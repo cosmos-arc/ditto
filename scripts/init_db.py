@@ -12,8 +12,8 @@ from typing import Any
 
 try:
     from ditto_foundation.logging_config import setup_logging
-    from ditto.data.adapters import DuckDBAdapter, SQLiteAdapter
-    from ditto.data.service import DataService
+    from data.adapters import DuckDBAdapter, SQLiteAdapter
+    from data.service import DataService
 except ImportError as e:
     print(f"导入失败: {e}")
     print("请确保在 pixi 环境中运行: pixi run python scripts/init_db.py")

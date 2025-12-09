@@ -12,10 +12,10 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import polars as pl
 import pytest
-from ditto.data.clients.akshare_client import AkShareClient
-from ditto.data.clients.base import DailyData, DataSourceClient, EtfInfo
-from ditto.data.clients.factory import DataSourceFactory, DataSourceType
-from ditto.data.clients.tushare_client import TushareClient
+from data.clients.akshare_client import AkShareClient
+from data.clients.base import DailyData, DataSourceClient, EtfInfo
+from data.clients.factory import DataSourceFactory, DataSourceType
+from data.clients.tushare_client import TushareClient
 
 
 class TestDataSourceClient:

@@ -12,15 +12,15 @@ from unittest.mock import AsyncMock, Mock
 
 import polars as pl
 import pytest
-from ditto.data.validation.base import (
+from data.validation.base import (
     ValidationIssue,
     ValidationResult,
     ValidationSeverity,
 )
-from ditto.data.validation.cross_validator import CrossSourceValidator
-from ditto.data.validation.quality_reporter import QualityReporter
-from ditto.data.validation.service import DataQualityService
-from ditto.data.validation.validators import (
+from data.validation.cross_validator import CrossSourceValidator
+from data.validation.quality_reporter import QualityReporter
+from data.validation.service import DataQualityService
+from data.validation.validators import (
     LimitUpDownValidator,
     OHLCValidator,
     PriceContinuityValidator,

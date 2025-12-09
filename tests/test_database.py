@@ -11,9 +11,9 @@ import pytest
 
 # Try to import all required modules at the top level
 try:
-    from ditto.data import DataService
-    from ditto.data.adapters import DuckDBAdapter, SQLiteAdapter
-    from ditto.data.schema import (
+    from data import DataService
+    from data.adapters import DuckDBAdapter, SQLiteAdapter
+    from data.schema import (
         DUCKDB_TABLES,
         SQLITE_TABLES,
         RegimeType,

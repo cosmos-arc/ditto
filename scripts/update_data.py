@@ -15,9 +15,9 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from ditto.data.clients.factory import DataSourceFactory, DataSourceType
+    from data.clients.factory import DataSourceFactory, DataSourceType
     from ditto_foundation.config.settings import get_settings
-    from ditto.data.service import DataService
+    from data.service import DataService
 except ImportError as e:
     print(f"导入失败: {e}")
     print("请确保在 pixi 环境中运行: pixi run python scripts/update_data.py")
