@@ -9,12 +9,13 @@ __author__ = "Ditto Team"
 
 from .data.adapters import DatabaseAdapter, DuckDBAdapter, SQLiteAdapter
 from .data.constants import DatabaseType, DataSourceType
-from .data.datasources import AkShareDataSource, DataSource, TushareDataSource
+from .data.datasources import AkShareDataSource, DataSource, DataSourceFactory, TushareDataSource
 
 __all__ = [
     "DatabaseAdapter",
     "DatabaseType",
     "DataSource",
+    "DataSourceFactory",
     "DataSourceType",
     "DuckDBAdapter",
     "SQLiteAdapter",

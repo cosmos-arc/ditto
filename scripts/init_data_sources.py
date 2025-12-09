@@ -17,7 +17,8 @@ try:
         DataCollector,
         DataService,
     )
-    from ditto_foundation.data.clients.factory import DataSourceFactory, DataSourceType
+    from ditto_foundation.data.datasources import DataSourceFactory
+    from ditto_foundation.data.constants import DataSourceType
 except ImportError as e:
     print(f"导入失败: {e}")
     print("请确保在 pixi 环境中运行: pixi run python scripts/init_data_sources.py")
@@ -217,13 +218,9 @@ async def main() -> None:
             )
             sys.exit(1)
 
-        # Initialize data source factory
-        data_factory = DataSourceFactory(
-            primary_source=DataSourceType.TUSHARE,
-            backup_sources=[DataSourceType.AKSHARE],
-            tushare_api_key=settings.data_source.tushare_token,
-            tushare_pro_account=settings.tushare.pro_account,
-        )
+        # For now, create a simple data factory wrapper
+        # TODO: Update DataCollector to use new DataSourceFactory directly
+        data_factory = DataSourceFactory()
 
         # Initialize data service
         data_service = DataService(
