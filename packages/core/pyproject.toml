@@ -1,0 +1,4 @@
+[project]
+name = "ditto-core"
+requires-python = ">= 3.11"
+version = "0.1.0"

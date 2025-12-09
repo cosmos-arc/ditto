@@ -1,0 +1,76 @@
+# pixi.toml - Ditto 量化系统依赖配置
+
+[workspace]
+channels = ["conda-forge"]
+platforms = ["win-64"]
+name = "ditto"
+version = "0.1.0"
+authors = ["Chevy <chevy_777@126.com>"]
+description = "Quantitative Investment System for Volatile Market Conditions"
+readme = "README.md"
+
+[dependencies]
+# Python 环境
+python = "3.11.*"
+
+# 数据科学与处理
+polars = ">=1.8.0,<1.9"
+pandas = ">=2.2.0,<2.3"
+numpy = ">=2.1.0,<2.2"
+
+# Web框架与API
+fastapi = ">=0.115.0,<0.116"
+uvicorn = ">=0.32.0,<0.33"
+pydantic = ">=2.11.7,<3"
+pydantic-settings = ">=2.6.0,<2.7"
+
+# 数据库
+duckdb = ">=1.1.0,<1.2"
+
+# 网络请求
+httpx = ">=0.28.0,<0.29"
+aiohttp = ">=3.11.0,<3.12"
+
+# 配置与日志
+python-dotenv = ">=1.0.0,<1.1"
+loguru = ">=0.7.2,<0.8"
+
+# 任务调度
+apscheduler = ">=3.11.0,<3.12"
+
+# 开发工具
+ruff = ">=0.12.4,<0.13"
+pytest = ">=8.4.1,<9"
+pytest-cov = ">=6.2.1,<7"
+mypy = ">=1.17.0,<2"
+
+# 数据源 (feature)
+tushare = ">=1.4.21,<2"
+akshare = ">=1.15.0,<2"
+
+# 可视化
+matplotlib = ">=3.10.0,<3.11"
+
+# 开发工具
+ipykernel = ">=6.29.0,<7"
+jupyter = ">=1.1.0,<1.2"
+
+[environments]
+default = {features = ["data"], solve-group = "default"}
+dev = {features = ["data"], solve-group = "dev"}
+
+[tasks.server]
+description = "启动FastAPI服务器"
+cmd = ["python", "packages/shared/src/config/settings.py"]
+
+[tasks.test]
+description = "运行测试"
+cmd = ["pytest", "tests/", "-v"]
+
+[tasks.lint]
+description = "代码检查"
+cmd = ["ruff", "check", "src/", "tests/"]
+
+[tasks.format]
+description = "格式化代码"
+cmd = ["ruff", "format", "src/", "tests/"]
