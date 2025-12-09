@@ -10,7 +10,6 @@ import logging
 import sys
 import traceback
 from datetime import date, timedelta
-from pathlib import Path
 
 try:
     from data.clients.factory import DataSourceFactory, DataSourceType

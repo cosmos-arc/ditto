@@ -1,6 +1,5 @@
 """配置模块测试."""
 
-from pathlib import Path
 
 import pytest
 

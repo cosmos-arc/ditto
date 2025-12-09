@@ -1,9 +1,11 @@
 """测试 DataService 相关功能"""
 
-import pytest
 from pathlib import Path
 import tempfile
 import shutil
+from data.adapters.duckdb_adapter import DuckDBAdapter
+from data.adapters.sqlite_adapter import SQLiteAdapter
+from data.service import DataService
 
 
 class TestDuckDBAdapter:
@@ -20,7 +22,6 @@ class TestDuckDBAdapter:
 
     def test_create_adapter_with_path(self):
         """测试使用路径创建适配器"""
-        from data.adapters.duckdb_adapter import DuckDBAdapter
 
         adapter = DuckDBAdapter(db_path=str(self.db_path))
 
@@ -29,7 +30,6 @@ class TestDuckDBAdapter:
 
     def test_connection_creation(self):
         """测试连接创建"""
-        from data.adapters.duckdb_adapter import DuckDBAdapter
 
         adapter = DuckDBAdapter(db_path=str(self.db_path))
 
@@ -38,7 +38,6 @@ class TestDuckDBAdapter:
 
     def test_initialize_schema(self):
         """测试数据库 schema 初始化"""
-        from data.adapters.duckdb_adapter import DuckDBAdapter
 
         adapter = DuckDBAdapter(db_path=str(self.db_path))
 
@@ -71,7 +70,6 @@ class TestSQLiteAdapter:
 
     def test_create_adapter_with_path(self):
         """测试使用路径创建适配器"""
-        from data.adapters.sqlite_adapter import SQLiteAdapter
 
         adapter = SQLiteAdapter(db_path=str(self.db_path))
 
@@ -80,7 +78,6 @@ class TestSQLiteAdapter:
 
     def test_connection_creation(self):
         """测试连接创建"""
-        from data.adapters.sqlite_adapter import SQLiteAdapter
 
         adapter = SQLiteAdapter(db_path=str(self.db_path))
 
@@ -89,7 +86,6 @@ class TestSQLiteAdapter:
 
     def test_initialize_schema(self):
         """测试数据库 schema 初始化"""
-        from data.adapters.sqlite_adapter import SQLiteAdapter
 
         adapter = SQLiteAdapter(db_path=str(self.db_path))
 
@@ -123,7 +119,6 @@ class TestDataService:
 
     def test_service_initialization(self):
         """测试服务初始化"""
-        from data.service import DataService
 
         service = DataService(
             duckdb_path=str(self.duckdb_path),
@@ -141,7 +136,6 @@ class TestDataService:
 
     def test_lazy_connection(self):
         """测试懒加载连接"""
-        from data.service import DataService
 
         service = DataService(
             duckdb_path=str(self.duckdb_path),

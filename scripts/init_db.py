@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from ditto_foundation.logging_config import setup_logging
     from data.adapters import DuckDBAdapter, SQLiteAdapter
     from data.service import DataService
 except ImportError as e:
@@ -41,7 +40,7 @@ class DatabaseInitializer:
             logger.info("开始数据库初始化...")
 
             # 使用 DataService 初始化
-            with DataService(str(self.duckdb_path), str(self.sqlite_path)) as service:
+            with DataService(str(self.duckdb_path), str(self.sqlite_path)):
                 logger.info("✅ 数据库初始化完成!")
 
         except Exception as e:
@@ -61,23 +60,21 @@ class DatabaseInitializer:
         try:
             # 验证 DuckDB
             if self.duckdb_path.exists():
-                with DuckDBAdapter(str(self.duckdb_path)) as adapter:
-                    adapter.connect()
-                    # 简单验证表是否存在
-                    tables = adapter.connection.execute("SHOW TABLES").fetchall()
-                    result["duckdb_tables"] = len(tables)
-                    logger.info(f"DuckDB 表数量: {len(tables)}")
+                adapter = DuckDBAdapter(str(self.duckdb_path))
+                # 简单验证表是否存在
+                tables = adapter.connection.execute("SHOW TABLES").fetchall()
+                result["duckdb_tables"] = len(tables)
+                logger.info(f"DuckDB 表数量: {len(tables)}")
 
             # 验证 SQLite
             if self.sqlite_path.exists():
-                with SQLiteAdapter(str(self.sqlite_path)) as adapter:
-                    adapter.connect()
-                    # 简单验证表是否存在
-                    cursor = adapter.connection.cursor()
-                    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-                    tables = cursor.fetchall()
-                    result["sqlite_tables"] = len(tables)
-                    logger.info(f"SQLite 表数量: {len(tables)}")
+                adapter = SQLiteAdapter(str(self.sqlite_path))
+                # 简单验证表是否存在
+                cursor = adapter.connection.cursor()
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                tables = cursor.fetchall()
+                result["sqlite_tables"] = len(tables)
+                logger.info(f"SQLite 表数量: {len(tables)}")
 
         except Exception as e:
             result["issues"].append(f"验证失败: {e}")
@@ -89,8 +86,9 @@ class DatabaseInitializer:
 def print_database_info() -> bool:
     """打印数据库信息."""
     print("=== 数据库配置信息 ===")
-    print(f"DuckDB 路径: {Path(__file__).parent.parent / 'data' / 'duckdb' / 'ditto.duckdb'}")
-    print(f"SQLite 路径: {Path(__file__).parent.parent / 'data' / 'sqlite' / 'ditto.sqlite'}")
+    base_path = Path(__file__).parent.parent
+    print(f"DuckDB 路径: {base_path / 'data' / 'duckdb' / 'ditto.duckdb'}")
+    print(f"SQLite 路径: {base_path / 'data' / 'sqlite' / 'ditto.sqlite'}")
     print()
     print("✅ 数据库配置验证通过")
     return True
