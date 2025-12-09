@@ -72,7 +72,7 @@ cmd = ["pytest", "tests/", "-v"]
 
 [tasks.lint]
 description = "代码检查"
-cmd = ["ruff", "check", '.']
+cmd = ["ruff", "check", '.', "--fix", "--exit-non-zero-on-fix", "--show-fixes"]
 
 [tasks.format]
 description = "格式化代码"

@@ -1,47 +1,65 @@
 # Pre-commit hooks configuration
 # See https://pre-commit.com for more information
 
+minimum_pre_commit_version: "2.20.0"
+
 repos:
+  # 一些通用基础检查
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+      - id: check-toml # NEW: 顺带帮你检查 pyproject 等 toml 文件
       - id: check-added-large-files
       - id: check-case-conflict
       - id: check-merge-conflict
       - id: debug-statements
 
+  # Ruff: lint + format
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.12
     hooks:
       # Ruff Lint - 严格检查代码质量问题
       - id: ruff
-        args: [--fix, --show-fixes]  # Auto-fix issues and show what was fixed
-        # 每次提交前检查所有文件，不仅仅是修改的文件
-        pass_filenames: false
-        always_run: true
-        # 如果有无法自动修复的问题，提交会失败
-        fail_fast: true
+        # 自动修复能修的，同时如果有修复发生让命令返回非 0，提醒你重新 git add
+        args: [--fix, --exit-non-zero-on-fix, --show-fixes]
+        # 使用默认按文件运行即可，避免每次提交都全仓扫描太慢
+        # pass_filenames: false
+        # always_run: true
+        # fail_fast 默认就是 true，这里不再显式设置
+
       # Ruff Format - 代码格式化
       - id: ruff-format
-        args: [--diff]  # Show diff of formatting changes
-        pass_filenames: false
-        always_run: true
+        # 一般这里不需要 --diff，直接在本地改文件即可
+        # 如果你更喜欢只看 diff 再手动处理，可以改成 ["--check"]
+        # args: ["--check"]
+        pass_filenames: true
 
+  # Mypy: 严格类型检查（配合你 pyproject 里的 strict + pydantic.mypy 插件）
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        # 这里用 pre-commit 自建 env，比系统 mypy 更可控
+        additional_dependencies:
+          - pydantic>=2.0
+          # 如果你用到了 pydantic-settings / pydantic-core 等，也可以加在这里
+          # - pydantic-settings>=2.0
+
+  # 可选：本地 pytest 钩子（建议先保持注释，需要时再打开）
   # - repo: local
-#   hooks:
-#     - id: pytest-check
-#       name: pytest-check
-#       entry: pixi run python -m pytest
-#       language: system
-#       pass_filenames: false
-#       always_run: true
-#       # Run pytest on committed files
-#       files: ^tests/.*\.py$|^packages/.*\.py$|^apps/.*\.py$
+  #   hooks:
+  #     - id: pytest-check
+  #       name: pytest (fast subset)
+  #       entry: pixi run python -m pytest -m "unit and not slow"
+  #       language: system
+  #       pass_filenames: false
+  #       always_run: true
+  #       stages: [push]
 
-# Exclude directories
+# 全局排除目录（正则）
 exclude: |
   (?x)^(
     \.git/|
@@ -49,6 +67,7 @@ exclude: |
     __pycache__/|
     \.pytest_cache/|
     \.mypy_cache/|
+    \.ruff_cache/|
     \.coverage/|
     htmlcov/|
     \.tox/|
@@ -56,6 +75,3 @@ exclude: |
     dist/|
     \.venv/
   )$
-
-# Minimum pre-commit version
-minimum_pre_commit_version: 2.20.0

@@ -15,12 +15,7 @@ target-version = "py311"
 
 # 指定 Ruff 需要检查的源代码和测试目录。
 # 根据实际项目结构调整
-src = [
-    "packages",
-    "apps",
-    "scripts",
-    "tests"
-]
+src = ["packages", "apps", "scripts", "tests"]
 
 # 全局排除不需要检查的文件和目录。
 # 这个列表会在所有工具中复用，以保持一致性。
@@ -45,6 +40,12 @@ exclude = [
     "node_modules",
     "venv",
 ]
+
+# NEW: 性能 & 一致性小优化
+cache-dir = ".ruff_cache"
+respect-gitignore = true
+force-exclude = true
+# preview = true  # 如果你想吃新规则，可以再打开
 
 # --- Ruff Linter (检查器) 配置 ---
 [tool.ruff.lint]
@@ -77,12 +78,19 @@ select = [
     "C4",
     "SIM",
     "PTH",
-    "PL",
+    # 更精确地开启 Pylint 规则
+    "PLC",
+    "PLE",
+    "PLR",
+    "PLW",
     "RUF",
     "D",
     "PT",
     "ANN",
-    # "T20",
+    # 进阶规则（建议先用专门命令单独跑，再决定是否常开）
+    # "S",    # flake8-bandit 安全
+    # "DTZ",  # flake8-datetimez 时区安全
+    # "PERF", # perflint 性能优化
 ]
 
 # 'ignore' 用于关闭特定规则，以适应项目实际情况。
@@ -115,11 +123,12 @@ unfixable = []
 
 # 对特定文件类型忽略特定规则。
 [tool.ruff.lint.per-file-ignores]
-# 测试文件通常允许使用 assert 和魔法数值。
-"tests/**/*.py" = ["S101", "PLR2004", "T201"]
-"packages/*/tests/**/*.py" = ["S101", "PLR2004", "T201"]
-"apps/*/tests/**/*.py" = ["S101", "PLR2004", "T201"]
-# __init__.py 文件通常作为包的标记，可以没有文档字符串。
+# 测试文件允许魔法数 (PLR2004)
+"tests/**/*.py" = ["PLR2004"]
+"packages/*/tests/**/*.py" = ["PLR2004"]
+"apps/*/tests/**/*.py" = ["PLR2004"]
+
+# __init__.py 可以没有 docstring
 "__init__.py" = ["D104"]
 
 
@@ -148,6 +157,15 @@ typeCheckingMode = "strict"
 # 如果导入的库没有类型存根 (stubs)，Pyright 会在编辑器中发出警告。
 # 这有助于提醒开发者注意潜在的类型问题。
 reportMissingTypeStubs = true
+
+# NEW:
+reportUnknownVariableType = "information" # 或 "warning" / "none"
+
+# 新增：对第三方库这类不完整 stub 不要那么凶
+reportUnknownMemberType = "information" # 或 "warning" / "none"
+
+# 关键：告诉 Pyright 你的源码根目录
+extraPaths = ["packages/core/src", "packages/foundation/src", "apps/server/src"]
 
 # 保持与 Ruff 一致的排除列表。
 exclude = [
@@ -196,6 +214,9 @@ follow_imports = "normal"
 # 这是处理 Pydantic、Django、SQLAlchemy 等库的关键。
 plugins = ["pydantic.mypy"]
 
+# NEW: 报错信息里带 error code，调试更舒服
+show_error_codes = true
+
 # 保持与 Ruff 一致的排除列表。
 exclude = [
     ".bzr",
@@ -219,6 +240,10 @@ exclude = [
     "venv",
 ]
 
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
 
 # ===================================================================
 # Pytest (测试框架)
@@ -227,16 +252,8 @@ exclude = [
 [tool.pytest.ini_options]
 minversion = "7.0"
 # Monorepo测试目录结构
-testpaths = [
-    "packages/*/tests",
-    "apps/*/tests",
-    "tests"
-]
-pythonpath = [
-    "packages/core/src",
-    "packages/foundation/src",
-    "apps/server/src"
-]
+testpaths = ["packages/*/tests", "apps/*/tests", "tests"]
+pythonpath = ["packages/core/src", "packages/foundation/src", "apps/server/src"]
 
 # 将所有警告提升为错误，确保代码的健壮性。
 filterwarnings = ["error"]
@@ -254,16 +271,42 @@ markers = [
 log_cli = true
 log_cli_level = "INFO"
 
+# NEW: 如果有 async 测试，推荐开启
+asyncio_mode = "auto"
+
 # 命令行附加选项，用于增强测试流程。
 addopts = [
-    "-ra",                       # 显示除"通过"之外所有测试的详细摘要
-    "-q",                        # 减少输出的冗余信息，使报告更简洁
+    "-ra", # 显示除"通过"之外所有测试的详细摘要
+    "-q",  # 减少输出的冗余信息，使报告更简洁
     # "-n", "auto",               # 使用所有可用 CPU 核心并行测试，需要 pytest-xdist
-    "--strict-markers",          # 对未在配置中注册的 marker 标记报错
-    "--strict-config",           # 对配置文件中的拼写错误或无效键报错
-    "--cov=packages/",            # 指定计算代码覆盖率的目录
-    "--cov=apps/",                # 覆盖应用层代码
-    "--cov-report=term-missing", # 在终端报告中明确显示未被覆盖的代码行
-    "--cov-report=html",         # 同时生成 HTML 报告，便于可视化分析
-    "--cov-fail-under=80",       # 如果代码覆盖率低于 80%，则测试流程失败
+    "--strict-markers",                       # 对未在配置中注册的 marker 标记报错
+    "--strict-config",                        # 对配置文件中的拼写错误或无效键报错
+    "--cov=packages/",                        # 指定计算代码覆盖率的目录
+    "--cov=apps/",                            # 覆盖应用层代码
+    "--cov-report=term-missing:skip-covered", # 只在终端显示未覆盖的行
+    "--cov-report=html:htmlcov",              # HTML 报告输出目录
+    "--cov-branch",                           # NEW: 分支覆盖率
+    "--cov-fail-under=80",
+    "--durations=10",                         # NEW: 打印最慢的 10 个测试
+]
+
+# ===================================================================
+# Coverage (配合 pytest-cov 使用)
+# ===================================================================
+[tool.coverage.run]
+source = ["packages", "apps"]
+omit = ["*/tests/*", "*/test_*.py", "*/migrations/*", "*/conftest.py"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    'if __name__ == "__main__":',
+    "@(abc\\.)?abstractmethod",
 ]

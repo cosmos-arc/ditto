@@ -76,7 +76,8 @@ pixi install --without default  # 仅基础依赖
 **在提交任何代码之前，必须确保：**
 1. `pixi run ruff check .` 必须返回 "All checks passed!"
 2. `pixi run ruff format .` 必须没有任何格式问题
-3. **没有任何例外！** 任何 ruff 问题都必须在提交前修复
+3. `pixi run mypy packages/ apps/ scripts/ tests/` 必须通过类型检查
+4. **没有任何例外！** 任何问题都必须在提交前修复
 
 #### 🟢 编码阶段必须遵守的 Ruff Lint 规则
 **在编写代码时就必须遵守以下规则，不要等到提交前修复：**
@@ -96,15 +97,21 @@ pixi install --without default  # 仅基础依赖
    - 参数类型注解是强制的（除了self/cls）
    - 禁止使用 `Any` 类型（特殊情况除外）
 
-4. **代码质量 (B, PL, RUF)**
+4. **代码质量 (B, PLC, PLE, PLR, PLW, RUF)**
    - 禁止使用魔法数字（应该定义为常量）
-   - 函数复杂度不能过高
+   - 函数复杂度不能过高（C901）
    - 禁止不必要的变量赋值
+   - 注意：Pylint规则已细分为PLC（约定）、PLE（错误）、PLR（重构）、PLW（警告）
 
 5. **最佳实践 (UP, SIM, PTH)**
    - 使用现代Python语法（f-string, 类型注解等）
    - 使用pathlib替代os.path
    - 简化不必要的循环和条件判断
+
+#### ⚡ Ruff 性能优化配置
+- **cache-dir**: 使用`.ruff_cache`缓存结果，提升重复检查速度
+- **respect-gitignore**: 自动忽略.gitignore中的文件
+- **force-exclude**: 强制排除配置中的目录，即使显式指定
 
 Both formatting and linting issues must be resolved before code can be considered complete.
 
@@ -136,23 +143,74 @@ from ditto.data.service import DataService
 
 ```bash
 # Before committing, always run:
-ruff check packages/ apps/ scripts/ tests/  # Check for issues
-ruff format packages/ apps/ scripts/ tests/   # Format code
-ruff check --fix packages/ apps/ scripts/ tests/  # Auto-fix issues
+pixi run ruff check packages/ apps/ scripts/ tests/  # Check for issues
+pixi run ruff format packages/ apps/ scripts/ tests/   # Format code
+pixi run ruff check --fix packages/ apps/ scripts/ tests/  # Auto-fix issues
 
 # The project uses ruff for both linting and formatting
 # Configuration is in pyproject.toml
 
 # Type checking
-mypy packages/ apps/ scripts/ tests/           # Static type checking
-pyright packages/ apps/ scripts/ tests/          # VSCode integrated type checking
+pixi run mypy packages/ apps/ scripts/ tests/           # Static type checking
+pyright packages/ apps/ scripts/ tests/                 # VSCode integrated type checking
 
 # Run tests
 pytest                                          # Run all tests with coverage
 pytest tests/test_specific.py                 # Run specific test
 pytest -m "not slow"                            # Skip slow tests
 pytest --cov=packages/ --cov-report=html       # Generate HTML coverage report
+
+# Enhanced test commands
+pytest --cov-report=term-missing:skip-covered   # Show only uncovered lines in terminal
+pytest --cov-report=html:htmlcov               # Generate HTML report with branch coverage
+pytest --durations=10                          # Show 10 slowest tests
 ```
+
+### Type Checking Requirements ⚠️ **严格类型检查**
+**项目使用严格的类型检查策略，确保代码的类型安全。**
+
+#### MyPy 配置
+- **strict模式**: 启用所有严格类型检查
+- **show_error_codes**: 显示错误代码，便于快速定位问题
+- **pydantic.mypy插件**: 提供Pydantic模型的专用类型检查
+- **ignore_missing_imports**: 忽略第三方库的类型存根缺失
+
+#### Pydantic MyPy 插件配置
+```toml
+[tool.pydantic-mypy]
+init_forbid_extra = true      # 禁止模型接收额外字段
+init_typed = true             # 强制初始化参数类型检查
+warn_required_dynamic_aliases = true  # 警告必需的动态别名
+```
+
+#### Pyright 配置
+- **typeCheckingMode = "strict"**: VSCode中启用严格模式
+- **extraPaths**: 配置源码路径，确保正确解析
+- **reportUnknownVariableType = "information"**: 对未知类型变量仅显示信息
+- **reportUnknownMemberType = "information"**: 对第三方库未知成员放宽检查
+
+### Test Configuration Enhancements
+**项目配置了增强的pytest设置，提供更好的测试体验和覆盖率报告。**
+
+#### 测试特性
+- **Async测试支持**: `asyncio_mode = "auto"` 自动检测并运行异步测试
+- **分支覆盖率**: 启用 `--cov-branch` 跟踪条件分支的覆盖情况
+- **测试性能分析**: `--durations=10` 显示最慢的10个测试
+- **严格标记**: `--strict-markers` 确保所有测试标记都已注册
+- **覆盖率阈值**: 设置 `--cov-fail-under=80` 要求至少80%的代码覆盖率
+
+#### 测试标记
+- `unit`: 单元测试
+- `integration`: 集成测试
+- `e2e`: 端到端测试
+- `slow`: 运行缓慢的测试（可使用 `-m "not slow"` 跳过）
+- `smoke`: 冒烟测试
+
+#### 覆盖率配置
+- **源码目录**: `packages/` 和 `apps/`
+- **排除目录**: 测试文件、迁移文件、conftest.py等
+- **HTML报告**: 输出到 `htmlcov/` 目录，包含分支覆盖率详情
+- **终端报告**: 仅显示未覆盖的行，跳过已完全覆盖的文件
 
 ### Python Format Standards
 - **Line Length**: 88 characters maximum
@@ -172,10 +230,16 @@ pytest --cov=packages/ --cov-report=html       # Generate HTML coverage report
 **Pre-commit hooks会在每次提交时自动运行，任何违反ruff规则的代码都无法提交！**
 
 #### 自动检查内容：
-1. **Ruff Lint** - 检查所有代码质量问题（零容忍）
-2. **Ruff Format** - 自动格式化代码（不符合格式的提交会被阻止）
-3. **Pytest** - 运行测试套件
-4. **其他检查** - 文件尾空行、大文件检测等
+1. **基础检查** - 文件尾空行、YAML/TOML格式、大文件检测、合并冲突等
+2. **Ruff Lint** - 检查所有代码质量问题（零容忍），自动修复可修复的问题
+3. **Ruff Format** - 自动格式化代码（不符合格式的提交会被阻止）
+4. **Mypy** - 严格类型检查，配合Pydantic插件确保类型安全
+5. **可选 pytest** - 可配置在push阶段运行快速测试套件
+
+#### 关键配置说明：
+- **--exit-non-zero-on-fix**: 如果ruff自动修复了问题，会返回非零退出码，提醒你重新git add修复的文件
+- **check-toml**: 自动检查pyproject.toml、pixi.toml等TOML文件的格式正确性
+- **mypy插件**: 集成pydantic.mypy插件，提供更好的Pydantic模型类型检查
 
 #### 编码阶段最佳实践：
 1. **IDE集成配置**
@@ -195,6 +259,7 @@ pytest --cov=packages/ --cov-report=html       # Generate HTML coverage report
    # 快速自检（应该全部通过）
    pixi run ruff check .       # 必须返回 "All checks passed!"
    pixi run ruff format .      # 必须没有任何文件需要格式化
+   pixi run mypy packages/ apps/ scripts/ tests/  # 必须通过类型检查
    ```
 
 4. **错误处理流程**
@@ -205,6 +270,10 @@ pytest --cov=packages/ --cov-report=html       # Generate HTML coverage report
 
    # 如果格式化问题：
    pixi run ruff format .      # 自动格式化
+
+   # 如果有类型检查错误：
+   pixi run mypy packages/ apps/ scripts/ tests/  # 查看具体类型错误
+   # 修复类型注解或类型使用问题
    ```
 
 

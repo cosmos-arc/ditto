@@ -76,7 +76,7 @@ class TestSQLiteInit:
             # Convert to more readable format
             column_info = {
                 col[1]: {
-                    "type": col[2],
+                    "type": str(col[2]),
                     "not_null": bool(col[3]),
                     "primary_key": bool(col[5]),
                 }
@@ -86,22 +86,22 @@ class TestSQLiteInit:
             # Check required columns
             assert "trade_id" in column_info
             assert column_info["trade_id"]["primary_key"]
-            assert column_info["trade_id"]["type"].upper() == "INTEGER"
+            assert str(column_info["trade_id"]["type"]).upper() == "INTEGER"
 
             assert "symbol" in column_info
-            assert column_info["symbol"]["type"].upper() == "TEXT"
+            assert str(column_info["symbol"]["type"]).upper() == "TEXT"
             assert column_info["symbol"]["not_null"]
 
             assert "quantity" in column_info
-            assert column_info["quantity"]["type"].upper() == "INTEGER"
+            assert str(column_info["quantity"]["type"]).upper() == "INTEGER"
             assert column_info["quantity"]["not_null"]
 
             assert "price" in column_info
-            assert column_info["price"]["type"].upper() == "REAL"
+            assert str(column_info["price"]["type"]).upper() == "REAL"
             assert column_info["price"]["not_null"]
 
             assert "trade_date" in column_info
-            assert column_info["trade_date"]["type"].upper() == "TEXT"
+            assert str(column_info["trade_date"]["type"]).upper() == "TEXT"
             assert column_info["trade_date"]["not_null"]
 
             conn.close()

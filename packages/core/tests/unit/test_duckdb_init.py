@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import duckdb
+
 from data.adapters.duckdb_adapter import DuckDBAdapter
 
 
@@ -32,6 +33,7 @@ class TestDuckDBInit:
                     SELECT COUNT(*) FROM information_schema.tables
                     WHERE table_name = 'etf_info'
                 """).fetchone()
+                assert result is not None, "etf_info table should exist"
                 assert result[0] == 1, "etf_info table should exist"
 
                 # Check daily price table
@@ -39,6 +41,7 @@ class TestDuckDBInit:
                     SELECT COUNT(*) FROM information_schema.tables
                     WHERE table_name = 'daily_price'
                 """).fetchone()
+                assert result is not None, "daily_price table should exist"
                 assert result[0] == 1, "daily_price table should exist"
 
                 # Check adjustment factors table
@@ -46,6 +49,7 @@ class TestDuckDBInit:
                     SELECT COUNT(*) FROM information_schema.tables
                     WHERE table_name = 'adjustment_factors'
                 """).fetchone()
+                assert result is not None, "adjustment_factors table should exist"
                 assert result[0] == 1, "adjustment_factors table should exist"
 
                 # Check trading calendar table
@@ -53,6 +57,7 @@ class TestDuckDBInit:
                     SELECT COUNT(*) FROM information_schema.tables
                     WHERE table_name = 'trading_calendar'
                 """).fetchone()
+                assert result is not None, "trading_calendar table should exist"
                 assert result[0] == 1, "trading_calendar table should exist"
 
         finally:
