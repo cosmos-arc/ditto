@@ -60,7 +60,7 @@ ditto-foundation = { path = "packages/foundation", editable = true }
 
 [environments]
 default = { solve-group = "default" }
-dev = { solve-group = "dev" }
+dev = { features = ["dev"], solve-group = "dev" }
 
 [tasks.server]
 description = "启动FastAPI服务器"
@@ -77,3 +77,7 @@ cmd = ["ruff", "check", "src/", "tests/"]
 [tasks.format]
 description = "格式化代码"
 cmd = ["ruff", "format", "src/", "tests/"]
+
+[feature.dev.dependencies]
+pre-commit = "*"
+bandit = "*"

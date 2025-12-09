@@ -5,6 +5,7 @@ Ditto FastAPI 主应用.
 """
 
 # Standard library imports
+import logging
 import os
 import time
 import uuid
@@ -170,7 +171,7 @@ async def get_status() -> dict:
             "trading": False,
         },
         "logging": {
-            "level": "DEBUG" if logger.logger.level == 10 else "INFO",
+            "level": "DEBUG" if logger.logger.level == logging.DEBUG else "INFO",
             "structured": True,
         },
     }

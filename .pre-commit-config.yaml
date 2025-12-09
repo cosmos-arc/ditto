@@ -1,0 +1,51 @@
+# Pre-commit hooks configuration
+# See https://pre-commit.com for more information
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: debug-statements
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.8
+    hooks:
+      - id: ruff
+        args: [--fix]  # Auto-fix issues
+      - id: ruff-format  # Format code
+
+  - repo: local
+    hooks:
+      - id: pytest-check
+        name: pytest-check
+        entry: pixi run python -m pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        # Run pytest on committed files
+        files: ^tests/.*\.py$|^packages/.*\.py$|^apps/.*\.py$
+
+# Exclude directories
+exclude: |
+  (?x)^(
+    \.git/|
+    \.pixi/|
+    __pycache__/|
+    \.pytest_cache/|
+    \.mypy_cache/|
+    \.coverage/|
+    htmlcov/|
+    \.tox/|
+    build/|
+    dist/|
+    \.venv/
+  )$
+
+# Minimum pre-commit version
+minimum_pre_commit_version: 2.20.0

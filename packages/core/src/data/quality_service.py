@@ -19,13 +19,15 @@ class DataQualityService:
         symbol: str,
         start_date: date,
         end_date: date,
-        validators: list[str] | None
+        validators: list[str] | None,
     ) -> dict[str, Any]:
         """Validate data for a single symbol."""
         # Stub implementation
         return {}
 
-    async def run_health_check(self, sample_size: int, days_back: int) -> dict[str, Any]:
+    async def run_health_check(
+        self, sample_size: int, days_back: int
+    ) -> dict[str, Any]:
         """Run overall data health check."""
         # Stub implementation
         return {

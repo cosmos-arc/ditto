@@ -69,8 +69,14 @@ pixi install --without default  # 仅基础依赖
 # 然后手动安装数据源：pip install tushare akshare
 ```
 
-### Code Quality Requirements ⚠️
+### Code Quality Requirements ⚠️ **极其严格**
 **All Python code must comply with ruff formatting AND linting standards. This is a strict requirement for all contributions.**
+
+#### 🔴 零容忍规则：Ruff 检查必须全部通过
+**在提交任何代码之前，必须确保：**
+1. `pixi run ruff check .` 必须返回 "All checks passed!"
+2. `pixi run ruff format .` 必须没有任何格式问题
+3. **没有任何例外！** 任何 ruff 问题都必须在提交前修复
 
 Both formatting and linting issues must be resolved before code can be considered complete.
 
