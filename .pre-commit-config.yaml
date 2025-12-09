@@ -48,16 +48,16 @@ repos:
           # 如果你用到了 pydantic-settings / pydantic-core 等，也可以加在这里
           # - pydantic-settings>=2.0
 
-  # 可选：本地 pytest 钩子（建议先保持注释，需要时再打开）
-  # - repo: local
-  #   hooks:
-  #     - id: pytest-check
-  #       name: pytest (fast subset)
-  #       entry: pixi run python -m pytest -m "unit and not slow"
-  #       language: system
-  #       pass_filenames: false
-  #       always_run: true
-  #       stages: [push]
+# 可选：本地 pytest 钩子（建议先保持注释，需要时再打开）
+  - repo: local
+    hooks:
+      - id: pytest-check
+        name: pytest (fast subset)
+        entry: pixi run python -m pytest -m "unit and not slow"
+        language: system
+        pass_filenames: false
+        types: [python]
+        stages: [push]
 
 # 全局排除目录（正则）
 exclude: |

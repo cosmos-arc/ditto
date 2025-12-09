@@ -295,7 +295,7 @@ pixi run test --cov=packages --cov=apps --cov-report=html
 
 ## 文档
 
-详细文档请查看 `docs/` 目录：
+详细文档请查看 `docs/design/` 目录：
 
 - `00_overview.md` - 系统总览
 - `01_system_design_v1.md` - 系统设计

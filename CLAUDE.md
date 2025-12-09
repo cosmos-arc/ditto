@@ -504,18 +504,18 @@ The system enforces strict quality requirements:
    - `phase0_tasks.md` - 官方任务跟踪（永久保留）
    - `CLAUDE.md` - 项目指导文档（永久保留）
    - `README.md` - 项目说明（永久保留）
-   - `docs/` 目录下的设计文档（永久保留）
+   - `docs/design/` 目录下的设计文档（永久保留）
 
 ### Docs 文件夹管理规范 ⚠️ **严格禁止**
-1. **绝对禁止修改 docs/ 文件夹下的任何原有文档**
+1. **绝对禁止修改 docs/design/ 文件夹下的任何原有文档**
    - 所有设计文档都是项目核心资产
    - 需要修改必须获得用户明确授权
    - 包括但不限于：系统设计、路线图、数据设计、引擎设计等
 
 2. **文档内容保护**：
-   - 不得删除 docs/ 下的任何文件
-   - 不得重命名 docs/ 下的任何文件
-   - 不得修改 docs/ 下的文件内容
+   - 不得删除 docs/design/ 下的任何文件
+   - 不得重命名 docs/design/ 下的任何文件
+   - 不得修改 docs/design/ 下的文件内容
    - 可以读取但仅作参考，不能用于生成新内容
 
 ### Scripts 文件夹管理
@@ -528,12 +528,6 @@ The system enforces strict quality requirements:
    - `check_data_quality.py` - 数据质量检查脚本
    - `init_data_sources.py` - 数据源初始化脚本
    - `update_data.py` - 数据更新脚本
-
-2. **禁止的脚本类型**：
-   - 任务管理相关脚本（已删除 task_manager.py）
-   - 文档更新脚本（已删除 update_docs.py）
-   - 任何自动化文档生成的脚本
-   - 临时工具或测试脚本
 
 ### 开发流程要求
 1. **任务执行顺序**：
@@ -566,6 +560,7 @@ The system enforces strict quality requirements:
    - **执行计划**：使用 `superpowers:executing-plans` 批量实现任务
 
    **推荐 Skills 使用场景**：
+   - `superpowers:systematic-debugging`:问题排查，找根因
    - `superpowers:test-driven-development`：新功能开发
    - `superpowers:brainstorming`：设计阶段和复杂问题解决
    - `superpowers:verification-before-completion`：任务完成前验证
