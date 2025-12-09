@@ -210,6 +210,10 @@ ignore_missing_imports = true
 # 允许 Mypy 跟随导入链进行跨文件检查。
 follow_imports = "normal"
 
+# 添加包路径以支持 editable 安装的包
+explicit_package_bases = true
+namespace_packages = true
+
 # 启用 Mypy 插件以支持特定库的类型检查。
 # 这是处理 Pydantic、Django、SQLAlchemy 等库的关键。
 plugins = ["pydantic.mypy"]

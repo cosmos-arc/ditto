@@ -410,6 +410,24 @@ The system enforces strict quality requirements:
 - Strict risk management with KillSwitch capabilities
 - No cloud dependencies for core functionality
 
+## Claude Code 交互规范 ⚠️ **必须遵守**
+
+### 语言和记录要求
+1. **中文回复**：
+   - Claude 必须使用中文回复用户的所有问题
+   - 代码注释和文档可以使用英文，但解释和说明必须用中文
+   - 错误信息和调试输出保留原文，但需要中文解释
+
+2. **信息记录**：
+   - 每次会话中的重要决策和变更都需要记录
+   - 使用 TodoWrite 工具跟踪任务进度
+   - 完成的功能必须在 phase0_tasks.md 中更新状态
+
+3. **沟通风格**：
+   - 清晰、简洁、专业
+   - 主动报告进度和遇到的问题
+   - 提供具体的文件路径和行号引用
+
 ## Claude Code 开发工作流规范 ⚠️ **必须遵守**
 
 ### 任务跟踪管理

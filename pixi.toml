@@ -64,7 +64,7 @@ dev = { features = ["dev"], solve-group = "dev" }
 
 [tasks.server]
 description = "启动FastAPI服务器"
-cmd = ["python", "packages/shared/src/config/settings.py"]
+cmd = ["python", "-m", "apps.server.src.main"]
 
 [tasks.test]
 description = "运行测试"

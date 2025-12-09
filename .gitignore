@@ -79,7 +79,9 @@ ipython_config.py
 *.pkl
 *.pickle
 *.dat
-data/
+
+# 只忽略根目录下的 data 目录
+/data
 datasets/
 assets/
 
