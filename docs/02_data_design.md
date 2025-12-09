@@ -65,21 +65,21 @@
 ```python
 class TushareRateLimiter:
     """Tushare 限流器"""
-    
+
     def __init__(self, calls_per_minute: int = 180):
         self.calls_per_minute = calls_per_minute
         self.call_history: list[float] = []
-    
+
     async def acquire(self) -> None:
         """获取调用许可"""
         now = time.time()
         # 清理 1 分钟前的记录
         self.call_history = [t for t in self.call_history if now - t < 60]
-        
+
         if len(self.call_history) >= self.calls_per_minute:
             wait_time = 60 - (now - self.call_history[0])
             await asyncio.sleep(wait_time)
-        
+
         self.call_history.append(time.time())
 ```
 
@@ -92,9 +92,9 @@ class TushareRateLimiter:
 ```python
 class CrossSourceValidator:
     """双源交叉校验器"""
-    
+
     PRICE_DIFF_THRESHOLD = 0.002  # 0.2%
-    
+
     async def validate(
         self,
         symbol: str,
@@ -103,12 +103,12 @@ class CrossSourceValidator:
         akshare_data: dict
     ) -> ValidationResult:
         """交叉验证两个数据源"""
-        
+
         ts_close = tushare_data["close"]
         ak_close = akshare_data["close"]
-        
+
         price_diff = abs(ts_close - ak_close) / ts_close
-        
+
         if price_diff > self.PRICE_DIFF_THRESHOLD:
             return ValidationResult(
                 valid=False,
@@ -116,7 +116,7 @@ class CrossSourceValidator:
                 message=f"Price diff {price_diff:.4%} exceeds threshold",
                 action="MARK_SUSPICIOUS"  # 标记为可疑，禁止自动下单
             )
-        
+
         return ValidationResult(valid=True)
 ```
 
@@ -125,9 +125,9 @@ class CrossSourceValidator:
 ```python
 class DataFallbackStrategy:
     """数据源降级策略"""
-    
+
     MAX_CONSECUTIVE_FAILURES = 3
-    
+
     async def fetch_with_fallback(
         self,
         symbol: str,
@@ -135,7 +135,7 @@ class DataFallbackStrategy:
         end_date: date
     ) -> tuple[pl.DataFrame, str]:
         """带降级的数据获取
-        
+
         Returns:
             (data, source): 数据和来源标识
         """
@@ -147,7 +147,7 @@ class DataFallbackStrategy:
         except Exception as e:
             self.failure_count["tushare"] += 1
             logger.error("tushare_fetch_failed", symbol=symbol, error=str(e))
-        
+
         # 2. 连续失败 N 次后降级
         if self.failure_count["tushare"] >= self.MAX_CONSECUTIVE_FAILURES:
             logger.warning("degrading_to_akshare", symbol=symbol)
@@ -157,7 +157,7 @@ class DataFallbackStrategy:
             except Exception as e:
                 logger.critical("all_sources_failed", symbol=symbol)
                 raise DataSourceException("All data sources failed")
-        
+
         raise DataSourceException("Primary source failed")
 ```
 
@@ -200,15 +200,15 @@ class DataContract:
     """数据契约 - 定义数据质量 SLO"""
     dataset_id: str
     version: str
-    
+
     # 质量 SLO
     max_missing_days: int           # 最大允许缺失天数
     max_price_jump_pct: float       # 最大允许价格跳变
     cross_source_diff_threshold: float  # 双源价差阈值
-    
+
     # 时效性 SLO
     max_staleness_hours: int        # 最大允许延迟小时数
-    
+
     def check_violation(self, metrics: DataQualityMetrics) -> list[str]:
         """检查是否违反 SLO"""
         violations = []
@@ -687,30 +687,30 @@ CREATE TABLE IF NOT EXISTS execution_log (
     plan_id         VARCHAR,
     order_id        VARCHAR,
     sub_order_id    VARCHAR,
-    
+
     -- 订单信息
     symbol          VARCHAR,
     direction       VARCHAR,
     quantity        INTEGER,
-    
+
     -- 执行信息
     strategy_type   VARCHAR,      -- MARKET/TWAP/VWAP
     execute_time    TIMESTAMP,
     fill_time       TIMESTAMP,
-    
+
     -- 成交信息
     fill_price      DECIMAL(12, 4),
     fill_quantity   INTEGER,
     fill_status     VARCHAR,      -- FILLED/PARTIAL/FAILED
-    
+
     -- 成本
     commission      DECIMAL(10, 6),
     slippage        DECIMAL(10, 6),
     market_impact   DECIMAL(10, 6),
-    
+
     -- 质量指标
     implementation_shortfall DECIMAL(10, 6),
-    
+
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -737,21 +737,21 @@ class ValidationRule:
 
 class EnhancedETFKlineValidator:
     """增强版 ETF 日线数据校验器"""
-    
+
     def __init__(self):
         self.rules = [
             # 基础校验
             ValidationRule("price_range", self._check_price_range, "ERROR"),
             ValidationRule("volume_positive", self._check_volume, "ERROR"),
             ValidationRule("ohlc_relationship", self._check_ohlc, "ERROR"),
-            
+
             # 增强校验
             ValidationRule("price_jump", self._check_price_jump, "WARN"),
             ValidationRule("trading_suspension", self._check_suspension, "WARN"),
             ValidationRule("split_adjustment", self._check_split, "CRITICAL"),
             ValidationRule("cross_source", self._check_cross_source, "CRITICAL"),
         ]
-    
+
     def _check_price_range(self, df: pl.DataFrame) -> pl.DataFrame:
         """检查价格为正"""
         return df.filter(
@@ -760,7 +760,7 @@ class EnhancedETFKlineValidator:
             (pl.col("low") <= 0) |
             (pl.col("close") <= 0)
         )
-    
+
     def _check_ohlc(self, df: pl.DataFrame) -> pl.DataFrame:
         """检查 OHLC 合理性"""
         return df.filter(
@@ -770,11 +770,11 @@ class EnhancedETFKlineValidator:
             (pl.col("open") > pl.col("high")) |
             (pl.col("open") < pl.col("low"))
         )
-    
+
     def _check_volume(self, df: pl.DataFrame) -> pl.DataFrame:
         """检查成交量非负"""
         return df.filter(pl.col("volume") < 0)
-    
+
     def _check_price_jump(self, df: pl.DataFrame) -> pl.DataFrame:
         """检查价格跳变（排除涨跌停的异常跳变）"""
         df_sorted = df.sort(["symbol", "trade_date"])
@@ -786,14 +786,14 @@ class EnhancedETFKlineValidator:
             (pl.col("abs_return") > 0.15) &
             (pl.col("status") == "NORMAL")
         )
-    
+
     def _check_suspension(self, df: pl.DataFrame) -> pl.DataFrame:
         """检测停牌数据异常（成交量为0但有价格变动）"""
         return df.filter(
             (pl.col("volume") == 0) &
             (pl.col("close") != pl.col("prev_close"))
         )
-    
+
     def _check_split(self, df: pl.DataFrame) -> pl.DataFrame:
         """检测可能的复权错误"""
         df_sorted = df.sort(["symbol", "trade_date"])
@@ -805,7 +805,7 @@ class EnhancedETFKlineValidator:
             (pl.col("abs_return") > 0.08) &
             (pl.col("abs_return") < 0.095)
         )
-    
+
     def _check_cross_source(
         self,
         df_primary: pl.DataFrame,
@@ -822,7 +822,7 @@ class EnhancedETFKlineValidator:
             .alias("price_diff_pct")
         )
         return merged.filter(pl.col("price_diff_pct") > 0.002)
-    
+
     def validate(
         self,
         df: pl.DataFrame,
@@ -832,7 +832,7 @@ class EnhancedETFKlineValidator:
         warnings = []
         clean_df = df.clone()
         suspicious_symbols = set()
-        
+
         for rule in self.rules:
             if rule.name == "cross_source":
                 if df_secondary is not None:
@@ -842,11 +842,11 @@ class EnhancedETFKlineValidator:
                         # 标记可疑标的
                         suspicious_symbols.update(invalid["symbol"].unique().to_list())
                 continue
-            
+
             invalid = rule.check_func(clean_df)
             if len(invalid) > 0:
                 warnings.append(f"[{rule.severity}] {rule.name}: {len(invalid)} rows")
-                
+
                 if rule.severity in ("ERROR", "CRITICAL"):
                     # 删除错误行
                     clean_df = clean_df.join(
@@ -854,7 +854,7 @@ class EnhancedETFKlineValidator:
                         on=["symbol", "trade_date"],
                         how="anti"
                     )
-        
+
         # 标记可疑数据
         if suspicious_symbols:
             clean_df = clean_df.with_columns(
@@ -863,7 +863,7 @@ class EnhancedETFKlineValidator:
                 .otherwise(pl.col("is_suspicious"))
                 .alias("is_suspicious")
             )
-        
+
         return clean_df, warnings
 ```
 
@@ -880,16 +880,16 @@ def calc_limit_status(
     """计算涨跌停状态"""
     if volume == 0:
         return "SUSPENDED"
-    
+
     change_pct = (close - prev_close) / prev_close
-    
+
     # 一字板判断：最高=最低=收盘
     if high == low == close:
         if change_pct > 0.09:
             return "LIMIT_UP"
         elif change_pct < -0.09:
             return "LIMIT_DOWN"
-    
+
     return "NORMAL"
 ```
 
@@ -898,7 +898,7 @@ def calc_limit_status(
 ```python
 class DataStalenessChecker:
     """数据时效性检查器"""
-    
+
     def check_staleness(
         self,
         latest_data_date: date,
@@ -906,12 +906,12 @@ class DataStalenessChecker:
         max_staleness_days: int = 2
     ) -> tuple[bool, str]:
         """检查数据是否过期
-        
+
         Returns:
             (is_stale, message)
         """
         staleness_days = (expected_date - latest_data_date).days
-        
+
         if staleness_days <= 0:
             return False, "Data is up to date"
         elif staleness_days <= max_staleness_days:
@@ -927,24 +927,24 @@ class DataStalenessChecker:
 ```python
 class AdjustmentCalculator:
     """复权价格计算器"""
-    
+
     @staticmethod
     def calc_adjusted_price(
         df: pl.DataFrame,
         adjust_type: str = "hfq"
     ) -> pl.DataFrame:
         """计算复权价格
-        
+
         Args:
             df: 包含 open/high/low/close/adj_factor 的 DataFrame
             adjust_type: 'hfq'(后复权) / 'qfq'(前复权) / 'none'
-        
+
         Returns:
             添加了复权价格列的 DataFrame
         """
         if adjust_type == "none":
             return df
-        
+
         if adjust_type == "hfq":
             # 后复权：价格 * 复权因子
             return df.with_columns([
@@ -953,7 +953,7 @@ class AdjustmentCalculator:
                 (pl.col("low") * pl.col("adj_factor")).alias("low_adj"),
                 (pl.col("close") * pl.col("adj_factor")).alias("close_adj"),
             ])
-        
+
         elif adjust_type == "qfq":
             # 前复权：价格 * 复权因子 / 最新复权因子
             latest_adj = df.select(pl.col("adj_factor").last()).item()
@@ -963,7 +963,7 @@ class AdjustmentCalculator:
                 (pl.col("low") * pl.col("adj_factor") / latest_adj).alias("low_adj"),
                 (pl.col("close") * pl.col("adj_factor") / latest_adj).alias("close_adj"),
             ])
-        
+
         raise ValueError(f"Unknown adjust_type: {adjust_type}")
 ```
 
@@ -1058,10 +1058,10 @@ import polars as pl
 
 class DataWarehouse:
     """数据仓库层 - OLAP分析"""
-    
+
     def __init__(self, db_path: str = "data/ditto.duckdb"):
         self.conn = duckdb.connect(db_path)
-    
+
     # 场景1：因子IC分析（多表Join + 窗口函数）
     def analyze_factor_ic(
         self,
@@ -1069,15 +1069,15 @@ class DataWarehouse:
         price_data: pl.DataFrame
     ) -> pl.DataFrame:
         """分析因子IC
-        
+
         SQL比Polars表达式更清晰
         """
         self.conn.register('factors', factor_data)
         self.conn.register('prices', price_data)
-        
+
         return self.conn.execute("""
             WITH forward_returns AS (
-                SELECT 
+                SELECT
                     symbol,
                     date,
                     LEAD(close, 1) OVER (PARTITION BY symbol ORDER BY date) / close - 1 AS return_1d,
@@ -1085,7 +1085,7 @@ class DataWarehouse:
                     LEAD(close, 20) OVER (PARTITION BY symbol ORDER BY date) / close - 1 AS return_20d
                 FROM prices
             )
-            SELECT 
+            SELECT
                 f.date,
                 corr(f.factor_value, fr.return_1d) AS ic_1d,
                 corr(f.factor_value, fr.return_5d) AS ic_5d,
@@ -1096,7 +1096,7 @@ class DataWarehouse:
             GROUP BY f.date
             ORDER BY f.date
         """).pl()
-    
+
     # 场景2：分位数收益分析
     def analyze_quantile_returns(
         self,
@@ -1104,25 +1104,25 @@ class DataWarehouse:
         price_data: pl.DataFrame
     ) -> pl.DataFrame:
         """计算分位数收益"""
-        
+
         self.conn.register('factors', factor_data)
         self.conn.register('prices', price_data)
-        
+
         return self.conn.execute("""
             WITH forward_returns AS (
-                SELECT 
+                SELECT
                     symbol,
                     date,
                     LEAD(close, 1) OVER (PARTITION BY symbol ORDER BY date) / close - 1 AS return_1d
                 FROM prices
             ),
             factor_quantiles AS (
-                SELECT 
+                SELECT
                     f.*,
                     NTILE(5) OVER (PARTITION BY f.date ORDER BY f.factor_value) AS quantile
                 FROM factors f
             )
-            SELECT 
+            SELECT
                 fq.quantile,
                 AVG(fr.return_1d) AS mean_return,
                 STDDEV(fr.return_1d) AS std_return,
@@ -1133,18 +1133,18 @@ class DataWarehouse:
             GROUP BY fq.quantile
             ORDER BY fq.quantile
         """).pl()
-    
+
     # 场景3：回测结果统计
     def analyze_backtest_by_period(
         self,
         trades: pl.DataFrame
     ) -> pl.DataFrame:
         """按时间周期统计回测结果"""
-        
+
         self.conn.register('trades', trades)
-        
+
         return self.conn.execute("""
-            SELECT 
+            SELECT
                 strftime('%Y-%m', date) AS month,
                 COUNT(*) AS num_trades,
                 SUM(pnl) AS total_pnl,
@@ -1156,35 +1156,35 @@ class DataWarehouse:
             GROUP BY month
             ORDER BY month
         """).pl()
-    
+
     # 场景4：数据质量检查
     def detect_price_anomalies(
         self,
         price_data: pl.DataFrame
     ) -> pl.DataFrame:
         """检测价格异常（跳空、成交量异常）"""
-        
+
         self.conn.register('prices', price_data)
-        
+
         return self.conn.execute("""
             WITH price_stats AS (
-                SELECT 
+                SELECT
                     *,
                     close / LAG(close, 1) OVER (PARTITION BY symbol ORDER BY date) - 1 AS pct_change,
                     volume / AVG(volume) OVER (
-                        PARTITION BY symbol 
-                        ORDER BY date 
+                        PARTITION BY symbol
+                        ORDER BY date
                         ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING
                     ) AS volume_ratio
                 FROM prices
             )
-            SELECT 
+            SELECT
                 date,
                 symbol,
                 close,
                 pct_change,
                 volume_ratio,
-                CASE 
+                CASE
                     WHEN ABS(pct_change) > 0.10 THEN 'Price Jump'
                     WHEN volume_ratio > 5 THEN 'Volume Spike'
                     WHEN volume_ratio < 0.1 THEN 'Volume Drop'

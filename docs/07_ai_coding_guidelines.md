@@ -208,14 +208,14 @@ def calc_regime(
     lookback_days: int = 60
 ) -> RegimeResult:
     """计算 Regime
-    
+
     Args:
         trade_date: 交易日期
         lookback_days: 回看天数
-        
+
     Returns:
         RegimeResult: 包含 regime_type 和 regime_score
-        
+
     Raises:
         DataNotFoundError: 当数据不存在时
     """
@@ -447,7 +447,7 @@ def get_factors_pit(
     as_of_date: date
 ) -> pl.DataFrame:
     """PIT 安全的因子查询
-    
+
     Args:
         trade_date: 交易日期
         as_of_date: 数据可知日期（通常等于 trade_date）
@@ -488,7 +488,7 @@ def calc_value_factor(self, trade_date: date):
 def calc_value_factor(self, trade_date: date, as_of_date: date):
     # 正确：只使用当时可知的数据
     valuation = self.db.query("""
-        SELECT * FROM etf_valuation 
+        SELECT * FROM etf_valuation
         WHERE trade_date = ?
           AND report_date <= ?  -- 财报发布日
     """, [trade_date, as_of_date])

@@ -79,15 +79,15 @@ from pathlib import Path
 
 class ResearchDataAccess:
     """研究环境的数据访问（只读）"""
-    
+
     def __init__(self, warehouse_path: str = "../data/warehouse.duckdb"):
         # 只读模式连接
         self.conn = duckdb.connect(warehouse_path, read_only=True)
-    
+
     def query(self, sql: str) -> pl.DataFrame:
         """执行查询"""
         return self.conn.execute(sql).pl()
-    
+
     def get_etf_kline(
         self,
         symbol: str,
@@ -99,13 +99,13 @@ class ResearchDataAccess:
         raw = self.query(f"""
             SELECT k.*, a.adj_factor
             FROM etf_kline_daily k
-            LEFT JOIN etf_adj_factor a 
+            LEFT JOIN etf_adj_factor a
               ON k.symbol = a.symbol AND k.trade_date = a.trade_date
-            WHERE k.symbol = '{symbol}' 
+            WHERE k.symbol = '{symbol}'
               AND k.trade_date BETWEEN '{start_date}' AND '{end_date}'
             ORDER BY k.trade_date
         """)
-        
+
         if adjust == "none":
             return raw
         return self._apply_adjustment(raw, adjust)
@@ -280,16 +280,16 @@ data = ResearchDataAccess()
 # 实验逻辑
 def run_experiment():
     results = []
-    
+
     for window in config["parameters"]["rs_windows"]:
         print(f"Testing window = {window}")
-        
+
         # 计算因子
         factor_df = calc_rs_factor(data, window)
-        
+
         # 计算 IC
         ic_series = calc_rank_ic(factor_df, config["parameters"]["ic_lookback"])
-        
+
         results.append({
             "window": window,
             "ic_mean": ic_series.mean(),
@@ -297,7 +297,7 @@ def run_experiment():
             "ic_ir": ic_series.mean() / ic_series.std() if ic_series.std() > 0 else 0,
             "ic_positive_ratio": (ic_series > 0).mean()
         })
-    
+
     return pl.DataFrame(results)
 
 def calc_rs_factor(data, window):
@@ -312,21 +312,21 @@ def calc_rank_ic(factor_df, lookback):
 if __name__ == "__main__":
     print(f"Starting experiment: {config['experiment']['id']}")
     print(f"Time: {datetime.now()}")
-    
+
     # 运行实验
     results = run_experiment()
-    
+
     # 保存结果
     results_dir = Path("results")
     results_dir.mkdir(exist_ok=True)
-    
+
     results.write_json(results_dir / "metrics.json")
     results.write_csv(results_dir / "metrics.csv")
-    
+
     # 打印摘要
     print("\nResults Summary:")
     print(results)
-    
+
     print(f"\nExperiment completed at {datetime.now()}")
 ```
 
@@ -421,10 +421,10 @@ if __name__ == "__main__":
 class RSFactor(Factor):
     def __init__(self, window: int = 20, benchmark: str = "000300.SH"):
         ...
-    
+
     def calc(self, ctx: ExecutionContext) -> pl.DataFrame:
         """计算 RS 因子
-        
+
         Returns:
             DataFrame with columns: symbol, trade_date, rs_value, rs_zscore
         """
@@ -455,19 +455,19 @@ class RSFactor(Factor):
 
 def test_rs_factor_alignment():
     """验证研究代码与生产代码的 RS 因子结果一致"""
-    
+
     # 研究代码计算
     from research.factors.rs_factor import calc_rs_research
     research_result = calc_rs_research(universe, trade_date)
-    
+
     # 生产代码计算
     from ditto.engine.factor_engine import RSFactor
     production_result = RSFactor(window=20).calc(ctx)
-    
+
     # 对齐验证
     merged = research_result.join(production_result, on=["symbol", "trade_date"])
     diff = (merged["rs_research"] - merged["rs_production"]).abs().max()
-    
+
     assert diff < 1e-6, f"RS factor alignment failed: max diff = {diff}"
 ```
 
@@ -522,19 +522,19 @@ plt.style.use('seaborn-v0_8-whitegrid')
 def plot_ic_series(ic_series, title):
     """绘制 IC 时序图"""
     fig, ax = plt.subplots(figsize=(12, 6))
-    
-    ax.bar(ic_series.index, ic_series.values, 
+
+    ax.bar(ic_series.index, ic_series.values,
            color=['green' if v > 0 else 'red' for v in ic_series.values],
            alpha=0.7)
     ax.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
-    ax.axhline(y=ic_series.mean(), color='blue', linestyle='--', 
+    ax.axhline(y=ic_series.mean(), color='blue', linestyle='--',
                label=f'Mean: {ic_series.mean():.3f}')
-    
+
     ax.set_title(title)
     ax.set_xlabel('Date')
     ax.set_ylabel('Rank IC')
     ax.legend()
-    
+
     plt.tight_layout()
     return fig
 

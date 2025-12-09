@@ -97,11 +97,14 @@ pixi run server         # 启动开发服务器
 ditto/
 ├── apps/
 │   ├── server/                 # FastAPI 后端服务
-│   │   └── src/
-│   │       ├── api/           # API 路由
-│   │       ├── services/      # 应用服务
-│   │       ├── models/        # 数据模型
-│   │       └── main.py        # 启动入口
+│   │   ├── src/
+│   │   │   ├── api/           # API 路由
+│   │   │   ├── services/      # 应用服务
+│   │   │   ├── models/        # 数据模型
+│   │   │   └── main.py        # 启动入口
+│   │   └── tests/             # 服务器测试
+│   │       ├── unit/          # 单元测试
+│   │       └── integration/   # 集成测试
 │   └── web/                   # Next.js 前端 (Phase 1+)
 │       └── src/
 │           ├── app/           # 页面路由
@@ -109,23 +112,28 @@ ditto/
 │           └── stores/        # 状态管理
 ├── packages/
 │   ├── core/                  # 核心业务逻辑
-│   │   └── src/
-│   │       ├── data/          # 数据访问层
-│   │       ├── engine/        # 核心引擎
-│   │       ├── strategy/      # 策略实现
-│   │       └── portfolio/     # 组合管理
-│   └── foundation/                # 共享模块
-│       └── src/
-│           ├── config/        # 配置管理
-│           ├── types/         # 类型定义
-│           └── contracts/     # 数据契约
+│   │   ├── src/
+│   │   │   ├── data/          # 数据访问层
+│   │   │   ├── engine/        # 核心引擎
+│   │   │   ├── strategy/      # 策略实现
+│   │   │   └── portfolio/     # 组合管理
+│   │   └── tests/             # 核心模块测试
+│   │       └── unit/          # 单元测试
+│   └── foundation/            # 共享模块
+│       ├── src/
+│       │   ├── config/        # 配置管理
+│       │   ├── types/         # 类型定义
+│       │   └── contracts/     # 数据契约
+│       └── tests/             # 基础模块测试
+│           └── unit/          # 单元测试
 ├── data/                      # 数据存储
 │   ├── duckdb/               # 分析型数据库
 │   └── sqlite/               # 事务型数据库
 ├── logs/                      # 日志文件
 ├── docs/                      # 项目文档
 ├── scripts/                   # 工具脚本
-├── tests/                     # 测试文件
+├── tests/                     # E2E 测试和集成测试
+│   └── e2e/                   # 端到端测试
 ├── .env.example               # 环境变量模板
 ├── pixi.toml                 # 依赖配置
 ├── pyproject.toml            # Python 项目配置
@@ -237,25 +245,53 @@ MAX_SINGLE_POSITION_WEIGHT=0.15
 
 ## 测试
 
+### Monorepo 测试目录结构
+
+项目采用 Monorepo 最佳实践，测试文件位于各个模块内部：
+
+```
+ditto/
+├── apps/server/tests/           # 服务器应用测试
+│   ├── unit/                   # 单元测试
+│   └── integration/            # 集成测试
+├── packages/core/tests/         # 核心模块测试
+│   └── unit/                   # 单元测试
+├── packages/foundation/tests/   # 基础模块测试
+│   └── unit/                   # 单元测试
+└── tests/                       # E2E 测试和集成测试
+    └── e2e/                    # 端到端测试
+```
+
 ### 运行测试
 
 ```bash
 # 运行所有测试
 pixi run test
 
-# 运行特定测试
-pixi run test tests/test_data.py
+# 运行特定模块测试
+pixi run test packages/core/tests/unit/
+pixi run test apps/server/tests/
+
+# 运行特定测试文件
+pixi run test packages/core/tests/unit/test_data_service.py
+
+# 运行特定标记的测试
+pixi run test -m unit          # 只运行单元测试
+pixi run test -m integration   # 只运行集成测试
+pixi run test -m e2e          # 只运行端到端测试
+pixi run test -m "not slow"   # 跳过慢速测试
 
 # 生成覆盖率报告
-pixi run test --cov=src --cov-report=html
+pixi run test --cov=packages --cov=apps --cov-report=html
 ```
 
 ### 测试分类
 
-1. **单元测试**: 核心模块和函数
-2. **集成测试**: 端到端流程测试
-3. **对齐测试**: Fast vs Production 回测引擎对齐
-4. **Golden Dataset 测试**: 基于固定数据集的回归测试
+1. **单元测试**: 各模块内部的功能测试
+2. **集成测试**: 模块间的接口测试
+3. **端到端测试**: 完整业务流程测试
+4. **对齐测试**: Fast vs Production 回测引擎对齐
+5. **Golden Dataset 测试**: 基于固定数据集的回归测试
 
 ## 文档
 

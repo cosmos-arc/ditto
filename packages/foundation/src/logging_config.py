@@ -19,7 +19,7 @@ class LogConfig(BaseModel):
     """Logging configuration model."""
 
     level: str = "INFO"
-    format: str = (
+    log_format: str = (
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
         "<level>{level: <8}</level> | "
         "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
@@ -95,6 +95,7 @@ def setup_logging(
     Set up logging configuration for the application.
 
     Args:
+    ----
         config: Logging configuration
         log_dir: Directory for log files
         env: Environment (development, testing, production)
@@ -114,7 +115,7 @@ def setup_logging(
 
     # Console handler
     if config.enable_console:
-        console_format = config.format
+        console_format = config.log_format
         if env == "production":
             # Simpler format for production
             console_format = (
@@ -154,7 +155,7 @@ def setup_logging(
             # Regular text format
             logger.add(
                 log_file,
-                format=config.format,
+                format=config.log_format,
                 level=config.level,
                 rotation=config.rotation,
                 retention=config.retention,
@@ -166,7 +167,7 @@ def setup_logging(
         logger.add(
             error_log_file,
             level="ERROR",
-            format=config.format,
+            format=config.log_format,
             rotation=config.rotation,
             retention=config.retention,
             compression=config.compression,
@@ -187,9 +188,11 @@ def get_logger(name: str) -> StructuredLogger:
     Get a structured logger instance.
 
     Args:
+    ----
         name: Logger name (usually module name)
 
     Returns:
+    -------
         StructuredLogger instance
 
     """

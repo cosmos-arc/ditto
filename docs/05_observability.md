@@ -37,13 +37,13 @@ def setup_logging(
     retention: str = "30 days"
 ):
     """配置日志系统"""
-    
+
     log_path = Path(log_dir)
     log_path.mkdir(parents=True, exist_ok=True)
-    
+
     # 移除默认 handler
     logger.remove()
-    
+
     # 控制台输出（带颜色）
     logger.add(
         sys.stderr,
@@ -54,7 +54,7 @@ def setup_logging(
                "<level>{message}</level>",
         colorize=True
     )
-    
+
     # 文件输出（结构化 JSON）
     logger.add(
         log_path / "ditto_{time:YYYYMMDD}.log",
@@ -65,7 +65,7 @@ def setup_logging(
         compression="gz",
         serialize=True  # JSON 格式
     )
-    
+
     # 错误日志单独文件
     logger.add(
         log_path / "error_{time:YYYYMMDD}.log",
@@ -74,7 +74,7 @@ def setup_logging(
         retention="90 days",
         compression="gz"
     )
-    
+
     logger.info("logging_initialized", log_dir=str(log_path), level=level)
 ```
 
@@ -160,11 +160,11 @@ from typing import Optional
 @dataclass
 class DailyMetrics:
     """每日业务指标"""
-    
+
     # 时间
     trade_date: date
     calc_time: datetime
-    
+
     # 组合指标
     portfolio_value: float
     daily_return: float
@@ -172,21 +172,21 @@ class DailyMetrics:
     current_drawdown: float
     drawdown_3d: float              # 3日回撤（速度检测）
     peak_value: float
-    
+
     # 持仓指标
     total_position_ratio: float
     position_count: int
     max_single_position: float
-    
+
     # Regime
     regime_type: str
     regime_score: float
-    
+
     # 成本
     daily_cost: float
     cumulative_cost: float
     cost_ratio: float               # 成本/毛收益
-    
+
     # 风控
     kill_switch_level: int
     risk_alerts_count: int
@@ -194,21 +194,21 @@ class DailyMetrics:
 @dataclass
 class DataQualityMetrics:
     """数据质量指标"""
-    
+
     trade_date: date
-    
+
     # 完整性
     expected_records: int
     actual_records: int
     completeness_rate: float
-    
+
     # 准确性
     cross_validation_errors: int
     suspicious_records: int
-    
+
     # 时效性
     data_delay_hours: float
-    
+
     # 异常
     price_jump_count: int
     missing_adj_factor_count: int
@@ -216,20 +216,20 @@ class DataQualityMetrics:
 @dataclass
 class FactorHealthMetrics:
     """因子健康度指标"""
-    
+
     factor_name: str
     calc_date: date
-    
+
     # IC 指标
     ic_1m: float
     ic_3m: float
     ic_6m: float
     ic_12m: float
     ic_ir: float
-    
+
     # 状态
     health_status: str              # 'HEALTHY'/'CAUTION'/'WARNING'/'CRITICAL'
-    
+
     # 趋势
     ic_trend: str                   # 'IMPROVING'/'STABLE'/'DECLINING'
 ```
@@ -240,24 +240,24 @@ class FactorHealthMetrics:
 @dataclass
 class SystemMetrics:
     """系统运行指标"""
-    
+
     timestamp: datetime
-    
+
     # 数据库
     duckdb_size_mb: float
     sqlite_size_mb: float
     duckdb_query_count: int
     duckdb_avg_query_ms: float
-    
+
     # API
     api_request_count: int
     api_avg_response_ms: float
     api_error_count: int
-    
+
     # 调度
     scheduler_job_count: int
     scheduler_failed_jobs: int
-    
+
     # 资源
     memory_usage_mb: float
     disk_free_gb: float
@@ -340,7 +340,7 @@ ALERT_RULES = [
         condition=lambda m: m.kill_switch_level >= 3,
         message_template="🚨 紧急：Kill Switch Level 3 触发！回撤 {drawdown:.1%}，已强制清仓"
     ),
-    
+
     # P1 - 严重
     AlertRule(
         name="kill_switch_level2",
@@ -356,7 +356,7 @@ ALERT_RULES = [
         condition=lambda m: m.data_source_status == "ALL_FAILED",
         message_template="⚠️ 严重：所有数据源不可用，已暂停数据更新"
     ),
-    
+
     # P2 - 警告
     AlertRule(
         name="kill_switch_level1",
@@ -379,7 +379,7 @@ ALERT_RULES = [
         condition=lambda m: any(f.health_status == "CRITICAL" for f in m.factor_health),
         message_template="⚡ 警告：因子 {factor_name} IC 为负，建议移除"
     ),
-    
+
     # P3 - 通知
     AlertRule(
         name="data_source_degraded",
@@ -409,17 +409,17 @@ import httpx
 
 class AlertService:
     """告警服务"""
-    
+
     def __init__(self, config):
         self.config = config
         self.telagram_webhook = config.telagram_webhook
         self.dingtalk_webhook = config.dingtalk_webhook
         self.email_config = config.email
-    
+
     async def send_alert(self, rule: AlertRule, context: dict):
         """发送告警"""
         message = rule.message_template.format(**context)
-        
+
         logger.log(
             "CRITICAL" if rule.level in ("P0", "P1") else "WARNING",
             f"alert_triggered: {rule.name}",
@@ -427,7 +427,7 @@ class AlertService:
             alert_name=rule.name,
             message=message
         )
-        
+
         # 根据级别选择通知方式
         if rule.level == "P0":
             await self._send_all_channels(message, urgent=True)
@@ -439,41 +439,41 @@ class AlertService:
             await self._send_feishu(message)
             await self._send_dingtalk(message)
         # P3 只记录日志
-    
+
     async def _send_telagram(self, message: str, urgent: bool = False):
         """发送到Telagram"""
         if not self.telagram_webhook:
             return
-        
+
         payload = {
             "msg_type": "text",
             "content": {"text": message}
         }
-        
+
         async with httpx.AsyncClient() as client:
             await client.post(self.telagram_webhook, json=payload, timeout=10)
-    
+
     async def _send_dingtalk(self, message: str, urgent: bool = False):
         """发送到钉钉"""
         if not self.dingtalk_webhook:
             return
-        
+
         payload = {
             "msgtype": "text",
             "text": {"content": message}
         }
-        
+
         if urgent:
             payload["at"] = {"isAtAll": True}
-        
+
         async with httpx.AsyncClient() as client:
             await client.post(self.dingtalk_webhook, json=payload, timeout=10)
-    
+
     async def _send_email(self, message: str):
         """发送邮件"""
         # 实现邮件发送
         pass
-    
+
     async def _send_all_channels(self, message: str, urgent: bool = False):
         """发送到所有渠道"""
         await self._send_feishu(message, urgent)
@@ -504,7 +504,7 @@ async def healthz():
 async def health():
     """详细健康检查"""
     checks = await health_service.check_all()
-    
+
     return {
         "status": checks.overall_status,
         "timestamp": datetime.now().isoformat(),
@@ -596,10 +596,10 @@ from loguru import logger
 
 class AuditLogger:
     """审计日志记录器"""
-    
+
     def __init__(self, db_adapter):
         self.db = db_adapter
-    
+
     def log(
         self,
         event_type: str,
@@ -611,10 +611,10 @@ class AuditLogger:
         **details
     ):
         """记录审计日志"""
-        
+
         # 写入数据库
         self.db.execute("""
-            INSERT INTO audit_log 
+            INSERT INTO audit_log
             (event_type, event_time, operator, target, old_value, new_value, reason, details)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
@@ -627,7 +627,7 @@ class AuditLogger:
             reason,
             json.dumps(details) if details else None
         ))
-        
+
         # 同时写入日志文件
         logger.info(
             f"audit_{event_type}",
@@ -734,7 +734,7 @@ if (-not (Test-Path $archiveDir)) {
 }
 
 # 归档旧日志
-Get-ChildItem "$logDir/*.log" | 
+Get-ChildItem "$logDir/*.log" |
     Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$cutoffDays) } |
     ForEach-Object {
         $archiveName = "$archiveDir/$($_.BaseName)_$(Get-Date -Format 'yyyyMM').gz"

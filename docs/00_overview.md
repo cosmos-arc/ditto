@@ -137,7 +137,7 @@ packages/
     src/
       data/          # DataService / DuckDBAdapter / SQLiteAdapter
       indicators/    # technical_indicators 技术指标MA、EMA、RSI等
-      factor/        # factor_analyzer 
+      factor/        # factor_analyzer
       engine/        # Regime/Factor/Backtest/Risk 引擎
       strategy/      # 策略抽象 & ETF 行业轮动策略实现
       portfolio/     # 组合管理 & 多策略协调
@@ -186,7 +186,7 @@ class Instrument:
     list_date: date
     delist_date: Optional[date]
     is_active: bool
-    
+
 @dataclass
 class StrategyInstance:
     """策略实例"""
@@ -198,7 +198,7 @@ class StrategyInstance:
     config: dict
     created_at: date
     last_updated: date
-    
+
     def can_trade(self) -> bool:
         """是否可以交易"""
         return self.lifecycle_state in (
@@ -215,7 +215,7 @@ class Portfolio:
     strategies: list[StrategyInstance]
     total_capital: float
     risk_budget: "RiskBudget"
-    
+
 @dataclass
 class RiskBudget:
     """风险预算"""
@@ -310,11 +310,11 @@ RiskBudget ◄──────────────── Order (N)
 ```python
 class DataService:
     """数据服务 - 统一数据访问接口"""
-    
+
     def __init__(self, duckdb_path: str, sqlite_path: str):
         self.duckdb = DuckDBAdapter(duckdb_path)
         self.sqlite = SQLiteAdapter(sqlite_path)
-    
+
     # === K线数据（动态复权）===
     def get_kline(
         self,
@@ -327,15 +327,15 @@ class DataService:
         raw = self.duckdb.query("""
             SELECT k.*, a.adj_factor
             FROM etf_kline_daily k
-            LEFT JOIN etf_adj_factor a 
+            LEFT JOIN etf_adj_factor a
               ON k.symbol = a.symbol AND k.trade_date = a.trade_date
             WHERE k.symbol = ? AND k.trade_date BETWEEN ? AND ?
         """, [symbol, start_date, end_date])
-        
+
         if adjust == "none":
             return raw
         return self._apply_adjustment(raw, adjust)
-    
+
     # === 因子数据（PIT 查询）===
     def get_factors_pit(
         self,
@@ -344,7 +344,7 @@ class DataService:
         as_of_date: date
     ) -> pl.DataFrame:
         """获取因子数据（Point-in-Time 安全）
-        
+
         Args:
             symbols: 标的列表
             trade_date: 交易日期
@@ -356,12 +356,12 @@ class DataService:
               AND trade_date = ?
               AND knowledge_date <= ?
         """, [symbols, trade_date, as_of_date])
-    
+
     # === Regime 数据 ===
     def get_regime(self, trade_date: date) -> dict:
         """获取指定日期的 Regime"""
         pass
-    
+
     # === 涨跌停状态 ===
     def get_limit_status(
         self,
@@ -369,7 +369,7 @@ class DataService:
         trade_date: date
     ) -> str:
         """获取涨跌停状态
-        
+
         Returns:
             'NORMAL' / 'LIMIT_UP' / 'LIMIT_DOWN' / 'SUSPENDED'
         """
@@ -378,7 +378,7 @@ class DataService:
             FROM etf_kline_daily
             WHERE symbol = ? AND trade_date = ?
         """, [symbol, trade_date])
-        
+
         if row["status"] == "SUSPENDED" or row["volume"] == 0:
             return "SUSPENDED"
         if row["high"] == row["low"] == row["close"]:
@@ -412,11 +412,11 @@ class DataService:
 ```python
 class RegimeSvc:
     """Regime 服务"""
-    
+
     def get_current_regime(self) -> RegimeResult:
         """获取当前 Regime"""
         pass
-    
+
     def get_regime_history(
         self,
         start_date: date,
@@ -424,7 +424,7 @@ class RegimeSvc:
     ) -> list[RegimeResult]:
         """获取 Regime 历史"""
         pass
-    
+
     def recalc_regime(self, trade_date: date) -> None:
         """重新计算指定日期的 Regime"""
         pass
@@ -435,14 +435,14 @@ class RegimeSvc:
 ```python
 class RotationSvc:
     """行业轮动服务"""
-    
+
     def get_rotation_scores(
         self,
         trade_date: date
     ) -> list[RotationScore]:
         """获取轮动得分"""
         pass
-    
+
     def generate_rebalance_plan(
         self,
         trade_date: date,
@@ -451,31 +451,31 @@ class RotationSvc:
         """生成调仓计划"""
         # 1. 获取 Regime
         regime = self.regime_svc.get_current_regime()
-        
+
         # 2. 获取轮动得分
         scores = self.get_rotation_scores(trade_date)
-        
+
         # 3. 选择 TopN
         top_n = self._select_top_n(scores, regime)
-        
+
         # 4. 计算目标权重
         target_weights = self._calc_target_weights(top_n, regime)
-        
+
         # 5. Pre-Trade 风控检查
         risk_decision = self.risk_svc.pre_trade_check(
-            target_weights, 
+            target_weights,
             current_positions
         )
         if risk_decision.action == "BLOCK":
             raise RiskBlockedException(risk_decision.reason)
-        
+
         # 6. 生成调仓计划
         plan = self._generate_plan(
             target_weights,
             current_positions,
             trade_date
         )
-        
+
         return plan
 ```
 
@@ -484,15 +484,15 @@ class RotationSvc:
 ```python
 class BacktestSvc:
     """回测服务"""
-    
+
     def run_fast(self, config: BacktestConfig) -> BacktestResult:
         """运行快速回测（向量化）"""
         pass
-    
+
     def run_production(self, config: BacktestConfig) -> BacktestResult:
         """运行生产回测（事件驱动）"""
         pass
-    
+
     def run_alignment_test(
         self,
         config: BacktestConfig
@@ -500,7 +500,7 @@ class BacktestSvc:
         """运行对齐测试"""
         fast_result = self.run_fast(config)
         prod_result = self.run_production(config)
-        
+
         return AlignmentReport(
             return_diff=abs(fast_result.total_return - prod_result.total_return),
             drawdown_diff=abs(fast_result.max_drawdown - prod_result.max_drawdown),
@@ -519,15 +519,15 @@ class BacktestSvc:
 ```python
 class RiskSvc:
     """风控服务"""
-    
+
     def get_current_metrics(self) -> RiskMetrics:
         """获取当前风险指标"""
         pass
-    
+
     def check_kill_switch(self) -> KillSwitchStatus:
         """检查 Kill Switch 状态"""
         pass
-    
+
     def pre_trade_check(
         self,
         target_weights: dict[str, float],
@@ -535,7 +535,7 @@ class RiskSvc:
     ) -> RiskDecision:
         """下单前风控检查"""
         pass
-    
+
     def post_trade_check(self) -> RiskDecision:
         """盘后风控检查"""
         pass
@@ -546,15 +546,15 @@ class RiskSvc:
 ```python
 class HeartbeatSvc:
     """心跳服务 - 证明系统还活着"""
-    
+
     def __init__(self, config: HeartbeatConfig):
         self.config = config
         self.targets = config.targets  # Telagram/钉钉/邮件
-    
+
     async def send_heartbeat(self) -> None:
         """发送心跳"""
         status = self._collect_system_status()
-        
+
         for target in self.targets:
             try:
                 await target.send(
@@ -563,7 +563,7 @@ class HeartbeatSvc:
                 )
             except Exception as e:
                 logger.error("heartbeat_send_failed", target=target.name, error=str(e))
-    
+
     def _collect_system_status(self) -> SystemStatus:
         """收集系统状态"""
         return SystemStatus(
@@ -580,15 +580,15 @@ class HeartbeatSvc:
 ```python
 class FactorHealthSvc:
     """因子健康度服务"""
-    
+
     def get_factor_health(self, factor_name: str) -> FactorHealthMetrics:
         """获取单个因子健康度"""
         pass
-    
+
     def get_all_factor_health(self) -> list[FactorHealthMetrics]:
         """获取所有因子健康度"""
         pass
-    
+
     def check_factor_degradation(self) -> list[FactorAlert]:
         """检查因子退化"""
         alerts = []
@@ -774,37 +774,37 @@ from abc import ABC, abstractmethod
 
 class BrokerAdapter(ABC):
     """券商适配器接口"""
-    
+
     @abstractmethod
     async def connect(self) -> bool:
         """连接券商"""
         pass
-    
+
     @abstractmethod
     async def disconnect(self) -> None:
         """断开连接"""
         pass
-    
+
     @abstractmethod
     async def query_positions(self) -> list[Position]:
         """查询持仓（Source of Truth）"""
         pass
-    
+
     @abstractmethod
     async def query_account(self) -> AccountInfo:
         """查询账户信息"""
         pass
-    
+
     @abstractmethod
     async def send_order(self, order: Order) -> OrderResult:
         """发送订单"""
         pass
-    
+
     @abstractmethod
     async def cancel_order(self, order_id: str) -> bool:
         """撤销订单"""
         pass
-    
+
     @abstractmethod
     async def query_order(self, order_id: str) -> OrderStatus:
         """查询订单状态"""

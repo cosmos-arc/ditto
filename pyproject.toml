@@ -110,13 +110,15 @@ ignore = [
     "D415", # 文档字符串首行应以句号、问号或感叹号结尾
 ]
 
-# 允许自动修复被认为是“不安全”的规则（例如 pyupgrade 的一些重构）。
+# 允许自动修复被认为是"不安全"的规则（例如 pyupgrade 的一些重构）。
 unfixable = []
 
 # 对特定文件类型忽略特定规则。
 [tool.ruff.lint.per-file-ignores]
 # 测试文件通常允许使用 assert 和魔法数值。
 "tests/**/*.py" = ["S101", "PLR2004", "T201"]
+"packages/*/tests/**/*.py" = ["S101", "PLR2004", "T201"]
+"apps/*/tests/**/*.py" = ["S101", "PLR2004", "T201"]
 # __init__.py 文件通常作为包的标记，可以没有文档字符串。
 "__init__.py" = ["D104"]
 
@@ -224,10 +226,15 @@ exclude = [
 # ===================================================================
 [tool.pytest.ini_options]
 minversion = "7.0"
-testpaths = ["tests"]
+# Monorepo测试目录结构
+testpaths = [
+    "packages/*/tests",
+    "apps/*/tests",
+    "tests"
+]
 pythonpath = [
     "packages/core/src",
-    "packages/shared/src",
+    "packages/foundation/src",
     "apps/server/src"
 ]
 
@@ -236,8 +243,10 @@ filterwarnings = ["error"]
 
 # 注册自定义标记，配合 --strict-markers 使用
 markers = [
-    "slow: 标记运行缓慢的测试 (可使用 -m 'not slow' 跳过)",
+    "unit: 标记单元测试",
     "integration: 标记集成测试",
+    "e2e: 标记端到端测试",
+    "slow: 标记运行缓慢的测试 (可使用 -m 'not slow' 跳过)",
     "smoke: 标记冒烟测试",
 ]
 
@@ -247,13 +256,13 @@ log_cli_level = "INFO"
 
 # 命令行附加选项，用于增强测试流程。
 addopts = [
-    "-ra",                       # 显示除“通过”之外所有测试的详细摘要
+    "-ra",                       # 显示除"通过"之外所有测试的详细摘要
     "-q",                        # 减少输出的冗余信息，使报告更简洁
-    "-n",
-    "auto",                      # [新增] 使用所有可用 CPU 核心并行测试，需要 pytest-xdist
+    # "-n", "auto",               # 使用所有可用 CPU 核心并行测试，需要 pytest-xdist
     "--strict-markers",          # 对未在配置中注册的 marker 标记报错
     "--strict-config",           # 对配置文件中的拼写错误或无效键报错
     "--cov=packages/",            # 指定计算代码覆盖率的目录
+    "--cov=apps/",                # 覆盖应用层代码
     "--cov-report=term-missing", # 在终端报告中明确显示未被覆盖的代码行
     "--cov-report=html",         # 同时生成 HTML 报告，便于可视化分析
     "--cov-fail-under=80",       # 如果代码覆盖率低于 80%，则测试流程失败

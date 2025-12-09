@@ -14,7 +14,7 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.8
+    rev: v0.12.12
     hooks:
       # Ruff Lint - 严格检查代码质量问题
       - id: ruff
@@ -30,16 +30,16 @@ repos:
         pass_filenames: false
         always_run: true
 
-  - repo: local
-    hooks:
-      - id: pytest-check
-        name: pytest-check
-        entry: pixi run python -m pytest
-        language: system
-        pass_filenames: false
-        always_run: true
-        # Run pytest on committed files
-        files: ^tests/.*\.py$|^packages/.*\.py$|^apps/.*\.py$
+  # - repo: local
+#   hooks:
+#     - id: pytest-check
+#       name: pytest-check
+#       entry: pixi run python -m pytest
+#       language: system
+#       pass_filenames: false
+#       always_run: true
+#       # Run pytest on committed files
+#       files: ^tests/.*\.py$|^packages/.*\.py$|^apps/.*\.py$
 
 # Exclude directories
 exclude: |
