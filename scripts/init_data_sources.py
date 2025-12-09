@@ -12,9 +12,12 @@ import traceback
 from datetime import date, timedelta
 
 try:
-    from data.clients.factory import DataSourceFactory, DataSourceType
     from ditto_foundation.config.settings import get_settings
-    from data.service import DataService
+    from ditto_foundation.data import (
+        DataCollector,
+        DataService,
+    )
+    from ditto_foundation.data.clients.factory import DataSourceFactory, DataSourceType
 except ImportError as e:
     print(f"导入失败: {e}")
     print("请确保在 pixi 环境中运行: pixi run python scripts/init_data_sources.py")
@@ -208,7 +211,7 @@ async def main() -> None:
         settings = get_settings()
 
         # Check if Tushare API key is configured
-        if not settings.tushare.api_key:
+        if not settings.data_source.tushare_token:
             logger.error(
                 "Tushare API key not configured. Please set TUSHARE_API_KEY in .env"
             )
@@ -218,12 +221,15 @@ async def main() -> None:
         data_factory = DataSourceFactory(
             primary_source=DataSourceType.TUSHARE,
             backup_sources=[DataSourceType.AKSHARE],
-            tushare_api_key=settings.tushare.api_key,
+            tushare_api_key=settings.data_source.tushare_token,
             tushare_pro_account=settings.tushare.pro_account,
         )
 
         # Initialize data service
-        data_service = DataService()
+        data_service = DataService(
+            duckdb_path=settings.database.duckdb_path,
+            sqlite_path=settings.database.sqlite_path,
+        )
 
         # Initialize data collector
         collector = DataCollector(
