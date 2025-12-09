@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import duckdb
-
 from data.adapters.duckdb_adapter import DuckDBAdapter
 
 
