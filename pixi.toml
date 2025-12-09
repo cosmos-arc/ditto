@@ -72,11 +72,11 @@ cmd = ["pytest", "tests/", "-v"]
 
 [tasks.lint]
 description = "代码检查"
-cmd = ["ruff", "check", "src/", "tests/"]
+cmd = ["ruff", "check", '.']
 
 [tasks.format]
 description = "格式化代码"
-cmd = ["ruff", "format", "src/", "tests/"]
+cmd = ["ruff", "format", "."]
 
 [feature.dev.dependencies]
 pre-commit = "*"
