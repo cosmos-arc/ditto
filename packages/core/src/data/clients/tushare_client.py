@@ -24,9 +24,9 @@ from .base_client import BaseClient, EtfInfo
 class TushareClient(BaseClient):
     """Tushare 数据源客户端."""
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
-        初始化 Tushare 客户端。
+        初始化 Tushare 客户端。.
 
         Args:
             config: 配置字典，需要包含 token
@@ -52,16 +52,16 @@ class TushareClient(BaseClient):
         ts.set_token(self.token)
 
     def connect(self) -> None:
-        """建立 Tushare 连接（设置 token）。"""
+        """建立 Tushare 连接（设置 token）。."""
         # Tushare 使用 token 认证，无需额外连接
         pass
 
     def disconnect(self) -> None:
-        """断开 Tushare 连接。"""
+        """断开 Tushare 连接。."""
         pass
 
     def _rate_limit(self) -> None:
-        """实现请求频率限制。"""
+        """实现请求频率限制。."""
         current_time = time.time()
         elapsed = current_time - self.last_request_time
 
@@ -71,7 +71,7 @@ class TushareClient(BaseClient):
         self.last_request_time = time.time()
 
     def get_etf_list(self) -> list[EtfInfo]:
-        """获取 ETF 列表。"""
+        """获取 ETF 列表。."""
         self._rate_limit()
 
         # 获取基金基本信息
@@ -109,7 +109,7 @@ class TushareClient(BaseClient):
         self, ts_code: str, start_date: date, end_date: date
     ) -> pl.DataFrame:
         """
-        获取日线数据。
+        获取日线数据。.
 
         Args:
             ts_code: 股票代码
@@ -159,7 +159,7 @@ class TushareClient(BaseClient):
         self, ts_code: str, start_date: date, end_date: date
     ) -> pl.DataFrame:
         """
-        获取复权因子。
+        获取复权因子。.
 
         Args:
             ts_code: 股票代码
@@ -189,7 +189,7 @@ class TushareClient(BaseClient):
 
     def validate_data_quality(self, ts_code: str) -> dict[str, Any]:
         """
-        验证数据质量。
+        验证数据质量。.
 
         Args:
             ts_code: 股票代码

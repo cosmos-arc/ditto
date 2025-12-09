@@ -12,9 +12,9 @@ from .quality_service import DataQualityService
 from .service import DataService
 
 __all__ = [
+    "DataCollector",
+    "DataQualityService",
     "DataService",
     "DuckDBAdapter",
     "SQLiteAdapter",
-    "DataQualityService",
-    "DataCollector",
 ]

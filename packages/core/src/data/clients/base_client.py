@@ -1,6 +1,4 @@
-"""
-Base client for data source integration.
-"""
+"""Base client for data source integration."""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -26,7 +24,7 @@ class EtfInfo:
 class BaseClient(ABC):
     """Abstract base class for data source clients."""
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         """Initialize client with configuration."""
         self.config = config or {}
 

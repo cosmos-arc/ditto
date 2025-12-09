@@ -22,11 +22,11 @@ from .base_client import BaseClient, EtfInfo
 
 
 class AkShareClient(BaseClient):
-    """AkShare 数据源客户端。"""
+    """AkShare 数据源客户端。."""
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
-        初始化 AkShare 客户端。
+        初始化 AkShare 客户端。.
 
         Args:
             config: 配置字典
@@ -46,16 +46,16 @@ class AkShareClient(BaseClient):
         self.last_request_time = 0
 
     def connect(self) -> None:
-        """建立 AkShare 连接。"""
+        """建立 AkShare 连接。."""
         # AkShare 是纯 Python 库，无需连接
         pass
 
     def disconnect(self) -> None:
-        """断开 AkShare 连接。"""
+        """断开 AkShare 连接。."""
         pass
 
     def _rate_limit(self) -> None:
-        """实现请求频率限制。"""
+        """实现请求频率限制。."""
         current_time = time.time()
         elapsed = current_time - self.last_request_time
 
@@ -65,7 +65,7 @@ class AkShareClient(BaseClient):
         self.last_request_time = time.time()
 
     def get_etf_list(self) -> list[EtfInfo]:
-        """获取 ETF 列表。"""
+        """获取 ETF 列表。."""
         self._rate_limit()
 
         try:
@@ -108,7 +108,7 @@ class AkShareClient(BaseClient):
         self, ts_code: str, start_date: date, end_date: date
     ) -> pl.DataFrame:
         """
-        获取日线数据。
+        获取日线数据。.
 
         Args:
             ts_code: 股票代码（例如：sh000001）
@@ -133,7 +133,7 @@ class AkShareClient(BaseClient):
             if symbol.startswith(("SH", "SZ")):
                 # 去掉前缀，只保留数字
                 code = symbol[2:]
-                market = "sh" if symbol.startswith("SH") else "sz"
+                "sh" if symbol.startswith("SH") else "sz"
 
                 df = ak.stock_zh_a_hist(
                     symbol=code,
@@ -235,7 +235,7 @@ class AkShareClient(BaseClient):
         self, ts_code: str, start_date: date, end_date: date
     ) -> pl.DataFrame:
         """
-        获取复权因子。
+        获取复权因子。.
 
         注意：AkShare 主要提供复权后的价格，复权因子需要计算。
 
@@ -274,7 +274,7 @@ class AkShareClient(BaseClient):
 
     def validate_data_quality(self, ts_code: str) -> dict[str, Any]:
         """
-        验证数据质量。
+        验证数据质量。.
 
         Args:
             ts_code: 股票代码
