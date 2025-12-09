@@ -9,7 +9,12 @@ __version__ = "0.1.0"
 from .adapters import DatabaseAdapter, DuckDBAdapter, SQLiteAdapter
 from .collector import DataCollector
 from .constants import DatabaseType, DataSourceType
-from .datasources import AkShareDataSource, DataSource, DataSourceFactory, TushareDataSource
+from .datasources import (
+    AkShareDataSource,
+    DataSource,
+    DataSourceFactory,
+    TushareDataSource,
+)
 from .quality_service import DataQualityService
 from .service import DataService
 

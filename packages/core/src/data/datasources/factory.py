@@ -1,24 +1,24 @@
 """Factory for creating data source instances."""
 
-from typing import Any, Dict, Type
+from typing import Any
 
+from ..constants import DataSourceType
 from .akshare import AkShareDataSource
 from .base import DataSource
 from .tushare import TushareDataSource
-from ..constants import DataSourceType
 
 
 class DataSourceFactory:
     """Factory for creating data source instances."""
 
     # Registry of available data sources
-    _sources: Dict[str, Type[DataSource]] = {
+    _sources: dict[str, type[DataSource]] = {
         DataSourceType.TUSHARE: TushareDataSource,
         DataSourceType.AKSHARE: AkShareDataSource,
     }
 
     @classmethod
-    def create(cls, source_type: str, config: Dict[str, Any] | None = None) -> DataSource:
+    def create(cls, source_type: str, config: dict[str, Any] | None = None) -> DataSource:
         """
         Create a data source instance.
 
@@ -32,6 +32,7 @@ class DataSourceFactory:
         Raises:
             ValueError: If source_type is not supported
             ImportError: If required dependencies are not installed
+
         """
         if source_type not in cls._sources:
             available = ", ".join(cls._sources.keys())
@@ -44,13 +45,14 @@ class DataSourceFactory:
         return data_source_class(config)
 
     @classmethod
-    def register_source(cls, source_type: str, source_class: Type[DataSource]) -> None:
+    def register_source(cls, source_type: str, source_class: type[DataSource]) -> None:
         """
         Register a new data source type.
 
         Args:
             source_type: The type identifier for the data source
             source_class: The data source class to register
+
         """
         cls._sources[source_type] = source_class
 
@@ -70,6 +72,7 @@ class DataSourceFactory:
 
         Returns:
             TushareDataSource instance
+
         """
         config = {"token": token, **kwargs}
         return cls.create(DataSourceType.TUSHARE, config)
@@ -84,5 +87,6 @@ class DataSourceFactory:
 
         Returns:
             AkShareDataSource instance
+
         """
         return cls.create(DataSourceType.AKSHARE, kwargs)
