@@ -391,7 +391,8 @@ def get_settings() -> Settings:
 
     使用单例模式, 避免重复加载配置
 
-    Returns:
+    Returns
+    -------
         Settings: 配置实例
 
     """
@@ -407,7 +408,8 @@ def reload_settings() -> Settings:
 
     主要用于测试或配置热更新场景
 
-    Returns:
+    Returns
+    -------
         Settings: 新的配置实例
 
     """
@@ -422,9 +424,11 @@ def validate_settings(settings: Settings) -> list[str]:  # noqa: PLR0912
     验证配置的有效性.
 
     Args:
+    ----
         settings: 配置实例
 
     Returns:
+    -------
         List[str]: 验证错误信息列表, 空列表表示验证通过
 
     """

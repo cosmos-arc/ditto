@@ -1,6 +1,5 @@
 """配置模块测试."""
 
-
 import pytest
 
 # Try to import config modules at the top level
