@@ -1,11 +1,17 @@
-"""Abstract base class for database adapters."""
+"""
+Abstract base class for database adapters.
+
+This module provides both ABC and Protocol definitions for flexibility.
+"""
 
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
+from .protocol import DatabaseAdapter as DatabaseAdapterProtocol
 
-class DatabaseAdapter(ABC):
+
+class DatabaseAdapter(ABC, DatabaseAdapterProtocol):
     """Abstract base class for all database adapters."""
 
     def __init__(self, db_path: str | Path) -> None:
