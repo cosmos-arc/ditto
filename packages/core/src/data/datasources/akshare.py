@@ -1,6 +1,7 @@
 """AkShare data source implementation."""
 
 import time
+from datetime import datetime, timedelta
 from typing import Any
 
 import polars as pl
@@ -11,6 +12,7 @@ from .base import DataSource
 # Check if akshare is available
 try:
     import akshare as ak
+
     AKSHARE_AVAILABLE = True
 except ImportError:
     AKSHARE_AVAILABLE = False
@@ -19,6 +21,9 @@ except ImportError:
 
 class AkShareDataSource(DataSource):
     """AkShare data source for Chinese market data."""
+
+    min_request_interval: float
+    last_request_time: float
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
@@ -32,11 +37,15 @@ class AkShareDataSource(DataSource):
         super().__init__(config)
 
         if not AKSHARE_AVAILABLE:
-            raise ImportError("AkShare not available. Install with: pip install akshare")
+            raise ImportError(
+                "AkShare not available. Install with: pip install akshare"
+            )
 
-        # AkShare has no strict rate limits, but set minimum interval for server stability
-        self.min_request_interval = self.config.get("min_request_interval", 0.5)  # seconds
-        self.last_request_time = 0
+        # AkShare has no strict rate limits, but set minimum interval
+        self.min_request_interval = self.config.get(
+            "min_request_interval", 0.5
+        )  # seconds
+        self.last_request_time: float = 0.0
 
     def _get_source_type(self) -> str:
         """Get the data source type."""
@@ -60,7 +69,7 @@ class AkShareDataSource(DataSource):
         elapsed = current_time - self.last_request_time
         if elapsed < self.min_request_interval:
             time.sleep(self.min_request_interval - elapsed)
-        self.last_request_time = time.time()
+        self.last_request_time = current_time
 
     def get_etf_list(self) -> pl.DataFrame:
         """Get list of available ETFs from AkShare."""
@@ -71,29 +80,41 @@ class AkShareDataSource(DataSource):
             df = ak.fund_etf_category_sina(symbol="ETF基金")
 
             if df is None or df.empty:
-                return pl.DataFrame(schema={
-                    "symbol": str,
-                    "name": str,
-                    "fund_manager": str,
-                    "tracking_index": str,
-                    "establishment_date": str,
-                })
+                return pl.DataFrame(
+                    schema={
+                        "symbol": str,
+                        "name": str,
+                        "fund_manager": str,
+                        "tracking_index": str,
+                        "establishment_date": str,
+                    }
+                )
 
             # Select and rename columns
-            result_df = df[["代码", "名称", "基金管理人", "跟踪标的", "成立日期"]].copy()
-            result_df.columns = ["symbol", "name", "fund_manager", "tracking_index", "establishment_date"]
+            result_df = df[
+                ["代码", "名称", "基金管理人", "跟踪标的", "成立日期"]
+            ].copy()
+            result_df.columns = [
+                "symbol",
+                "name",
+                "fund_manager",
+                "tracking_index",
+                "establishment_date",
+            ]
 
             return pl.from_pandas(result_df)
 
         except Exception as e:
             print(f"Error fetching ETF list from AkShare: {e}")
-            return pl.DataFrame(schema={
-                "symbol": str,
-                "name": str,
-                "fund_manager": str,
-                "tracking_index": str,
-                "establishment_date": str,
-            })
+            return pl.DataFrame(
+                schema={
+                    "symbol": str,
+                    "name": str,
+                    "fund_manager": str,
+                    "tracking_index": str,
+                    "establishment_date": str,
+                }
+            )
 
     def get_daily_data(
         self,
@@ -116,17 +137,10 @@ class AkShareDataSource(DataSource):
         self._rate_limit()
 
         try:
-            # Convert symbol format
+            # Use stock_zh_a_hist for A-share data
             if symbol.startswith(("SH", "SZ")):
                 # Remove prefix, keep only numbers
                 code = symbol[2:]
-                prefix = "sh" if symbol.startswith("SH") else "sz"
-                ak_symbol = f"{prefix}{code}"
-            else:
-                ak_symbol = symbol
-
-            # Use stock_zh_a_hist for A-share data
-            if symbol.startswith(("SH", "SZ")):
                 df = ak.stock_zh_a_hist(
                     symbol=code,
                     period="daily",
@@ -162,8 +176,19 @@ class AkShareDataSource(DataSource):
                 )
 
             # Select and rename columns
-            result_df = df[["symbol", "日期", "开盘", "最高", "最低", "收盘", "成交量", "成交额"]].copy()
-            result_df.columns = ["symbol", "trade_date", "open_price", "high_price", "low_price", "close_price", "volume", "amount"]
+            result_df = df[
+                ["symbol", "日期", "开盘", "最高", "最低", "收盘", "成交量", "成交额"]
+            ].copy()
+            result_df.columns = [
+                "symbol",
+                "trade_date",
+                "open_price",
+                "high_price",
+                "low_price",
+                "close_price",
+                "volume",
+                "amount",
+            ]
 
             # Add knowledge_date (same as trade_date for AkShare)
             result_df["knowledge_date"] = result_df["trade_date"]
@@ -195,7 +220,7 @@ class AkShareDataSource(DataSource):
         """
         Get adjustment factors from AkShare.
 
-        Note: AkShare mainly provides adjusted prices, adjustment factors need to be calculated.
+        Note: AkShare mainly provides adjusted prices, factors need calculation.
 
         Args:
             symbol: Stock code (e.g., sh000001)
@@ -213,19 +238,24 @@ class AkShareDataSource(DataSource):
             # We'll return a DataFrame with all factors as 1.0
             # In practice, you would use the adjusted prices directly
 
-            date_range = pl.date_range(
-                start=start_date,
-                end=end_date,
-                interval="1d",
-            ).to_series()
+            # Create date range using datetime
+            start = datetime.strptime(start_date, "%Y-%m-%d")
+            end = datetime.strptime(end_date, "%Y-%m-%d")
+            dates = []
+            current = start
+            while current <= end:
+                dates.append(current.strftime("%Y-%m-%d"))
+                current += timedelta(days=1)
 
-            df = pl.DataFrame({
-                "symbol": symbol,
-                "ex_date": date_range.dt.strftime("%Y-%m-%d"),
-                "adj_factor": 1.0,
-                "adj_type": "cumulative",
-                "knowledge_date": date_range.dt.strftime("%Y-%m-%d"),
-            })
+            df = pl.DataFrame(
+                {
+                    "symbol": symbol,
+                    "ex_date": dates,
+                    "adj_factor": 1.0,
+                    "adj_type": "cumulative",
+                    "knowledge_date": dates,
+                }
+            )
 
             return df
 

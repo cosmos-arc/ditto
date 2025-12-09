@@ -19,8 +19,8 @@ try:
         DataCollector,
         DataService,
     )
-    from ditto_foundation.data.datasources import DataSourceFactory
     from ditto_foundation.data.constants import DataSourceType
+    from ditto_foundation.data.datasources import DataSourceFactory
 except ImportError as e:
     print(f"导入失败: {e}")
     print("请确保在 pixi 环境中运行: pixi run python scripts/update_data.py")

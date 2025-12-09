@@ -51,3 +51,8 @@ class DatabaseAdapter(ABC, DatabaseAdapterProtocol):
     def connection(self) -> Any:
         """Get database connection, creating if necessary."""
         pass
+
+    @abstractmethod
+    def execute(self, query: str, params: Any = None) -> Any:
+        """Execute a query on the database."""
+        pass

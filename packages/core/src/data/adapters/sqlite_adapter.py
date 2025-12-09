@@ -2,6 +2,7 @@
 
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 from logging_config import get_logger
 
@@ -170,6 +171,10 @@ class SQLiteAdapter(DatabaseAdapter):
         if self._connection is None:
             self._connection = sqlite3.connect(str(self.db_path))
         return self._connection
+
+    def execute(self, query: str, params: Any = None) -> Any:
+        """Execute a query on the database."""
+        return self.connection.execute(query, params)
 
     def close(self) -> None:
         """Close database connection."""

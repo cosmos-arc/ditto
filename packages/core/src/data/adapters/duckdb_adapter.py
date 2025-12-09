@@ -1,6 +1,7 @@
 """DuckDB adapter for analytical data storage."""
 
 from pathlib import Path
+from typing import Any
 
 import duckdb
 from logging_config import get_logger
@@ -121,6 +122,10 @@ class DuckDBAdapter(DatabaseAdapter):
         if self._connection is None:
             self._connection = duckdb.connect(str(self.db_path))
         return self._connection
+
+    def execute(self, query: str, params: Any = None) -> Any:
+        """Execute a query on the database."""
+        return self.connection.execute(query, params)
 
     def close(self) -> None:
         """Close database connection."""

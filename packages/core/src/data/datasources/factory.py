@@ -1,6 +1,6 @@
 """Factory for creating data source instances."""
 
-from typing import Any
+from typing import Any, ClassVar
 
 from ..constants import DataSourceType
 from .akshare import AkShareDataSource
@@ -12,13 +12,15 @@ class DataSourceFactory:
     """Factory for creating data source instances."""
 
     # Registry of available data sources
-    _sources: dict[str, type[DataSource]] = {
+    _sources: ClassVar[dict[str, type[DataSource]]] = {
         DataSourceType.TUSHARE: TushareDataSource,
         DataSourceType.AKSHARE: AkShareDataSource,
     }
 
     @classmethod
-    def create(cls, source_type: str, config: dict[str, Any] | None = None) -> DataSource:
+    def create(
+        cls, source_type: str, config: dict[str, Any] | None = None
+    ) -> DataSource:
         """
         Create a data source instance.
 
@@ -64,7 +66,7 @@ class DataSourceFactory:
     @classmethod
     def create_tushare(cls, token: str, **kwargs: Any) -> TushareDataSource:
         """
-        Convenience method to create Tushare data source.
+        Create a Tushare data source.
 
         Args:
             token: Tushare API token
@@ -75,12 +77,12 @@ class DataSourceFactory:
 
         """
         config = {"token": token, **kwargs}
-        return cls.create(DataSourceType.TUSHARE, config)
+        return cls.create(DataSourceType.TUSHARE, config)  # type: ignore[return-value]
 
     @classmethod
     def create_akshare(cls, **kwargs: Any) -> AkShareDataSource:
         """
-        Convenience method to create AkShare data source.
+        Create an AkShare data source.
 
         Args:
             **kwargs: Configuration options
@@ -89,4 +91,4 @@ class DataSourceFactory:
             AkShareDataSource instance
 
         """
-        return cls.create(DataSourceType.AKSHARE, kwargs)
+        return cls.create(DataSourceType.AKSHARE, kwargs)  # type: ignore[return-value]

@@ -12,6 +12,7 @@ from .base import DataSource
 # Check if tushare is available
 try:
     import tushare as ts
+
     TUSHARE_AVAILABLE = True
 except ImportError:
     TUSHARE_AVAILABLE = False
@@ -20,6 +21,9 @@ except ImportError:
 
 class TushareDataSource(DataSource):
     """Tushare data source for Chinese market data."""
+
+    min_request_interval: float
+    last_request_time: float
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
@@ -34,7 +38,9 @@ class TushareDataSource(DataSource):
         super().__init__(config)
 
         if not TUSHARE_AVAILABLE:
-            raise ImportError("Tushare not available. Install with: pip install tushare")
+            raise ImportError(
+                "Tushare not available. Install with: pip install tushare"
+            )
 
         # Initialize Tushare with token
         token = self.config.get("token")
@@ -45,8 +51,10 @@ class TushareDataSource(DataSource):
             raise ValueError("Tushare token is required in config")
 
         # Rate limiting
-        self.min_request_interval = self.config.get("min_request_interval", 0.2)  # seconds
-        self.last_request_time = 0
+        self.min_request_interval = self.config.get(
+            "min_request_interval", 0.2
+        )  # seconds
+        self.last_request_time: float = 0.0
 
     def _get_source_type(self) -> str:
         """Get the data source type."""
@@ -57,9 +65,11 @@ class TushareDataSource(DataSource):
         # Tushare uses HTTP API, no persistent connection needed
         # Test connection with a simple API call
         try:
-            self.pro.trade_cal(exchange="SSE", start_date="20240101", end_date="20240102")
+            self.pro.trade_cal(
+                exchange="SSE", start_date="20240101", end_date="20240102"
+            )
         except Exception as e:
-            raise ConnectionError(f"Failed to connect to Tushare: {e}")
+            raise ConnectionError(f"Failed to connect to Tushare: {e}") from e
 
     def disconnect(self) -> None:
         """Close Tushare connection."""
@@ -72,7 +82,7 @@ class TushareDataSource(DataSource):
         elapsed = current_time - self.last_request_time
         if elapsed < self.min_request_interval:
             time.sleep(self.min_request_interval - elapsed)
-        self.last_request_time = time.time()
+        self.last_request_time = current_time
 
     def get_etf_list(self) -> pl.DataFrame:
         """Get list of available ETFs from Tushare."""
@@ -83,29 +93,41 @@ class TushareDataSource(DataSource):
             df = self.pro.fund_basic(market="E")
 
             if df is None or df.empty:
-                return pl.DataFrame(schema={
-                    "symbol": str,
-                    "name": str,
-                    "fund_manager": str,
-                    "tracking_index": str,
-                    "establishment_date": str,
-                })
+                return pl.DataFrame(
+                    schema={
+                        "symbol": str,
+                        "name": str,
+                        "fund_manager": str,
+                        "tracking_index": str,
+                        "establishment_date": str,
+                    }
+                )
 
             # Select and rename columns
-            result_df = df[["ts_code", "name", "management", "benchmark", "establish_date"]].copy()
-            result_df.columns = ["symbol", "name", "fund_manager", "tracking_index", "establishment_date"]
+            result_df = df[
+                ["ts_code", "name", "management", "benchmark", "establish_date"]
+            ].copy()
+            result_df.columns = [
+                "symbol",
+                "name",
+                "fund_manager",
+                "tracking_index",
+                "establishment_date",
+            ]
 
             return pl.from_pandas(result_df)
 
         except Exception as e:
             print(f"Error fetching ETF list from Tushare: {e}")
-            return pl.DataFrame(schema={
-                "symbol": str,
-                "name": str,
-                "fund_manager": str,
-                "tracking_index": str,
-                "establishment_date": str,
-            })
+            return pl.DataFrame(
+                schema={
+                    "symbol": str,
+                    "name": str,
+                    "fund_manager": str,
+                    "tracking_index": str,
+                    "establishment_date": str,
+                }
+            )
 
     def get_daily_data(
         self,
@@ -150,8 +172,28 @@ class TushareDataSource(DataSource):
                 )
 
             # Select and rename columns
-            result_df = df[["ts_code", "trade_date", "open", "high", "low", "close", "vol", "amount"]].copy()
-            result_df.columns = ["symbol", "trade_date", "open_price", "high_price", "low_price", "close_price", "volume", "amount"]
+            result_df = df[
+                [
+                    "ts_code",
+                    "trade_date",
+                    "open",
+                    "high",
+                    "low",
+                    "close",
+                    "vol",
+                    "amount",
+                ]
+            ].copy()
+            result_df.columns = [
+                "symbol",
+                "trade_date",
+                "open_price",
+                "high_price",
+                "low_price",
+                "close_price",
+                "volume",
+                "amount",
+            ]
 
             # Convert data types
             result_df["volume"] = result_df["volume"].astype(int)

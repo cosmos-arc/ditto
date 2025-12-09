@@ -241,6 +241,47 @@ warn_required_dynamic_aliases = true  # 警告必需的动态别名
 - **check-toml**: 自动检查pyproject.toml、pixi.toml等TOML文件的格式正确性
 - **mypy插件**: 集成pydantic.mypy插件，提供更好的Pydantic模型类型检查
 
+#### 🚫 **绝对禁止绕过 Pre-commit 检测** ⚠️ **极其严格**
+**任何情况下都不得绕过、禁用或跳过 pre-commit 检查！这是项目代码质量的最后防线。**
+
+**禁止的绕过方式**：
+```bash
+# ❌ 绝对禁止使用这些命令！
+git commit --no-verify          # 跳过 pre-commit hooks
+git commit -n                   # --no-verify 的简写，同样禁止
+git config core.hooksPath /dev/null  # 禁用所有 hooks
+SKIP=ruff git commit            # 跳过特定检查（通过环境变量）
+pre-commit uninstall            # 卸载 pre-commit
+pre-commit run --all-files --no-color  # 修改 pre-commit 行为
+```
+
+**违反的后果**：
+1. **代码将被立即回滚**：任何通过绕过检查提交的代码都会被立即回滚
+2. **提交权限撤销**：违反者将被撤销项目的提交权限
+3. **记录在案**：违规行为将被记录并影响项目参与权限
+
+**为什么必须遵守**：
+- **质量保证**：Pre-commit 是防止低质量代码进入代码库的唯一有效机制
+- **团队协作**：绕过检查会影响整个团队的开发效率
+- **技术债务**：未经检查的代码会产生大量技术债务
+- **CI 一致性**：Pre-commit 检查与 CI 检查保持一致，绕过毫无意义
+
+**正确的做法**：
+```bash
+# ✅ 遇到检查失败时的正确处理流程
+# 1. 运行检查并自动修复
+pixi run ruff check . --fix
+pixi run ruff format .
+
+# 2. 重新添加修复后的文件
+git add .
+
+# 3. 再次尝试提交（让 pre-commit 正常运行）
+git commit -m "fix: 修复代码质量问题"
+
+# 4. 如果仍有问题，逐一修复直至所有检查通过
+```
+
 #### 编码阶段最佳实践：
 1. **IDE集成配置**
    - 安装 ruff 扩展（VSCode: `charliermarsh.ruff`）
