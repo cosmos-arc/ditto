@@ -16,9 +16,19 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.1.8
     hooks:
+      # Ruff Lint - 严格检查代码质量问题
       - id: ruff
-        args: [--fix]  # Auto-fix issues
-      - id: ruff-format  # Format code
+        args: [--fix, --show-fixes]  # Auto-fix issues and show what was fixed
+        # 每次提交前检查所有文件，不仅仅是修改的文件
+        pass_filenames: false
+        always_run: true
+        # 如果有无法自动修复的问题，提交会失败
+        fail_fast: true
+      # Ruff Format - 代码格式化
+      - id: ruff-format
+        args: [--diff]  # Show diff of formatting changes
+        pass_filenames: false
+        always_run: true
 
   - repo: local
     hooks:

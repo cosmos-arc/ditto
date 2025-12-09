@@ -78,6 +78,34 @@ pixi install --without default  # 仅基础依赖
 2. `pixi run ruff format .` 必须没有任何格式问题
 3. **没有任何例外！** 任何 ruff 问题都必须在提交前修复
 
+#### 🟢 编码阶段必须遵守的 Ruff Lint 规则
+**在编写代码时就必须遵守以下规则，不要等到提交前修复：**
+
+1. **导入规则 (I)**
+   - 导入必须在文件顶部，按字母顺序排列
+   - 禁止使用 `import *`
+   - 禁止循环导入
+
+2. **代码风格 (E, W)**
+   - 行长度不超过88字符
+   - 禁止使用未定义的变量
+   - 禁止使用未使用的导入和变量
+
+3. **类型注解 (ANN)**
+   - 所有公共函数必须有返回类型注解
+   - 参数类型注解是强制的（除了self/cls）
+   - 禁止使用 `Any` 类型（特殊情况除外）
+
+4. **代码质量 (B, PL, RUF)**
+   - 禁止使用魔法数字（应该定义为常量）
+   - 函数复杂度不能过高
+   - 禁止不必要的变量赋值
+
+5. **最佳实践 (UP, SIM, PTH)**
+   - 使用现代Python语法（f-string, 类型注解等）
+   - 使用pathlib替代os.path
+   - 简化不必要的循环和条件判断
+
 Both formatting and linting issues must be resolved before code can be considered complete.
 
 ### 导入和编译问题 ⚠️ **最高优先级**
@@ -140,48 +168,45 @@ pytest --cov=packages/ --cov-report=html       # Generate HTML coverage report
   - Constants: UPPER_SNAKE_CASE
   - Private members: prefix with underscore
 
-### Pre-commit Workflow ⚠️
-**在编码阶段就必须严格执行，避免后续返工！**
+### Pre-commit Workflow ⚠️ **自动化强制执行**
+**Pre-commit hooks会在每次提交时自动运行，任何违反ruff规则的代码都无法提交！**
 
-```bash
-# 开发过程中实时检查（推荐IDE集成）
-# VSCode: 安装 ruff 扩展，设置保存时自动格式化和检查
-# PyCharm: 配置 ruff 作为外部工具
+#### 自动检查内容：
+1. **Ruff Lint** - 检查所有代码质量问题（零容忍）
+2. **Ruff Format** - 自动格式化代码（不符合格式的提交会被阻止）
+3. **Pytest** - 运行测试套件
+4. **其他检查** - 文件尾空行、大文件检测等
 
-# 提交前必须执行
-ruff check packages/ apps/ scripts/ tests/  # 检查所有问题
-ruff format packages/ apps/ scripts/ tests/   # 格式化代码
-ruff check --fix packages/ apps/ scripts/ tests/  # 自动修复
-
-# 运行测试
-pytest
-
-# 4. 只有所有检查通过才能提交
-git add .
-git commit -m "feat: your change description"
-```
-
-### 编码阶段最佳实践
-
-1. **IDE 配置**
-   - 安装 ruff 扩展并启用保存时格式化
-   - 配置 ruff 为默认的格式化工具
+#### 编码阶段最佳实践：
+1. **IDE集成配置**
+   - 安装 ruff 扩展（VSCode: `charliermarsh.ruff`）
+   - 启用"保存时格式化"功能
    - 启用实时 linting 检查
+   - 配置 ruff 为默认格式化工具
 
-2. **实时检查**
-   - 每保存文件后立即检查是否有红色波浪线
-   - 修复问题后再继续编写下一部分代码
-   - 不要累积问题到最后一起修复
+2. **编码时的实时检查**
+   - ✅ **写代码时立即查看lint警告**
+   - ✅ **每个函数写完就添加类型注解**
+   - ✅ **导入时确保按顺序排列**
+   - ❌ **不要累积问题到最后一起修复**
 
-3. **小步提交**
-   - 完成一个功能模块就提交一次
-   - 每次提交前确保 ruff 检查通过
-   - 避免大段的代码堆积导致修复困难
+3. **提交前的快速验证**
+   ```bash
+   # 快速自检（应该全部通过）
+   pixi run ruff check .       # 必须返回 "All checks passed!"
+   pixi run ruff format .      # 必须没有任何文件需要格式化
+   ```
 
-4. **避免手动工具**
-   - 不要创建临时的格式化修复脚本
-   - 直接使用 ruff 标准工具
-   - 保持工具链的一致性
+4. **错误处理流程**
+   ```bash
+   # 如果有lint错误：
+   pixi run ruff check . --fix  # 自动修复能修复的问题
+   # 手动修复剩余问题（通常是需要添加类型注解或重构）
+
+   # 如果格式化问题：
+   pixi run ruff format .      # 自动格式化
+   ```
+
 
 ### Data Feature
 ```bash
