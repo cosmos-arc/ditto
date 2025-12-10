@@ -4,9 +4,9 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from data.adapters.duckdb_adapter import DuckDBAdapter
-from data.adapters.sqlite_adapter import SQLiteAdapter
-from data.service import DataService
+from ditto_core.data.adapters.duckdb_adapter import DuckDBAdapter
+from ditto_core.data.adapters.sqlite_adapter import SQLiteAdapter
+from ditto_core.data.service import DataService
 
 
 class TestDuckDBAdapter:

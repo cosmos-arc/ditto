@@ -4,10 +4,15 @@ import time
 from typing import Any
 
 import polars as pl
-import tushare as ts
+import requests
+from ditto_foundation.logging_config import get_logger
 
 from ..constants import DataSourceType
+from ..exceptions import NetworkError, ValidationError
 from .base import DataSource
+
+# Initialize logger
+logger = get_logger(__name__)
 
 # Check if tushare is available
 try:
@@ -16,7 +21,7 @@ try:
     TUSHARE_AVAILABLE = True
 except ImportError:
     TUSHARE_AVAILABLE = False
-    ts = None
+    ts = None  # type: ignore
 
 
 class TushareDataSource(DataSource):
@@ -117,8 +122,18 @@ class TushareDataSource(DataSource):
 
             return pl.from_pandas(result_df)
 
+        except requests.exceptions.RequestException as e:
+            logger.error("Network error fetching ETF list from Tushare", error=str(e))
+            raise NetworkError("Failed to connect to Tushare", source="tushare") from e
+        except (ValueError, KeyError) as e:
+            logger.error("Data validation error fetching ETF list", error=str(e))
+            raise ValidationError(
+                "Invalid data format from Tushare", source="tushare"
+            ) from e
         except Exception as e:
-            print(f"Error fetching ETF list from Tushare: {e}")
+            logger.error(
+                "Unexpected error fetching ETF list from Tushare", error=str(e)
+            )
             return pl.DataFrame(
                 schema={
                     "symbol": str,
@@ -203,8 +218,24 @@ class TushareDataSource(DataSource):
 
             return pl.from_pandas(result_df)
 
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                "Network error fetching daily data", symbol=symbol, error=str(e)
+            )
+            raise NetworkError(
+                "Failed to connect to Tushare", source="tushare", symbol=symbol
+            ) from e
+        except (ValueError, KeyError) as e:
+            logger.error(
+                "Data validation error fetching daily data", symbol=symbol, error=str(e)
+            )
+            raise ValidationError(
+                "Invalid data format from Tushare", source="tushare", symbol=symbol
+            ) from e
         except Exception as e:
-            print(f"Error fetching daily data for {symbol}: {e}")
+            logger.error(
+                "Unexpected error fetching daily data", symbol=symbol, error=str(e)
+            )
             return pl.DataFrame(
                 schema={
                     "symbol": str,
@@ -268,8 +299,28 @@ class TushareDataSource(DataSource):
 
             return pl.from_pandas(result_df)
 
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                "Network error fetching adjustment factors", symbol=symbol, error=str(e)
+            )
+            raise NetworkError(
+                "Failed to connect to Tushare", source="tushare", symbol=symbol
+            ) from e
+        except (ValueError, KeyError) as e:
+            logger.error(
+                "Data validation error fetching adjustment factors",
+                symbol=symbol,
+                error=str(e),
+            )
+            raise ValidationError(
+                "Invalid data format from Tushare", source="tushare", symbol=symbol
+            ) from e
         except Exception as e:
-            print(f"Error fetching adjustment factors for {symbol}: {e}")
+            logger.error(
+                "Unexpected error fetching adjustment factors",
+                symbol=symbol,
+                error=str(e),
+            )
             return pl.DataFrame(
                 schema={
                     "symbol": str,

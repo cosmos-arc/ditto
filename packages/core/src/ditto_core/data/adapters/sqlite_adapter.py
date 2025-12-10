@@ -4,7 +4,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from logging_config import get_logger
+from ditto_foundation.logging_config import get_logger
 
 from .base import DatabaseAdapter
 
@@ -174,7 +174,13 @@ class SQLiteAdapter(DatabaseAdapter):
 
     def execute(self, query: str, params: Any = None) -> Any:
         """Execute a query on the database."""
-        return self.connection.execute(query, params)
+        if params is not None:
+            return self.connection.execute(query, params)
+        return self.connection.execute(query)
+
+    def executemany(self, query: str, params_list: list[Any]) -> Any:
+        """Execute a query multiple times with different parameters."""
+        return self.connection.executemany(query, params_list)
 
     def close(self) -> None:
         """Close database connection."""

@@ -5,9 +5,15 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import polars as pl
+import requests
+from ditto_foundation.logging_config import get_logger
 
 from ..constants import DataSourceType
+from ..exceptions import NetworkError, ValidationError
 from .base import DataSource
+
+# Initialize logger
+logger = get_logger(__name__)
 
 # Check if akshare is available
 try:
@@ -51,13 +57,17 @@ class AkShareDataSource(DataSource):
         """Get the data source type."""
         return DataSourceType.AKSHARE
 
-    def connect(self) -> None:
+    def connect(self) -> bool:
         """
         Establish AkShare connection.
 
         AkShare is a pure Python library, no connection needed.
+
+        Returns:
+            True if successful, False otherwise
+
         """
-        pass
+        return AKSHARE_AVAILABLE
 
     def disconnect(self) -> None:
         """Close AkShare connection."""
@@ -104,8 +114,16 @@ class AkShareDataSource(DataSource):
 
             return pl.from_pandas(result_df)
 
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error fetching ETF list from AkShare: {e!s}")
+            raise NetworkError("Failed to connect to AkShare", source="akshare") from e
+        except (ValueError, KeyError) as e:
+            logger.error(f"Data validation error fetching ETF list: {e!s}")
+            raise ValidationError(
+                "Invalid data format from AkShare", source="akshare"
+            ) from e
         except Exception as e:
-            print(f"Error fetching ETF list from AkShare: {e}")
+            logger.error(f"Unexpected error fetching ETF list from AkShare: {e!s}")
             return pl.DataFrame(
                 schema={
                     "symbol": str,
@@ -195,8 +213,24 @@ class AkShareDataSource(DataSource):
 
             return pl.from_pandas(result_df)
 
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                "Network error fetching daily data", symbol=symbol, error=str(e)
+            )
+            raise NetworkError(
+                "Failed to connect to AkShare", source="akshare", symbol=symbol
+            ) from e
+        except (ValueError, KeyError) as e:
+            logger.error(
+                "Data validation error fetching daily data", symbol=symbol, error=str(e)
+            )
+            raise ValidationError(
+                "Invalid data format from AkShare", source="akshare", symbol=symbol
+            ) from e
         except Exception as e:
-            print(f"Error fetching daily data for {symbol}: {e}")
+            logger.error(
+                "Unexpected error fetching daily data", symbol=symbol, error=str(e)
+            )
             return pl.DataFrame(
                 schema={
                     "symbol": str,
@@ -259,8 +293,30 @@ class AkShareDataSource(DataSource):
 
             return df
 
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                "Network error calculating adjustment factors",
+                symbol=symbol,
+                error=str(e),
+            )
+            raise NetworkError(
+                "Failed to connect to AkShare", source="akshare", symbol=symbol
+            ) from e
+        except (ValueError, KeyError) as e:
+            logger.error(
+                "Data validation error calculating adjustment factors",
+                symbol=symbol,
+                error=str(e),
+            )
+            raise ValidationError(
+                "Invalid data format from AkShare", source="akshare", symbol=symbol
+            ) from e
         except Exception as e:
-            print(f"Error calculating adjustment factors for {symbol}: {e}")
+            logger.error(
+                "Unexpected error calculating adjustment factors",
+                symbol=symbol,
+                error=str(e),
+            )
             return pl.DataFrame(
                 schema={
                     "symbol": str,

@@ -3,7 +3,7 @@
 import sqlite3
 from pathlib import Path
 
-from data.adapters.sqlite_adapter import SQLiteAdapter
+from ditto_core.data.adapters.sqlite_adapter import SQLiteAdapter
 
 
 class TestSQLiteInit:

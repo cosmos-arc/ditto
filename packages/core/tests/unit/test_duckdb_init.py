@@ -3,8 +3,7 @@
 from pathlib import Path
 
 import duckdb
-
-from data.adapters.duckdb_adapter import DuckDBAdapter
+from ditto_core.data.adapters.duckdb_adapter import DuckDBAdapter
 
 
 class TestDuckDBInit:

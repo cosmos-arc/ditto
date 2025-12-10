@@ -15,17 +15,17 @@ from pathlib import Path
 
 # Third-party imports
 import uvicorn
-from fastapi import FastAPI, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 # Local imports - using editable packages
-from logging_config import (
+from ditto_foundation.logging_config import (
     LogConfig,
     get_logger,
     request_logger,
     setup_logging,
 )
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 # Initialize project root
 project_root = Path(__file__).parent.parent.parent.parent

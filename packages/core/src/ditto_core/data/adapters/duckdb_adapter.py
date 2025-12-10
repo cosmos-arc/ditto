@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import duckdb
-from logging_config import get_logger
+from ditto_foundation.logging_config import get_logger
 
 from .base import DatabaseAdapter
 

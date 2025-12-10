@@ -24,9 +24,6 @@ uvicorn = ">=0.32.0,<0.33"
 pydantic = ">=2.11.7,<3"
 pydantic-settings = ">=2.6.0,<2.7"
 
-# 数据库
-duckdb = ">=1.1.0,<1.2"
-
 # 网络请求
 httpx = ">=0.28.0,<0.29"
 aiohttp = ">=3.11.0,<3.12"
@@ -41,7 +38,7 @@ apscheduler = ">=3.11.0,<3.12"
 # 开发工具
 ruff = ">=0.12.4,<0.13"
 pytest = ">=8.4.1,<9"
-pytest-cov = ">=6.2.1,<7"
+pytest-cov = ">=7.0.0,<8"
 mypy = ">=1.17.0,<2"
 
 # 可视化
@@ -50,6 +47,11 @@ matplotlib = ">=3.10.0,<3.11"
 # 开发工具
 ipykernel = ">=6.29.0,<7"
 jupyter = ">=1.1.0,<1.2"
+pytest-asyncio = ">=1.3.0,<2"
+requests-mock = ">=1.12.1,<2"
+pandera = ">=0.27.0,<0.28"
+pyarrow = ">=22.0.0,<23"
+duckdb = ">=1.4.2,<2"
 
 [pypi-dependencies]
 # 数据源 (feature)
