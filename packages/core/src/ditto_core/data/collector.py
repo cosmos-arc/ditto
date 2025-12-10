@@ -1,7 +1,12 @@
 """Data collection service for fetching and storing market data."""
 
-from datetime import date
+import logging
+from datetime import date, datetime
 from typing import Any
+
+import polars as pl
+
+logger = logging.getLogger(__name__)
 
 # For now, create minimal stub implementations to allow ruff checks to pass
 # These will be properly implemented in a future task
@@ -12,27 +17,56 @@ class DataCollector:
 
     def __init__(
         self,
-        data_factory: Any,
         data_service: Any,
         batch_size: int = 1000,
         max_concurrent_fetches: int = 3,
     ) -> None:
         """Initialize data collector."""
-        self.data_factory = data_factory
         self.data_service = data_service
         self.batch_size = batch_size
         self.max_concurrent_fetches = max_concurrent_fetches
 
-    async def update_etf_list(self, force_update: bool = False) -> dict[str, Any]:
-        """Update ETF list from data source."""
-        # Stub implementation
-        return {
-            "total_processed": 0,
-            "new_records": 0,
-            "updated_records": 0,
-            "errors": [],
-            "duration": 0.0,
-        }
+        # Initialize data sources and adapters
+        self._sources: dict[str, Any] = {}
+        self._analytics_adapter = (
+            data_service.analytics_adapter
+            if hasattr(data_service, "analytics_adapter")
+            else None
+        )
+
+    def update_etf_list(self) -> dict[str, Any]:
+        """Update ETF list from primary data source."""
+        logger.info("开始更新ETF列表")
+
+        # 获取主数据源
+        primary_source = self._sources.get("tushare")
+        if not primary_source:
+            raise ValueError("未配置主数据源 Tushare")
+
+        try:
+            # 获取ETF列表
+            etf_df = primary_source.get_etf_list()
+            logger.info(f"获取到 {len(etf_df)} 只ETF")
+
+            # 添加knowledge_date
+            etf_df = etf_df.with_columns(
+                [pl.lit(datetime.now()).alias("knowledge_date")]
+            )
+
+            # 存储到DuckDB
+            if self._analytics_adapter is None:
+                raise ValueError("Analytics adapter not configured")
+            self._analytics_adapter.store_etf_info(etf_df)
+
+            return {
+                "total_updated": len(etf_df),
+                "source": "tushare",
+                "status": "success",
+            }
+
+        except Exception as e:
+            logger.error(f"更新ETF列表失败: {e}")
+            raise
 
     async def update_daily_data(
         self,
