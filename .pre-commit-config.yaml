@@ -38,28 +38,26 @@ repos:
         pass_filenames: true
 
   # Mypy: 严格类型检查（配合你 pyproject 里的 strict + pydantic.mypy 插件）
-  # 暂时禁用，待类型错误修复后重新启用
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.13.0
-  #   hooks:
-  #     - id: mypy
-  #       # 这里用 pre-commit 自建 env，比系统 mypy 更可控
-  #       additional_dependencies:
-  #         - pydantic>=2.0
-  #         # 如果你用到了 pydantic-settings / pydantic-core 等，也可以加在这里
-  #         # - pydantic-settings>=2.0
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        # 这里用 pre-commit 自建 env，比系统 mypy 更可控
+        additional_dependencies:
+          - pydantic>=2.0
+          # 如果你用到了 pydantic-settings / pydantic-core 等，也可以加在这里
+          # - pydantic-settings>=2.0
 
   # 可选：本地 pytest 钩子（建议先保持注释，需要时再打开）
-  # 暂时禁用，待测试目录问题修复后重新启用
-  # - repo: local
-  #   hooks:
-  #     - id: pytest-fast
-  #       name: pytest (fast subset)
-  #       entry: pixi run python -m pytest tests/unit -m "not slow and not integration"
-  #       language: system
-  #       pass_filenames: false
-  #       types: [python]
-  #       stages: [commit]
+  - repo: local
+    hooks:
+      - id: pytest-fast
+        name: pytest (fast subset)
+        entry: pixi run python -m pytest tests/unit -m "not slow and not integration"
+        language: system
+        pass_filenames: false
+        types: [python]
+        stages: [commit]
 
 # 全局排除目录（正则）
 exclude: |
