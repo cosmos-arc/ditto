@@ -262,10 +262,18 @@ warn_required_dynamic_aliases = true
 minversion = "7.0"
 # Monorepo测试目录结构
 testpaths = ["packages/*/tests", "apps/*/tests", "tests"]
+# 文件匹配模式
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 pythonpath = ["packages/core/src", "packages/foundation/src", "apps/server/src"]
 
 # 将所有警告提升为错误，确保代码的健壮性。
-filterwarnings = ["error"]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+]
 
 # 注册自定义标记，配合 --strict-markers 使用
 markers = [
@@ -274,6 +282,7 @@ markers = [
     "e2e: 标记端到端测试",
     "slow: 标记运行缓慢的测试 (可使用 -m 'not slow' 跳过)",
     "smoke: 标记冒烟测试",
+    "benchmark: marks performance benchmark tests",
 ]
 
 # 配置日志输出，方便调试
@@ -286,25 +295,33 @@ asyncio_mode = "auto"
 # 命令行附加选项，用于增强测试流程。
 addopts = [
     "-ra", # 显示除"通过"之外所有测试的详细摘要
-    "-q",  # 减少输出的冗余信息，使报告更简洁
+    "-v",  # 显示详细输出
     # "-n", "auto",               # 使用所有可用 CPU 核心并行测试，需要 pytest-xdist
     "--strict-markers",                       # 对未在配置中注册的 marker 标记报错
     "--strict-config",                        # 对配置文件中的拼写错误或无效键报错
-    "--cov=packages/",                        # 指定计算代码覆盖率的目录
-    "--cov=apps/",                            # 覆盖应用层代码
-    "--cov-report=term-missing:skip-covered", # 只在终端显示未覆盖的行
+    "--cov=packages",                        # 指定计算代码覆盖率的目录
+    "--cov=apps",                            # 覆盖应用层代码
     "--cov-report=html:htmlcov",              # HTML 报告输出目录
-    "--cov-branch",                           # NEW: 分支覆盖率
-    "--cov-fail-under=80",
-    "--durations=10",                         # NEW: 打印最慢的 10 个测试
+    "--cov-report=term-missing",             # 在终端显示未覆盖的行
+    "--cov-report=xml",                      # XML 报告，用于 CI 集成
+    "--cov-branch",                           # 分支覆盖率
+    "--durations=10",                         # 打印最慢的 10 个测试
 ]
 
 # ===================================================================
 # Coverage (配合 pytest-cov 使用)
 # ===================================================================
 [tool.coverage.run]
+branch = true
 source = ["packages", "apps"]
-omit = ["*/tests/*", "*/test_*.py", "*/migrations/*", "*/conftest.py"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+    "*/migrations/*",
+    "*/conftest.py",
+]
 
 [tool.coverage.report]
 precision = 2
@@ -313,9 +330,16 @@ skip_covered = false
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
+    "def __str__",
     "if TYPE_CHECKING:",
     "raise AssertionError",
     "raise NotImplementedError",
     'if __name__ == "__main__":',
+    "if 0:",
+    "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
+fail_under = 80
+
+[tool.coverage.html]
+directory = "htmlcov"

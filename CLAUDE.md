@@ -306,6 +306,35 @@ git commit -m "fix: 修复代码质量问题"
 # 4. 如果仍有问题，逐一修复直至所有检查通过
 ```
 
+#### 🚫 **任务完成后的强制检查规则** ⚠️ **极其严格**
+**每次完成所有任务后，必须运行全量 precommit 检查并通过！**
+
+**强制要求**：
+1. **必须运行全量检查**：`pre-commit run --all-files`
+2. **必须确保所有检查通过**：包括 ruff、mypy、pytest
+3. **禁止提交代码**：除非用户主动告知提交，否则只报告检查结果
+4. **检查失败时必须修复**：不能带着未解决的问题结束任务
+
+**执行流程**：
+```bash
+# 任务完成后必须执行的命令
+pre-commit run --all-files
+
+# 如果有失败，必须修复后再次运行，直至全部通过
+```
+
+**特别注意**：
+- 这是任务完成的必要条件，不是可选步骤
+- 即使代码看起来没问题，也必须运行检查验证
+- 检查通过后，只需要向用户报告"所有检查已通过"
+- 只有用户明确要求时才能提交代码
+
+**为什么必须遵守**：
+- **质量保证**：确保代码符合项目的所有质量标准
+- **避免技术债务**：防止小问题累积成大问题
+- **团队协作**：保证代码对其他开发者友好
+- **专业素养**：体现对代码质量的负责态度
+
 #### 编码阶段最佳实践：
 1. **IDE集成配置**
    - 安装 ruff 扩展（VSCode: `charliermarsh.ruff`）
@@ -655,3 +684,114 @@ The system enforces strict quality requirements:
    - [ ] 提交已完成的功能（使用原子提交）
    - [ ] 更新 README.md 中的任务进度
    - [ ] 确保所有新功能都有对应的测试
+
+## Python 单元测试规范 v1.0
+
+### 总体目标
+1. 建立一套统一、可执行的Python单元测试标准
+2. 保证金融计算、数据时序、风控规则的正确性
+3. 采用AAA模式（Arrange-Act-Assert），拥抱pytest函数式测试风格
+
+### 测试技术栈
+```bash
+# 必选工具
+pip install pytest pytest-cov pytest-mock
+
+# 推荐工具（按需）
+pip install pytest-benchmark faker hypothesis
+```
+
+### 目录结构
+```
+project_root/
+├── src/
+│   └── ditto/
+│       ├── strategies/
+│       ├── risk/
+│       └── core/
+└── tests/
+    ├── conftest.py           # 全局共享fixtures
+    ├── unit/                 # 单元测试（mock外部依赖）
+    ├── integration/          # 集成测试（子系统+真DB/IO）
+    ├── e2e/                  # 端到端测试
+    └── fixtures/             # 测试数据文件
+```
+
+### 测试命名规范
+- 文件命名：`test_<module_name>.py`
+- 函数命名：`test_<被测对象>_<场景>_<预期结果>`
+- 示例：
+  ```python
+  def test_calculate_sharpe_ratio_with_positive_returns_returns_correct_value():
+      ...
+  def test_kill_switch_when_drawdown_exceeds_threshold_triggers_halt():
+      ...
+  ```
+
+### AAA模式（必须遵守）
+```python
+def test_portfolio_daily_returns():
+    # Arrange - 准备输入数据
+    prices = pl.DataFrame({
+        "date": ["2024-01-01", "2024-01-02"],
+        "close": [100.0, 105.0],
+    })
+
+    # Act - 执行被测试函数
+    returns = calculate_returns(prices)
+
+    # Assert - 验证结果
+    assert returns["return"].to_list() == [0.0, 0.05]
+```
+
+### 测试隔离原则
+- 每个测试必须独立，不共享可变状态
+- 使用fixture而非类属性共享数据
+- 所有外部依赖（网络、DB、时间）必须mock
+
+### 浮点数比较规范
+```python
+# 金融金额比较（精确到分）
+assert actual == pytest.approx(expected, rel=1e-5, abs=1e-2)
+
+# 数组比较
+assert np.isclose(actual, expected, rtol=1e-5, atol=1e-2)
+```
+
+### PIT数据验证
+```python
+def test_pit_data_integrity():
+    as_of = pl.datetime(2024, 1, 1)
+    data = load_pit_data(as_of)
+    assert data["date"].max() <= as_of
+```
+
+### 覆盖率要求
+- 整体覆盖率不低于80%
+- 关键模块（风控、仓位）建议90%+
+- CI配置覆盖率门槛：`--cov-fail-under=80`
+
+### pytest配置示例
+```toml
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = [
+    "--cov=src/ditto",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "--strict-markers",
+    "-v"
+]
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
+    "benchmark: marks performance benchmark tests",
+]
+```
+
+### 测试最佳实践
+1. **使用pytest-mock**：统一使用`mocker` fixture
+2. **Patch原则**：在"使用的地方"patch，而非定义的地方
+3. **参数化测试**：使用`@pytest.mark.parametrize`覆盖多种场景
+4. **时间/随机数**：固定seed，使用freezegun固定时间
