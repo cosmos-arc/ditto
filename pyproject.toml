@@ -305,6 +305,7 @@ addopts = [
     "--cov-report=term-missing",             # 在终端显示未覆盖的行
     "--cov-report=xml",                      # XML 报告，用于 CI 集成
     "--cov-branch",                           # 分支覆盖率
+    "--cov-fail-under=80",                     # 设置覆盖率阈值为 80%
     "--durations=10",                         # 打印最慢的 10 个测试
 ]
 
