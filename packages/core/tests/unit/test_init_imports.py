@@ -1,9 +1,19 @@
 """Test __init__ module imports."""
 
+import importlib
 from unittest.mock import patch
 
-from ditto_core.data.adapters import SQLiteAdapter
-from ditto_core.data.datasources import AkShareDataSource, DataSourceFactory
+import ditto_core.data.adapters
+import ditto_core.data.datasources
+from ditto_core.data import adapters
+from ditto_core.data.adapters import DatabaseAdapter, SQLiteAdapter
+from ditto_core.data.constants import DatabaseType, DataSourceType
+from ditto_core.data.datasources import (
+    AkShareDataSource,
+    DataSource,
+    DataSourceFactory,
+    TushareDataSource,
+)
 
 
 def test_duckdb_import_error_handling() -> None:
@@ -11,10 +21,6 @@ def test_duckdb_import_error_handling() -> None:
     # Mock ImportError when importing DuckDBAdapter
     with patch.dict("sys.modules", {"duckdb": None}):
         # Force reload of the module to trigger import error
-        import importlib
-
-        from ditto_core.data import adapters
-
         # Reload adapters to trigger the import error path
         importlib.reload(adapters)
 
@@ -27,13 +33,9 @@ def test_duckdb_import_error_handling() -> None:
 
 def test_datasources_import_error_handling() -> None:
     """Test that datasource import errors are handled gracefully."""
-    import importlib
-
     # Test AkShare import error
     with patch.dict("sys.modules", {"akshare": None}):
         # Reload datasources module to trigger import error
-        import ditto_core.data.datasources
-
         importlib.reload(ditto_core.data.datasources)
 
         # AkShareDataSource should be None when import fails
@@ -46,8 +48,6 @@ def test_datasources_import_error_handling() -> None:
     # Test Tushare import error
     with patch.dict("sys.modules", {"tushare": None}):
         # Reload datasources module to trigger import error
-        import ditto_core.data.datasources
-
         importlib.reload(ditto_core.data.datasources)
 
         # TushareDataSource should be None when import fails
@@ -56,13 +56,9 @@ def test_datasources_import_error_handling() -> None:
 
 def test_adapters_duckdb_import_error_handling() -> None:
     """Test that adapters module handles DuckDB import error."""
-    import importlib
-
     # Test duckdb_adapter import error
     with patch.dict("sys.modules", {"duckdb": None}):
         # Reload adapters module
-        import ditto_core.data.adapters
-
         importlib.reload(ditto_core.data.adapters)
 
         # DuckDBAdapter should be None
@@ -75,13 +71,6 @@ def test_adapters_duckdb_import_error_handling() -> None:
 
 def test_normal_imports() -> None:
     """Test that normal imports work correctly."""
-    from ditto_core.data.adapters import DatabaseAdapter
-    from ditto_core.data.constants import DatabaseType, DataSourceType
-    from ditto_core.data.datasources import (
-        DataSource,
-        TushareDataSource,
-    )
-
     # Verify all imports are successful
     assert DatabaseAdapter is not None
     assert SQLiteAdapter is not None

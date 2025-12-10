@@ -19,16 +19,26 @@ from ditto_core.data.adapters.protocol import (
 class ITestConnection(Protocol):
     """Test Connection protocol."""
 
-    def execute(self, query: str, params: Any = None) -> Any: ...
-    def close(self) -> None: ...
+    def execute(self, query: str, params: Any = None) -> Any:
+        """Execute a query."""
+        ...
+
+    def close(self) -> None:
+        """Close connection."""
+        ...
 
 
 @runtime_checkable
 class ITestResult(Protocol):
     """Test Result protocol."""
 
-    def fetchall(self) -> list[Any]: ...
-    def fetchone(self) -> Any: ...
+    def fetchall(self) -> list[Any]:
+        """Fetch all results."""
+        ...
+
+    def fetchone(self) -> Any:
+        """Fetch one result."""
+        ...
 
 
 @runtime_checkable
@@ -36,9 +46,17 @@ class ITestDatabaseAdapter(Protocol):
     """Test DatabaseAdapter protocol."""
 
     @property
-    def connection(self) -> ITestConnection: ...
-    def execute(self, query: str, params: Any = None) -> ITestResult: ...
-    def close(self) -> None: ...
+    def connection(self) -> ITestConnection:
+        """Get database connection."""
+        ...
+
+    def execute(self, query: str, params: Any = None) -> ITestResult:
+        """Execute a query."""
+        ...
+
+    def close(self) -> None:
+        """Close database connection."""
+        ...
 
 
 class TestConnectionImpl:

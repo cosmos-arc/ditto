@@ -1,5 +1,7 @@
 """Unit tests for data module exceptions."""
 
+from typing import cast
+
 import pytest
 from ditto_core.data.exceptions import (
     AuthenticationError,
@@ -47,11 +49,13 @@ class TestNetworkError:
 
     def test_inheritance(self) -> None:
         """Test that NetworkError inherits from DataSourceError."""
-        error = NetworkError("Network error", source="tushare")
+        error: NetworkError = NetworkError("Network error", source="tushare")
         assert isinstance(error, DataSourceError)
         assert isinstance(error, Exception)
         assert str(error) == "Network error"
-        assert error.source == "tushare"
+        # Cast to DataSourceError to access the source attribute
+        data_source_error = cast(DataSourceError, error)
+        assert data_source_error.source == "tushare"
 
 
 class TestValidationError:

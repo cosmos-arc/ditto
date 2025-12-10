@@ -337,6 +337,7 @@ class Settings(BaseSettings):
     file_storage: FileStorageSettings = Field(default_factory=FileStorageSettings)
 
     def __init__(self, **kwargs: Any) -> None:
+        """Initialize Settings and ensure directories exist."""
         super().__init__(**kwargs)
         # 确保目录存在
         self._ensure_directories()
@@ -353,7 +354,10 @@ class Settings(BaseSettings):
         ]
 
         for directory in directories:
-            Path(directory).mkdir(parents=True, exist_ok=True)
+            if isinstance(directory, str):
+                Path(directory).mkdir(parents=True, exist_ok=True)
+            elif hasattr(directory, "mkdir"):
+                directory.mkdir(parents=True, exist_ok=True)
 
     @property
     def is_development(self) -> bool:
@@ -370,7 +374,7 @@ class Settings(BaseSettings):
         """是否为测试环境."""
         return self.system.ditto_env == "testing"
 
-    def get_log_config(self) -> dict:
+    def get_log_config(self) -> dict[str, Any]:
         """获取日志配置字典."""
         return {
             "level": self.system.log_level,

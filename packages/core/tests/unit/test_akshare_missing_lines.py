@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
 import polars as pl
 import pytest
 from ditto_core.data.datasources.akshare import AkShareDataSource
@@ -68,8 +69,6 @@ def test_akshare_get_daily_data_sh_prefix() -> None:
     with patch("ditto_core.data.datasources.akshare.AKSHARE_AVAILABLE", True):
         with patch("ditto_core.data.datasources.akshare.ak") as mock_ak:
             # Mock DataFrame with Chinese column names
-            import pandas as pd
-
             mock_df = pd.DataFrame(
                 {
                     "日期": ["2024-01-01"],

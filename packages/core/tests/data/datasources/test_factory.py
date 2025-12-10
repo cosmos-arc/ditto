@@ -116,7 +116,7 @@ class TestDataSourceFactory:
         assert isinstance(source, DataSource)
 
     def test_create_raises_import_error_for_missing_deps(self) -> None:
-        """Test that creating a source raises ImportError if dependencies are missing."""
+        """Test creating a source raises ImportError if dependencies are missing."""
         # This test assumes Tushare is not available in test environment
         with patch("ditto_core.data.datasources.tushare.TUSHARE_AVAILABLE", False):
             with pytest.raises(ImportError) as exc_info:

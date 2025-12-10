@@ -9,9 +9,10 @@ import logging
 import os
 import time
 import uuid
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 # Third-party imports
 import uvicorn
@@ -81,7 +82,7 @@ app.add_middleware(
 @app.middleware("http")
 async def log_requests(
     request: Request,
-    call_next: Callable[[Request], Response],
+    call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
     """Log incoming requests and outgoing responses."""
     # Generate unique request ID
@@ -143,21 +144,21 @@ async def log_requests(
 
 
 @app.get("/")
-async def root() -> dict:
+async def root() -> dict[str, str]:
     """根路径."""
     logger.info("Root endpoint accessed")
     return {"message": "Ditto Quant API", "version": "0.1.0"}
 
 
 @app.get("/healthz")
-async def health_check() -> dict:
+async def health_check() -> dict[str, Any]:
     """健康检查端点."""
     logger.debug("Health check endpoint accessed")
     return {"status": "ok", "service": "ditto-api", "timestamp": time.time()}
 
 
 @app.get("/api/v1/status")
-async def get_status() -> dict:
+async def get_status() -> dict[str, Any]:
     """获取系统状态."""
     logger.info("Status endpoint accessed")
     return {
@@ -178,7 +179,7 @@ async def get_status() -> dict:
 
 
 @app.get("/api/v1/logs/test")
-async def test_logging() -> dict:
+async def test_logging() -> dict[str, str]:
     """测试日志记录功能."""
     logger.info("Test info log", test_data="example")
     logger.warning("Test warning log", test_data="example")

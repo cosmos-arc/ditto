@@ -1,5 +1,10 @@
 """Database adapters for different storage backends."""
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .duckdb_adapter import DuckDBAdapter
+
 from .base import DatabaseAdapter
 from .protocol import DatabaseAdapter as DatabaseAdapterProtocol
 from .sqlite_adapter import SQLiteAdapter
@@ -8,7 +13,7 @@ from .sqlite_adapter import SQLiteAdapter
 try:
     from .duckdb_adapter import DuckDBAdapter
 except (ImportError, ModuleNotFoundError):
-    DuckDBAdapter = None
+    DuckDBAdapter = None  # type: ignore
 
 __all__ = [
     "DatabaseAdapter",

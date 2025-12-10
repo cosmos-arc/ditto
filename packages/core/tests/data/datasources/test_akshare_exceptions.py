@@ -99,7 +99,7 @@ class TestAkShareDataSourceExceptionHandling:
         """Test that unexpected errors return empty DataFrame with correct schema."""
         with patch("ditto_core.data.datasources.akshare.ak") as mock_ak:
             # Mock a general exception that's not caught by specific except blocks
-            # Use AttributeError instead of TypeError since ValueError/KeyError are caught
+            # Use AttributeError since ValueError/KeyError are caught
             mock_ak.stock_zh_a_hist.side_effect = AttributeError(
                 "Unexpected attribute error"
             )

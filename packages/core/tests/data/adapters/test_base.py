@@ -1,7 +1,5 @@
 """Unit tests for database adapter base class."""
 
-import os
-
 # Import directly to avoid import chain issues
 import sys
 from pathlib import Path
@@ -11,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
 
 from ditto_core.data.adapters.base import DatabaseAdapter
 
@@ -55,8 +53,6 @@ class TestDatabaseAdapter:
 
     def test_init_with_string_path(self) -> None:
         """Test initialization with string path."""
-        from pathlib import Path
-
         with TemporaryDirectory() as tmp_dir:
             db_path = Path(tmp_dir) / "test.db"
             adapter = MockDatabaseAdapter(str(db_path))
@@ -131,7 +127,7 @@ class TestDatabaseAdapter:
             "C:\\temp\\test.db" if Path("C:\\").exists() else "/tmp/test.db",
         ]
 
-        for path_str in test_cases:
+        for _path_str in test_cases:
             with TemporaryDirectory() as tmp_dir:
                 # Create temporary path
                 temp_path = Path(tmp_dir) / "test.db"
@@ -166,7 +162,7 @@ class TestDatabaseAdapter:
                 def close(self) -> None:
                     pass
 
-            adapter = TestAdapter(db_path)
+            TestAdapter(db_path)
 
             # _create_schema should not be called directly by __init__
             # It's called by _initialize_database in concrete implementations

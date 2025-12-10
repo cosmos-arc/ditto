@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import ditto_core.data.service as service_module
 import pytest
 from ditto_core.data.adapters import DuckDBAdapter, SQLiteAdapter
 from ditto_core.data.service import DataService
@@ -278,9 +279,8 @@ class TestDataService:
         )
 
         # Use context manager with exception
-        with pytest.raises(ValueError, match="Test exception"):
-            with service:
-                raise ValueError("Test exception")
+        with pytest.raises(ValueError, match="Test exception"), service:
+            raise ValueError("Test exception")
 
         # Verify close was still called despite exception
         mock_duckdb.close.assert_called_once()
@@ -289,8 +289,6 @@ class TestDataService:
     def test_duckdb_adapter_not_available(self) -> None:
         """Test behavior when DuckDBAdapter is not available."""
         # Simulate DuckDB not being available by setting it to None in the module
-        import ditto_core.data.service as service_module
-
         original_duckdb = service_module.DuckDBAdapter
 
         try:

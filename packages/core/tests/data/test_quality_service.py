@@ -140,7 +140,7 @@ class TestDataQualityService:
         """Test that health check returns correct date range."""
         days_back = 7
         expected_end = date.today()
-        expected_start = expected_end - timedelta(days=days_back)
+        expected_end - timedelta(days=days_back)
 
         result = await self.quality_service.run_health_check(
             sample_size=10, days_back=days_back

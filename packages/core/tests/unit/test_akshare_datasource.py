@@ -3,6 +3,7 @@
 import time
 from unittest.mock import Mock, patch
 
+import pandas as pd
 import pytest
 import requests
 from ditto_core.data.datasources.akshare import AkShareDataSource
@@ -62,7 +63,7 @@ class TestAkShareDataSource:
         # First call should not delay
         start_time = time.time()
         source._rate_limit()
-        first_call_time = time.time() - start_time
+        time.time() - start_time
 
         # Second immediate call should delay
         start_time = time.time()
@@ -115,8 +116,6 @@ class TestAkShareDataSource:
     @patch("ditto_core.data.datasources.akshare.ak")
     def test_get_etf_list_success(self, mock_ak: Mock) -> None:
         """Test successful ETF list retrieval."""
-        import pandas as pd
-
         # Mock successful response
         mock_data = pd.DataFrame(
             {
@@ -147,8 +146,6 @@ class TestAkShareDataSource:
     @patch("ditto_core.data.datasources.akshare.ak")
     def test_get_daily_data_sh_prefix(self, mock_ak: Mock) -> None:
         """Test get_daily_data with SH prefix symbol."""
-        import pandas as pd
-
         # Mock successful response
         mock_data = pd.DataFrame(
             {
@@ -185,8 +182,6 @@ class TestAkShareDataSource:
     @patch("ditto_core.data.datasources.akshare.ak")
     def test_get_daily_data_no_prefix(self, mock_ak: Mock) -> None:
         """Test get_daily_data without prefix symbol."""
-        import pandas as pd
-
         # Mock successful response
         mock_data = pd.DataFrame(
             {
@@ -272,8 +267,6 @@ class TestAkShareDataSource:
     @patch("ditto_core.data.datasources.akshare.ak")
     def test_get_adjustment_factors_validation_error(self, mock_ak: Mock) -> None:
         """Test get_adjustment_factors handles validation errors."""
-        from ditto_core.data.exceptions import ValidationError
-
         source = AkShareDataSource()
 
         # Test with invalid date format - should raise ValidationError

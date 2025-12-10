@@ -1,14 +1,14 @@
 """Unit tests for database adapter protocols."""
 
-import os
-
 # Import directly to avoid import chain issues
+import inspect
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
 
 from ditto_core.data.adapters.protocol import Connection, DatabaseAdapter, Result
 
@@ -49,6 +49,7 @@ class MockAdapter:
     """Mock adapter implementation."""
 
     def __init__(self) -> None:
+        """Initialize MockAdapter."""
         self._connection = MockConnection()
 
     @property
@@ -169,8 +170,6 @@ def test_protocol_instantiation() -> None:
 
 def test_protocol_method_signatures() -> None:
     """Test that protocol methods have correct signatures."""
-    import inspect
-
     # Check Connection protocol
     conn_sig = inspect.signature(Connection.execute)
     assert "query" in conn_sig.parameters

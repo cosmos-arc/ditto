@@ -13,6 +13,7 @@ import logging
 import sys
 import traceback
 from datetime import date, datetime, timedelta
+from typing import Any
 
 try:
     from ditto_foundation.config.settings import get_settings
@@ -233,7 +234,7 @@ async def validate_new_data(
             print(f"\nFound {len(validation_issues)} validation issues:")
 
             # Group by severity
-            by_severity = {
+            by_severity: dict[str, list[Any]] = {
                 "critical": [],
                 "error": [],
                 "warning": [],

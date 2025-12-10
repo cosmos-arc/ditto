@@ -13,6 +13,7 @@ class DataSourceError(Exception):
         symbol: str | None = None,
         **kwargs: Any,
     ) -> None:
+        """Initialize DataSourceError."""
         super().__init__(message)
         self.message = message
         self.source = source

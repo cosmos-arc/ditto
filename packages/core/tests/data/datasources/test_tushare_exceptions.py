@@ -194,7 +194,7 @@ class TestTushareDataSourceExceptionHandling:
     def test_connect_method_exception_handling(self) -> None:
         """Test exception handling in connect method."""
         # Test with valid token
-        with patch("ditto_core.data.datasources.tushare.ts") as mock_ts:
+        with patch("ditto_core.data.datasources.tushare.ts"):
             source = TushareDataSource({"token": "test_token"})
 
             # Test successful connection - connect method should not raise

@@ -1,23 +1,19 @@
 """Tests for logging configuration."""
 
-import json
 import sys
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-
-import pytest
+from unittest.mock import MagicMock, Mock, patch
 
 from ditto_foundation.logging_config import (
-    LogConfig,
-    StructuredLogger,
-    setup_logging,
-    get_logger,
-    RequestLogger,
     BusinessLogger,
+    LogConfig,
     LogLevelContext,
-    request_logger,
+    RequestLogger,
+    StructuredLogger,
     business_logger,
+    get_logger,
+    request_logger,
+    setup_logging,
 )
 
 
@@ -37,11 +33,7 @@ class TestLogConfig:
 
     def test_custom_config(self) -> None:
         """Test custom configuration values."""
-        config = LogConfig(
-            level="DEBUG",
-            enable_console=False,
-            json_format=True
-        )
+        config = LogConfig(level="DEBUG", enable_console=False, json_format=True)
         assert config.level == "DEBUG"
         assert config.enable_console is False
         assert config.json_format is True
@@ -67,7 +59,7 @@ class TestStructuredLogger:
         """Test info logging with additional data."""
         logger = StructuredLogger("test")
         logger.info("Test message", key1="value1", key2=123)
-        expected = "Test message | {\"key1\": \"value1\", \"key2\": 123}"
+        expected = 'Test message | {"key1": "value1", "key2": 123}'
         mock_logger.info.assert_called_once_with(expected)
 
     @patch("ditto_foundation.logging_config.logger")
@@ -82,7 +74,7 @@ class TestStructuredLogger:
         """Test error logging with additional data."""
         logger = StructuredLogger("test")
         logger.error("Error message", code=500, detail="Server error")
-        expected = "Error message | {\"code\": 500, \"detail\": \"Server error\"}"
+        expected = 'Error message | {"code": 500, "detail": "Server error"}'
         mock_logger.error.assert_called_once_with(expected)
 
     @patch("ditto_foundation.logging_config.logger")
@@ -90,7 +82,7 @@ class TestStructuredLogger:
         """Test warning logging with additional data."""
         logger = StructuredLogger("test")
         logger.warning("Warning message", user_id=123)
-        expected = "Warning message | {\"user_id\": 123}"
+        expected = 'Warning message | {"user_id": 123}'
         mock_logger.warning.assert_called_once_with(expected)
 
     @patch("ditto_foundation.logging_config.logger")
@@ -98,7 +90,7 @@ class TestStructuredLogger:
         """Test debug logging with additional data."""
         logger = StructuredLogger("test")
         logger.debug("Debug message", step=1, total=10)
-        expected = "Debug message | {\"step\": 1, \"total\": 10}"
+        expected = 'Debug message | {"step": 1, "total": 10}'
         mock_logger.debug.assert_called_once_with(expected)
 
     @patch("ditto_foundation.logging_config.logger")
@@ -106,7 +98,7 @@ class TestStructuredLogger:
         """Test exception logging with additional data."""
         logger = StructuredLogger("test")
         logger.exception("Exception occurred", error_type="ValueError")
-        expected = "Exception occurred | {\"error_type\": \"ValueError\"}"
+        expected = 'Exception occurred | {"error_type": "ValueError"}'
         mock_logger.exception.assert_called_once_with(expected)
 
     @patch("ditto_foundation.logging_config.logger")
@@ -122,7 +114,9 @@ class TestSetupLogging:
 
     @patch("ditto_foundation.logging_config.logger")
     @patch("ditto_foundation.logging_config.Path")
-    def test_setup_with_default_config(self, mock_path: Mock, mock_logger: Mock) -> None:
+    def test_setup_with_default_config(
+        self, mock_path: Mock, mock_logger: Mock
+    ) -> None:
         """Test setup with default configuration."""
         mock_log_dir = Mock()
         mock_path.return_value = mock_log_dir
@@ -174,8 +168,7 @@ class TestSetupLogging:
 
         # Check console format for production
         console_calls = [
-            call for call in mock_logger.add.call_args_list
-            if call[0][0] == sys.stdout
+            call for call in mock_logger.add.call_args_list if call[0][0] == sys.stdout
         ]
         assert len(console_calls) == 1
         format_arg = console_calls[0][1]["format"]
@@ -194,7 +187,8 @@ class TestSetupLogging:
         # Should remove all handlers and add only warning level
         assert mock_logger.remove.call_count == 2  # Once at start, once for testing
         warning_calls = [
-            call for call in mock_logger.add.call_args_list
+            call
+            for call in mock_logger.add.call_args_list
             if call[1].get("level") == "WARNING"
         ]
         assert len(warning_calls) == 1
@@ -212,23 +206,25 @@ class TestSetupLogging:
 
         # Check that serialize=True is set for JSON format
         file_calls = [
-            call for call in mock_logger.add.call_args_list
-            if call[0][0] != sys.stdout
+            call for call in mock_logger.add.call_args_list if call[0][0] != sys.stdout
         ]
         # Should find a call with serialize=True
         assert any(call[1].get("serialize") is True for call in file_calls)
 
     @patch("ditto_foundation.logging_config.logger")
-    @patch("ditto_foundation.logging_config.Path")
-    def test_setup_custom_log_dir(self, mock_path: Mock, mock_logger: Mock) -> None:
+    def test_setup_custom_log_dir(self, mock_logger: Mock) -> None:
         """Test setup with custom log directory."""
-        custom_dir = Path("/custom/logs")
-        custom_dir.mkdir = Mock()
+        # Create a mock directory with mkdir method
+        with patch("ditto_foundation.logging_config.Path") as mock_path:
+            custom_dir = MagicMock()
+            mock_path.return_value = custom_dir
 
-        setup_logging(log_dir=custom_dir)
+            setup_logging(log_dir=Path("/custom/logs"))
 
-        # Should use custom directory
-        custom_dir.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+            # Should call Path with the custom log directory
+            mock_path.assert_called_once_with(Path("/custom/logs"))
+            # And should call mkdir on it
+            custom_dir.mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
 
 class TestGetLogger:
@@ -253,7 +249,7 @@ class TestRequestLogger:
             path="/api/test",
             headers={"Authorization": "Bearer token"},
             query_params={"page": 1},
-            request_id="123"
+            request_id="123",
         )
 
         mock_logger.info.assert_called_once()
@@ -276,7 +272,7 @@ class TestRequestLogger:
             path="/api/test",
             status_code=200,
             duration_ms=150.5,
-            request_id="123"
+            request_id="123",
         )
 
         mock_logger.info.assert_called_once()
@@ -290,10 +286,7 @@ class TestRequestLogger:
         """Test logging a warning response."""
         logger = RequestLogger()
         logger.log_response(
-            method="POST",
-            path="/api/test",
-            status_code=400,
-            duration_ms=50.0
+            method="POST", path="/api/test", status_code=400, duration_ms=50.0
         )
 
         mock_logger.warning.assert_called_once()
@@ -305,10 +298,7 @@ class TestRequestLogger:
         """Test logging an error response."""
         logger = RequestLogger()
         logger.log_response(
-            method="DELETE",
-            path="/api/test",
-            status_code=500,
-            duration_ms=100.0
+            method="DELETE", path="/api/test", status_code=500, duration_ms=100.0
         )
 
         mock_logger.error.assert_called_once()
@@ -320,12 +310,7 @@ class TestRequestLogger:
         """Test logging an error."""
         logger = RequestLogger()
         error = ValueError("Test error")
-        logger.log_error(
-            method="GET",
-            path="/api/test",
-            error=error,
-            request_id="456"
-        )
+        logger.log_error(method="GET", path="/api/test", error=error, request_id="456")
 
         mock_logger.error.assert_called_once()
         call_args = mock_logger.error.call_args[0][0]
@@ -352,7 +337,7 @@ class TestBusinessLogger:
             action="BUY",
             quantity=1000,
             price=3.5,
-            order_id="ord123"
+            order_id="ord123",
         )
 
         mock_logger.info.assert_called_once()
@@ -377,7 +362,7 @@ class TestBusinessLogger:
             symbol="510300",
             signal_type="STRONG_BUY",
             confidence=0.85,
-            factors={"rs": 1.5, "value": 0.8}
+            factors={"rs": 1.5, "value": 0.8},
         )
 
         mock_logger.info.assert_called_once()
@@ -396,7 +381,7 @@ class TestBusinessLogger:
             symbol="510300",
             update_type="daily",
             records=250,
-            success=True
+            success=True,
         )
 
         mock_logger.info.assert_called_once()
@@ -415,7 +400,7 @@ class TestBusinessLogger:
             symbol="159919",
             update_type="realtime",
             records=0,
-            success=False
+            success=False,
         )
 
         mock_logger.error.assert_called_once()
