@@ -49,6 +49,8 @@ ipykernel = ">=6.29.0,<7"
 jupyter = ">=1.1.0,<1.2"
 pytest-asyncio = ">=1.3.0,<2"
 requests-mock = ">=1.12.1,<2"
+pytest-benchmark = ">=4.0.0,<5"
+faker = ">=33.0.0,<34"
 pandera = ">=0.27.0,<0.28"
 pyarrow = ">=22.0.0,<23"
 duckdb = ">=1.4.2,<2"
@@ -86,3 +88,4 @@ cmd = ["ruff", "format", "."]
 [feature.dev.dependencies]
 pre-commit = "*"
 bandit = "*"
+types-requests = ">=2.32.4.20250913,<3"

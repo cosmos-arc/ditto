@@ -234,7 +234,7 @@ class TestSQLiteAdapter:
             adapter.close()
 
     @patch("ditto_core.data.adapters.sqlite_adapter.sqlite3.connect")
-    def test_database_schema_structure(self, mock_connect: MagicMock) -> None:
+    def test_database_schema_structure(self, mock_connect: MagicMock) -> None:  # noqa: PLR0915
         """Test that database schema has correct structure."""
         with TemporaryDirectory() as tmp_dir:
             db_path = Path(tmp_dir) / "test.sqlite"

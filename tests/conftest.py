@@ -15,7 +15,7 @@ from _pytest.fixtures import SubRequest
 from _pytest.nodes import Item
 
 # Add src directories to Python path for editable imports
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root / "packages" / "core" / "src"))
 sys.path.insert(0, str(project_root / "packages" / "foundation" / "src"))
 sys.path.insert(0, str(project_root / "apps" / "server" / "src"))
@@ -249,7 +249,13 @@ def pytest_configure(config: Any) -> None:
     config.addinivalue_line("markers", "unit: Mark test as a unit test")
     config.addinivalue_line("markers", "integration: Mark test as an integration test")
     config.addinivalue_line("markers", "e2e: Mark test as an end-to-end test")
-    config.addinivalue_line("markers", "slow: Mark test as slow running")
+    config.addinivalue_line(
+        "markers", "slow: Mark test as slow running (skip with -m 'not slow')"
+    )
+    config.addinivalue_line("markers", "smoke: Mark test as a smoke test")
+    config.addinivalue_line(
+        "markers", "benchmark: Mark test as a performance benchmark test"
+    )
     config.addinivalue_line("markers", "network: Mark test as requiring network access")
     config.addinivalue_line("markers", "database: Mark test as requiring database")
 
@@ -276,6 +282,8 @@ def pytest_collection_modifyitems(config: Any, items: list[Item]) -> None:
             item.add_marker(pytest.mark.integration)
         elif "/tests/e2e/" in path_str or path_str.endswith("/tests/e2e"):
             item.add_marker(pytest.mark.e2e)
+        elif "/tests/perf/" in path_str or path_str.endswith("/tests/perf"):
+            item.add_marker(pytest.mark.benchmark)
 
         # Mark slow tests based on naming convention
         if "slow_" in item.name or "_slow" in item.name:

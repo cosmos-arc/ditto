@@ -271,9 +271,13 @@ pre-commit run --all-files --no-color  # 修改 pre-commit 行为
 
 **严重违规记录**：
 - 日期：2025-12-10
-- 违规行为：未经用户允许，擅自修改 .pre-commit-config.yaml，禁用了 mypy 和 pytest 检查
-- 影响：绕过了项目的代码质量检查机制
-- 处理：已恢复配置，违规行为已记录
+- 违规行为1：未经用户允许，擅自修改 .pre-commit-config.yaml，禁用了 mypy 和 pytest 检查
+  - 影响：绕过了项目的代码质量检查机制
+  - 处理：已恢复配置，违规行为已记录
+- 日期：2025-12-10
+- 违规行为2：在提交代码遇到 pre-commit 检查失败时，再次试图修改 pre-commit 配置以绕过检查
+  - 影响：再次试图绕过项目的代码质量检查机制
+  - 处理：已恢复配置，严重警告
 
 **禁止的行为**：
 - 修改 .pre-commit-config.yaml
@@ -416,11 +420,12 @@ Ditto is a quantitative investment system designed for volatile market condition
 apps/
   server/           # FastAPI application and API endpoints
     src/
-      api/          # HTTP routers
-      services/     # Application services (use case orchestration)
-      models/       # Pydantic models for API
-      scheduler/    # APScheduler job definitions
-      main.py       # FastAPI app entry point
+      ditto-server/
+         api/          # HTTP routers
+         services/     # Application services (use case orchestration)
+         models/       # Pydantic models for API
+         scheduler/    # APScheduler job definitions
+         main.py       # FastAPI app entry point
 
   web/              # Next.js frontend (Phase 1+)
     src/
@@ -432,17 +437,19 @@ apps/
 packages/
   core/
     src/
-      data/         # DataService, database adapters
-      engine/       # Core business logic engines
-      strategy/     # Strategy abstractions and implementations
-      portfolio/    # Portfolio management and multi-strategy coordination
-      config/       # Configuration models
-      util/         # Common utilities
+      ditto-core/
+         data/         # DataService, database adapters
+         engine/       # Core business logic engines
+         strategy/     # Strategy abstractions and implementations
+         portfolio/    # Portfolio management and multi-strategy coordination
 
-  shared/
+  foundatoin/
     src/
-      types/          # Shared type definitions
-      contracts/      # Data contracts and validation rules
+      ditto-foundatoin/
+         types/          # Shared type definitions
+         contracts/      # Data contracts and validation rules
+         config/         # Configuration models
+         util/           # Common utilities
 ```
 
 ### Core Engines
@@ -503,6 +510,70 @@ The system enforces strict quality requirements:
 - ETF sector rotation focus, but architecture supports multi-asset expansion
 - Strict risk management with KillSwitch capabilities
 - No cloud dependencies for core functionality
+
+### Shell 命令使用规范 ⚠️ **必须遵守**
+
+#### 系统检测和命令选择原则
+**在执行任何 shell 命令之前，必须先检测当前操作系统，然后使用相应的命令格式。**
+
+1. **Windows 系统优先使用 PowerShell**：
+   - Windows 环境下，默认使用 PowerShell 命令
+   - PowerShell 提供更强大的对象处理和管道功能
+   - 兼容性好，错误处理更完善
+
+2. **跨平台命令选择**：
+   - Windows: PowerShell (`pwsh` 或 `powershell`)
+   - Linux/macOS: Bash (`bash` 或 `sh`)
+   - 使用 `platform` 模块或类似方法检测系统
+
+3. **命令格式示例**：
+
+```python
+import platform
+import subprocess
+
+def run_command(cmd_args):
+    """根据操作系统选择合适的shell命令"""
+    system = platform.system()
+
+    if system == "Windows":
+        # Windows 使用 PowerShell
+        return subprocess.run(["powershell", "-Command"] + cmd_args, capture_output=True, text=True)
+    else:
+        # Linux/macOS 使用 Bash
+        return subprocess.run(["bash", "-c"] + [" ".join(cmd_args)], capture_output=True, text=True)
+```
+
+4. **具体命令映射**：
+
+| 操作 | Windows (PowerShell) | Linux/macOS (Bash) |
+|------|---------------------|-------------------|
+| 列出文件 | `Get-ChildItem` 或 `ls` | `ls` |
+| 复制文件 | `Copy-Item` 或 `copy` | `cp` |
+| 移动文件 | `Move-Item` 或 `move` | `mv` |
+| 删除文件 | `Remove-Item` 或 `del` | `rm` |
+| 创建目录 | `New-Item -Type Directory` 或 `mkdir` | `mkdir` |
+| 查找文件 | `Get-ChildItem -Recurse -Filter` | `find` |
+| 环境变量 | `$env:VAR_NAME` | `$VAR_NAME` |
+| 路径分隔符 | `\` (自动转换) | `/` |
+
+5. **Claude Code 使用指南**：
+   - 在 Windows 环境下，Bash 工具会自动使用 PowerShell
+   - 路径会自动转换，无需手动处理分隔符
+   - 优先使用跨平台的 Python 代码处理文件操作
+
+6. **最佳实践**：
+   - 优先使用 Python 内置功能（如 `pathlib`）处理文件操作
+   - 必须使用 shell 命令时，考虑跨平台兼容性
+   - 在脚本中使用条件判断处理不同系统
+
+```python
+from pathlib import Path
+
+# 跨平台兼容的文件操作方式
+data_dir = Path("data") / "test"
+data_dir.mkdir(parents=True, exist_ok=True)  # 跨平台创建目录
+```
 
 ## Claude Code 交互规范 ⚠️ **必须遵守**
 
@@ -584,9 +655,14 @@ The system enforces strict quality requirements:
 
 ### 开发流程要求
 1. **任务执行顺序**：
-   - 优先处理阻塞其他任务的项
-   - 修复导入错误等基础问题
-   - 按照里程碑依赖关系推进
+   - 按照里程碑依赖关系推进，优先处理阻塞其他任务的项
+   - 使用superpowers:writing-plans梳理计划后再执行
+   - 使用superpowers:systematic-debugging排查疑难咋整
+   - 使用superpowers:test-driven-development完成功能开发
+   - 使用superpowers:subagent-driven-development完成可独立拆解的并行功能开发
+   - 开发完成后使用superpowers:verification-before-completion做前置验证
+   - 验证完成后使用superpowers:requesting-code-review做CodeReview，并重复以上步骤直至代码审核通过
+   -
 
 2. **TDD 开发规范 ⚠️ **必须遵守**：
    - **先写测试**：实现任何功能前，先编写测试用例
@@ -681,9 +757,9 @@ The system enforces strict quality requirements:
 5. **会话结束检查清单**：
    - [ ] 更新 `phase0_tasks.md` 中的任务状态
    - [ ] 删除所有临时生成的文档
-   - [ ] 提交已完成的功能（使用原子提交）
    - [ ] 更新 README.md 中的任务进度
    - [ ] 确保所有新功能都有对应的测试
+   - [ ] 确保完整的precommit检查通过
 
 ## Python 单元测试规范 v1.0
 
@@ -695,26 +771,245 @@ The system enforces strict quality requirements:
 ### 测试技术栈
 ```bash
 # 必选工具
-pip install pytest pytest-cov pytest-mock
+pip install pytest pytest-cov pytest-mock pytest-asyncio
 
 # 推荐工具（按需）
 pip install pytest-benchmark faker hypothesis
 ```
 
-### 目录结构
+### 目录结构（模块内同级目录的镜像结构）
+
+#### 推荐的测试目录结构
+最佳实践是保持测试代码与源码目录结构镜像对应，测试目录与 src 目录同级，分别保留在相关模块内：
+
 ```
 project_root/
-├── src/
-│   └── ditto/
-│       ├── strategies/
-│       ├── risk/
-│       └── core/
-└── tests/
-    ├── conftest.py           # 全局共享fixtures
-    ├── unit/                 # 单元测试（mock外部依赖）
-    ├── integration/          # 集成测试（子系统+真DB/IO）
-    ├── e2e/                  # 端到端测试
-    └── fixtures/             # 测试数据文件
+├── packages/
+│   ├── core/
+│   │   ├── pyproject.toml
+│   │   ├── src/
+│   │   │   └── ditto_core/
+│   │   │       ├── data/
+│   │   │       │   ├── __init__.py
+│   │   │       │   ├── collector.py
+│   │   │       │   └── datasources/
+│   │   │       │       ├── __init__.py
+│   │   │       │       ├── tushare.py
+│   │   │       │       └── akshare.py
+│   │   │       ├── engine/
+│   │   │       │   ├── __init__.py
+│   │   │       │   ├── regime.py
+│   │   │       │   └── factor.py
+│   │   │       ├── portfolio/
+│   │   │       │   ├── __init__.py
+│   │   │       │   └── manager.py
+│   │   │       └── strategy/
+│   │   │           ├── __init__.py
+│   │   │           └── base.py
+│   │   └── tests/                          # 【核心】core 包的测试目录
+│   │       ├── conftest.py                 # core 包级别的 fixtures
+│   │       ├── unit/                       # 单元测试
+│   │       │   ├── data/
+│   │       │   │   ├── test_collector.py          # 对应 src/ditto_core/data/collector.py
+│   │       │   │   └── datasources/
+│   │       │   │       ├── test_tushare.py        # 对应 src/ditto_core/data/datasources/tushare.py
+│   │       │   │       └── test_akshare.py        # 对应 src/ditto_core/data/datasources/akshare.py
+│   │       │   ├── engine/
+│   │       │   │   ├── test_regime.py             # 对应 src/ditto_core/engine/regime.py
+│   │       │   │   └── test_factor.py             # 对应 src/ditto_core/engine/factor.py
+│   │       │   ├── portfolio/
+│   │       │   │   └── test_manager.py            # 对应 src/ditto_core/portfolio/manager.py
+│   │       │   └── strategy/
+│   │       │       └── test_base.py               # 对应 src/ditto_core/strategy/base.py
+│   │       ├── integration/                # 集成测试
+│   │       │   ├── data/
+│   │       │   │   └── test_data_integration.py   # 数据层集成测试
+│   │       │   └── test_duckdb_integration.py     # DuckDB 集成测试
+│   │       └── fixtures/                   # core 包的测试数据
+│   │           ├── sample_data.json
+│   │           └── mock_responses/
+│   │               └── tushare_responses.json
+│   └── foundation/
+│       ├── pyproject.toml
+│       ├── src/
+│       │   └── ditto_foundation/
+│       │       ├── contracts/
+│       │       │   ├── __init__.py
+│       │       │   ├── market_data.py
+│       │       │   └── etf.py
+│       │       └── config/
+│       │           ├── __init__.py
+│       │           └── settings.py
+│       └── tests/                          # foundation 包的测试目录
+│           ├── conftest.py                 # foundation 包级别的 fixtures
+│           ├── unit/
+│           │   ├── contracts/
+│           │   │   ├── test_market_data.py       # 对应 src/ditto_foundation/contracts/market_data.py
+│           │   │   └── test_etf.py               # 对应 src/ditto_foundation/contracts/etf.py
+│           │   └── config/
+│           │       └── test_settings.py           # 对应 src/ditto_foundation/config/settings.py
+│           └── integration/
+│               └── contracts/
+│                   └── test_market_data_integration.py
+├── apps/
+│   └── server/
+│       ├── pyproject.toml
+│       ├── src/
+│       │   └── ditto_server/              # 使用连字符命名
+│       │       ├── api/
+│       │       │   ├── __init__.py
+│       │       │   └── endpoints.py
+│       │       └── services/
+│       │           ├── __init__.py
+│       │           └── data_service.py
+│       └── tests/                          # server 应用的测试目录
+│           ├── conftest.py                 # server 应用级别的 fixtures
+│           ├── unit/                       # 单元测试（实用镜像结构）
+│           │   ├── test_endpoints.py              # 对应 src/ditto-server/api/endpoints.py
+│           │   └── test_data_service.py           # 对应 src/ditto_server/services/data_service.py
+│           └── integration/                # 集成测试
+│               └── test_api_integration.py        # API集成测试
+└── tests/                               # 项目根目录仅保留跨模块测试
+    ├── conftest.py                      # 【关键】全局共享 fixtures (数据库连接、Mock对象)
+    ├── e2e/                            # 端到端系统测试
+    │   └── test_trading_workflow.py
+    ├── perf/                           # 性能基准测试
+    │   └── test_data_processing.py
+    └── fixtures/                       # 全局测试数据文件
+        ├── test_db.sql
+        └── common_fixtures.json
+```
+
+#### 目录命名规范
+- **模块内测试目录**：每个包（packages/*, apps/*）都有自己的 `tests/` 目录
+- **测试根目录**：`tests/`（位于项目根目录，仅用于跨模块测试）
+- **测试分类**：
+  - `unit/` - 单元测试
+  - `integration/` - 集成测试
+  - `e2e/` - 端到端测试（仅在根目录）
+  - `perf/` - 性能测试（仅在根目录）
+  - `fixtures/` - 测试数据文件
+- **测试文件命名**：`test_{module_name}.py`（与源码文件一一对应）
+- **测试类命名**：`Test{ClassName}`
+- **测试函数命名**：`test_{function_name}_{scenario}_{expected}`
+
+### 关于 `tests/__init__.py` 的约定
+
+为保证依赖关系清晰、导入路径稳定，**Ditto 仓库统一约定：`tests/` 目录下不创建 `__init__.py` 文件**，即：
+
+```text
+tests/
+  conftest.py
+  unit/
+  integration/
+  e2e/
+  fixtures/
+```
+
+而不是：
+
+```text
+tests/
+  __init__.py      # ❌ 禁止
+  conftest.py
+  ...
+```
+
+**原因说明：**
+
+1. **避免将 tests 变成可导入的 Python 包**
+   - 一旦存在 `tests/__init__.py`，tests 就成为一个包，业务代码可能出现 `from tests.xxx import ...` 的错误用法
+   - 测试代码不属于生产依赖，任何对 tests 的 import 在打包/部署后都会失效，属于隐患
+
+2. **简化依赖方向：测试只能依赖代码，代码不能依赖测试**
+   - 我们希望依赖关系单向明确：
+     - 测试可以 `from ditto_core...`、`from ditto_data...`
+     - 业务代码不得以任何方式 import tests
+   - 不将 tests 声明为包，可以在物理结构上强化这一约束
+
+3. **配合 src/ 布局，不需要通过 tests 包做导入**
+   - 项目统一采用 src-layout，包通过 src/ditto_* 暴露
+   - 测试中一律使用绝对导入：
+     ```python
+     from ditto_core.engine import BacktestEngine
+     from ditto_data.pit import load_pit_data
+     ```
+   - 导入路径通过安装包（pip install -e . 或 workspace 管理）和 pytest 配置保证，而不是依赖 tests 包
+
+4. **避免命名冲突与导入混乱**
+   - 某些三方库或工具可能也使用 tests 作为模块名
+   - 将仓库根加入 PYTHONPATH 后，tests 包容易造成 shadowing
+   - 保持 tests/ 为普通目录，可以降低这类潜在冲突风险
+
+**强制规范：**
+- `tests/` 目录下不创建 `__init__.py` 文件
+- 所有测试均通过绝对导入引用业务包（ditto_*），不得引入 tests 作为可导入包
+
+#### 核心原则
+1. **模块自治**：每个包管理自己的测试，与 src 目录同级
+2. **实用镜像结构**：测试文件采用扁平化命名，避免过度嵌套
+3. **就近原则**：测试文件与被测文件保持在同一模块内
+   - 源码：`packages/core/src/ditto_core/data/collector.py`
+   - 测试：`packages/core/tests/unit/test_collector.py`
+   - 源码：`apps/server/src/ditto-server/api/endpoints.py`
+   - 测试：`apps/server/tests/unit/test_endpoints.py`
+4. **分层 fixtures**：
+   - `tests/conftest.py` - 全局 fixtures（数据库连接等）
+   - `packages/*/tests/conftest.py` - 包级别 fixtures
+   - `apps/*/tests/conftest.py` - 应用级别 fixtures
+5. **分离运行**：可以单独运行每个包/应用的测试
+
+#### 这种结构的优势
+- **模块独立性**：每个包的测试完全独立，便于包的维护和迁移
+- **清晰的职责分离**：单元测试和集成测试在各自包内，跨模块测试在根目录
+- **便于并行开发**：不同包的开发者可以独立运行自己的测试
+- **减少路径复杂性**：测试文件不需要从项目根目录开始的长路径
+- **符合微服务架构**：每个包都可以被视为独立的服务
+- **CI/CD 友好**：可以配置特定包的测试在特定条件下运行
+
+#### 运行测试示例
+```bash
+# 运行整个项目的测试
+pytest
+
+# 运行特定包的测试
+pytest packages/core/tests/
+pytest packages/foundation/tests/
+pytest apps/server/tests/
+
+# 运行特定类型的测试
+pytest packages/core/tests/unit/          # 仅 core 包的单元测试
+pytest packages/*/tests/integration/      # 所有包的集成测试
+pytest tests/e2e/                         # 端到端测试
+
+# 运行特定文件的测试
+pytest packages/core/tests/unit/data/test_collector.py
+```
+
+### 目录与Marker匹配规则（硬性约束）
+
+| 目录 | 必须Marker | 允许的其他Marker | 禁止的内容 |
+|------|-----------|------------------|------------|
+| tests/unit/ | （无） | slow（极少数）、smoke | 访问真实DB/网络、读大文件、跑长回测 |
+| tests/integration/ | integration | slow、smoke | 没有集成含义的纯函数测试（应放到unit） |
+| tests/e2e/ | e2e | slow、smoke | 依赖随意本地环境、复杂人工准备 |
+| tests/perf/ | benchmark | slow | 用于验证业务逻辑正确性（应在unit/integration） |
+
+**团队规范要求**：
+- `tests/integration/` 下的每个测试函数都必须加 `@pytest.mark.integration`
+- `tests/e2e/` 下的每个测试函数都必须加 `@pytest.mark.e2e`
+- `tests/perf/` 下的每个测试函数都必须加 `@pytest.mark.benchmark`
+
+这样可以在CI命令中用marker做精确筛选：
+```bash
+# 运行所有单元测试（排除慢测试）
+pytest -m "unit and not slow"
+
+# 运行集成测试
+pytest -m "integration"
+
+# 运行性能基准测试
+pytest -m "benchmark"
 ```
 
 ### 测试命名规范
@@ -784,10 +1079,42 @@ addopts = [
     "-v"
 ]
 markers = [
-    "slow: marks tests as slow",
-    "integration: marks tests as integration tests",
-    "benchmark: marks performance benchmark tests",
+    "unit: 标记单元测试",
+    "integration: 标记集成测试",
+    "e2e: 标记端到端测试",
+    "slow: 标记运行缓慢的测试 (可使用 -m 'not slow' 跳过)",
+    "smoke: 标记冒烟测试",
+    "benchmark: marks performance benchmark tests"
 ]
+```
+
+### 异步测试规范
+
+#### 使用场景
+- 仅当被测对象为 `async def` 函数/方法时才使用 `@pytest.mark.asyncio`
+- 所有异步测试必须写成：
+
+```python
+@pytest.mark.asyncio
+async def test_xxx(...):
+    ...
+```
+
+#### 分层规范
+异步测试同样遵守目录与marker的分层规范：
+- **unit级**：放在 `tests/unit/`，不访问真实外部资源
+- **integration级**：放在 `tests/integration/`，叠加 `@pytest.mark.integration`
+- **e2e级**：放在 `tests/e2e/`，叠加 `@pytest.mark.e2e`
+
+#### 禁止行为
+- 禁止在 `@pytest.mark.asyncio` 测试中调用 `asyncio.run()`
+- 事件循环由 `pytest-asyncio` 统一管理
+- 配置 `asyncio_mode = "strict"` 以避免隐藏的loop使用问题
+
+#### 配置示例
+```toml
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
 ```
 
 ### 测试最佳实践
@@ -795,3 +1122,159 @@ markers = [
 2. **Patch原则**：在"使用的地方"patch，而非定义的地方
 3. **参数化测试**：使用`@pytest.mark.parametrize`覆盖多种场景
 4. **时间/随机数**：固定seed，使用freezegun固定时间
+5. **目录约束**：严格遵守目录与marker匹配规则
+6. **异步测试**：仅用于异步函数，避免混用同步/异步模式
+
+## X. 外部依赖测试策略（HTTP / DB / 第三方服务）
+
+本章节用于统一规范 Ditto 项目中 **外部数据源、数据库、第三方接口** 的测试方式，明确：
+
+- 哪些应该用 **单元测试 + Mock/Fake**
+- 哪些必须用 **集成测试 + 真实依赖**
+- 如何避免 **过度 Mock** 或 **误用真实环境**
+
+---
+
+### X.1 测试目标分层原则
+
+外部依赖相关测试必须严格遵循以下分层原则：
+
+| 测试类型       | 核心目标                                   | 是否访问真实外部依赖 |
+|----------------|--------------------------------------------|----------------------|
+| 单元测试 (Unit) | 验证 **业务逻辑/算法/规则** 是否正确        | ❌ 禁止               |
+| 集成测试 (Integration) | 验证 **技术对接是否正确（SQL/协议/驱动）** | ✅ 允许（测试环境）   |
+| 端到端 (E2E)    | 验证 **系统整体链路是否可用**               | ✅ 允许（受控环境）   |
+
+**核心结论：**
+
+> ✅ 业务逻辑 → 一定在单元测试中用 Mock/Fake 隔离
+> ✅ 外部协议 / DB schema → 一定在集成测试中用真实依赖验证
+> ❌ 严禁在单元测试中访问真实 HTTP、真实 DB、真实第三方 API
+
+---
+
+### X.2 各类外部依赖的标准测试策略
+
+| 外部依赖类型 | 单元测试策略 | 集成测试策略 |
+|---------------|----------------|----------------|
+| HTTP 行情接口 / 资讯 API | Mock http client，返回固定 JSON | 本地 fake server 或 sandbox 接口 |
+| DuckDB / SQLite | Fake Repository 返回 DataFrame | 真实 test DB + 真实 SQL |
+| 消息队列 / Kafka / MQ | Mock Producer | Embedded broker 或 docker broker |
+| Redis / 状态存储 | Fake cache 对象 | 真实 Redis test 实例 |
+| 真实交易接口 | ❌ 只允许 Mock | ✅ 仅限纸交易 / Sandbox |
+
+---
+
+### X.3 单元测试中外部依赖的标准做法（Mock / Fake）
+
+#### ✅ 正确做法：Fake / Mock 外部数据源
+
+```python
+def test_strategy_with_fake_market_data(mocker):
+    mock_fetch = mocker.patch("ditto.data.fetch_data")
+    mock_fetch.return_value = fake_price_df
+
+    strategy = RotationStrategy()
+    signals = strategy.generate_signals()
+
+    assert signals is not None
+```
+
+✅ **更推荐做法：Port + Fake 实现（解耦测试）**
+```python
+class FakePriceRepository:
+    def get_prices(self, symbol):
+        return fake_price_df
+
+def test_strategy_with_fake_repo():
+    repo = FakePriceRepository()
+    strategy = RotationStrategy(price_repo=repo)
+
+    signals = strategy.generate_signals()
+    assert signals is not None
+```
+
+✅ 该方式比 patch() 更稳定、可维护性更强。
+
+---
+
+### X.4 集成测试中的真实依赖验证
+
+✅ **测试 DuckDB / PIT 数据完整性**
+```python
+@pytest.mark.integration
+def test_pit_loader_with_real_duckdb(tmp_path):
+    db_path = tmp_path / "test.db"
+    init_schema(db_path)
+    insert_test_data(db_path)
+
+    df = load_pit_data(as_of="2024-01-01", db_path=db_path)
+
+    assert df["date"].max() <= "2024-01-01"
+```
+
+**用途：**
+- 验证 SQL 语法是否正确
+- 验证时间条件是否正确
+- 验证去重、索引、性能是否异常
+
+---
+
+### X.5 明确"必须 Mock"的高风险场景
+
+以下场景 **严禁在 CI / 自动化测试中访问真实环境**：
+
+✅ 公网第三方行情 / 资讯 API
+✅ 真实下单接口 / 真实资金账户
+✅ 有频率限制 / 计费的接口
+✅ 不可回滚的破坏性操作
+
+**策略：**
+| 场景 | 解决方案 |
+|------|----------|
+| 行情 API | mock + 录制响应 |
+| 交易接口 | sandbox + 模拟撮合 |
+| 高频受限服务 | 本地 fake server |
+
+---
+
+### X.6 避免"过度 Mock"的两条硬规则
+
+❌ **禁止只测试"Mock 调用行为"**
+```python
+# 错误示例（实现耦合过强）
+mock_fetch.assert_called_once()
+```
+
+✅ **应该测试的是：**
+```python
+assert portfolio.total_value > 0
+```
+
+✅ **优先 Fake，其次 Patch**
+| 方式 | 适用场景 | 维护成本 |
+|------|----------|----------|
+| Fake 类实现 | Repo / DataSource / Cache | ✅ 低 |
+| mocker.patch() | 老代码、无法注入依赖时 | ❌ 高 |
+
+---
+
+### X.7 与测试目录 & marker 的强制约束关系
+
+| 目录 | 是否允许真实依赖 | 是否必须 marker |
+|------|------------------|----------------|
+| tests/unit/ | ❌ 禁止 | 无 |
+| tests/integration/ | ✅ 允许 | 必须 @pytest.mark.integration |
+| tests/e2e/ | ✅ 允许 | 必须 @pytest.mark.e2e |
+
+✅ **官方结论（Ditto 强制执行规范）**
+- ✅ 所有业务逻辑必须通过 mock/fake 的单元测试先行验证
+- ✅ 所有 DB / SQL / HTTP 协议级问题必须由 集成测试兜底
+- ❌ CI 中禁止调用任何真实公网第三方 API
+- ✅ 所有 PIT、风控、交易规则必须同时具备：单元逻辑测试 + 集成数据一致性测试
+
+✅ **一句话总结**
+- 单元测试 → 测"你脑子里写的逻辑对不对"
+- 集成测试 → 测"你和真实世界的接口对不对"
+
+两者缺一不可，但职责必须严格分离。

@@ -4,6 +4,10 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+# Constants for ETF validation
+MIN_SYMBOL_LENGTH = 6
+MIN_NAME_LENGTH = 2
+
 
 class ETFInfoModel(BaseModel):
     """Pydantic model for ETF information validation."""
@@ -18,16 +22,18 @@ class ETFInfoModel(BaseModel):
     @classmethod
     def validate_symbol(cls, v: str) -> str:
         """Validate ETF symbol format."""
-        if not v or len(v) < 6:
-            raise ValueError("ETF symbol must be at least 6 characters")
+        if not v or len(v) < MIN_SYMBOL_LENGTH:
+            raise ValueError(
+                f"ETF symbol must be at least {MIN_SYMBOL_LENGTH} characters"
+            )
         return v.upper()
 
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
         """Validate ETF name."""
-        if not v or len(v.strip()) < 2:
-            raise ValueError("ETF name must be at least 2 characters")
+        if not v or len(v.strip()) < MIN_NAME_LENGTH:
+            raise ValueError(f"ETF name must be at least {MIN_NAME_LENGTH} characters")
         return v.strip()
 
     model_config = ConfigDict(

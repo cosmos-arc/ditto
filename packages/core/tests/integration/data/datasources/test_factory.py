@@ -1,5 +1,6 @@
 """Unit tests for DataSourceFactory."""
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -56,7 +57,7 @@ class TestDataSourceFactory:
         class CustomDataSource(DataSource):
             """Custom data source for testing."""
 
-            def __init__(self, config: dict[str, any] | None = None) -> None:
+            def __init__(self, config: dict[str, Any] | None = None) -> None:
                 super().__init__(config)
 
             def connect(self) -> bool:
@@ -65,7 +66,7 @@ class TestDataSourceFactory:
             def disconnect(self) -> None:
                 pass
 
-            def get_etf_list(self) -> any:
+            def get_etf_list(self) -> Any:
                 return None
 
             def _get_source_type(self) -> str:
@@ -73,7 +74,7 @@ class TestDataSourceFactory:
 
             def get_daily_data(
                 self, symbol: str, start_date: str, end_date: str
-            ) -> any:
+            ) -> Any:
                 return None
 
         # Register the custom data source

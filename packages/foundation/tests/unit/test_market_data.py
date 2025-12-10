@@ -7,6 +7,7 @@ from ditto_foundation.contracts.market_data import (
     AdjustmentFactorSchema,
     DailyPriceSchema,
 )
+from pandera.errors import SchemaError, SchemaErrors
 
 
 class TestDailyPriceSchema:
@@ -49,7 +50,7 @@ class TestDailyPriceSchema:
             }
         )
 
-        with pytest.raises(Exception):  # Pandera raises SchemaErrors
+        with pytest.raises((SchemaError, SchemaErrors)):  # Pandera raises SchemaErrors
             DailyPriceSchema.validate(df)
 
     def test_date_format_validation(self) -> None:
@@ -68,7 +69,7 @@ class TestDailyPriceSchema:
             }
         )
 
-        with pytest.raises(Exception):
+        with pytest.raises((SchemaError, SchemaErrors)):  # Pandera raises SchemaErrors
             DailyPriceSchema.validate(df)
 
     def test_price_validation_non_negative(self) -> None:
@@ -87,7 +88,7 @@ class TestDailyPriceSchema:
             }
         )
 
-        with pytest.raises(Exception):
+        with pytest.raises((SchemaError, SchemaErrors)):  # Pandera raises SchemaErrors
             DailyPriceSchema.validate(df)
 
     def test_high_low_price_relationship(self) -> None:
@@ -108,7 +109,7 @@ class TestDailyPriceSchema:
         )
 
         # This should fail the custom validation
-        with pytest.raises(Exception):
+        with pytest.raises((SchemaError, SchemaErrors)):  # Pandera raises SchemaErrors
             DailyPriceSchema.validate(df)
 
     def test_polars_dataframe_validation(self) -> None:
@@ -162,7 +163,7 @@ class TestAdjustmentFactorSchema:
             }
         )
 
-        with pytest.raises(Exception):
+        with pytest.raises((SchemaError, SchemaErrors)):  # Pandera raises SchemaErrors
             AdjustmentFactorSchema.validate(df)
 
     def test_adj_factor_positive(self) -> None:
@@ -177,7 +178,7 @@ class TestAdjustmentFactorSchema:
             }
         )
 
-        with pytest.raises(Exception):
+        with pytest.raises((SchemaError, SchemaErrors)):  # Pandera raises SchemaErrors
             AdjustmentFactorSchema.validate(df)
 
     def test_cumulative_factor_monotonic(self) -> None:
@@ -193,7 +194,7 @@ class TestAdjustmentFactorSchema:
             }
         )
 
-        with pytest.raises(Exception):
+        with pytest.raises((SchemaError, SchemaErrors)):  # Pandera raises SchemaErrors
             AdjustmentFactorSchema.validate(df)
 
     def test_mixed_adjustment_types(self) -> None:

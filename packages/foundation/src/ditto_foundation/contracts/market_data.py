@@ -1,10 +1,11 @@
 """Pandera schemas for market data validation."""
 
+import pandas as pd
 import pandera.pandas as pa
 from pandera.typing import DataFrame, Series
 
 
-class DailyPriceSchema(pa.DataFrameModel):
+class DailyPriceSchema(pa.DataFrameModel):  # type: ignore[misc]
     """Pandera schema for daily price data validation."""
 
     symbol: Series[str] = pa.Field(
@@ -24,12 +25,16 @@ class DailyPriceSchema(pa.DataFrameModel):
     )
 
     @pa.check("open_price")
-    def price_consistency(self, open_price: Series[float]) -> Series[bool]:
+    @classmethod
+    def price_consistency(cls, open_price: Series[float]) -> Series[bool]:
         """Check that prices are consistent with each other."""
-        return True  # Additional consistency checks can be added here
+        # Return a Series of True values with the same index as the input
+        result: Series[bool] = pd.Series(True, index=open_price.index, dtype=bool)
+        return result
 
     @pa.dataframe_check
-    def high_low_relationship(self, df: DataFrame) -> bool:
+    @classmethod
+    def high_low_relationship(cls, df: DataFrame["DailyPriceSchema"]) -> bool:
         """Check that high >= max(open, close) and low <= min(open, close)."""
         return all(
             (df["high_price"] >= df[["open_price", "close_price"]].max(axis=1))
@@ -37,7 +42,7 @@ class DailyPriceSchema(pa.DataFrameModel):
         )
 
 
-class AdjustmentFactorSchema(pa.DataFrameModel):
+class AdjustmentFactorSchema(pa.DataFrameModel):  # type: ignore[misc]
     """Pandera schema for adjustment factor data validation."""
 
     symbol: Series[str] = pa.Field(
@@ -55,7 +60,10 @@ class AdjustmentFactorSchema(pa.DataFrameModel):
     )
 
     @pa.dataframe_check
-    def cumulative_factor_monotonic(self, df: DataFrame) -> bool | None:
+    @classmethod
+    def cumulative_factor_monotonic(
+        cls, df: DataFrame["AdjustmentFactorSchema"]
+    ) -> bool | None:
         """Check that cumulative adjustment factors are monotonic for each symbol."""
         # Only check for cumulative factors
         cumulative_df = df[df["adj_type"] == "cumulative"]

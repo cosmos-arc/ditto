@@ -27,8 +27,11 @@ class DataCollector:
         """Update ETF list from data source."""
         # Stub implementation
         return {
-            "updated": 0,
+            "total_processed": 0,
+            "new_records": 0,
+            "updated_records": 0,
             "errors": [],
+            "duration": 0.0,
         }
 
     async def update_daily_data(
@@ -41,9 +44,12 @@ class DataCollector:
         """Update daily market data."""
         # Stub implementation
         return {
+            "total_processed": 0,
             "total_records": 0,
-            "updated": 0,
+            "new_records": 0,
+            "updated_records": 0,
             "errors": [],
+            "duration": 0.0,
         }
 
     async def update_adj_factors(
@@ -56,9 +62,12 @@ class DataCollector:
         """Update adjustment factors."""
         # Stub implementation
         return {
+            "total_processed": 0,
             "total_records": 0,
-            "updated": 0,
+            "new_records": 0,
+            "updated_records": 0,
             "errors": [],
+            "duration": 0.0,
         }
 
     async def verify_data_quality(
@@ -71,6 +80,7 @@ class DataCollector:
         # Stub implementation
         return {
             "symbol": symbol,
+            "total_records": 0,
             "issues": [],
             "quality_score": 100.0,
         }

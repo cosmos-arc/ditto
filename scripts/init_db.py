@@ -51,7 +51,7 @@ class DatabaseInitializer:
         """验证初始化结果."""
         logger.info("验证数据库初始化结果...")
 
-        result = {
+        result: dict[str, Any] = {
             "duckdb_tables": 0,
             "sqlite_tables": 0,
             "issues": [],

@@ -117,8 +117,8 @@ ignore = [
     "D107", # __init__ 必须有文档字符串 (D104 已覆盖此场景)
     "D415", # 文档字符串首行应以句号、问号或感叹号结尾
     # --- 测试相关规则豁免 ---
-    "D401", # 文档字符串第一行应该是祈使语气
-    "PT011", # pytest.raises 需要指定 match 参数（过于严格）
+    "D401",   # 文档字符串第一行应该是祈使语气
+    "PT011",  # pytest.raises 需要指定 match 参数（过于严格）
     "SIM105", # 使用 contextlib.suppress 替代 try-except-pass
     "SIM117", # 使用单个 with 语句替代嵌套（测试中嵌套更清晰）
 ]
@@ -128,10 +128,10 @@ unfixable = []
 
 # 对特定文件类型忽略特定规则。
 [tool.ruff.lint.per-file-ignores]
-# 测试文件允许魔法数 (PLR2004)
-"tests/**/*.py" = ["PLR2004"]
-"packages/*/tests/**/*.py" = ["PLR2004"]
-"apps/*/tests/**/*.py" = ["PLR2004"]
+# 测试文件允许魔法数 (PLR2004) 和更多参数 (PLR0913)
+"tests/**/*.py" = ["PLR2004", "PLR0913"]
+"packages/*/tests/**/*.py" = ["PLR2004", "PLR0913"]
+"apps/*/tests/**/*.py" = ["PLR2004", "PLR0913"]
 
 # __init__.py 可以没有 docstring
 "__init__.py" = ["D104"]
@@ -226,6 +226,9 @@ plugins = ["pydantic.mypy"]
 # NEW: 报错信息里带 error code，调试更舒服
 show_error_codes = true
 
+# 忽略未类型化装饰器警告（测试文件和装饰器常见）
+disable_error_code = ["misc", "import-untyped"]
+
 # 保持与 Ruff 一致的排除列表。
 exclude = [
     ".bzr",
@@ -269,44 +272,39 @@ python_functions = ["test_*"]
 pythonpath = ["packages/core/src", "packages/foundation/src", "apps/server/src"]
 
 # 将所有警告提升为错误，确保代码的健壮性。
-filterwarnings = [
-    "error",
-    "ignore::UserWarning",
-    "ignore::DeprecationWarning",
-]
+filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]
 
 # 注册自定义标记，配合 --strict-markers 使用
 markers = [
-    "unit: 标记单元测试",
-    "integration: 标记集成测试",
-    "e2e: 标记端到端测试",
-    "slow: 标记运行缓慢的测试 (可使用 -m 'not slow' 跳过)",
-    "smoke: 标记冒烟测试",
-    "benchmark: marks performance benchmark tests",
+    "integration: Mark test as an integration test",
+    "e2e: Mark test as an end-to-end test",
+    "slow: Mark test as slow running (skip with -m 'not slow')",
+    "smoke: Mark test as a smoke test",
+    "benchmark: Mark test as a performance benchmark test",
 ]
 
 # 配置日志输出，方便调试
 log_cli = true
 log_cli_level = "INFO"
 
-# NEW: 如果有 async 测试，推荐开启
-asyncio_mode = "auto"
+# 如果有 async 测试，使用严格模式
+asyncio_mode = "strict"
 
 # 命令行附加选项，用于增强测试流程。
 addopts = [
     "-ra", # 显示除"通过"之外所有测试的详细摘要
     "-v",  # 显示详细输出
     # "-n", "auto",               # 使用所有可用 CPU 核心并行测试，需要 pytest-xdist
-    "--strict-markers",                       # 对未在配置中注册的 marker 标记报错
-    "--strict-config",                        # 对配置文件中的拼写错误或无效键报错
-    "--cov=packages",                        # 指定计算代码覆盖率的目录
-    "--cov=apps",                            # 覆盖应用层代码
-    "--cov-report=html:htmlcov",              # HTML 报告输出目录
-    "--cov-report=term-missing",             # 在终端显示未覆盖的行
-    "--cov-report=xml",                      # XML 报告，用于 CI 集成
-    "--cov-branch",                           # 分支覆盖率
-    "--cov-fail-under=80",                     # 设置覆盖率阈值为 80%
-    "--durations=10",                         # 打印最慢的 10 个测试
+    "--strict-markers",          # 对未在配置中注册的 marker 标记报错
+    "--strict-config",           # 对配置文件中的拼写错误或无效键报错
+    "--cov=packages",            # 指定计算代码覆盖率的目录
+    "--cov=apps",                # 覆盖应用层代码
+    "--cov-report=html:htmlcov", # HTML 报告输出目录
+    "--cov-report=term-missing", # 在终端显示未覆盖的行
+    "--cov-report=xml",          # XML 报告，用于 CI 集成
+    "--cov-branch",              # 分支覆盖率
+    "--cov-fail-under=80",       # 设置覆盖率阈值为 80%
+    "--durations=10",            # 打印最慢的 10 个测试
 ]
 
 # ===================================================================

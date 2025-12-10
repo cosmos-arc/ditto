@@ -57,17 +57,18 @@ class AkShareDataSource(DataSource):
         """Get the data source type."""
         return DataSourceType.AKSHARE
 
-    def connect(self) -> bool:
+    def connect(self) -> None:
         """
         Establish AkShare connection.
 
         AkShare is a pure Python library, no connection needed.
 
-        Returns:
-            True if successful, False otherwise
-
         """
-        return AKSHARE_AVAILABLE
+        # No connection needed for AkShare
+        if not AKSHARE_AVAILABLE:
+            raise ImportError(
+                "AkShare is not available. Please install it with: pip install akshare"
+            )
 
     def disconnect(self) -> None:
         """Close AkShare connection."""

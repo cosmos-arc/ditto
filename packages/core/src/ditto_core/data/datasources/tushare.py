@@ -21,7 +21,7 @@ try:
     TUSHARE_AVAILABLE = True
 except ImportError:
     TUSHARE_AVAILABLE = False
-    ts = None  # type: ignore
+    ts = None
 
 
 class TushareDataSource(DataSource):

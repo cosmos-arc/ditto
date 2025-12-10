@@ -44,7 +44,7 @@ async def update_etf_list(
 ) -> dict[str, Any]:
     """Update ETF list."""
     logger.info("Starting ETF list update")
-    stats = await collector.update_etf_list(force_update=force)
+    stats: dict[str, Any] = await collector.update_etf_list(force_update=force)
 
     logger.info("ETF list update completed:")
     logger.info(f"  Total processed: {stats['total_processed']}")
@@ -75,7 +75,7 @@ async def update_daily_data(
     if start_date and end_date:
         logger.info(f"Date range: {start_date} to {end_date}")
 
-    stats = await collector.update_daily_data(
+    stats: dict[str, Any] = await collector.update_daily_data(
         ts_codes=symbols,
         start_date=start_date,
         end_date=end_date,
@@ -109,7 +109,7 @@ async def update_adj_factors(
     count_text = str(symbol_count) if symbol_count > 0 else "all"
     logger.info(f"Starting adjustment factor update for {count_text} ETFs")
 
-    stats = await collector.update_adj_factors(
+    stats: dict[str, Any] = await collector.update_adj_factors(
         ts_codes=symbols,
         start_date=start_date,
         end_date=end_date,
@@ -136,7 +136,9 @@ async def verify_data_quality(
 
     logger.info(f"Verifying data quality for {symbol} from {start_date} to {end_date}")
 
-    report = await collector.verify_data_quality(symbol, start_date, end_date)
+    report: dict[str, Any] = await collector.verify_data_quality(
+        symbol, start_date, end_date
+    )
 
     logger.info(f"Data quality report for {symbol}:")
     logger.info(f"  Quality score: {report.get('quality_score', 0)}")
