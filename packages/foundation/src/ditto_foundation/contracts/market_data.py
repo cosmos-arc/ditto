@@ -5,7 +5,7 @@ import pandera.pandas as pa
 from pandera.typing import DataFrame, Series
 
 
-class DailyPriceSchema(pa.DataFrameModel):  # type: ignore[misc]
+class DailyPriceSchema(pa.DataFrameModel):
     """Pandera schema for daily price data validation."""
 
     symbol: Series[str] = pa.Field(
@@ -42,7 +42,7 @@ class DailyPriceSchema(pa.DataFrameModel):  # type: ignore[misc]
         )
 
 
-class AdjustmentFactorSchema(pa.DataFrameModel):  # type: ignore[misc]
+class AdjustmentFactorSchema(pa.DataFrameModel):
     """Pandera schema for adjustment factor data validation."""
 
     symbol: Series[str] = pa.Field(

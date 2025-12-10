@@ -21,7 +21,7 @@ class MockDatabaseAdapter(DatabaseAdapter):
         """Initialize mock adapter."""
         self.fail_init = fail_init
         self.initialize_called = False
-        self.connection_instance = MagicMock()
+        self.connection_instance: MagicMock | None = MagicMock()
         super().__init__(db_path)
 
     def _initialize_database(self) -> None:
@@ -146,7 +146,7 @@ class TestDatabaseAdapter:
 
             class TestAdapter(DatabaseAdapter):
                 def __init__(self, db_path: str | Path) -> None:
-                    self.connection_instance = MagicMock()
+                    self.connection_instance: MagicMock | None = MagicMock()
                     super().__init__(db_path)
 
                 def _initialize_database(self) -> None:

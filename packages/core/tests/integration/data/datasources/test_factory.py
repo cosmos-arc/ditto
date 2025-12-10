@@ -1,4 +1,4 @@
-"""Unit tests for DataSourceFactory."""
+"""Integration tests for DataSourceFactory."""
 
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -9,6 +9,7 @@ from ditto_core.data.datasources.base import DataSource
 from ditto_core.data.datasources.factory import DataSourceFactory
 
 
+@pytest.mark.integration
 class TestDataSourceFactory:
     """Test DataSourceFactory functionality."""
 

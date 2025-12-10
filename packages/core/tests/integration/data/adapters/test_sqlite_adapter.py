@@ -1,4 +1,4 @@
-"""Unit tests for SQLite adapter."""
+"""Integration tests for SQLite adapter."""
 
 import sqlite3
 from pathlib import Path
@@ -9,6 +9,7 @@ import pytest
 from ditto_core.data.adapters.sqlite_adapter import SQLiteAdapter
 
 
+@pytest.mark.integration
 class TestSQLiteAdapter:
     """Test cases for SQLiteAdapter."""
 

@@ -85,8 +85,8 @@ def show_coverage_summary() -> None:
 
     if low_coverage_files:
         print(f"\n⚠️  Files with low coverage (<{COVERAGE_THRESHOLD * 100:.0f}%):")
-        for file_name, coverage in sorted(low_coverage_files, key=lambda x: x[1]):
-            print(f"   {file_name}: {coverage * 100:.1f}%")
+        for file_name, coverage_float in sorted(low_coverage_files, key=lambda x: x[1]):
+            print(f"   {file_name}: {coverage_float * 100:.1f}%")
 
 
 def check_specific_file(file_path: str) -> None:

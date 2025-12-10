@@ -1,4 +1,4 @@
-"""Unit tests for DuckDB adapter."""
+"""Integration tests for DuckDB adapter."""
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -9,6 +9,7 @@ import pytest
 from ditto_core.data.adapters.duckdb_adapter import DuckDBAdapter
 
 
+@pytest.mark.integration
 class TestDuckDBAdapter:
     """Test cases for DuckDBAdapter."""
 

@@ -1,4 +1,4 @@
-"""Unit tests for database adapter protocols."""
+"""Integration tests for database adapter protocols."""
 
 # Import directly to avoid import chain issues
 import inspect
@@ -75,6 +75,7 @@ class CustomProtocol(Protocol):
         ...
 
 
+@pytest.mark.integration
 def test_connection_protocol_methods() -> None:
     """Test that MockConnection has required protocol methods."""
     conn = MockConnection()
@@ -88,6 +89,7 @@ def test_connection_protocol_methods() -> None:
     conn.close()  # Should not raise
 
 
+@pytest.mark.integration
 def test_result_protocol_methods() -> None:
     """Test that MockResult has required protocol methods."""
     result = MockResult()
@@ -106,6 +108,7 @@ def test_result_protocol_methods() -> None:
         assert len(result) >= 0
 
 
+@pytest.mark.integration
 def test_database_adapter_protocol_methods() -> None:
     """Test that MockAdapter has required protocol methods."""
     adapter = MockAdapter()
@@ -123,18 +126,19 @@ def test_database_adapter_protocol_methods() -> None:
     adapter.close()  # Should not raise
 
 
+@pytest.mark.integration
 def test_protocol_usage_pattern() -> None:
     """Test that protocols can be used in function signatures."""
 
     # These functions demonstrate how protocols would be used
     def process_connection(conn: "Connection") -> "Result":
         """Process a connection."""
-        return conn.execute("SELECT 1")  # type: ignore[return-value]
+        return conn.execute("SELECT 1")
 
     def process_adapter(adapter: "DatabaseAdapter") -> list[Any]:
         """Process an adapter."""
         result = adapter.execute("SELECT * FROM test")
-        return result.fetchall()  # type: ignore[return-value]
+        return result.fetchall()  # type: ignore[no-any-return]
 
     # Test with mock implementations
     conn = MockConnection()
@@ -146,6 +150,7 @@ def test_protocol_usage_pattern() -> None:
     assert isinstance(results, list)
 
 
+@pytest.mark.integration
 def test_protocol_runtime_checkability() -> None:
     """Test that protocols can be used for runtime type checking."""
     # Protocols should be runtime checkable if decorated properly
@@ -156,6 +161,7 @@ def test_protocol_runtime_checkability() -> None:
         pass
 
 
+@pytest.mark.integration
 def test_protocol_instantiation() -> None:
     """Test that protocols cannot be instantiated."""
     with pytest.raises(TypeError):
@@ -168,6 +174,7 @@ def test_protocol_instantiation() -> None:
         DatabaseAdapter()
 
 
+@pytest.mark.integration
 def test_protocol_method_signatures() -> None:
     """Test that protocol methods have correct signatures."""
     # Check Connection protocol
@@ -195,6 +202,7 @@ def test_protocol_method_signatures() -> None:
     assert len(close_sig.parameters) == 1  # Only self
 
 
+@pytest.mark.integration
 def test_protocol_with_type_hints() -> None:
     """Test that protocols work properly with type hints."""
 
@@ -218,6 +226,7 @@ def test_protocol_with_type_hints() -> None:
     assert isinstance(data, dict)
 
 
+@pytest.mark.integration
 def test_protocol_inheritance() -> None:
     """Test protocol inheritance and extension."""
 
@@ -254,6 +263,7 @@ def test_protocol_inheritance() -> None:
     assert adapter.get_version() == "1.0.0"
 
 
+@pytest.mark.integration
 def test_protocol_composition() -> None:
     """Test using protocols in composition patterns."""
 
@@ -266,7 +276,7 @@ def test_protocol_composition() -> None:
         def query(self, sql: str, params: Any = None) -> list[Any]:
             """Execute query and return all results."""
             result = self.adapter.execute(sql, params)
-            return result.fetchall()  # type: ignore[return-value]
+            return result.fetchall()  # type: ignore[no-any-return]
 
         def shutdown(self) -> None:
             """Close database connection."""
@@ -280,6 +290,7 @@ def test_protocol_composition() -> None:
     manager.shutdown()  # Should not raise
 
 
+@pytest.mark.integration
 def test_protocol_optional_parameters() -> None:
     """Test protocol methods with optional parameters."""
     # Test that params parameter is truly optional
@@ -298,6 +309,7 @@ def test_protocol_optional_parameters() -> None:
     assert result3 is not None
 
 
+@pytest.mark.integration
 def test_protocol_documentation() -> None:
     """Test that protocol classes have proper documentation."""
     assert Connection.__doc__ is not None
@@ -310,6 +322,7 @@ def test_protocol_documentation() -> None:
     assert "Database adapter protocol" in DatabaseAdapter.__doc__
 
 
+@pytest.mark.integration
 def test_protocol_method_documentation() -> None:
     """Test that protocol methods have proper documentation."""
     # Check method docstrings

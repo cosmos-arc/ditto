@@ -947,12 +947,12 @@ tests/
 
 #### 核心原则
 1. **模块自治**：每个包管理自己的测试，与 src 目录同级
-2. **实用镜像结构**：测试文件采用扁平化命名，避免过度嵌套
+2. **实用镜像结构**：测试文件采用镜像化命名，可忽略命名空间目录
 3. **就近原则**：测试文件与被测文件保持在同一模块内
    - 源码：`packages/core/src/ditto_core/data/collector.py`
-   - 测试：`packages/core/tests/unit/test_collector.py`
+   - 测试：`packages/core/tests/unit/data/test_collector.py`
    - 源码：`apps/server/src/ditto-server/api/endpoints.py`
-   - 测试：`apps/server/tests/unit/test_endpoints.py`
+   - 测试：`apps/server/tests/unit/api/test_endpoints.py`
 4. **分层 fixtures**：
    - `tests/conftest.py` - 全局 fixtures（数据库连接等）
    - `packages/*/tests/conftest.py` - 包级别 fixtures
