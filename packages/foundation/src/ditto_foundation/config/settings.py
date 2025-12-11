@@ -19,7 +19,7 @@ class DatabaseSettings(BaseSettings):
     """数据库配置."""
 
     model_config = SettingsConfigDict(
-        env_prefix="DB_", env_file=".env", env_file_encoding="utf-8"
+        env_prefix="DB_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     # DuckDB 配置 (分析型数据库)
@@ -44,7 +44,7 @@ class DataSourceSettings(BaseSettings):
     """数据源配置."""
 
     model_config = SettingsConfigDict(
-        env_prefix="", env_file=".env", env_file_encoding="utf-8"
+        env_prefix="", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     # Tushare 配置
@@ -103,7 +103,7 @@ class APISettings(BaseSettings):
     """FastAPI 服务配置."""
 
     model_config = SettingsConfigDict(
-        env_prefix="", env_file=".env", env_file_encoding="utf-8"
+        env_prefix="", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     # 服务器配置
@@ -140,7 +140,7 @@ class TradingSettings(BaseSettings):
     """交易执行配置 (Phase 2+ 使用)."""
 
     model_config = SettingsConfigDict(
-        env_prefix="", env_file=".env", env_file_encoding="utf-8"
+        env_prefix="", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     # MiniQMT配置
@@ -172,7 +172,7 @@ class RiskSettings(BaseSettings):
     """风险管理配置."""
 
     model_config = SettingsConfigDict(
-        env_prefix="", env_file=".env", env_file_encoding="utf-8"
+        env_prefix="", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     # Kill Switch配置
@@ -212,7 +212,7 @@ class NotificationSettings(BaseSettings):
     """通知配置."""
 
     model_config = SettingsConfigDict(
-        env_prefix="", env_file=".env", env_file_encoding="utf-8"
+        env_prefix="", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     # Telegram通知
@@ -240,7 +240,7 @@ class SystemSettings(BaseSettings):
     """系统基础配置."""
 
     model_config = SettingsConfigDict(
-        env_prefix="", env_file=".env", env_file_encoding="utf-8"
+        env_prefix="", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     # 环境配置
@@ -283,7 +283,7 @@ class FileStorageSettings(BaseSettings):
     """文件存储配置."""
 
     model_config = SettingsConfigDict(
-        env_prefix="", env_file=".env", env_file_encoding="utf-8"
+        env_prefix="", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     # 存储路径
