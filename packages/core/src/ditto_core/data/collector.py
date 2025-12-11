@@ -1,10 +1,12 @@
 """Data collection service for fetching and storing market data."""
 
 import logging
-from datetime import date, datetime
+from datetime import date
 from typing import Any, cast
 
 import polars as pl
+
+from .services.data_writer import DataWriter
 
 logger = logging.getLogger(__name__)
 
@@ -20,22 +22,17 @@ class DataCollector:
 
     def __init__(
         self,
-        data_service: Any,
+        data_writer: DataWriter,
         batch_size: int = 1000,
         max_concurrent_fetches: int = 3,
     ) -> None:
         """Initialize data collector."""
-        self.data_service = data_service
+        self.data_writer = data_writer
         self.batch_size = batch_size
         self.max_concurrent_fetches = max_concurrent_fetches
 
-        # Initialize data sources and adapters
+        # Initialize data sources
         self._sources: dict[str, Any] = {}
-        self._analytics_adapter = (
-            data_service.analytics_adapter
-            if hasattr(data_service, "analytics_adapter")
-            else None
-        )
 
     def update_etf_list(self) -> dict[str, Any]:
         """Update ETF list from primary data source."""
@@ -51,15 +48,8 @@ class DataCollector:
             etf_df = primary_source.get_etf_list()
             logger.info(f"获取到 {len(etf_df)} 只ETF")
 
-            # 添加knowledge_date
-            etf_df = etf_df.with_columns(
-                [pl.lit(datetime.now()).alias("knowledge_date")]
-            )
-
-            # 存储到DuckDB
-            if self._analytics_adapter is None:
-                raise ValueError("Analytics adapter not configured")
-            self._analytics_adapter.store_etf_info(etf_df)
+            # 存储到数据库
+            self.data_writer.store_etf_info(etf_df)
 
             return {
                 "total_updated": len(etf_df),
@@ -116,15 +106,8 @@ class DataCollector:
                         validation_errors.append(f"{symbol}: 主备数据源价格差异过大")
                         continue
 
-                # 添加knowledge_date
-                primary_df = primary_df.with_columns(
-                    [pl.lit(datetime.now()).alias("knowledge_date")]
-                )
-
-                # 存储到DuckDB
-                if self._analytics_adapter is None:
-                    raise ValueError("Analytics adapter not configured")
-                self._analytics_adapter.store_daily_data(primary_df)
+                # 存储到数据库
+                self.data_writer.store_daily_data(primary_df)
 
                 total_records += len(primary_df)
                 symbols_updated.append(symbol)
@@ -150,7 +133,9 @@ class DataCollector:
         force_update: bool = False,
     ) -> dict[str, Any]:
         """Update adjustment factors."""
-        # Stub implementation
+        # Stub implementation - TODO: Implement actual logic to fetch and store
+        # adjustment factors. When implemented, should use:
+        # self.data_writer.store_adjustment_factors()
         return {
             "total_processed": 0,
             "total_records": 0,

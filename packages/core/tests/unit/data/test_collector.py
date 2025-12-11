@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, Mock
 import polars as pl
 import pytest
 from ditto_core.data.collector import DataCollector
+from ditto_core.data.services.data_writer import DataWriter
 
 
 class TestDataCollector:
@@ -14,22 +15,22 @@ class TestDataCollector:
 
     def setup_method(self) -> None:
         """Set up test fixtures."""
-        self.mock_service = MagicMock()
+        self.mock_data_writer = MagicMock(spec=DataWriter)
         self.collector = DataCollector(
-            data_service=self.mock_service,
+            data_writer=self.mock_data_writer,
             batch_size=500,
             max_concurrent_fetches=2,
         )
 
     def test_initialization(self) -> None:
         """Test DataCollector initialization."""
-        assert self.collector.data_service == self.mock_service
+        assert self.collector.data_writer == self.mock_data_writer
         assert self.collector.batch_size == 500
         assert self.collector.max_concurrent_fetches == 2
 
     def test_initialization_with_defaults(self) -> None:
         """Test DataCollector initialization with default values."""
-        collector = DataCollector(data_service=self.mock_service)
+        collector = DataCollector(data_writer=self.mock_data_writer)
         assert collector.batch_size == 1000
         assert collector.max_concurrent_fetches == 3
 
@@ -109,11 +110,7 @@ class TestDataCollector:
             }
         )
 
-        # Mock the analytics adapter
-        mock_adapter = Mock()
-        self.mock_service.analytics_adapter = mock_adapter
-
-        collector = DataCollector(data_service=self.mock_service)
+        collector = DataCollector(data_writer=self.mock_data_writer)
         collector._sources = {"tushare": mock_tushare}
 
         # Act
@@ -125,7 +122,7 @@ class TestDataCollector:
         assert result["status"] == "success"
 
         # Verify store_etf_info was called
-        mock_adapter.store_etf_info.assert_called_once()
+        self.mock_data_writer.store_etf_info.assert_called_once()
 
     def test_update_daily_data_with_single_symbol(self, monkeypatch: Any) -> None:
         """Test updating daily data for a single symbol with cross-validation."""
@@ -143,11 +140,7 @@ class TestDataCollector:
             }
         )
 
-        # Mock the analytics adapter
-        mock_adapter = Mock()
-        self.mock_service.analytics_adapter = mock_adapter
-
-        collector = DataCollector(data_service=self.mock_service)
+        collector = DataCollector(data_writer=self.mock_data_writer)
         collector._sources = {"tushare": mock_source}
 
         # Act
@@ -189,11 +182,7 @@ class TestDataCollector:
             }
         )
 
-        # Mock the analytics adapter
-        mock_adapter = Mock()
-        self.mock_service.analytics_adapter = mock_adapter
-
-        collector = DataCollector(data_service=self.mock_service)
+        collector = DataCollector(data_writer=self.mock_data_writer)
         collector._sources = {"tushare": mock_primary, "akshare": mock_backup}
 
         # Act
@@ -214,7 +203,7 @@ class TestDataCollector:
         df1 = pl.DataFrame({"date": ["2024-01-01"], "close": [3.55]})
         df2 = pl.DataFrame({"date": ["2024-01-01"], "close": [3.55]})
 
-        collector = DataCollector(data_service=self.mock_service)
+        collector = DataCollector(data_writer=self.mock_data_writer)
         assert collector._validate_price_consistency(df1, df2) is True
 
     def test_validate_price_consistency_with_small_difference(self) -> None:
@@ -227,7 +216,7 @@ class TestDataCollector:
             }
         )
 
-        collector = DataCollector(data_service=self.mock_service)
+        collector = DataCollector(data_writer=self.mock_data_writer)
         assert collector._validate_price_consistency(df1, df2) is True
 
     def test_validate_price_consistency_with_large_difference(self) -> None:
@@ -240,7 +229,7 @@ class TestDataCollector:
             }
         )
 
-        collector = DataCollector(data_service=self.mock_service)
+        collector = DataCollector(data_writer=self.mock_data_writer)
         assert collector._validate_price_consistency(df1, df2) is False
 
     def test_validate_price_consistency_with_empty_dataframes(self) -> None:
@@ -248,7 +237,7 @@ class TestDataCollector:
         df1 = pl.DataFrame({"date": [], "close": []})
         df2 = pl.DataFrame({"date": ["2024-01-01"], "close": [3.55]})
 
-        collector = DataCollector(data_service=self.mock_service)
+        collector = DataCollector(data_writer=self.mock_data_writer)
         assert collector._validate_price_consistency(df1, df2) is False
 
         # Test with both empty
@@ -270,7 +259,7 @@ class TestDataCollector:
             }
         )
 
-        collector = DataCollector(data_service=self.mock_service)
+        collector = DataCollector(data_writer=self.mock_data_writer)
         # Should validate only non-null values (2024-01-01)
         assert collector._validate_price_consistency(df1, df2) is True
 
@@ -285,7 +274,7 @@ class TestDataCollector:
         df1 = pl.DataFrame({"date": ["2024-01-01"]})  # Missing close
         df2 = pl.DataFrame({"date": ["2024-01-01"], "close": [3.55]})
 
-        collector = DataCollector(data_service=self.mock_service)
+        collector = DataCollector(data_writer=self.mock_data_writer)
         assert collector._validate_price_consistency(df1, df2) is False
 
         # Test with missing date
@@ -303,7 +292,7 @@ class TestDataCollector:
             }
         )
 
-        collector = DataCollector(data_service=self.mock_service)
+        collector = DataCollector(data_writer=self.mock_data_writer)
         # Default tolerance (1%) should fail
         assert collector._validate_price_consistency(df1, df2) is False
 
@@ -313,10 +302,7 @@ class TestDataCollector:
     def test_update_daily_data_with_empty_symbols_list(self) -> None:
         """Test updating daily data with empty symbols list."""
         # Arrange
-        mock_adapter = Mock()
-        self.mock_service.analytics_adapter = mock_adapter
-
-        collector = DataCollector(data_service=self.mock_service)
+        collector = DataCollector(data_writer=self.mock_data_writer)
 
         # Act
         result = collector.update_daily_data(
