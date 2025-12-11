@@ -4,6 +4,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+import polars as pl
 from ditto_foundation.logging_config import get_logger
 
 from .base import DatabaseAdapter
@@ -181,6 +182,53 @@ class SQLiteAdapter(DatabaseAdapter):
     def executemany(self, query: str, params_list: list[Any]) -> Any:
         """Execute a query multiple times with different parameters."""
         return self.connection.executemany(query, params_list)
+
+    def fetch_df(self, sql: str, params: dict[str, Any] | None = None) -> pl.DataFrame:
+        """
+        Execute SQL query and return DataFrame.
+
+        Args:
+            sql: SQL查询语句
+            params: 查询参数字典
+
+        Returns:
+            查询结果的DataFrame
+
+        """
+        try:
+            cursor = self.connection.execute(sql, params or ())
+            columns = (
+                [description[0] for description in cursor.description]
+                if cursor.description
+                else []
+            )
+            data = cursor.fetchall()
+
+            return pl.DataFrame(
+                {col: [row[i] for row in data] for i, col in enumerate(columns)}
+            )
+        except Exception as e:
+            logger.error(f"查询失败: {sql}, 错误: {e}")
+            raise
+
+    def execute_many(self, sql: str, data: list[dict[str, Any]]) -> None:
+        """
+        Execute SQL statements in batch.
+
+        Args:
+            sql: SQL语句模板
+            data: 参数字典列表
+
+        """
+        try:
+            # Convert list of dicts to list of tuples in correct order
+            if data:
+                keys = list(data[0].keys())
+                values_list = [tuple(row[key] for key in keys) for row in data]
+                self.connection.executemany(sql, values_list)
+        except Exception as e:
+            logger.error(f"批量执行失败: {sql}, 错误: {e}")
+            raise
 
     def close(self) -> None:
         """Close database connection."""

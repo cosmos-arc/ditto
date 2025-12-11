@@ -2,6 +2,8 @@
 
 from typing import Any, Protocol
 
+import polars as pl
+
 
 class Connection(Protocol):
     """Database connection protocol."""
@@ -37,6 +39,14 @@ class DatabaseAdapter(Protocol):
 
     def execute(self, query: str, params: Any = None) -> Result:
         """Execute a query."""
+        ...
+
+    def fetch_df(self, sql: str, params: dict[str, Any] | None = None) -> pl.DataFrame:
+        """Execute SQL query and return DataFrame."""
+        ...
+
+    def execute_many(self, sql: str, data: list[dict[str, Any]]) -> None:
+        """Execute SQL query with multiple parameter sets."""
         ...
 
     def close(self) -> None:

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import duckdb
+import polars as pl
 from ditto_foundation.logging_config import get_logger
 
 from .base import DatabaseAdapter
@@ -126,6 +127,42 @@ class DuckDBAdapter(DatabaseAdapter):
     def execute(self, query: str, params: Any = None) -> Any:
         """Execute a query on the database."""
         return self.connection.execute(query, params)
+
+    def fetch_df(self, sql: str, params: dict[str, Any] | None = None) -> pl.DataFrame:
+        """
+        Execute SQL query and return DataFrame.
+
+        Args:
+            sql: SQL查询语句
+            params: 查询参数字典
+
+        Returns:
+            查询结果的DataFrame
+
+        """
+        try:
+            if params:
+                return self.connection.execute(sql, params).pl()
+            else:
+                return self.connection.execute(sql).pl()
+        except Exception as e:
+            logger.error(f"查询失败: {sql}, 错误: {e}")
+            raise
+
+    def execute_many(self, sql: str, data: list[dict[str, Any]]) -> None:
+        """
+        Execute SQL statements in batch.
+
+        Args:
+            sql: SQL语句模板
+            data: 参数字典列表
+
+        """
+        try:
+            self.connection.executemany(sql, data)
+        except Exception as e:
+            logger.error(f"批量执行失败: {sql}, 错误: {e}")
+            raise
 
     def close(self) -> None:
         """Close database connection."""
