@@ -27,6 +27,7 @@ from ditto_foundation.logging_config import (
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from loguru import logger as loguru_logger
 
 # Initialize project root
 project_root = Path(__file__).parent.parent.parent.parent
@@ -172,7 +173,7 @@ async def get_status() -> dict[str, Any]:
             "trading": False,
         },
         "logging": {
-            "level": "DEBUG" if logger.logger.level == logging.DEBUG else "INFO",
+            "level": "DEBUG" if loguru_logger.level == logging.DEBUG else "INFO",
             "structured": True,
         },
     }
