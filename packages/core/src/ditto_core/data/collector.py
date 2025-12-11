@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 class DataCollector:
     """Service for collecting and managing market data."""
 
+    # Default tolerance for price validation (1%)
+    DEFAULT_PRICE_TOLERANCE = 0.01
+
     def __init__(
         self,
         data_service: Any,
@@ -72,6 +75,15 @@ class DataCollector:
         self, symbols: list[str], start_date: str, end_date: str, validate: bool = True
     ) -> dict[str, Any]:
         """批量下载日线数据."""
+        if not symbols:
+            logger.warning("空的股票代码列表, 跳过更新")
+            return {
+                "total_records": 0,
+                "symbols_updated": [],
+                "validation_errors": [],
+                "status": "completed",
+            }
+
         logger.info(
             f"开始更新日线数据: {len(symbols)} 只股票, {start_date} 至 {end_date}"
         )
@@ -164,27 +176,91 @@ class DataCollector:
         }
 
     def _validate_price_consistency(
-        self, df1: pl.DataFrame, df2: pl.DataFrame, tolerance: float = 0.01
+        self, df1: pl.DataFrame, df2: pl.DataFrame, tolerance: float | None = None
     ) -> bool:
         """验证两个数据源的价格一致性."""
-        if len(df1) == 0 or len(df2) == 0:
-            return False
+        # Use default tolerance if not provided
+        if tolerance is None:
+            tolerance = self.DEFAULT_PRICE_TOLERANCE
+
+        # Early returns for invalid inputs
+        validation_result = self._validate_price_inputs(df1, df2)
+        if not validation_result:
+            return validation_result
 
         # 合并数据对比
         merged = df1.join(df2, on="date", suffix="_backup")
 
-        if len(merged) == 0:
+        if merged.is_empty():
+            return False
+
+        # Handle null values in price data
+        merged = merged.filter(
+            pl.col("close").is_not_null() & pl.col("close_backup").is_not_null()
+        )
+
+        if merged.is_empty():
+            logger.warning("过滤空值后没有可用于比较的数据")
             return False
 
         # 计算价格差异百分比
         price_diff = (merged["close"] - merged["close_backup"]).abs() / merged["close"]
 
         # 检查是否所有差异都在容忍范围内
-        max_diff = float(price_diff.max())
+        max_diff_val = price_diff.max()
+        # Handle both Series and scalar return types
+        if max_diff_val is None:
+            return False
+        if hasattr(max_diff_val, "item"):
+            max_diff = max_diff_val.item()
+        else:
+            max_diff = float(max_diff_val)
 
-        logger.debug(f"价格差异: 最大={max_diff:.4f}, 阈值={tolerance}")
+        # 更详细的错误报告
+        if max_diff > tolerance:
+            # Find the date with maximum difference
+            max_diff_rows = merged.filter(price_diff == max_diff)
+            if not max_diff_rows.is_empty():
+                date_val = max_diff_rows["date"][0]
+                date_str = (
+                    date_val.item() if hasattr(date_val, "item") else str(date_val)
+                )
+                close_val = max_diff_rows["close"][0]
+                close_float = (
+                    close_val.item() if hasattr(close_val, "item") else float(close_val)
+                )
+                close_backup_val = max_diff_rows["close_backup"][0]
+                close_backup_float = (
+                    close_backup_val.item()
+                    if hasattr(close_backup_val, "item")
+                    else float(close_backup_val)
+                )
+
+                logger.warning(
+                    f"价格差异过大: 日期={date_str}, 最大差异={max_diff:.4f}, "
+                    f"阈值={tolerance}, 主数据源价格={close_float}, "
+                    f"备份数据源价格={close_backup_float}"
+                )
+        else:
+            logger.debug(f"价格差异: 最大={max_diff:.4f}, 阈值={tolerance}")
 
         return max_diff <= tolerance
+
+    def _validate_price_inputs(self, df1: pl.DataFrame, df2: pl.DataFrame) -> bool:
+        """验证价格数据的输入."""
+        # Check for empty DataFrames using is_empty()
+        if df1.is_empty() or df2.is_empty():
+            return False
+
+        # Check for required columns
+        if "date" not in df1.columns or "close" not in df1.columns:
+            logger.error("主数据源缺少必需的列: date 或 close")
+            return False
+        if "date" not in df2.columns or "close" not in df2.columns:
+            logger.error("备份数据源缺少必需的列: date 或 close")
+            return False
+
+        return True
 
     async def _validate_daily_data(self, symbol: str, data: Any) -> list[Any]:
         """Validate daily data for a symbol."""

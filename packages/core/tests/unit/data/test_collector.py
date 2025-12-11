@@ -242,3 +242,92 @@ class TestDataCollector:
 
         collector = DataCollector(data_service=self.mock_service)
         assert collector._validate_price_consistency(df1, df2) is False
+
+    def test_validate_price_consistency_with_empty_dataframes(self) -> None:
+        """Test price validation with empty DataFrames."""
+        df1 = pl.DataFrame({"date": [], "close": []})
+        df2 = pl.DataFrame({"date": ["2024-01-01"], "close": [3.55]})
+
+        collector = DataCollector(data_service=self.mock_service)
+        assert collector._validate_price_consistency(df1, df2) is False
+
+        # Test with both empty
+        df2_empty = pl.DataFrame({"date": [], "close": []})
+        assert collector._validate_price_consistency(df1, df2_empty) is False
+
+    def test_validate_price_consistency_with_none_values(self) -> None:
+        """Test price validation with None values in price data."""
+        df1 = pl.DataFrame(
+            {
+                "date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                "close": [3.55, None, 3.57],
+            }
+        )
+        df2 = pl.DataFrame(
+            {
+                "date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                "close": [3.55, 3.56, None],
+            }
+        )
+
+        collector = DataCollector(data_service=self.mock_service)
+        # Should validate only non-null values (2024-01-01)
+        assert collector._validate_price_consistency(df1, df2) is True
+
+        # Test with all null values
+        df1_all_null = pl.DataFrame({"date": ["2024-01-01"], "close": [None]})
+        df2_all_null = pl.DataFrame({"date": ["2024-01-01"], "close": [None]})
+        result = collector._validate_price_consistency(df1_all_null, df2_all_null)
+        assert result is False
+
+    def test_validate_price_consistency_with_missing_columns(self) -> None:
+        """Test price validation with missing required columns."""
+        df1 = pl.DataFrame({"date": ["2024-01-01"]})  # Missing close
+        df2 = pl.DataFrame({"date": ["2024-01-01"], "close": [3.55]})
+
+        collector = DataCollector(data_service=self.mock_service)
+        assert collector._validate_price_consistency(df1, df2) is False
+
+        # Test with missing date
+        df1_no_date = pl.DataFrame({"close": [3.55]})
+        df2_no_date = pl.DataFrame({"close": [3.55]})
+        assert collector._validate_price_consistency(df1_no_date, df2_no_date) is False
+
+    def test_validate_price_consistency_custom_tolerance(self) -> None:
+        """Test price validation with custom tolerance."""
+        df1 = pl.DataFrame({"date": ["2024-01-01"], "close": [3.55]})
+        df2 = pl.DataFrame(
+            {
+                "date": ["2024-01-01"],
+                "close": [3.80],  # 7% difference
+            }
+        )
+
+        collector = DataCollector(data_service=self.mock_service)
+        # Default tolerance (1%) should fail
+        assert collector._validate_price_consistency(df1, df2) is False
+
+        # Custom tolerance (10%) should pass
+        assert collector._validate_price_consistency(df1, df2, tolerance=0.10) is True
+
+    def test_update_daily_data_with_empty_symbols_list(self) -> None:
+        """Test updating daily data with empty symbols list."""
+        # Arrange
+        mock_adapter = Mock()
+        self.mock_service.analytics_adapter = mock_adapter
+
+        collector = DataCollector(data_service=self.mock_service)
+
+        # Act
+        result = collector.update_daily_data(
+            symbols=[], start_date="2024-01-01", end_date="2024-01-01"
+        )
+
+        # Assert
+        assert result["total_records"] == 0
+        assert result["symbols_updated"] == []
+        assert result["validation_errors"] == []
+        assert result["status"] == "completed"
+
+        # Verify no data source calls were made
+        assert len(collector._sources) == 0
