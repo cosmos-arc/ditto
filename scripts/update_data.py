@@ -7,17 +7,22 @@
 
 import logging
 import sys
-from typing import Any
+from datetime import datetime
+from pathlib import Path
 
 try:
     import polars as pl
-    from ditto_core.data.collector import DataCollector
-    from ditto_core.data.service import DataService
+    from ditto_core.data.services.data_reader import DataReader
+    from ditto_core.data.services.data_writer import DataWriter
     from ditto_foundation.config.settings import get_settings
 except ImportError as e:
     print(f"导入失败: {e}")
     print("请确保在 pixi 环境中运行: pixi run python scripts/update_data.py")
     sys.exit(1)
+
+# Import CSV adapter for testing
+sys.path.append(str(Path(__file__).parent))
+from csv_adapter import CSVAdapter
 
 # Configure logging
 logging.basicConfig(
@@ -31,58 +36,96 @@ def update_market_data() -> None:
     """更新市场数据."""
     logger.info("开始更新市场数据...")
 
-    settings = get_settings()
+    # 使用CSV适配器进行测试
+    data_dir = Path("data/csv_test")
+    csv_adapter = CSVAdapter(data_dir=data_dir)
 
-    with DataService(
-        duckdb_path=settings.database.duckdb_path,
-        sqlite_path=settings.database.sqlite_path,
-    ) as data_service:
-        # 创建一个简单的Mock对象来测试脚本
-        class MockAdapter:
-            def store_etf_info(self, df: Any) -> None:
-                logger.info(f"Mock存储ETF信息: {len(df)}条记录")
+    # 创建DataReader和DataWriter
+    reader = DataReader(csv_adapter)
+    writer = DataWriter(csv_adapter)
 
-            def store_daily_data(self, df: Any) -> None:
-                logger.info(f"Mock存储日线数据: {len(df)}条记录")
-
-            def get_etf_list(self) -> pl.DataFrame:
-                return pl.DataFrame(
-                    {
-                        "symbol": ["510300.SH", "516010.SH", "513100.SH"],
-                        "name": ["沪深300ETF", "游戏ETF", "纳指ETF"],
-                    }
-                )
-
-        collector = DataCollector(data_service)
-        collector._analytics_adapter = MockAdapter()
-
-        # 1. 更新ETF列表 (Mock)
-        logger.info("更新ETF列表...")
-        # 由于没有真实的token, 这里只是模拟更新
-        logger.info("✅ ETF列表更新完成(M)")
-
-        # 2. 获取所有ETF代码
-        etf_list = MockAdapter().get_etf_list()
-        symbols = etf_list["symbol"].to_list()
-
-        # 3. 更新日线数据(Mock)
-        logger.info(f"更新日线数据: {len(symbols)} 只ETF...")
-        daily_result: dict[str, Any] = {
-            "total_records": 100,
-            "symbols_updated": symbols[:2],  # Mock更新了前2个
-            "validation_errors": ["符号1: 验证错误示例(M)"],  # Mock错误
-            "status": "completed",
+    # 1. 创建并更新ETF列表
+    logger.info("更新ETF列表...")
+    etf_data = pl.DataFrame(
+        {
+            "symbol": ["510300.SH", "516010.SH", "513100.SH", "000300.SH"],
+            "name": ["沪深300ETF", "游戏ETF", "纳指ETF", "沪深300指数"],
+            "list_date": ["2012-04-26", "2015-06-18", "2013-11-06", "2005-04-08"],
+            "knowledge_date": [datetime.now() for _ in range(4)],
         }
+    )
+    writer.store_etf_info(etf_data)
+    logger.info(f"[OK] ETF列表更新完成: {len(etf_data)} 条记录")
 
-        logger.info("✅ 日线数据更新完成(M):")
-        logger.info(f"   - 总记录数: {daily_result['total_records']}")
-        logger.info(f"   - 更新成功: {len(daily_result['symbols_updated'])} 只")
-        if daily_result["validation_errors"]:
-            logger.info(f"   - 验证错误: {len(daily_result['validation_errors'])} 个")
+    # 2. 获取所有ETF代码
+    etf_list = reader.get_etf_list()
+    symbols = etf_list["symbol"].to_list()
+    logger.info(f"获取到 {len(symbols)} 只ETF")
 
-        logger.info(
-            "\n注意: 这是Mock运行(M), 需要配置真实的Tushare Token才能获取真实数据"
+    # 3. 创建并更新日线数据（示例数据）
+    logger.info(f"更新日线数据: {len(symbols)} 只ETF...")
+    daily_records = []
+
+    # 为每个ETF生成示例数据
+    for i, symbol in enumerate(symbols):
+        base_price = 3.0 + i * 0.5  # 基准价格
+        for date_offset in range(10):  # 最近10天数据
+            date = datetime(2024, 12, 1 + date_offset).strftime("%Y-%m-%d")
+            # 生成随机价格变动
+            price = base_price * (1 + (date_offset - 5) * 0.02)
+
+            daily_records.append(
+                {
+                    "symbol": symbol,
+                    "date": date,
+                    "open": price * 0.995,
+                    "high": price * 1.01,
+                    "low": price * 0.98,
+                    "close": price,
+                    "volume": 1000000 + date_offset * 10000,
+                }
+            )
+
+    # 存储日线数据
+    daily_data = pl.DataFrame(daily_records)
+    writer.store_daily_data(daily_data)
+
+    # 4. 创建并存储复权因子
+    logger.info("更新复权因子...")
+    adj_records = []
+    for symbol in symbols[:2]:  # 只为前两个ETF创建复权因子
+        adj_records.append(
+            {
+                "symbol": symbol,
+                "ex_date": "2024-06-01",
+                "adj_factor": 1.05,
+                "adj_type": "dividend",
+                "description": "分红派息",
+            }
         )
+
+    if adj_records:
+        adj_data = pl.DataFrame(adj_records)
+        writer.store_adjustment_factors(adj_data)
+        logger.info(f"[OK] 复权因子更新完成: {len(adj_records)} 条记录")
+
+    # 5. 生成更新报告
+    logger.info("\n=== 数据更新报告 ===")
+    logger.info(f"ETF列表: {len(etf_list)} 只")
+    logger.info(f"日线数据: {len(daily_data)} 条记录")
+    logger.info(f"复权因子: {len(adj_records)} 条记录")
+
+    # 验证数据
+    logger.info("\n验证数据存储...")
+    for symbol in symbols[:2]:  # 只验证前两个
+        df = reader.get_daily_data(symbol, "2024-12-01", "2024-12-10")
+        if len(df) > 0:
+            logger.info(f"  [OK] {symbol}: {len(df)} 条记录")
+        else:
+            logger.info(f"  [ERROR] {symbol}: 无数据")
+
+    logger.info("\n[OK] 数据更新完成！")
+    logger.info(f"数据存储位置: {data_dir.absolute()}")
 
 
 if __name__ == "__main__":

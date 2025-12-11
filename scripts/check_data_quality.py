@@ -28,8 +28,11 @@ from typing import Any
 
 # Import from installed packages (editable mode)
 from ditto_core.data.quality.reporter import DataQualityReporter
-from ditto_core.data.service import DataService
-from ditto_foundation.config import get_settings
+from ditto_core.data.services.data_reader import DataReader
+
+# Import CSV adapter for testing
+sys.path.append(str(Path(__file__).parent))
+from csv_adapter import CSVAdapter
 
 # Golden Dataset 标的配置
 GOLDEN_SYMBOLS = [
@@ -45,7 +48,7 @@ GOOD_THRESHOLD = 0.7
 
 
 def check_single_symbol_quality(
-    symbol: str, reporter: DataQualityReporter, data_service: DataService
+    symbol: str, reporter: DataQualityReporter, reader: DataReader
 ) -> dict[str, Any]:
     """
     检查单个标的数据质量。.
@@ -53,7 +56,7 @@ def check_single_symbol_quality(
     Args:
         symbol: 标的代码
         reporter: DataQualityReporter实例
-        data_service: DataService实例
+        reader: DataReader实例
 
     Returns:
         质量报告字典
@@ -62,7 +65,7 @@ def check_single_symbol_quality(
     print(f"检查 {symbol}...")
 
     # 加载数据（2022-2024年）
-    df = data_service.analytics.get_daily_data(
+    df = reader.get_daily_data(
         symbol=symbol,
         start_date="2022-01-01",
         end_date="2024-12-31",
@@ -91,140 +94,140 @@ def check_golden_dataset_quality(args: argparse.Namespace) -> None:
     print("Ditto Phase 0.5 数据质量检查")
     print("=" * 60)
 
-    # 获取配置
-    settings = get_settings()
+    # 使用CSV适配器读取Golden Dataset数据
+    data_dir = Path("data/golden_dataset")
+    if not data_dir.exists():
+        print(f"\n❌ 错误: 找不到Golden Dataset目录: {data_dir}")
+        print("请先运行 init_golden_dataset.py 初始化数据")
+        sys.exit(1)
 
-    # 初始化服务和报告器
-    with DataService(settings) as data_service:
-        reporter = DataQualityReporter()
+    csv_adapter = CSVAdapter(data_dir=data_dir)
+    reader = DataReader(csv_adapter)
+    reporter = DataQualityReporter()
 
-        # 检查单个标的
-        if args.symbol:
-            if args.symbol not in GOLDEN_SYMBOLS:
-                print(f"\n⚠️  警告: {args.symbol} 不在 Golden Dataset 标的列表中")
-                print(f"Golden Dataset 标的: {', '.join(GOLDEN_SYMBOLS)}")
+    # 检查单个标的
+    if args.symbol:
+        if args.symbol not in GOLDEN_SYMBOLS:
+            print(f"\n⚠️  警告: {args.symbol} 不在 Golden Dataset 标的列表中")
+            print(f"Golden Dataset 标的: {', '.join(GOLDEN_SYMBOLS)}")
 
-            report = check_single_symbol_quality(args.symbol, reporter, data_service)
+        report = check_single_symbol_quality(args.symbol, reporter, reader)
 
-            # 输出报告
-            print("\n" + "=" * 60)
-            print("数据质量报告")
-            print("=" * 60)
-            print(f"标的: {report['symbol']}")
-            print(f"检查时间: {report['timestamp']}")
-            print(f"数据记录数: {report['total_records']:,}")
-            print(f"质量分数: {report['quality_score']:.2%}")
-
-            if report.get("date_range"):
-                print(
-                    f"数据范围: {report['date_range']['start']} 至 {report['date_range']['end']}"
-                )
-
-            print("\n验证结果:")
-            print(f"  - 通过: {report['summary']['passed']}")
-            print(f"  - 失败: {report['summary']['failed']}")
-
-            print("\n详细验证:")
-            for validator in report["validators"]:
-                status_icon = "✅" if validator["status"] == "passed" else "❌"
-                print(f"  {status_icon} {validator['name']}: {validator['message']}")
-
-            # 保存报告
-            if args.output:
-                save_report(report, args.output)
-            else:
-                # 默认文件名
-                filename = f"quality_report_{args.symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-                save_report(report, filename)
-
-            return
-
-        # 批量检查
-        print(f"\n检查标的: {', '.join(GOLDEN_SYMBOLS)}")
-        print("\n1. 加载数据...")
-
-        data_dict = {}
-        for symbol in GOLDEN_SYMBOLS:
-            df = data_service.analytics.get_daily_data(
-                symbol=symbol,
-                start_date="2022-01-01",
-                end_date="2024-12-31",
-            )
-
-            if not df.empty:
-                data_dict[symbol] = df
-                print(f"  ✅ {symbol}: {len(df):,} 条记录")
-            else:
-                print(f"  ❌ {symbol}: 无数据")
-
-        if not data_dict:
-            print("\n❌ 错误: 没有可用的数据")
-            sys.exit(1)
-
-        print("\n2. 生成质量报告...")
-        batch_report = reporter.generate_batch_report(data_dict)
-
-        # 输出汇总报告
+        # 输出报告
         print("\n" + "=" * 60)
-        print("数据质量汇总报告")
+        print("数据质量报告")
         print("=" * 60)
-        print(f"检查标的数: {batch_report['total_symbols']}")
-        print(f"总记录数: {batch_report['summary']['total_records']:,}")
-        print(f"平均质量分数: {batch_report['summary']['avg_quality_score']:.2%}")
+        print(f"标的: {report['symbol']}")
+        print(f"检查时间: {report['timestamp']}")
+        print(f"数据记录数: {report['total_records']:,}")
+        print(f"质量分数: {report['quality_score']:.2%}")
 
-        # 质量分数分布
-        dist = batch_report["summary"]["score_distribution"]
-        print("\n质量分数分布:")
-        print(f"  - 优秀 (90-100%): {dist['excellent']}")
-        print(f"  - 良好 (70-90%): {dist['good']}")
-        print(f"  - 一般 (50-70%): {dist['fair']}")
-        print(f"  - 较差 (<50%): {dist['poor']}")
-
-        # 问题标的
-        if batch_report["summary"]["failed_symbols"]:
+        if report.get("date_range"):
             print(
-                f"\n⚠️  问题标的: {', '.join(batch_report['summary']['failed_symbols'])}"
+                f"数据范围: {report['date_range']['start']} 至 {report['date_range']['end']}"
             )
 
-        # 各标的质量分数
-        print("\n各标的质量分数:")
-        for report in batch_report["reports"]:
-            status_icon = (
-                "✅"
-                if report["quality_score"] >= 0.9
-                else "⚠️"
-                if report["quality_score"] >= 0.7
-                else "❌"
-            )
-            print(f"  {status_icon} {report['symbol']}: {report['quality_score']:.2%}")
+        print("\n验证结果:")
+        print(f"  - 通过: {report['summary']['passed']}")
+        print(f"  - 失败: {report['summary']['failed']}")
 
-        # 详细问题
-        print("\n" + "=" * 60)
-        print("详细问题")
-        print("=" * 60)
-        has_issues = False
-        for report in batch_report["reports"]:
-            if report["summary"]["failed"] > 0:
-                has_issues = True
-                print(
-                    f"\n{report['symbol']} (质量分数: {report['quality_score']:.2%}):"
-                )
-                for validator in report["validators"]:
-                    if validator["status"] == "failed":
-                        print(f"  ❌ {validator['name']}: {validator['message']}")
-
-        if not has_issues:
-            print("\n✅ 所有标的都通过了质量检查！")
+        print("\n详细验证:")
+        for validator in report["validators"]:
+            status_icon = "✅" if validator["status"] == "passed" else "❌"
+            print(f"  {status_icon} {validator['name']}: {validator['message']}")
 
         # 保存报告
         if args.output:
-            save_report(batch_report, args.output)
+            save_report(report, args.output)
         else:
             # 默认文件名
-            filename = (
-                f"batch_quality_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            )
-            save_report(batch_report, filename)
+            filename = f"quality_report_{args.symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            save_report(report, filename)
+
+        return
+
+    # 批量检查
+    print(f"\n检查标的: {', '.join(GOLDEN_SYMBOLS)}")
+    print("\n1. 加载数据...")
+
+    data_dict = {}
+    for symbol in GOLDEN_SYMBOLS:
+        df = reader.get_daily_data(
+            symbol=symbol,
+            start_date="2022-01-01",
+            end_date="2024-12-31",
+        )
+
+        if not df.empty:
+            data_dict[symbol] = df
+            print(f"  ✅ {symbol}: {len(df):,} 条记录")
+        else:
+            print(f"  ❌ {symbol}: 无数据")
+
+    if not data_dict:
+        print("\n❌ 错误: 没有可用的数据")
+        sys.exit(1)
+
+    print("\n2. 生成质量报告...")
+    batch_report = reporter.generate_batch_report(data_dict)
+
+    # 输出汇总报告
+    print("\n" + "=" * 60)
+    print("数据质量汇总报告")
+    print("=" * 60)
+    print(f"检查标的数: {batch_report['total_symbols']}")
+    print(f"总记录数: {batch_report['summary']['total_records']:,}")
+    print(f"平均质量分数: {batch_report['summary']['avg_quality_score']:.2%}")
+
+    # 质量分数分布
+    dist = batch_report["summary"]["score_distribution"]
+    print("\n质量分数分布:")
+    print(f"  - 优秀 (90-100%): {dist['excellent']}")
+    print(f"  - 良好 (70-90%): {dist['good']}")
+    print(f"  - 一般 (50-70%): {dist['fair']}")
+    print(f"  - 较差 (<50%): {dist['poor']}")
+
+    # 问题标的
+    if batch_report["summary"]["failed_symbols"]:
+        print(f"\n⚠️  问题标的: {', '.join(batch_report['summary']['failed_symbols'])}")
+
+    # 各标的质量分数
+    print("\n各标的质量分数:")
+    for report in batch_report["reports"]:
+        status_icon = (
+            "✅"
+            if report["quality_score"] >= 0.9
+            else "⚠️"
+            if report["quality_score"] >= 0.7
+            else "❌"
+        )
+        print(f"  {status_icon} {report['symbol']}: {report['quality_score']:.2%}")
+
+    # 详细问题
+    print("\n" + "=" * 60)
+    print("详细问题")
+    print("=" * 60)
+    has_issues = False
+    for report in batch_report["reports"]:
+        if report["summary"]["failed"] > 0:
+            has_issues = True
+            print(f"\n{report['symbol']} (质量分数: {report['quality_score']:.2%}):")
+            for validator in report["validators"]:
+                if validator["status"] == "failed":
+                    print(f"  ❌ {validator['name']}: {validator['message']}")
+
+    if not has_issues:
+        print("\n✅ 所有标的都通过了质量检查！")
+
+    # 保存报告
+    if args.output:
+        save_report(batch_report, args.output)
+    else:
+        # 默认文件名
+        filename = (
+            f"batch_quality_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
+        save_report(batch_report, filename)
 
 
 def save_report(report: dict[str, Any], filename: str) -> None:
