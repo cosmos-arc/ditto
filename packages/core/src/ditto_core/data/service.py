@@ -1,10 +1,37 @@
 """数据服务 - 统一数据访问入口."""
 
+import warnings
+
 from .adapters import DuckDBAdapter, SQLiteAdapter
 
 
 class DataService:
-    """数据服务 - 管理所有数据库连接和操作."""
+    """
+    数据服务 - 管理所有数据库连接和操作.
+
+    .. deprecated:: 0.5.0
+        DataService is deprecated and will be removed in a future version.
+        Use DataReader and DataWriter classes instead for better separation of concerns.
+
+    Migration guide:
+        - For reading data: Use DataReader(adapter)
+        - For writing data: Use DataWriter(adapter)
+        - For database connections: Use DuckDBAdapter or SQLiteAdapter directly
+
+    Example:
+        Old::
+
+            with DataService(duckdb_path="path.db", sqlite_path="path2.db") as service:
+                duckdb = service.get_duckdb()
+                data = duckdb.fetch_df("SELECT * FROM table")
+
+        New::
+
+            adapter = DuckDBAdapter("path.db")
+            reader = DataReader(adapter)
+            data = reader.get_daily_data("symbol", "2024-01-01", "2024-12-31")
+
+    """
 
     def __init__(
         self,
@@ -19,13 +46,25 @@ class DataService:
             sqlite_path: SQLite 数据库路径 (可选)
 
         """
+        warnings.warn(
+            "DataService is deprecated and will be removed in a future version. "
+            "Use DataReader and DataWriter classes instead. "
+            "See the class docstring for migration examples.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.duckdb_path = duckdb_path
         self.sqlite_path = sqlite_path
         self._duckdb: DuckDBAdapter | None = None
         self._sqlite: SQLiteAdapter | None = None
 
     def get_duckdb(self) -> DuckDBAdapter:
-        """Get DuckDB adapter (lazy load and initialize)."""
+        """
+        Get DuckDB adapter (lazy load and initialize).
+
+        .. deprecated:: 0.5.0
+            Use DuckDBAdapter directly instead.
+        """
         if self._duckdb is None:
             if self.duckdb_path is None:
                 raise ValueError("DuckDB path not provided")
@@ -33,7 +72,12 @@ class DataService:
         return self._duckdb
 
     def get_sqlite(self) -> SQLiteAdapter:
-        """Get SQLite adapter (lazy load and initialize)."""
+        """
+        Get SQLite adapter (lazy load and initialize).
+
+        .. deprecated:: 0.5.0
+            Use SQLiteAdapter directly instead.
+        """
         if self._sqlite is None:
             if self.sqlite_path is None:
                 raise ValueError("SQLite path not provided")

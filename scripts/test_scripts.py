@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-测试所有更新后的脚本
-"""
+"""测试所有更新后的脚本."""
 
 import subprocess
 import sys
@@ -35,7 +33,7 @@ def run_script(script_name: str) -> bool:
         return False
 
 
-def main():
+def main() -> int:
     """主函数."""
     print("开始测试所有更新后的脚本...")
 
