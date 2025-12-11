@@ -8,7 +8,7 @@ from ditto_core.data.validators.base import BaseValidator, ValidationResult
 class TestValidationResult:
     """Test ValidationResult class."""
 
-    def test_init_with_all_params(self):
+    def test_init_with_all_params(self) -> None:
         """Test initialization with all parameters."""
         details = {"error_count": 5, "warnings": 1}
         result = ValidationResult(
@@ -19,7 +19,7 @@ class TestValidationResult:
         assert result.message == "Validation failed"
         assert result.details == details
 
-    def test_init_with_defaults(self):
+    def test_init_with_defaults(self) -> None:
         """Test initialization with default values."""
         result = ValidationResult(is_valid=True)
 
@@ -27,12 +27,12 @@ class TestValidationResult:
         assert result.message == ""
         assert result.details == {}
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """Test string representation."""
         result = ValidationResult(is_valid=True, message="All good")
         assert repr(result) == "ValidationResult(is_valid=True, message='All good')"
 
-    def test_to_dict(self):
+    def test_to_dict(self) -> None:
         """Test conversion to dictionary."""
         details = {"records": 100}
         result = ValidationResult(is_valid=False, message="Error", details=details)
@@ -40,7 +40,7 @@ class TestValidationResult:
         expected = {"is_valid": False, "message": "Error", "details": details}
         assert result.to_dict() == expected
 
-    def test_to_dict_with_empty_details(self):
+    def test_to_dict_with_empty_details(self) -> None:
         """Test to_dict with None details."""
         result = ValidationResult(is_valid=True)
 
@@ -66,24 +66,24 @@ class ConcreteValidator(BaseValidator):
 class TestBaseValidator:
     """Test BaseValidator abstract class."""
 
-    def test_cannot_instantiate_abstract(self):
+    def test_cannot_instantiate_abstract(self) -> None:
         """Test that BaseValidator cannot be instantiated directly."""
         with pytest.raises(TypeError):
             BaseValidator()
 
-    def test_concrete_implementation(self):
+    def test_concrete_implementation(self) -> None:
         """Test concrete implementation works correctly."""
         validator = ConcreteValidator()
 
         assert validator.name == "test_validator"
         assert isinstance(validator, BaseValidator)
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """Test string representation of validator."""
         validator = ConcreteValidator()
         assert repr(validator) == "ConcreteValidator(name='test_validator')"
 
-    def test_validate_method(self):
+    def test_validate_method(self) -> None:
         """Test validate method returns correct result."""
         validator = ConcreteValidator()
 

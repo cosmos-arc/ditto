@@ -7,12 +7,12 @@ from ditto_core.data.validators.volume import VolumeValidator
 class TestVolumeValidator:
     """Test VolumeValidator class."""
 
-    def test_name(self):
+    def test_name(self) -> None:
         """Test validator name property."""
         validator = VolumeValidator()
         assert validator.name == "volume_validator"
 
-    def test_valid_volume_data(self):
+    def test_valid_volume_data(self) -> None:
         """Test validation with valid volume data."""
         df = pl.DataFrame(
             {
@@ -31,7 +31,7 @@ class TestVolumeValidator:
         assert result.details["extreme_volume"] == 0
         assert result.details["long_zero_volume"] == 0
 
-    def test_missing_volume_column(self):
+    def test_missing_volume_column(self) -> None:
         """Test validation with missing volume column."""
         df = pl.DataFrame({"date": ["2024-01-01"], "close": [3.55]})
 
@@ -41,7 +41,7 @@ class TestVolumeValidator:
         assert not result.is_valid
         assert "缺少必需列: volume" in result.message
 
-    def test_negative_volume(self):
+    def test_negative_volume(self) -> None:
         """Test validation with negative volume."""
         df = pl.DataFrame({"date": ["2024-01-01"], "volume": [-1000]})
 
@@ -52,7 +52,7 @@ class TestVolumeValidator:
         assert "负成交量" in result.message
         assert result.details["negative_volume"] == 1
 
-    def test_extreme_volume_spike(self):
+    def test_extreme_volume_spike(self) -> None:
         """Test validation with extreme volume spike."""
         # Create data with median volume of 1000, then spike to 60000 (60x)
         df = pl.DataFrame(
@@ -69,7 +69,7 @@ class TestVolumeValidator:
         assert "异常高成交量" in result.message
         assert result.details["extreme_volume"] == 1
 
-    def test_zero_volume_periods(self):
+    def test_zero_volume_periods(self) -> None:
         """Test validation with zero volume periods."""
         df = pl.DataFrame(
             {
@@ -102,7 +102,7 @@ class TestVolumeValidator:
         assert "长期零成交量" in result.message
         assert result.details["long_zero_volume"] == 1
 
-    def test_short_zero_volume_periods(self):
+    def test_short_zero_volume_periods(self) -> None:
         """Test that short zero volume periods are valid."""
         df = pl.DataFrame(
             {
@@ -117,7 +117,7 @@ class TestVolumeValidator:
         assert result.is_valid  # Should pass, as zero period is < 10 days
         assert result.details["long_zero_volume"] == 0
 
-    def test_volume_statistics(self):
+    def test_volume_statistics(self) -> None:
         """Test volume statistics calculation."""
         df = pl.DataFrame(
             {
@@ -135,7 +135,7 @@ class TestVolumeValidator:
         assert stats["median"] == 2000
         assert stats["mean"] == 2000
 
-    def test_no_date_column_zero_volume_check(self):
+    def test_no_date_column_zero_volume_check(self) -> None:
         """Test that zero volume check is skipped without date column."""
         df = pl.DataFrame(
             {
@@ -149,7 +149,7 @@ class TestVolumeValidator:
         # Should pass zero volume check, but might fail other checks
         assert result.details["long_zero_volume"] == 0
 
-    def test_single_record_zero_median(self):
+    def test_single_record_zero_median(self) -> None:
         """Test behavior with single record and zero median."""
         df = pl.DataFrame({"date": ["2024-01-01"], "volume": [0]})
 
@@ -159,7 +159,7 @@ class TestVolumeValidator:
         # Should not trigger extreme volume check due to zero median
         assert result.details["extreme_volume"] == 0
 
-    def test_all_zero_volumes(self):
+    def test_all_zero_volumes(self) -> None:
         """Test validation with all zero volumes."""
         df = pl.DataFrame(
             {
@@ -175,7 +175,7 @@ class TestVolumeValidator:
         assert "长期零成交量" in result.message
         assert result.details["long_zero_volume"] == 1
 
-    def test_mixed_volume_issues(self):
+    def test_mixed_volume_issues(self) -> None:
         """Test validation with multiple volume issues."""
         df = pl.DataFrame(
             {

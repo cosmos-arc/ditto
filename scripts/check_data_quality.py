@@ -1,395 +1,289 @@
+#!/usr/bin/env python3
 """
-Data quality check script.
+数据质量检查脚本 - Phase 0.5
+生成 Golden Dataset 数据质量报告.
 
-This script provides command-line interface for running data quality
-checks on stored market data, generating reports, and monitoring
-data health.
+Usage:
+    python scripts/check_data_quality.py [--symbol SYMBOL] [--output FILE]
+
+Examples:
+    # 检查所有 Golden Dataset 标的
+    python scripts/check_data_quality.py
+
+    # 检查单个标的
+    python scripts/check_data_quality.py --symbol 510300.SH
+
+    # 指定输出文件
+    python scripts/check_data_quality.py --output quality_report.json
+
 """
 
-# Standard library imports
 import argparse
-import asyncio
-import logging
+import json
 import sys
 import traceback
-from datetime import date, datetime, timedelta
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
-try:
-    from ditto_foundation.config.settings import get_settings
-    from ditto_foundation.data import (
-        DataCollector,
-        DataQualityService,
-        DataService,
-    )
-    from ditto_foundation.data.constants import DataSourceType
-    from ditto_foundation.data.datasources import DataSourceFactory
-except ImportError as e:
-    print(f"导入失败: {e}")
-    print("请确保在 pixi 环境中运行: pixi run python scripts/check_data_quality.py")
-    sys.exit(1)
+# Import from installed packages (editable mode)
+from ditto_core.data.quality.reporter import DataQualityReporter
+from ditto_core.data.service import DataService
+from ditto_foundation.config import get_settings
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
+# Golden Dataset 标的配置
+GOLDEN_SYMBOLS = [
+    "510300.SH",  # 沪深300ETF
+    "516010.SH",  # 游戏ETF
+    "513100.SH",  # 纳指ETF
+    "000300.SH",  # 沪深300指数
+]
+
+# 质量分数阈值
+EXCELLENT_THRESHOLD = 0.9
+GOOD_THRESHOLD = 0.7
 
 
-async def check_symbol_quality(
-    service: DataQualityService,
-    symbol: str,
-    start_date: date | None,
-    end_date: date | None,
-    validators: list[str] | None,
-) -> None:
-    """Check quality for a single symbol."""
-    logger.info(f"Checking data quality for {symbol}")
+def check_single_symbol_quality(
+    symbol: str, reporter: DataQualityReporter, data_service: DataService
+) -> dict[str, Any]:
+    """
+    检查单个标的数据质量。.
 
-    if not start_date:
-        start_date = date.today() - timedelta(days=30)
-    if not end_date:
-        end_date = date.today()
+    Args:
+        symbol: 标的代码
+        reporter: DataQualityReporter实例
+        data_service: DataService实例
 
-    results = await service.validate_symbol(symbol, start_date, end_date, validators)
+    Returns:
+        质量报告字典
 
-    # Print results
-    print(f"\n{'=' * 60}")
-    print(f"Quality Report for {symbol}")
-    print(f"{'=' * 60}")
-    print(f"Date Range: {start_date} to {end_date}")
-    print(f"Validators Run: {len(results)}")
+    """
+    print(f"检查 {symbol}...")
 
-    total_issues = 0
-    critical_count = 0
-    error_count = 0
-
-    for validator_name, result in results.items():
-        print(f"\n{validator_name.upper()}:")
-        print(f"  Status: {'✓ PASS' if result.is_valid else '✗ FAIL'}")
-        print(f"  Issues: {len(result.issues)}")
-
-        total_issues += len(result.issues)
-
-        # Group issues by severity
-        severity_counts = {
-            "critical": 0,
-            "error": 0,
-            "warning": 0,
-            "info": 0,
-        }
-
-        for issue in result.issues:
-            severity_counts[issue.severity.value] += 1
-
-        for severity, count in severity_counts.items():
-            if count > 0:
-                print(f"  {severity.capitalize()}: {count}")
-                if severity == "critical":
-                    critical_count += count
-                elif severity == "error":
-                    error_count += count
-
-        # Show top issues
-        if result.issues:
-            print("\n  Top Issues:")
-            for issue in result.issues[:5]:  # Show first 5
-                print(f"    - [{issue.code}] {issue.message}")
-
-    # Summary
-    print(f"\n{'=' * 60}")
-    print("SUMMARY:")
-    print(f"Total Issues: {total_issues}")
-    if critical_count > 0:
-        print(f"✗ CRITICAL ISSUES: {critical_count}")
-    if error_count > 0:
-        print(f"✗ ERRORS: {error_count}")
-    score = max(0, 100 - critical_count * 20 - error_count * 5)
-    print(f"Overall Quality Score: {score}/100")
-
-
-async def run_health_check(
-    service: DataQualityService, sample_size: int, days_back: int
-) -> None:
-    """Run data health check."""
-    logger.info("Running data health check")
-
-    health = await service.run_health_check(
-        sample_size=sample_size, days_back=days_back
+    # 加载数据（2022-2024年）
+    df = data_service.analytics.get_daily_data(
+        symbol=symbol,
+        start_date="2022-01-01",
+        end_date="2024-12-31",
     )
 
-    print(f"\n{'=' * 60}")
-    print("DATA HEALTH CHECK")
-    print(f"{'=' * 60}")
-    print(f"Health Status: {'✓ HEALTHY' if health['healthy'] else '✗ UNHEALTHY'}")
-    print(f"Health Score: {health['score']:.1f}%")
-    print(f"Symbols Checked: {len(health['symbols_checked'])}")
-    print(
-        f"Date Range: {health['date_range']['start']} to {health['date_range']['end']}"
-    )
-    print(f"Total Validations: {health['total_validations']}")
-    print(f"Passed Validations: {health['passed_validations']}")
-    print(f"Critical Issues: {health['critical_issues']}")
+    if df.empty:
+        print(f"  ❌ {symbol}: 无数据")
+        return {"symbol": symbol, "error": "No data available"}
 
-    if health["critical_issues"] > 0:
-        print(
-            f"\n⚠️ Found {health['critical_issues']} critical issues requiring attention"
-        )
-        print("Recommendation: Run detailed validation on affected symbols")
+    print(f"  ✅ {symbol}: {len(df)} 条记录")
+
+    # 生成报告
+    report = reporter.generate_report(df, symbol)
+    return report
 
 
-async def generate_quality_report(
-    service: DataQualityService,
-    symbols: list[str] | None,
-    start_date: date | None,
-    end_date: date | None,
-    output_format: str = "json",
-) -> None:
-    """Generate comprehensive quality report."""
-    logger.info("Generating quality report")
+def check_golden_dataset_quality(args: argparse.Namespace) -> None:
+    """
+    检查 Golden Dataset 数据质量。.
 
-    report = await service.generate_quality_report(
-        ts_codes=symbols,
-        start_date=start_date,
-        end_date=end_date,
-        save_report=True,
-    )
+    Args:
+        args: 命令行参数
 
-    print(f"\n{'=' * 60}")
-    print("QUALITY REPORT")
-    print(f"{'=' * 60}")
+    """
+    print("=" * 60)
+    print("Ditto Phase 0.5 数据质量检查")
+    print("=" * 60)
 
-    # Summary
-    summary = report["summary"]
-    print(f"Validators Run: {summary['validators_run']}")
-    print(f"Validators Passed: {summary['validators_passed']}")
-    print(f"Success Rate: {summary['success_rate']:.1%}")
-    print(f"Overall Quality Score: {summary['quality_score']:.1f}/100")
-    print(f"Total Issues: {summary['total_issues']}")
-    print(f"Records Validated: {summary['total_records_validated']}")
+    # 获取配置
+    settings = get_settings()
 
-    # Issue breakdown
-    print("\nIssue Breakdown:")
-    for severity, count in summary["issue_breakdown"].items():
-        if count > 0:
-            print(f"  {severity.capitalize()}: {count}")
+    # 初始化服务和报告器
+    with DataService(settings) as data_service:
+        reporter = DataQualityReporter()
 
-    # Quality scores
-    print("\nQuality Scores by Validator:")
-    for validator, score_info in report["quality_scores"].items():
-        print(f"  {validator}: {score_info['score']:.1f} ({score_info['grade']})")
+        # 检查单个标的
+        if args.symbol:
+            if args.symbol not in GOLDEN_SYMBOLS:
+                print(f"\n⚠️  警告: {args.symbol} 不在 Golden Dataset 标的列表中")
+                print(f"Golden Dataset 标的: {', '.join(GOLDEN_SYMBOLS)}")
 
-    # Top issues
-    print("\nTop Issue Types:")
-    for issue_code, count in report["issue_analysis"]["top_issue_codes"][:5]:
-        print(f"  {issue_code}: {count} occurrences")
+            report = check_single_symbol_quality(args.symbol, reporter, data_service)
 
-    # Recommendations
-    if report["recommendations"]:
-        print("\nRecommendations:")
-        for rec in report["recommendations"][:3]:  # Show top 3
-            print(f"  • {rec['title']}")
-            print(f"    {rec['description']}")
+            # 输出报告
+            print("\n" + "=" * 60)
+            print("数据质量报告")
+            print("=" * 60)
+            print(f"标的: {report['symbol']}")
+            print(f"检查时间: {report['timestamp']}")
+            print(f"数据记录数: {report['total_records']:,}")
+            print(f"质量分数: {report['quality_score']:.2%}")
 
-    print("\nDetailed report saved to reports directory")
+            if report.get("date_range"):
+                print(
+                    f"数据范围: {report['date_range']['start']} 至 {report['date_range']['end']}"
+                )
 
+            print("\n验证结果:")
+            print(f"  - 通过: {report['summary']['passed']}")
+            print(f"  - 失败: {report['summary']['failed']}")
 
-async def validate_new_data(
-    collector: DataCollector,
-    symbol: str,
-    days_back: int,
-) -> None:
-    """Validate newly collected data."""
-    logger.info(f"Validating new data for {symbol}")
+            print("\n详细验证:")
+            for validator in report["validators"]:
+                status_icon = "✅" if validator["status"] == "passed" else "❌"
+                print(f"  {status_icon} {validator['name']}: {validator['message']}")
 
-    # Get recent data
-    end_date = date.today()
-    start_date = end_date - timedelta(days=days_back)
+            # 保存报告
+            if args.output:
+                save_report(report, args.output)
+            else:
+                # 默认文件名
+                filename = f"quality_report_{args.symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                save_report(report, filename)
 
-    # Get data from source (primary and backup if available)
-    try:
-        # Fetch data from primary source
-        primary_data = await collector.data_factory.get_daily_data(
-            symbol, start_date, end_date
-        )
-
-        if primary_data.is_empty():
-            print(f"No data found for {symbol} in specified date range")
             return
 
-        # Validate the data
-        validation_issues = await collector._validate_daily_data(symbol, primary_data)
+        # 批量检查
+        print(f"\n检查标的: {', '.join(GOLDEN_SYMBOLS)}")
+        print("\n1. 加载数据...")
 
-        # Print results
-        print(f"\n{'=' * 60}")
-        print(f"NEW DATA VALIDATION for {symbol}")
-        print(f"{'=' * 60}")
-        print(f"Records Found: {primary_data.height}")
-        print(f"Date Range: {start_date} to {end_date}")
-
-        if not validation_issues:
-            print("\n✓ No issues found - data quality is excellent")
-        else:
-            print(f"\nFound {len(validation_issues)} validation issues:")
-
-            # Group by severity
-            by_severity: dict[str, list[Any]] = {
-                "critical": [],
-                "error": [],
-                "warning": [],
-                "info": [],
-            }
-
-            for issue in validation_issues:
-                by_severity[issue.severity.value].append(issue)
-
-            for severity in ["critical", "error", "warning", "info"]:
-                issues = by_severity[severity]
-                if issues:
-                    print(f"\n{severity.upper()} ({len(issues)}):")
-                    for issue in issues[:5]:  # Show first 5
-                        print(f"  • {issue.message}")
-
-        # Store data if validation passed (or has only warnings/info)
-        critical_errors = [
-            issue
-            for issue in validation_issues
-            if issue.severity.value in ["critical", "error"]
-        ]
-
-        if not critical_errors:
-            print("\n✓ Data can be stored (no critical errors)")
-        else:
-            print(
-                f"\n✗ Data should NOT be stored "
-                f"({len(critical_errors)} critical errors)"
+        data_dict = {}
+        for symbol in GOLDEN_SYMBOLS:
+            df = data_service.analytics.get_daily_data(
+                symbol=symbol,
+                start_date="2022-01-01",
+                end_date="2024-12-31",
             )
 
-    except Exception as e:
-        logger.error(f"Validation failed: {e}")
-        print(f"\nError: {e}")
+            if not df.empty:
+                data_dict[symbol] = df
+                print(f"  ✅ {symbol}: {len(df):,} 条记录")
+            else:
+                print(f"  ❌ {symbol}: 无数据")
+
+        if not data_dict:
+            print("\n❌ 错误: 没有可用的数据")
+            sys.exit(1)
+
+        print("\n2. 生成质量报告...")
+        batch_report = reporter.generate_batch_report(data_dict)
+
+        # 输出汇总报告
+        print("\n" + "=" * 60)
+        print("数据质量汇总报告")
+        print("=" * 60)
+        print(f"检查标的数: {batch_report['total_symbols']}")
+        print(f"总记录数: {batch_report['summary']['total_records']:,}")
+        print(f"平均质量分数: {batch_report['summary']['avg_quality_score']:.2%}")
+
+        # 质量分数分布
+        dist = batch_report["summary"]["score_distribution"]
+        print("\n质量分数分布:")
+        print(f"  - 优秀 (90-100%): {dist['excellent']}")
+        print(f"  - 良好 (70-90%): {dist['good']}")
+        print(f"  - 一般 (50-70%): {dist['fair']}")
+        print(f"  - 较差 (<50%): {dist['poor']}")
+
+        # 问题标的
+        if batch_report["summary"]["failed_symbols"]:
+            print(
+                f"\n⚠️  问题标的: {', '.join(batch_report['summary']['failed_symbols'])}"
+            )
+
+        # 各标的质量分数
+        print("\n各标的质量分数:")
+        for report in batch_report["reports"]:
+            status_icon = (
+                "✅"
+                if report["quality_score"] >= 0.9
+                else "⚠️"
+                if report["quality_score"] >= 0.7
+                else "❌"
+            )
+            print(f"  {status_icon} {report['symbol']}: {report['quality_score']:.2%}")
+
+        # 详细问题
+        print("\n" + "=" * 60)
+        print("详细问题")
+        print("=" * 60)
+        has_issues = False
+        for report in batch_report["reports"]:
+            if report["summary"]["failed"] > 0:
+                has_issues = True
+                print(
+                    f"\n{report['symbol']} (质量分数: {report['quality_score']:.2%}):"
+                )
+                for validator in report["validators"]:
+                    if validator["status"] == "failed":
+                        print(f"  ❌ {validator['name']}: {validator['message']}")
+
+        if not has_issues:
+            print("\n✅ 所有标的都通过了质量检查！")
+
+        # 保存报告
+        if args.output:
+            save_report(batch_report, args.output)
+        else:
+            # 默认文件名
+            filename = (
+                f"batch_quality_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            )
+            save_report(batch_report, filename)
 
 
-async def main() -> None:
-    """Check data quality."""
-    parser = argparse.ArgumentParser(description="Check data quality")
-    parser.add_argument(
-        "command",
-        choices=["symbol", "health", "report", "validate-new"],
-        help="Command to execute",
+def save_report(report: dict[str, Any], filename: str) -> None:
+    """
+    保存报告到JSON文件。.
+
+    Args:
+        report: 报告字典
+        filename: 输出文件名
+
+    """
+    # 确保reports目录存在
+    report_path = Path("reports") / filename
+    report_path.parent.mkdir(exist_ok=True)
+
+    # 保存报告
+    with open(report_path, "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2, ensure_ascii=False, default=str)
+
+    print(f"\n📄 详细报告已保存至: {report_path}")
+
+
+def main() -> None:
+    """主函数."""
+    parser = argparse.ArgumentParser(
+        description="Ditto Phase 0.5 数据质量检查工具",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+示例:
+  %(prog)s                           # 检查所有 Golden Dataset 标的
+  %(prog)s --symbol 510300.SH       # 检查单个标的
+  %(prog)s --output report.json     # 指定输出文件
+        """,
     )
+
     parser.add_argument(
         "--symbol",
-        help="ETF symbol to check (for 'symbol' and 'validate-new' commands)",
+        type=str,
+        help="检查单个标的代码（如 510300.SH）",
     )
+
     parser.add_argument(
-        "--symbols", nargs="+", help="ETF symbols to check (for 'report' command)"
+        "--output",
+        type=str,
+        help="指定报告输出文件名（默认保存在 reports/ 目录）",
     )
-    parser.add_argument(
-        "--start-date",
-        type=lambda s: datetime.strptime(s, "%Y-%m-%d").date(),
-        help="Start date (YYYY-MM-DD)",
-    )
-    parser.add_argument(
-        "--end-date",
-        type=lambda s: datetime.strptime(s, "%Y-%m-%d").date(),
-        help="End date (YYYY-MM-DD)",
-    )
-    parser.add_argument(
-        "--validators",
-        nargs="+",
-        choices=["ohlc", "price_continuity", "volume", "limit_up_down"],
-        help="Validators to run",
-    )
-    parser.add_argument(
-        "--sample-size", type=int, default=5, help="Sample size for health check"
-    )
-    parser.add_argument("--days-back", type=int, default=7, help="Days to look back")
-    parser.add_argument(
-        "--format",
-        choices=["json", "html"],
-        default="json",
-        help="Report output format",
-    )
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging")
 
     args = parser.parse_args()
 
-    # Configure logging level
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-
     try:
-        # Load configuration
-        settings = get_settings()
-
-        # Initialize services
-        data_factory = DataSourceFactory(
-            primary_source=DataSourceType.TUSHARE,
-            tushare_api_key=settings.data_source.tushare_token,
-        )
-        data_service = DataService(
-            duckdb_path=settings.database.duckdb_path,
-            sqlite_path=settings.database.sqlite_path,
-        )
-        quality_service = DataQualityService(
-            data_service=data_service,
-        )
-        collector = DataCollector(
-            data_factory=data_factory,
-            data_service=data_service,
-        )
-
-        # Execute command
-        if args.command == "symbol":
-            if not args.symbol:
-                parser.error("--symbol is required for 'symbol' command")
-            await check_symbol_quality(
-                quality_service,
-                args.symbol,
-                args.start_date,
-                args.end_date,
-                args.validators,
-            )
-
-        elif args.command == "health":
-            await run_health_check(
-                quality_service,
-                args.sample_size,
-                args.days_back,
-            )
-
-        elif args.command == "report":
-            await generate_quality_report(
-                quality_service,
-                args.symbols,
-                args.start_date,
-                args.end_date,
-                args.format,
-            )
-
-        elif args.command == "validate-new":
-            if not args.symbol:
-                parser.error("--symbol is required for 'validate-new' command")
-            await validate_new_data(
-                collector,
-                args.symbol,
-                args.days_back,
-            )
-
-        logger.info("Data quality check completed")
-
+        check_golden_dataset_quality(args)
     except KeyboardInterrupt:
-        logger.info("Check interrupted by user")
+        print("\n\n用户中断操作")
         sys.exit(1)
-
     except Exception as e:
-        logger.error(f"Check failed: {e}")
-        if args.verbose:
-            logger.error(traceback.format_exc())
+        print(f"\n❌ 错误: {e}")
+        traceback.print_exc()
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

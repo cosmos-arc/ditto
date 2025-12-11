@@ -7,12 +7,12 @@ from ditto_core.data.validators.price import PriceValidator
 class TestPriceValidator:
     """Test PriceValidator class."""
 
-    def test_name(self):
+    def test_name(self) -> None:
         """Test validator name property."""
         validator = PriceValidator()
         assert validator.name == "price_validator"
 
-    def test_valid_ohlc_data(self):
+    def test_valid_ohlc_data(self) -> None:
         """Test validation with valid OHLC data."""
         df = pl.DataFrame(
             {
@@ -34,7 +34,7 @@ class TestPriceValidator:
         assert result.details["invalid_low"] == 0
         assert result.details["negative_prices"] == 0
 
-    def test_missing_required_columns(self):
+    def test_missing_required_columns(self) -> None:
         """Test validation with missing required columns."""
         df = pl.DataFrame({"date": ["2024-01-01"], "close": [3.55]})
 
@@ -47,7 +47,7 @@ class TestPriceValidator:
         assert "high" in result.message
         assert "low" in result.message
 
-    def test_negative_prices(self):
+    def test_negative_prices(self) -> None:
         """Test validation with negative prices."""
         df = pl.DataFrame(
             {
@@ -66,7 +66,7 @@ class TestPriceValidator:
         assert "非正价格" in result.message
         assert result.details["negative_prices"] == 1
 
-    def test_invalid_high_prices(self):
+    def test_invalid_high_prices(self) -> None:
         """Test validation with invalid high prices."""
         df = pl.DataFrame(
             {
@@ -85,7 +85,7 @@ class TestPriceValidator:
         assert "最高价不合理" in result.message
         assert result.details["invalid_high"] == 1
 
-    def test_invalid_low_prices(self):
+    def test_invalid_low_prices(self) -> None:
         """Test validation with invalid low prices."""
         df = pl.DataFrame(
             {
@@ -104,7 +104,7 @@ class TestPriceValidator:
         assert "最低价不合理" in result.message
         assert result.details["invalid_low"] == 1
 
-    def test_extreme_price_changes(self):
+    def test_extreme_price_changes(self) -> None:
         """Test validation with extreme price changes."""
         df = pl.DataFrame(
             {
@@ -123,7 +123,7 @@ class TestPriceValidator:
         assert "极端价格变化" in result.message
         assert result.details["extreme_changes"] == 1
 
-    def test_multiple_errors(self):
+    def test_multiple_errors(self) -> None:
         """Test validation with multiple errors."""
         df = pl.DataFrame(
             {
@@ -143,7 +143,7 @@ class TestPriceValidator:
         assert "最高价不合理" in result.message
         assert "最低价不合理" in result.message
 
-    def test_single_day_no_price_change_check(self):
+    def test_single_day_no_price_change_check(self) -> None:
         """Test that single day data doesn't trigger price change check."""
         df = pl.DataFrame(
             {
@@ -162,7 +162,7 @@ class TestPriceValidator:
         assert result.is_valid
         assert result.details["extreme_changes"] == 0
 
-    def test_mixed_valid_invalid_records(self):
+    def test_mixed_valid_invalid_records(self) -> None:
         """Test validation with mix of valid and invalid records."""
         df = pl.DataFrame(
             {
@@ -181,7 +181,7 @@ class TestPriceValidator:
         assert result.details["total_records"] == 3
         assert result.details["negative_prices"] >= 1
 
-    def test_zero_prices(self):
+    def test_zero_prices(self) -> None:
         """Test validation with zero prices."""
         df = pl.DataFrame(
             {
