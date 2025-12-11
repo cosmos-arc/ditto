@@ -656,6 +656,7 @@ data_dir.mkdir(parents=True, exist_ok=True)  # 跨平台创建目录
 ### 开发流程要求
 1. **任务执行顺序**：
    - 按照里程碑依赖关系推进，优先处理阻塞其他任务的项
+   - 遵循docs/design的系统设计以及借助brainstorm完成代码功能设计，有任何疑问请向我确认和要求澄清
    - 使用superpowers:writing-plans梳理计划后再执行
    - 使用superpowers:systematic-debugging排查疑难咋整
    - 使用superpowers:test-driven-development完成功能开发
