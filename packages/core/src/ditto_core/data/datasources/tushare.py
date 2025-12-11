@@ -1,6 +1,7 @@
 """Tushare data source implementation."""
 
 import time
+from datetime import datetime
 from typing import Any
 
 import polars as pl
@@ -253,8 +254,8 @@ class TushareDataSource(DataSource):
     def get_adjustment_factors(
         self,
         symbol: str,
-        start_date: str,
-        end_date: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> pl.DataFrame:
         """
         Get adjustment factors from Tushare.
@@ -327,6 +328,71 @@ class TushareDataSource(DataSource):
                     "ex_date": str,
                     "adj_factor": float,
                     "adj_type": str,
+                    "knowledge_date": str,
+                }
+            )
+
+    def get_trading_calendar(
+        self,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Get trading calendar from Tushare.
+
+        Args:
+            start_date: Start date in YYYYMMDD format
+            end_date: End date in YYYYMMDD format
+
+        Returns:
+            DataFrame with trading calendar
+
+        """
+        self._rate_limit()
+
+        try:
+            # Convert date format
+            start = start_date.replace("-", "")
+            end = end_date.replace("-", "")
+
+            # Fetch trading calendar
+            df = self.pro.trade_cal(exchange="SSE", start_date=start, end_date=end)
+
+            if df is None or df.empty:
+                return pl.DataFrame(
+                    schema={
+                        "date": str,
+                        "is_trading_day": bool,
+                        "knowledge_date": str,
+                    }
+                )
+
+            # Select and rename columns
+            result_df = df[["cal_date", "is_open"]].copy()
+            result_df.columns = ["date", "is_trading_day"]
+
+            # Convert is_open to boolean
+            result_df["is_trading_day"] = result_df["is_trading_day"] == 1
+            result_df["knowledge_date"] = datetime.now().strftime("%Y-%m-%d")
+
+            return pl.from_pandas(result_df)
+
+        except requests.exceptions.RequestException as e:
+            logger.error("Network error fetching trading calendar", error=str(e))
+            raise NetworkError("Failed to connect to Tushare", source="tushare") from e
+        except (ValueError, KeyError) as e:
+            logger.error(
+                "Data validation error fetching trading calendar", error=str(e)
+            )
+            raise ValidationError(
+                "Invalid data format from Tushare", source="tushare"
+            ) from e
+        except Exception as e:
+            logger.error("Unexpected error fetching trading calendar", error=str(e))
+            return pl.DataFrame(
+                schema={
+                    "date": str,
+                    "is_trading_day": bool,
                     "knowledge_date": str,
                 }
             )

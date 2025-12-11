@@ -49,3 +49,22 @@ class DataSource(ABC):
     ) -> pl.DataFrame:
         """Get daily price data for a symbol."""
         pass
+
+    @abstractmethod
+    def get_adjustment_factors(
+        self,
+        symbol: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """Get adjustment factors for a symbol."""
+        pass
+
+    @abstractmethod
+    def get_trading_calendar(
+        self,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """Get trading calendar."""
+        pass

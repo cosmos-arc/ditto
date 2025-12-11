@@ -109,11 +109,30 @@ def update_market_data() -> None:
         writer.store_adjustment_factors(adj_data)
         logger.info(f"[OK] 复权因子更新完成: {len(adj_records)} 条记录")
 
-    # 5. 生成更新报告
+    # 5. 创建并存储交易日历
+    logger.info("更新交易日历...")
+    cal_records = []
+    for date_offset in range(31):  # 2024年12月1日到31日
+        date = datetime(2024, 12, 1 + date_offset).strftime("%Y-%m-%d")
+        is_trading = datetime(2024, 12, 1 + date_offset).weekday() < 5  # 周一到周五
+        cal_records.append(
+            {
+                "date": date,
+                "is_trading_day": is_trading,
+                "knowledge_date": datetime.now().strftime("%Y-%m-%d"),
+            }
+        )
+
+    cal_data = pl.DataFrame(cal_records)
+    writer.store_trading_calendar(cal_data)
+    logger.info(f"[OK] 交易日历更新完成: {len(cal_records)} 条记录")
+
+    # 6. 生成更新报告
     logger.info("\n=== 数据更新报告 ===")
     logger.info(f"ETF列表: {len(etf_list)} 只")
     logger.info(f"日线数据: {len(daily_data)} 条记录")
     logger.info(f"复权因子: {len(adj_records)} 条记录")
+    logger.info(f"交易日历: {len(cal_records)} 条记录")
 
     # 验证数据
     logger.info("\n验证数据存储...")

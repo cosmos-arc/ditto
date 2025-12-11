@@ -327,3 +327,60 @@ class AkShareDataSource(DataSource):
                     "knowledge_date": str,
                 }
             )
+
+    def get_trading_calendar(
+        self,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Get trading calendar from AkShare.
+
+        Args:
+            start_date: Start date in YYYY-MM-DD format
+            end_date: End date in YYYY-MM-DD format
+
+        Returns:
+            DataFrame with trading calendar
+
+        """
+        try:
+            # Generate date range
+            start = datetime.strptime(start_date, "%Y-%m-%d")
+            end = datetime.strptime(end_date, "%Y-%m-%d")
+
+            # Create a date range
+            dates = []
+            current = start
+            while current <= end:
+                # Skip weekends (Saturdays and Sundays)
+                if current.weekday() < 5:  # Monday=0, Friday=4
+                    dates.append(current.strftime("%Y-%m-%d"))
+                current += timedelta(days=1)
+
+            # Create DataFrame
+            df = pl.DataFrame(
+                {
+                    "date": dates,
+                    "is_trading_day": [True] * len(dates),
+                    "knowledge_date": [datetime.now().strftime("%Y-%m-%d")]
+                    * len(dates),
+                }
+            )
+
+            return df
+
+        except Exception as e:
+            logger.error(
+                "Error generating trading calendar",
+                start_date=start_date,
+                end_date=end_date,
+                error=str(e),
+            )
+            return pl.DataFrame(
+                schema={
+                    "date": str,
+                    "is_trading_day": bool,
+                    "knowledge_date": str,
+                }
+            )

@@ -1,7 +1,8 @@
 """Data collection service for fetching and storing market data."""
 
 import logging
-from datetime import date
+import time
+from datetime import date, datetime, timedelta
 from typing import Any, cast
 
 import polars as pl
@@ -190,23 +191,154 @@ class DataCollector:
 
     async def update_adj_factors(
         self,
-        ts_codes: list[str] | None = None,
-        start_date: date | None = None,
-        end_date: date | None = None,
+        symbols: list[str] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
         force_update: bool = False,
     ) -> dict[str, Any]:
-        """Update adjustment factors."""
-        # Stub implementation - TODO: Implement actual logic to fetch and store
-        # adjustment factors. When implemented, should use:
-        # self.data_writer.store_adjustment_factors()
+        """Update adjustment factors for symbols."""
+        start_time = time.time()
+        logger.info("开始更新复权因子")
+
+        # Get primary data source
+        primary_source = self._sources.get("primary")
+        if not primary_source:
+            raise ValueError("未配置主数据源")
+
+        # If no symbols specified, get all ETFs
+        if not symbols:
+            etf_df = primary_source.get_etf_list()
+            if etf_df.is_empty():
+                logger.warning("未获取到ETF列表")
+                return {
+                    "total_processed": 0,
+                    "total_records": 0,
+                    "new_records": 0,
+                    "updated_records": 0,
+                    "errors": ["未获取到ETF列表"],
+                    "duration": 0.0,
+                }
+            symbols = etf_df["symbol"].to_list()
+
+        # Set default date range if not provided
+        if not end_date:
+            end_date = datetime.now().strftime("%Y-%m-%d")
+        if not start_date:
+            # Default to 1 year ago
+            start_date = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
+
+        total_records = 0
+        errors = []
+        symbols_updated = []
+
+        logger.info(f"开始为 {len(symbols)} 只股票更新复权因子")
+
+        for symbol in symbols:
+            try:
+                logger.info(f"更新 {symbol} 复权因子...")
+
+                # Get adjustment factors
+                adj_df = primary_source.get_adjustment_factors(
+                    symbol=symbol,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+
+                if adj_df.is_empty():
+                    logger.warning(f"⚠️ {symbol}: 无复权因子数据")
+                    continue
+
+                # Store to database
+                self.data_writer.store_adjustment_factors(adj_df)
+
+                total_records += len(adj_df)
+                symbols_updated.append(symbol)
+
+                logger.info(f"✅ {symbol}: 更新 {len(adj_df)} 条复权因子记录")
+
+            except Exception as e:
+                logger.error(f"❌ {symbol}: 更新复权因子失败 - {e}")
+                errors.append(f"{symbol}: {e!s}")
+
+        duration = time.time() - start_time
+
         return {
-            "total_processed": 0,
-            "total_records": 0,
-            "new_records": 0,
+            "total_processed": len(symbols),
+            "total_records": total_records,
+            "symbols_updated": symbols_updated,
+            "new_records": total_records,  # Simplified - not tracking new vs updated
             "updated_records": 0,
-            "errors": [],
-            "duration": 0.0,
+            "errors": errors,
+            "duration": duration,
+            "start_date": start_date,
+            "end_date": end_date,
         }
+
+    async def update_trading_calendar(
+        self,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> dict[str, Any]:
+        """Update trading calendar."""
+        start_time = time.time()
+        logger.info("开始更新交易日历")
+
+        # Get primary data source
+        primary_source = self._sources.get("primary")
+        if not primary_source:
+            raise ValueError("未配置主数据源")
+
+        # Set default date range if not provided
+        if not end_date:
+            end_date = datetime.now().strftime("%Y-%m-%d")
+        if not start_date:
+            # Default to 1 year ahead
+            start_date = datetime.now().strftime("%Y-%m-%d")
+            end_date = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
+
+        try:
+            logger.info(f"获取交易日历: {start_date} 到 {end_date}")
+
+            # Get trading calendar
+            cal_df = primary_source.get_trading_calendar(
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            if cal_df.is_empty():
+                logger.warning("未获取到交易日历数据")
+                return {
+                    "total_records": 0,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "errors": ["未获取到交易日历数据"],
+                    "duration": 0.0,
+                }
+
+            # Store to database
+            self.data_writer.store_trading_calendar(cal_df)
+
+            duration = time.time() - start_time
+            logger.info(f"✅ 交易日历更新完成: {len(cal_df)} 条记录")
+
+            return {
+                "total_records": len(cal_df),
+                "start_date": start_date,
+                "end_date": end_date,
+                "errors": [],
+                "duration": duration,
+            }
+
+        except Exception as e:
+            logger.error(f"❌ 更新交易日历失败: {e}")
+            duration = time.time() - start_time
+            return {
+                "total_records": 0,
+                "start_date": start_date,
+                "end_date": end_date,
+                "errors": [str(e)],
+                "duration": duration,
+            }
 
     async def verify_data_quality(
         self,
