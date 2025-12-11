@@ -5,7 +5,6 @@ Ditto FastAPI 主应用.
 """
 
 # Standard library imports
-import logging
 import os
 import time
 import uuid
@@ -27,7 +26,6 @@ from ditto_foundation.logging_config import (
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from loguru import logger as loguru_logger
 
 # Initialize project root
 project_root = Path(__file__).parent.parent.parent.parent
@@ -173,7 +171,11 @@ async def get_status() -> dict[str, Any]:
             "trading": False,
         },
         "logging": {
-            "level": "DEBUG" if loguru_logger.level == logging.DEBUG else "INFO",
+            "level": (
+                "DEBUG"
+                if os.getenv("DITTO_ENV", "development") == "development"
+                else "INFO"
+            ),
             "structured": True,
         },
     }
