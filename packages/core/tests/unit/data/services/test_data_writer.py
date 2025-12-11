@@ -56,8 +56,8 @@ class TestDataWriter:
 
         # Assert
         call_args = mock_adapter.execute.call_args[0]
-        # Check that knowledge_date is in the parameters
-        assert "knowledge_date" in call_args[1]
+        # Check that knowledge_date is in the SQL column list
+        assert "knowledge_date" in call_args[0]
 
     def test_data_writer_store_daily_data(self, mocker: MockerFixture) -> None:
         """Test storing daily price data."""
