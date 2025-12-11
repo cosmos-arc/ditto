@@ -6,54 +6,84 @@ from typing import Any, cast
 
 import polars as pl
 
+from ..config.sources_config import SourcesConfig, get_sources_config
+from .datasources.base import DataSource
+from .datasources.factory import DataSourceFactory
 from .services.data_writer import DataWriter
 
 logger = logging.getLogger(__name__)
-
-# For now, create minimal stub implementations to allow ruff checks to pass
-# These will be properly implemented in a future task
 
 
 class DataCollector:
     """Service for collecting and managing market data."""
 
-    # Default tolerance for price validation (1%)
-    DEFAULT_PRICE_TOLERANCE = 0.01
-
     def __init__(
         self,
         data_writer: DataWriter,
-        batch_size: int = 1000,
-        max_concurrent_fetches: int = 3,
+        config: SourcesConfig | None = None,
     ) -> None:
-        """Initialize data collector."""
-        self.data_writer = data_writer
-        self.batch_size = batch_size
-        self.max_concurrent_fetches = max_concurrent_fetches
+        """
+        Initialize data collector with configuration.
 
-        # Initialize data sources
-        self._sources: dict[str, Any] = {}
+        Args:
+            data_writer: Data writer instance for storing data
+            config: Sources configuration. If None, loads from default location
+
+        """
+        self.data_writer = data_writer
+        self.config = config or get_sources_config()
+
+        # Initialize data sources based on configuration
+        self._sources: dict[str, DataSource] = {}
+        self._initialize_sources()
+
+    def _initialize_sources(self) -> None:
+        """Initialize data sources based on configuration."""
+        enabled_sources = self.config.get_enabled_sources()
+
+        for source_name, source_config in enabled_sources.items():
+            try:
+                # Create data source instance using factory
+                source = DataSourceFactory.create(
+                    source_type=source_config.type, config=source_config.config
+                )
+
+                # Connect to the source
+                source.connect()
+
+                # Store the source
+                self._sources[source_name] = source
+
+                logger.info(
+                    f"Initialized {source_name} data source: {source_config.type}"
+                )
+
+            except Exception as e:
+                logger.error(f"Failed to initialize {source_name} data source: {e}")
+                if source_name == "primary":
+                    # Primary source is required
+                    raise
 
     def update_etf_list(self) -> dict[str, Any]:
         """Update ETF list from primary data source."""
         logger.info("开始更新ETF列表")
 
-        # 获取主数据源
-        primary_source = self._sources.get("tushare")
+        # Get primary data source
+        primary_source = self._sources.get("primary")
         if not primary_source:
-            raise ValueError("未配置主数据源 Tushare")
+            raise ValueError("未配置主数据源")
 
         try:
-            # 获取ETF列表
+            # Get ETF list
             etf_df = primary_source.get_etf_list()
             logger.info(f"获取到 {len(etf_df)} 只ETF")
 
-            # 存储到数据库
+            # Store to database
             self.data_writer.store_etf_info(etf_df)
 
             return {
                 "total_updated": len(etf_df),
-                "source": "tushare",
+                "source": self.config.primary.type,
                 "status": "success",
             }
 
@@ -64,7 +94,19 @@ class DataCollector:
     def update_daily_data(
         self, symbols: list[str], start_date: str, end_date: str, validate: bool = True
     ) -> dict[str, Any]:
-        """批量下载日线数据."""
+        """
+        批量下载日线数据.
+
+        Args:
+            symbols: List of symbols to update
+            start_date: Start date in YYYY-MM-DD format
+            end_date: End date in YYYY-MM-DD format
+            validate: Whether to validate with backup source
+
+        Returns:
+            Dictionary containing update results
+
+        """
         if not symbols:
             logger.warning("空的股票代码列表, 跳过更新")
             return {
@@ -78,45 +120,66 @@ class DataCollector:
             f"开始更新日线数据: {len(symbols)} 只股票, {start_date} 至 {end_date}"
         )
 
-        primary_source = self._sources.get("tushare")
-        backup_source = self._sources.get("akshare") if validate else None
-
+        # Get primary source
+        primary_source = self._sources.get("primary")
         if primary_source is None:
-            raise ValueError("未配置主数据源 Tushare")
+            raise ValueError("未配置主数据源")
+
+        # Get backup source if validation is enabled
+        backup_source = None
+        if validate and self.config.backup.enabled:
+            backup_source = self._sources.get("backup")
 
         total_records = 0
         symbols_updated = []
         validation_errors = []
 
-        for symbol in symbols:
-            try:
-                # 从主数据源获取
-                primary_df = primary_source.get_daily_data(
-                    symbol=symbol, start_date=start_date, end_date=end_date
-                )
+        # Get batch size from config
+        batch_size = self.config.collection.batch_size
 
-                if validate and backup_source:
-                    # 交叉验证
-                    backup_df = backup_source.get_daily_data(
+        # Process symbols in batches
+        for i in range(0, len(symbols), batch_size):
+            batch = symbols[i : i + batch_size]
+            logger.debug(f"Processing batch {i // batch_size + 1}: {batch}")
+
+            for symbol in batch:
+                try:
+                    # Fetch from primary source
+                    primary_df = primary_source.get_daily_data(
                         symbol=symbol, start_date=start_date, end_date=end_date
                     )
 
-                    # 验证一致性
-                    if not self._validate_price_consistency(primary_df, backup_df):
-                        validation_errors.append(f"{symbol}: 主备数据源价格差异过大")
-                        continue
+                    # Cross-validate if enabled
+                    if (
+                        validate
+                        and backup_source
+                        and self.config.collection.validate_consistency
+                    ):
+                        backup_df = backup_source.get_daily_data(
+                            symbol=symbol, start_date=start_date, end_date=end_date
+                        )
 
-                # 存储到数据库
-                self.data_writer.store_daily_data(primary_df)
+                        # Validate consistency
+                        tolerance = self.config.quality.cross_validation.tolerance
+                        if not self._validate_price_consistency(
+                            primary_df, backup_df, tolerance
+                        ):
+                            validation_errors.append(
+                                f"{symbol}: 主备数据源价格差异过大"
+                            )
+                            continue
 
-                total_records += len(primary_df)
-                symbols_updated.append(symbol)
+                    # Store to database
+                    self.data_writer.store_daily_data(primary_df)
 
-                logger.info(f"✅ {symbol}: 更新 {len(primary_df)} 条记录")
+                    total_records += len(primary_df)
+                    symbols_updated.append(symbol)
 
-            except Exception as e:
-                logger.error(f"❌ {symbol}: 更新失败 - {e}")
-                validation_errors.append(f"{symbol}: {e!s}")
+                    logger.info(f"✅ {symbol}: 更新 {len(primary_df)} 条记录")
+
+                except Exception as e:
+                    logger.error(f"❌ {symbol}: 更新失败 - {e}")
+                    validation_errors.append(f"{symbol}: {e!s}")
 
         return {
             "total_records": total_records,
@@ -166,7 +229,7 @@ class DataCollector:
         """验证两个数据源的价格一致性."""
         # Use default tolerance if not provided
         if tolerance is None:
-            tolerance = self.DEFAULT_PRICE_TOLERANCE
+            tolerance = self.config.quality.cross_validation.tolerance
 
         # Early returns for invalid inputs
         validation_result = self._validate_price_inputs(df1, df2)
@@ -251,6 +314,28 @@ class DataCollector:
             return False
 
         return True
+
+    def cleanup(self) -> None:
+        """Cleanup resources by disconnecting all data sources."""
+        logger.info("Cleaning up data collector...")
+
+        for source_name, source in self._sources.items():
+            try:
+                source.disconnect()
+                logger.debug(f"Disconnected {source_name} data source")
+            except Exception as e:
+                logger.error(f"Failed to disconnect {source_name} data source: {e}")
+
+        self._sources.clear()
+        logger.info("Data collector cleanup completed")
+
+    def __del__(self) -> None:
+        """Destructor to ensure cleanup."""
+        try:
+            self.cleanup()
+        except Exception:
+            # Ignore errors during cleanup in destructor
+            pass
 
     async def _validate_daily_data(self, symbol: str, data: Any) -> list[Any]:
         """Validate daily data for a symbol."""

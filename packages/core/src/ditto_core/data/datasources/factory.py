@@ -5,6 +5,7 @@ from typing import Any, ClassVar
 from ..constants import DataSourceType
 from .akshare import AkShareDataSource
 from .base import DataSource
+from .csv_source import CSVDataSource
 from .tushare import TushareDataSource
 
 
@@ -15,6 +16,7 @@ class DataSourceFactory:
     _sources: ClassVar[dict[str, type[DataSource]]] = {
         DataSourceType.TUSHARE: TushareDataSource,
         DataSourceType.AKSHARE: AkShareDataSource,
+        DataSourceType.CSV: CSVDataSource,
     }
 
     @classmethod
@@ -92,3 +94,17 @@ class DataSourceFactory:
 
         """
         return cls.create(DataSourceType.AKSHARE, kwargs)  # type: ignore[return-value]
+
+    @classmethod
+    def create_csv(cls, **kwargs: Any) -> CSVDataSource:
+        """
+        Create a CSV data source.
+
+        Args:
+            **kwargs: Configuration options
+
+        Returns:
+            CSVDataSource instance
+
+        """
+        return cls.create(DataSourceType.CSV, kwargs)  # type: ignore[return-value]
