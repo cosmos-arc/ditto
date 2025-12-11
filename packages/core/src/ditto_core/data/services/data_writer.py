@@ -76,10 +76,10 @@ class DataWriter:
             column_mapping = {
                 "symbol": "symbol",
                 "date": "trade_date",
-                "open": "open_price",
-                "high": "high_price",
-                "low": "low_price",
-                "close": "close_price",
+                "open": "open",
+                "high": "high",
+                "low": "low",
+                "close": "close",
                 "volume": "volume",
                 "amount": "amount",
                 "turnover_rate": "turnover_rate",
@@ -94,16 +94,29 @@ class DataWriter:
                 raise ValueError(f"Missing required columns: {missing}")
 
             # Select and rename columns that exist in the data
-            available_columns = []
-            final_columns = []
-            for new_col, old_col in column_mapping.items():
-                if old_col in daily_data.columns:
-                    available_columns.append(old_col)
-                    final_columns.append(new_col)
+            # Map to database column names
+            db_column_mapping = {
+                "symbol": "symbol",
+                "date": "trade_date",
+                "open": "open_price",
+                "high": "high_price",
+                "low": "low_price",
+                "close": "close_price",
+                "volume": "volume",
+                "amount": "amount",
+                "turnover_rate": "turnover_rate",
+                "pe_ratio": "pe_ratio",
+                "pb_ratio": "pb_ratio",
+            }
 
-            # Prepare data for insert
+            # Prepare data for insert - select all columns that exist in the data
+            available_columns = [col for col in daily_data.columns if col in column_mapping]
             insert_data = daily_data.select(available_columns)
-            insert_data.columns = final_columns
+
+            # Rename columns to match database schema
+            rename_dict = {col: db_column_mapping[col] for col in available_columns if col in db_column_mapping and col != db_column_mapping[col]}
+            if rename_dict:
+                insert_data = insert_data.rename(rename_dict)
 
             # Add knowledge_date
             if "knowledge_date" not in insert_data.columns:
@@ -204,7 +217,7 @@ class DataWriter:
         try:
             # Map columns to match schema
             column_mapping = {
-                "date": "trade_date",
+                "date": "date",
                 "is_trading_day": "is_trading_day",
                 "market": "market",
             }
@@ -216,16 +229,13 @@ class DataWriter:
                 raise ValueError(f"Missing required columns: {missing}")
 
             # Select and rename columns that exist in the data
-            available_columns = []
-            final_columns = []
-            for new_col, old_col in column_mapping.items():
-                if old_col in calendar_data.columns:
-                    available_columns.append(old_col)
-                    final_columns.append(new_col)
-
-            # Prepare data for insert
+            available_columns = [col for col in calendar_data.columns if col in column_mapping]
             insert_data = calendar_data.select(available_columns)
-            insert_data.columns = final_columns
+
+            # Rename columns to match database schema
+            rename_dict = {col: "trade_date" for col in available_columns if col == "date"}
+            if rename_dict:
+                insert_data = insert_data.rename(rename_dict)
 
             # Use executemany for batch insert
             columns_str = ", ".join(insert_data.columns)

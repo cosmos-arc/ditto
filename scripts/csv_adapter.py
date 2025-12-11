@@ -171,10 +171,17 @@ class CSVAdapter:
             start_date = params["start_date"]
             end_date = params["end_date"]
 
+            # Check if date column exists (could be 'date' or 'trade_date')
+            date_col = None
             if "date" in df.columns:
+                date_col = "date"
+            elif "trade_date" in df.columns:
+                date_col = "trade_date"
+
+            if date_col:
                 df = df.filter(
-                    (pl.col("date") >= pl.lit(start_date).str.to_date())
-                    & (pl.col("date") <= pl.lit(end_date).str.to_date())
+                    (pl.col(date_col) >= pl.lit(start_date).str.to_date())
+                    & (pl.col(date_col) <= pl.lit(end_date).str.to_date())
                 )
 
         # Add knowledge_date if not present
@@ -182,17 +189,38 @@ class CSVAdapter:
             df = df.with_columns([pl.lit(datetime.now()).alias("knowledge_date")])
 
         # Sort by date
+        date_col = None
         if "date" in df.columns:
-            df = df.sort("date")
+            date_col = "date"
+        elif "trade_date" in df.columns:
+            date_col = "trade_date"
 
-        # Select only required columns
+        if date_col:
+            df = df.sort(date_col)
+
+        # Rename columns back to original names if they have database names
+        rename_back_mapping = {
+            "trade_date": "date",
+            "open_price": "open",
+            "high_price": "high",
+            "low_price": "low",
+            "close_price": "close",
+        }
+
+        for db_name, orig_name in rename_back_mapping.items():
+            if db_name in df.columns:
+                df = df.rename({db_name: orig_name})
+
+        # Select only required columns (including symbol)
         required_cols = [
+            "symbol",
             "date",
             "open",
             "high",
             "low",
             "close",
             "volume",
+            "amount",
             "knowledge_date",
         ]
         available_cols = [col for col in required_cols if col in df.columns]
@@ -248,15 +276,26 @@ class CSVAdapter:
             start_date = params["start_date"]
             end_date = params["end_date"]
 
+            # Check for date column (could be 'date' or 'trade_date')
+            date_col = None
             if "date" in df.columns:
+                date_col = "date"
+            elif "trade_date" in df.columns:
+                date_col = "trade_date"
+
+            if date_col:
                 df = df.filter(
-                    (pl.col("date") >= pl.lit(start_date).str.to_date())
-                    & (pl.col("date") <= pl.lit(end_date).str.to_date())
+                    (pl.col(date_col) >= pl.lit(start_date).str.to_date())
+                    & (pl.col(date_col) <= pl.lit(end_date).str.to_date())
                 )
 
         # Add knowledge_date if not present
         if "knowledge_date" not in df.columns:
             df = df.with_columns([pl.lit(datetime.now()).alias("knowledge_date")])
+
+        # Rename trade_date to date if needed
+        if "trade_date" in df.columns:
+            df = df.rename({"trade_date": "date"})
 
         return df.select(["date", "is_trading_day", "knowledge_date"])
 
@@ -316,6 +355,19 @@ class CSVAdapter:
                 # No date column, skip sorting
                 pass
 
+            # Rename price columns back to original names for storage
+            column_rename_mapping = {
+                "open_price": "open",
+                "high_price": "high",
+                "low_price": "low",
+                "close_price": "close",
+            }
+
+            # Apply renaming if columns exist
+            for new_name, old_name in column_rename_mapping.items():
+                if old_name in symbol_data.columns:
+                    symbol_data = symbol_data.rename({old_name: new_name})
+
             # Write to CSV
             symbol_data.write_csv(daily_file)
 
@@ -362,6 +414,12 @@ class CSVAdapter:
         else:
             # No date column, skip sorting
             pass
+
+        # Ensure required columns exist
+        if "is_trading_day" not in df.columns:
+            df = df.with_columns([pl.lit(True).alias("is_trading_day")])
+        if "market" not in df.columns:
+            df = df.with_columns([pl.lit("all").alias("market")])
 
         # Write to CSV
         cal_file = self.data_dir / "trading_calendar.csv"
