@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .akshare import AkShareDataSource
+    from .csv_source import CSVDataSource
     from .tushare import TushareDataSource
 
 # Try importing datasources - may fail if dependencies are not installed
@@ -18,10 +19,12 @@ except ImportError:
     TushareDataSource = None  # type: ignore
 
 from .base import DataSource
+from .csv_source import CSVDataSource
 from .factory import DataSourceFactory
 
 __all__ = [
     "AkShareDataSource",
+    "CSVDataSource",
     "DataSource",
     "DataSourceFactory",
     "TushareDataSource",

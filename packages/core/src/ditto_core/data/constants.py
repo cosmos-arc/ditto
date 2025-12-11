@@ -6,6 +6,7 @@ class DataSourceType:
 
     TUSHARE = "tushare"
     AKSHARE = "akshare"
+    CSV = "csv"
 
 
 class DatabaseType:
