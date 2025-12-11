@@ -2,7 +2,7 @@
 
 import logging
 from datetime import date, datetime
-from typing import Any
+from typing import Any, cast
 
 import polars as pl
 
@@ -211,10 +211,15 @@ class DataCollector:
         # Handle both Series and scalar return types
         if max_diff_val is None:
             return False
-        if hasattr(max_diff_val, "item"):
-            max_diff = max_diff_val.item()
-        else:
-            max_diff = float(max_diff_val)
+
+        # Convert to float - handle different Polars return types
+        try:
+            # Cast to Any first to satisfy type checker, then convert to float
+            max_diff = float(cast(Any, max_diff_val))
+        except (TypeError, ValueError):
+            # If conversion fails, this is an unexpected type
+            logger.error(f"无法转换价格差异值为浮点数: {max_diff_val}")
+            return False
 
         # 更详细的错误报告
         if max_diff > tolerance:
