@@ -4,6 +4,10 @@ import polars as pl
 
 from .base import BaseValidator, ValidationResult
 
+# Constants for validation thresholds
+LONG_ZERO_VOLUME_DAYS = 10
+EXTREME_VOLUME_MULTIPLIER = 50
+
 
 class VolumeValidator(BaseValidator):
     """
@@ -51,7 +55,7 @@ class VolumeValidator(BaseValidator):
         negative_volume_mask = data.with_columns(
             [(pl.col("volume") < 0).alias("is_negative")]
         )
-        negative_volume = negative_volume_mask["is_negative"].sum()
+        negative_volume = int(negative_volume_mask["is_negative"].sum() or 0)
         details["negative_volume"] = negative_volume
         if negative_volume > 0:
             errors.append(f"负成交量: {negative_volume} 条记录")
@@ -68,11 +72,20 @@ class VolumeValidator(BaseValidator):
 
         # Check for extreme volume spikes (>50x median)
         volume_median = volume_series.median()
-        if volume_median and volume_median > 0:
+        if (
+            volume_median is not None
+            and isinstance(volume_median, int | float)
+            and volume_median > 0
+        ):
+            median_float = float(volume_median)
             extreme_volume_mask = data.with_columns(
-                [(pl.col("volume") > (volume_median * 50)).alias("is_extreme")]
+                [
+                    (
+                        pl.col("volume") > (median_float * EXTREME_VOLUME_MULTIPLIER)
+                    ).alias("is_extreme")
+                ]
             )
-            extreme_volume = extreme_volume_mask["is_extreme"].sum()
+            extreme_volume = int(extreme_volume_mask["is_extreme"].sum() or 0)
             details["extreme_volume"] = extreme_volume
             if extreme_volume > 0:
                 errors.append(f"异常高成交量(>50倍中位数): {extreme_volume} 条记录")
@@ -101,15 +114,23 @@ class VolumeValidator(BaseValidator):
 
             if len(zero_volume_groups) > 0:
                 long_zero_volume_mask = zero_volume_groups.with_columns(
-                    [(pl.col("len") > 10).alias("is_long")]
+                    [(pl.col("len") > LONG_ZERO_VOLUME_DAYS).alias("is_long")]
                 )
-                long_zero_volume = long_zero_volume_mask["is_long"].sum()
+                long_zero_volume = int(long_zero_volume_mask["is_long"].sum() or 0)
                 details["long_zero_volume"] = long_zero_volume
                 if long_zero_volume > 0:
-                    max_zero_days = zero_volume_groups["len"].max()
-                    errors.append(
-                        f"长期零成交量(>10天): {long_zero_volume} 组, 最长{max_zero_days}天"
+                    max_zero_days_val = zero_volume_groups["len"].max()
+                    max_zero_days = (
+                        int(max_zero_days_val)
+                        if max_zero_days_val is not None
+                        and isinstance(max_zero_days_val, int | float)
+                        else 0
                     )
+                    error_msg = (
+                        f"长期零成交量(>{LONG_ZERO_VOLUME_DAYS}天): "
+                        f"{long_zero_volume} 组, 最长{max_zero_days}天"
+                    )
+                    errors.append(error_msg)
 
         is_valid = len(errors) == 0
         message = "; ".join(errors) if errors else "成交量数据正常"

@@ -4,6 +4,9 @@ import polars as pl
 
 from .base import BaseValidator, ValidationResult
 
+# Constants for validation thresholds
+EXTREME_PRICE_CHANGE_THRESHOLD = 0.2
+
 
 class PriceValidator(BaseValidator):
     """
@@ -70,7 +73,7 @@ class PriceValidator(BaseValidator):
                 ).alias("has_nonpos")
             ]
         )
-        negative_prices = non_positive_mask["has_nonpos"].sum()
+        negative_prices = int(non_positive_mask["has_nonpos"].sum() or 0)
         details["negative_prices"] = negative_prices
         if negative_prices > 0:
             errors.append(f"存在非正价格: {negative_prices} 条记录")
@@ -84,7 +87,7 @@ class PriceValidator(BaseValidator):
                 ).alias("invalid_high")
             ]
         )
-        invalid_high = invalid_high_mask["invalid_high"].sum()
+        invalid_high = int(invalid_high_mask["invalid_high"].sum() or 0)
         details["invalid_high"] = invalid_high
         if invalid_high > 0:
             errors.append(f"最高价不合理: {invalid_high} 条记录")
@@ -97,7 +100,7 @@ class PriceValidator(BaseValidator):
                 ).alias("invalid_low")
             ]
         )
-        invalid_low = invalid_low_mask["invalid_low"].sum()
+        invalid_low = int(invalid_low_mask["invalid_low"].sum() or 0)
         details["invalid_low"] = invalid_low
         if invalid_low > 0:
             errors.append(f"最低价不合理: {invalid_low} 条记录")
@@ -109,7 +112,10 @@ class PriceValidator(BaseValidator):
                 [pl.col("close").pct_change().abs().alias("price_change")]
             ).drop_nulls()
 
-            extreme_changes = (price_changes["price_change"] > 0.2).sum()
+            extreme_changes = int(
+                (price_changes["price_change"] > EXTREME_PRICE_CHANGE_THRESHOLD).sum()
+                or 0
+            )
             details["extreme_changes"] = extreme_changes
             if extreme_changes > 0:
                 errors.append(f"极端价格变化(>20%): {extreme_changes} 条记录")
