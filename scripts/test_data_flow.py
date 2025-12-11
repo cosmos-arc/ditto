@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-测试数据流脚本 - 验证DataReader/DataWriter架构
+测试数据流脚本 - 验证DataReader/DataWriter架构.
 
 这个脚本测试完整的数据流程：
 1. 创建测试数据
@@ -232,9 +232,9 @@ def test_trading_calendar_flow() -> None:
     assert len(read_data) == 5, f"期望5条记录，实际{len(read_data)}条"
     assert "date" in read_data.columns
     assert "is_trading_day" in read_data.columns
-    assert (
-        read_data.filter(pl.col("date") == pl.date(2024, 12, 3))["is_trading_day"][0] == False
-    )
+    assert not read_data.filter(pl.col("date") == pl.date(2024, 12, 3))[
+        "is_trading_day"
+    ][0]
     print("  [OK] 交易日历数据验证成功")
 
 
@@ -283,7 +283,9 @@ def test_cross_symbol_data_consistency() -> None:
         assert len(df) == 3, f"{symbol}期望3条记录，实际{len(df)}条"
         # Convert dates to string for comparison
         date_strings = [str(d) for d in df["date"].to_list()]
-        assert all(ds in ["2024-12-01", "2024-12-02", "2024-12-03"] for ds in date_strings)
+        assert all(
+            ds in ["2024-12-01", "2024-12-02", "2024-12-03"] for ds in date_strings
+        )
         print(f"  [OK] {symbol} 数据一致性验证成功")
 
     # 3. 测试日期范围过滤

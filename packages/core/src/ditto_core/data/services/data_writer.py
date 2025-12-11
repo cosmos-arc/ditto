@@ -110,11 +110,17 @@ class DataWriter:
             }
 
             # Prepare data for insert - select all columns that exist in the data
-            available_columns = [col for col in daily_data.columns if col in column_mapping]
+            available_columns = [
+                col for col in daily_data.columns if col in column_mapping
+            ]
             insert_data = daily_data.select(available_columns)
 
             # Rename columns to match database schema
-            rename_dict = {col: db_column_mapping[col] for col in available_columns if col in db_column_mapping and col != db_column_mapping[col]}
+            rename_dict = {
+                col: db_column_mapping[col]
+                for col in available_columns
+                if col in db_column_mapping and col != db_column_mapping[col]
+            }
             if rename_dict:
                 insert_data = insert_data.rename(rename_dict)
 
@@ -229,11 +235,15 @@ class DataWriter:
                 raise ValueError(f"Missing required columns: {missing}")
 
             # Select and rename columns that exist in the data
-            available_columns = [col for col in calendar_data.columns if col in column_mapping]
+            available_columns = [
+                col for col in calendar_data.columns if col in column_mapping
+            ]
             insert_data = calendar_data.select(available_columns)
 
             # Rename columns to match database schema
-            rename_dict = {col: "trade_date" for col in available_columns if col == "date"}
+            rename_dict = {
+                col: "trade_date" for col in available_columns if col == "date"
+            }
             if rename_dict:
                 insert_data = insert_data.rename(rename_dict)
 

@@ -1,0 +1,154 @@
+"""错误处理中间件."""
+
+import time
+from typing import Any
+
+from ditto_foundation.logging_config import get_logger
+from fastapi import Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from .exceptions import DittoException
+
+logger = get_logger(__name__)
+
+
+def create_error_response(
+    status_code: int,
+    error: str,
+    detail: str | None = None,
+    error_code: str | None = None,
+    request_id: str | None = None,
+    timestamp: float | None = None,
+) -> JSONResponse:
+    """创建标准化的错误响应."""
+    if timestamp is None:
+        timestamp = time.time()
+
+    content: dict[str, Any] = {
+        "success": False,
+        "error": error,
+        "status_code": status_code,
+        "timestamp": timestamp,
+    }
+
+    if detail:
+        content["detail"] = detail
+
+    if error_code:
+        content["error_code"] = error_code
+
+    if request_id:
+        content["request_id"] = request_id
+
+    return JSONResponse(
+        status_code=status_code,
+        content=content,
+    )
+
+
+async def ditto_exception_handler(
+    request: Request,
+    exc: DittoException,
+) -> JSONResponse:
+    """处理 Ditto 自定义异常."""
+    request_id = getattr(request.state, "request_id", None)
+    logger.error(
+        "Ditto exception occurred",
+        error=exc.message,
+        error_code=exc.error_code,
+        path=request.url.path,
+        method=request.method,
+        request_id=request_id,
+    )
+
+    return create_error_response(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        error=exc.__class__.__name__,
+        detail=exc.message,
+        error_code=exc.error_code,
+        request_id=request_id,
+    )
+
+
+async def http_exception_handler(
+    request: Request,
+    exc: StarletteHTTPException,
+) -> JSONResponse:
+    """处理 HTTP 异常."""
+    request_id = getattr(request.state, "request_id", None)
+    logger.warning(
+        "HTTP exception occurred",
+        status_code=exc.status_code,
+        detail=exc.detail,
+        path=request.url.path,
+        method=request.method,
+        request_id=request_id,
+    )
+
+    return create_error_response(
+        status_code=exc.status_code,
+        error="HTTP_ERROR",
+        detail=str(exc.detail),
+        request_id=request_id,
+    )
+
+
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError,
+) -> JSONResponse:
+    """处理请求验证异常."""
+    request_id = getattr(request.state, "request_id", None)
+
+    # 格式化验证错误
+    errors = []
+    for error in exc.errors():
+        errors.append(
+            {
+                "field": ".".join(str(loc) for loc in error["loc"]),
+                "message": error["msg"],
+                "type": error["type"],
+            }
+        )
+
+    logger.warning(
+        "Request validation failed",
+        errors=errors,
+        path=request.url.path,
+        method=request.method,
+        request_id=request_id,
+    )
+
+    return create_error_response(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        error="VALIDATION_ERROR",
+        detail="Invalid request parameters",
+        request_id=request_id,
+    )
+
+
+async def general_exception_handler(
+    request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    """处理通用异常."""
+    request_id = getattr(request.state, "request_id", None)
+
+    # 记录异常堆栈
+    logger.exception(
+        "Unhandled exception occurred",
+        error=str(exc),
+        error_type=exc.__class__.__name__,
+        path=request.url.path,
+        method=request.method,
+        request_id=request_id,
+    )
+
+    return create_error_response(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        error="INTERNAL_SERVER_ERROR",
+        detail="An unexpected error occurred",
+        request_id=request_id,
+    )

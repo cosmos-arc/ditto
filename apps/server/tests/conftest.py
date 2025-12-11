@@ -1,0 +1,247 @@
+"""pytest配置文件."""
+
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+import pytest
+from ditto_core.data.adapters import DuckDBAdapter, SQLiteAdapter
+from ditto_foundation.config import Settings
+
+
+@pytest.fixture
+def temp_dir():
+    """临时目录fixture."""
+    with TemporaryDirectory() as tmpdir:
+        yield Path(tmpdir)
+
+
+@pytest.fixture
+def test_settings(temp_dir):
+    """测试配置fixture."""
+    return Settings(
+        duckdb_path=temp_dir / "test.duckdb",
+        sqlite_path=temp_dir / "test.sqlite",
+        tushare_token="test_token",
+        akshare_enabled=False,
+    )
+
+
+@pytest.fixture
+def duckdb_adapter(test_settings):
+    """DuckDB适配器fixture."""
+    adapter = DuckDBAdapter(str(test_settings.duckdb_path))
+
+    # 初始化表结构
+    adapter.execute_many(
+        """
+        CREATE TABLE IF NOT EXISTS etf_list (
+            symbol VARCHAR,
+            name VARCHAR,
+            market VARCHAR,
+            category VARCHAR,
+            establish_date DATE,
+            fund_manager VARCHAR,
+            tracking_index VARCHAR,
+            knowledge_date DATE
+        )
+    """,
+        [],
+    )
+
+    adapter.execute_many(
+        """
+        CREATE TABLE IF NOT EXISTS daily_price_raw (
+            symbol VARCHAR,
+            date DATE,
+            open_price DOUBLE,
+            high_price DOUBLE,
+            low_price DOUBLE,
+            close_price DOUBLE,
+            volume BIGINT,
+            amount DOUBLE,
+            knowledge_date DATE
+        )
+    """,
+        [],
+    )
+
+    adapter.execute_many(
+        """
+        CREATE TABLE IF NOT EXISTS daily_price_adjusted (
+            symbol VARCHAR,
+            date DATE,
+            open DOUBLE,
+            high DOUBLE,
+            low DOUBLE,
+            close DOUBLE,
+            volume BIGINT,
+            knowledge_date DATE
+        )
+    """,
+        [],
+    )
+
+    adapter.execute_many(
+        """
+        CREATE TABLE IF NOT EXISTS adjustment_factors (
+            symbol VARCHAR,
+            ex_date DATE,
+            adj_factor DOUBLE,
+            knowledge_date DATE
+        )
+    """,
+        [],
+    )
+
+    yield adapter
+
+    adapter.close()
+
+
+@pytest.fixture
+def sqlite_adapter(test_settings):
+    """SQLite适配器fixture."""
+    adapter = SQLiteAdapter(str(test_settings.sqlite_path))
+
+    # 初始化表结构
+    adapter.execute_many(
+        """
+        CREATE TABLE IF NOT EXISTS trading_calendar (
+            date DATE PRIMARY KEY,
+            is_trading_day BOOLEAN,
+            knowledge_date DATE
+        )
+    """,
+        [],
+    )
+
+    yield adapter
+
+    adapter.close()
+
+
+@pytest.fixture
+def sample_etf_data():
+    """示例ETF数据."""
+    return [
+        {
+            "symbol": "510300",
+            "name": "沪深300ETF",
+            "market": "上海",
+            "category": "指数型",
+            "establish_date": "2012-04-26",
+            "fund_manager": "柳军",
+            "tracking_index": "沪深300指数",
+            "knowledge_date": "2024-01-01",
+        },
+        {
+            "symbol": "159915",
+            "name": "创业板ETF",
+            "market": "深圳",
+            "category": "指数型",
+            "establish_date": "2011-09-20",
+            "fund_manager": "王军",
+            "tracking_index": "创业板指数",
+            "knowledge_date": "2024-01-01",
+        },
+    ]
+
+
+@pytest.fixture
+def sample_daily_data():
+    """示例日线数据."""
+    data = []
+    symbol = "510300"
+    for i in range(10):
+        date = f"2024-01-{i + 1:02d}"
+        data.append(
+            {
+                "symbol": symbol,
+                "date": date,
+                "open": 3.5 + i * 0.01,
+                "high": 3.6 + i * 0.01,
+                "low": 3.4 + i * 0.01,
+                "close": 3.55 + i * 0.01,
+                "volume": 1000000 + i * 10000,
+                "knowledge_date": "2024-01-01",
+            }
+        )
+    return data
+
+
+@pytest.fixture
+def populated_databases(
+    duckdb_adapter,
+    sqlite_adapter,
+    sample_etf_data,
+    sample_daily_data,
+):
+    """填充测试数据的数据库."""
+    # 插入ETF数据
+    duckdb_adapter.execute_many(
+        """
+        INSERT INTO etf_list (
+            symbol, name, market, category, establish_date,
+            fund_manager, tracking_index, knowledge_date
+        ) VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?
+        )
+        """,
+        [
+            (
+                d["symbol"],
+                d["name"],
+                d["market"],
+                d["category"],
+                d["establish_date"],
+                d["fund_manager"],
+                d["tracking_index"],
+                d["knowledge_date"],
+            )
+            for d in sample_etf_data
+        ],
+    )
+
+    # 插入日线数据
+    duckdb_adapter.execute_many(
+        """
+        INSERT INTO daily_price_adjusted (
+            symbol, date, open, high, low, close, volume, knowledge_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (
+                d["symbol"],
+                d["date"],
+                d["open"],
+                d["high"],
+                d["low"],
+                d["close"],
+                d["volume"],
+                d["knowledge_date"],
+            )
+            for d in sample_daily_data
+        ],
+    )
+
+    # 插入交易日历数据
+    trading_days = []
+    for i in range(31):
+        date = f"2024-01-{i + 1:02d}"
+        trading_days.append(
+            {
+                "date": date,
+                "is_trading_day": i % 7 not in [5, 6],  # 周末不交易
+                "knowledge_date": "2024-01-01",
+            }
+        )
+
+    sqlite_adapter.execute_many(
+        """
+        INSERT INTO trading_calendar (date, is_trading_day, knowledge_date)
+        VALUES (?, ?, ?)
+        """,
+        [(d["date"], d["is_trading_day"], d["knowledge_date"]) for d in trading_days],
+    )
+
+    return duckdb_adapter, sqlite_adapter

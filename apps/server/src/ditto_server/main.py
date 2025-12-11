@@ -24,8 +24,20 @@ from ditto_foundation.logging_config import (
     setup_logging,
 )
 from fastapi import FastAPI, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+# Local API routes
+from ditto_server.api import data_router, update_router
+from ditto_server.exceptions import DittoException
+from ditto_server.middleware import (
+    ditto_exception_handler,
+    general_exception_handler,
+    http_exception_handler,
+    validation_exception_handler,
+)
 
 # Initialize project root
 project_root = Path(__file__).parent.parent.parent.parent
@@ -188,6 +200,17 @@ async def test_logging() -> dict[str, str]:
     logger.warning("Test warning log", test_data="example")
     logger.error("Test error log", test_data="example")
     return {"message": "Test logs generated"}
+
+
+# 注册异常处理器
+app.add_exception_handler(DittoException, ditto_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
+
+# 注册API路由
+app.include_router(data_router)
+app.include_router(update_router)
 
 
 if __name__ == "__main__":
