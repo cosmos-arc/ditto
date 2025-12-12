@@ -1,298 +1,609 @@
-"""Data writer service for storing market data."""
+"""New DataWriter implementation without adapter abstraction."""
 
+from __future__ import annotations
+
+import sqlite3
+import tempfile
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
+import duckdb
 import polars as pl
+from ditto_foundation.config import get_settings
 from loguru import logger
-
-from ..adapters.protocol import DatabaseAdapter
 
 
 class DataWriter:
-    """数据写入服务 - 提供业务语义的数据存储接口."""
+    """数据写入服务 - 直接管理数据库连接，不使用adapter抽象."""
 
-    def __init__(self, adapter: DatabaseAdapter) -> None:
+    def __init__(
+        self, duckdb_path: str | None = None, sqlite_path: str | None = None
+    ) -> None:
         """
-        Initialize data writer.
+        初始化数据写入器.
 
         Args:
-            adapter: Database adapter instance
+            duckdb_path: DuckDB数据库路径
+            sqlite_path: SQLite数据库路径
 
         """
-        self._adapter = adapter
+        if duckdb_path is None or sqlite_path is None:
+            settings = get_settings()
+            duckdb_path = duckdb_path or str(settings.database.duckdb_path)
+            sqlite_path = sqlite_path or str(settings.database.sqlite_path)
 
-    def store_etf_info(self, etf_data: pl.DataFrame) -> None:
+        # 确保目录存在
+        Path(duckdb_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(sqlite_path).parent.mkdir(parents=True, exist_ok=True)
+
+        # 创建数据库连接
+        self._duck_conn = duckdb.connect(duckdb_path)
+        self._sqlite_conn = sqlite3.connect(sqlite_path)
+
+        # 初始化表结构
+        self._init_schemas()
+
+    @classmethod
+    def for_testing(cls) -> DataWriter:
+        """
+        创建测试用的DataWriter实例（使用内存数据库）.
+
+        Returns:
+            DataWriter实例
+
+        """
+        # 创建临时文件数据库而不是内存数据库，以便支持多个连接
+        temp_dir = tempfile.mkdtemp()
+        duckdb_path = f"{temp_dir}/test_market.duckdb"
+        sqlite_path = f"{temp_dir}/test_trading.sqlite"
+
+        writer = cls(duckdb_path=duckdb_path, sqlite_path=sqlite_path)
+        return writer
+
+    def _init_schemas(self) -> None:
+        """初始化数据库表结构."""
+        # DuckDB表（市场数据）
+        self._duck_conn.execute("""
+            CREATE TABLE IF NOT EXISTS etf_info (
+                symbol VARCHAR PRIMARY KEY,
+                name VARCHAR,
+                list_date DATE,
+                knowledge_date DATE
+            )
+        """)
+
+        self._duck_conn.execute("""
+            CREATE TABLE IF NOT EXISTS daily_price (
+                symbol VARCHAR,
+                trade_date DATE,
+                open_price DECIMAL(10,4),
+                high_price DECIMAL(10,4),
+                low_price DECIMAL(10,4),
+                close_price DECIMAL(10,4),
+                volume BIGINT,
+                amount DECIMAL(20,2),
+                turnover_rate DECIMAL(8,4),
+                pe_ratio DECIMAL(8,4),
+                pb_ratio DECIMAL(8,4),
+                knowledge_date DATE,
+                PRIMARY KEY (symbol, trade_date)
+            )
+        """)
+
+        self._duck_conn.execute("""
+            CREATE TABLE IF NOT EXISTS adjustment_factors (
+                symbol VARCHAR,
+                ex_date DATE,
+                adj_factor DECIMAL(12,8),
+                adj_type VARCHAR,
+                knowledge_date DATE,
+                PRIMARY KEY (symbol, ex_date)
+            )
+        """)
+
+        self._duck_conn.execute("""
+            CREATE TABLE IF NOT EXISTS trading_calendar (
+                trade_date DATE PRIMARY KEY,
+                is_trading_day BOOLEAN,
+                market VARCHAR,
+                knowledge_date DATE
+            )
+        """)
+
+        # SQLite表（交易数据）
+        self._sqlite_conn.execute("""
+            CREATE TABLE IF NOT EXISTS trades (
+                trade_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol VARCHAR,
+                side VARCHAR,
+                quantity INTEGER,
+                price DECIMAL(10,4),
+                timestamp DATETIME,
+                knowledge_date DATE
+            )
+        """)
+
+        self._sqlite_conn.execute("""
+            CREATE TABLE IF NOT EXISTS orders (
+                order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol VARCHAR,
+                side VARCHAR,
+                order_type VARCHAR,
+                quantity INTEGER,
+                price DECIMAL(10,4),
+                status VARCHAR,
+                create_time DATETIME,
+                update_time DATETIME,
+                knowledge_date DATE
+            )
+        """)
+
+        self._sqlite_conn.execute("""
+            CREATE TABLE IF NOT EXISTS positions (
+                position_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol VARCHAR,
+                quantity INTEGER,
+                avg_price DECIMAL(10,4),
+                market_value DECIMAL(20,2),
+                last_update DATETIME,
+                knowledge_date DATE
+            )
+        """)
+
+    def store_etf_info(self, etf_data: pl.DataFrame | list[dict[str, Any]]) -> None:
         """
         Store ETF basic information.
 
         Args:
-            etf_data: 包含ETF信息的DataFrame
+            etf_data: 包含ETF信息的DataFrame或字典列表
 
         """
         try:
+            # 转换为DataFrame
+            df = pl.DataFrame(etf_data) if isinstance(etf_data, list) else etf_data
+
             # Check for required columns
-            if "symbol" not in etf_data.columns or "name" not in etf_data.columns:
+            if "symbol" not in df.columns or "name" not in df.columns:
                 raise ValueError("ETF数据必须包含symbol和name列")
 
             # Add knowledge_date if not present
-            if "knowledge_date" not in etf_data.columns:
-                etf_data = etf_data.with_columns(
-                    [pl.lit(datetime.now()).alias("knowledge_date")]
+            if "knowledge_date" not in df.columns:
+                df = df.with_columns(
+                    [pl.lit(datetime.now().date()).alias("knowledge_date")]
                 )
 
-            # Prepare the insert with fixed columns based on test expectations
-            sql = """
-            INSERT OR REPLACE INTO etf_info
-            (symbol, name, list_date, knowledge_date)
-            VALUES (?, ?, ?, ?)
-            """
+            # Select only required columns
+            required_columns = ["symbol", "name", "list_date", "knowledge_date"]
+            df = df.select(required_columns)
 
-            for row in etf_data.to_dicts():
-                self._adapter.execute(
-                    sql,
-                    [
-                        row.get("symbol"),
-                        row.get("name"),
-                        row.get("list_date"),
-                        row.get("knowledge_date"),
-                    ],
-                )
-
-            logger.info(f"存储ETF信息: {len(etf_data)} 条记录")
+            # 插入数据库
+            self._duck_conn.execute("INSERT OR REPLACE INTO etf_info SELECT * FROM df")
+            logger.info(f"存储ETF信息: {len(df)} 条记录")
         except Exception as e:
             logger.error(f"存储ETF信息失败: {e}")
             raise
 
-    def store_daily_data(self, daily_data: pl.DataFrame) -> None:
+    def store_daily_data(self, daily_data: pl.DataFrame | list[dict[str, Any]]) -> None:
         """
-        Store daily data (raw prices).
+        Store daily price data.
 
         Args:
-            daily_data: 包含日线数据的DataFrame
+            daily_data: 包含日线数据的DataFrame或字典列表
 
         """
         try:
-            # Map columns to match schema
-            column_mapping = {
-                "symbol": "symbol",
-                "date": "trade_date",
-                "open": "open",
-                "high": "high",
-                "low": "low",
-                "close": "close",
-                "volume": "volume",
-                "amount": "amount",
-                "turnover_rate": "turnover_rate",
-                "pe_ratio": "pe_ratio",
-                "pb_ratio": "pb_ratio",
-            }
+            # 转换为DataFrame
+            df = (
+                pl.DataFrame(daily_data) if isinstance(daily_data, list) else daily_data
+            )
 
             # Check for required columns
             required_cols = {"symbol", "date", "open", "high", "low", "close", "volume"}
-            if not required_cols.issubset(daily_data.columns):
-                missing = required_cols - set(daily_data.columns)
+            if not required_cols.issubset(df.columns):
+                missing = required_cols - set(df.columns)
                 raise ValueError(f"Missing required columns: {missing}")
 
-            # Select and rename columns that exist in the data
-            # Map to database column names
-            db_column_mapping = {
-                "symbol": "symbol",
+            # Map columns to database schema
+            column_mapping = {
                 "date": "trade_date",
                 "open": "open_price",
                 "high": "high_price",
                 "low": "low_price",
                 "close": "close_price",
-                "volume": "volume",
-                "amount": "amount",
-                "turnover_rate": "turnover_rate",
-                "pe_ratio": "pe_ratio",
-                "pb_ratio": "pb_ratio",
             }
 
-            # Prepare data for insert - select all columns that exist in the data
-            available_columns = [
-                col for col in daily_data.columns if col in column_mapping
-            ]
-            insert_data = daily_data.select(available_columns)
+            # Rename columns
+            df = df.rename(column_mapping)
 
-            # Rename columns to match database schema
-            rename_dict = {
-                col: db_column_mapping[col]
-                for col in available_columns
-                if col in db_column_mapping and col != db_column_mapping[col]
-            }
-            if rename_dict:
-                insert_data = insert_data.rename(rename_dict)
-
-            # Add knowledge_date
-            if "knowledge_date" not in insert_data.columns:
-                insert_data = insert_data.with_columns(
+            # Add knowledge_date if not present
+            if "knowledge_date" not in df.columns:
+                df = df.with_columns(
                     [pl.lit(datetime.now().date()).alias("knowledge_date")]
                 )
 
-            # Use executemany for batch insert
-            columns_str = ", ".join(insert_data.columns)
-            placeholders = ", ".join(["?" for _ in insert_data.columns])
-            sql = f"""
-            INSERT OR REPLACE INTO daily_price
-            ({columns_str})
-            VALUES ({placeholders})
-            """
+            # Select all columns needed for database
+            db_columns = [
+                "symbol",
+                "trade_date",
+                "open_price",
+                "high_price",
+                "low_price",
+                "close_price",
+                "volume",
+                "amount",
+                "turnover_rate",
+                "pe_ratio",
+                "pb_ratio",
+                "knowledge_date",
+            ]
 
-            self._adapter.execute_many(sql, insert_data.to_dicts())
-            logger.info(f"存储日线数据: {len(daily_data)} 条记录")
+            # Add missing columns with null values
+            for col in db_columns:
+                if col not in df.columns:
+                    df = df.with_columns(pl.lit(None).alias(col))
+
+            # Select columns in correct order
+            df = df.select(db_columns)
+
+            # 插入数据库
+            self._duck_conn.execute(
+                "INSERT OR REPLACE INTO daily_price SELECT * FROM df"
+            )
+            logger.info(f"存储日线数据: {len(df)} 条记录")
         except Exception as e:
             logger.error(f"存储日线数据失败: {e}")
             raise
 
-    def store_adjustment_factors(self, adj_data: pl.DataFrame) -> None:
+    def store_adjustment_factors(
+        self, adj_data: pl.DataFrame | list[dict[str, Any]]
+    ) -> None:
         """
         Store adjustment factors.
 
         Args:
-            adj_data: 包含复权因子的DataFrame
+            adj_data: 包含复权因子的DataFrame或字典列表
 
         """
         try:
+            # 转换为DataFrame
+            df = pl.DataFrame(adj_data) if isinstance(adj_data, list) else adj_data
+
             # Handle both 'date' and 'ex_date' column names
-            if "date" not in adj_data.columns and "ex_date" not in adj_data.columns:
+            if "date" not in df.columns and "ex_date" not in df.columns:
                 raise ValueError(
                     "Adjustment data must contain either 'date' or 'ex_date' column"
                 )
 
             # Rename 'date' to 'ex_date' if necessary
-            if "date" in adj_data.columns and "ex_date" not in adj_data.columns:
-                adj_data = adj_data.rename({"date": "ex_date"})
-
-            # Map columns to match schema
-            column_mapping = {
-                "symbol": "symbol",
-                "ex_date": "ex_date",
-                "adj_factor": "adj_factor",
-                "adj_type": "adj_type",
-                "description": "description",
-            }
+            if "date" in df.columns and "ex_date" not in df.columns:
+                df = df.rename({"date": "ex_date"})
 
             # Check for required columns
-            required_cols = {"symbol", "ex_date", "adj_factor", "adj_type"}
-            if not required_cols.issubset(adj_data.columns):
-                missing = required_cols - set(adj_data.columns)
+            required_cols = {"symbol", "ex_date", "adj_factor"}
+            if not required_cols.issubset(df.columns):
+                missing = required_cols - set(df.columns)
                 raise ValueError(f"Missing required columns: {missing}")
 
-            # Select and rename columns that exist in the data
-            available_columns = []
-            final_columns = []
-            for new_col, old_col in column_mapping.items():
-                if old_col in adj_data.columns:
-                    available_columns.append(old_col)
-                    final_columns.append(new_col)
-
-            # Prepare data for insert
-            insert_data = adj_data.select(available_columns)
-            insert_data.columns = final_columns
-
-            # Add knowledge_date
-            if "knowledge_date" not in insert_data.columns:
-                insert_data = insert_data.with_columns(
+            # Add knowledge_date if not present
+            if "knowledge_date" not in df.columns:
+                df = df.with_columns(
                     [pl.lit(datetime.now().date()).alias("knowledge_date")]
                 )
 
-            # Use executemany for batch insert
-            columns_str = ", ".join(insert_data.columns)
-            placeholders = ", ".join(["?" for _ in insert_data.columns])
-            sql = f"""
-            INSERT OR REPLACE INTO adjustment_factors
-            ({columns_str})
-            VALUES ({placeholders})
-            """
+            # Select all columns needed for database
+            db_columns = [
+                "symbol",
+                "ex_date",
+                "adj_factor",
+                "adj_type",
+                "knowledge_date",
+            ]
 
-            self._adapter.execute_many(sql, insert_data.to_dicts())
-            logger.info(f"存储复权因子: {len(adj_data)} 条记录")
+            # Add missing columns with null values
+            for col in db_columns:
+                if col not in df.columns:
+                    df = df.with_columns(pl.lit(None).alias(col))
+
+            # Select columns in correct order
+            df = df.select(db_columns)
+
+            # 插入数据库
+            self._duck_conn.execute(
+                "INSERT OR REPLACE INTO adjustment_factors SELECT * FROM df"
+            )
+            logger.info(f"存储复权因子: {len(df)} 条记录")
         except Exception as e:
             logger.error(f"存储复权因子失败: {e}")
             raise
 
-    def store_trading_calendar(self, calendar_data: pl.DataFrame) -> None:
+    def store_trading_calendar(
+        self, calendar_data: pl.DataFrame | list[dict[str, Any]]
+    ) -> None:
         """
         Store trading calendar.
 
         Args:
-            calendar_data: 包含交易日历的DataFrame
+            calendar_data: 包含交易日历的DataFrame或字典列表
 
         """
         try:
-            # Map columns to match schema
-            column_mapping = {
-                "date": "date",
-                "is_trading_day": "is_trading_day",
-                "market": "market",
-            }
+            # 转换为DataFrame
+            df = (
+                pl.DataFrame(calendar_data)
+                if isinstance(calendar_data, list)
+                else calendar_data
+            )
 
             # Check for required columns
             required_cols = {"date", "is_trading_day"}
-            if not required_cols.issubset(calendar_data.columns):
-                missing = required_cols - set(calendar_data.columns)
+            if not required_cols.issubset(df.columns):
+                missing = required_cols - set(df.columns)
                 raise ValueError(f"Missing required columns: {missing}")
 
-            # Select and rename columns that exist in the data
-            available_columns = [
-                col for col in calendar_data.columns if col in column_mapping
+            # Rename 'date' to 'trade_date'
+            if "date" in df.columns:
+                df = df.rename({"date": "trade_date"})
+
+            # Add knowledge_date if not present
+            if "knowledge_date" not in df.columns:
+                df = df.with_columns(
+                    [pl.lit(datetime.now().date()).alias("knowledge_date")]
+                )
+
+            # Select all columns needed for database
+            db_columns = [
+                "trade_date",
+                "is_trading_day",
+                "market",
+                "knowledge_date",
             ]
-            insert_data = calendar_data.select(available_columns)
 
-            # Rename columns to match database schema
-            rename_dict = {
-                col: "trade_date" for col in available_columns if col == "date"
-            }
-            if rename_dict:
-                insert_data = insert_data.rename(rename_dict)
+            # Add missing columns with null values
+            for col in db_columns:
+                if col not in df.columns:
+                    df = df.with_columns(pl.lit(None).alias(col))
 
-            # Use executemany for batch insert
-            columns_str = ", ".join(insert_data.columns)
-            placeholders = ", ".join(["?" for _ in insert_data.columns])
-            sql = f"""
-            INSERT OR IGNORE INTO trading_calendar
-            ({columns_str})
-            VALUES ({placeholders})
-            """
+            # Select columns in correct order
+            df = df.select(db_columns)
 
-            self._adapter.execute_many(sql, insert_data.to_dicts())
-            logger.info(f"存储交易日历: {len(calendar_data)} 条记录")
+            # 插入数据库
+            self._duck_conn.execute(
+                "INSERT OR IGNORE INTO trading_calendar SELECT * FROM df"
+            )
+            logger.info(f"存储交易日历: {len(df)} 条记录")
         except Exception as e:
             logger.error(f"存储交易日历失败: {e}")
             raise
 
-    def _batch_insert(self, table_name: str, data: pl.DataFrame) -> None:
+    def store_trades(self, trades_data: pl.DataFrame | list[dict[str, Any]]) -> None:
         """
-        Internal method for batch data insertion.
+        Store trade records.
 
-        This method handles both INSERT and UPDATE logic for data that
-        might already exist in the database.
+        Args:
+            trades_data: 包含交易记录的DataFrame或字典列表
+
         """
-        # Use different batch insert strategies for different tables
-        if table_name in ["daily_price_raw", "adjustment_factors"]:
-            # These tables may need to update existing records, use INSERT OR REPLACE
-            for row in data.to_dicts():
-                # Build dynamic SQL statement based on DataFrame columns
-                columns = list(row.keys())
-                placeholders = ", ".join(["?" for _ in columns])
-                column_names = ", ".join(columns)
+        try:
+            # 转换为DataFrame
+            df = (
+                pl.DataFrame(trades_data)
+                if isinstance(trades_data, list)
+                else trades_data
+            )
 
-                sql = f"""
-                INSERT OR REPLACE INTO {table_name}
-                ({column_names})
-                VALUES ({placeholders})
-                """
-                self._adapter.execute(sql, list(row.values()))
-        # Other tables use direct batch insert with INSERT OR IGNORE
-        elif len(data) > 0:
-            columns = list(data.columns)
-            placeholders = ", ".join(["?" for _ in columns])
-            column_names = ", ".join(columns)
+            # Check for required columns
+            required_cols = {"symbol", "side", "quantity", "price"}
+            if not required_cols.issubset(df.columns):
+                missing = required_cols - set(df.columns)
+                raise ValueError(f"Missing required columns: {missing}")
 
-            sql = f"""
-                INSERT OR IGNORE INTO {table_name}
-                ({column_names})
-                VALUES ({placeholders})
+            # Add knowledge_date if not present
+            if "knowledge_date" not in df.columns:
+                df = df.with_columns(
+                    [pl.lit(datetime.now().date()).alias("knowledge_date")]
+                )
+
+            # Add timestamp if not present
+            if "timestamp" not in df.columns:
+                df = df.with_columns([pl.lit(datetime.now()).alias("timestamp")])
+
+            # Select all columns needed for database
+            db_columns = [
+                "symbol",
+                "side",
+                "quantity",
+                "price",
+                "timestamp",
+                "knowledge_date",
+            ]
+
+            # Add missing columns with null values
+            for col in db_columns:
+                if col not in df.columns:
+                    df = df.with_columns(pl.lit(None).alias(col))
+
+            # Select columns in correct order
+            df = df.select(db_columns)
+
+            # Convert to dict and insert
+            trades_list = df.to_dicts()
+            self._sqlite_conn.executemany(
                 """
-            self._adapter.execute_many(sql, data.to_dicts())
+                INSERT INTO trades (symbol, side, quantity, price, timestamp, knowledge_date)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        t["symbol"],
+                        t["side"],
+                        t["quantity"],
+                        t["price"],
+                        t["timestamp"],
+                        t["knowledge_date"],
+                    )
+                    for t in trades_list
+                ],
+            )
+            logger.info(f"存储交易记录: {len(trades_list)} 条记录")
+        except Exception as e:
+            logger.error(f"存储交易记录失败: {e}")
+            raise
+
+    def store_orders(self, orders_data: pl.DataFrame | list[dict[str, Any]]) -> None:
+        """
+        Store order records.
+
+        Args:
+            orders_data: 包含订单记录的DataFrame或字典列表
+
+        """
+        try:
+            # 转换为DataFrame
+            df = (
+                pl.DataFrame(orders_data)
+                if isinstance(orders_data, list)
+                else orders_data
+            )
+
+            # Check for required columns
+            required_cols = {"symbol", "side", "quantity"}
+            if not required_cols.issubset(df.columns):
+                missing = required_cols - set(df.columns)
+                raise ValueError(f"Missing required columns: {missing}")
+
+            # Add knowledge_date if not present
+            if "knowledge_date" not in df.columns:
+                df = df.with_columns(
+                    [pl.lit(datetime.now().date()).alias("knowledge_date")]
+                )
+
+            # Add timestamps if not present
+            if "create_time" not in df.columns:
+                df = df.with_columns([pl.lit(datetime.now()).alias("create_time")])
+            if "update_time" not in df.columns:
+                df = df.with_columns([pl.lit(datetime.now()).alias("update_time")])
+
+            # Select all columns needed for database
+            db_columns = [
+                "symbol",
+                "side",
+                "order_type",
+                "quantity",
+                "price",
+                "status",
+                "create_time",
+                "update_time",
+                "knowledge_date",
+            ]
+
+            # Add missing columns with null values
+            for col in db_columns:
+                if col not in df.columns:
+                    df = df.with_columns(pl.lit(None).alias(col))
+
+            # Select columns in correct order
+            df = df.select(db_columns)
+
+            # Convert to dict and insert
+            orders_list = df.to_dicts()
+            self._sqlite_conn.executemany(
+                """
+                INSERT INTO orders (symbol, side, order_type, quantity, price, status, create_time, update_time, knowledge_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        o["symbol"],
+                        o["side"],
+                        o["order_type"],
+                        o["quantity"],
+                        o["price"],
+                        o["status"],
+                        o["create_time"],
+                        o["update_time"],
+                        o["knowledge_date"],
+                    )
+                    for o in orders_list
+                ],
+            )
+            logger.info(f"存储订单记录: {len(orders_list)} 条记录")
+        except Exception as e:
+            logger.error(f"存储订单记录失败: {e}")
+            raise
+
+    def store_positions(
+        self, positions_data: pl.DataFrame | list[dict[str, Any]]
+    ) -> None:
+        """
+        Store position records.
+
+        Args:
+            positions_data: 包含持仓记录的DataFrame或字典列表
+
+        """
+        try:
+            # 转换为DataFrame
+            df = (
+                pl.DataFrame(positions_data)
+                if isinstance(positions_data, list)
+                else positions_data
+            )
+
+            # Check for required columns
+            required_cols = {"symbol", "quantity"}
+            if not required_cols.issubset(df.columns):
+                missing = required_cols - set(df.columns)
+                raise ValueError(f"Missing required columns: {missing}")
+
+            # Add knowledge_date if not present
+            if "knowledge_date" not in df.columns:
+                df = df.with_columns(
+                    [pl.lit(datetime.now().date()).alias("knowledge_date")]
+                )
+
+            # Add last_update if not present
+            if "last_update" not in df.columns:
+                df = df.with_columns([pl.lit(datetime.now()).alias("last_update")])
+
+            # Select all columns needed for database
+            db_columns = [
+                "symbol",
+                "quantity",
+                "avg_price",
+                "market_value",
+                "last_update",
+                "knowledge_date",
+            ]
+
+            # Add missing columns with null values
+            for col in db_columns:
+                if col not in df.columns:
+                    df = df.with_columns(pl.lit(None).alias(col))
+
+            # Select columns in correct order
+            df = df.select(db_columns)
+
+            # Convert to dict and insert
+            positions_list = df.to_dicts()
+            self._sqlite_conn.executemany(
+                """
+                INSERT INTO positions (symbol, quantity, avg_price, market_value, last_update, knowledge_date)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        p["symbol"],
+                        p["quantity"],
+                        p["avg_price"],
+                        p["market_value"],
+                        p["last_update"],
+                        p["knowledge_date"],
+                    )
+                    for p in positions_list
+                ],
+            )
+            logger.info(f"存储持仓记录: {len(positions_list)} 条记录")
+        except Exception as e:
+            logger.error(f"存储持仓记录失败: {e}")
+            raise

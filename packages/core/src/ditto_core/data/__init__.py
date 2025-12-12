@@ -8,7 +8,6 @@ import warnings
 
 __version__ = "0.1.0"
 
-from .adapters import DatabaseAdapter, DuckDBAdapter, SQLiteAdapter
 from .collector import DataCollector
 from .constants import DatabaseType, DataSourceType
 from .datasources import (
@@ -38,9 +37,6 @@ __all__ = [
     "DataSource",
     "DataSourceFactory",
     "DataSourceType",
-    "DatabaseAdapter",
     "DatabaseType",
-    "DuckDBAdapter",
-    "SQLiteAdapter",
     "TushareDataSource",
 ]

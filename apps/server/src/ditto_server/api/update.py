@@ -4,10 +4,8 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from ditto_core.data.adapters import DuckDBAdapter
 from ditto_core.data.collector import DataCollector
-from ditto_core.data.services.data_reader import DataReader
-from ditto_foundation.config import get_settings
+from ditto_core.data.services import DataReader
 from ditto_foundation.logging_config import get_logger
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
@@ -82,12 +80,9 @@ async def update_daily_data_task(
 
         # 获取ETF列表（如果未指定）
         if not symbols:
-            settings = get_settings()
-            adapter = DuckDBAdapter(str(settings.database.duckdb_path))
-            reader = DataReader(adapter)
+            reader = DataReader()
             etf_df = reader.get_etf_list()
             symbols = etf_df["symbol"].to_list()
-            adapter.close()
         else:
             symbols = symbols or []
 

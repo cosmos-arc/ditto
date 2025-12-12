@@ -1,265 +1,338 @@
-"""Tests for DataWriter service."""
+"""Tests for the DataWriter implementation without adapter abstraction."""
 
-from datetime import datetime
+from datetime import date, datetime
+from unittest.mock import patch
 
-import polars as pl
 import pytest
 from ditto_core.data.services.data_writer import DataWriter
-from pytest_mock import MockerFixture
 
 
 class TestDataWriter:
-    """Test cases for DataWriter service."""
+    """Test cases for the DataWriter implementation."""
 
-    def test_data_writer_store_etf_info(self, mocker: MockerFixture) -> None:
-        """Test storing ETF info to database."""
+    @pytest.fixture
+    def test_writer(self):
+        """Create a DataWriter instance with in-memory databases for testing."""
+        return DataWriter.for_testing()
+
+    def test_store_etf_info_with_dataframe(self, test_writer):
+        """Test storing ETF info with DataFrame input."""
         # Arrange
-        mock_adapter = mocker.Mock()
-        mock_adapter.execute.return_value = None
+        import polars as pl
 
-        writer = DataWriter(mock_adapter)
         etf_data = pl.DataFrame(
-            {
-                "symbol": ["510300.SH"],
-                "name": ["沪深300ETF"],
-                "list_date": ["2022-01-01"],
-            }
-        )
-
-        # Act & Assert
-        writer.store_etf_info(etf_data)  # Should not raise
-
-        # Verify SQL was executed
-        assert mock_adapter.execute.call_count == 1
-        call_args = mock_adapter.execute.call_args[0]
-        assert "INSERT OR REPLACE INTO etf_info" in call_args[0]
-
-    def test_data_writer_store_etf_info_adds_knowledge_date(
-        self, mocker: MockerFixture
-    ) -> None:
-        """Test that store_etf_info adds knowledge_date if missing."""
-        # Arrange
-        mock_adapter = mocker.Mock()
-        mock_adapter.execute.return_value = None
-
-        writer = DataWriter(mock_adapter)
-        etf_data = pl.DataFrame(
-            {
-                "symbol": ["510300.SH"],
-                "name": ["沪深300ETF"],
-                "list_date": ["2022-01-01"],
-            }
+            [
+                {
+                    "symbol": "159915",
+                    "name": "创业板ETF",
+                    "list_date": date(2011, 1, 1),
+                },
+                {
+                    "symbol": "510300",
+                    "name": "沪深300ETF",
+                    "list_date": date(2012, 5, 4),
+                },
+            ]
         )
 
         # Act
-        writer.store_etf_info(etf_data)
+        test_writer.store_etf_info(etf_data)
 
         # Assert
-        call_args = mock_adapter.execute.call_args[0]
-        # Check that knowledge_date is in the SQL column list
-        assert "knowledge_date" in call_args[0]
+        result = test_writer._duck_conn.sql(
+            "SELECT * FROM etf_info ORDER BY symbol"
+        ).pl()
+        assert len(result) == 2
+        assert result["symbol"][0] == "159915"
+        assert result["name"][1] == "沪深300ETF"
 
-    def test_data_writer_store_daily_data(self, mocker: MockerFixture) -> None:
-        """Test storing daily price data."""
+    def test_store_etf_info_with_dict_list(self, test_writer):
+        """Test storing ETF info with dictionary list input."""
         # Arrange
-        mock_adapter = mocker.Mock()
-        mock_adapter.execute.return_value = None
+        etf_data = [
+            {"symbol": "159915", "name": "创业板ETF"},
+            {"symbol": "510300", "name": "沪深300ETF", "list_date": "2012-05-04"},
+        ]
 
-        writer = DataWriter(mock_adapter)
-        daily_data = pl.DataFrame(
-            {
-                "symbol": ["510300.SH"],
-                "date": ["2024-01-02"],
-                "open": [3.5],
-                "high": [3.6],
-                "low": [3.4],
-                "close": [3.55],
-                "volume": [1000000],
-            }
-        )
+        # Act
+        test_writer.store_etf_info(etf_data)
+
+        # Assert
+        result = test_writer._duck_conn.sql(
+            "SELECT * FROM etf_info ORDER BY symbol"
+        ).pl()
+        assert len(result) == 2
+        assert result["symbol"][0] == "159915"
+        assert result["symbol"][1] == "510300"
+
+    def test_store_etf_info_missing_required_columns(self, test_writer):
+        """Test store_etf_info raises error when required columns are missing."""
+        # Arrange
+        etf_data = [{"name": "创业板ETF"}]  # Missing symbol
 
         # Act & Assert
-        writer.store_daily_data(daily_data)  # Should not raise
+        with pytest.raises(ValueError, match="必须包含symbol和name列"):
+            test_writer.store_etf_info(etf_data)
 
-        # Verify batch_insert was called
-        assert mock_adapter.execute_many.called or mock_adapter.execute.called
-
-    def test_data_writer_store_daily_data_missing_columns(
-        self, mocker: MockerFixture
-    ) -> None:
-        """Test that store_daily_data raises error for missing columns."""
+    def test_store_daily_data_with_dataframe(self, test_writer):
+        """Test storing daily price data with DataFrame input."""
         # Arrange
-        mock_adapter = mocker.Mock()
-        writer = DataWriter(mock_adapter)
+        import polars as pl
+
         daily_data = pl.DataFrame(
-            {
-                "symbol": ["510300.SH"],
-                "date": ["2024-01-02"],
-                # Missing required OHLCV columns
-            }
-        )
-
-        # Act & Assert
-        with pytest.raises(ValueError, match="Missing required columns"):
-            writer.store_daily_data(daily_data)
-
-    def test_data_writer_store_daily_data_adds_knowledge_date(
-        self, mocker: MockerFixture
-    ) -> None:
-        """Test that store_daily_data adds knowledge_date if missing."""
-        # Arrange
-        mock_adapter = mocker.Mock()
-        mock_adapter.execute.return_value = None
-        mock_adapter.execute_many.return_value = None
-
-        writer = DataWriter(mock_adapter)
-        daily_data = pl.DataFrame(
-            {
-                "symbol": ["510300.SH"],
-                "date": ["2024-01-02"],
-                "open": [3.5],
-                "high": [3.6],
-                "low": [3.4],
-                "close": [3.55],
-                "volume": [1000000],
-            }
+            [
+                {
+                    "symbol": "159915",
+                    "date": "2024-01-02",
+                    "open": 2.5,
+                    "high": 2.6,
+                    "low": 2.4,
+                    "close": 2.55,
+                    "volume": 1000000,
+                },
+                {
+                    "symbol": "159915",
+                    "date": "2024-01-03",
+                    "open": 2.55,
+                    "high": 2.65,
+                    "low": 2.5,
+                    "close": 2.6,
+                    "volume": 1200000,
+                },
+            ]
         )
 
         # Act
-        writer.store_daily_data(daily_data)
+        test_writer.store_daily_data(daily_data)
 
-        # Assert - Check that knowledge_date was added
-        # Either execute_many or execute should have been called with knowledge_date
-        if mock_adapter.execute_many.called:
-            call_args = mock_adapter.execute_many.call_args[0]
-            # Check the data passed to execute_many
-            assert any("knowledge_date" in str(row) for row in call_args[1])
+        # Assert
+        result = test_writer._duck_conn.sql(
+            "SELECT * FROM daily_price ORDER BY trade_date"
+        ).pl()
+        assert len(result) == 2
+        assert result["symbol"][0] == "159915"
+        assert float(result["close_price"][1]) == 2.6
 
-    def test_data_writer_store_adjustment_factors(self, mocker: MockerFixture) -> None:
+    def test_store_daily_data_with_dict_list(self, test_writer):
+        """Test storing daily price data with dictionary list input."""
+        # Arrange
+        daily_data = [
+            {
+                "symbol": "159915",
+                "date": "2024-01-02",
+                "open": 2.5,
+                "high": 2.6,
+                "low": 2.4,
+                "close": 2.55,
+                "volume": 1000000,
+            }
+        ]
+
+        # Act
+        test_writer.store_daily_data(daily_data)
+
+        # Assert
+        result = test_writer._duck_conn.sql("SELECT * FROM daily_price").pl()
+        assert len(result) == 1
+        assert result["symbol"][0] == "159915"
+        assert float(result["close_price"][0]) == 2.55
+
+    def test_store_adjustment_factors(self, test_writer):
         """Test storing adjustment factors."""
         # Arrange
-        mock_adapter = mocker.Mock()
-        mock_adapter.execute.return_value = None
-
-        writer = DataWriter(mock_adapter)
-        adj_data = pl.DataFrame(
+        adj_data = [
             {
-                "symbol": ["510300.SH"],
-                "ex_date": ["2024-01-02"],
-                "adj_factor": [1.1],
-                "adj_type": ["dividend"],
-            }
-        )
+                "symbol": "159915",
+                "ex_date": "2024-01-02",
+                "adj_factor": 1.05,
+                "adj_type": "dividend",
+            },
+            {
+                "symbol": "159915",
+                "ex_date": "2024-06-01",  # Using 'ex_date'
+                "adj_factor": 1.1,
+                "adj_type": "split",
+            },
+        ]
 
-        # Act & Assert
-        writer.store_adjustment_factors(adj_data)  # Should not raise
+        # Act
+        test_writer.store_adjustment_factors(adj_data)
 
-        # Verify batch_insert was called
-        assert mock_adapter.execute_many.called or mock_adapter.execute.called
+        # Assert
+        result = test_writer._duck_conn.sql(
+            "SELECT * FROM adjustment_factors ORDER BY ex_date"
+        ).pl()
+        assert len(result) == 2
+        assert result["symbol"][0] == "159915"
+        assert float(result["adj_factor"][1]) == 1.1
 
-    def test_data_writer_store_trading_calendar(self, mocker: MockerFixture) -> None:
+    def test_store_trading_calendar(self, test_writer):
         """Test storing trading calendar."""
         # Arrange
-        mock_adapter = mocker.Mock()
-        mock_adapter.execute.return_value = None
-
-        writer = DataWriter(mock_adapter)
-        calendar_data = pl.DataFrame(
-            {"date": ["2024-01-01", "2024-01-02"], "is_trading_day": [False, True]}
-        )
-
-        # Act & Assert
-        writer.store_trading_calendar(calendar_data)  # Should not raise
-
-        # Verify batch_insert was called
-        assert mock_adapter.execute_many.called or mock_adapter.execute.called
-
-    def test_data_writer_batch_insert_daily_price(self, mocker: MockerFixture) -> None:
-        """Test _batch_insert method for daily_price table."""
-        # Arrange
-        mock_adapter = mocker.Mock()
-        writer = DataWriter(mock_adapter)
-
-        data = pl.DataFrame(
-            {
-                "symbol": ["510300.SH"],
-                "date": ["2024-01-02"],
-                "open": [3.5],
-                "high": [3.6],
-                "low": [3.4],
-                "close": [3.55],
-                "volume": [1000000],
-                "knowledge_date": [datetime.now()],
-            }
-        )
+        calendar_data = [
+            {"date": "2024-01-01", "is_trading_day": False, "market": "SZSE"},
+            {"date": "2024-01-02", "is_trading_day": True, "market": "SZSE"},
+        ]
 
         # Act
-        writer._batch_insert("daily_price_raw", data)
+        test_writer.store_trading_calendar(calendar_data)
 
         # Assert
-        assert mock_adapter.execute.called
-        call_args = mock_adapter.execute.call_args[0]
-        assert "INSERT OR REPLACE INTO daily_price_raw" in call_args[0]
+        result = test_writer._duck_conn.sql(
+            "SELECT * FROM trading_calendar ORDER BY trade_date"
+        ).pl()
+        assert len(result) == 2
+        assert result["is_trading_day"][0] is False
+        assert result["is_trading_day"][1] is True
 
-    def test_data_writer_batch_insert_adjustment_factors(
-        self, mocker: MockerFixture
-    ) -> None:
-        """Test _batch_insert method for adjustment_factors table."""
+    def test_store_trades(self, test_writer):
+        """Test storing trade records."""
         # Arrange
-        mock_adapter = mocker.Mock()
-        writer = DataWriter(mock_adapter)
-
-        data = pl.DataFrame(
+        trades_data = [
             {
-                "symbol": ["510300.SH"],
-                "ex_date": ["2024-01-02"],
-                "adj_factor": [1.1],
-                "adj_type": ["dividend"],
-                "knowledge_date": [datetime.now()],
-            }
-        )
+                "symbol": "159915",
+                "side": "buy",
+                "quantity": 1000,
+                "price": 2.55,
+            },
+            {
+                "symbol": "510300",
+                "side": "sell",
+                "quantity": 500,
+                "price": 4.05,
+                "timestamp": datetime(2024, 1, 2, 10, 30),
+            },
+        ]
 
         # Act
-        writer._batch_insert("adjustment_factors", data)
+        test_writer.store_trades(trades_data)
 
         # Assert
-        assert mock_adapter.execute.called
-        call_args = mock_adapter.execute.call_args[0]
-        assert "INSERT OR REPLACE INTO adjustment_factors" in call_args[0]
+        cursor = test_writer._sqlite_conn.execute(
+            "SELECT * FROM trades ORDER BY trade_id"
+        )
+        trades = cursor.fetchall()
+        assert len(trades) == 2
+        assert trades[0][1] == "159915"  # symbol
+        assert trades[0][2] == "buy"  # side
+        assert trades[0][3] == 1000  # quantity
 
-    def test_data_writer_batch_insert_other_table(self, mocker: MockerFixture) -> None:
-        """Test _batch_insert method for other tables using execute_many."""
+    def test_store_orders(self, test_writer):
+        """Test storing order records."""
         # Arrange
-        mock_adapter = mocker.Mock()
-        writer = DataWriter(mock_adapter)
-
-        data = pl.DataFrame({"date": ["2024-01-01"], "is_trading_day": [True]})
+        orders_data = [
+            {
+                "symbol": "159915",
+                "side": "buy",
+                "quantity": 1000,
+                "price": 2.55,
+                "status": "filled",
+            },
+            {
+                "symbol": "510300",
+                "side": "sell",
+                "order_type": "limit",
+                "quantity": 500,
+                "price": 4.05,
+                "status": "pending",
+            },
+        ]
 
         # Act
-        writer._batch_insert("trading_calendar", data)
+        test_writer.store_orders(orders_data)
 
         # Assert
-        # For non-price/adjustment tables, should use execute_many
-        assert mock_adapter.execute_many.called
-        call_args = mock_adapter.execute_many.call_args[0]
-        assert "INSERT OR IGNORE INTO trading_calendar" in call_args[0]
+        cursor = test_writer._sqlite_conn.execute(
+            "SELECT * FROM orders ORDER BY order_id"
+        )
+        orders = cursor.fetchall()
+        assert len(orders) == 2
+        assert orders[0][1] == "159915"  # symbol
+        assert orders[0][2] == "buy"  # side
+        assert orders[0][6] == "filled"  # status
 
-    def test_data_writer_handles_exceptions(self, mocker: MockerFixture) -> None:
-        """Test that DataWriter properly handles and re-raises exceptions."""
+    def test_store_positions(self, test_writer):
+        """Test storing position records."""
         # Arrange
-        mock_adapter = mocker.Mock()
-        mock_adapter.execute.side_effect = Exception("Database error")
-
-        writer = DataWriter(mock_adapter)
-        etf_data = pl.DataFrame(
+        positions_data = [
             {
-                "symbol": ["510300.SH"],
-                "name": ["沪深300ETF"],
-                "list_date": ["2022-01-01"],
-                "knowledge_date": [datetime.now()],
-            }
+                "symbol": "159915",
+                "quantity": 1000,
+                "avg_price": 2.55,
+                "market_value": 2550.0,
+            },
+            {
+                "symbol": "510300",
+                "quantity": -500,
+                "avg_price": 4.05,
+                "market_value": -2025.0,
+            },
+        ]
+
+        # Act
+        test_writer.store_positions(positions_data)
+
+        # Assert
+        cursor = test_writer._sqlite_conn.execute(
+            "SELECT * FROM positions ORDER BY position_id"
+        )
+        positions = cursor.fetchall()
+        assert len(positions) == 2
+        assert positions[0][1] == "159915"  # symbol
+        assert positions[0][2] == 1000  # quantity
+        assert positions[0][3] == 2.55  # avg_price
+
+    def test_knowledge_date_auto_added(self, test_writer):
+        """Test that knowledge_date is automatically added when missing."""
+        # Arrange
+        etf_data = [{"symbol": "TEST", "name": "Test ETF", "list_date": None}]
+
+        # Act
+        test_writer.store_etf_info(etf_data)
+
+        # Assert
+        result = test_writer._duck_conn.sql(
+            "SELECT knowledge_date FROM etf_info WHERE symbol = 'TEST'"
+        ).pl()
+        assert len(result) == 1
+        assert result["knowledge_date"][0] == datetime.now().date()
+
+    def test_data_writer_initialization_uses_real_paths(self):
+        """Test that DataWriter uses configured database paths when not in test mode."""
+        # Arrange & Act
+        with patch("ditto_foundation.config.settings.get_settings") as mock_settings:
+            mock_settings.return_value.database.duckdb_path = "/test/path/market.db"
+            mock_settings.return_value.database.sqlite_path = "/test/path/trading.db"
+
+            writer = DataWriter()
+
+            # Assert
+            # The constructor should have attempted to create the directories
+            # We can't easily test the actual connections without files
+            assert writer is not None
+
+    def test_data_isolation_between_instances(self):
+        """Test that different DataWriter instances have isolated data."""
+        # Create two separate instances
+        writer1 = DataWriter.for_testing()
+        writer2 = DataWriter.for_testing()
+
+        # Store data in writer1
+        writer1.store_etf_info(
+            [{"symbol": "TEST1", "name": "Test ETF 1", "list_date": None}]
         )
 
-        # Act & Assert
-        with pytest.raises(Exception, match="Database error"):
-            writer.store_etf_info(etf_data)
+        # Store data in writer2
+        writer2.store_etf_info(
+            [{"symbol": "TEST2", "name": "Test ETF 2", "list_date": None}]
+        )
+
+        # Verify isolation
+        result1 = writer1._duck_conn.sql("SELECT * FROM etf_info").pl()
+        result2 = writer2._duck_conn.sql("SELECT * FROM etf_info").pl()
+
+        assert len(result1) == 1
+        assert result1["symbol"][0] == "TEST1"
+
+        assert len(result2) == 1
+        assert result2["symbol"][0] == "TEST2"

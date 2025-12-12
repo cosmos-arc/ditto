@@ -1,8 +1,9 @@
 """数据服务 - 统一数据访问入口."""
 
+import sqlite3
 import warnings
 
-from .adapters import DuckDBAdapter, SQLiteAdapter
+import duckdb
 
 
 class DataService:
@@ -55,47 +56,47 @@ class DataService:
         )
         self.duckdb_path = duckdb_path
         self.sqlite_path = sqlite_path
-        self._duckdb: DuckDBAdapter | None = None
-        self._sqlite: SQLiteAdapter | None = None
+        self._duckdb: duckdb.DuckDBPyConnection | None = None
+        self._sqlite: sqlite3.Connection | None = None
 
-    def get_duckdb(self) -> DuckDBAdapter:
+    def get_duckdb(self) -> duckdb.DuckDBPyConnection:
         """
-        Get DuckDB adapter (lazy load and initialize).
+        Get DuckDB connection (lazy load and initialize).
 
         .. deprecated:: 0.5.0
-            Use DuckDBAdapter directly instead.
+            Use duckdb.connect() directly instead.
         """
         if self._duckdb is None:
             if self.duckdb_path is None:
                 raise ValueError("DuckDB path not provided")
-            self._duckdb = DuckDBAdapter(self.duckdb_path)
+            self._duckdb = duckdb.connect(self.duckdb_path)
         return self._duckdb
 
-    def get_sqlite(self) -> SQLiteAdapter:
+    def get_sqlite(self) -> sqlite3.Connection:
         """
-        Get SQLite adapter (lazy load and initialize).
+        Get SQLite connection (lazy load and initialize).
 
         .. deprecated:: 0.5.0
-            Use SQLiteAdapter directly instead.
+            Use sqlite3.connect() directly instead.
         """
         if self._sqlite is None:
             if self.sqlite_path is None:
                 raise ValueError("SQLite path not provided")
-            self._sqlite = SQLiteAdapter(self.sqlite_path)
+            self._sqlite = sqlite3.connect(self.sqlite_path)
         return self._sqlite
 
     @property
-    def duckdb_adapter(self) -> DuckDBAdapter | None:
-        """Get DuckDB adapter (not connected)."""
+    def duckdb_connection(self) -> duckdb.DuckDBPyConnection | None:
+        """Get DuckDB connection (not connected)."""
         if self._duckdb is None and self.duckdb_path is not None:
-            self._duckdb = DuckDBAdapter(self.duckdb_path)
+            self._duckdb = duckdb.connect(self.duckdb_path)
         return self._duckdb
 
     @property
-    def sqlite_adapter(self) -> SQLiteAdapter | None:
-        """Get SQLite adapter (not connected)."""
+    def sqlite_connection(self) -> sqlite3.Connection | None:
+        """Get SQLite connection (not connected)."""
         if self._sqlite is None and self.sqlite_path is not None:
-            self._sqlite = SQLiteAdapter(self.sqlite_path)
+            self._sqlite = sqlite3.connect(self.sqlite_path)
         return self._sqlite
 
     def initialize(self) -> None:
