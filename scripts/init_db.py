@@ -11,8 +11,9 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from data.adapters import DuckDBAdapter, SQLiteAdapter
-    from data.service import DataService
+    import duckdb
+    import sqlite3
+    from ditto_core.data.services.data_writer import DataWriter
 except ImportError as e:
     print(f"导入失败: {e}")
     print("请确保在 pixi 环境中运行: pixi run python scripts/init_db.py")
@@ -39,9 +40,15 @@ class DatabaseInitializer:
         try:
             logger.info("开始数据库初始化...")
 
-            # 使用 DataService 初始化
-            with DataService(str(self.duckdb_path), str(self.sqlite_path)):
-                logger.info("✅ 数据库初始化完成!")
+            # 创建数据目录
+            self.duckdb_path.parent.mkdir(parents=True, exist_ok=True)
+            self.sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # 使用 DataWriter 初始化（会自动创建表）
+            DataWriter(str(self.duckdb_path), str(self.sqlite_path))
+
+            # DataWriter 的构造函数会自动初始化数据库和表
+            logger.info("✅ 数据库初始化完成!")
 
         except Exception as e:
             logger.error(f"数据库初始化失败: {e}")
@@ -60,21 +67,23 @@ class DatabaseInitializer:
         try:
             # 验证 DuckDB
             if self.duckdb_path.exists():
-                adapter = DuckDBAdapter(str(self.duckdb_path))
+                conn = duckdb.connect(str(self.duckdb_path))
                 # 简单验证表是否存在
-                tables = adapter.connection.execute("SHOW TABLES").fetchall()
+                tables = conn.execute("SHOW TABLES").fetchall()
                 result["duckdb_tables"] = len(tables)
                 logger.info(f"DuckDB 表数量: {len(tables)}")
+                conn.close()
 
             # 验证 SQLite
             if self.sqlite_path.exists():
-                adapter = SQLiteAdapter(str(self.sqlite_path))
+                conn = sqlite3.connect(str(self.sqlite_path))
                 # 简单验证表是否存在
-                cursor = adapter.connection.cursor()
+                cursor = conn.cursor()
                 cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
                 tables = cursor.fetchall()
                 result["sqlite_tables"] = len(tables)
                 logger.info(f"SQLite 表数量: {len(tables)}")
+                conn.close()
 
         except Exception as e:
             result["issues"].append(f"验证失败: {e}")

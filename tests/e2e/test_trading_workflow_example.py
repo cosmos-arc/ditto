@@ -3,7 +3,8 @@
 from pathlib import Path
 
 import pytest
-from ditto_core.data.service import DataService
+from ditto_core.data.services.data_reader import DataReader
+from ditto_core.data.services.data_writer import DataWriter
 
 # TODO: Implement RotationEngine when engine module is ready
 # from ditto_core.engine.rotation import RotationEngine
@@ -15,17 +16,21 @@ from ditto_core.data.service import DataService
 def test_complete_sector_rotation_workflow(temp_dir: Path) -> None:
     """Test complete sector rotation workflow from data to signals."""
     # Arrange
-    db_path = temp_dir / "e2e_test.db"
-    data_service = DataService(database_path=str(db_path))
+    duckdb_path = temp_dir / "e2e_test.duckdb"
+    sqlite_path = temp_dir / "e2e_test.sqlite"
+
+    data_reader = DataReader(str(duckdb_path), str(sqlite_path))
+    data_writer = DataWriter(str(duckdb_path), str(sqlite_path))
     # rotation_engine = RotationEngine()  # TODO: Uncomment when implemented
 
-    # Initialize database
-    data_service._init_database()
+    # Initialize database (DataWriter constructor automatically initializes)
+    assert data_reader is not None
+    assert data_writer is not None
 
     # Act - Simulate complete workflow
     # 1. Load market data
     # Note: In real e2e tests, this would fetch actual data
-    # market_data = data_service.load_market_data(...)
+    # market_data = data_reader.load_market_data(...)
 
     # 2. Calculate factors
     # factor_data = rotation_engine.calculate_factors(market_data)
@@ -34,8 +39,10 @@ def test_complete_sector_rotation_workflow(temp_dir: Path) -> None:
     # signals = rotation_engine.generate_signals(factor_data)
 
     # Assert - Verify workflow completed
-    assert db_path.exists()
-    assert data_service is not None
+    assert duckdb_path.parent.exists()
+    assert sqlite_path.parent.exists()
+    assert data_reader is not None
+    assert data_writer is not None
     # assert rotation_engine is not None  # TODO: Uncomment when implemented
 
 

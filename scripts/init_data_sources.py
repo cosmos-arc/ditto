@@ -12,10 +12,11 @@ import traceback
 from datetime import date, timedelta
 
 try:
+    from ditto_core.data.services.data_reader import DataReader
+    from ditto_core.data.services.data_writer import DataWriter
     from ditto_foundation.config.settings import get_settings
     from ditto_foundation.data import (
         DataCollector,
-        DataService,
     )
     from ditto_foundation.data.datasources import DataSourceFactory
 except ImportError as e:
@@ -160,7 +161,7 @@ async def validate_golden_dataset(collector: DataCollector) -> None:
             logger.error(f"Failed to validate {etf_code}: {e}")
 
 
-async def create_data_summary(data_service: DataService) -> None:
+async def create_data_summary(data_reader: DataReader) -> None:
     """
     Create a summary of the data in the database.
 
@@ -171,13 +172,13 @@ async def create_data_summary(data_service: DataService) -> None:
 
     try:
         # Get ETF list
-        etf_df = await data_service.get_etf_list()
+        etf_df = data_reader.get_etf_list()
         logger.info(f"Total ETFs in database: {etf_df.height}")
 
         # Get data coverage for Golden ETFs
         for etf_code in GOLDEN_ETFS:
             # Get latest data
-            latest_df = await data_service.get_daily_data(
+            latest_df = data_reader.get_daily_data(
                 etf_code,
                 start_date=date.today() - timedelta(days=7),
                 end_date=date.today(),
@@ -221,18 +222,23 @@ async def main() -> None:
         # TODO: Update DataCollector to use new DataSourceFactory directly
         data_factory = DataSourceFactory()
 
-        # Initialize data service
-        data_service = DataService(
+        # Initialize data writer
+        data_writer = DataWriter(
             duckdb_path=settings.database.duckdb_path,
             sqlite_path=settings.database.sqlite_path,
         )
 
         # Initialize data collector
         collector = DataCollector(
-            data_factory=data_factory,
-            data_service=data_service,
+            data_writer=data_writer,
             batch_size=1000,
             max_concurrent_fetches=3,  # Conservative for initial fetch
+        )
+
+        # Initialize data reader for summary
+        data_reader = DataReader(
+            duckdb_path=settings.database.duckdb_path,
+            sqlite_path=settings.database.sqlite_path,
         )
 
         # Step 1: Test data source connectivity
@@ -247,7 +253,7 @@ async def main() -> None:
         await validate_golden_dataset(collector)
 
         # Step 4: Create data summary
-        await create_data_summary(data_service)
+        await create_data_summary(data_reader)
 
         logger.info("Data source initialization completed successfully!")
         logger.info("\nNext steps:")

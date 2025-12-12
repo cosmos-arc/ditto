@@ -4,8 +4,6 @@ Data module for the Ditto quantitative trading system.
 Provides a unified interface for data access, validation, and storage.
 """
 
-import warnings
-
 __version__ = "0.1.0"
 
 from .collector import DataCollector
@@ -17,23 +15,11 @@ from .datasources import (
     TushareDataSource,
 )
 from .quality_service import DataQualityService
-from .service import DataService
-
-# Deprecation warning for DataService import
-warnings.warn(
-    "DataService is deprecated and will be removed in a future version. "
-    "Use DataReader and DataWriter classes instead. "
-    "Import them from ditto_core.data.services.data_reader and "
-    "ditto_core.data.services.data_writer",
-    DeprecationWarning,
-    stacklevel=2,
-)
 
 __all__ = [
     "AkShareDataSource",
     "DataCollector",
     "DataQualityService",
-    "DataService",
     "DataSource",
     "DataSourceFactory",
     "DataSourceType",
