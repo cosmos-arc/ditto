@@ -11,8 +11,9 @@ from pathlib import Path
 from typing import Any
 
 try:
-    import duckdb
     import sqlite3
+
+    import duckdb
     from ditto_core.data.services.data_writer import DataWriter
 except ImportError as e:
     print(f"导入失败: {e}")
@@ -44,7 +45,7 @@ class DatabaseInitializer:
             self.duckdb_path.parent.mkdir(parents=True, exist_ok=True)
             self.sqlite_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # 使用 DataWriter 初始化（会自动创建表）
+            # 使用 DataWriter 初始化(会自动创建表)
             DataWriter(str(self.duckdb_path), str(self.sqlite_path))
 
             # DataWriter 的构造函数会自动初始化数据库和表

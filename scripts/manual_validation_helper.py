@@ -14,7 +14,6 @@ from pathlib import Path
 import pandas as pd
 import polars as pl
 from ditto_core.data.services.data_reader import DataReader
-from ditto_foundation.config import get_settings
 
 # 设置Windows控制台输出编码为UTF-8
 if sys.platform == "win32":
