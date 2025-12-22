@@ -64,13 +64,13 @@
 │   PortfolioSvc / FactorHealthSvc / HeartbeatSvc              │
 └──────────────────────────────────────────────────────────────┘
                              ▲
-                             │ 调用 Core Engine + Data Access
+                             │ 调用 Core Engine + DataHub
                              ▼
 ┌──────────────────────────────────────────────────────────────┐
-│   Core Engines & Data Access (Regime/Factor/Rotation/...)    │
-│   - DuckDB & SQLite 持久化                                   │
-│   - PIT 数据查询                                             │
-│   - 复权价动态计算                                           │
+│   Core Engines & DataHub                                     │
+│   - DuckDB & SQLite 持久化                                    │
+│   - PIT 数据查询                                               │
+│   - 复权价动态计算                                              │
 └──────────────────────────────────────────────────────────────┘
                              ▲
                              │ SDK/HTTP 请求
@@ -78,7 +78,7 @@
 ┌──────────────────────────────────────────────────────────────┐
 │                         外部系统                             │
 │  - Tushare Pro / AkShare（数据）                             │
-│  - 券商终端 / MiniQMT (Phase 2+ 实盘)                        │
+│  - 券商终端 / MiniQMT (Phase 2+ 实盘)                           │
 │  - Telagram/钉钉（心跳通知）                                     │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -89,7 +89,7 @@
 
 ### 3.1 按层划分
 
-**1. Core Domain（核心域）**
+**1. Engine Layer（引擎层）**
 
 - 因子、Regime、轮动、回测、风控等模型与算法
 - **组合与策略生命周期管理**
@@ -107,11 +107,10 @@
 
 - 前端展示与交互
 
-**5. Infrastructure（基础设施层）**
+**5. Data Layer（数据层）**
 
 - DuckDB/SQLite 访问层
 - 外部数据源适配
-- **作业调度（APScheduler）**与配置加载
 
 ### 3.2 模块与职责（按目录）
 
@@ -135,13 +134,17 @@ apps/
 packages/
   core/
     src/
-      data/          # DataService / DuckDBAdapter / SQLiteAdapter
-      engine/        # Regime/Factor/Rotation/Backtest/Risk 引擎
+      indicators/    # technical_indicators 技术指标MA、EMA、RSI等
+      factor/        # factor_analyzer
+      engine/        # Regime/Factor/Backtest/Risk 引擎
       strategy/      # 策略抽象 & ETF 行业轮动策略实现
       portfolio/     # 组合管理 & 多策略协调
       config/        # 配置模型（Pydantic Settings）
       util/          # 公共工具
-
+  datahub/
+    src/
+      repositories/
+      stores/
   foundation/
     src/
       types/           # 前后端共享 schema

@@ -64,13 +64,13 @@
 │   PortfolioSvc / FactorHealthSvc / HeartbeatSvc              │
 └──────────────────────────────────────────────────────────────┘
                              ▲
-                             │ 调用 Core Engine + Data Access
+                             │ 调用 Core Engine + DataHub
                              ▼
 ┌──────────────────────────────────────────────────────────────┐
-│   Core Engines & Data Access (Regime/Factor/Rotation/...)    │
-│   - DuckDB & SQLite 持久化                                   │
-│   - PIT 数据查询                                             │
-│   - 复权价动态计算                                           │
+│   Core Engines & DataHub                                     │
+│   - DuckDB & SQLite 持久化                                    │
+│   - PIT 数据查询                                               │
+│   - 复权价动态计算                                              │
 └──────────────────────────────────────────────────────────────┘
                              ▲
                              │ SDK/HTTP 请求
@@ -89,7 +89,7 @@
 
 ### 3.1 按层划分
 
-**1. Core Domain（核心域）**
+**1. Engine Layer（引擎层）**
 
 - 因子、Regime、轮动、回测、风控等模型与算法
 - **组合与策略生命周期管理**
@@ -107,11 +107,10 @@
 
 - 前端展示与交互
 
-**5. Infrastructure（基础设施层）**
+**5. Data Layer（数据层）**
 
 - DuckDB/SQLite 访问层
 - 外部数据源适配
-- **作业调度（APScheduler）**与配置加载
 
 ### 3.2 模块与职责（按目录）
 
@@ -135,7 +134,6 @@ apps/
 packages/
   core/
     src/
-      data/          # DataService / DuckDBAdapter / SQLiteAdapter
       indicators/    # technical_indicators 技术指标MA、EMA、RSI等
       factor/        # factor_analyzer
       engine/        # Regime/Factor/Backtest/Risk 引擎
@@ -143,7 +141,10 @@ packages/
       portfolio/     # 组合管理 & 多策略协调
       config/        # 配置模型（Pydantic Settings）
       util/          # 公共工具
-
+  datahub/
+    src/
+      repositories/
+      stores/
   foundation/
     src/
       types/           # 前后端共享 schema
@@ -297,6 +298,8 @@ RiskBudget ◄──────────────── Order (N)
 
 ### 5.1 数据访问模块（Data Layer）
 
+详细见 `02_data_design.md`，这里只列模块：
+
 **职责**：
 
 - 为上层提供统一的数据访问接口
@@ -308,86 +311,10 @@ RiskBudget ◄──────────────── Order (N)
 **核心组件**：
 
 ```python
-class DataService:
+class DataHub:
     """数据服务 - 统一数据访问接口"""
+   ...
 
-    def __init__(self, duckdb_path: str, sqlite_path: str):
-        self.duckdb = DuckDBAdapter(duckdb_path)
-        self.sqlite = SQLiteAdapter(sqlite_path)
-
-    # === K线数据（动态复权）===
-    def get_kline(
-        self,
-        symbol: str,
-        start_date: date,
-        end_date: date,
-        adjust: str = "hfq"  # 'hfq' / 'qfq' / 'none'
-    ) -> pl.DataFrame:
-        """获取K线数据，运行时动态计算复权价"""
-        raw = self.duckdb.query("""
-            SELECT k.*, a.adj_factor
-            FROM etf_kline_daily k
-            LEFT JOIN etf_adj_factor a
-              ON k.symbol = a.symbol AND k.trade_date = a.trade_date
-            WHERE k.symbol = ? AND k.trade_date BETWEEN ? AND ?
-        """, [symbol, start_date, end_date])
-
-        if adjust == "none":
-            return raw
-        return self._apply_adjustment(raw, adjust)
-
-    # === 因子数据（PIT 查询）===
-    def get_factors_pit(
-        self,
-        symbols: list[str],
-        trade_date: date,
-        as_of_date: date
-    ) -> pl.DataFrame:
-        """获取因子数据（Point-in-Time 安全）
-
-        Args:
-            symbols: 标的列表
-            trade_date: 交易日期
-            as_of_date: 数据可知日期（通常等于 trade_date）
-        """
-        return self.duckdb.query("""
-            SELECT * FROM etf_factor_daily
-            WHERE symbol IN (?)
-              AND trade_date = ?
-              AND knowledge_date <= ?
-        """, [symbols, trade_date, as_of_date])
-
-    # === Regime 数据 ===
-    def get_regime(self, trade_date: date) -> dict:
-        """获取指定日期的 Regime"""
-        pass
-
-    # === 涨跌停状态 ===
-    def get_limit_status(
-        self,
-        symbol: str,
-        trade_date: date
-    ) -> str:
-        """获取涨跌停状态
-
-        Returns:
-            'NORMAL' / 'LIMIT_UP' / 'LIMIT_DOWN' / 'SUSPENDED'
-        """
-        row = self.duckdb.query_one("""
-            SELECT high, low, close, prev_close, volume, status
-            FROM etf_kline_daily
-            WHERE symbol = ? AND trade_date = ?
-        """, [symbol, trade_date])
-
-        if row["status"] == "SUSPENDED" or row["volume"] == 0:
-            return "SUSPENDED"
-        if row["high"] == row["low"] == row["close"]:
-            change_pct = (row["close"] - row["prev_close"]) / row["prev_close"]
-            if change_pct > 0.09:
-                return "LIMIT_UP"
-            elif change_pct < -0.09:
-                return "LIMIT_DOWN"
-        return "NORMAL"
 ```
 
 ### 5.2 引擎模块（Engine Layer）

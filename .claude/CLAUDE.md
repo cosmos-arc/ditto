@@ -9,14 +9,10 @@
 pixi install && pixi shell
 
 # 代码质量检查（提交前必须全部通过）
-pixi run ruff check .
-pixi run ruff format .
+pixi run lint
+pixi run format
 pixi run mypy packages/ apps/ scripts/ tests/
-pytest
-
-# 自动修复
-pixi run ruff check . --fix
-pixi run ruff format .
+pixi run test
 
 # 完整预提交检查
 pre-commit run --all-files
@@ -35,6 +31,7 @@ pixi shell            # 激活环境
 
 **依赖管理分离**：
 - `pixi.toml` → 运行时依赖（Python 包、系统库）
+  - 优先使用 `dependencies`, 无法解析依赖时使用 `pypi-dependencies`
 - `pyproject.toml` → 代码质量工具配置（ruff、mypy、pytest）
 
 **本地包使用 editable 模式**：
@@ -49,25 +46,33 @@ ditto-foundation = { path = "packages/foundation", editable = true }
 
 ## 2. 代码质量标准
 
-### 必须通过的检查
+### **必须通过的检查**
 
 | 检查项 | 命令 | 要求 |
 |--------|------|------|
-| Lint | `pixi run ruff check .` | All checks passed |
-| Format | `pixi run ruff format .` | 无格式问题 |
+| Lint | `pixi run check` | All checks passed |
+| Format | `pixi run format` | 无格式问题 |
 | Type | `pixi run mypy packages/ apps/ scripts/ tests/` | 无类型错误 |
-| Test | `pytest` | 全部通过 |
+| Test | `pixi run format` | 全部通过 |
 
 ---
 
 ## 3. 开发工作流
 
-### 规划 + TDD 流程 + CI以及CodeReview（必须遵守）
+### 规划 + TDD 流程 + CI以及CodeReview（**必须遵守**）
 
+1.规划任务
+2.建立开发分支
+3.执行编码任务
 ```
-1.规划工作项 → 2. 编写测试 → 3. 实现功能 → 4. 重构优化 → 5. 提交代码 → 6. CI + REVIEW
-```
+4. 编写测试 → 2. 实现功能 → 3. 重构优化 → 4. 提交代码 → 5. CI/CD + AI-CODEREVIEW
 执行以上流程至流程通过
+```
+5.更新文档
+6.提交PR
+
+### 代码实现
+**必须**优先参考设计文档中的代码实现及伪代码
 
 ### Commit 规范（Conventional Commits）
 
@@ -85,17 +90,19 @@ test(engine): P0-041 add unit tests for RegimeEngine
 **破坏性变更**：在 type 后加 `!`，如 `feat!: breaking change`
 
 ### 项目管理
-- 项目任务文档：`docs/tasks/phase0.md`
-- 状态标记：✅ 完成 | ⚠️ 部分完成 | ❌ 未开始 | 🔄 进行中
+- 项目管理文档：`docs/progress/{sprint*}.md`
+- 状态标记：✅ 已完成 | 🔴 阻塞中 | 📝 未开始 | 🔄 进行中
 - 完成功能后立即更新任务状态
 
 ### 工作规划管理
-- 工作规划文档：`docs/plans/*.md`
-- 梳理详细工作项列表
+- 从`sprint`中选择需要完成的Task
+- 构建Task工作规划文档：`docs/plans/{sprint*}/{date}-{task*}.md`
+- 梳理详细拆解任务项`TaskItem`列表
+- 状态标记：✅ 已完成 | 🔴 阻塞中 | 📝 未开始 | 🔄 进行中
 - 制定执行优先级
 - 确立完成标准
-- 完成功能后立即更新任务状态
-- 完成后确立下一步工作计划
+- 开始基于开发流程进行开发
+- 完成功能后立即更新任务项状态
 
 ### Superpower Skills 使用
 
@@ -121,9 +128,9 @@ API Layer (FastAPI)
     ↓
 Application Services (RegimeSvc, RotationSvc, BacktestSvc, RiskSvc)
     ↓
-Core Domain (RegimeEngine, FactorEngine, RotationEngine, BacktestEngine, RiskEngine)
+Core Engine (RegimeEngine, FactorEngine, RotationEngine, BacktestEngine, RiskEngine)
     ↓
-Infrastructure (Data Access, External Integrations)
+DataHub (Data Access, External Integrations)
 ```
 
 ### 目录结构
@@ -135,7 +142,7 @@ apps/
       api/          # HTTP routers
       services/     # Application services
       models/       # Pydantic models
-      scheduler/    # APScheduler jobs
+      scheduler/    # Prefect jobs
 
   web/              # Next.js 前端
     src/
@@ -144,9 +151,14 @@ apps/
       stores/       # Zustand state
 
 packages/
+  datahub/          # 数据存储层
+    src/ditto-datahub/
+      repositories/ # 仓储逻辑访问
+      stores/       # 物理存储访问
+      runtime/      # 运行时支持类
+
   core/             # 核心业务逻辑
     src/ditto-core/
-      data/         # DataService, DB adapters
       engine/       # Business logic engines
       strategy/     # Strategy abstractions
       portfolio/    # Portfolio management

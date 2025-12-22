@@ -13,6 +13,13 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
 - **数据质量**: 多源校验，PIT 安全，复权分离存储
 - **ML 增强**: 机器学习因子权重学习（Phase 3+）
 
+### 当前开发状态
+
+**Phase 0.5-1 进行中**：
+- ✅ Sprint 1: 数据层与验证（已规划，基于官方02_data_design.md）
+- 🔄 Sprint 2: 核心引擎实现（基于官方03_engine_design.md）
+- 📋 Sprint 3: 回测与风控（基于官方09_risk_constitution.md）
+
 ### 系统架构
 
 ```
@@ -27,12 +34,12 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
                                                        │
                        ┌─────────────────┐    ┌─────────────────┐
                        │   External      │    │   Data Layer    │
-                       │   APIs          │◄──►│   - DuckDB      │
-                       │                 │    │   - SQLite      │
-                       │ - Tushare       │    │   - Data Quality│
-                       │ - AkShare       │    │   - PIT Safe     │
-                       │ - MiniQMT       │    └─────────────────┘
-                       └─────────────────┘
+                       │   APIs          │◄──►│   - DataHub      │
+                       │                 │    │   - Repository  │
+                       │ - Tushare       │    │   - Store       │
+                       │ - MINIQMT       │    │   - Runtime      │
+                       │                 │    │   - PIT Safe     │
+                       └─────────────────┘    └─────────────────┘
 ```
 
 ## 快速开始
@@ -103,116 +110,120 @@ ditto/
 │   │   │   ├── models/        # 数据模型
 │   │   │   └── main.py        # 启动入口
 │   │   └── tests/             # 服务器测试
-│   │       ├── unit/          # 单元测试
-│   │       └── integration/   # 集成测试
 │   └── web/                   # Next.js 前端 (Phase 1+)
-│       └── src/
-│           ├── app/           # 页面路由
-│           ├── components/    # UI 组件
-│           └── stores/        # 状态管理
 ├── packages/
 │   ├── core/                  # 核心业务逻辑
 │   │   ├── src/
-│   │   │   ├── data/          # 数据访问层
 │   │   │   ├── engine/        # 核心引擎
+│   │   │   ├── factors/       # 因子系统
 │   │   │   ├── strategy/      # 策略实现
+│   │   │   ├── backtest/      # 回测引擎
+│   │   │   ├── risk/          # 风控引擎
 │   │   │   └── portfolio/     # 组合管理
 │   │   └── tests/             # 核心模块测试
-│   │       └── unit/          # 单元测试
-│   └── foundation/            # 共享模块
+│   ├── datahub/               # 数据访问层
+│   │   ├── src/
+│   │   │   ├── hub.py         # DataHub 统一入口
+│   │   │   ├── repositories/  # 业务聚合
+│   │   │   ├── stores/        # 数据存储
+│   │   │   └── runtime/       # 运行时支持
+│   │   └── tests/             # 数据层测试
+│   └── foundation/           # 共享模块
 │       ├── src/
 │       │   ├── config/        # 配置管理
-│       │   ├── types/         # 类型定义
-│       │   └── contracts/     # 数据契约
-│       └── tests/             # 基础模块测试
-│           └── unit/          # 单元测试
+│       │   ├── logging/       # 日志系统
+│       │   └── types/         # 类型定义
 ├── data/                      # 数据存储
-│   ├── duckdb/               # 分析型数据库
-│   └── sqlite/               # 事务型数据库
-├── logs/                      # 日志文件
+│   ├── meta/                  # SQLite 元数据
+│   ├── market_daily/          # 股票日线
+│   ├── etf_daily/             # ETF 日线
+│   └── freezes/               # 冻结点
 ├── docs/                      # 项目文档
+│   ├── design/                # 设计文档
+│   └── sprints/               # Sprint 计划
 ├── scripts/                   # 工具脚本
-├── tests/                     # E2E 测试和集成测试
-│   └── e2e/                   # 端到端测试
-├── .env.example               # 环境变量模板
-├── pixi.toml                 # 依赖配置
-├── pyproject.toml            # Python 项目配置
-└── README.md                 # 项目说明
+└── tests/                     # E2E 测试
 ```
 
-## 开发阶段
+## 开发路线图
 
-### Phase 0: 环境与数据打底 (当前阶段) - 37.5% 完成
-- [x] 环境配置和依赖管理
-- [x] 项目目录结构搭建
-- [x] 本地包 editable 配置
-- [x] Tushare 和 AkShare 数据源接入
-- [x] 日志配置完成
-- [ ] 数据库初始化
-- [ ] 数据采集和存储实现
-- [ ] 数据质量验证实现
-- [ ] API 服务完善
-- [ ] 核心模块实现
-- [ ] 基础启动脚本
+### Phase 0: 环境与数据打底 ✅
+- [x] 项目脚手架搭建
+- [x] 开发环境配置（pixi + pre-commit）
+- [x] 基础依赖安装
 
-> 详细任务跟踪请查看: [phase0_tasks.md](phase0_tasks.md)
-
-### Phase 0.5: 数据质量验证期
-- [ ] Golden Dataset 选取和验证
-- [ ] 手工数据核验
-- [ ] 数据质量基线报告
+### Phase 0.5: 数据质量验证 🔄
+- [x] Sprint 1: 数据层实现（DataHub + Repository）
+  - 实现统一数据入口（DataHub Facade）
+  - 实现SID标识体系
+  - 实现Point-in-Time语义
+  - Golden Dataset验证
 
 ### Phase 1: 回测闭环与调仓计划
-- [ ] 核心引擎实现
-- [ ] 双回测引擎
-- [ ] 风控引擎
-- [ ] 调仓计划生成
-- [ ] Web UI 基础框架
+- [ ] Sprint 2: 核心引擎实现
+  - RegimeEngine（自适应阈值）
+  - FactorEngine（4个核心因子）
+  - Strategy框架（多策略协调）
+  - PortfolioManager（组合管理）
 
-### Phase 2: 实盘接入
-- [ ] BrokerAdapter 接口实现
-- [ ] MiniQMT 对接
+- [ ] Sprint 3: 回测与风控
+  - FastBacktester（向量化）
+  - ProductionBacktester（事件驱动）
+  - 对齐测试（误差<0.1%）
+  - RiskEngine（三级Kill Switch）
+
+### Phase 2: 实盘接入（规划中）
+- [ ] BrokerAdapter实现
 - [ ] 纸面交易验证
+- [ ] 实盘小资金测试
 
-### Phase 3: ML 增强与扩展
-- [ ] ML 因子权重学习
+### Phase 3: ML增强（规划中）
+- [ ] 因子权重学习
 - [ ] 可转债策略
-- [ ] 多策略组合管理
+- [ ] 多策略组合
 
-## 配置说明
+## 核心设计文档
 
-### 环境变量
+本项目严格遵循官方设计文档：
 
-主要配置项（详见 `.env.example`）：
+### 数据层设计
+- **《02_data_design.md》** - 数据层设计文档（v2.0 Final）
+  - DataHub统一入口设计
+  - SID标识体系（内部唯一ID）
+  - Repository模式（业务聚合）
+  - Point-in-Time语义
 
-```bash
-# 数据源配置
-TUSHARE_TOKEN=your_token_here
-AKSHARE_ENABLE=true
+### 引擎设计
+- **《03_engine_design.md》** - 引擎设计文档（v2.0 Final）
+  - RegimeEngine（自适应阈值）
+  - FactorEngine（健康度监控）
+  - 策略框架抽象
+  - 双回测引擎架构
 
-# 数据库配置
-DUCKDB_PATH=./data/duckdb/ditto.duckdb
-SQLITE_PATH=./data/sqlite/ditto.sqlite
+### 风险设计
+- **《09_risk_constitution.md》** - 风险宪法
+  - 三级Kill Switch（10%/18%/20%）
+  - 回撤速度检测
+  - 仓位控制规则
 
-# API 服务配置
-HOST=0.0.0.0
-PORT=8000
-SECRET_KEY=your_secret_key_here
+## Sprint规划
 
-# 风险管理配置
-KILL_SWITCH_ENABLED=true
-MAX_SINGLE_POSITION_WEIGHT=0.15
-```
+详细的Sprint计划请查看 `docs/sprints/` 目录：
 
-### 数据源
+### Sprint 1: 数据层与验证
+- **时间**: Week 1-2
+- **目标**: 实现数据层基础
+- **文档**: [sprint-01-data-layer.md](docs/sprints/sprint-01-data-layer.md)
 
-1. **Tushare Pro** (主数据源)
-   - 需要 Pro 账户和 Token
-   - 提供 ETF 日线、复权因子等数据
+### Sprint 2: 核心引擎实现
+- **时间**: Week 3-4
+- **目标**: 实现核心引擎和策略框架
+- **文档**: [sprint-02-core-engines.md](docs/sprints/sprint-02-core-engines.md)
 
-2. **AkShare** (备用数据源)
-   - 免费开源数据源
-   - 用于数据校验和降级
+### Sprint 3: 回测与风控
+- **时间**: Week 5-6
+- **目标**: 完成回测系统和风控
+- **文档**: [sprint-03-backtest-risk.md](docs/sprints/sprint-03-backtest-risk.md)
 
 ## 策略说明
 
@@ -233,15 +244,17 @@ MAX_SINGLE_POSITION_WEIGHT=0.15
 
 ### 风险管理
 
-**三层 Kill Switch**:
-1. Level 1: 日亏损 2% 或周亏损 5%
-2. Level 2: 回撤 15% 或 3日快速回撤 5%
-3. Level 3: 回撤 20% 或紧急情况 25%
+**三层 Kill Switch**（严格按风险宪法）：
+1. **Level 1** (≥10%回撤): 停止新开仓，回撤<8%自动恢复
+2. **Level 2** (≥18%回撤): 强制减仓50%，需人工确认
+3. **Level 3** (≥20%回撤): 强制清仓，需策略重构评审
 
-**仓位限制**:
-- 单只证券最大 15%
-- 单行业最大 30%
-- 最小现金比例 5%
+**仓位限制**（Regime驱动）：
+| Regime | 总仓位 | 单票上限 |
+|--------|--------|----------|
+| Bull   | 70-90% | 15% |
+| Osc    | 50-70% | 12% |
+| Bear   | 10-40% | 10% |
 
 ## 测试
 
@@ -252,14 +265,10 @@ MAX_SINGLE_POSITION_WEIGHT=0.15
 ```
 ditto/
 ├── apps/server/tests/           # 服务器应用测试
-│   ├── unit/                   # 单元测试
-│   └── integration/            # 集成测试
 ├── packages/core/tests/         # 核心模块测试
-│   └── unit/                   # 单元测试
+├── packages/datahub/tests/      # 数据层测试
 ├── packages/foundation/tests/   # 基础模块测试
-│   └── unit/                   # 单元测试
 └── tests/                       # E2E 测试和集成测试
-    └── e2e/                    # 端到端测试
 ```
 
 ### 运行测试
@@ -272,26 +281,32 @@ pixi run test
 pixi run test packages/core/tests/unit/
 pixi run test apps/server/tests/
 
-# 运行特定测试文件
-pixi run test packages/core/tests/unit/test_data_service.py
-
-# 运行特定标记的测试
-pixi run test -m unit          # 只运行单元测试
-pixi run test -m integration   # 只运行集成测试
-pixi run test -m e2e          # 只运行端到端测试
-pixi run test -m "not slow"   # 跳过慢速测试
-
 # 生成覆盖率报告
 pixi run test --cov=packages --cov=apps --cov-report=html
+
+# 运行pre-commit检查
+pre-commit run --all-files
 ```
 
-### 测试分类
+## 配置说明
 
-1. **单元测试**: 各模块内部的功能测试
-2. **集成测试**: 模块间的接口测试
-3. **端到端测试**: 完整业务流程测试
-4. **对齐测试**: Fast vs Production 回测引擎对齐
-5. **Golden Dataset 测试**: 基于固定数据集的回归测试
+### 环境变量
+
+```bash
+# 数据源配置
+TUSHARE_TOKEN=your_token_here
+
+# API 服务配置
+HOST=0.0.0.0
+PORT=8000
+SECRET_KEY=your_secret_key_here
+
+# 数据存储
+DITTO_DATA_ROOT=data
+
+# 风险管理
+KILL_SWITCH_ENABLED=true
+```
 
 ## 文档
 
@@ -310,16 +325,27 @@ pixi run test --cov=packages --cov=apps --cov-report=html
 
 1. Fork 项目
 2. 创建功能分支
-3. 编写代码和测试
+3. 编写代码和测试（TDD）
 4. 运行质量检查
 5. 提交 Pull Request
 
 ### 代码规范
 
+- 严格遵循官方设计文档
 - 使用 ruff 进行格式化和检查
 - 使用 mypy 进行类型检查
 - 所有新功能需要测试覆盖
-- 遵循项目架构设计
+- 遵循 TDD 开发流程
+
+### Commit规范
+
+```
+<type>(<scope>): <task-id> <description>
+
+# 示例
+feat(data): P0-001 implement DataHub facade
+test(engine): P0-002 add RegimeEngine tests
+```
 
 ## 许可证
 
