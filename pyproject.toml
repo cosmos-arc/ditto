@@ -269,7 +269,7 @@ testpaths = ["packages/*/tests", "apps/*/tests", "tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-pythonpath = ["packages/core/src", "packages/foundation/src", "apps/server/src"]
+pythonpath = ["packages/core/src", "packages/foundation/src", "packages/datahub/src", "apps/server/src"]
 
 # 将所有警告提升为错误，确保代码的健壮性。
 filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]

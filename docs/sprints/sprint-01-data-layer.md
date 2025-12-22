@@ -81,26 +81,32 @@ Runtime Layer（支持组件）
 - ✅ Ruff代码质量检查通过
 - ✅ MyPy类型检查通过
 
-#### 任务2: 实现Store Layer（数据存取）
+#### 任务2: 实现Store Layer（数据存取） ✅ 已完成
 
-**2.1 SQLite Stores**
-- SecurityStore：`packages/datahub/src/ditto_data_hub/stores/security_store.py`
+**2.1 SQLite Stores** ✅
+- SecurityStore：`packages/datahub/src/ditto_datahub/stores/security_store.py` ✅
   - 管理security和security_mapping表（含PIT）
   - 支持src_code到sid的映射（Point-in-Time）
-- CalendarStore：`packages/datahub/src/ditto_data_hub/stores/calendar_store.py`
+- CalendarStore：`packages/datahub/src/ditto_datahub/stores/calendar_store.py` ✅
   - 管理交易日历
   - 内存缓存优化
-- PipelineStore：`packages/datahub/src/ditto_data_hub/stores/pipeline_store.py`
+- PipelineStore：`packages/datahub/src/ditto_datahub/stores/pipeline_store.py` ✅
   - 记录pipeline运行状态
   - DQ异常记录
 
-**2.2 Parquet Stores（年分区）**
-- BarsStore：`packages/datahub/src/ditto_data_hub/stores/bars_store.py`
+**2.2 Parquet Stores（年分区）** ✅
+- BarsStore：`packages/datahub/src/ditto_datahub/stores/bars_store.py` ✅
   - 读写market_daily/etf_daily
   - 年分区存储（2020.parquet, 2021.parquet...）
-- AdjFactorStore：`packages/datahub/src/ditto_data_hub/stores/adj_factor_store.py`
+- AdjFactorStore：`packages/datahub/src/ditto_datahub/stores/adj_factor_store.py` ✅
   - 复权因子管理
   - 支持增量更新
+
+**完成状态**:
+- ✅ 5个Store类实现完成（SecurityStore, CalendarStore, PipelineStore, BarsStore, AdjFactorStore）
+- ✅ 83个单元测试全部通过
+- ✅ Ruff代码质量检查通过
+- ✅ MyPy类型检查通过
 
 #### 任务3: 实现Domain Repositories
 

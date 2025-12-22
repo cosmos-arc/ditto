@@ -1,0 +1,51 @@
+"""IO utility functions for file operations."""
+
+import hashlib
+from pathlib import Path
+
+import polars as pl
+
+
+def atomic_write(df: pl.DataFrame, path: Path) -> None:
+    """
+    Write DataFrame to Parquet file atomically.
+
+    Writes to a temporary file first, then renames to the target path.
+    This ensures atomic operation - either the file is fully written or not at all.
+
+    Args:
+        df: DataFrame to write.
+        path: Target file path.
+
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write to temporary file first
+    temp_path = path.with_suffix(path.suffix + ".tmp")
+    df.write_parquet(temp_path, compression="zstd")
+
+    # Atomic rename
+    temp_path.replace(path)
+
+
+def file_md5(path: Path) -> str:
+    """
+    Calculate MD5 checksum of a file.
+
+    Args:
+        path: Path to the file.
+
+    Returns:
+        MD5 checksum as a 32-character hex string.
+
+    """
+    path = Path(path)
+    md5 = hashlib.md5()
+
+    with path.open("rb") as f:
+        # Read in chunks to handle large files efficiently
+        for chunk in iter(lambda: f.read(8192), b""):
+            md5.update(chunk)
+
+    return md5.hexdigest()
