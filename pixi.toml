@@ -63,6 +63,8 @@ tushare = ">=1.4.21,<2"
 akshare = ">=1.15.0,<2"
 ditto-core = { path = "packages/core", editable = true }
 ditto-foundation = { path = "packages/foundation", editable = true }
+# File locking
+filelock = ">=3.16.0,<4"
 types-requests = ">=2.32.4.20250913, <3"
 types-pyyaml = ">=6.0.12.20250915, <7"
 types-python-dateutil = ">=2.9.0.20251115, <3"

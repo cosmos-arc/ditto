@@ -53,7 +53,9 @@ ditto-foundation = { path = "packages/foundation", editable = true }
 | Lint | `pixi run check` | All checks passed |
 | Format | `pixi run format` | 无格式问题 |
 | Type | `pixi run mypy packages/ apps/ scripts/ tests/` | 无类型错误 |
-| Test | `pixi run format` | 全部通过 |
+| Test | `pixi run test` | 全部通过 |
+
+**以上问题必须通过！！！！无法容忍任何的哪怕部分小问题和格式问题**
 
 ---
 
