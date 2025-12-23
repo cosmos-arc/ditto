@@ -65,7 +65,7 @@
           "refId": "A"
         }
       ],
-      "title": "服务状态",
+      "title": "Service Status",
       "type": "stat"
     },
     {
@@ -118,7 +118,7 @@
           "refId": "A"
         }
       ],
-      "title": "Kill Switch 级别",
+      "title": "Kill Switch Level",
       "type": "stat"
     },
     {
@@ -175,7 +175,7 @@
           "refId": "A"
         }
       ],
-      "title": "当前回撤",
+      "title": "Portfolio Drawdown",
       "type": "stat"
     },
     {
@@ -224,7 +224,7 @@
           "refId": "A"
         }
       ],
-      "title": "数据记录总数",
+      "title": "Total Records",
       "type": "stat"
     },
     {
@@ -293,16 +293,16 @@
       "targets": [
         {
           "expr": "rate(ditto_data_records_total[5m])",
-          "legendFormat": "数据记录/秒",
+          "legendFormat": "Records/sec",
           "refId": "A"
         },
         {
           "expr": "rate(ditto_data_errors_total[5m])",
-          "legendFormat": "数据错误/秒",
+          "legendFormat": "Errors/sec",
           "refId": "B"
         }
       ],
-      "title": "数据处理速率",
+      "title": "Data Processing Rate",
       "type": "timeseries"
     },
     {
@@ -375,12 +375,56 @@
       "targets": [
         {
           "expr": "ditto_portfolio_drawdown * 100",
-          "legendFormat": "组合回撤",
+          "legendFormat": "Drawdown",
           "refId": "A"
         }
       ],
-      "title": "组合回撤趋势",
+      "title": "Portfolio Drawdown Trend",
       "type": "timeseries"
+    },
+    {
+      "datasource": "VictoriaLogs",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "frameIndex": 0,
+            "frameSize": 15,
+            "maxWidth": false,
+            "showLinks": true,
+            "showThemedValues": true,
+            "timeField": "@timestamp",
+            "timeZone": "UTC"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 7,
+      "options": {
+        "dedupStrategy": "none",
+        "showTimeField": false,
+        "sortOrder": "Descending",
+        "showThemedValues": true
+      },
+      "pluginVersion": "11.1.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "{service=\"ditto\"}",
+          "queryType": "logs",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent Logs (Raw Logs)",
+      "type": "victorialogs-logs"
     }
   ],
   "refresh": "5s",
@@ -396,8 +440,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Ditto 可观测性概览",
+  "title": "Ditto Observability Overview",
   "uid": "ditto-overview",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

@@ -13,7 +13,7 @@ datasources:
 
   # VictoriaLogs - Logs 数据源
   - name: VictoriaLogs
-    type: victorialogs-datasource
+    type: victoriametrics-logs-datasource
     access: proxy
     url: http://victorialogs:9428
     editable: true
