@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import polars as pl
+from loguru import logger
 
 from ..types import DQResult, DQSeverity
 from .dq_rules import DQ_RULES
@@ -43,6 +44,14 @@ class DQChecker:
         """Execute DQ checks."""
         rules = self.rules.get(dataset_id, [])
 
+        logger.info(
+            "dq_check_start",
+            event="dq_check",
+            dataset_id=dataset_id,
+            rules_count=len(rules),
+            row_count=len(df),
+        )
+
         results = []
         all_passed = True
 
@@ -60,5 +69,21 @@ class DQChecker:
 
             if not passed and rule.severity == DQSeverity.FAIL:
                 all_passed = False
+
+        fail_count = sum(
+            1 for r in results if not r.passed and r.severity == DQSeverity.FAIL
+        )
+        warn_count = sum(
+            1 for r in results if not r.passed and r.severity == DQSeverity.WARN
+        )
+
+        logger.info(
+            "dq_check_complete",
+            event="dq_check",
+            dataset_id=dataset_id,
+            passed=all_passed,
+            fail_count=fail_count,
+            warn_count=warn_count,
+        )
 
         return DQCheckResult(passed=all_passed, results=results)
