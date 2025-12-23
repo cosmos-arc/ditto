@@ -455,3 +455,48 @@ def test_create_order(test_db):
 | 不启用外键 | 数据完整性 | `PRAGMA foreign_keys = ON` |
 | 忽略事务 | 数据不一致 | 用 `with conn:` |
 | PRAGMA synchronous = OFF 生产使用 | 数据丢失风险 | 仅批量导入时临时使用 |
+
+---
+
+## SQLite 特定问题
+
+### BOOLEAN 类型处理
+
+SQLite 存储 BOOLEAN 为 INTEGER (0/1)，读取时需要转换：
+
+```python
+from typing import Any
+
+def _row_to_dict(row: Any) -> dict[str, Any]:
+    """Convert SQLite row to dict with proper type conversions.
+
+    SQLite stores BOOLEAN as INTEGER (0/1), so we convert them back.
+    """
+    if row is None:
+        return {}
+    result = dict(row)
+    # 转换 INTEGER back to bool
+    for key in ("dq_passed", "is_open", "is_active", "is_st",
+                "is_week_end", "is_month_end", "is_quarter_end", "is_primary"):
+        if isinstance(result[key], int):
+            result[key] = bool(result[key])
+    return result
+
+# 使用示例
+cursor = conn.execute("SELECT * FROM pipeline_run WHERE run_id = ?", (run_id,))
+row = cursor.fetchone()
+run_record = _row_to_dict(row)
+assert run_record["dq_passed"] is True  # 现在是 bool 类型
+```
+
+**规则**: SQLite 返回的 BOOLEAN 字段是 `int` (0/1)，需要手动转换为 `bool`。
+
+### Row 对象转 Dict
+
+```python
+# 方式1: 直接转换（保留类型问题）
+row_dict = dict(row)
+
+# 方式2: 使用 _row_to_dict 处理类型转换
+row_dict = _row_to_dict(row)
+```

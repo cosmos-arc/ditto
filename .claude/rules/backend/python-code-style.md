@@ -29,7 +29,53 @@ paths: **/*.py
 
 ## 2. 代码格式
 
-### 2.1 基本格式（Ruff 自动处理）
+### 2.1 模块文档字符串格式（重要）
+
+**规则**: 模块文档字符串必须在所有 imports 之前。
+
+```python
+# ✅ 正确：单行文档字符串
+"""Single-line module docstring."""
+
+from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
+import polars as pl
+
+
+# ✅ 正确：多行文档字符串
+"""Multi-line module docstring.
+
+Details about the module purpose and usage.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
+import polars as pl
+
+
+# ❌ 错误：文档字符串在 imports 之后
+from __future__ import annotations
+from datetime import datetime
+
+"""Module docstring after imports (violates D213 rule)."""
+
+
+# ❌ 错误：不符合 D213 规则
+"""Module docstring
+with summary on first line.
+"""
+
+from __future__ import annotations
+# 触发 D213：Multi-line docstring summary should start at second line
+```
+
+**Ruff D213 规则**: 多行文档字符串的 summary 后需要空一行，details 在新行。
+
+### 2.2 基本格式（Ruff 自动处理）
 
 ```python
 # 行长度：88 字符
@@ -38,7 +84,7 @@ paths: **/*.py
 # 尾随逗号：保留（减少 git diff 噪音）
 ```
 
-### 2.2 导入顺序（isort 规则）
+### 2.3 导入顺序（isort 规则）
 
 ```python
 # 1. 标准库

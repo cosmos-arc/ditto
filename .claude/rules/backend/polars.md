@@ -257,6 +257,64 @@ def make_ohlcv(
     })
 ```
 
+### 日期测试数据（重要）
+
+```python
+from datetime import date
+from typing import Any
+
+# ✅ 正确：使用 Python 原生 date 类型
+@pytest.fixture
+def sample_df(self) -> pl.DataFrame:
+    """Create sample data with date columns."""
+    data: dict[str, list[Any]] = {
+        "sid": [100000001, 100000002],
+        "trade_date": [
+            date(2024, 1, 2),
+            date(2024, 1, 3),
+        ],
+        "close": [10.5, 20.5],
+    }
+    return pl.DataFrame(data)
+
+# ❌ 错误：pl.date() 返回表达式，不是值
+data = {"trade_date": [pl.date(2024, 1, 2), ...]}  # ComputeError!
+```
+
+### 日期字符串解析
+
+```python
+from datetime import datetime
+
+# ❌ 错误：pl.strptime() 不存在
+start_dt = pl.strptime(start_date, "%Y-%m-%d")
+
+# ✅ 正确：使用 datetime.strptime
+start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+# 然后在 Polars filter 中使用 pl.lit()
+lf = lf.filter(pl.col("trade_date") >= pl.lit(start_dt))
+```
+
+### 类型注解（MyPy 兼容）
+
+```python
+# ❌ 错误：MyPy 报错 no-any-return
+def list_sids(self, dataset: str) -> list[int]:
+    result = lf.select(pl.col("sid").unique()).collect()
+    return result["sid"].to_list()  # 返回 Any
+
+# ✅ 正确：显式类型声明
+def list_sids(self, dataset: str) -> list[int]:
+    result = lf.select(pl.col("sid").unique()).collect()
+    sids: list[int] = result["sid"].to_list()
+    return sids
+```
+
+**规则**:
+- Polars 的 `to_list()` 返回 `Any`，必须显式类型注解
+- 日期使用 Python `datetime.date` 而非 `pl.date()`
+- 日期解析用 `datetime.strptime()` + `pl.lit()`
+
 ## 禁止清单
 
 | 禁止 | 原因 | 替代方案 |
