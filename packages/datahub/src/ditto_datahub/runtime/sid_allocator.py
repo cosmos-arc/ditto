@@ -2,6 +2,8 @@
 
 from typing import TYPE_CHECKING
 
+from loguru import logger
+
 from ..types import SidRange
 
 if TYPE_CHECKING:
@@ -19,6 +21,12 @@ class SidAllocator:
         """Allocate new SID (atomic operation)."""
         # 获取资产类别的SID范围
         min_sid, max_sid = SidRange.get_range(asset_class)
+
+        logger.info(
+            "sid_allocate_start",
+            event="sid_allocate",
+            asset_class=asset_class,
+        )
 
         try:
             # 开始事务
@@ -44,6 +52,12 @@ class SidAllocator:
                 # 检查是否超出范围
                 if new_sid > max_sid:
                     self._pool.execute("ROLLBACK")
+                    logger.error(
+                        "sid_allocate_exhausted",
+                        event="sid_allocate",
+                        asset_class=asset_class,
+                        max_sid=max_sid,
+                    )
                     raise OverflowError(f"SID exhausted for {asset_class}")
 
                 # 更新当前最大值
@@ -54,9 +68,21 @@ class SidAllocator:
 
             # 提交事务
             self._pool.commit()
+
+            logger.info(
+                "sid_allocate_complete",
+                event="sid_allocate",
+                asset_class=asset_class,
+                sid=new_sid,
+            )
             return new_sid
 
         except Exception:
             # 发生任何错误都要回滚
             self._pool.rollback()
+            logger.error(
+                "sid_allocate_failed",
+                event="sid_allocate",
+                asset_class=asset_class,
+            )
             raise
