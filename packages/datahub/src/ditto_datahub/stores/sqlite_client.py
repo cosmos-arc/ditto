@@ -2,7 +2,12 @@
 
 from typing import Any
 
+from loguru import logger
+
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
+
+# Maximum SQL length to log (truncates longer queries)
+_MAX_SQL_LOG_LENGTH = 100
 
 
 class SQLiteClient:
@@ -22,6 +27,10 @@ class SQLiteClient:
 
         """
         self._pool = pool
+        logger.debug(
+            "sqlite_client_initialized",
+            event="client_init",
+        )
 
     @property
     def conn(self) -> Any:
@@ -42,6 +51,12 @@ class SQLiteClient:
             Cursor object.
 
         """
+        logger.debug(
+            "sql_execute",
+            event="sql_execute",
+            sql=sql[:_MAX_SQL_LOG_LENGTH] if len(sql) > _MAX_SQL_LOG_LENGTH else sql,
+            has_params=params is not None,
+        )
         if params:
             return self.conn.execute(sql, params)
         return self.conn.execute(sql)
@@ -60,6 +75,12 @@ class SQLiteClient:
             Cursor object.
 
         """
+        logger.info(
+            "sql_executemany",
+            event="sql_batch",
+            sql=sql[:_MAX_SQL_LOG_LENGTH] if len(sql) > _MAX_SQL_LOG_LENGTH else sql,
+            batch_size=len(params_list),
+        )
         return self.conn.executemany(sql, params_list)
 
     def executescript(self, script: str) -> Any:
@@ -73,6 +94,11 @@ class SQLiteClient:
             Cursor object.
 
         """
+        logger.info(
+            "sql_executescript",
+            event="sql_script",
+            script_length=len(script),
+        )
         return self.conn.executescript(script)
 
     def fetchone(
@@ -89,6 +115,11 @@ class SQLiteClient:
             sqlite3.Row or None.
 
         """
+        logger.debug(
+            "sql_fetchone",
+            event="sql_query",
+            sql=sql[:_MAX_SQL_LOG_LENGTH] if len(sql) > _MAX_SQL_LOG_LENGTH else sql,
+        )
         cursor = self.execute(sql, params)
         return cursor.fetchone()
 
@@ -108,6 +139,11 @@ class SQLiteClient:
         """
         cursor = self.execute(sql, params)
         result: list[Any] = cursor.fetchall()
+        logger.debug(
+            "sql_fetchall",
+            event="sql_query",
+            row_count=len(result),
+        )
         return result
 
     def fetchval(
@@ -131,10 +167,20 @@ class SQLiteClient:
 
     def commit(self) -> None:
         """Commit transaction."""
+        logger.debug(
+            "transaction_commit",
+            event="transaction",
+            action="commit",
+        )
         self.conn.commit()
 
     def rollback(self) -> None:
         """Rollback transaction."""
+        logger.warning(
+            "transaction_rollback",
+            event="transaction",
+            action="rollback",
+        )
         self.conn.rollback()
 
     def insert_returning_id(
@@ -154,6 +200,11 @@ class SQLiteClient:
         cursor = self.execute(sql, params)
         self.commit()
         row_id: int = cursor.lastrowid
+        logger.info(
+            "insert_returning_id",
+            event="insert",
+            row_id=row_id,
+        )
         return row_id
 
     def exists(
