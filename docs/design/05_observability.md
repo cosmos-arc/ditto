@@ -718,157 +718,113 @@ M.data_records.add(100, {"source": "tushare", "table": "etf_daily", "status": "s
 ### 10.1 目录结构
 
 ```
-deploy/
-└── observability/
-    ├── docker-compose.yml
-    ├── vector.toml
-    └── grafana/
-        ├── datasources.yml
+deploy/observability/
+├── docker-compose.yml          # Docker Compose 配置
+├── README.md                   # 部署说明文档
+├── vector.toml                 # Vector 日志采集配置
+└── grafana/
+    └── provisioning/
+        ├── datasources/
+        │   └── datasources.yml      # 数据源配置
         └── dashboards/
-            ├── overview.json
-            └── risk.json
+            ├── dashboard.yml         # 仪表盘提供者配置
+            └── ditto-overview.json   # Ditto 概览仪表盘
+
+scripts/observability/
+├── start.ps1                   # 启动服务脚本
+├── stop.ps1                    # 停止服务脚本
+├── health_check.ps1            # 健康检查脚本
+└── test_observability.py       # 测试脚本
 ```
 
-### 10.2 Docker Compose
+### 10.2 服务版本
 
-```yaml
-# deploy/observability/docker-compose.yml
-version: '3.8'
+| 服务 | 版本 | 发布日期 | 端口 | 内存限制 | 保留期 | 用途 |
+|------|------|----------|------|----------|--------|------|
+| VictoriaMetrics | v1.104.0 | 2024-10-02 | 8428 | 256M | 90天 | Metrics 存储 + OTLP 接收 |
+| VictoriaLogs | v1.37.0 | 2024-10-18 | 9428 | 256M | 30天 | Logs 存储 + 查询 |
+| Vector | v0.52.0-debian | 2024-12-16 | 8686 | 128M | - | 日志采集 |
+| Grafana | 11.1.0 | 2024-06-21 | 3000 | 256M | - | 可视化仪表盘 |
 
-services:
-  # VictoriaMetrics - Metrics 存储
-  victoriametrics:
-    image: victoriametrics/victoria-metrics:v1.96.0
-    container_name: ditto-vm
-    ports:
-      - "8428:8428"
-    command:
-      - "-storageDataPath=/data"
-      - "-retentionPeriod=90d"
-      - "-selfScrapeInterval=10s"
-    volumes:
-      - vm-data:/data
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256M  # 锁死内存上限
+**总资源占用**: ~400MB RAM, ~2.6GB 磁盘 (30天)
 
-  # VictoriaLogs - Logs 存储
-  victorialogs:
-    image: victoriametrics/victoria-logs:v1.0.0-victorialogs
-    container_name: ditto-vl
-    ports:
-      - "9428:9428"
-    command:
-      - "-storageDataPath=/data"
-      - "-retentionPeriod=30d"
-    volumes:
-      - vl-data:/data
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256M  # 锁死内存上限
+### 10.3 部署拓扑
 
-  # Vector - 日志采集
-  vector:
-    image: timberio/vector:0.34.0-debian
-    container_name: ditto-vector
-    volumes:
-      - ./vector.toml:/etc/vector/vector.toml:ro
-      - ../../logs:/logs:ro
-    depends_on:
-      - victorialogs
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 128M  # 锁死内存上限
-
-  # Grafana - 可视化
-  grafana:
-    image: grafana/grafana:10.2.2
-    container_name: ditto-grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_INSTALL_PLUGINS=victoriametrics-datasource,victorialogs-datasource
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
-    depends_on:
-      - victoriametrics
-      - victorialogs
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256M  # 锁死内存上限
-
-volumes:
-  vm-data:
-  vl-data:
-  grafana-data:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Ditto Application                           │
+├─────────────────────────────────────────────────────────────────┤
+│  Loguru → logs/ditto.jsonl → Vector → VictoriaLogs             │
+│  OTel Metrics → OTLP HTTP → VictoriaMetrics                     │
+│  Traces → 通过 trace_id 关联日志（暂不独立存储）                 │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+                        ┌──────────────┐
+                        │   Grafana    │
+                        │    :3000     │
+                        └──────────────┘
 ```
 
-### 10.3 Vector 配置
+### 10.4 快速开始
 
-```toml
-# deploy/observability/vector.toml
+#### 前置要求
+- Docker Desktop 已安装并运行
+- Windows PowerShell 5.1+
+- 端口 8428, 9428, 3000, 8686 未被占用
 
-# ============ Sources ============
+#### 启动服务
 
-[sources.ditto_logs]
-type = "file"
-include = ["/logs/ditto_*.jsonl"]
-read_from = "end"
-
-# ============ Transforms ============
-
-[transforms.parse_json]
-type = "remap"
-inputs = ["ditto_logs"]
-source = '''
-. = parse_json!(.message)
-'''
-
-# ============ Sinks ============
-
-[sinks.victorialogs]
-type = "http"
-inputs = ["parse_json"]
-uri = "http://victorialogs:9428/insert/jsonline?_stream_fields=service,level,event"
-encoding.codec = "json"
-framing.method = "newline_delimited"
-request.headers.Content-Type = "application/stream+json"
+```powershell
+# 从项目根目录
+.\scripts\observability\start.ps1
 ```
 
-### 10.4 Grafana 数据源配置
+#### 检查服务状态
 
-```yaml
-# deploy/observability/grafana/datasources.yml
-apiVersion: 1
-
-datasources:
-  - name: VictoriaMetrics
-    type: prometheus
-    access: proxy
-    url: http://victoriametrics:8428
-    isDefault: true
-    editable: false
-
-  - name: VictoriaLogs
-    type: victorialogs-datasource
-    access: proxy
-    url: http://victorialogs:9428
-    editable: false
+```powershell
+.\scripts\observability\health_check.ps1
 ```
 
-### 10.5 资源占用
+#### 访问服务
+
+| 服务 | URL | 用途 |
+|------|-----|------|
+| Grafana | http://localhost:3000 | 可视化仪表盘 |
+| VictoriaMetrics | http://localhost:8428 | Metrics 查询 UI |
+| VictoriaLogs | http://localhost:9428 | Logs 查询 UI |
+| Vector | http://localhost:8686 | 日志采集状态 |
+
+#### 停止服务
+
+```powershell
+.\scripts\observability\stop.ps1
+```
+
+### 10.5 关键配置
+
+#### VictoriaMetrics
+- OTLP HTTP 端点: `http://localhost:8428/otlp/v1/metrics`
+- 数据保留: 90 天
+- 内存限制: 256MB
+
+#### VictoriaLogs
+- HTTP 接收端点: `http://localhost:9428/insert/jsonline`
+- 查询语言: LogsQL
+- 数据保留: 30 天
+- 内存限制: 256MB
+
+#### Vector
+- 日志源: `/logs/ditto*.jsonl` (JSON Lines 格式)
+- 目标: VictoriaLogs HTTP 端点
+- 内存限制: 128MB
+
+#### Grafana
+- 插件: victoriametrics-logs-datasource
+- 数据源: VictoriaMetrics (Prometheus 兼容), VictoriaLogs
+- 预配置仪表盘: Ditto Observability Overview
+- 内存限制: 256MB
+
+### 10.6 资源占用
 
 | 组件 | 内存 | 磁盘（30天） |
 |------|------|--------------|
@@ -877,6 +833,85 @@ datasources:
 | Vector | ~50MB | - |
 | Grafana | ~150MB | ~100MB |
 | **总计** | **~400MB** | **~2.6GB** |
+
+### 10.7 故障排查
+
+#### Docker Desktop 未启动
+
+```powershell
+docker version
+```
+
+#### 端口占用
+
+```powershell
+netstat -an | findstr "8428 9428 3000 8686"
+```
+
+#### 服务日志
+
+```powershell
+# 查看所有服务日志
+docker-compose -f deploy/observability/docker-compose.yml logs -f
+
+# 查看特定服务日志
+docker logs ditto-grafana
+docker logs ditto-vector
+```
+
+### 10.8 维护操作
+
+#### 更新服务版本
+
+编辑 `deploy/observability/docker-compose.yml` 中的镜像版本，然后：
+
+```powershell
+docker-compose -f deploy/observability/docker-compose.yml pull
+docker-compose -f deploy/observability/docker-compose.yml up -d
+```
+
+#### 清理数据（警告：删除所有数据）
+
+```powershell
+docker-compose -f deploy/observability/docker-compose.yml down -v
+```
+
+#### 备份数据
+
+```powershell
+# 备份 VictoriaMetrics 数据
+docker cp ditto-vm:/vmdata ./backup/vmdata
+
+# 备份 VictoriaLogs 数据
+docker cp ditto-vl:/vldata ./backup/vldata
+
+# 备份 Grafana 配置
+docker cp ditto-grafana:/var/lib/grafana ./backup/grafana
+```
+
+### 10.9 生产环境注意事项
+
+当前配置为本地开发环境，生产环境部署需要：
+
+1. **启用认证**
+   - Grafana: 配置用户名/密码或 OAuth
+   - VictoriaMetrics: 配置基本认证或反向代理
+
+2. **启用 TLS**
+   - 使用反向代理 (Nginx/Traefik) 提供 HTTPS
+   - 配置有效的 SSL 证书
+
+3. **网络隔离**
+   - 限制外部访问 VictoriaMetrics/VictoriaLogs
+   - 仅通过 Grafana 访问数据
+
+4. **数据备份**
+   - 定期备份数据卷
+   - 配置远程存储
+
+5. **监控告警**
+   - 配置服务健康检查
+   - 设置磁盘空间告警
 
 ---
 
