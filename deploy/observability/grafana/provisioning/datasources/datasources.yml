@@ -1,0 +1,21 @@
+apiVersion: 1
+
+datasources:
+  # VictoriaMetrics - Metrics 数据源
+  - name: VictoriaMetrics
+    type: prometheus
+    access: proxy
+    url: http://victoriametrics:8428
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: "15s"
+
+  # VictoriaLogs - Logs 数据源
+  - name: VictoriaLogs
+    type: victorialogs-datasource
+    access: proxy
+    url: http://victorialogs:9428
+    editable: true
+    jsonData:
+      timeInterval: "15s"

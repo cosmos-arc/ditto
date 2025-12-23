@@ -41,7 +41,7 @@ class SpanContext:
         """
         self.name = name
         self.attributes = attributes
-        self._span: trace.Span | None = None
+        self._span: Any = None  # ContextManager, 不是 Span 类型
 
     def __enter__(self) -> "SpanContext":
         """进入上下文，启动 span."""

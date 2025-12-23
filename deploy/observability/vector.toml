@@ -1,0 +1,34 @@
+# Vector 配置文件 - Ditto 可观测性系统
+# 功能: 从应用日志文件采集日志并推送到 VictoriaLogs
+
+# ============ 数据源 ============
+
+[sources.ditto_logs]
+type = "file"
+include = ["/logs/ditto*.jsonl"]
+read_from = "end"
+
+# ============ 数据转换 ============
+
+[transforms.parse_json]
+type = "remap"
+inputs = ["ditto_logs"]
+source = '''
+. = parse_json!(.message)
+'''
+
+# ============ 数据汇 - VictoriaLogs ============
+
+[sinks.victorialogs]
+type = "http"
+inputs = ["parse_json"]
+uri = "http://victorialogs:9428/insert/jsonline?_stream_fields=service"
+encoding.codec = "json"
+framing.method = "newline_delimited"
+batch.max_events = 100
+
+# ============ 健康检查 ============
+
+[api]
+enabled = true
+address = "0.0.0.0:8686"

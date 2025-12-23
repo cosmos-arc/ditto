@@ -1,0 +1,85 @@
+# Ditto 可观测性系统 - Docker Compose 配置
+# 版本: v1.0.0
+# 说明: 部署 VictoriaMetrics、VictoriaLogs、Vector、Grafana
+
+version: '3.8'
+
+services:
+  # VictoriaMetrics - Metrics 存储与 OTLP 接收
+  victoriametrics:
+    image: victoriametrics/victoriametrics:v1.104.0
+    container_name: ditto-vm
+    ports:
+      - "8428:8428"
+    command:
+      - "--storageDataPath=/vmdata"
+      - "--retentionPeriod=90d"
+    volumes:
+      - vm-data:/vmdata
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # VictoriaLogs - Logs 存储与查询
+  victorialogs:
+    image: victoriametrics/victoria-logs:v0.37.0-victorialogs
+    container_name: ditto-vl
+    ports:
+      - "9428:9428"
+    command:
+      - "--storageDataPath=/vldata"
+      - "--retentionPeriod=30d"
+    volumes:
+      - vl-data:/vldata
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Vector - 日志采集
+  vector:
+    image: timberio/vector:0.52.0-debian
+    container_name: ditto-vector
+    ports:
+      - "8686:8686"
+    volumes:
+      - ./vector.toml:/etc/vector/vector.toml:ro
+      - ../../logs:/logs:ro
+    depends_on:
+      - victorialogs
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # Grafana - 可视化仪表盘
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: ditto-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_INSTALL_PLUGINS=victoriametrics-datasource,victorialogs-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - victoriametrics
+      - victorialogs
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+volumes:
+  vm-data:
+  vl-data:
+  grafana-data:

@@ -299,7 +299,74 @@ config = ObservabilityConfig(
 )
 ```
 
-## 八、注意事项
+## 八、外部依赖部署
+
+### 生产环境部署
+
+在 PRODUCTION/DEVELOPMENT 模式下，需要部署外部可观测性服务来接收日志和指标。
+
+#### 使用 Docker Compose 部署
+
+1. **启动服务**
+   ```powershell
+   # 从项目根目录运行
+   .\scripts\observability\start.ps1
+   ```
+
+2. **验证服务**
+   ```powershell
+   .\scripts\observability\health_check.ps1
+   ```
+
+3. **访问服务**
+   | 服务 | URL | 用途 |
+   |------|-----|------|
+   | Grafana | http://localhost:3000 | 可视化仪表盘 |
+   | VictoriaMetrics | http://localhost:8428 | Metrics 查询 UI |
+   | VictoriaLogs | http://localhost:9428 | Logs 查询 UI |
+
+#### 服务组件
+
+| 组件 | 版本 | 端口 | 内存限制 | 保留期 |
+|------|------|------|----------|--------|
+| VictoriaMetrics | v1.104.0 | 8428 | 256M | 90天 |
+| VictoriaLogs | v0.37.0 | 9428 | 256M | 30天 |
+| Vector | v0.52.0 | 8686 | 128M | - |
+| Grafana | 11.1.0 | 3000 | 256M | - |
+
+**总资源占用**: ~400MB RAM, ~2.6GB 磁盘 (30天)
+
+#### 数据流向
+
+```
+App (Loguru) → logs/ditto.jsonl → Vector → VictoriaLogs
+App (OTel) → OTLP HTTP → VictoriaMetrics
+                                      ↓
+                                  Grafana
+```
+
+#### 停止服务
+
+```powershell
+.\scripts\observability\stop.ps1
+```
+
+详细部署指南请参考：[deploy/observability/README.md](../../../../deploy/observability/README.md)
+
+### 配置端点
+
+默认配置下，应用会向以下端点推送数据：
+
+- **Metrics**: `http://localhost:8428/opentelemetry/v1/metrics`
+- **Logs**: 通过 Vector 采集 `logs/ditto.jsonl`
+
+如需修改端点，设置环境变量：
+
+```powershell
+$env:OBSERVABILITY_VM_ENDPOINT="http://your-vm-endpoint:8428/opentelemetry/v1/metrics"
+```
+
+## 九、注意事项
 
 1. **测试隔离**: 每个测试前应调用 `reset_for_testing()` 重置状态
 2. **shutdown 限制**: `shutdown()` 后无法重新初始化，测试中应使用 `reset_for_testing()` 代替
@@ -307,3 +374,5 @@ config = ObservabilityConfig(
 4. **force 参数**: `init(force=True)` 可强制重新初始化 (仅用于测试)
 5. **trace_id 格式**: 返回标准 UUID 格式字符串 (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 6. **ObservableGauge 限制**: 预定义的 Gauge 指标（如 `M.kill_switch_level`）当前实现不支持多标签 attributes。`set(attributes)` 中的 attributes 参数会被忽略，仅保留 API 兼容性。如需带标签的 Gauge，请直接使用 meter API 创建。
+7. **生产环境日志格式**: 生产模式下日志文件为 `ditto.jsonl` (JSON Lines 格式)，便于 Vector 采集和分析。
+8. **Docker Desktop 依赖**: 部署外部依赖需要 Docker Desktop 运行，建议使用 WSL 2 后端。

@@ -13,9 +13,13 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Protocol
 
 from opentelemetry import metrics
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.metrics import Counter, Histogram, ObservableGauge
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+from opentelemetry.sdk.metrics.export import (
+    InMemoryMetricReader,
+    PeriodicExportingMetricReader,
+)
 from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
 from opentelemetry.sdk.resources import Resource
 
@@ -54,25 +58,25 @@ class M:
     # 数据指标
     data_update_duration: Histogram
     data_records: Counter
-    data_freshness: ObservableGauge
+    data_freshness: "GaugeWrapper"
     data_errors: Counter
 
     # 因子指标
     factor_calc_duration: Histogram
-    factor_ic: ObservableGauge
-    factor_health: ObservableGauge
+    factor_ic: "GaugeWrapper"
+    factor_health: "GaugeWrapper"
 
     # 策略指标
     signal_total: Counter
     rebalance_total: Counter
 
     # 组合指标
-    portfolio_value: ObservableGauge
-    portfolio_drawdown: ObservableGauge
-    portfolio_drawdown_3d: ObservableGauge
+    portfolio_value: "GaugeWrapper"
+    portfolio_drawdown: "GaugeWrapper"
+    portfolio_drawdown_3d: "GaugeWrapper"
 
     # 风控指标
-    kill_switch_level: ObservableGauge
+    kill_switch_level: "GaugeWrapper"
     kill_switch_total: Counter
 
     # 系统指标
@@ -311,9 +315,21 @@ def configure_metrics(config: ObservabilityConfig, mode: Mode) -> metrics.Meter:
         M.setup(_meter)
         return _meter
 
-    # PRODUCTION / DEVELOPMENT：暂不配置实际导出
-    # 后续可添加 OTLPMetricExporter
-    provider = MeterProvider(resource=resource)
+    # PRODUCTION / DEVELOPMENT：配置 OTLP Exporter
+    # 将指标推送到 VictoriaMetrics
+    otlp_exporter = OTLPMetricExporter(
+        endpoint=config.vm_endpoint,
+        timeout=30,
+    )
+    period_exporter = PeriodicExportingMetricReader(
+        otlp_exporter,
+        export_interval_millis=config.metrics_export_interval_ms,
+    )
+    provider = MeterProvider(
+        metric_readers=[period_exporter],
+        resource=resource,
+        views=duration_histogram_views,
+    )
     metrics.set_meter_provider(provider)
     _meter = metrics.get_meter(config.service_name)
     M.setup(_meter)

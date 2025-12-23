@@ -109,7 +109,7 @@ def configure_logging(config: ObservabilityConfig, mode: Mode) -> None:
 
     # File sink - JSON 格式（生产环境）
     if mode == Mode.PRODUCTION:
-        log_file = log_dir / "ditto.log"
+        log_file = log_dir / "ditto.jsonl"
         _logger.add(
             log_file,
             format=_json_formatter,
