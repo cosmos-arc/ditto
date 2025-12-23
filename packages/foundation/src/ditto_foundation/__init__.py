@@ -6,3 +6,8 @@ Ditto 共享模块.
 
 __version__ = "0.1.0"
 __author__ = "Ditto Team"
+
+# Export app initializer
+from ditto_foundation.app_initializer import AppInitializer, initialize_app
+
+__all__ = ["AppInitializer", "initialize_app"]
