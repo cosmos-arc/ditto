@@ -7,11 +7,13 @@ with year partitioning. Following design document at docs/design/02_data_design.
 
 from __future__ import annotations
 
+import time
 from datetime import datetime
 from pathlib import Path
 
 import polars as pl
 from ditto_foundation.util.io import atomic_write, file_md5
+from loguru import logger
 
 
 class AdjFactorStore:
@@ -102,6 +104,8 @@ class AdjFactorStore:
             DataFrame with matching records.
 
         """
+        start_time = time.time()
+
         # Determine year range from date filters
         start_year = int(start_date[:4]) if start_date else 1990
         end_year = int(end_date[:4]) if end_date else 2099
@@ -109,6 +113,15 @@ class AdjFactorStore:
         paths = self._collect_paths(dataset, start_year, end_year)
 
         if not paths:
+            logger.info(
+                "adj_factor_read_no_data",
+                event="adj_factor_read",
+                dataset=dataset,
+                start_date=start_date,
+                end_date=end_date,
+                row_count=0,
+                duration_ms=0,
+            )
             return pl.DataFrame()
 
         # Scan and filter
@@ -126,7 +139,22 @@ class AdjFactorStore:
             end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
             lf = lf.filter(pl.col("trade_date") <= pl.lit(end_dt))
 
-        return lf.unique(subset=["sid", "trade_date"], keep="last").collect()
+        result = lf.unique(subset=["sid", "trade_date"], keep="last").collect()
+
+        duration_ms = (time.time() - start_time) * 1000
+
+        logger.info(
+            "adj_factor_read_complete",
+            event="adj_factor_read",
+            dataset=dataset,
+            start_date=start_date,
+            end_date=end_date,
+            sids_count=len(sids) if sids else None,
+            row_count=len(result),
+            duration_ms=round(duration_ms, 2),
+        )
+
+        return result
 
     # ============ Write operations ============
 
@@ -150,10 +178,13 @@ class AdjFactorStore:
             Tuple of (file_path, checksum).
 
         """
+        start_time = time.time()
+
         dataset_dir = self._data_root / dataset
         dataset_dir.mkdir(parents=True, exist_ok=True)
 
         file_path = self._get_path(dataset, year)
+        is_merge = file_path.exists()
 
         # Merge with existing data
         if file_path.exists():
@@ -173,6 +204,21 @@ class AdjFactorStore:
 
         # Calculate checksum
         checksum: str = file_md5(file_path)
+
+        duration_ms = (time.time() - start_time) * 1000
+
+        logger.info(
+            "adj_factor_write_complete",
+            event="adj_factor_write",
+            dataset=dataset,
+            year=year,
+            row_count=len(df),
+            total_rows=len(combined),
+            is_merge=is_merge,
+            file_path=str(file_path),
+            checksum=checksum,
+            duration_ms=round(duration_ms, 2),
+        )
 
         return str(file_path), checksum
 
