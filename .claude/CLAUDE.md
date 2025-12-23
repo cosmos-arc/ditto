@@ -44,17 +44,22 @@ ditto-foundation = { path = "packages/foundation", editable = true }
 
 ---
 
-## 2. 代码质量标准
+## 2、代码质量检查清单
 
-### **必须通过的检查**
+提交前必须执行：
 
-| 检查项 | 命令 | 要求 |
-|--------|------|------|
-| Lint | `pixi run check` | All checks passed |
-| Format | `pixi run format` | 无格式问题 |
-| Type | `pixi run mypy packages/ apps/ scripts/ tests/` | 无类型错误 |
-| Test | `pixi run test` | 全部通过 |
+```bash
+# 方法1：一键检查（推荐）
+pre-commit run --all-files
 
+# 方法2：分步检查
+pixi run lint .    # Lint
+pixi run format .  # Format
+pixi run type      # Type check
+pixi run pytest    # Tests
+```
+
+**规则**: 每次提交前必须通过所有检查，不得使用 `--no-verify` 绕过。
 **以上问题必须通过！！！！无法容忍任何的哪怕部分小问题和格式问题**
 
 ---
@@ -116,6 +121,16 @@ test(engine): P0-041 add unit tests for RegimeEngine
 | 任务完成前 | `superpowers:verification-before-completion` |
 | 代码审查 | `superpowers:requesting-code-review` |
 | 并行开发 | `superpowers:subagent-driven-development` |
+
+### 文档同步清单
+
+实现完成后需要更新的文档：
+
+| 文档 | 用途 |
+|------|------|
+| `docs/sprints/sprint-*.md` | 更新任务完成状态 |
+| `docs/plans/YYYY-MM-DD-sprint*-task*.md` | 更新实施状态和验收标准 |
+| `docs/design/*.md` | 同步命名变更、接口变更 |
 
 ---
 

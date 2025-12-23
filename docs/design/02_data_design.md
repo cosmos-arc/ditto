@@ -197,7 +197,7 @@ packages/
           pipeline_store.py       # pipeline_run + dq_issue
 
           # Parquet Stores（年分区）
-          bars_store.py           # market_daily / etf_daily 读写
+          bars_store.py           # stock_daily / etf_daily 读写
           index_store.py          # index_daily / index_weight 读写
           adj_factor_store.py     # adj_factor 读写
 
@@ -240,7 +240,7 @@ $DITTO_DATA_ROOT/
 ├── meta/
 │   └── hub.sqlite                    # SQLite 元数据库
 │
-├── market_daily/                     # 股票日线（年分区）
+├── stock_daily/                     # 股票日线（年分区）
 │   ├── 2020.parquet
 │   ├── 2021.parquet
 │   ├── 2022.parquet
@@ -323,7 +323,7 @@ sid = self.security_store.resolve_sid("000022.SZ", source="tushare", asof="2017-
 df = df.filter(pl.col("trade_date") <= "2017-01-01")
 
 # 4. SQL 查询同样支持
-df = hub.sql("SELECT * FROM market_daily WHERE sid = ?", asof="2017-01-01")
+df = hub.sql("SELECT * FROM stock_daily WHERE sid = ?", asof="2017-01-01")
 ```
 
 ---
@@ -951,7 +951,7 @@ import polars as pl
 # ============================================================
 # 股票日线 Schema
 # ============================================================
-MARKET_DAILY_SCHEMA = {
+STOCK_DAILY_SCHEMA = {
     "sid":              pl.Int64,
     "trade_date":       pl.Date,
     "source":           pl.Utf8,
@@ -988,6 +988,11 @@ ETF_DAILY_SCHEMA = {
     "volume":           pl.Float64,
     "amount":           pl.Float64,
     "pct_change":       pl.Float64,
+    "turnover":         pl.Float64,
+    "is_suspended":     pl.Boolean,
+    "is_limit_up":      pl.Boolean,
+    "is_limit_down":    pl.Boolean,
+    "is_st":            pl.Boolean,
 }
 
 
@@ -1405,7 +1410,7 @@ def check_weight_positive(df: pl.DataFrame, params: dict) -> tuple[bool, int, st
 # ============ 规则配置（替代 YAML）============
 
 DQ_RULES: dict[str, list[DQRule]] = {
-    "market_daily": [
+    "stock_daily": [
         DQRule("primary_key_unique", DQSeverity.FAIL, check_pk_unique, {"keys": ["sid", "trade_date"]}),
         DQRule("sid_not_null", DQSeverity.FAIL, check_sid_not_null),
         DQRule("ohlc_positive", DQSeverity.FAIL, check_ohlc_positive),
@@ -1517,7 +1522,7 @@ DataHub - 统一数据入口（Pythonic 版本）
     bars = hub.bars.get(src_codes=["600000.SH"], start="2024-01-01")
 
     # SQL 查询
-    df = hub.sql("SELECT * FROM market_daily WHERE sid = 10001")
+    df = hub.sql("SELECT * FROM stock_daily WHERE sid = 10001")
 
     # 资源清理
     hub.close()
@@ -1749,10 +1754,10 @@ class DataHub:
 
         示例：
             # 基础查询
-            hub.sql("SELECT * FROM market_daily WHERE sid = 10001")
+            hub.sql("SELECT * FROM stock_daily WHERE sid = 10001")
 
             # PIT 查询
-            hub.sql("SELECT * FROM market_daily WHERE trade_date <= $asof", asof="2024-06-30")
+            hub.sql("SELECT * FROM stock_daily WHERE trade_date <= $asof", asof="2024-06-30")
 
             # 前复权查询
             hub.sql("SELECT * FROM qfq($asof) WHERE sid = 10001", asof="2024-06-30")
@@ -1870,7 +1875,7 @@ class BarsRepository:
         bars = repo.get(src_codes=["600000.SH"], start="2024-01-01", adj="qfq")
 
         # 写入行情
-        result = repo.write(df, year=2024, dataset="market_daily")
+        result = repo.write(df, year=2024, dataset="stock_daily")
     """
 
     def __init__(
@@ -1943,7 +1948,7 @@ class BarsRepository:
 
         if asset_class in ("stock", "all"):
             df = self.bars_store.read(
-                dataset="market_daily",
+                dataset="stock_daily",
                 sids=resolved_sids,
                 start_date=start_date,
                 end_date=end_date,
@@ -2022,7 +2027,7 @@ class BarsRepository:
         self,
         df: pl.DataFrame,
         year: int,
-        dataset: Literal["market_daily", "etf_daily"] = "market_daily",
+        dataset: Literal["stock_daily", "etf_daily"] = "stock_daily",
         source: str = "tushare",
         dq_fail_action: Literal["reject", "quarantine"] = "reject",
     ) -> WriteResult:
@@ -4336,7 +4341,7 @@ class BarsStore:
     行情数据存储（年分区）
 
     存储结构：
-        market_daily/
+        stock_daily/
             2020.parquet
             2021.parquet
             ...
@@ -5258,18 +5263,18 @@ class SqlEngine:
     DuckDB SQL 引擎
 
     支持：
-    - Parquet 数据 (market_daily, index_daily, etc.)
+    - Parquet 数据 (stock_daily, index_daily, etc.)
     - SQLite 元数据 (security, calendar, etc.) - 按需 ATTACH
     - 复权宏 (qfq, market_hfq)
 
     使用示例：
         # 1. 纯 Parquet 查询
-        hub.sql("SELECT * FROM market_daily WHERE sid = 10001")
+        hub.sql("SELECT * FROM stock_daily WHERE sid = 10001")
 
         # 2. 跨库 JOIN（自动 ATTACH SQLite）
         hub.sql('''
             SELECT m.*, s.symbol, s.name
-            FROM market_daily m
+            FROM stock_daily m
             JOIN security s ON m.sid = s.sid
             WHERE m.trade_date = '2024-01-02'
         ''')
@@ -5313,7 +5318,7 @@ class SqlEngine:
     def _register_views(self):
         """注册 Parquet 数据为 DuckDB View"""
         datasets = [
-            "market_daily",
+            "stock_daily",
             "etf_daily",
             "index_daily",
             "index_weight",
@@ -5350,7 +5355,7 @@ class SqlEngine:
                 m.low * COALESCE(f.adj_factor, 1.0) AS low,
                 m.close * COALESCE(f.adj_factor, 1.0) AS close,
                 m.volume, m.amount
-            FROM market_daily m
+            FROM stock_daily m
             LEFT JOIN adj_factor f ON m.sid = f.sid AND m.trade_date = f.trade_date
         """)
 
@@ -5370,7 +5375,7 @@ class SqlEngine:
                 m.low * COALESCE(f.adj_factor, 1.0) / COALESCE(b.base_factor, 1.0) AS low,
                 m.close * COALESCE(f.adj_factor, 1.0) / COALESCE(b.base_factor, 1.0) AS close,
                 m.volume, m.amount
-            FROM market_daily m
+            FROM stock_daily m
             LEFT JOIN adj_factor f ON m.sid = f.sid AND m.trade_date = f.trade_date
             LEFT JOIN baseline b ON m.sid = b.sid
             WHERE m.trade_date <= cast(scan_date as DATE)
@@ -6072,7 +6077,7 @@ constituents = hub.index.get_constituents(
 result = hub.bars.write(
     df=df,
     year=2024,
-    dataset="market_daily",
+    dataset="stock_daily",
     dq_fail_action="reject",
 )
 
@@ -6090,11 +6095,11 @@ hub.index.write_weight(df=weight_df, year=2024)
 
 ```python
 # 查询原始数据（手动 PIT）
-df = hub.sql("SELECT * FROM market_daily WHERE sid = 10001 AND trade_date <= $asof", asof="2024-06-01")
+df = hub.sql("SELECT * FROM stock_daily WHERE sid = 10001 AND trade_date <= $asof", asof="2024-06-01")
 
 # PIT 查询（自动应用 trade_date <= asof）
 df = hub.sql(
-    "SELECT * FROM market_daily WHERE sid = 100000001",
+    "SELECT * FROM stock_daily WHERE sid = 100000001",
     asof="2024-06-30"
 )
 
@@ -6112,7 +6117,7 @@ df = hub.sql("SELECT * FROM qfq($asof) WHERE sid = 1000", asof="2024-01-01")
 # 跨年查询
 df = hub.sql("""
     SELECT sid, trade_date, close
-    FROM market_daily
+    FROM stock_daily
     WHERE trade_date >= '2020-01-01'
     ORDER BY trade_date
 """)
@@ -6120,7 +6125,7 @@ df = hub.sql("""
 # 跨库 JOIN（自动 ATTACH SQLite）
 df = hub.sql("""
     SELECT m.trade_date, m.close, s.symbol, s.name
-    FROM market_daily m
+    FROM stock_daily m
     JOIN security s ON m.sid = s.sid
     WHERE m.trade_date = '2024-06-28'
     ORDER BY m.close DESC
@@ -6275,7 +6280,7 @@ print(history)
 | security (etf) | fund_basic | ts_code→src_code, name, fund_type |
 | security (index) | index_basic | ts_code→src_code, name, market |
 | trading_calendar | trade_cal | cal_date, is_open, pretrade_date |
-| market_daily | daily | ts_code, trade_date, OHLCV |
+| stock_daily | daily | ts_code, trade_date, OHLCV |
 | adj_factor | adj_factor | ts_code, trade_date, adj_factor |
 | etf_daily | fund_daily | ts_code, trade_date, OHLCV |
 | index_daily | index_daily | ts_code, trade_date, OHLCV |
