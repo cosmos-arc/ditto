@@ -37,10 +37,24 @@ src/ditto_foundation/
 ├── util/              # 工具函数
 │   ├── io.py               # IO 工具 (atomic_write, file_md5)
 │   └── __init__.py
-└── logging_config.py  # 日志配置
+├── logging_config.py  # 日志配置
+└── app_initializer.py  # 应用初始化 (NEW)
 ```
 
 ## 四、关键模块说明
+
+### app_initializer - 应用初始化 (NEW)
+- `AppInitializer`: 应用初始化类
+  - `initialize()`: 执行完整初始化（目录创建、日志设置、配置验证）
+- `initialize_app()`: 快速初始化函数（单例模式）
+
+**使用示例**:
+```python
+from ditto_foundation import initialize_app
+
+result = initialize_app()
+# 返回: {"status": "initialized", "log_initialized": True, ...}
+```
 
 ### config/ - 配置管理
 - `DatabaseSettings`: DuckDB/SQLite 配置

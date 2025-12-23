@@ -76,8 +76,37 @@ src/ditto_datahub/
 3. **双存储职责**: DuckDB 用于分析/因子，SQLite 用于事务/配置
 4. **原子写入**: 使用 `atomic_write()` 确保写入完整性
 5. **DQ 规则**: 数据写入前必须通过 DQ 检查
+6. **统一日志**: 所有模块使用 loguru 记录结构化日志，禁止使用 print
 
-## 六、使用示例
+## 六、日志使用说明 (NEW)
+
+所有模块使用 `loguru` 记录结构化日志，遵循统一格式：
+
+### 日志级别
+- **DEBUG**: 函数入参、中间结果、连接创建等详细信息
+- **INFO**: 正常业务流程（操作开始/完成、数据更新成功）
+- **WARNING**: 可恢复异常（SID 解析失败、数据源降级、DQ 规则失败）
+- **ERROR**: 错误但系统可继续（单个数据写入失败、事务回滚）
+
+### 结构化日志字段
+- `event`: 事件类型标识（必须）
+- `duration_ms`: 操作耗时毫秒数（性能操作推荐）
+- 其他上下文字段（按需）
+
+### 示例
+```python
+from loguru import logger
+
+logger.info(
+    "bars_write_complete",  # 事件描述
+    event="bars_write",      # 事件类型
+    dataset="market_daily",   # 上下文
+    row_count=1000,           # 上下文
+    duration_ms=450,          # 性能指标
+)
+```
+
+## 七、使用示例
 
 ```python
 from ditto_datahub.stores import BarsStore, CalendarStore
