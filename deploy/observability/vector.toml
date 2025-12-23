@@ -10,10 +10,12 @@ read_from = "end"
 
 # ============ 数据转换 ============
 
+# 日志文件已经是 JSON 格式，直接解析整行
 [transforms.parse_json]
 type = "remap"
 inputs = ["ditto_logs"]
 source = '''
+# 将整行作为 JSON 解析
 . = parse_json!(.message)
 '''
 
