@@ -7,11 +7,13 @@ Following design document at docs/design/02_data_design.md.
 
 from __future__ import annotations
 
+import time
 from datetime import datetime
 from pathlib import Path
 
 import polars as pl
 from ditto_foundation.util.io import atomic_write, file_md5
+from loguru import logger
 
 
 class BarsStore:
@@ -83,6 +85,41 @@ class BarsStore:
 
         return paths
 
+    def _ensure_date_column(self, df: pl.DataFrame) -> pl.DataFrame:
+        """
+        Ensure trade_date column is Date type for sorting.
+
+        Args:
+            df: Input DataFrame.
+
+        Returns:
+            DataFrame with trade_date as Date type.
+
+        """
+        dtype = df["trade_date"].dtype
+
+        # If already Date type, return as-is
+        if dtype == pl.Date:
+            return df
+
+        # If String type, convert to Date
+        if dtype == pl.String:
+            return df.with_columns(pl.col("trade_date").str.to_date())
+
+        # If Object type (could be date objects or strings), try to convert
+        if dtype == pl.Object:
+            # Try casting to string first, then to date
+            try:
+                return df.with_columns(
+                    pl.col("trade_date").cast(pl.String).str.to_date()
+                )
+            except Exception:
+                # If that fails, the column might already contain date objects
+                # Just return the DataFrame as-is and hope for the best
+                return df
+
+        return df
+
     # ============ Read operations ============
 
     def read(
@@ -105,6 +142,8 @@ class BarsStore:
             DataFrame with matching records.
 
         """
+        start_time = time.time()
+
         # Determine year range from date filters
         start_year = int(start_date[:4]) if start_date else 1990
         end_year = int(end_date[:4]) if end_date else 2099
@@ -112,6 +151,15 @@ class BarsStore:
         paths = self._collect_paths(dataset, start_year, end_year)
 
         if not paths:
+            logger.info(
+                "bars_read_no_data",
+                event="bars_read",
+                dataset=dataset,
+                start_date=start_date,
+                end_date=end_date,
+                row_count=0,
+                duration_ms=0,
+            )
             return pl.DataFrame()
 
         # Scan and filter
@@ -121,7 +169,6 @@ class BarsStore:
             lf = lf.filter(pl.col("sid").is_in(sids))
 
         if start_date:
-            # Convert string to literal date
             start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
             lf = lf.filter(pl.col("trade_date") >= pl.lit(start_dt))
 
@@ -129,7 +176,22 @@ class BarsStore:
             end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
             lf = lf.filter(pl.col("trade_date") <= pl.lit(end_dt))
 
-        return lf.unique(subset=["sid", "trade_date"], keep="last").collect()
+        result = lf.unique(subset=["sid", "trade_date"], keep="last").collect()
+
+        duration_ms = (time.time() - start_time) * 1000
+
+        logger.info(
+            "bars_read_complete",
+            event="bars_read",
+            dataset=dataset,
+            start_date=start_date,
+            end_date=end_date,
+            sids_count=len(sids) if sids else None,
+            row_count=len(result),
+            duration_ms=round(duration_ms, 2),
+        )
+
+        return result
 
     # ============ Write operations ============
 
@@ -153,20 +215,27 @@ class BarsStore:
             Tuple of (file_path, checksum).
 
         """
+        start_time = time.time()
+
         dataset_dir = self._data_root / dataset
         dataset_dir.mkdir(parents=True, exist_ok=True)
 
         file_path = self._get_path(dataset, year)
+        is_merge = file_path.exists()
 
         # Merge with existing data
         if file_path.exists():
             existing = pl.read_parquet(file_path)
-            combined = pl.concat([existing, df]).unique(
+            combined = pl.concat([existing, df])
+            combined = combined.unique(
                 subset=["sid", "trade_date"],
-                keep="last",  # New data overwrites
+                keep="last",
             )
         else:
             combined = df
+
+        # Ensure trade_date is date type for sorting
+        combined = self._ensure_date_column(combined)
 
         # Sort for optimal read performance
         combined = combined.sort(["trade_date", "sid"])
@@ -176,6 +245,21 @@ class BarsStore:
 
         # Calculate checksum
         checksum: str = file_md5(file_path)
+
+        duration_ms = (time.time() - start_time) * 1000
+
+        logger.info(
+            "bars_write_complete",
+            event="bars_write",
+            dataset=dataset,
+            year=year,
+            row_count=len(df),
+            total_rows=len(combined),
+            is_merge=is_merge,
+            file_path=str(file_path),
+            checksum=checksum,
+            duration_ms=round(duration_ms, 2),
+        )
 
         return str(file_path), checksum
 
