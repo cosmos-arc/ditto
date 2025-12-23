@@ -15,7 +15,7 @@ from loguru import logger as _logger
 from .config import Mode, ObservabilityConfig
 
 
-def _json_formatter(record: dict[str, Any]) -> str:
+def _json_formatter(record: dict[str, Any] | Any) -> str:
     """
     JSON 格式化器，用于生产环境日志.
 
