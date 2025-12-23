@@ -1,6 +1,7 @@
 """错误处理中间件."""
 
 import time
+from dataclasses import dataclass
 from typing import Any
 
 from ditto_foundation.logging_config import get_logger
@@ -14,36 +15,41 @@ from .exceptions import DittoException
 logger = get_logger(__name__)
 
 
-def create_error_response(
-    status_code: int,
-    error: str,
-    detail: str | None = None,
-    error_code: str | None = None,
-    request_id: str | None = None,
-    timestamp: float | None = None,
-) -> JSONResponse:
+@dataclass
+class ErrorResponseParams:
+    """错误响应参数."""
+
+    status_code: int
+    error: str
+    detail: str | None = None
+    error_code: str | None = None
+    request_id: str | None = None
+    timestamp: float | None = None
+
+
+def create_error_response(params: ErrorResponseParams) -> JSONResponse:
     """创建标准化的错误响应."""
-    if timestamp is None:
-        timestamp = time.time()
+    if params.timestamp is None:
+        params.timestamp = time.time()
 
     content: dict[str, Any] = {
         "success": False,
-        "error": error,
-        "status_code": status_code,
-        "timestamp": timestamp,
+        "error": params.error,
+        "status_code": params.status_code,
+        "timestamp": params.timestamp,
     }
 
-    if detail:
-        content["detail"] = detail
+    if params.detail:
+        content["detail"] = params.detail
 
-    if error_code:
-        content["error_code"] = error_code
+    if params.error_code:
+        content["error_code"] = params.error_code
 
-    if request_id:
-        content["request_id"] = request_id
+    if params.request_id:
+        content["request_id"] = params.request_id
 
     return JSONResponse(
-        status_code=status_code,
+        status_code=params.status_code,
         content=content,
     )
 
@@ -64,11 +70,13 @@ async def ditto_exception_handler(
     )
 
     return create_error_response(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        error=exc.__class__.__name__,
-        detail=exc.message,
-        error_code=exc.error_code,
-        request_id=request_id,
+        ErrorResponseParams(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            error=exc.__class__.__name__,
+            detail=exc.message,
+            error_code=exc.error_code,
+            request_id=request_id,
+        )
     )
 
 
@@ -88,10 +96,12 @@ async def http_exception_handler(
     )
 
     return create_error_response(
-        status_code=exc.status_code,
-        error="HTTP_ERROR",
-        detail=str(exc.detail),
-        request_id=request_id,
+        ErrorResponseParams(
+            status_code=exc.status_code,
+            error="HTTP_ERROR",
+            detail=str(exc.detail),
+            request_id=request_id,
+        )
     )
 
 
@@ -122,10 +132,12 @@ async def validation_exception_handler(
     )
 
     return create_error_response(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        error="VALIDATION_ERROR",
-        detail="Invalid request parameters",
-        request_id=request_id,
+        ErrorResponseParams(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            error="VALIDATION_ERROR",
+            detail="Invalid request parameters",
+            request_id=request_id,
+        )
     )
 
 
@@ -147,8 +159,10 @@ async def general_exception_handler(
     )
 
     return create_error_response(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        error="INTERNAL_SERVER_ERROR",
-        detail="An unexpected error occurred",
-        request_id=request_id,
+        ErrorResponseParams(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error="INTERNAL_SERVER_ERROR",
+            detail="An unexpected error occurred",
+            request_id=request_id,
+        )
     )

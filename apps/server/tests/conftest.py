@@ -1,8 +1,10 @@
 """pytest配置文件."""
 
 import sqlite3
+from collections.abc import Generator
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any
 
 import duckdb
 import pytest
@@ -10,14 +12,14 @@ from ditto_foundation.config import Settings
 
 
 @pytest.fixture
-def temp_dir():
+def temp_dir() -> Generator[Path, None, None]:
     """临时目录fixture."""
     with TemporaryDirectory() as tmpdir:
         yield Path(tmpdir)
 
 
 @pytest.fixture
-def test_settings(temp_dir):
+def test_settings(temp_dir: Path) -> Settings:
     """测试配置fixture."""
     return Settings(
         duckdb_path=temp_dir / "test.duckdb",
@@ -28,7 +30,9 @@ def test_settings(temp_dir):
 
 
 @pytest.fixture
-def duckdb_conn(test_settings):
+def duckdb_conn(
+    test_settings: Settings,
+) -> Generator[duckdb.DuckDBPyConnection, None, None]:
     """DuckDB连接fixture."""
     conn = duckdb.connect(str(test_settings.duckdb_path))
 
@@ -88,7 +92,7 @@ def duckdb_conn(test_settings):
 
 
 @pytest.fixture
-def sqlite_conn(test_settings):
+def sqlite_conn(test_settings: Settings) -> Generator[sqlite3.Connection, None, None]:
     """SQLite连接fixture."""
     conn = sqlite3.connect(str(test_settings.sqlite_path))
 
@@ -107,7 +111,7 @@ def sqlite_conn(test_settings):
 
 
 @pytest.fixture
-def sample_etf_data():
+def sample_etf_data() -> list[dict[str, Any]]:
     """示例ETF数据."""
     return [
         {
@@ -134,7 +138,7 @@ def sample_etf_data():
 
 
 @pytest.fixture
-def sample_daily_data():
+def sample_daily_data() -> list[dict[str, Any]]:
     """示例日线数据."""
     data = []
     symbol = "510300"
@@ -157,11 +161,11 @@ def sample_daily_data():
 
 @pytest.fixture
 def populated_databases(
-    duckdb_conn,
-    sqlite_conn,
-    sample_etf_data,
-    sample_daily_data,
-):
+    duckdb_conn: duckdb.DuckDBPyConnection,
+    sqlite_conn: sqlite3.Connection,
+    sample_etf_data: list[dict[str, Any]],
+    sample_daily_data: list[dict[str, Any]],
+) -> tuple[duckdb.DuckDBPyConnection, sqlite3.Connection]:
     """填充测试数据的数据库."""
     # 插入ETF数据
     duckdb_conn.execute_many(
@@ -222,7 +226,7 @@ def populated_databases(
             }
         )
 
-    sqlite_conn.execute_many(
+    sqlite_conn.executemany(
         """
         INSERT INTO trading_calendar (date, is_trading_day, knowledge_date)
         VALUES (?, ?, ?)
@@ -231,3 +235,34 @@ def populated_databases(
     )
 
     return duckdb_conn, sqlite_conn
+
+
+# =============================================================================
+# 可观测性 Fixtures
+# =============================================================================
+
+
+@pytest.fixture(autouse=True)
+def reset_observability() -> Generator[None, None, None]:
+    """每个测试自动重置可观测性状态."""
+    from ditto_foundation import reset_for_testing
+
+    reset_for_testing()
+    yield
+    reset_for_testing()
+
+
+@pytest.fixture
+def obs_noop() -> None:
+    """静默模式 - 最快, 不输出日志."""
+    from ditto_foundation import Mode, init
+
+    init(mode=Mode.TESTING)
+
+
+@pytest.fixture
+def obs_assertions() -> None:
+    """断言模式 - 可验证, 内存记录."""
+    from ditto_foundation import Mode, init
+
+    init(mode=Mode.TESTING_WITH_ASSERTIONS)

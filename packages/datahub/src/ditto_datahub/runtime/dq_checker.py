@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import polars as pl
-from loguru import logger
+from ditto_foundation import logger, span
 
 from ..types import DQResult, DQSeverity
 from .dq_rules import DQ_RULES
@@ -42,6 +42,11 @@ class DQChecker:
 
     def check(self, df: pl.DataFrame, dataset_id: str) -> DQCheckResult:
         """Execute DQ checks."""
+        with span("dq_checker.check", dataset_id=dataset_id):
+            return self._check_impl(df, dataset_id)
+
+    def _check_impl(self, df: pl.DataFrame, dataset_id: str) -> DQCheckResult:
+        """Internal implementation of DQ checks."""
         rules = self.rules.get(dataset_id, [])
 
         logger.info(

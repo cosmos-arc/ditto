@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 import polars as pl
-from loguru import logger
+from ditto_foundation import logger
 
 from ditto_datahub.errors import TradingDateNotFoundError
 from ditto_datahub.stores.sqlite_client import SQLiteClient

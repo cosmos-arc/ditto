@@ -2,7 +2,7 @@
 
 from typing import TYPE_CHECKING
 
-from loguru import logger
+from ditto_foundation import logger, span
 
 from ..types import SidRange
 
@@ -19,6 +19,11 @@ class SidAllocator:
 
     def allocate(self, asset_class: str) -> int:
         """Allocate new SID (atomic operation)."""
+        with span("sid_allocator.allocate", asset_class=asset_class):
+            return self._allocate_impl(asset_class)
+
+    def _allocate_impl(self, asset_class: str) -> int:
+        """Internal implementation of SID allocation."""
         # 获取资产类别的SID范围
         min_sid, max_sid = SidRange.get_range(asset_class)
 

@@ -5,7 +5,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from loguru import logger
+from ditto_foundation import logger
 
 
 class SQLitePool:

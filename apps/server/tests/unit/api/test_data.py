@@ -8,13 +8,13 @@ from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-def client():
+def client() -> TestClient:
     """测试客户端."""
     return TestClient(app)
 
 
 @pytest.fixture
-def mock_data_reader():
+def mock_data_reader() -> Mock:
     """模拟数据读取器."""
     mock = Mock()
 
@@ -94,7 +94,9 @@ class TestETFListAPI:
     """ETF列表API测试."""
 
     @patch("ditto_server.api.data.get_data_readers")
-    def test_get_etf_list_success(self, mock_readers, client, mock_data_reader):
+    def test_get_etf_list_success(
+        self, mock_readers: Mock, client: TestClient, mock_data_reader: Mock
+    ) -> None:
         """测试成功获取ETF列表."""
         mock_readers.return_value = (mock_data_reader, None)
 
@@ -108,9 +110,9 @@ class TestETFListAPI:
         assert data["data"][0]["symbol"] == "510300"
 
     @patch("ditto_server.api.data.get_data_readers")
-    def test_get_etf_list_error(self, mock_reader, client):
+    def test_get_etf_list_error(self, mock_reader: Mock, client: TestClient) -> None:
         """测试获取ETF列表失败."""
-        mock_readers.side_effect = Exception("Database connection failed")
+        mock_reader.side_effect = Exception("Database connection failed")
 
         response = client.get("/api/v1/data/etf/list")
 
@@ -123,7 +125,9 @@ class TestDailyDataAPI:
     """日线数据API测试."""
 
     @patch("ditto_server.api.data.get_data_readers")
-    def test_get_daily_data_success(self, mock_readers, client, mock_data_reader):
+    def test_get_daily_data_success(
+        self, mock_readers: Mock, client: TestClient, mock_data_reader: Mock
+    ) -> None:
         """测试成功获取日线数据."""
         mock_readers.return_value = (mock_data_reader, None)
 
@@ -141,9 +145,9 @@ class TestDailyDataAPI:
         assert data["adjusted"] is True
 
     @patch("ditto_server.api.data.get_data_readers")
-    def test_get_daily_data_empty(self, mock_reader, client):
+    def test_get_daily_data_empty(self, mock_reader: Mock, client: TestClient) -> None:
         """测试获取空数据."""
-        mock_readers.return_value[0].get_daily_data.return_value = Mock(
+        mock_reader.return_value[0].get_daily_data.return_value = Mock(
             is_empty=Mock(return_value=True)
         )
 
@@ -157,7 +161,7 @@ class TestDailyDataAPI:
         assert data["count"] == 0
         assert "No data found" in data["message"]
 
-    def test_get_daily_data_invalid_date(self, client):
+    def test_get_daily_data_invalid_date(self, client: TestClient) -> None:
         """测试无效日期格式."""
         response = client.get(
             "/api/v1/data/etf/510300/daily?start_date=2024-13-01&end_date=2024-01-31"
@@ -173,8 +177,8 @@ class TestAdjustmentFactorsAPI:
 
     @patch("ditto_server.api.data.get_data_readers")
     def test_get_adjustment_factors_success(
-        self, mock_readers, client, mock_data_reader
-    ):
+        self, mock_readers: Mock, client: TestClient, mock_data_reader: Mock
+    ) -> None:
         """测试成功获取复权因子."""
         mock_readers.return_value = (mock_data_reader, None)
 
@@ -191,7 +195,9 @@ class TestTradingCalendarAPI:
     """交易日历API测试."""
 
     @patch("ditto_server.api.data.get_data_readers")
-    def test_get_trading_calendar_success(self, mock_readers, client, mock_data_reader):
+    def test_get_trading_calendar_success(
+        self, mock_readers: Mock, client: TestClient, mock_data_reader: Mock
+    ) -> None:
         """测试成功获取交易日历."""
         mock_readers.return_value = (mock_data_reader, None)
 

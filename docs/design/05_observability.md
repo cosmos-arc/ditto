@@ -1,749 +1,1858 @@
-# Ditto 可观测性设计文档
+# Ditto 可观测性方案设计文档
 
 **版本：v2.0 Final（Phase 0–1：ETF 行业轮动）**
 
-**日期：2025-12-08**
+**日期：2025-12-23**
 
 ---
 
-## 1. 设计目标
+## 目录
 
-本文档定义 Ditto 的日志、指标、追踪与告警设计，确保：
-
-1. **问题可定位**：出错时能快速找到原因
-2. **状态可感知**：随时了解系统运行状况
-3. **外部可验证**：心跳机制证明系统存活
-4. **历史可追溯**：关键操作有审计记录
+1. [设计目标与原则](#1-设计目标与原则)
+2. [技术栈选择](#2-技术栈选择)
+3. [架构设计](#3-架构设计)
+4. [日志规范](#4-日志规范)
+5. [Trace 规范](#5-trace-规范)
+6. [Metrics 规范](#6-metrics-规范)
+7. [埋点清单](#7-埋点清单)
+8. [告警规则](#8-告警规则)
+9. [代码实现](#9-代码实现)
+10. [部署方案](#10-部署方案)
+11. [测试方案](#11-测试方案)
+12. [运维手册](#12-运维手册)
 
 ---
 
-## 2. 日志设计
+## 1. 设计目标与原则
 
-### 2.1 日志框架
+### 1.1 设计目标
 
-使用 **loguru** 作为日志框架，配置如下：
+| 目标 | 说明 | 验收标准 |
+|------|------|----------|
+| **问题可定位** | 出错时能快速找到原因 | 通过 trace_id 5 分钟内定位问题 |
+| **状态可感知** | 随时了解系统运行状况 | Grafana 仪表盘实时展示 |
+| **外部可验证** | 心跳机制证明系统存活 | /healthz 端点响应 < 100ms |
+| **历史可追溯** | 关键操作有审计记录 | 审计日志永久保留 |
+
+### 1.2 设计原则
+
+| 原则 | 说明 |
+|------|------|
+| **OTel 标准优先** | 使用 OpenTelemetry API，后端可插拔 |
+| **轻量单机优化** | 资源占用 < 500MB RAM |
+| **渐进式建设** | 先 Logs + Metrics，后 Traces |
+| **测试友好** | 单测不依赖外部服务 |
+| **业务语义清晰** | 指标/日志命名体现业务含义 |
+
+---
+
+## 2. 技术栈选择
+
+### 2.1 SDK 层
+
+| 组件 | 选型 | 版本 | 说明 |
+|------|------|------|------|
+| Logs | Loguru | ≥0.7 | Python 最佳日志库，开发体验好 |
+| Traces | OTel API | ≥1.20 | 业界标准，通过日志 trace_id 关联 |
+| Metrics | OTel API | ≥1.20 | 业界标准，OTLP 直推 |
+
+### 2.2 后端层
+
+| 组件 | 选型 | 版本 | 说明 |
+|------|------|------|------|
+| Metrics 存储 | VictoriaMetrics | ≥1.96 | 原生 OTLP 支持，单二进制 |
+| Logs 存储 | VictoriaLogs | ≥1.0 | 超轻量，LogsQL 查询 |
+| Logs 采集 | Vector | ≥0.34 | 高性能，配置简单 |
+| 可视化 | Grafana | ≥10.2 | 统一仪表盘 |
+
+### 2.3 依赖清单
+
+```toml
+# pyproject.toml
+[project]
+dependencies = [
+    # OTel 核心
+    "opentelemetry-api>=1.20",
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp-proto-http>=1.20",
+
+    # 日志
+    "loguru>=0.7",
+]
+```
+
+**安装大小：~15MB**
+
+---
+
+## 3. 架构设计
+
+### 3.1 整体架构
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Ditto Application                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
+│  │   Loguru     │    │  OTel Tracer │    │  OTel Meter  │       │
+│  │              │◄───│  (trace_id)  │    │              │       │
+│  └──────┬───────┘    └──────────────┘    └──────┬───────┘       │
+│         │                                        │               │
+│         ▼                                        ▼               │
+│  ┌──────────────┐                        ┌──────────────┐       │
+│  │  JSON Files  │                        │ OTLP Exporter│       │
+│  │  (.jsonl)    │                        │              │       │
+│  └──────┬───────┘                        └──────┬───────┘       │
+│         │                                        │               │
+└─────────┼────────────────────────────────────────┼───────────────┘
+          │                                        │
+          ▼                                        ▼
+   ┌──────────────┐                    ┌────────────────────┐
+   │    Vector    │                    │  VictoriaMetrics   │
+   │              │                    │  :8428/otlp/v1     │
+   └──────┬───────┘                    └─────────┬──────────┘
+          │                                      │
+          ▼                                      │
+   ┌──────────────┐                              │
+   │ VictoriaLogs │                              │
+   │    :9428     │                              │
+   └──────┬───────┘                              │
+          │                                      │
+          └──────────────┬───────────────────────┘
+                         │
+                         ▼
+                  ┌──────────────┐
+                  │   Grafana    │
+                  │    :3000     │
+                  └──────────────┘
+```
+
+### 3.2 数据流
+
+| 数据类型 | 流向 | 格式 |
+|----------|------|------|
+| Logs | App → JSON File → Vector → VictoriaLogs | JSON Lines |
+| Metrics | App → OTLP HTTP → VictoriaMetrics | OTLP/HTTP |
+| Traces | 通过 trace_id 关联日志（暂不独立存储） | - |
+
+### 3.3 端口规划
+
+| 服务 | 端口 | 用途 |
+|------|------|------|
+| Ditto API | 8000 | 业务 API |
+| VictoriaMetrics | 8428 | Metrics 存储 + OTLP 接收 |
+| VictoriaLogs | 9428 | Logs 存储 + 查询 |
+| Vector | 8686 | 日志采集状态 |
+| Grafana | 3000 | 可视化仪表盘 |
+
+---
+
+## 4. 日志规范
+
+### 4.1 日志级别
+
+| 级别 | 使用场景 | 示例 |
+|------|----------|------|
+| **DEBUG** | 开发调试信息 | 函数入参、中间计算结果、span 开始/结束 |
+| **INFO** | 正常业务流程 | 任务开始/完成、数据更新成功、调仓执行 |
+| **WARNING** | 异常但可恢复 | 数据源降级、因子健康度警告、Kill Switch L1 |
+| **ERROR** | 错误但系统可继续 | 单个标的数据获取失败、API 调用失败 |
+| **CRITICAL** | 严重错误需人工介入 | Kill Switch L2/L3、数据库损坏 |
+
+### 4.2 日志字段规范
+
+#### 4.2.1 必选字段
+
+| 字段名 | 类型 | 说明 | 示例 |
+|--------|------|------|------|
+| `_time` | string | ISO8601 时间戳 | `2024-12-23T14:30:01.123Z` |
+| `level` | string | 日志级别 | `INFO` |
+| `_msg` | string | 日志消息 | `Data update completed` |
+| `service` | string | 服务名 | `ditto` |
+
+#### 4.2.2 Trace 上下文字段
+
+| 字段名 | 类型 | 说明 | 示例 |
+|--------|------|------|------|
+| `trace_id` | string | 追踪 ID（8位） | `a1b2c3d4` |
+| `span` | string | 当前 Span 名称 | `run_backtest` |
+| `span_path` | string | Span 调用路径 | `run_backtest > load_data` |
+
+#### 4.2.3 业务上下文字段
+
+| 字段名 | 类型 | 使用场景 | 示例 |
+|--------|------|----------|------|
+| `event` | string | 事件类型（用于搜索） | `data_update`, `rebalance` |
+| `strategy` | string | 策略名称 | `etf_rotation` |
+| `trade_date` | string | 交易日期 | `2024-12-23` |
+| `symbol` | string | 标的代码 | `510300.SH` |
+| `source` | string | 数据源 | `tushare`, `akshare` |
+| `duration_ms` | float | 操作耗时（毫秒） | `1234.5` |
+| `error` | string | 错误信息 | `Connection timeout` |
+| `error_type` | string | 错误类型 | `ValueError` |
+
+### 4.3 事件类型（event 字段）
+
+统一使用 `snake_case`，格式：`{domain}_{action}`
+
+| 领域 | 事件类型 | 说明 |
+|------|----------|------|
+| **数据** | `data_update_start` | 数据更新开始 |
+| | `data_update_complete` | 数据更新完成 |
+| | `data_update_failed` | 数据更新失败 |
+| | `data_validation_error` | 数据校验错误 |
+| **因子** | `factor_calc_start` | 因子计算开始 |
+| | `factor_calc_complete` | 因子计算完成 |
+| | `factor_health_warning` | 因子健康度警告 |
+| **策略** | `signal_generated` | 信号生成 |
+| | `rebalance_plan_created` | 调仓计划创建 |
+| | `rebalance_executed` | 调仓执行 |
+| **风控** | `kill_switch_triggered` | Kill Switch 触发 |
+| | `kill_switch_deactivated` | Kill Switch 解除 |
+| | `drawdown_warning` | 回撤警告 |
+| **系统** | `scheduler_job_start` | 调度任务开始 |
+| | `scheduler_job_complete` | 调度任务完成 |
+| | `api_request` | API 请求 |
+| | `health_check` | 健康检查 |
+
+### 4.4 日志示例
 
 ```python
-# packages/core/ditto/config/logging.py
+# INFO - 正常业务流程
+logger.info(
+    "Daily data update completed",
+    event="data_update_complete",
+    trade_date="2024-12-23",
+    source="tushare",
+    duration_ms=45000,
+    records_inserted=1250,
+    symbols_updated=50,
+)
+
+# WARNING - 可恢复异常
+logger.warning(
+    "Primary data source unavailable, using fallback",
+    event="data_source_degraded",
+    primary_source="tushare",
+    fallback_source="akshare",
+)
+
+# ERROR - 错误但可继续
+logger.error(
+    "Failed to fetch data for symbol",
+    event="data_update_failed",
+    symbol="510300.SH",
+    source="tushare",
+    error="Connection timeout",
+    error_type="TimeoutError",
+    retry_count=3,
+)
+
+# CRITICAL - 需人工介入
+logger.critical(
+    "Kill Switch Level 2 triggered",
+    event="kill_switch_triggered",
+    level=2,
+    current_drawdown=0.185,
+    threshold=0.18,
+    action="REDUCE_50PCT",
+)
+```
+
+### 4.5 敏感信息处理
+
+```python
+# ❌ 错误：记录完整敏感信息
+logger.info("API call", api_key="sk-1234567890abcdef")
+
+# ✅ 正确：脱敏处理
+logger.info("API call", api_key="sk-12****ef")
+
+# ❌ 错误：记录密码
+logger.info("Login", password="my_password")
+
+# ✅ 正确：不记录密码
+logger.info("Login", user="admin")
+```
+
+**禁止记录的信息：**
+- 完整 API Key / Token
+- 账户密码
+- 券商账号信息
+- 身份证号、手机号等个人信息
+
+---
+
+## 5. Trace 规范
+
+### 5.1 Trace ID 生成规则
+
+- **格式**：8 位十六进制字符（UUID 前 8 位）
+- **生成时机**：每个顶层操作开始时自动生成
+- **传递方式**：通过 `contextvars` 在调用链中传递
+
+### 5.2 Span 命名规范
+
+格式：`{domain}.{operation}` 或 `{operation}`（简单场景）
+
+| 领域 | Span 名称 | 说明 |
+|------|-----------|------|
+| **数据** | `data.update` | 数据更新主流程 |
+| | `data.fetch` | 从数据源获取数据 |
+| | `data.validate` | 数据校验 |
+| | `data.store` | 数据存储 |
+| **因子** | `factor.calculate` | 因子计算主流程 |
+| | `factor.{name}` | 单个因子计算 |
+| **策略** | `strategy.generate_signal` | 信号生成 |
+| | `strategy.create_plan` | 创建调仓计划 |
+| | `strategy.execute` | 执行调仓 |
+| **回测** | `backtest.run` | 回测主流程 |
+| | `backtest.load_data` | 加载回测数据 |
+| | `backtest.simulate` | 模拟交易 |
+| | `backtest.calculate_metrics` | 计算回测指标 |
+
+### 5.3 Span 属性规范
+
+| 属性名 | 类型 | 说明 | 示例 |
+|--------|------|------|------|
+| `strategy` | string | 策略名称 | `etf_rotation` |
+| `trade_date` | string | 交易日期 | `2024-12-23` |
+| `symbol` | string | 标的代码 | `510300.SH` |
+| `source` | string | 数据源 | `tushare` |
+| `rows` | int | 数据行数 | `10000` |
+| `duration_ms` | float | 耗时 | `1234.5` |
+
+### 5.4 使用示例
+
+```python
+from ditto.observability import span, traced, logger
+
+# 装饰器方式
+@traced("backtest.run")
+def run_backtest(strategy: str, start_date: str, end_date: str) -> dict:
+    logger.info(f"Starting backtest: {strategy}")
+
+    with span("backtest.load_data", source="duckdb") as s:
+        df = load_data(start_date, end_date)
+        s.set_attribute("rows", len(df))
+        logger.info("Data loaded", rows=len(df))
+
+    with span("backtest.simulate"):
+        result = simulate(df, strategy)
+        logger.info("Simulation complete", orders=result.order_count)
+
+    return result
+```
+
+---
+
+## 6. Metrics 规范
+
+### 6.1 命名规范
+
+格式：`ditto.{domain}.{metric_name}`
+
+- 使用 `snake_case`
+- 单位后缀：`_seconds`, `_bytes`, `_total`, `_ratio`, `_percent`
+- Counter 以 `_total` 结尾
+- Gauge 描述当前状态
+- Histogram 用于分布统计
+
+### 6.2 Label 规范
+
+| Label 名 | 说明 | 示例值 |
+|----------|------|--------|
+| `strategy` | 策略名称 | `etf_rotation` |
+| `source` | 数据源 | `tushare`, `akshare` |
+| `table` | 数据表名 | `etf_daily`, `index_daily` |
+| `factor` | 因子名称 | `rs_20d`, `vol_20d` |
+| `status` | 状态 | `success`, `failed` |
+| `level` | 级别 | `1`, `2`, `3` |
+| `direction` | 方向 | `buy`, `sell` |
+| `regime` | 市场状态 | `bull`, `bear`, `oscillation` |
+
+**Label 使用原则：**
+- 控制基数：每个 label 的值不超过 20 个
+- 避免高基数：不使用 `symbol`、`order_id` 等高基数字段作为 label
+- 相关指标使用一致的 label
+
+### 6.3 指标清单
+
+#### 6.3.1 数据指标
+
+| 指标名 | 类型 | Labels | 说明 |
+|--------|------|--------|------|
+| `ditto.data.update_duration_seconds` | Histogram | `source`, `table` | 数据更新耗时 |
+| `ditto.data.records_total` | Counter | `source`, `table`, `status` | 数据记录数 |
+| `ditto.data.freshness_seconds` | Gauge | `source`, `table` | 数据新鲜度（距最新数据的秒数） |
+| `ditto.data.quality_ratio` | Gauge | `source`, `table` | 数据完整率 |
+| `ditto.data.errors_total` | Counter | `source`, `error_type` | 数据错误数 |
+
+#### 6.3.2 因子指标
+
+| 指标名 | 类型 | Labels | 说明 |
+|--------|------|--------|------|
+| `ditto.factor.calc_duration_seconds` | Histogram | `factor` | 因子计算耗时 |
+| `ditto.factor.ic_value` | Gauge | `factor`, `period` | 因子 IC 值 |
+| `ditto.factor.health_status` | Gauge | `factor` | 健康状态（0=健康,1=警告,2=严重） |
+
+#### 6.3.3 策略指标
+
+| 指标名 | 类型 | Labels | 说明 |
+|--------|------|--------|------|
+| `ditto.strategy.signal_total` | Counter | `strategy`, `direction` | 信号生成数 |
+| `ditto.strategy.rebalance_total` | Counter | `strategy`, `status` | 调仓执行数 |
+
+#### 6.3.4 组合指标
+
+| 指标名 | 类型 | Labels | 说明 |
+|--------|------|--------|------|
+| `ditto.portfolio.value_yuan` | Gauge | `strategy` | 组合净值（元） |
+| `ditto.portfolio.return_ratio` | Gauge | `strategy`, `period` | 收益率 |
+| `ditto.portfolio.drawdown_ratio` | Gauge | `strategy` | 当前回撤 |
+| `ditto.portfolio.drawdown_3d_ratio` | Gauge | `strategy` | 3 日回撤（速度） |
+| `ditto.portfolio.position_ratio` | Gauge | `strategy` | 仓位比例 |
+| `ditto.portfolio.position_count` | Gauge | `strategy` | 持仓数量 |
+
+#### 6.3.5 风控指标
+
+| 指标名 | 类型 | Labels | 说明 |
+|--------|------|--------|------|
+| `ditto.risk.kill_switch_level` | Gauge | `strategy` | Kill Switch 当前级别 |
+| `ditto.risk.kill_switch_total` | Counter | `strategy`, `level` | Kill Switch 触发次数 |
+| `ditto.risk.alerts_total` | Counter | `strategy`, `alert_type` | 告警次数 |
+
+#### 6.3.6 系统指标
+
+| 指标名 | 类型 | Labels | 说明 |
+|--------|------|--------|------|
+| `ditto.system.scheduler_jobs_total` | Counter | `job`, `status` | 调度任务执行数 |
+| `ditto.system.scheduler_job_duration_seconds` | Histogram | `job` | 任务耗时 |
+| `ditto.system.api_requests_total` | Counter | `endpoint`, `method`, `status` | API 请求数 |
+| `ditto.system.api_duration_seconds` | Histogram | `endpoint`, `method` | API 耗时 |
+| `ditto.system.db_query_duration_seconds` | Histogram | `db`, `operation` | 数据库查询耗时 |
+| `ditto.system.heartbeat_timestamp` | Gauge | - | 最近心跳时间戳 |
+
+### 6.4 Histogram Buckets
+
+```python
+# 耗时类（秒）
+DURATION_BUCKETS = [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120, 300]
+
+# 数据量类
+SIZE_BUCKETS = [100, 500, 1000, 5000, 10000, 50000, 100000]
+```
+
+---
+
+## 7. 埋点清单
+
+### 7.1 数据模块
+
+| 位置 | Span | Metrics | Logs |
+|------|------|---------|------|
+| 数据更新入口 | `data.update` | `update_duration_seconds` | INFO: 开始/完成 |
+| 数据源获取 | `data.fetch` | `records_total` | DEBUG: 获取中 |
+| 数据校验 | `data.validate` | `quality_ratio` | WARNING: 校验失败 |
+| 数据存储 | `data.store` | - | DEBUG: 存储中 |
+| 数据源切换 | - | `errors_total` | WARNING: 降级 |
+
+```python
+# 示例：数据更新埋点
+@traced("data.update")
+def update_daily_data(trade_date: str) -> None:
+    logger.info("Starting daily data update", event="data_update_start", trade_date=trade_date)
+
+    for source in ["tushare", "akshare"]:
+        with span("data.fetch", source=source) as s:
+            try:
+                df = fetch_from_source(source, trade_date)
+                s.set_attribute("rows", len(df))
+                M.data_records.add(len(df), {"source": source, "table": "etf_daily", "status": "success"})
+                logger.debug(f"Fetched {len(df)} records", source=source, rows=len(df))
+            except Exception as e:
+                M.data_errors.add(1, {"source": source, "error_type": type(e).__name__})
+                logger.error("Data fetch failed", event="data_update_failed", source=source, error=str(e))
+                raise
+
+    M.data_freshness.set(0, {"source": "tushare", "table": "etf_daily"})
+    logger.info("Daily data update completed", event="data_update_complete", trade_date=trade_date)
+```
+
+### 7.2 因子模块
+
+| 位置 | Span | Metrics | Logs |
+|------|------|---------|------|
+| 因子计算入口 | `factor.calculate` | `calc_duration_seconds` | INFO: 开始/完成 |
+| 单因子计算 | `factor.{name}` | - | DEBUG: 计算中 |
+| IC 计算 | `factor.ic` | `ic_value` | INFO: IC 结果 |
+| 健康检查 | - | `health_status` | WARNING: 健康度下降 |
+
+```python
+# 示例：因子计算埋点
+@traced("factor.calculate")
+def calculate_factors(trade_date: str) -> None:
+    logger.info("Starting factor calculation", event="factor_calc_start", trade_date=trade_date)
+
+    for factor_name in FACTORS:
+        with span(f"factor.{factor_name}") as s:
+            with M.factor_calc_duration.labels(factor=factor_name).time():
+                result = calculate_single_factor(factor_name, trade_date)
+                s.set_attribute("symbols", len(result))
+
+    logger.info("Factor calculation completed", event="factor_calc_complete", trade_date=trade_date)
+```
+
+### 7.3 策略模块
+
+| 位置 | Span | Metrics | Logs |
+|------|------|---------|------|
+| 信号生成 | `strategy.generate_signal` | `signal_total` | INFO: 信号详情 |
+| 调仓计划 | `strategy.create_plan` | - | INFO: 计划创建 |
+| 调仓执行 | `strategy.execute` | `rebalance_total` | INFO: 执行结果 |
+
+### 7.4 风控模块
+
+| 位置 | Span | Metrics | Logs |
+|------|------|---------|------|
+| Kill Switch 检查 | - | `kill_switch_level` | DEBUG: 检查结果 |
+| Kill Switch 触发 | - | `kill_switch_total` | CRITICAL: L2/L3, WARNING: L1 |
+| 回撤计算 | - | `drawdown_ratio`, `drawdown_3d_ratio` | WARNING: 超阈值 |
+
+```python
+# 示例：Kill Switch 埋点
+def check_kill_switch(drawdown: float, drawdown_3d: float) -> int:
+    level = 0
+
+    if drawdown >= 0.20:
+        level = 3
+        logger.critical(
+            "Kill Switch Level 3 triggered - Full liquidation",
+            event="kill_switch_triggered",
+            level=3,
+            current_drawdown=drawdown,
+            threshold=0.20,
+            action="LIQUIDATE_ALL",
+        )
+    elif drawdown >= 0.18:
+        level = 2
+        logger.critical(
+            "Kill Switch Level 2 triggered - Reduce 50%",
+            event="kill_switch_triggered",
+            level=2,
+            current_drawdown=drawdown,
+            threshold=0.18,
+            action="REDUCE_50PCT",
+        )
+    elif drawdown >= 0.15 or drawdown_3d >= 0.05:
+        level = 1
+        logger.warning(
+            "Kill Switch Level 1 triggered - No new positions",
+            event="kill_switch_triggered",
+            level=1,
+            current_drawdown=drawdown,
+            drawdown_3d=drawdown_3d,
+            action="STOP_NEW_POSITIONS",
+        )
+
+    M.kill_switch_level.set(level, {"strategy": "etf_rotation"})
+    if level > 0:
+        M.kill_switch_total.add(1, {"strategy": "etf_rotation", "level": str(level)})
+
+    return level
+```
+
+### 7.5 调度模块
+
+| 位置 | Span | Metrics | Logs |
+|------|------|---------|------|
+| 任务开始 | `scheduler.{job}` | `scheduler_jobs_total` | INFO: 任务开始 |
+| 任务完成 | - | `scheduler_job_duration_seconds` | INFO: 任务完成 |
+| 任务失败 | - | - | ERROR: 任务失败 |
+
+### 7.6 API 模块
+
+| 位置 | Span | Metrics | Logs |
+|------|------|---------|------|
+| 请求入口 | `api.{endpoint}` | `api_requests_total` | DEBUG: 请求详情 |
+| 请求完成 | - | `api_duration_seconds` | DEBUG: 响应详情 |
+| 请求错误 | - | - | ERROR: 错误详情 |
+
+---
+
+## 8. 告警规则
+
+### 8.1 告警级别
+
+| 级别 | 名称 | 响应时间 | 通知方式 |
+|------|------|----------|----------|
+| **P0** | 紧急 | 立即 | Telegram + 钉钉 + 邮件 + 短信 |
+| **P1** | 严重 | 1 小时内 | Telegram + 钉钉 + 邮件 |
+| **P2** | 警告 | 当日 | Telegram + 钉钉 |
+| **P3** | 通知 | 下次检查 | 仅日志 |
+
+### 8.2 告警规则清单
+
+#### P0 - 紧急
+
+| 规则名 | 条件 | 消息模板 |
+|--------|------|----------|
+| `kill_switch_level3` | `kill_switch_level >= 3` | 🚨 紧急：Kill Switch L3 触发！回撤 {drawdown:.1%}，已强制清仓 |
+
+#### P1 - 严重
+
+| 规则名 | 条件 | 消息模板 |
+|--------|------|----------|
+| `kill_switch_level2` | `kill_switch_level == 2` | ⚠️ 严重：Kill Switch L2 触发，回撤 {drawdown:.1%}，已减仓 50% |
+| `all_data_sources_failed` | 所有数据源失败 | ⚠️ 严重：所有数据源不可用，数据更新暂停 |
+| `heartbeat_missing` | 心跳超过 6 小时 | ⚠️ 严重：系统心跳丢失超过 6 小时 |
+
+#### P2 - 警告
+
+| 规则名 | 条件 | 消息模板 |
+|--------|------|----------|
+| `kill_switch_level1` | `kill_switch_level == 1` | ⚡ 警告：Kill Switch L1 触发，回撤 {drawdown:.1%}，已停止新开仓 |
+| `fast_drawdown` | `drawdown_3d > 0.05` | ⚡ 警告：3 日回撤 {drawdown_3d:.1%}，触发速度保护 |
+| `factor_critical` | 因子健康状态为 CRITICAL | ⚡ 警告：因子 {factor} IC 为负，建议移除 |
+| `data_stale` | 数据新鲜度 > 24 小时 | ⚡ 警告：{table} 数据已超过 24 小时未更新 |
+
+#### P3 - 通知
+
+| 规则名 | 条件 | 消息模板 |
+|--------|------|----------|
+| `data_source_degraded` | 主数据源不可用 | 📝 通知：主数据源 {source} 不可用，已降级到备用源 |
+| `factor_warning` | 因子健康状态为 WARNING | 📝 通知：因子 {factor} IC 低于阈值，建议观察 |
+| `scheduler_job_failed` | 调度任务失败 | 📝 通知：任务 {job} 执行失败：{error} |
+
+### 8.3 Grafana 告警配置示例
+
+```yaml
+# grafana/provisioning/alerting/rules.yaml
+apiVersion: 1
+groups:
+  - name: ditto_critical
+    folder: Ditto
+    interval: 1m
+    rules:
+      - uid: kill_switch_l2
+        title: Kill Switch Level 2
+        condition: B
+        data:
+          - refId: A
+            datasourceUid: victoriametrics
+            model:
+              expr: ditto_risk_kill_switch_level{strategy="etf_rotation"} >= 2
+          - refId: B
+            datasourceUid: "-100"
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+        for: 0s
+        annotations:
+          summary: "Kill Switch Level 2 triggered"
+        labels:
+          severity: critical
+```
+
+---
+
+## 9. 代码实现
+
+### 9.1 目录结构
+
+```
+packages/foundation/scr/ditto_foundation/
+├── observability/
+│   ├── __init__.py          # 统一导出
+│   ├── config.py             # 配置
+│   ├── logging.py            # Loguru 配置
+│   ├── tracing.py            # OTel Tracing
+│   ├── metrics.py            # OTel Metrics
+│   └── testing.py            # 测试辅助
+```
+
+### 9.2 完整实现
+
+```python
+# packages/foundation/scr/ditto_foundation/observability/__init__.py
+"""
+Ditto 可观测性模块
+
+使用方法：
+    from ditto.observability import init, logger, span, traced, M
+
+    # 初始化
+    init()
+
+    # 日志
+    logger.info("Starting backtest", strategy="etf_rotation")
+
+    # 追踪
+    @traced("my_function")
+    def my_function():
+        with span("sub_operation", key="value"):
+            ...
+
+    # 指标
+    M.backtest_total.add(1, {"strategy": "etf_rotation", "status": "success"})
+"""
+
+from .config import ObservabilityConfig, Mode
+from .logging import configure_logging
+from .tracing import (
+    configure_tracing,
+    span,
+    traced,
+    get_trace_id,
+    get_tracer,
+)
+from .metrics import configure_metrics, get_meter, M
+from .testing import (
+    reset_for_testing,
+    get_recorded_spans,
+    clear_recorded_spans,
+    get_recorded_metrics,
+)
 
 from loguru import logger
-import sys
-from pathlib import Path
 
-def setup_logging(
-    log_dir: str = "logs",
-    level: str = "INFO",
-    rotation: str = "00:00",
-    retention: str = "30 days"
-):
-    """配置日志系统"""
+__all__ = [
+    # 初始化
+    "init",
+    "shutdown",
+    "ObservabilityConfig",
+    "Mode",
+    # Logging
+    "logger",
+    # Tracing
+    "span",
+    "traced",
+    "get_trace_id",
+    "get_tracer",
+    # Metrics
+    "get_meter",
+    "M",
+    # Testing
+    "reset_for_testing",
+    "get_recorded_spans",
+    "clear_recorded_spans",
+    "get_recorded_metrics",
+]
 
-    log_path = Path(log_dir)
-    log_path.mkdir(parents=True, exist_ok=True)
+_initialized = False
 
-    # 移除默认 handler
-    logger.remove()
 
-    # 控制台输出（带颜色）
-    logger.add(
-        sys.stderr,
-        level=level,
-        format="<green>{time:HH:mm:ss}</green> | "
-               "<level>{level: <8}</level> | "
-               "<cyan>{name}</cyan>:<cyan>{function}</cyan> | "
-               "<level>{message}</level>",
-        colorize=True
+def init(
+    service_name: str = "ditto",
+    environment: str = "dev",
+    vm_endpoint: str = "http://localhost:8428/opentelemetry/v1/metrics",
+    mode: Mode | None = None,
+) -> None:
+    """一键初始化所有可观测性组件"""
+    global _initialized
+
+    if _initialized:
+        return
+
+    config = ObservabilityConfig(
+        service_name=service_name,
+        environment=environment,
+        vm_otlp_endpoint=vm_endpoint,
     )
 
-    # 文件输出（结构化 JSON）
+    actual_mode = mode or config.detect_mode()
+
+    if actual_mode in (Mode.TESTING, Mode.TESTING_WITH_ASSERTIONS):
+        configure_logging(config, silent=True)
+    else:
+        configure_logging(config)
+
+    configure_tracing(config, actual_mode)
+    configure_metrics(config, actual_mode)
+
+    if actual_mode not in (Mode.TESTING, Mode.TESTING_WITH_ASSERTIONS):
+        logger.info(
+            f"Observability initialized: {service_name} ({actual_mode.value})",
+            event="observability_init",
+            service=service_name,
+            environment=environment,
+            mode=actual_mode.value,
+        )
+
+    _initialized = True
+
+
+def shutdown() -> None:
+    """优雅关闭"""
+    from opentelemetry import trace, metrics
+
+    for provider in [trace.get_tracer_provider(), metrics.get_meter_provider()]:
+        if hasattr(provider, "shutdown"):
+            provider.shutdown()
+```
+
+```python
+# packages/foundation/scr/ditto_foundation/observability/config.py
+"""可观测性配置"""
+
+from __future__ import annotations
+
+import os
+from enum import Enum
+from dataclasses import dataclass, field
+
+
+class Mode(Enum):
+    """运行模式"""
+
+    PRODUCTION = "production"
+    DEVELOPMENT = "development"
+    TESTING = "testing"
+    TESTING_WITH_ASSERTIONS = "testing_assertions"
+
+
+@dataclass
+class ObservabilityConfig:
+    """可观测性配置"""
+
+    service_name: str = "ditto"
+    environment: str = "dev"
+    log_dir: str = "logs"
+    log_level: str = "INFO"
+
+    # VictoriaMetrics OTLP 端点
+    vm_otlp_endpoint: str = "http://localhost:8428/opentelemetry/v1/metrics"
+    metrics_export_interval_ms: int = 15_000
+
+    # 功能开关
+    tracing_enabled: bool = True
+    metrics_enabled: bool = True
+
+    def detect_mode(self) -> Mode:
+        """自动检测运行模式"""
+        # pytest 环境
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            return Mode.TESTING
+
+        # 显式指定
+        mode = os.environ.get("DITTO_OBSERVABILITY_MODE", "").lower()
+        if mode == "testing":
+            return Mode.TESTING
+        if mode == "testing_assertions":
+            return Mode.TESTING_WITH_ASSERTIONS
+
+        # 根据环境判断
+        if self.environment == "production":
+            return Mode.PRODUCTION
+        return Mode.DEVELOPMENT
+```
+
+```python
+# packages/foundation/scr/ditto_foundation/observability/logging.py
+"""Loguru 日志配置"""
+
+from __future__ import annotations
+
+import sys
+import json
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from loguru import logger
+
+if TYPE_CHECKING:
+    from .config import ObservabilityConfig
+
+
+def _json_formatter(record: dict) -> str:
+    """JSON 格式化器 - VictoriaLogs 友好"""
+    r = record
+    log = {
+        "_time": r["time"].strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        "level": r["level"].name,
+        "_msg": r["message"],
+        "service": r["extra"].get("service", "ditto"),
+        "file": f"{r['file'].name}:{r['line']}",
+    }
+
+    # 合并上下文字段（过滤 None 值）
+    for k, v in r["extra"].items():
+        if v is not None and k != "service":
+            log[k] = v
+
+    # 异常信息
+    if r["exception"]:
+        log["error"] = str(r["exception"].value)
+        log["error_type"] = (
+            r["exception"].type.__name__ if r["exception"].type else None
+        )
+
+    return json.dumps(log, ensure_ascii=False, default=str)
+
+
+def _json_sink(message) -> None:
+    """JSON sink"""
+    print(_json_formatter(message.record), file=sys.stderr)
+
+
+def configure_logging(config: ObservabilityConfig, silent: bool = False) -> None:
+    """配置 Loguru"""
+    logger.remove()
+
+    if silent:
+        # 测试模式：静默（可保留 WARNING 以上）
+        # logger.add(sys.stderr, level="WARNING")
+        return
+
+    # 开发环境：彩色控制台
+    if config.environment != "production":
+        logger.add(
+            sys.stderr,
+            format=(
+                "<green>{time:HH:mm:ss.SSS}</green> | "
+                "<level>{level: <8}</level> | "
+                "<cyan>{extra[trace_id]:-<8}</cyan> | "
+                "<cyan>{file}:{line}</cyan> | "
+                "<level>{message}</level>"
+            ),
+            level="DEBUG",
+            colorize=True,
+        )
+    else:
+        # 生产环境：JSON 格式
+        logger.add(_json_sink, level=config.log_level)
+
+    # 文件输出（JSON 格式，供 Vector 采集）
+    log_path = Path(config.log_dir)
+    log_path.mkdir(parents=True, exist_ok=True)
+
+    # 主日志文件
     logger.add(
-        log_path / "ditto_{time:YYYYMMDD}.log",
-        level=level,
-        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} | {message}",
-        rotation=rotation,
-        retention=retention,
+        log_path / "ditto_{time:YYYY-MM-DD}.jsonl",
+        format="{message}",
+        serialize=True,
+        rotation="00:00",
+        retention="30 days",
         compression="gz",
-        serialize=True  # JSON 格式
+        level="INFO",
     )
 
     # 错误日志单独文件
     logger.add(
-        log_path / "error_{time:YYYYMMDD}.log",
+        log_path / "error_{time:YYYY-MM-DD}.log",
+        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {message}",
         level="ERROR",
-        rotation=rotation,
+        rotation="00:00",
         retention="90 days",
-        compression="gz"
+        compression="gz",
     )
 
-    logger.info("logging_initialized", log_dir=str(log_path), level=level)
+    # 默认上下文
+    logger.configure(
+        extra={
+            "service": config.service_name,
+            "trace_id": None,
+            "span": None,
+        }
+    )
 ```
-
-### 2.2 日志级别使用规范
-
-| 级别 | 使用场景 | 示例 |
-|------|----------|------|
-| DEBUG | 开发调试信息 | 函数入参、中间计算结果 |
-| INFO | 正常业务流程 | 任务开始/完成、数据更新成功 |
-| WARNING | 异常但可恢复 | 数据源降级、因子健康度警告 |
-| ERROR | 错误但系统可继续 | 单个标的数据获取失败 |
-| CRITICAL | 严重错误需人工介入 | Kill Switch 触发、数据库损坏 |
-
-### 2.3 结构化日志字段规范
 
 ```python
-# 标准字段
-logger.info(
-    "message",                    # 必须：事件描述
-    event="data_update_complete", # 推荐：事件类型（便于搜索）
-    duration_ms=1234,            # 推荐：耗时
-    **context                    # 可选：上下文信息
-)
+# packages/foundation/scr/ditto_foundation/observability/tracing.py
+"""OTel Tracing - 轻量实现，通过 trace_id 关联日志"""
 
-# 示例
-logger.info(
-    "daily_data_update_complete",
-    event="data_update",
-    duration_ms=45000,
-    records_inserted=1250,
-    symbols_updated=50,
-    source="tushare"
-)
+from __future__ import annotations
 
-logger.error(
-    "factor_calculation_failed",
-    event="factor_error",
-    factor_name="rs_20d",
-    symbol="510300.SH",
-    error_type="ValueError",
-    error_msg="Invalid price data"
-)
+from functools import wraps
+from typing import TYPE_CHECKING, Callable, TypeVar, Generator
+from contextlib import contextmanager
 
-logger.critical(
-    "kill_switch_triggered",
-    event="kill_switch",
-    level=2,
-    current_drawdown=0.185,
-    threshold=0.18,
-    action="REDUCE_50PCT"
-)
-```
-
-### 2.4 敏感信息处理
-
-```python
-# 脱敏处理
-logger.info(
-    "api_request",
-    api_key=api_key[:4] + "****",  # 只显示前4位
-    token="[REDACTED]"
-)
-
-# 不记录的信息
-# - 完整 API Key / Token
-# - 账户密码
-# - 券商账号信息
-```
-
----
-
-## 3. 指标设计
-
-### 3.1 核心业务指标
-
-```python
-# packages/core/ditto/metrics/business_metrics.py
-
-from dataclasses import dataclass
-from datetime import date, datetime
-from typing import Optional
-
-@dataclass
-class DailyMetrics:
-    """每日业务指标"""
-
-    # 时间
-    trade_date: date
-    calc_time: datetime
-
-    # 组合指标
-    portfolio_value: float
-    daily_return: float
-    cumulative_return: float
-    current_drawdown: float
-    drawdown_3d: float              # 3日回撤（速度检测）
-    peak_value: float
-
-    # 持仓指标
-    total_position_ratio: float
-    position_count: int
-    max_single_position: float
-
-    # Regime
-    regime_type: str
-    regime_score: float
-
-    # 成本
-    daily_cost: float
-    cumulative_cost: float
-    cost_ratio: float               # 成本/毛收益
-
-    # 风控
-    kill_switch_level: int
-    risk_alerts_count: int
-
-@dataclass
-class DataQualityMetrics:
-    """数据质量指标"""
-
-    trade_date: date
-
-    # 完整性
-    expected_records: int
-    actual_records: int
-    completeness_rate: float
-
-    # 准确性
-    cross_validation_errors: int
-    suspicious_records: int
-
-    # 时效性
-    data_delay_hours: float
-
-    # 异常
-    price_jump_count: int
-    missing_adj_factor_count: int
-
-@dataclass
-class FactorHealthMetrics:
-    """因子健康度指标"""
-
-    factor_name: str
-    calc_date: date
-
-    # IC 指标
-    ic_1m: float
-    ic_3m: float
-    ic_6m: float
-    ic_12m: float
-    ic_ir: float
-
-    # 状态
-    health_status: str              # 'HEALTHY'/'CAUTION'/'WARNING'/'CRITICAL'
-
-    # 趋势
-    ic_trend: str                   # 'IMPROVING'/'STABLE'/'DECLINING'
-```
-
-### 3.2 系统运行指标
-
-```python
-@dataclass
-class SystemMetrics:
-    """系统运行指标"""
-
-    timestamp: datetime
-
-    # 数据库
-    duckdb_size_mb: float
-    sqlite_size_mb: float
-    duckdb_query_count: int
-    duckdb_avg_query_ms: float
-
-    # API
-    api_request_count: int
-    api_avg_response_ms: float
-    api_error_count: int
-
-    # 调度
-    scheduler_job_count: int
-    scheduler_failed_jobs: int
-
-    # 资源
-    memory_usage_mb: float
-    disk_free_gb: float
-```
-
-### 3.3 指标存储
-
-指标存储在 SQLite 中，便于查询和展示：
-
-```sql
-CREATE TABLE IF NOT EXISTS metrics_daily (
-    trade_date      TEXT PRIMARY KEY,
-    portfolio_value REAL,
-    daily_return    REAL,
-    cumulative_return REAL,
-    current_drawdown REAL,
-    drawdown_3d     REAL,
-    regime_type     TEXT,
-    kill_switch_level INTEGER,
-    metrics_json    TEXT,           -- 完整指标 JSON
-    created_at      TEXT
-);
-
-CREATE TABLE IF NOT EXISTS metrics_data_quality (
-    trade_date      TEXT PRIMARY KEY,
-    completeness_rate REAL,
-    cross_validation_errors INTEGER,
-    suspicious_records INTEGER,
-    data_delay_hours REAL,
-    details_json    TEXT,
-    created_at      TEXT
-);
-
-CREATE TABLE IF NOT EXISTS metrics_factor_health (
-    factor_name     TEXT,
-    calc_date       TEXT,
-    ic_6m           REAL,
-    ic_12m          REAL,
-    health_status   TEXT,
-    PRIMARY KEY (factor_name, calc_date)
-);
-```
-
----
-
-## 4. 告警设计
-
-### 4.1 告警级别
-
-| 级别 | 名称 | 响应时间 | 通知方式 | 示例 |
-|------|------|----------|----------|------|
-| P0 | 紧急 | 立即 | Telagram+钉钉+邮件+短信 | Kill Switch Level 3 |
-| P1 | 严重 | 1 小时内 | Telagram+钉钉+邮件 | Kill Switch Level 2、数据源全部失败 |
-| P2 | 警告 | 当日 | Telagram+钉钉 | Kill Switch Level 1、因子健康度下降 |
-| P3 | 通知 | 下次检查 | 仅日志 | 数据源降级、小幅偏差 |
-
-### 4.2 告警规则
-
-```python
-# packages/core/ditto/alerts/rules.py
-
-from dataclasses import dataclass
-from typing import Callable, Any
-
-@dataclass
-class AlertRule:
-    """告警规则"""
-    name: str
-    description: str
-    level: str                      # 'P0'/'P1'/'P2'/'P3'
-    condition: Callable[[Any], bool]
-    message_template: str
-
-ALERT_RULES = [
-    # P0 - 紧急
-    AlertRule(
-        name="kill_switch_level3",
-        description="Kill Switch Level 3 触发",
-        level="P0",
-        condition=lambda m: m.kill_switch_level >= 3,
-        message_template="🚨 紧急：Kill Switch Level 3 触发！回撤 {drawdown:.1%}，已强制清仓"
-    ),
-
-    # P1 - 严重
-    AlertRule(
-        name="kill_switch_level2",
-        description="Kill Switch Level 2 触发",
-        level="P1",
-        condition=lambda m: m.kill_switch_level == 2,
-        message_template="⚠️ 严重：Kill Switch Level 2 触发，回撤 {drawdown:.1%}，已减仓 50%"
-    ),
-    AlertRule(
-        name="all_data_sources_failed",
-        description="所有数据源失败",
-        level="P1",
-        condition=lambda m: m.data_source_status == "ALL_FAILED",
-        message_template="⚠️ 严重：所有数据源不可用，已暂停数据更新"
-    ),
-
-    # P2 - 警告
-    AlertRule(
-        name="kill_switch_level1",
-        description="Kill Switch Level 1 触发",
-        level="P2",
-        condition=lambda m: m.kill_switch_level == 1,
-        message_template="⚡ 警告：Kill Switch Level 1 触发，回撤 {drawdown:.1%}，已停止新开仓"
-    ),
-    AlertRule(
-        name="fast_drawdown",
-        description="3日快速回撤",
-        level="P2",
-        condition=lambda m: m.drawdown_3d > 0.05,
-        message_template="⚡ 警告：3日回撤 {drawdown_3d:.1%}，已触发速度保护"
-    ),
-    AlertRule(
-        name="factor_critical",
-        description="因子严重退化",
-        level="P2",
-        condition=lambda m: any(f.health_status == "CRITICAL" for f in m.factor_health),
-        message_template="⚡ 警告：因子 {factor_name} IC 为负，建议移除"
-    ),
-
-    # P3 - 通知
-    AlertRule(
-        name="data_source_degraded",
-        description="数据源降级",
-        level="P3",
-        condition=lambda m: m.data_source_status == "DEGRADED",
-        message_template="📝 通知：主数据源不可用，已降级到备用源"
-    ),
-    AlertRule(
-        name="factor_warning",
-        description="因子健康度下降",
-        level="P3",
-        condition=lambda m: any(f.health_status == "WARNING" for f in m.factor_health),
-        message_template="📝 通知：因子 {factor_name} IC 低于阈值，建议观察"
-    ),
-]
-```
-
-### 4.3 告警服务
-
-```python
-# packages/core/ditto/alerts/alert_service.py
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 
 from loguru import logger
-from datetime import datetime
-import httpx
 
-class AlertService:
-    """告警服务"""
+if TYPE_CHECKING:
+    from .config import ObservabilityConfig, Mode
 
-    def __init__(self, config):
-        self.config = config
-        self.telagram_webhook = config.telagram_webhook
-        self.dingtalk_webhook = config.dingtalk_webhook
-        self.email_config = config.email
+F = TypeVar("F", bound=Callable)
 
-    async def send_alert(self, rule: AlertRule, context: dict):
-        """发送告警"""
-        message = rule.message_template.format(**context)
+_tracer: trace.Tracer | None = None
+_in_memory_exporter: InMemorySpanExporter | None = None
 
-        logger.log(
-            "CRITICAL" if rule.level in ("P0", "P1") else "WARNING",
-            f"alert_triggered: {rule.name}",
-            alert_level=rule.level,
-            alert_name=rule.name,
-            message=message
-        )
 
-        # 根据级别选择通知方式
-        if rule.level == "P0":
-            await self._send_all_channels(message, urgent=True)
-        elif rule.level == "P1":
-            await self._send_feishu(message)
-            await self._send_dingtalk(message)
-            await self._send_email(message)
-        elif rule.level == "P2":
-            await self._send_feishu(message)
-            await self._send_dingtalk(message)
-        # P3 只记录日志
+def configure_tracing(config: "ObservabilityConfig", mode: "Mode") -> trace.Tracer:
+    """配置 OTel Tracing"""
+    global _tracer, _in_memory_exporter
 
-    async def _send_telagram(self, message: str, urgent: bool = False):
-        """发送到Telagram"""
-        if not self.telagram_webhook:
-            return
+    from .config import Mode
 
-        payload = {
-            "msg_type": "text",
-            "content": {"text": message}
-        }
+    resource = Resource.create({SERVICE_NAME: config.service_name})
 
-        async with httpx.AsyncClient() as client:
-            await client.post(self.telagram_webhook, json=payload, timeout=10)
+    if mode == Mode.TESTING:
+        # NoOp：不设置 provider
+        _tracer = trace.get_tracer(config.service_name)
+        return _tracer
 
-    async def _send_dingtalk(self, message: str, urgent: bool = False):
-        """发送到钉钉"""
-        if not self.dingtalk_webhook:
-            return
+    if mode == Mode.TESTING_WITH_ASSERTIONS:
+        # InMemory：可断言
+        _in_memory_exporter = InMemorySpanExporter()
+        provider = TracerProvider(resource=resource)
+        provider.add_span_processor(SimpleSpanProcessor(_in_memory_exporter))
+        trace.set_tracer_provider(provider)
+        _tracer = trace.get_tracer(config.service_name)
+        return _tracer
 
-        payload = {
-            "msgtype": "text",
-            "text": {"content": message}
-        }
+    # 正常模式：暂不导出 traces，只用于生成 trace_id
+    # 未来加 VictoriaTraces 时添加 OTLP exporter
+    provider = TracerProvider(resource=resource)
+    trace.set_tracer_provider(provider)
+    _tracer = trace.get_tracer(config.service_name)
 
-        if urgent:
-            payload["at"] = {"isAtAll": True}
+    return _tracer
 
-        async with httpx.AsyncClient() as client:
-            await client.post(self.dingtalk_webhook, json=payload, timeout=10)
 
-    async def _send_email(self, message: str):
-        """发送邮件"""
-        # 实现邮件发送
-        pass
+def get_tracer() -> trace.Tracer:
+    """获取 OTel Tracer"""
+    global _tracer
+    if _tracer is None:
+        _tracer = trace.get_tracer("ditto")
+    return _tracer
 
-    async def _send_all_channels(self, message: str, urgent: bool = False):
-        """发送到所有渠道"""
-        await self._send_feishu(message, urgent)
-        await self._send_dingtalk(message, urgent)
-        await self._send_email(message)
+
+def get_trace_id() -> str | None:
+    """获取当前 trace_id（8 位）"""
+    span = trace.get_current_span()
+    ctx = span.get_span_context()
+    if ctx.is_valid:
+        return format(ctx.trace_id, "032x")[:8]
+    return None
+
+
+def get_span_id() -> str | None:
+    """获取当前 span_id（8 位）"""
+    span = trace.get_current_span()
+    ctx = span.get_span_context()
+    if ctx.is_valid:
+        return format(ctx.span_id, "016x")[:8]
+    return None
+
+
+@contextmanager
+def span(name: str, **attributes) -> Generator[trace.Span, None, None]:
+    """
+    创建 OTel Span，同时自动注入日志上下文。
+
+    用法：
+        with span("load_data", source="tushare") as s:
+            logger.info("Loading...")  # 自动带 trace_id
+            s.set_attribute("rows", 10000)
+    """
+    tracer = get_tracer()
+
+    with tracer.start_as_current_span(name) as s:
+        # 设置属性
+        for k, v in attributes.items():
+            s.set_attribute(k, v)
+
+        # 注入日志上下文
+        trace_id = get_trace_id()
+
+        with logger.contextualize(trace_id=trace_id, span=name):
+            logger.debug(f"▶ {name}")
+            try:
+                yield s
+                s.set_status(trace.StatusCode.OK)
+                logger.debug(f"◀ {name}")
+            except Exception as e:
+                s.set_status(trace.StatusCode.ERROR, str(e))
+                s.record_exception(e)
+                logger.error(f"✖ {name}: {e}")
+                raise
+
+
+def traced(name: str | None = None, **default_attrs):
+    """
+    Trace 装饰器。
+
+    用法：
+        @traced("run_backtest")
+        def run_backtest(strategy: str):
+            ...
+    """
+
+    def decorator(func: F) -> F:
+        span_name = name or func.__name__
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            with span(span_name, **default_attrs):
+                return func(*args, **kwargs)
+
+        return wrapper  # type: ignore
+
+    return decorator
 ```
-
----
-
-## 5. 健康检查 API
-
-### 5.1 端点设计
 
 ```python
-# apps/server/src/api/health.py
+# packages/foundation/scr/ditto_foundation/observability/metrics.py
+"""OTel Metrics - OTLP 直推 VictoriaMetrics"""
 
-from fastapi import APIRouter
-from datetime import datetime
+from __future__ import annotations
 
-router = APIRouter(tags=["Health"])
+from typing import TYPE_CHECKING
 
-@router.get("/healthz")
-async def healthz():
-    """简单存活检查（用于心跳）"""
-    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+from opentelemetry import metrics
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import (
+    PeriodicExportingMetricReader,
+    InMemoryMetricReader,
+)
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 
-@router.get("/health")
-async def health():
-    """详细健康检查"""
-    checks = await health_service.check_all()
-
-    return {
-        "status": checks.overall_status,
-        "timestamp": datetime.now().isoformat(),
-        "checks": [
-            {
-                "component": c.component,
-                "status": c.status,
-                "message": c.message,
-                "last_check": c.last_check.isoformat()
-            }
-            for c in checks.details
-        ]
-    }
-
-@router.get("/health/data")
-async def data_health():
-    """数据健康检查"""
-    return await health_service.check_data_quality()
-
-@router.get("/health/factors")
-async def factor_health():
-    """因子健康检查"""
-    return await health_service.check_factor_health()
-
-@router.get("/health/risk")
-async def risk_health():
-    """风控健康检查"""
-    return await health_service.check_risk_status()
-```
-
-### 5.2 健康检查项
-
-| 组件 | 检查内容 | 健康标准 | 降级标准 | 不健康标准 |
-|------|----------|----------|----------|------------|
-| duckdb | 连接+查询 | 可查询 | - | 无法连接 |
-| sqlite | 连接+查询 | 可查询 | - | 无法连接 |
-| data_freshness | 最新数据日期 | ≤1天 | 2-3天 | >3天 |
-| scheduler | 运行状态 | 正在运行 | - | 未运行 |
-| kill_switch | 触发状态 | Level 0 | Level 1 | Level 2-3 |
-| factor_health | 因子 IC | 全部健康 | 有警告 | 有严重 |
-| heartbeat | 最近心跳 | ≤2小时 | 2-6小时 | >6小时 |
-
----
-
-## 6. 审计日志
-
-### 6.1 审计事件
-
-需要记录审计日志的事件：
-
-| 事件类型 | 记录内容 |
-|----------|----------|
-| config_change | 配置变更：变更前后值、操作人 |
-| kill_switch_trigger | Kill Switch 触发：级别、触发条件、当前值 |
-| kill_switch_deactivate | Kill Switch 解除：操作人、原因 |
-| rebalance_plan_create | 调仓计划创建：计划详情 |
-| rebalance_plan_confirm | 调仓计划确认：操作人 |
-| factor_weight_change | 因子权重变更：变更前后值 |
-| strategy_state_change | 策略状态变更：前后状态 |
-
-### 6.2 审计日志表
-
-```sql
-CREATE TABLE IF NOT EXISTS audit_log (
-    audit_id    INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_type  TEXT NOT NULL,
-    event_time  TEXT NOT NULL,
-    operator    TEXT,                   -- 操作人（系统或人工）
-    target      TEXT,                   -- 操作对象
-    old_value   TEXT,                   -- 变更前值（JSON）
-    new_value   TEXT,                   -- 变更后值（JSON）
-    reason      TEXT,
-    ip_address  TEXT,
-    details     TEXT                    -- 其他详情（JSON）
-);
-
-CREATE INDEX idx_audit_event_type ON audit_log(event_type);
-CREATE INDEX idx_audit_event_time ON audit_log(event_time);
-```
-
-### 6.3 审计日志记录
-
-```python
-# packages/core/ditto/audit/audit_logger.py
-
-import json
-from datetime import datetime
 from loguru import logger
 
-class AuditLogger:
-    """审计日志记录器"""
+if TYPE_CHECKING:
+    from .config import ObservabilityConfig, Mode
 
-    def __init__(self, db_adapter):
-        self.db = db_adapter
+_meter: metrics.Meter | None = None
+_in_memory_reader: InMemoryMetricReader | None = None
 
-    def log(
-        self,
-        event_type: str,
-        target: str,
-        old_value: any = None,
-        new_value: any = None,
-        operator: str = "system",
-        reason: str = None,
-        **details
-    ):
-        """记录审计日志"""
 
-        # 写入数据库
-        self.db.execute("""
-            INSERT INTO audit_log
-            (event_type, event_time, operator, target, old_value, new_value, reason, details)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            event_type,
-            datetime.now().isoformat(),
-            operator,
-            target,
-            json.dumps(old_value) if old_value else None,
-            json.dumps(new_value) if new_value else None,
-            reason,
-            json.dumps(details) if details else None
-        ))
+def configure_metrics(config: "ObservabilityConfig", mode: "Mode") -> metrics.Meter:
+    """配置 OTel Metrics"""
+    global _meter, _in_memory_reader
 
-        # 同时写入日志文件
-        logger.info(
-            f"audit_{event_type}",
-            event="audit",
-            event_type=event_type,
-            operator=operator,
-            target=target,
-            reason=reason,
-            **details
+    from .config import Mode
+
+    resource = Resource.create({SERVICE_NAME: config.service_name})
+
+    if mode == Mode.TESTING:
+        # NoOp：不设置 provider
+        _meter = metrics.get_meter(config.service_name)
+        return _meter
+
+    if mode == Mode.TESTING_WITH_ASSERTIONS:
+        # InMemory：可断言
+        _in_memory_reader = InMemoryMetricReader()
+        provider = MeterProvider(resource=resource, metric_readers=[_in_memory_reader])
+        metrics.set_meter_provider(provider)
+        _meter = metrics.get_meter(config.service_name)
+        M.setup()
+        return _meter
+
+    # 正常模式：OTLP 推送到 VictoriaMetrics
+    exporter = OTLPMetricExporter(endpoint=config.vm_otlp_endpoint)
+    reader = PeriodicExportingMetricReader(
+        exporter,
+        export_interval_millis=config.metrics_export_interval_ms,
+    )
+    provider = MeterProvider(resource=resource, metric_readers=[reader])
+    metrics.set_meter_provider(provider)
+
+    _meter = metrics.get_meter(config.service_name)
+    M.setup()
+
+    logger.info(f"Metrics → {config.vm_otlp_endpoint}")
+
+    return _meter
+
+
+def get_meter() -> metrics.Meter:
+    """获取 OTel Meter"""
+    global _meter
+    if _meter is None:
+        _meter = metrics.get_meter("ditto")
+    return _meter
+
+
+class M:
+    """Ditto 业务指标（延迟初始化）"""
+
+    _initialized: bool = False
+
+    # === 数据指标 ===
+    data_update_duration: metrics.Histogram
+    data_records: metrics.Counter
+    data_freshness: metrics.Gauge
+    data_quality: metrics.Gauge
+    data_errors: metrics.Counter
+
+    # === 因子指标 ===
+    factor_calc_duration: metrics.Histogram
+    factor_ic: metrics.Gauge
+    factor_health: metrics.Gauge
+
+    # === 策略指标 ===
+    signal_total: metrics.Counter
+    rebalance_total: metrics.Counter
+
+    # === 组合指标 ===
+    portfolio_value: metrics.Gauge
+    portfolio_return: metrics.Gauge
+    portfolio_drawdown: metrics.Gauge
+    portfolio_drawdown_3d: metrics.Gauge
+    portfolio_position_ratio: metrics.Gauge
+    portfolio_position_count: metrics.Gauge
+
+    # === 风控指标 ===
+    kill_switch_level: metrics.Gauge
+    kill_switch_total: metrics.Counter
+    alerts_total: metrics.Counter
+
+    # === 系统指标 ===
+    scheduler_jobs: metrics.Counter
+    scheduler_duration: metrics.Histogram
+    api_requests: metrics.Counter
+    api_duration: metrics.Histogram
+    db_query_duration: metrics.Histogram
+    heartbeat_timestamp: metrics.Gauge
+
+    @classmethod
+    def setup(cls) -> None:
+        """初始化所有指标"""
+        if cls._initialized:
+            return
+
+        m = get_meter()
+
+        # === 数据指标 ===
+        cls.data_update_duration = m.create_histogram(
+            name="ditto.data.update_duration_seconds",
+            description="Data update duration in seconds",
+            unit="s",
+        )
+        cls.data_records = m.create_counter(
+            name="ditto.data.records_total",
+            description="Total data records processed",
+            unit="1",
+        )
+        cls.data_freshness = m.create_gauge(
+            name="ditto.data.freshness_seconds",
+            description="Seconds since last data update",
+            unit="s",
+        )
+        cls.data_quality = m.create_gauge(
+            name="ditto.data.quality_ratio",
+            description="Data completeness ratio",
+            unit="1",
+        )
+        cls.data_errors = m.create_counter(
+            name="ditto.data.errors_total",
+            description="Total data errors",
+            unit="1",
         )
 
-# 使用示例
-audit = AuditLogger(db)
+        # === 因子指标 ===
+        cls.factor_calc_duration = m.create_histogram(
+            name="ditto.factor.calc_duration_seconds",
+            description="Factor calculation duration",
+            unit="s",
+        )
+        cls.factor_ic = m.create_gauge(
+            name="ditto.factor.ic_value",
+            description="Factor IC value",
+            unit="1",
+        )
+        cls.factor_health = m.create_gauge(
+            name="ditto.factor.health_status",
+            description="Factor health status (0=healthy, 1=warning, 2=critical)",
+            unit="1",
+        )
 
-# Kill Switch 触发
-audit.log(
-    event_type="kill_switch_trigger",
-    target="portfolio",
-    new_value={"level": 2, "drawdown": 0.185},
-    reason="Drawdown exceeded 18%"
-)
+        # === 策略指标 ===
+        cls.signal_total = m.create_counter(
+            name="ditto.strategy.signal_total",
+            description="Total signals generated",
+            unit="1",
+        )
+        cls.rebalance_total = m.create_counter(
+            name="ditto.strategy.rebalance_total",
+            description="Total rebalances executed",
+            unit="1",
+        )
 
-# Kill Switch 解除
-audit.log(
-    event_type="kill_switch_deactivate",
-    target="portfolio",
-    old_value={"level": 2},
-    new_value={"level": 0},
-    operator="user:admin",
-    reason="Market stabilized, manual review passed"
-)
+        # === 组合指标 ===
+        cls.portfolio_value = m.create_gauge(
+            name="ditto.portfolio.value_yuan",
+            description="Portfolio value in CNY",
+            unit="CNY",
+        )
+        cls.portfolio_return = m.create_gauge(
+            name="ditto.portfolio.return_ratio",
+            description="Portfolio return ratio",
+            unit="1",
+        )
+        cls.portfolio_drawdown = m.create_gauge(
+            name="ditto.portfolio.drawdown_ratio",
+            description="Current drawdown ratio",
+            unit="1",
+        )
+        cls.portfolio_drawdown_3d = m.create_gauge(
+            name="ditto.portfolio.drawdown_3d_ratio",
+            description="3-day drawdown ratio",
+            unit="1",
+        )
+        cls.portfolio_position_ratio = m.create_gauge(
+            name="ditto.portfolio.position_ratio",
+            description="Position ratio",
+            unit="1",
+        )
+        cls.portfolio_position_count = m.create_gauge(
+            name="ditto.portfolio.position_count",
+            description="Number of positions",
+            unit="1",
+        )
+
+        # === 风控指标 ===
+        cls.kill_switch_level = m.create_gauge(
+            name="ditto.risk.kill_switch_level",
+            description="Current Kill Switch level",
+            unit="1",
+        )
+        cls.kill_switch_total = m.create_counter(
+            name="ditto.risk.kill_switch_total",
+            description="Total Kill Switch triggers",
+            unit="1",
+        )
+        cls.alerts_total = m.create_counter(
+            name="ditto.risk.alerts_total",
+            description="Total alerts triggered",
+            unit="1",
+        )
+
+        # === 系统指标 ===
+        cls.scheduler_jobs = m.create_counter(
+            name="ditto.system.scheduler_jobs_total",
+            description="Total scheduler jobs",
+            unit="1",
+        )
+        cls.scheduler_duration = m.create_histogram(
+            name="ditto.system.scheduler_job_duration_seconds",
+            description="Scheduler job duration",
+            unit="s",
+        )
+        cls.api_requests = m.create_counter(
+            name="ditto.system.api_requests_total",
+            description="Total API requests",
+            unit="1",
+        )
+        cls.api_duration = m.create_histogram(
+            name="ditto.system.api_duration_seconds",
+            description="API request duration",
+            unit="s",
+        )
+        cls.db_query_duration = m.create_histogram(
+            name="ditto.system.db_query_duration_seconds",
+            description="Database query duration",
+            unit="s",
+        )
+        cls.heartbeat_timestamp = m.create_gauge(
+            name="ditto.system.heartbeat_timestamp",
+            description="Last heartbeat timestamp",
+            unit="s",
+        )
+
+        cls._initialized = True
+```
+
+```python
+# packages/foundation/scr/ditto_foundation/observability/testing.py
+"""测试辅助工具"""
+
+from __future__ import annotations
+
+from opentelemetry import trace, metrics
+
+
+def reset_for_testing() -> None:
+    """重置所有可观测性状态（测试 fixture 用）"""
+    from . import tracing, metrics as metrics_module
+
+    # 清除 spans
+    if tracing._in_memory_exporter:
+        tracing._in_memory_exporter.clear()
+
+    # 重置全局状态
+    trace._TRACER_PROVIDER = None
+    metrics._METER_PROVIDER = None
+
+    tracing._tracer = None
+    tracing._in_memory_exporter = None
+    metrics_module._meter = None
+    metrics_module._in_memory_reader = None
+    metrics_module.M._initialized = False
+
+
+def get_recorded_spans() -> list:
+    """获取记录的 spans（测试用）"""
+    from . import tracing
+
+    if tracing._in_memory_exporter:
+        return list(tracing._in_memory_exporter.get_finished_spans())
+    return []
+
+
+def clear_recorded_spans() -> None:
+    """清除记录的 spans"""
+    from . import tracing
+
+    if tracing._in_memory_exporter:
+        tracing._in_memory_exporter.clear()
+
+
+def get_recorded_metrics() -> dict:
+    """获取记录的 metrics（测试用）"""
+    from . import metrics as metrics_module
+
+    if metrics_module._in_memory_reader:
+        data = metrics_module._in_memory_reader.get_metrics_data()
+        result = {}
+        for resource_metric in data.resource_metrics:
+            for scope_metric in resource_metric.scope_metrics:
+                for metric in scope_metric.metrics:
+                    result[metric.name] = metric
+        return result
+    return {}
 ```
 
 ---
 
-## 7. 仪表盘设计
+## 10. 部署方案
 
-### 7.1 首页仪表盘
+### 10.1 目录结构
 
-展示内容：
+```
+deploy/
+└── observability/
+    ├── docker-compose.yml
+    ├── vector.toml
+    └── grafana/
+        ├── datasources.yml
+        └── dashboards/
+            ├── overview.json
+            └── risk.json
+```
 
-1. **系统状态卡片**
-   - 整体状态（健康/降级/异常）
-   - Kill Switch 状态
-   - 最近心跳时间
-   - 数据新鲜度
+### 10.2 Docker Compose
 
-2. **组合概览**
-   - 当前净值
-   - 当日收益
-   - 累计收益
-   - 当前回撤
+```yaml
+# deploy/observability/docker-compose.yml
+version: '3.8'
 
-3. **Regime 状态**
-   - 当前 Regime（Bull/Osc/Bear）
-   - Regime Score
-   - 近期 Regime 变化
+services:
+  # VictoriaMetrics - Metrics 存储
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.96.0
+    container_name: ditto-vm
+    ports:
+      - "8428:8428"
+    command:
+      - "-storageDataPath=/data"
+      - "-retentionPeriod=90d"
+      - "-selfScrapeInterval=10s"
+    volumes:
+      - vm-data:/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M  # 锁死内存上限
 
-4. **风控指标**
-   - 回撤进度条（显示距各级阈值的距离）
-   - 3日回撤速度
-   - 仓位使用率
+  # VictoriaLogs - Logs 存储
+  victorialogs:
+    image: victoriametrics/victoria-logs:v1.0.0-victorialogs
+    container_name: ditto-vl
+    ports:
+      - "9428:9428"
+    command:
+      - "-storageDataPath=/data"
+      - "-retentionPeriod=30d"
+    volumes:
+      - vl-data:/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M  # 锁死内存上限
 
-5. **待办事项**
-   - 未确认的调仓计划
-   - 需要关注的告警
-   - 因子健康度警告
+  # Vector - 日志采集
+  vector:
+    image: timberio/vector:0.34.0-debian
+    container_name: ditto-vector
+    volumes:
+      - ./vector.toml:/etc/vector/vector.toml:ro
+      - ../../logs:/logs:ro
+    depends_on:
+      - victorialogs
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M  # 锁死内存上限
 
-### 7.2 监控页面
+  # Grafana - 可视化
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: ditto-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_INSTALL_PLUGINS=victoriametrics-datasource,victorialogs-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    depends_on:
+      - victoriametrics
+      - victorialogs
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M  # 锁死内存上限
 
-| 页面 | 内容 |
-|------|------|
-| 数据监控 | 数据更新状态、质量指标、异常标的 |
-| 因子监控 | 各因子 IC 趋势、健康状态、因子墓地 |
-| 回测监控 | 对齐测试结果、历史回测记录 |
-| 风控监控 | Kill Switch 历史、风控事件时间线 |
-| 系统监控 | 资源使用、任务执行、错误统计 |
+volumes:
+  vm-data:
+  vl-data:
+  grafana-data:
+```
+
+### 10.3 Vector 配置
+
+```toml
+# deploy/observability/vector.toml
+
+# ============ Sources ============
+
+[sources.ditto_logs]
+type = "file"
+include = ["/logs/ditto_*.jsonl"]
+read_from = "end"
+
+# ============ Transforms ============
+
+[transforms.parse_json]
+type = "remap"
+inputs = ["ditto_logs"]
+source = '''
+. = parse_json!(.message)
+'''
+
+# ============ Sinks ============
+
+[sinks.victorialogs]
+type = "http"
+inputs = ["parse_json"]
+uri = "http://victorialogs:9428/insert/jsonline?_stream_fields=service,level,event"
+encoding.codec = "json"
+framing.method = "newline_delimited"
+request.headers.Content-Type = "application/stream+json"
+```
+
+### 10.4 Grafana 数据源配置
+
+```yaml
+# deploy/observability/grafana/datasources.yml
+apiVersion: 1
+
+datasources:
+  - name: VictoriaMetrics
+    type: prometheus
+    access: proxy
+    url: http://victoriametrics:8428
+    isDefault: true
+    editable: false
+
+  - name: VictoriaLogs
+    type: victorialogs-datasource
+    access: proxy
+    url: http://victorialogs:9428
+    editable: false
+```
+
+### 10.5 资源占用
+
+| 组件 | 内存 | 磁盘（30天） |
+|------|------|--------------|
+| VictoriaMetrics | ~100MB | ~500MB |
+| VictoriaLogs | ~100MB | ~2GB |
+| Vector | ~50MB | - |
+| Grafana | ~150MB | ~100MB |
+| **总计** | **~400MB** | **~2.6GB** |
 
 ---
 
-## 8. 日志保留与归档
+## 11. 测试方案
 
-### 8.1 保留策略
+### 11.1 pytest 配置
 
-| 日志类型 | 保留期 | 归档 |
-|----------|--------|------|
-| 运行日志 | 30 天 | 压缩后保留 90 天 |
-| 错误日志 | 90 天 | 压缩后保留 1 年 |
-| 审计日志 | 永久 | 定期归档 |
-| 指标数据 | 永久 | 定期归档 |
+```python
+# tests/conftest.py
+"""pytest 配置"""
 
-### 8.2 归档脚本
+import pytest
+import os
 
-```powershell
-# scripts/archive_logs.ps1
+os.environ["PYTEST_CURRENT_TEST"] = "true"
 
-$logDir = "logs"
-$archiveDir = "logs/archived"
-$cutoffDays = 30
 
-# 创建归档目录
-if (-not (Test-Path $archiveDir)) {
-    New-Item -ItemType Directory -Path $archiveDir
-}
+@pytest.fixture(autouse=True, scope="function")
+def reset_observability():
+    """每个测试自动重置"""
+    from ditto.observability import reset_for_testing
+    reset_for_testing()
+    yield
+    reset_for_testing()
 
-# 归档旧日志
-Get-ChildItem "$logDir/*.log" |
-    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$cutoffDays) } |
-    ForEach-Object {
-        $archiveName = "$archiveDir/$($_.BaseName)_$(Get-Date -Format 'yyyyMM').gz"
-        # 压缩并移动
-        Compress-Archive -Path $_.FullName -DestinationPath $archiveName -Update
-        Remove-Item $_.FullName
-    }
+
+@pytest.fixture
+def obs_noop():
+    """NoOp 模式 - 静默，最快"""
+    from ditto.observability import init, Mode
+    init(mode=Mode.TESTING)
+    yield
+
+
+@pytest.fixture
+def obs_assertions():
+    """断言模式 - 记录到内存"""
+    from ditto.observability import init, Mode
+    init(mode=Mode.TESTING_WITH_ASSERTIONS)
+    yield
+```
+
+### 11.2 测试示例
+
+```python
+# tests/test_observability.py
+import pytest
+from ditto.observability import (
+    span, traced, logger, M,
+    get_recorded_spans, get_recorded_metrics,
+)
+
+
+class TestSpan:
+    """Span 测试"""
+
+    def test_span_created(self, obs_assertions):
+        """验证 span 正确创建"""
+        with span("test_operation", key="value"):
+            pass
+
+        spans = get_recorded_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "test_operation"
+        assert spans[0].attributes["key"] == "value"
+
+    def test_nested_spans(self, obs_assertions):
+        """验证嵌套 span"""
+        with span("parent"):
+            with span("child"):
+                pass
+
+        spans = get_recorded_spans()
+        assert len(spans) == 2
+
+        child, parent = spans
+        assert child.name == "child"
+        assert parent.name == "parent"
+
+    def test_span_records_exception(self, obs_assertions):
+        """验证异常记录"""
+        with pytest.raises(ValueError):
+            with span("failing_op"):
+                raise ValueError("test error")
+
+        spans = get_recorded_spans()
+        from opentelemetry import trace
+        assert spans[0].status.status_code == trace.StatusCode.ERROR
+
+
+class TestMetrics:
+    """Metrics 测试"""
+
+    def test_counter_incremented(self, obs_assertions):
+        """验证 counter 递增"""
+        M.data_records.add(100, {"source": "test", "table": "test", "status": "success"})
+
+        metrics = get_recorded_metrics()
+        assert "ditto.data.records_total" in metrics
+
+
+class TestTraced:
+    """@traced 装饰器测试"""
+
+    def test_traced_decorator(self, obs_assertions):
+        """验证装饰器创建 span"""
+
+        @traced("my_operation")
+        def my_func():
+            return 42
+
+        result = my_func()
+        assert result == 42
+
+        spans = get_recorded_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "my_operation"
 ```
 
 ---
 
-*本可观测性文档定义了 Ditto 的日志、指标、告警和审计设计，确保系统运行状态可感知、问题可追溯。*
+## 12. 运维手册
+
+### 12.1 常用命令
+
+```bash
+# 启动可观测性服务
+cd deploy/observability
+docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f victorialogs
+
+# 停止服务
+docker-compose down
+
+# 清理数据（谨慎！）
+docker-compose down -v
+```
+
+### 12.2 VictoriaLogs 查询
+
+```sql
+-- 查询某次操作的完整链路
+{service="ditto"} trace_id="a1b2c3d4"
+
+-- 查询错误日志
+{service="ditto", level="ERROR"}
+
+-- 按事件类型查询
+{service="ditto"} event="kill_switch_triggered"
+
+-- 时间范围查询
+{service="ditto", level="ERROR"} _time:1h
+
+-- 统计每分钟错误数
+{service="ditto", level="ERROR"} | stats count() by (_time:1m)
+
+-- 查询慢操作
+{service="ditto"} duration_ms:>1000
+```
+
+### 12.3 VictoriaMetrics 查询
+
+```promql
+# 当前 Kill Switch 级别
+ditto_risk_kill_switch_level{strategy="etf_rotation"}
+
+# 当前回撤
+ditto_portfolio_drawdown_ratio{strategy="etf_rotation"}
+
+# 数据更新 P95 耗时
+histogram_quantile(0.95,
+  sum(rate(ditto_data_update_duration_seconds_bucket[1h])) by (le, source)
+)
+
+# 最近 1 小时错误数
+sum(increase(ditto_data_errors_total[1h])) by (source, error_type)
+
+# Kill Switch 触发次数趋势
+sum(increase(ditto_risk_kill_switch_total[1d])) by (level)
+```
+
+### 12.4 健康检查
+
+```bash
+# VictoriaMetrics 健康检查
+curl http://localhost:8428/health
+
+# VictoriaLogs 健康检查
+curl http://localhost:9428/health
+
+# Grafana 健康检查
+curl http://localhost:3000/api/health
+
+# Ditto 应用健康检查
+curl http://localhost:8000/healthz
+```
+
+### 12.5 日志保留策略
+
+| 日志类型 | 保留期 | 存储位置 |
+|----------|--------|----------|
+| 运行日志（文件） | 30 天 | `logs/ditto_*.jsonl.gz` |
+| 错误日志（文件） | 90 天 | `logs/error_*.log.gz` |
+| VictoriaLogs | 30 天 | Docker volume |
+| VictoriaMetrics | 90 天 | Docker volume |
+| 审计日志 | 永久 | SQLite |
+
+### 12.6 故障排查流程
+
+```
+1. 查看告警信息
+   └─► Grafana Dashboard / Telegram 通知
+
+2. 确定 trace_id
+   └─► 从告警或日志中获取
+
+3. 查询完整链路
+   └─► VictoriaLogs: {service="ditto"} trace_id="xxx"
+
+4. 分析指标
+   └─► Grafana: 查看相关指标趋势
+
+5. 定位根因
+   └─► 结合日志 + 指标确定问题
+
+6. 修复 & 验证
+   └─► 修复后观察指标恢复
+```
+
+---
+
+## 附录 A：快速开始
+
+```bash
+# 1. 安装依赖
+pip install opentelemetry-api opentelemetry-sdk \
+            opentelemetry-exporter-otlp-proto-http loguru
+
+# 2. 启动后端服务
+cd deploy/observability
+docker-compose up -d
+
+# 3. 在代码中初始化
+from ditto.observability import init, logger, span, M
+
+init(service_name="ditto", environment="dev")
+
+# 4. 开始使用
+logger.info("Hello Ditto!", event="startup")
+
+with span("my_operation"):
+    logger.info("Processing...")
+    M.data_records.add(100, {"source": "test", "table": "test", "status": "success"})
+
+# 5. 查看结果
+# Grafana: http://localhost:3000
+# VictoriaMetrics: http://localhost:8428
+# VictoriaLogs: http://localhost:9428
+```
+
+---

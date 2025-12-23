@@ -96,6 +96,28 @@ class FileStorageSettings(BaseSettings):
     )
 
 
+class ObservabilitySettings(BaseSettings):
+    """可观测性配置."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="OBSERVABILITY_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    enabled: bool = Field(default=True, description="是否启用可观测性")
+    mode: str = Field(
+        default="auto", description="运行模式 (auto/production/development/testing)"
+    )
+    log_level: str = Field(default="INFO", description="日志级别")
+    vm_endpoint: str = Field(
+        default="http://localhost:8428/opentelemetry/v1/metrics",
+        description="VictoriaMetrics OTLP 端点",
+    )
+    metrics_interval_ms: int = Field(default=15000, description="指标导出间隔(毫秒)")
+
+
 class Settings(BaseSettings):
     """
     Ditto系统主配置类.
@@ -115,6 +137,7 @@ class Settings(BaseSettings):
     api: APISettings = Field(default_factory=APISettings)
     system: SystemSettings = Field(default_factory=SystemSettings)
     file_storage: FileStorageSettings = Field(default_factory=FileStorageSettings)
+    observability: ObservabilitySettings = Field(default_factory=ObservabilitySettings)
 
     def __init__(self, **kwargs: Any) -> None:
         """Initialize Settings and ensure directories exist."""

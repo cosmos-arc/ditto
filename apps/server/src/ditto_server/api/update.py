@@ -47,15 +47,13 @@ async def update_etf_list_task(task_id: str) -> None:
         active_tasks[task_id].status = "running"
         active_tasks[task_id].message = "正在更新ETF列表..."
 
-        # 创建数据采集器
-        collector = DataCollector()
-
         # 获取并存储ETF列表
-        etf_list = collector.update_etf_list()
+        _collector = DataCollector()
+        etf_list = _collector.update_etf_list()
 
         active_tasks[task_id].status = "completed"
         active_tasks[task_id].progress = 100.0
-        active_tasks[task_id].message = f"成功更新ETF列表，共 {len(etf_list)} 只ETF"
+        active_tasks[task_id].message = f"成功更新ETF列表, 共 {len(etf_list)} 只ETF"
 
     except Exception as e:
         active_tasks[task_id].status = "failed"
@@ -75,16 +73,15 @@ async def update_daily_data_task(
         active_tasks[task_id].status = "running"
         active_tasks[task_id].message = "正在更新日线数据..."
 
-        # 创建数据采集器
-        collector = DataCollector()
-
-        # 获取ETF列表（如果未指定）
+        # 获取ETF列表(如果未指定)
         if not symbols:
             reader = DataReader()
             etf_df = reader.get_etf_list()
             symbols = etf_df["symbol"].to_list()
-        else:
-            symbols = symbols or []
+
+        # 确保 symbols 不为 None
+        if symbols is None:
+            symbols = []
 
         total_symbols = len(symbols)
         updated_count = 0
@@ -130,7 +127,7 @@ async def trigger_etf_list_update(background_tasks: BackgroundTasks) -> dict[str
     active_tasks[task_id] = UpdateStatus(
         task_id=task_id,
         status="pending",
-        message="任务已提交，等待执行...",
+        message="任务已提交, 等待执行...",
         started_at=datetime.now(),
     )
 
@@ -163,7 +160,7 @@ async def trigger_daily_data_update(
     active_tasks[task_id] = UpdateStatus(
         task_id=task_id,
         status="pending",
-        message="任务已提交，等待执行...",
+        message="任务已提交, 等待执行...",
         started_at=datetime.now(),
     )
 

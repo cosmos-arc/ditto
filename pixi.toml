@@ -69,6 +69,13 @@ types-requests = ">=2.32.4.20250913, <3"
 types-pyyaml = ">=6.0.12.20250915, <7"
 types-python-dateutil = ">=2.9.0.20251115, <3"
 
+# OpenTelemetry - 可观测性
+# 使用最新版本以支持 importlib-metadata >= 8.0
+opentelemetry-api = ">=1.39,<1.40"
+opentelemetry-sdk = ">=1.39,<1.40"
+opentelemetry-exporter-otlp-proto-http = ">=1.39,<1.40"
+uuid7 = ">=0.1.0,<1"
+
 [environments]
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "dev" }

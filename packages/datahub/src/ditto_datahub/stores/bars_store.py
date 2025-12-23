@@ -12,8 +12,8 @@ from datetime import datetime
 from pathlib import Path
 
 import polars as pl
+from ditto_foundation import logger
 from ditto_foundation.util.io import atomic_write, file_md5
-from loguru import logger
 
 
 class BarsStore:

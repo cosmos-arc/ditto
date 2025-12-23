@@ -13,7 +13,7 @@ from functools import lru_cache
 from typing import Any
 
 import polars as pl
-from loguru import logger
+from ditto_foundation import logger
 
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 

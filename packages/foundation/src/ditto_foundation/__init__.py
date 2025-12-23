@@ -10,4 +10,37 @@ __author__ = "Ditto Team"
 # Export app initializer
 from ditto_foundation.app_initializer import AppInitializer, initialize_app
 
-__all__ = ["AppInitializer", "initialize_app"]
+# Export observability
+from ditto_foundation.observability import (
+    M,
+    Mode,
+    ObservabilityConfig,
+    get_recorded_metrics,
+    get_recorded_spans,
+    get_span_id,
+    get_trace_id,
+    init,
+    logger,
+    reset_for_testing,
+    shutdown,
+    span,
+    traced,
+)
+
+__all__ = [
+    "AppInitializer",
+    "M",
+    "Mode",
+    "ObservabilityConfig",
+    "get_recorded_metrics",
+    "get_recorded_spans",
+    "get_span_id",
+    "get_trace_id",
+    "init",
+    "initialize_app",
+    "logger",
+    "reset_for_testing",
+    "shutdown",
+    "span",
+    "traced",
+]

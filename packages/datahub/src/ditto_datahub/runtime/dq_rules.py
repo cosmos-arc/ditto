@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import polars as pl
-from loguru import logger
+from ditto_foundation import logger
 
 from ..types import DQSeverity
 

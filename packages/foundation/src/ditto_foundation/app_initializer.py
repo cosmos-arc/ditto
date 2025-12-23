@@ -2,7 +2,7 @@
 Application initializer for Ditto system.
 
 Provides unified initialization for:
-- Logging system (loguru)
+- Observability system (loguru, tracing, metrics)
 - Directory structure
 - Configuration validation
 """
@@ -13,14 +13,14 @@ from typing import Any
 from loguru import logger
 
 from ditto_foundation.config import get_settings
-from ditto_foundation.logging_config import LogConfig, setup_logging
+from ditto_foundation.observability import Mode, init
 
 
 class AppInitializer:
     """
     Application initializer.
 
-    Handles system-wide initialization tasks including logging setup,
+    Handles system-wide initialization tasks including observability setup,
     directory creation, and configuration validation.
     """
 
@@ -45,8 +45,8 @@ class AppInitializer:
         # Create directories
         self._create_directories(settings)
 
-        # Setup logging
-        self._setup_logging(settings)
+        # Setup observability
+        self._setup_observability(settings)
 
         # Validate configuration
         errors = self._validate_config(settings)
@@ -55,7 +55,7 @@ class AppInitializer:
 
         result = {
             "status": "initialized",
-            "log_initialized": True,
+            "observability_initialized": True,
             "directories_created": True,
             "config_valid": len(errors) == 0,
             "config_errors": errors,
@@ -82,20 +82,18 @@ class AppInitializer:
         for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)
 
-    def _setup_logging(self, settings: Any) -> None:
-        """Setup logging configuration."""
-        log_dir = Path(settings.file_storage.log_root)
-        log_config = LogConfig(
-            level=settings.system.log_level,
-            json_format=settings.is_production,
-            enable_console=not settings.is_production,
-            enable_file=True,
-        )
+    def _setup_observability(self, settings: Any) -> None:
+        """Setup observability (logging, tracing, metrics)."""
+        # Determine mode based on environment
+        mode = Mode.PRODUCTION if settings.is_production else Mode.DEVELOPMENT
 
-        setup_logging(
-            config=log_config,
-            log_dir=log_dir,
-            env=settings.system.ditto_env,
+        # Initialize observability
+        init(
+            service_name="ditto",
+            environment=settings.system.ditto_env,
+            log_level=settings.system.log_level,
+            log_dir=str(settings.file_storage.log_root),
+            mode=mode,
         )
 
     def _validate_config(self, settings: Any) -> list[str]:

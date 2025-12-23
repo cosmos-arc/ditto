@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from loguru import logger
+from ditto_foundation import logger
 
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 

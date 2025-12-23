@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from loguru import logger
+from ditto_foundation import logger
 
 try:
     from filelock import FileLock, Timeout
@@ -66,7 +66,7 @@ class FileLockManager:
 
         logger.debug(
             "file_lock_acquire_start",
-            event="file_lock_acquire",
+            event="file_lock_acquire_start",
             lock_name=name,
             timeout=timeout,
         )
@@ -75,7 +75,7 @@ class FileLockManager:
             with lock:
                 logger.debug(
                     "file_lock_acquired",
-                    event="file_lock_acquire",
+                    event="file_lock_acquired",
                     lock_name=name,
                 )
                 yield

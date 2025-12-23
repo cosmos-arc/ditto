@@ -136,6 +136,29 @@ unfixable = []
 # __init__.py 可以没有 docstring
 "__init__.py" = ["D104"]
 
+# Observability 模块特殊规则
+# - RUF002/RUF003: 允许中文文档中的全角标点
+# - PLW0602/PLW0603: 允许全局变量用于模块状态管理
+# - PLR0913: 允许多参数函数
+# - PLC0415: 允许在函数中导入 opentelemetry
+"packages/foundation/src/ditto_foundation/observability/**/*.py" = [
+    "RUF002",
+    "RUF003",
+    "PLW0602",
+    "PLW0603",
+    "PLR0913",
+    "PLC0415",
+]
+# Datahub 模块允许未使用的导入（从 ditto_foundation 导入但尚未全部使用）
+"packages/datahub/**/*.py" = [
+    "F401",
+]
+# 测试 conftest 文件允许缺少类型注解（fixture 函数）
+"apps/server/tests/conftest.py" = [
+    "ANN",
+    "PLC0415",
+]
+
 
 # --- Ruff Formatter (格式化器) 配置 ---
 # 旨在成为 Black 的直接、高速替代品。

@@ -104,12 +104,12 @@ async def get_adjustment_factors(
 
     Args:
         symbol: ETF代码
-        start_date: 可选，开始日期
-        end_date: 可选，结束日期
+        start_date: 可选, 开始日期
+        end_date: 可选, 结束日期
 
     """
     try:
-        # 验证日期格式（如果提供）
+        # 验证日期格式(如果提供)
         if start_date:
             datetime.strptime(start_date, "%Y-%m-%d")
         if end_date:
@@ -196,17 +196,17 @@ async def get_trading_calendar(
 
 # @router.get("/quality/report")
 # async def get_data_quality_report(
-#     symbol: str = Query(None, description="可选，特定ETF代码"),
-#     start_date: str = Query(None, description="可选，开始日期"),
-#     end_date: str = Query(None, description="可选，结束日期"),
+#     symbol: str = Query(None, description="可选, 特定ETF代码"),
+#     start_date: str = Query(None, description="可选, 开始日期"),
+#     end_date: str = Query(None, description="可选, 结束日期"),
 # ) -> dict[str, Any]:
 #     """
 #     获取数据质量报告.
 #
 #     Args:
-#         symbol: 可选，特定ETF代码
-#         start_date: 可选，开始日期
-#         end_date: 可选，结束日期
+#         symbol: 可选, 特定ETF代码
+#         start_date: 可选, 开始日期
+#         end_date: 可选, 结束日期
 #
 #     """
 #     try:

@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from loguru import logger
+from ditto_foundation import logger
 
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
