@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import polars as pl
+from loguru import logger
 
 from ..types import DQSeverity
 
@@ -35,6 +36,16 @@ def check_pk_unique(df: pl.DataFrame, params: dict[str, Any]) -> tuple[bool, int
     unique_rows = df.select(keys).n_unique()
 
     duplicate_count = total_rows - unique_rows
+
+    if duplicate_count > 0:
+        logger.warning(
+            "dq_rule_pk_duplicate",
+            event="dq_check",
+            rule="primary_key_unique",
+            keys=keys,
+            duplicate_count=duplicate_count,
+        )
+
     return (
         duplicate_count == 0,
         duplicate_count,
@@ -49,6 +60,15 @@ def check_sid_not_null(
 ) -> tuple[bool, int, str]:
     """Check sid is not null."""
     null_count = df.filter(pl.col("sid").is_null()).height
+
+    if null_count > 0:
+        logger.warning(
+            "dq_rule_null_sid",
+            event="dq_check",
+            rule="sid_not_null",
+            null_count=null_count,
+        )
+
     return (
         null_count == 0,
         null_count,
@@ -66,6 +86,14 @@ def check_ohlc_positive(
     for col in price_cols:
         if col in df.columns:
             bad_count += df.filter(pl.col(col) <= 0).height
+
+    if bad_count > 0:
+        logger.warning(
+            "dq_rule_non_positive_ohlc",
+            event="dq_check",
+            rule="ohlc_positive",
+            bad_count=bad_count,
+        )
 
     return (
         bad_count == 0,
