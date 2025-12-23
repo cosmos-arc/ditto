@@ -10,6 +10,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from loguru import logger
+
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
@@ -98,6 +100,15 @@ class PipelineStore:
         if started_at and finished_at:
             duration_sec = (finished_at - started_at).total_seconds()
 
+        logger.info(
+            "pipeline_run_inserted",
+            event="pipeline_run",
+            run_id=run_id,
+            task_name=task_name,
+            dataset_id=dataset_id,
+            status=status,
+        )
+
         try:
             self._client.execute(
                 """INSERT INTO pipeline_run
@@ -126,6 +137,12 @@ class PipelineStore:
 
         except Exception:
             self._client.rollback()
+            logger.error(
+                "pipeline_run_insert_failed",
+                event="pipeline_run",
+                run_id=run_id,
+                task_name=task_name,
+            )
             raise
 
     def update_run(  # noqa: PLR0913
@@ -207,6 +224,13 @@ class PipelineStore:
                 params,
             )
             self._client.commit()
+
+            logger.info(
+                "pipeline_run_updated",
+                event="pipeline_run",
+                run_id=run_id,
+                status=status,
+            )
 
     def get_run(self, run_id: str) -> dict[str, Any] | None:
         """
@@ -373,6 +397,15 @@ class PipelineStore:
             trade_date: Trade date.
 
         """
+        logger.warning(
+            "dq_issue_inserted",
+            event="dq_issue",
+            run_id=run_id,
+            dataset_id=dataset_id,
+            rule_name=rule_name,
+            severity=severity,
+        )
+
         self._client.execute(
             """INSERT INTO dq_issue
             (run_id, dataset_id, year, sid, trade_date, rule_name, severity, message)
