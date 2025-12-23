@@ -13,6 +13,7 @@ from functools import lru_cache
 from typing import Any
 
 import polars as pl
+from loguru import logger
 
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
@@ -64,9 +65,36 @@ class SecurityStore:
             sid or None if not found.
 
         """
+        logger.debug(
+            "resolve_sid_start",
+            event="sid_resolve",
+            src_code=src_code,
+            source=source,
+            asof=asof,
+        )
+
         if asof is None:
-            return self.resolve_sid_cached(src_code, source)
-        return self._resolve_sid_from_db(src_code, source, asof)
+            result = self.resolve_sid_cached(src_code, source)
+        else:
+            result = self._resolve_sid_from_db(src_code, source, asof)
+
+        if result:
+            logger.debug(
+                "resolve_sid_found",
+                event="sid_resolve",
+                src_code=src_code,
+                sid=result,
+            )
+        else:
+            logger.warning(
+                "resolve_sid_not_found",
+                event="sid_resolve",
+                src_code=src_code,
+                source=source,
+                asof=asof,
+            )
+
+        return result
 
     def _resolve_sid_from_db(
         self,
@@ -123,11 +151,28 @@ class SecurityStore:
             Dictionary mapping src_code to sid (only for found codes).
 
         """
+        logger.info(
+            "resolve_sids_batch_start",
+            event="sid_batch_resolve",
+            source=source,
+            asof=asof,
+            input_count=len(src_codes),
+        )
+
         result: dict[str, int] = {}
         for code in src_codes:
             sid = self.resolve_sid(code, source, asof)
             if sid:
                 result[code] = sid
+
+        logger.info(
+            "resolve_sids_batch_complete",
+            event="sid_batch_resolve",
+            requested=len(src_codes),
+            found=len(result),
+            not_found=len(src_codes) - len(result),
+        )
+
         return result
 
     def resolve_by_symbol(
@@ -410,6 +455,17 @@ class SecurityStore:
             The registered sid.
 
         """
+        logger.info(
+            "register_security_start",
+            event="security_register",
+            sid=sid,
+            symbol=symbol,
+            src_code=src_code,
+            source=source,
+            asset_class=asset_class,
+            exchange=exchange,
+        )
+
         try:
             # Insert into security table
             self._client.execute(
@@ -428,8 +484,22 @@ class SecurityStore:
             )
 
             self._client.commit()
+
+            logger.info(
+                "register_security_success",
+                event="security_register",
+                sid=sid,
+                symbol=symbol,
+            )
+
             return sid
 
         except Exception:
             self._client.rollback()
+            logger.error(
+                "register_security_failed",
+                event="security_register",
+                sid=sid,
+                symbol=symbol,
+            )
             raise
