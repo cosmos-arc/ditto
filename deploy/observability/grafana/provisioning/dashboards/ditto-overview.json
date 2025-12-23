@@ -383,7 +383,10 @@
       "type": "timeseries"
     },
     {
-      "datasource": "VictoriaLogs",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -423,8 +426,8 @@
           "refId": "A"
         }
       ],
-      "title": "Recent Logs (Raw Logs)",
-      "type": "victorialogs-logs"
+      "title": "Recent Logs",
+      "type": "logs"
     }
   ],
   "refresh": "5s",
