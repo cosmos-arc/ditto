@@ -5,6 +5,8 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from loguru import logger
+
 
 class SQLitePool:
     """Simple SQLite connection wrapper."""
@@ -14,6 +16,12 @@ class SQLitePool:
         self._db_path = Path(db_path)
         self._local = threading.local()
 
+        logger.debug(
+            "sqlite_pool_init",
+            event="pool_init",
+            db_path=str(self._db_path),
+        )
+
     def get_connection(self) -> sqlite3.Connection:
         """Get thread-local connection."""
         if not hasattr(self._local, "conn"):
@@ -22,6 +30,12 @@ class SQLitePool:
             )
             conn.row_factory = sqlite3.Row
             self._local.conn = conn
+
+            logger.debug(
+                "sqlite_connection_created",
+                event="connection_created",
+                thread_id=threading.get_ident(),
+            )
         return self._local.conn  # type: ignore[no-any-return]
 
     def _get_connection(self) -> sqlite3.Connection:
@@ -39,18 +53,40 @@ class SQLitePool:
         """Rollback transaction."""
         conn = self.get_connection()
         conn.rollback()
+        logger.debug(
+            "sqlite_pool_rollback",
+            event="transaction",
+            action="rollback",
+        )
 
     def commit(self) -> None:
         """Commit transaction."""
         conn = self.get_connection()
         conn.commit()
+        logger.debug(
+            "sqlite_pool_commit",
+            event="transaction",
+            action="commit",
+        )
 
     def init_schema(self) -> None:
         """Initialize database schema."""
+        logger.info(
+            "sqlite_schema_init_start",
+            event="schema_init",
+            db_path=str(self._db_path),
+        )
+
         conn = self.get_connection()
         schema = self._get_schema()
         conn.executescript(schema)
         conn.commit()
+
+        logger.info(
+            "sqlite_schema_init_complete",
+            event="schema_init",
+            status="success",
+        )
 
     def _get_schema(self) -> str:
         """Get database schema DDL."""
@@ -223,3 +259,9 @@ class SQLitePool:
         if hasattr(self._local, "conn"):
             self._local.conn.close()
             delattr(self._local, "conn")
+
+            logger.debug(
+                "sqlite_connection_closed",
+                event="connection_closed",
+                thread_id=threading.get_ident(),
+            )
