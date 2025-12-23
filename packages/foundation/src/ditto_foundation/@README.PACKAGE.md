@@ -181,8 +181,57 @@ M.data_update_duration.record(1.5, {"source": "tushare"})
 2. **配置热加载**: 使用 `reload_settings()` 可重新加载配置
 3. **环境变量**: 配置优先级: 环境变量 > .env 文件 > 默认值
 4. **可观测性模式**: 测试环境自动使用 `TESTING` 模式，可通过 `DITTO_OBSERVABILITY_MODE` 环境变量显式指定
+5. **外部依赖部署**: 生产/开发模式需要部署外部服务（VictoriaMetrics、VictoriaLogs、Vector、Grafana）
 
-## 六、使用示例
+## 六、外部依赖部署
+
+生产环境和开发环境需要部署以下可观测性服务：
+
+### 快速开始
+
+```powershell
+# 启动服务
+.\scripts\observability\start.ps1
+
+# 检查服务状态
+.\scripts\observability\health_check.ps1
+
+# 停止服务
+.\scripts\observability\stop.ps1
+```
+
+### 服务说明
+
+| 服务 | 版本 | 端口 | 用途 |
+|------|------|------|------|
+| VictoriaMetrics | v1.104.0 | 8428 | Metrics 存储 + OTLP 接收 |
+| VictoriaLogs | v1.37.0 | 9428 | Logs 存储 + 查询 |
+| Vector | v0.52.0-debian | 8686 | 日志采集 |
+| Grafana | 11.1.0 | 3000 | 可视化仪表盘 |
+
+### 数据流向
+
+```
+Application
+    Loguru -> logs/ditto.jsonl -> Vector -> VictoriaLogs
+    OTel Metrics -> OTLP HTTP -> VictoriaMetrics
+                              |
+                              v
+                        Grafana :3000
+```
+
+### 访问地址
+
+- **Grafana**: http://localhost:3000 (可视化仪表盘)
+- **VictoriaMetrics**: http://localhost:8428 (Metrics 查询)
+- **VictoriaLogs**: http://localhost:9428 (Logs 查询)
+- **Vector**: http://localhost:8686 (日志采集状态)
+
+### 详细部署文档
+
+请参考 `deploy/observability/README.md` 获取完整的部署指南、配置说明和故障排查。
+
+## 七、使用示例
 
 ### 基础使用
 
