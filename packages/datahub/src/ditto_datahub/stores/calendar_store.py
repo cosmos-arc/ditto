@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 import polars as pl
+from loguru import logger
 
 from ditto_datahub.errors import TradingDateNotFoundError
 from ditto_datahub.stores.sqlite_client import SQLiteClient
@@ -65,6 +66,11 @@ class CalendarStore:
 
     def _load_cache(self) -> None:
         """Load all calendar data into memory."""
+        logger.info(
+            "calendar_cache_load_start",
+            event="calendar_load",
+        )
+
         sql = "SELECT * FROM trading_calendar ORDER BY trade_date"
         rows = self._client.fetchall(sql)
 
@@ -97,8 +103,22 @@ class CalendarStore:
                 if day.is_quarter_end:
                     self._quarter_ends.append(date_str)
 
+        logger.info(
+            "calendar_cache_load_complete",
+            event="calendar_load",
+            total_days=len(self._all_days),
+            trading_days=len(self._trading_days),
+            week_ends=len(self._week_ends),
+            month_ends=len(self._month_ends),
+            quarter_ends=len(self._quarter_ends),
+        )
+
     def reload(self) -> None:
         """Reload cache (call after calendar update)."""
+        logger.debug(
+            "calendar_cache_reload_start",
+            event="calendar_reload",
+        )
         self._cache.clear()
         self._trading_days.clear()
         self._all_days.clear()
@@ -106,6 +126,10 @@ class CalendarStore:
         self._month_ends.clear()
         self._quarter_ends.clear()
         self._load_cache()
+        logger.debug(
+            "calendar_cache_reload_complete",
+            event="calendar_reload",
+        )
 
     # ============ Basic queries (O(1)) ============
 
@@ -433,6 +457,12 @@ class CalendarStore:
         if not records:
             return 0
 
+        logger.info(
+            "calendar_upsert_start",
+            event="calendar_upsert",
+            record_count=len(records),
+        )
+
         try:
             count = 0
             for record in records:
@@ -460,8 +490,19 @@ class CalendarStore:
 
             self._client.commit()
             self.reload()  # Update cache
+
+            logger.info(
+                "calendar_upsert_complete",
+                event="calendar_upsert",
+                affected_count=count,
+            )
             return count
 
         except Exception:
             self._client.rollback()
+            logger.error(
+                "calendar_upsert_failed",
+                event="calendar_upsert",
+                record_count=len(records),
+            )
             raise
