@@ -17,8 +17,8 @@ class SQLitePool:
         self._local = threading.local()
 
         logger.debug(
-            "sqlite_pool_init",
-            event="pool_init",
+            "SQLite pool initialized",
+            event="pool_init_complete",
             db_path=str(self._db_path),
         )
 
@@ -32,7 +32,7 @@ class SQLitePool:
             self._local.conn = conn
 
             logger.debug(
-                "sqlite_connection_created",
+                "SQLite connection created",
                 event="connection_created",
                 thread_id=threading.get_ident(),
             )
@@ -54,9 +54,8 @@ class SQLitePool:
         conn = self.get_connection()
         conn.rollback()
         logger.debug(
-            "sqlite_pool_rollback",
-            event="transaction",
-            action="rollback",
+            "Rolling back transaction",
+            event="transaction_rollback",
         )
 
     def commit(self) -> None:
@@ -64,16 +63,15 @@ class SQLitePool:
         conn = self.get_connection()
         conn.commit()
         logger.debug(
-            "sqlite_pool_commit",
-            event="transaction",
-            action="commit",
+            "Committing transaction",
+            event="transaction_commit",
         )
 
     def init_schema(self) -> None:
         """Initialize database schema."""
         logger.info(
-            "sqlite_schema_init_start",
-            event="schema_init",
+            "Initializing database schema",
+            event="schema_init_start",
             db_path=str(self._db_path),
         )
 
@@ -83,8 +81,8 @@ class SQLitePool:
         conn.commit()
 
         logger.info(
-            "sqlite_schema_init_complete",
-            event="schema_init",
+            "Database schema initialized successfully",
+            event="schema_init_complete",
             status="success",
         )
 
@@ -261,7 +259,7 @@ class SQLitePool:
             delattr(self._local, "conn")
 
             logger.debug(
-                "sqlite_connection_closed",
+                "SQLite connection closed",
                 event="connection_closed",
                 thread_id=threading.get_ident(),
             )

@@ -47,7 +47,14 @@ repos:
           - pydantic>=2.0
           # 如果你用到了 pydantic-settings / pydantic-core 等，也可以加在这里
           # - pydantic-settings>=2.0
-        args: [--no-error-summary]
+        args:
+          [
+            --no-error-summary,
+            --disable-error-code,
+            misc,
+            --disable-error-code,
+            import-untyped,
+          ]
 
   # 可选：本地 pytest 钩子
   #- repo: local

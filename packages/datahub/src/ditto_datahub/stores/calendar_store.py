@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 import polars as pl
-from ditto_foundation import logger
+from ditto_foundation import logger, span
 
 from ditto_datahub.errors import TradingDateNotFoundError
 from ditto_datahub.stores.sqlite_client import SQLiteClient
@@ -66,10 +66,11 @@ class CalendarStore:
 
     def _load_cache(self) -> None:
         """Load all calendar data into memory."""
-        logger.info(
-            "calendar_cache_load_start",
-            event="calendar_load",
-        )
+        with span("calendar.load") as s:
+            logger.info(
+                "Loading calendar data into cache",
+                event="calendar_load_start",
+            )
 
         sql = "SELECT * FROM trading_calendar ORDER BY trade_date"
         rows = self._client.fetchall(sql)
@@ -103,9 +104,13 @@ class CalendarStore:
                 if day.is_quarter_end:
                     self._quarter_ends.append(date_str)
 
+        # Set span attributes
+        s.set_attribute("total_days", len(self._all_days))
+        s.set_attribute("trading_days", len(self._trading_days))
+
         logger.info(
-            "calendar_cache_load_complete",
-            event="calendar_load",
+            "Calendar cache loaded successfully",
+            event="calendar_load_complete",
             total_days=len(self._all_days),
             trading_days=len(self._trading_days),
             week_ends=len(self._week_ends),
@@ -116,8 +121,8 @@ class CalendarStore:
     def reload(self) -> None:
         """Reload cache (call after calendar update)."""
         logger.debug(
-            "calendar_cache_reload_start",
-            event="calendar_reload",
+            "Reloading calendar cache",
+            event="calendar_reload_start",
         )
         self._cache.clear()
         self._trading_days.clear()
@@ -127,8 +132,8 @@ class CalendarStore:
         self._quarter_ends.clear()
         self._load_cache()
         logger.debug(
-            "calendar_cache_reload_complete",
-            event="calendar_reload",
+            "Calendar cache reloaded successfully",
+            event="calendar_reload_complete",
         )
 
     # ============ Basic queries (O(1)) ============
@@ -458,8 +463,8 @@ class CalendarStore:
             return 0
 
         logger.info(
-            "calendar_upsert_start",
-            event="calendar_upsert",
+            "Starting calendar upsert",
+            event="calendar_upsert_start",
             record_count=len(records),
         )
 
@@ -492,8 +497,8 @@ class CalendarStore:
             self.reload()  # Update cache
 
             logger.info(
-                "calendar_upsert_complete",
-                event="calendar_upsert",
+                "Calendar upsert completed",
+                event="calendar_upsert_complete",
                 affected_count=count,
             )
             return count
@@ -501,8 +506,8 @@ class CalendarStore:
         except Exception:
             self._client.rollback()
             logger.error(
-                "calendar_upsert_failed",
-                event="calendar_upsert",
+                "Calendar upsert failed",
+                event="calendar_upsert_failed",
                 record_count=len(records),
             )
             raise

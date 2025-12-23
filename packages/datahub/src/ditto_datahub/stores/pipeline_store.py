@@ -101,8 +101,8 @@ class PipelineStore:
             duration_sec = (finished_at - started_at).total_seconds()
 
         logger.info(
-            "pipeline_run_inserted",
-            event="pipeline_run",
+            "Inserting pipeline run record",
+            event="pipeline_run_insert_start",
             run_id=run_id,
             task_name=task_name,
             dataset_id=dataset_id,
@@ -138,8 +138,8 @@ class PipelineStore:
         except Exception:
             self._client.rollback()
             logger.error(
-                "pipeline_run_insert_failed",
-                event="pipeline_run",
+                "Pipeline run insertion failed",
+                event="pipeline_run_insert_failed",
                 run_id=run_id,
                 task_name=task_name,
             )
@@ -226,8 +226,8 @@ class PipelineStore:
             self._client.commit()
 
             logger.info(
-                "pipeline_run_updated",
-                event="pipeline_run",
+                "Pipeline run updated",
+                event="pipeline_run_update_complete",
                 run_id=run_id,
                 status=status,
             )
@@ -398,8 +398,8 @@ class PipelineStore:
 
         """
         logger.warning(
-            "dq_issue_inserted",
-            event="dq_issue",
+            "Data quality issue detected",
+            event="dq_issue_detected",
             run_id=run_id,
             dataset_id=dataset_id,
             rule_name=rule_name,

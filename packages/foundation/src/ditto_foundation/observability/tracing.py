@@ -7,7 +7,7 @@
 import functools
 import uuid
 from collections.abc import Callable
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
@@ -16,6 +16,9 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from .config import Mode, ObservabilityConfig
+
+P = ParamSpec("P")
+T = TypeVar("T")
 
 # 全局变量
 _tracer: trace.Tracer | None = None
@@ -158,7 +161,7 @@ def span(name: str, **attributes: Any) -> SpanContext:
     return SpanContext(name, **attributes)
 
 
-def traced(operation: str) -> Callable[[Any], Any]:
+def traced(operation: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """
     装饰器：自动创建 Span.
 
@@ -172,9 +175,9 @@ def traced(operation: str) -> Callable[[Any], Any]:
 
     """
 
-    def decorator(func: Any) -> Any:
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             with span(operation, function=func.__name__):
                 return func(*args, **kwargs)
 

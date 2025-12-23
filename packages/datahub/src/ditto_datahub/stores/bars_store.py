@@ -10,9 +10,10 @@ from __future__ import annotations
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import polars as pl
-from ditto_foundation import logger
+from ditto_foundation import M, logger, span, traced
 from ditto_foundation.util.io import atomic_write, file_md5
 
 
@@ -122,6 +123,7 @@ class BarsStore:
 
     # ============ Read operations ============
 
+    @traced("data.read")  # type: ignore[misc]
     def read(
         self,
         dataset: str,
@@ -152,8 +154,8 @@ class BarsStore:
 
         if not paths:
             logger.info(
-                "bars_read_no_data",
-                event="bars_read",
+                "No data found for query",
+                event="data_read_complete",
                 dataset=dataset,
                 start_date=start_date,
                 end_date=end_date,
@@ -181,8 +183,8 @@ class BarsStore:
         duration_ms = (time.time() - start_time) * 1000
 
         logger.info(
-            "bars_read_complete",
-            event="bars_read",
+            "Data read completed",
+            event="data_read_complete",
             dataset=dataset,
             start_date=start_date,
             end_date=end_date,
@@ -190,6 +192,10 @@ class BarsStore:
             row_count=len(result),
             duration_ms=round(duration_ms, 2),
         )
+
+        # Record metrics
+        M.data_records.add(len(result), {"dataset": dataset, "status": "success"})
+        M.data_update_duration.record(duration_ms / 1000, {"dataset": dataset})
 
         return result
 
@@ -215,6 +221,16 @@ class BarsStore:
             Tuple of (file_path, checksum).
 
         """
+        with span("data.write", dataset=dataset, year=year) as s:
+            return self._write_impl(dataset, df, year, s)
+
+    def _write_impl(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        span_ctx: Any,
+    ) -> tuple[str, str]:
         start_time = time.time()
 
         dataset_dir = self._data_root / dataset
@@ -248,9 +264,15 @@ class BarsStore:
 
         duration_ms = (time.time() - start_time) * 1000
 
+        # Set span attributes
+        if span_ctx:
+            span_ctx.set_attribute("row_count", len(df))
+            span_ctx.set_attribute("total_rows", len(combined))
+            span_ctx.set_attribute("is_merge", is_merge)
+
         logger.info(
-            "bars_write_complete",
-            event="bars_write",
+            "Data write completed",
+            event="data_write_complete",
             dataset=dataset,
             year=year,
             row_count=len(df),
@@ -260,6 +282,10 @@ class BarsStore:
             checksum=checksum,
             duration_ms=round(duration_ms, 2),
         )
+
+        # Record metrics
+        M.data_records.add(len(df), {"dataset": dataset, "status": "success"})
+        M.data_update_duration.record(duration_ms / 1000, {"dataset": dataset})
 
         return str(file_path), checksum
 

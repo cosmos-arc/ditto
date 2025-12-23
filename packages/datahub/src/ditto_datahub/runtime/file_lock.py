@@ -43,8 +43,8 @@ class FileLockManager:
         self.lock_dir.mkdir(parents=True, exist_ok=True)
 
         logger.debug(
-            "file_lock_manager_init",
-            event="file_lock_init",
+            "File lock manager initialized",
+            event="file_lock_init_complete",
             lock_dir=str(self.lock_dir),
         )
 
@@ -65,7 +65,7 @@ class FileLockManager:
         lock = FileLock(lock_path, timeout=timeout)
 
         logger.debug(
-            "file_lock_acquire_start",
+            "Attempting to acquire file lock",
             event="file_lock_acquire_start",
             lock_name=name,
             timeout=timeout,
@@ -74,14 +74,14 @@ class FileLockManager:
         try:
             with lock:
                 logger.debug(
-                    "file_lock_acquired",
+                    "File lock acquired",
                     event="file_lock_acquired",
                     lock_name=name,
                 )
                 yield
         except Timeout as e:
             logger.error(
-                "file_lock_timeout",
+                "File lock acquisition timeout",
                 event="file_lock_timeout",
                 lock_name=name,
                 timeout=timeout,

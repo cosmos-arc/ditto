@@ -13,7 +13,7 @@ from functools import lru_cache
 from typing import Any
 
 import polars as pl
-from ditto_foundation import logger
+from ditto_foundation import M, logger, span, traced
 
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
@@ -52,6 +52,7 @@ class SecurityStore:
         """
         return self._resolve_sid_from_db(src_code, source, asof=None)
 
+    @traced("data.sid_resolve")  # type: ignore[misc]
     def resolve_sid(self, src_code: str, source: str, asof: str | None) -> int | None:
         """
         Resolve src_code to sid (with PIT support).
@@ -66,8 +67,8 @@ class SecurityStore:
 
         """
         logger.debug(
-            "resolve_sid_start",
-            event="sid_resolve",
+            "Starting SID resolution",
+            event="sid_resolve_start",
             src_code=src_code,
             source=source,
             asof=asof,
@@ -80,19 +81,23 @@ class SecurityStore:
 
         if result:
             logger.debug(
-                "resolve_sid_found",
-                event="sid_resolve",
+                "SID resolved successfully",
+                event="sid_resolve_complete",
                 src_code=src_code,
                 sid=result,
             )
+            # Record metrics
+            M.data_records.add(1, {"dataset": "sid_resolution", "status": "success"})
         else:
             logger.warning(
-                "resolve_sid_not_found",
-                event="sid_resolve",
+                "SID not found",
+                event="sid_resolve_not_found",
                 src_code=src_code,
                 source=source,
                 asof=asof,
             )
+            # Record metrics
+            M.data_records.add(1, {"dataset": "sid_resolution", "status": "not_found"})
 
         return result
 
@@ -152,8 +157,8 @@ class SecurityStore:
 
         """
         logger.info(
-            "resolve_sids_batch_start",
-            event="sid_batch_resolve",
+            "Starting batch SID resolution",
+            event="sid_batch_resolve_start",
             source=source,
             asof=asof,
             input_count=len(src_codes),
@@ -166,8 +171,8 @@ class SecurityStore:
                 result[code] = sid
 
         logger.info(
-            "resolve_sids_batch_complete",
-            event="sid_batch_resolve",
+            "Batch SID resolution completed",
+            event="sid_batch_resolve_complete",
             requested=len(src_codes),
             found=len(result),
             not_found=len(src_codes) - len(result),
@@ -456,8 +461,8 @@ class SecurityStore:
 
         """
         logger.info(
-            "register_security_start",
-            event="security_register",
+            "Starting security registration",
+            event="security_register_start",
             sid=sid,
             symbol=symbol,
             src_code=src_code,
@@ -486,8 +491,8 @@ class SecurityStore:
             self._client.commit()
 
             logger.info(
-                "register_security_success",
-                event="security_register",
+                "Security registered successfully",
+                event="security_register_complete",
                 sid=sid,
                 symbol=symbol,
             )
@@ -497,8 +502,8 @@ class SecurityStore:
         except Exception:
             self._client.rollback()
             logger.error(
-                "register_security_failed",
-                event="security_register",
+                "Security registration failed",
+                event="security_register_failed",
                 sid=sid,
                 symbol=symbol,
             )
