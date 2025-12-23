@@ -132,6 +132,51 @@ test(engine): P0-041 add unit tests for RegimeEngine
 | `docs/plans/YYYY-MM-DD-sprint*-task*.md` | 更新实施状态和验收标准 |
 | `docs/design/*.md` | 同步命名变更、接口变更 |
 
+### 模块文档更新规则
+
+**任何源码文件变更后，必须判断是否需要更新对应的 `@README.PACKAGE.md` 文件。**
+
+#### 需要更新 @README.PACKAGE.md 的场景
+
+| 变更类型 | 说明 | 示例 |
+|----------|------|------|
+| 新增类/函数 | 添加新的公开类或函数 | 在 `stores/` 中新增 `FooStore` |
+| 修改接口 | 函数签名变更、参数增减 | `connect()` 方法增加 `timeout` 参数 |
+| 删除功能 | 移除公开类或函数 | 废弃 `LegacyStore` 类 |
+| 架构调整 | 模块职责变化、依赖关系变更 | `stores/` 不再依赖 `runtime/` |
+
+#### 不需要更新的场景
+
+| 变更类型 | 说明 |
+|----------|------|
+| 私有实现 | 仅修改 `_private_method()` 等私有成员 |
+| Bug 修复 | 不改变接口的行为修复 |
+| 内部重构 | 代码结构优化但接口不变 |
+| 测试代码 | 仅修改 `tests/` 下的文件 |
+
+#### @README.PACKAGE.md 文件位置
+
+| 包级别 | 文件路径 |
+|--------|----------|
+| ditto_core | `packages/core/src/ditto_core/@README.PACKAGE.md` |
+| ditto_datahub | `packages/datahub/src/ditto_datahub/@README.PACKAGE.md` |
+| ditto_foundation | `packages/foundation/src/ditto_foundation/@README.PACKAGE.md` |
+
+| 子模块级别 | 文件路径示例 |
+|------------|-------------|
+| stores | `packages/datahub/src/ditto_datahub/stores/@README.PACKAGE.md` |
+| runtime | `packages/datahub/src/ditto_datahub/runtime/@README.PACKAGE.md` |
+| config | `packages/foundation/src/ditto_foundation/config/@README.PACKAGE.md` |
+
+#### 更新检查清单
+
+提交代码前，确认以下检查项：
+
+- [ ] 是否新增/修改/删除了公开类或函数？
+- [ ] 是否修改了模块的依赖关系？
+- [ ] 是否改变了模块的核心职责？
+- [ ] 如果是，是否已更新对应的 `@README.PACKAGE.md`？
+
 ---
 
 ## 4. 项目架构
