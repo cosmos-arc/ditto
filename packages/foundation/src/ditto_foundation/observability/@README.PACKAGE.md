@@ -165,6 +165,19 @@ assert metrics["metrics_recorded"] is True
 
 ## 五、预定义指标
 
+### Histogram Buckets 配置
+
+所有 `duration` 类型的 Histogram 指标使用统一的 buckets 配置（单位：秒）：
+
+```python
+buckets = [0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0]
+```
+
+适用于以下指标：
+- `ditto.data.update.duration`
+- `ditto.factor.calc.duration`
+- `ditto.api.duration`
+
 ### 数据指标
 
 | 指标名 | 类型 | 属性示例 | 说明 |
@@ -293,3 +306,4 @@ config = ObservabilityConfig(
 3. **属性值**: 指标属性值必须是字符串，数字会被自动转换
 4. **force 参数**: `init(force=True)` 可强制重新初始化 (仅用于测试)
 5. **trace_id 格式**: 返回标准 UUID 格式字符串 (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+6. **ObservableGauge 限制**: 预定义的 Gauge 指标（如 `M.kill_switch_level`）当前实现不支持多标签 attributes。`set(attributes)` 中的 attributes 参数会被忽略，仅保留 API 兼容性。如需带标签的 Gauge，请直接使用 meter API 创建。

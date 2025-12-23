@@ -2,15 +2,21 @@
 指标模块.
 
 基于 OpenTelemetry 的指标收集，定义所有预定义业务指标.
+
+Histogram Buckets 配置 (秒):
+    [0.1, 0.5, 1, 5, 10, 30, 60, 300]
+
+适用于所有 duration 类型的 Histogram 指标.
 """
 
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from opentelemetry import metrics
 from opentelemetry.metrics import Counter, Histogram, ObservableGauge
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
 from opentelemetry.sdk.resources import Resource
 
 from .config import Mode, ObservabilityConfig
@@ -19,6 +25,27 @@ from .config import Mode, ObservabilityConfig
 _meter: metrics.Meter | None = None
 _in_memory_reader: InMemoryMetricReader | None = None
 _gauge_callbacks: dict[str, Callable[..., Any]] = {}
+
+# Histogram buckets 配置 (秒)
+_HISTOGRAM_BUCKETS = (0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0)
+
+
+if TYPE_CHECKING:
+
+    class GaugeWrapper(Protocol):
+        """Gauge 接口协议 (类型检查用)."""
+
+        def set(self, value: float, attributes: dict[str, str] | None = None) -> None:
+            """设置指标值."""
+            ...
+
+        def inc(self, delta: float = 1.0) -> None:
+            """增加指标值."""
+            ...
+
+        def dec(self, delta: float = 1.0) -> None:
+            """减少指标值."""
+            ...
 
 
 class M:
@@ -156,9 +183,12 @@ def _create_gauge(
     meter: metrics.Meter,
     name: str,
     description: str,
-) -> ObservableGauge:
+) -> "GaugeWrapper":
     """
     创建一个 ObservableGauge，提供简单的 set() 接口.
+
+    注意: 当前实现不支持 attributes 参数。set(attributes) 中的 attributes
+    会被忽略，因为 ObservableGauge 使用固定的回调函数。
 
     Args:
     ----
@@ -168,7 +198,7 @@ def _create_gauge(
 
     Returns:
     -------
-        包装了 ObservableGauge 的对象，提供 set() 方法
+        GaugeWrapper: 包装了 ObservableGauge 的对象，提供 set() / inc() / dec() 方法
 
     """
     # 使用字典来存储当前值
@@ -187,14 +217,27 @@ def _create_gauge(
 
     # 创建一个包装类提供 set() 接口
     class GaugeWrapper:
-        """ObservableGauge 包装器，提供简单的 set() 接口."""
+        """
+        ObservableGauge 包装器，提供简单的 set() 接口.
+
+        注意: 当前实现不支持多标签 attributes。如需带标签的 Gauge，
+        请使用 meter.create_gauge() 直接创建。
+        """
 
         def __init__(self, obs_gauge: ObservableGauge) -> None:
             self._gauge = obs_gauge
             self._name = name
 
         def set(self, value: float, attributes: dict[str, str] | None = None) -> None:
-            """设置指标值."""
+            """
+            设置指标值.
+
+            Args:
+            ----
+                value: 指标值
+                attributes: 标签字典 (当前实现中会被忽略，保留用于API兼容性)
+
+            """
             current_values[self._name] = value
 
         def inc(self, delta: float = 1.0) -> None:
@@ -229,10 +272,40 @@ def configure_metrics(config: ObservabilityConfig, mode: Mode) -> metrics.Meter:
     # 资源定义
     resource = Resource.create({"service.name": config.service_name})
 
+    # 配置 Histogram buckets 视图 - 适用于所有 duration 类型指标
+    # 注意：当前 OpenTelemetry SDK 不支持 name_pattern 匹配
+    # 需要为每个 duration 指标单独创建 View
+    duration_histogram_aggregation = ExplicitBucketHistogramAggregation(
+        boundaries=_HISTOGRAM_BUCKETS,
+    )
+
+    # 为每个 duration 指标创建视图
+    duration_histogram_views = [
+        View(
+            instrument_type=Histogram,
+            instrument_name="ditto.data.update.duration",
+            aggregation=duration_histogram_aggregation,
+        ),
+        View(
+            instrument_type=Histogram,
+            instrument_name="ditto.factor.calc.duration",
+            aggregation=duration_histogram_aggregation,
+        ),
+        View(
+            instrument_type=Histogram,
+            instrument_name="ditto.api.duration",
+            aggregation=duration_histogram_aggregation,
+        ),
+    ]
+
     # TESTING 或 TESTING_WITH_ASSERTIONS：使用 InMemory Reader
     if mode.is_testing():
         _in_memory_reader = InMemoryMetricReader()
-        provider = MeterProvider(metric_readers=[_in_memory_reader], resource=resource)
+        provider = MeterProvider(
+            metric_readers=[_in_memory_reader],
+            resource=resource,
+            views=duration_histogram_views,
+        )
         # 直接从 provider 获取 meter，不设置全局 provider
         _meter = provider.get_meter(__name__)
         M.setup(_meter)

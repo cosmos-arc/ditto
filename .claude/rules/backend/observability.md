@@ -20,8 +20,8 @@ paths: **/*.py
 ## 导入规范
 
 ```python
-# ✅ 正确：统一从 observability 模块导入
-from ditto.observability import init, logger, span, traced, M
+# ✅ 正确：统一从 ditto_foundation 模块导入可观测性接口
+from ditto_foundation import init, logger, span, traced, M
 
 # ❌ 错误：直接导入底层库
 from loguru import logger
@@ -228,7 +228,7 @@ def run_backtest(strategy: str) -> dict:
 ### 使用预定义指标
 
 ```python
-from ditto.observability import M
+from ditto_foundation import M
 
 # Counter - 计数
 M.data_records.add(100, {"source": "tushare", "table": "etf_daily", "status": "success"})
@@ -413,7 +413,7 @@ async def get_portfolio():
 
 ```python
 import pytest
-from ditto.observability import init, Mode, reset_for_testing
+from ditto_foundation import init, Mode, reset_for_testing
 
 @pytest.fixture(autouse=True)
 def reset_obs():
@@ -437,7 +437,7 @@ def obs_assertions():
 ### 断言 Span
 
 ```python
-from ditto.observability import span, get_recorded_spans
+from ditto_foundation import span, get_recorded_spans
 
 def test_span_created(obs_assertions):
     with span("test_op", key="value"):
@@ -452,7 +452,7 @@ def test_span_created(obs_assertions):
 ### 断言 Metrics
 
 ```python
-from ditto.observability import M, get_recorded_metrics
+from ditto_foundation import M, get_recorded_metrics
 
 def test_counter(obs_assertions):
     M.data_records.add(100, {"source": "test", "table": "test", "status": "success"})
@@ -502,7 +502,7 @@ M.data_records.add(1, {"source": "tushare", "table": "etf_daily"})
 from loguru import logger
 
 # 正确
-from ditto.observability import logger
+from ditto_foundation import logger
 ```
 
 ### ❌ span 不设置属性
