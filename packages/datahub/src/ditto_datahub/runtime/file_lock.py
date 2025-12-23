@@ -4,6 +4,8 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from loguru import logger
+
 try:
     from filelock import FileLock, Timeout
 except ImportError as e:
@@ -40,6 +42,12 @@ class FileLockManager:
         self.lock_dir = Path(lock_dir)
         self.lock_dir.mkdir(parents=True, exist_ok=True)
 
+        logger.debug(
+            "file_lock_manager_init",
+            event="file_lock_init",
+            lock_dir=str(self.lock_dir),
+        )
+
     @contextmanager
     def acquire(self, name: str, timeout: float = 30.0) -> Iterator[None]:
         """
@@ -56,10 +64,28 @@ class FileLockManager:
         lock_path = self.lock_dir / f"{name}.lock"
         lock = FileLock(lock_path, timeout=timeout)
 
+        logger.debug(
+            "file_lock_acquire_start",
+            event="file_lock_acquire",
+            lock_name=name,
+            timeout=timeout,
+        )
+
         try:
             with lock:
+                logger.debug(
+                    "file_lock_acquired",
+                    event="file_lock_acquire",
+                    lock_name=name,
+                )
                 yield
         except Timeout as e:
+            logger.error(
+                "file_lock_timeout",
+                event="file_lock_timeout",
+                lock_name=name,
+                timeout=timeout,
+            )
             raise LockAcquisitionError(
                 f"Failed to acquire lock '{name}' within {timeout}s",
                 lock_name=name,
