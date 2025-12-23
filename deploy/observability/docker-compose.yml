@@ -2,12 +2,12 @@
 # 版本: v1.0.0
 # 说明: 部署 VictoriaMetrics、VictoriaLogs、Vector、Grafana
 
-version: '3.8'
+version: "3.8"
 
 services:
   # VictoriaMetrics - Metrics 存储与 OTLP 接收
   victoriametrics:
-    image: victoriametrics/victoriametrics:v1.104.0
+    image: victoriametrics/victoria-metrics:v1.104.0
     container_name: ditto-vm
     ports:
       - "8428:8428"
@@ -24,7 +24,7 @@ services:
 
   # VictoriaLogs - Logs 存储与查询
   victorialogs:
-    image: victoriametrics/victoria-logs:v0.37.0-victorialogs
+    image: victoriametrics/victoria-logs:v1.37.0
     container_name: ditto-vl
     ports:
       - "9428:9428"
@@ -66,7 +66,7 @@ services:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_SERVER_ROOT_URL=http://localhost:3000
-      - GF_INSTALL_PLUGINS=victoriametrics-datasource,victorialogs-datasource
+      - GF_INSTALL_PLUGINS=
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
