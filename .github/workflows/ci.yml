@@ -212,48 +212,6 @@ jobs:
           name: test-results-unit
           path: junit-unit.xml
 
-  test-integration:
-    name: Integration Tests
-    needs: [changes, test-unit]
-    # Skip integration tests in CI (observability services not available)
-    if: false
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.8.1
-        with:
-          pixi-version: v0.39.5
-          cache: true
-          locked: true
-          environment: dev # 使用 dev 环境，包含代码质量工具
-
-      # 集成测试可能需要的服务
-      - name: Prepare test environment
-        run: |
-          mkdir -p data/duckdb data/sqlite
-          # 如需启动依赖服务，在此添加
-
-      - name: Run integration tests
-        run: |
-          pixi run -e dev pytest \
-            -m "integration" \
-            --cov=packages \
-            --cov=apps \
-            --cov-report=xml:coverage-integration.xml \
-            --cov-append \
-            --junitxml=junit-integration.xml \
-            -v
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage-integration.xml
-          flags: integration
-          fail_ci_if_error: false
-
   # ============================================================
   # Stage 4: 构建验证（仅 main 分支）
   # ============================================================
