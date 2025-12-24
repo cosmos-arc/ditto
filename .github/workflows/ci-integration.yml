@@ -34,11 +34,13 @@ jobs:
         image: victoriametrics/victoria-metrics:v1.104.0
         ports:
           - 8428:8428
+        # Use built-in healthcheck from the image
         options: >-
-          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8428/health || exit 1"
+          --health-cmd "curl -f http://localhost:8428/health || exit 1"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
+          --health-start-period 10s
 
       # VictoriaLogs
       victorialogs:
@@ -46,10 +48,11 @@ jobs:
         ports:
           - 9428:9428
         options: >-
-          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:9428/health || exit 1"
+          --health-cmd "curl -f http://localhost:9428/health || exit 1"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
+          --health-start-period 10s
 
       # Grafana
       grafana:
@@ -61,10 +64,11 @@ jobs:
           GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
           GF_SERVER_ROOT_URL: http://localhost:3000
         options: >-
-          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"
+          --health-cmd "curl -f http://localhost:3000/api/health || exit 1"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
+          --health-start-period 30s
 
     steps:
       - name: Checkout code
