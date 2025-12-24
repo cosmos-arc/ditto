@@ -75,6 +75,7 @@ jobs:
           pixi-version: v0.39.5
           cache: true
           locked: true
+          environment: dev # 使用 dev 环境，包含代码质量工具
 
       - name: Ruff lint
         run: pixi run ruff check --output-format=github .
@@ -96,6 +97,7 @@ jobs:
           pixi-version: v0.39.5
           cache: true
           locked: true
+          environment: dev # 使用 dev 环境，包含代码质量工具
 
       # Mypy 缓存
       - name: Cache mypy
@@ -126,6 +128,7 @@ jobs:
           pixi-version: v0.39.5
           cache: true
           locked: true
+          environment: dev # 使用 dev 环境，包含代码质量工具
 
       # Bandit 安全扫描
       - name: Bandit security lint
@@ -179,6 +182,7 @@ jobs:
           pixi-version: v0.39.5
           cache: true
           locked: true
+          environment: dev # 使用 dev 环境，包含代码质量工具
 
       - name: Run unit tests
         run: |
@@ -222,6 +226,7 @@ jobs:
           pixi-version: v0.39.5
           cache: true
           locked: true
+          environment: dev # 使用 dev 环境，包含代码质量工具
 
       # 集成测试可能需要的服务
       - name: Prepare test environment
@@ -265,6 +270,7 @@ jobs:
           pixi-version: v0.39.5
           cache: true
           locked: true
+          environment: dev # 使用 dev 环境，包含代码质量工具
 
       # 验证各包可以正常构建
       - name: Build packages
