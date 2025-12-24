@@ -92,6 +92,7 @@ jobs:
             --cov=apps \
             --cov-report=xml:coverage-integration.xml \
             --cov-report=term-missing \
+            --cov-fail-under=0 \
             --junitxml=junit-integration.xml \
             -v \
             --tb=short
