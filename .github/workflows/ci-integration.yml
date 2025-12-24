@@ -34,13 +34,10 @@ jobs:
         image: victoriametrics/victoria-metrics:v1.104.0
         ports:
           - 8428:8428
-        # Use built-in healthcheck from the image
         options: >-
-          --health-cmd "curl -f http://localhost:8428/health || exit 1"
-          --health-interval 10s
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 10
-          --health-start-period 10s
+          --health-retries 20
 
       # VictoriaLogs
       victorialogs:
@@ -48,11 +45,9 @@ jobs:
         ports:
           - 9428:9428
         options: >-
-          --health-cmd "curl -f http://localhost:9428/health || exit 1"
-          --health-interval 10s
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 10
-          --health-start-period 10s
+          --health-retries 20
 
       # Grafana
       grafana:
@@ -63,12 +58,11 @@ jobs:
           GF_AUTH_ANONYMOUS_ENABLED: true
           GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
           GF_SERVER_ROOT_URL: http://localhost:3000
+          GF_INSTALL_PLUGINS: victoriametrics-logs-datasource
         options: >-
-          --health-cmd "curl -f http://localhost:3000/api/health || exit 1"
-          --health-interval 10s
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 10
-          --health-start-period 30s
+          --health-retries 30
 
     steps:
       - name: Checkout code
