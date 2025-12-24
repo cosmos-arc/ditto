@@ -1,24 +1,70 @@
 # Ditto Integration Tests - GitHub Actions
 #
-# Uses the same docker-compose configuration as local development
+# Runs integration tests with observability services (VictoriaMetrics, VictoriaLogs, Vector, Grafana)
+# Triggered manually or after successful CI
 
 name: Integration Tests
 
 on:
+  # Manual trigger from GitHub Actions UI
   workflow_dispatch:
+  # Run on schedule (e.g., daily at 2 AM UTC) - only works on default branch
   schedule:
     - cron: "0 2 * * *"
+  # Run after merge to main - only works on default branch
   workflow_run:
     workflows: [CI]
     types:
       - completed
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
+    services:
+      # VictoriaMetrics
+      victoriametrics:
+        image: victoriametrics/victoria-metrics:v1.104.0
+        ports:
+          - 8428:8428
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8428/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # VictoriaLogs
+      victorialogs:
+        image: victoriametrics/victoria-logs:v1.37.0
+        ports:
+          - 9428:9428
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:9428/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # Grafana
+      grafana:
+        image: grafana/grafana:11.1.0
+        ports:
+          - 3000:3000
+        env:
+          GF_AUTH_ANONYMOUS_ENABLED: true
+          GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+          GF_SERVER_ROOT_URL: http://localhost:3000
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -32,57 +78,38 @@ jobs:
           locked: true
           environment: dev
 
-      # Create logs directory
-      - name: Create logs directory
-        run: mkdir -p logs
-
-      # Start observability stack using docker compose (V2 plugin)
-      - name: Start observability services
-        working-directory: deploy/observability
+      - name: Create Vector config
         run: |
-          # Start services using docker compose V2
-          docker compose -f docker-compose.yml up -d
+          mkdir -p logs
+          cat > vector-ci.toml << 'EOF'
+          [sources.logs]
+          type = "file"
+          include = ["/logs/**/*.jsonl"]
 
-          # Wait for services to start
-          echo "Waiting for services to start..."
-          sleep 15
+          [sinks.victorialogs]
+          type = "vector"
+          inputs = ["logs"]
+          address = "localhost:9428"
+          EOF
 
-          # Show service status
-          docker compose ps
-
-      - name: Wait for services health
-        working-directory: deploy/observability
+      - name: Start Vector
         run: |
-          # Check VictoriaMetrics
-          for i in {1..30}; do
-            if curl -sf http://localhost:8428/health > /dev/null 2>&1 || \
-               curl -sf http://localhost:8428/metrics > /dev/null 2>&1; then
-              echo "VictoriaMetrics is ready"
-              break
-            fi
-            echo "Waiting for VictoriaMetrics... ($i/30)"
-            sleep 2
-          done
+          docker run -d \
+            --name ditto-vector \
+            -p 8686:8686 \
+            -v $(pwd)/vector-ci.toml:/etc/vector/vector.toml:ro \
+            -v $(pwd)/logs:/logs:ro \
+            timberio/vector:0.52.0-debian \
+            --config /etc/vector/vector.toml
 
-          # Check VictoriaLogs
-          for i in {1..30}; do
-            if curl -sf http://localhost:9428/health > /dev/null 2>&1; then
-              echo "VictoriaLogs is ready"
-              break
-            fi
-            echo "Waiting for VictoriaLogs... ($i/30)"
-            sleep 2
-          done
-
-          # Check Grafana
-          for i in {1..30}; do
-            if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
-              echo "Grafana is ready"
-              break
-            fi
-            echo "Waiting for Grafana... ($i/30)"
-            sleep 2
-          done
+      - name: Wait for services
+        run: |
+          echo "Waiting for services to be ready..."
+          timeout 60 bash -c 'until curl -s http://localhost:8428/health; do sleep 2; done'
+          timeout 60 bash -c 'until curl -s http://localhost:9428/health; do sleep 2; done'
+          timeout 60 bash -c 'until curl -s http://localhost:3000/api/health; do sleep 2; done'
+          timeout 60 bash -c 'until curl -s http://localhost:8686/health; do sleep 2; done'
+          echo "All services are ready!"
 
       - name: Run integration tests
         run: |
@@ -92,7 +119,6 @@ jobs:
             --cov=apps \
             --cov-report=xml:coverage-integration.xml \
             --cov-report=term-missing \
-            --cov-fail-under=0 \
             --junitxml=junit-integration.xml \
             -v \
             --tb=short
@@ -113,8 +139,6 @@ jobs:
           path: junit-integration.xml
           retention-days: 30
 
-      - name: Cleanup services
+      - name: Cleanup Vector
         if: always()
-        working-directory: deploy/observability
-        run: |
-          docker compose -f docker-compose.yml down -v
+        run: docker rm -f ditto-vector || true

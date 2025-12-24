@@ -1,335 +1,274 @@
-# GitHub Actions CI/CD
+# GitHub Actions CI/CD 说明
 
-Ditto 项目使用 GitHub Actions 实现持续集成和持续部署，集成 Codecov 进行覆盖率管理。
+## 工作流概览
 
-## 概述
+Ditto 项目使用分层的 CI/CD 策略，将快速反馈的单元测试与耗时的集成测试分离。
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        GitHub Actions CI/CD                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Push/PR to main                                                │
-│       │                                                         │
-│       ▼                                                         │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                    CI Workflow                           │   │
-│  │  .github/workflows/ci.yml                                │   │
-│  │                                                           │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐ │   │
-│  │  │   lint   │  │type-check│  │ security │  │test-unit │ │   │
-│  │  │  (Ruff)  │  │ (MyPy)   │  │(Bandit)  │  │(pytest)  │ │   │
-│  │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘ │   │
-│  │       │             │             │             │        │   │
-│  │       └─────────────┴─────────────┴─────────────┘        │   │
-│  │                          │                                │   │
-│  │                          ▼                                │   │
-│  │                   ┌───────────┐                           │   │
-│  │                   │ci-success │  ← Branch Protection     │   │
-│  │                   └───────────┘                             │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│       │                                                         │
-│       ▼ (All checks passed)                                    │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                  Merge to main                           │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│       │                                                         │
-│       ▼                                                         │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                  CD Workflow                             │   │
-│  │  .github/workflows/deploy.yml                            │   │
-│  │                                                           │   │
-│  │  ┌─────────────────┐    ┌─────────────────┐              │   │
-│  │  │ Deploy Staging  │    │ Deploy Production│              │   │
-│  │  │ (auto on merge) │    │ (manual trigger) │              │   │
-│  │  │ Environment:    │    │ Environment:      │              │   │
-│  │  │ staging         │    │ production        │              │   │
-│  │  └─────────────────┘    └─────────────────┘              │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+### 工作流文件
+
+| 文件 | 触发条件 | 用途 | 耗时 |
+|------|----------|------|------|
+| `ci.yml` | PR 到 main, push 到 main | 单元测试 + 代码质量检查 | ~5 分钟 |
+| `ci-integration.yml` | 手动触发, 定时, CI 成功后 | 集成测试（含 observability 服务） | ~15 分钟 |
+| `deploy.yml` | CI 成功后, Release 发布 | 部署到 staging/production | ~10 分钟 |
 
 ---
 
-## 工作流文件
+## ci.yml - 持续集成（快速反馈）
 
-### ci.yml - 持续集成
+**目标**: 在 PR 阶段提供快速反馈，确保代码质量和基础功能正常。
 
-**触发条件**:
-- Pull request 到 `main` 分支
-- Push 到 `main` 分支
-
-**作业流程**:
+### 作业流程
 
 ```
 changes (变更检测)
-  ├── lint (Ruff 代码检查)
-  ├── type-check (MyPy 类型检查)
-  ├── security (Bandit + Gitleaks 安全扫描)
-  ├── test-unit (单元测试, 覆盖率 ≥80%)
-  │   └── codecov (上传覆盖率报告)
-  └── ci-success (状态汇总)
+  ├── lint (Ruff)
+  ├── type-check (MyPy)
+  ├── security (Bandit + Gitleaks)
+  ├── test-unit (单元测试, 覆盖率 70%)
+  └── build (构建验证, 仅 main 分支)
+       └── ci-success (状态汇总)
 ```
 
-**Branch Protection 必需检查**:
+### Branch Protection 要求的检查
 
-| 检查名称 | 说明 | 必需 |
-|----------|------|------|
-| `lint` | Ruff lint + format | ✅ |
-| `type-check` | MyPy 类型检查 | ✅ |
-| `security` | Bandit + Gitleaks | ✅ |
-| `test-unit` | 单元测试 + 覆盖率 | ✅ |
-| `ci-success` | CI 状态汇总 | ✅ |
+| 检查名称 | 说明 |
+|----------|------|
+| `lint` | Ruff 代码风格检查 |
+| `type-check` | MyPy 类型检查 |
+| `security` | Bandit 安全扫描 + Gitleaks 敏感信息检测 |
+| `test-unit` | 单元测试（排除集成测试） |
+| `ci-success` | 所有必需作业的汇总状态 |
 
-### ci-integration.yml - 集成测试
+### 覆盖率要求
 
-**触发条件**:
-- 手动触发 (workflow_dispatch)
-- 定时任务 (每天 02:00 UTC)
-- CI 成功后自动运行 (workflow_run)
-
-**作业流程**:
-
-```
-Start observability services (docker compose)
-  ├── VictoriaMetrics :8428
-  ├── VictoriaLogs    :9428
-  ├── Vector          :8686
-  └── Grafana         :3000
-         │
-         ▼
-Run integration tests (pytest -m integration)
-  ├── test_victoriametrics_health
-  ├── test_victorialogs_health
-  ├── test_vector_health
-  ├── test_grafana_health
-  └── test_metrics_export
-         │
-         ▼
-Upload coverage to Codecov (flags: integration)
-```
-
-**注意**: 集成测试覆盖率检查已禁用 (`--cov-fail-under=0`)，因为端到端测试覆盖率较低（~25%）是正常的。
-
-### deploy.yml - 持续部署
-
-**触发条件**:
-- CI 成功后自动部署到 staging
-- Release 发布部署到 production
-- 手动触发部署
-
-**环境**:
-- **staging**: 自动部署，无需审批
-- **production**: 需要审批，仅限 tags (`refs/tags/v*`)
+- 单元测试覆盖率: **≥70%**
+- 通过 Codecov 精细化配置管理各模块覆盖率
 
 ---
 
-## 覆盖率要求
+## ci-integration.yml - 集成测试（完整验证）
 
-### Codecov 精细化配置 (codecov.yml)
+**目标**: 验证与外部服务（observability stack）的集成。
 
-| 模块 | 目标覆盖率 | 容差 |
-|------|-----------|------|
-| 整体默认 | 80% | ±2% |
-| 补丁 (patch) | 80% | 0% |
-| core-strategy | 90% | - |
-| core-engine | 85% | - |
-| datahub | 85% | - |
-| foundation | 80% | - |
-| server | 80% | - |
+### 触发方式
 
-### CI 中的覆盖率配置
+1. **手动触发**: GitHub Actions UI → "CI - Integration Tests" → "Run workflow"
+2. **定时触发**: 每天 UTC 2:00 自动运行
+3. **CI 成功后**: 主 CI 完成后自动触发
 
-```yaml
-# 单元测试 - 80% 覆盖率要求
-pytest --cov=packages --cov=apps --cov-fail-under=80 ...
+### 启动的服务
 
-# 集成测试 - 无覆盖率要求
-pytest --cov=packages --cov=apps --cov-fail-under=0 ...
-```
+使用 GitHub Actions 服务容器启动：
 
----
+| 服务 | 端口 | 用途 |
+|------|------|------|
+| VictoriaMetrics | 8428 | 指标存储与 OTLP 接收 |
+| VictoriaLogs | 9428 | 日志存储与查询 |
+| Vector | 8686 | 日志采集 |
+| Grafana | 3000 | 可视化仪表盘 |
 
-## 使用说明
-
-### 本地验证（提交前）
+### 运行的测试
 
 ```bash
-# 完整检查（推荐）
-pixi run -e dev ci-check
-
-# 或分别运行
-pixi run -e dev lint          # Ruff
-pixi run -e dev format-check  # Ruff format
-pixi run -e dev typecheck     # MyPy
-pixi run -e dev security      # Bandit
-pixi run -e dev test-cov      # pytest with coverage
-
-# Pre-commit 钩子
-pre-commit run --all-files
-```
-
-### 查看 CI 状态
-
-**GitHub Actions 页面**:
-https://github.com/cosmos-arc/ditto/actions
-
-**PR 检查状态**:
-PR 页面底部显示所有必需的检查项及其状态
-
-### Codecov 覆盖率报告
-
-**PR 中自动显示**: 覆盖率变化报告
-
-**详细报告**: https://codecov.io/gh/cosmos-arc/ditto
-
-### 触发部署
-
-**Staging**: 合并 PR 到 `main` 分支自动触发
-
-**Production**: 创建 Release tag
-```bash
-git tag -a v1.0.0 -m "Release v1.0.0"
-git push origin v1.0.0
+pytest -m "integration" \
+  --cov=packages \
+  --cov=apps \
+  --cov-report=xml:coverage-integration.xml \
+  --junitxml=junit-integration.xml
 ```
 
 ---
 
-## 分支保护规则
+## deploy.yml - 持续部署
 
-### main 分支保护
+### 部署流程
 
-- ✅ 需要 Pull Request 才能合并
-- ✅ 至少 1 人审批
-- ✅ 必须通过所有状态检查
-- ✅ 必须是最新的分支（merge 前需要 update）
-- ✅ 需要解决所有对话
-- ✅ 推荐使用 Squash merge
+```
+CI 成功
+  ├── deploy-staging (自动部署到 staging)
+  │     └── 触发 e2e 测试 (可选)
+  └── deploy-production (Release 发布触发, 需审批)
+        └── rollback (失败时自动回滚)
+```
 
-### GitHub Environments
+### 环境
 
-**staging**:
-- 无需审批
-- 限制部署分支：`main`
-
-**production**:
-- 需要审批（添加审批人）
-- 限制部署分支：`refs/tags/v*`
+| 环境 | 触发方式 | 审批 |
+|------|----------|------|
+| staging | 合并到 main 分支 | 无需审批 |
+| production | 创建 Release tag | 需要审批 |
 
 ---
 
-## 故障排查
+## 本地开发与测试
 
-### CI 未触发
+### 安装 pre-commit 钩子
 
-**可能原因**:
-- 分支名称不匹配（CI 只监听 PR 到 main 和 push 到 main）
-- GitHub Actions 未启用
-
-**解决方法**: 创建 PR 到 `main` 分支触发 CI
-
-### 作业失败
-
-**查看日志**:
 ```bash
-# GitHub 网页直接查看
-# Actions → 选择运行 → 点击失败的作业
+pixi run pre-commit-install
 ```
 
-### 常见问题
-
-| 问题 | 解决方法 |
-|------|----------|
-| MyPy 检查失败 | 本地运行 `pixi run -e dev typecheck` 查看详细错误 |
-| 覆盖率不足 | 本地运行 `pixi run -e dev test-cov` 查看 HTML 报告 |
-| Codecov 未显示 | 检查 `CODECOV_TOKEN` 是否配置在 GitHub Secrets |
-| 集成测试失败 | 检查 observability 服务是否启动 |
-
----
-
-## 开发工作流
-
-### 标准开发流程
+### 运行单元测试
 
 ```bash
-# 1. 创建功能分支
-git checkout -b feat/P0-XXX-task-name
+# 快速测试（排除集成/慢速测试）
+pixi run test-unit
 
-# 2. 开发 + 测试
-pixi run -e dev ci-check  # 确保通过
-
-# 3. 提交代码
-git add .
-git commit -m "feat(scope): P0-XXX description"
-
-# 4. 推送分支
-git push -u origin feat/P0-XXX-task-name
-
-# 5. 创建 PR
-gh pr create --base main --title "feat: P0-XXX description"
-
-# 6. 等待 CI 通过 + 代码审查
-
-# 7. 合并到 main (Squash merge)
-
-# 8. 删除分支
-git branch -d feat/P0-XXX-task-name
+# 等价于
+pytest -m "not integration and not e2e and not slow"
 ```
 
-### 快速修复流程
+### 运行集成测试（需要 observability 服务）
+
+**步骤 1**: 启动 observability 服务
 
 ```bash
-# 直接在 main 分支修复（小问题）
-git commit -m "fix: quick fix"
-git push origin main
+# 使用 docker-compose
+cd deploy/observability
+docker-compose up -d
 
-# 或创建 hotfix 分支（大问题）
-git checkout -b hotfix/P0-XXX-issue
-# ... 修复 ...
-git push origin hotfix/P0-XXX-issue
-gh pr create --base main
+# 验证服务状态
+docker-compose ps
+```
+
+**步骤 2**: 运行集成测试
+
+```bash
+# 运行所有集成测试
+pixi run test-integration
+
+# 或使用 pytest
+pytest -m "integration" -v
+```
+
+**步骤 3**: 停止服务
+
+```bash
+docker-compose down
+```
+
+### 本地验证 CI 检查
+
+```bash
+# 完整的 CI 检查（等同于 GitHub Actions 运行）
+pixi run ci-check
 ```
 
 ---
 
-## 配置文件
+## 测试标记说明
 
-| 文件 | 用途 |
-|------|------|
-| `.github/workflows/ci.yml` | CI 持续集成 |
-| `.github/workflows/ci-integration.yml` | 集成测试 |
-| `.github/workflows/deploy.yml` | CD 持续部署 |
-| `.github/PULL_REQUEST_TEMPLATE.md` | PR 模板 |
-| `.pre-commit-config.yaml` | Pre-commit 钩子 |
-| `codecov.yml` | 覆盖率配置 |
-| `pixi.toml` | Pixi 任务定义 |
+| 标记 | 说明 | 运行位置 |
+|------|------|----------|
+| `integration` | 集成测试（需要外部服务） | 本地 + CI 集成工作流 |
+| `e2e` | 端到端测试 | 本地 + CI 集成工作流 |
+| `slow` | 耗时测试（>30s） | 本地 + CI 集成工作流 |
+| `unit` | 单元测试（无外部依赖） | 本地 + CI 主工作流 |
+| `smoke` | 冒烟测试 | 本地 + CI |
+| `benchmark` | 性能测试 | 本地 |
 
 ---
 
-## 附录：命令速查
+## 常见问题
+
+### Q1: 为什么 CI 中不运行集成测试？
+
+**A**: 集成测试需要启动多个 Docker 服务，耗时较长（~15 分钟）。将它们分离到独立工作流可以：
+- PR 阶段快速获得反馈（~5 分钟）
+- 按需或定时运行完整集成测试
+- 减少 CI 资源消耗
+
+### Q2: 如何确保 PR 合并后集成测试通过？
+
+**A**: 有三种保障机制：
+1. **定时任务**: 每天自动运行，发现问题立即通知
+2. **CI 成功后触发**: 主 CI 完成后自动运行集成测试
+3. **手动触发**: 发布前可手动运行验证
+
+### Q3: 本地如何运行完整的 CI 验证？
+
+**A**:
+```bash
+# 1. 启动 observability 服务
+cd deploy/observability && docker-compose up -d
+
+# 2. 运行完整测试套件
+cd ../..
+pixi run ci-check
+
+# 3. 清理
+cd deploy/observability && docker-compose down
+```
+
+### Q4: 集成测试失败会影响合并吗？
+
+**A**: 不会直接影响，因为 Branch Protection 只要求主 CI 的检查通过。但建议：
+- 定时任务失败时应及时修复
+- 发布前手动运行集成测试确认
+
+### Q5: 如何添加新的集成测试？
+
+**A**:
+```python
+# tests/integration/test_your_feature.py
+import pytest
+
+@pytest.mark.integration
+class TestYourFeatureIntegration:
+    def test_something(self):
+        # 测试代码
+        pass
+```
+
+---
+
+## 最佳实践
+
+### PR 工作流
+
+1. 创建功能分支
+2. 开发并编写测试
+3. 本地运行 `pixi run ci-check`
+4. 提交并推送
+5. 等待 CI 检查通过
+6. 请求代码审查
+7. 合并到 main
+
+### 发布前检查
+
+1. 确保主 CI 通过
+2. 手动触发集成测试
+3. 启动 observability 服务运行本地集成测试
+4. 创建 Release tag 触发部署
+
+### 监控与告警
+
+- 集成测试失败会创建 GitHub Issue
+- Codecov 覆盖率下降会在 PR 中注释
+- 安全扫描失败会阻止合并
+
+---
+
+## 附录: 命令速查
 
 ```bash
-# 本地完整验证
-pixi run -e dev ci-check
-pre-commit run --all-files
+# === 单元测试 ===
+pixi run test-unit              # 运行单元测试
+pixi run test-cov               # 带覆盖率的单元测试
 
-# 单独运行各检查
-pixi run -e dev lint         # Ruff
-pixi run -e dev format       # Ruff format
-pixi run -e dev typecheck    # MyPy
-pixi run -e dev security     # Bandit
-pixi run -e dev test-unit    # 单元测试
-pixi run -e dev test-cov     # 覆盖率
+# === 集成测试（需要 observability 服务）===
+pixi run test-integration       # 运行集成测试
 
-# 集成测试（本地）
-docker compose -f deploy/observability/docker-compose.yml up -d
-pixi run -e dev pytest -m integration
+# === 完整测试 ===
+pixi run test                   # 运行所有测试
 
-# GitHub CLI
-gh pr list                    # 列出 PR
-gh pr create                  # 创建 PR
-gh pr merge <number>          # 合并 PR
-gh run list                   # 列出 CI 运行
-gh run view <id>              # 查看运行详情
+# === 代码质量 ===
+pixi run lint                   # Ruff lint
+pixi run format                 # Ruff format check
+pixi run type                   # MyPy type check
+pixi run security               # Bandit security scan
+
+# === 复合任务 ===
+pixi run ci-check               # 完整 CI 检查（本地）
 ```

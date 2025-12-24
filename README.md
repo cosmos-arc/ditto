@@ -82,20 +82,20 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
 ### 开发命令
 
 ```bash
-# 代码质量检查（必须使用 dev 环境）
-pixi run -e dev lint         # Ruff 检查
-pixi run -e dev format       # 格式化代码
-pixi run -e dev typecheck    # MyPy 类型检查
-pixi run -e dev security     # Bandit 安全扫描
+# 代码质量检查
+pixi run lint          # 运行 ruff 检查
+pixi run format         # 格式化代码
+pixi run typecheck      # 运行 mypy 类型检查
 
 # 测试
-pixi run -e dev test         # 运行所有测试
-pixi run -e dev test-unit    # 单元测试
-pixi run -e dev test-cov     # 测试覆盖率
+pixi run test           # 运行所有测试
+pixi run test tests/test_specific.py  # 运行特定测试
 
-# 完整检查（提交前必须运行）
-pixi run -e dev ci-check
-pre-commit run --all-files
+# 数据更新
+pixi run update-data    # 更新市场数据
+
+# 开发模式启动
+pixi run server         # 启动开发服务器
 ```
 
 ## 项目结构
@@ -290,53 +290,19 @@ pre-commit run --all-files
 
 ## CI/CD
 
-### 分支管理与开发流程
-
-**强制规则**: 所有任务开发必须先创建分支，完成后通过 PR 合入主分支。
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      开发流程（必须遵守）                         │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. 创建功能分支                                                │
-│     git checkout -b feat/P0-XXX-task-name                      │
-│                                                                 │
-│  2. 开发 + 测试                                                 │
-│     pixi run -e dev ci-check  # 确保通过                        │
-│                                                                 │
-│  3. 提交代码                                                    │
-│     git commit -m "feat(scope): P0-XXX description"             │
-│                                                                 │
-│  4. 推送分支                                                    │
-│     git push -u origin feat/P0-XXX-task-name                   │
-│                                                                 │
-│  5. 创建 PR                                                     │
-│     gh pr create --base main                                    │
-│                                                                 │
-│  6. 等待 CI 通过 + 代码审查                                     │
-│                                                                 │
-│  7. 合并到 main (Squash merge)                                  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**分支命名规范**:
-- `feat/P0-XXX-task-name` - 新功能
-- `fix/P0-XXX-issue-name` - Bug 修复
-- `refactor/P0-XXX-area` - 重构
-- `docs/P0-XXX-topic` - 文档更新
-- `test/P0-XXX-module` - 测试相关
-- `ci/P0-XXX-workflow` - CI/CD 相关
-
 ### 本地检查
 
 提交代码前必须运行:
 
 ```bash
-# 完整检查（推荐）
-pixi run -e dev ci-check
+# 安装 pre-commit 钩子
+pixi run pre-commit-install
+
+# 运行所有检查
 pre-commit run --all-files
+
+# 或使用 pixi 任务
+pixi run ci-check
 ```
 
 ### GitHub Actions
@@ -344,20 +310,14 @@ pre-commit run --all-files
 项目配置了以下 GitHub Actions:
 
 - **CI**: 每次 PR 和 push 运行代码质量检查和测试
-- **Integration Tests**: 集成测试（observability 服务）
 - **Deploy**: 自动部署到 staging/production
 
 **CI 检查包括**:
 - Ruff (lint + format)
 - MyPy (type check)
 - Bandit + Gitleaks (security)
-- Pytest (unit tests, 覆盖率 ≥80%)
-- Codecov (覆盖率报告)
-
-**分支保护规则**:
-- ✅ 需要 Pull Request 才能合并
-- ✅ 至少 1 人审批
-- ✅ 必须通过所有状态检查 (lint, type-check, security, test-unit, ci-success)
+- Pytest (unit + integration tests)
+- **覆盖率要求: 80%** (通过 Codecov 精细化管理)
 
 ### Codecov 覆盖率
 
@@ -367,7 +327,7 @@ pre-commit run --all-files
   - core-engine: 85%
   - datahub: 85%
   - foundation/server: 80%
-- 访问 https://codecov.io/gh/cosmos-arc/ditto 查看详细报告
+- 访问 https://codecov.io/gh/[username]/ditto 查看详细报告
 
 详见: [.github/workflows/README.md](.github/workflows/README.md)
 

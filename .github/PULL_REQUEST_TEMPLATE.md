@@ -1,50 +1,54 @@
-## 关联任务
-
-- 任务 ID: P0-XXX
-- 规划文档: `docs/plans/YYYY-MM-DD-sprint*-task*.md`
-
-## 变更概述
-
-<!-- 简要描述本次变更的内容 -->
-
 ## 变更类型
 
-- [ ] 新功能 (feat)
-- [ ] Bug 修复 (fix)
-- [ ] 重构 (refactor)
-- [ ] 文档更新 (docs)
-- [ ] 测试 (test)
-- [ ] CI/CD (ci)
+<!-- 请选择一个类型 -->
+- [ ] 🚀 feat: 新功能
+- [ ] 🐛 fix: Bug 修复
+- [ ] 📝 docs: 文档变更
+- [ ] 🎨 style: 代码风格
+- [ ] ♻️ refactor: 重构
+- [ ] ⚡ perf: 性能优化
+- [ ] ✅ test: 测试相关
+- [ ] 🔧 chore: 杂项
 
-## 代码质量检查
+## 变更描述
 
-提交前请确认：
+<!-- 简要描述这个 PR 做了什么 -->
 
-- [ ] 运行 `pixi run -e dev ci-check` 通过
-- [ ] 运行 `pre-commit run --all-files` 通过
-- [ ] 本地测试通过
-- [ ] 更新相关文档
+## 影响范围
 
-## CI/CD 检查项
+<!-- 哪些模块受到影响？ -->
+- [ ] `packages/core` - 核心业务逻辑
+- [ ] `packages/datahub` - 数据存储层
+- [ ] `packages/foundation` - 基础设施
+- [ ] `apps/server` - 后端服务
+- [ ] `apps/web` - 前端应用
+- [ ] `deploy/` - 部署配置
+- [ ] 其他:
 
-创建 PR 后，GitHub Actions 自动运行以下检查：
+## 测试
 
-| 检查项 | 说明 | 状态 |
-|--------|------|------|
-| `lint` | Ruff 代码检查 | [ ] |
-| `type-check` | MyPy 类型检查 | [ ] |
-| `security` | Bandit + Gitleaks 安全扫描 | [ ] |
-| `test-unit` | 单元测试（覆盖率 ≥80%） | [ ] |
-| `ci-success` | CI 状态汇总 | [ ] |
+<!-- 描述如何测试这些变更 -->
+- [ ] 添加了单元测试
+- [ ] 添加了集成测试
+- [ ] 本地验证通过
+- [ ] 不需要测试
 
-## 测试说明
+## 检查清单
 
-<!-- 描述如何验证本次变更 -->
+- [ ] 代码符合项目规范（Ruff lint 通过）
+- [ ] 类型检查通过（Mypy）
+- [ ] 测试覆盖率满足要求
+- [ ] 已更新相关文档
+- [ ] Commit message 符合 Conventional Commits 规范
 
-## 截图/日志
+## 相关 Issue
 
-<!-- 如适用，添加截图或日志 -->
+<!-- 关联的 Issue，例如：Closes #123 -->
+
+## 截图/演示
+
+<!-- 如适用，添加截图或录屏 -->
 
 ## 其他说明
 
-<!-- 任何其他需要审查者注意的信息 -->
+<!-- 任何需要 reviewer 注意的事项 -->
