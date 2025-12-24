@@ -159,17 +159,11 @@ jobs:
           path: bandit-report.json
           retention-days: 7
 
-      # Gitleaks 敏感信息检测（跳过组织许可证检查）
+      # Gitleaks 敏感信息检测（使用 gitleaks 官方 Docker 镜像）
       - name: Gitleaks scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # 跳过组织许可证检查（开源项目使用）
-          GITLEAKS_SCAN_CRON: "false"
+        uses: docker://ghcr.io/gitleaks/gitleaks:latest
         with:
-          # 使用开源版本配置
-          enable-leak-detection: true
-          detect-ref: false
+          args: detect --source . --verbose --report-path gitleaks-report.json
 
   # ============================================================
   # Stage 3: 测试套件（分层执行）
