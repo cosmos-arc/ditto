@@ -119,7 +119,7 @@ class TestObservabilityStack:
 
         # 检查是否包含 Ditto 概览仪表盘
         dashboard_titles = [db.get("title", "") for db in dashboards]
-        assert "Ditto 可观测性概览" in dashboard_titles
+        assert "Ditto Observability Overview" in dashboard_titles
 
 
 class TestMetricsExport:
@@ -218,7 +218,12 @@ class TestLogsCollection:
 class TestObservabilityE2E:
     """端到端集成测试标记."""
 
-    def test_services_all_healthy(self, http_client: httpx.Client) -> None:
+    @pytest.fixture
+    def http_client(self) -> httpx.Client:
+        """HTTP 客户端."""
+        return httpx.Client(timeout=10.0)
+
+    def test_services_all_healthy(self) -> None:
         """测试所有服务健康."""
         endpoints: dict[str, str] = {
             "VictoriaMetrics": "http://localhost:8428/health",
@@ -230,7 +235,8 @@ class TestObservabilityE2E:
         failed: list[tuple[str, str]] = []
         for name, endpoint in endpoints.items():
             try:
-                response = http_client.get(endpoint)
+                with httpx.Client() as client:
+                    response = client.get(endpoint)
                 if response.status_code != 200:
                     failed.append((name, f"Status: {response.status_code}"))
             except Exception as e:

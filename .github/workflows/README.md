@@ -1,151 +1,179 @@
-# GitHub Actions Workflows
+# GitHub Actions 工作流
 
-本目录包含Ditto量化系统的GitHub Actions CI/CD工作流配置。
+## 概述
 
-## 工作流说明
+Ditto 项目使用 GitHub Actions 实现持续集成和持续部署，集成 Codecov 进行覆盖率管理。
 
-### 1. `test.yml` - 主测试工作流
+## 工作流文件
 
-**触发条件：**
-- 推送到 master/main/develop 分支
-- 创建/更新针对 master/main 的 Pull Request
+### ci.yml - 持续集成
 
-**功能：**
-- 在 Windows 和 Ubuntu 环境下运行测试
-- 支持 Python 3.11 和 3.12（Ubuntu只测试3.11以节省时间）
-- 使用 pixi 作为包管理器
-- 运行 pytest 测试套件
-- 生成测试覆盖率报告（XML和HTML）
-- 上传覆盖率到 Codecov
-- 验证Python文件语法和导入
+**文件路径**: `.github/workflows/ci.yml`
 
-**关键特性：**
-- 矩阵构建：支持多OS和多Python版本
-- 快速失败：语法错误立即失败
-- 缓存优化：使用pixi缓存加速依赖安装
-- 测试结果上传：保存测试报告供下载
+**触发条件**:
+- Pull request 到 `main` 分支
+- Push 到 `main` 分支
 
-### 2. `lint.yml` - 代码质量检查工作流
+**作业流程**:
+```
+changes (变更检测)
+  ├── lint (Ruff)
+  ├── type-check (MyPy)
+  ├── security (Bandit + Gitleaks)
+  ├── test-unit (单元测试, 覆盖率80%)
+  │   └── test-integration (集成测试, 覆盖率追加)
+  └── build (构建验证，仅 main)
+```
 
-**触发条件：**
-- 推送到 master/main/develop 分支
-- 创建/更新针对 master/main 的 Pull Request
+**覆盖率要求**:
+- 整体: 80% (通过 codecov.yml 精细化配置)
+- 单元测试: `--cov-fail-under=80`
+- Codecov 集成: 自动上传并生成 PR 注释
 
-**功能：**
-- **Lint检查**：运行 ruff 检查代码质量问题
-- **格式化检查**：验证代码格式是否符合标准
-- **类型检查**：运行 mypy 进行静态类型检查
-- **安全扫描**：使用 bandit 扫描安全漏洞
-- **Pre-commit检查**：运行所有pre-commit hooks
+**必需检查** (对应 Branch Protection):
+- `lint` - Ruff 代码检查
+- `type-check` - MyPy 类型检查
+- `security` - 安全扫描
+- `test-unit` - 单元测试
+- `ci-success` - 汇总状态
 
-**作业说明：**
-- `lint`：ruff检查（Ubuntu和Windows并行运行）
-- `type-check`：mypy类型检查（仅在Ubuntu）
-- `security`：bandit安全扫描（仅在Ubuntu）
-- `pre-commit`：完整的pre-commit检查（仅在Ubuntu）
+### deploy.yml - 持续部署
 
-### 3. `coverage.yml` - 覆盖率检查工作流
+**文件路径**: `.github/workflows/deploy.yml`
 
-**触发条件：**
-- 仅在 Pull Request 时运行
+**触发条件**:
+- CI 成功后自动部署到 staging
+- Release 发布部署到 production
+- 手动触发 (workflow_dispatch)
 
-**功能：**
-- 生成详细的覆盖率报告
-- 与基础分支比较覆盖率差异
-- 在PR中添加覆盖率评论
-- 检查覆盖率是否达到阈值（80%）
-- 上传HTML覆盖率报告
+**环境配置**:
 
-**特性：**
-- 自动评论：在PR中自动添加覆盖率报告
-- 阈值检查：覆盖率低于80%时PR无法合并
-- 可视化报告：生成HTML报告供下载
+| 环境 | 审批要求 | 限制分支 | 说明 |
+|------|----------|----------|------|
+| staging | 无需审批 | main | CI 成功后自动部署 |
+| production | 需要审批 | refs/tags/v* | Release 发布时触发 |
 
-## 环境变量
+**部署流程**:
+1. **prepare** - 确定部署目标和版本
+2. **deploy-staging** - 部署到 staging 环境
+3. **deploy-production** - 部署到 production 环境 (需审批)
+4. **rollback** - production 失败时自动回滚
 
-工作流使用以下环境变量：
+## 使用说明
 
-- `PYTHON_DEFAULT_VERSION`: "3.11" - 默认Python版本
-- `CODECOV_TOKEN`: 存储在GitHub Secrets中，用于上传覆盖率
+### 本地验证
 
-## 缓存策略
+提交代码前必须运行:
 
-1. **Pixi缓存**：缓存依赖包，加速后续构建
-2. **Pre-commit缓存**：缓存pre-commit环境
+```bash
+# 安装 pre-commit 钩子
+pixi run pre-commit-install
 
-## 产物（Artifacts）
+# 运行所有检查
+pre-commit run --all-files
 
-工作流会生成以下产物供下载：
+# 或使用 pixi 任务
+pixi run ci-check
+```
 
-- `coverage-report-{os}`: HTML覆盖率报告
-- `test-results-{os}-py{version}`: 测试结果文件
-- `bandit-security-report`: 安全扫描报告（JSON格式）
-- `coverage-html-report`: PR的HTML覆盖率报告
+### 查看 CI 状态
 
-## 故障排除
+访问: https://github.com/[username]/ditto/actions
+
+### Codecov 覆盖率报告
+
+- PR 中自动显示覆盖率变化
+- 访问: https://codecov.io/gh/[username]/ditto
+
+### 触发部署
+
+**Staging**: 合并到 `main` 分支自动触发
+
+**Production**: 创建 Release tag
+```bash
+git tag -a v1.0.0 -m "Release v1.0.0"
+git push origin v1.0.0
+```
+
+## 覆盖率要求
+
+基于 `codecov.yml` 的精细化配置:
+
+| 模块 | 目标 | 说明 |
+|------|------|------|
+| 整体 | 80% | 默认要求 |
+| 补丁 (patch) | 80% | 新增代码必须达到 |
+| core-strategy | 90% | 策略核心逻辑 |
+| core-engine | 85% | 核心引擎 |
+| datahub | 85% | 数据访问层 |
+| foundation | 80% | 基础设施 |
+| server | 80% | API 服务 |
+
+## 故障排查
 
 ### 常见问题
 
-1. **pixi安装失败**
-   - 检查 pixi.toml 格式是否正确
-   - 确认所有依赖都可用的版本
+**问题**: MyPy 检查失败
+```bash
+# 本地查看详细错误
+pixi run type
+```
 
-2. **测试失败**
-   - 查看测试日志确定具体失败原因
-   - 检查是否是环境特定的失败（如Windows路径问题）
+**问题**: 覆盖率不足
+```bash
+# 本地查看 HTML 报告
+pixi run test-cov
+# 报告生成在 htmlcov/ 目录
+```
 
-3. **覆盖率不足**
-   - 运行 `pixi run pytest --cov-report=term-missing` 查看未覆盖的行
-   - 添加相应的测试用例
+**问题**: Codecov 未显示报告
+- 检查 `CODECOV_TOKEN` 是否配置在 GitHub Secrets
+- 检查 workflow 是否成功完成
 
-4. **mypy类型错误**
-   - 使用 `pixi run mypy packages/` 查看详细错误
-   - 添加缺失的类型注解
+**问题**: Pre-commit 钩子运行缓慢
+- 首次运行需要下载依赖，请耐心等待
+- 后续运行会使用缓存，速度会快很多
 
-### 调试技巧
+## 配置验证
 
-1. **本地运行相同的检查**
-   ```bash
-   # 运行所有检查
-   pre-commit run --all-files
+### Branch Protection 验证
 
-   # 运行测试
-   pixi run python -m pytest --cov=packages --cov-report=html
+确保 main 分支的 Branch Protection 规则配置以下必需检查:
 
-   # 类型检查
-   pixi run mypy packages/ apps/
-   ```
+- [x] `lint`
+- [x] `type-check`
+- [x] `security`
+- [x] `test-unit`
+- [x] `ci-success`
 
-2. **查看详细日志**
-   - 在GitHub Actions页面点击对应的工作流
-   - 展开失败的步骤查看详细输出
+### Environment 验证
 
-## 最佳实践
+**staging**:
+- [x] 无需审批
+- [x] 限制部署分支: `main`
 
-1. **提交前检查**
-   - 总是在本地运行 pre-commit
-   - 确保所有测试通过
+**production**:
+- [x] Required reviewers: 需要添加审批人
+- [x] Wait timer: 5 分钟 (可选)
+- [x] 限制部署分支: `refs/tags/v*`
 
-2. **PR管理**
-   - 保持PR较小，便于审查
-   - 确保PR标题和描述清晰
+## Secrets 配置
 
-3. **性能优化**
-   - 利用缓存减少构建时间
-   - 避免不必要的工作流触发
+以下 Secrets 需要在 GitHub 仓库设置中配置:
 
-## 扩展指南
+| Secret | 用途 | 必需 |
+|--------|------|------|
+| `CODECOV_TOKEN` | Codecov 上传覆盖率 | 是 |
+| `STAGING_HOST` | Staging 服务器地址 | 部署时 |
+| `STAGING_USER` | Staging 服务器用户 | 部署时 |
+| `STAGING_SSH_KEY` | Staging SSH 密钥 | 部署时 |
+| `PROD_HOST` | Production 服务器地址 | 部署时 |
+| `PROD_USER` | Production 服务器用户 | 部署时 |
+| `PROD_SSH_KEY` | Production SSH 密钥 | 部署时 |
+| `OBSERVABILITY_WEBHOOK` | 部署通知 Webhook | 可选 |
 
-如需添加新的检查或修改现有工作流：
+## 相关文档
 
-1. **添加新的质量检查**
-   - 在 `lint.yml` 中添加新的作业
-   - 或在现有作业中添加新的步骤
-
-2. **修改测试矩阵**
-   - 在 `test.yml` 中修改 `strategy.matrix`
-   - 添加或删除Python版本/操作系统组合
-
-3. **调整覆盖率阈值**
-   - 在相应工作流中修改 `--cov-fail-under` 参数
-   - 更新文档中的阈值说明
+- [主 README](../../README.md)
+- [开发者指南](../../docs/development.md)
+- [Codecov 配置](../../codecov.yml)

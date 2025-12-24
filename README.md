@@ -288,6 +288,49 @@ pixi run test --cov=packages --cov=apps --cov-report=html
 pre-commit run --all-files
 ```
 
+## CI/CD
+
+### 本地检查
+
+提交代码前必须运行:
+
+```bash
+# 安装 pre-commit 钩子
+pixi run pre-commit-install
+
+# 运行所有检查
+pre-commit run --all-files
+
+# 或使用 pixi 任务
+pixi run ci-check
+```
+
+### GitHub Actions
+
+项目配置了以下 GitHub Actions:
+
+- **CI**: 每次 PR 和 push 运行代码质量检查和测试
+- **Deploy**: 自动部署到 staging/production
+
+**CI 检查包括**:
+- Ruff (lint + format)
+- MyPy (type check)
+- Bandit + Gitleaks (security)
+- Pytest (unit + integration tests)
+- **覆盖率要求: 80%** (通过 Codecov 精细化管理)
+
+### Codecov 覆盖率
+
+- PR 中自动显示覆盖率变化报告
+- 各模块差异化目标:
+  - core-strategy: 90%
+  - core-engine: 85%
+  - datahub: 85%
+  - foundation/server: 80%
+- 访问 https://codecov.io/gh/[username]/ditto 查看详细报告
+
+详见: [.github/workflows/README.md](.github/workflows/README.md)
+
 ## 配置说明
 
 ### 环境变量

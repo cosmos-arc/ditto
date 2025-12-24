@@ -128,36 +128,64 @@ unfixable = []
 
 # 对特定文件类型忽略特定规则。
 [tool.ruff.lint.per-file-ignores]
-# 测试文件允许魔法数 (PLR2004) 和更多参数 (PLR0913)
-"tests/**/*.py" = ["PLR2004", "PLR0913"]
-"packages/*/tests/**/*.py" = ["PLR2004", "PLR0913"]
-"apps/*/tests/**/*.py" = ["PLR2004", "PLR0913"]
 
-# __init__.py 可以没有 docstring
-"__init__.py" = ["D104"]
+# ═══════════════════════════════════════════════════════════════
+# 测试文件 - 最宽松
+# ═══════════════════════════════════════════════════════════════
+"tests/**/*.py" = [
+    "PLR2004",  # 魔法数字
+    "PLR0913",  # 多参数
+    "S101",     # assert 语句
+    "ANN",      # 类型注解
+    "D",        # 文档字符串
+]
+"**/tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "ANN", "D"]
+"**/conftest.py" = ["ANN", "D", "PLC0415"]
 
-# Observability 模块特殊规则
-# - RUF002/RUF003: 允许中文文档中的全角标点
-# - PLW0602/PLW0603: 允许全局变量用于模块状态管理
-# - PLR0913: 允许多参数函数
-# - PLC0415: 允许在函数中导入 opentelemetry
+# ═══════════════════════════════════════════════════════════════
+# 脚本文件 - 允许 print 和简化规则
+# ═══════════════════════════════════════════════════════════════
+"scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN"]
+"**/cli.py" = ["T201"]
+"**/main.py" = ["T201"]
+
+# ═══════════════════════════════════════════════════════════════
+# 策略模块 - 允许复杂度，这是业务本质
+# ═══════════════════════════════════════════════════════════════
+"packages/core/src/ditto_core/strategy/**/*.py" = [
+    "C901",     # 函数复杂度（策略逻辑天然复杂）
+    "PLR0912",  # 分支过多（多条件判断是正常的）
+    "PLR0915",  # 语句过多
+    "PLR0913",  # 参数过多（策略配置项多）
+]
+
+# ═══════════════════════════════════════════════════════════════
+# 投资组合/风控模块 - 允许复杂计算
+# ═══════════════════════════════════════════════════════════════
+"packages/core/src/ditto_core/portfolio/**/*.py" = [
+    "C901",
+    "PLR0912",
+    "PLR0913",
+]
+
+# ═══════════════════════════════════════════════════════════════
+# 数据处理模块 - 允许更多参数和魔法数字
+# ═══════════════════════════════════════════════════════════════
+"packages/datahub/src/ditto_datahub/**/*.py" = [
+    "PLR0913",  # 参数多（数据源配置）
+    "PLR2004",  # 魔法数字（如 252 交易日）
+    "F401",     # 未使用导入（re-export 模式）
+]
+
 "packages/foundation/src/ditto_foundation/observability/**/*.py" = [
-    "RUF002",
-    "RUF003",
     "PLW0602",
     "PLW0603",
     "PLR0913",
     "PLC0415",
 ]
-# Datahub 模块允许未使用的导入（从 ditto_foundation 导入但尚未全部使用）
-"packages/datahub/**/*.py" = [
-    "F401",
-]
-# 测试 conftest 文件允许缺少类型注解（fixture 函数）
-"apps/server/tests/conftest.py" = [
-    "ANN",
-    "PLC0415",
-]
+
+# __init__.py 可以没有 docstring
+"__init__.py" = ["D104"]
 
 
 # --- Ruff Formatter (格式化器) 配置 ---
@@ -280,6 +308,23 @@ init_forbid_extra = true
 init_typed = true
 warn_required_dynamic_aliases = true
 
+[[tool.mypy.overrides]]
+module = [
+    "polars.*", "duckdb.*", "tushare.*",
+    "akshare.*", "ricequant.*", "prefect.*", "loguru.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*", "*.tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = "scripts.*"
+disallow_untyped_defs = false
+ignore_errors = true
+
 # ===================================================================
 # Pytest (测试框架)
 # 负责：运行自动化测试，并报告代码覆盖率。
@@ -304,6 +349,9 @@ markers = [
     "slow: Mark test as slow running (skip with -m 'not slow')",
     "smoke: Mark test as a smoke test",
     "benchmark: Mark test as a performance benchmark test",
+    "pit: Mark test for Point-in-Time data validation",
+    "data: Mark test that requires data fixtures",
+    "external: Mark test that calls external APIs (Tushare, etc.)",
 ]
 
 # 配置日志输出，方便调试
@@ -336,32 +384,82 @@ addopts = [
 [tool.coverage.run]
 branch = true
 source = ["packages", "apps"]
-omit = [
-    "*/tests/*",
-    "*/test_*",
-    "*/__pycache__/*",
-    "*/site-packages/*",
-    "*/migrations/*",
-    "*/conftest.py",
-]
+# 动态上下文：记录每行代码被哪个测试覆盖
+dynamic_context = "test_function"
 
 [tool.coverage.report]
 precision = 2
 show_missing = true
 skip_covered = false
+
+# 排除不需要覆盖的代码模式
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
     "def __str__",
-    "if TYPE_CHECKING:",
     "raise AssertionError",
     "raise NotImplementedError",
-    'if __name__ == "__main__":',
-    "if 0:",
-    "class .*\\bProtocol\\):",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
     "@(abc\\.)?abstractmethod",
+    "@overload",
+    "class .*\\bProtocol\\):",
+    # 量化系统特有
+    "if self\\.debug:",
+    "logger\\.(debug|trace)",
 ]
 fail_under = 80
 
+# 部分覆盖的分支也要报告
+partial_branches = [
+    "pragma: no branch",
+    "if TYPE_CHECKING:",
+]
+
 [tool.coverage.html]
 directory = "htmlcov"
+
+# ==========================================================
+# Bandit 安全扫描配置
+# ==========================================================
+[tool.bandit]
+# 排除测试目录
+exclude_dirs = [
+    "tests",
+    "packages/*/tests",
+    "apps/*/tests",
+    ".pixi",
+    ".venv",
+    "node_modules",
+]
+
+# 跳过特定规则
+skips = [
+    "B101",  # assert 语句（测试中常用）
+    "B104",  # 绑定到所有接口（开发环境常见）
+    "B311",  # random 不用于加密场景时可接受
+]
+
+# 按严重程度过滤
+# severity: all, high, medium, low
+# confidence: all, high, medium, low
+
+# 针对特定文件的规则覆盖
+[tool.bandit.assert_used]
+skips = ["*_test.py", "test_*.py", "conftest.py"]
+
+
+# ==========================================================
+# 补充：Commitizen 配置（可选，用于自动生成 changelog）
+# ==========================================================
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "v$version"
+version_files = [
+    "packages/core/src/ditto_core/__init__.py:__version__",
+    "packages/foundation/src/ditto_foundation/__init__.py:__version__",
+    "packages/datahub/src/ditto_datahub/__init__.py:__version__",
+]
+update_changelog_on_bump = true
+changelog_incremental = true

@@ -80,27 +80,30 @@ uuid7 = ">=0.1.0,<1"
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "dev" }
 
-[tasks.server]
-description = "启动FastAPI服务器"
-cmd = ["python", "-m", "apps.server.src.main"]
-
-[tasks.test]
-description = "运行测试"
-cmd = ["pytest", "tests/", "-v"]
-
-[tasks.lint]
-description = "代码检查"
-cmd = ["ruff", "check", "--fix", "--exit-non-zero-on-fix", "--show-fixes"]
-
-[tasks.format]
-description = "格式化代码"
-cmd = ["ruff", "format", "--check"]
-
-[tasks.type]
-description = "类型检查"
-cmd = ["mypy", "packages/", "apps/", "scripts/", "tests/"]
-
 [feature.dev.dependencies]
 pre-commit = "*"
 bandit = "*"
 types-requests = ">=2.32.4.20250913,<3"
+
+[tasks]
+# 代码质量
+lint = "ruff check --fix --exit-non-zero-on-fix --show-fixes"
+format = "ruff format --check"
+type = "mypy packages/ apps/server/ scripts/"
+security = "bandit -r packages/ apps/server/src/ -c pyproject.toml"
+
+# 测试
+test = "pytest tests/ -v"
+test-unit = "pytest -m 'not integration and not e2e and not slow'"
+test-integration = "pytest -m integration"
+test-cov = "pytest --cov --cov-report=html"
+
+# 开发辅助
+pre-commit-install = "pre-commit install --hook-type commit-msg --hook-type pre-commit"
+pre-commit-run = "pre-commit run --all-files"
+
+# CI 复合任务
+ci-check = { depends-on = ["lint", "format", "type", "security", "test-unit"] }
+
+# 服务启动
+server = "python -m apps.server.src.main"

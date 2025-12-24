@@ -257,7 +257,7 @@ class SecurityStore:
         row = self._client.fetchone("SELECT * FROM security WHERE sid = ?", [sid])
         return dict(row) if row else None
 
-    def find_securities(  # noqa: PLR0913 - many filters required by design
+    def find_securities(
         self,
         sids: list[int] | None = None,
         src_codes: list[str] | None = None,
@@ -430,7 +430,7 @@ class SecurityStore:
 
         return df.join(symbol_df, on="sid", how="left")
 
-    def register(  # noqa: PLR0913 - many fields required by design
+    def register(
         self,
         sid: int,
         source: str,

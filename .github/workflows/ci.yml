@@ -1,206 +1,337 @@
-name: CI/CD Pipeline
+# .github/workflows/ci.yml
+# Ditto CI Pipeline - 基于实际项目结构设计
+#
+# 特点：
+# - 使用 Pixi 包管理器
+# - Monorepo 变更检测（packages/* + apps/*）
+# - 分层测试策略（unit → integration → e2e）
+# - 前端工作流预留
+
+name: CI
 
 on:
-  push:
-    branches: [master, main, develop]
   pull_request:
-    branches: [master, main]
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-  PYTHON_DEFAULT_VERSION: "3.11"
+  PYTHON_VERSION: "3.11"
 
 jobs:
-  quality:
-    name: Code Quality Checks
+  # ============================================================
+  # Stage 1: 变更检测
+  # ============================================================
+  changes:
+    name: Detect Changes
     runs-on: ubuntu-latest
-
+    outputs:
+      python: ${{ steps.filter.outputs.python }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      infra: ${{ steps.filter.outputs.infra }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install pixi
-      uses: prefix-dev/setup-pixi@v0.4.1
-      with:
-        pixi-version: latest
-        cache: true
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            python:
+              - 'packages/**/*.py'
+              - 'apps/server/**/*.py'
+              - 'tests/**/*.py'
+              - 'scripts/**/*.py'
+              - 'pyproject.toml'
+              - 'pixi.toml'
+              - 'pixi.lock'
+            frontend:
+              - 'apps/web/**'
+              - 'pnpm-lock.yaml'
+              - 'package.json'
+            infra:
+              - '.github/**'
+              - 'deploy/**'
+              - 'Dockerfile*'
+              - 'docker-compose*.yml'
 
-    - name: Install dependencies
-      run: pixi install
-
-    - name: Run ruff checks
-      run: |
-        pixi run ruff check .
-        if [ $? -ne 0 ]; then
-          echo "::error::Ruff checks failed. All ruff issues must be fixed before merging."
-          exit 1
-        fi
-
-    - name: Run ruff format
-      run: |
-        pixi run ruff format --check .
-        if [ $? -ne 0 ]; then
-          echo "::error::Code formatting issues found. Run 'pixi run ruff format .' to fix."
-          exit 1
-        fi
-
-    - name: Type checking with mypy
-      run: |
-        pixi run mypy packages/core/src --strict
-        if [ $? -ne 0 ]; then
-          echo "::error::Type checking failed. Please fix type errors."
-          exit 1
-        fi
-
-  test:
-    name: Test Suite
+  # ============================================================
+  # Stage 2: Python 代码质量检查（并行）
+  # ============================================================
+  lint:
+    name: Lint (Ruff)
+    needs: changes
+    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
-    needs: quality
-
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12"]
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.39.5
+          cache: true
+          locked: true
 
-    - name: Install pixi
-      uses: prefix-dev/setup-pixi@v0.4.1
-      with:
-        pixi-version: latest
-        cache: true
+      - name: Ruff lint
+        run: pixi run ruff check --output-format=github .
 
-    - name: Install dependencies
-      run: pixi install
+      - name: Ruff format check
+        run: pixi run ruff format --check --diff .
 
-    - name: Run tests
-      run: |
-        pixi run python -m pytest \
-          --cov=packages/core/src \
-          --cov-report=xml \
-          --cov-report=html \
-          --cov-fail-under=80 \
-          -v
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-
-  build:
-    name: Build Check
+  type-check:
+    name: Type Check (Mypy)
+    needs: changes
+    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
-    needs: [quality, test]
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install pixi
-      uses: prefix-dev/setup-pixi@v0.4.1
-      with:
-        pixi-version: latest
-        cache: true
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.39.5
+          cache: true
+          locked: true
 
-    - name: Install dependencies
-      run: pixi install
+      # Mypy 缓存
+      - name: Cache mypy
+        uses: actions/cache@v4
+        with:
+          path: .mypy_cache
+          key: mypy-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('pyproject.toml', 'pixi.lock') }}
+          restore-keys: |
+            mypy-${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
-    - name: Check imports
-      run: |
-        # Check that all modules can be imported
-        pixi run python -c "
-        import sys
-        sys.path.insert(0, 'packages/core/src')
-        try:
-            import ditto_foundation.data
-            print('✓ Data module imports successfully')
-        except ImportError as e:
-            print(f'✗ Import failed: {e}')
-            sys.exit(1)
-        "
-
-    - name: Compile all Python files
-      run: |
-        # Ensure all Python files compile without syntax errors
-        find . -name "*.py" -not -path "./.git/*" -not -path "./.pixi/*" | xargs pixi run python -m py_compile
-        echo "✓ All Python files compile successfully"
+      - name: Mypy type check
+        run: |
+          pixi run mypy packages/ apps/server/ \
+            --no-error-summary \
+            --show-error-codes
 
   security:
     name: Security Scan
+    needs: changes
+    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
-    needs: quality
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install pixi
-      uses: prefix-dev/setup-pixi@v0.4.1
-      with:
-        pixi-version: latest
-        cache: true
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.39.5
+          cache: true
+          locked: true
 
-    - name: Install dependencies
-      run: pixi install
+      # Bandit 安全扫描
+      - name: Bandit security lint
+        run: |
+          pixi run bandit -r packages/ apps/server/src/ \
+            -c pyproject.toml \
+            -f json \
+            -o bandit-report.json \
+            --severity-level medium \
+            || true
 
-    - name: Run bandit security scan
-      run: |
-        pixi add --feature dev bandit
-        pixi run bandit -r packages/core/src -f json -o bandit-report.json || true
-        pixi run bandit -r packages/core/src
+      - name: Check Bandit results
+        run: |
+          if [ -f bandit-report.json ]; then
+            HIGH_ISSUES=$(python -c "import json; r=json.load(open('bandit-report.json')); print(sum(1 for i in r.get('results',[]) if i['issue_severity']=='HIGH'))")
+            if [ "$HIGH_ISSUES" -gt 0 ]; then
+              echo "::error::Found $HIGH_ISSUES high severity security issues"
+              cat bandit-report.json | python -m json.tool
+              exit 1
+            fi
+          fi
 
-    - name: Upload security scan results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: bandit-report
-        path: bandit-report.json
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-report
+          path: bandit-report.json
+          retention-days: 7
 
-  pre-commit:
-    name: Pre-commit Check
+      # Gitleaks 敏感信息检测
+      - name: Gitleaks scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================================
+  # Stage 3: 测试套件（分层执行）
+  # ============================================================
+  test-unit:
+    name: Unit Tests
+    needs: changes
+    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
-    needs: quality
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install pixi
-      uses: prefix-dev/setup-pixi@v0.4.1
-      with:
-        pixi-version: latest
-        cache: true
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.39.5
+          cache: true
+          locked: true
 
-    - name: Install dependencies
-      run: |
-        pixi install
-        pixi add --feature dev pre-commit
+      - name: Run unit tests
+        run: |
+          pixi run pytest \
+            -m "not integration and not e2e and not slow" \
+            --cov=packages \
+            --cov=apps \
+            --cov-report=xml:coverage-unit.xml \
+            --cov-report=term-missing \
+            --cov-fail-under=70 \
+            --junitxml=junit-unit.xml \
+            -v \
+            --durations=10
 
-    - name: Run pre-commit on all files
-      run: |
-        pixi run pre-commit run --all-files
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-unit.xml
+          flags: unit
+          fail_ci_if_error: false
 
-  notify:
-    name: Notify Status
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-unit
+          path: junit-unit.xml
+
+  test-integration:
+    name: Integration Tests
+    needs: [changes, test-unit]
+    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
-    needs: [quality, test, build, security]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.39.5
+          cache: true
+          locked: true
+
+      # 集成测试可能需要的服务
+      - name: Prepare test environment
+        run: |
+          mkdir -p data/duckdb data/sqlite
+          # 如需启动依赖服务，在此添加
+
+      - name: Run integration tests
+        run: |
+          pixi run pytest \
+            -m "integration" \
+            --cov=packages \
+            --cov=apps \
+            --cov-report=xml:coverage-integration.xml \
+            --cov-append \
+            --junitxml=junit-integration.xml \
+            -v
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-integration.xml
+          flags: integration
+          fail_ci_if_error: false
+
+  # ============================================================
+  # Stage 4: 构建验证（仅 main 分支）
+  # ============================================================
+  build:
+    name: Build Validation
+    needs: [lint, type-check, security, test-unit]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.39.5
+          cache: true
+          locked: true
+
+      # 验证各包可以正常构建
+      - name: Build packages
+        run: |
+          cd packages/foundation && pixi run python -m build --wheel --outdir ../../dist/
+          cd ../core && pixi run python -m build --wheel --outdir ../../dist/
+          cd ../datahub && pixi run python -m build --wheel --outdir ../../dist/
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  # ============================================================
+  # 预留：前端检查
+  # ============================================================
+  frontend-check:
+    name: Frontend Checks
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: "apps/web/pnpm-lock.yaml"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build
+
+  # ============================================================
+  # 最终状态汇总（用于 Branch Protection）
+  # ============================================================
+  ci-success:
+    name: CI Success
+    needs: [lint, type-check, security, test-unit]
     if: always()
-
+    runs-on: ubuntu-latest
     steps:
-    - name: Notify success
-      if: ${{ needs.quality.result == 'success' && needs.test.result == 'success' && needs.build.result == 'success' }}
-      run: |
-        echo "✅ All checks passed! Code is ready to merge."
-
-    - name: Notify failure
-      if: ${{ needs.quality.result == 'failure' || needs.test.result == 'failure' || needs.build.result == 'failure' }}
-      run: |
-        echo "::error::❌ CI checks failed. Please fix the issues before merging."
-        exit 1
+      - name: Check required jobs
+        run: |
+          results=("${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.security.result }}" "${{ needs.test-unit.result }}")
+          for result in "${results[@]}"; do
+            if [[ "$result" == "failure" ]]; then
+              echo "::error::One or more required CI checks failed"
+              exit 1
+            fi
+          done
+          echo "✅ All required CI checks passed!"

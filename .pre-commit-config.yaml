@@ -1,73 +1,130 @@
-# Pre-commit hooks configuration
-# See https://pre-commit.com for more information
+# .pre-commit-config.yaml (增强版)
+# 基于现有配置，添加安全扫描和 Commit 规范检查
+#
+# 变更说明：
+# + 添加 Bandit 安全扫描
+# + 添加 Gitleaks 敏感信息检测
+# + 添加 Conventional Commits 检查
+# + 优化 Mypy 配置
 
 minimum_pre_commit_version: "2.20.0"
 
 repos:
-  # 一些通用基础检查
+  # ==========================================================
+  # 基础检查（保持现有配置）
+  # ==========================================================
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-      - id: check-toml # NEW: 顺带帮你检查 pyproject 等 toml 文件
+        args: [--unsafe] # 允许自定义 YAML 标签（如 GitHub Actions）
+      - id: check-toml
+      - id: check-json
       - id: check-added-large-files
+        args: [--maxkb=1000]
       - id: check-case-conflict
       - id: check-merge-conflict
       - id: debug-statements
+      - id: detect-private-key # 新增：检测私钥泄露
+      - id: no-commit-to-branch # 新增：禁止直接提交到 main
+        args: [--branch, main]
 
-  # Ruff: lint + format
+  # ==========================================================
+  # Ruff: Lint + Format（保持现有配置）
+  # ==========================================================
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.12
     hooks:
-      # Ruff Lint - 严格检查代码质量问题
       - id: ruff
-        # 自动修复能修的，同时如果有修复发生让命令返回非 0，提醒你重新 git add
         args: [--fix, --exit-non-zero-on-fix, --show-fixes]
-        # 使用默认按文件运行即可，避免每次提交都全仓扫描太慢
-        # pass_filenames: false
-        # always_run: true
-        # fail_fast 默认就是 true，这里不再显式设置
-
-      # Ruff Format - 代码格式化
       - id: ruff-format
-        # 一般这里不需要 --diff，直接在本地改文件即可
-        # 如果你更喜欢只看 diff 再手动处理，可以改成 ["--check"]
-        # args: ["--check"]
         pass_filenames: true
 
-  # Mypy: 严格类型检查（配合你 pyproject 里的 strict + pydantic.mypy 插件）
+  # ==========================================================
+  # Mypy: 类型检查（优化配置）
+  # ==========================================================
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.13.0
     hooks:
       - id: mypy
-        # 这里用 pre-commit 自建 env，比系统 mypy 更可控
+        # 指定检查范围，避免检查不必要的文件
+        files: ^(packages|apps/server)/
+        exclude: ^(tests/|.*_test\.py$|conftest\.py$)
         additional_dependencies:
           - pydantic>=2.0
-          # 如果你用到了 pydantic-settings / pydantic-core 等，也可以加在这里
-          # - pydantic-settings>=2.0
+          - types-requests
+          - types-python-dateutil
         args:
-          [
-            --no-error-summary,
-            --disable-error-code,
-            misc,
-            --disable-error-code,
-            import-untyped,
-          ]
+          - --no-error-summary
+          - --disable-error-code=misc
+          - --disable-error-code=import-untyped
+          # 使用增量检查提升速度
+          - --cache-dir=.mypy_cache
 
-  # 可选：本地 pytest 钩子
-  #- repo: local
-  #  hooks:
-  #    - id: pytest-fast
-  #      name: pytest (fast subset)
-  #      entry: pixi run python -m pytest -m "not slow and not integration" --no-cov
-  #      language: system
-  #      pass_filenames: false
-  #      types: [python]
-  #      stages: [pre-commit]
+  # ==========================================================
+  # 新增：Bandit 安全扫描
+  # ==========================================================
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args:
+          - -c
+          - pyproject.toml
+          - --severity-level=medium # 只报告 medium 及以上
+          - --confidence-level=medium
+        additional_dependencies: ["bandit[toml]"]
+        # 排除测试文件
+        exclude: ^(tests/|.*/tests/|.*_test\.py$)
 
-# 全局排除目录（正则）
+  # ==========================================================
+  # 新增：Gitleaks 敏感信息检测
+  # ==========================================================
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  # ==========================================================
+  # 新增：Conventional Commits 规范
+  # ==========================================================
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.6.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args:
+          - feat # 新功能
+          - fix # Bug 修复
+          - docs # 文档变更
+          - style # 代码风格（不影响逻辑）
+          - refactor # 重构
+          - perf # 性能优化
+          - test # 测试相关
+          - build # 构建系统
+          - ci # CI 配置
+          - chore # 杂项
+          - revert # 回滚
+          - wip # 进行中（可选）
+
+  # ==========================================================
+  # 可选：本地快速测试（开发时使用）
+  # ==========================================================
+  - repo: local
+    hooks:
+      - id: pytest-fast
+        name: pytest (fast subset)
+        entry: pixi run pytest -m "not slow and not integration and not e2e" --no-cov -q
+        language: system
+        pass_filenames: false
+        types: [python]
+        stages: [pre-push] # 改为 push 时运行，commit 时跳过
+
+# ==========================================================
+# 全局排除
+# ==========================================================
 exclude: |
   (?x)^(
     \.git/|
@@ -81,5 +138,18 @@ exclude: |
     \.tox/|
     build/|
     dist/|
-    \.venv/
+    \.venv/|
+    node_modules/|
+    apps/web/\.next/|
+    data/
   )$
+
+# ==========================================================
+# CI 集成配置（pre-commit.ci 服务）
+# ==========================================================
+ci:
+  autoupdate_schedule: monthly
+  autoupdate_commit_msg: "chore(deps): update pre-commit hooks"
+  autofix_prs: false
+  skip:
+    - gitleaks # CI 中单独运行

@@ -61,7 +61,7 @@ class PipelineStore:
 
     # ============ Pipeline run operations ============
 
-    def insert_run(  # noqa: PLR0913
+    def insert_run(
         self,
         run_id: str,
         task_name: str,
@@ -145,7 +145,7 @@ class PipelineStore:
             )
             raise
 
-    def update_run(  # noqa: PLR0913
+    def update_run(
         self,
         run_id: str,
         status: str | None = None,
@@ -372,7 +372,7 @@ class PipelineStore:
 
     # ============ DQ issue operations ============
 
-    def insert_dq_issue(  # noqa: PLR0913
+    def insert_dq_issue(
         self,
         run_id: str,
         dataset_id: str,
