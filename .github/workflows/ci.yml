@@ -110,7 +110,7 @@ jobs:
 
       - name: Mypy type check
         run: |
-          pixi run mypy packages/ apps/server/ \
+          pixi run -e dev mypy packages/ apps/server/ \
             --no-error-summary \
             --show-error-codes
 
@@ -133,7 +133,7 @@ jobs:
       # Bandit 安全扫描
       - name: Bandit security lint
         run: |
-          pixi run bandit -r packages/ apps/server/src/ \
+          pixi run -e dev bandit -r packages/ apps/server/src/ \
             -c pyproject.toml \
             -f json \
             -o bandit-report.json \
@@ -186,7 +186,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pixi run pytest \
+          pixi run -e dev pytest \
             -m "not integration and not e2e and not slow" \
             --cov=packages \
             --cov=apps \
@@ -236,7 +236,7 @@ jobs:
 
       - name: Run integration tests
         run: |
-          pixi run pytest \
+          pixi run -e dev pytest \
             -m "integration" \
             --cov=packages \
             --cov=apps \
