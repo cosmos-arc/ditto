@@ -177,7 +177,7 @@ def traced(operation: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @functools.wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        def wrapper(*args: Any, **kwargs: Any) -> T:
             with span(operation, function=func.__name__):
                 return func(*args, **kwargs)
 

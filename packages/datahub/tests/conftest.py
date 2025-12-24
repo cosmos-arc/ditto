@@ -4,7 +4,7 @@ import pytest
 from ditto_foundation import Mode, init
 
 
-@pytest.fixture(autouse=True)  # type: ignore[misc]
+@pytest.fixture(autouse=True)
 def init_observability() -> None:
     """Initialize observability in testing mode for all tests."""
     init(mode=Mode.TESTING)

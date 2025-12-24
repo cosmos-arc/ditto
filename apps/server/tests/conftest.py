@@ -168,7 +168,7 @@ def populated_databases(
 ) -> tuple[duckdb.DuckDBPyConnection, sqlite3.Connection]:
     """填充测试数据的数据库."""
     # 插入ETF数据
-    duckdb_conn.execute_many(
+    duckdb_conn.executemany(
         """
         INSERT INTO etf_list (
             symbol, name, market, category, establish_date,
@@ -193,7 +193,7 @@ def populated_databases(
     )
 
     # 插入日线数据
-    duckdb_conn.execute_many(
+    duckdb_conn.executemany(
         """
         INSERT INTO daily_price_adjusted (
             symbol, date, open, high, low, close, volume, knowledge_date

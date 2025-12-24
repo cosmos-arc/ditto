@@ -17,23 +17,16 @@ from typing import Any
 import uvicorn
 
 # Local imports - using editable packages
-from ditto_foundation.logging_config import (
-    LogConfig,
-    get_logger,
-    request_logger,
-    setup_logging,
-)
+# 使用新的 observability 模块
+from ditto_foundation.observability import Mode, init, logger, shutdown
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-# Local API routes
-from ditto_server.api import data_router, update_router
 from ditto_server.exceptions import DittoException
 from ditto_server.middleware import (
-    ditto_exception_handler,
     general_exception_handler,
     http_exception_handler,
     validation_exception_handler,
@@ -42,9 +35,6 @@ from ditto_server.middleware import (
 # Initialize project root
 project_root = Path(__file__).parent.parent.parent.parent
 
-# Initialize logging
-logger = get_logger(__name__)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -52,14 +42,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("Starting Ditto API server")
     try:
-        # Initialize logging with environment-specific config
+        # Initialize observability with environment-specific config
         env = os.getenv("DITTO_ENV", "development")
-        log_config = LogConfig(
-            level="DEBUG" if env == "development" else "INFO",
-            json_format=env == "production",
+        log_level = "DEBUG" if env == "development" else "INFO"
+        log_dir = str(project_root / "logs")
+
+        # 使用新的 observability init
+        init(
+            service_name="ditto-server",
+            environment=env,
+            log_level=log_level,
+            log_dir=log_dir,
+            mode=Mode.DEVELOPMENT if env == "development" else Mode.PRODUCTION,
         )
-        setup_logging(config=log_config, log_dir=project_root / "logs", env=env)
-        logger.info("Logging configured", environment=env)
+
+        logger.info("Observability configured", environment=env)
         yield
     except Exception as e:
         logger.exception("Failed to initialize application", error=str(e))
@@ -67,6 +64,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     finally:
         # Shutdown
         logger.info("Shutting down Ditto API server")
+        shutdown()
 
 
 # 创建FastAPI应用实例
@@ -99,19 +97,15 @@ async def log_requests(
     # Generate unique request ID
     request_id = str(uuid.uuid4())
 
-    # Add request ID to response headers
-    response = Response()
-    response.headers["X-Request-ID"] = request_id
-
     # Get start time
     start_time = time.time()
 
     # Log request
-    request_logger.log_request(
+    logger.info(
+        f"{request.method} {request.url.path}",
+        event="request",
         method=request.method,
         path=request.url.path,
-        headers=dict(request.headers),
-        query_params=dict(request.query_params),
         request_id=request_id,
     )
 
@@ -122,11 +116,13 @@ async def log_requests(
         # Calculate duration
         duration_ms = (time.time() - start_time) * 1000
 
-        # Add request ID to actual response
+        # Add request ID to response headers
         response.headers["X-Request-ID"] = request_id
 
         # Log response
-        request_logger.log_response(
+        logger.info(
+            f"{request.method} {request.url.path} - {response.status_code}",
+            event="response",
             method=request.method,
             path=request.url.path,
             status_code=response.status_code,
@@ -139,8 +135,14 @@ async def log_requests(
     except Exception as e:
         # Log error
         duration_ms = (time.time() - start_time) * 1000
-        request_logger.log_error(
-            method=request.method, path=request.url.path, error=e, request_id=request_id
+        logger.exception(
+            "Request processing error",
+            event="error",
+            method=request.method,
+            path=request.url.path,
+            request_id=request_id,
+            error_type=type(e).__name__,
+            error_message=str(e),
         )
 
         # Return error response
@@ -182,7 +184,7 @@ async def get_status() -> dict[str, Any]:
             "backtest": False,
             "trading": False,
         },
-        "logging": {
+        "observability": {
             "level": (
                 "DEBUG"
                 if os.getenv("DITTO_ENV", "development") == "development"
@@ -203,14 +205,10 @@ async def test_logging() -> dict[str, str]:
 
 
 # 注册异常处理器
-app.add_exception_handler(DittoException, ditto_exception_handler)
+app.add_exception_handler(DittoException, general_exception_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
-
-# 注册API路由
-app.include_router(data_router)
-app.include_router(update_router)
 
 
 if __name__ == "__main__":

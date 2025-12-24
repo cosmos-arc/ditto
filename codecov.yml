@@ -1,0 +1,57 @@
+# codecov.yml
+# Ditto 覆盖率报告配置
+
+coverage:
+  precision: 2
+  round: down
+  range: "60...100"
+
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 2%
+
+    patch:
+      default:
+        target: 80%
+        threshold: 0%
+
+  flags:
+    core-strategy:
+      paths:
+        - packages/core/src/ditto_core/strategy/
+        - packages/core/src/ditto_core/portfolio/
+      target: 90%
+
+    core-engine:
+      paths:
+        - packages/core/src/ditto_core/engine/
+      target: 85%
+
+    datahub:
+      paths:
+        - packages/datahub/src/
+      target: 85%
+
+    foundation:
+      paths:
+        - packages/foundation/src/
+      target: 80%
+
+    server:
+      paths:
+        - apps/server/src/
+      target: 80%
+
+ignore:
+  - "**/__init__.py"
+  - "**/conftest.py"
+  - "scripts/**"
+  - "tests/**"
+  - "**/migrations/**"
+
+comment:
+  layout: "header,diff,flags,files"
+  behavior: default
+  require_changes: true

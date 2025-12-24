@@ -1,0 +1,144 @@
+# Ditto Integration Tests - GitHub Actions
+#
+# Runs integration tests with observability services (VictoriaMetrics, VictoriaLogs, Vector, Grafana)
+# Triggered manually or after successful CI
+
+name: Integration Tests
+
+on:
+  # Manual trigger from GitHub Actions UI
+  workflow_dispatch:
+  # Run on schedule (e.g., daily at 2 AM UTC) - only works on default branch
+  schedule:
+    - cron: "0 2 * * *"
+  # Run after merge to main - only works on default branch
+  workflow_run:
+    workflows: [CI]
+    types:
+      - completed
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      # VictoriaMetrics
+      victoriametrics:
+        image: victoriametrics/victoria-metrics:v1.104.0
+        ports:
+          - 8428:8428
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8428/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # VictoriaLogs
+      victorialogs:
+        image: victoriametrics/victoria-logs:v1.37.0
+        ports:
+          - 9428:9428
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:9428/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # Grafana
+      grafana:
+        image: grafana/grafana:11.1.0
+        ports:
+          - 3000:3000
+        env:
+          GF_AUTH_ANONYMOUS_ENABLED: true
+          GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+          GF_SERVER_ROOT_URL: http://localhost:3000
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.39.5
+          cache: true
+          locked: true
+          environment: dev
+
+      - name: Create Vector config
+        run: |
+          mkdir -p logs
+          cat > vector-ci.toml << 'EOF'
+          [sources.logs]
+          type = "file"
+          include = ["/logs/**/*.jsonl"]
+
+          [sinks.victorialogs]
+          type = "vector"
+          inputs = ["logs"]
+          address = "localhost:9428"
+          EOF
+
+      - name: Start Vector
+        run: |
+          docker run -d \
+            --name ditto-vector \
+            -p 8686:8686 \
+            -v $(pwd)/vector-ci.toml:/etc/vector/vector.toml:ro \
+            -v $(pwd)/logs:/logs:ro \
+            timberio/vector:0.52.0-debian \
+            --config /etc/vector/vector.toml
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for services to be ready..."
+          timeout 60 bash -c 'until curl -s http://localhost:8428/health; do sleep 2; done'
+          timeout 60 bash -c 'until curl -s http://localhost:9428/health; do sleep 2; done'
+          timeout 60 bash -c 'until curl -s http://localhost:3000/api/health; do sleep 2; done'
+          timeout 60 bash -c 'until curl -s http://localhost:8686/health; do sleep 2; done'
+          echo "All services are ready!"
+
+      - name: Run integration tests
+        run: |
+          pixi run -e dev pytest \
+            -m "integration" \
+            --cov=packages \
+            --cov=apps \
+            --cov-report=xml:coverage-integration.xml \
+            --cov-report=term-missing \
+            --junitxml=junit-integration.xml \
+            -v \
+            --tb=short
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-integration.xml
+          flags: integration
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-integration
+          path: junit-integration.xml
+          retention-days: 30
+
+      - name: Cleanup Vector
+        if: always()
+        run: docker rm -f ditto-vector || true

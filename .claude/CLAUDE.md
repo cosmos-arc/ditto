@@ -22,16 +22,50 @@ pre-commit run --all-files
 
 ## 1. 开发环境
 
+### ⚠️ 重要：Pixi 环境使用规则
+
+**开发环境必须使用 `dev` 环境配置，生产环境使用 `default` 配置**
+
+```bash
+# 开发环境（包含代码质量工具：ruff, mypy, pytest, pre-commit, bandit 等）
+pixi run -e dev <task>     # 在 dev 环境运行任务
+pixi shell -e dev          # 激活 dev 环境
+
+# 生产环境（仅运行时依赖）
+pixi run -e default <task> # 或直接 pixi run <task>
+pixi shell                 # 激活 default 环境
+```
+
+**环境说明**：
+| 环境 | 用途 | 包含内容 |
+|------|------|----------|
+| `dev` | 开发、测试、CI/CD | 运行时依赖 + 代码质量工具（ruff, mypy, pytest, pre-commit, bandit） |
+| `default` | 生产部署 | 仅运行时依赖 |
+
+**命令示例**：
+```bash
+# 开发时必须使用 -e dev 指定环境
+pixi run -e dev lint          # 代码检查
+pixi run -e dev typecheck     # 类型检查
+pixi run -e dev test-unit     # 运行测试
+pixi run -e dev ci-check      # 完整 CI 检查
+pixi run -e dev pre-commit-run # 运行 pre-commit
+
+# 部署时使用 default 环境
+pixi run server               # 启动服务器
+```
+
 ### 包管理（使用 pixi，不要用 pip）
 
 ```bash
-pixi install          # 安装所有依赖
-pixi shell            # 激活环境
+pixi install          # 安装所有依赖（包括 default 和 dev 环境）
+pixi shell -e dev     # 激活开发环境
 ```
 
 **依赖管理分离**：
-- `pixi.toml` → 运行时依赖（Python 包、系统库）
-  - 优先使用 `dependencies`, 无法解析依赖时使用 `pypi-dependencies`
+- `pixi.toml` → 依赖管理
+  - `[dependencies]` → 运行时依赖（default 和 dev 共享）
+  - `[feature.dev.dependencies]` → 开发工具（仅 dev 环境）
 - `pyproject.toml` → 代码质量工具配置（ruff、mypy、pytest）
 
 **本地包使用 editable 模式**：
@@ -50,13 +84,16 @@ ditto-foundation = { path = "packages/foundation", editable = true }
 
 ```bash
 # 方法1：一键检查（推荐）
-pre-commit run --all-files
+pixi run -e dev pre-commit-run
 
-# 方法2：分步检查
-pixi run lint .    # Lint
-pixi run format .  # Format
-pixi run type      # Type check
-pixi run pytest    # Tests
+# 方法2：分步检查（必须在 dev 环境）
+pixi run -e dev lint          # Lint
+pixi run -e dev format        # Format
+pixi run -e dev typecheck     # Type check
+pixi run -e dev test-unit     # Unit Tests
+
+# 方法3：快速检查（开发时用，自动修复）
+pixi run -e dev quick-check
 ```
 
 **规则**: 每次提交前必须通过所有检查，不得使用 `--no-verify` 绕过。
@@ -288,7 +325,114 @@ packages/
 
 ---
 
-## 6. 测试命令
+## 6. 代码质量准则（必须遵守）
+
+### 质量检查要求
+
+**提交代码前必须通过所有代码质量检查，不得有任何错误或警告。**
+
+```bash
+# 完整质量检查（必须全部通过）
+pixi run -e dev ci-check
+
+# 或分别运行
+pixi run -e dev lint          # Ruff lint 检查
+pixi run -e dev format-check  # Ruff 格式检查
+pixi run -e dev typecheck     # MyPy 类型检查
+pixi run -e dev security      # Bandit 安全扫描
+pixi run -e dev test-cov-xml  # 测试覆盖率（≥80%）
+```
+
+### 各项质量标准
+
+| 检查项 | 工具 | 标准 | 说明 |
+|--------|------|------|------|
+| **Lint** | Ruff | 0 错误 | 代码风格和质量检查 |
+| **Format** | Ruff | 0 错误 | 代码格式化 |
+| **Type Check** | MyPy | 0 错误 | 类型检查 |
+| **Security** | Bandit | 0 高危问题 | 安全扫描 |
+| **Test Coverage** | pytest-cov | ≥80% | 代码覆盖率 |
+
+### 安全规范
+
+1. **SQL 注入防护**：使用参数化查询，禁止字符串拼接 SQL
+   ```python
+   # ✅ 正确
+   cursor.execute("SELECT * FROM table WHERE id = ?", (user_id,))
+
+   # ❌ 错误
+   cursor.execute(f"SELECT * FROM table WHERE id = {user_id}")
+   ```
+
+2. **哈希函数使用**：非安全场景使用 `usedforsecurity=False`
+   ```python
+   # ✅ 正确 - 文件校验场景
+   md5 = hashlib.md5(usedforsecurity=False)
+
+   # ❌ 错误 - 安全场景使用 MD5
+   md5 = hashlib.md5()  # Bandit B324
+   ```
+
+3. **已确认的安全问题**：使用 `# nosec` 注释标记
+   ```python
+   # nosec: B608 - table 参数来自内部调用，where 子句使用参数化查询
+   sql = f"SELECT COUNT(*) FROM {table}"
+   ```
+
+### 类型注解规范
+
+1. **所有公开函数必须有类型注解**
+   ```python
+   # ✅ 正确
+   def calculate_return(principal: float, rate: float) -> float:
+       return principal * rate
+
+   # ❌ 错误
+   def calculate_return(principal, rate):
+       return principal * rate
+   ```
+
+2. **装饰器类型注解**：使用 `cast` 帮助类型推断
+   ```python
+   from typing import cast, ParamSpec, TypeVar, Callable
+
+   P = ParamSpec("P")
+   T = TypeVar("T")
+
+   def decorator(func: Callable[P, T]) -> Callable[P, T]:
+       def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+           return func(*args, **kwargs)
+       return cast(Callable[P, T], wrapper)  # 显式类型转换
+   ```
+
+3. **测试文件类型注解**：使用 `Any` 处理 pytest fixture
+   ```python
+   from typing import Any
+
+   def test_something(tmp_path: Any) -> None:
+       # pytest.TempPathFactory 类型问题
+       pass
+   ```
+
+### 覆盖率要求
+
+- **整体覆盖率**：≥80%
+- **各模块要求**（基于 codecov.yml）：
+  - `core-strategy`: ≥90%
+  - `core-engine`: ≥85%
+  - `datahub`: ≥85%
+  - `foundation`: ≥80%
+  - `server`: ≥80%
+
+### 中文项目特殊说明
+
+- **RUF002/RUF003**：中文标点符号警告可接受
+  - 中文文档字符串中的全角标点（，。：（））不强制改为半角
+  - 代码注释中的中文标点同样可接受
+
+---
+
+## 7. 测试命令
 
 ```bash
 # 运行所有测试
@@ -309,7 +453,7 @@ pytest --durations=10
 
 ---
 
-## 7. 数据功能
+## 8. 数据功能
 
 ```bash
 # 安装数据依赖

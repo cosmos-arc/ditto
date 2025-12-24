@@ -41,7 +41,8 @@ def file_md5(path: Path) -> str:
 
     """
     path = Path(path)
-    md5 = hashlib.md5()
+    # MD5 用于文件校验，非安全场景，使用 usedforsecurity=False
+    md5 = hashlib.md5(usedforsecurity=False)
 
     with path.open("rb") as f:
         # Read in chunks to handle large files efficiently

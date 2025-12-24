@@ -12,7 +12,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import polars as pl
-import pytest
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore

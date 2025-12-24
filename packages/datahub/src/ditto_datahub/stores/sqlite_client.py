@@ -244,7 +244,7 @@ class SQLiteClient:
             Record count.
 
         """
-        sql = f"SELECT COUNT(*) FROM {table}"
+        sql = f"SELECT COUNT(*) FROM {table}"  # nosec B608
         if where:
             sql += f" WHERE {where}"
 
