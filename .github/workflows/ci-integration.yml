@@ -36,49 +36,19 @@ jobs:
       - name: Create logs directory
         run: mkdir -p logs
 
-      # Start observability stack using docker-compose
+      # Start observability stack using docker compose (V2 plugin)
       - name: Start observability services
         working-directory: deploy/observability
         run: |
-          # Create docker-compose override for CI (remove volumes)
-          cat > docker-compose.ci.yml << 'EOF'
-          version: "3.8"
-          services:
-            victoriametrics:
-              command:
-                - "--storageDataPath=/vmdata"
-                - "--retentionPeriod=90d"
-            volumes: !override []
-              - /tmp/vmdata:/vmdata
-            deploy: !override {}
-            victorialogs:
-              command:
-                - "--storageDataPath=/vldata"
-                - "--retentionPeriod=30d"
-            volumes: !override []
-              - /tmp/vldata:/vldata
-            deploy: !override {}
-            vector:
-              volumes: !override []
-              - ./vector.toml:/etc/vector/vector.toml:ro
-              - ../../logs:/logs:ro
-            deploy: !override {}
-            grafana:
-              volumes: !override []
-              - /tmp/grafana-data:/var/lib/grafana
-              - ./grafana/provisioning:/etc/grafana/provisioning:ro
-            deploy: !override {}
-          EOF
+          # Start services using docker compose V2
+          docker compose -f docker-compose.yml up -d
 
-          # Start services
-          docker-compose -f docker-compose.yml -f docker-compose.ci.yml up -d
-
-          # Wait for services to be healthy
+          # Wait for services to start
           echo "Waiting for services to start..."
           sleep 15
 
           # Show service status
-          docker-compose ps
+          docker compose ps
 
       - name: Wait for services health
         working-directory: deploy/observability
@@ -146,5 +116,4 @@ jobs:
         if: always()
         working-directory: deploy/observability
         run: |
-          docker-compose -f docker-compose.yml -f docker-compose.ci.yml down -v
-          rm -f docker-compose.ci.yml
+          docker compose -f docker-compose.yml down -v
