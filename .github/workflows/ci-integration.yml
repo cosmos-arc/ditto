@@ -1,68 +1,24 @@
 # Ditto Integration Tests - GitHub Actions
 #
 # Runs integration tests with observability services (VictoriaMetrics, VictoriaLogs, Vector, Grafana)
-# Triggered manually or after successful CI
 
 name: Integration Tests
 
 on:
-  # Manual trigger from GitHub Actions UI
   workflow_dispatch:
-  # Run on schedule (e.g., daily at 2 AM UTC) - only works on default branch
   schedule:
     - cron: "0 2 * * *"
-  # Run after merge to main - only works on default branch
   workflow_run:
     workflows: [CI]
     types:
       - completed
     branches: [main]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
-    services:
-      # VictoriaMetrics
-      victoriametrics:
-        image: victoriametrics/victoria-metrics:v1.104.0
-        ports:
-          - 8428:8428
-        options: >-
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-
-      # VictoriaLogs
-      victorialogs:
-        image: victoriametrics/victoria-logs:v1.37.0
-        ports:
-          - 9428:9428
-        options: >-
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-
-      # Grafana
-      grafana:
-        image: grafana/grafana:11.1.0
-        ports:
-          - 3000:3000
-        env:
-          GF_AUTH_ANONYMOUS_ENABLED: true
-          GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
-          GF_SERVER_ROOT_URL: http://localhost:3000
-          GF_INSTALL_PLUGINS: victoriametrics-logs-datasource
-        options: >-
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 30
 
     steps:
       - name: Checkout code
@@ -75,6 +31,66 @@ jobs:
           cache: true
           locked: true
           environment: dev
+
+      # Start observability services using docker-compose style approach
+      - name: Start observability services
+        run: |
+          # Create network for services
+          docker network create ditto-observability || true
+
+          # Start VictoriaMetrics
+          docker run -d --name ditto-vm \
+            --network ditto-observability \
+            -p 8428:8428 \
+            victoriametrics/victoria-metrics:v1.104.0 \
+            --listenAddr=:8428
+
+          # Start VictoriaLogs
+          docker run -d --name ditto-vl \
+            --network ditto-observability \
+            -p 9428:9428 \
+            victoriametrics/victoria-logs:v1.37.0 \
+            --http.listenAddr=:9428
+
+          # Start Grafana
+          docker run -d --name ditto-grafana \
+            --network ditto-observability \
+            -p 3000:3000 \
+            -e GF_AUTH_ANONYMOUS_ENABLED=true \
+            -e GF_AUTH_ANONYMOUS_ORG_ROLE=Admin \
+            -e GF_SERVER_ROOT_URL=http://localhost:3000 \
+            grafana/grafana:11.1.0
+
+          echo "Services started, waiting for health..."
+
+      - name: Wait for services
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:8428/health > /dev/null; then
+              echo "VictoriaMetrics is ready"
+              break
+            fi
+            echo "Waiting for VictoriaMetrics... ($i/30)"
+            sleep 2
+          done
+
+          for i in {1..30}; do
+            if curl -sf http://localhost:9428/health > /dev/null; then
+              echo "VictoriaLogs is ready"
+              break
+            fi
+            echo "Waiting for VictoriaLogs... ($i/30)"
+            sleep 2
+          done
+
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000/api/health > /dev/null; then
+              echo "Grafana is ready"
+              break
+            fi
+            echo "Waiting for Grafana... ($i/30)"
+            sleep 2
+          done
 
       - name: Create Vector config
         run: |
@@ -94,20 +110,14 @@ jobs:
         run: |
           docker run -d \
             --name ditto-vector \
+            --network ditto-observability \
             -p 8686:8686 \
             -v $(pwd)/vector-ci.toml:/etc/vector/vector.toml:ro \
             -v $(pwd)/logs:/logs:ro \
             timberio/vector:0.52.0-debian \
             --config /etc/vector/vector.toml
 
-      - name: Wait for services
-        run: |
-          echo "Waiting for services to be ready..."
-          timeout 60 bash -c 'until curl -s http://localhost:8428/health; do sleep 2; done'
-          timeout 60 bash -c 'until curl -s http://localhost:9428/health; do sleep 2; done'
-          timeout 60 bash -c 'until curl -s http://localhost:3000/api/health; do sleep 2; done'
-          timeout 60 bash -c 'until curl -s http://localhost:8686/health; do sleep 2; done'
-          echo "All services are ready!"
+          sleep 5
 
       - name: Run integration tests
         run: |
@@ -137,6 +147,8 @@ jobs:
           path: junit-integration.xml
           retention-days: 30
 
-      - name: Cleanup Vector
+      - name: Cleanup services
         if: always()
-        run: docker rm -f ditto-vector || true
+        run: |
+          docker rm -f ditto-vector ditto-grafana ditto-vl ditto-vm || true
+          docker network rm ditto-observability || true
