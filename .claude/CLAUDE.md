@@ -134,9 +134,9 @@ test(engine): P0-041 add unit tests for RegimeEngine
 
 ### 模块文档更新规则
 
-**任何源码文件变更后，必须判断是否需要更新对应的 `@README.PACKAGE.md` 文件。**
+**任何源码文件变更后，必须判断是否需要更新对应的 `README.md` 文件。**
 
-#### 需要更新 @README.PACKAGE.md 的场景
+#### 需要更新 README.md 的场景
 
 | 变更类型 | 说明 | 示例 |
 |----------|------|------|
@@ -154,19 +154,19 @@ test(engine): P0-041 add unit tests for RegimeEngine
 | 内部重构 | 代码结构优化但接口不变 |
 | 测试代码 | 仅修改 `tests/` 下的文件 |
 
-#### @README.PACKAGE.md 文件位置
+#### README.md 文件位置
 
 | 包级别 | 文件路径 |
 |--------|----------|
-| ditto_core | `packages/core/src/ditto_core/@README.PACKAGE.md` |
-| ditto_datahub | `packages/datahub/src/ditto_datahub/@README.PACKAGE.md` |
-| ditto_foundation | `packages/foundation/src/ditto_foundation/@README.PACKAGE.md` |
+| ditto_core | `packages/core/src/ditto_core/README.md` |
+| ditto_datahub | `packages/datahub/src/ditto_datahub/README.md` |
+| ditto_foundation | `packages/foundation/src/ditto_foundation/README.md` |
 
 | 子模块级别 | 文件路径示例 |
 |------------|-------------|
-| stores | `packages/datahub/src/ditto_datahub/stores/@README.PACKAGE.md` |
-| runtime | `packages/datahub/src/ditto_datahub/runtime/@README.PACKAGE.md` |
-| config | `packages/foundation/src/ditto_foundation/config/@README.PACKAGE.md` |
+| stores | `packages/datahub/src/ditto_datahub/stores/README.md` |
+| runtime | `packages/datahub/src/ditto_datahub/runtime/README.md` |
+| config | `packages/foundation/src/ditto_foundation/config/README.md` |
 
 #### 更新检查清单
 
@@ -175,7 +175,7 @@ test(engine): P0-041 add unit tests for RegimeEngine
 - [ ] 是否新增/修改/删除了公开类或函数？
 - [ ] 是否修改了模块的依赖关系？
 - [ ] 是否改变了模块的核心职责？
-- [ ] 如果是，是否已更新对应的 `@README.PACKAGE.md`？
+- [ ] 如果是，是否已更新对应的 `README.md`？
 
 ---
 

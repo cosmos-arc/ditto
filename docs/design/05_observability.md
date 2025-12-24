@@ -673,7 +673,7 @@ packages/foundation/src/ditto_foundation/
 │   ├── tracing.py           # OTel Tracing 实现
 │   ├── metrics.py           # OTel Metrics 实现
 │   ├── testing.py           # 测试辅助函数
-│   └── @README.PACKAGE.md   # 模块使用文档
+│   └── README.md           # 模块使用文档
 ```
 
 ### 9.2 模块说明
@@ -709,7 +709,7 @@ def my_function():
 M.data_records.add(100, {"source": "tushare", "table": "etf_daily", "status": "success"})
 ```
 
-> **注**: 完整的代码实现请参考 `packages/foundation/src/ditto_foundation/observability/@README.PACKAGE.md` 模块文档。
+> **注**: 完整的代码实现请参考 `packages/foundation/src/ditto_foundation/observability/README.md` 模块文档。
 
 ---
 
