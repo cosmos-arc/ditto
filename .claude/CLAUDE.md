@@ -103,35 +103,192 @@ pixi run -e dev quick-check
 
 ## 3. 开发工作流
 
-### 规划 + TDD 流程 + CI以及CodeReview（**必须遵守**）
+### 分支管理与 PR 流程（**必须遵守**）
 
-1.规划任务
-2.建立开发分支
-3.执行编码任务
-```
-4. 编写测试 → 2. 实现功能 → 3. 重构优化 → 4. 提交代码 → 5. CI/CD + AI-CODEREVIEW
-执行以上流程至流程通过
-```
-5.更新文档
-6.提交PR
+**强制规则**：所有任务开发必须先创建分支，完成后通过 PR 合入主分支。
 
-### 代码实现
-**必须**优先参考设计文档中的代码实现及伪代码
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      开发流程（必须遵守）                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 规划阶段                                                   │
+│     ├── 从 sprint 中选择任务                                    │
+│     ├── 创建任务规划文档 docs/plans/{date}-{task}.md            │
+│     └── 确定验收标准                                           │
+│                                                                 │
+│  2. 创建开发分支（**必须！**）                                  │
+│     git checkout -b feat/P0-XXX-task-name                      │
+│     分支命名: <type>/<task-id>-<brief-description>             │
+│                                                                 │
+│  3. TDD 开发循环                                               │
+│     ├── 编写测试（RED）                                         │
+│     ├── 实现功能（GREEN）                                       │
+│     ├── 重构优化（REFACTOR）                                    │
+│     └── 本地提交代码                                           │
+│                                                                 │
+│  4. 代码质量检查                                               │
+│     ├── pixi run -e dev ci-check  # 必须通过                   │
+│     ├── pre-commit run --all-files  # 必须通过                 │
+│     └── 确认所有检查项 0 错误                                   │
+│                                                                 │
+│  5. 推送分支                                                   │
+│     git push -u origin feat/P0-XXX-task-name                   │
+│                                                                 │
+│  6. 创建 Pull Request                                          │
+│     ├── gh pr create --base main --title "feat: P0-XXX ..."    │
+│     ├── 填写 PR 描述（关联任务规划文档）                        │
+│     └── 等待 CI 检查通过                                        │
+│                                                                 │
+│  7. CI/CD 验证                                                 │
+│     ├── CI 自动运行: lint, type-check, security, test-unit     │
+│     ├── 集成测试自动运行（如需要）                              │
+│     └── Codecov 覆盖率报告（≥80%）                             │
+│                                                                 │
+│  8. 代码审查                                                   │
+│     ├── 至少 1 人审批通过                                       │
+│     ├── 解决所有 review 意见                                    │
+│     └── 确认 CI 全部通过                                        │
+│                                                                 │
+│  9. 合并到 main                                                │
+│     ├── 使用 Squash and merge 保持历史整洁                      │
+│     ├── 分支保护规则自动检查                                    │
+│     └── 合并后自动部署到 staging                                │
+│                                                                 │
+│  10. 清理和更新                                                │
+│      ├── 删除本地分支  git branch -d feat/P0-XXX                │
+│      ├── 更新任务状态（sprint 文档）                            │
+│      └── 更新相关文档（如需要）                                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 分支命名规范
+
+```bash
+# 功能开发
+git checkout -b feat/P0-005-duckdb-init
+
+# Bug 修复
+git checkout -b fix/P0-022-import-error
+
+# 重构
+git checkout -b refactor/P0-041-engine-cleanup
+
+# 文档更新
+git checkout -b docs/P0-050-readme-update
+
+# 测试
+git checkout -b test/P0-060-add-unit-tests
+
+# CI/CD
+git checkout -b ci/P0-070-optimize-workflow
+```
+
+**类型说明**：
+- `feat`: 新功能
+- `fix`: Bug 修复
+- `refactor`: 重构（不改变功能）
+- `docs`: 文档更新
+- `test`: 添加或修改测试
+- `ci`: CI/CD 相关
+- `chore`: 构建/工具链相关
 
 ### Commit 规范（Conventional Commits）
 
-```
+```bash
+# 格式
 <type>(<scope>): <task-id> <description>
 
 # 示例
-feat(data): P0-005 implement DuckDB initialization - TDD
-fix(api): P0-022 resolve import error in main.py
-test(engine): P0-041 add unit tests for RegimeEngine
+git commit -m "feat(data): P0-005 implement DuckDB initialization"
+git commit -m "fix(api): P0-022 resolve import error in main.py"
+git commit -m "test(engine): P0-041 add unit tests for RegimeEngine"
+git commit -m "docs(readme): P0-050 update deployment section"
 ```
 
 **Type 类型**：`feat` | `fix` | `docs` | `style` | `refactor` | `perf` | `test` | `chore` | `ci` | `build`
 
-**破坏性变更**：在 type 后加 `!`，如 `feat!: breaking change`
+### Pull Request 模板
+
+创建 PR 时使用以下模板：
+
+```markdown
+## 关联任务
+- 任务 ID: P0-XXX
+- 规划文档: `docs/plans/YYYY-MM-DD-sprint*-task*.md`
+
+## 变更概述
+<!-- 简要描述本次变更的内容 -->
+
+## 变更类型
+- [ ] 新功能 (feat)
+- [ ] Bug 修复 (fix)
+- [ ] 重构 (refactor)
+- [ ] 文档更新 (docs)
+- [ ] 测试 (test)
+- [ ] CI/CD (ci)
+
+## 代码质量
+- [ ] 通过所有 pre-commit 检查
+- [ ] 通过所有 CI 检查 (lint, type-check, security, test-unit)
+- [ ] 覆盖率 ≥80%
+- [ ] 更新相关文档
+
+## 测试说明
+<!-- 描述如何验证本次变更 -->
+
+## 截图/日志
+<!-- 如适用，添加截图或日志 -->
+```
+
+### CI/CD 检查项说明
+
+PR 创建后，GitHub Actions 自动运行以下检查：
+
+| 检查项 | 说明 | 必需 |
+|--------|------|------|
+| `lint` | Ruff 代码检查 | ✅ |
+| `type-check` | MyPy 类型检查 | ✅ |
+| `security` | Bandit + Gitleaks 安全扫描 | ✅ |
+| `test-unit` | 单元测试（覆盖率 ≥80%） | ✅ |
+| `ci-success` | CI 状态汇总 | ✅ |
+| `integration-tests` | 集成测试（observability） | ⚠️ 可选 |
+
+**注意**：所有必需检查必须通过后才能合并。
+
+### 本地开发验证
+
+推送代码前，确保本地验证通过：
+
+```bash
+# 1. 更新代码
+git fetch origin
+git rebase origin/main
+
+# 2. 完整质量检查
+pixi run -e dev ci-check
+
+# 3. 运行 pre-commit
+pre-commit run --all-files
+
+# 4. 推送分支
+git push origin feat/P0-XXX-task-name
+```
+
+### 分支保护规则
+
+**main 分支受保护，规则如下**：
+
+- ✅ 需要 Pull Request 才能合并
+- ✅ 至少 1 人审批
+- ✅ 必须通过所有状态检查
+- ✅ 必须是最新的分支（merge 前需要 update）
+- ✅ 需要解决所有对话
+- ✅ 推荐使用 Squash merge
+
+### 代码实现
+**必须**优先参考设计文档中的代码实现及伪代码
 
 ### 项目管理
 - 项目管理文档：`docs/progress/{sprint*}.md`

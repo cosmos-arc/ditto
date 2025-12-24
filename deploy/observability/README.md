@@ -13,6 +13,22 @@ This directory contains the Docker Compose configuration for deploying Ditto obs
 
 **Total Resource Usage**: ~400MB RAM, ~2.6GB disk (30 days)
 
+## CI/CD Integration
+
+This configuration is also used in GitHub Actions for integration tests.
+
+- **CI Workflow**: `.github/workflows/ci-integration.yml`
+- **Command**: `docker compose -f docker-compose.yml up -d`
+- **Note**: CI uses Docker Compose V2 plugin (`docker compose`)
+
+### CI vs Local Differences
+
+| Aspect | Local | CI |
+|--------|-------|-----|
+| Command | `docker-compose` | `docker compose` |
+| Volumes | Persistent | None (ephemeral) |
+| Coverage Check | N/A | `--cov-fail-under=0` (disabled) |
+
 ## Prerequisites
 
 - Docker Desktop installed and running
