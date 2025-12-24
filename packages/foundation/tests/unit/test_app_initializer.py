@@ -1,6 +1,7 @@
 """Tests for app_initializer module."""
 
 import os
+from typing import Any
 
 import ditto_foundation.app_initializer as init_module
 import ditto_foundation.config.settings as settings_module
@@ -27,7 +28,7 @@ def test_initialize_app_basic() -> None:
     assert "status" in result
 
 
-def test_initialize_app_creates_directories(tmp_path: pytest.TempPathFactory) -> None:
+def test_initialize_app_creates_directories(tmp_path: Any) -> None:
     """测试初始化创建必要目录."""
     # Backup original environment variables
     orig_data_root = os.environ.get("DITTO_DATA_ROOT")
@@ -35,8 +36,18 @@ def test_initialize_app_creates_directories(tmp_path: pytest.TempPathFactory) ->
 
     try:
         # Set temporary paths
-        os.environ["DITTO_DATA_ROOT"] = str(tmp_path / "data")
-        os.environ["DITTO_LOG_ROOT"] = str(tmp_path / "logs")
+        data_path = (
+            tmp_path / "data"
+            if hasattr(tmp_path, "__truediv__")
+            else os.path.join(tmp_path, "data")
+        )
+        log_path = (
+            tmp_path / "logs"
+            if hasattr(tmp_path, "__truediv__")
+            else os.path.join(tmp_path, "logs")
+        )
+        os.environ["DITTO_DATA_ROOT"] = str(data_path)
+        os.environ["DITTO_LOG_ROOT"] = str(log_path)
 
         # Reset global initializer and settings for testing
         init_module._initializer = None
@@ -44,8 +55,9 @@ def test_initialize_app_creates_directories(tmp_path: pytest.TempPathFactory) ->
 
         initialize_app()
 
-        assert (tmp_path / "data").exists()
-        assert (tmp_path / "logs").exists()
+        # Check if directories exist (handle both Path and str)
+        assert os.path.exists(str(data_path))
+        assert os.path.exists(str(log_path))
 
     finally:
         # Restore original environment variables

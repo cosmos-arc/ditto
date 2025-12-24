@@ -220,7 +220,7 @@ class PipelineStore:
         if updates:
             params.append(run_id)
             self._client.execute(
-                f"UPDATE pipeline_run SET {', '.join(updates)} WHERE run_id = ?",
+                f"UPDATE pipeline_run SET {', '.join(updates)} WHERE run_id = ?",  # nosec
                 params,
             )
             self._client.commit()

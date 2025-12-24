@@ -123,7 +123,7 @@ class BarsStore:
 
     # ============ Read operations ============
 
-    @traced("data.read")  # type: ignore[misc]
+    @traced("data.read")  # type: ignore[untyped-decorator]
     def read(
         self,
         dataset: str,
