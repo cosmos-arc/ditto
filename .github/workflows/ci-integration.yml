@@ -1,4 +1,6 @@
 # Ditto Integration Tests - GitHub Actions
+#
+# Uses the same docker-compose configuration as local development
 
 name: Integration Tests
 
@@ -30,69 +32,79 @@ jobs:
           locked: true
           environment: dev
 
-      # Start observability services on host network
+      # Create logs directory
+      - name: Create logs directory
+        run: mkdir -p logs
+
+      # Start observability stack using docker-compose
       - name: Start observability services
+        working-directory: deploy/observability
         run: |
-          # Create log directory for Vector
-          mkdir -p logs
+          # Create docker-compose override for CI (remove volumes)
+          cat > docker-compose.ci.yml << 'EOF'
+          version: "3.8"
+          services:
+            victoriametrics:
+              command:
+                - "--storageDataPath=/vmdata"
+                - "--retentionPeriod=90d"
+            volumes: !override []
+              - /tmp/vmdata:/vmdata
+            deploy: !override {}
+            victorialogs:
+              command:
+                - "--storageDataPath=/vldata"
+                - "--retentionPeriod=30d"
+            volumes: !override []
+              - /tmp/vldata:/vldata
+            deploy: !override {}
+            vector:
+              volumes: !override []
+              - ./vector.toml:/etc/vector/vector.toml:ro
+              - ../../logs:/logs:ro
+            deploy: !override {}
+            grafana:
+              volumes: !override []
+              - /tmp/grafana-data:/var/lib/grafana
+              - ./grafana/provisioning:/etc/grafana/provisioning:ro
+            deploy: !override {}
+          EOF
 
-          # Start services on host network so tests can access via localhost
-          docker run -d --name ditto-vm \
-            --network host \
-            victoriametrics/victoria-metrics:v1.104.0 \
-            --listenAddr=:8428
+          # Start services
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml up -d
 
-          docker run -d --name ditto-vl \
-            --network host \
-            victoriametrics/victoria-logs:v1.37.0 \
-            --http.listenAddr=:9428
+          # Wait for services to be healthy
+          echo "Waiting for services to start..."
+          sleep 15
 
-          docker run -d --name ditto-grafana \
-            --network host \
-            -e GF_AUTH_ANONYMOUS_ENABLED=true \
-            -e GF_AUTH_ANONYMOUS_ORG_ROLE=Admin \
-            -e GF_SERVER_ROOT_URL=http://localhost:3000 \
-            -e GF_SERVER_HTTP_ADDR=0.0.0.0 \
-            grafana/grafana:11.1.0
+          # Show service status
+          docker-compose ps
 
-          # Give services time to start
-          sleep 10
-
-      - name: Wait for services
+      - name: Wait for services health
+        working-directory: deploy/observability
         run: |
-          # VictoriaMetrics health check - try multiple endpoints
-          echo "Checking VictoriaMetrics..."
+          # Check VictoriaMetrics
           for i in {1..30}; do
-            if curl -sf http://localhost:8428/healthz > /dev/null 2>&1; then
-              echo "VictoriaMetrics is ready (via /healthz)"
-              break
-            elif curl -sf http://localhost:8428/health > /dev/null 2>&1; then
-              echo "VictoriaMetrics is ready (via /health)"
-              break
-            elif curl -sf http://localhost:8428/metrics > /dev/null 2>&1; then
-              echo "VictoriaMetrics is ready (via /metrics)"
+            if curl -sf http://localhost:8428/health > /dev/null 2>&1 || \
+               curl -sf http://localhost:8428/metrics > /dev/null 2>&1; then
+              echo "VictoriaMetrics is ready"
               break
             fi
             echo "Waiting for VictoriaMetrics... ($i/30)"
             sleep 2
           done
 
-          # VictoriaLogs health check
-          echo "Checking VictoriaLogs..."
+          # Check VictoriaLogs
           for i in {1..30}; do
-            if curl -sf http://localhost:9428/healthz > /dev/null 2>&1; then
-              echo "VictoriaLogs is ready (via /healthz)"
-              break
-            elif curl -sf http://localhost:9428/health > /dev/null 2>&1; then
-              echo "VictoriaLogs is ready (via /health)"
+            if curl -sf http://localhost:9428/health > /dev/null 2>&1; then
+              echo "VictoriaLogs is ready"
               break
             fi
             echo "Waiting for VictoriaLogs... ($i/30)"
             sleep 2
           done
 
-          # Grafana health check
-          echo "Checking Grafana..."
+          # Check Grafana
           for i in {1..30}; do
             if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
               echo "Grafana is ready"
@@ -101,13 +113,6 @@ jobs:
             echo "Waiting for Grafana... ($i/30)"
             sleep 2
           done
-
-          # Show service status for debugging
-          echo "=== Service Status ==="
-          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-          echo "=== Testing endpoints ==="
-          curl -s http://localhost:8428/metrics | head -1 || echo "VM metrics failed"
-          curl -s http://localhost:8428/api/v1/query?query=up | head -1 || echo "VM api failed"
 
       - name: Run integration tests
         run: |
@@ -139,5 +144,7 @@ jobs:
 
       - name: Cleanup services
         if: always()
+        working-directory: deploy/observability
         run: |
-          docker rm -f ditto-grafana ditto-vl ditto-vm || true
+          docker-compose -f docker-compose.yml -f docker-compose.ci.yml down -v
+          rm -f docker-compose.ci.yml
