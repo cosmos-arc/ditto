@@ -3,15 +3,15 @@
 # Runs integration tests with observability services (VictoriaMetrics, VictoriaLogs, Vector, Grafana)
 # Triggered manually or after successful CI
 
-name: CI - Integration Tests
+name: Integration Tests
 
 on:
   # Manual trigger from GitHub Actions UI
   workflow_dispatch:
-  # Run on schedule (e.g., daily at 2 AM UTC)
+  # Run on schedule (e.g., daily at 2 AM UTC) - only works on default branch
   schedule:
-    - cron: '0 2 * * *'
-  # Run after merge to main
+    - cron: "0 2 * * *"
+  # Run after merge to main - only works on default branch
   workflow_run:
     workflows: [CI]
     types:
