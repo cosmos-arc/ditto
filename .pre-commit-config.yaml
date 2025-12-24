@@ -92,14 +92,15 @@ repos:
 
       # --------------------------------------------------------
       # pytest (可选 - pre-push 阶段)
+      # 注意：已禁用，因为 GitHub Actions 会运行完整测试
       # --------------------------------------------------------
-      - id: pytest-fast
-        name: pytest (fast)
-        entry: pixi run -e dev test-fast
-        language: system
-        pass_filenames: false
-        always_run: true
-        stages: [pre-push] # 只在 push 时运行，不阻塞 commit
+      # - id: pytest-fast
+      #   name: pytest (fast)
+      #   entry: pixi run -e dev test-fast
+      #   language: system
+      #   pass_filenames: false
+      #   always_run: true
+      #   stages: [pre-push] # 只在 push 时运行，不阻塞 commit
 
   # ==========================================================
   # 敏感信息检测（二进制工具，使用远程 repo）
