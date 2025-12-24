@@ -103,8 +103,11 @@ models/
 #                 Web 框架 (Web Frameworks)
 # ===================================================================
 
-# Django
+# 日志目录
+logs/
 *.log
+
+# Django
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
