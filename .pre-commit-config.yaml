@@ -95,7 +95,7 @@ repos:
       # --------------------------------------------------------
       - id: pytest-fast
         name: pytest (fast)
-        entry: pixi run test-fast
+        entry: pixi run -e dev test-fast
         language: system
         pass_filenames: false
         always_run: true
