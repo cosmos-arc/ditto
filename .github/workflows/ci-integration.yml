@@ -36,17 +36,6 @@ jobs:
           # Create log directory for Vector
           mkdir -p logs
 
-          # Create Vector config
-          cat > vector-ci.toml << 'EOF'
-          [sources.logs]
-          type = "file"
-          include = ["/logs/**/*.jsonl"]
-          [sinks.victorialogs]
-          type = "vector"
-          inputs = ["logs"]
-          address = "localhost:9428"
-          EOF
-
           # Start services on host network so tests can access via localhost
           docker run -d --name ditto-vm \
             --network host \
@@ -66,34 +55,59 @@ jobs:
             -e GF_SERVER_HTTP_ADDR=0.0.0.0 \
             grafana/grafana:11.1.0
 
+          # Give services time to start
+          sleep 10
+
       - name: Wait for services
         run: |
+          # VictoriaMetrics health check - try multiple endpoints
+          echo "Checking VictoriaMetrics..."
           for i in {1..30}; do
-            if curl -sf http://localhost:8428/health > /dev/null; then
-              echo "VictoriaMetrics is ready"
+            if curl -sf http://localhost:8428/healthz > /dev/null 2>&1; then
+              echo "VictoriaMetrics is ready (via /healthz)"
+              break
+            elif curl -sf http://localhost:8428/health > /dev/null 2>&1; then
+              echo "VictoriaMetrics is ready (via /health)"
+              break
+            elif curl -sf http://localhost:8428/metrics > /dev/null 2>&1; then
+              echo "VictoriaMetrics is ready (via /metrics)"
               break
             fi
             echo "Waiting for VictoriaMetrics... ($i/30)"
             sleep 2
           done
 
+          # VictoriaLogs health check
+          echo "Checking VictoriaLogs..."
           for i in {1..30}; do
-            if curl -sf http://localhost:9428/health > /dev/null; then
-              echo "VictoriaLogs is ready"
+            if curl -sf http://localhost:9428/healthz > /dev/null 2>&1; then
+              echo "VictoriaLogs is ready (via /healthz)"
+              break
+            elif curl -sf http://localhost:9428/health > /dev/null 2>&1; then
+              echo "VictoriaLogs is ready (via /health)"
               break
             fi
             echo "Waiting for VictoriaLogs... ($i/30)"
             sleep 2
           done
 
+          # Grafana health check
+          echo "Checking Grafana..."
           for i in {1..30}; do
-            if curl -sf http://localhost:3000/api/health > /dev/null; then
+            if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
               echo "Grafana is ready"
               break
             fi
             echo "Waiting for Grafana... ($i/30)"
             sleep 2
           done
+
+          # Show service status for debugging
+          echo "=== Service Status ==="
+          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo "=== Testing endpoints ==="
+          curl -s http://localhost:8428/metrics | head -1 || echo "VM metrics failed"
+          curl -s http://localhost:8428/api/v1/query?query=up | head -1 || echo "VM api failed"
 
       - name: Run integration tests
         run: |
