@@ -1,6 +1,4 @@
 # Ditto Integration Tests - GitHub Actions
-#
-# Runs integration tests with observability services (VictoriaMetrics, VictoriaLogs, Vector, Grafana)
 
 name: Integration Tests
 
@@ -32,36 +30,41 @@ jobs:
           locked: true
           environment: dev
 
-      # Start observability services using docker-compose style approach
+      # Start observability services on host network
       - name: Start observability services
         run: |
-          # Create network for services
-          docker network create ditto-observability || true
+          # Create log directory for Vector
+          mkdir -p logs
 
-          # Start VictoriaMetrics
+          # Create Vector config
+          cat > vector-ci.toml << 'EOF'
+          [sources.logs]
+          type = "file"
+          include = ["/logs/**/*.jsonl"]
+          [sinks.victorialogs]
+          type = "vector"
+          inputs = ["logs"]
+          address = "localhost:9428"
+          EOF
+
+          # Start services on host network so tests can access via localhost
           docker run -d --name ditto-vm \
-            --network ditto-observability \
-            -p 8428:8428 \
+            --network host \
             victoriametrics/victoria-metrics:v1.104.0 \
             --listenAddr=:8428
 
-          # Start VictoriaLogs
           docker run -d --name ditto-vl \
-            --network ditto-observability \
-            -p 9428:9428 \
+            --network host \
             victoriametrics/victoria-logs:v1.37.0 \
             --http.listenAddr=:9428
 
-          # Start Grafana
           docker run -d --name ditto-grafana \
-            --network ditto-observability \
-            -p 3000:3000 \
+            --network host \
             -e GF_AUTH_ANONYMOUS_ENABLED=true \
             -e GF_AUTH_ANONYMOUS_ORG_ROLE=Admin \
             -e GF_SERVER_ROOT_URL=http://localhost:3000 \
+            -e GF_SERVER_HTTP_ADDR=0.0.0.0 \
             grafana/grafana:11.1.0
-
-          echo "Services started, waiting for health..."
 
       - name: Wait for services
         run: |
@@ -91,33 +94,6 @@ jobs:
             echo "Waiting for Grafana... ($i/30)"
             sleep 2
           done
-
-      - name: Create Vector config
-        run: |
-          mkdir -p logs
-          cat > vector-ci.toml << 'EOF'
-          [sources.logs]
-          type = "file"
-          include = ["/logs/**/*.jsonl"]
-
-          [sinks.victorialogs]
-          type = "vector"
-          inputs = ["logs"]
-          address = "localhost:9428"
-          EOF
-
-      - name: Start Vector
-        run: |
-          docker run -d \
-            --name ditto-vector \
-            --network ditto-observability \
-            -p 8686:8686 \
-            -v $(pwd)/vector-ci.toml:/etc/vector/vector.toml:ro \
-            -v $(pwd)/logs:/logs:ro \
-            timberio/vector:0.52.0-debian \
-            --config /etc/vector/vector.toml
-
-          sleep 5
 
       - name: Run integration tests
         run: |
@@ -150,5 +126,4 @@ jobs:
       - name: Cleanup services
         if: always()
         run: |
-          docker rm -f ditto-vector ditto-grafana ditto-vl ditto-vm || true
-          docker network rm ditto-observability || true
+          docker rm -f ditto-grafana ditto-vl ditto-vm || true
