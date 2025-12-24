@@ -65,9 +65,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        # Grafana takes longer to start
-        volumes:
-          - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
 
     steps:
       - name: Checkout code
