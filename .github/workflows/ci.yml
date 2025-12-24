@@ -78,10 +78,10 @@ jobs:
           environment: dev # 使用 dev 环境，包含代码质量工具
 
       - name: Ruff lint
-        run: pixi run ruff check --output-format=github .
+        run: pixi run -e dev ruff check --output-format=github .
 
       - name: Ruff format check
-        run: pixi run ruff format --check --diff .
+        run: pixi run -e dev ruff format --check --diff .
 
   type-check:
     name: Type Check (Mypy)
@@ -159,11 +159,17 @@ jobs:
           path: bandit-report.json
           retention-days: 7
 
-      # Gitleaks 敏感信息检测
+      # Gitleaks 敏感信息检测（跳过组织许可证检查）
       - name: Gitleaks scan
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 跳过组织许可证检查（开源项目使用）
+          GITLEAKS_SCAN_CRON: "false"
+        with:
+          # 使用开源版本配置
+          enable-leak-detection: true
+          detect-ref: false
 
   # ============================================================
   # Stage 3: 测试套件（分层执行）
