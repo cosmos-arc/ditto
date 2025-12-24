@@ -359,7 +359,7 @@ pixi run -e dev test-cov-xml  # 测试覆盖率（≥80%）
    ```python
    # ✅ 正确
    cursor.execute("SELECT * FROM table WHERE id = ?", (user_id,))
-   
+
    # ❌ 错误
    cursor.execute(f"SELECT * FROM table WHERE id = {user_id}")
    ```
@@ -368,7 +368,7 @@ pixi run -e dev test-cov-xml  # 测试覆盖率（≥80%）
    ```python
    # ✅ 正确 - 文件校验场景
    md5 = hashlib.md5(usedforsecurity=False)
-   
+
    # ❌ 错误 - 安全场景使用 MD5
    md5 = hashlib.md5()  # Bandit B324
    ```
@@ -386,7 +386,7 @@ pixi run -e dev test-cov-xml  # 测试覆盖率（≥80%）
    # ✅ 正确
    def calculate_return(principal: float, rate: float) -> float:
        return principal * rate
-   
+
    # ❌ 错误
    def calculate_return(principal, rate):
        return principal * rate
@@ -395,10 +395,10 @@ pixi run -e dev test-cov-xml  # 测试覆盖率（≥80%）
 2. **装饰器类型注解**：使用 `cast` 帮助类型推断
    ```python
    from typing import cast, ParamSpec, TypeVar, Callable
-   
+
    P = ParamSpec("P")
    T = TypeVar("T")
-   
+
    def decorator(func: Callable[P, T]) -> Callable[P, T]:
        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
            return func(*args, **kwargs)
@@ -408,7 +408,7 @@ pixi run -e dev test-cov-xml  # 测试覆盖率（≥80%）
 3. **测试文件类型注解**：使用 `Any` 处理 pytest fixture
    ```python
    from typing import Any
-   
+
    def test_something(tmp_path: Any) -> None:
        # pytest.TempPathFactory 类型问题
        pass

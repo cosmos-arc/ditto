@@ -36,7 +36,7 @@ updates:
       time: "09:00"
       timezone: "Asia/Shanghai"
     open-pull-requests-limit: 5
-    
+
     groups:
       # 开发工具依赖（低风险，可自动合并）
       dev-tools:
@@ -50,18 +50,18 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      
+
       # 类型存根
       type-stubs:
         patterns:
           - "types-*"
-      
+
       # 可观测性相关
       observability:
         patterns:
           - "opentelemetry*"
           - "loguru"
-    
+
     # 忽略主版本更新（需手动评估）
     ignore:
       - dependency-name: "*"
@@ -69,11 +69,11 @@ updates:
       # Polars 主版本更新可能有 breaking changes
       - dependency-name: "polars"
         update-types: ["version-update:semver-major"]
-    
+
     labels:
       - "dependencies"
       - "python"
-    
+
     commit-message:
       prefix: "deps(python)"
 
@@ -101,7 +101,7 @@ updates:
       time: "09:00"
       timezone: "Asia/Shanghai"
     open-pull-requests-limit: 5
-    
+
     groups:
       # 开发依赖
       dev-deps:
@@ -109,7 +109,7 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      
+
       # Next.js 生态
       nextjs:
         patterns:
@@ -117,14 +117,14 @@ updates:
           - "@next/*"
           - "react"
           - "react-dom"
-    
+
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
-    
+
     labels:
       - "dependencies"
       - "frontend"
-    
+
     commit-message:
       prefix: "deps(web)"
