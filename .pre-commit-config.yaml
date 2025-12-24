@@ -95,17 +95,11 @@ repos:
       # --------------------------------------------------------
       - id: pytest-fast
         name: pytest (fast)
-        entry: pixi run pytest
+        entry: pixi run test-fast
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-push] # 只在 push 时运行，不阻塞 commit
-        args:
-          - -m
-          - "not slow and not integration and not e2e and not external"
-          - --no-cov
-          - -q
-          - --tb=no
 
   # ==========================================================
   # 敏感信息检测（二进制工具，使用远程 repo）
