@@ -62,7 +62,7 @@ jobs:
   # Stage 2: Python 代码质量检查（并行）
   # ============================================================
   lint:
-    name: Lint (Ruff)
+    name: lint
     needs: changes
     if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
@@ -84,7 +84,7 @@ jobs:
         run: pixi run -e dev ruff format --check --diff .
 
   type-check:
-    name: Type Check (Mypy)
+    name: type-check
     needs: changes
     if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
@@ -115,7 +115,7 @@ jobs:
             --show-error-codes
 
   security:
-    name: Security Scan
+    name: security
     needs: changes
     if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
@@ -169,7 +169,7 @@ jobs:
   # Stage 3: 测试套件（分层执行）
   # ============================================================
   test-unit:
-    name: Unit Tests
+    name: test-unit
     needs: changes
     if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
@@ -285,7 +285,7 @@ jobs:
   # 最终状态汇总（用于 Branch Protection）
   # ============================================================
   ci-success:
-    name: CI Success
+    name: ci-success
     needs: [lint, type-check, security, test-unit]
     if: always()
     runs-on: ubuntu-latest
