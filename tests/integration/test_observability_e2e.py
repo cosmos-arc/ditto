@@ -15,6 +15,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
+@pytest.mark.integration
 class TestObservabilityStack:
     """可观测性服务栈集成测试."""
 
@@ -122,6 +123,7 @@ class TestObservabilityStack:
         assert "Ditto Observability Overview" in dashboard_titles
 
 
+@pytest.mark.integration
 class TestMetricsExport:
     """指标导出集成测试."""
 
@@ -159,6 +161,7 @@ class TestMetricsExport:
         assert "data" in data
 
 
+@pytest.mark.integration
 class TestLogsCollection:
     """日志采集集成测试."""
 
