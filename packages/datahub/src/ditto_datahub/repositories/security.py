@@ -1,0 +1,291 @@
+"""Security Repository for securities master data access."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
+
+import polars as pl
+from ditto_foundation import M, logger, traced
+
+from ditto_datahub.stores.security_store import SecurityStore
+
+if TYPE_CHECKING:
+    from ditto_datahub.runtime.sid_allocator import SidAllocator
+
+
+class SecurityRepository:
+    """
+    Securities master data repository.
+
+    Provides domain-level interface for security data operations,
+    coordinating SecurityStore and SidAllocator.
+    """
+
+    def __init__(
+        self,
+        security_store: SecurityStore,
+        sid_allocator: SidAllocator,
+    ) -> None:
+        """
+        Initialize SecurityRepository.
+
+        Args:
+            security_store: Security store for data access.
+            sid_allocator: SID allocator for new securities.
+
+        """
+        self._security_store = security_store
+        self._sid_allocator = sid_allocator
+
+    @traced("repository.security.get")  # type: ignore[untyped-decorator]
+    def get(
+        self,
+        sids: list[int] | None = None,
+        src_codes: list[str] | None = None,
+        source: str = "tushare",
+        asset_class: str | None = None,
+        exchange: str | None = None,
+        is_active: bool | None = True,
+        asof: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        Query securities data.
+
+        Args:
+            sids: Filter by SIDs.
+            src_codes: Filter by source codes.
+            source: Data source identifier.
+            asset_class: Filter by asset class.
+            exchange: Filter by exchange.
+            is_active: Filter by active status.
+            asof: Point-in-time query date.
+
+        Returns:
+            Securities data DataFrame.
+
+        """
+        logger.debug(
+            "Fetching securities",
+            event="security_get_start",
+            sids_count=len(sids) if sids else None,
+            src_codes_count=len(src_codes) if src_codes else None,
+            source=source,
+            asset_class=asset_class,
+        )
+
+        result: pl.DataFrame = self._security_store.find_securities(
+            sids=sids,
+            src_codes=src_codes,
+            source=source,
+            asset_class=asset_class,
+            exchange=exchange,
+            is_active=is_active,
+            asof=asof,
+        )
+
+        logger.debug(
+            "Securities fetched",
+            event="security_get_complete",
+            row_count=len(result),
+        )
+
+        # Record metrics
+        M.data_records.add(len(result), {"dataset": "security", "operation": "get"})
+
+        return result
+
+    def get_by_sid(self, sid: int) -> dict[str, Any] | None:
+        """
+        Get security by SID.
+
+        Args:
+            sid: Security ID.
+
+        Returns:
+            Security data dict, or None if not found.
+
+        """
+        return cast(dict[str, Any] | None, self._security_store.get_by_sid(sid))
+
+    def resolve_identifier(
+        self,
+        identifier: str,
+        source: str = "tushare",
+        asof: str | None = None,
+    ) -> int | None:
+        """
+        Resolve identifier to SID.
+
+        Tries src_code first, then symbol.
+
+        Args:
+            identifier: Source code or symbol.
+            source: Data source identifier.
+            asof: Point-in-time query date.
+
+        Returns:
+            SID, or None if not found.
+
+        """
+        # Try as src_code first
+        sid = cast(
+            int | None, self._security_store.resolve_sid(identifier, source, asof)
+        )
+        if sid:
+            return sid
+
+        # Try as symbol
+        sids = cast(
+            list[int], self._security_store.resolve_by_symbol(identifier, source)
+        )
+        if sids:
+            # Return first match (should be unique for active mappings)
+            return sids[0]
+
+        return None
+
+    def resolve_identifiers_batch(
+        self,
+        identifiers: list[str],
+        source: str = "tushare",
+        asof: str | None = None,
+    ) -> dict[str, int]:
+        """
+        Batch resolve identifiers to SIDs.
+
+        Args:
+            identifiers: List of identifiers.
+            source: Data source identifier.
+            asof: Point-in-time query date.
+
+        Returns:
+            Dictionary mapping identifier to SID (only for found identifiers).
+
+        """
+        return cast(
+            dict[str, int],
+            self._security_store.resolve_sids_batch(identifiers, source, asof),
+        )
+
+    def list_all(
+        self,
+        asset_class: str | None = None,
+        exchange: str | None = None,
+        is_active: bool = True,
+    ) -> list[int]:
+        """
+        List all security SIDs.
+
+        Args:
+            asset_class: Filter by asset class.
+            exchange: Filter by exchange.
+            is_active: Filter by active status.
+
+        Returns:
+            List of SIDs.
+
+        """
+        return cast(
+            list[int], self._security_store.list_sids(asset_class, exchange, is_active)
+        )
+
+    def get_symbol(self, sid: int) -> str | None:
+        """
+        Get symbol by SID.
+
+        Args:
+            sid: Security ID.
+
+        Returns:
+            Symbol, or None if not found.
+
+        """
+        return cast(str | None, self._security_store.get_symbol(sid))
+
+    def get_src_code(
+        self,
+        sid: int,
+        source: str = "tushare",
+        asof: str | None = None,
+    ) -> str | None:
+        """
+        Get source code by SID.
+
+        Args:
+            sid: Security ID.
+            source: Data source identifier.
+            asof: Point-in-time query date.
+
+        Returns:
+            Source code, or None if not found.
+
+        """
+        return cast(str | None, self._security_store.get_src_code(sid, source, asof))
+
+    @traced("repository.security.register")  # type: ignore[untyped-decorator]
+    def register(
+        self,
+        src_code: str,
+        symbol: str,
+        name: str,
+        exchange: str,
+        asset_class: str,
+        list_date: str,
+        source: str = "tushare",
+        board: str | None = None,
+    ) -> int:
+        """
+        Register a new security and allocate SID.
+
+        Args:
+            src_code: Source code.
+            symbol: Display symbol.
+            name: Security name.
+            exchange: Exchange code.
+            asset_class: Asset class (stock/etf/index).
+            list_date: Listing date.
+            source: Data source identifier.
+            board: Board code (optional).
+
+        Returns:
+            Allocated SID.
+
+        """
+        logger.info(
+            "Registering new security",
+            event="security_register_start",
+            symbol=symbol,
+            src_code=src_code,
+            asset_class=asset_class,
+        )
+
+        # Allocate SID
+        sid = self._sid_allocator.allocate(asset_class)
+
+        # Register to security store
+        registered_sid = cast(
+            int,
+            self._security_store.register(
+                sid=sid,
+                source=source,
+                src_code=src_code,
+                symbol=symbol,
+                name=name,
+                exchange=exchange,
+                asset_class=asset_class,
+                list_date=list_date,
+                board=board,
+            ),
+        )
+
+        logger.info(
+            "Security registered successfully",
+            event="security_register_complete",
+            sid=registered_sid,
+            symbol=symbol,
+        )
+
+        # Record metrics
+        M.data_records.add(1, {"dataset": "security", "operation": "register"})
+
+        return registered_sid

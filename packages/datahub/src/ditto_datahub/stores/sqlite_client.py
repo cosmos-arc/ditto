@@ -1,6 +1,6 @@
 """SQLite client for database operations."""
 
-from typing import Any
+from typing import Any, cast
 
 from ditto_foundation import logger, span
 
@@ -108,7 +108,7 @@ class SQLiteClient:
 
     def fetchone(
         self, sql: str, params: list[Any] | tuple[Any, ...] | None = None
-    ) -> Any:
+    ) -> dict[str, Any] | None:
         """
         Query single record.
 
@@ -117,7 +117,7 @@ class SQLiteClient:
             params: Parameter list.
 
         Returns:
-            sqlite3.Row or None.
+            Record as dict, or None if not found.
 
         """
         logger.debug(
@@ -126,11 +126,12 @@ class SQLiteClient:
             sql=sql[:_MAX_SQL_LOG_LENGTH] if len(sql) > _MAX_SQL_LOG_LENGTH else sql,
         )
         cursor = self.execute(sql, params)
-        return cursor.fetchone()
+        row = cursor.fetchone()
+        return cast(dict[str, Any], dict(row)) if row else None
 
     def fetchall(
         self, sql: str, params: list[Any] | tuple[Any, ...] | None = None
-    ) -> list[Any]:
+    ) -> list[dict[str, Any]]:
         """
         Query all records.
 
@@ -139,11 +140,14 @@ class SQLiteClient:
             params: Parameter list.
 
         Returns:
-            sqlite3.Row list.
+            List of record dicts.
 
         """
         cursor = self.execute(sql, params)
-        result: list[Any] = cursor.fetchall()
+        rows = cursor.fetchall()
+        result: list[dict[str, Any]] = cast(
+            list[dict[str, Any]], [dict(row) for row in rows]
+        )
         logger.debug(
             "Query completed",
             event="sql_query_complete",
@@ -165,7 +169,8 @@ class SQLiteClient:
             First row first column value, or None.
 
         """
-        row = self.fetchone(sql, params)
+        cursor = self.execute(sql, params)
+        row = cursor.fetchone()
         if row:
             return row[0]
         return None
