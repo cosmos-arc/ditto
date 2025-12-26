@@ -52,7 +52,7 @@ class SecurityStore:
         """
         return self._resolve_sid_from_db(src_code, source, asof=None)
 
-    @traced("data.sid_resolve")  # type: ignore[untyped-decorator]
+    @traced("data.sid_resolve")
     def resolve_sid(self, src_code: str, source: str, asof: str | None) -> int | None:
         """
         Resolve src_code to sid (with PIT support).
@@ -255,7 +255,7 @@ class SecurityStore:
 
         """
         row = self._client.fetchone("SELECT * FROM security WHERE sid = ?", [sid])
-        return cast(dict[str, Any] | None, row)
+        return row
 
     def find_securities(
         self,

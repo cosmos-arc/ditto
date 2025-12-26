@@ -27,6 +27,38 @@ class CalendarError(DataHubError):
     pass
 
 
+class IdentifierError(DataHubError):
+    """Identifier-related error base class."""
+
+    pass
+
+
+class SidNotFoundError(IdentifierError):
+    """Security identifier (SID) not found."""
+
+    def __init__(
+        self,
+        message: str = "SID not found",
+        identifier: str | None = None,
+        source: str | None = None,
+    ) -> None:
+        """
+        Initialize SidNotFoundError.
+
+        Args:
+            message: Error message.
+            identifier: The identifier that was not found.
+            source: Data source identifier.
+
+        """
+        details: dict[str, object] = {}
+        if identifier:
+            details["identifier"] = identifier
+        if source:
+            details["source"] = source
+        super().__init__(message, details if details else None)
+
+
 class TradingDateNotFoundError(CalendarError):
     """Trading date not found (outside calendar range)."""
 

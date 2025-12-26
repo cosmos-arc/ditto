@@ -124,10 +124,11 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage-integration.xml
           flags: integration
           fail_ci_if_error: false
+          # 对于公开仓库，不需要 token
+          # token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

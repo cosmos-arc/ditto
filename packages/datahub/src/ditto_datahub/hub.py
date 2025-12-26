@@ -5,10 +5,12 @@ from __future__ import annotations
 import types
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 from ditto_foundation import logger
+
+from ditto_datahub.errors import SidNotFoundError
 
 if TYPE_CHECKING:
     from ditto_datahub.repositories.bars import BarsRepository
@@ -219,10 +221,7 @@ class DataHub:
             Query result as polars DataFrame.
 
         """
-        return cast(
-            pl.DataFrame,
-            self.sql_engine.execute(query, asof=asof, params=params),
-        )
+        return self.sql_engine.execute(query, asof=asof, params=params)
 
     def resolve_sid(
         self,
@@ -245,7 +244,14 @@ class DataHub:
             SidNotFoundError: If identifier cannot be resolved.
 
         """
-        return cast(int, self.security_store.resolve_sid(identifier, source, asof))
+        result = self.security_store.resolve_sid(identifier, source, asof)
+        if result is None:
+            raise SidNotFoundError(
+                message=f"Identifier '{identifier}' not found in source '{source}'",
+                identifier=identifier,
+                source=source,
+            )
+        return result
 
     def refresh_sql_views(self) -> None:
         """

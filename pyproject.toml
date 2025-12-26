@@ -274,6 +274,9 @@ follow_imports = "normal"
 explicit_package_bases = true
 namespace_packages = true
 
+# 指定 mypy 的模块搜索路径，避免重复检测
+mypy_path = "packages/core/src:packages/foundation/src:packages/datahub/src:apps/server/src"
+
 # 启用 Mypy 插件以支持特定库的类型检查。
 # 这是处理 Pydantic、Django、SQLAlchemy 等库的关键。
 plugins = ["pydantic.mypy"]

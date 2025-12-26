@@ -37,7 +37,7 @@ class SecurityRepository:
         self._security_store = security_store
         self._sid_allocator = sid_allocator
 
-    @traced("repository.security.get")  # type: ignore[untyped-decorator]
+    @traced("repository.security.get")
     def get(
         self,
         sids: list[int] | None = None,
@@ -105,7 +105,7 @@ class SecurityRepository:
             Security data dict, or None if not found.
 
         """
-        return cast(dict[str, Any] | None, self._security_store.get_by_sid(sid))
+        return self._security_store.get_by_sid(sid)
 
     def resolve_identifier(
         self,
@@ -128,16 +128,12 @@ class SecurityRepository:
 
         """
         # Try as src_code first
-        sid = cast(
-            int | None, self._security_store.resolve_sid(identifier, source, asof)
-        )
+        sid = self._security_store.resolve_sid(identifier, source, asof)
         if sid:
             return sid
 
         # Try as symbol
-        sids = cast(
-            list[int], self._security_store.resolve_by_symbol(identifier, source)
-        )
+        sids = self._security_store.resolve_by_symbol(identifier, source)
         if sids:
             # Return first match (should be unique for active mappings)
             return sids[0]
@@ -162,10 +158,7 @@ class SecurityRepository:
             Dictionary mapping identifier to SID (only for found identifiers).
 
         """
-        return cast(
-            dict[str, int],
-            self._security_store.resolve_sids_batch(identifiers, source, asof),
-        )
+        return self._security_store.resolve_sids_batch(identifiers, source, asof)
 
     def list_all(
         self,
@@ -185,9 +178,7 @@ class SecurityRepository:
             List of SIDs.
 
         """
-        return cast(
-            list[int], self._security_store.list_sids(asset_class, exchange, is_active)
-        )
+        return self._security_store.list_sids(asset_class, exchange, is_active)
 
     def get_symbol(self, sid: int) -> str | None:
         """
@@ -200,7 +191,7 @@ class SecurityRepository:
             Symbol, or None if not found.
 
         """
-        return cast(str | None, self._security_store.get_symbol(sid))
+        return self._security_store.get_symbol(sid)
 
     def get_src_code(
         self,
@@ -220,9 +211,9 @@ class SecurityRepository:
             Source code, or None if not found.
 
         """
-        return cast(str | None, self._security_store.get_src_code(sid, source, asof))
+        return self._security_store.get_src_code(sid, source, asof)
 
-    @traced("repository.security.register")  # type: ignore[untyped-decorator]
+    @traced("repository.security.register")
     def register(
         self,
         src_code: str,
@@ -263,19 +254,16 @@ class SecurityRepository:
         sid = self._sid_allocator.allocate(asset_class)
 
         # Register to security store
-        registered_sid = cast(
-            int,
-            self._security_store.register(
-                sid=sid,
-                source=source,
-                src_code=src_code,
-                symbol=symbol,
-                name=name,
-                exchange=exchange,
-                asset_class=asset_class,
-                list_date=list_date,
-                board=board,
-            ),
+        registered_sid = self._security_store.register(
+            sid=sid,
+            source=source,
+            src_code=src_code,
+            symbol=symbol,
+            name=name,
+            exchange=exchange,
+            asset_class=asset_class,
+            list_date=list_date,
+            board=board,
         )
 
         logger.info(
