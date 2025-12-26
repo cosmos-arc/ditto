@@ -316,15 +316,25 @@ class BarsRepository:
         if asset_class:
             return f"{asset_class}_daily"
 
-        # Determine by SID range
+        # Check for mixed asset classes
         stock_range = SidRange.get_range("stock")
         etf_range = SidRange.get_range("etf")
 
-        for sid in sids:
-            if stock_range.min_sid <= sid <= stock_range.max_sid:
-                return "stock_daily"
-            if etf_range.min_sid <= sid <= etf_range.max_sid:
-                return "etf_daily"
+        has_stock = any(
+            stock_range.min_sid <= sid <= stock_range.max_sid for sid in sids
+        )
+        has_etf = any(etf_range.min_sid <= sid <= etf_range.max_sid for sid in sids)
+
+        if has_stock and has_etf:
+            raise ValueError(
+                "Mixed asset class query detected. SIDs contain both stock and ETF. "
+                "Please query each asset class separately."
+            )
+
+        if has_stock:
+            return "stock_daily"
+        if has_etf:
+            return "etf_daily"
 
         return "stock_daily"  # Default
 

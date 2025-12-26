@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import polars as pl
+import pytest
 from ditto_datahub.repositories.bars import BarsRepository
 from ditto_datahub.runtime.dq_checker import DQChecker
 from ditto_datahub.runtime.file_lock import FileLockManager
@@ -208,3 +209,79 @@ class TestBarsRepository:
         assert result.rows_written == 1
         assert result.file_path is not None
         assert result.checksum is not None
+
+
+class TestMixedAssetClass:
+    """Tests for mixed asset class handling."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = TemporaryDirectory()
+        data_root = Path(self.temp_dir.name)
+
+        self.pool = SQLitePool(":memory:")
+        self.pool.init_schema()
+        self.client = SQLiteClient(self.pool)
+
+        self.bars_store = BarsStore(data_root)
+        self.adj_factor_store = AdjFactorStore(data_root)
+        self.security_store = SecurityStore(self.client)
+        self.dq_checker = DQChecker()
+        self.file_lock_manager = FileLockManager(data_root / "locks")
+
+        self.repo = BarsRepository(
+            self.bars_store,
+            self.adj_factor_store,
+            self.security_store,
+            self.dq_checker,
+            self.file_lock_manager,
+        )
+
+        # Insert stock security (SID: 100,000,000 - 199,999,999)
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (100000001, '600000', 'Test Stock', 'SSE', 'stock', '2000-01-01')
+        """)
+
+        # Insert ETF security (SID: 200,000,000 - 299,999,999)
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (200000001, '510300', 'Test ETF', 'SSE', 'etf', '2000-01-01')
+        """)
+        self.client.commit()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        self.temp_dir.cleanup()
+
+    def test_get_with_mixed_sids_raises_error(self) -> None:
+        """Test that mixed stock/ETF SIDs raise ValueError."""
+        # Act & Assert
+        with pytest.raises(ValueError, match="Mixed asset class query"):
+            self.repo.get(
+                sids=[100000001, 200000001],  # stock + ETF
+                start="2024-01-01",
+                end="2024-01-31",
+            )
+
+    def test_get_with_all_stock_sids_succeeds(self) -> None:
+        """Test that all stock SIDs succeed."""
+        # Should not raise
+        result = self.repo.get(
+            sids=[100000001, 100000002],  # both stocks
+            start="2024-01-01",
+            end="2024-01-31",
+        )
+        assert isinstance(result, pl.DataFrame)
+
+    def test_get_with_all_etf_sids_succeeds(self) -> None:
+        """Test that all ETF SIDs succeed."""
+        # Should not raise
+        result = self.repo.get(
+            sids=[200000001, 200000002],  # both ETFs
+            start="2024-01-01",
+            end="2024-01-31",
+        )
+        assert isinstance(result, pl.DataFrame)
