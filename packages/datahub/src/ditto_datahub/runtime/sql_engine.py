@@ -88,8 +88,9 @@ class SqlEngine:
             # Check if directory exists before creating view
             if parquet_path.exists():
                 # Create view with glob pattern for year partitions
+                # dataset is from hardcoded trusted list, not user input
                 view_sql = (
-                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "
+                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "  # nosec B608
                     f'"{parquet_path}/*.parquet"'
                 )
                 self.con.execute(view_sql)
