@@ -76,7 +76,7 @@ jobs:
           pixi-version: v0.39.5
           cache: true
           locked: true
-          environment: dev
+          environments: dev
 
       - name: Create Vector config
         run: |
