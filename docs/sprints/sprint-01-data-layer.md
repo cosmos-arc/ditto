@@ -1,285 +1,351 @@
-# Sprint 1: 数据层与验证（基于官方设计文档）
+# Sprint 1: 数据层与数据摄取（Phase 0.5）
 
-**时间**: Week 1-2
-**Phase**: 0.5 数据质量验证期
-**目标**: 按照官方设计文档实现数据层
+**时间**: Week 1-3
+**Phase**: 0.5 数据摄取打通期
+**目标**: 实现数据层基础 + 数据摄取管道
 
-## 重要说明
+## 参考文档
 
-**本Sprint严格遵循以下官方设计文档**：
+- 《01_system_design.md》 - 系统架构设计
 - 《02_data_design.md》 - 数据层设计文档（v2.0 Final）
-- 《01_system_design_v1.md》 - 系统架构设计
+- 《09_data_quality_design.md》 - 数据质量设计（DQ 三层架构延后到 Sprint-02）
+- 《10_data_ingestion_scheduler_design.md》 - 数据摄取调度设计
 
 ## Sprint 目标
 
-1. 实现 DataHub 统一数据入口（Facade模式）
-2. 实现 Domain Repositories（业务聚合根）
-3. 实现 Store Layer（数据存取层）
-4. 实现 Runtime Layer（运行时支持）
-5. 完成Golden Dataset验证
+1. ✅ 实现 DataHub 统一数据入口（已完成）
+2. ✅ 实现 Domain Repositories（已完成）
+3. ✅ 实现 Store Layer（已完成）
+4. ✅ 实现 Runtime Layer（已完成）
+5. 🆕 实现 Sources 层（Tushare 适配器）
+6. 🆕 实现 Server 层骨架（Prefect 调度）
 
-## 架构概览
+## 架构概览（更新）
 
 ```
-上层应用
-    ↓
-DataHub（纯 Facade，唯一入口）
-    ↓
-Domain Repositories（业务聚合）
-    ├── BarsRepository
-    ├── CalendarRepository
-    ├── SecurityRepository
-    ├── IndexRepository
-    └── UniverseRepository
-    ↓
-Store Layer（数据存取）
-    ├── SQLite Stores（元数据）
-    └── Parquet Stores（年分区事实数据）
-    ↓
-Runtime Layer（支持组件）
-    ├── SQLite Pool
-    ├── SID Allocator
-    ├── Freeze Manager
-    ├── DQ Checker
-    └── File Lock Manager
-    ↓
-物理存储
-    ├── SQLite（元数据）
-    ├── Parquet（年分区）
-    └── DuckDB（OLAP查询）
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Server 层（新增）                                │
+│                                                                              │
+│   Prefect Flows/Tasks：任务编排、调度、重试                                   │
+│   daily_ingest_flow → ingest_etf_bars → hub.sources.tushare.fetch_etf_daily │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ 调用
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              DataHub（纯 Facade）                             │
+│                                                                              │
+│   hub.bars / hub.calendar / hub.securities / hub.sources / hub.sql         │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+        ┌───────────────────────────┴───────────────────────────┐
+        ▼                                                           ▼
+┌──────────────────────────────┐    ┌──────────────────────────────┐
+│      Sources Layer（新增）    │    │   Domain Repositories        │
+│                              │    │                              │
+│   hub.sources.tushare        │    │   BarsRepository             │
+│   hub.sources.akshare（Sprint-02）│   CalendarRepository         │
+│                              │    │   SecurityRepository         │
+└──────────────────────────────┘    └──────────────────────────────┘
+                                                │
+                                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Store Layer（数据存取层）                          │
+│                                                                              │
+│   SQLite Stores（元数据）+ Parquet Stores（年分区事实数据）                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                                │
+                                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            Runtime Layer                                    │
+│                                                                              │
+│   SQLite Pool │ SID Allocator │ File Lock │ DQ Checker │ SQL Engine        │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
 
 ## 任务分解
 
 ### P0 - 必须完成
 
-#### 任务1: 实现Runtime Layer（基础组件）✅ 已完成
+---
 
-**1.1 SID分配器** ✅
-- 文件：`packages/datahub/src/ditto_datahub/runtime/sid_allocator.py`
-- 功能：管理sid序列号分配（100M-299M for ETF）
-- 测试：`packages/datahub/tests/unit/runtime/test_sid_allocator.py` ✅
+#### 任务1: Runtime Layer（基础组件）✅ 已完成
 
-**1.2 SQLite连接池** ✅
-- 文件：`packages/datahub/src/ditto_datahub/runtime/sqlite_pool.py`
-- 功能：管理SQLite连接，支持并发访问
-- 测试：`packages/datahub/tests/unit/runtime/test_sqlite_pool.py`
-
-**1.3 文件锁管理器** ✅
-- 文件：`packages/datahub/src/ditto_datahub/runtime/file_lock.py`
-- 功能：跨平台文件锁，防止并发写入冲突（基于开源filelock库）
-- 测试：`packages/datahub/tests/unit/runtime/test_file_lock.py` ✅
-
-**1.4 DQ检查器** ✅
-- 文件：`packages/datahub/src/ditto_datahub/runtime/dq_checker.py`
-- 功能：数据质量检查（主键、OHLC关系等）
-- 测试：`packages/datahub/tests/unit/runtime/test_dq_checker.py` ✅
+| 组件 | 文件 | 状态 |
+|------|------|------|
+| SID 分配器 | `runtime/sid_allocator.py` | ✅ |
+| SQLite 连接池 | `runtime/sqlite_pool.py` | ✅ |
+| 文件锁管理器 | `runtime/file_lock.py` | ✅ |
+| DQ 检查器（简单版） | `runtime/dq_checker.py` | ✅ |
+| SQL Engine | `runtime/sql_engine.py` | ✅ |
 
 **完成状态**:
-- ✅ 所有组件实现完成
-- ✅ 18个单元测试全部通过
-- ✅ Ruff代码质量检查通过
-- ✅ MyPy类型检查通过
+- ✅ 18 个单元测试全部通过
+- ✅ Ruff/MyPy 检查通过
 
-#### 任务2: 实现Store Layer（数据存取） ✅ 已完成
+**注意**: DQ 三层架构（L1/L2/L3）延后到 Sprint-02，当前保留简单 DQChecker
 
-**2.1 SQLite Stores** ✅
-- SecurityStore：`packages/datahub/src/ditto_datahub/stores/security_store.py` ✅
-  - 管理security和security_mapping表（含PIT）
-  - 支持src_code到sid的映射（Point-in-Time）
-- CalendarStore：`packages/datahub/src/ditto_datahub/stores/calendar_store.py` ✅
-  - 管理交易日历
-  - 内存缓存优化
-- PipelineStore：`packages/datahub/src/ditto_datahub/stores/pipeline_store.py` ✅
-  - 记录pipeline运行状态
-  - DQ异常记录
+---
 
-**2.2 Parquet Stores（年分区）** ✅
-- BarsStore：`packages/datahub/src/ditto_datahub/stores/bars_store.py` ✅
-  - 读写market_daily/etf_daily
-  - 年分区存储（2020.parquet, 2021.parquet...）
-- AdjFactorStore：`packages/datahub/src/ditto_datahub/stores/adj_factor_store.py` ✅
-  - 复权因子管理
-  - 支持增量更新
+#### 任务2: Store Layer（数据存取）✅ 已完成
+
+| 组件 | 文件 | 状态 |
+|------|------|------|
+| SecurityStore | `stores/security_store.py` | ✅ |
+| CalendarStore | `stores/calendar_store.py` | ✅ |
+| PipelineStore | `stores/pipeline_store.py` | ✅ |
+| BarsStore | `stores/bars_store.py` | ✅ |
+| AdjFactorStore | `stores/adj_factor_store.py` | ✅ |
 
 **完成状态**:
-- ✅ 5个Store类实现完成（SecurityStore, CalendarStore, PipelineStore, BarsStore, AdjFactorStore）
-- ✅ 83个单元测试全部通过
-- ✅ Ruff代码质量检查通过
-- ✅ MyPy类型检查通过
+- ✅ 83 个单元测试全部通过
+- ✅ Ruff/MyPy 检查通过
 
-#### 任务3: 实现Domain Repositories ✅ 已完成
+---
 
-**3.1 SecurityRepository** ✅
-- 文件：`packages/datahub/src/ditto_datahub/repositories/security.py` ✅
-- 功能：
-  - 证券主数据管理 ✅
-  - src_code → sid映射（支持PIT）✅
-  - SID分配 ✅
-- 测试：`packages/datahub/tests/unit/test_security_repository.py` ✅
+#### 任务3: Domain Repositories ✅ 已完成
 
-**3.2 BarsRepository** ✅
-- 文件：`packages/datahub/src/ditto_datahub/repositories/bars.py` ✅
-- 功能：
-  - 行情数据读写（股票/ETF）✅
-  - 复权计算（QFQ/HFQ）✅
-  - 多标识符支持（sid/src_code/symbol）✅
-- 测试：`packages/datahub/tests/unit/test_bars_repository.py` ✅
-
-**3.3 CalendarRepository** ✅
-- 文件：`packages/datahub/src/ditto_datahub/repositories/calendar.py` ✅
-- 功能：
-  - 交易日历查询 ✅
-  - 工作日计算 ✅
-  - 日期序列生成 ✅
-- 测试：`packages/datahub/tests/unit/test_calendar_repository.py` ✅
+| 组件 | 文件 | 状态 |
+|------|------|------|
+| SecurityRepository | `repositories/security.py` | ✅ |
+| BarsRepository | `repositories/bars.py` | ✅ |
+| CalendarRepository | `repositories/calendar.py` | ✅ |
 
 **完成状态**:
-- ✅ 3个Repository类实现完成
-- ✅ 8个单元测试全部通过
-- ✅ Ruff/MyPy检查通过
-
-#### 任务4: 实现DataHub（Facade）✅ 已完成
-
-**4.1 DataHub主类** ✅
-- 文件：`packages/datahub/src/ditto_datahub/hub.py` ✅
-- 功能：
-  - 统一数据入口（Facade模式）✅
-  - 懒加载Repository（@cached_property）✅
-  - 资源管理（支持with语句）✅
-- 测试：`packages/datahub/tests/unit/test_hub.py` ✅
-
-**4.2 SQL Engine** ✅
-- 文件：`packages/datahub/src/ditto_datahub/runtime/sql_engine.py` ✅
-- 功能：
-  - DuckDB集成 ✅
-  - Parquet View 注册（stock_daily, etf_daily, index_daily, adj_factor）✅
-  - 复权宏（qfq, qfq_now, market_hfq）✅
-  - SQLite 按需 ATTACH ✅
-  - PIT 查询支持（asof 参数）✅
-- 测试：`packages/datahub/tests/unit/runtime/test_sql_engine.py` ✅
-
-**完成状态**:
-- ✅ SqlEngine 实现（12 tests）
-- ✅ DataHub Facade 实现（8 tests）
+- ✅ 8 个单元测试全部通过
 - ✅ 覆盖率 80.30%
+
+---
+
+#### 任务4: DataHub Facade ✅ 已完成
+
+| 组件 | 文件 | 状态 |
+|------|------|------|
+| DataHub | `hub.py` | ✅ |
+| SQL Engine | `runtime/sql_engine.py` | ✅ |
+
+**完成状态**:
 - ✅ PR: https://github.com/cosmos-arc/ditto/pull/7
 
-### P1 - 应该完成
+---
 
-#### 任务5: ETL Pipeline
+#### 任务5: Sources 层（新增）🆕
 
-**5.1 数据导入流程**
-- 文件：`packages/datahub/src/ditto_data_hub/etl/ingest_pipeline.py`
+**5.1 DataSource 基类** [S]
+- 文件：`packages/ditto-data-hub/src/ditto_data_hub/sources/base.py`
 - 功能：
-  - Tushare/AkShare数据获取
-  - src_code → sid映射
-  - 数据质量检查
-  - 年分区写入
+  - DataSource 抽象基类定义
+  - DataSourceError 异常体系
+  - get_source() 工厂函数
+- 抽象方法：
+  ```python
+  @abstractmethod
+  def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame
+  @abstractmethod
+  def fetch_etf_basic(self) -> pl.DataFrame
+  @abstractmethod
+  def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame
+  ```
+- 验收标准：
+  - [ ] 基类定义完整
+  - [ ] 工厂函数支持 "tushare", "akshare"
+  - [ ] 异常体系定义完整
 
-#### 任务6: Golden Dataset验证
+**5.2 Tushare 适配器基础** [M]
+- 文件：
+  - `packages/ditto-data-hub/src/ditto_data_hub/sources/tushare/__init__.py`
+  - `packages/ditto-data-hub/src/ditto_data_hub/sources/tushare/client.py`
+  - `packages/ditto-data-hub/src/ditto_data_hub/sources/tushare/source.py`
+- 功能：
+  - **TushareClient**：
+    - 从环境变量 `TUSHARE_TOKEN` 读取凭证
+    - 实现基础限流（每分钟 200 次）
+    - 实现重试机制（指数退避）
+  - **TushareSource**：
+    - 实现 fetch_calendar()（交易日历）
+    - 实现 fetch_etf_basic()（ETF 基础信息）
+    - 实现 fetch_etf_daily()（ETF 日线行情）
+    - 数据格式统一为 Ditto 标准 Schema
+- 验收标准：
+  - [ ] TushareClient 单元测试通过
+  - [ ] fetch_etf_daily() 返回标准格式数据
+  - [ ] 限流和重试机制生效
 
-**6.1 标的选取**（基于sid体系）：
-- 先映射src_code到sid：
-  - 510300.SH → sid (200M区间)
-  - 516010.SH → sid (200M区间)
-  - 513100.SH → sid (200M区间)
-  - 000300.SH → sid (300M区间)
+**5.3 DataHub 集成 sources** [S]
+- 文件：修改 `packages/ditto-data-hub/src/ditto_data_hub/hub.py`
+- 功能：
+  - 添加 `@cached_property sources`
+  - 返回 SourcesAccessor 实例
+  - SourcesAccessor 提供 `tushare` 属性和 `get()` 方法
+- 验收标准：
+  - [ ] `hub.sources.tushare.fetch_etf_daily()` 可调用
+  - [ ] 单例模式生效（多次调用返回同一实例）
 
-**6.2 验证任务**：
-- 通过DataHub读取数据
-- 对比权威数据源
-- 验证PIT语义正确性
+---
 
-## 关键实现细节
+#### 任务6: Server 层骨架（新增）🆕
 
-### 1. SID体系实现
-```python
-# sid区间定义
-STOCK_MIN = 100_000_000, STOCK_MAX = 199_999_999
-ETF_MIN = 200_000_000, ETF_MAX = 299_999_999
-INDEX_MIN = 300_000_000, INDEX_MAX = 399_999_999
+**6.1 Prefect 基础设施** [S]
+- 文件：
+  - `apps/server/pyproject.toml`（新增包）
+  - `apps/server/src/ditto_server/__init__.py`
+  - `apps/server/src/ditto_server/main.py`
+- 功能：
+  - FastAPI 基础应用
+  - Prefect 本地 Server 启动
+  - 健康检查端点
+- 依赖：
+  ```toml
+  dependencies = [
+    "fastapi>=0.100",
+    "uvicorn>=0.23",
+    "prefect>=3.0",
+    "ditto-data-hub",
+  ]
+  ```
+- 验收标准：
+  - [ ] `pixi run -e dev server` 启动成功
+  - [ ] 访问 http://localhost:8000/health 返回 OK
+  - [ ] 访问 http://localhost:4200（Prefect UI）可访问
 
-# PIT映射表
-CREATE TABLE security_mapping (
-    sid INTEGER NOT NULL,
-    source TEXT NOT NULL,
-    src_code TEXT NOT NULL,
-    effective_from DATE NOT NULL,
-    effective_to DATE,  -- NULL=当前有效
-    PRIMARY KEY (source, src_code, effective_from)
-);
-```
+**6.2 摄取 Flow 基础** [M]
+- 文件：
+  - `apps/server/src/ditto_server/ingestion/__init__.py`
+  - `apps/server/src/ditto_server/ingestion/flows/__init__.py`
+  - `apps/server/src/ditto_server/ingestion/flows/daily_ingest.py`
+  - `apps/server/src/ditto_server/ingestion/tasks/__init__.py`
+  - `apps/server/src/ditto_server/ingestion/tasks/bars.py`
+- 功能：
+  - **daily_ingest_flow**：
+    - 基础版本，仅支持 ETF 日线摄取
+    - 参数：trade_date, source（默认 "tushare"）
+    - 返回：摄取结果统计
+  - **ingest_etf_bars Task**：
+    - 调用 hub.sources.tushare.fetch_etf_daily()
+    - 调用 hub.securities.resolve_sids_batch() 解析 SID
+    - 调用 hub.bars.write() 写入数据
+- 验收标准：
+  - [ ] 手动触发 Flow 成功执行
+  - [ ] 数据成功写入 DataHub
+  - [ ] Prefect UI 显示 Flow Run 历史
 
-### 2. DataHub使用示例
-```python
-from ditto_data_hub import DataHub
+---
 
-# 初始化
-hub = DataHub("data")
+### P1 - 延后到 Sprint-02
 
-# Repository访问
-bars = hub.bars.get(
-    src_codes=["510300.SH"],
-    start="2024-01-01",
-    adj="qfq"
-)
+---
 
-# SQL查询（支持PIT）
-df = hub.sql(
-    "SELECT * FROM market_daily WHERE trade_date <= $asof",
-    asof="2024-06-30"
-)
+#### 任务7: DQ 三层架构重构 🔄
 
-# 资源清理
-hub.close()
-```
+**原因**: 当前简单 DQChecker 已满足基本需求，三层架构复杂度高
 
-### 3. PIT语义实现
-```python
-# 解析src_code到sid（支持历史）
-sid = hub.security_store.resolve_sid(
-    "000022.SZ",
-    source="tushare",
-    asof="2017-01-01"  # 查询2017年的映射
-)
-```
+**Sprint-02 实现**：
+- `dq/engine.py` - DQEngine 统一执行引擎
+- `dq/result.py` - DQResult, DQIssue 等模型
+- `dq/checkers/technical.py` - L1 技术校验（非空、唯一、外键）
+- `dq/checkers/business.py` - L2 业务规则（OHLC、涨跌幅）
+- `dq/checkers/statistical.py` - L3 统计异常（Z-score、完整性）
+- `config/dq_rules.yaml` - YAML 规则配置
+- Repository 集成 DQEngine
+- 隔离区机制实现
 
-## 验收标准
+---
 
-- [ ] 所有组件通过单元测试
-- [ ] DataHub API与设计文档一致
-- [ ] PIT语义正确实现
-- [ ] Golden Dataset通过DataHub验证
-- [ ] DQ检查规则生效
-- [ ] 年分区存储正确
+#### 任务8: Server 调度完善 🔄
+
+**原因**: Phase 0 重点是打通数据流，调度功能可以后续完善
+
+**Sprint-02 实现**：
+- 完整的 Flow/Task 实现（calendar, securities, adj_factor, derived）
+- dq_batch_flow（L3 批量检查）
+- backfill_flow（补数据）
+- heartbeat_flow（心跳）
+- 定时调度配置（CronSchedule）
+- 告警 Hook（Telegram/钉钉）
+- API 触发端点
+
+---
+
+#### 任务9: AkShare 适配器 🔄
+
+**Sprint-02 实现**：
+- `sources/akshare/client.py`
+- `sources/akshare/source.py`
+- 作为 Tushare 的降级备选
+
+---
 
 ## 关键文件清单
 
+### 新增文件
+
 ```
-packages/datahub/src/ditto_data_hub/
-├── hub.py                        # DataHub Facade
-├── types.py                      # 类型定义
-├── errors.py                     # 异常定义
-├── repositories/
-│   ├── base.py                   # Repository基类
-│   ├── bars.py                   # 行情数据
-│   ├── security.py               # 证券主数据
-│   └── calendar.py               # 交易日历
-├── stores/
-│   ├── security_store.py         # SQLite存储
-│   ├── bars_store.py             # Parquet存储
-│   └── calendar_store.py         # 日历存储
-├── runtime/
-│   ├── sqlite_pool.py            # 连接池
-│   ├── sid_allocator.py          # SID分配
-│   ├── file_lock.py              # 文件锁
-│   ├── dq_checker.py             # 数据质量
-│   └── sql_engine.py             # DuckDB引擎
-└── meta/
-    └── schemas.py                # Schema定义
+packages/ditto-data-hub/
+├── src/ditto_data_hub/sources/
+│   ├── __init__.py                 # 导出 get_source, DataSource
+│   ├── base.py                     # DataSource 基类 + 异常
+│   └── tushare/
+│       ├── __init__.py
+│       ├── client.py               # Tushare 客户端（限流、重试）
+│       └── source.py               # TushareSource 实现
+│
+apps/server/
+├── pyproject.toml                  # Server 包配置
+└── src/ditto_server/
+    ├── __init__.py
+    ├── main.py                     # FastAPI 入口 + Prefect 启动
+    └── ingestion/
+        ├── __init__.py
+        ├── flows/
+        │   ├── __init__.py
+        │   └── daily_ingest.py     # 每日摄取 Flow
+        └── tasks/
+            ├── __init__.py
+            └── bars.py             # K线摄取 Task
 ```
 
-## 下一步
+### 修改文件
 
-Sprint 1完成后，将具备完整的数据访问能力，为Sprint 2的核心引擎提供坚实的数据基础。
+```
+packages/ditto-data-hub/src/ditto_data_hub/
+└── hub.py                          # 添加 sources 属性
+```
+
+---
+
+## 验收标准
+
+### Sprint-01 Phase 0.5 完成标准
+
+- [ ] **Sources 层**：DataSource 基类 + Tushare 适配器实现完成
+- [ ] **Server 层**：可启动，Prefect UI 可访问
+- [ ] **数据流**：手动触发 daily_ingest_flow 成功执行
+- [ ] **数据写入**：数据成功写入 DataHub（通过现有 DQ 检查）
+- [ ] **单元测试**：所有新增代码有单元测试覆盖
+- [ ] **代码质量**：ci-check 全部通过
+
+---
+
+## 依赖关系
+
+```
+sources/base.py（基类）
+    ↓
+sources/tushare（实现）
+    ↓
+hub.py（集成 sources）
+    ↓
+Server/tasks/bars.py（调用 hub.sources）
+    ↓
+Server/flows/daily_ingest.py（编排 tasks）
+```
+
+---
+
+## 下一步（Sprint-02）
+
+1. DQ 三层架构重构
+2. Server 调度完善（完整 Flows/Tasks、定时调度、告警）
+3. AkShare 适配器实现
+4. Golden Dataset 验证

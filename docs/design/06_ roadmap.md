@@ -44,14 +44,17 @@ Phase 0     Phase 0.5    Phase 1           Phase 2          Phase 3
 | 复权因子独立存储 | 4h | 不复权价 + 复权因子分表存储 |
 | 涨跌停状态计算 | 4h | 能正确识别涨停/跌停/停牌 |
 | 基础日志配置 | 2h | loguru 配置完成 |
-| 数据采集任务 | 4h | 数据采集可用 |
+| Prefect 配置 | 4h | Prefect Server + Worker 启动正常 |
+| 数据摄取 Flow | 8h | `daily_ingest_flow` 可触发执行 |
+| 心跳 Flow | 2h | `heartbeat_flow` 每小时发送 |
+| L3 DQ 批量检查 Task | 4h | `dq_batch_check` 可触发执行 |
 
 **总工时**：~54h（约 2-3 周）
 
 ### 2.3 里程碑
 
 - **M0.1**：环境就绪，能启动空的 FastAPI 服务
-- **M0.2**：数据采集就绪，能拉取一只 ETF 的历史数据
+- **M0.2**：数据摄取 Flow 就绪，能通过 Prefect 拉取一只 ETF 的历史数据
 - **M0.3**：数据校验就绪，能检测出异常数据
 
 ### 2.4 验收检查
@@ -60,6 +63,14 @@ Phase 0     Phase 0.5    Phase 1           Phase 2          Phase 3
 # 环境验收
 pixi run server  # 能启动
 curl http://localhost:8000/healthz  # 返回 ok
+
+# Prefect 验收（新增）
+curl http://localhost:4200/api/health  # Prefect Server 正常
+prefect deployment ls  # 能看到 daily-ingest, heartbeat 等 Deployment
+
+# 手动触发验收（新增）
+prefect deployment run "daily-ingest/daily-ingest-scheduled" --param trade_date="2024-12-20"
+# 在 Prefect UI 查看执行结果
 
 # 数据验收
 # 能成功获取 510300.SH 最近 1 年的日线数据
