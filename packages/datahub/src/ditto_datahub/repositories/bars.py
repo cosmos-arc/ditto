@@ -184,6 +184,18 @@ class BarsRepository:
             sids = self._security_store.resolve_by_symbol(identifier, source)
             if not sids:
                 return pl.DataFrame()
+
+            # Warn if multiple SIDs match the same symbol
+            if len(sids) > 1:
+                logger.warning(
+                    "Multiple SIDs found for symbol, using first match",
+                    event="symbol_multiple_matches",
+                    symbol=identifier,
+                    sids=sids,
+                    selected_sid=sids[0],
+                    match_count=len(sids),
+                )
+
             sid = sids[0]
 
         # Get data
