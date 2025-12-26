@@ -1,49 +1,58 @@
 # Ditto Sprint 开发文档
 
-## 概述
+## 当前状态
 
-本文档目录包含Ditto量化交易系统的Sprint开发计划和跟踪文档。
+| Sprint | 阶段 | 进度 | 状态 |
+|--------|------|------|------|
+| Sprint 1 | 数据层与验证 | ████████░░ 80% | 🔄 进行中 |
+| Sprint 2 | 核心引擎 | ░░░░░░░░░░ 0% | ❌ 未开始 |
+| Sprint 3 | 回测与风控 | ░░░░░░░░░░ 0% | ❌ 未开始 |
 
-## Sprint 划分
+## 当前进行中
 
-### Phase 0.5: 数据层与验证（Sprint 1）
-- **时间**: Week 1-2
-- **目标**: 按照官方设计文档实现数据层（DataHub + Repository + Store + Runtime）
-- **文档**: [sprint-01-data-layer.md](./sprint-01-data-layer.md)
-- **状态**: ✅ 已规划（基于官方02_data_design.md）
+<!-- 从 Sprint 文件同步当前正在进行的任务 -->
 
-### Phase 1.1: 核心引擎实现（Sprint 2）
-- **时间**: Week 3-4
-- **目标**: 实现核心业务引擎
-- **文档**: [sprint-02-core-engines.md](./sprint-02-core-engines.md)
-- **状态**: ❌ 未开始
+### Sprint 1 - 任务 3: Domain Repositories
+- **分支**: `feat/domain-repositories`
+- **状态**: 🔄 开发中
+- **开始**: 2024-12-26
 
-### Phase 1.2: 回测与风控（Sprint 3）
-- **时间**: Week 5-6
-- **目标**: 完成回测引擎和风控系统
-- **文档**: [sprint-03-backtest-risk.md](./sprint-03-backtest-risk.md)
-- **状态**: ❌ 未开始
+**子任务**:
+- [ ] SecurityRepository
+- [ ] BarsRepository
+- [ ] CalendarRepository
 
-## 任务跟踪
+---
 
-每个Sprint文档包含：
-- Sprint目标
-- 任务分解（P0/P1优先级）
-- 验收标准
-- 关键里程碑
-- 交付清单
+## Sprint 规划
 
-## 进度更新
+### Phase 0.5: 数据层与验证
+- **Sprint 1**: [数据层实现](./sprint-01-data-layer.md)
+  - Week 1-2
+  - Runtime Layer ✅ → Store Layer ✅ → Repositories → DataHub
 
-请使用以下状态标记：
+### Phase 1.1: 核心引擎
+- **Sprint 2**: [核心引擎实现](./sprint-02-core-engines.md)
+  - Week 3-4
+  - RegimeEngine → FactorEngine → 策略框架
+
+### Phase 1.2: 回测与风控
+- **Sprint 3**: [回测与风控](./sprint-03-backtest-risk.md)
+  - Week 5-6
+  - FastBacktester → RiskEngine → Walk-Forward
+
+---
+
+## 开发原则
+
+1. **数据层优先**: Golden Dataset 是成功的基石
+2. **严格 TDD**: 先写测试，再实现功能
+3. **质量第一**: 代码覆盖率 >90%，对齐测试误差 <0.1%
+4. **渐进交付**: 每个 Sprint 都有可演示的成果
+
+## 状态图例
+
 - ✅ 已完成
 - 🔄 进行中
 - ❌ 未开始
 - 🚧 阻塞中
-
-## 开发原则
-
-1. **数据层优先**: Golden Dataset是成功的基石
-2. **严格TDD**: 先写测试，再实现功能
-3. **质量第一**: 代码覆盖率>90%，对齐测试误差<0.1%
-4. **渐进交付**: 每个Sprint都有可演示的成果
