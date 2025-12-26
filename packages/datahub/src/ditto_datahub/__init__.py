@@ -1,3 +1,5 @@
 """Ditto 数据模块."""
 
-__all__: list[str] = []
+from ditto_datahub.hub import DataHub
+
+__all__ = ["DataHub"]
