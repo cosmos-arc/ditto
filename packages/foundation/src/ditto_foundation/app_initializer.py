@@ -119,7 +119,7 @@ def initialize_app() -> dict[str, Any]:
         Initialization status dictionary.
 
     """
-    global _initializer  # noqa: PLW0603
+    global _initializer  # noqa: PLW0603 - singleton pattern, ensures single instance
 
     if _initializer is None:
         _initializer = AppInitializer()

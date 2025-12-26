@@ -108,48 +108,62 @@ Runtime Layer（支持组件）
 - ✅ Ruff代码质量检查通过
 - ✅ MyPy类型检查通过
 
-#### 任务3: 实现Domain Repositories
+#### 任务3: 实现Domain Repositories ✅ 已完成
 
-**3.1 SecurityRepository**
-- 文件：`packages/datahub/src/ditto_data_hub/repositories/security.py`
+**3.1 SecurityRepository** ✅
+- 文件：`packages/datahub/src/ditto_datahub/repositories/security.py` ✅
 - 功能：
-  - 证券主数据管理
-  - src_code → sid映射（支持PIT）
-  - SID分配
-- 测试：`packages/datahub/tests/unit/test_security_repository.py`
+  - 证券主数据管理 ✅
+  - src_code → sid映射（支持PIT）✅
+  - SID分配 ✅
+- 测试：`packages/datahub/tests/unit/test_security_repository.py` ✅
 
-**3.2 BarsRepository**
-- 文件：`packages/datahub/src/ditto_data_hub/repositories/bars.py`
+**3.2 BarsRepository** ✅
+- 文件：`packages/datahub/src/ditto_datahub/repositories/bars.py` ✅
 - 功能：
-  - 行情数据读写（股票/ETF）
-  - 复权计算（QFQ/HFQ）
-  - 多标识符支持（sid/src_code/symbol）
-- 测试：`packages/datahub/tests/unit/test_bars_repository.py`
+  - 行情数据读写（股票/ETF）✅
+  - 复权计算（QFQ/HFQ）✅
+  - 多标识符支持（sid/src_code/symbol）✅
+- 测试：`packages/datahub/tests/unit/test_bars_repository.py` ✅
 
-**3.3 CalendarRepository**
-- 文件：`packages/datahub/src/ditto_data_hub/repositories/calendar.py`
+**3.3 CalendarRepository** ✅
+- 文件：`packages/datahub/src/ditto_datahub/repositories/calendar.py` ✅
 - 功能：
-  - 交易日历查询
-  - 工作日计算
-  - 日期序列生成
-- 测试：`packages/datahub/tests/unit/test_calendar_repository.py`
+  - 交易日历查询 ✅
+  - 工作日计算 ✅
+  - 日期序列生成 ✅
+- 测试：`packages/datahub/tests/unit/test_calendar_repository.py` ✅
 
-#### 任务4: 实现DataHub（Facade）
+**完成状态**:
+- ✅ 3个Repository类实现完成
+- ✅ 8个单元测试全部通过
+- ✅ Ruff/MyPy检查通过
 
-**4.1 DataHub主类**
-- 文件：`packages/datahub/src/ditto_data_hub/hub.py`
+#### 任务4: 实现DataHub（Facade）✅ 已完成
+
+**4.1 DataHub主类** ✅
+- 文件：`packages/datahub/src/ditto_datahub/hub.py` ✅
 - 功能：
-  - 统一数据入口（Facade模式）
-  - 懒加载Repository（@cached_property）
-  - 资源管理（支持with语句）
-- 测试：`packages/datahub/tests/unit/test_hub.py`
+  - 统一数据入口（Facade模式）✅
+  - 懒加载Repository（@cached_property）✅
+  - 资源管理（支持with语句）✅
+- 测试：`packages/datahub/tests/unit/test_hub.py` ✅
 
-**4.2 SQL Engine**
-- 文件：`packages/datahub/src/ditto_data_hub/runtime/sql_engine.py`
+**4.2 SQL Engine** ✅
+- 文件：`packages/datahub/src/ditto_datahub/runtime/sql_engine.py` ✅
 - 功能：
-  - DuckDB集成
-  - PIT View支持
-  - 复权宏（qfq($asof)）
+  - DuckDB集成 ✅
+  - Parquet View 注册（stock_daily, etf_daily, index_daily, adj_factor）✅
+  - 复权宏（qfq, qfq_now, market_hfq）✅
+  - SQLite 按需 ATTACH ✅
+  - PIT 查询支持（asof 参数）✅
+- 测试：`packages/datahub/tests/unit/runtime/test_sql_engine.py` ✅
+
+**完成状态**:
+- ✅ SqlEngine 实现（12 tests）
+- ✅ DataHub Facade 实现（8 tests）
+- ✅ 覆盖率 80.30%
+- ✅ PR: https://github.com/cosmos-arc/ditto/pull/7
 
 ### P1 - 应该完成
 

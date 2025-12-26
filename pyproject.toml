@@ -178,6 +178,7 @@ unfixable = []
     "PLR0913",  # 参数多（数据源配置）
     "PLR2004",  # 魔法数字（如 252 交易日）
     "F401",     # 未使用导入（re-export 模式）
+    "PLC0415",  # 延迟导入以避免循环依赖（DataHub Facade）
 ]
 
 "packages/foundation/src/ditto_foundation/observability/**/*.py" = [
