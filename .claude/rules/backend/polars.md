@@ -315,6 +315,195 @@ def list_sids(self, dataset: str) -> list[int]:
 - 日期使用 Python `datetime.date` 而非 `pl.date()`
 - 日期解析用 `datetime.strptime()` + `pl.lit()`
 
+## 类型安全与 Schema
+
+### Polars 运行时类型安全
+
+Polars LazyFrame 在 Plan 阶段就能验证 Schema，提供了比 TypedDict 更好的类型安全。
+
+```python
+# ✅ Good: Schema 定义让 Polars 在执行前验证
+schema = {
+    "sid": pl.Int64,
+    "trade_date": pl.Date,
+    "open": pl.Float64,
+    "high": pl.Float64,
+    "low": pl.Float64,
+    "close": pl.Float64,
+    "volume": pl.UInt64,
+}
+
+# LazyFrame 在 Plan 阶段就能捕获错误
+lf = pl.scan_parquet("data.parquet").select([
+    pl.col("close"),   # ✅ 列存在，Plan 阶段通过
+    pl.col("typo"),    # ❌ 列不存在，Plan 阶段报错
+])
+```
+
+### 为什么不需要 TypedDict
+
+```python
+# ❌ 反模式: TypedDict 维护成本高，容易与实际 Schema 不一致
+from typing import TypedDict
+
+class OHLCVRow(TypedDict):
+    """OHLCV data row."""
+    sid: int
+    trade_date: date
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+
+def process_row(row: OHLCVRow) -> float:
+    """Process a single row."""
+    return (row["high"] - row["low"]) / row["close"]
+
+# ❌ 问题:
+# 1. Schema 变更需要同步更新 TypedDict
+# 2. 容易与实际 Schema 不一致
+# 3. 违反向量化原则
+
+
+# ✅ 推荐: 直接使用 DataFrame，让 Polars 提供类型安全
+def process_dataframe(df: pl.DataFrame) -> pl.DataFrame:
+    """Process OHLCV data as DataFrame.
+
+    Polars 在 Plan 阶段就能验证列名和类型，
+    比 TypedDict 提供更早的错误检测。
+    """
+    return df.with_columns(
+        ((pl.col("high") - pl.col("low")) / pl.col("close")).alias("range_pct")
+    )
+```
+
+### Schema 验证最佳实践
+
+```python
+# ✅ 在数据边界验证 Schema
+def validate_bars_schema(df: pl.DataFrame) -> None:
+    """Validate bars DataFrame schema.
+
+    在数据写入或读取时验证，确保整个系统使用一致的 Schema。
+    """
+    expected_schema = {
+        "sid": pl.Int64,
+        "trade_date": pl.Date,
+        "open": pl.Float64,
+        "high": pl.Float64,
+        "low": pl.Float64,
+        "close": pl.Float64,
+        "volume": pl.UInt64,
+    }
+
+    # 检查列名
+    missing = set(expected_schema.keys()) - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing columns: {missing}")
+
+    extra = set(df.columns) - set(expected_schema.keys())
+    if extra:
+        raise ValueError(f"Unexpected columns: {extra}")
+
+    # 检查类型
+    for col, expected_dtype in expected_schema.items():
+        actual_dtype = df.schema[col]
+        if actual_dtype != expected_dtype:
+            raise TypeError(
+                f"Column '{col}': expected {expected_dtype}, got {actual_dtype}"
+            )
+
+
+# ✅ 使用 LazyFrame 的 schema 属性
+def safe_query(df: pl.DataFrame) -> pl.DataFrame:
+    """Safe query with schema validation."""
+    lf = df.lazy()
+
+    # Plan 阶段就能捕获错误
+    result = (
+        lf
+        .filter(pl.col("trade_date") >= pl.lit(date(2024, 1, 1)))
+        .select([
+            pl.col("close"),
+            pl.col("volume"),
+        ])
+    )
+
+    # 在 collect() 前验证输出 Schema
+    output_schema = result.collect_schema()
+    assert output_schema["close"] == pl.Float64
+
+    return result.collect()
+```
+
+### 类型注解与 MyPy
+
+```python
+# ✅ Polars 操作的返回类型注解
+def calculate_returns(df: pl.DataFrame) -> pl.DataFrame:
+    """Calculate daily returns.
+
+    Returns:
+        pl.DataFrame: DataFrame with additional 'returns' column.
+    """
+    return df.with_columns(
+        pl.col("close").pct_change().alias("returns")
+    )
+
+
+# ✅ 明确 Schema 约束（使用 pl.Enum）
+def filter_by_status(df: pl.DataFrame) -> pl.DataFrame:
+    """Filter orders by status."""
+    return df.filter(
+        pl.col("status").is_in(["pending", "submitted", "filled"])
+    )
+
+
+# ✅ 使用 cast 处理 Polars 类型推断的局限
+from typing import cast
+
+def get_first_close(df: pl.DataFrame) -> float:
+    """Get first close price."""
+    # item() 返回 Any，需要 cast
+    result = df.select(pl.col("close").first()).item()
+    return cast(float, result)
+```
+
+### Schema 演进策略
+
+```python
+# ✅ Schema 版本化
+class SchemaV1:
+    """Schema version 1."""
+    BARS = {
+        "sid": pl.Int64,
+        "trade_date": pl.Date,
+        "open": pl.Float64,
+        "high": pl.Float64,
+        "low": pl.Float64,
+        "close": pl.Float64,
+        "volume": pl.UInt64,
+    }
+
+
+class SchemaV2(SchemaV1):
+    """Schema version 2: added adj_factor column."""
+    BARS = {
+        **SchemaV1.BARS,
+        "adj_factor": pl.Float64,  # 新增列
+    }
+
+
+def migrate_schema(df: pl.DataFrame, from_v: int, to_v: int) -> pl.DataFrame:
+    """Migrate DataFrame between schema versions."""
+    if from_v == 1 and to_v == 2:
+        return df.with_columns(
+            pl.lit(1.0).alias("adj_factor")
+        )
+    raise NotImplementedError(f"Migration from v{from_v} to v{to_v}")
+```
+
 ## 禁止清单
 
 | 禁止 | 原因 | 替代方案 |
