@@ -161,7 +161,7 @@ jobs:
 
       # Gitleaks 敏感信息检测
       - name: Gitleaks scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v1
         with:
           args: detect --source . --verbose --report-path gitleaks-report.json
 

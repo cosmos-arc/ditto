@@ -6,17 +6,15 @@
 name: Integration Tests
 
 on:
-  # Manual trigger from GitHub Actions UI
+  # Manual trigger only - to save CI minutes
   workflow_dispatch:
-  # Run on schedule (e.g., daily at 2 AM UTC) - only works on default branch
-  schedule:
-    - cron: "0 2 * * *"
-  # Run after merge to main - only works on default branch
-  workflow_run:
-    workflows: [CI]
-    types:
-      - completed
-    branches: [main]
+  # schedule:
+  #   - cron: "0 2 * * *"  # Disabled to save CI minutes
+  # workflow_run:           # Disabled to save CI minutes
+  #   workflows: [CI]
+  #   types:
+  #     - completed
+  #   branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
