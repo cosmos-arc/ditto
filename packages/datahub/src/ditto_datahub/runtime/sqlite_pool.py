@@ -36,7 +36,10 @@ class SQLitePool:
                 event="connection_created",
                 thread_id=threading.get_ident(),
             )
-        return self._local.conn  # type: ignore[no-any-return]
+        # Add runtime type check to help mypy understand the type
+        conn = self._local.conn
+        assert isinstance(conn, sqlite3.Connection), "conn must be sqlite3.Connection"
+        return conn
 
     def _get_connection(self) -> sqlite3.Connection:
         """Get thread-local connection (deprecated, use get_connection)."""

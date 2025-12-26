@@ -49,6 +49,21 @@ class PipelineStore:
     Manages pipeline execution records, DQ issues, and freeze points.
     """
 
+    # Allowed column names for update_run() method (security whitelist)
+    ALLOWED_COLUMNS = frozenset(
+        [
+            "status",
+            "error_message",
+            "rows_read",
+            "rows_written",
+            "dq_passed",
+            "dq_fail_count",
+            "dq_warn_count",
+            "finished_at",
+            "duration_sec",
+        ]
+    )
+
     def __init__(self, sqlite_client: SQLiteClient) -> None:
         """
         Initialize PipelineStore.
@@ -218,9 +233,15 @@ class PipelineStore:
                 params.append(duration_sec)
 
         if updates:
+            # Validate column names against whitelist
+            for col in updates:
+                col_name = col.split()[0]  # Extract column name from "col = ?"
+                if col_name not in self.ALLOWED_COLUMNS:
+                    raise ValueError(f"Invalid column: {col_name}")
+
             params.append(run_id)
             self._client.execute(
-                f"UPDATE pipeline_run SET {', '.join(updates)} WHERE run_id = ?",  # nosec
+                f"UPDATE pipeline_run SET {', '.join(updates)} WHERE run_id = ?",  # nosec B608 - column names validated against ALLOWED_COLUMNS whitelist above
                 params,
             )
             self._client.commit()

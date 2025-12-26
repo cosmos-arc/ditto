@@ -18,6 +18,20 @@ class SQLiteClient:
     Store classes use this client through composition.
     """
 
+    # Allowed table names for count() method (security whitelist)
+    ALLOWED_TABLES = frozenset(
+        [
+            "security",
+            "security_mapping",
+            "trading_calendar",
+            "pipeline_run",
+            "dq_issue",
+            "freeze_point",
+            "universe",
+            "universe_constituent",
+        ]
+    )
+
     def __init__(self, pool: SQLitePool) -> None:
         """
         Initialize client.
@@ -249,7 +263,11 @@ class SQLiteClient:
             Record count.
 
         """
-        sql = f"SELECT COUNT(*) FROM {table}"  # nosec B608
+        # Validate table name against whitelist
+        if table not in self.ALLOWED_TABLES:
+            raise ValueError(f"Invalid table: {table}")
+
+        sql = f"SELECT COUNT(*) FROM {table}"
         if where:
             sql += f" WHERE {where}"
 

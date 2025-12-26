@@ -39,6 +39,17 @@ class SqlEngine:
         ]
     )
 
+    # Allowed dataset names for view registration (security whitelist)
+    ALLOWED_DATASETS = frozenset(
+        [
+            "stock_daily",
+            "etf_daily",
+            "index_daily",
+            "index_weight",
+            "adj_factor",
+        ]
+    )
+
     def __init__(
         self,
         data_root: Path,
@@ -75,22 +86,15 @@ class SqlEngine:
 
     def _register_views(self) -> None:
         """Register Parquet datasets as DuckDB views."""
-        datasets = [
-            "stock_daily",
-            "etf_daily",
-            "index_daily",
-            "index_weight",
-            "adj_factor",
-        ]
-
-        for dataset in datasets:
+        # Use class-level whitelist for security validation
+        for dataset in self.ALLOWED_DATASETS:
             parquet_path = self.data_root / dataset
             # Check if directory exists before creating view
             if parquet_path.exists():
                 # Create view with glob pattern for year partitions
-                # dataset is from hardcoded trusted list, not user input
+                # dataset is validated against ALLOWED_DATASETS whitelist
                 view_sql = (
-                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "  # nosec B608
+                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "
                     f'"{parquet_path}/*.parquet"'
                 )
                 self.con.execute(view_sql)

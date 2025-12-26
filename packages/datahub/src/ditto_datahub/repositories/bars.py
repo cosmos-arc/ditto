@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -35,7 +35,7 @@ class WriteResult:
     checksum: str
     rows_written: int
     rows_total: int
-    failed_checks: list[Any] = ()  # type: ignore[assignment]
+    failed_checks: list[Any] = field(default_factory=list)
 
 
 class BarsRepository:
