@@ -193,3 +193,140 @@ class TestBarsStore:
         # Try to delete non-existent partition
         result = self.store.delete("market_daily", 2024)
         assert result is False
+
+
+class TestBarsStoreRefactoredHelpers:
+    """Tests for refactored helper methods in BarsStore."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = TemporaryDirectory()
+        self.store = BarsStore(Path(self.temp_dir.name))
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        self.temp_dir.cleanup()
+
+    def test_ensure_dataset_dir_creates_directory(self) -> None:
+        """Test _ensure_dataset_dir creates dataset directory."""
+        dataset = "test_dataset"
+        result_path = self.store._ensure_dataset_dir(dataset)
+
+        assert result_path == Path(self.temp_dir.name) / dataset
+        assert result_path.exists()
+        assert result_path.is_dir()
+
+    def test_ensure_dataset_dir_is_idempotent(self) -> None:
+        """Test _ensure_dataset_dir can be called multiple times safely."""
+        dataset = "test_dataset"
+        path1 = self.store._ensure_dataset_dir(dataset)
+        path2 = self.store._ensure_dataset_dir(dataset)
+
+        assert path1 == path2
+        assert path1.exists()
+
+    def test_merge_with_existing_returns_new_data_when_no_file(self) -> None:
+        """Test _merge_with_existing returns new data when file doesn't exist."""
+        new_df = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 1)],
+                "open": [10.0],
+                "high": [12.0],
+                "low": [9.0],
+                "close": [11.0],
+                "volume": [1000],
+            }
+        )
+        non_existent_path = Path(self.temp_dir.name) / "nonexistent.parquet"
+
+        result = self.store._merge_with_existing(new_df, non_existent_path)
+
+        # Should return new data as-is
+        assert len(result) == 1
+        assert result["sid"][0] == 100000001
+
+    def test_merge_with_existing_merges_when_file_exists(self) -> None:
+        """Test _merge_with_existing merges data when file exists."""
+        # First write initial data
+        initial_df = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 1)],
+                "open": [10.0],
+                "high": [12.0],
+                "low": [9.0],
+                "close": [11.0],
+                "volume": [1000],
+            }
+        )
+        self.store.write("market_daily", initial_df, 2024)
+
+        # Create new data with overlap
+        new_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000002],
+                "trade_date": [date(2024, 1, 1), date(2024, 1, 2)],
+                "open": [10.5, 11.0],
+                "high": [12.5, 13.0],
+                "low": [9.5, 10.0],
+                "close": [11.5, 12.0],
+                "volume": [1500, 2000],
+            }
+        )
+
+        file_path = self.store._get_path("market_daily", 2024)
+        result = self.store._merge_with_existing(new_df, file_path)
+
+        # Should have 2 unique records
+        assert len(result) == 2
+        # The overlapped record should be updated
+        record = result.filter(pl.col("sid") == 100000001)
+        assert record["close"][0] == 11.5
+
+    def test_prepare_for_write_normalizes_dates(self) -> None:
+        """Test _prepare_for_write normalizes date types."""
+        # Create DataFrame with string dates
+        df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000002],
+                "trade_date": ["2024-01-01", "2024-01-02"],
+                "open": [10.0, 11.0],
+                "high": [12.0, 13.0],
+                "low": [9.0, 10.0],
+                "close": [11.0, 12.0],
+                "volume": [1000, 2000],
+            }
+        )
+
+        result = self.store._prepare_for_write(df)
+
+        # Dates should be Date type
+        assert result["trade_date"].dtype == pl.Date
+        # Data should be sorted by trade_date, sid
+        assert result[0]["trade_date"] == date(2024, 1, 1)
+
+    def test_prepare_for_write_sorts_data(self) -> None:
+        """Test _prepare_for_write sorts data correctly."""
+        # Create intentionally unsorted data
+        df = pl.DataFrame(
+            {
+                "sid": [100000002, 100000001, 100000002],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 1), date(2024, 1, 1)],
+                "open": [11.0, 10.0, 11.0],
+                "high": [13.0, 12.0, 13.0],
+                "low": [10.0, 9.0, 10.0],
+                "close": [12.0, 11.0, 12.0],
+                "volume": [2000, 1000, 2000],
+            }
+        )
+
+        result = self.store._prepare_for_write(df)
+
+        # Should be sorted by trade_date, then sid
+        # First row should be 2024-01-01, sid=100000001
+        assert result[0]["trade_date"] == date(2024, 1, 1)
+        assert result[0]["sid"] == 100000001
+        # Last row should be 2024-01-02, sid=100000002
+        assert result[2]["trade_date"] == date(2024, 1, 2)
+        assert result[2]["sid"] == 100000002
