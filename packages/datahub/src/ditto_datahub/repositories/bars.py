@@ -12,7 +12,7 @@ from ditto_foundation import M, logger, traced
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.security_store import SecurityStore
-from ditto_datahub.types import SidRange
+from ditto_datahub.types import DQResult, SidRange
 
 if TYPE_CHECKING:
     from ditto_datahub.runtime.dq_checker import DQChecker
@@ -35,7 +35,7 @@ class WriteResult:
     checksum: str
     rows_written: int
     rows_total: int
-    failed_checks: list[Any] = field(default_factory=list)
+    failed_checks: list[DQResult] = field(default_factory=list)
 
 
 class BarsRepository:
