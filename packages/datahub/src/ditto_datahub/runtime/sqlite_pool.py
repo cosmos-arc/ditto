@@ -3,7 +3,7 @@
 import sqlite3
 import threading
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from ditto_foundation import logger
 
@@ -38,7 +38,8 @@ class SQLitePool:
                 event="connection_created",
                 thread_id=threading.get_ident(),
             )
-        return cast(sqlite3.Connection, self._local.conn)
+        # Type is correctly inferred but mypy sees Any from threading.local
+        return self._local.conn  # type: ignore[no-any-return]
 
     def _get_connection(self) -> sqlite3.Connection:
         """Get thread-local connection (deprecated, use get_connection)."""
