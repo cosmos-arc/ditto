@@ -363,6 +363,9 @@ class BarsRepository:
             )
             return df
 
+        # Ensure sorting for correct last() aggregation (defensive programming)
+        adj_df = adj_df.sort(["sid", "trade_date"])
+
         # Join adjustment factors
         df = df.join(
             adj_df.select(["sid", "trade_date", "adj_factor"]),

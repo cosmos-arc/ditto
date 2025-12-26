@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 
 import polars as pl
 import pytest
-from ditto_datahub.repositories.bars import BarsRepository
+from ditto_datahub.repositories.bars import AdjType, BarsRepository
 from ditto_datahub.runtime.dq_checker import DQChecker
 from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
@@ -125,6 +125,134 @@ class TestBarsRepository:
         # Assert
         assert "symbol" in result.columns
         assert result["symbol"][0] == "600000"
+
+
+class TestQFQAdjustment:
+    """Tests for QFQ (前复权) adjustment."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = TemporaryDirectory()
+        data_root = Path(self.temp_dir.name)
+
+        self.pool = SQLitePool(":memory:")
+        self.pool.init_schema()
+        self.client = SQLiteClient(self.pool)
+
+        self.bars_store = BarsStore(data_root)
+        self.adj_factor_store = AdjFactorStore(data_root)
+        self.security_store = SecurityStore(self.client)
+        self.dq_checker = DQChecker()
+        self.file_lock_manager = FileLockManager(data_root / "locks")
+
+        self.repo = BarsRepository(
+            self.bars_store,
+            self.adj_factor_store,
+            self.security_store,
+            self.dq_checker,
+            self.file_lock_manager,
+        )
+
+        # Insert test security
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (100000001, '600000', 'Test Stock', 'SSE', 'stock', '2000-01-01')
+        """)
+        self.client.commit()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        self.temp_dir.cleanup()
+
+    def test_qfq_uses_latest_adj_factor(self) -> None:
+        """Test that QFQ adjustment uses the latest adj_factor correctly."""
+        # Arrange: Write bars data with consistent prices
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000001],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
+                "open": [10.0, 10.0, 10.0],
+                "high": [12.0, 12.0, 12.0],
+                "low": [9.0, 9.0, 9.0],
+                "close": [11.0, 11.0, 11.0],
+                "volume": [1000, 2000, 3000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Write adj_factor data: 0.95 on 2024-01-03 and later
+        adj_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000001],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
+                "adj_factor": [1.0, 0.95, 0.95],
+            }
+        )
+        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+
+        # Act: Get QFQ adjusted data
+        result = self.repo.get(
+            sids=[100000001],
+            start="2024-01-02",
+            end="2024-01-04",
+            adj=AdjType.QFQ,
+        )
+
+        # Assert: QFQ should adjust all prices using the latest factor (0.95)
+        # Formula: adjusted_price = original_price * latest_factor / adj_factor
+        # 2024-01-02: 11.0 * 0.95 / 1.0 = 10.45
+        # 2024-01-03: 11.0 * 0.95 / 0.95 = 11.0
+        # 2024-01-04: 11.0 * 0.95 / 0.95 = 11.0
+        result_sorted = result.sort("trade_date")
+        assert len(result_sorted) == 3
+        assert abs(result_sorted["close"][0] - 10.45) < 0.01  # 2024-01-02
+        assert abs(result_sorted["close"][1] - 11.00) < 0.01  # 2024-01-03
+        assert abs(result_sorted["close"][2] - 11.00) < 0.01  # 2024-01-04
+
+
+class TestBarsRepositorySingle:
+    """Tests for get_single method."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = TemporaryDirectory()
+        data_root = Path(self.temp_dir.name)
+
+        self.pool = SQLitePool(":memory:")
+        self.pool.init_schema()
+        self.client = SQLiteClient(self.pool)
+
+        self.bars_store = BarsStore(data_root)
+        self.adj_factor_store = AdjFactorStore(data_root)
+        self.security_store = SecurityStore(self.client)
+        self.dq_checker = DQChecker()
+        self.file_lock_manager = FileLockManager(data_root / "locks")
+
+        self.repo = BarsRepository(
+            self.bars_store,
+            self.adj_factor_store,
+            self.security_store,
+            self.dq_checker,
+            self.file_lock_manager,
+        )
+
+        # Insert test security
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '2000-01-01')
+        """)
+        self.client.execute("""
+            INSERT INTO security_mapping
+            (sid, source, src_code, effective_from)
+            VALUES (100000001, 'tushare', '600000.SH', '2000-01-01')
+        """)
+        self.client.commit()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        self.temp_dir.cleanup()
 
     def test_get_single_by_src_code(self) -> None:
         """Test get_single resolves src_code."""
