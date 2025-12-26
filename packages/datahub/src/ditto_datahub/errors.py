@@ -83,3 +83,9 @@ class TradingDateNotFoundError(CalendarError):
         if direction:
             details["direction"] = direction
         super().__init__(message, details if details else None)
+
+
+class ValidationError(DataHubError):
+    """DataFrame schema validation failed."""
+
+    pass

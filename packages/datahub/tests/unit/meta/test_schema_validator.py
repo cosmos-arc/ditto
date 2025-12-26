@@ -1,5 +1,7 @@
 """Tests for schema validation."""
 
+from datetime import date
+
 import polars as pl
 import pytest
 from ditto_datahub.meta.schema_validator import (
@@ -16,7 +18,7 @@ class TestValidateDataFrameSchema:
         df = pl.DataFrame(
             {
                 "sid": [100000001],
-                "trade_date": [pl.date(2024, 1, 1)],
+                "trade_date": [date(2024, 1, 1)],
                 "source": ["tushare"],
                 "src_code": ["000001.SZ"],
                 "open": [10.0],
@@ -43,7 +45,7 @@ class TestValidateDataFrameSchema:
         df = pl.DataFrame(
             {
                 "sid": [100000001],
-                "trade_date": [pl.date(2024, 1, 1)],
+                "trade_date": [date(2024, 1, 1)],
                 "source": ["tushare"],
                 "src_code": ["000001.SZ"],
                 "adj_factor": [1.0],
@@ -72,7 +74,7 @@ class TestValidateDataFrameSchema:
         df = pl.DataFrame(
             {
                 "sid": ["not_an_int"],  # Should be Int64
-                "trade_date": [pl.date(2024, 1, 1)],
+                "trade_date": [date(2024, 1, 1)],
                 "source": ["tushare"],
                 "src_code": ["000001.SZ"],
                 "open": [10.0],
