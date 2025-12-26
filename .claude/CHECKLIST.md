@@ -329,6 +329,7 @@ git branch -d feat/task-name
 - [ ] Sprint 文件中的任务状态已更新（checkbox → ✅）
 - [ ] 如有 Plan 文件，已更新完成状态
 - [ ] Sprint README 进度已同步
+- [ ] 相关修改模块文件夹下的 README 文件同步最新模块说明
 
 ---
 

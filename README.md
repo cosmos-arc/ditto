@@ -18,7 +18,7 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
 **Phase 0.5-1 进行中**：
 - ✅ Sprint 1: 数据层与验证（已规划，基于官方02_data_design.md）
 - 🔄 Sprint 2: 核心引擎实现（基于官方03_engine_design.md）
-- 📋 Sprint 3: 回测与风控（基于官方09_risk_constitution.md）
+- 📋 Sprint 3: 回测与风控（基于官方08_risk_constitution.md）
 
 ### 系统架构
 
@@ -201,7 +201,7 @@ ditto/
   - 双回测引擎架构
 
 ### 风险设计
-- **《09_risk_constitution.md》** - 风险宪法
+- **《08_risk_constitution.md》** - 风险宪法
   - 三级Kill Switch（10%/18%/20%）
   - 回撤速度检测
   - 仓位控制规则
@@ -360,7 +360,7 @@ KILL_SWITCH_ENABLED=true
 - `02_data_design.md` - 数据设计
 - `03_engine_design.md` - 引擎设计
 - `06_roadmap_v1.md` - 开发路线图
-- `09_risk_constitution.md` - 风险宪法
+- `08_risk_constitution.md` - 风险宪法
 
 ## 贡献
 

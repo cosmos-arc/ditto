@@ -4,47 +4,6 @@
 
 ---
 
-> ## 🎯 CLAUDE CODE 必读：Superpowers 工作流
->
-> **这是最重要的部分**。Claude Code 必须严格遵循以下技能激活流程。
->
-> ### 技能激活检查表（执行前必读）
->
-> | 阶段 | **必须使用的 Skill** | 使用时机 |
-> |------|---------------------|----------|
-> | 设计 | `superpowers:brainstorming` | 用户描述需求时 |
-> | 计划 | `superpowers:writing-plans` | 设计确认后 |
-> | 执行 | `superpowers:executing-plans` + `superpowers:test-driven-development` | 开始实施 |
-> | 审查 | `superpowers:requesting-code-review` | 任务间隙 |
-> | 完成 | `superpowers:finishing-a-development-branch` | 任务完成时 |
->
-> ### 禁止行为
->
-> | ❌ 禁止 | ✅ 正确做法 |
-> |---------|-----------|
-> | 跳过 brainstorming 直接实现 | 使用 Skill 工具调用 `superpowers:brainstorming` |
-> | 先写代码后补测试 | 遵循 TDD: RED→GREEN→REFACTOR |
-> | 单个大提交包含整个功能 | 每个红绿循环独立提交 |
-> | 声称完成前不验证 | 使用 `superpowers:verification-before-completion` |
-> | 完成后不使用 finishing 技能 | 使用 Skill 工具调用 `superpowers:finishing-a-development-branch` |
->
-> ### Git 提交粒度规范
->
-> **❌ 错误**: 单个提交包含整个功能
-> **✅ 正确**: 每个 TDD 循环独立提交
->
-> ```bash
-> # 正确的提交序列示例
-> git commit -m "test(sql_engine): add test skeleton"                    # RED
-> git commit -m "feat(sql_engine): implement __init__ and _setup"        # GREEN
-> git commit -m "feat(sql_engine): implement _register_views"            # GREEN
-> git commit -m "refactor(sql_engine): extract view registration"       # REFACTOR
-> ```
->
-> **详细工作流见下方第 3 节**
-
----
-
 ## ⛔ 硬性规则（CRITICAL）
 
 > **以下规则必须无条件遵守，不得绕过或寻找替代方案。**
@@ -60,7 +19,6 @@
 | `pixi run -e dev ci-check` 全部通过 | ❌ 有错误时提交 |
 | 正常提交流程 | ❌ 使用 `--no-verify` |
 | AI 代码必须经过 Polishing | ❌ AI 粗坯直接合入 |
-| 每个 TDD 循环独立提交 | ❌ 单个大提交包含整个功能 |
 
 ### 环境与工具
 
@@ -150,17 +108,6 @@ gh pr create --base main
 | `dev` | 开发、测试、CI | `pixi run -e dev <task>` |
 | `default` | 生产部署 | `pixi run <task>` |
 
-```bash
-# 开发环境（包含 ruff, mypy, pytest, pre-commit, bandit）
-pixi run -e dev lint
-pixi run -e dev typecheck
-pixi run -e dev test-unit
-pixi run -e dev ci-check
-
-# 生产环境
-pixi run server
-```
-
 ### 依赖管理
 
 - `pixi.toml` → 依赖声明
@@ -204,119 +151,110 @@ pixi run -e dev test-unit     # Tests
 
 ---
 
-## 3. Superpowers 驱动的开发工作流
+## 3. Superpowers 工作流（必须遵循）
 
-> **这是最重要的工作流程**
+### ⚠️ 核心规则
 
-### 完整工作流图
-
-```
-用户启动 /start-dev
-         ↓
-┌─────────────────────────────────────────────────────┐
-│ 1. 选择任务 (从 Sprint 文件)                          │
-│    - 确认优先级 (P0/P1)                               │
-│    - 确认依赖已满足                                   │
-└─────────────────────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────────────────────┐
-│ 2. 创建开发分支                                        │
-│    git checkout -b feat/task-name                    │
-└─────────────────────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────────────────────┐
-│ 3. 设计阶段  → MANDATORY                             │
-│    使用 Skill 工具调用: superpowers:brainstorming    │
-│    - 交互式设计细化                                    │
-│    - 边界条件讨论                                      │
-│    - 方案确认                                         │
-└─────────────────────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────────────────────┐
-│ 4. 计划阶段  → MANDATORY                             │
-│    使用 Skill 工具调用: superpowers:writing-plans    │
-│    - 生成详细实施计划                                  │
-│    - 强调 TDD/YAGNI/DRY                              │
-│    - 复杂任务保存到 docs/plans/                       │
-└─────────────────────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────────────────────┐
-│ 5. 执行阶段  → MANDATORY                             │
-│    使用 Skill 工具调用: superpowers:executing-plans  │
-│    每个子任务遵循 TDD:                                │
-│    ┌──────────────────────────────────────┐         │
-│    │ test-driven-development              │         │
-│    │  - RED: 写测试，观察失败               │         │
-│    │  - GREEN: 写最少代码通过               │         │
-│    │  - REFACTOR: 重构优化                  │         │
-│    │  - COMMIT: 每个循环独立提交            │         │
-│    └──────────────────────────────────────┘         │
-│    ↓                                                  │
-│    requesting-code-review (任务间隙)                 │
-│    - 对照计划审查                                      │
-│    - 按严重性报告问题                                  │
-└─────────────────────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────────────────────┐
-│ 6. 完成阶段  → MANDATORY                             │
-│    使用 Skill 工具调用:                               │
-│    superpowers:finishing-a-development-branch        │
-│    - verification-before-completion                  │
-│    - 提供选项: PR / 本地合并 / 保留 / 丢弃            │
-└─────────────────────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────────────────────┐
-│ 7. 合并后清理                                          │
-│    - 更新 Sprint 文件状态                              │
-│    - 删除本地分支                                      │
-└─────────────────────────────────────────────────────┘
-```
+**Claude 必须主动使用 Skill 工具调用，不是"自动"发生！**
 
 ### 技能激活检查表
 
-| 阶段 | **必须使用的 Skill** | 调用方式 | 检查点 |
-|------|---------------------|----------|--------|
-| **设计** | `superpowers:brainstorming` | Skill 工具 | ✅ 需求已充分讨论<br>✅ 设计方案已确认<br>✅ 边界条件已明确 |
-| **计划** | `superpowers:writing-plans` | Skill 工具 | ✅ 计划已生成<br>✅ 强调 TDD/YAGNI/DRY<br>✅ 用户已确认 |
-| **执行** | `superpowers:executing-plans`<br>+ `superpowers:test-driven-development` | Skill 工具 | ✅ RED: 测试失败<br>✅ GREEN: 最少代码通过<br>✅ REFACTOR: 优化重构<br>✅ COMMIT: 每循环提交 |
-| **审查** | `superpowers:requesting-code-review` | Skill 工具 | ✅ 对照计划审查<br>✅ 按严重性报告问题 |
-| **完成** | `superpowers:finishing-a-development-branch` | Skill 工具 | ✅ 验证测试通过<br>✅ 提供 PR/合并决策 |
+| 阶段 | 触发条件 | **必须调用的 Skill** | 检查点 |
+|------|----------|---------------------|--------|
+| **设计** | 用户描述需求 | `superpowers:brainstorming` | ✅ 需求已充分讨论<br>✅ 设计方案已确认<br>✅ 边界条件已明确 |
+| **计划** | 设计确认后 | `superpowers:writing-plans` | ✅ 计划已生成<br>✅ 强调 TDD/YAGNI/DRY<br>✅ 用户已确认 |
+| **执行** | 开始实施 | `superpowers:executing-plans`<br>`superpowers:test-driven-development` | ✅ RED: 测试失败<br>✅ GREEN: 最少代码通过<br>✅ REFACTOR: 优化重构<br>✅ COMMIT: 每循环提交 |
+| **审查** | 任务间隙 | `superpowers:requesting-code-review` | ✅ 对照计划审查<br>✅ 按严重性报告问题 |
+| **完成** | 任务完成 | `superpowers:finishing-a-development-branch` | ✅ 验证测试通过<br>✅ 提供 PR/合并决策 |
 
-### TDD 循环与提交粒度
+### 禁止行为
 
-每个 TDD 循环必须独立提交：
+| ❌ 禁止 | ✅ 应该 |
+|--------|--------|
+| 跳过 brainstorming 直接实现 | 使用 Skill 工具调用 `brainstorming` |
+| 先写代码后补测试 | 遵循 TDD: RED→GREEN→REFACTOR |
+| 单个大提交包含整个功能 | 每个 TDD 循环独立提交 |
+| 声称完成前不验证 | 使用 `verification-before-completion` |
+| 完成后不使用 finishing 技能 | 使用 Skill 工具调用 `finishing-a-development-branch` |
 
-```bash
-# RED: 写测试
-git commit -m "test(sql_engine): add test skeleton for SqlEngine"
+### 流程总结图
 
-# GREEN: 写最少代码
-git commit -m "feat(sql_engine): implement SqlEngine.__init__ and _setup"
-
-# GREEN: 继续实现功能
-git commit -m "feat(sql_engine): implement _register_views"
-
-# REFACTOR: 优化重构
-git commit -m "refactor(sql_engine): extract view registration to separate method"
+```
+用户需求
+    │
+    ▼
+┌─────────────────────────────────────┐
+│ 1. BRAINSTORM (Skill 工具调用)       │
+│    - 分析需求，识别决策点             │
+│    - 分块展示设计                    │
+│    - 等待用户确认                    │
+└─────────────────────────────────────┘
+    │ 用户确认
+    ▼
+┌─────────────────────────────────────┐
+│ 2. PLAN (Skill 工具调用)             │
+│    - 生成 TaskItem 列表              │
+│    - 标注 TDD                        │
+│    - 等待用户确认                    │
+└─────────────────────────────────────┘
+    │ 用户确认
+    ▼
+┌─────────────────────────────────────┐
+│ 3. EXECUTE (Skill 工具调用)          │
+│    - 创建分支                        │
+│    - RED → GREEN → REFACTOR         │
+│    - 每个循环独立 commit             │
+└─────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────┐
+│ 4. VERIFY                           │
+│    - ci-check 通过                   │
+│    - 对照需求检查                    │
+└─────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────┐
+│ 5. FINISH (Skill 工具调用)           │
+│    - 询问：PR / merge / keep / discard │
+└─────────────────────────────────────┘
 ```
 
 ### Git 提交粒度规范
 
-#### ✅ 何时 Commit
+**❌ 禁止**: 单个大提交包含整个功能
+**✅ 正确**: 每个 TDD 循环独立提交
 
-| 场景 | 示例 Commit Message |
+#### 何时 Commit
+
+| 场景 | Commit Message 格式 |
 |------|---------------------|
-| 完成一个函数 | `feat(sql_engine): implement _register_views` |
-| 完成一个测试类 | `test(sql_engine): add test skeleton` |
-| RED→GREEN 完成 | `feat(sql): make sql query tests pass` |
-| 重构完成 | `refactor(hub): simplify dependency injection` |
-| 修复 Bug | `fix(types): add proper type hints` |
+| 写完测试（RED） | `test(scope): add test for xxx` |
+| 测试通过（GREEN） | `feat(scope): implement xxx` |
+| 重构完成（REFACTOR） | `refactor(scope): improve xxx` |
+| 修复 Bug | `fix(scope): resolve xxx` |
+
+#### ✅ 正确提交序列示例
+
+```bash
+# SqlEngine 实现
+git commit -m "test(sql_engine): add test skeleton"              # RED
+git commit -m "feat(sql_engine): implement __init__"             # GREEN
+git commit -m "feat(sql_engine): implement _register_views"      # GREEN
+git commit -m "refactor(sql_engine): extract view method"        # REFACTOR
+
+# DataHub 实现
+git commit -m "test(hub): add test skeleton for DataHub"         # RED
+git commit -m "feat(hub): implement __init__ with cached_property" # GREEN
+git commit -m "feat(hub): implement runtime layer properties"    # GREEN
+git commit -m "refactor(hub): simplify dependency injection"     # REFACTOR
+```
 
 #### ❌ 错误提交示例
 
-| 错误示例 | 问题 |
-|----------|------|
-| 单个提交整个 DataHub 功能 | 粒度过粗，无法回滚特定步骤 |
+| 错误 | 问题 |
+|------|------|
+| 单个提交整个 DataHub 功能 | 粒度过粗，无法回滚 |
 | "WIP" 或 "fix all tests" | 信息不明确 |
 | 混合多个不相关改动 | 违反单一职责 |
 
@@ -324,56 +262,69 @@ git commit -m "refactor(sql_engine): extract view registration to separate metho
 
 ```bash
 # 1. 确保在最新 main
-git checkout main
-git pull origin main
+git checkout main && git pull origin main
 
 # 2. 创建功能分支
 git checkout -b feat/task-name
 
-# 3. 开发（Superpowers 自动介入）
-# - brainstorming 细化设计
-# - writing-plans 生成计划
-# - executing-plans 执行任务
-# - test-driven-development 保证质量
+# 3. 开发（使用 Skill 工具调用）
+# brainstorming → writing-plans → executing-plans
 
-# 4. 提交变更（每个 TDD 循环独立提交）
-git add .
-git commit -m "feat(scope): description"
+# 4. TDD 循环提交（每个循环独立 commit）
+git commit -m "test(scope): add test for xxx"      # RED
+git commit -m "feat(scope): implement xxx"         # GREEN
+git commit -m "refactor(scope): improve xxx"       # REFACTOR
 
 # 5. 推送并创建 PR
 git push -u origin feat/task-name
-gh pr create --base main --title "feat: description"
+gh pr create --base main
 
-# 6. CI 通过后合并
-# 使用 Squash and merge
-
+# 6. CI 通过后 Squash and merge
 # 7. 清理本地分支
-git checkout main
-git pull origin main
-git branch -d feat/task-name
+git checkout main && git pull && git branch -d feat/task-name
 ```
 
 ### 分支命名规范
 
+| 类型 | 格式 | 示例 |
+|------|------|------|
+| 功能 | `feat/xxx` | `feat/momentum-factor` |
+| 修复 | `fix/xxx` | `fix/import-error` |
+| 重构 | `refactor/xxx` | `refactor/engine-cleanup` |
+| 文档 | `docs/xxx` | `docs/readme-update` |
+| 测试 | `test/xxx` | `test/add-unit-tests` |
+| CI | `ci/xxx` | `ci/optimize-workflow` |
+
+### Git 操作规范
+
+**Commit 前必做**：
 ```bash
-feat/momentum-factor       # 功能
-fix/import-error           # 修复
-refactor/engine-cleanup    # 重构
-docs/readme-update         # 文档
-test/add-unit-tests        # 测试
-ci/optimize-workflow       # CI/CD
+pixi run -e dev lint       # 代码规范
+pixi run -e dev typecheck  # 类型检查
+git diff --staged          # 确认改动范围
 ```
 
-### Commit 规范
+**Push 时机**：
+| 场景 | 操作 |
+|------|------|
+| 完成一个子任务 | Push |
+| 一天工作结束 | **必须 Push**（备份） |
+| 需要 CI 验证 | Push |
 
+**分支同步（当 main 有更新时）**：
 ```bash
-# 格式：<type>(<scope>): <description>
-git commit -m "feat(factor): implement momentum factor"
-git commit -m "fix(api): resolve import error"
-git commit -m "test(risk): add kill switch edge cases"
+git fetch origin
+git rebase origin/main
+# 如有冲突，解决后：
+git add . && git rebase --continue
+pixi run -e dev test-unit  # 验证
 ```
 
-Type: `feat` | `fix` | `docs` | `refactor` | `test` | `chore` | `ci`
+**禁止操作**：
+- ❌ `git push --force` 到 main
+- ❌ 直接 commit 到 main
+- ❌ `--no-verify` 跳过 hooks
+- ❌ 提交敏感信息
 
 ---
 
@@ -384,7 +335,7 @@ Type: `feat` | `fix` | `docs` | `refactor` | `test` | `chore` | `ci`
 ```
 docs/
 ├── sprints/
-│   ├── README.md                    # 总览 + 当前状态 + Superpowers 工作流
+│   ├── README.md                    # 总览 + 当前状态
 │   ├── sprint-01-data-layer.md      # Sprint 1 规划（Epic 级）
 │   ├── sprint-02-core-engines.md    # Sprint 2 规划
 │   ├── sprint-03-backtest-risk.md   # Sprint 3 规划
@@ -401,7 +352,7 @@ docs/
 
 | 文件 | 职责 | 更新时机 |
 |------|------|----------|
-| `README.md` | 当前 Sprint 进度 + Superpowers 工作流 | 任务状态变更时 |
+| `README.md` | 当前 Sprint 进度 | 任务状态变更时 |
 | `sprint-XX-*.md` | Epic 规划，任务列表 | 规划阶段 |
 | `backlog.md` | 想法池、技术债 | 随时 |
 | `plans/*.md` | 任务详细拆解 | 复杂任务开始前 |
@@ -417,20 +368,6 @@ docs/
   → 保存到 docs/plans/sprint-XX/
   → 便于恢复上下文
 ```
-
-### 工作节奏
-
-**日常（Continuous Flow）**：
-1. 从当前 Sprint 文件选择任务
-2. Superpowers 自动介入：brainstorm → plan → execute
-3. 更新 Sprint 文件中的任务状态（checkbox）
-4. 如有详细规划，更新 plans/ 文件
-
-**每周五（30分钟回顾）**：
-1. 回顾本周完成任务
-2. 清理 `backlog.md` 过时想法
-3. 识别技术债
-4. 更新 Sprint README 进度
 
 ---
 
@@ -516,24 +453,3 @@ pytest -m "not slow"
 # 覆盖率
 pytest --cov=packages/ --cov-report=html
 ```
-
-### 覆盖率要求
-
-| 模块 | 要求 |
-|------|------|
-| 整体 | ≥80% |
-| core-strategy | ≥90% |
-| core-engine | ≥85% |
-| datahub | ≥85% |
-| 风控模块 | 100% |
-
----
-
-## 附录：跨平台命令
-
-| 操作 | Windows (PowerShell) | Linux/macOS |
-|------|---------------------|-------------|
-| 列出文件 | `Get-ChildItem` / `ls` | `ls` |
-| 复制 | `Copy-Item` / `copy` | `cp` |
-| 删除 | `Remove-Item` / `del` | `rm` |
-| 环境变量 | `$env:VAR` | `$VAR` |

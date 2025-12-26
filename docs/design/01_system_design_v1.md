@@ -942,7 +942,7 @@ result = manager.execute_plan(plan, broker)
 
 必须满足的**硬性门槛**。
 
-这些门槛与《09_risk_constitution.md》中关于收益/回撤/策略生命周期的要求共同生效。
+这些门槛与《08_risk_constitution.md》中关于收益/回撤/策略生命周期的要求共同生效。
 
 ---
 
@@ -1018,7 +1018,7 @@ Ditto 系统的测试分为四层：
        - 黄金用例的回归测试（结果与上一版本差异在可接受范围内）。
 
 3. **策略从 Paper → Live_Small / Live_Full 的 Gate**
-   - **量化表现与风险门槛**遵循《09_risk_constitution.md》中关于第 10–12 条的规定；
+   - **量化表现与风险门槛**遵循《08_risk_constitution.md》中关于第 10–12 条的规定；
    - **工程侧额外要求**：
      - 数据管道、因子计算、回测引擎相关测试**全部通过**；
      - 与该策略相关的 DataContract 规则（缺失率、价差等）没有 CRITICAL 级别告警；

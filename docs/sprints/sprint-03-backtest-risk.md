@@ -6,7 +6,7 @@
 
 **参考文档**：
 - 《03_engine_design.md》 - 引擎设计文档（第5章回测引擎）
-- 《09_risk_constitution.md》 - 风险宪法
+- 《08_risk_constitution.md》 - 风险宪法
 
 ## Sprint 目标
 

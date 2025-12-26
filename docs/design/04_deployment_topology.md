@@ -266,7 +266,6 @@ backup = "powershell -File scripts/backup.ps1"
 本小节与：
 
 - `05_observability.md` 中关于日志内容的要求；
-- `07_ai_coding_guidelines.md` 中“不在对话中泄露敏感信息”的规范；
 
 共同构成 Ditto 的基础安全规范。
 
