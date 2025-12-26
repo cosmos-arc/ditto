@@ -33,6 +33,15 @@ class TestSQLitePool:
         assert conn is not None
         assert hasattr(conn, "execute")
 
+    def test_get_connection_returns_correct_type(self) -> None:
+        """Test get_connection returns sqlite3.Connection without runtime cast."""
+        self.pool = SQLitePool(str(self.db_path))
+        conn = self.pool.get_connection()
+
+        # Verify the returned type is sqlite3.Connection
+        # Type should be inferred correctly by mypy without runtime cast
+        assert isinstance(conn, sqlite3.Connection)
+
     def test_get_connection_is_thread_local(self) -> None:
         """Test get_connection returns thread-local connection."""
         self.pool = SQLitePool(str(self.db_path))
