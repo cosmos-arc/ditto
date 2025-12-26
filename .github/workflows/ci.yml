@@ -161,9 +161,10 @@ jobs:
 
       # Gitleaks 敏感信息检测
       - name: Gitleaks scan
-        uses: gitleaks/gitleaks-action@v1
-        with:
-          args: detect --source . --verbose --report-path gitleaks-report.json
+        run: |
+          wget -q https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64.tar.gz
+          tar -xzf gitleaks-linux-amd64.tar.gz
+          ./gitleaks detect --source . --verbose --report-path gitleaks-report.json
 
   # ============================================================
   # Stage 3: 测试套件（分层执行）
@@ -200,10 +201,11 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN || '' }}
           files: coverage-unit.xml
           flags: unit
           fail_ci_if_error: false
+          # 对于公开仓库，不需要 token
+          # token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
