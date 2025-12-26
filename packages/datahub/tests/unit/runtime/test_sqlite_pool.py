@@ -1,8 +1,10 @@
 """Tests for SQLite Pool."""
 
+import sqlite3
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 
 
@@ -170,3 +172,55 @@ class TestSQLitePool:
         # but we can verify the pool is still functional with a new connection
         new_conn = self.pool.get_connection()
         assert new_conn is not None
+
+    def test_foreign_key_constraint_enforced(self) -> None:
+        """Test that foreign key constraints are enforced."""
+        self.pool = SQLitePool(str(self.db_path))
+        self.pool.init_schema()
+
+        # Insert a valid security first
+        self.pool.execute(
+            "INSERT INTO security "
+            "(sid, symbol, name, exchange, asset_class, list_date) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [100000001, "600000", "Test", "SSE", "stock", "2000-01-01"],
+        )
+        self.pool.commit()
+
+        # Try to insert a mapping with invalid SID (should fail)
+        with pytest.raises(sqlite3.IntegrityError):
+            self.pool.execute(
+                "INSERT INTO security_mapping (sid, source, src_code, effective_from) "
+                "VALUES (?, ?, ?, ?)",
+                [999999, "tushare", "INVALID", "2000-01-01"],
+            )
+
+    def test_foreign_key_constraint_allows_valid_mapping(self) -> None:
+        """Test that foreign key constraints allow valid mappings."""
+        self.pool = SQLitePool(str(self.db_path))
+        self.pool.init_schema()
+
+        # Insert a valid security
+        self.pool.execute(
+            "INSERT INTO security "
+            "(sid, symbol, name, exchange, asset_class, list_date) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [100000001, "600000", "Test", "SSE", "stock", "2000-01-01"],
+        )
+        self.pool.commit()
+
+        # Should allow valid mapping
+        self.pool.execute(
+            "INSERT INTO security_mapping (sid, source, src_code, effective_from) "
+            "VALUES (?, ?, ?, ?)",
+            [100000001, "tushare", "600000.SH", "2000-01-01"],
+        )
+        self.pool.commit()
+
+        # Verify it was inserted
+        rows = self.pool.execute(
+            "SELECT COUNT(*) as count FROM security_mapping WHERE sid = ?",
+            [100000001],
+        ).fetchall()
+        count = rows[0]["count"]
+        assert count == 1

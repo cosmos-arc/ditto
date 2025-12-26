@@ -288,3 +288,92 @@ class TestSecurityStore:
         """Clean up after test."""
         # No cleanup needed for in-memory database
         pass
+
+
+class TestSqlInjectionProtection:
+    """Tests for SQL injection protection in IN clause construction."""
+
+    def setup_method(self) -> None:
+        """Set up test database."""
+        self.pool = SQLitePool(":memory:")
+        self.pool.init_schema()
+        self.client = SQLiteClient(self.pool)
+        self.store = SecurityStore(self.client)
+
+    def test_in_clause_with_many_sids(self) -> None:
+        """Test IN clause handles large list of SIDs safely."""
+        # Insert test data for 100 securities
+        for i in range(100):
+            sid = 100000001 + i
+            self.client.execute(
+                """INSERT INTO security
+                (sid, symbol, name, exchange, asset_class, list_date, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, TRUE)""",
+                [sid, f"60{i:04d}", f"Stock{i}", "SSE", "stock", "2000-01-01"],
+            )
+        self.client.commit()
+
+        # Query with 100 SIDs
+        sids = list(range(100000001, 100000101))
+        result = self.store.find_securities(sids=sids)
+
+        # Should return all 100 securities
+        assert len(result) == 100
+
+    def test_in_clause_with_single_sid(self) -> None:
+        """Test IN clause works with single SID."""
+        self.client.execute(
+            """INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date, is_active)
+            VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '2000-01-01', TRUE)"""
+        )
+        self.client.commit()
+
+        result = self.store.find_securities(sids=[100000001])
+        assert len(result) == 1
+        assert result["sid"][0] == 100000001
+
+    def test_get_sid_symbol_map_with_many_sids(self) -> None:
+        """Test get_sid_symbol_map with large list."""
+        # Insert test data for 50 securities
+        for i in range(50):
+            sid = 100000001 + i
+            self.client.execute(
+                """INSERT INTO security
+                (sid, symbol, name, exchange, asset_class, list_date, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, TRUE)""",
+                [sid, f"60{i:04d}", f"Stock{i}", "SSE", "stock", "2000-01-01"],
+            )
+        self.client.commit()
+
+        # Query with 50 SIDs
+        sids = list(range(100000001, 100000051))
+        mapping = self.store.get_sid_symbol_map(sids)
+
+        # Should return all 50 mappings
+        assert len(mapping) == 50
+        assert mapping[100000001] == "600000"
+        assert mapping[100000050] == "600049"  # i=49 produces "600049"
+
+    def test_special_characters_in_src_code(self) -> None:
+        """Test special characters in src_code are handled safely."""
+        self.client.execute(
+            """INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (100000001, 'TEST', 'Test', 'SSE', 'stock', '2000-01-01')"""
+        )
+        # Use src_code with special characters that could be SQL injection attempts
+        self.client.execute(
+            """INSERT INTO security_mapping
+            (sid, source, src_code, effective_from)
+            VALUES (100000001, 'tushare', 'test;DROP TABLE security--', '2000-01-01')"""
+        )
+        self.client.commit()
+
+        # Should safely query without executing the injection
+        sid = self.store.resolve_sid("test;DROP TABLE security--", "tushare", asof=None)
+        assert sid == 100000001
+
+        # Verify the security table still exists
+        result = self.client.fetchall("SELECT COUNT(*) as count FROM security")
+        assert result[0]["count"] >= 1
