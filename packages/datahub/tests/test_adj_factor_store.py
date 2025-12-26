@@ -320,3 +320,42 @@ class TestAdjFactorStore:
         store.write("adj_factor", sample_df, 2024)
         sids = store.list_sids("adj_factor")
         assert sids == [100000001, 100000002]
+
+    def test_write_maintains_sid_and_date_sorting(
+        self, store: AdjFactorStore, tmp_path: Path
+    ) -> None:
+        """Test that write ensures data is sorted by sid and trade_date."""
+        # Arrange: Create intentionally unsorted data
+        unsorted_df = pl.DataFrame(
+            {
+                "sid": [100000002, 100000001, 100000002, 100000001],
+                "trade_date": [
+                    date(2024, 1, 5),
+                    date(2024, 1, 2),
+                    date(2024, 1, 3),
+                    date(2024, 1, 4),
+                ],
+                "adj_factor": [1.0, 1.0, 0.95, 1.0],
+            }
+        )
+
+        # Act: Write the data
+        store.write("adj_factor", unsorted_df, 2024)
+
+        # Assert: Read back and verify it's sorted by (sid, trade_date)
+        result = store.read("adj_factor")
+
+        # Check that rows are in the correct order
+        for i in range(len(result) - 1):
+            current_sid = result["sid"][i]
+            next_sid = result["sid"][i + 1]
+            current_date = result["trade_date"][i]
+            next_date = result["trade_date"][i + 1]
+
+            # Either current sid < next sid, or same sid with current date <= next date
+            assert current_sid < next_sid or (
+                current_sid == next_sid and current_date <= next_date
+            ), (
+                f"Row {i} not sorted: ({current_sid}, {current_date}) "
+                f"before ({next_sid}, {next_date})"
+            )
