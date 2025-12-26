@@ -359,3 +359,72 @@ class TestAdjFactorStore:
                 f"Row {i} not sorted: ({current_sid}, {current_date}) "
                 f"before ({next_sid}, {next_date})"
             )
+
+
+class TestDateNormalization:
+    """Tests for date type normalization in write."""
+
+    @pytest.fixture
+    def data_root(self, tmp_path: Path) -> Path:
+        """Create temporary data root directory."""
+        return tmp_path / "data"
+
+    @pytest.fixture
+    def store(self, data_root: Path) -> AdjFactorStore:
+        """Create AdjFactorStore instance."""
+        return AdjFactorStore(data_root)
+
+    def test_write_with_string_trade_date(self, store: AdjFactorStore) -> None:
+        """Test write normalizes string trade_date to Date type."""
+        # Create DataFrame with string trade_date
+        df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001],
+                "trade_date": ["2024-01-02", "2024-01-03"],
+                "adj_factor": [1.0, 0.95],
+            }
+        )
+
+        # Write should normalize string dates to Date type
+        _file_path, _checksum = store.write("adj_factor", df, 2024)
+
+        # Read back and verify dates are Date type
+        result = store.read("adj_factor")
+        assert result["trade_date"].dtype == pl.Date
+        assert len(result) == 2
+
+    def test_write_with_date_trade_date(self, store: AdjFactorStore) -> None:
+        """Test write preserves Date type trade_date."""
+        # Create DataFrame with Date trade_date
+        df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
+                "adj_factor": [1.0, 0.95],
+            }
+        )
+
+        # Write should preserve Date type
+        _file_path, _checksum = store.write("adj_factor", df, 2024)
+
+        # Read back and verify dates are Date type
+        result = store.read("adj_factor")
+        assert result["trade_date"].dtype == pl.Date
+        assert len(result) == 2
+
+    def test_write_with_invalid_date_format_raises_error(
+        self, store: AdjFactorStore
+    ) -> None:
+        """Test write raises error for invalid date format."""
+        # Create DataFrame with invalid date format
+        df = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": ["not-a-date"],
+                "adj_factor": [1.0],
+            }
+        )
+
+        # Should raise InvalidOperationError for invalid date format
+        with pytest.raises(pl.InvalidOperationError):
+            store.write("adj_factor", df, 2024)

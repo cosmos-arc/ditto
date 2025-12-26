@@ -218,6 +218,15 @@ class AdjFactorStore:
         else:
             combined = df
 
+        # Normalize trade_date to Date type if needed
+        if "trade_date" in combined.columns:
+            if combined["trade_date"].dtype == pl.String:
+                combined = combined.with_columns(
+                    pl.col("trade_date").str.strptime(pl.Date, "%Y-%m-%d")
+                )
+            elif combined["trade_date"].dtype != pl.Date:
+                combined = combined.with_columns(pl.col("trade_date").cast(pl.Date))
+
         # Sort for optimal read performance AND correct last() aggregation
         combined = combined.sort(["sid", "trade_date"])
 
