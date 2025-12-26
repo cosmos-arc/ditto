@@ -304,7 +304,9 @@ class TestBarsStoreRefactoredHelpers:
         # Dates should be Date type
         assert result["trade_date"].dtype == pl.Date
         # Data should be sorted by trade_date, sid
-        assert result[0]["trade_date"] == date(2024, 1, 1)
+        # Use row() or proper indexing for single row access
+        first_row = result.row(0)
+        assert first_row[1] == date(2024, 1, 1)
 
     def test_prepare_for_write_sorts_data(self) -> None:
         """Test _prepare_for_write sorts data correctly."""
@@ -325,8 +327,10 @@ class TestBarsStoreRefactoredHelpers:
 
         # Should be sorted by trade_date, then sid
         # First row should be 2024-01-01, sid=100000001
-        assert result[0]["trade_date"] == date(2024, 1, 1)
-        assert result[0]["sid"] == 100000001
+        first_row = result.row(0)
+        assert first_row[1] == date(2024, 1, 1)
+        assert first_row[0] == 100000001
         # Last row should be 2024-01-02, sid=100000002
-        assert result[2]["trade_date"] == date(2024, 1, 2)
-        assert result[2]["sid"] == 100000002
+        last_row = result.row(2)
+        assert last_row[1] == date(2024, 1, 2)
+        assert last_row[0] == 100000002
