@@ -141,7 +141,13 @@ class AdjFactorStore:
             end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
             lf = lf.filter(pl.col("trade_date") <= pl.lit(end_dt))
 
-        result = lf.unique(subset=["sid", "trade_date"], keep="last").collect()
+        # Ensure sorting for correct unique(keep="last") and result order
+        result = (
+            lf.sort(["sid", "trade_date"])
+            .unique(subset=["sid", "trade_date"], keep="last")
+            .sort(["sid", "trade_date"])  # Ensure result is sorted
+            .collect()
+        )
 
         duration_ms = (time.time() - start_time) * 1000
 
@@ -212,8 +218,17 @@ class AdjFactorStore:
         else:
             combined = df
 
-        # Sort for optimal read performance
-        combined = combined.sort(["trade_date", "sid"])
+        # Normalize trade_date to Date type if needed
+        if "trade_date" in combined.columns:
+            if combined["trade_date"].dtype == pl.String:
+                combined = combined.with_columns(
+                    pl.col("trade_date").str.strptime(pl.Date, "%Y-%m-%d")
+                )
+            elif combined["trade_date"].dtype != pl.Date:
+                combined = combined.with_columns(pl.col("trade_date").cast(pl.Date))
+
+        # Sort for optimal read performance AND correct last() aggregation
+        combined = combined.sort(["sid", "trade_date"])
 
         # Atomic write
         atomic_write(combined, file_path)

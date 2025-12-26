@@ -121,6 +121,60 @@ class BarsStore:
 
         return df
 
+    def _ensure_dataset_dir(self, dataset: str) -> Path:
+        """
+        Ensure dataset directory exists.
+
+        Args:
+            dataset: Dataset name.
+
+        Returns:
+            Path to the dataset directory.
+
+        """
+        dataset_dir = self._data_root / dataset
+        dataset_dir.mkdir(parents=True, exist_ok=True)
+        return dataset_dir
+
+    def _merge_with_existing(self, df: pl.DataFrame, file_path: Path) -> pl.DataFrame:
+        """
+        Merge DataFrame with existing data if file exists.
+
+        Args:
+            df: New data to write.
+            file_path: Path to existing data file.
+
+        Returns:
+            Merged DataFrame with unique sid/date pairs.
+
+        """
+        if file_path.exists():
+            existing = pl.read_parquet(file_path)
+            combined = pl.concat([existing, df])
+            combined = combined.unique(
+                subset=["sid", "trade_date"],
+                keep="last",
+            )
+        else:
+            combined = df
+        return combined
+
+    def _prepare_for_write(self, df: pl.DataFrame) -> pl.DataFrame:
+        """
+        Prepare DataFrame for writing: normalize dates and sort.
+
+        Args:
+            df: Input DataFrame.
+
+        Returns:
+            Prepared DataFrame with Date type and sorted.
+
+        """
+        # Ensure trade_date is date type for sorting
+        df = self._ensure_date_column(df)
+        # Sort for optimal read performance
+        return df.sort(["trade_date", "sid"])
+
     # ============ Read operations ============
 
     @traced("data.read")
@@ -233,28 +287,15 @@ class BarsStore:
     ) -> tuple[str, str]:
         start_time = time.time()
 
-        dataset_dir = self._data_root / dataset
-        dataset_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure dataset directory exists
+        self._ensure_dataset_dir(dataset)
 
         file_path = self._get_path(dataset, year)
         is_merge = file_path.exists()
 
-        # Merge with existing data
-        if file_path.exists():
-            existing = pl.read_parquet(file_path)
-            combined = pl.concat([existing, df])
-            combined = combined.unique(
-                subset=["sid", "trade_date"],
-                keep="last",
-            )
-        else:
-            combined = df
-
-        # Ensure trade_date is date type for sorting
-        combined = self._ensure_date_column(combined)
-
-        # Sort for optimal read performance
-        combined = combined.sort(["trade_date", "sid"])
+        # Merge with existing data and prepare for write
+        combined = self._merge_with_existing(df, file_path)
+        combined = self._prepare_for_write(combined)
 
         # Atomic write
         atomic_write(combined, file_path)

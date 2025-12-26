@@ -12,7 +12,7 @@ from ditto_foundation import M, logger, traced
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.security_store import SecurityStore
-from ditto_datahub.types import SidRange
+from ditto_datahub.types import DQResult, SidRange
 
 if TYPE_CHECKING:
     from ditto_datahub.runtime.dq_checker import DQChecker
@@ -35,7 +35,7 @@ class WriteResult:
     checksum: str
     rows_written: int
     rows_total: int
-    failed_checks: list[Any] = field(default_factory=list)
+    failed_checks: list[DQResult] = field(default_factory=list)
 
 
 class BarsRepository:
@@ -184,6 +184,18 @@ class BarsRepository:
             sids = self._security_store.resolve_by_symbol(identifier, source)
             if not sids:
                 return pl.DataFrame()
+
+            # Warn if multiple SIDs match the same symbol
+            if len(sids) > 1:
+                logger.warning(
+                    "Multiple SIDs found for symbol, using first match",
+                    event="symbol_multiple_matches",
+                    symbol=identifier,
+                    sids=sids,
+                    selected_sid=sids[0],
+                    match_count=len(sids),
+                )
+
             sid = sids[0]
 
         # Get data
@@ -316,15 +328,25 @@ class BarsRepository:
         if asset_class:
             return f"{asset_class}_daily"
 
-        # Determine by SID range
+        # Check for mixed asset classes
         stock_range = SidRange.get_range("stock")
         etf_range = SidRange.get_range("etf")
 
-        for sid in sids:
-            if stock_range.min_sid <= sid <= stock_range.max_sid:
-                return "stock_daily"
-            if etf_range.min_sid <= sid <= etf_range.max_sid:
-                return "etf_daily"
+        has_stock = any(
+            stock_range.min_sid <= sid <= stock_range.max_sid for sid in sids
+        )
+        has_etf = any(etf_range.min_sid <= sid <= etf_range.max_sid for sid in sids)
+
+        if has_stock and has_etf:
+            raise ValueError(
+                "Mixed asset class query detected. SIDs contain both stock and ETF. "
+                "Please query each asset class separately."
+            )
+
+        if has_stock:
+            return "stock_daily"
+        if has_etf:
+            return "etf_daily"
 
         return "stock_daily"  # Default
 
@@ -353,6 +375,9 @@ class BarsRepository:
             )
             return df
 
+        # Ensure sorting for correct last() aggregation (defensive programming)
+        adj_df = adj_df.sort(["sid", "trade_date"])
+
         # Join adjustment factors
         df = df.join(
             adj_df.select(["sid", "trade_date", "adj_factor"]),
@@ -366,19 +391,28 @@ class BarsRepository:
                 pl.col("adj_factor").last().alias("latest_factor")
             )
             df = df.join(latest_factors, on="sid", how="left")
+            # Use coalesce(adj_factor, 1.0) for missing values (returns original price)
             df = df.with_columns(
                 [
                     (
-                        pl.col("open") * pl.col("latest_factor") / pl.col("adj_factor")
+                        pl.col("open")
+                        * pl.coalesce("latest_factor", 1.0)
+                        / pl.coalesce("adj_factor", 1.0)
                     ).alias("open"),
                     (
-                        pl.col("high") * pl.col("latest_factor") / pl.col("adj_factor")
+                        pl.col("high")
+                        * pl.coalesce("latest_factor", 1.0)
+                        / pl.coalesce("adj_factor", 1.0)
                     ).alias("high"),
                     (
-                        pl.col("low") * pl.col("latest_factor") / pl.col("adj_factor")
+                        pl.col("low")
+                        * pl.coalesce("latest_factor", 1.0)
+                        / pl.coalesce("adj_factor", 1.0)
                     ).alias("low"),
                     (
-                        pl.col("close") * pl.col("latest_factor") / pl.col("adj_factor")
+                        pl.col("close")
+                        * pl.coalesce("latest_factor", 1.0)
+                        / pl.coalesce("adj_factor", 1.0)
                     ).alias("close"),
                 ]
             )
@@ -386,12 +420,13 @@ class BarsRepository:
 
         else:  # HFQ
             # Backward adjustment: use current factor
+            # Use coalesce(adj_factor, 1.0) for missing values (returns original price)
             df = df.with_columns(
                 [
-                    (pl.col("open") * pl.col("adj_factor")).alias("open"),
-                    (pl.col("high") * pl.col("adj_factor")).alias("high"),
-                    (pl.col("low") * pl.col("adj_factor")).alias("low"),
-                    (pl.col("close") * pl.col("adj_factor")).alias("close"),
+                    (pl.col("open") * pl.coalesce("adj_factor", 1.0)).alias("open"),
+                    (pl.col("high") * pl.coalesce("adj_factor", 1.0)).alias("high"),
+                    (pl.col("low") * pl.coalesce("adj_factor", 1.0)).alias("low"),
+                    (pl.col("close") * pl.coalesce("adj_factor", 1.0)).alias("close"),
                 ]
             )
             df = df.drop("adj_factor")

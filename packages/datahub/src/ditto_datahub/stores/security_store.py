@@ -18,6 +18,30 @@ from ditto_foundation import M, logger, span, traced
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
+def _build_in_clause(items: list[Any]) -> tuple[str, list[Any]]:
+    """
+    Build parameterized IN clause with placeholders.
+
+    This helper function ensures SQL injection safety by using
+    parameterized queries for IN clauses.
+
+    Args:
+        items: List of values for the IN clause.
+
+    Returns:
+        Tuple of (SQL fragment with placeholders, list of values).
+
+    Example:
+        >>> _build_in_clause([1, 2, 3])
+        ('(?,?,?)', [1, 2, 3])
+
+    """
+    if not items:
+        return ("()", [])
+    placeholders = ",".join("?" * len(items))
+    return f"({placeholders})", items
+
+
 class SecurityStore:
     """
     Securities master data storage with PIT support.
@@ -292,14 +316,14 @@ class SecurityStore:
         params: list[Any] = []
 
         if sids:
-            placeholders = ",".join("?" * len(sids))
-            sql += f" AND s.sid IN ({placeholders})"
-            params.extend(sids)
+            in_clause, sids_list = _build_in_clause(sids)
+            sql += f" AND s.sid IN {in_clause}"
+            params.extend(sids_list)
 
         if src_codes:
-            placeholders = ",".join("?" * len(src_codes))
-            sql += f" AND m.src_code IN ({placeholders}) AND m.source = ?"
-            params.extend(src_codes)
+            in_clause, src_codes_list = _build_in_clause(src_codes)
+            sql += f" AND m.src_code IN {in_clause} AND m.source = ?"
+            params.extend(src_codes_list)
             params.append(source)
 
             if asof:
@@ -392,10 +416,10 @@ class SecurityStore:
 
         """
         if sids:
-            placeholders = ",".join("?" * len(sids))
+            in_clause, sids_list = _build_in_clause(sids)
             rows = self._client.fetchall(
-                f"SELECT sid, symbol FROM security WHERE sid IN ({placeholders})",  # nosec
-                sids,
+                f"SELECT sid, symbol FROM security WHERE sid IN {in_clause}",
+                sids_list,
             )
         else:
             rows = self._client.fetchall(

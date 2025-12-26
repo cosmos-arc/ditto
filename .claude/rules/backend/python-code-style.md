@@ -232,6 +232,132 @@ from typing import cast
 result = cast(float, df.select(pl.col("value").mean()).item())
 ```
 
+### 3.4 DataFrame 驱动系统的类型策略
+
+**核心原则**: 在量化系统中，数据流向为 `SQLite → Polars DataFrame → 向量化运算`。
+中间层的 Row 对象（TypedDict）是冗余的，TypedDict 可能是反模式。
+
+#### 何时使用 TypedDict
+
+| 场景 | 是否使用 TypedDict | 原因 |
+|------|-------------------|------|
+| DataFrame 列数据 | ❌ 不使用 | Polars 提供运行时类型安全 |
+| SQL 直接返回值 | ✅ 可使用 | API 边界需要明确契约 |
+| 配置/元数据 | ✅ 推荐 | 静态结构，需要文档化 |
+| 测试 fixture | ✅ 推荐 | 明确预期结构 |
+
+#### 务实的类型注解策略
+
+```python
+# ✅ 好：使用具体类型替代 Any
+from ditto_datahub.types import DQResult
+
+@dataclass
+class WriteResult:
+    """Data write result."""
+    path: str
+    checksum: str
+    failed_checks: list[DQResult]  # 而非 list[Any]
+
+
+# ✅ 好：SQL 返回值使用具体联合类型
+def fetchval(
+    self, sql: str, params: list[Any] | tuple[Any, ...] | None = None
+) -> str | int | float | None:
+    """Fetch first column of first row.
+
+    Returns:
+        str | int | float | None: Value from the first column.
+    """
+    row = self.fetchone(sql, params)
+    if row:
+        return cast(str | int | float, row[0])
+    return None
+
+
+# ✅ 可接受：低频查询使用 dict[str, Any]
+def get_metadata(self) -> dict[str, Any]:
+    """Get flexible metadata.
+
+    低频调用、结构多变的情况，dict[str, Any] 是务实的妥协。
+    """
+    return self._meta
+
+
+# ❌ 避免：为 SQL 返回值创建 TypedDict
+class SecurityRow(TypedDict):
+    """Security data row from SQLite."""
+    sid: int
+    symbol: str
+    name: str | None
+    # ...
+
+def get_security(sid: int) -> SecurityRow:
+    """❌ 冗余：应该直接返回 DataFrame"""
+    ...
+
+# ✅ 推荐：返回 DataFrame，让 Polars 提供类型安全
+def get_securities(sids: list[int]) -> pl.DataFrame:
+    """Get securities as DataFrame.
+
+    Polars LazyFrame 在 Plan 阶段就能验证 Schema，提供更好的类型安全。
+    """
+    ...
+```
+
+#### 类型精确化的优先级
+
+| 优先级 | 问题类型 | 示例 | 是否修复 |
+|--------|----------|------|----------|
+| P0 | `Any` 返回类型 | `def foo() -> Any:` | ✅ 必须修复 |
+| P0 | `Any` 参数类型 | `def foo(x: Any):` | ✅ 必须修复 |
+| P1 | `list[Any]` 具体类型已知 | `list[DQResult]` | ✅ 建议修复 |
+| P2 | `dict[str, Any]` 灵活配置 | 元数据、配置 | ⚠️ 可保留 |
+| P3 | SQL 返回 TypedDict | `SecurityRow` | ❌ 反模式 |
+
+#### 类型别名最佳实践
+
+```python
+# ✅ 定义输入类型别名
+from datetime import date, datetime
+
+DateInput = str | date | datetime | None
+
+def normalize_date(value: DateInput) -> str | None:
+    """Normalize various date input types to YYYY-MM-DD string."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        datetime.strptime(value, "%Y-%m-%d")
+        return value
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d")
+    if isinstance(value, date):
+        return value.strftime("%Y-%m-%d")
+    raise TypeError(f"Unsupported date type: {type(value)}")
+
+
+# ✅ 使用 Sequence 替代 list 提高灵活性
+from collections.abc import Sequence
+
+def get_symbols(symbols: Sequence[str]) -> pl.DataFrame:
+    """Accept any sequence of strings (list, tuple, set, etc.)."""
+    ...
+
+
+# ✅ 使用 Literal 限定字符串选项
+from typing import Literal
+
+AdjustmentType = Literal["qfq", "hfq", "none"]
+
+def apply_adjustment(
+    df: pl.DataFrame,
+    adj_type: AdjustmentType = "none",
+) -> pl.DataFrame:
+    """Apply price adjustment."""
+    ...
+```
+
 ---
 
 ## 4. 命名规范

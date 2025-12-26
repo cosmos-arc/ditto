@@ -10,6 +10,7 @@
 |------|------|------|
 | `atomic_write()` | 原子写入 Parquet 文件 | 确保数据写入完整性 |
 | `file_md5()` | 计算文件 MD5 哈希 | 数据完整性校验、变更检测 |
+| `normalize_date()` | 规范化日期格式 | 统一日期输入处理 |
 
 ## 二、架构定位
 
@@ -32,8 +33,9 @@
 
 ```
 util/
-├── __init__.py    # 导出 atomic_write, file_md5
-└── io.py          # IO 相关工具函数
+├── __init__.py    # 导出 atomic_write, file_md5, normalize_date
+├── io.py          # IO 相关工具函数
+└── dates.py       # 日期规范化工具函数
 ```
 
 ## 四、关键模块说明
@@ -86,6 +88,37 @@ print(checksum)  # 输出: "3a7bd3e2360a..."
 - 数据完整性校验
 - 文件变更检测
 - 缓存失效判断
+
+### 4.3 normalize_date()
+
+**功能**：将各种日期类型规范化为 YYYY-MM-DD 格式
+
+**支持的输入类型**：
+- `str`：YYYY-MM-DD 格式字符串
+- `datetime`：datetime 对象
+- `date`：date 对象
+- `None`：返回 None
+
+**特点**：
+- 使用 `DateInput` 类型别名统一输入类型
+- 完整的类型注解
+- 自动验证字符串格式
+
+```python
+from ditto_foundation.util import normalize_date, DateInput
+from datetime import date, datetime
+
+# 支持多种输入
+result1 = normalize_date("2024-01-02")      # "2024-01-02"
+result2 = normalize_date(date(2024, 1, 2))  # "2024-01-02"
+result3 = normalize_date(datetime(2024, 1, 2, 12, 0))  # "2024-01-02"
+result4 = normalize_date(None)              # None
+```
+
+**应用场景**：
+- 统一 API 接口日期输入
+- 数据库日期格式规范化
+- 跨系统日期数据交换
 
 ## 五、注意事项
 

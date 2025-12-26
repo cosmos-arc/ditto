@@ -83,3 +83,57 @@ class TradingDateNotFoundError(CalendarError):
         if direction:
             details["direction"] = direction
         super().__init__(message, details if details else None)
+
+
+class ValidationError(DataHubError):
+    """DataFrame schema validation failed."""
+
+    pass
+
+
+class DatasetNotFoundError(DataHubError):
+    """Dataset directory or files do not exist."""
+
+    def __init__(
+        self,
+        message: str = "Dataset not found",
+        dataset: str | None = None,
+    ) -> None:
+        """
+        Initialize DatasetNotFoundError.
+
+        Args:
+            message: Error message.
+            dataset: The dataset name that was not found.
+
+        """
+        details: dict[str, object] = {}
+        if dataset:
+            details["dataset"] = dataset
+        super().__init__(message, details if details else None)
+
+
+class PartitionNotFoundError(DataHubError):
+    """Year partition file does not exist."""
+
+    def __init__(
+        self,
+        message: str = "Partition not found",
+        dataset: str | None = None,
+        year: int | None = None,
+    ) -> None:
+        """
+        Initialize PartitionNotFoundError.
+
+        Args:
+            message: Error message.
+            dataset: The dataset name.
+            year: The year partition that was not found.
+
+        """
+        details: dict[str, object] = {}
+        if dataset:
+            details["dataset"] = dataset
+        if year:
+            details["year"] = year
+        super().__init__(message, details if details else None)

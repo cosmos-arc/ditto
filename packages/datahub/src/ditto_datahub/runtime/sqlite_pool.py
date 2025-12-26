@@ -29,6 +29,8 @@ class SQLitePool:
                 str(self._db_path), check_same_thread=False, timeout=30.0
             )
             conn.row_factory = sqlite3.Row
+            # Enable foreign key constraints
+            conn.execute("PRAGMA foreign_keys = ON;")
             self._local.conn = conn
 
             logger.debug(
@@ -36,10 +38,8 @@ class SQLitePool:
                 event="connection_created",
                 thread_id=threading.get_ident(),
             )
-        # Add runtime type check to help mypy understand the type
-        conn = self._local.conn
-        assert isinstance(conn, sqlite3.Connection), "conn must be sqlite3.Connection"
-        return conn
+        # Type is correctly inferred but mypy sees Any from threading.local
+        return self._local.conn  # type: ignore[no-any-return]
 
     def _get_connection(self) -> sqlite3.Connection:
         """Get thread-local connection (deprecated, use get_connection)."""
