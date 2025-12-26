@@ -15,6 +15,7 @@
 | `file_lock.py` | 跨平台文件锁，防止并发写入冲突 |
 | `dq_checker.py` | 数据质量检查引擎 |
 | `dq_rules.py` | DQ 规则定义 (主键、OHLC、涨跌停等) |
+| `sql_engine.py` | SQL 引擎，提供跨数据库查询能力 |
 
 ## 三、使用示例
 

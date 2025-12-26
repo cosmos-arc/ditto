@@ -31,21 +31,16 @@ src/ditto_foundation/
 ├── config/                 # 配置管理
 │   ├── __init__.py
 │   └── settings.py         # Pydantic Settings (主配置)
-├── contracts/              # 数据契约
-│   ├── __init__.py
-│   ├── etf.py              # ETF Pydantic 模型
-│   └── market_data.py      # Market Data Pandera Schema
-├── observability/          # 可观测性模块 (NEW)
+├── observability/          # 可观测性模块
 │   ├── __init__.py         # 主入口: init(), shutdown()
 │   ├── config.py           # Mode, ObservabilityConfig
 │   ├── logging.py          # Loguru 日志配置
 │   ├── tracing.py          # OTel 追踪: span(), @traced, get_trace_id()
 │   ├── metrics.py          # M 类 (预定义指标)
 │   └── testing.py          # 测试辅助: reset_for_testing()
-├── types/                  # 共享类型
-│   └── __init__.py
 └── util/                   # 工具函数
-    ├── io.py               # IO 工具
+    ├── io.py               # IO 工具 (atomic_write, file_md5)
+    ├── dates.py            # 日期规范化 (normalize_date)
     └── __init__.py
 ```
 
@@ -158,17 +153,15 @@ M.data_update_duration.record(1.5, {"source": "tushare"})
   - `DatabaseSettings`: DuckDB/SQLite 配置
   - `ObservabilitySettings`: 可观测性配置
   - `DataSourceSettings`: Tushare/AkShare 配置
-  - `TradingSettings`: 交易执行配置
-  - `RiskSettings`: 风险管理配置 (Kill Switch)
+  - `APISettings`: FastAPI 服务配置
+  - `SystemSettings`: 系统基础配置
+  - `FileStorageSettings`: 文件存储配置
 - `get_settings()`: 全局配置单例
-
-### contracts/ - 数据契约
-- `ETFInfoModel`: ETF 信息 Pydantic 模型
-- `DailyPriceSchema`: 日线数据 Pandera Schema
 
 ### util/ - 工具函数
 - `atomic_write()`: 原子写入 Parquet
 - `file_md5()`: 文件 MD5 校验
+- `normalize_date()`: 日期格式规范化
 
 ### app_initializer - 应用初始化
 - `AppInitializer`: 应用初始化类

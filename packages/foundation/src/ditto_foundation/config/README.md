@@ -18,11 +18,9 @@
 | `DatabaseSettings` | settings.py | 数据库配置（DuckDB + SQLite）|
 | `DataSourceSettings` | settings.py | 数据源配置（Tushare + AkShare）|
 | `APISettings` | settings.py | FastAPI 服务配置 |
-| `TradingSettings` | settings.py | 交易执行配置（Phase 2+）|
-| `RiskSettings` | settings.py | 风险管理配置 |
-| `NotificationSettings` | settings.py | 通知服务配置 |
 | `SystemSettings` | settings.py | 系统基础配置 |
 | `FileStorageSettings` | settings.py | 文件存储配置 |
+| `ObservabilitySettings` | settings.py | 可观测性配置 |
 
 ## 二、架构定位
 

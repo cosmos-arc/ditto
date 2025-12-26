@@ -11,6 +11,7 @@
 | 文件 | 功能 |
 |------|------|
 | `schemas.py` | Polars Schema 定义 |
+| `schema_validator.py` | Schema 验证工具 |
 
 ## 三、定义的 Schema
 
