@@ -4,7 +4,7 @@
 
 | Sprint | 阶段 | 进度 | 状态 |
 |--------|------|------|------|
-| Sprint 1 | 数据层与验证 | ████████░░ 80% | 🔄 进行中 |
+| Sprint 1 | 数据层与验证 | ██████████ 100% | ✅ P0 完成 |
 | Sprint 2 | 核心引擎 | ░░░░░░░░░░ 0% | ❌ 未开始 |
 | Sprint 3 | 回测与风控 | ░░░░░░░░░░ 0% | ❌ 未开始 |
 
@@ -12,16 +12,17 @@
 
 <!-- 从 Sprint 文件同步当前正在进行的任务 -->
 
-### Sprint 1 - 任务 4: DataHub Facade
-- **分支**: `feat/datahub-facade`
-- **状态**: ✅ 已完成
-- **完成**: 2024-12-26
+### Sprint 1 - P0 任务全部完成 ✅
 
-**子任务**:
-- [x] SqlEngine 实现
-- [x] DataHub Facade 实现
-- [x] 测试完成 (20 tests)
-- [x] PR 创建
+**Sprint 1 P0 任务状态**:
+- ✅ Task 1: Runtime Layer (18 tests)
+- ✅ Task 2: Store Layer (132 tests)
+- ✅ Task 3: Domain Repositories (8 tests)
+- ✅ Task 4: DataHub Facade + SqlEngine (20 tests)
+  - PR: https://github.com/cosmos-arc/ditto/pull/7
+  - 分支: `feat/datahub-facade`
+
+**下一步**: P1 任务（ETL Pipeline + Golden Dataset 验证）
 
 ---
 
@@ -121,7 +122,8 @@
 ### Phase 0.5: 数据层与验证
 - **Sprint 1**: [数据层实现](./sprint-01-data-layer.md)
   - Week 1-2
-  - Runtime Layer ✅ → Store Layer ✅ → Repositories ✅ → DataHub ✅
+  - ✅ P0 全部完成（Runtime Layer → Store Layer → Repositories → DataHub）
+  - 🔄 P1 待开始（ETL Pipeline + Golden Dataset 验证）
 
 ### Phase 1.1: 核心引擎
 - **Sprint 2**: [核心引擎实现](./sprint-02-core-engines.md)
