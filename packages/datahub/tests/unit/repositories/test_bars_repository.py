@@ -3,6 +3,7 @@
 from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 import polars as pl
 import pytest
@@ -424,6 +425,62 @@ class TestBarsRepositorySingle:
 
         # Assert
         assert len(result) == 1
+
+    def test_get_single_warns_on_multiple_symbol_matches(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test get_single warns when symbol maps to multiple SIDs."""
+        # Arrange: Insert multiple securities with same symbol (unlikely but possible)
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (100000002, '600000', 'Another Stock', 'SZSE', 'stock', '2000-01-01')
+        """)
+        self.client.execute("""
+            INSERT INTO security_mapping
+            (sid, source, src_code, effective_from)
+            VALUES (100000002, 'tushare', '600000.SZ', '2000-01-01')
+        """)
+        self.client.commit()
+
+        # Arrange: Write test data
+        test_df = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 2)],
+                "open": [10.0],
+                "high": [12.0],
+                "low": [9.0],
+                "close": [11.0],
+                "volume": [1000],
+            }
+        )
+        self.bars_store.write("stock_daily", test_df, 2024)
+
+        # Act: Mock logger and call get_single
+        with patch("ditto_datahub.repositories.bars.logger") as mock_logger:
+            result = self.repo.get_single(
+                identifier="600000",
+                start="2024-01-01",
+                end="2024-01-31",
+                source="tushare",
+            )
+
+        # Assert: Should return first SID's data
+        assert len(result) == 1
+        assert result["sid"][0] == 100000001
+
+        # Assert: logger.warning should have been called with correct arguments
+        mock_logger.warning.assert_called_once()
+        call_args = mock_logger.warning.call_args
+        assert call_args is not None
+        # Extract the positional and keyword arguments
+        # logger.warning(message, event=..., symbol=..., etc.)
+        args, kwargs = call_args
+        assert "Multiple SIDs found for symbol" in args[0]
+        assert kwargs["event"] == "symbol_multiple_matches"
+        assert kwargs["symbol"] == "600000"
+        assert kwargs["match_count"] == 2
 
     def test_write_returns_write_result(self) -> None:
         """Test write returns WriteResult."""
