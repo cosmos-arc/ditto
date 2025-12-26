@@ -62,33 +62,25 @@ repos:
       # --------------------------------------------------------
       - id: mypy
         name: mypy
-        entry: pixi run mypy
+        entry: pixi run -e dev mypy --explicit-package-bases
         language: system
         types: [python]
         # 只检查源码，排除测试
         files: ^(packages|apps/server)/.*\.py$
         exclude: ^(tests/|.*/tests/|.*_test\.py$|conftest\.py$)
         require_serial: true # Mypy 需要串行以利用缓存
-        args:
-          - --no-error-summary
-          - --cache-dir=.mypy_cache
 
       # --------------------------------------------------------
       # Bandit Security Scan
       # --------------------------------------------------------
       - id: bandit
         name: bandit
-        entry: pixi run bandit
+        entry: pixi run -e dev bandit -c pyproject.toml --severity-level medium --confidence-level medium --quiet
         language: system
         types: [python]
         files: ^(packages|apps/server)/.*\.py$
         exclude: ^(tests/|.*/tests/|.*_test\.py$|conftest\.py$)
-        args:
-          - -c
-          - pyproject.toml
-          - --severity-level=medium
-          - --confidence-level=medium
-          - --quiet
+        pass_filenames: true  # bandit 需要接收文件列表
 
       # --------------------------------------------------------
       # pytest (可选 - pre-push 阶段)

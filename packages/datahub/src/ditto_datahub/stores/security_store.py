@@ -10,7 +10,7 @@ Following design document at docs/design/02_data_design.md
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any
+from typing import Any, cast
 
 import polars as pl
 from ditto_foundation import M, logger, span, traced
@@ -136,7 +136,7 @@ class SecurityStore:
                 [source, src_code],
             )
 
-        return row["sid"] if row else None
+        return cast(int, row["sid"]) if row else None
 
     def resolve_sids_batch(
         self,
@@ -203,7 +203,7 @@ class SecurityStore:
             WHERE s.symbol = ? AND m.source = ? AND m.effective_to IS NULL""",
             [symbol, source],
         )
-        return [r["sid"] for r in rows]
+        return [cast(int, r["sid"]) for r in rows]
 
     def get_src_code(
         self,
@@ -241,7 +241,7 @@ class SecurityStore:
                 [sid, source],
             )
 
-        return row["src_code"] if row else None
+        return cast(str, row["src_code"]) if row else None
 
     def get_by_sid(self, sid: int) -> dict[str, Any] | None:
         """
@@ -255,7 +255,7 @@ class SecurityStore:
 
         """
         row = self._client.fetchone("SELECT * FROM security WHERE sid = ?", [sid])
-        return dict(row) if row else None
+        return cast(dict[str, Any] | None, row)
 
     def find_securities(
         self,
@@ -364,7 +364,7 @@ class SecurityStore:
             params.append(is_active)
 
         rows = self._client.fetchall(sql, params)
-        return [r["sid"] for r in rows]
+        return [cast(int, r["sid"]) for r in rows]
 
     def get_symbol(self, sid: int) -> str | None:
         """
@@ -378,7 +378,7 @@ class SecurityStore:
 
         """
         row = self._client.fetchone("SELECT symbol FROM security WHERE sid = ?", [sid])
-        return row["symbol"] if row else None
+        return cast(str, row["symbol"]) if row else None
 
     def get_sid_symbol_map(self, sids: list[int] | None = None) -> dict[int, str]:
         """
@@ -402,7 +402,7 @@ class SecurityStore:
                 "SELECT sid, symbol FROM security WHERE is_active = TRUE"
             )
 
-        return {r["sid"]: r["symbol"] for r in rows}
+        return {cast(int, r["sid"]): cast(str, r["symbol"]) for r in rows}
 
     def enrich_with_symbol(self, df: pl.DataFrame) -> pl.DataFrame:
         """

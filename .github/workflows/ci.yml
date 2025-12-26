@@ -70,12 +70,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.8.1
+        uses: prefix-dev/setup-pixi@v0.9.3
         with:
           pixi-version: v0.39.5
           cache: true
           locked: true
-          environment: dev # 使用 dev 环境，包含代码质量工具
+          environments: dev # 使用 dev 环境，包含代码质量工具
 
       - name: Ruff lint
         run: pixi run -e dev ruff check --output-format=github .
@@ -92,12 +92,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.8.1
+        uses: prefix-dev/setup-pixi@v0.9.3
         with:
           pixi-version: v0.39.5
           cache: true
           locked: true
-          environment: dev # 使用 dev 环境，包含代码质量工具
+          environments: dev # 使用 dev 环境，包含代码质量工具
 
       # Mypy 缓存
       - name: Cache mypy
@@ -123,12 +123,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.8.1
+        uses: prefix-dev/setup-pixi@v0.9.3
         with:
           pixi-version: v0.39.5
           cache: true
           locked: true
-          environment: dev # 使用 dev 环境，包含代码质量工具
+          environments: dev # 使用 dev 环境，包含代码质量工具
 
       # Bandit 安全扫描
       - name: Bandit security lint
@@ -159,9 +159,9 @@ jobs:
           path: bandit-report.json
           retention-days: 7
 
-      # Gitleaks 敏感信息检测（使用 gitleaks 官方 Docker 镜像）
+      # Gitleaks 敏感信息检测
       - name: Gitleaks scan
-        uses: docker://ghcr.io/gitleaks/gitleaks:latest
+        uses: gitleaks/gitleaks-action@v2
         with:
           args: detect --source . --verbose --report-path gitleaks-report.json
 
@@ -177,12 +177,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.8.1
+        uses: prefix-dev/setup-pixi@v0.9.3
         with:
           pixi-version: v0.39.5
           cache: true
           locked: true
-          environment: dev # 使用 dev 环境，包含代码质量工具
+          environments: dev # 使用 dev 环境，包含代码质量工具
 
       - name: Run unit tests
         run: |
@@ -224,12 +224,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.8.1
+        uses: prefix-dev/setup-pixi@v0.9.3
         with:
           pixi-version: v0.39.5
           cache: true
           locked: true
-          environment: dev # 使用 dev 环境，包含代码质量工具
+          environments: dev # 使用 dev 环境，包含代码质量工具
 
       # 验证各包可以正常构建
       - name: Build packages
