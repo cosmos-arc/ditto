@@ -21,6 +21,8 @@ class SQLiteClient:
     # Allowed table names for count() method (security whitelist)
     ALLOWED_TABLES = frozenset(
         [
+            "sid_sequence",
+            "price_limit_config",
             "security",
             "security_mapping",
             "trading_calendar",
