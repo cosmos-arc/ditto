@@ -16,7 +16,7 @@ from ditto_datahub.types import SidRange
 
 if TYPE_CHECKING:
     from ditto_datahub.runtime.dq_checker import DQChecker
-    from ditto_datahub.runtime.file_lock import FileLock
+    from ditto_datahub.runtime.file_lock import FileLockManager
 
 
 class AdjType(Enum):
@@ -53,7 +53,7 @@ class BarsRepository:
         adj_factor_store: AdjFactorStore,
         security_store: SecurityStore,
         dq_checker: DQChecker,
-        file_lock: FileLock,
+        file_lock: FileLockManager,
     ) -> None:
         """
         Initialize BarsRepository.
@@ -72,7 +72,7 @@ class BarsRepository:
         self._dq_checker = dq_checker
         self._file_lock = file_lock
 
-    @traced("repository.bars.get")  # type: ignore[untyped-decorator]
+    @traced("repository.bars.get")
     def get(
         self,
         sids: list[int] | None = None,
@@ -151,7 +151,7 @@ class BarsRepository:
             len(df), {"dataset": "bars", "operation": "get", "adj": adj.value}
         )
 
-        return cast(pl.DataFrame, df)
+        return df
 
     def get_single(
         self,
@@ -187,18 +187,15 @@ class BarsRepository:
             sid = sids[0]
 
         # Get data
-        return cast(
-            pl.DataFrame,
-            self.get(
-                sids=[sid],
-                start=start,
-                end=end,
-                adj=adj,
-                with_symbol=True,
-            ),
+        return self.get(
+            sids=[sid],
+            start=start,
+            end=end,
+            adj=adj,
+            with_symbol=True,
         )
 
-    @traced("repository.bars.write")  # type: ignore[untyped-decorator]
+    @traced("repository.bars.write")
     def write(
         self,
         df: pl.DataFrame,

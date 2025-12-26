@@ -147,7 +147,7 @@ class TestSpan:
         reset_for_testing()
         init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
 
-        @traced("my_operation")  # type: ignore[untyped-decorator]
+        @traced("my_operation")
         def my_func(x: int) -> int:
             return x + 1
 

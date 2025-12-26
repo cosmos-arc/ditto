@@ -31,7 +31,7 @@ class CalendarRepository:
         """
         self._calendar_store = calendar_store
 
-    @traced("repository.calendar.get")  # type: ignore[untyped-decorator]
+    @traced("repository.calendar.get")
     def get(
         self,
         start: str,
@@ -82,7 +82,7 @@ class CalendarRepository:
             True if trading day.
 
         """
-        return cast(bool, self._calendar_store.is_trading_day(date))
+        return self._calendar_store.is_trading_day(date)
 
     def list_trading_days(self, start: str, end: str) -> list[str]:
         """
@@ -96,7 +96,7 @@ class CalendarRepository:
             List of trading dates.
 
         """
-        return cast(list[str], self._calendar_store.get_range(start, end))
+        return self._calendar_store.get_range(start, end)
 
     def get_prev(self, date: str) -> str | None:
         """
@@ -109,7 +109,7 @@ class CalendarRepository:
             Previous trading date, or None if not found.
 
         """
-        return cast(str | None, self._calendar_store.get_prev(date))
+        return self._calendar_store.get_prev(date)
 
     def get_next(self, date: str) -> str | None:
         """
@@ -122,7 +122,7 @@ class CalendarRepository:
             Next trading date, or None if not found.
 
         """
-        return cast(str | None, self._calendar_store.get_next(date))
+        return self._calendar_store.get_next(date)
 
     def count_trading_days(self, start: str, end: str) -> int:
         """
@@ -136,7 +136,7 @@ class CalendarRepository:
             Number of trading days.
 
         """
-        return cast(int, self._calendar_store.count_trading_days(start, end))
+        return self._calendar_store.count_trading_days(start, end)
 
     def get_period_ends(
         self,
@@ -156,7 +156,7 @@ class CalendarRepository:
             List of period-end dates.
 
         """
-        return cast(list[str], self._calendar_store.get_period_ends(start, end, period))
+        return self._calendar_store.get_period_ends(start, end, period)
 
     def get_month_ends(self, start: str, end: str) -> list[str]:
         """
@@ -170,7 +170,7 @@ class CalendarRepository:
             List of month-end dates.
 
         """
-        return cast(list[str], self._calendar_store.get_month_ends(start, end))
+        return self._calendar_store.get_month_ends(start, end)
 
     def get_quarter_ends(self, start: str, end: str) -> list[str]:
         """
@@ -184,4 +184,4 @@ class CalendarRepository:
             List of quarter-end dates.
 
         """
-        return cast(list[str], self._calendar_store.get_quarter_ends(start, end))
+        return self._calendar_store.get_quarter_ends(start, end)

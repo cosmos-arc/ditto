@@ -14,6 +14,9 @@ except ImportError as e:
     ) from e
 
 
+__all__ = ["FileLockManager", "LockAcquisitionError"]
+
+
 class LockAcquisitionError(Exception):
     """Raised when lock acquisition fails due to timeout."""
 
