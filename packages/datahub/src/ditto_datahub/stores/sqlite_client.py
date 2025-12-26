@@ -173,7 +173,7 @@ class SQLiteClient:
 
     def fetchval(
         self, sql: str, params: list[Any] | tuple[Any, ...] | None = None
-    ) -> Any:
+    ) -> str | int | float | None:
         """
         Query single value.
 
@@ -182,13 +182,14 @@ class SQLiteClient:
             params: Parameter list.
 
         Returns:
-            First row first column value, or None.
+            First row first column value (str, int, float, or None).
 
         """
         cursor = self.execute(sql, params)
         row = cursor.fetchone()
         if row:
-            return row[0]
+            # mypy can't infer the type from sqlite3.Row, use cast
+            return cast(str | int | float, row[0])
         return None
 
     def commit(self) -> None:
@@ -273,4 +274,6 @@ class SQLiteClient:
         if where:
             sql += f" WHERE {where}"
 
-        return self.fetchval(sql, params) or 0
+        result = self.fetchval(sql, params)
+        # COUNT(*) always returns int, but mypy can't infer that
+        return int(result) if result is not None else 0
