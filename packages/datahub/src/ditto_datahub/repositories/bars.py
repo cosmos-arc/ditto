@@ -379,19 +379,28 @@ class BarsRepository:
                 pl.col("adj_factor").last().alias("latest_factor")
             )
             df = df.join(latest_factors, on="sid", how="left")
+            # Use coalesce(adj_factor, 1.0) for missing values (returns original price)
             df = df.with_columns(
                 [
                     (
-                        pl.col("open") * pl.col("latest_factor") / pl.col("adj_factor")
+                        pl.col("open")
+                        * pl.coalesce("latest_factor", 1.0)
+                        / pl.coalesce("adj_factor", 1.0)
                     ).alias("open"),
                     (
-                        pl.col("high") * pl.col("latest_factor") / pl.col("adj_factor")
+                        pl.col("high")
+                        * pl.coalesce("latest_factor", 1.0)
+                        / pl.coalesce("adj_factor", 1.0)
                     ).alias("high"),
                     (
-                        pl.col("low") * pl.col("latest_factor") / pl.col("adj_factor")
+                        pl.col("low")
+                        * pl.coalesce("latest_factor", 1.0)
+                        / pl.coalesce("adj_factor", 1.0)
                     ).alias("low"),
                     (
-                        pl.col("close") * pl.col("latest_factor") / pl.col("adj_factor")
+                        pl.col("close")
+                        * pl.coalesce("latest_factor", 1.0)
+                        / pl.coalesce("adj_factor", 1.0)
                     ).alias("close"),
                 ]
             )
@@ -399,12 +408,13 @@ class BarsRepository:
 
         else:  # HFQ
             # Backward adjustment: use current factor
+            # Use coalesce(adj_factor, 1.0) for missing values (returns original price)
             df = df.with_columns(
                 [
-                    (pl.col("open") * pl.col("adj_factor")).alias("open"),
-                    (pl.col("high") * pl.col("adj_factor")).alias("high"),
-                    (pl.col("low") * pl.col("adj_factor")).alias("low"),
-                    (pl.col("close") * pl.col("adj_factor")).alias("close"),
+                    (pl.col("open") * pl.coalesce("adj_factor", 1.0)).alias("open"),
+                    (pl.col("high") * pl.coalesce("adj_factor", 1.0)).alias("high"),
+                    (pl.col("low") * pl.coalesce("adj_factor", 1.0)).alias("low"),
+                    (pl.col("close") * pl.coalesce("adj_factor", 1.0)).alias("close"),
                 ]
             )
             df = df.drop("adj_factor")

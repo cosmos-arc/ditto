@@ -210,6 +210,122 @@ class TestQFQAdjustment:
         assert abs(result_sorted["close"][1] - 11.00) < 0.01  # 2024-01-03
         assert abs(result_sorted["close"][2] - 11.00) < 0.01  # 2024-01-04
 
+    def test_qfq_with_missing_adj_factor_uses_original_price(self) -> None:
+        """Test QFQ adjustment handles missing adj_factor gracefully."""
+        # Arrange: Write bars data
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
+                "open": [10.0, 11.0],
+                "high": [12.0, 13.0],
+                "low": [9.0, 10.0],
+                "close": [11.0, 12.0],
+                "volume": [1000, 2000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Write adj_factor data only for 2024-01-03 (missing for 2024-01-02)
+        adj_df = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 3)],
+                "adj_factor": [0.95],
+            }
+        )
+        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+
+        # Act: Get QFQ adjusted data
+        result = self.repo.get(
+            sids=[100000001],
+            start="2024-01-02",
+            end="2024-01-03",
+            adj=AdjType.QFQ,
+        )
+
+        # Assert: QFQ uses latest_factor (0.95) for all dates
+        # 2024-01-02: 11.0 * 0.95 / 1.0 (coalesced null adj_factor) = 10.45
+        # 2024-01-03: 12.0 * 0.95 / 0.95 = 12.0
+        result_sorted = result.sort("trade_date")
+        assert len(result_sorted) == 2
+        assert abs(result_sorted["close"][0] - 10.45) < 0.01  # 2024-01-02
+        assert abs(result_sorted["close"][1] - 12.00) < 0.01  # 2024-01-03
+
+    def test_qfq_with_no_adj_factor_returns_original_price(self) -> None:
+        """Test QFQ with no adj_factor data returns original prices."""
+        # Arrange: Write bars data without adj_factor
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
+                "open": [10.0, 11.0],
+                "high": [12.0, 13.0],
+                "low": [9.0, 10.0],
+                "close": [11.0, 12.0],
+                "volume": [1000, 2000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Act: Get QFQ adjusted data (no adj_factor available)
+        result = self.repo.get(
+            sids=[100000001],
+            start="2024-01-02",
+            end="2024-01-03",
+            adj=AdjType.QFQ,
+        )
+
+        # Assert: Should return original prices when no adj_factor data
+        result_sorted = result.sort("trade_date")
+        assert len(result_sorted) == 2
+        assert abs(result_sorted["close"][0] - 11.0) < 0.01  # 2024-01-02
+        assert abs(result_sorted["close"][1] - 12.0) < 0.01  # 2024-01-03
+
+    def test_hfq_with_missing_adj_factor_uses_original_price(self) -> None:
+        """Test HFQ adjustment falls back to original price when adj_factor missing."""
+        # Arrange: Write bars data
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
+                "open": [10.0, 11.0],
+                "high": [12.0, 13.0],
+                "low": [9.0, 10.0],
+                "close": [11.0, 12.0],
+                "volume": [1000, 2000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Write adj_factor data only for 2024-01-02 (missing for 2024-01-03)
+        adj_df = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 2)],
+                "adj_factor": [0.95],
+            }
+        )
+        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+
+        # Act: Get HFQ adjusted data
+        result = self.repo.get(
+            sids=[100000001],
+            start="2024-01-02",
+            end="2024-01-03",
+            adj=AdjType.HFQ,
+        )
+
+        # Assert: Missing adj_factor should use original price
+        # 2024-01-02: 11.0 * 0.95 = 10.45
+        # 2024-01-03: 12.0 * 1.0 = 12.0 (no adj_factor, uses original)
+        result_sorted = result.sort("trade_date")
+        assert len(result_sorted) == 2
+        assert abs(result_sorted["close"][0] - 10.45) < 0.01  # 2024-01-02
+        assert (
+            abs(result_sorted["close"][1] - 12.00) < 0.01
+        )  # 2024-01-03 (no adj factor)
+
 
 class TestBarsRepositorySingle:
     """Tests for get_single method."""
