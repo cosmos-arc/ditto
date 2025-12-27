@@ -13,42 +13,42 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              上层应用                                        │
-│         策略引擎 / 回测框架 / 研究 Notebook / CLI / 监控仪表盘                │
+│         策略引擎 / 回测框架 / 研究 Notebook / CLI / 监控仪表盘                    │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         DataHub（纯 Facade）                                 │
-│                                                                              │
-│   职责：暴露统一入口，路由到对应 Repository，不持有任何业务逻辑               │
-│                                                                              │
+│                                                                             │
+│   职责：暴露统一入口，路由到对应 Repository，不持有任何业务逻辑                       │
+│                                                                             │
 │   hub.bars         → BarsRepository                                         │
 │   hub.calendar     → CalendarRepository                                     │
 │   hub.universe     → UniverseRepository                                     │
 │   hub.securities   → SecurityRepository                                     │
 │   hub.index        → IndexRepository                                        │
-│   hub.sql(...)     → SqlEngine（DuckDB View + 复权宏）                         │
+│   hub.sql(...)     → SqlEngine（DuckDB View + 复权宏）                        │
 │   hub.freeze       → FreezeManager                                          │
-│                                                                              │
+│   hub.sources      → SourcesAccessor                                 │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      Domain Repositories（业务聚合根）                        │
-│                                                                              │
-│   ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
-│   │    Bars      │ │   Calendar   │ │   Universe   │ │   Security   │       │
-│   │  Repository  │ │  Repository  │ │  Repository  │ │  Repository  │       │
-│   └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └──────┬───────┘       │
-│          │                │                │                │                │
-│   ┌──────────────┐ ┌──────────────┐                                         │
-│   │    Index     │ │Classification│                                         │
-│   │  Repository  │ │  Repository  │                                         │
-│   └──────┬───────┘ └──────┬───────┘                                         │
-│          │                │                                                  │
-└──────────┼────────────────┼──────────────────────────────────────────────────┘
-           │                │
-           ▼                ▼
+                                    │
+                    ┌───────────────┴───────────────┐
+                    ▼                               ▼
+┌──────────────────────────────┐    ┌──────────────────────────────┐
+│      Sources Layer（新增）    │    │   Domain Repositories        │
+│                              │    │                              │
+│   hub.sources.tushare        │    │   BarsRepository             │
+│   hub.sources.akshare        │    │   CalendarRepository         │
+│                              │    │   SecurityRepository         │
+│   支持：                      │    │   ...                        │
+│   - 研究 Notebook 实时查询     │    │                              │
+│   - Server 摄取任务调用        │    │                              │
+└──────────────────────────────┘    └──────────────────────────────┘
+                                                │
+                                                ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           Store Layer（数据存取层）                          │
 │                                                                              │
@@ -152,6 +152,14 @@
 | **Parquet + Polars** | 事实数据存储（年分区）、批处理计算 | DataFrame 计算 |
 | **DuckDB** | OLAP 查询、多表聚合、PIT View | 复杂 SQL、研究探索 |
 
+### 1.5 Sources 与 Stores 的职责对比
+
+| 层 | 职责 | 数据流向 |
+|---|---|---|
+| **Sources** | 从外部数据源（Tushare/AkShare）获取数据 | 外部 → 系统 |
+| **Stores** | 本地存储读写（Parquet/SQLite） | 系统 ↔ 磁盘 |
+
+> 数据摄取任务设计详见：10_data_ingestion_scheduler_design.md
 ---
 
 ## 二、目录结构
@@ -164,6 +172,7 @@ packages/
 
     config/
       dq_rules.yaml             # DQ 规则配置
+      sources.yaml              # 数据源配置（限流、超时）
 
     src/
       ditto_data_hub/
@@ -175,6 +184,30 @@ packages/
         types.py                 # 强类型定义
         errors.py                # 统一异常
         settings.py              # 配置（paths, defaults）
+        # ============ 数据源层 ============
+        sources/
+          __init__.py           # 导出 get_source, DataSource
+          base.py               # DataSource 基类 + 工厂 + 异常定义
+          tushare/
+            __init__.py
+            client.py           # Tushare 客户端（连接、限流、重试）
+            source.py           # TushareSource 实现
+          akshare/
+            __init__.py
+            client.py
+            source.py
+
+        # ============ 数据质量层（重构）============
+        dq/
+          __init__.py           # 导出 DQEngine, get_dq_engine
+          engine.py             # 统一 DQ 执行引擎
+          result.py             # DQResult, DQIssue 等模型
+          rules.py              # 规则加载与解析
+          checkers/
+            __init__.py
+            technical.py        # L1 技术校验
+            business.py         # L2 业务规则
+            statistical.py      # L3 统计异常
 
         # ============ Repository 层 ============
         repositories/
@@ -1270,235 +1303,7 @@ CREATE INDEX IF NOT EXISTS idx_constituent_pit
 ---
 
 ## 八、DQ 规则校验
-
-### 8.1 DQRule 实现
-
-``` python
-# src/ditto_data_hub/runtime/dq_rules.py
-from __future__ import annotations
-from dataclasses import dataclass
-from typing import Callable, Any
-import polars as pl
-
-from ..types import DQSeverity
-
-
-@dataclass(frozen=True)
-class DQRule:
-    """DQ 规则定义"""
-    name: str
-    severity: DQSeverity
-    check_fn: Callable[[pl.DataFrame, dict], tuple[bool, int, str]]
-    params: dict = None
-
-    def __post_init__(self):
-        # frozen=True 时需要用 object.__setattr__
-        if self.params is None:
-            object.__setattr__(self, 'params', {})
-
-
-# ============ 检查函数 ============
-
-def check_pk_unique(df: pl.DataFrame, params: dict) -> tuple[bool, int, str]:
-    """主键唯一性检查"""
-    keys = params.get("keys", ["sid", "trade_date"])
-    existing_keys = [k for k in keys if k in df.columns]
-
-    if not existing_keys:
-        return True, 0, "No key columns found"
-
-    total = df.height
-    unique = df.unique(existing_keys).height
-    dup_count = total - unique
-
-    return (
-        dup_count == 0,
-        dup_count,
-        f"Found {dup_count} duplicates" if dup_count > 0 else "OK"
-    )
-
-
-def check_sid_not_null(df: pl.DataFrame, params: dict) -> tuple[bool, int, str]:
-    """sid 非空检查"""
-    if "sid" not in df.columns:
-        return False, 0, "Column 'sid' not found"
-
-    null_count = df.filter(pl.col("sid").is_null()).height
-
-    return (
-        null_count == 0,
-        null_count,
-        f"Found {null_count} null sid" if null_count > 0 else "OK"
-    )
-
-
-def check_ohlc_positive(df: pl.DataFrame, params: dict) -> tuple[bool, int, str]:
-    """OHLC 非负检查"""
-    price_cols = ["open", "high", "low", "close"]
-    existing = [c for c in price_cols if c in df.columns]
-
-    if not existing:
-        return True, 0, "No price columns"
-
-    negative_mask = pl.lit(False)
-    for col in existing:
-        negative_mask = negative_mask | (pl.col(col) < 0)
-
-    bad_count = df.filter(negative_mask).height
-
-    return (
-        bad_count == 0,
-        bad_count,
-        f"Found {bad_count} negative prices" if bad_count > 0 else "OK"
-    )
-
-
-def check_ohlc_relationship(df: pl.DataFrame, params: dict) -> tuple[bool, int, str]:
-    """OHLC 关系检查：high >= low, high >= open/close"""
-    required = ["open", "high", "low", "close"]
-    if not all(c in df.columns for c in required):
-        return True, 0, "Missing OHLC columns"
-
-    bad_mask = (
-        (pl.col("high") < pl.col("low")) |
-        (pl.col("high") < pl.col("open")) |
-        (pl.col("high") < pl.col("close")) |
-        (pl.col("low") > pl.col("open")) |
-        (pl.col("low") > pl.col("close"))
-    )
-
-    bad_count = df.filter(bad_mask).height
-
-    return (
-        bad_count == 0,
-        bad_count,
-        f"Found {bad_count} invalid OHLC" if bad_count > 0 else "OK"
-    )
-
-
-def check_volume_amount_consistency(df: pl.DataFrame, params: dict) -> tuple[bool, int, str]:
-    """成交量/成交额一致性"""
-    if "volume" not in df.columns or "amount" not in df.columns:
-        return True, 0, "Skip - missing columns"
-
-    bad_count = df.filter(
-        ((pl.col("volume") == 0) & (pl.col("amount") != 0)) |
-        ((pl.col("volume") != 0) & (pl.col("amount") == 0))
-    ).height
-
-    return (
-        bad_count == 0,
-        bad_count,
-        f"Found {bad_count} inconsistent" if bad_count > 0 else "OK"
-    )
-
-
-def check_weight_positive(df: pl.DataFrame, params: dict) -> tuple[bool, int, str]:
-    """权重正数检查"""
-    if "weight" not in df.columns:
-        return True, 0, "No weight column"
-
-    bad_count = df.filter(pl.col("weight") <= 0).height
-
-    return (
-        bad_count == 0,
-        bad_count,
-        f"Found {bad_count} non-positive" if bad_count > 0 else "OK"
-    )
-
-
-# ============ 规则配置（替代 YAML）============
-
-DQ_RULES: dict[str, list[DQRule]] = {
-    "stock_daily": [
-        DQRule("primary_key_unique", DQSeverity.FAIL, check_pk_unique, {"keys": ["sid", "trade_date"]}),
-        DQRule("sid_not_null", DQSeverity.FAIL, check_sid_not_null),
-        DQRule("ohlc_positive", DQSeverity.FAIL, check_ohlc_positive),
-        DQRule("ohlc_relationship", DQSeverity.FAIL, check_ohlc_relationship),
-        DQRule("volume_amount_consistency", DQSeverity.WARN, check_volume_amount_consistency),
-    ],
-
-    "etf_daily": [
-        DQRule("primary_key_unique", DQSeverity.FAIL, check_pk_unique, {"keys": ["sid", "trade_date"]}),
-        DQRule("sid_not_null", DQSeverity.FAIL, check_sid_not_null),
-        DQRule("ohlc_positive", DQSeverity.FAIL, check_ohlc_positive),
-    ],
-
-    "index_daily": [
-        DQRule("primary_key_unique", DQSeverity.FAIL, check_pk_unique, {"keys": ["sid", "trade_date"]}),
-        DQRule("sid_not_null", DQSeverity.FAIL, check_sid_not_null),
-    ],
-
-    "index_weight": [
-        DQRule("primary_key_unique", DQSeverity.FAIL, check_pk_unique, {"keys": ["index_sid", "con_sid", "trade_date"]}),
-        DQRule("weight_positive", DQSeverity.WARN, check_weight_positive),
-    ],
-
-    "adj_factor": [
-        DQRule("primary_key_unique", DQSeverity.FAIL, check_pk_unique, {"keys": ["sid", "trade_date"]}),
-    ],
-}
-```
-
-### 8.2 DQChecker 实现
-
-```python
-# src/ditto_data_hub/runtime/dq_checker.py
-from __future__ import annotations
-from dataclasses import dataclass
-import polars as pl
-
-from ..types import DQSeverity, DQResult
-from .dq_rules import DQ_RULES
-
-
-@dataclass
-class DQCheckResult:
-    """DQ 检查汇总结果"""
-    passed: bool
-    results: list[DQResult]
-
-    @property
-    def fail_count(self) -> int:
-        return sum(1 for r in self.results if not r.passed and r.severity == DQSeverity.FAIL)
-
-    @property
-    def warn_count(self) -> int:
-        return sum(1 for r in self.results if not r.passed and r.severity == DQSeverity.WARN)
-
-
-class DQChecker:
-    """数据质量检查器（使用 Python 配置）"""
-
-    def __init__(self):
-        self.rules = DQ_RULES
-
-    def check(self, df: pl.DataFrame, dataset_id: str) -> DQCheckResult:
-        """执行 DQ 检查"""
-        rules = self.rules.get(dataset_id, [])
-
-        results = []
-        all_passed = True
-
-        for rule in rules:
-            passed, affected_rows, message = rule.check_fn(df, rule.params)
-
-            result = DQResult(
-                passed=passed,
-                severity=rule.severity,
-                rule_name=rule.name,
-                message=message,
-                affected_rows=affected_rows,
-            )
-            results.append(result)
-
-            if not passed and rule.severity == DQSeverity.FAIL:
-                all_passed = False
-
-        return DQCheckResult(passed=all_passed, results=results)
-```
-
----
+> 详见 09_data_quality_design.md 设计文档
 
 ## 九、核心组件实现
 
@@ -6272,7 +6077,254 @@ print(history)
 
 ---
 
-## 十四、TuShare 接口对照表
+## 十四、Sources 数据源接入
+
+### 14.1 DataSource 基类
+
+```python
+# src/ditto_data_hub/sources/base.py
+
+from abc import ABC, abstractmethod
+from typing import Literal
+import polars as pl
+
+
+class DataSourceError(Exception):
+    """数据源错误基类"""
+    pass
+
+
+class RateLimitError(DataSourceError):
+    """API 限流错误（可重试）"""
+    pass
+
+
+class AuthenticationError(DataSourceError):
+    """认证错误（不可重试）"""
+    pass
+
+
+class DataSource(ABC):
+    """
+    数据源基类
+
+    所有外部数据源（Tushare/AkShare）继承此类
+    """
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """数据源标识"""
+        pass
+
+    # ============ 日历 ============
+
+    @abstractmethod
+    def fetch_calendar(
+        self,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        获取交易日历
+
+        Returns:
+            DataFrame[cal_date, is_open, pretrade_date]
+        """
+        pass
+
+    # ============ 证券主数据 ============
+
+    @abstractmethod
+    def fetch_etf_basic(self) -> pl.DataFrame:
+        """获取 ETF 基本信息"""
+        pass
+
+    @abstractmethod
+    def fetch_stock_basic(self) -> pl.DataFrame:
+        """获取股票基本信息"""
+        pass
+
+    @abstractmethod
+    def fetch_index_basic(self) -> pl.DataFrame:
+        """获取指数基本信息"""
+        pass
+
+    # ============ K线数据 ============
+
+    @abstractmethod
+    def fetch_etf_daily(
+        self,
+        trade_date: str | None = None,
+        src_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取 ETF 日线
+
+        Returns:
+            DataFrame[src_code, trade_date, open, high, low, close, volume, amount]
+        """
+        pass
+
+    @abstractmethod
+    def fetch_stock_daily(self, ...) -> pl.DataFrame:
+        """获取股票日线"""
+        pass
+
+    @abstractmethod
+    def fetch_index_daily(self, ...) -> pl.DataFrame:
+        """获取指数日线"""
+        pass
+
+    # ============ 复权因子 ============
+
+    @abstractmethod
+    def fetch_adj_factor(
+        self,
+        src_code: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取复权因子"""
+        pass
+
+
+# ============ 工厂函数 ============
+
+_sources: dict[str, DataSource] = {}
+
+
+def get_source(name: Literal["tushare", "akshare"]) -> DataSource:
+    """获取数据源实例（单例）"""
+    if name not in _sources:
+        if name == "tushare":
+            from .tushare import TushareSource
+            _sources[name] = TushareSource()
+        elif name == "akshare":
+            from .akshare import AkShareSource
+            _sources[name] = AkShareSource()
+        else:
+            raise ValueError(f"Unknown source: {name}")
+    return _sources[name]
+```
+
+### 14.2 Tushare 实现
+
+```python
+# src/ditto_data_hub/sources/tushare/client.py
+
+import tushare as ts
+import time
+from threading import Lock
+
+
+class RateLimiter:
+    """滑动窗口限流器"""
+
+    def __init__(self, calls_per_minute: int = 200):
+        self.calls_per_minute = calls_per_minute
+        self.window_size = 60.0
+        self.calls: list[float] = []
+        self.lock = Lock()
+
+    def wait(self):
+        """等待直到可以发起请求"""
+        with self.lock:
+            now = time.time()
+            self.calls = [t for t in self.calls if now - t < self.window_size]
+
+            if len(self.calls) >= self.calls_per_minute:
+                sleep_time = self.calls[0] + self.window_size - now
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
+
+            self.calls.append(time.time())
+
+
+class TushareClient:
+    """Tushare 客户端"""
+
+    def __init__(self, token: str | None = None, calls_per_minute: int = 200):
+        if token is None:
+            import os
+            token = os.environ.get("TUSHARE_TOKEN")
+
+        if not token:
+            raise ConfigurationError("Tushare token not provided")
+
+        self._api = ts.pro_api(token)
+        self._rate_limiter = RateLimiter(calls_per_minute)
+
+    def query(self, api_name: str, **kwargs):
+        """执行 Tushare API 查询（带限流）"""
+        self._rate_limiter.wait()
+        return self._api.query(api_name, **kwargs)
+
+
+# src/ditto_data_hub/sources/tushare/source.py
+
+class TushareSource(DataSource):
+    """Tushare Pro 数据源"""
+
+    def __init__(self, token: str | None = None):
+        self._client = TushareClient(token)
+
+    @property
+    def name(self) -> str:
+        return "tushare"
+
+    def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
+        df = self._client.query(
+            "trade_cal",
+            exchange="SSE",
+            start_date=start_date.replace("-", ""),
+            end_date=end_date.replace("-", ""),
+        )
+        return pl.from_pandas(df).select([
+            pl.col("cal_date").str.to_date("%Y%m%d").alias("cal_date"),
+            (pl.col("is_open") == 1).alias("is_open"),
+            pl.col("pretrade_date").str.to_date("%Y%m%d").alias("pretrade_date"),
+        ])
+
+    def fetch_etf_daily(self, trade_date: str | None = None, ...) -> pl.DataFrame:
+        params = {}
+        if trade_date:
+            params["trade_date"] = trade_date.replace("-", "")
+        # ... 其他参数
+
+        df = self._client.query("fund_daily", **params)
+        return self._normalize_ohlcv(df)
+
+    # ... 其他方法实现
+```
+
+### 14.3 SourcesAccessor:
+``` python
+class SourcesAccessor:
+    """
+    数据源访问器
+
+    使用示例：
+    """
+
+    @cached_property
+    def tushare(self) -> DataSource:
+        """Tushare Pro 数据源"""
+        return get_source("tushare")
+
+    @cached_property
+    def akshare(self) -> DataSource:
+        """AkShare 数据源"""
+        return get_source("akshare")
+
+    def get(self, name: Literal["tushare", "akshare"]) -> DataSource:
+        """按名称获取数据源"""
+        return get_source(name)
+```
+
+### 14.4 TuShare 接口对照表
 
 | Ditto 数据集 | TuShare 接口 | 关键字段映射 |
 |---|---|---|

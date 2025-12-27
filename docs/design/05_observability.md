@@ -215,6 +215,15 @@ dependencies = [
 | | `scheduler_job_complete` | 调度任务完成 |
 | | `api_request` | API 请求 |
 | | `health_check` | 健康检查 |
+| **数据摄取** | `ingest_flow_start` | Prefect Flow 开始 |
+| | `ingest_flow_complete` | Prefect Flow 完成 |
+| | `ingest_flow_failed` | Prefect Flow 失败 |
+| | `ingest_task_start` | Prefect Task 开始 |
+| | `ingest_task_complete` | Prefect Task 完成 |
+| | `ingest_task_retry` | Prefect Task 重试 |
+| **DQ** | `dq_l1_failed` | L1 技术校验失败 |
+| | `dq_l2_warning` | L2 业务规则警告 |
+| | `dq_l3_alert` | L3 统计异常告警 |
 
 ### 4.4 日志示例
 
@@ -388,6 +397,8 @@ def run_backtest(strategy: str, start_date: str, end_date: str) -> dict:
 | `ditto.data.freshness_seconds` | Gauge | `source`, `table` | 数据新鲜度（距最新数据的秒数） |
 | `ditto.data.quality_ratio` | Gauge | `source`, `table` | 数据完整率 |
 | `ditto.data.errors_total` | Counter | `source`, `error_type` | 数据错误数 |
+| `ditto.dq.check_duration_seconds` | Histogram | dataset, level | DQ 检查耗时 |
+| `ditto.dq.issues_total` | Counter | dataset, level, severity | DQ 问题数 |
 
 #### 6.3.2 因子指标
 
@@ -427,12 +438,17 @@ def run_backtest(strategy: str, start_date: str, end_date: str) -> dict:
 
 | 指标名 | 类型 | Labels | 说明 |
 |--------|------|--------|------|
-| `ditto.system.scheduler_jobs_total` | Counter | `job`, `status` | 调度任务执行数 |
-| `ditto.system.scheduler_job_duration_seconds` | Histogram | `job` | 任务耗时 |
 | `ditto.system.api_requests_total` | Counter | `endpoint`, `method`, `status` | API 请求数 |
 | `ditto.system.api_duration_seconds` | Histogram | `endpoint`, `method` | API 耗时 |
 | `ditto.system.db_query_duration_seconds` | Histogram | `db`, `operation` | 数据库查询耗时 |
 | `ditto.system.heartbeat_timestamp` | Gauge | - | 最近心跳时间戳 |
+
+#### 6.3.7 任务指标
+| 指标名 | 类型 | 标签 | 说明 |
+|--------|------|------|------|
+| `ditto.ingest.flow_duration_seconds` | Histogram | flow, source | Flow 执行耗时 |
+| `ditto.ingest.task_duration_seconds` | Histogram | task, source | Task 执行耗时 |
+| `ditto.ingest.records_total` | Counter | dataset, source, status | 摄取记录数 |
 
 ### 6.4 Histogram Buckets
 
@@ -656,6 +672,7 @@ groups:
           summary: "Kill Switch Level 2 triggered"
         labels:
           severity: critical
+
 ```
 
 ---

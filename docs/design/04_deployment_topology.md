@@ -1,8 +1,8 @@
 # Ditto 部署拓扑文档
 
-**版本：v2.0 Final（Phase 0–1：ETF 行业轮动）**
+**版本：v2.1（Phase 0–1：ETF 行业轮动）**
 
-**日期：2025-12-08**
+**日期：2025-12-26**
 
 ---
 
@@ -13,14 +13,14 @@
 1. **单机闭环**：Windows 10/11 本地完整运行，不依赖云服务
 2. **简单可靠**：最小化运维负担，故障恢复简单
 3. **可证明存活**：心跳机制证明系统正常运行
-4. **并发安全**：明确写锁策略，避免数据竞争
+4. **可观测调度**：数据摄取任务可视化、可手动触发
 
 ### 1.2 关键约束
 
 - **硬件**：普通 PC（8GB+ RAM，100GB+ SSD）
 - **网络**：仅需外网访问数据源，无需内网服务
 - **运维**：个人开发者，无专职运维
-- **监控**：外部心跳（Telagram/钉钉），不依赖本机监控
+- **监控**：外部心跳（Telegram/钉钉），不依赖本机监控
 
 ---
 
@@ -41,9 +41,16 @@
 │  │    (FastAPI)          │    │    (Next.js)          │                │
 │  │    Port: 8000         │    │    Port: 3000         │                │
 │  │                       │    │                       │                │
-│  │  + APScheduler        │    │  + Dev Server         │                │
+│  │  + Prefect Worker     │    │  + Dev Server         │                │
 │  │  + HeartbeatService   │    │    (or Static Build)  │                │
 │  └───────────┬───────────┘    └───────────┬───────────┘                │
+│              │                            │                             │
+│              │                            │                             │
+│  ┌───────────┴───────────┐                │                             │
+│  │   Prefect Server      │                │                             │
+│  │   Port: 4200 (UI)     │                │                             │
+│  │   SQLite 持久化       │                │                             │
+│  └───────────────────────┘                │                             │
 │              │                            │                             │
 │              │ HTTP/WS                    │ HTTP                        │
 │              ▼                            ▼                             │
@@ -51,11 +58,11 @@
 │  │                      数据存储层                                  │   │
 │  │                                                                  │   │
 │  │  ┌─────────────────────┐    ┌─────────────────────┐             │   │
-│  │  │  DuckDB             │    │  SQLite             │             │   │
-│  │  │  data/warehouse.db  │    │  ledger/trading.db  │             │   │
+│  │  │  Parquet + DuckDB   │    │  SQLite             │             │   │
+│  │  │  data/              │    │  data/meta.db       │             │   │
 │  │  │                     │    │  (WAL Mode)         │             │   │
-│  │  │  - K线/因子/Regime  │    │  - 调仓计划/持仓    │             │   │
-│  │  │  - 回测结果         │    │  - 风控事件/状态    │             │   │
+│  │  │  - K线/因子/Regime  │    │  - 元数据/映射      │             │   │
+│  │  │  - 回测结果         │    │  - 调仓计划/持仓    │             │   │
 │  │  └─────────────────────┘    └─────────────────────┘             │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                         │
@@ -63,8 +70,8 @@
 │  │                      外部通信                                    │   │
 │  │                                                                  │   │
 │  │  → Tushare Pro API (数据采集)                                   │   │
-│  │  → AkShare API (数据校验)                                       │   │
-│  │  → Telagram/钉钉 Webhook (心跳通知)                                 │   │
+│  │  → AkShare API (降级备选)                                       │   │
+│  │  → Telegram/钉钉 Webhook (心跳通知)                             │   │
 │  │  → 邮件 SMTP (备用通知)                                         │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                         │
@@ -80,62 +87,52 @@ D:\Ditto\                              # 项目根目录
 ├── apps/
 │   ├── server/                        # FastAPI 后端
 │   │   ├── src/
-│   │   │   ├── api/                   # HTTP 接口
-│   │   │   ├── services/              # 应用服务
-│   │   │   ├── scheduler/             # APScheduler 作业
-│   │   │   └── main.py
+│   │   │   ├── ditto_server/
+│   │   │   │   ├── api/               # HTTP 接口
+│   │   │   │   ├── services/          # 应用服务
+│   │   │   │   ├── ingestion/         # Prefect 数据摄取（新）
+│   │   │   │   │   ├── flows/         #   Flows
+│   │   │   │   │   ├── tasks/         #   Tasks
+│   │   │   │   │   └── schedules.py   #   调度配置
+│   │   │   │   └── main.py
 │   │   └── pyproject.toml
 │   │
 │   └── web/                           # Next.js 前端
 │       ├── src/
-│       │   ├── app/
-│       │   ├── components/
-│       │   └── stores/
 │       └── package.json
 │
 ├── packages/
-│   └── core/                          # 核心库
-│       └── ditto/
-│           ├── data/
-│           ├── engine/
-│           ├── strategy/
-│           ├── portfolio/
-│           └── config/
+│   ├── ditto-core/                    # 核心引擎库
+│   └── ditto-data-hub/                # 数据层库
 │
 ├── data/                              # 数据目录
-│   ├── warehouse.duckdb              # DuckDB 主库
-│   ├── golden/                       # Golden Dataset
-│   └── raw/                          # 原始数据（可选）
-│
-├── ledger/                            # 账本目录
-│   └── trading.db                    # SQLite 账本库
+│   ├── parquet/                       # Parquet 年分区数据
+│   │   ├── etf_daily/
+│   │   ├── index_daily/
+│   │   └── adj_factor/
+│   ├── meta.db                        # SQLite 元数据
+│   └── golden/                        # Golden Dataset
 │
 ├── backups/                           # 备份目录
-│   ├── warehouse_YYYYMMDD.duckdb
-│   └── trading_YYYYMMDD.db
+│   ├── data_YYYYMMDD/
+│   └── meta_YYYYMMDD.db
 │
 ├── logs/                              # 日志目录
-│   ├── ditto_YYYYMMDD.log
+│   ├── ditto_YYYYMMDD.jsonl
 │   └── archived/
 │
 ├── config/                            # 配置目录
-│   ├── settings.toml                 # 主配置
-│   ├── secrets.toml                  # 敏感配置（Git 忽略）
-│   └── strategies/                   # 策略配置
+│   ├── settings.toml                  # 主配置
+│   ├── secrets.toml                   # 敏感配置（Git 忽略）
+│   └── strategies/                    # 策略配置
 │       └── etf_rotation.toml
 │
-├── research/                          # 研究目录
-│   ├── notebooks/
-│   ├── experiments/
-│   └── reports/
-│
 ├── scripts/                           # 运维脚本
-│   ├── start_all.ps1                 # 一键启动
-│   ├── stop_all.ps1                  # 一键停止
-│   ├── backup.ps1                    # 备份脚本
-│   └── health_check.ps1              # 健康检查
-│
-├── docs/                              # 文档目录
+│   ├── start_all.ps1                  # 一键启动
+│   ├── stop_all.ps1                   # 一键停止
+│   ├── start_prefect.ps1              # 启动 Prefect（新）
+│   ├── backup.ps1                     # 备份脚本
+│   └── health_check.ps1               # 健康检查
 │
 ├── pixi.toml                          # Pixi 项目配置
 └── .gitignore
@@ -143,190 +140,276 @@ D:\Ditto\                              # 项目根目录
 
 ---
 
-## 4. 环境配置管理（Pixi）
+## 4. 任务调度（Prefect）
 
-### 4.1 pixi.toml 配置
+### 4.1 技术选型
 
-```toml
-[project]
-name = "ditto"
-version = "0.1.0"
-channels = ["conda-forge"]
-platforms = ["win-64"]
+**选择 Prefect 3 本地 Server 模式（SQLite 持久化）**
 
-[dependencies]
-python = ">=3.11"
-polars = ">=0.20"
-duckdb = ">=0.9"
-fastapi = ">=0.100"
-uvicorn = ">=0.23"
-pydantic = ">=2.0"
-pydantic-settings = ">=2.0"
-loguru = ">=0.7"
-httpx = ">=0.25"
-apscheduler = ">=3.10"
-tushare = ">=1.2"
-akshare = ">=1.10"
+| 维度 | APScheduler | Prefect |
+|------|-------------|---------|
+| 复杂度 | ⭐⭐ 简单 | ⭐⭐⭐ 中等 |
+| 可观测性 | ⭐⭐ 需自建 | ⭐⭐⭐⭐⭐ 内置 Dashboard |
+| 手动触发 | ⭐⭐ 需开发 | ⭐⭐⭐⭐⭐ CLI/UI/API |
+| 重试机制 | ⭐⭐ 手动 | ⭐⭐⭐⭐⭐ 声明式指数退避 |
+| DAG 支持 | ⭐ 无 | ⭐⭐⭐⭐⭐ 原生 |
+| 历史记录 | ⭐⭐ 需自建 | ⭐⭐⭐⭐⭐ 内置 |
 
-[tasks]
-server = "cd apps/server && uvicorn src.main:app --reload --port 8000"
-web = "cd apps/web && npm run dev"
-test = "pytest packages/core/tests -v"
-backup = "powershell -File scripts/backup.ps1"
-```
+**结论**：Prefect 的可观测性和手动触发能力带来的运维便利性，超过了其额外复杂度带来的成本。
 
-### 4.2 Secrets 与敏感信息管理
-
-本小节定义 Ditto 在部署与运行时对 **秘钥（Secrets）与敏感信息** 的管理规范，目标是：
-
-- 避免 API Token / 交易账号 等敏感信息泄露；
-- 避免敏感信息出现在代码仓库、日志或对话中；
-- 一旦疑似泄露，有明确的应急步骤。
-
----
-
-#### 4.2.1 敏感信息范围
-
-默认视为“敏感”的包括但不限于：
-
-- 第三方数据源 Token：
-  - 如：Tushare Token、AkShare 私有 Token（若有）；
-- 券商/交易接口相关信息：
-  - 账号、密码、交易接口 Token、证书文件路径等；
-- 本地服务访问凭证（若未来扩展）：
-  - 数据库密码；
-  - 内网服务访问 Token 等。
-
----
-
-#### 4.2.2 存储规范
-
-1. **禁止写死在代码中**
-   - Python/TypeScript 等代码中禁止出现类似：
-     - `"YOUR_TUSHARE_TOKEN_HERE"`
-     - `"broker_password = 'xxx'"` 等字面量。
-   - 统一通过 **环境变量 + Settings** 获取，例如：
-     - `DTT_TUSHARE_TOKEN`
-     - `DTT_BROKER_API_KEY`
-
-2. **优先使用本地环境文件 / 凭据管理器**
-   - 推荐方式：
-     - 在本机使用 `.env.local` / `.env.development.local`（**不要提交到 Git**）；
-     - 或使用 Windows 凭据管理器保存长期 Token，由 Settings 读取。
-   - `.env*` 文件必须在 `.gitignore` 中明确忽略。
-
-3. **Secrets 与配置分离**
-   - `settings.toml` / `config.yaml` 等配置文件中只保存：
-     - 非敏感配置（路径、开关、数值参数）；
-   - 涉及 Token / 密码的字段统一留空或使用占位符，并通过环境变量补全。
-
----
-
-#### 4.2.3 日志与备份中的安全要求
-
-1. **日志**
-   - 日志内容禁止输出：
-     - 完整 Token/密码；
-     - 完整账号信息；
-   - 若必须记录（用于调试），应只保留：
-     - 前后若干字符（例如前 4 位 + 后 4 位，中间用 `***` 替代）。
-
-2. **备份**
-   - DuckDB / SQLite 等备份文件可能包含交易记录、风险事件等敏感信息：
-     - 备份存放路径应避免同步到公开云盘；
-     - 若同步到云盘，需使用加密盘或受限权限的目录。
-
----
-
-#### 4.2.4 仓库安全与泄露应急
-
-1. **Git 仓库规范**
-   - `.gitignore` 中应至少包含：
-     - `.env*`
-     - `secrets/`
-     - `*.db` / `*.sqlite`（包含真实数据的文件）
-   - 禁止将真实生产数据库、API Token 文件提交到仓库。
-
-2. **疑似泄露的应急步骤**
-
-一旦发现（或怀疑）以下情况：
-
-- 将 `.env` / Token 文件误提交到远端仓库；
-- 在公开对话或截图中暴露了完整 Token；
-
-必须执行：
-
-1. 立即在相应服务（Tushare、券商等）**废弃该 Token / 修改密码**；
-2. 生成新的 Token，并更新本地 `.env` / 凭据；
-3. 在 `risk_events` 中记录一次类型为 `SECURITY_ALERT` 的事件（方便追踪）；
-4. 评估是否需要在《风险宪法》中补充相应的安全条款或经验总结。
-
----
-
-本小节与：
-
-- `05_observability.md` 中关于日志内容的要求；
-
-共同构成 Ditto 的基础安全规范。
-
-
----
-
-## 5. 任务调度（APScheduler）
-
-**核心设计**：使用 APScheduler 内嵌在 DittoServer 进程中，避免 Windows 任务计划程序的脆弱性。
-
-### 5.1 调度任务清单
+### 4.2 调度任务清单
 
 | 任务 | 触发时间 | 职责 |
 |------|----------|------|
-| daily_data_update | 交易日 17:00 | 数据采集 + 因子计算 + Regime 更新 |
-| heartbeat | 每小时整点 | 发送心跳到Telagram/钉钉 |
-| data_validation | 交易日 18:00 | 双源数据校验 |
-| daily_backup | 每天 22:00 | DuckDB + SQLite 备份 |
-| factor_health_check | 每周一 9:00 | 因子健康度检查 |
+| `daily_ingest_flow` | 交易日 17:00 | 日历 + 证券 + K线 + 复权因子 |
+| `dq_batch_check` | 交易日 18:00 | L3 统计异常检测 |
+| `heartbeat_flow` | 每小时整点 | 发送心跳到 Telegram/钉钉 |
+| `daily_backup` | 每天 22:00 | Parquet + SQLite 备份 |
+| `factor_health_check` | 每周一 9:00 | 因子健康度检查 |
 
-### 5.2 调度器实现要点
+### 4.3 Prefect 部署配置
 
 ```python
-scheduler = AsyncIOScheduler(
-    timezone="Asia/Shanghai",
-    job_defaults={
-        'coalesce': True,           # 合并错过的任务
-        'max_instances': 1,          # 最多同时运行 1 个实例
-        'misfire_grace_time': 3600,  # 错过后 1 小时内仍可执行
-    }
+# apps/server/src/ditto_server/ingestion/schedules.py
+
+from prefect.client.schemas.schedules import CronSchedule
+
+# 每日数据摄取：交易日 17:00
+daily_ingest_deployment = daily_ingest_flow.to_deployment(
+    name="daily-ingest-scheduled",
+    schedules=[
+        CronSchedule(cron="0 17 * * 1-5", timezone="Asia/Shanghai")
+    ],
+    parameters={"source": "tushare"},
 )
+
+# L3 批量校验：交易日 18:00
+dq_batch_deployment = dq_batch_flow.to_deployment(
+    name="dq-batch-scheduled",
+    schedules=[
+        CronSchedule(cron="0 18 * * 1-5", timezone="Asia/Shanghai")
+    ],
+)
+
+# 心跳：每小时整点
+heartbeat_deployment = heartbeat_flow.to_deployment(
+    name="heartbeat-scheduled",
+    schedules=[
+        CronSchedule(cron="0 * * * *", timezone="Asia/Shanghai")
+    ],
+)
+```
+
+### 4.4 Flow 实现示例
+
+```python
+# apps/server/src/ditto_server/ingestion/flows/daily_ingest.py
+
+from prefect import flow, get_run_logger
+from ditto_data_hub import DataHub
+
+from ..tasks.calendar import ingest_calendar
+from ..tasks.securities import ingest_securities
+from ..tasks.bars import ingest_etf_bars, ingest_index_bars
+from ..tasks.adj_factor import ingest_adj_factor
+
+
+@flow(
+    name="daily-ingest",
+    description="每日数据摄取",
+    retries=2,
+    retry_delay_seconds=300,
+    log_prints=True,
+)
+def daily_ingest_flow(
+    trade_date: str | None = None,
+    source: str = "tushare",
+) -> dict:
+    """
+    每日数据摄取主流程
+
+    DAG 依赖：
+    calendar → securities → bars (并行) + adj_factor
+    """
+    logger = get_run_logger()
+    hub = DataHub()
+
+    if trade_date is None:
+        trade_date = hub.calendar.get_last_trading_day()
+
+    logger.info(f"开始摄取: {trade_date}, source={source}")
+
+    # Step 1: 日历（其他任务依赖）
+    ingest_calendar(source=source)
+
+    # Step 2: 证券主数据
+    ingest_securities(source=source)
+
+    # Step 3: K线数据（并行）
+    etf_future = ingest_etf_bars.submit(trade_date, source)
+    index_future = ingest_index_bars.submit(trade_date, source)
+
+    # Step 4: 复权因子
+    adj_future = ingest_adj_factor.submit(trade_date, source)
+
+    # 等待并行任务
+    results = {
+        "etf": etf_future.result(),
+        "index": index_future.result(),
+        "adj": adj_future.result(),
+    }
+
+    logger.info(f"摄取完成: {results}")
+    return results
+```
+
+### 4.5 手动触发方式
+
+```bash
+# 1. CLI 方式
+prefect deployment run "daily-ingest/daily-ingest-scheduled" \
+    --param trade_date="2024-12-20"
+
+# 2. Prefect UI
+# 访问 http://localhost:4200，点击 Run 按钮
+
+# 3. Python API
+from prefect.deployments import run_deployment
+run_deployment(name="daily-ingest/daily-ingest-scheduled", parameters={"trade_date": "2024-12-20"})
+
+# 4. HTTP API（通过 FastAPI）
+curl -X POST http://localhost:8000/api/v1/ingestion/trigger \
+    -H "Content-Type: application/json" \
+    -d '{"flow": "daily_ingest", "params": {"trade_date": "2024-12-20"}}'
 ```
 
 ---
 
-## 6. 心跳机制
+## 5. 心跳机制
 
-### 6.1 设计原则
+### 5.1 设计原则
 
 > **"死人不会说话"** —— 监控系统本身挂了无法报警
 
-因此心跳必须发送到**外部系统**（Telagram/钉钉/邮件），而非本机监控。
+因此心跳必须发送到**外部系统**（Telegram/钉钉/邮件），而非本机监控。
 
-### 6.2 心跳内容
+### 5.2 心跳内容
 
 ```
 🤖 Ditto Heartbeat
-Time: 2024-12-08 15:00
-Status: ✅ OK | Data: 2024-12-06
+Time: 2024-12-26 15:00
+Status: ✅ OK | Data: 2024-12-25
 Kill Switch: Inactive
+Prefect: 3 flows healthy
 ```
 
-### 6.3 异常时发送详情
+### 5.3 异常时发送详情
 
 ```
 🤖 Ditto Heartbeat
-Time: 2024-12-08 15:00
-Status: ❌ ERROR | Kill Switch Level 2 Active
+Time: 2024-12-26 15:00
+Status: ❌ ERROR
 Kill Switch: ACTIVE Level 2 - Drawdown 18.5%
-Last Error: None
+Last Flow Run: daily-ingest FAILED
 Action Required: Review and manually confirm
+```
+
+### 5.4 Prefect 告警 Hook
+
+```python
+# apps/server/src/ditto_server/ingestion/hooks.py
+
+from prefect import flow
+from prefect.blocks.notifications import SlackWebhook
+
+
+async def on_flow_failure(flow, flow_run, state):
+    """Flow 失败时发送告警"""
+    message = f"""
+🚨 **Ditto 任务失败告警**
+
+Flow: {flow.name}
+Run ID: {flow_run.id}
+State: {state.name}
+Error: {state.message}
+
+请及时检查处理！
+"""
+    # 发送到 Telegram/钉钉
+    webhook = await SlackWebhook.load("ditto-alerts")
+    await webhook.notify(message)
+
+
+@flow(name="daily-ingest", on_failure=[on_flow_failure])
+def daily_ingest_flow(...):
+    ...
+```
+
+---
+
+## 6. Prefect 启动与运维
+
+### 6.1 启动脚本
+
+```powershell
+# scripts/start_prefect.ps1
+
+# 启动 Prefect Server（后台运行）
+Start-Process -NoNewWindow -FilePath "prefect" -ArgumentList "server", "start", "--host", "0.0.0.0"
+
+# 等待 Server 就绪
+Start-Sleep -Seconds 5
+
+# 启动 Prefect Worker
+Start-Process -NoNewWindow -FilePath "prefect" -ArgumentList "worker", "start", "--pool", "default-agent-pool"
+
+Write-Host "Prefect Server: http://localhost:4200"
+```
+
+### 6.2 一键启动
+
+```powershell
+# scripts/start_all.ps1
+
+Write-Host "Starting Ditto services..."
+
+# 1. 启动 Prefect
+& "$PSScriptRoot\start_prefect.ps1"
+
+# 2. 启动 FastAPI Server
+Start-Process -NoNewWindow -FilePath "pixi" -ArgumentList "run", "server"
+
+# 3. 启动 Web UI（可选）
+# Start-Process -NoNewWindow -FilePath "pixi" -ArgumentList "run", "web"
+
+Write-Host "All services started!"
+Write-Host "  - API: http://localhost:8000"
+Write-Host "  - Prefect UI: http://localhost:4200"
+Write-Host "  - Web UI: http://localhost:3000"
+```
+
+### 6.3 日常命令
+
+```bash
+# 查看所有 Deployments
+prefect deployment ls
+
+# 查看最近运行
+prefect flow-run ls --limit 10
+
+# 手动触发
+prefect deployment run "daily-ingest/daily-ingest-scheduled"
+
+# 取消运行
+prefect flow-run cancel <run-id>
+
+# 查看日志
+prefect flow-run logs <run-id>
+
+# 补数据
+prefect deployment run "backfill/backfill-scheduled" \
+    --param start_date="2024-01-01" \
+    --param end_date="2024-12-20"
 ```
 
 ---
@@ -335,15 +418,15 @@ Action Required: Review and manually confirm
 
 ### 7.1 核心原则
 
-**"任何时刻只有一个写 DuckDB/SQLite 的进程"**
+**"任何时刻只有一个写 Parquet/SQLite 的进程"**
 
 ### 7.2 实现方式
 
+- Prefect Worker 单实例运行（`max_instances=1`）
 - 使用文件锁 (`msvcrt.locking` on Windows)
-- 写操作前获取锁，完成后释放
-- 锁超时则抛出异常，不等待
+- SQLite WAL 模式
 
-### 7.3 SQLite WAL 模式
+### 7.3 SQLite 配置
 
 ```sql
 PRAGMA journal_mode=WAL;
@@ -353,43 +436,107 @@ PRAGMA busy_timeout=5000;
 
 ---
 
-## 8. 备份策略
+## 8. 健康检查
 
-### 8.1 备份内容
-
-| 数据 | 频率 | 保留期 |
-|------|------|--------|
-| DuckDB (warehouse) | 每日 | 30 天 |
-| SQLite (trading) | 每日 | 30 天 |
-| 配置文件 | 每日 | 30 天 |
-| 日志文件 | 每周 | 90 天 |
-
-### 8.2 备份恢复流程
-
-1. 停止所有服务
-2. 备份当前损坏数据（以防万一）
-3. 从备份恢复
-4. 重启服务
-5. 验证健康检查
-
----
-
-## 9. 健康检查
-
-### 9.1 检查项
+### 8.1 检查项
 
 | 组件 | 检查内容 | 健康标准 |
 |------|----------|----------|
-| duckdb | 连接 + 查询 | 可查询 |
 | sqlite | 连接 + 查询 | 可查询 |
+| parquet | 文件可读 | 可读取 |
 | data_freshness | 最新数据日期 | ≤ 1 天 |
-| scheduler | 运行状态 | 正在运行 |
+| prefect_server | API 响应 | 可访问 |
+| prefect_worker | 运行状态 | 正在运行 |
 | kill_switch | 触发状态 | 未触发 |
 
-### 9.2 API 端点
+### 8.2 API 端点
 
-- `GET /healthz` - 简单存活检查
-- `GET /health` - 详细健康报告
+```python
+# apps/server/src/ditto_server/api/health.py
+
+@router.get("/healthz")
+async def healthz():
+    """简单存活检查"""
+    return {"status": "ok"}
+
+
+@router.get("/health")
+async def health():
+    """详细健康报告"""
+    return {
+        "status": "healthy",
+        "components": {
+            "sqlite": check_sqlite(),
+            "parquet": check_parquet(),
+            "data_freshness": check_data_freshness(),
+            "prefect": await check_prefect(),
+            "kill_switch": check_kill_switch(),
+        },
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@router.get("/health/prefect")
+async def prefect_health():
+    """Prefect 健康检查"""
+    async with get_client() as client:
+        deployments = await client.read_deployments()
+        recent_runs = await client.read_flow_runs(limit=5)
+
+        return {
+            "status": "healthy",
+            "deployments": len(deployments),
+            "recent_runs": [
+                {
+                    "name": r.name,
+                    "state": r.state.type.value,
+                    "started": r.start_time.isoformat() if r.start_time else None,
+                }
+                for r in recent_runs
+            ],
+        }
+```
+
+---
+
+## 9. 备份策略
+
+### 9.1 备份内容
+
+| 数据 | 频率 | 保留期 |
+|------|------|--------|
+| Parquet 数据 | 每日 | 30 天 |
+| SQLite 元数据 | 每日 | 30 天 |
+| 配置文件 | 每日 | 30 天 |
+| Prefect 数据库 | 每周 | 30 天 |
+| 日志文件 | 每周 | 90 天 |
+
+### 9.2 备份脚本
+
+```powershell
+# scripts/backup.ps1
+
+$date = Get-Date -Format "yyyyMMdd"
+$backupDir = "D:\Ditto\backups\$date"
+
+New-Item -ItemType Directory -Force -Path $backupDir
+
+# 备份 Parquet 数据
+Copy-Item -Recurse "D:\Ditto\data\parquet" "$backupDir\parquet"
+
+# 备份 SQLite
+Copy-Item "D:\Ditto\data\meta.db" "$backupDir\meta.db"
+
+# 备份配置
+Copy-Item -Recurse "D:\Ditto\config" "$backupDir\config"
+
+# 清理旧备份（保留 30 天）
+Get-ChildItem "D:\Ditto\backups" -Directory |
+    Where-Object { $_.CreationTime -lt (Get-Date).AddDays(-30) } |
+    Remove-Item -Recurse -Force
+
+Write-Host "Backup completed: $backupDir"
+```
 
 ---
 
@@ -400,49 +547,61 @@ PRAGMA busy_timeout=5000;
 ```
 1. 检查网络连接
 2. 远程登录主机
-3. 检查 DittoServer 进程：Get-Process python | Where CommandLine -like "*uvicorn*"
-4. 查看最近日志：Get-Content logs\ditto_*.log -Tail 100
-5. 如果进程不存在，重启：.\scripts\start_all.ps1
-6. 如果持续失败，检查磁盘空间和内存
+3. 检查 Prefect Worker 进程：
+   Get-Process python | Where CommandLine -like "*prefect*"
+4. 查看 Prefect UI：http://localhost:4200
+5. 查看最近日志：Get-Content logs\ditto_*.jsonl -Tail 100
+6. 如果 Worker 不存在，重启：.\scripts\start_prefect.ps1
 ```
 
-### 10.2 数据更新失败
+### 10.2 数据摄取失败
 
 ```
-1. 检查 Tushare 积分和 API 状态
-2. 检查网络是否能访问 api.tushare.pro
-3. 查看日志中的具体错误
+1. 查看 Prefect UI 中的 Flow Run 详情
+2. 检查具体 Task 的错误信息
+3. 检查 Tushare 积分和 API 状态
 4. 如果 Tushare 不可用，手动触发 AkShare 降级：
-   python -m ditto.tasks.daily_update --source akshare
-5. 如果都不可用，记录风控事件，暂停自动交易
+   prefect deployment run "daily-ingest/..." --param source="akshare"
+5. 修复后手动重跑：
+   prefect deployment run "daily-ingest/..." --param trade_date="2024-12-20"
 ```
 
-### 10.3 Kill Switch 触发
+### 10.3 Prefect Server 无响应
 
 ```
-1. 确认回撤数值正确（检查持仓市值计算）
-2. 分析回撤原因（市场系统性下跌 vs 策略问题）
-3. 检查 Regime 是否正确识别
-4. 如果是市场系统性下跌且策略正常：
-   - 等待市场稳定
-   - 人工评估后解除 Kill Switch
-5. 如果是策略问题：
-   - 保持 Kill Switch 激活
-   - 分析策略失效原因
-   - 修复后重新回测验证
+1. 检查进程：Get-Process python | Where CommandLine -like "*prefect server*"
+2. 检查端口：netstat -an | findstr "4200"
+3. 查看日志：Get-Content ~/.prefect/prefect.log -Tail 100
+4. 重启 Prefect：
+   Stop-Process -Name python -Force  # 停止所有 Python 进程
+   .\scripts\start_prefect.ps1       # 重新启动
 ```
 
-### 10.4 数据库损坏
+### 10.4 补数据流程
 
 ```
-1. 停止所有服务：.\scripts\stop_all.ps1
-2. 备份损坏文件：Move-Item data\warehouse.duckdb data\warehouse.duckdb.corrupted
-3. 恢复最近备份：Copy-Item backups\warehouse_latest.duckdb data\warehouse.duckdb
-4. 重启服务：.\scripts\start_all.ps1
-5. 验证：Invoke-WebRequest http://localhost:8000/health
-6. 如果备份也损坏，需要重新采集历史数据
+1. 确定需要补的日期范围
+2. 运行 backfill Flow：
+   prefect deployment run "backfill/backfill-scheduled" \
+       --param start_date="2024-01-01" \
+       --param end_date="2024-01-31"
+3. 在 Prefect UI 监控进度
+4. 完成后验证数据完整性
 ```
 
 ---
 
-*本部署拓扑文档定义了 Ditto Phase 0–1 的完整部署架构。*
+## 11. 资源需求
+
+| 组件 | CPU | 内存 | 磁盘 |
+|------|-----|------|------|
+| FastAPI Server | 1 核 | 512MB | - |
+| Prefect Server | 1 核 | 256MB | 100MB |
+| Prefect Worker | 1 核 | 512MB | - |
+| SQLite | - | 256MB | 1GB |
+| Parquet 数据 | - | - | 10GB+ |
+| **总计** | 2-4 核 | 2GB | 15GB+ |
+
+---
+
+*本部署拓扑文档定义了 Ditto Phase 0–1 的完整部署架构，使用 Prefect 替代 APScheduler 进行任务调度。*

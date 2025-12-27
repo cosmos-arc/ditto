@@ -355,12 +355,18 @@ KILL_SWITCH_ENABLED=true
 
 详细文档请查看 `docs/design/` 目录：
 
-- `00_overview.md` - 系统总览
-- `01_system_design_v1.md` - 系统设计
+- `01_system_design.md` - 系统设计总览
 - `02_data_design.md` - 数据设计
 - `03_engine_design.md` - 引擎设计
-- `06_roadmap_v1.md` - 开发路线图
+- `04_deployment_topology.md` - 部署拓扑设计
+- `05_observability.md` - 可观测性设计
+- `06_roadmap.md` - 开发路线图
+- `07_research_playground.md` - 研究环境使用说明
 - `08_risk_constitution.md` - 风险宪法
+- `09_data_quality_design.md` - 数据质量设计
+- `10_data_ingestion_scheduler_design.md` - 数据摄取任务设计
+
+
 
 ## 贡献
 
