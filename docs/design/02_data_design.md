@@ -6244,17 +6244,19 @@ class RateLimiter:
 
 
 class TushareClient:
-    """Tushare 客户端"""
+    """
+    Tushare 客户端（带 Token 安全配置）
+
+    Token 获取优先级：
+    1. keyring（推荐）
+    2. ~/.ditto/secrets.toml（备用）
+    3. TUSHARE_TOKEN 环境变量（仅开发）
+    """
 
     def __init__(self, token: str | None = None, calls_per_minute: int = 200):
-        if token is None:
-            import os
-            token = os.environ.get("TUSHARE_TOKEN")
-
-        if not token:
-            raise ConfigurationError("Tushare token not provided")
-
-        self._api = ts.pro_api(token)
+        # Token 获取详见：14.2.1 Token 安全配置
+        self._token = _get_tushare_token(token)
+        self._api = ts.pro_api(self._token)
         self._rate_limiter = RateLimiter(calls_per_minute)
 
     def query(self, api_name: str, **kwargs):
@@ -6299,6 +6301,127 @@ class TushareSource(DataSource):
 
     # ... 其他方法实现
 ```
+
+#### 14.2.1 Token 安全配置
+
+**设计目标**：保护 Tushare API Token 不被泄露，同时提供灵活的配置方式。
+
+**三层优先级机制**：
+
+| 优先级 | 来源 | 适用场景 | 推荐度 |
+|-------|------|---------|--------|
+| 1 | keyring | 生产环境（Windows 凭据管理器 / macOS Keychain / Linux Secret Service） | ⭐⭐⭐ |
+| 2 | ~/.ditto/secrets.toml | 跨平台备用方案 | ⭐⭐ |
+| 3 | TUSHARE_TOKEN 环境变量 | 仅开发环境 | ⭐ |
+
+**实现代码**：
+
+```python
+# src/ditto_data_hub/sources/tushare/client.py
+
+import os
+import tomllib
+from pathlib import Path
+
+
+def _get_tushare_token(token: str | None = None) -> str:
+    """
+    获取 Tushare Token（三层优先级）
+
+    Args:
+        token: 显式传入的 token（最高优先级）
+
+    Returns:
+        str: Tushare API Token
+
+    Raises:
+        SourceConfigurationError: 所有来源均未配置 token
+    """
+    # 1. 显式参数
+    if token:
+        logger.debug("Token from parameter", event="token_loaded", source="parameter")
+        return token
+
+    # 2. keyring（推荐）
+    try:
+        import keyring
+        if keyring_token := keyring.get_password("ditto", "tushare"):
+            logger.debug("Token from keyring", event="token_loaded", source="keyring")
+            return keyring_token
+    except Exception:
+        pass  # keyring 不可用，继续尝试下一个
+
+    # 3. ~/.ditto/secrets.toml（备用）
+    config_file = Path.home() / ".ditto" / "secrets.toml"
+    if config_file.exists():
+        try:
+            config = tomllib.loads(config_file.read_text())
+            if config_token := config.get("tushare", {}).get("token"):
+                logger.debug("Token from secrets.toml", event="token_loaded", source="secrets.toml")
+                return config_token
+        except Exception:
+            pass
+
+    # 4. TUSHARE_TOKEN 环境变量（仅开发）
+    if env_token := os.getenv("TUSHARE_TOKEN"):
+        logger.debug("Token from env var", event="token_loaded", source="env_var")
+        return env_token
+
+    # 所有来源均未找到 token
+    raise SourceConfigurationError(
+        message=(
+            "Tushare token not configured. "
+            "Use keyring: keyring.set_password('ditto', 'tushare', 'YOUR_TOKEN') "
+            "or create ~/.ditto/secrets.toml with [tushare] token = 'YOUR_TOKEN'"
+        )
+    )
+```
+
+**配置方式示例**：
+
+```bash
+# 方式 1 - keyring（推荐）
+python -c "import keyring; keyring.set_password('ditto', 'tushare', 'YOUR_TOKEN')"
+```
+
+```toml
+# 方式 2 - ~/.ditto/secrets.toml（备用）
+[tushare]
+token = "YOUR_TOKEN"
+```
+
+```bash
+# 方式 3 - 环境变量（仅开发）
+export TUSHARE_TOKEN="YOUR_TOKEN"
+```
+
+**安全性要求**：
+
+| 要求 | 说明 |
+|------|------|
+| 日志脱敏 | 日志中不打印完整 token |
+| 错误隔离 | 错误消息不包含 token 值 |
+| 最小权限 | 使用最小够用的 Tushare 积分级别 |
+| 文件保护 | ~/.ditto/secrets.toml 权限设置为 600 |
+
+**异常处理**：
+
+```python
+# Token 配置错误
+SourceConfigurationError: Tushare token not configured
+
+# Token 认证失败
+SourceAuthenticationError: Tushare authentication failed
+```
+
+**测试要点**：
+
+- [ ] 测试 keyring 获取成功
+- [ ] 测试 secrets.toml fallback
+- [ ] 测试环境变量 fallback
+- [ ] 测试所有来源均失败时抛出异常
+- [ ] 测试日志不包含完整 token
+- [ ] 测试显式参数覆盖其他来源
 
 ### 14.3 SourcesAccessor:
 ``` python
