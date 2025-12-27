@@ -90,7 +90,7 @@ opentelemetry-exporter-otlp-proto-http = ">=1.28,<2"
 uuid7 = ">=0.1,<1"
 
 # 重试机制
-stamina = ">=25.0,<26"
+tenacity = ">=8.0,<9"
 
 # ==========================================================
 # 开发环境 Feature

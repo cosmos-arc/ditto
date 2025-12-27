@@ -2,7 +2,10 @@
 
 from datetime import date
 
+import polars as pl
+import pytest
 from ditto_datahub.sources.base import (
+    DataSource,
     DataSourceError,
     SourceAuthenticationError,
     SourceConfigurationError,
@@ -132,3 +135,44 @@ class TestSourceTransformationError:
             message="Transform failed",
         )
         assert error.details == {}
+
+
+class TestDataSourceABC:
+    """Tests for DataSource abstract base class."""
+
+    def test_cannot_instantiate_abstract_class(self) -> None:
+        """Test that DataSource cannot be instantiated directly."""
+        with pytest.raises(TypeError):
+            DataSource()  # type: ignore[abstract]
+
+    def test_subclass_must_implement_all_methods(self) -> None:
+        """Test subclass must implement all abstract methods."""
+
+        class IncompleteSource(DataSource):
+            def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_etf_basic(self) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            # Missing fetch_etf_daily
+
+        with pytest.raises(TypeError):
+            IncompleteSource()
+
+    def test_complete_subclass_can_be_instantiated(self) -> None:
+        """Test complete subclass can be instantiated."""
+
+        class CompleteSource(DataSource):
+            def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_etf_basic(self) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+        # Should not raise
+        source = CompleteSource()
+        assert isinstance(source, DataSource)
