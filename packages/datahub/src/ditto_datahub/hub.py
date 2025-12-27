@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from ditto_datahub.runtime.sid_allocator import SidAllocator
     from ditto_datahub.runtime.sql_engine import SqlEngine
     from ditto_datahub.runtime.sqlite_pool import SQLitePool
+    from ditto_datahub.sources.accessor import SourcesAccessor
     from ditto_datahub.stores.adj_factor_store import AdjFactorStore
     from ditto_datahub.stores.bars_store import BarsStore
     from ditto_datahub.stores.calendar_store import CalendarStore
@@ -41,6 +42,7 @@ class DataHub:
     - Store Layer: security_store, calendar_store, bars_store,
       adj_factor_store, pipeline_store
     - Repository Layer: securities, bars, calendar
+    - Sources Layer: sources (external data sources: Tushare, Akshare)
     - SQL Engine: sql_engine
     """
 
@@ -171,6 +173,17 @@ class DataHub:
         return CalendarRepository(
             calendar_store=self.calendar_store,
         )
+
+    # ========================================================================
+    # Sources Layer (External Data Sources)
+    # ========================================================================
+
+    @cached_property
+    def sources(self) -> SourcesAccessor:
+        """External data sources accessor (Tushare, Akshare, etc.)."""
+        from ditto_datahub.sources.accessor import SourcesAccessor
+
+        return SourcesAccessor()
 
     # ========================================================================
     # SQL Engine
