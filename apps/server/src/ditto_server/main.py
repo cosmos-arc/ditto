@@ -40,7 +40,7 @@ project_root = Path(__file__).parent.parent.parent.parent
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
     # Startup
-    logger.info("Starting Ditto API server")
+    logger.info("Starting Ditto API server", event="server_start")
     try:
         # Initialize observability with environment-specific config
         env = os.getenv("DITTO_ENV", "development")
@@ -56,14 +56,32 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             mode=Mode.DEVELOPMENT if env == "development" else Mode.PRODUCTION,
         )
 
-        logger.info("Observability configured", environment=env)
+        logger.info(
+            "Observability configured",
+            event="observability_ready",
+            environment=env,
+        )
+
+        # Note: Prefect 3.x uses daemon/workers, not embedded server
+        # Flows are automatically registered when imported
+        # To start Prefect UI: run `prefect server dev` in a separate terminal
+        logger.info(
+            "Prefect flows ready for deployment",
+            event="prefect_ready",
+            mode="daemon/worker (run 'prefect server dev' for UI)",
+        )
+
         yield
     except Exception as e:
-        logger.exception("Failed to initialize application", error=str(e))
+        logger.exception(
+            "Failed to initialize application",
+            event="server_init_failed",
+            error=str(e),
+        )
         raise
     finally:
         # Shutdown
-        logger.info("Shutting down Ditto API server")
+        logger.info("Shutting down Ditto API server", event="server_shutdown")
         shutdown()
 
 
@@ -166,8 +184,16 @@ async def root() -> dict[str, str]:
 @app.get("/healthz")
 async def health_check() -> dict[str, Any]:
     """健康检查端点."""
-    logger.debug("Health check endpoint accessed")
-    return {"status": "ok", "service": "ditto-api", "timestamp": time.time()}
+    logger.debug("Health check endpoint accessed", event="health_check")
+    return {
+        "status": "ok",
+        "service": "ditto-api",
+        "timestamp": time.time(),
+        "features": {
+            "prefect": True,  # Prefect flows available
+            "observability": True,
+        },
+    }
 
 
 @app.get("/api/v1/status")

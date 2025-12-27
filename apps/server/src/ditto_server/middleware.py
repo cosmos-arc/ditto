@@ -56,9 +56,12 @@ def create_error_response(params: ErrorResponseParams) -> JSONResponse:
 
 async def ditto_exception_handler(
     request: Request,
-    exc: DittoException,
+    exc: Exception,  # Changed from DittoException to Exception
 ) -> JSONResponse:
     """处理 Ditto 自定义异常."""
+    if not isinstance(exc, DittoException):
+        return await general_exception_handler(request, exc)
+
     request_id = getattr(request.state, "request_id", None)
     logger.error(
         "Ditto exception occurred",
@@ -82,9 +85,12 @@ async def ditto_exception_handler(
 
 async def http_exception_handler(
     request: Request,
-    exc: StarletteHTTPException,
+    exc: Exception,  # Changed from StarletteHTTPException to Exception
 ) -> JSONResponse:
     """处理 HTTP 异常."""
+    if not isinstance(exc, StarletteHTTPException):
+        return await general_exception_handler(request, exc)
+
     request_id = getattr(request.state, "request_id", None)
     logger.warning(
         "HTTP exception occurred",
@@ -107,9 +113,12 @@ async def http_exception_handler(
 
 async def validation_exception_handler(
     request: Request,
-    exc: RequestValidationError,
+    exc: Exception,  # Changed from RequestValidationError to Exception
 ) -> JSONResponse:
     """处理请求验证异常."""
+    if not isinstance(exc, RequestValidationError):
+        return await general_exception_handler(request, exc)
+
     request_id = getattr(request.state, "request_id", None)
 
     # 格式化验证错误
