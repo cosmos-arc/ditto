@@ -265,9 +265,9 @@ def get_source(name: str) -> DataSource:
     normalized_name = name.lower().strip()
 
     if normalized_name == "tushare":
-        raise ValueError(
-            f"Source '{name}' is not yet implemented. Planned for Cycle 4."
-        )
+        from ditto_datahub.sources.tushare.source import TushareSource
+
+        return TushareSource()
 
     if normalized_name == "akshare":
         raise ValueError(

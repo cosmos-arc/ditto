@@ -182,10 +182,19 @@ class TestDataSourceABC:
 class TestGetSourceFactory:
     """Tests for get_source factory function."""
 
-    def test_get_tushare_source_returns_not_implemented(self) -> None:
-        """Test tushare source raises not implemented error."""
-        with pytest.raises(ValueError, match="not yet implemented"):
-            get_source("tushare")
+    def test_get_tushare_source_returns_instance(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test tushare source returns TushareSource instance."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        source = get_source("tushare")
+
+        assert source is not None
+        assert hasattr(source, "fetch_calendar")
+        assert hasattr(source, "fetch_etf_basic")
+        assert hasattr(source, "fetch_etf_daily")
 
     def test_get_akshare_source_returns_not_implemented(self) -> None:
         """Test akshare source raises not implemented error."""
@@ -198,7 +207,15 @@ class TestGetSourceFactory:
             get_source("invalid_source")
 
     @pytest.mark.parametrize("name", ["tushare", "TUSHARE", "TuShArE"])
-    def test_factory_is_case_insensitive(self, name: str) -> None:
+    def test_factory_is_case_insensitive(
+        self,
+        name: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """Test factory normalizes case."""
-        with pytest.raises(ValueError, match="not yet implemented"):
-            get_source(name)
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        source = get_source(name)
+
+        assert source is not None
+        assert hasattr(source, "fetch_calendar")
