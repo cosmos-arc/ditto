@@ -277,3 +277,11 @@ class SQLiteClient:
         result = self.fetchval(sql, params)
         # COUNT(*) always returns int, but mypy can't infer that
         return int(result) if result is not None else 0
+
+    def close(self) -> None:
+        """
+        Close the database connection.
+
+        This closes the thread-local connection held by this client.
+        """
+        self._pool.close()

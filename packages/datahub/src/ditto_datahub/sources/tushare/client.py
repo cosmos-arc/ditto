@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import os
 import time
+import tomllib
+from pathlib import Path
 from threading import Lock
 from typing import Any
 
+import pandas as pd
 from ditto_foundation import logger
 from tenacity import (
     retry,
@@ -28,6 +31,88 @@ class _TushareRetryableError(Exception):
     """Internal: Marker for retryable Tushare errors."""
 
     pass
+
+
+def _get_tushare_token(token: str | None = None) -> str:
+    """
+    Get Tushare token with graceful fallback.
+
+    Priority order:
+    1. Provided token parameter
+    2. keyring (recommended)
+    3. ~/.ditto/secrets.toml (fallback)
+    4. TUSHARE_TOKEN env var (legacy)
+
+    Args:
+        token: Explicitly provided token.
+
+    Returns:
+        str: The Tushare API token.
+
+    Raises:
+        SourceConfigurationError: If token not found in any source.
+
+    """
+    # 1. Explicit parameter
+    if token:
+        logger.debug(
+            "Token loaded from parameter",
+            event="token_loaded",
+            source="parameter",
+        )
+        return token
+
+    # 2. Try keyring (recommended)
+    try:
+        import keyring
+
+        if keyring_token := keyring.get_password("ditto", "tushare"):
+            # keyring.get_password returns str | None
+            assert isinstance(keyring_token, str)
+            logger.debug(
+                "Token loaded from keyring",
+                event="token_loaded",
+                source="keyring",
+            )
+            return keyring_token
+    except Exception:
+        # keyring may not be available or configured, silently continue
+        pass
+
+    # 3. Try ~/.ditto/secrets.toml (fallback)
+    config_file = Path.home() / ".ditto" / "secrets.toml"
+    if config_file.exists():
+        try:
+            config = tomllib.loads(config_file.read_text())
+            if config_token := config.get("tushare", {}).get("token"):
+                assert isinstance(config_token, str)
+                logger.debug(
+                    "Token loaded from secrets.toml",
+                    event="token_loaded",
+                    source="secrets.toml",
+                )
+                return config_token
+        except Exception:
+            pass
+
+    # 4. Try TUSHARE_TOKEN env var (legacy)
+    if env_token := os.getenv("TUSHARE_TOKEN"):
+        assert env_token is not None
+        logger.debug(
+            "Token loaded from env var",
+            event="token_loaded",
+            source="env_var",
+        )
+        return env_token
+
+    # No token found
+    raise SourceConfigurationError(
+        message=(
+            "Tushare token not configured. "
+            "Use keyring: keyring.set_password('ditto', 'tushare', 'YOUR_TOKEN') "
+            "or create ~/.ditto/secrets.toml with [tushare] token = 'YOUR_TOKEN'"
+        )
+    )
 
 
 class TushareClient:
@@ -61,7 +146,7 @@ class TushareClient:
         Initialize Tushare client.
 
         Args:
-            token: API token (reads from TUSHARE_TOKEN env var if None).
+            token: API token (auto-detected from keyring/secrets.toml/env if None).
             rate_limit: Max requests per window.
             window_seconds: Time window for rate limit.
             max_retries: Max retry attempts.
@@ -71,13 +156,8 @@ class TushareClient:
             SourceConfigurationError: If token not found.
 
         """
-        # Get token from param or env
-        self._token = token or os.getenv("TUSHARE_TOKEN")
-        if not self._token:
-            raise SourceConfigurationError(
-                message="Tushare token not found",
-                env_var="TUSHARE_TOKEN",
-            )
+        # Get token with fallback chain
+        self._token = _get_tushare_token(token)
 
         # Configuration
         self._rate_limit = rate_limit
@@ -151,7 +231,7 @@ class TushareClient:
         api_name: str,
         fields: str | None = None,
         **params: Any,
-    ) -> Any:
+    ) -> pd.DataFrame:
         """
         Query Tushare API with rate limiting and retry.
 

@@ -80,8 +80,15 @@ def configure_logging(config: ObservabilityConfig, mode: Mode) -> None:
     if mode.is_silent():
         return
 
-    log_dir = Path(config.log_dir)
-    log_dir.mkdir(parents=True, exist_ok=True)
+    # 使用 XDG Base Directory 规范获取日志目录
+    # 如果 config.log_dir 是默认值 "logs"，使用 XDGPaths
+    if config.log_dir == "logs":
+        from ditto_foundation.config.paths import get_paths
+
+        log_dir = get_paths().state_subdir("logs")
+    else:
+        log_dir = Path(config.log_dir)
+        log_dir.mkdir(parents=True, exist_ok=True)
 
     # Console sink
     console_format = (

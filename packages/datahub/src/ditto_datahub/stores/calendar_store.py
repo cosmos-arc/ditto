@@ -511,3 +511,7 @@ class CalendarStore:
                 record_count=len(records),
             )
             raise
+
+    def close(self) -> None:
+        """Close the underlying SQLite client."""
+        self._client.close()

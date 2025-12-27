@@ -532,3 +532,7 @@ class SecurityStore:
                 symbol=symbol,
             )
             raise
+
+    def close(self) -> None:
+        """Close the underlying SQLite client."""
+        self._client.close()

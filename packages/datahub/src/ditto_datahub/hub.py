@@ -46,20 +46,27 @@ class DataHub:
     - SQL Engine: sql_engine
     """
 
-    def __init__(self, data_root: str | Path = "data") -> None:
-        """
+    def __init__(self, data_root: str | Path | None = None) -> None:
+        r"""
         Initialize DataHub.
 
         Args:
             data_root: Data root directory path.
+                If None, uses XDG Base Directory spec
+                (D:\\data\\ditto\\data on Windows).
 
         """
-        self.data_root = Path(data_root)
+        if data_root is None:
+            from ditto_foundation.config.paths import get_paths
+
+            self.data_root = get_paths().data_home
+        else:
+            self.data_root = Path(data_root)
 
         logger.debug(
             "DataHub initialized",
             event="datahub_init",
-            data_root=str(data_root),
+            data_root=str(self.data_root),
         )
 
     # ========================================================================
@@ -286,7 +293,20 @@ class DataHub:
 
         Only closes resources that have been accessed (initialized).
         Unaccessed resources are never created and don't need closing.
+
+        Closes in reverse order of initialization to avoid dependency issues:
+        1. Stores with SQLite clients (security_store, calendar_store, pipeline_store)
+        2. SQL engine (DuckDB)
+        3. SQLite pool (connection manager)
         """
+        # Close stores that hold SQLiteClient references
+        # These must be closed before sqlite_pool
+        for store_name in ("pipeline_store", "calendar_store", "security_store"):
+            if store_name in self.__dict__:
+                store = getattr(self, store_name)
+                if hasattr(store, "close"):
+                    store.close()
+
         # Close SQL engine
         if "sql_engine" in self.__dict__:
             self.sql_engine.close()

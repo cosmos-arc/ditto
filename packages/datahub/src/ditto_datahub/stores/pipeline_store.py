@@ -226,7 +226,7 @@ class PipelineStore:
                 "SELECT started_at FROM pipeline_run WHERE run_id = ?",
                 [run_id],
             )
-            if start_row and start_row["started_at"]:
+            if start_row and start_row.get("started_at"):
                 started_at = datetime.fromisoformat(start_row["started_at"])
                 duration_sec = (finished_at - started_at).total_seconds()
                 updates.append("duration_sec = ?")
@@ -515,3 +515,7 @@ class PipelineStore:
 
         result: int = self._client.count("dq_issue", where, params) or 0
         return result
+
+    def close(self) -> None:
+        """Close the underlying SQLite client."""
+        self._client.close()
