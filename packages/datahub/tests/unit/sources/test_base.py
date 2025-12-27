@@ -159,7 +159,7 @@ class TestDataSourceABC:
             # Missing fetch_etf_daily
 
         with pytest.raises(TypeError):
-            IncompleteSource()
+            IncompleteSource()  # type: ignore[abstract]
 
     def test_complete_subclass_can_be_instantiated(self) -> None:
         """Test complete subclass can be instantiated."""
