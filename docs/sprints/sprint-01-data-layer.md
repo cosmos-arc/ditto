@@ -130,9 +130,9 @@
 
 ---
 
-#### 任务5: Sources 层（新增）🆕
+#### 任务5: Sources 层（新增）✅ 已完成
 
-**5.1 DataSource 基类** [S]
+**5.1 DataSource 基类** [S] ✅
 - 文件：`packages/ditto-data-hub/src/ditto_data_hub/sources/base.py`
 - 功能：
   - DataSource 抽象基类定义
@@ -152,7 +152,7 @@
   - [ ] 工厂函数支持 "tushare", "akshare"
   - [ ] 异常体系定义完整
 
-**5.2 Tushare 适配器基础** [M]
+**5.2 Tushare 适配器基础** [M] ✅
 - 文件：
   - `packages/ditto-data-hub/src/ditto_data_hub/sources/tushare/__init__.py`
   - `packages/ditto-data-hub/src/ditto_data_hub/sources/tushare/client.py`
@@ -172,15 +172,19 @@
   - [ ] fetch_etf_daily() 返回标准格式数据
   - [ ] 限流和重试机制生效
 
-**5.3 DataHub 集成 sources** [S]
+**5.3 DataHub 集成 sources** [S] ✅
 - 文件：修改 `packages/ditto-data-hub/src/ditto_data_hub/hub.py`
 - 功能：
   - 添加 `@cached_property sources`
   - 返回 SourcesAccessor 实例
   - SourcesAccessor 提供 `tushare` 属性和 `get()` 方法
 - 验收标准：
-  - [ ] `hub.sources.tushare.fetch_etf_daily()` 可调用
-  - [ ] 单例模式生效（多次调用返回同一实例）
+  - ✅ `hub.sources.tushare.fetch_etf_daily()` 可调用
+  - ✅ 单例模式生效（多次调用返回同一实例）
+
+**完成状态**:
+- ✅ PR 已合并到 main
+- ✅ 单元测试通过
 
 ---
 
