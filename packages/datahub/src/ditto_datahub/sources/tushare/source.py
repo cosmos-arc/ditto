@@ -120,6 +120,7 @@ class TushareSource(DataSource):
                 original_error=str(e),
             ) from e
 
+    @traced("source.tushare.fetch_etf_basic")
     def fetch_etf_basic(self) -> pl.DataFrame:
         """
         Fetch ETF basic information.
@@ -136,8 +137,85 @@ class TushareSource(DataSource):
             SourceFetchError: If fetch fails.
 
         """
-        raise NotImplementedError("fetch_etf_basic not yet implemented")
+        logger.info(
+            "Fetching Tushare ETF basic info",
+            event="tushare_etf_basic_fetch_start",
+        )
 
+        try:
+            response = self._client.query(
+                api_name="etf_basic",
+                fields="ts_code,etf_name,exchange,list_date",
+            )
+
+            items = response.get("items", [])
+            if not items:
+                logger.info(
+                    "Tushare ETF basic empty",
+                    event="tushare_etf_basic_fetch_complete",
+                    row_count=0,
+                )
+                return pl.DataFrame(
+                    schema={
+                        "src_code": pl.String,
+                        "symbol": pl.String,
+                        "name": pl.String,
+                        "exchange": pl.String,
+                        "list_date": pl.Date,
+                    }
+                )
+
+            df = pl.DataFrame(
+                {
+                    "src_code": [item[0] for item in items],
+                    "name": [item[1] for item in items],
+                    "exchange_raw": [item[2] for item in items],
+                    "list_date": [item[3] for item in items],
+                }
+            )
+
+            # Extract symbol (6-digit code from ts_code)
+            df = df.with_columns(
+                pl.col("src_code").str.replace(".[A-Z]+$", "").alias("symbol"),
+                pl.col("list_date").str.strptime(pl.Date, "%Y%m%d"),
+                pl.when(pl.col("exchange_raw") == "上交所")
+                .then(pl.lit("SSE"))
+                .when(pl.col("exchange_raw") == "深交所")
+                .then(pl.lit("SZSE"))
+                .otherwise(pl.col("exchange_raw"))
+                .alias("exchange"),
+            )
+
+            # Select and reorder columns
+            df = df.select("src_code", "symbol", "name", "exchange", "list_date")
+
+            row_count = len(df)
+            logger.info(
+                "Tushare ETF basic fetched",
+                event="tushare_etf_basic_fetch_complete",
+                row_count=row_count,
+            )
+            M.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "etf_basic", "status": "success"},
+            )
+
+            return df
+
+        except Exception as e:
+            logger.error(
+                "Tushare ETF basic fetch failed",
+                event="tushare_etf_basic_fetch_error",
+                error=str(e),
+            )
+            raise SourceFetchError(
+                message="Failed to fetch ETF basic from Tushare",
+                source="tushare",
+                dataset="etf_basic",
+                original_error=str(e),
+            ) from e
+
+    @traced("source.tushare.fetch_etf_daily")
     def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
         """
         Fetch ETF daily OHLCV bars.
@@ -158,4 +236,83 @@ class TushareSource(DataSource):
             SourceTransformationError: If data transformation fails.
 
         """
-        raise NotImplementedError("fetch_etf_daily not yet implemented")
+        logger.info(
+            "Fetching Tushare ETF daily",
+            event="tushare_etf_daily_fetch_start",
+            trade_date=trade_date,
+        )
+
+        try:
+            ts_date = trade_date.replace("-", "")
+            response = self._client.query(
+                api_name="daily",
+                ts_code="",
+                trade_date=ts_date,
+                fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amt,pct_chg",
+            )
+
+            items = response.get("items", [])
+            if not items:
+                logger.info(
+                    "Tushare ETF daily empty",
+                    event="tushare_etf_daily_fetch_complete",
+                    row_count=0,
+                )
+                return pl.DataFrame(
+                    schema={
+                        "src_code": pl.String,
+                        "trade_date": pl.Date,
+                        "open": pl.Float64,
+                        "high": pl.Float64,
+                        "low": pl.Float64,
+                        "close": pl.Float64,
+                        "pre_close": pl.Float64,
+                        "volume": pl.Float64,
+                        "amount": pl.Float64,
+                        "pct_change": pl.Float64,
+                    }
+                )
+
+            df = pl.DataFrame(
+                {
+                    "src_code": [item[0] for item in items],
+                    "trade_date": [item[1] for item in items],
+                    "open": [float(item[2]) for item in items],
+                    "high": [float(item[3]) for item in items],
+                    "low": [float(item[4]) for item in items],
+                    "close": [float(item[5]) for item in items],
+                    "pre_close": [float(item[6]) for item in items],
+                    "volume": [float(item[7]) for item in items],
+                    "amount": [float(item[8]) for item in items],
+                    "pct_change": [float(item[9]) for item in items],
+                }
+            )
+
+            # Transform trade_date string to Date
+            df = df.with_columns(pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"))
+
+            row_count = len(df)
+            logger.info(
+                "Tushare ETF daily fetched",
+                event="tushare_etf_daily_fetch_complete",
+                row_count=row_count,
+            )
+            M.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "etf_daily", "status": "success"},
+            )
+
+            return df
+
+        except Exception as e:
+            logger.error(
+                "Tushare ETF daily fetch failed",
+                event="tushare_etf_daily_fetch_error",
+                error=str(e),
+            )
+            raise SourceFetchError(
+                message="Failed to fetch ETF daily from Tushare",
+                source="tushare",
+                dataset="daily",
+                original_error=str(e),
+            ) from e
