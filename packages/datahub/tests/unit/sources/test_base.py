@@ -12,6 +12,7 @@ from ditto_datahub.sources.base import (
     SourceFetchError,
     SourceRateLimitError,
     SourceTransformationError,
+    get_source,
 )
 
 
@@ -176,3 +177,28 @@ class TestDataSourceABC:
         # Should not raise
         source = CompleteSource()
         assert isinstance(source, DataSource)
+
+
+class TestGetSourceFactory:
+    """Tests for get_source factory function."""
+
+    def test_get_tushare_source_returns_not_implemented(self) -> None:
+        """Test tushare source raises not implemented error."""
+        with pytest.raises(ValueError, match="not yet implemented"):
+            get_source("tushare")
+
+    def test_get_akshare_source_returns_not_implemented(self) -> None:
+        """Test akshare source raises not implemented error."""
+        with pytest.raises(ValueError, match="not yet implemented"):
+            get_source("akshare")
+
+    def test_get_invalid_source_raises_error(self) -> None:
+        """Test invalid source name raises error."""
+        with pytest.raises(ValueError, match="Unknown source"):
+            get_source("invalid_source")
+
+    @pytest.mark.parametrize("name", ["tushare", "TUSHARE", "TuShArE"])
+    def test_factory_is_case_insensitive(self, name: str) -> None:
+        """Test factory normalizes case."""
+        with pytest.raises(ValueError, match="not yet implemented"):
+            get_source(name)
