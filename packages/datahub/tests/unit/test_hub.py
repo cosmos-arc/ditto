@@ -1,5 +1,7 @@
 """Tests for DataHub Facade."""
 
+import gc
+import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -32,6 +34,9 @@ class TestDataHub:
                 self.hub.close()
         except Exception:
             pass
+        # Force garbage collection to release SQLite file handles on Windows
+        gc.collect()
+        time.sleep(0.1)  # Small delay to let Windows release file locks
         self.temp_dir.cleanup()
 
     def test_init_creates_hub(self) -> None:

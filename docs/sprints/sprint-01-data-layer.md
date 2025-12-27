@@ -312,6 +312,88 @@
 
 ---
 
+### Bug 修复与技术债务清理
+
+#### Bug Fix #1: Windows SQLite 文件锁定问题 ✅
+
+**问题描述**:
+- Windows 环境下测试 teardown 时出现 `PermissionError: [WinError 32]`
+- SQLite WAL 模式的 `-wal` 和 `-shm` 文件未被正确释放
+
+**根本原因**:
+- `SQLiteClient` 缺少 `close()` 方法
+- `DataHub.close()` 未关闭 store 层资源
+- Windows 文件句柄需要显式释放
+
+**解决方案**:
+1. 为 `SQLiteClient` 添加 `close()` 方法
+2. 为所有 Stores 添加 `close()` 方法：
+   - `SecurityStore.close()`
+   - `CalendarStore.close()`
+   - `PipelineStore.close()`
+3. 更新 `DataHub.close()` 按依赖顺序关闭资源：
+   - Stores (hold SQLiteClient) → sql_engine → sqlite_pool
+4. 测试 teardown 添加 `gc.collect()` 和延迟确保 Windows 释放句柄
+
+**修改文件**:
+- `packages/datahub/src/ditto_datahub/stores/sqlite_client.py`
+- `packages/datahub/src/ditto_datahub/stores/security_store.py`
+- `packages/datahub/src/ditto_datahub/stores/calendar_store.py`
+- `packages/datahub/src/ditto_datahub/stores/pipeline_store.py`
+- `packages/datahub/src/ditto_datahub/hub.py`
+- `packages/datahub/tests/unit/test_hub.py`
+
+**验收**:
+- ✅ 所有测试通过（8 passed）
+- ✅ teardown 无 PermissionError
+
+---
+
+#### Bug Fix #2: TushareClient 类型注解 ✅
+
+**问题描述**:
+- Pylance 报告 `len(response)` 类型未知
+- `TushareClient.query()` 返回类型是 `Any`
+
+**解决方案**:
+- 将返回类型从 `Any` 改为 `pd.DataFrame`
+- 添加 `import pandas as pd`
+
+**修改文件**:
+- `packages/datahub/src/ditto_datahub/sources/tushare/client.py`
+
+**验收**:
+- ✅ Pylance 类型检查通过
+- ✅ mypy typecheck 通过
+
+---
+
+#### Bug Fix #3: XDG 路径规范化 ✅
+
+**问题描述**:
+- 代码中存在硬编码的 C 盘路径
+- 不符合 XDG Base Directory 规范
+- Windows 环境下应默认使用 D 盘
+
+**解决方案**:
+1. 新增 `XDGPaths` 类实现跨平台路径管理
+2. 使用 `computed_field` 实现延迟路径解析
+3. 支持环境变量覆盖（`DITTO_*_DIR` 优先级最高）
+
+**修改文件**:
+- `packages/foundation/src/ditto_foundation/config/paths.py` (新增)
+- `packages/foundation/src/ditto_foundation/config/settings.py`
+- `packages/foundation/src/ditto_foundation/config/__init__.py`
+- `packages/foundation/src/ditto_foundation/observability/logging.py`
+- `.env.example`
+
+**验收**:
+- ✅ Windows 默认使用 `D:\data\ditto`
+- ✅ 环境变量覆盖生效
+- ✅ 所有测试通过
+
+---
+
 ## 关键文件清单
 
 ### 新增文件

@@ -16,6 +16,8 @@ from ditto_datahub.meta.schemas import (
     UNIVERSE_CONSTITUENT_SCHEMA,
 )
 
+__all__ = ["ValidationError", "validate_dataframe_schema"]
+
 # Dataset schema mapping
 DATASET_SCHEMAS: dict[str, dict[str, type[pl.DataType]]] = {
     "stock_daily": STOCK_DAILY_SCHEMA,

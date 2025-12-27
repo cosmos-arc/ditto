@@ -141,6 +141,7 @@ class TestPipelineStore:
         )
 
         result = pipeline_store.get_run(run_id)
+        assert result is not None
         assert result["status"] == "completed"
         assert result["rows_written"] == 5000
 
@@ -162,6 +163,7 @@ class TestPipelineStore:
         )
 
         result = pipeline_store.get_run(run_id)
+        assert result is not None
         assert result["dq_passed"] is False
         assert result["dq_fail_count"] == 5
         assert result["dq_warn_count"] == 10

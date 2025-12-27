@@ -1,5 +1,6 @@
 """pytest配置文件."""
 
+import os
 import sqlite3
 from collections.abc import Generator
 from pathlib import Path
@@ -21,12 +22,21 @@ def temp_dir() -> Generator[Path, None, None]:
 @pytest.fixture
 def test_settings(temp_dir: Path) -> Settings:
     """测试配置fixture."""
-    return Settings(
-        duckdb_path=temp_dir / "test.duckdb",
-        sqlite_path=temp_dir / "test.sqlite",
-        tushare_token="test_token",
-        akshare_enabled=False,
-    )
+    # 通过环境变量设置数据库路径
+    os.environ["DB_DUCKDB_PATH"] = str(temp_dir / "test.duckdb")
+    os.environ["DB_SQLITE_PATH"] = str(temp_dir / "test.sqlite")
+    os.environ["TUSHARE_TOKEN"] = "test_token"
+    os.environ["DITTO_ENV"] = "testing"
+
+    settings = Settings()
+
+    # 清理环境变量
+    del os.environ["DB_DUCKDB_PATH"]
+    del os.environ["DB_SQLITE_PATH"]
+    del os.environ["TUSHARE_TOKEN"]
+    del os.environ["DITTO_ENV"]
+
+    return settings
 
 
 @pytest.fixture
@@ -34,7 +44,7 @@ def duckdb_conn(
     test_settings: Settings,
 ) -> Generator[duckdb.DuckDBPyConnection, None, None]:
     """DuckDB连接fixture."""
-    conn = duckdb.connect(str(test_settings.duckdb_path))
+    conn = duckdb.connect(str(test_settings.database.duckdb_path))
 
     # 初始化表结构
     conn.execute("""
@@ -94,7 +104,7 @@ def duckdb_conn(
 @pytest.fixture
 def sqlite_conn(test_settings: Settings) -> Generator[sqlite3.Connection, None, None]:
     """SQLite连接fixture."""
-    conn = sqlite3.connect(str(test_settings.sqlite_path))
+    conn = sqlite3.connect(str(test_settings.database.sqlite_path))
 
     # 初始化表结构
     conn.execute("""

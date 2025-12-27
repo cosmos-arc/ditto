@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any
 
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.sqlite_client import SQLiteClient
@@ -47,7 +48,7 @@ class TestSQLiteClient:
         self.client.execute("CREATE TABLE test (id INTEGER, value TEXT)")
         self.client.commit()
 
-        params = [(1, "a"), (2, "b"), (3, "c")]
+        params: list[list[Any] | tuple[Any, ...]] = [(1, "a"), (2, "b"), (3, "c")]
         self.client.executemany("INSERT INTO test VALUES (?, ?)", params)
         self.client.commit()
 

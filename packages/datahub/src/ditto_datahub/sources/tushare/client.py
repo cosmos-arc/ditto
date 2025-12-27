@@ -9,6 +9,7 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
+import pandas as pd
 from ditto_foundation import logger
 from tenacity import (
     retry,
@@ -230,7 +231,7 @@ class TushareClient:
         api_name: str,
         fields: str | None = None,
         **params: Any,
-    ) -> Any:
+    ) -> pd.DataFrame:
         """
         Query Tushare API with rate limiting and retry.
 
