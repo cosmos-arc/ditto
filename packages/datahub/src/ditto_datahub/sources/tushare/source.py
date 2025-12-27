@@ -69,9 +69,8 @@ class TushareSource(DataSource):
                 fields="cal_date,is_open",
             )
 
-            # Transform response to DataFrame
-            items = response.get("items", [])
-            if not items:
+            # Tushare Pro API returns DataFrame directly
+            if len(response) == 0:
                 logger.info(
                     "Tushare calendar empty",
                     event="tushare_calendar_fetch_complete",
@@ -81,17 +80,13 @@ class TushareSource(DataSource):
                     schema={"trade_date": pl.Date, "is_open": pl.Boolean}
                 )
 
-            df = pl.DataFrame(
-                {
-                    "trade_date": [item[0] for item in items],
-                    "is_open": [item[1] for item in items],
-                }
-            )
+            # Convert pandas DataFrame to polars and rename columns
+            df = pl.from_pandas(response).rename({"cal_date": "trade_date"})
 
             # Transform types
             df = df.with_columns(
                 pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
-                pl.col("is_open") == pl.lit("1"),
+                pl.col("is_open").cast(pl.Int8) == 1,
             )
 
             row_count = len(df)
@@ -145,11 +140,11 @@ class TushareSource(DataSource):
         try:
             response = self._client.query(
                 api_name="etf_basic",
-                fields="ts_code,etf_name,exchange,list_date",
+                fields="ts_code,csname,exchange,list_date",
             )
 
-            items = response.get("items", [])
-            if not items:
+            # Tushare Pro API returns DataFrame directly
+            if len(response) == 0:
                 logger.info(
                     "Tushare ETF basic empty",
                     event="tushare_etf_basic_fetch_complete",
@@ -165,28 +160,18 @@ class TushareSource(DataSource):
                     }
                 )
 
-            df = pl.DataFrame(
-                {
-                    "src_code": [item[0] for item in items],
-                    "name": [item[1] for item in items],
-                    "exchange_raw": [item[2] for item in items],
-                    "list_date": [item[3] for item in items],
-                }
+            # Convert pandas DataFrame to polars and rename columns
+            df = pl.from_pandas(response).rename(
+                {"ts_code": "src_code", "csname": "name"}
             )
 
-            # Extract symbol (6-digit code from ts_code)
+            # Extract symbol (6-digit code from ts_code) and transform types
             df = df.with_columns(
-                pl.col("src_code").str.replace(".[A-Z]+$", "").alias("symbol"),
+                pl.col("src_code").str.replace(r"\.[A-Z]+$", "").alias("symbol"),
                 pl.col("list_date").str.strptime(pl.Date, "%Y%m%d"),
-                pl.when(pl.col("exchange_raw") == "上交所")
-                .then(pl.lit("SSE"))
-                .when(pl.col("exchange_raw") == "深交所")
-                .then(pl.lit("SZSE"))
-                .otherwise(pl.col("exchange_raw"))
-                .alias("exchange"),
             )
 
-            # Select and reorder columns
+            # Select and reorder columns (exchange already in SSE/SZSE format)
             df = df.select("src_code", "symbol", "name", "exchange", "list_date")
 
             row_count = len(df)
@@ -245,14 +230,14 @@ class TushareSource(DataSource):
         try:
             ts_date = trade_date.replace("-", "")
             response = self._client.query(
-                api_name="daily",
+                api_name="fund_daily",
                 ts_code="",
                 trade_date=ts_date,
-                fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amt,pct_chg",
+                fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
             )
 
-            items = response.get("items", [])
-            if not items:
+            # Tushare Pro API returns DataFrame directly
+            if len(response) == 0:
                 logger.info(
                     "Tushare ETF daily empty",
                     event="tushare_etf_daily_fetch_complete",
@@ -273,23 +258,41 @@ class TushareSource(DataSource):
                     }
                 )
 
-            df = pl.DataFrame(
+            # Convert pandas DataFrame to polars and rename columns
+            df = pl.from_pandas(response).rename(
                 {
-                    "src_code": [item[0] for item in items],
-                    "trade_date": [item[1] for item in items],
-                    "open": [float(item[2]) for item in items],
-                    "high": [float(item[3]) for item in items],
-                    "low": [float(item[4]) for item in items],
-                    "close": [float(item[5]) for item in items],
-                    "pre_close": [float(item[6]) for item in items],
-                    "volume": [float(item[7]) for item in items],
-                    "amount": [float(item[8]) for item in items],
-                    "pct_change": [float(item[9]) for item in items],
+                    "ts_code": "src_code",
+                    "vol": "volume",
+                    "pct_chg": "pct_change",
                 }
             )
 
-            # Transform trade_date string to Date
-            df = df.with_columns(pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"))
+            # Transform trade_date string to Date and ensure float types
+            df = df.with_columns(
+                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+                pl.col("open").cast(pl.Float64),
+                pl.col("high").cast(pl.Float64),
+                pl.col("low").cast(pl.Float64),
+                pl.col("close").cast(pl.Float64),
+                pl.col("pre_close").cast(pl.Float64),
+                pl.col("volume").cast(pl.Float64),
+                pl.col("amount").cast(pl.Float64),
+                pl.col("pct_change").cast(pl.Float64),
+            )
+
+            # Select required columns
+            df = df.select(
+                "src_code",
+                "trade_date",
+                "open",
+                "high",
+                "low",
+                "close",
+                "pre_close",
+                "volume",
+                "amount",
+                "pct_change",
+            )
 
             row_count = len(df)
             logger.info(
@@ -314,5 +317,353 @@ class TushareSource(DataSource):
                 message="Failed to fetch ETF daily from Tushare",
                 source="tushare",
                 dataset="daily",
+                original_error=str(e),
+            ) from e
+
+    @traced("source.tushare.fetch_stock_basic")
+    def fetch_stock_basic(self) -> pl.DataFrame:
+        """
+        Fetch stock basic information.
+
+        Returns:
+            DataFrame with columns:
+            - src_code: Source code (e.g., "000001.SZ")
+            - symbol: Display symbol (e.g., "000001")
+            - name: Stock name
+            - exchange: Exchange code
+            - list_date: Listing date
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        logger.info(
+            "Fetching Tushare stock basic info",
+            event="tushare_stock_basic_fetch_start",
+        )
+
+        try:
+            response = self._client.query(
+                api_name="stock_basic",
+                list_status="L",
+                fields="ts_code,symbol,name,exchange,list_date",
+            )
+
+            if len(response) == 0:
+                logger.info(
+                    "Tushare stock basic empty",
+                    event="tushare_stock_basic_fetch_complete",
+                    row_count=0,
+                )
+                return pl.DataFrame(
+                    schema={
+                        "src_code": pl.String,
+                        "symbol": pl.String,
+                        "name": pl.String,
+                        "exchange": pl.String,
+                        "list_date": pl.Date,
+                    }
+                )
+
+            df = pl.from_pandas(response).rename({"ts_code": "src_code"})
+
+            df = df.with_columns(
+                pl.col("list_date").str.strptime(pl.Date, "%Y%m%d"),
+            ).select("src_code", "symbol", "name", "exchange", "list_date")
+
+            row_count = len(df)
+            logger.info(
+                "Tushare stock basic fetched",
+                event="tushare_stock_basic_fetch_complete",
+                row_count=row_count,
+            )
+            M.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "stock_basic", "status": "success"},
+            )
+
+            return df
+
+        except Exception as e:
+            logger.error(
+                "Tushare stock basic fetch failed",
+                event="tushare_stock_basic_fetch_error",
+                error=str(e),
+            )
+            raise SourceFetchError(
+                message="Failed to fetch stock basic from Tushare",
+                source="tushare",
+                dataset="stock_basic",
+                original_error=str(e),
+            ) from e
+
+    @traced("source.tushare.fetch_stock_daily")
+    def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch stock daily OHLCV bars.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with columns (same as ETF daily schema):
+            - src_code: Source code
+            - trade_date: Date
+            - open, high, low, close, pre_close: Float64
+            - volume, amount: Float64
+            - pct_change: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+            SourceTransformationError: If data transformation fails.
+
+        """
+        logger.info(
+            "Fetching Tushare stock daily",
+            event="tushare_stock_daily_fetch_start",
+            trade_date=trade_date,
+        )
+
+        try:
+            ts_date = trade_date.replace("-", "")
+            response = self._client.query(
+                api_name="daily",
+                trade_date=ts_date,
+                fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
+            )
+
+            if len(response) == 0:
+                logger.info(
+                    "Tushare stock daily empty",
+                    event="tushare_stock_daily_fetch_complete",
+                    row_count=0,
+                )
+                return pl.DataFrame(
+                    schema={
+                        "src_code": pl.String,
+                        "trade_date": pl.Date,
+                        "open": pl.Float64,
+                        "high": pl.Float64,
+                        "low": pl.Float64,
+                        "close": pl.Float64,
+                        "pre_close": pl.Float64,
+                        "volume": pl.Float64,
+                        "amount": pl.Float64,
+                        "pct_change": pl.Float64,
+                    }
+                )
+
+            df = pl.from_pandas(response).rename(
+                {
+                    "ts_code": "src_code",
+                    "vol": "volume",
+                    "pct_chg": "pct_change",
+                }
+            )
+
+            df = df.with_columns(
+                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+                pl.col("open").cast(pl.Float64),
+                pl.col("high").cast(pl.Float64),
+                pl.col("low").cast(pl.Float64),
+                pl.col("close").cast(pl.Float64),
+                pl.col("pre_close").cast(pl.Float64),
+                pl.col("volume").cast(pl.Float64),
+                pl.col("amount").cast(pl.Float64),
+                pl.col("pct_change").cast(pl.Float64),
+            )
+
+            df = df.select(
+                "src_code",
+                "trade_date",
+                "open",
+                "high",
+                "low",
+                "close",
+                "pre_close",
+                "volume",
+                "amount",
+                "pct_change",
+            )
+
+            row_count = len(df)
+            logger.info(
+                "Tushare stock daily fetched",
+                event="tushare_stock_daily_fetch_complete",
+                row_count=row_count,
+            )
+            M.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "stock_daily", "status": "success"},
+            )
+
+            return df
+
+        except Exception as e:
+            logger.error(
+                "Tushare stock daily fetch failed",
+                event="tushare_stock_daily_fetch_error",
+                error=str(e),
+            )
+            raise SourceFetchError(
+                message="Failed to fetch stock daily from Tushare",
+                source="tushare",
+                dataset="daily",
+                original_error=str(e),
+            ) from e
+
+    @traced("source.tushare.fetch_adj_factor")
+    def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch stock adjustment factors.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with columns:
+            - src_code: Source code
+            - trade_date: Date
+            - adj_factor: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        logger.info(
+            "Fetching Tushare adj factors",
+            event="tushare_adj_factor_fetch_start",
+            trade_date=trade_date,
+        )
+
+        try:
+            ts_date = trade_date.replace("-", "")
+            response = self._client.query(
+                api_name="adj_factor",
+                trade_date=ts_date,
+            )
+
+            if len(response) == 0:
+                logger.info(
+                    "Tushare adj factor empty",
+                    event="tushare_adj_factor_fetch_complete",
+                    row_count=0,
+                )
+                return pl.DataFrame(
+                    schema={
+                        "src_code": pl.String,
+                        "trade_date": pl.Date,
+                        "adj_factor": pl.Float64,
+                    }
+                )
+
+            df = pl.from_pandas(response).rename({"ts_code": "src_code"})
+
+            df = df.with_columns(
+                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+                pl.col("adj_factor").cast(pl.Float64),
+            )
+
+            row_count = len(df)
+            logger.info(
+                "Tushare adj factor fetched",
+                event="tushare_adj_factor_fetch_complete",
+                row_count=row_count,
+            )
+            M.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "adj_factor", "status": "success"},
+            )
+
+            return df
+
+        except Exception as e:
+            logger.error(
+                "Tushare adj factor fetch failed",
+                event="tushare_adj_factor_fetch_error",
+                error=str(e),
+            )
+            raise SourceFetchError(
+                message="Failed to fetch adj factor from Tushare",
+                source="tushare",
+                dataset="adj_factor",
+                original_error=str(e),
+            ) from e
+
+    @traced("source.tushare.fetch_fund_adj")
+    def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch ETF/fund adjustment factors.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with columns:
+            - src_code: Source code
+            - trade_date: Date
+            - adj_factor: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        logger.info(
+            "Fetching Tushare fund adj factors",
+            event="tushare_fund_adj_fetch_start",
+            trade_date=trade_date,
+        )
+
+        try:
+            ts_date = trade_date.replace("-", "")
+            response = self._client.query(
+                api_name="fund_adj",
+                trade_date=ts_date,
+            )
+
+            if len(response) == 0:
+                logger.info(
+                    "Tushare fund adj empty",
+                    event="tushare_fund_adj_fetch_complete",
+                    row_count=0,
+                )
+                return pl.DataFrame(
+                    schema={
+                        "src_code": pl.String,
+                        "trade_date": pl.Date,
+                        "adj_factor": pl.Float64,
+                    }
+                )
+
+            df = pl.from_pandas(response).rename({"ts_code": "src_code"})
+
+            df = df.with_columns(
+                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+                pl.col("adj_factor").cast(pl.Float64),
+            )
+
+            row_count = len(df)
+            logger.info(
+                "Tushare fund adj fetched",
+                event="tushare_fund_adj_fetch_complete",
+                row_count=row_count,
+            )
+            M.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "fund_adj", "status": "success"},
+            )
+
+            return df
+
+        except Exception as e:
+            logger.error(
+                "Tushare fund adj fetch failed",
+                event="tushare_fund_adj_fetch_error",
+                error=str(e),
+            )
+            raise SourceFetchError(
+                message="Failed to fetch fund adj from Tushare",
+                source="tushare",
+                dataset="fund_adj",
                 original_error=str(e),
             ) from e

@@ -174,6 +174,18 @@ class TestDataSourceABC:
             def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
+            def fetch_stock_basic(self) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
         # Should not raise
         source = CompleteSource()
         assert isinstance(source, DataSource)

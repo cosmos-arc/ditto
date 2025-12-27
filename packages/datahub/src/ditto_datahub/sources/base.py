@@ -247,6 +247,88 @@ class DataSource(ABC):
         """
         pass
 
+    @abstractmethod
+    def fetch_stock_basic(self) -> pl.DataFrame:
+        """
+        Fetch stock basic information.
+
+        Returns:
+            DataFrame with columns:
+            - src_code: Source code (e.g., "000001.SZ")
+            - symbol: Display symbol (e.g., "000001")
+            - name: Stock name
+            - exchange: Exchange code (SSE/SZSE/BSE)
+            - list_date: Listing date
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch stock daily OHLCV bars.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with columns (same as ETF daily schema):
+            - src_code: Source code
+            - trade_date: Date
+            - open, high, low, close, pre_close: Float64
+            - volume, amount: Float64
+            - pct_change: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+            SourceTransformationError: If data transformation fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch stock adjustment factors.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with columns:
+            - src_code: Source code
+            - trade_date: Date
+            - adj_factor: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch ETF/fund adjustment factors.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with columns:
+            - src_code: Source code
+            - trade_date: Date
+            - adj_factor: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
 
 def get_source(name: str) -> DataSource:
     """
