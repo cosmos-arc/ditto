@@ -1,0 +1,140 @@
+"""L1 Technical checker."""
+
+from typing import Any
+
+import polars as pl
+from ditto_foundation import logger
+
+from ditto_datahub.dq.models import DQIssue, DQLevel, DQSeverity
+
+
+class TechnicalChecker:
+    """L1 technical validation checker."""
+
+    def check(
+        self,
+        df: pl.DataFrame,
+        rules: list[dict],
+        context: dict[str, Any] | None = None,
+    ) -> list[DQIssue]:
+        """Execute L1 technical checks.
+
+        Args:
+            df: Data to check
+            rules: List of L1 rule configurations
+            context: Additional context (e.g., hub for FK checks)
+
+        Returns:
+            List of DQIssue (ERROR severity)
+        """
+        issues: list[DQIssue] = []
+
+        for rule in rules:
+            issue = self._check_rule(df, rule, context)
+            if issue:
+                issues.append(issue)
+
+        return issues
+
+    def _check_rule(
+        self,
+        df: pl.DataFrame,
+        rule: dict,
+        context: dict[str, Any] | None = None,
+    ) -> DQIssue | None:
+        """Check a single rule.
+
+        Args:
+            df: Data to check
+            rule: Rule configuration
+            context: Additional context
+
+        Returns:
+            DQIssue if rule violated, None otherwise
+        """
+        rule_type = rule.get("rule")
+
+        if rule_type == "not_null":
+            return self._check_not_null(df, rule)
+        elif rule_type == "unique":
+            return self._check_unique(df, rule)
+        elif rule_type == "foreign_key":
+            return self._check_foreign_key(df, rule, context)
+        elif rule_type == "type_check":
+            return self._check_type(df, rule)
+
+        return None
+
+    def _check_not_null(self, df: pl.DataFrame, rule: dict) -> DQIssue | None:
+        """Check not null constraint."""
+        columns = rule.get("columns", [])
+
+        for col in columns:
+            if col not in df.columns:
+                continue
+            null_count = df.filter(pl.col(col).is_null()).height
+            if null_count > 0:
+                logger.warning(
+                    "dq_rule_not_null",
+                    event="dq_check",
+                    rule="not_null",
+                    column=col,
+                    null_count=null_count,
+                )
+                return DQIssue(
+                    level=DQLevel.L1_TECHNICAL,
+                    severity=DQSeverity.ERROR,
+                    rule_name="not_null",
+                    message=rule.get("message", f"{col} has null values"),
+                    affected_rows=null_count,
+                )
+
+        return None
+
+    def _check_unique(self, df: pl.DataFrame, rule: dict) -> DQIssue | None:
+        """Check uniqueness constraint."""
+        columns = rule.get("columns", [])
+
+        # Check if all columns exist
+        missing_cols = [c for c in columns if c not in df.columns]
+        if missing_cols:
+            return None
+
+        # Check duplicates
+        total_rows = df.height
+        unique_rows = df.select(columns).n_unique()
+        duplicate_count = total_rows - unique_rows
+
+        if duplicate_count > 0:
+            logger.warning(
+                "dq_rule_unique",
+                event="dq_check",
+                rule="unique",
+                columns=columns,
+                duplicate_count=duplicate_count,
+            )
+            return DQIssue(
+                level=DQLevel.L1_TECHNICAL,
+                severity=DQSeverity.ERROR,
+                rule_name="unique",
+                message=rule.get("message", f"Duplicate key: {columns}"),
+                affected_rows=duplicate_count,
+            )
+
+        return None
+
+    def _check_foreign_key(
+        self,
+        df: pl.DataFrame,
+        rule: dict,
+        context: dict[str, Any] | None = None,
+    ) -> DQIssue | None:
+        """Check foreign key constraint."""
+        # TODO: Implement with hub context for FK validation
+        # Need to query reference table from context["hub"]
+        return None
+
+    def _check_type(self, df: pl.DataFrame, rule: dict) -> DQIssue | None:
+        """Check data types."""
+        # TODO: Implement type checking
+        return None

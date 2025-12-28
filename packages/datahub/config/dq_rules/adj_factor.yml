@@ -1,0 +1,64 @@
+# 复权因子 DQ 规则
+dataset: adj_factor
+description: "复权因子数据质量检查规则"
+
+# L1: 技术校验（写入时强制阻断）
+l1_technical:
+  - rule: not_null
+    columns: [sid, trade_date, adj_factor]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [sid, trade_date]
+    message: "主键 (sid, trade_date) 重复"
+
+  - rule: foreign_key
+    column: sid
+    reference: security.sid
+    message: "SID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      sid: int
+      trade_date: date
+      adj_factor: float
+    message: "字段类型不匹配"
+
+# L2: 业务规则（写入时警告但不阻断）
+l2_business:
+  - rule: positive
+    columns: [adj_factor]
+    message: "复权因子必须为正数"
+
+  - rule: monotonic_decrease
+    column: adj_factor
+    group_by: sid
+    severity: warning
+    message: "复权因子应单调递减（除权除息时会跳跃）"
+
+  - rule: expression
+    name: reasonable_range
+    expr: "adj_factor BETWEEN 0.1 AND 100.0"
+    severity: warning
+    message: "复权因子超出合理范围 [0.1, 100.0]"
+
+# L3: 统计异常（定时批量检查）
+l3_statistical:
+  - rule: completeness
+    name: missing_adj_factor
+    expected_dates: "trade_calendar"
+    lookback_days: 5
+    message: "最近 5 个交易日存在缺失的复权因子数据"
+
+  - rule: outlier
+    name: sudden_change
+    column: adj_factor
+    window: 20
+    threshold_ratio: 0.5  # 变化超过 50% 标记为异常
+    group_by: sid
+    message: "复权因子异常变化（可能除权除息）"
+
+  - rule: consistency
+    name: cross_check_with_price
+    reference_dataset: market_daily
+    message: "复权因子与价格数据存在不一致"
