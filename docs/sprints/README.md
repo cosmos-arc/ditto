@@ -4,9 +4,10 @@
 
 | Sprint | 阶段 | 进度 | 状态 |
 |--------|------|------|------|
-| Sprint 1 | 数据层与验证 | ██████████ 100% | ✅ P0 完成 |
-| Sprint 2 | 核心引擎 | ░░░░░░░░░░ 0% | ❌ 未开始 |
-| Sprint 3 | 回测与风控 | ░░░░░░░░░░ 0% | ❌ 未开始 |
+| Sprint 1 | 数据层基础架构 | ██████████ 100% | ✅ P0 完成 |
+| Sprint 2 | 数据层完善与验证 | ░░░░░░░░░░ 0% | ❌ 未开始 |
+| Sprint 3 | 核心引擎 | ░░░░░░░░░░ 0% | ❌ 未开始 |
+| Sprint 4 | 回测与风控 | ░░░░░░░░░░ 0% | ❌ 未开始 |
 
 ## 当前进行中
 
@@ -120,19 +121,26 @@
 ## Sprint 规划
 
 ### Phase 0.5: 数据层与验证
-- **Sprint 1**: [数据层实现](./sprint-01-data-layer.md)
-  - Week 1-2
+- **Sprint 1**: [数据层基础架构](./sprint-01-data-foundation.md)
+  - Week 1-3
   - ✅ P0 全部完成（Runtime Layer → Store Layer → Repositories → DataHub）
-  - 🔄 P1 待开始（ETL Pipeline + Golden Dataset 验证）
+  - ✅ 数据摄取基础（Tushare 适配器）
+
+- **Sprint 2**: [数据层完善与验证](./sprint-02-data-quality.md)
+  - Week 4-8 (4-5 周)
+  - ❌ DQ 三层架构（L1/L2/L3）
+  - ❌ DataHub 完整实现（Universe/Index/Freeze/元数据）
+  - ❌ 数据摄取增强（增量/监控/告警/AkShare）
+  - ❌ 黄金数据集验证（最终验收）
 
 ### Phase 1.1: 核心引擎
-- **Sprint 2**: [核心引擎实现](./sprint-02-core-engines.md)
-  - Week 3-4
+- **Sprint 3**: [核心引擎实现](./sprint-03-core-engines.md)
+  - Week 9-12 (3-4 周)
   - RegimeEngine → FactorEngine → 策略框架
 
 ### Phase 1.2: 回测与风控
-- **Sprint 3**: [回测与风控](./sprint-03-backtest-risk.md)
-  - Week 5-6
+- **Sprint 4**: [回测与风控](./sprint-04-backtest-risk.md)
+  - Week 13-16 (3-4 周)
   - FastBacktester → RiskEngine → Walk-Forward
 
 ---
@@ -211,7 +219,8 @@ git commit -m "chore(datahub): export DataHub from __init__.py"
 
 | Sprint | 文件 | 状态 |
 |--------|------|------|
-| 1 | [sprint-01-data-layer.md](./sprint-01-data-layer.md) | 🔄 80% |
-| 2 | [sprint-02-core-engines.md](./sprint-02-core-engines.md) | ❌ 未开始 |
-| 3 | [sprint-03-backtest-risk.md](./sprint-03-backtest-risk.md) | ❌ 未开始 |
+| 1 | [sprint-01-data-foundation.md](./sprint-01-data-foundation.md) | ✅ 100% P0 |
+| 2 | [sprint-02-data-quality.md](./sprint-02-data-quality.md) | ❌ 未开始 |
+| 3 | [sprint-03-core-engines.md](./sprint-03-core-engines.md) | ❌ 未开始 |
+| 4 | [sprint-04-backtest-risk.md](./sprint-04-backtest-risk.md) | ❌ 未开始 |
 | - | [backlog.md](./backlog.md) | 📝 想法池 |

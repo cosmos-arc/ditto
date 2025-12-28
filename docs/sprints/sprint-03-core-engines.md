@@ -1,6 +1,6 @@
-# Sprint 2: 核心引擎实现（基于官方设计文档）
+# Sprint 3: 核心引擎实现（基于官方设计文档）
 
-**时间**: Week 3-4
+**时间**: Week 9-12 (3-4 周)
 **Phase**: 1.1 核心引擎期
 **目标**: 按照官方设计文档实现核心引擎和策略框架
 
@@ -108,6 +108,7 @@ class Strategy(ABC):
   - 包含自适应阈值计算
   - 包含确认期机制
   - 包含极端行情检测
+- **状态**：❌
 
 #### 任务2: 实现因子系统
 - **文件**：
@@ -118,6 +119,7 @@ class Strategy(ABC):
   - `packages/core/src/ditto_core/factors/crowding_factor.py`
   - `packages/core/src/ditto_core/factors/analyzer.py` - FactorAnalyzer
 - **测试**：`packages/core/tests/unit/test_factors/`
+- **状态**：❌
 
 #### 任务3: 实现策略框架
 - **文件**：
@@ -126,12 +128,14 @@ class Strategy(ABC):
   - `packages/core/src/ditto_core/strategy/defensive_strategy.py`
   - `packages/core/src/ditto_core/strategy/momentum_strategy.py`
 - **测试**：`packages/core/tests/unit/test_strategies/`
+- **状态**：❌
 
 #### 任务4: 实现PortfolioManager
 - **文件**：
   - `packages/core/src/ditto_core/portfolio/portfolio_manager.py`
   - `packages/core/src/ditto_core/portfolio/strategy_allocation.py`
 - **测试**：`packages/core/tests/unit/test_portfolio_manager.py`
+- **状态**：❌
 
 ### P1 - 应该完成
 
@@ -142,6 +146,7 @@ class Strategy(ABC):
   - Polars原生实现
   - 比Pandas-TA快18倍
   - 支持SMA、EMA、RSI、MACD、布林带、ATR
+- **状态**：❌
 
 ## 验收标准
 
@@ -204,7 +209,30 @@ packages/core/src/ditto_core/
 2. **使用DataHub**：所有数据访问通过DataHub，确保PIT安全
 3. **Polars优先**：性能关键部分使用Polars向量化
 4. **完整测试**：每个组件都需要单元测试和集成测试
+5. **基于数据层成果**：Sprint 2 已完成数据层完善，可充分利用 DataHub 的完整功能
 
 ## 下一步
 
-Sprint 2完成后，将进入Sprint 3回测与风控阶段，使用已实现的引擎构建完整的回测系统。
+Sprint 3完成后，将进入Sprint 4回测与风控阶段，使用已实现的引擎构建完整的回测系统。
+
+---
+
+## 调整说明
+
+**原 Sprint 2 核心引擎任务**已延后到当前 Sprint 3，原因是 Sprint 2 专注于数据层完善：
+- DQ 三层架构（L1/L2/L3）
+- DataHub 完整实现（Universe/Index/Freeze/元数据）
+- 数据摄取增强（增量/监控/告警/AkShare）
+- 黄金数据集验证（最终验收）
+
+这为引擎开发提供了坚实的数据基础。
+
+---
+
+## 状态图例
+
+- ❌ 未开始
+- 🔄 进行中
+- ✅ 已完成
+- 🚧 阻塞中
+- 📝 规划中
