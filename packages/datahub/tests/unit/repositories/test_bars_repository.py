@@ -1,6 +1,8 @@
 """Tests for BarsRepository."""
 
-from datetime import date
+import random
+import time
+from datetime import date, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -689,3 +691,364 @@ class TestMixedAssetClass:
                 start="2024-01-01",
                 end="2024-01-31",
             )
+
+    def test_mixed_asset_with_boundary_sids(self) -> None:
+        """测试 SID 范围边界值（使用已存在的 100000001 和 200000001）."""
+        # Write test data for existing SIDs from setup
+        # setup already has: 100000001 (stock) and 200000001 (etf)
+        stock_bars = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 2)],
+                "open": [10.0],
+                "high": [12.0],
+                "low": [9.0],
+                "close": [11.0],
+                "volume": [1000],
+            }
+        )
+        etf_bars = pl.DataFrame(
+            {
+                "sid": [200000001],
+                "trade_date": [date(2024, 1, 2)],
+                "open": [5.0],
+                "high": [6.0],
+                "low": [4.5],
+                "close": [5.5],
+                "volume": [2000],
+            }
+        )
+        self.bars_store.write("stock_daily", stock_bars, 2024)
+        self.bars_store.write("etf_daily", etf_bars, 2024)
+
+        # Act & Assert: Mixed SIDs (stock + etf) should raise error
+        with pytest.raises(ValueError, match="Mixed asset class query"):
+            self.repo.get(
+                sids=[100000001, 200000001],
+                start="2024-01-01",
+                end="2024-01-31",
+            )
+
+    def test_mixed_asset_with_all_three_asset_classes(self) -> None:
+        """测试同时包含 stock/etf/index 的查询."""
+        # Insert index security (SID: 300,000,000 - 399,999,999)
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (300000001, '000001', 'Test Index', 'SSE', 'index', '2000-01-01')
+        """)
+        self.client.commit()
+
+        # Write index data
+        index_bars = pl.DataFrame(
+            {
+                "sid": [300000001],
+                "trade_date": [date(2024, 1, 1)],
+                "open": [3000.0],
+                "high": [3100.0],
+                "low": [2900.0],
+                "close": [3050.0],
+                "volume": [1000000],
+            }
+        )
+        self.bars_store.write("index_daily", index_bars, 2024)
+
+        # Act & Assert: All three asset classes should raise error
+        with pytest.raises(ValueError, match="Mixed asset class query"):
+            self.repo.get(
+                sids=[100000001, 200000001, 300000001],  # stock + etf + index
+                start="2024-01-01",
+                end="2024-01-31",
+            )
+
+        # Verify error message mentions all three classes
+        try:
+            self.repo.get(
+                sids=[100000001, 200000001, 300000001],
+                start="2024-01-01",
+                end="2024-01-31",
+            )
+        except ValueError as e:
+            error_msg = str(e)
+            assert "stock" in error_msg
+            assert "ETF" in error_msg
+            assert "index" in error_msg
+        else:
+            pytest.fail("Expected ValueError for mixed asset classes")
+
+
+class TestAdjFactorEdgeCases:
+    """复权因子边缘情况测试."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = TemporaryDirectory()
+        data_root = Path(self.temp_dir.name)
+
+        self.pool = SQLitePool(":memory:")
+        self.pool.init_schema()
+        self.client = SQLiteClient(self.pool)
+
+        self.bars_store = BarsStore(data_root)
+        self.adj_factor_store = AdjFactorStore(data_root)
+        self.security_store = SecurityStore(self.client)
+        self.dq_checker = DQChecker()
+        self.file_lock_manager = FileLockManager(data_root / "locks")
+
+        self.repo = BarsRepository(
+            self.bars_store,
+            self.adj_factor_store,
+            self.security_store,
+            self.dq_checker,
+            self.file_lock_manager,
+        )
+
+        # Insert test security
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (100000001, '600000', 'Test Stock', 'SSE', 'stock', '2000-01-01')
+        """)
+        self.client.commit()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        self.temp_dir.cleanup()
+
+    def test_qfq_with_all_missing_factors_returns_original(self) -> None:
+        """QFQ 所有复权因子缺失时返回原始价格."""
+        # Arrange: Write bars data without any adj_factor
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
+                "open": [10.0, 11.0],
+                "high": [12.0, 13.0],
+                "low": [9.0, 10.0],
+                "close": [11.0, 12.0],
+                "volume": [1000, 2000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Act: Get QFQ adjusted data (no adj_factor data at all)
+        result = self.repo.get(
+            sids=[100000001],
+            start="2024-01-02",
+            end="2024-01-03",
+            adj=AdjType.QFQ,
+        )
+
+        # Assert: Should return original prices when no adj_factor data exists
+        result_sorted = result.sort("trade_date")
+        assert len(result_sorted) == 2
+        assert abs(result_sorted["close"][0] - 11.0) < 0.01  # 2024-01-02
+        assert abs(result_sorted["close"][1] - 12.0) < 0.01  # 2024-01-03
+
+    def test_hfq_with_all_missing_factors_returns_original(self) -> None:
+        """HFQ 所有复权因子缺失时返回原始价格."""
+        # Arrange: Write bars data without any adj_factor
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
+                "open": [10.0, 11.0],
+                "high": [12.0, 13.0],
+                "low": [9.0, 10.0],
+                "close": [11.0, 12.0],
+                "volume": [1000, 2000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Act: Get HFQ adjusted data (no adj_factor data at all)
+        result = self.repo.get(
+            sids=[100000001],
+            start="2024-01-02",
+            end="2024-01-03",
+            adj=AdjType.HFQ,
+        )
+
+        # Assert: Should return original prices when no adj_factor data exists
+        result_sorted = result.sort("trade_date")
+        assert len(result_sorted) == 2
+        assert abs(result_sorted["close"][0] - 11.0) < 0.01  # 2024-01-02
+        assert abs(result_sorted["close"][1] - 12.0) < 0.01  # 2024-01-03
+
+    def test_qfq_year_boundary_continuity(self) -> None:
+        """QFQ 跨年数据排序连续性验证."""
+        # Arrange: Write bars data across year boundary
+        dates = [date(2023, 12, 29), date(2023, 12, 30), date(2024, 1, 2)]
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000001],
+                "trade_date": dates,
+                "open": [10.0, 10.0, 10.0],
+                "high": [12.0, 12.0, 12.0],
+                "low": [9.0, 9.0, 9.0],
+                "close": [11.0, 11.0, 11.0],
+                "volume": [1000, 2000, 3000],
+            }
+        )
+        # Split data by year
+        bars_2023 = bars_df.filter(pl.col("trade_date") < date(2024, 1, 1))
+        bars_2024 = bars_df.filter(pl.col("trade_date") >= date(2024, 1, 1))
+        self.bars_store.write("stock_daily", bars_2023, 2023)
+        self.bars_store.write("stock_daily", bars_2024, 2024)
+
+        # Write adj_factor data: 0.95 starting from 2024-01-02
+        adj_df_2023 = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001],
+                "trade_date": [date(2023, 12, 29), date(2023, 12, 30)],
+                "adj_factor": [1.0, 1.0],
+            }
+        )
+        adj_df_2024 = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 2)],
+                "adj_factor": [0.95],
+            }
+        )
+        self.adj_factor_store.write("adj_factor", adj_df_2023, 2023)
+        self.adj_factor_store.write("adj_factor", adj_df_2024, 2024)
+
+        # Act: Get QFQ adjusted data across year boundary
+        result = self.repo.get(
+            sids=[100000001],
+            start="2023-12-29",
+            end="2024-01-02",
+            adj=AdjType.QFQ,
+        )
+
+        # Assert: Verify continuity across year boundary
+        result_sorted = result.sort("trade_date")
+        assert len(result_sorted) == 3
+        # QFQ should use latest factor (0.95) as baseline for all dates
+        # 2023-12-29: 11.0 * 1.0 / 0.95
+        assert abs(result_sorted["close"][0] - 11.579) < 0.01
+        # 2023-12-30: 11.0 * 1.0 / 0.95
+        assert abs(result_sorted["close"][1] - 11.579) < 0.01
+        # 2024-01-02: 11.0 * 0.95 / 0.95
+        assert abs(result_sorted["close"][2] - 11.00) < 0.01
+
+    def test_qfq_large_dataset_performance(self) -> None:
+        """QFQ 大数据集性能测试（365 个交易日）."""
+        # Arrange: Create dataset for full year (365 trading days)
+        random.seed(42)
+        # Generate dates for full year 2024
+        dates = [date(2024, 1, 1) + timedelta(days=i) for i in range(365)]
+        n_records = len(dates)
+        sids = [100000001] * n_records
+        opens = [10.0 + random.random() for _ in range(n_records)]
+        highs = [12.0 + random.random() for _ in range(n_records)]
+        lows = [9.0 + random.random() for _ in range(n_records)]
+        closes = [11.0 + random.random() for _ in range(n_records)]
+        volumes = [1000 + i for i in range(n_records)]
+
+        bars_df = pl.DataFrame(
+            {
+                "sid": sids,
+                "trade_date": dates,
+                "open": opens,
+                "high": highs,
+                "low": lows,
+                "close": closes,
+                "volume": volumes,
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Create adj_factor data for all dates
+        half_len = len(dates) // 2
+        adj_factors = [1.0 if i < half_len else 0.95 for i in range(len(dates))]
+        adj_df = pl.DataFrame(
+            {
+                "sid": [100000001] * len(dates),
+                "trade_date": dates,
+                "adj_factor": adj_factors,
+            }
+        )
+        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+
+        # Act: Get QFQ adjusted data for full year
+        start_time = time.time()
+        result = self.repo.get(
+            sids=[100000001],
+            start="2024-01-01",
+            end="2024-12-31",
+            adj=AdjType.QFQ,
+        )
+        duration_ms = (time.time() - start_time) * 1000
+
+        # Assert: Verify results and performance
+        assert len(result) == n_records
+        # Performance check: should complete within reasonable time (< 5 seconds)
+        msg = f"Performance check failed: {duration_ms}ms >= 5000ms"
+        assert duration_ms < 5000, msg
+
+    def test_adj_factor_with_single_sid(self) -> None:
+        """单个 SID 的复权处理."""
+        # Arrange: Write bars and adj_factor for single SID
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 2)],
+                "open": [10.0],
+                "high": [12.0],
+                "low": [9.0],
+                "close": [11.0],
+                "volume": [1000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        adj_df = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 2)],
+                "adj_factor": [0.95],
+            }
+        )
+        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+
+        # Act: Get QFQ adjusted data
+        result = self.repo.get(
+            sids=[100000001],
+            start="2024-01-02",
+            end="2024-01-02",
+            adj=AdjType.QFQ,
+        )
+
+        # Assert: Single SID should work correctly
+        assert len(result) == 1
+        # QFQ: 11.0 * 0.95 / 0.95 = 11.0 (only one factor, so baseline is same)
+        assert abs(result["close"][0] - 11.0) < 0.01
+
+    def test_adj_factor_with_empty_sid_list(self) -> None:
+        """空 SID 列表处理."""
+        # Arrange: Write some bars data
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 2)],
+                "open": [10.0],
+                "high": [12.0],
+                "low": [9.0],
+                "close": [11.0],
+                "volume": [1000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Act: Get data with empty SID list
+        result = self.repo.get(
+            sids=[],
+            start="2024-01-01",
+            end="2024-01-31",
+        )
+
+        # Assert: Should return empty DataFrame
+        assert isinstance(result, pl.DataFrame)
+        assert result.is_empty()

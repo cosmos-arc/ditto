@@ -375,19 +375,21 @@ class BarsRepository:
         asof: str | None = None,
     ) -> pl.DataFrame:
         """
-        Apply price adjustment.
+        应用价格调整（主入口）。
 
         Args:
-            df: Bars data DataFrame.
-            sids: SIDs to adjust.
-            adj: Adjustment type.
-            start: Start date for adj_factor read.
-            end: End date for adj_factor read.
-            asof: Point-in-time date for adjustment baseline. When provided,
-                  the latest factor is computed as of this date, not end date.
+            df: K线数据 DataFrame。
+            sids: 要调整的 SID 列表。
+            adj: 调整类型。
+            start: adj_factor 读取的起始日期。
+            end: adj_factor 读取的结束日期。
+            asof: PIT 调整基准日期。如果提供，则使用该日期的最新因子。
+
+        Returns:
+            调整后的 DataFrame.
 
         """
-        # Read adjustment factors
+        # 读取调整因子
         adj_df = self._adj_factor_store.read(
             dataset="adj_factor",
             sids=sids,
@@ -403,70 +405,110 @@ class BarsRepository:
             )
             return df
 
-        # Ensure sorting for correct last() aggregation (defensive programming)
+        # 确保排序以正确处理 last() 聚合
         adj_df = adj_df.sort(["sid", "trade_date"])
 
-        # Join adjustment factors
+        # 关联调整因子
         df = df.join(
             adj_df.select(["sid", "trade_date", "adj_factor"]),
             on=["sid", "trade_date"],
             how="left",
         )
 
+        # 根据调整类型调用相应方法
         if adj == AdjType.QFQ:
-            # Forward adjustment: use latest factor as baseline
-            # Tushare QFQ: adj_price = orig_price * cur_factor / latest_factor
-            # PIT: When asof is provided, use latest factor as of asof date
-            baseline_df = adj_df
-            if asof is not None:
-                # Filter to factors on or before asof date for PIT safety
-                from datetime import date
-
-                asof_date = date.fromisoformat(asof)
-                baseline_df = adj_df.filter(pl.col("trade_date") <= asof_date)
-
-            latest_factors = baseline_df.group_by("sid").agg(
-                pl.col("adj_factor").last().alias("latest_factor")
-            )
-            df = df.join(latest_factors, on="sid", how="left")
-            # Use coalesce(adj_factor, 1.0) for missing values (returns original price)
-            df = df.with_columns(
-                [
-                    (
-                        pl.col("open")
-                        * pl.coalesce("adj_factor", 1.0)
-                        / pl.coalesce("latest_factor", 1.0)
-                    ).alias("open"),
-                    (
-                        pl.col("high")
-                        * pl.coalesce("adj_factor", 1.0)
-                        / pl.coalesce("latest_factor", 1.0)
-                    ).alias("high"),
-                    (
-                        pl.col("low")
-                        * pl.coalesce("adj_factor", 1.0)
-                        / pl.coalesce("latest_factor", 1.0)
-                    ).alias("low"),
-                    (
-                        pl.col("close")
-                        * pl.coalesce("adj_factor", 1.0)
-                        / pl.coalesce("latest_factor", 1.0)
-                    ).alias("close"),
-                ]
-            )
-            df = df.drop(["adj_factor", "latest_factor"])
-
+            return self._apply_qfq_adj(df, adj_df, asof)
         else:  # HFQ
-            # Backward adjustment: use current factor
-            # Use coalesce(adj_factor, 1.0) for missing values (returns original price)
-            df = df.with_columns(
-                [
-                    (pl.col("open") * pl.coalesce("adj_factor", 1.0)).alias("open"),
-                    (pl.col("high") * pl.coalesce("adj_factor", 1.0)).alias("high"),
-                    (pl.col("low") * pl.coalesce("adj_factor", 1.0)).alias("low"),
-                    (pl.col("close") * pl.coalesce("adj_factor", 1.0)).alias("close"),
-                ]
-            )
-            df = df.drop("adj_factor")
+            return self._apply_hfq_adj(df, adj_df)
 
-        return df
+    def _apply_qfq_adj(
+        self,
+        df: pl.DataFrame,
+        adj_df: pl.DataFrame,
+        asof: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        应用前复权（QFQ）调整。
+
+        Tushare QFQ: adj_price = orig_price * cur_factor / latest_factor。
+        当 asof 提供时，使用该日期的最新因子作为基准。
+
+        Args:
+            df: 已关联 adj_factor 的 K线数据。
+            adj_df: 调整因子数据（已排序）。
+            asof: PIT 基准日期。
+
+        Returns:
+            QFQ 调整后的 DataFrame.
+
+        """
+        # 计算 baseline（PIT 安全）
+        baseline_df = adj_df
+        if asof is not None:
+            from datetime import date
+
+            asof_date = date.fromisoformat(asof)
+            baseline_df = adj_df.filter(pl.col("trade_date") <= asof_date)
+
+        # 获取每个 SID 的最新因子
+        latest_factors = baseline_df.group_by("sid").agg(
+            pl.col("adj_factor").last().alias("latest_factor")
+        )
+        df = df.join(latest_factors, on="sid", how="left")
+
+        # 应用 QFQ 公式，缺失值使用 1.0（返回原始价格）
+        df = df.with_columns(
+            [
+                (
+                    pl.col("open")
+                    * pl.coalesce("adj_factor", 1.0)
+                    / pl.coalesce("latest_factor", 1.0)
+                ).alias("open"),
+                (
+                    pl.col("high")
+                    * pl.coalesce("adj_factor", 1.0)
+                    / pl.coalesce("latest_factor", 1.0)
+                ).alias("high"),
+                (
+                    pl.col("low")
+                    * pl.coalesce("adj_factor", 1.0)
+                    / pl.coalesce("latest_factor", 1.0)
+                ).alias("low"),
+                (
+                    pl.col("close")
+                    * pl.coalesce("adj_factor", 1.0)
+                    / pl.coalesce("latest_factor", 1.0)
+                ).alias("close"),
+            ]
+        )
+        return df.drop(["adj_factor", "latest_factor"])
+
+    def _apply_hfq_adj(
+        self,
+        df: pl.DataFrame,
+        adj_df: pl.DataFrame,
+    ) -> pl.DataFrame:
+        """
+        应用后复权（HFQ）调整。
+
+        后复权：adj_price = orig_price * cur_factor
+        缺失值使用 1.0（返回原始价格）。
+
+        Args:
+            df: 已关联 adj_factor 的 K线数据。
+            adj_df: 调整因子数据（未使用，保持参数一致性）。
+
+        Returns:
+            HFQ 调整后的 DataFrame.
+
+        """
+        # 应用 HFQ 公式，缺失值使用 1.0
+        df = df.with_columns(
+            [
+                (pl.col("open") * pl.coalesce("adj_factor", 1.0)).alias("open"),
+                (pl.col("high") * pl.coalesce("adj_factor", 1.0)).alias("high"),
+                (pl.col("low") * pl.coalesce("adj_factor", 1.0)).alias("low"),
+                (pl.col("close") * pl.coalesce("adj_factor", 1.0)).alias("close"),
+            ]
+        )
+        return df.drop("adj_factor")

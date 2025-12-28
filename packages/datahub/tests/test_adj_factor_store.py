@@ -428,3 +428,154 @@ class TestDateNormalization:
         # Should raise InvalidOperationError for invalid date format
         with pytest.raises(pl.InvalidOperationError):
             store.write("adj_factor", df, 2024)
+
+
+class TestSortingEnhanced:
+    """排序验证增强测试."""
+
+    @pytest.fixture
+    def data_root(self, tmp_path: Path) -> Path:
+        """Create temporary data root directory."""
+        return tmp_path / "data"
+
+    @pytest.fixture
+    def store(self, data_root: Path) -> AdjFactorStore:
+        """Create AdjFactorStore instance."""
+        return AdjFactorStore(data_root)
+
+    def test_sorting_across_year_partitions(self, store: AdjFactorStore) -> None:
+        """跨年分区数据的排序正确性."""
+        # Write 2023 data
+        dates_2023 = [date(2023, 12, 31), date(2023, 12, 29), date(2023, 12, 30)]
+        df_2023 = pl.DataFrame(
+            {
+                "sid": [100000002, 100000001, 100000001],
+                "trade_date": dates_2023,
+                "adj_factor": [1.0, 1.0, 0.98],
+            }
+        )
+        store.write("adj_factor", df_2023, 2023)
+
+        # Write 2024 data
+        dates_2024 = [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 1)]
+        df_2024 = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000002],
+                "trade_date": dates_2024,
+                "adj_factor": [0.95, 0.95, 1.0],
+            }
+        )
+        store.write("adj_factor", df_2024, 2024)
+
+        # Read across both years
+        result = store.read(
+            "adj_factor",
+            start_date="2023-12-29",
+            end_date="2024-01-03",
+        )
+
+        # Verify sorting: (sid, trade_date)
+        assert len(result) == 6
+        # Expected order:
+        # 100000001, 2023-12-29
+        # 100000001, 2023-12-30
+        # 100000001, 2024-01-02
+        # 100000001, 2024-01-03
+        # 100000002, 2023-12-31
+        # 100000002, 2024-01-01
+        for i in range(len(result) - 1):
+            current_sid = result["sid"][i]
+            next_sid = result["sid"][i + 1]
+            current_date = result["trade_date"][i]
+            next_date = result["trade_date"][i + 1]
+
+            # Verify sorting order
+            assert current_sid < next_sid or (
+                current_sid == next_sid and current_date <= next_date
+            ), (
+                f"Row {i} not sorted: ({current_sid}, {current_date}) before "
+                f"({next_sid}, {next_date})"
+            )
+
+    def test_sorting_with_duplicate_keys_uses_last(self, store: AdjFactorStore) -> None:
+        """重复键的正确处理（keep="last"）。"""
+        # Write initial data
+        df1 = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000002],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 2)],
+                "adj_factor": [1.0, 0.95, 1.0],
+            }
+        )
+        store.write("adj_factor", df1, 2024)
+
+        # Write overlapping data with updated values
+        df2 = pl.DataFrame(
+            {
+                "sid": [100000001, 100000002],
+                "trade_date": [date(2024, 1, 3), date(2024, 1, 2)],
+                "adj_factor": [0.92, 0.88],  # Updated values
+            }
+        )
+        store.write("adj_factor", df2, 2024)
+
+        # Read back and verify keep="last" behavior
+        result = store.read("adj_factor")
+
+        # Check that 100000001/2024-01-03 uses the last value (0.92, not 0.95)
+        record = result.filter(
+            (pl.col("sid") == 100000001) & (pl.col("trade_date") == date(2024, 1, 3))
+        )
+        assert len(record) == 1
+        assert record["adj_factor"][0] == 0.92
+
+        # Check that 100000002/2024-01-02 uses the last value (0.88, not 1.0)
+        record = result.filter(
+            (pl.col("sid") == 100000002) & (pl.col("trade_date") == date(2024, 1, 2))
+        )
+        assert len(record) == 1
+        assert record["adj_factor"][0] == 0.88
+
+    def test_sorting_order_is_stable_after_merge(self, store: AdjFactorStore) -> None:
+        """合并后排序顺序的稳定性."""
+        # Write first batch
+        df1 = pl.DataFrame(
+            {
+                "sid": [100000001, 100000002, 100000003],
+                "trade_date": [date(2024, 1, 5), date(2024, 1, 3), date(2024, 1, 1)],
+                "adj_factor": [1.0, 1.0, 1.0],
+            }
+        )
+        store.write("adj_factor", df1, 2024)
+
+        # Write second batch (overlap and new)
+        df2 = pl.DataFrame(
+            {
+                "sid": [100000002, 100000003, 100000004],
+                "trade_date": [date(2024, 1, 3), date(2024, 1, 2), date(2024, 1, 4)],
+                "adj_factor": [0.95, 0.95, 1.0],
+            }
+        )
+        store.write("adj_factor", df2, 2024)
+
+        # Read back and verify stable sorting
+        result = store.read("adj_factor")
+
+        # Expected sorted order:
+        # 100000001, 2024-01-05, 1.0
+        # 100000002, 2024-01-03, 0.95 (updated)
+        # 100000003, 2024-01-01, 1.0
+        # 100000003, 2024-01-02, 0.95 (new)
+        # 100000004, 2024-01-04, 1.0 (new)
+        expected_pairs = [
+            (100000001, date(2024, 1, 5)),
+            (100000002, date(2024, 1, 3)),
+            (100000003, date(2024, 1, 1)),
+            (100000003, date(2024, 1, 2)),
+            (100000004, date(2024, 1, 4)),
+        ]
+
+        assert len(result) == len(expected_pairs)
+        for i, (expected_sid, expected_date) in enumerate(expected_pairs):
+            assert result["sid"][i] == expected_sid
+            assert result["trade_date"][i] == expected_date

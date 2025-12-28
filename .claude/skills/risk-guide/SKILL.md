@@ -1,6 +1,11 @@
 ---
 name: risk-guide
-description: 风控指南。当涉及 Kill Switch、回撤控制时使用。
+description: |
+  【必读】风控指南。
+  触发条件: Kill Switch、风控、回撤 drawdown、熔断、止损、仓位控制、风险管理、最大回撤、持仓限制。
+  核心规则: 三级 Kill Switch (15%/18%/20%)、同步检查、禁止绕过、100% 测试覆盖。
+globs:
+  - "**/risk/**/*.py"
 ---
 
 # 风控指南

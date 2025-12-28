@@ -8,6 +8,18 @@ alwaysApply: true
 
 ---
 
+## ⚠️ Skill 加载（最高优先级）
+
+**写代码前必须先读取相关 Skill 文件：**
+- 写 Polars → 先 Read `.claude/skills/polars-guide/SKILL.md`
+- 涉及数据 → 先 Read `.claude/skills/pit-guide/SKILL.md`
+- 涉及风控 → 先 Read `.claude/skills/risk-guide/SKILL.md`
+- 开发 Engine → 先 Read `.claude/skills/engine-template/SKILL.md`
+
+**这是强制要求，不是建议。**
+
+---
+
 ## 开发流程
 
 - **必须 TDD**：先写测试，再写实现，RED→GREEN→REFACTOR

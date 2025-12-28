@@ -1,6 +1,11 @@
 ---
 name: observability
-description: 可观测性指南。当添加日志、追踪、指标时使用。
+description: |
+  【必读】可观测性指南。
+  触发条件: logger、logging、日志、span、trace、追踪、metrics、指标、埋点、OpenTelemetry、监控。
+  核心规则: 必须包含 event 字段、命名规范 domain_action、敏感信息脱敏。
+globs:
+  - "**/*.py"
 ---
 
 # 可观测性指南

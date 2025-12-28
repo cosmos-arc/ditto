@@ -1,6 +1,12 @@
 ---
 name: engine-template
-description: 引擎开发模板。当开发 Engine 类时使用。
+description: |
+  【必读】Engine 引擎开发模板。
+  触发条件: 开发 Engine 类、BaseEngine、RegimeEngine、FactorEngine、BacktestEngine、RiskEngine、引擎、initialize、process、validate。
+  核心规则: 继承 BaseEngine、实现生命周期方法、config 不可变。
+globs:
+  - "**/engine/**/*.py"
+  - "**/engines/**/*.py"
 ---
 
 # 引擎开发指南

@@ -1,6 +1,12 @@
 ---
 name: fastapi-guide
-description: FastAPI 开发指南。当写 HTTP API 时使用。
+description: |
+  【必读】FastAPI 开发指南。
+  触发条件: FastAPI、Router、API、接口、endpoint、route、Pydantic、BaseModel、Depends、HTTPException、REST。
+  核心规则: 三层架构 Router→Service→Engine、依赖注入、Pydantic 校验。
+globs:
+  - "**/api/**/*.py"
+  - "**/routers/**/*.py"
 ---
 
 # FastAPI 开发指南
