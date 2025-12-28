@@ -329,6 +329,54 @@ class TestQFQAdjustment:
             abs(result_sorted["close"][1] - 12.00) < 0.01
         )  # 2024-01-03 (no adj factor)
 
+    def test_qfq_with_asof_uses_correct_baseline(self) -> None:
+        """Test that QFQ with asof parameter uses correct PIT baseline."""
+        # Arrange: Write bars data for 3 days
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000001],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
+                "open": [10.0, 10.0, 10.0],
+                "high": [12.0, 12.0, 12.0],
+                "low": [9.0, 9.0, 9.0],
+                "close": [11.0, 11.0, 11.0],
+                "volume": [1000, 2000, 3000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Write adj_factor: 1.0, 0.95, 0.90 over the 3 days
+        adj_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000001],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
+                "adj_factor": [1.0, 0.95, 0.90],
+            }
+        )
+        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+
+        # Act: Get QFQ adjusted data with asof="2024-01-03"
+        # This means: use the latest adj_factor as of 2024-01-03 (which is 0.95)
+        result = self.repo.get(
+            sids=[100000001],
+            start="2024-01-02",
+            end="2024-01-04",
+            adj=AdjType.QFQ,
+            asof="2024-01-03",  # PIT baseline: 0.95 (last factor as of 2024-01-03)
+        )
+
+        # Assert: QFQ should use 0.95 as baseline (latest factor as of 2024-01-03)
+        # NOT 0.90 (latest factor in entire period)
+        # Formula: adjusted = original * current / latest_asof
+        # 2024-01-02: 11.0 * 1.0 / 0.95 = 11.579
+        # 2024-01-03: 11.0 * 0.95 / 0.95 = 11.0
+        # 2024-01-04: 11.0 * 0.90 / 0.95 = 10.421
+        result_sorted = result.sort("trade_date")
+        assert len(result_sorted) == 3
+        assert abs(result_sorted["close"][0] - 11.579) < 0.01  # 2024-01-02
+        assert abs(result_sorted["close"][1] - 11.00) < 0.01  # 2024-01-03
+        assert abs(result_sorted["close"][2] - 10.421) < 0.01  # 2024-01-04
+
 
 class TestBarsRepositorySingle:
     """Tests for get_single method."""

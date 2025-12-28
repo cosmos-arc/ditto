@@ -133,7 +133,7 @@ class BarsRepository:
 
         # 4. Apply adjustment if needed
         if adj != AdjType.NONE:
-            df = self._apply_adj(df, resolved_sids, adj, start, end)
+            df = self._apply_adj(df, resolved_sids, adj, start, end, asof)
 
         # 5. Add symbol column if requested
         if with_symbol:
@@ -372,8 +372,21 @@ class BarsRepository:
         adj: AdjType,
         start: str | None,
         end: str | None,
+        asof: str | None = None,
     ) -> pl.DataFrame:
-        """Apply price adjustment."""
+        """
+        Apply price adjustment.
+
+        Args:
+            df: Bars data DataFrame.
+            sids: SIDs to adjust.
+            adj: Adjustment type.
+            start: Start date for adj_factor read.
+            end: End date for adj_factor read.
+            asof: Point-in-time date for adjustment baseline. When provided,
+                  the latest factor is computed as of this date, not end date.
+
+        """
         # Read adjustment factors
         adj_df = self._adj_factor_store.read(
             dataset="adj_factor",
@@ -403,7 +416,16 @@ class BarsRepository:
         if adj == AdjType.QFQ:
             # Forward adjustment: use latest factor as baseline
             # Tushare QFQ: adj_price = orig_price * cur_factor / latest_factor
-            latest_factors = adj_df.group_by("sid").agg(
+            # PIT: When asof is provided, use latest factor as of asof date
+            baseline_df = adj_df
+            if asof is not None:
+                # Filter to factors on or before asof date for PIT safety
+                from datetime import date
+
+                asof_date = date.fromisoformat(asof)
+                baseline_df = adj_df.filter(pl.col("trade_date") <= asof_date)
+
+            latest_factors = baseline_df.group_by("sid").agg(
                 pl.col("adj_factor").last().alias("latest_factor")
             )
             df = df.join(latest_factors, on="sid", how="left")
