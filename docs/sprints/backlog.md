@@ -97,4 +97,3 @@
 ### [validation] 黄金数据集验证
 - **状态**: ✅ 已纳入 Sprint 2 Phase 5
 - **参考**: [sprint-02-data-layer.md Phase 5](./sprint-02-data-layer.md#phase-5-黄金数据集验证-6-任务-5-7-天-⭐-最终验收)
-
