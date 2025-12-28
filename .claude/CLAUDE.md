@@ -12,6 +12,7 @@
 
 ### 必须遵守
 
+- **语言**：尽量使用简体中文用于回复信息、注释描述、文档内容、Commit和PR内容信息
 - **TDD**：先写测试，再实现
 - **PIT 安全**：`closed="left"`，knowledge_date
 - **Kill Switch**：三级风控机制
