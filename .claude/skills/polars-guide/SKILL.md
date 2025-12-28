@@ -1,6 +1,11 @@
 ---
 name: polars-guide
-description: Polars 开发规范。当写 DataFrame、LazyFrame、rolling 计算时使用。
+description: |
+  【必读】Polars DataFrame 开发规范。
+  触发条件: 写 polars 代码、DataFrame、LazyFrame、rolling、with_columns、group_by、filter、join、over、agg、sort、select、cast。
+  核心规则: closed="left" 防止 PIT 泄露，LazyFrame 优先，禁止 pandas。
+globs:
+  - "**/*.py"
 ---
 
 # Polars 开发指南

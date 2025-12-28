@@ -1,6 +1,11 @@
 ---
 name: pit-guide
-description: PIT 数据安全指南。当涉及数据查询、回测数据时使用。
+description: |
+  【必读】Point-in-Time 数据安全指南。
+  触发条件: PIT、knowledge_date、回测数据、as-of join、时点数据、未来数据泄露、look-ahead bias、数据查询、历史数据。
+  核心规则: knowledge_date 字段必须、closed="left"、T日信号T+1执行、join_asof。
+globs:
+  - "**/*.py"
 ---
 
 # PIT 数据安全指南

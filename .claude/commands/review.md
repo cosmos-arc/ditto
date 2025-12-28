@@ -12,6 +12,7 @@ description: 代码审查
 1. 调用 `superpowers:requesting-code-review` 进行审查
 2. 对照计划检查实现完整性
 3. 检查 Ditto 规范遵守情况
+4. 检查文档更新情况
 
 ## 审查要点
 
@@ -33,10 +34,17 @@ description: 代码审查
 - [ ] 异常路径
 - [ ] 风控场景 100%
 
+### 文档更新
+- [ ] 模块 README 已更新（如有新模块/接口）
+- [ ] Sprint 状态已更新
+- [ ] Plan 文档存在（复杂任务）
+- [ ] ADR 已记录（架构决策）
+
 ## 使用
 
 ```
 /review
 /review --focus pit-safety
 /review --focus risk
+/review --focus docs
 ```

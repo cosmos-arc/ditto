@@ -1,6 +1,12 @@
 ---
 name: factor-dev
-description: 因子开发指南。当开发量化因子时使用。
+description: |
+  【必读】量化因子开发指南。
+  触发条件: 开发因子、Factor、动量 momentum、波动率 volatility、换手率、IC 分析、因子值、alpha、多因子、因子库。
+  核心规则: closed="left"、去极值 winsorize、标准化 zscore/rank、IC 检验。
+globs:
+  - "**/factor/**/*.py"
+  - "**/factors/**/*.py"
 ---
 
 # 因子开发指南

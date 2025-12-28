@@ -2,6 +2,15 @@
 
 > ETF 轮动 + A股智能选股
 
+## ⚠️ 重要：开始工作前必读
+
+**在写任何代码前，必须先读取相关的 Skill 文件！**
+
+使用 `/load <skill>` 命令或直接 Read 对应文件：
+- 写 Polars 代码 → `/load polars` 或 Read `.claude/skills/polars-guide/SKILL.md`
+- 涉及数据查询 → `/load pit` 或 Read `.claude/skills/pit-guide/SKILL.md`
+- 涉及风控 → `/load risk` 或 Read `.claude/skills/risk-guide/SKILL.md`
+
 ## 快速开始
 
 1. **开发流程**：遵循 Superpowers 工作流
@@ -12,7 +21,8 @@
 
 ### 必须遵守
 
-- **语言**：尽量使用简体中文用于回复信息、注释描述、文档内容、Commit和PR内容信息
+- **语言**：尽量使用中文用于回复、文档、Commit及PR内容
+- **分支规范**：从main分支拉取开发分支开发，完成想main分支提交PR
 - **TDD**：先写测试，再实现
 - **PIT 安全**：`closed="left"`，knowledge_date
 - **Kill Switch**：三级风控机制
@@ -23,6 +33,7 @@
 - `import pandas`
 - `rolling_mean(20)` 不指定 closed
 - 跳过风控检查
+- 直接在 main 分支开发
 - 直接提交 main
 
 ## 开发流程
@@ -46,12 +57,22 @@ superpowers:finishing-a-development-branch → 完成
 | FastAPI | `.claude/skills/fastapi-guide/SKILL.md` |
 | 可观测性 | `.claude/skills/observability/SKILL.md` |
 | 回测 | `.claude/skills/backtest-guide/SKILL.md` |
+| 文档规范 | `.claude/skills/docs-guide/SKILL.md` |
+
+## 文档更新
+
+| 触发条件 | 必须更新 |
+|----------|----------|
+| 新建/修改模块 | `packages/xxx/README.md` |
+| 任务状态变更 | `docs/sprints/sprint-XX.md` |
+| 复杂任务开始 | `docs/plans/YYYY-MM-DD-name.md` |
+| 架构决策 | `docs/adr/NNNN-title.md` |
 
 ## 常用命令
 
 ```bash
+pixi run -e dev test-unit #单元测试（快速，无覆盖率）
 pixi run -e dev quick-check # 快速检查（开发时用，自动修复）
-pixi run -e dev test-unit # 单元测试（快速，无覆盖率）
 pixi run -e dev pre-push-check # 提交前检查（比 quick-check 更严格）
 pixi run -e dev ci-check # CI 完整检查（模拟 CI 流程）
 ```

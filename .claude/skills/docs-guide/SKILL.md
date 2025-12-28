@@ -1,6 +1,12 @@
 ---
 name: docs-guide
-description: 文档规范指南。当需要更新 README、Sprint、Plan、ADR 时使用。
+description: |
+  【必读】文档规范指南。
+  触发条件: README、Sprint、ADR、Plan、文档、进度更新、架构决策、任务状态、模块文档。
+  核心规则: 模块README必须更新、Sprint状态同步、复杂任务需Plan、架构决策需ADR。
+globs:
+  - "**/*.md"
+  - "**/docs/**/*"
 ---
 
 # 文档规范指南
