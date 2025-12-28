@@ -21,7 +21,7 @@ description: 风控指南。当涉及 Kill Switch、回撤控制时使用。
 class RiskEngine:
     def check_kill_switch(self, drawdown: float) -> int:
         if drawdown >= 0.20:
-            logger.critical("Kill Switch L3", 
+            logger.critical("Kill Switch L3",
                 event="kill_switch_triggered", level=3)
             return 3
         elif drawdown >= 0.18:
@@ -43,7 +43,7 @@ class RiskEngine:
 def execute_trade(order: Order) -> TradeResult:
     # 必须同步检查
     level = risk_engine.check_kill_switch()
-    
+
     if level >= 3:
         raise KillSwitchError("L3 清仓")
     if level >= 2:
@@ -51,7 +51,7 @@ def execute_trade(order: Order) -> TradeResult:
     if level >= 1:
         if order.is_new_position:
             raise KillSwitchError("L1 禁止新开仓")
-    
+
     return broker.execute(order)
 ```
 

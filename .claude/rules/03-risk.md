@@ -29,7 +29,7 @@ def execute_trade(order: Order) -> TradeResult:
         raise KillSwitchError("L3: 清仓止损")
     if kill_switch_level >= 1:
         order = risk_engine.apply_restrictions(order, kill_switch_level)
-    
+
     # 2. 执行交易
     return broker.execute(order)
 ```

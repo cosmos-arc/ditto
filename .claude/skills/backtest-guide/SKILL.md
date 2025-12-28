@@ -32,12 +32,12 @@ class BacktestConfig:
     start_date: date
     end_date: date
     initial_capital: float = 1_000_000
-    
+
     # 成本
     commission_rate: float = 0.0003  # 万三
     stamp_duty: float = 0.001        # 千一（卖出）
     slippage: float = 0.001          # 千一
-    
+
     # A股约束
     t_plus_1: bool = True
     price_limit: float = 0.10        # 涨跌停 10%

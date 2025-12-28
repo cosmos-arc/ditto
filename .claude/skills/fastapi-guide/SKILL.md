@@ -40,7 +40,7 @@ class BacktestRequest(BaseModel):
     strategy: str = Field(..., description="策略名称")
     start_date: date
     end_date: date
-    
+
     @field_validator("end_date")
     @classmethod
     def end_after_start(cls, v: date, info) -> date:

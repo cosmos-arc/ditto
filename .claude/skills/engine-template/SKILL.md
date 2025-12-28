@@ -38,7 +38,7 @@ class Engine(Protocol[TConfig, TInput, TOutput]):
 
 ```python
 class MyEngine(BaseEngine[MyConfig, pl.DataFrame, MyResult]):
-    
+
     def _validate_config(self, config: MyConfig) -> None:
         config.validate()
 
