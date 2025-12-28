@@ -200,14 +200,15 @@ class TestQFQAdjustment:
             adj=AdjType.QFQ,
         )
 
-        # Assert: QFQ should adjust all prices using the latest factor (0.95)
-        # Formula: adjusted_price = original_price * latest_factor / adj_factor
-        # 2024-01-02: 11.0 * 0.95 / 1.0 = 10.45
+        # Assert: QFQ should adjust all prices to the latest reference point
+        # Tushare QFQ: adj_price = orig_price * cur_factor / latest_factor
+        # latest_factor = 0.95 (the last factor in the period)
+        # 2024-01-02: 11.0 * 1.0 / 0.95 = 11.579
         # 2024-01-03: 11.0 * 0.95 / 0.95 = 11.0
         # 2024-01-04: 11.0 * 0.95 / 0.95 = 11.0
         result_sorted = result.sort("trade_date")
         assert len(result_sorted) == 3
-        assert abs(result_sorted["close"][0] - 10.45) < 0.01  # 2024-01-02
+        assert abs(result_sorted["close"][0] - 11.579) < 0.01  # 2024-01-02
         assert abs(result_sorted["close"][1] - 11.00) < 0.01  # 2024-01-03
         assert abs(result_sorted["close"][2] - 11.00) < 0.01  # 2024-01-04
 
@@ -246,11 +247,12 @@ class TestQFQAdjustment:
         )
 
         # Assert: QFQ uses latest_factor (0.95) for all dates
-        # 2024-01-02: 11.0 * 0.95 / 1.0 (coalesced null adj_factor) = 10.45
+        # Tushare QFQ: adj_price = orig_price * cur_factor / latest_factor
+        # 2024-01-02: 11.0 * 1.0 (coalesced null adj_factor) / 0.95 = 11.579
         # 2024-01-03: 12.0 * 0.95 / 0.95 = 12.0
         result_sorted = result.sort("trade_date")
         assert len(result_sorted) == 2
-        assert abs(result_sorted["close"][0] - 10.45) < 0.01  # 2024-01-02
+        assert abs(result_sorted["close"][0] - 11.579) < 0.01  # 2024-01-02
         assert abs(result_sorted["close"][1] - 12.00) < 0.01  # 2024-01-03
 
     def test_qfq_with_no_adj_factor_returns_original_price(self) -> None:
@@ -326,6 +328,54 @@ class TestQFQAdjustment:
         assert (
             abs(result_sorted["close"][1] - 12.00) < 0.01
         )  # 2024-01-03 (no adj factor)
+
+    def test_qfq_with_asof_uses_correct_baseline(self) -> None:
+        """Test that QFQ with asof parameter uses correct PIT baseline."""
+        # Arrange: Write bars data for 3 days
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000001],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
+                "open": [10.0, 10.0, 10.0],
+                "high": [12.0, 12.0, 12.0],
+                "low": [9.0, 9.0, 9.0],
+                "close": [11.0, 11.0, 11.0],
+                "volume": [1000, 2000, 3000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Write adj_factor: 1.0, 0.95, 0.90 over the 3 days
+        adj_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000001],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
+                "adj_factor": [1.0, 0.95, 0.90],
+            }
+        )
+        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+
+        # Act: Get QFQ adjusted data with asof="2024-01-03"
+        # This means: use the latest adj_factor as of 2024-01-03 (which is 0.95)
+        result = self.repo.get(
+            sids=[100000001],
+            start="2024-01-02",
+            end="2024-01-04",
+            adj=AdjType.QFQ,
+            asof="2024-01-03",  # PIT baseline: 0.95 (last factor as of 2024-01-03)
+        )
+
+        # Assert: QFQ should use 0.95 as baseline (latest factor as of 2024-01-03)
+        # NOT 0.90 (latest factor in entire period)
+        # Formula: adjusted = original * current / latest_asof
+        # 2024-01-02: 11.0 * 1.0 / 0.95 = 11.579
+        # 2024-01-03: 11.0 * 0.95 / 0.95 = 11.0
+        # 2024-01-04: 11.0 * 0.90 / 0.95 = 10.421
+        result_sorted = result.sort("trade_date")
+        assert len(result_sorted) == 3
+        assert abs(result_sorted["close"][0] - 11.579) < 0.01  # 2024-01-02
+        assert abs(result_sorted["close"][1] - 11.00) < 0.01  # 2024-01-03
+        assert abs(result_sorted["close"][2] - 10.421) < 0.01  # 2024-01-04
 
 
 class TestBarsRepositorySingle:
@@ -586,3 +636,56 @@ class TestMixedAssetClass:
             end="2024-01-31",
         )
         assert isinstance(result, pl.DataFrame)
+
+    def test_get_with_all_index_sids_succeeds(self) -> None:
+        """Test that all index SIDs (300M-399M) are routed to index_daily."""
+        # Insert index security (SID: 300,000,000 - 399,999,999)
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (300000001, '000001', 'Test Index', 'SSE', 'index', '2000-01-01')
+        """)
+        self.client.commit()
+
+        # Write index data to index_daily dataset
+        index_bars_df = pl.DataFrame(
+            {
+                "sid": [300000001],
+                "trade_date": [date(2024, 1, 1)],
+                "open": [3000.0],
+                "high": [3100.0],
+                "low": [2900.0],
+                "close": [3050.0],
+                "volume": [1000000],
+            }
+        )
+        self.bars_store.write("index_daily", index_bars_df, 2024)
+
+        # Should route to index_daily and return data (NOT empty from stock_daily)
+        result = self.repo.get(
+            sids=[300000001],
+            start="2024-01-01",
+            end="2024-01-31",
+        )
+        # Verify we get actual data from index_daily, not empty from wrong dataset
+        assert len(result) == 1
+        assert result["sid"][0] == 300000001
+        assert result["close"][0] == 3050.0
+
+    def test_get_with_mixed_index_stock_sids_raises_error(self) -> None:
+        """Test that mixed index/stock SIDs raise ValueError."""
+        # Insert index security
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (300000001, '000001', 'Test Index', 'SSE', 'index', '2000-01-01')
+        """)
+        self.client.commit()
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="Mixed asset class query"):
+            self.repo.get(
+                sids=[100000001, 300000001],  # stock + index
+                start="2024-01-01",
+                end="2024-01-31",
+            )

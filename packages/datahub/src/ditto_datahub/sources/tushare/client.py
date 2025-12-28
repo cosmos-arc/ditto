@@ -9,6 +9,8 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
+# NOTE: Tushare API returns pandas DataFrame natively.
+# We import pandas here for API compatibility, then convert to polars in source.py.
 import pandas as pd
 from ditto_foundation import logger
 from tenacity import (
@@ -234,6 +236,9 @@ class TushareClient:
     ) -> pd.DataFrame:
         """
         Query Tushare API with rate limiting and retry.
+
+        NOTE: Returns pandas DataFrame because Tushare API returns it natively.
+        The result will be converted to polars DataFrame in source.py.
 
         Args:
             api_name: API name (e.g., "trade_cal", "daily").

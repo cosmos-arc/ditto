@@ -133,7 +133,7 @@ class BarsRepository:
 
         # 4. Apply adjustment if needed
         if adj != AdjType.NONE:
-            df = self._apply_adj(df, resolved_sids, adj, start, end)
+            df = self._apply_adj(df, resolved_sids, adj, start, end, asof)
 
         # 5. Add symbol column if requested
         if with_symbol:
@@ -321,7 +321,7 @@ class BarsRepository:
 
     def _determine_dataset(
         self,
-        asset_class: Literal["stock", "etf"] | None,
+        asset_class: Literal["stock", "etf", "index"] | None,
         sids: list[int],
     ) -> str:
         """Determine dataset name from asset class or SIDs."""
@@ -331,15 +331,28 @@ class BarsRepository:
         # Check for mixed asset classes
         stock_range = SidRange.get_range("stock")
         etf_range = SidRange.get_range("etf")
+        index_range = SidRange.get_range("index")
 
         has_stock = any(
             stock_range.min_sid <= sid <= stock_range.max_sid for sid in sids
         )
         has_etf = any(etf_range.min_sid <= sid <= etf_range.max_sid for sid in sids)
+        has_index = any(
+            index_range.min_sid <= sid <= index_range.max_sid for sid in sids
+        )
 
-        if has_stock and has_etf:
+        # Check for mixed asset classes
+        asset_class_count = sum([has_stock, has_etf, has_index])
+        if asset_class_count > 1:
+            classes = []
+            if has_stock:
+                classes.append("stock")
+            if has_etf:
+                classes.append("ETF")
+            if has_index:
+                classes.append("index")
             raise ValueError(
-                "Mixed asset class query detected. SIDs contain both stock and ETF. "
+                f"Mixed asset class query detected. SIDs contain {', '.join(classes)}. "
                 "Please query each asset class separately."
             )
 
@@ -347,6 +360,8 @@ class BarsRepository:
             return "stock_daily"
         if has_etf:
             return "etf_daily"
+        if has_index:
+            return "index_daily"
 
         return "stock_daily"  # Default
 
@@ -357,8 +372,21 @@ class BarsRepository:
         adj: AdjType,
         start: str | None,
         end: str | None,
+        asof: str | None = None,
     ) -> pl.DataFrame:
-        """Apply price adjustment."""
+        """
+        Apply price adjustment.
+
+        Args:
+            df: Bars data DataFrame.
+            sids: SIDs to adjust.
+            adj: Adjustment type.
+            start: Start date for adj_factor read.
+            end: End date for adj_factor read.
+            asof: Point-in-time date for adjustment baseline. When provided,
+                  the latest factor is computed as of this date, not end date.
+
+        """
         # Read adjustment factors
         adj_df = self._adj_factor_store.read(
             dataset="adj_factor",
@@ -386,8 +414,18 @@ class BarsRepository:
         )
 
         if adj == AdjType.QFQ:
-            # Forward adjustment: use latest factor
-            latest_factors = adj_df.group_by("sid").agg(
+            # Forward adjustment: use latest factor as baseline
+            # Tushare QFQ: adj_price = orig_price * cur_factor / latest_factor
+            # PIT: When asof is provided, use latest factor as of asof date
+            baseline_df = adj_df
+            if asof is not None:
+                # Filter to factors on or before asof date for PIT safety
+                from datetime import date
+
+                asof_date = date.fromisoformat(asof)
+                baseline_df = adj_df.filter(pl.col("trade_date") <= asof_date)
+
+            latest_factors = baseline_df.group_by("sid").agg(
                 pl.col("adj_factor").last().alias("latest_factor")
             )
             df = df.join(latest_factors, on="sid", how="left")
@@ -396,23 +434,23 @@ class BarsRepository:
                 [
                     (
                         pl.col("open")
-                        * pl.coalesce("latest_factor", 1.0)
-                        / pl.coalesce("adj_factor", 1.0)
+                        * pl.coalesce("adj_factor", 1.0)
+                        / pl.coalesce("latest_factor", 1.0)
                     ).alias("open"),
                     (
                         pl.col("high")
-                        * pl.coalesce("latest_factor", 1.0)
-                        / pl.coalesce("adj_factor", 1.0)
+                        * pl.coalesce("adj_factor", 1.0)
+                        / pl.coalesce("latest_factor", 1.0)
                     ).alias("high"),
                     (
                         pl.col("low")
-                        * pl.coalesce("latest_factor", 1.0)
-                        / pl.coalesce("adj_factor", 1.0)
+                        * pl.coalesce("adj_factor", 1.0)
+                        / pl.coalesce("latest_factor", 1.0)
                     ).alias("low"),
                     (
                         pl.col("close")
-                        * pl.coalesce("latest_factor", 1.0)
-                        / pl.coalesce("adj_factor", 1.0)
+                        * pl.coalesce("adj_factor", 1.0)
+                        / pl.coalesce("latest_factor", 1.0)
                     ).alias("close"),
                 ]
             )
