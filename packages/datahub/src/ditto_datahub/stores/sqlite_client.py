@@ -1,5 +1,6 @@
 """SQLite client for database operations."""
 
+import sqlite3
 from typing import Any, cast
 
 from ditto_foundation import logger, span
@@ -49,13 +50,13 @@ class SQLiteClient:
         )
 
     @property
-    def conn(self) -> Any:
+    def conn(self) -> sqlite3.Connection:
         """Get current thread database connection."""
         return self._pool.get_connection()
 
     def execute(
         self, sql: str, params: list[Any] | tuple[Any, ...] | None = None
-    ) -> Any:
+    ) -> sqlite3.Cursor:
         """
         Execute SQL statement.
 
@@ -84,7 +85,7 @@ class SQLiteClient:
 
     def executemany(
         self, sql: str, params_list: list[list[Any] | tuple[Any, ...]]
-    ) -> Any:
+    ) -> sqlite3.Cursor:
         """
         Execute SQL batch.
 
@@ -104,7 +105,7 @@ class SQLiteClient:
         )
         return self.conn.executemany(sql, params_list)
 
-    def executescript(self, script: str) -> Any:
+    def executescript(self, script: str) -> sqlite3.Cursor:
         """
         Execute SQL script (multiple statements).
 
@@ -224,7 +225,7 @@ class SQLiteClient:
         """
         cursor = self.execute(sql, params)
         self.commit()
-        row_id: int = cursor.lastrowid
+        row_id: int = cursor.lastrowid or 0
         logger.info(
             "Record inserted successfully",
             event="insert_complete",

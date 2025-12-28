@@ -10,10 +10,9 @@ Provides unified initialization for:
 from pathlib import Path
 from typing import Any
 
-from loguru import logger
-
 from ditto_foundation.config import get_settings
 from ditto_foundation.observability import Mode, init
+from ditto_foundation.observability.logging import logger
 
 
 class AppInitializer:

@@ -177,6 +177,39 @@ class BarsStore:
 
     # ============ Read operations ============
 
+    def _build_filter_conditions(
+        self,
+        lf: pl.LazyFrame,
+        sids: list[int] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.LazyFrame:
+        """
+        Build filter conditions for LazyFrame.
+
+        Args:
+            lf: LazyFrame to filter.
+            sids: Filter by security IDs.
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            Filtered LazyFrame.
+
+        """
+        if sids:
+            lf = lf.filter(pl.col("sid").is_in(sids))
+
+        if start_date:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+            lf = lf.filter(pl.col("trade_date") >= pl.lit(start_dt))
+
+        if end_date:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+            lf = lf.filter(pl.col("trade_date") <= pl.lit(end_dt))
+
+        return lf
+
     @traced("data.read")
     def read(
         self,
@@ -218,20 +251,9 @@ class BarsStore:
             )
             return pl.DataFrame()
 
-        # Scan and filter
+        # Scan and apply filters
         lf = pl.scan_parquet([str(p) for p in paths])
-
-        if sids:
-            lf = lf.filter(pl.col("sid").is_in(sids))
-
-        if start_date:
-            start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
-            lf = lf.filter(pl.col("trade_date") >= pl.lit(start_dt))
-
-        if end_date:
-            end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
-            lf = lf.filter(pl.col("trade_date") <= pl.lit(end_dt))
-
+        lf = self._build_filter_conditions(lf, sids, start_date, end_date)
         result = lf.unique(subset=["sid", "trade_date"], keep="last").collect()
 
         duration_ms = (time.time() - start_time) * 1000
