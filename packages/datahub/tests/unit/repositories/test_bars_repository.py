@@ -588,3 +588,56 @@ class TestMixedAssetClass:
             end="2024-01-31",
         )
         assert isinstance(result, pl.DataFrame)
+
+    def test_get_with_all_index_sids_succeeds(self) -> None:
+        """Test that all index SIDs (300M-399M) are routed to index_daily."""
+        # Insert index security (SID: 300,000,000 - 399,999,999)
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (300000001, '000001', 'Test Index', 'SSE', 'index', '2000-01-01')
+        """)
+        self.client.commit()
+
+        # Write index data to index_daily dataset
+        index_bars_df = pl.DataFrame(
+            {
+                "sid": [300000001],
+                "trade_date": [date(2024, 1, 1)],
+                "open": [3000.0],
+                "high": [3100.0],
+                "low": [2900.0],
+                "close": [3050.0],
+                "volume": [1000000],
+            }
+        )
+        self.bars_store.write("index_daily", index_bars_df, 2024)
+
+        # Should route to index_daily and return data (NOT empty from stock_daily)
+        result = self.repo.get(
+            sids=[300000001],
+            start="2024-01-01",
+            end="2024-01-31",
+        )
+        # Verify we get actual data from index_daily, not empty from wrong dataset
+        assert len(result) == 1
+        assert result["sid"][0] == 300000001
+        assert result["close"][0] == 3050.0
+
+    def test_get_with_mixed_index_stock_sids_raises_error(self) -> None:
+        """Test that mixed index/stock SIDs raise ValueError."""
+        # Insert index security
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (300000001, '000001', 'Test Index', 'SSE', 'index', '2000-01-01')
+        """)
+        self.client.commit()
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="Mixed asset class query"):
+            self.repo.get(
+                sids=[100000001, 300000001],  # stock + index
+                start="2024-01-01",
+                end="2024-01-31",
+            )

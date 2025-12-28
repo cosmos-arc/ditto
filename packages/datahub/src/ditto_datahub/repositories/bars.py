@@ -321,7 +321,7 @@ class BarsRepository:
 
     def _determine_dataset(
         self,
-        asset_class: Literal["stock", "etf"] | None,
+        asset_class: Literal["stock", "etf", "index"] | None,
         sids: list[int],
     ) -> str:
         """Determine dataset name from asset class or SIDs."""
@@ -331,15 +331,28 @@ class BarsRepository:
         # Check for mixed asset classes
         stock_range = SidRange.get_range("stock")
         etf_range = SidRange.get_range("etf")
+        index_range = SidRange.get_range("index")
 
         has_stock = any(
             stock_range.min_sid <= sid <= stock_range.max_sid for sid in sids
         )
         has_etf = any(etf_range.min_sid <= sid <= etf_range.max_sid for sid in sids)
+        has_index = any(
+            index_range.min_sid <= sid <= index_range.max_sid for sid in sids
+        )
 
-        if has_stock and has_etf:
+        # Check for mixed asset classes
+        asset_class_count = sum([has_stock, has_etf, has_index])
+        if asset_class_count > 1:
+            classes = []
+            if has_stock:
+                classes.append("stock")
+            if has_etf:
+                classes.append("ETF")
+            if has_index:
+                classes.append("index")
             raise ValueError(
-                "Mixed asset class query detected. SIDs contain both stock and ETF. "
+                f"Mixed asset class query detected. SIDs contain {', '.join(classes)}. "
                 "Please query each asset class separately."
             )
 
@@ -347,6 +360,8 @@ class BarsRepository:
             return "stock_daily"
         if has_etf:
             return "etf_daily"
+        if has_index:
+            return "index_daily"
 
         return "stock_daily"  # Default
 
