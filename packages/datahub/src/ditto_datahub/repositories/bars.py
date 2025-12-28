@@ -386,7 +386,8 @@ class BarsRepository:
         )
 
         if adj == AdjType.QFQ:
-            # Forward adjustment: use latest factor
+            # Forward adjustment: use latest factor as baseline
+            # Tushare QFQ: adj_price = orig_price * cur_factor / latest_factor
             latest_factors = adj_df.group_by("sid").agg(
                 pl.col("adj_factor").last().alias("latest_factor")
             )
@@ -396,23 +397,23 @@ class BarsRepository:
                 [
                     (
                         pl.col("open")
-                        * pl.coalesce("latest_factor", 1.0)
-                        / pl.coalesce("adj_factor", 1.0)
+                        * pl.coalesce("adj_factor", 1.0)
+                        / pl.coalesce("latest_factor", 1.0)
                     ).alias("open"),
                     (
                         pl.col("high")
-                        * pl.coalesce("latest_factor", 1.0)
-                        / pl.coalesce("adj_factor", 1.0)
+                        * pl.coalesce("adj_factor", 1.0)
+                        / pl.coalesce("latest_factor", 1.0)
                     ).alias("high"),
                     (
                         pl.col("low")
-                        * pl.coalesce("latest_factor", 1.0)
-                        / pl.coalesce("adj_factor", 1.0)
+                        * pl.coalesce("adj_factor", 1.0)
+                        / pl.coalesce("latest_factor", 1.0)
                     ).alias("low"),
                     (
                         pl.col("close")
-                        * pl.coalesce("latest_factor", 1.0)
-                        / pl.coalesce("adj_factor", 1.0)
+                        * pl.coalesce("adj_factor", 1.0)
+                        / pl.coalesce("latest_factor", 1.0)
                     ).alias("close"),
                 ]
             )

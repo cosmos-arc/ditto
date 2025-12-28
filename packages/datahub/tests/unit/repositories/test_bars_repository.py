@@ -200,14 +200,15 @@ class TestQFQAdjustment:
             adj=AdjType.QFQ,
         )
 
-        # Assert: QFQ should adjust all prices using the latest factor (0.95)
-        # Formula: adjusted_price = original_price * latest_factor / adj_factor
-        # 2024-01-02: 11.0 * 0.95 / 1.0 = 10.45
+        # Assert: QFQ should adjust all prices to the latest reference point
+        # Tushare QFQ: adj_price = orig_price * cur_factor / latest_factor
+        # latest_factor = 0.95 (the last factor in the period)
+        # 2024-01-02: 11.0 * 1.0 / 0.95 = 11.579
         # 2024-01-03: 11.0 * 0.95 / 0.95 = 11.0
         # 2024-01-04: 11.0 * 0.95 / 0.95 = 11.0
         result_sorted = result.sort("trade_date")
         assert len(result_sorted) == 3
-        assert abs(result_sorted["close"][0] - 10.45) < 0.01  # 2024-01-02
+        assert abs(result_sorted["close"][0] - 11.579) < 0.01  # 2024-01-02
         assert abs(result_sorted["close"][1] - 11.00) < 0.01  # 2024-01-03
         assert abs(result_sorted["close"][2] - 11.00) < 0.01  # 2024-01-04
 
@@ -246,11 +247,12 @@ class TestQFQAdjustment:
         )
 
         # Assert: QFQ uses latest_factor (0.95) for all dates
-        # 2024-01-02: 11.0 * 0.95 / 1.0 (coalesced null adj_factor) = 10.45
+        # Tushare QFQ: adj_price = orig_price * cur_factor / latest_factor
+        # 2024-01-02: 11.0 * 1.0 (coalesced null adj_factor) / 0.95 = 11.579
         # 2024-01-03: 12.0 * 0.95 / 0.95 = 12.0
         result_sorted = result.sort("trade_date")
         assert len(result_sorted) == 2
-        assert abs(result_sorted["close"][0] - 10.45) < 0.01  # 2024-01-02
+        assert abs(result_sorted["close"][0] - 11.579) < 0.01  # 2024-01-02
         assert abs(result_sorted["close"][1] - 12.00) < 0.01  # 2024-01-03
 
     def test_qfq_with_no_adj_factor_returns_original_price(self) -> None:
