@@ -212,6 +212,7 @@ class UniverseRepository:
 
         return count
 
+    @traced("repository.universe.list")
     def list_universes(
         self,
         universe_type: str | None = None,
@@ -242,6 +243,7 @@ class UniverseRepository:
 
         return result
 
+    @traced("repository.universe.get_csi300")
     def get_csi300(self, asof: str | None = None) -> list[int]:
         """
         Get CSI 300 universe constituents (predefined shortcut).
@@ -269,6 +271,7 @@ class UniverseRepository:
 
         return sids
 
+    @traced("repository.universe.get_csi500")
     def get_csi500(self, asof: str | None = None) -> list[int]:
         """
         Get CSI 500 universe constituents (predefined shortcut).
