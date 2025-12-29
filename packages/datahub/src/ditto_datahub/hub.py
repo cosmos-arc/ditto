@@ -15,9 +15,12 @@ from ditto_datahub.errors import SidNotFoundError
 if TYPE_CHECKING:
     from ditto_datahub.repositories.bars import BarsRepository
     from ditto_datahub.repositories.calendar import CalendarRepository
+    from ditto_datahub.repositories.index import IndexRepository
     from ditto_datahub.repositories.security import SecurityRepository
+    from ditto_datahub.repositories.universe import UniverseRepository
     from ditto_datahub.runtime.dq_checker import DQChecker
     from ditto_datahub.runtime.file_lock import FileLockManager
+    from ditto_datahub.runtime.freeze_manager import FreezeManager
     from ditto_datahub.runtime.sid_allocator import SidAllocator
     from ditto_datahub.runtime.sql_engine import SqlEngine
     from ditto_datahub.runtime.sqlite_pool import SQLitePool
@@ -25,8 +28,10 @@ if TYPE_CHECKING:
     from ditto_datahub.stores.adj_factor_store import AdjFactorStore
     from ditto_datahub.stores.bars_store import BarsStore
     from ditto_datahub.stores.calendar_store import CalendarStore
+    from ditto_datahub.stores.index_weight_store import IndexWeightStore
     from ditto_datahub.stores.pipeline_store import PipelineStore
     from ditto_datahub.stores.security_store import SecurityStore
+    from ditto_datahub.stores.universe_store import UniverseStore
 
 
 class DataHub:
@@ -103,6 +108,13 @@ class DataHub:
 
         return DQChecker()
 
+    @cached_property
+    def freeze(self) -> FreezeManager:
+        """Freeze manager for data version tracking."""
+        from ditto_datahub.runtime.freeze_manager import FreezeManager
+
+        return FreezeManager(data_root=str(self.data_root))
+
     # ========================================================================
     # Store Layer
     # ========================================================================
@@ -145,6 +157,22 @@ class DataHub:
 
         return PipelineStore(SQLiteClient(self.sqlite_pool))
 
+    @cached_property
+    def universe_store(self) -> UniverseStore:
+        """Universe store for security universe data."""
+        from ditto_datahub.stores.sqlite_client import SQLiteClient
+        from ditto_datahub.stores.universe_store import UniverseStore
+
+        return UniverseStore(SQLiteClient(self.sqlite_pool))
+
+    @cached_property
+    def index_weight_store(self) -> IndexWeightStore:
+        """Index weight store for index constituent data."""
+        from ditto_datahub.stores.index_weight_store import IndexWeightStore
+        from ditto_datahub.stores.sqlite_client import SQLiteClient
+
+        return IndexWeightStore(SQLiteClient(self.sqlite_pool))
+
     # ========================================================================
     # Repository Layer
     # ========================================================================
@@ -179,6 +207,27 @@ class DataHub:
 
         return CalendarRepository(
             calendar_store=self.calendar_store,
+        )
+
+    @cached_property
+    def universe(self) -> UniverseRepository:
+        """Security universe repository."""
+        from ditto_datahub.repositories.universe import UniverseRepository
+
+        return UniverseRepository(
+            universe_store=self.universe_store,
+            sid_allocator=self.sid_allocator,
+        )
+
+    @cached_property
+    def index(self) -> IndexRepository:
+        """Index data repository."""
+        from ditto_datahub.repositories.index import IndexRepository
+
+        return IndexRepository(
+            bars_store=self.bars_store,
+            index_weight_store=self.index_weight_store,
+            security_store=self.security_store,
         )
 
     # ========================================================================
@@ -282,6 +331,40 @@ class DataHub:
         """
         if "sql_engine" in self.__dict__:
             self.sql_engine.refresh_views()
+
+    def get_trading_days(
+        self,
+        start: str,
+        end: str,
+        only_open: bool = True,
+    ) -> list[str]:
+        """
+        Get trading days list (convenience method).
+
+        Args:
+            start: Start date (YYYY-MM-DD).
+            end: End date (YYYY-MM-DD).
+            only_open: Only return trading days (default True).
+
+        Returns:
+            List of trading dates.
+
+        """
+        df = self.calendar.get(start, end, only_open)
+        return df["trade_date"].to_list()
+
+    def is_trading_day(self, date: str) -> bool:
+        """
+        Check if date is a trading day (convenience method).
+
+        Args:
+            date: Date string (YYYY-MM-DD).
+
+        Returns:
+            True if trading day.
+
+        """
+        return self.calendar.is_trading_day(date)
 
     # ========================================================================
     # Resource Management
