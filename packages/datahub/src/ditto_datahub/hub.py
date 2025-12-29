@@ -378,13 +378,20 @@ class DataHub:
         Unaccessed resources are never created and don't need closing.
 
         Closes in reverse order of initialization to avoid dependency issues:
-        1. Stores with SQLite clients (security_store, calendar_store, pipeline_store)
+        1. Stores with SQLite clients (pipeline_store, calendar_store, security_store,
+           universe_store, index_weight_store)
         2. SQL engine (DuckDB)
         3. SQLite pool (connection manager)
         """
         # Close stores that hold SQLiteClient references
         # These must be closed before sqlite_pool
-        for store_name in ("pipeline_store", "calendar_store", "security_store"):
+        for store_name in (
+            "pipeline_store",
+            "calendar_store",
+            "security_store",
+            "universe_store",
+            "index_weight_store",
+        ):
             if store_name in self.__dict__:
                 store = getattr(self, store_name)
                 if hasattr(store, "close"):
