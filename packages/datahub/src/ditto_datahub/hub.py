@@ -43,10 +43,10 @@ class DataHub:
     - Reduces startup time and allocates resources on demand
 
     Attribute layers:
-    - Runtime Layer: sqlite_pool, file_lock, sid_allocator, dq_checker
-    - Store Layer: security_store, calendar_store, bars_store,
-      adj_factor_store, pipeline_store
-    - Repository Layer: securities, bars, calendar
+    - Runtime Layer: sqlite_pool, file_lock, sid_allocator, dq_checker, freeze
+    - Store Layer: security_store, calendar_store, bars_store, adj_factor_store,
+      pipeline_store, universe_store, index_weight_store
+    - Repository Layer: securities, bars, calendar, universe, index
     - Sources Layer: sources (external data sources: Tushare, Akshare)
     - SQL Engine: sql_engine
     """
