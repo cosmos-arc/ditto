@@ -103,7 +103,10 @@ class TestDQReportGenerator:
             ),
         }
 
-        summary = self.generator.generate_batch_summary(results, trade_date="2024-01-01")
+        summary = self.generator.generate_batch_summary(
+            results,
+            trade_date="2024-01-01",
+        )
 
         assert "# DQ 批量检查摘要" in summary
         assert "2024-01-01" in summary

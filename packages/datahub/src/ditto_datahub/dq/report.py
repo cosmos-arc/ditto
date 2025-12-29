@@ -11,7 +11,8 @@ class DQReportGenerator:
     """DQ 检查报告生成器。"""
 
     def generate_markdown_report(self, result: DQResult) -> str:
-        """生成 Markdown 格式报告。
+        """
+        生成 Markdown 格式报告。
 
         Args:
             result: DQ 检查结果
@@ -23,7 +24,7 @@ class DQReportGenerator:
         buffer = StringIO()
 
         # 标题
-        buffer.write(f"# 数据质量检查报告\n\n")
+        buffer.write("# 数据质量检查报告\n\n")
         buffer.write(f"**数据集**: {result.dataset}\n")
         buffer.write(f"**状态**: {'✅ 通过' if result.passed else '❌ 失败'}\n")
         buffer.write(f"**问题总数**: {result.total_count}\n\n")
@@ -34,7 +35,7 @@ class DQReportGenerator:
         l3_issues = [i for i in result.issues if i.level == DQLevel.L3_STATISTICAL]
 
         # L1 技术校验
-        buffer.write("## L1 技术校验（阻断写入）\n\n")
+        buffer.write("## L1 技术校验(阻断写入)\n\n")
         if l1_issues:
             for issue in l1_issues:
                 buffer.write(f"- **{issue.rule_name}**: {issue.message}\n")
@@ -44,7 +45,7 @@ class DQReportGenerator:
             buffer.write("无问题 ✅\n")
 
         # L2 业务规则
-        buffer.write("\n## L2 业务规则（警告记录）\n\n")
+        buffer.write("\n## L2 业务规则(警告记录)\n\n")
         if l2_issues:
             for issue in l2_issues:
                 buffer.write(f"- **{issue.rule_name}**: {issue.message}\n")
@@ -53,7 +54,7 @@ class DQReportGenerator:
             buffer.write("无问题 ✅\n")
 
         # L3 统计异常
-        buffer.write("\n## L3 统计异常（告警通知）\n\n")
+        buffer.write("\n## L3 统计异常(告警通知)\n\n")
         if l3_issues:
             for issue in l3_issues:
                 buffer.write(f"- **{issue.rule_name}**: {issue.message}\n")
@@ -63,8 +64,8 @@ class DQReportGenerator:
 
         # 统计摘要
         buffer.write("\n## 统计摘要\n\n")
-        buffer.write(f"| 指标 | 数值 |\n")
-        buffer.write(f"|------|------|\n")
+        buffer.write("| 指标 | 数值 |\n")
+        buffer.write("|------|------|\n")
         buffer.write(f"| ERROR | {result.error_count} |\n")
         buffer.write(f"| WARNING | {result.warn_count} |\n")
         buffer.write(f"| ALERT | {result.alert_count} |\n")
@@ -73,7 +74,8 @@ class DQReportGenerator:
         return buffer.getvalue()
 
     def generate_html_report(self, result: DQResult) -> str:
-        """生成 HTML 格式报告。
+        """
+        生成 HTML 格式报告。
 
         Args:
             result: DQ 检查结果
@@ -108,8 +110,8 @@ class DQReportGenerator:
 </head>
 <body>
     <h1>数据质量检查报告</h1>
-    <div class="status {'pass' if result.passed else 'fail'}">
-        <strong>状态:</strong> {'✅ 通过' if result.passed else '❌ 失败'}
+    <div class="status {"pass" if result.passed else "fail"}">
+        <strong>状态:</strong> {"&#10003; 通过" if result.passed else "&#10060; 失败"}
         <strong>数据集:</strong> {result.dataset}
     </div>
 
@@ -128,21 +130,34 @@ class DQReportGenerator:
         </div>
     </div>
 
-    <h2>L1 技术校验（阻断写入）</h2>
-    {self._render_issues_html([i for i in result.issues if i.level == DQLevel.L1_TECHNICAL])}
+    <h2>L1 技术校验(阻断写入)</h2>
+    {
+            self._render_issues_html(
+                [i for i in result.issues if i.level == DQLevel.L1_TECHNICAL]
+            )
+        }
 
-    <h2>L2 业务规则（警告记录）</h2>
-    {self._render_issues_html([i for i in result.issues if i.level == DQLevel.L2_BUSINESS])}
+    <h2>L2 业务规则(警告记录)</h2>
+    {
+            self._render_issues_html(
+                [i for i in result.issues if i.level == DQLevel.L2_BUSINESS]
+            )
+        }
 
-    <h2>L3 统计异常（告警通知）</h2>
-    {self._render_issues_html([i for i in result.issues if i.level == DQLevel.L3_STATISTICAL])}
+    <h2>L3 统计异常(告警通知)</h2>
+    {
+            self._render_issues_html(
+                [i for i in result.issues if i.level == DQLevel.L3_STATISTICAL]
+            )
+        }
 
 </body>
 </html>"""
         return html
 
     def _render_issues_html(self, issues: list[DQIssue]) -> str:
-        """渲染问题列表为 HTML。
+        """
+        渲染问题列表为 HTML。
 
         Args:
             issues: 问题列表
@@ -152,11 +167,17 @@ class DQReportGenerator:
 
         """
         if not issues:
-            return "<p>无问题 ✅</p>"
+            return "<p>无问题 &#10003;</p>"
 
         html = []
         for issue in issues:
-            severity_class = "error" if issue.severity == DQSeverity.ERROR else "warning" if issue.severity == DQSeverity.WARNING else "alert"
+            severity_class = (
+                "error"
+                if issue.severity == DQSeverity.ERROR
+                else "warning"
+                if issue.severity == DQSeverity.WARNING
+                else "alert"
+            )
             html.append(f"""
             <div class="issue {severity_class}">
                 <strong>{issue.rule_name}</strong>: {issue.message}<br>
@@ -170,26 +191,27 @@ class DQReportGenerator:
         self,
         result: DQResult,
         output_path: str | Path,
-        format: str = "markdown",
+        report_format: str = "markdown",
     ) -> None:
-        """保存报告到文件。
+        """
+        保存报告到文件。
 
         Args:
             result: DQ 检查结果
             output_path: 输出文件路径
-            format: 报告格式（markdown 或 html）
+            report_format: 报告格式（markdown 或 html）
 
         """
         output_path = Path(output_path)
 
-        if format == "markdown":
+        if report_format == "markdown":
             content = self.generate_markdown_report(result)
             suffix = ".md"
-        elif format == "html":
+        elif report_format == "html":
             content = self.generate_html_report(result)
             suffix = ".html"
         else:
-            raise ValueError(f"Unsupported format: {format}")
+            raise ValueError(f"Unsupported format: {report_format}")
 
         # 确保目录存在
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -205,7 +227,8 @@ class DQReportGenerator:
         results: dict[str, DQResult],
         trade_date: str | None = None,
     ) -> str:
-        """生成批量检查摘要报告。
+        """
+        生成批量检查摘要报告。
 
         Args:
             results: 数据集 -> DQResult 的映射
@@ -228,7 +251,7 @@ class DQReportGenerator:
         total_alerts = sum(r.alert_count for r in results.values())
         passed_count = sum(1 for r in results.values() if r.passed)
 
-        buffer.write(f"\n## 总体统计\n\n")
+        buffer.write("\n## 总体统计\n\n")
         buffer.write(f"- 检查数据集: {len(results)}\n")
         buffer.write(f"- 通过数据集: {passed_count}\n")
         buffer.write(f"- 失败数据集: {len(results) - passed_count}\n")

@@ -5,14 +5,15 @@ from typing import Any, Literal
 
 import polars as pl
 
-from ditto_datahub.dq.models import DQConfig, DQIssue, DQLevel, DQResult, DQSeverity
-from ditto_datahub.dq.checkers.technical import TechnicalChecker
 from ditto_datahub.dq.checkers.business import BusinessChecker
 from ditto_datahub.dq.checkers.statistical import StatisticalChecker
+from ditto_datahub.dq.checkers.technical import TechnicalChecker
+from ditto_datahub.dq.models import DQConfig, DQIssue, DQLevel, DQResult, DQSeverity
 
 
 class DQEngine:
-    """DQ execution engine.
+    """
+    DQ execution engine.
 
     Orchestrates data quality checks across L1/L2/L3 levels.
     """
@@ -22,11 +23,13 @@ class DQEngine:
         config: DQConfig | None = None,
         config_path: str | Path | None = None,
     ) -> None:
-        """Initialize DQ engine.
+        """
+        Initialize DQ engine.
 
         Args:
             config: Pre-loaded DQ configuration
             config_path: Path to YAML configuration directory
+
         """
         if config is not None:
             self.config = config
@@ -44,10 +47,11 @@ class DQEngine:
         self,
         df: pl.DataFrame,
         dataset: str,
-        levels: list[Literal["l1", "l2"]] = ["l1", "l2"],
+        levels: list[Literal["l1", "l2"]] | None = None,
         context: dict[str, Any] | None = None,
     ) -> DQResult:
-        """Execute DQ checks (write-time).
+        """
+        Execute DQ checks (write-time).
 
         Args:
             df: Data to check
@@ -57,7 +61,11 @@ class DQEngine:
 
         Returns:
             DQResult with check results
+
         """
+        if levels is None:
+            levels = ["l1", "l2"]
+
         issues: list[DQIssue] = []
 
         # Get dataset rules
@@ -100,7 +108,8 @@ class DQEngine:
         trade_date: str,
         hub: Any,  # DataHub instance
     ) -> DQResult:
-        """Execute L3 statistical anomaly checks (batch).
+        """
+        Execute L3 statistical anomaly checks (batch).
 
         Args:
             dataset: Dataset identifier
@@ -109,6 +118,7 @@ class DQEngine:
 
         Returns:
             DQResult with L3 check results
+
         """
         issues: list[DQIssue] = []
 

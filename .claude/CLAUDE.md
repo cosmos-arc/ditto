@@ -4,9 +4,14 @@
 
 ## ⚠️ 重要：开始工作前必读
 
-**在写任何代码前，必须先读取相关的 Skill 文件！**
+**在进行任何工作前，必须判断是否先读取相关的 Skill 文件！**
 
 使用 `/load <skill>` 命令或直接 Read 对应文件：
+
+- 设计讨论 → superpowers:brainstorming 
+- 计划生成 → superpowers:writing-plans
+- TDD 执行 → superpowers:test-driven-development
+- 完成 → superpowers:finishing-a-development-branch
 - 写 Polars 代码 → `/load polars` 或 Read `.claude/skills/polars-guide/SKILL.md`
 - 涉及数据查询 → `/load pit` 或 Read `.claude/skills/pit-guide/SKILL.md`
 - 涉及风控 → `/load risk` 或 Read `.claude/skills/risk-guide/SKILL.md`

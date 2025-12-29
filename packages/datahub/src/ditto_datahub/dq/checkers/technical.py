@@ -17,7 +17,8 @@ class TechnicalChecker:
         rules: list[dict],
         context: dict[str, Any] | None = None,
     ) -> list[DQIssue]:
-        """Execute L1 technical checks.
+        """
+        Execute L1 technical checks.
 
         Args:
             df: Data to check
@@ -26,6 +27,7 @@ class TechnicalChecker:
 
         Returns:
             List of DQIssue (ERROR severity)
+
         """
         issues: list[DQIssue] = []
 
@@ -42,7 +44,8 @@ class TechnicalChecker:
         rule: dict,
         context: dict[str, Any] | None = None,
     ) -> DQIssue | None:
-        """Check a single rule.
+        """
+        Check a single rule.
 
         Args:
             df: Data to check
@@ -51,6 +54,7 @@ class TechnicalChecker:
 
         Returns:
             DQIssue if rule violated, None otherwise
+
         """
         rule_type = rule.get("rule")
 

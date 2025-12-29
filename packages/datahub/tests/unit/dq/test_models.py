@@ -3,18 +3,15 @@
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
-
 from ditto_datahub.dq.models import (
-    DQConfig,
-    DQLevel,
     DatasetRules,
-    DQSeverity,
+    DQConfig,
     NotNullRule,
     RangeCheckRule,
     UniqueRule,
     ZScoreRule,
 )
+from pydantic import ValidationError
 
 
 class TestDatasetRules:
@@ -39,8 +36,16 @@ class TestDatasetRules:
             dataset="etf_daily",
             description="ETF daily data",
             l1_technical=[
-                {"rule": "not_null", "columns": ["sid", "trade_date"], "message": "Required"},
-                {"rule": "unique", "columns": ["sid", "trade_date"], "message": "Unique"},
+                {
+                    "rule": "not_null",
+                    "columns": ["sid", "trade_date"],
+                    "message": "Required",
+                },
+                {
+                    "rule": "unique",
+                    "columns": ["sid", "trade_date"],
+                    "message": "Unique",
+                },
             ],
             l2_business=[
                 {

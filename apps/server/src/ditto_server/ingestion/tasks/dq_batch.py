@@ -3,15 +3,15 @@
 from pathlib import Path
 from typing import Any
 
-from ditto_foundation import logger
-from prefect import task
-
+from ditto_datahub import DataHub
 from ditto_datahub.dq import DQEngine
+from ditto_foundation import M, logger
+from prefect import task
 
 
 @task(
     name="dq-batch-check",
-    description="批量数据质量检查（L3 统计异常）",
+    description="批量数据质量检查(L3 统计异常)",
     tags=["dq", "batch", "l3"],
 )
 def dq_batch_check(
@@ -19,10 +19,11 @@ def dq_batch_check(
     datasets: list[str] | None = None,
     config_path: str | None = None,
 ) -> dict[str, Any]:
-    """执行 L3 批量检查任务。
+    """
+    执行 L3 批量检查任务。
 
     Args:
-        trade_date: 交易日期（YYYY-MM-DD），默认为最后一个交易日
+        trade_date: 交易日期(YYYY-MM-DD)，默认为最后一个交易日
         datasets: 要检查的数据集列表，默认为常用数据集
         config_path: DQ 规则配置目录路径
 
@@ -30,8 +31,6 @@ def dq_batch_check(
         检查结果摘要
 
     """
-    from ditto_datahub import DataHub
-
     logger.info(
         "Starting DQ batch check",
         event="dq_batch_start",
@@ -57,7 +56,11 @@ def dq_batch_check(
     # 初始化 DQ 引擎
     if config_path is None:
         # 使用默认配置目录
-        config_path = str(Path(__file__).parent.parent.parent.parent.parent.parent / "config" / "dq_rules")
+        config_path = str(
+            Path(__file__).parent.parent.parent.parent.parent.parent
+            / "config"
+            / "dq_rules"
+        )
 
     engine = DQEngine(config_path=config_path)
 
@@ -120,8 +123,6 @@ def dq_batch_check(
         _send_dq_alert(trade_date, all_issues)
 
     # 记录指标
-    from ditto_foundation import M
-
     M.dq_batch_checks.increment()
     M.dq_batch_issues.add(summary["total_issues"], {"trade_date": trade_date})
     M.dq_batch_alerts.add(summary["alert_count"], {"trade_date": trade_date})
@@ -130,20 +131,24 @@ def dq_batch_check(
 
 
 def _send_dq_alert(trade_date: str, issues: list[Any]) -> None:
-    """发送 DQ 告警通知。
+    """
+    发送 DQ 告警通知。
 
     Args:
         trade_date: 交易日期
         issues: 问题列表
 
     """
-    # TODO: 实现告警发送逻辑（邮件、钉钉、企业微信等）
+    # TODO: 实现告警发送逻辑(邮件、钉钉、企业微信等)
     logger.warning(
         "DQ alert notification",
         event="dq_alert",
         trade_date=trade_date,
         issue_count=len(issues),
-        issues=[{"level": i.level.value, "rule": i.rule_name, "message": i.message} for i in issues],
+        issues=[
+            {"level": i.level.value, "rule": i.rule_name, "message": i.message}
+            for i in issues
+        ],
     )
 
 
@@ -157,7 +162,8 @@ def dq_completeness_check(
     dataset: str,
     expected_sids: list[int] | None = None,
 ) -> dict[str, Any]:
-    """检查数据完整性。
+    """
+    检查数据完整性。
 
     Args:
         trade_date: 交易日期
@@ -168,8 +174,6 @@ def dq_completeness_check(
         完整性检查结果
 
     """
-    from ditto_datahub import DataHub
-
     hub = DataHub()
 
     # 读取实际数据

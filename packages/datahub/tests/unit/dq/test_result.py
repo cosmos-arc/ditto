@@ -1,7 +1,6 @@
 """Tests for DQ result models."""
 
-import pytest
-from ditto_datahub.dq.result import DQLevel, DQSeverity, DQIssue, DQResult
+from ditto_datahub.dq.result import DQIssue, DQLevel, DQResult, DQSeverity
 
 
 class TestDQLevel:

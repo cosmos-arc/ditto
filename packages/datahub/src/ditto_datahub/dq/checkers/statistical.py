@@ -18,7 +18,8 @@ class StatisticalChecker:
         rules: list[dict],
         hub: Any,  # DataHub instance
     ) -> list[DQIssue]:
-        """Execute L3 statistical checks.
+        """
+        Execute L3 statistical checks.
 
         Args:
             dataset: Dataset identifier
@@ -28,6 +29,7 @@ class StatisticalChecker:
 
         Returns:
             List of DQIssue (ALERT severity)
+
         """
         issues: list[DQIssue] = []
 
@@ -45,7 +47,8 @@ class StatisticalChecker:
         rule: dict,
         hub: Any,
     ) -> DQIssue | None:
-        """Check a single rule.
+        """
+        Check a single rule.
 
         Args:
             dataset: Dataset identifier
@@ -55,6 +58,7 @@ class StatisticalChecker:
 
         Returns:
             DQIssue if rule violated, None otherwise
+
         """
         rule_type = rule.get("rule")
 
@@ -72,7 +76,8 @@ class StatisticalChecker:
         rule: dict,
         hub: Any,
     ) -> DQIssue | None:
-        """Check Z-score anomaly.
+        """
+        Check Z-score anomaly.
 
         Args:
             dataset: Dataset identifier
@@ -82,6 +87,7 @@ class StatisticalChecker:
 
         Returns:
             DQIssue if anomaly detected, None otherwise
+
         """
         # TODO: Implement Z-score calculation with historical data
         # 1. Query historical data from hub for the window period
@@ -97,7 +103,8 @@ class StatisticalChecker:
         rule: dict,
         hub: Any,
     ) -> DQIssue | None:
-        """Check data completeness.
+        """
+        Check data completeness.
 
         Args:
             dataset: Dataset identifier
@@ -107,6 +114,7 @@ class StatisticalChecker:
 
         Returns:
             DQIssue if missing data detected, None otherwise
+
         """
         # TODO: Implement completeness check
         # 1. Query trade calendar for expected dates

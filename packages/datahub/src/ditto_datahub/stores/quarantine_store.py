@@ -1,20 +1,22 @@
 """Quarantine store for failed DQ data."""
 
+import sqlite3
 from pathlib import Path
 from typing import Any
 
 import polars as pl
-import sqlite3
 
 
 class QuarantineStore:
     """SQLite-based quarantine store for DQ failed data."""
 
     def __init__(self, db_path: str | Path) -> None:
-        """Initialize quarantine store.
+        """
+        Initialize quarantine store.
 
         Args:
             db_path: Path to SQLite database
+
         """
         self._db_path = Path(db_path)
         self._conn = sqlite3.connect(self._db_path)
@@ -44,7 +46,8 @@ class QuarantineStore:
         failed_data: pl.DataFrame,
         trade_date: str | None = None,
     ) -> int:
-        """Save failed data to quarantine.
+        """
+        Save failed data to quarantine.
 
         Args:
             dataset: Dataset name
@@ -55,6 +58,7 @@ class QuarantineStore:
 
         Returns:
             Row ID of inserted record
+
         """
         # Convert DataFrame to dict for JSON serialization
         # Use arrow format for reliable serialization
@@ -88,7 +92,8 @@ class QuarantineStore:
         rule_id: str | None = None,
         limit: int = 1000,
     ) -> pl.DataFrame:
-        """Get quarantined data.
+        """
+        Get quarantined data.
 
         Args:
             dataset: Filter by dataset (optional)
@@ -97,6 +102,7 @@ class QuarantineStore:
 
         Returns:
             DataFrame with quarantined data
+
         """
         query = "SELECT * FROM quarantine_failed_data WHERE 1=1"
         params: list[Any] = []
@@ -119,13 +125,15 @@ class QuarantineStore:
         return pl.DataFrame(rows, schema=columns, orient="row")
 
     def get_failed_data_df(self, row_id: int) -> pl.DataFrame | None:
-        """Get failed data DataFrame by row ID.
+        """
+        Get failed data DataFrame by row ID.
 
         Args:
             row_id: Quarantine record ID
 
         Returns:
             Failed data as DataFrame, or None if not found
+
         """
         import json
 
@@ -146,13 +154,15 @@ class QuarantineStore:
             return None
 
     def clear_old_records(self, days: int = 30) -> int:
-        """Clear old quarantine records.
+        """
+        Clear old quarantine records.
 
         Args:
             days: Delete records older than this many days
 
         Returns:
             Number of records deleted
+
         """
         cursor = self._conn.execute(
             """
@@ -165,10 +175,12 @@ class QuarantineStore:
         return cursor.rowcount
 
     def get_stats(self) -> list[dict[str, Any]]:
-        """Get quarantine statistics.
+        """
+        Get quarantine statistics.
 
         Returns:
             Dictionary with stats
+
         """
         cursor = self._conn.execute("""
             SELECT

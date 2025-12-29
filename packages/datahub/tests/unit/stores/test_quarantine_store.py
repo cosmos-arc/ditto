@@ -4,8 +4,6 @@ import tempfile
 from pathlib import Path
 
 import polars as pl
-import pytest
-
 from ditto_datahub.stores.quarantine_store import QuarantineStore
 
 
@@ -15,7 +13,8 @@ class TestQuarantineStore:
     def setup_method(self) -> None:
         """Set up test environment."""
         # Use in-memory database for testing
-        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as db:
+            self.temp_db = db
         self.temp_db.close()
         self.store = QuarantineStore(self.temp_db.name)
 
@@ -28,7 +27,8 @@ class TestQuarantineStore:
         """Test initialization creates quarantine table."""
         # Query table schema
         cursor = self.store._conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='quarantine_failed_data'"
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name='quarantine_failed_data'"
         )
         result = cursor.fetchone()
 
@@ -37,11 +37,13 @@ class TestQuarantineStore:
 
     def test_save_and_get_quarantined_data(self) -> None:
         """Test saving and retrieving quarantined data."""
-        df = pl.DataFrame({
-            "sid": [1, 2, 3],
-            "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
-            "value": [10.0, 20.0, 30.0],
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                "value": [10.0, 20.0, 30.0],
+            }
+        )
 
         row_id = self.store.save_failed_data(
             dataset="test_dataset",
@@ -64,10 +66,12 @@ class TestQuarantineStore:
 
     def test_get_failed_data_df(self) -> None:
         """Test retrieving failed data as DataFrame."""
-        df = pl.DataFrame({
-            "sid": [1, 2],
-            "value": [100, 200],
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [1, 2],
+                "value": [100, 200],
+            }
+        )
 
         row_id = self.store.save_failed_data(
             dataset="test",
@@ -135,7 +139,8 @@ class TestQuarantineStore:
 
     def test_context_manager(self) -> None:
         """Test using store as context manager."""
-        db_path = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as db_path:
+            pass
         db_path.close()
 
         with QuarantineStore(db_path.name) as store:
