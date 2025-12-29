@@ -208,6 +208,41 @@ class TestFreezeManager:
         assert manifest.file_count == 1
         assert "bars/stock_2020.parquet" in manifest.files
 
+    def test_create_freeze_with_missing_dataset_raises_error(self) -> None:
+        """Test creating freeze with non-existent dataset raises error."""
+        with pytest.raises(FileNotFoundError, match="Datasets not found"):
+            self.manager.create(
+                freeze_id="missing_test",
+                description="测试缺失文件",
+                datasets=["bars/nonexistent", "bars/stock_daily"],
+            )
+
+    def test_create_freeze_with_invalid_freeze_id_raises_error(self) -> None:
+        """Test creating freeze with invalid freeze_id raises error."""
+        # Test with path separator
+        with pytest.raises(ValueError, match="Invalid freeze_id"):
+            self.manager.create(
+                freeze_id="backtest/v1",
+                description="Invalid ID",
+                datasets=["bars/stock_daily"],
+            )
+
+        # Test with backslash
+        with pytest.raises(ValueError, match="Invalid freeze_id"):
+            self.manager.create(
+                freeze_id="backtest\\v1",
+                description="Invalid ID",
+                datasets=["bars/stock_daily"],
+            )
+
+        # Test with double dots
+        with pytest.raises(ValueError, match="Invalid freeze_id"):
+            self.manager.create(
+                freeze_id="../backtest",
+                description="Invalid ID",
+                datasets=["bars/stock_daily"],
+            )
+
     def test_manifest_created_at_format(self) -> None:
         """Test manifest has ISO format timestamp."""
         manifest = self.manager.create(

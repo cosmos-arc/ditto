@@ -55,6 +55,7 @@ class FreezeManager:
 
         Raises:
             FileNotFoundError: 数据集文件不存在
+            ValueError: freeze_id 包含非法字符
 
         """
         logger.info(
@@ -64,26 +65,11 @@ class FreezeManager:
             datasets_count=len(datasets),
         )
 
-        files: dict[str, str] = {}
+        # Validate freeze_id for path traversal protection
+        self._validate_freeze_id(freeze_id)
 
-        for dataset in datasets:
-            # 数据集路径 -> 文件路径
-            # 支持 parquet 文件
-            file_path = self._data_root / f"{dataset}.parquet"
-
-            if not file_path.exists():
-                logger.warning(
-                    "freeze_file_not_found",
-                    event="freeze_create",
-                    freeze_id=freeze_id,
-                    file_path=file_path.relative_to(self._data_root).as_posix(),
-                )
-                continue
-
-            # 计算 MD5 checksum
-            checksum = self._compute_checksum(file_path)
-            rel_path = file_path.relative_to(self._data_root).as_posix()
-            files[rel_path] = checksum
+        # Collect checksums for all datasets
+        files = self._collect_checksums(freeze_id, datasets)
 
         created_at = datetime.now().isoformat()
         manifest = FreezeManifest(
@@ -133,20 +119,7 @@ class FreezeManager:
         )
 
         manifest = self.get_manifest(freeze_id)
-        errors: list[str] = []
-
-        for rel_path, expected_checksum in manifest.files.items():
-            file_path = self._data_root / rel_path
-
-            # 检查文件是否存在
-            if not file_path.exists():
-                errors.append(f"File missing: {rel_path}")
-                continue
-
-            # 检查 checksum 是否匹配
-            actual_checksum = self._compute_checksum(file_path)
-            if actual_checksum != expected_checksum:
-                errors.append(f"Checksum mismatch: {rel_path}")
+        errors = self._verify_files(manifest)
 
         passed = len(errors) == 0
 
@@ -255,6 +228,94 @@ class FreezeManager:
             event="freeze_delete",
             freeze_id=freeze_id,
         )
+
+    def _validate_freeze_id(self, freeze_id: str) -> None:
+        """
+        验证 freeze_id 不包含路径遍历字符。
+
+        Args:
+            freeze_id: Freeze ID
+
+        Raises:
+            ValueError: freeze_id 包含非法字符
+
+        """
+        if "/" in freeze_id or "\\" in freeze_id or ".." in freeze_id:
+            raise ValueError(
+                "Invalid freeze_id: cannot contain path separators or '..'"
+            )
+
+    def _collect_checksums(
+        self,
+        freeze_id: str,
+        datasets: list[str],
+    ) -> dict[str, str]:
+        """
+        收集所有数据集的 checksum。
+
+        Args:
+            freeze_id: Freeze ID（用于日志）
+            datasets: 数据集列表
+
+        Returns:
+            {相对路径: checksum} 字典
+
+        Raises:
+            FileNotFoundError: 任何数据集文件不存在
+
+        """
+        files: dict[str, str] = {}
+        missing_files: list[str] = []
+
+        for dataset in datasets:
+            # 数据集路径 -> 文件路径
+            file_path = self._data_root / f"{dataset}.parquet"
+
+            if not file_path.exists():
+                rel_path = file_path.relative_to(self._data_root).as_posix()
+                missing_files.append(rel_path)
+                continue
+
+            # 计算 MD5 checksum
+            checksum = self._compute_checksum(file_path)
+            rel_path = file_path.relative_to(self._data_root).as_posix()
+            files[rel_path] = checksum
+
+        # 如果有文件缺失，抛出异常
+        if missing_files:
+            raise FileNotFoundError(
+                f"Datasets not found for freeze '{freeze_id}': {missing_files}"
+            )
+
+        return files
+
+    def _verify_files(self, manifest: FreezeManifest) -> list[str]:
+        """
+        验证 manifest 中所有文件的 checksum。
+
+        Args:
+            manifest: Freeze manifest
+
+        Returns:
+            错误列表（空列表表示全部通过）
+
+        """
+        errors: list[str] = []
+
+        for rel_path, expected_checksum in manifest.files.items():
+            file_path = self._data_root / rel_path
+
+            # 检查文件是否存在
+            if not file_path.exists():
+                errors.append(f"File missing: {rel_path}")
+                continue
+
+            # 检查 checksum 是否匹配
+            actual_checksum = self._compute_checksum(file_path)
+            if actual_checksum != expected_checksum:
+                errors.append(f"Checksum mismatch: {rel_path}")
+
+        return errors
 
     def _compute_checksum(self, file_path: Path) -> str:
         """
