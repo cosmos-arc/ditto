@@ -1,21 +1,122 @@
 ---
 name: dev
-description: 启动开发流程
+description: 基于已生成的开发计划，执行实际开发工作
 ---
 
 # /dev 命令
 
-启动完整的 Superpowers 开发流程。
+基于已生成的开发计划，执行实际开发工作。
 
-## 流程
+## 输入参数
 
-1. 调用 `superpowers:brainstorming` 讨论需求
-2. 确认后调用 `superpowers:writing-plans` 生成计划
-3. 执行 `superpowers:test-driven-development` 实施
-4. 完成后调用 `superpowers:finishing-a-development-branch`
+$ARGUMENTS
 
-## 使用
+如未指定，将提示选择 `docs/plans/` 目录下最新的计划文件。
+
+## 执行策略
+
+本命令整合以下 Skills 进行开发：
+
+- `superpowers:executing-plans` - 计划执行与进度跟踪
+- `superpowers:test-driven-development` - TDD 开发流程
+- `python-development` - Python 开发最佳实践
+
+## 执行流程
+
+### Phase 1: 准备阶段
+
+1. **加载计划**：读取指定的 plan 文件
+2. **环境检查**：
+   - 确认 Python 环境就绪
+   - 检查依赖是否安装
+   - 验证测试框架可用
+3. **任务确认**：展示待执行任务列表，确认执行范围
+
+### Phase 2: TDD 开发循环
+
+对每个任务执行 Red-Green-Refactor 循环：
 
 ```
-/dev 帮我实现一个动量因子引擎
+┌─────────────────────────────────────────────────────────┐
+│  For each task in plan:                                 │
+│                                                         │
+│  1. 📝 RED: 编写失败的测试                               │
+│     - 根据验收标准编写测试用例                            │
+│     - 运行测试确认失败                                   │
+│                                                         │
+│  2. ✅ GREEN: 实现最小代码通过测试                        │
+│     - 编写刚好通过测试的实现                              │
+│     - 运行测试确认通过                                   │
+│                                                         │
+│  3. 🔄 REFACTOR: 重构优化                               │
+│     - 消除重复代码                                       │
+│     - 改善命名和结构                                     │
+│     - 确保测试仍然通过                                   │
+│                                                         │
+│  4. 📋 更新计划进度                                      │
+│     - 标记任务完成                                       │
+│     - 记录实际耗时和笔记                                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Phase 3: 质量保证
+
+每完成一个 Phase 后执行：
+
+1. **运行完整测试套件**：`pytest tests/ -v`
+2. **类型检查**：`pyright src/`
+3. **代码风格**：`ruff check src/`
+4. **覆盖率检查**：确保新增代码有足够测试覆盖
+
+### Phase 4: 进度同步
+
+1. **更新计划文件**：标记已完成任务
+2. **生成进度报告**：输出当前完成状态
+3. **Git 提交**：按任务粒度提交代码
+
+## 开发规范遵循
+
+### Ditto 项目特定规范
+
+1. **数据层**：
+   - 所有数据操作必须遵循 Point-in-Time 原则
+   - 使用 Polars 进行数据处理，避免 Pandas
+   - 通过 Repository Pattern 访问数据
+
+2. **风控层**：
+   - 涉及交易逻辑必须集成 Kill Switch 检查
+   - 三层风控：Position → Strategy → System
+
+3. **代码风格**：
+   - 类型注解完整
+   - Docstring 使用 Google 风格
+   - 遵循 `docs/coding-standards/` 中的规范
+
+## 交互模式
+
+开发过程中支持以下交互：
+
+- **暂停**: 输入 `pause` 暂停当前任务
+- **跳过**: 输入 `skip` 跳过当前任务
+- **回顾**: 输入 `review` 查看当前进度
+- **帮助**: 输入 `help` 获取帮助
+
+## 输出
+
+1. **实现代码**：按计划完成的功能代码
+2. **测试代码**：对应的测试用例
+3. **更新后的计划文件**：标记完成状态
+4. **Git 提交记录**：结构化的提交历史
+
+## 示例用法
+
+```bash
+# 执行最新的计划
+/dev
+
+# 执行指定计划
+/dev docs/plans/2024-01-15-etf-rotation.md
+
+# 只执行计划中的特定 phase
+/dev docs/plans/2024-01-15-etf-rotation.md --phase 2
 ```

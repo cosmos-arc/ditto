@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from ditto_datahub.stores.bars_store import BarsStore
     from ditto_datahub.stores.calendar_store import CalendarStore
     from ditto_datahub.stores.index_weight_store import IndexWeightStore
+    from ditto_datahub.stores.ingestion_metadata_store import IngestionMetadataStore
     from ditto_datahub.stores.pipeline_store import PipelineStore
     from ditto_datahub.stores.security_store import SecurityStore
     from ditto_datahub.stores.universe_store import UniverseStore
@@ -172,6 +173,14 @@ class DataHub:
         from ditto_datahub.stores.sqlite_client import SQLiteClient
 
         return IndexWeightStore(SQLiteClient(self.sqlite_pool))
+
+    @cached_property
+    def ingestion_metadata_store(self) -> IngestionMetadataStore:
+        """Ingestion metadata store for incremental data fetching."""
+        from ditto_datahub.stores.ingestion_metadata_store import IngestionMetadataStore
+        from ditto_datahub.stores.sqlite_client import SQLiteClient
+
+        return IngestionMetadataStore(SQLiteClient(self.sqlite_pool))
 
     # ========================================================================
     # Repository Layer

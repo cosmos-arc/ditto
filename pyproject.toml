@@ -87,6 +87,7 @@ select = [
     "D",
     "PT",
     "ANN",
+    "C90", # McCabe 复杂度 (核心：控制嵌套和逻辑分支)
     # 进阶规则（建议先用专门命令单独跑，再决定是否常开）
     # "S",    # flake8-bandit 安全
     # "DTZ",  # flake8-datetimez 时区安全
@@ -106,8 +107,8 @@ ignore = [
     # 允许对动态分配的 Any 类型进行操作，在处理外部库时可能需要
     "ANN401",
     # --- 中文文档字符串豁免 ---
-    "RUF002",  # 中文标点符号（全角逗号、括号等）
-    "RUF003",  # 中文注释中的标点符号（全角冒号、逗号等）
+    "RUF002", # 中文标点符号（全角逗号、括号等）
+    "RUF003", # 中文注释中的标点符号（全角冒号、逗号等）
     # --- 文档字符串 (Docstring) 规则豁免 ---
     # D203 和 D212 与 Black 的格式化风格冲突，应禁用。
     "D203",
@@ -134,11 +135,11 @@ unfixable = []
 # 测试文件 - 最宽松
 # ═══════════════════════════════════════════════════════════════
 "tests/**/*.py" = [
-    "PLR2004",  # 魔法数字
-    "PLR0913",  # 多参数
-    "S101",     # assert 语句
-    "ANN",      # 类型注解
-    "D",        # 文档字符串
+    "PLR2004", # 魔法数字
+    "PLR0913", # 多参数
+    "S101",    # assert 语句
+    "ANN",     # 类型注解
+    "D",       # 文档字符串
 ]
 "**/tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "ANN", "D"]
 "**/conftest.py" = ["ANN", "D", "PLC0415"]
@@ -154,10 +155,10 @@ unfixable = []
 # 策略模块 - 允许复杂度，这是业务本质
 # ═══════════════════════════════════════════════════════════════
 "packages/core/src/ditto_core/strategy/**/*.py" = [
-    "C901",     # 函数复杂度（策略逻辑天然复杂）
-    "PLR0912",  # 分支过多（多条件判断是正常的）
-    "PLR0915",  # 语句过多
-    "PLR0913",  # 参数过多（策略配置项多）
+    "C901",    # 函数复杂度（策略逻辑天然复杂）
+    "PLR0912", # 分支过多（多条件判断是正常的）
+    "PLR0915", # 语句过多
+    "PLR0913", # 参数过多（策略配置项多）
 ]
 
 # ═══════════════════════════════════════════════════════════════
@@ -173,10 +174,10 @@ unfixable = []
 # 数据处理模块 - 允许更多参数和魔法数字
 # ═══════════════════════════════════════════════════════════════
 "packages/datahub/src/ditto_datahub/**/*.py" = [
-    "PLR0913",  # 参数多（数据源配置）
-    "PLR2004",  # 魔法数字（如 252 交易日）
-    "F401",     # 未使用导入（re-export 模式）
-    "PLC0415",  # 延迟导入以避免循环依赖（DataHub Facade）
+    "PLR0913", # 参数多（数据源配置）
+    "PLR2004", # 魔法数字（如 252 交易日）
+    "F401",    # 未使用导入（re-export 模式）
+    "PLC0415", # 延迟导入以避免循环依赖（DataHub Facade）
 ]
 
 "packages/foundation/src/ditto_foundation/observability/**/*.py" = [
@@ -201,6 +202,15 @@ skip-magic-trailing-comma = false
 # 自动检测并使用当前系统的行尾符（LF 或 CRLF）。
 line-ending = "auto"
 
+[tool.ruff.lint.pylint]
+# 对应“函数长度”：限制最大行数
+max-statements = 50 # 限制函数内的语句数量，比单纯行数更科学
+max-args = 5        # 顺便限制一下参数个数
+
+[tool.ruff.lint.mccabe]
+# 对应“嵌套层级”的逻辑：建议设为 10 以下。
+# 注意：这是圈复杂度，虽不完全等于嵌套层数，但嵌套越深，复杂度越高。
+max-complexity = 10
 
 # ===================================================================
 # Pyright (VSCode Pylance 引擎)
@@ -315,8 +325,13 @@ warn_required_dynamic_aliases = true
 
 [[tool.mypy.overrides]]
 module = [
-    "polars.*", "duckdb.*", "tushare.*",
-    "akshare.*", "ricequant.*", "prefect.*", "loguru.*",
+    "polars.*",
+    "duckdb.*",
+    "tushare.*",
+    "akshare.*",
+    "ricequant.*",
+    "prefect.*",
+    "loguru.*",
 ]
 ignore_missing_imports = true
 
@@ -342,7 +357,12 @@ testpaths = ["packages/*/tests", "apps/*/tests", "tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-pythonpath = ["packages/core/src", "packages/foundation/src", "packages/datahub/src", "apps/server/src"]
+pythonpath = [
+    "packages/core/src",
+    "packages/foundation/src",
+    "packages/datahub/src",
+    "apps/server/src",
+]
 
 # 将所有警告提升为错误，确保代码的健壮性。
 filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]
@@ -416,10 +436,7 @@ exclude_lines = [
 fail_under = 80
 
 # 部分覆盖的分支也要报告
-partial_branches = [
-    "pragma: no branch",
-    "if TYPE_CHECKING:",
-]
+partial_branches = ["pragma: no branch", "if TYPE_CHECKING:"]
 
 [tool.coverage.html]
 directory = "htmlcov"
@@ -440,9 +457,9 @@ exclude_dirs = [
 
 # 跳过特定规则
 skips = [
-    "B101",  # assert 语句（测试中常用）
-    "B104",  # 绑定到所有接口（开发环境常见）
-    "B311",  # random 不用于加密场景时可接受
+    "B101", # assert 语句（测试中常用）
+    "B104", # 绑定到所有接口（开发环境常见）
+    "B311", # random 不用于加密场景时可接受
 ]
 
 # 按严重程度过滤
