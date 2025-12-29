@@ -20,8 +20,8 @@ $ARGUMENTS
 1. **解析输入**：理解用户提供的 Sprint Phase 或需求描述
 2. **上下文收集**：
    - 查看相关的 `docs/sprints/` 目录了解 Sprint 规划
-   - 检查 `docs/architecture/` 了解系统架构约束
-   - 查看 `CLAUDE.md` 确认项目规范和约定
+   - 检查 `docs/design/` 了解系统架构约束
+   - 查看 `.claude/CLAUDE.md`、`.claude/rules/*.md` 确认项目规范和约定
 3. **需求澄清**：如有不明确之处，向用户提问确认
 4. **可行性分析**：评估技术可行性和潜在风险
 
