@@ -38,7 +38,7 @@ duckdb = ">=1.1,<2"
 # Web 框架与 API
 # ──────────────────────────────────────────────────────────
 fastapi = ">=0.115,<1"
-uvicorn = ">=0.32,<1"
+# uvicorn 已被 granian 替代（2-4x 性能提升）
 pydantic = ">=2.9,<3"
 pydantic-settings = ">=2.6,<3"
 
@@ -74,6 +74,11 @@ matplotlib = ">=3.9,<4"
 ditto-core = { path = "packages/core", editable = true }
 ditto-foundation = { path = "packages/foundation", editable = true }
 ditto-datahub = { path = "packages/datahub", editable = true }
+
+# 性能优化库（Rust 实现）
+cachebox = ">=5.0,<6"      # 高性能缓存（10-50x 性能）
+granian = ">=1.0,<2"       # ASGI 服务器（2-4x 性能，替代 uvicorn）
+orjson = ">=3.10,<4"       # JSON 序列化（4.5-11.5x 性能）
 
 # 数据源
 tushare = ">=1.4,<2"

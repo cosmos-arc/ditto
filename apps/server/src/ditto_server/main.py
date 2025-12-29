@@ -14,11 +14,12 @@ from pathlib import Path
 from typing import Any
 
 # Third-party imports
-import uvicorn
+import granian
+import orjson
 
 # Local imports - using editable packages
 # 使用新的 observability 模块
-from ditto_foundation.observability import Mode, init, logger, shutdown
+from ditto_foundation.observability import M, Mode, init, logger, shutdown
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,6 +35,32 @@ from ditto_server.middleware import (
 
 # Initialize project root
 project_root = Path(__file__).parent.parent.parent.parent
+
+
+class ORJSONResponse(JSONResponse):
+    """
+    使用 orjson 的 FastAPI 响应类.
+
+    性能提升：
+    - 序列化：4.5-11.5x 更快
+    - 反序列化：2-5x 更快
+    - 内存占用：更小
+    """
+
+    def render(self, content: Any) -> bytes:
+        """使用 orjson 序列化内容."""
+        # 记录序列化指标
+        start_time = time.monotonic()
+
+        # 使用 orjson 序列化
+        result = orjson.dumps(content)
+
+        # 记录序列化耗时
+        duration = time.monotonic() - start_time
+        M.json_serialize_duration.record(duration)
+        M.json_bytes_total.add(len(result))
+
+        return result
 
 
 @asynccontextmanager
@@ -93,6 +120,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
+    default_response_class=ORJSONResponse,  # 使用 orjson 提升性能
 )
 
 # 配置CORS
@@ -238,4 +266,8 @@ app.add_exception_handler(Exception, general_exception_handler)
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
+    granian.Granian(
+        "main:app",
+        address="0.0.0.0:8000",
+        reload=True,
+    ).serve()

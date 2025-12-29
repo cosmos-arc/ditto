@@ -9,12 +9,12 @@ Following design document at docs/design/02_data_design.md
 
 from __future__ import annotations
 
-from functools import lru_cache
 from typing import Any, cast
 
 import polars as pl
 from ditto_foundation import M, logger, span, traced
 
+from ditto_datahub.runtime.cache import DataCache
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
@@ -51,30 +51,21 @@ class SecurityStore:
     - Through security_mapping with effective_from/to for historical resolution
     """
 
-    def __init__(self, sqlite_client: SQLiteClient) -> None:
+    def __init__(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache | None = None,
+    ) -> None:
         """
         Initialize SecurityStore.
 
         Args:
             sqlite_client: SQLite client for database operations.
+            data_cache: Optional DataCache for SID resolution caching.
 
         """
         self._client = sqlite_client
-
-    @lru_cache(maxsize=10000)  # noqa: B019 - cache is safe for stateless lookup
-    def resolve_sid_cached(self, src_code: str, source: str) -> int | None:
-        """
-        Cache current mapping (for queries without asof).
-
-        Args:
-            src_code: Source code.
-            source: Data source identifier.
-
-        Returns:
-            sid or None if not found.
-
-        """
-        return self._resolve_sid_from_db(src_code, source, asof=None)
+        self._data_cache = data_cache
 
     @traced("data.sid_resolve")
     def resolve_sid(self, src_code: str, source: str, asof: str | None) -> int | None:
@@ -98,10 +89,20 @@ class SecurityStore:
             asof=asof,
         )
 
-        if asof is None:
-            result = self.resolve_sid_cached(src_code, source)
-        else:
-            result = self._resolve_sid_from_db(src_code, source, asof)
+        # 尝试从 DataCache 获取
+        if self._data_cache:
+            cache_key = f"sid:{src_code}:{source}:{asof or 'current'}"
+            cached = self._data_cache.get(cache_key)
+            if cached is not None:
+                return cached if cached != -1 else None
+
+        # 从数据库查询
+        result = self._resolve_sid_from_db(src_code, source, asof)
+
+        # 缓存结果（使用 -1 表示 None）
+        if self._data_cache:
+            cache_key = f"sid:{src_code}:{source}:{asof or 'current'}"
+            self._data_cache.set(cache_key, result if result is not None else -1)
 
         if result:
             logger.debug(
@@ -415,6 +416,15 @@ class SecurityStore:
             Dictionary mapping sid to symbol.
 
         """
+        # 尝试从 DataCache 获取
+        if self._data_cache and sids:
+            # 使用排序后的 tuple 作为缓存键
+            cache_key = f"sid_symbol_map:{','.join(map(str, sorted(sids)))}"
+            cached = self._data_cache.get(cache_key)
+            if cached is not None:
+                return cached
+
+        # 从数据库查询
         if sids:
             in_clause, sids_list = _build_in_clause(sids)
             rows = self._client.fetchall(
@@ -426,7 +436,14 @@ class SecurityStore:
                 "SELECT sid, symbol FROM security WHERE is_active = TRUE"
             )
 
-        return {cast(int, r["sid"]): cast(str, r["symbol"]) for r in rows}
+        result = {cast(int, r["sid"]): cast(str, r["symbol"]) for r in rows}
+
+        # 缓存结果
+        if self._data_cache and sids:
+            cache_key = f"sid_symbol_map:{','.join(map(str, sorted(sids)))}"
+            self._data_cache.set(cache_key, result)
+
+        return result
 
     def enrich_with_symbol(self, df: pl.DataFrame) -> pl.DataFrame:
         """

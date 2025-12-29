@@ -19,7 +19,7 @@ $ARGUMENTS
 
 - `superpowers:executing-plans` - 计划执行与进度跟踪
 - `superpowers:test-driven-development` - TDD 开发流程
-- `python-development` - Python 开发最佳实践
+- `python-development:python-scaffold` - Python 开发最佳实践
 
 ## 执行流程
 
