@@ -34,6 +34,7 @@ class SqlEngine:
             "trading_calendar",
             "universe",
             "universe_constituent",
+            "index_weight",
             "pipeline_run",
             "dq_issue",
         ]

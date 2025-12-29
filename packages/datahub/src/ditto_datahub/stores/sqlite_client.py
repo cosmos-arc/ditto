@@ -32,6 +32,7 @@ class SQLiteClient:
             "freeze_point",
             "universe",
             "universe_constituent",
+            "index_weight",
         ]
     )
 

@@ -163,3 +163,21 @@ CREATE INDEX IF NOT EXISTS idx_constituent_current
 -- PIT 查询优化
 CREATE INDEX IF NOT EXISTS idx_constituent_pit
     ON universe_constituent(universe_id, effective_from, effective_to);
+
+-- 指数成分股权重（PIT support）
+CREATE TABLE IF NOT EXISTS index_weight (
+    index_id       TEXT NOT NULL,
+    sid            INTEGER NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to   DATE,
+    weight         REAL,
+    PRIMARY KEY (index_id, sid, effective_from)
+);
+
+-- 当前有效成分快速查询
+CREATE INDEX IF NOT EXISTS idx_index_weight_current
+    ON index_weight(index_id, sid) WHERE effective_to IS NULL;
+
+-- PIT 查询优化
+CREATE INDEX IF NOT EXISTS idx_index_weight_pit
+    ON index_weight(index_id, effective_from, effective_to);
