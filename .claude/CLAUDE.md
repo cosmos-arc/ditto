@@ -8,7 +8,7 @@
 
 使用 `/load <skill>` 命令或直接 Read 对应文件：
 
-- 设计讨论 → superpowers:brainstorming 
+- 设计讨论 → superpowers:brainstorming
 - 计划生成 → superpowers:writing-plans
 - TDD 执行 → superpowers:test-driven-development
 - 完成 → superpowers:finishing-a-development-branch
