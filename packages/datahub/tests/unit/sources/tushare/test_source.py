@@ -7,6 +7,7 @@ import pandas as pd
 import polars as pl
 import pytest
 from ditto_datahub.sources.base import SourceFetchError
+from ditto_datahub.sources.metadata import IncrementalMode
 from ditto_datahub.sources.tushare.source import TushareSource
 
 
@@ -637,3 +638,190 @@ class TestTushareSourceFundAdj:
 
             with pytest.raises(SourceFetchError):
                 source.fetch_fund_adj("2024-01-02")
+
+
+class TestTushareSourceIncremental:
+    """Tests for TushareSource.fetch_etf_daily_incremental."""
+
+    def test_quick_mode_skips_when_uptodate(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test QUICK mode skips fetch when trade_date <= last_trade_date."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        source = TushareSource()
+
+        # Call with last_trade_date equal to trade_date - should skip
+        df, metadata = source.fetch_etf_daily_incremental(
+            trade_date="2024-12-27",
+            mode=IncrementalMode.QUICK,
+            last_trade_date="2024-12-27",
+        )
+
+        # Should return empty DataFrame and metadata with no new data
+        assert df.is_empty()
+        assert metadata.last_trade_date == "2024-12-27"
+        assert metadata.last_rows == 0
+
+    def test_quick_mode_fetches_when_stale(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test QUICK mode fetches when trade_date > last_trade_date."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        mock_response = pd.DataFrame(
+            {
+                "ts_code": ["510300.SH"],
+                "trade_date": ["20241227"],
+                "pre_close": [3.5],
+                "open": [3.5],
+                "high": [3.6],
+                "low": [3.4],
+                "close": [3.55],
+                "change": [0.05],
+                "pct_chg": [1.5],
+                "vol": [100000.0],
+                "amount": [355000.0],
+            }
+        )
+
+        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
+            mock_api.return_value.query.return_value = mock_response
+
+            source = TushareSource()
+            df, metadata = source.fetch_etf_daily_incremental(
+                trade_date="2024-12-27",
+                mode=IncrementalMode.QUICK,
+                last_trade_date="2024-12-26",
+            )
+
+        # Should return data and updated metadata
+        assert not df.is_empty()
+        assert len(df) == 1
+        assert metadata.last_trade_date == "2024-12-27"
+        assert metadata.last_rows == 1
+        assert metadata.last_checksum is not None
+
+    def test_precise_mode_fetches_when_checksum_differs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test PRECISE mode fetches when checksum differs."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        mock_response = pd.DataFrame(
+            {
+                "ts_code": ["510300.SH"],
+                "trade_date": ["20241227"],
+                "pre_close": [3.5],
+                "open": [3.5],
+                "high": [3.6],
+                "low": [3.4],
+                "close": [3.55],
+                "change": [0.05],
+                "pct_chg": [1.5],
+                "vol": [100000.0],
+                "amount": [355000.0],
+            }
+        )
+
+        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
+            mock_api.return_value.query.return_value = mock_response
+
+            source = TushareSource()
+            df, metadata = source.fetch_etf_daily_incremental(
+                trade_date="2024-12-27",
+                mode=IncrementalMode.PRECISE,
+                last_trade_date="2024-12-27",
+                last_checksum="different_checksum",
+            )
+
+        # Should fetch because checksum differs
+        assert not df.is_empty()
+        assert metadata.last_checksum != "different_checksum"
+
+    def test_precise_mode_skips_when_checksum_matches(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test PRECISE mode skips when checksum matches."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        mock_response = pd.DataFrame(
+            {
+                "ts_code": ["510300.SH"],
+                "trade_date": ["20241227"],
+                "pre_close": [3.5],
+                "open": [3.5],
+                "high": [3.6],
+                "low": [3.4],
+                "close": [3.55],
+                "change": [0.05],
+                "pct_chg": [1.5],
+                "vol": [100000.0],
+                "amount": [355000.0],
+            }
+        )
+
+        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
+            mock_api.return_value.query.return_value = mock_response
+
+            source = TushareSource()
+
+            # First, fetch to get the checksum
+            df1, metadata1 = source.fetch_etf_daily_incremental(
+                trade_date="2024-12-27",
+                mode=IncrementalMode.PRECISE,
+                last_trade_date="2024-12-26",
+            )
+            expected_checksum = metadata1.last_checksum
+
+            # Second, call with same checksum - should skip
+            df2, metadata2 = source.fetch_etf_daily_incremental(
+                trade_date="2024-12-27",
+                mode=IncrementalMode.PRECISE,
+                last_trade_date="2024-12-27",
+                last_checksum=expected_checksum,
+            )
+
+        # Should skip because checksum matches
+        assert df2.is_empty()
+        assert metadata2.last_rows == 0
+
+    def test_incremental_returns_metadata_with_dataset_name(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test incremental fetch returns correct metadata."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        mock_response = pd.DataFrame(
+            {
+                "ts_code": ["510300.SH"],
+                "trade_date": ["20241227"],
+                "pre_close": [3.5],
+                "open": [3.5],
+                "high": [3.6],
+                "low": [3.4],
+                "close": [3.55],
+                "change": [0.05],
+                "pct_chg": [1.5],
+                "vol": [100000.0],
+                "amount": [355000.0],
+            }
+        )
+
+        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
+            mock_api.return_value.query.return_value = mock_response
+
+            source = TushareSource()
+            df, metadata = source.fetch_etf_daily_incremental(
+                trade_date="2024-12-27",
+                mode=IncrementalMode.QUICK,
+                last_trade_date="2024-12-26",
+            )
+
+        assert metadata.dataset == "etf_daily"
+        assert metadata.source == "tushare"

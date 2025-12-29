@@ -2,6 +2,7 @@
 
 from ditto_server.ingestion.tasks.adj_factor import ingest_adj_factor, ingest_fund_adj
 from ditto_server.ingestion.tasks.bars import ingest_etf_bars
+from ditto_server.ingestion.tasks.monitoring import monitor_ingestion_quality
 from ditto_server.ingestion.tasks.stock import ingest_stock_basic, ingest_stock_daily
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "ingest_fund_adj",
     "ingest_stock_basic",
     "ingest_stock_daily",
+    "monitor_ingestion_quality",
 ]

@@ -181,3 +181,14 @@ CREATE INDEX IF NOT EXISTS idx_index_weight_current
 -- PIT 查询优化
 CREATE INDEX IF NOT EXISTS idx_index_weight_pit
     ON index_weight(index_id, effective_from, effective_to);
+
+-- 摄取元数据（增量更新支持）
+CREATE TABLE IF NOT EXISTS ingestion_metadata (
+    dataset TEXT NOT NULL,
+    source TEXT NOT NULL,
+    last_trade_date DATE,
+    last_checksum TEXT,
+    last_rows INTEGER DEFAULT 0,
+    last_updated_at TIMESTAMP NOT NULL,
+    PRIMARY KEY (dataset, source)
+);

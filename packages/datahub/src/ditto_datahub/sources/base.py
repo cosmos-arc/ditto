@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import polars as pl
 
 if TYPE_CHECKING:
-    pass
+    from ditto_datahub.sources.metadata import IncrementalMode, IngestionMetadata
 
 
 class DataSourceError(Exception):
@@ -325,6 +325,35 @@ class DataSource(ABC):
 
         Raises:
             SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_etf_daily_incremental(
+        self,
+        trade_date: str,
+        mode: IncrementalMode,  # type: ignore[valid-type]
+        last_trade_date: str | None = None,
+        last_checksum: str | None = None,
+    ) -> tuple[pl.DataFrame, IngestionMetadata]:  # type: ignore[valid-type]
+        """
+        Fetch ETF daily data with incremental update support.
+
+        Args:
+            trade_date: Trade date to fetch (YYYY-MM-DD).
+            mode: Incremental mode (QUICK=date check, PRECISE=data check).
+            last_trade_date: Last successfully fetched trade date (for QUICK mode).
+            last_checksum: Checksum of last fetched data (for PRECISE mode).
+
+        Returns:
+            Tuple of:
+            - DataFrame with ETF daily data
+            - IngestionMetadata with checksum and metadata
+
+        Raises:
+            SourceFetchError: If fetch fails.
+            SourceTransformationError: If data transformation fails.
 
         """
         pass

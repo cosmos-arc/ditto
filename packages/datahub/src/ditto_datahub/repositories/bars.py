@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from itertools import combinations
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.dq.models import DQIssue
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.security_store import SecurityStore
@@ -36,6 +38,8 @@ class WriteResult:
     rows_written: int
     rows_total: int
     failed_checks: list[DQResult] = field(default_factory=list)
+    blocked: bool = False
+    dq_result: DQResult | None = None
 
 
 class BarsRepository:
@@ -242,19 +246,57 @@ class BarsRepository:
         lock_name = f"bars_write_{dataset}_{year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
             # Data quality check
-            failed_checks = []
+            dq_result: DQResult | None = None
+            blocked = False
+
             if run_dq_check:
                 check_result = self._dq_checker.check(df, dataset)
-                failed_checks = [r for r in check_result.results if not r.passed]
+                dq_result = check_result
 
-                # Log failures
-                for check in failed_checks:
-                    logger.warning(
-                        "Data quality check failed",
-                        event="bars_dq_check_failed",
+                # Check for L1 errors (blocking)
+                if check_result.has_errors:
+                    logger.error(
+                        "DQ check failed with L1 errors - blocking write",
+                        event="bars_dq_blocked",
                         dataset=dataset,
-                        rule=check.rule_name,
-                        affected_rows=check.affected_rows,
+                        error_count=check_result.error_count,
+                    )
+
+                    # Save failed data to quarantine
+                    for issue in check_result.issues:
+                        if issue.severity.value == "error":
+                            self._save_to_quarantine(
+                                df=filter_failed_rows(df, issue),
+                                dataset=dataset,
+                                rule_id=issue.rule_name,
+                                severity="error",
+                            )
+
+                    blocked = True
+
+                    # Record metrics
+                    M.data_errors.add(
+                        check_result.error_count,
+                        {"dataset": dataset, "operation": "write_blocked"},
+                    )
+
+                    return WriteResult(
+                        file_path="",
+                        checksum="",
+                        rows_written=0,
+                        rows_total=0,
+                        failed_checks=[],
+                        blocked=True,
+                        dq_result=dq_result,
+                    )
+
+                # Log L2 warnings (non-blocking)
+                if check_result.has_warnings:
+                    logger.warning(
+                        "DQ check found L2 warnings - proceeding",
+                        event="bars_dq_warnings",
+                        dataset=dataset,
+                        warning_count=check_result.warn_count,
                     )
 
             # Write data
@@ -281,6 +323,10 @@ class BarsRepository:
                 rows_total=total_rows,
             )
 
+            # Generate DQ report if enabled
+            if dq_result and not dq_result.passed:
+                self._generate_dq_report(dq_result, dataset)
+
             # Record metrics
             M.data_records.add(len(df), {"dataset": "bars", "operation": "write"})
 
@@ -289,7 +335,9 @@ class BarsRepository:
                 checksum=checksum,
                 rows_written=len(df),
                 rows_total=total_rows,
-                failed_checks=failed_checks,
+                failed_checks=[],
+                blocked=False,
+                dq_result=dq_result,
             )
 
     def _resolve_sids(
@@ -443,11 +491,29 @@ class BarsRepository:
 
         """
         # 计算 baseline（PIT 安全）
+        #
+        # 注意: 当前实现使用 trade_date 进行过滤，这存在 PIT 安全隐患。
+        # 正确的做法应该是使用 knowledge_date（因子生效日期）进行过滤。
+        #
+        # PIT 安全要求:
+        # - 复权因子的 knowledge_date 应该是因子实际可用的日期
+        # - 对于 Tushare，通常是 T+1 日才可用（knowledge_date = trade_date + 1）
+        #
+        # 当前限制:
+        # adj_factor 表目前没有 knowledge_date 字段，这需要:
+        # 1. 修改 adj_factor 表结构添加 knowledge_date 列
+        # 2. 更新 ingestion 逻辑以正确设置 knowledge_date
+        # 3. 修改此处过滤条件为 knowledge_date <= asof_date
+        #
+        # TODO: 在未来的 Sprint 中添加 knowledge_date 支持
+        # 追踪: https://github.com/your-org/ditto/issues/XXX
         baseline_df = adj_df
         if asof is not None:
             from datetime import date
 
             asof_date = date.fromisoformat(asof)
+            # 临时方案: 使用 trade_date，假设因子当日可用
+            # 正确方案: 应使用 knowledge_date <= asof_date
             baseline_df = adj_df.filter(pl.col("trade_date") <= asof_date)
 
         # 获取每个 SID 的最新因子
@@ -512,3 +578,157 @@ class BarsRepository:
             ]
         )
         return df.drop("adj_factor")
+
+    def _save_to_quarantine(
+        self,
+        df: pl.DataFrame,
+        dataset: str,
+        rule_id: str,
+        severity: str,
+        trade_date: str | None = None,
+    ) -> None:
+        """
+        Save failed data to quarantine store.
+
+        Args:
+            df: Failed data rows.
+            dataset: Dataset name.
+            rule_id: Rule that failed.
+            severity: Severity level.
+            trade_date: Optional trade date.
+
+        """
+        if df.is_empty():
+            return
+
+        try:
+            from ditto_datahub.dq.models import DQIssue
+
+            # Get quarantine store path from bars_store
+            data_root = self._bars_store._data_root
+            quarantine_path = data_root / "quarantine.db"
+
+            from ditto_datahub.stores.quarantine_store import QuarantineStore
+
+            quarantine_store = QuarantineStore(quarantine_path)
+            quarantine_store.save_failed_data(
+                dataset=dataset,
+                rule_id=rule_id,
+                severity=severity,
+                failed_data=df,
+                trade_date=trade_date,
+            )
+
+            logger.info(
+                "Failed data saved to quarantine",
+                event="quarantine_saved",
+                dataset=dataset,
+                rule_id=rule_id,
+                rows=len(df),
+            )
+
+        except Exception as e:
+            logger.error(
+                "Failed to save to quarantine",
+                event="quarantine_save_failed",
+                dataset=dataset,
+                rule_id=rule_id,
+                error=str(e),
+            )
+
+    def _generate_dq_report(self, result: DQResult, dataset: str) -> None:
+        """
+        Generate DQ report and save to file.
+
+        Args:
+            result: DQ check result.
+            dataset: Dataset name.
+
+        """
+        try:
+            from datetime import datetime
+
+            from ditto_datahub.dq.report import DQReportGenerator
+
+            data_root = self._bars_store._data_root
+            reports_dir = data_root / "reports" / "dq"
+            reports_dir.mkdir(parents=True, exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            report_path = reports_dir / f"{dataset}_{timestamp}.md"
+
+            generator = DQReportGenerator()
+            generator.save_report(result, report_path, report_format="markdown")
+
+            logger.info(
+                "DQ report generated",
+                event="dq_report_generated",
+                dataset=dataset,
+                report_path=str(report_path),
+            )
+
+        except Exception as e:
+            logger.error(
+                "Failed to generate DQ report",
+                event="dq_report_failed",
+                dataset=dataset,
+                error=str(e),
+            )
+
+
+def filter_failed_rows(df: pl.DataFrame, issue: DQIssue) -> pl.DataFrame:
+    """
+    Filter failed rows based on DQ issue.
+
+    Args:
+        df: Input DataFrame.
+        issue: DQ issue with rule information.
+
+    Returns:
+        Filtered DataFrame with failed rows.
+
+    """
+    rule_name = issue.rule_name.lower()
+
+    # Handle not_null rule: filter rows where column is null
+    if rule_name == "not_null":
+        # Extract column name from message (format: "{col} has null values")
+        message = issue.message.lower()
+        for col in df.columns:
+            if col.lower() in message and "has null values" in message:
+                return df.filter(pl.col(col).is_null())
+        # Fallback: check all columns for null values
+        null_cols = [pl.col(c).is_null() for c in df.columns]
+        if null_cols:
+            return df.filter(pl.any_horizontal(null_cols))
+
+    # Handle unique rule: filter duplicate rows
+    if rule_name == "unique":
+        # For unique constraint, find duplicate rows
+        # Check all column combinations to find duplicates
+        for col_count in range(1, len(df.columns) + 1):
+            for cols in combinations(df.columns, col_count):
+                duplicates = (
+                    df.group_by(cols)
+                    .agg(pl.len().alias("_count"))
+                    .filter(pl.col("_count") > 1)
+                )
+                if not duplicates.is_empty():
+                    # Join back to get original rows
+                    return df.join(duplicates.select(cols), on=cols, how="inner")
+        return df  # Fallback: return all rows
+
+    # Handle foreign_key rule: filter rows with invalid FK
+    if rule_name == "foreign_key":
+        # Cannot filter without reference data
+        # Return all rows for manual review
+        return df
+
+    # Handle type_check rule: filter rows with type issues
+    if rule_name == "type_check":
+        # Cannot filter without type info
+        # Return all rows for manual review
+        return df
+
+    # Default: return all rows for manual review
+    return df
