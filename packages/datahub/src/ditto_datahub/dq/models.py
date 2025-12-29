@@ -223,13 +223,15 @@ class DQConfig(BaseModel):
 
     @classmethod
     def from_yaml_dir(cls, config_dir: str | Path) -> "DQConfig":
-        """Load DQ config from YAML directory.
+        """
+        Load DQ config from YAML directory.
 
         Args:
             config_dir: Path to directory containing YAML rule files
 
         Returns:
             DQConfig instance
+
         """
         config_path = Path(config_dir)
         if not config_path.exists():
@@ -239,37 +241,41 @@ class DQConfig(BaseModel):
 
         for yaml_file in config_path.glob("*.yml"):
             try:
-                with open(yaml_file, encoding="utf-8") as f:
+                with yaml_file.open(encoding="utf-8") as f:
                     data = yaml.safe_load(f)
 
                 if data and "dataset" in data:
                     dataset_rules = DatasetRules(**data)
                     datasets[dataset_rules.dataset] = dataset_rules
-            except Exception as e:
+            except Exception:
                 # Skip invalid files but continue loading others
                 continue
 
         return cls(datasets=datasets)
 
     def get_rules(self, dataset: str) -> DatasetRules | None:
-        """Get rules for a specific dataset.
+        """
+        Get rules for a specific dataset.
 
         Args:
             dataset: Dataset name
 
         Returns:
             DatasetRules if found, None otherwise
+
         """
         return self.datasets.get(dataset)
 
     def has_dataset(self, dataset: str) -> bool:
-        """Check if dataset has rules configured.
+        """
+        Check if dataset has rules configured.
 
         Args:
             dataset: Dataset name
 
         Returns:
             True if dataset has rules, False otherwise
+
         """
         return dataset in self.datasets
 

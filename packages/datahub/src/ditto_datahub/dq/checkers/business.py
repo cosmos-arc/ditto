@@ -17,7 +17,8 @@ class BusinessChecker:
         rules: list[dict],
         context: dict[str, Any] | None = None,
     ) -> list[DQIssue]:
-        """Execute L2 business checks.
+        """
+        Execute L2 business checks.
 
         Args:
             df: Data to check
@@ -26,6 +27,7 @@ class BusinessChecker:
 
         Returns:
             List of DQIssue (WARNING severity)
+
         """
         issues: list[DQIssue] = []
 
@@ -42,7 +44,8 @@ class BusinessChecker:
         rule: dict,
         context: dict[str, Any] | None = None,
     ) -> DQIssue | None:
-        """Check a single rule.
+        """
+        Check a single rule.
 
         Args:
             df: Data to check
@@ -51,6 +54,7 @@ class BusinessChecker:
 
         Returns:
             DQIssue if rule violated, None otherwise
+
         """
         rule_type = rule.get("rule")
 

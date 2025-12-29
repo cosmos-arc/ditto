@@ -1,8 +1,6 @@
 """Tests for TechnicalChecker."""
 
 import polars as pl
-import pytest
-
 from ditto_datahub.dq.checkers.technical import TechnicalChecker
 from ditto_datahub.dq.models import DQLevel, DQSeverity
 
@@ -16,13 +14,19 @@ class TestTechnicalChecker:
 
     def test_check_not_null_pass(self) -> None:
         """Test not null check with valid data."""
-        df = pl.DataFrame({
-            "sid": [1, 2, 3],
-            "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+            }
+        )
 
         rules = [
-            {"rule": "not_null", "columns": ["sid", "trade_date"], "message": "Required fields"}
+            {
+                "rule": "not_null",
+                "columns": ["sid", "trade_date"],
+                "message": "Required fields",
+            }
         ]
 
         issues = self.checker.check(df, rules)
@@ -31,14 +35,14 @@ class TestTechnicalChecker:
 
     def test_check_not_null_fail(self) -> None:
         """Test not null check with null values."""
-        df = pl.DataFrame({
-            "sid": [1, None, 3],  # One null
-            "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [1, None, 3],  # One null
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+            }
+        )
 
-        rules = [
-            {"rule": "not_null", "columns": ["sid"], "message": "SID required"}
-        ]
+        rules = [{"rule": "not_null", "columns": ["sid"], "message": "SID required"}]
 
         issues = self.checker.check(df, rules)
 
@@ -50,13 +54,19 @@ class TestTechnicalChecker:
 
     def test_check_unique_pass(self) -> None:
         """Test unique check with valid data."""
-        df = pl.DataFrame({
-            "sid": [1, 1, 2],
-            "trade_date": ["2024-01-01", "2024-01-02", "2024-01-01"],
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [1, 1, 2],
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-01"],
+            }
+        )
 
         rules = [
-            {"rule": "unique", "columns": ["sid", "trade_date"], "message": "Primary key unique"}
+            {
+                "rule": "unique",
+                "columns": ["sid", "trade_date"],
+                "message": "Primary key unique",
+            }
         ]
 
         issues = self.checker.check(df, rules)
@@ -65,13 +75,23 @@ class TestTechnicalChecker:
 
     def test_check_unique_fail(self) -> None:
         """Test unique check with duplicates."""
-        df = pl.DataFrame({
-            "sid": [1, 1, 1],
-            "trade_date": ["2024-01-01", "2024-01-02", "2024-01-01"],  # Duplicate (1, 2024-01-01)
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [1, 1, 1],
+                "trade_date": [
+                    "2024-01-01",
+                    "2024-01-02",
+                    "2024-01-01",
+                ],  # Duplicate (1, 2024-01-01)
+            }
+        )
 
         rules = [
-            {"rule": "unique", "columns": ["sid", "trade_date"], "message": "Primary key unique"}
+            {
+                "rule": "unique",
+                "columns": ["sid", "trade_date"],
+                "message": "Primary key unique",
+            }
         ]
 
         issues = self.checker.check(df, rules)
@@ -84,14 +104,24 @@ class TestTechnicalChecker:
 
     def test_check_multiple_issues(self) -> None:
         """Test checking with multiple rule violations."""
-        df = pl.DataFrame({
-            "sid": [1, None, 1],
-            "trade_date": ["2024-01-01", "2024-01-02", "2024-01-01"],  # Null + duplicate
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [1, None, 1],
+                "trade_date": [
+                    "2024-01-01",
+                    "2024-01-02",
+                    "2024-01-01",
+                ],  # Null + duplicate
+            }
+        )
 
         rules = [
             {"rule": "not_null", "columns": ["sid"], "message": "SID required"},
-            {"rule": "unique", "columns": ["sid", "trade_date"], "message": "Primary key unique"},
+            {
+                "rule": "unique",
+                "columns": ["sid", "trade_date"],
+                "message": "Primary key unique",
+            },
         ]
 
         issues = self.checker.check(df, rules)
@@ -104,13 +134,19 @@ class TestTechnicalChecker:
 
     def test_check_missing_column(self) -> None:
         """Test checking with missing column."""
-        df = pl.DataFrame({
-            "sid": [1, 2, 3],
-            # trade_date column missing
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],
+                # trade_date column missing
+            }
+        )
 
         rules = [
-            {"rule": "not_null", "columns": ["sid", "trade_date"], "message": "Required"}
+            {
+                "rule": "not_null",
+                "columns": ["sid", "trade_date"],
+                "message": "Required",
+            }
         ]
 
         issues = self.checker.check(df, rules)

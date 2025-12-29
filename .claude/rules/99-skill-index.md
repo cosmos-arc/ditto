@@ -87,3 +87,15 @@ alwaysApply: true
 - `/load polars` → 加载 polars-guide
 - `/load pit` → 加载 pit-guide
 - `/load all` → 加载所有常用 skills
+
+## 组合使用示例
+**用户**: 帮我开发一个动量因子引擎
+
+**正确流程**:
+1. 调用 `superpowers:brainstorming` Skills讨论设计
+2. 读取 `engine-template/SKILL.md`（引擎模板）
+3. 读取 `factor-dev/SKILL.md`（因子开发）
+4. 读取 `polars-guide/SKILL.md`（Polars 规范）
+5. 调用 `superpowers:writing-plans` Skills生成计划
+6. 调用 `superpowers:executing-plans` + `superpowers:test-driven-development` + `python-development` Skills执行
+7. 调用 `superpowers:finishing-a-development-branch` Skills完成

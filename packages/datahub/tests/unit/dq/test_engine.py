@@ -5,8 +5,12 @@ from unittest.mock import Mock
 
 import polars as pl
 import pytest
-
-from ditto_datahub.dq import DQConfig, DQEngine, DQIssue, DQLevel, DQResult, DQSeverity, DatasetRules
+from ditto_datahub.dq import (
+    DatasetRules,
+    DQConfig,
+    DQEngine,
+    DQResult,
+)
 
 
 class TestDQEngine:
@@ -21,10 +25,18 @@ class TestDQEngine:
                     dataset="test_dataset",
                     description="Test dataset for DQ engine",
                     l1_technical=[
-                        {"rule": "not_null", "columns": ["sid"], "message": "SID required"}
+                        {
+                            "rule": "not_null",
+                            "columns": ["sid"],
+                            "message": "SID required",
+                        }
                     ],
                     l2_business=[
-                        {"rule": "positive", "columns": ["value"], "message": "Value positive"}
+                        {
+                            "rule": "positive",
+                            "columns": ["value"],
+                            "message": "Value positive",
+                        }
                     ],
                     l3_statistical=[],
                 )
@@ -54,11 +66,13 @@ class TestDQEngine:
         """Test checking valid data passes all rules."""
         engine = DQEngine(config=self.config)
 
-        df = pl.DataFrame({
-            "sid": [1, 2, 3],
-            "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
-            "value": [10.0, 20.0, 30.0],
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                "value": [10.0, 20.0, 30.0],
+            }
+        )
 
         result = engine.check(df, "test_dataset")
 
@@ -71,10 +85,12 @@ class TestDQEngine:
         """Test checking data with null SID fails L1."""
         engine = DQEngine(config=self.config)
 
-        df = pl.DataFrame({
-            "sid": [1, None, 3],  # One null SID
-            "value": [10.0, 20.0, 30.0],
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [1, None, 3],  # One null SID
+                "value": [10.0, 20.0, 30.0],
+            }
+        )
 
         result = engine.check(df, "test_dataset")
 
@@ -87,10 +103,12 @@ class TestDQEngine:
         """Test checking data with negative value generates L2 warning."""
         engine = DQEngine(config=self.config)
 
-        df = pl.DataFrame({
-            "sid": [1, 2, 3],
-            "value": [10.0, -5.0, 30.0],  # One negative value
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],
+                "value": [10.0, -5.0, 30.0],  # One negative value
+            }
+        )
 
         result = engine.check(df, "test_dataset")
 
@@ -162,14 +180,16 @@ class TestDQEngineIntegration:
         engine = DQEngine(config_path=config_dir)
 
         # Valid ETF data
-        df = pl.DataFrame({
-            "sid": [200001, 200001],
-            "trade_date": ["2024-01-01", "2024-01-02"],
-            "open": [10.0, 10.5],
-            "high": [10.2, 10.8],
-            "low": [9.8, 10.2],
-            "close": [10.1, 10.6],
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [200001, 200001],
+                "trade_date": ["2024-01-01", "2024-01-02"],
+                "open": [10.0, 10.5],
+                "high": [10.2, 10.8],
+                "low": [9.8, 10.2],
+                "close": [10.1, 10.6],
+            }
+        )
 
         result = engine.check(df, "etf_daily")
 
@@ -188,14 +208,16 @@ class TestDQEngineIntegration:
         engine = DQEngine(config_path=config_dir)
 
         # Invalid OHLC data (high < low)
-        df = pl.DataFrame({
-            "sid": [200001],
-            "trade_date": ["2024-01-01"],
-            "open": [10.5],
-            "high": [10.0],  # High < open
-            "low": [10.8],   # Low > open
-            "close": [10.1],
-        })
+        df = pl.DataFrame(
+            {
+                "sid": [200001],
+                "trade_date": ["2024-01-01"],
+                "open": [10.5],
+                "high": [10.0],  # High < open
+                "low": [10.8],  # Low > open
+                "close": [10.1],
+            }
+        )
 
         result = engine.check(df, "etf_daily")
 
