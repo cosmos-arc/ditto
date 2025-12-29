@@ -43,3 +43,19 @@ class DQResult:
     rule_name: str
     message: str
     affected_rows: int = 0
+
+
+# ============ Freeze 数据结构 ============
+@dataclass(frozen=True)
+class FreezeManifest:
+    """Freeze manifest for data version tracking."""
+
+    freeze_id: str
+    description: str
+    created_at: str
+    files: dict[str, str]  # {relative_path: md5_checksum}
+
+    @property
+    def file_count(self) -> int:
+        """Number of files in freeze."""
+        return len(self.files)
