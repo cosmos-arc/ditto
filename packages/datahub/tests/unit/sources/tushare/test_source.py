@@ -495,6 +495,7 @@ class TestTushareSourceAdjFactor:
         expected_schema = {
             "src_code": pl.String,
             "trade_date": pl.Date,
+            "knowledge_date": pl.Date,
             "adj_factor": pl.Float64,
         }
         assert result.schema == expected_schema
@@ -504,11 +505,13 @@ class TestTushareSourceAdjFactor:
             {
                 "src_code": "000001.SZ",
                 "trade_date": date(2024, 1, 2),
+                "knowledge_date": date(2024, 1, 2),
                 "adj_factor": 1.2345,
             },
             {
                 "src_code": "600000.SH",
                 "trade_date": date(2024, 1, 2),
+                "knowledge_date": date(2024, 1, 2),
                 "adj_factor": 1.5678,
             },
         ]
@@ -583,6 +586,7 @@ class TestTushareSourceFundAdj:
         expected_schema = {
             "src_code": pl.String,
             "trade_date": pl.Date,
+            "knowledge_date": pl.Date,
             "adj_factor": pl.Float64,
         }
         assert result.schema == expected_schema
@@ -592,11 +596,13 @@ class TestTushareSourceFundAdj:
             {
                 "src_code": "510300.SH",
                 "trade_date": date(2024, 1, 2),
+                "knowledge_date": date(2024, 1, 2),
                 "adj_factor": 1.0123,
             },
             {
                 "src_code": "159919.SZ",
                 "trade_date": date(2024, 1, 2),
+                "knowledge_date": date(2024, 1, 2),
                 "adj_factor": 1.0456,
             },
         ]

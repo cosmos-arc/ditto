@@ -528,6 +528,7 @@ class TushareSource(DataSource):
             DataFrame with columns:
             - src_code: Source code
             - trade_date: Date
+            - knowledge_date: Date (PIT safety: when this data became known)
             - adj_factor: Float64
 
         Raises:
@@ -557,16 +558,25 @@ class TushareSource(DataSource):
                     schema={
                         "src_code": pl.String,
                         "trade_date": pl.Date,
+                        "knowledge_date": pl.Date,
                         "adj_factor": pl.Float64,
                     }
                 )
 
             df = pl.from_pandas(response).rename({"ts_code": "src_code"})
 
+            # 添加 knowledge_date 列（Tushare 当日数据，knowledge_date = trade_date）
             df = df.with_columns(
-                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+                pl.col("trade_date")
+                .str.strptime(pl.Date, "%Y%m%d")
+                .alias("trade_date"),
+                pl.col("trade_date")
+                .str.strptime(pl.Date, "%Y%m%d")
+                .alias("knowledge_date"),
                 pl.col("adj_factor").cast(pl.Float64),
             )
+
+            df = df.select("src_code", "trade_date", "knowledge_date", "adj_factor")
 
             row_count = len(df)
             logger.info(
@@ -606,6 +616,7 @@ class TushareSource(DataSource):
             DataFrame with columns:
             - src_code: Source code
             - trade_date: Date
+            - knowledge_date: Date (PIT safety: when this data became known)
             - adj_factor: Float64
 
         Raises:
@@ -635,16 +646,25 @@ class TushareSource(DataSource):
                     schema={
                         "src_code": pl.String,
                         "trade_date": pl.Date,
+                        "knowledge_date": pl.Date,
                         "adj_factor": pl.Float64,
                     }
                 )
 
             df = pl.from_pandas(response).rename({"ts_code": "src_code"})
 
+            # 添加 knowledge_date 列（Tushare 当日数据，knowledge_date = trade_date）
             df = df.with_columns(
-                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+                pl.col("trade_date")
+                .str.strptime(pl.Date, "%Y%m%d")
+                .alias("trade_date"),
+                pl.col("trade_date")
+                .str.strptime(pl.Date, "%Y%m%d")
+                .alias("knowledge_date"),
                 pl.col("adj_factor").cast(pl.Float64),
             )
+
+            df = df.select("src_code", "trade_date", "knowledge_date", "adj_factor")
 
             row_count = len(df)
             logger.info(
