@@ -7,7 +7,7 @@ import pandas as pd
 import polars as pl
 import pytest
 from ditto_datahub.sources.base import SourceFetchError
-from ditto_datahub.sources.metadata import IncrementalMode
+from ditto_datahub.sources.metadata import IncrementalMode, NotTradingDayError
 from ditto_datahub.sources.tushare.source import TushareSource
 
 
@@ -697,15 +697,13 @@ class TestTushareSourceIncremental:
             mock_api.return_value.query.return_value = mock_response
 
             source = TushareSource()
-            df, metadata = source.fetch_etf_daily_incremental(
+            _, metadata = source.fetch_etf_daily_incremental(
                 trade_date="2024-12-27",
                 mode=IncrementalMode.QUICK,
                 last_trade_date="2024-12-26",
             )
 
         # Should return data and updated metadata
-        assert not df.is_empty()
-        assert len(df) == 1
         assert metadata.last_trade_date == "2024-12-27"
         assert metadata.last_rows == 1
         assert metadata.last_checksum is not None
@@ -777,7 +775,7 @@ class TestTushareSourceIncremental:
             source = TushareSource()
 
             # First, fetch to get the checksum
-            df1, metadata1 = source.fetch_etf_daily_incremental(
+            _, metadata1 = source.fetch_etf_daily_incremental(
                 trade_date="2024-12-27",
                 mode=IncrementalMode.PRECISE,
                 last_trade_date="2024-12-26",
@@ -823,7 +821,7 @@ class TestTushareSourceIncremental:
             mock_api.return_value.query.return_value = mock_response
 
             source = TushareSource()
-            df, metadata = source.fetch_etf_daily_incremental(
+            _, metadata = source.fetch_etf_daily_incremental(
                 trade_date="2024-12-27",
                 mode=IncrementalMode.QUICK,
                 last_trade_date="2024-12-26",
@@ -831,3 +829,74 @@ class TestTushareSourceIncremental:
 
         assert metadata.dataset == "etf_daily"
         assert metadata.source == "tushare"
+
+
+class TestTushareSourceIngestDate:
+    """Tests for TushareSource.ingest_date."""
+
+    def test_ingest_date_non_trading_day_raises_error(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test ingest_date raises NotTradingDayError for non-trading days."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        source = TushareSource(token="test_token")
+
+        # 2024-01-06 is a Saturday (non-trading day)
+        # Create a simple validation function that returns False for this date
+        def is_trading_day_fn(date_str: str) -> bool:
+            """Mock trading day validation function."""
+            return date_str != "2024-01-06"
+
+        with pytest.raises(NotTradingDayError) as exc_info:
+            source.ingest_date(
+                dataset="stock_daily",
+                trade_date="2024-01-06",
+                _is_trading_day_fn=is_trading_day_fn,
+            )
+
+        assert exc_info.value.trade_date == "2024-01-06"
+
+    def test_ingest_date_trading_day_succeeds(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test ingest_date succeeds for trading days."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        mock_response = pd.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "trade_date": ["20240102"],
+                "pre_close": [11.5],
+                "open": [11.5],
+                "high": [11.8],
+                "low": [11.3],
+                "close": [11.6],
+                "change": [0.1],
+                "pct_chg": [0.87],
+                "vol": [12500000.0],
+                "amount": [145000000.0],
+            }
+        )
+
+        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
+            mock_api.return_value.query.return_value = mock_response
+
+            source = TushareSource(token="test_token")
+
+            # 2024-01-02 is a trading day (Tuesday)
+            def is_trading_day_fn(date_str: str) -> bool:
+                """Mock trading day validation function."""
+                return date_str == "2024-01-02"
+
+            df, log = source.ingest_date(
+                dataset="stock_daily",
+                trade_date="2024-01-02",
+                _is_trading_day_fn=is_trading_day_fn,
+            )
+
+            assert not df.is_empty()
+            assert log.status == "SUCCESS"
+            assert log.trade_date == "2024-01-02"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from datetime import datetime
 
 import polars as pl
@@ -15,6 +16,7 @@ from ditto_datahub.sources.metadata import (
     IngestionLog,
     IngestionMetadata,
     IngestionStatus,
+    NotTradingDayError,
 )
 from ditto_datahub.sources.tushare.client import TushareClient
 
@@ -1114,6 +1116,7 @@ class TushareSource(DataSource):
         dataset: str,
         trade_date: str,
         force: bool = False,
+        _is_trading_day_fn: Callable[[str], bool] | None = None,
     ) -> tuple[pl.DataFrame, IngestionLog]:
         """
         Ingest data for a specific date (new interface).
@@ -1122,6 +1125,9 @@ class TushareSource(DataSource):
             dataset: Dataset name (e.g., "stock_daily", "etf_daily").
             trade_date: Trade date (YYYY-MM-DD).
             force: Force update even if data was fetched before.
+            _is_trading_day_fn: Optional function to validate trading days.
+                If provided, must raise NotTradingDayError for non-trading days.
+                Signature: (date_str: str) -> bool
 
         Returns:
             Tuple of:
@@ -1129,11 +1135,12 @@ class TushareSource(DataSource):
             - IngestionLog with ingestion metadata
 
         Raises:
+            NotTradingDayError: If trade_date is not a trading day.
             SourceFetchError: If fetch fails or returns empty dataframe.
             ValueError: If dataset is not supported.
 
         Note:
-            Trading day validation should be done by the caller.
+            Trading day validation is performed when _is_trading_day_fn is provided.
             This method validates that the fetched data is non-empty.
 
         """
@@ -1144,6 +1151,10 @@ class TushareSource(DataSource):
             trade_date=trade_date,
             force=force,
         )
+
+        # Validate trading day if validation function is provided
+        if _is_trading_day_fn is not None and not _is_trading_day_fn(trade_date):
+            raise NotTradingDayError(trade_date)
 
         # Route to appropriate fetch method based on dataset
         fetch_map = {
