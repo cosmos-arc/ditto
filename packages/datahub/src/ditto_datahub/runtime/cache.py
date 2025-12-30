@@ -61,11 +61,11 @@ class DataCache:
             enable_metrics: 是否启用指标记录
 
         """
-        # cachebox.VTTLCache: (maxsize, ttl)
-        # 使用 VTTLCache 支持单条目 TTL，默认 TTL 为 ttl_seconds
-        self._cache: cachebox.VTTLCache[str, Any] = cachebox.VTTLCache(
-            maxsize=max_size, ttl=ttl_seconds
-        )
+        # cachebox.VTTLCache: (maxsize,)
+        # 注意：VTTLCache 构造函数的 ttl 参数仅用于初始化 iterable，
+        # 不是新条目的默认 TTL。我们在 set() 方法中手动传递 ttl。
+        self._cache: cachebox.VTTLCache[str, Any] = cachebox.VTTLCache(maxsize=max_size)
+        self._default_ttl = ttl_seconds  # 保存默认 TTL 供 set() 使用
         self._enable_metrics = enable_metrics
 
         # 统计计数器（用于非指标模式）
@@ -110,11 +110,21 @@ class DataCache:
             value: 缓存值
             ttl: TTL 秒数，None 时使用默认 TTL
 
+        Note:
+        ----
+            VTTLCache 需要显式传递 TTL 参数，ttl=None 表示不设置过期时间。
+            我们使用 `_default_ttl` 作为默认值。
+
         """
-        if ttl is not None:
-            self._cache.insert(key, value, ttl=ttl)
+        # 必须使用 insert() 方法并显式传递 TTL
+        # ttl=None 时使用默认 TTL，ttl=0 时表示不设置过期时间
+        if ttl is None:
+            self._cache.insert(key, value, ttl=self._default_ttl)
+        elif ttl == 0:
+            # ttl=0 表示永不过期（不设置 TTL）
+            self._cache.insert(key, value)
         else:
-            self._cache[key] = value
+            self._cache.insert(key, value, ttl=ttl)
 
     def invalidate(self, key: str) -> bool:
         """
