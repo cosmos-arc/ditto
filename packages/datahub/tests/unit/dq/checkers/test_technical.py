@@ -153,3 +153,54 @@ class TestTechnicalChecker:
 
         # Should only check sid column, skip missing trade_date
         assert len(issues) == 0  # All sid values are not null
+
+    def test_check_type_valid(self) -> None:
+        """Test type check with valid types."""
+        df = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],
+                "close": [10.0, 20.0, 30.0],
+                "volume": [100, 200, 300],
+            }
+        )
+        rules = [
+            {
+                "rule": "type_check",
+                "types": {"sid": "Int64", "close": "Float64", "volume": "Int64"},
+            }
+        ]
+
+        issues = self.checker.check(df, rules)
+
+        assert len(issues) == 0
+
+    def test_check_type_invalid(self) -> None:
+        """Test type check with invalid types."""
+        df = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],  # Int64
+                "close": ["10.0", "20.0", "30.0"],  # String (wrong)
+            }
+        )
+        rules = [{"rule": "type_check", "types": {"sid": "Int64", "close": "Float64"}}]
+
+        issues = self.checker.check(df, rules)
+
+        assert len(issues) == 1
+        assert issues[0].level == DQLevel.L1_TECHNICAL
+        assert issues[0].severity == DQSeverity.ERROR
+        assert "close" in issues[0].message
+
+    def test_check_type_column_not_exist(self) -> None:
+        """Test type check with non-existent column (should skip)."""
+        df = pl.DataFrame({"sid": [1, 2, 3]})
+        rules = [
+            {
+                "rule": "type_check",
+                "types": {"sid": "Int64", "close": "Float64"},  # close doesn't exist
+            }
+        ]
+
+        issues = self.checker.check(df, rules)
+
+        assert len(issues) == 0  # Should skip missing columns

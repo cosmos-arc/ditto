@@ -138,7 +138,48 @@ class TechnicalChecker:
         # Need to query reference table from context["hub"]
         return None
 
-    def _check_type(self, df: pl.DataFrame, rule: dict) -> DQIssue | None:
-        """Check data types."""
-        # TODO: Implement type checking
+    def _check_type(
+        self,
+        df: pl.DataFrame,
+        rule: dict,
+    ) -> DQIssue | None:
+        """
+        Check data types.
+
+        Args:
+            df: Data to check
+            rule: Rule config with "types" dict mapping column -> expected dtype
+
+        Returns:
+            DQIssue if type mismatch, None otherwise
+
+        """
+        expected_types = rule.get("types", {})
+
+        for col, expected_type in expected_types.items():
+            if col not in df.columns:
+                continue
+
+            actual_dtype = str(df[col].dtype)
+            # Polars dtypes like "Int64", "Float64", "String"
+            if not actual_dtype.startswith(expected_type):
+                logger.warning(
+                    "dq_rule_type_mismatch",
+                    event="dq_check",
+                    rule="type_check",
+                    column=col,
+                    expected=expected_type,
+                    actual=actual_dtype,
+                )
+                msg = (
+                    f"Column '{col}' has type {actual_dtype}, expected {expected_type}"
+                )
+                return DQIssue(
+                    level=DQLevel.L1_TECHNICAL,
+                    severity=DQSeverity.ERROR,
+                    rule_name="type_check",
+                    message=msg,
+                    affected_rows=df.height,
+                )
+
         return None
