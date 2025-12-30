@@ -268,3 +268,80 @@ class TestTechnicalChecker:
         issues = self.checker.check(df, [rule], context=None)
 
         assert len(issues) == 0  # Should skip without context
+
+    def test_foreign_key_invalid_dataset_sql_injection(self) -> None:
+        """Test foreign key check with SQL injection in dataset name."""
+        df = pl.DataFrame({"index_sid": [100, 200]})
+        mock_hub = MagicMock()
+
+        # SQL injection attempt: dataset name not in whitelist
+        rule = {
+            "rule": "foreign_key",
+            "column": "index_sid",
+            "reference": "malicious_table; DROP TABLE security--.sid",
+        }
+        context = {"hub": mock_hub}
+
+        issues = self.checker.check(df, [rule], context)
+
+        # Should reject due to dataset not in whitelist
+        assert len(issues) == 0
+        # hub.sql should not be called
+        mock_hub.sql.assert_not_called()
+
+    def test_foreign_key_invalid_column_sql_injection(self) -> None:
+        """Test foreign key check with SQL injection in column name."""
+        df = pl.DataFrame({"index_sid": [100, 200]})
+        mock_hub = MagicMock()
+
+        # SQL injection attempt: column name with invalid characters
+        rule = {
+            "rule": "foreign_key",
+            "column": "index_sid",
+            "reference": "security.sid; DROP TABLE users--",
+        }
+        context = {"hub": mock_hub}
+
+        issues = self.checker.check(df, [rule], context)
+
+        # Should reject due to invalid column format
+        assert len(issues) == 0
+        # hub.sql should not be called
+        mock_hub.sql.assert_not_called()
+
+    def test_foreign_key_valid_whitelist_dataset(self) -> None:
+        """Test foreign key check with valid whitelisted dataset."""
+        df = pl.DataFrame({"sid": [1, 2, 3]})
+        mock_hub = MagicMock()
+        mock_hub.sql.return_value = pl.DataFrame({"sid": [1, 2, 3, 4, 5]})
+
+        # Test with all whitelisted datasets
+        valid_datasets = [
+            "security",
+            "security_mapping",
+            "trading_calendar",
+            "universe",
+            "universe_constituent",
+            "index_weight",
+            "stock_daily",
+            "etf_daily",
+            "index_daily",
+            "adj_factor",
+        ]
+
+        for dataset in valid_datasets:
+            rule = {
+                "rule": "foreign_key",
+                "column": "sid",
+                "reference": f"{dataset}.sid",
+            }
+            context = {"hub": mock_hub}
+
+            # Reset mock for each iteration
+            mock_hub.sql.reset_mock()
+
+            issues = self.checker.check(df, [rule], context)
+
+            # Should pass whitelist validation and call hub.sql
+            assert len(issues) == 0
+            mock_hub.sql.assert_called_once()

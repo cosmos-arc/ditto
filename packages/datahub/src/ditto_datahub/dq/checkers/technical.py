@@ -1,5 +1,6 @@
 """L1 Technical checker."""
 
+import re
 from typing import Any
 
 import polars as pl
@@ -11,10 +12,31 @@ from ditto_datahub.dq.models import DQIssue, DQLevel, DQSeverity
 class TechnicalChecker:
     """L1 technical validation checker."""
 
+    # 允许的外键引用数据集白名单
+    # （与 SqlEngine.SQLITE_TABLES + ALLOWED_DATASETS 保持一致）
+    _ALLOWED_REF_DATASETS = frozenset(
+        {
+            # SQLite tables
+            "security",
+            "security_mapping",
+            "trading_calendar",
+            "universe",
+            "universe_constituent",
+            "index_weight",
+            "pipeline_run",
+            "dq_issue",
+            # Parquet views
+            "stock_daily",
+            "etf_daily",
+            "index_daily",
+            "adj_factor",
+        }
+    )
+
     def check(
         self,
         df: pl.DataFrame,
-        rules: list[dict],
+        rules: list[dict[str, Any]],
         context: dict[str, Any] | None = None,
     ) -> list[DQIssue]:
         """
@@ -41,7 +63,7 @@ class TechnicalChecker:
     def _check_rule(
         self,
         df: pl.DataFrame,
-        rule: dict,
+        rule: dict[str, Any],
         context: dict[str, Any] | None = None,
     ) -> DQIssue | None:
         """
@@ -69,7 +91,7 @@ class TechnicalChecker:
 
         return None
 
-    def _check_not_null(self, df: pl.DataFrame, rule: dict) -> DQIssue | None:
+    def _check_not_null(self, df: pl.DataFrame, rule: dict[str, Any]) -> DQIssue | None:
         """Check not null constraint."""
         columns = rule.get("columns", [])
 
@@ -95,7 +117,7 @@ class TechnicalChecker:
 
         return None
 
-    def _check_unique(self, df: pl.DataFrame, rule: dict) -> DQIssue | None:
+    def _check_unique(self, df: pl.DataFrame, rule: dict[str, Any]) -> DQIssue | None:
         """Check uniqueness constraint."""
         columns = rule.get("columns", [])
 
@@ -130,7 +152,7 @@ class TechnicalChecker:
     def _check_foreign_key(
         self,
         df: pl.DataFrame,
-        rule: dict,
+        rule: dict[str, Any],
         context: dict[str, Any] | None = None,
     ) -> DQIssue | None:
         """
@@ -174,6 +196,29 @@ class TechnicalChecker:
         ref_dataset, ref_column = reference.rsplit(".", 1)
         hub = context["hub"]
         issue: DQIssue | None = None
+
+        # ====================
+        # SQL 注入防护
+        # ====================
+        # 1. 白名单验证数据集名称
+        if ref_dataset not in self._ALLOWED_REF_DATASETS:
+            logger.warning(
+                "dq_fk_invalid_dataset",
+                event="dq_check",
+                rule="foreign_key",
+                dataset=ref_dataset,
+            )
+            return None
+
+        # 2. 列名格式验证（只允许字母、数字、下划线）
+        if not ref_column or not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", ref_column):
+            logger.warning(
+                "dq_fk_invalid_column",
+                event="dq_check",
+                rule="foreign_key",
+                column=ref_column,
+            )
+            return None
 
         try:
             # Query reference values
@@ -230,7 +275,7 @@ class TechnicalChecker:
     def _check_type(
         self,
         df: pl.DataFrame,
-        rule: dict,
+        rule: dict[str, Any],
     ) -> DQIssue | None:
         """
         Check data types.
