@@ -202,16 +202,92 @@ class StatisticalChecker:
 
         Args:
             dataset: Dataset identifier
-            trade_date: Trade date to check
-            rule: Rule config with lookback_days, expected_dates
-            hub: DataHub instance
+            trade_date: Trade date to check (YYYY-MM-DD)
+            rule: Rule config with lookback_days
+            hub: DataHub instance for calendar access
 
         Returns:
             DQIssue if missing data detected, None otherwise
 
         """
-        # TODO: Implement completeness check
-        # 1. Query trade calendar for expected dates
-        # 2. Check if all expected dates have data
-        # 3. Report missing dates
+        lookback_days = rule.get("lookback_days", 5)
+
+        try:
+            # Calculate start date with buffer
+            trade_dt = datetime.fromisoformat(trade_date)
+            start_dt = trade_dt - timedelta(days=lookback_days * 2)  # Extra buffer
+            start_date = start_dt.strftime("%Y-%m-%d")
+
+            # Query trading calendar
+            calendar = hub.calendar.get(
+                start=start_date,
+                end=trade_date,
+            )
+
+            if calendar.is_empty():
+                logger.debug(
+                    "dq_completeness_no_calendar",
+                    event="dq_check",
+                    dataset=dataset,
+                )
+                return None
+
+            # Get expected trading days (open days only)
+            expected_dates = set(
+                calendar.filter(pl.col("is_open"))["trade_date"].cast(str).to_list()
+            )
+
+            # Query actual data dates
+            actual_df = hub.bars.get(
+                start=start_date,
+                end=trade_date,
+            )
+
+            if actual_df.is_empty():
+                msg = (
+                    f"No data found for dataset '{dataset}' "
+                    f"in the last {lookback_days} days"
+                )
+                return DQIssue(
+                    level=DQLevel.L3_STATISTICAL,
+                    severity=DQSeverity.ALERT,
+                    rule_name="completeness",
+                    message=msg,
+                    affected_rows=0,
+                )
+
+            actual_dates = set(actual_df["trade_date"].cast(str).unique().to_list())
+
+            # Check for missing dates
+            missing_dates = expected_dates - actual_dates
+
+            if missing_dates:
+                sorted_missing = sorted(missing_dates)
+                logger.warning(
+                    "dq_rule_completeness_gap",
+                    event="dq_check",
+                    dataset=dataset,
+                    missing_count=len(missing_dates),
+                    missing_dates=sorted_missing,
+                )
+                msg = (
+                    f"Missing data for {len(missing_dates)} trading days: "
+                    f"{sorted_missing}"
+                )
+                return DQIssue(
+                    level=DQLevel.L3_STATISTICAL,
+                    severity=DQSeverity.ALERT,
+                    rule_name="completeness",
+                    message=msg,
+                    affected_rows=len(missing_dates),
+                )
+
+        except Exception as e:
+            logger.error(
+                "dq_completeness_error",
+                event="dq_check",
+                error=str(e),
+            )
+            return None
+
         return None

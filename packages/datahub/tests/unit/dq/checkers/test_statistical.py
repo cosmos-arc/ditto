@@ -200,3 +200,130 @@ class TestStatisticalChecker:
 
         # Should return empty issues when column not specified
         assert len(issues) == 0
+
+
+@pytest.fixture
+def mock_hub_with_calendar():
+    """Create mock hub with calendar data."""
+    hub = MagicMock()
+
+    # Mock calendar with 5 trading days
+    dates = [
+        date.today() - timedelta(days=i)
+        for i in range(6, 0, -1)
+        if (date.today() - timedelta(days=i)).weekday() < 5
+    ]
+    calendar_data = [{"trade_date": d, "is_open": True} for d in dates]
+
+    hub.calendar.get.return_value = pl.DataFrame(calendar_data)
+    return hub
+
+
+class TestCompletenessChecker:
+    """Test cases for completeness checker."""
+
+    def test_completeness_full(self, mock_hub_with_calendar):
+        """Test completeness check with all data present."""
+        # Get the calendar dates
+        calendar_dates = mock_hub_with_calendar.calendar.get.return_value[
+            "trade_date"
+        ].to_list()
+        df = pl.DataFrame(
+            {
+                "trade_date": calendar_dates,
+                "close": [100.0] * len(calendar_dates),
+            }
+        )
+
+        def mock_bars_get(start, end):
+            return df
+
+        mock_hub_with_calendar.bars.get = mock_bars_get
+
+        rule = {
+            "rule": "completeness",
+            "lookback_days": 5,
+        }
+
+        checker = StatisticalChecker()
+        issues = checker.check(
+            "test_dataset", str(date.today()), [rule], mock_hub_with_calendar
+        )
+
+        assert len(issues) == 0
+
+    def test_completeness_missing_days(self, mock_hub_with_calendar):
+        """Test completeness check with missing trading days."""
+        # Create data with only 2 out of expected days
+        calendar_dates = mock_hub_with_calendar.calendar.get.return_value[
+            "trade_date"
+        ].to_list()
+        df = pl.DataFrame(
+            {
+                "trade_date": [
+                    calendar_dates[0],
+                    calendar_dates[-1],
+                ],  # Only first and last day
+                "close": [100.0, 200.0],
+            }
+        )
+
+        def mock_bars_get(start, end):
+            return df
+
+        mock_hub_with_calendar.bars.get = mock_bars_get
+
+        rule = {
+            "rule": "completeness",
+            "lookback_days": 5,
+        }
+
+        checker = StatisticalChecker()
+        issues = checker.check(
+            "test_dataset", str(date.today()), [rule], mock_hub_with_calendar
+        )
+
+        assert len(issues) == 1
+        assert issues[0].rule_name == "completeness"
+        assert "missing" in issues[0].message.lower()
+
+    def test_completeness_no_calendar(self):
+        """Test completeness check with no calendar data."""
+        hub = MagicMock()
+        hub.calendar.get.return_value = pl.DataFrame()
+
+        rule = {
+            "rule": "completeness",
+            "lookback_days": 5,
+        }
+
+        checker = StatisticalChecker()
+        issues = checker.check("test_dataset", str(date.today()), [rule], hub)
+
+        # Should return empty issues when no calendar
+        assert len(issues) == 0
+
+    def test_completeness_no_data(self, mock_hub_with_calendar):
+        """Test completeness check with no actual data."""
+
+        def mock_bars_get(start, end):
+            return pl.DataFrame()
+
+        mock_hub_with_calendar.bars.get = mock_bars_get
+
+        rule = {
+            "rule": "completeness",
+            "lookback_days": 5,
+        }
+
+        checker = StatisticalChecker()
+        issues = checker.check(
+            "test_dataset", str(date.today()), [rule], mock_hub_with_calendar
+        )
+
+        assert len(issues) == 1
+        assert issues[0].rule_name == "completeness"
+        assert (
+            "no data" in issues[0].message.lower()
+            or "not found" in issues[0].message.lower()
+        )
