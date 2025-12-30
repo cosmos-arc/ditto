@@ -84,6 +84,25 @@ class M:
     api_requests: Counter
     api_duration: Histogram
 
+    # 缓存指标
+    cache_hit: Counter
+    cache_miss: Counter
+    cache_hit_rate: "GaugeWrapper"
+    cache_invalidations: Counter
+    cache_evictions: Counter
+    cache_size: "GaugeWrapper"
+
+    # SQL 指标
+    sql_query_duration: Histogram
+    sql_slow_query_total: Counter
+    sql_query_plan_cache_hit: Counter
+    sql_query_plan_cache_miss: Counter
+
+    # JSON 序列化指标
+    json_serialize_duration: Histogram
+    json_deserialize_duration: Histogram
+    json_bytes_total: Counter
+
     @classmethod
     def setup(cls, meter: metrics.Meter) -> None:
         """
@@ -180,6 +199,66 @@ class M:
         cls.api_duration = meter.create_histogram(
             "ditto.api.duration",
             description="API request duration in seconds",
+        )
+
+        # 缓存指标
+        cls.cache_hit = meter.create_counter(
+            "ditto.cache.hit_total",
+            description="Total cache hits",
+        )
+        cls.cache_miss = meter.create_counter(
+            "ditto.cache.miss_total",
+            description="Total cache misses",
+        )
+        cls.cache_hit_rate = _create_gauge(
+            meter,
+            "ditto.cache.hit_rate",
+            "Cache hit rate (0-1)",
+        )
+        cls.cache_invalidations = meter.create_counter(
+            "ditto.cache.invalidations_total",
+            description="Total cache invalidations",
+        )
+        cls.cache_evictions = meter.create_counter(
+            "ditto.cache.evictions_total",
+            description="Total cache evictions",
+        )
+        cls.cache_size = _create_gauge(
+            meter,
+            "ditto.cache.size",
+            "Current cache size (number of entries)",
+        )
+
+        # SQL 指标
+        cls.sql_query_duration = meter.create_histogram(
+            "ditto.sql.query.duration",
+            description="SQL query execution duration in seconds",
+        )
+        cls.sql_slow_query_total = meter.create_counter(
+            "ditto.sql.slow_query_total",
+            description="Total slow queries",
+        )
+        cls.sql_query_plan_cache_hit = meter.create_counter(
+            "ditto.sql.query_plan_cache.hit_total",
+            description="Total query plan cache hits",
+        )
+        cls.sql_query_plan_cache_miss = meter.create_counter(
+            "ditto.sql.query_plan_cache.miss_total",
+            description="Total query plan cache misses",
+        )
+
+        # JSON 序列化指标
+        cls.json_serialize_duration = meter.create_histogram(
+            "ditto.json.serialize.duration",
+            description="JSON serialization duration in seconds",
+        )
+        cls.json_deserialize_duration = meter.create_histogram(
+            "ditto.json.deserialize.duration",
+            description="JSON deserialization duration in seconds",
+        )
+        cls.json_bytes_total = meter.create_counter(
+            "ditto.json.bytes_total",
+            description="Total JSON bytes processed",
         )
 
 
@@ -298,6 +377,21 @@ def configure_metrics(config: ObservabilityConfig, mode: Mode) -> metrics.Meter:
         View(
             instrument_type=Histogram,
             instrument_name="ditto.api.duration",
+            aggregation=duration_histogram_aggregation,
+        ),
+        View(
+            instrument_type=Histogram,
+            instrument_name="ditto.sql.query.duration",
+            aggregation=duration_histogram_aggregation,
+        ),
+        View(
+            instrument_type=Histogram,
+            instrument_name="ditto.json.serialize.duration",
+            aggregation=duration_histogram_aggregation,
+        ),
+        View(
+            instrument_type=Histogram,
+            instrument_name="ditto.json.deserialize.duration",
             aggregation=duration_histogram_aggregation,
         ),
     ]

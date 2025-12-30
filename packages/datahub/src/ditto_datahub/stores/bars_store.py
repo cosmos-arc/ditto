@@ -16,8 +16,11 @@ import polars as pl
 from ditto_foundation import M, logger, span, traced
 from ditto_foundation.util.io import atomic_write, file_md5
 
+from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
+from ditto_datahub.types import OnDuplicate
 
-class BarsStore:
+
+class BarsStore(ParquetStoreBase):
     """
     Market bars data storage with year partitioning.
 
@@ -31,60 +34,6 @@ class BarsStore:
                 2020.parquet
                 ...
     """
-
-    def __init__(self, data_root: Path) -> None:
-        """
-        Initialize BarsStore.
-
-        Args:
-            data_root: Root directory for data storage.
-
-        """
-        self._data_root = Path(data_root)
-
-    def _get_path(self, dataset: str, year: int) -> Path:
-        """
-        Get year partition file path.
-
-        Args:
-            dataset: Dataset name (e.g., "market_daily", "etf_daily").
-            year: Year partition.
-
-        Returns:
-            Path to the Parquet file.
-
-        """
-        return self._data_root / dataset / f"{year}.parquet"
-
-    def _collect_paths(
-        self,
-        dataset: str,
-        start_year: int,
-        end_year: int,
-    ) -> list[Path]:
-        """
-        Collect year partition file paths.
-
-        Args:
-            dataset: Dataset name.
-            start_year: Start year (inclusive).
-            end_year: End year (inclusive).
-
-        Returns:
-            List of existing file paths.
-
-        """
-        dataset_dir = self._data_root / dataset
-        if not dataset_dir.exists():
-            return []
-
-        paths: list[Path] = []
-        for year in range(start_year, end_year + 1):
-            path = dataset_dir / f"{year}.parquet"
-            if path.exists():
-                paths.append(path)
-
-        return paths
 
     def _ensure_date_column(self, df: pl.DataFrame) -> pl.DataFrame:
         """
@@ -136,25 +85,71 @@ class BarsStore:
         dataset_dir.mkdir(parents=True, exist_ok=True)
         return dataset_dir
 
-    def _merge_with_existing(self, df: pl.DataFrame, file_path: Path) -> pl.DataFrame:
+    def _merge_with_existing(
+        self,
+        df: pl.DataFrame,
+        file_path: Path,
+        on_duplicate: OnDuplicate,
+    ) -> pl.DataFrame:
         """
         Merge DataFrame with existing data if file exists.
 
         Args:
             df: New data to write.
             file_path: Path to existing data file.
+            on_duplicate: 策略处理重复数据.
 
         Returns:
             Merged DataFrame with unique sid/date pairs.
 
+        Raises:
+            ValueError: 如果 on_duplicate=ERROR 且存在重复数据.
+
         """
         if file_path.exists():
             existing = pl.read_parquet(file_path)
-            combined = pl.concat([existing, df])
-            combined = combined.unique(
-                subset=["sid", "trade_date"],
-                keep="last",
+
+            # 检测重复数据
+            existing_keys = existing.select(["sid", "trade_date"])
+            new_keys = df.select(["sid", "trade_date"])
+
+            # 找出重叠的 (sid, trade_date) 对
+            merged_keys = existing_keys.join(
+                new_keys, on=["sid", "trade_date"], how="inner"
             )
+
+            if not merged_keys.is_empty():
+                # 存在重复数据
+                if on_duplicate == OnDuplicate.ERROR:
+                    dup_count = len(merged_keys)
+                    msg = (
+                        "Duplicate data: "
+                        f"{dup_count} overlapping (sid, trade_date) pairs. "
+                        "Use OnDuplicate.KEEP_FIRST to preserve, or "
+                        "OnDuplicate.KEEP_LAST to overwrite."
+                    )
+                    raise ValueError(msg)
+                elif on_duplicate == OnDuplicate.KEEP_FIRST:
+                    # 保留现有数据，过滤掉新数据中的重复部分
+                    # 使用 anti join 获取新数据中不重复的部分
+                    non_overlapping = new_keys.join(
+                        existing_keys, on=["sid", "trade_date"], how="anti"
+                    )
+                    # 过滤 df 以保留不重复的行
+                    df = df.join(non_overlapping, on=["sid", "trade_date"], how="inner")
+                    combined = pl.concat([existing, df])
+                elif on_duplicate == OnDuplicate.KEEP_LAST:
+                    # Last-Write-Wins: 新数据覆盖现有数据
+                    combined = pl.concat([existing, df])
+                    combined = combined.unique(
+                        subset=["sid", "trade_date"],
+                        keep="last",
+                    )
+                else:
+                    raise ValueError(f"Unknown OnDuplicate strategy: {on_duplicate}")
+            else:
+                # 无重复，直接合并
+                combined = pl.concat([existing, df])
         else:
             combined = df
         return combined
@@ -282,6 +277,7 @@ class BarsStore:
         dataset: str,
         df: pl.DataFrame,
         year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
     ) -> tuple[str, str]:
         """
         Write year partition file.
@@ -292,13 +288,14 @@ class BarsStore:
             dataset: Dataset name.
             df: Data to write.
             year: Year partition.
+            on_duplicate: 策略处理重复数据 (默认 ERROR 报错).
 
         Returns:
             Tuple of (file_path, checksum).
 
         """
         with span("data.write", dataset=dataset, year=year) as s:
-            return self._write_impl(dataset, df, year, s)
+            return self._write_impl(dataset, df, year, s, on_duplicate)
 
     def _write_impl(
         self,
@@ -306,6 +303,7 @@ class BarsStore:
         df: pl.DataFrame,
         year: int,
         span_ctx: Any,
+        on_duplicate: OnDuplicate,
     ) -> tuple[str, str]:
         start_time = time.time()
 
@@ -316,7 +314,7 @@ class BarsStore:
         is_merge = file_path.exists()
 
         # Merge with existing data and prepare for write
-        combined = self._merge_with_existing(df, file_path)
+        combined = self._merge_with_existing(df, file_path, on_duplicate)
         combined = self._prepare_for_write(combined)
 
         # Atomic write
@@ -351,148 +349,3 @@ class BarsStore:
         M.data_update_duration.record(duration_ms / 1000, {"dataset": dataset})
 
         return str(file_path), checksum
-
-    # ============ Metadata operations ============
-
-    def get_years(self, dataset: str) -> list[int]:
-        """
-        Get available years for a dataset.
-
-        Args:
-            dataset: Dataset name.
-
-        Returns:
-            Sorted list of available years.
-
-        """
-        dataset_dir = self._data_root / dataset
-        if not dataset_dir.exists():
-            return []
-
-        years: list[int] = []
-        for f in dataset_dir.glob("*.parquet"):
-            try:
-                year = int(f.stem)
-                years.append(year)
-            except ValueError:
-                # Skip files that don't match year pattern
-                continue
-
-        return sorted(years)
-
-    def delete(self, dataset: str, year: int) -> bool:
-        """
-        Delete a year partition.
-
-        Args:
-            dataset: Dataset name.
-            year: Year partition to delete.
-
-        Returns:
-            True if deleted, False if file didn't exist.
-
-        """
-        path = self._get_path(dataset, year)
-        if path.exists():
-            path.unlink()
-            return True
-        return False
-
-    def get_checksum(self, dataset: str, year: int) -> str:
-        """
-        Get MD5 checksum of a year partition.
-
-        Args:
-            dataset: Dataset name.
-            year: Year partition.
-
-        Returns:
-            Checksum hex string, or empty string if file doesn't exist.
-
-        """
-        path = self._get_path(dataset, year)
-        if path.exists():
-            result: str = file_md5(path)
-            return result
-        return ""
-
-    def count(
-        self,
-        dataset: str,
-        sids: list[int] | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
-    ) -> int:
-        """
-        Count records in a dataset.
-
-        Args:
-            dataset: Dataset name.
-            sids: Filter by security IDs.
-            start_date: Start date (YYYY-MM-DD).
-            end_date: End date (YYYY-MM-DD).
-
-        Returns:
-            Number of matching records.
-
-        """
-        df = self.read(dataset, sids=sids, start_date=start_date, end_date=end_date)
-        return len(df)
-
-    def get_date_range(self, dataset: str) -> tuple[str | None, str | None]:
-        """
-        Get overall date range for a dataset.
-
-        Args:
-            dataset: Dataset name.
-
-        Returns:
-            Tuple of (start_date, end_date) as strings, or (None, None) if empty.
-
-        """
-        years = self.get_years(dataset)
-        if not years:
-            return None, None
-
-        # Scan all partitions and find min/max dates
-        paths = self._collect_paths(dataset, min(years), max(years))
-        if not paths:
-            return None, None
-
-        lf = pl.scan_parquet([str(p) for p in paths])
-        min_max = lf.select(
-            [
-                pl.col("trade_date").min().alias("min"),
-                pl.col("trade_date").max().alias("max"),
-            ]
-        ).collect()
-
-        if len(min_max) == 0 or min_max["min"][0] is None:
-            return None, None
-
-        return str(min_max["min"][0]), str(min_max["max"][0])
-
-    def list_sids(self, dataset: str) -> list[int]:
-        """
-        List unique security IDs in a dataset.
-
-        Args:
-            dataset: Dataset name.
-
-        Returns:
-            Sorted list of unique security IDs.
-
-        """
-        years = self.get_years(dataset)
-        if not years:
-            return []
-
-        paths = self._collect_paths(dataset, min(years), max(years))
-        if not paths:
-            return []
-
-        lf = pl.scan_parquet([str(p) for p in paths])
-        result = lf.select(pl.col("sid").unique()).collect()
-
-        sids: list[int] = result["sid"].to_list()
-        return sids

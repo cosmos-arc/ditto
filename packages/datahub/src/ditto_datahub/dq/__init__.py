@@ -9,7 +9,6 @@ from ditto_datahub.dq.models import (
     DQResult,
     DQSeverity,
 )
-from ditto_datahub.dq.result import DQIssue as DQIssueResult
 
 __all__ = [
     "DQConfig",

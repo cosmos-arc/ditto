@@ -34,6 +34,8 @@ class TestValidateDataFrameSchema:
                 "is_limit_up": [False],
                 "is_limit_down": [False],
                 "is_st": [False],
+                "up_limit": [11.0],
+                "down_limit": [9.0],
             }
         )
 
@@ -49,6 +51,7 @@ class TestValidateDataFrameSchema:
                 "source": ["tushare"],
                 "src_code": ["000001.SZ"],
                 "adj_factor": [1.0],
+                "knowledge_date": [date(2024, 1, 2)],
             }
         )
 
@@ -90,6 +93,8 @@ class TestValidateDataFrameSchema:
                 "is_limit_up": [False],
                 "is_limit_down": [False],
                 "is_st": [False],
+                "up_limit": [11.0],
+                "down_limit": [9.0],
             }
         )
 

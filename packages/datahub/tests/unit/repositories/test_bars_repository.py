@@ -17,6 +17,7 @@ from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
 
 
 class TestBarsRepository:
@@ -34,6 +35,7 @@ class TestBarsRepository:
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
+        self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.dq_checker = DQChecker()
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
@@ -41,6 +43,7 @@ class TestBarsRepository:
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
+            self.stock_status_store,  # B.3
             self.dq_checker,
             self.file_lock_manager,
         )
@@ -130,6 +133,195 @@ class TestBarsRepository:
         assert result["symbol"][0] == "600000"
 
 
+class TestPITSafeAdjustment:
+    """Tests for PIT-safe (Point-in-Time) adjustment calculation."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = TemporaryDirectory()
+        data_root = Path(self.temp_dir.name)
+
+        self.pool = SQLitePool(":memory:")
+        self.pool.init_schema()
+        self.client = SQLiteClient(self.pool)
+
+        self.bars_store = BarsStore(data_root)
+        self.adj_factor_store = AdjFactorStore(data_root)
+        self.security_store = SecurityStore(self.client)
+        self.stock_status_store = StockStatusStore(data_root)  # B.3
+        self.dq_checker = DQChecker()
+        self.file_lock_manager = FileLockManager(data_root / "locks")
+
+        self.repo = BarsRepository(
+            self.bars_store,
+            self.adj_factor_store,
+            self.security_store,
+            self.stock_status_store,  # B.3
+            self.dq_checker,
+            self.file_lock_manager,
+        )
+
+        # Insert test security
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date)
+            VALUES (100000001, '600000', 'Test Stock', 'SSE', 'stock', '2000-01-01')
+        """)
+        self.client.commit()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        self.temp_dir.cleanup()
+
+    def test_qfq_uses_knowledge_date_not_trade_date(self) -> None:
+        """Test that QFQ adjustment uses knowledge_date for PIT safety.
+
+        Scenario:
+        - Trade date: 2024-01-03
+        - Adj factor published on: 2024-01-04 (T+1)
+        - Query asof: 2024-01-03
+
+        Expected behavior:
+        - When asof=2024-01-03, the adj factor from 2024-01-03 should NOT be used
+          because it wasn't published until 2024-01-04 (knowledge_date).
+        - PIT-safe: Only use adj factors where knowledge_date <= asof_date.
+        """
+        # Arrange: Write bars data
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000001],
+                "trade_date": [
+                    date(2024, 1, 2),
+                    date(2024, 1, 3),
+                    date(2024, 1, 4),
+                ],
+                "open": [10.0, 10.0, 10.0],
+                "high": [12.0, 12.0, 12.0],
+                "low": [9.0, 9.0, 9.0],
+                "close": [11.0, 11.0, 11.0],
+                "volume": [1000, 2000, 3000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Write adj_factor data with knowledge_date (T+1 publication)
+        # The factor on 2024-01-03 is published on 2024-01-04 (knowledge_date)
+        adj_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000001],
+                "trade_date": [
+                    date(2024, 1, 2),
+                    date(2024, 1, 3),
+                    date(2024, 1, 4),
+                ],
+                "adj_factor": [1.0, 0.95, 0.95],
+                "knowledge_date": [
+                    date(2024, 1, 2),  # Published same day
+                    date(2024, 1, 4),  # T+1 (2024-01-03 factor available 2024-01-04)
+                    date(2024, 1, 5),  # Published T+1
+                ],
+            }
+        )
+        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+
+        # Act: Get QFQ adjusted data asof 2024-01-03
+        # PIT-safe: Should only use adj factors with knowledge_date <= 2024-01-03
+        result = self.repo.get(
+            sids=[100000001],
+            start="2024-01-02",
+            end="2024-01-04",
+            adj=AdjType.QFQ,
+            asof="2024-01-03",  # Query point
+        )
+
+        # Assert: PIT-safe behavior
+        # The 0.95 factor from 2024-01-03 has knowledge_date=2024-01-04
+        # So when asof=2024-01-03, this factor should NOT be used
+        result_sorted = result.sort("trade_date")
+        assert len(result_sorted) == 3
+
+        # With PIT safety, latest_factor should be 1.0 (not 0.95)
+        # because 0.95 factor's knowledge_date (2024-01-04) > asof (2024-01-03)
+        # So all prices should be original (no adjustment)
+        assert abs(result_sorted["close"][0] - 11.00) < 0.01  # 2024-01-02
+        assert abs(result_sorted["close"][1] - 11.00) < 0.01  # 2024-01-03
+        assert abs(result_sorted["close"][2] - 11.00) < 0.01  # 2024-01-04
+
+    def test_qfq_with_knowledge_date_uses_later_factors(self) -> None:
+        """Test QFQ with knowledge_date uses later factors when asof allows.
+
+        Scenario:
+        - Same data as above
+        - Query asof: 2024-01-05
+
+        Expected behavior:
+        - When asof=2024-01-05, all adj factors should be available
+          (all knowledge_date <= 2024-01-05)
+        - latest_factor should be 0.95
+        """
+        # Arrange: Write bars data
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000001],
+                "trade_date": [
+                    date(2024, 1, 2),
+                    date(2024, 1, 3),
+                    date(2024, 1, 4),
+                ],
+                "open": [10.0, 10.0, 10.0],
+                "high": [12.0, 12.0, 12.0],
+                "low": [9.0, 9.0, 9.0],
+                "close": [11.0, 11.0, 11.0],
+                "volume": [1000, 2000, 3000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Write adj_factor data with knowledge_date (T+1 publication)
+        adj_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000001],
+                "trade_date": [
+                    date(2024, 1, 2),
+                    date(2024, 1, 3),
+                    date(2024, 1, 4),
+                ],
+                "adj_factor": [1.0, 0.95, 0.95],
+                "knowledge_date": [
+                    date(2024, 1, 2),
+                    date(2024, 1, 4),
+                    date(2024, 1, 5),
+                ],
+            }
+        )
+        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+
+        # Act: Get QFQ adjusted data asof 2024-01-05
+        # All factors should be available (all knowledge_date <= 2024-01-05)
+        result = self.repo.get(
+            sids=[100000001],
+            start="2024-01-02",
+            end="2024-01-04",
+            adj=AdjType.QFQ,
+            asof="2024-01-05",  # Later query point
+        )
+
+        # Assert: Should use latest_factor = 0.95
+        result_sorted = result.sort("trade_date")
+        assert len(result_sorted) == 3
+        # QFQ: adj_price = orig_price * cur_factor / latest_factor
+        # latest_factor = 0.95
+        assert (
+            abs(result_sorted["close"][0] - 11.579) < 0.01
+        )  # 2024-01-02: 11.0 * 1.0 / 0.95
+        assert (
+            abs(result_sorted["close"][1] - 11.00) < 0.01
+        )  # 2024-01-03: 11.0 * 0.95 / 0.95
+        assert (
+            abs(result_sorted["close"][2] - 11.00) < 0.01
+        )  # 2024-01-04: 11.0 * 0.95 / 0.95
+
+
 class TestQFQAdjustment:
     """Tests for QFQ (前复权) adjustment."""
 
@@ -145,6 +337,7 @@ class TestQFQAdjustment:
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
+        self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.dq_checker = DQChecker()
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
@@ -152,6 +345,7 @@ class TestQFQAdjustment:
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
+            self.stock_status_store,  # B.3
             self.dq_checker,
             self.file_lock_manager,
         )
@@ -395,6 +589,7 @@ class TestBarsRepositorySingle:
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
+        self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.dq_checker = DQChecker()
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
@@ -402,6 +597,7 @@ class TestBarsRepositorySingle:
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
+            self.stock_status_store,  # B.3
             self.dq_checker,
             self.file_lock_manager,
         )
@@ -579,6 +775,7 @@ class TestMixedAssetClass:
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
+        self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.dq_checker = DQChecker()
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
@@ -586,6 +783,7 @@ class TestMixedAssetClass:
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
+            self.stock_status_store,  # B.3
             self.dq_checker,
             self.file_lock_manager,
         )
@@ -792,6 +990,7 @@ class TestAdjFactorEdgeCases:
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
+        self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.dq_checker = DQChecker()
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
@@ -799,6 +998,7 @@ class TestAdjFactorEdgeCases:
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
+            self.stock_status_store,  # B.3
             self.dq_checker,
             self.file_lock_manager,
         )

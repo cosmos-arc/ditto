@@ -20,16 +20,16 @@ class DQCheckResult:
 
     @property
     def fail_count(self) -> int:
-        """Number of failed rules with FAIL severity."""
+        """Number of failed rules with ERROR severity (B.5: renamed from FAIL)."""
         return sum(
-            1 for r in self.results if not r.passed and r.severity == DQSeverity.FAIL
+            1 for r in self.results if not r.passed and r.severity == DQSeverity.ERROR
         )
 
     @property
     def warn_count(self) -> int:
-        """Number of failed rules with WARN severity."""
+        """Number of failed rules with WARNING severity (B.5: renamed from WARN)."""
         return sum(
-            1 for r in self.results if not r.passed and r.severity == DQSeverity.WARN
+            1 for r in self.results if not r.passed and r.severity == DQSeverity.WARNING
         )
 
 
@@ -72,14 +72,14 @@ class DQChecker:
             )
             results.append(result)
 
-            if not passed and rule.severity == DQSeverity.FAIL:
+            if not passed and rule.severity == DQSeverity.ERROR:
                 all_passed = False
 
         fail_count = sum(
-            1 for r in results if not r.passed and r.severity == DQSeverity.FAIL
+            1 for r in results if not r.passed and r.severity == DQSeverity.ERROR
         )
         warn_count = sum(
-            1 for r in results if not r.passed and r.severity == DQSeverity.WARN
+            1 for r in results if not r.passed and r.severity == DQSeverity.WARNING
         )
 
         logger.info(

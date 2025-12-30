@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from ditto_datahub.stores.ingestion_metadata_store import IngestionMetadataStore
     from ditto_datahub.stores.pipeline_store import PipelineStore
     from ditto_datahub.stores.security_store import SecurityStore
+    from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
     from ditto_datahub.stores.universe_store import UniverseStore
 
 
@@ -151,6 +152,13 @@ class DataHub:
         return AdjFactorStore(data_root=self.data_root)
 
     @cached_property
+    def stock_status_store(self) -> StockStatusStore:  # B.3
+        """Stock status store (Parquet, year partitioned)."""
+        from ditto_datahub.stores.stock_status_store import StockStatusStore
+
+        return StockStatusStore(data_root=self.data_root)
+
+    @cached_property
     def pipeline_store(self) -> PipelineStore:
         """Pipeline run store."""
         from ditto_datahub.stores.pipeline_store import PipelineStore
@@ -205,6 +213,7 @@ class DataHub:
             bars_store=self.bars_store,
             security_store=self.security_store,
             adj_factor_store=self.adj_factor_store,
+            stock_status_store=self.stock_status_store,  # B.3
             dq_checker=self.dq_checker,
             file_lock=self.file_lock,
         )

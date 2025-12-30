@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import os
-import time
 import tomllib
 from pathlib import Path
-from threading import Lock
 from typing import Any
 
 # NOTE: Tushare API returns pandas DataFrame natively.
@@ -26,6 +24,11 @@ from ditto_datahub.sources.base import (
     SourceConfigurationError,
     SourceFetchError,
     SourceRateLimitError,
+)
+from ditto_datahub.sources.tushare.rate_limiter import (
+    TushareAPIGroup,
+    TushareRateLimitConfig,
+    TushareRateLimiter,
 )
 
 
@@ -122,37 +125,28 @@ class TushareClient:
     Tushare Pro API client.
 
     Features:
-    - Token authentication from TUSHARE_TOKEN env var
-    - Rate limiting (200 requests/minute default)
+    - Token authentication from keyring/secrets.toml/env
+    - Multi-level rate limiting using limits library
     - Retry with exponential backoff (Tenacity)
     - Error handling and logging
 
     Attributes:
         _token: Tushare API token.
-        _rate_limit: Max requests per time window.
-        _window_seconds: Time window in seconds.
-        _max_retries: Max retry attempts.
-        _retry_backoff: Backoff multiplier.
+        _limiter: Rate limiter instance.
 
     """
 
     def __init__(
         self,
         token: str | None = None,
-        rate_limit: int = 200,
-        window_seconds: int = 60,
-        max_retries: int = 3,
-        retry_backoff: float = 1.5,
+        rate_config: TushareRateLimitConfig | None = None,
     ) -> None:
         """
         Initialize Tushare client.
 
         Args:
-            token: API token (auto-detected from keyring/secrets.toml/env if None).
-            rate_limit: Max requests per window.
-            window_seconds: Time window for rate limit.
-            max_retries: Max retry attempts.
-            retry_backoff: Exponential backoff multiplier.
+            token: API token (auto-detected if None).
+            rate_config: 限流配置（默认免费账户）.
 
         Raises:
             SourceConfigurationError: If token not found.
@@ -161,52 +155,29 @@ class TushareClient:
         # Get token with fallback chain
         self._token = _get_tushare_token(token)
 
-        # Configuration
-        self._rate_limit = rate_limit
-        self._window_seconds = window_seconds
-        self._max_retries = max_retries
-        self._retry_backoff = retry_backoff
-
-        # Rate limiting state
-        self._request_count = 0
-        self._window_start = time.time()
-        self._lock = Lock()
+        # 配置限流器（默认免费账户）
+        config = rate_config or TushareRateLimitConfig.free()
+        self._limiter = TushareRateLimiter(config)
 
         # Initialize Tushare API
         self._api = pro_api(token=self._token)
 
         logger.debug(
-            "TushareClient initialized",
+            "TushareClient initialized with limits library",
             event="tushare_client_init",
-            rate_limit=rate_limit,
-            window_seconds=window_seconds,
+            rate_config=config,
         )
 
-    def _check_rate_limit(self) -> None:
-        """Block if rate limit exceeded (thread-safe)."""
-        with self._lock:
-            now = time.time()
-            elapsed = now - self._window_start
-
-            # Reset if window expired
-            if elapsed >= self._window_seconds:
-                self._request_count = 0
-                self._window_start = now
-                elapsed = 0
-
-            # Wait if limit exceeded
-            if self._request_count >= self._rate_limit:
-                wait_time = self._window_seconds - elapsed
-                logger.debug(
-                    "Rate limit reached, waiting",
-                    event="rate_limit_wait",
-                    wait_seconds=wait_time,
-                )
-                time.sleep(wait_time)
-                self._request_count = 0
-                self._window_start = time.time()
-
-            self._request_count += 1
+    def _get_api_group(self, api_name: str) -> TushareAPIGroup:
+        """根据 API 名称返回分组."""
+        if api_name in ["daily", "weekly", "monthly"]:
+            return TushareAPIGroup.DAILY
+        elif api_name.startswith("f_") or api_name.startswith("adj"):
+            return TushareAPIGroup.DERIVED
+        elif api_name in ["trade_cal", "pro_bar", "stock_basic"]:
+            return TushareAPIGroup.BASIC
+        else:
+            return TushareAPIGroup.SPECIAL
 
     def _is_retryable_error(self, error: Exception) -> bool:
         """Check if error is retryable."""
@@ -254,8 +225,9 @@ class TushareClient:
             SourceFetchError: If query fails after retries.
 
         """
-        # Enforce rate limiting
-        self._check_rate_limit()
+        # 确定分组并进行限流检查
+        group = self._get_api_group(api_name)
+        self._limiter.wait_if_needed(group)
 
         try:
             logger.debug(

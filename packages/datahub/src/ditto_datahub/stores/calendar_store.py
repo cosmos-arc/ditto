@@ -19,6 +19,7 @@ import polars as pl
 from ditto_foundation import logger, span
 
 from ditto_datahub.errors import TradingDateNotFoundError
+from ditto_datahub.runtime.cache import DataCache
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
@@ -47,15 +48,21 @@ class CalendarStore:
     or O(log n) query performance.
     """
 
-    def __init__(self, sqlite_client: SQLiteClient) -> None:
+    def __init__(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache | None = None,
+    ) -> None:
         """
         Initialize CalendarStore.
 
         Args:
             sqlite_client: SQLite client for database operations.
+            data_cache: Optional DataCache for range query caching.
 
         """
         self._client = sqlite_client
+        self._data_cache = data_cache
         self._cache: dict[str, CalendarDay] = {}
         self._all_days: list[str] = []
         self._trading_days: list[str] = []
@@ -130,6 +137,11 @@ class CalendarStore:
         self._week_ends.clear()
         self._month_ends.clear()
         self._quarter_ends.clear()
+
+        # 失效 DataCache 中的日历相关缓存
+        if self._data_cache:
+            self._data_cache.invalidate_pattern("trading_days:*")
+
         self._load_cache()
         logger.debug(
             "Calendar cache reloaded successfully",
@@ -274,16 +286,32 @@ class CalendarStore:
             end: End date (inclusive).
 
         Returns:
-            List of trading dates.
+            List of trading dates (always a copy).
 
         """
         if not self._trading_days:
             return []
 
+        # 尝试从 DataCache 获取
+        if self._data_cache:
+            cache_key = f"trading_days:{start}:{end}"
+            cached = self._data_cache.get(cache_key)
+            if cached is not None:
+                # 返回副本以防止缓存污染
+                return cached.copy()
+
+        # 从内存缓存计算
         start_idx = bisect.bisect_left(self._trading_days, start)
         end_idx = bisect.bisect_right(self._trading_days, end)
+        result = self._trading_days[start_idx:end_idx]
 
-        return self._trading_days[start_idx:end_idx]
+        # 缓存结果（缓存原始列表）
+        if self._data_cache:
+            cache_key = f"trading_days:{start}:{end}"
+            self._data_cache.set(cache_key, result)
+
+        # 返回副本以防止调用方修改内部列表
+        return result.copy()
 
     def get_range_df(
         self,

@@ -167,55 +167,56 @@ def check_weight_positive(
 
 
 # ============ 规则配置(替代 YAML) ============
+# B.5: Updated DQSeverity.FAIL -> ERROR, WARN -> WARNING
 DQ_RULES: dict[str, list[DQRule]] = {
     "market_daily": [
         DQRule(
             "primary_key_unique",
-            DQSeverity.FAIL,
+            DQSeverity.ERROR,
             check_pk_unique,
             {"keys": ["sid", "trade_date"]},
         ),
-        DQRule("sid_not_null", DQSeverity.FAIL, check_sid_not_null),
-        DQRule("ohlc_positive", DQSeverity.FAIL, check_ohlc_positive),
-        DQRule("ohlc_relationship", DQSeverity.FAIL, check_ohlc_relationship),
+        DQRule("sid_not_null", DQSeverity.ERROR, check_sid_not_null),
+        DQRule("ohlc_positive", DQSeverity.ERROR, check_ohlc_positive),
+        DQRule("ohlc_relationship", DQSeverity.ERROR, check_ohlc_relationship),
         DQRule(
             "volume_amount_consistency",
-            DQSeverity.WARN,
+            DQSeverity.WARNING,
             check_volume_amount_consistency,
         ),
     ],
     "etf_daily": [
         DQRule(
             "primary_key_unique",
-            DQSeverity.FAIL,
+            DQSeverity.ERROR,
             check_pk_unique,
             {"keys": ["sid", "trade_date"]},
         ),
-        DQRule("sid_not_null", DQSeverity.FAIL, check_sid_not_null),
-        DQRule("ohlc_positive", DQSeverity.FAIL, check_ohlc_positive),
+        DQRule("sid_not_null", DQSeverity.ERROR, check_sid_not_null),
+        DQRule("ohlc_positive", DQSeverity.ERROR, check_ohlc_positive),
     ],
     "index_daily": [
         DQRule(
             "primary_key_unique",
-            DQSeverity.FAIL,
+            DQSeverity.ERROR,
             check_pk_unique,
             {"keys": ["sid", "trade_date"]},
         ),
-        DQRule("sid_not_null", DQSeverity.FAIL, check_sid_not_null),
+        DQRule("sid_not_null", DQSeverity.ERROR, check_sid_not_null),
     ],
     "index_weight": [
         DQRule(
             "primary_key_unique",
-            DQSeverity.FAIL,
+            DQSeverity.ERROR,
             check_pk_unique,
             {"keys": ["index_sid", "con_sid", "trade_date"]},
         ),
-        DQRule("weight_positive", DQSeverity.WARN, check_weight_positive),
+        DQRule("weight_positive", DQSeverity.WARNING, check_weight_positive),
     ],
     "adj_factor": [
         DQRule(
             "primary_key_unique",
-            DQSeverity.FAIL,
+            DQSeverity.ERROR,
             check_pk_unique,
             {"keys": ["sid", "trade_date"]},
         ),

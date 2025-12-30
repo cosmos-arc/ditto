@@ -5,7 +5,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import polars as pl
+import pytest
 from ditto_datahub.stores.bars_store import BarsStore
+from ditto_datahub.types import OnDuplicate
 
 
 class TestBarsStore:
@@ -59,7 +61,7 @@ class TestBarsStore:
         assert set(result["sid"].to_list()) == {100000001, 100000002}
 
     def test_write_merge_with_existing_data(self) -> None:
-        """Test write merges with existing data."""
+        """Test write merges with existing data (using KEEP_LAST)."""
         # Initial data
         df1 = pl.DataFrame(
             {
@@ -88,7 +90,8 @@ class TestBarsStore:
             }
         )
 
-        self.store.write("market_daily", df2, 2024)
+        # Explicitly use KEEP_LAST to test the old Last-Write-Wins behavior
+        self.store.write("market_daily", df2, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
 
         # Read back - should have unique sid/date pairs
         result = self.store.read(
@@ -240,7 +243,9 @@ class TestBarsStoreRefactoredHelpers:
         )
         non_existent_path = Path(self.temp_dir.name) / "nonexistent.parquet"
 
-        result = self.store._merge_with_existing(new_df, non_existent_path)
+        result = self.store._merge_with_existing(
+            new_df, non_existent_path, OnDuplicate.KEEP_LAST
+        )
 
         # Should return new data as-is
         assert len(result) == 1
@@ -276,7 +281,9 @@ class TestBarsStoreRefactoredHelpers:
         )
 
         file_path = self.store._get_path("market_daily", 2024)
-        result = self.store._merge_with_existing(new_df, file_path)
+        result = self.store._merge_with_existing(
+            new_df, file_path, OnDuplicate.KEEP_LAST
+        )
 
         # Should have 2 unique records
         assert len(result) == 2
@@ -334,3 +341,170 @@ class TestBarsStoreRefactoredHelpers:
         last_row = result.row(2)
         assert last_row[1] == date(2024, 1, 2)
         assert last_row[0] == 100000002
+
+
+class TestOnDuplicate:
+    """Tests for on_duplicate parameter to prevent data overwriting."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = TemporaryDirectory()
+        self.store = BarsStore(Path(self.temp_dir.name))
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        self.temp_dir.cleanup()
+
+    def test_on_duplicate_error_raises_on_duplicates(self) -> None:
+        """Test OnDuplicate.ERROR raises exception on duplicate data."""
+        # Initial data (high quality, e.g., from paid API)
+        df1 = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 1)],
+                "open": [10.0],
+                "high": [12.0],
+                "low": [9.0],
+                "close": [11.0],
+                "volume": [1000],
+            }
+        )
+        self.store.write("market_daily", df1, 2024)
+
+        # Try to write duplicate data (low quality, e.g., from web scraper)
+        df2 = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 1)],
+                "open": [10.5],  # Different values
+                "high": [12.5],
+                "low": [9.5],
+                "close": [11.5],
+                "volume": [1500],
+            }
+        )
+
+        # Should raise ValueError due to duplicate
+        with pytest.raises(ValueError, match="Duplicate data detected"):
+            self.store.write("market_daily", df2, 2024, on_duplicate=OnDuplicate.ERROR)
+
+    def test_on_duplicate_keep_first_preserves_original(self) -> None:
+        """Test OnDuplicate.KEEP_FIRST preserves original data."""
+        # Initial data
+        df1 = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 1)],
+                "open": [10.0],
+                "high": [12.0],
+                "low": [9.0],
+                "close": [11.0],
+                "volume": [1000],
+            }
+        )
+        self.store.write("market_daily", df1, 2024)
+
+        # Try to write duplicate with different values
+        df2 = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 1)],
+                "open": [10.5],
+                "high": [12.5],
+                "low": [9.5],
+                "close": [11.5],
+                "volume": [1500],
+            }
+        )
+        self.store.write("market_daily", df2, 2024, on_duplicate=OnDuplicate.KEEP_FIRST)
+
+        # Should keep original data
+        result = self.store.read(
+            "market_daily", start_date="2024-01-01", end_date="2024-01-31"
+        )
+        assert len(result) == 1
+        assert result["close"][0] == 11.0  # Original value
+        assert result["volume"][0] == 1000
+
+    def test_on_duplicate_keep_last_overwrites(self) -> None:
+        """Test OnDuplicate.KEEP_LAST overwrites with new data (Last-Write-Wins)."""
+        # Initial data
+        df1 = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 1)],
+                "open": [10.0],
+                "high": [12.0],
+                "low": [9.0],
+                "close": [11.0],
+                "volume": [1000],
+            }
+        )
+        self.store.write("market_daily", df1, 2024)
+
+        # Write duplicate with new values
+        df2 = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 1)],
+                "open": [10.5],
+                "high": [12.5],
+                "low": [9.5],
+                "close": [11.5],
+                "volume": [1500],
+            }
+        )
+        self.store.write("market_daily", df2, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
+
+        # Should use new data
+        result = self.store.read(
+            "market_daily", start_date="2024-01-01", end_date="2024-01-31"
+        )
+        assert len(result) == 1
+        assert result["close"][0] == 11.5  # New value
+        assert result["volume"][0] == 1500
+
+    def test_on_duplicate_with_non_overlapping_data(self) -> None:
+        """Test on_duplicate allows non-overlapping data regardless of strategy."""
+        # New data with different sid/date (no overlap)
+        df1 = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 1)],
+                "open": [10.0],
+                "high": [12.0],
+                "low": [9.0],
+                "close": [11.0],
+                "volume": [1000],
+            }
+        )
+        df2 = pl.DataFrame(
+            {
+                "sid": [100000002],
+                "trade_date": [date(2024, 1, 2)],
+                "open": [11.0],
+                "high": [13.0],
+                "low": [10.0],
+                "close": [12.0],
+                "volume": [2000],
+            }
+        )
+
+        # All strategies should work when there's no duplicate
+        # Each strategy uses a separate temp directory
+        for strategy in [
+            OnDuplicate.ERROR,
+            OnDuplicate.KEEP_FIRST,
+            OnDuplicate.KEEP_LAST,
+        ]:
+            with TemporaryDirectory() as temp_dir:
+                store = BarsStore(Path(temp_dir))
+                store.write("market_daily", df1, 2024)
+                store.write("market_daily", df2, 2024, on_duplicate=strategy)
+
+                result = store.read(
+                    "market_daily", start_date="2024-01-01", end_date="2024-01-31"
+                )
+                assert len(result) == 2
+                sids = set(result["sid"].to_list())
+                assert sids == {100000001, 100000002}

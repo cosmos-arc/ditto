@@ -804,6 +804,266 @@ class TushareSource(DataSource):
 
         return df, metadata
 
+    @traced("source.tushare.fetch_stock_limit")
+    def fetch_stock_limit(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch stock limit up/down prices (B.3).
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with columns:
+            - src_code: Source code (e.g., "000001.SZ")
+            - trade_date: Date
+            - up_limit: Float64 (涨停价)
+            - down_limit: Float64 (跌停价)
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        logger.info(
+            "Fetching Tushare stock limit prices",
+            event="tushare_stock_limit_fetch_start",
+            trade_date=trade_date,
+        )
+
+        try:
+            ts_date = trade_date.replace("-", "")
+            response = self._client.query(
+                api_name="stk_limit",
+                trade_date=ts_date,
+                fields="ts_code,trade_date,up_limit,down_limit",
+            )
+
+            if len(response) == 0:
+                logger.info(
+                    "Tushare stock limit empty",
+                    event="tushare_stock_limit_fetch_complete",
+                    row_count=0,
+                )
+                return pl.DataFrame(
+                    schema={
+                        "src_code": pl.Utf8,
+                        "trade_date": pl.Date,
+                        "up_limit": pl.Float64,
+                        "down_limit": pl.Float64,
+                    }
+                )
+
+            df = pl.from_pandas(response).rename({"ts_code": "src_code"})
+
+            df = df.with_columns(
+                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+                pl.col("up_limit").cast(pl.Float64),
+                pl.col("down_limit").cast(pl.Float64),
+            )
+
+            df = df.select("src_code", "trade_date", "up_limit", "down_limit")
+
+            row_count = len(df)
+            logger.info(
+                "Tushare stock limit fetched",
+                event="tushare_stock_limit_fetch_complete",
+                row_count=row_count,
+            )
+            M.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "stock_limit", "status": "success"},
+            )
+
+            return df
+
+        except Exception as e:
+            logger.error(
+                "Tushare stock limit fetch failed",
+                event="tushare_stock_limit_fetch_error",
+                error=str(e),
+            )
+            raise SourceFetchError(
+                message="Failed to fetch stock limit from Tushare",
+                source="tushare",
+                dataset="stk_limit",
+                original_error=str(e),
+            ) from e
+
+    @traced("source.tushare.fetch_stock_status")
+    def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch stock status information (B.3).
+
+        Combines data from multiple Tushare APIs:
+        - suspend_d: 停牌信息
+        - stock_st: ST状态
+        - stock_basic: list_status
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with columns:
+            - src_code: Source code (e.g., "000001.SZ")
+            - trade_date: Date
+            - is_suspended: Boolean
+            - suspend_timing: Utf8 (e.g., "09:30-10:00" or null)
+            - is_st: Boolean
+            - st_type: Utf8 (e.g., "ST" or null)
+            - list_status: Utf8 (L=正常, D=退市, P=暂停)
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        logger.info(
+            "Fetching Tushare stock status",
+            event="tushare_stock_status_fetch_start",
+            trade_date=trade_date,
+        )
+
+        try:
+            ts_date = trade_date.replace("-", "")
+
+            # 1. Fetch suspension data from suspend_d API
+            suspend_df = pl.DataFrame(
+                schema={
+                    "ts_code": pl.Utf8,
+                    "suspend_timing": pl.Utf8,
+                }
+            )
+            try:
+                suspend_response = self._client.query(
+                    api_name="suspend_d",
+                    suspend_date=ts_date,
+                    fields="ts_code,suspend_timing",
+                )
+                if len(suspend_response) > 0:
+                    suspend_df = pl.from_pandas(suspend_response)
+            except Exception as e:
+                logger.warning(
+                    "Failed to fetch suspend_d data",
+                    event="tushare_suspend_d_fetch_error",
+                    error=str(e),
+                )
+
+            # 2. Fetch ST status from stock_st API
+            st_df = pl.DataFrame(schema={"ts_code": pl.Utf8, "name": pl.Utf8})
+            try:
+                st_response = self._client.query(
+                    api_name="stock_st",
+                    fields="ts_code,name",
+                )
+                if len(st_response) > 0:
+                    st_df = pl.from_pandas(st_response)
+            except Exception as e:
+                logger.warning(
+                    "Failed to fetch stock_st data",
+                    event="tushare_stock_st_fetch_error",
+                    error=str(e),
+                )
+
+            # 3. Fetch list_status from stock_basic API
+            list_status_df = pl.DataFrame(
+                schema={"ts_code": pl.Utf8, "list_status": pl.Utf8}
+            )
+            try:
+                basic_response = self._client.query(
+                    api_name="stock_basic",
+                    fields="ts_code,list_status",
+                )
+                if len(basic_response) > 0:
+                    list_status_df = pl.from_pandas(basic_response)
+            except Exception as e:
+                logger.warning(
+                    "Failed to fetch stock_basic list_status",
+                    event="tushare_stock_basic_fetch_error",
+                    error=str(e),
+                )
+
+            # 4. Merge all data sources
+            # Start with all stock codes from stock_basic (as reference)
+            result = list_status_df.rename({"ts_code": "src_code"})
+
+            # Add suspension info
+            if not suspend_df.is_empty():
+                suspend_expanded = suspend_df.with_columns(
+                    pl.lit(True).alias("is_suspended")
+                )
+                result = result.join(
+                    suspend_expanded.rename({"ts_code": "src_code"}),
+                    on="src_code",
+                    how="left",
+                )
+            else:
+                result = result.with_columns(pl.lit(None).alias("is_suspended"))
+                result = result.with_columns(pl.lit(None).alias("suspend_timing"))
+
+            # Add ST status
+            if not st_df.is_empty():
+                st_expanded = st_df.with_columns(
+                    pl.lit(True).alias("is_st"),
+                    pl.col("name").alias("st_type"),
+                )
+                result = result.join(
+                    st_expanded.rename({"ts_code": "src_code"}),
+                    on="src_code",
+                    how="left",
+                )
+            else:
+                result = result.with_columns(pl.lit(None).alias("is_st"))
+                result = result.with_columns(pl.lit(None).alias("st_type"))
+
+            # Fill null values with defaults
+            result = result.with_columns(
+                pl.col("is_suspended").fill_null(False),
+                pl.col("suspend_timing").fill_null(""),
+                pl.col("is_st").fill_null(False),
+                pl.col("st_type").fill_null(""),
+                pl.col("list_status").fill_null("L"),  # Default to 正常
+            )
+
+            # Add trade_date column
+            result = result.with_columns(
+                pl.lit(trade_date).str.strptime(pl.Date, "%Y-%m-%d").alias("trade_date")
+            )
+
+            # Select and reorder columns
+            result = result.select(
+                "src_code",
+                "trade_date",
+                "is_suspended",
+                "suspend_timing",
+                "is_st",
+                "st_type",
+                "list_status",
+            )
+
+            row_count = len(result)
+            logger.info(
+                "Tushare stock status fetched",
+                event="tushare_stock_status_fetch_complete",
+                row_count=row_count,
+            )
+            M.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "stock_status", "status": "success"},
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(
+                "Tushare stock status fetch failed",
+                event="tushare_stock_status_fetch_error",
+                error=str(e),
+            )
+            raise SourceFetchError(
+                message="Failed to fetch stock status from Tushare",
+                source="tushare",
+                dataset="stock_status",
+                original_error=str(e),
+            ) from e
+
     def _compute_checksum(self, df: pl.DataFrame) -> str:
         """
         Compute checksum of DataFrame for change detection.

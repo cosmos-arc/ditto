@@ -28,10 +28,20 @@ class SidRange(NamedTuple):
 
 # ============ DQ 枚举 ============
 class DQSeverity(Enum):
-    """DQ severity levels."""
+    """DQ severity levels (B.5: 统一三级定义)."""
 
-    FAIL = "fail"
-    WARN = "warn"
+    ERROR = "error"
+    WARNING = "warning"
+    ALERT = "alert"
+
+
+# ============ Store 枚举 ============
+class OnDuplicate(Enum):
+    """策略：处理写入时的重复数据."""
+
+    ERROR = "error"  # 遇到重复时报错（默认，最安全）
+    KEEP_FIRST = "keep_first"  # 保留现有数据，忽略新数据
+    KEEP_LAST = "keep_last"  # 使用新数据覆盖现有数据（Last-Write-Wins）
 
 
 @dataclass(frozen=True)

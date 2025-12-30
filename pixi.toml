@@ -38,7 +38,7 @@ duckdb = ">=1.1,<2"
 # Web 框架与 API
 # ──────────────────────────────────────────────────────────
 fastapi = ">=0.115,<1"
-uvicorn = ">=0.32,<1"
+# uvicorn 已被 granian 替代（2-4x 性能提升）
 pydantic = ">=2.9,<3"
 pydantic-settings = ">=2.6,<3"
 
@@ -75,6 +75,11 @@ ditto-core = { path = "packages/core", editable = true }
 ditto-foundation = { path = "packages/foundation", editable = true }
 ditto-datahub = { path = "packages/datahub", editable = true }
 
+# 性能优化库（Rust 实现）
+cachebox = ">=5.0,<6"      # 高性能缓存（10-50x 性能）
+granian = ">=1.0,<2"       # ASGI 服务器（2-4x 性能，替代 uvicorn）
+orjson = ">=3.10,<4"       # JSON 序列化（4.5-11.5x 性能）
+
 # 数据源
 tushare = ">=1.4,<2"
 akshare = ">=1.15,<2"
@@ -92,6 +97,9 @@ uuid7 = ">=0.1,<1"
 
 # 重试机制
 tenacity = ">=8.0,<9"
+
+# 限流库
+limits = ">=3.15"
 
 # 凭据管理（keyring 用于安全存储 token）
 keyring = ">=25.0,<26"
@@ -229,8 +237,9 @@ pre-push-check = { depends-on = ["lint", "format-check", "typecheck", "test-unit
 # ──────────────────────────────────────────────────────────
 # 服务
 # ──────────────────────────────────────────────────────────
-server = "uvicorn apps.server.src.ditto_server.main:app --reload --host 0.0.0.0 --port 8000"
-server-prod = "uvicorn apps.server.src.ditto_server.main:app --host 0.0.0.0 --port 8000 --workers 4"
+# 使用 granian 替代 uvicorn（2-4x 性能提升）
+server = "granian apps.server.src.ditto_server.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
+server-prod = "granian apps.server.src.ditto_server.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
 
 # ──────────────────────────────────────────────────────────
 # 清理

@@ -19,7 +19,7 @@ $ARGUMENTS
 
 - `superpowers:executing-plans` - 计划执行与进度跟踪
 - `superpowers:test-driven-development` - TDD 开发流程
-- `python-development` - Python 开发最佳实践
+- `python-development:python-scaffold` - Python 开发最佳实践
 
 ## 执行流程
 
@@ -63,9 +63,10 @@ $ARGUMENTS
 
 每完成一个 Phase 后执行 ci-check
 
-### Phase 4: 进度同步
+### Phase 4: 进度同步（重要，必须）！！
 
 1. **更新计划文件**：标记已完成任务
+1. **更新readme文件**：更新关键信息
 2. **生成进度报告**：输出当前完成状态
 3. **Git 提交**：按任务粒度提交代码
 

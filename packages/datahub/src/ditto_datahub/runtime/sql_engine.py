@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import duckdb
 import polars as pl
-from ditto_foundation import logger
+from ditto_foundation import M, logger
 
 if TYPE_CHECKING:
     from ditto_datahub.stores.calendar_store import CalendarStore
     from ditto_datahub.stores.security_store import SecurityStore
+
+from ditto_datahub.runtime.pit_helper import PitHelper
 
 
 class SqlEngine:
@@ -56,6 +60,9 @@ class SqlEngine:
         data_root: Path,
         security_store: SecurityStore,
         calendar_store: CalendarStore,
+        enable_plan_cache: bool = True,
+        plan_cache_size: int = 1000,
+        slow_query_threshold: float = 1.0,
     ) -> None:
         """
         Initialize SqlEngine.
@@ -64,6 +71,9 @@ class SqlEngine:
             data_root: Data root directory path.
             security_store: Security store for metadata access.
             calendar_store: Calendar store for metadata access.
+            enable_plan_cache: Enable query plan caching.
+            plan_cache_size: Max size of query plan cache.
+            slow_query_threshold: Slow query threshold in seconds.
 
         """
         self.data_root = data_root
@@ -71,12 +81,27 @@ class SqlEngine:
         self.calendar_store = calendar_store
         self.con = duckdb.connect(":memory:")
         self._sqlite_attached = False
+
+        # 查询计划缓存
+        self._enable_plan_cache = enable_plan_cache
+        self._plan_cache: dict[str, Any] = {}
+        self._plan_cache_size = plan_cache_size
+
+        # 慢查询配置
+        self._slow_query_threshold = slow_query_threshold
+
         self._setup()
+
+        # PIT 辅助函数（类级别，无需实例化）
+        self.pit_helper = PitHelper
 
         logger.debug(
             "SqlEngine initialized",
             event="sql_engine_init",
             data_root=str(data_root),
+            enable_plan_cache=enable_plan_cache,
+            plan_cache_size=plan_cache_size,
+            slow_query_threshold=slow_query_threshold,
         )
 
     def _setup(self) -> None:
@@ -175,6 +200,85 @@ class SqlEngine:
             path=str(sqlite_path),
         )
 
+    def _normalize_query(self, query: str) -> str:
+        """
+        Normalize query for caching.
+
+        Remove extra whitespace and comments to generate cache key.
+
+        Args:
+            query: SQL query string.
+
+        Returns:
+            Normalized query string.
+
+        """
+        # Remove SQL comments
+        query = re.sub(r"--.*?\n", " ", query)
+        query = re.sub(r"/\*.*?\*/", " ", query, flags=re.DOTALL)
+
+        # Normalize whitespace
+        query = re.sub(r"\s+", " ", query)
+        query = query.strip()
+
+        return query
+
+    def _prepare_query(self, query: str) -> tuple[str, bool]:
+        """
+        Prepare query with caching support.
+
+        Args:
+            query: SQL query string.
+
+        Returns:
+            Tuple of (prepared_query, cache_hit).
+
+        """
+        normalized = self._normalize_query(query)
+
+        if not self._enable_plan_cache:
+            return normalized, False
+
+        # Generate cache key using MD5 hash (非安全用途，仅用于缓存键生成)
+        cache_key = hashlib.md5(normalized.encode()).hexdigest()  # nosec B324
+
+        if cache_key in self._plan_cache:
+            M.sql_query_plan_cache_hit.add(1)
+            return self._plan_cache[cache_key], True
+
+        M.sql_query_plan_cache_miss.add(1)
+
+        # FIFO 淘汰：如果缓存已满，删除最旧的条目
+        if len(self._plan_cache) >= self._plan_cache_size:
+            # 简单的 FIFO：删除第一个条目
+            # 在 Python 3.7+ 中 dict 保持插入顺序
+            first_key = next(iter(self._plan_cache))
+            del self._plan_cache[first_key]
+
+        # 缓存准备好的查询
+        self._plan_cache[cache_key] = normalized
+        return normalized, False
+
+    def _log_slow_query(self, query: str, duration: float) -> None:
+        """
+        Log slow query with metrics.
+
+        Args:
+            query: SQL query string.
+            duration: Query execution duration in seconds.
+
+        """
+        # 记录慢查询指标（duration 已在 execute() 中记录，这里只记录慢查询计数）
+        M.sql_slow_query_total.add(1)
+
+        # 记录日志
+        logger.warning(
+            "Slow query detected",
+            event="sql_slow_query",
+            duration_seconds=duration,
+            query_preview=query[:200] if len(query) > 200 else query,
+        )
+
     def _needs_sqlite(self, query: str) -> bool:
         """
         Detect if query requires SQLite tables.
@@ -216,24 +320,81 @@ class SqlEngine:
             Query result as polars DataFrame.
 
         """
+        start_time = time.monotonic()
+
+        # 准备查询（带缓存）
+        prepared_query, _cache_hit = self._prepare_query(query)
+
         # Attach SQLite if needed
-        if self._needs_sqlite(query):
+        if self._needs_sqlite(prepared_query):
             self._attach_sqlite()
             # Prefix SQLite tables with meta.
             for table in self.SQLITE_TABLES:
                 # Replace table references with meta.table
                 # Use word boundaries to avoid partial matches
                 pattern = r"\b" + table + r"\b"
-                query = re.sub(pattern, f"meta.{table}", query)
+                prepared_query = re.sub(pattern, f"meta.{table}", prepared_query)
 
         # Replace $asof parameter
         if asof:
-            query = query.replace("$asof", f"'{asof}'")
+            prepared_query = prepared_query.replace("$asof", f"'{asof}'")
 
         # Execute query and convert to polars DataFrame
         if params:
-            return self.con.execute(query, params).pl()
-        return self.con.execute(query).pl()
+            result = self.con.execute(prepared_query, params).pl()
+        else:
+            result = self.con.execute(prepared_query).pl()
+
+        # 记录执行时间
+        duration = time.monotonic() - start_time
+        M.sql_query_duration.record(duration)
+
+        # 慢查询检测
+        if duration > self._slow_query_threshold:
+            self._log_slow_query(query, duration)
+
+        return result
+
+    def pit_query(
+        self,
+        query: str,
+        knowledge_date: str,
+        date_column: str = "trade_date",
+        params: list[Any] | dict[str, Any] | None = None,
+    ) -> pl.DataFrame:
+        """
+        执行 PIT 查询（便捷方法）。
+
+        自动为查询添加 PIT 过滤条件，确保只使用 knowledge_date 之前的数据。
+
+        Args:
+            query: SQL 查询（可使用 $asof 占位符）
+            knowledge_date: 知识日期 (PIT 时间点)
+            date_column: 日期列名，默认为 "trade_date"
+            params: 查询参数
+
+        Returns:
+            查询结果
+
+        Examples:
+            >>> engine.pit_query(
+            ...     "SELECT * FROM stock_daily WHERE sid = 1",
+            ...     "2024-01-15"
+            ... )
+            # 自动添加: AND trade_date <= '2024-01-15'
+
+            >>> engine.pit_query(
+            ...     "SELECT * FROM stock_daily WHERE trade_date <= $asof",
+            ...     "2024-01-15"
+            ... )
+            # $asof 会被替换为 '2024-01-15'
+
+        """
+        # 使用 PitHelper 添加 PIT 过滤条件
+        pit_query = self.pit_helper.add_pit_filter(query, knowledge_date, date_column)
+
+        # 执行查询
+        return self.execute(pit_query, asof=knowledge_date, params=params)
 
     def refresh_views(self) -> None:
         """Re-register Parquet views (call after data updates)."""
