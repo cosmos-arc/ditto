@@ -2,6 +2,7 @@
 
 import time
 
+import pytest
 from ditto_datahub.runtime.cache import DataCache
 
 
@@ -22,23 +23,21 @@ def test_individual_ttl():
 
 
 def test_individual_ttl_with_zero():
-    """测试 TTL 为 0 的情况（立即过期）."""
+    """测试 TTL 为 0 的情况应该抛出异常."""
     cache = DataCache(ttl_seconds=300)
 
-    cache.set("key1", "value1", ttl=0)  # 立即过期
-
-    # 应该立即过期
-    assert cache.get("key1") is None
+    # VTTLCache 不允许零 TTL
+    with pytest.raises(ValueError, match="ttl must be positive and non-zero"):
+        cache.set("key1", "value1", ttl=0)
 
 
 def test_individual_ttl_with_negative():
-    """测试 TTL 为负数的情况."""
+    """测试 TTL 为负数的情况应该抛出异常."""
     cache = DataCache(ttl_seconds=300)
 
-    cache.set("key1", "value1", ttl=-1)  # 负数应该视为无效
-
-    # 负数 TTL 应该使用默认 TTL
-    assert cache.get("key1") == "value1"
+    # VTTLCache 不允许负 TTL
+    with pytest.raises(ValueError, match="ttl must be positive and non-zero"):
+        cache.set("key1", "value1", ttl=-1)
 
 
 def test_individual_ttl_none_value():

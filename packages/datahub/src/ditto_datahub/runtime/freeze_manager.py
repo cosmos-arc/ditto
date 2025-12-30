@@ -464,7 +464,9 @@ class FreezeManager:
 
         # 向后兼容：旧格式可能没有 version 和 checksum_type 字段
         version = data.get("version", "1.0")  # 默认为旧版本
-        checksum_type = data.get("checksum_type", "md5" if version == "1.0" else "sha256")
+        checksum_type = data.get(
+            "checksum_type", "md5" if version == "1.0" else "sha256"
+        )
 
         return FreezeManifest(
             freeze_id=data["freeze_id"],

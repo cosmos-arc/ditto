@@ -1,5 +1,7 @@
 """Tests for FreezeManager."""
 
+import json
+import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -263,7 +265,7 @@ class TestFreezeManager:
         manager = FreezeManager(str(self.data_root), default_ttl_days=90)
 
         # Create current freeze (should not be deleted)
-        current_manifest = manager.create(
+        manager.create(
             freeze_id="current_freeze",
             description="Current freeze",
             datasets=["bars/stock_daily"],
@@ -285,7 +287,6 @@ class TestFreezeManager:
                 "created_at": (datetime.now() - timedelta(days=100)).isoformat(),
                 "files": old_manifest.files,
             }
-            import json
             json.dump(data, f, indent=2, ensure_ascii=False)
 
         # Run cleanup with 90 days max age
@@ -325,7 +326,6 @@ class TestFreezeManager:
                 "created_at": (datetime.now() - timedelta(days=40)).isoformat(),
                 "files": old_manifest.files,
             }
-            import json
             json.dump(data, f, indent=2, ensure_ascii=False)
 
         # Run cleanup without specifying max_age_days (should use default)
@@ -356,7 +356,6 @@ class TestFreezeManager:
         # Remove existing freezes directory if it exists
         freezes_dir = self.data_root / "freezes"
         if freezes_dir.exists():
-            import shutil
             shutil.rmtree(freezes_dir)
 
         manager = FreezeManager(str(self.data_root))
