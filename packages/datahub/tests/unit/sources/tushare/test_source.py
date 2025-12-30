@@ -7,7 +7,13 @@ import pandas as pd
 import polars as pl
 import pytest
 from ditto_datahub.sources.base import SourceFetchError
-from ditto_datahub.sources.metadata import IncrementalMode, NotTradingDayError
+from ditto_datahub.sources.metadata import (
+    DataChangedError,
+    IncrementalMode,
+    IngestionLog,
+    IngestionStatus,
+    NotTradingDayError,
+)
 from ditto_datahub.sources.tushare.source import TushareSource
 
 
@@ -900,3 +906,186 @@ class TestTushareSourceIngestDate:
             assert not df.is_empty()
             assert log.status == "SUCCESS"
             assert log.trade_date == "2024-01-02"
+
+    def test_ingest_date_unchanged_without_force_returns_empty(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test ingest_date returns empty df when data unchanged and force=False."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        mock_response = pd.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "trade_date": ["20240102"],
+                "pre_close": [11.5],
+                "open": [11.5],
+                "high": [11.8],
+                "low": [11.3],
+                "close": [11.6],
+                "change": [0.1],
+                "pct_chg": [0.87],
+                "vol": [12500000.0],
+                "amount": [145000000.0],
+            }
+        )
+
+        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
+            mock_api.return_value.query.return_value = mock_response
+
+            source = TushareSource(token="test_token")
+
+            # Mock previous log with same checksum
+            def is_trading_day_fn(date_str: str) -> bool:
+                return True
+
+            # First, fetch to get the checksum
+            _, log1 = source.ingest_date(
+                dataset="stock_daily",
+                trade_date="2024-01-02",
+                force=True,  # Force to get initial data
+                _is_trading_day_fn=is_trading_day_fn,
+            )
+            original_checksum = log1.checksum
+
+            # Mock IngestionLogStore to return previous log with same checksum
+            mock_store = mock.Mock()
+            mock_store.get_log.return_value = IngestionLog(
+                dataset="stock_daily",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.SUCCESS,
+                checksum=original_checksum,
+                rows=1,
+                attempts=1,
+                first_attempt_at="2024-01-02T00:00:00",
+                last_attempt_at="2024-01-02T00:00:00",
+            )
+
+            # Call again with force=False and same checksum - should return empty
+            df2, log2 = source.ingest_date(
+                dataset="stock_daily",
+                trade_date="2024-01-02",
+                force=False,
+                _is_trading_day_fn=is_trading_day_fn,
+                _log_store=mock_store,
+            )
+
+            assert df2.is_empty()
+            assert log2.checksum == original_checksum
+
+    def test_ingest_date_changed_without_force_raises_error(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test ingest_date raises DataChangedError when data changed."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        mock_response = pd.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "trade_date": ["20240102"],
+                "pre_close": [11.5],
+                "open": [11.5],
+                "high": [11.8],
+                "low": [11.3],
+                "close": [11.6],
+                "change": [0.1],
+                "pct_chg": [0.87],
+                "vol": [12500000.0],
+                "amount": [145000000.0],
+            }
+        )
+
+        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
+            mock_api.return_value.query.return_value = mock_response
+
+            source = TushareSource(token="test_token")
+
+            def is_trading_day_fn(date_str: str) -> bool:
+                return True
+
+            # Mock IngestionLogStore to return previous log with different checksum
+            mock_store = mock.Mock()
+            mock_store.get_log.return_value = IngestionLog(
+                dataset="stock_daily",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.SUCCESS,
+                checksum="old_checksum_xyz123",
+                rows=1,
+                attempts=1,
+                first_attempt_at="2024-01-02T00:00:00",
+                last_attempt_at="2024-01-02T00:00:00",
+            )
+
+            # Call with force=False and different checksum - should raise error
+            with pytest.raises(DataChangedError) as exc_info:
+                source.ingest_date(
+                    dataset="stock_daily",
+                    trade_date="2024-01-02",
+                    force=False,
+                    _is_trading_day_fn=is_trading_day_fn,
+                    _log_store=mock_store,
+                )
+
+            assert exc_info.value.trade_date == "2024-01-02"
+            assert exc_info.value.old_checksum == "old_checksum_xyz123"
+
+    def test_ingest_date_changed_with_force_succeeds(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test ingest_date succeeds with force=True even when data changed."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        mock_response = pd.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "trade_date": ["20240102"],
+                "pre_close": [11.5],
+                "open": [11.5],
+                "high": [11.8],
+                "low": [11.3],
+                "close": [11.6],
+                "change": [0.1],
+                "pct_chg": [0.87],
+                "vol": [12500000.0],
+                "amount": [145000000.0],
+            }
+        )
+
+        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
+            mock_api.return_value.query.return_value = mock_response
+
+            source = TushareSource(token="test_token")
+
+            def is_trading_day_fn(date_str: str) -> bool:
+                return True
+
+            # Mock IngestionLogStore to return previous log with different checksum
+            mock_store = mock.Mock()
+            mock_store.get_log.return_value = IngestionLog(
+                dataset="stock_daily",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.SUCCESS,
+                checksum="old_checksum_xyz123",
+                rows=1,
+                attempts=1,
+                first_attempt_at="2024-01-02T00:00:00",
+                last_attempt_at="2024-01-02T00:00:00",
+            )
+
+            # Call with force=True - should succeed and return new data
+            df, log = source.ingest_date(
+                dataset="stock_daily",
+                trade_date="2024-01-02",
+                force=True,
+                _is_trading_day_fn=is_trading_day_fn,
+                _log_store=mock_store,
+            )
+
+            assert not df.is_empty()
+            assert log.checksum != "old_checksum_xyz123"
+            assert log.status == IngestionStatus.SUCCESS

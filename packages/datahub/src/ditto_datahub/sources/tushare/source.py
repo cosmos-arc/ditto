@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Callable
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import polars as pl
 from ditto_foundation import M, logger, traced
@@ -19,6 +20,9 @@ from ditto_datahub.sources.metadata import (
     NotTradingDayError,
 )
 from ditto_datahub.sources.tushare.client import TushareClient
+
+if TYPE_CHECKING:
+    from ditto_datahub.stores.ingestion_log import IngestionLogStore
 
 
 class TushareSource(DataSource):
@@ -1117,6 +1121,7 @@ class TushareSource(DataSource):
         trade_date: str,
         force: bool = False,
         _is_trading_day_fn: Callable[[str], bool] | None = None,
+        _log_store: IngestionLogStore | None = None,
     ) -> tuple[pl.DataFrame, IngestionLog]:
         """
         Ingest data for a specific date (new interface).
@@ -1128,19 +1133,24 @@ class TushareSource(DataSource):
             _is_trading_day_fn: Optional function to validate trading days.
                 If provided, must raise NotTradingDayError for non-trading days.
                 Signature: (date_str: str) -> bool
+            _log_store: Optional IngestionLogStore for checksum validation.
+                If provided, enables checksum-based change detection and
+                implements the force parameter semantics.
 
         Returns:
             Tuple of:
-            - DataFrame with data
+            - DataFrame with data (empty if data unchanged and force=False)
             - IngestionLog with ingestion metadata
 
         Raises:
             NotTradingDayError: If trade_date is not a trading day.
+            DataChangedError: If data checksum changed and force=False.
             SourceFetchError: If fetch fails or returns empty dataframe.
             ValueError: If dataset is not supported.
 
         Note:
             Trading day validation is performed when _is_trading_day_fn is provided.
+            Checksum validation is performed when _log_store is provided.
             This method validates that the fetched data is non-empty.
 
         """
@@ -1190,10 +1200,60 @@ class TushareSource(DataSource):
                 trade_date=target_date,
             )
 
-        # Compute checksum and create log
+        # Compute checksum
         checksum = self._compute_checksum(df)
         now = datetime.now().isoformat()
 
+        # Checksum validation if log store is provided
+        if _log_store is not None:
+            previous_log = _log_store.get_log(dataset, "tushare", trade_date)
+
+            if (
+                previous_log is not None
+                and previous_log.status == IngestionStatus.SUCCESS
+                and previous_log.checksum is not None
+            ):
+                if checksum == previous_log.checksum:
+                    # Data unchanged - return empty DataFrame
+                    logger.info(
+                        "Tushare ingest_date unchanged - returning empty",
+                        event="tushare_ingest_date_unchanged",
+                        dataset=dataset,
+                        trade_date=trade_date,
+                        checksum=checksum,
+                    )
+
+                    log = IngestionLog(
+                        dataset=dataset,
+                        source="tushare",
+                        trade_date=trade_date,
+                        status=IngestionStatus.SUCCESS,
+                        checksum=checksum,
+                        rows=previous_log.rows,
+                        attempts=previous_log.attempts,
+                        first_attempt_at=previous_log.first_attempt_at,
+                        last_attempt_at=now,
+                    )
+
+                    return pl.DataFrame(schema=df.schema), log
+                elif not force:
+                    # Data changed and force=False - raise error
+                    logger.warning(
+                        "Tushare ingest_date data changed",
+                        event="tushare_ingest_date_changed",
+                        dataset=dataset,
+                        trade_date=trade_date,
+                        old_checksum=previous_log.checksum,
+                        new_checksum=checksum,
+                    )
+
+                    raise DataChangedError(
+                        trade_date=trade_date,
+                        old_checksum=previous_log.checksum,
+                        new_checksum=checksum,
+                    )
+
+        # Create log
         log = IngestionLog(
             dataset=dataset,
             source="tushare",
@@ -1205,6 +1265,17 @@ class TushareSource(DataSource):
             first_attempt_at=now,
             last_attempt_at=now,
         )
+
+        # Save log to store if provided
+        if _log_store is not None:
+            _log_store.save_log(
+                dataset=dataset,
+                source="tushare",
+                trade_date=trade_date,
+                status=IngestionStatus.SUCCESS,
+                checksum=checksum,
+                rows=len(df),
+            )
 
         logger.info(
             "Tushare ingest_date complete",
