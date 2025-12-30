@@ -1,8 +1,9 @@
 """
 统一数据缓存层，基于 cachebox 实现.
 
-本模块提供基于 cachebox.TTLCache 的统一缓存封装，支持：
+本模块提供基于 cachebox.VTTLCache 的统一缓存封装，支持：
 - TTL 过期和 LRU 淘汰（由 cachebox 提供）
+- 单条目 TTL 和全局默认 TTL
 - OpenTelemetry 指标集成
 - 模式失效（fnmatch 风格）
 - 缓存统计信息
@@ -33,13 +34,14 @@ class DataCache:
     基于 cachebox 的统一缓存封装层.
 
     特性：
-    - TTL 过期和 LRU 淘汰（由 cachebox.TTLCache 提供）
+    - TTL 过期和 LRU 淘汰（由 cachebox.VTTLCache 提供）
+    - 支持单条目 TTL 和全局默认 TTL
     - OpenTelemetry 指标记录
     - 模式失效（fnmatch 风格）
     - 线程安全（cachebox 内置锁）
 
     注意：
-    - cachebox.TTLCache 使用全局 TTL，如需不同 TTL 使用 VTTLCache
+    - 使用 cachebox.VTTLCache 支持单条目 TTL
     - 线程安全由 cachebox 保证，无需额外处理
     """
 
@@ -59,9 +61,9 @@ class DataCache:
             enable_metrics: 是否启用指标记录
 
         """
-        # cachebox.TTLCache: (maxsize, ttl)
-        # 注意：TTLCache 使用全局统一 TTL，不支持单条目 TTL
-        self._cache: cachebox.TTLCache[str, Any] = cachebox.TTLCache(
+        # cachebox.VTTLCache: (maxsize, ttl)
+        # 使用 VTTLCache 支持单条目 TTL，默认 TTL 为 ttl_seconds
+        self._cache: cachebox.VTTLCache[str, Any] = cachebox.VTTLCache(
             maxsize=max_size, ttl=ttl_seconds
         )
         self._enable_metrics = enable_metrics
@@ -102,18 +104,17 @@ class DataCache:
         """
         设置缓存值.
 
-        注意：
-        cachebox.TTLCache 不支持单条目 TTL，ttl 参数会被忽略。
-        如需不同 TTL，请使用 cachebox.VTTLCache 或创建多个缓存实例。
-
         Args:
         ----
             key: 缓存键（应遵循 category:key 格式）
             value: 缓存值
-            ttl: TTL 秒数（当前实现中会被忽略）
+            ttl: TTL 秒数，None 时使用默认 TTL
 
         """
-        self._cache[key] = value
+        if ttl is not None:
+            self._cache.insert(key, value, ttl=ttl)
+        else:
+            self._cache[key] = value
 
     def invalidate(self, key: str) -> bool:
         """

@@ -1,6 +1,6 @@
 """Tests for FreezeManager."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -50,10 +50,13 @@ class TestFreezeManager:
         assert "bars/stock_daily.parquet" in manifest.files
         assert "bars/etf_daily.parquet" in manifest.files
 
-        # Verify checksums are MD5 format (32 hex chars)
+        # Verify checksums are SHA-256 format (64 hex chars)
         for checksum in manifest.files.values():
-            assert len(checksum) == 32
+            assert len(checksum) == 64
             assert all(c in "0123456789abcdef" for c in checksum)
+        # Verify new version and checksum_type fields
+        assert manifest.version == "2.0"
+        assert manifest.checksum_type == "sha256"
 
     def test_create_freeze_saves_manifest_to_disk(self) -> None:
         """Test freeze manifest is persisted to disk."""
@@ -253,3 +256,113 @@ class TestFreezeManager:
 
         # Should be parseable as ISO datetime
         datetime.fromisoformat(manifest.created_at)
+
+    def test_cleanup_expired(self) -> None:
+        """Test cleanup of expired freezes."""
+        # Create manager with 90 days default TTL
+        manager = FreezeManager(str(self.data_root), default_ttl_days=90)
+
+        # Create current freeze (should not be deleted)
+        current_manifest = manager.create(
+            freeze_id="current_freeze",
+            description="Current freeze",
+            datasets=["bars/stock_daily"],
+        )
+
+        # Create old freeze (should be deleted)
+        old_manifest = manager.create(
+            freeze_id="old_freeze",
+            description="Old freeze",
+            datasets=["bars/etf_daily"],
+        )
+
+        # Mock created_at for old freeze to be 100 days ago
+        old_manifest_path = self.data_root / "freezes" / "old_freeze.json"
+        with old_manifest_path.open("w", encoding="utf-8") as f:
+            data = {
+                "freeze_id": "old_freeze",
+                "description": "Old freeze",
+                "created_at": (datetime.now() - timedelta(days=100)).isoformat(),
+                "files": old_manifest.files,
+            }
+            import json
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        # Run cleanup with 90 days max age
+        deleted = manager.cleanup_expired(max_age_days=90)
+
+        # Should have deleted old_freeze but not current_freeze
+        assert "old_freeze" in deleted
+        assert "current_freeze" not in deleted
+        assert len(deleted) == 1
+
+        # Verify old freeze is actually deleted
+        with pytest.raises(FileNotFoundError):
+            manager.get_manifest("old_freeze")
+
+        # Verify current freeze still exists
+        current = manager.get_manifest("current_freeze")
+        assert current.freeze_id == "current_freeze"
+
+    def test_cleanup_expired_with_default_ttl(self) -> None:
+        """Test cleanup using default TTL."""
+        # Create manager with 30 days default TTL
+        manager = FreezeManager(str(self.data_root), default_ttl_days=30)
+
+        # Create old freeze (should be deleted)
+        old_manifest = manager.create(
+            freeze_id="old_freeze",
+            description="Old freeze",
+            datasets=["bars/stock_daily"],
+        )
+
+        # Mock created_at for old freeze to be 40 days ago
+        old_manifest_path = self.data_root / "freezes" / "old_freeze.json"
+        with old_manifest_path.open("w", encoding="utf-8") as f:
+            data = {
+                "freeze_id": "old_freeze",
+                "description": "Old freeze",
+                "created_at": (datetime.now() - timedelta(days=40)).isoformat(),
+                "files": old_manifest.files,
+            }
+            import json
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        # Run cleanup without specifying max_age_days (should use default)
+        deleted = manager.cleanup_expired()
+
+        # Should have deleted old_freeze
+        assert "old_freeze" in deleted
+
+    def test_cleanup_expired_nothing_to_delete(self) -> None:
+        """Test cleanup when no freezes are expired."""
+        # Create current freeze (should not be deleted)
+        manager = FreezeManager(str(self.data_root), default_ttl_days=90)
+        manager.create(
+            freeze_id="current_freeze",
+            description="Current freeze",
+            datasets=["bars/stock_daily"],
+        )
+
+        # Run cleanup with 1 day max age (nothing should be deleted)
+        deleted = manager.cleanup_expired(max_age_days=1)
+
+        # Should not delete anything
+        assert deleted == []
+
+    def test_cleanup_expired_empty_directory(self) -> None:
+        """Test cleanup when freezes directory is empty."""
+        # Create new manager without creating any freezes
+        # Remove existing freezes directory if it exists
+        freezes_dir = self.data_root / "freezes"
+        if freezes_dir.exists():
+            import shutil
+            shutil.rmtree(freezes_dir)
+
+        manager = FreezeManager(str(self.data_root))
+
+        # Run cleanup
+        deleted = manager.cleanup_expired(max_age_days=90)
+
+        # Should return empty list
+        assert deleted == []

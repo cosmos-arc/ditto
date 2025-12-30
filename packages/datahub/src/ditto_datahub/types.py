@@ -63,7 +63,9 @@ class FreezeManifest:
     freeze_id: str
     description: str
     created_at: str
-    files: dict[str, str]  # {relative_path: md5_checksum}
+    version: str = "2.0"
+    checksum_type: str = "sha256"  # "md5" for legacy, "sha256" for new
+    files: dict[str, str] = None  # {relative_path: checksum}
 
     @property
     def file_count(self) -> int:
