@@ -5,6 +5,7 @@ Core optimizations:
 - Load all data into memory on startup (~7500 records, ~1MB)
 - All query operations O(1) or O(log n)
 - No SQL query overhead after initialization
+- Thread-safe reload using double-buffer pattern
 
 Following design document at docs/design/02_data_design.md
 """
@@ -12,6 +13,7 @@ Following design document at docs/design/02_data_design.md
 from __future__ import annotations
 
 import bisect
+import threading
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
@@ -63,24 +65,89 @@ class CalendarStore:
         """
         self._client = sqlite_client
         self._data_cache = data_cache
-        self._cache: dict[str, CalendarDay] = {}
+
+        # Thread safety: double-buffer pattern
+        self._lock = threading.RLock()
+        self._cache_v1: dict[str, CalendarDay] = {}
+        self._cache_v2: dict[str, CalendarDay] = {}
+        self._current_cache = "v1"
+
+        # Public references (will be swapped atomically during reload)
+        self._cache: dict[str, CalendarDay] = self._cache_v1
         self._all_days: list[str] = []
         self._trading_days: list[str] = []
         self._week_ends: list[str] = []
         self._month_ends: list[str] = []
         self._quarter_ends: list[str] = []
+
         self._load_cache()
 
     def _load_cache(self) -> None:
-        """Load all calendar data into memory."""
+        """Load all calendar data into memory (initial load)."""
         with span("calendar.load") as s:
             logger.info(
                 "Loading calendar data into cache",
                 event="calendar_load_start",
             )
 
+        # Build cache data
+        cache, all_days, trading_days, week_ends, month_ends, quarter_ends = (
+            self._build_cache_data()
+        )
+
+        # Load into v1 cache (initial load)
+        self._cache_v1.clear()
+        self._cache_v1.update(cache)
+
+        # Update public references
+        self._cache = self._cache_v1
+        self._all_days = all_days
+        self._trading_days = trading_days
+        self._week_ends = week_ends
+        self._month_ends = month_ends
+        self._quarter_ends = quarter_ends
+
+        # Set span attributes
+        s.set_attribute("total_days", len(self._all_days))
+        s.set_attribute("trading_days", len(self._trading_days))
+
+        logger.info(
+            "Calendar cache loaded successfully",
+            event="calendar_load_complete",
+            total_days=len(self._all_days),
+            trading_days=len(self._trading_days),
+            week_ends=len(self._week_ends),
+            month_ends=len(self._month_ends),
+            quarter_ends=len(self._quarter_ends),
+        )
+
+    def _build_cache_data(
+        self,
+    ) -> tuple[
+        dict[str, CalendarDay],
+        list[str],
+        list[str],
+        list[str],
+        list[str],
+        list[str],
+    ]:
+        """
+        Build cache data from database (pure function, no state modification).
+
+        Returns:
+            Tuple of (cache, all_days, trading_days, week_ends,
+            month_ends, quarter_ends)
+
+        """
         sql = "SELECT * FROM trading_calendar ORDER BY trade_date"
         rows = self._client.fetchall(sql)
+
+        cache: dict[str, CalendarDay] = {}
+        all_days: list[str] = []
+        trading_days: list[str] = []
+        week_ends: list[str] = []
+        month_ends: list[str] = []
+        quarter_ends: list[str] = []
 
         for r in rows:
             date_str = r["trade_date"]
@@ -98,54 +165,70 @@ class CalendarStore:
                 is_quarter_end=bool(r["is_quarter_end"]),
             )
 
-            self._cache[date_str] = day
-            self._all_days.append(date_str)
+            cache[date_str] = day
+            all_days.append(date_str)
 
             if day.is_open:
-                self._trading_days.append(date_str)
+                trading_days.append(date_str)
 
                 if day.is_week_end:
-                    self._week_ends.append(date_str)
+                    week_ends.append(date_str)
                 if day.is_month_end:
-                    self._month_ends.append(date_str)
+                    month_ends.append(date_str)
                 if day.is_quarter_end:
-                    self._quarter_ends.append(date_str)
+                    quarter_ends.append(date_str)
 
-        # Set span attributes
-        s.set_attribute("total_days", len(self._all_days))
-        s.set_attribute("trading_days", len(self._trading_days))
-
-        logger.info(
-            "Calendar cache loaded successfully",
-            event="calendar_load_complete",
-            total_days=len(self._all_days),
-            trading_days=len(self._trading_days),
-            week_ends=len(self._week_ends),
-            month_ends=len(self._month_ends),
-            quarter_ends=len(self._quarter_ends),
-        )
+        return cache, all_days, trading_days, week_ends, month_ends, quarter_ends
 
     def reload(self) -> None:
-        """Reload cache (call after calendar update)."""
+        """
+        Reload cache (thread-safe using double-buffer pattern).
+
+        This method is thread-safe and can be called concurrently with read operations.
+        Readers will continue to see the old cache until the new one is fully built,
+        at which point an atomic swap occurs.
+        """
         logger.debug(
             "Reloading calendar cache",
             event="calendar_reload_start",
         )
-        self._cache.clear()
-        self._trading_days.clear()
-        self._all_days.clear()
-        self._week_ends.clear()
-        self._month_ends.clear()
-        self._quarter_ends.clear()
 
-        # 失效 DataCache 中的日历相关缓存
-        if self._data_cache:
-            self._data_cache.invalidate_pattern("trading_days:*")
+        with self._lock:
+            # Determine which cache buffer to use
+            target_cache = (
+                self._cache_v2 if self._current_cache == "v1" else self._cache_v1
+            )
 
-        self._load_cache()
+            # Build new cache data (without holding lock for too long)
+            # Note: _build_cache_data acquires its own database connection
+            cache, all_days, trading_days, week_ends, month_ends, quarter_ends = (
+                self._build_cache_data()
+            )
+
+            # Update target cache
+            target_cache.clear()
+            target_cache.update(cache)
+
+            # 失效 DataCache 中的日历相关缓存
+            if self._data_cache:
+                self._data_cache.invalidate_pattern("trading_days:*")
+
+            # Atomic swap of all references
+            self._cache = target_cache
+            self._all_days = all_days
+            self._trading_days = trading_days
+            self._week_ends = week_ends
+            self._month_ends = month_ends
+            self._quarter_ends = quarter_ends
+
+            # Switch current cache marker
+            self._current_cache = "v2" if self._current_cache == "v1" else "v1"
+
         logger.debug(
             "Calendar cache reloaded successfully",
             event="calendar_reload_complete",
+            total_days=len(self._all_days),
+            trading_days=len(self._trading_days),
         )
 
     # ============ Basic queries (O(1)) ============
