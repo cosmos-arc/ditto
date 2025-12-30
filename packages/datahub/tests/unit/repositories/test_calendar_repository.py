@@ -142,6 +142,11 @@ class TestCalendarRepository:
         assert "trade_date" in result.columns
         assert "is_open" in result.columns
 
+    def test_get_last_trading_day(self) -> None:
+        """Test get_last_trading_day."""
+        result = self.repo.get_last_trading_day()
+        assert result == "2024-01-08"
+
     def teardown_method(self) -> None:
         """Clean up after test."""
         # No cleanup needed for in-memory database

@@ -98,6 +98,16 @@ class CalendarRepository:
         """
         return self._calendar_store.get_range(start, end)
 
+    def get_last_trading_day(self) -> str | None:
+        """
+        Get the last (latest) trading day in the calendar.
+
+        Returns:
+            Latest trading day as YYYY-MM-DD string, or None if calendar is empty.
+
+        """
+        return self._calendar_store.get_last_trading_day()
+
     def get_prev(self, date: str) -> str | None:
         """
         Get previous trading day.
