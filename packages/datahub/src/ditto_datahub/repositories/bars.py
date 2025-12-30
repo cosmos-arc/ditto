@@ -10,19 +10,16 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.dq.models import DQIssue
 
 # Authoritative DQResult with issues list (from dq.engine)
 from ditto_datahub.dq.models import DQResult as DQResultNew
-
-# DQChecker and DQCheckResult are used at runtime (not just for type checking)
-# DQCheckResult is used in isinstance() check at line 732
-from ditto_datahub.runtime.dq_checker import DQChecker, DQCheckResult
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
-from ditto_datahub.types import DQResult, SidRange
+from ditto_datahub.types import SidRange
 
 if TYPE_CHECKING:
     from ditto_datahub.runtime.file_lock import FileLockManager
@@ -38,20 +35,14 @@ class AdjType(Enum):
 
 @dataclass(frozen=True)
 class WriteResult:
-    """
-    Result of writing bars data.
-
-    Note: dq_result can be either legacy DQCheckResult (from runtime.dq_checker)
-    or the new dq.models.DQResult (from dq.engine). The new format is preferred.
-    """
+    """Result of writing bars data."""
 
     file_path: str
     checksum: str
     rows_written: int
     rows_total: int
-    failed_checks: list[DQResult] = field(default_factory=list)  # Legacy types.DQResult
     blocked: bool = False
-    dq_result: DQCheckResult | DQResultNew | None = None  # Union for migration
+    dq_result: DQResultNew | None = None  # New DQResult format
 
 
 class BarsRepository:
@@ -69,7 +60,7 @@ class BarsRepository:
         adj_factor_store: AdjFactorStore,
         security_store: SecurityStore,
         stock_status_store: StockStatusStore,  # B.3
-        dq_checker: DQChecker,  # TODO: Migrate to DQEngine (dq.engine)
+        dq_engine: DQEngine,  # New DQ engine
         file_lock: FileLockManager,
     ) -> None:
         """
@@ -80,7 +71,7 @@ class BarsRepository:
             adj_factor_store: Adjustment factor store.
             security_store: Security store for identifier resolution.
             stock_status_store: Stock status store (B.3).
-            dq_checker: Data quality checker (deprecated: use DQEngine).
+            dq_engine: Data quality engine (new DQEngine from dq.engine).
             file_lock: File lock manager for concurrent writes.
 
         """
@@ -88,7 +79,7 @@ class BarsRepository:
         self._adj_factor_store = adj_factor_store
         self._security_store = security_store
         self._stock_status_store = stock_status_store  # B.3
-        self._dq_checker = dq_checker
+        self._dq_engine = dq_engine
         self._file_lock = file_lock
 
     @traced("repository.bars.get")
@@ -272,26 +263,24 @@ class BarsRepository:
         # Use file lock for concurrent safety
         lock_name = f"bars_write_{dataset}_{year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
-            # Data quality check (legacy DQChecker, should migrate to DQEngine)
-            dq_result: DQCheckResult | DQResultNew | None = None
+            # Data quality check using DQEngine
+            dq_result: DQResultNew | None = None
 
             if run_dq_check:
-                check_result = self._dq_checker.check(df, dataset)
-                dq_result = check_result  # Returns legacy DQCheckResult
+                dq_result = self._dq_engine.check(df, dataset)
 
                 # Check for L1 errors (blocking)
-                if check_result.has_errors:
+                if dq_result.has_errors:
                     logger.error(
                         "DQ check failed with L1 errors - blocking write",
                         event="bars_dq_blocked",
                         dataset=dataset,
-                        error_count=check_result.error_count,
+                        error_count=dq_result.error_count,
                     )
 
                     # Save failed data to quarantine
-                    for issue in check_result.issues:
+                    for issue in dq_result.issues:
                         if issue.severity.value == "error":
-                            # Convert DQResult to DQIssue-like format
                             self._save_to_quarantine_from_result(
                                 df=df,
                                 issue=issue,
@@ -300,7 +289,7 @@ class BarsRepository:
 
                     # Record metrics
                     M.data_errors.add(
-                        check_result.error_count,
+                        dq_result.error_count,
                         {"dataset": dataset, "operation": "write_blocked"},
                     )
 
@@ -309,18 +298,17 @@ class BarsRepository:
                         checksum="",
                         rows_written=0,
                         rows_total=0,
-                        failed_checks=[],
                         blocked=True,
                         dq_result=dq_result,
                     )
 
                 # Log L2 warnings (non-blocking)
-                if check_result.has_warnings:
+                if dq_result.has_warnings:
                     logger.warning(
                         "DQ check found L2 warnings - proceeding",
                         event="bars_dq_warnings",
                         dataset=dataset,
-                        warning_count=check_result.warn_count,
+                        warning_count=dq_result.warn_count,
                     )
 
             # Write data
@@ -359,7 +347,6 @@ class BarsRepository:
                 checksum=checksum,
                 rows_written=len(df),
                 rows_total=total_rows,
-                failed_checks=[],
                 blocked=False,
                 dq_result=dq_result,
             )
@@ -681,15 +668,15 @@ class BarsRepository:
     def _save_to_quarantine_from_result(
         self,
         df: pl.DataFrame,
-        issue: DQResult,
+        issue: DQIssue,
         dataset: str,
     ) -> None:
         """
-        Save failed data to quarantine store from DQResult (legacy type).
+        Save failed data to quarantine store from DQIssue.
 
         Args:
             df: Full data DataFrame.
-            issue: DQResult with failure information.
+            issue: DQIssue with failure information.
             dataset: Dataset name.
 
         """
@@ -706,14 +693,12 @@ class BarsRepository:
             severity=issue.severity.value,
         )
 
-    def _generate_dq_report(
-        self, result: DQCheckResult | DQResultNew, dataset: str
-    ) -> None:
+    def _generate_dq_report(self, result: DQResultNew, dataset: str) -> None:
         """
         Generate DQ report and save to file.
 
         Args:
-            result: DQ check result.
+            result: DQ check result (new format).
             dataset: Dataset name.
 
         """
@@ -730,41 +715,7 @@ class BarsRepository:
             report_path = reports_dir / f"{dataset}_{timestamp}.md"
 
             generator = DQReportGenerator()
-
-            # Convert DQCheckResult to dq.models.DQResult if needed
-            if isinstance(result, DQCheckResult):
-                # Convert legacy DQCheckResult to new DQResult format
-                from ditto_datahub.dq.models import DQLevel
-                from ditto_datahub.dq.models import DQSeverity as DQSeverityNew
-
-                issues = []
-                for r in result.results:
-                    if not r.passed:
-                        # Convert types.DQSeverity to dq.models.DQSeverity
-                        severity_new = DQSeverityNew(r.severity.value)
-                        level = (
-                            DQLevel.L1_TECHNICAL
-                            if r.severity.value == "error"
-                            else DQLevel.L2_BUSINESS
-                        )
-                        issue = DQIssue(
-                            level=level,
-                            severity=severity_new,
-                            rule_name=r.rule_name,
-                            message=r.message,
-                            affected_rows=r.affected_rows,
-                        )
-                        issues.append(issue)
-
-                converted_result = DQResultNew(
-                    dataset=dataset, passed=result.passed, issues=issues
-                )
-                generator.save_report(
-                    converted_result, report_path, report_format="markdown"
-                )
-            else:
-                # result is already dq.models.DQResult
-                generator.save_report(result, report_path, report_format="markdown")
+            generator.save_report(result, report_path, report_format="markdown")
 
             logger.info(
                 "DQ report generated",
@@ -853,7 +804,7 @@ class BarsRepository:
         return result
 
 
-def filter_failed_rows(df: pl.DataFrame, issue: DQIssue | DQResult) -> pl.DataFrame:  # noqa: PLR0911
+def filter_failed_rows(df: pl.DataFrame, issue: DQIssue) -> pl.DataFrame:  # noqa: PLR0911
     """
     Filter failed rows based on DQ issue.
 

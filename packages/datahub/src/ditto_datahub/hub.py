@@ -13,6 +13,7 @@ from ditto_foundation import logger
 from ditto_datahub.errors import SidNotFoundError
 
 if TYPE_CHECKING:
+    from ditto_datahub.dq.engine import DQEngine
     from ditto_datahub.repositories.bars import BarsRepository
     from ditto_datahub.repositories.calendar import CalendarRepository
     from ditto_datahub.repositories.index import IndexRepository
@@ -107,10 +108,18 @@ class DataHub:
 
     @cached_property
     def dq_checker(self) -> DQChecker:
-        """Data quality checker."""
+        """Data quality checker (deprecated: use dq_engine)."""
         from ditto_datahub.runtime.dq_checker import DQChecker
 
         return DQChecker()
+
+    @cached_property
+    def dq_engine(self) -> DQEngine:
+        """New DQ engine."""
+        from ditto_datahub.dq.engine import DQEngine
+
+        config_path = self.data_root / "config" / "dq"
+        return DQEngine(config_path=config_path)
 
     @cached_property
     def freeze(self) -> FreezeManager:
@@ -232,7 +241,7 @@ class DataHub:
             security_store=self.security_store,
             adj_factor_store=self.adj_factor_store,
             stock_status_store=self.stock_status_store,  # B.3
-            dq_checker=self.dq_checker,
+            dq_engine=self.dq_engine,  # Use new DQEngine
             file_lock=self.file_lock,
         )
 
