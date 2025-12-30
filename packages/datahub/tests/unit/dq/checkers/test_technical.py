@@ -1,5 +1,7 @@
 """Tests for TechnicalChecker."""
 
+from unittest.mock import MagicMock
+
 import polars as pl
 from ditto_datahub.dq.checkers.technical import TechnicalChecker
 from ditto_datahub.dq.models import DQLevel, DQSeverity
@@ -204,3 +206,65 @@ class TestTechnicalChecker:
         issues = self.checker.check(df, rules)
 
         assert len(issues) == 0  # Should skip missing columns
+
+    def test_foreign_key_valid(self) -> None:
+        """Test foreign key check with valid references."""
+        df = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],
+                "index_sid": [100, 200, 300],
+            }
+        )
+
+        # Mock hub that returns valid sids
+        mock_hub = MagicMock()
+        mock_hub.sql.return_value = pl.DataFrame({"sid": [100, 200, 300, 400]})
+
+        rule = {
+            "rule": "foreign_key",
+            "column": "index_sid",
+            "reference": "security.sid",
+        }
+        context = {"hub": mock_hub}
+
+        issues = self.checker.check(df, [rule], context)
+
+        assert len(issues) == 0
+
+    def test_foreign_key_invalid(self) -> None:
+        """Test foreign key check with invalid references."""
+        df = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],
+                "index_sid": [100, 999, 300],  # 999 is invalid
+            }
+        )
+
+        mock_hub = MagicMock()
+        mock_hub.sql.return_value = pl.DataFrame({"sid": [100, 200, 300, 400]})
+
+        rule = {
+            "rule": "foreign_key",
+            "column": "index_sid",
+            "reference": "security.sid",
+        }
+        context = {"hub": mock_hub}
+
+        issues = self.checker.check(df, [rule], context)
+
+        assert len(issues) == 1
+        assert issues[0].rule_name == "foreign_key"
+        assert issues[0].affected_rows == 1
+
+    def test_foreign_key_no_context(self) -> None:
+        """Test foreign key check without hub context (should skip)."""
+        df = pl.DataFrame({"index_sid": [100, 200]})
+        rule = {
+            "rule": "foreign_key",
+            "column": "index_sid",
+            "reference": "security.sid",
+        }
+
+        issues = self.checker.check(df, [rule], context=None)
+
+        assert len(issues) == 0  # Should skip without context

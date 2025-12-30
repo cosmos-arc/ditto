@@ -133,10 +133,99 @@ class TechnicalChecker:
         rule: dict,
         context: dict[str, Any] | None = None,
     ) -> DQIssue | None:
-        """Check foreign key constraint."""
-        # TODO: Implement with hub context for FK validation
-        # Need to query reference table from context["hub"]
-        return None
+        """
+        Check foreign key constraint.
+
+        Args:
+            df: Data to check
+            rule: Rule config with "column" and "reference" (format: "dataset.column")
+            context: Optional context containing "hub" for querying reference data
+
+        Returns:
+            DQIssue if FK violation, None otherwise
+
+        """
+        column = rule.get("column")
+        reference = rule.get("reference")
+
+        # Validate rule configuration
+        if not column or not reference:
+            return None
+
+        # Need hub context to validate
+        if not context or "hub" not in context:
+            logger.debug(
+                "dq_fk_skip_no_context",
+                event="dq_check",
+                rule="foreign_key",
+                column=column,
+            )
+            return None
+
+        # Parse reference: "dataset.column" -> dataset, column
+        if "." not in reference:
+            logger.warning(
+                "dq_fk_invalid_reference",
+                event="dq_check",
+                reference=reference,
+            )
+            return None
+
+        ref_dataset, ref_column = reference.rsplit(".", 1)
+        hub = context["hub"]
+        issue: DQIssue | None = None
+
+        try:
+            # Query reference values
+            query = f"SELECT DISTINCT {ref_column} FROM {ref_dataset}"
+            result_df = hub.sql(query)
+
+            if result_df.is_empty() or ref_column not in result_df.columns:
+                logger.warning(
+                    "dq_fk_empty_reference",
+                    event="dq_check",
+                    dataset=ref_dataset,
+                    column=ref_column,
+                )
+            elif column not in df.columns:
+                pass  # Column doesn't exist, skip check
+            else:
+                # Perform FK validation
+                valid_values = set(result_df[ref_column].drop_nulls().to_list())
+                invalid_rows = df.filter(
+                    ~pl.col(column).is_null() & ~pl.col(column).is_in(valid_values)
+                )
+
+                if invalid_rows.height > 0:
+                    logger.warning(
+                        "dq_rule_fk_violation",
+                        event="dq_check",
+                        rule="foreign_key",
+                        column=column,
+                        reference=reference,
+                        invalid_count=invalid_rows.height,
+                    )
+                    msg = (
+                        f"Column '{column}' has {invalid_rows.height} "
+                        f"invalid references to {reference}"
+                    )
+                    issue = DQIssue(
+                        level=DQLevel.L1_TECHNICAL,
+                        severity=DQSeverity.ERROR,
+                        rule_name="foreign_key",
+                        message=msg,
+                        affected_rows=invalid_rows.height,
+                        sample_data=invalid_rows.select(column).head(5).to_dicts(),
+                    )
+
+        except Exception as e:
+            logger.error(
+                "dq_fk_check_error",
+                event="dq_check",
+                error=str(e),
+            )
+
+        return issue
 
     def _check_type(
         self,
