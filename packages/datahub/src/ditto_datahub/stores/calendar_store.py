@@ -5,7 +5,7 @@ Core optimizations:
 - Load all data into memory on startup (~7500 records, ~1MB)
 - All query operations O(1) or O(log n)
 - No SQL query overhead after initialization
-- Thread-safe reload using double-buffer pattern
+- Thread-safe reload using atomic instance replacement
 
 Following design document at docs/design/02_data_design.md
 """
@@ -66,14 +66,11 @@ class CalendarStore:
         self._client = sqlite_client
         self._data_cache = data_cache
 
-        # Thread safety: double-buffer pattern
+        # Thread safety: lock for reload operations
         self._lock = threading.RLock()
-        self._cache_v1: dict[str, CalendarDay] = {}
-        self._cache_v2: dict[str, CalendarDay] = {}
-        self._current_cache = "v1"
 
-        # Public references (will be swapped atomically during reload)
-        self._cache: dict[str, CalendarDay] = self._cache_v1
+        # In-memory cache (will be replaced atomically during reload)
+        self._cache: dict[str, CalendarDay] = {}
         self._all_days: list[str] = []
         self._trading_days: list[str] = []
         self._week_ends: list[str] = []
@@ -95,12 +92,8 @@ class CalendarStore:
             self._build_cache_data()
         )
 
-        # Load into v1 cache (initial load)
-        self._cache_v1.clear()
-        self._cache_v1.update(cache)
-
-        # Update public references
-        self._cache = self._cache_v1
+        # Update public references (initial load, no concurrent readers yet)
+        self._cache = cache
         self._all_days = all_days
         self._trading_days = trading_days
         self._week_ends = week_ends
@@ -182,11 +175,11 @@ class CalendarStore:
 
     def reload(self) -> None:
         """
-        Reload cache (thread-safe using double-buffer pattern).
+        Reload cache (thread-safe using direct instance replacement).
 
         This method is thread-safe and can be called concurrently with read operations.
         Readers will continue to see the old cache until the new one is fully built,
-        at which point an atomic swap occurs.
+        at which point an atomic replacement occurs (Python assignment is atomic).
         """
         logger.debug(
             "Reloading calendar cache",
@@ -194,35 +187,22 @@ class CalendarStore:
         )
 
         with self._lock:
-            # Determine which cache buffer to use
-            target_cache = (
-                self._cache_v2 if self._current_cache == "v1" else self._cache_v1
-            )
-
-            # Build new cache data (without holding lock for too long)
-            # Note: _build_cache_data acquires its own database connection
+            # Build new cache data (creates new instances, doesn't affect current reads)
             cache, all_days, trading_days, week_ends, month_ends, quarter_ends = (
                 self._build_cache_data()
             )
 
-            # Update target cache
-            target_cache.clear()
-            target_cache.update(cache)
-
-            # 失效 DataCache 中的日历相关缓存
+            # Invalidate DataCache calendar-related cache
             if self._data_cache:
                 self._data_cache.invalidate_pattern("trading_days:*")
 
-            # Atomic swap of all references
-            self._cache = target_cache
+            # Atomic replacement of all references (Python assignment is atomic)
+            self._cache = cache
             self._all_days = all_days
             self._trading_days = trading_days
             self._week_ends = week_ends
             self._month_ends = month_ends
             self._quarter_ends = quarter_ends
-
-            # Switch current cache marker
-            self._current_cache = "v2" if self._current_cache == "v1" else "v1"
 
         logger.debug(
             "Calendar cache reloaded successfully",
