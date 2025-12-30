@@ -335,15 +335,42 @@ class SqlEngine:
                 pattern = r"\b(?<!meta\.)" + table + r"\b"
                 prepared_query = re.sub(pattern, f"meta.{table}", prepared_query)
 
-        # Replace $asof parameter (safe: validate date format to prevent SQL injection)
-        if asof:
-            # Validate ISO date format (YYYY-MM-DD) to prevent SQL injection
-            # Only allow safe characters: digits and hyphen in specific format
-            if not re.match(r"^\d{4}-\d{2}-\d{2}$", asof):
+        # 使用参数化查询处理 $asof
+        if asof is not None:
+            # 验证 ISO 日期格式 (YYYY-MM-DD) 以防止 SQL 注入
+            # 只允许安全字符：特定格式的数字和连字符
+            if not isinstance(asof, str) or not re.match(r"^\d{4}-\d{2}-\d{2}$", asof):
                 raise ValueError(
                     f"Invalid asof date format: {asof}. Expected YYYY-MM-DD format."
                 )
-            prepared_query = prepared_query.replace("$asof", f"'{asof}'")
+
+            # 检查是否可以与 params 组合使用
+            if isinstance(params, dict):
+                raise ValueError(
+                    "Cannot combine $asof parameter with dict params. "
+                    "Use list params instead."
+                )
+
+            # 将 $asof 替换为 DuckDB 参数占位符
+            # 策略：将 $asof 替换为新的参数占位符，避免与现有参数冲突
+            # 例如：如果查询有 $1, $2，则 $asof 变为 $3
+
+            # 计算查询中已有的参数数量
+            existing_params = 0
+            if params and isinstance(params, list):
+                existing_params = len(params)
+
+            # 新的参数编号
+            new_param_num = existing_params + 1
+
+            # 替换 $asof 为新的参数占位符
+            prepared_query = prepared_query.replace("$asof", f"${new_param_num}")
+
+            # 合并参数
+            if params is None:
+                params = [asof]
+            elif isinstance(params, list):
+                params = [*params, asof]
 
         # Execute query and convert to polars DataFrame
         if params:
