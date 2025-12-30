@@ -3,10 +3,23 @@
 from pathlib import Path
 from typing import Any
 
+import ditto_datahub
 from ditto_datahub import DataHub
 from ditto_datahub.dq import DQEngine
 from ditto_foundation import M, logger
 from prefect import task
+
+
+def get_default_dq_config_path() -> str:
+    """
+    获取默认 DQ 规则配置路径。
+
+    Returns:
+        指向 packages/datahub/config/dq_rules 的绝对路径字符串
+
+    """
+    package_root = Path(ditto_datahub.__file__).parent.parent.parent
+    return str(package_root / "config" / "dq_rules")
 
 
 @task(
@@ -55,12 +68,7 @@ def dq_batch_check(
 
     # 初始化 DQ 引擎
     if config_path is None:
-        # 使用默认配置目录
-        config_path = str(
-            Path(__file__).parent.parent.parent.parent.parent.parent
-            / "config"
-            / "dq_rules"
-        )
+        config_path = get_default_dq_config_path()
 
     engine = DQEngine(config_path=config_path)
 
