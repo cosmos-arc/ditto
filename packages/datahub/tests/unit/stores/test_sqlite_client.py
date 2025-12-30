@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+import pytest
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
@@ -169,3 +170,46 @@ class TestSQLiteClient:
         """Test count method with WHERE clause."""
         count = self.client.count("sid_sequence", "asset_class = ?", ["stock"])
         assert count == 1
+
+    # ============ Security/Whitelist tests ============
+
+    def test_count_rejects_invalid_table(self) -> None:
+        """Test count method rejects tables not in whitelist."""
+        with pytest.raises(ValueError, match="Invalid table"):
+            self.client.count("malicious_table")
+
+    def test_count_rejects_sql_injection_in_table_name(self) -> None:
+        """Test count method rejects SQL injection in table name."""
+        # SQL injection attempt: DROP TABLE statement
+        with pytest.raises(ValueError, match="Invalid table"):
+            self.client.count("security; DROP TABLE security")
+
+        # SQL injection attempt: UNION injection
+        with pytest.raises(ValueError, match="Invalid table"):
+            self.client.count("security UNION SELECT * FROM users")
+
+        # SQL injection attempt: Comment injection
+        with pytest.raises(ValueError, match="Invalid table"):
+            self.client.count("security--")
+
+    def test_count_accepts_all_whitelisted_tables(self) -> None:
+        """Test count method accepts all tables in ALLOWED_TABLES."""
+        # Verify all whitelisted tables can be counted
+        whitelisted_tables = [
+            "sid_sequence",
+            "price_limit_config",
+            "security",
+            "security_mapping",
+            "trading_calendar",
+            "pipeline_run",
+            "dq_issue",
+            "freeze_point",
+            "universe",
+            "universe_constituent",
+            "index_weight",
+        ]
+
+        for table in whitelisted_tables:
+            # Should not raise ValueError
+            count = self.client.count(table)
+            assert isinstance(count, int)
