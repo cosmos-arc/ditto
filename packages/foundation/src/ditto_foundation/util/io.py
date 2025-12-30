@@ -1,12 +1,17 @@
 """IO utility functions for file operations."""
 
 import hashlib
+import os
 from pathlib import Path
 
 import polars as pl
 
 
-def atomic_write(df: pl.DataFrame, path: Path) -> None:
+def atomic_write(
+    df: pl.DataFrame,
+    path: Path,
+    fsync: bool = True,
+) -> None:
     """
     Write DataFrame to Parquet file atomically.
 
@@ -16,6 +21,8 @@ def atomic_write(df: pl.DataFrame, path: Path) -> None:
     Args:
         df: DataFrame to write.
         path: Target file path.
+        fsync: Whether to call fsync to ensure data is persisted to disk.
+             Defaults to True for data durability.
 
     """
     path = Path(path)
@@ -24,6 +31,11 @@ def atomic_write(df: pl.DataFrame, path: Path) -> None:
     # Write to temporary file first
     temp_path = path.with_suffix(path.suffix + ".tmp")
     df.write_parquet(temp_path, compression="zstd")
+
+    # Call fsync if requested
+    if fsync:
+        with temp_path.open("r+b") as f:
+            os.fsync(f.fileno())
 
     # Atomic rename
     temp_path.replace(path)
