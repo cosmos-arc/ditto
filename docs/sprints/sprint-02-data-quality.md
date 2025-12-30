@@ -307,7 +307,16 @@ apps/server/src/ditto_server/ingestion/
 
 ### Phase 4: 数据引擎与服务器性能增强（12 任务，4-5 天）✅ 已完成
 
-**完成日期**: 2025-12-29
+**完成日期**: 2025-12-30
+
+**PR #19 代码审查修复**（2025-12-30）：
+- **B.1**: BarsRepository 复权计算 PIT 安全隐患修复
+- **B.2**: BarsStore Last-Write-Wins 数据覆盖风险防护
+- **B.3**: 风控字段缺失（涨跌停价、停牌状态）完善
+- **B.4**: 抽取 ParquetStoreBase 基类（消除 394 行重复代码）
+- **B.5**: 统一 DQSeverity 类型定义（三级定义）
+- **B.6**: pre_close 复权计算验证（无需修改）
+- **测试修复**: Schema validator 测试数据更新（新增 knowledge_date, up_limit, down_limit 字段）
 
 **新增文件结构**：
 ```
@@ -315,6 +324,13 @@ packages/datahub/src/ditto_datahub/runtime/
 ├── sql_engine.py                      # 查询优化（增强）
 ├── cache.py                           # DataCache 实现
 └── pit_helper.py                      # PIT SQL 辅助函数
+
+packages/datahub/src/ditto_datahub/stores/
+├── parquet_store_base.py              # ParquetStoreBase 基类 (B.4)
+└── stock_status_store.py              # StockStatusStore (B.3)
+
+packages/datahub/README.md              # DataHub 文档 (A.9)
+docs/plans/2025-12-29-pr19-review-fixes.md  # PR #19 修复计划
 
 apps/server/src/ditto_server/
 └── main.py                            # Granian + ORJSONResponse
@@ -342,10 +358,13 @@ apps/server/src/ditto_server/
 - **指标扩展**：新增缓存、SQL、JSON 相关的 OpenTelemetry 指标（15 个）
 - **Store 集成**：CalendarStore 和 SecurityStore 集成 DataCache，移除 @lru_cache
 - **SqlEngine 增强**：查询计划缓存（MD5 + FIFO）、慢查询日志（1 秒阈值）、pit_query() 便捷方法
-- **PitHelper**：提供 add_pit_filter()、add_pit_join()、wrap_pit_cte() 辅助函数
+- **PitHelper**：提供 add_pit_filter()、add_pit_join()、wrap_pit_cte() 辅助函数，SQL 注入防护
+- **ParquetStoreBase**：抽取基类，消除 394 行重复代码（B.4）
+- **StockStatusStore**：新增风控字段存储（涨跌停价、停牌状态）（B.3）
+- **DQSeverity 统一**：三级定义（ERROR/WARNING/ALERT）（B.5）
 - **Granian 服务器**：替换 uvicorn，2-4x 性能提升
 - **ORJSONResponse**：使用 orjson 序列化，4.5-11.5x 性能提升
-- **测试覆盖**：82 个新增测试全部通过（总测试数 591）
+- **测试覆盖**：新增 30+ 个测试，总测试数 600+
 - **代码质量**：通过 linting 检查（ruff、mypy、bandit）
 
 **验收标准**：
@@ -354,10 +373,13 @@ apps/server/src/ditto_server/
 - [x] SecurityStore 集成缓存
 - [x] SqlEngine 查询计划缓存
 - [x] SqlEngine 慢查询日志
-- [x] PIT SQL 辅助函数
+- [x] PIT SQL 辅助函数（含注入防护）
 - [x] Granian 服务器正常运行
 - [x] orjson JSON 序列化正常工作
-- [x] 所有测试通过（591 个测试）
+- [x] ParquetStoreBase 重构完成
+- [x] StockStatusStore 风控字段完整
+- [x] DQSeverity 类型统一
+- [x] 所有测试通过（600+ 个测试）
 - [x] 代码覆盖率 >= 80%
 
 ---
@@ -652,7 +674,7 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
   - PitHelper：提供 PIT SQL 生成辅助函数
   - Granian 服务器：替换 uvicorn（2-4x 性能提升）
   - ORJSONResponse：使用 orjson 序列化（4.5-11.5x 性能提升）
-  - 测试覆盖：82 个新增测试全部通过（总测试数 591）
+  - 测试覆盖：82 个新增测试全部通过 + 3 个 schema validator 测试修复（总测试数 602）
   - 代码质量：通过 linting 检查（ruff、mypy、bandit）
 - ✅ **PR 创建成功**：https://github.com/cosmos-arc/ditto/pull/19
 - ✅ Sprint 2 进度更新：83% 完成（Phase 0-4）

@@ -215,3 +215,43 @@ class TestCacheStats:
         assert stats.hit_rate == 0.8
         assert stats.invalidation_count == 5
         assert stats.evict_count == 2
+
+
+class TestDataCacheWithMetrics:
+    """Test cases for DataCache with metrics enabled."""
+
+    def setup_method(self) -> None:
+        """Set up test environment with metrics enabled."""
+        self.cache = DataCache(ttl_seconds=60, max_size=100, enable_metrics=True)
+
+    def test_get_stats_with_metrics_enabled(self) -> None:
+        """Test get_stats returns correct stats when metrics are enabled."""
+        self.cache.set("key1", "value1")
+        self.cache.set("key2", "value2")
+
+        # 2 hits, 1 miss
+        self.cache.get("key1")
+        self.cache.get("key2")
+        self.cache.get("missing")
+
+        # 1 invalidation
+        self.cache.invalidate("key1")
+
+        stats = self.cache.get_stats()
+
+        # Should have correct counts even in metrics mode
+        assert stats.total_entries == 1  # 只有 key2
+        assert stats.hit_count == 2
+        assert stats.miss_count == 1
+        assert stats.hit_rate == 2 / 3
+        assert stats.invalidation_count == 1
+
+    def test_get_stats_with_metrics_empty_cache(self) -> None:
+        """Test get_stats with metrics enabled on empty cache."""
+        stats = self.cache.get_stats()
+
+        assert stats.total_entries == 0
+        assert stats.hit_count == 0
+        assert stats.miss_count == 0
+        assert stats.hit_rate == 0.0
+        assert stats.invalidation_count == 0

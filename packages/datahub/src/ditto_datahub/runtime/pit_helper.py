@@ -6,6 +6,7 @@ PIT SQL 辅助函数.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 
@@ -20,6 +21,44 @@ class PitHelper:
     - 开发者仍需理解 PIT 概念和规则
     - 参考 .claude/skills/pit-guide/SKILL.md 了解详情
     """
+
+    @staticmethod
+    def _validate_date_string(date_str: str) -> None:
+        """
+        验证日期字符串格式，防止 SQL 注入.
+
+        Args:
+        ----
+            date_str: 日期字符串
+
+        Raises:
+        ------
+            ValueError: 当日期格式无效时
+
+        """
+        # 使用正则表达式验证日期格式：YYYY-MM-DD
+        # 只允许数字和短横线，拒绝其他字符（包括单引号、分号、注释符号等）
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+            raise ValueError(f"Invalid date format: {date_str}")
+
+    @staticmethod
+    def _validate_sql_identifier(identifier: str, name: str = "identifier") -> None:
+        """
+        验证 SQL 标识符格式，防止 SQL 注入.
+
+        Args:
+        ----
+            identifier: SQL 标识符（表名、列名、CTE名等）
+            name: 参数名称（用于错误消息）
+
+        Raises:
+        ------
+            ValueError: 当标识符格式无效时
+
+        """
+        # 只允许字母、数字、下划线，且必须以字母或下划线开头
+        if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", identifier):
+            raise ValueError(f"Invalid {name}: {identifier}")
 
     @staticmethod
     def add_pit_filter(
@@ -47,7 +86,21 @@ class PitHelper:
             "SELECT * FROM stock_daily WHERE knowledge_date <= '2024-01-15'"
 
         """
+        # 验证日期格式和列名，防止 SQL 注入
+        PitHelper._validate_date_string(knowledge_date)
+        PitHelper._validate_sql_identifier(date_column, "date_column")
+
         query = query.strip()
+
+        # 检测 ORDER BY / LIMIT / GROUP BY / HAVING 子句
+        # 如果存在这些子句，需要使用 CTE 包装
+        if re.search(r"\b(ORDER BY|LIMIT|GROUP BY|HAVING)\b", query, re.IGNORECASE):
+            # 使用 CTE 包装以避免破坏原有 SQL 结构
+            wrapped = (
+                f"WITH _pit_original AS ({query}) "
+                f"SELECT * FROM _pit_original WHERE {date_column} <= '{knowledge_date}'"
+            )
+            return wrapped
 
         # 检查是否已有 WHERE 子句
         if " where " in query.lower():
@@ -63,6 +116,7 @@ class PitHelper:
         right_table: str,
         join_keys: list[str],
         asof_date: str,
+        date_column: str = "trade_date",
     ) -> str:
         """
         生成 PIT ASOF JOIN SQL.
@@ -76,6 +130,7 @@ class PitHelper:
             right_table: 右表名称
             join_keys: 连接键列表（不包含时间列）
             asof_date: ASOF 日期
+            date_column: 右表的时间列名，默认 "trade_date"
 
         Returns:
         -------
@@ -92,7 +147,21 @@ class PitHelper:
             "stock_daily s LEFT JOIN adj_factor a ON s.sid = a.sid "
             "AND a.trade_date <= '2024-01-15'"
 
+            >>> PitHelper.add_pit_join(
+            ...     "stock_daily s",
+            ...     "adj_factor a",
+            ...     ["s.sid = a.sid"],
+            ...     "2024-01-15",
+            ...     date_column="effective_from"
+            ... )
+            "stock_daily s LEFT JOIN adj_factor a ON s.sid = a.sid "
+            "AND a.effective_from <= '2024-01-15'"
+
         """
+        # 验证日期格式和列名，防止 SQL 注入
+        PitHelper._validate_date_string(asof_date)
+        PitHelper._validate_sql_identifier(date_column, "date_column")
+
         # 构建 ON 子句
         on_clause = " AND ".join(join_keys)
 
@@ -101,11 +170,10 @@ class PitHelper:
         parts = right_table.strip().split()
         right_alias = parts[-1] if len(parts) >= 2 else right_table
 
-        # 添加 PIT 条件 (假设右表有 trade_date 列)
-        # 注意：这里使用 trade_date 作为示例，实际应根据表结构调整
+        # 添加 PIT 条件（使用指定的 date_column）
         return (
             f"{left_table} LEFT JOIN {right_table} "
-            f"ON {on_clause} AND {right_alias}.trade_date <= '{asof_date}'"
+            f"ON {on_clause} AND {right_alias}.{date_column} <= '{asof_date}'"
         )
 
     @staticmethod
@@ -138,10 +206,15 @@ class PitHelper:
             "SELECT * FROM pit_data WHERE trade_date <= '2024-01-15'"
 
         """
+        # 验证 CTE 名称和日期格式，防止 SQL 注入
+        PitHelper._validate_sql_identifier(cte_name, "cte_name")
+        if asof_date:
+            PitHelper._validate_date_string(asof_date)
+
         query = query.strip()
 
-        # 构建 CTE
-        cte = f"WITH {cte_name} AS ({query}) SELECT * FROM {cte_name}"
+        # 构建 CTE（query 参数由开发者控制，非用户输入）
+        cte = f"WITH {cte_name} AS ({query}) SELECT * FROM {cte_name}"  # nosec: B608
 
         # 如果提供了 asof_date，添加 WHERE 子句
         if asof_date:
@@ -180,6 +253,11 @@ class PitHelper:
             "trade_date <= '2024-01-15'"
 
         """
+        # 验证列名和日期格式，防止 SQL 注入
+        PitHelper._validate_sql_identifier(base_column, "base_column")
+        if not knowledge_date.startswith("$"):
+            PitHelper._validate_date_string(knowledge_date)
+
         if knowledge_date.startswith("$"):
             # 占位符，不加引号
             return f"{base_column} <= {knowledge_date}"

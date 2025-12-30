@@ -98,6 +98,9 @@ uuid7 = ">=0.1,<1"
 # 重试机制
 tenacity = ">=8.0,<9"
 
+# 限流库
+limits = ">=3.15"
+
 # 凭据管理（keyring 用于安全存储 token）
 keyring = ">=25.0,<26"
 
@@ -234,8 +237,9 @@ pre-push-check = { depends-on = ["lint", "format-check", "typecheck", "test-unit
 # ──────────────────────────────────────────────────────────
 # 服务
 # ──────────────────────────────────────────────────────────
-server = "uvicorn apps.server.src.ditto_server.main:app --reload --host 0.0.0.0 --port 8000"
-server-prod = "uvicorn apps.server.src.ditto_server.main:app --host 0.0.0.0 --port 8000 --workers 4"
+# 使用 granian 替代 uvicorn（2-4x 性能提升）
+server = "granian apps.server.src.ditto_server.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
+server-prod = "granian apps.server.src.ditto_server.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
 
 # ──────────────────────────────────────────────────────────
 # 清理

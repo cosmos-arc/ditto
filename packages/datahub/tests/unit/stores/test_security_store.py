@@ -293,6 +293,66 @@ class TestSecurityStore:
         resolved_sid = self.store.resolve_sid("600000.SH", "tushare", asof=None)
         assert resolved_sid == sid
 
+    def test_register_invalidates_negative_cache(self) -> None:
+        """Test that register() invalidates negative cache for new security."""
+        # Create store with DataCache
+        data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
+        store_with_cache = SecurityStore(self.client, data_cache=data_cache)
+
+        # First query: security doesn't exist, returns None (cached as -1)
+        sid1 = store_with_cache.resolve_sid("600999.SH", "tushare", asof=None)
+        assert sid1 is None
+
+        # Verify negative cache is set (still returns None without DB query)
+        sid2 = store_with_cache.resolve_sid("600999.SH", "tushare", asof=None)
+        assert sid2 is None
+
+        # Register the new security
+        new_sid = store_with_cache.register(
+            sid=100999001,
+            source="tushare",
+            src_code="600999.SH",
+            symbol="600999",
+            name="New Stock",
+            exchange="SSE",
+            asset_class="stock",
+            list_date="2020-01-01",
+        )
+
+        # After registration, negative cache should be invalidated
+        # This should now return the newly registered sid
+        sid3 = store_with_cache.resolve_sid("600999.SH", "tushare", asof=None)
+        assert sid3 == new_sid
+
+    def test_register_invalidates_sid_symbol_map_cache(self) -> None:
+        """Test that register() invalidates sid_symbol_map cache."""
+        # Create store with DataCache
+        data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
+        store_with_cache = SecurityStore(self.client, data_cache=data_cache)
+
+        # Query sid_symbol_map (should be empty)
+        map1 = store_with_cache.get_sid_symbol_map()
+        assert len(map1) == 0
+
+        # Register a new security
+        store_with_cache.register(
+            sid=100999002,
+            source="tushare",
+            src_code="600998.SH",
+            symbol="600998",
+            name="Another Stock",
+            exchange="SSE",
+            asset_class="stock",
+            list_date="2020-01-01",
+        )
+
+        # After registration, sid_symbol_map cache should be invalidated
+        # This should now return the newly registered security
+        map2 = store_with_cache.get_sid_symbol_map()
+        assert len(map2) == 1
+        assert 100999002 in map2
+        assert map2[100999002] == "600998"
+
     def teardown_method(self) -> None:
         """Clean up after test."""
         # No cleanup needed for in-memory database

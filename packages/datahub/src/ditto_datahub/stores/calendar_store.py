@@ -286,7 +286,7 @@ class CalendarStore:
             end: End date (inclusive).
 
         Returns:
-            List of trading dates.
+            List of trading dates (always a copy).
 
         """
         if not self._trading_days:
@@ -297,19 +297,21 @@ class CalendarStore:
             cache_key = f"trading_days:{start}:{end}"
             cached = self._data_cache.get(cache_key)
             if cached is not None:
-                return cached
+                # 返回副本以防止缓存污染
+                return cached.copy()
 
         # 从内存缓存计算
         start_idx = bisect.bisect_left(self._trading_days, start)
         end_idx = bisect.bisect_right(self._trading_days, end)
         result = self._trading_days[start_idx:end_idx]
 
-        # 缓存结果
+        # 缓存结果（缓存原始列表）
         if self._data_cache:
             cache_key = f"trading_days:{start}:{end}"
             self._data_cache.set(cache_key, result)
 
-        return result
+        # 返回副本以防止调用方修改内部列表
+        return result.copy()
 
     def get_range_df(
         self,

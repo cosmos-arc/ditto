@@ -6,6 +6,10 @@ from unittest import mock
 import pytest
 from ditto_datahub.sources.base import SourceConfigurationError
 from ditto_datahub.sources.tushare.client import TushareClient
+from ditto_datahub.sources.tushare.rate_limiter import (
+    TushareRateLimitConfig,
+    TushareRateLimiter,
+)
 
 
 class TestTushareClientInit:
@@ -60,17 +64,21 @@ class TestTushareClientInit:
         """Test custom rate limit configuration."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        client = TushareClient(rate_limit=100, window_seconds=60)
-        assert client._rate_limit == 100
-        assert client._window_seconds == 60
+        # 使用新的 rate_config API
+        config = TushareRateLimitConfig(
+            global_rate=100,
+            global_window=60,
+        )
+        client = TushareClient(rate_config=config)
+        assert isinstance(client._limiter, TushareRateLimiter)
 
     def test_init_custom_retry_config(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Test custom retry configuration."""
+        """Test custom retry configuration uses paid tier."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        client = TushareClient(max_retries=3, retry_backoff=2.0)
-        assert client._max_retries == 3
-        assert client._retry_backoff == 2.0
+        # 使用付费账户配置
+        client = TushareClient(rate_config=TushareRateLimitConfig.paid())
+        assert isinstance(client._limiter, TushareRateLimiter)

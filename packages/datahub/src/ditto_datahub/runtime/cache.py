@@ -90,14 +90,12 @@ class DataCache:
             value = self._cache[key]
             if self._enable_metrics:
                 M.cache_hit.add(1, {"type": "data_cache"})
-            else:
-                self._hit_count += 1
+            self._hit_count += 1  # 同步维护本地计数器
             return value
         except KeyError:
             if self._enable_metrics:
                 M.cache_miss.add(1, {"type": "data_cache"})
-            else:
-                self._miss_count += 1
+            self._miss_count += 1  # 同步维护本地计数器
             return default
 
     def set(self, key: str, value: Any, ttl: int | None = None) -> None:
@@ -134,8 +132,7 @@ class DataCache:
             del self._cache[key]
             if self._enable_metrics:
                 M.cache_invalidations.add(1)
-            else:
-                self._invalidation_count += 1
+            self._invalidation_count += 1  # 同步维护本地计数器
             return True
         except KeyError:
             return False
@@ -158,8 +155,7 @@ class DataCache:
             del self._cache[key]
             if self._enable_metrics:
                 M.cache_invalidations.add(1)
-            else:
-                self._invalidation_count += 1
+            self._invalidation_count += 1  # 同步维护本地计数器
         return len(keys_to_delete)
 
     def clear(self) -> None:
@@ -177,17 +173,11 @@ class DataCache:
         """
         total_entries = len(self._cache)
 
-        if self._enable_metrics:
-            # 从 M.metrics 读取（需要实际实现，这里简化）
-            hit_count = 0
-            miss_count = 0
-            invalidation_count = 0
-            evict_count = 0
-        else:
-            hit_count = self._hit_count
-            miss_count = self._miss_count
-            invalidation_count = self._invalidation_count
-            evict_count = self._evict_count
+        # 始终使用本地计数器（同步维护）
+        hit_count = self._hit_count
+        miss_count = self._miss_count
+        invalidation_count = self._invalidation_count
+        evict_count = self._evict_count
 
         total_requests = hit_count + miss_count
         hit_rate = hit_count / total_requests if total_requests > 0 else 0.0

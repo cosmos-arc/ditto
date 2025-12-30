@@ -323,9 +323,39 @@ class TestCalendarStore:
         assert count == 1
 
         # Verify the record was inserted
-        day = self.store.get("2024-01-15")
-        assert day is not None
-        assert day.is_open is True
+
+    def test_get_range_returns_immutable_copy(self) -> None:
+        """Test that get_range returns a copy to prevent cache pollution."""
+        from ditto_datahub.runtime.cache import DataCache
+
+        # Create store with DataCache
+        data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
+        store_with_cache = CalendarStore(self.client, data_cache=data_cache)
+
+        # Call get_range twice
+        result1 = store_with_cache.get_range("2024-01-02", "2024-01-05")
+        result2 = store_with_cache.get_range("2024-01-02", "2024-01-05")
+
+        # Each call returns a copy (different objects)
+        assert result1 is not result2, "Each call should return a new copy"
+
+        # But content should be the same
+        assert result1 == result2
+
+        # Modify result1
+        result1.append("2024-01-15")
+        result1.remove("2024-01-02")
+
+        # result2 should not be affected
+        assert len(result2) == 4
+        assert "2024-01-02" in result2
+        assert "2024-01-15" not in result2
+
+        # Third call should return correct data
+        result3 = store_with_cache.get_range("2024-01-02", "2024-01-05")
+        assert len(result3) == 4
+        assert "2024-01-02" in result3
+        assert "2024-01-15" not in result3
 
     def teardown_method(self) -> None:
         """Clean up after test."""

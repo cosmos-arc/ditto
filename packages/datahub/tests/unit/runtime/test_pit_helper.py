@@ -1,5 +1,6 @@
 """Tests for PitHelper."""
 
+import pytest
 from ditto_datahub.runtime.pit_helper import PitHelper
 
 
@@ -11,9 +12,7 @@ class TestPitHelper:
         query = "SELECT * FROM stock_daily"
         result = PitHelper.add_pit_filter(query, "2024-01-15")
 
-        expected = (
-            "SELECT * FROM stock_daily WHERE knowledge_date <= '2024-01-15'"
-        )
+        expected = "SELECT * FROM stock_daily WHERE knowledge_date <= '2024-01-15'"
         assert result == expected
 
     def test_add_pit_filter_with_where(self) -> None:
@@ -22,8 +21,7 @@ class TestPitHelper:
         result = PitHelper.add_pit_filter(query, "2024-01-15")
 
         expected = (
-            "SELECT * FROM stock_daily WHERE sid = 1 "
-            "AND knowledge_date <= '2024-01-15'"
+            "SELECT * FROM stock_daily WHERE sid = 1 AND knowledge_date <= '2024-01-15'"
         )
         assert result == expected
 
@@ -74,6 +72,54 @@ class TestPitHelper:
             "stock_daily s LEFT JOIN adj_factor a "
             "ON s.sid = a.sid AND s.source = a.source "
             "AND a.trade_date <= '2024-01-15'"
+        )
+        assert result == expected
+
+    def test_add_pit_join_custom_date_column(self) -> None:
+        """Test add_pit_join with custom date column parameter."""
+        result = PitHelper.add_pit_join(
+            "stock_daily s",
+            "adj_factor a",
+            ["s.sid = a.sid"],
+            "2024-01-15",
+            date_column="effective_from",
+        )
+
+        expected = (
+            "stock_daily s LEFT JOIN adj_factor a "
+            "ON s.sid = a.sid AND a.effective_from <= '2024-01-15'"
+        )
+        assert result == expected
+
+    def test_add_pit_join_custom_date_column_knowledge_date(self) -> None:
+        """Test add_pit_join with knowledge_date column."""
+        result = PitHelper.add_pit_join(
+            "stock_daily s",
+            "security_mapping m",
+            ["s.sid = m.sid"],
+            "2024-01-15",
+            date_column="knowledge_date",
+        )
+
+        expected = (
+            "stock_daily s LEFT JOIN security_mapping m "
+            "ON s.sid = m.sid AND m.knowledge_date <= '2024-01-15'"
+        )
+        assert result == expected
+
+    def test_add_pit_join_default_date_column(self) -> None:
+        """Test add_pit_join with default date_column parameter."""
+        # When date_column is not specified, should use "trade_date" (default)
+        result = PitHelper.add_pit_join(
+            "stock_daily s",
+            "adj_factor a",
+            ["s.sid = a.sid"],
+            "2024-01-15",
+        )
+
+        expected = (
+            "stock_daily s LEFT JOIN adj_factor a "
+            "ON s.sid = a.sid AND a.trade_date <= '2024-01-15'"
         )
         assert result == expected
 
@@ -167,3 +213,144 @@ class TestPitHelper:
         # 结果应该同时包含 CTE 和 PIT 过滤
         assert "WITH filtered_data AS" in pit_query
         assert "knowledge_date <= '2024-01-15'" in pit_query
+
+
+class TestSQLSyntaxHandling:
+    """Tests for handling complex SQL syntax (ORDER BY, LIMIT, etc.)."""
+
+    def test_add_pit_filter_with_order_by(self) -> None:
+        """Test add_pit_filter handles ORDER BY clause correctly."""
+        query = "SELECT * FROM stock_daily ORDER BY trade_date DESC"
+        result = PitHelper.add_pit_filter(query, "2024-01-15")
+
+        # Should use CTE wrapper to avoid breaking ORDER BY
+        assert "WITH _pit_original AS" in result
+        assert "knowledge_date <= '2024-01-15'" in result
+        assert "ORDER BY trade_date DESC" in result
+
+    def test_add_pit_filter_with_limit(self) -> None:
+        """Test add_pit_filter handles LIMIT clause correctly."""
+        query = "SELECT * FROM stock_daily LIMIT 100"
+        result = PitHelper.add_pit_filter(query, "2024-01-15")
+
+        # Should use CTE wrapper to avoid breaking LIMIT
+        assert "WITH _pit_original AS" in result
+        assert "knowledge_date <= '2024-01-15'" in result
+        assert "LIMIT 100" in result
+
+    def test_add_pit_filter_with_group_by(self) -> None:
+        """Test add_pit_filter handles GROUP BY clause correctly."""
+        query = "SELECT sid, AVG(close) FROM stock_daily GROUP BY sid"
+        result = PitHelper.add_pit_filter(query, "2024-01-15")
+
+        # Should use CTE wrapper to avoid breaking GROUP BY
+        assert "WITH _pit_original AS" in result
+        assert "knowledge_date <= '2024-01-15'" in result
+        assert "GROUP BY sid" in result
+
+    def test_add_pit_filter_with_having(self) -> None:
+        """Test add_pit_filter handles HAVING clause correctly."""
+        query = "SELECT sid, AVG(close) as avg_close FROM stock_daily GROUP BY sid HAVING avg_close > 10"
+        result = PitHelper.add_pit_filter(query, "2024-01-15")
+
+        # Should use CTE wrapper to avoid breaking HAVING
+        assert "WITH _pit_original AS" in result
+        assert "knowledge_date <= '2024-01-15'" in result
+        assert "HAVING avg_close > 10" in result
+
+    def test_add_pit_filter_with_where_and_order_by(self) -> None:
+        """Test add_pit_filter handles WHERE + ORDER BY correctly."""
+        query = "SELECT * FROM stock_daily WHERE sid = 1 ORDER BY trade_date DESC"
+        result = PitHelper.add_pit_filter(query, "2024-01-15")
+
+        # Should use CTE wrapper because ORDER BY is present
+        assert "WITH _pit_original AS" in result
+        assert "knowledge_date <= '2024-01-15'" in result
+
+    def test_add_pit_filter_with_order_by_and_limit(self) -> None:
+        """Test add_pit_filter handles ORDER BY + LIMIT correctly."""
+        query = "SELECT * FROM stock_daily ORDER BY trade_date DESC LIMIT 10"
+        result = PitHelper.add_pit_filter(query, "2024-01-15")
+
+        # Should use CTE wrapper
+        assert "WITH _pit_original AS" in result
+        assert "knowledge_date <= '2024-01-15'" in result
+        assert "ORDER BY trade_date DESC" in result
+        assert "LIMIT 10" in result
+
+
+class TestSQLInjectionProtection:
+    """Tests for SQL injection protection in PitHelper."""
+
+    def test_add_pit_filter_rejects_invalid_date_format(self) -> None:
+        """Test that add_pit_filter rejects invalid date format."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            PitHelper.add_pit_filter("SELECT * FROM stock_daily", "2024/01/15")
+
+    def test_add_pit_filter_rejects_sql_injection_single_quote(self) -> None:
+        """Test that add_pit_filter rejects SQL injection with single quote."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            PitHelper.add_pit_filter(
+                "SELECT * FROM stock_daily", "2024-01-15' OR '1'='1"
+            )
+
+    def test_add_pit_filter_rejects_sql_injection_comment(self) -> None:
+        """Test that add_pit_filter rejects SQL injection with comment."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            PitHelper.add_pit_filter("SELECT * FROM stock_daily", "2024-01-15--")
+
+    def test_add_pit_filter_rejects_sql_injection_semicolon(self) -> None:
+        """Test that add_pit_filter rejects SQL injection with semicolon."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            PitHelper.add_pit_filter(
+                "SELECT * FROM stock_daily", "2024-01-15; DROP TABLE users--"
+            )
+
+    def test_add_pit_join_rejects_invalid_date_format(self) -> None:
+        """Test that add_pit_join rejects invalid date format."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            PitHelper.add_pit_join(
+                "stock_daily s", "adj_factor a", ["s.sid = a.sid"], "2024/01/15"
+            )
+
+    def test_add_pit_join_rejects_sql_injection(self) -> None:
+        """Test that add_pit_join rejects SQL injection."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            PitHelper.add_pit_join(
+                "stock_daily s",
+                "adj_factor a",
+                ["s.sid = a.sid"],
+                "2024-01-15' OR '1'='1",
+            )
+
+    def test_wrap_pit_cte_rejects_invalid_date_format(self) -> None:
+        """Test that wrap_pit_cte rejects invalid date format."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            PitHelper.wrap_pit_cte(
+                "SELECT sid, close FROM stock_daily", "pit_data", "2024/01/15"
+            )
+
+    def test_wrap_pit_cte_rejects_sql_injection(self) -> None:
+        """Test that wrap_pit_cte rejects SQL injection."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            PitHelper.wrap_pit_cte(
+                "SELECT sid, close FROM stock_daily",
+                "pit_data",
+                "2024-01-15'; DROP TABLE users--",
+            )
+
+    def test_get_safe_trade_date_rejects_invalid_date_format(self) -> None:
+        """Test that get_safe_trade_date rejects invalid date format."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            PitHelper.get_safe_trade_date(knowledge_date="2024/01/15")
+
+    def test_get_safe_trade_date_rejects_sql_injection(self) -> None:
+        """Test that get_safe_trade_date rejects SQL injection."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            PitHelper.get_safe_trade_date(knowledge_date="2024-01-15' OR '1'='1")
+
+    def test_add_pit_filter_accepts_valid_date(self) -> None:
+        """Test that add_pit_filter accepts valid date format."""
+        # Should not raise
+        result = PitHelper.add_pit_filter("SELECT * FROM stock_daily", "2024-01-15")
+        assert "knowledge_date <= '2024-01-15'" in result

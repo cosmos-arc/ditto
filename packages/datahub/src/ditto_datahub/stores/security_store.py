@@ -529,6 +529,14 @@ class SecurityStore:
                 [sid, source, src_code, list_date],
             )
 
+            # 失效相关缓存
+            if self._data_cache:
+                # 失效特定 src_code 的负缓存（如果有）
+                cache_key = f"sid:{src_code}:{source}:current"
+                self._data_cache.invalidate(cache_key)
+                # 失效 sid_symbol_map 缓存
+                self._data_cache.invalidate_pattern("sid_symbol_map:*")
+
             self._client.commit()
 
             logger.info(

@@ -268,9 +268,8 @@ class SqlEngine:
             duration: Query execution duration in seconds.
 
         """
-        # 记录慢查询指标
+        # 记录慢查询指标（duration 已在 execute() 中记录，这里只记录慢查询计数）
         M.sql_slow_query_total.add(1)
-        M.sql_query_duration.record(duration)
 
         # 记录日志
         logger.warning(

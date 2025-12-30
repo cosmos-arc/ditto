@@ -33,6 +33,8 @@ STOCK_DAILY_SCHEMA: dict[str, type[pl.DataType]] = {
     "is_limit_up": pl.Boolean,
     "is_limit_down": pl.Boolean,
     "is_st": pl.Boolean,
+    "up_limit": pl.Float64,  # 涨停价
+    "down_limit": pl.Float64,  # 跌停价
 }
 
 
@@ -84,6 +86,9 @@ ADJ_FACTOR_SCHEMA: dict[str, type[pl.DataType]] = {
     "source": pl.Utf8,
     "src_code": pl.Utf8,
     "adj_factor": pl.Float64,
+    # PIT safety: knowledge_date = when this factor became known
+    # For Tushare, this is typically trade_date + 1 day (T+1 publication)
+    "knowledge_date": pl.Date,
 }
 
 
@@ -112,4 +117,24 @@ UNIVERSE_CONSTITUENT_SCHEMA: dict[str, type[pl.DataType]] = {
     "effective_from": pl.Date,
     "effective_to": pl.Date,
     "weight": pl.Float64,
+}
+
+
+# ============================================================
+# Stock Status Schema (B.3: Risk Control Fields)
+# ============================================================
+# Stores stock status information for risk control:
+# - Suspension (停牌): is_suspended, suspend_timing
+# - ST status: is_st, st_type
+# - List status: list_status (L=正常, D=退市, P=暂停)
+STOCK_STATUS_SCHEMA: dict[str, type[pl.DataType]] = {
+    "sid": pl.Int64,
+    "trade_date": pl.Date,
+    "is_suspended": pl.Boolean,  # 是否停牌
+    "suspend_timing": pl.Utf8,  # 停牌时间段 "09:30-10:00" or None
+    "is_st": pl.Boolean,  # 是否ST
+    "st_type": pl.Utf8,  # ST/*ST 类型名称
+    "list_status": pl.Utf8,  # L正常/D退市/P暂停
+    "source": pl.Utf8,
+    "src_code": pl.Utf8,
 }
