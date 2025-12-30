@@ -14,6 +14,10 @@ from ditto_datahub.dq.models import DQIssue
 
 # Authoritative DQResult with issues list (from dq.engine)
 from ditto_datahub.dq.models import DQResult as DQResultNew
+
+# DQChecker and DQCheckResult are used at runtime (not just for type checking)
+# DQCheckResult is used in isinstance() check at line 732
+from ditto_datahub.runtime.dq_checker import DQChecker, DQCheckResult
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.security_store import SecurityStore
@@ -21,7 +25,6 @@ from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
 from ditto_datahub.types import DQResult, SidRange
 
 if TYPE_CHECKING:
-    from ditto_datahub.runtime.dq_checker import DQChecker, DQCheckResult
     from ditto_datahub.runtime.file_lock import FileLockManager
 
 
