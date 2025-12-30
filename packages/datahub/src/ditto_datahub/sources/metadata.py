@@ -1,11 +1,18 @@
 """Ingestion metadata models for incremental data fetching."""
 
+import warnings
 from dataclasses import dataclass
 from enum import Enum
 
 
 class IncrementalMode(str, Enum):
-    """Incremental fetch mode (deprecated, use new ingestion system)."""
+    """
+    Incremental fetch mode (deprecated, use new ingestion system).
+
+    .. deprecated::
+        Use the new ``ingest_date()`` interface with ``force`` parameter instead.
+
+    """
 
     QUICK = "quick"  # Quick mode: date-level check
     PRECISE = "precise"  # Precise mode: data-level check
@@ -16,7 +23,8 @@ class IngestionMetadata:
     """
     Metadata for data ingestion tracking (deprecated, legacy compatibility).
 
-    Deprecated: Use IngestionLog and IngestionCursor instead.
+    .. deprecated::
+        Use ``IngestionLog`` and ``IngestionCursor`` instead.
 
     Attributes:
         dataset: Dataset name (e.g., "etf_daily", "stock_daily")
@@ -103,3 +111,48 @@ class IngestionCursor:
     last_success: str | None  # None if no successful ingestion yet
     last_attempted: str | None  # None if never attempted
     updated_at: str
+
+
+# ============ New Ingestion System: Exceptions ============
+
+
+class NotTradingDayError(Exception):
+    """Raised when trying to ingest data for a non-trading day."""
+
+    def __init__(self, trade_date: str) -> None:
+        """
+        Initialize NotTradingDayError.
+
+        Args:
+            trade_date: The non-trading date (YYYY-MM-DD).
+
+        """
+        self.trade_date = trade_date
+        super().__init__(f"{trade_date} is not a trading day")
+
+
+class DataChangedError(Exception):
+    """Raised when data checksum changed and force=False."""
+
+    def __init__(
+        self,
+        trade_date: str,
+        old_checksum: str,
+        new_checksum: str,
+    ) -> None:
+        """
+        Initialize DataChangedError.
+
+        Args:
+            trade_date: The trade date (YYYY-MM-DD).
+            old_checksum: Previous checksum.
+            new_checksum: New checksum.
+
+        """
+        self.trade_date = trade_date
+        self.old_checksum = old_checksum
+        self.new_checksum = new_checksum
+        super().__init__(
+            f"Data changed for {trade_date}: checksum {old_checksum} → {new_checksum}. "
+            "Use force=True to overwrite."
+        )

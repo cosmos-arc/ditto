@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from ditto_datahub.stores.bars_store import BarsStore
     from ditto_datahub.stores.calendar_store import CalendarStore
     from ditto_datahub.stores.index_weight_store import IndexWeightStore
+    from ditto_datahub.stores.ingestion_cursor import IngestionCursorStore
+    from ditto_datahub.stores.ingestion_log import IngestionLogStore
     from ditto_datahub.stores.ingestion_metadata_store import IngestionMetadataStore
     from ditto_datahub.stores.pipeline_store import PipelineStore
     from ditto_datahub.stores.security_store import SecurityStore
@@ -184,11 +186,27 @@ class DataHub:
 
     @cached_property
     def ingestion_metadata_store(self) -> IngestionMetadataStore:
-        """Ingestion metadata store for incremental data fetching."""
+        """Ingestion metadata store for incremental data fetching (deprecated)."""
         from ditto_datahub.stores.ingestion_metadata_store import IngestionMetadataStore
         from ditto_datahub.stores.sqlite_client import SQLiteClient
 
         return IngestionMetadataStore(SQLiteClient(self.sqlite_pool))
+
+    @cached_property
+    def ingestion_log(self) -> IngestionLogStore:
+        """Ingestion event log store (new system)."""
+        from ditto_datahub.stores.ingestion_log import IngestionLogStore
+        from ditto_datahub.stores.sqlite_client import SQLiteClient
+
+        return IngestionLogStore(SQLiteClient(self.sqlite_pool))
+
+    @cached_property
+    def ingestion_cursor(self) -> IngestionCursorStore:
+        """Ingestion cursor store for fast progress tracking (new system)."""
+        from ditto_datahub.stores.ingestion_cursor import IngestionCursorStore
+        from ditto_datahub.stores.sqlite_client import SQLiteClient
+
+        return IngestionCursorStore(SQLiteClient(self.sqlite_pool))
 
     # ========================================================================
     # Repository Layer
@@ -397,7 +415,7 @@ class DataHub:
 
         Closes in reverse order of initialization to avoid dependency issues:
         1. Stores with SQLite clients (pipeline_store, calendar_store, security_store,
-           universe_store, index_weight_store)
+           universe_store, index_weight_store, ingestion_log, ingestion_cursor)
         2. SQL engine (DuckDB)
         3. SQLite pool (connection manager)
         """
@@ -409,6 +427,8 @@ class DataHub:
             "security_store",
             "universe_store",
             "index_weight_store",
+            "ingestion_log",
+            "ingestion_cursor",
         ):
             if store_name in self.__dict__:
                 store = getattr(self, store_name)

@@ -9,7 +9,13 @@ from typing import TYPE_CHECKING, Any
 import polars as pl
 
 if TYPE_CHECKING:
-    from ditto_datahub.sources.metadata import IncrementalMode, IngestionMetadata
+    from ditto_datahub.sources.metadata import (
+        DataChangedError,
+        IncrementalMode,
+        IngestionLog,
+        IngestionMetadata,
+        NotTradingDayError,
+    )
 
 
 class DataSourceError(Exception):
@@ -330,6 +336,38 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
+    def ingest_date(
+        self,
+        dataset: str,
+        trade_date: str,
+        force: bool = False,
+    ) -> tuple[pl.DataFrame, IngestionLog]:
+        """
+        Ingest data for a specific date (new interface).
+
+        This is the new unified interface for data ingestion, replacing the
+        old ``fetch_etf_daily_incremental()`` method.
+
+        Args:
+            dataset: Dataset name (e.g., "stock_daily", "etf_daily").
+            trade_date: Trade date (YYYY-MM-DD).
+            force: Force update even if checksum matches.
+
+        Returns:
+            Tuple of:
+            - DataFrame with data (empty if skipped due to checksum match)
+            - IngestionLog with ingestion metadata
+
+        Raises:
+            NotTradingDayError: If trade_date is not a trading day.
+            DataChangedError: If checksum changed and force=False.
+            SourceFetchError: If fetch fails.
+            SourceTransformationError: If data transformation fails.
+
+        """
+        pass
+
+    @abstractmethod
     def fetch_etf_daily_incremental(
         self,
         trade_date: str,
@@ -339,6 +377,9 @@ class DataSource(ABC):
     ) -> tuple[pl.DataFrame, IngestionMetadata]:
         """
         Fetch ETF daily data with incremental update support.
+
+        .. deprecated::
+            Use ``ingest_date()`` instead.
 
         Args:
             trade_date: Trade date to fetch (YYYY-MM-DD).
