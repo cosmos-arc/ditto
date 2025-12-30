@@ -4,15 +4,13 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-from ditto_foundation.logging_config import get_logger
+from ditto_foundation.observability import logger
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .exceptions import DittoException
-
-logger = get_logger(__name__)
 
 
 @dataclass

@@ -333,10 +333,10 @@ class DataSource(ABC):
     def fetch_etf_daily_incremental(
         self,
         trade_date: str,
-        mode: IncrementalMode,  # type: ignore[valid-type]
+        mode: IncrementalMode,
         last_trade_date: str | None = None,
         last_checksum: str | None = None,
-    ) -> tuple[pl.DataFrame, IngestionMetadata]:  # type: ignore[valid-type]
+    ) -> tuple[pl.DataFrame, IngestionMetadata]:
         """
         Fetch ETF daily data with incremental update support.
 

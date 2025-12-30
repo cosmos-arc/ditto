@@ -14,7 +14,7 @@ class BusinessChecker:
     def check(
         self,
         df: pl.DataFrame,
-        rules: list[dict],
+        rules: list[dict[str, Any]],
         context: dict[str, Any] | None = None,
     ) -> list[DQIssue]:
         """
@@ -41,7 +41,7 @@ class BusinessChecker:
     def _check_rule(
         self,
         df: pl.DataFrame,
-        rule: dict,
+        rule: dict[str, Any],
         context: dict[str, Any] | None = None,
     ) -> DQIssue | None:
         """
@@ -69,7 +69,7 @@ class BusinessChecker:
 
         return None
 
-    def _check_positive(self, df: pl.DataFrame, rule: dict) -> DQIssue | None:
+    def _check_positive(self, df: pl.DataFrame, rule: dict[str, Any]) -> DQIssue | None:
         """Check positive values."""
         columns = rule.get("columns", [])
 
@@ -95,7 +95,9 @@ class BusinessChecker:
 
         return None
 
-    def _check_expression(self, df: pl.DataFrame, rule: dict) -> DQIssue | None:
+    def _check_expression(
+        self, df: pl.DataFrame, rule: dict[str, Any]
+    ) -> DQIssue | None:
         """Check expression-based rule (e.g., OHLC consistency)."""
         name = rule.get("name", "expression")
 
@@ -130,7 +132,7 @@ class BusinessChecker:
 
         return None
 
-    def _check_range(self, df: pl.DataFrame, rule: dict) -> DQIssue | None:
+    def _check_range(self, df: pl.DataFrame, rule: dict[str, Any]) -> DQIssue | None:
         """Check range constraint."""
         column = rule.get("column")
         if not column or column not in df.columns:
@@ -173,7 +175,9 @@ class BusinessChecker:
 
         return None
 
-    def _check_no_zero_volume(self, df: pl.DataFrame, rule: dict) -> DQIssue | None:
+    def _check_no_zero_volume(
+        self, df: pl.DataFrame, rule: dict[str, Any]
+    ) -> DQIssue | None:
         """Check no zero volume."""
         column = rule.get("column", "volume")
         if column not in df.columns:

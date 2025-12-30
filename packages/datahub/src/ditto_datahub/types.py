@@ -27,7 +27,7 @@ class SidRange(NamedTuple):
 
 
 # ============ DQ 枚举 ============
-class DQSeverity(Enum):
+class DQSeverity(str, Enum):
     """DQ severity levels (B.5: 统一三级定义)."""
 
     ERROR = "error"
@@ -46,7 +46,7 @@ class OnDuplicate(Enum):
 
 @dataclass(frozen=True)
 class DQResult:
-    """Data quality check result."""
+    """Data quality check result (legacy, for runtime/dq_checker.py compatibility)."""
 
     passed: bool
     severity: DQSeverity

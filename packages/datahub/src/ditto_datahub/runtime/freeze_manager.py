@@ -253,6 +253,10 @@ class FreezeManager:
         """
         收集所有数据集的 checksum。
 
+        支持两种模式：
+        1. 单文件：{dataset}.parquet
+        2. 分区目录：{dataset}/**/*.parquet（匹配所有分区文件）
+
         Args:
             freeze_id: Freeze ID（用于日志）
             datasets: 数据集列表
@@ -268,18 +272,34 @@ class FreezeManager:
         missing_files: list[str] = []
 
         for dataset in datasets:
-            # 数据集路径 -> 文件路径
-            file_path = self._data_root / f"{dataset}.parquet"
+            # Try single file first (e.g., "stock_daily.parquet")
+            single_file_path = self._data_root / f"{dataset}.parquet"
 
-            if not file_path.exists():
-                rel_path = file_path.relative_to(self._data_root).as_posix()
-                missing_files.append(rel_path)
+            if single_file_path.exists():
+                # Single file mode
+                checksum = self._compute_checksum(single_file_path)
+                rel_path = single_file_path.relative_to(self._data_root).as_posix()
+                files[rel_path] = checksum
                 continue
 
-            # 计算 MD5 checksum
-            checksum = self._compute_checksum(file_path)
-            rel_path = file_path.relative_to(self._data_root).as_posix()
-            files[rel_path] = checksum
+            # Try partitioned directory (e.g., "stock_daily/**/*.parquet")
+            dataset_dir = self._data_root / dataset
+            if dataset_dir.exists() and dataset_dir.is_dir():
+                # Find all .parquet files in the dataset directory
+                parquet_files = list(dataset_dir.rglob("*.parquet"))
+                if parquet_files:
+                    for parquet_file in parquet_files:
+                        checksum = self._compute_checksum(parquet_file)
+                        rel_path = parquet_file.relative_to(self._data_root).as_posix()
+                        files[rel_path] = checksum
+                    continue
+
+            # Neither single file nor directory found
+            if single_file_path.parent.exists():
+                rel_path = single_file_path.relative_to(self._data_root).as_posix()
+            else:
+                rel_path = f"{dataset}.parquet"
+            missing_files.append(rel_path)
 
         # 如果有文件缺失，抛出异常
         if missing_files:

@@ -422,7 +422,7 @@ class SecurityStore:
             cache_key = f"sid_symbol_map:{','.join(map(str, sorted(sids)))}"
             cached = self._data_cache.get(cache_key)
             if cached is not None:
-                return cached
+                return cast(dict[int, str], cached)
 
         # 从数据库查询
         if sids:

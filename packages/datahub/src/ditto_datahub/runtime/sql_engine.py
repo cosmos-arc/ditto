@@ -328,15 +328,21 @@ class SqlEngine:
         # Attach SQLite if needed
         if self._needs_sqlite(prepared_query):
             self._attach_sqlite()
-            # Prefix SQLite tables with meta.
+            # Prefix SQLite tables with meta. (if not already prefixed)
             for table in self.SQLITE_TABLES:
-                # Replace table references with meta.table
-                # Use word boundaries to avoid partial matches
-                pattern = r"\b" + table + r"\b"
+                # Only replace if not already prefixed with meta.
+                # Negative lookahead: \btable\b not preceded by meta.
+                pattern = r"\b(?<!meta\.)" + table + r"\b"
                 prepared_query = re.sub(pattern, f"meta.{table}", prepared_query)
 
-        # Replace $asof parameter
+        # Replace $asof parameter (safe: validate date format to prevent SQL injection)
         if asof:
+            # Validate ISO date format (YYYY-MM-DD) to prevent SQL injection
+            # Only allow safe characters: digits and hyphen in specific format
+            if not re.match(r"^\d{4}-\d{2}-\d{2}$", asof):
+                raise ValueError(
+                    f"Invalid asof date format: {asof}. Expected YYYY-MM-DD format."
+                )
             prepared_query = prepared_query.replace("$asof", f"'{asof}'")
 
         # Execute query and convert to polars DataFrame

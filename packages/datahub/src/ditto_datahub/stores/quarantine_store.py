@@ -84,7 +84,12 @@ class QuarantineStore:
             ),
         )
         self._conn.commit()
-        return cursor.lastrowid
+        row_id = cursor.lastrowid
+        if row_id is None:
+            # Fallback: get the last inserted row ID
+            cursor = self._conn.execute("SELECT last_insert_rowid()")
+            row_id = cursor.fetchone()[0]
+        return row_id
 
     def get_quarantined_data(
         self,

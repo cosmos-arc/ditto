@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import bisect
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import polars as pl
 from ditto_foundation import logger, span
@@ -298,7 +298,7 @@ class CalendarStore:
             cached = self._data_cache.get(cache_key)
             if cached is not None:
                 # 返回副本以防止缓存污染
-                return cached.copy()
+                return cast(list[str], cached).copy()
 
         # 从内存缓存计算
         start_idx = bisect.bisect_left(self._trading_days, start)
