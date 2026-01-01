@@ -6,6 +6,246 @@
 - 调用 Metadata 管理增量逻辑
 - 调用 DataHub 写入数据
 - 记录摄取日志
-
-本模块将在 Task 1.3 中实现。
 """
+
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, ClassVar, Literal
+
+import polars as pl
+from ditto_datahub.sources.base import DataSource, SourceFetchError
+from ditto_datahub.sources.metadata import IngestionStatus
+from ditto_foundation import logger
+
+from ditto_server.ingestion.services.metadata import MetadataManager
+
+if TYPE_CHECKING:
+    from ditto_datahub.hub import DataHub
+
+
+@dataclass(frozen=True)
+class IngestionResult:
+    """数据摄取结果。"""
+
+    dataset: str
+    trade_date: str
+    status: Literal["success", "skipped", "failed"]
+    row_count: int | None = None
+    checksum: str | None = None
+    message: str = ""
+    error: str | None = None
+
+
+class IngestionCoordinator:
+    """统一摄取协调器。"""
+
+    _DATASET_METHODS: ClassVar[dict[str, str]] = {
+        "calendar": "fetch_calendar",
+        "etf_basic": "fetch_etf_basic",
+        "etf_daily": "fetch_etf_daily",
+        "stock_basic": "fetch_stock_basic",
+        "stock_daily": "fetch_stock_daily",
+        "adj_factor": "fetch_adj_factor",
+        "fund_adj": "fetch_fund_adj",
+    }
+
+    def __init__(
+        self,
+        hub: "DataHub",
+        source: DataSource,
+        source_name: str = "tushare",
+    ) -> None:
+        """初始化 IngestionCoordinator。"""
+        self._hub = hub
+        self._source = source
+        self._source_name = source_name
+        self._metadata_manager = MetadataManager(log_store=hub.ingestion_log)
+
+    def ingest_date(
+        self,
+        dataset: str,
+        trade_date: str,
+        force: bool = False,
+    ) -> IngestionResult:
+        """摄取单个交易日数据。"""
+        logger.info(
+            "开始摄取数据",
+            event="ingestion_start",
+            dataset=dataset,
+            trade_date=trade_date,
+            force=force,
+        )
+
+        # 验证数据集是否支持
+        if dataset not in self._DATASET_METHODS:
+            raise ValueError(f"不支持的数据集: {dataset}")
+
+        should_skip, skip_reason = self._metadata_manager.should_skip(
+            dataset=dataset,
+            trade_date=trade_date,
+            force=force,
+        )
+
+        if should_skip:
+            return IngestionResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                status="skipped",
+                message=skip_reason or "数据已存在且摄取成功",
+            )
+
+        try:
+            df = self._fetch_data(dataset, trade_date)
+        except SourceFetchError as e:
+            self._hub.ingestion_log.save_log(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.FAIL,
+                error_code="FETCH_ERROR",
+                error_message=str(e),
+            )
+            return IngestionResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                status="failed",
+                error="FETCH_ERROR",
+                message=f"获取数据失败: {e}",
+            )
+        except Exception as e:
+            self._hub.ingestion_log.save_log(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.FAIL,
+                error_code="UNKNOWN_ERROR",
+                error_message=f"{type(e).__name__}: {e}",
+            )
+            return IngestionResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                status="failed",
+                error="UNKNOWN_ERROR",
+                message=f"未知错误: {e}",
+            )
+
+        if df.is_empty():
+            self._hub.ingestion_log.save_log(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.FAIL,
+                error_code="EMPTY_DATA",
+                error_message="获取的数据为空",
+            )
+            return IngestionResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                status="failed",
+                error="EMPTY_DATA",
+                message="获取的数据为空",
+            )
+
+        checksum = self._metadata_manager.compute_checksum(df)
+
+        try:
+            file_path, stored_checksum = self._write_data(dataset, df, trade_date)
+        except Exception as e:
+            self._hub.ingestion_log.save_log(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.FAIL,
+                error_code="WRITE_ERROR",
+                error_message=str(e),
+            )
+            return IngestionResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                status="failed",
+                error="WRITE_ERROR",
+                message=f"写入数据失败: {e}",
+            )
+
+        self._hub.ingestion_log.save_log(
+            dataset=dataset,
+            source=self._source_name,
+            trade_date=trade_date,
+            status=IngestionStatus.SUCCESS,
+            checksum=stored_checksum or checksum,
+            rows=len(df),
+        )
+
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="success",
+            row_count=len(df),
+            checksum=stored_checksum or checksum,
+            message="数据摄取成功",
+        )
+
+    def ingest_range(
+        self,
+        dataset: str,
+        start_date: str,
+        end_date: str,
+        force: bool = False,
+    ) -> list[IngestionResult]:
+        """摄取日期范围数据。"""
+        trade_dates = self._hub.calendar_store.get_range(start_date, end_date)
+
+        if not trade_dates:
+            return []
+
+        results: list[IngestionResult] = []
+        for trade_date in trade_dates:
+            result = self.ingest_date(dataset, trade_date, force)
+            results.append(result)
+
+        return results
+
+    def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
+        """根据数据集类型调用对应的 Source 方法获取数据。"""
+        method_name = self._DATASET_METHODS.get(dataset)
+        if method_name is None:
+            raise ValueError(f"不支持的数据集: {dataset}")
+
+        method = getattr(self._source, method_name)
+
+        if dataset in ("calendar", "etf_basic", "stock_basic"):
+            if dataset == "calendar":
+                return method(trade_date, trade_date)  # type: ignore[call-arg]
+            return method()  # type: ignore[call-arg]
+        else:
+            return method(trade_date)  # type: ignore[call-arg]
+
+    def _write_data(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        trade_date: str,
+    ) -> tuple[str, str]:
+        """根据数据集类型写入对应的 Store。"""
+        year = int(trade_date[:4])
+
+        if dataset in ("etf_daily", "stock_daily"):
+            file_path, checksum = self._hub.bars_store.write(
+                dataset=dataset,
+                df=df,
+                year=year,
+            )
+        elif dataset in ("adj_factor", "fund_adj"):
+            file_path, checksum = self._hub.adj_factor_store.write(
+                dataset=dataset,
+                df=df,
+                year=year,
+            )
+        elif dataset == "calendar":
+            records = df.to_dicts()
+            self._hub.calendar_store.upsert(records)  # type: ignore[arg-type]
+            file_path = f"calendar_store:{trade_date}"
+            checksum = self._metadata_manager.compute_checksum(df)
+        else:
+            raise ValueError(f"不支持写入数据集: {dataset}")
+
+        return file_path, checksum
