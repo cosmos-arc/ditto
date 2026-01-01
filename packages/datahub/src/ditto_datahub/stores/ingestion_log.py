@@ -387,3 +387,53 @@ class IngestionLogStore:
             rows = self._client.fetchall(sql, [dataset, source])
 
         return [row["trade_date"] for row in rows]
+
+    def get_failed_logs(
+        self,
+        dataset: str,
+        source: str = "tushare",
+        limit: int = 10,
+        max_attempts: int = 3,
+    ) -> list[IngestionLog]:
+        """
+        Get failed ingestion logs that need retry.
+
+        Args:
+            dataset: Dataset name (e.g., "stock_daily")
+            source: Data source identifier (default: "tushare")
+            limit: Maximum number of logs to return
+            max_attempts: Only return logs with attempts < max_attempts
+
+        Returns:
+            List of IngestionLog that need retry.
+
+        """
+        sql = """
+            SELECT dataset, source, trade_date, status,
+                   checksum, rows, error_code, error_message,
+                   attempts, first_attempt_at, last_attempt_at
+            FROM ingestion_log
+            WHERE dataset = ? AND source = ? AND status = 'FAIL'
+              AND attempts < ?
+            ORDER BY trade_date ASC
+            LIMIT ?
+        """
+
+        rows = self._client.fetchall(sql, [dataset, source, max_attempts, limit])
+
+        return [
+            IngestionLog(
+                dataset=row["dataset"],
+                source=row["source"],
+                trade_date=row["trade_date"],
+                status=IngestionStatus(row["status"]),
+                checksum=row["checksum"],
+                rows=row["rows"],
+                error_code=row["error_code"],
+                error_message=row["error_message"],
+                attempts=row["attempts"],
+                first_attempt_at=row["first_attempt_at"],
+                last_attempt_at=row["last_attempt_at"],
+            )
+            for row in rows
+        ]
