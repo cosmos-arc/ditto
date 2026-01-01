@@ -349,3 +349,41 @@ class IngestionLogStore:
             "fail_count": row["fail_count"] if row else 0,
             "total_count": row["total_count"] if row else 0,
         }
+
+    def get_ingested_dates(
+        self,
+        dataset: str,
+        source: str = "tushare",
+        status: IngestionStatus | None = None,
+    ) -> list[str]:
+        """
+        Get all ingested trade dates for a dataset.
+
+        Args:
+            dataset: Dataset name (e.g., "stock_daily")
+            source: Data source identifier (default: "tushare")
+            status: Optional status filter (SUCCESS or FAIL). If None,
+                returns all dates.
+
+        Returns:
+            List of trade dates (YYYY-MM-DD) that have been ingested.
+
+        """
+        if status:
+            sql = """
+                SELECT trade_date
+                FROM ingestion_log
+                WHERE dataset = ? AND source = ? AND status = ?
+                ORDER BY trade_date ASC
+            """
+            rows = self._client.fetchall(sql, [dataset, source, status.value])
+        else:
+            sql = """
+                SELECT trade_date
+                FROM ingestion_log
+                WHERE dataset = ? AND source = ?
+                ORDER BY trade_date ASC
+            """
+            rows = self._client.fetchall(sql, [dataset, source])
+
+        return [row["trade_date"] for row in rows]
