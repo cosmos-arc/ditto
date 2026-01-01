@@ -10,13 +10,15 @@ Flow 功能：
 - 非交易日跳过逻辑
 - 汇总所有结果
 - 触发 DQC 检查
+
+使用 Prefect 原生依赖机制（@task + wait_for）实现声明式编排。
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from prefect import flow
+from prefect import flow, task
 
 from ditto_server.ingestion.config.datasets import (
     Dataset,
@@ -30,7 +32,30 @@ from ditto_server.ingestion.tasks import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+
+    from prefect.tasks import Task
+
+
+@task(name="check_trading_day")
+def check_trading_day(trade_date: str, data_root: str) -> bool:
+    """
+    检查指定日期是否为交易日。
+
+    Args:
+        trade_date: 交易日期 (YYYY-MM-DD)
+        data_root: DataHub 根目录
+
+    Returns:
+        是否为交易日
+
+    """
+    from ditto_datahub import DataHub  # noqa: PLC0415
+
+    hub = DataHub(data_root=data_root)
+    try:
+        return hub.calendar.is_trading_day(trade_date)
+    finally:
+        hub.close()
 
 
 @flow(name="daily-ingestion", description="每日增量数据摄取流程")
@@ -49,6 +74,8 @@ def daily_ingestion_flow(
     3. 执行 T1 增量任务（并行，依赖 T0）
     4. 触发 T3 数据质量检查
 
+    使用 Prefect 原生依赖机制（@task + wait_for）实现声明式编排。
+
     Args:
         trade_date: 交易日期 (YYYY-MM-DD)
         source: 数据源名称
@@ -66,74 +93,90 @@ def daily_ingestion_flow(
         - summary: 汇总统计
 
     """
-    from ditto_datahub import DataHub  # noqa: PLC0415
+    # 1. 检查交易日
+    is_trading = check_trading_day(trade_date=trade_date, data_root=data_root)
 
-    # 1. 验证交易日
-    hub = DataHub(data_root=data_root)
-    try:
-        if not hub.calendar.is_trading_day(trade_date):
-            return {
+    # 如果非交易日，直接返回
+    if not is_trading:
+        return {
+            "trade_date": trade_date,
+            "skipped": True,
+            "reason": "非交易日",
+            "t0_results": {},
+            "t1_results": {},
+            "dqc_results": {},
+            "summary": {
                 "trade_date": trade_date,
-                "skipped": True,
-                "reason": "非交易日",
-                "t0_results": {},
-                "t1_results": {},
-                "dqc_results": {},
-                "summary": {
-                    "trade_date": trade_date,
-                    "total_tasks": 0,
-                    "success_count": 0,
-                    "failed_count": 0,
-                    "skipped_count": 0,
-                },
-            }
-    finally:
-        hub.close()
+                "total_tasks": 0,
+                "success_count": 0,
+                "failed_count": 0,
+                "skipped_count": 0,
+            },
+        }
 
-    # 2. 执行 T0 任务（并行）
+    # 2. 提交 T0 任务（并行执行）
     t0_datasets = get_datasets_by_tier(TaskTier.T0_META)
-    t0_results = _execute_tier_tasks(
-        datasets=t0_datasets,
-        trade_date=trade_date,
-        source=source,
-        data_root=data_root,
-        force=force,
-        task_factory=create_ingest_task_t0,
-    )
+    t0_futures = []
+    for dataset in t0_datasets:
+        t0_task = create_ingest_task_t0(dataset)  # type: ignore[assignment, attr-defined]
+        future = t0_task.submit(
+            trade_date=trade_date,
+            source=source,
+            data_root=data_root,
+            force=force,
+        )
+        t0_futures.append(future)
 
-    # 3. 执行 T1 任务（并行，依赖 T0）
+    # 3. 提交 T1 任务（并行执行，等待 T0 完成）
     t1_datasets = get_datasets_by_tier(TaskTier.T1_INCREMENTAL)
-    t1_results = _execute_tier_tasks(
-        datasets=t1_datasets,
-        trade_date=trade_date,
-        source=source,
-        data_root=data_root,
-        force=force,
-        task_factory=create_ingest_task_t1_bars,
-    )
+    t1_futures = []
 
-    # 执行 adj_factor 和 fund_adj（T1）
+    # T1 日行情任务
+    for dataset in t1_datasets:
+        t1_task = create_ingest_task_t1_bars(dataset)  # type: ignore[assignment, attr-defined]
+        future = t1_task.submit(
+            trade_date=trade_date,
+            source=source,
+            data_root=data_root,
+            force=force,
+            wait_for=t0_futures,  # 等待所有 T0 任务完成
+        )
+        t1_futures.append(future)
+
+    # T1 复权因子任务
     adj_datasets = [Dataset.ADJ_FACTOR, Dataset.FUND_ADJ]
     for dataset in adj_datasets:
-        task = create_ingest_task_t1_adj(dataset)
-        try:
-            result = task(
-                trade_date=trade_date,
-                source=source,
-                data_root=data_root,
-                force=force,
-            )
-            t1_results[dataset.value] = result
-        except Exception as e:
-            t1_results[dataset.value] = {
-                "status": "failed",
-                "error": str(e),
-            }
+        t1_adj_task = create_ingest_task_t1_adj(dataset)  # type: ignore[assignment, attr-defined]
+        future = t1_adj_task.submit(
+            trade_date=trade_date,
+            source=source,
+            data_root=data_root,
+            force=force,
+            wait_for=t0_futures,  # 等待所有 T0 任务完成
+        )
+        t1_futures.append(future)
 
-    # 4. 触发 DQC 检查
-    dqc_results = _trigger_dqc(trade_date=trade_date)
+    # 4. 收集结果
+    t0_results = {}
+    for future in t0_futures:
+        result = future.result()
+        dataset_name = result.get("dataset", "unknown")
+        t0_results[dataset_name] = result
 
-    # 5. 汇总结果
+    t1_results = {}
+    for future in t1_futures:
+        result = future.result()
+        dataset_name = result.get("dataset", "unknown")
+        t1_results[dataset_name] = result
+
+    # 5. 触发 DQC（TODO: 待实现）
+    dqc_results = {
+        "trade_date": trade_date,
+        "status": "skipped",
+        "message": "DQC 检查待实现",
+    }
+
+    # 6. 汇总统计
     all_results = {**t0_results, **t1_results}
     success_count = sum(1 for r in all_results.values() if r.get("status") == "success")
     failed_count = sum(1 for r in all_results.values() if r.get("status") == "failed")
@@ -155,68 +198,4 @@ def daily_ingestion_flow(
         "t1_results": t1_results,
         "dqc_results": dqc_results,
         "summary": summary,
-    }
-
-
-def _execute_tier_tasks(  # noqa: PLR0913
-    datasets: list[Dataset],
-    trade_date: str,
-    source: str,
-    data_root: str,
-    force: bool,
-    task_factory: Callable[[Dataset], Any],
-) -> dict[str, Any]:
-    """
-    执行指定层级的所有任务。
-
-    Args:
-        datasets: 数据集列表
-        trade_date: 交易日期
-        source: 数据源
-        data_root: 数据根目录
-        force: 是否强制
-        task_factory: 任务工厂函数
-
-    Returns:
-        数据集名称到结果的映射
-
-    """
-    results = {}
-
-    for dataset in datasets:
-        task = task_factory(dataset)
-        try:
-            result = task(
-                trade_date=trade_date,
-                source=source,
-                data_root=data_root,
-                force=force,
-            )
-            results[dataset.value] = result
-        except Exception as e:
-            results[dataset.value] = {
-                "status": "failed",
-                "error": str(e),
-            }
-
-    return results
-
-
-def _trigger_dqc(trade_date: str) -> dict[str, object]:
-    """
-    触发数据质量检查。
-
-    Args:
-        trade_date: 交易日期
-
-    Returns:
-        DQC 检查结果
-
-    """
-    # TODO: 实现 DQC 检查逻辑
-    # 目前返回占位符
-    return {
-        "trade_date": trade_date,
-        "status": "skipped",
-        "message": "DQC 检查待实现",
     }
