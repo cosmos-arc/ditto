@@ -403,20 +403,20 @@ DataSource.fetch_fund_adj()
 
 ### Phase 1: Ingestion Service 层（核心）
 
-- [ ] **Task 1.1**: 创建 Ingestion Service 目录结构
-- [ ] **Task 1.2**: 实现 MetadataManager
-- [ ] **Task 1.3**: 实现 IngestionCoordinator
+- [x] **Task 1.1**: 创建 Ingestion Service 目录结构
+- [x] **Task 1.2**: 实现 MetadataManager
+- [x] **Task 1.3**: 实现 IngestionCoordinator
 
 ### Phase 2: 全量回补和重试能力
 
-- [ ] **Task 2.1**: 实现 BackfillManager
-- [ ] **Task 2.2**: 实现 RetryManager
+- [x] **Task 2.1**: 实现 BackfillManager
+- [x] **Task 2.2**: 实现 RetryManager
 
 ### Phase 3: Prefect 集成（新增）
 
-- [ ] **Task 3.1**: 创建 config/datasets.py (数据集注册表)
-- [ ] **Task 3.2**: 创建 Tasks 层 (轻量 wrapper)
-- [ ] **Task 3.3**: 创建 flows/daily.py (每日增量 Flow)
+- [x] **Task 3.1**: 创建 config/datasets.py (数据集注册表)
+- [x] **Task 3.2**: 创建 Tasks 层 (轻量 wrapper)
+- [x] **Task 3.3**: 创建 flows/daily.py (每日增量 Flow)
 - [ ] **Task 3.4**: 创建 flows/backfill.py (全量回补 Flow)
 - [ ] **Task 3.5**: 创建 flows/repair.py (修补 Flow)
 - [ ] **Task 3.6**: 创建 deploy.py (部署脚本)
