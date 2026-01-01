@@ -24,7 +24,7 @@ class TestDatasetEnum:
         assert Dataset.STOCK_BASIC in Dataset
         assert Dataset.ETF_BASIC in Dataset
 
-    def test_dataset_t1_daily_datasets(self) -> None:
+    def test_dataset_t1_incremental_datasets(self) -> None:
         """Test T1 daily datasets are defined."""
         assert Dataset.ETF_DAILY in Dataset
         assert Dataset.STOCK_DAILY in Dataset
@@ -47,10 +47,10 @@ class TestTaskTierEnum:
 
     def test_task_tier_values(self) -> None:
         """Test task tier enum values."""
-        assert TaskTier.T0_META.value == "T0"
-        assert TaskTier.T1_DAILY.value == "T1"
-        assert TaskTier.T2_REPAIR.value == "T2"
-        assert TaskTier.T3_QUALITY.value == "T3"
+        assert TaskTier.T0_META.value == "t0_meta"
+        assert TaskTier.T1_INCREMENTAL.value == "t1_incremental"
+        assert TaskTier.T2_REPAIR.value == "t2_repair"
+        assert TaskTier.T3_QUALITY.value == "t3_quality"
 
 
 class TestDatasetConfig:
@@ -60,7 +60,7 @@ class TestDatasetConfig:
         """Test DatasetConfig model validation with all required fields."""
         config = DatasetConfig(
             dataset=Dataset.ETF_DAILY,
-            tier=TaskTier.T1_DAILY,
+            tier=TaskTier.T1_INCREMENTAL,
             description="ETF daily bars",
             update_frequency="每日",
             typical_available_time=time(18, 0),
@@ -83,7 +83,7 @@ class TestDatasetConfig:
         )
 
         assert config.dataset == Dataset.ETF_DAILY
-        assert config.tier == TaskTier.T1_DAILY
+        assert config.tier == TaskTier.T1_INCREMENTAL
         assert config.update_frequency == "每日"
         assert config.typical_available_time == time(18, 0)
         assert config.priority == 20
@@ -105,7 +105,7 @@ class TestDatasetConfig:
         """Test DatasetConfig with depends_on field."""
         config = DatasetConfig(
             dataset=Dataset.STOCK_DAILY,
-            tier=TaskTier.T1_DAILY,
+            tier=TaskTier.T1_INCREMENTAL,
             description="Stock daily bars",
             update_frequency="每日",
             typical_available_time=time(17, 0),
@@ -133,7 +133,7 @@ class TestDatasetConfig:
         """Test ADJ_FACTOR depends on STOCK_DAILY."""
         config = DatasetConfig(
             dataset=Dataset.ADJ_FACTOR,
-            tier=TaskTier.T1_DAILY,
+            tier=TaskTier.T1_INCREMENTAL,
             description="复权因子",
             update_frequency="每日",
             typical_available_time=time(19, 0),
@@ -192,7 +192,7 @@ class TestDatasetRegistry:
         """Test T1 daily datasets configuration."""
         # ETF daily should be T1
         etf_daily = DATASET_REGISTRY[Dataset.ETF_DAILY]
-        assert etf_daily.tier == TaskTier.T1_DAILY
+        assert etf_daily.tier == TaskTier.T1_INCREMENTAL
         assert etf_daily.requires_trade_date is True
         assert etf_daily.task_name == "ingest_etf_bars"
         assert etf_daily.update_frequency == "每日"
@@ -200,19 +200,19 @@ class TestDatasetRegistry:
 
         # Stock daily should be T1
         stock_daily = DATASET_REGISTRY[Dataset.STOCK_DAILY]
-        assert stock_daily.tier == TaskTier.T1_DAILY
+        assert stock_daily.tier == TaskTier.T1_INCREMENTAL
         assert stock_daily.requires_trade_date is True
         assert stock_daily.task_name == "ingest_stock_daily"
 
         # Adj factor should be T1
         adj_factor = DATASET_REGISTRY[Dataset.ADJ_FACTOR]
-        assert adj_factor.tier == TaskTier.T1_DAILY
+        assert adj_factor.tier == TaskTier.T1_INCREMENTAL
         assert adj_factor.requires_trade_date is True
         assert adj_factor.task_name == "ingest_adj_factor"
 
         # Fund adj should be T1
         fund_adj = DATASET_REGISTRY[Dataset.FUND_ADJ]
-        assert fund_adj.tier == TaskTier.T1_DAILY
+        assert fund_adj.tier == TaskTier.T1_INCREMENTAL
         assert fund_adj.requires_trade_date is True
         assert fund_adj.task_name == "ingest_fund_adj"
 
@@ -262,7 +262,7 @@ class TestHelperFunctions:
 
     def test_get_datasets_by_tier_t1(self) -> None:
         """Test get_datasets_by_tier for T1."""
-        t1_datasets = get_datasets_by_tier(TaskTier.T1_DAILY)
+        t1_datasets = get_datasets_by_tier(TaskTier.T1_INCREMENTAL)
 
         assert Dataset.ETF_DAILY in t1_datasets
         assert Dataset.STOCK_DAILY in t1_datasets
@@ -286,7 +286,7 @@ class TestHelperFunctions:
 
         assert isinstance(config, DatasetConfig)
         assert config.dataset == Dataset.ETF_DAILY
-        assert config.tier == TaskTier.T1_DAILY
+        assert config.tier == TaskTier.T1_INCREMENTAL
 
     def test_get_dataset_config_all_datasets(self) -> None:
         """Test get_dataset_config works for all datasets."""
@@ -366,7 +366,7 @@ class TestExtendedHelperFunctions:
         - Level 0: ETF_DAILY, STOCK_DAILY (depend only on T0)
         - Level 1: ADJ_FACTOR (depends on STOCK_DAILY), FUND_ADJ (depends on ETF_DAILY)
         """
-        levels = get_parallel_datasets(TaskTier.T1_DAILY)
+        levels = get_parallel_datasets(TaskTier.T1_INCREMENTAL)
 
         # T1 should have 2 levels due to T1->T1 dependencies
         assert len(levels) == 2
@@ -394,7 +394,7 @@ class TestExtendedHelperFunctions:
 
     def test_parallel_execution_validation(self) -> None:
         """Test that parallel execution groups are valid."""
-        levels = get_parallel_datasets(TaskTier.T1_DAILY)
+        levels = get_parallel_datasets(TaskTier.T1_INCREMENTAL)
 
         # Verify no dataset appears twice
         seen = set()
@@ -404,5 +404,5 @@ class TestExtendedHelperFunctions:
                 seen.add(dataset)
 
         # Verify all datasets are accounted for
-        t1_datasets = set(get_datasets_by_tier(TaskTier.T1_DAILY))
+        t1_datasets = set(get_datasets_by_tier(TaskTier.T1_INCREMENTAL))
         assert seen == t1_datasets

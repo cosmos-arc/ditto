@@ -35,7 +35,7 @@ class Dataset(str, Enum):
     STOCK_BASIC = "stock_basic"
     ETF_BASIC = "etf_basic"
 
-    # T1: Daily datasets
+    # T1: Incremental datasets
     ETF_DAILY = "etf_daily"
     STOCK_DAILY = "stock_daily"
     ADJ_FACTOR = "adj_factor"
@@ -53,10 +53,10 @@ class TaskTier(str, Enum):
     - T3: Quality checks - validate data integrity
     """
 
-    T0_META = "T0"  # Meta data: calendar, basic info
-    T1_DAILY = "T1"  # Daily incremental data
-    T2_REPAIR = "T2"  # Repair and backfill
-    T3_QUALITY = "T3"  # Quality checks
+    T0_META = "t0_meta"  # Meta data: calendar, basic info
+    T1_INCREMENTAL = "t1_incremental"  # Daily incremental data
+    T2_REPAIR = "t2_repair"  # Repair and backfill
+    T3_QUALITY = "t3_quality"  # Quality checks
 
 
 class DatasetConfig(BaseModel):
@@ -176,10 +176,10 @@ DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
         task_name="ingest_etf_basic",
         requires_trade_date=False,
     ),
-    # T1: Daily datasets
+    # T1: Incremental datasets
     Dataset.ETF_DAILY: DatasetConfig(
         dataset=Dataset.ETF_DAILY,
-        tier=TaskTier.T1_DAILY,
+        tier=TaskTier.T1_INCREMENTAL,
         description="ETF日行情数据",
         update_frequency="每日",
         typical_available_time=time(18, 0),
@@ -202,7 +202,7 @@ DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
     ),
     Dataset.STOCK_DAILY: DatasetConfig(
         dataset=Dataset.STOCK_DAILY,
-        tier=TaskTier.T1_DAILY,
+        tier=TaskTier.T1_INCREMENTAL,
         description="股票日行情数据",
         update_frequency="每日",
         typical_available_time=time(17, 0),
@@ -225,7 +225,7 @@ DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
     ),
     Dataset.ADJ_FACTOR: DatasetConfig(
         dataset=Dataset.ADJ_FACTOR,
-        tier=TaskTier.T1_DAILY,
+        tier=TaskTier.T1_INCREMENTAL,
         description="复权因子",
         update_frequency="每日",
         typical_available_time=time(19, 0),
@@ -240,7 +240,7 @@ DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
     ),
     Dataset.FUND_ADJ: DatasetConfig(
         dataset=Dataset.FUND_ADJ,
-        tier=TaskTier.T1_DAILY,
+        tier=TaskTier.T1_INCREMENTAL,
         description="ETF/基金复权因子",
         update_frequency="每日",
         typical_available_time=time(19, 0),
@@ -294,7 +294,7 @@ def get_dataset_config(dataset: Dataset) -> DatasetConfig:
 
     Examples:
         >>> config = get_dataset_config(Dataset.ETF_DAILY)
-        >>> assert config.tier == TaskTier.T1_DAILY
+        >>> assert config.tier == TaskTier.T1_INCREMENTAL
 
     """
     if dataset not in DATASET_REGISTRY:
@@ -313,7 +313,7 @@ def iter_tier_datasets(tier: TaskTier) -> Iterator[tuple[Dataset, DatasetConfig]
         Tuples of (dataset, config)
 
     Examples:
-        >>> for dataset, config in iter_tier_datasets(TaskTier.T1_DAILY):
+        >>> for dataset, config in iter_tier_datasets(TaskTier.T1_INCREMENTAL):
         ...     print(f"{dataset.name}: {config.description}")
 
     """
@@ -351,7 +351,7 @@ def get_parallel_datasets(tier: TaskTier) -> list[list[Dataset]]:
 
     Examples:
         >>> # T1 datasets all depend on T0 datasets, so they are all level 0
-        >>> levels = get_parallel_datasets(TaskTier.T1_DAILY)
+        >>> levels = get_parallel_datasets(TaskTier.T1_INCREMENTAL)
         >>> assert len(levels[0]) == 4  # etf_daily, stock_daily, adj_factor, fund_adj
 
     """
