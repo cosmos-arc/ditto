@@ -3,14 +3,26 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import polars as pl
 from ditto_foundation import M, logger, traced
 
 from ditto_datahub.sources.base import DataSource, SourceFetchError
-from ditto_datahub.sources.metadata import IncrementalMode, IngestionMetadata
+from ditto_datahub.sources.metadata import (
+    DataChangedError,
+    IncrementalMode,
+    IngestionLog,
+    IngestionMetadata,
+    IngestionStatus,
+    NotTradingDayError,
+)
 from ditto_datahub.sources.tushare.client import TushareClient
+
+if TYPE_CHECKING:
+    from ditto_datahub.stores.ingestion_log import IngestionLogStore
 
 
 class TushareSource(DataSource):
@@ -528,6 +540,7 @@ class TushareSource(DataSource):
             DataFrame with columns:
             - src_code: Source code
             - trade_date: Date
+            - knowledge_date: Date (PIT safety: when this data became known)
             - adj_factor: Float64
 
         Raises:
@@ -557,16 +570,25 @@ class TushareSource(DataSource):
                     schema={
                         "src_code": pl.String,
                         "trade_date": pl.Date,
+                        "knowledge_date": pl.Date,
                         "adj_factor": pl.Float64,
                     }
                 )
 
             df = pl.from_pandas(response).rename({"ts_code": "src_code"})
 
+            # 添加 knowledge_date 列（Tushare 当日数据，knowledge_date = trade_date）
             df = df.with_columns(
-                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+                pl.col("trade_date")
+                .str.strptime(pl.Date, "%Y%m%d")
+                .alias("trade_date"),
+                pl.col("trade_date")
+                .str.strptime(pl.Date, "%Y%m%d")
+                .alias("knowledge_date"),
                 pl.col("adj_factor").cast(pl.Float64),
             )
+
+            df = df.select("src_code", "trade_date", "knowledge_date", "adj_factor")
 
             row_count = len(df)
             logger.info(
@@ -606,6 +628,7 @@ class TushareSource(DataSource):
             DataFrame with columns:
             - src_code: Source code
             - trade_date: Date
+            - knowledge_date: Date (PIT safety: when this data became known)
             - adj_factor: Float64
 
         Raises:
@@ -635,16 +658,25 @@ class TushareSource(DataSource):
                     schema={
                         "src_code": pl.String,
                         "trade_date": pl.Date,
+                        "knowledge_date": pl.Date,
                         "adj_factor": pl.Float64,
                     }
                 )
 
             df = pl.from_pandas(response).rename({"ts_code": "src_code"})
 
+            # 添加 knowledge_date 列（Tushare 当日数据，knowledge_date = trade_date）
             df = df.with_columns(
-                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+                pl.col("trade_date")
+                .str.strptime(pl.Date, "%Y%m%d")
+                .alias("trade_date"),
+                pl.col("trade_date")
+                .str.strptime(pl.Date, "%Y%m%d")
+                .alias("knowledge_date"),
                 pl.col("adj_factor").cast(pl.Float64),
             )
+
+            df = df.select("src_code", "trade_date", "knowledge_date", "adj_factor")
 
             row_count = len(df)
             logger.info(
@@ -712,41 +744,40 @@ class TushareSource(DataSource):
         target_date = date_type.fromisoformat(trade_date)
 
         # QUICK mode: Check if we need to fetch based on dates
-        if mode == IncrementalMode.QUICK:
-            if last_trade_date:
-                last_date = date_type.fromisoformat(last_trade_date)
-                if target_date <= last_date:
-                    # Skip fetch - data is up to date
-                    logger.info(
-                        "QUICK mode: Skipping fetch - data is up to date",
-                        event="tushare_etf_daily_incremental_skip",
-                        reason="uptodate",
-                        last_trade_date=last_trade_date,
-                        target_date=trade_date,
-                    )
-                    empty_df = pl.DataFrame(
-                        schema={
-                            "src_code": pl.String,
-                            "trade_date": pl.Date,
-                            "open": pl.Float64,
-                            "high": pl.Float64,
-                            "low": pl.Float64,
-                            "close": pl.Float64,
-                            "pre_close": pl.Float64,
-                            "volume": pl.Float64,
-                            "amount": pl.Float64,
-                            "pct_change": pl.Float64,
-                        }
-                    )
-                    metadata = IngestionMetadata(
-                        dataset="etf_daily",
-                        source="tushare",
-                        last_trade_date=target_date.isoformat(),
-                        last_checksum=last_checksum,
-                        last_rows=0,
-                        last_updated_at=datetime.now().isoformat(),
-                    )
-                    return empty_df, metadata
+        if mode == IncrementalMode.QUICK and last_trade_date:
+            last_date = date_type.fromisoformat(last_trade_date)
+            if target_date <= last_date:
+                # Skip fetch - data is up to date
+                logger.info(
+                    "QUICK mode: Skipping fetch - data is up to date",
+                    event="tushare_etf_daily_incremental_skip",
+                    reason="uptodate",
+                    last_trade_date=last_trade_date,
+                    target_date=trade_date,
+                )
+                empty_df = pl.DataFrame(
+                    schema={
+                        "src_code": pl.String,
+                        "trade_date": pl.Date,
+                        "open": pl.Float64,
+                        "high": pl.Float64,
+                        "low": pl.Float64,
+                        "close": pl.Float64,
+                        "pre_close": pl.Float64,
+                        "volume": pl.Float64,
+                        "amount": pl.Float64,
+                        "pct_change": pl.Float64,
+                    }
+                )
+                metadata = IngestionMetadata(
+                    dataset="etf_daily",
+                    source="tushare",
+                    last_trade_date=target_date.isoformat(),
+                    last_checksum=last_checksum,
+                    last_rows=0,
+                    last_updated_at=datetime.now().isoformat(),
+                )
+                return empty_df, metadata
 
         # Fetch data
         df = self.fetch_etf_daily(trade_date)
@@ -1082,3 +1113,177 @@ class TushareSource(DataSource):
         df.write_ipc(buffer)
         content = buffer.getvalue()
         return hashlib.sha256(content).hexdigest()[:16]
+
+    @traced("source.tushare.ingest_date")
+    def ingest_date(
+        self,
+        dataset: str,
+        trade_date: str,
+        force: bool = False,
+        _is_trading_day_fn: Callable[[str], bool] | None = None,
+        _log_store: IngestionLogStore | None = None,
+    ) -> tuple[pl.DataFrame, IngestionLog]:
+        """
+        Ingest data for a specific date (new interface).
+
+        Args:
+            dataset: Dataset name (e.g., "stock_daily", "etf_daily").
+            trade_date: Trade date (YYYY-MM-DD).
+            force: Force update even if data was fetched before.
+            _is_trading_day_fn: Optional function to validate trading days.
+                If provided, must raise NotTradingDayError for non-trading days.
+                Signature: (date_str: str) -> bool
+            _log_store: Optional IngestionLogStore for checksum validation.
+                If provided, enables checksum-based change detection and
+                implements the force parameter semantics.
+
+        Returns:
+            Tuple of:
+            - DataFrame with data (empty if data unchanged and force=False)
+            - IngestionLog with ingestion metadata
+
+        Raises:
+            NotTradingDayError: If trade_date is not a trading day.
+            DataChangedError: If data checksum changed and force=False.
+            SourceFetchError: If fetch fails or returns empty dataframe.
+            ValueError: If dataset is not supported.
+
+        Note:
+            Trading day validation is performed when _is_trading_day_fn is provided.
+            Checksum validation is performed when _log_store is provided.
+            This method validates that the fetched data is non-empty.
+
+        """
+        logger.info(
+            "Tushare ingest_date start",
+            event="tushare_ingest_date_start",
+            dataset=dataset,
+            trade_date=trade_date,
+            force=force,
+        )
+
+        # Validate trading day if validation function is provided
+        if _is_trading_day_fn is not None and not _is_trading_day_fn(trade_date):
+            raise NotTradingDayError(trade_date)
+
+        # Route to appropriate fetch method based on dataset
+        fetch_map = {
+            "stock_daily": self.fetch_stock_daily,
+            "etf_daily": self.fetch_etf_daily,
+            "adj_factor": self.fetch_adj_factor,
+            "fund_adj": self.fetch_fund_adj,
+        }
+
+        fetch_fn = fetch_map.get(dataset)
+        if fetch_fn is None:
+            raise ValueError(
+                f"Unsupported dataset: {dataset}. "
+                f"Supported datasets: {list(fetch_map.keys())}"
+            )
+
+        # Fetch data
+        df = fetch_fn(trade_date)
+
+        # Validate: trading day should not return empty df
+        if df.is_empty():
+            from datetime import date as date_type
+
+            target_date = date_type.fromisoformat(trade_date)
+            raise SourceFetchError(
+                message=(
+                    f"Trading day {trade_date} returned empty data for {dataset}. "
+                    "This may indicate a data quality issue or the date is not "
+                    "a trading day."
+                ),
+                source="tushare",
+                dataset=dataset,
+                trade_date=target_date,
+            )
+
+        # Compute checksum
+        checksum = self._compute_checksum(df)
+        now = datetime.now().isoformat()
+
+        # Checksum validation if log store is provided
+        if _log_store is not None:
+            previous_log = _log_store.get_log(dataset, "tushare", trade_date)
+
+            if (
+                previous_log is not None
+                and previous_log.status == IngestionStatus.SUCCESS
+                and previous_log.checksum is not None
+            ):
+                if checksum == previous_log.checksum:
+                    # Data unchanged - return empty DataFrame
+                    logger.info(
+                        "Tushare ingest_date unchanged - returning empty",
+                        event="tushare_ingest_date_unchanged",
+                        dataset=dataset,
+                        trade_date=trade_date,
+                        checksum=checksum,
+                    )
+
+                    log = IngestionLog(
+                        dataset=dataset,
+                        source="tushare",
+                        trade_date=trade_date,
+                        status=IngestionStatus.SUCCESS,
+                        checksum=checksum,
+                        rows=previous_log.rows,
+                        attempts=previous_log.attempts,
+                        first_attempt_at=previous_log.first_attempt_at,
+                        last_attempt_at=now,
+                    )
+
+                    return pl.DataFrame(schema=df.schema), log
+                elif not force:
+                    # Data changed and force=False - raise error
+                    logger.warning(
+                        "Tushare ingest_date data changed",
+                        event="tushare_ingest_date_changed",
+                        dataset=dataset,
+                        trade_date=trade_date,
+                        old_checksum=previous_log.checksum,
+                        new_checksum=checksum,
+                    )
+
+                    raise DataChangedError(
+                        trade_date=trade_date,
+                        old_checksum=previous_log.checksum,
+                        new_checksum=checksum,
+                    )
+
+        # Create log
+        log = IngestionLog(
+            dataset=dataset,
+            source="tushare",
+            trade_date=trade_date,
+            status=IngestionStatus.SUCCESS,
+            checksum=checksum,
+            rows=len(df),
+            attempts=1,
+            first_attempt_at=now,
+            last_attempt_at=now,
+        )
+
+        # Save log to store if provided
+        if _log_store is not None:
+            _log_store.save_log(
+                dataset=dataset,
+                source="tushare",
+                trade_date=trade_date,
+                status=IngestionStatus.SUCCESS,
+                checksum=checksum,
+                rows=len(df),
+            )
+
+        logger.info(
+            "Tushare ingest_date complete",
+            event="tushare_ingest_date_complete",
+            dataset=dataset,
+            trade_date=trade_date,
+            row_count=len(df),
+            checksum=checksum,
+        )
+
+        return df, log

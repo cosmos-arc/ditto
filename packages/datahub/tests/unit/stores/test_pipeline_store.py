@@ -569,3 +569,41 @@ class TestPipelineStore:
         """Test deleting non-existent run."""
         deleted = pipeline_store.delete_run("nonexistent")
         assert deleted is False
+
+    # ============ Security/Whitelist tests ============
+
+    def test_update_run_accepts_all_whitelisted_columns(
+        self, pipeline_store: PipelineStore
+    ) -> None:
+        """Test update_run accepts all columns in ALLOWED_COLUMNS.
+
+        Note: update_run() uses explicit parameter definitions, which prevents
+        SQL injection via kwargs at the Python level (TypeError is raised before
+        the function executes). The ALLOWED_COLUMNS whitelist provides defense
+        in depth for the dynamic SQL construction inside the method.
+        """
+        pipeline_store.insert_run(
+            run_id="run-whitelist-002",
+            task_name="update",
+            dataset_id="stock_daily",
+        )
+
+        # All whitelisted columns should be accepted
+        pipeline_store.update_run(
+            run_id="run-whitelist-002",
+            status="completed",
+            error_message=None,
+            rows_read=1000,
+            rows_written=950,
+            dq_passed=True,
+            dq_fail_count=0,
+            dq_warn_count=2,
+        )
+
+        result = pipeline_store.get_run("run-whitelist-002")
+        assert result is not None
+        assert result["status"] == "completed"
+        assert result["rows_read"] == 1000
+        assert result["dq_passed"] is True
+        assert result["dq_fail_count"] == 0
+        assert result["dq_warn_count"] == 2

@@ -199,3 +199,44 @@ class TestDQChecker:
         ]
         assert len(weight_errors) == 1
         assert not weight_errors[0].passed
+
+    def test_check_adj_factor_valid(self) -> None:
+        """Test valid adj_factor data with knowledge_date."""
+        df = pl.DataFrame(
+            {
+                "sid": [100001, 100001, 100002],
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-01"],
+                "knowledge_date": ["2024-01-02", "2024-01-03", "2024-01-02"],
+                "adj_factor": [1.0, 1.05, 1.0],
+            }
+        )
+
+        result = self.dq_checker.check(df, "adj_factor")
+
+        assert result.passed
+        assert result.fail_count == 0
+        assert all(r.passed for r in result.results)
+
+    def test_check_adj_factor_missing_knowledge_date(self) -> None:
+        """Test adj_factor data missing knowledge_date column."""
+        df = pl.DataFrame(
+            {
+                "sid": [100001, 100001, 100002],
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-01"],
+                "adj_factor": [1.0, 1.05, 1.0],
+            }
+        )
+
+        result = self.dq_checker.check(df, "adj_factor")
+
+        assert not result.passed
+        assert result.fail_count == 1
+
+        # Find knowledge_date error
+        missing_errors = [
+            r for r in result.results if r.rule_name == "has_knowledge_date"
+        ]
+        assert len(missing_errors) == 1
+        assert not missing_errors[0].passed
+        assert "knowledge_date" in missing_errors[0].message.lower()
+        assert missing_errors[0].affected_rows == 1

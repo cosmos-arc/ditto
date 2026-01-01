@@ -1,6 +1,6 @@
 """Type definitions for data hub."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import NamedTuple
 
@@ -27,7 +27,7 @@ class SidRange(NamedTuple):
 
 
 # ============ DQ 枚举 ============
-class DQSeverity(Enum):
+class DQSeverity(str, Enum):
     """DQ severity levels (B.5: 统一三级定义)."""
 
     ERROR = "error"
@@ -46,7 +46,7 @@ class OnDuplicate(Enum):
 
 @dataclass(frozen=True)
 class DQResult:
-    """Data quality check result."""
+    """Data quality check result (legacy, for runtime/dq_checker.py compatibility)."""
 
     passed: bool
     severity: DQSeverity
@@ -63,7 +63,9 @@ class FreezeManifest:
     freeze_id: str
     description: str
     created_at: str
-    files: dict[str, str]  # {relative_path: md5_checksum}
+    version: str = "2.0"
+    checksum_type: str = "sha256"  # "md5" for legacy, "sha256" for new
+    files: dict[str, str] = field(default_factory=dict)  # {relative_path: checksum}
 
     @property
     def file_count(self) -> int:

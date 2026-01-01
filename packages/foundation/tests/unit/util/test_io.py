@@ -79,6 +79,49 @@ class TestAtomicWrite:
         loaded = pl.read_parquet(target_path)
         assert len(loaded) == 1000
 
+    def test_atomic_write_with_fsync(self) -> None:
+        """Test atomic_write with fsync=True ensures data durability."""
+        df = pl.DataFrame({"a": [1, 2, 3]})
+        target_path = self.temp_path / "test_fsync.parquet"
+
+        # Test writing with fsync enabled
+        atomic_write(df, target_path, fsync=True)
+
+        # File should exist and contain correct data
+        assert target_path.exists()
+        loaded_df = pl.read_parquet(target_path)
+        assert loaded_df.equals(df)
+
+        # Additional verification: file should be flushed to disk
+        # (We can't easily test the actual fsync behavior, but we can verify
+        # the file is properly written and readable)
+
+    def test_atomic_write_without_fsync(self) -> None:
+        """Test atomic_write with fsync=False works normally."""
+        df = pl.DataFrame({"a": [1, 2, 3]})
+        target_path = self.temp_path / "test_no_fsync.parquet"
+
+        # Test writing with fsync disabled
+        atomic_write(df, target_path, fsync=False)
+
+        # File should exist and contain correct data
+        assert target_path.exists()
+        loaded_df = pl.read_parquet(target_path)
+        assert loaded_df.equals(df)
+
+    def test_atomic_write_fsync_default(self) -> None:
+        """Test atomic_write default behavior includes fsync."""
+        df = pl.DataFrame({"a": [1, 2, 3]})
+        target_path = self.temp_path / "test_default.parquet"
+
+        # Test writing without specifying fsync (should default to True)
+        atomic_write(df, target_path)
+
+        # File should exist and contain correct data
+        assert target_path.exists()
+        loaded_df = pl.read_parquet(target_path)
+        assert loaded_df.equals(df)
+
 
 class TestFileMd5:
     """Test cases for file_md5 function."""

@@ -13,6 +13,7 @@ from ditto_foundation import logger
 from ditto_datahub.errors import SidNotFoundError
 
 if TYPE_CHECKING:
+    from ditto_datahub.dq.engine import DQEngine
     from ditto_datahub.repositories.bars import BarsRepository
     from ditto_datahub.repositories.calendar import CalendarRepository
     from ditto_datahub.repositories.index import IndexRepository
@@ -29,6 +30,8 @@ if TYPE_CHECKING:
     from ditto_datahub.stores.bars_store import BarsStore
     from ditto_datahub.stores.calendar_store import CalendarStore
     from ditto_datahub.stores.index_weight_store import IndexWeightStore
+    from ditto_datahub.stores.ingestion_cursor import IngestionCursorStore
+    from ditto_datahub.stores.ingestion_log import IngestionLogStore
     from ditto_datahub.stores.ingestion_metadata_store import IngestionMetadataStore
     from ditto_datahub.stores.pipeline_store import PipelineStore
     from ditto_datahub.stores.security_store import SecurityStore
@@ -105,10 +108,18 @@ class DataHub:
 
     @cached_property
     def dq_checker(self) -> DQChecker:
-        """Data quality checker."""
+        """Data quality checker (deprecated: use dq_engine)."""
         from ditto_datahub.runtime.dq_checker import DQChecker
 
         return DQChecker()
+
+    @cached_property
+    def dq_engine(self) -> DQEngine:
+        """New DQ engine."""
+        from ditto_datahub.dq.engine import DQEngine
+
+        config_path = self.data_root / "config" / "dq"
+        return DQEngine(config_path=config_path)
 
     @cached_property
     def freeze(self) -> FreezeManager:
@@ -184,11 +195,27 @@ class DataHub:
 
     @cached_property
     def ingestion_metadata_store(self) -> IngestionMetadataStore:
-        """Ingestion metadata store for incremental data fetching."""
+        """Ingestion metadata store for incremental data fetching (deprecated)."""
         from ditto_datahub.stores.ingestion_metadata_store import IngestionMetadataStore
         from ditto_datahub.stores.sqlite_client import SQLiteClient
 
         return IngestionMetadataStore(SQLiteClient(self.sqlite_pool))
+
+    @cached_property
+    def ingestion_log(self) -> IngestionLogStore:
+        """Ingestion event log store (new system)."""
+        from ditto_datahub.stores.ingestion_log import IngestionLogStore
+        from ditto_datahub.stores.sqlite_client import SQLiteClient
+
+        return IngestionLogStore(SQLiteClient(self.sqlite_pool))
+
+    @cached_property
+    def ingestion_cursor(self) -> IngestionCursorStore:
+        """Ingestion cursor store for fast progress tracking (new system)."""
+        from ditto_datahub.stores.ingestion_cursor import IngestionCursorStore
+        from ditto_datahub.stores.sqlite_client import SQLiteClient
+
+        return IngestionCursorStore(SQLiteClient(self.sqlite_pool))
 
     # ========================================================================
     # Repository Layer
@@ -214,7 +241,7 @@ class DataHub:
             security_store=self.security_store,
             adj_factor_store=self.adj_factor_store,
             stock_status_store=self.stock_status_store,  # B.3
-            dq_checker=self.dq_checker,
+            dq_engine=self.dq_engine,  # Use new DQEngine
             file_lock=self.file_lock,
         )
 
@@ -397,7 +424,7 @@ class DataHub:
 
         Closes in reverse order of initialization to avoid dependency issues:
         1. Stores with SQLite clients (pipeline_store, calendar_store, security_store,
-           universe_store, index_weight_store)
+           universe_store, index_weight_store, ingestion_log, ingestion_cursor)
         2. SQL engine (DuckDB)
         3. SQLite pool (connection manager)
         """
@@ -409,6 +436,8 @@ class DataHub:
             "security_store",
             "universe_store",
             "index_weight_store",
+            "ingestion_log",
+            "ingestion_cursor",
         ):
             if store_name in self.__dict__:
                 store = getattr(self, store_name)

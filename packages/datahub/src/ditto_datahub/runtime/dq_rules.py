@@ -166,10 +166,58 @@ def check_weight_positive(
     )
 
 
+def check_required_columns(
+    df: pl.DataFrame, params: dict[str, Any]
+) -> tuple[bool, int, str]:
+    """
+    Check required columns exist.
+
+    Args:
+        df: Data to check
+        params: Dict with "columns" key containing list of required column names
+
+    Returns:
+        Tuple of (passed, affected_columns, message)
+
+    """
+    required = params.get("columns", [])
+    missing = [col for col in required if col not in df.columns]
+
+    if missing:
+        logger.warning(
+            "dq_rule_missing_columns",
+            event="dq_check",
+            rule="required_columns",
+            missing_columns=missing,
+        )
+
+    return (
+        len(missing) == 0,
+        len(missing),
+        f"Missing columns: {missing}" if missing else "All required columns present",
+    )
+
+
 # ============ 规则配置(替代 YAML) ============
 # B.5: Updated DQSeverity.FAIL -> ERROR, WARN -> WARNING
 DQ_RULES: dict[str, list[DQRule]] = {
-    "market_daily": [
+    "stock_daily": [  # 股票日线数据（主要命名）
+        DQRule(
+            "primary_key_unique",
+            DQSeverity.ERROR,
+            check_pk_unique,
+            {"keys": ["sid", "trade_date"]},
+        ),
+        DQRule("sid_not_null", DQSeverity.ERROR, check_sid_not_null),
+        DQRule("ohlc_positive", DQSeverity.ERROR, check_ohlc_positive),
+        DQRule("ohlc_relationship", DQSeverity.ERROR, check_ohlc_relationship),
+        DQRule(
+            "volume_amount_consistency",
+            DQSeverity.WARNING,
+            check_volume_amount_consistency,
+        ),
+    ],
+    "market_daily": [  # 别名，兼容旧配置
         DQRule(
             "primary_key_unique",
             DQSeverity.ERROR,
@@ -219,6 +267,12 @@ DQ_RULES: dict[str, list[DQRule]] = {
             DQSeverity.ERROR,
             check_pk_unique,
             {"keys": ["sid", "trade_date"]},
+        ),
+        DQRule(
+            "has_knowledge_date",
+            DQSeverity.ERROR,
+            check_required_columns,
+            {"columns": ["knowledge_date"]},
         ),
     ],
 }

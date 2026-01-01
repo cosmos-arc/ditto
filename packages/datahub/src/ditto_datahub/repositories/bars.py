@@ -10,15 +10,18 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.dq.models import DQIssue
+
+# Authoritative DQResult with issues list (from dq.engine)
+from ditto_datahub.dq.models import DQResult as DQResultNew
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
-from ditto_datahub.types import DQResult, SidRange
+from ditto_datahub.types import SidRange
 
 if TYPE_CHECKING:
-    from ditto_datahub.runtime.dq_checker import DQChecker
     from ditto_datahub.runtime.file_lock import FileLockManager
 
 
@@ -38,9 +41,8 @@ class WriteResult:
     checksum: str
     rows_written: int
     rows_total: int
-    failed_checks: list[DQResult] = field(default_factory=list)
     blocked: bool = False
-    dq_result: DQResult | None = None
+    dq_result: DQResultNew | None = None  # New DQResult format
 
 
 class BarsRepository:
@@ -58,7 +60,7 @@ class BarsRepository:
         adj_factor_store: AdjFactorStore,
         security_store: SecurityStore,
         stock_status_store: StockStatusStore,  # B.3
-        dq_checker: DQChecker,
+        dq_engine: DQEngine,  # New DQ engine
         file_lock: FileLockManager,
     ) -> None:
         """
@@ -69,7 +71,7 @@ class BarsRepository:
             adj_factor_store: Adjustment factor store.
             security_store: Security store for identifier resolution.
             stock_status_store: Stock status store (B.3).
-            dq_checker: Data quality checker.
+            dq_engine: Data quality engine (new DQEngine from dq.engine).
             file_lock: File lock manager for concurrent writes.
 
         """
@@ -77,7 +79,7 @@ class BarsRepository:
         self._adj_factor_store = adj_factor_store
         self._security_store = security_store
         self._stock_status_store = stock_status_store  # B.3
-        self._dq_checker = dq_checker
+        self._dq_engine = dq_engine
         self._file_lock = file_lock
 
     @traced("repository.bars.get")
@@ -189,13 +191,14 @@ class BarsRepository:
             end: End date (YYYY-MM-DD).
             source: Data source identifier.
             adj: Adjustment type.
-            asof: Point-in-time date.
+            asof: Point-in-time date (for PIT-safe identifier resolution and query).
 
         Returns:
             Bars data DataFrame.
 
         """
         # Resolve identifier (try src_code first, then symbol)
+        # Note: asof is passed here for PIT-safe identifier resolution
         sid = self._security_store.resolve_sid(identifier, source, asof)
         if not sid:
             # Try as symbol
@@ -216,12 +219,13 @@ class BarsRepository:
 
             sid = sids[0]
 
-        # Get data
+        # Get data (pass asof for PIT-safe query)
         return self.get(
             sids=[sid],
             start=start,
             end=end,
             adj=adj,
+            asof=asof,  # Pass asof for PIT-safe data query
             with_symbol=True,
         )
 
@@ -259,38 +263,33 @@ class BarsRepository:
         # Use file lock for concurrent safety
         lock_name = f"bars_write_{dataset}_{year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
-            # Data quality check
-            dq_result: DQResult | None = None
-            blocked = False
+            # Data quality check using DQEngine
+            dq_result: DQResultNew | None = None
 
             if run_dq_check:
-                check_result = self._dq_checker.check(df, dataset)
-                dq_result = check_result
+                dq_result = self._dq_engine.check(df, dataset)
 
                 # Check for L1 errors (blocking)
-                if check_result.has_errors:
+                if dq_result.has_errors:
                     logger.error(
                         "DQ check failed with L1 errors - blocking write",
                         event="bars_dq_blocked",
                         dataset=dataset,
-                        error_count=check_result.error_count,
+                        error_count=dq_result.error_count,
                     )
 
                     # Save failed data to quarantine
-                    for issue in check_result.issues:
+                    for issue in dq_result.issues:
                         if issue.severity.value == "error":
-                            self._save_to_quarantine(
-                                df=filter_failed_rows(df, issue),
+                            self._save_to_quarantine_from_result(
+                                df=df,
+                                issue=issue,
                                 dataset=dataset,
-                                rule_id=issue.rule_name,
-                                severity="error",
                             )
-
-                    blocked = True
 
                     # Record metrics
                     M.data_errors.add(
-                        check_result.error_count,
+                        dq_result.error_count,
                         {"dataset": dataset, "operation": "write_blocked"},
                     )
 
@@ -299,18 +298,17 @@ class BarsRepository:
                         checksum="",
                         rows_written=0,
                         rows_total=0,
-                        failed_checks=[],
                         blocked=True,
                         dq_result=dq_result,
                     )
 
                 # Log L2 warnings (non-blocking)
-                if check_result.has_warnings:
+                if dq_result.has_warnings:
                     logger.warning(
                         "DQ check found L2 warnings - proceeding",
                         event="bars_dq_warnings",
                         dataset=dataset,
-                        warning_count=check_result.warn_count,
+                        warning_count=dq_result.warn_count,
                     )
 
             # Write data
@@ -349,7 +347,6 @@ class BarsRepository:
                 checksum=checksum,
                 rows_written=len(df),
                 rows_total=total_rows,
-                failed_checks=[],
                 blocked=False,
                 dq_result=dq_result,
             )
@@ -537,7 +534,8 @@ class BarsRepository:
                 baseline_df = adj_df.filter(pl.col("knowledge_date") <= pit_dt)
             else:
                 logger.warning(
-                    "Adj factors missing knowledge_date, using trade_date (not PIT-safe)",
+                    "Adj factors missing knowledge_date, "
+                    "using trade_date (not PIT-safe)",
                     event="bars_adj_missing_knowledge_date",
                 )
                 baseline_df = adj_df.filter(pl.col("trade_date") <= pit_dt)
@@ -667,12 +665,40 @@ class BarsRepository:
                 error=str(e),
             )
 
-    def _generate_dq_report(self, result: DQResult, dataset: str) -> None:
+    def _save_to_quarantine_from_result(
+        self,
+        df: pl.DataFrame,
+        issue: DQIssue,
+        dataset: str,
+    ) -> None:
+        """
+        Save failed data to quarantine store from DQIssue.
+
+        Args:
+            df: Full data DataFrame.
+            issue: DQIssue with failure information.
+            dataset: Dataset name.
+
+        """
+        # Filter failed rows
+        failed_df = filter_failed_rows(df, issue)
+
+        if failed_df.is_empty():
+            return
+
+        self._save_to_quarantine(
+            df=failed_df,
+            dataset=dataset,
+            rule_id=issue.rule_name,
+            severity=issue.severity.value,
+        )
+
+    def _generate_dq_report(self, result: DQResultNew, dataset: str) -> None:
         """
         Generate DQ report and save to file.
 
         Args:
-            result: DQ check result.
+            result: DQ check result (new format).
             dataset: Dataset name.
 
         """
@@ -778,7 +804,7 @@ class BarsRepository:
         return result
 
 
-def filter_failed_rows(df: pl.DataFrame, issue: DQIssue) -> pl.DataFrame:
+def filter_failed_rows(df: pl.DataFrame, issue: DQIssue) -> pl.DataFrame:  # noqa: PLR0911
     """
     Filter failed rows based on DQ issue.
 

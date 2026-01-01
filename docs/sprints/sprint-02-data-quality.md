@@ -698,6 +698,40 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 - ✅ `pixi run -e dev ci-check` 通过
 - ✅ Sprint 2 进度更新：65% 完成（Phase 0-3）
 
+### 2025-12-30
+- ✅ **代码质量改进**：修复 7 个高优先级问题
+  - **CalendarStore 线程安全** (commit f0e4d7b)
+    - 使用 `RLock` 保护 `reload()` 方法
+    - 采用直接实例替换模式（重构后）
+    - 原子性更新 `_cache`, `_all_days`, `_trading_days` 三个属性
+    - 新增并发测试验证线程安全性
+  - **SqlEngine SQL 注入防护** (commit 21be559)
+    - 使用 DuckDB 参数化查询 (`?` 占位符)
+    - `asof` 参数通过参数绑定传递，不再字符串拼接
+    - 添加日期格式验证 (`YYYY-MM-DD`)
+  - **DQ 系统统一迁移** (commit b961710)
+    - BarsRepository 从 DQChecker 迁移到 DQEngine
+    - DataHub 统一使用 DQEngine
+    - 移除 DQCheckResult 的 TYPE_CHECKING 导入（运行时修复）
+  - **CalendarRepository 增强**
+    - 暴露 `get_last_trading_day()` 方法 (commit ee1bbd0)
+  - **DataCache TTL 增强**
+    - 迁移到 VTTLCache 支持单条目 TTL
+    - `set(key, value, ttl=...)` 方法支持独立 TTL 设置
+  - **FreezeManager 安全增强**
+    - 校验和从 MD5 升级到 SHA-256
+    - 新增 `cleanup_expired()` 方法支持过期清理
+  - **BarsStore 持久化增强** (commit bdd53ca)
+    - `atomic_write()` 添加 `fsync` 参数
+    - 默认启用 fsync 确保数据落盘
+- ✅ **TushareSource ingest_date 语义增强**
+  - 添加交易日验证（函数注入模式）
+  - 实现 `force` 参数强制重取
+  - 实现 checksum 比较和数据变更检测
+- ✅ **DQ 配置路径修复** (commit fd279ae)
+  - 修复路径指向 `packages/datahub/config/dq_rules`
+- ✅ 测试覆盖：新增 20+ 测试全部通过
+
 ### 2025-12-28
 - ✅ Phase 0 完成：技术债务清理（14 任务）
 - ✅ Phase 1 完成：DQ 三层架构（9/10 任务，Task 1.8 延后到 Phase 3）

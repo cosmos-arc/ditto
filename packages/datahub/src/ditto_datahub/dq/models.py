@@ -205,13 +205,13 @@ class DatasetRules(BaseModel):
 
     dataset: str
     description: str
-    l1_technical: list[dict] = Field(default_factory=list)
-    l2_business: list[dict] = Field(default_factory=list)
-    l3_statistical: list[dict] = Field(default_factory=list)
+    l1_technical: list[dict[str, Any]] = Field(default_factory=list)
+    l2_business: list[dict[str, Any]] = Field(default_factory=list)
+    l3_statistical: list[dict[str, Any]] = Field(default_factory=list)
 
     @field_validator("l1_technical", "l2_business", "l3_statistical", mode="before")
     @classmethod
-    def parse_rules(cls, v: list) -> list:
+    def parse_rules(cls, v: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Parse rule dicts into proper models."""
         return v
 
@@ -292,7 +292,7 @@ class DQIssue:
     rule_name: str
     message: str
     affected_rows: int = 0
-    sample_data: list[dict] = field(default_factory=list)
+    sample_data: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass

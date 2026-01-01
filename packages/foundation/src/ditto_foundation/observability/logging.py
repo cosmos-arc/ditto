@@ -54,10 +54,13 @@ def _json_formatter(record: dict[str, Any] | Any) -> str:
 
     # 添加异常信息
     if record["record"]["exception"]:
+        # Convert traceback to string for JSON serialization
+        # Use loguru's built-in exception formatter
+        exc = record["record"]["exception"]
         log_entry["exception"] = {
-            "type": record["record"]["exception"].type.__name__,
-            "value": str(record["record"]["exception"].value),
-            "traceback": record["record"]["exception"].traceback,
+            "type": exc.type.__name__,
+            "value": str(exc.value),
+            "traceback": str(exc.traceback),  # Convert to string for JSON serialization
         }
 
     return json.dumps(log_entry, ensure_ascii=False) + "\n"

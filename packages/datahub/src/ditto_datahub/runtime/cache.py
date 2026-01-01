@@ -1,8 +1,9 @@
 """
 统一数据缓存层，基于 cachebox 实现.
 
-本模块提供基于 cachebox.TTLCache 的统一缓存封装，支持：
+本模块提供基于 cachebox.VTTLCache 的统一缓存封装，支持：
 - TTL 过期和 LRU 淘汰（由 cachebox 提供）
+- 单条目 TTL 和全局默认 TTL
 - OpenTelemetry 指标集成
 - 模式失效（fnmatch 风格）
 - 缓存统计信息
@@ -33,13 +34,14 @@ class DataCache:
     基于 cachebox 的统一缓存封装层.
 
     特性：
-    - TTL 过期和 LRU 淘汰（由 cachebox.TTLCache 提供）
+    - TTL 过期和 LRU 淘汰（由 cachebox.VTTLCache 提供）
+    - 支持单条目 TTL 和全局默认 TTL
     - OpenTelemetry 指标记录
     - 模式失效（fnmatch 风格）
     - 线程安全（cachebox 内置锁）
 
     注意：
-    - cachebox.TTLCache 使用全局 TTL，如需不同 TTL 使用 VTTLCache
+    - 使用 cachebox.VTTLCache 支持单条目 TTL
     - 线程安全由 cachebox 保证，无需额外处理
     """
 
@@ -59,11 +61,11 @@ class DataCache:
             enable_metrics: 是否启用指标记录
 
         """
-        # cachebox.TTLCache: (maxsize, ttl)
-        # 注意：TTLCache 使用全局统一 TTL，不支持单条目 TTL
-        self._cache: cachebox.TTLCache[str, Any] = cachebox.TTLCache(
-            maxsize=max_size, ttl=ttl_seconds
-        )
+        # cachebox.VTTLCache: (maxsize,)
+        # 注意：VTTLCache 构造函数的 ttl 参数仅用于初始化 iterable，
+        # 不是新条目的默认 TTL。我们在 set() 方法中手动传递 ttl。
+        self._cache: cachebox.VTTLCache[str, Any] = cachebox.VTTLCache(maxsize=max_size)
+        self._default_ttl = ttl_seconds  # 保存默认 TTL 供 set() 使用
         self._enable_metrics = enable_metrics
 
         # 统计计数器（用于非指标模式）
@@ -102,18 +104,27 @@ class DataCache:
         """
         设置缓存值.
 
-        注意：
-        cachebox.TTLCache 不支持单条目 TTL，ttl 参数会被忽略。
-        如需不同 TTL，请使用 cachebox.VTTLCache 或创建多个缓存实例。
-
         Args:
         ----
             key: 缓存键（应遵循 category:key 格式）
             value: 缓存值
-            ttl: TTL 秒数（当前实现中会被忽略）
+            ttl: TTL 秒数，None 时使用默认 TTL
+
+        Note:
+        ----
+            VTTLCache 需要显式传递 TTL 参数，ttl=None 表示不设置过期时间。
+            我们使用 `_default_ttl` 作为默认值。
 
         """
-        self._cache[key] = value
+        # 必须使用 insert() 方法并显式传递 TTL
+        # ttl=None 时使用默认 TTL，ttl=0 时表示不设置过期时间
+        if ttl is None:
+            self._cache.insert(key, value, ttl=self._default_ttl)
+        elif ttl == 0:
+            # ttl=0 表示永不过期（不设置 TTL）
+            self._cache.insert(key, value)
+        else:
+            self._cache.insert(key, value, ttl=ttl)
 
     def invalidate(self, key: str) -> bool:
         """

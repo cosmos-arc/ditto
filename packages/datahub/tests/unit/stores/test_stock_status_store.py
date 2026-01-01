@@ -8,6 +8,7 @@ from typing import Any
 
 import polars as pl
 import pytest
+from ditto_datahub.stores.stock_status_store import StockStatusStore
 
 
 class TestStockStatusStore:
@@ -19,10 +20,8 @@ class TestStockStatusStore:
         return tmp_path / "data"
 
     @pytest.fixture
-    def store(self, data_root: Path):
+    def store(self, data_root: Path) -> StockStatusStore:
         """Create StockStatusStore instance."""
-        from ditto_datahub.stores.stock_status_store import StockStatusStore
-
         return StockStatusStore(data_root)
 
     @pytest.fixture
@@ -169,10 +168,8 @@ class TestStockStatusRiskControlFields:
         return tmp_path / "data"
 
     @pytest.fixture
-    def store(self, data_root: Path):
+    def store(self, data_root: Path) -> StockStatusStore:
         """Create StockStatusStore instance."""
-        from ditto_datahub.stores.stock_status_store import StockStatusStore
-
         return StockStatusStore(data_root)
 
     @pytest.fixture

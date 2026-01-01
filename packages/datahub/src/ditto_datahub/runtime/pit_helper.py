@@ -102,8 +102,9 @@ class PitHelper:
             )
             return wrapped
 
-        # 检查是否已有 WHERE 子句
-        if " where " in query.lower():
+        # 检查是否已有 WHERE 子句（使用正则表达式，不区分大小写）
+        # \bWHERE\b 确保匹配完整的 WHERE 关键字，避免匹配到包含 WHERE 的其他词
+        if re.search(r"\bWHERE\b", query, re.IGNORECASE):
             # 已有 WHERE，添加 AND 条件
             return f"{query} AND {date_column} <= '{knowledge_date}'"
         else:

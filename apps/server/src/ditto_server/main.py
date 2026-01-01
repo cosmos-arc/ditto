@@ -28,6 +28,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from ditto_server.exceptions import DittoException
 from ditto_server.middleware import (
+    ditto_exception_handler,
     general_exception_handler,
     http_exception_handler,
     validation_exception_handler,
@@ -178,28 +179,9 @@ async def log_requests(
 
         return response
 
-    except Exception as e:
-        # Log error
-        duration_ms = (time.time() - start_time) * 1000
-        logger.exception(
-            "Request processing error",
-            event="error",
-            method=request.method,
-            path=request.url.path,
-            request_id=request_id,
-            error_type=type(e).__name__,
-            error_message=str(e),
-        )
-
-        # Return error response
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": "Internal server error",
-                "request_id": request_id,
-                "duration_ms": duration_ms,
-            },
-        )
+    except Exception:
+        # Re-raise exception to let FastAPI exception handlers process it
+        raise
 
 
 @app.get("/")
@@ -259,7 +241,7 @@ async def test_logging() -> dict[str, str]:
 
 
 # 注册异常处理器
-app.add_exception_handler(DittoException, general_exception_handler)
+app.add_exception_handler(DittoException, ditto_exception_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)

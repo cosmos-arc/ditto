@@ -1,26 +1,8 @@
 ---
-name: docs-guide
-description: |
-  【必读】文档规范指南。
-  触发条件: README、Sprint、ADR、Plan、文档、进度更新、架构决策、任务状态、模块文档。
-  核心规则: 模块README必须更新、Sprint状态同步、复杂任务需Plan、架构决策需ADR。
-globs:
-  - "**/*.md"
-  - "**/docs/**/*"
+paths: **/*.md
 ---
 
-# 文档规范指南
-
-## 文档类型速查
-
-| 类型 | 路径 | 触发条件 |
-|------|------|----------|
-| 模块 README | `packages/xxx/README.md` | 新建/修改模块 |
-| Sprint 进度 | `docs/sprints/sprint-XX.md` | 任务状态变更 |
-| Plan 文档 | `docs/plans/YYYY-MM-DD-name.md` | 复杂任务开始 |
-| ADR | `docs/adr/NNNN-title.md` | 架构决策 |
-
----
+# 文档规范
 
 ## 1. 模块 README 模板
 
@@ -171,24 +153,11 @@ docs/adr/0004-dq-three-tier-architecture.md
 
 ---
 
-## 检查清单
+## 完成检查
 
-功能开发完成后：
-
-```markdown
+```
 - [ ] 模块 README 更新？
 - [ ] Sprint 状态更新？
 - [ ] Plan 文档创建？（复杂任务）
 - [ ] ADR 记录？（架构决策）
 ```
-
----
-
-## 禁止
-
-| 禁止 | 替代 |
-|------|------|
-| 只有代码没有说明 | 添加功能描述 |
-| 状态未更新 | 及时更新 Sprint 状态 |
-| 示例代码过时 | 同步更新示例 |
-| 链接指向不存在 | 检查所有链接 |

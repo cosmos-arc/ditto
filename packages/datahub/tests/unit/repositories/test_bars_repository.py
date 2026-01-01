@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 import polars as pl
 import pytest
+from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.repositories.bars import AdjType, BarsRepository
-from ditto_datahub.runtime.dq_checker import DQChecker
 from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
@@ -36,7 +36,7 @@ class TestBarsRepository:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
-        self.dq_checker = DQChecker()
+        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.repo = BarsRepository(
@@ -44,7 +44,7 @@ class TestBarsRepository:
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,  # B.3
-            self.dq_checker,
+            self.dq_engine,
             self.file_lock_manager,
         )
 
@@ -149,7 +149,7 @@ class TestPITSafeAdjustment:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
-        self.dq_checker = DQChecker()
+        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.repo = BarsRepository(
@@ -157,7 +157,7 @@ class TestPITSafeAdjustment:
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,  # B.3
-            self.dq_checker,
+            self.dq_engine,
             self.file_lock_manager,
         )
 
@@ -338,7 +338,7 @@ class TestQFQAdjustment:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
-        self.dq_checker = DQChecker()
+        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.repo = BarsRepository(
@@ -346,7 +346,7 @@ class TestQFQAdjustment:
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,  # B.3
-            self.dq_checker,
+            self.dq_engine,
             self.file_lock_manager,
         )
 
@@ -590,7 +590,7 @@ class TestBarsRepositorySingle:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
-        self.dq_checker = DQChecker()
+        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.repo = BarsRepository(
@@ -598,7 +598,7 @@ class TestBarsRepositorySingle:
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,  # B.3
-            self.dq_checker,
+            self.dq_engine,
             self.file_lock_manager,
         )
 
@@ -776,7 +776,7 @@ class TestMixedAssetClass:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
-        self.dq_checker = DQChecker()
+        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.repo = BarsRepository(
@@ -784,7 +784,7 @@ class TestMixedAssetClass:
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,  # B.3
-            self.dq_checker,
+            self.dq_engine,
             self.file_lock_manager,
         )
 
@@ -991,7 +991,7 @@ class TestAdjFactorEdgeCases:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
-        self.dq_checker = DQChecker()
+        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.repo = BarsRepository(
@@ -999,7 +999,7 @@ class TestAdjFactorEdgeCases:
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,  # B.3
-            self.dq_checker,
+            self.dq_engine,
             self.file_lock_manager,
         )
 

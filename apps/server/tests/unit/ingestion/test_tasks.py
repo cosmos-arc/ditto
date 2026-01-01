@@ -1,4 +1,12 @@
-"""Tests for ingestion tasks."""
+"""Tests for ingestion tasks.
+
+.. deprecated::
+    These tests use the old ingestion interface (IncrementalMode.QUICK/PRECISE).
+    After Phase 0.4 (Source layer refactoring) is complete, these tests should be
+    updated to use the new `ingest_date()` interface with `force` parameter.
+
+    See: C:\\Users\\36486\\.claude\\plans\\humming-skipping-parrot.md
+"""
 
 from datetime import date
 from unittest.mock import Mock, patch

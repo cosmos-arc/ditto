@@ -1,30 +1,20 @@
 ---
-name: pit-guide
-description: |
-  【必读】Point-in-Time 数据安全指南。
-  触发条件: PIT、knowledge_date、回测数据、as-of join、时点数据、未来数据泄露、look-ahead bias、数据查询、历史数据。
-  核心规则: knowledge_date 字段必须、closed="left"、T日信号T+1执行、join_asof。
-globs:
-  - "**/*.py"
+paths: packages/datahub/**/*.py
 ---
 
-# PIT 数据安全指南
+# 数据层 & PIT 安全
 
-## 核心概念
+## PIT 核心原则
 
-**PIT 安全** = 时间点 T 只能用 T 之前已知的数据
+**时间点 T 只能用 T 之前已知的数据**
 
----
-
-## knowledge_date
+## knowledge_date 规则
 
 | 数据类型 | knowledge_date |
 |----------|----------------|
 | 日行情 | trade_date + 1 |
 | 财报 | 公告日期 |
 | 指数成分 | 生效日期 |
-
----
 
 ## As-Of Join
 
@@ -38,15 +28,13 @@ result = signals.join_asof(
 )
 ```
 
----
-
 ## Rolling 安全
 
 ```python
-# ✅ 正确
+# ✅ 正确 - 不包含当日
 pl.col("close").rolling_mean(20, closed="left")
 
-# ❌ 错误（包含当日）
+# ❌ 错误 - 包含当日（未来泄露）
 pl.col("close").rolling_mean(20)
 ```
 
@@ -54,8 +42,6 @@ pl.col("close").rolling_mean(20)
 |--------|------|------|
 | "left" | [T-20, T-1] | ✅ |
 | "right" | [T-19, T] | ❌ |
-
----
 
 ## 信号规则
 
@@ -68,12 +54,25 @@ Signal(
 )
 ```
 
----
-
 ## 禁止
 
 | 禁止 | 替代 |
 |------|------|
-| rolling 不指定 closed | closed="left" |
 | 用 trade_date 查询 | 用 knowledge_date |
 | T日信号T日执行 | T+1执行 |
+| rolling 不指定 closed | closed="left" |
+
+## 知识日期
+
+| ✅ 正确 | ❌ 错误 |
+|---------|---------|
+| hub.bars.get(auto_knowledge_date=True) | 手动计算 trade_date + 1 |
+| @traced("data.read") | 无追踪装饰器 |
+
+## 测试标记
+
+| 测试类型 | 标记 | 运行命令 |
+|----------|------|----------|
+| PIT 验证 | @pytest.mark.pit | pytest -m pit |
+| 数据摄入 | @pytest.mark.ingestion | pytest -m ingestion |
+| 集成测试 | @pytest.mark.integration | pytest -m integration |

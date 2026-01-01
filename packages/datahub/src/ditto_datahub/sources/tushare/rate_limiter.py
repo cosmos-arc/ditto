@@ -134,8 +134,17 @@ class TushareRateLimiter:
         # 使用 test() 检查但不消耗，等待直到可以请求
         import time
 
-        while not self._limiter.test(rate, "tushare", group.value):
+        while True:
+            # 同时检查全局限流和分组限流
+            global_ok = self._limiter.test(self._global_rate, "tushare", "global")
+            group_ok = self._limiter.test(rate, "tushare", group.value)
+
+            if global_ok and group_ok:
+                break
+
             time.sleep(0.1)  # 短暂等待后重试
 
-        # 消耗一次额度
+        # 消费全局限流额度
+        self._limiter.hit(self._global_rate, "tushare", "global")
+        # 消费分组限流额度
         self._limiter.hit(rate, "tushare", group.value)

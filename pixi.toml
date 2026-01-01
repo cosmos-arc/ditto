@@ -7,7 +7,7 @@
 
 [workspace]
 channels = ["conda-forge"]
-platforms = ["win-64", "linux-64"]  # 如有 Mac 用户可加 "osx-64", "osx-arm64"
+platforms = ["win-64", "linux-64"]                                            # 如有 Mac 用户可加 "osx-64", "osx-arm64"
 name = "ditto"
 version = "0.1.0"
 authors = ["Chevy <chevy_777@126.com>"]
@@ -24,10 +24,10 @@ python = "3.11.*"
 # ──────────────────────────────────────────────────────────
 # 数据科学与处理
 # ──────────────────────────────────────────────────────────
-polars = ">=1.8,<2"          # 放宽上限，便于升级
+polars = ">=1.8,<2"  # 放宽上限，便于升级
 pandas = ">=2.2,<3"
 numpy = ">=2.1,<3"
-pyarrow = ">=18,<23"         # Polars/Pandas 依赖
+pyarrow = ">=18,<23" # Polars/Pandas 依赖
 
 # ──────────────────────────────────────────────────────────
 # 数据库
@@ -59,7 +59,7 @@ pyyaml = ">=6.0,<7"
 # 任务调度
 # ──────────────────────────────────────────────────────────
 prefect = ">=3.0,<4"
-apscheduler = ">=3.11,<4"  # 保留作为备用
+apscheduler = ">=3.11,<4" # 保留作为备用
 
 # ──────────────────────────────────────────────────────────
 # 可视化
@@ -76,9 +76,9 @@ ditto-foundation = { path = "packages/foundation", editable = true }
 ditto-datahub = { path = "packages/datahub", editable = true }
 
 # 性能优化库（Rust 实现）
-cachebox = ">=5.0,<6"      # 高性能缓存（10-50x 性能）
-granian = ">=1.0,<2"       # ASGI 服务器（2-4x 性能，替代 uvicorn）
-orjson = ">=3.10,<4"       # JSON 序列化（4.5-11.5x 性能）
+cachebox = ">=5.0,<6" # 高性能缓存（10-50x 性能）
+granian = ">=1.0,<2"  # ASGI 服务器（2-4x 性能，替代 uvicorn）
+orjson = ">=3.10,<4"  # JSON 序列化（4.5-11.5x 性能）
 
 # 数据源
 tushare = ">=1.4,<2"
@@ -123,15 +123,15 @@ pytest-cov = ">=6.0,<7"
 pytest-asyncio = ">=0.24,<1"
 pytest-mock = ">=3.14,<4"
 pytest-benchmark = ">=4.0,<5"
-pytest-xdist = ">=3.5,<4"      # 并行测试
-pytest-timeout = ">=2.3,<3"    # 超时控制
+pytest-xdist = ">=3.5,<4"     # 并行测试
+pytest-timeout = ">=2.3,<3"   # 超时控制
 requests-mock = ">=1.12,<2"
 
 # ──────────────────────────────────────────────────────────
 # 测试辅助
 # ──────────────────────────────────────────────────────────
 faker = ">=33,<40"
-pandera = ">=0.21,<1"          # DataFrame 验证
+pandera = ">=0.21,<1" # DataFrame 验证
 
 # ──────────────────────────────────────────────────────────
 # 类型存根
@@ -226,13 +226,16 @@ pre-commit-update = "pre-commit autoupdate"
 # 复合任务
 # ──────────────────────────────────────────────────────────
 # CI 完整检查（模拟 CI 流程）
-ci-check = { depends-on = ["lint", "format-check", "typecheck", "security", "test-cov-xml"] }
+ci-check = { depends-on = [
+    "lint",
+    "format-check",
+    "typecheck",
+    "security",
+    "test-cov-xml",
+] }
 
 # 快速检查（开发时用，自动修复）
 quick-check = { depends-on = ["lint-fix", "format", "test-fast"] }
-
-# 提交前检查（比 quick-check 更严格）
-pre-push-check = { depends-on = ["lint", "format-check", "typecheck", "test-unit"] }
 
 # ──────────────────────────────────────────────────────────
 # 服务
