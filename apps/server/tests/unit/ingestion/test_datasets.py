@@ -1,0 +1,408 @@
+"""Tests for Dataset Configuration Registry."""
+
+from datetime import time
+
+import pytest
+from ditto_server.ingestion.config.datasets import (
+    DATASET_REGISTRY,
+    Dataset,
+    DatasetConfig,
+    TaskTier,
+    get_all_datasets,
+    get_dataset_config,
+    get_datasets_by_tier,
+    get_parallel_datasets,
+)
+
+
+class TestDatasetEnum:
+    """Test Dataset enumeration."""
+
+    def test_dataset_t0_meta_datasets(self) -> None:
+        """Test T0 meta datasets are defined."""
+        assert Dataset.CALENDAR in Dataset
+        assert Dataset.STOCK_BASIC in Dataset
+        assert Dataset.ETF_BASIC in Dataset
+
+    def test_dataset_t1_daily_datasets(self) -> None:
+        """Test T1 daily datasets are defined."""
+        assert Dataset.ETF_DAILY in Dataset
+        assert Dataset.STOCK_DAILY in Dataset
+        assert Dataset.ADJ_FACTOR in Dataset
+        assert Dataset.FUND_ADJ in Dataset
+
+    def test_dataset_values(self) -> None:
+        """Test dataset enum values match expected strings."""
+        assert Dataset.CALENDAR.value == "calendar"
+        assert Dataset.STOCK_BASIC.value == "stock_basic"
+        assert Dataset.ETF_BASIC.value == "etf_basic"
+        assert Dataset.ETF_DAILY.value == "etf_daily"
+        assert Dataset.STOCK_DAILY.value == "stock_daily"
+        assert Dataset.ADJ_FACTOR.value == "adj_factor"
+        assert Dataset.FUND_ADJ.value == "fund_adj"
+
+
+class TestTaskTierEnum:
+    """Test TaskTier enumeration."""
+
+    def test_task_tier_values(self) -> None:
+        """Test task tier enum values."""
+        assert TaskTier.T0_META.value == "T0"
+        assert TaskTier.T1_DAILY.value == "T1"
+        assert TaskTier.T2_REPAIR.value == "T2"
+        assert TaskTier.T3_QUALITY.value == "T3"
+
+
+class TestDatasetConfig:
+    """Test DatasetConfig model."""
+
+    def test_dataset_config_validation(self) -> None:
+        """Test DatasetConfig model validation with all required fields."""
+        config = DatasetConfig(
+            dataset=Dataset.ETF_DAILY,
+            tier=TaskTier.T1_DAILY,
+            description="ETF daily bars",
+            update_frequency="每日",
+            typical_available_time=time(18, 0),
+            priority=20,
+            depends_on=[Dataset.ETF_BASIC],
+            retry_limit=3,
+            timeout_seconds=300,
+            quality_checks_enabled=True,
+            critical_fields=[
+                "trade_date",
+                "ts_code",
+                "open",
+                "high",
+                "low",
+                "close",
+                "vol",
+            ],
+            task_name="ingest_etf_bars",
+            requires_trade_date=True,
+        )
+
+        assert config.dataset == Dataset.ETF_DAILY
+        assert config.tier == TaskTier.T1_DAILY
+        assert config.update_frequency == "每日"
+        assert config.typical_available_time == time(18, 0)
+        assert config.priority == 20
+        assert config.depends_on == [Dataset.ETF_BASIC]
+        assert config.retry_limit == 3
+        assert config.timeout_seconds == 300
+        assert config.quality_checks_enabled is True
+        assert config.critical_fields == [
+            "trade_date",
+            "ts_code",
+            "open",
+            "high",
+            "low",
+            "close",
+            "vol",
+        ]
+
+    def test_dataset_config_with_dependencies(self) -> None:
+        """Test DatasetConfig with depends_on field."""
+        config = DatasetConfig(
+            dataset=Dataset.STOCK_DAILY,
+            tier=TaskTier.T1_DAILY,
+            description="Stock daily bars",
+            update_frequency="每日",
+            typical_available_time=time(17, 0),
+            priority=20,
+            depends_on=[Dataset.STOCK_BASIC],
+            retry_limit=3,
+            timeout_seconds=600,
+            quality_checks_enabled=True,
+            critical_fields=[
+                "trade_date",
+                "ts_code",
+                "open",
+                "high",
+                "low",
+                "close",
+                "vol",
+            ],
+            task_name="ingest_stock_daily",
+            requires_trade_date=True,
+        )
+
+        assert config.depends_on == [Dataset.STOCK_BASIC]
+
+    def test_dataset_config_adj_factor_dependencies(self) -> None:
+        """Test ADJ_FACTOR depends on STOCK_DAILY."""
+        config = DatasetConfig(
+            dataset=Dataset.ADJ_FACTOR,
+            tier=TaskTier.T1_DAILY,
+            description="复权因子",
+            update_frequency="每日",
+            typical_available_time=time(19, 0),
+            priority=30,
+            depends_on=[Dataset.STOCK_DAILY],
+            retry_limit=3,
+            timeout_seconds=300,
+            quality_checks_enabled=True,
+            critical_fields=["trade_date", "ts_code", "adj_factor"],
+            task_name="ingest_adj_factor",
+            requires_trade_date=True,
+        )
+
+        assert config.depends_on == [Dataset.STOCK_DAILY]
+
+
+class TestDatasetRegistry:
+    """Test DATASET_REGISTRY."""
+
+    def test_registry_is_defined(self) -> None:
+        """Test DATASET_REGISTRY is defined."""
+        assert isinstance(DATASET_REGISTRY, dict)
+        assert len(DATASET_REGISTRY) > 0
+
+    def test_registry_contains_all_datasets(self) -> None:
+        """Test registry contains all Dataset enum values."""
+        for dataset in Dataset:
+            assert dataset in DATASET_REGISTRY, f"{dataset} not in registry"
+
+    def test_registry_configs_are_valid(self) -> None:
+        """Test all registry configs are valid DatasetConfig instances."""
+        for dataset, config in DATASET_REGISTRY.items():
+            assert isinstance(config, DatasetConfig)
+            assert config.dataset == dataset
+
+    def test_t0_meta_datasets_config(self) -> None:
+        """Test T0 meta datasets configuration."""
+        # Calendar should be T0
+        calendar = DATASET_REGISTRY[Dataset.CALENDAR]
+        assert calendar.tier == TaskTier.T0_META
+        assert calendar.requires_trade_date is False
+        assert calendar.priority == 10  # Highest priority
+
+        # Stock basic should be T0
+        stock_basic = DATASET_REGISTRY[Dataset.STOCK_BASIC]
+        assert stock_basic.tier == TaskTier.T0_META
+        assert stock_basic.requires_trade_date is False
+        assert stock_basic.task_name == "ingest_stock_basic"
+
+        # ETF basic should be T0
+        etf_basic = DATASET_REGISTRY[Dataset.ETF_BASIC]
+        assert etf_basic.tier == TaskTier.T0_META
+        assert etf_basic.requires_trade_date is False
+
+    def test_t1_daily_datasets_config(self) -> None:
+        """Test T1 daily datasets configuration."""
+        # ETF daily should be T1
+        etf_daily = DATASET_REGISTRY[Dataset.ETF_DAILY]
+        assert etf_daily.tier == TaskTier.T1_DAILY
+        assert etf_daily.requires_trade_date is True
+        assert etf_daily.task_name == "ingest_etf_bars"
+        assert etf_daily.update_frequency == "每日"
+        assert isinstance(etf_daily.typical_available_time, time)
+
+        # Stock daily should be T1
+        stock_daily = DATASET_REGISTRY[Dataset.STOCK_DAILY]
+        assert stock_daily.tier == TaskTier.T1_DAILY
+        assert stock_daily.requires_trade_date is True
+        assert stock_daily.task_name == "ingest_stock_daily"
+
+        # Adj factor should be T1
+        adj_factor = DATASET_REGISTRY[Dataset.ADJ_FACTOR]
+        assert adj_factor.tier == TaskTier.T1_DAILY
+        assert adj_factor.requires_trade_date is True
+        assert adj_factor.task_name == "ingest_adj_factor"
+
+        # Fund adj should be T1
+        fund_adj = DATASET_REGISTRY[Dataset.FUND_ADJ]
+        assert fund_adj.tier == TaskTier.T1_DAILY
+        assert fund_adj.requires_trade_date is True
+        assert fund_adj.task_name == "ingest_fund_adj"
+
+    def test_required_fields_exist(self) -> None:
+        """Test all datasets have required spec fields."""
+
+        for _dataset, config in DATASET_REGISTRY.items():
+            # Check all required fields are present
+            assert hasattr(config, "dataset")
+            assert hasattr(config, "tier")
+            assert hasattr(config, "description")
+            assert hasattr(config, "update_frequency")
+            assert hasattr(config, "typical_available_time")
+            assert hasattr(config, "priority")
+            assert hasattr(config, "depends_on")
+            assert hasattr(config, "retry_limit")
+            assert hasattr(config, "timeout_seconds")
+            assert hasattr(config, "quality_checks_enabled")
+            assert hasattr(config, "critical_fields")
+
+            # Validate field types
+            assert isinstance(config.dataset, Dataset)
+            assert isinstance(config.tier, TaskTier)
+            assert isinstance(config.description, str)
+            assert isinstance(config.update_frequency, str)
+            assert isinstance(config.typical_available_time, time)
+            assert isinstance(config.priority, int)
+            assert isinstance(config.depends_on, list)
+            assert isinstance(config.retry_limit, int)
+            assert isinstance(config.timeout_seconds, int)
+            assert isinstance(config.quality_checks_enabled, bool)
+            assert isinstance(config.critical_fields, list)
+
+
+class TestHelperFunctions:
+    """Test helper functions."""
+
+    def test_get_datasets_by_tier_t0(self) -> None:
+        """Test get_datasets_by_tier for T0."""
+        t0_datasets = get_datasets_by_tier(TaskTier.T0_META)
+
+        assert Dataset.CALENDAR in t0_datasets
+        assert Dataset.STOCK_BASIC in t0_datasets
+        assert Dataset.ETF_BASIC in t0_datasets
+        assert Dataset.ETF_DAILY not in t0_datasets
+        assert Dataset.STOCK_DAILY not in t0_datasets
+
+    def test_get_datasets_by_tier_t1(self) -> None:
+        """Test get_datasets_by_tier for T1."""
+        t1_datasets = get_datasets_by_tier(TaskTier.T1_DAILY)
+
+        assert Dataset.ETF_DAILY in t1_datasets
+        assert Dataset.STOCK_DAILY in t1_datasets
+        assert Dataset.ADJ_FACTOR in t1_datasets
+        assert Dataset.FUND_ADJ in t1_datasets
+        assert Dataset.CALENDAR not in t1_datasets
+        assert Dataset.STOCK_BASIC not in t1_datasets
+
+    def test_get_datasets_by_tier_t2(self) -> None:
+        """Test get_datasets_by_tier for T2."""
+        t2_datasets = get_datasets_by_tier(TaskTier.T2_REPAIR)
+
+        # T2 is for repair/backfill, can be empty
+        # (repair flow uses all datasets dynamically)
+        # This test ensures the function works correctly even if no T2-specific datasets
+        assert isinstance(t2_datasets, list)
+
+    def test_get_dataset_config(self) -> None:
+        """Test get_dataset_config function."""
+        config = get_dataset_config(Dataset.ETF_DAILY)
+
+        assert isinstance(config, DatasetConfig)
+        assert config.dataset == Dataset.ETF_DAILY
+        assert config.tier == TaskTier.T1_DAILY
+
+    def test_get_dataset_config_all_datasets(self) -> None:
+        """Test get_dataset_config works for all datasets."""
+        for dataset in Dataset:
+            config = get_dataset_config(dataset)
+            assert isinstance(config, DatasetConfig)
+            assert config.dataset == dataset
+
+
+class TestDatasetDependencies:
+    """Test dataset dependency relationships."""
+
+    def test_calendar_no_dependencies(self) -> None:
+        """Test calendar has no dependencies (foundation dataset)."""
+        config = get_dataset_config(Dataset.CALENDAR)
+        assert len(config.depends_on) == 0
+
+    def test_t1_etf_daily_depends_on_etf_basic(self) -> None:
+        """Test ETF_DAILY depends on ETF_BASIC."""
+        config = get_dataset_config(Dataset.ETF_DAILY)
+        assert Dataset.ETF_BASIC in config.depends_on
+
+    def test_t1_stock_daily_depends_on_stock_basic(self) -> None:
+        """Test STOCK_DAILY depends on STOCK_BASIC."""
+        config = get_dataset_config(Dataset.STOCK_DAILY)
+        assert Dataset.STOCK_BASIC in config.depends_on
+
+    def test_t1_adj_factor_depends_on_stock_daily(self) -> None:
+        """Test ADJ_FACTOR depends on STOCK_DAILY."""
+        config = get_dataset_config(Dataset.ADJ_FACTOR)
+        assert Dataset.STOCK_DAILY in config.depends_on
+
+    def test_no_circular_dependencies(self) -> None:
+        """Test there are no circular dependencies in the registry."""
+        # Build dependency graph
+        dep_graph = {}
+        for dataset, config in DATASET_REGISTRY.items():
+            dep_graph[dataset] = set(config.depends_on)
+
+        # Check for cycles using DFS
+        def has_cycle(
+            node: Dataset, visited: set[Dataset], rec_stack: set[Dataset]
+        ) -> bool:
+            visited.add(node)
+            rec_stack.add(node)
+
+            for neighbor in dep_graph.get(node, []):
+                if neighbor not in visited:
+                    if has_cycle(neighbor, visited, rec_stack):
+                        return True
+                elif neighbor in rec_stack:
+                    return True
+
+            rec_stack.remove(node)
+            return False
+
+        for dataset in Dataset:
+            if has_cycle(dataset, set(), set()):
+                pytest.fail(f"Circular dependency detected involving {dataset}")
+
+
+class TestExtendedHelperFunctions:
+    """Test extended helper functions for parallel execution."""
+
+    def test_get_all_datasets(self) -> None:
+        """Test get_all_datasets returns all datasets."""
+        all_datasets = get_all_datasets()
+
+        assert len(all_datasets) > 0
+        assert Dataset.CALENDAR in all_datasets
+        assert Dataset.ETF_DAILY in all_datasets
+
+    def test_get_parallel_datasets_t1(self) -> None:
+        """Test get_parallel_datasets for T1 tier.
+
+        T1 datasets have a dependency chain:
+        - Level 0: ETF_DAILY, STOCK_DAILY (depend only on T0)
+        - Level 1: ADJ_FACTOR (depends on STOCK_DAILY), FUND_ADJ (depends on ETF_DAILY)
+        """
+        levels = get_parallel_datasets(TaskTier.T1_DAILY)
+
+        # T1 should have 2 levels due to T1->T1 dependencies
+        assert len(levels) == 2
+
+        # Level 0 should have ETF_DAILY and STOCK_DAILY
+        assert set(levels[0]) == {Dataset.ETF_DAILY, Dataset.STOCK_DAILY}
+
+        # Level 1 should have ADJ_FACTOR and FUND_ADJ
+        assert set(levels[1]) == {Dataset.ADJ_FACTOR, Dataset.FUND_ADJ}
+
+    def test_get_parallel_datasets_t0(self) -> None:
+        """Test get_parallel_datasets for T0 tier."""
+        levels = get_parallel_datasets(TaskTier.T0_META)
+
+        # T0 should have 1 level with all datasets (no dependencies)
+        assert len(levels) == 1
+        assert len(levels[0]) >= 3  # calendar, stock_basic, etf_basic
+
+    def test_get_parallel_datasets_empty_tier(self) -> None:
+        """Test get_parallel_datasets for tier with no datasets."""
+        levels = get_parallel_datasets(TaskTier.T2_REPAIR)
+
+        # T2 has no datasets, should return empty list
+        assert levels == []
+
+    def test_parallel_execution_validation(self) -> None:
+        """Test that parallel execution groups are valid."""
+        levels = get_parallel_datasets(TaskTier.T1_DAILY)
+
+        # Verify no dataset appears twice
+        seen = set()
+        for level in levels:
+            for dataset in level:
+                assert dataset not in seen, f"{dataset} appears in multiple levels"
+                seen.add(dataset)
+
+        # Verify all datasets are accounted for
+        t1_datasets = set(get_datasets_by_tier(TaskTier.T1_DAILY))
+        assert seen == t1_datasets
