@@ -85,13 +85,16 @@ class DatasetConfig(BaseModel):
     tier: TaskTier = Field(..., description="Task tier for scheduling")
     description: str = Field(..., description="Human-readable description")
     update_frequency: str = Field(
-        ..., description="Update frequency (e.g., '每日', '实时')"
+        ...,
+        description="Update frequency (e.g., '每日', '实时')",
     )
     typical_available_time: time = Field(
-        ..., description="Typical time when data is available"
+        ...,
+        description="Typical time when data is available",
     )
     priority: int = Field(
-        ..., description="Execution priority (lower = higher priority)"
+        ...,
+        description="Execution priority (lower = higher priority)",
     )
     depends_on: list[Dataset] = Field(
         default_factory=list,

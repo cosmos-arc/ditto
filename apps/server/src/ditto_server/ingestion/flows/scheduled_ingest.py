@@ -161,7 +161,7 @@ def create_weekday_schedule(
         Prefect schedule object.
 
     """
-    from prefect.schedules import Cron
+    from prefect.schedules import Cron  # noqa: PLC0415
 
     cron = f"{minute} {hour} * * 1-5"  # Monday-Friday
     return Cron(cron)

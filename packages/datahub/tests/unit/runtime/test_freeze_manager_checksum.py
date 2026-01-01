@@ -20,6 +20,7 @@ class TestFreezeManagerChecksum:
     def teardown_method(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_sha256_checksum_default(self):
@@ -58,6 +59,7 @@ class TestFreezeManagerChecksum:
 
         # Calculate MD5 checksum
         import hashlib
+
         md5 = hashlib.md5(usedforsecurity=False)
         md5.update(test_file.read_bytes())
         md5_checksum = md5.hexdigest()
@@ -67,7 +69,7 @@ class TestFreezeManagerChecksum:
             "freeze_id": "old_freeze",
             "description": "Old freeze",
             "created_at": "2024-01-01T00:00:00",
-            "files": {"test.parquet": md5_checksum}
+            "files": {"test.parquet": md5_checksum},
         }
 
         with old_manifest_path.open("w", encoding="utf-8") as f:
@@ -103,7 +105,7 @@ class TestFreezeManagerChecksum:
         # Verify they are different
         assert sha256_checksum != md5_checksum
         assert len(sha256_checksum) == 64  # SHA-256
-        assert len(md5_checksum) == 32    # MD5
+        assert len(md5_checksum) == 32  # MD5
 
     def test_freeze_manifest_new_fields(self):
         """Test that FreezeManifest has new fields for version and checksum_type."""
@@ -119,8 +121,8 @@ class TestFreezeManagerChecksum:
         )
 
         # Verify new fields exist
-        assert hasattr(manifest, 'version')
-        assert hasattr(manifest, 'checksum_type')
+        assert hasattr(manifest, "version")
+        assert hasattr(manifest, "checksum_type")
         assert manifest.version == "2.0"
         assert manifest.checksum_type == "sha256"
 
@@ -148,7 +150,7 @@ class TestFreezeManagerChecksum:
         assert reloaded_manifest.checksum_type == original_manifest.checksum_type
         assert reloaded_manifest.files == original_manifest.files
 
-    @patch('ditto_datahub.runtime.freeze_manager.hashlib')
+    @patch("ditto_datahub.runtime.freeze_manager.hashlib")
     def test_compute_checksum_implementation(self, mock_hashlib):
         """Test the _compute_checksum implementation uses SHA-256."""
         # Mock hashlib.sha256

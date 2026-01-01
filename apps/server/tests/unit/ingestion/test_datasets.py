@@ -328,7 +328,9 @@ class TestDatasetDependencies:
 
         # Check for cycles using DFS
         def has_cycle(
-            node: Dataset, visited: set[Dataset], rec_stack: set[Dataset]
+            node: Dataset,
+            visited: set[Dataset],
+            rec_stack: set[Dataset],
         ) -> bool:
             visited.add(node)
             rec_stack.add(node)

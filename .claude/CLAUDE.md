@@ -5,14 +5,31 @@
 - **分支**: 从 main 拉取开发分支，PR 合并
 - **TDD**: RED → GREEN → REFACTOR
 - **依赖**:
-    - **存储**: duckdb / sqlite
+    - **存储**: parquet / duckdb / sqlite
     - **数据处理**: polars
     - **API**: fastapi
     - **任务处理**: prefect
     - **日志监控**: loguru / opentelemetry
+    - **限流、重试**: tenacity / limits
+    - **本地换成**：cachebox
+    - **Json序列化**: orjson
+    - **ASGI**: granian
+    - **网络请求**: httpx
 - **包管理**: 只用 pixi（禁止 pip/poetry/conda）
 - **文档**: 文档驱动开发，保持LiveDocument，及时更新
 - **测试**: 分支覆盖率>=80%
+- **工具**:
+    - **文件读写**：优先使用内置工具而非 Bash 命令
+        - 读文件 → `Read` 工具，不要用 `cat`
+        - 写文件 → `Write` 工具，不要用 `cat >` 或 `echo >`
+        - 编辑文件 → `Edit` 工具，不要用 `sed`
+        - 创建目录 → 可以用 `mkdir`
+    - **代码智能分析**：项目已配置 LSP。在以下场景优先使用 LSP 工具而非 grep/ripgrep/glob，LSP 结果更精确，优先信任 LSP 的类型和诊断信息。
+        - 查找函数/类定义 → `goToDefinition`
+        - 查找引用位置 → `findReferences`
+        - 理解类型信息 → `hover`
+        - 了解文件结构 → `documentSymbol`
+        - 编辑后检查错误 → `getDiagnostics`
 
 ## 绝对禁止
 
@@ -20,6 +37,7 @@
 - `rolling_mean(20)` 不指定 `closed="left"`
 - 跳过风控检查
 - 直接提交 main
+- 文件读写改操作使用Bash中的 `cat`、 `cat >` 、 `echo >`、`sed`
 
 ## 常用命令
 
