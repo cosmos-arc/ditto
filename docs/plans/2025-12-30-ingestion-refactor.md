@@ -498,3 +498,110 @@ DataSource.fetch_fund_adj()
 ### 性能验收
 - [ ] 单日摄取性能不低于重构前
 - [ ] 内存使用无明显增加
+
+---
+
+## 八、进度跟踪
+
+> **更新时间**: 2025-01-01
+> **分支**: `feat/ingestion-service-structure`
+> **总体进度**: 47% (8/17 任务完成)
+
+### 进度概览
+
+| Phase | 任务数 | 已完成 | 待开始 | 完成率 |
+|-------|--------|--------|--------|--------|
+| Phase 1 | 3 | 3 | 0 | 100% ✅ |
+| Phase 2 | 2 | 2 | 0 | 100% ✅ |
+| Phase 3 | 6 | 3 | 3 | 50% 🔄 |
+| Phase 4 | 3 | 0 | 3 | 0% |
+| Phase 5 | 3 | 0 | 3 | 0% |
+
+### Phase 1: Ingestion Service 层 ✅ (100%)
+
+**Task 1.1**: 创建 Ingestion Service 目录结构
+- 提交: `8388318` (初始), `5e9a5df` (规范修复)
+- 状态: ✅ 完成
+- 审查: Spec 通过, 代码质量通过
+
+**Task 1.2**: 实现 MetadataManager
+- 文件: `apps/server/src/ditto_server/ingestion/services/metadata.py`
+- 测试: 14个测试通过, 覆盖率 **100%**
+- 状态: ✅ 完成
+- 审查: Spec 通过, 代码质量通过
+
+**Task 1.3**: 实现 IngestionCoordinator
+- 文件: `apps/server/src/ditto_server/ingestion/services/coordinator.py`
+- 测试: 16个测试通过, 覆盖率 **88.35%**
+- 状态: ✅ 完成
+- 审查: Spec 通过, 代码质量通过
+
+### Phase 2: 全量回补和重试能力 ✅ (100%)
+
+**Task 2.1**: 实现 BackfillManager
+- 文件: `apps/server/src/ditto_server/ingestion/services/backfill.py`
+- 测试: 9个测试通过, 覆盖率 **86.36%**
+- 状态: ✅ 完成
+- 审查: Spec 通过, 代码质量通过
+
+**Task 2.2**: 实现 RetryManager
+- 文件: `apps/server/src/ditto_server/ingestion/services/retry.py`
+- 测试: 12个测试通过, 覆盖率 **100%**
+- 状态: ✅ 完成
+- 审查: Spec 通过, 代码质量通过（评分 A+ 95/100）
+
+### Phase 3: Prefect 集成 🔄 (50%)
+
+**Task 3.1**: 创建 config/datasets.py (数据集注册表)
+- 文件: `apps/server/src/ditto_server/ingestion/config/datasets.py`
+- 测试: 28个测试通过, 覆盖率 **88.61%**
+- 修复提交: `d7bd0ad`, `544e4df`
+- 状态: ✅ 完成
+- 审查: Spec 通过, 代码质量通过
+
+**Task 3.2**: 创建 Tasks 层 (轻量 wrapper)
+- 文件: `t0_meta.py`, `t1_bars.py`, `t1_adj_factor.py`
+- 测试: 22个测试通过, 覆盖率 **100%**
+- 状态: ✅ 完成
+- 审查: Spec 通过, 代码质量通过（评分 9.8/10）
+
+**Task 3.3**: 创建 flows/daily.py (每日增量 Flow)
+- 文件: `apps/server/src/ditto_server/ingestion/flows/daily.py`
+- 测试: 20个测试通过
+- 修复提交: `db2778d` (依赖编排重构)
+- 状态: ✅ 完成
+
+**Task 3.4**: 创建 flows/backfill.py ⏳
+- 状态: 待开始
+
+**Task 3.5**: 创建 flows/repair.py ⏳
+- 状态: 待开始
+
+**Task 3.6**: 创建 deploy.py ⏳
+- 状态: 待开始
+
+### Phase 4: Source 层简化 (0%)
+
+**Task 4.1**: 移除 DataSource.ingest_date() ⏳
+**Task 4.2**: 移除 TushareSource.ingest_date() ⏳
+**Task 4.3**: 废弃 fetch_etf_daily_incremental() ⏳
+
+### Phase 5: 清理和文档 (0%)
+
+**Task 5.1**: 标记废弃组件 ⏳
+**Task 5.2**: 更新测试 ⏳
+**Task 5.3**: 更新文档 ⏳
+
+### 技术债务
+
+1. **mypy 类型警告**: Prefect 任务工厂的类型推断限制（不影响功能）
+2. **旧式任务测试失败**: 4个使用废弃接口的测试失败（待 Phase 4 更新）
+3. **DQC 检查**: Task 3.3 中的 DQC 检查当前是 TODO 状态
+
+### 下一步计划
+
+1. Task 3.4: 创建 flows/backfill.py
+2. Task 3.5: 创建 flows/repair.py
+3. Task 3.6: 创建 deploy.py
+4. Phase 4: Source 层简化
+5. Phase 5: 清理和文档
