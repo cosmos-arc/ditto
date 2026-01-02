@@ -141,7 +141,7 @@ pixi run -e dev pytest -m integration  # 集成测试
 | Skill | 使用时机 | 强制级别 |
 |-------|---------|---------|
 | `superpowers:writing-plans` | 有规范或需求的多步骤任务，在写代码前 | ⭐⭐⭐ 必须 |
-| `superpowers:executing-plans` | 有书面实施计划在单独会话执行 | ⭐⭐ 推荐 |
+| `superpowers:executing-plans` | 有书面实施计划在单独会话执行 | ⭐⭐⭐ 必须 |
 | `superpowers:subagent-driven-development` | 执行有独立任务的当前会话中的实施计划 | ⭐⭐⭐ 必须  |
 | `superpowers:dispatching-parallel-agents` | 面对 2+ 个无共享状态/顺序依赖的独立任务 | ⭐ 谨慎选择 |
 
@@ -168,12 +168,6 @@ pixi run -e dev pytest -m integration  # 集成测试
 | `python-development:async-python-patterns` | 构建 async API，并发系统，I/O 密集 | ⭐⭐ 主动使用 |
 | `python-development:fastapi-pro` | FastAPI 开发，async APIs，WebSockets | ⭐⭐ 主动使用 |
 
-**测试与调试专项类：**
-
-| Skill | 使用时机 | 强制级别 |
-|-------|---------|---------|
-| `unit-testing:debugger` | 任何错误、测试失败、意外行为 | ⭐⭐⭐ 必须，主动使用 |
-| `unit-testing:test-automator` | 测试自动化，质量工程，CI 集成 | ⭐⭐ 主动使用 |
 
 ### 危险信号（不要陷入这些想法）
 
