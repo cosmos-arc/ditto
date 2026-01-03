@@ -95,6 +95,7 @@ class BarsRepository:
         asset_class: Literal["stock", "etf"] | None = None,
         with_symbol: bool = False,
         with_status: bool = False,  # B.3
+        market_wide: bool = False,  # 全市场查询模式
     ) -> pl.DataFrame:
         """
         Get bars data.
@@ -113,6 +114,7 @@ class BarsRepository:
             asset_class: Asset class filter.
             with_symbol: Add symbol column to result.
             with_status: Add stock status columns (B.3). Only for stock data.
+            market_wide: 全市场查询模式，不限制 SID 范围。为 True 时获取所有活跃证券。
 
         Returns:
             Bars data DataFrame.
@@ -125,10 +127,19 @@ class BarsRepository:
             end=end,
             adj=adj.value,
             with_status=with_status,
+            market_wide=market_wide,
         )
 
         # 1. Resolve identifiers to SIDs
-        resolved_sids = self._resolve_sids(sids, src_codes, symbols, asof)
+        # 全市场模式：获取所有活跃 SID
+        if market_wide:
+            resolved_sids = self._security_store.list_sids(
+                asset_class=asset_class,
+                is_active=True,
+            )
+        else:
+            # 样本集模式：使用原逻辑
+            resolved_sids = self._resolve_sids(sids, src_codes, symbols, asof)
 
         if not resolved_sids:
             return pl.DataFrame()

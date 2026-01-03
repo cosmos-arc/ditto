@@ -1257,3 +1257,189 @@ class TestAdjFactorEdgeCases:
         # Assert: Should return empty DataFrame
         assert isinstance(result, pl.DataFrame)
         assert result.is_empty()
+
+
+class TestMarketWideMode:
+    """Tests for market_wide query mode."""
+
+    def setup_method(self) -> None:
+        """Set up test environment with multiple securities."""
+        self.temp_dir = TemporaryDirectory()
+        data_root = Path(self.temp_dir.name)
+
+        self.pool = SQLitePool(":memory:")
+        self.pool.init_schema()
+        self.client = SQLiteClient(self.pool)
+
+        self.bars_store = BarsStore(data_root)
+        self.adj_factor_store = AdjFactorStore(data_root)
+        self.security_store = SecurityStore(self.client)
+        self.stock_status_store = StockStatusStore(data_root)
+        self.dq_engine = DQEngine()
+        self.file_lock_manager = FileLockManager(data_root / "locks")
+
+        self.repo = BarsRepository(
+            self.bars_store,
+            self.adj_factor_store,
+            self.security_store,
+            self.stock_status_store,
+            self.dq_engine,
+            self.file_lock_manager,
+        )
+
+        # Insert multiple active stocks
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date, is_active)
+            VALUES
+            (100000001, '600000', 'Stock1', 'SSE', 'stock', '2000-01-01', 1),
+            (100000002, '600001', 'Stock2', 'SSE', 'stock', '2000-01-01', 1),
+            (100000003, '600002', 'Stock3', 'SSE', 'stock', '2000-01-01', 0)
+        """)
+        self.client.commit()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        self.temp_dir.cleanup()
+
+    def test_market_wide_returns_all_active_stocks(self) -> None:
+        """Test market_wide=True returns data for all active stocks."""
+        # Arrange: Write bars data for all stocks
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000002, 100000003],
+                "trade_date": [date(2024, 1, 2)] * 3,
+                "open": [10.0, 11.0, 12.0],
+                "high": [12.0, 13.0, 14.0],
+                "low": [9.0, 10.0, 11.0],
+                "close": [11.0, 12.0, 13.0],
+                "volume": [1000, 2000, 3000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Act: Query with market_wide=True
+        result = self.repo.get(
+            market_wide=True,
+            start="2024-01-01",
+            end="2024-01-31",
+        )
+
+        # Assert: Should return data for active stocks only (100000001, 100000002)
+        assert not result.is_empty()
+        result_sids = result["sid"].unique().to_list()
+        assert 100000001 in result_sids
+        assert 100000002 in result_sids
+        assert 100000003 not in result_sids  # Inactive stock
+
+    def test_market_wide_respects_asset_class_filter(self) -> None:
+        """Test market_wide=True with asset_class filter."""
+        # Arrange: Insert ETF
+        self.client.execute("""
+            INSERT INTO security
+            (sid, symbol, name, exchange, asset_class, list_date, is_active)
+            VALUES (200000001, '510300', 'Test ETF', 'SSE', 'etf', '2000-01-01', 1)
+        """)
+        self.client.commit()
+
+        # Write stock data
+        stock_bars = pl.DataFrame(
+            {
+                "sid": [100000001],
+                "trade_date": [date(2024, 1, 2)],
+                "open": [10.0],
+                "high": [12.0],
+                "low": [9.0],
+                "close": [11.0],
+                "volume": [1000],
+            }
+        )
+        self.bars_store.write("stock_daily", stock_bars, 2024)
+
+        # Write ETF data
+        etf_bars = pl.DataFrame(
+            {
+                "sid": [200000001],
+                "trade_date": [date(2024, 1, 2)],
+                "open": [5.0],
+                "high": [6.0],
+                "low": [4.5],
+                "close": [5.5],
+                "volume": [2000],
+            }
+        )
+        self.bars_store.write("etf_daily", etf_bars, 2024)
+
+        # Act: Query with market_wide=True and asset_class="stock"
+        result = self.repo.get(
+            market_wide=True,
+            asset_class="stock",
+            start="2024-01-01",
+            end="2024-01-31",
+        )
+
+        # Assert: Should only return stock data
+        assert not result.is_empty()
+        result_sids = result["sid"].unique().to_list()
+        assert 100000001 in result_sids
+        assert 200000001 not in result_sids
+
+    def test_sample_set_mode_unchanged(self) -> None:
+        """Test that sample set mode (market_wide=False) works as before."""
+        # Arrange: Write bars data
+        bars_df = pl.DataFrame(
+            {
+                "sid": [100000001, 100000002],
+                "trade_date": [date(2024, 1, 2)] * 2,
+                "open": [10.0, 11.0],
+                "high": [12.0, 13.0],
+                "low": [9.0, 10.0],
+                "close": [11.0, 12.0],
+                "volume": [1000, 2000],
+            }
+        )
+        self.bars_store.write("stock_daily", bars_df, 2024)
+
+        # Act: Query with specific SIDs (sample set mode)
+        result = self.repo.get(
+            sids=[100000001],
+            market_wide=False,
+            start="2024-01-01",
+            end="2024-01-31",
+        )
+
+        # Assert: Should only return data for specified SID
+        assert not result.is_empty()
+        result_sids = result["sid"].unique().to_list()
+        assert result_sids == [100000001]
+        assert 100000002 not in result_sids
+
+    def test_market_wide_with_no_active_stocks(self) -> None:
+        """Test market_wide=True when no active stocks exist."""
+        # Arrange: Deactivate all stocks
+        self.client.execute("UPDATE security SET is_active = 0")
+        self.client.commit()
+
+        # Act: Query with market_wide=True
+        result = self.repo.get(
+            market_wide=True,
+            start="2024-01-01",
+            end="2024-01-31",
+        )
+
+        # Assert: Should return empty DataFrame
+        assert isinstance(result, pl.DataFrame)
+        assert result.is_empty()
+
+    def test_market_wide_with_no_data(self) -> None:
+        """Test market_wide=True when no bars data exists."""
+        # Act: Query with market_wide=True (no data written)
+        result = self.repo.get(
+            market_wide=True,
+            start="2024-01-01",
+            end="2024-01-31",
+        )
+
+        # Assert: Should return empty DataFrame
+        assert isinstance(result, pl.DataFrame)
+        assert result.is_empty()
