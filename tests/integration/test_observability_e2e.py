@@ -124,8 +124,13 @@ class TestObservabilityStack:
 
 
 @pytest.mark.integration
+@pytest.mark.external
 class TestMetricsExport:
-    """指标导出集成测试."""
+    """指标导出集成测试.
+
+    标记为 external 因为需要外部服务运行并推送指标.
+    CI 默认跳过，本地开发时可运行.
+    """
 
     @pytest.fixture(scope="class")
     def victoria_metrics_endpoint(self) -> str:
@@ -162,8 +167,13 @@ class TestMetricsExport:
 
 
 @pytest.mark.integration
+@pytest.mark.external
 class TestLogsCollection:
-    """日志采集集成测试."""
+    """日志采集集成测试.
+
+    标记为 external 因为需要外部服务运行并采集日志.
+    CI 默认跳过，本地开发时可运行.
+    """
 
     @pytest.fixture(scope="class")
     def victoria_logs_endpoint(self) -> str:
