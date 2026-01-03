@@ -64,7 +64,8 @@ DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
 | `PipelineStore` | ETL 流水 | SQLite |
 | `UniverseStore` | 股票池 | SQLite |
 | `IndexWeightStore` | 指数权重 | SQLite |
-| `IngestionMetadataStore` | 数据摄取元数据 | SQLite |
+| `IngestionLogStore` | 数据摄取事件日志 | SQLite |
+| `IngestionCursorStore` | 数据摄取游标 | SQLite |
 | `QuarantineStore` | 数据隔离区 | SQLite |
 
 ### Repository 层
@@ -453,16 +454,16 @@ failed_dates = log_store.get_failed_dates(
 # ["2024-12-24", "2024-12-25", ...]
 ```
 
-### Phase 0.4: Source 层重构（待实现）
+### Phase 0.4: Source 层重构 ✅ (已完成 - 2026-01-03)
 
 #### 目标
 
 移除 `IncrementalMode.QUICK/PRECISE`，统一为 `ingest_date()` 接口。
 
-#### 旧接口（已废弃）
+#### 旧接口（已删除）
 
 ```python
-# ❌ 旧接口：使用 QUICK/PRECISE 模式
+# ❌ 旧接口：使用 QUICK/PRECISE 模式（已删除）
 df, metadata = source.fetch_etf_daily_incremental(
     trade_date="2024-12-27",
     mode=IncrementalMode.QUICK,  # 或 PRECISE
@@ -471,11 +472,14 @@ df, metadata = source.fetch_etf_daily_incremental(
 )
 ```
 
-#### 新接口（待实现）
+#### 新接口（使用 IngestionCoordinator）
 
 ```python
-# ✅ 新接口：使用 force 参数
-df, log = source.ingest_date(
+# ✅ 新接口：使用 IngestionCoordinator
+from ditto_server.ingestion.services.coordinator import IngestionCoordinator
+
+coordinator = IngestionCoordinator(hub, source)
+result = coordinator.ingest_date(
     dataset="stock_daily",
     trade_date="2024-12-27",
     force=False,  # 强制更新，忽略 checksum
@@ -487,16 +491,17 @@ df, log = source.ingest_date(
 1. **非交易日检查**：抛出 `NotTradingDayError`
 2. **交易日空 df**：抛出 `SourceFetchError`（数据质量异常）
 3. **Checksum 验证**：
-   - 未变且非 force → 返回空 df
+   - 未变且非 force → 跳过（返回空结果）
    - 变化且非 force → 抛出 `DataChangedError`
-4. **返回值**：`(DataFrame, IngestionLog)` 元组
+4. **返回值**：`IngestionResult` 对象，包含状态和元数据
 
-#### 相关文件
+#### 完成状态
 
-- `sources/metadata.py` - 移除 `IncrementalMode`
-- `sources/base.py` - 更新接口定义
-- `sources/tushare/source.py` - 重构实现
-- `repositories/bars.py` - 集成新 metadata
+- ✅ 移除 `IncrementalMode` 枚举
+- ✅ 移除 `IngestionMetadata` dataclass
+- ✅ 移除 `DataSource.fetch_etf_daily_incremental()` 抽象方法
+- ✅ 移除 `TushareSource.fetch_etf_daily_incremental()` 实现
+- ✅ 实现 `IngestionCoordinator` 作为新的摄取协调器
 
 ## 性能优化
 
