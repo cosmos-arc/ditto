@@ -13,6 +13,31 @@
 | Phase 3 | ✅ 完成 | 2026-01-03 | @pytest.mark.pit marker |
 | Phase 4 | ✅ 完成 | 2026-01-03 | Property-based tests (Date Utils, DQ Statistical, PIT Helper) |
 | Phase 5 | ✅ 完成 | 2026-01-03 | Memory DB migration (9 个文件迁移, 2 个文件改造) |
+| Phase 6 | ✅ 完成 | 2026-01-03 | 遗留代码清理 (10 个文件删除, 5 个文件修改) |
+
+### Phase 6: 遗留代码清理 ✅ (已完成 - 2026-01-03)
+
+**完成内容**:
+1. ✅ 删除 `test_ingestion_metadata_store.py`
+2. ✅ 删除 `test_metadata.py`
+3. ✅ 删除 `test_tasks.py` 和 `test_flows.py`
+4. ✅ 更新 `test_base.py`，移除对废弃组件的测试
+5. ✅ 删除 `IngestionMetadataStore` 类
+6. ✅ 删除 `IncrementalMode` 和 `IngestionMetadata`
+7. ✅ 删除 `DataSource.fetch_etf_daily_incremental()` 抽象方法
+8. ✅ 删除旧任务和流程文件
+9. ✅ 清理导出引用
+
+**总计**: 10 个文件删除，5 个文件修改
+
+**Commits**:
+- `refactor(test): 删除 IngestionMetadataStore 遗留测试`
+- `refactor(test): 删除 IncrementalMode/IngestionMetadata 遗留测试`
+- `refactor(test): 删除 server 层旧任务/流程遗留测试`
+- `refactor(datahub): 移除 hub.ingestion_metadata_store 废弃属性`
+- `refactor(datahub): 删除废弃的 IncrementalMode/IngestionMetadata`
+
+---
 
 ### Phase 1: 消除硬编码 sleep ✅
 

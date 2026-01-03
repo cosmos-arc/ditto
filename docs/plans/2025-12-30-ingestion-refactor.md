@@ -630,10 +630,47 @@ DataSource.fetch_fund_adj()
 - 标记废弃组件的文档说明已更新
 - 状态: ✅ 完成
 
+### Phase 6: 遗留代码清理 ✅ (已完成 - 2026-01-03)
+
+**任务目标**: 彻底删除所有遗留废弃代码和兼容代码
+
+**Task 6.1**: 删除遗留测试
+- 删除 `test_ingestion_metadata_store.py`
+- 删除 `test_metadata.py`
+- 删除 `test_tasks.py` 和 `test_flows.py`
+- 更新 `test_base.py`，移除对废弃组件的测试
+- 状态: ✅ 完成
+
+**Task 6.2**: 删除废弃组件
+- 删除 `IngestionMetadataStore` 类
+- 删除 `IncrementalMode` 枚举
+- 删除 `IngestionMetadata` dataclass
+- 删除 `DataSource.fetch_etf_daily_incremental()` 抽象方法
+- 删除 `TushareSource.fetch_etf_daily_incremental()` 实现
+- 删除 `TushareSource._compute_checksum()` 方法
+- 状态: ✅ 完成
+
+**Task 6.3**: 删除旧任务和流程
+- 删除 `tasks/bars.py`, `tasks/stock.py`, `tasks/adj_factor.py`
+- 删除 `flows/daily_ingest.py`, `flows/scheduled_ingest.py`
+- 清理 `tasks/__init__.py` 和 `flows/__init__.py` 导出
+- 状态: ✅ 完成
+
+**Task 6.4**: 移除 hub.py 中的废弃属性
+- 移除 `hub.ingestion_metadata_store` 属性
+- 状态: ✅ 完成
+
+**Commits**:
+- `refactor(test): 删除 IngestionMetadataStore 遗留测试`
+- `refactor(test): 删除 IncrementalMode/IngestionMetadata 遗留测试`
+- `refactor(test): 删除 server 层旧任务/流程遗留测试`
+- `refactor(datahub): 移除 hub.ingestion_metadata_store 废弃属性`
+- `refactor(datahub): 删除废弃的 IncrementalMode/IngestionMetadata`
+
 ### 技术债务
 
 1. **mypy 类型警告**: Prefect 任务工厂的类型推断限制（不影响功能）
-2. **旧式任务和流程**: `tasks/bars.py` 和 `flows/daily_ingest.py` 是遗留实现，已标记废弃
+2. ~~**旧式任务和流程**: `tasks/bars.py` 和 `flows/daily_ingest.py` 是遗留实现~~ ✅ 已删除
 3. **DQC 检查**: Task 3.3 中的 DQC 检查当前是 TODO 状态
 4. **Prefect 3.x 部署**: deploy.py 需要更新以使用新的 `flow.serve()`, `flow.deploy()` API
 
@@ -641,5 +678,6 @@ DataSource.fetch_fund_adj()
 
 1. ✅ Phase 4 - Source 层简化（已完成）
 2. ✅ Phase 5 - 清理和文档（已完成）
-3. 待处理: 更新 deploy.py 以适配 Prefect 3.x 新 API
-4. 待处理: 实现 DQC 检查集成
+3. ✅ Phase 6 - 遗留代码清理（已完成 - 2026-01-03）
+4. 待处理: 更新 deploy.py 以适配 Prefect 3.x 新 API
+5. 待处理: 实现 DQC 检查集成
