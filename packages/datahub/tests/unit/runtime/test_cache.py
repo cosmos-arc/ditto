@@ -2,6 +2,7 @@
 
 import time
 
+import time_machine as time_machine_lib
 from ditto_datahub.runtime.cache import CacheStats, DataCache
 
 
@@ -118,18 +119,19 @@ class TestDataCache:
         assert "key1" in self.cache
         assert "key2" not in self.cache
 
-    def test_ttl_expiration(self) -> None:
+    def test_ttl_expiration(self, time_machine: None) -> None:
         """Test entries expire after TTL."""
-        self.cache.set("key1", "value1")
+        with time_machine_lib.travel(0, tick=False):
+            self.cache.set("key1", "value1")
 
-        # 立即获取应该成功
-        assert self.cache.get("key1") == "value1"
+            # 立即获取应该成功
+            assert self.cache.get("key1") == "value1"
 
-        # 等待 TTL 过期（1 秒 + buffer）
-        time.sleep(1.2)
+            # 等待 TTL 过期（1 秒 + buffer）
+            time.sleep(1.2)
 
-        # 过期后应该返回 None
-        assert self.cache.get("key1") is None
+            # 过期后应该返回 None
+            assert self.cache.get("key1") is None
 
     def test_lru_eviction(self) -> None:
         """Test LRU eviction when max_size is exceeded."""
