@@ -13,6 +13,26 @@ from ditto_foundation.config import Settings
 
 
 @pytest.fixture
+def fake_time(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
+    """可控的时间 fixture，通过 monkeypatch 替换时间函数.
+
+    使 time.sleep 立即完成，time.time 按预期前进，提高测试速度和确定性。
+    """
+    current_time = [0.0]
+
+    def fake_sleep(seconds: float) -> None:
+        current_time[0] += seconds
+
+    def fake_time_func() -> float:
+        return current_time[0]
+
+    monkeypatch.setattr("time.sleep", fake_sleep)
+    monkeypatch.setattr("time.time", fake_time_func)
+
+    return
+
+
+@pytest.fixture
 def temp_dir() -> Generator[Path, None, None]:
     """临时目录fixture."""
     with TemporaryDirectory() as tmpdir:
