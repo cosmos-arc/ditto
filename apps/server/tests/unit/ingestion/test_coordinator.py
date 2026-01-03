@@ -131,7 +131,7 @@ class TestIngestDate:
         """成功摄取 etf_daily 数据。"""
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None  # 无历史记录
-        mock_source.fetch_etf_daily.return_value = pl.DataFrame(
+        source_df = pl.DataFrame(
             {
                 "src_code": ["510300.SH", "510500.SH"],
                 "trade_date": [date(2024, 12, 27), date(2024, 12, 27)],
@@ -145,6 +145,7 @@ class TestIngestDate:
                 "pct_change": [1.25, 1.43],
             }
         )
+        mock_source.fetch_etf_daily.return_value = source_df
 
         mock_hub.bars_store = Mock()
         mock_hub.bars_store.write.return_value = (
@@ -159,6 +160,13 @@ class TestIngestDate:
             checksum="checksum123",
             rows=2,
         )
+
+        # Mock SecurityMapper.enrich_dataframe
+        enriched_df = source_df.with_columns(
+            pl.lit(2000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
 
         # Act
         result = coordinator.ingest_date("etf_daily", "2024-12-27")
@@ -177,7 +185,7 @@ class TestIngestDate:
         """成功摄取 stock_daily 数据。"""
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None
-        mock_source.fetch_stock_daily.return_value = pl.DataFrame(
+        source_df = pl.DataFrame(
             {
                 "src_code": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
@@ -191,6 +199,7 @@ class TestIngestDate:
                 "pct_change": [2.0],
             }
         )
+        mock_source.fetch_stock_daily.return_value = source_df
 
         mock_hub.bars_store = Mock()
         mock_hub.bars_store.write.return_value = (
@@ -205,6 +214,13 @@ class TestIngestDate:
             checksum="checksum456",
             rows=1,
         )
+
+        # Mock SecurityMapper.enrich_dataframe
+        enriched_df = source_df.with_columns(
+            pl.lit(1000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
 
         # Act
         result = coordinator.ingest_date("stock_daily", "2024-12-27")
@@ -343,7 +359,7 @@ class TestIngestDate:
             rows=1000,
         )
 
-        mock_source.fetch_stock_daily.return_value = pl.DataFrame(
+        source_df = pl.DataFrame(
             {
                 "src_code": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
@@ -357,6 +373,7 @@ class TestIngestDate:
                 "pct_change": [2.0],
             }
         )
+        mock_source.fetch_stock_daily.return_value = source_df
 
         mock_hub.bars_store = Mock()
         mock_hub.bars_store.write.return_value = (
@@ -371,6 +388,13 @@ class TestIngestDate:
             checksum="new_checksum",
             rows=1,
         )
+
+        # Mock SecurityMapper.enrich_dataframe
+        enriched_df = source_df.with_columns(
+            pl.lit(1000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
 
         # Act
         result = coordinator.ingest_date("stock_daily", "2024-12-27", force=True)
@@ -409,7 +433,7 @@ class TestIngestRange:
 
         mock_hub.ingestion_log.get_log.return_value = None  # 无历史记录
 
-        mock_source.fetch_stock_daily.return_value = pl.DataFrame(
+        source_df = pl.DataFrame(
             {
                 "src_code": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
@@ -423,6 +447,7 @@ class TestIngestRange:
                 "low": [9.8],
             }
         )
+        mock_source.fetch_stock_daily.return_value = source_df
 
         mock_hub.bars_store = Mock()
         mock_hub.bars_store.write.return_value = (
@@ -438,6 +463,13 @@ class TestIngestRange:
             checksum="checksum123",
             rows=1,
         )
+
+        # Mock SecurityMapper.enrich_dataframe
+        enriched_df = source_df.with_columns(
+            pl.lit(1000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
 
         # Act
         results = coordinator.ingest_range("stock_daily", "2024-12-25", "2024-12-27")
@@ -477,7 +509,7 @@ class TestIngestRange:
 
         mock_hub.ingestion_log.get_log.side_effect = get_log_side_effect
 
-        mock_source.fetch_stock_daily.return_value = pl.DataFrame(
+        source_df = pl.DataFrame(
             {
                 "src_code": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
@@ -491,6 +523,7 @@ class TestIngestRange:
                 "low": [9.8],
             }
         )
+        mock_source.fetch_stock_daily.return_value = source_df
 
         mock_hub.bars_store = Mock()
         mock_hub.bars_store.write.return_value = (
@@ -506,6 +539,13 @@ class TestIngestRange:
             checksum="checksum123",
             rows=1,
         )
+
+        # Mock SecurityMapper.enrich_dataframe
+        enriched_df = source_df.with_columns(
+            pl.lit(1000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
 
         # Act
         results = coordinator.ingest_range("stock_daily", "2024-12-25", "2024-12-27")
@@ -535,7 +575,7 @@ class TestIngestRange:
         mock_hub.calendar_store = Mock()
         mock_hub.calendar_store.get_range.return_value = ["2024-12-27"]
 
-        mock_source.fetch_stock_daily.return_value = pl.DataFrame(
+        source_df = pl.DataFrame(
             {
                 "src_code": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
@@ -549,6 +589,7 @@ class TestIngestRange:
                 "low": [9.8],
             }
         )
+        mock_source.fetch_stock_daily.return_value = source_df
 
         mock_hub.bars_store = Mock()
         mock_hub.bars_store.write.return_value = (
@@ -564,6 +605,13 @@ class TestIngestRange:
             checksum="checksum123",
             rows=1,
         )
+
+        # Mock SecurityMapper.enrich_dataframe
+        enriched_df = source_df.with_columns(
+            pl.lit(1000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
 
         # Act
         results = coordinator.ingest_range(
@@ -729,3 +777,117 @@ class TestWriteT0Data:
             source="tushare",
             trade_date="2024-01-03",
         )
+
+
+class TestWriteT1Data:
+    """测试 T1 数据（etf_daily, stock_daily）写入与 SID 补齐。"""
+
+    def test_write_stock_daily_enriches_sid_and_source(
+        self, coordinator, mock_hub
+    ) -> None:
+        """验证 stock_daily 写入前补齐 sid 和 source 字段。"""
+        # Arrange
+        df = pl.DataFrame(
+            {
+                "src_code": ["000001.SZ", "000002.SZ"],
+                "trade_date": [date(2024, 12, 27), date(2024, 12, 27)],
+                "open": [10.0, 15.0],
+                "high": [10.5, 15.5],
+                "low": [9.8, 14.8],
+                "close": [10.2, 15.3],
+                "pre_close": [10.0, 15.0],
+                "volume": [1000000, 800000],
+                "amount": [10200000, 12240000],
+                "pct_change": [2.0, 2.0],
+            }
+        )
+
+        mock_hub.bars_store = Mock()
+        mock_hub.bars_store.write.return_value = (
+            "/path/to/stock_daily/2024.parquet",
+            "checksum123",
+        )
+
+        # Mock SecurityMapper.enrich_dataframe 返回补齐后的 DataFrame
+        enriched_df = df.with_columns(
+            pl.lit(1000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+
+        # Act
+        file_path, checksum = coordinator._write_data("stock_daily", df, "2024-12-27")
+
+        # Assert
+        assert file_path == "/path/to/stock_daily/2024.parquet"
+        assert checksum == "checksum123"
+        # 验证 enrich_dataframe 被正确调用
+        coordinator._security_mapper.enrich_dataframe.assert_called_once_with(
+            df,
+            src_code_col="src_code",
+            asset_class="stock",
+            source="tushare",
+        )
+        # 验证 bars_store.write 被调用，且 DataFrame 包含 sid 和 source 列
+        mock_hub.bars_store.write.assert_called_once()
+        call_args = mock_hub.bars_store.write.call_args
+        written_df = call_args.kwargs.get("df")
+        assert written_df is not None
+        assert "sid" in written_df.columns
+        assert "source" in written_df.columns
+        assert written_df["source"].to_list() == ["tushare", "tushare"]
+
+    def test_write_etf_daily_enriches_sid_and_source(
+        self, coordinator, mock_hub
+    ) -> None:
+        """验证 etf_daily 写入前补齐 sid 和 source 字段。"""
+        # Arrange
+        df = pl.DataFrame(
+            {
+                "src_code": ["510300.SH", "510500.SH"],
+                "trade_date": [date(2024, 12, 27), date(2024, 12, 27)],
+                "open": [4.0, 3.5],
+                "high": [4.1, 3.6],
+                "low": [3.9, 3.4],
+                "close": [4.05, 3.55],
+                "pre_close": [4.0, 3.5],
+                "volume": [1000000, 800000],
+                "amount": [4050000, 2840000],
+                "pct_change": [1.25, 1.43],
+            }
+        )
+
+        mock_hub.bars_store = Mock()
+        mock_hub.bars_store.write.return_value = (
+            "/path/to/etf_daily/2024.parquet",
+            "checksum456",
+        )
+
+        # Mock SecurityMapper.enrich_dataframe 返回补齐后的 DataFrame
+        enriched_df = df.with_columns(
+            pl.lit(2000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+
+        # Act
+        file_path, checksum = coordinator._write_data("etf_daily", df, "2024-12-27")
+
+        # Assert
+        assert file_path == "/path/to/etf_daily/2024.parquet"
+        assert checksum == "checksum456"
+        # 验证 enrich_dataframe 被正确调用
+        coordinator._security_mapper.enrich_dataframe.assert_called_once_with(
+            df,
+            src_code_col="src_code",
+            asset_class="etf",
+            source="tushare",
+        )
+        # 验证 bars_store.write 被调用，且 DataFrame 包含 sid 和 source 列
+        mock_hub.bars_store.write.assert_called_once()
+        call_args = mock_hub.bars_store.write.call_args
+        written_df = call_args.kwargs.get("df")
+        assert written_df is not None
+        assert "sid" in written_df.columns
+        assert "source" in written_df.columns
+        assert written_df["source"].to_list() == ["tushare", "tushare"]

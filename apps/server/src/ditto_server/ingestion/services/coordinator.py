@@ -219,10 +219,10 @@ class IngestionCoordinator:
 
         if dataset in ("calendar", "etf_basic", "stock_basic"):
             if dataset == "calendar":
-                return method(trade_date, trade_date)  # type: ignore[call-arg]
-            return method()  # type: ignore[call-arg]
+                return method(trade_date, trade_date)  # type: ignore[no-any-return]
+            return method()  # type: ignore[no-any-return]
         else:
-            return method(trade_date)  # type: ignore[call-arg]
+            return method(trade_date)  # type: ignore[no-any-return]
 
     def _write_data(
         self,
@@ -234,6 +234,16 @@ class IngestionCoordinator:
         year = int(trade_date[:4])
 
         if dataset in ("etf_daily", "stock_daily"):
+            # 补齐 sid/source 字段
+            asset_class: Literal["stock", "etf"] = (
+                "etf" if dataset == "etf_daily" else "stock"
+            )
+            df = self._security_mapper.enrich_dataframe(
+                df,
+                src_code_col="src_code",
+                asset_class=asset_class,
+                source=self._source_name,
+            )
             file_path, checksum = self._hub.bars_store.write(
                 dataset=dataset,
                 df=df,
@@ -247,7 +257,7 @@ class IngestionCoordinator:
             )
         elif dataset == "calendar":
             records = df.to_dicts()
-            self._hub.calendar_store.upsert(records)  # type: ignore[arg-type]
+            self._hub.calendar_store.upsert(records)
             file_path = f"calendar_store:{trade_date}"
             checksum = self._metadata_manager.compute_checksum(df)
         elif dataset == "stock_basic":
