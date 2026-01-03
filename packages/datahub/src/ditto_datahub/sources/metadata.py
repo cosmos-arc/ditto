@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 from enum import Enum
 
-
 # ============ New Ingestion System: Event Log + Cursor ============
 
 
