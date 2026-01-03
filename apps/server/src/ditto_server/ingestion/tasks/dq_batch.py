@@ -31,6 +31,7 @@ def dq_batch_check(
     trade_date: str | None = None,
     datasets: list[str] | None = None,
     config_path: str | None = None,
+    market_wide: bool = False,
 ) -> dict[str, Any]:
     """
     执行 L3 批量检查任务。
@@ -39,6 +40,7 @@ def dq_batch_check(
         trade_date: 交易日期(YYYY-MM-DD)，默认为最后一个交易日
         datasets: 要检查的数据集列表，默认为常用数据集
         config_path: DQ 规则配置目录路径
+        market_wide: 是否使用全市场查询模式
 
     Returns:
         检查结果摘要
@@ -49,93 +51,98 @@ def dq_batch_check(
         event="dq_batch_start",
         trade_date=trade_date,
         datasets=datasets,
+        market_wide=market_wide,
     )
 
     hub = DataHub()
-
-    # 获取最后一个交易日
-    if trade_date is None:
-        trade_date = hub.calendar.get_last_trading_day()
-        logger.info(
-            "Using last trading day",
-            event="dq_batch_date_resolved",
-            trade_date=trade_date,
-        )
-
-    # 默认数据集
-    if datasets is None:
-        datasets = ["etf_daily", "index_daily", "market_daily", "adj_factor"]
-
-    # 初始化 DQ 引擎
-    if config_path is None:
-        config_path = get_default_dq_config_path()
-
-    engine = DQEngine(config_path=config_path)
-
-    all_issues = []
-    results_by_dataset = {}
-
-    # 执行 L3 检查
-    for dataset in datasets:
-        try:
-            result = engine.check_statistical(
-                dataset=dataset,
+    try:
+        # 获取最后一个交易日
+        if trade_date is None:
+            trade_date = hub.calendar.get_last_trading_day()
+            logger.info(
+                "Using last trading day",
+                event="dq_batch_date_resolved",
                 trade_date=trade_date,
-                hub=hub,
             )
 
-            results_by_dataset[dataset] = {
-                "passed": result.passed,
-                "issue_count": len(result.issues),
-                "alert_count": result.alert_count,
-            }
+        # 默认数据集
+        if datasets is None:
+            datasets = ["etf_daily", "index_daily", "market_daily", "adj_factor"]
 
-            all_issues.extend(result.issues)
+        # 初始化 DQ 引擎
+        if config_path is None:
+            config_path = get_default_dq_config_path()
 
-            if result.issues:
-                logger.warning(
-                    "L3 DQ issues found",
-                    event="dq_batch_issues",
+        engine = DQEngine(config_path=config_path)
+
+        all_issues = []
+        results_by_dataset = {}
+
+        # 执行 L3 检查
+        for dataset in datasets:
+            try:
+                result = engine.check_statistical(
                     dataset=dataset,
-                    count=len(result.issues),
+                    trade_date=trade_date,  # type: ignore[arg-type]
+                    hub=hub,
+                    market_wide=market_wide,
                 )
 
-        except Exception as e:
-            logger.error(
-                "L3 DQ check failed",
-                event="dq_batch_error",
-                dataset=dataset,
-                error=str(e),
-            )
-            results_by_dataset[dataset] = {
-                "error": str(e),
-            }
+                results_by_dataset[dataset] = {
+                    "passed": result.passed,
+                    "issue_count": len(result.issues),
+                    "alert_count": result.alert_count,
+                }
 
-    # 汇总结果
-    summary = {
-        "trade_date": trade_date,
-        "datasets_checked": datasets,
-        "total_issues": len(all_issues),
-        "alert_count": sum(1 for i in all_issues if i.severity.value == "alert"),
-        "results_by_dataset": results_by_dataset,
-    }
+                all_issues.extend(result.issues)
 
-    logger.info(
-        "DQ batch check complete",
-        event="dq_batch_complete",
-        **summary,
-    )
+                if result.issues:
+                    logger.warning(
+                        "L3 DQ issues found",
+                        event="dq_batch_issues",
+                        dataset=dataset,
+                        count=len(result.issues),
+                    )
 
-    # 如果有告警，发送通知
-    if summary["alert_count"] > 0:
-        _send_dq_alert(trade_date, all_issues)
+            except Exception as e:
+                logger.error(
+                    "L3 DQ check failed",
+                    event="dq_batch_error",
+                    dataset=dataset,
+                    error=str(e),
+                )
+                results_by_dataset[dataset] = {"error": str(e)}  # type: ignore[dict-item]
 
-    # 记录指标
-    M.dq_batch_checks.increment()
-    M.dq_batch_issues.add(summary["total_issues"], {"trade_date": trade_date})
-    M.dq_batch_alerts.add(summary["alert_count"], {"trade_date": trade_date})
+        # 汇总结果
+        summary = {
+            "trade_date": trade_date,
+            "datasets_checked": datasets,
+            "total_issues": len(all_issues),
+            "alert_count": sum(1 for i in all_issues if i.severity.value == "alert"),
+            "results_by_dataset": results_by_dataset,
+        }
 
-    return summary
+        logger.info(
+            "DQ batch check complete",
+            event="dq_batch_complete",
+            **summary,
+        )
+
+        # 如果有告警，发送通知
+        if summary["alert_count"] > 0:  # type: ignore[operator]
+            _send_dq_alert(trade_date, all_issues)  # type: ignore[arg-type]
+
+        # 记录指标
+        if hasattr(M, "dq_batch_checks"):
+            M.dq_batch_checks.increment()
+        if hasattr(M, "dq_batch_issues"):
+            M.dq_batch_issues.add(summary["total_issues"], {"trade_date": trade_date})
+        if hasattr(M, "dq_batch_alerts"):
+            M.dq_batch_alerts.add(summary["alert_count"], {"trade_date": trade_date})
+
+        return summary
+    finally:
+        hub.close()
 
 
 def _send_dq_alert(trade_date: str, issues: list[Any]) -> None:
@@ -169,6 +176,7 @@ def dq_completeness_check(
     trade_date: str,
     dataset: str,
     expected_sids: list[int] | None = None,
+    market_wide: bool = False,
 ) -> dict[str, Any]:
     """
     检查数据完整性。
@@ -177,45 +185,51 @@ def dq_completeness_check(
         trade_date: 交易日期
         dataset: 数据集名称
         expected_sids: 预期的 SID 列表
+        market_wide: 是否使用全市场查询模式
 
     Returns:
         完整性检查结果
 
     """
     hub = DataHub()
+    try:
+        # 读取实际数据
+        df = hub.bars.get(
+            start=trade_date,
+            end=trade_date,
+            market_wide=market_wide,
+        )
 
-    # 读取实际数据
-    df = hub.bars.get(
-        start=trade_date,
-        end=trade_date,
-    )
+        actual_sids = df["sid"].unique().to_list() if not df.is_empty() else []
 
-    actual_sids = df["sid"].unique().to_list() if not df.is_empty() else []
+        # 计算缺失
+        missing_sids: set[int]
+        extra_sids: set[int]
+        if expected_sids:
+            missing_sids = set(expected_sids) - set(actual_sids)
+            extra_sids = set(actual_sids) - set(expected_sids)
+        else:
+            missing_sids = set()
+            extra_sids = set()
 
-    # 计算缺失
-    if expected_sids:
-        missing_sids = set(expected_sids) - set(actual_sids)
-        extra_sids = set(actual_sids) - set(expected_sids)
-    else:
-        missing_sids = []
-        extra_sids = []
+        result = {
+            "trade_date": trade_date,
+            "dataset": dataset,
+            "expected_count": len(expected_sids) if expected_sids else None,
+            "actual_count": len(actual_sids),
+            "missing_count": len(missing_sids),
+            "missing_sids": sorted(missing_sids),
+            "extra_count": len(extra_sids),
+            "extra_sids": sorted(extra_sids),
+            "is_complete": len(missing_sids) == 0,
+        }
 
-    result = {
-        "trade_date": trade_date,
-        "dataset": dataset,
-        "expected_count": len(expected_sids) if expected_sids else None,
-        "actual_count": len(actual_sids),
-        "missing_count": len(missing_sids),
-        "missing_sids": sorted(missing_sids),
-        "extra_count": len(extra_sids),
-        "extra_sids": sorted(extra_sids),
-        "is_complete": len(missing_sids) == 0,
-    }
+        logger.info(
+            "Completeness check complete",
+            event="dq_completeness_complete",
+            **result,
+        )
 
-    logger.info(
-        "Completeness check complete",
-        event="dq_completeness_complete",
-        **result,
-    )
-
-    return result
+        return result
+    finally:
+        hub.close()

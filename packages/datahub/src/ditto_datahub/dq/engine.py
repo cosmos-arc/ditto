@@ -107,6 +107,7 @@ class DQEngine:
         dataset: str,
         trade_date: str,
         hub: Any,  # DataHub instance
+        market_wide: bool = False,
     ) -> DQResult:
         """
         Execute L3 statistical anomaly checks (batch).
@@ -115,6 +116,7 @@ class DQEngine:
             dataset: Dataset identifier
             trade_date: Trade date to check (YYYY-MM-DD)
             hub: DataHub instance for historical data access
+            market_wide: Whether to use market-wide query mode
 
         Returns:
             DQResult with L3 check results
@@ -134,6 +136,7 @@ class DQEngine:
                 trade_date=trade_date,
                 rules=dataset_rules.l3_statistical,
                 hub=hub,
+                market_wide=market_wide,
             )
             issues.extend(l3_issues)
 
