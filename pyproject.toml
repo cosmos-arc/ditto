@@ -206,6 +206,8 @@ line-ending = "auto"
 # 对应“函数长度”：限制最大行数
 max-statements = 50 # 限制函数内的语句数量，比单纯行数更科学
 max-args = 5        # 顺便限制一下参数个数
+max-branches = 12   # 对应 PLR0912，限制分支复杂度（相当于圈复杂度）
+max-returns = 6     # 对应 PLR0911，限制 return 出现的次数
 
 [tool.ruff.lint.mccabe]
 # 对应“嵌套层级”的逻辑：建议设为 10 以下。
