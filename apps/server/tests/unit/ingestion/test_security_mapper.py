@@ -301,10 +301,14 @@ class TestMapOrCreate:
             ),
         )
 
-        # Assert - 000001.SZ 第二次从缓存获取,只查询了 000002.SZ
+        # Assert - 000001.SZ 第二次从缓存获取
+        # resolve_sid 调用:
+        # 1. 第一次调用: 000001.SZ
+        # 2. 第二次调用: 000002.SZ (map_or_create 中)
+        # 3. 第三次调用: 000002.SZ (_register_security 中并发检查)
         assert (
-            mock_security_store.resolve_sid.call_count == 2
-        )  # 000001.SZ (第一次) + 000002.SZ (第二次)
+            mock_security_store.resolve_sid.call_count == 3
+        )  # 000001.SZ (第一次) + 000002.SZ (第二次) + 000002.SZ 并发检查
         assert result1 == {"000001.SZ": 1000001}
         assert result2 == {
             "000001.SZ": 1000001,  # 从缓存获取

@@ -17,6 +17,9 @@ class SecurityMapper:
     """
     管理 src_code → sid 映射,为新证券自动分配 SID。
 
+    注意: 当前实现非线程安全,多进程环境下应使用单实例。
+    并发场景建议在调用层协调或使用分布式锁。
+
     SID 分配规则:
     - stock: 1_000_000 - 1_999_999
     - etf: 2_000_000 - 2_999_999
@@ -151,7 +154,7 @@ class SecurityMapper:
         """
         if df.is_empty():
             return df.with_columns(
-                pl.lit(None, dtype=pl.Int32).alias("sid"),
+                pl.lit(None, dtype=pl.Int64).alias("sid"),
                 pl.lit(source).alias("source"),
             )
 
@@ -243,6 +246,18 @@ class SecurityMapper:
             metadata: 证券元数据。
 
         """
+        # 检查是否已注册（防止并发竞态）
+        existing = self._store.resolve_sid(src_code, source, None)
+        if existing is not None:
+            logger.debug(
+                "证券已在并发中注册,跳过",
+                event="security_already_registered",
+                source=source,
+                src_code=src_code,
+                sid=existing,
+            )
+            return
+
         # 从 metadata 中提取该证券的信息
         security_meta = metadata.filter(pl.col("ts_code") == src_code)
 
