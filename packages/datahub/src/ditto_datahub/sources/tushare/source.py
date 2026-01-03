@@ -2,17 +2,10 @@
 
 from __future__ import annotations
 
-import hashlib
-from datetime import datetime
-
 import polars as pl
 from ditto_foundation import M, logger, traced
 
 from ditto_datahub.sources.base import DataSource, SourceFetchError
-from ditto_datahub.sources.metadata import (
-    IncrementalMode,
-    IngestionMetadata,
-)
 from ditto_datahub.sources.tushare.client import TushareClient
 
 
@@ -695,137 +688,6 @@ class TushareSource(DataSource):
                 original_error=str(e),
             ) from e
 
-    @traced("source.tushare.fetch_etf_daily_incremental")
-    def fetch_etf_daily_incremental(
-        self,
-        trade_date: str,
-        mode: IncrementalMode = IncrementalMode.QUICK,
-        last_trade_date: str | None = None,
-        last_checksum: str | None = None,
-    ) -> tuple[pl.DataFrame, IngestionMetadata]:
-        """
-        Fetch ETF daily data with incremental update support.
-
-        Args:
-            trade_date: Trade date to fetch (YYYY-MM-DD).
-            mode: Incremental mode (QUICK=date check, PRECISE=data check).
-            last_trade_date: Last successfully fetched trade date (for QUICK mode).
-            last_checksum: Checksum of last fetched data (for PRECISE mode).
-
-        Returns:
-            Tuple of:
-            - DataFrame with ETF daily data (empty if skipped)
-            - IngestionMetadata with checksum and metadata
-
-        Raises:
-            SourceFetchError: If fetch fails.
-            SourceTransformationError: If data transformation fails.
-
-        """
-        from datetime import date as date_type
-
-        logger.info(
-            "Fetching Tushare ETF daily incremental",
-            event="tushare_etf_daily_incremental_start",
-            trade_date=trade_date,
-            mode=mode.value,
-            last_trade_date=last_trade_date,
-        )
-
-        target_date = date_type.fromisoformat(trade_date)
-
-        # QUICK mode: Check if we need to fetch based on dates
-        if mode == IncrementalMode.QUICK and last_trade_date:
-            last_date = date_type.fromisoformat(last_trade_date)
-            if target_date <= last_date:
-                # Skip fetch - data is up to date
-                logger.info(
-                    "QUICK mode: Skipping fetch - data is up to date",
-                    event="tushare_etf_daily_incremental_skip",
-                    reason="uptodate",
-                    last_trade_date=last_trade_date,
-                    target_date=trade_date,
-                )
-                empty_df = pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "trade_date": pl.Date,
-                        "open": pl.Float64,
-                        "high": pl.Float64,
-                        "low": pl.Float64,
-                        "close": pl.Float64,
-                        "pre_close": pl.Float64,
-                        "volume": pl.Float64,
-                        "amount": pl.Float64,
-                        "pct_change": pl.Float64,
-                    }
-                )
-                metadata = IngestionMetadata(
-                    dataset="etf_daily",
-                    source="tushare",
-                    last_trade_date=target_date.isoformat(),
-                    last_checksum=last_checksum,
-                    last_rows=0,
-                    last_updated_at=datetime.now().isoformat(),
-                )
-                return empty_df, metadata
-
-        # Fetch data
-        df = self.fetch_etf_daily(trade_date)
-
-        # If empty, return empty result
-        if df.is_empty():
-            metadata = IngestionMetadata(
-                dataset="etf_daily",
-                source="tushare",
-                last_trade_date=target_date.isoformat(),
-                last_checksum=None,
-                last_rows=0,
-                last_updated_at=datetime.now().isoformat(),
-            )
-            return df, metadata
-
-        # PRECISE mode: Check checksum to see if data changed
-        if mode == IncrementalMode.PRECISE and last_checksum:
-            current_checksum = self._compute_checksum(df)
-            if current_checksum == last_checksum:
-                # Skip - data unchanged
-                logger.info(
-                    "PRECISE mode: Skipping fetch - data unchanged",
-                    event="tushare_etf_daily_incremental_skip",
-                    reason="checksum_match",
-                    checksum=current_checksum,
-                )
-                metadata = IngestionMetadata(
-                    dataset="etf_daily",
-                    source="tushare",
-                    last_trade_date=target_date.isoformat(),
-                    last_checksum=last_checksum,
-                    last_rows=0,
-                    last_updated_at=datetime.now().isoformat(),
-                )
-                return pl.DataFrame(schema=df.schema), metadata
-
-        # Compute checksum and metadata
-        checksum = self._compute_checksum(df)
-        metadata = IngestionMetadata(
-            dataset="etf_daily",
-            source="tushare",
-            last_trade_date=target_date.isoformat(),
-            last_checksum=checksum,
-            last_rows=len(df),
-            last_updated_at=datetime.now().isoformat(),
-        )
-
-        logger.info(
-            "Tushare ETF daily incremental fetched",
-            event="tushare_etf_daily_incremental_complete",
-            row_count=len(df),
-            checksum=checksum,
-        )
-
-        return df, metadata
-
     @traced("source.tushare.fetch_stock_limit")
     def fetch_stock_limit(self, trade_date: str) -> pl.DataFrame:
         """
@@ -1085,22 +947,3 @@ class TushareSource(DataSource):
                 dataset="stock_status",
                 original_error=str(e),
             ) from e
-
-    def _compute_checksum(self, df: pl.DataFrame) -> str:
-        """
-        Compute checksum of DataFrame for change detection.
-
-        Args:
-            df: DataFrame to compute checksum for.
-
-        Returns:
-            Hex checksum string (first 16 characters of SHA256).
-
-        """
-        # Convert to bytes using IPC format
-        import io
-
-        buffer = io.BytesIO()
-        df.write_ipc(buffer)
-        content = buffer.getvalue()
-        return hashlib.sha256(content).hexdigest()[:16]

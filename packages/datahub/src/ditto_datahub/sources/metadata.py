@@ -1,75 +1,7 @@
-"""Ingestion metadata models for incremental data fetching."""
+"""Ingestion metadata models for data tracking."""
 
-import warnings
 from dataclasses import dataclass
 from enum import Enum
-
-
-class IncrementalMode(str, Enum):
-    """
-    Incremental fetch mode (deprecated, use new ingestion system).
-
-    .. deprecated::
-        **This enum is deprecated and will be removed in a future release.**
-
-        Use ``IngestionCoordinator`` from
-        ``ditto_server.ingestion.services.coordinator`` for unified
-        ingestion with incremental logic, checksums, and metadata.
-
-    """
-
-    QUICK = "quick"  # Quick mode: date-level check
-    PRECISE = "precise"  # Precise mode: data-level check
-
-    def __init__(self, value: str) -> None:
-        """Emit deprecation warning on instantiation."""
-        super().__init__(value)
-        warnings.warn(
-            "IncrementalMode is deprecated. Use IngestionCoordinator from "
-            "ditto_server.ingestion.services.coordinator for ingestion logic.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-
-@dataclass(frozen=True)
-class IngestionMetadata:
-    """
-    Metadata for data ingestion tracking (deprecated, legacy compatibility).
-
-    .. deprecated::
-        **This dataclass is deprecated and will be removed in a future release.**
-
-        Use ``IngestionLog`` and ``IngestionCursor`` from the new ingestion system
-        (``ditto_datahub.stores.ingestion_log`` and ``ditto_datahub.stores.cursor``)
-        for event-based ingestion tracking.
-
-    Attributes:
-        dataset: Dataset name (e.g., "etf_daily", "stock_daily")
-        source: Data source identifier (e.g., "tushare")
-        last_trade_date: Last successfully ingested trade date (YYYY-MM-DD format)
-        last_checksum: Checksum of last ingested data
-        last_rows: Number of rows in last ingestion
-        last_updated_at: Timestamp of last update (ISO format)
-
-    """
-
-    dataset: str
-    source: str
-    last_trade_date: str | None  # ISO format string (YYYY-MM-DD) or None
-    last_checksum: str | None
-    last_rows: int
-    last_updated_at: str
-
-    def __post_init__(self) -> None:
-        """Emit deprecation warning on instantiation."""
-        warnings.warn(
-            "IngestionMetadata is deprecated. Use IngestionLog and IngestionCursor "
-            "from the new ingestion system (ditto_datahub.stores.ingestion_log and "
-            "ditto_datahub.stores.cursor) for event-based tracking.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
 
 
 # ============ New Ingestion System: Event Log + Cursor ============

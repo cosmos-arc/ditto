@@ -4,15 +4,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import TYPE_CHECKING, Any
 
 import polars as pl
-
-if TYPE_CHECKING:
-    from ditto_datahub.sources.metadata import (
-        IncrementalMode,
-        IngestionMetadata,
-    )
 
 
 class DataSourceError(Exception):
@@ -328,50 +321,6 @@ class DataSource(ABC):
 
         Raises:
             SourceFetchError: If fetch fails.
-
-        """
-        pass
-
-    @abstractmethod
-    def fetch_etf_daily_incremental(
-        self,
-        trade_date: str,
-        mode: IncrementalMode,
-        last_trade_date: str | None = None,
-        last_checksum: str | None = None,
-    ) -> tuple[pl.DataFrame, IngestionMetadata]:
-        """
-        Fetch ETF daily data with incremental update support.
-
-        .. deprecated::
-            **This method is deprecated and will be removed in a future
-            release.**
-
-            The incremental ingestion logic has been moved to the
-            Ingestion Service layer. Use
-            ``IngestionCoordinator.ingest_date()`` from
-            ``ditto_server.ingestion.services.coordinator`` for a unified
-            ingestion interface that handles incremental logic, checksums,
-            and metadata.
-
-            For simple data fetching without incremental logic, use
-            ``fetch_etf_daily()`` instead.
-
-        Args:
-            trade_date: Trade date to fetch (YYYY-MM-DD).
-            mode: Incremental mode (QUICK=date check, PRECISE=data check).
-            last_trade_date: Last successfully fetched trade date (for QUICK
-                mode).
-            last_checksum: Checksum of last fetched data (for PRECISE mode).
-
-        Returns:
-            Tuple of:
-            - DataFrame with ETF daily data
-            - IngestionMetadata with checksum and metadata
-
-        Raises:
-            SourceFetchError: If fetch fails.
-            SourceTransformationError: If data transformation fails.
 
         """
         pass

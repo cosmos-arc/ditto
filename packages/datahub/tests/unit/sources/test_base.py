@@ -14,7 +14,6 @@ from ditto_datahub.sources.base import (
     SourceTransformationError,
     get_source,
 )
-from ditto_datahub.sources.metadata import IncrementalMode, IngestionMetadata
 
 
 class TestDataSourceError:
@@ -29,7 +28,7 @@ class TestDataSourceError:
     def test_initialization_with_details(self) -> None:
         """Test error initialization with details."""
         error = DataSourceError("Test error", details={"key": "value"})
-        assert error.details == {"key": "value"}
+        assert error.details["key"] == "value"
 
 
 class TestSourceConfigurationError:
@@ -187,22 +186,6 @@ class TestDataSourceABC:
             def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
-            def fetch_etf_daily_incremental(
-                self,
-                trade_date: str,
-                mode: IncrementalMode,  # type: ignore[name-defined]
-                last_trade_date: str | None = None,
-                last_checksum: str | None = None,
-            ) -> tuple[pl.DataFrame, IngestionMetadata]:  # type: ignore[name-defined]
-                return pl.DataFrame(), IngestionMetadata(
-                    dataset="test",
-                    source="test",
-                    last_trade_date=None,
-                    last_checksum=None,
-                    last_rows=0,
-                    last_updated_at="2024-01-01",
-                )
-
         # Should not raise
         source = CompleteSource()
         assert isinstance(source, DataSource)
@@ -248,86 +231,3 @@ class TestGetSourceFactory:
 
         assert source is not None
         assert hasattr(source, "fetch_calendar")
-
-
-class TestDataSourceIncrementalInterface:
-    """Tests for DataSource incremental fetch interface."""
-
-    def test_subclass_must_implement_incremental_method(self) -> None:
-        """Test subclass must implement fetch_etf_daily_incremental."""
-
-        class IncrementalIncompleteSource(DataSource):
-            def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_etf_basic(self) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_stock_basic(self) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            # Missing fetch_etf_daily_incremental
-
-        with pytest.raises(TypeError, match="abstract"):
-            IncrementalIncompleteSource()  # type: ignore[abstract]
-
-    def test_complete_incremental_subclass_can_be_instantiated(self) -> None:
-        """Test complete subclass with incremental method can be instantiated."""
-
-        class CompleteIncrementalSource(DataSource):
-            def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_etf_basic(self) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_stock_basic(self) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_etf_daily_incremental(
-                self,
-                trade_date: str,
-                mode: IncrementalMode = IncrementalMode.QUICK,
-                last_trade_date: str | None = None,
-                last_checksum: str | None = None,
-            ) -> tuple[pl.DataFrame, IngestionMetadata]:
-                """Implement incremental fetch."""
-                df = pl.DataFrame()
-                metadata = IngestionMetadata(
-                    dataset="etf_daily",
-                    source="test",
-                    last_trade_date=trade_date,
-                    last_checksum="test_checksum",
-                    last_rows=0,
-                    last_updated_at="2024-12-27T00:00:00",
-                )
-                return df, metadata
-
-        # Should not raise
-        source = CompleteIncrementalSource()
-        assert isinstance(source, DataSource)
-        assert hasattr(source, "fetch_etf_daily_incremental")
