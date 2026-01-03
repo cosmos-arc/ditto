@@ -186,6 +186,14 @@ class IngestionCoordinator:
             rows=len(df),
         )
 
+        # 更新游标 (T0 数据集的游标更新已在 _write_stock_basic/_write_etf_basic 中处理)
+        if dataset not in ("stock_basic", "etf_basic"):
+            self._hub.ingestion_cursor.update_success(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+            )
+
         return IngestionResult(
             dataset=dataset,
             trade_date=trade_date,

@@ -1058,3 +1058,321 @@ class TestForceParameter:
         call_kwargs = mock_hub.adj_factor_store.write.call_args.kwargs
         assert "on_duplicate" in call_kwargs
         assert call_kwargs["on_duplicate"] == OnDuplicate.KEEP_LAST
+
+
+class TestCursorUpdateAfterSuccess:
+    """测试 ingest_date 成功后更新游标 (Stage 5.1)。"""
+
+    def test_stock_daily_updates_cursor_after_success(
+        self, coordinator, mock_hub, mock_source
+    ) -> None:
+        """验证 stock_daily 成功后更新游标。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        source_df = pl.DataFrame(
+            {
+                "src_code": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "open": [10.0],
+                "high": [10.5],
+                "low": [9.8],
+                "close": [10.2],
+                "pre_close": [10.0],
+                "volume": [1000000],
+                "amount": [10200000],
+                "pct_change": [2.0],
+            }
+        )
+        mock_source.fetch_stock_daily.return_value = source_df
+
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
+            "/path/to/file.parquet",
+            "checksum123",
+        )
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum123",
+            rows=1,
+        )
+
+        # Mock 游标更新
+        mock_hub.ingestion_cursor = Mock()
+
+        # Mock SecurityMapper.enrich_dataframe
+        enriched_df = source_df.with_columns(
+            pl.lit(1000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+
+        # Act
+        result = coordinator.ingest_date("stock_daily", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        # 验证游标被更新
+        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+        )
+
+    def test_etf_daily_updates_cursor_after_success(
+        self, coordinator, mock_hub, mock_source
+    ) -> None:
+        """验证 etf_daily 成功后更新游标。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        source_df = pl.DataFrame(
+            {
+                "src_code": ["510300.SH"],
+                "trade_date": [date(2024, 12, 27)],
+                "open": [4.0],
+                "high": [4.1],
+                "low": [3.9],
+                "close": [4.05],
+                "pre_close": [4.0],
+                "volume": [1000000],
+                "amount": [4050000],
+                "pct_change": [1.25],
+            }
+        )
+        mock_source.fetch_etf_daily.return_value = source_df
+
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
+            "/path/to/file.parquet",
+            "checksum456",
+        )
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="etf_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum456",
+            rows=1,
+        )
+
+        # Mock 游标更新
+        mock_hub.ingestion_cursor = Mock()
+
+        # Mock SecurityMapper.enrich_dataframe
+        enriched_df = source_df.with_columns(
+            pl.lit(2000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+
+        # Act
+        result = coordinator.ingest_date("etf_daily", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        # 验证游标被更新
+        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
+            dataset="etf_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+        )
+
+    def test_adj_factor_updates_cursor_after_success(
+        self, coordinator, mock_hub, mock_source
+    ) -> None:
+        """验证 adj_factor 成功后更新游标。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_source.fetch_adj_factor.return_value = pl.DataFrame(
+            {
+                "src_code": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "adj_factor": [1.2345],
+            }
+        )
+
+        mock_hub.adj_factor_store = Mock()
+        mock_hub.adj_factor_store.write.return_value = (
+            "/path/to/file.parquet",
+            "checksum789",
+        )
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="adj_factor",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum789",
+            rows=1,
+        )
+
+        # Mock 游标更新
+        mock_hub.ingestion_cursor = Mock()
+
+        # Act
+        result = coordinator.ingest_date("adj_factor", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        # 验证游标被更新
+        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
+            dataset="adj_factor",
+            source="tushare",
+            trade_date="2024-12-27",
+        )
+
+    def test_fund_adj_updates_cursor_after_success(
+        self, coordinator, mock_hub, mock_source
+    ) -> None:
+        """验证 fund_adj 成功后更新游标。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_source.fetch_fund_adj.return_value = pl.DataFrame(
+            {
+                "src_code": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "adj_factor": [1.5],
+            }
+        )
+
+        mock_hub.adj_factor_store = Mock()
+        mock_hub.adj_factor_store.write.return_value = (
+            "/path/to/file.parquet",
+            "checksum999",
+        )
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="fund_adj",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum999",
+            rows=1,
+        )
+
+        # Mock 游标更新
+        mock_hub.ingestion_cursor = Mock()
+
+        # Act
+        result = coordinator.ingest_date("fund_adj", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        # 验证游标被更新
+        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
+            dataset="fund_adj",
+            source="tushare",
+            trade_date="2024-12-27",
+        )
+
+    def test_calendar_updates_cursor_after_success(
+        self, coordinator, mock_hub, mock_source
+    ) -> None:
+        """验证 calendar 成功后更新游标。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_source.fetch_calendar.return_value = pl.DataFrame(
+            {
+                "trade_date": [date(2024, 12, 27), date(2024, 12, 30)],
+                "is_open": [True, True],
+            }
+        )
+
+        mock_hub.calendar_store = Mock()
+        mock_hub.calendar_store.upsert.return_value = 2
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="calendar",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum000",
+            rows=2,
+        )
+
+        # Mock 游标更新
+        mock_hub.ingestion_cursor = Mock()
+
+        # Act
+        result = coordinator.ingest_date("calendar", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        # 验证游标被更新
+        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
+            dataset="calendar",
+            source="tushare",
+            trade_date="2024-12-27",
+        )
+
+    def test_cursor_not_updated_when_fetch_fails(
+        self, coordinator, mock_hub, mock_source
+    ) -> None:
+        """验证获取数据失败时不更新游标。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_source.fetch_stock_daily.side_effect = SourceFetchError(
+            "Network error", source="tushare", dataset="stock_daily"
+        )
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.FAIL,
+            error_code="FETCH_ERROR",
+            error_message="Network error",
+        )
+
+        # Mock 游标更新
+        mock_hub.ingestion_cursor = Mock()
+
+        # Act
+        result = coordinator.ingest_date("stock_daily", "2024-12-27")
+
+        # Assert
+        assert result.status == "failed"
+        # 验证游标没有被更新
+        mock_hub.ingestion_cursor.update_success.assert_not_called()
+
+    def test_cursor_not_updated_when_write_fails(
+        self, coordinator, mock_hub, mock_source
+    ) -> None:
+        """验证写入失败时不更新游标。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        source_df = pl.DataFrame(
+            {
+                "src_code": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "open": [10.0],
+            }
+        )
+        mock_source.fetch_stock_daily.return_value = source_df
+
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.side_effect = OSError("Disk full")
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.FAIL,
+            error_code="WRITE_ERROR",
+            error_message="Disk full",
+        )
+
+        # Mock 游标更新
+        mock_hub.ingestion_cursor = Mock()
+
+        # Mock SecurityMapper.enrich_dataframe
+        enriched_df = source_df.with_columns(
+            pl.lit(1000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+
+        # Act
+        result = coordinator.ingest_date("stock_daily", "2024-12-27")
+
+        # Assert
+        assert result.status == "failed"
+        # 验证游标没有被更新
+        mock_hub.ingestion_cursor.update_success.assert_not_called()
