@@ -11,8 +11,8 @@
 | Phase 1 | ✅ 完成 | 2026-01-03 | fake_time, time_machine refactor, external marker |
 | Phase 2 | ✅ 完成 | 2026-01-03 | pytest-mock unification |
 | Phase 3 | ✅ 完成 | 2026-01-03 | @pytest.mark.pit marker |
-| Phase 4 | ⏳ 待执行 | - | Property-based tests |
-| Phase 5 | ⏳ 待执行 | - | Memory DB migration |
+| Phase 4 | ✅ 完成 | 2026-01-03 | Property-based tests (Date Utils, DQ Statistical, PIT Helper) |
+| Phase 5 | ✅ 完成 | 2026-01-03 | Memory DB migration (9 个文件迁移, 2 个文件改造) |
 
 ### Phase 1: 消除硬编码 sleep ✅
 
@@ -59,19 +59,38 @@
 **Commit**:
 - `test: add @pytest.mark.pit marker to PIT tests`
 
-### Phase 4: 增加 Property 测试 ⏳
+### Phase 4: 增加 Property 测试 ✅
 
-**待执行**:
-- Date Utils Property Tests
-- DQ Statistical Checker Property Tests
-- PIT Helper Property Tests
+**完成内容**:
+1. ✅ `test_dates_property.py`: 7 个 property tests for `normalize_date()`
+2. ✅ `test_statistical_property.py`: 6 个 property tests for Z-score invariants
+3. ✅ `test_pit_helper_property.py`: 13 个 property tests for PIT query generation
 
-### Phase 5: 内存数据库单元测试迁移 ⏳
+**新增文件**:
+- `packages/foundation/tests/unit/util/test_dates_property.py`
+- `packages/datahub/tests/unit/dq/checkers/test_statistical_property.py`
+- `packages/datahub/tests/unit/runtime/test_pit_helper_property.py`
 
-**待执行**:
-- 创建内存数据库 fixtures
-- 迁移 SQLite 内存数据库测试
-- 迁移 Parquet Store 测试
+### Phase 5: 内存数据库单元测试迁移 ✅
+
+**完成内容**:
+1. ✅ 创建 `packages/datahub/tests/unit/conftest.py` (内存数据库 fixtures)
+2. ✅ 迁移 SQLite 内存数据库测试 (4 个文件)
+3. ✅ 迁移 Parquet Store 测试 (3 个文件)
+4. ✅ 改造临时文件测试 (2 个文件)
+
+**迁移文件列表**:
+- `test_calendar_store.py`: 19 个测试
+- `test_security_store.py`: 15 个测试
+- `test_universe_store.py`: 14 个测试
+- `test_index_weight_store.py`: 13 个测试
+- `test_bars_store.py`: 25 个测试
+- `test_adj_factor_store.py`: 15 个测试
+- `test_stock_status_store.py`: 11 个测试
+- `test_sqlite_client.py`: 19 个测试 (改造为使用 fixtures)
+- `test_ingestion_metadata_store.py`: 7 个测试 (改造为使用 fixtures)
+
+**总计**: ~138 个测试从 `integration/` 迁移到 `unit/`
 
 ---
 

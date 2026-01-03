@@ -32,8 +32,7 @@ from ditto_server.ingestion.tasks import (
 )
 
 if TYPE_CHECKING:
-
-    from prefect.tasks import Task
+    pass
 
 
 @task(name="check_trading_day")

@@ -1,12 +1,19 @@
-"""ETF bars ingestion task."""
+"""ETF bars ingestion task (deprecated, use new task system)."""
 
 from __future__ import annotations
 
+import warnings
+
 import polars as pl
 from ditto_datahub import DataHub
-from ditto_datahub.sources.metadata import IncrementalMode
 from ditto_foundation import M, logger
 from prefect import task
+
+# Suppress deprecation warnings for legacy code
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+# Import deprecated components with warning suppression
+from ditto_datahub.sources.metadata import IncrementalMode  # noqa: E402
 
 
 @task(

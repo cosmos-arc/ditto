@@ -126,6 +126,9 @@ pytest-benchmark = ">=4.0,<5"
 pytest-xdist = ">=3.5,<4"     # 并行测试
 pytest-timeout = ">=2.3,<3"   # 超时控制
 requests-mock = ">=1.12,<2"
+inline-snapshot = ">=0.10"
+hypothesis = ">=6.100"
+respx = ">=0.21"
 
 # ──────────────────────────────────────────────────────────
 # 测试辅助

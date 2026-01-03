@@ -10,11 +10,8 @@ import polars as pl
 
 if TYPE_CHECKING:
     from ditto_datahub.sources.metadata import (
-        DataChangedError,
         IncrementalMode,
-        IngestionLog,
         IngestionMetadata,
-        NotTradingDayError,
     )
 
 
@@ -336,38 +333,6 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
-    def ingest_date(
-        self,
-        dataset: str,
-        trade_date: str,
-        force: bool = False,
-    ) -> tuple[pl.DataFrame, IngestionLog]:
-        """
-        Ingest data for a specific date (new interface).
-
-        This is the new unified interface for data ingestion, replacing the
-        old ``fetch_etf_daily_incremental()`` method.
-
-        Args:
-            dataset: Dataset name (e.g., "stock_daily", "etf_daily").
-            trade_date: Trade date (YYYY-MM-DD).
-            force: Force update even if checksum matches.
-
-        Returns:
-            Tuple of:
-            - DataFrame with data (empty if skipped due to checksum match)
-            - IngestionLog with ingestion metadata
-
-        Raises:
-            NotTradingDayError: If trade_date is not a trading day.
-            DataChangedError: If checksum changed and force=False.
-            SourceFetchError: If fetch fails.
-            SourceTransformationError: If data transformation fails.
-
-        """
-        pass
-
-    @abstractmethod
     def fetch_etf_daily_incremental(
         self,
         trade_date: str,
@@ -379,12 +344,24 @@ class DataSource(ABC):
         Fetch ETF daily data with incremental update support.
 
         .. deprecated::
-            Use ``ingest_date()`` instead.
+            **This method is deprecated and will be removed in a future
+            release.**
+
+            The incremental ingestion logic has been moved to the
+            Ingestion Service layer. Use
+            ``IngestionCoordinator.ingest_date()`` from
+            ``ditto_server.ingestion.services.coordinator`` for a unified
+            ingestion interface that handles incremental logic, checksums,
+            and metadata.
+
+            For simple data fetching without incremental logic, use
+            ``fetch_etf_daily()`` instead.
 
         Args:
             trade_date: Trade date to fetch (YYYY-MM-DD).
             mode: Incremental mode (QUICK=date check, PRECISE=data check).
-            last_trade_date: Last successfully fetched trade date (for QUICK mode).
+            last_trade_date: Last successfully fetched trade date (for QUICK
+                mode).
             last_checksum: Checksum of last fetched data (for PRECISE mode).
 
         Returns:

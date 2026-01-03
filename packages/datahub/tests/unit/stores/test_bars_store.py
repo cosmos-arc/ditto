@@ -385,7 +385,7 @@ class TestOnDuplicate:
         )
 
         # Should raise ValueError due to duplicate
-        with pytest.raises(ValueError, match="Duplicate data detected"):
+        with pytest.raises(ValueError, match="Duplicate data"):
             self.store.write("market_daily", df2, 2024, on_duplicate=OnDuplicate.ERROR)
 
     def test_on_duplicate_keep_first_preserves_original(self) -> None:

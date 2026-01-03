@@ -10,12 +10,26 @@ class IncrementalMode(str, Enum):
     Incremental fetch mode (deprecated, use new ingestion system).
 
     .. deprecated::
-        Use the new ``ingest_date()`` interface with ``force`` parameter instead.
+        **This enum is deprecated and will be removed in a future release.**
+
+        Use ``IngestionCoordinator`` from
+        ``ditto_server.ingestion.services.coordinator`` for unified
+        ingestion with incremental logic, checksums, and metadata.
 
     """
 
     QUICK = "quick"  # Quick mode: date-level check
     PRECISE = "precise"  # Precise mode: data-level check
+
+    def __init__(self, value: str) -> None:
+        """Emit deprecation warning on instantiation."""
+        super().__init__(value)
+        warnings.warn(
+            "IncrementalMode is deprecated. Use IngestionCoordinator from "
+            "ditto_server.ingestion.services.coordinator for ingestion logic.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
 
 @dataclass(frozen=True)
@@ -24,7 +38,11 @@ class IngestionMetadata:
     Metadata for data ingestion tracking (deprecated, legacy compatibility).
 
     .. deprecated::
-        Use ``IngestionLog`` and ``IngestionCursor`` instead.
+        **This dataclass is deprecated and will be removed in a future release.**
+
+        Use ``IngestionLog`` and ``IngestionCursor`` from the new ingestion system
+        (``ditto_datahub.stores.ingestion_log`` and ``ditto_datahub.stores.cursor``)
+        for event-based ingestion tracking.
 
     Attributes:
         dataset: Dataset name (e.g., "etf_daily", "stock_daily")
@@ -42,6 +60,16 @@ class IngestionMetadata:
     last_checksum: str | None
     last_rows: int
     last_updated_at: str
+
+    def __post_init__(self) -> None:
+        """Emit deprecation warning on instantiation."""
+        warnings.warn(
+            "IngestionMetadata is deprecated. Use IngestionLog and IngestionCursor "
+            "from the new ingestion system (ditto_datahub.stores.ingestion_log and "
+            "ditto_datahub.stores.cursor) for event-based tracking.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
 
 # ============ New Ingestion System: Event Log + Cursor ============

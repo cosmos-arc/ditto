@@ -98,6 +98,7 @@ models/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+.hypothesis/
 
 # ===================================================================
 #                 Web 框架 (Web Frameworks)
@@ -162,5 +163,3 @@ coverage.xml
 *.lcov
 report.xml
 *.html
-
-# ===================================================================

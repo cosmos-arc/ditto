@@ -1,5 +1,7 @@
 """Ingestion metadata store for tracking data ingestion history."""
 
+import warnings
+
 from ditto_foundation import logger
 
 from ditto_datahub.sources.metadata import IngestionMetadata
@@ -9,6 +11,13 @@ from ditto_datahub.stores.sqlite_client import SQLiteClient
 class IngestionMetadataStore:
     """
     Store for ingestion metadata.
+
+    .. deprecated::
+        **This class is deprecated and will be removed in a future release.**
+
+        Use ``IngestionLogStore`` and ``IngestionCursorStore`` from the new
+        ingestion system (``ditto_datahub.stores.ingestion_log`` and
+        ``ditto_datahub.stores.cursor``) for event-based ingestion tracking.
 
     Tracks data ingestion history for incremental updates,
     including last trade date, checksum, and row counts.
@@ -26,6 +35,13 @@ class IngestionMetadataStore:
         logger.debug(
             "IngestionMetadataStore initialized",
             event="ingestion_metadata_store_init",
+        )
+        warnings.warn(
+            "IngestionMetadataStore is deprecated. Use IngestionLogStore and "
+            "IngestionCursorStore from the new ingestion system "
+            "(ditto_datahub.stores.ingestion_log and ditto_datahub.stores.cursor).",
+            DeprecationWarning,
+            stacklevel=2,
         )
 
     def get_metadata(self, dataset: str, source: str) -> IngestionMetadata | None:
