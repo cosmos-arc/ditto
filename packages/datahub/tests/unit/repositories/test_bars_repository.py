@@ -20,8 +20,13 @@ from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
 
 
+@pytest.mark.pit
 class TestBarsRepository:
-    """Tests for BarsRepository."""
+    """Tests for BarsRepository.
+
+    PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
+    These tests require more resources and time than unit tests.
+    """
 
     def setup_method(self) -> None:
         """Set up test environment."""

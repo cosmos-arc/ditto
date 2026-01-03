@@ -3,6 +3,7 @@
 from unittest.mock import Mock
 
 import polars as pl
+import pytest
 from ditto_datahub.repositories.universe import UniverseRepository
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
@@ -10,8 +11,13 @@ from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.universe_store import UniverseStore
 
 
+@pytest.mark.pit
 class TestUniverseRepository:
-    """Tests for UniverseRepository."""
+    """Tests for UniverseRepository.
+
+    PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
+    These tests require more resources and time than unit tests.
+    """
 
     def setup_method(self) -> None:
         """Set up test database."""

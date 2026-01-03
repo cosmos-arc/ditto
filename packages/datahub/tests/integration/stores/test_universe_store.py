@@ -1,12 +1,18 @@
 """Tests for UniverseStore."""
 
+import pytest
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.universe_store import UniverseStore
 
 
+@pytest.mark.pit
 class TestUniverseStore:
-    """Tests for UniverseStore."""
+    """Tests for UniverseStore.
+
+    PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
+    These tests require more resources and time than unit tests.
+    """
 
     def setup_method(self) -> None:
         """Set up test database."""
@@ -286,8 +292,13 @@ class TestUniverseStore:
         pass
 
 
+@pytest.mark.pit
 class TestUniverseStorePITSafety:
-    """Tests for PIT safety in UniverseStore."""
+    """Tests for PIT safety in UniverseStore.
+
+    PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
+    These tests require more resources and time than unit tests.
+    """
 
     def setup_method(self) -> None:
         """Set up test database."""

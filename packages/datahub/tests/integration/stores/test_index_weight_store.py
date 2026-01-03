@@ -1,12 +1,18 @@
 """Tests for IndexWeightStore."""
 
+import pytest
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
+@pytest.mark.pit
 class TestIndexWeightStore:
-    """Tests for IndexWeightStore."""
+    """Tests for IndexWeightStore.
+
+    PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
+    These tests require more resources and time than unit tests.
+    """
 
     def setup_method(self) -> None:
         """Set up test database."""
@@ -216,8 +222,13 @@ class TestIndexWeightStore:
         assert sids_500 == [100000002]
 
 
+@pytest.mark.pit
 class TestIndexWeightStorePITSafety:
-    """Tests for PIT safety in IndexWeightStore."""
+    """Tests for PIT safety in IndexWeightStore.
+
+    PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
+    These tests require more resources and time than unit tests.
+    """
 
     def setup_method(self) -> None:
         """Set up test database."""

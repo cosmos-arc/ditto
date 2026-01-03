@@ -10,8 +10,13 @@ from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.security_store import SecurityStore
 
 
+@pytest.mark.pit
 class TestIndexRepositoryWithMocks:
-    """Tests for IndexRepository with mocked dependencies."""
+    """Tests for IndexRepository with mocked dependencies.
+
+    PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
+    These tests require more resources and time than unit tests.
+    """
 
     def setup_method(self) -> None:
         """Set up mocked stores for testing."""

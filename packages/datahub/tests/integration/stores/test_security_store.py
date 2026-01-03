@@ -1,14 +1,20 @@
 """Tests for SecurityStore."""
 
 import polars as pl
+import pytest
 from ditto_datahub.runtime.cache import DataCache
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
+@pytest.mark.pit
 class TestSecurityStore:
-    """Tests for SecurityStore."""
+    """Tests for SecurityStore.
+
+    PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
+    These tests require more resources and time than unit tests.
+    """
 
     def setup_method(self) -> None:
         """Set up test database."""
@@ -359,8 +365,13 @@ class TestSecurityStore:
         pass
 
 
+@pytest.mark.pit
 class TestSqlInjectionProtection:
-    """Tests for SQL injection protection in IN clause construction."""
+    """Tests for SQL injection protection in IN clause construction.
+
+    PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
+    These tests require more resources and time than unit tests.
+    """
 
     def setup_method(self) -> None:
         """Set up test database."""
