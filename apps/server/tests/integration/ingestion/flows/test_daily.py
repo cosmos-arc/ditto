@@ -22,6 +22,7 @@ def setup_prefect():
         yield
 
 
+@pytest.mark.integration
 class TestDailyIngestionFlow:
     """Tests for daily_ingestion_flow."""
 
@@ -171,6 +172,7 @@ class TestDailyIngestionFlow:
         assert "DQC 检查待实现" in result["dqc_results"]["message"]
 
 
+@pytest.mark.integration
 class TestTradingDayValidation:
     """Tests for trading day validation logic."""
 
@@ -232,6 +234,7 @@ class TestTradingDayValidation:
         assert result["skipped"] is True
 
 
+@pytest.mark.integration
 class TestTaskDependencyOrchestration:
     """Tests for task dependency orchestration using Prefect wait_for."""
 
@@ -305,6 +308,7 @@ class TestTaskDependencyOrchestration:
                     assert "wait_for" in submit_kwargs
 
 
+@pytest.mark.integration
 class TestResultAggregation:
     """Tests for result aggregation logic."""
 
@@ -355,6 +359,7 @@ class TestResultAggregation:
         assert "summary" in result
 
 
+@pytest.mark.integration
 class TestErrorHandling:
     """Tests for error handling in various scenarios."""
 

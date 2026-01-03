@@ -1,4 +1,11 @@
-"""Tests for IngestionMetadataStore."""
+"""Tests for IngestionMetadataStore (deprecated component)."""
+
+# ruff: noqa: E402  # 测试文件允许 warnings.filterwarnings 在 import 之前
+
+import warnings
+
+# Suppress deprecation warnings when testing deprecated components
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.sources.metadata import IngestionMetadata
@@ -11,6 +18,7 @@ class TestIngestionMetadataStore:
 
     def setup_method(self) -> None:
         """Set up test environment."""
+        # ruff: noqa: PLC0415  # 测试方法内导入
         from pathlib import Path
         from tempfile import TemporaryDirectory
 
@@ -25,6 +33,7 @@ class TestIngestionMetadataStore:
         """Clean up test environment."""
         self.pool.close()
         # Clean up temp directory
+        # ruff: noqa: PLC0415  # 测试方法内导入
         import shutil
 
         shutil.rmtree(self.temp_dir.name, ignore_errors=True)

@@ -2,11 +2,17 @@
 
 .. deprecated::
     These tests use the old ingestion interface (IncrementalMode.QUICK/PRECISE).
-    After Phase 0.4 (Source layer refactoring) is complete, these tests should be
-    updated to use the new `ingest_date()` interface with `force` parameter.
-
-    See: C:\\Users\\36486\\.claude\\plans\\humming-skipping-parrot.md
+    The old task system has been replaced by the new IngestionCoordinator-based tasks.
+    See: apps/server/src/ditto_server/ingestion/tasks/t1_bars.py
+    for the new implementation.
 """
+
+# ruff: noqa: E402  # 测试文件允许 warnings.filterwarnings 在 import 之前
+
+import warnings
+
+# Suppress deprecation warnings when testing legacy code
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 from datetime import date
 from unittest.mock import Mock, patch

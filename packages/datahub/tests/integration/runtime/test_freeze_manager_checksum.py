@@ -19,6 +19,7 @@ class TestFreezeManagerChecksum:
 
     def teardown_method(self):
         """Clean up test fixtures."""
+        # ruff: noqa: PLC0415  # 测试方法内导入
         import shutil
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
@@ -41,7 +42,7 @@ class TestFreezeManagerChecksum:
         # Verify version is 2.0
         assert manifest.version == "2.0"
         # Verify checksum length is 64 (SHA-256)
-        checksum = list(manifest.files.values())[0]
+        checksum = next(iter(manifest.files.values()))
         assert len(checksum) == 64
         # Verify SHA-256 format (hexadecimal)
         assert all(c in "0123456789abcdef" for c in checksum)
@@ -58,6 +59,7 @@ class TestFreezeManagerChecksum:
         old_manifest_path.parent.mkdir(exist_ok=True)
 
         # Calculate MD5 checksum
+        # ruff: noqa: PLC0415  # 测试方法内导入
         import hashlib
 
         md5 = hashlib.md5(usedforsecurity=False)

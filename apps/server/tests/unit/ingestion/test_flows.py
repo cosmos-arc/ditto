@@ -1,4 +1,18 @@
-"""Tests for ingestion flows."""
+"""Tests for ingestion flows (legacy implementation).
+
+.. deprecated::
+    These tests use the old flow implementation (daily_ingest_flow).
+    The old flow has been replaced by the new implementation (flows/daily.py).
+    See: apps/server/src/ditto_server/ingestion/flows/daily.py
+    for the new implementation.
+"""
+
+# ruff: noqa: E402  # 测试文件允许 warnings.filterwarnings 在 import 之前
+
+import warnings
+
+# Suppress deprecation warnings when testing legacy code
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 from unittest.mock import patch
 
