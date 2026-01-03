@@ -9,6 +9,7 @@ from typing import Any
 import polars as pl
 import pytest
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
+from ditto_datahub.types import OnDuplicate
 
 
 class TestAdjFactorStore:
@@ -579,3 +580,140 @@ class TestSortingEnhanced:
         for i, (expected_sid, expected_date) in enumerate(expected_pairs):
             assert result["sid"][i] == expected_sid
             assert result["trade_date"][i] == expected_date
+
+
+class TestOnDuplicate:
+    """测试 OnDuplicate 语义。"""
+
+    @pytest.fixture
+    def data_root(self, tmp_path: Path) -> Path:
+        """Create temporary data root directory."""
+        return tmp_path / "data"
+
+    @pytest.fixture
+    def store(self, data_root: Path) -> AdjFactorStore:
+        """Create AdjFactorStore instance."""
+        return AdjFactorStore(data_root)
+
+    @pytest.fixture
+    def initial_df(self) -> pl.DataFrame:
+        """Create initial test data."""
+        return pl.DataFrame(
+            {
+                "sid": [100000001, 100000001, 100000002],
+                "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 2)],
+                "adj_factor": [1.0, 0.95, 1.0],
+            }
+        )
+
+    @pytest.fixture
+    def overlapping_df(self) -> pl.DataFrame:
+        """Create overlapping test data with updated values."""
+        return pl.DataFrame(
+            {
+                "sid": [100000001, 100000003],
+                "trade_date": [date(2024, 1, 3), date(2024, 1, 4)],
+                "adj_factor": [0.92, 1.0],  # 100000001/2024-01-03 updated
+            }
+        )
+
+    def test_on_duplicate_error_raises_on_duplicate(
+        self,
+        store: AdjFactorStore,
+        initial_df: pl.DataFrame,
+        overlapping_df: pl.DataFrame,
+    ) -> None:
+        """Test OnDuplicate.ERROR raises ValueError when duplicates detected."""
+        # Write initial data
+        store.write("adj_factor", initial_df, 2024)
+
+        # Attempt to write overlapping data with ERROR strategy
+        with pytest.raises(ValueError, match="检测到重复数据"):
+            store.write(
+                "adj_factor", overlapping_df, 2024, on_duplicate=OnDuplicate.ERROR
+            )
+
+    def test_on_duplicate_keep_first_preserves_existing(
+        self,
+        store: AdjFactorStore,
+        initial_df: pl.DataFrame,
+        overlapping_df: pl.DataFrame,
+    ) -> None:
+        """Test OnDuplicate.KEEP_FIRST preserves existing data."""
+        # Write initial data
+        store.write("adj_factor", initial_df, 2024)
+
+        # Write overlapping data with KEEP_FIRST strategy
+        store.write(
+            "adj_factor", overlapping_df, 2024, on_duplicate=OnDuplicate.KEEP_FIRST
+        )
+
+        # Verify existing data is preserved
+        result = store.read("adj_factor")
+
+        # Should have 4 records: 3 from initial + 1 new (100000003)
+        assert len(result) == 4
+
+        # Check that 100000001/2024-01-03 keeps original value (0.95)
+        record = result.filter(
+            (pl.col("sid") == 100000001) & (pl.col("trade_date") == date(2024, 1, 3))
+        )
+        assert len(record) == 1
+        assert record["adj_factor"][0] == 0.95
+
+    def test_on_duplicate_keep_last_overwrites(
+        self,
+        store: AdjFactorStore,
+        initial_df: pl.DataFrame,
+        overlapping_df: pl.DataFrame,
+    ) -> None:
+        """Test OnDuplicate.KEEP_LAST overwrites with new data."""
+        # Write initial data
+        store.write("adj_factor", initial_df, 2024)
+
+        # Write overlapping data with KEEP_LAST strategy
+        store.write(
+            "adj_factor", overlapping_df, 2024, on_duplicate=OnDuplicate.KEEP_LAST
+        )
+
+        # Verify new data overwrites
+        result = store.read("adj_factor")
+
+        # Should have 4 records: 3 from initial + 1 new (100000003)
+        assert len(result) == 4
+
+        # Check that 100000001/2024-01-03 uses new value (0.92)
+        record = result.filter(
+            (pl.col("sid") == 100000001) & (pl.col("trade_date") == date(2024, 1, 3))
+        )
+        assert len(record) == 1
+        assert record["adj_factor"][0] == 0.92
+
+    def test_on_duplicate_default_is_error(
+        self,
+        store: AdjFactorStore,
+        initial_df: pl.DataFrame,
+        overlapping_df: pl.DataFrame,
+    ) -> None:
+        """Test default OnDuplicate behavior is ERROR."""
+        # Write initial data
+        store.write("adj_factor", initial_df, 2024)
+
+        # Attempt to write overlapping data without specifying on_duplicate
+        # Should default to ERROR and raise ValueError
+        with pytest.raises(ValueError, match="检测到重复数据"):
+            store.write("adj_factor", overlapping_df, 2024)
+
+    def test_on_duplicate_keep_last_allows_idempotent_writes(
+        self, store: AdjFactorStore, initial_df: pl.DataFrame
+    ) -> None:
+        """Test OnDuplicate.KEEP_LAST allows writing same data multiple times."""
+        # Write initial data
+        store.write("adj_factor", initial_df, 2024)
+
+        # Write same data again with KEEP_LAST (should succeed)
+        store.write("adj_factor", initial_df, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
+
+        # Verify data is unchanged
+        result = store.read("adj_factor")
+        assert len(result) == 3

@@ -8,6 +8,7 @@ import pytest
 from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
+from ditto_datahub.types import OnDuplicate
 from ditto_foundation.observability import Mode, init, reset_for_testing
 from ditto_server.ingestion.services.coordinator import (
     IngestionCoordinator,
@@ -891,3 +892,146 @@ class TestWriteT1Data:
         assert "sid" in written_df.columns
         assert "source" in written_df.columns
         assert written_df["source"].to_list() == ["tushare", "tushare"]
+
+
+class TestForceParameter:
+    """测试 force 参数语义。"""
+
+    def test_force_false_maps_to_error_on_duplicate(
+        self, coordinator, mock_hub, mock_source
+    ) -> None:
+        """验证 force=False 映射到 OnDuplicate.ERROR。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        source_df = pl.DataFrame(
+            {
+                "src_code": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "open": [10.0],
+                "high": [10.5],
+                "low": [9.8],
+                "close": [10.2],
+                "pre_close": [10.0],
+                "volume": [1000000],
+                "amount": [10200000],
+                "pct_change": [2.0],
+            }
+        )
+        mock_source.fetch_stock_daily.return_value = source_df
+
+        mock_hub.bars_store = Mock()
+        mock_hub.bars_store.write.return_value = (
+            "/path/to/file.parquet",
+            "checksum123",
+        )
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum123",
+            rows=1,
+        )
+
+        enriched_df = source_df.with_columns(
+            pl.lit(1000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+
+        # Act
+        coordinator.ingest_date("stock_daily", "2024-12-27", force=False)
+
+        # Assert
+        mock_hub.bars_store.write.assert_called_once()
+        call_kwargs = mock_hub.bars_store.write.call_args.kwargs
+        assert "on_duplicate" in call_kwargs
+        assert call_kwargs["on_duplicate"] == OnDuplicate.ERROR
+
+    def test_force_true_maps_to_keep_last_on_duplicate(
+        self, coordinator, mock_hub, mock_source
+    ) -> None:
+        """验证 force=True 映射到 OnDuplicate.KEEP_LAST。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        source_df = pl.DataFrame(
+            {
+                "src_code": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "open": [10.0],
+                "high": [10.5],
+                "low": [9.8],
+                "close": [10.2],
+                "pre_close": [10.0],
+                "volume": [1000000],
+                "amount": [10200000],
+                "pct_change": [2.0],
+            }
+        )
+        mock_source.fetch_stock_daily.return_value = source_df
+
+        mock_hub.bars_store = Mock()
+        mock_hub.bars_store.write.return_value = (
+            "/path/to/file.parquet",
+            "checksum123",
+        )
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum123",
+            rows=1,
+        )
+
+        enriched_df = source_df.with_columns(
+            pl.lit(1000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+
+        # Act
+        coordinator.ingest_date("stock_daily", "2024-12-27", force=True)
+
+        # Assert
+        mock_hub.bars_store.write.assert_called_once()
+        call_kwargs = mock_hub.bars_store.write.call_args.kwargs
+        assert "on_duplicate" in call_kwargs
+        assert call_kwargs["on_duplicate"] == OnDuplicate.KEEP_LAST
+
+    def test_force_true_for_adj_factor_uses_keep_last(
+        self, coordinator, mock_hub, mock_source
+    ) -> None:
+        """验证 force=True 对 adj_factor 数据集也传递正确的 on_duplicate。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_source.fetch_adj_factor.return_value = pl.DataFrame(
+            {
+                "src_code": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "adj_factor": [1.2345],
+            }
+        )
+
+        mock_hub.adj_factor_store = Mock()
+        mock_hub.adj_factor_store.write.return_value = (
+            "/path/to/file.parquet",
+            "checksum789",
+        )
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="adj_factor",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum789",
+            rows=1,
+        )
+
+        # Act
+        coordinator.ingest_date("adj_factor", "2024-12-27", force=True)
+
+        # Assert
+        mock_hub.adj_factor_store.write.assert_called_once()
+        call_kwargs = mock_hub.adj_factor_store.write.call_args.kwargs
+        assert "on_duplicate" in call_kwargs
+        assert call_kwargs["on_duplicate"] == OnDuplicate.KEEP_LAST

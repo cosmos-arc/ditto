@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 import polars as pl
 from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_datahub.sources.metadata import IngestionStatus
+from ditto_datahub.types import OnDuplicate
 from ditto_foundation import logger
 
 from ditto_server.ingestion.services.metadata import MetadataManager
@@ -152,8 +153,13 @@ class IngestionCoordinator:
 
         checksum = self._metadata_manager.compute_checksum(df)
 
+        # 将 force 映射到 on_duplicate
+        on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
+
         try:
-            _file_path, stored_checksum = self._write_data(dataset, df, trade_date)
+            _file_path, stored_checksum = self._write_data(
+                dataset, df, trade_date, on_duplicate
+            )
         except Exception as e:
             self._hub.ingestion_log.save_log(
                 dataset=dataset,
@@ -229,6 +235,7 @@ class IngestionCoordinator:
         dataset: str,
         df: pl.DataFrame,
         trade_date: str,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
     ) -> tuple[str, str]:
         """根据数据集类型写入对应的 Store。"""
         year = int(trade_date[:4])
@@ -248,12 +255,14 @@ class IngestionCoordinator:
                 dataset=dataset,
                 df=df,
                 year=year,
+                on_duplicate=on_duplicate,
             )
         elif dataset in ("adj_factor", "fund_adj"):
             file_path, checksum = self._hub.adj_factor_store.write(
                 dataset=dataset,
                 df=df,
                 year=year,
+                on_duplicate=on_duplicate,
             )
         elif dataset == "calendar":
             records = df.to_dicts()
