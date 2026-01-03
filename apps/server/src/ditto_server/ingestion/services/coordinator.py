@@ -251,13 +251,20 @@ class IngestionCoordinator:
                 asset_class=asset_class,
                 source=self._source_name,
             )
-            file_path, checksum = self._hub.bars_store.write(
-                dataset=dataset,
+            # 使用 Repository 层以获得文件锁和 DQ 检查保护
+            write_result = self._hub.bars.write(
                 df=df,
                 year=year,
+                dataset=dataset,
+                source=self._source_name,
+                run_dq_check=True,
                 on_duplicate=on_duplicate,
             )
+            file_path = write_result.file_path
+            checksum = write_result.checksum
         elif dataset in ("adj_factor", "fund_adj"):
+            # TODO: adj_factor 也需要文件锁保护，未来应该通过 Repository 层调用
+            # 当前暂时保持直接调用 Store 层，但在高并发场景下可能存在数据损坏风险
             file_path, checksum = self._hub.adj_factor_store.write(
                 dataset=dataset,
                 df=df,

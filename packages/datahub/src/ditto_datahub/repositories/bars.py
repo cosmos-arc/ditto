@@ -19,7 +19,7 @@ from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
-from ditto_datahub.types import SidRange
+from ditto_datahub.types import OnDuplicate, SidRange
 
 if TYPE_CHECKING:
     from ditto_datahub.runtime.file_lock import FileLockManager
@@ -237,6 +237,7 @@ class BarsRepository:
         dataset: str = "stock_daily",
         source: str = "tushare",
         run_dq_check: bool = True,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
     ) -> WriteResult:
         """
         Write bars data.
@@ -247,6 +248,7 @@ class BarsRepository:
             dataset: Dataset name.
             source: Data source identifier.
             run_dq_check: Whether to run data quality checks.
+            on_duplicate: Strategy for handling duplicate data.
 
         Returns:
             Write result with file path and checksum.
@@ -312,7 +314,9 @@ class BarsRepository:
                     )
 
             # Write data
-            file_path, checksum = self._bars_store.write(dataset, df, year)
+            file_path, checksum = self._bars_store.write(
+                dataset, df, year, on_duplicate=on_duplicate
+            )
 
             # Get total rows after write
             total_rows = len(

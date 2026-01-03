@@ -1,5 +1,6 @@
 """Tests for IngestionCoordinator."""
 
+from dataclasses import dataclass
 from datetime import date
 from unittest.mock import Mock
 
@@ -14,6 +15,28 @@ from ditto_server.ingestion.services.coordinator import (
     IngestionCoordinator,
     IngestionResult,
 )
+
+
+@dataclass(frozen=True)
+class MockWriteResult:
+    """Mock WriteResult for testing."""
+
+    file_path: str
+    checksum: str
+    rows_written: int = 0
+    rows_total: int = 0
+    blocked: bool = False
+    dq_result: None = None
+
+
+def mock_hub_bars_write(file_path: str, checksum: str) -> MockWriteResult:
+    """创建 Mock hub.bars.write() 的返回值。"""
+    return MockWriteResult(
+        file_path=file_path,
+        checksum=checksum,
+        rows_written=0,
+        rows_total=0,
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -148,8 +171,8 @@ class TestIngestDate:
         )
         mock_source.fetch_etf_daily.return_value = source_df
 
-        mock_hub.bars_store = Mock()
-        mock_hub.bars_store.write.return_value = (
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -177,7 +200,7 @@ class TestIngestDate:
         assert result.row_count == 2
         assert result.checksum == "checksum123"
         mock_source.fetch_etf_daily.assert_called_once_with("2024-12-27")
-        mock_hub.bars_store.write.assert_called_once()
+        mock_hub.bars.write.assert_called_once()
         mock_hub.ingestion_log.save_log.assert_called_once()
 
     def test_ingest_date_success_stock_daily(
@@ -202,8 +225,8 @@ class TestIngestDate:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars_store = Mock()
-        mock_hub.bars_store.write.return_value = (
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum456",
         )
@@ -376,8 +399,8 @@ class TestIngestDate:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars_store = Mock()
-        mock_hub.bars_store.write.return_value = (
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "new_checksum",
         )
@@ -450,8 +473,8 @@ class TestIngestRange:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars_store = Mock()
-        mock_hub.bars_store.write.return_value = (
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -526,8 +549,8 @@ class TestIngestRange:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars_store = Mock()
-        mock_hub.bars_store.write.return_value = (
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -592,8 +615,8 @@ class TestIngestRange:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars_store = Mock()
-        mock_hub.bars_store.write.return_value = (
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -803,8 +826,8 @@ class TestWriteT1Data:
             }
         )
 
-        mock_hub.bars_store = Mock()
-        mock_hub.bars_store.write.return_value = (
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/stock_daily/2024.parquet",
             "checksum123",
         )
@@ -829,9 +852,9 @@ class TestWriteT1Data:
             asset_class="stock",
             source="tushare",
         )
-        # 验证 bars_store.write 被调用，且 DataFrame 包含 sid 和 source 列
-        mock_hub.bars_store.write.assert_called_once()
-        call_args = mock_hub.bars_store.write.call_args
+        # 验证 bars.write 被调用，且 DataFrame 包含 sid 和 source 列
+        mock_hub.bars.write.assert_called_once()
+        call_args = mock_hub.bars.write.call_args
         written_df = call_args.kwargs.get("df")
         assert written_df is not None
         assert "sid" in written_df.columns
@@ -858,8 +881,8 @@ class TestWriteT1Data:
             }
         )
 
-        mock_hub.bars_store = Mock()
-        mock_hub.bars_store.write.return_value = (
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/etf_daily/2024.parquet",
             "checksum456",
         )
@@ -884,9 +907,9 @@ class TestWriteT1Data:
             asset_class="etf",
             source="tushare",
         )
-        # 验证 bars_store.write 被调用，且 DataFrame 包含 sid 和 source 列
-        mock_hub.bars_store.write.assert_called_once()
-        call_args = mock_hub.bars_store.write.call_args
+        # 验证 bars.write 被调用，且 DataFrame 包含 sid 和 source 列
+        mock_hub.bars.write.assert_called_once()
+        call_args = mock_hub.bars.write.call_args
         written_df = call_args.kwargs.get("df")
         assert written_df is not None
         assert "sid" in written_df.columns
@@ -919,8 +942,8 @@ class TestForceParameter:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars_store = Mock()
-        mock_hub.bars_store.write.return_value = (
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -943,8 +966,8 @@ class TestForceParameter:
         coordinator.ingest_date("stock_daily", "2024-12-27", force=False)
 
         # Assert
-        mock_hub.bars_store.write.assert_called_once()
-        call_kwargs = mock_hub.bars_store.write.call_args.kwargs
+        mock_hub.bars.write.assert_called_once()
+        call_kwargs = mock_hub.bars.write.call_args.kwargs
         assert "on_duplicate" in call_kwargs
         assert call_kwargs["on_duplicate"] == OnDuplicate.ERROR
 
@@ -970,8 +993,8 @@ class TestForceParameter:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars_store = Mock()
-        mock_hub.bars_store.write.return_value = (
+        mock_hub.bars = Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -994,8 +1017,8 @@ class TestForceParameter:
         coordinator.ingest_date("stock_daily", "2024-12-27", force=True)
 
         # Assert
-        mock_hub.bars_store.write.assert_called_once()
-        call_kwargs = mock_hub.bars_store.write.call_args.kwargs
+        mock_hub.bars.write.assert_called_once()
+        call_kwargs = mock_hub.bars.write.call_args.kwargs
         assert "on_duplicate" in call_kwargs
         assert call_kwargs["on_duplicate"] == OnDuplicate.KEEP_LAST
 
