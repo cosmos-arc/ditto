@@ -6,11 +6,24 @@ Security Mapper 服务。
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Literal
 
 import polars as pl
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_foundation import logger
+
+
+@dataclass(frozen=True)
+class SecurityRegistrationParams:
+    """证券注册参数。"""
+
+    src_code: str
+    sid: int
+    source: str
+    asset_class: Literal["stock", "etf"]
+    metadata: pl.DataFrame
+    src_code_col: str = "ts_code"
 
 
 class SecurityMapper:
@@ -51,6 +64,7 @@ class SecurityMapper:
         source: str,
         asset_class: Literal["stock", "etf"],
         metadata: pl.DataFrame,
+        src_code_col: str = "ts_code",
     ) -> dict[str, int]:
         """
         映射 src_code 到 sid,不存在则创建并分配 SID。
@@ -60,11 +74,12 @@ class SecurityMapper:
             source: 数据源标识符。
             asset_class: 资产类别,可选 "stock" 或 "etf"。
             metadata: 证券元数据 DataFrame,必须包含以下列:
-                - ts_code: 源代码
+                - {src_code_col}: 源代码（默认 "ts_code"）
                 - symbol: 显示符号
                 - name: 证券名称
                 - exchange: 交易所代码
                 - list_date: 上市日期
+            src_code_col: metadata 中源代码的字段名,默认 "ts_code"。
 
         Returns:
             字典,映射 src_code 到 sid。
@@ -107,9 +122,15 @@ class SecurityMapper:
             else:
                 # 不存在,分配新 SID
                 new_sid = self._allocate_sid(asset_class)
-                self._register_security(
-                    src_code, new_sid, source, asset_class, metadata
+                params = SecurityRegistrationParams(
+                    src_code=src_code,
+                    sid=new_sid,
+                    source=source,
+                    asset_class=asset_class,
+                    metadata=metadata,
+                    src_code_col=src_code_col,
                 )
+                self._register_security(params)
                 result[src_code] = new_sid
                 self._cache[cache_key] = new_sid
                 created_count += 1
@@ -227,66 +248,57 @@ class SecurityMapper:
 
         return sid
 
-    def _register_security(
-        self,
-        src_code: str,
-        sid: int,
-        source: str,
-        asset_class: Literal["stock", "etf"],
-        metadata: pl.DataFrame,
-    ) -> None:
+    def _register_security(self, params: SecurityRegistrationParams) -> None:
         """
         注册新证券到 SecurityStore。
 
         Args:
-            src_code: 源代码。
-            sid: Security ID。
-            source: 数据源标识符。
-            asset_class: 资产类别。
-            metadata: 证券元数据。
+            params: 证券注册参数。
 
         """
         # 检查是否已注册（防止并发竞态）
-        existing = self._store.resolve_sid(src_code, source, None)
+        existing = self._store.resolve_sid(params.src_code, params.source, None)
         if existing is not None:
             logger.debug(
                 "证券已在并发中注册,跳过",
                 event="security_already_registered",
-                source=source,
-                src_code=src_code,
+                source=params.source,
+                src_code=params.src_code,
                 sid=existing,
             )
             return
 
         # 从 metadata 中提取该证券的信息
-        security_meta = metadata.filter(pl.col("ts_code") == src_code)
+        security_meta = params.metadata.filter(
+            pl.col(params.src_code_col) == params.src_code
+        )
 
         if security_meta.is_empty():
             logger.warning(
                 "未找到证券元数据",
                 event="security_metadata_not_found",
-                src_code=src_code,
+                src_code=params.src_code,
             )
             # 使用默认值
-            symbol = src_code
-            name = src_code
+            symbol = params.src_code
+            name = params.src_code
             exchange = "UNKNOWN"
             list_date = "19900101"
         else:
             row = security_meta.row(0, named=True)
-            symbol = str(row.get("symbol", src_code))
-            name = str(row.get("name", src_code))
+            symbol = str(row.get("symbol", params.src_code))
+            name = str(row.get("name", params.src_code))
             exchange = str(row.get("exchange", "UNKNOWN"))
             list_date = str(row.get("list_date", "19900101"))
 
         self._store.register(
-            sid=sid,
-            source=source,
-            src_code=src_code,
+            sid=params.sid,
+            source=params.source,
+            src_code=params.src_code,
             symbol=symbol,
             name=name,
             exchange=exchange,
-            asset_class=asset_class,
+            asset_class=params.asset_class,
             list_date=list_date,
             board=None,
         )

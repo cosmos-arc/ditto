@@ -573,3 +573,159 @@ class TestIngestRange:
         # Assert
         assert len(results) == 1
         assert results[0].status == "success"
+
+
+class TestWriteT0Data:
+    """测试 T0 数据（stock_basic, etf_basic）写入。"""
+
+    def test_ingest_date_success_stock_basic(
+        self, coordinator, mock_hub, mock_source
+    ) -> None:
+        """成功摄取 stock_basic 数据到 security_store。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_source.fetch_stock_basic.return_value = pl.DataFrame(
+            {
+                "src_code": ["000001.SZ", "600000.SH"],
+                "symbol": ["000001", "600000"],
+                "name": ["平安银行", "浦发银行"],
+                "exchange": ["SZSE", "SSE"],
+                "list_date": [date(1991, 4, 3), date(1999, 11, 10)],
+            }
+        )
+
+        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor.update_success.return_value = Mock(
+            dataset="stock_basic",
+            source="tushare",
+            last_success="2024-01-03",
+            last_attempted="2024-01-03",
+        )
+        mock_hub.ingestion_log.save_log.return_value = Mock(
+            dataset="stock_basic",
+            source="tushare",
+            trade_date="2024-01-03",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum123",
+            rows=2,
+        )
+
+        # Act
+        result = coordinator.ingest_date("stock_basic", "2024-01-03")
+
+        # Assert
+        assert result.status == "success"
+        assert result.row_count == 2
+        mock_source.fetch_stock_basic.assert_called_once()
+        # 验证游标被更新
+        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
+            dataset="stock_basic",
+            source="tushare",
+            trade_date="2024-01-03",
+        )
+
+    def test_ingest_date_success_etf_basic(
+        self, coordinator, mock_hub, mock_source
+    ) -> None:
+        """成功摄取 etf_basic 数据到 security_store。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_source.fetch_etf_basic.return_value = pl.DataFrame(
+            {
+                "src_code": ["510300.SH", "159919.SZ"],
+                "symbol": ["510300", "159919"],
+                "name": ["沪深300ETF", "沪深300ETF"],
+                "exchange": ["SSE", "SZSE"],
+                "list_date": [date(2012, 7, 6), date(2019, 6, 24)],
+            }
+        )
+
+        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor.update_success.return_value = Mock(
+            dataset="etf_basic",
+            source="tushare",
+            last_success="2024-01-03",
+            last_attempted="2024-01-03",
+        )
+        mock_hub.ingestion_log.save_log.return_value = Mock(
+            dataset="etf_basic",
+            source="tushare",
+            trade_date="2024-01-03",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum456",
+            rows=2,
+        )
+
+        # Act
+        result = coordinator.ingest_date("etf_basic", "2024-01-03")
+
+        # Assert
+        assert result.status == "success"
+        assert result.row_count == 2
+        mock_source.fetch_etf_basic.assert_called_once()
+        # 验证游标被更新
+        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
+            dataset="etf_basic",
+            source="tushare",
+            trade_date="2024-01-03",
+        )
+
+    def test_write_stock_basic_calls_mapper_and_updates_cursor(
+        self, coordinator, mock_hub
+    ) -> None:
+        """验证 _write_stock_basic 调用 SecurityMapper 并更新游标。"""
+        # Arrange
+        df = pl.DataFrame(
+            {
+                "src_code": ["000001.SZ"],
+                "symbol": ["000001"],
+                "name": ["平安银行"],
+                "exchange": ["SZSE"],
+                "list_date": [date(1991, 4, 3)],
+            }
+        )
+
+        mock_hub.ingestion_cursor = Mock()
+
+        # Act
+        file_path, checksum = coordinator._write_stock_basic(df, "2024-01-03")
+
+        # Assert
+        assert file_path == "security_store:stock_basic"
+        assert checksum is not None
+        # 验证游标被更新
+        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
+            dataset="stock_basic",
+            source="tushare",
+            trade_date="2024-01-03",
+        )
+
+    def test_write_etf_basic_calls_mapper_and_updates_cursor(
+        self, coordinator, mock_hub
+    ) -> None:
+        """验证 _write_etf_basic 调用 SecurityMapper 并更新游标。"""
+        # Arrange
+        df = pl.DataFrame(
+            {
+                "src_code": ["510300.SH"],
+                "symbol": ["510300"],
+                "name": ["沪深300ETF"],
+                "exchange": ["SSE"],
+                "list_date": [date(2012, 7, 6)],
+            }
+        )
+
+        mock_hub.ingestion_cursor = Mock()
+
+        # Act
+        file_path, checksum = coordinator._write_etf_basic(df, "2024-01-03")
+
+        # Assert
+        assert file_path == "security_store:etf_basic"
+        assert checksum is not None
+        # 验证游标被更新
+        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
+            dataset="etf_basic",
+            source="tushare",
+            trade_date="2024-01-03",
+        )

@@ -17,6 +17,7 @@ from ditto_datahub.sources.metadata import IngestionStatus
 from ditto_foundation import logger
 
 from ditto_server.ingestion.services.metadata import MetadataManager
+from ditto_server.ingestion.services.security_mapper import SecurityMapper
 
 if TYPE_CHECKING:
     from ditto_datahub.hub import DataHub
@@ -53,12 +54,16 @@ class IngestionCoordinator:
         hub: "DataHub",
         source: DataSource,
         source_name: str = "tushare",
+        security_mapper: SecurityMapper | None = None,
     ) -> None:
         """初始化 IngestionCoordinator。"""
         self._hub = hub
         self._source = source
         self._source_name = source_name
         self._metadata_manager = MetadataManager(log_store=hub.ingestion_log)
+        self._security_mapper = security_mapper or SecurityMapper(
+            security_store=hub.security_store
+        )
 
     def ingest_date(
         self,
@@ -148,7 +153,7 @@ class IngestionCoordinator:
         checksum = self._metadata_manager.compute_checksum(df)
 
         try:
-            file_path, stored_checksum = self._write_data(dataset, df, trade_date)
+            _file_path, stored_checksum = self._write_data(dataset, df, trade_date)
         except Exception as e:
             self._hub.ingestion_log.save_log(
                 dataset=dataset,
@@ -245,7 +250,55 @@ class IngestionCoordinator:
             self._hub.calendar_store.upsert(records)  # type: ignore[arg-type]
             file_path = f"calendar_store:{trade_date}"
             checksum = self._metadata_manager.compute_checksum(df)
+        elif dataset == "stock_basic":
+            file_path, checksum = self._write_stock_basic(df, trade_date)
+        elif dataset == "etf_basic":
+            file_path, checksum = self._write_etf_basic(df, trade_date)
         else:
             raise ValueError(f"不支持写入数据集: {dataset}")
 
+        return file_path, checksum
+
+    def _write_stock_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
+        """写入 stock_basic 数据到 security_store。"""
+        # 1. 映射或创建 SID（SecurityMapper 内部会自动注册新证券）
+        self._security_mapper.map_or_create(
+            src_codes=df["src_code"].to_list(),
+            source=self._source_name,
+            asset_class="stock",
+            metadata=df,
+            src_code_col="src_code",
+        )
+
+        # 2. 更新游标
+        self._hub.ingestion_cursor.update_success(
+            dataset="stock_basic",
+            source=self._source_name,
+            trade_date=trade_date,
+        )
+
+        file_path = "security_store:stock_basic"
+        checksum = self._metadata_manager.compute_checksum(df)
+        return file_path, checksum
+
+    def _write_etf_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
+        """写入 etf_basic 数据到 security_store。"""
+        # 1. 映射或创建 SID（SecurityMapper 内部会自动注册新证券）
+        self._security_mapper.map_or_create(
+            src_codes=df["src_code"].to_list(),
+            source=self._source_name,
+            asset_class="etf",
+            metadata=df,
+            src_code_col="src_code",
+        )
+
+        # 2. 更新游标
+        self._hub.ingestion_cursor.update_success(
+            dataset="etf_basic",
+            source=self._source_name,
+            trade_date=trade_date,
+        )
+
+        file_path = "security_store:etf_basic"
+        checksum = self._metadata_manager.compute_checksum(df)
         return file_path, checksum
