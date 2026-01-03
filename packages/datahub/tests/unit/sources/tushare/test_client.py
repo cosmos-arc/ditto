@@ -1,9 +1,9 @@
 """Tests for TushareClient."""
 
 import os
-from unittest import mock
 
 import pytest
+import pytest_mock
 from ditto_datahub.sources.base import SourceConfigurationError
 from ditto_datahub.sources.tushare.client import TushareClient
 from ditto_datahub.sources.tushare.rate_limiter import (
@@ -18,6 +18,7 @@ class TestTushareClientInit:
     def test_init_with_token_from_env(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test initialization reads token from environment."""
 
@@ -31,16 +32,17 @@ class TestTushareClientInit:
 
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token_123")
 
-        with mock.patch(
+        mocker.patch(
             "ditto_datahub.sources.tushare.client._get_tushare_token",
             side_effect=mock_get_token,
-        ):
-            client = TushareClient()
-            assert client._token == "test_token_123"
+        )
+        client = TushareClient()
+        assert client._token == "test_token_123"
 
     def test_init_missing_token_raises_error(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test missing token raises configuration error."""
 
@@ -50,12 +52,12 @@ class TestTushareClientInit:
 
         monkeypatch.delenv("TUSHARE_TOKEN", raising=False)
 
-        with mock.patch(
+        mocker.patch(
             "ditto_datahub.sources.tushare.client._get_tushare_token",
             side_effect=mock_get_token,
-        ):
-            with pytest.raises(SourceConfigurationError):
-                TushareClient()
+        )
+        with pytest.raises(SourceConfigurationError):
+            TushareClient()
 
     def test_init_custom_rate_limit(
         self,

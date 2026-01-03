@@ -1,11 +1,11 @@
 """Tests for TushareSource."""
 
 from datetime import date
-from unittest import mock
 
 import pandas as pd
 import polars as pl
 import pytest
+import pytest_mock
 from ditto_datahub.sources.base import SourceFetchError
 from ditto_datahub.sources.metadata import (
     IncrementalMode,
@@ -19,6 +19,7 @@ class TestTushareSourceCalendar:
     def test_fetch_calendar_returns_dataframe(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_calendar returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -31,11 +32,11 @@ class TestTushareSourceCalendar:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_calendar("2024-01-01", "2024-01-03")
+        source = TushareSource()
+        result = source.fetch_calendar("2024-01-01", "2024-01-03")
 
         # Verify schema
         assert result.schema == {
@@ -53,34 +54,36 @@ class TestTushareSourceCalendar:
     def test_fetch_calendar_empty_response(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_calendar handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         mock_response = pd.DataFrame({"cal_date": [], "is_open": []})
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_calendar("2024-01-01", "2024-01-03")
+        source = TushareSource()
+        result = source.fetch_calendar("2024-01-01", "2024-01-03")
 
         assert result.is_empty()
 
     def test_fetch_calendar_api_error_raises(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_calendar raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.side_effect = Exception("API error")
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.side_effect = Exception("API error")
 
-            source = TushareSource()
+        source = TushareSource()
 
-            with pytest.raises(SourceFetchError):
-                source.fetch_calendar("2024-01-01", "2024-01-03")
+        with pytest.raises(SourceFetchError):
+            source.fetch_calendar("2024-01-01", "2024-01-03")
 
 
 class TestTushareSourceEtfBasic:
@@ -89,6 +92,7 @@ class TestTushareSourceEtfBasic:
     def test_fetch_etf_basic_returns_dataframe(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_etf_basic returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -104,11 +108,11 @@ class TestTushareSourceEtfBasic:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_etf_basic()
+        source = TushareSource()
+        result = source.fetch_etf_basic()
 
         # Verify schema
         assert result.schema == {
@@ -140,6 +144,7 @@ class TestTushareSourceEtfBasic:
     def test_fetch_etf_basic_empty_response(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_etf_basic handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -153,11 +158,11 @@ class TestTushareSourceEtfBasic:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_etf_basic()
+        source = TushareSource()
+        result = source.fetch_etf_basic()
 
         assert result.is_empty()
 
@@ -168,6 +173,7 @@ class TestTushareSourceEtfDaily:
     def test_fetch_etf_daily_returns_dataframe(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_etf_daily returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -190,11 +196,11 @@ class TestTushareSourceEtfDaily:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_etf_daily("2024-01-02")
+        source = TushareSource()
+        result = source.fetch_etf_daily("2024-01-02")
 
         # Verify schema matches ETF_DAILY_SCHEMA
         expected_schema = {
@@ -230,6 +236,7 @@ class TestTushareSourceEtfDaily:
     def test_fetch_etf_daily_empty_response(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_etf_daily handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -250,11 +257,11 @@ class TestTushareSourceEtfDaily:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_etf_daily("2024-01-02")
+        source = TushareSource()
+        result = source.fetch_etf_daily("2024-01-02")
 
         assert result.is_empty()
 
@@ -265,6 +272,7 @@ class TestTushareSourceStockBasic:
     def test_fetch_stock_basic_returns_dataframe(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_stock_basic returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -281,11 +289,11 @@ class TestTushareSourceStockBasic:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_stock_basic()
+        source = TushareSource()
+        result = source.fetch_stock_basic()
 
         # Verify schema
         assert result.schema == {
@@ -317,6 +325,7 @@ class TestTushareSourceStockBasic:
     def test_fetch_stock_basic_empty_response(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_stock_basic handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -331,28 +340,29 @@ class TestTushareSourceStockBasic:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_stock_basic()
+        source = TushareSource()
+        result = source.fetch_stock_basic()
 
         assert result.is_empty()
 
     def test_fetch_stock_basic_api_error_raises(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_stock_basic raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.side_effect = Exception("API error")
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.side_effect = Exception("API error")
 
-            source = TushareSource()
+        source = TushareSource()
 
-            with pytest.raises(SourceFetchError):
-                source.fetch_stock_basic()
+        with pytest.raises(SourceFetchError):
+            source.fetch_stock_basic()
 
 
 class TestTushareSourceStockDaily:
@@ -361,6 +371,7 @@ class TestTushareSourceStockDaily:
     def test_fetch_stock_daily_returns_dataframe(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_stock_daily returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -383,11 +394,11 @@ class TestTushareSourceStockDaily:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_stock_daily("2024-01-02")
+        source = TushareSource()
+        result = source.fetch_stock_daily("2024-01-02")
 
         # Verify schema matches STOCK_DAILY_SCHEMA (same as ETF daily)
         expected_schema = {
@@ -423,6 +434,7 @@ class TestTushareSourceStockDaily:
     def test_fetch_stock_daily_empty_response(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_stock_daily handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -443,28 +455,29 @@ class TestTushareSourceStockDaily:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_stock_daily("2024-01-02")
+        source = TushareSource()
+        result = source.fetch_stock_daily("2024-01-02")
 
         assert result.is_empty()
 
     def test_fetch_stock_daily_api_error_raises(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_stock_daily raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.side_effect = Exception("API error")
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.side_effect = Exception("API error")
 
-            source = TushareSource()
+        source = TushareSource()
 
-            with pytest.raises(SourceFetchError):
-                source.fetch_stock_daily("2024-01-02")
+        with pytest.raises(SourceFetchError):
+            source.fetch_stock_daily("2024-01-02")
 
 
 class TestTushareSourceAdjFactor:
@@ -473,6 +486,7 @@ class TestTushareSourceAdjFactor:
     def test_fetch_adj_factor_returns_dataframe(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_adj_factor returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -487,11 +501,11 @@ class TestTushareSourceAdjFactor:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_adj_factor("2024-01-02")
+        source = TushareSource()
+        result = source.fetch_adj_factor("2024-01-02")
 
         # Verify schema
         expected_schema = {
@@ -521,6 +535,7 @@ class TestTushareSourceAdjFactor:
     def test_fetch_adj_factor_empty_response(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_adj_factor handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -533,28 +548,29 @@ class TestTushareSourceAdjFactor:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_adj_factor("2024-01-02")
+        source = TushareSource()
+        result = source.fetch_adj_factor("2024-01-02")
 
         assert result.is_empty()
 
     def test_fetch_adj_factor_api_error_raises(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_adj_factor raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.side_effect = Exception("API error")
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.side_effect = Exception("API error")
 
-            source = TushareSource()
+        source = TushareSource()
 
-            with pytest.raises(SourceFetchError):
-                source.fetch_adj_factor("2024-01-02")
+        with pytest.raises(SourceFetchError):
+            source.fetch_adj_factor("2024-01-02")
 
 
 class TestTushareSourceFundAdj:
@@ -563,6 +579,7 @@ class TestTushareSourceFundAdj:
     def test_fetch_fund_adj_returns_dataframe(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_fund_adj returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -578,11 +595,11 @@ class TestTushareSourceFundAdj:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_fund_adj("2024-01-02")
+        source = TushareSource()
+        result = source.fetch_fund_adj("2024-01-02")
 
         # Verify schema
         expected_schema = {
@@ -612,6 +629,7 @@ class TestTushareSourceFundAdj:
     def test_fetch_fund_adj_empty_response(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_fund_adj handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -624,28 +642,29 @@ class TestTushareSourceFundAdj:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            result = source.fetch_fund_adj("2024-01-02")
+        source = TushareSource()
+        result = source.fetch_fund_adj("2024-01-02")
 
         assert result.is_empty()
 
     def test_fetch_fund_adj_api_error_raises(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetch_fund_adj raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.side_effect = Exception("API error")
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.side_effect = Exception("API error")
 
-            source = TushareSource()
+        source = TushareSource()
 
-            with pytest.raises(SourceFetchError):
-                source.fetch_fund_adj("2024-01-02")
+        with pytest.raises(SourceFetchError):
+            source.fetch_fund_adj("2024-01-02")
 
 
 class TestTushareSourceIncremental:
@@ -675,6 +694,7 @@ class TestTushareSourceIncremental:
     def test_quick_mode_fetches_when_stale(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test QUICK mode fetches when trade_date > last_trade_date."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -695,15 +715,15 @@ class TestTushareSourceIncremental:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            _, metadata = source.fetch_etf_daily_incremental(
-                trade_date="2024-12-27",
-                mode=IncrementalMode.QUICK,
-                last_trade_date="2024-12-26",
-            )
+        source = TushareSource()
+        _, metadata = source.fetch_etf_daily_incremental(
+            trade_date="2024-12-27",
+            mode=IncrementalMode.QUICK,
+            last_trade_date="2024-12-26",
+        )
 
         # Should return data and updated metadata
         assert metadata.last_trade_date == "2024-12-27"
@@ -713,6 +733,7 @@ class TestTushareSourceIncremental:
     def test_precise_mode_fetches_when_checksum_differs(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test PRECISE mode fetches when checksum differs."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -733,16 +754,16 @@ class TestTushareSourceIncremental:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            df, metadata = source.fetch_etf_daily_incremental(
-                trade_date="2024-12-27",
-                mode=IncrementalMode.PRECISE,
-                last_trade_date="2024-12-27",
-                last_checksum="different_checksum",
-            )
+        source = TushareSource()
+        df, metadata = source.fetch_etf_daily_incremental(
+            trade_date="2024-12-27",
+            mode=IncrementalMode.PRECISE,
+            last_trade_date="2024-12-27",
+            last_checksum="different_checksum",
+        )
 
         # Should fetch because checksum differs
         assert not df.is_empty()
@@ -751,6 +772,7 @@ class TestTushareSourceIncremental:
     def test_precise_mode_skips_when_checksum_matches(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test PRECISE mode skips when checksum matches."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -771,26 +793,26 @@ class TestTushareSourceIncremental:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
+        source = TushareSource()
 
-            # First, fetch to get the checksum
-            _, metadata1 = source.fetch_etf_daily_incremental(
-                trade_date="2024-12-27",
-                mode=IncrementalMode.PRECISE,
-                last_trade_date="2024-12-26",
-            )
-            expected_checksum = metadata1.last_checksum
+        # First, fetch to get the checksum
+        _, metadata1 = source.fetch_etf_daily_incremental(
+            trade_date="2024-12-27",
+            mode=IncrementalMode.PRECISE,
+            last_trade_date="2024-12-26",
+        )
+        expected_checksum = metadata1.last_checksum
 
-            # Second, call with same checksum - should skip
-            df2, metadata2 = source.fetch_etf_daily_incremental(
-                trade_date="2024-12-27",
-                mode=IncrementalMode.PRECISE,
-                last_trade_date="2024-12-27",
-                last_checksum=expected_checksum,
-            )
+        # Second, call with same checksum - should skip
+        df2, metadata2 = source.fetch_etf_daily_incremental(
+            trade_date="2024-12-27",
+            mode=IncrementalMode.PRECISE,
+            last_trade_date="2024-12-27",
+            last_checksum=expected_checksum,
+        )
 
         # Should skip because checksum matches
         assert df2.is_empty()
@@ -799,6 +821,7 @@ class TestTushareSourceIncremental:
     def test_incremental_returns_metadata_with_dataset_name(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test incremental fetch returns correct metadata."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
@@ -819,15 +842,15 @@ class TestTushareSourceIncremental:
             }
         )
 
-        with mock.patch("ditto_datahub.sources.tushare.client.pro_api") as mock_api:
-            mock_api.return_value.query.return_value = mock_response
+        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
+        mock_api.return_value.query.return_value = mock_response
 
-            source = TushareSource()
-            _, metadata = source.fetch_etf_daily_incremental(
-                trade_date="2024-12-27",
-                mode=IncrementalMode.QUICK,
-                last_trade_date="2024-12-26",
-            )
+        source = TushareSource()
+        _, metadata = source.fetch_etf_daily_incremental(
+            trade_date="2024-12-27",
+            mode=IncrementalMode.QUICK,
+            last_trade_date="2024-12-26",
+        )
 
         assert metadata.dataset == "etf_daily"
         assert metadata.source == "tushare"
