@@ -311,13 +311,13 @@ class IngestionCoordinator:
             if "sid" not in df.columns:
                 df = self._security_mapper.enrich_dataframe(
                     df,
-                    src_code_col="ts_code",
+                    src_code_col="src_code",
                     asset_class=adj_asset_class,
                     source=self._source_name,
                 )
 
             # 使用 AdjFactorRepository 写入（带文件锁保护）
-            file_path, checksum = self._hub.adj_factor.write(  # type: ignore
+            file_path, checksum = self._hub.adj_factor.write(  # type: ignore[attr-defined]
                 dataset=dataset,
                 df=df,
                 year=year,
@@ -371,7 +371,7 @@ class IngestionCoordinator:
     def _write_stock_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """写入 stock_basic 数据到 security_store。"""
         # 使用 SecurityRepository 批量注册（线程安全）
-        file_path, checksum = self._hub.securities.register_batch(  # type: ignore
+        file_path, checksum = self._hub.securities.register_batch(  # type: ignore[attr-defined]
             df=df,
             source=self._source_name,
             asset_class="stock",
@@ -390,7 +390,7 @@ class IngestionCoordinator:
     def _write_etf_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """写入 etf_basic 数据到 security_store。"""
         # 使用 SecurityRepository 批量注册（线程安全）
-        file_path, checksum = self._hub.securities.register_batch(  # type: ignore
+        file_path, checksum = self._hub.securities.register_batch(  # type: ignore[attr-defined]
             df=df,
             source=self._source_name,
             asset_class="etf",
