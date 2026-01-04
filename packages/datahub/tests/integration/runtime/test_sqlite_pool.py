@@ -192,7 +192,7 @@ class TestSQLitePool:
             "INSERT INTO security "
             "(sid, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)",
-            [100000001, "600000", "Test", "SSE", "stock", "2000-01-01"],
+            [1000001, "600000", "Test", "SSE", "stock", "2000-01-01"],
         )
         self.pool.commit()
 
@@ -214,7 +214,7 @@ class TestSQLitePool:
             "INSERT INTO security "
             "(sid, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)",
-            [100000001, "600000", "Test", "SSE", "stock", "2000-01-01"],
+            [1000001, "600000", "Test", "SSE", "stock", "2000-01-01"],
         )
         self.pool.commit()
 
@@ -222,14 +222,14 @@ class TestSQLitePool:
         self.pool.execute(
             "INSERT INTO security_mapping (sid, source, src_code, effective_from) "
             "VALUES (?, ?, ?, ?)",
-            [100000001, "tushare", "600000.SH", "2000-01-01"],
+            [1000001, "tushare", "600000.SH", "2000-01-01"],
         )
         self.pool.commit()
 
         # Verify it was inserted
         rows = self.pool.execute(
             "SELECT COUNT(*) as count FROM security_mapping WHERE sid = ?",
-            [100000001],
+            [1000001],
         ).fetchall()
         count = rows[0]["count"]
         assert count == 1

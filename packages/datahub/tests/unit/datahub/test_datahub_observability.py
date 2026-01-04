@@ -39,7 +39,7 @@ class TestObservabilityBarsStore:
         # Create test data first
         test_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 1)],
                 "open": [10.0],
                 "high": [12.0],
@@ -71,7 +71,7 @@ class TestObservabilityBarsStore:
         # Perform write operation
         test_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 1)],
                 "open": [10.0],
                 "high": [12.0],
@@ -94,7 +94,7 @@ class TestObservabilityBarsStore:
         # Create test data first
         test_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000002],
+                "sid": [1000001, 1000002],
                 "trade_date": [date(2024, 1, 1), date(2024, 1, 2)],
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],
@@ -123,7 +123,7 @@ class TestObservabilityBarsStore:
         # Perform write operation
         test_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000002],
+                "sid": [1000001, 1000002],
                 "trade_date": [date(2024, 1, 1), date(2024, 1, 2)],
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],
@@ -157,7 +157,7 @@ class TestObservabilityAdjFactorStore:
         # Create test data first
         test_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 1)],
                 "adj_factor": [1.5],
             }
@@ -183,7 +183,7 @@ class TestObservabilityAdjFactorStore:
         # Perform write operation
         test_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 1)],
                 "adj_factor": [1.5],
             }
@@ -216,7 +216,7 @@ class TestObservabilitySecurityStore:
         """Test that resolve_sid operation creates a span."""
         # Register a security first
         self.store.register(
-            sid=100000001,
+            sid=1000001,
             source="tushare",
             src_code="510300.SZ",
             symbol="510300",
@@ -241,7 +241,7 @@ class TestObservabilitySecurityStore:
         """Test that resolve_sid operation records metrics."""
         # Register a security first
         self.store.register(
-            sid=100000001,
+            sid=1000001,
             source="tushare",
             src_code="510300.SZ",
             symbol="510300",
@@ -374,7 +374,7 @@ class TestObservabilityIntegration:
 
         # Register security
         security_store.register(
-            sid=100000001,
+            sid=1000001,
             source="tushare",
             src_code="510300.SZ",
             symbol="510300",
@@ -390,7 +390,7 @@ class TestObservabilityIntegration:
         # Write bars data
         test_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],
+                "sid": [1000001, 1000001],
                 "trade_date": [date(2024, 1, 1), date(2024, 1, 2)],
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],

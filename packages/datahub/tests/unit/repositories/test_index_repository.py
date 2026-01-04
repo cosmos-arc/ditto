@@ -150,7 +150,7 @@ class TestIndexRepositoryWithMocks:
         mock_df = pl.DataFrame(
             {
                 "index_id": ["000300.SH", "000300.SH"],
-                "sid": [100000001, 100000002],
+                "sid": [1000001, 1000002],
                 "effective_from": ["2024-01-01", "2024-01-01"],
                 "weight": [0.5, 0.5],
             }
@@ -179,7 +179,7 @@ class TestIndexRepositoryWithMocks:
         mock_df = pl.DataFrame(
             {
                 "index_id": ["000300.SH", "000300.SH"],
-                "sid": [100000001, 100000002],
+                "sid": [1000001, 1000002],
                 "effective_from": ["2024-01-01", "2024-01-01"],
                 "weight": [0.5, 0.5],
             }
@@ -188,7 +188,7 @@ class TestIndexRepositoryWithMocks:
 
         mock_security_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000002],
+                "sid": [1000001, 1000002],
                 "symbol": ["SID001", "SID002"],
             }
         )
@@ -213,7 +213,7 @@ class TestIndexRepositoryWithMocks:
         mock_df = pl.DataFrame(
             {
                 "index_id": ["000300.SH", "000300.SH", "000300.SH"],
-                "sid": [100000001, 100000002, 100000003],
+                "sid": [1000001, 1000002, 1000003],
                 "effective_from": ["2024-01-01", "2024-01-01", "2024-01-01"],
                 "weight": [0.6, 0.3, 0.1],
             }
@@ -230,9 +230,9 @@ class TestIndexRepositoryWithMocks:
 
         # Assert
         assert len(result) == 2
-        assert 100000001 in result["sid"].to_list()
-        assert 100000002 in result["sid"].to_list()
-        assert 100000003 not in result["sid"].to_list()
+        assert 1000001 in result["sid"].to_list()
+        assert 1000002 in result["sid"].to_list()
+        assert 1000003 not in result["sid"].to_list()
 
     def test_get_constituents_with_asof(self) -> None:
         """Test getting index constituents with PIT asof query."""
@@ -240,7 +240,7 @@ class TestIndexRepositoryWithMocks:
         mock_df = pl.DataFrame(
             {
                 "index_id": ["000300.SH"],
-                "sid": [100000001],
+                "sid": [1000001],
                 "effective_from": ["2024-01-01"],
                 "weight": [1.0],
             }
@@ -265,9 +265,9 @@ class TestIndexRepositoryWithMocks:
         """Test getting index constituent SIDs as a list."""
         # Arrange
         self.mock_index_weight_store.get_constituents_sids.return_value = [
-            100000001,
-            100000002,
-            100000003,
+            1000001,
+            1000002,
+            1000003,
         ]
 
         # Act
@@ -278,9 +278,9 @@ class TestIndexRepositoryWithMocks:
 
         # Assert
         assert len(sids) == 3
-        assert 100000001 in sids
-        assert 100000002 in sids
-        assert 100000003 in sids
+        assert 1000001 in sids
+        assert 1000002 in sids
+        assert 1000003 in sids
         self.mock_index_weight_store.get_constituents_sids.assert_called_once_with(
             index_id="000300.SH", asof=None
         )
@@ -316,8 +316,8 @@ class TestIndexRepositoryWithMocks:
         """Test get_csi300_constituents predefined shortcut."""
         # Arrange
         self.mock_index_weight_store.get_constituents_sids.return_value = [
-            100000001,
-            100000002,
+            1000001,
+            1000002,
         ]
 
         # Act
@@ -333,8 +333,8 @@ class TestIndexRepositoryWithMocks:
         """Test get_csi500_constituents predefined shortcut."""
         # Arrange
         self.mock_index_weight_store.get_constituents_sids.return_value = [
-            200000001,
-            200000002,
+            2000001,
+            2000002,
         ]
 
         # Act

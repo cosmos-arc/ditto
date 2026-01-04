@@ -50,7 +50,7 @@ class TestDQEngineIntegration:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '2000-01-01')
+            VALUES (1000001, '600000', 'Test', 'SSE', 'stock', '2000-01-01')
         """)
         self.client.commit()
 
@@ -84,7 +84,7 @@ class TestDQEngineIntegration:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "open": [10.0],
                 "high": [12.0],
@@ -118,7 +118,7 @@ class TestDQEngineIntegration:
         # Arrange: Create valid bars data
         test_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],
+                "sid": [1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],
@@ -150,7 +150,7 @@ class TestDQEngineIntegration:
         # Arrange: Create data with NULL values
         bad_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, None],  # NULL in sid
+                "sid": [1000001, 1000001, None],  # NULL in sid
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
                 "open": [10.0, 11.0, 10.0],
                 "high": [12.0, 13.0, 12.0],
@@ -183,7 +183,7 @@ class TestDQEngineIntegration:
         # Arrange: Create data with NULL values
         bad_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, None],
+                "sid": [1000001, 1000001, None],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
                 "open": [10.0, 11.0, 10.0],
                 "high": [12.0, 13.0, 12.0],
@@ -261,7 +261,7 @@ l2_business:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '2000-01-01')
+            VALUES (1000001, '600000', 'Test', 'SSE', 'stock', '2000-01-01')
         """)
         self.client.commit()
 
@@ -274,7 +274,7 @@ l2_business:
         # Arrange: Create data with NULL values
         bad_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, None],  # NULL in sid
+                "sid": [1000001, 1000001, None],  # NULL in sid
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
                 "open": [10.0, 11.0, 10.0],
                 "high": [12.0, 13.0, 12.0],
@@ -300,7 +300,7 @@ l2_business:
         # Arrange: Create data with duplicate (sid, trade_date)
         dup_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],  # Same SID
+                "sid": [1000001, 1000001],  # Same SID
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],  # Same date
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],
@@ -324,7 +324,7 @@ l2_business:
         # Arrange: Create valid data
         valid_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],
+                "sid": [1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],

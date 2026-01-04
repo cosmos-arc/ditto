@@ -120,13 +120,13 @@ class TestSqlEngine:
         self.pool.execute(
             "INSERT INTO security (sid, symbol, name, exchange, asset_class, "
             "list_date) VALUES (?, ?, ?, ?, ?, ?)",
-            [100_000_001, "TEST", "Test Security", "SH", "stock", "2024-01-01"],
+            [1_000_001, "TEST", "Test Security", "SH", "stock", "2024-01-01"],
         )
         self.pool.commit()
 
         # Query that needs SQLite
         result = self.engine.execute(
-            "SELECT s.symbol FROM security s WHERE s.sid = 100000001"
+            "SELECT s.symbol FROM security s WHERE s.sid = 1000001"
         )
 
         assert len(result) == 1

@@ -184,16 +184,16 @@ class TestPipelineStore:
             run_id="test-run-008",
             dataset_id="stock_daily",
             year=2024,
-            sid=100000001,
+            sid=1000001,
             trade_date="2024-01-15",
             rule_name="price_negative",
             severity="error",
-            message="Price is negative for sid 100000001",
+            message="Price is negative for sid 1000001",
         )
 
         issues = pipeline_store.list_dq_issues(run_id="test-run-008")
         assert len(issues) == 1
-        assert issues[0]["sid"] == 100000001
+        assert issues[0]["sid"] == 1000001
         assert issues[0]["rule_name"] == "price_negative"
         assert issues[0]["severity"] == "error"
 
@@ -204,11 +204,11 @@ class TestPipelineStore:
                 run_id="test-run-009",
                 dataset_id="stock_daily",
                 year=2024,
-                sid=100000001 + i,
+                sid=1000001 + i,
                 trade_date="2024-01-15",
                 rule_name="price_negative",
                 severity="error",
-                message=f"Price issue for sid {100000001 + i}",
+                message=f"Price issue for sid {1000001 + i}",
             )
 
         issues = pipeline_store.list_dq_issues(run_id="test-run-009")
