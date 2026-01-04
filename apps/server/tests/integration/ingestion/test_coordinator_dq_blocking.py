@@ -1,0 +1,183 @@
+# ruff: noqa: PLC0415  # 测试文件允许函数内导入
+
+"""Tests for DQ L1 blocking behavior in coordinator.
+
+This module tests that when DQ L1 checks fail:
+1. The ingestion result status is "failed"
+2. The error code is "DQ_BLOCKED"
+3. The cursor is still updated (avoiding blocking the entire flow)
+4. The log is recorded as FAIL status
+"""
+
+from unittest.mock import MagicMock, patch
+
+import polars as pl
+import pytest
+
+
+@pytest.mark.integration
+class TestDQBlockingBehavior:
+    """Tests for DQ L1 blocking behavior."""
+
+    def test_dq_blocked_returns_failed_status(self):
+        """Test that DQ blocked ingestion returns failed status."""
+        from ditto_datahub.dq import DQResult
+        from ditto_datahub.repositories.bars import WriteResult
+        from ditto_server.ingestion.services.coordinator import IngestionCoordinator
+
+        # Mock DataHub
+        mock_hub = MagicMock()
+        mock_source = MagicMock()
+
+        # Mock metadata manager to not skip
+        mock_hub.ingestion_log = MagicMock()
+        mock_hub.ingestion_cursor = MagicMock()
+        mock_hub.bars = MagicMock()
+
+        # Create coordinator
+        coordinator = IngestionCoordinator(
+            hub=mock_hub,
+            source=mock_source,
+            source_name="tushare",
+        )
+
+        # Mock _fetch_data to return valid data
+        with patch.object(
+            coordinator,
+            "_fetch_data",
+            return_value=pl.DataFrame({"src_code": ["000001.SZ"], "close": [None]}),
+        ):
+            # Mock _write_data to return blocked result
+            mock_dq_result = MagicMock(spec=DQResult)
+            mock_dq_result.has_errors = True
+            mock_dq_result.error_count = 1
+
+            blocked_result = WriteResult(
+                file_path="",
+                checksum="",
+                rows_written=0,
+                rows_total=0,
+                blocked=True,
+                dq_result=mock_dq_result,
+            )
+
+            with patch.object(coordinator, "_write_data", return_value=blocked_result):
+                # Execute ingestion
+                result = coordinator.ingest_date("stock_daily", "2024-01-02")
+
+                # Verify result status is failed
+                assert result.status == "failed", (
+                    f"Expected 'failed', got '{result.status}'"
+                )
+                assert result.error == "DQ_BLOCKED", (
+                    f"Expected 'DQ_BLOCKED', got '{result.error}'"
+                )
+                assert "DQ L1 check failed" in result.message
+
+    def test_dq_blocked_still_updates_cursor(self):
+        """Test DQ blocked ingestion still updates cursor to avoid blocking flow."""
+        from ditto_datahub.dq import DQResult
+        from ditto_datahub.repositories.bars import WriteResult
+        from ditto_server.ingestion.services.coordinator import IngestionCoordinator
+
+        # Mock DataHub
+        mock_hub = MagicMock()
+        mock_source = MagicMock()
+
+        # Mock metadata manager to not skip
+        mock_hub.ingestion_log = MagicMock()
+        mock_hub.ingestion_cursor = MagicMock()
+        mock_hub.bars = MagicMock()
+
+        # Create coordinator
+        coordinator = IngestionCoordinator(
+            hub=mock_hub,
+            source=mock_source,
+            source_name="tushare",
+        )
+
+        # Mock _fetch_data to return valid data
+        with patch.object(
+            coordinator,
+            "_fetch_data",
+            return_value=pl.DataFrame({"src_code": ["000001.SZ"], "close": [None]}),
+        ):
+            # Mock _write_data to return blocked result
+            mock_dq_result = MagicMock(spec=DQResult)
+            mock_dq_result.has_errors = True
+            mock_dq_result.error_count = 1
+
+            blocked_result = WriteResult(
+                file_path="",
+                checksum="",
+                rows_written=0,
+                rows_total=0,
+                blocked=True,
+                dq_result=mock_dq_result,
+            )
+
+            with patch.object(coordinator, "_write_data", return_value=blocked_result):
+                # Execute ingestion
+                coordinator.ingest_date("stock_daily", "2024-01-02")
+
+                # Verify cursor was still updated
+                mock_hub.ingestion_cursor.update_success.assert_called_once_with(
+                    dataset="stock_daily",
+                    source="tushare",
+                    trade_date="2024-01-02",
+                )
+
+    def test_dq_blocked_logs_fail_status(self):
+        """Test that DQ blocked ingestion logs FAIL status for retry."""
+        from ditto_datahub.dq import DQResult
+        from ditto_datahub.repositories.bars import WriteResult
+        from ditto_datahub.sources.metadata import IngestionStatus
+        from ditto_server.ingestion.services.coordinator import IngestionCoordinator
+
+        # Mock DataHub
+        mock_hub = MagicMock()
+        mock_source = MagicMock()
+
+        # Mock metadata manager to not skip
+        mock_hub.ingestion_log = MagicMock()
+        mock_hub.ingestion_cursor = MagicMock()
+        mock_hub.bars = MagicMock()
+
+        # Create coordinator
+        coordinator = IngestionCoordinator(
+            hub=mock_hub,
+            source=mock_source,
+            source_name="tushare",
+        )
+
+        # Mock _fetch_data to return valid data
+        with patch.object(
+            coordinator,
+            "_fetch_data",
+            return_value=pl.DataFrame({"src_code": ["000001.SZ"], "close": [None]}),
+        ):
+            # Mock _write_data to return blocked result
+            mock_dq_result = MagicMock(spec=DQResult)
+            mock_dq_result.has_errors = True
+            mock_dq_result.error_count = 1
+
+            blocked_result = WriteResult(
+                file_path="",
+                checksum="",
+                rows_written=0,
+                rows_total=0,
+                blocked=True,
+                dq_result=mock_dq_result,
+            )
+
+            with patch.object(coordinator, "_write_data", return_value=blocked_result):
+                # Execute ingestion
+                coordinator.ingest_date("stock_daily", "2024-01-02")
+
+                # Verify log was saved with FAIL status
+                mock_hub.ingestion_log.save_log.assert_called_once()
+                call_kwargs = mock_hub.ingestion_log.save_log.call_args.kwargs
+
+                assert call_kwargs["status"] == IngestionStatus.FAIL
+                assert call_kwargs["error_code"] == "DQ_BLOCKED"
+                assert "DQ L1 check failed" in call_kwargs["error_message"]

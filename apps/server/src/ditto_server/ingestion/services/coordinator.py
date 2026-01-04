@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 import polars as pl
+from ditto_datahub.repositories.bars import WriteResult
 from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_datahub.sources.metadata import IngestionStatus
 from ditto_datahub.types import OnDuplicate
@@ -66,7 +67,7 @@ class IngestionCoordinator:
             security_store=hub.security_store
         )
 
-    def ingest_date(
+    def ingest_date(  # noqa: PLR0911
         self,
         dataset: str,
         trade_date: str,
@@ -158,9 +159,7 @@ class IngestionCoordinator:
         on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
 
         try:
-            _file_path, stored_checksum = self._write_data(
-                dataset, df, trade_date, on_duplicate
-            )
+            write_result = self._write_data(dataset, df, trade_date, on_duplicate)
         except Exception as e:
             self._hub.ingestion_log.save_log(
                 dataset=dataset,
@@ -178,12 +177,45 @@ class IngestionCoordinator:
                 message=f"写入数据失败: {e}",
             )
 
+        # 检查 DQ 阻断
+        if write_result.blocked:
+            error_count = (
+                write_result.dq_result.error_count if write_result.dq_result else 0
+            )
+            self._hub.ingestion_log.save_log(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.FAIL,
+                error_code="DQ_BLOCKED",
+                error_message=f"DQ L1 check failed: {error_count} errors",
+            )
+
+            # 仍然更新游标（避免阻塞整个摄取流程）
+            # 失败的数据通过单独的重试任务来处理
+            if dataset not in ("stock_basic", "etf_basic"):
+                self._hub.ingestion_cursor.update_success(
+                    dataset=dataset,
+                    source=self._source_name,
+                    trade_date=trade_date,
+                )
+
+            return IngestionResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                status="failed",
+                error="DQ_BLOCKED",
+                message=(
+                    "DQ L1 check failed, data rejected (will retry via reprocess task)"
+                ),
+            )
+
         self._hub.ingestion_log.save_log(
             dataset=dataset,
             source=self._source_name,
             trade_date=trade_date,
             status=IngestionStatus.SUCCESS,
-            checksum=stored_checksum or checksum,
+            checksum=write_result.checksum or checksum,
             rows=len(df),
         )
 
@@ -200,7 +232,7 @@ class IngestionCoordinator:
             trade_date=trade_date,
             status="success",
             row_count=len(df),
-            checksum=stored_checksum or checksum,
+            checksum=write_result.checksum or checksum,
             message="数据摄取成功",
         )
 
@@ -245,7 +277,7 @@ class IngestionCoordinator:
         df: pl.DataFrame,
         trade_date: str,
         on_duplicate: OnDuplicate = OnDuplicate.ERROR,
-    ) -> tuple[str, str]:
+    ) -> WriteResult:
         """根据数据集类型写入对应的 Store。"""
         year = int(trade_date[:4])
 
@@ -261,7 +293,7 @@ class IngestionCoordinator:
                 source=self._source_name,
             )
             # 使用 Repository 层以获得文件锁和 DQ 检查保护
-            write_result = self._hub.bars.write(
+            return self._hub.bars.write(
                 df=df,
                 year=year,
                 dataset=dataset,
@@ -269,71 +301,107 @@ class IngestionCoordinator:
                 run_dq_check=True,
                 on_duplicate=on_duplicate,
             )
-            file_path = write_result.file_path
-            checksum = write_result.checksum
         elif dataset in ("adj_factor", "fund_adj"):
-            # TODO: adj_factor 也需要文件锁保护，未来应该通过 Repository 层调用
-            # 当前暂时保持直接调用 Store 层，但在高并发场景下可能存在数据损坏风险
-            file_path, checksum = self._hub.adj_factor_store.write(
+            # 补齐 sid/source 字段
+            adj_asset_class: Literal["stock", "etf"] = (
+                "etf" if dataset == "fund_adj" else "stock"
+            )
+
+            # 检查是否已有 sid 列（上游可能已处理）
+            if "sid" not in df.columns:
+                df = self._security_mapper.enrich_dataframe(
+                    df,
+                    src_code_col="ts_code",
+                    asset_class=adj_asset_class,
+                    source=self._source_name,
+                )
+
+            # 使用 AdjFactorRepository 写入（带文件锁保护）
+            file_path, checksum = self._hub.adj_factor.write(  # type: ignore
                 dataset=dataset,
                 df=df,
                 year=year,
                 on_duplicate=on_duplicate,
+            )
+            # 返回 WriteResult（非 bars 数据集不支持 DQ 阻断）
+            return WriteResult(
+                file_path=file_path,
+                checksum=checksum,
+                rows_written=len(df),
+                rows_total=len(df),
+                blocked=False,
+                dq_result=None,
             )
         elif dataset == "calendar":
             records = df.to_dicts()
             self._hub.calendar_store.upsert(records)
             file_path = f"calendar_store:{trade_date}"
             checksum = self._metadata_manager.compute_checksum(df)
+            return WriteResult(
+                file_path=file_path,
+                checksum=checksum,
+                rows_written=len(df),
+                rows_total=len(df),
+                blocked=False,
+                dq_result=None,
+            )
         elif dataset == "stock_basic":
             file_path, checksum = self._write_stock_basic(df, trade_date)
+            return WriteResult(
+                file_path=file_path,
+                checksum=checksum,
+                rows_written=len(df),
+                rows_total=len(df),
+                blocked=False,
+                dq_result=None,
+            )
         elif dataset == "etf_basic":
             file_path, checksum = self._write_etf_basic(df, trade_date)
+            return WriteResult(
+                file_path=file_path,
+                checksum=checksum,
+                rows_written=len(df),
+                rows_total=len(df),
+                blocked=False,
+                dq_result=None,
+            )
         else:
             raise ValueError(f"不支持写入数据集: {dataset}")
 
-        return file_path, checksum
-
     def _write_stock_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """写入 stock_basic 数据到 security_store。"""
-        # 1. 映射或创建 SID（SecurityMapper 内部会自动注册新证券）
-        self._security_mapper.map_or_create(
-            src_codes=df["src_code"].to_list(),
+        # 使用 SecurityRepository 批量注册（线程安全）
+        file_path, checksum = self._hub.securities.register_batch(  # type: ignore
+            df=df,
             source=self._source_name,
             asset_class="stock",
-            metadata=df,
             src_code_col="src_code",
         )
 
-        # 2. 更新游标
+        # 更新游标
         self._hub.ingestion_cursor.update_success(
             dataset="stock_basic",
             source=self._source_name,
             trade_date=trade_date,
         )
 
-        file_path = "security_store:stock_basic"
-        checksum = self._metadata_manager.compute_checksum(df)
         return file_path, checksum
 
     def _write_etf_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """写入 etf_basic 数据到 security_store。"""
-        # 1. 映射或创建 SID（SecurityMapper 内部会自动注册新证券）
-        self._security_mapper.map_or_create(
-            src_codes=df["src_code"].to_list(),
+        # 使用 SecurityRepository 批量注册（线程安全）
+        file_path, checksum = self._hub.securities.register_batch(  # type: ignore
+            df=df,
             source=self._source_name,
             asset_class="etf",
-            metadata=df,
             src_code_col="src_code",
         )
 
-        # 2. 更新游标
+        # 更新游标
         self._hub.ingestion_cursor.update_success(
             dataset="etf_basic",
             source=self._source_name,
             trade_date=trade_date,
         )
 
-        file_path = "security_store:etf_basic"
-        checksum = self._metadata_manager.compute_checksum(df)
         return file_path, checksum
