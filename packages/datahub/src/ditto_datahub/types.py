@@ -53,17 +53,6 @@ class OnDuplicate(Enum):
     KEEP_LAST = "keep_last"  # 使用新数据覆盖现有数据（Last-Write-Wins）
 
 
-@dataclass(frozen=True)
-class DQResult:
-    """Data quality check result (legacy, for runtime/dq_checker.py compatibility)."""
-
-    passed: bool
-    severity: DQSeverity
-    rule_name: str
-    message: str
-    affected_rows: int = 0
-
-
 # ============ Freeze 数据结构 ============
 @dataclass(frozen=True)
 class FreezeManifest:

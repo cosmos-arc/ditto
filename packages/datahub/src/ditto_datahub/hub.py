@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     from ditto_datahub.repositories.index import IndexRepository
     from ditto_datahub.repositories.security import SecurityRepository
     from ditto_datahub.repositories.universe import UniverseRepository
-    from ditto_datahub.runtime.dq_checker import DQChecker
     from ditto_datahub.runtime.file_lock import FileLockManager
     from ditto_datahub.runtime.freeze_manager import FreezeManager
     from ditto_datahub.runtime.sid_allocator import SidAllocator
@@ -47,7 +46,7 @@ class DataHub:
     - Reduces startup time and allocates resources on demand
 
     Attribute layers:
-    - Runtime Layer: sqlite_pool, file_lock, sid_allocator, dq_checker, freeze
+    - Runtime Layer: sqlite_pool, file_lock, sid_allocator, dq_engine, freeze
     - Store Layer: security_store, calendar_store, bars_store, adj_factor_store,
       pipeline_store, universe_store, index_weight_store
     - Repository Layer: securities, bars, calendar, universe, index
@@ -104,13 +103,6 @@ class DataHub:
         from ditto_datahub.runtime.sid_allocator import SidAllocator
 
         return SidAllocator(self.sqlite_pool)
-
-    @cached_property
-    def dq_checker(self) -> DQChecker:
-        """Data quality checker (deprecated: use dq_engine)."""
-        from ditto_datahub.runtime.dq_checker import DQChecker
-
-        return DQChecker()
 
     @cached_property
     def dq_engine(self) -> DQEngine:

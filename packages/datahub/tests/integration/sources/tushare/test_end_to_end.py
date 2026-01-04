@@ -74,7 +74,9 @@ class TestTushareEndToEnd:
         assert isinstance(stocks_dict, list)
         assert all("." in d["src_code"] for d in stocks_dict)
         # exchange 可能包含 SSE, SZSE, BSE 等多种交易所
-        assert all(d["exchange"] in stocks["exchange"].unique().to_list() for d in stocks_dict)
+        assert all(
+            d["exchange"] in stocks["exchange"].unique().to_list() for d in stocks_dict
+        )
 
         # 4. 测试 stock_daily 获取（使用交易日 2024-01-02）
         daily = source.fetch_stock_daily("2024-01-02")
@@ -183,9 +185,9 @@ class TestTushareEndToEnd:
         # 验证 knowledge_date = trade_date（数据即日可用）
         adj_dict = adj_factor.to_dicts()
         for row in adj_dict:
-            assert (
-                row["knowledge_date"] == row["trade_date"]
-            ), "knowledge_date 应等于 trade_date"
+            assert row["knowledge_date"] == row["trade_date"], (
+                "knowledge_date 应等于 trade_date"
+            )
 
         # 2. 测试 fund adj 获取
         fund_adj = source.fetch_fund_adj("2024-01-02")
@@ -224,9 +226,7 @@ class TestTushareEndToEnd:
         # 验证涨跌停价逻辑
         limit_dict = stock_limit.to_dicts()
         for row in limit_dict:
-            assert (
-                row["up_limit"] > row["down_limit"]
-            ), "涨停价应大于跌停价"
+            assert row["up_limit"] > row["down_limit"], "涨停价应大于跌停价"
             assert row["up_limit"] > 0, "涨停价应大于 0"
             assert row["down_limit"] > 0, "跌停价应大于 0"
 
