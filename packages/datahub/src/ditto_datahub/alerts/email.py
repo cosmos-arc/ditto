@@ -50,6 +50,7 @@ class EmailAlertSender(AlertSender):
 
     @property
     def name(self) -> str:
+        """Sender name."""
         return "email"
 
     def send(self, message: AlertMessage) -> bool:
@@ -69,7 +70,8 @@ class EmailAlertSender(AlertSender):
             msg["Subject"] = f"[{message.level.value.upper()}] {message.title}"
             msg.set_content(message.format())
 
-            with smtplib.SMTP(self._smtp_host, self._smtp_port) as server:
+            host = self._smtp_host or "localhost"
+            with smtplib.SMTP(host, int(self._smtp_port)) as server:
                 if self._username and self._password:
                     server.starttls()
                     server.login(self._username, self._password)

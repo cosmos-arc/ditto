@@ -3,6 +3,7 @@
 import pytest
 from ditto_datahub.dq.result import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_foundation.observability import Mode, init, reset_for_testing
+from ditto_server.ingestion.tasks.monitoring import monitor_ingestion_quality
 
 
 @pytest.fixture(autouse=True)
@@ -19,8 +20,6 @@ class TestMonitorIngestionQuality:
 
     def test_monitor_records_successful_ingestion_metrics(self) -> None:
         """Test monitoring records metrics for successful ingestion."""
-        from ditto_server.ingestion.tasks.monitoring import monitor_ingestion_quality
-
         ingestion_results = {
             "etf_daily": {
                 "trade_date": "2024-12-27",
@@ -49,8 +48,6 @@ class TestMonitorIngestionQuality:
 
     def test_monitor_records_dq_failure_metrics(self) -> None:
         """Test monitoring records metrics for DQ failures."""
-        from ditto_server.ingestion.tasks.monitoring import monitor_ingestion_quality
-
         # Create DQ result with errors
         dq_result = DQResult(
             dataset="stock_daily",
@@ -99,8 +96,6 @@ class TestMonitorIngestionQuality:
 
     def test_monitor_aggregates_multiple_datasets(self) -> None:
         """Test monitoring aggregates metrics across multiple datasets."""
-        from ditto_server.ingestion.tasks.monitoring import monitor_ingestion_quality
-
         ingestion_results = {
             "etf_daily": {
                 "trade_date": "2024-12-27",
@@ -139,8 +134,6 @@ class TestMonitorIngestionQuality:
 
     def test_monitor_handles_empty_results(self) -> None:
         """Test monitoring handles empty ingestion results."""
-        from ditto_server.ingestion.tasks.monitoring import monitor_ingestion_quality
-
         result = monitor_ingestion_quality.fn(
             trade_date="2024-12-27",
             ingestion_results={},
@@ -152,8 +145,6 @@ class TestMonitorIngestionQuality:
 
     def test_monitor_handles_missing_dq_result(self) -> None:
         """Test monitoring handles results without DQ result."""
-        from ditto_server.ingestion.tasks.monitoring import monitor_ingestion_quality
-
         ingestion_results = {
             "etf_daily": {
                 "trade_date": "2024-12-27",

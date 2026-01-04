@@ -15,6 +15,12 @@ from ditto_server.ingestion.config.datasets import (
 from ditto_server.ingestion.services.coordinator import (
     IngestionResult,
 )
+from ditto_server.ingestion.tasks import (
+    t0_meta,
+    t1_adj_factor,
+    t1_bars,
+)
+from ditto_server.ingestion.tasks.t0_meta import create_ingest_task
 
 
 class TestCreateIngestTask:
@@ -22,8 +28,6 @@ class TestCreateIngestTask:
 
     def test_create_task_returns_callable(self):
         """Test that create_ingest_task returns a callable."""
-        from ditto_server.ingestion.tasks.t0_meta import create_ingest_task
-
         # Create a task for calendar dataset
         task_func = create_ingest_task(Dataset.CALENDAR)
 
@@ -32,15 +36,9 @@ class TestCreateIngestTask:
 
     def test_task_uses_registry_config(self):
         """Test that task uses config from DATASET_REGISTRY."""
-        from ditto_server.ingestion.tasks.t0_meta import create_ingest_task
-
         # Create tasks for different datasets
         calendar_task = create_ingest_task(Dataset.CALENDAR)
         etf_daily_task = create_ingest_task(Dataset.ETF_DAILY)
-
-        # Verify task properties match registry config
-        calendar_config = DATASET_REGISTRY[Dataset.CALENDAR]
-        etf_daily_config = DATASET_REGISTRY[Dataset.ETF_DAILY]
 
         # Tasks should have names based on dataset
         assert calendar_task.name == f"ingest_{Dataset.CALENDAR.value}"
@@ -56,8 +54,6 @@ class TestCreateIngestTask:
     )
     def test_task_retry_limit_from_registry(self, dataset, expected_retry_limit):
         """Test that task retry_limit matches DATASET_REGISTRY config."""
-        from ditto_server.ingestion.tasks.t0_meta import create_ingest_task
-
         task_func = create_ingest_task(dataset)
 
         # Prefect task should have correct retries
@@ -73,8 +69,6 @@ class TestCreateIngestTask:
     )
     def test_task_timeout_from_registry(self, dataset, expected_timeout):
         """Test that task timeout_seconds matches DATASET_REGISTRY config."""
-        from ditto_server.ingestion.tasks.t0_meta import create_ingest_task
-
         task_func = create_ingest_task(dataset)
 
         # Prefect task should have correct timeout
@@ -82,8 +76,6 @@ class TestCreateIngestTask:
 
     def test_task_calls_coordinator(self):
         """Test that task calls IngestionCoordinator.ingest_date."""
-        from ditto_server.ingestion.tasks.t0_meta import create_ingest_task
-
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 
@@ -127,8 +119,6 @@ class TestCreateIngestTask:
 
     def test_task_closes_hub(self):
         """Test that task properly closes DataHub."""
-        from ditto_server.ingestion.tasks.t0_meta import create_ingest_task
-
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 
@@ -163,8 +153,6 @@ class TestCreateIngestTask:
 
     def test_task_closes_hub_on_exception(self):
         """Test that task closes DataHub even when exception occurs."""
-        from ditto_server.ingestion.tasks.t0_meta import create_ingest_task
-
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 
@@ -197,8 +185,6 @@ class TestT0MetaTasks:
 
     def test_t0_meta_tasks_exist(self):
         """Test that all T0 meta tasks are exported."""
-        from ditto_server.ingestion.tasks import t0_meta
-
         # Check that key datasets have factory functions
         assert hasattr(t0_meta, "create_ingest_task")
 
@@ -221,8 +207,6 @@ class TestT1IncrementalTasks:
 
     def test_t1_incremental_tasks_exist(self):
         """Test that all T1 incremental tasks are exported."""
-        from ditto_server.ingestion.tasks import t1_adj_factor, t1_bars
-
         # Check that factory functions exist
         assert hasattr(t1_bars, "create_ingest_task")
         assert hasattr(t1_adj_factor, "create_ingest_task")
@@ -247,8 +231,6 @@ class TestTaskIntegration:
 
     def test_all_registered_datasets_have_tasks(self):
         """Test that all datasets in registry can create tasks."""
-        from ditto_server.ingestion.tasks.t0_meta import create_ingest_task
-
         # Try creating tasks for all datasets
         for dataset in DATASET_REGISTRY:
             task_func = create_ingest_task(dataset)
@@ -257,8 +239,6 @@ class TestTaskIntegration:
 
     def test_task_parameters_correct(self):
         """Test that task parameters are correctly passed."""
-        from ditto_server.ingestion.tasks.t0_meta import create_ingest_task
-
         task_func = create_ingest_task(Dataset.STOCK_DAILY)
 
         # Mock

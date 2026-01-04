@@ -186,9 +186,8 @@ class TestPitHelper:
         query = "SELECT * FROM stock_daily where sid = 1"
         result = PitHelper.add_pit_filter(query, "2024-01-15")
 
-        assert (
-            result
-            == "SELECT * FROM stock_daily where sid = 1 AND knowledge_date <= '2024-01-15'"
+        assert result == (
+            "SELECT * FROM stock_daily where sid = 1 AND knowledge_date <= '2024-01-15'"
         )
 
     def test_wrap_pit_cte_no_asof_date(self) -> None:
@@ -197,7 +196,10 @@ class TestPitHelper:
         result = PitHelper.wrap_pit_cte(query, "pit_data", asof_date=None)
 
         # 不应该添加额外的 WHERE
-        expected = "WITH pit_data AS (SELECT sid, close FROM stock_daily WHERE sid = 1) SELECT * FROM pit_data"
+        expected = (
+            "WITH pit_data AS (SELECT sid, close FROM stock_daily WHERE sid = 1) "
+            "SELECT * FROM pit_data"
+        )
         assert result == expected
 
     def test_combined_pit_query_workflow(self) -> None:
@@ -250,7 +252,10 @@ class TestSQLSyntaxHandling:
 
     def test_add_pit_filter_with_having(self) -> None:
         """Test add_pit_filter handles HAVING clause correctly."""
-        query = "SELECT sid, AVG(close) as avg_close FROM stock_daily GROUP BY sid HAVING avg_close > 10"
+        query = (
+            "SELECT sid, AVG(close) as avg_close FROM stock_daily "
+            "GROUP BY sid HAVING avg_close > 10"
+        )
         result = PitHelper.add_pit_filter(query, "2024-01-15")
 
         # Should use CTE wrapper to avoid breaking HAVING

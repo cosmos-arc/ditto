@@ -36,7 +36,7 @@ def deploy_all_flows() -> None:
     logger.info("开始部署 Prefect Flows", event="deploy_start")
 
     # 1. 每日增量摄取流程（交易日 18:00）
-    Deployment.build_from_flow(
+    Deployment.build_from_flow(  # type: ignore[attr-defined]
         flow=daily_ingestion_flow,
         name="daily-ingestion-prod",
         parameters={"trade_date": "{{ date }}", "data_root": "data"},
@@ -47,7 +47,7 @@ def deploy_all_flows() -> None:
     )
 
     # 2. 每日修补流程（每日凌晨 2:00）
-    Deployment.build_from_flow(
+    Deployment.build_from_flow(  # type: ignore[attr-defined]
         flow=daily_repair_flow,
         name="daily-repair-prod",
         parameters={"data_root": "data"},
@@ -58,7 +58,7 @@ def deploy_all_flows() -> None:
     )
 
     # 3. 重试失败流程（每 4 小时）
-    Deployment.build_from_flow(
+    Deployment.build_from_flow(  # type: ignore[attr-defined]
         flow=retry_failed_flow,
         name="retry-failed-prod",
         parameters={"dataset": "stock_daily", "data_root": "data"},
@@ -69,7 +69,7 @@ def deploy_all_flows() -> None:
     )
 
     # 4. 全量回补流程（手动触发）
-    Deployment.build_from_flow(
+    Deployment.build_from_flow(  # type: ignore[attr-defined]
         flow=backfill_flow,
         name="backfill-prod",
         parameters={
@@ -85,7 +85,7 @@ def deploy_all_flows() -> None:
     )
 
     # 5. 修补空洞流程（手动触发）
-    Deployment.build_from_flow(
+    Deployment.build_from_flow(  # type: ignore[attr-defined]
         flow=repair_holes_flow,
         name="repair-holes-prod",
         parameters={"dataset": "stock_daily", "data_root": "data"},
@@ -96,7 +96,7 @@ def deploy_all_flows() -> None:
     )
 
     # 6. DQC 检查流程（手动触发）
-    Deployment.build_from_flow(
+    Deployment.build_from_flow(  # type: ignore[attr-defined]
         flow=dq_batch_check.fn,
         name="dq-batch-check-prod",
         parameters={"trade_date": "{{ date }}"},

@@ -14,8 +14,10 @@ class AlertLevel(str, Enum):
     ERROR = "error"
     CRITICAL = "critical"
 
-    def __lt__(self, other: "AlertLevel") -> bool:
+    def __lt__(self, other: object) -> bool:
         """Compare alert levels by severity."""
+        if not isinstance(other, AlertLevel):
+            return NotImplemented
         order = [
             AlertLevel.INFO,
             AlertLevel.WARNING,
@@ -24,16 +26,22 @@ class AlertLevel(str, Enum):
         ]
         return order.index(self) < order.index(other)
 
-    def __le__(self, other: "AlertLevel") -> bool:
+    def __le__(self, other: object) -> bool:
         """Compare alert levels by severity."""
+        if not isinstance(other, AlertLevel):
+            return NotImplemented
         return self == other or self < other
 
-    def __gt__(self, other: "AlertLevel") -> bool:
+    def __gt__(self, other: object) -> bool:
         """Compare alert levels by severity."""
+        if not isinstance(other, AlertLevel):
+            return NotImplemented
         return not self <= other
 
-    def __ge__(self, other: "AlertLevel") -> bool:
+    def __ge__(self, other: object) -> bool:
         """Compare alert levels by severity."""
+        if not isinstance(other, AlertLevel):
+            return NotImplemented
         return self == other or self > other
 
 

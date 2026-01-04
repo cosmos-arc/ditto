@@ -132,7 +132,9 @@ class AlertManager:
         self.send_alert(
             level=level,
             title=f"数据质量检查失败: {dataset}",
-            message=f"日期 {trade_date} 的 {dataset} 数据质量检查发现 {error_count} 个错误",
+            message=(
+                f"日期 {trade_date} 的 {dataset} 数据质量检查发现 {error_count} 个错误"
+            ),
             dataset=dataset,
             trade_date=trade_date,
             failed_rules=failed_rules,
@@ -150,6 +152,7 @@ class LoggingAlertSender(AlertSender):
 
     @property
     def name(self) -> str:
+        """Sender name."""
         return "logging"
 
     def send(self, message: AlertMessage) -> bool:
