@@ -73,7 +73,7 @@ class TestFreezeManagerChecksum:
         with pytest.raises(ValueError) as exc_info:
             self.manager.get_manifest("old_freeze")
 
-        assert "Unsupported freeze manifest" in str(exc_info.value)
+        assert "Invalid freeze manifest" in str(exc_info.value)
         assert "SHA-256" in str(exc_info.value)
 
     def test_sha256_vs_md5_different_checksums(self):

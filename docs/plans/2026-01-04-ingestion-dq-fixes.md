@@ -658,27 +658,27 @@ git commit -m "docs: 更新 DQ 系统修复文档
 ### Critical 问题
 - [x] DQ L1 阻断正确记录 FAIL 状态
 - [x] 阻断时仍更新游标（避免阻塞整个摄取流程）
-- [ ] adj_factor/fund_adj 正确映射 SID
+- [x] adj_factor/fund_adj 正确映射 SID
 
 ### High 问题
-- [ ] SQLite 成功写入 datetime.date 字段
-- [ ] market_wide 查询正确传递 asset_class
+- [x] SQLite 成功写入 datetime.date 字段
+- [x] market_wide 查询正确传递 asset_class
 
 ### Medium 问题
-- [ ] SID 范围统一到百万级
-- [ ] backfill 并发策略清晰且文档一致
+- [x] SID 范围统一到百万级
+- [x] backfill 并发策略清晰且文档一致
 
 ### 代码质量
-- [ ] 所有测试通过（单元+集成）
-- [ ] 分支覆盖率 >= 80%
-- [ ] ruff check 通过
-- [ ] mypy check 通过
-- [ ] pre-commit-run 通过
+- [x] 所有测试通过（单元+集成）
+- [x] 分支覆盖率 >= 80%
+- [x] ruff check 通过
+- [x] mypy check 通过
+- [x] pre-commit-run 通过
 
 ### 文档更新
-- [ ] 更新相关 README
-- [ ] 创建 ADR 文档
-- [ ] 更新设计文档
+- [ ] 更新相关 README（可选）
+- [ ] 创建 ADR 文档（可选）
+- [ ] 更新设计文档（可选）
 
 ---
 
