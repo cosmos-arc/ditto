@@ -18,7 +18,7 @@ class FreezeManager:
 
     设计原则：
     - Freeze = 轻量级可复现
-    - 只记录文件 SHA-256 checksum（v2.0+），向后支持 MD5（v1.0）
+    - 使用 SHA-256 checksum 记录文件指纹
     - 文件路径相对于 data_root
     - Manifest 存储在 {data_root}/freezes/
     """
@@ -380,13 +380,8 @@ class FreezeManager:
                 errors.append(f"File missing: {rel_path}")
                 continue
 
-            # 根据校验和类型使用不同的验证方法
-            if manifest.checksum_type == "md5":
-                # 对于 MD5，仍然使用 MD5 算法验证
-                actual_checksum = self._compute_md5_checksum(file_path)
-            else:
-                # 对于 SHA-256，使用新的 SHA-256 算法验证
-                actual_checksum = self._compute_checksum(file_path)
+            # 使用 SHA-256 验证
+            actual_checksum = self._compute_checksum(file_path)
 
             if actual_checksum != expected_checksum:
                 errors.append(f"Checksum mismatch: {rel_path}")
@@ -409,23 +404,6 @@ class FreezeManager:
             for chunk in iter(lambda: f.read(8192), b""):
                 sha256.update(chunk)
         return sha256.hexdigest()
-
-    def _compute_md5_checksum(self, file_path: Path) -> str:
-        """
-        计算文件的 MD5 checksum。
-
-        Args:
-            file_path: 文件路径
-
-        Returns:
-            MD5 hex string
-
-        """
-        md5 = hashlib.md5(usedforsecurity=False)
-        with file_path.open("rb") as f:
-            for chunk in iter(lambda: f.read(8192), b""):
-                md5.update(chunk)
-        return md5.hexdigest()
 
     def _save_manifest(self, path: Path, manifest: FreezeManifest) -> None:
         """
@@ -458,15 +436,29 @@ class FreezeManager:
         Returns:
             FreezeManifest 对象
 
+        Raises:
+            ValueError: 如果 manifest 格式不正确
+
         """
         with path.open(encoding="utf-8") as f:
             data = json.load(f)
 
-        # 向后兼容：旧格式可能没有 version 和 checksum_type 字段
-        version = data.get("version", "1.0")  # 默认为旧版本
-        checksum_type = data.get(
-            "checksum_type", "md5" if version == "1.0" else "sha256"
-        )
+        # 验证必要字段存在
+        if "version" not in data or "checksum_type" not in data:
+            raise ValueError(
+                "Invalid freeze manifest: missing version or checksum_type field. "
+                "This version only supports v2.0 manifests with SHA-256 checksums."
+            )
+
+        version = data["version"]
+        checksum_type = data["checksum_type"]
+
+        # 验证版本和校验和类型
+        if version != "2.0" or checksum_type != "sha256":
+            raise ValueError(
+                f"Invalid freeze manifest: expected v2.0/sha256, "
+                f"got {version}/{checksum_type}"
+            )
 
         return FreezeManifest(
             freeze_id=data["freeze_id"],

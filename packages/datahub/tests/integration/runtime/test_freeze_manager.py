@@ -285,6 +285,8 @@ class TestFreezeManager:
                 "freeze_id": "old_freeze",
                 "description": "Old freeze",
                 "created_at": (datetime.now() - timedelta(days=100)).isoformat(),
+                "version": "2.0",
+                "checksum_type": "sha256",
                 "files": old_manifest.files,
             }
             json.dump(data, f, indent=2, ensure_ascii=False)
@@ -324,6 +326,8 @@ class TestFreezeManager:
                 "freeze_id": "old_freeze",
                 "description": "Old freeze",
                 "created_at": (datetime.now() - timedelta(days=40)).isoformat(),
+                "version": "2.0",
+                "checksum_type": "sha256",
                 "files": old_manifest.files,
             }
             json.dump(data, f, indent=2, ensure_ascii=False)

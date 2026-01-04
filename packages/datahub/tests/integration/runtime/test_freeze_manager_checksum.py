@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 
 
@@ -47,48 +48,33 @@ class TestFreezeManagerChecksum:
         # Verify SHA-256 format (hexadecimal)
         assert all(c in "0123456789abcdef" for c in checksum)
 
-    def test_backward_compatibility_md5(self):
-        """Test that old manifests with MD5 can still be loaded and verified."""
+    def test_backward_compatibility_md5_raises_error(self):
+        """Test that old MD5 manifests are no longer supported."""
         # Create a test file
         test_file = self.temp_dir / "test.parquet"
         test_file.write_text("test data")
 
         # Create an old-style manifest with MD5
         old_manifest_path = self.temp_dir / "freezes" / "old_freeze.json"
-        self.temp_dir / "freezes" / "old_freeze.json"
         old_manifest_path.parent.mkdir(exist_ok=True)
 
-        # Calculate MD5 checksum
-        # ruff: noqa: PLC0415  # 测试方法内导入
-        import hashlib
-
-        md5 = hashlib.md5(usedforsecurity=False)
-        md5.update(test_file.read_bytes())
-        md5_checksum = md5.hexdigest()
-
-        # Create old manifest format
+        # Create old manifest format (without version and checksum_type)
         old_manifest_data = {
             "freeze_id": "old_freeze",
             "description": "Old freeze",
             "created_at": "2024-01-01T00:00:00",
-            "files": {"test.parquet": md5_checksum},
+            "files": {"test.parquet": "dummy_checksum"},
         }
 
         with old_manifest_path.open("w", encoding="utf-8") as f:
             json.dump(old_manifest_data, f, indent=2, ensure_ascii=False)
 
-        # Load old manifest
-        manifest = self.manager.get_manifest("old_freeze")
+        # Loading old manifest should raise ValueError
+        with pytest.raises(ValueError) as exc_info:
+            self.manager.get_manifest("old_freeze")
 
-        # Verify it loads correctly
-        assert manifest.freeze_id == "old_freeze"
-        assert manifest.checksum_type == "md5"  # Old format defaults to MD5
-        assert manifest.version == "1.0"  # Old format defaults to version 1.0
-        assert len(next(iter(manifest.files.values()))) == 32  # MD5 length
-
-        # Verify checksum still matches
-        actual_checksum = self.manager._compute_md5_checksum(test_file)
-        assert actual_checksum == next(iter(manifest.files.values()))
+        assert "Unsupported freeze manifest" in str(exc_info.value)
+        assert "SHA-256" in str(exc_info.value)
 
     def test_sha256_vs_md5_different_checksums(self):
         """Test that SHA-256 and MD5 produce different checksums for the same file."""
