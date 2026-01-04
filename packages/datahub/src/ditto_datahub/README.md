@@ -59,8 +59,8 @@ src/ditto_datahub/
 
 ### runtime/ - 运行时支持
 - `SidAllocator`: 内部唯一 ID 分配 (100M-299M for ETF)
-- `DQChecker`: 数据质量检查引擎
 - `FileLockManager`: 跨进程文件锁
+- `FreezeManager`: 轻量级数据版本管理 (SHA-256 checksum)
 - `SQLitePool`: SQLite 连接池
 
 ### meta/ - 元数据
@@ -110,7 +110,8 @@ logger.info(
 
 ```python
 from ditto_datahub.stores import BarsStore, CalendarStore
-from ditto_datahub.runtime import DQChecker, SidAllocator
+from ditto_datahub.runtime import SidAllocator
+from ditto_datahub.dq import DQEngine
 
 # SID 分配
 allocator = SidAllocator()
@@ -121,6 +122,6 @@ bars_store = BarsStore(data_root=Path("data"))
 df = bars_store.read("etf_daily", sids=[etf_sid], start_date="2024-01-01")
 
 # 数据质量检查
-checker = DQChecker()
-result = checker.check(df, dataset_id="etf_daily")
+dq_engine = DQEngine(data_root=Path("data"))
+result = dq_engine.check(df, dataset_id="etf_daily")
 ```
