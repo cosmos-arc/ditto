@@ -141,8 +141,8 @@ class TestMapHttpError:
 
         assert "tushare" in exc_info.value.details.get("source", "")
 
-    def test_5xx_raises_fetch_error(self):
-        """5xx 映射到抓取错误."""
+    def test_5xx_raises_fetch_error_with_retry(self):
+        """5xx 映射到抓取错误并支持重试."""
         # Arrange
         request = httpx.Request("POST", "http://api.tushare.pro")
         response = httpx.Response(500, request=request)
