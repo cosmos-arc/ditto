@@ -38,17 +38,17 @@ class TestSidAllocator:
         self.temp_dir.cleanup()
 
     def test_allocate_first_etf_sid(self) -> None:
-        """Test allocating first ETF SID returns 200M."""
+        """Test allocating first ETF SID returns 2M."""
         sid = self.allocator.allocate("etf")
 
-        assert sid == 200_000_000
+        assert sid == 2_000_000
 
         # Verify it was persisted
         row = self.pool.execute(
             "SELECT current_max FROM sid_sequence WHERE asset_class = ?", ["etf"]
         ).fetchone()
         assert row is not None
-        assert row["current_max"] == 200_000_000
+        assert row["current_max"] == 2_000_000
 
     def test_allocate_consecutive_etf_sids(self) -> None:
         """Test allocating consecutive ETF SIDs."""
@@ -56,9 +56,9 @@ class TestSidAllocator:
         second_sid = self.allocator.allocate("etf")
         third_sid = self.allocator.allocate("etf")
 
-        assert first_sid == 200_000_000
-        assert second_sid == 200_000_001
-        assert third_sid == 200_000_002
+        assert first_sid == 2_000_000
+        assert second_sid == 2_000_001
+        assert third_sid == 2_000_002
 
     def test_allocate_different_asset_classes(self) -> None:
         """Test allocating SIDs for different asset classes."""
@@ -66,16 +66,16 @@ class TestSidAllocator:
         stock_sid = self.allocator.allocate("stock")
         index_sid = self.allocator.allocate("index")
 
-        assert etf_sid == 200_000_000  # ETF range starts at 200M
-        assert stock_sid == 100_000_000  # Stock range starts at 100M
-        assert index_sid == 300_000_000  # Index range starts at 300M
+        assert etf_sid == 2_000_000  # ETF range starts at 2M
+        assert stock_sid == 1_000_000  # Stock range starts at 1M
+        assert index_sid == 3_000_000  # Index range starts at 3M
 
     def test_sid_exhaustion(self) -> None:
         """Test behavior when SID range is exhausted."""
         # Set current_max to near the limit
         self.pool.execute("BEGIN IMMEDIATE")
         self.pool.execute(
-            "INSERT OR REPLACE INTO sid_sequence VALUES (?, ?)", ["etf", 299_999_999]
+            "INSERT OR REPLACE INTO sid_sequence VALUES (?, ?)", ["etf", 2_999_999]
         )
         self.pool.commit()
 

@@ -2,22 +2,22 @@
 -- This schema supports SID allocation, security master, PIT queries,
 -- trading calendar, pipeline tracking, data quality, and universe management.
 
--- SID 序列
+-- SID 序列 (百万级范围，与 SidRange 保持一致)
 CREATE TABLE IF NOT EXISTS sid_sequence (
     asset_class TEXT PRIMARY KEY,
     current_max INTEGER NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 INSERT OR IGNORE INTO sid_sequence (asset_class, current_max)
-VALUES ('stock', 100000000);
+VALUES ('stock', 1000000);
 INSERT OR IGNORE INTO sid_sequence (asset_class, current_max)
-VALUES ('etf', 200000000);
+VALUES ('etf', 2000000);
 INSERT OR IGNORE INTO sid_sequence (asset_class, current_max)
-VALUES ('index', 300000000);
+VALUES ('index', 3000000);
 INSERT OR IGNORE INTO sid_sequence (asset_class, current_max)
-VALUES ('bond', 400000000);
+VALUES ('bond', 4000000);
 INSERT OR IGNORE INTO sid_sequence (asset_class, current_max)
-VALUES ('future', 500000000);
+VALUES ('future', 5000000);
 
 -- 证券主表
 CREATE TABLE IF NOT EXISTS security (

@@ -29,7 +29,7 @@ class TestAdjFactorStore:
     def sample_df(self) -> pl.DataFrame:
         """Create sample adjustment factor data."""
         data: dict[str, list[Any]] = {
-            "sid": [100000001, 100000001, 100000001, 100000002],
+            "sid": [1000001, 1000001, 1000001, 1000002],
             "trade_date": [
                 date(2024, 1, 2),
                 date(2024, 1, 3),
@@ -94,9 +94,9 @@ class TestAdjFactorStore:
     ) -> None:
         """Test read filtered by security IDs."""
         store.write("adj_factor", sample_df, 2024)
-        df = store.read("adj_factor", sids=[100000001])
+        df = store.read("adj_factor", sids=[1000001])
         assert len(df) == 3
-        assert df["sid"].unique().to_list() == [100000001]
+        assert df["sid"].unique().to_list() == [1000001]
 
     def test_read_filter_by_date_range(
         self, store: AdjFactorStore, sample_df: pl.DataFrame
@@ -145,7 +145,7 @@ class TestAdjFactorStore:
         # Write overlapping new data
         new_data = pl.DataFrame(
             {
-                "sid": [100000001, 100000003],
+                "sid": [1000001, 1000003],
                 "trade_date": [date(2024, 1, 4), date(2024, 1, 5)],
                 "adj_factor": [0.92, 1.0],
             }
@@ -154,11 +154,11 @@ class TestAdjFactorStore:
 
         # Verify deduplication (new adj_factor overwrites)
         df = store.read("adj_factor")
-        assert len(df) == 5  # 4 original + 1 new (100000001/2024-01-04 updated)
+        assert len(df) == 5  # 4 original + 1 new (1000001/2024-01-04 updated)
 
         # Verify new value was applied
         record = df.filter(
-            (pl.col("sid") == 100000001) & (pl.col("trade_date") == date(2024, 1, 4))
+            (pl.col("sid") == 1000001) & (pl.col("trade_date") == date(2024, 1, 4))
         )
         assert record["adj_factor"][0] == 0.92
 
@@ -171,14 +171,14 @@ class TestAdjFactorStore:
         # Write same date/sid with different adj_factor
         updated = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 3)],
                 "adj_factor": [0.85],
             }
         )
         store.write("adj_factor", updated, 2024)
 
-        df = store.read("adj_factor", sids=[100000001])
+        df = store.read("adj_factor", sids=[1000001])
         record = df.filter(pl.col("trade_date") == date(2024, 1, 3))
         assert record["adj_factor"][0] == 0.85
 
@@ -278,7 +278,7 @@ class TestAdjFactorStore:
     ) -> None:
         """Test count with filters applied."""
         store.write("adj_factor", sample_df, 2024)
-        count = store.count("adj_factor", sids=[100000001])
+        count = store.count("adj_factor", sids=[1000001])
         assert count == 3
 
     # ============ get_date_range tests ============
@@ -320,7 +320,7 @@ class TestAdjFactorStore:
         """Test list_sids returns unique security IDs."""
         store.write("adj_factor", sample_df, 2024)
         sids = store.list_sids("adj_factor")
-        assert sids == [100000001, 100000002]
+        assert sids == [1000001, 1000002]
 
     def test_write_maintains_sid_and_date_sorting(
         self, store: AdjFactorStore, tmp_path: Path
@@ -329,7 +329,7 @@ class TestAdjFactorStore:
         # Arrange: Create intentionally unsorted data
         unsorted_df = pl.DataFrame(
             {
-                "sid": [100000002, 100000001, 100000002, 100000001],
+                "sid": [1000002, 1000001, 1000002, 1000001],
                 "trade_date": [
                     date(2024, 1, 5),
                     date(2024, 1, 2),
@@ -380,7 +380,7 @@ class TestDateNormalization:
         # Create DataFrame with string trade_date
         df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],
+                "sid": [1000001, 1000001],
                 "trade_date": ["2024-01-02", "2024-01-03"],
                 "adj_factor": [1.0, 0.95],
             }
@@ -399,7 +399,7 @@ class TestDateNormalization:
         # Create DataFrame with Date trade_date
         df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],
+                "sid": [1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
                 "adj_factor": [1.0, 0.95],
             }
@@ -420,7 +420,7 @@ class TestDateNormalization:
         # Create DataFrame with invalid date format
         df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": ["not-a-date"],
                 "adj_factor": [1.0],
             }
@@ -450,7 +450,7 @@ class TestSortingEnhanced:
         dates_2023 = [date(2023, 12, 31), date(2023, 12, 29), date(2023, 12, 30)]
         df_2023 = pl.DataFrame(
             {
-                "sid": [100000002, 100000001, 100000001],
+                "sid": [1000002, 1000001, 1000001],
                 "trade_date": dates_2023,
                 "adj_factor": [1.0, 1.0, 0.98],
             }
@@ -461,7 +461,7 @@ class TestSortingEnhanced:
         dates_2024 = [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 1)]
         df_2024 = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, 100000002],
+                "sid": [1000001, 1000001, 1000002],
                 "trade_date": dates_2024,
                 "adj_factor": [0.95, 0.95, 1.0],
             }
@@ -478,12 +478,12 @@ class TestSortingEnhanced:
         # Verify sorting: (sid, trade_date)
         assert len(result) == 6
         # Expected order:
-        # 100000001, 2023-12-29
-        # 100000001, 2023-12-30
-        # 100000001, 2024-01-02
-        # 100000001, 2024-01-03
-        # 100000002, 2023-12-31
-        # 100000002, 2024-01-01
+        # 1000001, 2023-12-29
+        # 1000001, 2023-12-30
+        # 1000001, 2024-01-02
+        # 1000001, 2024-01-03
+        # 1000002, 2023-12-31
+        # 1000002, 2024-01-01
         for i in range(len(result) - 1):
             current_sid = result["sid"][i]
             next_sid = result["sid"][i + 1]
@@ -503,7 +503,7 @@ class TestSortingEnhanced:
         # Write initial data
         df1 = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, 100000002],
+                "sid": [1000001, 1000001, 1000002],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 2)],
                 "adj_factor": [1.0, 0.95, 1.0],
             }
@@ -513,7 +513,7 @@ class TestSortingEnhanced:
         # Write overlapping data with updated values
         df2 = pl.DataFrame(
             {
-                "sid": [100000001, 100000002],
+                "sid": [1000001, 1000002],
                 "trade_date": [date(2024, 1, 3), date(2024, 1, 2)],
                 "adj_factor": [0.92, 0.88],  # Updated values
             }
@@ -523,16 +523,16 @@ class TestSortingEnhanced:
         # Read back and verify keep="last" behavior
         result = store.read("adj_factor")
 
-        # Check that 100000001/2024-01-03 uses the last value (0.92, not 0.95)
+        # Check that 1000001/2024-01-03 uses the last value (0.92, not 0.95)
         record = result.filter(
-            (pl.col("sid") == 100000001) & (pl.col("trade_date") == date(2024, 1, 3))
+            (pl.col("sid") == 1000001) & (pl.col("trade_date") == date(2024, 1, 3))
         )
         assert len(record) == 1
         assert record["adj_factor"][0] == 0.92
 
-        # Check that 100000002/2024-01-02 uses the last value (0.88, not 1.0)
+        # Check that 1000002/2024-01-02 uses the last value (0.88, not 1.0)
         record = result.filter(
-            (pl.col("sid") == 100000002) & (pl.col("trade_date") == date(2024, 1, 2))
+            (pl.col("sid") == 1000002) & (pl.col("trade_date") == date(2024, 1, 2))
         )
         assert len(record) == 1
         assert record["adj_factor"][0] == 0.88
@@ -542,7 +542,7 @@ class TestSortingEnhanced:
         # Write first batch
         df1 = pl.DataFrame(
             {
-                "sid": [100000001, 100000002, 100000003],
+                "sid": [1000001, 1000002, 1000003],
                 "trade_date": [date(2024, 1, 5), date(2024, 1, 3), date(2024, 1, 1)],
                 "adj_factor": [1.0, 1.0, 1.0],
             }
@@ -552,7 +552,7 @@ class TestSortingEnhanced:
         # Write second batch (overlap and new)
         df2 = pl.DataFrame(
             {
-                "sid": [100000002, 100000003, 100000004],
+                "sid": [1000002, 1000003, 1000004],
                 "trade_date": [date(2024, 1, 3), date(2024, 1, 2), date(2024, 1, 4)],
                 "adj_factor": [0.95, 0.95, 1.0],
             }
@@ -563,17 +563,17 @@ class TestSortingEnhanced:
         result = store.read("adj_factor")
 
         # Expected sorted order:
-        # 100000001, 2024-01-05, 1.0
-        # 100000002, 2024-01-03, 0.95 (updated)
-        # 100000003, 2024-01-01, 1.0
-        # 100000003, 2024-01-02, 0.95 (new)
-        # 100000004, 2024-01-04, 1.0 (new)
+        # 1000001, 2024-01-05, 1.0
+        # 1000002, 2024-01-03, 0.95 (updated)
+        # 1000003, 2024-01-01, 1.0
+        # 1000003, 2024-01-02, 0.95 (new)
+        # 1000004, 2024-01-04, 1.0 (new)
         expected_pairs = [
-            (100000001, date(2024, 1, 5)),
-            (100000002, date(2024, 1, 3)),
-            (100000003, date(2024, 1, 1)),
-            (100000003, date(2024, 1, 2)),
-            (100000004, date(2024, 1, 4)),
+            (1000001, date(2024, 1, 5)),
+            (1000002, date(2024, 1, 3)),
+            (1000003, date(2024, 1, 1)),
+            (1000003, date(2024, 1, 2)),
+            (1000004, date(2024, 1, 4)),
         ]
 
         assert len(result) == len(expected_pairs)
@@ -600,7 +600,7 @@ class TestOnDuplicate:
         """Create initial test data."""
         return pl.DataFrame(
             {
-                "sid": [100000001, 100000001, 100000002],
+                "sid": [1000001, 1000001, 1000002],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 2)],
                 "adj_factor": [1.0, 0.95, 1.0],
             }
@@ -611,9 +611,9 @@ class TestOnDuplicate:
         """Create overlapping test data with updated values."""
         return pl.DataFrame(
             {
-                "sid": [100000001, 100000003],
+                "sid": [1000001, 1000003],
                 "trade_date": [date(2024, 1, 3), date(2024, 1, 4)],
-                "adj_factor": [0.92, 1.0],  # 100000001/2024-01-03 updated
+                "adj_factor": [0.92, 1.0],  # 1000001/2024-01-03 updated
             }
         )
 
@@ -651,12 +651,12 @@ class TestOnDuplicate:
         # Verify existing data is preserved
         result = store.read("adj_factor")
 
-        # Should have 4 records: 3 from initial + 1 new (100000003)
+        # Should have 4 records: 3 from initial + 1 new (1000003)
         assert len(result) == 4
 
-        # Check that 100000001/2024-01-03 keeps original value (0.95)
+        # Check that 1000001/2024-01-03 keeps original value (0.95)
         record = result.filter(
-            (pl.col("sid") == 100000001) & (pl.col("trade_date") == date(2024, 1, 3))
+            (pl.col("sid") == 1000001) & (pl.col("trade_date") == date(2024, 1, 3))
         )
         assert len(record) == 1
         assert record["adj_factor"][0] == 0.95
@@ -679,12 +679,12 @@ class TestOnDuplicate:
         # Verify new data overwrites
         result = store.read("adj_factor")
 
-        # Should have 4 records: 3 from initial + 1 new (100000003)
+        # Should have 4 records: 3 from initial + 1 new (1000003)
         assert len(result) == 4
 
-        # Check that 100000001/2024-01-03 uses new value (0.92)
+        # Check that 1000001/2024-01-03 uses new value (0.92)
         record = result.filter(
-            (pl.col("sid") == 100000001) & (pl.col("trade_date") == date(2024, 1, 3))
+            (pl.col("sid") == 1000001) & (pl.col("trade_date") == date(2024, 1, 3))
         )
         assert len(record) == 1
         assert record["adj_factor"][0] == 0.92

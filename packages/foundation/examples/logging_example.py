@@ -73,7 +73,7 @@ def example_contextual_logging() -> None:
         "resolve_sid_found",
         event="sid_resolve",
         src_code="600000.SH",
-        sid=100000001,
+        sid=1000001,
     )
 
     # Not found

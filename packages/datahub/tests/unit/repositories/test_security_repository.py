@@ -28,21 +28,21 @@ class TestSecurityRepository:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Bank', 'SSE', 'stock', '2000-01-01')
+            VALUES (1000001, '600000', 'Bank', 'SSE', 'stock', '2000-01-01')
         """)
         self.client.execute("""
             INSERT INTO security_mapping
             (sid, source, src_code, effective_from)
-            VALUES (100000001, 'tushare', '600000.SH', '2000-01-01')
+            VALUES (1000001, 'tushare', '600000.SH', '2000-01-01')
         """)
         self.client.commit()
 
         # Act
-        result = self.repo.get(sids=[100000001])
+        result = self.repo.get(sids=[1000001])
 
         # Assert
         assert len(result) == 1
-        assert result["sid"][0] == 100000001
+        assert result["sid"][0] == 1000001
         assert result["symbol"][0] == "600000"
 
     def test_resolve_identifier_with_src_code(self) -> None:
@@ -51,12 +51,12 @@ class TestSecurityRepository:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Bank', 'SSE', 'stock', '2000-01-01')
+            VALUES (1000001, '600000', 'Bank', 'SSE', 'stock', '2000-01-01')
         """)
         self.client.execute("""
             INSERT INTO security_mapping
             (sid, source, src_code, effective_from)
-            VALUES (100000001, 'tushare', '600000.SH', '2000-01-01')
+            VALUES (1000001, 'tushare', '600000.SH', '2000-01-01')
         """)
         self.client.commit()
 
@@ -64,7 +64,7 @@ class TestSecurityRepository:
         sid = self.repo.resolve_identifier("600000.SH", "tushare")
 
         # Assert
-        assert sid == 100000001
+        assert sid == 1000001
 
     def test_resolve_identifier_with_symbol(self) -> None:
         """Test resolve_identifier with symbol."""
@@ -72,12 +72,12 @@ class TestSecurityRepository:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Bank', 'SSE', 'stock', '2000-01-01')
+            VALUES (1000001, '600000', 'Bank', 'SSE', 'stock', '2000-01-01')
         """)
         self.client.execute("""
             INSERT INTO security_mapping
             (sid, source, src_code, effective_from)
-            VALUES (100000001, 'tushare', '600000.SH', '2000-01-01')
+            VALUES (1000001, 'tushare', '600000.SH', '2000-01-01')
         """)
         self.client.commit()
 
@@ -85,7 +85,7 @@ class TestSecurityRepository:
         sid = self.repo.resolve_identifier("600000", "tushare")
 
         # Assert
-        assert sid == 100000001
+        assert sid == 1000001
 
     def test_resolve_identifier_not_found(self) -> None:
         """Test resolve_identifier returns None for unknown identifier."""
@@ -99,7 +99,7 @@ class TestSecurityRepository:
         """Test batch resolution of identifiers."""
         # Arrange
         for i in range(3):
-            sid = 100000001 + i
+            sid = 1000001 + i
             self.client.execute(
                 f"INSERT INTO security "
                 f"(sid, symbol, name, exchange, asset_class, list_date) "
@@ -119,8 +119,8 @@ class TestSecurityRepository:
         )
 
         # Assert
-        assert result["600000.SH"] == 100000001
-        assert result["600001.SH"] == 100000002
+        assert result["600000.SH"] == 1000001
+        assert result["600001.SH"] == 1000002
         assert "600003.SH" not in result  # Not found
 
     def test_get_by_sid(self) -> None:
@@ -129,16 +129,16 @@ class TestSecurityRepository:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Test Bank', 'SSE', 'stock', '1999-11-10')
+            VALUES (1000001, '600000', 'Test Bank', 'SSE', 'stock', '1999-11-10')
         """)
         self.client.commit()
 
         # Act
-        result = self.repo.get_by_sid(100000001)
+        result = self.repo.get_by_sid(1000001)
 
         # Assert
         assert result is not None
-        assert result["sid"] == 100000001
+        assert result["sid"] == 1000001
         assert result["symbol"] == "600000"
         assert result["name"] == "Test Bank"
 
@@ -154,7 +154,7 @@ class TestSecurityRepository:
         """Test listing all sids."""
         # Arrange
         for i in range(3):
-            sid = 100000001 + i
+            sid = 1000001 + i
             self.client.execute(
                 "INSERT INTO security "
                 "(sid, symbol, name, exchange, asset_class, list_date, is_active) "
@@ -168,8 +168,8 @@ class TestSecurityRepository:
 
         # Assert
         assert len(sids) == 3
-        assert 100000001 in sids
-        assert 100000002 in sids
+        assert 1000001 in sids
+        assert 1000002 in sids
 
     def test_get_symbol(self) -> None:
         """Test getting symbol by sid."""
@@ -177,12 +177,12 @@ class TestSecurityRepository:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
+            VALUES (1000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
         """)
         self.client.commit()
 
         # Act
-        symbol = self.repo.get_symbol(100000001)
+        symbol = self.repo.get_symbol(1000001)
 
         # Assert
         assert symbol == "600000"
@@ -193,17 +193,17 @@ class TestSecurityRepository:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
+            VALUES (1000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
         """)
         self.client.execute("""
             INSERT INTO security_mapping
             (sid, source, src_code, effective_from)
-            VALUES (100000001, 'tushare', '600000.SH', '1999-11-10')
+            VALUES (1000001, 'tushare', '600000.SH', '1999-11-10')
         """)
         self.client.commit()
 
         # Act
-        src_code = self.repo.get_src_code(100000001, "tushare")
+        src_code = self.repo.get_src_code(1000001, "tushare")
 
         # Assert
         assert src_code == "600000.SH"
@@ -221,7 +221,7 @@ class TestSecurityRepository:
         )
 
         # Assert
-        assert sid == 100000001  # First stock SID (starts at STOCK_MIN + 1)
+        assert sid == 1000001  # First stock SID (starts at STOCK_MIN + 1)
 
         # Verify in database
         security = self.repo.get_by_sid(sid)

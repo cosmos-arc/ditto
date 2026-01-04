@@ -57,12 +57,12 @@ class TestBarsRepository:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '2000-01-01')
+            VALUES (1000001, '600000', 'Test', 'SSE', 'stock', '2000-01-01')
         """)
         self.client.execute("""
             INSERT INTO security_mapping
             (sid, source, src_code, effective_from)
-            VALUES (100000001, 'tushare', '600000.SH', '2000-01-01')
+            VALUES (1000001, 'tushare', '600000.SH', '2000-01-01')
         """)
         self.client.commit()
 
@@ -73,7 +73,7 @@ class TestBarsRepository:
     def test_get_returns_empty_dataframe_for_no_data(self) -> None:
         """Test get returns empty DataFrame when no data exists."""
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-01",
             end="2024-01-31",
         )
@@ -86,7 +86,7 @@ class TestBarsRepository:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],
+                "sid": [1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],
@@ -99,7 +99,7 @@ class TestBarsRepository:
 
         # Act
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-01",
             end="2024-01-31",
         )
@@ -114,7 +114,7 @@ class TestBarsRepository:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "open": [10.0],
                 "high": [12.0],
@@ -127,7 +127,7 @@ class TestBarsRepository:
 
         # Act
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-01",
             end="2024-01-31",
             with_symbol=True,
@@ -170,7 +170,7 @@ class TestPITSafeAdjustment:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Test Stock', 'SSE', 'stock', '2000-01-01')
+            VALUES (1000001, '600000', 'Test Stock', 'SSE', 'stock', '2000-01-01')
         """)
         self.client.commit()
 
@@ -194,7 +194,7 @@ class TestPITSafeAdjustment:
         # Arrange: Write bars data
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, 100000001],
+                "sid": [1000001, 1000001, 1000001],
                 "trade_date": [
                     date(2024, 1, 2),
                     date(2024, 1, 3),
@@ -213,7 +213,7 @@ class TestPITSafeAdjustment:
         # The factor on 2024-01-03 is published on 2024-01-04 (knowledge_date)
         adj_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, 100000001],
+                "sid": [1000001, 1000001, 1000001],
                 "trade_date": [
                     date(2024, 1, 2),
                     date(2024, 1, 3),
@@ -232,7 +232,7 @@ class TestPITSafeAdjustment:
         # Act: Get QFQ adjusted data asof 2024-01-03
         # PIT-safe: Should only use adj factors with knowledge_date <= 2024-01-03
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-02",
             end="2024-01-04",
             adj=AdjType.QFQ,
@@ -267,7 +267,7 @@ class TestPITSafeAdjustment:
         # Arrange: Write bars data
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, 100000001],
+                "sid": [1000001, 1000001, 1000001],
                 "trade_date": [
                     date(2024, 1, 2),
                     date(2024, 1, 3),
@@ -285,7 +285,7 @@ class TestPITSafeAdjustment:
         # Write adj_factor data with knowledge_date (T+1 publication)
         adj_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, 100000001],
+                "sid": [1000001, 1000001, 1000001],
                 "trade_date": [
                     date(2024, 1, 2),
                     date(2024, 1, 3),
@@ -304,7 +304,7 @@ class TestPITSafeAdjustment:
         # Act: Get QFQ adjusted data asof 2024-01-05
         # All factors should be available (all knowledge_date <= 2024-01-05)
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-02",
             end="2024-01-04",
             adj=AdjType.QFQ,
@@ -359,7 +359,7 @@ class TestQFQAdjustment:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Test Stock', 'SSE', 'stock', '2000-01-01')
+            VALUES (1000001, '600000', 'Test Stock', 'SSE', 'stock', '2000-01-01')
         """)
         self.client.commit()
 
@@ -372,7 +372,7 @@ class TestQFQAdjustment:
         # Arrange: Write bars data with consistent prices
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, 100000001],
+                "sid": [1000001, 1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
                 "open": [10.0, 10.0, 10.0],
                 "high": [12.0, 12.0, 12.0],
@@ -386,7 +386,7 @@ class TestQFQAdjustment:
         # Write adj_factor data: 0.95 on 2024-01-03 and later
         adj_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, 100000001],
+                "sid": [1000001, 1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
                 "adj_factor": [1.0, 0.95, 0.95],
             }
@@ -395,7 +395,7 @@ class TestQFQAdjustment:
 
         # Act: Get QFQ adjusted data
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-02",
             end="2024-01-04",
             adj=AdjType.QFQ,
@@ -418,7 +418,7 @@ class TestQFQAdjustment:
         # Arrange: Write bars data
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],
+                "sid": [1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],
@@ -432,7 +432,7 @@ class TestQFQAdjustment:
         # Write adj_factor data only for 2024-01-03 (missing for 2024-01-02)
         adj_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 3)],
                 "adj_factor": [0.95],
             }
@@ -441,7 +441,7 @@ class TestQFQAdjustment:
 
         # Act: Get QFQ adjusted data
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-02",
             end="2024-01-03",
             adj=AdjType.QFQ,
@@ -461,7 +461,7 @@ class TestQFQAdjustment:
         # Arrange: Write bars data without adj_factor
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],
+                "sid": [1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],
@@ -474,7 +474,7 @@ class TestQFQAdjustment:
 
         # Act: Get QFQ adjusted data (no adj_factor available)
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-02",
             end="2024-01-03",
             adj=AdjType.QFQ,
@@ -491,7 +491,7 @@ class TestQFQAdjustment:
         # Arrange: Write bars data
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],
+                "sid": [1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],
@@ -505,7 +505,7 @@ class TestQFQAdjustment:
         # Write adj_factor data only for 2024-01-02 (missing for 2024-01-03)
         adj_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "adj_factor": [0.95],
             }
@@ -514,7 +514,7 @@ class TestQFQAdjustment:
 
         # Act: Get HFQ adjusted data
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-02",
             end="2024-01-03",
             adj=AdjType.HFQ,
@@ -535,7 +535,7 @@ class TestQFQAdjustment:
         # Arrange: Write bars data for 3 days
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, 100000001],
+                "sid": [1000001, 1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
                 "open": [10.0, 10.0, 10.0],
                 "high": [12.0, 12.0, 12.0],
@@ -549,7 +549,7 @@ class TestQFQAdjustment:
         # Write adj_factor: 1.0, 0.95, 0.90 over the 3 days
         adj_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, 100000001],
+                "sid": [1000001, 1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)],
                 "adj_factor": [1.0, 0.95, 0.90],
             }
@@ -559,7 +559,7 @@ class TestQFQAdjustment:
         # Act: Get QFQ adjusted data with asof="2024-01-03"
         # This means: use the latest adj_factor as of 2024-01-03 (which is 0.95)
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-02",
             end="2024-01-04",
             adj=AdjType.QFQ,
@@ -611,12 +611,12 @@ class TestBarsRepositorySingle:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '2000-01-01')
+            VALUES (1000001, '600000', 'Test', 'SSE', 'stock', '2000-01-01')
         """)
         self.client.execute("""
             INSERT INTO security_mapping
             (sid, source, src_code, effective_from)
-            VALUES (100000001, 'tushare', '600000.SH', '2000-01-01')
+            VALUES (1000001, 'tushare', '600000.SH', '2000-01-01')
         """)
         self.client.commit()
 
@@ -629,7 +629,7 @@ class TestBarsRepositorySingle:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "open": [10.0],
                 "high": [12.0],
@@ -650,14 +650,14 @@ class TestBarsRepositorySingle:
 
         # Assert
         assert len(result) == 1
-        assert result["sid"][0] == 100000001
+        assert result["sid"][0] == 1000001
 
     def test_get_single_by_symbol(self) -> None:
         """Test get_single resolves symbol."""
         # Arrange
         test_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "open": [10.0],
                 "high": [12.0],
@@ -687,19 +687,19 @@ class TestBarsRepositorySingle:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000002, '600000', 'Another Stock', 'SZSE', 'stock', '2000-01-01')
+            VALUES (1000002, '600000', 'Another Stock', 'SZSE', 'stock', '2000-01-01')
         """)
         self.client.execute("""
             INSERT INTO security_mapping
             (sid, source, src_code, effective_from)
-            VALUES (100000002, 'tushare', '600000.SZ', '2000-01-01')
+            VALUES (1000002, 'tushare', '600000.SZ', '2000-01-01')
         """)
         self.client.commit()
 
         # Arrange: Write test data
         test_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "open": [10.0],
                 "high": [12.0],
@@ -721,7 +721,7 @@ class TestBarsRepositorySingle:
 
         # Assert: Should return first SID's data
         assert len(result) == 1
-        assert result["sid"][0] == 100000001
+        assert result["sid"][0] == 1000001
 
         # Assert: logger.warning should have been called with correct arguments
         mock_logger.warning.assert_called_once()
@@ -740,7 +740,7 @@ class TestBarsRepositorySingle:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "open": [10.0],
                 "high": [12.0],
@@ -797,14 +797,14 @@ class TestMixedAssetClass:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Test Stock', 'SSE', 'stock', '2000-01-01')
+            VALUES (1000001, '600000', 'Test Stock', 'SSE', 'stock', '2000-01-01')
         """)
 
         # Insert ETF security (SID: 200,000,000 - 299,999,999)
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (200000001, '510300', 'Test ETF', 'SSE', 'etf', '2000-01-01')
+            VALUES (2000001, '510300', 'Test ETF', 'SSE', 'etf', '2000-01-01')
         """)
         self.client.commit()
 
@@ -817,7 +817,7 @@ class TestMixedAssetClass:
         # Act & Assert
         with pytest.raises(ValueError, match="Mixed asset class query"):
             self.repo.get(
-                sids=[100000001, 200000001],  # stock + ETF
+                sids=[1000001, 2000001],  # stock + ETF
                 start="2024-01-01",
                 end="2024-01-31",
             )
@@ -826,7 +826,7 @@ class TestMixedAssetClass:
         """Test that all stock SIDs succeed."""
         # Should not raise
         result = self.repo.get(
-            sids=[100000001, 100000002],  # both stocks
+            sids=[1000001, 1000002],  # both stocks
             start="2024-01-01",
             end="2024-01-31",
         )
@@ -836,7 +836,7 @@ class TestMixedAssetClass:
         """Test that all ETF SIDs succeed."""
         # Should not raise
         result = self.repo.get(
-            sids=[200000001, 200000002],  # both ETFs
+            sids=[2000001, 2000002],  # both ETFs
             start="2024-01-01",
             end="2024-01-31",
         )
@@ -848,14 +848,14 @@ class TestMixedAssetClass:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (300000001, '000001', 'Test Index', 'SSE', 'index', '2000-01-01')
+            VALUES (3000001, '000001', 'Test Index', 'SSE', 'index', '2000-01-01')
         """)
         self.client.commit()
 
         # Write index data to index_daily dataset
         index_bars_df = pl.DataFrame(
             {
-                "sid": [300000001],
+                "sid": [3000001],
                 "trade_date": [date(2024, 1, 1)],
                 "open": [3000.0],
                 "high": [3100.0],
@@ -868,13 +868,13 @@ class TestMixedAssetClass:
 
         # Should route to index_daily and return data (NOT empty from stock_daily)
         result = self.repo.get(
-            sids=[300000001],
+            sids=[3000001],
             start="2024-01-01",
             end="2024-01-31",
         )
         # Verify we get actual data from index_daily, not empty from wrong dataset
         assert len(result) == 1
-        assert result["sid"][0] == 300000001
+        assert result["sid"][0] == 3000001
         assert result["close"][0] == 3050.0
 
     def test_get_with_mixed_index_stock_sids_raises_error(self) -> None:
@@ -883,25 +883,25 @@ class TestMixedAssetClass:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (300000001, '000001', 'Test Index', 'SSE', 'index', '2000-01-01')
+            VALUES (3000001, '000001', 'Test Index', 'SSE', 'index', '2000-01-01')
         """)
         self.client.commit()
 
         # Act & Assert
         with pytest.raises(ValueError, match="Mixed asset class query"):
             self.repo.get(
-                sids=[100000001, 300000001],  # stock + index
+                sids=[1000001, 3000001],  # stock + index
                 start="2024-01-01",
                 end="2024-01-31",
             )
 
     def test_mixed_asset_with_boundary_sids(self) -> None:
-        """测试 SID 范围边界值（使用已存在的 100000001 和 200000001）."""
+        """测试 SID 范围边界值（使用已存在的 1000001 和 2000001）."""
         # Write test data for existing SIDs from setup
-        # setup already has: 100000001 (stock) and 200000001 (etf)
+        # setup already has: 1000001 (stock) and 2000001 (etf)
         stock_bars = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "open": [10.0],
                 "high": [12.0],
@@ -912,7 +912,7 @@ class TestMixedAssetClass:
         )
         etf_bars = pl.DataFrame(
             {
-                "sid": [200000001],
+                "sid": [2000001],
                 "trade_date": [date(2024, 1, 2)],
                 "open": [5.0],
                 "high": [6.0],
@@ -927,7 +927,7 @@ class TestMixedAssetClass:
         # Act & Assert: Mixed SIDs (stock + etf) should raise error
         with pytest.raises(ValueError, match="Mixed asset class query"):
             self.repo.get(
-                sids=[100000001, 200000001],
+                sids=[1000001, 2000001],
                 start="2024-01-01",
                 end="2024-01-31",
             )
@@ -938,14 +938,14 @@ class TestMixedAssetClass:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (300000001, '000001', 'Test Index', 'SSE', 'index', '2000-01-01')
+            VALUES (3000001, '000001', 'Test Index', 'SSE', 'index', '2000-01-01')
         """)
         self.client.commit()
 
         # Write index data
         index_bars = pl.DataFrame(
             {
-                "sid": [300000001],
+                "sid": [3000001],
                 "trade_date": [date(2024, 1, 1)],
                 "open": [3000.0],
                 "high": [3100.0],
@@ -959,7 +959,7 @@ class TestMixedAssetClass:
         # Act & Assert: All three asset classes should raise error
         with pytest.raises(ValueError, match="Mixed asset class query"):
             self.repo.get(
-                sids=[100000001, 200000001, 300000001],  # stock + etf + index
+                sids=[1000001, 2000001, 3000001],  # stock + etf + index
                 start="2024-01-01",
                 end="2024-01-31",
             )
@@ -967,7 +967,7 @@ class TestMixedAssetClass:
         # Verify error message mentions all three classes
         try:
             self.repo.get(
-                sids=[100000001, 200000001, 300000001],
+                sids=[1000001, 2000001, 3000001],
                 start="2024-01-01",
                 end="2024-01-31",
             )
@@ -1012,7 +1012,7 @@ class TestAdjFactorEdgeCases:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (100000001, '600000', 'Test Stock', 'SSE', 'stock', '2000-01-01')
+            VALUES (1000001, '600000', 'Test Stock', 'SSE', 'stock', '2000-01-01')
         """)
         self.client.commit()
 
@@ -1025,7 +1025,7 @@ class TestAdjFactorEdgeCases:
         # Arrange: Write bars data without any adj_factor
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],
+                "sid": [1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],
@@ -1038,7 +1038,7 @@ class TestAdjFactorEdgeCases:
 
         # Act: Get QFQ adjusted data (no adj_factor data at all)
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-02",
             end="2024-01-03",
             adj=AdjType.QFQ,
@@ -1055,7 +1055,7 @@ class TestAdjFactorEdgeCases:
         # Arrange: Write bars data without any adj_factor
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],
+                "sid": [1000001, 1000001],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],
@@ -1068,7 +1068,7 @@ class TestAdjFactorEdgeCases:
 
         # Act: Get HFQ adjusted data (no adj_factor data at all)
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-02",
             end="2024-01-03",
             adj=AdjType.HFQ,
@@ -1086,7 +1086,7 @@ class TestAdjFactorEdgeCases:
         dates = [date(2023, 12, 29), date(2023, 12, 30), date(2024, 1, 2)]
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000001, 100000001],
+                "sid": [1000001, 1000001, 1000001],
                 "trade_date": dates,
                 "open": [10.0, 10.0, 10.0],
                 "high": [12.0, 12.0, 12.0],
@@ -1104,14 +1104,14 @@ class TestAdjFactorEdgeCases:
         # Write adj_factor data: 0.95 starting from 2024-01-02
         adj_df_2023 = pl.DataFrame(
             {
-                "sid": [100000001, 100000001],
+                "sid": [1000001, 1000001],
                 "trade_date": [date(2023, 12, 29), date(2023, 12, 30)],
                 "adj_factor": [1.0, 1.0],
             }
         )
         adj_df_2024 = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "adj_factor": [0.95],
             }
@@ -1121,7 +1121,7 @@ class TestAdjFactorEdgeCases:
 
         # Act: Get QFQ adjusted data across year boundary
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2023-12-29",
             end="2024-01-02",
             adj=AdjType.QFQ,
@@ -1145,7 +1145,7 @@ class TestAdjFactorEdgeCases:
         # Generate dates for full year 2024
         dates = [date(2024, 1, 1) + timedelta(days=i) for i in range(365)]
         n_records = len(dates)
-        sids = [100000001] * n_records
+        sids = [1000001] * n_records
         opens = [10.0 + random.random() for _ in range(n_records)]
         highs = [12.0 + random.random() for _ in range(n_records)]
         lows = [9.0 + random.random() for _ in range(n_records)]
@@ -1170,7 +1170,7 @@ class TestAdjFactorEdgeCases:
         adj_factors = [1.0 if i < half_len else 0.95 for i in range(len(dates))]
         adj_df = pl.DataFrame(
             {
-                "sid": [100000001] * len(dates),
+                "sid": [1000001] * len(dates),
                 "trade_date": dates,
                 "adj_factor": adj_factors,
             }
@@ -1180,7 +1180,7 @@ class TestAdjFactorEdgeCases:
         # Act: Get QFQ adjusted data for full year
         start_time = time.time()
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-01",
             end="2024-12-31",
             adj=AdjType.QFQ,
@@ -1198,7 +1198,7 @@ class TestAdjFactorEdgeCases:
         # Arrange: Write bars and adj_factor for single SID
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "open": [10.0],
                 "high": [12.0],
@@ -1211,7 +1211,7 @@ class TestAdjFactorEdgeCases:
 
         adj_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "adj_factor": [0.95],
             }
@@ -1220,7 +1220,7 @@ class TestAdjFactorEdgeCases:
 
         # Act: Get QFQ adjusted data
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             start="2024-01-02",
             end="2024-01-02",
             adj=AdjType.QFQ,
@@ -1236,7 +1236,7 @@ class TestAdjFactorEdgeCases:
         # Arrange: Write some bars data
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "open": [10.0],
                 "high": [12.0],
@@ -1292,9 +1292,9 @@ class TestMarketWideMode:
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date, is_active)
             VALUES
-            (100000001, '600000', 'Stock1', 'SSE', 'stock', '2000-01-01', 1),
-            (100000002, '600001', 'Stock2', 'SSE', 'stock', '2000-01-01', 1),
-            (100000003, '600002', 'Stock3', 'SSE', 'stock', '2000-01-01', 0)
+            (1000001, '600000', 'Stock1', 'SSE', 'stock', '2000-01-01', 1),
+            (1000002, '600001', 'Stock2', 'SSE', 'stock', '2000-01-01', 1),
+            (1000003, '600002', 'Stock3', 'SSE', 'stock', '2000-01-01', 0)
         """)
         self.client.commit()
 
@@ -1307,7 +1307,7 @@ class TestMarketWideMode:
         # Arrange: Write bars data for all stocks
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000002, 100000003],
+                "sid": [1000001, 1000002, 1000003],
                 "trade_date": [date(2024, 1, 2)] * 3,
                 "open": [10.0, 11.0, 12.0],
                 "high": [12.0, 13.0, 14.0],
@@ -1325,12 +1325,12 @@ class TestMarketWideMode:
             end="2024-01-31",
         )
 
-        # Assert: Should return data for active stocks only (100000001, 100000002)
+        # Assert: Should return data for active stocks only (1000001, 1000002)
         assert not result.is_empty()
         result_sids = result["sid"].unique().to_list()
-        assert 100000001 in result_sids
-        assert 100000002 in result_sids
-        assert 100000003 not in result_sids  # Inactive stock
+        assert 1000001 in result_sids
+        assert 1000002 in result_sids
+        assert 1000003 not in result_sids  # Inactive stock
 
     def test_market_wide_respects_asset_class_filter(self) -> None:
         """Test market_wide=True with asset_class filter."""
@@ -1338,14 +1338,14 @@ class TestMarketWideMode:
         self.client.execute("""
             INSERT INTO security
             (sid, symbol, name, exchange, asset_class, list_date, is_active)
-            VALUES (200000001, '510300', 'Test ETF', 'SSE', 'etf', '2000-01-01', 1)
+            VALUES (2000001, '510300', 'Test ETF', 'SSE', 'etf', '2000-01-01', 1)
         """)
         self.client.commit()
 
         # Write stock data
         stock_bars = pl.DataFrame(
             {
-                "sid": [100000001],
+                "sid": [1000001],
                 "trade_date": [date(2024, 1, 2)],
                 "open": [10.0],
                 "high": [12.0],
@@ -1359,7 +1359,7 @@ class TestMarketWideMode:
         # Write ETF data
         etf_bars = pl.DataFrame(
             {
-                "sid": [200000001],
+                "sid": [2000001],
                 "trade_date": [date(2024, 1, 2)],
                 "open": [5.0],
                 "high": [6.0],
@@ -1381,15 +1381,15 @@ class TestMarketWideMode:
         # Assert: Should only return stock data
         assert not result.is_empty()
         result_sids = result["sid"].unique().to_list()
-        assert 100000001 in result_sids
-        assert 200000001 not in result_sids
+        assert 1000001 in result_sids
+        assert 2000001 not in result_sids
 
     def test_sample_set_mode_unchanged(self) -> None:
         """Test that sample set mode (market_wide=False) works as before."""
         # Arrange: Write bars data
         bars_df = pl.DataFrame(
             {
-                "sid": [100000001, 100000002],
+                "sid": [1000001, 1000002],
                 "trade_date": [date(2024, 1, 2)] * 2,
                 "open": [10.0, 11.0],
                 "high": [12.0, 13.0],
@@ -1402,7 +1402,7 @@ class TestMarketWideMode:
 
         # Act: Query with specific SIDs (sample set mode)
         result = self.repo.get(
-            sids=[100000001],
+            sids=[1000001],
             market_wide=False,
             start="2024-01-01",
             end="2024-01-31",
@@ -1411,8 +1411,8 @@ class TestMarketWideMode:
         # Assert: Should only return data for specified SID
         assert not result.is_empty()
         result_sids = result["sid"].unique().to_list()
-        assert result_sids == [100000001]
-        assert 100000002 not in result_sids
+        assert result_sids == [1000001]
+        assert 1000002 not in result_sids
 
     def test_market_wide_with_no_active_stocks(self) -> None:
         """Test market_wide=True when no active stocks exist."""

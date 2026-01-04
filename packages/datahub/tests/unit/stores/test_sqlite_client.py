@@ -106,7 +106,7 @@ class TestSQLiteClient:
         val = sqlite_client.fetchval(
             "SELECT current_max FROM sid_sequence WHERE asset_class = ?", ["stock"]
         )
-        assert val == 100_000_000
+        assert val == 1_000_000
 
     def test_fetchval_returns_none_for_no_data(
         self, sqlite_client: SQLiteClient

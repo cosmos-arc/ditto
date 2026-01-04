@@ -107,11 +107,11 @@ class TestSQLitePool:
 
         asset_classes = {row["asset_class"]: row["current_max"] for row in rows}
 
-        assert asset_classes.get("stock") == 100_000_000
-        assert asset_classes.get("etf") == 200_000_000
-        assert asset_classes.get("index") == 300_000_000
-        assert asset_classes.get("bond") == 400_000_000
-        assert asset_classes.get("future") == 500_000_000
+        assert asset_classes.get("stock") == 1_000_000
+        assert asset_classes.get("etf") == 2_000_000
+        assert asset_classes.get("index") == 3_000_000
+        assert asset_classes.get("bond") == 4_000_000
+        assert asset_classes.get("future") == 5_000_000
 
     def test_execute_method_works(self) -> None:
         """Test execute method works for basic queries."""
