@@ -8,11 +8,10 @@ Ditto 系统配置管理.
 4. 配置分组管理
 """
 
-import os
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field, PrivateAttr, computed_field
+from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 延迟导入以避免循环依赖
@@ -29,28 +28,10 @@ class DatabaseSettings(BaseSettings):
         extra="ignore",
     )
 
-    # 私有属性用于从环境变量读取（向后兼容）
-    _duckdb_path_override: str = PrivateAttr(default="")
-    _sqlite_path_override: str = PrivateAttr(default="")
-
-    def __init__(self, **kwargs: Any) -> None:
-        """Initialize and read legacy environment variables."""
-        super().__init__(**kwargs)
-        # 从环境变量读取旧值（如果存在）
-        self._duckdb_path_override = os.environ.get(
-            "DB_DUCKDB_PATH", os.environ.get("DUCKDB_PATH", "")
-        )
-        self._sqlite_path_override = os.environ.get(
-            "DB_SQLITE_PATH", os.environ.get("SQLITE_PATH", "")
-        )
-
-    # computed_field 提供实际的路径
     @computed_field
     @property
     def duckdb_path(self) -> Path:
         """DuckDB 数据库文件路径."""
-        if self._duckdb_path_override:
-            return Path(self._duckdb_path_override).expanduser()
         from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
 
         return get_paths().data_subdir("db/duckdb/ditto.duckdb")
@@ -59,8 +40,6 @@ class DatabaseSettings(BaseSettings):
     @property
     def sqlite_path(self) -> Path:
         """SQLite 数据库文件路径."""
-        if self._sqlite_path_override:
-            return Path(self._sqlite_path_override).expanduser()
         from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
 
         return get_paths().data_subdir("db/sqlite/hub.sqlite")
@@ -114,29 +93,10 @@ class FileStorageSettings(BaseSettings):
         populate_by_name=True,
     )
 
-    # 私有属性用于向后兼容（从环境变量读取）
-    _data_root_override: str = PrivateAttr(default="")
-    _log_root_override: str = PrivateAttr(default="")
-    _backup_root_override: str = PrivateAttr(default="")
-    _temp_root_override: str = PrivateAttr(default="")
-
-    def __init__(self, **kwargs: Any) -> None:
-        """Initialize and read legacy environment variables."""
-        super().__init__(**kwargs)
-        self._data_root_override = os.environ.get("DITTO_DATA_ROOT", "")
-        self._log_root_override = os.environ.get("DITTO_LOG_ROOT", "")
-        self._backup_root_override = os.environ.get("DITTO_BACKUP_ROOT", "")
-        self._temp_root_override = os.environ.get("DITTO_TEMP_ROOT", "")
-
-    # computed_field 提供实际的路径（优先使用环境变量，否则使用 XDGPaths）
     @computed_field
     @property
     def data_root(self) -> Path:
         """数据存储根目录."""
-        # 如果设置了旧环境变量，使用它
-        if self._data_root_override:
-            return Path(self._data_root_override).expanduser()
-        # 否则使用 XDGPaths
         from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
 
         return get_paths().data_home
@@ -145,8 +105,6 @@ class FileStorageSettings(BaseSettings):
     @property
     def log_root(self) -> Path:
         """日志存储根目录."""
-        if self._log_root_override:
-            return Path(self._log_root_override).expanduser()
         from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
 
         return get_paths().state_subdir("logs")
@@ -155,8 +113,6 @@ class FileStorageSettings(BaseSettings):
     @property
     def backup_root(self) -> Path:
         """备份存储根目录."""
-        if self._backup_root_override:
-            return Path(self._backup_root_override).expanduser()
         from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
 
         return get_paths().state_subdir("backups")
@@ -165,8 +121,6 @@ class FileStorageSettings(BaseSettings):
     @property
     def temp_root(self) -> Path:
         """临时文件存储根目录."""
-        if self._temp_root_override:
-            return Path(self._temp_root_override).expanduser()
         from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
 
         return get_paths().cache_subdir("temp")

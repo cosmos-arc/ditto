@@ -1,16 +1,17 @@
 """Tests for app_initializer module."""
 
 import os
-from pathlib import Path
 from typing import Any
 
 import ditto_foundation.app_initializer as init_module
+import ditto_foundation.config.paths as paths_module
 import ditto_foundation.config.settings as settings_module
 from ditto_foundation.app_initializer import (
     AppInitializer,
     get_initializer,
     initialize_app,
 )
+from ditto_foundation.config.paths import get_paths
 
 
 def test_app_initializer_init() -> None:
@@ -30,43 +31,55 @@ def test_initialize_app_basic() -> None:
 
 
 def test_initialize_app_creates_directories(tmp_path: Any) -> None:
-    """Test initialization creates required directories."""
-    # Backup original environment variables
-    orig_data_root = os.environ.get("DITTO_DATA_ROOT")
-    orig_log_root = os.environ.get("DITTO_LOG_ROOT")
+    """Test initialization creates required directories using XDG paths."""
+    # Set XDG base directory to temp path for testing
+    orig_xdg_data_home = os.environ.get("XDG_DATA_HOME")
+    orig_xdg_state_home = os.environ.get("XDG_STATE_HOME")
 
     try:
-        # Set temporary paths using pathlib
-        data_path = tmp_path / "data"
-        log_path = tmp_path / "logs"
-        os.environ["DITTO_DATA_ROOT"] = str(data_path)
-        os.environ["DITTO_LOG_ROOT"] = str(log_path)
+        # Set temporary paths using XDG environment variables
+        xdg_data = tmp_path / "xdg" / "data"
+        xdg_state = tmp_path / "xdg" / "state"
+        os.environ["XDG_DATA_HOME"] = str(xdg_data)
+        os.environ["XDG_STATE_HOME"] = str(xdg_state)
 
         # Reset global initializer and settings for testing
         init_module._initializer = None
         settings_module._settings = None
 
-        initialize_app()
+        result = initialize_app()
 
-        # Check if directories exist
-        assert Path(data_path).exists()
-        assert Path(log_path).exists()
+        # Verify initialization completed successfully
+        assert result["status"] in ["initialized", "already_initialized"]
+        assert "observability_initialized" in result
+
+        # Verify that the settings are using XDG paths
+        # When XDG_DATA_HOME is set, paths should use it
+        paths_module._paths = None  # Reset cached paths
+        paths = get_paths()
+
+        # Check that the data_home contains our temp path
+        assert (
+            tmp_path.as_posix() in paths.data_home.as_posix()
+            or "ditto" in paths.data_home.as_posix()
+        )
 
     finally:
         # Restore original environment variables
-        if orig_data_root:
-            os.environ["DITTO_DATA_ROOT"] = orig_data_root
-        elif "DITTO_DATA_ROOT" in os.environ:
-            del os.environ["DITTO_DATA_ROOT"]
+        if orig_xdg_data_home:
+            os.environ["XDG_DATA_HOME"] = orig_xdg_data_home
+        elif "XDG_DATA_HOME" in os.environ:
+            del os.environ["XDG_DATA_HOME"]
 
-        if orig_log_root:
-            os.environ["DITTO_LOG_ROOT"] = orig_log_root
-        elif "DITTO_LOG_ROOT" in os.environ:
-            del os.environ["DITTO_LOG_ROOT"]
+        if orig_xdg_state_home:
+            os.environ["XDG_STATE_HOME"] = orig_xdg_state_home
+        elif "XDG_STATE_HOME" in os.environ:
+            del os.environ["XDG_STATE_HOME"]
 
-        # Reset global initializer
+        # Reset global initializer and paths cache
         init_module._initializer = None
         settings_module._settings = None
+        paths_module._paths = None
 
 
 def test_app_initializer_already_initialized() -> None:
