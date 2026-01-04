@@ -93,6 +93,7 @@ class MetadataManager:
         self,
         dataset: str,
         trade_date: str,
+        source: str = "tushare",
         force: bool = False,
     ) -> tuple[bool, str | None]:
         """
@@ -101,6 +102,7 @@ class MetadataManager:
         Args:
             dataset: 数据集名称(如 "stock_daily")。
             trade_date: 交易日期(YYYY-MM-DD)。
+            source: 数据源名称(如 "tushare", "akshare")。
             force: 是否强制重新摄取。
 
         Returns:
@@ -132,7 +134,7 @@ class MetadataManager:
 
         existing = self._log_store.get_log(
             dataset=dataset,
-            source="tushare",  # TODO: 从配置获取
+            source=source,
             trade_date=trade_date,
         )
 

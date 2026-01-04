@@ -234,6 +234,40 @@ class TestShouldSkip:
         assert should_skip is False
         assert reason is None
 
+    def test_should_skip_uses_source_parameter(self) -> None:
+        """should_skip 应使用传入的 source 参数，而非硬编码。"""
+        manager = MetadataManager()
+
+        # Mock get_log 返回成功的历史记录
+        mock_store = Mock()
+        mock_store.get_log.return_value = IngestionLog(
+            dataset="stock_daily",
+            source="akshare",  # 不同的数据源
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="abc123",
+            rows=1000,
+        )
+        manager._log_store = mock_store
+
+        # 使用 akshare 数据源
+        should_skip, reason = manager.should_skip(
+            dataset="stock_daily",
+            trade_date="2024-12-27",
+            source="akshare",
+            force=False,
+        )
+
+        # 验证 get_log 被调用时使用了正确的 source
+        mock_store.get_log.assert_called_once_with(
+            dataset="stock_daily",
+            source="akshare",  # 应该是 akshare 而不是硬编码的 tushare
+            trade_date="2024-12-27",
+        )
+
+        assert should_skip is True
+        assert reason is not None
+
 
 class TestCompareData:
     """测试 compare_data 方法。"""

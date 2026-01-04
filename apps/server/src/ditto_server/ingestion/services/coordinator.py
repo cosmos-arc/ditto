@@ -88,6 +88,7 @@ class IngestionCoordinator:
         should_skip, skip_reason = self._metadata_manager.should_skip(
             dataset=dataset,
             trade_date=trade_date,
+            source=self._source_name,
             force=force,
         )
 

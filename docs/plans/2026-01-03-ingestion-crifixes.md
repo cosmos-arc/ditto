@@ -317,20 +317,29 @@ def dq_completeness_check(
 
 ## 阶段 5: 其他问题修复 (P2)
 
-### 5.1 游标更新 (Medium)
+### 5.1 游标更新 (Medium) ✅
+
+**状态**: 已完成 (2026-01-03)
 
 **文件**: `apps/server/src/ditto_server/ingestion/services/coordinator.py`
 
-在 `ingest_date` 成功后添加游标更新 (line 177)：
+在 `ingest_date` 成功后添加游标更新 (line 189-195)：
 
 ```python
-# 写入成功后更新游标
-self._hub.ingestion_cursor.update_success(
-    dataset=dataset,
-    source=self._source_name,
-    trade_date=trade_date,
-)
+# 更新游标 (T0 数据集的游标更新已在 _write_stock_basic/_write_etf_basic 中处理)
+if dataset not in ("stock_basic", "etf_basic"):
+    self._hub.ingestion_cursor.update_success(
+        dataset=dataset,
+        source=self._source_name,
+        trade_date=trade_date,
+    )
 ```
+
+**实现细节**:
+- T0 数据集 (`stock_basic`, `etf_basic`) 的游标更新保留在各自的 `_write_*` 方法中,避免重复调用
+- T1/T2 数据集 (`stock_daily`, `etf_daily`, `adj_factor`, `fund_adj`, `calendar`) 统一在 `ingest_date` 中更新游标
+- 新增 7 个测试验证游标更新正确性
+- 失败场景 (fetch/write 失败) 不更新游标
 
 ### 5.2 依赖编排修复 (Medium)
 
@@ -361,13 +370,36 @@ for level in levels:
     previous_futures = t1_futures
 ```
 
-### 5.3 多源硬编码修复 (Medium)
+### 5.3 多源硬编码修复 (Medium) ✅
+
+**状态**: 已完成 (2026-01-04)
 
 **文件**:
-- `apps/server/src/ditto_server/ingestion/services/metadata.py` (line 133)
-- `apps/server/src/ditto_server/ingestion/flows/backfill.py` (line 192)
+- `apps/server/src/ditto_server/ingestion/services/metadata.py` (line 96, 137)
+- `apps/server/src/ditto_server/ingestion/services/coordinator.py` (line 91)
+- `apps/server/src/ditto_server/ingestion/flows/backfill.py` (无需修改,已正确)
 
 将硬编码的 `"tushare"` 替换为参数化（使用 `source_name` 或传入的 `source` 参数）。
+
+**实现细节**:
+
+1. **metadata.py 修改**:
+   - `should_skip()` 方法新增 `source: str = "tushare"` 参数
+   - 将硬编码的 `source="tushare"` 改为使用传入的 `source` 参数
+   - 添加测试 `test_should_skip_uses_source_parameter` 验证参数正确传递
+
+2. **coordinator.py 修改**:
+   - 调用 `should_skip()` 时传递 `source=self._source_name`
+   - 确保使用 coordinator 实例的 source_name 而非硬编码
+
+3. **backfill.py 验证**:
+   - 确认 `backfill_flow` 和 `backfill_missing_flow` 已正确传递 `source` 参数给 coordinator
+   - 无需额外修改
+
+**测试覆盖**:
+- 新增 1 个测试验证 source 参数传递
+- 所有 143 个 ingestion 单元测试通过
+- 向后兼容: 默认值为 `"tushare"`,现有调用无需修改
 
 ---
 
@@ -431,9 +463,9 @@ for level in levels:
 - [ ] 阶段 3: 并发安全验证
 - [x] 阶段 4.1: bars.get 查询模式 ✅
 - [ ] 阶段 4.2: DQ 调用修改
-- [ ] 阶段 5.1: 游标更新
+- [x] 阶段 5.1: 游标更新 ✅
 - [ ] 阶段 5.2: 依赖编排修复
-- [ ] 阶段 5.3: 多源硬编码修复
+- [x] 阶段 5.3: 多源硬编码修复 ✅
 - [ ] 单元测试编写
 - [ ] 集成测试编写
 - [ ] 文档更新
