@@ -235,7 +235,7 @@ class TestCompletenessChecker:
             }
         )
 
-        def mock_bars_get(start, end):
+        def mock_bars_get(start, end, **kwargs):
             return df
 
         mock_hub_with_calendar.bars.get = mock_bars_get
@@ -268,7 +268,7 @@ class TestCompletenessChecker:
             }
         )
 
-        def mock_bars_get(start, end):
+        def mock_bars_get(start, end, **kwargs):
             return df
 
         mock_hub_with_calendar.bars.get = mock_bars_get
@@ -306,7 +306,7 @@ class TestCompletenessChecker:
     def test_completeness_no_data(self, mock_hub_with_calendar):
         """Test completeness check with no actual data."""
 
-        def mock_bars_get(start, end):
+        def mock_bars_get(start, end, **kwargs):
             return pl.DataFrame()
 
         mock_hub_with_calendar.bars.get = mock_bars_get
