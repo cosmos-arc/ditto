@@ -2,9 +2,13 @@
 
 import os
 
+import httpx
 import pytest
 import pytest_mock
-from ditto_datahub.sources.base import SourceConfigurationError
+from ditto_datahub.sources.base import (
+    SourceAuthenticationError,
+    SourceConfigurationError,
+)
 from ditto_datahub.sources.tushare.client import TushareClient
 from ditto_datahub.sources.tushare.rate_limiter import (
     TushareRateLimitConfig,
@@ -84,3 +88,136 @@ class TestTushareClientInit:
         # 使用付费账户配置
         client = TushareClient(rate_config=TushareRateLimitConfig.paid())
         assert isinstance(client._limiter, TushareRateLimiter)
+
+
+class TestTushareClientQuery:
+    """Tests for TushareClient.query method."""
+
+    def test_successful_query_returns_dataframe(self, respx_mock) -> None:
+        """成功查询返回 polars DataFrame."""
+        # Arrange
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["cal_date", "is_open"],
+                        "items": [["20240101", 0], ["20240102", 1]],
+                    },
+                },
+            )
+        )
+
+        # Act
+        client = TushareClient(token="test_token")
+        result = client.query("trade_cal", "cal_date,is_open", exchange="SSE")
+
+        # Assert
+        assert result.height == 2
+        assert result.columns == ["cal_date", "is_open"]
+        assert result.to_dict(as_series=False) == {
+            "cal_date": ["20240101", "20240102"],
+            "is_open": [0, 1],
+        }
+
+    def test_rate_limit_before_request(
+        self, respx_mock, mocker: pytest_mock.MockFixture
+    ) -> None:
+        """请求前调用限流器."""
+        # Arrange
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": [["20240101"]]},
+                },
+            )
+        )
+
+        client = TushareClient(token="test_token")
+        wait_spy = mocker.spy(client._limiter, "wait_if_needed")
+
+        # Act
+        client.query("trade_cal", "cal_date", exchange="SSE")
+
+        # Assert
+        wait_spy.assert_called_once()
+
+    def test_retry_on_network_error(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """网络错误自动重试."""
+        # Arrange
+        call_count = 0
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise httpx.NetworkError("Connection failed")
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": [["20240101"]]},
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
+
+        # Act
+        client = TushareClient(token="test_token")
+        result = client.query("trade_cal", "cal_date", exchange="SSE")
+
+        # Assert
+        assert call_count == 2  # 第一次失败,第二次成功
+        assert result.height == 1
+
+    def test_no_retry_on_auth_error(self, respx_mock) -> None:
+        """认证错误不重试,直接抛出."""
+        # Arrange
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={"code": 2002, "msg": "没有权限"},
+            )
+        )
+
+        # Act & Assert
+        client = TushareClient(token="invalid_token")
+        with pytest.raises(SourceAuthenticationError):
+            client.query("trade_cal", "cal_date", exchange="SSE")
+
+    def test_retry_on_5xx_status(self, respx_mock) -> None:
+        """5xx 状态码自动重试."""
+        # Arrange
+        call_count = 0
+
+        def side_effect(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return httpx.Response(500, text="Internal Server Error")
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date"], "items": [["20240101"]]},
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=side_effect)
+
+        # Act
+        client = TushareClient(token="test_token")
+        result = client.query("trade_cal", "cal_date", exchange="SSE")
+
+        # Assert
+        assert call_count == 2
+        assert result.height == 1

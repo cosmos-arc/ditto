@@ -81,7 +81,6 @@ granian = ">=1.0,<2"  # ASGI 服务器（2-4x 性能，替代 uvicorn）
 orjson = ">=3.10,<4"  # JSON 序列化（4.5-11.5x 性能）
 
 # 数据源
-tushare = ">=1.4,<2"
 akshare = ">=1.15,<2"
 
 # 文件锁

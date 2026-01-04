@@ -5,8 +5,34 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.sources.base import DataSource, SourceFetchError
+from ditto_datahub.sources.base import (
+    DataSource,
+    SourceAuthenticationError,
+    SourceFetchError,
+    SourceRateLimitError,
+)
 from ditto_datahub.sources.tushare.client import TushareClient
+
+
+def _record_metrics(row_count: int, dataset: str) -> None:
+    """
+    安全地记录数据指标。
+
+    如果 observability 未初始化，静默跳过。
+
+    Args:
+        row_count: 数据行数
+        dataset: 数据集名称
+
+    """
+    try:
+        M.data_records.add(
+            row_count,
+            {"source": "tushare", "dataset": dataset, "status": "success"},
+        )
+    except (AttributeError, TypeError):
+        # Observability 未初始化，静默跳过
+        pass
 
 
 class TushareSource(DataSource):
@@ -69,7 +95,7 @@ class TushareSource(DataSource):
                 fields="cal_date,is_open",
             )
 
-            # Tushare Pro API returns DataFrame directly
+            # HTTP API 已经返回 polars DataFrame
             if len(response) == 0:
                 logger.info(
                     "Tushare calendar empty",
@@ -80,13 +106,10 @@ class TushareSource(DataSource):
                     schema={"trade_date": pl.Date, "is_open": pl.Boolean}
                 )
 
-            # Convert pandas DataFrame to polars and rename columns
-            df = pl.from_pandas(response).rename({"cal_date": "trade_date"})
-
-            # Transform types
-            df = df.with_columns(
-                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
-                pl.col("is_open").cast(pl.Int8) == 1,
+            # 重命名列并转换类型
+            df = response.rename({"cal_date": "trade_date"}).with_columns(
+                pl.col("trade_date").str.to_date("%Y%m%d"),
+                pl.col("is_open").cast(pl.Boolean),
             )
 
             row_count = len(df)
@@ -95,13 +118,16 @@ class TushareSource(DataSource):
                 event="tushare_calendar_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "calendar", "status": "success"},
-            )
+            _record_metrics(row_count, "calendar")
 
             return df
 
+        except SourceAuthenticationError:
+            # 认证错误直接抛出，不要包装
+            raise
+        except SourceRateLimitError:
+            # 限流错误直接抛出，不要包装
+            raise
         except Exception as e:
             logger.error(
                 "Tushare calendar fetch failed",
@@ -139,11 +165,11 @@ class TushareSource(DataSource):
 
         try:
             response = self._client.query(
-                api_name="etf_basic",
-                fields="ts_code,csname,exchange,list_date",
+                api_name="fund_basic",  # ETF basic 使用 fund_basic API
+                fields="ts_code,name,list_date",  # fund_basic 可能没有 exchange 字段
             )
 
-            # Tushare Pro API returns DataFrame directly
+            # HTTP API 已经返回 polars DataFrame
             if len(response) == 0:
                 logger.info(
                     "Tushare ETF basic empty",
@@ -160,18 +186,20 @@ class TushareSource(DataSource):
                     }
                 )
 
-            # Convert pandas DataFrame to polars and rename columns
-            df = pl.from_pandas(response).rename(
-                {"ts_code": "src_code", "csname": "name"}
+            # 重命名列并转换类型
+            # 从 src_code 中提取 symbol 和 exchange
+            # 例如 "510300.SH" -> "510300" + "SSE"
+            df = response.rename({"ts_code": "src_code"}).with_columns(
+                pl.col("src_code").str.split(".").list.get(0).alias("symbol"),
+                pl.col("src_code")
+                .str.split(".")
+                .list.get(1)
+                .replace({"SH": "SSE", "SZ": "SZSE"})
+                .alias("exchange"),
+                pl.col("list_date").str.to_date("%Y%m%d"),
             )
 
-            # Extract symbol (6-digit code from ts_code) and transform types
-            df = df.with_columns(
-                pl.col("src_code").str.replace(r"\.[A-Z]+$", "").alias("symbol"),
-                pl.col("list_date").str.strptime(pl.Date, "%Y%m%d"),
-            )
-
-            # Select and reorder columns (exchange already in SSE/SZSE format)
+            # 选择并重排列
             df = df.select("src_code", "symbol", "name", "exchange", "list_date")
 
             row_count = len(df)
@@ -180,10 +208,7 @@ class TushareSource(DataSource):
                 event="tushare_etf_basic_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "etf_basic", "status": "success"},
-            )
+            _record_metrics(row_count, "etf_basic")
 
             return df
 
@@ -236,7 +261,7 @@ class TushareSource(DataSource):
                 fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
             )
 
-            # Tushare Pro API returns DataFrame directly
+            # HTTP API 已经返回 polars DataFrame
             if len(response) == 0:
                 logger.info(
                     "Tushare ETF daily empty",
@@ -258,18 +283,11 @@ class TushareSource(DataSource):
                     }
                 )
 
-            # Convert pandas DataFrame to polars and rename columns
-            df = pl.from_pandas(response).rename(
-                {
-                    "ts_code": "src_code",
-                    "vol": "volume",
-                    "pct_chg": "pct_change",
-                }
-            )
-
-            # Transform trade_date string to Date and ensure float types
-            df = df.with_columns(
-                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+            # 重命名列并转换类型
+            df = response.rename(
+                {"ts_code": "src_code", "vol": "volume", "pct_chg": "pct_change"}
+            ).with_columns(
+                pl.col("trade_date").str.to_date("%Y%m%d"),
                 pl.col("open").cast(pl.Float64),
                 pl.col("high").cast(pl.Float64),
                 pl.col("low").cast(pl.Float64),
@@ -280,7 +298,7 @@ class TushareSource(DataSource):
                 pl.col("pct_change").cast(pl.Float64),
             )
 
-            # Select required columns
+            # 选择所需的列
             df = df.select(
                 "src_code",
                 "trade_date",
@@ -300,10 +318,7 @@ class TushareSource(DataSource):
                 event="tushare_etf_daily_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "etf_daily", "status": "success"},
-            )
+            _record_metrics(row_count, "etf_daily")
 
             return df
 
@@ -365,11 +380,14 @@ class TushareSource(DataSource):
                     }
                 )
 
-            df = pl.from_pandas(response).rename({"ts_code": "src_code"})
-
-            df = df.with_columns(
-                pl.col("list_date").str.strptime(pl.Date, "%Y%m%d"),
-            ).select("src_code", "symbol", "name", "exchange", "list_date")
+            # 重命名列并转换类型
+            df = (
+                response.rename({"ts_code": "src_code"})
+                .with_columns(
+                    pl.col("list_date").str.to_date("%Y%m%d"),
+                )
+                .select("src_code", "symbol", "name", "exchange", "list_date")
+            )
 
             row_count = len(df)
             logger.info(
@@ -377,10 +395,7 @@ class TushareSource(DataSource):
                 event="tushare_stock_basic_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "stock_basic", "status": "success"},
-            )
+            _record_metrics(row_count, "stock_basic")
 
             return df
 
@@ -453,16 +468,11 @@ class TushareSource(DataSource):
                     }
                 )
 
-            df = pl.from_pandas(response).rename(
-                {
-                    "ts_code": "src_code",
-                    "vol": "volume",
-                    "pct_chg": "pct_change",
-                }
-            )
-
-            df = df.with_columns(
-                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+            # 重命名列并转换类型
+            df = response.rename(
+                {"ts_code": "src_code", "vol": "volume", "pct_chg": "pct_change"}
+            ).with_columns(
+                pl.col("trade_date").str.to_date("%Y%m%d"),
                 pl.col("open").cast(pl.Float64),
                 pl.col("high").cast(pl.Float64),
                 pl.col("low").cast(pl.Float64),
@@ -492,10 +502,7 @@ class TushareSource(DataSource):
                 event="tushare_stock_daily_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "stock_daily", "status": "success"},
-            )
+            _record_metrics(row_count, "stock_daily")
 
             return df
 
@@ -541,6 +548,7 @@ class TushareSource(DataSource):
             ts_date = trade_date.replace("-", "")
             response = self._client.query(
                 api_name="adj_factor",
+                fields="ts_code,trade_date,adj_factor",
                 trade_date=ts_date,
             )
 
@@ -559,16 +567,11 @@ class TushareSource(DataSource):
                     }
                 )
 
-            df = pl.from_pandas(response).rename({"ts_code": "src_code"})
-
-            # 添加 knowledge_date 列（Tushare 当日数据，knowledge_date = trade_date）
-            df = df.with_columns(
-                pl.col("trade_date")
-                .str.strptime(pl.Date, "%Y%m%d")
-                .alias("trade_date"),
-                pl.col("trade_date")
-                .str.strptime(pl.Date, "%Y%m%d")
-                .alias("knowledge_date"),
+            # 重命名列并转换类型
+            # knowledge_date = trade_date (数据即日可用)
+            df = response.rename({"ts_code": "src_code"}).with_columns(
+                pl.col("trade_date").str.to_date("%Y%m%d"),
+                pl.col("trade_date").str.to_date("%Y%m%d").alias("knowledge_date"),
                 pl.col("adj_factor").cast(pl.Float64),
             )
 
@@ -580,10 +583,7 @@ class TushareSource(DataSource):
                 event="tushare_adj_factor_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "adj_factor", "status": "success"},
-            )
+            _record_metrics(row_count, "adj_factor")
 
             return df
 
@@ -629,6 +629,7 @@ class TushareSource(DataSource):
             ts_date = trade_date.replace("-", "")
             response = self._client.query(
                 api_name="fund_adj",
+                fields="ts_code,trade_date,adj_factor",
                 trade_date=ts_date,
             )
 
@@ -647,16 +648,11 @@ class TushareSource(DataSource):
                     }
                 )
 
-            df = pl.from_pandas(response).rename({"ts_code": "src_code"})
-
-            # 添加 knowledge_date 列（Tushare 当日数据，knowledge_date = trade_date）
-            df = df.with_columns(
-                pl.col("trade_date")
-                .str.strptime(pl.Date, "%Y%m%d")
-                .alias("trade_date"),
-                pl.col("trade_date")
-                .str.strptime(pl.Date, "%Y%m%d")
-                .alias("knowledge_date"),
+            # 重命名列并转换类型
+            # knowledge_date = trade_date (数据即日可用)
+            df = response.rename({"ts_code": "src_code"}).with_columns(
+                pl.col("trade_date").str.to_date("%Y%m%d"),
+                pl.col("trade_date").str.to_date("%Y%m%d").alias("knowledge_date"),
                 pl.col("adj_factor").cast(pl.Float64),
             )
 
@@ -668,10 +664,7 @@ class TushareSource(DataSource):
                 event="tushare_fund_adj_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "fund_adj", "status": "success"},
-            )
+            _record_metrics(row_count, "fund_adj")
 
             return df
 
@@ -729,17 +722,16 @@ class TushareSource(DataSource):
                 )
                 return pl.DataFrame(
                     schema={
-                        "src_code": pl.Utf8,
+                        "src_code": pl.String,
                         "trade_date": pl.Date,
                         "up_limit": pl.Float64,
                         "down_limit": pl.Float64,
                     }
                 )
 
-            df = pl.from_pandas(response).rename({"ts_code": "src_code"})
-
-            df = df.with_columns(
-                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+            # 重命名列并转换类型
+            df = response.rename({"ts_code": "src_code"}).with_columns(
+                pl.col("trade_date").str.to_date("%Y%m%d"),
                 pl.col("up_limit").cast(pl.Float64),
                 pl.col("down_limit").cast(pl.Float64),
             )
@@ -752,10 +744,7 @@ class TushareSource(DataSource):
                 event="tushare_stock_limit_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "stock_limit", "status": "success"},
-            )
+            _record_metrics(row_count, "stock_limit")
 
             return df
 
@@ -811,8 +800,8 @@ class TushareSource(DataSource):
             # 1. Fetch suspension data from suspend_d API
             suspend_df = pl.DataFrame(
                 schema={
-                    "ts_code": pl.Utf8,
-                    "suspend_timing": pl.Utf8,
+                    "ts_code": pl.String,
+                    "suspend_timing": pl.String,
                 }
             )
             try:
@@ -822,7 +811,7 @@ class TushareSource(DataSource):
                     fields="ts_code,suspend_timing",
                 )
                 if len(suspend_response) > 0:
-                    suspend_df = pl.from_pandas(suspend_response)
+                    suspend_df = suspend_response
             except Exception as e:
                 logger.warning(
                     "Failed to fetch suspend_d data",
@@ -831,14 +820,14 @@ class TushareSource(DataSource):
                 )
 
             # 2. Fetch ST status from stock_st API
-            st_df = pl.DataFrame(schema={"ts_code": pl.Utf8, "name": pl.Utf8})
+            st_df = pl.DataFrame(schema={"ts_code": pl.String, "name": pl.String})
             try:
                 st_response = self._client.query(
                     api_name="stock_st",
                     fields="ts_code,name",
                 )
                 if len(st_response) > 0:
-                    st_df = pl.from_pandas(st_response)
+                    st_df = st_response
             except Exception as e:
                 logger.warning(
                     "Failed to fetch stock_st data",
@@ -848,7 +837,7 @@ class TushareSource(DataSource):
 
             # 3. Fetch list_status from stock_basic API
             list_status_df = pl.DataFrame(
-                schema={"ts_code": pl.Utf8, "list_status": pl.Utf8}
+                schema={"ts_code": pl.String, "list_status": pl.String}
             )
             try:
                 basic_response = self._client.query(
@@ -856,7 +845,7 @@ class TushareSource(DataSource):
                     fields="ts_code,list_status",
                 )
                 if len(basic_response) > 0:
-                    list_status_df = pl.from_pandas(basic_response)
+                    list_status_df = basic_response
             except Exception as e:
                 logger.warning(
                     "Failed to fetch stock_basic list_status",
@@ -908,7 +897,7 @@ class TushareSource(DataSource):
 
             # Add trade_date column
             result = result.with_columns(
-                pl.lit(trade_date).str.strptime(pl.Date, "%Y-%m-%d").alias("trade_date")
+                pl.lit(trade_date).str.to_date("%Y-%m-%d").alias("trade_date")
             )
 
             # Select and reorder columns
@@ -928,10 +917,7 @@ class TushareSource(DataSource):
                 event="tushare_stock_status_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "stock_status", "status": "success"},
-            )
+            _record_metrics(row_count, "stock_status")
 
             return result
 

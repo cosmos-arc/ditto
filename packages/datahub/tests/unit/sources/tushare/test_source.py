@@ -2,10 +2,9 @@
 
 from datetime import date
 
-import pandas as pd
+import httpx
 import polars as pl
 import pytest
-import pytest_mock
 from ditto_datahub.sources.base import SourceFetchError
 from ditto_datahub.sources.tushare.source import TushareSource
 
@@ -14,23 +13,25 @@ class TestTushareSourceCalendar:
     """Tests for TushareSource.fetch_calendar."""
 
     def test_fetch_calendar_returns_dataframe(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_calendar returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        # Mock Tushare API response (pandas DataFrame like actual API)
-        mock_response = pd.DataFrame(
-            {
-                "cal_date": ["20240101", "20240102", "20240103"],
-                "is_open": [0, 1, 1],
-            }
+        # Mock HTTP 响应
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["cal_date", "is_open"],
+                        "items": [["20240101", 0], ["20240102", 1], ["20240103", 1]],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_calendar("2024-01-01", "2024-01-03")
@@ -49,17 +50,22 @@ class TestTushareSourceCalendar:
         ]
 
     def test_fetch_calendar_empty_response(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_calendar handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        mock_response = pd.DataFrame({"cal_date": [], "is_open": []})
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
+        # Mock HTTP 响应 - 空数据
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {"fields": ["cal_date", "is_open"], "items": []},
+                },
+            )
+        )
 
         source = TushareSource()
         result = source.fetch_calendar("2024-01-01", "2024-01-03")
@@ -67,15 +73,15 @@ class TestTushareSourceCalendar:
         assert result.is_empty()
 
     def test_fetch_calendar_api_error_raises(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_calendar raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.side_effect = Exception("API error")
+        # Mock HTTP 响应 - API 错误
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(500, text="Internal Server Error")
+        )
 
         source = TushareSource()
 
@@ -87,26 +93,29 @@ class TestTushareSourceEtfBasic:
     """Tests for TushareSource.fetch_etf_basic."""
 
     def test_fetch_etf_basic_returns_dataframe(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_etf_basic returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        # Mock Tushare API response (pandas DataFrame like actual API)
-        # Note: API returns csname, not etf_name; exchange is already SSE/SZSE
-        mock_response = pd.DataFrame(
-            {
-                "ts_code": ["510300.SH", "159919.SZ"],
-                "csname": ["沪深300ETF", "沪深300ETF"],
-                "exchange": ["SSE", "SZSE"],
-                "list_date": ["20120706", "20190624"],
-            }
+        # Mock HTTP 响应 - fund_basic API
+        # 注意: fund_basic 返回 ts_code, name, exchange, list_date
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "name", "exchange", "list_date"],
+                        "items": [
+                            ["510300.SH", "沪深300ETF", "SSE", "20120706"],
+                            ["159919.SZ", "沪深300ETF", "SZSE", "20190624"],
+                        ],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_etf_basic()
@@ -120,7 +129,7 @@ class TestTushareSourceEtfBasic:
             "list_date": pl.Date,
         }
 
-        # Verify data transformation (exchange already in correct format)
+        # Verify data transformation
         assert result.to_dicts() == [
             {
                 "src_code": "510300.SH",
@@ -139,24 +148,25 @@ class TestTushareSourceEtfBasic:
         ]
 
     def test_fetch_etf_basic_empty_response(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_etf_basic handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        mock_response = pd.DataFrame(
-            {
-                "ts_code": [],
-                "csname": [],
-                "exchange": [],
-                "list_date": [],
-            }
+        # Mock HTTP 响应 - 空数据
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "name", "exchange", "list_date"],
+                        "items": [],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_etf_basic()
@@ -168,33 +178,52 @@ class TestTushareSourceEtfDaily:
     """Tests for TushareSource.fetch_etf_daily."""
 
     def test_fetch_etf_daily_returns_dataframe(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_etf_daily returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        # Mock Tushare API response (pandas DataFrame like actual API)
-        # Note: fund_daily API returns vol, amount, pct_chg
-        mock_response = pd.DataFrame(
-            {
-                "ts_code": ["510300.SH"],
-                "trade_date": ["20240102"],
-                "pre_close": [3.5],
-                "open": [3.5],
-                "high": [3.6],
-                "low": [3.4],
-                "close": [3.55],
-                "change": [0.05],
-                "pct_chg": [1.5],
-                "vol": [100000.0],
-                "amount": [355000.0],
-            }
+        # Mock HTTP 响应 - fund_daily API
+        # 注意: fund_daily 返回 vol, amount, pct_chg
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "trade_date",
+                            "pre_close",
+                            "open",
+                            "high",
+                            "low",
+                            "close",
+                            "change",
+                            "pct_chg",
+                            "vol",
+                            "amount",
+                        ],
+                        "items": [
+                            [
+                                "510300.SH",
+                                "20240102",
+                                "3.5",
+                                "3.5",
+                                "3.6",
+                                "3.4",
+                                "3.55",
+                                "0.05",
+                                "1.5",
+                                "100000.0",
+                                "355000.0",
+                            ],
+                        ],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_etf_daily("2024-01-02")
@@ -231,31 +260,37 @@ class TestTushareSourceEtfDaily:
         ]
 
     def test_fetch_etf_daily_empty_response(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_etf_daily handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        mock_response = pd.DataFrame(
-            {
-                "ts_code": [],
-                "trade_date": [],
-                "pre_close": [],
-                "open": [],
-                "high": [],
-                "low": [],
-                "close": [],
-                "change": [],
-                "pct_chg": [],
-                "vol": [],
-                "amount": [],
-            }
+        # Mock HTTP 响应 - 空数据
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "trade_date",
+                            "pre_close",
+                            "open",
+                            "high",
+                            "low",
+                            "close",
+                            "change",
+                            "pct_chg",
+                            "vol",
+                            "amount",
+                        ],
+                        "items": [],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_etf_daily("2024-01-02")
@@ -267,27 +302,35 @@ class TestTushareSourceStockBasic:
     """Tests for TushareSource.fetch_stock_basic."""
 
     def test_fetch_stock_basic_returns_dataframe(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_stock_basic returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        # Mock Tushare API response (pandas DataFrame like actual API)
-        # Note: stock_basic API returns ts_code, symbol, name, exchange, list_date
-        mock_response = pd.DataFrame(
-            {
-                "ts_code": ["000001.SZ", "600000.SH"],
-                "symbol": ["000001", "600000"],
-                "name": ["平安银行", "浦发银行"],
-                "exchange": ["SZSE", "SSE"],
-                "list_date": ["19910403", "19991110"],
-            }
+        # Mock HTTP 响应 - stock_basic API
+        # 注意: stock_basic API 返回 ts_code, symbol, name, exchange, list_date
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "symbol",
+                            "name",
+                            "exchange",
+                            "list_date",
+                        ],
+                        "items": [
+                            ["000001.SZ", "000001", "平安银行", "SZSE", "19910403"],
+                            ["600000.SH", "600000", "浦发银行", "SSE", "19991110"],
+                        ],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_stock_basic()
@@ -320,25 +363,31 @@ class TestTushareSourceStockBasic:
         ]
 
     def test_fetch_stock_basic_empty_response(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_stock_basic handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        mock_response = pd.DataFrame(
-            {
-                "ts_code": [],
-                "symbol": [],
-                "name": [],
-                "exchange": [],
-                "list_date": [],
-            }
+        # Mock HTTP 响应 - 空数据
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "symbol",
+                            "name",
+                            "exchange",
+                            "list_date",
+                        ],
+                        "items": [],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_stock_basic()
@@ -346,15 +395,15 @@ class TestTushareSourceStockBasic:
         assert result.is_empty()
 
     def test_fetch_stock_basic_api_error_raises(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_stock_basic raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.side_effect = Exception("API error")
+        # Mock HTTP 响应 - API 错误
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(500, text="Internal Server Error")
+        )
 
         source = TushareSource()
 
@@ -366,38 +415,57 @@ class TestTushareSourceStockDaily:
     """Tests for TushareSource.fetch_stock_daily."""
 
     def test_fetch_stock_daily_returns_dataframe(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_stock_daily returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        # Mock Tushare API response (pandas DataFrame like actual API)
-        # Note: daily API returns vol, amount, pct_chg (same as fund_daily)
-        mock_response = pd.DataFrame(
-            {
-                "ts_code": ["000001.SZ"],
-                "trade_date": ["20240102"],
-                "pre_close": [11.5],
-                "open": [11.5],
-                "high": [11.8],
-                "low": [11.3],
-                "close": [11.6],
-                "change": [0.1],
-                "pct_chg": [0.87],
-                "vol": [12500000.0],
-                "amount": [145000000.0],
-            }
+        # Mock HTTP 响应 - daily API
+        # 注意: daily API 返回 vol, amount, pct_chg
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "trade_date",
+                            "pre_close",
+                            "open",
+                            "high",
+                            "low",
+                            "close",
+                            "change",
+                            "pct_chg",
+                            "vol",
+                            "amount",
+                        ],
+                        "items": [
+                            [
+                                "000001.SZ",
+                                "20240102",
+                                "11.5",
+                                "11.5",
+                                "11.8",
+                                "11.3",
+                                "11.6",
+                                "0.1",
+                                "0.87",
+                                "12500000.0",
+                                "145000000.0",
+                            ],
+                        ],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_stock_daily("2024-01-02")
 
-        # Verify schema matches STOCK_DAILY_SCHEMA (same as ETF daily)
+        # Verify schema matches STOCK_DAILY_SCHEMA
         expected_schema = {
             "src_code": pl.String,
             "trade_date": pl.Date,
@@ -429,31 +497,37 @@ class TestTushareSourceStockDaily:
         ]
 
     def test_fetch_stock_daily_empty_response(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_stock_daily handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        mock_response = pd.DataFrame(
-            {
-                "ts_code": [],
-                "trade_date": [],
-                "pre_close": [],
-                "open": [],
-                "high": [],
-                "low": [],
-                "close": [],
-                "change": [],
-                "pct_chg": [],
-                "vol": [],
-                "amount": [],
-            }
+        # Mock HTTP 响应 - 空数据
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "trade_date",
+                            "pre_close",
+                            "open",
+                            "high",
+                            "low",
+                            "close",
+                            "change",
+                            "pct_chg",
+                            "vol",
+                            "amount",
+                        ],
+                        "items": [],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_stock_daily("2024-01-02")
@@ -461,15 +535,15 @@ class TestTushareSourceStockDaily:
         assert result.is_empty()
 
     def test_fetch_stock_daily_api_error_raises(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_stock_daily raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.side_effect = Exception("API error")
+        # Mock HTTP 响应 - API 错误
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(500, text="Internal Server Error")
+        )
 
         source = TushareSource()
 
@@ -481,25 +555,28 @@ class TestTushareSourceAdjFactor:
     """Tests for TushareSource.fetch_adj_factor."""
 
     def test_fetch_adj_factor_returns_dataframe(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_adj_factor returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        # Mock Tushare API response (pandas DataFrame like actual API)
-        # Note: adj_factor API returns ts_code, trade_date, adj_factor
-        mock_response = pd.DataFrame(
-            {
-                "ts_code": ["000001.SZ", "600000.SH"],
-                "trade_date": ["20240102", "20240102"],
-                "adj_factor": [1.2345, 1.5678],
-            }
+        # Mock HTTP 响应 - adj_factor API
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "trade_date", "adj_factor"],
+                        "items": [
+                            ["000001.SZ", "20240102", "1.2345"],
+                            ["600000.SH", "20240102", "1.5678"],
+                        ],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_adj_factor("2024-01-02")
@@ -513,7 +590,7 @@ class TestTushareSourceAdjFactor:
         }
         assert result.schema == expected_schema
 
-        # Verify data transformation
+        # Verify data transformation (knowledge_date = trade_date)
         assert result.to_dicts() == [
             {
                 "src_code": "000001.SZ",
@@ -530,23 +607,25 @@ class TestTushareSourceAdjFactor:
         ]
 
     def test_fetch_adj_factor_empty_response(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_adj_factor handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        mock_response = pd.DataFrame(
-            {
-                "ts_code": [],
-                "trade_date": [],
-                "adj_factor": [],
-            }
+        # Mock HTTP 响应 - 空数据
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "trade_date", "adj_factor"],
+                        "items": [],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_adj_factor("2024-01-02")
@@ -554,15 +633,15 @@ class TestTushareSourceAdjFactor:
         assert result.is_empty()
 
     def test_fetch_adj_factor_api_error_raises(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_adj_factor raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.side_effect = Exception("API error")
+        # Mock HTTP 响应 - API 错误
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(500, text="Internal Server Error")
+        )
 
         source = TushareSource()
 
@@ -574,26 +653,28 @@ class TestTushareSourceFundAdj:
     """Tests for TushareSource.fetch_fund_adj."""
 
     def test_fetch_fund_adj_returns_dataframe(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_fund_adj returns DataFrame with correct schema."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        # Mock Tushare API response (pandas DataFrame like actual API)
-        # Note: fund_adj API returns ts_code, trade_date, adj_factor
-        # (same as adj_factor)
-        mock_response = pd.DataFrame(
-            {
-                "ts_code": ["510300.SH", "159919.SZ"],
-                "trade_date": ["20240102", "20240102"],
-                "adj_factor": [1.0123, 1.0456],
-            }
+        # Mock HTTP 响应 - fund_adj API
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "trade_date", "adj_factor"],
+                        "items": [
+                            ["510300.SH", "20240102", "1.0123"],
+                            ["159919.SZ", "20240102", "1.0456"],
+                        ],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_fund_adj("2024-01-02")
@@ -607,7 +688,7 @@ class TestTushareSourceFundAdj:
         }
         assert result.schema == expected_schema
 
-        # Verify data transformation
+        # Verify data transformation (knowledge_date = trade_date)
         assert result.to_dicts() == [
             {
                 "src_code": "510300.SH",
@@ -624,23 +705,25 @@ class TestTushareSourceFundAdj:
         ]
 
     def test_fetch_fund_adj_empty_response(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_fund_adj handles empty response."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        mock_response = pd.DataFrame(
-            {
-                "ts_code": [],
-                "trade_date": [],
-                "adj_factor": [],
-            }
+        # Mock HTTP 响应 - 空数据
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "trade_date", "adj_factor"],
+                        "items": [],
+                    },
+                },
+            )
         )
-
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.return_value = mock_response
 
         source = TushareSource()
         result = source.fetch_fund_adj("2024-01-02")
@@ -648,15 +731,15 @@ class TestTushareSourceFundAdj:
         assert result.is_empty()
 
     def test_fetch_fund_adj_api_error_raises(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: pytest_mock.MockFixture,
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test fetch_fund_adj raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        mock_api = mocker.patch("ditto_datahub.sources.tushare.client.pro_api")
-        mock_api.return_value.query.side_effect = Exception("API error")
+        # Mock HTTP 响应 - API 错误
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(500, text="Internal Server Error")
+        )
 
         source = TushareSource()
 

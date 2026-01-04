@@ -31,7 +31,9 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
     msg = response_json.get("msg")
 
     # 检查认证错误
-    if code == 2002:
+    # 2002: 权限不足/无权限
+    # 40101: 用户Token格式错误或无效
+    if code in (2002, 40101):
         raise SourceAuthenticationError(
             message=(msg if isinstance(msg, str) else None) or "Tushare 认证失败",
             source="tushare",
