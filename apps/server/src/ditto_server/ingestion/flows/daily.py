@@ -16,7 +16,7 @@ Flow 功能：
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from prefect import flow, task
 
@@ -24,6 +24,7 @@ from ditto_server.ingestion.config.datasets import (
     Dataset,
     TaskTier,
     get_datasets_by_tier,
+    get_parallel_datasets,
 )
 from ditto_server.ingestion.tasks import (
     create_ingest_task_t0,
@@ -115,10 +116,10 @@ def daily_ingestion_flow(
 
     # 2. 提交 T0 任务（并行执行）
     t0_datasets = get_datasets_by_tier(TaskTier.T0_META)
-    t0_futures = []
+    t0_futures: list[Any] = []
     for dataset in t0_datasets:
-        t0_task = create_ingest_task_t0(dataset)  # type: ignore[assignment, attr-defined]
-        future = t0_task.submit(
+        t0_task = create_ingest_task_t0(dataset)
+        future = t0_task.submit(  # type: ignore[attr-defined]
             trade_date=trade_date,
             source=source,
             data_root=data_root,
@@ -126,34 +127,45 @@ def daily_ingestion_flow(
         )
         t0_futures.append(future)
 
-    # 3. 提交 T1 任务（并行执行，等待 T0 完成）
-    t1_datasets = get_datasets_by_tier(TaskTier.T1_INCREMENTAL)
-    t1_futures = []
+    # 3. 提交 T1 任务（按依赖层级并行执行）
+    # T1 数据集按依赖关系分层：
+    # - Level 0: etf_daily, stock_daily (只依赖 T0)
+    # - Level 1: adj_factor (依赖 stock_daily), fund_adj (依赖 etf_daily)
+    t1_levels = get_parallel_datasets(TaskTier.T1_INCREMENTAL)
+    t1_futures: list[Any] = []
+    level_futures: list[list[Any]] = []
 
-    # T1 日行情任务
-    for dataset in t1_datasets:
-        t1_task = create_ingest_task_t1_bars(dataset)  # type: ignore[assignment, attr-defined]
-        future = t1_task.submit(
-            trade_date=trade_date,
-            source=source,
-            data_root=data_root,
-            force=force,
-            wait_for=t0_futures,  # 等待所有 T0 任务完成
-        )
-        t1_futures.append(future)
+    for level_idx, level in enumerate(t1_levels):
+        # 确定等待的任务：第一层等待 T0，后续层等待前面所有层
+        if level_idx == 0:
+            wait_for_futures = t0_futures
+        else:
+            # 收集前面所有层的 futures
+            wait_for_futures_inner: list[Any] = []
+            for prev_level in level_futures:
+                wait_for_futures_inner.extend(prev_level)
+            wait_for_futures = wait_for_futures_inner
 
-    # T1 复权因子任务
-    adj_datasets = [Dataset.ADJ_FACTOR, Dataset.FUND_ADJ]
-    for dataset in adj_datasets:
-        t1_adj_task = create_ingest_task_t1_adj(dataset)  # type: ignore[assignment, attr-defined]
-        future = t1_adj_task.submit(
-            trade_date=trade_date,
-            source=source,
-            data_root=data_root,
-            force=force,
-            wait_for=t0_futures,  # 等待所有 T0 任务完成
-        )
-        t1_futures.append(future)
+        current_level_futures: list[Any] = []
+        for dataset in level:
+            # 根据数据集类型选择对应的 task 创建函数
+            if dataset in [Dataset.ADJ_FACTOR, Dataset.FUND_ADJ]:
+                task = create_ingest_task_t1_adj(dataset)
+            else:
+                task = create_ingest_task_t1_bars(dataset)
+
+            future = task.submit(  # type: ignore[attr-defined]
+                trade_date=trade_date,
+                source=source,
+                data_root=data_root,
+                force=force,
+                wait_for=wait_for_futures,
+            )
+            current_level_futures.append(future)
+            t1_futures.append(future)
+
+        # 记录本层的 futures，供后续层依赖
+        level_futures.append(current_level_futures)
 
     # 4. 收集结果
     t0_results = {}
