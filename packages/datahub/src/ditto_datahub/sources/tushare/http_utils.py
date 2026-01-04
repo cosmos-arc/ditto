@@ -1,8 +1,9 @@
 """Tushare HTTP 工具函数."""
 
-from typing import NoReturn
+from typing import NoReturn, cast
 
 import httpx
+import polars as pl
 
 from ditto_datahub.sources.base import (
     SourceAuthenticationError,
@@ -129,3 +130,26 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
         source="tushare",
         original_error=str(error),
     )
+
+
+def response_to_dataframe(response_data: dict[str, object]) -> pl.DataFrame:
+    """
+    将 Tushare API 响应转换为 polars DataFrame。
+
+    Args:
+        response_data: API 响应的 data 字段
+
+    Returns:
+        polars DataFrame
+
+    """
+    fields = cast(list[str], response_data["fields"])
+    items = cast(list[list[object]], response_data["items"])
+
+    # items 是按行组织的列表，转换为按列组织的字典
+    if not items:
+        return pl.DataFrame(schema=fields)
+
+    # 转置数据：从行式转为列式
+    data = {col: [row[i] for row in items] for i, col in enumerate(fields)}
+    return pl.DataFrame(data)
