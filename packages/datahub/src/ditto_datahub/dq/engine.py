@@ -107,6 +107,7 @@ class DQEngine:
         dataset: str,
         trade_date: str,
         hub: Any,  # DataHub instance
+        asset_class: Literal["stock", "etf", "index"] | None = None,
         market_wide: bool = False,
     ) -> DQResult:
         """
@@ -116,6 +117,7 @@ class DQEngine:
             dataset: Dataset identifier
             trade_date: Trade date to check (YYYY-MM-DD)
             hub: DataHub instance for historical data access
+            asset_class: Asset class for market-wide queries (stock/etf/index)
             market_wide: Whether to use market-wide query mode
 
         Returns:
@@ -136,6 +138,7 @@ class DQEngine:
                 trade_date=trade_date,
                 rules=dataset_rules.l3_statistical,
                 hub=hub,
+                asset_class=asset_class,
                 market_wide=market_wide,
             )
             issues.extend(l3_issues)

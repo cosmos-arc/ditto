@@ -219,6 +219,169 @@ def mock_hub_with_calendar():
     return hub
 
 
+class TestAssetClassParameter:
+    """Test cases for asset_class parameter."""
+
+    def test_zscore_with_asset_class(self):
+        """Test Z-score check correctly passes asset_class to hub.bars.get."""
+        mock_hub = MagicMock()
+
+        # Mock historical and current data
+        historical_data = pl.DataFrame(
+            {
+                "sid": [1, 2],
+                "trade_date": ["2024-01-01", "2024-01-01"],
+                "close": [100.0, 200.0],
+            }
+        )
+        current_data = pl.DataFrame(
+            {
+                "sid": [1],
+                "trade_date": ["2024-01-02"],
+                "close": [105.0],
+            }
+        )
+
+        # Use MagicMock's side_effect to track calls
+        call_count = [0]
+        call_history = []
+
+        def mock_bars_get(start, end, **kwargs):
+            call_count[0] += 1
+            call_history.append({"start": start, "end": end, "kwargs": kwargs})
+            if start == end == "2024-01-02":
+                return current_data
+            return historical_data
+
+        mock_hub.bars.get = mock_bars_get
+
+        rule = {
+            "rule": "zscore",
+            "column": "close",
+            "window": 60,
+            "threshold": 3.0,
+        }
+
+        checker = StatisticalChecker()
+        checker._check_zscore(
+            dataset="stock_daily",
+            trade_date="2024-01-02",
+            rule=rule,
+            hub=mock_hub,
+            asset_class="stock",
+            market_wide=True,
+        )
+
+        # Verify hub.bars.get was called with asset_class parameter
+        assert call_count[0] >= 2
+        assert len(call_history) >= 2
+
+        # Check first call (historical data)
+        first_call = call_history[0]
+        assert "asset_class" in first_call["kwargs"]
+        assert first_call["kwargs"]["asset_class"] == "stock"
+        assert first_call["kwargs"]["market_wide"]
+
+        # Check second call (current data)
+        second_call = call_history[1]
+        assert "asset_class" in second_call["kwargs"]
+        assert second_call["kwargs"]["asset_class"] == "stock"
+        assert second_call["kwargs"]["market_wide"]
+
+    def test_completeness_with_asset_class(self):
+        """Test completeness check correctly passes asset_class to hub.bars.get."""
+        mock_hub = MagicMock()
+
+        # Mock calendar data
+        calendar_data = pl.DataFrame(
+            {
+                "trade_date": ["2024-01-01", "2024-01-02"],
+                "is_open": [True, True],
+            }
+        )
+
+        # Mock bars data
+        bars_data = pl.DataFrame(
+            {
+                "trade_date": ["2024-01-01", "2024-01-02"],
+                "close": [100.0, 105.0],
+            }
+        )
+
+        mock_hub.calendar.get.return_value = calendar_data
+        mock_hub.bars.get.return_value = bars_data
+
+        rule = {
+            "rule": "completeness",
+            "lookback_days": 5,
+        }
+
+        checker = StatisticalChecker()
+        checker._check_completeness(
+            dataset="stock_daily",
+            trade_date="2024-01-02",
+            rule=rule,
+            hub=mock_hub,
+            asset_class="stock",
+            market_wide=True,
+        )
+
+        # Verify hub.bars.get was called with asset_class parameter
+        mock_hub.bars.get.assert_called_once()
+        call_kwargs = mock_hub.bars.get.call_args.kwargs
+        assert "asset_class" in call_kwargs
+        assert call_kwargs["asset_class"] == "stock"
+        assert call_kwargs["market_wide"]
+
+    def test_check_passes_asset_class_to_rule_checkers(self):
+        """Test check() method passes asset_class to individual rule checkers."""
+        mock_hub = MagicMock()
+
+        # Mock data to avoid errors
+        historical_data = pl.DataFrame(
+            {
+                "sid": [1, 2],
+                "trade_date": ["2024-01-01", "2024-01-01"],
+                "close": [100.0, 200.0],
+            }
+        )
+
+        # Track calls to hub.bars.get
+        call_history = []
+
+        def mock_bars_get(start, end, **kwargs):
+            call_history.append({"start": start, "end": end, "kwargs": kwargs})
+            return historical_data
+
+        mock_hub.bars.get = mock_bars_get
+
+        rules = [
+            {
+                "rule": "zscore",
+                "column": "close",
+                "window": 60,
+                "threshold": 3.0,
+            }
+        ]
+
+        checker = StatisticalChecker()
+        checker.check(
+            dataset="stock_daily",
+            trade_date="2024-01-02",
+            rules=rules,
+            hub=mock_hub,
+            asset_class="stock",
+            market_wide=True,
+        )
+
+        # Verify hub.bars.get was called with asset_class through the entire call chain
+        assert len(call_history) > 0
+        first_call = call_history[0]
+        assert "asset_class" in first_call["kwargs"]
+        assert first_call["kwargs"]["asset_class"] == "stock"
+        assert first_call["kwargs"]["market_wide"]
+
+
 class TestCompletenessChecker:
     """Test cases for completeness checker."""
 

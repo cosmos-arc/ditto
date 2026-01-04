@@ -1,7 +1,7 @@
 """DQ batch check tasks for L3 statistical anomaly detection."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import ditto_datahub
 from ditto_datahub import DataHub
@@ -78,13 +78,26 @@ def dq_batch_check(
         all_issues = []
         results_by_dataset = {}
 
+        # 定义 dataset 到 asset_class 的映射
+        dataset_asset_class: dict[str, Literal["stock", "etf", "index"]] = {
+            "stock_daily": "stock",
+            "etf_daily": "etf",
+            "index_daily": "index",
+            "adj_factor": "stock",
+            "fund_adj": "etf",
+        }
+
         # 执行 L3 检查
         for dataset in datasets:
             try:
+                # 推断 asset_class
+                asset_class = dataset_asset_class.get(dataset)
+
                 result = engine.check_statistical(
                     dataset=dataset,
                     trade_date=trade_date,  # type: ignore[arg-type]
                     hub=hub,
+                    asset_class=asset_class,
                     market_wide=market_wide,
                 )
 
