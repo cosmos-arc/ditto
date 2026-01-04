@@ -7,11 +7,41 @@ Security Mapper 服务。
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Literal
 
 import polars as pl
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_foundation import logger
+
+
+def _format_date_for_sqlite(d: date | str | None) -> str:
+    """
+    转换日期为 SQLite 可绑定的字符串.
+
+    Args:
+        d: 日期对象、字符串或 None
+
+    Returns:
+        可绑定的日期字符串 (YYYYMMDD 或 YYYY-MM-DD)
+
+    Examples:
+        >>> _format_date_for_sqlite(date(2024, 1, 2))
+        '20240102'
+        >>> _format_date_for_sqlite("2024-01-02")
+        '20240102'
+        >>> _format_date_for_sqlite("19900101")
+        '19900101'
+
+    """
+    if d is None:
+        return "19900101"
+    if isinstance(d, date):
+        return d.strftime("%Y%m%d")
+    # 处理 "YYYY-MM-DD" 格式
+    if isinstance(d, str) and "-" in d:
+        return d.replace("-", "")
+    return str(d)
 
 
 @dataclass(frozen=True)
@@ -289,7 +319,7 @@ class SecurityMapper:
             symbol = str(row.get("symbol", params.src_code))
             name = str(row.get("name", params.src_code))
             exchange = str(row.get("exchange", "UNKNOWN"))
-            list_date = str(row.get("list_date", "19900101"))
+            list_date = _format_date_for_sqlite(row.get("list_date"))
 
         self._store.register(
             sid=params.sid,
