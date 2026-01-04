@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import tomllib
 from pathlib import Path
 
@@ -41,7 +40,6 @@ def _get_tushare_token(token: str | None = None) -> str:
     1. Provided token parameter
     2. keyring (recommended)
     3. ~/.ditto/secrets.toml (fallback)
-    4. TUSHARE_TOKEN env var (legacy)
 
     Args:
         token: Explicitly provided token.
@@ -94,16 +92,6 @@ def _get_tushare_token(token: str | None = None) -> str:
                 return config_token
         except Exception:
             pass
-
-    # 4. Try TUSHARE_TOKEN env var (legacy)
-    if env_token := os.getenv("TUSHARE_TOKEN"):
-        assert env_token is not None
-        logger.debug(
-            "Token loaded from env var",
-            event="token_loaded",
-            source="env_var",
-        )
-        return env_token
 
     # No token found
     raise SourceConfigurationError(
