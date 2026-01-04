@@ -64,7 +64,7 @@ class TestStatisticalChecker:
         )
 
         # Setup mock to return different data for current date
-        def mock_bars_get(start, end):
+        def mock_bars_get(start, end, **kwargs):
             if start == end == trade_date_str:
                 return current_data
             # Return historical data
