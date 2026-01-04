@@ -72,7 +72,7 @@ def backfill_flow(  # noqa: PLR0913
     """
     from ditto_datahub import DataHub  # noqa: PLC0415
 
-    from ditto_server.ingestion.services.coordinator import (
+    from ditto_server.ingestion.services.coordinator import (  # noqa: PLC0415
         IngestionCoordinator,
     )
 
@@ -146,7 +146,7 @@ def backfill_missing_flow(
     """
     from ditto_datahub import DataHub  # noqa: PLC0415
 
-    from ditto_server.ingestion.services.coordinator import (
+    from ditto_server.ingestion.services.coordinator import (  # noqa: PLC0415
         IngestionCoordinator,
     )
 

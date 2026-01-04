@@ -82,9 +82,11 @@ def create_ingest_task(dataset: Dataset) -> Callable[..., Any]:
 
         """
         # 延迟导入避免循环依赖
-        from ditto_datahub import DataHub
+        from ditto_datahub import DataHub  # noqa: PLC0415
 
-        from ditto_server.ingestion.services.coordinator import IngestionCoordinator
+        from ditto_server.ingestion.services.coordinator import (  # noqa: PLC0415
+            IngestionCoordinator,
+        )
 
         hub = DataHub(data_root=data_root)
         try:

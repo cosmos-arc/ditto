@@ -43,7 +43,7 @@ def retry_failed_flow(
     """
     from ditto_datahub import DataHub  # noqa: PLC0415
 
-    from ditto_server.ingestion.services.coordinator import (
+    from ditto_server.ingestion.services.coordinator import (  # noqa: PLC0415
         IngestionCoordinator,
     )
 
@@ -113,10 +113,10 @@ def repair_holes_flow(
     """
     from ditto_datahub import DataHub  # noqa: PLC0415
 
-    from ditto_server.ingestion.services.backfill import (
+    from ditto_server.ingestion.services.backfill import (  # noqa: PLC0415
         BackfillManager,
     )
-    from ditto_server.ingestion.services.coordinator import (
+    from ditto_server.ingestion.services.coordinator import (  # noqa: PLC0415
         IngestionCoordinator,
     )
 
