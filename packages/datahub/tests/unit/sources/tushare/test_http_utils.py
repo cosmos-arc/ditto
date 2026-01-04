@@ -73,3 +73,18 @@ class TestValidateTushareResponse:
             validate_tushare_response(response_json)
 
         assert "缺少 data 字段" in str(exc_info.value)
+
+    def test_invalid_data_type_raises_fetch_error(self):
+        """data 字段类型错误抛出 SourceFetchError."""
+        # Arrange
+        response_json = {
+            "code": 0,
+            "msg": None,
+            "data": "not_a_dict",  # 字符串而非 dict
+        }
+
+        # Act & Assert
+        with pytest.raises(SourceFetchError) as exc_info:
+            validate_tushare_response(response_json)
+
+        assert "类型错误" in str(exc_info.value)
