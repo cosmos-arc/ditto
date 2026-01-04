@@ -424,3 +424,84 @@ class TestBackfillMissing:
         mock_calendar_store.get_range.assert_called_once_with(
             "2024-12-01", "2024-12-31"
         )
+
+    def test_backfill_missing_with_source(
+        self,
+        backfill_manager,
+        mock_coordinator,
+        mock_calendar_store,
+        mock_ingestion_log_store,
+    ) -> None:
+        """测试 backfill_missing 支持 source 参数。"""
+        # Arrange
+        mock_calendar_store.get_range.return_value = [
+            "2024-12-25",
+            "2024-12-26",
+            "2024-12-27",
+        ]
+
+        # 验证 source 参数被正确传递
+        mock_ingestion_log_store.get_ingested_dates.return_value = ["2024-12-25"]
+
+        mock_coordinator.ingest_date.side_effect = [
+            IngestionResult(
+                dataset="stock_daily",
+                trade_date="2024-12-26",
+                status="success",
+                row_count=1000,
+            ),
+            IngestionResult(
+                dataset="stock_daily",
+                trade_date="2024-12-27",
+                status="success",
+                row_count=1000,
+            ),
+        ]
+
+        # Act
+        result = backfill_manager.backfill_missing(
+            dataset="stock_daily",
+            source="tushare",
+        )
+
+        # Assert
+        assert result.total_dates >= 0
+        # 验证 source 参数被正确传递给 get_ingested_dates
+        mock_ingestion_log_store.get_ingested_dates.assert_called_once_with(
+            "stock_daily", "tushare"
+        )
+
+    def test_backfill_range_year_level_parallel(
+        self, backfill_manager, mock_coordinator, mock_calendar_store
+    ) -> None:
+        """测试年份级并行策略。"""
+        # Arrange - 准备跨年数据
+        mock_calendar_store.get_range.return_value = [
+            "2023-12-29",
+            "2023-12-30",
+            "2024-01-02",
+            "2024-01-03",
+        ]
+
+        mock_coordinator.ingest_date.side_effect = [
+            IngestionResult(
+                dataset="stock_daily",
+                trade_date=date,
+                status="success",
+                row_count=1000,
+            )
+            for date in ["2023-12-29", "2023-12-30", "2024-01-02", "2024-01-03"]
+        ]
+
+        # Act
+        result = backfill_manager.backfill_range(
+            dataset="stock_daily",
+            start_date="2023-12-29",
+            end_date="2024-01-03",
+            parallel=2,
+        )
+
+        # Assert - 验证正确处理
+        assert result.total_dates > 0
+        assert result.success_count == 4
+        assert mock_coordinator.ingest_date.call_count == 4

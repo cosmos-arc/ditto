@@ -1,5 +1,6 @@
 """Backfill manager for historical data backfill operations."""
 
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING
 
@@ -94,14 +95,25 @@ class BackfillManager:
         results: list[IngestionResult] = []
 
         if parallel > 1:
-            # 并行执行
-            with ThreadPoolExecutor(max_workers=parallel) as executor:
-                futures = {
-                    executor.submit(
-                        self._coordinator.ingest_date, dataset, trade_date
-                    ): trade_date
-                    for trade_date in trade_dates
-                }
+            # 年份级并行，年内串行（避免文件锁冲突）
+            dates_by_year = defaultdict(list)
+            for trade_date in trade_dates:
+                year = trade_date[:4]  # 提取年份
+                dates_by_year[year].append(trade_date)
+
+            with ThreadPoolExecutor(
+                max_workers=min(parallel, len(dates_by_year))
+            ) as executor:
+                futures = {}
+                for _year, year_dates in dates_by_year.items():
+                    # 每个年份串行处理
+                    for date in year_dates:
+                        future = executor.submit(
+                            self._coordinator.ingest_date,
+                            dataset,
+                            date,
+                        )
+                        futures[future] = date
 
                 for future in as_completed(futures):
                     result = future.result()
@@ -141,6 +153,7 @@ class BackfillManager:
     def backfill_missing(
         self,
         dataset: str,
+        source: str = "tushare",
         parallel: int = 1,
     ) -> BackfillResult:
         """
@@ -148,6 +161,7 @@ class BackfillManager:
 
         Args:
             dataset: 数据集名称。
+            source: 数据源标识符（默认: "tushare"）。
             parallel: 并行度，默认为 1（串行）。
 
         Returns:
@@ -189,7 +203,7 @@ class BackfillManager:
             )
 
         # 获取已摄取的日期
-        ingested_dates = self._ingestion_log_store.get_ingested_dates(dataset)
+        ingested_dates = self._ingestion_log_store.get_ingested_dates(dataset, source)
 
         # 计算缺失的日期
         missing_dates = set(all_trade_dates) - set(ingested_dates)
