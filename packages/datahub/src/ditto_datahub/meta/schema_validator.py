@@ -21,7 +21,6 @@ __all__ = ["ValidationError", "validate_dataframe_schema"]
 # Dataset schema mapping
 DATASET_SCHEMAS: dict[str, dict[str, type[pl.DataType]]] = {
     "stock_daily": STOCK_DAILY_SCHEMA,
-    "market_daily": STOCK_DAILY_SCHEMA,  # Alias for backwards compatibility
     "etf_daily": ETF_DAILY_SCHEMA,
     "index_daily": INDEX_DAILY_SCHEMA,
     "adj_factor": ADJ_FACTOR_SCHEMA,
