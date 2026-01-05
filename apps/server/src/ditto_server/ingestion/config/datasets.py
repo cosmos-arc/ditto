@@ -111,23 +111,12 @@ class DatasetConfig(BaseModel):
         description="Critical fields for quality validation",
     )
 
-    # Extended fields for backward compatibility
+    # Extended fields
     task_name: str = Field(..., description="Prefect task name")
     requires_trade_date: bool = Field(
         default=False,
         description="Whether task requires trade_date parameter",
     )
-
-    # Backward compatibility aliases
-    @property
-    def name(self) -> Dataset:  # pragma: no cover
-        """Backward compatibility property for name field."""
-        return self.dataset
-
-    @property
-    def dependencies(self) -> list[Dataset]:  # pragma: no cover
-        """Backward compatibility property for dependencies field."""
-        return self.depends_on
 
 
 # ============ Dataset Registry ============
