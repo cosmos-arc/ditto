@@ -16,7 +16,7 @@ def test_config_default_values() -> None:
 
 def test_config_from_env(monkeypatch) -> None:
     """Test loading configuration from environment variables."""
-    monkeypatch.setenv("DITTO_DATA_ROOT", "/tmp/data")
+    monkeypatch.setenv("DITTO_DATA_DIR", "/tmp/data")
     monkeypatch.setenv("DITTO_DEFAULT_SOURCE", "akshare")
     monkeypatch.setenv("DITTO_AUTO_REGISTER_SECURITIES", "false")
 

@@ -345,7 +345,7 @@ PORT=8000
 SECRET_KEY=your_secret_key_here
 
 # 数据存储
-DITTO_DATA_ROOT=data
+DITTO_DATA_DIR=data
 
 # 风险管理
 KILL_SWITCH_ENABLED=true

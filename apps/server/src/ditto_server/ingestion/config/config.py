@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,9 +20,13 @@ class IngestionConfig(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
-    data_root: Path = Path("data")
+    data_root: Path = Field(
+        default=Path("data"),
+        validation_alias="DITTO_DATA_DIR",
+    )
     """Root directory for DataHub storage."""
 
     default_source: str = "tushare"
