@@ -44,10 +44,6 @@ class SQLitePool:
         # Type is correctly inferred but mypy sees Any from threading.local
         return self._local.conn  # type: ignore[no-any-return]
 
-    def _get_connection(self) -> sqlite3.Connection:
-        """Get thread-local connection (deprecated, use get_connection)."""
-        return self.get_connection()
-
     def execute(self, sql: str, params: list[Any] | None = None) -> sqlite3.Cursor:
         """Execute SQL query."""
         conn = self.get_connection()
