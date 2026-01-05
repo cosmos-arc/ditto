@@ -1,5 +1,7 @@
 """Tests for SecurityMapper."""
 
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
 from unittest.mock import Mock
 
 import polars as pl
@@ -7,6 +9,31 @@ import pytest
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_foundation.observability import Mode, init, reset_for_testing
 from ditto_server.ingestion.services.security_mapper import SecurityMapper
+
+
+@pytest.fixture
+def mock_sid_allocator():
+    """创建 Mock SidAllocator。"""
+    allocator = Mock()
+
+    # 使用计数器模拟递增的 SID 分配
+    stock_counter = [1_000_000]
+    etf_counter = [2_000_000]
+
+    def allocate_side_effect(asset_class: str) -> int:
+        if asset_class == "stock":
+            sid = stock_counter[0]
+            stock_counter[0] += 1
+            return sid
+        elif asset_class == "etf":
+            sid = etf_counter[0]
+            etf_counter[0] += 1
+            return sid
+        else:
+            raise ValueError(f"Unknown asset class: {asset_class}")
+
+    allocator.allocate.side_effect = allocate_side_effect
+    return allocator
 
 
 @pytest.fixture(autouse=True)
@@ -28,9 +55,9 @@ def mock_security_store():
 
 
 @pytest.fixture
-def mapper(mock_security_store):
+def mapper(mock_security_store, mock_sid_allocator):
     """创建 SecurityMapper 实例。"""
-    return SecurityMapper(mock_security_store)
+    return SecurityMapper(mock_security_store, mock_sid_allocator)
 
 
 class TestMapOrCreate:
@@ -437,10 +464,10 @@ class TestEnrichDataFrame:
         assert_frame_equal(result, expected)
         mock_security_store.resolve_sid.assert_not_called()
 
-    def test_uses_custom_source(self, mock_security_store):
+    def test_uses_custom_source(self, mock_security_store, mock_sid_allocator):
         """使用自定义 source。"""
         # Arrange
-        mapper = SecurityMapper(mock_security_store)
+        mapper = SecurityMapper(mock_security_store, mock_sid_allocator)
         mock_security_store.resolve_sid.return_value = 1000001
 
         df = pl.DataFrame(
@@ -471,3 +498,65 @@ def assert_frame_equal(left, right):
     assert left.columns == right.columns
     for col in left.columns:
         assert left[col].to_list() == right[col].to_list()
+
+
+class TestConcurrency:
+    """测试并发场景下的 SID 分配。"""
+
+    def test_concurrent_allocation_with_multiple_mapper_instances(
+        self, mock_security_store, mock_sid_allocator
+    ):
+        """测试多个 SecurityMapper 实例并发分配 SID（模拟多进程场景）。
+
+        这个测试模拟真实的生产环境场景：
+        - 多个进程/协程同时运行摄取任务
+        - 每个进程创建自己的 SecurityMapper 实例
+        - 所有实例共享同一个 SidAllocator（线程安全）
+        - 验证 SID 分配是唯一的且没有冲突
+        """
+        # Arrange
+        mock_security_store.resolve_sid.return_value = None  # 都不存在
+
+        # 创建线程安全的 sid 集合来跟踪分配的 SID
+        allocated_sids: set[int] = set()
+        sid_lock = Lock()
+
+        def allocate_with_new_mapper(idx: int) -> int:
+            """使用新的 SecurityMapper 实例分配 SID。"""
+            # 每个线程创建自己的 mapper 实例（模拟多进程场景）
+            # 但所有实例共享同一个 SidAllocator（线程安全）
+            local_mapper = SecurityMapper(mock_security_store, mock_sid_allocator)
+
+            metadata = pl.DataFrame(
+                {
+                    "ts_code": [f"00000{idx}.SZ"],
+                    "symbol": [f"Stock{idx}"],
+                    "name": [f"Test Stock {idx}"],
+                    "exchange": ["SZ"],
+                    "list_date": ["19900101"],
+                }
+            )
+            result = local_mapper.map_or_create(
+                src_codes=[f"00000{idx}.SZ"],
+                source="tushare",
+                asset_class="stock",
+                metadata=metadata,
+            )
+            sid = result[f"00000{idx}.SZ"]
+
+            # 线程安全地添加到集合
+            with sid_lock:
+                if sid in allocated_sids:
+                    raise AssertionError(f"SID {sid} 被重复分配!")
+                allocated_sids.add(sid)
+
+            return sid
+
+        # Act: 10 个线程并发分配 SID，每个线程使用独立的 mapper 实例
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(allocate_with_new_mapper, i) for i in range(10)]
+            results = [f.result() for f in futures]
+
+        # Assert: 所有 SID 应该唯一
+        assert len(set(results)) == 10, f"所有 SID 应该唯一, 但得到: {results}"
+        assert len(results) == 10, "应该分配 10 个 SID"

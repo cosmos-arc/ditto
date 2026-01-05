@@ -53,6 +53,32 @@ def mock_hub():
     """创建 Mock DataHub。"""
     hub = Mock()
     hub.ingestion_log = Mock(spec=IngestionLogStore)
+
+    # 添加 SidAllocator mock
+    mock_sid_allocator = Mock()
+    stock_counter = [1_000_000]
+    etf_counter = [2_000_000]
+
+    def allocate_side_effect(asset_class: str) -> int:
+        if asset_class == "stock":
+            sid = stock_counter[0]
+            stock_counter[0] += 1
+            return sid
+        elif asset_class == "etf":
+            sid = etf_counter[0]
+            etf_counter[0] += 1
+            return sid
+        else:
+            raise ValueError(f"Unknown asset class: {asset_class}")
+
+    mock_sid_allocator.allocate.side_effect = allocate_side_effect
+    hub.sid_allocator = mock_sid_allocator
+
+    # 添加 SecurityStore mock（SecurityMapper 需要）
+    hub.security_store = Mock()
+    hub.security_store.resolve_sid.return_value = None  # 默认返回 None（不存在）
+    hub.security_store.register.return_value = 1000001  # 返回注册的 SID
+
     return hub
 
 

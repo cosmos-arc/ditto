@@ -8,11 +8,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import polars as pl
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_foundation import logger
+
+if TYPE_CHECKING:
+    from ditto_datahub.runtime.sid_allocator import SidAllocator
 
 
 def _format_date_for_sqlite(d: date | str | None) -> str:
@@ -60,33 +63,29 @@ class SecurityMapper:
     """
     管理 src_code → sid 映射,为新证券自动分配 SID。
 
-    注意: 当前实现非线程安全,多进程环境下应使用单实例。
-    并发场景建议在调用层协调或使用分布式锁。
+    使用线程安全的 SidAllocator 进行 SID 分配，支持多进程/多线程并发场景。
 
     SID 分配规则:
     - stock: 1_000_000 - 1_999_999
     - etf: 2_000_000 - 2_999_999
     """
 
-    # SID 范围配置
-    STOCK_SID_START = 1_000_000
-    ETF_SID_START = 2_000_000
-
     def __init__(
         self,
         security_store: SecurityStore,
+        sid_allocator: SidAllocator,
     ) -> None:
         """
         初始化 SecurityMapper。
 
         Args:
             security_store: SecurityStore 实例,用于查询和注册证券。
+            sid_allocator: 线程安全的 SID 分配器。
 
         """
         self._store = security_store
+        self._sid_allocator = sid_allocator
         self._cache: dict[str, int] = {}  # {src_code: sid}
-        self._stock_sid_counter = self.STOCK_SID_START
-        self._etf_sid_counter = self.ETF_SID_START
 
     def map_or_create(
         self,
@@ -258,7 +257,9 @@ class SecurityMapper:
 
     def _allocate_sid(self, asset_class: Literal["stock", "etf"]) -> int:
         """
-        分配新的 SID。
+        分配新的 SID（线程安全）。
+
+        委托给 SidAllocator 进行原子分配，确保并发安全。
 
         Args:
             asset_class: 资产类别。
@@ -267,16 +268,7 @@ class SecurityMapper:
             新分配的 SID。
 
         """
-        if asset_class == "stock":
-            sid = self._stock_sid_counter
-            self._stock_sid_counter += 1
-        elif asset_class == "etf":
-            sid = self._etf_sid_counter
-            self._etf_sid_counter += 1
-        else:
-            raise ValueError(f"不支持的资产类别: {asset_class}")
-
-        return sid
+        return self._sid_allocator.allocate(asset_class)
 
     def _register_security(self, params: SecurityRegistrationParams) -> None:
         """

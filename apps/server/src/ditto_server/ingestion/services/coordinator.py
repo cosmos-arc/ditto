@@ -64,7 +64,7 @@ class IngestionCoordinator:
         self._source_name = source_name
         self._metadata_manager = MetadataManager(log_store=hub.ingestion_log)
         self._security_mapper = security_mapper or SecurityMapper(
-            security_store=hub.security_store
+            security_store=hub.security_store, sid_allocator=hub.sid_allocator
         )
 
     def ingest_date(  # noqa: PLR0911
@@ -317,7 +317,7 @@ class IngestionCoordinator:
                 )
 
             # 使用 AdjFactorRepository 写入（带文件锁保护）
-            file_path, checksum = self._hub.adj_factor.write(  # type: ignore[attr-defined]
+            file_path, checksum = self._hub.adj_factor_store.write(
                 dataset=dataset,
                 df=df,
                 year=year,
