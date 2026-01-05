@@ -1,7 +1,7 @@
 """Tests for ingestion monitoring task."""
 
 import pytest
-from ditto_datahub.dq.result import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_datahub.dq.models import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_foundation.observability import Mode, init, reset_for_testing
 from ditto_server.ingestion.tasks.monitoring import monitor_ingestion_quality
 
