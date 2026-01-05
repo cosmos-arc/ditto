@@ -184,11 +184,11 @@ class TestDQConfig:
     def test_get_rules(self) -> None:
         """Test get_rules method."""
         dataset_rules = DatasetRules(
-            dataset="market_daily",
+            dataset="stock_daily",
             description="Market daily",
         )
 
-        config = DQConfig(datasets={"market_daily": dataset_rules})
+        config = DQConfig(datasets={"stock_daily": dataset_rules})
 
-        assert config.get_rules("market_daily") is dataset_rules
+        assert config.get_rules("stock_daily") is dataset_rules
         assert config.get_rules("nonexistent") is None

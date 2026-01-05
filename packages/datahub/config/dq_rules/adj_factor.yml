@@ -60,5 +60,5 @@ l3_statistical:
 
   - rule: consistency
     name: cross_check_with_price
-    reference_dataset: market_daily
+    reference_dataset: stock_daily
     message: "复权因子与价格数据存在不一致"

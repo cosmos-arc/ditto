@@ -48,13 +48,13 @@ class TestObservabilityBarsStore:
                 "volume": [1000],
             }
         )
-        self.store.write("market_daily", test_df, 2024)
+        self.store.write("stock_daily", test_df, 2024)
 
         # Clear previous spans
         _ = get_recorded_spans()
 
         # Perform read operation
-        self.store.read("market_daily", start_date="2024-01-01", end_date="2024-01-31")
+        self.store.read("stock_daily", start_date="2024-01-01", end_date="2024-01-31")
 
         # Verify span was created
         spans = get_recorded_spans()
@@ -80,7 +80,7 @@ class TestObservabilityBarsStore:
                 "volume": [1000],
             }
         )
-        self.store.write("market_daily", test_df, 2024)
+        self.store.write("stock_daily", test_df, 2024)
 
         # Verify span was created
         spans = get_recorded_spans()
@@ -103,13 +103,13 @@ class TestObservabilityBarsStore:
                 "volume": [1000, 2000],
             }
         )
-        self.store.write("market_daily", test_df, 2024)
+        self.store.write("stock_daily", test_df, 2024)
 
         # Clear previous metrics
         _ = get_recorded_metrics()
 
         # Perform read operation
-        self.store.read("market_daily", start_date="2024-01-01", end_date="2024-01-31")
+        self.store.read("stock_daily", start_date="2024-01-01", end_date="2024-01-31")
 
         # Verify metrics were recorded
         metrics = get_recorded_metrics()
@@ -132,7 +132,7 @@ class TestObservabilityBarsStore:
                 "volume": [1000, 2000],
             }
         )
-        self.store.write("market_daily", test_df, 2024)
+        self.store.write("stock_daily", test_df, 2024)
 
         # Verify metrics were recorded
         metrics = get_recorded_metrics()
@@ -399,11 +399,11 @@ class TestObservabilityIntegration:
                 "volume": [1000, 2000],
             }
         )
-        bars_store.write("market_daily", test_df, 2024)
+        bars_store.write("stock_daily", test_df, 2024)
 
         # Read bars data
         result = bars_store.read(
-            "market_daily", start_date="2024-01-01", end_date="2024-01-31"
+            "stock_daily", start_date="2024-01-01", end_date="2024-01-31"
         )
 
         # Verify operations completed

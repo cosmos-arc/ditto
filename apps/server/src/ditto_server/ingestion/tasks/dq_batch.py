@@ -67,7 +67,7 @@ def dq_batch_check(
 
         # 默认数据集
         if datasets is None:
-            datasets = ["etf_daily", "index_daily", "market_daily", "adj_factor"]
+            datasets = ["etf_daily", "index_daily", "stock_daily", "adj_factor"]
 
         # 初始化 DQ 引擎
         if config_path is None:

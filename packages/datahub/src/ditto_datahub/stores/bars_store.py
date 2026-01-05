@@ -26,7 +26,7 @@ class BarsStore(ParquetStoreBase):
 
     Storage structure:
         data_root/
-            market_daily/
+            stock_daily/
                 2020.parquet
                 2021.parquet
                 ...
@@ -217,7 +217,7 @@ class BarsStore(ParquetStoreBase):
         Read market bars data.
 
         Args:
-            dataset: Dataset name (e.g., "market_daily", "etf_daily").
+            dataset: Dataset name (e.g., "stock_daily", "etf_daily").
             sids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).

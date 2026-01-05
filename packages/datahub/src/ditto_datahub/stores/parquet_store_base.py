@@ -49,7 +49,7 @@ class ParquetStoreBase(ABC):
         Get year partition file path.
 
         Args:
-            dataset: Dataset name (e.g., "market_daily", "adj_factor").
+            dataset: Dataset name (e.g., "stock_daily", "adj_factor").
             year: Year partition.
 
         Returns:

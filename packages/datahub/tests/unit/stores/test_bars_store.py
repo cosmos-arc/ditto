@@ -46,7 +46,7 @@ class TestBarsStore:
         )
 
         # Write data
-        file_path, checksum = self.store.write("market_daily", test_df, 2024)
+        file_path, checksum = self.store.write("stock_daily", test_df, 2024)
 
         assert file_path is not None
         assert checksum is not None
@@ -54,7 +54,7 @@ class TestBarsStore:
 
         # Read data back
         result = self.store.read(
-            "market_daily", start_date="2024-01-01", end_date="2024-01-31"
+            "stock_daily", start_date="2024-01-01", end_date="2024-01-31"
         )
 
         assert len(result) == 2
@@ -75,7 +75,7 @@ class TestBarsStore:
             }
         )
 
-        self.store.write("market_daily", df1, 2024)
+        self.store.write("stock_daily", df1, 2024)
 
         # Additional data with overlap
         df2 = pl.DataFrame(
@@ -91,11 +91,11 @@ class TestBarsStore:
         )
 
         # Explicitly use KEEP_LAST to test the old Last-Write-Wins behavior
-        self.store.write("market_daily", df2, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
+        self.store.write("stock_daily", df2, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
 
         # Read back - should have unique sid/date pairs
         result = self.store.read(
-            "market_daily", start_date="2024-01-01", end_date="2024-01-31"
+            "stock_daily", start_date="2024-01-01", end_date="2024-01-31"
         )
 
         assert len(result) == 2
@@ -123,10 +123,10 @@ class TestBarsStore:
             }
         )
 
-        self.store.write("market_daily", test_df, 2024)
-        self.store.write("market_daily", test_df, 2023)
+        self.store.write("stock_daily", test_df, 2024)
+        self.store.write("stock_daily", test_df, 2023)
 
-        years = self.store.get_years("market_daily")
+        years = self.store.get_years("stock_daily")
         assert years == [2023, 2024]
 
     def test_count_returns_zero_for_nonexistent_dataset(self) -> None:
@@ -148,9 +148,9 @@ class TestBarsStore:
             }
         )
 
-        self.store.write("market_daily", test_df, 2024)
+        self.store.write("stock_daily", test_df, 2024)
 
-        count = self.store.count("market_daily")
+        count = self.store.count("stock_daily")
         assert count == 3
 
     def test_read_filters_by_sids(self) -> None:
@@ -167,9 +167,9 @@ class TestBarsStore:
             }
         )
 
-        self.store.write("market_daily", test_df, 2024)
+        self.store.write("stock_daily", test_df, 2024)
 
-        result = self.store.read("market_daily", sids=[100000001, 100000002])
+        result = self.store.read("stock_daily", sids=[100000001, 100000002])
         assert len(result) == 2
         assert set(result["sid"].to_list()) == {100000001, 100000002}
 
@@ -187,14 +187,14 @@ class TestBarsStore:
             }
         )
 
-        self.store.write("market_daily", test_df, 2024)
+        self.store.write("stock_daily", test_df, 2024)
 
         # Delete existing partition
-        result = self.store.delete("market_daily", 2024)
+        result = self.store.delete("stock_daily", 2024)
         assert result is True
 
         # Try to delete non-existent partition
-        result = self.store.delete("market_daily", 2024)
+        result = self.store.delete("stock_daily", 2024)
         assert result is False
 
 
@@ -265,7 +265,7 @@ class TestBarsStoreRefactoredHelpers:
                 "volume": [1000],
             }
         )
-        self.store.write("market_daily", initial_df, 2024)
+        self.store.write("stock_daily", initial_df, 2024)
 
         # Create new data with overlap
         new_df = pl.DataFrame(
@@ -280,7 +280,7 @@ class TestBarsStoreRefactoredHelpers:
             }
         )
 
-        file_path = self.store._get_path("market_daily", 2024)
+        file_path = self.store._get_path("stock_daily", 2024)
         result = self.store._merge_with_existing(
             new_df, file_path, OnDuplicate.KEEP_LAST
         )
@@ -369,7 +369,7 @@ class TestOnDuplicate:
                 "volume": [1000],
             }
         )
-        self.store.write("market_daily", df1, 2024)
+        self.store.write("stock_daily", df1, 2024)
 
         # Try to write duplicate data (low quality, e.g., from web scraper)
         df2 = pl.DataFrame(
@@ -386,7 +386,7 @@ class TestOnDuplicate:
 
         # Should raise ValueError due to duplicate
         with pytest.raises(ValueError, match="Duplicate data"):
-            self.store.write("market_daily", df2, 2024, on_duplicate=OnDuplicate.ERROR)
+            self.store.write("stock_daily", df2, 2024, on_duplicate=OnDuplicate.ERROR)
 
     def test_on_duplicate_keep_first_preserves_original(self) -> None:
         """Test OnDuplicate.KEEP_FIRST preserves original data."""
@@ -402,7 +402,7 @@ class TestOnDuplicate:
                 "volume": [1000],
             }
         )
-        self.store.write("market_daily", df1, 2024)
+        self.store.write("stock_daily", df1, 2024)
 
         # Try to write duplicate with different values
         df2 = pl.DataFrame(
@@ -416,11 +416,11 @@ class TestOnDuplicate:
                 "volume": [1500],
             }
         )
-        self.store.write("market_daily", df2, 2024, on_duplicate=OnDuplicate.KEEP_FIRST)
+        self.store.write("stock_daily", df2, 2024, on_duplicate=OnDuplicate.KEEP_FIRST)
 
         # Should keep original data
         result = self.store.read(
-            "market_daily", start_date="2024-01-01", end_date="2024-01-31"
+            "stock_daily", start_date="2024-01-01", end_date="2024-01-31"
         )
         assert len(result) == 1
         assert result["close"][0] == 11.0  # Original value
@@ -440,7 +440,7 @@ class TestOnDuplicate:
                 "volume": [1000],
             }
         )
-        self.store.write("market_daily", df1, 2024)
+        self.store.write("stock_daily", df1, 2024)
 
         # Write duplicate with new values
         df2 = pl.DataFrame(
@@ -454,11 +454,11 @@ class TestOnDuplicate:
                 "volume": [1500],
             }
         )
-        self.store.write("market_daily", df2, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
+        self.store.write("stock_daily", df2, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
 
         # Should use new data
         result = self.store.read(
-            "market_daily", start_date="2024-01-01", end_date="2024-01-31"
+            "stock_daily", start_date="2024-01-01", end_date="2024-01-31"
         )
         assert len(result) == 1
         assert result["close"][0] == 11.5  # New value
@@ -499,11 +499,11 @@ class TestOnDuplicate:
         ]:
             with TemporaryDirectory() as temp_dir:
                 store = BarsStore(Path(temp_dir))
-                store.write("market_daily", df1, 2024)
-                store.write("market_daily", df2, 2024, on_duplicate=strategy)
+                store.write("stock_daily", df1, 2024)
+                store.write("stock_daily", df2, 2024, on_duplicate=strategy)
 
                 result = store.read(
-                    "market_daily", start_date="2024-01-01", end_date="2024-01-31"
+                    "stock_daily", start_date="2024-01-01", end_date="2024-01-31"
                 )
                 assert len(result) == 2
                 sids = set(result["sid"].to_list())
