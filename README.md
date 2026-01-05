@@ -135,7 +135,7 @@ ditto/
 │       │   └── types/         # 类型定义
 ├── data/                      # 数据存储
 │   ├── meta/                  # SQLite 元数据
-│   ├── market_daily/          # 股票日线
+│   ├── stock_daily/           # 股票日线
 │   ├── etf_daily/             # ETF 日线
 │   └── freezes/               # 冻结点
 ├── docs/                      # 项目文档

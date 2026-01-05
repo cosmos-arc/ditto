@@ -100,7 +100,7 @@ from loguru import logger
 logger.info(
     "bars_write_complete",  # 事件描述
     event="bars_write",      # 事件类型
-    dataset="market_daily",   # 上下文
+    dataset="stock_daily",   # 上下文
     row_count=1000,           # 上下文
     duration_ms=450,          # 性能指标
 )

@@ -91,7 +91,7 @@ packages/datahub/
 │   └── dq_rules/                     # YAML 规则定义
 │       ├── etf_daily.yml             # ETF 日频数据规则
 │       ├── index_daily.yml           # 指数日频数据规则
-│       ├── market_daily.yml          # 股票日频数据规则
+│       ├── stock_daily.yml           # 股票日频数据规则
 │       ├── index_weight.yml          # 指数权重规则
 │       └── adj_factor.yml            # 复权因子规则
 │
@@ -149,7 +149,7 @@ apps/server/src/ditto_server/
 | L3 | StatisticalChecker | Z-score、完整性 | 定时批量 | **告警通知** |
 
 **完成总结**：
-- 创建 5 个 YAML 规则配置文件（etf_daily, index_daily, market_daily, index_weight, adj_factor）
+- 创建 5 个 YAML 规则配置文件（etf_daily, index_daily, stock_daily, index_weight, adj_factor）
 - 实现 Pydantic 规则模型（DQConfig, DatasetRules, 各种规则类型）
 - 实现 DQEngine 执行引擎，支持 L1/L2/L3 检查
 - 实现 TechnicalChecker（L1）：not_null, unique, foreign_key 检查
@@ -565,7 +565,7 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 |----------|------|------|
 | `packages/datahub/config/dq_rules/etf_daily.yml` | ETF 规则 | ✅ |
 | `packages/datahub/config/dq_rules/index_daily.yml` | 指数规则 | ✅ |
-| `packages/datahub/config/dq_rules/market_daily.yml` | 股票规则 | ✅ |
+| `packages/datahub/config/dq_rules/stock_daily.yml` | 股票规则 | ✅ |
 | `packages/datahub/config/dq_rules/index_weight.yml` | 权重规则 | ✅ |
 | `packages/datahub/config/dq_rules/adj_factor.yml` | 复权规则 | ✅ |
 | `packages/datahub/src/ditto_datahub/dq/models.py` | 规则模型 | ✅ |
