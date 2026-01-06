@@ -25,17 +25,18 @@
 
 | # | 问题 | 优先级 | 预估时间 | 状态 |
 |---|------|--------|---------|------|
-| 1 | IngestionCoordinator 调用不存在的 API | Critical | 3h | 待开始 |
-| 2 | SID 分配并发安全问题 | Critical | 4h | 已完成 |
-| 3 | 游标多源支持 | High | 5h | 待开始 |
+| 1 | IngestionCoordinator 调用不存在的 API | Critical | 3h | ✅ 已完成 |
+| 2 | SID 分配并发安全问题 | Critical | 4h | ✅ 已完成 |
+| 3 | 游标多源支持 | High | 5h | ✅ 已完成 |
 | 4 | DQ 配置路径不统一 | High | 3h | 待开始 |
-| 5 | BarsRepository 未传递 context | High | 1h | 待开始 |
-| 6 | Tushare token 环境变量残留 | Medium | 0.5h | 待开始 |
-| 7 | OnDuplicate.ERROR 未检测 batch 内部重复 | Medium | 2h | 待开始 |
-| 8 | SqlEngine 不支持 meta.* 查询 | Medium | 1h | 待开始 |
-| 9 | schema.sql 保留已废弃表 | Low | 0.5h | 待开始 |
-| 10 | SQL whitelist 未包含摄取表 | Low | 0.5h | 待开始 |
-| | **总计** | | **20.5h** | |
+| 5 | BarsRepository 未传递 context | High | 1h | ✅ 已完成 |
+| 6 | Tushare token 环境变量残留 | Medium | 0.5h | ✅ 已完成 |
+| 7 | OnDuplicate.ERROR 未检测 batch 内部重复 | Medium | 2h | ✅ 已完成 |
+| 8 | SqlEngine 不支持 meta.* 查询 | Medium | 1h | ✅ 已完成 |
+| 9 | schema.sql 保留已废弃表 | Low | 0.5h | ✅ 已完成 |
+| 10 | SQL whitelist 未包含摄取表 | Low | 0.5h | ✅ 已完成 |
+| | **已完成 9/10** | | **21h** | |
+| | **剩余 1/10** | | **3h** | |
 
 ---
 

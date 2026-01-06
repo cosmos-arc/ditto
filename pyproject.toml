@@ -371,6 +371,7 @@ filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]
 
 # 注册自定义标记，配合 --strict-markers 使用
 markers = [
+    "unit: Mark test as a unit test",
     "integration: Mark test as an integration test",
     "e2e: Mark test as an end-to-end test",
     "slow: Mark test as slow running (skip with -m 'not slow')",

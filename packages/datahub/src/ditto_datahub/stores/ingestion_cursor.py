@@ -60,12 +60,15 @@ class IngestionCursorStore:
             event="ingestion_cursor_table_created",
         )
 
-    def get_cursor(self, dataset: str) -> IngestionCursor | None:
+    def get_cursor(
+        self, dataset: str, source: str = "tushare"
+    ) -> IngestionCursor | None:
         """
         Get cursor for a dataset.
 
         Args:
             dataset: Dataset name (e.g., "stock_daily")
+            source: Data source identifier (default: "tushare")
 
         Returns:
             IngestionCursor if found, None otherwise.
@@ -74,10 +77,10 @@ class IngestionCursorStore:
         sql = """
             SELECT dataset, source, last_success, last_attempted, updated_at
             FROM ingestion_cursor
-            WHERE dataset = ?
+            WHERE dataset = ? AND source = ?
         """
 
-        row = self._client.fetchone(sql, [dataset])
+        row = self._client.fetchone(sql, [dataset, source])
 
         if not row:
             return None
@@ -117,10 +120,9 @@ class IngestionCursorStore:
                 dataset, source, last_success, last_attempted, updated_at
             )
             VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT (dataset) DO UPDATE SET
+            ON CONFLICT (dataset, source) DO UPDATE SET
                 last_success = excluded.last_success,
                 last_attempted = excluded.last_attempted,
-                source = excluded.source,
                 updated_at = excluded.updated_at
         """
 
@@ -165,18 +167,17 @@ class IngestionCursorStore:
         now = datetime.now().isoformat()
 
         # First check if cursor exists
-        existing = self.get_cursor(dataset)
+        existing = self.get_cursor(dataset, source)
 
         if existing:
             # Update only last_attempted, preserve last_success
             sql = """
                 UPDATE ingestion_cursor
                 SET last_attempted = ?,
-                    source = ?,
                     updated_at = ?
-                WHERE dataset = ?
+                WHERE dataset = ? AND source = ?
             """
-            self._client.execute(sql, [trade_date, source, now, dataset])
+            self._client.execute(sql, [trade_date, now, dataset, source])
         else:
             # Create new cursor with last_success=NULL
             sql = """
@@ -193,11 +194,12 @@ class IngestionCursorStore:
             "Ingestion cursor updated (attempted)",
             event="ingestion_cursor_updated_attempted",
             dataset=dataset,
+            source=source,
             last_attempted=trade_date,
         )
 
         # Return updated cursor
-        return self.get_cursor(dataset)  # type: ignore[return-value]
+        return self.get_cursor(dataset, source)  # type: ignore[return-value]
 
     def get_all_cursors(self, source: str = "tushare") -> list[IngestionCursor]:
         """
