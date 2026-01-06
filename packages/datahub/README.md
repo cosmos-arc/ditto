@@ -237,6 +237,80 @@ report = hub.dq_checker.generate_report(result)
 report.save_html("dq_report.html")
 ```
 
+### DQ 配置管理
+
+Ditto 使用 YAML 配置定义数据质量规则，支持用户自定义覆盖包内默认配置。
+
+#### 配置路径
+
+| 类型 | 路径 | 说明 |
+|------|------|------|
+| **默认配置** | `{package}/config/dq_rules/*.yml` | 包内默认规则 |
+| **用户配置** | `{data_root}/config/dq/*.yml` | 用户自定义规则（覆盖默认） |
+
+#### 加载优先级
+
+用户配置优先级高于默认配置：`用户配置 > 包内默认配置`
+
+#### 初始化用户配置
+
+```bash
+# 复制默认配置到用户目录
+pixi run -e dev python -m ditto_datahub.cli.init_dq_config /path/to/data_root
+```
+
+示例输出：
+```
+Created: /path/to/data_root/config/dq/stock_daily.yml
+Created: /path/to/data_root/config/dq/etf_daily.yml
+Skipped (exists): /path/to/data_root/config/dq/index_daily.yml
+
+DQ config initialized at: /path/to/data_root/config/dq
+  Created: 2 files
+  Skipped: 1 files
+You can now customize these files.
+```
+
+#### 配置示例
+
+```yaml
+# packages/datahub/config/dq_rules/stock_daily.yml
+dataset: stock_daily
+description: "股票日 K 线数据质量检查规则"
+
+# L1: 技术校验（写入时强制阻断）
+l1_technical:
+  - rule: not_null
+    columns: [sid, trade_date, open, high, low, close, volume, amount]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [sid, trade_date]
+    message: "主键 (sid, trade_date) 重复"
+
+# L2: 业务规则（写入时警告但不阻断）
+l2_business:
+  - rule: positive
+    columns: [open, high, low, close, volume, amount]
+    message: "OHLC 价格、成交额必须为正数"
+
+# L3: 统计异常（定时批量检查）
+l3_statistical:
+  - rule: zscore
+    name: volume_spike
+    column: volume
+    window: 60
+    threshold: 5
+    group_by: sid
+    message: "成交量异常波动（Z-score > 5）"
+```
+
+#### 自定义配置
+
+1. 运行初始化脚本复制默认配置
+2. 编辑 `{data_root}/config/dq/*.yml` 自定义规则
+3. 重启应用使配置生效
+
 ## PIT 安全核心规则
 
 ### 为什么需要 PIT 安全？

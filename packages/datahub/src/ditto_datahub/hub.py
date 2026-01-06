@@ -106,11 +106,11 @@ class DataHub:
 
     @cached_property
     def dq_engine(self) -> DQEngine:
-        """New DQ engine."""
+        """New DQ engine with user override support."""
         from ditto_datahub.dq.engine import DQEngine
 
-        config_path = self.data_root / "config" / "dq"
-        return DQEngine(config_path=config_path)
+        # Use new method: load config with user override
+        return DQEngine(data_root=self.data_root)
 
     @cached_property
     def freeze(self) -> FreezeManager:

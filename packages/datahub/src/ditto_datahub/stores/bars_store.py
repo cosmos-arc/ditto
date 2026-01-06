@@ -313,6 +313,25 @@ class BarsStore(ParquetStoreBase):
         file_path = self._get_path(dataset, year)
         is_merge = file_path.exists()
 
+        # Detect and deduplicate batch internal duplicates
+        key_columns = ["sid", "trade_date"]
+        batch_duplicates = (
+            df.group_by(key_columns)
+            .agg(pl.len().alias("_count"))
+            .filter(pl.col("_count") > 1)
+        )
+
+        if not batch_duplicates.is_empty():
+            logger.warning(
+                "检测到 batch 内部重复, 自动去重(保留第一条)",
+                event="batch_internal_duplicates",
+                dataset=dataset,
+                year=year,
+                duplicate_count=len(batch_duplicates),
+            )
+            # Auto-deduplicate (keep first)
+            df = df.unique(subset=key_columns, keep="first")
+
         # Merge with existing data and prepare for write
         combined = self._merge_with_existing(df, file_path, on_duplicate)
         combined = self._prepare_for_write(combined)

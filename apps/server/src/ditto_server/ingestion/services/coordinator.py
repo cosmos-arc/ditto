@@ -371,7 +371,7 @@ class IngestionCoordinator:
     def _write_stock_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """写入 stock_basic 数据到 security_store。"""
         # 使用 SecurityRepository 批量注册（线程安全）
-        file_path, checksum = self._hub.securities.register_batch(  # type: ignore[attr-defined]
+        file_path, checksum = self._hub.securities.register_batch(
             df=df,
             source=self._source_name,
             asset_class="stock",
@@ -390,7 +390,7 @@ class IngestionCoordinator:
     def _write_etf_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """写入 etf_basic 数据到 security_store。"""
         # 使用 SecurityRepository 批量注册（线程安全）
-        file_path, checksum = self._hub.securities.register_batch(  # type: ignore[attr-defined]
+        file_path, checksum = self._hub.securities.register_batch(
             df=df,
             source=self._source_name,
             asset_class="etf",

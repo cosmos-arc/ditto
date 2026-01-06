@@ -52,6 +52,9 @@ class SqlEngine:
             "index_daily",
             "index_weight",
             "adj_factor",
+            "stock_status",
+            "ingestion_log",
+            "ingestion_cursor",
         ]
     )
 
@@ -283,6 +286,10 @@ class SqlEngine:
         """
         Detect if query requires SQLite tables.
 
+        Supports both:
+        - SELECT * FROM security
+        - SELECT * FROM meta.security
+
         Args:
             query: SQL query string.
 
@@ -290,15 +297,12 @@ class SqlEngine:
             True if query references SQLite tables.
 
         """
-        query_lower = query.lower()
-        for table in self.SQLITE_TABLES:
-            if (
-                f" {table}" in query_lower
-                or f"from {table}" in query_lower
-                or f"join {table}" in query_lower
-            ):
-                return True
-        return False
+        # Extract all table names (removing meta. prefix)
+        table_pattern = r"\b(?:meta\.)?(\w+)\b"
+        tables = re.findall(table_pattern, query.lower())
+
+        # Check if any table is a SQLite table
+        return any(table in self.SQLITE_TABLES for table in tables)
 
     def execute(
         self,

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+from datetime import date
 from typing import TYPE_CHECKING, Any, cast
 
 import polars as pl
@@ -11,6 +14,15 @@ from ditto_datahub.stores.security_store import SecurityStore
 
 if TYPE_CHECKING:
     from ditto_datahub.runtime.sid_allocator import SidAllocator
+
+
+def _json_serializable(obj: object) -> object:
+    """Convert object to JSON serializable format."""
+    if isinstance(obj, date):
+        return obj.isoformat()
+    if hasattr(obj, "to_python"):
+        return obj.to_python()
+    return str(obj)
 
 
 class SecurityRepository:
@@ -277,3 +289,87 @@ class SecurityRepository:
         M.data_records.add(1, {"dataset": "security", "operation": "register"})
 
         return registered_sid
+
+    def register_batch(
+        self,
+        df: pl.DataFrame,
+        source: str,
+        asset_class: str,
+        src_code_col: str,
+    ) -> tuple[str, str]:
+        """
+        Batch register securities from DataFrame.
+
+        Skips securities that already exist (based on src_code resolution).
+
+        Args:
+            df: DataFrame with securities data. Must contain columns:
+                - src_code_col: Source code column name
+                - symbol: Display symbol
+                - name: Security name
+                - exchange: Exchange code
+                - list_date: Listing date
+            source: Data source identifier.
+            asset_class: Asset class (stock/etf/index).
+            src_code_col: Name of the source code column in df.
+
+        Returns:
+            Tuple of (file_path, checksum) for tracking purposes.
+
+        """
+        logger.info(
+            "Starting batch security registration",
+            event="security_batch_register_start",
+            source=source,
+            asset_class=asset_class,
+            row_count=len(df),
+        )
+
+        registered_count = 0
+        skipped_count = 0
+
+        for row in df.to_dicts():
+            src_code = row[src_code_col]
+
+            # Check if already exists
+            existing_sid = self._security_store.resolve_sid(src_code, source, None)
+            if existing_sid is not None:
+                skipped_count += 1
+                continue
+
+            # Register new security
+            self.register(
+                src_code=src_code,
+                symbol=row["symbol"],
+                name=row["name"],
+                exchange=row["exchange"],
+                asset_class=asset_class,
+                list_date=row["list_date"],
+                source=source,
+                board=row.get("board"),
+            )
+            registered_count += 1
+
+        # Calculate checksum from DataFrame content
+        data_dict = df.to_dict(as_series=False)
+        json_str = json.dumps(data_dict, sort_keys=True, default=_json_serializable)
+        checksum = hashlib.md5(json_str.encode("utf-8")).hexdigest()
+
+        # File path for tracking (not a real file for SQLite storage)
+        file_path = f"security_store:{asset_class}_basic"
+
+        logger.info(
+            "Batch security registration completed",
+            event="security_batch_register_complete",
+            registered=registered_count,
+            skipped=skipped_count,
+            checksum=checksum,
+        )
+
+        # Record metrics
+        M.data_records.add(
+            registered_count,
+            {"dataset": "security", "operation": "register_batch"},
+        )
+
+        return file_path, checksum

@@ -51,7 +51,7 @@ class TushareSource(DataSource):
         Initialize Tushare source.
 
         Args:
-            token: API token (reads from TUSHARE_TOKEN env var if None).
+            token: API token. Reads from keyring or ~/.ditto/secrets.toml if None.
 
         """
         self._client = TushareClient(token=token)

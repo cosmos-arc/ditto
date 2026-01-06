@@ -16,8 +16,8 @@ class IngestionCursorStore:
     avoiding expensive MAX() queries on the ingestion_log table.
 
     Table: ingestion_cursor
-    - dataset: PRIMARY KEY
-    - source: Data source identifier
+    - dataset: Part of composite PRIMARY KEY (with source)
+    - source: Part of composite PRIMARY KEY (with dataset), data source identifier
     - last_success: Last successful trade date (YYYY-MM-DD)
     - last_attempted: Last attempted trade date including FAIL (YYYY-MM-DD)
     - updated_at: Cursor update timestamp (ISO format)
@@ -46,11 +46,12 @@ class IngestionCursorStore:
         """Create ingestion_cursor table if not exists."""
         sql = """
             CREATE TABLE IF NOT EXISTS ingestion_cursor (
-                dataset TEXT PRIMARY KEY,
+                dataset TEXT NOT NULL,
                 source TEXT NOT NULL,
                 last_success TEXT,
                 last_attempted TEXT,
-                updated_at TEXT NOT NULL
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY (dataset, source)
             )
         """
         self._client.execute(sql)

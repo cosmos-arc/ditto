@@ -150,7 +150,7 @@ class TestAdjFactorStore:
                 "adj_factor": [0.92, 1.0],
             }
         )
-        store.write("adj_factor", new_data, 2024)
+        store.write("adj_factor", new_data, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
 
         # Verify deduplication (new adj_factor overwrites)
         df = store.read("adj_factor")
@@ -176,7 +176,7 @@ class TestAdjFactorStore:
                 "adj_factor": [0.85],
             }
         )
-        store.write("adj_factor", updated, 2024)
+        store.write("adj_factor", updated, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
 
         df = store.read("adj_factor", sids=[1000001])
         record = df.filter(pl.col("trade_date") == date(2024, 1, 3))
@@ -518,7 +518,7 @@ class TestSortingEnhanced:
                 "adj_factor": [0.92, 0.88],  # Updated values
             }
         )
-        store.write("adj_factor", df2, 2024)
+        store.write("adj_factor", df2, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
 
         # Read back and verify keep="last" behavior
         result = store.read("adj_factor")
@@ -557,7 +557,7 @@ class TestSortingEnhanced:
                 "adj_factor": [0.95, 0.95, 1.0],
             }
         )
-        store.write("adj_factor", df2, 2024)
+        store.write("adj_factor", df2, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
 
         # Read back and verify stable sorting
         result = store.read("adj_factor")

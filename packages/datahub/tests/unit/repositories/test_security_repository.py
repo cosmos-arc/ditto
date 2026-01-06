@@ -1,5 +1,6 @@
 """Tests for SecurityRepository."""
 
+import polars as pl
 from ditto_datahub.repositories.security import SecurityRepository
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
@@ -227,6 +228,76 @@ class TestSecurityRepository:
         security = self.repo.get_by_sid(sid)
         assert security is not None
         assert security["symbol"] == "600001"
+
+    def test_register_batch_registers_multiple_securities(self) -> None:
+        """Test register_batch registers multiple securities from DataFrame."""
+        # Arrange
+        df = pl.DataFrame(
+            {
+                "src_code": ["600001.SH", "600002.SH", "600003.SH"],
+                "symbol": ["600001", "600002", "600003"],
+                "name": ["Stock1", "Stock2", "Stock3"],
+                "exchange": ["SSE", "SSE", "SSE"],
+                "list_date": ["2000-01-01", "2000-01-02", "2000-01-03"],
+            }
+        )
+
+        # Act
+        file_path, checksum = self.repo.register_batch(
+            df=df,
+            source="tushare",
+            asset_class="stock",
+            src_code_col="src_code",
+        )
+
+        # Assert
+        assert isinstance(file_path, str)
+        assert isinstance(checksum, str)
+        assert len(checksum) == 32  # MD5 hash length
+
+        # Verify all securities were registered
+        assert self.repo.get_by_sid(1000001) is not None
+        assert self.repo.get_by_sid(1000002) is not None
+        assert self.repo.get_by_sid(1000003) is not None
+
+    def test_register_batch_handles_existing_securities(self) -> None:
+        """Test register_batch skips existing securities."""
+        # Arrange
+        # Register first security
+        df1 = pl.DataFrame(
+            {
+                "src_code": ["600001.SH"],
+                "symbol": ["600001"],
+                "name": ["Stock1"],
+                "exchange": ["SSE"],
+                "list_date": ["2000-01-01"],
+            }
+        )
+        self.repo.register_batch(
+            df=df1, source="tushare", asset_class="stock", src_code_col="src_code"
+        )
+
+        # Try to register again (should skip existing)
+        df2 = pl.DataFrame(
+            {
+                "src_code": ["600001.SH", "600002.SH"],
+                "symbol": ["600001", "600002"],
+                "name": ["Stock1", "Stock2"],
+                "exchange": ["SSE", "SSE"],
+                "list_date": ["2000-01-01", "2000-01-02"],
+            }
+        )
+
+        # Act
+        file_path, checksum = self.repo.register_batch(
+            df=df2, source="tushare", asset_class="stock", src_code_col="src_code"
+        )
+
+        # Assert - should only register the new one
+        assert self.repo.get_by_sid(1000001) is not None  # Existing
+        assert self.repo.get_by_sid(1000002) is not None  # New
+        # Third security should not exist (only 2 registered)
+        assert self.repo.get_by_sid(1000003) is None
 
     def teardown_method(self) -> None:
         """Clean up after test."""
