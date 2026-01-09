@@ -196,6 +196,47 @@ class TestDataCache:
         assert self.cache.get("sid:current:tushare:600000.SH") is not None
         assert self.cache.get("sid:pit:tushare:600000.SH:2024-06") is not None
 
+    def test_set_with_ttl_none_uses_default_ttl(self) -> None:
+        """Test set with ttl=None uses default TTL."""
+        # ttl=None 应该使用默认 TTL (1秒)
+        self.cache.set("key1", "value1", ttl=None)
+
+        # 应该立即可以获取
+        assert self.cache.get("key1") == "value1"
+
+        # 等待 TTL 过期
+        time.sleep(1.2)
+
+        # 过期后应该返回 None
+        assert self.cache.get("key1") is None
+
+    def test_set_with_ttl_zero_no_expiration(self) -> None:
+        """Test set with ttl=0 means no expiration."""
+        # ttl=0 表示永不过期
+        self.cache.set("key1", "value1", ttl=0)
+
+        # 等待超过默认 TTL
+        time.sleep(1.2)
+
+        # 应该仍然存在（因为设置了 ttl=0，永不过期）
+        assert self.cache.get("key1") == "value1"
+
+    def test_set_with_custom_ttl(self) -> None:
+        """Test set with custom TTL value."""
+        # 设置自定义 TTL 为 2 秒
+        self.cache.set("key1", "value1", ttl=2)
+
+        # 立即获取应该成功
+        assert self.cache.get("key1") == "value1"
+
+        # 等待 1 秒，应该还在
+        time.sleep(1)
+        assert self.cache.get("key1") == "value1"
+
+        # 再等待 1.2 秒，应该过期
+        time.sleep(1.2)
+        assert self.cache.get("key1") is None
+
 
 class TestCacheStats:
     """Test cases for CacheStats dataclass."""
@@ -257,3 +298,15 @@ class TestDataCacheWithMetrics:
         assert stats.miss_count == 0
         assert stats.hit_rate == 0.0
         assert stats.invalidation_count == 0
+
+    def test_invalidate_pattern_with_metrics(self) -> None:
+        """Test invalidate_pattern with metrics enabled records metrics."""
+        self.cache.set("sid:600000.SH", "value1")
+        self.cache.set("sid:600000.SH:2024-01", "value2")
+
+        # 失效所有 sid: 开头的键 - 这会触发 line 168 的 M.cache_invalidations.add(1)
+        count = self.cache.invalidate_pattern("sid:*")
+
+        assert count == 2
+        stats = self.cache.get_stats()
+        assert stats.invalidation_count == 2
