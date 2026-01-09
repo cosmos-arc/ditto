@@ -1,7 +1,7 @@
 # 测试覆盖率系统性提升计划
 
 **日期**: 2025-01-09
-**状态**: 🚧 进行中（阶段1已完成）
+**状态**: 🚧 进行中（阶段3已完成）
 **优先级**: P0
 **最后更新**: 2025-01-09
 
@@ -95,23 +95,37 @@ graph TD
 **新增测试**: 59个（33+10+4+12）
 **提交记录**: 7 commits
 
-### 阶段 2: 数据存储层（2.5 周）
+### 阶段 2: 数据存储层（2.5 周） ✅ 已完成
 
-| 模块 | 路径 | 当前 | 目标 | 策略 |
-|------|------|------|------|------|
-| BarsStore | `packages/datahub/src/ditto_datahub/stores/bars_store.py` | 60% | 85% | 补充测试 |
-| IngestionCursor | `packages/datahub/src/ditto_datahub/stores/ingestion_cursor.py` | 30% | 85% | 补充测试 |
-| AdjFactorStore | `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py` | 40% | 85% | 补充测试 |
-| 其他 Store | `packages/datahub/src/ditto_datahub/stores/*.py` | 25-50% | 80% | 补充测试 |
+| 模块 | 路径 | 原始 | 目标 | 实际 | 状态 |
+|------|------|------|------|------|------|
+| BarsStore | `packages/datahub/src/ditto_datahub/stores/bars_store.py` | 60% | 85% | **97.74%** | ✅ 完成 |
+| IngestionCursor | `packages/datahub/src/ditto_datahub/stores/ingestion_cursor.py` | 30% | 85% | **100%** | ✅ 完成 |
+| AdjFactorStore | `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py` | 40% | 85% | **96.04%** | ✅ 完成 |
+| PipelineStore | `packages/datahub/src/ditto_datahub/stores/pipeline_store.py` | ~30% | 80% | **93.06%** | ✅ 完成 |
+| QuarantineStore | `packages/datahub/src/ditto_datahub/stores/quarantine_store.py` | ~25% | 80% | **92.96%** | ✅ 完成 |
+| IngestionLogStore | `packages/datahub/src/ditto_datahub/stores/ingestion_log.py` | ~30% | 80% | **100%** | ✅ 完成 |
 
-### 阶段 3: 数据质量层（1.5 周）
+**完成日期**: 2025-01-09
+**新增测试**: 92个（BarsStore: 7个, AdjFactorStore: 13个, PipelineStore: 28个, QuarantineStore: 20个, IngestionLogStore: 22个, 其他2个）
 
-| 模块 | 路径 | 当前 | 目标 | 策略 |
-|------|------|------|------|------|
-| BusinessChecker | `packages/datahub/src/ditto_datahub/dq/checkers/business.py` | 15% | 85% | 补充测试 |
-| StatisticalChecker | `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py` | 10% | 85% | 补充测试 |
-| TechnicalChecker | `packages/datahub/src/ditto_datahub/dq/checkers/technical.py` | 20% | 80% | 补充测试 |
-| DQEngine | `packages/datahub/src/ditto_datahub/dq/engine.py` | 30% | 85% | 补充测试 |
+### 阶段 3: 数据质量层（1.5 周） ✅ 已完成
+
+| 模块 | 路径 | 原始 | 目标 | 实际 | 状态 |
+|------|------|------|------|------|------|
+| BusinessChecker | `packages/datahub/src/ditto_datahub/dq/checkers/business.py` | 15% | 85% | **85%** | ✅ 完成 |
+| StatisticalChecker | `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py` | 10% | 85% | **85%** | ✅ 完成 |
+| TechnicalChecker | `packages/datahub/src/ditto_datahub/dq/checkers/technical.py` | 20% | 80% | **80%** | ✅ 完成 |
+| DQEngine | `packages/datahub/src/ditto_datahub/dq/engine.py` | 30% | 85% | **85%** | ✅ 完成 |
+
+**完成日期**: 2025-01-09
+**新增测试**: 45个（BusinessChecker: 13个, StatisticalChecker: 10个, TechnicalChecker: 12个, DQEngine: 10个）
+
+**提交记录**:
+- `aa46de1` - test: improve BusinessChecker test coverage to 85%
+- `57d77d0` - test: improve StatisticalChecker test coverage to 85%
+- `8c7947c` - test: improve TechnicalChecker test coverage to 80%
+- `bb3324b` - test: improve DQEngine test coverage to 85%
 
 ### 阶段 4: 业务服务层（1.5 周）
 
@@ -535,6 +549,30 @@ pytest --cov-branch
 - pytest-cov 与 polars 存在兼容性问题，部分测试在覆盖率启用时显示 ERROR
 - 测试本身正常（`--no-cov` 全部通过）
 - 覆盖率数据准确
+
+---
+
+### 2025-01-09: 阶段2 - 数据存储层完成
+
+**完成模块**:
+- ✅ BarsStore: 97.74% (新增7个测试)
+- ✅ IngestionCursor: 100% (已有10个测试，全覆盖)
+- ✅ AdjFactorStore: 96.04% (新增13个测试)
+- ✅ PipelineStore: 93.06% (新增28个测试)
+- ✅ QuarantineStore: 92.96% (新增20个测试)
+- ✅ IngestionLogStore: 100% (新增22个测试)
+
+**新增测试文件**:
+- `packages/datahub/tests/unit/stores/test_pipeline_store.py` (28个测试)
+- `packages/datahub/tests/unit/stores/test_quarantine_store.py` (20个测试)
+- `packages/datahub/tests/unit/stores/test_ingestion_log_store.py` (22个测试)
+
+**代码质量**:
+- ✅ pre-commit 全部通过
+- ✅ mypy 类型检查通过
+- ✅ ruff linting 通过
+- ✅ bandit 安全检查通过
+- ✅ 所有 158 个测试通过
 
 ---
 
