@@ -148,21 +148,26 @@ def store_with_data(data_root: Path) -> MockStore:
 class TestGetPath:
     """Tests for _get_path method."""
 
-    def test_get_path_returns_correct_path(self, store: MockStore) -> None:
-        """Test _get_path generates correct file path."""
-        path = store._get_path("test_dataset", 2024)
-        expected = store._data_root / "test_dataset" / "2024.parquet"
+    @pytest.mark.parametrize(
+        ("dataset", "year", "expected_dataset", "expected_year"),
+        [
+            ("test_dataset", 2024, "test_dataset", 2024),
+            ("stock_daily", 2023, "stock_daily", 2023),
+            ("adj_factor", 2024, "adj_factor", 2024),
+        ],
+    )
+    def test_get_path_generates_correct_path(
+        self,
+        store: MockStore,
+        dataset: str,
+        year: int,
+        expected_dataset: str,
+        expected_year: int,
+    ) -> None:
+        """Test _get_path generates correct file path for various datasets and years."""
+        path = store._get_path(dataset, year)
+        expected = store._data_root / expected_dataset / f"{expected_year}.parquet"
         assert path == expected
-
-    def test_get_path_with_different_dataset(self, store: MockStore) -> None:
-        """Test _get_path with different dataset names."""
-        path1 = store._get_path("stock_daily", 2023)
-        path2 = store._get_path("adj_factor", 2024)
-
-        assert "stock_daily" in str(path1)
-        assert "2023.parquet" in str(path1)
-        assert "adj_factor" in str(path2)
-        assert "2024.parquet" in str(path2)
 
 
 # ============ _collect_paths tests ============
@@ -242,11 +247,6 @@ class TestGetYears:
         years = store.get_years("test_dataset")
         assert years == [2020, 2021]
 
-    def test_get_years_nonexistent_dataset(self, store: MockStore) -> None:
-        """Test get_years with non-existent dataset."""
-        years = store.get_years("nonexistent")
-        assert years == []
-
     def test_get_years_single_year(
         self, store: MockStore, sample_df: pl.DataFrame
     ) -> None:
@@ -275,27 +275,32 @@ class TestDelete:
         assert result is True
         assert not file_path.exists()
 
-    def test_delete_nonexistent_year(self, store: MockStore) -> None:
-        """Test delete with non-existent year."""
-        result = store.delete("test_dataset", 2024)
+    @pytest.mark.parametrize(
+        ("dataset", "year"),
+        [
+            ("test_dataset", 2024),
+            ("nonexistent", 2024),
+        ],
+    )
+    def test_delete_nonexistent(
+        self, store: MockStore, dataset: str, year: int
+    ) -> None:
+        """Test delete with non-existent year or dataset."""
+        result = store.delete(dataset, year)
         assert result is False
 
-    def test_delete_nonexistent_dataset(self, store: MockStore) -> None:
-        """Test delete with non-existent dataset."""
-        result = store.delete("nonexistent", 2024)
-        assert result is False
-
-    def test_delete_multiple_years(
+    def test_delete_leaves_other_years_intact(
         self, store_with_data: MockStore, tmp_path: Path
     ) -> None:
         """Test delete leaves other years intact."""
-        # Delete 2023, 2024 should remain
         result = store_with_data.delete("test_dataset", 2023)
         assert result is True
 
         file_2024 = tmp_path / "data" / "test_dataset" / "2024.parquet"
         assert file_2024.exists()
 
+        file_2023 = tmp_path / "data" / "test_dataset" / "2023.parquet"
+        assert not file_2023.exists()
         file_2023 = tmp_path / "data" / "test_dataset" / "2023.parquet"
         assert not file_2023.exists()
 
@@ -318,12 +323,11 @@ class TestGetChecksum:
         int(checksum, 16)  # Verify it's valid hex
 
     def test_get_checksum_nonexistent_file(self, store: MockStore) -> None:
-        """Test get_checksum with missing file."""
+        """Test get_checksum with missing file (non-existent year or dataset)."""
         checksum = store.get_checksum("test_dataset", 2024)
         assert checksum == ""
 
-    def test_get_checksum_nonexistent_dataset(self, store: MockStore) -> None:
-        """Test get_checksum with non-existent dataset."""
+        # Test with non-existent dataset
         checksum = store.get_checksum("nonexistent", 2024)
         assert checksum == ""
 
@@ -399,12 +403,6 @@ class TestGetDateRange:
         assert start == "2024-01-02"
         assert end == "2024-01-04"
 
-    def test_get_date_range_nonexistent_dataset(self, store: MockStore) -> None:
-        """Test get_date_range with non-existent dataset."""
-        start, end = store.get_date_range("nonexistent")
-        assert start is None
-        assert end is None
-
     def test_get_date_range_missing_trade_date_column(
         self, store: MockStore, tmp_path: Path
     ) -> None:
@@ -432,7 +430,7 @@ class TestListSids:
         assert sids == []
 
     def test_list_sids_returns_unique_sorted(self, store_with_data: MockStore) -> None:
-        """Test list_sids returns sorted unique SIDs."""
+        """Test list_sids returns sorted unique SIDs across all years."""
         sids = store_with_data.list_sids("test_dataset")
         assert sids == [1000001, 1000002]
 
@@ -444,12 +442,6 @@ class TestListSids:
         store.write("test_dataset", single_sid_df, 2024)
         sids = store.list_sids("test_dataset")
         assert sids == [1000001]
-
-    def test_list_sids_multiple_years(self, store_with_data: MockStore) -> None:
-        """Test list_sids across multiple years."""
-        sids = store_with_data.list_sids("test_dataset")
-        # Should return unique SIDs across all years
-        assert sids == [1000001, 1000002]
 
     def test_list_sids_nonexistent_dataset(self, store: MockStore) -> None:
         """Test list_sids with non-existent dataset."""
@@ -475,32 +467,6 @@ class TestEdgeCases:
         assert store.count("test") == 0
         assert store.get_date_range("test") == (None, None)
         assert store.list_sids("test") == []
-
-    def test_dataset_directory_without_parquet_files(
-        self, store: MockStore, tmp_path: Path
-    ) -> None:
-        """Test dataset directory with no parquet files."""
-        data_root = tmp_path / "data" / "test_dataset"
-        data_root.mkdir(parents=True)
-        (data_root / "readme.txt").write_text("test")
-
-        assert store.get_years("test_dataset") == []
-        assert store._collect_paths("test_dataset", 2020, 2024) == []
-
-    def test_mixed_valid_invalid_files(self, store: MockStore, tmp_path: Path) -> None:
-        """Test directory with mix of valid and invalid files."""
-        data_root = tmp_path / "data" / "test_dataset"
-        data_root.mkdir(parents=True)
-
-        # Create various files
-        (data_root / "2020.parquet").touch()
-        (data_root / "2021.parquet").touch()
-        (data_root / "README.md").write_text("test")
-        (data_root / ".DS_Store").touch()
-        (data_root / "tmp.parquet.tmp").touch()
-
-        years = store.get_years("test_dataset")
-        assert years == [2020, 2021]
 
     def test_path_operations_dont_create_files(
         self, store: MockStore, tmp_path: Path
