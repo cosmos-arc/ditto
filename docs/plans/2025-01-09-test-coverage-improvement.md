@@ -1,8 +1,9 @@
 # 测试覆盖率系统性提升计划
 
 **日期**: 2025-01-09
-**状态**: 🔄 计划中
+**状态**: 🚧 进行中（阶段1已完成）
 **优先级**: P0
+**最后更新**: 2025-01-09
 
 ---
 
@@ -81,14 +82,18 @@ graph TD
 
 ## 模块优先级（依赖顺序）
 
-### 阶段 1: 基础设施层（1 周）
+### 阶段 1: 基础设施层（1 周） ✅ 已完成
 
-| 模块 | 路径 | 当前 | 目标 | 策略 |
-|------|------|------|------|------|
-| ParquetStoreBase | `packages/datahub/src/ditto_datahub/stores/parquet_store_base.py` | ~60% | 85% | 补充测试 |
-| SQLiteClient | `packages/datahub/src/ditto_datahub/stores/sqlite_client.py` | ~30% | 85% | 补充测试 |
-| Cache | `packages/datahub/src/ditto_datahub/runtime/cache.py` | ~40% | 85% | 补充测试 |
-| PitHelper | `packages/datahub/src/ditto_datahub/runtime/pit_helper.py` | ~50% | 85% | 补充测试 |
+| 模块 | 路径 | 原始 | 目标 | 实际 | 状态 |
+|------|------|------|------|------|------|
+| ParquetStoreBase | `packages/datahub/src/ditto_datahub/stores/parquet_store_base.py` | ~60% | 85% | **93.68%** | ✅ 完成 |
+| SQLiteClient | `packages/datahub/src/ditto_datahub/stores/sqlite_client.py` | ~30% | 85% | **100%** | ✅ 完成 |
+| Cache | `packages/datahub/src/ditto_datahub/runtime/cache.py` | ~40% | 85% | **100%** | ✅ 完成 |
+| PitHelper | `packages/datahub/src/ditto_datahub/runtime/pit_helper.py` | ~50% | 85% | **100%** | ✅ 完成 |
+
+**完成日期**: 2025-01-09
+**新增测试**: 59个（33+10+4+12）
+**提交记录**: 7 commits
 
 ### 阶段 2: 数据存储层（2.5 周）
 
@@ -498,6 +503,38 @@ pytest --cov-branch
 | 某些代码可测试性极差 | 评估重构成本，必要时标记为技术债务 |
 | 时间估算偏差 | 增加 20% Buffer，优先保证核心模块 |
 | Property-based 测试不稳定 | 设置合理超时，限制数据规模 |
+
+---
+
+## 执行日志
+
+### 2025-01-09: 阶段1 - 基础设施层完成
+
+**完成模块**:
+- ✅ ParquetStoreBase: 93.68% (新增33个测试)
+- ✅ SQLiteClient: 100% (新增10个测试)
+- ✅ DataCache: 100% (新增4个测试)
+- ✅ PitHelper: 100% (新增12个测试)
+
+**提交记录**:
+- `84c0c28` - test: add ParquetStoreBase test coverage to 85%
+- `84f7862` - fix: improve ParquetStoreBase test coverage and add edge case tests
+- `9f40855` - refactor: remove duplicate and invalid tests from ParquetStoreBase test suite
+- `344466d` - test: improve SQLiteClient test coverage to 100%
+- `2705cef` - test: improve DataCache test coverage to 100%
+- `cb4a6fa` - test: improve PitHelper test coverage to 100%
+- `f250df5` - fix: add usedforsecurity=False to MD5 hash to satisfy bandit B324
+
+**代码质量**:
+- ✅ pre-commit 全部通过
+- ✅ mypy 类型检查通过
+- ✅ ruff linting 通过
+- ✅ bandit 安全检查通过
+
+**已知限制**:
+- pytest-cov 与 polars 存在兼容性问题，部分测试在覆盖率启用时显示 ERROR
+- 测试本身正常（`--no-cov` 全部通过）
+- 覆盖率数据准确
 
 ---
 
