@@ -359,3 +359,97 @@ class TestSQLInjectionProtection:
         # Should not raise
         result = PitHelper.add_pit_filter("SELECT * FROM stock_daily", "2024-01-15")
         assert "knowledge_date <= '2024-01-15'" in result
+
+    def test_validate_sql_identifier_rejects_empty_string(self) -> None:
+        """Test that _validate_sql_identifier rejects empty string."""
+        with pytest.raises(ValueError, match="Invalid identifier"):
+            PitHelper._validate_sql_identifier("")
+
+    def test_validate_sql_identifier_rejects_starting_with_number(self) -> None:
+        """Test that _validate_sql_identifier rejects identifiers starting with
+        number."""
+        with pytest.raises(ValueError, match="Invalid identifier"):
+            PitHelper._validate_sql_identifier("123table")
+
+    def test_validate_sql_identifier_rejects_special_characters(self) -> None:
+        """Test that _validate_sql_identifier rejects special characters."""
+        with pytest.raises(ValueError, match="Invalid identifier"):
+            PitHelper._validate_sql_identifier("table-name")
+
+    def test_validate_sql_identifier_rejects_sql_injection(self) -> None:
+        """Test that _validate_sql_identifier rejects SQL injection attempts."""
+        with pytest.raises(ValueError, match="Invalid identifier"):
+            PitHelper._validate_sql_identifier("table; DROP TABLE users--")
+
+    def test_validate_sql_identifier_rejects_hyphen(self) -> None:
+        """Test that _validate_sql_identifier rejects hyphens."""
+        with pytest.raises(ValueError, match="Invalid identifier"):
+            PitHelper._validate_sql_identifier("my-table")
+
+    def test_validate_sql_identifier_rejects_space(self) -> None:
+        """Test that _validate_sql_identifier rejects spaces."""
+        with pytest.raises(ValueError, match="Invalid identifier"):
+            PitHelper._validate_sql_identifier("my table")
+
+    def test_validate_sql_identifier_accepts_valid_identifier(self) -> None:
+        """Test that _validate_sql_identifier accepts valid identifiers."""
+        # Should not raise
+        PitHelper._validate_sql_identifier("table_name")
+        PitHelper._validate_sql_identifier("_private")
+        PitHelper._validate_sql_identifier("Table123")
+        PitHelper._validate_sql_identifier("a")
+
+    def test_validate_sql_identifier_custom_name(self) -> None:
+        """Test that _validate_sql_identifier uses custom name in error message."""
+        with pytest.raises(ValueError, match="Invalid cte_name"):
+            PitHelper._validate_sql_identifier("123invalid", "cte_name")
+
+    def test_add_pit_join_single_word_right_table(self) -> None:
+        """Test add_pit_join with single word right table (no alias)."""
+        result = PitHelper.add_pit_join(
+            "stock_daily s",
+            "adj_factor",
+            ["s.sid = adj_factor.sid"],
+            "2024-01-15",
+        )
+
+        # When right_table has no space, entire string is used as alias
+        expected = (
+            "stock_daily s LEFT JOIN adj_factor "
+            "ON s.sid = adj_factor.sid AND adj_factor.trade_date <= '2024-01-15'"
+        )
+        assert result == expected
+
+    def test_add_pit_join_right_table_multiple_spaces(self) -> None:
+        """Test add_pit_join with multiple spaces in right table."""
+        result = PitHelper.add_pit_join(
+            "stock_daily s",
+            "adj_factor   a",
+            ["s.sid = a.sid"],
+            "2024-01-15",
+        )
+
+        # Should handle multiple spaces correctly
+        expected = (
+            "stock_daily s LEFT JOIN adj_factor   a "
+            "ON s.sid = a.sid AND a.trade_date <= '2024-01-15'"
+        )
+        assert result == expected
+
+    def test_get_safe_trade_date_with_custom_placeholder(self) -> None:
+        """Test get_safe_trade_date with custom placeholder."""
+        result = PitHelper.get_safe_trade_date(
+            base_column="knowledge_date", knowledge_date="$latest_date"
+        )
+
+        # Should not add quotes around custom placeholder
+        assert result == "knowledge_date <= $latest_date"
+
+    def test_get_safe_trade_date_placeholder_with_custom_column(self) -> None:
+        """Test get_safe_trade_date with placeholder and custom column."""
+        result = PitHelper.get_safe_trade_date(
+            base_column="effective_date", knowledge_date="$asof"
+        )
+
+        # Should use custom column without quotes on placeholder
+        assert result == "effective_date <= $asof"
