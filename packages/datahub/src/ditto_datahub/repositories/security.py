@@ -353,7 +353,9 @@ class SecurityRepository:
         # Calculate checksum from DataFrame content
         data_dict = df.to_dict(as_series=False)
         json_str = json.dumps(data_dict, sort_keys=True, default=_json_serializable)
-        checksum = hashlib.md5(json_str.encode("utf-8")).hexdigest()
+        checksum = hashlib.md5(
+            json_str.encode("utf-8"), usedforsecurity=False
+        ).hexdigest()
 
         # File path for tracking (not a real file for SQLite storage)
         file_path = f"security_store:{asset_class}_basic"
