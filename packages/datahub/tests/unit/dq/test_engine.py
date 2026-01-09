@@ -1,7 +1,8 @@
 """Tests for DQEngine."""
 
+import tempfile
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 import polars as pl
 import pytest
@@ -225,3 +226,237 @@ class TestDQEngineIntegration:
         assert result.dataset == "etf_daily"
         # OHLC check not yet implemented, so this might pass for now
         assert isinstance(result, DQResult)
+
+
+class TestDQEngineEdgeCases:
+    """Test edge cases and additional coverage for DQEngine."""
+
+    def test_init_with_data_root(self) -> None:
+        """Test engine initialization with data_root parameter."""
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a default config directory structure
+            default_config = (
+                Path(__file__).parent.parent.parent.parent / "config" / "dq_rules"
+            )
+
+            if not default_config.exists():
+                pytest.skip(f"Default config directory not found: {default_config}")
+
+            engine = DQEngine(data_root=tmpdir)
+
+            assert engine.config is not None
+
+    def test_init_with_no_params(self) -> None:
+        """Test engine initialization with no parameters (default empty config)."""
+        engine = DQEngine()
+
+        assert engine.config is not None
+        assert isinstance(engine.config, DQConfig)
+
+    def test_config_property(self) -> None:
+        """Test _config property for backward compatibility."""
+        engine = DQEngine()
+
+        # _config property should return the same as config
+        assert engine._config is engine.config
+
+    def test_check_with_empty_rule_lists(self) -> None:
+        """Test check with dataset rules but empty L1/L2 lists."""
+        config = DQConfig(
+            datasets={
+                "test_dataset": DatasetRules(
+                    dataset="test_dataset",
+                    description="Test dataset with empty rules",
+                    l1_technical=[],  # Empty list
+                    l2_business=[],  # Empty list
+                    l3_statistical=[],
+                )
+            }
+        )
+
+        engine = DQEngine(config=config)
+
+        df = pl.DataFrame({"sid": [1, 2, 3], "value": [10.0, 20.0, 30.0]})
+
+        result = engine.check(df, "test_dataset")
+
+        # Should pass with no issues
+        assert result.passed is True
+        assert len(result.issues) == 0
+
+    def test_check_with_levels_none(self) -> None:
+        """Test check with levels=None (default behavior)."""
+        config = DQConfig(
+            datasets={
+                "test_dataset": DatasetRules(
+                    dataset="test_dataset",
+                    description="Test dataset",
+                    l1_technical=[
+                        {
+                            "rule": "not_null",
+                            "columns": ["sid"],
+                            "message": "SID required",
+                        }
+                    ],
+                    l2_business=[],
+                )
+            }
+        )
+
+        engine = DQEngine(config=config)
+
+        df = pl.DataFrame({"sid": [1, 2, 3]})
+
+        # levels=None should default to ["l1", "l2"]
+        result = engine.check(df, "test_dataset", levels=None)
+
+        assert result.passed is True
+
+    def test_check_with_both_levels(self) -> None:
+        """Test check with both L1 and L2 levels."""
+        config = DQConfig(
+            datasets={
+                "test_dataset": DatasetRules(
+                    dataset="test_dataset",
+                    description="Test dataset",
+                    l1_technical=[
+                        {
+                            "rule": "not_null",
+                            "columns": ["sid"],
+                            "message": "SID required",
+                        }
+                    ],
+                    l2_business=[
+                        {
+                            "rule": "positive",
+                            "columns": ["value"],
+                            "message": "Value positive",
+                        }
+                    ],
+                )
+            }
+        )
+
+        engine = DQEngine(config=config)
+
+        df = pl.DataFrame({"sid": [1, 2, 3], "value": [-5.0, 10.0, 20.0]})
+
+        result = engine.check(df, "test_dataset", levels=["l1", "l2"])
+
+        # L1 passes, L2 generates warning
+        assert result.passed is True  # No L1 errors
+        assert result.has_warnings is True  # L2 warning
+
+    def test_check_statistical_basic(self) -> None:
+        """Test check_statistical with mock hub."""
+        config = DQConfig(
+            datasets={
+                "test_dataset": DatasetRules(
+                    dataset="test_dataset",
+                    description="Test dataset",
+                    l3_statistical=[
+                        {
+                            "rule": "zscore",
+                            "column": "close",
+                            "window": 60,
+                            "threshold": 3.0,
+                        }
+                    ],
+                )
+            }
+        )
+
+        engine = DQEngine(config=config)
+
+        # Mock hub
+        mock_hub = MagicMock()
+        mock_hub.bars.get.return_value = pl.DataFrame()
+
+        result = engine.check_statistical(
+            dataset="test_dataset",
+            trade_date="2024-01-01",
+            hub=mock_hub,
+        )
+
+        # check_statistical always passes (alerts only)
+        assert result.passed is True
+        assert result.dataset == "test_dataset"
+
+    def test_check_statistical_unknown_dataset(self) -> None:
+        """Test check_statistical with unknown dataset."""
+        engine = DQEngine()
+
+        mock_hub = MagicMock()
+
+        result = engine.check_statistical(
+            dataset="unknown_dataset",
+            trade_date="2024-01-01",
+            hub=mock_hub,
+        )
+
+        # Unknown dataset should pass with no issues
+        assert result.passed is True
+        assert len(result.issues) == 0
+
+    def test_check_statistical_with_asset_class(self) -> None:
+        """Test check_statistical with asset_class parameter."""
+        config = DQConfig(
+            datasets={
+                "stock_daily": DatasetRules(
+                    dataset="stock_daily",
+                    description="Stock daily data",
+                    l3_statistical=[
+                        {
+                            "rule": "zscore",
+                            "column": "close",
+                            "window": 60,
+                            "threshold": 3.0,
+                        }
+                    ],
+                )
+            }
+        )
+
+        engine = DQEngine(config=config)
+
+        mock_hub = MagicMock()
+        mock_hub.bars.get.return_value = pl.DataFrame()
+
+        result = engine.check_statistical(
+            dataset="stock_daily",
+            trade_date="2024-01-01",
+            hub=mock_hub,
+            asset_class="stock",
+            market_wide=True,
+        )
+
+        assert result.passed is True
+
+    def test_check_with_no_matching_levels(self) -> None:
+        """Test check with levels that don't match configured rules."""
+        config = DQConfig(
+            datasets={
+                "test_dataset": DatasetRules(
+                    dataset="test_dataset",
+                    description="Test dataset",
+                    l1_technical=[
+                        {
+                            "rule": "not_null",
+                            "columns": ["sid"],
+                            "message": "SID required",
+                        }
+                    ],
+                )
+            }
+        )
+
+        engine = DQEngine(config=config)
+
+        df = pl.DataFrame({"sid": [1, 2, 3]})
+
+        # Only check L2, but dataset has no L2 rules
+        result = engine.check(df, "test_dataset", levels=["l2"])
+
+        assert result.passed is True
+        assert len(result.issues) == 0
