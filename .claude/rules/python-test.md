@@ -1,5 +1,5 @@
 ---
-paths: **/tests/**/*.py
+paths: tests/**/*.py
 ---
 
 # 测试规范

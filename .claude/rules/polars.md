@@ -1,5 +1,5 @@
 ---
-paths: **/*.py
+paths: ./**/*.py
 ---
 
 # Polars 规范
