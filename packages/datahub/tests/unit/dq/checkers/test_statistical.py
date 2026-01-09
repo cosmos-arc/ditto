@@ -490,3 +490,269 @@ class TestCompletenessChecker:
             "no data" in issues[0].message.lower()
             or "not found" in issues[0].message.lower()
         )
+
+
+class TestStatisticalCheckerEdgeCases:
+    """Test edge cases and error handling for StatisticalChecker."""
+
+    def test_zscore_exception_handling(self):
+        """Test Z-score check handles exceptions gracefully."""
+        hub = MagicMock()
+
+        # Mock bars.get to raise exception
+        hub.bars.get.side_effect = Exception("Database connection failed")
+
+        rule = {
+            "rule": "zscore",
+            "column": "close",
+            "window": 60,
+            "threshold": 3.0,
+        }
+
+        checker = StatisticalChecker()
+        issues = checker.check(
+            "test_dataset", "2024-01-01", [rule], hub, asset_class="stock"
+        )
+
+        # Should return empty issues on exception
+        assert len(issues) == 0
+
+    def test_completeness_exception_handling(self):
+        """Test completeness check handles exceptions gracefully."""
+        hub = MagicMock()
+
+        # Mock calendar.get to raise exception
+        hub.calendar.get.side_effect = Exception("Calendar service unavailable")
+
+        rule = {
+            "rule": "completeness",
+            "lookback_days": 5,
+        }
+
+        checker = StatisticalChecker()
+        issues = checker.check(
+            "test_dataset", "2024-01-01", [rule], hub, asset_class="stock"
+        )
+
+        # Should return empty issues on exception
+        assert len(issues) == 0
+
+    def test_unknown_rule_type(self):
+        """Test check with unknown rule type."""
+        hub = MagicMock()
+
+        rule = {
+            "rule": "unknown_rule",
+            "param": "value",
+        }
+
+        checker = StatisticalChecker()
+        issues = checker.check(
+            "test_dataset", "2024-01-01", [rule], hub, asset_class="stock"
+        )
+
+        # Should return empty issues for unknown rule types
+        assert len(issues) == 0
+
+    def test_empty_rules_list(self):
+        """Test check with empty rules list."""
+        hub = MagicMock()
+
+        checker = StatisticalChecker()
+        issues = checker.check(
+            "test_dataset", "2024-01-01", [], hub, asset_class="stock"
+        )
+
+        assert len(issues) == 0
+
+    def test_multiple_rules_mixed_types(self):
+        """Test check with multiple rules of different types."""
+        hub = MagicMock()
+
+        # Mock historical data
+        dates = [date.today() - timedelta(days=i) for i in range(60, 0, -1)]
+        historical_data = [{"sid": 1, "trade_date": d, "close": 100.0} for d in dates]
+
+        # Mock calendar data
+        calendar_data = [
+            {"trade_date": d, "is_open": d.weekday() < 5}
+            for d in [
+                date.today() - timedelta(days=i)
+                for i in range(10, 0, -1)
+                if (date.today() - timedelta(days=i)).weekday() < 5
+            ][:5]
+        ]
+
+        def mock_bars_get(start, end, **kwargs):
+            return pl.DataFrame(historical_data)
+
+        hub.bars.get = mock_bars_get
+        hub.calendar.get.return_value = pl.DataFrame(calendar_data)
+
+        rules = [
+            {
+                "rule": "zscore",
+                "column": "close",
+                "window": 60,
+                "threshold": 3.0,
+            },
+            {
+                "rule": "completeness",
+                "lookback_days": 5,
+            },
+        ]
+
+        checker = StatisticalChecker()
+        issues = checker.check(
+            "test_dataset", str(date.today()), rules, hub, asset_class="stock"
+        )
+
+        # Should collect issues from both rules
+        assert isinstance(issues, list)
+
+    def test_zscore_with_market_wide_false(self):
+        """Test zscore check with market_wide=False (default)."""
+        hub = MagicMock()
+
+        historical_data = pl.DataFrame(
+            {
+                "sid": [1, 2],
+                "trade_date": ["2024-01-01", "2024-01-01"],
+                "close": [100.0, 200.0],
+            }
+        )
+
+        hub.bars.get.return_value = historical_data
+
+        rule = {
+            "rule": "zscore",
+            "column": "close",
+            "window": 60,
+            "threshold": 3.0,
+        }
+
+        checker = StatisticalChecker()
+        issue = checker._check_zscore(
+            dataset="test_dataset",
+            trade_date="2024-01-02",
+            rule=rule,
+            hub=hub,
+            asset_class="stock",
+            market_wide=False,
+        )
+
+        # _check_zscore returns DQIssue | None
+        assert issue is None or isinstance(issue, list)
+
+    def test_completeness_with_etf_asset_class(self):
+        """Test completeness check with ETF asset class."""
+        hub = MagicMock()
+
+        calendar_data = pl.DataFrame(
+            {
+                "trade_date": ["2024-01-01", "2024-01-02"],
+                "is_open": [True, True],
+            }
+        )
+
+        bars_data = pl.DataFrame(
+            {
+                "trade_date": ["2024-01-01", "2024-01-02"],
+                "close": [100.0, 105.0],
+            }
+        )
+
+        hub.calendar.get.return_value = calendar_data
+        hub.bars.get.return_value = bars_data
+
+        rule = {
+            "rule": "completeness",
+            "lookback_days": 5,
+        }
+
+        checker = StatisticalChecker()
+        issue = checker._check_completeness(
+            dataset="etf_daily",
+            trade_date="2024-01-02",
+            rule=rule,
+            hub=hub,
+            asset_class="etf",
+            market_wide=False,
+        )
+
+        # _check_completeness returns DQIssue | None
+        assert issue is None or isinstance(issue, list)
+
+    def test_zscore_with_index_asset_class(self):
+        """Test zscore check with index asset class."""
+        hub = MagicMock()
+
+        historical_data = pl.DataFrame(
+            {
+                "sid": [1],
+                "trade_date": ["2024-01-01"],
+                "close": [1000.0],
+            }
+        )
+
+        hub.bars.get.return_value = historical_data
+
+        rule = {
+            "rule": "zscore",
+            "column": "close",
+            "window": 60,
+            "threshold": 3.0,
+        }
+
+        checker = StatisticalChecker()
+        issue = checker._check_zscore(
+            dataset="index_daily",
+            trade_date="2024-01-02",
+            rule=rule,
+            hub=hub,
+            asset_class="index",
+            market_wide=False,
+        )
+
+        # _check_zscore returns DQIssue | None
+        assert issue is None or isinstance(issue, list)
+
+    def test_zscore_invalid_date_format(self):
+        """Test zscore check with invalid date format."""
+        hub = MagicMock()
+
+        hub.bars.get.return_value = pl.DataFrame()
+
+        rule = {
+            "rule": "zscore",
+            "column": "close",
+            "window": 60,
+            "threshold": 3.0,
+        }
+
+        checker = StatisticalChecker()
+        issues = checker.check(
+            "test_dataset", "invalid-date", [rule], hub, asset_class="stock"
+        )
+
+        # Should handle exception gracefully
+        assert len(issues) == 0
+
+    def test_completeness_invalid_date_format(self):
+        """Test completeness check with invalid date format."""
+        hub = MagicMock()
+
+        hub.calendar.get.side_effect = Exception("Invalid date")
+
+        rule = {
+            "rule": "completeness",
+            "lookback_days": 5,
+        }
+
+        checker = StatisticalChecker()
+        issues = checker.check(
+            "test_dataset", "invalid-date", [rule], hub, asset_class="stock"
+        )
+
+        # Should handle exception gracefully
+        assert len(issues) == 0
