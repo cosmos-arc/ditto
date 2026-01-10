@@ -7,17 +7,10 @@ operations with date range chunking and resume capability.
 # ruff: noqa: PLC0415  # 测试文件允许函数内导入
 
 import pytest
-from prefect.testing.utilities import prefect_test_harness
-
-
-@pytest.fixture(autouse=True)
-def setup_prefect():
-    """Set up Prefect test harness for each test."""
-    with prefect_test_harness():
-        yield
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("prefect_test_session")
 class TestBackfillFlow:
     """Tests for backfill_flow."""
 
@@ -140,6 +133,7 @@ class TestBackfillFlow:
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("prefect_test_session")
 class TestBackfillMissingFlow:
     """Tests for backfill_missing_flow."""
 
@@ -190,6 +184,7 @@ class TestBackfillMissingFlow:
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("prefect_test_session")
 class TestResumeCapability:
     """Tests for resume capability."""
 

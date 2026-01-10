@@ -7,17 +7,10 @@ and filling data holes.
 # ruff: noqa: PLC0415  # 测试文件允许函数内导入
 
 import pytest
-from prefect.testing.utilities import prefect_test_harness
-
-
-@pytest.fixture(autouse=True)
-def setup_prefect():
-    """Set up Prefect test harness for each test."""
-    with prefect_test_harness():
-        yield
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("prefect_test_session")
 class TestRetryFailedFlow:
     """Tests for retry_failed_flow."""
 
@@ -134,6 +127,7 @@ class TestRetryFailedFlow:
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("prefect_test_session")
 class TestRepairHolesFlow:
     """Tests for repair_holes_flow."""
 
@@ -184,6 +178,7 @@ class TestRepairHolesFlow:
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("prefect_test_session")
 class TestDailyRepairFlow:
     """Tests for daily_repair_flow."""
 

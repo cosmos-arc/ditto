@@ -10,17 +10,10 @@ for declarative orchestration.
 # ruff: noqa: PLC0415  # 测试文件允许函数内导入
 
 import pytest
-from prefect.testing.utilities import prefect_test_harness
-
-
-@pytest.fixture(autouse=True)
-def setup_prefect():
-    """Set up Prefect test harness for each test."""
-    with prefect_test_harness():
-        yield
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("prefect_test_session")
 class TestDailyIngestionFlow:
     """Tests for daily_ingestion_flow."""
 
@@ -178,6 +171,7 @@ class TestDailyIngestionFlow:
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("prefect_test_session")
 class TestTradingDayValidation:
     """Tests for trading day validation logic."""
 
@@ -244,6 +238,7 @@ class TestTradingDayValidation:
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("prefect_test_session")
 class TestTaskDependencyOrchestration:
     """Tests for task dependency orchestration using Prefect wait_for."""
 
@@ -322,6 +317,7 @@ class TestTaskDependencyOrchestration:
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("prefect_test_session")
 class TestResultAggregation:
     """Tests for result aggregation logic."""
 
@@ -376,6 +372,7 @@ class TestResultAggregation:
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("prefect_test_session")
 class TestErrorHandling:
     """Tests for error handling in various scenarios."""
 
