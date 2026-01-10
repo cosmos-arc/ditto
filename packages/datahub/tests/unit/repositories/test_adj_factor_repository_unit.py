@@ -38,7 +38,7 @@ class TestAdjFactorRepository:
         )
 
         # Act
-        file_path, checksum = self.repo.write(
+        write_result = self.repo.write(
             dataset="adj_factor",
             df=df,
             year=2024,
@@ -46,9 +46,12 @@ class TestAdjFactorRepository:
         )
 
         # Assert
-        assert file_path is not None
-        assert checksum is not None
-        assert len(checksum) > 0
+        assert write_result.file_path is not None
+        assert write_result.checksum is not None
+        assert len(write_result.checksum) > 0
+        assert write_result.rows_written == 2
+        assert write_result.rows_total == 2
+        assert write_result.blocked is False
 
         # Verify data was written
         result = self.adj_factor_store.read(
