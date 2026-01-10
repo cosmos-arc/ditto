@@ -218,8 +218,8 @@ class TestDatabaseManager:
         # 在没有创建连接的情况下清理
         manager.clean_duckdb()
 
-        # 不应该抛出异常
-        assert True
+        # 验证连接仍然为 None（因为没有创建过连接）
+        assert manager._duckdb_conn is None
 
     def test_multiple_managers_independent(self):
         """测试多个 DatabaseManager 实例独立."""
