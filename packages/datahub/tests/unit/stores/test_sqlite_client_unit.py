@@ -361,7 +361,10 @@ class TestSQLiteClient:
         # Close the client
         sqlite_client.close()
 
-        # After close, accessing conn should return a new connection or raise
-        # The actual behavior depends on SQLitePool implementation
-        # We just verify close() can be called without error
-        assert True  # If we get here, close() worked
+        # After close, accessing conn should create a new connection
+        # Verify that we can still get a connection (it will be a new one)
+        new_conn = sqlite_client.conn
+        assert new_conn is not None
+        # The new connection should work
+        result = new_conn.execute("SELECT 1").fetchone()
+        assert result[0] == 1
