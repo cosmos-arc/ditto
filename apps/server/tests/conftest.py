@@ -126,24 +126,23 @@ def test_settings(temp_dir: Path) -> Settings:
 @pytest.fixture(scope="session")
 def test_settings_session() -> Generator[Settings, None, None]:
     """Session 级别的 Settings，避免重复初始化."""
-    temp_dir = TemporaryDirectory()
-    temp_path = Path(temp_dir.name)
+    with TemporaryDirectory() as tmpdir:
+        temp_path = Path(tmpdir)
 
-    os.environ["DB_DUCKDB_PATH"] = str(temp_path / "test.duckdb")
-    os.environ["DB_SQLITE_PATH"] = str(temp_path / "test.sqlite")
-    os.environ["TUSHARE_TOKEN"] = "test_token"
-    os.environ["DITTO_ENV"] = "testing"
+        os.environ["DB_DUCKDB_PATH"] = str(temp_path / "test.duckdb")
+        os.environ["DB_SQLITE_PATH"] = str(temp_path / "test.sqlite")
+        os.environ["TUSHARE_TOKEN"] = "test_token"
+        os.environ["DITTO_ENV"] = "testing"
 
-    settings = Settings()
+        settings = Settings()
 
-    yield settings
+        yield settings
 
-    # 清理环境变量和临时目录
-    del os.environ["DB_DUCKDB_PATH"]
-    del os.environ["DB_SQLITE_PATH"]
-    del os.environ["TUSHARE_TOKEN"]
-    del os.environ["DITTO_ENV"]
-    temp_dir.cleanup()
+        # 清理环境变量
+        del os.environ["DB_DUCKDB_PATH"]
+        del os.environ["DB_SQLITE_PATH"]
+        del os.environ["TUSHARE_TOKEN"]
+        del os.environ["DITTO_ENV"]
 
 
 @pytest.fixture(scope="session")
