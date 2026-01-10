@@ -412,8 +412,6 @@ addopts = [
 [tool.coverage.run]
 branch = true
 source = ["packages", "apps"]
-# 动态上下文：记录每行代码被哪个测试覆盖
-dynamic_context = "test_function"
 
 [tool.coverage.report]
 precision = 2
