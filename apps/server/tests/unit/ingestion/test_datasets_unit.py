@@ -18,18 +18,23 @@ from ditto_server.ingestion.config.datasets import (
 class TestDatasetEnum:
     """Test Dataset enumeration."""
 
-    def test_dataset_t0_meta_datasets(self) -> None:
-        """Test T0 meta datasets are defined."""
-        assert Dataset.CALENDAR in Dataset
-        assert Dataset.STOCK_BASIC in Dataset
-        assert Dataset.ETF_BASIC in Dataset
-
-    def test_dataset_t1_incremental_datasets(self) -> None:
-        """Test T1 daily datasets are defined."""
-        assert Dataset.ETF_DAILY in Dataset
-        assert Dataset.STOCK_DAILY in Dataset
-        assert Dataset.ADJ_FACTOR in Dataset
-        assert Dataset.FUND_ADJ in Dataset
+    @pytest.mark.parametrize(
+        "dataset",
+        [
+            # T0 meta datasets
+            Dataset.CALENDAR,
+            Dataset.STOCK_BASIC,
+            Dataset.ETF_BASIC,
+            # T1 incremental datasets
+            Dataset.ETF_DAILY,
+            Dataset.STOCK_DAILY,
+            Dataset.ADJ_FACTOR,
+            Dataset.FUND_ADJ,
+        ],
+    )
+    def test_dataset_enum_contains(self, dataset: Dataset) -> None:
+        """Test that datasets are defined in the enum."""
+        assert dataset in Dataset
 
     def test_dataset_values(self) -> None:
         """Test dataset enum values match expected strings."""
