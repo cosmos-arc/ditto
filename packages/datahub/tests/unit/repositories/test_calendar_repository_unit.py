@@ -1,5 +1,6 @@
 """Tests for CalendarRepository."""
 
+import pytest
 from ditto_datahub.repositories.calendar import CalendarRepository
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.calendar_store import CalendarStore
@@ -96,15 +97,26 @@ class TestCalendarRepository:
         assert self.repo.is_trading_day("2024-01-02") is True
         assert self.repo.is_trading_day("2024-01-01") is False
 
-    def test_get_prev(self) -> None:
-        """Test get_prev."""
-        assert self.repo.get_prev("2024-01-03") == "2024-01-02"
-        assert self.repo.get_prev("2024-01-02") is None
-
-    def test_get_next(self) -> None:
-        """Test get_next."""
-        assert self.repo.get_next("2024-01-03") == "2024-01-04"
-        assert self.repo.get_next("2024-01-08") is None
+    @pytest.mark.parametrize(
+        ("method", "date", "expected"),
+        [
+            # get_prev tests
+            ("prev", "2024-01-03", "2024-01-02"),
+            ("prev", "2024-01-02", None),
+            # get_next tests
+            ("next", "2024-01-03", "2024-01-04"),
+            ("next", "2024-01-08", None),
+        ],
+    )
+    def test_get_adjacent_trading_day(
+        self, method: str, date: str, expected: str | None
+    ) -> None:
+        """Test get_prev and get_next."""
+        if method == "prev":
+            result = self.repo.get_prev(date)
+        else:
+            result = self.repo.get_next(date)
+        assert result == expected
 
     def test_list_trading_days(self) -> None:
         """Test list_trading_days."""
