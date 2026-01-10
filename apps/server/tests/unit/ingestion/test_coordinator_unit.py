@@ -1,11 +1,11 @@
 """Tests for IngestionCoordinator."""
 
-from dataclasses import dataclass
 from datetime import date
 
 import polars as pl
 import pytest
 from ditto_datahub.dq.engine import DQResult
+from ditto_datahub.repositories.bars import WriteResult
 from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
@@ -17,25 +17,25 @@ from ditto_server.ingestion.services.coordinator import (
 )
 
 
-@dataclass(frozen=True)
-class MockWriteResult:
-    """Mock WriteResult for testing."""
-
-    file_path: str
-    checksum: str
-    rows_written: int = 0
-    rows_total: int = 0
-    blocked: bool = False
-    dq_result: None = None
-
-
-def mock_hub_bars_write(file_path: str, checksum: str) -> MockWriteResult:
+def mock_hub_bars_write(file_path: str, checksum: str) -> WriteResult:
     """创建 Mock hub.bars.write() 的返回值。"""
-    return MockWriteResult(
+    return WriteResult(
         file_path=file_path,
         checksum=checksum,
         rows_written=0,
         rows_total=0,
+    )
+
+
+def mock_hub_adj_factor_write(file_path: str, checksum: str) -> WriteResult:
+    """创建 Mock hub.adj_factor.write() 的返回值。"""
+    return WriteResult(
+        file_path=file_path,
+        checksum=checksum,
+        rows_written=0,
+        rows_total=0,
+        blocked=False,
+        dq_result=None,
     )
 
 
@@ -311,8 +311,8 @@ class TestIngestDate:
             }
         )
 
-        mock_hub.adj_factor_store = mocker.Mock()
-        mock_hub.adj_factor_store.write.return_value = (
+        mock_hub.adj_factor = mocker.Mock()
+        mock_hub.adj_factor.write.return_value = mock_hub_adj_factor_write(
             "/path/to/file.parquet",
             "checksum789",
         )
@@ -331,7 +331,7 @@ class TestIngestDate:
         # Assert
         assert result.status == "success"
         mock_source.fetch_adj_factor.assert_called_once_with("2024-12-27")
-        mock_hub.adj_factor_store.write.assert_called_once()
+        mock_hub.adj_factor.write.assert_called_once()
 
     def test_ingest_date_success_calendar(
         self, coordinator, mock_hub, mock_source, mocker
@@ -519,9 +519,11 @@ class TestIngestDate:
         mock_dq_result = mocker.Mock(spec=DQResult)
         mock_dq_result.error_count = 10
 
-        mock_hub.bars.write.return_value = MockWriteResult(
+        mock_hub.bars.write.return_value = WriteResult(
             file_path="/path/to/file.parquet",
             checksum="checksum123",
+            rows_written=0,
+            rows_total=0,
             blocked=True,
             dq_result=mock_dq_result,
         )
@@ -1179,8 +1181,8 @@ class TestForceParameter:
             }
         )
 
-        mock_hub.adj_factor_store = mocker.Mock()
-        mock_hub.adj_factor_store.write.return_value = (
+        mock_hub.adj_factor = mocker.Mock()
+        mock_hub.adj_factor.write.return_value = mock_hub_adj_factor_write(
             "/path/to/file.parquet",
             "checksum789",
         )
@@ -1197,8 +1199,8 @@ class TestForceParameter:
         coordinator.ingest_date("adj_factor", "2024-12-27", force=True)
 
         # Assert
-        mock_hub.adj_factor_store.write.assert_called_once()
-        call_kwargs = mock_hub.adj_factor_store.write.call_args.kwargs
+        mock_hub.adj_factor.write.assert_called_once()
+        call_kwargs = mock_hub.adj_factor.write.call_args.kwargs
         assert "on_duplicate" in call_kwargs
         assert call_kwargs["on_duplicate"] == OnDuplicate.KEEP_LAST
 
@@ -1341,8 +1343,8 @@ class TestCursorUpdateAfterSuccess:
             }
         )
 
-        mock_hub.adj_factor_store = mocker.Mock()
-        mock_hub.adj_factor_store.write.return_value = (
+        mock_hub.adj_factor = mocker.Mock()
+        mock_hub.adj_factor.write.return_value = mock_hub_adj_factor_write(
             "/path/to/file.parquet",
             "checksum789",
         )
@@ -1384,10 +1386,10 @@ class TestCursorUpdateAfterSuccess:
             }
         )
 
-        mock_hub.adj_factor_store = mocker.Mock()
-        mock_hub.adj_factor_store.write.return_value = (
+        mock_hub.adj_factor = mocker.Mock()
+        mock_hub.adj_factor.write.return_value = mock_hub_adj_factor_write(
             "/path/to/file.parquet",
-            "checksum999",
+            "checksum789",
         )
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="fund_adj",
@@ -1567,7 +1569,7 @@ class TestWriteDataEdgeCases:
 
         # 验证没有调用任何 store 的 write 方法
         mock_hub.bars.write.assert_not_called()
-        mock_hub.adj_factor_store.write.assert_not_called()
+        mock_hub.adj_factor.write.assert_not_called()
 
 
 @pytest.mark.unit
@@ -1595,9 +1597,11 @@ class TestDQBlockedCursorUpdate:
         mock_dq_result = mocker.Mock(spec=DQResult)
         mock_dq_result.error_count = 5
 
-        mock_hub.bars.write.return_value = MockWriteResult(
+        mock_hub.bars.write.return_value = WriteResult(
             file_path="/path/to/file.parquet",
             checksum="checksum123",
+            rows_written=0,
+            rows_total=0,
             blocked=True,
             dq_result=mock_dq_result,
         )
@@ -1670,8 +1674,8 @@ class TestDQBlockedCursorUpdate:
             }
         )
 
-        mock_hub.adj_factor_store = mocker.Mock()
-        mock_hub.adj_factor_store.write.return_value = (
+        mock_hub.adj_factor = mocker.Mock()
+        mock_hub.adj_factor.write.return_value = mock_hub_adj_factor_write(
             "/path/to/file.parquet",
             "checksum789",
         )
@@ -1760,8 +1764,8 @@ class TestAdjFactorWithExistingSid:
             }
         )
 
-        mock_hub.adj_factor_store = mocker.Mock()
-        mock_hub.adj_factor_store.write.return_value = (
+        mock_hub.adj_factor = mocker.Mock()
+        mock_hub.adj_factor.write.return_value = mock_hub_adj_factor_write(
             "/path/to/file.parquet",
             "checksum789",
         )
@@ -1778,7 +1782,7 @@ class TestAdjFactorWithExistingSid:
         # 验证没有调用 enrich_dataframe（因为已有 sid 列）
         coordinator._security_mapper.enrich_dataframe.assert_not_called()
         # 验证 adj_factor_store.write 被调用
-        mock_hub.adj_factor_store.write.assert_called_once()
+        mock_hub.adj_factor.write.assert_called_once()
 
     def test_write_fund_adj_with_existing_sid_column(
         self, coordinator, mock_hub, mocker
@@ -1794,8 +1798,8 @@ class TestAdjFactorWithExistingSid:
             }
         )
 
-        mock_hub.adj_factor_store = mocker.Mock()
-        mock_hub.adj_factor_store.write.return_value = (
+        mock_hub.adj_factor = mocker.Mock()
+        mock_hub.adj_factor.write.return_value = mock_hub_adj_factor_write(
             "/path/to/file.parquet",
             "checksum999",
         )
@@ -1812,7 +1816,7 @@ class TestAdjFactorWithExistingSid:
         # 验证没有调用 enrich_dataframe（因为已有 sid 列）
         coordinator._security_mapper.enrich_dataframe.assert_not_called()
         # 验证 adj_factor_store.write 被调用
-        mock_hub.adj_factor_store.write.assert_called_once()
+        mock_hub.adj_factor.write.assert_called_once()
 
     def test_write_adj_factor_without_sid_column_calls_enrich(
         self, coordinator, mock_hub, mocker
@@ -1827,8 +1831,8 @@ class TestAdjFactorWithExistingSid:
             }
         )
 
-        mock_hub.adj_factor_store = mocker.Mock()
-        mock_hub.adj_factor_store.write.return_value = (
+        mock_hub.adj_factor = mocker.Mock()
+        mock_hub.adj_factor.write.return_value = mock_hub_adj_factor_write(
             "/path/to/file.parquet",
             "checksum789",
         )
@@ -1855,4 +1859,4 @@ class TestAdjFactorWithExistingSid:
             source="tushare",
         )
         # 验证 adj_factor_store.write 被调用
-        mock_hub.adj_factor_store.write.assert_called_once()
+        mock_hub.adj_factor.write.assert_called_once()

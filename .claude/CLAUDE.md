@@ -30,6 +30,11 @@
     - **覆盖率阈值**: CI 和本地统一为 80%
       - CI: `.github/workflows/ci.yml` (`--cov-fail-under=80`)
       - 本地: `pixi.toml` test-cov-xml (`--cov-fail-under=80`)
+    - **覆盖率数据准确性**（**新增约束**）:
+      - 计划文件中的覆盖率数据必须使用标准命令验证：`pixi run -e dev pytest --cov=<package> --cov-report=term`
+      - 覆盖率变化超过 5% 时，必须更新相关计划文件（`docs/plans/*.md`）
+      - 计划文件创建时必须标注数据来源和验证日期
+      - 禁止使用不完整或过时的覆盖率数据作为决策依据
     - 假测试检测：无 `assert True` 等无效断言（检查: `grep -r "assert True" tests/`）
     - 技术债务追踪：新增 `# HACK/# TODO` 必须创建 issue 追踪（存储至 `docs/issues/`）
     - 文档同步：代码变更时必须更新相关 README/ADR
