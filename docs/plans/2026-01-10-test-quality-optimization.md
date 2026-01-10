@@ -481,7 +481,7 @@ class TestDataHubConvenienceMethods:
 - ✅ 总计约 350+ 个测试通过
 
 **提交记录：**
-- （待创建提交）
+- 98230d5: test: migrate all test files from unittest.mock to pytest-mock (Phase 3)
 
 #### Task 3.1: 批量迁移 unittest.mock 到 pytest-mock
 
