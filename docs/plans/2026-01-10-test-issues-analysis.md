@@ -317,10 +317,22 @@ env:
   DITTO_OBSERVABILITY_TEST_MODE: ${{ vars.DITTO_OBSERVABILITY_TEST_MODE || 'docker' }}
 ```
 
-### Phase 4: 修复失败的集成测试
+### Phase 4: 修复失败的集成测试（**✅ 已完成**）
 
-#### 任务4.1：修复复权因子摄入测试
+#### 任务4.1：修复复权因子摄入测试（**✅ 已完成**）
 **文件：** `apps/server/tests/integration/ingestion/test_*_adj_*.py`
+
+**问题根因**:
+- 测试 mock 了 `mock_hub.adj_factor.write`，但 DataHub 没有 `adj_factor` 属性
+- Coordinator 直接调用 Store 层 (`adj_factor_store`)，与 bars 数据集不一致
+
+**修复内容**:
+1. **AdjFactorRepository**: 修改 `write()` 返回 `WriteResult` 而非 `tuple[str, str]`
+2. **DataHub**: 添加 `adj_factor` repository 属性，与 `bars` 保持一致
+3. **Coordinator**: 使用 `self._hub.adj_factor.write()` 而非 Store 层
+4. **测试**: mock 返回 `WriteResult` 对象
+
+**测试结果**: ✅ 2 个集成测试通过
 
 ### Phase 5: 提升核心覆盖率（按优先级）
 
