@@ -3,7 +3,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from threading import Lock
-from unittest.mock import Mock
 
 import polars as pl
 import pytest
@@ -17,9 +16,9 @@ from ditto_server.ingestion.services.security_mapper import (
 
 
 @pytest.fixture
-def mock_sid_allocator():
+def mock_sid_allocator(mocker):
     """创建 Mock SidAllocator。"""
-    allocator = Mock()
+    allocator = mocker.Mock()
 
     # 使用计数器模拟递增的 SID 分配
     stock_counter = [1_000_000]
@@ -51,9 +50,9 @@ def setup_observability():
 
 
 @pytest.fixture
-def mock_security_store():
+def mock_security_store(mocker):
     """创建 Mock SecurityStore。"""
-    store = Mock(spec=SecurityStore)
+    store = mocker.Mock(spec=SecurityStore)
     # 默认情况下 resolve_sid 返回 None (不存在)
     store.resolve_sid.return_value = None
     return store
@@ -497,7 +496,7 @@ class TestEnrichDataFrame:
         )
 
 
-def assert_frame_equal(left, right):
+def assert_frame_equal(left: pl.DataFrame, right: pl.DataFrame) -> None:
     """辅助函数:断言两个 DataFrame 相等。"""
     assert left.shape == right.shape
     assert left.columns == right.columns

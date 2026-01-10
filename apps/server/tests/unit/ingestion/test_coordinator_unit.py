@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from datetime import date
-from unittest.mock import Mock
 
 import polars as pl
 import pytest
@@ -50,13 +49,13 @@ def setup_observability():
 
 
 @pytest.fixture
-def mock_hub():
+def mock_hub(mocker):
     """创建 Mock DataHub。"""
-    hub = Mock()
-    hub.ingestion_log = Mock(spec=IngestionLogStore)
+    hub = mocker.Mock()
+    hub.ingestion_log = mocker.Mock(spec=IngestionLogStore)
 
     # 添加 SidAllocator mock
-    mock_sid_allocator = Mock()
+    mock_sid_allocator = mocker.Mock()
     stock_counter = [1_000_000]
     etf_counter = [2_000_000]
 
@@ -76,13 +75,13 @@ def mock_hub():
     hub.sid_allocator = mock_sid_allocator
 
     # 添加 SecurityStore mock（SecurityMapper 需要）
-    hub.security_store = Mock()
+    hub.security_store = mocker.Mock()
     hub.security_store.resolve_sid.return_value = None  # 默认返回 None（不存在）
     hub.security_store.register.return_value = 1000001  # 返回注册的 SID
 
     # 添加 Securities Repository mock
     # (Coordinator._write_stock_basic/_write_etf_basic 需要)
-    hub.securities = Mock()
+    hub.securities = mocker.Mock()
 
     def register_batch_side_effect(df, source, asset_class, **kwargs):
         """根据 asset_class 返回不同的 file_path。"""
@@ -96,9 +95,9 @@ def mock_hub():
 
 
 @pytest.fixture
-def mock_source():
+def mock_source(mocker):
     """创建 Mock DataSource。"""
-    source = Mock(spec=DataSource)
+    source = mocker.Mock(spec=DataSource)
     return source
 
 
@@ -189,7 +188,7 @@ class TestIngestDate:
         mock_source.fetch_stock_daily.assert_not_called()
 
     def test_ingest_date_success_etf_daily(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """成功摄取 etf_daily 数据。"""
         # Arrange
@@ -210,7 +209,7 @@ class TestIngestDate:
         )
         mock_source.fetch_etf_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
@@ -229,7 +228,9 @@ class TestIngestDate:
             pl.lit(2000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         result = coordinator.ingest_date("etf_daily", "2024-12-27")
@@ -243,7 +244,7 @@ class TestIngestDate:
         mock_hub.ingestion_log.save_log.assert_called_once()
 
     def test_ingest_date_success_stock_daily(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """成功摄取 stock_daily 数据。"""
         # Arrange
@@ -264,7 +265,7 @@ class TestIngestDate:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum456",
@@ -283,7 +284,9 @@ class TestIngestDate:
             pl.lit(1000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         result = coordinator.ingest_date("stock_daily", "2024-12-27")
@@ -293,7 +296,7 @@ class TestIngestDate:
         mock_source.fetch_stock_daily.assert_called_once_with("2024-12-27")
 
     def test_ingest_date_success_adj_factor(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """成功摄取 adj_factor 数据。"""
         # Arrange
@@ -306,7 +309,7 @@ class TestIngestDate:
             }
         )
 
-        mock_hub.adj_factor_store = Mock()
+        mock_hub.adj_factor_store = mocker.Mock()
         mock_hub.adj_factor_store.write.return_value = (
             "/path/to/file.parquet",
             "checksum789",
@@ -329,7 +332,7 @@ class TestIngestDate:
         mock_hub.adj_factor_store.write.assert_called_once()
 
     def test_ingest_date_success_calendar(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """成功摄取 calendar 数据（范围数据）。"""
         # Arrange
@@ -341,7 +344,7 @@ class TestIngestDate:
             }
         )
 
-        mock_hub.calendar_store = Mock()
+        mock_hub.calendar_store = mocker.Mock()
         mock_hub.calendar_store.upsert.return_value = 2
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="calendar",
@@ -385,7 +388,7 @@ class TestIngestDate:
         assert "Network error" in result.message
 
     def test_ingest_date_empty_dataframe(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """获取到空数据时返回失败结果。"""
         # Arrange
@@ -409,7 +412,7 @@ class TestIngestDate:
         assert "空" in result.message or "empty" in result.message.lower()
 
     def test_ingest_date_force_overwrites_previous_success(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """force=True 时覆盖历史成功记录。"""
         # Arrange
@@ -438,7 +441,7 @@ class TestIngestDate:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "new_checksum",
@@ -457,7 +460,9 @@ class TestIngestDate:
             pl.lit(1000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         result = coordinator.ingest_date("stock_daily", "2024-12-27", force=True)
@@ -491,7 +496,9 @@ class TestIngestDate:
         assert result.error == "UNKNOWN_ERROR"
         assert "Unexpected error" in result.message
 
-    def test_ingest_date_dq_blocked(self, coordinator, mock_hub, mock_source) -> None:
+    def test_ingest_date_dq_blocked(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
         """测试 DQ 阻断时的处理。"""
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None
@@ -505,9 +512,9 @@ class TestIngestDate:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
 
-        mock_dq_result = Mock(spec=DQResult)
+        mock_dq_result = mocker.Mock(spec=DQResult)
         mock_dq_result.error_count = 10
 
         mock_hub.bars.write.return_value = MockWriteResult(
@@ -524,13 +531,15 @@ class TestIngestDate:
             error_code="DQ_BLOCKED",
             error_message="DQ L1 check failed: 10 errors",
         )
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         enriched_df = source_df.with_columns(
             pl.lit(1000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         result = coordinator.ingest_date("stock_daily", "2024-12-27")
@@ -556,11 +565,11 @@ class TestIngestRange:
     """测试 ingest_range 方法。"""
 
     def test_ingest_range_multiple_dates(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """成功摄取日期范围内的多个交易日。"""
         # Arrange
-        mock_hub.calendar_store = Mock()
+        mock_hub.calendar_store = mocker.Mock()
         mock_hub.calendar_store.get_range.return_value = [
             "2024-12-25",
             "2024-12-26",
@@ -585,7 +594,7 @@ class TestIngestRange:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
@@ -605,7 +614,9 @@ class TestIngestRange:
             pl.lit(1000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         results = coordinator.ingest_range("stock_daily", "2024-12-25", "2024-12-27")
@@ -619,11 +630,11 @@ class TestIngestRange:
         assert mock_source.fetch_stock_daily.call_count == 3
 
     def test_ingest_range_with_skipped_dates(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """日期范围内有跳过的日期。"""
         # Arrange
-        mock_hub.calendar_store = Mock()
+        mock_hub.calendar_store = mocker.Mock()
         mock_hub.calendar_store.get_range.return_value = [
             "2024-12-25",
             "2024-12-26",
@@ -661,7 +672,7 @@ class TestIngestRange:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
@@ -681,7 +692,9 @@ class TestIngestRange:
             pl.lit(1000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         results = coordinator.ingest_range("stock_daily", "2024-12-25", "2024-12-27")
@@ -693,10 +706,10 @@ class TestIngestRange:
         assert len(skipped_results) == 1
         assert skipped_results[0].trade_date == "2024-12-26"
 
-    def test_ingest_range_empty_range(self, coordinator, mock_hub) -> None:
+    def test_ingest_range_empty_range(self, coordinator, mock_hub, mocker) -> None:
         """日期范围为空时返回空列表。"""
         # Arrange
-        mock_hub.calendar_store = Mock()
+        mock_hub.calendar_store = mocker.Mock()
         mock_hub.calendar_store.get_range.return_value = []
 
         # Act
@@ -705,10 +718,12 @@ class TestIngestRange:
         # Assert
         assert len(results) == 0
 
-    def test_ingest_range_with_force(self, coordinator, mock_hub, mock_source) -> None:
+    def test_ingest_range_with_force(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
         """force=True 时跳过所有历史检查。"""
         # Arrange
-        mock_hub.calendar_store = Mock()
+        mock_hub.calendar_store = mocker.Mock()
         mock_hub.calendar_store.get_range.return_value = ["2024-12-27"]
 
         source_df = pl.DataFrame(
@@ -727,7 +742,7 @@ class TestIngestRange:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
@@ -747,7 +762,9 @@ class TestIngestRange:
             pl.lit(1000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         results = coordinator.ingest_range(
@@ -763,7 +780,7 @@ class TestWriteT0Data:
     """测试 T0 数据（stock_basic, etf_basic）写入。"""
 
     def test_ingest_date_success_stock_basic(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """成功摄取 stock_basic 数据到 security_store。"""
         # Arrange
@@ -778,14 +795,14 @@ class TestWriteT0Data:
             }
         )
 
-        mock_hub.ingestion_cursor = Mock()
-        mock_hub.ingestion_cursor.update_success.return_value = Mock(
+        mock_hub.ingestion_cursor = mocker.Mock()
+        mock_hub.ingestion_cursor.update_success.return_value = mocker.Mock(
             dataset="stock_basic",
             source="tushare",
             last_success="2024-01-03",
             last_attempted="2024-01-03",
         )
-        mock_hub.ingestion_log.save_log.return_value = Mock(
+        mock_hub.ingestion_log.save_log.return_value = mocker.Mock(
             dataset="stock_basic",
             source="tushare",
             trade_date="2024-01-03",
@@ -809,7 +826,7 @@ class TestWriteT0Data:
         )
 
     def test_ingest_date_success_etf_basic(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """成功摄取 etf_basic 数据到 security_store。"""
         # Arrange
@@ -824,14 +841,14 @@ class TestWriteT0Data:
             }
         )
 
-        mock_hub.ingestion_cursor = Mock()
-        mock_hub.ingestion_cursor.update_success.return_value = Mock(
+        mock_hub.ingestion_cursor = mocker.Mock()
+        mock_hub.ingestion_cursor.update_success.return_value = mocker.Mock(
             dataset="etf_basic",
             source="tushare",
             last_success="2024-01-03",
             last_attempted="2024-01-03",
         )
-        mock_hub.ingestion_log.save_log.return_value = Mock(
+        mock_hub.ingestion_log.save_log.return_value = mocker.Mock(
             dataset="etf_basic",
             source="tushare",
             trade_date="2024-01-03",
@@ -855,7 +872,7 @@ class TestWriteT0Data:
         )
 
     def test_write_stock_basic_calls_mapper_and_updates_cursor(
-        self, coordinator, mock_hub
+        self, coordinator, mock_hub, mocker
     ) -> None:
         """验证 _write_stock_basic 调用 SecurityMapper 并更新游标。"""
         # Arrange
@@ -869,7 +886,7 @@ class TestWriteT0Data:
             }
         )
 
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         # Act
         file_path, checksum = coordinator._write_stock_basic(df, "2024-01-03")
@@ -885,7 +902,7 @@ class TestWriteT0Data:
         )
 
     def test_write_etf_basic_calls_mapper_and_updates_cursor(
-        self, coordinator, mock_hub
+        self, coordinator, mock_hub, mocker
     ) -> None:
         """验证 _write_etf_basic 调用 SecurityMapper 并更新游标。"""
         # Arrange
@@ -899,7 +916,7 @@ class TestWriteT0Data:
             }
         )
 
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         # Act
         file_path, checksum = coordinator._write_etf_basic(df, "2024-01-03")
@@ -919,7 +936,7 @@ class TestWriteT1Data:
     """测试 T1 数据（etf_daily, stock_daily）写入与 SID 补齐。"""
 
     def test_write_stock_daily_enriches_sid_and_source(
-        self, coordinator, mock_hub
+        self, coordinator, mock_hub, mocker
     ) -> None:
         """验证 stock_daily 写入前补齐 sid 和 source 字段。"""
         # Arrange
@@ -938,7 +955,7 @@ class TestWriteT1Data:
             }
         )
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/stock_daily/2024.parquet",
             "checksum123",
@@ -949,7 +966,9 @@ class TestWriteT1Data:
             pl.lit(1000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         write_result = coordinator._write_data("stock_daily", df, "2024-12-27")
@@ -974,7 +993,7 @@ class TestWriteT1Data:
         assert written_df["source"].to_list() == ["tushare", "tushare"]
 
     def test_write_etf_daily_enriches_sid_and_source(
-        self, coordinator, mock_hub
+        self, coordinator, mock_hub, mocker
     ) -> None:
         """验证 etf_daily 写入前补齐 sid 和 source 字段。"""
         # Arrange
@@ -993,7 +1012,7 @@ class TestWriteT1Data:
             }
         )
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/etf_daily/2024.parquet",
             "checksum456",
@@ -1004,7 +1023,9 @@ class TestWriteT1Data:
             pl.lit(2000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         write_result = coordinator._write_data("etf_daily", df, "2024-12-27")
@@ -1033,7 +1054,7 @@ class TestForceParameter:
     """测试 force 参数语义。"""
 
     def test_force_false_maps_to_error_on_duplicate(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证 force=False 映射到 OnDuplicate.ERROR。"""
         # Arrange
@@ -1054,7 +1075,7 @@ class TestForceParameter:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
@@ -1072,7 +1093,9 @@ class TestForceParameter:
             pl.lit(1000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         coordinator.ingest_date("stock_daily", "2024-12-27", force=False)
@@ -1084,7 +1107,7 @@ class TestForceParameter:
         assert call_kwargs["on_duplicate"] == OnDuplicate.ERROR
 
     def test_force_true_maps_to_keep_last_on_duplicate(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证 force=True 映射到 OnDuplicate.KEEP_LAST。"""
         # Arrange
@@ -1105,7 +1128,7 @@ class TestForceParameter:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
@@ -1123,7 +1146,9 @@ class TestForceParameter:
             pl.lit(1000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         coordinator.ingest_date("stock_daily", "2024-12-27", force=True)
@@ -1135,7 +1160,7 @@ class TestForceParameter:
         assert call_kwargs["on_duplicate"] == OnDuplicate.KEEP_LAST
 
     def test_force_true_for_adj_factor_uses_keep_last(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证 force=True 对 adj_factor 数据集也传递正确的 on_duplicate。"""
         # Arrange
@@ -1148,7 +1173,7 @@ class TestForceParameter:
             }
         )
 
-        mock_hub.adj_factor_store = Mock()
+        mock_hub.adj_factor_store = mocker.Mock()
         mock_hub.adj_factor_store.write.return_value = (
             "/path/to/file.parquet",
             "checksum789",
@@ -1176,7 +1201,7 @@ class TestCursorUpdateAfterSuccess:
     """测试 ingest_date 成功后更新游标 (Stage 5.1)。"""
 
     def test_stock_daily_updates_cursor_after_success(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证 stock_daily 成功后更新游标。"""
         # Arrange
@@ -1197,7 +1222,7 @@ class TestCursorUpdateAfterSuccess:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum123",
@@ -1212,14 +1237,16 @@ class TestCursorUpdateAfterSuccess:
         )
 
         # Mock 游标更新
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         # Mock SecurityMapper.enrich_dataframe
         enriched_df = source_df.with_columns(
             pl.lit(1000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         result = coordinator.ingest_date("stock_daily", "2024-12-27")
@@ -1234,7 +1261,7 @@ class TestCursorUpdateAfterSuccess:
         )
 
     def test_etf_daily_updates_cursor_after_success(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证 etf_daily 成功后更新游标。"""
         # Arrange
@@ -1255,7 +1282,7 @@ class TestCursorUpdateAfterSuccess:
         )
         mock_source.fetch_etf_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.return_value = mock_hub_bars_write(
             "/path/to/file.parquet",
             "checksum456",
@@ -1270,14 +1297,16 @@ class TestCursorUpdateAfterSuccess:
         )
 
         # Mock 游标更新
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         # Mock SecurityMapper.enrich_dataframe
         enriched_df = source_df.with_columns(
             pl.lit(2000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         result = coordinator.ingest_date("etf_daily", "2024-12-27")
@@ -1292,7 +1321,7 @@ class TestCursorUpdateAfterSuccess:
         )
 
     def test_adj_factor_updates_cursor_after_success(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证 adj_factor 成功后更新游标。"""
         # Arrange
@@ -1305,7 +1334,7 @@ class TestCursorUpdateAfterSuccess:
             }
         )
 
-        mock_hub.adj_factor_store = Mock()
+        mock_hub.adj_factor_store = mocker.Mock()
         mock_hub.adj_factor_store.write.return_value = (
             "/path/to/file.parquet",
             "checksum789",
@@ -1320,7 +1349,7 @@ class TestCursorUpdateAfterSuccess:
         )
 
         # Mock 游标更新
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         # Act
         result = coordinator.ingest_date("adj_factor", "2024-12-27")
@@ -1335,7 +1364,7 @@ class TestCursorUpdateAfterSuccess:
         )
 
     def test_fund_adj_updates_cursor_after_success(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证 fund_adj 成功后更新游标。"""
         # Arrange
@@ -1348,7 +1377,7 @@ class TestCursorUpdateAfterSuccess:
             }
         )
 
-        mock_hub.adj_factor_store = Mock()
+        mock_hub.adj_factor_store = mocker.Mock()
         mock_hub.adj_factor_store.write.return_value = (
             "/path/to/file.parquet",
             "checksum999",
@@ -1363,7 +1392,7 @@ class TestCursorUpdateAfterSuccess:
         )
 
         # Mock 游标更新
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         # Act
         result = coordinator.ingest_date("fund_adj", "2024-12-27")
@@ -1378,7 +1407,7 @@ class TestCursorUpdateAfterSuccess:
         )
 
     def test_calendar_updates_cursor_after_success(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证 calendar 成功后更新游标。"""
         # Arrange
@@ -1390,7 +1419,7 @@ class TestCursorUpdateAfterSuccess:
             }
         )
 
-        mock_hub.calendar_store = Mock()
+        mock_hub.calendar_store = mocker.Mock()
         mock_hub.calendar_store.upsert.return_value = 2
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="calendar",
@@ -1402,7 +1431,7 @@ class TestCursorUpdateAfterSuccess:
         )
 
         # Mock 游标更新
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         # Act
         result = coordinator.ingest_date("calendar", "2024-12-27")
@@ -1417,7 +1446,7 @@ class TestCursorUpdateAfterSuccess:
         )
 
     def test_cursor_not_updated_when_fetch_fails(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证获取数据失败时不更新游标。"""
         # Arrange
@@ -1435,7 +1464,7 @@ class TestCursorUpdateAfterSuccess:
         )
 
         # Mock 游标更新
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         # Act
         result = coordinator.ingest_date("stock_daily", "2024-12-27")
@@ -1446,7 +1475,7 @@ class TestCursorUpdateAfterSuccess:
         mock_hub.ingestion_cursor.update_success.assert_not_called()
 
     def test_cursor_not_updated_when_write_fails(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证写入失败时不更新游标。"""
         # Arrange
@@ -1460,7 +1489,7 @@ class TestCursorUpdateAfterSuccess:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
         mock_hub.bars.write.side_effect = OSError("Disk full")
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="stock_daily",
@@ -1472,14 +1501,16 @@ class TestCursorUpdateAfterSuccess:
         )
 
         # Mock 游标更新
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         # Mock SecurityMapper.enrich_dataframe
         enriched_df = source_df.with_columns(
             pl.lit(1000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         result = coordinator.ingest_date("stock_daily", "2024-12-27")
@@ -1534,7 +1565,7 @@ class TestDQBlockedCursorUpdate:
     """测试 DQ 阻断时的游标更新逻辑。"""
 
     def test_dq_blocked_updates_cursor_for_non_t0_datasets(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证 DQ 阻断时，非 T0 数据集会更新游标（第196-203行）。"""
         # Arrange
@@ -1549,9 +1580,9 @@ class TestDQBlockedCursorUpdate:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
 
-        mock_dq_result = Mock(spec=DQResult)
+        mock_dq_result = mocker.Mock(spec=DQResult)
         mock_dq_result.error_count = 5
 
         mock_hub.bars.write.return_value = MockWriteResult(
@@ -1570,14 +1601,16 @@ class TestDQBlockedCursorUpdate:
         )
 
         # Mock 游标更新
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         # Mock SecurityMapper.enrich_dataframe
         enriched_df = source_df.with_columns(
             pl.lit(1000001).alias("sid"),
             pl.lit("tushare").alias("source"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         result = coordinator.ingest_date("stock_daily", "2024-12-27")
@@ -1593,7 +1626,7 @@ class TestDQBlockedCursorUpdate:
         )
 
     def test_dq_blocked_skips_cursor_update_for_t0_datasets(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证 DQ 阻断时，T0 数据集（stock_basic, etf_basic）不更新游标。"""
         # Arrange
@@ -1611,9 +1644,9 @@ class TestDQBlockedCursorUpdate:
 
         # 模拟 DQ 阻断（虽然实际情况下 T0 数据不太可能被 DQ 阻断）
         # 但我们需要测试这个分支逻辑
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
 
-        mock_dq_result = Mock(spec=DQResult)
+        mock_dq_result = mocker.Mock(spec=DQResult)
         mock_dq_result.error_count = 3
 
         # 由于 stock_basic 不走 bars.write，我们需要模拟整个流程
@@ -1627,7 +1660,7 @@ class TestDQBlockedCursorUpdate:
             }
         )
 
-        mock_hub.adj_factor_store = Mock()
+        mock_hub.adj_factor_store = mocker.Mock()
         mock_hub.adj_factor_store.write.return_value = (
             "/path/to/file.parquet",
             "checksum789",
@@ -1642,7 +1675,7 @@ class TestDQBlockedCursorUpdate:
         )
 
         # Mock 游标更新
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         # Act
         result = coordinator.ingest_date("adj_factor", "2024-12-27")
@@ -1658,7 +1691,7 @@ class TestDQBlockedCursorUpdate:
         )
 
     def test_dq_blocked_for_stock_basic_does_not_update_cursor(
-        self, coordinator, mock_hub, mock_source
+        self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """验证 DQ 阻断时，stock_basic 不更新游标（第196-203行的 else 分支）。"""
         # Arrange
@@ -1675,9 +1708,9 @@ class TestDQBlockedCursorUpdate:
         mock_source.fetch_stock_basic.return_value = source_df
 
         # 模拟 DQ 阻断
-        mock_hub.bars = Mock()
+        mock_hub.bars = mocker.Mock()
 
-        mock_dq_result = Mock(spec=DQResult)
+        mock_dq_result = mocker.Mock(spec=DQResult)
         mock_dq_result.error_count = 3
 
         # 由于 stock_basic 不走 bars.write，它不会触发 DQ 阻断
@@ -1687,7 +1720,7 @@ class TestDQBlockedCursorUpdate:
         # 所以我们需要通过 ingest_date 来测试
         # 但由于 stock_basic 不走 bars.write，它不会被 DQ 阻断
         # 所以这个测试实际上覆盖的是第196行的 if 条件为 False 的情况
-        mock_hub.ingestion_cursor = Mock()
+        mock_hub.ingestion_cursor = mocker.Mock()
 
         # Act - 直接调用 ingest_date
         result = coordinator.ingest_date("stock_basic", "2024-01-03")
@@ -1703,7 +1736,7 @@ class TestAdjFactorWithExistingSid:
     """测试 adj_factor/fund_adj 数据集已有 sid 列的情况。"""
 
     def test_write_adj_factor_with_existing_sid_column(
-        self, coordinator, mock_hub
+        self, coordinator, mock_hub, mocker
     ) -> None:
         """验证 adj_factor 已有 sid 列时不调用 enrich_dataframe（第311-320行）。"""
         # Arrange
@@ -1716,14 +1749,14 @@ class TestAdjFactorWithExistingSid:
             }
         )
 
-        mock_hub.adj_factor_store = Mock()
+        mock_hub.adj_factor_store = mocker.Mock()
         mock_hub.adj_factor_store.write.return_value = (
             "/path/to/file.parquet",
             "checksum789",
         )
 
         # Mock SecurityMapper.enrich_dataframe
-        coordinator._security_mapper.enrich_dataframe = Mock()
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock()
 
         # Act
         write_result = coordinator._write_data("adj_factor", df, "2024-12-27")
@@ -1737,7 +1770,7 @@ class TestAdjFactorWithExistingSid:
         mock_hub.adj_factor_store.write.assert_called_once()
 
     def test_write_fund_adj_with_existing_sid_column(
-        self, coordinator, mock_hub
+        self, coordinator, mock_hub, mocker
     ) -> None:
         """验证 fund_adj 数据集已有 sid 列时不调用 enrich_dataframe。"""
         # Arrange
@@ -1750,14 +1783,14 @@ class TestAdjFactorWithExistingSid:
             }
         )
 
-        mock_hub.adj_factor_store = Mock()
+        mock_hub.adj_factor_store = mocker.Mock()
         mock_hub.adj_factor_store.write.return_value = (
             "/path/to/file.parquet",
             "checksum999",
         )
 
         # Mock SecurityMapper.enrich_dataframe
-        coordinator._security_mapper.enrich_dataframe = Mock()
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock()
 
         # Act
         write_result = coordinator._write_data("fund_adj", df, "2024-12-27")
@@ -1771,7 +1804,7 @@ class TestAdjFactorWithExistingSid:
         mock_hub.adj_factor_store.write.assert_called_once()
 
     def test_write_adj_factor_without_sid_column_calls_enrich(
-        self, coordinator, mock_hub
+        self, coordinator, mock_hub, mocker
     ) -> None:
         """验证 adj_factor 数据集没有 sid 列时调用 enrich_dataframe。"""
         # Arrange
@@ -1783,7 +1816,7 @@ class TestAdjFactorWithExistingSid:
             }
         )
 
-        mock_hub.adj_factor_store = Mock()
+        mock_hub.adj_factor_store = mocker.Mock()
         mock_hub.adj_factor_store.write.return_value = (
             "/path/to/file.parquet",
             "checksum789",
@@ -1793,7 +1826,9 @@ class TestAdjFactorWithExistingSid:
         enriched_df = df.with_columns(
             pl.lit(1000001).alias("sid"),
         )
-        coordinator._security_mapper.enrich_dataframe = Mock(return_value=enriched_df)
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
 
         # Act
         write_result = coordinator._write_data("adj_factor", df, "2024-12-27")

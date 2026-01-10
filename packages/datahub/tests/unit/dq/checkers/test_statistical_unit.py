@@ -1,7 +1,6 @@
 """Tests for StatisticalChecker."""
 
 from datetime import date, timedelta
-from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
@@ -10,9 +9,9 @@ from ditto_datahub.dq.models import DQLevel, DQSeverity
 
 
 @pytest.fixture
-def mock_hub_with_history():
+def mock_hub_with_history(mocker):
     """Create mock hub with historical data."""
-    hub = MagicMock()
+    hub = mocker.MagicMock()
 
     # Mock historical data (60 days)
     dates = [date.today() - timedelta(days=i) for i in range(60, 0, -1)]
@@ -98,9 +97,9 @@ class TestStatisticalChecker:
         assert issues[0].severity == DQSeverity.ALERT
         assert "zscore" in issues[0].rule_name
 
-    def test_zscore_with_group_by(self):
+    def test_zscore_with_group_by(self, mocker):
         """Test Z-score check with grouping."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
 
         # Create historical data with different stats per sid
         historical_rows = []
@@ -142,9 +141,9 @@ class TestStatisticalChecker:
 
         assert len(issues) == 0
 
-    def test_zscore_empty_historical_data(self):
+    def test_zscore_empty_historical_data(self, mocker):
         """Test Z-score check with empty historical data."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
         hub.bars.get.return_value = pl.DataFrame()
 
         rule = {
@@ -160,9 +159,9 @@ class TestStatisticalChecker:
         # Should return empty issues when no historical data
         assert len(issues) == 0
 
-    def test_zscore_missing_column(self):
+    def test_zscore_missing_column(self, mocker):
         """Test Z-score check with missing column."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
         hub.bars.get.return_value = pl.DataFrame(
             {
                 "sid": [1, 2],
@@ -184,9 +183,9 @@ class TestStatisticalChecker:
         # Should return empty issues when column missing
         assert len(issues) == 0
 
-    def test_zscore_no_column_specified(self):
+    def test_zscore_no_column_specified(self, mocker):
         """Test Z-score check without column specified."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
 
         rule = {
             "rule": "zscore",
@@ -203,9 +202,9 @@ class TestStatisticalChecker:
 
 
 @pytest.fixture
-def mock_hub_with_calendar():
+def mock_hub_with_calendar(mocker):
     """Create mock hub with calendar data."""
-    hub = MagicMock()
+    hub = mocker.MagicMock()
 
     # Mock calendar with 5 trading days
     dates = [
@@ -222,9 +221,9 @@ def mock_hub_with_calendar():
 class TestAssetClassParameter:
     """Test cases for asset_class parameter."""
 
-    def test_zscore_with_asset_class(self):
+    def test_zscore_with_asset_class(self, mocker):
         """Test Z-score check correctly passes asset_class to hub.bars.get."""
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
 
         # Mock historical and current data
         historical_data = pl.DataFrame(
@@ -288,9 +287,9 @@ class TestAssetClassParameter:
         assert second_call["kwargs"]["asset_class"] == "stock"
         assert second_call["kwargs"]["market_wide"]
 
-    def test_completeness_with_asset_class(self):
+    def test_completeness_with_asset_class(self, mocker):
         """Test completeness check correctly passes asset_class to hub.bars.get."""
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
 
         # Mock calendar data
         calendar_data = pl.DataFrame(
@@ -333,9 +332,9 @@ class TestAssetClassParameter:
         assert call_kwargs["asset_class"] == "stock"
         assert call_kwargs["market_wide"]
 
-    def test_check_passes_asset_class_to_rule_checkers(self):
+    def test_check_passes_asset_class_to_rule_checkers(self, mocker):
         """Test check() method passes asset_class to individual rule checkers."""
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
 
         # Mock data to avoid errors
         historical_data = pl.DataFrame(
@@ -450,9 +449,9 @@ class TestCompletenessChecker:
         assert issues[0].rule_name == "completeness"
         assert "missing" in issues[0].message.lower()
 
-    def test_completeness_no_calendar(self):
+    def test_completeness_no_calendar(self, mocker):
         """Test completeness check with no calendar data."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
         hub.calendar.get.return_value = pl.DataFrame()
 
         rule = {
@@ -495,9 +494,9 @@ class TestCompletenessChecker:
 class TestStatisticalCheckerEdgeCases:
     """Test edge cases and error handling for StatisticalChecker."""
 
-    def test_zscore_exception_handling(self):
+    def test_zscore_exception_handling(self, mocker):
         """Test Z-score check handles exceptions gracefully."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
 
         # Mock bars.get to raise exception
         hub.bars.get.side_effect = Exception("Database connection failed")
@@ -517,9 +516,9 @@ class TestStatisticalCheckerEdgeCases:
         # Should return empty issues on exception
         assert len(issues) == 0
 
-    def test_completeness_exception_handling(self):
+    def test_completeness_exception_handling(self, mocker):
         """Test completeness check handles exceptions gracefully."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
 
         # Mock calendar.get to raise exception
         hub.calendar.get.side_effect = Exception("Calendar service unavailable")
@@ -537,9 +536,9 @@ class TestStatisticalCheckerEdgeCases:
         # Should return empty issues on exception
         assert len(issues) == 0
 
-    def test_unknown_rule_type(self):
+    def test_unknown_rule_type(self, mocker):
         """Test check with unknown rule type."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
 
         rule = {
             "rule": "unknown_rule",
@@ -554,9 +553,9 @@ class TestStatisticalCheckerEdgeCases:
         # Should return empty issues for unknown rule types
         assert len(issues) == 0
 
-    def test_empty_rules_list(self):
+    def test_empty_rules_list(self, mocker):
         """Test check with empty rules list."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
 
         checker = StatisticalChecker()
         issues = checker.check(
@@ -565,9 +564,9 @@ class TestStatisticalCheckerEdgeCases:
 
         assert len(issues) == 0
 
-    def test_multiple_rules_mixed_types(self):
+    def test_multiple_rules_mixed_types(self, mocker):
         """Test check with multiple rules of different types."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
 
         # Mock historical data
         dates = [date.today() - timedelta(days=i) for i in range(60, 0, -1)]
@@ -610,9 +609,9 @@ class TestStatisticalCheckerEdgeCases:
         # Should collect issues from both rules
         assert isinstance(issues, list)
 
-    def test_zscore_with_market_wide_false(self):
+    def test_zscore_with_market_wide_false(self, mocker):
         """Test zscore check with market_wide=False (default)."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
 
         historical_data = pl.DataFrame(
             {
@@ -644,9 +643,9 @@ class TestStatisticalCheckerEdgeCases:
         # _check_zscore returns DQIssue | None
         assert issue is None or isinstance(issue, list)
 
-    def test_completeness_with_etf_asset_class(self):
+    def test_completeness_with_etf_asset_class(self, mocker):
         """Test completeness check with ETF asset class."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
 
         calendar_data = pl.DataFrame(
             {
@@ -683,9 +682,9 @@ class TestStatisticalCheckerEdgeCases:
         # _check_completeness returns DQIssue | None
         assert issue is None or isinstance(issue, list)
 
-    def test_zscore_with_index_asset_class(self):
+    def test_zscore_with_index_asset_class(self, mocker):
         """Test zscore check with index asset class."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
 
         historical_data = pl.DataFrame(
             {
@@ -717,9 +716,9 @@ class TestStatisticalCheckerEdgeCases:
         # _check_zscore returns DQIssue | None
         assert issue is None or isinstance(issue, list)
 
-    def test_zscore_invalid_date_format(self):
+    def test_zscore_invalid_date_format(self, mocker):
         """Test zscore check with invalid date format."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
 
         hub.bars.get.return_value = pl.DataFrame()
 
@@ -738,9 +737,9 @@ class TestStatisticalCheckerEdgeCases:
         # Should handle exception gracefully
         assert len(issues) == 0
 
-    def test_completeness_invalid_date_format(self):
+    def test_completeness_invalid_date_format(self, mocker):
         """Test completeness check with invalid date format."""
-        hub = MagicMock()
+        hub = mocker.MagicMock()
 
         hub.calendar.get.side_effect = Exception("Invalid date")
 

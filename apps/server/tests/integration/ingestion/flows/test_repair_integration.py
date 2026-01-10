@@ -6,8 +6,6 @@ and filling data holes.
 
 # ruff: noqa: PLC0415  # 测试文件允许函数内导入
 
-from unittest.mock import Mock, patch
-
 import pytest
 from prefect.testing.utilities import prefect_test_harness
 
@@ -30,101 +28,106 @@ class TestRetryFailedFlow:
         assert retry_failed_flow is not None
         assert callable(retry_failed_flow)
 
-    def test_flow_retries_failed_tasks(self):
+    def test_flow_retries_failed_tasks(self, mocker):
         """Test that flow retries failed tasks."""
         from ditto_server.ingestion.flows.repair import retry_failed_flow
 
-        mock_hub = Mock()
+        mock_hub = mocker.Mock()
         mock_hub.ingestion_log.get_failed_dates.return_value = [
             "2024-01-02",
             "2024-01-03",
         ]
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            result = retry_failed_flow(
-                dataset="stock_daily",
-                max_attempts=3,
-                limit=10,
-                data_root="data",
-            )
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+
+        result = retry_failed_flow(
+            dataset="stock_daily",
+            max_attempts=3,
+            limit=10,
+            data_root="data",
+        )
 
         # Should return retry result
         assert "dataset" in result
         assert "retried_count" in result
 
-    def test_flow_limits_retry_count(self):
+    def test_flow_limits_retry_count(self, mocker):
         """Test that flow respects limit parameter."""
         from ditto_server.ingestion.flows.repair import retry_failed_flow
 
-        mock_hub = Mock()
+        mock_hub = mocker.Mock()
         # Return 2 failed dates (matching the limit)
         mock_hub.ingestion_log.get_failed_dates.return_value = [
             "2024-01-02",
             "2024-01-03",
         ]
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            result = retry_failed_flow(
-                dataset="stock_daily",
-                max_attempts=3,
-                limit=2,  # Only retry 2
-                data_root="data",
-            )
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+
+        result = retry_failed_flow(
+            dataset="stock_daily",
+            max_attempts=3,
+            limit=2,  # Only retry 2
+            data_root="data",
+        )
 
         # Should respect limit
         assert result["retried_count"] <= 2
 
-    def test_flow_handles_no_failures(self):
+    def test_flow_handles_no_failures(self, mocker):
         """Test that flow handles case with no failed tasks."""
         from ditto_server.ingestion.flows.repair import retry_failed_flow
 
-        mock_hub = Mock()
+        mock_hub = mocker.Mock()
         mock_hub.ingestion_log.get_failed_dates.return_value = []
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            result = retry_failed_flow(
-                dataset="stock_daily",
-                max_attempts=3,
-                limit=10,
-                data_root="data",
-            )
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+
+        result = retry_failed_flow(
+            dataset="stock_daily",
+            max_attempts=3,
+            limit=10,
+            data_root="data",
+        )
 
         # Should indicate no retries
         assert result["retried_count"] == 0
         assert result["total_failed"] == 0
 
-    def test_flow_uses_force_on_retry(self):
+    def test_flow_uses_force_on_retry(self, mocker):
         """Test that flow uses force=True when retrying."""
         from ditto_server.ingestion.flows.repair import retry_failed_flow
 
-        mock_hub = Mock()
+        mock_hub = mocker.Mock()
         mock_hub.ingestion_log.get_failed_dates.return_value = ["2024-01-02"]
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            result = retry_failed_flow(
-                dataset="stock_daily",
-                max_attempts=3,
-                limit=10,
-                data_root="data",
-            )
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+
+        result = retry_failed_flow(
+            dataset="stock_daily",
+            max_attempts=3,
+            limit=10,
+            data_root="data",
+        )
 
         # Should complete successfully
         assert "dataset" in result
 
-    def test_flow_closes_hub(self):
+    def test_flow_closes_hub(self, mocker):
         """Test that flow properly closes DataHub."""
         from ditto_server.ingestion.flows.repair import retry_failed_flow
 
-        mock_hub = Mock()
+        mock_hub = mocker.Mock()
         mock_hub.ingestion_log.get_failed_dates.return_value = []
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            retry_failed_flow(
-                dataset="stock_daily",
-                max_attempts=3,
-                limit=10,
-                data_root="data",
-            )
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+
+        retry_failed_flow(
+            dataset="stock_daily",
+            max_attempts=3,
+            limit=10,
+            data_root="data",
+        )
 
         # Verify hub.close() was called
         mock_hub.close.assert_called_once()
@@ -134,11 +137,11 @@ class TestRetryFailedFlow:
 class TestRepairHolesFlow:
     """Tests for repair_holes_flow."""
 
-    def test_flow_detects_and_repairs_holes(self):
+    def test_flow_detects_and_repairs_holes(self, mocker):
         """Test that flow can detect and repair data holes."""
         from ditto_server.ingestion.flows.repair import repair_holes_flow
 
-        mock_hub = Mock()
+        mock_hub = mocker.Mock()
         mock_hub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
         mock_hub.calendar_store.get_last_trading_day.return_value = "2024-01-31"
         mock_hub.calendar_store.get_range.return_value = [
@@ -148,31 +151,33 @@ class TestRepairHolesFlow:
         ]
         mock_hub.ingestion_log.get_ingested_dates.return_value = ["2024-01-02"]
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            result = repair_holes_flow(
-                dataset="stock_daily",
-                data_root="data",
-            )
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+
+        result = repair_holes_flow(
+            dataset="stock_daily",
+            data_root="data",
+        )
 
         # Should repair holes
         assert "dataset" in result
         assert result["dataset"] == "stock_daily"
 
-    def test_flow_handles_no_holes(self):
+    def test_flow_handles_no_holes(self, mocker):
         """Test that flow handles case with no holes."""
         from ditto_server.ingestion.flows.repair import repair_holes_flow
 
-        mock_hub = Mock()
+        mock_hub = mocker.Mock()
         mock_hub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
         mock_hub.calendar_store.get_last_trading_day.return_value = "2024-01-31"
         mock_hub.calendar_store.get_range.return_value = ["2024-01-02"]
         mock_hub.ingestion_log.get_ingested_dates.return_value = ["2024-01-02"]
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            result = repair_holes_flow(
-                dataset="stock_daily",
-                data_root="data",
-            )
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+
+        result = repair_holes_flow(
+            dataset="stock_daily",
+            data_root="data",
+        )
 
         # Should indicate no holes
         assert "holes_count" in result or result.get("total_dates") == 0
@@ -182,37 +187,39 @@ class TestRepairHolesFlow:
 class TestDailyRepairFlow:
     """Tests for daily_repair_flow."""
 
-    def test_flow_runs_retry_and_hole_detection(self):
+    def test_flow_runs_retry_and_hole_detection(self, mocker):
         """Test that flow runs both retry and hole detection."""
         from ditto_server.ingestion.flows.repair import daily_repair_flow
 
-        mock_hub = Mock()
+        mock_hub = mocker.Mock()
         mock_hub.ingestion_log.get_failed_dates.return_value = []
         mock_hub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
         mock_hub.calendar_store.get_last_trading_day.return_value = "2024-01-31"
         mock_hub.calendar_store.get_range.return_value = ["2024-01-02"]
         mock_hub.ingestion_log.get_ingested_dates.return_value = ["2024-01-02"]
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            result = daily_repair_flow(data_root="data")
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+
+        result = daily_repair_flow(data_root="data")
 
         # Should run both operations
         assert "retry_result" in result
         assert "holes_result" in result
 
-    def test_flow_aggregates_results(self):
+    def test_flow_aggregates_results(self, mocker):
         """Test that flow aggregates retry and holes results."""
         from ditto_server.ingestion.flows.repair import daily_repair_flow
 
-        mock_hub = Mock()
+        mock_hub = mocker.Mock()
         mock_hub.ingestion_log.get_failed_dates.return_value = []
         mock_hub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
         mock_hub.calendar_store.get_last_trading_day.return_value = "2024-01-31"
         mock_hub.calendar_store.get_range.return_value = ["2024-01-02"]
         mock_hub.ingestion_log.get_ingested_dates.return_value = ["2024-01-02"]
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            result = daily_repair_flow(data_root="data")
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+
+        result = daily_repair_flow(data_root="data")
 
         # Should have summary
         assert "summary" in result or (

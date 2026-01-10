@@ -1,7 +1,5 @@
 """Tests for UniverseRepository."""
 
-from unittest.mock import Mock
-
 import polars as pl
 import pytest
 from ditto_datahub.repositories.universe import UniverseRepository
@@ -383,11 +381,11 @@ class TestUniverseRepository:
 class TestUniverseRepositoryWithMocks:
     """Tests for UniverseRepository with mocked dependencies."""
 
-    def test_add_constituents_with_mocks(self) -> None:
+    def test_add_constituents_with_mocks(self, mocker) -> None:
         """Test add_constituents with mocked store and allocator."""
         # Arrange
-        mock_store = Mock()
-        mock_allocator = Mock()
+        mock_store = mocker.Mock()
+        mock_allocator = mocker.Mock()
         repo = UniverseRepository(mock_store, mock_allocator)
 
         mock_store.add_constituents.return_value = 2
@@ -407,11 +405,11 @@ class TestUniverseRepositoryWithMocks:
         assert call_args[0][0] == "test_u"
         assert len(call_args[0][1]) == 2
 
-    def test_get_constituents_with_mock_store(self) -> None:
+    def test_get_constituents_with_mock_store(self, mocker) -> None:
         """Test get_constituents with mocked store."""
         # Arrange
-        mock_store = Mock()
-        mock_allocator = Mock()
+        mock_store = mocker.Mock()
+        mock_allocator = mocker.Mock()
         repo = UniverseRepository(mock_store, mock_allocator)
 
         # Mock return data
@@ -433,11 +431,11 @@ class TestUniverseRepositoryWithMocks:
             universe_id="test_u", asof=None
         )
 
-    def test_create_with_mock_store(self) -> None:
+    def test_create_with_mock_store(self, mocker) -> None:
         """Test create with mocked store."""
         # Arrange
-        mock_store = Mock()
-        mock_allocator = Mock()
+        mock_store = mocker.Mock()
+        mock_allocator = mocker.Mock()
         repo = UniverseRepository(mock_store, mock_allocator)
 
         # Act
@@ -458,11 +456,11 @@ class TestUniverseRepositoryWithMocks:
             source_ref=None,
         )
 
-    def test_list_universes_with_mock_store(self) -> None:
+    def test_list_universes_with_mock_store(self, mocker) -> None:
         """Test list_universes with mocked store."""
         # Arrange
-        mock_store = Mock()
-        mock_allocator = Mock()
+        mock_store = mocker.Mock()
+        mock_allocator = mocker.Mock()
         repo = UniverseRepository(mock_store, mock_allocator)
 
         mock_df = pl.DataFrame(

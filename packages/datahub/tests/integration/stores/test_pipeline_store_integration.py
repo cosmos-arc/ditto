@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from unittest import mock
 
 import pytest
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
@@ -99,7 +98,9 @@ class TestPipelineStore:
         assert result["error_message"] == "Connection timeout"
         assert result["dq_passed"] is False  # Failed runs default to False
 
-    def test_insert_run_rollback_on_error(self, pipeline_store: PipelineStore) -> None:
+    def test_insert_run_rollback_on_error(
+        self, pipeline_store: PipelineStore, mocker
+    ) -> None:
         """Test rollback on error during insert."""
         # Insert a valid run first
         pipeline_store.insert_run(
@@ -109,15 +110,19 @@ class TestPipelineStore:
         )
 
         # Mock execute to raise exception
-        with mock.patch.object(
+        original_execute = pipeline_store._client.execute
+        mocker.patch.object(
             pipeline_store._client, "execute", side_effect=Exception("DB error")
-        ):
-            with pytest.raises(Exception, match="DB error"):
-                pipeline_store.insert_run(
-                    run_id="test-run-005",
-                    task_name="update_bars",
-                    dataset_id="stock_daily",
-                )
+        )
+        with pytest.raises(Exception, match="DB error"):
+            pipeline_store.insert_run(
+                run_id="test-run-005",
+                task_name="update_bars",
+                dataset_id="stock_daily",
+            )
+
+        # Restore original execute for verification
+        pipeline_store._client.execute = original_execute
 
         # Original run should still be accessible
         result = pipeline_store.get_run("test-run-004")

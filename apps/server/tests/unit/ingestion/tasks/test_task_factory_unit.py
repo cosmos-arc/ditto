@@ -4,8 +4,6 @@ This module tests the factory functions that create Prefect tasks for data inges
 The factories are lightweight wrappers that delegate to IngestionCoordinator.
 """
 
-from unittest.mock import Mock, patch
-
 import pytest
 from ditto_server.ingestion.config.datasets import (
     DATASET_REGISTRY,
@@ -74,14 +72,14 @@ class TestCreateIngestTask:
         # Prefect task should have correct timeout
         assert task_func.timeout_seconds == expected_timeout
 
-    def test_task_calls_coordinator(self):
+    def test_task_calls_coordinator(self, mocker):
         """Test that task calls IngestionCoordinator.ingest_date."""
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 
         # Mock DataHub and Coordinator
-        mock_hub = Mock()
-        mock_coordinator = Mock()
+        mock_hub = mocker.Mock()
+        mock_coordinator = mocker.Mock()
         # 使用真实的 IngestionResult 对象
         mock_result = IngestionResult(
             dataset="calendar",
@@ -92,21 +90,22 @@ class TestCreateIngestTask:
         mock_coordinator.ingest_date.return_value = mock_result
 
         # Mock the sources.get() to return a mock source
-        mock_source = Mock()
+        mock_source = mocker.Mock()
         mock_hub.sources.get.return_value = mock_source
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            with patch(
-                "ditto_server.ingestion.services.coordinator.IngestionCoordinator",
-                return_value=mock_coordinator,
-            ):
-                # Call task
-                result = task_func.fn(
-                    trade_date="2024-01-02",
-                    source="tushare",
-                    data_root="data",
-                    force=False,
-                )
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch(
+            "ditto_server.ingestion.services.coordinator.IngestionCoordinator",
+            return_value=mock_coordinator,
+        )
+
+        # Call task
+        result = task_func.fn(
+            trade_date="2024-01-02",
+            source="tushare",
+            data_root="data",
+            force=False,
+        )
 
         # Verify coordinator was called correctly
         mock_coordinator.ingest_date.assert_called_once_with(
@@ -117,14 +116,14 @@ class TestCreateIngestTask:
         assert result["status"] == "success"
         assert result["row_count"] == 100
 
-    def test_task_closes_hub(self):
+    def test_task_closes_hub(self, mocker):
         """Test that task properly closes DataHub."""
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 
         # Mock DataHub
-        mock_hub = Mock()
-        mock_coordinator = Mock()
+        mock_hub = mocker.Mock()
+        mock_coordinator = mocker.Mock()
         mock_result = IngestionResult(
             dataset="calendar",
             trade_date="2024-01-02",
@@ -132,49 +131,51 @@ class TestCreateIngestTask:
         )
         mock_coordinator.ingest_date.return_value = mock_result
 
-        mock_source = Mock()
+        mock_source = mocker.Mock()
         mock_hub.sources.get.return_value = mock_source
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            with patch(
-                "ditto_server.ingestion.services.coordinator.IngestionCoordinator",
-                return_value=mock_coordinator,
-            ):
-                # Call task
-                task_func.fn(
-                    trade_date="2024-01-02",
-                    source="tushare",
-                    data_root="data",
-                    force=False,
-                )
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch(
+            "ditto_server.ingestion.services.coordinator.IngestionCoordinator",
+            return_value=mock_coordinator,
+        )
+
+        # Call task
+        task_func.fn(
+            trade_date="2024-01-02",
+            source="tushare",
+            data_root="data",
+            force=False,
+        )
 
         # Verify hub.close() was called even on success
         mock_hub.close.assert_called_once()
 
-    def test_task_closes_hub_on_exception(self):
+    def test_task_closes_hub_on_exception(self, mocker):
         """Test that task closes DataHub even when exception occurs."""
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 
         # Mock DataHub
-        mock_hub = Mock()
+        mock_hub = mocker.Mock()
 
-        mock_source = Mock()
+        mock_source = mocker.Mock()
         mock_hub.sources.get.return_value = mock_source
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            with patch(
-                "ditto_server.ingestion.services.coordinator.IngestionCoordinator",
-                side_effect=Exception("Coordinator error"),
-            ):
-                # Call task - should raise exception
-                with pytest.raises(Exception, match="Coordinator error"):
-                    task_func.fn(
-                        trade_date="2024-01-02",
-                        source="tushare",
-                        data_root="data",
-                        force=False,
-                    )
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch(
+            "ditto_server.ingestion.services.coordinator.IngestionCoordinator",
+            side_effect=Exception("Coordinator error"),
+        )
+
+        # Call task - should raise exception
+        with pytest.raises(Exception, match="Coordinator error"):
+            task_func.fn(
+                trade_date="2024-01-02",
+                source="tushare",
+                data_root="data",
+                force=False,
+            )
 
         # Verify hub.close() was called even on exception
         mock_hub.close.assert_called_once()
@@ -237,13 +238,13 @@ class TestTaskIntegration:
             assert callable(task_func)
             assert task_func.name == f"ingest_{dataset.value}"
 
-    def test_task_parameters_correct(self):
+    def test_task_parameters_correct(self, mocker):
         """Test that task parameters are correctly passed."""
         task_func = create_ingest_task(Dataset.STOCK_DAILY)
 
         # Mock
-        mock_hub = Mock()
-        mock_coordinator = Mock()
+        mock_hub = mocker.Mock()
+        mock_coordinator = mocker.Mock()
         mock_result = IngestionResult(
             dataset="stock_daily",
             trade_date="2024-01-02",
@@ -251,28 +252,29 @@ class TestTaskIntegration:
         )
         mock_coordinator.ingest_date.return_value = mock_result
 
-        mock_source = Mock()
+        mock_source = mocker.Mock()
         mock_hub.sources.get.return_value = mock_source
 
-        with patch("ditto_datahub.DataHub", return_value=mock_hub):
-            with patch(
-                "ditto_server.ingestion.services.coordinator.IngestionCoordinator",
-                return_value=mock_coordinator,
-            ):
-                # Call with different parameter combinations
-                result1 = task_func.fn(
-                    trade_date="2024-01-02",
-                    source="tushare",
-                    data_root="/data",
-                    force=True,
-                )
+        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch(
+            "ditto_server.ingestion.services.coordinator.IngestionCoordinator",
+            return_value=mock_coordinator,
+        )
 
-                result2 = task_func.fn(
-                    trade_date="2024-01-03",
-                    source="akshare",
-                    data_root="/data2",
-                    force=False,
-                )
+        # Call with different parameter combinations
+        result1 = task_func.fn(
+            trade_date="2024-01-02",
+            source="tushare",
+            data_root="/data",
+            force=True,
+        )
+
+        result2 = task_func.fn(
+            trade_date="2024-01-03",
+            source="akshare",
+            data_root="/data2",
+            force=False,
+        )
 
         # Verify both calls succeeded
         assert result1["status"] == "success"

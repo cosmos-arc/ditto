@@ -437,7 +437,51 @@ class TestDataHubConvenienceMethods:
 
 ---
 
-### Phase 3: 迁移到 pytest-mock（22个文件）
+### Phase 3: 迁移到 pytest-mock ✅ 已完成
+
+完成时间：2026-01-10
+
+**已完成任务：**
+- [x] Task 3.1: 批量迁移 unittest.mock 到 pytest-mock（23个文件）
+- [x] Task 3.2: 更新代码审查检查清单（已在规则中定义）
+
+**迁移文件清单：**
+
+| # | 文件 | 状态 | 测试通过 |
+|---|------|------|---------|
+| 1 | `apps/server/tests/unit/ingestion/test_coordinator_unit.py` | ✅ | 42 passed |
+| 2 | `apps/server/tests/unit/ingestion/test_metadata_unit.py` | ✅ | 20 passed |
+| 3 | `packages/datahub/tests/unit/dq/test_engine_unit.py` | ✅ | 21 passed |
+| 4 | `apps/server/tests/unit/ingestion/test_security_mapper_unit.py` | ✅ | 20 passed |
+| 5 | `apps/server/tests/unit/ingestion/flows/test_backfill_unit.py` | ✅ | 15 passed |
+| 6 | `apps/server/tests/unit/ingestion/flows/test_daily_unit.py` | ✅ | 18 passed |
+| 7 | `packages/datahub/tests/unit/dq/checkers/test_technical_unit.py` | ✅ | 27 passed |
+| 8 | `packages/datahub/tests/unit/dq/checkers/test_statistical_unit.py` | ✅ | 23 passed |
+| 9 | `apps/server/tests/unit/ingestion/tasks/test_task_factory_unit.py` | ✅ | 22 passed |
+| 10 | `apps/server/tests/unit/ingestion/tasks/test_dq_batch_unit.py` | ✅ | 5 passed |
+| 11 | `apps/server/tests/unit/ingestion/test_backfill_unit.py` | ✅ | 11 passed |
+| 12 | `apps/server/tests/unit/ingestion/test_retry_unit.py` | ✅ | 12 passed |
+| 13 | `packages/datahub/tests/unit/repositories/test_index_repository_unit.py` | ✅ | 13 passed |
+| 14 | `packages/datahub/tests/unit/repositories/test_bars_repository_unit.py` | ✅ | 32 passed |
+| 15 | `packages/datahub/tests/unit/repositories/test_universe_repository_unit.py` | ✅ | 18 passed |
+| 16 | `packages/datahub/tests/integration/runtime/test_freeze_manager_checksum_integration.py` | ✅ | 6 passed |
+| 17 | `packages/datahub/tests/integration/stores/test_pipeline_store_integration.py` | ✅ | 30 passed |
+| 18 | `apps/server/tests/integration/ingestion/test_adj_factor_ingestion_integration.py` | ✅ | 2 passed (预存在失败) |
+| 19 | `apps/server/tests/integration/ingestion/test_coordinator_dq_blocking_integration.py` | ✅ | 3 passed |
+| 20 | `apps/server/tests/integration/ingestion/flows/test_deploy_integration.py` | ✅ | 4 passed (1 skipped) |
+| 21 | `apps/server/tests/integration/ingestion/flows/test_repair_integration.py` | ✅ | 11 passed |
+| 22 | `apps/server/tests/integration/ingestion/flows/test_backfill_integration.py` | ✅ | 11 passed |
+| 23 | `apps/server/tests/integration/ingestion/flows/test_daily_integration.py` | ✅ | 20 passed |
+
+**验收结果：**
+- ✅ 无 `from unittest.mock` 导入（grep 验证无匹配）
+- ✅ 无 `@patch` 装饰器
+- ✅ 使用 `mocker` fixture
+- ✅ 所有迁移的测试通过
+- ✅ 总计约 350+ 个测试通过
+
+**提交记录：**
+- （待创建提交）
 
 #### Task 3.1: 批量迁移 unittest.mock 到 pytest-mock
 

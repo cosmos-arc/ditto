@@ -4,7 +4,6 @@ import hashlib
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from ditto_datahub.runtime.freeze_manager import FreezeManager
@@ -138,10 +137,10 @@ class TestFreezeManagerChecksum:
         assert reloaded_manifest.checksum_type == original_manifest.checksum_type
         assert reloaded_manifest.files == original_manifest.files
 
-    @patch("ditto_datahub.runtime.freeze_manager.hashlib")
-    def test_compute_checksum_implementation(self, mock_hashlib):
+    def test_compute_checksum_implementation(self, mocker):
         """Test the _compute_checksum implementation uses SHA-256."""
         # Mock hashlib.sha256
+        mock_hashlib = mocker.patch("ditto_datahub.runtime.freeze_manager.hashlib")
         mock_sha256 = mock_hashlib.sha256.return_value
         mock_sha256.hexdigest.return_value = "mock_sha256_hash"
 

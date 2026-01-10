@@ -1,13 +1,44 @@
 """Tests for IndexRepository."""
 
-from unittest.mock import Mock
-
 import polars as pl
 import pytest
 from ditto_datahub.repositories.index import IndexRepository
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.security_store import SecurityStore
+from pytest_mock import MockerFixture
+
+
+@pytest.fixture
+def mock_bars_store(mocker: MockerFixture) -> BarsStore:
+    """Create a mock BarsStore."""
+    return mocker.Mock(spec=BarsStore)
+
+
+@pytest.fixture
+def mock_index_weight_store(mocker: MockerFixture) -> IndexWeightStore:
+    """Create a mock IndexWeightStore."""
+    return mocker.Mock(spec=IndexWeightStore)
+
+
+@pytest.fixture
+def mock_security_store(mocker: MockerFixture) -> SecurityStore:
+    """Create a mock SecurityStore."""
+    return mocker.Mock(spec=SecurityStore)
+
+
+@pytest.fixture
+def index_repo(
+    mock_bars_store: BarsStore,
+    mock_index_weight_store: IndexWeightStore,
+    mock_security_store: SecurityStore,
+) -> IndexRepository:
+    """Create an IndexRepository with mocked dependencies."""
+    return IndexRepository(
+        mock_bars_store,
+        mock_index_weight_store,
+        mock_security_store,
+    )
 
 
 @pytest.mark.pit
@@ -18,24 +49,17 @@ class TestIndexRepositoryWithMocks:
     These tests require more resources and time than unit tests.
     """
 
-    def setup_method(self) -> None:
-        """Set up mocked stores for testing."""
-        self.mock_bars_store = Mock(spec=BarsStore)
-        self.mock_index_weight_store = Mock(spec=IndexWeightStore)
-        self.mock_security_store = Mock(spec=SecurityStore)
-        self.repo = IndexRepository(
-            self.mock_bars_store,
-            self.mock_index_weight_store,
-            self.mock_security_store,
-        )
-
-    def test_repository_init(self) -> None:
+    def test_repository_init(self, index_repo: IndexRepository) -> None:
         """Test IndexRepository initialization."""
-        assert self.repo._bars_store is not None
-        assert self.repo._index_weight_store is not None
-        assert self.repo._security_store is not None
+        assert index_repo._bars_store is not None
+        assert index_repo._index_weight_store is not None
+        assert index_repo._security_store is not None
 
-    def test_get_bars_by_sids(self) -> None:
+    def test_get_bars_by_sids(
+        self,
+        index_repo: IndexRepository,
+        mock_bars_store: BarsStore,
+    ) -> None:
         """Test getting index bars by SIDs."""
         # Arrange
         mock_df = pl.DataFrame(
@@ -50,10 +74,10 @@ class TestIndexRepositoryWithMocks:
                 "amount": [1000000000, 1100000000, 900000000],
             }
         )
-        self.mock_bars_store.read.return_value = mock_df
+        mock_bars_store.read.return_value = mock_df
 
         # Act
-        result = self.repo.get_bars(
+        result = index_repo.get_bars(
             sids=[1, 2],
             symbols=None,
             start="2024-01-01",
@@ -63,14 +87,19 @@ class TestIndexRepositoryWithMocks:
 
         # Assert
         assert len(result) == 3
-        self.mock_bars_store.read.assert_called_once_with(
+        mock_bars_store.read.assert_called_once_with(
             dataset="index_daily",
             sids=[1, 2],
             start_date="2024-01-01",
             end_date="2024-01-31",
         )
 
-    def test_get_bars_by_symbols(self) -> None:
+    def test_get_bars_by_symbols(
+        self,
+        index_repo: IndexRepository,
+        mock_bars_store: BarsStore,
+        mock_security_store: SecurityStore,
+    ) -> None:
         """Test getting index bars by symbols (requires SID resolution)."""
         # Arrange
         mock_df = pl.DataFrame(
@@ -80,11 +109,11 @@ class TestIndexRepositoryWithMocks:
                 "close": [3020.0, 3120.0],
             }
         )
-        self.mock_bars_store.read.return_value = mock_df
-        self.mock_security_store.resolve_sid.return_value = 1
+        mock_bars_store.read.return_value = mock_df
+        mock_security_store.resolve_sid.return_value = 1
 
         # Act
-        result = self.repo.get_bars(
+        result = index_repo.get_bars(
             sids=None,
             symbols=["000300.SH"],
             start="2024-01-01",
@@ -94,17 +123,22 @@ class TestIndexRepositoryWithMocks:
 
         # Assert
         assert len(result) == 2
-        self.mock_security_store.resolve_sid.assert_called_once_with(
+        mock_security_store.resolve_sid.assert_called_once_with(
             "000300.SH", "tushare", None
         )
-        self.mock_bars_store.read.assert_called_once_with(
+        mock_bars_store.read.assert_called_once_with(
             dataset="index_daily",
             sids=[1],
             start_date="2024-01-01",
             end_date="2024-01-31",
         )
 
-    def test_get_bars_with_asof(self) -> None:
+    def test_get_bars_with_asof(
+        self,
+        index_repo: IndexRepository,
+        mock_bars_store: BarsStore,
+        mock_security_store: SecurityStore,
+    ) -> None:
         """Test getting index bars with asof parameter."""
         # Arrange
         mock_df = pl.DataFrame(
@@ -114,11 +148,11 @@ class TestIndexRepositoryWithMocks:
                 "close": [3020.0],
             }
         )
-        self.mock_bars_store.read.return_value = mock_df
-        self.mock_security_store.resolve_sid.return_value = 1
+        mock_bars_store.read.return_value = mock_df
+        mock_security_store.resolve_sid.return_value = 1
 
         # Act
-        result = self.repo.get_bars(
+        result = index_repo.get_bars(
             sids=None,
             symbols=["000300.SH"],
             start="2024-01-01",
@@ -128,15 +162,17 @@ class TestIndexRepositoryWithMocks:
 
         # Assert
         assert len(result) == 1
-        self.mock_security_store.resolve_sid.assert_called_once_with(
+        mock_security_store.resolve_sid.assert_called_once_with(
             "000300.SH", "tushare", "2024-01-15"
         )
 
-    def test_get_bars_raises_error_when_no_sids_or_symbols(self) -> None:
+    def test_get_bars_raises_error_when_no_sids_or_symbols(
+        self, index_repo: IndexRepository
+    ) -> None:
         """Test that get_bars raises error when both sids and symbols are None."""
         # Act & Assert
         with pytest.raises(ValueError, match="Either sids or symbols"):
-            self.repo.get_bars(
+            index_repo.get_bars(
                 sids=None,
                 symbols=None,
                 start="2024-01-01",
@@ -144,7 +180,11 @@ class TestIndexRepositoryWithMocks:
                 asof=None,
             )
 
-    def test_get_constituents_basic(self) -> None:
+    def test_get_constituents_basic(
+        self,
+        index_repo: IndexRepository,
+        mock_index_weight_store: IndexWeightStore,
+    ) -> None:
         """Test getting index constituents without symbol."""
         # Arrange
         mock_df = pl.DataFrame(
@@ -155,10 +195,10 @@ class TestIndexRepositoryWithMocks:
                 "weight": [0.5, 0.5],
             }
         )
-        self.mock_index_weight_store.get_constituents.return_value = mock_df
+        mock_index_weight_store.get_constituents.return_value = mock_df
 
         # Act
-        result = self.repo.get_constituents(
+        result = index_repo.get_constituents(
             index_id="000300.SH",
             asof=None,
             with_symbol=False,
@@ -169,11 +209,16 @@ class TestIndexRepositoryWithMocks:
         assert len(result) == 2
         assert "sid" in result.columns
         assert "symbol" not in result.columns
-        self.mock_index_weight_store.get_constituents.assert_called_once_with(
+        mock_index_weight_store.get_constituents.assert_called_once_with(
             index_id="000300.SH", asof=None
         )
 
-    def test_get_constituents_with_symbol(self) -> None:
+    def test_get_constituents_with_symbol(
+        self,
+        index_repo: IndexRepository,
+        mock_index_weight_store: IndexWeightStore,
+        mock_security_store: SecurityStore,
+    ) -> None:
         """Test getting index constituents with symbol join."""
         # Arrange
         mock_df = pl.DataFrame(
@@ -184,7 +229,7 @@ class TestIndexRepositoryWithMocks:
                 "weight": [0.5, 0.5],
             }
         )
-        self.mock_index_weight_store.get_constituents.return_value = mock_df
+        mock_index_weight_store.get_constituents.return_value = mock_df
 
         mock_security_df = pl.DataFrame(
             {
@@ -192,10 +237,10 @@ class TestIndexRepositoryWithMocks:
                 "symbol": ["SID001", "SID002"],
             }
         )
-        self.mock_security_store.find_securities.return_value = mock_security_df
+        mock_security_store.find_securities.return_value = mock_security_df
 
         # Act
-        result = self.repo.get_constituents(
+        result = index_repo.get_constituents(
             index_id="000300.SH",
             asof=None,
             with_symbol=True,
@@ -205,9 +250,13 @@ class TestIndexRepositoryWithMocks:
         # Assert
         assert len(result) == 2
         assert "symbol" in result.columns
-        self.mock_security_store.find_securities.assert_called_once()
+        mock_security_store.find_securities.assert_called_once()
 
-    def test_get_constituents_with_min_weight(self) -> None:
+    def test_get_constituents_with_min_weight(
+        self,
+        index_repo: IndexRepository,
+        mock_index_weight_store: IndexWeightStore,
+    ) -> None:
         """Test getting index constituents with minimum weight filter."""
         # Arrange
         mock_df = pl.DataFrame(
@@ -218,10 +267,10 @@ class TestIndexRepositoryWithMocks:
                 "weight": [0.6, 0.3, 0.1],
             }
         )
-        self.mock_index_weight_store.get_constituents.return_value = mock_df
+        mock_index_weight_store.get_constituents.return_value = mock_df
 
         # Act
-        result = self.repo.get_constituents(
+        result = index_repo.get_constituents(
             index_id="000300.SH",
             asof=None,
             with_symbol=False,
@@ -234,7 +283,11 @@ class TestIndexRepositoryWithMocks:
         assert 1000002 in result["sid"].to_list()
         assert 1000003 not in result["sid"].to_list()
 
-    def test_get_constituents_with_asof(self) -> None:
+    def test_get_constituents_with_asof(
+        self,
+        index_repo: IndexRepository,
+        mock_index_weight_store: IndexWeightStore,
+    ) -> None:
         """Test getting index constituents with PIT asof query."""
         # Arrange
         mock_df = pl.DataFrame(
@@ -245,10 +298,10 @@ class TestIndexRepositoryWithMocks:
                 "weight": [1.0],
             }
         )
-        self.mock_index_weight_store.get_constituents.return_value = mock_df
+        mock_index_weight_store.get_constituents.return_value = mock_df
 
         # Act
-        result = self.repo.get_constituents(
+        result = index_repo.get_constituents(
             index_id="000300.SH",
             asof="2024-06-01",
             with_symbol=False,
@@ -257,21 +310,25 @@ class TestIndexRepositoryWithMocks:
 
         # Assert
         assert len(result) == 1
-        self.mock_index_weight_store.get_constituents.assert_called_once_with(
+        mock_index_weight_store.get_constituents.assert_called_once_with(
             index_id="000300.SH", asof="2024-06-01"
         )
 
-    def test_get_index_constituents_sids(self) -> None:
+    def test_get_index_constituents_sids(
+        self,
+        index_repo: IndexRepository,
+        mock_index_weight_store: IndexWeightStore,
+    ) -> None:
         """Test getting index constituent SIDs as a list."""
         # Arrange
-        self.mock_index_weight_store.get_constituents_sids.return_value = [
+        mock_index_weight_store.get_constituents_sids.return_value = [
             1000001,
             1000002,
             1000003,
         ]
 
         # Act
-        sids = self.repo.get_index_constituents_sids(
+        sids = index_repo.get_index_constituents_sids(
             index_id="000300.SH",
             asof=None,
         )
@@ -281,11 +338,16 @@ class TestIndexRepositoryWithMocks:
         assert 1000001 in sids
         assert 1000002 in sids
         assert 1000003 in sids
-        self.mock_index_weight_store.get_constituents_sids.assert_called_once_with(
+        mock_index_weight_store.get_constituents_sids.assert_called_once_with(
             index_id="000300.SH", asof=None
         )
 
-    def test_get_csi300_bars(self) -> None:
+    def test_get_csi300_bars(
+        self,
+        index_repo: IndexRepository,
+        mock_bars_store: BarsStore,
+        mock_security_store: SecurityStore,
+    ) -> None:
         """Test get_csi300_bars predefined shortcut."""
         # Arrange
         mock_df = pl.DataFrame(
@@ -295,11 +357,11 @@ class TestIndexRepositoryWithMocks:
                 "close": [3500.0],
             }
         )
-        self.mock_bars_store.read.return_value = mock_df
-        self.mock_security_store.resolve_sid.return_value = 300
+        mock_bars_store.read.return_value = mock_df
+        mock_security_store.resolve_sid.return_value = 300
 
         # Act
-        result = self.repo.get_csi300_bars(
+        result = index_repo.get_csi300_bars(
             start="2024-01-01",
             end="2024-01-31",
             asof=None,
@@ -307,41 +369,49 @@ class TestIndexRepositoryWithMocks:
 
         # Assert
         assert len(result) == 1
-        self.mock_security_store.resolve_sid.assert_called_once_with(
+        mock_security_store.resolve_sid.assert_called_once_with(
             "000300.SH", "tushare", None
         )
-        self.mock_bars_store.read.assert_called_once()
+        mock_bars_store.read.assert_called_once()
 
-    def test_get_csi300_constituents(self) -> None:
+    def test_get_csi300_constituents(
+        self,
+        index_repo: IndexRepository,
+        mock_index_weight_store: IndexWeightStore,
+    ) -> None:
         """Test get_csi300_constituents predefined shortcut."""
         # Arrange
-        self.mock_index_weight_store.get_constituents_sids.return_value = [
+        mock_index_weight_store.get_constituents_sids.return_value = [
             1000001,
             1000002,
         ]
 
         # Act
-        sids = self.repo.get_csi300_constituents(asof=None)
+        sids = index_repo.get_csi300_constituents(asof=None)
 
         # Assert
         assert len(sids) == 2
-        self.mock_index_weight_store.get_constituents_sids.assert_called_once_with(
+        mock_index_weight_store.get_constituents_sids.assert_called_once_with(
             index_id="000300.SH", asof=None
         )
 
-    def test_get_csi500_constituents(self) -> None:
+    def test_get_csi500_constituents(
+        self,
+        index_repo: IndexRepository,
+        mock_index_weight_store: IndexWeightStore,
+    ) -> None:
         """Test get_csi500_constituents predefined shortcut."""
         # Arrange
-        self.mock_index_weight_store.get_constituents_sids.return_value = [
+        mock_index_weight_store.get_constituents_sids.return_value = [
             2000001,
             2000002,
         ]
 
         # Act
-        sids = self.repo.get_csi500_constituents(asof=None)
+        sids = index_repo.get_csi500_constituents(asof=None)
 
         # Assert
         assert len(sids) == 2
-        self.mock_index_weight_store.get_constituents_sids.assert_called_once_with(
+        mock_index_weight_store.get_constituents_sids.assert_called_once_with(
             index_id="000905.SH", asof=None
         )

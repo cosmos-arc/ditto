@@ -5,7 +5,6 @@ import time
 from datetime import date, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
 
 import polars as pl
 import pytest
@@ -18,6 +17,7 @@ from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
+from pytest_mock import MockerFixture
 
 
 @pytest.mark.pit
@@ -680,7 +680,7 @@ class TestBarsRepositorySingle:
         assert len(result) == 1
 
     def test_get_single_warns_on_multiple_symbol_matches(
-        self, caplog: pytest.LogCaptureFixture
+        self, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test get_single warns when symbol maps to multiple SIDs."""
         # Arrange: Insert multiple securities with same symbol (unlikely but possible)
@@ -711,13 +711,13 @@ class TestBarsRepositorySingle:
         self.bars_store.write("stock_daily", test_df, 2024)
 
         # Act: Mock logger and call get_single
-        with patch("ditto_datahub.repositories.bars.logger") as mock_logger:
-            result = self.repo.get_single(
-                identifier="600000",
-                start="2024-01-01",
-                end="2024-01-31",
-                source="tushare",
-            )
+        mock_logger = mocker.patch("ditto_datahub.repositories.bars.logger")
+        result = self.repo.get_single(
+            identifier="600000",
+            start="2024-01-01",
+            end="2024-01-31",
+            source="tushare",
+        )
 
         # Assert: Should return first SID's data
         assert len(result) == 1

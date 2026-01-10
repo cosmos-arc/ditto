@@ -6,8 +6,6 @@ This module tests that adj_factor and fund_adj datasets correctly map
 source codes to internal SIDs using the correct column name (src_code).
 """
 
-from unittest.mock import MagicMock, patch
-
 import polars as pl
 import pytest
 
@@ -16,22 +14,22 @@ import pytest
 class TestAdjFactorIngestion:
     """Tests for adj_factor ingestion with SID mapping."""
 
-    def test_ingest_adj_factor_uses_src_code_column(self):
+    def test_ingest_adj_factor_uses_src_code_column(self, mocker):
         """Test that adj_factor ingestion uses src_code column for SID mapping."""
         from ditto_server.ingestion.services.coordinator import IngestionCoordinator
 
         # Mock DataHub
-        mock_hub = MagicMock()
-        mock_source = MagicMock()
+        mock_hub = mocker.MagicMock()
+        mock_source = mocker.MagicMock()
 
         # Mock dependencies
-        mock_hub.ingestion_log = MagicMock()
-        mock_hub.ingestion_cursor = MagicMock()
-        mock_hub.adj_factor = MagicMock()
+        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.ingestion_cursor = mocker.MagicMock()
+        mock_hub.adj_factor = mocker.MagicMock()
         mock_hub.adj_factor.write.return_value = ("/path/to/file", "checksum123")
 
         # Mock security_store to return valid securities
-        mock_hub.security_store = MagicMock()
+        mock_hub.security_store = mocker.MagicMock()
         mock_hub.security_store.resolve_sid.side_effect = (
             lambda src_code, source, asset_class: {
                 "000001.SZ": 1_000_001,
@@ -47,7 +45,7 @@ class TestAdjFactorIngestion:
         )
 
         # Mock _fetch_data to return data with src_code column (not ts_code)
-        with patch.object(
+        mocker.patch.object(
             coordinator,
             "_fetch_data",
             return_value=pl.DataFrame(
@@ -57,43 +55,40 @@ class TestAdjFactorIngestion:
                     "adj_factor": [1.234, 1.567],
                 }
             ),
-        ):
-            # Execute ingestion
-            result = coordinator.ingest_date("adj_factor", "2024-01-02")
+        )
 
-            # Verify result status is success
-            assert result.status == "success", (
-                f"Expected 'success', got '{result.status}'"
-            )
+        # Execute ingestion
+        result = coordinator.ingest_date("adj_factor", "2024-01-02")
 
-            # Verify adj_factor.write was called with dataframe containing sid
-            call_args = mock_hub.adj_factor.write.call_args
-            df_written = call_args.kwargs["df"]
+        # Verify result status is success
+        assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-            # Verify sid column exists in the written dataframe
-            assert "sid" in df_written.columns, (
-                "sid column missing in written dataframe"
-            )
-            assert "src_code" in df_written.columns, (
-                "src_code column missing in written dataframe"
-            )
+        # Verify adj_factor.write was called with dataframe containing sid
+        call_args = mock_hub.adj_factor.write.call_args
+        df_written = call_args.kwargs["df"]
 
-    def test_ingest_fund_adj_uses_src_code_column(self):
+        # Verify sid column exists in the written dataframe
+        assert "sid" in df_written.columns, "sid column missing in written dataframe"
+        assert "src_code" in df_written.columns, (
+            "src_code column missing in written dataframe"
+        )
+
+    def test_ingest_fund_adj_uses_src_code_column(self, mocker):
         """Test that fund_adj ingestion uses src_code column for SID mapping."""
         from ditto_server.ingestion.services.coordinator import IngestionCoordinator
 
         # Mock DataHub
-        mock_hub = MagicMock()
-        mock_source = MagicMock()
+        mock_hub = mocker.MagicMock()
+        mock_source = mocker.MagicMock()
 
         # Mock dependencies
-        mock_hub.ingestion_log = MagicMock()
-        mock_hub.ingestion_cursor = MagicMock()
-        mock_hub.adj_factor = MagicMock()
+        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.ingestion_cursor = mocker.MagicMock()
+        mock_hub.adj_factor = mocker.MagicMock()
         mock_hub.adj_factor.write.return_value = ("/path/to/file", "checksum456")
 
         # Mock security_store to return valid securities
-        mock_hub.security_store = MagicMock()
+        mock_hub.security_store = mocker.MagicMock()
         mock_hub.security_store.resolve_sid.side_effect = (
             lambda src_code, source, asset_class: {
                 "510300.SH": 2_000_001,
@@ -109,7 +104,7 @@ class TestAdjFactorIngestion:
         )
 
         # Mock _fetch_data to return data with src_code column (not ts_code)
-        with patch.object(
+        mocker.patch.object(
             coordinator,
             "_fetch_data",
             return_value=pl.DataFrame(
@@ -119,23 +114,20 @@ class TestAdjFactorIngestion:
                     "adj_factor": [1.123, 1.234],
                 }
             ),
-        ):
-            # Execute ingestion
-            result = coordinator.ingest_date("fund_adj", "2024-01-02")
+        )
 
-            # Verify result status is success
-            assert result.status == "success", (
-                f"Expected 'success', got '{result.status}'"
-            )
+        # Execute ingestion
+        result = coordinator.ingest_date("fund_adj", "2024-01-02")
 
-            # Verify adj_factor.write was called with dataframe containing sid
-            call_args = mock_hub.adj_factor.write.call_args
-            df_written = call_args.kwargs["df"]
+        # Verify result status is success
+        assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-            # Verify sid column exists in the written dataframe
-            assert "sid" in df_written.columns, (
-                "sid column missing in written dataframe"
-            )
-            assert "src_code" in df_written.columns, (
-                "src_code column missing in written dataframe"
-            )
+        # Verify adj_factor.write was called with dataframe containing sid
+        call_args = mock_hub.adj_factor.write.call_args
+        df_written = call_args.kwargs["df"]
+
+        # Verify sid column exists in the written dataframe
+        assert "sid" in df_written.columns, "sid column missing in written dataframe"
+        assert "src_code" in df_written.columns, (
+            "src_code column missing in written dataframe"
+        )

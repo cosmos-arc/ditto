@@ -2,8 +2,6 @@
 
 # ruff: noqa: PLC0415  # 测试文件允许函数内导入
 
-from unittest.mock import patch
-
 import pytest
 
 
@@ -57,23 +55,28 @@ class TestDeployFunctions:
 class TestMainFunction:
     """Tests for main function."""
 
-    @patch("sys.argv", ["deploy.py", "list"])
-    def test_main_list_command(self):
+    def test_main_list_command(self, mocker):
         """Test that main with 'list' command lists flows."""
         from ditto_server.ingestion.flows.deploy import main as deploy_main
 
-        # Mock print
-        with patch("builtins.print") as mock_print:
-            deploy_main()
+        # Mock sys.argv and print
+        mocker.patch("sys.argv", ["deploy.py", "list"])
+        mock_print = mocker.patch("builtins.print")
+
+        deploy_main()
 
         # Should have printed flows
         assert mock_print.called
 
-    @patch("ditto_server.ingestion.flows.deploy.deploy_all_flows")
-    @patch("sys.argv", ["deploy.py"])
-    def test_main_default_deploys(self, mock_deploy):
+    def test_main_default_deploys(self, mocker):
         """Test that main without arguments deploys all flows."""
         from ditto_server.ingestion.flows.deploy import main as deploy_main
+
+        # Mock sys.argv and deploy_all_flows
+        mocker.patch("sys.argv", ["deploy.py"])
+        mock_deploy = mocker.patch(
+            "ditto_server.ingestion.flows.deploy.deploy_all_flows"
+        )
 
         deploy_main()
 

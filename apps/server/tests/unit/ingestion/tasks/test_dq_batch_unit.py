@@ -1,7 +1,6 @@
 """Tests for DQ batch tasks."""
 
 import pathlib
-from unittest.mock import MagicMock, patch
 
 import ditto_datahub
 import polars as pl
@@ -25,15 +24,17 @@ def test_default_config_path_points_to_package():
     assert pathlib.Path(actual_path).exists()
 
 
-def test_dq_completeness_check_closes_hub_connection(tmp_path):
+def test_dq_completeness_check_closes_hub_connection(tmp_path, mocker):
     """Test dq_completeness_check closes DataHub connection to avoid leaks."""
     # Arrange
-    mock_hub = MagicMock()
+    mock_hub = mocker.MagicMock()
     mock_hub.bars.get.return_value = pl.DataFrame(
         {"sid": [1, 2, 3], "trade_date": ["2024-01-02", "2024-01-02", "2024-01-02"]}
     )
 
-    with patch("ditto_server.ingestion.tasks.dq_batch.DataHub", return_value=mock_hub):
+    with mocker.patch(
+        "ditto_server.ingestion.tasks.dq_batch.DataHub", return_value=mock_hub
+    ):
         # Act
         result = dq_completeness_check(
             trade_date="2024-01-02",
@@ -48,15 +49,17 @@ def test_dq_completeness_check_closes_hub_connection(tmp_path):
         mock_hub.close.assert_called_once()
 
 
-def test_dq_completeness_check_passes_market_wide_parameter(tmp_path):
+def test_dq_completeness_check_passes_market_wide_parameter(tmp_path, mocker):
     """Test dq_completeness_check passes market_wide to bars.get()."""
     # Arrange
-    mock_hub = MagicMock()
+    mock_hub = mocker.MagicMock()
     mock_hub.bars.get.return_value = pl.DataFrame(
         {"sid": [1, 2, 3], "trade_date": ["2024-01-02", "2024-01-02", "2024-01-02"]}
     )
 
-    with patch("ditto_server.ingestion.tasks.dq_batch.DataHub", return_value=mock_hub):
+    with mocker.patch(
+        "ditto_server.ingestion.tasks.dq_batch.DataHub", return_value=mock_hub
+    ):
         # Act
         dq_completeness_check(
             trade_date="2024-01-02",
@@ -70,25 +73,27 @@ def test_dq_completeness_check_passes_market_wide_parameter(tmp_path):
         assert call_kwargs.get("market_wide") is True
 
 
-def test_dq_batch_check_closes_hub_connection(tmp_path):
+def test_dq_batch_check_closes_hub_connection(tmp_path, mocker):
     """Test dq_batch_check closes DataHub connection to avoid leaks."""
     # Arrange
-    mock_hub = MagicMock()
+    mock_hub = mocker.MagicMock()
     mock_hub.calendar.get_last_trading_day.return_value = "2024-01-02"
 
     # Mock DQEngine to avoid actual DQ checks
-    mock_engine = MagicMock()
-    mock_result = MagicMock()
+    mock_engine = mocker.MagicMock()
+    mock_result = mocker.MagicMock()
     mock_result.passed = True
     mock_result.issues = []
     mock_result.alert_count = 0
     mock_engine.check_statistical.return_value = mock_result
 
-    with patch("ditto_server.ingestion.tasks.dq_batch.DataHub", return_value=mock_hub):
-        with patch(
+    with mocker.patch(
+        "ditto_server.ingestion.tasks.dq_batch.DataHub", return_value=mock_hub
+    ):
+        with mocker.patch(
             "ditto_server.ingestion.tasks.dq_batch.DQEngine", return_value=mock_engine
         ):
-            with patch("ditto_server.ingestion.tasks.dq_batch.M"):
+            with mocker.patch("ditto_server.ingestion.tasks.dq_batch.M"):
                 # Act
                 result = dq_batch_check(
                     trade_date="2024-01-02",
@@ -101,13 +106,15 @@ def test_dq_batch_check_closes_hub_connection(tmp_path):
                 mock_hub.close.assert_called_once()
 
 
-def test_dq_completeness_check_closes_on_exception(tmp_path):
+def test_dq_completeness_check_closes_on_exception(tmp_path, mocker):
     """Test dq_completeness_check closes connection even when exception occurs."""
     # Arrange
-    mock_hub = MagicMock()
+    mock_hub = mocker.MagicMock()
     mock_hub.bars.get.side_effect = Exception("Database error")
 
-    with patch("ditto_server.ingestion.tasks.dq_batch.DataHub", return_value=mock_hub):
+    with mocker.patch(
+        "ditto_server.ingestion.tasks.dq_batch.DataHub", return_value=mock_hub
+    ):
         # Act & Assert
         with pytest.raises(Exception, match="Database error"):
             dq_completeness_check(

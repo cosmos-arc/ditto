@@ -1,7 +1,5 @@
 """Tests for BackfillManager."""
 
-from unittest.mock import Mock
-
 import pytest
 from ditto_foundation.observability import Mode, init, reset_for_testing
 from ditto_server.ingestion.services.backfill import (
@@ -21,28 +19,28 @@ def setup_observability():
 
 
 @pytest.fixture
-def mock_coordinator():
+def mock_coordinator(mocker):
     """创建 Mock IngestionCoordinator。"""
-    coordinator = Mock()
-    coordinator.ingest_date = Mock()
+    coordinator = mocker.Mock()
+    coordinator.ingest_date = mocker.Mock()
     return coordinator
 
 
 @pytest.fixture
-def mock_calendar_store():
+def mock_calendar_store(mocker):
     """创建 Mock CalendarStore。"""
-    calendar_store = Mock()
-    calendar_store.get_range = Mock()
-    calendar_store.get_first_trading_day = Mock(return_value="2020-01-02")
-    calendar_store.get_last_trading_day = Mock(return_value="2024-12-31")
+    calendar_store = mocker.Mock()
+    calendar_store.get_range = mocker.Mock()
+    calendar_store.get_first_trading_day = mocker.Mock(return_value="2020-01-02")
+    calendar_store.get_last_trading_day = mocker.Mock(return_value="2024-12-31")
     return calendar_store
 
 
 @pytest.fixture
-def mock_ingestion_log_store():
+def mock_ingestion_log_store(mocker):
     """创建 Mock IngestionLogStore。"""
-    log_store = Mock()
-    log_store.get_ingested_dates = Mock()
+    log_store = mocker.Mock()
+    log_store.get_ingested_dates = mocker.Mock()
     return log_store
 
 

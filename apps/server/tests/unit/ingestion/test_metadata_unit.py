@@ -1,7 +1,6 @@
 """Tests for MetadataManager."""
 
 from datetime import date
-from unittest.mock import Mock
 
 import polars as pl
 import pytest
@@ -136,11 +135,11 @@ class TestComputeChecksum:
 class TestShouldSkip:
     """测试 should_skip 方法。"""
 
-    def test_should_not_skip_when_force_is_true(self) -> None:
+    def test_should_not_skip_when_force_is_true(self, mocker) -> None:
         """force=True 时不跳过。"""
 
         manager = MetadataManager()
-        manager._log_store = Mock()
+        manager._log_store = mocker.Mock()
 
         should_skip, reason = manager.should_skip(
             dataset="stock_daily",
@@ -151,13 +150,13 @@ class TestShouldSkip:
         assert should_skip is False
         assert reason is None
 
-    def test_should_not_skip_when_no_history(self) -> None:
+    def test_should_not_skip_when_no_history(self, mocker) -> None:
         """无历史记录时不跳过。"""
 
         manager = MetadataManager()
 
         # Mock get_log 返回 None（无历史记录）
-        mock_store = Mock()
+        mock_store = mocker.Mock()
         mock_store.get_log.return_value = None
         manager._log_store = mock_store
 
@@ -171,13 +170,13 @@ class TestShouldSkip:
         assert reason is None
         mock_store.get_log.assert_called_once()
 
-    def test_should_skip_when_previous_success(self) -> None:
+    def test_should_skip_when_previous_success(self, mocker) -> None:
         """历史成功时跳过。"""
 
         manager = MetadataManager()
 
         # Mock get_log 返回成功的历史记录
-        mock_store = Mock()
+        mock_store = mocker.Mock()
         mock_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
@@ -198,13 +197,13 @@ class TestShouldSkip:
         assert reason is not None
         assert "成功" in reason or "SUCCESS" in reason
 
-    def test_should_not_skip_when_previous_failed(self) -> None:
+    def test_should_not_skip_when_previous_failed(self, mocker) -> None:
         """历史失败时不跳过。"""
 
         manager = MetadataManager()
 
         # Mock get_log 返回失败的历史记录
-        mock_store = Mock()
+        mock_store = mocker.Mock()
         mock_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
@@ -238,12 +237,12 @@ class TestShouldSkip:
         assert should_skip is False
         assert reason is None
 
-    def test_should_skip_uses_source_parameter(self) -> None:
+    def test_should_skip_uses_source_parameter(self, mocker) -> None:
         """should_skip 应使用传入的 source 参数，而非硬编码。"""
         manager = MetadataManager()
 
         # Mock get_log 返回成功的历史记录
-        mock_store = Mock()
+        mock_store = mocker.Mock()
         mock_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="akshare",  # 不同的数据源
@@ -438,12 +437,12 @@ class TestJsonSerializable:
 class TestShouldSkipEdgeCases:
     """测试 should_skip 方法的边界情况。"""
 
-    def test_skip_reason_contains_checksum_and_rows(self) -> None:
+    def test_skip_reason_contains_checksum_and_rows(self, mocker) -> None:
         """跳过原因应包含 checksum 和 rows 信息。"""
         manager = MetadataManager()
 
         # Mock get_log 返回成功的历史记录
-        mock_store = Mock()
+        mock_store = mocker.Mock()
         mock_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
@@ -466,12 +465,12 @@ class TestShouldSkipEdgeCases:
         assert "abcdef12" in reason  # checksum 前 8 个字符
         assert "1000" in reason  # 行数
 
-    def test_skip_reason_handles_missing_checksum(self) -> None:
+    def test_skip_reason_handles_missing_checksum(self, mocker) -> None:
         """跳过原因应处理 checksum 为 None 的情况。"""
         manager = MetadataManager()
 
         # Mock get_log 返回成功但无 checksum 的历史记录
-        mock_store = Mock()
+        mock_store = mocker.Mock()
         mock_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",

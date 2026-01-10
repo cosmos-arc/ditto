@@ -1,7 +1,5 @@
 """Tests for RetryManager."""
 
-from unittest.mock import Mock
-
 import pytest
 from ditto_foundation.observability import Mode, init, reset_for_testing
 from ditto_server.ingestion.services.coordinator import IngestionResult
@@ -21,18 +19,18 @@ def setup_observability():
 
 
 @pytest.fixture
-def mock_coordinator():
+def mock_coordinator(mocker):
     """创建 Mock IngestionCoordinator。"""
-    coordinator = Mock()
-    coordinator.ingest_date = Mock()
+    coordinator = mocker.Mock()
+    coordinator.ingest_date = mocker.Mock()
     return coordinator
 
 
 @pytest.fixture
-def mock_ingestion_log_store():
+def mock_ingestion_log_store(mocker):
     """创建 Mock IngestionLogStore。"""
-    log_store = Mock()
-    log_store.get_failed_dates = Mock()
+    log_store = mocker.Mock()
+    log_store.get_failed_dates = mocker.Mock()
     return log_store
 
 

@@ -1,7 +1,5 @@
 """Tests for TechnicalChecker."""
 
-from unittest.mock import MagicMock
-
 import polars as pl
 from ditto_datahub.dq.checkers.technical import TechnicalChecker
 from ditto_datahub.dq.models import DQLevel, DQSeverity
@@ -207,7 +205,7 @@ class TestTechnicalChecker:
 
         assert len(issues) == 0  # Should skip missing columns
 
-    def test_foreign_key_valid(self) -> None:
+    def test_foreign_key_valid(self, mocker) -> None:
         """Test foreign key check with valid references."""
         df = pl.DataFrame(
             {
@@ -217,7 +215,7 @@ class TestTechnicalChecker:
         )
 
         # Mock hub that returns valid sids
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
         mock_hub.sql.return_value = pl.DataFrame({"sid": [100, 200, 300, 400]})
 
         rule = {
@@ -231,7 +229,7 @@ class TestTechnicalChecker:
 
         assert len(issues) == 0
 
-    def test_foreign_key_invalid(self) -> None:
+    def test_foreign_key_invalid(self, mocker) -> None:
         """Test foreign key check with invalid references."""
         df = pl.DataFrame(
             {
@@ -240,7 +238,7 @@ class TestTechnicalChecker:
             }
         )
 
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
         mock_hub.sql.return_value = pl.DataFrame({"sid": [100, 200, 300, 400]})
 
         rule = {
@@ -269,10 +267,10 @@ class TestTechnicalChecker:
 
         assert len(issues) == 0  # Should skip without context
 
-    def test_foreign_key_invalid_dataset_sql_injection(self) -> None:
+    def test_foreign_key_invalid_dataset_sql_injection(self, mocker) -> None:
         """Test foreign key check with SQL injection in dataset name."""
         df = pl.DataFrame({"index_sid": [100, 200]})
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
 
         # SQL injection attempt: dataset name not in whitelist
         rule = {
@@ -289,10 +287,10 @@ class TestTechnicalChecker:
         # hub.sql should not be called
         mock_hub.sql.assert_not_called()
 
-    def test_foreign_key_invalid_column_sql_injection(self) -> None:
+    def test_foreign_key_invalid_column_sql_injection(self, mocker) -> None:
         """Test foreign key check with SQL injection in column name."""
         df = pl.DataFrame({"index_sid": [100, 200]})
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
 
         # SQL injection attempt: column name with invalid characters
         rule = {
@@ -309,10 +307,10 @@ class TestTechnicalChecker:
         # hub.sql should not be called
         mock_hub.sql.assert_not_called()
 
-    def test_foreign_key_valid_whitelist_dataset(self) -> None:
+    def test_foreign_key_valid_whitelist_dataset(self, mocker) -> None:
         """Test foreign key check with valid whitelisted dataset."""
         df = pl.DataFrame({"sid": [1, 2, 3]})
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
         mock_hub.sql.return_value = pl.DataFrame({"sid": [1, 2, 3, 4, 5]})
 
         # Test with all whitelisted datasets
@@ -416,10 +414,10 @@ class TestTechnicalChecker:
 
         assert len(issues) == 0
 
-    def test_foreign_key_invalid_reference_format(self) -> None:
+    def test_foreign_key_invalid_reference_format(self, mocker) -> None:
         """Test foreign key check with invalid reference format (no dot)."""
         df = pl.DataFrame({"sid": [1, 2]})
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
 
         rule = {
             "rule": "foreign_key",
@@ -434,10 +432,10 @@ class TestTechnicalChecker:
         assert len(issues) == 0
         mock_hub.sql.assert_not_called()
 
-    def test_foreign_key_empty_reference_data(self) -> None:
+    def test_foreign_key_empty_reference_data(self, mocker) -> None:
         """Test foreign key check with empty reference data."""
         df = pl.DataFrame({"sid": [1, 2, 3]})
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
         mock_hub.sql.return_value = pl.DataFrame()  # Empty result
 
         rule = {
@@ -452,10 +450,10 @@ class TestTechnicalChecker:
         # Should return None when reference data is empty
         assert len(issues) == 0
 
-    def test_foreign_key_column_not_in_dataframe(self) -> None:
+    def test_foreign_key_column_not_in_dataframe(self, mocker) -> None:
         """Test foreign key check when column not in dataframe."""
         df = pl.DataFrame({"other_column": [1, 2, 3]})  # sid column missing
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
         mock_hub.sql.return_value = pl.DataFrame({"sid": [1, 2, 3]})
 
         rule = {
@@ -470,10 +468,10 @@ class TestTechnicalChecker:
         # Should return None when column doesn't exist in df
         assert len(issues) == 0
 
-    def test_foreign_key_exception_handling(self) -> None:
+    def test_foreign_key_exception_handling(self, mocker) -> None:
         """Test foreign key check handles exceptions gracefully."""
         df = pl.DataFrame({"sid": [1, 2, 3]})
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
         mock_hub.sql.side_effect = Exception("SQL execution failed")
 
         rule = {
@@ -530,10 +528,10 @@ class TestTechnicalChecker:
 
         assert len(issues) == 0
 
-    def test_foreign_key_with_null_values(self) -> None:
+    def test_foreign_key_with_null_values(self, mocker) -> None:
         """Test foreign key check with null values in data."""
         df = pl.DataFrame({"sid": [1, None, 3, 999]})
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
         mock_hub.sql.return_value = pl.DataFrame({"sid": [1, 2, 3, 4, 5]})
 
         rule = {

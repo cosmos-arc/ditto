@@ -2,7 +2,6 @@
 
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock
 
 import polars as pl
 import pytest
@@ -155,13 +154,13 @@ class TestDQEngine:
         assert result.has_warnings is True
         assert result.has_errors is False
 
-    def test_check_with_context(self) -> None:
+    def test_check_with_context(self, mocker) -> None:
         """Test checking with additional context."""
         engine = DQEngine(config=self.config)
 
         df = pl.DataFrame({"sid": [1, 2], "value": [10.0, 20.0]})
 
-        context = {"hub": Mock(), "source": "test"}
+        context = {"hub": mocker.Mock(), "source": "test"}
 
         result = engine.check(df, "test_dataset", context=context)
 
@@ -348,7 +347,7 @@ class TestDQEngineEdgeCases:
         assert result.passed is True  # No L1 errors
         assert result.has_warnings is True  # L2 warning
 
-    def test_check_statistical_basic(self) -> None:
+    def test_check_statistical_basic(self, mocker) -> None:
         """Test check_statistical with mock hub."""
         config = DQConfig(
             datasets={
@@ -370,7 +369,7 @@ class TestDQEngineEdgeCases:
         engine = DQEngine(config=config)
 
         # Mock hub
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
         mock_hub.bars.get.return_value = pl.DataFrame()
 
         result = engine.check_statistical(
@@ -383,11 +382,11 @@ class TestDQEngineEdgeCases:
         assert result.passed is True
         assert result.dataset == "test_dataset"
 
-    def test_check_statistical_unknown_dataset(self) -> None:
+    def test_check_statistical_unknown_dataset(self, mocker) -> None:
         """Test check_statistical with unknown dataset."""
         engine = DQEngine()
 
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
 
         result = engine.check_statistical(
             dataset="unknown_dataset",
@@ -399,7 +398,7 @@ class TestDQEngineEdgeCases:
         assert result.passed is True
         assert len(result.issues) == 0
 
-    def test_check_statistical_with_asset_class(self) -> None:
+    def test_check_statistical_with_asset_class(self, mocker) -> None:
         """Test check_statistical with asset_class parameter."""
         config = DQConfig(
             datasets={
@@ -420,7 +419,7 @@ class TestDQEngineEdgeCases:
 
         engine = DQEngine(config=config)
 
-        mock_hub = MagicMock()
+        mock_hub = mocker.MagicMock()
         mock_hub.bars.get.return_value = pl.DataFrame()
 
         result = engine.check_statistical(
