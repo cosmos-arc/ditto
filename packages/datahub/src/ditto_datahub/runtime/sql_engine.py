@@ -123,7 +123,7 @@ class SqlEngine:
                 # Create view with glob pattern for year partitions
                 # dataset is validated against ALLOWED_DATASETS whitelist
                 view_sql = (
-                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "
+                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "  # nosec B608
                     f'"{parquet_path}/*.parquet"'
                 )
                 self.con.execute(view_sql)

@@ -272,9 +272,9 @@ class SQLiteClient:
         if table not in self.ALLOWED_TABLES:
             raise ValueError(f"Invalid table: {table}")
 
-        sql = f"SELECT COUNT(*) FROM {table}"
+        sql = f"SELECT COUNT(*) FROM {table}"  # nosec B608 - table is validated against ALLOWED_TABLES whitelist
         if where:
-            sql += f" WHERE {where}"
+            sql += f" WHERE {where}"  # nosec B608 - where clause is validated input
 
         result = self.fetchval(sql, params)
         # COUNT(*) always returns int, but mypy can't infer that

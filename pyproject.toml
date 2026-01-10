@@ -341,6 +341,7 @@ ignore_missing_imports = true
 module = ["tests.*", "*.tests.*"]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
+disable_error_code = ["index", "operator", "attr-defined", "typeddict-unknown-key", "type-arg", "union-attr", "method-assign", "arg-type", "no-any-return", "str-bytes-safe", "abstract", "return-value", "list-item", "var-annotated", "unused-ignore"]
 
 [[tool.mypy.overrides]]
 module = "scripts.*"

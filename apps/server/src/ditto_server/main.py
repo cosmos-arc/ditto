@@ -232,7 +232,7 @@ async def get_status() -> dict[str, Any]:
 
 
 @app.get("/api/v1/logs/test")
-async def test_logging() -> dict[str, str]:
+async def generate_test_logs() -> dict[str, str]:
     """测试日志记录功能."""
     logger.info("Test info log", test_data="example")
     logger.warning("Test warning log", test_data="example")

@@ -332,7 +332,7 @@ class UniverseRepository:
 
         # Build query
         placeholders = ",".join("?" * len(sids))
-        query = f"SELECT sid, symbol FROM security WHERE sid IN ({placeholders})"
+        query = f"SELECT sid, symbol FROM security WHERE sid IN ({placeholders})"  # nosec B608 - placeholders are "?" strings for parameterized query
 
         security_rows = client.fetchall(query, sids)
 

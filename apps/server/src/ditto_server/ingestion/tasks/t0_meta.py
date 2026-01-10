@@ -14,10 +14,11 @@ from prefect import task
 from ditto_server.ingestion.config.datasets import DATASET_REGISTRY, Dataset
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    pass
 
 
-def create_ingest_task(dataset: Dataset) -> Callable[..., Any]:
+# Prefect Task 返回类型是复杂的泛型，使用 Any 简化类型注解
+def create_ingest_task(dataset: Dataset) -> Any:
     """
     创建摄取任务的工厂函数。
 

@@ -119,7 +119,7 @@ def daily_ingestion_flow(
     t0_futures: list[Any] = []
     for dataset in t0_datasets:
         t0_task = create_ingest_task_t0(dataset)
-        future = t0_task.submit(  # type: ignore[attr-defined]
+        future = t0_task.submit(
             trade_date=trade_date,
             source=source,
             data_root=data_root,
@@ -154,7 +154,7 @@ def daily_ingestion_flow(
             else:
                 task = create_ingest_task_t1_bars(dataset)
 
-            future = task.submit(  # type: ignore[attr-defined]
+            future = task.submit(
                 trade_date=trade_date,
                 source=source,
                 data_root=data_root,

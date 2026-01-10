@@ -1,7 +1,7 @@
 """Tests for FastAPI main application async endpoints."""
 
 import pytest
-from ditto_server.main import get_status, health_check, root, test_logging
+from ditto_server.main import generate_test_logs, get_status, health_check, root
 
 
 class TestFastAPIEndpoints:
@@ -36,5 +36,5 @@ class TestFastAPIEndpoints:
     @pytest.mark.asyncio
     async def test_test_logging_endpoint(self):
         """Test test logging endpoint generates logs."""
-        response = await test_logging()
+        response = await generate_test_logs()
         assert response == {"message": "Test logs generated"}
