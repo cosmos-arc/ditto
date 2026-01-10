@@ -1,4 +1,3 @@
-# ruff: noqa: PLC0415  # 测试文件允许函数内导入
 """Unit tests for daily ingestion flow.
 
 This module provides unit-level coverage for the daily ingestion flow,
@@ -10,6 +9,11 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+from ditto_server.ingestion.config.datasets import Dataset
+from ditto_server.ingestion.flows.daily import (
+    check_trading_day,
+    daily_ingestion_flow,
+)
 from prefect.tasks import Task as PrefectTask
 
 
@@ -19,7 +23,6 @@ class TestCheckTradingDay:
 
     def test_returns_true_for_trading_day(self):
         """Test that task returns True for valid trading day."""
-        from ditto_server.ingestion.flows.daily import check_trading_day
 
         mock_hub = MagicMock()
         mock_hub.calendar.is_trading_day.return_value = True
@@ -36,7 +39,6 @@ class TestCheckTradingDay:
 
     def test_returns_false_for_non_trading_day(self):
         """Test that task returns False for non-trading day."""
-        from ditto_server.ingestion.flows.daily import check_trading_day
 
         mock_hub = MagicMock()
         mock_hub.calendar.is_trading_day.return_value = False
@@ -52,7 +54,6 @@ class TestCheckTradingDay:
 
     def test_closes_hub_on_exception(self):
         """Test that hub.close() is called even when is_trading_day raises."""
-        from ditto_server.ingestion.flows.daily import check_trading_day
 
         mock_hub = MagicMock()
         mock_hub.calendar.is_trading_day.side_effect = ValueError("Test error")
@@ -69,7 +70,6 @@ class TestCheckTradingDay:
 
     def test_is_prefect_task(self):
         """Test that check_trading_day is a Prefect task."""
-        from ditto_server.ingestion.flows.daily import check_trading_day
 
         assert isinstance(check_trading_day, PrefectTask)
         assert check_trading_day.name == "check_trading_day"
@@ -81,7 +81,6 @@ class TestDailyIngestionFlowNonTradingDay:
 
     def test_returns_skipped_result_for_non_trading_day(self):
         """Test that flow returns skipped result for non-trading day."""
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=False
@@ -110,8 +109,6 @@ class TestDailyIngestionFlowT0Execution:
 
     def test_executes_t0_datasets(self):
         """Test that flow executes T0 datasets."""
-        from ditto_server.ingestion.config.datasets import Dataset
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         # Mock check_trading_day to return True
         with patch(
@@ -154,7 +151,6 @@ class TestDailyIngestionFlowT0Execution:
 
     def test_handles_empty_t0_datasets(self):
         """Test that flow handles empty T0 datasets list."""
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
@@ -184,8 +180,6 @@ class TestDailyIngestionFlowT1Execution:
 
     def test_uses_correct_task_factory_for_adj_factor(self):
         """Test that adj_factor uses create_ingest_task_t1_adj."""
-        from ditto_server.ingestion.config.datasets import Dataset
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
@@ -227,8 +221,6 @@ class TestDailyIngestionFlowT1Execution:
 
     def test_uses_correct_task_factory_for_fund_adj(self):
         """Test that fund_adj uses create_ingest_task_t1_adj."""
-        from ditto_server.ingestion.config.datasets import Dataset
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
@@ -267,8 +259,6 @@ class TestDailyIngestionFlowT1Execution:
 
     def test_uses_correct_task_factory_for_bars_datasets(self):
         """Test that bars datasets use create_ingest_task_t1_bars."""
-        from ditto_server.ingestion.config.datasets import Dataset
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
@@ -307,8 +297,6 @@ class TestDailyIngestionFlowT1Execution:
 
     def test_handles_multi_level_t1_dependencies(self):
         """Test that T1 multi-level dependencies use correct wait_for."""
-        from ditto_server.ingestion.config.datasets import Dataset
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
@@ -374,7 +362,6 @@ class TestDailyIngestionFlowT1Execution:
 
     def test_handles_empty_t1_datasets(self):
         """Test that flow handles empty T1 datasets list."""
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
@@ -402,7 +389,6 @@ class TestDailyIngestionFlowResultAggregation:
 
     def test_aggregates_success_status(self):
         """Test that success status is counted correctly."""
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
@@ -439,7 +425,6 @@ class TestDailyIngestionFlowResultAggregation:
 
     def test_aggregates_failed_status(self):
         """Test that failed status is counted correctly."""
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
@@ -476,7 +461,6 @@ class TestDailyIngestionFlowResultAggregation:
 
     def test_aggregates_skipped_status(self):
         """Test that skipped status is counted correctly."""
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
@@ -513,7 +497,6 @@ class TestDailyIngestionFlowResultAggregation:
 
     def test_aggregates_mixed_statuses(self):
         """Test that mixed statuses are counted correctly."""
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
@@ -560,7 +543,6 @@ class TestDailyIngestionFlowReturnValue:
 
     def test_return_value_contains_all_required_keys(self):
         """Test that return value contains all required keys."""
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
@@ -597,7 +579,6 @@ class TestDailyIngestionFlowReturnValue:
 
     def test_dqc_results_placeholder(self):
         """Test that DQC results contain placeholder."""
-        from ditto_server.ingestion.flows.daily import daily_ingestion_flow
 
         with patch(
             "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
