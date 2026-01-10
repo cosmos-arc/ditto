@@ -12,7 +12,7 @@ from prefect.testing.utilities import prefect_test_harness
 @pytest.fixture(scope="session")
 def prefect_test_session() -> Generator[None, None, None]:
     """Session 级别的 Prefect test harness。"""
-    with prefect_test_harness():
+    with prefect_test_harness(server_startup_timeout=30):
         yield
 
 
