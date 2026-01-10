@@ -289,7 +289,7 @@ class TestSecurityRepository:
         )
 
         # Act
-        file_path, checksum = self.repo.register_batch(
+        _file_path, _checksum = self.repo.register_batch(
             df=df2, source="tushare", asset_class="stock", src_code_col="src_code"
         )
 

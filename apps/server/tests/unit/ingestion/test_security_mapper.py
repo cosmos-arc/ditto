@@ -1,6 +1,7 @@
 """Tests for SecurityMapper."""
 
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date
 from threading import Lock
 from unittest.mock import Mock
 
@@ -8,7 +9,11 @@ import polars as pl
 import pytest
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_foundation.observability import Mode, init, reset_for_testing
-from ditto_server.ingestion.services.security_mapper import SecurityMapper
+from ditto_server.ingestion.services.security_mapper import (
+    SecurityMapper,
+    SecurityRegistrationParams,
+    _format_date_for_sqlite,
+)
 
 
 @pytest.fixture
@@ -560,3 +565,127 @@ class TestConcurrency:
         # Assert: 所有 SID 应该唯一
         assert len(set(results)) == 10, f"所有 SID 应该唯一, 但得到: {results}"
         assert len(results) == 10, "应该分配 10 个 SID"
+
+
+class TestFormatDateForSqlite:
+    """测试 _format_date_for_sqlite 辅助函数。"""
+
+    def test_formats_date_object(self):
+        """测试转换 date 对象为 SQLite 格式。"""
+        # Arrange
+        input_date = date(2024, 1, 2)
+
+        # Act
+        result = _format_date_for_sqlite(input_date)
+
+        # Assert
+        assert result == "20240102"
+
+    def test_formats_string_with_dashes(self):
+        """测试转换带连字符的日期字符串。"""
+        # Arrange
+        input_date = "2024-01-02"
+
+        # Act
+        result = _format_date_for_sqlite(input_date)
+
+        # Assert
+        assert result == "20240102"
+
+    def test_returns_default_for_none(self):
+        """测试 None 返回默认日期。"""
+        # Act
+        result = _format_date_for_sqlite(None)
+
+        # Assert
+        assert result == "19900101"
+
+    def test_passes_through_formatted_string(self):
+        """测试已格式化的字符串直接返回。"""
+        # Arrange
+        input_date = "19900101"
+
+        # Act
+        result = _format_date_for_sqlite(input_date)
+
+        # Assert
+        assert result == "19900101"
+
+
+class TestRegisterSecurity:
+    """测试 _register_security 方法。"""
+
+    def test_handles_missing_metadata(self, mapper, mock_security_store):
+        """测试元数据缺失时使用默认值。"""
+        # Arrange
+        mock_security_store.resolve_sid.return_value = None
+        empty_metadata = pl.DataFrame(
+            schema={
+                "ts_code": pl.String,
+                "symbol": pl.String,
+                "name": pl.String,
+                "exchange": pl.String,
+                "list_date": pl.String,
+            }
+        )
+
+        params = SecurityRegistrationParams(
+            src_code="000001.SZ",
+            sid=1000000,
+            source="tushare",
+            asset_class="stock",
+            metadata=empty_metadata,
+            src_code_col="ts_code",
+        )
+
+        # Act
+        mapper._register_security(params)
+
+        # Assert
+        mock_security_store.register.assert_called_once_with(
+            sid=1000000,
+            source="tushare",
+            src_code="000001.SZ",
+            symbol="000001.SZ",  # 默认使用 src_code
+            name="000001.SZ",  # 默认使用 src_code
+            exchange="UNKNOWN",  # 默认值
+            asset_class="stock",
+            list_date="19900101",  # 默认值
+            board=None,
+        )
+
+    def test_skips_when_already_registered_concurrently(
+        self, mapper, mock_security_store
+    ):
+        """测试并发竞态时跳过注册。"""
+        # Arrange
+        # _register_security 开始时会检查是否已注册
+        # 如果已存在（并发竞态），直接返回不注册
+        mock_security_store.resolve_sid.return_value = 1000001
+
+        params = SecurityRegistrationParams(
+            src_code="000001.SZ",
+            sid=1000000,
+            source="tushare",
+            asset_class="stock",
+            metadata=pl.DataFrame(
+                {
+                    "ts_code": ["000001.SZ"],
+                    "symbol": ["平安银行"],
+                    "name": ["平安银行股份有限公司"],
+                    "exchange": ["SZ"],
+                    "list_date": ["19910403"],
+                }
+            ),
+            src_code_col="ts_code",
+        )
+
+        # Act
+        mapper._register_security(params)
+
+        # Assert
+        # 不应该调用 register，因为检测到已注册
+        mock_security_store.register.assert_not_called()
+        mock_security_store.resolve_sid.assert_called_once_with(
+            "000001.SZ", "tushare", None
+        )

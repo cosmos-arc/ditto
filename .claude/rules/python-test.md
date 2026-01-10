@@ -33,6 +33,25 @@ tests/
 - Parquet Store（`tmp_path`）→ 测 Store 读写逻辑
 - 都够快、都是测你的代码而非底层库，测的是业务逻辑而非数据库本身。
 
+### 文件命名规范（防止import冲突）
+
+**禁止同名测试文件存在于不同测试层级**：
+
+```
+# ❌ 错误：会导致 pytest 收集冲突
+packages/datahub/tests/unit/stores/test_pipeline_store.py
+packages/datahub/tests/integration/stores/test_pipeline_store.py
+
+# ✅ 正确：添加层级后缀区分
+packages/datahub/tests/unit/stores/test_pipeline_store_unit.py
+packages/datahub/tests/integration/stores/test_pipeline_store_integration.py
+```
+
+**命名规则**：
+- 单元测试: `test_{module}_unit.py`
+- 集成测试: `test_{module}_integration.py`
+- E2E测试: `test_{module}_e2e.py`
+
 ## 编写规则
 
 ### 命名
@@ -51,6 +70,50 @@ def test_xxx():
 
 ### 单一职责
 每个测试只验证一个行为，不要在一个测试中验证多个场景。
+
+### 禁止假测试（绝对禁止）
+
+**以下断言形式被视为假测试，严格禁止**：
+
+```python
+# ❌ 禁止：assert True
+assert True  # 如果能到这里就通过 - 没有实际验证
+
+# ❌ 禁止：assert False
+assert False  # 永远失败
+
+# ❌ 禁止：空断言
+pass
+# 或者没有 assert 语句
+
+# ❌ 禁止：无意义的断言
+assert result is not None  # 过于宽泛
+assert len(result) > 0     # 过于宽泛
+```
+
+**正确的做法**：
+
+```python
+# ✅ 验证具体行为
+assert result.status == "success"
+assert result.count == 3
+assert "expected" in result.message
+
+# ✅ 测试异常路径
+with pytest.raises(ValueError, match="Invalid input"):
+    function_with_invalid_input()
+
+# ✅ 使用 DataFrame 断言
+assert_frame_equal(result, expected)
+```
+
+**检查命令**：
+```bash
+# 提交前必须检查
+grep -r "assert True" tests/
+grep -r "assert False" tests/
+grep -r "^\\s*pass\\s*$" tests/
+```
 
 ## DataFrame测试
 
@@ -85,12 +148,27 @@ QuoteSchema.validate(df)  # 测试中使用
 
 | 场景 | 工具 |
 |------|------|
-| 验证调用参数/次数 | `pytest-mock (mocker)` |
+| 验证调用参数/次数 | `pytest-mock (mocker)`,`禁止使用unittest.mock` |
 | 简单替换返回值 | `monkeypatch.setattr()` |
 | 环境变量 | `monkeypatch.setenv()` |
 | HTTP请求 | `respx` |
 
 ```python
+# ✅ pytest-mock 示例（推荐）
+def test_api(mocker):
+    mock_get = mocker.patch("httpx.Client.get")
+    mock_get.return_value = httpx.Response(200, json={"price": 15.5})
+
+    # 验证调用
+    result = fetch_quote("000001")
+    mock_get.assert_called_once_with("https://api.example.com/quote?symbol=000001")
+
+# ❌ 禁止：unittest.mock
+from unittest.mock import patch  # 不要使用
+@patch("httpx.Client.get")
+def test_api(mock_get):  # 旧方式，不够简洁
+    ...
+
 # respx示例
 def test_api(respx_mock):
     respx_mock.get("https://api.example.com/quote").mock(
@@ -98,7 +176,10 @@ def test_api(respx_mock):
     )
 ```
 
-**原则**：只Mock外部依赖，不Mock内部实现。
+**原则**：
+1. 只Mock外部依赖，不Mock内部实现
+2. 优先使用 `pytest-mock` 的 `mocker` fixture
+3. 禁止使用 `unittest.mock.patch` 装饰器
 
 ## PIT (Point-in-Time) 测试
 
@@ -300,3 +381,239 @@ def test_signal_generation_performance(benchmark, large_dataset):
 - [ ] 异常路径有测试覆盖
 - [ ] 无 sleep/time.sleep 等待
 - [ ] 无硬编码路径或环境依赖
+- [ ] 无假测试（assert True、assert False、空 pass）
+- [ ] 无 import 冲突（同名测试文件）
+- [ ] 使用参数化测试减少重复
+
+---
+
+## 参数化测试（减少重复代码）
+
+**当测试逻辑相同，只是输入/输出不同时，必须使用参数化测试**：
+
+```python
+# ❌ 错误：重复代码
+def test_read_filter_by_sids_1(self, store, sample_df):
+    store.write("adj_factor", sample_df, 2024)
+    df = store.read("adj_factor", sids=[1000001])
+    assert len(df) == 3
+
+def test_read_filter_by_sids_2(self, store, sample_df):
+    store.write("adj_factor", sample_df, 2024)
+    df = store.read("adj_factor", sids=[1000002])
+    assert len(df) == 1
+
+def test_read_filter_by_sids_3(self, store, sample_df):
+    store.write("adj_factor", sample_df, 2024)
+    df = store.read("adj_factor", sids=[1000001, 1000002])
+    assert len(df) == 4
+
+# ✅ 正确：参数化测试
+@pytest.mark.parametrize("sids,expected_count", [
+    ([1000001], 3),                    # 单个 SID
+    ([1000002], 1),                    # 另一个 SID
+    ([1000001, 1000002], 4),           # 多个 SID
+    ([], 0),                           # 空 SID 列表
+])
+def test_read_filter_by_sids(self, store, sample_df, sids, expected_count):
+    store.write("adj_factor", sample_df, 2024)
+    df = store.read("adj_factor", sids=sids)
+    assert len(df) == expected_count
+```
+
+**参数化测试的优势**：
+- 减少重复代码 50%+
+- 更容易添加新的测试用例
+- 测试失败时显示具体参数
+- 一次运行所有变体
+
+**适用场景**：
+- 边界值测试（0、-1、MAX、None）
+- 多种输入组合
+- 相同逻辑的不同配置
+
+---
+
+## 异步测试
+
+**对于异步函数，必须使用异步测试**：
+
+```python
+import pytest
+
+# ✅ 异步测试
+@pytest.mark.asyncio
+async def test_async_data_fetch():
+    result = await fetch_data_async("000001")
+    assert result is not None
+
+@pytest.mark.asyncio
+async def test_async_database_operation(async_db_pool):
+    result = await async_db_pool.fetchrow("SELECT * FROM securities WHERE sid = $1", 100001)
+    assert result["symbol"] == "000001"
+
+# ✅ 异步 + 参数化
+@pytest.mark.asyncio
+@pytest.mark.parametrize("symbol,expected_sid", [
+    ("000001", 1000001),
+    ("000002", 1000002),
+])
+async def test_resolve_sid_async(symbol, expected_sid):
+    sid = await async_resolve_sid(symbol)
+    assert sid == expected_sid
+```
+
+**注意**：
+- 异步测试需要 `pytest-asyncio` 插件
+- 测试函数必须是 `async def`
+- fixture 也需要是异步的（使用 `@pytest_asyncio.fixture`）
+
+---
+
+## 覆盖率要求
+
+**项目覆盖率标准**：
+
+| 指标 | 要求 | 检查命令 |
+|------|------|----------|
+| 分支覆盖率 | >= 80% | `pytest --cov --cov-report=term-missing` |
+| 行覆盖率 | >= 80% | `pytest --cov --cov-report=html` |
+| 新增代码 | >= 85% | CI 自动检查 |
+
+### 覆盖率提升策略
+
+**1. 优先覆盖核心业务逻辑**
+```python
+# ✅ 优先测试这些
+- Repository 层的业务规则
+- Store 层的数据转换
+- DQ Engine 的验证逻辑
+- 异常处理路径
+```
+
+**2. 分支覆盖率关键点**
+```python
+# 测试所有条件分支
+if condition:      # 需要 True 和 False 两种情况
+    pass
+else:
+    pass
+
+# 测试异常路径
+try:
+    risky_operation()
+except ValueError:  # 需要触发这个异常
+    handle_error()
+```
+
+**3. 使用覆盖率报告定位缺失**
+```bash
+# 生成详细报告
+pytest --cov-report=term-missing:skip-covered
+
+# 输出示例：
+# packages/datahub/src/ditto_datahub/errors.py:40  <<<<<<< 需要添加测试
+#                                                          40    def __init__(self, message: str = "..."):
+```
+
+### 覆盖率检查流程
+
+```bash
+# 1. 本地开发时快速检查
+pytest tests/unit/ -m "not slow" --cov
+
+# 2. 提交前完整检查
+pytest --cov --cov-report=html --cov-report=term-missing
+
+# 3. 查看 HTML 报告
+open htmlcov/index.html  # 找出未覆盖的代码行
+
+# 4. 检查假测试（提交前必须）
+grep -r "assert True" tests/
+grep -r "assert False" tests/
+```
+
+---
+
+## 并发测试配置
+
+**项目已配置 pytest-xdist 并发测试**：
+
+```bash
+# pyproject.toml 配置
+addopts = [
+    "-ra",
+    "-v",
+    "-n", "auto",  # 使用所有可用 CPU 核心并行测试
+    ...
+]
+```
+
+**并发测试注意事项**：
+- 测试必须独立，不能有共享状态
+- 使用 `tmp_path` 而非固定路径
+- 每个测试应有独立的数据库 fixture
+- 避免使用全局变量或单例
+
+**预期提速**：2-4倍（取决于 CPU 核心数）
+
+---
+
+## 测试隔离性
+
+**确保测试可以独立运行，无执行顺序依赖**：
+
+```python
+# ✅ 正确：每个测试独立准备数据
+def test_feature_a(store):
+    store.write(sample_data_a)
+    result = store.read("a")
+    assert result == expected_a
+
+def test_feature_b(store):
+    store.write(sample_data_b)  # 独立准备，不依赖 test_feature_a
+    result = store.read("b")
+    assert result == expected_b
+
+# ❌ 错误：依赖执行顺序
+def test_feature_a(store):
+    global shared_state = "a"  # 不要使用全局状态
+
+def test_feature_b(store):
+    assert global_state == "a"  # 依赖前面的测试
+```
+
+**使用 fixture 确保隔离**：
+```python
+@pytest.fixture
+def clean_store(tmp_path):
+    """每个测试都获得新的 store"""
+    store = ParquetStore(tmp_path)
+    yield store
+    # 自动清理
+```
+
+---
+
+## 检测问题命令
+
+**提交前必须运行的检查**：
+
+```bash
+# 1. 检查假测试
+grep -r "assert True" tests/
+grep -r "assert False" tests/
+
+# 2. 检查 import 冲突
+pytest --collect-only 2>&1 | grep "import mismatch"
+
+# 3. 检查重复代码
+# 手动审查：是否有多个测试只有参数不同
+
+# 4. 检查覆盖率
+pytest --cov --cov-fail-under=80
+
+# 5. 检查 unittest.mock 使用（应迁移到 pytest-mock）
+grep -r "from unittest.mock" tests/
+grep -r "@patch" tests/
+```

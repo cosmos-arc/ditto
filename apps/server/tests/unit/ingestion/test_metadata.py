@@ -1,12 +1,16 @@
 """Tests for MetadataManager."""
 
+from datetime import date
 from unittest.mock import Mock
 
 import polars as pl
 import pytest
 from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_foundation.observability import Mode, init, reset_for_testing
-from ditto_server.ingestion.services.metadata import MetadataManager
+from ditto_server.ingestion.services.metadata import (
+    MetadataManager,
+    _json_serializable,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -379,3 +383,111 @@ class TestCompareData:
         result = manager.compare_data(df, existing_log)
 
         assert result is False
+
+    def test_compare_returns_true_when_rows_is_none(self) -> None:
+        """当 existing_log.rows 为 None 时，仅比较 checksum。"""
+        manager = MetadataManager()
+
+        df = pl.DataFrame(
+            {
+                "code": ["000001", "000002"],
+                "close": [10.5, 20.3],
+            }
+        )
+
+        checksum = manager.compute_checksum(df)
+
+        # rows 为 None（老数据可能没有记录行数）
+        existing_log = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum=checksum,
+            rows=None,  # 行数为 None
+        )
+
+        result = manager.compare_data(df, existing_log)
+
+        # checksum 相同，rows 为 None 时不比较行数，应返回 True
+        assert result is True
+
+
+class TestJsonSerializable:
+    """测试 _json_serializable 辅助函数。"""
+
+    def test_json_serializable_with_date(self) -> None:
+        """date 类型应转换为 ISO 格式字符串。"""
+
+        test_date = date(2024, 12, 27)
+        result = _json_serializable(test_date)
+
+        assert result == "2024-12-27"
+
+    def test_json_serializable_with_unsupported_type(self) -> None:
+        """不支持的类型应抛出 TypeError。"""
+
+        # 使用一个不支持的自定义类
+        class CustomClass:
+            pass
+
+        with pytest.raises(TypeError, match=r"Type .* not serializable"):
+            _json_serializable(CustomClass())
+
+
+class TestShouldSkipEdgeCases:
+    """测试 should_skip 方法的边界情况。"""
+
+    def test_skip_reason_contains_checksum_and_rows(self) -> None:
+        """跳过原因应包含 checksum 和 rows 信息。"""
+        manager = MetadataManager()
+
+        # Mock get_log 返回成功的历史记录
+        mock_store = Mock()
+        mock_store.get_log.return_value = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="abcdef1234567890",
+            rows=1000,
+        )
+        manager._log_store = mock_store
+
+        should_skip, reason = manager.should_skip(
+            dataset="stock_daily",
+            trade_date="2024-12-27",
+            force=False,
+        )
+
+        assert should_skip is True
+        assert reason is not None
+        assert "2024-12-27" in reason
+        assert "abcdef12" in reason  # checksum 前 8 个字符
+        assert "1000" in reason  # 行数
+
+    def test_skip_reason_handles_missing_checksum(self) -> None:
+        """跳过原因应处理 checksum 为 None 的情况。"""
+        manager = MetadataManager()
+
+        # Mock get_log 返回成功但无 checksum 的历史记录
+        mock_store = Mock()
+        mock_store.get_log.return_value = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum=None,
+            rows=1000,
+        )
+        manager._log_store = mock_store
+
+        should_skip, reason = manager.should_skip(
+            dataset="stock_daily",
+            trade_date="2024-12-27",
+            force=False,
+        )
+
+        assert should_skip is True
+        assert reason is not None
+        assert "N/A" in reason  # checksum 为 None 时显示 N/A

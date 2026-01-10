@@ -909,8 +909,11 @@ class TestDateNormalization:
             }
         )
 
-        # 应该抛出 InvalidOperationError
-        with pytest.raises(pl.InvalidOperationError):
+        # 应该抛出异常（polars 解析日期失败）
+        with pytest.raises(
+            pl.exceptions.InvalidOperationError,
+            match="conversion from `str` to `date` failed",
+        ):
             store.write("adj_factor", df, 2024)
 
 
