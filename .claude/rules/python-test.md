@@ -595,25 +595,64 @@ def clean_store(tmp_path):
 
 ---
 
-## 检测问题命令
-
-**提交前必须运行的检查**：
+## 检测问题命令（提交前必跑）
 
 ```bash
-# 1. 检查假测试
-grep -r "assert True" tests/
+grep -r "assert True" tests/          # 假测试检测
 grep -r "assert False" tests/
-
-# 2. 检查 import 冲突
-pytest --collect-only 2>&1 | grep "import mismatch"
-
-# 3. 检查重复代码
-# 手动审查：是否有多个测试只有参数不同
-
-# 4. 检查覆盖率
-pytest --cov --cov-fail-under=80
-
-# 5. 检查 unittest.mock 使用（应迁移到 pytest-mock）
-grep -r "from unittest.mock" tests/
+pytest --collect-only 2>&1 | grep "import mismatch"  # import冲突
+grep -r "from unittest.mock" tests/   # 应迁移到pytest-mock
 grep -r "@patch" tests/
+grep -r "async def test" tests/       # 异步测试覆盖
+```
+
+---
+
+## 类型检查（mypy）
+
+**配置**：`tests.*` 模块已配置宽松规则（禁用 index/operator/attr-defined 等，适配 mock 场景）
+
+```bash
+pixi run -e dev typecheck        # 完整检查
+pixi run -e dev mypy tests/      # 只检查测试
+```
+
+---
+
+## 安全检查（bandit # nosec B608）
+
+```python
+# ✅ 需要注释：已验证/白名单/参数化
+sql = f"SELECT * FROM {table}"  # nosec B608 - table in ALLOWED_TABLES
+query = f"SELECT id FROM t WHERE id IN ({placeholders})"  # nosec B608
+
+# ❌ 禁止：直接拼接用户输入
+sql = f"SELECT * FROM t WHERE name = '{user_input}'"
+```
+
+```bash
+pixi run -e dev security         # 运行检查
+```
+
+---
+
+## 异步测试注意
+
+```python
+# ❌ 避免被pytest误识别为测试
+@app.get("/api/test")
+async def test_logging():  # ← 函数名以test_开头
+
+# ✅ 重命名避免歧义
+async def generate_test_logs():
+```
+
+---
+
+## 完整检查命令
+
+```bash
+pixi run -e dev quick-check       # 开发时（lint-fix + format + test-fast）
+pixi run -e dev pre-commit-run    # 提交前（lint + format + typecheck + security）
+pixi run -e dev ci-check          # CI完整（以上 + test-cov-xml）
 ```

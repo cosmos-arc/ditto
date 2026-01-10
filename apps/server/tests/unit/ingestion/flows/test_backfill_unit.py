@@ -93,7 +93,7 @@ class TestBackfillFlow:
         mock_dh = mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch("ditto_server.ingestion.services.coordinator.IngestionCoordinator")
         mock_manager = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -130,7 +130,7 @@ class TestBackfillFlow:
         mock_coordinator_cls.return_value = mock_coordinator
 
         mock_manager = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -206,7 +206,7 @@ class TestBackfillFlow:
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch("ditto_server.ingestion.services.coordinator.IngestionCoordinator")
         mock_manager = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -241,7 +241,7 @@ class TestBackfillFlow:
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch("ditto_server.ingestion.services.coordinator.IngestionCoordinator")
         mock_manager = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -273,7 +273,7 @@ class TestBackfillFlow:
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch("ditto_server.ingestion.services.coordinator.IngestionCoordinator")
         mock_manager = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -318,7 +318,7 @@ class TestBackfillFlow:
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch("ditto_server.ingestion.services.coordinator.IngestionCoordinator")
         mock_manager = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -376,7 +376,7 @@ class TestBackfillMissingFlow:
         mock_dh = mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch("ditto_server.ingestion.services.coordinator.IngestionCoordinator")
         mock_manager = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -411,7 +411,7 @@ class TestBackfillMissingFlow:
         mock_coordinator_cls.return_value = mock_coordinator
 
         mock_manager = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -446,7 +446,7 @@ class TestBackfillMissingFlow:
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch("ditto_server.ingestion.services.coordinator.IngestionCoordinator")
         mock_manager_cls = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_manager = mocker.MagicMock()
         mock_manager_cls.return_value = mock_manager
@@ -481,7 +481,7 @@ class TestBackfillMissingFlow:
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch("ditto_server.ingestion.services.coordinator.IngestionCoordinator")
         mock_manager = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -511,7 +511,7 @@ class TestBackfillMissingFlow:
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch("ditto_server.ingestion.services.coordinator.IngestionCoordinator")
         mock_manager = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -550,7 +550,7 @@ class TestBackfillMissingFlow:
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch("ditto_server.ingestion.services.coordinator.IngestionCoordinator")
         mock_manager = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -579,7 +579,7 @@ class TestBackfillMissingFlow:
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch("ditto_server.ingestion.services.coordinator.IngestionCoordinator")
         mock_manager = mocker.patch(
-            "ditto_server.ingestion.services.backfill.BackfillManager"
+            "ditto_server.ingestion.flows.backfill.BackfillManager"
         )
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"

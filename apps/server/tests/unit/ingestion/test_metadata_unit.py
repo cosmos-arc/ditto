@@ -21,6 +21,7 @@ def setup_observability():
     reset_for_testing()
 
 
+@pytest.mark.unit
 class TestComputeChecksum:
     """测试 compute_checksum 方法。"""
 
@@ -132,6 +133,7 @@ class TestComputeChecksum:
         assert checksum1 != checksum2
 
 
+@pytest.mark.unit
 class TestShouldSkip:
     """测试 should_skip 方法。"""
 
@@ -272,6 +274,7 @@ class TestShouldSkip:
         assert reason is not None
 
 
+@pytest.mark.unit
 class TestCompareData:
     """测试 compare_data 方法。"""
 
@@ -412,6 +415,7 @@ class TestCompareData:
         assert result is True
 
 
+@pytest.mark.unit
 class TestJsonSerializable:
     """测试 _json_serializable 辅助函数。"""
 
@@ -434,6 +438,7 @@ class TestJsonSerializable:
             _json_serializable(CustomClass())
 
 
+@pytest.mark.unit
 class TestShouldSkipEdgeCases:
     """测试 should_skip 方法的边界情况。"""
 

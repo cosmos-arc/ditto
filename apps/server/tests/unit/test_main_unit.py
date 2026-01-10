@@ -4,6 +4,7 @@ import pytest
 from ditto_server.main import generate_test_logs, get_status, health_check, root
 
 
+@pytest.mark.unit
 class TestFastAPIEndpoints:
     """Tests for FastAPI async endpoint functions."""
 

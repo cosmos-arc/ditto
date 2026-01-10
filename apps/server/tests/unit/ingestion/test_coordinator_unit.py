@@ -107,6 +107,7 @@ def coordinator(mock_hub, mock_source):
     return IngestionCoordinator(mock_hub, mock_source, "tushare")
 
 
+@pytest.mark.unit
 class TestIngestionResult:
     """测试 IngestionResult 类。"""
 
@@ -157,6 +158,7 @@ class TestIngestionResult:
         assert result.row_count is None
 
 
+@pytest.mark.unit
 class TestIngestDate:
     """测试 ingest_date 方法。"""
 
@@ -561,6 +563,7 @@ class TestIngestDate:
             coordinator.ingest_date("unsupported_dataset", "2024-12-27")
 
 
+@pytest.mark.unit
 class TestIngestRange:
     """测试 ingest_range 方法。"""
 
@@ -776,6 +779,7 @@ class TestIngestRange:
         assert results[0].status == "success"
 
 
+@pytest.mark.unit
 class TestWriteT0Data:
     """测试 T0 数据（stock_basic, etf_basic）写入。"""
 
@@ -932,6 +936,7 @@ class TestWriteT0Data:
         )
 
 
+@pytest.mark.unit
 class TestWriteT1Data:
     """测试 T1 数据（etf_daily, stock_daily）写入与 SID 补齐。"""
 
@@ -1050,6 +1055,7 @@ class TestWriteT1Data:
         assert written_df["source"].to_list() == ["tushare", "tushare"]
 
 
+@pytest.mark.unit
 class TestForceParameter:
     """测试 force 参数语义。"""
 
@@ -1197,6 +1203,7 @@ class TestForceParameter:
         assert call_kwargs["on_duplicate"] == OnDuplicate.KEEP_LAST
 
 
+@pytest.mark.unit
 class TestCursorUpdateAfterSuccess:
     """测试 ingest_date 成功后更新游标 (Stage 5.1)。"""
 
@@ -1521,6 +1528,7 @@ class TestCursorUpdateAfterSuccess:
         mock_hub.ingestion_cursor.update_success.assert_not_called()
 
 
+@pytest.mark.unit
 class TestFetchDataEdgeCases:
     """测试 _fetch_data 方法的边界情况。"""
 
@@ -1541,6 +1549,7 @@ class TestFetchDataEdgeCases:
         mock_source.fetch_etf_daily.assert_not_called()
 
 
+@pytest.mark.unit
 class TestWriteDataEdgeCases:
     """测试 _write_data 方法的边界情况。"""
 
@@ -1561,6 +1570,7 @@ class TestWriteDataEdgeCases:
         mock_hub.adj_factor_store.write.assert_not_called()
 
 
+@pytest.mark.unit
 class TestDQBlockedCursorUpdate:
     """测试 DQ 阻断时的游标更新逻辑。"""
 
@@ -1732,6 +1742,7 @@ class TestDQBlockedCursorUpdate:
         mock_hub.ingestion_cursor.update_success.assert_called_once()
 
 
+@pytest.mark.unit
 class TestAdjFactorWithExistingSid:
     """测试 adj_factor/fund_adj 数据集已有 sid 列的情况。"""
 

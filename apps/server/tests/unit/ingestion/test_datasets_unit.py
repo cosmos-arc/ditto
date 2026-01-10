@@ -15,6 +15,7 @@ from ditto_server.ingestion.config.datasets import (
 )
 
 
+@pytest.mark.unit
 class TestDatasetEnum:
     """Test Dataset enumeration."""
 
@@ -47,6 +48,7 @@ class TestDatasetEnum:
         assert Dataset.FUND_ADJ.value == "fund_adj"
 
 
+@pytest.mark.unit
 class TestTaskTierEnum:
     """Test TaskTier enumeration."""
 
@@ -58,6 +60,7 @@ class TestTaskTierEnum:
         assert TaskTier.T3_QUALITY.value == "t3_quality"
 
 
+@pytest.mark.unit
 class TestDatasetConfig:
     """Test DatasetConfig model."""
 
@@ -155,6 +158,7 @@ class TestDatasetConfig:
         assert config.depends_on == [Dataset.STOCK_DAILY]
 
 
+@pytest.mark.unit
 class TestDatasetRegistry:
     """Test DATASET_REGISTRY."""
 
@@ -252,6 +256,7 @@ class TestDatasetRegistry:
             assert isinstance(config.critical_fields, list)
 
 
+@pytest.mark.unit
 class TestHelperFunctions:
     """Test helper functions."""
 
@@ -301,6 +306,7 @@ class TestHelperFunctions:
             assert config.dataset == dataset
 
 
+@pytest.mark.unit
 class TestDatasetDependencies:
     """Test dataset dependency relationships."""
 
@@ -355,6 +361,7 @@ class TestDatasetDependencies:
                 pytest.fail(f"Circular dependency detected involving {dataset}")
 
 
+@pytest.mark.unit
 class TestExtendedHelperFunctions:
     """Test extended helper functions for parallel execution."""
 

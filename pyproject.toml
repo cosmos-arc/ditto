@@ -381,6 +381,7 @@ markers = [
     "pit: Mark test for Point-in-Time data validation",
     "data: Mark test that requires data fixtures",
     "external: Mark test that calls external APIs (Tushare, etc.)",
+    "observability: Mark test that requires observability stack (VictoriaMetrics, Grafana, etc.)",
 ]
 
 # 配置日志输出，方便调试

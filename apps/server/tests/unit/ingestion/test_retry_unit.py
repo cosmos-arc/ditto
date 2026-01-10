@@ -44,6 +44,7 @@ def retry_manager(mock_coordinator, mock_ingestion_log_store):
     )
 
 
+@pytest.mark.unit
 class TestRetryResult:
     """测试 RetryResult 类。"""
 
@@ -88,6 +89,7 @@ class TestRetryResult:
         assert len(result.results) == 3
 
 
+@pytest.mark.unit
 class TestGetFailedDates:
     """测试 get_failed_dates 方法。"""
 
@@ -172,6 +174,7 @@ class TestGetFailedDates:
         )
 
 
+@pytest.mark.unit
 class TestRetryFailed:
     """测试 retry_failed 方法。"""
 

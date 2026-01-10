@@ -2,9 +2,11 @@
 
 from pathlib import Path
 
+import pytest
 from ditto_server.ingestion.config import IngestionConfig
 
 
+@pytest.mark.unit
 def test_config_default_values() -> None:
     """Test default configuration values."""
     config = IngestionConfig()
@@ -14,6 +16,7 @@ def test_config_default_values() -> None:
     assert config.auto_register_securities is True
 
 
+@pytest.mark.unit
 def test_config_from_env(monkeypatch) -> None:
     """Test loading configuration from environment variables."""
     monkeypatch.setenv("DITTO_DATA_DIR", "/tmp/data")

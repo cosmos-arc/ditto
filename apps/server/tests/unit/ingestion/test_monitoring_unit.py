@@ -15,6 +15,7 @@ def setup_observability():
     reset_for_testing()
 
 
+@pytest.mark.unit
 class TestMonitorIngestionQuality:
     """Tests for monitor_ingestion_quality task."""
 

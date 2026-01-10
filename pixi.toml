@@ -205,14 +205,11 @@ test-integration = "pytest -m integration -v"
 # PIT 数据正确性测试
 test-pit = "pytest -m pit -v --tb=long"
 
-# 关键路径测试（失败即停）
-test-critical = "pytest -m critical -v -x"
-
 # 覆盖率测试（HTML 报告）
 test-cov = "pytest --cov --cov-report=html --cov-report=term-missing"
 
 # 覆盖率测试（XML 报告，CI 用）
-test-cov-xml = "pytest --cov --cov-report=xml --cov-report=term-missing"
+test-cov-xml = "pytest --cov --cov-report=xml --cov-report=term-missing --cov-fail-under=80"
 
 # 性能基准测试
 test-benchmark = "pytest -m benchmark --benchmark-only"

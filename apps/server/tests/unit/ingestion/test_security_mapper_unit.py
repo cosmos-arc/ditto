@@ -64,6 +64,7 @@ def mapper(mock_security_store, mock_sid_allocator):
     return SecurityMapper(mock_security_store, mock_sid_allocator)
 
 
+@pytest.mark.unit
 class TestMapOrCreate:
     """测试 map_or_create 方法。"""
 
@@ -347,6 +348,7 @@ class TestMapOrCreate:
         }
 
 
+@pytest.mark.unit
 class TestEnrichDataFrame:
     """测试 enrich_dataframe 方法。"""
 
@@ -504,6 +506,7 @@ def assert_frame_equal(left: pl.DataFrame, right: pl.DataFrame) -> None:
         assert left[col].to_list() == right[col].to_list()
 
 
+@pytest.mark.unit
 class TestConcurrency:
     """测试并发场景下的 SID 分配。"""
 
@@ -566,6 +569,7 @@ class TestConcurrency:
         assert len(results) == 10, "应该分配 10 个 SID"
 
 
+@pytest.mark.unit
 class TestFormatDateForSqlite:
     """测试 _format_date_for_sqlite 辅助函数。"""
 
@@ -611,6 +615,7 @@ class TestFormatDateForSqlite:
         assert result == "19900101"
 
 
+@pytest.mark.unit
 class TestRegisterSecurity:
     """测试 _register_security 方法。"""
 

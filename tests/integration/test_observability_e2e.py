@@ -16,6 +16,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
 @pytest.mark.integration
+@pytest.mark.observability
 class TestObservabilityStack:
     """可观测性服务栈集成测试."""
 
@@ -125,6 +126,7 @@ class TestObservabilityStack:
 
 @pytest.mark.integration
 @pytest.mark.external
+@pytest.mark.observability
 class TestMetricsExport:
     """指标导出集成测试.
 
@@ -168,6 +170,7 @@ class TestMetricsExport:
 
 @pytest.mark.integration
 @pytest.mark.external
+@pytest.mark.observability
 class TestLogsCollection:
     """日志采集集成测试.
 
@@ -228,6 +231,7 @@ class TestLogsCollection:
 
 
 @pytest.mark.integration
+@pytest.mark.observability
 class TestObservabilityE2E:
     """端到端集成测试标记."""
 

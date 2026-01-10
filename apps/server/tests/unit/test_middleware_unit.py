@@ -28,6 +28,7 @@ def create_mock_request(path: str = "/test") -> Request:
     return Request(scope=scope)
 
 
+@pytest.mark.unit
 class TestDittoExceptionHandler:
     """Tests for ditto_exception_handler."""
 
@@ -42,6 +43,7 @@ class TestDittoExceptionHandler:
         assert response.status_code == 500
 
 
+@pytest.mark.unit
 class TestHTTPExceptionHandler:
     """Tests for http_exception_handler."""
 
@@ -66,6 +68,7 @@ class TestHTTPExceptionHandler:
         assert response.status_code == 500
 
 
+@pytest.mark.unit
 class TestValidationExceptionHandler:
     """Tests for validation_exception_handler."""
 
@@ -93,6 +96,7 @@ class TestValidationExceptionHandler:
         assert response.status_code == 422
 
 
+@pytest.mark.unit
 class TestGeneralExceptionHandler:
     """Tests for general_exception_handler."""
 
