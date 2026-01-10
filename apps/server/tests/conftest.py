@@ -6,6 +6,7 @@ from collections.abc import Generator
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
+from unittest.mock import MagicMock
 
 import duckdb
 import pytest
@@ -276,3 +277,59 @@ def obs_assertions() -> None:
     from ditto_foundation import Mode, init
 
     init(mode=Mode.TESTING_WITH_ASSERTIONS)
+
+
+@pytest.fixture(scope="session")
+def mock_datahub_session() -> MagicMock:
+    """Session 级别的 Mock DataHub，避免每个测试重复创建.
+
+    这个 fixture 预构建了所有测试需要的 Mock 对象，显著减少测试时间.
+    """
+    mock = MagicMock()
+
+    # Calendar mock
+    mock.calendar.is_trading_day.return_value = True
+    mock.calendar_store.get_first_trading_day.return_value = "2024-01-02"
+    mock.calendar_store.get_last_trading_day.return_value = "2024-01-31"
+    mock.calendar_store.get_range.return_value = ["2024-01-02", "2024-01-03"]
+
+    # Ingestion log mock
+    mock.ingestion_log.get_failed_dates.return_value = []
+    mock.ingestion_log.get_ingested_dates.return_value = []
+
+    return mock
+
+
+@pytest.fixture
+def patch_datahub(mock_datahub_session: MagicMock, mocker: Any) -> MagicMock:
+    """将 DataHub 替换为 Mock 对象.
+
+    使用方式：
+        def test_something(patch_datahub):
+            patch_datahub.calendar.is_trading_day.return_value = False
+            # ... 测试逻辑
+
+    Returns:
+        MagicMock: mock_datahub_session 对象，可以直接用于配置 mock 行为
+
+    Note:
+        每个 test 函数会自动重置 mock 状态，确保测试隔离性。
+    """
+    # 重置 mock 状态，确保测试隔离
+    mock_datahub_session.reset_mock()
+
+    # 重置子 mock 的 return_value
+    mock_datahub_session.calendar.is_trading_day.return_value = True
+    mock_datahub_session.calendar_store.get_first_trading_day.return_value = (
+        "2024-01-02"
+    )
+    mock_datahub_session.calendar_store.get_last_trading_day.return_value = "2024-01-31"
+    mock_datahub_session.calendar_store.get_range.return_value = [
+        "2024-01-02",
+        "2024-01-03",
+    ]
+    mock_datahub_session.ingestion_log.get_failed_dates.return_value = []
+    mock_datahub_session.ingestion_log.get_ingested_dates.return_value = []
+
+    mocker.patch("ditto_datahub.DataHub", return_value=mock_datahub_session)
+    return mock_datahub_session
