@@ -129,30 +129,29 @@ class TestDQEngine:
         assert result.passed is True
         assert len(result.issues) == 0
 
-    def test_check_with_l1_only(self) -> None:
-        """Test checking with only L1 rules."""
+    @pytest.mark.parametrize(
+        ("levels", "expected_has_warnings", "expected_has_errors"),
+        [
+            (["l1"], False, False),  # L2 violations not checked, so no warnings
+            (["l2"], True, False),  # Only warnings, no errors
+        ],
+    )
+    def test_check_with_specific_levels(
+        self,
+        levels: list[str],
+        expected_has_warnings: bool,
+        expected_has_errors: bool,
+    ) -> None:
+        """Test checking with specific rule levels."""
         engine = DQEngine(config=self.config)
 
         df = pl.DataFrame({"sid": [1, 2], "value": [-10.0, 20.0]})
 
-        result = engine.check(df, "test_dataset", levels=["l1"])
+        result = engine.check(df, "test_dataset", levels=levels)
 
         assert isinstance(result, DQResult)
-        # L2 violations not checked, so no warnings
-        assert result.has_warnings is False
-
-    def test_check_with_l2_only(self) -> None:
-        """Test checking with only L2 rules."""
-        engine = DQEngine(config=self.config)
-
-        df = pl.DataFrame({"sid": [1, 2], "value": [-10.0, 20.0]})
-
-        result = engine.check(df, "test_dataset", levels=["l2"])
-
-        assert isinstance(result, DQResult)
-        # Only warnings, no errors
-        assert result.has_warnings is True
-        assert result.has_errors is False
+        assert result.has_warnings is expected_has_warnings
+        assert result.has_errors is expected_has_errors
 
     def test_check_with_context(self, mocker) -> None:
         """Test checking with additional context."""
