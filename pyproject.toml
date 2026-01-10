@@ -393,7 +393,7 @@ asyncio_mode = "strict"
 addopts = [
     "-ra", # 显示除"通过"之外所有测试的详细摘要
     "-v",  # 显示详细输出
-    # "-n", "auto",               # 使用所有可用 CPU 核心并行测试，需要 pytest-xdist
+    "-n", "auto",                # 使用所有可用 CPU 核心并行测试，需要 pytest-xdist
     "--strict-markers",          # 对未在配置中注册的 marker 标记报错
     "--strict-config",           # 对配置文件中的拼写错误或无效键报错
     "--cov=packages",            # 指定计算代码覆盖率的目录
