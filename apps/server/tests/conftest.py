@@ -12,6 +12,68 @@ import pytest
 from ditto_foundation.config import Settings
 
 
+class DatabaseManager:
+    """数据库连接池管理器。"""
+
+    def __init__(self):
+        self._duckdb_conn = None
+
+    def get_duckdb_conn(self) -> duckdb.DuckDBPyConnection:
+        """获取 DuckDB 连接。
+
+        如果连接不存在，则创建新的连接并初始化表结构。
+        连接使用 :memory: 数据库，在测试会话中复用。
+
+        Returns:
+            DuckDB 连接对象
+        """
+        if self._duckdb_conn is None:
+            self._duckdb_conn = duckdb.connect(":memory:")
+            self._init_duckdb_tables()
+        return self._duckdb_conn
+
+    def _init_duckdb_tables(self) -> None:
+        """初始化 DuckDB 表结构。"""
+        conn = self._duckdb_conn
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS etf_list (
+                symbol VARCHAR, name VARCHAR, market VARCHAR,
+                category VARCHAR, establish_date DATE, fund_manager VARCHAR,
+                tracking_index VARCHAR, knowledge_date DATE
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS daily_price_raw (
+                symbol VARCHAR, date DATE, open_price DOUBLE, high_price DOUBLE,
+                low_price DOUBLE, close_price DOUBLE, volume BIGINT,
+                amount DOUBLE, knowledge_date DATE
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS daily_price_adjusted (
+                symbol VARCHAR, date DATE, open DOUBLE, high DOUBLE,
+                low DOUBLE, close DOUBLE, volume BIGINT, knowledge_date DATE
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS adjustment_factors (
+                symbol VARCHAR, ex_date DATE, adj_factor DOUBLE, knowledge_date DATE
+            )
+        """)
+
+    def clean_duckdb(self) -> None:
+        """清理数据。
+
+        删除所有表中的数据，但保留表结构。
+        如果连接不存在，则不执行任何操作。
+        """
+        if self._duckdb_conn:
+            self._duckdb_conn.execute("DELETE FROM etf_list")
+            self._duckdb_conn.execute("DELETE FROM daily_price_raw")
+            self._duckdb_conn.execute("DELETE FROM daily_price_adjusted")
+            self._duckdb_conn.execute("DELETE FROM adjustment_factors")
+
+
 @pytest.fixture
 def fake_time(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
     """可控的时间 fixture，通过 monkeypatch 替换时间函数.
