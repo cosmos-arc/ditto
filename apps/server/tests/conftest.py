@@ -183,6 +183,22 @@ def duckdb_conn(
     conn.close()
 
 
+@pytest.fixture(scope="session")
+def db_manager() -> Generator[DatabaseManager, None, None]:
+    """Session 级别的数据库管理器."""
+    manager = DatabaseManager()
+    yield manager
+    if manager._duckdb_conn:
+        manager._duckdb_conn.close()
+
+
+@pytest.fixture
+def clean_duckdb(db_manager: DatabaseManager) -> duckdb.DuckDBPyConnection:
+    """提供清理后的连接."""
+    db_manager.clean_duckdb()
+    return db_manager.get_duckdb_conn()
+
+
 @pytest.fixture
 def sqlite_conn(test_settings: Settings) -> Generator[sqlite3.Connection, None, None]:
     """SQLite连接fixture."""
