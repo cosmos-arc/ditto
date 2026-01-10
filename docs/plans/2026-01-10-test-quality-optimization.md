@@ -524,9 +524,28 @@ def test_something(mocker):
 
 ---
 
-### Phase 4: 优化测试效率
+### Phase 4: 优化测试效率 ✅ 已完成
 
-#### Task 4.1: 参数化测试改造
+完成时间：2026-01-10
+
+**已完成任务：**
+- [x] Task 4.1: 参数化测试改造（5个文件）
+- [x] Task 4.2: 异步测试补充（2个新文件）
+
+**提交记录：**
+- 1c7aa4f: refactor: add parametrize decorator to test_technical_unit.py
+- 76b1d77: refactor: add parametrize decorator to test_datasets_unit.py
+- c1b0e1e: refactor: add parametrize decorator to test_engine_unit.py
+- 4ebc112: refactor: add parametrize decorator to test_calendar_store_unit.py
+- 4bd120a: refactor: add parametrize decorator to test_calendar_repository_unit.py
+- c6bacc6: test: add async tests for main and middleware
+
+**验收结果：**
+- ✅ 参数化测试覆盖 5 个文件，减少重复代码
+- ✅ 异步测试覆盖 11 个异步函数（4个端点 + 7个异常处理器）
+- ✅ 所有测试通过
+
+#### Task 4.1: 参数化测试改造 ✅
 将重复测试改造为参数化：
 
 **改造前**:
@@ -556,14 +575,21 @@ def test_read_filter_by_sids(self, store, sample_df, sids, expected_count):
     assert len(df) == expected_count
 ```
 
-#### Task 4.2: 异步测试补充
+#### Task 4.2: 异步测试补充 ✅
 
 **问题**: 项目有异步代码但无异步测试（搜索 `async def test` 返回 0）
 
-**需要添加异步测试的模块**:
-1. FastAPI 路由测试
-2. httpx 异步客户端测试
-3. 异步数据库操作测试
+**已完成的异步测试**:
+- `test_main_unit.py` - 4个异步端点测试
+  - test_root_endpoint
+  - test_health_check_endpoint
+  - test_get_status_endpoint
+  - test_test_logging_endpoint
+- `test_middleware_unit.py` - 7个异步异常处理器测试
+  - test_ditto_exception_handler
+  - test_http_exception_handler_404/500
+  - test_validation_exception_handler
+  - test_general_exception_handler (3 variants)
 
 **示例**:
 ```python
