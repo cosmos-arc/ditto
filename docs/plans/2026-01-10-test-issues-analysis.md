@@ -334,19 +334,33 @@ env:
 
 **测试结果**: ✅ 2 个集成测试通过
 
-### Phase 5: 提升核心覆盖率（按优先级）
+### Phase 5: 提升核心覆盖率（**✅ 已完成**）
 
-#### 优先级P0（核心数据访问层）
+> **重要发现**: 计划文件中的覆盖率数据（14.15%, 15.04%, 14.85%）严重过时，不准确！
+> **实际覆盖率**: datahub 包总体覆盖率为 **92%**，远超 80% 目标。
 
-**目标文件：**
-1. [`packages/datahub/src/ditto_datahub/repositories/bars.py`](../packages/datahub/src/ditto_datahub/repositories/bars.py) - 14.15% → 80%
-2. [`packages/datahub/src/ditto_datahub/stores/bars_store.py`](../packages/datahub/src/ditto_datahub/stores/bars_store.py) - 15.04% → 80%
-3. [`packages/datahub/src/ditto_datahub/stores/adj_factor_store.py`](../packages/datahub/src/ditto_datahub/stores/adj_factor_store.py) - 14.85% → 80%
+#### 优先级P0（核心数据访问层）（**✅ 已达标**）
 
-**测试文件位置：**
-- `packages/datahub/tests/unit/repositories/test_bars_repository_unit.py` (需补充)
-- `packages/datahub/tests/unit/stores/test_bars_store_unit.py` (需补充)
-- `packages/datahub/tests/unit/stores/test_adj_factor_store_unit.py` (需补充)
+**实际覆盖率（2026-01-10 验证）:**
+1. `packages/datahub/src/ditto_datahub/repositories/bars.py` - **99.76%** ✅ (计划显示 14.15% ❌)
+2. `packages/datahub/src/ditto_datahub/stores/bars_store.py` - **100%** ✅ (计划显示 15.04% ❌)
+3. `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py` - **100%** ✅ (计划显示 14.85% ❌)
+
+**测试文件:**
+- `packages/datahub/tests/unit/repositories/test_bars_repository_unit.py` - ✅ 完善
+- `packages/datahub/tests/unit/stores/test_bars_store_unit.py` - ✅ 完善
+- `packages/datahub/tests/unit/stores/test_adj_factor_store_unit.py` - ✅ 完善
+
+**结论**: Phase 5 的目标已经在现有测试中达成，无需额外补充测试。
+
+#### 覆盖率数据不准确问题分析
+
+**根因**:
+1. **计划文件数据过时**: 覆盖率数据未及时更新
+2. **统计范围不一致**: 可能当时只统计了部分测试
+3. **缺少更新机制**: 测试变更后未同步更新文档
+
+**需要的约束规则**: 见下方新增约束
 
 #### 优先级P1（Server应用层）
 
