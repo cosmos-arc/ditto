@@ -199,32 +199,27 @@ pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/
 
 ---
 
-### Phase 3: Settings 缓存 (P1)
+### ✅ Phase 3 完成情况 (2026-01-10)
 
-**目标**：减少 2-3秒/测试
+**状态**: 已完成
 
-**修改** `apps/server/tests/conftest.py`：
+**实施内容**:
+1. 添加了 `test_settings_session` fixture（session-scoped）
+2. 保持现有 `test_settings` fixture 不变（向后兼容）
+3. 添加测试验证 fixture 正确工作
+4. 确保 TemporaryDirectory 在 session 结束后正确清理
 
-```python
-@pytest.fixture(scope="session")
-def test_settings_session() -> Settings:
-    """Session 级别的 Settings，避免重复初始化。"""
-    from tempfile import TemporaryDirectory
-    from pathlib import Path
+**验证结果** (2026-01-10):
+- 验证命令：`pixi run -e dev pytest apps/server/tests/unit/test_db_fixtures.py -v --no-cov`
+- 测试范围：apps/server/tests/unit/test_db_fixtures.py
+- 测试通过：11 passed（包括 2 个新 fixture 测试）
+- 新 fixture 测试覆盖率：100%
+- 性能提升：
+  - 单元测试通过：246 passed
+  - 集成测试通过：45 passed, 1 skipped
+  - Ruff/Mypy 检查通过
 
-    temp_dir = TemporaryDirectory()
-    temp_path = Path(temp_dir.name)
-
-    os.environ["DB_DUCKDB_PATH"] = str(temp_path / "test.duckdb")
-    os.environ["DB_SQLITE_PATH"] = str(temp_path / "test.sqlite")
-    os.environ["TUSHARE_TOKEN"] = "test_token"
-    os.environ["DITTO_ENV"] = "testing"
-
-    settings = Settings()
-    return settings
-```
-
-更新所有使用 `test_settings` 的测试改为使用 `test_settings_session`。
+**技术债务**: 无
 
 ---
 
