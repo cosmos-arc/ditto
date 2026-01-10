@@ -4,8 +4,11 @@ import gc
 import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import MagicMock, patch
 
 import polars as pl
+import pytest
+from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.hub import DataHub
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 
@@ -276,3 +279,122 @@ class TestDataHub:
         hub = DataHub(self.data_root)
         assert hub.is_trading_day("2024-01-02") is True
         assert hub.is_trading_day("2024-01-06") is False
+
+    # ========================================================================
+    # resolve_sid Tests
+    # ========================================================================
+
+    def test_resolve_sid_raises_sid_not_found_error(self) -> None:
+        """Test resolve_sid raises SidNotFoundError when identifier not found."""
+
+        hub = DataHub(self.data_root)
+
+        # Try to resolve a non-existent identifier
+        with pytest.raises(SidNotFoundError) as exc_info:
+            hub.resolve_sid("999999.SH", source="tushare")
+
+        # Verify exception contains the identifier and source
+        assert exc_info.value.details["identifier"] == "999999.SH"
+        assert exc_info.value.details["source"] == "tushare"
+        assert "999999.SH" in str(exc_info.value)
+
+    def test_resolve_sid_with_custom_source(self) -> None:
+        """Test resolve_sid with custom source parameter."""
+
+        hub = DataHub(self.data_root)
+
+        # Try to resolve with custom source
+        with pytest.raises(SidNotFoundError) as exc_info:
+            hub.resolve_sid("000001.SZ", source="akshare")
+
+        assert exc_info.value.details["source"] == "akshare"
+
+    def test_resolve_sid_with_asof_parameter(self) -> None:
+        """Test resolve_sid with asof parameter for PIT queries."""
+
+        hub = DataHub(self.data_root)
+
+        # Try to resolve with asof parameter
+        with pytest.raises(SidNotFoundError) as exc_info:
+            hub.resolve_sid("600000.SH", source="tushare", asof="2023-01-01")
+
+        assert exc_info.value.details["identifier"] == "600000.SH"
+
+    # ========================================================================
+    # refresh_sql_views Tests
+    # ========================================================================
+
+    def test_refresh_sql_views_without_sql_engine_initialized(self) -> None:
+        """Test refresh_sql_views when sql_engine is not initialized."""
+        hub = DataHub(self.data_root)
+
+        # sql_engine not accessed yet, should not be in __dict__
+        assert "sql_engine" not in hub.__dict__
+
+        # Should not raise any error
+        hub.refresh_sql_views()
+
+        # sql_engine should still not be initialized
+        assert "sql_engine" not in hub.__dict__
+
+    def test_refresh_sql_views_with_sql_engine_initialized(self) -> None:
+        """Test refresh_sql_views when sql_engine is initialized."""
+        hub = DataHub(self.data_root)
+
+        # Access sql_engine to trigger initialization
+        _ = hub.sql_engine
+        assert "sql_engine" in hub.__dict__
+
+        # Mock the refresh_views method to verify it gets called
+
+        original_refresh = hub.sql_engine.refresh_views
+        hub.sql_engine.refresh_views = MagicMock()
+
+        # Call refresh_sql_views
+        hub.refresh_sql_views()
+
+        # Verify refresh_views was called
+        hub.sql_engine.refresh_views.assert_called_once()
+
+        # Restore original method
+        hub.sql_engine.refresh_views = original_refresh
+
+    # ========================================================================
+    # __init__ with Default Path Tests
+    # ========================================================================
+
+    def test_init_with_none_uses_default_path(self) -> None:
+        """Test __init__ with data_root=None uses default path."""
+
+        # Create a mock get_paths function
+        mock_get_paths = MagicMock()
+        mock_path_obj = Path("D:/test/ditto/data")
+        mock_get_paths.return_value.data_home = mock_path_obj
+
+        # Mock the import in hub.py's __init__ method
+        with patch("ditto_foundation.config.paths.get_paths", mock_get_paths):
+            hub = DataHub(data_root=None)
+
+            # Verify default path was used
+            assert hub.data_root == mock_path_obj
+            mock_get_paths.assert_called_once()
+
+    # ========================================================================
+    # __exit__ Exception Handling Tests
+    # ========================================================================
+
+    def test_exit_handles_exception_gracefully(self) -> None:
+        """Test __exit__ handles exceptions and still closes resources."""
+        hub = DataHub(self.data_root)
+        _ = hub.sqlite_pool
+
+        # Simulate an exception in the with block
+        try:
+            with hub:
+                _ = hub.sql_engine
+                raise ValueError("Test exception")
+        except ValueError:
+            pass  # Expected exception
+
+        # Resources should still be closed (we can verify by checking no errors occur)
+        # The main test is that __exit__ doesn't raise an exception itself
