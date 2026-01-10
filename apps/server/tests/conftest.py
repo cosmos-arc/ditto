@@ -162,9 +162,11 @@ def clean_duckdb(db_manager: DatabaseManager) -> duckdb.DuckDBPyConnection:
 
 
 @pytest.fixture
-def sqlite_conn(test_settings: Settings) -> Generator[sqlite3.Connection, None, None]:
+def sqlite_conn(
+    test_settings_session: Settings,
+) -> Generator[sqlite3.Connection, None, None]:
     """SQLite连接fixture."""
-    conn = sqlite3.connect(str(test_settings.database.sqlite_path))
+    conn = sqlite3.connect(str(test_settings_session.database.sqlite_path))
 
     # 初始化表结构
     conn.execute("""
