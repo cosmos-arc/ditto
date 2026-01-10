@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import polars as pl
@@ -12,16 +11,8 @@ from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.types import OnDuplicate
 
 if TYPE_CHECKING:
+    from ditto_datahub.repositories.bars import WriteResult
     from ditto_datahub.runtime.file_lock import FileLockManager
-
-
-@dataclass(frozen=True)
-class AdjFactorWriteResult:
-    """Result of writing adj_factor data."""
-
-    file_path: str
-    checksum: str
-    rows_written: int
 
 
 class AdjFactorRepository:
@@ -55,7 +46,7 @@ class AdjFactorRepository:
         df: pl.DataFrame,
         year: int,
         on_duplicate: OnDuplicate = OnDuplicate.ERROR,
-    ) -> tuple[str, str]:
+    ) -> WriteResult:
         """
         Write adjustment factor data with file lock protection.
 
@@ -66,7 +57,7 @@ class AdjFactorRepository:
             on_duplicate: Strategy for handling duplicate data.
 
         Returns:
-            Tuple of (file_path, checksum).
+            WriteResult with file_path, checksum, and row counts.
 
         """
         logger.info(
@@ -98,4 +89,14 @@ class AdjFactorRepository:
             # Record metrics
             M.data_records.add(len(df), {"dataset": dataset, "operation": "write"})
 
-            return file_path, checksum
+            # Import WriteResult here to avoid circular imports
+            from ditto_datahub.repositories.bars import WriteResult
+
+            return WriteResult(
+                file_path=file_path,
+                checksum=checksum,
+                rows_written=len(df),
+                rows_total=len(df),
+                blocked=False,
+                dq_result=None,
+            )

@@ -16,6 +16,7 @@ class TestAdjFactorIngestion:
 
     def test_ingest_adj_factor_uses_src_code_column(self, mocker):
         """Test that adj_factor ingestion uses src_code column for SID mapping."""
+        from ditto_datahub.repositories.bars import WriteResult
         from ditto_server.ingestion.services.coordinator import IngestionCoordinator
 
         # Mock DataHub
@@ -26,7 +27,15 @@ class TestAdjFactorIngestion:
         mock_hub.ingestion_log = mocker.MagicMock()
         mock_hub.ingestion_cursor = mocker.MagicMock()
         mock_hub.adj_factor = mocker.MagicMock()
-        mock_hub.adj_factor.write.return_value = ("/path/to/file", "checksum123")
+        # Mock write to return WriteResult (not tuple)
+        mock_hub.adj_factor.write.return_value = WriteResult(
+            file_path="/path/to/file",
+            checksum="checksum123",
+            rows_written=2,
+            rows_total=2,
+            blocked=False,
+            dq_result=None,
+        )
 
         # Mock security_store to return valid securities
         mock_hub.security_store = mocker.MagicMock()
@@ -75,6 +84,7 @@ class TestAdjFactorIngestion:
 
     def test_ingest_fund_adj_uses_src_code_column(self, mocker):
         """Test that fund_adj ingestion uses src_code column for SID mapping."""
+        from ditto_datahub.repositories.bars import WriteResult
         from ditto_server.ingestion.services.coordinator import IngestionCoordinator
 
         # Mock DataHub
@@ -85,7 +95,15 @@ class TestAdjFactorIngestion:
         mock_hub.ingestion_log = mocker.MagicMock()
         mock_hub.ingestion_cursor = mocker.MagicMock()
         mock_hub.adj_factor = mocker.MagicMock()
-        mock_hub.adj_factor.write.return_value = ("/path/to/file", "checksum456")
+        # Mock write to return WriteResult (not tuple)
+        mock_hub.adj_factor.write.return_value = WriteResult(
+            file_path="/path/to/file",
+            checksum="checksum456",
+            rows_written=2,
+            rows_total=2,
+            blocked=False,
+            dq_result=None,
+        )
 
         # Mock security_store to return valid securities
         mock_hub.security_store = mocker.MagicMock()

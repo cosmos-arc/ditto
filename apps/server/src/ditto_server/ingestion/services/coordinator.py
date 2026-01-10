@@ -317,20 +317,11 @@ class IngestionCoordinator:
                 )
 
             # 使用 AdjFactorRepository 写入（带文件锁保护）
-            file_path, checksum = self._hub.adj_factor_store.write(
+            return self._hub.adj_factor.write(
                 dataset=dataset,
                 df=df,
                 year=year,
                 on_duplicate=on_duplicate,
-            )
-            # 返回 WriteResult（非 bars 数据集不支持 DQ 阻断）
-            return WriteResult(
-                file_path=file_path,
-                checksum=checksum,
-                rows_written=len(df),
-                rows_total=len(df),
-                blocked=False,
-                dq_result=None,
             )
         elif dataset == "calendar":
             records = df.to_dicts()

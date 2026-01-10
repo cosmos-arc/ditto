@@ -14,6 +14,7 @@ from ditto_datahub.errors import SidNotFoundError
 
 if TYPE_CHECKING:
     from ditto_datahub.dq.engine import DQEngine
+    from ditto_datahub.repositories.adj_factor import AdjFactorRepository
     from ditto_datahub.repositories.bars import BarsRepository
     from ditto_datahub.repositories.calendar import CalendarRepository
     from ditto_datahub.repositories.index import IndexRepository
@@ -225,6 +226,16 @@ class DataHub:
             adj_factor_store=self.adj_factor_store,
             stock_status_store=self.stock_status_store,  # B.3
             dq_engine=self.dq_engine,  # Use new DQEngine
+            file_lock=self.file_lock,
+        )
+
+    @cached_property
+    def adj_factor(self) -> AdjFactorRepository:
+        """Adjustment factor repository."""
+        from ditto_datahub.repositories.adj_factor import AdjFactorRepository
+
+        return AdjFactorRepository(
+            adj_factor_store=self.adj_factor_store,
             file_lock=self.file_lock,
         )
 
