@@ -4,7 +4,6 @@ import gc
 import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import MagicMock, patch
 
 import polars as pl
 import pytest
@@ -337,7 +336,7 @@ class TestDataHub:
         # sql_engine should still not be initialized
         assert "sql_engine" not in hub.__dict__
 
-    def test_refresh_sql_views_with_sql_engine_initialized(self) -> None:
+    def test_refresh_sql_views_with_sql_engine_initialized(self, mocker) -> None:
         """Test refresh_sql_views when sql_engine is initialized."""
         hub = DataHub(self.data_root)
 
@@ -345,48 +344,46 @@ class TestDataHub:
         _ = hub.sql_engine
         assert "sql_engine" in hub.__dict__
 
-        # Mock the refresh_views method to verify it gets called
-
-        original_refresh = hub.sql_engine.refresh_views
-        hub.sql_engine.refresh_views = MagicMock()
+        # 使用 mocker.fixture mock refresh_views 方法
+        mock_refresh = mocker.patch.object(hub.sql_engine, "refresh_views")
 
         # Call refresh_sql_views
         hub.refresh_sql_views()
 
         # Verify refresh_views was called
-        hub.sql_engine.refresh_views.assert_called_once()
-
-        # Restore original method
-        hub.sql_engine.refresh_views = original_refresh
+        mock_refresh.assert_called_once()
 
     # ========================================================================
     # __init__ with Default Path Tests
     # ========================================================================
 
-    def test_init_with_none_uses_default_path(self) -> None:
+    def test_init_with_none_uses_default_path(self, mocker) -> None:
         """Test __init__ with data_root=None uses default path."""
 
-        # Create a mock get_paths function
-        mock_get_paths = MagicMock()
+        # Mock get_paths 返回值
         mock_path_obj = Path("D:/test/ditto/data")
+
+        # 使用 mocker.patch 替代 patch
+        mock_get_paths = mocker.patch("ditto_foundation.config.paths.get_paths")
         mock_get_paths.return_value.data_home = mock_path_obj
 
-        # Mock the import in hub.py's __init__ method
-        with patch("ditto_foundation.config.paths.get_paths", mock_get_paths):
-            hub = DataHub(data_root=None)
+        hub = DataHub(data_root=None)
 
-            # Verify default path was used
-            assert hub.data_root == mock_path_obj
-            mock_get_paths.assert_called_once()
+        # Verify default path was used
+        assert hub.data_root == mock_path_obj
+        mock_get_paths.assert_called_once()
 
     # ========================================================================
     # __exit__ Exception Handling Tests
     # ========================================================================
 
-    def test_exit_handles_exception_gracefully(self) -> None:
+    def test_exit_handles_exception_gracefully(self, mocker) -> None:
         """Test __exit__ handles exceptions and still closes resources."""
         hub = DataHub(self.data_root)
         _ = hub.sqlite_pool
+
+        # Mock close 方法以验证调用
+        mocker.patch.object(hub, "close")
 
         # Simulate an exception in the with block
         try:
@@ -396,5 +393,5 @@ class TestDataHub:
         except ValueError:
             pass  # Expected exception
 
-        # Resources should still be closed (we can verify by checking no errors occur)
-        # The main test is that __exit__ doesn't raise an exception itself
+        # 验证 close 被调用
+        hub.close.assert_called_once()
