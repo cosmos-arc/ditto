@@ -1,6 +1,7 @@
 """Tests for TechnicalChecker."""
 
 import polars as pl
+import pytest
 from ditto_datahub.dq.checkers.technical import TechnicalChecker
 from ditto_datahub.dq.models import DQLevel, DQSeverity
 
@@ -12,95 +13,127 @@ class TestTechnicalChecker:
         """Set up test environment."""
         self.checker = TechnicalChecker()
 
-    def test_check_not_null_pass(self) -> None:
-        """Test not null check with valid data."""
-        df = pl.DataFrame(
-            {
-                "sid": [1, 2, 3],
-                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
-            }
-        )
-
-        rules = [
-            {
-                "rule": "not_null",
-                "columns": ["sid", "trade_date"],
-                "message": "Required fields",
-            }
-        ]
-
+    @pytest.mark.parametrize(
+        (
+            "data_dict",
+            "rules",
+            "expected_issue_count",
+            "expected_severity",
+            "expected_affected_rows",
+        ),
+        [
+            # Pass case: all values are not null
+            (
+                {
+                    "sid": [1, 2, 3],
+                    "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                },
+                [
+                    {
+                        "rule": "not_null",
+                        "columns": ["sid", "trade_date"],
+                        "message": "Required fields",
+                    }
+                ],
+                0,
+                None,
+                None,
+            ),
+            # Fail case: null values present
+            (
+                {
+                    "sid": [1, None, 3],
+                    "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                },
+                [{"rule": "not_null", "columns": ["sid"], "message": "SID required"}],
+                1,
+                DQSeverity.ERROR,
+                1,
+            ),
+        ],
+    )
+    def test_check_not_null(
+        self,
+        data_dict: dict,
+        rules: list[dict],
+        expected_issue_count: int,
+        expected_severity: DQSeverity | None,
+        expected_affected_rows: int | None,
+    ) -> None:
+        """Test not null check with valid and null data."""
+        df = pl.DataFrame(data_dict)
         issues = self.checker.check(df, rules)
 
-        assert len(issues) == 0
+        assert len(issues) == expected_issue_count
+        if expected_issue_count > 0:
+            assert issues[0].rule_name == "not_null"
+            assert issues[0].severity == expected_severity
+            assert issues[0].level == DQLevel.L1_TECHNICAL
+            assert issues[0].affected_rows == expected_affected_rows
 
-    def test_check_not_null_fail(self) -> None:
-        """Test not null check with null values."""
-        df = pl.DataFrame(
-            {
-                "sid": [1, None, 3],  # One null
-                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
-            }
-        )
-
-        rules = [{"rule": "not_null", "columns": ["sid"], "message": "SID required"}]
-
+    @pytest.mark.parametrize(
+        (
+            "data_dict",
+            "rules",
+            "expected_issue_count",
+            "expected_severity",
+            "expected_affected_rows",
+        ),
+        [
+            # Pass case: unique combinations
+            (
+                {
+                    "sid": [1, 1, 2],
+                    "trade_date": ["2024-01-01", "2024-01-02", "2024-01-01"],
+                },
+                [
+                    {
+                        "rule": "unique",
+                        "columns": ["sid", "trade_date"],
+                        "message": "Primary key unique",
+                    }
+                ],
+                0,
+                None,
+                None,
+            ),
+            # Fail case: duplicate (1, 2024-01-01)
+            (
+                {
+                    "sid": [1, 1, 1],
+                    "trade_date": ["2024-01-01", "2024-01-02", "2024-01-01"],
+                },
+                [
+                    {
+                        "rule": "unique",
+                        "columns": ["sid", "trade_date"],
+                        "message": "Primary key unique",
+                    }
+                ],
+                1,
+                DQSeverity.ERROR,
+                1,
+            ),
+        ],
+    )
+    def test_check_unique(
+        self,
+        data_dict: dict,
+        rules: list[dict],
+        expected_issue_count: int,
+        expected_severity: DQSeverity | None,
+        expected_affected_rows: int | None,
+    ) -> None:
+        """Test unique check with valid and duplicate data."""
+        df = pl.DataFrame(data_dict)
         issues = self.checker.check(df, rules)
 
-        assert len(issues) == 1
-        assert issues[0].rule_name == "not_null"
-        assert issues[0].severity == DQSeverity.ERROR
-        assert issues[0].level == DQLevel.L1_TECHNICAL
-        assert issues[0].affected_rows == 1
-
-    def test_check_unique_pass(self) -> None:
-        """Test unique check with valid data."""
-        df = pl.DataFrame(
-            {
-                "sid": [1, 1, 2],
-                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-01"],
-            }
-        )
-
-        rules = [
-            {
-                "rule": "unique",
-                "columns": ["sid", "trade_date"],
-                "message": "Primary key unique",
-            }
-        ]
-
-        issues = self.checker.check(df, rules)
-
-        assert len(issues) == 0
-
-    def test_check_unique_fail(self) -> None:
-        """Test unique check with duplicates."""
-        df = pl.DataFrame(
-            {
-                "sid": [1, 1, 1],
-                "trade_date": [
-                    "2024-01-01",
-                    "2024-01-02",
-                    "2024-01-01",
-                ],  # Duplicate (1, 2024-01-01)
-            }
-        )
-
-        rules = [
-            {
-                "rule": "unique",
-                "columns": ["sid", "trade_date"],
-                "message": "Primary key unique",
-            }
-        ]
-
-        issues = self.checker.check(df, rules)
-
-        assert len(issues) == 1
-        assert issues[0].rule_name == "unique"
-        assert issues[0].severity == DQSeverity.ERROR
-        assert issues[0].level == DQLevel.L1_TECHNICAL
-        assert issues[0].affected_rows == 1  # 3 total - 2 unique = 1 duplicate
+        assert len(issues) == expected_issue_count
+        if expected_issue_count > 0:
+            assert issues[0].rule_name == "unique"
+            assert issues[0].severity == expected_severity
+            assert issues[0].level == DQLevel.L1_TECHNICAL
+            assert issues[0].affected_rows == expected_affected_rows
 
     def test_check_multiple_issues(self) -> None:
         """Test checking with multiple rule violations."""
@@ -154,42 +187,64 @@ class TestTechnicalChecker:
         # Should only check sid column, skip missing trade_date
         assert len(issues) == 0  # All sid values are not null
 
-    def test_check_type_valid(self) -> None:
-        """Test type check with valid types."""
-        df = pl.DataFrame(
-            {
-                "sid": [1, 2, 3],
-                "close": [10.0, 20.0, 30.0],
-                "volume": [100, 200, 300],
-            }
-        )
-        rules = [
-            {
-                "rule": "type_check",
-                "types": {"sid": "Int64", "close": "Float64", "volume": "Int64"},
-            }
-        ]
-
+    @pytest.mark.parametrize(
+        (
+            "data_dict",
+            "rules",
+            "expected_issue_count",
+            "expected_severity",
+            "check_message_contains",
+        ),
+        [
+            # Pass case: valid types
+            (
+                {
+                    "sid": [1, 2, 3],
+                    "close": [10.0, 20.0, 30.0],
+                    "volume": [100, 200, 300],
+                },
+                [
+                    {
+                        "rule": "type_check",
+                        "types": {
+                            "sid": "Int64",
+                            "close": "Float64",
+                            "volume": "Int64",
+                        },
+                    }
+                ],
+                0,
+                None,
+                None,
+            ),
+            # Fail case: invalid type (string instead of Float64)
+            (
+                {"sid": [1, 2, 3], "close": ["10.0", "20.0", "30.0"]},
+                [{"rule": "type_check", "types": {"sid": "Int64", "close": "Float64"}}],
+                1,
+                DQSeverity.ERROR,
+                "close",
+            ),
+        ],
+    )
+    def test_check_type(
+        self,
+        data_dict: dict,
+        rules: list[dict],
+        expected_issue_count: int,
+        expected_severity: DQSeverity | None,
+        check_message_contains: str | None,
+    ) -> None:
+        """Test type check with valid and invalid types."""
+        df = pl.DataFrame(data_dict)
         issues = self.checker.check(df, rules)
 
-        assert len(issues) == 0
-
-    def test_check_type_invalid(self) -> None:
-        """Test type check with invalid types."""
-        df = pl.DataFrame(
-            {
-                "sid": [1, 2, 3],  # Int64
-                "close": ["10.0", "20.0", "30.0"],  # String (wrong)
-            }
-        )
-        rules = [{"rule": "type_check", "types": {"sid": "Int64", "close": "Float64"}}]
-
-        issues = self.checker.check(df, rules)
-
-        assert len(issues) == 1
-        assert issues[0].level == DQLevel.L1_TECHNICAL
-        assert issues[0].severity == DQSeverity.ERROR
-        assert "close" in issues[0].message
+        assert len(issues) == expected_issue_count
+        if expected_issue_count > 0:
+            assert issues[0].level == DQLevel.L1_TECHNICAL
+            assert issues[0].severity == expected_severity
+            if check_message_contains:
+                assert check_message_contains in issues[0].message
 
     def test_check_type_column_not_exist(self) -> None:
         """Test type check with non-existent column (should skip)."""
