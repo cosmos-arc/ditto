@@ -207,7 +207,35 @@ apps/server/tests/unit/ingestion/test_retry.py
 
 ## 优化计划
 
-### Phase 1: 修复测试基础设施（紧急）⚠️ 约80个文件需要重命名
+### Phase 1: 修复测试基础设施（紧急）✅ 已完成
+
+完成时间：2026-01-10
+
+**已完成任务：**
+- [x] Task 1.1: 批量重命名测试文件（85个文件）
+- [x] Task 1.2: 更新导入语句（无需更新，无跨测试文件导入）
+- [x] Task 1.3: 修复假测试（test_sqlite_client.py:367）
+- [x] Task 1.4: 启用并发测试配置
+
+**提交记录：**
+- b256df5: refactor: rename datahub unit test files with _unit suffix (52 files)
+- 433d1dd: refactor: rename datahub integration test files with _integration suffix (10 files)
+- 0d1ef6f: refactor: rename foundation unit test files with _unit suffix (5 files)
+- a7cc0dc: refactor: rename server unit test files with _unit suffix (12 files)
+- 3b503b4: refactor: rename server integration test files with _integration suffix (6 files)
+- 5fe7729: test: fix fake test in test_sqlite_client_unit.py
+- bbf9529: test: enable parallel test execution with pytest-xdist
+- 59e6625: fix: remove dynamic_context from coverage config for xdist compatibility
+
+**验收结果：**
+- ✅ 无 import 冲突错误
+- ✅ 无假测试（grep -r "assert True" tests/ 无结果）
+- ✅ 并发测试已启用（-n auto）
+- ✅ datahub + foundation 单元测试覆盖率 91.26% (> 80%)
+- ✅ 861 个单元测试通过
+
+**已知问题：**
+- apps/server/tests/unit/ingestion/flows/ 下有 7 个测试失败，与 backfill flow 的 mock 设置有关（预存在问题，与 Phase 1 更改无关）
 
 #### Task 1.1: 批量重命名测试文件（约80个文件）
 
