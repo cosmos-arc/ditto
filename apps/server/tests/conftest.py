@@ -15,7 +15,9 @@ from ditto_foundation.config import Settings
 class DatabaseManager:
     """数据库连接池管理器。"""
 
-    def __init__(self):
+    _duckdb_conn: duckdb.DuckDBPyConnection | None
+
+    def __init__(self) -> None:
         self._duckdb_conn = None
 
     def get_duckdb_conn(self) -> duckdb.DuckDBPyConnection:
