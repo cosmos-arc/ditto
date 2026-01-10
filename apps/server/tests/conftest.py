@@ -12,6 +12,22 @@ import pytest
 from ditto_foundation.config import Settings
 
 
+def pytest_configure(config) -> None:
+    """在测试开始前预加载模块.
+
+    预加载 ingestion flows 模块,避免每个测试都重新导入相同模块,
+    从而减少测试执行时间（目标: 减少 1-2秒/测试）.
+    """
+    # 预加载 flows 模块,避免每个测试都重新导入
+    # fmt: off
+    from ditto_server.ingestion.flows import (
+        backfill,  # noqa: F401
+        daily,  # noqa: F401
+        repair,  # noqa: F401
+    )
+    # fmt: on
+
+
 class DatabaseManager:
     """数据库连接池管理器。"""
 
