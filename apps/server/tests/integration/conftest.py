@@ -16,15 +16,6 @@ def prefect_test_session() -> Generator[None, None, None]:
         yield
 
 
-@pytest.fixture(autouse=True)
-def reset_prefect_context() -> Generator[None, None, None]:
-    """每个测试前重置 Prefect 上下文。"""
-    # Prefect 3.x 使用 ContextVar 管理上下文，会自动隔离
-    # 这里只是为了确保测试间状态清洁
-    return
-    # 测试结束后自动清理
-
-
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     """为 integration 目录下的所有测试自动添加 integration marker.
 
