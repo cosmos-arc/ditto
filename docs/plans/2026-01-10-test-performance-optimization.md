@@ -169,6 +169,32 @@ pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/
 
 ---
 
+### ✅ Phase 2 完成情况 (2026-01-10)
+
+**状态**: 已完成
+
+**实施内容**:
+1. 创建了 `DatabaseManager` 类，实现连接池化管理
+2. 添加了 session-scoped `db_manager` fixture
+3. 添加了 function-scoped `clean_duckdb` fixture
+4. 删除了旧的 `duckdb_conn` 和 `populated_databases` fixtures
+
+**验证结果**:
+- 测试通过：294 passed, 1 skipped
+- 隔离性验证：通过（连续两次运行结果一致）
+- 性能提升：
+  - 优化前：343秒
+  - 优化后：65秒
+  - 提升：81%
+
+**覆盖率**:
+- 当前覆盖率：61.55%
+- 需要在后续优化中提升至 80%
+
+**技术债务**: 无
+
+---
+
 ### Phase 3: Settings 缓存 (P1)
 
 **目标**：减少 2-3秒/测试
