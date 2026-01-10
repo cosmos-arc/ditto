@@ -179,16 +179,20 @@ pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/
 3. 添加了 function-scoped `clean_duckdb` fixture
 4. 删除了旧的 `duckdb_conn` 和 `populated_databases` fixtures
 
-**验证结果**:
-- 测试通过：294 passed, 1 skipped
+**验证结果** (2026-01-10):
+- 验证命令：`pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/ -v`
+- 测试范围：apps/server/tests/integration/ingestion/flows/
+- 测试通过：45 passed, 1 skipped
 - 隔离性验证：通过（连续两次运行结果一致）
 - 性能提升：
   - 优化前：343秒
   - 优化后：65秒
   - 提升：81%
 
-**覆盖率**:
-- 当前覆盖率：61.55%
+**覆盖率** (2026-01-10 验证):
+- 验证命令：`pixi run -e dev pytest --cov=ditto_server --cov-report=term`
+- ditto_server 整体覆盖率：93.67%
+- ingestion/flows/ 路径覆盖率：35.83% (仅运行该路径测试时)
 - 需要在后续优化中提升至 80%
 
 **技术债务**: 无
