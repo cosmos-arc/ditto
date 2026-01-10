@@ -338,7 +338,7 @@ pytest
 
 | Marker | 用途 | 运行时机 |
 |--------|------|----------|
-| (无) | 普通单元测试 | 每次提交 |
+| `@pytest.mark.unit` | 单元测试（无外部依赖） | 每次提交/CI |
 | `@pytest.mark.integration` | 多组件协作测试 | CI |
 | `@pytest.mark.e2e` | 端到端完整流程 | CI/手动 |
 | `@pytest.mark.slow` | 耗时测试 | CI/手动 |
@@ -347,10 +347,37 @@ pytest
 | `@pytest.mark.pit` | PIT数据正确性验证 | CI |
 | `@pytest.mark.data` | 需要数据fixtures | 按需 |
 | `@pytest.mark.external` | 调用外部API（Tushare等） | 手动/CI |
+| `@pytest.mark.observability` | 可观测性堆栈测试 | 按需/CI |
 
 ### 示例
 
 ```python
+# 单元测试 - 必须添加
+@pytest.mark.unit
+class TestFastAPIEndpoints:
+    """Tests for FastAPI async endpoint functions."""
+    ...
+
+@pytest.mark.unit
+def test_dataset_config_validation():
+    """Test DatasetConfig model validation."""
+    ...
+
+# 可观测性测试
+@pytest.mark.integration
+@pytest.mark.observability
+class TestObservabilityStack:
+    """可观测性服务栈集成测试."""
+    ...
+
+# 可观测性 + 外部依赖
+@pytest.mark.integration
+@pytest.mark.external
+@pytest.mark.observability
+class TestMetricsExport:
+    """指标导出集成测试."""
+    ...
+
 @pytest.mark.pit
 def test_no_future_data_leakage(sample_quotes):
     """验证回测中无未来数据泄露"""
@@ -472,13 +499,16 @@ async def test_resolve_sid_async(symbol, expected_sid):
 
 ## 覆盖率要求
 
-**项目覆盖率标准**：
+**项目覆盖率标准（统一 80%）**：
 
-| 指标 | 要求 | 检查命令 |
+| 指标 | 要求 | 配置位置 |
 |------|------|----------|
-| 分支覆盖率 | >= 80% | `pytest --cov --cov-report=term-missing` |
-| 行覆盖率 | >= 80% | `pytest --cov --cov-report=html` |
+| 分支覆盖率 | >= 80% | `pyproject.toml`: fail_under = 80 |
+| CI 阈值 | >= 80% | `.github/workflows/ci.yml`: `--cov-fail-under=80` |
+| 本地阈值 | >= 80% | `pixi.toml` test-cov-xml: `--cov-fail-under=80` |
 | 新增代码 | >= 85% | CI 自动检查 |
+
+**注意**: CI 和本地环境使用相同的覆盖率阈值（80%），确保一致性。
 
 ### 覆盖率提升策略
 
@@ -655,4 +685,79 @@ async def generate_test_logs():
 pixi run -e dev quick-check       # 开发时（lint-fix + format + test-fast）
 pixi run -e dev pre-commit-run    # 提交前（lint + format + typecheck + security）
 pixi run -e dev ci-check          # CI完整（以上 + test-cov-xml）
+```
+
+---
+
+## 可观测性测试控制
+
+### 环境变量
+
+测试使用环境变量控制是否运行可观测性相关测试：
+
+```bash
+# 禁用可观测性测试（默认）
+export DITTO_TEST_OBSERVABILITY=disabled
+pytest tests/integration/
+
+# 启用可观测性测试
+export DITTO_TEST_OBSERVABILITY=enabled
+pytest tests/integration/
+
+# CI 环境运行
+export DITTO_TEST_OBSERVABILITY=enabled
+export DITTO_OBSERVABILITY_TEST_MODE=docker
+pytest tests/integration/
+```
+
+### conftest.py 实现
+
+`tests/integration/conftest.py` 提供自动跳过功能：
+
+```python
+@pytest.fixture(scope="session")
+def observability_test_config() -> dict:
+    """可观测性测试配置fixture."""
+    return {
+        "enabled": os.environ.get("DITTO_TEST_OBSERVABILITY", "disabled") == "enabled",
+        "test_mode": os.environ.get("DITTO_OBSERVABILITY_TEST_MODE", "local"),
+        "timeout": int(os.environ.get("DITTO_OBSERVABILITY_TEST_TIMEOUT", "30")),
+        "skip_external": os.environ.get("DITTO_OBSERVABILITY_SKIP_EXTERNAL_CHECKS", "false").lower() == "true",
+    }
+
+@pytest.fixture(autouse=True)
+def skip_observability_tests_if_disabled(observability_test_config):
+    """自动跳过禁用的可观测性测试."""
+    if not observability_test_config["enabled"]:
+        pytest.skip("DITTO_TEST_OBSERVABILITY=disabled, skipping observability tests")
+```
+
+### Marker 组合使用
+
+```python
+# 可观测性 + 集成测试
+@pytest.mark.integration
+@pytest.mark.observability
+class TestObservabilityStack:
+    ...
+
+# 可观测性 + 集成 + 外部依赖
+@pytest.mark.integration
+@pytest.mark.external
+@pytest.mark.observability
+class TestMetricsExport:
+    ...
+```
+
+### 运行命令
+
+```bash
+# 跳过可观测性测试
+pytest -m "not observability"
+
+# 只运行可观测性测试
+pytest -m observability
+
+# 运行集成测试（包含可观测性）
+pytest -m integration
 ```

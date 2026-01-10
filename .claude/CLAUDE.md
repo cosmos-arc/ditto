@@ -22,6 +22,14 @@
     - 规划计划变更 → 更新 `docs/plans/YYYY-MM-DD-name.md`
     - 重大架构决策 → 更新 `docs/adr/NNNN-title.md`
 - **测试**: 分支覆盖率 >= 80%
+    - **Marker 规范**: 必须为测试添加 @pytest.mark.* 装饰器
+      - 单元测试: `@pytest.mark.unit`
+      - 集成测试: `@pytest.mark.integration`
+      - 可观测性: `@pytest.mark.observability`
+      - 外部 API: `@pytest.mark.external`
+    - **覆盖率阈值**: CI 和本地统一为 80%
+      - CI: `.github/workflows/ci.yml` (`--cov-fail-under=80`)
+      - 本地: `pixi.toml` test-cov-xml (`--cov-fail-under=80`)
     - 假测试检测：无 `assert True` 等无效断言（检查: `grep -r "assert True" tests/`）
     - 技术债务追踪：新增 `# HACK/# TODO` 必须创建 issue 追踪（存储至 `docs/issues/`）
     - 文档同步：代码变更时必须更新相关 README/ADR
