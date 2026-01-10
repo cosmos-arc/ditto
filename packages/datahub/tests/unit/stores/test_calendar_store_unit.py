@@ -1,5 +1,6 @@
 """Tests for CalendarStore."""
 
+import pytest
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
@@ -203,18 +204,23 @@ class TestCalendarStore:
         assert self.store.get_next("2024-01-02") == "2024-01-03"
         assert self.store.get_next("2024-01-05") == "2024-01-08"  # Friday to Monday
 
-    def test_offset_positive(self) -> None:
-        """Test offset with positive n."""
-        assert self.store.offset("2024-01-02", 0) == "2024-01-02"
-        assert self.store.offset("2024-01-02", 1) == "2024-01-03"
-        assert self.store.offset("2024-01-02", 2) == "2024-01-04"
-        assert self.store.offset("2024-01-05", 1) == "2024-01-08"  # Friday to Monday
-
-    def test_offset_negative(self) -> None:
-        """Test offset with negative n."""
-        assert self.store.offset("2024-01-04", -1) == "2024-01-03"
-        assert self.store.offset("2024-01-04", -2) == "2024-01-02"
-        assert self.store.offset("2024-01-08", -1) == "2024-01-05"  # Monday to Friday
+    @pytest.mark.parametrize(
+        ("date", "offset", "expected"),
+        [
+            # Positive offsets
+            ("2024-01-02", 0, "2024-01-02"),
+            ("2024-01-02", 1, "2024-01-03"),
+            ("2024-01-02", 2, "2024-01-04"),
+            ("2024-01-05", 1, "2024-01-08"),  # Friday to Monday
+            # Negative offsets
+            ("2024-01-04", -1, "2024-01-03"),
+            ("2024-01-04", -2, "2024-01-02"),
+            ("2024-01-08", -1, "2024-01-05"),  # Monday to Friday
+        ],
+    )
+    def test_offset(self, date: str, offset: int, expected: str) -> None:
+        """Test offset with positive and negative values."""
+        assert self.store.offset(date, offset) == expected
 
     def test_offset_out_of_range(self) -> None:
         """Test offset beyond available data."""
