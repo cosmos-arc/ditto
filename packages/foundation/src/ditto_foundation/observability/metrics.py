@@ -437,3 +437,15 @@ def reset_metrics() -> None:
 
     _meter = None
     _in_memory_reader = None
+
+
+def _get_in_memory_reader() -> InMemoryMetricReader | None:
+    """
+    获取 InMemory Metric Reader（测试用）.
+
+    Returns
+    -------
+        InMemoryMetricReader | None: 当前的 InMemory Metric Reader 实例
+
+    """
+    return _in_memory_reader

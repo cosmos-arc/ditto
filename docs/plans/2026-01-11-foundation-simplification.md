@@ -60,29 +60,34 @@
 
 ---
 
-### 阶段 2: 中风险模块 (tracing.py)
+### 阶段 2: 中风险模块 (tracing.py) ✅
 
-#### 2.1 全局状态管理简化
+#### 2.1 全局状态管理简化 ✅
 
 **问题**: 3 个全局变量 (`_tracer`, `_in_memory_exporter`, `_current_span`) 分散管理
 
 **简化方案**:
-- 引入 `TracingState` dataclass 封装所有状态
-- 替换全局变量为单一 `_state` 对象
-- 简化 `reset_tracing()` 逻辑
+- [x] 引入 `TracingState` dataclass 封装所有状态
+- [x] 替换全局变量为单一 `_state` 对象
+- [x] 简化 `reset_tracing()` 逻辑
 
-#### 2.2 SpanContext 简化
+#### 2.2 SpanContext 简化 ✅
 
 **问题**: 手动管理 `_current_span` 全局变量，双重上下文管理
 
 **简化方案**:
-- 移除 `_current_span` 全局变量
-- 利用 OpenTelemetry 的内置 `trace.get_current_span()`
-- 简化 `__enter__` 和 `__exit__` 逻辑
+- [x] 移除 `_current_span` 全局变量
+- [x] 利用 OpenTelemetry 的内置 `trace.get_current_span()`
+- [x] 简化 `__enter__` 和 `__exit__` 逻辑
 
 **关键文件**: [observability/tracing.py](packages/foundation/src/ditto_foundation/observability/tracing.py)
 
 **验证**: 运行 `pixi run -e dev pytest -m unit --cov=ditto_foundation.observability.tracing`
+
+**完成状态**: ✅ 已完成
+- tracing.py 覆盖率从 56.49% → 81.15% (提升 24.66%)
+- 代码行数从 262 行 → 245 行 (减少 17 行，约 6.5%)
+- 移除了冗余的全局状态管理，完全依赖 OpenTelemetry 内置机制
 
 ---
 

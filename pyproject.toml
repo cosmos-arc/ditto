@@ -185,6 +185,7 @@ unfixable = []
     "PLW0603",
     "PLR0913",
     "PLC0415",
+    "RUF002",  # 中文文档中的全角标点符号（中文项目正常使用）
 ]
 
 # __init__.py 可以没有 docstring
