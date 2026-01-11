@@ -91,7 +91,7 @@ packages/datahub/
 │   └── dq_rules/                     # YAML 规则定义
 │       ├── etf_daily.yml             # ETF 日频数据规则
 │       ├── index_daily.yml           # 指数日频数据规则
-│       ├── market_daily.yml          # 股票日频数据规则
+│       ├── stock_daily.yml           # 股票日频数据规则
 │       ├── index_weight.yml          # 指数权重规则
 │       └── adj_factor.yml            # 复权因子规则
 │
@@ -121,7 +121,7 @@ packages/datahub/
     └── unit/stores/
         └── test_quarantine_store.py  # 隔离区测试
 
-apps/server/src/ditto_server/
+apps/server/src/ditto_port/
 └── ingestion/
     └── tasks/
         └── dq_batch.py               # L3 批量检查任务
@@ -149,7 +149,7 @@ apps/server/src/ditto_server/
 | L3 | StatisticalChecker | Z-score、完整性 | 定时批量 | **告警通知** |
 
 **完成总结**：
-- 创建 5 个 YAML 规则配置文件（etf_daily, index_daily, market_daily, index_weight, adj_factor）
+- 创建 5 个 YAML 规则配置文件（etf_daily, index_daily, stock_daily, index_weight, adj_factor）
 - 实现 Pydantic 规则模型（DQConfig, DatasetRules, 各种规则类型）
 - 实现 DQEngine 执行引擎，支持 L1/L2/L3 检查
 - 实现 TechnicalChecker（L1）：not_null, unique, foreign_key 检查
@@ -259,7 +259,7 @@ packages/datahub/src/ditto_datahub/
 └── stores/
     └── ingestion_metadata_store.py    # 摄取元数据存储
 
-apps/server/src/ditto_server/ingestion/
+apps/server/src/ditto_port/ingestion/
 ├── flows/
 │   └── scheduled_ingest.py            # 定时摄取流程
 └── tasks/
@@ -332,7 +332,7 @@ packages/datahub/src/ditto_datahub/stores/
 packages/datahub/README.md              # DataHub 文档 (A.9)
 docs/plans/2025-12-29-pr19-review-fixes.md  # PR #19 修复计划
 
-apps/server/src/ditto_server/
+apps/server/src/ditto_port/
 └── main.py                            # Granian + ORJSONResponse
 ```
 
@@ -396,7 +396,7 @@ apps/server/src/ditto_server/
 
 **新增文件结构**：
 ```
-apps/server/src/ditto_server/validation/
+apps/server/src/ditto_port/validation/
 ├── __init__.py
 ├── golden_dataset.py                  # 黄金数据集管理
 ├── comparison.py                      # 数据比对引擎
@@ -565,7 +565,7 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 |----------|------|------|
 | `packages/datahub/config/dq_rules/etf_daily.yml` | ETF 规则 | ✅ |
 | `packages/datahub/config/dq_rules/index_daily.yml` | 指数规则 | ✅ |
-| `packages/datahub/config/dq_rules/market_daily.yml` | 股票规则 | ✅ |
+| `packages/datahub/config/dq_rules/stock_daily.yml` | 股票规则 | ✅ |
 | `packages/datahub/config/dq_rules/index_weight.yml` | 权重规则 | ✅ |
 | `packages/datahub/config/dq_rules/adj_factor.yml` | 复权规则 | ✅ |
 | `packages/datahub/src/ditto_datahub/dq/models.py` | 规则模型 | ✅ |
@@ -592,9 +592,9 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 | `packages/datahub/src/ditto_datahub/sources/base.py` | 增量接口 | ✅ Phase 3 |
 | `packages/datahub/src/ditto_datahub/sources/metadata.py` | 元数据源 | ✅ Phase 3 |
 | `packages/datahub/src/ditto_datahub/sources/tushare/source.py` | Tushare 增量 | ✅ Phase 3 |
-| `apps/server/src/ditto_server/ingestion/tasks/dq_batch.py` | L3 任务 | ✅ |
-| `apps/server/src/ditto_server/ingestion/tasks/monitoring.py` | 质量监控 | ✅ Phase 3 |
-| `apps/server/src/ditto_server/ingestion/flows/scheduled_ingest.py` | 定时摄取 | ✅ Phase 3 |
+| `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py` | L3 任务 | ✅ |
+| `apps/server/src/ditto_port/ingestion/tasks/monitoring.py` | 质量监控 | ✅ Phase 3 |
+| `apps/server/src/ditto_port/ingestion/flows/scheduled_ingest.py` | 定时摄取 | ✅ Phase 3 |
 | **测试文件** (22 个) | | |
 | `packages/datahub/tests/unit/dq/*.py` | DQ 测试 | ✅ |
 | `packages/datahub/tests/unit/stores/test_*.py` | Store 测试 | ✅ |
@@ -611,9 +611,9 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 | `packages/datahub/tests/unit/runtime/test_cache.py` | 缓存测试 | ✅ Phase 4 |
 | `packages/datahub/tests/unit/runtime/test_pit_helper.py` | PIT 测试 | ✅ Phase 4 |
 | `packages/datahub/src/ditto_datahub/sources/failover.py` | 自动切换 | ❌ |
-| `apps/server/src/ditto_server/validation/golden_dataset.py` | 黄金数据集管理器 | ❌ |
-| `apps/server/src/ditto_server/validation/comparison.py` | 数据比对引擎 | ❌ |
-| `apps/server/src/ditto_server/validation/report.py` | 验证报告生成 | ❌ |
+| `apps/server/src/ditto_port/validation/golden_dataset.py` | 黄金数据集管理器 | ❌ |
+| `apps/server/src/ditto_port/validation/comparison.py` | 数据比对引擎 | ❌ |
+| `apps/server/src/ditto_port/validation/report.py` | 验证报告生成 | ❌ |
 | `doc/validation/golden_dataset_baseline_v1.md` | 数据质量基线报告 | ❌ |
 
 ### 修改文件
@@ -627,7 +627,7 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 | `packages/datahub/src/ditto_datahub/runtime/__init__.py` | 导出 DataCache, PitHelper | ✅ Phase 4 |
 | `packages/datahub/src/ditto_datahub/stores/calendar_store.py` | 集成 DataCache | ✅ Phase 4 |
 | `packages/datahub/src/ditto_datahub/stores/security_store.py` | 集成 DataCache，移除 @lru_cache | ✅ Phase 4 |
-| `apps/server/src/ditto_server/main.py` | Granian 服务器 + ORJSONResponse | ✅ Phase 4 |
+| `apps/server/src/ditto_port/main.py` | Granian 服务器 + ORJSONResponse | ✅ Phase 4 |
 | `packages/datahub/src/ditto_datahub/repositories/bars.py` | 集成 DQEngine (Task 1.8) | 📝 Phase 3 |
 | `packages/datahub/src/ditto_datahub/sources/base.py` | 增量更新接口 | ❌ |
 | `packages/datahub/src/ditto_datahub/sources/tushare/source.py` | 增量适配 | ❌ |
@@ -636,8 +636,8 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 | `packages/datahub/src/ditto_datahub/repositories/__init__.py` | 导出新 Repository | ✅ |
 | `packages/datahub/src/ditto_datahub/hub.py` | freeze/universe/index 接口 | ✅ |
 | `packages/datahub/tests/unit/test_hub.py` | DataHub 集成测试 | ✅ |
-| `apps/server/src/ditto_server/ingestion/scheduler.py` | 定时调度 | ❌ |
-| `apps/server/src/ditto_server/api/ingestion.py` | API 触发 | ❌ |
+| `apps/server/src/ditto_port/ingestion/scheduler.py` | 定时调度 | ❌ |
+| `apps/server/src/ditto_port/api/ingestion.py` | API 触发 | ❌ |
 
 ---
 
@@ -742,3 +742,19 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 - 创建 apps/server/.../tasks/dq_batch.py
 - 测试覆盖：53 个 DQ 相关测试全部通过
 - **Task 1.8 延后原因**：Repository 集成 DQEngine 需要与 Phase 3 数据摄取增强配合，在摄取流程中统一集成 DQ 检查
+
+### 2026-01-04
+- ✅ **代码审查修复完成**：修复 7 个 ruff PLC0415 错误
+  - `backfill.py`: 添加 2 处 `# noqa: PLC0415` 注释（import 延迟导入）
+  - `repair.py`: 添加 3 处 `# noqa: PLC0415` 注释（import 延迟导入）
+  - `t0_meta.py`: 添加 2 处 `# noqa: PLC0415` 注释（import 延迟导入）
+- ✅ **文档补充完成**：
+  - 创建 `IMPLEMENTATION_SUMMARY.md`：Tushare HTTP 重构实施总结
+  - 创建 `tushare/README.md`：数据源使用说明、HTTP API 规范、限流配置说明
+- ✅ **代码审查报告**：[docs/plans/2026-01-04-code-review.md](../plans/2026-01-04-code-review.md)
+  - PIT 安全审查：🟢 通过（0 个问题）
+  - 风控审查：🟢 通过（0 个问题）
+  - 代码质量：🟡 需改进 → 🟢 已修复（7 个 ruff 错误已修复）
+  - 文档同步：🟡 需改进 → 🟢 已补充（IMPLEMENTATION_SUMMARY.md + README.md）
+  - 架构约束：🟢 通过（0 个问题）
+- ✅ **最终结论**：🟢 可合并（所有 Important 问题已修复）

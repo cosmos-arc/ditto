@@ -52,7 +52,4 @@ paths: apps/server/**/*.py
 
 ## 导入规范
 
-| ✅ 正确 | ❌ 错误 |
-|---------|---------|
-| from ditto_server.api import get_hub | from ditto_server.api.dependencies import hub |
-| from ditto_server.ingestion import flows | 直接导入内部实现 |
+Server 层导入规则详见 [core.md](.claude/rules/core.md)。

@@ -217,22 +217,6 @@ DQ_RULES: dict[str, list[DQRule]] = {
             check_volume_amount_consistency,
         ),
     ],
-    "market_daily": [  # 别名，兼容旧配置
-        DQRule(
-            "primary_key_unique",
-            DQSeverity.ERROR,
-            check_pk_unique,
-            {"keys": ["sid", "trade_date"]},
-        ),
-        DQRule("sid_not_null", DQSeverity.ERROR, check_sid_not_null),
-        DQRule("ohlc_positive", DQSeverity.ERROR, check_ohlc_positive),
-        DQRule("ohlc_relationship", DQSeverity.ERROR, check_ohlc_relationship),
-        DQRule(
-            "volume_amount_consistency",
-            DQSeverity.WARNING,
-            check_volume_amount_consistency,
-        ),
-    ],
     "etf_daily": [
         DQRule(
             "primary_key_unique",

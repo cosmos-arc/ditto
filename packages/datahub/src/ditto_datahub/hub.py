@@ -14,12 +14,12 @@ from ditto_datahub.errors import SidNotFoundError
 
 if TYPE_CHECKING:
     from ditto_datahub.dq.engine import DQEngine
+    from ditto_datahub.repositories.adj_factor import AdjFactorRepository
     from ditto_datahub.repositories.bars import BarsRepository
     from ditto_datahub.repositories.calendar import CalendarRepository
     from ditto_datahub.repositories.index import IndexRepository
     from ditto_datahub.repositories.security import SecurityRepository
     from ditto_datahub.repositories.universe import UniverseRepository
-    from ditto_datahub.runtime.dq_checker import DQChecker
     from ditto_datahub.runtime.file_lock import FileLockManager
     from ditto_datahub.runtime.freeze_manager import FreezeManager
     from ditto_datahub.runtime.sid_allocator import SidAllocator
@@ -30,9 +30,7 @@ if TYPE_CHECKING:
     from ditto_datahub.stores.bars_store import BarsStore
     from ditto_datahub.stores.calendar_store import CalendarStore
     from ditto_datahub.stores.index_weight_store import IndexWeightStore
-    from ditto_datahub.stores.ingestion_cursor import IngestionCursorStore
     from ditto_datahub.stores.ingestion_log import IngestionLogStore
-    from ditto_datahub.stores.ingestion_metadata_store import IngestionMetadataStore
     from ditto_datahub.stores.pipeline_store import PipelineStore
     from ditto_datahub.stores.security_store import SecurityStore
     from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
@@ -48,7 +46,7 @@ class DataHub:
     - Reduces startup time and allocates resources on demand
 
     Attribute layers:
-    - Runtime Layer: sqlite_pool, file_lock, sid_allocator, dq_checker, freeze
+    - Runtime Layer: sqlite_pool, file_lock, sid_allocator, dq_engine, freeze
     - Store Layer: security_store, calendar_store, bars_store, adj_factor_store,
       pipeline_store, universe_store, index_weight_store
     - Repository Layer: securities, bars, calendar, universe, index
@@ -107,19 +105,12 @@ class DataHub:
         return SidAllocator(self.sqlite_pool)
 
     @cached_property
-    def dq_checker(self) -> DQChecker:
-        """Data quality checker (deprecated: use dq_engine)."""
-        from ditto_datahub.runtime.dq_checker import DQChecker
-
-        return DQChecker()
-
-    @cached_property
     def dq_engine(self) -> DQEngine:
-        """New DQ engine."""
+        """New DQ engine with user override support."""
         from ditto_datahub.dq.engine import DQEngine
 
-        config_path = self.data_root / "config" / "dq"
-        return DQEngine(config_path=config_path)
+        # Use new method: load config with user override
+        return DQEngine(data_root=self.data_root)
 
     @cached_property
     def freeze(self) -> FreezeManager:
@@ -194,28 +185,12 @@ class DataHub:
         return IndexWeightStore(SQLiteClient(self.sqlite_pool))
 
     @cached_property
-    def ingestion_metadata_store(self) -> IngestionMetadataStore:
-        """Ingestion metadata store for incremental data fetching (deprecated)."""
-        from ditto_datahub.stores.ingestion_metadata_store import IngestionMetadataStore
-        from ditto_datahub.stores.sqlite_client import SQLiteClient
-
-        return IngestionMetadataStore(SQLiteClient(self.sqlite_pool))
-
-    @cached_property
     def ingestion_log(self) -> IngestionLogStore:
         """Ingestion event log store (new system)."""
         from ditto_datahub.stores.ingestion_log import IngestionLogStore
         from ditto_datahub.stores.sqlite_client import SQLiteClient
 
         return IngestionLogStore(SQLiteClient(self.sqlite_pool))
-
-    @cached_property
-    def ingestion_cursor(self) -> IngestionCursorStore:
-        """Ingestion cursor store for fast progress tracking (new system)."""
-        from ditto_datahub.stores.ingestion_cursor import IngestionCursorStore
-        from ditto_datahub.stores.sqlite_client import SQLiteClient
-
-        return IngestionCursorStore(SQLiteClient(self.sqlite_pool))
 
     # ========================================================================
     # Repository Layer
@@ -242,6 +217,16 @@ class DataHub:
             adj_factor_store=self.adj_factor_store,
             stock_status_store=self.stock_status_store,  # B.3
             dq_engine=self.dq_engine,  # Use new DQEngine
+            file_lock=self.file_lock,
+        )
+
+    @cached_property
+    def adj_factor(self) -> AdjFactorRepository:
+        """Adjustment factor repository."""
+        from ditto_datahub.repositories.adj_factor import AdjFactorRepository
+
+        return AdjFactorRepository(
+            adj_factor_store=self.adj_factor_store,
             file_lock=self.file_lock,
         )
 
@@ -424,7 +409,7 @@ class DataHub:
 
         Closes in reverse order of initialization to avoid dependency issues:
         1. Stores with SQLite clients (pipeline_store, calendar_store, security_store,
-           universe_store, index_weight_store, ingestion_log, ingestion_cursor)
+           universe_store, index_weight_store, ingestion_log)
         2. SQL engine (DuckDB)
         3. SQLite pool (connection manager)
         """
@@ -437,7 +422,6 @@ class DataHub:
             "universe_store",
             "index_weight_store",
             "ingestion_log",
-            "ingestion_cursor",
         ):
             if store_name in self.__dict__:
                 store = getattr(self, store_name)

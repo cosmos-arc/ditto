@@ -17,6 +17,7 @@ from ditto_foundation import M, logger, span, traced
 from ditto_foundation.util.io import atomic_write, file_md5
 
 from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
+from ditto_datahub.types import OnDuplicate
 
 
 class AdjFactorStore(ParquetStoreBase):
@@ -123,6 +124,7 @@ class AdjFactorStore(ParquetStoreBase):
         dataset: str,
         df: pl.DataFrame,
         year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
     ) -> tuple[str, str]:
         """
         Write year partition file.
@@ -133,19 +135,21 @@ class AdjFactorStore(ParquetStoreBase):
             dataset: Dataset name.
             df: Data to write.
             year: Year partition.
+            on_duplicate: 处理重复数据的策略。
 
         Returns:
             Tuple of (file_path, checksum).
 
         """
         with span("data.write", dataset=dataset, year=year) as s:
-            return self._write_impl(dataset, df, year, s)
+            return self._write_impl(dataset, df, year, on_duplicate, s)
 
     def _write_impl(
         self,
         dataset: str,
         df: pl.DataFrame,
         year: int,
+        on_duplicate: OnDuplicate,
         span_ctx: Any,
     ) -> tuple[str, str]:
         start_time = time.time()
@@ -156,13 +160,54 @@ class AdjFactorStore(ParquetStoreBase):
         file_path = self._get_path(dataset, year)
         is_merge = file_path.exists()
 
+        # Detect and deduplicate batch internal duplicates
+        key_columns = ["sid", "trade_date"]
+        batch_duplicates = (
+            df.group_by(key_columns)
+            .agg(pl.len().alias("_count"))
+            .filter(pl.col("_count") > 1)
+        )
+
+        if not batch_duplicates.is_empty():
+            logger.warning(
+                "检测到 batch 内部重复, 自动去重(保留第一条)",
+                event="batch_internal_duplicates",
+                dataset=dataset,
+                year=year,
+                duplicate_count=len(batch_duplicates),
+            )
+            # Auto-deduplicate (keep first)
+            df = df.unique(subset=key_columns, keep="first")
+
         # Merge with existing data
         if file_path.exists():
             existing = pl.read_parquet(file_path)
-            combined = pl.concat([existing, df]).unique(
-                subset=["sid", "trade_date"],
-                keep="last",  # New data overwrites
+
+            # Check for duplicates
+            new_keys = df[["sid", "trade_date"]]
+            existing_keys = existing[["sid", "trade_date"]]
+            duplicates = new_keys.join(
+                existing_keys, on=["sid", "trade_date"], how="inner"
             )
+
+            if len(duplicates) > 0 and on_duplicate == OnDuplicate.ERROR:
+                raise ValueError(
+                    f"检测到重复数据: {len(duplicates)} 条记录已存在."
+                    f"如需覆盖, 请使用 on_duplicate=OnDuplicate.KEEP_LAST"
+                )
+
+            if on_duplicate == OnDuplicate.KEEP_FIRST:
+                # 保留现有数据，忽略新数据中的重复
+                combined = pl.concat([existing, df]).unique(
+                    subset=["sid", "trade_date"],
+                    keep="first",
+                )
+            else:  # KEEP_LAST or default
+                # 新数据覆盖现有数据
+                combined = pl.concat([existing, df]).unique(
+                    subset=["sid", "trade_date"],
+                    keep="last",
+                )
         else:
             combined = df
 

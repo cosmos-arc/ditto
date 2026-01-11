@@ -6,7 +6,16 @@ from typing import NamedTuple
 
 
 class SidRange(NamedTuple):
-    """SID range for asset classes."""
+    """
+    SID range for asset classes.
+
+    统一使用百万级范围，与 SecurityMapper 保持一致:
+    - stock: 1M (1,000,000 - 1,999,999)
+    - etf: 2M (2,000,000 - 2,999,999)
+    - index: 3M (3,000,000 - 3,999,999)
+
+    避免未来 SID 冲突，并保持范围一致性。
+    """
 
     min_sid: int
     max_sid: int
@@ -15,9 +24,9 @@ class SidRange(NamedTuple):
     def get_range(cls, asset_class: str) -> "SidRange":
         """Get SID range for asset class."""
         ranges = {
-            "stock": cls(100_000_000, 199_999_999),
-            "etf": cls(200_000_000, 299_999_999),
-            "index": cls(300_000_000, 399_999_999),
+            "stock": cls(1_000_000, 1_999_999),
+            "etf": cls(2_000_000, 2_999_999),
+            "index": cls(3_000_000, 3_999_999),
         }
 
         if asset_class not in ranges:
@@ -42,17 +51,6 @@ class OnDuplicate(Enum):
     ERROR = "error"  # 遇到重复时报错（默认，最安全）
     KEEP_FIRST = "keep_first"  # 保留现有数据，忽略新数据
     KEEP_LAST = "keep_last"  # 使用新数据覆盖现有数据（Last-Write-Wins）
-
-
-@dataclass(frozen=True)
-class DQResult:
-    """Data quality check result (legacy, for runtime/dq_checker.py compatibility)."""
-
-    passed: bool
-    severity: DQSeverity
-    rule_name: str
-    message: str
-    affected_rows: int = 0
 
 
 # ============ Freeze 数据结构 ============

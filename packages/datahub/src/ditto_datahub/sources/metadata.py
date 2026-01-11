@@ -1,48 +1,7 @@
-"""Ingestion metadata models for incremental data fetching."""
+"""Ingestion metadata models for data tracking."""
 
-import warnings
 from dataclasses import dataclass
 from enum import Enum
-
-
-class IncrementalMode(str, Enum):
-    """
-    Incremental fetch mode (deprecated, use new ingestion system).
-
-    .. deprecated::
-        Use the new ``ingest_date()`` interface with ``force`` parameter instead.
-
-    """
-
-    QUICK = "quick"  # Quick mode: date-level check
-    PRECISE = "precise"  # Precise mode: data-level check
-
-
-@dataclass(frozen=True)
-class IngestionMetadata:
-    """
-    Metadata for data ingestion tracking (deprecated, legacy compatibility).
-
-    .. deprecated::
-        Use ``IngestionLog`` and ``IngestionCursor`` instead.
-
-    Attributes:
-        dataset: Dataset name (e.g., "etf_daily", "stock_daily")
-        source: Data source identifier (e.g., "tushare")
-        last_trade_date: Last successfully ingested trade date (YYYY-MM-DD format)
-        last_checksum: Checksum of last ingested data
-        last_rows: Number of rows in last ingestion
-        last_updated_at: Timestamp of last update (ISO format)
-
-    """
-
-    dataset: str
-    source: str
-    last_trade_date: str | None  # ISO format string (YYYY-MM-DD) or None
-    last_checksum: str | None
-    last_rows: int
-    last_updated_at: str
-
 
 # ============ New Ingestion System: Event Log + Cursor ============
 

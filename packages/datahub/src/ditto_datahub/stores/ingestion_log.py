@@ -349,3 +349,105 @@ class IngestionLogStore:
             "fail_count": row["fail_count"] if row else 0,
             "total_count": row["total_count"] if row else 0,
         }
+
+    def get_ingested_dates(
+        self,
+        dataset: str,
+        source: str = "tushare",
+        status: IngestionStatus | None = None,
+    ) -> list[str]:
+        """
+        Get all ingested trade dates for a dataset.
+
+        Args:
+            dataset: Dataset name (e.g., "stock_daily")
+            source: Data source identifier (default: "tushare")
+            status: Optional status filter (SUCCESS or FAIL). If None,
+                returns all dates.
+
+        Returns:
+            List of trade dates (YYYY-MM-DD) that have been ingested.
+
+        """
+        if status:
+            sql = """
+                SELECT trade_date
+                FROM ingestion_log
+                WHERE dataset = ? AND source = ? AND status = ?
+                ORDER BY trade_date ASC
+            """
+            rows = self._client.fetchall(sql, [dataset, source, status.value])
+        else:
+            sql = """
+                SELECT trade_date
+                FROM ingestion_log
+                WHERE dataset = ? AND source = ?
+                ORDER BY trade_date ASC
+            """
+            rows = self._client.fetchall(sql, [dataset, source])
+
+        return [row["trade_date"] for row in rows]
+
+    def get_failed_logs(
+        self,
+        dataset: str,
+        source: str = "tushare",
+        limit: int = 10,
+        max_attempts: int = 3,
+    ) -> list[IngestionLog]:
+        """
+        Get failed ingestion logs that need retry.
+
+        Args:
+            dataset: Dataset name (e.g., "stock_daily")
+            source: Data source identifier (default: "tushare")
+            limit: Maximum number of logs to return
+            max_attempts: Only return logs with attempts < max_attempts
+
+        Returns:
+            List of IngestionLog that need retry.
+
+        """
+        sql = """
+            SELECT dataset, source, trade_date, status,
+                   checksum, rows, error_code, error_message,
+                   attempts, first_attempt_at, last_attempt_at
+            FROM ingestion_log
+            WHERE dataset = ? AND source = ? AND status = 'FAIL'
+              AND attempts < ?
+            ORDER BY trade_date ASC
+            LIMIT ?
+        """
+
+        rows = self._client.fetchall(sql, [dataset, source, max_attempts, limit])
+
+        return [
+            IngestionLog(
+                dataset=row["dataset"],
+                source=row["source"],
+                trade_date=row["trade_date"],
+                status=IngestionStatus(row["status"]),
+                checksum=row["checksum"],
+                rows=row["rows"],
+                error_code=row["error_code"],
+                error_message=row["error_message"],
+                attempts=row["attempts"],
+                first_attempt_at=row["first_attempt_at"],
+                last_attempt_at=row["last_attempt_at"],
+            )
+            for row in rows
+        ]
+
+    def get_last_success_date(
+        self,
+        dataset: str,
+        source: str = "tushare",
+    ) -> str | None:
+        """获取最后成功的交易日期。"""
+        sql = """
+            SELECT MAX(trade_date) as last_success
+            FROM ingestion_log
+            WHERE dataset = ? AND source = ? AND status = 'SUCCESS'
+        """
+        row = self._client.fetchone(sql, [dataset, source])
+        return row["last_success"] if row else None

@@ -45,7 +45,7 @@
                              │ HTTP/WS
                              ▼
 ┌──────────────────────────────────────────────────────────────┐
-│                        DittoServer (API)                     │
+│                        DittoPort (API/CLI/Jobs)                │
 │   FastAPI：                                                  │
 │   - 调用 Application Services                                │
 │   - 编排引擎执行                                             │
@@ -90,32 +90,37 @@
 |---|---|---|
 | **Engine Layer** | 因子、Regime、轮动、回测、风控等模型与算法 | `packages/ditto-core/` |
 | **Data Layer** | 数据获取、存储、PIT 查询、复权计算 | `packages/ditto-data-hub/` |
-| **Application Services** | 面向用例的编排逻辑 | `apps/server/services/` |
-| **API Layer** | HTTP/REST/WS 封装与序列化 | `apps/server/api/` |
-| **Ingestion Layer** | 数据摄取调度（Prefect Flows/Tasks） | `apps/server/ingestion/` |
+| **Application Services** | 业务服务层（无框架依赖） | `apps/port/services/` |
+| **Port Layer** | 统一入口层（API/CLI/Jobs） | `apps/port/api|cli|jobs/` |
 | **Web UI Layer** | 前端展示与交互 | `apps/web/` |
 
 ### 3.2 目录结构
 
 ```
 apps/
-  server/
+  port/                      # 统一入口层（API/CLI/Jobs）
     src/
-      ditto_server/
-        api/               # HTTP 接口（FastAPI Router）
-        services/          # Application Services
-        models/            # API 层 DTO / Pydantic 模型
-        ingestion/         # Prefect 数据摄取（新）
-          flows/           #   Prefect Flows
-          tasks/           #   Prefect Tasks
-          schedules.py     #   调度配置
-        main.py            # 启动入口
+      ditto_port/
+        api/                 # HTTP API 入口
+          routes/            # FastAPI 路由
+        cli/                 # CLI 入口
+          commands/          # 命令实现
+          utils/             # CLI 工具
+        jobs/                # 定时任务入口
+          flows/             # Prefect Flow 定义
+          tasks/             # Prefect Task 定义
+        services/            # 业务服务层（无框架依赖）
+          ingestion/         # 摄取服务
+            coordinator.py   # 摄取协调器
+            backfill.py      # 回补管理器
+            config/          # 配置
+        main.py              # FastAPI 启动入口
 
   web/
     src/
-      app/                 # Next.js 页面路由
-      components/          # UI 组件
-      stores/              # Zustand 全局状态
+      app/                   # Next.js 页面路由
+      components/            # UI 组件
+      stores/                # Zustand 全局状态
 
 packages/
   ditto-core/

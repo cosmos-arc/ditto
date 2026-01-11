@@ -20,8 +20,10 @@ class TelegramAlertSender(AlertSender):
         Initialize Telegram alert sender.
 
         Args:
-            bot_token: Telegram bot token. If None, reads from TELEGRAM_BOT_TOKEN env var.
-            chat_id: Telegram chat ID. If None, reads from TELEGRAM_CHAT_ID env var.
+            bot_token: Telegram bot token. If None, reads from
+                TELEGRAM_BOT_TOKEN env var.
+            chat_id: Telegram chat ID. If None, reads from
+                TELEGRAM_CHAT_ID env var.
 
         """
         self._bot_token = bot_token or os.getenv("TELEGRAM_BOT_TOKEN")
@@ -35,6 +37,7 @@ class TelegramAlertSender(AlertSender):
 
     @property
     def name(self) -> str:
+        """Sender name."""
         return "telegram"
 
     def send(self, message: AlertMessage) -> bool:

@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import os
 import tomllib
 from pathlib import Path
-from typing import Any
 
-# NOTE: Tushare API returns pandas DataFrame natively.
-# We import pandas here for API compatibility, then convert to polars in source.py.
-import pandas as pd
+import httpx
+import polars as pl
 from ditto_foundation import logger
 from tenacity import (
     retry,
@@ -17,25 +14,22 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
-from tushare import pro_api
 
 from ditto_datahub.sources.base import (
-    SourceAuthenticationError,
     SourceConfigurationError,
     SourceFetchError,
     SourceRateLimitError,
+)
+from ditto_datahub.sources.tushare.http_utils import (
+    map_http_error,
+    response_to_dataframe,
+    validate_tushare_response,
 )
 from ditto_datahub.sources.tushare.rate_limiter import (
     TushareAPIGroup,
     TushareRateLimitConfig,
     TushareRateLimiter,
 )
-
-
-class _TushareRetryableError(Exception):
-    """Internal: Marker for retryable Tushare errors."""
-
-    pass
 
 
 def _get_tushare_token(token: str | None = None) -> str:
@@ -46,7 +40,6 @@ def _get_tushare_token(token: str | None = None) -> str:
     1. Provided token parameter
     2. keyring (recommended)
     3. ~/.ditto/secrets.toml (fallback)
-    4. TUSHARE_TOKEN env var (legacy)
 
     Args:
         token: Explicitly provided token.
@@ -100,16 +93,6 @@ def _get_tushare_token(token: str | None = None) -> str:
         except Exception:
             pass
 
-    # 4. Try TUSHARE_TOKEN env var (legacy)
-    if env_token := os.getenv("TUSHARE_TOKEN"):
-        assert env_token is not None
-        logger.debug(
-            "Token loaded from env var",
-            event="token_loaded",
-            source="env_var",
-        )
-        return env_token
-
     # No token found
     raise SourceConfigurationError(
         message=(
@@ -146,7 +129,7 @@ class TushareClient:
 
         Args:
             token: API token (auto-detected if None).
-            rate_config: 限流配置（默认免费账户）.
+            rate_config: 限流配置(默认免费账户).
 
         Raises:
             SourceConfigurationError: If token not found.
@@ -155,15 +138,19 @@ class TushareClient:
         # Get token with fallback chain
         self._token = _get_tushare_token(token)
 
-        # 配置限流器（默认免费账户）
+        # 配置限流器(默认免费账户)
         config = rate_config or TushareRateLimitConfig.free()
         self._limiter = TushareRateLimiter(config)
 
-        # Initialize Tushare API
-        self._api = pro_api(token=self._token)
+        # Initialize HTTP client
+        self._client = httpx.Client(
+            base_url="http://api.tushare.pro",
+            timeout=30.0,
+            headers={"Content-Type": "application/json"},
+        )
 
         logger.debug(
-            "TushareClient initialized with limits library",
+            "TushareClient initialized with HTTP client",
             event="tushare_client_init",
             rate_config=config,
         )
@@ -179,50 +166,27 @@ class TushareClient:
         else:
             return TushareAPIGroup.SPECIAL
 
-    def _is_retryable_error(self, error: Exception) -> bool:
-        """Check if error is retryable."""
-        error_msg = str(error)
-
-        # Authentication errors - not retryable
-        if any(keyword in error_msg for keyword in ["权限", "认证"]):
-            return False
-
-        # Rate limit errors - retryable
-        if any(keyword in error_msg for keyword in ["每分钟", "流量"]):
-            return True
-
-        # Network errors - retryable
-        return isinstance(error, TimeoutError | ConnectionError)
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type(_TushareRetryableError),
-    )
-    def query(
+    def _query(
         self,
         api_name: str,
-        fields: str | None = None,
-        **params: Any,
-    ) -> pd.DataFrame:
+        fields: str,
+        **params: str | int,
+    ) -> dict[str, object]:
         """
-        Query Tushare API with rate limiting and retry.
-
-        NOTE: Returns pandas DataFrame because Tushare API returns it natively.
-        The result will be converted to polars DataFrame in source.py.
+        执行 HTTP 查询并返回原始 JSON。
 
         Args:
-            api_name: API name (e.g., "trade_cal", "daily").
-            fields: Comma-separated field names.
-            **params: API parameters.
+            api_name: API 名称
+            fields: 逗号分隔的字段名
+            **params: API 参数
 
         Returns:
-            API response data.
+            Tushare API 响应的 data 字段
 
         Raises:
-            SourceRateLimitError: If rate limit exceeded after retries.
-            SourceAuthenticationError: If authentication fails.
-            SourceFetchError: If query fails after retries.
+            SourceAuthenticationError: 认证失败
+            SourceRateLimitError: 限流
+            SourceFetchError: 其他错误
 
         """
         # 确定分组并进行限流检查
@@ -231,53 +195,82 @@ class TushareClient:
 
         try:
             logger.debug(
-                "Tushare API query",
-                event="tushare_query_start",
+                "Tushare HTTP request",
+                event="tushare_http_request",
                 api_name=api_name,
             )
 
-            response = self._api.query(
-                api_name=api_name,
-                fields=fields,
-                **params,
-            )
+            # 构建请求体
+            request_body = {
+                "api_name": api_name,
+                "token": self._token,
+                "params": params,
+                "fields": fields,
+            }
+
+            # 发送 HTTP POST 请求
+            response = self._client.post("/", json=request_body)
+
+            # 检查 HTTP 状态码 (会针对 4xx/5xx 抛出 HTTPStatusError)
+            response.raise_for_status()
+
+            # 解析 JSON
+            response_json = response.json()
+
+            # 验证响应并返回 data 字段
+            data = validate_tushare_response(response_json)
 
             logger.debug(
-                "Tushare API query success",
-                event="tushare_query_success",
+                "Tushare HTTP request success",
+                event="tushare_http_success",
                 api_name=api_name,
             )
 
-            return response
+            return data
 
-        except Exception as e:
-            error_msg = str(e)
+        except httpx.HTTPStatusError as e:
+            # HTTP 状态码错误,映射到相应异常
+            map_http_error(e, api_name)
 
-            # Check for specific error types
-            if self._is_retryable_error(e):
-                logger.warning(
-                    "Tushare retryable error, will retry",
-                    event="tushare_retry",
-                    error=error_msg,
-                )
-                raise _TushareRetryableError() from e
+        except (httpx.NetworkError, httpx.TimeoutException) as e:
+            # 网络错误和超时,映射到 SourceFetchError
+            map_http_error(e, api_name)
 
-            # Authentication errors
-            if any(keyword in error_msg for keyword in ["权限", "认证"]):
-                logger.error(
-                    "Tushare authentication failed",
-                    event="tushare_auth_error",
-                    error=error_msg,
-                )
-                raise SourceAuthenticationError(
-                    message="Tushare authentication failed",
-                    source="tushare",
-                ) from e
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_exception_type(SourceFetchError),
+    )
+    def query(
+        self,
+        api_name: str,
+        fields: str,
+        **params: str | int,
+    ) -> pl.DataFrame:
+        """
+        Query Tushare API with rate limiting and retry.
 
-            # Other errors
-            raise SourceFetchError(
-                message="Tushare query failed",
-                source="tushare",
-                dataset=api_name,
-                original_error=error_msg,
-            ) from e
+        Args:
+            api_name: API name (e.g., "trade_cal", "daily").
+            fields: Comma-separated field names.
+            **params: API parameters.
+
+        Returns:
+            polars DataFrame
+
+        Raises:
+            SourceRateLimitError: If rate limit exceeded after retries.
+            SourceAuthenticationError: If authentication fails.
+            SourceFetchError: If query fails after retries.
+
+        """
+        # 调用内部 _query 方法获取原始数据
+        data = self._query(api_name, fields, **params)
+
+        # 转换为 polars DataFrame
+        return response_to_dataframe(data)
+
+    def __del__(self) -> None:
+        """清理 HTTP 客户端."""
+        if hasattr(self, "_client"):
+            self._client.close()

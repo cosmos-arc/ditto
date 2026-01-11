@@ -193,7 +193,7 @@ jobs:
             --cov=apps \
             --cov-report=xml:coverage-unit.xml \
             --cov-report=term-missing \
-            --cov-fail-under=70 \
+            --cov-fail-under=80 \
             --junitxml=junit-unit.xml \
             -v \
             --durations=10

@@ -842,7 +842,7 @@ class StrategyContext:
         if symbols is None:
             symbols = self.universe
 
-        start_date = self.trade_date - pd.Timedelta(days=lookback_days)
+        start_date = self.trade_date - timedelta(days=lookback_days)
         return self.data_service.get_kline(
             symbols=symbols,
             start_date=start_date,
@@ -2251,7 +2251,6 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import List, Dict, Callable, Optional
 import polars as pl
-import pandas as pd
 
 
 @dataclass
@@ -2496,12 +2495,20 @@ class WalkForwardValidator:
             periods=periods,
             num_periods=len(periods),
             avg_test_sharpe=sum(test_sharpes) / len(test_sharpes),
-            std_test_sharpe=pd.Series(test_sharpes).std(),
+            std_test_sharpe=self._calc_std(test_sharpes),
             avg_test_return=sum(test_returns) / len(test_returns),
             avg_test_drawdown=sum(test_drawdowns) / len(test_drawdowns),
             positive_periods=sum(1 for r in test_returns if r > 0),
             stability_score=self._calc_stability(test_sharpes)
         )
+
+    def _calc_std(self, values: List[float]) -> float:
+        """计算标准差"""
+        if len(values) < 2:
+            return 0.0
+        mean = sum(values) / len(values)
+        variance = sum((x - mean) ** 2 for x in values) / (len(values) - 1)
+        return variance ** 0.5
 
     def _calc_stability(self, sharpes: List[float]) -> float:
         """计算稳定性得分

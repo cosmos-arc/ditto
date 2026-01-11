@@ -145,7 +145,7 @@
 | `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py` | L3 检查器 |
 | `packages/datahub/src/ditto_datahub/stores/quarantine_store.py` | 隔离区 |
 | `packages/datahub/src/ditto_datahub/dq/report.py` | 报告生成 |
-| `apps/server/src/ditto_server/ingestion/tasks/dq_batch.py` | L3 任务 |
+| `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py` | L3 任务 |
 | `tests/unit/dq/` | 测试文件 |
 
 ---

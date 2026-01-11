@@ -87,7 +87,7 @@ D:\Ditto\                              # 项目根目录
 ├── apps/
 │   ├── server/                        # FastAPI 后端
 │   │   ├── src/
-│   │   │   ├── ditto_server/
+│   │   │   ├── ditto_port/
 │   │   │   │   ├── api/               # HTTP 接口
 │   │   │   │   ├── services/          # 应用服务
 │   │   │   │   ├── ingestion/         # Prefect 数据摄取（新）
@@ -170,7 +170,7 @@ D:\Ditto\                              # 项目根目录
 ### 4.3 Prefect 部署配置
 
 ```python
-# apps/server/src/ditto_server/ingestion/schedules.py
+# apps/server/src/ditto_port/ingestion/schedules.py
 
 from prefect.client.schemas.schedules import CronSchedule
 
@@ -203,7 +203,7 @@ heartbeat_deployment = heartbeat_flow.to_deployment(
 ### 4.4 Flow 实现示例
 
 ```python
-# apps/server/src/ditto_server/ingestion/flows/daily_ingest.py
+# apps/server/src/ditto_port/ingestion/flows/daily_ingest.py
 
 from prefect import flow, get_run_logger
 from ditto_data_hub import DataHub
@@ -317,7 +317,7 @@ Action Required: Review and manually confirm
 ### 5.4 Prefect 告警 Hook
 
 ```python
-# apps/server/src/ditto_server/ingestion/hooks.py
+# apps/server/src/ditto_port/ingestion/hooks.py
 
 from prefect import flow
 from prefect.blocks.notifications import SlackWebhook
@@ -452,7 +452,7 @@ PRAGMA busy_timeout=5000;
 ### 8.2 API 端点
 
 ```python
-# apps/server/src/ditto_server/api/health.py
+# apps/server/src/ditto_port/api/health.py
 
 @router.get("/healthz")
 async def healthz():

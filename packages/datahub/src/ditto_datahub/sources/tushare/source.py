@@ -2,27 +2,37 @@
 
 from __future__ import annotations
 
-import hashlib
-from collections.abc import Callable
-from datetime import datetime
-from typing import TYPE_CHECKING
-
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.sources.base import DataSource, SourceFetchError
-from ditto_datahub.sources.metadata import (
-    DataChangedError,
-    IncrementalMode,
-    IngestionLog,
-    IngestionMetadata,
-    IngestionStatus,
-    NotTradingDayError,
+from ditto_datahub.sources.base import (
+    DataSource,
+    SourceAuthenticationError,
+    SourceFetchError,
+    SourceRateLimitError,
 )
 from ditto_datahub.sources.tushare.client import TushareClient
 
-if TYPE_CHECKING:
-    from ditto_datahub.stores.ingestion_log import IngestionLogStore
+
+def _record_metrics(row_count: int, dataset: str) -> None:
+    """
+    安全地记录数据指标。
+
+    如果 observability 未初始化，静默跳过。
+
+    Args:
+        row_count: 数据行数
+        dataset: 数据集名称
+
+    """
+    try:
+        M.data_records.add(
+            row_count,
+            {"source": "tushare", "dataset": dataset, "status": "success"},
+        )
+    except (AttributeError, TypeError):
+        # Observability 未初始化，静默跳过
+        pass
 
 
 class TushareSource(DataSource):
@@ -41,7 +51,7 @@ class TushareSource(DataSource):
         Initialize Tushare source.
 
         Args:
-            token: API token (reads from TUSHARE_TOKEN env var if None).
+            token: API token. Reads from keyring or ~/.ditto/secrets.toml if None.
 
         """
         self._client = TushareClient(token=token)
@@ -85,7 +95,7 @@ class TushareSource(DataSource):
                 fields="cal_date,is_open",
             )
 
-            # Tushare Pro API returns DataFrame directly
+            # HTTP API 已经返回 polars DataFrame
             if len(response) == 0:
                 logger.info(
                     "Tushare calendar empty",
@@ -96,13 +106,10 @@ class TushareSource(DataSource):
                     schema={"trade_date": pl.Date, "is_open": pl.Boolean}
                 )
 
-            # Convert pandas DataFrame to polars and rename columns
-            df = pl.from_pandas(response).rename({"cal_date": "trade_date"})
-
-            # Transform types
-            df = df.with_columns(
-                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
-                pl.col("is_open").cast(pl.Int8) == 1,
+            # 重命名列并转换类型
+            df = response.rename({"cal_date": "trade_date"}).with_columns(
+                pl.col("trade_date").str.to_date("%Y%m%d"),
+                pl.col("is_open").cast(pl.Boolean),
             )
 
             row_count = len(df)
@@ -111,13 +118,16 @@ class TushareSource(DataSource):
                 event="tushare_calendar_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "calendar", "status": "success"},
-            )
+            _record_metrics(row_count, "calendar")
 
             return df
 
+        except SourceAuthenticationError:
+            # 认证错误直接抛出，不要包装
+            raise
+        except SourceRateLimitError:
+            # 限流错误直接抛出，不要包装
+            raise
         except Exception as e:
             logger.error(
                 "Tushare calendar fetch failed",
@@ -155,11 +165,11 @@ class TushareSource(DataSource):
 
         try:
             response = self._client.query(
-                api_name="etf_basic",
-                fields="ts_code,csname,exchange,list_date",
+                api_name="fund_basic",  # ETF basic 使用 fund_basic API
+                fields="ts_code,name,list_date",  # fund_basic 可能没有 exchange 字段
             )
 
-            # Tushare Pro API returns DataFrame directly
+            # HTTP API 已经返回 polars DataFrame
             if len(response) == 0:
                 logger.info(
                     "Tushare ETF basic empty",
@@ -176,18 +186,20 @@ class TushareSource(DataSource):
                     }
                 )
 
-            # Convert pandas DataFrame to polars and rename columns
-            df = pl.from_pandas(response).rename(
-                {"ts_code": "src_code", "csname": "name"}
+            # 重命名列并转换类型
+            # 从 src_code 中提取 symbol 和 exchange
+            # 例如 "510300.SH" -> "510300" + "SSE"
+            df = response.rename({"ts_code": "src_code"}).with_columns(
+                pl.col("src_code").str.split(".").list.get(0).alias("symbol"),
+                pl.col("src_code")
+                .str.split(".")
+                .list.get(1)
+                .replace({"SH": "SSE", "SZ": "SZSE"})
+                .alias("exchange"),
+                pl.col("list_date").str.to_date("%Y%m%d"),
             )
 
-            # Extract symbol (6-digit code from ts_code) and transform types
-            df = df.with_columns(
-                pl.col("src_code").str.replace(r"\.[A-Z]+$", "").alias("symbol"),
-                pl.col("list_date").str.strptime(pl.Date, "%Y%m%d"),
-            )
-
-            # Select and reorder columns (exchange already in SSE/SZSE format)
+            # 选择并重排列
             df = df.select("src_code", "symbol", "name", "exchange", "list_date")
 
             row_count = len(df)
@@ -196,10 +208,7 @@ class TushareSource(DataSource):
                 event="tushare_etf_basic_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "etf_basic", "status": "success"},
-            )
+            _record_metrics(row_count, "etf_basic")
 
             return df
 
@@ -252,7 +261,7 @@ class TushareSource(DataSource):
                 fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
             )
 
-            # Tushare Pro API returns DataFrame directly
+            # HTTP API 已经返回 polars DataFrame
             if len(response) == 0:
                 logger.info(
                     "Tushare ETF daily empty",
@@ -274,18 +283,11 @@ class TushareSource(DataSource):
                     }
                 )
 
-            # Convert pandas DataFrame to polars and rename columns
-            df = pl.from_pandas(response).rename(
-                {
-                    "ts_code": "src_code",
-                    "vol": "volume",
-                    "pct_chg": "pct_change",
-                }
-            )
-
-            # Transform trade_date string to Date and ensure float types
-            df = df.with_columns(
-                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+            # 重命名列并转换类型
+            df = response.rename(
+                {"ts_code": "src_code", "vol": "volume", "pct_chg": "pct_change"}
+            ).with_columns(
+                pl.col("trade_date").str.to_date("%Y%m%d"),
                 pl.col("open").cast(pl.Float64),
                 pl.col("high").cast(pl.Float64),
                 pl.col("low").cast(pl.Float64),
@@ -296,7 +298,7 @@ class TushareSource(DataSource):
                 pl.col("pct_change").cast(pl.Float64),
             )
 
-            # Select required columns
+            # 选择所需的列
             df = df.select(
                 "src_code",
                 "trade_date",
@@ -316,10 +318,7 @@ class TushareSource(DataSource):
                 event="tushare_etf_daily_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "etf_daily", "status": "success"},
-            )
+            _record_metrics(row_count, "etf_daily")
 
             return df
 
@@ -381,11 +380,14 @@ class TushareSource(DataSource):
                     }
                 )
 
-            df = pl.from_pandas(response).rename({"ts_code": "src_code"})
-
-            df = df.with_columns(
-                pl.col("list_date").str.strptime(pl.Date, "%Y%m%d"),
-            ).select("src_code", "symbol", "name", "exchange", "list_date")
+            # 重命名列并转换类型
+            df = (
+                response.rename({"ts_code": "src_code"})
+                .with_columns(
+                    pl.col("list_date").str.to_date("%Y%m%d"),
+                )
+                .select("src_code", "symbol", "name", "exchange", "list_date")
+            )
 
             row_count = len(df)
             logger.info(
@@ -393,10 +395,7 @@ class TushareSource(DataSource):
                 event="tushare_stock_basic_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "stock_basic", "status": "success"},
-            )
+            _record_metrics(row_count, "stock_basic")
 
             return df
 
@@ -469,16 +468,11 @@ class TushareSource(DataSource):
                     }
                 )
 
-            df = pl.from_pandas(response).rename(
-                {
-                    "ts_code": "src_code",
-                    "vol": "volume",
-                    "pct_chg": "pct_change",
-                }
-            )
-
-            df = df.with_columns(
-                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+            # 重命名列并转换类型
+            df = response.rename(
+                {"ts_code": "src_code", "vol": "volume", "pct_chg": "pct_change"}
+            ).with_columns(
+                pl.col("trade_date").str.to_date("%Y%m%d"),
                 pl.col("open").cast(pl.Float64),
                 pl.col("high").cast(pl.Float64),
                 pl.col("low").cast(pl.Float64),
@@ -508,10 +502,7 @@ class TushareSource(DataSource):
                 event="tushare_stock_daily_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "stock_daily", "status": "success"},
-            )
+            _record_metrics(row_count, "stock_daily")
 
             return df
 
@@ -557,6 +548,7 @@ class TushareSource(DataSource):
             ts_date = trade_date.replace("-", "")
             response = self._client.query(
                 api_name="adj_factor",
+                fields="ts_code,trade_date,adj_factor",
                 trade_date=ts_date,
             )
 
@@ -575,16 +567,11 @@ class TushareSource(DataSource):
                     }
                 )
 
-            df = pl.from_pandas(response).rename({"ts_code": "src_code"})
-
-            # 添加 knowledge_date 列（Tushare 当日数据，knowledge_date = trade_date）
-            df = df.with_columns(
-                pl.col("trade_date")
-                .str.strptime(pl.Date, "%Y%m%d")
-                .alias("trade_date"),
-                pl.col("trade_date")
-                .str.strptime(pl.Date, "%Y%m%d")
-                .alias("knowledge_date"),
+            # 重命名列并转换类型
+            # knowledge_date = trade_date (数据即日可用)
+            df = response.rename({"ts_code": "src_code"}).with_columns(
+                pl.col("trade_date").str.to_date("%Y%m%d"),
+                pl.col("trade_date").str.to_date("%Y%m%d").alias("knowledge_date"),
                 pl.col("adj_factor").cast(pl.Float64),
             )
 
@@ -596,10 +583,7 @@ class TushareSource(DataSource):
                 event="tushare_adj_factor_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "adj_factor", "status": "success"},
-            )
+            _record_metrics(row_count, "adj_factor")
 
             return df
 
@@ -645,6 +629,7 @@ class TushareSource(DataSource):
             ts_date = trade_date.replace("-", "")
             response = self._client.query(
                 api_name="fund_adj",
+                fields="ts_code,trade_date,adj_factor",
                 trade_date=ts_date,
             )
 
@@ -663,16 +648,11 @@ class TushareSource(DataSource):
                     }
                 )
 
-            df = pl.from_pandas(response).rename({"ts_code": "src_code"})
-
-            # 添加 knowledge_date 列（Tushare 当日数据，knowledge_date = trade_date）
-            df = df.with_columns(
-                pl.col("trade_date")
-                .str.strptime(pl.Date, "%Y%m%d")
-                .alias("trade_date"),
-                pl.col("trade_date")
-                .str.strptime(pl.Date, "%Y%m%d")
-                .alias("knowledge_date"),
+            # 重命名列并转换类型
+            # knowledge_date = trade_date (数据即日可用)
+            df = response.rename({"ts_code": "src_code"}).with_columns(
+                pl.col("trade_date").str.to_date("%Y%m%d"),
+                pl.col("trade_date").str.to_date("%Y%m%d").alias("knowledge_date"),
                 pl.col("adj_factor").cast(pl.Float64),
             )
 
@@ -684,10 +664,7 @@ class TushareSource(DataSource):
                 event="tushare_fund_adj_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "fund_adj", "status": "success"},
-            )
+            _record_metrics(row_count, "fund_adj")
 
             return df
 
@@ -703,137 +680,6 @@ class TushareSource(DataSource):
                 dataset="fund_adj",
                 original_error=str(e),
             ) from e
-
-    @traced("source.tushare.fetch_etf_daily_incremental")
-    def fetch_etf_daily_incremental(
-        self,
-        trade_date: str,
-        mode: IncrementalMode = IncrementalMode.QUICK,
-        last_trade_date: str | None = None,
-        last_checksum: str | None = None,
-    ) -> tuple[pl.DataFrame, IngestionMetadata]:
-        """
-        Fetch ETF daily data with incremental update support.
-
-        Args:
-            trade_date: Trade date to fetch (YYYY-MM-DD).
-            mode: Incremental mode (QUICK=date check, PRECISE=data check).
-            last_trade_date: Last successfully fetched trade date (for QUICK mode).
-            last_checksum: Checksum of last fetched data (for PRECISE mode).
-
-        Returns:
-            Tuple of:
-            - DataFrame with ETF daily data (empty if skipped)
-            - IngestionMetadata with checksum and metadata
-
-        Raises:
-            SourceFetchError: If fetch fails.
-            SourceTransformationError: If data transformation fails.
-
-        """
-        from datetime import date as date_type
-
-        logger.info(
-            "Fetching Tushare ETF daily incremental",
-            event="tushare_etf_daily_incremental_start",
-            trade_date=trade_date,
-            mode=mode.value,
-            last_trade_date=last_trade_date,
-        )
-
-        target_date = date_type.fromisoformat(trade_date)
-
-        # QUICK mode: Check if we need to fetch based on dates
-        if mode == IncrementalMode.QUICK and last_trade_date:
-            last_date = date_type.fromisoformat(last_trade_date)
-            if target_date <= last_date:
-                # Skip fetch - data is up to date
-                logger.info(
-                    "QUICK mode: Skipping fetch - data is up to date",
-                    event="tushare_etf_daily_incremental_skip",
-                    reason="uptodate",
-                    last_trade_date=last_trade_date,
-                    target_date=trade_date,
-                )
-                empty_df = pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "trade_date": pl.Date,
-                        "open": pl.Float64,
-                        "high": pl.Float64,
-                        "low": pl.Float64,
-                        "close": pl.Float64,
-                        "pre_close": pl.Float64,
-                        "volume": pl.Float64,
-                        "amount": pl.Float64,
-                        "pct_change": pl.Float64,
-                    }
-                )
-                metadata = IngestionMetadata(
-                    dataset="etf_daily",
-                    source="tushare",
-                    last_trade_date=target_date.isoformat(),
-                    last_checksum=last_checksum,
-                    last_rows=0,
-                    last_updated_at=datetime.now().isoformat(),
-                )
-                return empty_df, metadata
-
-        # Fetch data
-        df = self.fetch_etf_daily(trade_date)
-
-        # If empty, return empty result
-        if df.is_empty():
-            metadata = IngestionMetadata(
-                dataset="etf_daily",
-                source="tushare",
-                last_trade_date=target_date.isoformat(),
-                last_checksum=None,
-                last_rows=0,
-                last_updated_at=datetime.now().isoformat(),
-            )
-            return df, metadata
-
-        # PRECISE mode: Check checksum to see if data changed
-        if mode == IncrementalMode.PRECISE and last_checksum:
-            current_checksum = self._compute_checksum(df)
-            if current_checksum == last_checksum:
-                # Skip - data unchanged
-                logger.info(
-                    "PRECISE mode: Skipping fetch - data unchanged",
-                    event="tushare_etf_daily_incremental_skip",
-                    reason="checksum_match",
-                    checksum=current_checksum,
-                )
-                metadata = IngestionMetadata(
-                    dataset="etf_daily",
-                    source="tushare",
-                    last_trade_date=target_date.isoformat(),
-                    last_checksum=last_checksum,
-                    last_rows=0,
-                    last_updated_at=datetime.now().isoformat(),
-                )
-                return pl.DataFrame(schema=df.schema), metadata
-
-        # Compute checksum and metadata
-        checksum = self._compute_checksum(df)
-        metadata = IngestionMetadata(
-            dataset="etf_daily",
-            source="tushare",
-            last_trade_date=target_date.isoformat(),
-            last_checksum=checksum,
-            last_rows=len(df),
-            last_updated_at=datetime.now().isoformat(),
-        )
-
-        logger.info(
-            "Tushare ETF daily incremental fetched",
-            event="tushare_etf_daily_incremental_complete",
-            row_count=len(df),
-            checksum=checksum,
-        )
-
-        return df, metadata
 
     @traced("source.tushare.fetch_stock_limit")
     def fetch_stock_limit(self, trade_date: str) -> pl.DataFrame:
@@ -876,17 +722,16 @@ class TushareSource(DataSource):
                 )
                 return pl.DataFrame(
                     schema={
-                        "src_code": pl.Utf8,
+                        "src_code": pl.String,
                         "trade_date": pl.Date,
                         "up_limit": pl.Float64,
                         "down_limit": pl.Float64,
                     }
                 )
 
-            df = pl.from_pandas(response).rename({"ts_code": "src_code"})
-
-            df = df.with_columns(
-                pl.col("trade_date").str.strptime(pl.Date, "%Y%m%d"),
+            # 重命名列并转换类型
+            df = response.rename({"ts_code": "src_code"}).with_columns(
+                pl.col("trade_date").str.to_date("%Y%m%d"),
                 pl.col("up_limit").cast(pl.Float64),
                 pl.col("down_limit").cast(pl.Float64),
             )
@@ -899,10 +744,7 @@ class TushareSource(DataSource):
                 event="tushare_stock_limit_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "stock_limit", "status": "success"},
-            )
+            _record_metrics(row_count, "stock_limit")
 
             return df
 
@@ -958,8 +800,8 @@ class TushareSource(DataSource):
             # 1. Fetch suspension data from suspend_d API
             suspend_df = pl.DataFrame(
                 schema={
-                    "ts_code": pl.Utf8,
-                    "suspend_timing": pl.Utf8,
+                    "ts_code": pl.String,
+                    "suspend_timing": pl.String,
                 }
             )
             try:
@@ -969,7 +811,7 @@ class TushareSource(DataSource):
                     fields="ts_code,suspend_timing",
                 )
                 if len(suspend_response) > 0:
-                    suspend_df = pl.from_pandas(suspend_response)
+                    suspend_df = suspend_response
             except Exception as e:
                 logger.warning(
                     "Failed to fetch suspend_d data",
@@ -978,14 +820,14 @@ class TushareSource(DataSource):
                 )
 
             # 2. Fetch ST status from stock_st API
-            st_df = pl.DataFrame(schema={"ts_code": pl.Utf8, "name": pl.Utf8})
+            st_df = pl.DataFrame(schema={"ts_code": pl.String, "name": pl.String})
             try:
                 st_response = self._client.query(
                     api_name="stock_st",
                     fields="ts_code,name",
                 )
                 if len(st_response) > 0:
-                    st_df = pl.from_pandas(st_response)
+                    st_df = st_response
             except Exception as e:
                 logger.warning(
                     "Failed to fetch stock_st data",
@@ -995,7 +837,7 @@ class TushareSource(DataSource):
 
             # 3. Fetch list_status from stock_basic API
             list_status_df = pl.DataFrame(
-                schema={"ts_code": pl.Utf8, "list_status": pl.Utf8}
+                schema={"ts_code": pl.String, "list_status": pl.String}
             )
             try:
                 basic_response = self._client.query(
@@ -1003,7 +845,7 @@ class TushareSource(DataSource):
                     fields="ts_code,list_status",
                 )
                 if len(basic_response) > 0:
-                    list_status_df = pl.from_pandas(basic_response)
+                    list_status_df = basic_response
             except Exception as e:
                 logger.warning(
                     "Failed to fetch stock_basic list_status",
@@ -1055,7 +897,7 @@ class TushareSource(DataSource):
 
             # Add trade_date column
             result = result.with_columns(
-                pl.lit(trade_date).str.strptime(pl.Date, "%Y-%m-%d").alias("trade_date")
+                pl.lit(trade_date).str.to_date("%Y-%m-%d").alias("trade_date")
             )
 
             # Select and reorder columns
@@ -1075,10 +917,7 @@ class TushareSource(DataSource):
                 event="tushare_stock_status_fetch_complete",
                 row_count=row_count,
             )
-            M.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "stock_status", "status": "success"},
-            )
+            _record_metrics(row_count, "stock_status")
 
             return result
 
@@ -1094,196 +933,3 @@ class TushareSource(DataSource):
                 dataset="stock_status",
                 original_error=str(e),
             ) from e
-
-    def _compute_checksum(self, df: pl.DataFrame) -> str:
-        """
-        Compute checksum of DataFrame for change detection.
-
-        Args:
-            df: DataFrame to compute checksum for.
-
-        Returns:
-            Hex checksum string (first 16 characters of SHA256).
-
-        """
-        # Convert to bytes using IPC format
-        import io
-
-        buffer = io.BytesIO()
-        df.write_ipc(buffer)
-        content = buffer.getvalue()
-        return hashlib.sha256(content).hexdigest()[:16]
-
-    @traced("source.tushare.ingest_date")
-    def ingest_date(
-        self,
-        dataset: str,
-        trade_date: str,
-        force: bool = False,
-        _is_trading_day_fn: Callable[[str], bool] | None = None,
-        _log_store: IngestionLogStore | None = None,
-    ) -> tuple[pl.DataFrame, IngestionLog]:
-        """
-        Ingest data for a specific date (new interface).
-
-        Args:
-            dataset: Dataset name (e.g., "stock_daily", "etf_daily").
-            trade_date: Trade date (YYYY-MM-DD).
-            force: Force update even if data was fetched before.
-            _is_trading_day_fn: Optional function to validate trading days.
-                If provided, must raise NotTradingDayError for non-trading days.
-                Signature: (date_str: str) -> bool
-            _log_store: Optional IngestionLogStore for checksum validation.
-                If provided, enables checksum-based change detection and
-                implements the force parameter semantics.
-
-        Returns:
-            Tuple of:
-            - DataFrame with data (empty if data unchanged and force=False)
-            - IngestionLog with ingestion metadata
-
-        Raises:
-            NotTradingDayError: If trade_date is not a trading day.
-            DataChangedError: If data checksum changed and force=False.
-            SourceFetchError: If fetch fails or returns empty dataframe.
-            ValueError: If dataset is not supported.
-
-        Note:
-            Trading day validation is performed when _is_trading_day_fn is provided.
-            Checksum validation is performed when _log_store is provided.
-            This method validates that the fetched data is non-empty.
-
-        """
-        logger.info(
-            "Tushare ingest_date start",
-            event="tushare_ingest_date_start",
-            dataset=dataset,
-            trade_date=trade_date,
-            force=force,
-        )
-
-        # Validate trading day if validation function is provided
-        if _is_trading_day_fn is not None and not _is_trading_day_fn(trade_date):
-            raise NotTradingDayError(trade_date)
-
-        # Route to appropriate fetch method based on dataset
-        fetch_map = {
-            "stock_daily": self.fetch_stock_daily,
-            "etf_daily": self.fetch_etf_daily,
-            "adj_factor": self.fetch_adj_factor,
-            "fund_adj": self.fetch_fund_adj,
-        }
-
-        fetch_fn = fetch_map.get(dataset)
-        if fetch_fn is None:
-            raise ValueError(
-                f"Unsupported dataset: {dataset}. "
-                f"Supported datasets: {list(fetch_map.keys())}"
-            )
-
-        # Fetch data
-        df = fetch_fn(trade_date)
-
-        # Validate: trading day should not return empty df
-        if df.is_empty():
-            from datetime import date as date_type
-
-            target_date = date_type.fromisoformat(trade_date)
-            raise SourceFetchError(
-                message=(
-                    f"Trading day {trade_date} returned empty data for {dataset}. "
-                    "This may indicate a data quality issue or the date is not "
-                    "a trading day."
-                ),
-                source="tushare",
-                dataset=dataset,
-                trade_date=target_date,
-            )
-
-        # Compute checksum
-        checksum = self._compute_checksum(df)
-        now = datetime.now().isoformat()
-
-        # Checksum validation if log store is provided
-        if _log_store is not None:
-            previous_log = _log_store.get_log(dataset, "tushare", trade_date)
-
-            if (
-                previous_log is not None
-                and previous_log.status == IngestionStatus.SUCCESS
-                and previous_log.checksum is not None
-            ):
-                if checksum == previous_log.checksum:
-                    # Data unchanged - return empty DataFrame
-                    logger.info(
-                        "Tushare ingest_date unchanged - returning empty",
-                        event="tushare_ingest_date_unchanged",
-                        dataset=dataset,
-                        trade_date=trade_date,
-                        checksum=checksum,
-                    )
-
-                    log = IngestionLog(
-                        dataset=dataset,
-                        source="tushare",
-                        trade_date=trade_date,
-                        status=IngestionStatus.SUCCESS,
-                        checksum=checksum,
-                        rows=previous_log.rows,
-                        attempts=previous_log.attempts,
-                        first_attempt_at=previous_log.first_attempt_at,
-                        last_attempt_at=now,
-                    )
-
-                    return pl.DataFrame(schema=df.schema), log
-                elif not force:
-                    # Data changed and force=False - raise error
-                    logger.warning(
-                        "Tushare ingest_date data changed",
-                        event="tushare_ingest_date_changed",
-                        dataset=dataset,
-                        trade_date=trade_date,
-                        old_checksum=previous_log.checksum,
-                        new_checksum=checksum,
-                    )
-
-                    raise DataChangedError(
-                        trade_date=trade_date,
-                        old_checksum=previous_log.checksum,
-                        new_checksum=checksum,
-                    )
-
-        # Create log
-        log = IngestionLog(
-            dataset=dataset,
-            source="tushare",
-            trade_date=trade_date,
-            status=IngestionStatus.SUCCESS,
-            checksum=checksum,
-            rows=len(df),
-            attempts=1,
-            first_attempt_at=now,
-            last_attempt_at=now,
-        )
-
-        # Save log to store if provided
-        if _log_store is not None:
-            _log_store.save_log(
-                dataset=dataset,
-                source="tushare",
-                trade_date=trade_date,
-                status=IngestionStatus.SUCCESS,
-                checksum=checksum,
-                rows=len(df),
-            )
-
-        logger.info(
-            "Tushare ingest_date complete",
-            event="tushare_ingest_date_complete",
-            dataset=dataset,
-            trade_date=trade_date,
-            row_count=len(df),
-            checksum=checksum,
-        )
-
-        return df, log

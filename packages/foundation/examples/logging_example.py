@@ -73,7 +73,7 @@ def example_contextual_logging() -> None:
         "resolve_sid_found",
         event="sid_resolve",
         src_code="600000.SH",
-        sid=100000001,
+        sid=1000001,
     )
 
     # Not found
@@ -134,7 +134,7 @@ def example_business_logging() -> None:
     logger.info(
         "dq_check_start",
         event="dq_check",
-        dataset_id="market_daily",
+        dataset_id="stock_daily",
         rules_count=5,
         row_count=10000,
     )
@@ -142,7 +142,7 @@ def example_business_logging() -> None:
     logger.info(
         "dq_check_complete",
         event="dq_check",
-        dataset_id="market_daily",
+        dataset_id="stock_daily",
         passed=True,
         fail_count=0,
         warn_count=2,
@@ -154,7 +154,7 @@ def example_business_logging() -> None:
         event="pipeline_run",
         run_id="run_20241223_001",
         task_name="update_market_data",
-        dataset_id="market_daily",
+        dataset_id="stock_daily",
         status="running",
     )
 

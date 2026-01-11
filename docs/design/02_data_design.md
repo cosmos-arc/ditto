@@ -268,7 +268,7 @@ packages/
 ## 三、数据目录结构
 
 ```
-$DITTO_DATA_ROOT/
+$DITTO_DATA_DIR/
 │
 ├── meta/
 │   └── hub.sqlite                    # SQLite 元数据库

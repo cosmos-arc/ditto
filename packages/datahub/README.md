@@ -64,7 +64,7 @@ DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
 | `PipelineStore` | ETL 流水 | SQLite |
 | `UniverseStore` | 股票池 | SQLite |
 | `IndexWeightStore` | 指数权重 | SQLite |
-| `IngestionMetadataStore` | 数据摄取元数据 | SQLite |
+| `IngestionLogStore` | 数据摄取事件日志 | SQLite |
 | `QuarantineStore` | 数据隔离区 | SQLite |
 
 ### Repository 层
@@ -236,6 +236,80 @@ report = hub.dq_checker.generate_report(result)
 report.save_html("dq_report.html")
 ```
 
+### DQ 配置管理
+
+Ditto 使用 YAML 配置定义数据质量规则，支持用户自定义覆盖包内默认配置。
+
+#### 配置路径
+
+| 类型 | 路径 | 说明 |
+|------|------|------|
+| **默认配置** | `{package}/config/dq_rules/*.yml` | 包内默认规则 |
+| **用户配置** | `{data_root}/config/dq/*.yml` | 用户自定义规则（覆盖默认） |
+
+#### 加载优先级
+
+用户配置优先级高于默认配置：`用户配置 > 包内默认配置`
+
+#### 初始化用户配置
+
+```bash
+# 复制默认配置到用户目录
+pixi run -e dev python -m ditto_datahub.cli.init_dq_config /path/to/data_root
+```
+
+示例输出：
+```
+Created: /path/to/data_root/config/dq/stock_daily.yml
+Created: /path/to/data_root/config/dq/etf_daily.yml
+Skipped (exists): /path/to/data_root/config/dq/index_daily.yml
+
+DQ config initialized at: /path/to/data_root/config/dq
+  Created: 2 files
+  Skipped: 1 files
+You can now customize these files.
+```
+
+#### 配置示例
+
+```yaml
+# packages/datahub/config/dq_rules/stock_daily.yml
+dataset: stock_daily
+description: "股票日 K 线数据质量检查规则"
+
+# L1: 技术校验（写入时强制阻断）
+l1_technical:
+  - rule: not_null
+    columns: [sid, trade_date, open, high, low, close, volume, amount]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [sid, trade_date]
+    message: "主键 (sid, trade_date) 重复"
+
+# L2: 业务规则（写入时警告但不阻断）
+l2_business:
+  - rule: positive
+    columns: [open, high, low, close, volume, amount]
+    message: "OHLC 价格、成交额必须为正数"
+
+# L3: 统计异常（定时批量检查）
+l3_statistical:
+  - rule: zscore
+    name: volume_spike
+    column: volume
+    window: 60
+    threshold: 5
+    group_by: sid
+    message: "成交量异常波动（Z-score > 5）"
+```
+
+#### 自定义配置
+
+1. 运行初始化脚本复制默认配置
+2. 编辑 `{data_root}/config/dq/*.yml` 自定义规则
+3. 重启应用使配置生效
+
 ## PIT 安全核心规则
 
 ### 为什么需要 PIT 安全？
@@ -354,12 +428,11 @@ ${data_root}/
 
 ### 设计概述
 
-Ingestion Metadata 系统采用 **"事件日志 + 游标"** 模式，跟踪每日数据摄取状态：
+Ingestion Metadata 系统采用 **"事件日志"** 模式，跟踪每日数据摄取状态：
 
 | 组件 | 说明 | 表 |
 |------|------|-----|
 | `IngestionLogStore` | 每日摄取事件日志 | `ingestion_log` |
-| `IngestionCursorStore` | 进度游标（加速查询） | `ingestion_cursor` |
 
 ### 核心设计
 
@@ -375,7 +448,7 @@ Ingestion Metadata 系统采用 **"事件日志 + 游标"** 模式，跟踪每�
 └─────────────────────────────────┘
 ```
 
-**新设计（事件日志 + 游标）**：
+**新设计（事件日志）**：
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ ingestion_log (每个交易日一条记录)                        │
@@ -387,21 +460,15 @@ Ingestion Metadata 系统采用 **"事件日志 + 游标"** 模式，跟踪每�
 │ │ 12-25    │ FAIL   │ NULL     │ 1        │ 12-25   │  │
 │ │ 12-26    │ SUCCESS│ b2c3...  │ 1        │ 12-26   │  │
 │ └──────────┴────────┴─────────┴──────────┴─────────┘  │
-│                                                          │
-│ ingestion_cursor (游标，加速查询)                        │
-│ ├────────────────┬───────────────────┐                 │
-│ │ last_success   │ 2024-12-26        │                 │
-│ │ last_attempted │ 2024-12-25        │                 │
-│ └────────────────┴───────────────────┘                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
 #### 状态定义
 
-| 状态 | 场景 | 更新游标 |
-|------|------|----------|
-| **SUCCESS** | 获取成功，DQ 通过 | ✓ |
-| **FAIL** | 获取失败 / DQ 阻断 / 交易日空 df | ✗ |
+| 状态 | 场景 |
+|------|------|
+| **SUCCESS** | 获取成功，DQ 通过 |
+| **FAIL** | 获取失败 / DQ 阻断 / 交易日空 df |
 
 **重要**：非交易日不记录，依赖 `calendar` 表判断。
 
@@ -415,7 +482,6 @@ hub = DataHub()
 
 # 记录成功摄取
 log_store = hub.ingestion_log
-cursor_store = hub.ingestion_cursor
 
 # 保存成功日志
 log = log_store.save_log(
@@ -427,9 +493,6 @@ log = log_store.save_log(
     rows=5000,
 )
 
-# 更新游标
-cursor_store.update_success("stock_daily", "tushare", "2024-12-27")
-
 # 记录失败
 fail_log = log_store.save_log(
     dataset="stock_daily",
@@ -440,9 +503,6 @@ fail_log = log_store.save_log(
     error_message="OHLC consistency check failed",
 )
 
-# 只更新 attempted（不更新 last_success）
-cursor_store.update_attempted("stock_daily", "tushare", "2024-12-24")
-
 # 查询失败重跑
 failed_dates = log_store.get_failed_dates(
     dataset="stock_daily",
@@ -451,18 +511,25 @@ failed_dates = log_store.get_failed_dates(
     max_attempts=3,
 )
 # ["2024-12-24", "2024-12-25", ...]
+
+# 获取最后成功日期
+last_success = log_store.get_last_success_date(
+    dataset="stock_daily",
+    source="tushare",
+)
+# "2024-12-26"
 ```
 
-### Phase 0.4: Source 层重构（待实现）
+### Phase 0.4: Source 层重构 ✅ (已完成 - 2026-01-03)
 
 #### 目标
 
 移除 `IncrementalMode.QUICK/PRECISE`，统一为 `ingest_date()` 接口。
 
-#### 旧接口（已废弃）
+#### 旧接口（已删除）
 
 ```python
-# ❌ 旧接口：使用 QUICK/PRECISE 模式
+# ❌ 旧接口：使用 QUICK/PRECISE 模式（已删除）
 df, metadata = source.fetch_etf_daily_incremental(
     trade_date="2024-12-27",
     mode=IncrementalMode.QUICK,  # 或 PRECISE
@@ -471,11 +538,14 @@ df, metadata = source.fetch_etf_daily_incremental(
 )
 ```
 
-#### 新接口（待实现）
+#### 新接口（使用 IngestionCoordinator）
 
 ```python
-# ✅ 新接口：使用 force 参数
-df, log = source.ingest_date(
+# ✅ 新接口：使用 IngestionCoordinator
+from ditto_server.ingestion.services.coordinator import IngestionCoordinator
+
+coordinator = IngestionCoordinator(hub, source)
+result = coordinator.ingest_date(
     dataset="stock_daily",
     trade_date="2024-12-27",
     force=False,  # 强制更新，忽略 checksum
@@ -487,16 +557,17 @@ df, log = source.ingest_date(
 1. **非交易日检查**：抛出 `NotTradingDayError`
 2. **交易日空 df**：抛出 `SourceFetchError`（数据质量异常）
 3. **Checksum 验证**：
-   - 未变且非 force → 返回空 df
+   - 未变且非 force → 跳过（返回空结果）
    - 变化且非 force → 抛出 `DataChangedError`
-4. **返回值**：`(DataFrame, IngestionLog)` 元组
+4. **返回值**：`IngestionResult` 对象，包含状态和元数据
 
-#### 相关文件
+#### 完成状态
 
-- `sources/metadata.py` - 移除 `IncrementalMode`
-- `sources/base.py` - 更新接口定义
-- `sources/tushare/source.py` - 重构实现
-- `repositories/bars.py` - 集成新 metadata
+- ✅ 移除 `IncrementalMode` 枚举
+- ✅ 移除 `IngestionMetadata` dataclass
+- ✅ 移除 `DataSource.fetch_etf_daily_incremental()` 抽象方法
+- ✅ 移除 `TushareSource.fetch_etf_daily_incremental()` 实现
+- ✅ 实现 `IngestionCoordinator` 作为新的摄取协调器
 
 ## 性能优化
 

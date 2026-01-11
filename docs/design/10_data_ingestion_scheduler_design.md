@@ -14,10 +14,10 @@
 
 ### 1.1 需求
 
-基于 Ditto 数据层设计（02_data_design.md），规划 Server 侧数据摄取定时任务：
+基于 Ditto 数据层设计（02_data_design.md），规划 Port 侧数据摄取定时任务：
 
 - 支持定时自动执行
-- 支持手动触发
+- 支持手动触发（CLI/API）
 - 支持失败重试
 - 支持任务依赖编排
 - 可观测（执行历史、日志、状态）
@@ -42,10 +42,25 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              Server 层                                       │
+│                              Port 层                                        │
 │                                                                              │
+│   ┌─────────────────────────────┐   ┌─────────────────────────────────────┐ │
+│   │   CLI 入口 (cli/)           │   │   Jobs 入口 (jobs/)                 │ │
+│   │  - stock daily             │   │  - Prefect Flows                    │ │
+│   │  - stock backfill          │   │  - Prefect Tasks                    │ │
+│   │  - etf daily               │   │                                    │ │
+│   └─────────────┬───────────────┘   └─────────────────┬───────────────────┘ │
+│                 │                                    │                        │
+│                 └────────────────┬───────────────────┘                        │
+│                                  ▼                                            │
 │   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │                    Prefect Flows（编排层）                           │   │
+│   │                    Services 层（services/ingestion/）                │   │
+│   │  - IngestionCoordinator  (摄取协调器)                               │   │
+│   │  - BackfillManager     (回补管理器)                                  │   │
+│   │  - RetryManager        (重试管理器)                                  │   │
+│   │  - MetadataManager     (元数据管理器)                                │   │
+│   └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
 │   │                                                                      │   │
 │   │   ┌──────────────────────────────────────────────────────────────┐  │   │
 │   │   │  T0 → T1 → T2 → T3 分层语义                                    │  │   │
@@ -66,26 +81,6 @@
 │   │   │                         → 调用 IngestionCoordinator           │  │   │
 │   │   └──────────────────────────────────────────────────────────────┘  │   │
 │   └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                         │
-│                                    │ 调用                                    │
-│                                    ▼                                         │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                     │
-                                     ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         Ingestion Service 层（新增）                          │
-│                                                                              │
-│   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │                    IngestionCoordinator                              │   │
-│   │  - ingest_date(): 单日摄取                                           │   │
-│   │  - ingest_range(): 日期范围摄取                                       │   │
-│   └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                              │
-│   ┌──────────────────┐  ┌──────────────┐  ┌────────────────┐               │
-│   │ MetadataManager  │  │BackfillManager│  │ RetryManager   │               │
-│   │ - checksum计算   │  │ - 全量回补    │  │ - 失败重试     │               │
-│   │ - 增量判断       │  │ - 并行处理    │  │ - 空洞扫描     │               │
-│   └──────────────────┘  └──────────────┘  └────────────────┘               │
 │                                    │                                         │
 │                                    │ 调用                                    │
 │                                    ▼                                         │
@@ -175,7 +170,7 @@
 **核心思想**：`DATASET_REGISTRY` 作为单一配置源
 
 ```python
-# apps/server/src/ditto_server/ingestion/config/datasets.py
+# apps/server/src/ditto_port/ingestion/config/datasets.py
 
 class Dataset(str, Enum):
     """数据集枚举"""
@@ -515,7 +510,7 @@ apps/
     pyproject.toml
 
     src/
-      ditto_server/
+      ditto_port/
         __init__.py
         main.py                     # FastAPI 入口
 
@@ -594,12 +589,12 @@ from typing import Literal
 from prefect import flow, get_run_logger
 from prefect.futures import wait
 
-from ditto_server.ingestion.config.datasets import (
+from ditto_port.ingestion.config.datasets import (
     Dataset,
     TaskTier,
     DATASET_REGISTRY,
 )
-from ditto_server.ingestion.tasks import (
+from ditto_port.ingestion.tasks import (
     ingest_calendar,
     ingest_etf_basic,
     ingest_stock_basic,
@@ -607,9 +602,9 @@ from ditto_server.ingestion.tasks import (
     ingest_stock_daily,
     ingest_adj_factor,
 )
-from ditto_server.ingestion.tasks.t0_meta import check_trading_day
-from ditto_server.ingestion.tasks.t3_quality import run_quality_checks
-from ditto_server.ingestion.hooks import on_flow_failure
+from ditto_port.ingestion.tasks.t0_meta import check_trading_day
+from ditto_port.ingestion.tasks.t3_quality import run_quality_checks
+from ditto_port.ingestion.hooks import on_flow_failure
 
 
 # Task 注册表
@@ -731,8 +726,8 @@ def daily_ingestion_flow(
 from datetime import date
 from prefect import flow, get_run_logger
 
-from ditto_server.ingestion.config.datasets import Dataset
-from ditto_server.ingestion.tasks import backfill_chunk
+from ditto_port.ingestion.config.datasets import Dataset
+from ditto_port.ingestion.tasks import backfill_chunk
 from ditto_datahub import DataHub
 
 
@@ -749,7 +744,7 @@ def backfill_chunk(
 
     hub = DataHub(data_root=data_root)
     try:
-        from ditto_server.ingestion.services.backfill import BackfillManager
+        from ditto_port.ingestion.services.backfill import BackfillManager
 
         manager = BackfillManager(hub, source)
         result = manager.backfill_dates(
@@ -839,8 +834,8 @@ def backfill_flow(
 from datetime import date, timedelta
 from prefect import flow, get_run_logger
 
-from ditto_server.ingestion.config.datasets import Dataset, DATASET_REGISTRY
-from ditto_server.ingestion.services.retry import RetryManager
+from ditto_port.ingestion.config.datasets import Dataset, DATASET_REGISTRY
+from ditto_port.ingestion.services.retry import RetryManager
 from ditto_datahub import DataHub
 
 
@@ -889,7 +884,7 @@ def repair_holes_flow(
             return {"dataset": dataset.value, "holes_found": 0, "repaired": 0}
 
         # 触发回补
-        from ditto_server.ingestion.flows.backfill import backfill_chunk
+        from ditto_port.ingestion.flows.backfill import backfill_chunk
 
         sorted_holes = sorted(holes)
         result = backfill_chunk(
@@ -922,7 +917,7 @@ def retry_failed_flow(
 
     hub = DataHub(data_root=data_root)
     try:
-        from ditto_server.ingestion.services.retry import RetryManager
+        from ditto_port.ingestion.services.retry import RetryManager
 
         manager = RetryManager(hub, source)
 
@@ -1013,8 +1008,8 @@ from typing import Any
 from prefect import task, get_run_logger
 from prefect.tasks import exponential_backoff
 
-from ditto_server.ingestion.config.datasets import Dataset, DATASET_REGISTRY
-from ditto_server.ingestion.services.coordinator import IngestionCoordinator
+from ditto_port.ingestion.config.datasets import Dataset, DATASET_REGISTRY
+from ditto_port.ingestion.services.coordinator import IngestionCoordinator
 from ditto_datahub import DataHub
 
 
@@ -1146,7 +1141,7 @@ def ingest_calendar(
     hub = DataHub(data_root=data_root)
     try:
         # 日历是全量更新，不需要 trade_date 参数
-        from ditto_server.ingestion.services.coordinator import IngestionCoordinator
+        from ditto_port.ingestion.services.coordinator import IngestionCoordinator
 
         coordinator = IngestionCoordinator(hub, source)
         result = coordinator.ingest_calendar()
@@ -1165,10 +1160,10 @@ def ingest_calendar(
 from prefect import serve
 from prefect.client.schemas.schedules import CronSchedule
 
-from ditto_server.ingestion.flows.daily import daily_ingestion_flow
-from ditto_server.ingestion.flows.backfill import backfill_flow
-from ditto_server.ingestion.flows.repair import daily_repair_flow, retry_failed_flow
-from ditto_server.ingestion.flows.quality import standalone_quality_flow
+from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+from ditto_port.ingestion.flows.backfill import backfill_flow
+from ditto_port.ingestion.flows.repair import daily_repair_flow, retry_failed_flow
+from ditto_port.ingestion.flows.quality import standalone_quality_flow
 
 
 def deploy():
@@ -1310,7 +1305,7 @@ async def send_notification(message: str):
 ## 9. FastAPI 集成
 
 ```python
-# apps/server/src/ditto_server/main.py
+# apps/server/src/ditto_port/main.py
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI

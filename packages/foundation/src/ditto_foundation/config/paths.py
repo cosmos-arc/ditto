@@ -18,7 +18,6 @@ import os
 import sys
 from functools import cached_property
 from pathlib import Path
-from typing import ClassVar as _ClassVar
 
 
 class XDGPaths:
@@ -28,12 +27,6 @@ class XDGPaths:
 
     # Windows 默认基础目录（D 盘，避免系统盘空间不足）
     DEFAULT_WINDOWS_BASE: str = "D:\\data\\ditto"
-
-    # 旧环境变量别名（向后兼容）
-    LEGACY_ENV_ALIASES: _ClassVar[dict[str, list[str]]] = {
-        "DITTO_DATA_DIR": ["DITTO_DATA_ROOT"],
-        "DITTO_LOG_DIR": ["DITTO_LOG_ROOT"],
-    }
 
     def __init__(self, base_dir: str | Path | None = None) -> None:
         """
@@ -195,13 +188,7 @@ class XDGPaths:
         if ditto_override := os.environ.get(ditto_env):
             return Path(ditto_override).expanduser()
 
-        # 2. 检查旧环境变量别名（向后兼容）
-        if legacy_aliases := self.LEGACY_ENV_ALIASES.get(ditto_env):
-            for legacy_name in legacy_aliases:
-                if legacy_value := os.environ.get(legacy_name):
-                    return Path(legacy_value).expanduser()
-
-        # 3. XDG 环境变量
+        # 2. XDG 环境变量
         if xdg_value := os.environ.get(xdg_env):
             return Path(xdg_value).expanduser() / self.APP_NAME
 

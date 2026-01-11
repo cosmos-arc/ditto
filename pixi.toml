@@ -74,6 +74,7 @@ matplotlib = ">=3.9,<4"
 ditto-core = { path = "packages/core", editable = true }
 ditto-foundation = { path = "packages/foundation", editable = true }
 ditto-datahub = { path = "packages/datahub", editable = true }
+ditto-port = { path = "apps/port", editable = true }
 
 # 性能优化库（Rust 实现）
 cachebox = ">=5.0,<6" # 高性能缓存（10-50x 性能）
@@ -81,7 +82,6 @@ granian = ">=1.0,<2"  # ASGI 服务器（2-4x 性能，替代 uvicorn）
 orjson = ">=3.10,<4"  # JSON 序列化（4.5-11.5x 性能）
 
 # 数据源
-tushare = ">=1.4,<2"
 akshare = ">=1.15,<2"
 
 # 文件锁
@@ -103,6 +103,9 @@ limits = ">=3.15"
 
 # 凭据管理（keyring 用于安全存储 token）
 keyring = ">=25.0,<26"
+
+# CLI 框架
+typer = ">=0.12,<1"
 
 # ==========================================================
 # 开发环境 Feature
@@ -126,6 +129,9 @@ pytest-benchmark = ">=4.0,<5"
 pytest-xdist = ">=3.5,<4"     # 并行测试
 pytest-timeout = ">=2.3,<3"   # 超时控制
 requests-mock = ">=1.12,<2"
+inline-snapshot = ">=0.10"
+hypothesis = ">=6.100"
+respx = ">=0.21"
 
 # ──────────────────────────────────────────────────────────
 # 测试辅助
@@ -180,10 +186,10 @@ format-check = "ruff format --check --diff ."
 format = "ruff format ."
 
 # 类型检查
-typecheck = "mypy packages/ apps/server/"
+typecheck = "mypy packages/ apps/port/"
 
 # 安全扫描
-security = "bandit -r packages/ apps/server/src/ -c pyproject.toml --severity-level medium -q"
+security = "bandit -r packages/ apps/port/src/ -c pyproject.toml --severity-level medium -q"
 
 # ──────────────────────────────────────────────────────────
 # 测试
@@ -195,7 +201,8 @@ test = "pytest"
 test-unit = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q"
 
 # 极速测试（开发时用）
-test-fast = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q --tb=no -x"
+# 使用 -n0 禁用 xdist 以避免并行测试时的竞态条件问题
+test-fast = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q --tb=no -x -n0"
 
 # 集成测试
 test-integration = "pytest -m integration -v"
@@ -203,14 +210,11 @@ test-integration = "pytest -m integration -v"
 # PIT 数据正确性测试
 test-pit = "pytest -m pit -v --tb=long"
 
-# 关键路径测试（失败即停）
-test-critical = "pytest -m critical -v -x"
-
 # 覆盖率测试（HTML 报告）
 test-cov = "pytest --cov --cov-report=html --cov-report=term-missing"
 
 # 覆盖率测试（XML 报告，CI 用）
-test-cov-xml = "pytest --cov --cov-report=xml --cov-report=term-missing"
+test-cov-xml = "pytest --cov --cov-report=xml --cov-report=term-missing --cov-fail-under=80"
 
 # 性能基准测试
 test-benchmark = "pytest -m benchmark --benchmark-only"
@@ -241,8 +245,11 @@ quick-check = { depends-on = ["lint-fix", "format", "test-fast"] }
 # 服务
 # ──────────────────────────────────────────────────────────
 # 使用 granian 替代 uvicorn（2-4x 性能提升）
-server = "granian apps.server.src.ditto_server.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
-server-prod = "granian apps.server.src.ditto_server.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
+server = "granian apps.port.src.ditto_port.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
+server-prod = "granian apps.port.src.ditto_port.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
+
+# CLI 命令行工具
+ditto = "python -m ditto_port.cli.main"
 
 # ──────────────────────────────────────────────────────────
 # 清理

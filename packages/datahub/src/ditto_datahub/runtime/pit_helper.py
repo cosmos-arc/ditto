@@ -98,7 +98,7 @@ class PitHelper:
             # 使用 CTE 包装以避免破坏原有 SQL 结构
             wrapped = (
                 f"WITH _pit_original AS ({query}) "
-                f"SELECT * FROM _pit_original WHERE {date_column} <= '{knowledge_date}'"
+                f"SELECT * FROM _pit_original WHERE {date_column} <= '{knowledge_date}'"  # nosec B608 - date_column is validated, knowledge_date is YYYY-MM-DD format
             )
             return wrapped
 
@@ -106,10 +106,10 @@ class PitHelper:
         # \bWHERE\b 确保匹配完整的 WHERE 关键字，避免匹配到包含 WHERE 的其他词
         if re.search(r"\bWHERE\b", query, re.IGNORECASE):
             # 已有 WHERE，添加 AND 条件
-            return f"{query} AND {date_column} <= '{knowledge_date}'"
+            return f"{query} AND {date_column} <= '{knowledge_date}'"  # nosec B608 - date_column is validated, knowledge_date is YYYY-MM-DD format
         else:
             # 没有 WHERE，添加 WHERE 子句
-            return f"{query} WHERE {date_column} <= '{knowledge_date}'"
+            return f"{query} WHERE {date_column} <= '{knowledge_date}'"  # nosec B608 - date_column is validated, knowledge_date is YYYY-MM-DD format
 
     @staticmethod
     def add_pit_join(

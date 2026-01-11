@@ -66,7 +66,9 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
 3. **配置环境变量**
    ```bash
    cp .env.example .env
-   # 编辑 .env 文件，填入 TUSHARE_TOKEN 等配置
+   # 编辑 .env 文件，配置必要的环境变量
+   # 注意：Tushare token 需要通过 keyring 或 ~/.ditto/secrets.toml 配置
+   # 参考 .env.example 中的说明
    ```
 
 4. **初始化数据库**
@@ -135,7 +137,7 @@ ditto/
 │       │   └── types/         # 类型定义
 ├── data/                      # 数据存储
 │   ├── meta/                  # SQLite 元数据
-│   ├── market_daily/          # 股票日线
+│   ├── stock_daily/           # 股票日线
 │   ├── etf_daily/             # ETF 日线
 │   └── freezes/               # 冻结点
 ├── docs/                      # 项目文档
@@ -336,20 +338,35 @@ pixi run ci-check
 ### 环境变量
 
 ```bash
-# 数据源配置
-TUSHARE_TOKEN=your_token_here
-
 # API 服务配置
 HOST=0.0.0.0
 PORT=8000
 SECRET_KEY=your_secret_key_here
 
 # 数据存储
-DITTO_DATA_ROOT=data
+DITTO_DATA_DIR=data
 
 # 风险管理
 KILL_SWITCH_ENABLED=true
 ```
+
+### Tushare Token 配置
+
+**注意**：Tushare token 不再支持通过环境变量配置。请使用以下方式之一：
+
+1. **Keyring（推荐）**:
+   ```bash
+   pixi run -e dev python -c "
+   import keyring
+   keyring.set_password('ditto', 'tushare', 'your_token_here')
+   "
+   ```
+
+2. **~/.ditto/secrets.toml**:
+   ```toml
+   [tushare]
+   token = "your_token_here"
+   ```
 
 ## 文档
 

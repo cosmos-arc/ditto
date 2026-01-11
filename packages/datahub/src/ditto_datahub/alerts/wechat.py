@@ -17,7 +17,8 @@ class WeChatAlertSender(AlertSender):
         Initialize WeChat alert sender.
 
         Args:
-            webhook_url: WeChat bot webhook URL. If None, reads from WECHAT_WEBHOOK_URL env var.
+            webhook_url: WeChat bot webhook URL. If None, reads from
+                WECHAT_WEBHOOK_URL env var.
 
         """
         self._webhook_url = webhook_url or os.getenv("WECHAT_WEBHOOK_URL")
@@ -29,6 +30,7 @@ class WeChatAlertSender(AlertSender):
 
     @property
     def name(self) -> str:
+        """Sender name."""
         return "wechat"
 
     def send(self, message: AlertMessage) -> bool:

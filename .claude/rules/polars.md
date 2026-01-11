@@ -1,5 +1,5 @@
 ---
-paths: **/*.py
+paths: ./**/*.py
 ---
 
 # Polars 规范
@@ -15,16 +15,6 @@ result = (
     .agg(pl.col("close").mean())
     .collect()
 )
-```
-
-## Rolling 必须 closed="left"
-
-```python
-# ✅ PIT 安全
-pl.col("close").rolling_mean(20, closed="left").over("code")
-
-# ❌ 未来泄露
-pl.col("close").rolling_mean(20).over("code")
 ```
 
 ## 常用模式
@@ -49,5 +39,6 @@ pl.col("factor").rank().over("trade_date")
 | 禁止 | 替代 |
 |------|------|
 | `import pandas` | `import polars as pl` |
-| `rolling_mean(20)` | `rolling_mean(20, closed="left")` |
 | `df.apply(lambda...)` | 向量化表达式 |
+
+**注意**: Rolling 窗口的 PIT 安全规则详见 [pit.md](.claude/rules/pit.md)

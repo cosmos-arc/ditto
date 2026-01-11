@@ -24,7 +24,7 @@ We adopt a **hybrid storage approach**:
 
 ### Market Data: Parquet with Year Partitioning
 - **Format**: Apache Parquet with zstd compression
-- **Partitioning**: By year (e.g., `market_daily/2024.parquet`)
+- **Partitioning**: By year (e.g., `stock_daily/2024.parquet`)
 - **Library**: Polars for read/write
 - **Advantages**:
   - Columnar compression (10-100x smaller than CSV)
@@ -51,7 +51,7 @@ We adopt a **hybrid storage approach**:
 data_root/
 ├── meta/
 │   └── hub.sqlite              # Metadata (security, calendar, etc.)
-├── market_daily/
+├── stock_daily/
 │   ├── 2020.parquet
 │   ├── 2021.parquet
 │   └── ...

@@ -37,8 +37,4 @@ paths: packages/foundation/**/*.py
 
 ## 导入规范
 
-| ✅ 正确 | ❌ 错误 |
-|---------|---------|
-| from ditto_foundation import logger, M, span, traced, init | from ditto_foundation.observability.logging import get_logger |
-| from ditto_foundation.config import get_settings | 直接访问 os.environ |
-| from ditto_foundation.util.io import atomic_write | 使用 open() 写文件 |
+Foundation 层导入规则详见 [core.md](.claude/rules/core.md)。

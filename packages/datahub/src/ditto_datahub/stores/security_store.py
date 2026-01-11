@@ -428,7 +428,7 @@ class SecurityStore:
         if sids:
             in_clause, sids_list = _build_in_clause(sids)
             rows = self._client.fetchall(
-                f"SELECT sid, symbol FROM security WHERE sid IN {in_clause}",
+                f"SELECT sid, symbol FROM security WHERE sid IN {in_clause}",  # nosec B608
                 sids_list,
             )
         else:
