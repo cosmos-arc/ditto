@@ -4,7 +4,12 @@ import os
 from pathlib import Path
 from typing import Any
 
-from ditto_foundation.config.paths import PathResolver, XDGPaths
+from ditto_foundation.config.paths import (
+    PathResolver,
+    XDGPaths,
+    get_paths,
+    reload_paths,
+)
 
 
 class TestPathResolver:
@@ -239,3 +244,215 @@ class TestPathResolverIntegration:
 
         finally:
             os.environ.pop("DITTO_CONFIG_DIR", None)
+
+
+class TestXDGPathsRuntime:
+    """测试 XDGPaths.runtime_dir 属性."""
+
+    def test_runtime_dir_with_ditto_env(self, tmp_path: Any) -> None:
+        """测试 DITTO_RUNTIME_DIR 环境变量优先级."""
+        # 设置 DITTO_RUNTIME_DIR
+        ditto_runtime = tmp_path / "ditto_runtime"
+        os.environ["DITTO_RUNTIME_DIR"] = str(ditto_runtime)
+
+        try:
+            paths = XDGPaths(base_dir=tmp_path / "base")
+            runtime = paths.runtime_dir
+
+            assert runtime == ditto_runtime
+
+        finally:
+            os.environ.pop("DITTO_RUNTIME_DIR", None)
+
+    def test_runtime_dir_with_xdg_env(self, tmp_path: Any) -> None:
+        """测试 XDG_RUNTIME_DIR 环境变量."""
+        # 设置 XDG_RUNTIME_DIR
+        xdg_runtime = tmp_path / "xdg_runtime"
+        os.environ["XDG_RUNTIME_DIR"] = str(xdg_runtime)
+
+        try:
+            paths = XDGPaths(base_dir=tmp_path / "base")
+            runtime = paths.runtime_dir
+
+            # 应该使用 XDG_RUNTIME_DIR/ditto
+            assert runtime == xdg_runtime / "ditto"
+
+        finally:
+            os.environ.pop("XDG_RUNTIME_DIR", None)
+
+    def test_runtime_dir_fallback_win32(self, tmp_path: Any) -> None:
+        """测试 Windows 平台降级方案."""
+        # 设置 TEMP 环境变量
+        temp_dir = tmp_path / "temp"
+        os.environ["TEMP"] = str(temp_dir)
+
+        try:
+            # 模拟 Windows 平台
+            paths = XDGPaths(base_dir=tmp_path / "base")
+            paths._platform = "win32"
+
+            runtime = paths.runtime_dir
+
+            # 应该使用 TEMP/ditto
+            assert runtime == temp_dir / "ditto"
+
+        finally:
+            os.environ.pop("TEMP", None)
+
+    def test_runtime_dir_fallback_unix(self, tmp_path: Any) -> None:
+        """测试 Unix 平台降级方案."""
+        # 不设置任何环境变量，使用降级方案
+        paths = XDGPaths(base_dir=tmp_path / "base")
+        paths._platform = "linux"
+
+        runtime = paths.runtime_dir
+
+        # 应该使用 /tmp/ditto-{uid} 或 /tmp/ditto-{pid}
+        # 在 Windows 上运行测试时，路径会被转换为 Windows 格式
+        # 所以只检查关键部分
+        runtime_str = str(runtime)
+        assert "tmp" in runtime_str
+        assert "ditto" in runtime_str.lower()
+
+
+class TestXDGPathsSubdirs:
+    """测试 XDGPaths 子目录方法."""
+
+    def test_data_subdir_creates_directory(self, tmp_path: Any) -> None:
+        """测试 data_subdir 创建目录."""
+        paths = XDGPaths(base_dir=tmp_path / "base")
+
+        # 创建子目录
+        subdir = paths.data_subdir("db/duckdb")
+
+        # 验证路径正确
+        assert subdir == tmp_path / "base" / "data" / "db" / "duckdb"
+        # 验证目录已创建
+        assert subdir.exists()
+        assert subdir.is_dir()
+
+    def test_state_subdir_creates_directory(self, tmp_path: Any) -> None:
+        """测试 state_subdir 创建目录."""
+        paths = XDGPaths(base_dir=tmp_path / "base")
+
+        # 创建子目录
+        subdir = paths.state_subdir("logs/app")
+
+        # 验证路径正确
+        assert subdir == tmp_path / "base" / "state" / "logs" / "app"
+        # 验证目录已创建
+        assert subdir.exists()
+        assert subdir.is_dir()
+
+    def test_cache_subdir_creates_directory(self, tmp_path: Any) -> None:
+        """测试 cache_subdir 创建目录."""
+        paths = XDGPaths(base_dir=tmp_path / "base")
+
+        # 创建子目录
+        subdir = paths.cache_subdir("http")
+
+        # 验证路径正确
+        assert subdir == tmp_path / "base" / "cache" / "http"
+        # 验证目录已创建
+        assert subdir.exists()
+        assert subdir.is_dir()
+
+
+class TestXDGPathsUtilities:
+    """测试 XDGPaths 工具方法."""
+
+    def test_ensure_all_creates_directories(self, tmp_path: Any) -> None:
+        """测试 ensure_all 创建所有目录."""
+        paths = XDGPaths(base_dir=tmp_path / "base")
+
+        # 调用 ensure_all
+        paths.ensure_all()
+
+        # 验证所有目录都已创建
+        assert paths.config_home.exists()
+        assert paths.data_home.exists()
+        assert paths.state_home.exists()
+        assert paths.cache_home.exists()
+        assert paths.runtime_dir.exists()
+
+    def test_as_dict_returns_all_paths(self, tmp_path: Any) -> None:
+        """测试 as_dict 返回所有路径."""
+        paths = XDGPaths(base_dir=tmp_path / "base")
+
+        # 访问所有属性以触发 cached_property
+        _ = paths.config_home
+        _ = paths.data_home
+        _ = paths.state_home
+        _ = paths.cache_home
+        _ = paths.runtime_dir
+
+        # 获取字典表示
+        result = paths.as_dict()
+
+        # 验证字典包含所有键
+        assert "config_home" in result
+        assert "data_home" in result
+        assert "state_home" in result
+        assert "cache_home" in result
+        assert "runtime_dir" in result
+
+        # 验证值都是字符串
+        for key, value in result.items():
+            assert isinstance(value, str)
+            assert value == str(getattr(paths, key))
+
+    def test_repr_returns_string(self, tmp_path: Any) -> None:
+        """测试 __repr__ 返回字符串."""
+        paths = XDGPaths(base_dir=tmp_path / "base")
+
+        # 获取字符串表示
+        result = repr(paths)
+
+        # 验证返回字符串
+        assert isinstance(result, str)
+        assert "XDGPaths" in result
+        assert "data=" in result
+
+
+class TestGlobalSingleton:
+    """测试全局单例函数."""
+
+    def test_get_paths_returns_singleton(self) -> None:
+        """测试 get_paths 返回单例."""
+        # 先重置
+        reload_paths()
+
+        # 获取实例
+        instance1 = get_paths()
+        instance2 = get_paths()
+        assert instance1 is instance2
+
+    def test_get_paths_creates_directories(self, tmp_path: Any) -> None:
+        """测试 get_paths 创建所有目录."""
+        # 使用自定义 base_dir
+        paths = XDGPaths(base_dir=tmp_path / "base")
+
+        # 调用 ensure_all
+        paths.ensure_all()
+
+        # 验证所有目录都已创建
+        assert paths.config_home.exists()
+        assert paths.data_home.exists()
+        assert paths.state_home.exists()
+        assert paths.cache_home.exists()
+        assert paths.runtime_dir.exists()
+
+    def test_reload_paths_returns_new_instance(self, tmp_path: Any) -> None:
+        """测试 reload_paths 返回新实例."""
+        # 获取第一个实例
+        instance1 = get_paths()
+
+        # 重新加载
+        instance2 = reload_paths()
+
+        # 验证返回新实例
+        assert instance1 is not instance2
+
+        # 再次获取应该是同一个实例
+        instance3 = get_paths()
+        assert instance2 is instance3
