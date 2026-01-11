@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from opentelemetry import metrics
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-from opentelemetry.metrics import Counter, Histogram, ObservableGauge
+from opentelemetry.metrics import Counter, Histogram
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import (
     InMemoryMetricReader,
@@ -34,12 +34,13 @@ _gauge_callbacks: dict[str, Callable[..., Any]] = {}
 _HISTOGRAM_BUCKETS = (0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0)
 
 
+# 用于类型检查的 Gauge 接口协议
 if TYPE_CHECKING:
 
     class GaugeWrapper(Protocol):
         """Gauge 接口协议 (类型检查用)."""
 
-        def set(self, value: float, attributes: dict[str, str] | None = None) -> None:
+        def set(self, value: float) -> None:
             """设置指标值."""
             ...
 
@@ -50,6 +51,72 @@ if TYPE_CHECKING:
         def dec(self, delta: float = 1.0) -> None:
             """减少指标值."""
             ...
+
+
+class SimpleGauge:
+    """
+    简化的 Gauge 包装器.
+
+    使用实例变量存储状态，提供简单的 set/inc/dec 接口。
+    不支持 attributes 参数，简化了接口。
+    """
+
+    def __init__(self, meter: metrics.Meter, name: str, description: str) -> None:
+        """
+        初始化 SimpleGauge.
+
+        Args:
+        ----
+            meter: OTel Meter 实例
+            name: 指标名称
+            description: 指标描述
+
+        """
+        self._name = name
+        self._value = 0.0
+
+        def callback(options: Any) -> list[metrics.Observation]:
+            """ObservableGauge 回调函数."""
+            return [metrics.Observation(self._value, {})]
+
+        self._gauge = meter.create_observable_gauge(
+            name,
+            [callback],
+            description=description,
+        )
+
+    def set(self, value: float) -> None:
+        """
+        设置指标值.
+
+        Args:
+        ----
+            value: 指标值
+
+        """
+        self._value = value
+
+    def inc(self, delta: float = 1.0) -> None:
+        """
+        增加指标值.
+
+        Args:
+        ----
+            delta: 增量，默认为 1.0
+
+        """
+        self._value += delta
+
+    def dec(self, delta: float = 1.0) -> None:
+        """
+        减少指标值.
+
+        Args:
+        ----
+            delta: 减量，默认为 1.0
+
+        """
+        self._value = max(0.0, self._value - delta)
 
 
 class M:
@@ -266,12 +333,9 @@ def _create_gauge(
     meter: metrics.Meter,
     name: str,
     description: str,
-) -> "GaugeWrapper":
+) -> SimpleGauge:
     """
     创建一个 ObservableGauge，提供简单的 set() 接口.
-
-    注意: 当前实现不支持 attributes 参数。set(attributes) 中的 attributes
-    会被忽略，因为 ObservableGauge 使用固定的回调函数。
 
     Args:
     ----
@@ -281,59 +345,10 @@ def _create_gauge(
 
     Returns:
     -------
-        GaugeWrapper: 包装了 ObservableGauge 的对象，提供 set() / inc() / dec() 方法
+        SimpleGauge: 包装了 ObservableGauge 的对象，提供 set() / inc() / dec() 方法
 
     """
-    # 使用字典来存储当前值
-    current_values: dict[str, float] = {}
-
-    def callback(options: Any) -> list[metrics.Observation]:
-        """ObservableGauge 回调函数."""
-        value = current_values.get(name, 0.0)
-        return [metrics.Observation(value, {})]
-
-    gauge = meter.create_observable_gauge(
-        name,
-        [callback],
-        description=description,
-    )
-
-    # 创建一个包装类提供 set() 接口
-    class GaugeWrapper:
-        """
-        ObservableGauge 包装器，提供简单的 set() 接口.
-
-        注意: 当前实现不支持多标签 attributes。如需带标签的 Gauge，
-        请使用 meter.create_gauge() 直接创建。
-        """
-
-        def __init__(self, obs_gauge: ObservableGauge) -> None:
-            self._gauge = obs_gauge
-            self._name = name
-
-        def set(self, value: float, attributes: dict[str, str] | None = None) -> None:
-            """
-            设置指标值.
-
-            Args:
-            ----
-                value: 指标值
-                attributes: 标签字典 (当前实现中会被忽略，保留用于API兼容性)
-
-            """
-            current_values[self._name] = value
-
-        def inc(self, delta: float = 1.0) -> None:
-            """增加指标值."""
-            current = current_values.get(self._name, 0.0)
-            current_values[self._name] = current + delta
-
-        def dec(self, delta: float = 1.0) -> None:
-            """减少指标值."""
-            current = current_values.get(self._name, 0.0)
-            current_values[self._name] = max(0, current - delta)
-
-    return GaugeWrapper(gauge)
+    return SimpleGauge(meter, name, description)
 
 
 def configure_metrics(config: ObservabilityConfig, mode: Mode) -> metrics.Meter:
