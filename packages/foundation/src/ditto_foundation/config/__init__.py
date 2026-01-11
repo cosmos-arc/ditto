@@ -4,7 +4,12 @@ Ditto 配置管理模块.
 提供统一的配置管理, 支持环境变量、配置文件等多种配置源
 """
 
-from ditto_foundation.config.paths import XDGPaths, get_paths, reload_paths
+from ditto_foundation.config.paths import (
+    PathResolver,
+    XDGPaths,
+    get_paths,
+    reload_paths,
+)
 from ditto_foundation.config.settings import (
     APISettings,
     DatabaseSettings,
@@ -21,6 +26,7 @@ __all__ = [
     "DataSourceSettings",
     "DatabaseSettings",
     "FileStorageSettings",
+    "PathResolver",
     "Settings",
     "SystemSettings",
     "XDGPaths",
