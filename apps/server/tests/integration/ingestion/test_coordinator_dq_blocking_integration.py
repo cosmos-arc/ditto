@@ -5,8 +5,7 @@
 This module tests that when DQ L1 checks fail:
 1. The ingestion result status is "failed"
 2. The error code is "DQ_BLOCKED"
-3. The cursor is still updated (avoiding blocking the entire flow)
-4. The log is recorded as FAIL status
+3. The log is recorded as FAIL status
 """
 
 import polars as pl
@@ -29,7 +28,6 @@ class TestDQBlockingBehavior:
 
         # Mock metadata manager to not skip
         mock_hub.ingestion_log = mocker.MagicMock()
-        mock_hub.ingestion_cursor = mocker.MagicMock()
         mock_hub.bars = mocker.MagicMock()
 
         # Create coordinator
@@ -72,61 +70,6 @@ class TestDQBlockingBehavior:
         )
         assert "DQ L1 check failed" in result.message
 
-    def test_dq_blocked_still_updates_cursor(self, mocker):
-        """Test DQ blocked ingestion still updates cursor to avoid blocking flow."""
-        from ditto_datahub.dq import DQResult
-        from ditto_datahub.repositories.bars import WriteResult
-        from ditto_server.ingestion.services.coordinator import IngestionCoordinator
-
-        # Mock DataHub
-        mock_hub = mocker.MagicMock()
-        mock_source = mocker.MagicMock()
-
-        # Mock metadata manager to not skip
-        mock_hub.ingestion_log = mocker.MagicMock()
-        mock_hub.ingestion_cursor = mocker.MagicMock()
-        mock_hub.bars = mocker.MagicMock()
-
-        # Create coordinator
-        coordinator = IngestionCoordinator(
-            hub=mock_hub,
-            source=mock_source,
-            source_name="tushare",
-        )
-
-        # Mock _fetch_data to return valid data
-        mocker.patch.object(
-            coordinator,
-            "_fetch_data",
-            return_value=pl.DataFrame({"src_code": ["000001.SZ"], "close": [None]}),
-        )
-
-        # Mock _write_data to return blocked result
-        mock_dq_result = mocker.MagicMock(spec=DQResult)
-        mock_dq_result.has_errors = True
-        mock_dq_result.error_count = 1
-
-        blocked_result = WriteResult(
-            file_path="",
-            checksum="",
-            rows_written=0,
-            rows_total=0,
-            blocked=True,
-            dq_result=mock_dq_result,
-        )
-
-        mocker.patch.object(coordinator, "_write_data", return_value=blocked_result)
-
-        # Execute ingestion
-        coordinator.ingest_date("stock_daily", "2024-01-02")
-
-        # Verify cursor was still updated
-        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
-            dataset="stock_daily",
-            source="tushare",
-            trade_date="2024-01-02",
-        )
-
     def test_dq_blocked_logs_fail_status(self, mocker):
         """Test that DQ blocked ingestion logs FAIL status for retry."""
         from ditto_datahub.dq import DQResult
@@ -140,7 +83,6 @@ class TestDQBlockingBehavior:
 
         # Mock metadata manager to not skip
         mock_hub.ingestion_log = mocker.MagicMock()
-        mock_hub.ingestion_cursor = mocker.MagicMock()
         mock_hub.bars = mocker.MagicMock()
 
         # Create coordinator
