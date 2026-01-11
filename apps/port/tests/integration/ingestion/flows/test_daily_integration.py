@@ -19,20 +19,20 @@ class TestDailyIngestionFlow:
 
     def test_flow_exists(self):
         """Test that daily_ingestion_flow is defined."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
         assert daily_ingestion_flow is not None
         assert callable(daily_ingestion_flow)
 
     def test_flow_has_correct_name(self):
         """Test that flow has correct name attribute."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
         assert daily_ingestion_flow.name == "daily-ingestion"
 
     def test_flow_accepts_required_params(self):
         """Test that flow accepts required parameters."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
         # Flow should be callable with required params
         assert callable(daily_ingestion_flow)
@@ -47,7 +47,7 @@ class TestDailyIngestionFlow:
     )
     def test_flow_skips_non_trade_dates(self, trade_date, is_trade_day, patch_datahub):
         """Test that flow skips non-trading days."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
         # 设置 mock 行为
         patch_datahub.calendar.is_trading_day.return_value = is_trade_day
@@ -66,7 +66,7 @@ class TestDailyIngestionFlow:
 
     def test_check_trading_day_is_task(self):
         """Test that check_trading_day is a Prefect task."""
-        from ditto_port.ingestion.flows.daily import check_trading_day
+        from ditto_port.jobs.flows.daily import check_trading_day
         from prefect.tasks import Task
 
         # Verify it's a Task instance
@@ -75,11 +75,9 @@ class TestDailyIngestionFlow:
 
     def test_flow_uses_submit_for_t0_tasks(self, patch_datahub, mocker):
         """Test that flow uses .submit() for T0 tasks."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
-        mock_factory = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t0"
-        )
+        mock_factory = mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
 
         mock_task = mocker.MagicMock()
         mock_future = mocker.MagicMock()
@@ -99,12 +97,12 @@ class TestDailyIngestionFlow:
 
     def test_t1_tasks_use_wait_for(self, patch_datahub, mocker):
         """Test that T1 tasks use wait_for parameter."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
-        mocker.patch("ditto_server.ingestion.flows.daily.create_ingest_task_t0")
+        mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
 
         mock_t1_factory = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t1_bars"
+            "ditto_port.jobs.flows.daily.create_ingest_task_t1_bars"
         )
 
         mock_task = mocker.MagicMock()
@@ -124,7 +122,7 @@ class TestDailyIngestionFlow:
 
     def test_flow_aggregates_results(self, patch_datahub):
         """Test that flow properly aggregates results."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
         result = daily_ingestion_flow(trade_date="2024-01-02", data_root="data")
 
@@ -138,7 +136,7 @@ class TestDailyIngestionFlow:
 
     def test_flow_returns_dqc_placeholder(self, patch_datahub):
         """Test that flow returns DQC placeholder."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
         result = daily_ingestion_flow(trade_date="2024-01-02", data_root="data")
 
@@ -155,7 +153,7 @@ class TestTradingDayValidation:
 
     def test_check_trading_day_closes_hub(self, patch_datahub):
         """Test that check_trading_day properly closes DataHub."""
-        from ditto_port.ingestion.flows.daily import check_trading_day
+        from ditto_port.jobs.flows.daily import check_trading_day
 
         result = check_trading_day.fn(
             trade_date="2024-01-02",
@@ -168,7 +166,7 @@ class TestTradingDayValidation:
 
     def test_valid_trade_date_executes_tasks(self, patch_datahub):
         """Test flow with valid trade date."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
         result = daily_ingestion_flow(trade_date="2024-01-02", data_root="data")
 
@@ -176,7 +174,7 @@ class TestTradingDayValidation:
 
     def test_weekend_skipped(self, patch_datahub):
         """Test that weekend dates are skipped."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
         patch_datahub.calendar.is_trading_day.return_value = False
 
@@ -187,7 +185,7 @@ class TestTradingDayValidation:
 
     def test_holiday_skipped(self, patch_datahub):
         """Test that holidays are skipped."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
         patch_datahub.calendar.is_trading_day.return_value = False
 
@@ -206,11 +204,9 @@ class TestTaskDependencyOrchestration:
 
     def test_t0_tasks_submitted_in_parallel(self, patch_datahub, mocker):
         """Test that T0 tasks are submitted for parallel execution."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
-        mock_factory = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t0"
-        )
+        mock_factory = mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
 
         mock_task = mocker.MagicMock()
         mock_future = mocker.MagicMock()
@@ -228,14 +224,10 @@ class TestTaskDependencyOrchestration:
 
     def test_t1_tasks_wait_for_t0(self, patch_datahub, mocker):
         """Test that T1 tasks have wait_for parameter set."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
-        mock_t0 = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t0"
-        )
-        mock_t1 = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t1_bars"
-        )
+        mock_t0 = mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
+        mock_t1 = mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t1_bars")
 
         # Setup T0 mocks
         mock_t0_task = mocker.MagicMock()
@@ -275,11 +267,9 @@ class TestResultAggregation:
 
     def test_aggregate_with_success_results(self, patch_datahub, mocker):
         """Test aggregation with all successful results."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
-        mock_t0 = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t0"
-        )
+        mock_t0 = mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
 
         # Mock successful T0 result
         mock_t0_task = mocker.MagicMock()
@@ -299,7 +289,7 @@ class TestResultAggregation:
 
     def test_aggregate_includes_all_sections(self, patch_datahub):
         """Test that aggregation includes all result sections."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
         result = daily_ingestion_flow(trade_date="2024-01-02", data_root="data")
 
@@ -320,11 +310,9 @@ class TestErrorHandling:
 
     def test_flow_handles_missing_dataset_key(self, patch_datahub, mocker):
         """Test that flow handles results without dataset key."""
-        from ditto_port.ingestion.flows.daily import daily_ingestion_flow
+        from ditto_port.jobs.flows.daily import daily_ingestion_flow
 
-        mock_factory = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t0"
-        )
+        mock_factory = mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
 
         # Mock result without "dataset" key
         mock_task = mocker.MagicMock()

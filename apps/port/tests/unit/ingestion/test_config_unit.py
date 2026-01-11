@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from ditto_port.ingestion.config import IngestionConfig
+from ditto_port.services.ingestion.config import IngestionConfig
 
 
 @pytest.mark.unit

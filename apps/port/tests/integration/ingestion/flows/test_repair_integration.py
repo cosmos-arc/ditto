@@ -16,14 +16,14 @@ class TestRetryFailedFlow:
 
     def test_flow_exists(self, patch_datahub):
         """Test that retry_failed_flow is defined."""
-        from ditto_port.ingestion.flows.repair import retry_failed_flow
+        from ditto_port.jobs.flows.repair import retry_failed_flow
 
         assert retry_failed_flow is not None
         assert callable(retry_failed_flow)
 
     def test_flow_retries_failed_tasks(self, patch_datahub):
         """Test that flow retries failed tasks."""
-        from ditto_port.ingestion.flows.repair import retry_failed_flow
+        from ditto_port.jobs.flows.repair import retry_failed_flow
 
         patch_datahub.ingestion_log.get_failed_dates.return_value = [
             "2024-01-02",
@@ -43,7 +43,7 @@ class TestRetryFailedFlow:
 
     def test_flow_limits_retry_count(self, patch_datahub):
         """Test that flow respects limit parameter."""
-        from ditto_port.ingestion.flows.repair import retry_failed_flow
+        from ditto_port.jobs.flows.repair import retry_failed_flow
 
         # Return 2 failed dates (matching the limit)
         patch_datahub.ingestion_log.get_failed_dates.return_value = [
@@ -63,7 +63,7 @@ class TestRetryFailedFlow:
 
     def test_flow_handles_no_failures(self, patch_datahub):
         """Test that flow handles case with no failed tasks."""
-        from ditto_port.ingestion.flows.repair import retry_failed_flow
+        from ditto_port.jobs.flows.repair import retry_failed_flow
 
         patch_datahub.ingestion_log.get_failed_dates.return_value = []
 
@@ -80,7 +80,7 @@ class TestRetryFailedFlow:
 
     def test_flow_uses_force_on_retry(self, patch_datahub):
         """Test that flow uses force=True when retrying."""
-        from ditto_port.ingestion.flows.repair import retry_failed_flow
+        from ditto_port.jobs.flows.repair import retry_failed_flow
 
         patch_datahub.ingestion_log.get_failed_dates.return_value = ["2024-01-02"]
 
@@ -96,7 +96,7 @@ class TestRetryFailedFlow:
 
     def test_flow_closes_hub(self, patch_datahub):
         """Test that flow properly closes DataHub."""
-        from ditto_port.ingestion.flows.repair import retry_failed_flow
+        from ditto_port.jobs.flows.repair import retry_failed_flow
 
         patch_datahub.ingestion_log.get_failed_dates.return_value = []
 
@@ -118,7 +118,7 @@ class TestRepairHolesFlow:
 
     def test_flow_detects_and_repairs_holes(self, patch_datahub):
         """Test that flow can detect and repair data holes."""
-        from ditto_port.ingestion.flows.repair import repair_holes_flow
+        from ditto_port.jobs.flows.repair import repair_holes_flow
 
         patch_datahub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
         patch_datahub.calendar_store.get_last_trading_day.return_value = "2024-01-31"
@@ -140,7 +140,7 @@ class TestRepairHolesFlow:
 
     def test_flow_handles_no_holes(self, patch_datahub):
         """Test that flow handles case with no holes."""
-        from ditto_port.ingestion.flows.repair import repair_holes_flow
+        from ditto_port.jobs.flows.repair import repair_holes_flow
 
         patch_datahub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
         patch_datahub.calendar_store.get_last_trading_day.return_value = "2024-01-31"
@@ -163,7 +163,7 @@ class TestDailyRepairFlow:
 
     def test_flow_runs_retry_and_hole_detection(self, patch_datahub):
         """Test that flow runs both retry and hole detection."""
-        from ditto_port.ingestion.flows.repair import daily_repair_flow
+        from ditto_port.jobs.flows.repair import daily_repair_flow
 
         patch_datahub.ingestion_log.get_failed_dates.return_value = []
         patch_datahub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
@@ -179,7 +179,7 @@ class TestDailyRepairFlow:
 
     def test_flow_aggregates_results(self, patch_datahub):
         """Test that flow aggregates retry and holes results."""
-        from ditto_port.ingestion.flows.repair import daily_repair_flow
+        from ditto_port.jobs.flows.repair import daily_repair_flow
 
         patch_datahub.ingestion_log.get_failed_dates.return_value = []
         patch_datahub.calendar_store.get_first_trading_day.return_value = "2024-01-02"

@@ -7,11 +7,11 @@ testing individual code paths and branches without full integration setup.
 from __future__ import annotations
 
 import pytest
-from ditto_port.ingestion.config.datasets import Dataset
-from ditto_port.ingestion.flows.daily import (
+from ditto_port.jobs.flows.daily import (
     check_trading_day,
     daily_ingestion_flow,
 )
+from ditto_port.services.ingestion.config.datasets import Dataset
 from prefect.tasks import Task as PrefectTask
 
 
@@ -81,7 +81,7 @@ class TestDailyIngestionFlowNonTradingDay:
         """Test that flow returns skipped result for non-trading day."""
 
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=False
+            "ditto_port.jobs.flows.daily.check_trading_day", return_value=False
         )
         result = daily_ingestion_flow(
             trade_date="2024-01-06",
@@ -109,18 +109,16 @@ class TestDailyIngestionFlowT0Execution:
         """Test that flow executes T0 datasets."""
 
         # Mock check_trading_day to return True
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         # Mock get_datasets_by_tier to return T0 datasets
         t0_datasets = [Dataset.CALENDAR, Dataset.STOCK_BASIC]
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=t0_datasets,
         )
         # Mock task creation
         mock_create_task = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t0"
+            "ditto_port.jobs.flows.daily.create_ingest_task_t0"
         )
         mock_task = mocker.MagicMock()
         mock_future = mocker.MagicMock()
@@ -133,7 +131,7 @@ class TestDailyIngestionFlowT0Execution:
 
         # Mock get_parallel_datasets to return empty list
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[],
         )
         result = daily_ingestion_flow(
@@ -150,15 +148,13 @@ class TestDailyIngestionFlowT0Execution:
     def test_handles_empty_t0_datasets(self, mocker):
         """Test that flow handles empty T0 datasets list."""
 
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=[],
         )
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[],
         )
         result = daily_ingestion_flow(
@@ -179,20 +175,18 @@ class TestDailyIngestionFlowT1Execution:
     def test_uses_correct_task_factory_for_adj_factor(self, mocker):
         """Test that adj_factor uses create_ingest_task_t1_adj."""
 
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=[],
         )
         # Mock get_parallel_datasets to return adj_factor in level 0
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[[Dataset.ADJ_FACTOR]],
         )
         mock_t1_adj = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t1_adj"
+            "ditto_port.jobs.flows.daily.create_ingest_task_t1_adj"
         )
         mock_task = mocker.MagicMock()
         mock_future = mocker.MagicMock()
@@ -204,7 +198,7 @@ class TestDailyIngestionFlowT1Execution:
         mock_t1_adj.return_value = mock_task
 
         # Mock T0 futures
-        mocker.patch("ditto_server.ingestion.flows.daily.create_ingest_task_t0")
+        mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
@@ -218,19 +212,17 @@ class TestDailyIngestionFlowT1Execution:
     def test_uses_correct_task_factory_for_fund_adj(self, mocker):
         """Test that fund_adj uses create_ingest_task_t1_adj."""
 
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=[],
         )
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[[Dataset.FUND_ADJ]],
         )
         mock_t1_adj = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t1_adj"
+            "ditto_port.jobs.flows.daily.create_ingest_task_t1_adj"
         )
         mock_task = mocker.MagicMock()
         mock_future = mocker.MagicMock()
@@ -241,7 +233,7 @@ class TestDailyIngestionFlowT1Execution:
         mock_task.submit.return_value = mock_future
         mock_t1_adj.return_value = mock_task
 
-        mocker.patch("ditto_server.ingestion.flows.daily.create_ingest_task_t0")
+        mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
@@ -254,19 +246,17 @@ class TestDailyIngestionFlowT1Execution:
     def test_uses_correct_task_factory_for_bars_datasets(self, mocker):
         """Test that bars datasets use create_ingest_task_t1_bars."""
 
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=[],
         )
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[[Dataset.STOCK_DAILY, Dataset.ETF_DAILY]],
         )
         mock_t1_bars = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t1_bars"
+            "ditto_port.jobs.flows.daily.create_ingest_task_t1_bars"
         )
         mock_task = mocker.MagicMock()
         mock_future = mocker.MagicMock()
@@ -277,7 +267,7 @@ class TestDailyIngestionFlowT1Execution:
         mock_task.submit.return_value = mock_future
         mock_t1_bars.return_value = mock_task
 
-        mocker.patch("ditto_server.ingestion.flows.daily.create_ingest_task_t0")
+        mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
         daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
@@ -290,29 +280,25 @@ class TestDailyIngestionFlowT1Execution:
     def test_handles_multi_level_t1_dependencies(self, mocker):
         """Test that T1 multi-level dependencies use correct wait_for."""
 
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=[Dataset.CALENDAR],
         )
         # Mock two levels of T1 datasets
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[
                 [Dataset.STOCK_DAILY],  # Level 0
                 [Dataset.ADJ_FACTOR],  # Level 1 (depends on Level 0)
             ],
         )
-        mock_t0 = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t0"
-        )
+        mock_t0 = mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
         mock_t1_bars = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t1_bars"
+            "ditto_port.jobs.flows.daily.create_ingest_task_t1_bars"
         )
         mock_t1_adj = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t1_adj"
+            "ditto_port.jobs.flows.daily.create_ingest_task_t1_adj"
         )
         # Setup mocks
         mock_t0_task = mocker.MagicMock()
@@ -355,15 +341,13 @@ class TestDailyIngestionFlowT1Execution:
     def test_handles_empty_t1_datasets(self, mocker):
         """Test that flow handles empty T1 datasets list."""
 
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=[],
         )
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[],
         )
         result = daily_ingestion_flow(
@@ -382,19 +366,17 @@ class TestDailyIngestionFlowResultAggregation:
     def test_aggregates_success_status(self, mocker):
         """Test that success status is counted correctly."""
 
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=[],
         )
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[[MockDataset("success")]],
         )
         mock_factory = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t1_bars"
+            "ditto_port.jobs.flows.daily.create_ingest_task_t1_bars"
         )
         mock_task = mocker.MagicMock()
         mock_future = mocker.MagicMock()
@@ -418,19 +400,17 @@ class TestDailyIngestionFlowResultAggregation:
     def test_aggregates_failed_status(self, mocker):
         """Test that failed status is counted correctly."""
 
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=[],
         )
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[[MockDataset("failed")]],
         )
         mock_factory = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t1_bars"
+            "ditto_port.jobs.flows.daily.create_ingest_task_t1_bars"
         )
         mock_task = mocker.MagicMock()
         mock_future = mocker.MagicMock()
@@ -454,19 +434,17 @@ class TestDailyIngestionFlowResultAggregation:
     def test_aggregates_skipped_status(self, mocker):
         """Test that skipped status is counted correctly."""
 
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=[],
         )
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[[MockDataset("skipped")]],
         )
         mock_factory = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t1_bars"
+            "ditto_port.jobs.flows.daily.create_ingest_task_t1_bars"
         )
         mock_task = mocker.MagicMock()
         mock_future = mocker.MagicMock()
@@ -490,22 +468,20 @@ class TestDailyIngestionFlowResultAggregation:
     def test_aggregates_mixed_statuses(self, mocker):
         """Test that mixed statuses are counted correctly."""
 
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=[],
         )
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[
                 [MockDataset("success"), MockDataset("failed")],
                 [MockDataset("skipped")],
             ],
         )
         mock_factory = mocker.patch(
-            "ditto_server.ingestion.flows.daily.create_ingest_task_t1_bars"
+            "ditto_port.jobs.flows.daily.create_ingest_task_t1_bars"
         )
         mock_task = mocker.MagicMock()
         mock_future = mocker.MagicMock()
@@ -536,15 +512,13 @@ class TestDailyIngestionFlowReturnValue:
     def test_return_value_contains_all_required_keys(self, mocker):
         """Test that return value contains all required keys."""
 
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=[],
         )
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[],
         )
         result = daily_ingestion_flow(
@@ -572,15 +546,13 @@ class TestDailyIngestionFlowReturnValue:
     def test_dqc_results_placeholder(self, mocker):
         """Test that DQC results contain placeholder."""
 
+        mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.check_trading_day", return_value=True
-        )
-        mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_datasets_by_tier",
+            "ditto_port.jobs.flows.daily.get_datasets_by_tier",
             return_value=[],
         )
         mocker.patch(
-            "ditto_server.ingestion.flows.daily.get_parallel_datasets",
+            "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[],
         )
         result = daily_ingestion_flow(

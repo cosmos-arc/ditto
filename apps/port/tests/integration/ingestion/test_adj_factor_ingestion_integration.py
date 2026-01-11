@@ -17,7 +17,7 @@ class TestAdjFactorIngestion:
     def test_ingest_adj_factor_uses_src_code_column(self, mocker):
         """Test that adj_factor ingestion uses src_code column for SID mapping."""
         from ditto_datahub.repositories.bars import WriteResult
-        from ditto_port.ingestion.services.coordinator import IngestionCoordinator
+        from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
         # Mock DataHub
         mock_hub = mocker.MagicMock()
@@ -85,7 +85,7 @@ class TestAdjFactorIngestion:
     def test_ingest_fund_adj_uses_src_code_column(self, mocker):
         """Test that fund_adj ingestion uses src_code column for SID mapping."""
         from ditto_datahub.repositories.bars import WriteResult
-        from ditto_port.ingestion.services.coordinator import IngestionCoordinator
+        from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
         # Mock DataHub
         mock_hub = mocker.MagicMock()

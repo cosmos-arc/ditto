@@ -3,7 +3,7 @@
 import pytest
 from ditto_datahub.dq.models import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_foundation.observability import Mode, init, reset_for_testing
-from ditto_port.ingestion.tasks.monitoring import monitor_ingestion_quality
+from ditto_port.jobs.tasks.monitoring import monitor_ingestion_quality
 
 
 @pytest.fixture(autouse=True)

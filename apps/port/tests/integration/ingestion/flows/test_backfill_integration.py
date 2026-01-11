@@ -16,21 +16,21 @@ class TestBackfillFlow:
 
     def test_flow_exists(self):
         """Test that backfill_flow is defined."""
-        from ditto_port.ingestion.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import backfill_flow
 
         assert backfill_flow is not None
         assert callable(backfill_flow)
 
     def test_flow_accepts_date_range(self):
         """Test that flow accepts start_date and end_date parameters."""
-        from ditto_port.ingestion.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import backfill_flow
 
         # Flow should be callable with date range
         assert callable(backfill_flow)
 
     def test_flow_backfills_single_dataset(self, patch_datahub):
         """Test that flow can backfill a single dataset."""
-        from ditto_port.ingestion.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import backfill_flow
 
         # Mock calendar_store.get_range to return empty list for simplicity
         patch_datahub.calendar_store.get_range.return_value = []
@@ -49,7 +49,7 @@ class TestBackfillFlow:
 
     def test_flow_supports_parallel_execution(self, patch_datahub):
         """Test that flow supports parallel execution."""
-        from ditto_port.ingestion.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import backfill_flow
 
         # Mock calendar_store.get_range to return empty list for simplicity
         patch_datahub.calendar_store.get_range.return_value = []
@@ -67,7 +67,7 @@ class TestBackfillFlow:
 
     def test_flow_handles_empty_date_range(self, patch_datahub):
         """Test that flow handles empty date range gracefully."""
-        from ditto_port.ingestion.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import backfill_flow
 
         patch_datahub.calendar_store.get_range.return_value = []
 
@@ -83,7 +83,7 @@ class TestBackfillFlow:
 
     def test_flow_chunks_date_range(self, patch_datahub):
         """Test that flow can chunk date range for progress tracking."""
-        from ditto_port.ingestion.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import backfill_flow
 
         trade_dates = ["2024-01-02", "2024-01-03", "2024-01-04"]
         patch_datahub.calendar_store.get_range.return_value = trade_dates
@@ -101,7 +101,7 @@ class TestBackfillFlow:
 
     def test_flow_closes_hub(self, patch_datahub):
         """Test that flow properly closes DataHub."""
-        from ditto_port.ingestion.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import backfill_flow
 
         # Mock calendar_store.get_range to return empty list for simplicity
         patch_datahub.calendar_store.get_range.return_value = []
@@ -124,7 +124,7 @@ class TestBackfillMissingFlow:
 
     def test_flow_backfills_missing_dates(self, patch_datahub):
         """Test that flow can backfill only missing dates."""
-        from ditto_port.ingestion.flows.backfill import backfill_missing_flow
+        from ditto_port.jobs.flows.backfill import backfill_missing_flow
 
         patch_datahub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
         patch_datahub.calendar_store.get_last_trading_day.return_value = "2024-01-31"
@@ -146,7 +146,7 @@ class TestBackfillMissingFlow:
 
     def test_flow_handles_no_missing_dates(self, patch_datahub):
         """Test that flow handles case with no missing dates."""
-        from ditto_port.ingestion.flows.backfill import backfill_missing_flow
+        from ditto_port.jobs.flows.backfill import backfill_missing_flow
 
         patch_datahub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
         patch_datahub.calendar_store.get_last_trading_day.return_value = "2024-01-31"
@@ -169,7 +169,7 @@ class TestResumeCapability:
 
     def test_flow_can_resume_from_checkpoint(self, patch_datahub):
         """Test that flow can resume from a checkpoint."""
-        from ditto_port.ingestion.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import backfill_flow
 
         # Mock calendar_store.get_range to return empty list for simplicity
         patch_datahub.calendar_store.get_range.return_value = []
@@ -187,7 +187,7 @@ class TestResumeCapability:
 
     def test_flow_skips_already_ingested_dates(self, patch_datahub):
         """Test that flow skips dates that are already ingested."""
-        from ditto_port.ingestion.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import backfill_flow
 
         # Mock calendar_store.get_range to return empty list for simplicity
         patch_datahub.calendar_store.get_range.return_value = []

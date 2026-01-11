@@ -5,20 +5,20 @@ The factories are lightweight wrappers that delegate to IngestionCoordinator.
 """
 
 import pytest
-from ditto_port.ingestion.config.datasets import (
-    DATASET_REGISTRY,
-    Dataset,
-    TaskTier,
-)
-from ditto_port.ingestion.services.coordinator import (
-    IngestionResult,
-)
-from ditto_port.ingestion.tasks import (
+from ditto_port.jobs.tasks import (
     t0_meta,
     t1_adj_factor,
     t1_bars,
 )
-from ditto_port.ingestion.tasks.t0_meta import create_ingest_task
+from ditto_port.jobs.tasks.t0_meta import create_ingest_task
+from ditto_port.services.ingestion.config.datasets import (
+    DATASET_REGISTRY,
+    Dataset,
+    TaskTier,
+)
+from ditto_port.services.ingestion.coordinator import (
+    IngestionResult,
+)
 
 
 class TestCreateIngestTask:
@@ -95,7 +95,7 @@ class TestCreateIngestTask:
 
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch(
-            "ditto_server.ingestion.services.coordinator.IngestionCoordinator",
+            "ditto_port.services.ingestion.coordinator.IngestionCoordinator",
             return_value=mock_coordinator,
         )
 
@@ -136,7 +136,7 @@ class TestCreateIngestTask:
 
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch(
-            "ditto_server.ingestion.services.coordinator.IngestionCoordinator",
+            "ditto_port.services.ingestion.coordinator.IngestionCoordinator",
             return_value=mock_coordinator,
         )
 
@@ -164,7 +164,7 @@ class TestCreateIngestTask:
 
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch(
-            "ditto_server.ingestion.services.coordinator.IngestionCoordinator",
+            "ditto_port.services.ingestion.coordinator.IngestionCoordinator",
             side_effect=Exception("Coordinator error"),
         )
 
@@ -257,7 +257,7 @@ class TestTaskIntegration:
 
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch(
-            "ditto_server.ingestion.services.coordinator.IngestionCoordinator",
+            "ditto_port.services.ingestion.coordinator.IngestionCoordinator",
             return_value=mock_coordinator,
         )
 
