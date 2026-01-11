@@ -1316,3 +1316,180 @@ class TestAdjFactorWithExistingSid:
         )
         # 验证 adj_factor_store.write 被调用
         mock_hub.adj_factor.write.assert_called_once()
+
+
+@pytest.mark.unit
+class TestTradingDayCheck:
+    """测试交易日检查（P0-2）。"""
+
+    def test_stock_daily_skips_on_non_trading_day(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
+        """stock_daily 在非交易日静默跳过。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None  # 无历史记录
+        mock_hub.calendar_store = mocker.Mock()
+        mock_hub.calendar_store.is_trading_day.return_value = False
+
+        # Act
+        result = coordinator.ingest_date("stock_daily", "2024-12-28")
+
+        # Assert
+        assert result.status == "skipped"
+        assert "非交易日" in result.message or "跳过" in result.message
+        # 不应该调用 source
+        mock_source.fetch_stock_daily.assert_not_called()
+        # 不应该记录 ingestion_log（静默跳过）
+        mock_hub.ingestion_log.save_log.assert_not_called()
+
+    def test_etf_daily_skips_on_non_trading_day(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
+        """etf_daily 在非交易日静默跳过。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.calendar_store = mocker.Mock()
+        mock_hub.calendar_store.is_trading_day.return_value = False
+
+        # Act
+        result = coordinator.ingest_date("etf_daily", "2024-12-28")
+
+        # Assert
+        assert result.status == "skipped"
+        assert "非交易日" in result.message or "跳过" in result.message
+        # 不应该调用 source
+        mock_source.fetch_etf_daily.assert_not_called()
+
+    def test_stock_daily_proceeds_on_trading_day(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
+        """stock_daily 在交易日继续处理。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.calendar_store = mocker.Mock()
+        mock_hub.calendar_store.is_trading_day.return_value = True
+
+        source_df = pl.DataFrame(
+            {
+                "src_code": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "open": [10.0],
+                "close": [10.2],
+                "pre_close": [10.0],
+                "volume": [1000000],
+                "amount": [10200000],
+                "pct_change": [2.0],
+                "high": [10.5],
+                "low": [9.8],
+            }
+        )
+        mock_source.fetch_stock_daily.return_value = source_df
+
+        mock_hub.bars = mocker.Mock()
+        mock_hub.bars.write.return_value = mock_hub_bars_write(
+            "/path/to/file.parquet",
+            "checksum123",
+        )
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum123",
+            rows=1,
+        )
+
+        enriched_df = source_df.with_columns(
+            pl.lit(1000001).alias("sid"),
+            pl.lit("tushare").alias("source"),
+        )
+        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
+            return_value=enriched_df
+        )
+
+        # Act
+        result = coordinator.ingest_date("stock_daily", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        # 验证调用了 source
+        mock_source.fetch_stock_daily.assert_called_once_with("2024-12-27")
+
+    def test_adj_factor_does_not_check_trading_day(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
+        """adj_factor 不检查交易日（参考类数据集）。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.calendar_store = mocker.Mock()
+        # 即使 calendar_store 返回非交易日，adj_factor 也不应该检查
+        mock_hub.calendar_store.is_trading_day.return_value = False
+
+        mock_source.fetch_adj_factor.return_value = pl.DataFrame(
+            {
+                "src_code": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "adj_factor": [1.2345],
+            }
+        )
+
+        mock_hub.adj_factor = mocker.Mock()
+        mock_hub.adj_factor.write.return_value = mock_hub_adj_factor_write(
+            "/path/to/file.parquet",
+            "checksum789",
+        )
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="adj_factor",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum789",
+            rows=1,
+        )
+
+        # Act
+        result = coordinator.ingest_date("adj_factor", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        # 验证调用了 source（没有因为非交易日而跳过）
+        mock_source.fetch_adj_factor.assert_called_once()
+        # 验证没有调用 is_trading_day
+        mock_hub.calendar_store.is_trading_day.assert_not_called()
+
+    def test_calendar_does_not_check_trading_day(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
+        """calendar 不检查交易日（基础类数据集）。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.calendar_store = mocker.Mock()
+        mock_hub.calendar_store.is_trading_day.return_value = False
+
+        mock_source.fetch_calendar.return_value = pl.DataFrame(
+            {
+                "trade_date": [date(2024, 12, 27)],
+                "is_open": [True],
+            }
+        )
+
+        mock_hub.calendar_store = mocker.Mock()
+        mock_hub.calendar_store.upsert.return_value = 1
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="calendar",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum000",
+            rows=1,
+        )
+
+        # Act
+        result = coordinator.ingest_date("calendar", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        # 验证调用了 source（没有因为非交易日而跳过）
+        mock_source.fetch_calendar.assert_called_once()
+        # 验证没有调用 is_trading_day
+        mock_hub.calendar_store.is_trading_day.assert_not_called()

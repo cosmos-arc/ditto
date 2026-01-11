@@ -101,6 +101,19 @@ class IngestionCoordinator:
                 message=skip_reason or "数据已存在且摄取成功",
             )
 
+        # 对于行情类数据集，检查是否为交易日（P0-2）
+        # P0-2: 行情类数据集在非交易日静默跳过
+        if dataset in (
+            "stock_daily",
+            "etf_daily",
+        ) and not self._hub.calendar_store.is_trading_day(trade_date):
+            return IngestionResult(
+                dataset=dataset,
+                trade_date=trade_date,
+                status="skipped",
+                message="非交易日, 跳过",
+            )
+
         try:
             df = self._fetch_data(dataset, trade_date)
         except SourceFetchError as e:
