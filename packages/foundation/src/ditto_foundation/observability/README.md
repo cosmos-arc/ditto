@@ -177,13 +177,10 @@ buckets = [0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0]
 - `ditto.data.update.duration`
 - `ditto.factor.calc.duration`
 - `ditto.api.duration`
+- `ditto.sql.query.duration`
+- `ditto.json.serialize.duration`
+- `ditto.json.deserialize.duration`
 
-- `ditto.sql.query.duration`
-- `ditto.json.serialize.duration`
-- `ditto.json.deserialize.duration`
-- `ditto.sql.query.duration`
-- `ditto.json.serialize.duration`
-- `ditto.json.deserialize.duration`
 ### 数据指标
 
 | 指标名 | 类型 | 属性示例 | 说明 |
@@ -226,6 +223,7 @@ buckets = [0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0]
 ### 系统指标
 
 
+
 ### 缓存指标
 
 | 指标名 | 类型 | 属性示例 | 说明 |
@@ -253,6 +251,8 @@ buckets = [0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0]
 | `ditto.json.serialize.duration` | Histogram | - | JSON 序列化耗时 (秒) |
 | `ditto.json.deserialize.duration` | Histogram | - | JSON 反序列化耗时 (秒) |
 | `ditto.json.bytes_total` | Counter | operation | JSON 处理字节总数 |
+
+### 系统指标
 
 | 指标名 | 类型 | 属性示例 | 说明 |
 |--------|------|----------|------|
