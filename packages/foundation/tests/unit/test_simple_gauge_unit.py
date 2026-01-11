@@ -148,3 +148,18 @@ class TestSimpleGauge:
         # 如果尝试传入 attributes，应该得到 TypeError
         with pytest.raises(TypeError):
             gauge.set(10.0, {"key": "value"})  # type: ignore
+
+    def test_inc_with_negative_delta_clamps_at_zero(self) -> None:
+        """测试 inc() 使用负数时也会限制在 0.0."""
+        reset_for_testing()
+
+        config = ObservabilityConfig(environment="testing")
+        meter = configure_metrics(config, Mode.TESTING)
+
+        gauge = SimpleGauge(meter, "test.gauge10", "Test gauge 10")
+
+        gauge.set(5.0)
+        gauge.inc(-10.0)
+
+        # 验证值被限制在 0.0，不允许负值
+        assert gauge._value == 0.0

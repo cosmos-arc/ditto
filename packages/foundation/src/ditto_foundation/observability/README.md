@@ -137,9 +137,9 @@ from ditto_foundation import M
 M.data_records.add(delta, attributes)
 M.signal_total.increment(attributes)
 
-# Gauge (可增减)
-M.kill_switch_level.set(value, attributes)
-M.kill_switch_level.inc(delta, attributes)
+# Gauge (可增减，简化接口无 attributes 参数)
+M.kill_switch_level.set(value)
+M.kill_switch_level.inc(delta)
 
 # Histogram (记录分布)
 M.data_update_duration.record(value, attributes)

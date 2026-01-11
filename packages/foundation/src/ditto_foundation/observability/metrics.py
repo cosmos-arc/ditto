@@ -72,7 +72,6 @@ class SimpleGauge:
             description: 指标描述
 
         """
-        self._name = name
         self._value = 0.0
 
         def callback(options: Any) -> list[metrics.Observation]:
@@ -100,16 +99,21 @@ class SimpleGauge:
         """
         增加指标值.
 
+        注意: 允许传入负数来减少值，但不会低于 0.0。
+        如需减少值，建议使用 dec() 方法以获得更清晰的语义。
+
         Args:
         ----
-            delta: 增量，默认为 1.0
+            delta: 增量，默认为 1.0。可为负数。
 
         """
-        self._value += delta
+        self._value = max(0.0, self._value + delta)
 
     def dec(self, delta: float = 1.0) -> None:
         """
         减少指标值.
+
+        值不会低于 0.0。
 
         Args:
         ----
