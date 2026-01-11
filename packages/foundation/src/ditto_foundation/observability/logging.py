@@ -15,6 +15,47 @@ from loguru import logger as _logger
 from .config import Mode, ObservabilityConfig
 
 
+def _build_log_record(record: dict[str, Any] | Any) -> dict[str, Any]:
+    """
+    构建日志记录字典.
+
+    Args:
+    ----
+        record: loguru 日志记录
+
+    Returns:
+    -------
+        dict[str, Any]: 包含所有日志字段的字典
+
+    """
+    rec = record["record"]
+    extra = record["extra"]
+
+    # 基本字段
+    log_entry = {
+        "timestamp": datetime.fromtimestamp(rec["time"].timestamp()).isoformat(),
+        "level": rec["level"].name,
+        "logger": rec["name"],
+        "function": rec["function"],
+        "line": rec["line"],
+        "message": rec["message"],
+    }
+
+    # 添加所有额外字段（包括 event 和 trace_id）
+    log_entry.update(extra)
+
+    # 添加异常信息
+    if rec["exception"]:
+        exc = rec["exception"]
+        log_entry["exception"] = {
+            "type": exc.type.__name__,
+            "value": str(exc.value),
+            "traceback": str(exc.traceback),
+        }
+
+    return log_entry
+
+
 def _json_formatter(record: dict[str, Any] | Any) -> str:
     """
     JSON 格式化器，用于生产环境日志.
@@ -28,41 +69,7 @@ def _json_formatter(record: dict[str, Any] | Any) -> str:
         str: JSON 格式的日志字符串
 
     """
-    log_entry = {
-        "timestamp": datetime.fromtimestamp(
-            record["record"]["time"].timestamp()
-        ).isoformat(),
-        "level": record["record"]["level"].name,
-        "logger": record["record"]["name"],
-        "function": record["record"]["function"],
-        "line": record["record"]["line"],
-        "message": record["record"]["message"],
-    }
-
-    # 添加额外的上下文字段
-    if "event" in record["extra"]:
-        log_entry["event"] = record["extra"]["event"]
-
-    # 添加 trace_id 如果存在
-    if "trace_id" in record["extra"]:
-        log_entry["trace_id"] = record["extra"]["trace_id"]
-
-    # 添加其他额外字段
-    for key, value in record["extra"].items():
-        if key not in ("event", "trace_id"):
-            log_entry[key] = value
-
-    # 添加异常信息
-    if record["record"]["exception"]:
-        # Convert traceback to string for JSON serialization
-        # Use loguru's built-in exception formatter
-        exc = record["record"]["exception"]
-        log_entry["exception"] = {
-            "type": exc.type.__name__,
-            "value": str(exc.value),
-            "traceback": str(exc.traceback),  # Convert to string for JSON serialization
-        }
-
+    log_entry = _build_log_record(record)
     return json.dumps(log_entry, ensure_ascii=False) + "\n"
 
 
