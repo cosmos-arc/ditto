@@ -137,9 +137,9 @@ from ditto_foundation import M
 M.data_records.add(delta, attributes)
 M.signal_total.increment(attributes)
 
-# Gauge (可增减)
-M.kill_switch_level.set(value, attributes)
-M.kill_switch_level.inc(delta, attributes)
+# Gauge (可增减，简化接口无 attributes 参数)
+M.kill_switch_level.set(value)
+M.kill_switch_level.inc(delta)
 
 # Histogram (记录分布)
 M.data_update_duration.record(value, attributes)
@@ -177,6 +177,9 @@ buckets = [0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0]
 - `ditto.data.update.duration`
 - `ditto.factor.calc.duration`
 - `ditto.api.duration`
+- `ditto.sql.query.duration`
+- `ditto.json.serialize.duration`
+- `ditto.json.deserialize.duration`
 
 ### 数据指标
 
@@ -216,6 +219,35 @@ buckets = [0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0]
 |--------|------|----------|------|
 | `ditto.risk.kill_switch_level` | Gauge | strategy | Kill Switch 等级 (0-3) |
 | `ditto.risk.kill_switch_total` | Counter | strategy, level | Kill Switch 触发总数 |
+
+
+### 缓存指标
+
+| 指标名 | 类型 | 属性示例 | 说明 |
+|--------|------|----------|------|
+| `ditto.cache.hit_total` | Counter | cache_name | 缓存命中总数 |
+| `ditto.cache.miss_total` | Counter | cache_name | 缓存未命中总数 |
+| `ditto.cache.hit_rate` | Gauge | cache_name | 缓存命中率 (0-1) |
+| `ditto.cache.invalidations_total` | Counter | cache_name | 缓存失效总数 |
+| `ditto.cache.evictions_total` | Counter | cache_name | 缓存驱逐总数 |
+| `ditto.cache.size` | Gauge | cache_name | 当前缓存大小 (条目数) |
+
+### SQL 指标
+
+| 指标名 | 类型 | 属性示例 | 说明 |
+|--------|------|----------|------|
+| `ditto.sql.query.duration` | Histogram | query_type | SQL 查询耗时 (秒) |
+| `ditto.sql.slow_query_total` | Counter | query_type, threshold | 慢查询总数 |
+| `ditto.sql.query_plan_cache.hit_total` | Counter | - | 查询计划缓存命中总数 |
+| `ditto.sql.query_plan_cache.miss_total` | Counter | - | 查询计划缓存未命中总数 |
+
+### JSON 序列化指标
+
+| 指标名 | 类型 | 属性示例 | 说明 |
+|--------|------|----------|------|
+| `ditto.json.serialize.duration` | Histogram | - | JSON 序列化耗时 (秒) |
+| `ditto.json.deserialize.duration` | Histogram | - | JSON 反序列化耗时 (秒) |
+| `ditto.json.bytes_total` | Counter | operation | JSON 处理字节总数 |
 
 ### 系统指标
 

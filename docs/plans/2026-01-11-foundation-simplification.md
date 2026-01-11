@@ -116,6 +116,12 @@
 
 **验证**: 运行 `pixi run -e dev pytest -m unit --cov=ditto_foundation.observability.metrics`
 
+**完成状态**: ✅ 已完成
+- M.setup() 代码行数: 155 行 → 31 行 (减少 124 行，80%)
+- METRIC_DEFINITIONS 配置: 30 个指标定义
+- metrics.py 覆盖率: 90.09%
+- 新增测试: test_metric_definitions_unit.py (7 个测试用例)
+
 ---
 
 ## 实施步骤

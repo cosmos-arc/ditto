@@ -225,7 +225,7 @@ class TestMetrics:
         reset_for_testing()
         init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
 
-        M.kill_switch_level.set(2, {"strategy": "test"})
+        M.kill_switch_level.set(2.0)
 
         metrics_data = get_recorded_metrics()
         assert metrics_data is not None
