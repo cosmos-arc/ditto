@@ -104,6 +104,9 @@ limits = ">=3.15"
 # 凭据管理（keyring 用于安全存储 token）
 keyring = ">=25.0,<26"
 
+# CLI 框架
+typer = ">=0.12,<1"
+
 # ==========================================================
 # 开发环境 Feature
 # ==========================================================
@@ -183,10 +186,10 @@ format-check = "ruff format --check --diff ."
 format = "ruff format ."
 
 # 类型检查
-typecheck = "mypy packages/ apps/server/"
+typecheck = "mypy packages/ apps/port/"
 
 # 安全扫描
-security = "bandit -r packages/ apps/server/src/ -c pyproject.toml --severity-level medium -q"
+security = "bandit -r packages/ apps/port/src/ -c pyproject.toml --severity-level medium -q"
 
 # ──────────────────────────────────────────────────────────
 # 测试

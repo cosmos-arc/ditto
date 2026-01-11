@@ -4,7 +4,9 @@ paths: tests/**/*.py
 
 # 测试规范
 
-## 组件栈(**必须，无法使用其他组件！！**)
+## 测试组件栈
+
+**必须使用以下组件，不得替换**：
 
 | 组件 | 用途 | 使用场景 |
 |------|------|----------|
@@ -28,10 +30,10 @@ tests/
 ├── unit/           # 70% - 每次提交，含内存DB测试，含property测试10%（基于Hypothesis）
 └── integration/    # 20% - CI运行，完整数据流
 ```
+
 **数据层测试归入 unit/**：
 - 内存DB（DuckDB/SQLite `:memory:`）→ 测 Repository 逻辑
 - Parquet Store（`tmp_path`）→ 测 Store 读写逻辑
-- 都够快、都是测你的代码而非底层库，测的是业务逻辑而非数据库本身。
 
 ### 文件命名规范（防止import冲突）
 
@@ -52,15 +54,19 @@ packages/datahub/tests/integration/stores/test_pipeline_store_integration.py
 - 集成测试: `test_{module}_integration.py`
 - E2E测试: `test_{module}_e2e.py`
 
+---
+
 ## 编写规则
 
 ### 命名
+
 ```python
 # ✅ test_calculate_sharpe_ratio_returns_zero_when_std_is_zero
 # ❌ test_sharpe
 ```
 
 ### AAA模式
+
 ```python
 def test_xxx():
     # Arrange - 准备数据
@@ -69,60 +75,45 @@ def test_xxx():
 ```
 
 ### 单一职责
+
 每个测试只验证一个行为，不要在一个测试中验证多个场景。
 
 ### 禁止假测试（绝对禁止）
 
-**以下断言形式被视为假测试，严格禁止**：
+| 形式 | 状态 | 原因 |
+|------|------|------|
+| `assert True` | ❌ | 没有实际验证 |
+| `assert False` | ❌ | 永远失败 |
+| 空的 `pass` | ❌ | 无断言 |
+| `assert result is not None` | ❌ | 过于宽泛 |
 
 ```python
-# ❌ 禁止：assert True
-assert True  # 如果能到这里就通过 - 没有实际验证
-
-# ❌ 禁止：assert False
-assert False  # 永远失败
-
-# ❌ 禁止：空断言
-pass
-# 或者没有 assert 语句
-
-# ❌ 禁止：无意义的断言
-assert result is not None  # 过于宽泛
-assert len(result) > 0     # 过于宽泛
-```
-
-**正确的做法**：
-
-```python
-# ✅ 验证具体行为
+# ✅ 正确：验证具体行为
 assert result.status == "success"
 assert result.count == 3
-assert "expected" in result.message
 
 # ✅ 测试异常路径
 with pytest.raises(ValueError, match="Invalid input"):
     function_with_invalid_input()
-
-# ✅ 使用 DataFrame 断言
-assert_frame_equal(result, expected)
 ```
 
 **检查命令**：
 ```bash
-# 提交前必须检查
 grep -r "assert True" tests/
 grep -r "assert False" tests/
-grep -r "^\\s*pass\\s*$" tests/
 ```
+
+---
 
 ## DataFrame测试
 
 ```python
 from polars.testing import assert_frame_equal
-assert_frame_equal(result, expected, atol=1e-4)  # 浮点容差
+assert_frame_equal(result, expected, atol=1e-4)
 ```
 
 ### Property测试
+
 ```python
 from polars.testing.parametric import dataframes, column
 from hypothesis import given
@@ -133,6 +124,7 @@ def test_calculation_properties(df: pl.DataFrame):
 ```
 
 ### Schema验证
+
 ```python
 import pandera.polars as pa
 
@@ -141,106 +133,64 @@ class QuoteSchema(pa.DataFrameModel):
     symbol: str
     price: float = pa.Field(gt=0)
 
-QuoteSchema.validate(df)  # 测试中使用
+QuoteSchema.validate(df)
 ```
+
+---
 
 ## Mock选择
 
 | 场景 | 工具 |
 |------|------|
-| 验证调用参数/次数 | `pytest-mock (mocker)`,`禁止使用unittest.mock` |
+| 验证调用参数/次数 | `pytest-mock (mocker)` |
 | 简单替换返回值 | `monkeypatch.setattr()` |
 | 环境变量 | `monkeypatch.setenv()` |
 | HTTP请求 | `respx` |
 
 ```python
-# ✅ pytest-mock 示例（推荐）
+# ✅ 推荐
 def test_api(mocker):
     mock_get = mocker.patch("httpx.Client.get")
     mock_get.return_value = httpx.Response(200, json={"price": 15.5})
-
-    # 验证调用
     result = fetch_quote("000001")
     mock_get.assert_called_once_with("https://api.example.com/quote?symbol=000001")
 
 # ❌ 禁止：unittest.mock
 from unittest.mock import patch  # 不要使用
-@patch("httpx.Client.get")
-def test_api(mock_get):  # 旧方式，不够简洁
-    ...
-
-# respx示例
-def test_api(respx_mock):
-    respx_mock.get("https://api.example.com/quote").mock(
-        return_value=httpx.Response(200, json={"price": 15.5})
-    )
 ```
 
-**原则**：
-1. 只Mock外部依赖，不Mock内部实现
-2. 优先使用 `pytest-mock` 的 `mocker` fixture
-3. 禁止使用 `unittest.mock.patch` 装饰器
+---
 
-## PIT (Point-in-Time) 测试
+## 测试类型
+
+### PIT (Point-in-Time) 测试
 
 量化系统核心测试，验证无未来数据泄露。
 
 ```python
 @pytest.mark.pit
 def test_no_future_data_in_features(sample_quotes):
-    """特征计算不能使用未来数据"""
     features = calculate_features(sample_quotes, as_of=date(2024, 1, 15))
-
-    # 验证所有数据日期 <= as_of
     assert features["date"].max() <= date(2024, 1, 15)
 
 @pytest.mark.pit
 def test_signal_uses_only_past_data():
-    """信号生成只能用历史数据"""
     signal_date = date(2024, 1, 15)
     signals = generate_signals(as_of=signal_date)
-
-    # 信号应基于 T-1 及更早的数据
     for signal in signals:
         assert signal.data_date < signal_date
-
-@pytest.mark.pit
-def test_backtest_respects_pit():
-    """回测严格遵守PIT原则"""
-    result = run_backtest(
-        start=date(2024, 1, 1),
-        end=date(2024, 3, 31)
-    )
-
-    # 验证每个交易日只用了当时可知的数据
-    for trade in result.trades:
-        assert trade.decision_data_date < trade.execution_date
 ```
 
-## 快照测试
+### 快照测试
 
 **使用规则**：输出结构复杂（>3个字段）且需要防止意外变更时用快照；简单断言（≤3个字段）或含随机/时间值时不用。
 
-### 适用场景
-
-| 场景 | 示例 |
+| 场景 | 适用 |
 |------|------|
-| 回测报告 | 多字段摘要、交易记录 |
-| 信号输出 | 策略生成的信号列表 |
-| API响应格式 | 需要保持稳定的接口 |
-| 数据管道输出 | 特征工程结果结构 |
-
-### 不适用场景
-
-```python
-# ❌ 简单断言更清晰
-assert calculate_sharpe(returns) == pytest.approx(1.5)
-
-# ❌ 包含随机/时间值
-result = {"timestamp": datetime.now(), ...}  # 每次都变
-```
-
-### 示例
+| 回测报告 | ✅ 多字段摘要 |
+| 信号输出 | ✅ 策略信号列表 |
+| 简单断言 | ❌ 用 `assert` 更清晰 |
+| 含随机/时间值 | ❌ 每次都变 |
 
 ```python
 from inline_snapshot import snapshot
@@ -250,27 +200,55 @@ def test_backtest_output():
     assert result.summary == snapshot({
         "total_return": 0.156,
         "sharpe_ratio": 1.23,
-        "max_drawdown": -0.089,
-        "win_rate": 0.58,
     })
-
-def test_signal_format():
-    signals = generate_signals(date="2024-01-15")
-    assert signals.to_dicts() == snapshot([
-        {"symbol": "000001", "action": "BUY", "weight": 0.1},
-    ])
 ```
 
-### 命令
+### 异步测试
 
-```bash
-pytest --inline-snapshot=create   # 首次生成
-pytest --inline-snapshot=update   # 确认变更并更新
+```python
+@pytest.mark.asyncio
+async def test_async_data_fetch():
+    result = await fetch_data_async("000001")
+    assert result is not None
+
+# 异步 + 参数化
+@pytest.mark.asyncio
+@pytest.mark.parametrize("symbol,expected_sid", [
+    ("000001", 1000001),
+    ("000002", 1000002),
+])
+async def test_resolve_sid_async(symbol, expected_sid):
+    sid = await async_resolve_sid(symbol)
+    assert sid == expected_sid
 ```
+
+### 参数化测试（减少重复）
+
+**当测试逻辑相同，只是输入/输出不同时，必须使用参数化测试**：
+
+```python
+# ❌ 错误：重复代码
+def test_read_filter_by_sids_1(self, store, sample_df):
+    store.write("adj_factor", sample_df, 2024)
+    df = store.read("adj_factor", sids=[1000001])
+    assert len(df) == 3
+
+# ✅ 正确：参数化测试
+@pytest.mark.parametrize("sids,expected_count", [
+    ([1000001], 3),           # 单个 SID
+    ([1000002], 1),           # 另一个 SID
+    ([1000001, 1000002], 4),  # 多个 SID
+    ([], 0),                  # 空 SID 列表
+])
+def test_read_filter_by_sids(self, store, sample_df, sids, expected_count):
+    store.write("adj_factor", sample_df, 2024)
+    df = store.read("adj_factor", sids=sids)
+    assert len(df) == expected_count
+```
+
+---
 
 ## Parquet Store 测试
-
-使用 `tmp_path` 创建临时目录，测试 Store 业务逻辑而非 Parquet 格式本身。
 
 ```python
 @pytest.fixture
@@ -278,16 +256,6 @@ def store(tmp_path):
     """临时目录的ParquetStore"""
     return QuoteParquetStore(base_path=tmp_path / "quotes")
 
-@pytest.fixture
-def store_with_data(store, sample_quotes):
-    """预填充数据的Store"""
-    store.save(sample_quotes)
-    return store
-```
-
-### 分区测试
-
-```python
 def test_partitioned_write(store, sample_quotes):
     store.save(sample_quotes, partition_by="symbol")
     assert (store.base_path / "symbol=000001").exists()
@@ -295,15 +263,81 @@ def test_partitioned_write(store, sample_quotes):
 
 **不需要测**：Parquet格式正确性（那是Polars的责任）
 
+---
 
 ## Fixture规范
 
-- `sample_*`: 标准测试数据
-- `empty_*`: 空数据/边界测试
-- `mock_*`: Mock对象
-- `duckdb_conn` / `sqlite_conn`: 内存数据库连接
+| 前缀 | 用途 | 作用域 |
+|------|------|--------|
+| `sample_*` | 标准测试数据 | module（只读） |
+| `empty_*` | 空数据/边界测试 | function |
+| `mock_*` | Mock对象 | function |
+| `*_conn` | 内存数据库连接 | function |
 
-作用域：`function`（默认）用于可变状态，`module` 用于只读数据。
+---
+
+## Marker 规范
+
+| Marker | 用途 | 运行时机 |
+|--------|------|----------|
+| `@pytest.mark.unit` | 单元测试（无外部依赖） | 每次提交/CI |
+| `@pytest.mark.integration` | 多组件协作测试 | CI |
+| `@pytest.mark.e2e` | 端到端完整流程 | CI/手动 |
+| `@pytest.mark.slow` | 耗时测试 | CI/手动 |
+| `@pytest.mark.smoke` | 冒烟测试，核心功能 | 每次提交 |
+| `@pytest.mark.benchmark` | 性能基准测试 | 手动/定期 |
+| `@pytest.mark.pit` | PIT数据正确性验证 | CI |
+| `@pytest.mark.data` | 需要数据fixtures | 按需 |
+| `@pytest.mark.external` | 调用外部API（Tushare等） | 手动/CI |
+| `@pytest.mark.observability` | 可观测性堆栈测试 | 按需/CI |
+
+### 使用示例
+
+```python
+# 单元测试 - 必须添加
+@pytest.mark.unit
+def test_dataset_config_validation():
+    ...
+
+# 可观测性测试
+@pytest.mark.integration
+@pytest.mark.observability
+class TestObservabilityStack:
+    ...
+
+# PIT 测试
+@pytest.mark.pit
+def test_no_future_data_leakage(sample_quotes):
+    ...
+```
+
+---
+
+## 覆盖率要求
+
+**项目覆盖率标准（统一 80%）**：
+
+| 指标 | 要求 | 配置位置 |
+|------|------|----------|
+| 分支覆盖率 | >= 80% | `pyproject.toml`: fail_under = 80 |
+| CI 阈值 | >= 80% | `.github/workflows/ci.yml`: `--cov-fail-under=80` |
+| 本地阈值 | >= 80% | `pixi.toml` test-cov-xml: `--cov-fail-under=80` |
+| 新增代码 | >= 85% | CI 自动检查 |
+
+### 覆盖率检查流程
+
+```bash
+# 本地开发时快速检查
+pytest tests/unit/ -m "not slow" --cov
+
+# 提交前完整检查
+pytest --cov --cov-report=html --cov-report=term-missing
+
+# 查看 HTML 报告
+open htmlcov/index.html
+```
+
+---
 
 ## 运行命令
 
@@ -325,74 +359,78 @@ pytest -m integration
 
 # PIT验证测试
 pytest -m pit
-
-# 性能基准
-pytest -m benchmark --benchmark-only
-
-# 外部API测试（手动触发）
-pytest
-
 ```
 
-## Marker 使用指南
+---
 
-| Marker | 用途 | 运行时机 |
-|--------|------|----------|
-| `@pytest.mark.unit` | 单元测试（无外部依赖） | 每次提交/CI |
-| `@pytest.mark.integration` | 多组件协作测试 | CI |
-| `@pytest.mark.e2e` | 端到端完整流程 | CI/手动 |
-| `@pytest.mark.slow` | 耗时测试 | CI/手动 |
-| `@pytest.mark.smoke` | 冒烟测试，核心功能 | 每次提交 |
-| `@pytest.mark.benchmark` | 性能基准测试 | 手动/定期 |
-| `@pytest.mark.pit` | PIT数据正确性验证 | CI |
-| `@pytest.mark.data` | 需要数据fixtures | 按需 |
-| `@pytest.mark.external` | 调用外部API（Tushare等） | 手动/CI |
-| `@pytest.mark.observability` | 可观测性堆栈测试 | 按需/CI |
+## 并发测试配置
 
-### 示例
+**项目已配置 pytest-xdist 并发测试** (`-n auto`)：
+
+**注意事项**：
+- 测试必须独立，不能有共享状态
+- 使用 `tmp_path` 而非固定路径
+- 避免使用全局变量或单例
+
+**预期提速**：2-4倍
+
+---
+
+## 测试隔离性
 
 ```python
-# 单元测试 - 必须添加
-@pytest.mark.unit
-class TestFastAPIEndpoints:
-    """Tests for FastAPI async endpoint functions."""
-    ...
+# ✅ 正确：每个测试独立准备数据
+def test_feature_a(store):
+    store.write(sample_data_a)
+    result = store.read("a")
+    assert result == expected_a
 
-@pytest.mark.unit
-def test_dataset_config_validation():
-    """Test DatasetConfig model validation."""
-    ...
+def test_feature_b(store):
+    store.write(sample_data_b)  # 独立准备
+    result = store.read("b")
+    assert result == expected_b
 
-# 可观测性测试
+# ❌ 错误：依赖执行顺序
+def test_feature_a(store):
+    global shared_state = "a"  # 不要使用全局状态
+```
+
+---
+
+## 可观测性测试控制
+
+### 环境变量
+
+```bash
+# 禁用可观测性测试（默认）
+export DITTO_TEST_OBSERVABILITY=disabled
+
+# 启用可观测性测试
+export DITTO_TEST_OBSERVABILITY=enabled
+export DITTO_OBSERVABILITY_TEST_MODE=docker
+```
+
+### Marker 组合使用
+
+```python
+# 可观测性 + 集成测试
 @pytest.mark.integration
 @pytest.mark.observability
 class TestObservabilityStack:
-    """可观测性服务栈集成测试."""
     ...
-
-# 可观测性 + 外部依赖
-@pytest.mark.integration
-@pytest.mark.external
-@pytest.mark.observability
-class TestMetricsExport:
-    """指标导出集成测试."""
-    ...
-
-@pytest.mark.pit
-def test_no_future_data_leakage(sample_quotes):
-    """验证回测中无未来数据泄露"""
-    ...
-
-@pytest.mark.external
-def test_tushare_daily_quote():
-    """调用Tushare获取日行情"""
-    ...
-
-@pytest.mark.benchmark
-def test_signal_generation_performance(benchmark, large_dataset):
-    result = benchmark(generate_signals, large_dataset)
-    assert result.height > 0
 ```
+
+### 运行命令
+
+```bash
+# 跳过可观测性测试
+pytest -m "not observability"
+
+# 只运行可观测性测试
+pytest -m observability
+```
+
+---
 
 ## 代码审查检查清单
 
@@ -414,217 +452,6 @@ def test_signal_generation_performance(benchmark, large_dataset):
 
 ---
 
-## 参数化测试（减少重复代码）
-
-**当测试逻辑相同，只是输入/输出不同时，必须使用参数化测试**：
-
-```python
-# ❌ 错误：重复代码
-def test_read_filter_by_sids_1(self, store, sample_df):
-    store.write("adj_factor", sample_df, 2024)
-    df = store.read("adj_factor", sids=[1000001])
-    assert len(df) == 3
-
-def test_read_filter_by_sids_2(self, store, sample_df):
-    store.write("adj_factor", sample_df, 2024)
-    df = store.read("adj_factor", sids=[1000002])
-    assert len(df) == 1
-
-def test_read_filter_by_sids_3(self, store, sample_df):
-    store.write("adj_factor", sample_df, 2024)
-    df = store.read("adj_factor", sids=[1000001, 1000002])
-    assert len(df) == 4
-
-# ✅ 正确：参数化测试
-@pytest.mark.parametrize("sids,expected_count", [
-    ([1000001], 3),                    # 单个 SID
-    ([1000002], 1),                    # 另一个 SID
-    ([1000001, 1000002], 4),           # 多个 SID
-    ([], 0),                           # 空 SID 列表
-])
-def test_read_filter_by_sids(self, store, sample_df, sids, expected_count):
-    store.write("adj_factor", sample_df, 2024)
-    df = store.read("adj_factor", sids=sids)
-    assert len(df) == expected_count
-```
-
-**参数化测试的优势**：
-- 减少重复代码 50%+
-- 更容易添加新的测试用例
-- 测试失败时显示具体参数
-- 一次运行所有变体
-
-**适用场景**：
-- 边界值测试（0、-1、MAX、None）
-- 多种输入组合
-- 相同逻辑的不同配置
-
----
-
-## 异步测试
-
-**对于异步函数，必须使用异步测试**：
-
-```python
-import pytest
-
-# ✅ 异步测试
-@pytest.mark.asyncio
-async def test_async_data_fetch():
-    result = await fetch_data_async("000001")
-    assert result is not None
-
-@pytest.mark.asyncio
-async def test_async_database_operation(async_db_pool):
-    result = await async_db_pool.fetchrow("SELECT * FROM securities WHERE sid = $1", 100001)
-    assert result["symbol"] == "000001"
-
-# ✅ 异步 + 参数化
-@pytest.mark.asyncio
-@pytest.mark.parametrize("symbol,expected_sid", [
-    ("000001", 1000001),
-    ("000002", 1000002),
-])
-async def test_resolve_sid_async(symbol, expected_sid):
-    sid = await async_resolve_sid(symbol)
-    assert sid == expected_sid
-```
-
-**注意**：
-- 异步测试需要 `pytest-asyncio` 插件
-- 测试函数必须是 `async def`
-- fixture 也需要是异步的（使用 `@pytest_asyncio.fixture`）
-
----
-
-## 覆盖率要求
-
-**项目覆盖率标准（统一 80%）**：
-
-| 指标 | 要求 | 配置位置 |
-|------|------|----------|
-| 分支覆盖率 | >= 80% | `pyproject.toml`: fail_under = 80 |
-| CI 阈值 | >= 80% | `.github/workflows/ci.yml`: `--cov-fail-under=80` |
-| 本地阈值 | >= 80% | `pixi.toml` test-cov-xml: `--cov-fail-under=80` |
-| 新增代码 | >= 85% | CI 自动检查 |
-
-**注意**: CI 和本地环境使用相同的覆盖率阈值（80%），确保一致性。
-
-### 覆盖率提升策略
-
-**1. 优先覆盖核心业务逻辑**
-```python
-# ✅ 优先测试这些
-- Repository 层的业务规则
-- Store 层的数据转换
-- DQ Engine 的验证逻辑
-- 异常处理路径
-```
-
-**2. 分支覆盖率关键点**
-```python
-# 测试所有条件分支
-if condition:      # 需要 True 和 False 两种情况
-    pass
-else:
-    pass
-
-# 测试异常路径
-try:
-    risky_operation()
-except ValueError:  # 需要触发这个异常
-    handle_error()
-```
-
-**3. 使用覆盖率报告定位缺失**
-```bash
-# 生成详细报告
-pytest --cov-report=term-missing:skip-covered
-
-# 输出示例：
-# packages/datahub/src/ditto_datahub/errors.py:40  <<<<<<< 需要添加测试
-#                                                          40    def __init__(self, message: str = "..."):
-```
-
-### 覆盖率检查流程
-
-```bash
-# 1. 本地开发时快速检查
-pytest tests/unit/ -m "not slow" --cov
-
-# 2. 提交前完整检查
-pytest --cov --cov-report=html --cov-report=term-missing
-
-# 3. 查看 HTML 报告
-open htmlcov/index.html  # 找出未覆盖的代码行
-
-# 4. 检查假测试（提交前必须）
-grep -r "assert True" tests/
-grep -r "assert False" tests/
-```
-
----
-
-## 并发测试配置
-
-**项目已配置 pytest-xdist 并发测试**：
-
-```bash
-# pyproject.toml 配置
-addopts = [
-    "-ra",
-    "-v",
-    "-n", "auto",  # 使用所有可用 CPU 核心并行测试
-    ...
-]
-```
-
-**并发测试注意事项**：
-- 测试必须独立，不能有共享状态
-- 使用 `tmp_path` 而非固定路径
-- 每个测试应有独立的数据库 fixture
-- 避免使用全局变量或单例
-
-**预期提速**：2-4倍（取决于 CPU 核心数）
-
----
-
-## 测试隔离性
-
-**确保测试可以独立运行，无执行顺序依赖**：
-
-```python
-# ✅ 正确：每个测试独立准备数据
-def test_feature_a(store):
-    store.write(sample_data_a)
-    result = store.read("a")
-    assert result == expected_a
-
-def test_feature_b(store):
-    store.write(sample_data_b)  # 独立准备，不依赖 test_feature_a
-    result = store.read("b")
-    assert result == expected_b
-
-# ❌ 错误：依赖执行顺序
-def test_feature_a(store):
-    global shared_state = "a"  # 不要使用全局状态
-
-def test_feature_b(store):
-    assert global_state == "a"  # 依赖前面的测试
-```
-
-**使用 fixture 确保隔离**：
-```python
-@pytest.fixture
-def clean_store(tmp_path):
-    """每个测试都获得新的 store"""
-    store = ParquetStore(tmp_path)
-    yield store
-    # 自动清理
-```
-
----
-
 ## 检测问题命令（提交前必跑）
 
 ```bash
@@ -633,7 +460,16 @@ grep -r "assert False" tests/
 pytest --collect-only 2>&1 | grep "import mismatch"  # import冲突
 grep -r "from unittest.mock" tests/   # 应迁移到pytest-mock
 grep -r "@patch" tests/
-grep -r "async def test" tests/       # 异步测试覆盖
+```
+
+---
+
+## 完整检查命令
+
+```bash
+pixi run -e dev quick-check       # 开发时（lint-fix + format + test-fast）
+pixi run -e dev pre-commit-run    # 提交前（lint + format + typecheck + security）
+pixi run -e dev ci-check          # CI完整（以上 + test-cov-xml）
 ```
 
 ---
@@ -654,7 +490,6 @@ pixi run -e dev mypy tests/      # 只检查测试
 ```python
 # ✅ 需要注释：已验证/白名单/参数化
 sql = f"SELECT * FROM {table}"  # nosec B608 - table in ALLOWED_TABLES
-query = f"SELECT id FROM t WHERE id IN ({placeholders})"  # nosec B608
 
 # ❌ 禁止：直接拼接用户输入
 sql = f"SELECT * FROM t WHERE name = '{user_input}'"
@@ -675,89 +510,4 @@ async def test_logging():  # ← 函数名以test_开头
 
 # ✅ 重命名避免歧义
 async def generate_test_logs():
-```
-
----
-
-## 完整检查命令
-
-```bash
-pixi run -e dev quick-check       # 开发时（lint-fix + format + test-fast）
-pixi run -e dev pre-commit-run    # 提交前（lint + format + typecheck + security）
-pixi run -e dev ci-check          # CI完整（以上 + test-cov-xml）
-```
-
----
-
-## 可观测性测试控制
-
-### 环境变量
-
-测试使用环境变量控制是否运行可观测性相关测试：
-
-```bash
-# 禁用可观测性测试（默认）
-export DITTO_TEST_OBSERVABILITY=disabled
-pytest tests/integration/
-
-# 启用可观测性测试
-export DITTO_TEST_OBSERVABILITY=enabled
-pytest tests/integration/
-
-# CI 环境运行
-export DITTO_TEST_OBSERVABILITY=enabled
-export DITTO_OBSERVABILITY_TEST_MODE=docker
-pytest tests/integration/
-```
-
-### conftest.py 实现
-
-`tests/integration/conftest.py` 提供自动跳过功能：
-
-```python
-@pytest.fixture(scope="session")
-def observability_test_config() -> dict:
-    """可观测性测试配置fixture."""
-    return {
-        "enabled": os.environ.get("DITTO_TEST_OBSERVABILITY", "disabled") == "enabled",
-        "test_mode": os.environ.get("DITTO_OBSERVABILITY_TEST_MODE", "local"),
-        "timeout": int(os.environ.get("DITTO_OBSERVABILITY_TEST_TIMEOUT", "30")),
-        "skip_external": os.environ.get("DITTO_OBSERVABILITY_SKIP_EXTERNAL_CHECKS", "false").lower() == "true",
-    }
-
-@pytest.fixture(autouse=True)
-def skip_observability_tests_if_disabled(observability_test_config):
-    """自动跳过禁用的可观测性测试."""
-    if not observability_test_config["enabled"]:
-        pytest.skip("DITTO_TEST_OBSERVABILITY=disabled, skipping observability tests")
-```
-
-### Marker 组合使用
-
-```python
-# 可观测性 + 集成测试
-@pytest.mark.integration
-@pytest.mark.observability
-class TestObservabilityStack:
-    ...
-
-# 可观测性 + 集成 + 外部依赖
-@pytest.mark.integration
-@pytest.mark.external
-@pytest.mark.observability
-class TestMetricsExport:
-    ...
-```
-
-### 运行命令
-
-```bash
-# 跳过可观测性测试
-pytest -m "not observability"
-
-# 只运行可观测性测试
-pytest -m observability
-
-# 运行集成测试（包含可观测性）
-pytest -m integration
 ```
