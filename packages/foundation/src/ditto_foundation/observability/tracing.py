@@ -7,6 +7,7 @@
 import functools
 import uuid
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any, ParamSpec, TypeVar, overload
 
 from opentelemetry import trace
@@ -20,10 +21,26 @@ from .config import Mode, ObservabilityConfig
 P = ParamSpec("P")
 T = TypeVar("T")
 
-# 全局变量
-_tracer: trace.Tracer | None = None
-_in_memory_exporter: InMemorySpanExporter | None = None
-_current_span: trace.Span | None = None
+
+@dataclass
+class TracingState:
+    """封装所有 tracing 全局状态."""
+
+    tracer: trace.Tracer | None = None
+    in_memory_exporter: InMemorySpanExporter | None = None
+    current_span: trace.Span | None = None
+
+    def reset(self) -> None:
+        """重置所有状态."""
+        self.tracer = None
+        self.current_span = None
+        if self.in_memory_exporter:
+            self.in_memory_exporter.clear()
+        self.in_memory_exporter = None
+
+
+# 全局状态
+_state = TracingState()
 
 
 class SpanContext:
@@ -45,36 +62,32 @@ class SpanContext:
 
     def __enter__(self) -> "SpanContext":
         """进入上下文，启动 span."""
-        global _current_span
-
-        if _tracer is None:
+        if _state.tracer is None:
             return self
 
         # 使用 start_as_current_span 来正确传播 trace 上下文
         # 返回的是 context manager
-        self._span = _tracer.start_as_current_span(self.name)
+        self._span = _state.tracer.start_as_current_span(self.name)
         # 进入 span 上下文，获取实际的 Span 对象
         actual_span = self._span.__enter__()
         # 设置属性
         for key, value in self.attributes.items():
             actual_span.set_attribute(key, str(value))
         # 存储实际的 Span 对象
-        _current_span = actual_span
+        _state.current_span = actual_span
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """退出上下文，结束 span."""
-        global _current_span
-
         if self._span is None:
             return
 
-        if exc_type is not None and _current_span is not None:
+        if exc_type is not None and _state.current_span is not None:
             # 记录异常
-            _current_span.record_exception(exc_val)
+            _state.current_span.record_exception(exc_val)
         # 退出 context manager
         self._span.__exit__(exc_type, exc_val, exc_tb)
-        _current_span = None
+        _state.current_span = None
 
     def set_attribute(self, key: str, value: Any) -> None:
         """
@@ -86,9 +99,8 @@ class SpanContext:
             value: 属性值
 
         """
-        global _current_span
-        if _current_span is not None:
-            _current_span.set_attribute(key, str(value))
+        if _state.current_span is not None:
+            _state.current_span.set_attribute(key, str(value))
 
     def set_status(self, status: str) -> None:
         """
@@ -117,31 +129,29 @@ def configure_tracing(config: ObservabilityConfig, mode: Mode) -> trace.Tracer:
         trace.Tracer: 配置好的 Tracer 实例
 
     """
-    global _tracer, _in_memory_exporter
-
     # 静默模式：使用 NoOp Tracer
     if mode == Mode.TESTING:
-        _tracer = trace.get_tracer(__name__)
-        return _tracer
+        _state.tracer = trace.get_tracer(__name__)
+        return _state.tracer
 
     # 资源定义
     resource = Resource.create({"service.name": config.service_name})
 
     # TESTING_WITH_ASSERTIONS：使用 InMemory Exporter
     if mode == Mode.TESTING_WITH_ASSERTIONS:
-        _in_memory_exporter = InMemorySpanExporter()
+        _state.in_memory_exporter = InMemorySpanExporter()
         provider = TracerProvider(resource=resource)
-        provider.add_span_processor(SimpleSpanProcessor(_in_memory_exporter))
+        provider.add_span_processor(SimpleSpanProcessor(_state.in_memory_exporter))
         # 直接从 provider 获取 tracer，不设置全局 provider
-        _tracer = provider.get_tracer(__name__)
-        return _tracer
+        _state.tracer = provider.get_tracer(__name__)
+        return _state.tracer
 
     # PRODUCTION / DEVELOPMENT：标准 TracerProvider
     provider = TracerProvider(resource=resource)
     trace.set_tracer_provider(provider)
-    _tracer = trace.get_tracer(config.service_name)
+    _state.tracer = trace.get_tracer(config.service_name)
 
-    return _tracer
+    return _state.tracer
 
 
 def span(name: str, **attributes: Any) -> SpanContext:
@@ -202,16 +212,14 @@ def get_trace_id() -> str:
         str: UUID 格式的 trace_id，如果无效则返回空字符串
 
     """
-    global _current_span, _tracer
-
     # 优先使用存储的当前 span
-    if _current_span is not None:
-        span_context = _current_span.get_span_context()
+    if _state.current_span is not None:
+        span_context = _state.current_span.get_span_context()
         if span_context.is_valid:
             return str(uuid.UUID(int=span_context.trace_id))
 
     # 回退到全局获取（用于 production/development 模式）
-    if _tracer is None:
+    if _state.tracer is None:
         return ""
 
     current_span = trace.get_current_span()
@@ -230,16 +238,14 @@ def get_span_id() -> str:
         str: 16位十六进制 span_id，如果无效则返回空字符串
 
     """
-    global _current_span, _tracer
-
     # 优先使用存储的当前 span
-    if _current_span is not None:
-        span_context = _current_span.get_span_context()
+    if _state.current_span is not None:
+        span_context = _state.current_span.get_span_context()
         if span_context.is_valid:
             return format(span_context.span_id, "016x")
 
     # 回退到全局获取（用于 production/development 模式）
-    if _tracer is None:
+    if _state.tracer is None:
         return ""
 
     current_span = trace.get_current_span()
@@ -251,11 +257,4 @@ def get_span_id() -> str:
 
 def reset_tracing() -> None:
     """重置 Tracing 状态（用于测试）."""
-    global _tracer, _in_memory_exporter, _current_span
-
-    _tracer = None
-    _current_span = None
-
-    if _in_memory_exporter:
-        _in_memory_exporter.clear()
-    _in_memory_exporter = None
+    _state.reset()

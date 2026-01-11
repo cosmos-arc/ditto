@@ -24,8 +24,8 @@ def get_recorded_spans() -> list[Any]:
         list: 已完成的 Span 列表
 
     """
-    if tracing._in_memory_exporter is not None:
-        return list(tracing._in_memory_exporter.get_finished_spans())
+    if tracing._state.in_memory_exporter is not None:
+        return list(tracing._state.in_memory_exporter.get_finished_spans())
     return []
 
 
