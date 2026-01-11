@@ -366,7 +366,37 @@ App (OTel) → OTLP HTTP → VictoriaMetrics
 $env:OBSERVABILITY_VM_ENDPOINT="http://your-vm-endpoint:8428/opentelemetry/v1/metrics"
 ```
 
-## 九、注意事项
+## 九、内部实现
+
+### Tracing 状态管理
+
+Tracing 模块使用 `TracingState` dataclass 封装全局状态：
+
+```python
+@dataclass
+class TracingState:
+    """封装所有 tracing 全局状态."""
+    tracer: trace.Tracer | None = None
+    in_memory_exporter: InMemorySpanExporter | None = None
+
+    def reset(self) -> None:
+        """重置所有状态."""
+        ...
+```
+
+- **单一状态对象**: 所有全局状态封装在 `_state` 单例中
+- **简化重置**: `reset_tracing()` 调用 `_state.reset()` 清理所有状态
+- **无手动 Span 管理**: 完全依赖 OpenTelemetry 的 `trace.get_current_span()`
+
+### 重置函数
+
+| 函数 | 用途 | 使用场景 |
+|------|------|----------|
+| `reset_tracing()` | 重置 tracing 状态 | 测试间清理 |
+| `reset_metrics()` | 重置 metrics 状态 | 测试间清理 |
+| `reset_for_testing()` | 重置所有可观测性状态 | 测试前置操作 |
+
+## 十、注意事项
 
 1. **测试隔离**: 每个测试前应调用 `reset_for_testing()` 重置状态
 2. **shutdown 限制**: `shutdown()` 后无法重新初始化，测试中应使用 `reset_for_testing()` 代替

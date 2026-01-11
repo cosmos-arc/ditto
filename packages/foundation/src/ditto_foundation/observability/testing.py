@@ -24,8 +24,9 @@ def get_recorded_spans() -> list[Any]:
         list: 已完成的 Span 列表
 
     """
-    if tracing._state.in_memory_exporter is not None:
-        return list(tracing._state.in_memory_exporter.get_finished_spans())
+    exporter = tracing._get_in_memory_exporter()
+    if exporter is not None:
+        return list(exporter.get_finished_spans())
     return []
 
 
@@ -40,8 +41,9 @@ def get_recorded_metrics() -> dict[str, Any]:
     """
     # InMemoryMetricReader 的 get_metrics_data() 返回 ResourceMetrics
     # 这是一个复杂的结构，测试中我们只需要验证它不是 None
-    if metrics._in_memory_reader is not None:
-        data = metrics._in_memory_reader.get_metrics_data()
+    reader = metrics._get_in_memory_reader()
+    if reader is not None:
+        data = reader.get_metrics_data()
         if data is not None:
             return {"metrics_recorded": True}
     return {}

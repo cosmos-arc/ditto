@@ -8,7 +8,7 @@ import functools
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, ParamSpec, TypeVar, overload
+from typing import Any, ParamSpec, TypeVar
 
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
@@ -169,10 +169,6 @@ def span(name: str, **attributes: Any) -> SpanContext:
     return SpanContext(name, **attributes)
 
 
-@overload
-def traced(operation: str) -> Callable[[Callable[P, T]], Callable[P, T]]: ...
-
-
 def traced(operation: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """
     装饰器：自动创建 Span.
@@ -242,3 +238,15 @@ def get_span_id() -> str:
 def reset_tracing() -> None:
     """重置 Tracing 状态（用于测试）."""
     _state.reset()
+
+
+def _get_in_memory_exporter() -> InMemorySpanExporter | None:
+    """
+    获取 InMemory Exporter（测试用）.
+
+    Returns
+    -------
+        InMemorySpanExporter | None: 当前的 InMemory Exporter 实例
+
+    """
+    return _state.in_memory_exporter
