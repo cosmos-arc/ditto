@@ -506,6 +506,58 @@ class TestIngestionLogStore:
         )
         assert len(eastmoney_dates) == 1
 
+    def test_get_last_success_date(self) -> None:
+        """Test getting last successful trade date."""
+        # Insert logs with different dates and statuses
+        self.store.save_log(
+            "test_dataset", "tushare", "2024-01-01", IngestionStatus.SUCCESS
+        )
+        self.store.save_log(
+            "test_dataset", "tushare", "2024-01-02", IngestionStatus.FAIL
+        )
+        self.store.save_log(
+            "test_dataset", "tushare", "2024-01-03", IngestionStatus.SUCCESS
+        )
+        self.store.save_log(
+            "test_dataset", "tushare", "2024-01-04", IngestionStatus.FAIL
+        )
+        self.store.save_log(
+            "test_dataset", "tushare", "2024-01-05", IngestionStatus.SUCCESS
+        )
+
+        # Get last success date
+        last_success = self.store.get_last_success_date(
+            dataset="test_dataset", source="tushare"
+        )
+
+        # Should return 2024-01-05 (last SUCCESS)
+        assert last_success == "2024-01-05"
+
+    def test_get_last_success_date_no_records(self) -> None:
+        """Test getting last success date when no records exist."""
+        last_success = self.store.get_last_success_date(
+            dataset="nonexistent", source="tushare"
+        )
+        assert last_success is None
+
+    def test_get_last_success_date_no_success_records(self) -> None:
+        """Test getting last success date when only FAIL records exist."""
+        # Insert only FAIL logs
+        self.store.save_log(
+            "test_dataset", "tushare", "2024-01-01", IngestionStatus.FAIL
+        )
+        self.store.save_log(
+            "test_dataset", "tushare", "2024-01-02", IngestionStatus.FAIL
+        )
+
+        # Get last success date
+        last_success = self.store.get_last_success_date(
+            dataset="test_dataset", source="tushare"
+        )
+
+        # Should return None (no SUCCESS records)
+        assert last_success is None
+
     def teardown_method(self) -> None:
         """Clean up after test."""
         # No cleanup needed for in-memory database

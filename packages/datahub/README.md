@@ -65,7 +65,6 @@ DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
 | `UniverseStore` | 股票池 | SQLite |
 | `IndexWeightStore` | 指数权重 | SQLite |
 | `IngestionLogStore` | 数据摄取事件日志 | SQLite |
-| `IngestionCursorStore` | 数据摄取游标 | SQLite |
 | `QuarantineStore` | 数据隔离区 | SQLite |
 
 ### Repository 层
@@ -429,12 +428,11 @@ ${data_root}/
 
 ### 设计概述
 
-Ingestion Metadata 系统采用 **"事件日志 + 游标"** 模式，跟踪每日数据摄取状态：
+Ingestion Metadata 系统采用 **"事件日志"** 模式，跟踪每日数据摄取状态：
 
 | 组件 | 说明 | 表 |
 |------|------|-----|
 | `IngestionLogStore` | 每日摄取事件日志 | `ingestion_log` |
-| `IngestionCursorStore` | 进度游标（加速查询） | `ingestion_cursor` |
 
 ### 核心设计
 
@@ -450,7 +448,7 @@ Ingestion Metadata 系统采用 **"事件日志 + 游标"** 模式，跟踪每�
 └─────────────────────────────────┘
 ```
 
-**新设计（事件日志 + 游标）**：
+**新设计（事件日志）**：
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ ingestion_log (每个交易日一条记录)                        │
@@ -462,21 +460,15 @@ Ingestion Metadata 系统采用 **"事件日志 + 游标"** 模式，跟踪每�
 │ │ 12-25    │ FAIL   │ NULL     │ 1        │ 12-25   │  │
 │ │ 12-26    │ SUCCESS│ b2c3...  │ 1        │ 12-26   │  │
 │ └──────────┴────────┴─────────┴──────────┴─────────┘  │
-│                                                          │
-│ ingestion_cursor (游标，加速查询)                        │
-│ ├────────────────┬───────────────────┐                 │
-│ │ last_success   │ 2024-12-26        │                 │
-│ │ last_attempted │ 2024-12-25        │                 │
-│ └────────────────┴───────────────────┘                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
 #### 状态定义
 
-| 状态 | 场景 | 更新游标 |
-|------|------|----------|
-| **SUCCESS** | 获取成功，DQ 通过 | ✓ |
-| **FAIL** | 获取失败 / DQ 阻断 / 交易日空 df | ✗ |
+| 状态 | 场景 |
+|------|------|
+| **SUCCESS** | 获取成功，DQ 通过 |
+| **FAIL** | 获取失败 / DQ 阻断 / 交易日空 df |
 
 **重要**：非交易日不记录，依赖 `calendar` 表判断。
 
@@ -490,7 +482,6 @@ hub = DataHub()
 
 # 记录成功摄取
 log_store = hub.ingestion_log
-cursor_store = hub.ingestion_cursor
 
 # 保存成功日志
 log = log_store.save_log(
@@ -502,9 +493,6 @@ log = log_store.save_log(
     rows=5000,
 )
 
-# 更新游标
-cursor_store.update_success("stock_daily", "tushare", "2024-12-27")
-
 # 记录失败
 fail_log = log_store.save_log(
     dataset="stock_daily",
@@ -515,9 +503,6 @@ fail_log = log_store.save_log(
     error_message="OHLC consistency check failed",
 )
 
-# 只更新 attempted（不更新 last_success）
-cursor_store.update_attempted("stock_daily", "tushare", "2024-12-24")
-
 # 查询失败重跑
 failed_dates = log_store.get_failed_dates(
     dataset="stock_daily",
@@ -526,6 +511,13 @@ failed_dates = log_store.get_failed_dates(
     max_attempts=3,
 )
 # ["2024-12-24", "2024-12-25", ...]
+
+# 获取最后成功日期
+last_success = log_store.get_last_success_date(
+    dataset="stock_daily",
+    source="tushare",
+)
+# "2024-12-26"
 ```
 
 ### Phase 0.4: Source 层重构 ✅ (已完成 - 2026-01-03)

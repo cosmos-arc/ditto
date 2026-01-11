@@ -191,15 +191,6 @@ class IngestionCoordinator:
                 error_message=f"DQ L1 check failed: {error_count} errors",
             )
 
-            # 仍然更新游标（避免阻塞整个摄取流程）
-            # 失败的数据通过单独的重试任务来处理
-            if dataset not in ("stock_basic", "etf_basic"):
-                self._hub.ingestion_cursor.update_success(
-                    dataset=dataset,
-                    source=self._source_name,
-                    trade_date=trade_date,
-                )
-
             return IngestionResult(
                 dataset=dataset,
                 trade_date=trade_date,
@@ -218,14 +209,6 @@ class IngestionCoordinator:
             checksum=write_result.checksum or checksum,
             rows=len(df),
         )
-
-        # 更新游标 (T0 数据集的游标更新已在 _write_stock_basic/_write_etf_basic 中处理)
-        if dataset not in ("stock_basic", "etf_basic"):
-            self._hub.ingestion_cursor.update_success(
-                dataset=dataset,
-                source=self._source_name,
-                trade_date=trade_date,
-            )
 
         return IngestionResult(
             dataset=dataset,
@@ -369,13 +352,6 @@ class IngestionCoordinator:
             src_code_col="src_code",
         )
 
-        # 更新游标
-        self._hub.ingestion_cursor.update_success(
-            dataset="stock_basic",
-            source=self._source_name,
-            trade_date=trade_date,
-        )
-
         return file_path, checksum
 
     def _write_etf_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
@@ -386,13 +362,6 @@ class IngestionCoordinator:
             source=self._source_name,
             asset_class="etf",
             src_code_col="src_code",
-        )
-
-        # 更新游标
-        self._hub.ingestion_cursor.update_success(
-            dataset="etf_basic",
-            source=self._source_name,
-            trade_date=trade_date,
         )
 
         return file_path, checksum

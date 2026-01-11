@@ -437,3 +437,17 @@ class IngestionLogStore:
             )
             for row in rows
         ]
+
+    def get_last_success_date(
+        self,
+        dataset: str,
+        source: str = "tushare",
+    ) -> str | None:
+        """获取最后成功的交易日期。"""
+        sql = """
+            SELECT MAX(trade_date) as last_success
+            FROM ingestion_log
+            WHERE dataset = ? AND source = ? AND status = 'SUCCESS'
+        """
+        row = self._client.fetchone(sql, [dataset, source])
+        return row["last_success"] if row else None

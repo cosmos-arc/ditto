@@ -535,7 +535,6 @@ class TestIngestDate:
             error_code="DQ_BLOCKED",
             error_message="DQ L1 check failed: 10 errors",
         )
-        mock_hub.ingestion_cursor = mocker.Mock()
 
         enriched_df = source_df.with_columns(
             pl.lit(1000001).alias("sid"),
@@ -801,13 +800,6 @@ class TestWriteT0Data:
             }
         )
 
-        mock_hub.ingestion_cursor = mocker.Mock()
-        mock_hub.ingestion_cursor.update_success.return_value = mocker.Mock(
-            dataset="stock_basic",
-            source="tushare",
-            last_success="2024-01-03",
-            last_attempted="2024-01-03",
-        )
         mock_hub.ingestion_log.save_log.return_value = mocker.Mock(
             dataset="stock_basic",
             source="tushare",
@@ -824,12 +816,6 @@ class TestWriteT0Data:
         assert result.status == "success"
         assert result.row_count == 2
         mock_source.fetch_stock_basic.assert_called_once()
-        # 验证游标被更新
-        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
-            dataset="stock_basic",
-            source="tushare",
-            trade_date="2024-01-03",
-        )
 
     def test_ingest_date_success_etf_basic(
         self, coordinator, mock_hub, mock_source, mocker
@@ -847,13 +833,6 @@ class TestWriteT0Data:
             }
         )
 
-        mock_hub.ingestion_cursor = mocker.Mock()
-        mock_hub.ingestion_cursor.update_success.return_value = mocker.Mock(
-            dataset="etf_basic",
-            source="tushare",
-            last_success="2024-01-03",
-            last_attempted="2024-01-03",
-        )
         mock_hub.ingestion_log.save_log.return_value = mocker.Mock(
             dataset="etf_basic",
             source="tushare",
@@ -870,17 +849,11 @@ class TestWriteT0Data:
         assert result.status == "success"
         assert result.row_count == 2
         mock_source.fetch_etf_basic.assert_called_once()
-        # 验证游标被更新
-        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
-            dataset="etf_basic",
-            source="tushare",
-            trade_date="2024-01-03",
-        )
 
-    def test_write_stock_basic_calls_mapper_and_updates_cursor(
+    def test_write_stock_basic_calls_mapper(
         self, coordinator, mock_hub, mocker
     ) -> None:
-        """验证 _write_stock_basic 调用 SecurityMapper 并更新游标。"""
+        """验证 _write_stock_basic 调用 SecurityMapper。"""
         # Arrange
         df = pl.DataFrame(
             {
@@ -892,25 +865,15 @@ class TestWriteT0Data:
             }
         )
 
-        mock_hub.ingestion_cursor = mocker.Mock()
-
         # Act
         file_path, checksum = coordinator._write_stock_basic(df, "2024-01-03")
 
         # Assert
         assert file_path == "security_store:stock_basic"
         assert checksum is not None
-        # 验证游标被更新
-        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
-            dataset="stock_basic",
-            source="tushare",
-            trade_date="2024-01-03",
-        )
 
-    def test_write_etf_basic_calls_mapper_and_updates_cursor(
-        self, coordinator, mock_hub, mocker
-    ) -> None:
-        """验证 _write_etf_basic 调用 SecurityMapper 并更新游标。"""
+    def test_write_etf_basic_calls_mapper(self, coordinator, mock_hub, mocker) -> None:
+        """验证 _write_etf_basic 调用 SecurityMapper。"""
         # Arrange
         df = pl.DataFrame(
             {
@@ -922,20 +885,12 @@ class TestWriteT0Data:
             }
         )
 
-        mock_hub.ingestion_cursor = mocker.Mock()
-
         # Act
         file_path, checksum = coordinator._write_etf_basic(df, "2024-01-03")
 
         # Assert
         assert file_path == "security_store:etf_basic"
         assert checksum is not None
-        # 验证游标被更新
-        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
-            dataset="etf_basic",
-            source="tushare",
-            trade_date="2024-01-03",
-        )
 
 
 @pytest.mark.unit
@@ -1206,331 +1161,6 @@ class TestForceParameter:
 
 
 @pytest.mark.unit
-class TestCursorUpdateAfterSuccess:
-    """测试 ingest_date 成功后更新游标 (Stage 5.1)。"""
-
-    def test_stock_daily_updates_cursor_after_success(
-        self, coordinator, mock_hub, mock_source, mocker
-    ) -> None:
-        """验证 stock_daily 成功后更新游标。"""
-        # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
-        source_df = pl.DataFrame(
-            {
-                "src_code": ["000001.SZ"],
-                "trade_date": [date(2024, 12, 27)],
-                "open": [10.0],
-                "high": [10.5],
-                "low": [9.8],
-                "close": [10.2],
-                "pre_close": [10.0],
-                "volume": [1000000],
-                "amount": [10200000],
-                "pct_change": [2.0],
-            }
-        )
-        mock_source.fetch_stock_daily.return_value = source_df
-
-        mock_hub.bars = mocker.Mock()
-        mock_hub.bars.write.return_value = mock_hub_bars_write(
-            "/path/to/file.parquet",
-            "checksum123",
-        )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
-            dataset="stock_daily",
-            source="tushare",
-            trade_date="2024-12-27",
-            status=IngestionStatus.SUCCESS,
-            checksum="checksum123",
-            rows=1,
-        )
-
-        # Mock 游标更新
-        mock_hub.ingestion_cursor = mocker.Mock()
-
-        # Mock SecurityMapper.enrich_dataframe
-        enriched_df = source_df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
-        )
-
-        # Act
-        result = coordinator.ingest_date("stock_daily", "2024-12-27")
-
-        # Assert
-        assert result.status == "success"
-        # 验证游标被更新
-        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
-            dataset="stock_daily",
-            source="tushare",
-            trade_date="2024-12-27",
-        )
-
-    def test_etf_daily_updates_cursor_after_success(
-        self, coordinator, mock_hub, mock_source, mocker
-    ) -> None:
-        """验证 etf_daily 成功后更新游标。"""
-        # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
-        source_df = pl.DataFrame(
-            {
-                "src_code": ["510300.SH"],
-                "trade_date": [date(2024, 12, 27)],
-                "open": [4.0],
-                "high": [4.1],
-                "low": [3.9],
-                "close": [4.05],
-                "pre_close": [4.0],
-                "volume": [1000000],
-                "amount": [4050000],
-                "pct_change": [1.25],
-            }
-        )
-        mock_source.fetch_etf_daily.return_value = source_df
-
-        mock_hub.bars = mocker.Mock()
-        mock_hub.bars.write.return_value = mock_hub_bars_write(
-            "/path/to/file.parquet",
-            "checksum456",
-        )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
-            dataset="etf_daily",
-            source="tushare",
-            trade_date="2024-12-27",
-            status=IngestionStatus.SUCCESS,
-            checksum="checksum456",
-            rows=1,
-        )
-
-        # Mock 游标更新
-        mock_hub.ingestion_cursor = mocker.Mock()
-
-        # Mock SecurityMapper.enrich_dataframe
-        enriched_df = source_df.with_columns(
-            pl.lit(2000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
-        )
-
-        # Act
-        result = coordinator.ingest_date("etf_daily", "2024-12-27")
-
-        # Assert
-        assert result.status == "success"
-        # 验证游标被更新
-        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
-            dataset="etf_daily",
-            source="tushare",
-            trade_date="2024-12-27",
-        )
-
-    def test_adj_factor_updates_cursor_after_success(
-        self, coordinator, mock_hub, mock_source, mocker
-    ) -> None:
-        """验证 adj_factor 成功后更新游标。"""
-        # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
-        mock_source.fetch_adj_factor.return_value = pl.DataFrame(
-            {
-                "src_code": ["000001.SZ"],
-                "trade_date": [date(2024, 12, 27)],
-                "adj_factor": [1.2345],
-            }
-        )
-
-        mock_hub.adj_factor = mocker.Mock()
-        mock_hub.adj_factor.write.return_value = mock_hub_adj_factor_write(
-            "/path/to/file.parquet",
-            "checksum789",
-        )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
-            dataset="adj_factor",
-            source="tushare",
-            trade_date="2024-12-27",
-            status=IngestionStatus.SUCCESS,
-            checksum="checksum789",
-            rows=1,
-        )
-
-        # Mock 游标更新
-        mock_hub.ingestion_cursor = mocker.Mock()
-
-        # Act
-        result = coordinator.ingest_date("adj_factor", "2024-12-27")
-
-        # Assert
-        assert result.status == "success"
-        # 验证游标被更新
-        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
-            dataset="adj_factor",
-            source="tushare",
-            trade_date="2024-12-27",
-        )
-
-    def test_fund_adj_updates_cursor_after_success(
-        self, coordinator, mock_hub, mock_source, mocker
-    ) -> None:
-        """验证 fund_adj 成功后更新游标。"""
-        # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
-        mock_source.fetch_fund_adj.return_value = pl.DataFrame(
-            {
-                "src_code": ["000001.SZ"],
-                "trade_date": [date(2024, 12, 27)],
-                "adj_factor": [1.5],
-            }
-        )
-
-        mock_hub.adj_factor = mocker.Mock()
-        mock_hub.adj_factor.write.return_value = mock_hub_adj_factor_write(
-            "/path/to/file.parquet",
-            "checksum789",
-        )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
-            dataset="fund_adj",
-            source="tushare",
-            trade_date="2024-12-27",
-            status=IngestionStatus.SUCCESS,
-            checksum="checksum999",
-            rows=1,
-        )
-
-        # Mock 游标更新
-        mock_hub.ingestion_cursor = mocker.Mock()
-
-        # Act
-        result = coordinator.ingest_date("fund_adj", "2024-12-27")
-
-        # Assert
-        assert result.status == "success"
-        # 验证游标被更新
-        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
-            dataset="fund_adj",
-            source="tushare",
-            trade_date="2024-12-27",
-        )
-
-    def test_calendar_updates_cursor_after_success(
-        self, coordinator, mock_hub, mock_source, mocker
-    ) -> None:
-        """验证 calendar 成功后更新游标。"""
-        # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
-        mock_source.fetch_calendar.return_value = pl.DataFrame(
-            {
-                "trade_date": [date(2024, 12, 27), date(2024, 12, 30)],
-                "is_open": [True, True],
-            }
-        )
-
-        mock_hub.calendar_store = mocker.Mock()
-        mock_hub.calendar_store.upsert.return_value = 2
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
-            dataset="calendar",
-            source="tushare",
-            trade_date="2024-12-27",
-            status=IngestionStatus.SUCCESS,
-            checksum="checksum000",
-            rows=2,
-        )
-
-        # Mock 游标更新
-        mock_hub.ingestion_cursor = mocker.Mock()
-
-        # Act
-        result = coordinator.ingest_date("calendar", "2024-12-27")
-
-        # Assert
-        assert result.status == "success"
-        # 验证游标被更新
-        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
-            dataset="calendar",
-            source="tushare",
-            trade_date="2024-12-27",
-        )
-
-    def test_cursor_not_updated_when_fetch_fails(
-        self, coordinator, mock_hub, mock_source, mocker
-    ) -> None:
-        """验证获取数据失败时不更新游标。"""
-        # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
-        mock_source.fetch_stock_daily.side_effect = SourceFetchError(
-            "Network error", source="tushare", dataset="stock_daily"
-        )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
-            dataset="stock_daily",
-            source="tushare",
-            trade_date="2024-12-27",
-            status=IngestionStatus.FAIL,
-            error_code="FETCH_ERROR",
-            error_message="Network error",
-        )
-
-        # Mock 游标更新
-        mock_hub.ingestion_cursor = mocker.Mock()
-
-        # Act
-        result = coordinator.ingest_date("stock_daily", "2024-12-27")
-
-        # Assert
-        assert result.status == "failed"
-        # 验证游标没有被更新
-        mock_hub.ingestion_cursor.update_success.assert_not_called()
-
-    def test_cursor_not_updated_when_write_fails(
-        self, coordinator, mock_hub, mock_source, mocker
-    ) -> None:
-        """验证写入失败时不更新游标。"""
-        # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
-        source_df = pl.DataFrame(
-            {
-                "src_code": ["000001.SZ"],
-                "trade_date": [date(2024, 12, 27)],
-                "open": [10.0],
-            }
-        )
-        mock_source.fetch_stock_daily.return_value = source_df
-
-        mock_hub.bars = mocker.Mock()
-        mock_hub.bars.write.side_effect = OSError("Disk full")
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
-            dataset="stock_daily",
-            source="tushare",
-            trade_date="2024-12-27",
-            status=IngestionStatus.FAIL,
-            error_code="WRITE_ERROR",
-            error_message="Disk full",
-        )
-
-        # Mock 游标更新
-        mock_hub.ingestion_cursor = mocker.Mock()
-
-        # Mock SecurityMapper.enrich_dataframe
-        enriched_df = source_df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
-        )
-
-        # Act
-        result = coordinator.ingest_date("stock_daily", "2024-12-27")
-
-        # Assert
-        assert result.status == "failed"
-        # 验证游标没有被更新
-        mock_hub.ingestion_cursor.update_success.assert_not_called()
-
-
-@pytest.mark.unit
 class TestFetchDataEdgeCases:
     """测试 _fetch_data 方法的边界情况。"""
 
@@ -1570,180 +1200,6 @@ class TestWriteDataEdgeCases:
         # 验证没有调用任何 store 的 write 方法
         mock_hub.bars.write.assert_not_called()
         mock_hub.adj_factor.write.assert_not_called()
-
-
-@pytest.mark.unit
-class TestDQBlockedCursorUpdate:
-    """测试 DQ 阻断时的游标更新逻辑。"""
-
-    def test_dq_blocked_updates_cursor_for_non_t0_datasets(
-        self, coordinator, mock_hub, mock_source, mocker
-    ) -> None:
-        """验证 DQ 阻断时，非 T0 数据集会更新游标（第196-203行）。"""
-        # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
-        source_df = pl.DataFrame(
-            {
-                "src_code": ["000001.SZ"],
-                "trade_date": [date(2024, 12, 27)],
-                "open": [10.0],
-                "close": [10.2],
-            }
-        )
-        mock_source.fetch_stock_daily.return_value = source_df
-
-        mock_hub.bars = mocker.Mock()
-
-        mock_dq_result = mocker.Mock(spec=DQResult)
-        mock_dq_result.error_count = 5
-
-        mock_hub.bars.write.return_value = WriteResult(
-            file_path="/path/to/file.parquet",
-            checksum="checksum123",
-            rows_written=0,
-            rows_total=0,
-            blocked=True,
-            dq_result=mock_dq_result,
-        )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
-            dataset="stock_daily",
-            source="tushare",
-            trade_date="2024-12-27",
-            status=IngestionStatus.FAIL,
-            error_code="DQ_BLOCKED",
-            error_message="DQ L1 check failed: 5 errors",
-        )
-
-        # Mock 游标更新
-        mock_hub.ingestion_cursor = mocker.Mock()
-
-        # Mock SecurityMapper.enrich_dataframe
-        enriched_df = source_df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
-        )
-
-        # Act
-        result = coordinator.ingest_date("stock_daily", "2024-12-27")
-
-        # Assert
-        assert result.status == "failed"
-        assert result.error == "DQ_BLOCKED"
-        # 验证游标被更新（因为 stock_daily 不是 T0 数据集）
-        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
-            dataset="stock_daily",
-            source="tushare",
-            trade_date="2024-12-27",
-        )
-
-    def test_dq_blocked_skips_cursor_update_for_t0_datasets(
-        self, coordinator, mock_hub, mock_source, mocker
-    ) -> None:
-        """验证 DQ 阻断时，T0 数据集（stock_basic, etf_basic）不更新游标。"""
-        # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
-        source_df = pl.DataFrame(
-            {
-                "src_code": ["000001.SZ"],
-                "symbol": ["000001"],
-                "name": ["平安银行"],
-                "exchange": ["SZSE"],
-                "list_date": [date(1991, 4, 3)],
-            }
-        )
-        mock_source.fetch_stock_basic.return_value = source_df
-
-        # 模拟 DQ 阻断（虽然实际情况下 T0 数据不太可能被 DQ 阻断）
-        # 但我们需要测试这个分支逻辑
-        mock_hub.bars = mocker.Mock()
-
-        mock_dq_result = mocker.Mock(spec=DQResult)
-        mock_dq_result.error_count = 3
-
-        # 由于 stock_basic 不走 bars.write，我们需要模拟整个流程
-        # 这里我们直接测试 ingest_date 的 DQ 阻断分支
-        # 但实际上 T0 数据不会触发 DQ 阻断，所以我们测试 adj_factor 数据集
-        mock_source.fetch_adj_factor.return_value = pl.DataFrame(
-            {
-                "src_code": ["000001.SZ"],
-                "trade_date": [date(2024, 12, 27)],
-                "adj_factor": [1.2345],
-            }
-        )
-
-        mock_hub.adj_factor = mocker.Mock()
-        mock_hub.adj_factor.write.return_value = mock_hub_adj_factor_write(
-            "/path/to/file.parquet",
-            "checksum789",
-        )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
-            dataset="adj_factor",
-            source="tushare",
-            trade_date="2024-12-27",
-            status=IngestionStatus.FAIL,
-            error_code="DQ_BLOCKED",
-            error_message="DQ L1 check failed: 3 errors",
-        )
-
-        # Mock 游标更新
-        mock_hub.ingestion_cursor = mocker.Mock()
-
-        # Act
-        result = coordinator.ingest_date("adj_factor", "2024-12-27")
-
-        # Assert
-        # adj_factor 成功摄取（因为没有 DQ 阻断）
-        assert result.status == "success"
-        # 验证游标被更新
-        mock_hub.ingestion_cursor.update_success.assert_called_once_with(
-            dataset="adj_factor",
-            source="tushare",
-            trade_date="2024-12-27",
-        )
-
-    def test_dq_blocked_for_stock_basic_does_not_update_cursor(
-        self, coordinator, mock_hub, mock_source, mocker
-    ) -> None:
-        """验证 DQ 阻断时，stock_basic 不更新游标（第196-203行的 else 分支）。"""
-        # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
-        source_df = pl.DataFrame(
-            {
-                "src_code": ["000001.SZ"],
-                "symbol": ["000001"],
-                "name": ["平安银行"],
-                "exchange": ["SZSE"],
-                "list_date": [date(1991, 4, 3)],
-            }
-        )
-        mock_source.fetch_stock_basic.return_value = source_df
-
-        # 模拟 DQ 阻断
-        mock_hub.bars = mocker.Mock()
-
-        mock_dq_result = mocker.Mock(spec=DQResult)
-        mock_dq_result.error_count = 3
-
-        # 由于 stock_basic 不走 bars.write，它不会触发 DQ 阻断
-        # 所以我们需要通过 _write_data 的返回值来模拟 DQ 阻断
-        # 但这在实际中不会发生，所以我们直接测试分支逻辑
-        # 实际上，stock_basic 和 etf_basic 不在 DQ 阻断时更新游标的分支中
-        # 所以我们需要通过 ingest_date 来测试
-        # 但由于 stock_basic 不走 bars.write，它不会被 DQ 阻断
-        # 所以这个测试实际上覆盖的是第196行的 if 条件为 False 的情况
-        mock_hub.ingestion_cursor = mocker.Mock()
-
-        # Act - 直接调用 ingest_date
-        result = coordinator.ingest_date("stock_basic", "2024-01-03")
-
-        # Assert
-        # stock_basic 成功摄取
-        assert result.status == "success"
-        # 验证游标被更新（在 _write_stock_basic 中）
-        mock_hub.ingestion_cursor.update_success.assert_called_once()
 
 
 @pytest.mark.unit
