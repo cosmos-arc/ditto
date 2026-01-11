@@ -220,9 +220,6 @@ buckets = [0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0]
 | `ditto.risk.kill_switch_level` | Gauge | strategy | Kill Switch 等级 (0-3) |
 | `ditto.risk.kill_switch_total` | Counter | strategy, level | Kill Switch 触发总数 |
 
-### 系统指标
-
-
 
 ### 缓存指标
 
