@@ -28,8 +28,8 @@ class TestSimpleGauge:
         # 设置值
         gauge.set(42.0)
 
-        # 通过 metrics 系统验证值被设置
-        # (在实际使用中，ObservableGauge 的回调会被调用)
+        # 验证值被正确设置
+        assert gauge._value == 42.0
 
     def test_set_overwrites_previous_value(self) -> None:
         """测试 set() 覆盖之前的值."""
@@ -43,7 +43,8 @@ class TestSimpleGauge:
         gauge.set(10.0)
         gauge.set(20.0)
 
-        # 最后设置的值应该是 20.0
+        # 验证最后设置的值是 20.0
+        assert gauge._value == 20.0
 
     def test_inc_increments_value(self) -> None:
         """测试 inc() 增加值."""
@@ -57,7 +58,8 @@ class TestSimpleGauge:
         gauge.set(5.0)
         gauge.inc(3.0)
 
-        # 值应该是 8.0
+        # 验证值从 5.0 增加到 8.0
+        assert gauge._value == 8.0
 
     def test_inc_default_delta(self) -> None:
         """测试 inc() 默认增量为 1.0."""
@@ -71,7 +73,8 @@ class TestSimpleGauge:
         gauge.set(10.0)
         gauge.inc()
 
-        # 值应该是 11.0
+        # 验证值从 10.0 增加到 11.0 (默认增量 1.0)
+        assert gauge._value == 11.0
 
     def test_inc_from_zero(self) -> None:
         """测试从零开始增加."""
@@ -84,7 +87,8 @@ class TestSimpleGauge:
 
         gauge.inc(5.0)
 
-        # 值应该是 5.0 (从 0 开始)
+        # 验证值从 0.0 增加到 5.0
+        assert gauge._value == 5.0
 
     def test_dec_decrements_value(self) -> None:
         """测试 dec() 减少值."""
@@ -98,7 +102,8 @@ class TestSimpleGauge:
         gauge.set(10.0)
         gauge.dec(3.0)
 
-        # 值应该是 7.0
+        # 验证值从 10.0 减少到 7.0
+        assert gauge._value == 7.0
 
     def test_dec_default_delta(self) -> None:
         """测试 dec() 默认减量为 1.0."""
@@ -112,7 +117,8 @@ class TestSimpleGauge:
         gauge.set(10.0)
         gauge.dec()
 
-        # 值应该是 9.0
+        # 验证值从 10.0 减少到 9.0 (默认减量 1.0)
+        assert gauge._value == 9.0
 
     def test_dec_clamps_at_zero(self) -> None:
         """测试 dec() 不会让值变为负数."""
@@ -126,7 +132,8 @@ class TestSimpleGauge:
         gauge.set(5.0)
         gauge.dec(10.0)
 
-        # 值应该是 0.0 (不允许负值)
+        # 验证值被限制在 0.0，不允许负值
+        assert gauge._value == 0.0
 
     def test_no_attributes_parameter(self) -> None:
         """测试 set() 方法不接受 attributes 参数 (简化接口)."""
