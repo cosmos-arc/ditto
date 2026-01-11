@@ -28,12 +28,10 @@ class TracingState:
 
     tracer: trace.Tracer | None = None
     in_memory_exporter: InMemorySpanExporter | None = None
-    current_span: trace.Span | None = None
 
     def reset(self) -> None:
         """重置所有状态."""
         self.tracer = None
-        self.current_span = None
         if self.in_memory_exporter:
             self.in_memory_exporter.clear()
         self.in_memory_exporter = None
@@ -73,8 +71,6 @@ class SpanContext:
         # 设置属性
         for key, value in self.attributes.items():
             actual_span.set_attribute(key, str(value))
-        # 存储实际的 Span 对象
-        _state.current_span = actual_span
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -82,12 +78,13 @@ class SpanContext:
         if self._span is None:
             return
 
-        if exc_type is not None and _state.current_span is not None:
-            # 记录异常
-            _state.current_span.record_exception(exc_val)
+        # 记录异常（如果发生）
+        if exc_type is not None:
+            current = trace.get_current_span()
+            if current.is_recording():
+                current.record_exception(exc_val)
         # 退出 context manager
         self._span.__exit__(exc_type, exc_val, exc_tb)
-        _state.current_span = None
 
     def set_attribute(self, key: str, value: Any) -> None:
         """
@@ -99,8 +96,9 @@ class SpanContext:
             value: 属性值
 
         """
-        if _state.current_span is not None:
-            _state.current_span.set_attribute(key, str(value))
+        current = trace.get_current_span()
+        if current.is_recording():
+            current.set_attribute(key, str(value))
 
     def set_status(self, status: str) -> None:
         """
@@ -212,20 +210,13 @@ def get_trace_id() -> str:
         str: UUID 格式的 trace_id，如果无效则返回空字符串
 
     """
-    # 优先使用存储的当前 span
-    if _state.current_span is not None:
-        span_context = _state.current_span.get_span_context()
-        if span_context.is_valid:
-            return str(uuid.UUID(int=span_context.trace_id))
-
-    # 回退到全局获取（用于 production/development 模式）
     if _state.tracer is None:
         return ""
 
-    current_span = trace.get_current_span()
-    span_context = current_span.get_span_context()
-    if span_context.is_valid:
-        return str(uuid.UUID(int=span_context.trace_id))
+    current = trace.get_current_span()
+    ctx = current.get_span_context()
+    if ctx.is_valid:
+        return str(uuid.UUID(int=ctx.trace_id))
     return ""
 
 
@@ -238,20 +229,13 @@ def get_span_id() -> str:
         str: 16位十六进制 span_id，如果无效则返回空字符串
 
     """
-    # 优先使用存储的当前 span
-    if _state.current_span is not None:
-        span_context = _state.current_span.get_span_context()
-        if span_context.is_valid:
-            return format(span_context.span_id, "016x")
-
-    # 回退到全局获取（用于 production/development 模式）
     if _state.tracer is None:
         return ""
 
-    current_span = trace.get_current_span()
-    span_context = current_span.get_span_context()
-    if span_context.is_valid:
-        return format(span_context.span_id, "016x")
+    current = trace.get_current_span()
+    ctx = current.get_span_context()
+    if ctx.is_valid:
+        return format(ctx.span_id, "016x")
     return ""
 
 
