@@ -201,7 +201,8 @@ test = "pytest"
 test-unit = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q"
 
 # 极速测试（开发时用）
-test-fast = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q --tb=no -x"
+# 使用 -n0 禁用 xdist 以避免并行测试时的竞态条件问题
+test-fast = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q --tb=no -x -n0"
 
 # 集成测试
 test-integration = "pytest -m integration -v"
