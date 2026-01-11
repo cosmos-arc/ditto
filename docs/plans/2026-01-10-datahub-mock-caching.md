@@ -159,7 +159,7 @@ pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/ -v --durat
 
 ```bash
 # 确保覆盖率没有下降
-pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/ --cov=ditto_server --cov-report=term
+pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/ --cov=ditto_port --cov-report=term
 ```
 
 ---

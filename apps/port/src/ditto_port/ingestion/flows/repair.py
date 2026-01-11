@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from prefect import flow
 
-from ditto_server.ingestion.services.retry import RetryManager
+from ditto_port.ingestion.services.retry import RetryManager
 
 if TYPE_CHECKING:
     pass
@@ -43,7 +43,7 @@ def retry_failed_flow(
     """
     from ditto_datahub import DataHub  # noqa: PLC0415
 
-    from ditto_server.ingestion.services.coordinator import (  # noqa: PLC0415
+    from ditto_port.ingestion.services.coordinator import (  # noqa: PLC0415
         IngestionCoordinator,
     )
 
@@ -113,10 +113,10 @@ def repair_holes_flow(
     """
     from ditto_datahub import DataHub  # noqa: PLC0415
 
-    from ditto_server.ingestion.services.backfill import (  # noqa: PLC0415
+    from ditto_port.ingestion.services.backfill import (  # noqa: PLC0415
         BackfillManager,
     )
-    from ditto_server.ingestion.services.coordinator import (  # noqa: PLC0415
+    from ditto_port.ingestion.services.coordinator import (  # noqa: PLC0415
         IngestionCoordinator,
     )
 

@@ -5,14 +5,14 @@ Prefect Tasks for data ingestion.
 """
 
 # 新式任务工厂
-from ditto_server.ingestion.tasks.monitoring import monitor_ingestion_quality
-from ditto_server.ingestion.tasks.t0_meta import (
+from ditto_port.ingestion.tasks.monitoring import monitor_ingestion_quality
+from ditto_port.ingestion.tasks.t0_meta import (
     create_ingest_task as create_ingest_task_t0,
 )
-from ditto_server.ingestion.tasks.t1_adj_factor import (
+from ditto_port.ingestion.tasks.t1_adj_factor import (
     create_ingest_task as create_ingest_task_t1_adj,
 )
-from ditto_server.ingestion.tasks.t1_bars import (
+from ditto_port.ingestion.tasks.t1_bars import (
     create_ingest_task as create_ingest_task_t1_bars,
 )
 

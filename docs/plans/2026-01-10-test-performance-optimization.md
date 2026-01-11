@@ -190,8 +190,8 @@ pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/
   - 提升：81%
 
 **覆盖率** (2026-01-10 验证):
-- 验证命令：`pixi run -e dev pytest --cov=ditto_server --cov-report=term`
-- ditto_server 整体覆盖率：93.67%
+- 验证命令：`pixi run -e dev pytest --cov=ditto_port --cov-report=term`
+- ditto_port 整体覆盖率：93.67%
 - ingestion/flows/ 路径覆盖率：35.83% (仅运行该路径测试时)
 - 需要在后续优化中提升至 80%
 
@@ -229,7 +229,7 @@ pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/
 
 **实施内容**:
 1. 添加了 `pytest_configure` 钩子函数
-2. 在测试会话开始时预加载 `ditto_server.ingestion.flows` 的 `daily`、`repair`、`backfill` 模块
+2. 在测试会话开始时预加载 `ditto_port.ingestion.flows` 的 `daily`、`repair`、`backfill` 模块
 3. 避免每个测试都重新导入相同的模块
 
 **验证结果** (2026-01-10):
@@ -301,7 +301,7 @@ pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/
 pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/ -v
 
 # 2. 覆盖率检查
-pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/ --cov=ditto_server --cov-report=term-missing
+pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/ --cov=ditto_port --cov-report=term-missing
 
 # 3. 性能基准
 pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/ --durations=20

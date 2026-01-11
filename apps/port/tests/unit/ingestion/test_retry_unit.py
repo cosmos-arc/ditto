@@ -2,8 +2,8 @@
 
 import pytest
 from ditto_foundation.observability import Mode, init, reset_for_testing
-from ditto_server.ingestion.services.coordinator import IngestionResult
-from ditto_server.ingestion.services.retry import (
+from ditto_port.ingestion.services.coordinator import IngestionResult
+from ditto_port.ingestion.services.retry import (
     RetryManager,
     RetryResult,
 )

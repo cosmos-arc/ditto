@@ -1,7 +1,7 @@
 """Tests for FastAPI middleware async handlers."""
 
 import pytest
-from ditto_server.middleware import (
+from ditto_port.middleware import (
     ditto_exception_handler,
     general_exception_handler,
     http_exception_handler,

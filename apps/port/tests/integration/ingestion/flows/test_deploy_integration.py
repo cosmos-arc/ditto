@@ -11,7 +11,7 @@ class TestDeployFunctions:
 
     def test_list_flows(self):
         """Test that list_flows returns all available flows."""
-        from ditto_server.ingestion.flows.deploy import list_flows
+        from ditto_port.ingestion.flows.deploy import list_flows
 
         flows = list_flows()
 
@@ -30,7 +30,7 @@ class TestDeployFunctions:
 
     def test_deploy_all_flows_exists(self):
         """Test that deploy_all_flows function exists."""
-        from ditto_server.ingestion.flows.deploy import deploy_all_flows
+        from ditto_port.ingestion.flows.deploy import deploy_all_flows
 
         assert callable(deploy_all_flows)
 
@@ -44,7 +44,7 @@ class TestDeployFunctions:
         Note: Prefect 3.x removed the Deployment API. This test needs to be
         updated to use the new flow.serve(), flow.deploy(), or prefect deploy CLI.
         """
-        from ditto_server.ingestion.flows.deploy import deploy_all_flows
+        from ditto_port.ingestion.flows.deploy import deploy_all_flows
 
         # TODO: Update to test Prefect 3.x deployment mechanism
         # For now, verify the function exists and is callable
@@ -57,7 +57,7 @@ class TestMainFunction:
 
     def test_main_list_command(self, mocker):
         """Test that main with 'list' command lists flows."""
-        from ditto_server.ingestion.flows.deploy import main as deploy_main
+        from ditto_port.ingestion.flows.deploy import main as deploy_main
 
         # Mock sys.argv and print
         mocker.patch("sys.argv", ["deploy.py", "list"])
@@ -70,7 +70,7 @@ class TestMainFunction:
 
     def test_main_default_deploys(self, mocker):
         """Test that main without arguments deploys all flows."""
-        from ditto_server.ingestion.flows.deploy import main as deploy_main
+        from ditto_port.ingestion.flows.deploy import main as deploy_main
 
         # Mock sys.argv and deploy_all_flows
         mocker.patch("sys.argv", ["deploy.py"])

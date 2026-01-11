@@ -52,7 +52,7 @@
 **涉及文件**:
 - `packages/datahub/src/ditto_datahub/hub.py`
 - `packages/datahub/src/ditto_datahub/repositories/security.py`
-- `apps/server/src/ditto_server/ingestion/services/coordinator.py`
+- `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 
 ---
 
@@ -60,8 +60,8 @@
 **目标**: SecurityMapper 完全委托给 SidAllocator，移除内存计数器
 
 **涉及文件**:
-- `apps/server/src/ditto_server/ingestion/services/security_mapper.py`
-- `apps/server/src/ditto_server/ingestion/services/coordinator.py`
+- `apps/server/src/ditto_port/ingestion/services/security_mapper.py`
+- `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 
 ---
 
@@ -72,7 +72,7 @@
 - `packages/datahub/src/ditto_datahub/stores/ingestion_cursor.py`
 - `packages/datahub/src/ditto_datahub/runtime/schema.sql`
 - `packages/datahub/migrations/0002_cursor_multi_source.py` (新建)
-- `apps/server/src/ditto_server/ingestion/services/coordinator.py`
+- `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 
 **数据迁移**: 包含完整的 upgrade 和 downgrade 脚本
 
@@ -83,7 +83,7 @@
 
 **涉及文件**:
 - `packages/datahub/src/ditto_datahub/dq/engine.py`
-- `apps/server/src/ditto_server/ingestion/tasks/dq_batch.py`
+- `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py`
 - `packages/datahub/scripts/init_dq_config.py` (新建)
 - `packages/datahub/README.md`
 
@@ -579,7 +579,7 @@ CREATE TABLE ingestion_cursor_backup AS SELECT * FROM ingestion_cursor;
 
 ### 必须修改的核心文件（10 个）
 
-1. `apps/server/src/ditto_server/ingestion/services/security_mapper.py` - Critical 2
+1. `apps/server/src/ditto_port/ingestion/services/security_mapper.py` - Critical 2
 2. `packages/datahub/src/ditto_datahub/repositories/security.py` - Critical 1
 3. `packages/datahub/src/ditto_datahub/hub.py` - Critical 1
 4. `packages/datahub/src/ditto_datahub/stores/ingestion_cursor.py` - High 1

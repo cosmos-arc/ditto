@@ -182,8 +182,8 @@ FETCH_ERROR   df.is_empty()   DQ_BLOCKED / WRITE_ERROR
 **文件**:
 - 删除: `packages/datahub/src/ditto_datahub/stores/ingestion_cursor.py`
 - 修改: `packages/datahub/src/ditto_datahub/hub.py`
-- 修改: `apps/server/src/ditto_server/ingestion/services/coordinator.py`
-- 修改: `apps/server/src/ditto_server/ingestion/services/backfill.py`
+- 修改: `apps/server/src/ditto_port/ingestion/services/coordinator.py`
+- 修改: `apps/server/src/ditto_port/ingestion/services/backfill.py`
 
 **修复**:
 
@@ -219,7 +219,7 @@ def get_last_success_date(
 
 **问题**: 行情类数据集未检查交易日，非交易日被错误记录
 
-**文件**: `apps/server/src/ditto_server/ingestion/services/coordinator.py`
+**文件**: `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 
 **修复**:
 
@@ -246,7 +246,7 @@ def ingest_date(self, dataset: str, trade_date: str, force: bool = False):
 
 **问题**: 失败路径处理不一致
 
-**文件**: `apps/server/src/ditto_server/ingestion/services/coordinator.py`
+**文件**: `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 
 **修复**:
 
@@ -292,7 +292,7 @@ if write_result.blocked:
 
 **问题**: `_format_date_for_sqlite` 输出 YYYYMMDD，但 `effective_from` 是 DATE 类型
 
-**文件**: `apps/server/src/ditto_server/ingestion/services/security_mapper.py`
+**文件**: `apps/server/src/ditto_port/ingestion/services/security_mapper.py`
 
 **修复**:
 

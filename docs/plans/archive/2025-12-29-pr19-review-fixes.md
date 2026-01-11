@@ -225,8 +225,8 @@ def get_range(self, start: str, end: str) -> list[str]:
 
 **修复**:
 ```toml
-server = "granian apps.server.src.ditto_server.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
-server-prod = "granian apps.server.src.ditto_server.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
+server = "granian apps.port.src.ditto_port.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
+server-prod = "granian apps.port.src.ditto_port.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
 ```
 
 **验收标准**:

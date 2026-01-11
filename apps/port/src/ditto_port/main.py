@@ -26,8 +26,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from ditto_server.exceptions import DittoException
-from ditto_server.middleware import (
+from ditto_port.exceptions import DittoException
+from ditto_port.middleware import (
     ditto_exception_handler,
     general_exception_handler,
     http_exception_handler,

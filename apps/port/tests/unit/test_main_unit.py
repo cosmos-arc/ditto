@@ -1,7 +1,7 @@
 """Tests for FastAPI main application async endpoints."""
 
 import pytest
-from ditto_server.main import generate_test_logs, get_status, health_check, root
+from ditto_port.main import generate_test_logs, get_status, health_check, root
 
 
 @pytest.mark.unit

@@ -1,5 +1,5 @@
 """Data ingestion module with Prefect orchestration."""
 
-from ditto_server.ingestion.config import IngestionConfig
+from ditto_port.ingestion.config import IngestionConfig
 
 __all__ = ["IngestionConfig"]

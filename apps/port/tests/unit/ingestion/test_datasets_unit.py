@@ -3,7 +3,7 @@
 from datetime import time
 
 import pytest
-from ditto_server.ingestion.config.datasets import (
+from ditto_port.ingestion.config.datasets import (
     DATASET_REGISTRY,
     Dataset,
     DatasetConfig,

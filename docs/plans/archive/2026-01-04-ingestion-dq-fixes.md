@@ -66,8 +66,8 @@
 #### Task 1.1: 修复 DQ L1 阻断处理
 
 **Files:**
-- Modify: `apps/server/src/ditto_server/ingestion/services/coordinator.py:242-308` (`_write_data` 方法)
-- Modify: `apps/server/src/ditto_server/ingestion/services/coordinator.py:160-205` (`ingest_date` 方法)
+- Modify: `apps/server/src/ditto_port/ingestion/services/coordinator.py:242-308` (`_write_data` 方法)
+- Modify: `apps/server/src/ditto_port/ingestion/services/coordinator.py:160-205` (`ingest_date` 方法)
 - Create: `apps/server/tests/integration/ingestion/test_coordinator_dq_blocking.py`
 
 **Step 1: 修改 `_write_data()` 返回类型**
@@ -151,7 +151,7 @@ pixi run -e dev pytest apps/server/tests/integration/ingestion/test_coordinator_
 **Step 5: 提交**
 
 ```bash
-git add apps/server/src/ditto_server/ingestion/services/coordinator.py
+git add apps/server/src/ditto_port/ingestion/services/coordinator.py
 git add apps/server/tests/integration/ingestion/test_coordinator_dq_blocking.py
 git commit -m "fix(ingestion): DQ L1 阻断正确记录 FAIL 状态
 
@@ -167,7 +167,7 @@ git commit -m "fix(ingestion): DQ L1 阻断正确记录 FAIL 状态
 #### Task 1.2: 修复 adj_factor/fund_adj 列名不匹配
 
 **Files:**
-- Modify: `apps/server/src/ditto_server/ingestion/services/coordinator.py:274-287`
+- Modify: `apps/server/src/ditto_port/ingestion/services/coordinator.py:274-287`
 - Create: `apps/server/tests/integration/ingestion/test_adj_factor_ingestion.py`
 
 **Step 1: 修改 src_code_col 参数**
@@ -211,7 +211,7 @@ pixi run -e dev pytest apps/server/tests/integration/ingestion/test_adj_factor_i
 **Step 4: 提交**
 
 ```bash
-git add apps/server/src/ditto_server/ingestion/services/coordinator.py
+git add apps/server/src/ditto_port/ingestion/services/coordinator.py
 git add apps/server/tests/integration/ingestion/test_adj_factor_ingestion.py
 git commit -m "fix(ingestion): 修复 adj_factor SID 映射列名
 
@@ -309,7 +309,7 @@ git commit -m "fix(datahub): 修复 SQLite 日期绑定问题
 #### Task 2.2: 修复 market_wide asset_class 缺失
 
 **Files:**
-- Modify: `apps/server/src/ditto_server/ingestion/tasks/dq_batch.py:30-90`
+- Modify: `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py:30-90`
 - Modify: `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py:15-44, 77-97`
 - Modify: `packages/datahub/src/ditto_datahub/repositories/bars.py:396-440`
 - Create: `packages/datahub/tests/unit/dq/checkers/test_statistical_checker.py`
@@ -419,7 +419,7 @@ pixi run -e dev pytest packages/datahub/tests/unit/dq/checkers/test_statistical_
 **Step 6: 提交**
 
 ```bash
-git add apps/server/src/ditto_server/ingestion/tasks/dq_batch.py
+git add apps/server/src/ditto_port/ingestion/tasks/dq_batch.py
 git add packages/datahub/src/ditto_datahub/dq/checkers/statistical.py
 git add packages/datahub/tests/unit/dq/checkers/test_statistical_checker.py
 git commit -m "fix(dq): 修复 market_wide 查询 asset_class 缺失
@@ -493,7 +493,7 @@ git commit -m "refactor(datahub): 统一 SID 范围到百万级
 #### Task 3.2: 明确 backfill 并发策略
 
 **Files:**
-- Modify: `apps/server/src/ditto_server/ingestion/services/backfill.py:97-120, 153-210`
+- Modify: `apps/server/src/ditto_port/ingestion/services/backfill.py:97-120, 153-210`
 - Modify: `apps/server/tests/unit/ingestion/test_backfill.py`
 
 **Step 1: 修改 backfill_range 注释和实现**
@@ -563,7 +563,7 @@ pixi run -e dev pytest apps/server/tests/unit/ingestion/test_backfill.py -v
 **Step 5: 提交**
 
 ```bash
-git add apps/server/src/ditto_server/ingestion/services/backfill.py
+git add apps/server/src/ditto_port/ingestion/services/backfill.py
 git add apps/server/tests/unit/ingestion/test_backfill.py
 git commit -m "refactor(ingestion): 明确 backfill 并发策略
 
@@ -589,7 +589,7 @@ pixi run -e dev pytest packages/datahub/tests/ -v -m unit
 pixi run -e dev pytest apps/server/tests/ -v -m integration
 
 # 覆盖率检查
-pixi run -e dev pytest --cov=ditto_datahub --cov=ditto_server \
+pixi run -e dev pytest --cov=ditto_datahub --cov=ditto_port \
     --cov-report=html --cov-fail-under=80
 ```
 
@@ -684,12 +684,12 @@ git commit -m "docs: 更新 DQ 系统修复文档
 
 ## 关键实施文件清单
 
-1. `apps/server/src/ditto_server/ingestion/services/coordinator.py`
+1. `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 2. `packages/datahub/src/ditto_datahub/repositories/security.py`
 3. `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py`
-4. `apps/server/src/ditto_server/ingestion/tasks/dq_batch.py`
+4. `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py`
 5. `packages/datahub/src/ditto_datahub/types.py`
-6. `apps/server/src/ditto_server/ingestion/services/backfill.py`
+6. `apps/server/src/ditto_port/ingestion/services/backfill.py`
 
 ---
 

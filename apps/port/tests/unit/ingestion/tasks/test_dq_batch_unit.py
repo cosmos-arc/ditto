@@ -5,7 +5,7 @@ import pathlib
 import ditto_datahub
 import polars as pl
 import pytest
-from ditto_server.ingestion.tasks.dq_batch import (
+from ditto_port.ingestion.tasks.dq_batch import (
     dq_batch_check,
     dq_completeness_check,
     get_default_dq_config_path,

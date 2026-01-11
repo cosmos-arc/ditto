@@ -365,8 +365,8 @@ env:
 #### 优先级P1（Server应用层）
 
 **目标文件：**
-1. [`apps/server/src/ditto_server/ingestion/tasks/monitoring.py`](../apps/server/src/ditto_server/ingestion/tasks/monitoring.py) - 11.29% → 80%
-2. [`apps/server/src/ditto_server/ingestion/tasks/dq_batch.py`](../apps/server/src/ditto_server/ingestion/tasks/dq_batch.py) - 15.12% → 80%
+1. [`apps/server/src/ditto_port/ingestion/tasks/monitoring.py`](../apps/server/src/ditto_port/ingestion/tasks/monitoring.py) - 11.29% → 80%
+2. [`apps/server/src/ditto_port/ingestion/tasks/dq_batch.py`](../apps/server/src/ditto_port/ingestion/tasks/dq_batch.py) - 15.12% → 80%
 
 #### 优先级P2（运行时组件）
 
@@ -430,8 +430,8 @@ pixi run -e dev pre-commit-run
 | P0 | `packages/datahub/src/ditto_datahub/repositories/bars.py` | 14.15% | 80% |
 | P0 | `packages/datahub/src/ditto_datahub/stores/bars_store.py` | 15.04% | 80% |
 | P0 | `packages/datahub/src/ditto_datahub/stores/adj_factor_store.py` | 14.85% | 80% |
-| P1 | `apps/server/src/ditto_server/ingestion/tasks/monitoring.py` | 11.29% | 80% |
-| P1 | `apps/server/src/ditto_server/ingestion/tasks/dq_batch.py` | 15.12% | 80% |
+| P1 | `apps/server/src/ditto_port/ingestion/tasks/monitoring.py` | 11.29% | 80% |
+| P1 | `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py` | 15.12% | 80% |
 | P2 | `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py` | 14.61% | 80% |
 
 ---

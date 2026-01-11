@@ -7,7 +7,7 @@ testing individual code paths and branches without full integration setup.
 from __future__ import annotations
 
 import pytest
-from ditto_server.ingestion.flows.backfill import (
+from ditto_port.ingestion.flows.backfill import (
     BackfillFlowResult,
     backfill_flow,
     backfill_missing_flow,

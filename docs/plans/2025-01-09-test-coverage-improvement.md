@@ -44,7 +44,7 @@
 | dq/checkers/business | `packages/datahub/src/ditto_datahub/dq/checkers/business.py` | 15% | 边界测试不足 |
 | dq/checkers/statistical | `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py` | 10% | 分支覆盖不足 |
 | stores/ingestion_cursor | `packages/datahub/src/ditto_datahub/stores/ingestion_cursor.py` | 30% | 异常路径未测 |
-| ingestion/services/coordinator | `apps/server/src/ditto_server/ingestion/services/coordinator.py` | 27% | Mock 覆盖不足 |
+| ingestion/services/coordinator | `apps/server/src/ditto_port/ingestion/services/coordinator.py` | 27% | Mock 覆盖不足 |
 
 ---
 
@@ -131,9 +131,9 @@ graph TD
 
 | 模块 | 路径 | 原始 | 目标 | 实际 | 状态 |
 |------|------|------|------|------|------|
-| Coordinator | `apps/server/src/ditto_server/ingestion/services/coordinator.py` | 27% | 85% | **96%** | ✅ 完成 |
-| Metadata | `apps/server/src/ditto_server/ingestion/services/metadata.py` | 20% | 85% | **100%** | ✅ 完成 |
-| SecurityMapper | `apps/server/src/ditto_server/ingestion/services/security_mapper.py` | 40% | 85% | **100%** | ✅ 完成 |
+| Coordinator | `apps/server/src/ditto_port/ingestion/services/coordinator.py` | 27% | 85% | **96%** | ✅ 完成 |
+| Metadata | `apps/server/src/ditto_port/ingestion/services/metadata.py` | 20% | 85% | **100%** | ✅ 完成 |
+| SecurityMapper | `apps/server/src/ditto_port/ingestion/services/security_mapper.py` | 40% | 85% | **100%** | ✅ 完成 |
 
 **完成日期**: 2025-01-09
 **新增测试**: 23个（Coordinator: 8个, Metadata: 5个, SecurityMapper: 6个, Coordinator修复: 4个）
@@ -142,8 +142,8 @@ graph TD
 
 | 模块 | 路径 | 原始 | 目标 | 实际 | 状态 |
 |------|------|------|------|------|------|
-| Daily Flow | `apps/server/src/ditto_server/ingestion/flows/daily.py` | 20% | 80% | **100%** | ✅ 完成 |
-| Backfill Flow | `apps/server/src/ditto_server/ingestion/flows/backfill.py` | 15% | 80% | **94.61%** | ✅ 完成 |
+| Daily Flow | `apps/server/src/ditto_port/ingestion/flows/daily.py` | 20% | 80% | **100%** | ✅ 完成 |
+| Backfill Flow | `apps/server/src/ditto_port/ingestion/flows/backfill.py` | 15% | 80% | **94.61%** | ✅ 完成 |
 
 **完成日期**: 2025-01-10
 **新增测试**: 48个（Daily Flow: 18个, Backfill Flow: 30个）
@@ -487,7 +487,7 @@ pixi run -e dev pre-commit-run
 ### 每日检查
 ```bash
 # 运行覆盖率
-pixi run -e dev pytest --cov-report=term-missing --cov=ditto_datahub --cov=ditto_server
+pixi run -e dev pytest --cov-report=term-missing --cov=ditto_datahub --cov=ditto_port
 
 # 只运行失败的测试
 pytest --lf

@@ -7,8 +7,8 @@ testing individual code paths and branches without full integration setup.
 from __future__ import annotations
 
 import pytest
-from ditto_server.ingestion.config.datasets import Dataset
-from ditto_server.ingestion.flows.daily import (
+from ditto_port.ingestion.config.datasets import Dataset
+from ditto_port.ingestion.flows.daily import (
     check_trading_day,
     daily_ingestion_flow,
 )

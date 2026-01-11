@@ -288,7 +288,7 @@ Prefect Scheduler
 ### 8.1 从 apps/server 迁移
 
 1. **重命名**：`apps/server` → `apps/port`
-2. **包名**：`ditto_server` → `ditto_port`
+2. **包名**：`ditto_port` → `ditto_port`
 3. **目录重组**：
    - 创建 `services/` 和 `jobs/`
    - 移动业务逻辑到 `services/ingestion/`

@@ -7,7 +7,7 @@ T1 复权因子摄取任务工厂.
 
 from __future__ import annotations
 
-from ditto_server.ingestion.tasks.t0_meta import create_ingest_task
+from ditto_port.ingestion.tasks.t0_meta import create_ingest_task
 
 __all__ = ["create_ingest_task"]
 

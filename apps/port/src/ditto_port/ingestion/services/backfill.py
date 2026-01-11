@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from ditto_foundation import logger
 from pydantic import BaseModel
 
-from ditto_server.ingestion.services.coordinator import (
+from ditto_port.ingestion.services.coordinator import (
     IngestionCoordinator,
     IngestionResult,
 )

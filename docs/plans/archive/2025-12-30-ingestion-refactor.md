@@ -106,7 +106,7 @@ metadata = metadata_store.get_metadata("etf_daily", source)
 **核心思想**：`DATASET_REGISTRY` 作为单一配置源
 
 ```python
-# apps/server/src/ditto_server/ingestion/config/datasets.py
+# apps/server/src/ditto_port/ingestion/config/datasets.py
 
 class Dataset(str, Enum):
     """数据集枚举"""
@@ -185,7 +185,7 @@ DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
 
 **目录结构**：
 ```
-apps/server/src/ditto_server/ingestion/services/
+apps/server/src/ditto_port/ingestion/services/
 ├── __init__.py
 ├── coordinator.py      # IngestionCoordinator - 统一摄取协调器
 ├── metadata.py         # MetadataManager - 元数据管理
@@ -301,7 +301,7 @@ class RetryManager:
 
 #### 3.2.1 数据集注册表 (`config/datasets.py`)
 
-**文件**: `apps/server/src/ditto_server/ingestion/config/datasets.py`
+**文件**: `apps/server/src/ditto_port/ingestion/config/datasets.py`
 
 **职责**：
 - 定义 `Dataset` 枚举
@@ -438,26 +438,26 @@ DataSource.fetch_fund_adj()
 ## 五、关键文件路径
 
 ### 新增文件 - Ingestion Service
-- `apps/server/src/ditto_server/ingestion/services/__init__.py`
-- `apps/server/src/ditto_server/ingestion/services/metadata.py`
-- `apps/server/src/ditto_server/ingestion/services/coordinator.py`
-- `apps/server/src/ditto_server/ingestion/services/backfill.py`
-- `apps/server/src/ditto_server/ingestion/services/retry.py`
+- `apps/server/src/ditto_port/ingestion/services/__init__.py`
+- `apps/server/src/ditto_port/ingestion/services/metadata.py`
+- `apps/server/src/ditto_port/ingestion/services/coordinator.py`
+- `apps/server/src/ditto_port/ingestion/services/backfill.py`
+- `apps/server/src/ditto_port/ingestion/services/retry.py`
 
 ### 新增文件 - Config
-- `apps/server/src/ditto_server/ingestion/config/__init__.py`
-- `apps/server/src/ditto_server/ingestion/config/datasets.py`
+- `apps/server/src/ditto_port/ingestion/config/__init__.py`
+- `apps/server/src/ditto_port/ingestion/config/datasets.py`
 
 ### 新增文件 - Tasks
-- `apps/server/src/ditto_server/ingestion/tasks/__init__.py`
-- `apps/server/src/ditto_server/ingestion/tasks/t0_meta.py`
-- `apps/server/src/ditto_server/ingestion/tasks/t1_bars.py`
-- `apps/server/src/ditto_server/ingestion/tasks/t1_adj_factor.py`
+- `apps/server/src/ditto_port/ingestion/tasks/__init__.py`
+- `apps/server/src/ditto_port/ingestion/tasks/t0_meta.py`
+- `apps/server/src/ditto_port/ingestion/tasks/t1_bars.py`
+- `apps/server/src/ditto_port/ingestion/tasks/t1_adj_factor.py`
 
 ### 新增文件 - Flows
-- `apps/server/src/ditto_server/ingestion/flows/daily.py`
-- `apps/server/src/ditto_server/ingestion/flows/backfill.py`
-- `apps/server/src/ditto_server/ingestion/flows/repair.py`
+- `apps/server/src/ditto_port/ingestion/flows/daily.py`
+- `apps/server/src/ditto_port/ingestion/flows/backfill.py`
+- `apps/server/src/ditto_port/ingestion/flows/repair.py`
 
 ### 新增文件 - Deploy
 - `apps/server/deploy.py`
@@ -525,13 +525,13 @@ DataSource.fetch_fund_adj()
 - 审查: Spec 通过, 代码质量通过
 
 **Task 1.2**: 实现 MetadataManager
-- 文件: `apps/server/src/ditto_server/ingestion/services/metadata.py`
+- 文件: `apps/server/src/ditto_port/ingestion/services/metadata.py`
 - 测试: 14个测试通过, 覆盖率 **100%**
 - 状态: ✅ 完成
 - 审查: Spec 通过, 代码质量通过
 
 **Task 1.3**: 实现 IngestionCoordinator
-- 文件: `apps/server/src/ditto_server/ingestion/services/coordinator.py`
+- 文件: `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 - 测试: 16个测试通过, 覆盖率 **88.35%**
 - 状态: ✅ 完成
 - 审查: Spec 通过, 代码质量通过
@@ -539,13 +539,13 @@ DataSource.fetch_fund_adj()
 ### Phase 2: 全量回补和重试能力 ✅ (100%)
 
 **Task 2.1**: 实现 BackfillManager
-- 文件: `apps/server/src/ditto_server/ingestion/services/backfill.py`
+- 文件: `apps/server/src/ditto_port/ingestion/services/backfill.py`
 - 测试: 9个测试通过, 覆盖率 **86.36%**
 - 状态: ✅ 完成
 - 审查: Spec 通过, 代码质量通过
 
 **Task 2.2**: 实现 RetryManager
-- 文件: `apps/server/src/ditto_server/ingestion/services/retry.py`
+- 文件: `apps/server/src/ditto_port/ingestion/services/retry.py`
 - 测试: 12个测试通过, 覆盖率 **100%**
 - 状态: ✅ 完成
 - 审查: Spec 通过, 代码质量通过（评分 A+ 95/100）
@@ -553,7 +553,7 @@ DataSource.fetch_fund_adj()
 ### Phase 3: Prefect 集成 ✅ (100%)
 
 **Task 3.1**: 创建 config/datasets.py (数据集注册表)
-- 文件: `apps/server/src/ditto_server/ingestion/config/datasets.py`
+- 文件: `apps/server/src/ditto_port/ingestion/config/datasets.py`
 - 测试: 28个测试通过, 覆盖率 **88.61%**
 - 修复提交: `d7bd0ad`, `544e4df`
 - 状态: ✅ 完成
@@ -566,25 +566,25 @@ DataSource.fetch_fund_adj()
 - 审查: Spec 通过, 代码质量通过（评分 9.8/10）
 
 **Task 3.3**: 创建 flows/daily.py (每日增量 Flow)
-- 文件: `apps/server/src/ditto_server/ingestion/flows/daily.py`
+- 文件: `apps/server/src/ditto_port/ingestion/flows/daily.py`
 - 测试: 20个测试通过, 覆盖率 **100%**
 - 修复提交: `db2778d` (依赖编排重构)
 - 状态: ✅ 完成
 
 **Task 3.4**: 创建 flows/backfill.py
-- 文件: `apps/server/src/ditto_server/ingestion/flows/backfill.py`
+- 文件: `apps/server/src/ditto_port/ingestion/flows/backfill.py`
 - 测试: 10个测试通过, 覆盖率 **100%**
 - 修复提交: 测试 Mock 配置修复
 - 状态: ✅ 完成
 
 **Task 3.5**: 创建 flows/repair.py
-- 文件: `apps/server/src/ditto_server/ingestion/flows/repair.py`
+- 文件: `apps/server/src/ditto_port/ingestion/flows/repair.py`
 - 测试: 9个测试通过, 覆盖率 **100%**
 - 修复提交: 测试 limit 参数验证修复
 - 状态: ✅ 完成
 
 **Task 3.6**: 创建 deploy.py
-- 文件: `apps/server/src/ditto_server/ingestion/flows/deploy.py`
+- 文件: `apps/server/src/ditto_port/ingestion/flows/deploy.py`
 - 测试: 4个测试通过, 1个跳过 (Prefect 3.x API 变更)
 - 状态: ✅ 完成
 - 注: 需要更新以适配 Prefect 3.x 新的部署机制

@@ -11,7 +11,7 @@
 ## 变更概览
 
 ### 主要变更文件
-1. **数据摄入层** (`apps/server/src/ditto_server/ingestion/`)
+1. **数据摄入层** (`apps/server/src/ditto_port/ingestion/`)
    - `services/backfill.py` - 回补管理器
    - `services/coordinator.py` - 摄取协调器
    - `tasks/dq_batch.py` - DQ 批量检查任务
@@ -48,7 +48,7 @@
    - adj_factor schema 正确定义了 knowledge_date 字段
 
 3. **游标管理改进**
-   - [coordinator.py:190-196](apps/server/src/ditto_server/ingestion/services/coordinator.py#L190-L196) 正确处理游标更新逻辑
+   - [coordinator.py:190-196](apps/server/src/ditto_port/ingestion/services/coordinator.py#L190-L196) 正确处理游标更新逻辑
    - T0 数据集（stock_basic, etf_basic）在各自的 `_write_*` 方法中更新游标
    - T1/T2 数据集在 `ingest_date` 中统一更新游标
 
@@ -87,18 +87,18 @@
 
 4. **并发写入保护** ✅
    - [adj_factor.py:81-86](packages/datahub/src/ditto_datahub/repositories/adj_factor.py#L81-L86) 使用文件锁保护
-   - [coordinator.py:264](apps/server/src/ditto_server/ingestion/services/coordinator.py#L264) 使用 BarsRepository（带文件锁）
+   - [coordinator.py:264](apps/server/src/ditto_port/ingestion/services/coordinator.py#L264) 使用 BarsRepository（带文件锁）
 
 5. **错误分类处理** ✅
    - [http_utils.py:68-134](packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py#L68-L134) 完整的错误映射
    - 区分认证错误、限流错误、网络错误、超时错误
 
 6. **空数据处理** ✅
-   - [coordinator.py:138-153](apps/server/src/ditto_server/ingestion/services/coordinator.py#L138-L153) 正确处理空数据
+   - [coordinator.py:138-153](apps/server/src/ditto_port/ingestion/services/coordinator.py#L138-L153) 正确处理空数据
    - [source.py:99-107](packages/datahub/src/ditto_datahub/sources/tushare/source.py#L99-L107) 返回空 schema 而非错误
 
 7. **降级策略** ✅
-   - [coordinator.py:103-120](apps/server/src/ditto_server/ingestion/services/coordinator.py#L103-L120) 失败返回 IngestionResult 而非抛出异常
+   - [coordinator.py:103-120](apps/server/src/ditto_port/ingestion/services/coordinator.py#L103-L120) 失败返回 IngestionResult 而非抛出异常
    - 支持跳过已摄取数据
 
 ### 风控总体评级: 🟢 通过
@@ -143,19 +143,19 @@
 1. **ruff PLC0415 错误**（7 个）
    - **问题**: import 语句应放在文件顶层
    - **影响文件**:
-     - [backfill.py:75, 149](apps/server/src/ditto_server/ingestion/flows/backfill.py#L75)
-     - [repair.py:46, 116, 119](apps/server/src/ditto_server/ingestion/flows/repair.py#L46)
-     - [t0_meta.py:85, 87](apps/server/src/ditto_server/ingestion/tasks/t0_meta.py#L85)
+     - [backfill.py:75, 149](apps/server/src/ditto_port/ingestion/flows/backfill.py#L75)
+     - [repair.py:46, 116, 119](apps/server/src/ditto_port/ingestion/flows/repair.py#L46)
+     - [t0_meta.py:85, 87](apps/server/src/ditto_port/ingestion/tasks/t0_meta.py#L85)
    - **建议**: 将这些 import 移至文件顶层，或添加 `# noqa: PLC0415` 注释（如果是有意延迟导入）
 
 **Minor**（可选）：
 
 2. **文档字符串**
-   - [backfill.py](apps/server/src/ditto_server/ingestion/services/backfill.py) 的方法文档字符串完整
+   - [backfill.py](apps/server/src/ditto_port/ingestion/services/backfill.py) 的方法文档字符串完整
    - 建议为新增的 AdjFactorRepository 添加 README
 
 3. **代码复杂度**
-   - [coordinator.py](apps/server/src/ditto_server/ingestion/services/coordinator.py) 347 行，建议考虑拆分
+   - [coordinator.py](apps/server/src/ditto_port/ingestion/services/coordinator.py) 347 行，建议考虑拆分
    - 当前可接受，但未来可考虑按数据集拆分 Coordinator
 
 ### 代码质量总体评级: 🟡 需改进
@@ -285,9 +285,9 @@
 ## 附录 A：关键文件路径
 
 ### 核心实现文件
-- [apps/server/src/ditto_server/ingestion/services/backfill.py](apps/server/src/ditto_server/ingestion/services/backfill.py)
-- [apps/server/src/ditto_server/ingestion/services/coordinator.py](apps/server/src/ditto_server/ingestion/services/coordinator.py)
-- [apps/server/src/ditto_server/ingestion/tasks/dq_batch.py](apps/server/src/ditto_server/ingestion/tasks/dq_batch.py)
+- [apps/server/src/ditto_port/ingestion/services/backfill.py](apps/server/src/ditto_port/ingestion/services/backfill.py)
+- [apps/server/src/ditto_port/ingestion/services/coordinator.py](apps/server/src/ditto_port/ingestion/services/coordinator.py)
+- [apps/server/src/ditto_port/ingestion/tasks/dq_batch.py](apps/server/src/ditto_port/ingestion/tasks/dq_batch.py)
 - [packages/datahub/src/ditto_datahub/sources/tushare/client.py](packages/datahub/src/ditto_datahub/sources/tushare/client.py)
 - [packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py](packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py)
 - [packages/datahub/src/ditto_datahub/repositories/adj_factor.py](packages/datahub/src/ditto_datahub/repositories/adj_factor.py)（新增）

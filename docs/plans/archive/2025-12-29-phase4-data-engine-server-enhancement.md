@@ -277,7 +277,7 @@ class M:
 
 ### 4. Granian 服务器迁移
 
-**文件**: `apps/server/src/ditto_server/main.py`（或服务器入口文件）
+**文件**: `apps/server/src/ditto_port/main.py`（或服务器入口文件）
 
 **原配置**（uvicorn）:
 ```python
@@ -285,7 +285,7 @@ import uvicorn
 
 if __name__ == "__main__":
     uvicorn.run(
-        "ditto_server.app:create_app",
+        "ditto_port.app:create_app",
         host="0.0.0.0",
         port=8000,
         reload=True,
@@ -298,7 +298,7 @@ import granian
 
 if __name__ == "__main__":
     granian.Granian(
-        "ditto_server.app:create_app",
+        "ditto_port.app:create_app",
         interface="asgi",
         host="0.0.0.0",
         port=8000,
@@ -320,10 +320,10 @@ if __name__ == "__main__":
 **启动脚本更新**:
 ```bash
 # 原命令
-pixi run -e dev uvicorn ditto_server.app:create_app --host 0.0.0.0 --port 8000 --reload
+pixi run -e dev uvicorn ditto_port.app:create_app --host 0.0.0.0 --port 8000 --reload
 
 # 新命令
-pixi run -e dev granian ditto_server.app:create_app --interface asgi --host 0.0.0.0 --port 8000 --reload
+pixi run -e dev granian ditto_port.app:create_app --interface asgi --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### 5. orjson JSON 序列化迁移
@@ -496,14 +496,14 @@ async def get_data():
 - **延后原因**: 需要完整的数据环境进行性能基准测试
 
 ### Task 4.11: Granian 服务器迁移 `[M]` ✅ 已完成
-- 修改文件: `apps/server/src/ditto_server/main.py`
+- 修改文件: `apps/server/src/ditto_port/main.py`
 - 替换 uvicorn 为 granian 启动逻辑
 - 配置 Granian 参数（workers=1, threads=4, loop="granian"）
 - 更新启动脚本/命令
 - 验收标准: 服务器正常启动，API 可访问
 
 ### Task 4.12: orjson 序列化迁移 `[M]` ✅ 已完成
-- 修改文件: `apps/server/src/ditto_server/main.py`（ORJSONResponse）
+- 修改文件: `apps/server/src/ditto_port/main.py`（ORJSONResponse）
 - 实现 json_dumps/json_loads 统一接口（基于 orjson）
 - 创建 OrJSONResponse FastAPI 响应类
 - 迁移现有 JSON 序列化调用
@@ -534,7 +534,7 @@ async def get_data():
 | `packages/datahub/src/ditto_datahub/runtime/__init__.py` | 导出 DataCache, PitHelper | ✅ |
 | `packages/datahub/src/ditto_datahub/stores/calendar_store.py` | 集成 DataCache | ✅ |
 | `packages/datahub/src/ditto_datahub/stores/security_store.py` | 集成 DataCache | ✅ |
-| `apps/server/src/ditto_server/main.py` | Granian + ORJSONResponse | ✅ |
+| `apps/server/src/ditto_port/main.py` | Granian + ORJSONResponse | ✅ |
 
 ## 风险与依赖（更新）
 

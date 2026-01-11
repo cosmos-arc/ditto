@@ -8,7 +8,7 @@ import polars as pl
 import pytest
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_foundation.observability import Mode, init, reset_for_testing
-from ditto_server.ingestion.services.security_mapper import (
+from ditto_port.ingestion.services.security_mapper import (
     SecurityMapper,
     SecurityRegistrationParams,
     _format_date_for_sqlite,

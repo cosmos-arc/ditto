@@ -36,7 +36,7 @@
 
 ### 1.1 新增 SecurityMapper 服务
 
-**文件**: `apps/server/src/ditto_server/ingestion/services/security_mapper.py` (新增)
+**文件**: `apps/server/src/ditto_port/ingestion/services/security_mapper.py` (新增)
 
 ```python
 class SecurityMapper:
@@ -72,7 +72,7 @@ class SecurityMapper:
 
 ### 1.2 修复 Coordinator T0 写入路径
 
-**文件**: `apps/server/src/ditto_server/ingestion/services/coordinator.py`
+**文件**: `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 
 #### 修改点 1: 添加 SecurityMapper 依赖注入
 
@@ -158,7 +158,7 @@ def _write_etf_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]
 
 ### 1.3 T1 数据 SID 补齐
 
-**文件**: `apps/server/src/ditto_server/ingestion/services/coordinator.py`
+**文件**: `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 
 在 `_write_data` 的 T1 分支中添加 SID 补齐 (line 231)：
 
@@ -182,7 +182,7 @@ if dataset in ("etf_daily", "stock_daily"):
 
 ## 阶段 2: force 语义修复 (P0)
 
-**文件**: `apps/server/src/ditto_server/ingestion/services/coordinator.py`
+**文件**: `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 
 ### 修改点 1: ingest_date 传递 on_duplicate (line 150)
 
@@ -227,7 +227,7 @@ def _write_data(
 
 ## 阶段 3: 并发安全验证 (P1)
 
-**文件**: `apps/server/src/ditto_server/ingestion/flows/backfill.py`
+**文件**: `apps/server/src/ditto_port/ingestion/flows/backfill.py`
 
 ### 验证点
 
@@ -286,7 +286,7 @@ def get(
 
 在 `_check_zscore` 和 `_check_completeness` 方法中添加 `market_wide` 参数传递。
 
-**文件**: `apps/server/src/ditto_server/ingestion/tasks/dq_batch.py`
+**文件**: `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py`
 
 ### 修改点: dq_completeness_check 添加参数并修复连接泄漏 (line 168)
 
@@ -321,7 +321,7 @@ def dq_completeness_check(
 
 **状态**: 已完成 (2026-01-03)
 
-**文件**: `apps/server/src/ditto_server/ingestion/services/coordinator.py`
+**文件**: `apps/server/src/ditto_port/ingestion/services/coordinator.py`
 
 在 `ingest_date` 成功后添加游标更新 (line 189-195)：
 
@@ -343,7 +343,7 @@ if dataset not in ("stock_basic", "etf_basic"):
 
 ### 5.2 依赖编排修复 (Medium)
 
-**文件**: `apps/server/src/ditto_server/ingestion/flows/daily.py`
+**文件**: `apps/server/src/ditto_port/ingestion/flows/daily.py`
 
 #### 修改点 1: 移除重复执行
 
@@ -352,7 +352,7 @@ if dataset not in ("stock_basic", "etf_basic"):
 #### 修改点 2: 使用 get_parallel_datasets
 
 ```python
-from ditto_server.ingestion.config.datasets import get_parallel_datasets
+from ditto_port.ingestion.config.datasets import get_parallel_datasets
 
 levels = get_parallel_datasets(TaskTier.T1_INCREMENTAL)
 
@@ -375,9 +375,9 @@ for level in levels:
 **状态**: 已完成 (2026-01-04)
 
 **文件**:
-- `apps/server/src/ditto_server/ingestion/services/metadata.py` (line 96, 137)
-- `apps/server/src/ditto_server/ingestion/services/coordinator.py` (line 91)
-- `apps/server/src/ditto_server/ingestion/flows/backfill.py` (无需修改,已正确)
+- `apps/server/src/ditto_port/ingestion/services/metadata.py` (line 96, 137)
+- `apps/server/src/ditto_port/ingestion/services/coordinator.py` (line 91)
+- `apps/server/src/ditto_port/ingestion/flows/backfill.py` (无需修改,已正确)
 
 将硬编码的 `"tushare"` 替换为参数化（使用 `source_name` 或传入的 `source` 参数）。
 
@@ -423,16 +423,16 @@ for level in levels:
 ## 关键文件路径
 
 ### 新增文件
-- `apps/server/src/ditto_server/ingestion/services/security_mapper.py`
+- `apps/server/src/ditto_port/ingestion/services/security_mapper.py`
 
 ### 修改文件
-- `apps/server/src/ditto_server/ingestion/services/coordinator.py` - 核心修改
+- `apps/server/src/ditto_port/ingestion/services/coordinator.py` - 核心修改
 - `packages/datahub/src/ditto_datahub/repositories/bars.py`
-- `apps/server/src/ditto_server/ingestion/tasks/dq_batch.py`
+- `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py`
 - `packages/datahub/src/ditto_datahub/dq/checkers/statistical.py`
-- `apps/server/src/ditto_server/ingestion/flows/daily.py`
-- `apps/server/src/ditto_server/ingestion/services/metadata.py`
-- `apps/server/src/ditto_server/ingestion/flows/backfill.py`
+- `apps/server/src/ditto_port/ingestion/flows/daily.py`
+- `apps/server/src/ditto_port/ingestion/services/metadata.py`
+- `apps/server/src/ditto_port/ingestion/flows/backfill.py`
 
 ---
 

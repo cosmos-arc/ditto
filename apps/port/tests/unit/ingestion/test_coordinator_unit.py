@@ -11,7 +11,7 @@ from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_datahub.types import OnDuplicate
 from ditto_foundation.observability import Mode, init, reset_for_testing
-from ditto_server.ingestion.services.coordinator import (
+from ditto_port.ingestion.services.coordinator import (
     IngestionCoordinator,
     IngestionResult,
 )

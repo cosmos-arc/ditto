@@ -45,7 +45,7 @@ packages/datahub/src/ditto_datahub/
 └── repositories/
     └── bars.py                            # 修改：DQ 集成增强
 
-apps/server/src/ditto_server/
+apps/server/src/ditto_port/
 ├── ingestion/
 │   ├── tasks/
 │   │   ├── monitoring.py                  # 新增：摄取质量监控任务
@@ -131,7 +131,7 @@ def _compute_checksum(self, df: pl.DataFrame) -> str:
 
 ### Task 3.3: 摄取质量监控
 
-**新增文件**: `apps/server/src/ditto_server/ingestion/tasks/monitoring.py`
+**新增文件**: `apps/server/src/ditto_port/ingestion/tasks/monitoring.py`
 
 Prefect 任务：`monitor_ingestion_quality(trade_date, ingestion_results)`
 
@@ -175,7 +175,7 @@ def alert_dq_failure(dataset, trade_date, failed_rules, error_count) -> None
 
 ### Task 3.5: 定时调度配置
 
-**新增文件**: `apps/server/src/ditto_server/ingestion/flows/scheduled_ingest.py`
+**新增文件**: `apps/server/src/ditto_port/ingestion/flows/scheduled_ingest.py`
 
 Prefect Flow：`scheduled_daily_ingest_flow()`
 
@@ -353,7 +353,7 @@ class WriteResult:
 | `packages/datahub/src/ditto_datahub/sources/base.py` | 添加增量更新接口 | P0 |
 | `packages/datahub/src/ditto_datahub/sources/tushare/source.py` | 实现增量查询 | P0 |
 | `packages/datahub/src/ditto_datahub/repositories/bars.py` | DQ 集成增强 | P0 |
-| `apps/server/src/ditto_server/ingestion/tasks/bars.py` | 集成增量更新 | P0 |
+| `apps/server/src/ditto_port/ingestion/tasks/bars.py` | 集成增量更新 | P0 |
 | `packages/datahub/src/ditto_datahub/alerts/manager.py` | 新增告警管理器 | P0 |
 
 ---
@@ -413,8 +413,8 @@ class WriteResult:
   - `wechat.py` - WeChat 告警
 - `packages/datahub/src/ditto_datahub/sources/metadata.py` - 摄取元数据模型
 - `packages/datahub/src/ditto_datahub/stores/ingestion_metadata_store.py` - 摄取元数据存储
-- `apps/server/src/ditto_server/ingestion/tasks/monitoring.py` - 质量监控任务
-- `apps/server/src/ditto_server/ingestion/flows/scheduled_ingest.py` - 定时摄取流程
+- `apps/server/src/ditto_port/ingestion/tasks/monitoring.py` - 质量监控任务
+- `apps/server/src/ditto_port/ingestion/flows/scheduled_ingest.py` - 定时摄取流程
 - 测试文件 (6 个)
 
 **修改文件** (5 个):

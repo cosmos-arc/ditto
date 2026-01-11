@@ -821,11 +821,11 @@ pixi run -e dev python -c "import httpx; print(httpx.__version__)"
 
 ```bash
 # 1. Server tasks 可正常运行（需真实 token）
-pixi run -e dev python -m apps.server.tasks.ingestion.tushare_calendar
+pixi run -e dev python -m apps.port.tasks.ingestion.tushare_calendar
 
 # 2. Prefect flow 可调度
 pixi run -e dev python -c "
-from apps.server.ingestion.flows import tushare_ingestion_flow
+from apps.port.ingestion.flows import tushare_ingestion_flow
 assert tushare_ingestion_flow is not None
 "
 ```

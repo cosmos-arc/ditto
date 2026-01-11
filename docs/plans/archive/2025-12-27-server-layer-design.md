@@ -66,7 +66,7 @@
 ### 2.3 目录结构（更新）
 
 ```
-apps/server/src/ditto_server/
+apps/server/src/ditto_port/
 ├── main.py                    # FastAPI 应用（集成 Prefect Server）
 ├── ingestion/                 # 数据摄取模块
 │   ├── config.py              # IngestionConfig 配置
@@ -404,13 +404,13 @@ export TUSHARE_TOKEN="YOUR_TOKEN"
 
 | 操作 | 文件路径 | 说明 |
 |------|----------|------|
-| 修改 | `apps/server/src/ditto_server/main.py` | FastAPI + Prefect 启动 |
+| 修改 | `apps/server/src/ditto_port/main.py` | FastAPI + Prefect 启动 |
 | 修改 | `packages/datahub/src/ditto_datahub/sources/tushare/client.py` | Token fallback 链 |
 | 修改 | `packages/datahub/src/ditto_datahub/sources/base.py` | 新增 4 个抽象方法 |
 | 修改 | `packages/datahub/src/ditto_datahub/sources/tushare/source.py` | 新增 4 个 fetch 方法 |
-| 新增 | `apps/server/src/ditto_server/ingestion/tasks/stock.py` | 股票摄取任务 |
-| 新增 | `apps/server/src/ditto_server/ingestion/tasks/adj_factor.py` | 复权因子摄取任务 |
-| 新增 | `apps/server/src/ditto_server/ingestion/flows/daily_ingest.py` | 完整摄取流程（7 tasks） |
+| 新增 | `apps/server/src/ditto_port/ingestion/tasks/stock.py` | 股票摄取任务 |
+| 新增 | `apps/server/src/ditto_port/ingestion/tasks/adj_factor.py` | 复权因子摄取任务 |
+| 新增 | `apps/server/src/ditto_port/ingestion/flows/daily_ingest.py` | 完整摄取流程（7 tasks） |
 | 新增 | `apps/server/README.md` | Server 模块说明 |
 | 新增 | `packages/datahub/src/ditto_datahub/sources/README.md` | Sources 模块说明 |
 | 修改 | `docs/sprints/sprint-01-data-layer.md` | Sprint 文档更新 |

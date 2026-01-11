@@ -2,11 +2,11 @@
 
 import pytest
 from ditto_foundation.observability import Mode, init, reset_for_testing
-from ditto_server.ingestion.services.backfill import (
+from ditto_port.ingestion.services.backfill import (
     BackfillManager,
     BackfillResult,
 )
-from ditto_server.ingestion.services.coordinator import IngestionResult
+from ditto_port.ingestion.services.coordinator import IngestionResult
 
 
 @pytest.fixture(autouse=True)

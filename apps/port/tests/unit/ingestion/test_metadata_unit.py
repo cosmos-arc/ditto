@@ -6,7 +6,7 @@ import polars as pl
 import pytest
 from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_foundation.observability import Mode, init, reset_for_testing
-from ditto_server.ingestion.services.metadata import (
+from ditto_port.ingestion.services.metadata import (
     MetadataManager,
     _json_serializable,
 )
