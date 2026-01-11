@@ -7,10 +7,12 @@ from unittest.mock import MagicMock
 import duckdb
 import pytest
 
-# 添加父目录到 sys.path 以导入 conftest
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# 获取项目根目录并添加到 sys.path（为了导入 apps.port.tests.conftest）
+_project_root = Path(__file__).parent.parent.parent.parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
 
-from conftest import DatabaseManager
+from apps.port.tests.conftest import DatabaseManager  # noqa: E402
 
 
 @pytest.mark.unit
