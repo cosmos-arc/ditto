@@ -1,7 +1,7 @@
 """Ingestion configuration package."""
 
-from ditto_port.ingestion.config.config import IngestionConfig
-from ditto_port.ingestion.config.datasets import (
+from ditto_port.services.ingestion.config.config import IngestionConfig
+from ditto_port.services.ingestion.config.datasets import (
     DATASET_REGISTRY,
     Dataset,
     DatasetConfig,

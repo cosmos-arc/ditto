@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from prefect import task
 
-from ditto_port.ingestion.config.datasets import DATASET_REGISTRY, Dataset
+from ditto_port.services.ingestion.config.datasets import DATASET_REGISTRY, Dataset
 
 if TYPE_CHECKING:
     pass
@@ -85,7 +85,7 @@ def create_ingest_task(dataset: Dataset) -> Any:
         # 延迟导入避免循环依赖
         from ditto_datahub import DataHub  # noqa: PLC0415
 
-        from ditto_port.ingestion.services.coordinator import (  # noqa: PLC0415
+        from ditto_port.services.ingestion.coordinator import (  # noqa: PLC0415
             IngestionCoordinator,
         )
 

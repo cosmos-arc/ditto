@@ -24,14 +24,14 @@ def deploy_all_flows() -> None:
     """
     from prefect.deployments import Deployment  # noqa: PLC0415
 
-    from ditto_port.ingestion.flows import (  # noqa: PLC0415
+    from ditto_port.jobs.flows import (  # noqa: PLC0415
         backfill_flow,
         daily_ingestion_flow,
         daily_repair_flow,
         repair_holes_flow,
         retry_failed_flow,
     )
-    from ditto_port.ingestion.tasks.dq_batch import dq_batch_check  # noqa: PLC0415
+    from ditto_port.jobs.tasks.dq_batch import dq_batch_check  # noqa: PLC0415
 
     logger.info("开始部署 Prefect Flows", event="deploy_start")
 

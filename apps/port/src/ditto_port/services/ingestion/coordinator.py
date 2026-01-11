@@ -18,8 +18,8 @@ from ditto_datahub.sources.metadata import IngestionStatus
 from ditto_datahub.types import OnDuplicate
 from ditto_foundation import logger
 
-from ditto_port.ingestion.services.metadata import MetadataManager
-from ditto_port.ingestion.services.security_mapper import SecurityMapper
+from ditto_port.services.ingestion.metadata import MetadataManager
+from ditto_port.services.ingestion.security_mapper import SecurityMapper
 
 if TYPE_CHECKING:
     from ditto_datahub.hub import DataHub
