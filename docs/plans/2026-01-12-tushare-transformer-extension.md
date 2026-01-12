@@ -1,7 +1,7 @@
 # Tushare Transformer 统一扩展设计
 
 **日期**: 2026-01-12
-**状态**: 设计完成
+**状态**: 实施中
 **目标**: 扩展 transformer 支持所有 Tushare API 的数据转换
 
 ---
@@ -10,7 +10,7 @@
 
 扩展 `TushareDataTransformer` 以支持所有 Tushare API 的数据转换，消除 `source.py` 中剩余的 ~162 行重复代码。
 
-**当前状态**: Phase 1.1 已完成 `fetch_etf_daily` 和 `fetch_stock_daily` 使用 transformer
+**当前状态**: REFACTOR 阶段进行中（步骤 1 已完成，步骤 2-4 待完成）
 **目标**: 将其余 6 个 fetch 方法也改用 transformer 统一处理
 
 ---
@@ -65,69 +65,62 @@ def transform(
 
 ## 实施步骤 (TDD)
 
-### RED 阶段
+### RED 阶段 ✅ 已完成
 
-1. **扩展 ColumnMapping**
-   - 添加 `boolean_columns: tuple[str, ...] = ()`
-   - 添加 `computed_columns: dict[str, pl.Expr] = field(default_factory=dict)`
+1. **扩展 ColumnMapping** ✅
+   - [x] 添加 `boolean_columns: tuple[str, ...] = ()`
+   - [x] 添加 `computed_columns: dict[str, pl.Expr] = field(default_factory=dict)`
 
-2. **编写测试**
-   - `test_column_mapping_with_boolean_columns()`
-   - `test_column_mapping_with_computed_columns()`
-   - `test_transform_with_boolean_columns()`
-   - `test_transform_with_computed_columns()` (symbol/exchange 提取)
-   - `test_transform_calendar_empty()`
-   - `test_transform_adj_factor_empty()`
+2. **编写测试** ✅
+   - [x] `test_column_mapping_with_boolean_columns()`
+   - [x] `test_column_mapping_with_computed_columns()`
+   - [x] `test_transform_with_boolean_columns()`
+   - [x] `test_transform_with_computed_columns()` (symbol/exchange 提取)
+   - [x] `test_transform_calendar_empty()`
+   - [x] `test_transform_adj_factor_empty()`
 
-### GREEN 阶段
+### GREEN 阶段 ✅ 已完成
 
-1. **更新 `_build_schema_from_mapping()`**
-   - 支持 `boolean_columns` → `pl.Boolean`
-   - 支持 `computed_columns` 推断类型
+1. **更新 `_build_schema_from_mapping()`** ✅
+   - [x] 支持 `boolean_columns` → `pl.Boolean`
+   - [x] 支持 `computed_columns` 推断类型（使用 dummy 数据执行转换）
 
-2. **实现通用 `transform()` 方法**
-   - 合并现有 `transform_daily_ohlcv()` 逻辑
-   - 添加 `boolean_columns` 转换
-   - 添加 `computed_columns` 应用
+2. **实现通用 `transform()` 方法** ✅
+   - [x] 合并现有 `transform_daily_ohlcv()` 逻辑
+   - [x] 添加 `boolean_columns` 转换
+   - [x] 添加 `computed_columns` 应用（使用 `**kwargs` 展开）
+   - [x] 提取 `_transform_impl()` 内部方法
 
-### REFACTOR 阶段
+### REFACTOR 阶段 🔄 进行中
 
-1. **创建预定义配置** (transformer.py)
+1. **创建预定义配置** (transformer.py) ✅ 已完成
    ```python
-   CALENDAR_MAPPING = ColumnMapping(...)
-   ADJ_FACTOR_MAPPING = ColumnMapping(...)
-   FUND_ADJ_MAPPING = ColumnMapping(...)
-   ETF_BASIC_MAPPING = ColumnMapping(...)
-   STOCK_BASIC_MAPPING = ColumnMapping(...)
-   STOCK_LIMIT_MAPPING = ColumnMapping(...)
+   CALENDAR_MAPPING = ColumnMapping(...)      # ✅
+   ADJ_FACTOR_MAPPING = ColumnMapping(...)    # ✅
+   FUND_ADJ_MAPPING = ColumnMapping(...)      # ✅
+   ETF_BASIC_MAPPING = ColumnMapping(...)     # ✅
+   STOCK_BASIC_MAPPING = ColumnMapping(...)   # ✅
+   STOCK_LIMIT_MAPPING = ColumnMapping(...)   # ✅
    ```
 
-2. **重构 source.py fetch 方法**
-   - `fetch_calendar()` → 使用 `CALENDAR_MAPPING`
-   - `fetch_adj_factor()` → 使用 `ADJ_FACTOR_MAPPING`
-   - `fetch_fund_adj()` → 使用 `FUND_ADJ_MAPPING`
-   - `fetch_etf_basic()` → 使用 `ETF_BASIC_MAPPING`
-   - `fetch_stock_basic()` → 使用 `STOCK_BASIC_MAPPING`
-   - `fetch_stock_limit()` → 使用 `STOCK_LIMIT_MAPPING`
+2. **重构 source.py fetch 方法** ⏳ 待完成
+   - [ ] `fetch_calendar()` → 使用 `CALENDAR_MAPPING`
+   - [ ] `fetch_adj_factor()` → 使用 `ADJ_FACTOR_MAPPING`
+   - [ ] `fetch_fund_adj()` → 使用 `FUND_ADJ_MAPPING`
+   - [ ] `fetch_etf_basic()` → 使用 `ETF_BASIC_MAPPING`
+   - [ ] `fetch_stock_basic()` → 使用 `STOCK_BASIC_MAPPING`
+   - [ ] `fetch_stock_limit()` → 使用 `STOCK_LIMIT_MAPPING`
 
-3. **保持向后兼容**
-   ```python
-   @staticmethod
-   def transform_daily_ohlcv(df, dataset_name, mapping=None):
-       """向后兼容的包装方法."""
-       if mapping is None:
-           mapping = DAILY_OHLCV_MAPPING
-       return TushareDataTransformer.transform(df, dataset_name, mapping)
-   ```
+3. **保持向后兼容** ✅ 已完成（transform_daily_ohlcv 已保留）
 
-4. **更新 __all__ 导出**
+4. **更新 __all__ 导出** ✅ 已完成
    ```python
    __all__ = [
-       "DAILY_OHLCV_MAPPING",
-       "CALENDAR_MAPPING",
        "ADJ_FACTOR_MAPPING",
-       "FUND_ADJ_MAPPING",
+       "CALENDAR_MAPPING",
+       "DAILY_OHLCV_MAPPING",
        "ETF_BASIC_MAPPING",
+       "FUND_ADJ_MAPPING",
        "STOCK_BASIC_MAPPING",
        "STOCK_LIMIT_MAPPING",
        "ColumnMapping",
@@ -200,3 +193,21 @@ pixi run -e dev pre-commit-run
 | ETF symbol/exchange 提取逻辑错误 | 单独测试 computed_columns |
 | 向后兼容性破坏 | 保留 `transform_daily_ohlcv()` 包装方法 |
 | Schema 变化影响下游 | 运行完整集成测试验证 |
+
+---
+
+## 进度日志
+
+| 日期 | 提交 | 内容 |
+|------|------|------|
+| 2026-01-12 | `8156976` | feat(tushare): 扩展 ColumnMapping 添加 boolean_columns 字段 |
+| 2026-01-12 | `a256a78` | feat(tushare): 扩展 ColumnMapping 添加 computed_columns |
+| 2026-01-12 | `29950d4` | test(tushare): 编写 transform 相关测试 (boolean/computed/empty) |
+| 2026-01-12 | `af7e19c` | test(tushare): 修复 ETF_BASIC_MAPPING 测试配置 |
+| 2026-01-12 | `b5f9667` | feat(tushare): 添加预定义映射配置并修复 transform 方法 |
+
+### 待完成工作
+
+1. 重构 6 个 fetch 方法使用对应的 MAPPING 配置
+2. 运行完整测试验证
+3. 清理 `_record_metrics` 函数（已移入 transform）
