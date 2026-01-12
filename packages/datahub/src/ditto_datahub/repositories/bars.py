@@ -193,9 +193,12 @@ class BarsRepository:
         # 1. 参数验证和解析
         try:
             resolved = self._resolve_query(query)
-        except ValueError:
+        except ValueError as e:
             # 如果无法解析出有效的 SID，返回空 DataFrame
-            return pl.DataFrame()
+            # 其他 ValueError（如混合资产类别）应该继续抛出
+            if "无法解析出有效的 SID" in str(e):
+                return pl.DataFrame()
+            raise
 
         # 2. 加载核心数据
         df = self._load_bars_core(resolved)
@@ -463,7 +466,7 @@ class BarsRepository:
             asof_date = date_type.fromisoformat(query.asof)
 
         # 3. 确定资产类别
-        asset_class = query.asset_class
+        asset_class: Literal["stock", "etf", "index"] | None = query.asset_class
         if not asset_class:
             asset_class = self._detect_asset_class_from_sids(resolved_sids)
 
@@ -526,7 +529,9 @@ class BarsRepository:
 
         return sorted(resolved)
 
-    def _detect_asset_class_from_sids(self, sids: list[int]) -> str:
+    def _detect_asset_class_from_sids(
+        self, sids: list[int]
+    ) -> Literal["stock", "etf", "index"]:
         """
         从 SID 列表检测资产类别。
 
@@ -776,7 +781,8 @@ class BarsRepository:
         Args:
             df: 已关联 adj_factor 的 K线数据。
             adj_df: 调整因子数据（已排序，包含所有因子）。
-            asof: Point-in-Time 日期（date 对象或字符串）。如果提供，baseline 计算将使用该日期之前的因子。
+            asof: Point-in-Time 日期（date 对象或字符串）。
+                如果提供，baseline 计算将使用该日期之前的因子。
 
         Returns:
             QFQ 调整后的 DataFrame.
