@@ -8,6 +8,10 @@ from contextlib import contextmanager
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.meta.schemas import (
+    TUSHARE_LIST_STATUS_SCHEMA,
+    TUSHARE_ST_SCHEMA,
+)
 from ditto_datahub.sources.base import (
     DataSource,
     SourceAuthenticationError,
@@ -419,7 +423,7 @@ class TushareSource(DataSource):
             stock_st API 不需要日期参数，返回所有当前 ST 股票
 
         """
-        st_df = pl.DataFrame(schema={"ts_code": pl.String, "name": pl.String})
+        st_df = pl.DataFrame(schema=TUSHARE_ST_SCHEMA)
         try:
             st_response = self._client.query(
                 api_name="stock_st",
@@ -448,9 +452,7 @@ class TushareSource(DataSource):
             list_status: L=正常, D=退市, P=暂停
 
         """
-        list_status_df = pl.DataFrame(
-            schema={"ts_code": pl.String, "list_status": pl.String}
-        )
+        list_status_df = pl.DataFrame(schema=TUSHARE_LIST_STATUS_SCHEMA)
         try:
             basic_response = self._client.query(
                 api_name="stock_basic",

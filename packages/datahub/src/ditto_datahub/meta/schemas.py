@@ -138,3 +138,26 @@ STOCK_STATUS_SCHEMA: dict[str, type[pl.DataType]] = {
     "source": pl.Utf8,
     "src_code": pl.Utf8,
 }
+
+
+# ============================================================
+# Tushare Source Schemas (for empty DataFrame creation)
+# ============================================================
+# These schemas are used in Tushare source methods to create empty DataFrames
+# when API calls fail. They define the minimal structure for temporary DataFrames.
+
+
+# ST (Special Treatment) stock schema
+# Used in TushareSource._fetch_st_data() for stock_st API
+TUSHARE_ST_SCHEMA: dict[str, type[pl.DataType]] = {
+    "ts_code": pl.String,
+    "name": pl.String,
+}
+
+
+# List status schema
+# Used in TushareSource._fetch_list_status_data() for stock_basic API
+TUSHARE_LIST_STATUS_SCHEMA: dict[str, type[pl.DataType]] = {
+    "ts_code": pl.String,
+    "list_status": pl.String,
+}

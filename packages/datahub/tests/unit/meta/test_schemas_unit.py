@@ -8,6 +8,8 @@ from ditto_datahub.meta.schemas import (
     INDEX_WEIGHT_SCHEMA,
     STOCK_DAILY_SCHEMA,
     STOCK_STATUS_SCHEMA,  # B.3: Stock status schema
+    TUSHARE_LIST_STATUS_SCHEMA,  # Tushare source schemas
+    TUSHARE_ST_SCHEMA,  # Tushare source schemas
     UNIVERSE_CONSTITUENT_SCHEMA,
 )
 
@@ -295,3 +297,55 @@ class TestStockStatusSchema:
         assert STOCK_STATUS_SCHEMA["list_status"] == pl.Utf8
         assert STOCK_STATUS_SCHEMA["source"] == pl.Utf8
         assert STOCK_STATUS_SCHEMA["src_code"] == pl.Utf8
+
+
+class TestTushareSTSchema:
+    """Tests for TUSHARE_ST_SCHEMA."""
+
+    def test_schema_is_dict(self) -> None:
+        """Schema should be a dictionary."""
+        assert isinstance(TUSHARE_ST_SCHEMA, dict)
+
+    def test_schema_has_all_required_fields(self) -> None:
+        """Schema should have ts_code and name fields."""
+        required_fields = {"ts_code", "name"}
+        assert set(TUSHARE_ST_SCHEMA.keys()) == required_fields
+
+    def test_schema_types_are_polars_types(self) -> None:
+        """Schema values should be Polars String types."""
+        for dtype in TUSHARE_ST_SCHEMA.values():
+            assert dtype == pl.String
+
+    def test_ts_code_is_string(self) -> None:
+        """ts_code field should be String."""
+        assert TUSHARE_ST_SCHEMA["ts_code"] == pl.String
+
+    def test_name_is_string(self) -> None:
+        """name field should be String."""
+        assert TUSHARE_ST_SCHEMA["name"] == pl.String
+
+
+class TestTushareListStatusSchema:
+    """Tests for TUSHARE_LIST_STATUS_SCHEMA."""
+
+    def test_schema_is_dict(self) -> None:
+        """Schema should be a dictionary."""
+        assert isinstance(TUSHARE_LIST_STATUS_SCHEMA, dict)
+
+    def test_schema_has_all_required_fields(self) -> None:
+        """Schema should have ts_code and list_status fields."""
+        required_fields = {"ts_code", "list_status"}
+        assert set(TUSHARE_LIST_STATUS_SCHEMA.keys()) == required_fields
+
+    def test_schema_types_are_polars_types(self) -> None:
+        """Schema values should be Polars String types."""
+        for dtype in TUSHARE_LIST_STATUS_SCHEMA.values():
+            assert dtype == pl.String
+
+    def test_ts_code_is_string(self) -> None:
+        """ts_code field should be String."""
+        assert TUSHARE_LIST_STATUS_SCHEMA["ts_code"] == pl.String
+
+    def test_list_status_is_string(self) -> None:
+        """list_status field should be String."""
+        assert TUSHARE_LIST_STATUS_SCHEMA["list_status"] == pl.String
