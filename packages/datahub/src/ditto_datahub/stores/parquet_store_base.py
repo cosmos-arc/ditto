@@ -10,11 +10,36 @@ Following design document at docs/design/02_data_design.md.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import polars as pl
-from ditto_foundation.util.io import file_md5
+from ditto_foundation import M, logger, traced
+from ditto_foundation.util.io import atomic_write, file_md5
+
+from ditto_datahub.types import OnDuplicate
+
+
+@dataclass(frozen=True)
+class WriteResult:
+    """写入结果统计"""
+
+    file_path: str
+    checksum: str
+    added: int
+    updated: int
+    skipped: int
+    is_merge: bool
+
+
+@dataclass(frozen=True)
+class MergeResult:
+    """合并结果"""
+
+    df: pl.DataFrame
+    added: int
+    updated: int
 
 
 class ParquetStoreBase(ABC):
@@ -91,6 +116,17 @@ class ParquetStoreBase(ABC):
     # ============ Abstract methods (must be implemented by subclasses) ============
 
     @abstractmethod
+    def _get_key_columns(self) -> list[str]:
+        """
+        获取唯一键列名（用于去重）。
+
+        Returns:
+            键列名列表。
+
+        """
+        ...
+
+    @abstractmethod
     def read(
         self,
         dataset: str,
@@ -113,26 +149,216 @@ class ParquetStoreBase(ABC):
         """
         ...
 
-    @abstractmethod
+    def _get_sort_columns(self) -> list[str]:
+        """
+        获取排序列名（默认为键列）。
+
+        Returns:
+            排序列名列表。
+
+        """
+        return self._get_key_columns()
+
+    def _get_date_column(self) -> str:
+        """
+        获取日期列名（默认 trade_date）。
+
+        Returns:
+            日期列名。
+
+        """
+        return "trade_date"
+
+    def _prepare_for_write(self, df: pl.DataFrame) -> pl.DataFrame:
+        """
+        准备写入：归一化日期列并排序。
+
+        Args:
+            df: 输入 DataFrame。
+
+        Returns:
+            准备好的 DataFrame。
+
+        """
+        date_col = self._get_date_column()
+        if date_col in df.columns:
+            if df[date_col].dtype == pl.String:
+                df = df.with_columns(pl.col(date_col).str.strptime(pl.Date, "%Y-%m-%d"))
+            elif df[date_col].dtype != pl.Date:
+                df = df.with_columns(pl.col(date_col).cast(pl.Date))
+
+        sort_cols = self._get_sort_columns()
+        return df.sort(sort_cols)
+
+    def _merge_with_existing(
+        self,
+        df: pl.DataFrame,
+        file_path: Path,
+        on_duplicate: OnDuplicate,
+    ) -> MergeResult:
+        """
+        合并新数据与现有数据。
+
+        Args:
+            df: 新数据。
+            file_path: 现有数据文件路径。
+            on_duplicate: 重复数据处理策略。
+
+        Returns:
+            MergeResult 包含合并后的 DataFrame 和统计信息。
+
+        Raises:
+            ValueError: 如果 on_duplicate=ERROR 且存在重复数据。
+
+        """
+        if file_path.exists():
+            existing = pl.read_parquet(file_path)
+            key_columns = self._get_key_columns()
+
+            # 检测重复数据
+            existing_keys = existing.select(key_columns)
+            new_keys = df.select(key_columns)
+
+            # 找出重叠的键
+            merged_keys = existing_keys.join(new_keys, on=key_columns, how="inner")
+            overlap_count = len(merged_keys)
+
+            if not merged_keys.is_empty():
+                # 存在重复数据
+                if on_duplicate == OnDuplicate.ERROR:
+                    dup_count = overlap_count
+                    msg = (
+                        f"Duplicate data: {dup_count} overlapping key pairs. "
+                        "Use OnDuplicate.KEEP_FIRST to preserve, or "
+                        "OnDuplicate.KEEP_LAST to overwrite."
+                    )
+                    raise ValueError(msg)
+                elif on_duplicate == OnDuplicate.KEEP_FIRST:
+                    # 保留现有数据，过滤掉新数据中的重复部分
+                    non_overlapping = new_keys.join(
+                        existing_keys, on=key_columns, how="anti"
+                    )
+                    df = df.join(non_overlapping, on=key_columns, how="inner")
+                    combined = pl.concat([existing, df])
+                    # added = 新数据中去重后的行数
+                    added = len(df)
+                    updated = 0
+                elif on_duplicate == OnDuplicate.KEEP_LAST:
+                    # Last-Write-Wins: 新数据覆盖现有数据
+                    combined = pl.concat([existing, df])
+                    combined = combined.unique(subset=key_columns, keep="last")
+                    # added = 新数据中非重叠的行数
+                    added = len(df) - overlap_count
+                    # updated = 重叠的行数
+                    updated = overlap_count
+                else:
+                    raise ValueError(f"Unknown OnDuplicate strategy: {on_duplicate}")
+            else:
+                # 无重复，直接合并
+                combined = pl.concat([existing, df])
+                added = len(df)
+                updated = 0
+        else:
+            combined = df
+            added = len(df)
+            updated = 0
+
+        return MergeResult(df=combined, added=added, updated=updated)
+
+    @traced("data.write")
     def write(
         self,
         dataset: str,
         df: pl.DataFrame,
         year: int,
-    ) -> tuple[str, str]:
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> WriteResult:
         """
-        Write data to the store.
+        统一的写入实现（所有子类共享）。
 
         Args:
-            dataset: Dataset name.
-            df: Data to write.
-            year: Year partition.
+            dataset: 数据集名称。
+            df: 要写入的数据。
+            year: 年份分区。
+            on_duplicate: 重复数据处理策略。
 
         Returns:
-            Tuple of (file_path, checksum).
+            写入结果统计。
 
         """
-        ...
+        if len(df) == 0:
+            return WriteResult(
+                file_path="",
+                checksum="",
+                added=0,
+                updated=0,
+                skipped=0,
+                is_merge=False,
+            )
+
+        # 确保目录存在
+        dataset_dir = self._data_root / dataset
+        dataset_dir.mkdir(parents=True, exist_ok=True)
+
+        file_path = self._get_path(dataset, year)
+        is_merge = file_path.exists()
+
+        # 检测 batch 内部重复并自动去重
+        key_columns = self._get_key_columns()
+        batch_duplicates = (
+            df.group_by(key_columns)
+            .agg(pl.len().alias("_count"))
+            .filter(pl.col("_count") > 1)
+        )
+
+        if not batch_duplicates.is_empty():
+            logger.warning(
+                "检测到 batch 内部重复, 自动去重(保留第一条)",
+                event="batch_internal_duplicates",
+                dataset=dataset,
+                year=year,
+                duplicate_count=len(batch_duplicates),
+            )
+            df = df.unique(subset=key_columns, keep="first")
+
+        # 合并现有数据并获取统计信息
+        merge_result = self._merge_with_existing(df, file_path, on_duplicate)
+        combined = merge_result.df
+
+        # 准备写入
+        combined = self._prepare_for_write(combined)
+
+        # 使用合并结果中的统计信息
+        added = merge_result.added
+        updated = merge_result.updated
+        skipped = 0
+
+        # Atomic 写入
+        atomic_write(combined, file_path)
+
+        # 计算 checksum
+        checksum = file_md5(file_path)
+
+        logger.info(
+            "Data write completed",
+            event="data_write_complete",
+            dataset=dataset,
+            year=year,
+            row_count=len(df),
+            total_rows=len(combined),
+            is_merge=is_merge,
+            file_path=str(file_path),
+            checksum=checksum,
+        )
+
+        return WriteResult(
+            file_path=str(file_path),
+            checksum=checksum,
+            added=added,
+            updated=updated,
+            skipped=skipped,
+            is_merge=is_merge,
+        )
 
     # ============ Metadata operations ============
 

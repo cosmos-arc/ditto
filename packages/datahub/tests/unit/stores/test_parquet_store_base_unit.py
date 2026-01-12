@@ -2,20 +2,25 @@
 
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 import polars as pl
 import pytest
-from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
-from ditto_foundation.util.io import file_md5
+from ditto_datahub.stores.parquet_store_base import ParquetStoreBase, WriteResult
+from ditto_datahub.types import OnDuplicate
 
 # ============ Mock Implementation ============
 
 
 class MockStore(ParquetStoreBase):
     """Mock implementation of ParquetStoreBase for testing."""
+
+    def _get_key_columns(self) -> list[str]:
+        """返回键列名."""
+        return ["sid", "trade_date"]
 
     def read(
         self,
@@ -59,33 +64,6 @@ class MockStore(ParquetStoreBase):
             df = df.filter(pl.col("trade_date") <= pl.lit(end_date).cast(pl.Date))
 
         return df
-
-    def write(
-        self,
-        dataset: str,
-        df: pl.DataFrame,
-        year: int,
-    ) -> tuple[str, str]:
-        """
-        Write implementation - writes to parquet files.
-
-        Args:
-            dataset: Dataset name.
-            df: Data to write.
-            year: Year partition.
-
-        Returns:
-            Tuple of (file_path, checksum).
-
-        """
-        path = self._get_path(dataset, year)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        df.write_parquet(path)
-
-        # Return actual checksum using file_md5
-
-        checksum = file_md5(path)
-        return str(path), checksum
 
 
 # ============ Fixtures ============
@@ -483,3 +461,186 @@ class TestEdgeCases:
 
         final_files = list(data_root.rglob("*")) if data_root.exists() else []
         assert len(final_files) == len(initial_files)
+
+
+# ============ WriteResult tests ============
+
+
+class TestWriteResult:
+    """Tests for WriteResult dataclass."""
+
+    def test_write_result_creation(self) -> None:
+        """Test WriteResult can be created with all fields."""
+        result = WriteResult(
+            file_path="/data/test/2024.parquet",
+            checksum="abc123",
+            added=100,
+            updated=50,
+            skipped=10,
+            is_merge=True,
+        )
+        assert result.file_path == "/data/test/2024.parquet"
+        assert result.checksum == "abc123"
+        assert result.added == 100
+        assert result.updated == 50
+        assert result.skipped == 10
+        assert result.is_merge is True
+
+    def test_write_result_with_zero_values(self) -> None:
+        """Test WriteResult with zero values for new file."""
+        result = WriteResult(
+            file_path="/data/test/2024.parquet",
+            checksum="def456",
+            added=0,
+            updated=0,
+            skipped=0,
+            is_merge=False,
+        )
+        assert result.added == 0
+        assert result.updated == 0
+        assert result.skipped == 0
+        assert result.is_merge is False
+
+    def test_write_result_is_frozen(self) -> None:
+        """Test WriteResult is frozen (immutable)."""
+        result = WriteResult(
+            file_path="/data/test/2024.parquet",
+            checksum="abc123",
+            added=100,
+            updated=50,
+            skipped=10,
+            is_merge=True,
+        )
+        # frozen=True makes the dataclass immutable
+        with pytest.raises(FrozenInstanceError):
+            result.added = 200  # type: ignore[misc]
+
+
+# ============ write tests ============
+
+
+class TestWrite:
+    """Tests for write method statistics."""
+
+    def test_write_new_file_no_merge(self, store: MockStore) -> None:
+        """Test write to new file (no merge)."""
+        data: dict[str, list[Any]] = {
+            "sid": [1000001, 1000002],
+            "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
+            "close": [10.0, 11.0],
+        }
+        df = pl.DataFrame(data)
+
+        result = store.write("test_dataset", df, 2024)
+
+        assert result.is_merge is False
+        assert result.added == 2
+        assert result.updated == 0
+        assert result.skipped == 0
+
+    def test_write_merge_keep_first_no_overlap(
+        self, store: MockStore, sample_df: pl.DataFrame
+    ) -> None:
+        """Test write with KEEP_FIRST, no overlapping keys."""
+        # Initial write
+        store.write("test_dataset", sample_df, 2024)
+
+        # New data with different keys
+        new_data: dict[str, list[Any]] = {
+            "sid": [1000003, 1000004],
+            "trade_date": [date(2024, 1, 5), date(2024, 1, 6)],
+            "close": [30.0, 31.0],
+        }
+        new_df = pl.DataFrame(new_data)
+
+        result = store.write("test_dataset", new_df, 2024, OnDuplicate.KEEP_FIRST)
+
+        assert result.is_merge is True
+        assert result.added == 2  # 2 new rows added
+        assert result.updated == 0
+        assert result.skipped == 0
+
+    def test_write_merge_keep_first_with_overlap(
+        self, store: MockStore, sample_df: pl.DataFrame
+    ) -> None:
+        """Test write with KEEP_FIRST, with overlapping keys."""
+        # Initial write
+        store.write("test_dataset", sample_df, 2024)
+
+        # New data with overlapping keys
+        new_data: dict[str, list[Any]] = {
+            "sid": [1000001, 1000003],
+            "trade_date": [date(2024, 1, 2), date(2024, 1, 5)],
+            "close": [99.0, 30.0],  # 1000001/2024-01-02 overlaps, should be skipped
+        }
+        new_df = pl.DataFrame(new_data)
+
+        result = store.write("test_dataset", new_df, 2024, OnDuplicate.KEEP_FIRST)
+
+        assert result.is_merge is True
+        assert result.added == 1  # Only 1000003 added
+        assert result.updated == 0
+        assert result.skipped == 0
+
+    def test_write_merge_keep_last_with_overlap(
+        self, store: MockStore, sample_df: pl.DataFrame
+    ) -> None:
+        """Test write with KEEP_LAST, with overlapping keys."""
+        # Initial write
+        store.write("test_dataset", sample_df, 2024)
+
+        # New data with overlapping keys
+        new_data: dict[str, list[Any]] = {
+            "sid": [1000001, 1000003],
+            "trade_date": [date(2024, 1, 2), date(2024, 1, 5)],
+            "close": [99.0, 30.0],  # 1000001/2024-01-02 overlaps, should update
+        }
+        new_df = pl.DataFrame(new_data)
+
+        result = store.write("test_dataset", new_df, 2024, OnDuplicate.KEEP_LAST)
+
+        assert result.is_merge is True
+        assert result.added == 1  # Only 1000003 added
+        assert result.updated == 1  # 1000001 updated
+        assert result.skipped == 0
+
+    def test_write_merge_keep_last_with_batch_duplicates(
+        self, store: MockStore, sample_df: pl.DataFrame
+    ) -> None:
+        """Test write with KEEP_LAST, batch has internal duplicates."""
+        # Initial write
+        store.write("test_dataset", sample_df, 2024)
+
+        # New data with internal duplicates
+        new_data: dict[str, list[Any]] = {
+            "sid": [1000001, 1000001, 1000003],
+            "trade_date": [
+                date(2024, 1, 2),
+                date(2024, 1, 2),
+                date(2024, 1, 5),
+            ],  # 1000001/2024-01-02 duplicated
+            "close": [99.0, 88.0, 30.0],
+        }
+        new_df = pl.DataFrame(new_data)
+
+        result = store.write("test_dataset", new_df, 2024, OnDuplicate.KEEP_LAST)
+
+        assert result.is_merge is True
+        assert result.added == 1  # Only 1000003 added
+        assert result.updated == 1  # 1000001 updated (batch dedup keeps first)
+        assert result.skipped == 0
+
+    def test_write_empty_dataframe(self, store: MockStore) -> None:
+        """Test write with empty DataFrame."""
+        empty_df = pl.DataFrame(
+            schema={"sid": pl.Int32, "trade_date": pl.Date, "close": pl.Float64}
+        )
+
+        result = store.write("test_dataset", empty_df, 2024)
+
+        assert result.file_path == ""
+        assert result.checksum == ""
+        assert result.added == 0
+        assert result.updated == 0
+        assert result.skipped == 0
+        assert result.is_merge is False
