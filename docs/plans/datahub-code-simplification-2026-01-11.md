@@ -416,7 +416,20 @@ class _ResolvedQuery:
 
 ## Phase 2: 中优先级简化
 
-### 2.1 fetch_stock_status() 方法分解
+### 2.1 fetch_stock_status() 方法分解 ✅
+
+**状态**: 已完成 (2026-01-12)
+
+**实现**:
+- ✅ 创建 `_fetch_suspend_data()` 方法
+- ✅ 创建 `_fetch_st_data()` 方法
+- ✅ 创建 `_fetch_list_status_data()` 方法
+- ✅ 创建 `_merge_status_data()` 方法
+- ✅ 重构 `fetch_stock_status()` 主方法调用新方法
+- ✅ 添加 17 个单元测试（4 + 4 + 4 + 5）
+- ✅ 所有测试通过（39/39）
+
+**收益**: 减少约 100 行代码，`fetch_stock_status()` 从 ~158 行减少到 ~58 行
 
 **目标文件**: `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
 

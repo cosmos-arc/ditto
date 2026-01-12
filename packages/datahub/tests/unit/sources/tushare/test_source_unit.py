@@ -1,5 +1,6 @@
 """Tests for TushareSource."""
 
+import json
 from datetime import date
 
 import httpx
@@ -796,3 +797,676 @@ class TestTushareSourceErrorHandler:
         # 验证错误信息包含原始错误
         assert "test_dataset" in str(exc_info.value)
         assert "Generic error" in exc_info.value.details.get("original_error", "")
+
+
+class TestTushareSourceFetchSuspendData:
+    """Tests for TushareSource._fetch_suspend_data private method."""
+
+    def test_fetch_suspend_data_returns_dataframe_with_data(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _fetch_suspend_data returns DataFrame with correct schema
+        when data exists.
+        """
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Mock HTTP 响应 - suspend_d API
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "suspend_timing"],
+                        "items": [
+                            ["000001.SZ", "09:30-10:00"],
+                            ["600000.SH", "13:00-14:30"],
+                        ],
+                    },
+                },
+            )
+        )
+
+        source = TushareSource()
+        result = source._fetch_suspend_data("20240102")
+
+        # Verify schema
+        assert result.schema == {
+            "ts_code": pl.String,
+            "suspend_timing": pl.String,
+        }
+
+        # Verify data
+        assert result.to_dicts() == [
+            {"ts_code": "000001.SZ", "suspend_timing": "09:30-10:00"},
+            {"ts_code": "600000.SH", "suspend_timing": "13:00-14:30"},
+        ]
+
+    def test_fetch_suspend_data_returns_empty_dataframe_on_empty_response(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _fetch_suspend_data returns empty DataFrame when API returns no data."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Mock HTTP 响应 - 空数据
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "suspend_timing"],
+                        "items": [],
+                    },
+                },
+            )
+        )
+
+        source = TushareSource()
+        result = source._fetch_suspend_data("20240102")
+
+        # Should return empty DataFrame with correct schema
+        assert result.is_empty()
+        assert result.schema == {
+            "ts_code": pl.String,
+            "suspend_timing": pl.String,
+        }
+
+    def test_fetch_suspend_data_returns_empty_dataframe_on_api_error(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _fetch_suspend_data returns empty DataFrame on API error."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Mock HTTP 响应 - API 错误
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(500, text="Internal Server Error")
+        )
+
+        source = TushareSource()
+        result = source._fetch_suspend_data("20240102")
+
+        # Should return empty DataFrame with correct schema
+        # (The method logs a warning but doesn't raise exception)
+        assert result.is_empty()
+        assert result.schema == {
+            "ts_code": pl.String,
+            "suspend_timing": pl.String,
+        }
+
+    def test_fetch_suspend_data_passes_correct_date_format(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _fetch_suspend_data passes ts_date parameter to API correctly."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Track the request
+        request_captured = []
+
+        def capture_request(request):
+            body = json.loads(request.content)
+            request_captured.append(body)
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "suspend_timing"],
+                        "items": [],
+                    },
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=capture_request)
+
+        source = TushareSource()
+        # _fetch_suspend_data expects ts_date in YYYYMMDD format
+        source._fetch_suspend_data("20240102")
+
+        # Verify the date was passed correctly to the API
+        assert len(request_captured) == 1
+        assert request_captured[0]["params"]["suspend_date"] == "20240102"
+
+
+class TestTushareSourceFetchStData:
+    """Tests for TushareSource._fetch_st_data private method."""
+
+    def test_fetch_st_data_returns_dataframe_with_data(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _fetch_st_data returns DataFrame with correct schema
+        when data exists.
+        """
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Mock HTTP 响应 - stock_st API
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "name"],
+                        "items": [
+                            ["000001.SZ", "ST平安"],
+                            ["600000.SH", "*ST浦发"],
+                        ],
+                    },
+                },
+            )
+        )
+
+        source = TushareSource()
+        result = source._fetch_st_data()
+
+        # Verify schema
+        assert result.schema == {
+            "ts_code": pl.String,
+            "name": pl.String,
+        }
+
+        # Verify data
+        assert result.to_dicts() == [
+            {"ts_code": "000001.SZ", "name": "ST平安"},
+            {"ts_code": "600000.SH", "name": "*ST浦发"},
+        ]
+
+    def test_fetch_st_data_returns_empty_dataframe_on_empty_response(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _fetch_st_data returns empty DataFrame when API returns no data."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Mock HTTP 响应 - 空数据
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "name"],
+                        "items": [],
+                    },
+                },
+            )
+        )
+
+        source = TushareSource()
+        result = source._fetch_st_data()
+
+        # Should return empty DataFrame with correct schema
+        assert result.is_empty()
+        assert result.schema == {
+            "ts_code": pl.String,
+            "name": pl.String,
+        }
+
+    def test_fetch_st_data_returns_empty_dataframe_on_api_error(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _fetch_st_data returns empty DataFrame on API error."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Mock HTTP 响应 - API 错误
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(500, text="Internal Server Error")
+        )
+
+        source = TushareSource()
+        result = source._fetch_st_data()
+
+        # Should return empty DataFrame with correct schema
+        # (The method logs a warning but doesn't raise exception)
+        assert result.is_empty()
+        assert result.schema == {
+            "ts_code": pl.String,
+            "name": pl.String,
+        }
+
+    def test_fetch_st_data_does_not_require_date_parameter(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _fetch_st_data calls stock_st API without date parameter."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Track the request
+        request_captured = []
+
+        def capture_request(request):
+            body = json.loads(request.content)
+            request_captured.append(body)
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "name"],
+                        "items": [],
+                    },
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=capture_request)
+
+        source = TushareSource()
+        source._fetch_st_data()
+
+        # Verify the API was called without date parameter
+        assert len(request_captured) == 1
+        request_body = request_captured[0]
+        assert request_body["api_name"] == "stock_st"
+        assert request_body["fields"] == "ts_code,name"
+        # Verify no date parameter in params
+        assert "suspend_date" not in request_body["params"]
+        assert "trade_date" not in request_body["params"]
+
+
+class TestTushareSourceFetchListStatusData:
+    """Tests for TushareSource._fetch_list_status_data private method."""
+
+    def test_fetch_list_status_data_returns_dataframe_with_data(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _fetch_list_status_data returns DataFrame with correct schema
+        when data exists.
+        """
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Mock HTTP 响应 - stock_basic API
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "list_status"],
+                        "items": [
+                            ["000001.SZ", "L"],
+                            ["600000.SH", "L"],
+                            ["000002.SZ", "D"],
+                        ],
+                    },
+                },
+            )
+        )
+
+        source = TushareSource()
+        result = source._fetch_list_status_data()
+
+        # Verify schema
+        assert result.schema == {
+            "ts_code": pl.String,
+            "list_status": pl.String,
+        }
+
+        # Verify data
+        assert result.to_dicts() == [
+            {"ts_code": "000001.SZ", "list_status": "L"},
+            {"ts_code": "600000.SH", "list_status": "L"},
+            {"ts_code": "000002.SZ", "list_status": "D"},
+        ]
+
+    def test_fetch_list_status_data_returns_empty_dataframe_on_empty_response(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _fetch_list_status_data returns empty DataFrame on empty response."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Mock HTTP 响应 - 空数据
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "list_status"],
+                        "items": [],
+                    },
+                },
+            )
+        )
+
+        source = TushareSource()
+        result = source._fetch_list_status_data()
+
+        # Should return empty DataFrame with correct schema
+        assert result.is_empty()
+        assert result.schema == {
+            "ts_code": pl.String,
+            "list_status": pl.String,
+        }
+
+    def test_fetch_list_status_data_returns_empty_dataframe_on_api_error(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _fetch_list_status_data returns empty DataFrame on API error."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Mock HTTP 响应 - API 错误
+        respx_mock.post("http://api.tushare.pro").mock(
+            return_value=httpx.Response(500, text="Internal Server Error")
+        )
+
+        source = TushareSource()
+        result = source._fetch_list_status_data()
+
+        # Should return empty DataFrame with correct schema
+        # (The method logs a warning but doesn't raise exception)
+        assert result.is_empty()
+        assert result.schema == {
+            "ts_code": pl.String,
+            "list_status": pl.String,
+        }
+
+    def test_fetch_list_status_data_does_not_require_date_parameter(
+        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _fetch_list_status_data calls stock_basic API without date parameter."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Track the request
+        request_captured = []
+
+        def capture_request(request):
+            body = json.loads(request.content)
+            request_captured.append(body)
+            return httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": ["ts_code", "list_status"],
+                        "items": [],
+                    },
+                },
+            )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=capture_request)
+
+        source = TushareSource()
+        source._fetch_list_status_data()
+
+        # Verify the API was called correctly
+        assert len(request_captured) == 1
+        request_body = request_captured[0]
+        assert request_body["api_name"] == "stock_basic"
+        assert request_body["fields"] == "ts_code,list_status"
+        # Verify no date parameter in params (stock_basic doesn't need date)
+        assert "suspend_date" not in request_body["params"]
+        assert "trade_date" not in request_body["params"]
+
+
+class TestTushareSourceMergeStatusData:
+    """Tests for TushareSource._merge_status_data private method."""
+
+    def test_merge_status_data_with_all_sources(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _merge_status_data merges all three data sources correctly."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Prepare test data
+        list_status_df = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ", "600000.SH", "000002.SZ"],
+                "list_status": ["L", "L", "D"],
+            }
+        )
+
+        suspend_df = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ", "600000.SH"],
+                "suspend_timing": ["09:30-10:00", "13:00-14:30"],
+            }
+        )
+
+        st_df = pl.DataFrame(
+            {
+                "ts_code": ["600000.SH", "000002.SZ"],
+                "name": ["*ST浦发", "ST平安"],
+            }
+        )
+
+        source = TushareSource()
+        result = source._merge_status_data(
+            list_status_df, suspend_df, st_df, "2024-01-02"
+        )
+
+        # Verify schema
+        expected_schema = {
+            "src_code": pl.String,
+            "trade_date": pl.Date,
+            "is_suspended": pl.Boolean,
+            "suspend_timing": pl.String,
+            "is_st": pl.Boolean,
+            "st_type": pl.String,
+            "list_status": pl.String,
+        }
+        assert result.schema == expected_schema
+
+        # Verify data
+        assert result.to_dicts() == [
+            {
+                "src_code": "000001.SZ",
+                "trade_date": date(2024, 1, 2),
+                "is_suspended": True,
+                "suspend_timing": "09:30-10:00",
+                "is_st": False,
+                "st_type": "",
+                "list_status": "L",
+            },
+            {
+                "src_code": "600000.SH",
+                "trade_date": date(2024, 1, 2),
+                "is_suspended": True,
+                "suspend_timing": "13:00-14:30",
+                "is_st": True,
+                "st_type": "*ST浦发",
+                "list_status": "L",
+            },
+            {
+                "src_code": "000002.SZ",
+                "trade_date": date(2024, 1, 2),
+                "is_suspended": False,
+                "suspend_timing": "",
+                "is_st": True,
+                "st_type": "ST平安",
+                "list_status": "D",
+            },
+        ]
+
+    def test_merge_status_data_with_empty_suspend_data(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _merge_status_data handles empty suspend_df correctly."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Prepare test data - suspend_df is empty
+        list_status_df = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ", "600000.SH"],
+                "list_status": ["L", "L"],
+            }
+        )
+
+        suspend_df = pl.DataFrame(
+            schema={"ts_code": pl.String, "suspend_timing": pl.String}
+        )
+
+        st_df = pl.DataFrame(
+            {
+                "ts_code": ["600000.SH"],
+                "name": ["*ST浦发"],
+            }
+        )
+
+        source = TushareSource()
+        result = source._merge_status_data(
+            list_status_df, suspend_df, st_df, "2024-01-02"
+        )
+
+        # Verify data - suspend columns should be False/empty
+        assert result.to_dicts() == [
+            {
+                "src_code": "000001.SZ",
+                "trade_date": date(2024, 1, 2),
+                "is_suspended": False,
+                "suspend_timing": "",
+                "is_st": False,
+                "st_type": "",
+                "list_status": "L",
+            },
+            {
+                "src_code": "600000.SH",
+                "trade_date": date(2024, 1, 2),
+                "is_suspended": False,
+                "suspend_timing": "",
+                "is_st": True,
+                "st_type": "*ST浦发",
+                "list_status": "L",
+            },
+        ]
+
+    def test_merge_status_data_with_empty_st_data(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _merge_status_data handles empty st_df correctly."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Prepare test data - st_df is empty
+        list_status_df = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ", "600000.SH"],
+                "list_status": ["L", "L"],
+            }
+        )
+
+        suspend_df = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "suspend_timing": ["09:30-10:00"],
+            }
+        )
+
+        st_df = pl.DataFrame(schema={"ts_code": pl.String, "name": pl.String})
+
+        source = TushareSource()
+        result = source._merge_status_data(
+            list_status_df, suspend_df, st_df, "2024-01-02"
+        )
+
+        # Verify data - ST columns should be False/empty
+        assert result.to_dicts() == [
+            {
+                "src_code": "000001.SZ",
+                "trade_date": date(2024, 1, 2),
+                "is_suspended": True,
+                "suspend_timing": "09:30-10:00",
+                "is_st": False,
+                "st_type": "",
+                "list_status": "L",
+            },
+            {
+                "src_code": "600000.SH",
+                "trade_date": date(2024, 1, 2),
+                "is_suspended": False,
+                "suspend_timing": "",
+                "is_st": False,
+                "st_type": "",
+                "list_status": "L",
+            },
+        ]
+
+    def test_merge_status_data_with_all_empty_data(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _merge_status_data handles all empty data sources correctly."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Prepare test data - all empty except list_status
+        list_status_df = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "list_status": ["L"],
+            }
+        )
+
+        suspend_df = pl.DataFrame(
+            schema={"ts_code": pl.String, "suspend_timing": pl.String}
+        )
+
+        st_df = pl.DataFrame(schema={"ts_code": pl.String, "name": pl.String})
+
+        source = TushareSource()
+        result = source._merge_status_data(
+            list_status_df, suspend_df, st_df, "2024-01-02"
+        )
+
+        # Verify data - all optional columns should be False/empty
+        assert result.to_dicts() == [
+            {
+                "src_code": "000001.SZ",
+                "trade_date": date(2024, 1, 2),
+                "is_suspended": False,
+                "suspend_timing": "",
+                "is_st": False,
+                "st_type": "",
+                "list_status": "L",
+            },
+        ]
+
+    def test_merge_status_data_default_list_status(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test _merge_status_data fills null list_status with 'L' (正常)."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        # Prepare test data - list_status contains null
+        list_status_df = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ", "600000.SH"],
+                "list_status": ["L", None],
+            }
+        )
+
+        suspend_df = pl.DataFrame(
+            schema={"ts_code": pl.String, "suspend_timing": pl.String}
+        )
+
+        st_df = pl.DataFrame(schema={"ts_code": pl.String, "name": pl.String})
+
+        source = TushareSource()
+        result = source._merge_status_data(
+            list_status_df, suspend_df, st_df, "2024-01-02"
+        )
+
+        # Verify data - null list_status should be filled with 'L'
+        assert result.to_dicts() == [
+            {
+                "src_code": "000001.SZ",
+                "trade_date": date(2024, 1, 2),
+                "is_suspended": False,
+                "suspend_timing": "",
+                "is_st": False,
+                "st_type": "",
+                "list_status": "L",
+            },
+            {
+                "src_code": "600000.SH",
+                "trade_date": date(2024, 1, 2),
+                "is_suspended": False,
+                "suspend_timing": "",
+                "is_st": False,
+                "st_type": "",
+                "list_status": "L",  # Filled with default
+            },
+        ]
