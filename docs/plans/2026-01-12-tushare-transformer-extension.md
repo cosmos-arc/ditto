@@ -1,7 +1,7 @@
 # Tushare Transformer 统一扩展设计
 
 **日期**: 2026-01-12
-**状态**: 实施中
+**状态**: ✅ 已完成
 **目标**: 扩展 transformer 支持所有 Tushare API 的数据转换
 
 ---
@@ -10,8 +10,8 @@
 
 扩展 `TushareDataTransformer` 以支持所有 Tushare API 的数据转换，消除 `source.py` 中剩余的 ~162 行重复代码。
 
-**当前状态**: REFACTOR 阶段进行中（步骤 1 已完成，步骤 2-4 待完成）
-**目标**: 将其余 6 个 fetch 方法也改用 transformer 统一处理
+**当前状态**: ✅ 已完成
+**结果**: 所有 6 个 fetch 方法已改用 transformer 统一处理
 
 ---
 
@@ -91,7 +91,7 @@ def transform(
    - [x] 添加 `computed_columns` 应用（使用 `**kwargs` 展开）
    - [x] 提取 `_transform_impl()` 内部方法
 
-### REFACTOR 阶段 🔄 进行中
+### REFACTOR 阶段 ✅ 已完成
 
 1. **创建预定义配置** (transformer.py) ✅ 已完成
    ```python
@@ -103,13 +103,13 @@ def transform(
    STOCK_LIMIT_MAPPING = ColumnMapping(...)   # ✅
    ```
 
-2. **重构 source.py fetch 方法** ⏳ 待完成
-   - [ ] `fetch_calendar()` → 使用 `CALENDAR_MAPPING`
-   - [ ] `fetch_adj_factor()` → 使用 `ADJ_FACTOR_MAPPING`
-   - [ ] `fetch_fund_adj()` → 使用 `FUND_ADJ_MAPPING`
-   - [ ] `fetch_etf_basic()` → 使用 `ETF_BASIC_MAPPING`
-   - [ ] `fetch_stock_basic()` → 使用 `STOCK_BASIC_MAPPING`
-   - [ ] `fetch_stock_limit()` → 使用 `STOCK_LIMIT_MAPPING`
+2. **重构 source.py fetch 方法** ✅ 已完成
+   - [x] `fetch_calendar()` → 使用 `CALENDAR_MAPPING`
+   - [x] `fetch_adj_factor()` → 使用 `ADJ_FACTOR_MAPPING`
+   - [x] `fetch_fund_adj()` → 使用 `FUND_ADJ_MAPPING`
+   - [x] `fetch_etf_basic()` → 使用 `ETF_BASIC_MAPPING`
+   - [x] `fetch_stock_basic()` → 使用 `STOCK_BASIC_MAPPING`
+   - [x] `fetch_stock_limit()` → 使用 `STOCK_LIMIT_MAPPING`
 
 3. **保持向后兼容** ✅ 已完成（transform_daily_ohlcv 已保留）
 
@@ -205,9 +205,14 @@ pixi run -e dev pre-commit-run
 | 2026-01-12 | `29950d4` | test(tushare): 编写 transform 相关测试 (boolean/computed/empty) |
 | 2026-01-12 | `af7e19c` | test(tushare): 修复 ETF_BASIC_MAPPING 测试配置 |
 | 2026-01-12 | `b5f9667` | feat(tushare): 添加预定义映射配置并修复 transform 方法 |
+| 2026-01-12 | `861c56d` | docs(plans): 更新 tushare-transformer-extension 进度 |
 
 ### 待完成工作
 
-1. 重构 6 个 fetch 方法使用对应的 MAPPING 配置
-2. 运行完整测试验证
-3. 清理 `_record_metrics` 函数（已移入 transform）
+✅ 所有任务已完成！
+
+**验证结果**：
+- ✅ 9 个 transformer 单元测试通过
+- ✅ 22 个 source 集成测试通过
+- ✅ pre-commit 所有检查通过
+- ✅ `_record_metrics` 函数保留（`fetch_stock_status` 仍需要使用）
