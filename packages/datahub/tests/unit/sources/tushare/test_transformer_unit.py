@@ -32,7 +32,10 @@ ETF_BASIC_MAPPING = ColumnMapping(
     float_columns=[],
     computed_columns={
         "symbol": pl.col("src_code").str.split(".").list.get(0),
-        "exchange": pl.col("src_code").str.split(".").list.get(1),
+        "exchange": pl.col("src_code")
+        .str.split(".")
+        .list.get(1)
+        .replace({"SH": "SSE", "SZ": "SZSE"}),
     },
     output_columns=("src_code", "symbol", "name", "exchange", "list_date"),
 )
@@ -271,21 +274,21 @@ class TestTushareDataTransformer:
                 "src_code": "510300.SH",
                 "symbol": "510300",
                 "name": "沪深300ETF",
-                "exchange": "SH",
+                "exchange": "SSE",
                 "list_date": date(2012, 7, 6),
             },
             {
                 "src_code": "159919.SZ",
                 "symbol": "159919",
                 "name": "沪深300ETF",
-                "exchange": "SZ",
+                "exchange": "SZSE",
                 "list_date": date(2019, 6, 24),
             },
             {
                 "src_code": "512100.SH",
                 "symbol": "512100",
                 "name": "科创板50ETF",
-                "exchange": "SH",
+                "exchange": "SSE",
                 "list_date": date(2020, 11, 16),
             },
         ]
