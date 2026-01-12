@@ -1,5 +1,7 @@
 """ETF 数据摄取命令."""
 
+from collections.abc import Callable
+
 import typer
 
 from ditto_port.cli.commands.factory import (
@@ -11,9 +13,15 @@ from ditto_port.cli.commands.factory import (
 app = typer.Typer(help="ETF数据摄取命令")
 
 # 使用工厂函数创建命令实现
-_daily_impl = create_daily_command("etf_daily", "摄取ETF日行情数据")
-_backfill_impl = create_backfill_command("etf_daily", "回补ETF历史数据")
-_basic_impl = create_basic_command("etf_basic", "摄取ETF基础信息")
+_daily_impl: Callable[[typer.Context, str, bool], None] = create_daily_command(
+    "etf_daily", "摄取ETF日行情数据"
+)
+_backfill_impl: Callable[[typer.Context, str, str, int], None] = (
+    create_backfill_command("etf_daily", "回补ETF历史数据")
+)
+_basic_impl: Callable[[typer.Context, bool], None] = create_basic_command(
+    "etf_basic", "摄取ETF基础信息"
+)
 
 
 @app.command()
