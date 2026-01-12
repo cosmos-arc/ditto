@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 from enum import Enum
 from itertools import combinations
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -75,6 +76,40 @@ class BarsQuery:
     with_status: bool = False
     market_wide: bool = False
     raw: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class _ResolvedQuery:
+    """
+    解析后的查询参数。
+
+    用于存储解析和验证后的查询参数，传递给数据加载和处理方法。
+    这是内部 API（前导下划线），仅供 BarsRepository 内部使用。
+
+    Attributes:
+        sids: 解析后的 SID 列表（非空）。
+        start: 开始日期（解析为 date 对象）。
+        end: 结束日期（解析为 date 对象）。
+        asof: 时间点查询日期（解析为 date 对象，PIT-safe）。
+        asset_class: 资产类别（如 "stock", "etf", "index"）。
+
+    Examples:
+        >>> from datetime import date
+        >>> resolved = _ResolvedQuery(
+        ...     sids=[1, 2, 3],
+        ...     start=date(2024, 1, 1),
+        ...     end=date(2024, 1, 31),
+        ...     asof=None,
+        ...     asset_class="stock",
+        ... )
+
+    """
+
+    sids: list[int]
+    start: date | None
+    end: date | None
+    asof: date | None
+    asset_class: str | None
 
 
 @dataclass(frozen=True)

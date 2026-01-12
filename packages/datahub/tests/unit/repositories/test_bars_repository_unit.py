@@ -11,6 +11,7 @@ import polars as pl
 import pytest
 from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.repositories import AdjType, BarsQuery, BarsRepository
+from ditto_datahub.repositories.bars import _ResolvedQuery
 from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
@@ -133,6 +134,149 @@ class TestBarsQuery:
         assert query.end is None  # Default
         assert query.adj == AdjType.NONE  # Default
         assert query.with_symbol is False  # Default
+
+
+class TestResolvedQuery:
+    """Tests for _ResolvedQuery dataclass."""
+
+    def test_resolved_query_creation_with_all_fields(self) -> None:
+        """Test _ResolvedQuery can be created with all fields."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[1, 2, 3],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=date(2024, 1, 15),
+            asset_class="stock",
+        )
+
+        # Assert
+        assert resolved.sids == [1, 2, 3]
+        assert resolved.start == date(2024, 1, 1)
+        assert resolved.end == date(2024, 1, 31)
+        assert resolved.asof == date(2024, 1, 15)
+        assert resolved.asset_class == "stock"
+
+    def test_resolved_query_with_none_dates(self) -> None:
+        """Test _ResolvedQuery with None date values."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[1000001],
+            start=None,
+            end=None,
+            asof=None,
+            asset_class=None,
+        )
+
+        # Assert
+        assert resolved.sids == [1000001]
+        assert resolved.start is None
+        assert resolved.end is None
+        assert resolved.asof is None
+        assert resolved.asset_class is None
+
+    def test_resolved_query_with_etf_asset_class(self) -> None:
+        """Test _ResolvedQuery with ETF asset class."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[2000001, 2000002],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=None,
+            asset_class="etf",
+        )
+
+        # Assert
+        assert resolved.sids == [2000001, 2000002]
+        assert resolved.asset_class == "etf"
+
+    def test_resolved_query_with_index_asset_class(self) -> None:
+        """Test _ResolvedQuery with index asset class."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[3000001],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=None,
+            asset_class="index",
+        )
+
+        # Assert
+        assert resolved.sids == [3000001]
+        assert resolved.asset_class == "index"
+
+    def test_resolved_query_is_frozen(self) -> None:
+        """Test _ResolvedQuery is immutable (frozen=True)."""
+        # Arrange
+        resolved = _ResolvedQuery(
+            sids=[1, 2, 3],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=None,
+            asset_class="stock",
+        )
+
+        # Act & Assert: Frozen dataclass raises FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
+            resolved.sids = [4, 5, 6]
+
+    def test_resolved_query_has_slots(self) -> None:
+        """Test _ResolvedQuery uses __slots__ (slots=True)."""
+        # Arrange & Act
+        resolved = _ResolvedQuery(
+            sids=[1],
+            start=date(2024, 1, 1),
+            end=None,
+            asof=None,
+            asset_class=None,
+        )
+
+        # Assert: __slots__ prevents __dict__ creation
+        assert not hasattr(resolved, "__dict__")
+
+    def test_resolved_query_with_single_sid(self) -> None:
+        """Test _ResolvedQuery with single SID."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[1000001],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=None,
+            asset_class="stock",
+        )
+
+        # Assert
+        assert resolved.sids == [1000001]
+        assert len(resolved.sids) == 1
+
+    def test_resolved_query_empty_sid_list(self) -> None:
+        """Test _ResolvedQuery with empty SID list."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=None,
+            asset_class="stock",
+        )
+
+        # Assert
+        assert resolved.sids == []
+        assert len(resolved.sids) == 0
+
+    def test_resolved_query_with_asof_date(self) -> None:
+        """Test _ResolvedQuery with asof date for PIT-safe queries."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[1, 2, 3],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=date(2024, 1, 15),
+            asset_class="stock",
+        )
+
+        # Assert
+        assert resolved.asof == date(2024, 1, 15)
 
 
 @pytest.mark.pit
