@@ -641,6 +641,48 @@ class BarsRepository:
         else:  # HFQ
             return self._apply_hfq_adj(df, adj_df)
 
+    def _parse_asof_date(self, asof: date | str) -> date:
+        """
+        解析 asof 参数为 date 对象。
+
+        Args:
+            asof: date 对象或 ISO 格式字符串。
+
+        Returns:
+            解析后的 date 对象。
+
+        """
+        if isinstance(asof, str):
+            from datetime import date as date_type
+
+            return date_type.fromisoformat(asof)
+        return asof
+
+    def _filter_baseline_by_asof(
+        self, adj_df: pl.DataFrame, pit_dt: date
+    ) -> pl.DataFrame:
+        """
+        根据 asof 日期过滤调整因子数据（用于计算 baseline）。
+
+        优先使用 knowledge_date，如果不存在则使用 trade_date（会记录警告）。
+
+        Args:
+            adj_df: 调整因子数据。
+            pit_dt: Point-in-Time 日期。
+
+        Returns:
+            过滤后的调整因子数据。
+
+        """
+        if "knowledge_date" in adj_df.columns:
+            return adj_df.filter(pl.col("knowledge_date") <= pit_dt)
+        else:
+            logger.warning(
+                "Adj factors missing knowledge_date, using trade_date (not PIT-safe)",
+                event="bars_adj_missing_knowledge_date",
+            )
+            return adj_df.filter(pl.col("trade_date") <= pit_dt)
+
     def _apply_qfq_adj(
         self,
         df: pl.DataFrame,
@@ -670,26 +712,13 @@ class BarsRepository:
 
         """
         # 计算 baseline：如果提供了 asof，需要过滤
-        baseline_df = adj_df
-        if asof is not None:
-            # 支持 date 对象和字符串
-            if isinstance(asof, str):
-                from datetime import date as date_type
-
-                pit_dt = date_type.fromisoformat(asof)
-            else:
-                pit_dt = asof
-
-            # 优先使用 knowledge_date，如果不存在则使用 trade_date
-            if "knowledge_date" in adj_df.columns:
-                baseline_df = adj_df.filter(pl.col("knowledge_date") <= pit_dt)
-            else:
-                logger.warning(
-                    "Adj factors missing knowledge_date, "
-                    "using trade_date (not PIT-safe)",
-                    event="bars_adj_missing_knowledge_date",
-                )
-                baseline_df = adj_df.filter(pl.col("trade_date") <= pit_dt)
+        if asof is None:
+            baseline_df = adj_df
+        else:
+            # 转换为 date 对象
+            pit_dt = self._parse_asof_date(asof)
+            # 过滤 baseline
+            baseline_df = self._filter_baseline_by_asof(adj_df, pit_dt)
 
         # 获取每个 SID 的最新因子（基于 baseline）
         latest_factors = baseline_df.group_by("sid").agg(
