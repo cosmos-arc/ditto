@@ -342,24 +342,6 @@ class FreezeManager:
 
         return False, None
 
-    def _get_missing_path(self, dataset: str) -> str:
-        """
-        获取缺失文件的相对路径（用于错误消息）。
-
-        Args:
-            dataset: 数据集名称
-
-        Returns:
-            相对路径字符串
-
-        """
-        single_file_path = self._data_root / f"{dataset}.parquet"
-
-        if single_file_path.parent.exists():
-            return single_file_path.relative_to(self._data_root).as_posix()
-
-        return f"{dataset}.parquet"
-
     def _handle_missing_files(self, freeze_id: str, missing_files: list[str]) -> None:
         """
         处理缺失文件（抛出异常）。
@@ -417,7 +399,7 @@ class FreezeManager:
                 continue
 
             # Track missing
-            missing_files.append(self._get_missing_path(dataset))
+            missing_files.append(f"{dataset}.parquet")
 
         # Handle missing files
         self._handle_missing_files(freeze_id, missing_files)

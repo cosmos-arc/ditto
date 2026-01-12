@@ -106,28 +106,6 @@ class TestFreezeManagerCollectChecksumsRefactor:
         assert success is False
         assert checksums is None
 
-    def test_get_missing_path_with_parent_exists(self) -> None:
-        """Test _get_missing_path returns relative path when parent exists."""
-        # Create parent directory
-        bars_dir = self.data_root / "bars"
-        bars_dir.mkdir(parents=True)
-
-        # Call method
-        missing_path = self.manager._get_missing_path("bars/stock_daily")
-
-        # Assertions
-        assert missing_path == "bars/stock_daily.parquet"
-
-    def test_get_missing_path_without_parent(self) -> None:
-        """Test _get_missing_path returns simple path when parent doesn't exist."""
-        # Don't create any directory
-
-        # Call method
-        missing_path = self.manager._get_missing_path("bars/stock_daily")
-
-        # Assertions
-        assert missing_path == "bars/stock_daily.parquet"
-
     def test_handle_missing_files_raises_error(self) -> None:
         """Test _handle_missing_files raises FileNotFoundError."""
         missing_files = ["bars/stock_daily.parquet", "bars/etf_daily.parquet"]
