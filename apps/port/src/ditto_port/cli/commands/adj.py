@@ -1,12 +1,19 @@
 """复权因子命令."""
 
+from collections.abc import Callable
+
 import typer
 
-from ditto_port.cli.context import ensure_executor
-from ditto_port.cli.utils.output import print_ingestion_result
-from ditto_port.cli.utils.validation import validate_date_format
+from ditto_port.cli.commands.factory import create_daily_command
 
 app = typer.Typer(help="复权因子命令")
+
+_adj_factor_impl: Callable[[typer.Context, str, bool], None] = create_daily_command(
+    "adj_factor", "摄取股票复权因子数据"
+)
+_fund_adj_impl: Callable[[typer.Context, str, bool], None] = create_daily_command(
+    "fund_adj", "摄取基金复权因子数据"
+)
 
 
 @app.command("adj-factor")
@@ -16,13 +23,7 @@ def adj_factor(
     force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
 ) -> None:
     """摄取股票复权因子数据."""
-    validate_date_format(date)
-
-    ensure_executor(ctx)
-    executor = ctx.obj["executor"]
-    result = executor.ingest_daily("adj_factor", date, force)
-
-    print_ingestion_result(result, ctx.obj["verbose"])
+    return _adj_factor_impl(ctx, date, force)
 
 
 @app.command("fund-adj")
@@ -32,10 +33,4 @@ def fund_adj(
     force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
 ) -> None:
     """摄取基金复权因子数据."""
-    validate_date_format(date)
-
-    ensure_executor(ctx)
-    executor = ctx.obj["executor"]
-    result = executor.ingest_daily("fund_adj", date, force)
-
-    print_ingestion_result(result, ctx.obj["verbose"])
+    return _fund_adj_impl(ctx, date, force)
