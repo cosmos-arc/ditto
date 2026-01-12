@@ -11,6 +11,7 @@ from ditto_foundation import M, logger, traced
 from ditto_datahub.meta.schemas import (
     TUSHARE_LIST_STATUS_SCHEMA,
     TUSHARE_ST_SCHEMA,
+    TUSHARE_SUSPEND_SCHEMA,
 )
 from ditto_datahub.sources.base import (
     DataSource,
@@ -389,12 +390,7 @@ class TushareSource(DataSource):
             如果获取失败返回空 DataFrame
 
         """
-        suspend_df = pl.DataFrame(
-            schema={
-                "ts_code": pl.String,
-                "suspend_timing": pl.String,
-            }
-        )
+        suspend_df = pl.DataFrame(schema=TUSHARE_SUSPEND_SCHEMA)
         try:
             suspend_response = self._client.query(
                 api_name="suspend_d",

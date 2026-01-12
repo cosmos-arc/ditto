@@ -10,6 +10,7 @@ from ditto_datahub.meta.schemas import (
     STOCK_STATUS_SCHEMA,  # B.3: Stock status schema
     TUSHARE_LIST_STATUS_SCHEMA,  # Tushare source schemas
     TUSHARE_ST_SCHEMA,  # Tushare source schemas
+    TUSHARE_SUSPEND_SCHEMA,  # Tushare source schemas
     UNIVERSE_CONSTITUENT_SCHEMA,
 )
 
@@ -349,3 +350,29 @@ class TestTushareListStatusSchema:
     def test_list_status_is_string(self) -> None:
         """list_status field should be String."""
         assert TUSHARE_LIST_STATUS_SCHEMA["list_status"] == pl.String
+
+
+class TestTushareSuspendSchema:
+    """Tests for TUSHARE_SUSPEND_SCHEMA."""
+
+    def test_schema_is_dict(self) -> None:
+        """Schema should be a dictionary."""
+        assert isinstance(TUSHARE_SUSPEND_SCHEMA, dict)
+
+    def test_schema_has_all_required_fields(self) -> None:
+        """Schema should have ts_code and suspend_timing fields."""
+        required_fields = {"ts_code", "suspend_timing"}
+        assert set(TUSHARE_SUSPEND_SCHEMA.keys()) == required_fields
+
+    def test_schema_types_are_polars_types(self) -> None:
+        """Schema values should be Polars String types."""
+        for dtype in TUSHARE_SUSPEND_SCHEMA.values():
+            assert dtype == pl.String
+
+    def test_ts_code_is_string(self) -> None:
+        """ts_code field should be String."""
+        assert TUSHARE_SUSPEND_SCHEMA["ts_code"] == pl.String
+
+    def test_suspend_timing_is_string(self) -> None:
+        """suspend_timing field should be String."""
+        assert TUSHARE_SUSPEND_SCHEMA["suspend_timing"] == pl.String

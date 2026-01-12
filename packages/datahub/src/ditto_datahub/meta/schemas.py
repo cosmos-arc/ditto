@@ -155,6 +155,14 @@ TUSHARE_ST_SCHEMA: dict[str, type[pl.DataType]] = {
 }
 
 
+# Suspend (停牌) schema
+# Used in TushareSource._fetch_suspend_data() for suspend_d API
+TUSHARE_SUSPEND_SCHEMA: dict[str, type[pl.DataType]] = {
+    "ts_code": pl.String,
+    "suspend_timing": pl.String,
+}
+
+
 # List status schema
 # Used in TushareSource._fetch_list_status_data() for stock_basic API
 TUSHARE_LIST_STATUS_SCHEMA: dict[str, type[pl.DataType]] = {
