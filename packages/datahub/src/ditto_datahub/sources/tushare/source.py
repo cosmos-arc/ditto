@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
+from contextlib import contextmanager
+
 import polars as pl
 from ditto_foundation import M, logger, traced
 
@@ -12,6 +15,15 @@ from ditto_datahub.sources.base import (
     SourceRateLimitError,
 )
 from ditto_datahub.sources.tushare.client import TushareClient
+from ditto_datahub.sources.tushare.transformer import (
+    ADJ_FACTOR_MAPPING,
+    CALENDAR_MAPPING,
+    ETF_BASIC_MAPPING,
+    FUND_ADJ_MAPPING,
+    STOCK_BASIC_MAPPING,
+    STOCK_LIMIT_MAPPING,
+    TushareDataTransformer,
+)
 
 
 def _record_metrics(row_count: int, dataset: str) -> None:
@@ -57,6 +69,48 @@ class TushareSource(DataSource):
         self._client = TushareClient(token=token)
         logger.debug("TushareSource initialized", event="tushare_source_init")
 
+    @contextmanager
+    def _tushare_fetch_error_handler(
+        self,
+        dataset: str,
+        api_name: str,
+    ) -> Generator[None, None, None]:
+        """
+        统一的 Tushare fetch 错误处理上下文管理器。
+
+        Args:
+            dataset: 数据集名称（用于日志和错误消息）
+            api_name: API 名称（用于错误消息）
+
+        Yields:
+            None
+
+        Raises:
+            SourceAuthenticationError: 认证错误直接抛出
+            SourceRateLimitError: 限流错误直接抛出
+            SourceFetchError: 其他异常包装为 SourceFetchError
+
+        """
+        try:
+            yield
+        except SourceAuthenticationError:
+            raise
+        except SourceRateLimitError:
+            raise
+        except Exception as e:
+            logger.error(
+                f"Tushare {dataset} fetch failed",
+                event=f"tushare_{dataset}_fetch_error",
+                error=str(e),
+                api_name=api_name,
+            )
+            raise SourceFetchError(
+                message=f"Failed to fetch {dataset} from Tushare",
+                source="tushare",
+                dataset=api_name,
+                original_error=str(e),
+            ) from e
+
     @traced("source.tushare.fetch_calendar")
     def fetch_calendar(
         self,
@@ -86,7 +140,7 @@ class TushareSource(DataSource):
             end_date=end_date,
         )
 
-        try:
+        with self._tushare_fetch_error_handler("calendar", "trade_cal"):
             response = self._client.query(
                 api_name="trade_cal",
                 exchange="SSE",
@@ -95,51 +149,9 @@ class TushareSource(DataSource):
                 fields="cal_date,is_open",
             )
 
-            # HTTP API 已经返回 polars DataFrame
-            if len(response) == 0:
-                logger.info(
-                    "Tushare calendar empty",
-                    event="tushare_calendar_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={"trade_date": pl.Date, "is_open": pl.Boolean}
-                )
-
-            # 重命名列并转换类型
-            df = response.rename({"cal_date": "trade_date"}).with_columns(
-                pl.col("trade_date").str.to_date("%Y%m%d"),
-                pl.col("is_open").cast(pl.Boolean),
+            return TushareDataTransformer.transform(
+                response, "calendar", CALENDAR_MAPPING
             )
-
-            row_count = len(df)
-            logger.info(
-                "Tushare calendar fetched",
-                event="tushare_calendar_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "calendar")
-
-            return df
-
-        except SourceAuthenticationError:
-            # 认证错误直接抛出，不要包装
-            raise
-        except SourceRateLimitError:
-            # 限流错误直接抛出，不要包装
-            raise
-        except Exception as e:
-            logger.error(
-                "Tushare calendar fetch failed",
-                event="tushare_calendar_fetch_error",
-                error=str(e),
-            )
-            raise SourceFetchError(
-                message="Failed to fetch calendar from Tushare",
-                source="tushare",
-                dataset="trade_cal",
-                original_error=str(e),
-            ) from e
 
     @traced("source.tushare.fetch_etf_basic")
     def fetch_etf_basic(self) -> pl.DataFrame:
@@ -163,67 +175,15 @@ class TushareSource(DataSource):
             event="tushare_etf_basic_fetch_start",
         )
 
-        try:
+        with self._tushare_fetch_error_handler("etf_basic", "fund_basic"):
             response = self._client.query(
                 api_name="fund_basic",  # ETF basic 使用 fund_basic API
                 fields="ts_code,name,list_date",  # fund_basic 可能没有 exchange 字段
             )
 
-            # HTTP API 已经返回 polars DataFrame
-            if len(response) == 0:
-                logger.info(
-                    "Tushare ETF basic empty",
-                    event="tushare_etf_basic_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "symbol": pl.String,
-                        "name": pl.String,
-                        "exchange": pl.String,
-                        "list_date": pl.Date,
-                    }
-                )
-
-            # 重命名列并转换类型
-            # 从 src_code 中提取 symbol 和 exchange
-            # 例如 "510300.SH" -> "510300" + "SSE"
-            df = response.rename({"ts_code": "src_code"}).with_columns(
-                pl.col("src_code").str.split(".").list.get(0).alias("symbol"),
-                pl.col("src_code")
-                .str.split(".")
-                .list.get(1)
-                .replace({"SH": "SSE", "SZ": "SZSE"})
-                .alias("exchange"),
-                pl.col("list_date").str.to_date("%Y%m%d"),
+            return TushareDataTransformer.transform(
+                response, "etf_basic", ETF_BASIC_MAPPING
             )
-
-            # 选择并重排列
-            df = df.select("src_code", "symbol", "name", "exchange", "list_date")
-
-            row_count = len(df)
-            logger.info(
-                "Tushare ETF basic fetched",
-                event="tushare_etf_basic_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "etf_basic")
-
-            return df
-
-        except Exception as e:
-            logger.error(
-                "Tushare ETF basic fetch failed",
-                event="tushare_etf_basic_fetch_error",
-                error=str(e),
-            )
-            raise SourceFetchError(
-                message="Failed to fetch ETF basic from Tushare",
-                source="tushare",
-                dataset="etf_basic",
-                original_error=str(e),
-            ) from e
 
     @traced("source.tushare.fetch_etf_daily")
     def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
@@ -252,7 +212,7 @@ class TushareSource(DataSource):
             trade_date=trade_date,
         )
 
-        try:
+        with self._tushare_fetch_error_handler("etf_daily", "fund_daily"):
             ts_date = trade_date.replace("-", "")
             response = self._client.query(
                 api_name="fund_daily",
@@ -261,79 +221,10 @@ class TushareSource(DataSource):
                 fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
             )
 
-            # HTTP API 已经返回 polars DataFrame
-            if len(response) == 0:
-                logger.info(
-                    "Tushare ETF daily empty",
-                    event="tushare_etf_daily_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "trade_date": pl.Date,
-                        "open": pl.Float64,
-                        "high": pl.Float64,
-                        "low": pl.Float64,
-                        "close": pl.Float64,
-                        "pre_close": pl.Float64,
-                        "volume": pl.Float64,
-                        "amount": pl.Float64,
-                        "pct_change": pl.Float64,
-                    }
-                )
-
-            # 重命名列并转换类型
-            df = response.rename(
-                {"ts_code": "src_code", "vol": "volume", "pct_chg": "pct_change"}
-            ).with_columns(
-                pl.col("trade_date").str.to_date("%Y%m%d"),
-                pl.col("open").cast(pl.Float64),
-                pl.col("high").cast(pl.Float64),
-                pl.col("low").cast(pl.Float64),
-                pl.col("close").cast(pl.Float64),
-                pl.col("pre_close").cast(pl.Float64),
-                pl.col("volume").cast(pl.Float64),
-                pl.col("amount").cast(pl.Float64),
-                pl.col("pct_change").cast(pl.Float64),
+            return TushareDataTransformer.transform_daily_ohlcv(
+                response,
+                "etf_daily",
             )
-
-            # 选择所需的列
-            df = df.select(
-                "src_code",
-                "trade_date",
-                "open",
-                "high",
-                "low",
-                "close",
-                "pre_close",
-                "volume",
-                "amount",
-                "pct_change",
-            )
-
-            row_count = len(df)
-            logger.info(
-                "Tushare ETF daily fetched",
-                event="tushare_etf_daily_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "etf_daily")
-
-            return df
-
-        except Exception as e:
-            logger.error(
-                "Tushare ETF daily fetch failed",
-                event="tushare_etf_daily_fetch_error",
-                error=str(e),
-            )
-            raise SourceFetchError(
-                message="Failed to fetch ETF daily from Tushare",
-                source="tushare",
-                dataset="daily",
-                original_error=str(e),
-            ) from e
 
     @traced("source.tushare.fetch_stock_basic")
     def fetch_stock_basic(self) -> pl.DataFrame:
@@ -357,60 +248,16 @@ class TushareSource(DataSource):
             event="tushare_stock_basic_fetch_start",
         )
 
-        try:
+        with self._tushare_fetch_error_handler("stock_basic", "stock_basic"):
             response = self._client.query(
                 api_name="stock_basic",
                 list_status="L",
                 fields="ts_code,symbol,name,exchange,list_date",
             )
 
-            if len(response) == 0:
-                logger.info(
-                    "Tushare stock basic empty",
-                    event="tushare_stock_basic_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "symbol": pl.String,
-                        "name": pl.String,
-                        "exchange": pl.String,
-                        "list_date": pl.Date,
-                    }
-                )
-
-            # 重命名列并转换类型
-            df = (
-                response.rename({"ts_code": "src_code"})
-                .with_columns(
-                    pl.col("list_date").str.to_date("%Y%m%d"),
-                )
-                .select("src_code", "symbol", "name", "exchange", "list_date")
+            return TushareDataTransformer.transform(
+                response, "stock_basic", STOCK_BASIC_MAPPING
             )
-
-            row_count = len(df)
-            logger.info(
-                "Tushare stock basic fetched",
-                event="tushare_stock_basic_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "stock_basic")
-
-            return df
-
-        except Exception as e:
-            logger.error(
-                "Tushare stock basic fetch failed",
-                event="tushare_stock_basic_fetch_error",
-                error=str(e),
-            )
-            raise SourceFetchError(
-                message="Failed to fetch stock basic from Tushare",
-                source="tushare",
-                dataset="stock_basic",
-                original_error=str(e),
-            ) from e
 
     @traced("source.tushare.fetch_stock_daily")
     def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
@@ -439,7 +286,7 @@ class TushareSource(DataSource):
             trade_date=trade_date,
         )
 
-        try:
+        with self._tushare_fetch_error_handler("stock_daily", "daily"):
             ts_date = trade_date.replace("-", "")
             response = self._client.query(
                 api_name="daily",
@@ -447,77 +294,10 @@ class TushareSource(DataSource):
                 fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
             )
 
-            if len(response) == 0:
-                logger.info(
-                    "Tushare stock daily empty",
-                    event="tushare_stock_daily_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "trade_date": pl.Date,
-                        "open": pl.Float64,
-                        "high": pl.Float64,
-                        "low": pl.Float64,
-                        "close": pl.Float64,
-                        "pre_close": pl.Float64,
-                        "volume": pl.Float64,
-                        "amount": pl.Float64,
-                        "pct_change": pl.Float64,
-                    }
-                )
-
-            # 重命名列并转换类型
-            df = response.rename(
-                {"ts_code": "src_code", "vol": "volume", "pct_chg": "pct_change"}
-            ).with_columns(
-                pl.col("trade_date").str.to_date("%Y%m%d"),
-                pl.col("open").cast(pl.Float64),
-                pl.col("high").cast(pl.Float64),
-                pl.col("low").cast(pl.Float64),
-                pl.col("close").cast(pl.Float64),
-                pl.col("pre_close").cast(pl.Float64),
-                pl.col("volume").cast(pl.Float64),
-                pl.col("amount").cast(pl.Float64),
-                pl.col("pct_change").cast(pl.Float64),
+            return TushareDataTransformer.transform_daily_ohlcv(
+                response,
+                "stock_daily",
             )
-
-            df = df.select(
-                "src_code",
-                "trade_date",
-                "open",
-                "high",
-                "low",
-                "close",
-                "pre_close",
-                "volume",
-                "amount",
-                "pct_change",
-            )
-
-            row_count = len(df)
-            logger.info(
-                "Tushare stock daily fetched",
-                event="tushare_stock_daily_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "stock_daily")
-
-            return df
-
-        except Exception as e:
-            logger.error(
-                "Tushare stock daily fetch failed",
-                event="tushare_stock_daily_fetch_error",
-                error=str(e),
-            )
-            raise SourceFetchError(
-                message="Failed to fetch stock daily from Tushare",
-                source="tushare",
-                dataset="daily",
-                original_error=str(e),
-            ) from e
 
     @traced("source.tushare.fetch_adj_factor")
     def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
@@ -544,7 +324,7 @@ class TushareSource(DataSource):
             trade_date=trade_date,
         )
 
-        try:
+        with self._tushare_fetch_error_handler("adj_factor", "adj_factor"):
             ts_date = trade_date.replace("-", "")
             response = self._client.query(
                 api_name="adj_factor",
@@ -552,53 +332,9 @@ class TushareSource(DataSource):
                 trade_date=ts_date,
             )
 
-            if len(response) == 0:
-                logger.info(
-                    "Tushare adj factor empty",
-                    event="tushare_adj_factor_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "trade_date": pl.Date,
-                        "knowledge_date": pl.Date,
-                        "adj_factor": pl.Float64,
-                    }
-                )
-
-            # 重命名列并转换类型
-            # knowledge_date = trade_date (数据即日可用)
-            df = response.rename({"ts_code": "src_code"}).with_columns(
-                pl.col("trade_date").str.to_date("%Y%m%d"),
-                pl.col("trade_date").str.to_date("%Y%m%d").alias("knowledge_date"),
-                pl.col("adj_factor").cast(pl.Float64),
+            return TushareDataTransformer.transform(
+                response, "adj_factor", ADJ_FACTOR_MAPPING
             )
-
-            df = df.select("src_code", "trade_date", "knowledge_date", "adj_factor")
-
-            row_count = len(df)
-            logger.info(
-                "Tushare adj factor fetched",
-                event="tushare_adj_factor_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "adj_factor")
-
-            return df
-
-        except Exception as e:
-            logger.error(
-                "Tushare adj factor fetch failed",
-                event="tushare_adj_factor_fetch_error",
-                error=str(e),
-            )
-            raise SourceFetchError(
-                message="Failed to fetch adj factor from Tushare",
-                source="tushare",
-                dataset="adj_factor",
-                original_error=str(e),
-            ) from e
 
     @traced("source.tushare.fetch_fund_adj")
     def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
@@ -625,7 +361,7 @@ class TushareSource(DataSource):
             trade_date=trade_date,
         )
 
-        try:
+        with self._tushare_fetch_error_handler("fund_adj", "fund_adj"):
             ts_date = trade_date.replace("-", "")
             response = self._client.query(
                 api_name="fund_adj",
@@ -633,53 +369,9 @@ class TushareSource(DataSource):
                 trade_date=ts_date,
             )
 
-            if len(response) == 0:
-                logger.info(
-                    "Tushare fund adj empty",
-                    event="tushare_fund_adj_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "trade_date": pl.Date,
-                        "knowledge_date": pl.Date,
-                        "adj_factor": pl.Float64,
-                    }
-                )
-
-            # 重命名列并转换类型
-            # knowledge_date = trade_date (数据即日可用)
-            df = response.rename({"ts_code": "src_code"}).with_columns(
-                pl.col("trade_date").str.to_date("%Y%m%d"),
-                pl.col("trade_date").str.to_date("%Y%m%d").alias("knowledge_date"),
-                pl.col("adj_factor").cast(pl.Float64),
+            return TushareDataTransformer.transform(
+                response, "fund_adj", FUND_ADJ_MAPPING
             )
-
-            df = df.select("src_code", "trade_date", "knowledge_date", "adj_factor")
-
-            row_count = len(df)
-            logger.info(
-                "Tushare fund adj fetched",
-                event="tushare_fund_adj_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "fund_adj")
-
-            return df
-
-        except Exception as e:
-            logger.error(
-                "Tushare fund adj fetch failed",
-                event="tushare_fund_adj_fetch_error",
-                error=str(e),
-            )
-            raise SourceFetchError(
-                message="Failed to fetch fund adj from Tushare",
-                source="tushare",
-                dataset="fund_adj",
-                original_error=str(e),
-            ) from e
 
     @traced("source.tushare.fetch_stock_limit")
     def fetch_stock_limit(self, trade_date: str) -> pl.DataFrame:
@@ -706,7 +398,7 @@ class TushareSource(DataSource):
             trade_date=trade_date,
         )
 
-        try:
+        with self._tushare_fetch_error_handler("stock_limit", "stk_limit"):
             ts_date = trade_date.replace("-", "")
             response = self._client.query(
                 api_name="stk_limit",
@@ -714,52 +406,9 @@ class TushareSource(DataSource):
                 fields="ts_code,trade_date,up_limit,down_limit",
             )
 
-            if len(response) == 0:
-                logger.info(
-                    "Tushare stock limit empty",
-                    event="tushare_stock_limit_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "trade_date": pl.Date,
-                        "up_limit": pl.Float64,
-                        "down_limit": pl.Float64,
-                    }
-                )
-
-            # 重命名列并转换类型
-            df = response.rename({"ts_code": "src_code"}).with_columns(
-                pl.col("trade_date").str.to_date("%Y%m%d"),
-                pl.col("up_limit").cast(pl.Float64),
-                pl.col("down_limit").cast(pl.Float64),
+            return TushareDataTransformer.transform(
+                response, "stock_limit", STOCK_LIMIT_MAPPING
             )
-
-            df = df.select("src_code", "trade_date", "up_limit", "down_limit")
-
-            row_count = len(df)
-            logger.info(
-                "Tushare stock limit fetched",
-                event="tushare_stock_limit_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "stock_limit")
-
-            return df
-
-        except Exception as e:
-            logger.error(
-                "Tushare stock limit fetch failed",
-                event="tushare_stock_limit_fetch_error",
-                error=str(e),
-            )
-            raise SourceFetchError(
-                message="Failed to fetch stock limit from Tushare",
-                source="tushare",
-                dataset="stk_limit",
-                original_error=str(e),
-            ) from e
 
     @traced("source.tushare.fetch_stock_status")
     def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
@@ -794,7 +443,7 @@ class TushareSource(DataSource):
             trade_date=trade_date,
         )
 
-        try:
+        with self._tushare_fetch_error_handler("stock_status", "stock_status"):
             ts_date = trade_date.replace("-", "")
 
             # 1. Fetch suspension data from suspend_d API
@@ -920,16 +569,3 @@ class TushareSource(DataSource):
             _record_metrics(row_count, "stock_status")
 
             return result
-
-        except Exception as e:
-            logger.error(
-                "Tushare stock status fetch failed",
-                event="tushare_stock_status_fetch_error",
-                error=str(e),
-            )
-            raise SourceFetchError(
-                message="Failed to fetch stock status from Tushare",
-                source="tushare",
-                dataset="stock_status",
-                original_error=str(e),
-            ) from e

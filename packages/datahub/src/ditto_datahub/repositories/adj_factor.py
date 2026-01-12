@@ -72,9 +72,10 @@ class AdjFactorRepository:
         lock_name = f"adj_factor_write_{dataset}_{year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
             # Write data
-            file_path, checksum = self._adj_factor_store.write(
+            result = self._adj_factor_store.write(
                 dataset, df, year, on_duplicate=on_duplicate
             )
+            file_path, checksum = result.file_path, result.checksum
 
             logger.info(
                 "AdjFactor data written",

@@ -1,11 +1,11 @@
 """Tests for FreezeManager."""
 
-import json
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import orjson
 import pytest
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 
@@ -289,7 +289,13 @@ class TestFreezeManager:
                 "checksum_type": "sha256",
                 "files": old_manifest.files,
             }
-            json.dump(data, f, indent=2, ensure_ascii=False)
+            json_bytes = orjson.dumps(
+                data,
+                option=orjson.OPT_INDENT_2
+                | orjson.OPT_NON_STR_KEYS
+                | orjson.OPT_OMIT_MICROSECONDS,
+            )
+            f.write(json_bytes.decode("utf-8"))
 
         # Run cleanup with 90 days max age
         deleted = manager.cleanup_expired(max_age_days=90)
@@ -330,7 +336,13 @@ class TestFreezeManager:
                 "checksum_type": "sha256",
                 "files": old_manifest.files,
             }
-            json.dump(data, f, indent=2, ensure_ascii=False)
+            json_bytes = orjson.dumps(
+                data,
+                option=orjson.OPT_INDENT_2
+                | orjson.OPT_NON_STR_KEYS
+                | orjson.OPT_OMIT_MICROSECONDS,
+            )
+            f.write(json_bytes.decode("utf-8"))
 
         # Run cleanup without specifying max_age_days (should use default)
         deleted = manager.cleanup_expired()

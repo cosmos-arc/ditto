@@ -325,9 +325,11 @@ class BarsRepository:
                     )
 
             # Write data
-            file_path, checksum = self._bars_store.write(
+            result = self._bars_store.write(
                 dataset, df, year, on_duplicate=on_duplicate
             )
+            file_path = result.file_path
+            checksum = result.checksum
 
             # Get total rows after write
             total_rows = len(
@@ -819,7 +821,92 @@ class BarsRepository:
         return result
 
 
-def filter_failed_rows(df: pl.DataFrame, issue: DQIssue) -> pl.DataFrame:  # noqa: PLR0911
+def _filter_not_null_violations(df: pl.DataFrame, issue: DQIssue) -> pl.DataFrame:
+    """
+    Filter rows with null values for not_null rule.
+
+    Args:
+        df: Input DataFrame.
+        issue: DQ issue with rule information.
+
+    Returns:
+        Filtered DataFrame with rows containing null values.
+
+    """
+    # Extract column name from message (format: "{col} has null values")
+    message = issue.message.lower()
+    for col in df.columns:
+        if col.lower() in message and "has null values" in message:
+            return df.filter(pl.col(col).is_null())
+    # Fallback: check all columns for null values
+    null_cols = [pl.col(c).is_null() for c in df.columns]
+    if null_cols:
+        return df.filter(pl.any_horizontal(null_cols))
+    return df
+
+
+def _filter_unique_violations(df: pl.DataFrame, issue: DQIssue) -> pl.DataFrame:
+    """
+    Filter duplicate rows for unique rule.
+
+    Args:
+        df: Input DataFrame.
+        issue: DQ issue with rule information.
+
+    Returns:
+        Filtered DataFrame with duplicate rows.
+
+    """
+    # For unique constraint, find duplicate rows
+    # Check all column combinations to find duplicates
+    for col_count in range(1, len(df.columns) + 1):
+        for cols in combinations(df.columns, col_count):
+            duplicates = (
+                df.group_by(cols)
+                .agg(pl.len().alias("_count"))
+                .filter(pl.col("_count") > 1)
+            )
+            if not duplicates.is_empty():
+                # Join back to get original rows
+                return df.join(duplicates.select(cols), on=cols, how="inner")
+    return df  # Fallback: return all rows
+
+
+def _filter_foreign_key_violations(df: pl.DataFrame, issue: DQIssue) -> pl.DataFrame:
+    """
+    Filter rows with foreign key violations.
+
+    Args:
+        df: Input DataFrame.
+        issue: DQ issue with rule information.
+
+    Returns:
+        All rows for manual review (cannot filter without reference data).
+
+    """
+    # Cannot filter without reference data
+    # Return all rows for manual review
+    return df
+
+
+def _filter_type_check_violations(df: pl.DataFrame, issue: DQIssue) -> pl.DataFrame:
+    """
+    Filter rows with type check violations.
+
+    Args:
+        df: Input DataFrame.
+        issue: DQ issue with rule information.
+
+    Returns:
+        All rows for manual review (cannot filter without type info).
+
+    """
+    # Cannot filter without type info
+    # Return all rows for manual review
+    return df
+
+
+def filter_failed_rows(df: pl.DataFrame, issue: DQIssue) -> pl.DataFrame:
     """
     Filter failed rows based on DQ issue.
 
@@ -831,47 +918,19 @@ def filter_failed_rows(df: pl.DataFrame, issue: DQIssue) -> pl.DataFrame:  # noq
         Filtered DataFrame with failed rows.
 
     """
+    # Map rule names to their filter functions
+    rule_filters = {
+        "not_null": _filter_not_null_violations,
+        "unique": _filter_unique_violations,
+        "foreign_key": _filter_foreign_key_violations,
+        "type_check": _filter_type_check_violations,
+    }
+
     rule_name = issue.rule_name.lower()
+    filter_func = rule_filters.get(rule_name)
 
-    # Handle not_null rule: filter rows where column is null
-    if rule_name == "not_null":
-        # Extract column name from message (format: "{col} has null values")
-        message = issue.message.lower()
-        for col in df.columns:
-            if col.lower() in message and "has null values" in message:
-                return df.filter(pl.col(col).is_null())
-        # Fallback: check all columns for null values
-        null_cols = [pl.col(c).is_null() for c in df.columns]
-        if null_cols:
-            return df.filter(pl.any_horizontal(null_cols))
-
-    # Handle unique rule: filter duplicate rows
-    if rule_name == "unique":
-        # For unique constraint, find duplicate rows
-        # Check all column combinations to find duplicates
-        for col_count in range(1, len(df.columns) + 1):
-            for cols in combinations(df.columns, col_count):
-                duplicates = (
-                    df.group_by(cols)
-                    .agg(pl.len().alias("_count"))
-                    .filter(pl.col("_count") > 1)
-                )
-                if not duplicates.is_empty():
-                    # Join back to get original rows
-                    return df.join(duplicates.select(cols), on=cols, how="inner")
-        return df  # Fallback: return all rows
-
-    # Handle foreign_key rule: filter rows with invalid FK
-    if rule_name == "foreign_key":
-        # Cannot filter without reference data
-        # Return all rows for manual review
-        return df
-
-    # Handle type_check rule: filter rows with type issues
-    if rule_name == "type_check":
-        # Cannot filter without type info
-        # Return all rows for manual review
-        return df
+    if filter_func is not None:
+        return filter_func(df, issue)
 
     # Default: return all rows for manual review
     return df

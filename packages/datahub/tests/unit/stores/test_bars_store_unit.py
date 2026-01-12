@@ -46,11 +46,11 @@ class TestBarsStore:
         )
 
         # Write data
-        file_path, checksum = self.store.write("stock_daily", test_df, 2024)
+        write_result = self.store.write("stock_daily", test_df, 2024)
 
-        assert file_path is not None
-        assert checksum is not None
-        assert Path(file_path).exists()
+        assert write_result.file_path is not None
+        assert write_result.checksum is not None
+        assert Path(write_result.file_path).exists()
 
         # Read data back
         result = self.store.read(
@@ -210,24 +210,6 @@ class TestBarsStoreRefactoredHelpers:
         """Clean up test environment."""
         self.temp_dir.cleanup()
 
-    def test_ensure_dataset_dir_creates_directory(self) -> None:
-        """Test _ensure_dataset_dir creates dataset directory."""
-        dataset = "test_dataset"
-        result_path = self.store._ensure_dataset_dir(dataset)
-
-        assert result_path == Path(self.temp_dir.name) / dataset
-        assert result_path.exists()
-        assert result_path.is_dir()
-
-    def test_ensure_dataset_dir_is_idempotent(self) -> None:
-        """Test _ensure_dataset_dir can be called multiple times safely."""
-        dataset = "test_dataset"
-        path1 = self.store._ensure_dataset_dir(dataset)
-        path2 = self.store._ensure_dataset_dir(dataset)
-
-        assert path1 == path2
-        assert path1.exists()
-
     def test_merge_with_existing_returns_new_data_when_no_file(self) -> None:
         """Test _merge_with_existing returns new data when file doesn't exist."""
         new_df = pl.DataFrame(
@@ -247,9 +229,11 @@ class TestBarsStoreRefactoredHelpers:
             new_df, non_existent_path, OnDuplicate.KEEP_LAST
         )
 
-        # Should return new data as-is
-        assert len(result) == 1
-        assert result["sid"][0] == 100000001
+        # Should return MergeResult with new data
+        assert len(result.df) == 1
+        assert result.added == 1
+        assert result.updated == 0
+        assert result.df["sid"][0] == 100000001
 
     def test_merge_with_existing_merges_when_file_exists(self) -> None:
         """Test _merge_with_existing merges data when file exists."""
@@ -286,9 +270,12 @@ class TestBarsStoreRefactoredHelpers:
         )
 
         # Should have 2 unique records
-        assert len(result) == 2
+        assert len(result.df) == 2
+        # 1 new record added, 1 updated
+        assert result.added == 1
+        assert result.updated == 1
         # The overlapped record should be updated
-        record = result.filter(pl.col("sid") == 100000001)
+        record = result.df.filter(pl.col("sid") == 100000001)
         assert record["close"][0] == 11.5
 
     def test_prepare_for_write_normalizes_dates(self) -> None:
@@ -654,11 +641,11 @@ class TestBarsStoreEdgeCases:
         )
 
         # 写入应该自动去重（保留第一条）
-        file_path, checksum = self.store.write("stock_daily", df, 2024)
+        write_result = self.store.write("stock_daily", df, 2024)
 
-        assert file_path is not None
-        assert checksum is not None
-        assert Path(file_path).exists()
+        assert write_result.file_path is not None
+        assert write_result.checksum is not None
+        assert Path(write_result.file_path).exists()
 
         # 读取验证：应该只有 2 条记录（自动去重）
         result = self.store.read(

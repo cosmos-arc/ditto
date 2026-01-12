@@ -130,11 +130,13 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """Test write creates new file."""
-        file_path, checksum = store.write("adj_factor", sample_df, 2024)
+        result = store.write("adj_factor", sample_df, 2024)
 
-        assert file_path == str(tmp_path / "data" / "adj_factor" / "2024.parquet")
-        assert Path(file_path).exists()
-        assert len(checksum) == 32  # MD5 hex string
+        assert result.file_path == str(
+            tmp_path / "data" / "adj_factor" / "2024.parquet"
+        )
+        assert Path(result.file_path).exists()
+        assert len(result.checksum) == 32  # MD5 hex string
 
     def test_write_merge_with_existing(
         self, store: AdjFactorStore, sample_df: pl.DataFrame
@@ -560,7 +562,7 @@ class TestOnDuplicate:
         store.write("adj_factor", initial_df, 2024)
 
         # Attempt to write overlapping data with ERROR strategy
-        with pytest.raises(ValueError, match="检测到重复数据"):
+        with pytest.raises(ValueError, match="Duplicate data"):
             store.write(
                 "adj_factor", overlapping_df, 2024, on_duplicate=OnDuplicate.ERROR
             )
@@ -633,7 +635,7 @@ class TestOnDuplicate:
 
         # Attempt to write overlapping data without specifying on_duplicate
         # Should default to ERROR and raise ValueError
-        with pytest.raises(ValueError, match="检测到重复数据"):
+        with pytest.raises(ValueError, match="Duplicate data"):
             store.write("adj_factor", overlapping_df, 2024)
 
     def test_on_duplicate_keep_last_allows_idempotent_writes(
@@ -682,11 +684,11 @@ class TestBatchInternalDeduplication:
         )
 
         # 写入数据，应该自动去重（保留第一条）
-        file_path, checksum = store.write("adj_factor", df_with_duplicates, 2024)
+        write_result = store.write("adj_factor", df_with_duplicates, 2024)
 
         # 验证写入成功
-        assert Path(file_path).exists()
-        assert len(checksum) == 32
+        assert Path(write_result.file_path).exists()
+        assert len(write_result.checksum) == 32
 
         # 读取并验证去重结果（应该保留第一条）
         result = store.read("adj_factor")
@@ -719,10 +721,10 @@ class TestBatchInternalDeduplication:
         )
 
         # 写入数据
-        file_path, _checksum = store.write("adj_factor", df_no_duplicates, 2024)
+        write_result = store.write("adj_factor", df_no_duplicates, 2024)
 
         # 验证写入成功
-        assert Path(file_path).exists()
+        assert Path(write_result.file_path).exists()
         result = store.read("adj_factor")
         assert len(result) == 3  # 没有重复，所有记录都保留
 
@@ -848,7 +850,7 @@ class TestDateNormalization:
         )
 
         # 写入应该规范化为 Date 类型
-        _file_path, _checksum = store.write("adj_factor", df, 2024)
+        _result = store.write("adj_factor", df, 2024)
 
         # 读取并验证
         result = store.read("adj_factor")
@@ -867,7 +869,7 @@ class TestDateNormalization:
         )
 
         # 写入
-        _file_path, _checksum = store.write("adj_factor", df, 2024)
+        _result = store.write("adj_factor", df, 2024)
 
         # 读取并验证
         result = store.read("adj_factor")
@@ -889,7 +891,7 @@ class TestDateNormalization:
         )
 
         # 写入应该规范化为 Date 类型
-        _file_path, _checksum = store.write("adj_factor", df, 2024)
+        _result = store.write("adj_factor", df, 2024)
 
         # 读取并验证
         result = store.read("adj_factor")
@@ -940,17 +942,17 @@ class TestWriteReturnValues:
             }
         )
 
-        file_path, checksum = store.write("adj_factor", df, 2024)
+        result = store.write("adj_factor", df, 2024)
 
         # 验证返回值
-        assert isinstance(file_path, str)
-        assert isinstance(checksum, str)
-        assert len(checksum) == 32  # MD5 hex string
-        assert Path(file_path).exists()
+        assert isinstance(result.file_path, str)
+        assert isinstance(result.checksum, str)
+        assert len(result.checksum) == 32  # MD5 hex string
+        assert Path(result.file_path).exists()
 
         # 验证校验和与文件一致
-        actual_checksum = file_md5(Path(file_path))
-        assert checksum == actual_checksum
+        actual_checksum = file_md5(Path(result.file_path))
+        assert result.checksum == actual_checksum
 
     def test_write_merge_returns_updated_checksum(self, store: AdjFactorStore) -> None:
         """测试合并写入后返回的校验和会更新。"""
@@ -963,7 +965,7 @@ class TestWriteReturnValues:
         )
 
         # 第一次写入
-        file_path1, checksum1 = store.write("adj_factor", df1, 2024)
+        result1 = store.write("adj_factor", df1, 2024)
 
         # 追加写入
         df2 = pl.DataFrame(
@@ -973,13 +975,13 @@ class TestWriteReturnValues:
                 "adj_factor": [1.0],
             }
         )
-        file_path2, checksum2 = store.write(
+        result2 = store.write(
             "adj_factor", df2, 2024, on_duplicate=OnDuplicate.KEEP_LAST
         )
 
         # 验证文件路径相同，但校验和不同（因为内容变了）
-        assert file_path1 == file_path2
-        assert checksum1 != checksum2
+        assert result1.file_path == result2.file_path
+        assert result1.checksum != result2.checksum
 
 
 class TestEdgeCases:
@@ -1055,10 +1057,10 @@ class TestEdgeCases:
             }
         )
 
-        file_path, _checksum = store.write("adj_factor", df, 2024)
+        write_result = store.write("adj_factor", df, 2024)
 
         # 验证写入成功
-        assert Path(file_path).exists()
+        assert Path(write_result.file_path).exists()
         result = store.read("adj_factor")
         assert len(result) == 1
         assert result["sid"][0] == 1000001
@@ -1074,10 +1076,10 @@ class TestEdgeCases:
         )
 
         # 应该能写入空 DataFrame
-        file_path, _checksum = store.write("adj_factor", df, 2024)
+        write_result = store.write("adj_factor", df, 2024)
 
         # 验证文件被创建
-        assert Path(file_path).exists()
+        assert Path(write_result.file_path).exists()
 
         # 读取应该返回空结果
         result = store.read("adj_factor")
@@ -1138,9 +1140,9 @@ class TestMultipleYearPartitions:
         )
 
         # 应该能创建新分区
-        file_path, _checksum = store.write("adj_factor", df, 2099)
+        write_result = store.write("adj_factor", df, 2099)
 
-        assert Path(file_path).exists()
+        assert Path(write_result.file_path).exists()
         result = store.read(
             "adj_factor", start_date="2099-01-01", end_date="2099-12-31"
         )

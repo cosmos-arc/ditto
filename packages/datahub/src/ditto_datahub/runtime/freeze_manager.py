@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from datetime import datetime
 from pathlib import Path
 
+import orjson
 from ditto_foundation import logger, traced
 
 from ..types import FreezeManifest
@@ -423,8 +423,16 @@ class FreezeManager:
             "files": manifest.files,
         }
 
+        # 使用 orjson 序列化，返回 bytes
+        json_bytes = orjson.dumps(
+            data,
+            option=orjson.OPT_INDENT_2
+            | orjson.OPT_NON_STR_KEYS
+            | orjson.OPT_OMIT_MICROSECONDS,
+        )
+        # 写入文件（需要解码为 str）
         with path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.write(json_bytes.decode("utf-8"))
 
     def _load_manifest(self, path: Path) -> FreezeManifest:
         """
@@ -440,8 +448,9 @@ class FreezeManager:
             ValueError: 如果 manifest 格式不正确
 
         """
-        with path.open(encoding="utf-8") as f:
-            data = json.load(f)
+        # 使用 orjson 反序列化
+        with path.open("rb") as f:
+            data = orjson.loads(f.read())
 
         # 验证必要字段存在
         if "version" not in data or "checksum_type" not in data:
