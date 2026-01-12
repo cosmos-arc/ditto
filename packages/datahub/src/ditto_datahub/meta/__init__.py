@@ -12,6 +12,9 @@ from ditto_datahub.meta.schemas import (
     INDEX_WEIGHT_SCHEMA,
     STOCK_DAILY_SCHEMA,
     STOCK_STATUS_SCHEMA,  # B.3: Stock status schema
+    TUSHARE_LIST_STATUS_SCHEMA,  # Tushare source schemas
+    TUSHARE_ST_SCHEMA,  # Tushare source schemas
+    TUSHARE_SUSPEND_SCHEMA,  # Tushare source schemas
     UNIVERSE_CONSTITUENT_SCHEMA,
 )
 
@@ -22,5 +25,8 @@ __all__ = [
     "INDEX_WEIGHT_SCHEMA",
     "STOCK_DAILY_SCHEMA",
     "STOCK_STATUS_SCHEMA",
+    "TUSHARE_LIST_STATUS_SCHEMA",
+    "TUSHARE_ST_SCHEMA",
+    "TUSHARE_SUSPEND_SCHEMA",
     "UNIVERSE_CONSTITUENT_SCHEMA",
 ]
