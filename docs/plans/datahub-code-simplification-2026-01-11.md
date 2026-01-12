@@ -466,7 +466,16 @@ def _merge_status_data(
 
 ---
 
-### 2.2 _determine_dataset() 条件逻辑简化
+### 2.2 _determine_dataset() 条件逻辑简化 ✅
+
+**状态**: 已完成 (2026-01-12)
+
+**实现**:
+- ✅ 删除 _determine_dataset() 死代码（~45 行）
+- ✅ 优化 _detect_asset_class_from_sids() 保留混合检测逻辑
+- ✅ 修复类型注解以通过 mypy 检查
+
+**收益**: 减少约 45 行代码
 
 **目标文件**: `packages/datahub/src/ditto_datahub/repositories/bars.py`
 
@@ -496,7 +505,17 @@ def _detect_asset_class(self, sids: list[int]) -> str:
 
 ---
 
-### 2.3 SQL IN 子句构建器
+### 2.3 SQL IN 子句构建器 ✅
+
+**状态**: 已完成 (2026-01-12)
+
+**实现**:
+- ✅ 增强 _build_in_clause() 支持分块处理（chunk_size=200）
+- ✅ 添加 column 参数以支持完整 SQL 片段生成
+- ✅ 更新 find_securities() 和 get_sid_symbol_map() 调用
+- ✅ 添加完整文档和示例
+
+**收益**: 支持任意大小的 SQL IN 查询，避免 SQLite 参数限制
 
 **目标文件**: `packages/datahub/src/ditto_datahub/stores/security_store.py`
 
