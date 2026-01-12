@@ -41,6 +41,7 @@ class TestBarsQuery:
         assert query.with_symbol is False
         assert query.with_status is False
         assert query.market_wide is False
+        assert query.raw is False
 
     def test_bars_query_creation_with_values(self) -> None:
         """Test BarsQuery can be created with specific values."""
@@ -57,6 +58,7 @@ class TestBarsQuery:
             with_symbol=True,
             with_status=True,
             market_wide=False,
+            raw=True,
         )
 
         # Assert
@@ -71,6 +73,7 @@ class TestBarsQuery:
         assert query.with_symbol is True
         assert query.with_status is True
         assert query.market_wide is False
+        assert query.raw is True
 
     def test_bars_query_with_index_asset_class(self) -> None:
         """Test BarsQuery with index asset class."""

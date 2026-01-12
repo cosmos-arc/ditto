@@ -55,6 +55,7 @@ class BarsQuery:
         with_symbol: 是否在结果中添加 symbol 列。
         with_status: 是否添加股票状态列（仅对股票数据有效）。
         market_wide: 全市场查询模式。为 True 时获取所有活跃证券，不限制 SID 范围。
+        raw: 是否跳过复权和状态增强。为 True 时返回原始数据，不应用复权和状态增强。
 
     Examples:
         >>> query = BarsQuery(sids=[1, 2, 3], start="2024-01-01", end="2024-01-31")
@@ -73,6 +74,7 @@ class BarsQuery:
     with_symbol: bool = False
     with_status: bool = False
     market_wide: bool = False
+    raw: bool = False
 
 
 @dataclass(frozen=True)
