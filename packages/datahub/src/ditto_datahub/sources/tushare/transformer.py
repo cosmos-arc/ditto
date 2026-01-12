@@ -3,14 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 
 import polars as pl
 from ditto_foundation import M, logger
-
-if TYPE_CHECKING:
-    from polars.type_aliases import PolarsDataType
-
 
 __all__ = [
     "ADJ_FACTOR_MAPPING",
@@ -149,33 +144,15 @@ class TushareDataTransformer:
             转换后的 DataFrame
 
         """
-        # 1. 空处理：使用 dummy 数据执行转换以获取正确的 schema
+        # 1. 空处理：直接使用 _build_schema_from_mapping 构建 schema
         if len(df) == 0:
             logger.info(
                 f"Tushare {dataset_name} empty",
                 event=f"tushare_{dataset_name}_fetch_complete",
                 row_count=0,
             )
-            # 创建单行 dummy 数据，使用有效的格式
-            dummy_data: dict[str, list[str | int]] = {}
-            for col in df.columns:
-                # 获取重命名后的列名
-                renamed_col = mapping.rename.get(col, col)
-                # 根据列类型生成有效的 dummy 值
-                if renamed_col in mapping.date_columns:
-                    dummy_data[col] = ["20240101"]
-                elif renamed_col in mapping.float_columns:
-                    dummy_data[col] = ["0.0"]
-                elif renamed_col in mapping.int_columns:
-                    dummy_data[col] = ["0"]
-                elif renamed_col in mapping.boolean_columns:
-                    dummy_data[col] = [0]
-                else:
-                    dummy_data[col] = ["dummy"]
-            dummy_df = pl.DataFrame(dummy_data)
-            # 执行转换获取正确 schema
-            transformed = TushareDataTransformer._transform_impl(dummy_df, mapping)
-            return pl.DataFrame(schema=transformed.schema)
+            schema = TushareDataTransformer._build_schema_from_mapping(mapping)
+            return pl.DataFrame(schema=schema)
 
         # 执行实际转换
         result = TushareDataTransformer._transform_impl(df, mapping)
@@ -293,24 +270,11 @@ class TushareDataTransformer:
         return result
 
     @staticmethod
-    def _build_schema_from_mapping(mapping: ColumnMapping) -> dict[str, PolarsDataType]:
-        """
-        从映射配置构建 schema.
-
-        Args:
-            mapping: 列映射配置
-
-        Returns:
-            schema 字典
-
-        """
-        schema: dict[str, PolarsDataType] = {}
-
-        # 如果指定了 output_columns，只构建这些列的 schema
-        columns_to_include = mapping.output_columns
-
-        # 构建列类型映射
-        column_types: dict[str, PolarsDataType] = {}
+    def _build_column_type_map(
+        mapping: ColumnMapping,
+    ) -> dict[str, type[pl.DataType]]:
+        """构建列名到类型的映射."""
+        column_types: dict[str, type[pl.DataType]] = {}
         for col in mapping.date_columns:
             column_types[col] = pl.Date
         for col in mapping.float_columns:
@@ -319,29 +283,70 @@ class TushareDataTransformer:
             column_types[col] = pl.Int64
         for col in mapping.boolean_columns:
             column_types[col] = pl.Boolean
+        return column_types
 
-        # 处理所有列（重命名后的）
+    @staticmethod
+    def _infer_computed_column_type(
+        expr: pl.Expr, column_types: dict[str, type[pl.DataType]]
+    ) -> type[pl.DataType]:
+        """从表达式推断计算列的类型."""
+        try:
+            root_names = expr.meta.root_names()
+            if len(root_names) == 1:
+                return column_types.get(root_names[0], pl.String)
+        except Exception:
+            pass
+        return pl.String
+
+    @staticmethod
+    def _build_schema_from_mapping(
+        mapping: ColumnMapping,
+    ) -> dict[str, type[pl.DataType]]:
+        """
+        从映射配置构建 schema.
+
+        此方法用于空数据处理场景,当 API 返回空数据时,
+        仍需返回正确 schema 的 DataFrame 以确保下游类型正确.
+
+        Args:
+            mapping: 列映射配置
+
+        Returns:
+            schema 字典,包含所有 output_columns 中指定的列及其类型
+
+        Note:
+            - 对于未在类型配置中明确指定的列(如 name),默认使用 String 类型
+            - computed_columns 的类型通过 _infer_computed_column_type 推断
+            - 确保 output_columns 中的所有列都在 schema 中
+
+        """
+        schema: dict[str, type[pl.DataType]] = {}
+        columns_to_include = mapping.output_columns
+        column_types = TushareDataTransformer._build_column_type_map(mapping)
+
+        # 处理重命名的列
         for old_name, new_name in mapping.rename.items():
-            final_name = new_name
-            final_type = column_types.get(old_name, pl.String)
+            if columns_to_include is None or new_name in columns_to_include:
+                schema[new_name] = column_types.get(old_name, pl.String)
 
-            if columns_to_include is None or final_name in columns_to_include:
-                schema[final_name] = final_type
-
-        # 处理没有重命名的列
+        # 处理未重命名的列
         for col, dtype in column_types.items():
-            if col not in mapping.rename and (
-                columns_to_include is None or col in columns_to_include
-            ):
+            should_include = columns_to_include is None or col in columns_to_include
+            if col not in mapping.rename and should_include:
                 schema[col] = dtype
 
-        # 处理 computed_columns（计算列）
-        # 注意：由于无法从 Polars 表达式推断确切类型，我们使用 String 作为默认类型
-        # 对于 Date 类型的计算列，需要在实际转换时才能确定正确类型
-        for col_name in mapping.computed_columns:
+        # 处理计算列
+        for col_name, expr in mapping.computed_columns.items():
             if columns_to_include is None or col_name in columns_to_include:
-                # 默认使用 String 类型，实际类型会在转换时确定
-                # 如果表达式明确是 Date 类型，会在运行时正确转换
-                schema[col_name] = pl.String
+                schema[col_name] = TushareDataTransformer._infer_computed_column_type(
+                    expr, column_types
+                )
+
+        # 处理在 output_columns 中但尚未添加的列(如 name,这些列没有在类型配置中)
+        # 这些列默认为 String 类型
+        if columns_to_include is not None:
+            for col in columns_to_include:
+                if col not in schema:
+                    schema[col] = pl.String
 
         return schema

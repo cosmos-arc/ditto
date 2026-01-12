@@ -306,3 +306,31 @@ class TestTushareDataTransformer:
             "knowledge_date": pl.Date,
             "adj_factor": pl.Float64,
         }
+
+    def test_transform_etf_basic_empty(self) -> None:
+        """Test transform with empty ETF basic DataFrame - computed columns type
+        inference."""
+        # 创建空 DataFrame，但有正确的 schema
+        input_df = pl.DataFrame(
+            schema={
+                "ts_code": pl.String,
+                "name": pl.String,
+                "list_date": pl.String,
+            }
+        )
+
+        # 调用通用 transform() 方法
+        result = TushareDataTransformer.transform(
+            input_df, "etf_basic", ETF_BASIC_MAPPING
+        )
+
+        # 验证返回正确 schema 的空 DataFrame
+        # 关键验证: symbol 和 exchange 是 computed_columns,类型应该是 pl.String
+        assert result.is_empty()
+        assert result.schema == {
+            "src_code": pl.String,
+            "symbol": pl.String,
+            "name": pl.String,
+            "exchange": pl.String,
+            "list_date": pl.Date,
+        }
