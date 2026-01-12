@@ -549,6 +549,7 @@ class BarsRepository:
         etf_range = SidRange.get_range("etf")
         index_range = SidRange.get_range("index")
 
+        # 检测每个资产类别
         has_stock = any(
             stock_range.min_sid <= sid <= stock_range.max_sid for sid in sids
         )
@@ -558,74 +559,26 @@ class BarsRepository:
         )
 
         # 检测混合资产类别
-        asset_class_count = sum([has_stock, has_etf, has_index])
-        if asset_class_count > 1:
-            classes = []
-            if has_stock:
-                classes.append("stock")
-            if has_etf:
-                classes.append("ETF")
-            if has_index:
-                classes.append("index")
+        detected: list[Literal["stock", "etf", "index"]] = []
+        if has_stock:
+            detected.append("stock")
+        if has_etf:
+            detected.append("etf")
+        if has_index:
+            detected.append("index")
+
+        if len(detected) > 1:
+            display_names = {"stock": "stock", "etf": "ETF", "index": "index"}
+            classes = [display_names[c] for c in detected]
             raise ValueError(
                 f"检测到混合资产类别查询。SID 包含 {', '.join(classes)}。"
                 "请分别查询每个资产类别。"
             )
 
-        if has_stock:
-            return "stock"
-        if has_etf:
-            return "etf"
-        if has_index:
-            return "index"
+        if not detected:
+            return "stock"  # 默认
 
-        return "stock"  # 默认
-
-    def _determine_dataset(
-        self,
-        asset_class: Literal["stock", "etf", "index"] | None,
-        sids: list[int],
-    ) -> str:
-        """Determine dataset name from asset class or SIDs."""
-        if asset_class:
-            return f"{asset_class}_daily"
-
-        # Check for mixed asset classes
-        stock_range = SidRange.get_range("stock")
-        etf_range = SidRange.get_range("etf")
-        index_range = SidRange.get_range("index")
-
-        has_stock = any(
-            stock_range.min_sid <= sid <= stock_range.max_sid for sid in sids
-        )
-        has_etf = any(etf_range.min_sid <= sid <= etf_range.max_sid for sid in sids)
-        has_index = any(
-            index_range.min_sid <= sid <= index_range.max_sid for sid in sids
-        )
-
-        # Check for mixed asset classes
-        asset_class_count = sum([has_stock, has_etf, has_index])
-        if asset_class_count > 1:
-            classes = []
-            if has_stock:
-                classes.append("stock")
-            if has_etf:
-                classes.append("ETF")
-            if has_index:
-                classes.append("index")
-            raise ValueError(
-                f"Mixed asset class query detected. SIDs contain {', '.join(classes)}. "
-                "Please query each asset class separately."
-            )
-
-        if has_stock:
-            return "stock_daily"
-        if has_etf:
-            return "etf_daily"
-        if has_index:
-            return "index_daily"
-
-        return "stock_daily"  # Default
+        return detected[0]
 
     def _apply_adjustment(
         self,

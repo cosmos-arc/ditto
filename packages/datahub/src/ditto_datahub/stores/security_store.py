@@ -18,28 +18,49 @@ from ditto_datahub.runtime.cache import DataCache
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
-def _build_in_clause(items: list[Any]) -> tuple[str, list[Any]]:
+def _build_in_clause(
+    column: str,
+    items: list[Any],
+    chunk_size: int = 200,
+) -> tuple[str, list[Any]]:
     """
-    Build parameterized IN clause with placeholders.
+    构建参数化 IN 子句（自动分块）。
 
-    This helper function ensures SQL injection safety by using
-    parameterized queries for IN clauses.
+    确保 SQL 注入安全，使用参数化查询。
+    当列表超过 chunk_size 时，自动分块并用 OR 连接。
 
     Args:
-        items: List of values for the IN clause.
+        column: 列名（如 "s.sid", "m.src_code"）。
+        items: 值列表。
+        chunk_size: 每块的最大参数数量（默认 200，SQLite 限制）。
 
     Returns:
-        Tuple of (SQL fragment with placeholders, list of values).
+        (SQL 片段, 参数列表) 元组。
 
-    Example:
-        >>> _build_in_clause([1, 2, 3])
-        ('(?,?,?)', [1, 2, 3])
+    Examples:
+        >>> _build_in_clause("s.sid", [1, 2, 3])
+        ('s.sid IN (?,?,?)', [1, 2, 3])
+        >>> _build_in_clause("s.sid", list(range(500)), chunk_size=200)
+        ('(s.sid IN (...)) OR (s.sid IN (...))', [...])
 
     """
     if not items:
-        return ("()", [])
-    placeholders = ",".join("?" * len(items))
-    return f"({placeholders})", items
+        return ("1=0", [])  # 空 IN 返回 False 条件
+
+    if len(items) <= chunk_size:
+        placeholders = ",".join("?" * len(items))
+        return f"{column} IN ({placeholders})", items
+
+    # 分块处理：用 OR 连接多个 IN 子句
+    chunks = [items[i : i + chunk_size] for i in range(0, len(items), chunk_size)]
+    clauses = []
+    params = []
+    for chunk in chunks:
+        placeholders = ",".join("?" * len(chunk))
+        clauses.append(f"{column} IN ({placeholders})")
+        params.extend(chunk)
+
+    return f"({' OR '.join(clauses)})", params
 
 
 class SecurityStore:
@@ -317,13 +338,13 @@ class SecurityStore:
         params: list[Any] = []
 
         if sids:
-            in_clause, sids_list = _build_in_clause(sids)
-            sql += f" AND s.sid IN {in_clause}"
+            in_clause, sids_list = _build_in_clause("s.sid", sids)
+            sql += f" AND {in_clause}"
             params.extend(sids_list)
 
         if src_codes:
-            in_clause, src_codes_list = _build_in_clause(src_codes)
-            sql += f" AND m.src_code IN {in_clause} AND m.source = ?"
+            in_clause, src_codes_list = _build_in_clause("m.src_code", src_codes)
+            sql += f" AND {in_clause} AND m.source = ?"
             params.extend(src_codes_list)
             params.append(source)
 
@@ -426,9 +447,9 @@ class SecurityStore:
 
         # 从数据库查询
         if sids:
-            in_clause, sids_list = _build_in_clause(sids)
+            in_clause, sids_list = _build_in_clause("sid", sids)
             rows = self._client.fetchall(
-                f"SELECT sid, symbol FROM security WHERE sid IN {in_clause}",  # nosec B608
+                f"SELECT sid, symbol FROM security WHERE {in_clause}",  # nosec B608
                 sids_list,
             )
         else:
