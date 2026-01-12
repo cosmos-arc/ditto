@@ -204,92 +204,22 @@ def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
 
 ---
 
-### 1.3 Store 写入重复逻辑提取
+### 1.3 Store 写入重复逻辑提取 ✅
 
-**目标文件**: `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
+**状态**: 已完成 (2026-01-12)
 
-**问题**: 9 处相同的 try/except 模式
+**实现**:
+- ✅ 创建 `WriteResult` 数据类
+- ✅ 添加 `_get_key_columns()` 抽象方法
+- ✅ 添加 `_get_sort_columns()` 和 `_get_date_column()` 可覆盖方法
+- ✅ 实现 `_prepare_for_write()` 方法
+- ✅ 实现 `_merge_with_existing()` 方法
+- ✅ 在 `ParquetStoreBase` 中实现统一的 `write()` 方法
+- ✅ 删除 `BarsStore` 和 `AdjFactorStore` 中的重复 `write()` 实现
+- ✅ 更新所有调用方 (repositories 和 tests)
+- ✅ 运行 pre-commit 验证
 
-**当前代码**（重复 9 次）:
-```python
-try:
-    response = self._client.invoke_raw_api(...)
-except SourceAuthenticationError:
-    raise
-except SourceRateLimitError:
-    raise
-except Exception as e:
-    logger.error(
-        "Tushare etf_daily fetch failed",
-        event="tushare_etf_daily_fetch_error",
-        error=str(e),
-    )
-    raise SourceFetchError(
-        message=f"Failed to fetch etf_daily from Tushare",
-        source="tushare",
-        dataset="daily",
-        original_error=str(e),
-    ) from e
-```
-
-**简化方案**:
-```python
-# 在 source.py 中添加
-from contextlib import contextmanager
-from typing import Generator
-
-class TushareSource:
-    # ... 现有代码 ...
-
-    @contextmanager
-    def _tushare_fetch_error_handler(
-        self,
-        dataset: str,
-        api_name: str,
-    ) -> Generator[None, None, None]:
-        """统一的 Tushare fetch 错误处理上下文管理器"""
-        try:
-            yield
-        except SourceAuthenticationError:
-            raise
-        except SourceRateLimitError:
-            raise
-        except Exception as e:
-            logger.error(
-                f"Tushare {dataset} fetch failed",
-                event=f"tushare_{dataset}_fetch_error",
-                error=str(e),
-                api_name=api_name,
-            )
-            raise SourceFetchError(
-                message=f"Failed to fetch {dataset} from Tushare",
-                source="tushare",
-                dataset=api_name,
-                original_error=str(e),
-            ) from e
-```
-
-**修改后的 fetch 方法**:
-```python
-def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
-    """获取 ETF 日线数据"""
-    with self._tushare_fetch_error_handler("etf_daily", "daily"):
-        response = self._client.invoke_raw_api(
-            api="daily",
-            params={...},
-            fields=DailyFields.ETF,
-        )
-        return TushareDataTransformer.transform_daily_ohlcv(response, "etf_daily")
-```
-
-**预期收益**:
-- 减少约 100-120 行代码
-- 统一错误处理逻辑
-- 更易于修改错误处理策略
-
----
-
-### 1.3 Store 写入重复逻辑提取
+**收益**: 减少 ~95 行重复代码 (BarsStore: ~70 行, AdjFactorStore: ~25 行)
 
 **目标文件**:
 - `packages/datahub/src/ditto_datahub/stores/bars_store.py`
