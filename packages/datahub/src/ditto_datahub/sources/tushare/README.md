@@ -250,12 +250,36 @@ pixi run -e dev pytest packages/datahub/tests/integration/sources/tushare/test_e
 tushare/
 ├── __init__.py              # 导出 TushareSource
 ├── client.py                # HTTP 客户端（httpx 封装）
-├── source.py                # DataSource 实现（7 个 fetch 方法）
+├── source.py                # DataSource 实现（fetch 方法）
+├── transformer.py           # 数据转换工具类（新增 Phase 1.1）
 ├── http_utils.py            # HTTP 工具（响应验证、错误映射）
 ├── rate_limiter.py          # 限流器
 ├── IMPLEMENTATION_SUMMARY.md # HTTP 重构实施总结
 └── README.md                # 本文档
 ```
+
+### 数据转换工具 (transformer.py)
+
+`transformer.py` 提供统一的数据转换逻辑，消除重复代码：
+
+```python
+from ditto_datahub.sources.tushare.transformer import (
+    TushareDataTransformer,
+    DAILY_OHLCV_MAPPING,
+)
+
+# 使用 transformer 统一转换 OHLCV 数据
+result = TushareDataTransformer.transform_daily_ohlcv(
+    df=response,
+    dataset_name="etf_daily",
+    mapping=DAILY_OHLCV_MAPPING,
+)
+```
+
+**核心组件**:
+- `ColumnMapping`: 列映射配置（frozen dataclass）
+- `TushareDataTransformer`: 数据转换工具类
+- `DAILY_OHLCV_MAPPING`: OHLCV 数据的通用配置
 
 ### 数据流
 
