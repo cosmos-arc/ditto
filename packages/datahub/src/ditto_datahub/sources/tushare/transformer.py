@@ -23,6 +23,7 @@ class ColumnMapping:
     date_columns: dict[str, str]  # 列名 -> 格式
     float_columns: list[str]
     int_columns: tuple[str, ...] = ()
+    boolean_columns: tuple[str, ...] = ()
     # 需要保留的输出列（重命名后），None 表示保留所有列
     output_columns: tuple[str, ...] | None = None
 

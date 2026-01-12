@@ -26,6 +26,20 @@ class TestColumnMapping:
         assert mapping.float_columns == ["open", "high", "low", "close"]
         assert mapping.int_columns == ()
 
+    def test_column_mapping_with_boolean_columns(self) -> None:
+        """Test ColumnMapping with boolean_columns field."""
+        mapping = ColumnMapping(
+            rename={},
+            date_columns={},
+            float_columns=[],
+            boolean_columns=("is_open", "is_trading"),
+        )
+
+        assert mapping.boolean_columns == ("is_open", "is_trading")
+        # 验证默认值为空元组
+        default_mapping = ColumnMapping(rename={}, date_columns={}, float_columns=[])
+        assert default_mapping.boolean_columns == ()
+
 
 class TestTushareDataTransformer:
     """Tests for TushareDataTransformer."""
