@@ -3,7 +3,7 @@
 - **语言**: 中文（回复/文档/Commit/PR）
 - **分支**: 从 main 拉取开发分支，PR 合并
 - **TDD**: RED → GREEN → REFACTOR
-- **依赖**:
+- **依赖**: **严格禁止**使用非以下功能分类中的其他功能库
     - **存储**: parquet / duckdb / sqlite
     - **数据处理**: polars（禁止 pandas）
     - **API**: fastapi
@@ -11,7 +11,7 @@
     - **日志监控**: loguru / opentelemetry
     - **限流、重试**: tenacity / limits
     - **本地缓存**: cachebox
-    - **Json序列化**: orjson
+    - **Json序列化**: orjson（禁止 json）
     - **ASGI**: granian
     - **网络请求**: httpx
 - **包管理**: 只用 pixi（禁止 pip/poetry/conda）

@@ -8,6 +8,7 @@ description: 基于计划执行TDD开发
 使用 `superpowers:brainstorming` 决策当前任务使用 `superpowers:subagent-driven-development` 或者 `superpowers:executing-plans` 方式进行执行
 2. Step two:
 任务中使用 `superpowers:test-driven-development` + `python-development:python-pro` + `python-development:python-testing-patterns` + `superpowers:systematic-debugging` 模式进行具体开发、测试、调式工作。
+3.Step three:基础功能开发完成尝试使用 `code-simplifier` SubAgent进行代码简化
 
 **必须**：子代理严格遵循工具使用、编码规范、架构设计规约！！！
 
