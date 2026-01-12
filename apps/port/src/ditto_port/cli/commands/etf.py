@@ -2,11 +2,18 @@
 
 import typer
 
-from ditto_port.cli.context import ensure_executor
-from ditto_port.cli.utils.output import print_backfill_summary, print_ingestion_result
-from ditto_port.cli.utils.validation import validate_date_format
+from ditto_port.cli.commands.factory import (
+    create_backfill_command,
+    create_basic_command,
+    create_daily_command,
+)
 
 app = typer.Typer(help="ETF数据摄取命令")
+
+# 使用工厂函数创建命令实现
+_daily_impl = create_daily_command("etf_daily", "摄取ETF日行情数据")
+_backfill_impl = create_backfill_command("etf_daily", "回补ETF历史数据")
+_basic_impl = create_basic_command("etf_basic", "摄取ETF基础信息")
 
 
 @app.command()
@@ -16,13 +23,7 @@ def daily(
     force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
 ) -> None:
     """摄取ETF日行情数据."""
-    validate_date_format(date)
-
-    ensure_executor(ctx)
-    executor = ctx.obj["executor"]
-    result = executor.ingest_daily("etf_daily", date, force)
-
-    print_ingestion_result(result, ctx.obj["verbose"])
+    return _daily_impl(ctx, date, force)
 
 
 @app.command()
@@ -33,14 +34,7 @@ def backfill(
     parallel: int = typer.Option(1, "--parallel", "-p", help="并行度 (默认 1)"),
 ) -> None:
     """回补ETF历史数据."""
-    validate_date_format(start)
-    validate_date_format(end)
-
-    ensure_executor(ctx)
-    executor = ctx.obj["executor"]
-    result = executor.backfill_range("etf_daily", start, end, parallel)
-
-    print_backfill_summary(result)
+    return _backfill_impl(ctx, start, end, parallel)
 
 
 @app.command()
@@ -49,8 +43,4 @@ def basic(
     force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
 ) -> None:
     """摄取ETF基础信息."""
-    ensure_executor(ctx)
-    executor = ctx.obj["executor"]
-    result = executor.ingest_daily("etf_basic", "", force)
-
-    print_ingestion_result(result, ctx.obj["verbose"])
+    return _basic_impl(ctx, force)
