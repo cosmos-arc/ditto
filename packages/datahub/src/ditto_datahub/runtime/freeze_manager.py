@@ -295,6 +295,70 @@ class FreezeManager:
                 "Invalid freeze_id: cannot contain path separators or '..'"
             )
 
+    def _try_single_file_mode(self, dataset: str) -> tuple[bool, dict[str, str] | None]:
+        """
+        尝试单文件模式（{dataset}.parquet）。
+
+        Args:
+            dataset: 数据集名称
+
+        Returns:
+            (是否成功, checksums 字典或 None)
+
+        """
+        single_file_path = self._data_root / f"{dataset}.parquet"
+
+        if single_file_path.exists():
+            checksum = self._compute_checksum(single_file_path)
+            rel_path = single_file_path.relative_to(self._data_root).as_posix()
+            return True, {rel_path: checksum}
+
+        return False, None
+
+    def _try_partitioned_directory_mode(
+        self, dataset: str
+    ) -> tuple[bool, dict[str, str] | None]:
+        """
+        尝试分区目录模式（{dataset}/**/*.parquet）。
+
+        Args:
+            dataset: 数据集名称
+
+        Returns:
+            (是否成功, checksums 字典或 None)
+
+        """
+        dataset_dir = self._data_root / dataset
+
+        if dataset_dir.exists() and dataset_dir.is_dir():
+            parquet_files = list(dataset_dir.rglob("*.parquet"))
+            if parquet_files:
+                files: dict[str, str] = {}
+                for parquet_file in parquet_files:
+                    checksum = self._compute_checksum(parquet_file)
+                    rel_path = parquet_file.relative_to(self._data_root).as_posix()
+                    files[rel_path] = checksum
+                return True, files
+
+        return False, None
+
+    def _handle_missing_files(self, freeze_id: str, missing_files: list[str]) -> None:
+        """
+        处理缺失文件（抛出异常）。
+
+        Args:
+            freeze_id: Freeze ID
+            missing_files: 缺失文件列表
+
+        Raises:
+            FileNotFoundError: 当有文件缺失时
+
+        """
+        if missing_files:
+            raise FileNotFoundError(
+                f"Datasets not found for freeze '{freeze_id}': {missing_files}"
+            )
+
     def _collect_checksums(
         self,
         freeze_id: str,
@@ -322,40 +386,23 @@ class FreezeManager:
         missing_files: list[str] = []
 
         for dataset in datasets:
-            # Try single file first (e.g., "stock_daily.parquet")
-            single_file_path = self._data_root / f"{dataset}.parquet"
-
-            if single_file_path.exists():
-                # Single file mode
-                checksum = self._compute_checksum(single_file_path)
-                rel_path = single_file_path.relative_to(self._data_root).as_posix()
-                files[rel_path] = checksum
+            # Try single file first
+            success, checksums = self._try_single_file_mode(dataset)
+            if success:
+                files.update(checksums)  # type: ignore[arg-type]
                 continue
 
-            # Try partitioned directory (e.g., "stock_daily/**/*.parquet")
-            dataset_dir = self._data_root / dataset
-            if dataset_dir.exists() and dataset_dir.is_dir():
-                # Find all .parquet files in the dataset directory
-                parquet_files = list(dataset_dir.rglob("*.parquet"))
-                if parquet_files:
-                    for parquet_file in parquet_files:
-                        checksum = self._compute_checksum(parquet_file)
-                        rel_path = parquet_file.relative_to(self._data_root).as_posix()
-                        files[rel_path] = checksum
-                    continue
+            # Try partitioned directory
+            success, checksums = self._try_partitioned_directory_mode(dataset)
+            if success:
+                files.update(checksums)  # type: ignore[arg-type]
+                continue
 
-            # Neither single file nor directory found
-            if single_file_path.parent.exists():
-                rel_path = single_file_path.relative_to(self._data_root).as_posix()
-            else:
-                rel_path = f"{dataset}.parquet"
-            missing_files.append(rel_path)
+            # Track missing
+            missing_files.append(f"{dataset}.parquet")
 
-        # 如果有文件缺失，抛出异常
-        if missing_files:
-            raise FileNotFoundError(
-                f"Datasets not found for freeze '{freeze_id}': {missing_files}"
-            )
+        # Handle missing files
+        self._handle_missing_files(freeze_id, missing_files)
 
         return files
 
