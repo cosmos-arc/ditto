@@ -15,6 +15,7 @@ from ditto_datahub.sources.base import (
     SourceRateLimitError,
 )
 from ditto_datahub.sources.tushare.client import TushareClient
+from ditto_datahub.sources.tushare.transformer import TushareDataTransformer
 
 
 def _record_metrics(row_count: int, dataset: str) -> None:
@@ -274,66 +275,10 @@ class TushareSource(DataSource):
                 fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
             )
 
-            # HTTP API 已经返回 polars DataFrame
-            if len(response) == 0:
-                logger.info(
-                    "Tushare ETF daily empty",
-                    event="tushare_etf_daily_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "trade_date": pl.Date,
-                        "open": pl.Float64,
-                        "high": pl.Float64,
-                        "low": pl.Float64,
-                        "close": pl.Float64,
-                        "pre_close": pl.Float64,
-                        "volume": pl.Float64,
-                        "amount": pl.Float64,
-                        "pct_change": pl.Float64,
-                    }
-                )
-
-            # 重命名列并转换类型
-            df = response.rename(
-                {"ts_code": "src_code", "vol": "volume", "pct_chg": "pct_change"}
-            ).with_columns(
-                pl.col("trade_date").str.to_date("%Y%m%d"),
-                pl.col("open").cast(pl.Float64),
-                pl.col("high").cast(pl.Float64),
-                pl.col("low").cast(pl.Float64),
-                pl.col("close").cast(pl.Float64),
-                pl.col("pre_close").cast(pl.Float64),
-                pl.col("volume").cast(pl.Float64),
-                pl.col("amount").cast(pl.Float64),
-                pl.col("pct_change").cast(pl.Float64),
+            return TushareDataTransformer.transform_daily_ohlcv(
+                response,
+                "etf_daily",
             )
-
-            # 选择所需的列
-            df = df.select(
-                "src_code",
-                "trade_date",
-                "open",
-                "high",
-                "low",
-                "close",
-                "pre_close",
-                "volume",
-                "amount",
-                "pct_change",
-            )
-
-            row_count = len(df)
-            logger.info(
-                "Tushare ETF daily fetched",
-                event="tushare_etf_daily_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "etf_daily")
-
-            return df
 
     @traced("source.tushare.fetch_stock_basic")
     def fetch_stock_basic(self) -> pl.DataFrame:
@@ -434,64 +379,10 @@ class TushareSource(DataSource):
                 fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
             )
 
-            if len(response) == 0:
-                logger.info(
-                    "Tushare stock daily empty",
-                    event="tushare_stock_daily_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "trade_date": pl.Date,
-                        "open": pl.Float64,
-                        "high": pl.Float64,
-                        "low": pl.Float64,
-                        "close": pl.Float64,
-                        "pre_close": pl.Float64,
-                        "volume": pl.Float64,
-                        "amount": pl.Float64,
-                        "pct_change": pl.Float64,
-                    }
-                )
-
-            # 重命名列并转换类型
-            df = response.rename(
-                {"ts_code": "src_code", "vol": "volume", "pct_chg": "pct_change"}
-            ).with_columns(
-                pl.col("trade_date").str.to_date("%Y%m%d"),
-                pl.col("open").cast(pl.Float64),
-                pl.col("high").cast(pl.Float64),
-                pl.col("low").cast(pl.Float64),
-                pl.col("close").cast(pl.Float64),
-                pl.col("pre_close").cast(pl.Float64),
-                pl.col("volume").cast(pl.Float64),
-                pl.col("amount").cast(pl.Float64),
-                pl.col("pct_change").cast(pl.Float64),
+            return TushareDataTransformer.transform_daily_ohlcv(
+                response,
+                "stock_daily",
             )
-
-            df = df.select(
-                "src_code",
-                "trade_date",
-                "open",
-                "high",
-                "low",
-                "close",
-                "pre_close",
-                "volume",
-                "amount",
-                "pct_change",
-            )
-
-            row_count = len(df)
-            logger.info(
-                "Tushare stock daily fetched",
-                event="tushare_stock_daily_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "stock_daily")
-
-            return df
 
     @traced("source.tushare.fetch_adj_factor")
     def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
