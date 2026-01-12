@@ -9,6 +9,34 @@ from ditto_datahub.sources.tushare.transformer import (
     TushareDataTransformer,
 )
 
+# 预定义映射配置（用于测试）
+CALENDAR_MAPPING = ColumnMapping(
+    rename={"cal_date": "trade_date"},
+    date_columns={"trade_date": "%Y%m%d"},
+    float_columns=[],
+    boolean_columns=("is_open",),
+    output_columns=("trade_date", "is_open"),
+)
+
+ADJ_FACTOR_MAPPING = ColumnMapping(
+    rename={"ts_code": "src_code"},
+    date_columns={"trade_date": "%Y%m%d"},
+    float_columns=["adj_factor"],
+    computed_columns={"knowledge_date": pl.col("trade_date").str.to_date("%Y%m%d")},
+    output_columns=("src_code", "trade_date", "knowledge_date", "adj_factor"),
+)
+
+ETF_BASIC_MAPPING = ColumnMapping(
+    rename={"ts_code": "src_code"},
+    date_columns={"list_date": "%Y%m%d"},
+    float_columns=[],
+    computed_columns={
+        "symbol": pl.col("src_code").str.split(".").list.get(0),
+        "exchange": pl.col("src_code").str.split(".").list.get(1),
+    },
+    output_columns=("src_code", "symbol", "name", "exchange", "list_date"),
+)
+
 
 class TestColumnMapping:
     """Tests for ColumnMapping dataclass."""
@@ -178,4 +206,128 @@ class TestTushareDataTransformer:
             "volume": pl.Float64,
             "amount": pl.Float64,
             "pct_change": pl.Float64,
+        }
+
+    def test_transform_with_boolean_columns(self) -> None:
+        """Test transform with boolean type columns conversion."""
+        # 模拟 Tushare API 返回的交易日历数据
+        # is_open 字段是整数 0/1，需要转换为 pl.Boolean
+        input_df = pl.DataFrame(
+            {
+                "cal_date": ["20240102", "20240103", "20240104", "20240105"],
+                "is_open": [1, 1, 0, 0],  # 整数形式：1=开市，0=休市
+            }
+        )
+
+        # 调用通用 transform() 方法
+        # 注意：这个方法还未实现，测试会失败
+        result = TushareDataTransformer.transform(
+            input_df, "calendar", CALENDAR_MAPPING
+        )
+
+        # 验证 schema
+        assert result.schema == {
+            "trade_date": pl.Date,
+            "is_open": pl.Boolean,
+        }
+
+        # 验证数据转换正确
+        assert result.to_dicts() == [
+            {"trade_date": date(2024, 1, 2), "is_open": True},
+            {"trade_date": date(2024, 1, 3), "is_open": True},
+            {"trade_date": date(2024, 1, 4), "is_open": False},
+            {"trade_date": date(2024, 1, 5), "is_open": False},
+        ]
+
+    def test_transform_with_computed_columns(self) -> None:
+        """Test transform with computed columns (symbol/exchange extraction)."""
+        # 模拟 Tushare API 返回的 ETF 基本信息数据
+        input_df = pl.DataFrame(
+            {
+                "ts_code": ["510300.SH", "159919.SZ", "512100.SH"],
+                "name": ["沪深300ETF", "沪深300ETF", "科创板50ETF"],
+                "list_date": ["20120706", "20190624", "20201116"],
+            }
+        )
+
+        # 调用通用 transform() 方法
+        # 注意：这个方法还未实现，测试会失败
+        result = TushareDataTransformer.transform(
+            input_df, "etf_basic", ETF_BASIC_MAPPING
+        )
+
+        # 验证 schema
+        assert result.schema == {
+            "src_code": pl.String,
+            "symbol": pl.String,
+            "name": pl.String,
+            "exchange": pl.String,
+            "list_date": pl.Date,
+        }
+
+        # 验证数据转换正确
+        assert result.to_dicts() == [
+            {
+                "src_code": "510300.SH",
+                "symbol": "510300",
+                "name": "沪深300ETF",
+                "exchange": "SH",
+                "list_date": date(2012, 7, 6),
+            },
+            {
+                "src_code": "159919.SZ",
+                "symbol": "159919",
+                "name": "沪深300ETF",
+                "exchange": "SZ",
+                "list_date": date(2019, 6, 24),
+            },
+            {
+                "src_code": "512100.SH",
+                "symbol": "512100",
+                "name": "科创板50ETF",
+                "exchange": "SH",
+                "list_date": date(2020, 11, 16),
+            },
+        ]
+
+    def test_transform_calendar_empty(self) -> None:
+        """Test transform with empty calendar DataFrame."""
+        # 创建空 DataFrame，但有正确的 schema
+        input_df = pl.DataFrame(schema={"cal_date": pl.String, "is_open": pl.Int64})
+
+        # 调用通用 transform() 方法
+        result = TushareDataTransformer.transform(
+            input_df, "calendar", CALENDAR_MAPPING
+        )
+
+        # 验证返回正确 schema 的空 DataFrame
+        assert result.is_empty()
+        assert result.schema == {
+            "trade_date": pl.Date,
+            "is_open": pl.Boolean,
+        }
+
+    def test_transform_adj_factor_empty(self) -> None:
+        """Test transform with empty adj_factor DataFrame."""
+        # 创建空 DataFrame，但有正确的 schema
+        input_df = pl.DataFrame(
+            schema={
+                "ts_code": pl.String,
+                "trade_date": pl.String,
+                "adj_factor": pl.String,
+            }
+        )
+
+        # 调用通用 transform() 方法
+        result = TushareDataTransformer.transform(
+            input_df, "adj_factor", ADJ_FACTOR_MAPPING
+        )
+
+        # 验证返回正确 schema 的空 DataFrame
+        assert result.is_empty()
+        assert result.schema == {
+            "src_code": pl.String,
+            "trade_date": pl.Date,
+            "knowledge_date": pl.Date,
+            "adj_factor": pl.Float64,
         }
