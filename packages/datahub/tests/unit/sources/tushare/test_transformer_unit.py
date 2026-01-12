@@ -4,40 +4,12 @@ from datetime import date
 
 import polars as pl
 from ditto_datahub.sources.tushare.transformer import (
+    ADJ_FACTOR_MAPPING,
+    CALENDAR_MAPPING,
     DAILY_OHLCV_MAPPING,
+    ETF_BASIC_MAPPING,
     ColumnMapping,
     TushareDataTransformer,
-)
-
-# 预定义映射配置（用于测试）
-CALENDAR_MAPPING = ColumnMapping(
-    rename={"cal_date": "trade_date"},
-    date_columns={"trade_date": "%Y%m%d"},
-    float_columns=[],
-    boolean_columns=("is_open",),
-    output_columns=("trade_date", "is_open"),
-)
-
-ADJ_FACTOR_MAPPING = ColumnMapping(
-    rename={"ts_code": "src_code"},
-    date_columns={"trade_date": "%Y%m%d"},
-    float_columns=["adj_factor"],
-    computed_columns={"knowledge_date": pl.col("trade_date").str.to_date("%Y%m%d")},
-    output_columns=("src_code", "trade_date", "knowledge_date", "adj_factor"),
-)
-
-ETF_BASIC_MAPPING = ColumnMapping(
-    rename={"ts_code": "src_code"},
-    date_columns={"list_date": "%Y%m%d"},
-    float_columns=[],
-    computed_columns={
-        "symbol": pl.col("src_code").str.split(".").list.get(0),
-        "exchange": pl.col("src_code")
-        .str.split(".")
-        .list.get(1)
-        .replace({"SH": "SSE", "SZ": "SZSE"}),
-    },
-    output_columns=("src_code", "symbol", "name", "exchange", "list_date"),
 )
 
 
