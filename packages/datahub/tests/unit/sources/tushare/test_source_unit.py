@@ -5,7 +5,11 @@ from datetime import date
 import httpx
 import polars as pl
 import pytest
-from ditto_datahub.sources.base import SourceFetchError
+from ditto_datahub.sources.base import (
+    SourceAuthenticationError,
+    SourceFetchError,
+    SourceRateLimitError,
+)
 from ditto_datahub.sources.tushare.source import TushareSource
 
 
@@ -745,3 +749,50 @@ class TestTushareSourceFundAdj:
 
         with pytest.raises(SourceFetchError):
             source.fetch_fund_adj("2024-01-02")
+
+
+class TestTushareSourceErrorHandler:
+    """Tests for TushareSource._tushare_fetch_error_handler context manager."""
+
+    def test_error_handler_re_raises_authentication_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test context manager re-raises SourceAuthenticationError."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+        source = TushareSource()
+
+        # 验证方法存在（会失败因为还未实现）
+        assert hasattr(source, "_tushare_fetch_error_handler")
+
+        # 测试认证错误直接抛出
+        with pytest.raises(SourceAuthenticationError):
+            with source._tushare_fetch_error_handler("test_dataset", "test_api"):
+                raise SourceAuthenticationError("Auth failed")
+
+    def test_error_handler_re_raises_rate_limit_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test context manager re-raises SourceRateLimitError."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+        source = TushareSource()
+
+        # 测试限流错误直接抛出
+        with pytest.raises(SourceRateLimitError):
+            with source._tushare_fetch_error_handler("test_dataset", "test_api"):
+                raise SourceRateLimitError("Rate limit exceeded")
+
+    def test_error_handler_wraps_generic_exception(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test context manager wraps generic exceptions as SourceFetchError."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+        source = TushareSource()
+
+        # 测试普通异常被包装为 SourceFetchError
+        with pytest.raises(SourceFetchError) as exc_info:
+            with source._tushare_fetch_error_handler("test_dataset", "test_api"):
+                raise ValueError("Generic error")
+
+        # 验证错误信息包含原始错误
+        assert "test_dataset" in str(exc_info.value)
+        assert "Generic error" in exc_info.value.details.get("original_error", "")
