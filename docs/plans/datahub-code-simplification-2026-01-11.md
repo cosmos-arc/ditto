@@ -30,7 +30,19 @@
 
 ## Phase 1: 高优先级简化（核心）
 
-### 1.1 数据转换重复模式统一
+### 1.1 数据转换重复模式统一 ✅
+
+**状态**: 已完成 (2026-01-12)
+
+**实现**:
+- ✅ 创建 `transformer.py` 工具类
+- ✅ 实现 `ColumnMapping` 数据类
+- ✅ 实现 `TushareDataTransformer` 类
+- ✅ 重构 `fetch_etf_daily` 使用 transformer
+- ✅ 重构 `fetch_stock_daily` 使用 transformer
+- ✅ 添加 transformer 单元测试
+
+**收益**: 减少 ~116 行重复代码
 
 **目标文件**: `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
 
@@ -170,7 +182,29 @@ def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
 
 ---
 
-### 1.2 错误处理重复模式统一
+### 1.2 错误处理重复模式统一 ✅
+
+**状态**: 已完成 (2026-01-12)
+
+**实现**:
+- ✅ 创建 `_tushare_fetch_error_handler` 上下文管理器
+- ✅ 重构 9 个 fetch 方法使用错误处理上下文管理器:
+  - fetch_calendar
+  - fetch_etf_basic
+  - fetch_etf_daily
+  - fetch_stock_basic
+  - fetch_stock_daily
+  - fetch_adj_factor
+  - fetch_fund_adj
+  - fetch_stock_limit
+  - fetch_stock_status
+- ✅ 添加错误处理上下文管理器的单元测试
+
+**收益**: 减少 ~133 行重复代码
+
+---
+
+### 1.3 Store 写入重复逻辑提取
 
 **目标文件**: `packages/datahub/src/ditto_datahub/sources/tushare/source.py`
 
