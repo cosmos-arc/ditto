@@ -15,7 +15,15 @@ from ditto_datahub.sources.base import (
     SourceRateLimitError,
 )
 from ditto_datahub.sources.tushare.client import TushareClient
-from ditto_datahub.sources.tushare.transformer import TushareDataTransformer
+from ditto_datahub.sources.tushare.transformer import (
+    ADJ_FACTOR_MAPPING,
+    CALENDAR_MAPPING,
+    ETF_BASIC_MAPPING,
+    FUND_ADJ_MAPPING,
+    STOCK_BASIC_MAPPING,
+    STOCK_LIMIT_MAPPING,
+    TushareDataTransformer,
+)
 
 
 def _record_metrics(row_count: int, dataset: str) -> None:
@@ -141,32 +149,9 @@ class TushareSource(DataSource):
                 fields="cal_date,is_open",
             )
 
-            # HTTP API 已经返回 polars DataFrame
-            if len(response) == 0:
-                logger.info(
-                    "Tushare calendar empty",
-                    event="tushare_calendar_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={"trade_date": pl.Date, "is_open": pl.Boolean}
-                )
-
-            # 重命名列并转换类型
-            df = response.rename({"cal_date": "trade_date"}).with_columns(
-                pl.col("trade_date").str.to_date("%Y%m%d"),
-                pl.col("is_open").cast(pl.Boolean),
+            return TushareDataTransformer.transform(
+                response, "calendar", CALENDAR_MAPPING
             )
-
-            row_count = len(df)
-            logger.info(
-                "Tushare calendar fetched",
-                event="tushare_calendar_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "calendar")
-
-            return df
 
     @traced("source.tushare.fetch_etf_basic")
     def fetch_etf_basic(self) -> pl.DataFrame:
@@ -196,48 +181,9 @@ class TushareSource(DataSource):
                 fields="ts_code,name,list_date",  # fund_basic 可能没有 exchange 字段
             )
 
-            # HTTP API 已经返回 polars DataFrame
-            if len(response) == 0:
-                logger.info(
-                    "Tushare ETF basic empty",
-                    event="tushare_etf_basic_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "symbol": pl.String,
-                        "name": pl.String,
-                        "exchange": pl.String,
-                        "list_date": pl.Date,
-                    }
-                )
-
-            # 重命名列并转换类型
-            # 从 src_code 中提取 symbol 和 exchange
-            # 例如 "510300.SH" -> "510300" + "SSE"
-            df = response.rename({"ts_code": "src_code"}).with_columns(
-                pl.col("src_code").str.split(".").list.get(0).alias("symbol"),
-                pl.col("src_code")
-                .str.split(".")
-                .list.get(1)
-                .replace({"SH": "SSE", "SZ": "SZSE"})
-                .alias("exchange"),
-                pl.col("list_date").str.to_date("%Y%m%d"),
+            return TushareDataTransformer.transform(
+                response, "etf_basic", ETF_BASIC_MAPPING
             )
-
-            # 选择并重排列
-            df = df.select("src_code", "symbol", "name", "exchange", "list_date")
-
-            row_count = len(df)
-            logger.info(
-                "Tushare ETF basic fetched",
-                event="tushare_etf_basic_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "etf_basic")
-
-            return df
 
     @traced("source.tushare.fetch_etf_daily")
     def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
@@ -309,40 +255,9 @@ class TushareSource(DataSource):
                 fields="ts_code,symbol,name,exchange,list_date",
             )
 
-            if len(response) == 0:
-                logger.info(
-                    "Tushare stock basic empty",
-                    event="tushare_stock_basic_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "symbol": pl.String,
-                        "name": pl.String,
-                        "exchange": pl.String,
-                        "list_date": pl.Date,
-                    }
-                )
-
-            # 重命名列并转换类型
-            df = (
-                response.rename({"ts_code": "src_code"})
-                .with_columns(
-                    pl.col("list_date").str.to_date("%Y%m%d"),
-                )
-                .select("src_code", "symbol", "name", "exchange", "list_date")
+            return TushareDataTransformer.transform(
+                response, "stock_basic", STOCK_BASIC_MAPPING
             )
-
-            row_count = len(df)
-            logger.info(
-                "Tushare stock basic fetched",
-                event="tushare_stock_basic_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "stock_basic")
-
-            return df
 
     @traced("source.tushare.fetch_stock_daily")
     def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
@@ -417,40 +332,9 @@ class TushareSource(DataSource):
                 trade_date=ts_date,
             )
 
-            if len(response) == 0:
-                logger.info(
-                    "Tushare adj factor empty",
-                    event="tushare_adj_factor_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "trade_date": pl.Date,
-                        "knowledge_date": pl.Date,
-                        "adj_factor": pl.Float64,
-                    }
-                )
-
-            # 重命名列并转换类型
-            # knowledge_date = trade_date (数据即日可用)
-            df = response.rename({"ts_code": "src_code"}).with_columns(
-                pl.col("trade_date").str.to_date("%Y%m%d"),
-                pl.col("trade_date").str.to_date("%Y%m%d").alias("knowledge_date"),
-                pl.col("adj_factor").cast(pl.Float64),
+            return TushareDataTransformer.transform(
+                response, "adj_factor", ADJ_FACTOR_MAPPING
             )
-
-            df = df.select("src_code", "trade_date", "knowledge_date", "adj_factor")
-
-            row_count = len(df)
-            logger.info(
-                "Tushare adj factor fetched",
-                event="tushare_adj_factor_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "adj_factor")
-
-            return df
 
     @traced("source.tushare.fetch_fund_adj")
     def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
@@ -485,40 +369,9 @@ class TushareSource(DataSource):
                 trade_date=ts_date,
             )
 
-            if len(response) == 0:
-                logger.info(
-                    "Tushare fund adj empty",
-                    event="tushare_fund_adj_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "trade_date": pl.Date,
-                        "knowledge_date": pl.Date,
-                        "adj_factor": pl.Float64,
-                    }
-                )
-
-            # 重命名列并转换类型
-            # knowledge_date = trade_date (数据即日可用)
-            df = response.rename({"ts_code": "src_code"}).with_columns(
-                pl.col("trade_date").str.to_date("%Y%m%d"),
-                pl.col("trade_date").str.to_date("%Y%m%d").alias("knowledge_date"),
-                pl.col("adj_factor").cast(pl.Float64),
+            return TushareDataTransformer.transform(
+                response, "fund_adj", FUND_ADJ_MAPPING
             )
-
-            df = df.select("src_code", "trade_date", "knowledge_date", "adj_factor")
-
-            row_count = len(df)
-            logger.info(
-                "Tushare fund adj fetched",
-                event="tushare_fund_adj_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "fund_adj")
-
-            return df
 
     @traced("source.tushare.fetch_stock_limit")
     def fetch_stock_limit(self, trade_date: str) -> pl.DataFrame:
@@ -553,39 +406,9 @@ class TushareSource(DataSource):
                 fields="ts_code,trade_date,up_limit,down_limit",
             )
 
-            if len(response) == 0:
-                logger.info(
-                    "Tushare stock limit empty",
-                    event="tushare_stock_limit_fetch_complete",
-                    row_count=0,
-                )
-                return pl.DataFrame(
-                    schema={
-                        "src_code": pl.String,
-                        "trade_date": pl.Date,
-                        "up_limit": pl.Float64,
-                        "down_limit": pl.Float64,
-                    }
-                )
-
-            # 重命名列并转换类型
-            df = response.rename({"ts_code": "src_code"}).with_columns(
-                pl.col("trade_date").str.to_date("%Y%m%d"),
-                pl.col("up_limit").cast(pl.Float64),
-                pl.col("down_limit").cast(pl.Float64),
+            return TushareDataTransformer.transform(
+                response, "stock_limit", STOCK_LIMIT_MAPPING
             )
-
-            df = df.select("src_code", "trade_date", "up_limit", "down_limit")
-
-            row_count = len(df)
-            logger.info(
-                "Tushare stock limit fetched",
-                event="tushare_stock_limit_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "stock_limit")
-
-            return df
 
     @traced("source.tushare.fetch_stock_status")
     def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:

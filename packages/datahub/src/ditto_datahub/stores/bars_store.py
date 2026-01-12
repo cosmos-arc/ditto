@@ -9,15 +9,11 @@ from __future__ import annotations
 
 import time
 from datetime import datetime
-from pathlib import Path
-from typing import Any
 
 import polars as pl
-from ditto_foundation import M, logger, span, traced
-from ditto_foundation.util.io import atomic_write, file_md5
+from ditto_foundation import M, logger, traced
 
 from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
-from ditto_datahub.types import OnDuplicate
 
 
 class BarsStore(ParquetStoreBase):
@@ -34,6 +30,14 @@ class BarsStore(ParquetStoreBase):
                 2020.parquet
                 ...
     """
+
+    def _get_key_columns(self) -> list[str]:
+        """返回键列名."""
+        return ["sid", "trade_date"]
+
+    def _get_sort_columns(self) -> list[str]:
+        """返回排序列名（BarsStore 使用 trade_date, sid 顺序）."""
+        return ["trade_date", "sid"]
 
     def _ensure_date_column(self, df: pl.DataFrame) -> pl.DataFrame:
         """
@@ -70,105 +74,23 @@ class BarsStore(ParquetStoreBase):
 
         return df
 
-    def _ensure_dataset_dir(self, dataset: str) -> Path:
-        """
-        Ensure dataset directory exists.
-
-        Args:
-            dataset: Dataset name.
-
-        Returns:
-            Path to the dataset directory.
-
-        """
-        dataset_dir = self._data_root / dataset
-        dataset_dir.mkdir(parents=True, exist_ok=True)
-        return dataset_dir
-
-    def _merge_with_existing(
-        self,
-        df: pl.DataFrame,
-        file_path: Path,
-        on_duplicate: OnDuplicate,
-    ) -> pl.DataFrame:
-        """
-        Merge DataFrame with existing data if file exists.
-
-        Args:
-            df: New data to write.
-            file_path: Path to existing data file.
-            on_duplicate: 策略处理重复数据.
-
-        Returns:
-            Merged DataFrame with unique sid/date pairs.
-
-        Raises:
-            ValueError: 如果 on_duplicate=ERROR 且存在重复数据.
-
-        """
-        if file_path.exists():
-            existing = pl.read_parquet(file_path)
-
-            # 检测重复数据
-            existing_keys = existing.select(["sid", "trade_date"])
-            new_keys = df.select(["sid", "trade_date"])
-
-            # 找出重叠的 (sid, trade_date) 对
-            merged_keys = existing_keys.join(
-                new_keys, on=["sid", "trade_date"], how="inner"
-            )
-
-            if not merged_keys.is_empty():
-                # 存在重复数据
-                if on_duplicate == OnDuplicate.ERROR:
-                    dup_count = len(merged_keys)
-                    msg = (
-                        "Duplicate data: "
-                        f"{dup_count} overlapping (sid, trade_date) pairs. "
-                        "Use OnDuplicate.KEEP_FIRST to preserve, or "
-                        "OnDuplicate.KEEP_LAST to overwrite."
-                    )
-                    raise ValueError(msg)
-                elif on_duplicate == OnDuplicate.KEEP_FIRST:
-                    # 保留现有数据，过滤掉新数据中的重复部分
-                    # 使用 anti join 获取新数据中不重复的部分
-                    non_overlapping = new_keys.join(
-                        existing_keys, on=["sid", "trade_date"], how="anti"
-                    )
-                    # 过滤 df 以保留不重复的行
-                    df = df.join(non_overlapping, on=["sid", "trade_date"], how="inner")
-                    combined = pl.concat([existing, df])
-                elif on_duplicate == OnDuplicate.KEEP_LAST:
-                    # Last-Write-Wins: 新数据覆盖现有数据
-                    combined = pl.concat([existing, df])
-                    combined = combined.unique(
-                        subset=["sid", "trade_date"],
-                        keep="last",
-                    )
-                else:
-                    raise ValueError(f"Unknown OnDuplicate strategy: {on_duplicate}")
-            else:
-                # 无重复，直接合并
-                combined = pl.concat([existing, df])
-        else:
-            combined = df
-        return combined
-
     def _prepare_for_write(self, df: pl.DataFrame) -> pl.DataFrame:
         """
-        Prepare DataFrame for writing: normalize dates and sort.
+        准备写入：归一化日期列并排序。
+
+        BarsStore 覆盖此方法以使用特殊的日期列处理和排序顺序。
 
         Args:
-            df: Input DataFrame.
+            df: 输入 DataFrame。
 
         Returns:
-            Prepared DataFrame with Date type and sorted.
+            准备好的 DataFrame。
 
         """
         # Ensure trade_date is date type for sorting
         df = self._ensure_date_column(df)
         # Sort for optimal read performance
-        return df.sort(["trade_date", "sid"])
+        return df.sort(self._get_sort_columns())
 
     # ============ Read operations ============
 
@@ -269,102 +191,3 @@ class BarsStore(ParquetStoreBase):
         M.data_update_duration.record(duration_ms / 1000, {"dataset": dataset})
 
         return result
-
-    # ============ Write operations ============
-
-    def write(
-        self,
-        dataset: str,
-        df: pl.DataFrame,
-        year: int,
-        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
-    ) -> tuple[str, str]:
-        """
-        Write year partition file.
-
-        Strategy: Read existing data → Merge deduplicate → Atomic write.
-
-        Args:
-            dataset: Dataset name.
-            df: Data to write.
-            year: Year partition.
-            on_duplicate: 策略处理重复数据 (默认 ERROR 报错).
-
-        Returns:
-            Tuple of (file_path, checksum).
-
-        """
-        with span("data.write", dataset=dataset, year=year) as s:
-            return self._write_impl(dataset, df, year, s, on_duplicate)
-
-    def _write_impl(
-        self,
-        dataset: str,
-        df: pl.DataFrame,
-        year: int,
-        span_ctx: Any,
-        on_duplicate: OnDuplicate,
-    ) -> tuple[str, str]:
-        start_time = time.time()
-
-        # Ensure dataset directory exists
-        self._ensure_dataset_dir(dataset)
-
-        file_path = self._get_path(dataset, year)
-        is_merge = file_path.exists()
-
-        # Detect and deduplicate batch internal duplicates
-        key_columns = ["sid", "trade_date"]
-        batch_duplicates = (
-            df.group_by(key_columns)
-            .agg(pl.len().alias("_count"))
-            .filter(pl.col("_count") > 1)
-        )
-
-        if not batch_duplicates.is_empty():
-            logger.warning(
-                "检测到 batch 内部重复, 自动去重(保留第一条)",
-                event="batch_internal_duplicates",
-                dataset=dataset,
-                year=year,
-                duplicate_count=len(batch_duplicates),
-            )
-            # Auto-deduplicate (keep first)
-            df = df.unique(subset=key_columns, keep="first")
-
-        # Merge with existing data and prepare for write
-        combined = self._merge_with_existing(df, file_path, on_duplicate)
-        combined = self._prepare_for_write(combined)
-
-        # Atomic write
-        atomic_write(combined, file_path)
-
-        # Calculate checksum
-        checksum: str = file_md5(file_path)
-
-        duration_ms = (time.time() - start_time) * 1000
-
-        # Set span attributes
-        if span_ctx:
-            span_ctx.set_attribute("row_count", len(df))
-            span_ctx.set_attribute("total_rows", len(combined))
-            span_ctx.set_attribute("is_merge", is_merge)
-
-        logger.info(
-            "Data write completed",
-            event="data_write_complete",
-            dataset=dataset,
-            year=year,
-            row_count=len(df),
-            total_rows=len(combined),
-            is_merge=is_merge,
-            file_path=str(file_path),
-            checksum=checksum,
-            duration_ms=round(duration_ms, 2),
-        )
-
-        # Record metrics
-        M.data_records.add(len(df), {"dataset": dataset, "status": "success"})
-        M.data_update_duration.record(duration_ms / 1000, {"dataset": dataset})
-
-        return str(file_path), checksum
