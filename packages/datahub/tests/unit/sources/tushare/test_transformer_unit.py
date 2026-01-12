@@ -40,6 +40,41 @@ class TestColumnMapping:
         default_mapping = ColumnMapping(rename={}, date_columns={}, float_columns=[])
         assert default_mapping.boolean_columns == ()
 
+    def test_column_mapping_with_computed_columns(self) -> None:
+        """Test ColumnMapping with computed_columns field."""
+        # 创建包含 computed_columns 的映射配置
+        mapping = ColumnMapping(
+            rename={"ts_code": "src_code"},
+            date_columns={},
+            float_columns=[],
+            computed_columns={
+                "symbol": pl.col("src_code").str.split(".").list.get(0),
+                "exchange": pl.col("src_code").str.split(".").list.get(1),
+            },
+        )
+
+        # 验证 computed_columns 的键（因为 Expr 对象不能直接用 == 比较）
+        assert set(mapping.computed_columns.keys()) == {"symbol", "exchange"}
+        assert isinstance(mapping.computed_columns["symbol"], pl.Expr)
+        assert isinstance(mapping.computed_columns["exchange"], pl.Expr)
+
+        # 验证默认值为空字典
+        default_mapping = ColumnMapping(rename={}, date_columns={}, float_columns=[])
+        assert default_mapping.computed_columns == {}
+
+        # 验证 computed_columns 是独立的（不共享可变默认值）
+        mapping1 = ColumnMapping(
+            rename={},
+            date_columns={},
+            float_columns=[],
+            computed_columns={"a": pl.lit(1)},
+        )
+        mapping2 = ColumnMapping(rename={}, date_columns={}, float_columns=[])
+        assert mapping2.computed_columns == {}
+        assert "a" not in mapping2.computed_columns
+        # mapping1 应该有自己的 computed_columns
+        assert "a" in mapping1.computed_columns
+
 
 class TestTushareDataTransformer:
     """Tests for TushareDataTransformer."""

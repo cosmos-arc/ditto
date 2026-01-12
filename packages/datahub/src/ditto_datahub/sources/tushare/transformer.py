@@ -24,6 +24,8 @@ class ColumnMapping:
     float_columns: list[str]
     int_columns: tuple[str, ...] = ()
     boolean_columns: tuple[str, ...] = ()
+    # 计算列：列名 -> Polars 表达式（用于动态计算，如从 ts_code 提取 symbol/exchange）
+    computed_columns: dict[str, pl.Expr] = field(default_factory=dict)
     # 需要保留的输出列（重命名后），None 表示保留所有列
     output_columns: tuple[str, ...] | None = None
 
