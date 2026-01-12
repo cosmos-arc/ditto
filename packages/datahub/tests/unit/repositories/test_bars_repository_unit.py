@@ -2,6 +2,7 @@
 
 import random
 import time
+from dataclasses import FrozenInstanceError
 from datetime import date, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -9,7 +10,8 @@ from tempfile import TemporaryDirectory
 import polars as pl
 import pytest
 from ditto_datahub.dq.engine import DQEngine
-from ditto_datahub.repositories.bars import AdjType, BarsRepository
+from ditto_datahub.repositories import AdjType, BarsQuery, BarsRepository
+from ditto_datahub.repositories.bars import _ResolvedQuery
 from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
@@ -18,6 +20,263 @@ from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
 from pytest_mock import MockerFixture
+
+
+class TestBarsQuery:
+    """Tests for BarsQuery dataclass."""
+
+    def test_bars_query_creation_with_default_values(self) -> None:
+        """Test BarsQuery can be created with default values."""
+        # Act
+        query = BarsQuery()
+
+        # Assert
+        assert query.sids is None
+        assert query.src_codes is None
+        assert query.symbols is None
+        assert query.start is None
+        assert query.end is None
+        assert query.adj == AdjType.NONE
+        assert query.asof is None
+        assert query.asset_class is None
+        assert query.with_symbol is False
+        assert query.with_status is False
+        assert query.market_wide is False
+        assert query.raw is False
+
+    def test_bars_query_creation_with_values(self) -> None:
+        """Test BarsQuery can be created with specific values."""
+        # Act
+        query = BarsQuery(
+            sids=[1, 2, 3],
+            src_codes=["600000.SH", "600001.SH"],
+            symbols=["600000", "600001"],
+            start="2024-01-01",
+            end="2024-01-31",
+            adj=AdjType.QFQ,
+            asof="2024-01-15",
+            asset_class="stock",
+            with_symbol=True,
+            with_status=True,
+            market_wide=False,
+            raw=True,
+        )
+
+        # Assert
+        assert query.sids == [1, 2, 3]
+        assert query.src_codes == ["600000.SH", "600001.SH"]
+        assert query.symbols == ["600000", "600001"]
+        assert query.start == "2024-01-01"
+        assert query.end == "2024-01-31"
+        assert query.adj == AdjType.QFQ
+        assert query.asof == "2024-01-15"
+        assert query.asset_class == "stock"
+        assert query.with_symbol is True
+        assert query.with_status is True
+        assert query.market_wide is False
+        assert query.raw is True
+
+    def test_bars_query_with_index_asset_class(self) -> None:
+        """Test BarsQuery with index asset class."""
+        # Act
+        query = BarsQuery(asset_class="index")
+
+        # Assert
+        assert query.asset_class == "index"
+
+    def test_bars_query_is_frozen(self) -> None:
+        """Test BarsQuery is immutable (frozen=True)."""
+        # Arrange
+        query = BarsQuery(sids=[1, 2, 3])
+
+        # Act & Assert: Frozen dataclass raises FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
+            query.sids = [4, 5, 6]
+
+    def test_bars_query_with_etf_asset_class(self) -> None:
+        """Test BarsQuery with ETF asset class."""
+        # Act
+        query = BarsQuery(
+            sids=[2000001],
+            asset_class="etf",
+            adj=AdjType.HFQ,
+        )
+
+        # Assert
+        assert query.asset_class == "etf"
+        assert query.adj == AdjType.HFQ
+
+    def test_bars_query_market_wide_mode(self) -> None:
+        """Test BarsQuery with market_wide mode."""
+        # Act
+        query = BarsQuery(
+            market_wide=True,
+            asset_class="stock",
+            start="2024-01-01",
+            end="2024-01-31",
+        )
+
+        # Assert
+        assert query.market_wide is True
+        assert query.asset_class == "stock"
+
+    def test_bars_query_partial_parameters(self) -> None:
+        """Test BarsQuery with partial parameters."""
+        # Act
+        query = BarsQuery(
+            sids=[1000001],
+            start="2024-01-01",
+        )
+
+        # Assert
+        assert query.sids == [1000001]
+        assert query.start == "2024-01-01"
+        assert query.end is None  # Default
+        assert query.adj == AdjType.NONE  # Default
+        assert query.with_symbol is False  # Default
+
+
+class TestResolvedQuery:
+    """Tests for _ResolvedQuery dataclass."""
+
+    def test_resolved_query_creation_with_all_fields(self) -> None:
+        """Test _ResolvedQuery can be created with all fields."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[1, 2, 3],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=date(2024, 1, 15),
+            asset_class="stock",
+        )
+
+        # Assert
+        assert resolved.sids == [1, 2, 3]
+        assert resolved.start == date(2024, 1, 1)
+        assert resolved.end == date(2024, 1, 31)
+        assert resolved.asof == date(2024, 1, 15)
+        assert resolved.asset_class == "stock"
+
+    def test_resolved_query_with_none_dates(self) -> None:
+        """Test _ResolvedQuery with None date values."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[1000001],
+            start=None,
+            end=None,
+            asof=None,
+            asset_class=None,
+        )
+
+        # Assert
+        assert resolved.sids == [1000001]
+        assert resolved.start is None
+        assert resolved.end is None
+        assert resolved.asof is None
+        assert resolved.asset_class is None
+
+    def test_resolved_query_with_etf_asset_class(self) -> None:
+        """Test _ResolvedQuery with ETF asset class."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[2000001, 2000002],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=None,
+            asset_class="etf",
+        )
+
+        # Assert
+        assert resolved.sids == [2000001, 2000002]
+        assert resolved.asset_class == "etf"
+
+    def test_resolved_query_with_index_asset_class(self) -> None:
+        """Test _ResolvedQuery with index asset class."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[3000001],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=None,
+            asset_class="index",
+        )
+
+        # Assert
+        assert resolved.sids == [3000001]
+        assert resolved.asset_class == "index"
+
+    def test_resolved_query_is_frozen(self) -> None:
+        """Test _ResolvedQuery is immutable (frozen=True)."""
+        # Arrange
+        resolved = _ResolvedQuery(
+            sids=[1, 2, 3],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=None,
+            asset_class="stock",
+        )
+
+        # Act & Assert: Frozen dataclass raises FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
+            resolved.sids = [4, 5, 6]
+
+    def test_resolved_query_has_slots(self) -> None:
+        """Test _ResolvedQuery uses __slots__ (slots=True)."""
+        # Arrange & Act
+        resolved = _ResolvedQuery(
+            sids=[1],
+            start=date(2024, 1, 1),
+            end=None,
+            asof=None,
+            asset_class=None,
+        )
+
+        # Assert: __slots__ prevents __dict__ creation
+        assert not hasattr(resolved, "__dict__")
+
+    def test_resolved_query_with_single_sid(self) -> None:
+        """Test _ResolvedQuery with single SID."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[1000001],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=None,
+            asset_class="stock",
+        )
+
+        # Assert
+        assert resolved.sids == [1000001]
+        assert len(resolved.sids) == 1
+
+    def test_resolved_query_empty_sid_list(self) -> None:
+        """Test _ResolvedQuery with empty SID list."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=None,
+            asset_class="stock",
+        )
+
+        # Assert
+        assert resolved.sids == []
+        assert len(resolved.sids) == 0
+
+    def test_resolved_query_with_asof_date(self) -> None:
+        """Test _ResolvedQuery with asof date for PIT-safe queries."""
+        # Act
+        resolved = _ResolvedQuery(
+            sids=[1, 2, 3],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 31),
+            asof=date(2024, 1, 15),
+            asset_class="stock",
+        )
+
+        # Assert
+        assert resolved.asof == date(2024, 1, 15)
 
 
 @pytest.mark.pit
@@ -73,9 +332,11 @@ class TestBarsRepository:
     def test_get_returns_empty_dataframe_for_no_data(self) -> None:
         """Test get returns empty DataFrame when no data exists."""
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-01",
-            end="2024-01-31",
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-01",
+                end="2024-01-31",
+            )
         )
 
         assert isinstance(result, pl.DataFrame)
@@ -99,9 +360,11 @@ class TestBarsRepository:
 
         # Act
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-01",
-            end="2024-01-31",
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-01",
+                end="2024-01-31",
+            )
         )
 
         # Assert
@@ -127,10 +390,12 @@ class TestBarsRepository:
 
         # Act
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-01",
-            end="2024-01-31",
-            with_symbol=True,
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-01",
+                end="2024-01-31",
+                with_symbol=True,
+            )
         )
 
         # Assert
@@ -232,11 +497,13 @@ class TestPITSafeAdjustment:
         # Act: Get QFQ adjusted data asof 2024-01-03
         # PIT-safe: Should only use adj factors with knowledge_date <= 2024-01-03
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-02",
-            end="2024-01-04",
-            adj=AdjType.QFQ,
-            asof="2024-01-03",  # Query point
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-02",
+                end="2024-01-04",
+                adj=AdjType.QFQ,
+                asof="2024-01-03",  # Query point
+            )
         )
 
         # Assert: PIT-safe behavior
@@ -304,11 +571,13 @@ class TestPITSafeAdjustment:
         # Act: Get QFQ adjusted data asof 2024-01-05
         # All factors should be available (all knowledge_date <= 2024-01-05)
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-02",
-            end="2024-01-04",
-            adj=AdjType.QFQ,
-            asof="2024-01-05",  # Later query point
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-02",
+                end="2024-01-04",
+                adj=AdjType.QFQ,
+                asof="2024-01-05",  # Later query point
+            )
         )
 
         # Assert: Should use latest_factor = 0.95
@@ -395,10 +664,12 @@ class TestQFQAdjustment:
 
         # Act: Get QFQ adjusted data
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-02",
-            end="2024-01-04",
-            adj=AdjType.QFQ,
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-02",
+                end="2024-01-04",
+                adj=AdjType.QFQ,
+            )
         )
 
         # Assert: QFQ should adjust all prices to the latest reference point
@@ -441,10 +712,12 @@ class TestQFQAdjustment:
 
         # Act: Get QFQ adjusted data
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-02",
-            end="2024-01-03",
-            adj=AdjType.QFQ,
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-02",
+                end="2024-01-03",
+                adj=AdjType.QFQ,
+            )
         )
 
         # Assert: QFQ uses latest_factor (0.95) for all dates
@@ -474,10 +747,12 @@ class TestQFQAdjustment:
 
         # Act: Get QFQ adjusted data (no adj_factor available)
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-02",
-            end="2024-01-03",
-            adj=AdjType.QFQ,
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-02",
+                end="2024-01-03",
+                adj=AdjType.QFQ,
+            )
         )
 
         # Assert: Should return original prices when no adj_factor data
@@ -514,10 +789,12 @@ class TestQFQAdjustment:
 
         # Act: Get HFQ adjusted data
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-02",
-            end="2024-01-03",
-            adj=AdjType.HFQ,
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-02",
+                end="2024-01-03",
+                adj=AdjType.HFQ,
+            )
         )
 
         # Assert: Missing adj_factor should use original price
@@ -559,11 +836,13 @@ class TestQFQAdjustment:
         # Act: Get QFQ adjusted data with asof="2024-01-03"
         # This means: use the latest adj_factor as of 2024-01-03 (which is 0.95)
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-02",
-            end="2024-01-04",
-            adj=AdjType.QFQ,
-            asof="2024-01-03",  # PIT baseline: 0.95 (last factor as of 2024-01-03)
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-02",
+                end="2024-01-04",
+                adj=AdjType.QFQ,
+                asof="2024-01-03",  # PIT baseline: 0.95 (last factor as of 2024-01-03)
+            )
         )
 
         # Assert: QFQ should use 0.95 as baseline (latest factor as of 2024-01-03)
@@ -815,20 +1094,24 @@ class TestMixedAssetClass:
     def test_get_with_mixed_sids_raises_error(self) -> None:
         """Test that mixed stock/ETF SIDs raise ValueError."""
         # Act & Assert
-        with pytest.raises(ValueError, match="Mixed asset class query"):
+        with pytest.raises(ValueError, match="检测到混合资产类别查询"):
             self.repo.get(
-                sids=[1000001, 2000001],  # stock + ETF
-                start="2024-01-01",
-                end="2024-01-31",
+                query=BarsQuery(
+                    sids=[1000001, 2000001],  # stock + ETF
+                    start="2024-01-01",
+                    end="2024-01-31",
+                )
             )
 
     def test_get_with_all_stock_sids_succeeds(self) -> None:
         """Test that all stock SIDs succeed."""
         # Should not raise
         result = self.repo.get(
-            sids=[1000001, 1000002],  # both stocks
-            start="2024-01-01",
-            end="2024-01-31",
+            query=BarsQuery(
+                sids=[1000001, 1000002],  # both stocks
+                start="2024-01-01",
+                end="2024-01-31",
+            )
         )
         assert isinstance(result, pl.DataFrame)
 
@@ -836,9 +1119,11 @@ class TestMixedAssetClass:
         """Test that all ETF SIDs succeed."""
         # Should not raise
         result = self.repo.get(
-            sids=[2000001, 2000002],  # both ETFs
-            start="2024-01-01",
-            end="2024-01-31",
+            query=BarsQuery(
+                sids=[2000001, 2000002],  # both ETFs
+                start="2024-01-01",
+                end="2024-01-31",
+            )
         )
         assert isinstance(result, pl.DataFrame)
 
@@ -868,9 +1153,11 @@ class TestMixedAssetClass:
 
         # Should route to index_daily and return data (NOT empty from stock_daily)
         result = self.repo.get(
-            sids=[3000001],
-            start="2024-01-01",
-            end="2024-01-31",
+            query=BarsQuery(
+                sids=[3000001],
+                start="2024-01-01",
+                end="2024-01-31",
+            )
         )
         # Verify we get actual data from index_daily, not empty from wrong dataset
         assert len(result) == 1
@@ -888,11 +1175,13 @@ class TestMixedAssetClass:
         self.client.commit()
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Mixed asset class query"):
+        with pytest.raises(ValueError, match="检测到混合资产类别查询"):
             self.repo.get(
-                sids=[1000001, 3000001],  # stock + index
-                start="2024-01-01",
-                end="2024-01-31",
+                query=BarsQuery(
+                    sids=[1000001, 3000001],  # stock + index
+                    start="2024-01-01",
+                    end="2024-01-31",
+                )
             )
 
     def test_mixed_asset_with_boundary_sids(self) -> None:
@@ -925,11 +1214,13 @@ class TestMixedAssetClass:
         self.bars_store.write("etf_daily", etf_bars, 2024)
 
         # Act & Assert: Mixed SIDs (stock + etf) should raise error
-        with pytest.raises(ValueError, match="Mixed asset class query"):
+        with pytest.raises(ValueError, match="检测到混合资产类别查询"):
             self.repo.get(
-                sids=[1000001, 2000001],
-                start="2024-01-01",
-                end="2024-01-31",
+                query=BarsQuery(
+                    sids=[1000001, 2000001],
+                    start="2024-01-01",
+                    end="2024-01-31",
+                )
             )
 
     def test_mixed_asset_with_all_three_asset_classes(self) -> None:
@@ -957,19 +1248,23 @@ class TestMixedAssetClass:
         self.bars_store.write("index_daily", index_bars, 2024)
 
         # Act & Assert: All three asset classes should raise error
-        with pytest.raises(ValueError, match="Mixed asset class query"):
+        with pytest.raises(ValueError, match="检测到混合资产类别查询"):
             self.repo.get(
-                sids=[1000001, 2000001, 3000001],  # stock + etf + index
-                start="2024-01-01",
-                end="2024-01-31",
+                query=BarsQuery(
+                    sids=[1000001, 2000001, 3000001],  # stock + etf + index
+                    start="2024-01-01",
+                    end="2024-01-31",
+                )
             )
 
         # Verify error message mentions all three classes
         try:
             self.repo.get(
-                sids=[1000001, 2000001, 3000001],
-                start="2024-01-01",
-                end="2024-01-31",
+                query=BarsQuery(
+                    sids=[1000001, 2000001, 3000001],
+                    start="2024-01-01",
+                    end="2024-01-31",
+                )
             )
         except ValueError as e:
             error_msg = str(e)
@@ -1038,10 +1333,12 @@ class TestAdjFactorEdgeCases:
 
         # Act: Get QFQ adjusted data (no adj_factor data at all)
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-02",
-            end="2024-01-03",
-            adj=AdjType.QFQ,
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-02",
+                end="2024-01-03",
+                adj=AdjType.QFQ,
+            )
         )
 
         # Assert: Should return original prices when no adj_factor data exists
@@ -1068,10 +1365,12 @@ class TestAdjFactorEdgeCases:
 
         # Act: Get HFQ adjusted data (no adj_factor data at all)
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-02",
-            end="2024-01-03",
-            adj=AdjType.HFQ,
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-02",
+                end="2024-01-03",
+                adj=AdjType.HFQ,
+            )
         )
 
         # Assert: Should return original prices when no adj_factor data exists
@@ -1121,10 +1420,12 @@ class TestAdjFactorEdgeCases:
 
         # Act: Get QFQ adjusted data across year boundary
         result = self.repo.get(
-            sids=[1000001],
-            start="2023-12-29",
-            end="2024-01-02",
-            adj=AdjType.QFQ,
+            query=BarsQuery(
+                sids=[1000001],
+                start="2023-12-29",
+                end="2024-01-02",
+                adj=AdjType.QFQ,
+            )
         )
 
         # Assert: Verify continuity across year boundary
@@ -1180,10 +1481,12 @@ class TestAdjFactorEdgeCases:
         # Act: Get QFQ adjusted data for full year
         start_time = time.time()
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-01",
-            end="2024-12-31",
-            adj=AdjType.QFQ,
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-01",
+                end="2024-12-31",
+                adj=AdjType.QFQ,
+            )
         )
         duration_ms = (time.time() - start_time) * 1000
 
@@ -1220,10 +1523,12 @@ class TestAdjFactorEdgeCases:
 
         # Act: Get QFQ adjusted data
         result = self.repo.get(
-            sids=[1000001],
-            start="2024-01-02",
-            end="2024-01-02",
-            adj=AdjType.QFQ,
+            query=BarsQuery(
+                sids=[1000001],
+                start="2024-01-02",
+                end="2024-01-02",
+                adj=AdjType.QFQ,
+            )
         )
 
         # Assert: Single SID should work correctly
@@ -1249,9 +1554,11 @@ class TestAdjFactorEdgeCases:
 
         # Act: Get data with empty SID list
         result = self.repo.get(
-            sids=[],
-            start="2024-01-01",
-            end="2024-01-31",
+            query=BarsQuery(
+                sids=[],
+                start="2024-01-01",
+                end="2024-01-31",
+            )
         )
 
         # Assert: Should return empty DataFrame
@@ -1320,9 +1627,11 @@ class TestMarketWideMode:
 
         # Act: Query with market_wide=True
         result = self.repo.get(
-            market_wide=True,
-            start="2024-01-01",
-            end="2024-01-31",
+            query=BarsQuery(
+                market_wide=True,
+                start="2024-01-01",
+                end="2024-01-31",
+            )
         )
 
         # Assert: Should return data for active stocks only (1000001, 1000002)
@@ -1372,10 +1681,12 @@ class TestMarketWideMode:
 
         # Act: Query with market_wide=True and asset_class="stock"
         result = self.repo.get(
-            market_wide=True,
-            asset_class="stock",
-            start="2024-01-01",
-            end="2024-01-31",
+            query=BarsQuery(
+                market_wide=True,
+                asset_class="stock",
+                start="2024-01-01",
+                end="2024-01-31",
+            )
         )
 
         # Assert: Should only return stock data
@@ -1402,10 +1713,12 @@ class TestMarketWideMode:
 
         # Act: Query with specific SIDs (sample set mode)
         result = self.repo.get(
-            sids=[1000001],
-            market_wide=False,
-            start="2024-01-01",
-            end="2024-01-31",
+            query=BarsQuery(
+                sids=[1000001],
+                market_wide=False,
+                start="2024-01-01",
+                end="2024-01-31",
+            )
         )
 
         # Assert: Should only return data for specified SID
@@ -1422,9 +1735,11 @@ class TestMarketWideMode:
 
         # Act: Query with market_wide=True
         result = self.repo.get(
-            market_wide=True,
-            start="2024-01-01",
-            end="2024-01-31",
+            query=BarsQuery(
+                market_wide=True,
+                start="2024-01-01",
+                end="2024-01-31",
+            )
         )
 
         # Assert: Should return empty DataFrame
@@ -1435,9 +1750,11 @@ class TestMarketWideMode:
         """Test market_wide=True when no bars data exists."""
         # Act: Query with market_wide=True (no data written)
         result = self.repo.get(
-            market_wide=True,
-            start="2024-01-01",
-            end="2024-01-31",
+            query=BarsQuery(
+                market_wide=True,
+                start="2024-01-01",
+                end="2024-01-31",
+            )
         )
 
         # Assert: Should return empty DataFrame
