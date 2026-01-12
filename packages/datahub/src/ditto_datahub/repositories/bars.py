@@ -34,6 +34,48 @@ class AdjType(Enum):
 
 
 @dataclass(frozen=True)
+class BarsQuery:
+    """
+    行情查询参数。
+
+    用于封装 BarsRepository.get() 方法的所有参数，提高可读性和可维护性。
+
+    Attributes:
+        sids: 按 SID 列表过滤。
+        src_codes: 按源代码列表过滤。
+        symbols: 按代码列表过滤。
+        start: 开始日期 (YYYY-MM-DD)。
+        end: 结束日期 (YYYY-MM-DD)。
+        adj: 复权类型。
+        asof: 时间点查询日期 (PIT-safe)。
+            - 用于标识符解析：获取截至该日期有效的 SID。
+            - 用于调整因子：仅使用 knowledge_date <= asof 的因子。
+            - 如果为 None，使用当前数据（非 PIT-safe）。
+        asset_class: 资产类别过滤。
+        with_symbol: 是否在结果中添加 symbol 列。
+        with_status: 是否添加股票状态列（仅对股票数据有效）。
+        market_wide: 全市场查询模式。为 True 时获取所有活跃证券，不限制 SID 范围。
+
+    Examples:
+        >>> query = BarsQuery(sids=[1, 2, 3], start="2024-01-01", end="2024-01-31")
+        >>> repo.get(query)
+
+    """
+
+    sids: list[int] | None = None
+    src_codes: list[str] | None = None
+    symbols: list[str] | None = None
+    start: str | None = None
+    end: str | None = None
+    adj: AdjType = AdjType.NONE
+    asof: str | None = None
+    asset_class: Literal["stock", "etf", "index"] | None = None
+    with_symbol: bool = False
+    with_status: bool = False
+    market_wide: bool = False
+
+
+@dataclass(frozen=True)
 class WriteResult:
     """Result of writing bars data."""
 

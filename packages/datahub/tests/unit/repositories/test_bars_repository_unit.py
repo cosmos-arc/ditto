@@ -2,6 +2,7 @@
 
 import random
 import time
+from dataclasses import FrozenInstanceError
 from datetime import date, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -9,7 +10,7 @@ from tempfile import TemporaryDirectory
 import polars as pl
 import pytest
 from ditto_datahub.dq.engine import DQEngine
-from ditto_datahub.repositories.bars import AdjType, BarsRepository
+from ditto_datahub.repositories import AdjType, BarsQuery, BarsRepository
 from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
@@ -18,6 +19,117 @@ from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
 from pytest_mock import MockerFixture
+
+
+class TestBarsQuery:
+    """Tests for BarsQuery dataclass."""
+
+    def test_bars_query_creation_with_default_values(self) -> None:
+        """Test BarsQuery can be created with default values."""
+        # Act
+        query = BarsQuery()
+
+        # Assert
+        assert query.sids is None
+        assert query.src_codes is None
+        assert query.symbols is None
+        assert query.start is None
+        assert query.end is None
+        assert query.adj == AdjType.NONE
+        assert query.asof is None
+        assert query.asset_class is None
+        assert query.with_symbol is False
+        assert query.with_status is False
+        assert query.market_wide is False
+
+    def test_bars_query_creation_with_values(self) -> None:
+        """Test BarsQuery can be created with specific values."""
+        # Act
+        query = BarsQuery(
+            sids=[1, 2, 3],
+            src_codes=["600000.SH", "600001.SH"],
+            symbols=["600000", "600001"],
+            start="2024-01-01",
+            end="2024-01-31",
+            adj=AdjType.QFQ,
+            asof="2024-01-15",
+            asset_class="stock",
+            with_symbol=True,
+            with_status=True,
+            market_wide=False,
+        )
+
+        # Assert
+        assert query.sids == [1, 2, 3]
+        assert query.src_codes == ["600000.SH", "600001.SH"]
+        assert query.symbols == ["600000", "600001"]
+        assert query.start == "2024-01-01"
+        assert query.end == "2024-01-31"
+        assert query.adj == AdjType.QFQ
+        assert query.asof == "2024-01-15"
+        assert query.asset_class == "stock"
+        assert query.with_symbol is True
+        assert query.with_status is True
+        assert query.market_wide is False
+
+    def test_bars_query_with_index_asset_class(self) -> None:
+        """Test BarsQuery with index asset class."""
+        # Act
+        query = BarsQuery(asset_class="index")
+
+        # Assert
+        assert query.asset_class == "index"
+
+    def test_bars_query_is_frozen(self) -> None:
+        """Test BarsQuery is immutable (frozen=True)."""
+        # Arrange
+        query = BarsQuery(sids=[1, 2, 3])
+
+        # Act & Assert: Frozen dataclass raises FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
+            query.sids = [4, 5, 6]
+
+    def test_bars_query_with_etf_asset_class(self) -> None:
+        """Test BarsQuery with ETF asset class."""
+        # Act
+        query = BarsQuery(
+            sids=[2000001],
+            asset_class="etf",
+            adj=AdjType.HFQ,
+        )
+
+        # Assert
+        assert query.asset_class == "etf"
+        assert query.adj == AdjType.HFQ
+
+    def test_bars_query_market_wide_mode(self) -> None:
+        """Test BarsQuery with market_wide mode."""
+        # Act
+        query = BarsQuery(
+            market_wide=True,
+            asset_class="stock",
+            start="2024-01-01",
+            end="2024-01-31",
+        )
+
+        # Assert
+        assert query.market_wide is True
+        assert query.asset_class == "stock"
+
+    def test_bars_query_partial_parameters(self) -> None:
+        """Test BarsQuery with partial parameters."""
+        # Act
+        query = BarsQuery(
+            sids=[1000001],
+            start="2024-01-01",
+        )
+
+        # Assert
+        assert query.sids == [1000001]
+        assert query.start == "2024-01-01"
+        assert query.end is None  # Default
+        assert query.adj == AdjType.NONE  # Default
+        assert query.with_symbol is False  # Default
 
 
 @pytest.mark.pit
