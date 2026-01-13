@@ -264,3 +264,67 @@ git revert HEAD
 | 阶段 4 | #9, #10, #12 | ~25 行 | 🟢 低 |
 
 **总计**: 预计减少 **~225 行重复代码**，提高可维护性和可测试性。
+
+---
+
+## 代码审查与修复记录
+
+**日期**: 2025-01-13
+**审查范围**: 阶段 4 变更文件
+**审查方法**: `/ditto-review` 命令执行 5 个维度并行审查
+
+### 审查结果汇总
+
+| 维度 | 结果 | 说明 |
+|------|------|------|
+| PIT安全 | ✅ 通过 | 无时间序列处理，无 PIT 风险 |
+| 规约 | ✅ 通过 | 核心约束全部遵守，无禁止依赖 |
+| 可维护性 | ⚠️ 有问题 | `list_flows()` 与部署配置不一致 |
+| 代码质量 | ✅ 通过 | Ruff 检查通过，嵌套≤3，无重复代码 |
+| 文档 | ⚠️ 不完整 | 缺少单元测试、API 变更文档 |
+
+### 修复项目
+
+#### 1. 修复 `list_flows()` 与部署配置不一致 ✅
+
+**问题**: `list_flows()` 包含 `backfill_missing_flow`，但 `_DEPLOYMENT_CONFIGS` 中没有对应配置。
+
+**解决方案**: 让 `list_flows()` 从 `_DEPLOYMENT_CONFIGS` 动态生成，确保一致性。
+
+**修改文件**:
+- [jobs/flows/deploy.py:147-157](apps/port/src/ditto_port/jobs/flows/deploy.py#L147-L157)
+
+**新增测试**:
+- [test_deploy_integration.py:12-36](apps/port/tests/integration/ingestion/flows/test_deploy_integration.py#L12-L36)
+
+#### 2. 添加工厂函数单元测试 ✅
+
+**问题**: 公共 API (`create_t0_config`, `create_t1_config`, `_optional_col`) 缺少单元测试。
+
+**解决方案**: 添加 10 个单元测试覆盖工厂函数的各种场景。
+
+**修改文件**:
+- [test_datasets_unit.py:425-511](apps/port/tests/unit/ingestion/test_datasets_unit.py#L425-L511)
+- [test_security_mapper_unit.py:698-765](apps/port/tests/unit/ingestion/test_security_mapper_unit.py#L698-L765)
+
+#### 3. 完善类型注解 ✅
+
+**问题**: `deploy.py:89` 的 `_get_flow` 函数返回类型 `Callable` 缺少类型参数。
+
+**解决方案**: 更新返回类型为 `Callable[..., Any]`。
+
+**修改文件**:
+- [jobs/flows/deploy.py:89](apps/port/src/ditto_port/jobs/flows/deploy.py#L89)
+
+### 验证结果
+
+所有测试通过：
+- ✅ 集成测试: 4 passed, 1 skipped
+- ✅ 单元测试: 10 passed (工厂函数)
+- ✅ 安全映射测试: 5 passed (_optional_col)
+
+### 后续建议
+
+1. **API 文档**: 在 README 或设计文档中说明新增工厂函数的使用方式
+2. **迁移指南**: 如有现有代码使用硬编码配置，提供迁移指南
+3. **覆盖率提升**: 当前整体覆盖率 ~30%，逐步提升至 80%

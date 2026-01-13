@@ -86,7 +86,7 @@ _DEPLOYMENT_CONFIGS: list[FlowDeploymentConfig] = [
 ]
 
 
-def _get_flow(flow_name: str, is_task: bool = False) -> Callable:
+def _get_flow(flow_name: str, is_task: bool = False) -> Callable[..., Any]:
     """动态导入 flow 或 task。"""
     if is_task and flow_name == "dq_batch_check":
         from ditto_port.jobs.tasks.dq_batch import dq_batch_check  # noqa: PLC0415
@@ -148,19 +148,13 @@ def list_flows() -> dict[str, str]:
     """
     列出所有可用的 Flows。
 
+    从部署配置中动态生成 flow 列表，确保与 _DEPLOYMENT_CONFIGS 一致。
+
     Returns:
         Flow 名称到描述的映射
 
     """
-    return {
-        "daily_ingestion_flow": "每日增量数据摄取流程 (T0 → T1 → T3)",
-        "daily_repair_flow": "每日修补流程 (重试 + 空洞扫描)",
-        "retry_failed_flow": "重试失败的任务",
-        "backfill_flow": "全量数据回补流程",
-        "backfill_missing_flow": "回补缺失数据",
-        "repair_holes_flow": "扫描并修补数据空洞",
-        "dq_batch_check": "批量数据质量检查",
-    }
+    return {config.flow_name: config.description for config in _DEPLOYMENT_CONFIGS}
 
 
 def main() -> None:
