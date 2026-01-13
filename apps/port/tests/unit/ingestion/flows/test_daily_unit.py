@@ -6,8 +6,11 @@ testing individual code paths and branches without full integration setup.
 
 from __future__ import annotations
 
+from unittest import mock
+
 import pytest
 from ditto_port.jobs.flows.daily import (
+    _collect_results,
     check_trading_day,
     daily_ingestion_flow,
 )
@@ -576,3 +579,86 @@ class MockDataset:
 
     def __repr__(self) -> str:
         return f"MockDataset({self.status_value})"
+
+
+@pytest.mark.unit
+class TestCollectResults:
+    """Unit tests for _collect_results helper function."""
+
+    def test_collects_empty_futures_list(self):
+        """Test that empty futures list returns empty dict."""
+        result = _collect_results([])
+        assert result == {}
+
+    def test_collects_single_future(self):
+        """Test that single future is collected correctly."""
+        mock_future = mock.MagicMock()
+        mock_future.result.return_value = {
+            "dataset": "calendar",
+            "status": "success",
+        }
+
+        result = _collect_results([mock_future])
+
+        assert "calendar" in result
+        assert result["calendar"]["status"] == "success"
+        mock_future.result.assert_called_once()
+
+    def test_collects_multiple_futures(self):
+        """Test that multiple futures are collected correctly."""
+        mock_future1 = mock.MagicMock()
+        mock_future1.result.return_value = {
+            "dataset": "calendar",
+            "status": "success",
+        }
+        mock_future2 = mock.MagicMock()
+        mock_future2.result.return_value = {
+            "dataset": "stock_basic",
+            "status": "success",
+        }
+
+        result = _collect_results([mock_future1, mock_future2])
+
+        assert "calendar" in result
+        assert "stock_basic" in result
+        assert len(result) == 2
+
+    def test_handles_missing_dataset_key(self):
+        """Test that future without 'dataset' key uses 'unknown' as key."""
+        mock_future = mock.MagicMock()
+        mock_future.result.return_value = {
+            "status": "success",
+        }
+
+        result = _collect_results([mock_future])
+
+        assert "unknown" in result
+        assert result["unknown"]["status"] == "success"
+
+    def test_handles_multiple_missing_dataset_keys(self):
+        """Test that multiple futures without 'dataset' key create separate entries."""
+        mock_future1 = mock.MagicMock()
+        mock_future1.result.return_value = {"status": "success"}
+        mock_future2 = mock.MagicMock()
+        mock_future2.result.return_value = {"status": "failed"}
+
+        result = _collect_results([mock_future1, mock_future2])
+
+        # 后面的会覆盖前面的，因为都使用 "unknown" 作为 key
+        assert "unknown" in result
+        assert result["unknown"]["status"] == "failed"
+
+    def test_preserves_all_result_fields(self):
+        """Test that all fields in result are preserved."""
+        mock_future = mock.MagicMock()
+        mock_future.result.return_value = {
+            "dataset": "test_dataset",
+            "status": "success",
+            "rows": 100,
+            "message": "OK",
+        }
+
+        result = _collect_results([mock_future])
+
+        assert result["test_dataset"]["rows"] == 100
+        assert result["test_dataset"]["message"] == "OK"

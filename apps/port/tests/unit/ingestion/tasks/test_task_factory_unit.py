@@ -6,9 +6,9 @@ The factories are lightweight wrappers that delegate to IngestionCoordinator.
 
 import pytest
 from ditto_port.jobs.tasks import (
+    create_ingest_task_t1_adj,
+    create_ingest_task_t1_bars,
     t0_meta,
-    t1_adj_factor,
-    t1_bars,
 )
 from ditto_port.jobs.tasks.t0_meta import create_ingest_task
 from ditto_port.services.ingestion.config.datasets import (
@@ -207,10 +207,14 @@ class TestT1IncrementalTasks:
     """Tests for T1 incremental tasks."""
 
     def test_t1_incremental_tasks_exist(self):
-        """Test that all T1 incremental tasks are exported."""
-        # Check that factory functions exist
-        assert hasattr(t1_bars, "create_ingest_task")
-        assert hasattr(t1_adj_factor, "create_ingest_task")
+        """Test that all T1 incremental tasks are exported as aliases."""
+        # Check that T1 task factory aliases are exported from __init__.py
+        # 这些别名直接指向 t0_meta.create_ingest_task
+        assert callable(create_ingest_task_t1_adj)
+        assert callable(create_ingest_task_t1_bars)
+        # 验证它们确实是同一个函数（因为都是 create_ingest_task 的别名）
+        assert create_ingest_task_t1_adj is create_ingest_task
+        assert create_ingest_task_t1_bars is create_ingest_task
 
     @pytest.mark.parametrize(
         "dataset",

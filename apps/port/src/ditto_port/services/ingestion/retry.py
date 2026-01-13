@@ -16,6 +16,7 @@ from ditto_port.services.ingestion.coordinator import (
     IngestionCoordinator,
     IngestionResult,
 )
+from ditto_port.services.ingestion.result_utils import count_results
 
 if TYPE_CHECKING:
     from ditto_datahub.stores.ingestion_log import IngestionLogStore
@@ -132,15 +133,15 @@ class RetryManager:
             )
             results.append(result)
 
-        success_count = sum(1 for r in results if r.status == "success")
-        still_failed_count = sum(1 for r in results if r.status == "failed")
+        # 统计结果
+        counts = count_results(results)
 
         retry_result = RetryResult(
             dataset=dataset,
             total_failed=total_failed,
             retried_count=len(results),
-            success_count=success_count,
-            still_failed_count=still_failed_count,
+            success_count=counts.success,
+            still_failed_count=counts.failed,
             results=results,
         )
 
@@ -150,8 +151,8 @@ class RetryManager:
             dataset=dataset,
             total_failed=total_failed,
             retried_count=len(results),
-            success_count=success_count,
-            still_failed_count=still_failed_count,
+            success_count=counts.success,
+            still_failed_count=counts.failed,
         )
 
         return retry_result

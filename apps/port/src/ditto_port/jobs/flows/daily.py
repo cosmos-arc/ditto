@@ -16,6 +16,7 @@ Flow 功能：
 
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 from prefect import flow, task
@@ -31,9 +32,30 @@ from ditto_port.services.ingestion.config.datasets import (
     get_datasets_by_tier,
     get_parallel_datasets,
 )
+from ditto_port.services.ingestion.result_utils import count_results
 
 if TYPE_CHECKING:
     pass
+
+
+def _collect_results(futures: list[Any]) -> dict[str, dict[str, object]]:
+    """
+    从 Prefect futures 收集结果字典。
+
+    Args:
+        futures: Prefect Future 对象列表
+
+    Returns:
+        以数据集名称为键的结果字典。如果结果中没有 'dataset' 字段，
+        则使用 'unknown' 作为键。
+
+    """
+    results: dict[str, dict[str, object]] = {}
+    for future in futures:
+        result = future.result()
+        dataset_name = result.get("dataset", "unknown")
+        results[dataset_name] = result
+    return results
 
 
 @task(name="check_trading_day")
@@ -138,10 +160,7 @@ def daily_ingestion_flow(
             wait_for_futures = t0_futures
         else:
             # 收集前面所有层的 futures
-            wait_for_futures_inner: list[Any] = []
-            for prev_level in level_futures:
-                wait_for_futures_inner.extend(prev_level)
-            wait_for_futures = wait_for_futures_inner
+            wait_for_futures = list(chain.from_iterable(level_futures))
 
         current_level_futures: list[Any] = []
         for dataset in level:
@@ -165,17 +184,8 @@ def daily_ingestion_flow(
         level_futures.append(current_level_futures)
 
     # 4. 收集结果
-    t0_results = {}
-    for future in t0_futures:
-        result = future.result()
-        dataset_name = result.get("dataset", "unknown")
-        t0_results[dataset_name] = result
-
-    t1_results = {}
-    for future in t1_futures:
-        result = future.result()
-        dataset_name = result.get("dataset", "unknown")
-        t1_results[dataset_name] = result
+    t0_results = _collect_results(t0_futures)
+    t1_results = _collect_results(t1_futures)
 
     # 5. 触发 DQC（TODO: 待实现）
     dqc_results = {
@@ -186,16 +196,14 @@ def daily_ingestion_flow(
 
     # 6. 汇总统计
     all_results = {**t0_results, **t1_results}
-    success_count = sum(1 for r in all_results.values() if r.get("status") == "success")
-    failed_count = sum(1 for r in all_results.values() if r.get("status") == "failed")
-    skipped_count = sum(1 for r in all_results.values() if r.get("status") == "skipped")
+    counts = count_results(all_results)
 
     summary = {
         "trade_date": trade_date,
         "total_tasks": len(all_results),
-        "success_count": success_count,
-        "failed_count": failed_count,
-        "skipped_count": skipped_count,
+        "success_count": counts.success,
+        "failed_count": counts.failed,
+        "skipped_count": counts.skipped,
     }
 
     return {
