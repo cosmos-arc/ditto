@@ -49,13 +49,10 @@ def check_trading_day(trade_date: str, data_root: str) -> bool:
         是否为交易日
 
     """
-    from ditto_datahub import DataHub  # noqa: PLC0415
+    from ditto_port.jobs.flows.helpers import create_ingestion_context  # noqa: PLC0415
 
-    hub = DataHub(data_root=data_root)
-    try:
+    with create_ingestion_context(data_root=data_root) as (hub, _):
         return hub.calendar.is_trading_day(trade_date)
-    finally:
-        hub.close()
 
 
 @flow(name="daily-ingestion", description="每日增量数据摄取流程")

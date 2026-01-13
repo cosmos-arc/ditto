@@ -41,25 +41,12 @@ def retry_failed_flow(
         重试结果字典
 
     """
-    from ditto_datahub import DataHub  # noqa: PLC0415
+    from ditto_port.jobs.flows.helpers import create_ingestion_context  # noqa: PLC0415
 
-    from ditto_port.services.ingestion.coordinator import (  # noqa: PLC0415
-        IngestionCoordinator,
-    )
-
-    hub = DataHub(data_root=data_root)
-
-    try:
-        # 获取数据源
-        data_source = hub.sources.get(source)
-
-        # 创建协调器
-        coordinator = IngestionCoordinator(
-            hub=hub,
-            source=data_source,
-            source_name=source,
-        )
-
+    with create_ingestion_context(data_root=data_root, source=source) as (
+        hub,
+        coordinator,
+    ):
         # 创建重试管理器
         retry_manager = RetryManager(
             coordinator=coordinator,
@@ -82,8 +69,6 @@ def retry_failed_flow(
             "still_failed_count": result.still_failed_count,
             "message": f"重试完成: {result.success_count}/{result.retried_count} 成功",
         }
-    finally:
-        hub.close()
 
 
 @flow(name="repair-holes", description="扫描并修补数据空洞")
@@ -111,28 +96,13 @@ def repair_holes_flow(
         修补结果字典
 
     """
-    from ditto_datahub import DataHub  # noqa: PLC0415
+    from ditto_port.jobs.flows.helpers import create_ingestion_context  # noqa: PLC0415
+    from ditto_port.services.ingestion.backfill import BackfillManager  # noqa: PLC0415
 
-    from ditto_port.services.ingestion.backfill import (  # noqa: PLC0415
-        BackfillManager,
-    )
-    from ditto_port.services.ingestion.coordinator import (  # noqa: PLC0415
-        IngestionCoordinator,
-    )
-
-    hub = DataHub(data_root=data_root)
-
-    try:
-        # 获取数据源
-        data_source = hub.sources.get(source)
-
-        # 创建协调器
-        coordinator = IngestionCoordinator(
-            hub=hub,
-            source=data_source,
-            source_name=source,
-        )
-
+    with create_ingestion_context(data_root=data_root, source=source) as (
+        hub,
+        coordinator,
+    ):
         # 创建回补管理器
         backfill_manager = BackfillManager(
             coordinator=coordinator,
@@ -157,8 +127,6 @@ def repair_holes_flow(
                 else "没有发现空洞"
             ),
         }
-    finally:
-        hub.close()
 
 
 @flow(name="daily-repair", description="每日修补流程")
@@ -191,54 +159,46 @@ def daily_repair_flow(  # noqa: PLR0913
         修补结果汇总
 
     """
-    from ditto_datahub import DataHub  # noqa: PLC0415
+    # 默认数据集列表
+    if datasets is None:
+        datasets = ["etf_daily", "stock_daily", "adj_factor", "fund_adj"]
 
-    hub = DataHub(data_root=data_root)
+    retry_results = {}
+    holes_results = {}
 
-    try:
-        # 默认数据集列表
-        if datasets is None:
-            datasets = ["etf_daily", "stock_daily", "adj_factor", "fund_adj"]
+    for dataset in datasets:
+        # 1. 重试失败任务
+        retry_result = retry_failed_flow(
+            dataset=dataset,
+            max_attempts=max_attempts,
+            limit=retry_limit,
+            source=source,
+            data_root=data_root,
+        )
+        retry_results[dataset] = retry_result
 
-        retry_results = {}
-        holes_results = {}
+        # 2. 修补空洞
+        holes_result = repair_holes_flow(
+            dataset=dataset,
+            source=source,
+            data_root=data_root,
+            parallel=parallel,
+        )
+        holes_results[dataset] = holes_result
 
-        for dataset in datasets:
-            # 1. 重试失败任务
-            retry_result = retry_failed_flow(
-                dataset=dataset,
-                max_attempts=max_attempts,
-                limit=retry_limit,
-                source=source,
-                data_root=data_root,
-            )
-            retry_results[dataset] = retry_result
+    # 汇总结果
+    total_retried = sum(r.get("retried_count", 0) for r in retry_results.values())
+    total_repaired = sum(r.get("repaired_count", 0) for r in holes_results.values())
 
-            # 2. 修补空洞
-            holes_result = repair_holes_flow(
-                dataset=dataset,
-                source=source,
-                data_root=data_root,
-                parallel=parallel,
-            )
-            holes_results[dataset] = holes_result
-
-        # 汇总结果
-        total_retried = sum(r.get("retried_count", 0) for r in retry_results.values())
-        total_repaired = sum(r.get("repaired_count", 0) for r in holes_results.values())
-
-        return {
-            "retry_result": retry_results,
-            "holes_result": holes_results,
-            "summary": {
-                "datasets": datasets,
-                "total_retried": total_retried,
-                "total_repaired": total_repaired,
-                "message": (
-                    f"修补完成: 重试 {total_retried} 个任务, "
-                    f"修补 {total_repaired} 个空洞"
-                ),
-            },
-        }
-    finally:
-        hub.close()
+    return {
+        "retry_result": retry_results,
+        "holes_result": holes_results,
+        "summary": {
+            "datasets": datasets,
+            "total_retried": total_retried,
+            "total_repaired": total_repaired,
+            "message": (
+                f"修补完成: 重试 {total_retried} 个任务, 修补 {total_repaired} 个空洞"
+            ),
+        },
+    }

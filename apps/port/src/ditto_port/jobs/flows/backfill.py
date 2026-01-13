@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from prefect import flow
 from pydantic import BaseModel
 
+from ditto_port.jobs.flows.helpers import create_ingestion_context
 from ditto_port.services.ingestion.backfill import BackfillManager
 
 if TYPE_CHECKING:
@@ -70,25 +71,10 @@ def backfill_flow(  # noqa: PLR0913
         回补结果字典
 
     """
-    from ditto_datahub import DataHub  # noqa: PLC0415
-
-    from ditto_port.services.ingestion.coordinator import (  # noqa: PLC0415
-        IngestionCoordinator,
-    )
-
-    hub = DataHub(data_root=data_root)
-
-    try:
-        # 获取数据源
-        data_source = hub.sources.get(source)
-
-        # 创建协调器
-        coordinator = IngestionCoordinator(
-            hub=hub,
-            source=data_source,
-            source_name=source,
-        )
-
+    with create_ingestion_context(data_root=data_root, source=source) as (
+        hub,
+        coordinator,
+    ):
         # 创建回补管理器
         backfill_manager = BackfillManager(
             coordinator=coordinator,
@@ -118,8 +104,6 @@ def backfill_flow(  # noqa: PLR0913
             "failed_count": result.failed_count,
             "message": f"回补完成: {result.success_count}/{result.total_dates} 成功",
         }
-    finally:
-        hub.close()
 
 
 @flow(name="backfill-missing", description="回补缺失数据")
@@ -144,25 +128,10 @@ def backfill_missing_flow(
         回补结果字典
 
     """
-    from ditto_datahub import DataHub  # noqa: PLC0415
-
-    from ditto_port.services.ingestion.coordinator import (  # noqa: PLC0415
-        IngestionCoordinator,
-    )
-
-    hub = DataHub(data_root=data_root)
-
-    try:
-        # 获取数据源
-        data_source = hub.sources.get(source)
-
-        # 创建协调器
-        coordinator = IngestionCoordinator(
-            hub=hub,
-            source=data_source,
-            source_name=source,
-        )
-
+    with create_ingestion_context(data_root=data_root, source=source) as (
+        hub,
+        coordinator,
+    ):
         # 创建回补管理器
         backfill_manager = BackfillManager(
             coordinator=coordinator,
@@ -186,5 +155,3 @@ def backfill_missing_flow(
             if result.total_dates > 0
             else "没有缺失数据",
         }
-    finally:
-        hub.close()
