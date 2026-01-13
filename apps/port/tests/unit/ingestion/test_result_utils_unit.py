@@ -147,7 +147,7 @@ class TestCountResultsWithDict:
 
     def test_count_dict_empty(self) -> None:
         """测试空字典的情况。"""
-        results: dict[str, dict] = {}
+        results: dict[str, dict[str, object]] = {}
 
         counts = count_results(results)
 
