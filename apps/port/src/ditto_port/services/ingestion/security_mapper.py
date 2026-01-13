@@ -18,6 +18,29 @@ if TYPE_CHECKING:
     from ditto_datahub.runtime.sid_allocator import SidAllocator
 
 
+def _optional_col(df: pl.DataFrame, col_name: str, default: str = "") -> pl.Expr:
+    """
+    创建可选列的表达式，如果列不存在则使用默认值。
+
+    Args:
+        df: DataFrame 对象
+        col_name: 列名
+        default: 默认值（默认为空字符串）
+
+    Returns:
+        Polars 表达式
+
+    Examples:
+        >>> df = pl.DataFrame({"a": [1, 2]})
+        >>> _optional_col(df, "b", "N/A")
+        ... # 返回一个表达式，如果列 b 不存在则使用 "N/A"
+
+    """
+    if col_name in df.columns:
+        return pl.col(col_name).alias(col_name)
+    return pl.lit(default).alias(col_name)
+
+
 def _format_date_for_sqlite(d: date | str | None) -> str:
     """
     转换日期为 SQLite 可绑定的字符串.
@@ -214,26 +237,10 @@ class SecurityMapper:
         metadata = df.select(
             [
                 pl.col(src_code_col).alias("ts_code"),
-                (
-                    pl.col("symbol").alias("symbol")
-                    if "symbol" in df.columns
-                    else pl.lit("").alias("symbol")
-                ),
-                (
-                    pl.col("name").alias("name")
-                    if "name" in df.columns
-                    else pl.lit("").alias("name")
-                ),
-                (
-                    pl.col("exchange").alias("exchange")
-                    if "exchange" in df.columns
-                    else pl.lit("").alias("exchange")
-                ),
-                (
-                    pl.col("list_date").alias("list_date")
-                    if "list_date" in df.columns
-                    else pl.lit("").alias("list_date")
-                ),
+                _optional_col(df, "symbol"),
+                _optional_col(df, "name"),
+                _optional_col(df, "exchange"),
+                _optional_col(df, "list_date"),
             ]
         )
 

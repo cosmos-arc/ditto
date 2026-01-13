@@ -12,6 +12,7 @@ from ditto_port.services.ingestion.security_mapper import (
     SecurityMapper,
     SecurityRegistrationParams,
     _format_date_for_sqlite,
+    _optional_col,
 )
 
 
@@ -693,3 +694,73 @@ class TestRegisterSecurity:
         mock_security_store.resolve_sid.assert_called_once_with(
             "000001.SZ", "tushare", None
         )
+
+
+@pytest.mark.unit
+class TestOptionalCol:
+    """测试 _optional_col 辅助函数。"""
+
+    def test_returns_column_when_exists(self):
+        """测试列存在时返回列表达式。"""
+        # Arrange
+        df = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+        # Act
+        result = _optional_col(df, "b", "N/A")
+
+        # Assert - 应该返回列 b 的表达式
+        # 我们通过在 DataFrame 上使用它来验证
+        assert "b" in df.columns
+        # 表达式应该选择列 b
+        assert df.select(result).columns == ["b"]
+
+    def test_returns_default_when_column_not_exists(self):
+        """测试列不存在时返回默认值表达式。"""
+        # Arrange
+        df = pl.DataFrame({"a": [1, 2]})
+
+        # Act
+        result = _optional_col(df, "b", "N/A")
+
+        # Assert - 应该返回默认值表达式
+        assert df.select(result).columns == ["b"]
+        assert df.select(result)["b"][0] == "N/A"
+
+    def test_default_empty_string(self):
+        """测试默认值为空字符串。"""
+        # Arrange
+        df = pl.DataFrame({"a": [1, 2]})
+
+        # Act
+        result = _optional_col(df, "b")  # 使用默认值 ""
+
+        # Assert
+        assert df.select(result).columns == ["b"]
+        assert df.select(result)["b"][0] == ""
+
+    def test_custom_default_value(self):
+        """测试自定义默认值。"""
+        # Arrange
+        df = pl.DataFrame({"a": [1, 2]})
+
+        # Act
+        result = _optional_col(df, "b", "custom_default")
+
+        # Assert
+        assert df.select(result).columns == ["b"]
+        assert df.select(result)["b"][0] == "custom_default"
+
+    def test_with_multiple_columns(self):
+        """测试在有多列的 DataFrame 上使用。"""
+        # Arrange
+        df = pl.DataFrame({"a": [1], "c": [3]})
+
+        # Act
+        expr_b = _optional_col(df, "b", "missing_b")
+        expr_c = _optional_col(df, "c", "missing_c")
+
+        # Assert
+        result = df.select(expr_b, expr_c)
+        assert result.columns == ["b", "c"]
+        assert result["b"][0] == "missing_b"  # b 不存在
+        assert result["c"][0] == 3  # c 存在

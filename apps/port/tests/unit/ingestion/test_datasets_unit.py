@@ -8,6 +8,8 @@ from ditto_port.services.ingestion.config.datasets import (
     Dataset,
     DatasetConfig,
     TaskTier,
+    create_t0_config,
+    create_t1_config,
     get_all_datasets,
     get_dataset_config,
     get_datasets_by_tier,
@@ -420,3 +422,92 @@ class TestExtendedHelperFunctions:
         # Verify all datasets are accounted for
         t1_datasets = set(get_datasets_by_tier(TaskTier.T1_INCREMENTAL))
         assert seen == t1_datasets
+
+
+@pytest.mark.unit
+class TestFactoryFunctions:
+    """Test factory functions for dataset configuration."""
+
+    def test_create_t0_config_creates_valid_config(self) -> None:
+        """Test create_t0_config creates a valid T0 dataset configuration."""
+        config = create_t0_config(
+            dataset=Dataset.CALENDAR,
+            description="交易日历",
+            typical_available_time=time(8, 0),
+            critical_fields=["cal_date", "is_trade"],
+            task_name="ingest_calendar",
+        )
+
+        assert isinstance(config, DatasetConfig)
+        assert config.dataset == Dataset.CALENDAR
+        assert config.tier == TaskTier.T0_META
+        assert config.description == "交易日历"
+        assert config.priority == 10
+        assert config.depends_on == []
+        assert config.retry_limit == 3
+        assert config.quality_checks_enabled is True
+        assert config.requires_trade_date is False
+        assert config.update_frequency == "每日"
+
+    def test_create_t0_config_with_custom_timeout(self) -> None:
+        """Test create_t0_config with custom timeout_seconds."""
+        config = create_t0_config(
+            dataset=Dataset.CALENDAR,
+            description="交易日历",
+            typical_available_time=time(8, 0),
+            critical_fields=["cal_date", "is_trade"],
+            task_name="ingest_calendar",
+            timeout_seconds=120,
+        )
+
+        assert config.timeout_seconds == 120
+
+    def test_create_t1_config_creates_valid_config(self) -> None:
+        """Test create_t1_config creates a valid T1 dataset configuration."""
+        config = create_t1_config(
+            dataset=Dataset.ETF_DAILY,
+            description="ETF日行情数据",
+            typical_available_time=time(18, 0),
+            depends_on=[Dataset.ETF_BASIC],
+            critical_fields=["trade_date", "ts_code", "close"],
+            task_name="ingest_etf_bars",
+        )
+
+        assert isinstance(config, DatasetConfig)
+        assert config.dataset == Dataset.ETF_DAILY
+        assert config.tier == TaskTier.T1_INCREMENTAL
+        assert config.description == "ETF日行情数据"
+        assert config.priority == 20  # default
+        assert config.depends_on == [Dataset.ETF_BASIC]
+        assert config.retry_limit == 3
+        assert config.quality_checks_enabled is True
+        assert config.requires_trade_date is True
+        assert config.update_frequency == "每日"
+
+    def test_create_t1_config_with_custom_priority(self) -> None:
+        """Test create_t1_config with custom priority."""
+        config = create_t1_config(
+            dataset=Dataset.ADJ_FACTOR,
+            description="复权因子",
+            typical_available_time=time(19, 0),
+            depends_on=[Dataset.STOCK_DAILY],
+            critical_fields=["trade_date", "ts_code", "adj_factor"],
+            task_name="ingest_adj_factor",
+            priority=30,
+        )
+
+        assert config.priority == 30
+
+    def test_create_t1_config_with_custom_timeout(self) -> None:
+        """Test create_t1_config with custom timeout_seconds."""
+        config = create_t1_config(
+            dataset=Dataset.STOCK_DAILY,
+            description="股票日行情数据",
+            typical_available_time=time(17, 0),
+            depends_on=[Dataset.STOCK_BASIC],
+            critical_fields=["trade_date", "ts_code", "close"],
+            task_name="ingest_stock_daily",
+            timeout_seconds=600,
+        )
+
+        assert config.timeout_seconds == 600
