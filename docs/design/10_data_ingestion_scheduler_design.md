@@ -368,57 +368,25 @@ class IngestionLog:
     last_attempt_at: str | None = None
 ```
 
-### 3.3 IngestionCursorStore（进度游标）
+### 3.3 IngestionCursorStore（已废弃）
 
-**职责**：快速查询最后成功/尝试日期（去规范化缓存）
+> **废弃说明**: 此表已从 schema 中移除（2026-01），游标功能已整合到 `IngestionLog` 中。
 
-**表结构**：
+**原职责**：快速查询最后成功/尝试日期（去规范化缓存）
+
+**原表结构**（仅供参考）：
 ```sql
+-- 已废弃，不再存在于 schema.sql 中
 CREATE TABLE ingestion_cursor (
     dataset TEXT PRIMARY KEY,
     source TEXT NOT NULL,
-    last_success TEXT,              -- 最后成功日期
-    last_attempted TEXT,            -- 最后尝试日期（包括失败）
+    last_success TEXT,
+    last_attempted TEXT,
     updated_at TEXT NOT NULL
 );
 ```
 
-**关键方法**：
-```python
-class IngestionCursorStore:
-    def get_cursor(
-        self,
-        dataset: str,
-    ) -> IngestionCursor | None:
-        """获取游标 - O(1) 访问最后成功日期"""
-
-    def update_success(
-        self,
-        dataset: str,
-        source: str,
-        trade_date: str,
-    ) -> None:
-        """更新成功状态（同时更新 last_success 和 last_attempted）"""
-
-    def update_attempted(
-        self,
-        dataset: str,
-        source: str,
-        trade_date: str,
-    ) -> None:
-        """更新尝试状态（仅更新 last_attempted）"""
-```
-
-**数据模型**：
-```python
-@dataclass(frozen=True)
-class IngestionCursor:
-    dataset: str
-    source: str
-    last_success: str | None      # None if no successful ingestion yet
-    last_attempted: str | None    # None if never attempted
-    updated_at: str
-```
+**替代方案**：使用 `IngestionLog` 的 `last_success` 和 `last_attempt_at` 字段。
 
 ### 3.4 使用场景
 

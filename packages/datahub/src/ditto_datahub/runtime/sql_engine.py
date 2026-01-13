@@ -54,7 +54,6 @@ class SqlEngine:
             "adj_factor",
             "stock_status",
             "ingestion_log",
-            "ingestion_cursor",
         ]
     )
 
