@@ -11,6 +11,7 @@ from ditto_port.services.ingestion.coordinator import (
     IngestionCoordinator,
     IngestionResult,
 )
+from ditto_port.services.ingestion.result_utils import count_results
 
 if TYPE_CHECKING:
     from ditto_datahub.stores.calendar_store import CalendarStore
@@ -125,16 +126,14 @@ class BackfillManager:
                 results.append(result)
 
         # 统计结果
-        success_count = sum(1 for r in results if r.status == "success")
-        skipped_count = sum(1 for r in results if r.status == "skipped")
-        failed_count = sum(1 for r in results if r.status == "failed")
+        counts = count_results(results)
 
         backfill_result = BackfillResult(
             dataset=dataset,
             total_dates=len(trade_dates),
-            success_count=success_count,
-            skipped_count=skipped_count,
-            failed_count=failed_count,
+            success_count=counts.success,
+            skipped_count=counts.skipped,
+            failed_count=counts.failed,
             results=results,
         )
 
@@ -244,16 +243,14 @@ class BackfillManager:
                 results.append(result)
 
         # 统计结果
-        success_count = sum(1 for r in results if r.status == "success")
-        skipped_count = sum(1 for r in results if r.status == "skipped")
-        failed_count = sum(1 for r in results if r.status == "failed")
+        counts = count_results(results)
 
         backfill_result = BackfillResult(
             dataset=dataset,
             total_dates=len(sorted_missing_dates),
-            success_count=success_count,
-            skipped_count=skipped_count,
-            failed_count=failed_count,
+            success_count=counts.success,
+            skipped_count=counts.skipped,
+            failed_count=counts.failed,
             results=results,
         )
 

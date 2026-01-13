@@ -31,6 +31,7 @@ from ditto_port.services.ingestion.config.datasets import (
     get_datasets_by_tier,
     get_parallel_datasets,
 )
+from ditto_port.services.ingestion.result_utils import count_results
 
 if TYPE_CHECKING:
     pass
@@ -186,16 +187,14 @@ def daily_ingestion_flow(
 
     # 6. 汇总统计
     all_results = {**t0_results, **t1_results}
-    success_count = sum(1 for r in all_results.values() if r.get("status") == "success")
-    failed_count = sum(1 for r in all_results.values() if r.get("status") == "failed")
-    skipped_count = sum(1 for r in all_results.values() if r.get("status") == "skipped")
+    counts = count_results(all_results)
 
     summary = {
         "trade_date": trade_date,
         "total_tasks": len(all_results),
-        "success_count": success_count,
-        "failed_count": failed_count,
-        "skipped_count": skipped_count,
+        "success_count": counts.success,
+        "failed_count": counts.failed,
+        "skipped_count": counts.skipped,
     }
 
     return {
