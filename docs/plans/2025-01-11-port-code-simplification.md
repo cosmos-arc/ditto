@@ -189,17 +189,28 @@ pixi run -e dev pytest --cov=ditto_port --cov-report=term-missing
 
 ### 任务清单
 
-- [ ] **4.1** dataset config 工厂函数
-- [ ] **4.2** security_mapper 可选列辅助函数
-- [ ] **4.3** deploy.py 部署配置数据驱动
+- [x] **4.1** dataset config 工厂函数
+- [x] **4.2** security_mapper 可选列辅助函数
+- [x] **4.3** deploy.py 部署配置数据驱动
+
+### 执行结果
+
+| 任务 | 状态 | 代码变化 | 提交 |
+|------|------|----------|------|
+| 4.1 | ✅ 完成 | +114 行 (工厂函数), -59 行 (简化配置) | 待提交 |
+| 4.2 | ✅ 完成 | +27 行, -20 行 (净 -7 行) | 待提交 |
+| 4.3 | ✅ 完成 | +114 行 (配置类), -79 行 (简化部署) | 待提交 |
+| 验证测试 | ✅ 完成 | 57 passed, 1 skipped | - |
+
+**总计**: 通过抽象和复用提高了可维护性，虽然总行数略有增加，但核心函数代码更简洁，未来扩展更容易。
 
 ### 关键文件
 
 | 文件 | 操作 | 说明 |
 |------|------|------|
-| `services/ingestion/config/datasets.py` | 修改 | 配置工厂函数 |
-| `services/ingestion/security_mapper.py` | 修改 | 可选列辅助函数 |
-| `jobs/flows/deploy.py` | 修改 | 配置数据驱动 |
+| `services/ingestion/config/datasets.py` | 修改 | 配置工厂函数 (create_t0_config, create_t1_config) |
+| `services/ingestion/security_mapper.py` | 修改 | 可选列辅助函数 (_optional_col) |
+| `jobs/flows/deploy.py` | 修改 | 配置数据驱动 (FlowDeploymentConfig) |
 
 ---
 

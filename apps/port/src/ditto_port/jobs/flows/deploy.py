@@ -6,7 +6,110 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
+
 from ditto_foundation import logger
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+@dataclass(frozen=True)
+class FlowDeploymentConfig:
+    """Flow 部署配置。"""
+
+    flow_name: str
+    """Flow 名称(用于导入)"""
+    deployment_name: str
+    """部署名称"""
+    description: str
+    """描述"""
+    parameters: dict[str, Any]
+    """参数"""
+    tags: list[str]
+    """标签"""
+    is_task: bool = False
+    """是否为 task(而非 flow)"""
+
+
+# 部署配置列表
+_DEPLOYMENT_CONFIGS: list[FlowDeploymentConfig] = [
+    FlowDeploymentConfig(
+        flow_name="daily_ingestion_flow",
+        deployment_name="daily-ingestion-prod",
+        description="每日增量数据摄取流程 (T0 → T1 → T3)",
+        parameters={"trade_date": "{{ date }}", "data_root": "data"},
+        tags=["production", "daily", "ingestion"],
+    ),
+    FlowDeploymentConfig(
+        flow_name="daily_repair_flow",
+        deployment_name="daily-repair-prod",
+        description="每日修补流程 (重试 + 空洞扫描)",
+        parameters={"data_root": "data"},
+        tags=["production", "daily", "repair"],
+    ),
+    FlowDeploymentConfig(
+        flow_name="retry_failed_flow",
+        deployment_name="retry-failed-prod",
+        description="重试失败的任务",
+        parameters={"dataset": "stock_daily", "data_root": "data"},
+        tags=["production", "retry", "repair"],
+    ),
+    FlowDeploymentConfig(
+        flow_name="backfill_flow",
+        deployment_name="backfill-prod",
+        description="全量数据回补流程",
+        parameters={
+            "dataset": "stock_daily",
+            "start_date": "2020-01-01",
+            "end_date": "2024-12-31",
+            "data_root": "data",
+        },
+        tags=["production", "backfill", "manual"],
+    ),
+    FlowDeploymentConfig(
+        flow_name="repair_holes_flow",
+        deployment_name="repair-holes-prod",
+        description="扫描并修补数据空洞",
+        parameters={"dataset": "stock_daily", "data_root": "data"},
+        tags=["production", "repair", "manual"],
+    ),
+    FlowDeploymentConfig(
+        flow_name="dq_batch_check",
+        deployment_name="dq-batch-check-prod",
+        description="批量数据质量检查",
+        parameters={"trade_date": "{{ date }}"},
+        tags=["production", "dq", "manual"],
+        is_task=True,
+    ),
+]
+
+
+def _get_flow(flow_name: str, is_task: bool = False) -> Callable:
+    """动态导入 flow 或 task。"""
+    if is_task and flow_name == "dq_batch_check":
+        from ditto_port.jobs.tasks.dq_batch import dq_batch_check  # noqa: PLC0415
+
+        return dq_batch_check.fn
+
+    from ditto_port.jobs.flows import (  # noqa: PLC0415
+        backfill_flow,
+        daily_ingestion_flow,
+        daily_repair_flow,
+        repair_holes_flow,
+        retry_failed_flow,
+    )
+
+    flow_map = {
+        "daily_ingestion_flow": daily_ingestion_flow,
+        "daily_repair_flow": daily_repair_flow,
+        "retry_failed_flow": retry_failed_flow,
+        "backfill_flow": backfill_flow,
+        "repair_holes_flow": repair_holes_flow,
+    }
+
+    return flow_map[flow_name]
 
 
 def deploy_all_flows() -> None:
@@ -24,87 +127,19 @@ def deploy_all_flows() -> None:
     """
     from prefect.deployments import Deployment  # noqa: PLC0415
 
-    from ditto_port.jobs.flows import (  # noqa: PLC0415
-        backfill_flow,
-        daily_ingestion_flow,
-        daily_repair_flow,
-        repair_holes_flow,
-        retry_failed_flow,
-    )
-    from ditto_port.jobs.tasks.dq_batch import dq_batch_check  # noqa: PLC0415
-
     logger.info("开始部署 Prefect Flows", event="deploy_start")
 
-    # 1. 每日增量摄取流程（交易日 18:00）
-    Deployment.build_from_flow(  # type: ignore[attr-defined]
-        flow=daily_ingestion_flow,
-        name="daily-ingestion-prod",
-        parameters={"trade_date": "{{ date }}", "data_root": "data"},
-        schedule=None,  # 手动触发或通过 cron
-        description="每日增量数据摄取流程 (T0 → T1 → T3)",
-        tags=["production", "daily", "ingestion"],
-        version="1.0.0",
-    )
-
-    # 2. 每日修补流程（每日凌晨 2:00）
-    Deployment.build_from_flow(  # type: ignore[attr-defined]
-        flow=daily_repair_flow,
-        name="daily-repair-prod",
-        parameters={"data_root": "data"},
-        schedule=None,  # 手动触发或通过 cron
-        description="每日修补流程 (重试 + 空洞扫描)",
-        tags=["production", "daily", "repair"],
-        version="1.0.0",
-    )
-
-    # 3. 重试失败流程（每 4 小时）
-    Deployment.build_from_flow(  # type: ignore[attr-defined]
-        flow=retry_failed_flow,
-        name="retry-failed-prod",
-        parameters={"dataset": "stock_daily", "data_root": "data"},
-        schedule=None,  # 手动触发或通过 cron
-        description="重试失败的任务",
-        tags=["production", "retry", "repair"],
-        version="1.0.0",
-    )
-
-    # 4. 全量回补流程（手动触发）
-    Deployment.build_from_flow(  # type: ignore[attr-defined]
-        flow=backfill_flow,
-        name="backfill-prod",
-        parameters={
-            "dataset": "stock_daily",
-            "start_date": "2020-01-01",
-            "end_date": "2024-12-31",
-            "data_root": "data",
-        },
-        schedule=None,  # 手动触发
-        description="全量数据回补流程",
-        tags=["production", "backfill", "manual"],
-        version="1.0.0",
-    )
-
-    # 5. 修补空洞流程（手动触发）
-    Deployment.build_from_flow(  # type: ignore[attr-defined]
-        flow=repair_holes_flow,
-        name="repair-holes-prod",
-        parameters={"dataset": "stock_daily", "data_root": "data"},
-        schedule=None,  # 手动触发
-        description="扫描并修补数据空洞",
-        tags=["production", "repair", "manual"],
-        version="1.0.0",
-    )
-
-    # 6. DQC 检查流程（手动触发）
-    Deployment.build_from_flow(  # type: ignore[attr-defined]
-        flow=dq_batch_check.fn,
-        name="dq-batch-check-prod",
-        parameters={"trade_date": "{{ date }}"},
-        schedule=None,  # 手动触发
-        description="批量数据质量检查",
-        tags=["production", "dq", "manual"],
-        version="1.0.0",
-    )
+    for config in _DEPLOYMENT_CONFIGS:
+        flow = _get_flow(config.flow_name, config.is_task)
+        Deployment.build_from_flow(  # type: ignore[attr-defined]
+            flow=flow,
+            name=config.deployment_name,
+            parameters=config.parameters,
+            schedule=None,
+            description=config.description,
+            tags=config.tags,
+            version="1.0.0",
+        )
 
     logger.info("Prefect Flows 部署完成", event="deploy_complete")
 

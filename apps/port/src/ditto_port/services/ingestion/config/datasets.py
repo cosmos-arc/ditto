@@ -119,67 +119,141 @@ class DatasetConfig(BaseModel):
     )
 
 
+# ============ Helper Functions ============
+
+
+def create_t0_config(  # noqa: PLR0913
+    dataset: Dataset,
+    description: str,
+    typical_available_time: time,
+    critical_fields: list[str],
+    task_name: str,
+    timeout_seconds: int = 300,
+) -> DatasetConfig:
+    """
+    Create a T0 meta dataset configuration.
+
+    T0 datasets are foundational metadata with these defaults:
+    - tier: T0_META
+    - priority: 10
+    - depends_on: []
+    - retry_limit: 3
+    - quality_checks_enabled: True
+    - requires_trade_date: False
+    - update_frequency: "每日"
+
+    Args:
+        dataset: Dataset identifier
+        description: Human-readable description
+        typical_available_time: Typical time when data is available
+        critical_fields: Critical fields for quality validation
+        task_name: Prefect task name to execute
+        timeout_seconds: Task timeout in seconds (default: 300)
+
+    Returns:
+        DatasetConfig instance
+
+    """
+    return DatasetConfig(
+        dataset=dataset,
+        tier=TaskTier.T0_META,
+        description=description,
+        update_frequency="每日",
+        typical_available_time=typical_available_time,
+        priority=10,
+        depends_on=[],
+        retry_limit=3,
+        timeout_seconds=timeout_seconds,
+        quality_checks_enabled=True,
+        critical_fields=critical_fields,
+        task_name=task_name,
+        requires_trade_date=False,
+    )
+
+
+def create_t1_config(  # noqa: PLR0913
+    dataset: Dataset,
+    description: str,
+    typical_available_time: time,
+    depends_on: list[Dataset],
+    critical_fields: list[str],
+    task_name: str,
+    priority: int = 20,
+    timeout_seconds: int = 300,
+) -> DatasetConfig:
+    """
+    Create a T1 incremental dataset configuration.
+
+    T1 datasets are daily incremental data with these defaults:
+    - tier: T1_INCREMENTAL
+    - retry_limit: 3
+    - quality_checks_enabled: True
+    - requires_trade_date: True
+    - update_frequency: "每日"
+
+    Args:
+        dataset: Dataset identifier
+        description: Human-readable description
+        typical_available_time: Typical time when data is available
+        depends_on: Datasets that must complete before this one
+        critical_fields: Critical fields for quality validation
+        task_name: Prefect task name to execute
+        priority: Execution priority (default: 20)
+        timeout_seconds: Task timeout in seconds (default: 300)
+
+    Returns:
+        DatasetConfig instance
+
+    """
+    return DatasetConfig(
+        dataset=dataset,
+        tier=TaskTier.T1_INCREMENTAL,
+        description=description,
+        update_frequency="每日",
+        typical_available_time=typical_available_time,
+        priority=priority,
+        depends_on=depends_on,
+        retry_limit=3,
+        timeout_seconds=timeout_seconds,
+        quality_checks_enabled=True,
+        critical_fields=critical_fields,
+        task_name=task_name,
+        requires_trade_date=True,
+    )
+
+
 # ============ Dataset Registry ============
 
 DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
     # T0: Meta datasets
-    Dataset.CALENDAR: DatasetConfig(
+    Dataset.CALENDAR: create_t0_config(
         dataset=Dataset.CALENDAR,
-        tier=TaskTier.T0_META,
         description="交易日历",
-        update_frequency="每日",
         typical_available_time=time(8, 0),
-        priority=10,
-        depends_on=[],
-        retry_limit=3,
-        timeout_seconds=60,
-        quality_checks_enabled=True,
         critical_fields=["cal_date", "is_trade"],
         task_name="ingest_calendar",
-        requires_trade_date=False,
+        timeout_seconds=60,
     ),
-    Dataset.STOCK_BASIC: DatasetConfig(
+    Dataset.STOCK_BASIC: create_t0_config(
         dataset=Dataset.STOCK_BASIC,
-        tier=TaskTier.T0_META,
         description="股票基础信息",
-        update_frequency="每日",
         typical_available_time=time(8, 30),
-        priority=10,
-        depends_on=[],
-        retry_limit=3,
-        timeout_seconds=300,
-        quality_checks_enabled=True,
         critical_fields=["ts_code", "symbol", "name", "market", "list_date"],
         task_name="ingest_stock_basic",
-        requires_trade_date=False,
     ),
-    Dataset.ETF_BASIC: DatasetConfig(
+    Dataset.ETF_BASIC: create_t0_config(
         dataset=Dataset.ETF_BASIC,
-        tier=TaskTier.T0_META,
         description="ETF基础信息",
-        update_frequency="每日",
         typical_available_time=time(8, 30),
-        priority=10,
-        depends_on=[],
-        retry_limit=3,
-        timeout_seconds=300,
-        quality_checks_enabled=True,
         critical_fields=["ts_code", "symbol", "name", "list_date"],
         task_name="ingest_etf_basic",
-        requires_trade_date=False,
     ),
     # T1: Incremental datasets
-    Dataset.ETF_DAILY: DatasetConfig(
+    Dataset.ETF_DAILY: create_t1_config(
         dataset=Dataset.ETF_DAILY,
-        tier=TaskTier.T1_INCREMENTAL,
         description="ETF日行情数据",
-        update_frequency="每日",
         typical_available_time=time(18, 0),
-        priority=20,
         depends_on=[Dataset.ETF_BASIC],
-        retry_limit=3,
-        timeout_seconds=300,
-        quality_checks_enabled=True,
         critical_fields=[
             "trade_date",
             "ts_code",
@@ -190,19 +264,12 @@ DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
             "vol",
         ],
         task_name="ingest_etf_bars",
-        requires_trade_date=True,
     ),
-    Dataset.STOCK_DAILY: DatasetConfig(
+    Dataset.STOCK_DAILY: create_t1_config(
         dataset=Dataset.STOCK_DAILY,
-        tier=TaskTier.T1_INCREMENTAL,
         description="股票日行情数据",
-        update_frequency="每日",
         typical_available_time=time(17, 0),
-        priority=20,
         depends_on=[Dataset.STOCK_BASIC],
-        retry_limit=3,
-        timeout_seconds=600,
-        quality_checks_enabled=True,
         critical_fields=[
             "trade_date",
             "ts_code",
@@ -213,37 +280,25 @@ DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
             "vol",
         ],
         task_name="ingest_stock_daily",
-        requires_trade_date=True,
+        timeout_seconds=600,
     ),
-    Dataset.ADJ_FACTOR: DatasetConfig(
+    Dataset.ADJ_FACTOR: create_t1_config(
         dataset=Dataset.ADJ_FACTOR,
-        tier=TaskTier.T1_INCREMENTAL,
         description="复权因子",
-        update_frequency="每日",
         typical_available_time=time(19, 0),
-        priority=30,
         depends_on=[Dataset.STOCK_DAILY],
-        retry_limit=3,
-        timeout_seconds=300,
-        quality_checks_enabled=True,
         critical_fields=["trade_date", "ts_code", "adj_factor"],
         task_name="ingest_adj_factor",
-        requires_trade_date=True,
-    ),
-    Dataset.FUND_ADJ: DatasetConfig(
-        dataset=Dataset.FUND_ADJ,
-        tier=TaskTier.T1_INCREMENTAL,
-        description="ETF/基金复权因子",
-        update_frequency="每日",
-        typical_available_time=time(19, 0),
         priority=30,
+    ),
+    Dataset.FUND_ADJ: create_t1_config(
+        dataset=Dataset.FUND_ADJ,
+        description="ETF/基金复权因子",
+        typical_available_time=time(19, 0),
         depends_on=[Dataset.ETF_DAILY],
-        retry_limit=3,
-        timeout_seconds=300,
-        quality_checks_enabled=True,
         critical_fields=["trade_date", "ts_code", "adj_factor"],
         task_name="ingest_fund_adj",
-        requires_trade_date=True,
+        priority=30,
     ),
 }
 
