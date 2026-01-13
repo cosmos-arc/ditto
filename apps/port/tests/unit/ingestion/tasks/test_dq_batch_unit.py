@@ -48,7 +48,7 @@ def test_dq_completeness_check_closes_hub_connection(tmp_path, mocker):
 
 
 def test_dq_completeness_check_passes_market_wide_parameter(tmp_path, mocker):
-    """Test dq_completeness_check passes market_wide to bars.get()."""
+    """Test dq_completeness_check passes market_wide to bars.get() via BarsQuery."""
     # Arrange
     mock_hub = mocker.MagicMock()
     mock_hub.bars.get.return_value = pl.DataFrame(
@@ -66,7 +66,9 @@ def test_dq_completeness_check_passes_market_wide_parameter(tmp_path, mocker):
 
         # Assert
         call_kwargs = mock_hub.bars.get.call_args.kwargs
-        assert call_kwargs.get("market_wide") is True
+        query = call_kwargs.get("query")
+        assert query is not None
+        assert query.market_wide is True
 
 
 def test_dq_batch_check_closes_hub_connection(tmp_path, mocker):

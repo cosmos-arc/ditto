@@ -6,6 +6,7 @@ from typing import Any, Literal
 import ditto_datahub
 from ditto_datahub import DataHub
 from ditto_datahub.dq import DQEngine
+from ditto_datahub.repositories import BarsQuery
 from ditto_foundation import M, logger
 from prefect import task
 
@@ -207,11 +208,12 @@ def dq_completeness_check(
     hub = DataHub()
     try:
         # 读取实际数据
-        df = hub.bars.get(
+        query = BarsQuery(
             start=trade_date,
             end=trade_date,
             market_wide=market_wide,
         )
+        df = hub.bars.get(query=query)
 
         actual_sids = df["sid"].unique().to_list() if not df.is_empty() else []
 
