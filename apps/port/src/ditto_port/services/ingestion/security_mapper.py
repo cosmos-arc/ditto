@@ -41,6 +41,10 @@ def _optional_col(df: pl.DataFrame, col_name: str, default: str = "") -> pl.Expr
     return pl.lit(default).alias(col_name)
 
 
+# YYYYMMDD 格式长度（如 20240102）
+_DATE_FORMAT_COMPACT_LENGTH = 8
+
+
 def _format_date_for_sqlite(d: date | str | None) -> str:
     """
     转换日期为 SQLite 可绑定的字符串.
@@ -49,24 +53,28 @@ def _format_date_for_sqlite(d: date | str | None) -> str:
         d: 日期对象、字符串或 None
 
     Returns:
-        可绑定的日期字符串 (YYYYMMDD 或 YYYY-MM-DD)
+        可绑定的日期字符串 (YYYY-MM-DD)
 
     Examples:
         >>> _format_date_for_sqlite(date(2024, 1, 2))
-        '20240102'
+        '2024-01-02'
         >>> _format_date_for_sqlite("2024-01-02")
-        '20240102'
+        '2024-01-02'
         >>> _format_date_for_sqlite("19900101")
-        '19900101'
+        '1990-01-01'
 
     """
     if d is None:
-        return "19900101"
+        return "1990-01-01"
     if isinstance(d, date):
-        return d.strftime("%Y%m%d")
-    # 处理 "YYYY-MM-DD" 格式
-    if isinstance(d, str) and "-" in d:
-        return d.replace("-", "")
+        return d.isoformat()
+    if isinstance(d, str):
+        value = d.strip()
+        if "-" in value:
+            return value
+        if len(value) == _DATE_FORMAT_COMPACT_LENGTH and value.isdigit():
+            return f"{value[:4]}-{value[4:6]}-{value[6:]}"
+        return value
     return str(d)
 
 
@@ -312,7 +320,7 @@ class SecurityMapper:
             symbol = params.src_code
             name = params.src_code
             exchange = "UNKNOWN"
-            list_date = "19900101"
+            list_date = "1990-01-01"
         else:
             row = security_meta.row(0, named=True)
             symbol = str(row.get("symbol", params.src_code))

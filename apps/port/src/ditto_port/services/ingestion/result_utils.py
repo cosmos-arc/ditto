@@ -18,7 +18,7 @@ class ResultCounts:
 
 
 def count_results(
-    results: list["IngestionResult"] | dict[str, dict],
+    results: list["IngestionResult"] | dict[str, dict[str, object]],
 ) -> ResultCounts:
     """
     统计摄取结果。

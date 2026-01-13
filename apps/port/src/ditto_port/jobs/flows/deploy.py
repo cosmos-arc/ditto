@@ -7,12 +7,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from ditto_foundation import logger
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from prefect import Flow, Task
 
 
 @dataclass(frozen=True)
@@ -86,12 +88,14 @@ _DEPLOYMENT_CONFIGS: list[FlowDeploymentConfig] = [
 ]
 
 
-def _get_flow(flow_name: str, is_task: bool = False) -> Callable[..., Any]:
+def _get_flow(
+    flow_name: str, is_task: bool = False
+) -> Callable[..., Any] | Task[Any, Any] | Flow[Any, Any]:
     """动态导入 flow 或 task。"""
     if is_task and flow_name == "dq_batch_check":
         from ditto_port.jobs.tasks.dq_batch import dq_batch_check  # noqa: PLC0415
 
-        return dq_batch_check.fn
+        return cast(Task[Any, Any], dq_batch_check.fn)
 
     from ditto_port.jobs.flows import (  # noqa: PLC0415
         backfill_flow,
@@ -101,7 +105,7 @@ def _get_flow(flow_name: str, is_task: bool = False) -> Callable[..., Any]:
         retry_failed_flow,
     )
 
-    flow_map = {
+    flow_map: dict[str, Flow[Any, Any]] = {
         "daily_ingestion_flow": daily_ingestion_flow,
         "daily_repair_flow": daily_repair_flow,
         "retry_failed_flow": retry_failed_flow,

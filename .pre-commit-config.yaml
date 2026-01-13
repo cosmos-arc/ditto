@@ -83,6 +83,18 @@ repos:
         pass_filenames: true # bandit 需要接收文件列表
 
       # --------------------------------------------------------
+      # Type Ignore 检查
+      # --------------------------------------------------------
+      - id: no-new-type-ignore
+        name: "检查新增的 type: ignore"
+        entry: >-
+          powershell -Command
+          "$diff = git diff --cached --unified=0 -- '*.py';
+           if ($diff | Select-String '^\+.*# type: ignore') { exit 1 } else { exit 0 }"
+        language: system
+        pass_filenames: false
+
+      # --------------------------------------------------------
       # pytest (可选 - pre-push 阶段)
       # 注意：已禁用，因为 GitHub Actions 会运行完整测试
       # --------------------------------------------------------

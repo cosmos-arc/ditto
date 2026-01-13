@@ -49,6 +49,22 @@
 - 文件读写改操作使用 Bash 命令
 - 绕过或忽略 mypy、ruff、precommit 检测
 
+## 类型检查规范
+
+### 禁止新增 type: ignore
+
+除非满足以下条件之一：
+1. 第三方库类型 stub 不完整
+2. 跨平台兼容（如 Windows-only 属性）
+3. 动态方法调用且无法重构
+
+### Type Ignore 注释规范
+
+必须添加理由注释：
+```python
+return self._local.conn  # type: ignore[no-any-return] - threading.local 内部 Any 类型
+```
+
 ## 项目架构
 
 ```

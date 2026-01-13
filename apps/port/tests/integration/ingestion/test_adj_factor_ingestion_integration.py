@@ -25,7 +25,6 @@ class TestAdjFactorIngestion:
 
         # Mock dependencies
         mock_hub.ingestion_log = mocker.MagicMock()
-        mock_hub.ingestion_cursor = mocker.MagicMock()
         mock_hub.adj_factor = mocker.MagicMock()
         # Mock write to return WriteResult (not tuple)
         mock_hub.adj_factor.write.return_value = WriteResult(
@@ -93,7 +92,6 @@ class TestAdjFactorIngestion:
 
         # Mock dependencies
         mock_hub.ingestion_log = mocker.MagicMock()
-        mock_hub.ingestion_cursor = mocker.MagicMock()
         mock_hub.adj_factor = mocker.MagicMock()
         # Mock write to return WriteResult (not tuple)
         mock_hub.adj_factor.write.return_value = WriteResult(

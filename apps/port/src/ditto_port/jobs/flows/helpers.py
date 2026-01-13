@@ -9,13 +9,18 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ditto_datahub import DataHub
+
+    from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
 
 @contextmanager
 def create_ingestion_context(
     data_root: str, source: str = "tushare"
-) -> Iterator[tuple[Any, Any]]:
+) -> Iterator[tuple[DataHub, IngestionCoordinator]]:
     """
     创建摄取上下文，自动管理 DataHub 和 Coordinator 资源。
 

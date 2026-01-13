@@ -9,7 +9,7 @@
 """
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal, cast
 
 import polars as pl
 from ditto_datahub.repositories.bars import WriteResult
@@ -252,20 +252,33 @@ class IngestionCoordinator:
 
         return results
 
-    def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
+    def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:  # noqa: PLR0911
         """根据数据集类型调用对应的 Source 方法获取数据。"""
+        from ditto_datahub.sources.base import DataSourceMethods  # noqa: PLC0415
+
         method_name = self._DATASET_METHODS.get(dataset)
         if method_name is None:
             raise ValueError(f"不支持的数据集: {dataset}")
 
-        method = getattr(self._source, method_name)
+        source: DataSourceMethods = cast(DataSourceMethods, self._source)
 
-        if dataset in ("calendar", "etf_basic", "stock_basic"):
-            if dataset == "calendar":
-                return method(trade_date, trade_date)  # type: ignore[no-any-return]
-            return method()  # type: ignore[no-any-return]
-        else:
-            return method(trade_date)  # type: ignore[no-any-return]
+        if dataset == "calendar":
+            return source.fetch_calendar(trade_date, trade_date)
+        if dataset == "etf_basic":
+            return source.fetch_etf_basic()
+        if dataset == "stock_basic":
+            return source.fetch_stock_basic()
+        if dataset == "etf_daily":
+            return source.fetch_etf_daily(trade_date)
+        if dataset == "stock_daily":
+            return source.fetch_stock_daily(trade_date)
+        if dataset == "adj_factor":
+            return source.fetch_adj_factor(trade_date)
+        if dataset == "fund_adj":
+            return source.fetch_fund_adj(trade_date)
+
+        # 不应该到达这里（前面已经验证过 dataset）
+        raise ValueError(f"不支持的数据集: {dataset}")
 
     def _write_data(
         self,

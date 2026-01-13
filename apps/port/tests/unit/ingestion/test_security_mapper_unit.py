@@ -85,7 +85,7 @@ class TestMapOrCreate:
                     "symbol": ["平安银行"],
                     "name": ["平安银行股份有限公司"],
                     "exchange": ["SZ"],
-                    "list_date": ["19910403"],
+                    "list_date": ["1991-04-03"],
                 }
             ),
         )
@@ -117,7 +117,7 @@ class TestMapOrCreate:
                     "symbol": ["平安银行", "万科A"],
                     "name": ["平安银行股份有限公司", "万科企业股份有限公司"],
                     "exchange": ["SZ", "SZ"],
-                    "list_date": ["19910403", "19910129"],
+                    "list_date": ["1991-04-03", "1991-01-29"],
                 }
             ),
         )
@@ -146,7 +146,7 @@ class TestMapOrCreate:
                     "symbol": ["平安银行"],
                     "name": ["平安银行股份有限公司"],
                     "exchange": ["SZ"],
-                    "list_date": ["19910403"],
+                    "list_date": ["1991-04-03"],
                 }
             ),
         )
@@ -161,7 +161,7 @@ class TestMapOrCreate:
             name="平安银行股份有限公司",
             exchange="SZ",
             asset_class="stock",
-            list_date="19910403",
+            list_date="1991-04-03",
             board=None,
         )
 
@@ -181,7 +181,7 @@ class TestMapOrCreate:
                     "symbol": ["300ETF"],
                     "name": ["华泰柏瑞沪深300ETF"],
                     "exchange": ["SH"],
-                    "list_date": ["20120507"],
+                    "list_date": ["2012-05-07"],
                 }
             ),
         )
@@ -196,7 +196,7 @@ class TestMapOrCreate:
             name="华泰柏瑞沪深300ETF",
             exchange="SH",
             asset_class="etf",
-            list_date="20120507",
+            list_date="2012-05-07",
             board=None,
         )
 
@@ -220,7 +220,7 @@ class TestMapOrCreate:
                     "symbol": ["平安银行", "万科A"],
                     "name": ["平安银行股份有限公司", "万科企业股份有限公司"],
                     "exchange": ["SZ", "SZ"],
-                    "list_date": ["19910403", "19910129"],
+                    "list_date": ["1991-04-03", "1991-01-29"],
                 }
             ),
         )
@@ -251,7 +251,7 @@ class TestMapOrCreate:
                         "国农科技股份有限公司",
                     ],
                     "exchange": ["SZ", "SZ", "SZ"],
-                    "list_date": ["19910403", "19910129", "19901212"],
+                    "list_date": ["1991-04-03", "1991-01-29", "1990-12-12"],
                 }
             ),
         )
@@ -279,7 +279,7 @@ class TestMapOrCreate:
                     "symbol": ["300ETF", "500ETF"],
                     "name": ["华泰柏瑞沪深300ETF", "南方中证500ETF"],
                     "exchange": ["SH", "SH"],
-                    "list_date": ["20120507", "20130318"],
+                    "list_date": ["2012-05-07", "2013-03-18"],
                 }
             ),
         )
@@ -313,7 +313,7 @@ class TestMapOrCreate:
                     "symbol": ["平安银行"],
                     "name": ["平安银行股份有限公司"],
                     "exchange": ["SZ"],
-                    "list_date": ["19910403"],
+                    "list_date": ["1991-04-03"],
                 }
             ),
         )
@@ -329,7 +329,7 @@ class TestMapOrCreate:
                     "symbol": ["平安银行", "万科A"],
                     "name": ["平安银行股份有限公司", "万科企业股份有限公司"],
                     "exchange": ["SZ", "SZ"],
-                    "list_date": ["19910403", "19910129"],
+                    "list_date": ["1991-04-03", "1991-01-29"],
                 }
             ),
         )
@@ -541,7 +541,7 @@ class TestConcurrency:
                     "symbol": [f"Stock{idx}"],
                     "name": [f"Test Stock {idx}"],
                     "exchange": ["SZ"],
-                    "list_date": ["19900101"],
+                    "list_date": ["1990-01-01"],
                 }
             )
             result = local_mapper.map_or_create(
@@ -583,7 +583,7 @@ class TestFormatDateForSqlite:
         result = _format_date_for_sqlite(input_date)
 
         # Assert
-        assert result == "20240102"
+        assert result == "2024-01-02"
 
     def test_formats_string_with_dashes(self):
         """测试转换带连字符的日期字符串。"""
@@ -594,7 +594,7 @@ class TestFormatDateForSqlite:
         result = _format_date_for_sqlite(input_date)
 
         # Assert
-        assert result == "20240102"
+        assert result == "2024-01-02"
 
     def test_returns_default_for_none(self):
         """测试 None 返回默认日期。"""
@@ -602,18 +602,18 @@ class TestFormatDateForSqlite:
         result = _format_date_for_sqlite(None)
 
         # Assert
-        assert result == "19900101"
+        assert result == "1990-01-01"
 
     def test_passes_through_formatted_string(self):
         """测试已格式化的字符串直接返回。"""
         # Arrange
-        input_date = "19900101"
+        input_date = "1990-01-01"
 
         # Act
         result = _format_date_for_sqlite(input_date)
 
         # Assert
-        assert result == "19900101"
+        assert result == "1990-01-01"
 
 
 @pytest.mark.unit
@@ -655,7 +655,7 @@ class TestRegisterSecurity:
             name="000001.SZ",  # 默认使用 src_code
             exchange="UNKNOWN",  # 默认值
             asset_class="stock",
-            list_date="19900101",  # 默认值
+            list_date="1990-01-01",  # 默认值
             board=None,
         )
 
@@ -679,7 +679,7 @@ class TestRegisterSecurity:
                     "symbol": ["平安银行"],
                     "name": ["平安银行股份有限公司"],
                     "exchange": ["SZ"],
-                    "list_date": ["19910403"],
+                    "list_date": ["1991-04-03"],
                 }
             ),
             src_code_col="ts_code",

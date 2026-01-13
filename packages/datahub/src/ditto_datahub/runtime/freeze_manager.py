@@ -389,13 +389,19 @@ class FreezeManager:
             # Try single file first
             success, checksums = self._try_single_file_mode(dataset)
             if success:
-                files.update(checksums)  # type: ignore[arg-type]
+                assert (
+                    checksums is not None
+                )  # 类型收窄：当 success=True 时，checksums 必须不为 None
+                files.update(checksums)
                 continue
 
             # Try partitioned directory
             success, checksums = self._try_partitioned_directory_mode(dataset)
             if success:
-                files.update(checksums)  # type: ignore[arg-type]
+                assert (
+                    checksums is not None
+                )  # 类型收窄：当 success=True 时，checksums 必须不为 None
+                files.update(checksums)
                 continue
 
             # Track missing
