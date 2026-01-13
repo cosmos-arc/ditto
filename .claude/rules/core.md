@@ -45,6 +45,8 @@ MAX_DRAWDOWN = 0.20          # UPPER_SNAKE
 
 ## 导入规范（汇总）
 
+**禁止行内导入！！破例需要注释说明具体原因**
+
 ### Foundation 层导入
 
 ```python

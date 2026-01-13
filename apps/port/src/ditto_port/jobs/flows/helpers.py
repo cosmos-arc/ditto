@@ -7,11 +7,15 @@ Flow 辅助函数和上下文管理器。
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
+from typing import Any
 
 
 @contextmanager
-def create_ingestion_context(data_root: str, source: str = "tushare"):
+def create_ingestion_context(
+    data_root: str, source: str = "tushare"
+) -> Iterator[tuple[Any, Any]]:
     """
     创建摄取上下文，自动管理 DataHub 和 Coordinator 资源。
 
@@ -29,7 +33,9 @@ def create_ingestion_context(data_root: str, source: str = "tushare"):
         tuple: (hub, coordinator) - DataHub 实例和 IngestionCoordinator 实例
 
     Example:
-        with create_ingestion_context(data_root="data", source="tushare") as (hub, coordinator):
+        with create_ingestion_context(
+            data_root="data", source="tushare"
+        ) as (hub, coordinator):
             # 使用 hub 和 coordinator
             result = coordinator.ingest(...)
         # hub 自动关闭

@@ -5,7 +5,7 @@ description: 并行代码审查
 
 # /review 命令
 
-使用`superpowers:requesting-code-review`并行执行多维度代码审查。
+使用`superpowers:requesting-code-review`并行执行多维度代码审查。 再使用 `/code-review:code-review` 做最终审核决定是否可合并
 
 ## 输入
 
@@ -15,7 +15,7 @@ $ARGUMENTS
 
 | 用法 | 范围 |
 |------|------|
-| `/review` | 当前 git diff 变更 |
+| `/review` | 当前 git diff 或者 当前PR 变更 |
 | `/review src/data/` | 指定目录 |
 | `/review src/engines/momentum.py` | 指定文件 |
 | `/review --all` | 全量审查（src/目录） |
@@ -26,14 +26,15 @@ $ARGUMENTS
 ### Step 1: 确定范围
 根据输入参数确定要审查的文件列表。
 
-### Step 2: 并行审查（4个Task）
+### Step 2: 并行审查（5个Task）
 
 **同时启动：**
 
 | Task | 职责 | 检查项 |
 |------|------|--------|
 | PIT安全 | 时间处理 | `closed="left"`、knowledge_date、无未来泄露 |
-| 风控 | Kill Switch | 检查点存在、阈值配置、路径覆盖100% |
+| 规约 | 编码和项目规约 | .claude/下规则文件严格遵守|
+| 可维护性 | 遗留及兼容代码，代码简化 | 非数据格式破坏的兼容外，不保留任何兼容和废弃代码，保持代码简洁|
 | 代码质量 | 静态检查 | ruff、pyright、嵌套≤3、无重复 |
 | 文档 | 同步状态 | README、Sprint状态、API记录 |
 

@@ -30,8 +30,8 @@ class TestCreateIngestionContext:
         mocker.patch("ditto_port.services.ingestion.coordinator.IngestionCoordinator")
 
         with create_ingestion_context(data_root="/custom/data", source="tushare") as (
-            hub,
-            coordinator,
+            _hub,
+            _coordinator,
         ):
             pass
 
@@ -48,8 +48,8 @@ class TestCreateIngestionContext:
         mocker.patch("ditto_port.services.ingestion.coordinator.IngestionCoordinator")
 
         with create_ingestion_context(data_root="data", source="custom_source") as (
-            hub,
-            coordinator,
+            _hub,
+            _coordinator,
         ):
             pass
 
@@ -70,8 +70,8 @@ class TestCreateIngestionContext:
         mock_coordinator_cls.return_value = mock_coordinator
 
         with create_ingestion_context(data_root="data", source="tushare") as (
-            hub,
-            coordinator,
+            _hub,
+            _coordinator,
         ):
             pass
 
@@ -112,8 +112,8 @@ class TestCreateIngestionContext:
         mocker.patch("ditto_port.services.ingestion.coordinator.IngestionCoordinator")
 
         with create_ingestion_context(data_root="data", source="tushare") as (
-            hub,
-            coordinator,
+            _hub,
+            _coordinator,
         ):
             pass
 
@@ -131,8 +131,8 @@ class TestCreateIngestionContext:
 
         with pytest.raises(ValueError, match="Test error"):
             with create_ingestion_context(data_root="data", source="tushare") as (
-                hub,
-                coordinator,
+                _hub,
+                _coordinator,
             ):
                 raise ValueError("Test error")
 
@@ -148,7 +148,7 @@ class TestCreateIngestionContext:
         mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
         mocker.patch("ditto_port.services.ingestion.coordinator.IngestionCoordinator")
 
-        with create_ingestion_context(data_root="data") as (hub, coordinator):
+        with create_ingestion_context(data_root="data") as (_hub, _coordinator):
             pass
 
         # Verify sources.get was called with default "tushare"
@@ -171,7 +171,7 @@ class TestCreateIngestionContext:
         mock_coordinator_cls.return_value = mock_coordinator
 
         with create_ingestion_context(data_root="data", source="tushare") as (
-            hub,
+            _hub,
             coordinator,
         ):
             result = coordinator.ingest_date(
@@ -193,20 +193,18 @@ class TestCreateIngestionContext:
         mock_hub1.sources.get.return_value = mock_source1
         mock_hub2.sources.get.return_value = mock_source2
 
-        mock_dh = mocker.patch(
-            "ditto_datahub.DataHub", side_effect=[mock_hub1, mock_hub2]
-        )
+        mocker.patch("ditto_datahub.DataHub", side_effect=[mock_hub1, mock_hub2])
         mocker.patch("ditto_port.services.ingestion.coordinator.IngestionCoordinator")
 
         with create_ingestion_context(data_root="data1", source="tushare") as (
             hub1,
-            coord1,
+            _coord1,
         ):
             assert hub1 is mock_hub1
 
         with create_ingestion_context(data_root="data2", source="tushare") as (
             hub2,
-            coord2,
+            _coord2,
         ):
             assert hub2 is mock_hub2
 
