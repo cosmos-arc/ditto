@@ -283,10 +283,7 @@ class XDGPaths:
             return Path(temp) / self.APP_NAME
         else:
             # os.getuid() 在 Windows 上不存在
-            try:
-                uid = os.getuid()  # type: ignore[attr-defined]
-            except AttributeError:
-                uid = os.getpid()
+            uid = os.getuid() if hasattr(os, "getuid") else os.getpid()
             return Path(f"/tmp/{self.APP_NAME}-{uid}")  # nosec B108
 
     # ==================== 子目录访问器 ====================
