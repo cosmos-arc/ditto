@@ -6,15 +6,17 @@ Prefect Tasks for data ingestion.
 
 # 新式任务工厂
 from ditto_port.jobs.tasks.monitoring import monitor_ingestion_quality
+
+# T1 任务工厂别名
+# 直接从 t0_meta 导入 create_ingest_task，为 T1 数据集创建别名
+# 这样可以避免创建空的 wrapper 文件
+from ditto_port.jobs.tasks.t0_meta import create_ingest_task
 from ditto_port.jobs.tasks.t0_meta import (
     create_ingest_task as create_ingest_task_t0,
 )
-from ditto_port.jobs.tasks.t1_adj_factor import (
-    create_ingest_task as create_ingest_task_t1_adj,
-)
-from ditto_port.jobs.tasks.t1_bars import (
-    create_ingest_task as create_ingest_task_t1_bars,
-)
+
+create_ingest_task_t1_adj = create_ingest_task
+create_ingest_task_t1_bars = create_ingest_task
 
 __all__ = [
     # 新式任务工厂
