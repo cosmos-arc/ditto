@@ -6,6 +6,7 @@ from typing import Any, Literal
 import ditto_datahub
 from ditto_datahub import DataHub
 from ditto_datahub.dq import DQEngine
+from ditto_datahub.dq.models import DQIssue
 from ditto_datahub.repositories import BarsQuery
 from ditto_foundation import M, logger
 from prefect import task
@@ -66,6 +67,10 @@ def dq_batch_check(
                 trade_date=trade_date,
             )
 
+        # 类型收窄：确保 trade_date 不是 None（用于后续类型检查）
+        if trade_date is None:
+            raise ValueError("Failed to resolve trade_date")
+
         # 默认数据集
         if datasets is None:
             datasets = ["etf_daily", "index_daily", "stock_daily", "adj_factor"]
@@ -76,8 +81,8 @@ def dq_batch_check(
 
         engine = DQEngine(config_path=config_path)
 
-        all_issues = []
-        results_by_dataset = {}
+        all_issues: list[DQIssue] = []
+        results_by_dataset: dict[str, dict[str, Any]] = {}
 
         # 定义 dataset 到 asset_class 的映射
         dataset_asset_class: dict[str, Literal["stock", "etf", "index"]] = {
@@ -93,10 +98,12 @@ def dq_batch_check(
             try:
                 # 推断 asset_class
                 asset_class = dataset_asset_class.get(dataset)
+                if asset_class is None:
+                    raise ValueError(f"Unknown dataset: {dataset}")
 
                 result = engine.check_statistical(
                     dataset=dataset,
-                    trade_date=trade_date,  # type: ignore[arg-type]
+                    trade_date=trade_date,
                     hub=hub,
                     asset_class=asset_class,
                     market_wide=market_wide,
@@ -125,14 +132,22 @@ def dq_batch_check(
                     dataset=dataset,
                     error=str(e),
                 )
-                results_by_dataset[dataset] = {"error": str(e)}  # type: ignore[dict-item]
+                results_by_dataset[dataset] = {
+                    "passed": False,
+                    "issue_count": 0,
+                    "alert_count": 0,
+                    "error": str(e),
+                }
 
         # 汇总结果
+        total_issues = len(all_issues)
+        alert_count = sum(1 for i in all_issues if i.severity.value == "alert")
+
         summary = {
             "trade_date": trade_date,
             "datasets_checked": datasets,
-            "total_issues": len(all_issues),
-            "alert_count": sum(1 for i in all_issues if i.severity.value == "alert"),
+            "total_issues": total_issues,
+            "alert_count": alert_count,
             "results_by_dataset": results_by_dataset,
         }
 
@@ -143,8 +158,8 @@ def dq_batch_check(
         )
 
         # 如果有告警，发送通知
-        if summary["alert_count"] > 0:  # type: ignore[operator]
-            _send_dq_alert(trade_date, all_issues)  # type: ignore[arg-type]
+        if alert_count > 0:
+            _send_dq_alert(trade_date, all_issues)
 
         # 记录指标
         if hasattr(M, "dq_batch_checks"):
