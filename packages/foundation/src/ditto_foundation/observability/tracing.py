@@ -141,8 +141,9 @@ def configure_tracing(config: ObservabilityConfig, mode: Mode) -> trace.Tracer:
         provider = TracerProvider(resource=resource)
         provider.add_span_processor(SimpleSpanProcessor(_state.in_memory_exporter))
         # 直接从 provider 获取 tracer，不设置全局 provider
-        _state.tracer = provider.get_tracer(__name__)
-        return _state.tracer
+        tracer = provider.get_tracer(__name__)
+        _state.tracer = tracer
+        return tracer
 
     # PRODUCTION / DEVELOPMENT：标准 TracerProvider
     provider = TracerProvider(resource=resource)
@@ -240,7 +241,7 @@ def reset_tracing() -> None:
     _state.reset()
 
 
-def _get_in_memory_exporter() -> InMemorySpanExporter | None:
+def get_in_memory_exporter() -> InMemorySpanExporter | None:
     """
     获取 InMemory Exporter（测试用）.
 

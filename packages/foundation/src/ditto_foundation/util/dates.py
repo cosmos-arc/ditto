@@ -35,8 +35,10 @@ def normalize_date(value: DateInput) -> str | None:
         # 将 datetime 转换为日期字符串
         return value.strftime("%Y-%m-%d")
 
-    if isinstance(value, date):
+    # 类型收窄后，这里一定是 date 类型（不是 datetime，已在上面处理）
+    # 但仍需要运行时 isinstance 检查以捕获不支持类型
+    if isinstance(value, date):  # type: ignore[unnecessary-isinstance]
         # 格式化 date 对象
         return value.strftime("%Y-%m-%d")
 
-    raise TypeError(f"Unsupported date type: {type(value)}")
+    raise TypeError(f"Unsupported date type: {type(value)}")  # type: ignore[unreachable]

@@ -1,7 +1,7 @@
 # Pyright 类型检测全面清零优化计划
 
 **日期**: 2026-01-14
-**状态**: 进行中（批次 0 已完成）
+**状态**: 进行中（批次 0、3 已完成）
 **目标**: 彻底清零所有 pyright 错误（116 个）
 
 ---
@@ -143,9 +143,11 @@ manifests.sort(key=lambda m: cast(str, m.created_at), reverse=True)
 
 ---
 
-### 批次 3: Foundation 层清理
+### ✅ 批次 3: Foundation 层清理
 
 **目标**: 清理 foundation 模块的所有错误
+
+**状态**: 已完成（2026-01-14）
 
 **文件** (6 个):
 1. [packages/foundation/src/ditto_foundation/observability/__init__.py](../packages/foundation/src/ditto_foundation/observability/__init__.py) - 3 个错误
@@ -156,11 +158,16 @@ manifests.sort(key=lambda m: cast(str, m.created_at), reverse=True)
 6. [packages/foundation/src/ditto_foundation/util/dates.py](../packages/foundation/src/ditto_foundation/util/dates.py) - 1 个错误
 
 **修复策略**:
-- **OpenTelemetry shutdown()**: 使用批次 0 创建的 stub
-- **Private Usage**: 私有函数改为公共或移到测试辅助模块
-- **Unnecessary isinstance**: 删除
+- **OpenTelemetry stub 扩展**: 创建完整的 SDK/API 类型层次结构
+- **Private Usage → Public**: `_get_in_memory_exporter/reader` 改为公共函数
+- **类型注解**: 添加显式类型注解（如 `errors: list[str] = []`）
 
-**预期**: 消除全部 10 个错误（Foundation 层 100% 清零）
+**实际结果**: 消除全部 101 个错误（Foundation 层 100% 清零）
+
+**新增 Stub 文件**:
+- `typings/opentelemetry/sdk/trace.pyi`
+- `typings/opentelemetry/sdk/resources.pyi`
+- `typings/opentelemetry/sdk/trace/export/in_memory_span_exporter.pyi`
 
 ---
 

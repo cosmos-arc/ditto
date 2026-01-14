@@ -98,7 +98,7 @@ class AppInitializer:
     def _validate_config(self, settings: Any) -> list[str]:
         """Validate configuration."""
         # Basic validation - can be extended
-        errors = []
+        errors: list[str] = []
 
         if not settings.data_source.tushare_token:
             errors.append("TUSHARE_TOKEN not set")

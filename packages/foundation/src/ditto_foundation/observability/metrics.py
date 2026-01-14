@@ -447,7 +447,7 @@ def configure_metrics(config: ObservabilityConfig, mode: Mode) -> metrics.Meter:
         metrics.Meter: 配置好的 Meter 实例
 
     """
-    global _meter, _in_memory_reader
+    global _meter, _in_memory_reader  # noqa: PLW0603
 
     # 资源定义
     resource = Resource.create({"service.name": config.service_name})
@@ -511,13 +511,13 @@ def configure_metrics(config: ObservabilityConfig, mode: Mode) -> metrics.Meter:
 
 def reset_metrics() -> None:
     """重置 Metrics 状态（用于测试）."""
-    global _meter, _in_memory_reader
+    global _meter, _in_memory_reader  # noqa: PLW0603
 
     _meter = None
     _in_memory_reader = None
 
 
-def _get_in_memory_reader() -> InMemoryMetricReader | None:
+def get_in_memory_reader() -> InMemoryMetricReader | None:
     """
     获取 InMemory Metric Reader（测试用）.
 
