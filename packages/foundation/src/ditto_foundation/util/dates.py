@@ -36,6 +36,9 @@ def normalize_date(value: DateInput) -> str | None:
         # 将 datetime 转换为日期字符串
         return value.strftime("%Y-%m-%d")
 
-    # 类型收窄：这里一定是 date 类型（不是 datetime，已在上面处理）
-    assert_type(value, date)
-    return value.strftime("%Y-%m-%d")
+    if isinstance(value, date):  # type: ignore[unnecessary-isinstance] (necessary for runtime type safety)
+        # 类型收窄：这里一定是 date 类型（不是 datetime，已在上面处理）
+        assert_type(value, date)
+        return value.strftime("%Y-%m-%d")
+
+    raise TypeError(f"Unsupported date type: {type(value).__name__}")
