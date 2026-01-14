@@ -162,16 +162,9 @@ def dq_batch_check(
             _send_dq_alert(trade_date, all_issues)
 
         # 记录指标
-        # M 是动态指标对象，使用 getattr 来避免类型检查错误
-        dq_checks = getattr(M, "dq_batch_checks", None)
-        if dq_checks and hasattr(dq_checks, "increment"):
-            dq_checks.increment()  # type: ignore[attr-defined]
-        dq_issues = getattr(M, "dq_batch_issues", None)
-        if dq_issues and hasattr(dq_issues, "add"):
-            dq_issues.add(summary["total_issues"], {"trade_date": trade_date})  # type: ignore[attr-defined]
-        dq_alerts = getattr(M, "dq_batch_alerts", None)
-        if dq_alerts and hasattr(dq_alerts, "add"):
-            dq_alerts.add(summary["alert_count"], {"trade_date": trade_date})  # type: ignore[attr-defined]
+        M.dq_batch_checks.add(1.0, {"trade_date": trade_date})
+        M.dq_batch_issues.add(float(total_issues), {"trade_date": trade_date})
+        M.dq_batch_alerts.add(float(alert_count), {"trade_date": trade_date})
 
         return summary
     finally:

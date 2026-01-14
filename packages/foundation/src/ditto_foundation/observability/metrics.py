@@ -252,6 +252,25 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "counter",
         "description": "Total JSON bytes processed",
     },
+    # DQ 批量检查指标
+    {
+        "name": "dq_batch_checks",
+        "instrument_name": "ditto.dq.batch.checks_total",
+        "type": "counter",
+        "description": "Total DQ batch checks executed",
+    },
+    {
+        "name": "dq_batch_issues",
+        "instrument_name": "ditto.dq.batch.issues_total",
+        "type": "counter",
+        "description": "Total DQ batch issues found",
+    },
+    {
+        "name": "dq_batch_alerts",
+        "instrument_name": "ditto.dq.batch.alerts_total",
+        "type": "counter",
+        "description": "Total DQ batch alerts generated",
+    },
 ]
 
 
@@ -375,6 +394,11 @@ class M:
     json_serialize_duration: Histogram
     json_deserialize_duration: Histogram
     json_bytes_total: Counter
+
+    # DQ 批量检查指标
+    dq_batch_checks: Counter
+    dq_batch_issues: Counter
+    dq_batch_alerts: Counter
 
     @classmethod
     def setup(cls, meter: metrics.Meter) -> None:
