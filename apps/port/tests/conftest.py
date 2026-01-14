@@ -3,7 +3,6 @@
 import sqlite3
 from collections.abc import Generator
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -129,10 +128,9 @@ def fake_time(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def temp_dir() -> Generator[Path, None, None]:
+def temp_dir(tmp_path: Path) -> Path:
     """临时目录fixture（已废弃，使用 pytest 内置 tmp_path）."""
-    with TemporaryDirectory() as tmpdir:
-        yield Path(tmpdir)
+    return tmp_path
 
 
 @pytest.fixture
