@@ -130,7 +130,7 @@ def repair_holes_flow(
 
 
 @flow(name="daily-repair", description="每日修补流程")
-def daily_repair_flow(  # noqa: PLR0913
+def daily_repair_flow(
     datasets: list[str] | None = None,
     max_attempts: int = 3,
     retry_limit: int = 10,
@@ -163,8 +163,8 @@ def daily_repair_flow(  # noqa: PLR0913
     if datasets is None:
         datasets = ["etf_daily", "stock_daily", "adj_factor", "fund_adj"]
 
-    retry_results = {}
-    holes_results = {}
+    retry_results: dict[str, dict[str, object]] = {}
+    holes_results: dict[str, dict[str, object]] = {}
 
     for dataset in datasets:
         # 1. 重试失败任务
@@ -187,8 +187,14 @@ def daily_repair_flow(  # noqa: PLR0913
         holes_results[dataset] = holes_result
 
     # 汇总结果
-    total_retried = sum(r.get("retried_count", 0) for r in retry_results.values())
-    total_repaired = sum(r.get("repaired_count", 0) for r in holes_results.values())
+    from typing import cast  # noqa: PLC0415
+
+    total_retried = sum(
+        cast(int, r.get("retried_count", 0)) for r in retry_results.values()
+    )
+    total_repaired = sum(
+        cast(int, r.get("repaired_count", 0)) for r in holes_results.values()
+    )
 
     return {
         "retry_result": retry_results,

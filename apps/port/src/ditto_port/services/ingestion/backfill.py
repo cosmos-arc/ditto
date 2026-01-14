@@ -1,7 +1,7 @@
 """Backfill manager for historical data backfill operations."""
 
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING
 
 from ditto_foundation import logger
@@ -97,7 +97,7 @@ class BackfillManager:
 
         if parallel > 1:
             # 年份级并行，年内串行（避免文件锁冲突）
-            dates_by_year = defaultdict(list)
+            dates_by_year: defaultdict[str, list[str]] = defaultdict(list)
             for trade_date in trade_dates:
                 year = trade_date[:4]  # 提取年份
                 dates_by_year[year].append(trade_date)
@@ -105,7 +105,7 @@ class BackfillManager:
             with ThreadPoolExecutor(
                 max_workers=min(parallel, len(dates_by_year))
             ) as executor:
-                futures = {}
+                futures: dict[Future[IngestionResult], str] = {}
                 for _year, year_dates in dates_by_year.items():
                     # 每个年份串行处理
                     for date in year_dates:

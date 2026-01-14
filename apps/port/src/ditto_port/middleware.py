@@ -120,7 +120,7 @@ async def validation_exception_handler(
     request_id = getattr(request.state, "request_id", None)
 
     # 格式化验证错误
-    errors = []
+    errors: list[dict[str, object]] = []
     for error in exc.errors():
         errors.append(
             {

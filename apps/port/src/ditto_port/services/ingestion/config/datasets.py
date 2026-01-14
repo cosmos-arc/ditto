@@ -97,7 +97,7 @@ class DatasetConfig(BaseModel):
         description="Execution priority (lower = higher priority)",
     )
     depends_on: list[Dataset] = Field(
-        default_factory=list,
+        default_factory=lambda: [],
         description="Datasets that must complete before this one",
     )
     retry_limit: int = Field(default=3, description="Maximum retry attempts")
@@ -107,7 +107,7 @@ class DatasetConfig(BaseModel):
         description="Whether to run quality checks",
     )
     critical_fields: list[str] = Field(
-        default_factory=list,
+        default_factory=lambda: [],
         description="Critical fields for quality validation",
     )
 
@@ -122,7 +122,7 @@ class DatasetConfig(BaseModel):
 # ============ Helper Functions ============
 
 
-def create_t0_config(  # noqa: PLR0913
+def create_t0_config(
     dataset: Dataset,
     description: str,
     typical_available_time: time,

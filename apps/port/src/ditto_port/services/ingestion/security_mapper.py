@@ -68,14 +68,13 @@ def _format_date_for_sqlite(d: date | str | None) -> str:
         return "1990-01-01"
     if isinstance(d, date):
         return d.isoformat()
-    if isinstance(d, str):
-        value = d.strip()
-        if "-" in value:
-            return value
-        if len(value) == _DATE_FORMAT_COMPACT_LENGTH and value.isdigit():
-            return f"{value[:4]}-{value[4:6]}-{value[6:]}"
+    # 类型收窄: d 此时一定是 str
+    value = d.strip()
+    if "-" in value:
         return value
-    return str(d)
+    if len(value) == _DATE_FORMAT_COMPACT_LENGTH and value.isdigit():
+        return f"{value[:4]}-{value[4:6]}-{value[6:]}"
+    return value
 
 
 @dataclass(frozen=True)

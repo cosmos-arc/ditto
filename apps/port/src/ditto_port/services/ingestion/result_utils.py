@@ -62,16 +62,10 @@ def count_results(
     """
     if isinstance(results, list):
         # 处理 IngestionResult 列表
-        statuses = [r.status for r in results if r is not None and hasattr(r, "status")]
-    elif isinstance(results, dict):
-        # 处理字典类型结果
-        statuses = [
-            v.get("status")
-            for v in results.values()
-            if isinstance(v, dict) and "status" in v
-        ]
+        statuses = [r.status for r in results if hasattr(r, "status")]
     else:
-        statuses = []
+        # 处理字典类型结果
+        statuses = [v.get("status") for v in results.values() if "status" in v]
 
     # 使用 Counter 统计
     counter = Counter(statuses)
