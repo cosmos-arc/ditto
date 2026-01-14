@@ -275,8 +275,7 @@ asyncio_mode = "strict"
 addopts = [
     "-ra",
     "-v",
-    "-n",
-    "auto",
+    # "-n", "auto",  # 移除全局并行配置，改为命令级别控制（支持分层并行策略）
     "--strict-markers",
     "--strict-config",
     "--cov=packages",

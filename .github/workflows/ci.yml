@@ -124,9 +124,21 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pixi run -e dev pytest \
-            -m "not integration and not e2e and not slow" \
+          # DataHub 单元测试：并行（已验证安全）
+          pixi run -e dev pytest packages/datahub/tests/unit/ \
+            -n auto \
             --cov=packages \
+            --cov-report=xml:coverage-unit.xml \
+            --cov-report=term-missing \
+            --cov-fail-under=80 \
+            --junitxml=junit-unit.xml \
+            -v \
+            --durations=10
+
+          # Port 单元测试：有限并行（需验证）
+          pixi run -e dev pytest apps/port/tests/unit/ \
+            -m "not integration and not e2e and not slow" \
+            -n 2 \
             --cov=apps \
             --cov-report=xml:coverage-unit.xml \
             --cov-report=term-missing \

@@ -157,16 +157,35 @@ typecheck-tests = "pyright --project pyright.tests.json"
 typecheck-all = { depends-on = ["typecheck", "typecheck-tests"] }
 
 # ──────────────────────────────────────────────────────────
-# 测试
+# 测试（分层并行策略）
 # ──────────────────────────────────────────────────────────
+# 基础测试命令
 test = "pytest"
-test-unit = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q"
-test-fast = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q --tb=no -x -n0"
-test-integration = "pytest -m integration -v"
 test-pit = "pytest -m pit -v --tb=long"
+test-benchmark = "pytest -m benchmark --benchmark-only"
+
+# 分层测试命令（并行优化）
+# DataHub 单元测试：并行（已验证安全）
+test-unit-datahub = "pytest packages/datahub/tests/unit/ -n auto -v"
+
+# Port 单元测试：有限并行（需验证）
+test-unit-port = "pytest apps/port/tests/unit/ -n 2 -v"
+
+# 集成测试：串行（有 session fixtures）
+test-integration = "pytest -m integration -n 0 -v"
+
+# 快速测试：串行（开发时）
+test-fast = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q --tb=no -x"
+
+# 兼容原有命令（串行）
+test-unit = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q"
+
+# 覆盖率测试
 test-cov = "pytest --cov --cov-report=html --cov-report=term-missing"
 test-cov-xml = "pytest --cov --cov-report=xml --cov-report=term-missing --cov-fail-under=80"
-test-benchmark = "pytest -m benchmark --benchmark-only"
+
+# 完整测试：分层执行
+test-all = "pytest packages/datahub/tests/unit/ -n auto && pytest apps/port/tests/unit/ -n 2 && pytest -m integration -n 0"
 
 # ──────────────────────────────────────────────────────────
 # Pre-commit
