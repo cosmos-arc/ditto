@@ -86,15 +86,14 @@ ignore = [
     "PT011",  # pytest.raises match 参数
     "SIM105", # contextlib.suppress
     "SIM117", # 嵌套 with 语句
-    "PLC0415", # 延迟导入（业界最佳实践：避免循环依赖、延迟初始化）
 ]
 
 unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
 # 测试文件 - 最宽松
-"tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "S106", "S311", "S608", "ANN", "D"]
-"**/tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "S106", "S311", "S608", "ANN", "D"]
+"tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "S106", "S311", "S608", "ANN", "D", "PLC0415", "C901", "S105"]
+"**/tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "S106", "S311", "S608", "ANN", "D", "PLC0415", "C901", "S105"]
 "**/conftest.py" = ["ANN", "D", "PLC0415"]
 
 # 脚本文件
@@ -106,6 +105,17 @@ unfixable = []
 
 # __init__.py
 "__init__.py" = ["D104"]
+
+# 延迟初始化模式 - cached_property 避免启动时重初始化
+"packages/datahub/src/ditto_datahub/hub.py" = ["PLC0415"]
+"packages/foundation/src/ditto_foundation/config/settings.py" = ["PLC0415", "S104"]  # S104: API server default
+
+# 动态导入 - deploy.py 需要动态导入 flows 避免循环依赖
+"apps/port/src/ditto_port/jobs/flows/deploy.py" = ["PLC0415"]
+
+# 类型收窄 - assert 用于类型收窄（Type narrowing）
+"packages/datahub/src/ditto_datahub/runtime/freeze_manager.py" = ["S101"]
+"packages/datahub/src/ditto_datahub/sources/tushare/client.py" = ["S101"]
 
 # --- Ruff Formatter (格式化器) 配置 ---
 [tool.ruff.format]
