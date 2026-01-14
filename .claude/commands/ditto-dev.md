@@ -36,7 +36,6 @@ $ARGUMENTS（计划文件路径，默认取 `docs/plans/` 最新）
 ```
 
 ### 3. 任务完成后（每个）
-- 运行 pre-commit
 - 更新 docs/plans 下当前规划内的任务项（标记 `[x]`）
 - Git 提交（原子粒度，描述清晰）
 

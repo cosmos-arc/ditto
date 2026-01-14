@@ -51,11 +51,11 @@ def main() -> int:
 
     # 用 pixi task 替代 ruff
     # 参数会自动追加到任务命令末尾：pixi run format <file>  => ruff format <file>
-    rc = run(["pixi", "run", "format", str(p)], cwd=project_dir)
+    # 先修复，再格式化
+    rc = run(["pixi", "run", "-e", "dev", "lint-fix-staged", str(p)], cwd=project_dir)
     if rc != 0:
         return rc
-
-    rc = run(["pixi", "run", "lint-fix", str(p)], cwd=project_dir)
+    rc = run(["pixi", "run", "-e", "dev", "format-staged", str(p)], cwd=project_dir)
     return rc
 
 

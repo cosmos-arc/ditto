@@ -25,18 +25,16 @@ def main() -> int:
     """执行代码质量检查流程。"""
     project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()  # noqa: PTH109
 
-    # 全量 lint（不 fix）
-    rc = run(["pixi", "run", "lint"], cwd=project_dir)
+    rc = run(["pixi", "run", "-e", "dev", "lint"], cwd=project_dir)
     if rc != 0:
         return rc
-
-    # 生产代码类型检查（warning 也算失败）
-    rc = run(["pixi", "run", "typecheck"], cwd=project_dir)
+    rc = run(["pixi", "run", "-e", "dev", "format-check"], cwd=project_dir)
     if rc != 0:
         return rc
-
-    # tests 类型检查（不强制清 0 就别在 task 里放 --warnings）
-    rc = run(["pixi", "run", "typecheck-tests"], cwd=project_dir)
+    rc = run(["pixi", "run", "-e", "dev", "typecheck"], cwd=project_dir)
+    if rc != 0:
+        return rc
+    rc = run(["pixi", "run", "-e", "dev", "typecheck-tests"], cwd=project_dir)
     return rc
 
 

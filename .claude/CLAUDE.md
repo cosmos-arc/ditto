@@ -51,22 +51,6 @@
 - 文件读写改操作使用 Bash 命令
 - 绕过或忽略 pyright、ruff、precommit 检测
 
-## 类型检查规范
-
-### 禁止新增 type: ignore
-
-除非满足以下条件之一：
-1. 第三方库类型 stub 不完整
-2. 跨平台兼容（如 Windows-only 属性）
-3. 动态方法调用且无法重构
-
-### Type Ignore 注释规范
-
-必须添加理由注释：
-```python
-return self._local.conn  # type: ignore[no-any-return] - threading.local 内部 Any 类型
-```
-
 ## 项目架构
 
 ```
@@ -95,7 +79,7 @@ ditto/
 
 | 任务类型 | 工作流 |
 |----------|--------|
-| 新功能 | plan → TDD → pre-commit-run → 文档 |
+| 新功能 | plan → TDD → 文档 |
 | 修改 DQ | 编辑 YAML → pytest → 更新 design doc |
 | 数据摄入 | 查游标 → 查日志 → 修复 → 重试 |
 | API 路由 | Pydantic Model → @app.get → 测试 |
