@@ -183,17 +183,8 @@ rm -rf dist/ build/ *.egg-info \
 """
 
 # ──────────────────────────────────────────────────────────
-# Pre-commit（保留兼容）
+# Pre-commit 工具
 # ──────────────────────────────────────────────────────────
 pre-commit-install = "pre-commit install --hook-type commit-msg --hook-type pre-commit --hook-type pre-push"
 pre-commit-run = "pre-commit run --all-files"
 pre-commit-update = "pre-commit autoupdate"
-
-# ──────────────────────────────────────────────────────────
-# 特殊测试
-# ──────────────────────────────────────────────────────────
-# PIT 测试：专门的 PIT 模式测试
-test-pit = "pytest -m pit -v --tb=long"
-
-# Benchmark：基准测试
-test-benchmark = "pytest -m benchmark --benchmark-only"
