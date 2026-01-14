@@ -169,7 +169,7 @@ test-benchmark = "pytest -m benchmark --benchmark-only"
 test-unit-datahub = "pytest packages/datahub/tests/unit/ -n auto -v"
 
 # Port 单元测试：有限并行（需验证）
-test-unit-port = "pytest apps/port/tests/unit/ -n 2 -v"
+test-unit-port = "pytest apps/port/tests/unit/ -n auto -v"
 
 # 集成测试：串行（有 session fixtures）
 test-integration = "pytest -m integration -n 0 -v"

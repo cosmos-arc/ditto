@@ -62,6 +62,13 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
             source="tushare",
         )
 
+    # 检查 data 字段类型
+    if not isinstance(data_value, dict):
+        raise SourceFetchError(
+            message="响应 data 字段类型错误",
+            source="tushare",
+        )
+
     data = cast(dict[str, Any], data_value)
     return data
 
