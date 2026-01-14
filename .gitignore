@@ -139,7 +139,7 @@ tmpclaude-*-cwd
 .env
 .env.*
 !.env.example
-!,.env.template
+!.env.template
 config.local.py
 local.settings.json
 
