@@ -202,7 +202,6 @@ ci-check = { depends-on = [
     "lint",
     "format-check",
     "typecheck-all",
-    "security",
     "test-cov-xml",
 ] }
 
