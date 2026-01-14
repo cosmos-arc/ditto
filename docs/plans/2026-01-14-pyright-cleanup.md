@@ -1,7 +1,7 @@
 # Pyright 类型检测全面清零优化计划
 
 **日期**: 2026-01-14
-**状态**: 进行中（批次 0、1、2、3 已完成）
+**状态**: ✅ 已完成（所有批次完成）
 **目标**: 彻底清零所有 pyright 错误（116 个）
 
 ---
@@ -181,9 +181,11 @@ manifests.sort(key=lambda m: cast(str, m.created_at), reverse=True)
 
 ---
 
-### 批次 4: Port 应用层清理
+### ✅ 批次 4: Port 应用层清理
 
 **目标**: 清理 apps/port 的所有错误
+
+**状态**: 已完成（2026-01-14）
 
 **文件** (8 个):
 1. [apps/port/src/ditto_port/jobs/flows/daily.py](../apps/port/src/ditto_port/jobs/flows/daily.py)
@@ -218,11 +220,23 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 **预期**: 消除全部 33 个错误（Port 层 100% 清零）
 
+**实际结果**: 消除全部 33 个错误（Port 层 100% 清零）
+
+**Commits**:
+- `13e055d` feat(batch-4/5): Port 层 pyright 错误清零并全面验证
+
 ---
 
-### 批次 5: 验证与收尾
+### ✅ 批次 5: 验证与收尾
 
 **目标**: 全面验证，确保所有模块清零
+
+**状态**: 已完成（2026-01-14）
+
+**验证结果**:
+- ✅ 完整 pyright 检查通过: `0 errors, 0 warnings, 0 informations`
+- ✅ 所有模块 100% 清零（DataHub、Foundation、Port）
+- ✅ 原始 116 个错误全部消除
 
 **验证命令**:
 ```bash
