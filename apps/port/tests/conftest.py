@@ -128,12 +128,6 @@ def fake_time(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def temp_dir(tmp_path: Path) -> Path:
-    """临时目录fixture（已废弃，使用 pytest 内置 tmp_path）."""
-    return tmp_path
-
-
-@pytest.fixture
 def test_settings(tmp_path: Path) -> Settings:
     """测试配置fixture.
 
