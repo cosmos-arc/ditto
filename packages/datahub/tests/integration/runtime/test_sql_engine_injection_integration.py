@@ -44,12 +44,12 @@ class TestSqlEngineInjection:
         try:
             if hasattr(self, "engine"):
                 self.engine.close()
-        except Exception:
+        except Exception:  # noqa: S110
             pass
         try:
             if hasattr(self, "pool"):
                 self.pool.close()
-        except Exception:
+        except Exception:  # noqa: S110
             pass
         self.temp_dir.cleanup()
 

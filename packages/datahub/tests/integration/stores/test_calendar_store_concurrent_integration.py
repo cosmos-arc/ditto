@@ -393,5 +393,5 @@ class TestCalendarStoreConcurrent:
         # Clean up temporary database file
         try:
             pathlib.Path(self.db_path).unlink(missing_ok=True)
-        except Exception:
+        except Exception:  # noqa: S110
             pass

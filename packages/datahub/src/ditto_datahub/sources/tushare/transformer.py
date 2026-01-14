@@ -294,8 +294,8 @@ class TushareDataTransformer:
             root_names = expr.meta.root_names()
             if len(root_names) == 1:
                 return column_types.get(root_names[0], pl.String)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to infer column type from expression", error=str(e))
         return pl.String
 
     @staticmethod

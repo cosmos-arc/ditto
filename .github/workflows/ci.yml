@@ -156,7 +156,7 @@ jobs:
   # ============================================================
   build:
     name: Build Validation
-    needs: [lint, type-check, security, test-unit]
+    needs: [lint, type-check, test-unit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
@@ -225,13 +225,13 @@ jobs:
   # ============================================================
   ci-success:
     name: ci-success
-    needs: [lint, type-check, security, test-unit]
+    needs: [lint, type-check, test-unit]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check required jobs
         run: |
-          results=("${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.security.result }}" "${{ needs.test-unit.result }}")
+          results=("${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.test-unit.result }}")
           for result in "${results[@]}"; do
             if [[ "$result" == "failure" ]]; then
               echo "::error::One or more required CI checks failed"

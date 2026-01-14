@@ -104,7 +104,7 @@ class TestDataHub:
         try:
             if hasattr(self, "hub"):
                 self.hub.close()
-        except Exception:
+        except Exception:  # noqa: S110
             pass
         # Force garbage collection to release SQLite file handles on Windows
         gc.collect()

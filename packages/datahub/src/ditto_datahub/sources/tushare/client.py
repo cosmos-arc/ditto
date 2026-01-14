@@ -72,9 +72,9 @@ def _get_tushare_token(token: str | None = None) -> str:
                 source="keyring",
             )
             return keyring_token
-    except Exception:
-        # keyring may not be available or configured, silently continue
-        pass
+    except Exception as e:
+        # keyring may not be available or configured
+        logger.debug("Keyring not available, skipping", error=str(e))
 
     # 3. Try ~/.ditto/secrets.toml (fallback)
     config_file = Path.home() / ".ditto" / "secrets.toml"
@@ -89,8 +89,8 @@ def _get_tushare_token(token: str | None = None) -> str:
                     source="secrets.toml",
                 )
                 return config_token
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to load secrets.toml", error=str(e))
 
     # No token found
     raise SourceConfigurationError(

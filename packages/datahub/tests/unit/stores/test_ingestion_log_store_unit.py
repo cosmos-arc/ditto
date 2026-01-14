@@ -2,7 +2,7 @@
 
 import pytest
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
-from ditto_datahub.sources.metadata import IngestionStatus
+from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
@@ -30,12 +30,14 @@ class TestIngestionLogStore:
     def test_save_log_success(self) -> None:
         """Test saving successful ingestion log."""
         log = self.store.save_log(
-            dataset="test_dataset",
-            source="tushare",
-            trade_date="2024-01-01",
-            status=IngestionStatus.SUCCESS,
-            checksum="abc123",
-            rows=1000,
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.SUCCESS,
+                checksum="abc123",
+                rows=1000,
+            )
         )
 
         assert log.dataset == "test_dataset"
@@ -51,12 +53,14 @@ class TestIngestionLogStore:
     def test_save_log_failure(self) -> None:
         """Test saving failed ingestion log."""
         log = self.store.save_log(
-            dataset="test_dataset",
-            source="tushare",
-            trade_date="2024-01-01",
-            status=IngestionStatus.FAIL,
-            error_code="NETWORK_ERROR",
-            error_message="Connection failed",
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+                error_code="NETWORK_ERROR",
+                error_message="Connection failed",
+            )
         )
 
         assert log.status == IngestionStatus.FAIL
@@ -68,21 +72,25 @@ class TestIngestionLogStore:
         """Test updating existing log record."""
         # First save
         log1 = self.store.save_log(
-            dataset="test_dataset",
-            source="tushare",
-            trade_date="2024-01-01",
-            status=IngestionStatus.FAIL,
-            error_code="ERROR1",
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+                error_code="ERROR1",
+            )
         )
 
         # Update with new status (error_code becomes None for success)
         log2 = self.store.save_log(
-            dataset="test_dataset",
-            source="tushare",
-            trade_date="2024-01-01",
-            status=IngestionStatus.SUCCESS,
-            checksum="abc123",
-            rows=1000,
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.SUCCESS,
+                checksum="abc123",
+                rows=1000,
+            )
         )
 
         # Verify attempts incremented
@@ -99,30 +107,36 @@ class TestIngestionLogStore:
         """Test multiple retry attempts."""
         # First attempt
         log1 = self.store.save_log(
-            dataset="test_dataset",
-            source="tushare",
-            trade_date="2024-01-01",
-            status=IngestionStatus.FAIL,
-            error_code="ERROR1",
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+                error_code="ERROR1",
+            )
         )
 
         # Second attempt
         log2 = self.store.save_log(
-            dataset="test_dataset",
-            source="tushare",
-            trade_date="2024-01-01",
-            status=IngestionStatus.FAIL,
-            error_code="ERROR2",
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+                error_code="ERROR2",
+            )
         )
 
         # Third attempt - success
         log3 = self.store.save_log(
-            dataset="test_dataset",
-            source="tushare",
-            trade_date="2024-01-01",
-            status=IngestionStatus.SUCCESS,
-            checksum="final",
-            rows=1000,
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.SUCCESS,
+                checksum="final",
+                rows=1000,
+            )
         )
 
         assert log1.attempts == 1
@@ -135,12 +149,14 @@ class TestIngestionLogStore:
         """Test getting ingestion log."""
         # Save a log
         self.store.save_log(
-            dataset="test_dataset",
-            source="tushare",
-            trade_date="2024-01-01",
-            status=IngestionStatus.SUCCESS,
-            checksum="abc123",
-            rows=1000,
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.SUCCESS,
+                checksum="abc123",
+                rows=1000,
+            )
         )
 
         # Retrieve it

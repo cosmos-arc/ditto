@@ -492,7 +492,7 @@ class SecurityStore:
 
         return df.join(symbol_df, on="sid", how="left")
 
-    def register(
+    def register(  # noqa: PLR0913
         self,
         sid: int,
         source: str,

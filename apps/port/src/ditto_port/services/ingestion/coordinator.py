@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal, cast
 import polars as pl
 from ditto_datahub.repositories.bars import WriteResult
 from ditto_datahub.sources.base import DataSource, SourceFetchError
-from ditto_datahub.sources.metadata import IngestionStatus
+from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_datahub.types import OnDuplicate
 from ditto_foundation import logger
 
@@ -118,12 +118,14 @@ class IngestionCoordinator:
             df = self._fetch_data(dataset, trade_date)
         except SourceFetchError as e:
             self._hub.ingestion_log.save_log(
-                dataset=dataset,
-                source=self._source_name,
-                trade_date=trade_date,
-                status=IngestionStatus.FAIL,
-                error_code="FETCH_ERROR",
-                error_message=str(e),
+                IngestionLog(
+                    dataset=dataset,
+                    source=self._source_name,
+                    trade_date=trade_date,
+                    status=IngestionStatus.FAIL,
+                    error_code="FETCH_ERROR",
+                    error_message=str(e),
+                )
             )
             return IngestionResult(
                 dataset=dataset,
@@ -134,12 +136,14 @@ class IngestionCoordinator:
             )
         except Exception as e:
             self._hub.ingestion_log.save_log(
-                dataset=dataset,
-                source=self._source_name,
-                trade_date=trade_date,
-                status=IngestionStatus.FAIL,
-                error_code="UNKNOWN_ERROR",
-                error_message=f"{type(e).__name__}: {e}",
+                IngestionLog(
+                    dataset=dataset,
+                    source=self._source_name,
+                    trade_date=trade_date,
+                    status=IngestionStatus.FAIL,
+                    error_code="UNKNOWN_ERROR",
+                    error_message=f"{type(e).__name__}: {e}",
+                )
             )
             return IngestionResult(
                 dataset=dataset,
@@ -151,12 +155,14 @@ class IngestionCoordinator:
 
         if df.is_empty():
             self._hub.ingestion_log.save_log(
-                dataset=dataset,
-                source=self._source_name,
-                trade_date=trade_date,
-                status=IngestionStatus.FAIL,
-                error_code="EMPTY_DATA",
-                error_message="获取的数据为空",
+                IngestionLog(
+                    dataset=dataset,
+                    source=self._source_name,
+                    trade_date=trade_date,
+                    status=IngestionStatus.FAIL,
+                    error_code="EMPTY_DATA",
+                    error_message="获取的数据为空",
+                )
             )
             return IngestionResult(
                 dataset=dataset,
@@ -175,12 +181,14 @@ class IngestionCoordinator:
             write_result = self._write_data(dataset, df, trade_date, on_duplicate)
         except Exception as e:
             self._hub.ingestion_log.save_log(
-                dataset=dataset,
-                source=self._source_name,
-                trade_date=trade_date,
-                status=IngestionStatus.FAIL,
-                error_code="WRITE_ERROR",
-                error_message=str(e),
+                IngestionLog(
+                    dataset=dataset,
+                    source=self._source_name,
+                    trade_date=trade_date,
+                    status=IngestionStatus.FAIL,
+                    error_code="WRITE_ERROR",
+                    error_message=str(e),
+                )
             )
             return IngestionResult(
                 dataset=dataset,
@@ -196,12 +204,14 @@ class IngestionCoordinator:
                 write_result.dq_result.error_count if write_result.dq_result else 0
             )
             self._hub.ingestion_log.save_log(
-                dataset=dataset,
-                source=self._source_name,
-                trade_date=trade_date,
-                status=IngestionStatus.FAIL,
-                error_code="DQ_BLOCKED",
-                error_message=f"DQ L1 check failed: {error_count} errors",
+                IngestionLog(
+                    dataset=dataset,
+                    source=self._source_name,
+                    trade_date=trade_date,
+                    status=IngestionStatus.FAIL,
+                    error_code="DQ_BLOCKED",
+                    error_message=f"DQ L1 check failed: {error_count} errors",
+                )
             )
 
             return IngestionResult(
@@ -215,12 +225,14 @@ class IngestionCoordinator:
             )
 
         self._hub.ingestion_log.save_log(
-            dataset=dataset,
-            source=self._source_name,
-            trade_date=trade_date,
-            status=IngestionStatus.SUCCESS,
-            checksum=write_result.checksum or checksum,
-            rows=len(df),
+            IngestionLog(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.SUCCESS,
+                checksum=write_result.checksum or checksum,
+                rows=len(df),
+            )
         )
 
         return IngestionResult(

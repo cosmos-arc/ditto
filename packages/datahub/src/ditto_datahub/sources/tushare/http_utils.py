@@ -90,14 +90,18 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
                 source="tushare",
             )
 
-        if status_code == 429:
+        # HTTP 状态码常量
+        _HTTP_RATE_LIMIT = 429
+        _HTTP_SERVER_ERROR = 500
+
+        if status_code == _HTTP_RATE_LIMIT:
             raise SourceRateLimitError(
                 message=f"Tushare API 限流 (API: {api_name})",
                 source="tushare",
             )
 
         # 5xx 服务器错误
-        if status_code >= 500:
+        if status_code >= _HTTP_SERVER_ERROR:
             raise SourceFetchError(
                 message=f"Tushare API 服务器错误 (API: {api_name})",
                 source="tushare",

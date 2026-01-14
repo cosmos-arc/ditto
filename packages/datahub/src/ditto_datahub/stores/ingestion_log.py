@@ -72,40 +72,23 @@ class IngestionLogStore:
             event="ingestion_log_table_created",
         )
 
-    def save_log(
-        self,
-        dataset: str,
-        source: str,
-        trade_date: str,
-        status: IngestionStatus,
-        checksum: str | None = None,
-        rows: int | None = None,
-        error_code: str | None = None,
-        error_message: str | None = None,
-    ) -> IngestionLog:
+    def save_log(self, log: IngestionLog) -> IngestionLog:
         """
         Save or update ingestion log record (UPSERT).
 
         If record exists, increments attempts and updates last_attempt_at.
 
         Args:
-            dataset: Dataset name (e.g., "stock_daily")
-            source: Data source identifier (e.g., "tushare")
-            trade_date: Trade date (YYYY-MM-DD)
-            status: Current status (SUCCESS or FAIL)
-            checksum: Data checksum (only when SUCCESS)
-            rows: Number of rows (only when SUCCESS)
-            error_code: Error code (only when FAIL)
-            error_message: Error message (only when FAIL)
+            log: IngestionLog object to save.
 
         Returns:
-            The saved IngestionLog.
+            The saved IngestionLog with updated timestamps and attempts.
 
         """
         now = datetime.now().isoformat()
 
         # Check if record exists
-        existing = self.get_log(dataset, source, trade_date)
+        existing = self.get_log(log.dataset, log.source, log.trade_date)
 
         if existing:
             # Update existing record
@@ -124,27 +107,27 @@ class IngestionLogStore:
             self._client.execute(
                 sql,
                 [
-                    status.value,
-                    checksum,
-                    rows,
-                    error_code,
-                    error_message,
+                    log.status.value,
+                    log.checksum,
+                    log.rows,
+                    log.error_code,
+                    log.error_message,
                     new_attempts,
                     now,
-                    dataset,
-                    source,
-                    trade_date,
+                    log.dataset,
+                    log.source,
+                    log.trade_date,
                 ],
             )
-            log = IngestionLog(
-                dataset=dataset,
-                source=source,
-                trade_date=trade_date,
-                status=status,
-                checksum=checksum,
-                rows=rows,
-                error_code=error_code,
-                error_message=error_message,
+            result = IngestionLog(
+                dataset=log.dataset,
+                source=log.source,
+                trade_date=log.trade_date,
+                status=log.status,
+                checksum=log.checksum,
+                rows=log.rows,
+                error_code=log.error_code,
+                error_message=log.error_message,
                 attempts=new_attempts,
                 first_attempt_at=existing.first_attempt_at,
                 last_attempt_at=now,
@@ -160,28 +143,28 @@ class IngestionLogStore:
             self._client.execute(
                 sql,
                 [
-                    dataset,
-                    source,
-                    trade_date,
-                    status.value,
-                    checksum,
-                    rows,
-                    error_code,
-                    error_message,
+                    log.dataset,
+                    log.source,
+                    log.trade_date,
+                    log.status.value,
+                    log.checksum,
+                    log.rows,
+                    log.error_code,
+                    log.error_message,
                     1,
                     now,
                     now,
                 ],
             )
-            log = IngestionLog(
-                dataset=dataset,
-                source=source,
-                trade_date=trade_date,
-                status=status,
-                checksum=checksum,
-                rows=rows,
-                error_code=error_code,
-                error_message=error_message,
+            result = IngestionLog(
+                dataset=log.dataset,
+                source=log.source,
+                trade_date=log.trade_date,
+                status=log.status,
+                checksum=log.checksum,
+                rows=log.rows,
+                error_code=log.error_code,
+                error_message=log.error_message,
                 attempts=1,
                 first_attempt_at=now,
                 last_attempt_at=now,
@@ -192,14 +175,14 @@ class IngestionLogStore:
         logger.debug(
             "Ingestion log saved",
             event="ingestion_log_saved",
-            dataset=dataset,
-            source=source,
-            trade_date=trade_date,
-            status=status.value,
-            attempts=log.attempts,
+            dataset=log.dataset,
+            source=log.source,
+            trade_date=log.trade_date,
+            status=log.status.value,
+            attempts=result.attempts,
         )
 
-        return log
+        return result
 
     def get_log(
         self,

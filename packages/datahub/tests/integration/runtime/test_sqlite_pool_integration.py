@@ -21,7 +21,7 @@ class TestSQLitePool:
         try:
             if hasattr(self, "pool"):
                 self.pool.close()
-        except Exception:
+        except Exception:  # noqa: S110
             pass
         self.temp_dir.cleanup()
 

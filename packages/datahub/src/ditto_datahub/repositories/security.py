@@ -227,7 +227,7 @@ class SecurityRepository:
         return self._security_store.get_src_code(sid, source, asof)
 
     @traced("repository.security.register")
-    def register(
+    def register(  # noqa: PLR0913
         self,
         src_code: str,
         symbol: str,

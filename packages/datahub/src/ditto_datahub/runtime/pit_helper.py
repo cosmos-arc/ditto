@@ -167,8 +167,9 @@ class PitHelper:
 
         # 提取右表别名
         # right_table 格式: "table_name alias" 或 "table_name alias"
+        _MIN_TABLE_PARTS = 2
         parts = right_table.strip().split()
-        right_alias = parts[-1] if len(parts) >= 2 else right_table
+        right_alias = parts[-1] if len(parts) >= _MIN_TABLE_PARTS else right_table
 
         # 添加 PIT 条件（使用指定的 date_column）
         return (

@@ -274,11 +274,16 @@ class SqlEngine:
         M.sql_slow_query_total.add(1)
 
         # 记录日志
+        _QUERY_PREVIEW_LENGTH = 200
+        if len(query) > _QUERY_PREVIEW_LENGTH:
+            _preview = query[:_QUERY_PREVIEW_LENGTH]
+        else:
+            _preview = query
         logger.warning(
             "Slow query detected",
             event="sql_slow_query",
             duration_seconds=duration,
-            query_preview=query[:200] if len(query) > 200 else query,
+            query_preview=_preview,
         )
 
     def _needs_sqlite(self, query: str) -> bool:
