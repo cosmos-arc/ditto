@@ -152,7 +152,7 @@ pixi run -e dev pytest -m integration  # 集成测试
 
 | Skill | 使用时机 | 强制级别 |
 |-------|---------|---------|
-| `python-development:python-pro` | Python 3.11+ 现代/async/性能优化 | ⭐⭐⭐ 必须 |
+| `python-development:python-pro` | Python 3.12+ 现代/async/性能优化 | ⭐⭐⭐ 必须 |
 | `python-development:python-testing-patterns` | 写 Python 测试，设置测试套件 | ⭐⭐⭐ 必须 |
 | `python-development:python-performance-optimization` | 调试慢代码，优化瓶颈 | ⭐⭐ 主动使用 |
 | `python-development:async-python-patterns` | 构建 async API，并发系统 | ⭐⭐ 主动使用 |

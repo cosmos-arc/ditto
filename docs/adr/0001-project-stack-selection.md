@@ -18,7 +18,7 @@ Building a quantitative trading system requires careful technology selection. Th
 We selected the following technology stack:
 
 ### Core Languages & Frameworks
-- **Python 3.11+**: Primary language for codebase
+- **Python 3.12+**: Primary language for codebase
 - **TypeScript/Next.js**: Web UI (future)
 
 ### Data Processing

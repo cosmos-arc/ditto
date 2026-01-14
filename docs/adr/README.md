@@ -15,7 +15,7 @@ ADR 记录项目中的重要架构决策，每个 ADR 包含：
 | 编号 | 标题 | 状态 | 日期 | 概要 |
 |------|------|------|------|------|
 | [0000](0000-use-adrs.md) | 使用 ADR 记录架构决策 | Accepted | 2024-01-01 | 说明 ADR 的目的、模板和用法 |
-| [0001](0001-project-stack-selection.md) | 项目技术栈选择 | Accepted | 2024-01-01 | 选择 Python 3.11+、Polars、FastAPI、Prefect 等技术栈 |
+| [0001](0001-project-stack-selection.md) | 项目技术栈选择 | Accepted | 2024-01-01 | 选择 Python 3.12+、Polars、FastAPI、Prefect 等技术栈 |
 | [0002](0002-monorepo-structure.md) | Monorepo 结构 | Accepted | 2024-01-01 | 采用 monorepo + packages 分离的代码组织结构 |
 | [0003](0003-data-storage-strategy.md) | 数据存储策略 | Accepted | 2024-01-01 | 混合存储：Parquet（时序数据）+ SQLite（元数据）+ DuckDB（分析查询） |
 

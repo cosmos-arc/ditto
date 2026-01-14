@@ -46,7 +46,7 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
 
 ### 环境要求
 
-- Python 3.11+
+- Python 3.12+
 - Pixi (包管理器)
 - Windows/Linux/macOS
 

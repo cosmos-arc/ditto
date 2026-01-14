@@ -268,7 +268,7 @@ exclude = [
 # 它尤其擅长处理需要插件的库（如 Pydantic, Django）。
 # ===================================================================
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 # 启用所有严格模式检查，与 Pyright 保持一致，确保最终检查的可靠性。
 strict = true
 
@@ -342,7 +342,23 @@ ignore_missing_imports = true
 module = ["tests.*", "*.tests.*"]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
-disable_error_code = ["index", "operator", "attr-defined", "typeddict-unknown-key", "type-arg", "union-attr", "method-assign", "arg-type", "no-any-return", "str-bytes-safe", "abstract", "return-value", "list-item", "var-annotated", "unused-ignore"]
+disable_error_code = [
+    "index",
+    "operator",
+    "attr-defined",
+    "typeddict-unknown-key",
+    "type-arg",
+    "union-attr",
+    "method-assign",
+    "arg-type",
+    "no-any-return",
+    "str-bytes-safe",
+    "abstract",
+    "return-value",
+    "list-item",
+    "var-annotated",
+    "unused-ignore",
+]
 
 [[tool.mypy.overrides]]
 module = "scripts.*"
@@ -394,9 +410,10 @@ asyncio_mode = "strict"
 
 # 命令行附加选项，用于增强测试流程。
 addopts = [
-    "-ra", # 显示除"通过"之外所有测试的详细摘要
-    "-v",  # 显示详细输出
-    "-n", "auto",                # 使用所有可用 CPU 核心并行测试，需要 pytest-xdist
+    "-ra",                       # 显示除"通过"之外所有测试的详细摘要
+    "-v",                        # 显示详细输出
+    "-n",
+    "auto",                      # 使用所有可用 CPU 核心并行测试，需要 pytest-xdist
     "--strict-markers",          # 对未在配置中注册的 marker 标记报错
     "--strict-config",           # 对配置文件中的拼写错误或无效键报错
     "--cov=packages",            # 指定计算代码覆盖率的目录
