@@ -99,7 +99,9 @@ unfixable = []
 # 脚本文件
 "scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN"]
 "**/cli.py" = ["T201"]
+"**/cli/*.py" = ["T201"]
 "**/main.py" = ["T201"]
+"**/examples/**/*.py" = ["T201"]
 
 # __init__.py
 "__init__.py" = ["D104"]
