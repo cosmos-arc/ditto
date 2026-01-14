@@ -181,28 +181,39 @@ class TestIngestionLogStore:
         """Test getting failed trade dates."""
         # Insert some failed logs
         self.store.save_log(
-            "test_dataset",
-            "tushare",
-            "2024-01-01",
-            IngestionStatus.FAIL,
-            error_code="E1",
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+                error_code="E1",
+            )
         )
         self.store.save_log(
-            "test_dataset",
-            "tushare",
-            "2024-01-02",
-            IngestionStatus.FAIL,
-            error_code="E2",
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.FAIL,
+                error_code="E2",
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-03", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-03",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset",
-            "tushare",
-            "2024-01-04",
-            IngestionStatus.FAIL,
-            error_code="E3",
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-04",
+                status=IngestionStatus.FAIL,
+                error_code="E3",
+            )
         )
 
         # Get failed dates
@@ -220,17 +231,37 @@ class TestIngestionLogStore:
         """Test getting failed dates filtered by max attempts."""
         # Insert logs with different attempt counts
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+            )
         )  # 2 attempts
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+            )
         )  # 3 attempts
 
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-02", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.FAIL,
+            )
         )
 
         # Get failed dates with max_attempts=2
@@ -247,7 +278,12 @@ class TestIngestionLogStore:
         # Insert multiple failed logs
         for i in range(5):
             self.store.save_log(
-                "test_dataset", "tushare", f"2024-01-0{i + 1}", IngestionStatus.FAIL
+                IngestionLog(
+                    dataset="test_dataset",
+                    source="tushare",
+                    trade_date=f"2024-01-0{i + 1}",
+                    status=IngestionStatus.FAIL,
+                )
             )
 
         # Get with limit
@@ -261,19 +297,44 @@ class TestIngestionLogStore:
         """Test calculating success rate."""
         # Insert mixed logs
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-02", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-03", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-03",
+                status=IngestionStatus.FAIL,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-04", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-04",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-05", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-05",
+                status=IngestionStatus.FAIL,
+            )
         )
 
         # Get success rate
@@ -286,16 +347,36 @@ class TestIngestionLogStore:
         """Test calculating success rate with start date filter."""
         # Insert logs for different dates
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-02", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.FAIL,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-03", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-03",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-04", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-04",
+                status=IngestionStatus.SUCCESS,
+            )
         )
 
         # Get success rate from 2024-01-03 onwards
@@ -315,19 +396,44 @@ class TestIngestionLogStore:
         """Test getting ingestion statistics."""
         # Insert mixed logs
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-02", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-03", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-03",
+                status=IngestionStatus.FAIL,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-04", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-04",
+                status=IngestionStatus.FAIL,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-05", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-05",
+                status=IngestionStatus.SUCCESS,
+            )
         )
 
         # Get stats
@@ -349,13 +455,28 @@ class TestIngestionLogStore:
         """Test getting all ingested dates."""
         # Insert logs
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-02", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.FAIL,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-03", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-03",
+                status=IngestionStatus.SUCCESS,
+            )
         )
 
         # Get all dates
@@ -370,16 +491,36 @@ class TestIngestionLogStore:
         """Test getting ingested dates filtered by status."""
         # Insert mixed logs
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-02", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.FAIL,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-03", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-03",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-04", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-04",
+                status=IngestionStatus.FAIL,
+            )
         )
 
         # Get only successful dates
@@ -404,19 +545,44 @@ class TestIngestionLogStore:
         """Test that ingested dates are ordered ASC."""
         # Insert logs in random order
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-05", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-05",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-02", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-04", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-04",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-03", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-03",
+                status=IngestionStatus.SUCCESS,
+            )
         )
 
         # Get dates - should be ordered ASC
@@ -434,21 +600,30 @@ class TestIngestionLogStore:
         """Test getting failed ingestion logs."""
         # Insert failed logs
         self.store.save_log(
-            "test_dataset",
-            "tushare",
-            "2024-01-01",
-            IngestionStatus.FAIL,
-            error_code="E1",
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+                error_code="E1",
+            )
         )
         self.store.save_log(
-            "test_dataset",
-            "tushare",
-            "2024-01-02",
-            IngestionStatus.FAIL,
-            error_code="E2",
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.FAIL,
+                error_code="E2",
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-03", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-03",
+                status=IngestionStatus.SUCCESS,
+            )
         )
 
         # Get failed logs
@@ -465,13 +640,28 @@ class TestIngestionLogStore:
         """Test getting failed logs filtered by max attempts."""
         # Insert log with multiple attempts
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+            )
         )  # 2 attempts
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+            )
         )  # 3 attempts
 
         # Get failed logs with max_attempts=2
@@ -487,7 +677,12 @@ class TestIngestionLogStore:
         # Insert multiple failed logs
         for i in range(5):
             self.store.save_log(
-                "test_dataset", "tushare", f"2024-01-0{i + 1}", IngestionStatus.FAIL
+                IngestionLog(
+                    dataset="test_dataset",
+                    source="tushare",
+                    trade_date=f"2024-01-0{i + 1}",
+                    status=IngestionStatus.FAIL,
+                )
             )
 
         # Get with limit
@@ -501,13 +696,28 @@ class TestIngestionLogStore:
         """Test handling logs from different sources."""
         # Insert logs from different sources
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "eastmoney", "2024-01-01", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="eastmoney",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-02", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.SUCCESS,
+            )
         )
 
         # Get tushare logs
@@ -526,19 +736,44 @@ class TestIngestionLogStore:
         """Test getting last successful trade date."""
         # Insert logs with different dates and statuses
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-02", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.FAIL,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-03", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-03",
+                status=IngestionStatus.SUCCESS,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-04", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-04",
+                status=IngestionStatus.FAIL,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-05", IngestionStatus.SUCCESS
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-05",
+                status=IngestionStatus.SUCCESS,
+            )
         )
 
         # Get last success date
@@ -560,10 +795,20 @@ class TestIngestionLogStore:
         """Test getting last success date when only FAIL records exist."""
         # Insert only FAIL logs
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-01", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-01",
+                status=IngestionStatus.FAIL,
+            )
         )
         self.store.save_log(
-            "test_dataset", "tushare", "2024-01-02", IngestionStatus.FAIL
+            IngestionLog(
+                dataset="test_dataset",
+                source="tushare",
+                trade_date="2024-01-02",
+                status=IngestionStatus.FAIL,
+            )
         )
 
         # Get last success date
