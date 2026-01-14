@@ -171,9 +171,7 @@ def main() -> None:
         if command == "list":
             # 列出所有 flows
             flows = list_flows()
-            print("可用的 Flows:")
-            for name, description in flows.items():
-                print(f"  - {name}: {description}")
+            logger.info("Available flows", flows=list(flows.items()))
             return
 
     # 部署所有 flows

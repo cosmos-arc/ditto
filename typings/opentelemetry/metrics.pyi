@@ -2,7 +2,6 @@
 
 from typing import Any
 
-
 class Observation:
     """Metric observation."""
 
@@ -18,7 +17,7 @@ class Meter:
         *,
         description: str = "",
         **kwargs: Any,
-    ) -> "Counter": ...
+    ) -> Counter: ...
 
     def create_histogram(
         self,
@@ -26,7 +25,7 @@ class Meter:
         *,
         description: str = "",
         **kwargs: Any,
-    ) -> "Histogram": ...
+    ) -> Histogram: ...
 
     def create_observable_gauge(
         self,
@@ -47,7 +46,9 @@ class Counter:
 class Histogram:
     """Histogram instrument."""
 
-    def record(self, amount: float, attributes: dict[str, Any] | None = None) -> None: ...
+    def record(
+        self, amount: float, attributes: dict[str, Any] | None = None
+    ) -> None: ...
 
 
 class MeterProvider:

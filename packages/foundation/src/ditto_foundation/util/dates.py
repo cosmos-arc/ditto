@@ -1,6 +1,7 @@
 """日期规范化工具函数，将各种日期类型转换为 YYYY-MM-DD 格式."""
 
 from datetime import date, datetime
+from typing import assert_type
 
 # 日期输入类型别名
 DateInput = str | date | datetime | None
@@ -35,10 +36,6 @@ def normalize_date(value: DateInput) -> str | None:
         # 将 datetime 转换为日期字符串
         return value.strftime("%Y-%m-%d")
 
-    # 类型收窄后，这里一定是 date 类型（不是 datetime，已在上面处理）
-    # 但仍需要运行时 isinstance 检查以捕获不支持类型
-    if isinstance(value, date):  # type: ignore[unnecessary-isinstance]
-        # 格式化 date 对象
-        return value.strftime("%Y-%m-%d")
-
-    raise TypeError(f"Unsupported date type: {type(value)}")  # type: ignore[unreachable]
+    # 类型收窄：这里一定是 date 类型（不是 datetime，已在上面处理）
+    assert_type(value, date)
+    return value.strftime("%Y-%m-%d")

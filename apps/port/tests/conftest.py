@@ -126,7 +126,7 @@ def test_settings(temp_dir: Path) -> Settings:
     # 通过环境变量设置数据库路径
     os.environ["DB_DUCKDB_PATH"] = str(temp_dir / "test.duckdb")
     os.environ["DB_SQLITE_PATH"] = str(temp_dir / "test.sqlite")
-    os.environ["TUSHARE_TOKEN"] = "test_token"
+    os.environ["TUSHARE_TOKEN"] = "test_token"  # noqa: S105
     os.environ["DITTO_ENV"] = "testing"
 
     settings = Settings()
@@ -148,7 +148,7 @@ def test_settings_session() -> Generator[Settings, None, None]:
 
         os.environ["DB_DUCKDB_PATH"] = str(temp_path / "test.duckdb")
         os.environ["DB_SQLITE_PATH"] = str(temp_path / "test.sqlite")
-        os.environ["TUSHARE_TOKEN"] = "test_token"
+        os.environ["TUSHARE_TOKEN"] = "test_token"  # noqa: S105
         os.environ["DITTO_ENV"] = "testing"
 
         settings = Settings()

@@ -1,4 +1,5 @@
-"""OpenTelemetry Trace API stub.
+"""
+OpenTelemetry Trace API stub.
 
 反映实际的类型层次结构：
 - opentelemetry.trace.TracerProvider (API)
@@ -7,9 +8,9 @@
 
 from typing import Any
 
-
 class SpanContext:
     """Span context."""
+
     trace_id: int
     span_id: int
     is_valid: bool
@@ -26,9 +27,28 @@ class Span:
 
     def get_span_context(self) -> SpanContext: ...
 
-    def __enter__(self) -> "Span": ...
+    def __enter__(self) -> Span: ...
 
     def __exit__(self, *args: Any) -> None: ...
+
+
+class ReadOnlySpan(Span):
+    """只读 Span，用于导出和读取已完成的 span."""
+
+    name: str
+    context: SpanContext
+    parent: SpanContext | None
+    start_time: int
+    end_time: int
+    attributes: dict[str, Any]
+    events: list[Any]
+    links: list[Any]
+    status: Any
+
+
+# ReadableSpan 是 SDK 层的具体实现，继承自 ReadOnlySpan
+class ReadableSpan(ReadOnlySpan):
+    """SDK 层的可读 Span 实现."""
 
 
 class Tracer:

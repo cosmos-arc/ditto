@@ -30,8 +30,8 @@ def init_dq_config(data_root: str | Path) -> None:
     package_config_dir = current_file.parent.parent / "config" / "dq_rules"
 
     if not package_config_dir.exists():
-        print("警告: 找不到包内默认配置目录")
-        print(f"  尝试路径: {package_config_dir}")
+        print("警告: 找不到包内默认配置目录")  # noqa: T201
+        print(f"  尝试路径: {package_config_dir}")  # noqa: T201
         return
 
     # 复制配置文件
@@ -42,10 +42,10 @@ def init_dq_config(data_root: str | Path) -> None:
         target = user_config_dir / config_file.name
         if not target.exists():
             shutil.copy(config_file, target)
-            print(f"Created: {target}")
+            print(f"Created: {target}")  # noqa: T201
             copied_count += 1
         else:
-            print(f"Skipped (exists): {target}")
+            print(f"Skipped (exists): {target}")  # noqa: T201
             skipped_count += 1
 
     # 同时检查 .yaml 文件（虽然项目中使用 .yml）
@@ -53,20 +53,22 @@ def init_dq_config(data_root: str | Path) -> None:
         target = user_config_dir / config_file.name
         if not target.exists():
             shutil.copy(config_file, target)
-            print(f"Created: {target}")
+            print(f"Created: {target}")  # noqa: T201
             copied_count += 1
         else:
-            print(f"Skipped (exists): {target}")
+            print(f"Skipped (exists): {target}")  # noqa: T201
             skipped_count += 1
 
-    print(f"\nDQ config initialized at: {user_config_dir}")
-    print(f"  Created: {copied_count} files")
-    print(f"  Skipped: {skipped_count} files")
-    print("You can now customize these files.")
+    print(f"\nDQ config initialized at: {user_config_dir}")  # noqa: T201
+    print(f"  Created: {copied_count} files")  # noqa: T201
+    print(f"  Skipped: {skipped_count} files")  # noqa: T201
+    print("You can now customize these files.")  # noqa: T201
 
 
 if __name__ == "__main__":
     import sys
 
-    data_root = Path.cwd() / "data" if len(sys.argv) < 2 else Path(sys.argv[1])
+    # CLI 参数: script.py [data_root]
+    MIN_ARGS = 2
+    data_root = Path.cwd() / "data" if len(sys.argv) < MIN_ARGS else Path(sys.argv[1])
     init_dq_config(data_root)

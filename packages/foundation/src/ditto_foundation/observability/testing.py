@@ -6,6 +6,9 @@
 
 from typing import Any
 
+# 为了类型检查，导入 ReadableSpan（但在运行时不使用）
+from opentelemetry.sdk.trace import ReadableSpan  # type: ignore[unused-import]
+
 from . import metrics, tracing
 
 
@@ -15,19 +18,18 @@ def reset_for_testing() -> None:
     metrics.reset_metrics()
 
 
-def get_recorded_spans() -> list[Any]:
+def get_recorded_spans() -> list[ReadableSpan]:
     """
     获取记录的 Spans（测试用）.
 
     Returns
     -------
-        list: 已完成的 Span 列表
+        list[ReadableSpan]: 已完成的 Span 列表
 
     """
     exporter = tracing.get_in_memory_exporter()
     if exporter is not None:
-        # get_finished_spans 返回未知类型，转换为 list
-        return list(exporter.get_finished_spans())  # type: ignore[unknown-item-type]
+        return list(exporter.get_finished_spans())
     return []
 
 

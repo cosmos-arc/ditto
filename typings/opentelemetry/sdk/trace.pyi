@@ -3,6 +3,11 @@
 from typing import Any
 
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.trace import ReadOnlySpan
+
+
+class ReadableSpan(ReadOnlySpan):
+    """SDK 层的可读 Span 实现."""
 
 
 class TracerProvider:
