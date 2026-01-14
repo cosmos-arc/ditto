@@ -1,7 +1,7 @@
 # Pyright 类型检测全面清零优化计划
 
 **日期**: 2026-01-14
-**状态**: 进行中（批次 0、3 已完成）
+**状态**: 进行中（批次 0、1、2、3 已完成）
 **目标**: 彻底清零所有 pyright 错误（116 个）
 
 ---
@@ -71,9 +71,11 @@ pixi run -e dev pyright packages/foundation/src/ditto_foundation/observability/_
 
 ---
 
-### 批次 1: DataHub 简单错误清理
+### ✅ 批次 1: DataHub 简单错误清理
 
 **目标**: 清理 Unused Import + Unnecessary checks
+
+**状态**: 已完成（2026-01-14）
 
 **文件** (13 个):
 1. [packages/datahub/src/ditto_datahub/alerts/wechat.py](../packages/datahub/src/ditto_datahub/alerts/wechat.py)
@@ -95,7 +97,10 @@ pixi run -e dev pyright packages/foundation/src/ditto_foundation/observability/_
 - **Unnecessary isinstance**: 删除多余的类型检查（类型已收窄）
 - **Private Usage**: 创建公共属性访问方法
 
-**预期**: 消除 ~25 个错误
+**实际结果**: 消除 40 个错误
+
+**Commits**:
+- `54feea0` feat(batch-1): 清理 DataHub 简单 pyright 错误
 
 **验证命令**:
 ```bash
@@ -104,9 +109,11 @@ pixi run -e dev pyright packages/datahub/src 2>&1 | tail -1
 
 ---
 
-### 批次 2: DataHub 类型注解增强
+### ✅ 批次 2: DataHub 类型注解增强
 
 **目标**: 为 Unknown 类型添加显式注解
+
+**状态**: 已完成（2026-01-14）
 
 **文件** (7 个):
 1. [packages/datahub/src/ditto_datahub/dq/models.py](../packages/datahub/src/ditto_datahub/dq/models.py) - 5 个错误
@@ -139,7 +146,10 @@ from typing import cast
 manifests.sort(key=lambda m: cast(str, m.created_at), reverse=True)
 ```
 
-**预期**: 消除 ~40 个错误
+**实际结果**: 消除全部 33 个错误（DataHub 100% 清零）
+
+**Commits**:
+- `2bb36bc` feat(batch-2): 增强 DataHub 类型注解清零 pyright 错误
 
 ---
 
