@@ -5,16 +5,16 @@ Flow 辅助函数和上下文管理器。
 用于简化 flows 中的重复代码模式。
 """
 
-from __future__ import annotations
-
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from ditto_datahub import DataHub
+from ditto_datahub import DataHub
 
-    from ditto_port.services.ingestion.coordinator import IngestionCoordinator
+from ditto_port.services.ingestion.coordinator import IngestionCoordinator
+
+if TYPE_CHECKING:
+    pass
 
 
 @contextmanager
@@ -46,12 +46,6 @@ def create_ingestion_context(
         # hub 自动关闭
 
     """
-    from ditto_datahub import DataHub  # noqa: PLC0415
-
-    from ditto_port.services.ingestion.coordinator import (  # noqa: PLC0415
-        IngestionCoordinator,
-    )
-
     hub = DataHub(data_root=data_root)
     try:
         # 获取数据源

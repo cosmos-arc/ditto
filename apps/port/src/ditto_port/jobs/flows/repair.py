@@ -7,12 +7,12 @@
 - 每日修补流程
 """
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from prefect import flow
 
+from ditto_port.jobs.flows.helpers import create_ingestion_context
+from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.retry import RetryManager
 
 if TYPE_CHECKING:
@@ -41,8 +41,6 @@ def retry_failed_flow(
         重试结果字典
 
     """
-    from ditto_port.jobs.flows.helpers import create_ingestion_context  # noqa: PLC0415
-
     with create_ingestion_context(data_root=data_root, source=source) as (
         hub,
         coordinator,
@@ -96,9 +94,6 @@ def repair_holes_flow(
         修补结果字典
 
     """
-    from ditto_port.jobs.flows.helpers import create_ingestion_context  # noqa: PLC0415
-    from ditto_port.services.ingestion.backfill import BackfillManager  # noqa: PLC0415
-
     with create_ingestion_context(data_root=data_root, source=source) as (
         hub,
         coordinator,
@@ -187,8 +182,6 @@ def daily_repair_flow(
         holes_results[dataset] = holes_result
 
     # 汇总结果
-    from typing import cast  # noqa: PLC0415
-
     total_retried = sum(
         cast(int, r.get("retried_count", 0)) for r in retry_results.values()
     )

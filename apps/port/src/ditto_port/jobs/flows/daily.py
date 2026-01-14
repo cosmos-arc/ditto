@@ -14,13 +14,12 @@ Flow 功能：
 使用 Prefect 原生依赖机制（@task + wait_for）实现声明式编排。
 """
 
-from __future__ import annotations
-
 from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 from prefect import flow, task
 
+from ditto_port.jobs.flows.helpers import create_ingestion_context
 from ditto_port.jobs.tasks import (
     create_ingest_task_t0,
     create_ingest_task_t1_adj,
@@ -71,8 +70,6 @@ def check_trading_day(trade_date: str, data_root: str) -> bool:
         是否为交易日
 
     """
-    from ditto_port.jobs.flows.helpers import create_ingestion_context  # noqa: PLC0415
-
     with create_ingestion_context(data_root=data_root) as (hub, _):
         return hub.calendar.is_trading_day(trade_date)
 

@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
@@ -93,11 +94,13 @@ def _get_flow(
 ) -> Callable[..., Any] | Task[Any, Any] | Flow[Any, Any]:
     """动态导入 flow 或 task。"""
     if is_task and flow_name == "dq_batch_check":
-        from ditto_port.jobs.tasks.dq_batch import dq_batch_check  # noqa: PLC0415
+        from ditto_port.jobs.tasks.dq_batch import (
+            dq_batch_check,
+        )
 
         return cast(Task[Any, Any], dq_batch_check.fn)
 
-    from ditto_port.jobs.flows import (  # noqa: PLC0415
+    from ditto_port.jobs.flows import (
         backfill_flow,
         daily_ingestion_flow,
         daily_repair_flow,
@@ -129,7 +132,7 @@ def deploy_all_flows() -> None:
     6. 部署 DQC 检查流程
 
     """
-    from prefect.deployments import Deployment  # noqa: PLC0415
+    from prefect.deployments import Deployment
 
     logger.info("开始部署 Prefect Flows", event="deploy_start")
 
@@ -163,8 +166,6 @@ def list_flows() -> dict[str, str]:
 
 def main() -> None:
     """主函数：部署所有 Flows。"""
-    import sys  # noqa: PLC0415
-
     # 检查命令行参数
     if len(sys.argv) > 1:
         command = sys.argv[1]
