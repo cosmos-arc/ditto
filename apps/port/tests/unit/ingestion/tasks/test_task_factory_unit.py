@@ -93,9 +93,9 @@ class TestCreateIngestTask:
         mock_source = mocker.Mock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.tasks.t0_meta.DataHub", return_value=mock_hub)
         mocker.patch(
-            "ditto_port.services.ingestion.coordinator.IngestionCoordinator",
+            "ditto_port.jobs.tasks.t0_meta.IngestionCoordinator",
             return_value=mock_coordinator,
         )
 
@@ -134,9 +134,9 @@ class TestCreateIngestTask:
         mock_source = mocker.Mock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.tasks.t0_meta.DataHub", return_value=mock_hub)
         mocker.patch(
-            "ditto_port.services.ingestion.coordinator.IngestionCoordinator",
+            "ditto_port.jobs.tasks.t0_meta.IngestionCoordinator",
             return_value=mock_coordinator,
         )
 
@@ -162,9 +162,9 @@ class TestCreateIngestTask:
         mock_source = mocker.Mock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.tasks.t0_meta.DataHub", return_value=mock_hub)
         mocker.patch(
-            "ditto_port.services.ingestion.coordinator.IngestionCoordinator",
+            "ditto_port.jobs.tasks.t0_meta.IngestionCoordinator",
             side_effect=Exception("Coordinator error"),
         )
 
@@ -259,9 +259,9 @@ class TestTaskIntegration:
         mock_source = mocker.Mock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.tasks.t0_meta.DataHub", return_value=mock_hub)
         mocker.patch(
-            "ditto_port.services.ingestion.coordinator.IngestionCoordinator",
+            "ditto_port.jobs.tasks.t0_meta.IngestionCoordinator",
             return_value=mock_coordinator,
         )
 

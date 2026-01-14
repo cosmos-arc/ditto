@@ -28,8 +28,8 @@ class TestCheckTradingDay:
         mock_hub = mocker.MagicMock()
         mock_hub.calendar.is_trading_day.return_value = True
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
-        result = check_trading_day.fn(
+        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
+        result = check_trading_day(
             trade_date="2024-01-02",
             data_root="data",
         )
@@ -44,8 +44,8 @@ class TestCheckTradingDay:
         mock_hub = mocker.MagicMock()
         mock_hub.calendar.is_trading_day.return_value = False
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
-        result = check_trading_day.fn(
+        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
+        result = check_trading_day(
             trade_date="2024-01-06",
             data_root="data",
         )
@@ -59,9 +59,9 @@ class TestCheckTradingDay:
         mock_hub = mocker.MagicMock()
         mock_hub.calendar.is_trading_day.side_effect = ValueError("Test error")
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
         with pytest.raises(ValueError, match="Test error"):
-            check_trading_day.fn(
+            check_trading_day(
                 trade_date="2024-01-02",
                 data_root="data",
             )

@@ -1,5 +1,7 @@
 """共享类型单元测试。"""
 
+from dataclasses import FrozenInstanceError
+
 import pytest
 from ditto_port.common.types import IngestionResult, ResultCounts
 
@@ -42,7 +44,7 @@ def test_ingestion_result_frozen() -> None:
         trade_date="y",
         status="success",
     )
-    with pytest.raises(TypeError):
+    with pytest.raises(FrozenInstanceError):
         result.status = "failed"  # type: ignore[misc]
 
 
@@ -81,5 +83,5 @@ def test_result_counts_creation() -> None:
 def test_result_counts_frozen() -> None:
     """测试 ResultCounts 不可变。"""
     counts = ResultCounts(success=10, failed=2, skipped=1)
-    with pytest.raises(TypeError):
+    with pytest.raises(FrozenInstanceError):
         counts.success = 20  # type: ignore[misc]

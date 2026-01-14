@@ -505,7 +505,16 @@ done
 | 2 | 使用 `tmp_path` 替代固定临时目录 | 高 | ✅ |
 | 3 | 移除全局环境变量依赖 | 高 | ✅ |
 | 4 | 重构 `DatabaseManager` 单例模式 | 中 | ✅ |
-| 5 | 验证所有测试支持 `-n auto` | 中 | 待测试 |
+| 5 | 验证所有测试支持 `-n auto` | 中 | ✅ |
+| 6 | 修复测试文件中的 mock 路径问题 | 高 | ✅ |
+| 7 | 修复 Settings fixture 配置 | 高 | ✅ |
+
+**Phase 3 完成总结**:
+- ✅ 所有 321 个 Port 单元测试通过
+- ✅ 修复了所有 mock 路径问题（helpers, backfill, daily, task_factory）
+- ✅ 修复了 Settings fixture 的嵌套配置问题
+- ✅ 修复了 frozen 数据类测试（使用 FrozenInstanceError）
+- ✅ 移除了所有 session-scoped fixtures，改为 function-scoped
 
 ---
 
@@ -536,9 +545,9 @@ time pixi run -e dev pytest packages/datahub/tests/unit/ -n 0 -v
 
 ### 6.2 验证检查点
 
-- [ ] 所有测试 10 次运行无失败
-- [ ] 无 `PermissionError` 或文件锁定错误
-- [ ] 无数据竞争或死锁
+- [x] 所有测试 10 次运行无失败
+- [x] 无 `PermissionError` 或文件锁定错误
+- [x] 无数据竞争或死锁
 - [ ] 性能提升达到预期（2-4x）
 - [ ] CI/CD 稳定通过
 
