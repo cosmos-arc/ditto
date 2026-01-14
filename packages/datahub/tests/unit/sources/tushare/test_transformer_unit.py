@@ -169,8 +169,8 @@ class TestTushareDataTransformer:
         )
 
         # 验证返回正确 schema 的空 DataFrame
-        assert result.is_empty()
-        assert result.schema == {
+        assert len(result) == 0
+        assert dict(result.schema) == {
             "src_code": pl.String,
             "trade_date": pl.Date,
             "open": pl.Float64,
