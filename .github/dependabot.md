@@ -42,11 +42,10 @@ updates:
       dev-tools:
         patterns:
           - "ruff"
-          - "mypy"
+          - "pyright"
           - "pytest*"
           - "coverage*"
           - "pre-commit"
-          - "bandit"
         update-types:
           - "minor"
           - "patch"

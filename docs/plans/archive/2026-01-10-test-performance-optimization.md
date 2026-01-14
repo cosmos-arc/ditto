@@ -236,7 +236,7 @@ pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/
 - 验证命令：`pixi run -e dev pytest apps/server/tests/ -v`
 - 测试范围：apps/server/tests/
 - 测试通过：296 passed, 1 skipped
-- Pre-commit 检查：通过（ruff, mypy, bandit 等）
+- Pre-commit 检查：通过（ruff,pyright等）
 - 性能提升：
   - 单元测试通过：296 passed
   - 集成测试通过：45 passed, 1 skipped
@@ -262,7 +262,7 @@ pixi run -e dev pytest apps/server/tests/integration/ingestion/flows/
   - 集成测试：46.62s → 43.16s（节省 3.46s，-7.4%）
   - 单元测试：34.84s → 35.55s（增加 0.71s，+2%）
 - 测试通过：1125 passed, 1 failed, 1 error（error 为并行运行时的临时问题，单独运行通过）
-- Pre-commit 检查：通过（ruff, mypy, bandit 等）
+- Pre-commit 检查：通过（ruff, pyright 等）
 
 **分析说明**:
 - Phase 5 的预期收益与实际结果不符，主要原因：

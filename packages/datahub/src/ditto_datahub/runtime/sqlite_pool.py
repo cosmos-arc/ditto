@@ -41,7 +41,7 @@ class SQLitePool:
                 event="connection_created",
                 thread_id=threading.get_ident(),
             )
-        # Type is correctly inferred but mypy sees Any from threading.local
+        # Type is correctly inferred but pyright sees Any from threading.local
         return self._local.conn  # type: ignore[no-any-return]
 
     def execute(self, sql: str, params: list[Any] | None = None) -> sqlite3.Cursor:

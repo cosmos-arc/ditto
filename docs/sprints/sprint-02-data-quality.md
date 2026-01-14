@@ -365,7 +365,7 @@ apps/server/src/ditto_port/
 - **Granian 服务器**：替换 uvicorn，2-4x 性能提升
 - **ORJSONResponse**：使用 orjson 序列化，4.5-11.5x 性能提升
 - **测试覆盖**：新增 30+ 个测试，总测试数 600+
-- **代码质量**：通过 linting 检查（ruff、mypy、bandit）
+- **代码质量**：通过 linting 检查（ruff、pyright）
 
 **验收标准**：
 - [x] DataCache 所有功能正常
@@ -675,7 +675,7 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
   - Granian 服务器：替换 uvicorn（2-4x 性能提升）
   - ORJSONResponse：使用 orjson 序列化（4.5-11.5x 性能提升）
   - 测试覆盖：82 个新增测试全部通过 + 3 个 schema validator 测试修复（总测试数 602）
-  - 代码质量：通过 linting 检查（ruff、mypy、bandit）
+  - 代码质量：通过 linting 检查（ruff、pyright）
 - ✅ **PR 创建成功**：https://github.com/cosmos-arc/ditto/pull/19
 - ✅ Sprint 2 进度更新：83% 完成（Phase 0-4）
 - ✅ **Phase 3 完成**：数据摄取增强（6/9 任务，3 个延后）

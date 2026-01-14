@@ -190,7 +190,7 @@ class SQLiteClient:
         cursor = self.execute(sql, params)
         row = cursor.fetchone()
         if row:
-            # mypy can't infer the type from sqlite3.Row, use cast
+            # pyright can't infer the type from sqlite3.Row, use cast
             return cast(str | int | float, row[0])
         return None
 
@@ -277,7 +277,7 @@ class SQLiteClient:
             sql += f" WHERE {where}"  # nosec B608 - where clause is validated input
 
         result = self.fetchval(sql, params)
-        # COUNT(*) always returns int, but mypy can't infer that
+        # COUNT(*) always returns int, but pyright can't infer that
         return int(result) if result is not None else 0
 
     def close(self) -> None:

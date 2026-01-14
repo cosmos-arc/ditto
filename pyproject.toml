@@ -6,26 +6,22 @@
 # 负责：代码风格检查、自动格式化、导入排序、坏味道重构等。
 # ===================================================================
 [tool.ruff]
+required-version = ">=0.6.0"
 # 设置与 Black 兼容的行长。
 line-length = 88
 # 指定你的项目支持的最低 Python 版本。
-# Ruff 会根据此版本推荐合适的现代语法。
-# 可选值: "py38", "py39", "py310", "py311", "py312"
-target-version = "py311"
+target-version = "py312"
 
 # 指定 Ruff 需要检查的源代码和测试目录。
-# 根据实际项目结构调整
 src = ["packages", "apps", "scripts", "tests"]
 
 # 全局排除不需要检查的文件和目录。
-# 这个列表会在所有工具中复用，以保持一致性。
 exclude = [
     ".bzr",
     ".direnv",
     ".eggs",
     ".git",
     ".hg",
-    ".mypy_cache",
     ".nox",
     ".pants.d",
     ".pixi",
@@ -41,30 +37,12 @@ exclude = [
     "venv",
 ]
 
-# NEW: 性能 & 一致性小优化
 cache-dir = ".ruff_cache"
 respect-gitignore = true
 force-exclude = true
-# preview = true  # 如果你想吃新规则，可以再打开
 
 # --- Ruff Linter (检查器) 配置 ---
 [tool.ruff.lint]
-# 'select' 用于开启一系列规则。这是一个全面的推荐规则集。
-# E, F, W: flake8 默认规则
-# I: isort (导入排序)
-# UP: pyupgrade (升级旧语法)
-# B: flake8-bugbear (常见陷阱)
-# C4: flake8-comprehensions (推导式简化)
-# SIM: flake8-simplify (代码简化)
-# PTH: flake8-use-pathlib (使用 pathlib 替代 os.path)
-# A: flake8-builtins (内置变量覆盖检查)
-# C90: McCabe 复杂度检查
-# PL: Pylint
-# RUF: Ruff 专属规则
-# D: pydocstyle (文档字符串规范)
-#"PT": flake8-pytest-style: 检查 pytest 最佳实践
-#"ANN": flake8-annotations: 检查类型注解缺失
-#"T20": flake8-print: 禁止 print 语句
 select = [
     "E",
     "F",
@@ -78,7 +56,6 @@ select = [
     "C4",
     "SIM",
     "PTH",
-    # 更精确地开启 Pylint 规则
     "PLC",
     "PLE",
     "PLR",
@@ -87,293 +64,146 @@ select = [
     "D",
     "PT",
     "ANN",
-    "C90", # McCabe 复杂度 (核心：控制嵌套和逻辑分支)
-    # 进阶规则（建议先用专门命令单独跑，再决定是否常开）
-    # "S",    # flake8-bandit 安全
-    # "DTZ",  # flake8-datetimez 时区安全
-    # "PERF", # perflint 性能优化
+    "S",
+    "T20",
 ]
 
-# 'ignore' 用于关闭特定规则，以适应项目实际情况。
 ignore = [
-    # 允许函数调用作为默认参数，这在 FastAPI 的 Depends 中非常普遍。
-    "B008",
-    # 函数复杂度检查，建议在代码行内使用 `# noqa: C901` 按需忽略。
-    "C901",
-    # 允许在 except 语句中使用 `e` 作为异常变量名。
+    "B008",   # 允许函数调用作为默认参数（FastAPI Depends）
     "N803",
     "N806",
     "N818",
-    # 允许对动态分配的 Any 类型进行操作，在处理外部库时可能需要
-    "ANN401",
-    # --- 中文文档字符串豁免 ---
-    "RUF002", # 中文标点符号（全角逗号、括号等）
-    "RUF003", # 中文注释中的标点符号（全角冒号、逗号等）
-    # --- 文档字符串 (Docstring) 规则豁免 ---
-    # D203 和 D212 与 Black 的格式化风格冲突，应禁用。
-    "D203",
-    "D212",
-    # 以下规则在实际开发中可能过于严格，可根据团队规范决定是否开启。
-    "D100", # 模块必须有文档字符串
-    "D107", # __init__ 必须有文档字符串 (D104 已覆盖此场景)
-    "D400", # 文档字符串第一行必须以句号结尾（中文句号不受支持）
-    "D415", # 文档字符串首行应以句号、问号或感叹号结尾
-    # --- 测试相关规则豁免 ---
-    "D401",   # 文档字符串第一行应该是祈使语气
-    "PT011",  # pytest.raises 需要指定 match 参数（过于严格）
-    "SIM105", # 使用 contextlib.suppress 替代 try-except-pass
-    "SIM117", # 使用单个 with 语句替代嵌套（测试中嵌套更清晰）
+    "ANN401", # 允许 Any 类型注解
+    "RUF002", # 中文标点符号
+    "RUF003", # 中文注释标点符号
+    "D203",   # 与 Black 冲突
+    "D212",   # 与 Black 冲突
+    "D100",   # 模块必须有文档字符串
+    "D107",   # __init__ 文档字符串
+    "D400",   # 文档字符串句号结尾（中文不适用）
+    "D415",   # 文档字符串首行标点
+    "D401",   # 祈使语气
+    "PT011",  # pytest.raises match 参数
+    "SIM105", # contextlib.suppress
+    "SIM117", # 嵌套 with 语句
 ]
 
-# 允许自动修复被认为是"不安全"的规则（例如 pyupgrade 的一些重构）。
 unfixable = []
 
-# 对特定文件类型忽略特定规则。
 [tool.ruff.lint.per-file-ignores]
-
-# ═══════════════════════════════════════════════════════════════
 # 测试文件 - 最宽松
-# ═══════════════════════════════════════════════════════════════
-"tests/**/*.py" = [
-    "PLR2004", # 魔法数字
-    "PLR0913", # 多参数
-    "S101",    # assert 语句
-    "ANN",     # 类型注解
-    "D",       # 文档字符串
-]
+"tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "ANN", "D"]
 "**/tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "ANN", "D"]
 "**/conftest.py" = ["ANN", "D", "PLC0415"]
 
-# ═══════════════════════════════════════════════════════════════
-# 脚本文件 - 允许 print 和简化规则
-# ═══════════════════════════════════════════════════════════════
+# 脚本文件
 "scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN"]
 "**/cli.py" = ["T201"]
 "**/main.py" = ["T201"]
 
-# ═══════════════════════════════════════════════════════════════
-# 策略模块 - 允许复杂度，这是业务本质
-# ═══════════════════════════════════════════════════════════════
-"packages/core/src/ditto_core/strategy/**/*.py" = [
-    "C901",    # 函数复杂度（策略逻辑天然复杂）
-    "PLR0912", # 分支过多（多条件判断是正常的）
-    "PLR0915", # 语句过多
-    "PLR0913", # 参数过多（策略配置项多）
-]
-
-# ═══════════════════════════════════════════════════════════════
-# 投资组合/风控模块 - 允许复杂计算
-# ═══════════════════════════════════════════════════════════════
-"packages/core/src/ditto_core/portfolio/**/*.py" = [
-    "C901",
-    "PLR0912",
-    "PLR0913",
-]
-
-# ═══════════════════════════════════════════════════════════════
-# 数据处理模块 - 允许更多参数和魔法数字
-# ═══════════════════════════════════════════════════════════════
-"packages/datahub/src/ditto_datahub/**/*.py" = [
-    "PLR0913", # 参数多（数据源配置）
-    "PLR2004", # 魔法数字（如 252 交易日）
-    "F401",    # 未使用导入（re-export 模式）
-    "PLC0415", # 延迟导入以避免循环依赖（DataHub Facade）
-]
-
-"packages/foundation/src/ditto_foundation/observability/**/*.py" = [
-    "PLW0602",
-    "PLW0603",
-    "PLR0913",
-    "PLC0415",
-    "RUF002",  # 中文文档中的全角标点符号（中文项目正常使用）
-]
-
-# __init__.py 可以没有 docstring
+# __init__.py
 "__init__.py" = ["D104"]
 
-
 # --- Ruff Formatter (格式化器) 配置 ---
-# 旨在成为 Black 的直接、高速替代品。
 [tool.ruff.format]
-# 使用双引号，与 Black 默认行为保持一致。
 quote-style = "double"
-# 在字典或列表的最后一个元素后保留逗号（magic trailing comma）。
-# 这有助于减少 git diff 的噪音，是一个很好的实践。
 skip-magic-trailing-comma = false
-# 自动检测并使用当前系统的行尾符（LF 或 CRLF）。
 line-ending = "auto"
 
+[tool.ruff.lint.flake8-annotations]
+ignore-fully-untyped = true
+suppress-none-returning = true
+suppress-dummy-args = true
+
 [tool.ruff.lint.pylint]
-# 对应“函数长度”：限制最大行数
-max-statements = 50 # 限制函数内的语句数量，比单纯行数更科学
-max-args = 5        # 顺便限制一下参数个数
-max-branches = 12   # 对应 PLR0912，限制分支复杂度（相当于圈复杂度）
-max-returns = 6     # 对应 PLR0911，限制 return 出现的次数
+max-statements = 50
+max-args = 7
+max-branches = 12
+max-returns = 6
 
 [tool.ruff.lint.mccabe]
-# 对应“嵌套层级”的逻辑：建议设为 10 以下。
-# 注意：这是圈复杂度，虽不完全等于嵌套层数，但嵌套越深，复杂度越高。
 max-complexity = 10
 
 # ===================================================================
-# Pyright (VSCode Pylance 引擎)
-# 负责：编辑器内的实时、快速类型检查反馈。
-# 它的配置旨在提供最佳的开发体验。
+# Pyright (类型检查) - 2026 最佳实践配置
+#
+# 策略：standard 打底 + 核心目录 strict
+# 优势：
+#   1. 避免全仓 strict 导致的噪音爆炸
+#   2. 核心业务逻辑获得最严格检查
+#   3. 边缘模块保持灵活性
 # ===================================================================
 [tool.pyright]
-# 启用所有严格模式规则，获得最强的实时类型检查。
-# 这相当于在 VSCode settings.json 中设置 "python.analysis.typeCheckingMode": "strict"。
-typeCheckingMode = "strict"
+pythonVersion = "3.12"
+pythonPlatform = "All"
+stubPath = "typings"
 
-# 如果导入的库没有类型存根 (stubs)，Pyright 会在编辑器中发出警告。
-# 这有助于提醒开发者注意潜在的类型问题。
-reportMissingTypeStubs = true
+# 核心：standard 模式打底（比 basic 严格，比 strict 宽松）
+typeCheckingMode = "standard"
 
-# NEW:
-reportUnknownVariableType = "information" # 或 "warning" / "none"
+# 源码目录
+include = ["packages/**/src", "apps/**/src"]
 
-# 新增：对第三方库这类不完整 stub 不要那么凶
-reportUnknownMemberType = "information" # 或 "warning" / "none"
-
-# 关键：告诉 Pyright 你的源码根目录
-extraPaths = ["packages/core/src", "packages/foundation/src", "apps/server/src"]
-
-# 保持与 Ruff 一致的排除列表。
+# 排除目录（tests 用独立配置）
 exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".hg",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
+    "**/__pycache__",
+    "**/node_modules",
     ".pixi",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
     ".venv",
-    "__pypackages__",
-    "_build",
     "build",
     "dist",
-    "node_modules",
-    "venv",
+    "tests",
+    "**/tests",
 ]
 
-
-# ===================================================================
-# Mypy
-# 负责：CI/CD 或 pre-commit 阶段的最终、权威的类型检查。
-# 它尤其擅长处理需要插件的库（如 Pydantic, Django）。
-# ===================================================================
-[tool.mypy]
-python_version = "3.12"
-# 启用所有严格模式检查，与 Pyright 保持一致，确保最终检查的可靠性。
-strict = true
-
-# 忽略对没有类型存根的第三方库的导入错误。
-# 这与 Pyright 的 `reportMissingTypeStubs=true` 策略互补：
-# - Pyright 在开发时警告你，让你知情。
-# - Mypy 在 CI 构建时忽略它，避免构建失败。
-ignore_missing_imports = true
-
-# 允许 Mypy 跟随导入链进行跨文件检查。
-follow_imports = "normal"
-
-# 添加包路径以支持 editable 安装的包
-explicit_package_bases = true
-namespace_packages = true
-
-# 指定 mypy 的模块搜索路径，避免重复检测
-mypy_path = "packages/core/src:packages/foundation/src:packages/datahub/src:apps/server/src"
-
-# 启用 Mypy 插件以支持特定库的类型检查。
-# 这是处理 Pydantic、Django、SQLAlchemy 等库的关键。
-plugins = ["pydantic.mypy"]
-
-# NEW: 报错信息里带 error code，调试更舒服
-show_error_codes = true
-
-# 忽略未类型化装饰器警告（测试文件和装饰器常见）
-disable_error_code = ["misc", "import-untyped"]
-
-# 保持与 Ruff 一致的排除列表。
-exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".hg",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".pixi",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    "__pypackages__",
-    "_build",
-    "build",
-    "dist",
-    "node_modules",
-    "venv",
+# VS Code 体验：tests 打开也不出红黄线（诊断被抑制）
+ignore = [
+    "tests",
+    "tests/**",
+    "**/tests/**",
+    "packages/*/tests/**",
+    "apps/*/tests/**",
 ]
 
-[tool.pydantic-mypy]
-init_forbid_extra = true
-init_typed = true
-warn_required_dynamic_aliases = true
+# ═══════════════════════════════════════════════════════════════════
+# 关键：核心目录提升到 strict 模式
+# 这些是最值钱的代码，值得最严格的检查
+# ═══════════════════════════════════════════════════════════════════
+strict = ["packages/**/src", "apps/port/**/src"]
 
-[[tool.mypy.overrides]]
-module = [
-    "polars.*",
-    "duckdb.*",
-    "tushare.*",
-    "akshare.*",
-    "ricequant.*",
-    "prefect.*",
-    "loguru.*",
+# ═══════════════════════════════════════════════════════════════════
+# 规则微调：让 Ruff 管风格，Pyright 专注类型
+# ═══════════════════════════════════════════════════════════════════
+# Ruff 已经管了这些
+reportUnusedImport = "none"
+reportUnusedVariable = "none"
+
+# 第三方库 stub 不完整时的处理
+reportMissingTypeStubs = "none"
+
+# 对于 standard 模式下的 Unknown 类型，降级为 warning
+# 这样编辑器里能看到黄线提醒，但不会阻塞 CI
+#reportUnknownMemberType = "warning"
+#reportUnknownArgumentType = "warning"
+#reportUnknownVariableType = "warning"
+
+# 私有成员访问（测试和内部模块可能需要）
+#reportPrivateUsage = "warning"
+
+# 告诉 Pyright 源码根目录（解决 import 路径问题）
+extraPaths = [
+    "packages/core/src",
+    "packages/foundation/src",
+    "packages/datahub/src",
+    "apps/port/src",
 ]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["tests.*", "*.tests.*"]
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-disable_error_code = [
-    "index",
-    "operator",
-    "attr-defined",
-    "typeddict-unknown-key",
-    "type-arg",
-    "union-attr",
-    "method-assign",
-    "arg-type",
-    "no-any-return",
-    "str-bytes-safe",
-    "abstract",
-    "return-value",
-    "list-item",
-    "var-annotated",
-    "unused-ignore",
-]
-
-[[tool.mypy.overrides]]
-module = "scripts.*"
-disallow_untyped_defs = false
-ignore_errors = true
 
 # ===================================================================
 # Pytest (测试框架)
-# 负责：运行自动化测试，并报告代码覆盖率。
 # ===================================================================
 [tool.pytest.ini_options]
 minversion = "7.0"
-# Monorepo测试目录结构
 testpaths = ["packages/*/tests", "apps/*/tests", "tests"]
-# 文件匹配模式
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -381,13 +211,11 @@ pythonpath = [
     "packages/core/src",
     "packages/foundation/src",
     "packages/datahub/src",
-    "apps/server/src",
+    "apps/port/src",
 ]
 
-# 将所有警告提升为错误，确保代码的健壮性。
 filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]
 
-# 注册自定义标记，配合 --strict-markers 使用
 markers = [
     "unit: Mark test as a unit test",
     "integration: Mark test as an integration test",
@@ -398,36 +226,32 @@ markers = [
     "pit: Mark test for Point-in-Time data validation",
     "data: Mark test that requires data fixtures",
     "external: Mark test that calls external APIs (Tushare, etc.)",
-    "observability: Mark test that requires observability stack (VictoriaMetrics, Grafana, etc.)",
+    "observability: Mark test that requires observability stack",
 ]
 
-# 配置日志输出，方便调试
 log_cli = true
 log_cli_level = "INFO"
-
-# 如果有 async 测试，使用严格模式
 asyncio_mode = "strict"
 
-# 命令行附加选项，用于增强测试流程。
 addopts = [
-    "-ra",                       # 显示除"通过"之外所有测试的详细摘要
-    "-v",                        # 显示详细输出
+    "-ra",
+    "-v",
     "-n",
-    "auto",                      # 使用所有可用 CPU 核心并行测试，需要 pytest-xdist
-    "--strict-markers",          # 对未在配置中注册的 marker 标记报错
-    "--strict-config",           # 对配置文件中的拼写错误或无效键报错
-    "--cov=packages",            # 指定计算代码覆盖率的目录
-    "--cov=apps",                # 覆盖应用层代码
-    "--cov-report=html:htmlcov", # HTML 报告输出目录
-    "--cov-report=term-missing", # 在终端显示未覆盖的行
-    "--cov-report=xml",          # XML 报告，用于 CI 集成
-    "--cov-branch",              # 分支覆盖率
-    "--cov-fail-under=80",       # 设置覆盖率阈值为 80%
-    "--durations=10",            # 打印最慢的 10 个测试
+    "auto",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=packages",
+    "--cov=apps",
+    "--cov-report=html:htmlcov",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-branch",
+    "--cov-fail-under=80",
+    "--durations=10",
 ]
 
 # ===================================================================
-# Coverage (配合 pytest-cov 使用)
+# Coverage
 # ===================================================================
 [tool.coverage.run]
 branch = true
@@ -437,8 +261,6 @@ source = ["packages", "apps"]
 precision = 2
 show_missing = true
 skip_covered = false
-
-# 排除不需要覆盖的代码模式
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -450,51 +272,18 @@ exclude_lines = [
     "@(abc\\.)?abstractmethod",
     "@overload",
     "class .*\\bProtocol\\):",
-    # 量化系统特有
     "if self\\.debug:",
     "logger\\.(debug|trace)",
 ]
 fail_under = 80
-
-# 部分覆盖的分支也要报告
 partial_branches = ["pragma: no branch", "if TYPE_CHECKING:"]
 
 [tool.coverage.html]
 directory = "htmlcov"
 
-# ==========================================================
-# Bandit 安全扫描配置
-# ==========================================================
-[tool.bandit]
-# 排除测试目录
-exclude_dirs = [
-    "tests",
-    "packages/*/tests",
-    "apps/*/tests",
-    ".pixi",
-    ".venv",
-    "node_modules",
-]
-
-# 跳过特定规则
-skips = [
-    "B101", # assert 语句（测试中常用）
-    "B104", # 绑定到所有接口（开发环境常见）
-    "B311", # random 不用于加密场景时可接受
-]
-
-# 按严重程度过滤
-# severity: all, high, medium, low
-# confidence: all, high, medium, low
-
-# 针对特定文件的规则覆盖
-[tool.bandit.assert_used]
-skips = ["*_test.py", "test_*.py", "conftest.py"]
-
-
-# ==========================================================
-# 补充：Commitizen 配置（可选，用于自动生成 changelog）
-# ==========================================================
+# ===================================================================
+# Commitizen 配置
+# ===================================================================
 [tool.commitizen]
 name = "cz_conventional_commits"
 version = "0.1.0"

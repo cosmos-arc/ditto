@@ -474,29 +474,16 @@ pixi run -e dev ci-check          # CI完整（以上 + test-cov-xml）
 
 ---
 
-## 类型检查（mypy）
+## 类型检查（Pyright）
 
-**配置**：`tests.*` 模块已配置宽松规则（禁用 index/operator/attr-defined 等，适配 mock 场景）
-
-```bash
-pixi run -e dev typecheck        # 完整检查
-pixi run -e dev mypy tests/      # 只检查测试
-```
-
----
-
-## 安全检查（bandit # nosec B608）
-
-```python
-# ✅ 需要注释：已验证/白名单/参数化
-sql = f"SELECT * FROM {table}"  # nosec B608 - table in ALLOWED_TABLES
-
-# ❌ 禁止：直接拼接用户输入
-sql = f"SELECT * FROM t WHERE name = '{user_input}'"
-```
+**配置**：
+- 源码：`pyproject.toml` [tool.pyright] 段（standard + strict 模式）
+- 测试：`pyright.tests.json`（basic 模式，宽松）
 
 ```bash
-pixi run -e dev security         # 运行检查
+pixi run -e dev typecheck         # 源码检查（strict + warnings）
+pixi run -e dev typecheck-tests   # 测试检查（basic 模式）
+pixi run -e dev typecheck-all     # 完整检查（源码 + 测试）
 ```
 
 ---

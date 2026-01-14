@@ -36,7 +36,7 @@ We selected the following technology stack:
 
 ### Quality & Testing
 - **Ruff**: Linting and formatting
-- **MyPy**: Static type checking
+- **Pyright**: Static type checking
 - **Pytest**: Testing framework
 - **Pre-commit hooks**: Automated quality checks
 

@@ -16,7 +16,9 @@
     - **网络请求**: httpx
 - **包管理**: 只用 pixi（禁止 pip/poetry/conda）
 - **文档**: 文档驱动开发，及时更新 README/Sprint/Plan/ADR
-- **测试**: 分支覆盖率 >= 80% （详见 [python-test.md](.claude/rules/python-test.md)）
+- **开发**:
+    - **Python核心规范**：详见 [core.md](.claude/rules/core.md)
+- **测试**: 尊师测试依赖，分支覆盖率 >= 80% （详见 [python-test.md](.claude/rules/python-test.md)）
 - **重构**: 必须移除旧代码，非数据格式兼容外不留兼容代码
 
 ## 工具使用规范
@@ -47,7 +49,7 @@
 - 跳过风控检查
 - 直接提交 main
 - 文件读写改操作使用 Bash 命令
-- 绕过或忽略 mypy、ruff、precommit 检测
+- 绕过或忽略 pyright、ruff、precommit 检测
 
 ## 类型检查规范
 

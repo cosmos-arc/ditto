@@ -7,7 +7,7 @@
 
 [workspace]
 channels = ["conda-forge"]
-platforms = ["win-64", "linux-64"]                                            # 如有 Mac 用户可加 "osx-64", "osx-arm64"
+platforms = ["win-64", "linux-64"]
 name = "ditto"
 version = "0.1.0"
 authors = ["Chevy <chevy_777@126.com>"]
@@ -18,56 +18,40 @@ readme = "README.md"
 # 运行时依赖（生产环境需要的）
 # ==========================================================
 [dependencies]
-# Python 环境
 python = "3.12.*"
 
-# ──────────────────────────────────────────────────────────
 # 数据科学与处理
-# ──────────────────────────────────────────────────────────
-polars = ">=1.8,<2"  # 放宽上限，便于升级
+polars = ">=1.8,<2"
 pandas = ">=2.2,<3"
 numpy = ">=2.1,<3"
-pyarrow = ">=18,<23" # Polars/Pandas 依赖
+pyarrow = ">=18,<23"
 
-# ──────────────────────────────────────────────────────────
 # 数据库
-# ──────────────────────────────────────────────────────────
 duckdb = ">=1.1,<2"
 
-# ──────────────────────────────────────────────────────────
 # Web 框架与 API
-# ──────────────────────────────────────────────────────────
 fastapi = ">=0.115,<1"
-# uvicorn 已被 granian 替代（2-4x 性能提升）
 pydantic = ">=2.9,<3"
 pydantic-settings = ">=2.6,<3"
 
-# ──────────────────────────────────────────────────────────
 # 网络请求
-# ──────────────────────────────────────────────────────────
 httpx = ">=0.28,<1"
 aiohttp = ">=3.11,<4"
 
-# ──────────────────────────────────────────────────────────
 # 配置与日志
-# ──────────────────────────────────────────────────────────
 python-dotenv = ">=1.0,<2"
 loguru = ">=0.7,<1"
 pyyaml = ">=6.0,<7"
 
-# ──────────────────────────────────────────────────────────
 # 任务调度
-# ──────────────────────────────────────────────────────────
 prefect = ">=3.0,<4"
-apscheduler = ">=3.11,<4" # 保留作为备用
+apscheduler = ">=3.11,<4"
 
-# ──────────────────────────────────────────────────────────
 # 可视化
-# ──────────────────────────────────────────────────────────
 matplotlib = ">=3.9,<4"
 
 # ==========================================================
-# PyPI 依赖（conda-forge 没有或版本不够新的）
+# PyPI 依赖
 # ==========================================================
 [pypi-dependencies]
 # 本地包（editable 安装）
@@ -76,10 +60,10 @@ ditto-foundation = { path = "packages/foundation", editable = true }
 ditto-datahub = { path = "packages/datahub", editable = true }
 ditto-port = { path = "apps/port", editable = true }
 
-# 性能优化库（Rust 实现）
-cachebox = ">=5.0,<6" # 高性能缓存（10-50x 性能）
-granian = ">=1.0,<2"  # ASGI 服务器（2-4x 性能，替代 uvicorn）
-orjson = ">=3.10,<4"  # JSON 序列化（4.5-11.5x 性能）
+# 性能优化库
+cachebox = ">=5.0,<6"
+granian = ">=1.0,<2"
+orjson = ">=3.10,<4"
 
 # 数据源
 akshare = ">=1.15,<2"
@@ -87,83 +71,61 @@ akshare = ">=1.15,<2"
 # 文件锁
 filelock = ">=3.16,<4"
 
-# OpenTelemetry 可观测性
+# OpenTelemetry
 opentelemetry-api = ">=1.28,<2"
 opentelemetry-sdk = ">=1.28,<2"
 opentelemetry-exporter-otlp-proto-http = ">=1.28,<2"
 
 # 其他
 uuid7 = ">=0.1,<1"
-
-# 重试机制
 tenacity = ">=8.0,<9"
-
-# 限流库
 limits = ">=3.15"
-
-# 凭据管理（keyring 用于安全存储 token）
 keyring = ">=25.0,<26"
-
-# CLI 框架
 typer = ">=0.12,<1"
 
 # ==========================================================
 # 开发环境 Feature
 # ==========================================================
 [feature.dev.dependencies]
-# ──────────────────────────────────────────────────────────
 # 代码质量工具
-# ──────────────────────────────────────────────────────────
 ruff = ">=0.8,<1"
-mypy = ">=1.13,<2"
 pre-commit = ">=4.0,<5"
 
-# ──────────────────────────────────────────────────────────
 # 测试框架
-# ──────────────────────────────────────────────────────────
 pytest = ">=8.0,<9"
 pytest-cov = ">=6.0,<7"
 pytest-asyncio = ">=0.24,<1"
 pytest-mock = ">=3.14,<4"
 pytest-benchmark = ">=4.0,<5"
-pytest-xdist = ">=3.5,<4"     # 并行测试
-pytest-timeout = ">=2.3,<3"   # 超时控制
+pytest-xdist = ">=3.5,<4"
+pytest-timeout = ">=2.3,<3"
 requests-mock = ">=1.12,<2"
 inline-snapshot = ">=0.10"
 hypothesis = ">=6.100"
 respx = ">=0.21"
 
-# ──────────────────────────────────────────────────────────
 # 测试辅助
-# ──────────────────────────────────────────────────────────
 faker = ">=33,<40"
-pandera = ">=0.21,<1" # DataFrame 验证
+pandera = ">=0.21,<1"
 
-# ──────────────────────────────────────────────────────────
 # 类型存根
-# ──────────────────────────────────────────────────────────
 types-requests = ">=2.32,<3"
 types-pyyaml = ">=6.0,<7"
 types-python-dateutil = ">=2.9,<3"
 
-# ──────────────────────────────────────────────────────────
 # 开发工具
-# ──────────────────────────────────────────────────────────
 ipykernel = ">=6.29,<7"
 jupyter = ">=1.1,<2"
 
 [feature.dev.pypi-dependencies]
-# 安全扫描（PyPI 版本更新更快）
-bandit = { version = ">=1.7,<2", extras = ["toml"] }
+# Pyright 类型检查（替代 mypy）
+pyright = ">=1.1.390,<2"
 
 # ==========================================================
 # 环境定义
 # ==========================================================
 [environments]
-# 默认环境：只有运行时依赖
 default = { solve-group = "default" }
-
-# 开发环境：运行时 + 开发依赖（共享 solve-group 确保版本一致）
 dev = { features = ["dev"], solve-group = "default" }
 
 # ==========================================================
@@ -173,50 +135,37 @@ dev = { features = ["dev"], solve-group = "default" }
 # ──────────────────────────────────────────────────────────
 # 代码质量
 # ──────────────────────────────────────────────────────────
-# Lint 检查（CI 用，不自动修复）
 lint = "ruff check ."
-
-# Lint 修复（开发用）
 lint-fix = "ruff check --fix --exit-non-zero-on-fix --show-fixes ."
+# 给 pre-commit 用：不带 "."，让 pre-commit 传入的文件列表生效
+lint-staged = "ruff check"
+lint-fix-staged = "ruff check --fix --exit-non-zero-on-fix --show-fixes"
 
-# 格式检查（CI 用）
 format-check = "ruff format --check --diff ."
+format-check-staged = "ruff format --check --diff"
 
-# 格式化（开发用）
 format = "ruff format ."
+format-staged = "ruff format"
 
-# 类型检查
-typecheck = "mypy packages/ apps/port/"
+# 类型检查 - 源码（standard + strict 核心目录）
+typecheck = "pyright --warnings"
 
-# 安全扫描
-security = "bandit -r packages/ apps/port/src/ -c pyproject.toml --severity-level medium -q"
+# 类型检查 - 测试（basic 模式，宽松）
+typecheck-tests = "pyright --project pyright.tests.json"
+
+# 类型检查 - 全部（CI 用）
+typecheck-all = { depends-on = ["typecheck", "typecheck-tests"] }
 
 # ──────────────────────────────────────────────────────────
 # 测试
 # ──────────────────────────────────────────────────────────
-# 完整测试
 test = "pytest"
-
-# 单元测试（快速，无覆盖率）
 test-unit = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q"
-
-# 极速测试（开发时用）
-# 使用 -n0 禁用 xdist 以避免并行测试时的竞态条件问题
 test-fast = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q --tb=no -x -n0"
-
-# 集成测试
 test-integration = "pytest -m integration -v"
-
-# PIT 数据正确性测试
 test-pit = "pytest -m pit -v --tb=long"
-
-# 覆盖率测试（HTML 报告）
 test-cov = "pytest --cov --cov-report=html --cov-report=term-missing"
-
-# 覆盖率测试（XML 报告，CI 用）
 test-cov-xml = "pytest --cov --cov-report=xml --cov-report=term-missing --cov-fail-under=80"
-
-# 性能基准测试
 test-benchmark = "pytest -m benchmark --benchmark-only"
 
 # ──────────────────────────────────────────────────────────
@@ -229,26 +178,23 @@ pre-commit-update = "pre-commit autoupdate"
 # ──────────────────────────────────────────────────────────
 # 复合任务
 # ──────────────────────────────────────────────────────────
-# CI 完整检查（模拟 CI 流程）
+# CI 完整检查
 ci-check = { depends-on = [
     "lint",
     "format-check",
-    "typecheck",
+    "typecheck-all",
     "security",
     "test-cov-xml",
 ] }
 
-# 快速检查（开发时用，自动修复）
+# 快速检查（开发时用）
 quick-check = { depends-on = ["lint-fix", "format", "test-fast"] }
 
 # ──────────────────────────────────────────────────────────
 # 服务
 # ──────────────────────────────────────────────────────────
-# 使用 granian 替代 uvicorn（2-4x 性能提升）
 server = "granian apps.port.src.ditto_port.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
 server-prod = "granian apps.port.src.ditto_port.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
-
-# CLI 命令行工具
 ditto = "python -m ditto_port.cli.main"
 
 # ──────────────────────────────────────────────────────────
@@ -256,7 +202,7 @@ ditto = "python -m ditto_port.cli.main"
 # ──────────────────────────────────────────────────────────
 clean = """
 rm -rf dist/ build/ *.egg-info \
-    .pytest_cache .mypy_cache .ruff_cache \
+    .pytest_cache .ruff_cache \
     htmlcov .coverage coverage.xml \
     **/__pycache__
 """

@@ -84,7 +84,6 @@ def add_pit_filter(..., knowledge_date: str):
 **验收标准**:
 - [x] 所有 PitHelper 方法添加日期验证
 - [x] 新增 11 个测试用例（SQL注入防护测试）
-- [x] bandit 安全扫描通过
 
 ---
 

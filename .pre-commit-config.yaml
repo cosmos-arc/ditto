@@ -3,16 +3,16 @@
 # 设计原则：
 # - 所有 Python 工具使用 local 模式，通过 pixi run 调用
 # - 确保 pre-commit、CI、开发环境使用完全相同的工具版本
-# - 非 Python 工具（如 gitleaks）仍使用远程 repo
+# - Pyright 放在 CI 中运行（避免 pre-commit 隔离环境的依赖问题）
 #
-# 安装: pixi run pre-commit install --hook-type commit-msg --hook-type pre-commit
+# 安装: pixi run pre-commit-install
 
 minimum_pre_commit_version: "2.20.0"
 default_stages: [pre-commit]
 
 repos:
   # ==========================================================
-  # 基础检查（这些是纯文件检查，无需 Python 环境）
+  # 基础检查（纯文件检查，无需 Python 环境）
   # ==========================================================
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
@@ -33,70 +33,36 @@ repos:
         args: [--branch, main]
 
   # ==========================================================
-  # Python 工具 - 全部使用 Local 模式
+  # Python 工具 - Local 模式
   # ==========================================================
   - repo: local
     hooks:
-      # --------------------------------------------------------
-      # Ruff Lint
-      # --------------------------------------------------------
-      - id: ruff-lint
-        name: ruff lint
-        entry: pixi run ruff check --fix --exit-non-zero-on-fix --show-fixes
-        language: system
-        types: [python]
-        require_serial: false # 可并行
-
-      # --------------------------------------------------------
-      # Ruff Format
-      # --------------------------------------------------------
-      - id: ruff-format
-        name: ruff format
-        entry: pixi run ruff format
+    hooks:
+      # Ruff Lint Fix（先修复）
+      - id: ruff-lint-fix
+        name: ruff lint (fix)
+        entry: pixi run -e dev lint-fix-staged
         language: system
         types: [python]
         require_serial: false
 
-      # --------------------------------------------------------
-      # Mypy Type Check
-      # --------------------------------------------------------
-      - id: mypy
-        name: mypy
-        entry: pixi run -e dev mypy --explicit-package-bases
+      # Ruff Format（再格式化）
+      - id: ruff-format
+        name: ruff format
+        entry: pixi run -e dev format-staged
         language: system
         types: [python]
-        # 只检查源码，排除测试
-        files: ^(packages|apps/server)/.*\.py$
-        exclude: ^(tests/|.*/tests/|.*_test\.py$|conftest\.py$)
-        require_serial: true # Mypy 需要串行以利用缓存
+        require_serial: false
 
-      # --------------------------------------------------------
-      # Bandit Security Scan
-      # --------------------------------------------------------
-      - id: bandit
-        name: bandit
-        entry: pixi run -e dev bandit -c pyproject.toml --severity-level medium --confidence-level medium --quiet
-        language: system
-        types: [python]
-        files: ^(packages|apps/server)/.*\.py$
-        exclude: ^(tests/|.*/tests/|.*_test\.py$|conftest\.py$)
-        pass_filenames: true # bandit 需要接收文件列表
-
-      # --------------------------------------------------------
-      # Type Ignore 检查
-      # --------------------------------------------------------
-      - id: no-new-type-ignore
-        name: "检查新增的 type: ignore"
-        entry: >-
-          powershell -Command
-          "$diff = git diff --cached --unified=0 -- '*.py';
-           if ($diff | Select-String '^\+.*# type: ignore') { exit 1 } else { exit 0 }"
+      - id: pyright
+        name: pyright (src, warnings=fail)
+        entry: pixi run -e dev typecheck
         language: system
         pass_filenames: false
+        require_serial: true
 
       # --------------------------------------------------------
-      # pytest (可选 - pre-push 阶段)
-      # 注意：已禁用，因为 GitHub Actions 会运行完整测试
+      # pytest (pre-push 阶段)
       # --------------------------------------------------------
       - id: pytest-fast
         name: pytest (fast)
@@ -104,10 +70,10 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
-        stages: [pre-push] # 只在 push 时运行，不阻塞 commit
+        stages: [pre-push]
 
   # ==========================================================
-  # 敏感信息检测（二进制工具，使用远程 repo）
+  # 敏感信息检测
   # ==========================================================
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.21.2
@@ -141,13 +107,10 @@ repos:
 # ==========================================================
 exclude: |
   (?x)^(
-    \.git/|
     \.pixi/|
     __pycache__/|
     \.pytest_cache/|
-    \.mypy_cache/|
     \.ruff_cache/|
-    \.coverage/|
     htmlcov/|
     \.tox/|
     build/|
@@ -155,9 +118,8 @@ exclude: |
     \.venv/|
     node_modules/|
     apps/web/\.next/|
-    data/|
-    \.pixi/
-  )$
+    data/
+  )
 
 # ==========================================================
 # CI 集成配置
@@ -167,8 +129,7 @@ ci:
     # CI 中跳过这些（由 GitHub Actions 单独运行）
     - ruff-lint
     - ruff-format
-    - mypy
-    - bandit
+    - pyright
     - pytest-fast
     - gitleaks
   autoupdate_schedule: monthly

@@ -95,7 +95,6 @@ models/
 *.onnx
 
 # 缓存文件
-.mypy_cache/
 .pytest_cache/
 .ruff_cache/
 .hypothesis/
@@ -132,6 +131,9 @@ media/
 # Visual Studio Code
 .vscode/
 *.code-workspace
+
+# Claude Code 扩展临时文件
+tmpclaude-*-cwd
 
 # 本地配置文件 (用于存储敏感信息，如 API 密钥)
 .env

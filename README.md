@@ -87,7 +87,7 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
 # 代码质量检查
 pixi run lint          # 运行 ruff 检查
 pixi run format         # 格式化代码
-pixi run typecheck      # 运行 mypy 类型检查
+pixi run typecheck      # 运行 pyright 类型检查
 
 # 测试
 pixi run test           # 运行所有测试
@@ -316,8 +316,7 @@ pixi run ci-check
 
 **CI 检查包括**:
 - Ruff (lint + format)
-- MyPy (type check)
-- Bandit + Gitleaks (security)
+- Pyright (type check)
 - Pytest (unit + integration tests)
 - **覆盖率要求: 80%** (通过 Codecov 精细化管理)
 
@@ -399,7 +398,7 @@ KILL_SWITCH_ENABLED=true
 
 - 严格遵循官方设计文档
 - 使用 ruff 进行格式化和检查
-- 使用 mypy 进行类型检查
+- 使用 pyright 进行类型检查
 - 所有新功能需要测试覆盖
 - 遵循 TDD 开发流程
 

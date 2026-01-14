@@ -126,7 +126,7 @@ git commit -m "chore(datahub): export DataHub from __init__.py"
 ### 质量
 - [ ] 单元测试通过
 - [ ] 覆盖率达标 (≥80%)
-- [ ] Ruff/MyPy 检查通过
+- [ ] Ruff/Pyright 检查通过
 
 ### 性能（如适用）
 - [ ] 性能指标 1

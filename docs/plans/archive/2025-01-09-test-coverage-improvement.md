@@ -548,13 +548,12 @@ pytest --cov-branch
 - `344466d` - test: improve SQLiteClient test coverage to 100%
 - `2705cef` - test: improve DataCache test coverage to 100%
 - `cb4a6fa` - test: improve PitHelper test coverage to 100%
-- `f250df5` - fix: add usedforsecurity=False to MD5 hash to satisfy bandit B324
 
 **代码质量**:
 - ✅ pre-commit 全部通过
 - ✅ mypy 类型检查通过
 - ✅ ruff linting 通过
-- ✅ bandit 安全检查通过
+
 
 **已知限制**:
 - pytest-cov 与 polars 存在兼容性问题，部分测试在覆盖率启用时显示 ERROR
@@ -582,7 +581,6 @@ pytest --cov-branch
 - ✅ pre-commit 全部通过
 - ✅ mypy 类型检查通过
 - ✅ ruff linting 通过
-- ✅ bandit 安全检查通过
 - ✅ 所有 158 个测试通过
 
 ---

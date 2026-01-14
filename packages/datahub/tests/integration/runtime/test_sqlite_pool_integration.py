@@ -39,7 +39,7 @@ class TestSQLitePool:
         conn = self.pool.get_connection()
 
         # Verify the returned type is sqlite3.Connection
-        # Type should be inferred correctly by mypy without runtime cast
+        # Type should be inferred correctly by pyright without runtime cast
         assert isinstance(conn, sqlite3.Connection)
 
     def test_get_connection_is_thread_local(self) -> None:

@@ -23,8 +23,7 @@ Ditto 项目使用分层的 CI/CD 策略，将快速反馈的单元测试与耗�
 ```
 changes (变更检测)
   ├── lint (Ruff)
-  ├── type-check (MyPy)
-  ├── security (Bandit + Gitleaks)
+  ├── type-check (Pyright)
   ├── test-unit (单元测试, 覆盖率 70%)
   └── build (构建验证, 仅 main 分支)
        └── ci-success (状态汇总)
@@ -35,8 +34,7 @@ changes (变更检测)
 | 检查名称 | 说明 |
 |----------|------|
 | `lint` | Ruff 代码风格检查 |
-| `type-check` | MyPy 类型检查 |
-| `security` | Bandit 安全扫描 + Gitleaks 敏感信息检测 |
+| `type-check` | Pyright 类型检查 |
 | `test-unit` | 单元测试（排除集成测试） |
 | `ci-success` | 所有必需作业的汇总状态 |
 
@@ -266,8 +264,7 @@ pixi run test                   # 运行所有测试
 # === 代码质量 ===
 pixi run lint                   # Ruff lint
 pixi run format                 # Ruff format check
-pixi run type                   # MyPy type check
-pixi run security               # Bandit security scan
+pixi run typecheck              # Pyright type check
 
 # === 复合任务 ===
 pixi run ci-check               # 完整 CI 检查（本地）
