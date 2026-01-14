@@ -160,7 +160,7 @@ class FreezeManager:
             event="freeze_list",
         )
 
-        manifests = []
+        manifests: list[FreezeManifest] = []
         for manifest_path in self._freezes_dir.glob("*.json"):
             manifest = self._load_manifest(manifest_path)
             manifests.append(manifest)
@@ -252,7 +252,7 @@ class FreezeManager:
         from datetime import datetime, timedelta
 
         cutoff = datetime.now() - timedelta(days=max_age)
-        deleted = []
+        deleted: list[str] = []
 
         for manifest_path in self._freezes_dir.glob("*.json"):
             try:

@@ -205,9 +205,9 @@ class DatasetRules(BaseModel):
 
     dataset: str
     description: str
-    l1_technical: list[dict[str, Any]] = Field(default_factory=list)
-    l2_business: list[dict[str, Any]] = Field(default_factory=list)
-    l3_statistical: list[dict[str, Any]] = Field(default_factory=list)
+    l1_technical: list[dict[str, Any]] = Field(default_factory=lambda: [])
+    l2_business: list[dict[str, Any]] = Field(default_factory=lambda: [])
+    l3_statistical: list[dict[str, Any]] = Field(default_factory=lambda: [])
 
     @field_validator("l1_technical", "l2_business", "l3_statistical", mode="before")
     @classmethod
@@ -324,7 +324,7 @@ class DQIssue:
     rule_name: str
     message: str
     affected_rows: int = 0
-    sample_data: list[dict[str, Any]] = field(default_factory=list)
+    sample_data: list[dict[str, Any]] = field(default_factory=lambda: [])
 
 
 @dataclass
@@ -333,7 +333,7 @@ class DQResult:
 
     dataset: str
     passed: bool
-    issues: list[DQIssue] = field(default_factory=list)
+    issues: list[DQIssue] = field(default_factory=lambda: [])
 
     @property
     def has_errors(self) -> bool:

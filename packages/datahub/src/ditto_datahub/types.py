@@ -63,7 +63,7 @@ class FreezeManifest:
     created_at: str
     version: str = "2.0"
     checksum_type: str = "sha256"  # "md5" for legacy, "sha256" for new
-    files: dict[str, str] = field(default_factory=dict)  # {relative_path: checksum}
+    files: dict[str, str] = field(default_factory=lambda: {})  # {relative_path: checksum}
 
     @property
     def file_count(self) -> int:
