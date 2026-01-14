@@ -373,7 +373,7 @@ pnpm preview
 
 - **系统设计**: `docs/design/01_system_design.md`
 - **引擎设计**: `docs/design/03_engine_design.md`
-- **API 文档**: `apps/server/README.md`
+- **API 文档**: `apps/port/README.md`
 - **风险宪法**: `docs/design/08_risk_constitution.md`
 
 ## 技术决策记录（ADR）

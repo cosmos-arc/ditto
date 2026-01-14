@@ -7,7 +7,7 @@ The flow uses Prefect's native dependency mechanism (@task + wait_for)
 for declarative orchestration.
 """
 
-# ruff: noqa: PLC0415  # 测试文件允许函数内导入
+# 测试文件允许函数内导入
 
 import pytest
 

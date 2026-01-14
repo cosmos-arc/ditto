@@ -4,7 +4,7 @@ This module tests the repair flow which handles retrying failed tasks
 and filling data holes.
 """
 
-# ruff: noqa: PLC0415  # 测试文件允许函数内导入
+# 测试文件允许函数内导入
 
 import pytest
 

@@ -332,7 +332,7 @@ class TestCalendarStore:
 
     def test_get_range_returns_immutable_copy(self) -> None:
         """Test that get_range returns a copy to prevent cache pollution."""
-        # ruff: noqa: PLC0415  # 测试方法内导入
+        # 测试方法内导入
         from ditto_datahub.runtime.cache import DataCache
 
         # Create store with DataCache

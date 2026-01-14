@@ -93,7 +93,9 @@ def configure_logging(config: ObservabilityConfig, mode: Mode) -> None:
     # 使用 XDG Base Directory 规范获取日志目录
     # 如果 config.log_dir 是默认值 "logs"，使用 XDGPaths
     if config.log_dir == "logs":
-        from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
+        from ditto_foundation.config.paths import (  # noqa: PLC0415 - 条件导入
+            get_paths,
+        )
 
         log_dir = get_paths().state_subdir("logs")
     else:

@@ -279,12 +279,12 @@ class XDGPaths:
 
         # 降级方案
         if self._platform == "win32":
-            temp = os.environ.get("TEMP", "/tmp")  # nosec B108
+            temp = os.environ.get("TEMP", "/tmp")  # noqa: S108
             return Path(temp) / self.APP_NAME
         else:
             # os.getuid() 在 Windows 上不存在
             uid = os.getuid() if hasattr(os, "getuid") else os.getpid()
-            return Path(f"/tmp/{self.APP_NAME}-{uid}")  # nosec B108
+            return Path(f"/tmp/{self.APP_NAME}-{uid}")  # noqa: S108
 
     # ==================== 子目录访问器 ====================
 

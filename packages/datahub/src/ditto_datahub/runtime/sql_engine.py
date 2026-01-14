@@ -122,7 +122,7 @@ class SqlEngine:
                 # Create view with glob pattern for year partitions
                 # dataset is validated against ALLOWED_DATASETS whitelist
                 view_sql = (
-                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "  # nosec B608
+                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "  # noqa: S608
                     f'"{parquet_path}/*.parquet"'
                 )
                 self.con.execute(view_sql)
@@ -242,7 +242,7 @@ class SqlEngine:
             return normalized, False
 
         # Generate cache key using MD5 hash (非安全用途，仅用于缓存键生成)
-        cache_key = hashlib.md5(normalized.encode()).hexdigest()  # nosec B324
+        cache_key = hashlib.md5(normalized.encode()).hexdigest()  # noqa: S324
 
         if cache_key in self._plan_cache:
             M.sql_query_plan_cache_hit.add(1)
@@ -375,10 +375,7 @@ class SqlEngine:
             prepared_query = prepared_query.replace("$asof", f"${new_param_num}")
 
             # 合并参数
-            if params is None:
-                params = [asof]
-            else:
-                params = [*params, asof]
+            params = [asof] if params is None else [*params, asof]
 
         # Execute query and convert to polars DataFrame
         if params:

@@ -96,8 +96,8 @@ class PitHelper:
         if re.search(r"\b(ORDER BY|LIMIT|GROUP BY|HAVING)\b", query, re.IGNORECASE):
             # 使用 CTE 包装以避免破坏原有 SQL 结构
             wrapped = (
-                f"WITH _pit_original AS ({query}) "
-                f"SELECT * FROM _pit_original WHERE {date_column} <= '{knowledge_date}'"  # nosec B608 - date_column is validated, knowledge_date is YYYY-MM-DD format
+                f"WITH _pit_original AS ({query}) "  # noqa: S608
+                f"SELECT * FROM _pit_original WHERE {date_column} <= '{knowledge_date}'"
             )
             return wrapped
 
@@ -105,10 +105,10 @@ class PitHelper:
         # \bWHERE\b 确保匹配完整的 WHERE 关键字，避免匹配到包含 WHERE 的其他词
         if re.search(r"\bWHERE\b", query, re.IGNORECASE):
             # 已有 WHERE，添加 AND 条件
-            return f"{query} AND {date_column} <= '{knowledge_date}'"  # nosec B608 - date_column is validated, knowledge_date is YYYY-MM-DD format
+            return f"{query} AND {date_column} <= '{knowledge_date}'"
         else:
             # 没有 WHERE，添加 WHERE 子句
-            return f"{query} WHERE {date_column} <= '{knowledge_date}'"  # nosec B608 - date_column is validated, knowledge_date is YYYY-MM-DD format
+            return f"{query} WHERE {date_column} <= '{knowledge_date}'"
 
     @staticmethod
     def add_pit_join(
@@ -215,7 +215,7 @@ class PitHelper:
         query = query.strip()
 
         # 构建 CTE（query 参数由开发者控制，非用户输入）
-        cte = f"WITH {cte_name} AS ({query}) SELECT * FROM {cte_name}"  # nosec: B608
+        cte = f"WITH {cte_name} AS ({query}) SELECT * FROM {cte_name}"  # noqa: S608
 
         # 如果提供了 asof_date，添加 WHERE 子句
         if asof_date:

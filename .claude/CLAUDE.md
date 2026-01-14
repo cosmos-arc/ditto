@@ -60,12 +60,12 @@ ditto/
 │   ├── datahub/       # 数据访问层
 │   └── core/          # 核心引擎
 ├── apps/              # 应用
-│   ├── server/        # Server 应用
+│   ├── port/        # Server 应用
 │   └── web/           # Web 应用
 └── docs/              # 文档
 
 依赖方向: core → datahub → foundation
-          apps/server → datahub → foundation
+          apps/port → datahub → foundation
 ```
 
 | 层级 | 职责 | 详细规范 |

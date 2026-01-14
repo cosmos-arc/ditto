@@ -4,7 +4,7 @@ This module tests the backfill flow which handles historical data backfill
 operations with date range chunking and resume capability.
 """
 
-# ruff: noqa: PLC0415  # 测试文件允许函数内导入
+# 测试文件允许函数内导入
 
 import pytest
 

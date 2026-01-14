@@ -42,7 +42,7 @@ jobs:
           filters: |
             python:
               - 'packages/**/*.py'
-              - 'apps/server/**/*.py'
+              - 'apps/port/**/*.py'
               - 'tests/**/*.py'
               - 'scripts/**/*.py'
               - 'pyproject.toml'

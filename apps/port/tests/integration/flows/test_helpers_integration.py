@@ -4,7 +4,7 @@ This module tests the helpers context managers with real dependencies
 but mocked data sources.
 """
 
-# ruff: noqa: PLC0415  # 测试文件允许函数内导入
+# 测试文件允许函数内导入
 
 import pytest
 

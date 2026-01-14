@@ -347,7 +347,7 @@ class TestPatchDatahubFixture:
     ) -> None:
         """验证 patch_datahub 正确 patch 了 ditto_datahub.DataHub."""
         # 在 patch 后导入 DataHub，确保使用被 patch 的版本
-        from ditto_datahub import DataHub  # noqa: PLC0415
+        from ditto_datahub import DataHub
 
         # 调用 DataHub 应该返回 mock_datahub_session
         # patch_datahub 就是 mock_datahub_session 的别名

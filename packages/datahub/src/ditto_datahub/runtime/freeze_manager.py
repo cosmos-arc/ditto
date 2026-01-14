@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import orjson
@@ -248,8 +248,6 @@ class FreezeManager:
             event="cleanup_expired",
             max_age_days=max_age,
         )
-
-        from datetime import datetime, timedelta
 
         cutoff = datetime.now() - timedelta(days=max_age)
         deleted: list[str] = []

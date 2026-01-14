@@ -1,5 +1,6 @@
 """Quarantine store for failed DQ data."""
 
+import json
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -62,7 +63,6 @@ class QuarantineStore:
         """
         # Convert DataFrame to dict for JSON serialization
         # Use arrow format for reliable serialization
-        import json
 
         # Convert to list of dicts (records format)
         data_dicts = failed_data.to_dicts()
@@ -140,8 +140,6 @@ class QuarantineStore:
             Failed data as DataFrame, or None if not found
 
         """
-        import json
-
         cursor = self._conn.execute(
             "SELECT failed_data FROM quarantine_failed_data WHERE id = ?",
             (row_id,),

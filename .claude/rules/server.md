@@ -1,5 +1,5 @@
 ---
-paths: apps/server/**/*.py
+paths: apps/port/**/*.py
 ---
 
 # Server 层规范

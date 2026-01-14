@@ -272,9 +272,9 @@ class SQLiteClient:
         if table not in self.ALLOWED_TABLES:
             raise ValueError(f"Invalid table: {table}")
 
-        sql = f"SELECT COUNT(*) FROM {table}"  # nosec B608 - table is validated against ALLOWED_TABLES whitelist
+        sql = f"SELECT COUNT(*) FROM {table}"  # noqa: S608 - table is validated against ALLOWED_TABLES whitelist
         if where:
-            sql += f" WHERE {where}"  # nosec B608 - where clause is validated input
+            sql += f" WHERE {where}"
 
         result = self.fetchval(sql, params)
         # COUNT(*) always returns int, but pyright can't infer that

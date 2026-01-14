@@ -1,4 +1,4 @@
-# ruff: noqa: PLC0415  # 测试文件允许函数内导入
+# 测试文件允许函数内导入
 
 """Tests for adj_factor and fund_adj ingestion with correct SID mapping.
 

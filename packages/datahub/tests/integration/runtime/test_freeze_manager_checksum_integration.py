@@ -19,7 +19,7 @@ class TestFreezeManagerChecksum:
 
     def teardown_method(self):
         """Clean up test fixtures."""
-        # ruff: noqa: PLC0415  # 测试方法内导入
+        # 测试方法内导入
         import shutil
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)

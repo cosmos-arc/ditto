@@ -266,7 +266,7 @@ ditto/
 
 ```
 ditto/
-├── apps/server/tests/           # 服务器应用测试
+├── apps/port/tests/           # 服务器应用测试
 ├── packages/core/tests/         # 核心模块测试
 ├── packages/datahub/tests/      # 数据层测试
 ├── packages/foundation/tests/   # 基础模块测试
@@ -281,7 +281,7 @@ pixi run test
 
 # 运行特定模块测试
 pixi run test packages/core/tests/unit/
-pixi run test apps/server/tests/
+pixi run test apps/port/tests/
 
 # 生成覆盖率报告
 pixi run test --cov=packages --cov=apps --cov-report=html

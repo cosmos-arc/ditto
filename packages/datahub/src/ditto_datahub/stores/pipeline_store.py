@@ -160,7 +160,7 @@ class PipelineStore:
             )
             raise
 
-    def update_run(  # noqa: PLR0913
+    def update_run(  # noqa: PLR0913, C901
         self,
         run_id: str,
         status: str | None = None,
@@ -241,7 +241,7 @@ class PipelineStore:
 
             params.append(run_id)
             self._client.execute(
-                f"UPDATE pipeline_run SET {', '.join(updates)} WHERE run_id = ?",  # nosec B608 - column names validated against ALLOWED_COLUMNS whitelist above
+                f"UPDATE pipeline_run SET {', '.join(updates)} WHERE run_id = ?",  # noqa: S608 - column names validated against ALLOWED_COLUMNS whitelist above
                 params,
             )
             self._client.commit()

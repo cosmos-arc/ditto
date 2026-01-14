@@ -170,7 +170,7 @@
 **核心思想**：`DATASET_REGISTRY` 作为单一配置源
 
 ```python
-# apps/server/src/ditto_port/ingestion/config/datasets.py
+# apps/port/src/ditto_port/ingestion/config/datasets.py
 
 class Dataset(str, Enum):
     """数据集枚举"""
@@ -229,7 +229,7 @@ DATASET_REGISTRY: dict[Dataset, DatasetConfig] = {
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        Server (apps/server)                                  │
+│                        Server (apps/port)                                  │
 │                                                                              │
 │   职责：应用层编排                                                           │
 │   - Prefect Flows：任务编排、调度、依赖管理                                   │
@@ -1273,7 +1273,7 @@ async def send_notification(message: str):
 ## 9. FastAPI 集成
 
 ```python
-# apps/server/src/ditto_port/main.py
+# apps/port/src/ditto_port/main.py
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI

@@ -214,9 +214,9 @@
 
 **6.1 Prefect 基础设施** [S] ✅
 - 文件：
-  - `apps/server/pyproject.toml`（新增包）
-  - `apps/server/src/ditto_port/__init__.py`
-  - `apps/server/src/ditto_port/main.py`
+  - `apps/port/pyproject.toml`（新增包）
+  - `apps/port/src/ditto_port/__init__.py`
+  - `apps/port/src/ditto_port/main.py`
 - 功能：
   - FastAPI 基础应用
   - Prefect 本地 Server 启动
@@ -238,12 +238,12 @@
 
 **6.2 完整摄取 Flow 实现** [L] ✅
 - 文件：
-  - `apps/server/src/ditto_port/ingestion/flows/__init__.py`
-  - `apps/server/src/ditto_port/ingestion/flows/daily_ingest.py`
-  - `apps/server/src/ditto_port/ingestion/tasks/__init__.py`
-  - `apps/server/src/ditto_port/ingestion/tasks/bars.py`
-  - `apps/server/src/ditto_port/ingestion/tasks/stock.py`
-  - `apps/server/src/ditto_port/ingestion/tasks/adj_factor.py`
+  - `apps/port/src/ditto_port/ingestion/flows/__init__.py`
+  - `apps/port/src/ditto_port/ingestion/flows/daily_ingest.py`
+  - `apps/port/src/ditto_port/ingestion/tasks/__init__.py`
+  - `apps/port/src/ditto_port/ingestion/tasks/bars.py`
+  - `apps/port/src/ditto_port/ingestion/tasks/stock.py`
+  - `apps/port/src/ditto_port/ingestion/tasks/adj_factor.py`
 - 功能：
   - **daily_ingest_flow**：
     - 完整版本，支持 7 个摄取任务
@@ -409,7 +409,7 @@ packages/datahub/
 │       ├── client.py               # Tushare 客户端（限流、重试、keyring）
 │       └── source.py               # TushareSource 实现（7个fetch方法）
 │
-apps/server/
+apps/port/
 ├── README.md                       # Server 模块说明
 ├── pyproject.toml                  # Server 包配置
 └── src/ditto_port/
