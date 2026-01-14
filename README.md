@@ -86,18 +86,29 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
 ```bash
 # 代码质量检查
 pixi run lint          # 运行 ruff 检查
-pixi run format         # 格式化代码
-pixi run typecheck      # 运行 pyright 类型检查
+pixi run lint --fix    # 自动修复问题
+pixi run fmt           # 格式化代码
+pixi run type          # 运行 pyright 类型检查
 
 # 测试
-pixi run test           # 运行所有测试
+pixi run test              # 运行所有测试
+pixi run test --unit       # 只运行单元测试
+pixi run test --integration # 只运行集成测试
+pixi run test --fast       # 快速测试（跳过慢速）
 pixi run test tests/test_specific.py  # 运行特定测试
+
+# 快速验证（开发时）
+pixi run check         # lint + fmt + type + test --fast
+
+# 完整检查（CI 用）
+pixi run ci            # 完整的 CI 检查
 
 # 数据更新
 pixi run update-data    # 更新市场数据
 
 # 开发模式启动
-pixi run server         # 启动开发服务器
+pixi run dev            # 启动开发服务器（热重载）
+pixi run server         # 启动生产服务器
 ```
 
 ## 项目结构
@@ -280,11 +291,17 @@ ditto/
 pixi run test
 
 # 运行特定模块测试
-pixi run test packages/core/tests/unit/
+pixi run test packages/core/tests/
 pixi run test apps/port/tests/
 
+# 运行单元测试（并行）
+pixi run test --unit
+
+# 运行集成测试（串行）
+pixi run test --integration
+
 # 生成覆盖率报告
-pixi run test --cov=packages --cov=apps --cov-report=html
+pixi run test --cov
 
 # 运行pre-commit检查
 pre-commit run --all-files
@@ -304,7 +321,8 @@ pixi run pre-commit-install
 pre-commit run --all-files
 
 # 或使用 pixi 任务
-pixi run ci-check
+pixi run ci            # 完整 CI 检查
+pixi run check         # 快速验证（开发时）
 ```
 
 ### GitHub Actions

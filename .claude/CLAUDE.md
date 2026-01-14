@@ -87,16 +87,31 @@ ditto/
 ## 常用命令
 
 ```bash
-# 检查
-pixi run -e dev quick-check     # 开发时
-pixi run -e dev pre-commit-run  # 提交前
-pixi run -e dev ci-check        # CI 完整
+# 快速验证（开发时）
+pixi run -e dev check          # lint + fmt + type + test --fast
+
+# 提交前检查
+pixi run -e dev pre-commit-run # pre-commit hooks
+pixi run -e dev ci             # CI 完整检查
 
 # 测试
-pixi run -e dev pytest          # 全部
-pixi run -e dev pytest -m unit  # 单元测试
-pixi run -e dev pytest -m pit   # PIT 测试
-pixi run -e dev pytest -m integration  # 集成测试
+pixi run -e dev test              # 默认：单元测试（并行）
+pixi run -e dev test --unit       # 只运行单元测试（并行）
+pixi run -e dev test --integration # 只运行集成测试（串行）
+pixi run -e dev test --fast       # 快速测试（跳过慢速）
+pixi run -e dev test --snapshot   # 支持 inline-snapshot（串行）
+pixi run -e dev test-pit          # PIT 测试
+
+# 类型检查
+pixi run -e dev type          # 源码类型检查（strict）
+pixi run -e dev type --tests  # 测试类型检查（basic）
+pixi run -e dev type --all    # 完整类型检查
+
+# 代码质量
+pixi run -e dev lint          # 代码检查
+pixi run -e dev lint --fix    # 自动修复
+pixi run -e dev fmt           # 格式化
+pixi run -e dev fmt --check   # 只检查不修改
 ```
 
 ## ⚠️ SKILLS 执行规则

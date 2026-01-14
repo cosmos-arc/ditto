@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""
+pixi type 命令包装脚本
+
+简化类型检查命令，支持参数驱动：
+- pixi run type          # 默认：源码类型检查（strict + warnings）
+- pixi run type --tests  # 测试代码类型检查（basic 模式）
+- pixi run type --all    # 源码 + 测试全部检查
+"""
+
+import subprocess
+import sys
+
+
+def main() -> int:
+    """主函数"""
+    args = sys.argv[1:]
+
+    has_tests = "--tests" in args
+    has_all = "--all" in args
+
+    if has_all:
+        # 运行所有类型检查
+        print("Running: pyright --warnings", file=sys.stderr)
+        rc1 = subprocess.run(["pyright", "--warnings"], check=False).returncode
+        print("\nRunning: pyright --project pyright.tests.json", file=sys.stderr)
+        rc2 = subprocess.run(
+            ["pyright", "--project", "pyright.tests.json"], check=False
+        ).returncode
+        return rc1 or rc2
+    elif has_tests:
+        # 只检查测试代码
+        print("Running: pyright --project pyright.tests.json", file=sys.stderr)
+        return subprocess.run(
+            ["pyright", "--project", "pyright.tests.json"], check=False
+        ).returncode
+    else:
+        # 默认：只检查源码
+        print("Running: pyright --warnings", file=sys.stderr)
+        return subprocess.run(["pyright", "--warnings"], check=False).returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

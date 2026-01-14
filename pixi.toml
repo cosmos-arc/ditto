@@ -135,92 +135,96 @@ dev = { features = ["dev"], solve-group = "default" }
 # ──────────────────────────────────────────────────────────
 # 代码质量
 # ──────────────────────────────────────────────────────────
+# Lint：代码检查
 lint = "ruff check ."
-lint-fix = "ruff check --fix --exit-non-zero-on-fix --show-fixes ."
-# 给 pre-commit 用：不带 "."，让 pre-commit 传入的文件列表生效
-lint-staged = "ruff check"
-lint-fix-staged = "ruff check --fix --exit-non-zero-on-fix --show-fixes"
 
-format-check = "ruff format --check --diff ."
-format-check-staged = "ruff format --check --diff"
+# Format：代码格式化
+fmt = "ruff format ."
 
-format = "ruff format ."
-format-staged = "ruff format"
-
-# 类型检查 - 源码（standard + strict 核心目录）
-typecheck = "pyright --warnings"
-
-# 类型检查 - 测试（basic 模式，宽松）
-typecheck-tests = "pyright --project pyright.tests.json"
-
-# 类型检查 - 全部（CI 用）
-typecheck-all = { depends-on = ["typecheck", "typecheck-tests"] }
+# Type：类型检查（使用包装脚本）
+type = "python scripts/type.py"
 
 # ──────────────────────────────────────────────────────────
-# 测试（分层并行策略）
+# 测试（使用包装脚本，支持参数驱动）
 # ──────────────────────────────────────────────────────────
-# 基础测试命令
-test = "pytest"
-test-pit = "pytest -m pit -v --tb=long"
-test-benchmark = "pytest -m benchmark --benchmark-only"
-
-# 分层测试命令（并行优化）
-# DataHub 单元测试：并行（已验证安全）
-test-unit-datahub = "pytest packages/datahub/tests/unit/ -n auto -v"
-
-# Port 单元测试：有限并行（需验证）
-test-unit-port = "pytest apps/port/tests/unit/ -n auto -v"
-
-# 集成测试：串行（有 session fixtures）
-test-integration = "pytest -m integration -n 0 -v"
-
-# 快速测试：串行（开发时）
-test-fast = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q --tb=no -x"
-
-# 兼容原有命令（串行）
-test-unit = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q"
-
-# 覆盖率测试
-test-cov = "pytest --cov --cov-report=html --cov-report=term-missing"
-test-cov-xml = "pytest --cov --cov-report=xml --cov-report=term-missing --cov-fail-under=80"
-
-# 完整测试：分层执行
-test-all = "pytest packages/datahub/tests/unit/ -n auto && pytest apps/port/tests/unit/ -n 2 && pytest -m integration -n 0"
+# pixi run test              # 默认：单元测试（并行）
+# pixi run test --unit       # 只跑单元测试（并行）
+# pixi run test --integration # 只跑集成测试（串行）
+# pixi run test --fast       # 快速测试（跳过 slow/integration/e2e）
+# pixi run test --cov        # 带覆盖率报告
+# pixi run test --cov-xml    # 覆盖率 XML（CI 用）
+# pixi run test --snapshot   # 支持 inline-snapshot（串行）
+test = "python scripts/test.py"
 
 # ──────────────────────────────────────────────────────────
-# Pre-commit
+# 组合命令
 # ──────────────────────────────────────────────────────────
-pre-commit-install = "pre-commit install --hook-type commit-msg --hook-type pre-commit --hook-type pre-push"
-pre-commit-run = "pre-commit run --all-files"
-pre-commit-update = "pre-commit autoupdate"
+# Check：快速验证（开发时用）
+check = { depends-on = ["lint", "fmt", "type", "test-fast"] }
+
+# CI：完整检查（CI 用）
+ci = { depends-on = ["lint", "fmt-check", "type-all", "test-cov-xml"] }
 
 # ──────────────────────────────────────────────────────────
-# 复合任务
+# 辅助命令
 # ──────────────────────────────────────────────────────────
-# CI 完整检查
-ci-check = { depends-on = [
-    "lint",
-    "format-check",
-    "typecheck-all",
-    "test-cov-xml",
-] }
+# Dev：开发服务（热重载）
+dev = "granian apps.port.src.ditto_port.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
 
-# 快速检查（开发时用）
-quick-check = { depends-on = ["lint-fix", "format", "test-fast"] }
+# Server：生产服务
+server = "granian apps.port.src.ditto_port.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
 
-# ──────────────────────────────────────────────────────────
-# 服务
-# ──────────────────────────────────────────────────────────
-server = "granian apps.port.src.ditto_port.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
-server-prod = "granian apps.port.src.ditto_port.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
-ditto = "python -m ditto_port.cli.main"
-
-# ──────────────────────────────────────────────────────────
-# 清理
-# ──────────────────────────────────────────────────────────
+# Clean：清理缓存
 clean = """
 rm -rf dist/ build/ *.egg-info \
     .pytest_cache .ruff_cache \
     htmlcov .coverage coverage.xml \
     **/__pycache__
 """
+
+# ──────────────────────────────────────────────────────────
+# Pre-commit（保留兼容）
+# ──────────────────────────────────────────────────────────
+pre-commit-install = "pre-commit install --hook-type commit-msg --hook-type pre-commit --hook-type pre-push"
+pre-commit-run = "pre-commit run --all-files"
+pre-commit-update = "pre-commit autoupdate"
+
+# ──────────────────────────────────────────────────────────
+# 特殊测试（保留兼容）
+# ──────────────────────────────────────────────────────────
+# PIT 测试：专门的 PIT 模式测试
+test-pit = "pytest -m pit -v --tb=long"
+
+# Benchmark：基准测试
+test-benchmark = "pytest -m benchmark --benchmark-only"
+
+# ──────────────────────────────────────────────────────────
+# 旧命令兼容（逐步迁移，后续移除）
+# ──────────────────────────────────────────────────────────
+# Lint 旧命令
+lint-fix = "pixi run lint --fix"
+lint-staged = "ruff check"
+lint-fix-staged = "pixi run lint --fix"
+
+# Format 旧命令
+format = "pixi run fmt"
+format-check = "pixi run fmt --check"
+format-staged = "ruff format"
+format-check-staged = "ruff format --check --diff"
+
+# Type 旧命令
+typecheck = "pixi run type"
+typecheck-tests = "pixi run type --tests"
+typecheck-all = "pixi run type --all"
+
+# Test 旧命令
+test-fast = "pixi run test --fast"
+test-unit = "pixi run test --unit"
+test-integration = "pixi run test --integration"
+test-cov = "pixi run test --cov"
+test-cov-xml = "pixi run test --cov-xml"
+test-all = "pixi run test"
+
+# Check 旧命令
+quick-check = "pixi run check"
+ci-check = "pixi run ci"

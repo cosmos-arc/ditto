@@ -467,9 +467,9 @@ grep -r "@patch" tests/
 ## 完整检查命令
 
 ```bash
-pixi run -e dev quick-check       # 开发时（lint-fix + format + test-fast）
-pixi run -e dev pre-commit-run    # 提交前（lint + format + typecheck + security）
-pixi run -e dev ci-check          # CI完整（以上 + test-cov-xml）
+pixi run -e dev check             # 开发时（lint + fmt + type + test --fast）
+pixi run -e dev pre-commit-run    # 提交前（pre-commit hooks）
+pixi run -e dev ci                # CI 完整（lint + fmt --check + type --all + test --cov-xml）
 ```
 
 ---
@@ -481,9 +481,9 @@ pixi run -e dev ci-check          # CI完整（以上 + test-cov-xml）
 - 测试：`pyright.tests.json`（basic 模式，宽松）
 
 ```bash
-pixi run -e dev typecheck         # 源码检查（strict + warnings）
-pixi run -e dev typecheck-tests   # 测试检查（basic 模式）
-pixi run -e dev typecheck-all     # 完整检查（源码 + 测试）
+pixi run -e dev type          # 源码检查（strict + warnings）
+pixi run -e dev type --tests  # 测试检查（basic 模式）
+pixi run -e dev type --all    # 完整检查（源码 + 测试）
 ```
 
 ---
