@@ -54,7 +54,7 @@ __all__ = [
     "traced",
 ]
 
-_initialized = False
+_initialized: bool = False
 
 
 def init(
@@ -80,7 +80,7 @@ def init(
         force: 强制重新初始化（用于测试）
 
     """
-    global _initialized
+    global _initialized  # noqa: PLW0603
 
     if _initialized and not force:
         return
@@ -128,8 +128,9 @@ def shutdown() -> None:
         ]:
             if hasattr(provider, "shutdown") and not hasattr(provider, "_shutdown"):
                 provider.shutdown()
-    except Exception:
+    except Exception:  # noqa: S110
+        # 静默忽略：优雅关闭失败不应抛出异常
         pass
 
-    global _initialized
+    global _initialized  # noqa: PLW0603
     _initialized = False
