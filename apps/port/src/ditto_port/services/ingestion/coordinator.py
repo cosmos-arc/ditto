@@ -8,7 +8,6 @@
 - 记录摄取日志
 """
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Literal, cast
 
 import polars as pl
@@ -18,24 +17,13 @@ from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_datahub.types import OnDuplicate
 from ditto_foundation import logger
 
+from ditto_port.common.types import IngestionResult
 from ditto_port.services.ingestion.metadata import MetadataManager
 from ditto_port.services.ingestion.security_mapper import SecurityMapper
 
 if TYPE_CHECKING:
     from ditto_datahub.hub import DataHub
-
-
-@dataclass(frozen=True)
-class IngestionResult:
-    """数据摄取结果。"""
-
-    dataset: str
-    trade_date: str
-    status: Literal["success", "skipped", "failed"]
-    row_count: int | None = None
-    checksum: str | None = None
-    message: str = ""
-    error: str | None = None
+    from ditto_datahub.sources.base import DataSourceMethods
 
 
 class IngestionCoordinator:
@@ -266,13 +254,11 @@ class IngestionCoordinator:
 
     def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:  # noqa: PLR0911
         """根据数据集类型调用对应的 Source 方法获取数据。"""
-        from ditto_datahub.sources.base import DataSourceMethods  # noqa: PLC0415
-
         method_name = self._DATASET_METHODS.get(dataset)
         if method_name is None:
             raise ValueError(f"不支持的数据集: {dataset}")
 
-        source: DataSourceMethods = cast(DataSourceMethods, self._source)
+        source = cast("DataSourceMethods", self._source)
 
         if dataset == "calendar":
             return source.fetch_calendar(trade_date, trade_date)

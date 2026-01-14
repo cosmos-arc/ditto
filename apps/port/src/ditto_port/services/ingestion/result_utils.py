@@ -1,24 +1,12 @@
 """结果统计辅助函数。"""
 
 from collections import Counter
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from ditto_port.services.ingestion.coordinator import IngestionResult
-
-
-@dataclass(frozen=True)
-class ResultCounts:
-    """结果统计。"""
-
-    success: int
-    failed: int
-    skipped: int
+from ditto_port.common.types import IngestionResult, ResultCounts
 
 
 def count_results(
-    results: list["IngestionResult"] | dict[str, dict[str, object]],
+    results: list[IngestionResult] | dict[str, dict[str, object]],
 ) -> ResultCounts:
     """
     统计摄取结果。
