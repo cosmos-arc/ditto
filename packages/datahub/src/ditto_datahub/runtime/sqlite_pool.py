@@ -3,7 +3,7 @@
 import sqlite3
 import threading
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ditto_foundation import logger
 
@@ -41,8 +41,8 @@ class SQLitePool:
                 event="connection_created",
                 thread_id=threading.get_ident(),
             )
-        # Type is correctly inferred but pyright sees Any from threading.local
-        return self._local.conn  # type: ignore[no-any-return]
+        # Cast to help pyright infer type from threading.local
+        return cast(sqlite3.Connection, self._local.conn)
 
     def execute(self, sql: str, params: list[Any] | None = None) -> sqlite3.Cursor:
         """Execute SQL query."""
