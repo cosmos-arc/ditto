@@ -190,41 +190,10 @@ pre-commit-run = "pre-commit run --all-files"
 pre-commit-update = "pre-commit autoupdate"
 
 # ──────────────────────────────────────────────────────────
-# 特殊测试（保留兼容）
+# 特殊测试
 # ──────────────────────────────────────────────────────────
 # PIT 测试：专门的 PIT 模式测试
 test-pit = "pytest -m pit -v --tb=long"
 
 # Benchmark：基准测试
 test-benchmark = "pytest -m benchmark --benchmark-only"
-
-# ──────────────────────────────────────────────────────────
-# 旧命令兼容（逐步迁移，后续移除）
-# ──────────────────────────────────────────────────────────
-# Lint 旧命令
-lint-fix = "pixi run lint --fix"
-lint-staged = "ruff check"
-lint-fix-staged = "pixi run lint --fix"
-
-# Format 旧命令
-format = "pixi run fmt"
-format-check = "pixi run fmt --check"
-format-staged = "ruff format"
-format-check-staged = "ruff format --check --diff"
-
-# Type 旧命令
-typecheck = "pixi run type"
-typecheck-tests = "pixi run type --tests"
-typecheck-all = "pixi run type --all"
-
-# Test 旧命令
-test-fast = "pixi run test --fast"
-test-unit = "pixi run test --unit"
-test-integration = "pixi run test --integration"
-test-cov = "pixi run test --cov"
-test-cov-xml = "pixi run test --cov-xml"
-test-all = "pixi run test"
-
-# Check 旧命令
-quick-check = "pixi run check"
-ci-check = "pixi run ci"
