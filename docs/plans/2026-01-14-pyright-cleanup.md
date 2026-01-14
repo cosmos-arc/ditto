@@ -319,10 +319,11 @@ from concurrent.futures import Future, ThreadPoolExecutor
 | 2 | 测试代码安全警告添加 noqa | ✅ 完成 | 5 处 |
 | 3 | CLI 工具 print 修复 | ✅ 完成 | 10 处 |
 | 4.1 | 消除 dates.py type ignore | ✅ 完成 | 2 处 |
-| 4.2 | 消除 testing.py type ignore | ⏸️ 待完成 | 1 处 |
+| 4.2 | 消除 testing.py type ignore | ✅ 完成 | 1 处 |
 | 4.3 | 消除 sqlite_pool.py type ignore | ⏸️ 待完成 | 1 处 |
 | 4.4 | 消除 dq_batch.py type ignore | ⏸️ 待完成 | 3 处 |
-| 6 | stub 文件格式化 | ⏸️ 待完成 | - |
+| 6 | stub 文件格式化 | ✅ 完成 | 1 处 |
+| 7 | CLI 魔法数字修复 | ✅ 完成 | 1 处 |
 | 8 | 全局变量警告注释 | ⏸️ 待完成 | 2 处 |
 
 **已完成的修改**:
@@ -342,14 +343,17 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 4. **类型优化**:
    - `packages/foundation/src/ditto_foundation/util/dates.py`: 使用 `assert_type()` 消除 2 处 `type: ignore`
+   - `packages/foundation/src/ditto_foundation/observability/testing.py`: 添加完整的 OpenTelemetry stub 类型定义
+
+5. **CLI 工具优化**:
+   - `packages/datahub/src/ditto_datahub/cli/init_dq_config.py`: 使用 `MIN_ARGS` 常量消除魔法数字
 
 **待完成的工作**:
 
-1. `packages/foundation/src/ditto_foundation/observability/testing.py`: 添加类型注解
-2. `packages/datahub/src/ditto_datahub/runtime/sqlite_pool.py`: 使用 `cast()`
-3. `apps/port/src/ditto_port/jobs/tasks/dq_batch.py`: 添加 DQ 指标静态定义
-4. `packages/foundation/src/ditto_foundation/observability/__init__.py`: 添加全局变量注释
-5. 复杂度优化（优先级 5，可选）
+1. `packages/datahub/src/ditto_datahub/runtime/sqlite_pool.py`: 使用 `cast()` 消除 `# type: ignore[no-any-return]`
+2. `apps/port/src/ditto_port/jobs/tasks/dq_batch.py`: 添加 DQ 指标静态定义，消除 3 处 `# type: ignore[attr-defined]`
+3. `packages/foundation/src/ditto_foundation/observability/__init__.py`: 添加全局变量注释
+4. 复杂度优化（优先级 5，可选）
 
 **预期结果**:
 - ruff errors: 168 → ~0
@@ -441,3 +445,4 @@ pixi run -e dev ci-check
 |------|------|------|
 | 2026-01-14 | 创建计划 | Claude |
 | 2026-01-14 | 添加批次 6：忽略策略审查 | Claude |
+| 2026-01-14 | 批次 7 进度更新：testing.py type ignore 已消除 | Claude |
