@@ -324,7 +324,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 | 4.4 | 消除 dq_batch.py type ignore | ⏸️ 待完成 | 3 处 |
 | 6 | stub 文件格式化 | ✅ 完成 | 1 处 |
 | 7 | CLI 魔法数字修复 | ✅ 完成 | 1 处 |
-| 8 | 全局变量警告注释 | ⏸️ 待完成 | 2 处 |
+| 8 | 全局变量警告注释 | ✅ 完成 | 2 处 |
 
 **已完成的修改**:
 
@@ -352,13 +352,12 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 1. `packages/datahub/src/ditto_datahub/runtime/sqlite_pool.py`: 使用 `cast()` 消除 `# type: ignore[no-any-return]`
 2. `apps/port/src/ditto_port/jobs/tasks/dq_batch.py`: 添加 DQ 指标静态定义，消除 3 处 `# type: ignore[attr-defined]`
-3. `packages/foundation/src/ditto_foundation/observability/__init__.py`: 添加全局变量注释
-4. 复杂度优化（优先级 5，可选）
+3. 复杂度优化（优先级 5，可选）
 
 **预期结果**:
 - ruff errors: 168 → ~0
 - type: ignore (生产): 8 → 0-2
-- noqa (生产): 35 → 31
+- noqa (生产): 35 → 33 (新增 2 处)
 
 **验证命令**:
 ```bash
