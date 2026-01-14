@@ -18,7 +18,6 @@ from tenacity import (
 from ditto_datahub.sources.base import (
     SourceConfigurationError,
     SourceFetchError,
-    SourceRateLimitError,
 )
 from ditto_datahub.sources.tushare.http_utils import (
     map_http_error,

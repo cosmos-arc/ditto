@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 from itertools import combinations
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Literal
 
 import polars as pl
 from ditto_foundation import M, logger, traced
 
 from ditto_datahub.dq.engine import DQEngine
-from ditto_datahub.dq.models import DQIssue
 
 # Authoritative DQResult with issues list (from dq.engine)
 from ditto_datahub.dq.models import DQResult as DQResultNew
@@ -23,6 +22,7 @@ from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
 from ditto_datahub.types import OnDuplicate, SidRange
 
 if TYPE_CHECKING:
+    from ditto_datahub.dq.models import DQIssue
     from ditto_datahub.runtime.file_lock import FileLockManager
 
 
@@ -511,7 +511,7 @@ class BarsRepository:
         source: str = "tushare",
     ) -> list[int]:
         """解析标识符为 SID 列表。"""
-        resolved = set()
+        resolved: set[int] = set()
 
         if sids:
             resolved.update(sids)
@@ -811,10 +811,8 @@ class BarsRepository:
             return
 
         try:
-            from ditto_datahub.dq.models import DQIssue
-
             # Get quarantine store path from bars_store
-            data_root = self._bars_store._data_root
+            data_root = self._bars_store.data_root
             quarantine_path = data_root / "quarantine.db"
 
             from ditto_datahub.stores.quarantine_store import QuarantineStore
@@ -887,7 +885,7 @@ class BarsRepository:
 
             from ditto_datahub.dq.report import DQReportGenerator
 
-            data_root = self._bars_store._data_root
+            data_root = self._bars_store.data_root
             reports_dir = data_root / "reports" / "dq"
             reports_dir.mkdir(parents=True, exist_ok=True)
 

@@ -7,7 +7,7 @@ coordinating UniverseStore and SidAllocator.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import polars as pl
 from ditto_foundation import M, logger, traced
@@ -313,17 +313,8 @@ class UniverseRepository:
             DataFrame with symbol column added.
 
         """
-        # Import here to avoid circular dependency
-        from ditto_datahub.stores.security_store import SecurityStore
-
         # Get SQLite client from universe store
-        # Note: This assumes UniverseStore has access to the client
-        # In a real implementation, we might need to pass SecurityStore
-        # to the repository constructor.
-
-        # For now, we'll use a simple approach: query security table directly
-        # through the store's client
-        client = self._universe_store._client
+        client = self._universe_store.client
 
         # Query security symbols for the SIDs
         sids = df["sid"].to_list()

@@ -1,12 +1,11 @@
 """WeChat enterprise bot alert sender."""
 
 import os
-from typing import Any
 
 import httpx
 from ditto_foundation import logger
 
-from ditto_datahub.alerts.base import AlertLevel, AlertMessage, AlertSender
+from ditto_datahub.alerts.base import AlertMessage, AlertSender
 
 
 class WeChatAlertSender(AlertSender):

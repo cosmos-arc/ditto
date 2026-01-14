@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 import polars as pl
-from ditto_foundation import M, logger, span, traced
+from ditto_foundation import M, logger, traced
 
 from ditto_datahub.runtime.cache import DataCache
 from ditto_datahub.stores.sqlite_client import SQLiteClient
@@ -53,8 +53,8 @@ def _build_in_clause(
 
     # 分块处理：用 OR 连接多个 IN 子句
     chunks = [items[i : i + chunk_size] for i in range(0, len(items), chunk_size)]
-    clauses = []
-    params = []
+    clauses: list[str] = []
+    params: list[Any] = []
     for chunk in chunks:
         placeholders = ",".join("?" * len(chunk))
         clauses.append(f"{column} IN ({placeholders})")
@@ -405,9 +405,9 @@ class SecurityStore:
             sql += " AND exchange = ?"
             params.append(exchange)
 
-        if is_active is not None:
-            sql += " AND is_active = ?"
-            params.append(is_active)
+        # Always filter by is_active (default True)
+        sql += " AND is_active = ?"
+        params.append(is_active)
 
         rows = self._client.fetchall(sql, params)
         return [cast(int, r["sid"]) for r in rows]

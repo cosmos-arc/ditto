@@ -42,6 +42,11 @@ class UniverseStore:
             event="universe_store_init_complete",
         )
 
+    @property
+    def client(self) -> SQLiteClient:
+        """Get the SQLite client."""
+        return self._client
+
     @traced("data.universe_create")
     def create_universe(
         self,

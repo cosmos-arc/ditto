@@ -342,7 +342,7 @@ class SqlEngine:
         if asof is not None:
             # 验证 ISO 日期格式 (YYYY-MM-DD) 以防止 SQL 注入
             # 只允许安全字符：特定格式的数字和连字符
-            if not isinstance(asof, str) or not re.match(r"^\d{4}-\d{2}-\d{2}$", asof):
+            if not re.match(r"^\d{4}-\d{2}-\d{2}$", asof):
                 raise ValueError(
                     f"Invalid asof date format: {asof}. Expected YYYY-MM-DD format."
                 )
@@ -360,7 +360,7 @@ class SqlEngine:
 
             # 计算查询中已有的参数数量
             existing_params = 0
-            if params and isinstance(params, list):
+            if params:
                 existing_params = len(params)
 
             # 新的参数编号
@@ -372,7 +372,7 @@ class SqlEngine:
             # 合并参数
             if params is None:
                 params = [asof]
-            elif isinstance(params, list):
+            else:
                 params = [*params, asof]
 
         # Execute query and convert to polars DataFrame

@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import polars as pl
 from ditto_foundation import M, logger, traced
 
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.security_store import SecurityStore
-
-if TYPE_CHECKING:
-    from ditto_datahub.runtime.sid_allocator import SidAllocator
 
 
 class IndexRepository:

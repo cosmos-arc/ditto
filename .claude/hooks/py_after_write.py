@@ -25,7 +25,15 @@ from pathlib import Path
 
 def run(cmd: list[str], cwd: str) -> int:
     """运行命令并输出 stdout/stderr，返回退出码。"""
-    p = subprocess.run(cmd, check=False, cwd=cwd, capture_output=True, text=True)  # noqa: S603
+    p = subprocess.run(  # noqa: S603
+        cmd,
+        check=False,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     if p.stdout:
         print(p.stdout)  # noqa: T201
     if p.stderr:

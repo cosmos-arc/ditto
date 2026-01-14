@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import date
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 from ditto_foundation import M, logger, traced
@@ -20,8 +20,9 @@ def _json_serializable(obj: object) -> object:
     """Convert object to JSON serializable format."""
     if isinstance(obj, date):
         return obj.isoformat()
-    if hasattr(obj, "to_python"):
-        return obj.to_python()
+    to_python_method = getattr(obj, "to_python", None)
+    if callable(to_python_method):
+        return to_python_method()
     return str(obj)
 
 

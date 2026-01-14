@@ -12,10 +12,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import polars as pl
-from ditto_foundation import M, logger, traced
+from ditto_foundation import logger, traced
 from ditto_foundation.util.io import atomic_write, file_md5
 
 from ditto_datahub.types import OnDuplicate
@@ -66,6 +65,13 @@ class ParquetStoreBase(ABC):
 
         """
         self._data_root = Path(data_root)
+
+    # ============ Public properties ============
+
+    @property
+    def data_root(self) -> Path:
+        """Get the data root directory."""
+        return self._data_root
 
     # ============ Path operations ============
 

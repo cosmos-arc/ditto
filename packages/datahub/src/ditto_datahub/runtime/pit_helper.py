@@ -7,7 +7,6 @@ PIT SQL 辅助函数.
 from __future__ import annotations
 
 import re
-from typing import Any
 
 
 class PitHelper:

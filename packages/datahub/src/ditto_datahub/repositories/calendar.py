@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast
+from typing import Literal
 
 import polars as pl
 from ditto_foundation import M, logger, traced

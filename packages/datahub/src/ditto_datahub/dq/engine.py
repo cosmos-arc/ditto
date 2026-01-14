@@ -8,7 +8,7 @@ import polars as pl
 from ditto_datahub.dq.checkers.business import BusinessChecker
 from ditto_datahub.dq.checkers.statistical import StatisticalChecker
 from ditto_datahub.dq.checkers.technical import TechnicalChecker
-from ditto_datahub.dq.models import DQConfig, DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_datahub.dq.models import DQConfig, DQIssue, DQResult, DQSeverity
 
 
 class DQEngine:
