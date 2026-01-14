@@ -1,8 +1,17 @@
 """OpenTelemetry InMemorySpanExporter stub."""
 
-from typing import Tuple
+from typing import Any
 
-from opentelemetry.sdk.trace import ReadableSpan
+
+class ReadableSpan:
+    """SDK 层的可读 Span."""
+
+    name: str
+    context: Any
+    parent: Any
+    start_time: int
+    end_time: int
+    attributes: dict[str, Any]
 
 
 class InMemorySpanExporter:
@@ -10,6 +19,6 @@ class InMemorySpanExporter:
 
     def __init__(self) -> None: ...
 
-    def get_finished_spans(self) -> Tuple[ReadableSpan, ...]: ...
+    def get_finished_spans(self) -> tuple[ReadableSpan, ...]: ...
 
     def clear(self) -> None: ...
