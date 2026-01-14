@@ -74,7 +74,7 @@ def test_adj_help():
 
 
 @pytest.mark.integration
-def test_e2e_stock_daily_workflow(temp_dir: Path):
+def test_e2e_stock_daily_workflow(tmp_path: Path):
     """测试完整的 stock daily 工作流."""
     # 测试参数验证 - 无效日期格式
     result = runner.invoke(app, ["stock", "daily", "2024/01/02"])
@@ -89,7 +89,7 @@ def test_e2e_stock_daily_workflow(temp_dir: Path):
     # 测试实际命令执行（可能会因数据库问题失败，这是预期的）
     result = runner.invoke(
         app,
-        ["--data-root", str(temp_dir), "stock", "daily", "2024-01-02"],
+        ["--data-root", str(tmp_path), "stock", "daily", "2024-01-02"],
     )
     # 命令应该成功执行或因为数据源问题失败（非 CLI 问题）
     assert (
@@ -100,14 +100,14 @@ def test_e2e_stock_daily_workflow(temp_dir: Path):
 
 
 @pytest.mark.integration
-def test_e2e_backfill_workflow(temp_dir: Path):
+def test_e2e_backfill_workflow(tmp_path: Path):
     """测试完整的 backfill 工作流."""
     # 测试日期范围验证
     result = runner.invoke(
         app,
         [
             "--data-root",
-            str(temp_dir),
+            str(tmp_path),
             "stock",
             "backfill",
             "--start",
@@ -123,13 +123,13 @@ def test_e2e_backfill_workflow(temp_dir: Path):
 
 
 @pytest.mark.integration
-def test_e2e_backfill_with_parallel(temp_dir: Path):
+def test_e2e_backfill_with_parallel(tmp_path: Path):
     """测试带并行度的 backfill 工作流."""
     result = runner.invoke(
         app,
         [
             "--data-root",
-            str(temp_dir),
+            str(tmp_path),
             "etf",
             "backfill",
             "--start",
@@ -147,37 +147,37 @@ def test_e2e_backfill_with_parallel(temp_dir: Path):
 
 
 @pytest.mark.integration
-def test_e2e_basic_commands(temp_dir: Path):
+def test_e2e_basic_commands(tmp_path: Path):
     """测试基础信息命令."""
     # 测试 stock basic
-    result = runner.invoke(app, ["--data-root", str(temp_dir), "stock", "basic"])
+    result = runner.invoke(app, ["--data-root", str(tmp_path), "stock", "basic"])
     assert result.exit_code == 0 or "unable to open database file" in str(
         result.exception
     )
 
     # 测试 etf basic
-    result = runner.invoke(app, ["--data-root", str(temp_dir), "etf", "basic"])
+    result = runner.invoke(app, ["--data-root", str(tmp_path), "etf", "basic"])
     assert result.exit_code == 0 or "unable to open database file" in str(
         result.exception
     )
 
 
 @pytest.mark.integration
-def test_e2e_calendar_command(temp_dir: Path):
+def test_e2e_calendar_command(tmp_path: Path):
     """测试交易日历命令."""
-    result = runner.invoke(app, ["--data-root", str(temp_dir), "calendar"])
+    result = runner.invoke(app, ["--data-root", str(tmp_path), "calendar"])
     assert result.exit_code == 0 or "unable to open database file" in str(
         result.exception
     )
 
 
 @pytest.mark.integration
-def test_e2e_adj_commands(temp_dir: Path):
+def test_e2e_adj_commands(tmp_path: Path):
     """测试复权因子命令."""
     # 测试 adj-factor
     result = runner.invoke(
         app,
-        ["--data-root", str(temp_dir), "adj", "adj-factor", "2024-01-02"],
+        ["--data-root", str(tmp_path), "adj", "adj-factor", "2024-01-02"],
     )
     assert result.exit_code == 0 or "unable to open database file" in str(
         result.exception
@@ -186,7 +186,7 @@ def test_e2e_adj_commands(temp_dir: Path):
     # 测试 fund-adj
     result = runner.invoke(
         app,
-        ["--data-root", str(temp_dir), "adj", "fund-adj", "2024-01-02"],
+        ["--data-root", str(tmp_path), "adj", "fund-adj", "2024-01-02"],
     )
     assert result.exit_code == 0 or "unable to open database file" in str(
         result.exception
@@ -194,11 +194,11 @@ def test_e2e_adj_commands(temp_dir: Path):
 
 
 @pytest.mark.integration
-def test_verbose_flag(temp_dir: Path):
+def test_verbose_flag(tmp_path: Path):
     """测试详细输出模式."""
     result = runner.invoke(
         app,
-        ["--data-root", str(temp_dir), "--verbose", "stock", "basic"],
+        ["--data-root", str(tmp_path), "--verbose", "stock", "basic"],
     )
     # 命令应该接受 verbose 参数
     assert result.exit_code == 0 or "unable to open database file" in str(
@@ -207,13 +207,13 @@ def test_verbose_flag(temp_dir: Path):
 
 
 @pytest.mark.integration
-def test_force_flag(temp_dir: Path):
+def test_force_flag(tmp_path: Path):
     """测试强制重新摄取标志."""
     result = runner.invoke(
         app,
         [
             "--data-root",
-            str(temp_dir),
+            str(tmp_path),
             "stock",
             "daily",
             "2024-01-02",
@@ -227,11 +227,11 @@ def test_force_flag(temp_dir: Path):
 
 
 @pytest.mark.integration
-def test_data_root_option(temp_dir: Path):
+def test_data_root_option(tmp_path: Path):
     """测试自定义数据根目录."""
     result = runner.invoke(
         app,
-        ["--data-root", str(temp_dir), "stock", "daily", "2024-01-02"],
+        ["--data-root", str(tmp_path), "stock", "daily", "2024-01-02"],
     )
     # 命令应该接受自定义数据根目录
     assert result.exit_code == 0 or "unable to open database file" in str(
