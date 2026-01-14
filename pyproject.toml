@@ -86,14 +86,15 @@ ignore = [
     "PT011",  # pytest.raises match 参数
     "SIM105", # contextlib.suppress
     "SIM117", # 嵌套 with 语句
+    "PLC0415", # 延迟导入（业界最佳实践：避免循环依赖、延迟初始化）
 ]
 
 unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
 # 测试文件 - 最宽松
-"tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "S106", "S311", "ANN", "D"]
-"**/tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "S106", "S311", "ANN", "D"]
+"tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "S106", "S311", "S608", "ANN", "D"]
+"**/tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "S106", "S311", "S608", "ANN", "D"]
 "**/conftest.py" = ["ANN", "D", "PLC0415"]
 
 # 脚本文件
