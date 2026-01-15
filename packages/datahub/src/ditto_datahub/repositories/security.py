@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from datetime import date
 from typing import TYPE_CHECKING, Any
 
+import orjson
 import polars as pl
 from ditto_foundation import M, logger, traced
 
@@ -353,10 +353,12 @@ class SecurityRepository:
 
         # Calculate checksum from DataFrame content
         data_dict = df.to_dict(as_series=False)
-        json_str = json.dumps(data_dict, sort_keys=True, default=_json_serializable)
-        checksum = hashlib.md5(
-            json_str.encode("utf-8"), usedforsecurity=False
-        ).hexdigest()
+        json_bytes = orjson.dumps(
+            data_dict,
+            option=orjson.OPT_SORT_KEYS | orjson.OPT_NON_STR_KEYS,
+            default=_json_serializable,
+        )
+        checksum = hashlib.md5(json_bytes, usedforsecurity=False).hexdigest()
 
         # File path for tracking (not a real file for SQLite storage)
         file_path = f"security_store:{asset_class}_basic"
