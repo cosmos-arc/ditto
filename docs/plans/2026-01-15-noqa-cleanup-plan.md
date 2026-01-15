@@ -445,6 +445,50 @@ git grep "^global " packages/*/src apps/*/src | wc -l
 
 ---
 
+## 临时豁免清单（需后续处理）
+
+> **说明**: 以下 per-file-ignores 已添加到 `pyproject.toml` 中，用于临时豁免已存在的 lint 问题。这些需要在后续批次中通过重构或代码优化来解决。
+
+### 复杂度相关
+
+| 文件 | 规则 | 原因 | 后续处理 |
+|------|------|------|----------|
+| `backfill.py` | PLR0913 | Prefect flow 参数过多 (9 > 7) | 考虑使用配置对象封装参数 |
+| `datasets.py` | PLR0913 | 配置工厂参数过多 (8 > 7) | 考虑使用 Builder 模式 |
+| `coordinator.py` | PLR0911 | 多返回语句 (8 > 6) | 重构为早期返回模式 |
+| `pipeline_store.py` | C901 | `update_run` 过于复杂 (13 > 10) | 拆分为多个辅助方法 |
+| `pipeline_store.py` | PLR0913 | 参数过多 (9 > 7) | 封装参数对象 |
+| `security.py` | PLR0913 | 参数过多 (8 > 7) | 封装参数对象 |
+| `paths.py` | PLR0913 | PathResolver 参数过多 (9 > 7) | 使用配置对象 |
+
+### SQL 相关（S608）
+
+| 文件 | 原因 | 后续处理 |
+|------|------|----------|
+| `technical.py` | 动态查询引用表 | 添加表名白名单验证 |
+| `pit_helper.py` | SQL 包装器 | 保留（已添加注释说明） |
+| `pipeline_store.py` | 动态 UPDATE 语句 | 保留（已添加注释说明） |
+| `security_store.py` | 动态 WHERE IN 子句 | 保留（已添加注释说明） |
+| `sqlite_client.py` | 动态表名 | 保留（已添加注释说明） |
+| `sql_engine.py` | CREATE VIEW | 保留（已添加注释说明） |
+
+### 测试相关
+
+| 文件 | 规则 | 原因 |
+|------|------|------|
+| `test_conftest.py` | E402 | 延迟导入以设置路径 |
+| `test_sql_engine_injection_integration.py` | B017 | assert Exception 测试 |
+
+### 其他
+
+| 文件 | 规则 | 原因 |
+|------|------|------|
+| `models.py` | S112 | 忽略无效配置文件 |
+| `ingestion_log.py` | S101 | 类型收窄（UPSERT RETURNING） |
+| `sql_engine.py` | S324 | MD5 用于缓存键（非安全用途） |
+
+---
+
 ## 风险与缓解
 
 | 风险 | 缓解措施 |
