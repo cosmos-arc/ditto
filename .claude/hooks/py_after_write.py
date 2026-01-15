@@ -25,7 +25,7 @@ from pathlib import Path
 
 def run(cmd: list[str], cwd: str) -> int:
     """运行命令并输出 stdout/stderr，返回退出码。"""
-    p = subprocess.run(  # noqa: S603
+    p = subprocess.run(
         cmd,
         check=False,
         cwd=cwd,
@@ -35,9 +35,9 @@ def run(cmd: list[str], cwd: str) -> int:
         errors="replace",
     )
     if p.stdout:
-        print(p.stdout)  # noqa: T201
+        print(p.stdout)
     if p.stderr:
-        print(p.stderr, file=sys.stderr)  # noqa: T201
+        print(p.stderr, file=sys.stderr)
     return p.returncode
 
 
@@ -55,7 +55,7 @@ def main() -> int:
     if p.suffix != ".py":
         return 0
 
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()  # noqa: PTH109
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
 
     # 用 pixi task 替代 ruff
     # 参数会自动追加到任务命令末尾：pixi run lint --fix <file>

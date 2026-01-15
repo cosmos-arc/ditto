@@ -82,7 +82,7 @@ class AppInitializer:
             directory.mkdir(parents=True, exist_ok=True)
 
     def _setup_observability(self, settings: Any) -> None:
-        """Setup observability (logging, tracing, metrics)."""
+        """Set up observability (logging, tracing, metrics)."""
         obs_settings = settings.observability
 
         # 检查是否启用
@@ -136,7 +136,7 @@ def initialize_app() -> dict[str, Any]:
         Initialization status dictionary.
 
     """
-    global _initializer  # noqa: PLW0603 - singleton pattern, ensures single instance
+    global _initializer  # noqa: PLW0603 - singleton pattern requires global state
 
     if _initializer is None:
         _initializer = AppInitializer()

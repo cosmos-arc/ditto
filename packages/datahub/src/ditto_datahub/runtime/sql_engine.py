@@ -122,7 +122,7 @@ class SqlEngine:
                 # Create view with glob pattern for year partitions
                 # dataset is validated against ALLOWED_DATASETS whitelist
                 view_sql = (
-                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "  # noqa: S608
+                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "
                     f'"{parquet_path}/*.parquet"'
                 )
                 self.con.execute(view_sql)
@@ -242,7 +242,7 @@ class SqlEngine:
             return normalized, False
 
         # Generate cache key using MD5 hash (非安全用途，仅用于缓存键生成)
-        cache_key = hashlib.md5(normalized.encode()).hexdigest()  # noqa: S324
+        cache_key = hashlib.md5(normalized.encode()).hexdigest()
 
         if cache_key in self._plan_cache:
             M.sql_query_plan_cache_hit.add(1)

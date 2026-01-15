@@ -114,7 +114,7 @@ class TestDataHub:
                     # ValueError: 未注册
                     # AttributeError: 方法不存在（旧版本兼容）
                     pass
-        except Exception:  # noqa: S110
+        except Exception:  # noqa: S110 - cleanup should not raise
             pass
         # Force garbage collection to release SQLite file handles on Windows
         gc.collect()

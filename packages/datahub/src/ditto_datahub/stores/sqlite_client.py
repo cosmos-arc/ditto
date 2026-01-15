@@ -272,7 +272,7 @@ class SQLiteClient:
         if table not in self.ALLOWED_TABLES:
             raise ValueError(f"Invalid table: {table}")
 
-        sql = f"SELECT COUNT(*) FROM {table}"  # noqa: S608 - table is validated against ALLOWED_TABLES whitelist
+        sql = f"SELECT COUNT(*) FROM {table}"
         if where:
             sql += f" WHERE {where}"
 

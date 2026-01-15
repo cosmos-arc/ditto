@@ -43,12 +43,12 @@ class TestSqlEngine:
         try:
             if hasattr(self, "engine"):
                 self.engine.close()
-        except Exception:  # noqa: S110
+        except Exception:  # noqa: S110 - cleanup should not raise
             pass
         try:
             if hasattr(self, "pool"):
                 self.pool.close()
-        except Exception:  # noqa: S110
+        except Exception:  # noqa: S110 - cleanup should not raise
             pass
         self.temp_dir.cleanup()
 

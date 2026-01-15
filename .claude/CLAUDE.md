@@ -26,7 +26,8 @@
 - **文档**: 文档驱动开发，及时更新 README/Sprint/Plan/ADR
 - **开发**:
     - **Python核心规范**：详见 [core.md](.claude/rules/core.md)
-- **测试**: 尊师测试依赖，分支覆盖率 >= 80% （详见 [python-test.md](.claude/rules/python-test.md)）
+- **测试**: 遵循测试依赖，分支覆盖率 >= 80% （详见 [python-test.md](.claude/rules/python-test.md)）
+- **质量**：必须通过 pyright、ruff检测
 - **重构**: 数据存储、API协议格式的兼容考量外，无需考虑向后兼容性，所有包均项目内使用，重构完成必须移除废弃代码和配置
 
 ## 工具使用规范
@@ -58,7 +59,8 @@
 - 直接提交 main
 - 文件读写改操作使用 Bash 命令
 - SRC源码内大量使用#naqa、#type:ignore, 新增代码优先重构避免
-- 绕过或忽略 pyright、ruff、precommit 检测
+- 绕过或忽略 pyright、ruff、precommit 检测（例如修改相关配置，使用--no verify提交）
+- 循环依赖，以及使用TYPE_CHECKING解决循环依赖（必须重构代码及架构解决）
 
 ## 项目架构
 

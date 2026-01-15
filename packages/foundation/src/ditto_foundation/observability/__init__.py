@@ -80,7 +80,7 @@ def init(
         force: 强制重新初始化（用于测试）
 
     """
-    global _initialized  # noqa: PLW0603
+    global _initialized  # noqa: PLW0603 - singleton pattern requires global state
 
     if _initialized and not force:
         return
@@ -128,9 +128,9 @@ def shutdown() -> None:
         ]:
             if hasattr(provider, "shutdown") and not hasattr(provider, "_shutdown"):
                 provider.shutdown()
-    except Exception:  # noqa: S110
+    except Exception:  # noqa: S110 - graceful shutdown failure should not raise
         # 静默忽略：优雅关闭失败不应抛出异常
         pass
 
-    global _initialized  # noqa: PLW0603
+    global _initialized  # noqa: PLW0603 - singleton pattern requires global state
     _initialized = False

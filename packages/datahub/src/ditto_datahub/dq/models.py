@@ -247,7 +247,7 @@ class DQConfig(BaseModel):
                 if data and "dataset" in data:
                     dataset_rules = DatasetRules(**data)
                     datasets[dataset_rules.dataset] = dataset_rules
-            except Exception:  # noqa: S112 - 跳过无效配置文件，静默处理
+            except Exception:
                 # Skip invalid files but continue loading others
                 continue
 

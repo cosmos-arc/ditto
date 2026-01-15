@@ -20,7 +20,7 @@ import sys
 
 def run(cmd: list[str], cwd: str) -> int:
     """运行命令并输出 stdout/stderr，返回退出码。"""
-    p = subprocess.run(  # noqa: S603
+    p = subprocess.run(
         cmd,
         check=False,
         cwd=cwd,
@@ -30,15 +30,15 @@ def run(cmd: list[str], cwd: str) -> int:
         errors="replace",
     )
     if p.stdout:
-        print(p.stdout)  # noqa: T201
+        print(p.stdout)
     if p.stderr:
-        print(p.stderr, file=sys.stderr)  # noqa: T201
+        print(p.stderr, file=sys.stderr)
     return p.returncode
 
 
 def main() -> int:
     """执行代码质量检查流程。"""
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()  # noqa: PTH109
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
 
     rc = run(["pixi", "run", "-e", "dev", "lint"], cwd=project_dir)
     if rc != 0:

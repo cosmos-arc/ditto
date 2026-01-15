@@ -232,7 +232,7 @@ def get_settings() -> Settings:
         Settings: 配置实例
 
     """
-    global _settings  # noqa: PLW0603 - singleton pattern, ensures single instance
+    global _settings  # noqa: PLW0603 - singleton pattern requires global state
     if _settings is None:
         _settings = Settings()
     return _settings
@@ -249,6 +249,6 @@ def reload_settings() -> Settings:
         Settings: 新的配置实例
 
     """
-    global _settings  # noqa: PLW0603 - singleton pattern, reloads instance
+    global _settings  # noqa: PLW0603 - singleton pattern requires global state
     _settings = Settings()
     return _settings

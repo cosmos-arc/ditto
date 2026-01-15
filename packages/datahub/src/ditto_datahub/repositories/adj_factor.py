@@ -91,7 +91,7 @@ class AdjFactorRepository:
             M.data_records.add(len(df), {"dataset": dataset, "operation": "write"})
 
             # Import WriteResult here to avoid circular imports
-            from ditto_datahub.repositories.bars import (  # noqa: PLC0415 - 避免 bars 循环依赖
+            from ditto_datahub.repositories.bars import (  # noqa: PLC0415 - circular import avoidance
                 WriteResult,
             )
 

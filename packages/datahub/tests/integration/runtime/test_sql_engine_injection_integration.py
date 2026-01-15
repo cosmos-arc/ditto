@@ -44,12 +44,12 @@ class TestSqlEngineInjection:
         try:
             if hasattr(self, "engine"):
                 self.engine.close()
-        except Exception:  # noqa: S110
+        except Exception:  # noqa: S110 - cleanup should not raise
             pass
         try:
             if hasattr(self, "pool"):
                 self.pool.close()
-        except Exception:  # noqa: S110
+        except Exception:  # noqa: S110 - cleanup should not raise
             pass
         self.temp_dir.cleanup()
 
@@ -113,7 +113,7 @@ class TestSqlEngineInjection:
         for invalid in invalid_dates:
             # DuckDB 会拒绝这些无效日期并抛出 ConversionException
             # 我们需要接受任何异常，因为 DuckDB 的错误类型不是标准 Python 异常
-            with pytest.raises(Exception):  # noqa: B017
+            with pytest.raises(Exception):
                 self.engine.execute(
                     "SELECT CAST($asof AS DATE) AS asof_date", asof=invalid
                 )

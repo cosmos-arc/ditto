@@ -381,9 +381,22 @@ def test_concurrent_save_log():
 
 ### 8️⃣ 资源管理审查
 
-**结论**: 🟡 中等问题 - 应尽快修复
+**结论**: ✅ **设计方案已完成** (2026-01-15)
 
-#### 问题 1: CLI DataHub 生命周期未管理
+**设计文档**: [`2026-01-15-resource-lifecycle-design.md`](./2026-01-15-resource-lifecycle-design.md)
+
+#### 修复方案摘要
+
+**核心设计**:
+- **DataHub**: 每个实例注册 `atexit` 自动清理
+- **CLI**: 应用侧单例（`get_hub()`）+ 上下文管理器（`create_executor`）
+- **Observability**: 完整配置支持（`enabled`、`mode`、`vm_endpoint`）
+
+**待实现**: 见设计文档
+
+---
+
+#### 原问题 1: CLI DataHub 生命周期未管理
 
 **文件**: `apps/port/src/ditto_port/cli/context.py:16-26`
 

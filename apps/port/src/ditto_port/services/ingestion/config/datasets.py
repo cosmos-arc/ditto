@@ -171,7 +171,7 @@ def create_t0_config(
     )
 
 
-def create_t1_config(  # noqa: PLR0913
+def create_t1_config(
     dataset: Dataset,
     description: str,
     typical_available_time: time,

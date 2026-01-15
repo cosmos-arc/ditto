@@ -197,4 +197,78 @@ def process_data(data):
 
 ### 生产代码类型洁净的硬标准
 - 生产代码任何 warning 都视为缺陷（必须修复），CI 使用 `--warnings` 强制执行。 :contentReference[oaicite:5]{index=5}
-- 如果某目录暂时无法做到类型洁净，应拆分为“隔离层”（adapter/boundary），而不是放宽核心目录规则。
+- 如果某目录暂时无法做到类型洁净，应拆分为"隔离层"（adapter/boundary），而不是放宽核心目录规则。
+
+## 架构分层约束
+
+### 分层职责定义
+
+| 层级 | 职责 | 典型组件 | 禁止 |
+|------|------|----------|------|
+| **DataHub Store** | 数据持久化、基础查询 | SecurityStore, BarsStore | 包含业务逻辑 |
+| **DataHub Repository** | 业务封装、领域接口 | SecurityRepository, BarsRepository | 直接访问文件系统 |
+| **DataHub Runtime** | 基础设施（连接池、锁、分配器） | SQLitePool, FileLockManager, SidAllocator | 包含业务逻辑 |
+| **DataHub Source** | 外部数据源适配 | TushareSource, AkshareSource | 包含业务逻辑 |
+| **Server Service** | 流程编排、任务协调 | IngestionCoordinator, RetryManager | 直接数据访问 |
+| **Server Flow** | 应用层用例组合 | DailyFlow, BackfillFlow | - |
+
+### 依赖方向规则
+
+**允许的单向依赖：**
+```
+Server Flow → Server Service → DataHub Repository → DataHub Store/Runtime → Foundation
+```
+
+**禁止的依赖模式：**
+- ❌ Server → DataHub Store (跨层访问)
+- ❌ Server → DataHub Runtime (跨层访问)
+- ❌ DataHub → Server (反向依赖)
+- ❌ 同层组件间的循环依赖
+
+### 跨层检测规则
+
+**导入语句检查：**
+
+```python
+# ❌ Server 层禁止直接导入 Store
+from ditto_datahub.stores.security_store import SecurityStore
+from ditto_datahub.stores.bars_store import BarsStore
+
+# ❌ Server 层禁止直接导入 Runtime
+from ditto_datahub.runtime.sid_allocator import SidAllocator
+from ditto_datahub.runtime.sqlite_pool import SQLitePool
+
+# ✅ Server 层应该使用 Repository
+from ditto_datahub import DataHub
+from ditto_datahub.repositories.security import SecurityRepository
+
+# ✅ DataHub 内部可以导入下层
+# packages/datahub 内的 Store 可以导入 Runtime
+```
+
+**职责识别检查：**
+
+当添加新组件时，通过以下问题判断其归属：
+
+| 问题 | 回答 Yes → 归属 | 回答 No → 归属 |
+|------|-----------------|----------------|
+| 是否直接访问存储文件/数据库？ | DataHub Store | 使用 Repository |
+| 是否需要分配/管理唯一标识符（如 SID）？ | DataHub Repository | 不应在此层 |
+| 是否包含数据映射/转换逻辑（如 src_code → sid）？ | DataHub Repository | 不应在此层 |
+| 是否依赖外部数据源（API/爬虫）？ | DataHub Source | 不应在此层 |
+| 是否是流程编排/任务协调？ | Server Service | 不应在此层 |
+| 是否是应用层用例组合？ | Server Flow | 不应在此层 |
+
+### 代码重复检测
+
+在实现新功能前，必须检查 DataHub Repository 是否已有类似实现：
+
+```bash
+# 检查 SecurityRepository 是否已有相关方法
+grep -r "def.*register" packages/datahub/repositories/
+grep -r "def.*resolve" packages/datahub/repositories/
+```
+
+**禁止重复实现：**
+- ❌ Server 层重复实现 Repository 已有的数据访问逻辑
+- ❌ 多个地方重复实现相同的映射/转换规则

@@ -449,7 +449,7 @@ class SecurityStore:
         if sids:
             in_clause, sids_list = _build_in_clause("sid", sids)
             rows = self._client.fetchall(
-                f"SELECT sid, symbol FROM security WHERE {in_clause}",  # noqa: S608
+                f"SELECT sid, symbol FROM security WHERE {in_clause}",
                 sids_list,
             )
         else:
@@ -492,7 +492,7 @@ class SecurityStore:
 
         return df.join(symbol_df, on="sid", how="left")
 
-    def register(  # noqa: PLR0913
+    def register(
         self,
         sid: int,
         source: str,

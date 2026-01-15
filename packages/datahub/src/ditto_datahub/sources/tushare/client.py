@@ -61,7 +61,7 @@ def _get_tushare_token(token: str | None = None) -> str:
 
     # 2. Try keyring (recommended)
     try:
-        import keyring  # noqa: PLC0415 - 可选依赖，运行时按需导入
+        import keyring  # noqa: PLC0415 - circular import avoidance
 
         if keyring_token := keyring.get_password("ditto", "tushare"):
             # keyring.get_password returns str | None

@@ -452,7 +452,9 @@ class BarsRepository:
             raise ValueError("无法解析出有效的 SID")
 
         # 2. 解析日期参数（字符串 -> date 对象）
-        from datetime import date as date_type  # noqa: PLC0415 - 避免参数名遮蔽
+        from datetime import (  # noqa: PLC0415 - circular import avoidance
+            date as date_type,
+        )
 
         start_date: date | None = None
         end_date: date | None = None
@@ -653,7 +655,9 @@ class BarsRepository:
 
         """
         if isinstance(asof, str):
-            from datetime import date as date_type  # noqa: PLC0415 - 避免参数名遮蔽
+            from datetime import (  # noqa: PLC0415 - circular import avoidance
+                date as date_type,
+            )
 
             return date_type.fromisoformat(asof)
         return asof
@@ -815,7 +819,7 @@ class BarsRepository:
             data_root = self._bars_store.data_root
             quarantine_path = data_root / "quarantine.db"
 
-            from ditto_datahub.stores.quarantine_store import (  # noqa: PLC0415 - DQ 失败时才需要
+            from ditto_datahub.stores.quarantine_store import (  # noqa: PLC0415 - circular import avoidance
                 QuarantineStore,
             )
 
@@ -883,9 +887,9 @@ class BarsRepository:
 
         """
         try:
-            from datetime import datetime  # noqa: PLC0415 - 生成报告时才需要
+            from datetime import datetime  # noqa: PLC0415 - circular import avoidance
 
-            from ditto_datahub.dq.report import (  # noqa: PLC0415 - 避免 dq 模块循环依赖
+            from ditto_datahub.dq.report import (  # noqa: PLC0415 - circular import avoidance
                 DQReportGenerator,
             )
 

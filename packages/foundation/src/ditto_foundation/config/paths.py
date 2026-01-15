@@ -34,7 +34,7 @@ class PathResolver:
 
     DEFAULT_WINDOWS_BASE: str = "D:\\data\\ditto"
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         ditto_env: str,
         xdg_env: str,
@@ -279,12 +279,12 @@ class XDGPaths:
 
         # 降级方案
         if self._platform == "win32":
-            temp = os.environ.get("TEMP", "/tmp")  # noqa: S108
+            temp = os.environ.get("TEMP", "/tmp")  # noqa: S108 - Windows TEMP fallback
             return Path(temp) / self.APP_NAME
         else:
             # os.getuid() 在 Windows 上不存在
             uid = os.getuid() if hasattr(os, "getuid") else os.getpid()
-            return Path(f"/tmp/{self.APP_NAME}-{uid}")  # noqa: S108
+            return Path(f"/tmp/{self.APP_NAME}-{uid}")  # noqa: S108 - runtime dir fallback
 
     # ==================== 子目录访问器 ====================
 
@@ -423,7 +423,7 @@ def get_paths() -> XDGPaths:
         XDGPaths: 路径管理器实例.
 
     """
-    global _paths  # noqa: PLW0603 - singleton pattern
+    global _paths  # noqa: PLW0603 - singleton pattern requires global state
     if _paths is None:
         _paths = XDGPaths()
         _paths.ensure_all()
@@ -438,6 +438,6 @@ def reload_paths() -> XDGPaths:
         XDGPaths: 新的路径管理器实例.
 
     """
-    global _paths  # noqa: PLW0603 - singleton pattern, reloads instance
+    global _paths  # noqa: PLW0603 - singleton pattern requires global state
     _paths = None
     return get_paths()

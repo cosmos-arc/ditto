@@ -19,11 +19,6 @@ def pytest_configure(config) -> None:
     """
     # 预加载 flows 模块,避免每个测试都重新导入
     # fmt: off
-    from ditto_port.jobs.flows import (
-        backfill,  # noqa: F401
-        daily,  # noqa: F401
-        repair,  # noqa: F401
-    )
     # fmt: on
 
 

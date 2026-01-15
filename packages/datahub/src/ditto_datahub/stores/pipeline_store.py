@@ -76,7 +76,7 @@ class PipelineStore:
 
     # ============ Pipeline run operations ============
 
-    def insert_run(  # noqa: PLR0913
+    def insert_run(
         self,
         run_id: str,
         task_name: str,
@@ -160,7 +160,7 @@ class PipelineStore:
             )
             raise
 
-    def update_run(  # noqa: PLR0913, C901
+    def update_run(
         self,
         run_id: str,
         status: str | None = None,
@@ -241,7 +241,7 @@ class PipelineStore:
 
             params.append(run_id)
             self._client.execute(
-                f"UPDATE pipeline_run SET {', '.join(updates)} WHERE run_id = ?",  # noqa: S608 - column names validated against ALLOWED_COLUMNS whitelist above
+                f"UPDATE pipeline_run SET {', '.join(updates)} WHERE run_id = ?",
                 params,
             )
             self._client.commit()
@@ -393,7 +393,7 @@ class PipelineStore:
 
     # ============ DQ issue operations ============
 
-    def insert_dq_issue(  # noqa: PLR0913
+    def insert_dq_issue(
         self,
         run_id: str,
         dataset_id: str,

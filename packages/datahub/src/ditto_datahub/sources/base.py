@@ -376,7 +376,7 @@ def get_source(name: str) -> DataSource:
     normalized_name = name.lower().strip()
 
     if normalized_name == "tushare":
-        from ditto_datahub.sources.tushare.source import (  # noqa: PLC0415 - 工厂模式延迟导入
+        from ditto_datahub.sources.tushare.source import (  # noqa: PLC0415 - circular import avoidance
             TushareSource,
         )
 

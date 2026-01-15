@@ -1,6 +1,7 @@
 """Tests for SecurityRepository."""
 
 import polars as pl
+import pytest
 from ditto_datahub.repositories.security import SecurityRepository
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
@@ -298,6 +299,271 @@ class TestSecurityRepository:
         assert self.repo.get_by_sid(1000002) is not None  # New
         # Third security should not exist (only 2 registered)
         assert self.repo.get_by_sid(1000003) is None
+
+    def test_resolve_or_create_batch_with_empty_dataframe(self) -> None:
+        """Test resolve_or_create_batch with empty DataFrame."""
+        # Arrange
+        df = pl.DataFrame(
+            {
+                "ts_code": [],
+                "symbol": [],
+                "name": [],
+                "exchange": [],
+                "list_date": [],
+            }
+        )
+
+        # Act
+        result = self.repo.resolve_or_create_batch(
+            df=df,
+            source="tushare",
+            asset_class="stock",
+            src_code_col="ts_code",
+        )
+
+        # Assert
+        assert result == {}
+
+    def test_resolve_or_create_batch_with_all_existing(self) -> None:
+        """Test resolve_or_create_batch when all securities already exist."""
+        # Arrange
+        # Register existing securities
+        df_existing = pl.DataFrame(
+            {
+                "src_code": ["600001.SH", "600002.SH"],
+                "symbol": ["600001", "600002"],
+                "name": ["Stock1", "Stock2"],
+                "exchange": ["SSE", "SSE"],
+                "list_date": ["2000-01-01", "2000-01-02"],
+            }
+        )
+        self.repo.register_batch(
+            df=df_existing,
+            source="tushare",
+            asset_class="stock",
+            src_code_col="src_code",
+        )
+
+        # Try to resolve same securities
+        df = pl.DataFrame(
+            {
+                "ts_code": ["600001.SH", "600002.SH"],
+                "symbol": ["600001", "600002"],
+                "name": ["Stock1", "Stock2"],
+                "exchange": ["SSE", "SSE"],
+                "list_date": ["2000-01-01", "2000-01-02"],
+            }
+        )
+
+        # Act
+        result = self.repo.resolve_or_create_batch(
+            df=df,
+            source="tushare",
+            asset_class="stock",
+            src_code_col="ts_code",
+        )
+
+        # Assert
+        assert len(result) == 2
+        assert result["600001.SH"] == 1000001
+        assert result["600002.SH"] == 1000002
+
+    def test_resolve_or_create_batch_with_all_new(self) -> None:
+        """Test resolve_or_create_batch when all securities are new."""
+        # Arrange
+        df = pl.DataFrame(
+            {
+                "ts_code": ["600001.SH", "600002.SH", "600003.SH"],
+                "symbol": ["600001", "600002", "600003"],
+                "name": ["Stock1", "Stock2", "Stock3"],
+                "exchange": ["SSE", "SSE", "SSE"],
+                "list_date": ["2000-01-01", "2000-01-02", "2000-01-03"],
+            }
+        )
+
+        # Act
+        result = self.repo.resolve_or_create_batch(
+            df=df,
+            source="tushare",
+            asset_class="stock",
+            src_code_col="ts_code",
+        )
+
+        # Assert
+        assert len(result) == 3
+        assert result["600001.SH"] == 1000001
+        assert result["600002.SH"] == 1000002
+        assert result["600003.SH"] == 1000003
+
+        # Verify securities were created
+        assert self.repo.get_by_sid(1000001) is not None
+        assert self.repo.get_by_sid(1000002) is not None
+        assert self.repo.get_by_sid(1000003) is not None
+
+    def test_resolve_or_create_batch_mixed_existing_and_new(self) -> None:
+        """Test resolve_or_create_batch with mixed existing and new securities."""
+        # Arrange
+        # Register one existing security
+        df_existing = pl.DataFrame(
+            {
+                "src_code": ["600001.SH"],
+                "symbol": ["600001"],
+                "name": ["Stock1"],
+                "exchange": ["SSE"],
+                "list_date": ["2000-01-01"],
+            }
+        )
+        self.repo.register_batch(
+            df=df_existing,
+            source="tushare",
+            asset_class="stock",
+            src_code_col="src_code",
+        )
+
+        # Mix existing and new
+        df = pl.DataFrame(
+            {
+                "ts_code": ["600001.SH", "600002.SH", "600003.SH"],
+                "symbol": ["600001", "600002", "600003"],
+                "name": ["Stock1", "Stock2", "Stock3"],
+                "exchange": ["SSE", "SSE", "SSE"],
+                "list_date": ["2000-01-01", "2000-01-02", "2000-01-03"],
+            }
+        )
+
+        # Act
+        result = self.repo.resolve_or_create_batch(
+            df=df,
+            source="tushare",
+            asset_class="stock",
+            src_code_col="ts_code",
+        )
+
+        # Assert
+        assert len(result) == 3
+        assert result["600001.SH"] == 1000001  # Existing
+        assert result["600002.SH"] == 1000002  # New
+        assert result["600003.SH"] == 1000003  # New
+
+    def test_resolve_or_create_batch_missing_required_columns(self) -> None:
+        """Test resolve_or_create_batch raises error for missing columns."""
+        # Arrange
+        df = pl.DataFrame(
+            {
+                "ts_code": ["600001.SH"],
+                "symbol": ["600001"],
+                # Missing: name, exchange, list_date
+            }
+        )
+
+        # Act & Assert
+        expected_match = "name|exchange|list_date"
+        with pytest.raises(KeyError, match=expected_match):
+            self.repo.resolve_or_create_batch(
+                df=df,
+                source="tushare",
+                asset_class="stock",
+                src_code_col="ts_code",
+            )
+
+    def test_enrich_dataframe_with_sid(self) -> None:
+        """Test enrich_dataframe_with_sid adds sid and source columns."""
+        # Arrange
+        df = pl.DataFrame(
+            {
+                "ts_code": ["600001.SH", "600002.SH"],
+                "symbol": ["600001", "600002"],
+                "name": ["Stock1", "Stock2"],
+                "exchange": ["SSE", "SSE"],
+                "list_date": ["2000-01-01", "2000-01-02"],
+                "other_col": ["a", "b"],  # Additional column should be preserved
+            }
+        )
+
+        # Act
+        result = self.repo.enrich_dataframe_with_sid(
+            df=df,
+            source="tushare",
+            asset_class="stock",
+            src_code_col="ts_code",
+        )
+
+        # Assert
+        assert "sid" in result.columns
+        assert "source" in result.columns
+        assert result["sid"].to_list() == [1000001, 1000002]
+        assert result["source"].to_list() == ["tushare", "tushare"]
+        assert "other_col" in result.columns  # Original columns preserved
+        assert result["other_col"].to_list() == ["a", "b"]
+
+    def test_enrich_dataframe_with_sid_with_existing_securities(self) -> None:
+        """Test enrich_dataframe_with_sid with existing securities."""
+        # Arrange
+        # Register existing securities
+        df_existing = pl.DataFrame(
+            {
+                "src_code": ["600001.SH"],
+                "symbol": ["600001"],
+                "name": ["Stock1"],
+                "exchange": ["SSE"],
+                "list_date": ["2000-01-01"],
+            }
+        )
+        self.repo.register_batch(
+            df=df_existing,
+            source="tushare",
+            asset_class="stock",
+            src_code_col="src_code",
+        )
+
+        # Enrich DataFrame with existing and new
+        df = pl.DataFrame(
+            {
+                "ts_code": ["600001.SH", "600002.SH"],
+                "symbol": ["600001", "600002"],
+                "name": ["Stock1", "Stock2"],
+                "exchange": ["SSE", "SSE"],
+                "list_date": ["2000-01-01", "2000-01-02"],
+            }
+        )
+
+        # Act
+        result = self.repo.enrich_dataframe_with_sid(
+            df=df,
+            source="tushare",
+            asset_class="stock",
+            src_code_col="ts_code",
+        )
+
+        # Assert
+        assert result["sid"].to_list() == [1000001, 1000002]
+        assert result["source"].to_list() == ["tushare", "tushare"]
+
+    def test_enrich_dataframe_with_sid_with_etf(self) -> None:
+        """Test enrich_dataframe_with_sid with ETF asset class."""
+        # Arrange
+        df = pl.DataFrame(
+            {
+                "ts_code": ["510300.SH"],
+                "symbol": "510300",
+                "name": "ETF300",
+                "exchange": "SSE",
+                "list_date": "2012-01-01",
+            }
+        )
+
+        # Act
+        result = self.repo.enrich_dataframe_with_sid(
+            df=df,
+            source="tushare",
+            asset_class="etf",
+            src_code_col="ts_code",
+        )
+
+        # Assert
+        # ETF SIDs start from 2000001
+        assert result["sid"][0] == 2000001
+        assert result["source"][0] == "tushare"
 
     def teardown_method(self) -> None:
         """Clean up after test."""

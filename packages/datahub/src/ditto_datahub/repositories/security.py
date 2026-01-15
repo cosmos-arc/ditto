@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import polars as pl
 from ditto_foundation import M, logger, traced
@@ -215,7 +215,7 @@ class SecurityRepository:
         return self._security_store.get_src_code(sid, source, asof)
 
     @traced("repository.security.register")
-    def register(  # noqa: PLR0913
+    def register(
         self,
         src_code: str,
         symbol: str,
@@ -363,3 +363,155 @@ class SecurityRepository:
         )
 
         return file_path, checksum
+
+    def resolve_or_create_batch(
+        self,
+        df: pl.DataFrame,
+        source: str,
+        asset_class: Literal["stock", "etf"],
+        src_code_col: str = "ts_code",
+    ) -> dict[str, int]:
+        """
+        批量解析 src_code，不存在则自动创建证券。
+
+        Args:
+            df: 包含证券元数据的 DataFrame。必须包含以下列：
+                - src_code_col: 源代码列名
+                - symbol: 显示符号
+                - name: 证券名称
+                - exchange: 交易所代码
+                - list_date: 上市日期
+            source: 数据源标识符（如 "tushare"）
+            asset_class: 资产类别（"stock" 或 "etf"）
+            src_code_col: DataFrame 中源代码的列名，默认 "ts_code"
+
+        Returns:
+            {src_code: sid} 映射字典
+
+        """
+        logger.debug(
+            "Resolving or creating securities in batch",
+            event="security_resolve_or_create_start",
+            source=source,
+            asset_class=asset_class,
+            row_count=len(df),
+        )
+
+        result: dict[str, int] = {}
+        created_count = 0
+
+        # 处理空 DataFrame
+        if len(df) == 0:
+            return result
+
+        # 验证必需列
+        required_cols = [src_code_col, "symbol", "name", "exchange", "list_date"]
+        for col in required_cols:
+            if col not in df.columns:
+                raise KeyError(f"DataFrame 缺少必需列: {col}")
+
+        # 批量查询已存在的证券
+        src_codes = df[src_code_col].to_list()
+        existing_mappings = self._security_store.resolve_sids_batch(
+            src_codes, source, None
+        )
+
+        # 处理每一行
+        for row in df.to_dicts():
+            src_code = row[src_code_col]
+
+            # 如果已存在，使用已有的 SID
+            if src_code in existing_mappings:
+                result[src_code] = existing_mappings[src_code]
+                continue
+
+            # 不存在则创建新证券
+            sid = self.register(
+                src_code=src_code,
+                symbol=row["symbol"],
+                name=row["name"],
+                exchange=row["exchange"],
+                asset_class=asset_class,
+                list_date=row["list_date"],
+                source=source,
+            )
+            result[src_code] = sid
+            created_count += 1
+
+        logger.debug(
+            "Batch resolve or create completed",
+            event="security_resolve_or_create_complete",
+            total_count=len(result),
+            created_count=created_count,
+        )
+
+        # 记录指标
+        M.data_records.add(
+            created_count,
+            {"dataset": "security", "operation": "resolve_or_create_batch"},
+        )
+
+        return result
+
+    def enrich_dataframe_with_sid(
+        self,
+        df: pl.DataFrame,
+        source: str,
+        asset_class: Literal["stock", "etf"],
+        src_code_col: str = "ts_code",
+    ) -> pl.DataFrame:
+        """
+        为 DataFrame 添加 sid 和 source 列。
+
+        不存在的证券会自动创建。
+
+        Args:
+            df: 输入 DataFrame，必须包含 src_code_col 指定的列
+            source: 数据源标识符（如 "tushare"）
+            asset_class: 资产类别（"stock" 或 "etf"）
+            src_code_col: 源代码列名，默认 "ts_code"
+
+        Returns:
+            添加了 sid 和 source 列的 DataFrame
+
+        """
+        logger.debug(
+            "Enriching DataFrame with SID",
+            event="security_enrich_start",
+            source=source,
+            asset_class=asset_class,
+            row_count=len(df),
+        )
+
+        # 处理空 DataFrame
+        if len(df) == 0:
+            return df.with_columns(
+                pl.lit(None, dtype=pl.Int32).alias("sid"),
+                pl.lit(source).alias("source"),
+            )
+
+        # 批量解析或创建证券
+        src_code_to_sid = self.resolve_or_create_batch(
+            df=df,
+            source=source,
+            asset_class=asset_class,
+            src_code_col=src_code_col,
+        )
+
+        # 创建映射表达式
+        src_codes = df[src_code_col].to_list()
+        sids = [src_code_to_sid.get(code) for code in src_codes]
+
+        # 添加列
+        result = df.with_columns(
+            pl.Series(sids, dtype=pl.Int32).alias("sid"),
+            pl.lit(source).alias("source"),
+        )
+
+        logger.debug(
+            "DataFrame enrichment completed",
+            event="security_enrich_complete",
+            row_count=len(result),
+        )
+
+        return result

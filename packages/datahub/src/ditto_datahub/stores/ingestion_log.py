@@ -145,7 +145,7 @@ class IngestionLogStore:
         )
 
         # UPSERT with RETURNING always returns a row
-        assert row is not None, "UPSERT RETURNING should always return a row"  # noqa: S101
+        assert row is not None, "UPSERT RETURNING should always return a row"
 
         self._client.commit()
 
