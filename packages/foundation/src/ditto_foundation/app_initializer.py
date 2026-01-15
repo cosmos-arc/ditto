@@ -83,16 +83,34 @@ class AppInitializer:
 
     def _setup_observability(self, settings: Any) -> None:
         """Setup observability (logging, tracing, metrics)."""
-        # Determine mode based on environment
-        mode = Mode.PRODUCTION if settings.is_production else Mode.DEVELOPMENT
+        obs_settings = settings.observability
 
-        # Initialize observability
+        # 检查是否启用
+        if not obs_settings.enabled:
+            logger.info("Observability disabled by configuration")
+            return
+
+        # 解析 mode
+        mode_mapping: dict[str, Mode | None] = {
+            "auto": None,
+            "production": Mode.PRODUCTION,
+            "development": Mode.DEVELOPMENT,
+            "testing": Mode.TESTING,
+        }
+
+        configured_mode = mode_mapping.get(obs_settings.mode.lower(), None)
+        actual_mode = configured_mode or (
+            Mode.PRODUCTION if settings.is_production else Mode.DEVELOPMENT
+        )
+
+        # 初始化
         init(
             service_name="ditto",
             environment=settings.system.ditto_env,
-            log_level=settings.system.log_level,
+            log_level=obs_settings.log_level,
             log_dir=str(settings.file_storage.log_root),
-            mode=mode,
+            vm_endpoint=obs_settings.vm_endpoint,
+            mode=actual_mode,
         )
 
     def _validate_config(self, settings: Any) -> list[str]:

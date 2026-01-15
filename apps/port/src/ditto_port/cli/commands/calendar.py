@@ -2,7 +2,7 @@
 
 import typer
 
-from ditto_port.cli.context import ensure_executor
+from ditto_port.cli.context import create_executor
 from ditto_port.cli.utils.output import print_ingestion_result
 
 app = typer.Typer(help="交易日历命令", invoke_without_command=True)
@@ -14,11 +14,10 @@ def update(
     force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
 ) -> None:
     """更新交易日历."""
-    ensure_executor(ctx)
-    executor = ctx.obj["executor"]
-    result = executor.ingest_daily("calendar", "", force)
-
-    print_ingestion_result(result, ctx.obj["verbose"])
+    data_root = ctx.obj.get("data_root")
+    with create_executor(data_root) as executor:
+        result = executor.ingest_daily("calendar", "", force)
+        print_ingestion_result(result, ctx.obj["verbose"])
 
 
 @app.callback()

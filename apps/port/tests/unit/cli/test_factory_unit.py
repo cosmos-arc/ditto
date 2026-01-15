@@ -10,6 +10,9 @@ from ditto_port.cli.commands.factory import (
     create_daily_command,
 )
 
+# Mock data root path for testing
+MOCK_DATA_ROOT = "D:/mock/ditto/data"
+
 
 @pytest.mark.unit
 def test_create_daily_command_returns_callable():
@@ -28,7 +31,7 @@ def test_create_daily_command_validates_date(app_ctx):
 
     # Mock context
     ctx = MagicMock()
-    ctx.obj = {"executor": Mock(), "verbose": False}
+    ctx.obj = {"data_root": MOCK_DATA_ROOT, "verbose": False}
 
     # 测试无效日期格式
     with patch("ditto_port.cli.commands.factory.validate_date_format") as mock_validate:
@@ -41,16 +44,16 @@ def test_create_daily_command_validates_date(app_ctx):
 
 
 @pytest.mark.unit
-def test_create_daily_command_ensures_executor(app_ctx):
-    """测试 create_daily_command 确保执行器存在"""
+def test_create_daily_command_uses_create_executor(app_ctx):
+    """测试 create_daily_command 使用 create_executor 上下文管理器"""
 
     cmd = create_daily_command("test_dataset", "测试描述")
 
-    # Mock context without executor
+    # Mock context
     ctx = MagicMock()
-    ctx.obj = {"verbose": False}
+    ctx.obj = {"data_root": MOCK_DATA_ROOT, "verbose": False}
 
-    # Mock ensure_executor to inject executor
+    # Mock executor
     mock_executor = Mock()
     mock_executor.ingest_daily.return_value = {
         "dataset": "test_dataset",
@@ -61,18 +64,19 @@ def test_create_daily_command_ensures_executor(app_ctx):
         "error": None,
     }
 
-    with patch("ditto_port.cli.commands.factory.ensure_executor") as mock_ensure:
-
-        def side_effect(ctx):
-            ctx.obj["executor"] = mock_executor
-
-        mock_ensure.side_effect = side_effect
-
+    with patch("ditto_port.cli.commands.factory.create_executor") as mock_create_exec:
+        # 设置 context manager 返回值
+        mock_create_exec.return_value.__enter__.return_value = mock_executor
         with patch("ditto_port.cli.commands.factory.validate_date_format"):
             with patch("ditto_port.cli.commands.factory.print_ingestion_result"):
                 cmd(ctx, "2024-01-02", False)
 
-        mock_ensure.assert_called_once_with(ctx)
+        # 验证 create_executor 被正确调用
+        mock_create_exec.assert_called_once_with(MOCK_DATA_ROOT)
+        # 验证 executor.ingest_daily 被调用
+        mock_executor.ingest_daily.assert_called_once_with(
+            "test_dataset", "2024-01-02", False
+        )
 
 
 @pytest.mark.unit
@@ -81,8 +85,10 @@ def test_create_daily_command_calls_ingest_daily(app_ctx):
 
     cmd = create_daily_command("test_dataset", "测试描述")
 
-    # Mock context with executor
+    # Mock context
     ctx = MagicMock()
+    ctx.obj = {"data_root": MOCK_DATA_ROOT, "verbose": False}
+
     mock_executor = Mock()
     mock_executor.ingest_daily.return_value = {
         "dataset": "test_dataset",
@@ -92,21 +98,22 @@ def test_create_daily_command_calls_ingest_daily(app_ctx):
         "message": "成功",
         "error": None,
     }
-    ctx.obj = {"executor": mock_executor, "verbose": False}
 
-    with patch("ditto_port.cli.commands.factory.validate_date_format"):
-        with patch(
-            "ditto_port.cli.commands.factory.print_ingestion_result"
-        ) as mock_print:
-            cmd(ctx, "2024-01-02", False)
+    with patch("ditto_port.cli.commands.factory.create_executor") as mock_create_exec:
+        mock_create_exec.return_value.__enter__.return_value = mock_executor
+        with patch("ditto_port.cli.commands.factory.validate_date_format"):
+            with patch(
+                "ditto_port.cli.commands.factory.print_ingestion_result"
+            ) as mock_print:
+                cmd(ctx, "2024-01-02", False)
 
-            # 验证调用 executor.ingest_daily
-            mock_executor.ingest_daily.assert_called_once_with(
-                "test_dataset", "2024-01-02", False
-            )
+                # 验证调用 executor.ingest_daily
+                mock_executor.ingest_daily.assert_called_once_with(
+                    "test_dataset", "2024-01-02", False
+                )
 
-            # 验证调用 print_ingestion_result
-            mock_print.assert_called_once()
+                # 验证调用 print_ingestion_result
+                mock_print.assert_called_once()
 
 
 @pytest.mark.unit
@@ -116,6 +123,8 @@ def test_create_daily_command_with_force_flag(app_ctx):
     cmd = create_daily_command("test_dataset", "测试描述")
 
     ctx = MagicMock()
+    ctx.obj = {"data_root": MOCK_DATA_ROOT, "verbose": False}
+
     mock_executor = Mock()
     mock_executor.ingest_daily.return_value = {
         "dataset": "test_dataset",
@@ -125,15 +134,16 @@ def test_create_daily_command_with_force_flag(app_ctx):
         "message": "成功",
         "error": None,
     }
-    ctx.obj = {"executor": mock_executor, "verbose": False}
 
-    with patch("ditto_port.cli.commands.factory.validate_date_format"):
-        with patch("ditto_port.cli.commands.factory.print_ingestion_result"):
-            cmd(ctx, "2024-01-02", force=True)
+    with patch("ditto_port.cli.commands.factory.create_executor") as mock_create_exec:
+        mock_create_exec.return_value.__enter__.return_value = mock_executor
+        with patch("ditto_port.cli.commands.factory.validate_date_format"):
+            with patch("ditto_port.cli.commands.factory.print_ingestion_result"):
+                cmd(ctx, "2024-01-02", force=True)
 
-            mock_executor.ingest_daily.assert_called_once_with(
-                "test_dataset", "2024-01-02", True
-            )
+                mock_executor.ingest_daily.assert_called_once_with(
+                    "test_dataset", "2024-01-02", True
+                )
 
 
 @pytest.mark.unit
@@ -152,6 +162,8 @@ def test_create_backfill_command_validates_dates(app_ctx):
     cmd = create_backfill_command("test_dataset", "测试描述")
 
     ctx = MagicMock()
+    ctx.obj = {"data_root": MOCK_DATA_ROOT}
+
     mock_executor = Mock()
     mock_executor.backfill_range.return_value = {
         "dataset": "test_dataset",
@@ -160,16 +172,19 @@ def test_create_backfill_command_validates_dates(app_ctx):
         "skipped_count": 0,
         "failed_count": 0,
     }
-    ctx.obj = {"executor": mock_executor}
 
-    with patch("ditto_port.cli.commands.factory.validate_date_format") as mock_validate:
-        with patch("ditto_port.cli.commands.factory.print_backfill_summary"):
-            cmd(ctx, "2024-01-01", "2024-01-05", 1)
+    with patch("ditto_port.cli.commands.factory.create_executor") as mock_create_exec:
+        mock_create_exec.return_value.__enter__.return_value = mock_executor
+        with patch(
+            "ditto_port.cli.commands.factory.validate_date_format"
+        ) as mock_validate:
+            with patch("ditto_port.cli.commands.factory.print_backfill_summary"):
+                cmd(ctx, "2024-01-01", "2024-01-05", 1)
 
-            # 验证调用了两次 validate_date_format
-            assert mock_validate.call_count == 2
-            mock_validate.assert_any_call("2024-01-01")
-            mock_validate.assert_any_call("2024-01-05")
+                # 验证调用了两次 validate_date_format
+                assert mock_validate.call_count == 2
+                mock_validate.assert_any_call("2024-01-01")
+                mock_validate.assert_any_call("2024-01-05")
 
 
 @pytest.mark.unit
@@ -179,6 +194,8 @@ def test_create_backfill_command_calls_backfill_range(app_ctx):
     cmd = create_backfill_command("test_dataset", "测试描述")
 
     ctx = MagicMock()
+    ctx.obj = {"data_root": MOCK_DATA_ROOT}
+
     mock_executor = Mock()
     mock_executor.backfill_range.return_value = {
         "dataset": "test_dataset",
@@ -187,19 +204,20 @@ def test_create_backfill_command_calls_backfill_range(app_ctx):
         "skipped_count": 1,
         "failed_count": 0,
     }
-    ctx.obj = {"executor": mock_executor}
 
-    with patch("ditto_port.cli.commands.factory.validate_date_format"):
-        with patch(
-            "ditto_port.cli.commands.factory.print_backfill_summary"
-        ) as mock_print:
-            cmd(ctx, "2024-01-01", "2024-01-05", parallel=2)
+    with patch("ditto_port.cli.commands.factory.create_executor") as mock_create_exec:
+        mock_create_exec.return_value.__enter__.return_value = mock_executor
+        with patch("ditto_port.cli.commands.factory.validate_date_format"):
+            with patch(
+                "ditto_port.cli.commands.factory.print_backfill_summary"
+            ) as mock_print:
+                cmd(ctx, "2024-01-01", "2024-01-05", parallel=2)
 
-            mock_executor.backfill_range.assert_called_once_with(
-                "test_dataset", "2024-01-01", "2024-01-05", 2
-            )
+                mock_executor.backfill_range.assert_called_once_with(
+                    "test_dataset", "2024-01-01", "2024-01-05", 2
+                )
 
-            mock_print.assert_called_once()
+                mock_print.assert_called_once()
 
 
 @pytest.mark.unit
@@ -218,6 +236,8 @@ def test_create_basic_command_calls_ingest_daily_with_empty_date(app_ctx):
     cmd = create_basic_command("test_dataset", "测试描述")
 
     ctx = MagicMock()
+    ctx.obj = {"data_root": MOCK_DATA_ROOT, "verbose": False}
+
     mock_executor = Mock()
     mock_executor.ingest_daily.return_value = {
         "dataset": "test_dataset",
@@ -227,9 +247,9 @@ def test_create_basic_command_calls_ingest_daily_with_empty_date(app_ctx):
         "message": "成功",
         "error": None,
     }
-    ctx.obj = {"executor": mock_executor, "verbose": False}
 
-    with patch("ditto_port.cli.commands.factory.ensure_executor"):
+    with patch("ditto_port.cli.commands.factory.create_executor") as mock_create_exec:
+        mock_create_exec.return_value.__enter__.return_value = mock_executor
         with patch(
             "ditto_port.cli.commands.factory.print_ingestion_result"
         ) as mock_print:
@@ -248,6 +268,8 @@ def test_create_basic_command_with_force_flag(app_ctx):
     cmd = create_basic_command("test_dataset", "测试描述")
 
     ctx = MagicMock()
+    ctx.obj = {"data_root": MOCK_DATA_ROOT, "verbose": False}
+
     mock_executor = Mock()
     mock_executor.ingest_daily.return_value = {
         "dataset": "test_dataset",
@@ -257,9 +279,9 @@ def test_create_basic_command_with_force_flag(app_ctx):
         "message": "已存在",
         "error": None,
     }
-    ctx.obj = {"executor": mock_executor, "verbose": False}
 
-    with patch("ditto_port.cli.commands.factory.ensure_executor"):
+    with patch("ditto_port.cli.commands.factory.create_executor") as mock_create_exec:
+        mock_create_exec.return_value.__enter__.return_value = mock_executor
         with patch("ditto_port.cli.commands.factory.print_ingestion_result"):
             cmd(ctx, force=False)
 
