@@ -497,9 +497,9 @@ def _setup_observability(self, settings: Any) -> None:
 
 ### 9️⃣ 架构封装审查
 
-**结论**: 🔴 严重问题 - 违反层级边界
+**结论**: ✅ **已修复** (2026-01-15)
 
-#### 问题 1: UniverseRepository 绕过 Store 层
+#### 问题 1: UniverseRepository 绕过 Store 层 ✅
 
 **文件**: `packages/datahub/src/ditto_datahub/repositories/universe.py:316-327`
 
@@ -638,6 +638,31 @@ class UniverseRepository:
 | **代码重复** | 如果其他 Repository 也需要 symbol，会复制这个模式 |
 | **违反规范** | 违反 datahub.md 中 "Repository 通过 Store 访问" 的规定 |
 | **可维护性** | 如果 SQLiteClient 接口变化，会影响 Repository |
+
+#### 修复结果 ✅
+
+**已修复** (2026-01-15)
+
+**修改文件清单**:
+
+| # | 文件 | 修改类型 | 描述 |
+|---|------|----------|------|
+| 1 | `packages/datahub/src/ditto_datahub/repositories/universe.py` | **修改** | 添加 `security_store` 依赖注入；直接调用 `self._security_store.enrich_with_symbol()` |
+| 2 | `packages/datahub/src/ditto_datahub/stores/universe_store.py` | **修改** | 删除 `client` property；简化 `get_constituents_sids` 复用 `get_constituents` |
+| 3 | `packages/datahub/src/ditto_datahub/hub.py` | **修改** | `UniverseRepository` 初始化传入 `security_store` |
+| 4 | `packages/datahub/tests/unit/repositories/test_universe_repository_unit.py` | **修改** | 添加 `SecurityStore` 依赖注入测试 |
+
+**测试验证**:
+- ✅ 所有 36 个 UniverseRepository 和 UniverseStore 测试通过
+- ✅ 类型检查通过（pyright 0 errors, 0 warnings）
+- ✅ 新增 `TestUniverseRepositorySecurityDependency` 测试类验证委托行为
+
+**代码简化**:
+- ✅ 删除了 `_enrich_with_symbol` 中间方法
+- ✅ 简化了 `get_constituents_sids` 复用现有方法
+- ✅ 共减少约 40 行代码
+
+**Commit**: 待提交
 
 ---
 
@@ -1113,7 +1138,7 @@ def register_with_universe(hub: DataHub, securities, universe_id):
 | 2 | save_log() 竞态条件 | ingestion_log.py:75 | 🔴 并发安全 |
 | 3 | json 违规（3 个文件） | multiple | 🔴 规约违反 |
 | 4 | is_active 逻辑错误 | security_store.py:405 | 🔴 功能 bug |
-| 5 | UniverseRepository 绕过 Store 层 | universe.py:316 | 🔴 架构违规 |
+| 5 | UniverseRepository 绕过 Store 层 | universe.py:316 | ✅ 已修复 |
 
 #### P1（强烈建议 - 合并前修复）
 

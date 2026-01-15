@@ -246,6 +246,7 @@ class DataHub:
 
         return UniverseRepository(
             universe_store=self.universe_store,
+            security_store=self.security_store,
             sid_allocator=self.sid_allocator,
         )
 

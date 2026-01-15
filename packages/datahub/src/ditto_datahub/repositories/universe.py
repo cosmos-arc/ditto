@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.universe_store import UniverseStore
 
 if TYPE_CHECKING:
@@ -36,6 +37,7 @@ class UniverseRepository:
     def __init__(
         self,
         universe_store: UniverseStore,
+        security_store: SecurityStore,
         sid_allocator: SidAllocator,
     ) -> None:
         """
@@ -43,10 +45,12 @@ class UniverseRepository:
 
         Args:
             universe_store: Universe store for data access.
+            security_store: Security store for symbol enrichment.
             sid_allocator: SID allocator (not currently used but kept for future).
 
         """
         self._universe_store = universe_store
+        self._security_store = security_store
         self._sid_allocator = sid_allocator
 
     @traced("repository.universe.create")
@@ -133,7 +137,7 @@ class UniverseRepository:
 
         # Add symbol if requested
         if with_symbol and not constituents.is_empty():
-            constituents = self._enrich_with_symbol(constituents)
+            constituents = self._security_store.enrich_with_symbol(constituents)
 
         logger.debug(
             "Constituents fetched",
@@ -298,42 +302,3 @@ class UniverseRepository:
         )
 
         return sids
-
-    def _enrich_with_symbol(self, df: pl.DataFrame) -> pl.DataFrame:
-        """
-        Enrich constituents DataFrame with symbol.
-
-        This method joins the constituents DataFrame with the security table
-        to add the symbol column.
-
-        Args:
-            df: Constituents DataFrame with sid column.
-
-        Returns:
-            DataFrame with symbol column added.
-
-        """
-        # Get SQLite client from universe store
-        client = self._universe_store.client
-
-        # Query security symbols for the SIDs
-        sids = df["sid"].to_list()
-        if not sids:
-            return df
-
-        # Build query
-        placeholders = ",".join("?" * len(sids))
-        query = f"SELECT sid, symbol FROM security WHERE sid IN ({placeholders})"  # noqa: S608 - placeholders are "?" strings for parameterized query
-
-        security_rows = client.fetchall(query, sids)
-
-        if not security_rows:
-            return df
-
-        # Create security mapping
-        security_df = pl.DataFrame(
-            [{"sid": r["sid"], "symbol": r["symbol"]} for r in security_rows]
-        )
-
-        # Join
-        return df.join(security_df, on="sid", how="left")

@@ -5,6 +5,7 @@ import pytest
 from ditto_datahub.repositories.universe import UniverseRepository
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
+from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.universe_store import UniverseStore
 
@@ -23,9 +24,11 @@ class TestUniverseRepository:
         self.pool.init_schema()
         self.client = SQLiteClient(self.pool)
         self.universe_store = UniverseStore(self.client)
+        self.security_store = SecurityStore(self.client)
         self.sid_allocator = SidAllocator(self.pool)
         self.repo = UniverseRepository(
             self.universe_store,
+            self.security_store,
             self.sid_allocator,
         )
 
@@ -385,8 +388,9 @@ class TestUniverseRepositoryWithMocks:
         """Test add_constituents with mocked store and allocator."""
         # Arrange
         mock_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
         mock_allocator = mocker.Mock()
-        repo = UniverseRepository(mock_store, mock_allocator)
+        repo = UniverseRepository(mock_store, mock_security_store, mock_allocator)
 
         mock_store.add_constituents.return_value = 2
 
@@ -409,8 +413,9 @@ class TestUniverseRepositoryWithMocks:
         """Test get_constituents with mocked store."""
         # Arrange
         mock_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
         mock_allocator = mocker.Mock()
-        repo = UniverseRepository(mock_store, mock_allocator)
+        repo = UniverseRepository(mock_store, mock_security_store, mock_allocator)
 
         # Mock return data
         mock_df = pl.DataFrame(
@@ -435,8 +440,9 @@ class TestUniverseRepositoryWithMocks:
         """Test create with mocked store."""
         # Arrange
         mock_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
         mock_allocator = mocker.Mock()
-        repo = UniverseRepository(mock_store, mock_allocator)
+        repo = UniverseRepository(mock_store, mock_security_store, mock_allocator)
 
         # Act
         repo.create(
@@ -460,8 +466,9 @@ class TestUniverseRepositoryWithMocks:
         """Test list_universes with mocked store."""
         # Arrange
         mock_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
         mock_allocator = mocker.Mock()
-        repo = UniverseRepository(mock_store, mock_allocator)
+        repo = UniverseRepository(mock_store, mock_security_store, mock_allocator)
 
         mock_df = pl.DataFrame(
             {
@@ -478,3 +485,68 @@ class TestUniverseRepositoryWithMocks:
         # Assert
         assert len(result) == 2
         mock_store.list_universes.assert_called_once_with(universe_type=None)
+
+
+class TestUniverseRepositorySecurityDependency:
+    """Tests for UniverseRepository security store dependency injection."""
+
+    def test_init_requires_security_store(self) -> None:
+        """Test UniverseRepository requires security_store parameter."""
+        # Arrange
+        pool = SQLitePool(":memory:")
+        pool.init_schema()
+        client = SQLiteClient(pool)
+        universe_store = UniverseStore(client)
+        security_store = SecurityStore(client)
+        sid_allocator = SidAllocator(pool)
+
+        # Act & Assert - Should accept security_store
+        repo = UniverseRepository(
+            universe_store=universe_store,
+            security_store=security_store,
+            sid_allocator=sid_allocator,
+        )
+
+        assert repo._universe_store is universe_store
+        assert repo._security_store is security_store
+        assert repo._sid_allocator is sid_allocator
+
+    def test_get_constituents_with_symbol_uses_security_store(self, mocker) -> None:
+        """Test get_constituents with_symbol=True uses SecurityStore."""
+        # Arrange
+        mock_universe_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_allocator = mocker.Mock()
+
+        repo = UniverseRepository(
+            universe_store=mock_universe_store,
+            security_store=mock_security_store,
+            sid_allocator=mock_allocator,
+        )
+
+        constituents_df = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],
+                "weight": [1.0, 1.0, 1.0],
+            }
+        )
+        enriched_df = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],
+                "weight": [1.0, 1.0, 1.0],
+                "symbol": ["A", "B", "C"],
+            }
+        )
+
+        mock_universe_store.get_constituents.return_value = constituents_df
+        mock_security_store.enrich_with_symbol.return_value = enriched_df
+
+        # Act
+        result = repo.get_constituents("test_u", asof=None, with_symbol=True)
+
+        # Assert
+        mock_universe_store.get_constituents.assert_called_once_with(
+            universe_id="test_u", asof=None
+        )
+        mock_security_store.enrich_with_symbol.assert_called_once_with(constituents_df)
+        assert result.equals(enriched_df)
