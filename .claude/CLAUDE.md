@@ -57,6 +57,7 @@
 - 跳过风控检查
 - 直接提交 main
 - 文件读写改操作使用 Bash 命令
+- SRC源码内大量使用#naqa、#type:ignore, 新增代码优先重构避免
 - 绕过或忽略 pyright、ruff、precommit 检测
 
 ## 项目架构
