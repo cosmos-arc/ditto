@@ -108,135 +108,114 @@ if is_active is not None:
 
 ### 6️⃣ 数据一致性审查
 
-**结论**: 🔴 严重问题 - 必须修复
+**结论**: ✅ **已修复** (2026-01-15)
 
-#### 问题 1: checksum 计算时机与落盘数据不一致
+#### 问题 1: checksum 计算时机与落盘数据不一致 ✅
 
 **文件**: `apps/port/src/ditto_port/services/ingestion/coordinator.py:163-221`
 
-**当前流程**:
-```python
-# Line 163: 基于原始 df 计算 checksum（不含 sid/source）
-checksum = self._metadata_manager.compute_checksum(df)
+**修复方案**:
+- ✅ **删除提前计算**: 移除 Line 163 的 `checksum = self._metadata_manager.compute_checksum(df)`
+- ✅ **统一使用落盘 checksum**: 修改为 `checksum=write_result.checksum`（移除 fallback）
+- ✅ **calendar 使用 ChecksumCompute**: 替换 MetadataManager 为统一的 ChecksumCompute
+- ✅ **stock_basic/etf_basic 使用 ChecksumCompute**: register_batch 添加 source 列后计算
 
-# Line 169: _write_data 中补齐 sid/source 后写入
-write_result = self._write_data(dataset, df, trade_date, on_duplicate)
-
-# Line 221: 记录到日志
-checksum=write_result.checksum or checksum,  # 优先使用文件 checksum
-```
-
-**问题分析**:
-| 组件 | checksum 来源 | 包含字段 |
-|------|--------------|----------|
-| MetadataManager | df.to_dict() | 原始字段（不含 sid/source） |
-| ParquetStoreBase | file_md5() | 落盘后完整数据（含 sid/source） |
-| FreezeManager | SHA-256(file) | 落盘后完整数据 |
+**Commit**: 待提交
 
 **影响的数据集**:
-- ✅ `stock_daily` - 补齐 sid/source
-- ✅ `etf_daily` - 补齐 sid/source
-- ✅ `adj_factor` - 补齐 sid/source
-- ✅ `fund_adj` - 补齐 sid/source
-- ❌ `calendar` - 不补齐（相对安全）
-- ❌ `stock_basic` - register_batch 内部计算
+- ✅ `stock_daily` - 使用 ParquetStoreBase.file_md5（包含 sid/source）
+- ✅ `etf_daily` - 使用 ParquetStoreBase.file_md5（包含 sid/source）
+- ✅ `adj_factor` - 使用 ParquetStoreBase.file_md5（包含 sid/source）
+- ✅ `fund_adj` - 使用 ParquetStoreBase.file_md5（包含 sid/source）
+- ✅ `calendar` - 使用 ChecksumCompute（统一 MD5 + 确定性排序）
+- ✅ `stock_basic` - 使用 ChecksumCompute（包含 source）
+- ✅ `etf_basic` - 使用 ChecksumCompute（包含 source）
 
-**后果**:
-1. **ingestion_log.checksum ≠ 落盘文件 checksum**
-2. **freeze 验证失败**: freeze manifest checksum 与 ingestion_log 不匹配
-3. **数据完整性无法验证**: 无法快速判断数据是否一致
-4. **重复数据检测失效**: `should_skip` 基于错误的 checksum
-
-#### 问题 2: checksum 行顺序依赖
+#### 问题 2: checksum 行顺序依赖 ✅
 
 **文件**: `apps/port/src/ditto_port/services/ingestion/metadata.py:75`
 
-**当前实现**:
+**修复方案**:
+- ✅ **创建统一工具类**: `ChecksumCompute` 位于 `packages/foundation/src/ditto_foundation/util/checksum.py`
+- ✅ **确定性行排序**: 按数据集类型定义排序键
+  - `stock_daily`, `etf_daily`, `adj_factor`, `fund_adj`: `["trade_date", "sid"]`
+  - `calendar`: `["trade_date"]`
+  - `stock_basic`, `etf_basic`: `["ts_code"]`
+- ✅ **所有组件使用**: calendar, stock_basic, etf_basic 都使用 ChecksumCompute
+
+**实现细节**:
 ```python
-data_dict = df.to_dict(as_series=False)  # 保持当前行顺序
-json_str = json.dumps(data_dict, sort_keys=True, default=_json_serializable)
+class ChecksumCompute:
+    SORT_KEYS: ClassVar[dict[str, Sequence[str]]] = {
+        "stock_daily": ("trade_date", "sid"),
+        "etf_daily": ("trade_date", "sid"),
+        "adj_factor": ("trade_date", "sid"),
+        "fund_adj": ("trade_date", "sid"),
+        "calendar": ("trade_date",),
+        "stock_basic": ("ts_code",),
+        "etf_basic": ("ts_code",),
+    }
+
+    @staticmethod
+    def from_dataframe(df: pl.DataFrame, dataset: str) -> str:
+        # 1. 按 SORT_KEYS 排序（确保确定性）
+        # 2. 转换为字典
+        # 3. orjson 序列化 (OPT_SORT_KEYS)
+        # 4. 计算 MD5
 ```
 
-**问题**:
-- `sort_keys=True` 只排序**列键**，不排序**行**
-- 相同数据不同行顺序 → 不同 checksum
-- 导致重复写入和日志噪声
+#### 问题 3: checksum 算法不统一 ✅
 
-**示例场景**:
-```python
-# 场景 1: 升序查询
-df1 = pl.scan_parquet("stock_daily/2024.parquet").sort("trade_date").collect()
-checksum1 = compute_checksum(df1)
+**修复方案**:
+- ✅ **统一使用 MD5**: 所有组件使用 MD5 算法（性能优于 SHA-256）
+- ✅ **usedforsecurity=False**: 明确标注非安全用途
+- ✅ **统一序列化**: 使用 orjson + OPT_SORT_KEYS 确保确定性
 
-# 场景 2: 降序查询
-df2 = pl.scan_parquet("stock_daily/2024.parquet").sort("trade_date", descending=True).collect()
-checksum2 = compute_checksum(df2)
-
-# checksum1 != checksum2 （即使内容相同）
-```
-
-#### 问题 3: checksum 算法不统一
-
-| 位置 | 算法 | 输入 | 用途 |
-|------|------|------|------|
-| MetadataManager | SHA-256(JSON) | df.to_dict() | ingestion_log.checksum |
-| SecurityRepository | MD5(JSON) | df.to_dict() | security_store checksum |
+| 位置 | 算法（修复后） | 输入 | 用途 |
+|------|---------------|------|------|
+| ChecksumCompute | MD5 | sorted df + orjson | 统一 checksum |
 | ParquetStoreBase | MD5(file) | 落盘文件 | WriteResult.checksum |
 | FreezeManager | SHA-256(file) | 落盘文件 | freeze manifest |
 
-**问题**: 算法不一致，无法跨组件验证
+**算法选择说明**:
+- ChecksumCompute 和 ParquetStoreBase 使用 MD5（性能优先）
+- FreezeManager 保持 SHA-256（安全优先，用于数据完整性验证）
 
-#### 修复建议（优先级排序）
+#### 测试验证
 
-**方案 1: 统一计算时机**（立即修复）
-```python
-# coordinator.py
-def ingest_date(self, dataset: str, trade_date: str, force: bool = False):
-    df = self._fetch_data(dataset, trade_date)
+**新增单元测试** (`packages/foundation/tests/unit/util/test_checksum_unit.py`):
+- ✅ `test_empty_dataframe_returns_md5_of_empty_bytes` - 空数据验证
+- ✅ `test_deterministic_irrespective_of_row_order` - 行顺序无关性（核心测试）
+- ✅ `test_checksum_includes_all_fields_including_sid_and_source` - sid/source 影响
+- ✅ `test_different_source_produces_different_checksum` - source 差异
+- ✅ `test_uses_md5_algorithm_32_char_hex` - MD5 算法验证
+- ✅ `test_dataset_specific_sort_keys` - 数据集特定排序键
+- ✅ `test_unknown_dataset_with_fallback_sort_keys` - 未知数据集备用排序
+- ✅ `test_get_sort_keys_returns_sequence` - get_sort_keys 方法验证
 
-    # ❌ 删除: checksum = self._metadata_manager.compute_checksum(df)
+**测试结果**: 所有 8 个测试通过 ✅
 
-    write_result = self._write_data(dataset, df, trade_date, on_duplicate)
+#### 修改文件清单
 
-    # ✅ 使用落盘后的 checksum（已包含所有字段）
-    checksum = write_result.checksum
+| # | 文件 | 修改类型 | 描述 |
+|---|------|----------|------|
+| 1 | `packages/foundation/src/ditto_foundation/util/checksum.py` | **新建** | 统一 ChecksumCompute 工具类 |
+| 2 | `packages/foundation/src/ditto_foundation/util/__init__.py` | **修改** | 导出 ChecksumCompute |
+| 3 | `apps/port/src/ditto_port/services/ingestion/coordinator.py` | **修改** | 删除提前计算；修改 calendar；移除 fallback |
+| 4 | `packages/datahub/src/ditto_datahub/repositories/security.py` | **修改** | register_batch 使用 ChecksumCompute，添加 source |
+| 5 | `packages/foundation/tests/unit/util/test_checksum_unit.py` | **新建** | ChecksumCompute 单元测试 |
+| 6 | `apps/port/src/ditto_port/services/ingestion/metadata.py` | **修改** | 删除 compute_checksum()、_json_serializable()，更新 compare_data() 使用 ChecksumCompute |
+| 7 | `apps/port/tests/unit/ingestion/test_metadata_unit.py` | **修改** | 删除 TestComputeChecksum、TestJsonSerializable 测试类 |
 
-    self._hub.ingestion_log.save_log(
-        IngestionLog(checksum=checksum, ...)
-    )
-```
+#### 遗留问题（可选优化）
 
-**方案 2: 统一算法和排序**（短期优化）
-```python
-class ChecksumCompute:
-    @staticmethod
-    def from_dataframe(df: pl.DataFrame) -> str:
-        """确定性 checksum（忽略行顺序）"""
-        # 1. 按键列排序
-        sorted_df = df.sort(["trade_date", "sid"])
-
-        # 2. 转换为字典
-        data_dict = sorted_df.to_dict(as_series=False)
-
-        # 3. 序列化
-        json_str = json.dumps(data_dict, sort_keys=True, default=_json_serializable)
-
-        # 4. 计算 SHA-256
-        return hashlib.sha256(json_str.encode("utf-8")).hexdigest()
-```
-
-**方案 3: 测试验证**
-```python
-def test_checksum_consistency_after_enrichment():
-    """验证补齐字段后 checksum 一致性"""
-    original_df = pl.DataFrame({"src_code": ["000001.SZ"], "close": [10.0]})
-    enriched_df = security_mapper.enrich_dataframe(original_df, ...)
-
-    write_result = bars_store.write("stock_daily", enriched_df, 2024)
-
-    # 验证: ingestion_log.checksum == write_result.checksum
-    assert write_result.checksum == file_md5(write_result.file_path)
-```
+| # | 问题 | 优先级 | 说明 |
+|---|------|--------|------|
+| 1 | ~~遗留代码未删除~~ | ~~P0~~ | **已修复** ✅ - 删除 MetadataManager.compute_checksum()、_json_serializable() |
+| 2 | ~~重复函数~~ | ~~P0~~ | **已修复** ✅ - 统一使用 ChecksumCompute._json_serializable() |
+| 3 | FreezeManager 算法不一致 | P2 | SHA-256 vs MD5，但用途不同（完整性校验 vs 重复检测） |
+| 4 | ParquetStoreBase.file_md5 可改用 ChecksumCompute | P2 | 当前实现已正确，但可统一到 ChecksumCompute |
+| 5 | README 文档缺失 | ~~P1~~ | **已修复** ✅ - 更新 Foundation README、util/README.md |
 
 ---
 

@@ -159,6 +159,9 @@ M.data_update_duration.record(1.5, {"source": "tushare"})
 - `get_settings()`: 全局配置单例
 
 ### util/ - 工具函数
+- `ChecksumCompute`: 统一的 Checksum 计算工具（MD5 算法，确定性排序）
+  - `from_dataframe()`: 计算 DataFrame 的确定性 checksum
+  - `get_sort_keys()`: 获取数据集的排序键配置
 - `atomic_write()`: 原子写入 Parquet
 - `file_md5()`: 文件 MD5 校验
 - `normalize_date()`: 日期格式规范化

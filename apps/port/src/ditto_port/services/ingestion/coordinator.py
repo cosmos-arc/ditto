@@ -16,6 +16,7 @@ from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_datahub.types import OnDuplicate
 from ditto_foundation import logger
+from ditto_foundation.util.checksum import ChecksumCompute
 
 from ditto_port.common.types import IngestionResult
 from ditto_port.services.ingestion.metadata import MetadataManager
@@ -160,7 +161,9 @@ class IngestionCoordinator:
                 message="获取的数据为空",
             )
 
-        checksum = self._metadata_manager.compute_checksum(df)
+        # 删除提前计算的 checksum（修复问题：计算时机不一致）
+        # 统一使用 write_result.checksum（落盘后的完整数据 checksum）
+        # checksum = self._metadata_manager.compute_checksum(df)  # ❌ 删除
 
         # 将 force 映射到 on_duplicate
         on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
@@ -218,7 +221,8 @@ class IngestionCoordinator:
                 source=self._source_name,
                 trade_date=trade_date,
                 status=IngestionStatus.SUCCESS,
-                checksum=write_result.checksum or checksum,
+                # 修复：统一使用 write_result.checksum（落盘后包含所有字段的 checksum）
+                checksum=write_result.checksum,
                 rows=len(df),
             )
         )
@@ -228,7 +232,8 @@ class IngestionCoordinator:
             trade_date=trade_date,
             status="success",
             row_count=len(df),
-            checksum=write_result.checksum or checksum,
+            # 修复：统一使用 write_result.checksum（落盘后包含所有字段的 checksum）
+            checksum=write_result.checksum,
             message="数据摄取成功",
         )
 
@@ -334,7 +339,8 @@ class IngestionCoordinator:
             records = df.to_dicts()
             self._hub.calendar_store.upsert(records)
             file_path = f"calendar_store:{trade_date}"
-            checksum = self._metadata_manager.compute_checksum(df)
+            # 修复：使用统一的 ChecksumCompute（MD5 算法，确定性排序）
+            checksum = ChecksumCompute.from_dataframe(df, "calendar")
             return WriteResult(
                 file_path=file_path,
                 checksum=checksum,

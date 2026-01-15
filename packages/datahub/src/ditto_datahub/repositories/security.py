@@ -2,28 +2,16 @@
 
 from __future__ import annotations
 
-import hashlib
-from datetime import date
 from typing import TYPE_CHECKING, Any
 
-import orjson
 import polars as pl
 from ditto_foundation import M, logger, traced
+from ditto_foundation.util.checksum import ChecksumCompute
 
 from ditto_datahub.stores.security_store import SecurityStore
 
 if TYPE_CHECKING:
     from ditto_datahub.runtime.sid_allocator import SidAllocator
-
-
-def _json_serializable(obj: object) -> object:
-    """Convert object to JSON serializable format."""
-    if isinstance(obj, date):
-        return obj.isoformat()
-    to_python_method = getattr(obj, "to_python", None)
-    if callable(to_python_method):
-        return to_python_method()
-    return str(obj)
 
 
 class SecurityRepository:
@@ -351,14 +339,11 @@ class SecurityRepository:
             )
             registered_count += 1
 
-        # Calculate checksum from DataFrame content
-        data_dict = df.to_dict(as_series=False)
-        json_bytes = orjson.dumps(
-            data_dict,
-            option=orjson.OPT_SORT_KEYS | orjson.OPT_NON_STR_KEYS,
-            default=_json_serializable,
-        )
-        checksum = hashlib.md5(json_bytes, usedforsecurity=False).hexdigest()
+        # 修复：使用统一的 ChecksumCompute 计算 checksum
+        # 添加 source 列以确保 checksum 包含 source 信息
+        dataset_name = f"{asset_class}_basic"
+        df_with_source = df.with_columns(pl.lit(source).alias("source"))
+        checksum = ChecksumCompute.from_dataframe(df_with_source, dataset_name)
 
         # File path for tracking (not a real file for SQLite storage)
         file_path = f"security_store:{asset_class}_basic"

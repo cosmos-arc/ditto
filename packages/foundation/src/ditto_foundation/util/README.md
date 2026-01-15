@@ -8,6 +8,7 @@
 
 | 函数 | 功能 | 用途 |
 |------|------|------|
+| `ChecksumCompute.from_dataframe()` | 计算 DataFrame 的确定性 checksum | 数据完整性校验、重复检测、变更追踪 |
 | `atomic_write()` | 原子写入 Parquet 文件 | 确保数据写入完整性 |
 | `file_md5()` | 计算文件 MD5 哈希 | 数据完整性校验、变更检测 |
 | `normalize_date()` | 规范化日期格式 | 统一日期输入处理 |
@@ -33,7 +34,8 @@
 
 ```
 util/
-├── __init__.py    # 导出 atomic_write, file_md5, normalize_date
+├── __init__.py    # 导出 ChecksumCompute, atomic_write, file_md5, normalize_date
+├── checksum.py    # Checksum 计算工具（MD5 + 确定性排序）
 ├── io.py          # IO 相关工具函数
 └── dates.py       # 日期规范化工具函数
 ```
@@ -119,6 +121,59 @@ result4 = normalize_date(None)              # None
 - 统一 API 接口日期输入
 - 数据库日期格式规范化
 - 跨系统日期数据交换
+
+### 4.4 ChecksumCompute.from_dataframe()
+
+**功能**：计算 DataFrame 的确定性 checksum（行顺序无关）
+
+**特性**：
+- **算法统一**：MD5（性能优于 SHA-256）
+- **排序统一**：按数据集类型确定性行排序
+- **字段统一**：包含所有字段（包括 sid、source）
+
+```python
+from ditto_foundation.util import ChecksumCompute
+import polars as pl
+
+df = pl.DataFrame({
+    "trade_date": ["2024-01-01", "2024-01-02"],
+    "sid": [1, 2],
+    "close": [10.0, 11.0],
+    "source": ["tushare", "tushare"]
+})
+
+# 计算 checksum（自动按 trade_date, sid 排序）
+checksum = ChecksumCompute.from_dataframe(df, "stock_daily")
+print(checksum)  # "3a7bd3e2360a..."
+```
+
+**支持的数据集类型**：
+
+| 数据集 | 排序键 |
+|--------|--------|
+| `stock_daily` | `trade_date`, `sid` |
+| `etf_daily` | `trade_date`, `sid` |
+| `adj_factor` | `trade_date`, `sid` |
+| `fund_adj` | `trade_date`, `sid` |
+| `calendar` | `trade_date` |
+| `stock_basic` | `ts_code` |
+| `etf_basic` | `ts_code` |
+
+**未知数据集处理**：
+
+```python
+# 使用 fallback_sort_keys 参数
+checksum = ChecksumCompute.from_dataframe(
+    df,
+    "unknown_dataset",
+    fallback_sort_keys=["id"]
+)
+```
+
+**应用场景**：
+- 数据完整性校验
+- 重复数据检测
+- 变更追踪
 
 ## 五、注意事项
 

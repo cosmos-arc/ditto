@@ -2,35 +2,15 @@
 元数据管理器。
 
 负责处理数据摄取的元数据逻辑, 包括：
-- 计算数据 checksum(用于判断数据是否变化)
 - 比较新旧数据
 - 判断是否需要跳过摄取(基于 checksum 和游标)
 """
-
-import hashlib
-import json
-from datetime import date
 
 import polars as pl
 from ditto_datahub.sources.metadata import IngestionLog
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_foundation import logger
-
-
-def _json_serializable(obj: object) -> object:
-    """
-    将对象转换为 JSON 可序列化的格式。
-
-    Args:
-        obj: 要转换的对象。
-
-    Returns:
-        JSON 可序列化的对象。
-
-    """
-    if isinstance(obj, date):
-        return obj.isoformat()
-    raise TypeError(f"Type {type(obj)} not serializable")
+from ditto_foundation.util.checksum import ChecksumCompute
 
 
 class MetadataManager:
@@ -56,38 +36,6 @@ class MetadataManager:
 
         """
         self._log_store = log_store
-
-    def compute_checksum(self, df: pl.DataFrame) -> str:
-        """
-        计算数据 checksum。
-
-        使用 JSON 序列化和 SHA256 哈希来计算 checksum。
-        相同的数据(包括行顺序)将产生相同的 checksum。
-
-        Args:
-            df: Polars DataFrame。
-
-        Returns:
-            十六进制格式的 checksum 字符串。
-
-        """
-        # 将 DataFrame 转换为字典(保持顺序)
-        data_dict = df.to_dict(as_series=False)
-
-        # 序列化为 JSON(确保确定性排序，处理日期类型)
-        json_str = json.dumps(data_dict, sort_keys=True, default=_json_serializable)
-
-        # 计算 SHA256 哈希
-        checksum = hashlib.sha256(json_str.encode("utf-8")).hexdigest()
-
-        logger.debug(
-            "Checksum computed",
-            event="checksum_computed",
-            row_count=len(df),
-            checksum=checksum[:8] + "...",  # 只记录前8个字符
-        )
-
-        return checksum
 
     def should_skip(
         self,
@@ -201,8 +149,8 @@ class MetadataManager:
             )
             return False
 
-        # 计算新数据的 checksum
-        new_checksum = self.compute_checksum(new_df)
+        # 计算新数据的 checksum（使用统一的 ChecksumCompute）
+        new_checksum = ChecksumCompute.from_dataframe(new_df, existing_log.dataset)
 
         # 比较 checksum
         if new_checksum != existing_log.checksum:

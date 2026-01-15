@@ -5,7 +5,9 @@ description: 生成结构化开发任务规划
 
 # /plan 命令
 
-使用 `superpowers:brainstorming` + `superpowers:writing-plans` 将需求拆解为可执行的开发计划。
+使用 `superpowers:brainstorming` + `superpowers:writing-plans` 将需求拆解为可执行的开发计划，开始
+
+**开始前有任何问题先向我询问澄清，直到完全无疑问！！**
 
 ## 输入
 

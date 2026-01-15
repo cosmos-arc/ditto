@@ -7,6 +7,8 @@ description: Sprint规划与任务管理
 
 使用 `superpowers:brainstorming` + `superpowers:writing-plans` 将目标拆分为可执行的Sprint任务。
 
+**开始前有任何问题先向我询问澄清，直到完全无疑问！！**
+
 ## 子命令
 
 | 命令 | 说明 |
