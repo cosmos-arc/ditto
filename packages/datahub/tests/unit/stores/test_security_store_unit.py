@@ -190,6 +190,41 @@ class TestSecurityStore:
         assert 100000001 in sse_sids
         assert 100000002 in sse_sids
 
+    def test_list_sids_with_is_active_none(self) -> None:
+        """Test listing sids with is_active=None returns both active and inactive."""
+        # Insert test data: 2 active, 1 inactive
+        for i in range(3):
+            sid = 100000001 + i
+            is_active = "TRUE" if i < 2 else "FALSE"
+            sql = (
+                "INSERT INTO security "
+                "(sid, symbol, name, exchange, asset_class, list_date, is_active) "
+                f"VALUES ({sid}, '60{i:04d}', 'Stock{i}', 'SSE', 'stock', "
+                f"'2000-01-01', {is_active})"
+            )
+            self.client.execute(sql)
+
+        self.client.commit()
+
+        # Default (is_active=True) should return only active
+        active_sids = self.store.list_sids()
+        assert len(active_sids) == 2
+        assert 100000001 in active_sids
+        assert 100000002 in active_sids
+        assert 100000003 not in active_sids
+
+        # is_active=False should return only inactive
+        inactive_sids = self.store.list_sids(is_active=False)
+        assert len(inactive_sids) == 1
+        assert 100000003 in inactive_sids
+
+        # is_active=None should return ALL (both active and inactive)
+        all_sids = self.store.list_sids(is_active=None)
+        assert len(all_sids) == 3
+        assert 100000001 in all_sids
+        assert 100000002 in all_sids
+        assert 100000003 in all_sids
+
     def test_get_symbol(self) -> None:
         """Test getting symbol by sid."""
         self.client.execute("""

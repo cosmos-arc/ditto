@@ -380,7 +380,7 @@ class SecurityStore:
         self,
         asset_class: str | None = None,
         exchange: str | None = None,
-        is_active: bool = True,
+        is_active: bool | None = True,
     ) -> list[int]:
         """
         List all sids with optional filters.
@@ -405,9 +405,9 @@ class SecurityStore:
             sql += " AND exchange = ?"
             params.append(exchange)
 
-        # Always filter by is_active (default True)
-        sql += " AND is_active = ?"
-        params.append(is_active)
+        if is_active is not None:
+            sql += " AND is_active = ?"
+            params.append(is_active)
 
         rows = self._client.fetchall(sql, params)
         return [cast(int, r["sid"]) for r in rows]
