@@ -96,13 +96,14 @@ reportUninitializedInstanceVariable = "error"  # 未初始化实例变量
 
 ### Phase 1: Singleton 模式重构（消除 PLW0603）
 
-- [ ] **Task 1.1**: 创建 SettingsManager 类 `[M]`
+- [x] **Task 1.1**: 创建 SettingsManager 类 `[M]`
   - 验收: 实现单例模式，无 global 语句，支持 reload
   - 文件: `packages/foundation/src/ditto_foundation/config/manager.py`
 
-- [ ] **Task 1.2**: 重构 settings.py 使用 Manager `[S]`
+- [x] **Task 1.2**: 重构 settings.py 使用 Manager `[S]`
   - 验收: 移除 2 处 PLW0603，移除 pyproject.toml 中的 PLC0415 豁免
   - 文件: `packages/foundation/src/ditto_foundation/config/settings.py`, `pyproject.toml`
+  - **注意**: SettingsManager 移至 settings.py 以避免循环依赖
 
 - [ ] **Task 1.3**: 重构 paths.py 使用 Manager `[S]`
   - 验收: 移除 2 处 PLW0603，S108 添加详细注释
