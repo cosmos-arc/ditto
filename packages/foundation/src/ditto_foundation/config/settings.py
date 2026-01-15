@@ -9,13 +9,12 @@ Ditto 系统配置管理.
 """
 
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# 延迟导入以避免循环依赖
-# get_paths 会在使用时导入
+from ditto_foundation.config.manager import SingletonManager
 
 
 class DatabaseSettings(BaseSettings):
@@ -217,8 +216,22 @@ class Settings(BaseSettings):
         return self.system.ditto_env == "testing"
 
 
-# 全局配置实例
-_settings: Settings | None = None
+# ============ Settings 单例管理器 ============
+
+
+class SettingsManager(SingletonManager["Settings"]):
+    """
+    Settings 单例管理器.
+
+    使用类属性而非 global 变量实现单例模式，避免 PLW0603 警告。
+    """
+
+    _instance: ClassVar["Settings | None"] = None
+
+    @classmethod
+    def _create_instance(cls) -> "Settings":
+        """创建 Settings 实例."""
+        return Settings()
 
 
 def get_settings() -> Settings:
@@ -232,10 +245,7 @@ def get_settings() -> Settings:
         Settings: 配置实例
 
     """
-    global _settings  # noqa: PLW0603 - singleton pattern requires global state
-    if _settings is None:
-        _settings = Settings()
-    return _settings
+    return SettingsManager.get()
 
 
 def reload_settings() -> Settings:
@@ -249,6 +259,18 @@ def reload_settings() -> Settings:
         Settings: 新的配置实例
 
     """
-    global _settings  # noqa: PLW0603 - singleton pattern requires global state
-    _settings = Settings()
-    return _settings
+    return SettingsManager.reload()
+
+
+__all__ = [
+    "APISettings",
+    "DataSourceSettings",
+    "DatabaseSettings",
+    "FileStorageSettings",
+    "ObservabilitySettings",
+    "Settings",
+    "SettingsManager",
+    "SystemSettings",
+    "get_settings",
+    "reload_settings",
+]

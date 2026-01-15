@@ -11,7 +11,6 @@ from abc import abstractmethod
 from typing import Any, ClassVar
 
 from ditto_foundation.config.paths import XDGPaths
-from ditto_foundation.config.settings import Settings
 
 
 class SingletonManager[T]:
@@ -95,21 +94,6 @@ class SingletonManager[T]:
         主要用于测试场景的状态隔离。
         """
         cls._instance = None
-
-
-class SettingsManager(SingletonManager[Settings]):
-    """
-    Settings 单例管理器.
-
-    管理全局 Settings 配置实例的生命周期。
-    """
-
-    _instance: ClassVar[Settings | None] = None
-
-    @classmethod
-    def _create_instance(cls) -> Settings:
-        """创建 Settings 实例."""
-        return Settings()
 
 
 class PathsManager(SingletonManager[XDGPaths]):

@@ -6,7 +6,6 @@ Ditto 配置管理模块.
 
 from ditto_foundation.config.manager import (
     PathsManager,
-    SettingsManager,
     SingletonManager,
 )
 from ditto_foundation.config.paths import (
@@ -21,6 +20,7 @@ from ditto_foundation.config.settings import (
     DataSourceSettings,
     FileStorageSettings,
     Settings,
+    SettingsManager,
     SystemSettings,
     get_settings,
     reload_settings,
