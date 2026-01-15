@@ -1,5 +1,6 @@
 """Tests for DataHub Facade."""
 
+import atexit
 import gc
 import time
 from pathlib import Path
@@ -103,7 +104,16 @@ class TestDataHub:
         """Clean up test environment."""
         try:
             if hasattr(self, "hub"):
+                # 在测试中，手动 close 并取消 atexit 注册
+                # 避免 Windows 文件锁问题
                 self.hub.close()
+                # 尝试取消 atexit 注册（如果存在）
+                try:
+                    atexit.unregister(self.hub._cleanup_on_exit)
+                except (ValueError, AttributeError):
+                    # ValueError: 未注册
+                    # AttributeError: 方法不存在（旧版本兼容）
+                    pass
         except Exception:  # noqa: S110
             pass
         # Force garbage collection to release SQLite file handles on Windows
@@ -136,29 +146,29 @@ class TestDataHub:
 
     def test_lazy_loading_sql_engine(self) -> None:
         """Test sql_engine is lazily loaded."""
-        hub = DataHub(self.data_root)
-        assert "sql_engine" not in hub.__dict__
+        with DataHub(self.data_root) as hub:
+            assert "sql_engine" not in hub.__dict__
 
-        _ = hub.sql_engine
-        assert "sql_engine" in hub.__dict__
+            _ = hub.sql_engine
+            assert "sql_engine" in hub.__dict__
 
     def test_sql_execute_returns_dataframe(self) -> None:
         """Test sql method returns DataFrame."""
-        hub = DataHub(self.data_root)
-        result = hub.sql("SELECT 1 AS num")
+        with DataHub(self.data_root) as hub:
+            result = hub.sql("SELECT 1 AS num")
 
-        assert isinstance(result, pl.DataFrame)
-        assert result["num"][0] == 1
+            assert isinstance(result, pl.DataFrame)
+            assert result["num"][0] == 1
 
     def test_close_closes_resources(self) -> None:
         """Test close closes initialized resources."""
-        hub = DataHub(self.data_root)
-        # Access some resources to trigger initialization
-        _ = hub.sqlite_pool
-        _ = hub.sql_engine
+        with DataHub(self.data_root) as hub:
+            # Access some resources to trigger initialization
+            _ = hub.sqlite_pool
+            _ = hub.sql_engine
 
-        # Close should not raise
-        hub.close()
+            # Close should not raise
+            hub.close()
 
     def test_context_manager(self) -> None:
         """Test DataHub supports context manager."""
@@ -247,13 +257,13 @@ class TestDataHub:
         """Test get_trading_days returns list of dates."""
         self._insert_calendar_data()
 
-        hub = DataHub(self.data_root)
-        trading_days = hub.get_trading_days("2024-01-01", "2024-01-05")
+        with DataHub(self.data_root) as hub:
+            trading_days = hub.get_trading_days("2024-01-01", "2024-01-05")
 
-        assert isinstance(trading_days, list)
-        assert len(trading_days) == 3
-        assert "2024-01-02" in trading_days
-        assert "2024-01-03" in trading_days
+            assert isinstance(trading_days, list)
+            assert len(trading_days) == 3
+            assert "2024-01-02" in trading_days
+            assert "2024-01-03" in trading_days
 
     def test_get_trading_days_only_open_false(self) -> None:
         """Test get_trading_days with only_open=False."""
@@ -261,13 +271,13 @@ class TestDataHub:
         rows = self._get_sample_calendar_rows()[:2]
         self._insert_calendar_data(rows)
 
-        hub = DataHub(self.data_root)
-        # When only_open=False, should return all days (closed + open)
-        all_days = hub.get_trading_days("2024-01-01", "2024-01-05", only_open=False)
+        with DataHub(self.data_root) as hub:
+            # When only_open=False, should return all days (closed + open)
+            all_days = hub.get_trading_days("2024-01-01", "2024-01-05", only_open=False)
 
-        # Should include at least the trading days
-        assert isinstance(all_days, list)
-        assert len(all_days) >= 2
+            # Should include at least the trading days
+            assert isinstance(all_days, list)
+            assert len(all_days) >= 2
 
     def test_is_trading_day_returns_bool(self) -> None:
         """Test is_trading_day returns boolean."""
@@ -275,9 +285,9 @@ class TestDataHub:
         rows = self._get_sample_calendar_rows()[:2]
         self._insert_calendar_data(rows)
 
-        hub = DataHub(self.data_root)
-        assert hub.is_trading_day("2024-01-02") is True
-        assert hub.is_trading_day("2024-01-06") is False
+        with DataHub(self.data_root) as hub:
+            assert hub.is_trading_day("2024-01-02") is True
+            assert hub.is_trading_day("2024-01-06") is False
 
     # ========================================================================
     # resolve_sid Tests
@@ -286,38 +296,35 @@ class TestDataHub:
     def test_resolve_sid_raises_sid_not_found_error(self) -> None:
         """Test resolve_sid raises SidNotFoundError when identifier not found."""
 
-        hub = DataHub(self.data_root)
+        with DataHub(self.data_root) as hub:
+            # Try to resolve a non-existent identifier
+            with pytest.raises(SidNotFoundError) as exc_info:
+                hub.resolve_sid("999999.SH", source="tushare")
 
-        # Try to resolve a non-existent identifier
-        with pytest.raises(SidNotFoundError) as exc_info:
-            hub.resolve_sid("999999.SH", source="tushare")
-
-        # Verify exception contains the identifier and source
-        assert exc_info.value.details["identifier"] == "999999.SH"
-        assert exc_info.value.details["source"] == "tushare"
-        assert "999999.SH" in str(exc_info.value)
+            # Verify exception contains the identifier and source
+            assert exc_info.value.details["identifier"] == "999999.SH"
+            assert exc_info.value.details["source"] == "tushare"
+            assert "999999.SH" in str(exc_info.value)
 
     def test_resolve_sid_with_custom_source(self) -> None:
         """Test resolve_sid with custom source parameter."""
 
-        hub = DataHub(self.data_root)
+        with DataHub(self.data_root) as hub:
+            # Try to resolve with custom source
+            with pytest.raises(SidNotFoundError) as exc_info:
+                hub.resolve_sid("000001.SZ", source="akshare")
 
-        # Try to resolve with custom source
-        with pytest.raises(SidNotFoundError) as exc_info:
-            hub.resolve_sid("000001.SZ", source="akshare")
-
-        assert exc_info.value.details["source"] == "akshare"
+            assert exc_info.value.details["source"] == "akshare"
 
     def test_resolve_sid_with_asof_parameter(self) -> None:
         """Test resolve_sid with asof parameter for PIT queries."""
 
-        hub = DataHub(self.data_root)
+        with DataHub(self.data_root) as hub:
+            # Try to resolve with asof parameter
+            with pytest.raises(SidNotFoundError) as exc_info:
+                hub.resolve_sid("600000.SH", source="tushare", asof="2023-01-01")
 
-        # Try to resolve with asof parameter
-        with pytest.raises(SidNotFoundError) as exc_info:
-            hub.resolve_sid("600000.SH", source="tushare", asof="2023-01-01")
-
-        assert exc_info.value.details["identifier"] == "600000.SH"
+            assert exc_info.value.details["identifier"] == "600000.SH"
 
     # ========================================================================
     # refresh_sql_views Tests
@@ -325,33 +332,31 @@ class TestDataHub:
 
     def test_refresh_sql_views_without_sql_engine_initialized(self) -> None:
         """Test refresh_sql_views when sql_engine is not initialized."""
-        hub = DataHub(self.data_root)
+        with DataHub(self.data_root) as hub:
+            # sql_engine not accessed yet, should not be in __dict__
+            assert "sql_engine" not in hub.__dict__
 
-        # sql_engine not accessed yet, should not be in __dict__
-        assert "sql_engine" not in hub.__dict__
+            # Should not raise any error
+            hub.refresh_sql_views()
 
-        # Should not raise any error
-        hub.refresh_sql_views()
-
-        # sql_engine should still not be initialized
-        assert "sql_engine" not in hub.__dict__
+            # sql_engine should still not be initialized
+            assert "sql_engine" not in hub.__dict__
 
     def test_refresh_sql_views_with_sql_engine_initialized(self, mocker) -> None:
         """Test refresh_sql_views when sql_engine is initialized."""
-        hub = DataHub(self.data_root)
+        with DataHub(self.data_root) as hub:
+            # Access sql_engine to trigger initialization
+            _ = hub.sql_engine
+            assert "sql_engine" in hub.__dict__
 
-        # Access sql_engine to trigger initialization
-        _ = hub.sql_engine
-        assert "sql_engine" in hub.__dict__
+            # 使用 mocker.fixture mock refresh_views 方法
+            mock_refresh = mocker.patch.object(hub.sql_engine, "refresh_views")
 
-        # 使用 mocker.fixture mock refresh_views 方法
-        mock_refresh = mocker.patch.object(hub.sql_engine, "refresh_views")
+            # Call refresh_sql_views
+            hub.refresh_sql_views()
 
-        # Call refresh_sql_views
-        hub.refresh_sql_views()
-
-        # Verify refresh_views was called
-        mock_refresh.assert_called_once()
+            # Verify refresh_views was called
+            mock_refresh.assert_called_once()
 
     # ========================================================================
     # __init__ with Default Path Tests
@@ -367,11 +372,10 @@ class TestDataHub:
         mock_get_paths = mocker.patch("ditto_foundation.config.paths.get_paths")
         mock_get_paths.return_value.data_home = mock_path_obj
 
-        hub = DataHub(data_root=None)
-
-        # Verify default path was used
-        assert hub.data_root == mock_path_obj
-        mock_get_paths.assert_called_once()
+        with DataHub(data_root=None) as hub:
+            # Verify default path was used
+            assert hub.data_root == mock_path_obj
+            mock_get_paths.assert_called_once()
 
     # ========================================================================
     # __exit__ Exception Handling Tests
@@ -380,10 +384,12 @@ class TestDataHub:
     def test_exit_handles_exception_gracefully(self, mocker) -> None:
         """Test __exit__ handles exceptions and still closes resources."""
         hub = DataHub(self.data_root)
+        self.hub = hub  # 保存引用供 teardown 使用
+
         _ = hub.sqlite_pool
 
         # Mock close 方法以验证调用
-        mocker.patch.object(hub, "close")
+        mock_close = mocker.patch.object(hub, "close")
 
         # Simulate an exception in the with block
         try:
@@ -394,4 +400,56 @@ class TestDataHub:
             pass  # Expected exception
 
         # 验证 close 被调用
-        hub.close.assert_called_once()
+        mock_close.assert_called_once()
+
+        # 手动清理 (teardown 会再次调用，但 close 是幂等的)
+        try:
+            atexit.unregister(hub._cleanup_on_exit)
+        except (ValueError, AttributeError):
+            pass
+        hub.close()
+
+    # ========================================================================
+    # Resource Lifecycle Tests
+    # ========================================================================
+
+    def test_atexit_registered_on_init(self, mocker) -> None:
+        """验证 atexit 在初始化时注册."""
+        # Mock atexit.register 来跟踪调用
+        mock_register = mocker.patch("atexit.register")
+
+        DataHub(self.data_root)
+
+        # 验证 atexit.register 被调用了一次
+        mock_register.assert_called_once()
+        # 验证注册的是 hub 的清理方法
+        args, _ = mock_register.call_args
+        assert args[0].__name__ == "_cleanup_on_exit"
+
+    def test_close_is_idempotent(self) -> None:
+        """验证 close() 可以多次调用."""
+        hub = DataHub(self.data_root)
+        _ = hub.sqlite_pool
+
+        # 第一次 close 应该成功
+        hub.close()
+
+        # 第二次 close 不应抛出异常
+        hub.close()
+
+        # 第三次 close 也不应抛出异常
+        hub.close()
+
+    def test_cleanup_on_exit_closes_resources(self, mocker) -> None:
+        """验证 _cleanup_on_exit 调用 close."""
+        hub = DataHub(self.data_root)
+        _ = hub.sqlite_pool
+
+        # Mock close 方法
+        mock_close = mocker.patch.object(hub, "close")
+
+        # 手动调用 _cleanup_on_exit
+        hub._cleanup_on_exit()
+
+        # 验证 close 被调用
+        mock_close.assert_called_once()

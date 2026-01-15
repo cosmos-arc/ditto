@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import atexit
 import types
 from functools import cached_property
 from pathlib import Path
@@ -70,6 +71,10 @@ class DataHub:
             self.data_root = get_paths().data_home
         else:
             self.data_root = Path(data_root)
+
+        self._closed = False
+        # 注册进程退出清理
+        atexit.register(self._cleanup_on_exit)
 
         logger.debug(
             "DataHub initialized",
@@ -401,6 +406,11 @@ class DataHub:
     # Resource Management
     # ========================================================================
 
+    def _cleanup_on_exit(self) -> None:
+        """进程退出时清理（由 atexit 自动调用）."""
+        if not self._closed:
+            self.close()
+
     def close(self) -> None:
         """
         Close resources.
@@ -408,12 +418,16 @@ class DataHub:
         Only closes resources that have been accessed (initialized).
         Unaccessed resources are never created and don't need closing.
 
+        This method is idempotent - can be called multiple times safely.
+
         Closes in reverse order of initialization to avoid dependency issues:
         1. Stores with SQLite clients (pipeline_store, calendar_store, security_store,
            universe_store, index_weight_store, ingestion_log)
         2. SQL engine (DuckDB)
         3. SQLite pool (connection manager)
         """
+        if self._closed:
+            return
         # Close stores that hold SQLiteClient references
         # These must be closed before sqlite_pool
         for store_name in (
@@ -436,6 +450,8 @@ class DataHub:
         # Close SQLite pool
         if "sqlite_pool" in self.__dict__:
             self.sqlite_pool.close()
+
+        self._closed = True
 
         logger.debug(
             "DataHub closed",
