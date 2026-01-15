@@ -4,12 +4,12 @@
 基于 loguru 的结构化日志配置，支持多环境和 JSON 格式输出.
 """
 
-import json
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import orjson
 from loguru import logger as _logger
 
 from .config import Mode, ObservabilityConfig
@@ -70,7 +70,7 @@ def _json_formatter(record: dict[str, Any] | Any) -> str:
 
     """
     log_entry = _build_log_record(record)
-    return json.dumps(log_entry, ensure_ascii=False) + "\n"
+    return orjson.dumps(log_entry).decode("utf-8") + "\n"
 
 
 def configure_logging(config: ObservabilityConfig, mode: Mode) -> None:
