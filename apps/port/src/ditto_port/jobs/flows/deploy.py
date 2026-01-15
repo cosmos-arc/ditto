@@ -88,10 +88,12 @@ def _get_flow_configs() -> list[FlowDeploymentConfig]:
             deployment_name="backfill-prod",
             description="全量数据回补流程",
             parameters={
-                "dataset": "stock_daily",
-                "start_date": "2020-01-01",
-                "end_date": "2024-12-31",
-                "data_root": "data",
+                "backfill_config": {
+                    "dataset": "stock_daily",
+                    "start_date": "2020-01-01",
+                    "end_date": "2024-12-31",
+                    "data_root": "data",
+                }
             },
             tags=["production", "backfill", "manual"],
         ),
