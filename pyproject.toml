@@ -145,12 +145,6 @@ unfixable = []
 "packages/datahub/src/ditto_datahub/sources/tushare/client.py" = ["S101"]
 "packages/datahub/src/ditto_datahub/stores/ingestion_log.py" = ["S101"]
 
-# Prefect flow - 参数过多
-"apps/port/src/ditto_port/jobs/flows/backfill.py" = ["PLR0913"]
-
-# 配置工厂 - 参数过多
-"apps/port/src/ditto_port/services/ingestion/config/datasets.py" = ["PLR0913"]
-
 # 数据协调器 - 多返回语句
 "apps/port/src/ditto_port/services/ingestion/coordinator.py" = ["PLR0911"]
 

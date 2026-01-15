@@ -7,6 +7,7 @@ from ditto_port.services.ingestion.config.datasets import (
     DATASET_REGISTRY,
     Dataset,
     DatasetConfig,
+    T1ConfigParams,
     TaskTier,
     create_t0_config,
     create_t1_config,
@@ -510,4 +511,107 @@ class TestFactoryFunctions:
             timeout_seconds=600,
         )
 
+        assert config.timeout_seconds == 600
+
+
+@pytest.mark.unit
+class TestT1ConfigParams:
+    """Test T1ConfigParams configuration parameter class."""
+
+    def test_t1_config_params_creates_valid_params(self) -> None:
+        """Test T1ConfigParams creates valid configuration parameters."""
+        params = T1ConfigParams(
+            dataset=Dataset.ETF_DAILY,
+            description="ETF日行情数据",
+            typical_available_time=time(18, 0),
+            depends_on=[Dataset.ETF_BASIC],
+            critical_fields=["trade_date", "ts_code", "close"],
+            task_name="ingest_etf_bars",
+        )
+
+        assert params.dataset == Dataset.ETF_DAILY
+        assert params.description == "ETF日行情数据"
+        assert params.typical_available_time == time(18, 0)
+        assert params.depends_on == [Dataset.ETF_BASIC]
+        assert params.critical_fields == ["trade_date", "ts_code", "close"]
+        assert params.task_name == "ingest_etf_bars"
+        assert params.priority == 20  # default
+        assert params.timeout_seconds == 300  # default
+
+    def test_t1_config_params_with_custom_priority(self) -> None:
+        """Test T1ConfigParams with custom priority."""
+        params = T1ConfigParams(
+            dataset=Dataset.ADJ_FACTOR,
+            description="复权因子",
+            typical_available_time=time(19, 0),
+            depends_on=[Dataset.STOCK_DAILY],
+            critical_fields=["trade_date", "ts_code", "adj_factor"],
+            task_name="ingest_adj_factor",
+            priority=30,
+        )
+
+        assert params.priority == 30
+
+    def test_t1_config_params_with_custom_timeout(self) -> None:
+        """Test T1ConfigParams with custom timeout_seconds."""
+        params = T1ConfigParams(
+            dataset=Dataset.STOCK_DAILY,
+            description="股票日行情数据",
+            typical_available_time=time(17, 0),
+            depends_on=[Dataset.STOCK_BASIC],
+            critical_fields=["trade_date", "ts_code", "close"],
+            task_name="ingest_stock_daily",
+            timeout_seconds=600,
+        )
+
+        assert params.timeout_seconds == 600
+
+    def test_t1_config_params_validation(self) -> None:
+        """Test T1ConfigParams validates required fields."""
+        with pytest.raises(ValueError):
+            T1ConfigParams(
+                # Missing required field: dataset
+                description="ETF日行情数据",
+                typical_available_time=time(18, 0),
+                depends_on=[Dataset.ETF_BASIC],
+                critical_fields=["trade_date", "ts_code", "close"],
+                task_name="ingest_etf_bars",
+            )
+
+    def test_create_t1_config_with_params(self) -> None:
+        """Test create_t1_config accepts T1ConfigParams."""
+        params = T1ConfigParams(
+            dataset=Dataset.ETF_DAILY,
+            description="ETF日行情数据",
+            typical_available_time=time(18, 0),
+            depends_on=[Dataset.ETF_BASIC],
+            critical_fields=["trade_date", "ts_code", "close"],
+            task_name="ingest_etf_bars",
+        )
+
+        config = create_t1_config(params)
+
+        assert isinstance(config, DatasetConfig)
+        assert config.dataset == Dataset.ETF_DAILY
+        assert config.tier == TaskTier.T1_INCREMENTAL
+        assert config.description == "ETF日行情数据"
+        assert config.priority == 20
+        assert config.timeout_seconds == 300
+
+    def test_create_t1_config_with_params_custom_values(self) -> None:
+        """Test create_t1_config with T1ConfigParams custom values."""
+        params = T1ConfigParams(
+            dataset=Dataset.ADJ_FACTOR,
+            description="复权因子",
+            typical_available_time=time(19, 0),
+            depends_on=[Dataset.STOCK_DAILY],
+            critical_fields=["trade_date", "ts_code", "adj_factor"],
+            task_name="ingest_adj_factor",
+            priority=30,
+            timeout_seconds=600,
+        )
+
+        config = create_t1_config(params)
+
+        assert config.priority == 30
         assert config.timeout_seconds == 600

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from datetime import time
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, overload
 
 from pydantic import BaseModel, Field
 
@@ -119,6 +119,49 @@ class DatasetConfig(BaseModel):
     )
 
 
+# ============ Configuration Parameters ============
+
+
+class T1ConfigParams(BaseModel):
+    """
+    T1 数据集配置参数。
+
+    封装 T1 数据集配置所需的所有参数，简化 create_t1_config 函数调用。
+
+    Attributes:
+        dataset: 数据集标识符
+        description: 人类可读的描述
+        typical_available_time: 数据典型可用时间
+        depends_on: 依赖的数据集列表
+        critical_fields: 质量验证的关键字段
+        task_name: Prefect 任务名称
+        priority: 执行优先级（默认 20）
+        timeout_seconds: 任务超时时间（默认 300）
+
+    """
+
+    dataset: Dataset = Field(..., description="数据集标识符")
+    description: str = Field(..., description="人类可读的描述")
+    typical_available_time: time = Field(
+        ...,
+        description="数据典型可用时间",
+    )
+    depends_on: Annotated[
+        list[Dataset],
+        Field(default_factory=list, description="依赖的数据集列表"),
+    ]
+    critical_fields: Annotated[
+        list[str],
+        Field(default_factory=list, description="质量验证的关键字段"),
+    ]
+    task_name: str = Field(..., description="Prefect 任务名称")
+    priority: int = Field(
+        default=20,
+        description="执行优先级(数字越小优先级越高)",
+    )
+    timeout_seconds: int = Field(default=300, description="任务超时时间(秒)")
+
+
 # ============ Helper Functions ============
 
 
@@ -171,7 +214,13 @@ def create_t0_config(
     )
 
 
+@overload
+def create_t1_config(params: T1ConfigParams) -> DatasetConfig: ...
+
+
+@overload
 def create_t1_config(
+    *,
     dataset: Dataset,
     description: str,
     typical_available_time: time,
@@ -180,6 +229,12 @@ def create_t1_config(
     task_name: str,
     priority: int = 20,
     timeout_seconds: int = 300,
+) -> DatasetConfig: ...
+
+
+def create_t1_config(
+    params: T1ConfigParams | None = None,
+    **kwargs: object,
 ) -> DatasetConfig:
     """
     Create a T1 incremental dataset configuration.
@@ -191,20 +246,88 @@ def create_t1_config(
     - requires_trade_date: True
     - update_frequency: "每日"
 
-    Args:
-        dataset: Dataset identifier
-        description: Human-readable description
-        typical_available_time: Typical time when data is available
-        depends_on: Datasets that must complete before this one
-        critical_fields: Critical fields for quality validation
-        task_name: Prefect task name to execute
-        priority: Execution priority (default: 20)
-        timeout_seconds: Task timeout in seconds (default: 300)
+    支持两种调用方式：
+
+    1. 使用 T1ConfigParams 对象（推荐）:
+        >>> params = T1ConfigParams(
+        ...     dataset=Dataset.ETF_DAILY,
+        ...     description="ETF日行情数据",
+        ...     typical_available_time=time(18, 0),
+        ...     depends_on=[Dataset.ETF_BASIC],
+        ...     critical_fields=["trade_date", "ts_code"],
+        ...     task_name="ingest_etf_bars",
+        ... )
+        >>> config = create_t1_config(params)
+
+    2. 使用关键字参数（向后兼容）:
+        >>> config = create_t1_config(
+        ...     dataset=Dataset.ETF_DAILY,
+        ...     description="ETF日行情数据",
+        ...     typical_available_time=time(18, 0),
+        ...     depends_on=[Dataset.ETF_BASIC],
+        ...     critical_fields=["trade_date", "ts_code"],
+        ...     task_name="ingest_etf_bars",
+        ... )
 
     Returns:
-        DatasetConfig instance
+        DatasetConfig 实例
 
     """
+    # 检查是否使用 T1ConfigParams 对象
+    if params is not None:
+        return DatasetConfig(
+            dataset=params.dataset,
+            tier=TaskTier.T1_INCREMENTAL,
+            description=params.description,
+            update_frequency="每日",
+            typical_available_time=params.typical_available_time,
+            priority=params.priority,
+            depends_on=params.depends_on,
+            retry_limit=3,
+            timeout_seconds=params.timeout_seconds,
+            quality_checks_enabled=True,
+            critical_fields=params.critical_fields,
+            task_name=params.task_name,
+            requires_trade_date=True,
+        )
+
+    # 使用关键字参数方式
+    dataset = kwargs.get("dataset")
+    description = kwargs.get("description")
+    typical_available_time = kwargs.get("typical_available_time")
+    depends_on = kwargs.get("depends_on")
+    critical_fields = kwargs.get("critical_fields")
+    task_name = kwargs.get("task_name")
+    priority = kwargs.get("priority", 20)
+    timeout_seconds = kwargs.get("timeout_seconds", 300)
+
+    # 验证必需参数
+    if not isinstance(dataset, Dataset):
+        msg = "dataset is required and must be a Dataset enum"
+        raise TypeError(msg)
+    if not isinstance(description, str):
+        msg = "description is required and must be a string"
+        raise TypeError(msg)
+    if not isinstance(typical_available_time, time):
+        msg = "typical_available_time is required and must be a time object"
+        raise TypeError(msg)
+    if not isinstance(depends_on, list):
+        msg = "depends_on is required and must be a list"
+        raise TypeError(msg)
+    if not isinstance(critical_fields, list):
+        msg = "critical_fields is required and must be a list"
+        raise TypeError(msg)
+    if not isinstance(task_name, str):
+        msg = "task_name is required and must be a string"
+        raise TypeError(msg)
+    if not isinstance(priority, int):
+        msg = "priority must be an integer"
+        raise TypeError(msg)
+    if not isinstance(timeout_seconds, int):
+        msg = "timeout_seconds must be an integer"
+        raise TypeError(msg)
+
+    # 类型收窄（经过验证后安全）
     return DatasetConfig(
         dataset=dataset,
         tier=TaskTier.T1_INCREMENTAL,
@@ -212,11 +335,11 @@ def create_t1_config(
         update_frequency="每日",
         typical_available_time=typical_available_time,
         priority=priority,
-        depends_on=depends_on,
+        depends_on=depends_on,  # type: ignore[arg-type]
         retry_limit=3,
         timeout_seconds=timeout_seconds,
         quality_checks_enabled=True,
-        critical_fields=critical_fields,
+        critical_fields=critical_fields,  # type: ignore[arg-type]
         task_name=task_name,
         requires_trade_date=True,
     )
