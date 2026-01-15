@@ -1,10 +1,10 @@
 """Quarantine store for failed DQ data."""
 
-import json
 import sqlite3
 from pathlib import Path
 from typing import Any
 
+import orjson
 import polars as pl
 
 
@@ -66,7 +66,7 @@ class QuarantineStore:
 
         # Convert to list of dicts (records format)
         data_dicts = failed_data.to_dicts()
-        data_json = json.dumps(data_dicts)
+        data_json = orjson.dumps(data_dicts).decode("utf-8")
 
         cursor = self._conn.execute(
             """
@@ -151,7 +151,7 @@ class QuarantineStore:
 
         # Parse JSON back to DataFrame
         try:
-            data_dicts = json.loads(row[0])
+            data_dicts = orjson.loads(row[0])
             return pl.DataFrame(data_dicts)
         except Exception:
             return None
