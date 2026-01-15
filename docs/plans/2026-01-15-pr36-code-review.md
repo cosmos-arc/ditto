@@ -242,11 +242,31 @@ def test_checksum_consistency_after_enrichment():
 
 ### 7️⃣ 并发安全审查
 
-**结论**: 🔴 严重问题 - 高危风险
+**结论**: ✅ 已修复
 
-#### 问题 1: save_log() 竞态条件
+#### ✅ 问题 1: save_log() 竞态条件 - 已修复
 
-**文件**: `packages/datahub/src/ditto_datahub/stores/ingestion_log.py:75-185`
+**文件**: `packages/datahub/src/ditto_datahub/stores/ingestion_log.py`
+
+**修复方案**：
+- 使用 SQLite 的 `INSERT ... ON CONFLICT ... DO UPDATE` 语法实现原子化 UPSERT
+- `attempts` 字段使用 `attempts + 1` 在数据库层面原子递增
+- 使用 `RETURNING` 子句返回操作后的完整记录
+
+**Commit**: 待提交
+**测试验证**:
+- ✅ `test_concurrent_save_log_attempts_increment` - 10 线程并发，attempts 正确递增到 10
+- ✅ `test_concurrent_save_then_update` - 创建后多线程更新，attempts 正确
+- ✅ `test_concurrent_mixed_operations` - 混合读写操作无冲突
+
+#### ✅ 问题 2: 索引策略不匹配 - 已修复
+
+**修复方案**：
+- 删除旧索引 `idx_ingestion_log_status_date`
+- 创建新索引 `idx_ingestion_log_dataset_source_status_date(dataset, source, status, trade_date)`
+- 匹配所有查询模式的前缀
+
+**Commit**: 待提交
 
 **当前实现**:
 ```python
