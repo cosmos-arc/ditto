@@ -20,7 +20,6 @@ from ditto_foundation.util.checksum import ChecksumCompute
 
 from ditto_port.common.types import IngestionResult
 from ditto_port.services.ingestion.metadata import MetadataManager
-from ditto_port.services.ingestion.security_mapper import SecurityMapper
 
 if TYPE_CHECKING:
     from ditto_datahub.hub import DataHub
@@ -45,18 +44,14 @@ class IngestionCoordinator:
         hub: "DataHub",
         source: DataSource,
         source_name: str = "tushare",
-        security_mapper: SecurityMapper | None = None,
     ) -> None:
         """初始化 IngestionCoordinator。"""
         self._hub = hub
         self._source = source
         self._source_name = source_name
         self._metadata_manager = MetadataManager(log_store=hub.ingestion_log)
-        self._security_mapper = security_mapper or SecurityMapper(
-            security_store=hub.security_store, sid_allocator=hub.sid_allocator
-        )
 
-    def ingest_date(  # noqa: PLR0911
+    def ingest_date(
         self,
         dataset: str,
         trade_date: str,
@@ -257,7 +252,7 @@ class IngestionCoordinator:
 
         return results
 
-    def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:  # noqa: PLR0911
+    def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
         """根据数据集类型调用对应的 Source 方法获取数据。"""
         method_name = self._DATASET_METHODS.get(dataset)
         if method_name is None:
@@ -294,15 +289,15 @@ class IngestionCoordinator:
         year = int(trade_date[:4])
 
         if dataset in ("etf_daily", "stock_daily"):
-            # 补齐 sid/source 字段
+            # 补齐 sid/source 字段（使用 SecurityRepository API）
             asset_class: Literal["stock", "etf"] = (
                 "etf" if dataset == "etf_daily" else "stock"
             )
-            df = self._security_mapper.enrich_dataframe(
+            df = self._hub.securities.enrich_dataframe_with_sid(
                 df,
-                src_code_col="src_code",
-                asset_class=asset_class,
                 source=self._source_name,
+                asset_class=asset_class,
+                src_code_col="src_code",
             )
             # 使用 Repository 层以获得文件锁和 DQ 检查保护
             return self._hub.bars.write(
@@ -314,18 +309,18 @@ class IngestionCoordinator:
                 on_duplicate=on_duplicate,
             )
         elif dataset in ("adj_factor", "fund_adj"):
-            # 补齐 sid/source 字段
+            # 补齐 sid/source 字段（使用 SecurityRepository API）
             adj_asset_class: Literal["stock", "etf"] = (
                 "etf" if dataset == "fund_adj" else "stock"
             )
 
             # 检查是否已有 sid 列（上游可能已处理）
             if "sid" not in df.columns:
-                df = self._security_mapper.enrich_dataframe(
+                df = self._hub.securities.enrich_dataframe_with_sid(
                     df,
-                    src_code_col="src_code",
-                    asset_class=adj_asset_class,
                     source=self._source_name,
+                    asset_class=adj_asset_class,
+                    src_code_col="src_code",
                 )
 
             # 使用 AdjFactorRepository 写入（带文件锁保护）
