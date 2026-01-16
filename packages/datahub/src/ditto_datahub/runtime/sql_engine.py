@@ -356,7 +356,7 @@ class SqlEngine:
             if isinstance(params, dict):
                 raise ValueError(
                     "Cannot combine $asof parameter with dict params. "
-                    "Use list params instead."
+                    + "Use list params instead."
                 )
 
             # 将 $asof 替换为 DuckDB 参数占位符

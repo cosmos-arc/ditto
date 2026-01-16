@@ -256,7 +256,13 @@ reportUnusedImport = "none"
 reportUnusedVariable = "none"
 
 # 第三方库 stub 不完整时的处理
-reportMissingTypeStubs = "none"
+reportMissingTypeStubs = "warning"
+
+# 检测不必要的 type: ignore 注释
+reportUnnecessaryTypeIgnoreComment = "error"
+
+# 检测隐式字符串拼接
+reportImplicitStringConcatenation = "error"
 
 # 对于 standard 模式下的 Unknown 类型，降级为 warning
 # 这样编辑器里能看到黄线提醒，但不会阻塞 CI

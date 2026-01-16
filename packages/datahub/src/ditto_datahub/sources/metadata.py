@@ -113,5 +113,5 @@ class DataChangedError(Exception):
         self.new_checksum = new_checksum
         super().__init__(
             f"Data changed for {trade_date}: checksum {old_checksum} → {new_checksum}. "
-            "Use force=True to overwrite."
+            + "Use force=True to overwrite."
         )

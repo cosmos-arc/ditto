@@ -507,7 +507,7 @@ class FreezeManager:
         if "version" not in data or "checksum_type" not in data:
             raise ValueError(
                 "Invalid freeze manifest: missing version or checksum_type field. "
-                "This version only supports v2.0 manifests with SHA-256 checksums."
+                + "This version only supports v2.0 manifests with SHA-256 checksums."
             )
 
         version = data["version"]
@@ -516,8 +516,8 @@ class FreezeManager:
         # 验证版本和校验和类型
         if version != "2.0" or checksum_type != "sha256":
             raise ValueError(
-                f"Invalid freeze manifest: expected v2.0/sha256, "
-                f"got {version}/{checksum_type}"
+                "Invalid freeze manifest: expected v2.0/sha256, "
+                + f"got {version}/{checksum_type}"
             )
 
         return FreezeManifest(

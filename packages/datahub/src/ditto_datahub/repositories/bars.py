@@ -560,9 +560,10 @@ class BarsRepository:
         if len(detected) > 1:
             display_names = {"stock": "stock", "etf": "ETF", "index": "index"}
             classes = [display_names[c] for c in detected]
+            classes_str = ", ".join(classes)
             raise ValueError(
-                f"检测到混合资产类别查询。SID 包含 {', '.join(classes)}。"
-                "请分别查询每个资产类别。"
+                "检测到混合资产类别查询。SID 包含 "
+                + f"{classes_str}。请分别查询每个资产类别。"
             )
 
         if not detected:
