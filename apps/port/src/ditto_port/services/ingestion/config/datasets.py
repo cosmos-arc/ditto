@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from datetime import time
 from enum import Enum
-from typing import TYPE_CHECKING, Annotated, overload
+from typing import TYPE_CHECKING, Annotated, cast, overload
 
 from pydantic import BaseModel, Field
 
@@ -165,6 +165,58 @@ class T1ConfigParams(BaseModel):
 # ============ Helper Functions ============
 
 
+def _validate_dataset_list(value: object) -> list[Dataset]:
+    """
+    验证并收窄类型为 list[Dataset].
+
+    Args:
+        value: 待验证的值
+
+    Returns:
+        验证后的 list[Dataset]
+
+    Raises:
+        TypeError: 如果值不是 list 或包含非 Dataset 元素
+
+    """
+    if not isinstance(value, list):
+        msg = "depends_on must be a list"
+        raise TypeError(msg)
+    # 使用 cast 告诉类型检查器这是 list[object]
+    for item in cast(list[object], value):
+        if not isinstance(item, Dataset):
+            msg = "depends_on must contain only Dataset enum values"
+            raise TypeError(msg)
+    # 经过验证后，可以安全地 cast 为 list[Dataset]
+    return cast(list[Dataset], value)
+
+
+def _validate_string_list(value: object) -> list[str]:
+    """
+    验证并收窄类型为 list[str].
+
+    Args:
+        value: 待验证的值
+
+    Returns:
+        验证后的 list[str]
+
+    Raises:
+        TypeError: 如果值不是 list 或包含非字符串元素
+
+    """
+    if not isinstance(value, list):
+        msg = "value must be a list"
+        raise TypeError(msg)
+    # 使用 cast 告诉类型检查器这是 list[object]
+    for item in cast(list[object], value):
+        if not isinstance(item, str):
+            msg = "list must contain only strings"
+            raise TypeError(msg)
+    # 经过验证后，可以安全地 cast 为 list[str]
+    return cast(list[str], value)
+
+
 def create_t0_config(
     dataset: Dataset,
     description: str,
@@ -311,12 +363,9 @@ def create_t1_config(
     if not isinstance(typical_available_time, time):
         msg = "typical_available_time is required and must be a time object"
         raise TypeError(msg)
-    if not isinstance(depends_on, list):
-        msg = "depends_on is required and must be a list"
-        raise TypeError(msg)
-    if not isinstance(critical_fields, list):
-        msg = "critical_fields is required and must be a list"
-        raise TypeError(msg)
+    # 使用辅助函数验证并收窄类型
+    depends_on = _validate_dataset_list(depends_on)
+    critical_fields = _validate_string_list(critical_fields)
     if not isinstance(task_name, str):
         msg = "task_name is required and must be a string"
         raise TypeError(msg)
@@ -335,11 +384,11 @@ def create_t1_config(
         update_frequency="每日",
         typical_available_time=typical_available_time,
         priority=priority,
-        depends_on=depends_on,  # type: ignore[arg-type]
+        depends_on=depends_on,
         retry_limit=3,
         timeout_seconds=timeout_seconds,
         quality_checks_enabled=True,
-        critical_fields=critical_fields,  # type: ignore[arg-type]
+        critical_fields=critical_fields,
         task_name=task_name,
         requires_trade_date=True,
     )
