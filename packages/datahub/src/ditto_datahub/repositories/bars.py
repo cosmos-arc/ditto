@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 from itertools import combinations
 from typing import TYPE_CHECKING, Literal
@@ -15,15 +15,16 @@ from ditto_datahub.dq.engine import DQEngine
 
 # Authoritative DQResult with issues list (from dq.engine)
 from ditto_datahub.dq.models import DQResult as DQResultNew
+from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
+from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
-from ditto_datahub.types import OnDuplicate, SidRange
+from ditto_datahub.types import OnDuplicate, SidRange, WriteResult
 
 if TYPE_CHECKING:
     from ditto_datahub.dq.models import DQIssue
-    from ditto_datahub.runtime.file_lock import FileLockManager
 
 
 class AdjType(Enum):
@@ -112,18 +113,6 @@ class _ResolvedQuery:
     asset_class: str | None
 
 
-@dataclass(frozen=True)
-class WriteResult:
-    """Result of writing bars data."""
-
-    file_path: str
-    checksum: str
-    rows_written: int
-    rows_total: int
-    blocked: bool = False
-    dq_result: DQResultNew | None = None  # New DQResult format
-
-
 class BarsRepository:
     """
     Market data repository for OHLCV bars.
@@ -141,6 +130,7 @@ class BarsRepository:
         stock_status_store: StockStatusStore,  # B.3
         dq_engine: DQEngine,  # New DQ engine
         file_lock: FileLockManager,
+        quarantine_store: QuarantineStore,  # Injected to avoid circular import
     ) -> None:
         """
         Initialize BarsRepository.
@@ -152,6 +142,7 @@ class BarsRepository:
             stock_status_store: Stock status store (B.3).
             dq_engine: Data quality engine (new DQEngine from dq.engine).
             file_lock: File lock manager for concurrent writes.
+            quarantine_store: Quarantine store for failed data.
 
         """
         self._bars_store = bars_store
@@ -160,6 +151,7 @@ class BarsRepository:
         self._stock_status_store = stock_status_store  # B.3
         self._dq_engine = dq_engine
         self._file_lock = file_lock
+        self._quarantine_store = quarantine_store
 
     @traced("repository.bars.get")
     def get(self, query: BarsQuery) -> pl.DataFrame:
@@ -452,20 +444,16 @@ class BarsRepository:
             raise ValueError("无法解析出有效的 SID")
 
         # 2. 解析日期参数（字符串 -> date 对象）
-        from datetime import (  # noqa: PLC0415 - circular import avoidance
-            date as date_type,
-        )
-
         start_date: date | None = None
         end_date: date | None = None
         asof_date: date | None = None
 
         if query.start:
-            start_date = date_type.fromisoformat(query.start)
+            start_date = date.fromisoformat(query.start)
         if query.end:
-            end_date = date_type.fromisoformat(query.end)
+            end_date = date.fromisoformat(query.end)
         if query.asof:
-            asof_date = date_type.fromisoformat(query.asof)
+            asof_date = date.fromisoformat(query.asof)
 
         # 3. 确定资产类别
         asset_class: Literal["stock", "etf", "index"] | None = query.asset_class
@@ -655,11 +643,7 @@ class BarsRepository:
 
         """
         if isinstance(asof, str):
-            from datetime import (  # noqa: PLC0415 - circular import avoidance
-                date as date_type,
-            )
-
-            return date_type.fromisoformat(asof)
+            return date.fromisoformat(asof)
         return asof
 
     def _filter_baseline_by_asof(
@@ -815,16 +799,8 @@ class BarsRepository:
             return
 
         try:
-            # Get quarantine store path from bars_store
-            data_root = self._bars_store.data_root
-            quarantine_path = data_root / "quarantine.db"
-
-            from ditto_datahub.stores.quarantine_store import (  # noqa: PLC0415 - circular import avoidance
-                QuarantineStore,
-            )
-
-            quarantine_store = QuarantineStore(quarantine_path)
-            quarantine_store.save_failed_data(
+            # Use injected quarantine store to avoid circular import
+            self._quarantine_store.save_failed_data(
                 dataset=dataset,
                 rule_id=rule_id,
                 severity=severity,
@@ -887,8 +863,6 @@ class BarsRepository:
 
         """
         try:
-            from datetime import datetime  # noqa: PLC0415 - circular import avoidance
-
             from ditto_datahub.dq.report import (  # noqa: PLC0415 - circular import avoidance
                 DQReportGenerator,
             )

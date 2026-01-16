@@ -30,17 +30,21 @@ class TestBackfillFlow:
 
     def test_flow_backfills_single_dataset(self, patch_datahub):
         """Test that flow can backfill a single dataset."""
-        from ditto_port.jobs.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import (
+            BackfillFlowConfig,
+            backfill_flow,
+        )
 
         # Mock calendar_store.get_range to return empty list for simplicity
         patch_datahub.calendar_store.get_range.return_value = []
 
-        result = backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
             data_root="data",
         )
+        result = backfill_flow(config)
 
         # Should return backfill result
         assert "dataset" in result
@@ -49,72 +53,97 @@ class TestBackfillFlow:
 
     def test_flow_supports_parallel_execution(self, patch_datahub):
         """Test that flow supports parallel execution."""
-        from ditto_port.jobs.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import (
+            BackfillFlowConfig,
+            backfill_flow,
+        )
 
         # Mock calendar_store.get_range to return empty list for simplicity
         patch_datahub.calendar_store.get_range.return_value = []
 
-        result = backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
             parallel=3,
             data_root="data",
         )
+        result = backfill_flow(config)
 
         # Should complete without error
         assert "dataset" in result
 
     def test_flow_handles_empty_date_range(self, patch_datahub):
         """Test that flow handles empty date range gracefully."""
-        from ditto_port.jobs.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import (
+            BackfillFlowConfig,
+            backfill_flow,
+        )
 
         patch_datahub.calendar_store.get_range.return_value = []
 
-        result = backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-01",  # Non-trading day
             data_root="data",
         )
+        result = backfill_flow(config)
 
         # Should return empty result
         assert result["total_dates"] == 0
 
     def test_flow_chunks_date_range(self, patch_datahub):
         """Test that flow can chunk date range for progress tracking."""
-        from ditto_port.jobs.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import (
+            BackfillFlowConfig,
+            backfill_flow,
+        )
 
         trade_dates = ["2024-01-02", "2024-01-03", "2024-01-04"]
         patch_datahub.calendar_store.get_range.return_value = trade_dates
 
-        result = backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
             chunk_size=2,
             data_root="data",
         )
+        result = backfill_flow(config)
 
         # Should process all dates
         assert result["total_dates"] >= 0
 
-    def test_flow_closes_hub(self, patch_datahub):
+    def test_flow_closes_hub(self, patch_datahub, mocker):
         """Test that flow properly closes DataHub."""
-        from ditto_port.jobs.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import (
+            BackfillFlowConfig,
+            backfill_flow,
+        )
 
-        # Mock calendar_store.get_range to return empty list for simplicity
-        patch_datahub.calendar_store.get_range.return_value = []
+        # Patch DataHub at the location where it's used
+        mocker.patch(
+            "ditto_port.jobs.flows.helpers.DataHub", return_value=patch_datahub
+        )
 
-        backfill_flow(
+        # Create a new method that always returns empty list
+        def empty_range(*args, **kwargs):
+            return []
+
+        # Override the method to ensure it returns empty list
+        patch_datahub.calendar_store.get_range.side_effect = empty_range
+
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
             data_root="data",
         )
+        backfill_flow(config)
 
         # Verify hub.close() was called
-        patch_datahub.close.assert_called_once()
+        patch_datahub.close.assert_called_once_with()
 
 
 @pytest.mark.integration
@@ -169,36 +198,44 @@ class TestResumeCapability:
 
     def test_flow_can_resume_from_checkpoint(self, patch_datahub):
         """Test that flow can resume from a checkpoint."""
-        from ditto_port.jobs.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import (
+            BackfillFlowConfig,
+            backfill_flow,
+        )
 
         # Mock calendar_store.get_range to return empty list for simplicity
         patch_datahub.calendar_store.get_range.return_value = []
 
-        result = backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
             resume_from="2024-01-15",
             data_root="data",
         )
+        result = backfill_flow(config)
 
         # Should handle resume parameter
         assert "dataset" in result
 
     def test_flow_skips_already_ingested_dates(self, patch_datahub):
         """Test that flow skips dates that are already ingested."""
-        from ditto_port.jobs.flows.backfill import backfill_flow
+        from ditto_port.jobs.flows.backfill import (
+            BackfillFlowConfig,
+            backfill_flow,
+        )
 
         # Mock calendar_store.get_range to return empty list for simplicity
         patch_datahub.calendar_store.get_range.return_value = []
 
-        result = backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
             skip_existing=True,
             data_root="data",
         )
+        result = backfill_flow(config)
 
         # Should handle skip_existing parameter
         assert "dataset" in result

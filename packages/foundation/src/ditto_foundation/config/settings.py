@@ -15,6 +15,7 @@ from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ditto_foundation.config.manager import SingletonManager
+from ditto_foundation.config.paths import get_paths
 
 
 class DatabaseSettings(BaseSettings):
@@ -31,20 +32,12 @@ class DatabaseSettings(BaseSettings):
     @property
     def duckdb_path(self) -> Path:
         """DuckDB 数据库文件路径."""
-        from ditto_foundation.config.paths import (
-            get_paths,
-        )
-
         return get_paths().data_subdir("db/duckdb/ditto.duckdb")
 
     @computed_field
     @property
     def sqlite_path(self) -> Path:
         """SQLite 数据库文件路径."""
-        from ditto_foundation.config.paths import (
-            get_paths,
-        )
-
         return get_paths().data_subdir("db/sqlite/hub.sqlite")
 
 
@@ -100,40 +93,24 @@ class FileStorageSettings(BaseSettings):
     @property
     def data_root(self) -> Path:
         """数据存储根目录."""
-        from ditto_foundation.config.paths import (
-            get_paths,
-        )
-
         return get_paths().data_home
 
     @computed_field
     @property
     def log_root(self) -> Path:
         """日志存储根目录."""
-        from ditto_foundation.config.paths import (
-            get_paths,
-        )
-
         return get_paths().state_subdir("logs")
 
     @computed_field
     @property
     def backup_root(self) -> Path:
         """备份存储根目录."""
-        from ditto_foundation.config.paths import (
-            get_paths,
-        )
-
         return get_paths().state_subdir("backups")
 
     @computed_field
     @property
     def temp_root(self) -> Path:
         """临时文件存储根目录."""
-        from ditto_foundation.config.paths import (
-            get_paths,
-        )
-
         return get_paths().cache_subdir("temp")
 
 

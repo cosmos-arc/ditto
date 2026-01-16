@@ -8,11 +8,99 @@ from __future__ import annotations
 
 import pytest
 from ditto_port.jobs.flows.backfill import (
+    BackfillFlowConfig,
     BackfillFlowResult,
     backfill_flow,
     backfill_missing_flow,
 )
 from prefect import Flow
+from pydantic import ValidationError
+
+
+@pytest.mark.unit
+class TestBackfillFlowConfig:
+    """Unit tests for BackfillFlowConfig model."""
+
+    def test_config_with_required_fields(self):
+        """Test that config accepts required fields."""
+
+        config = BackfillFlowConfig(
+            dataset="stock_daily",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+        )
+
+        assert config.dataset == "stock_daily"
+        assert config.start_date == "2024-01-01"
+        assert config.end_date == "2024-01-31"
+
+    def test_config_with_all_fields(self):
+        """Test that config accepts all fields."""
+
+        config = BackfillFlowConfig(
+            dataset="stock_daily",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            source="tushare",
+            data_root="data",
+            parallel=4,
+            chunk_size=20,
+            resume_from="2024-01-15",
+            skip_existing=True,
+        )
+
+        assert config.dataset == "stock_daily"
+        assert config.source == "tushare"
+        assert config.data_root == "data"
+        assert config.parallel == 4
+        assert config.chunk_size == 20
+        assert config.resume_from == "2024-01-15"
+        assert config.skip_existing is True
+
+    def test_config_defaults(self):
+        """Test that config has correct defaults."""
+
+        config = BackfillFlowConfig(
+            dataset="stock_daily",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+        )
+
+        assert config.source == "tushare"
+        assert config.data_root == "data"
+        assert config.parallel == 1
+        assert config.chunk_size == 10
+        assert config.resume_from is None
+        assert config.skip_existing is False
+
+    def test_config_validates_required_fields(self):
+        """Test that config validates required fields."""
+
+        with pytest.raises(ValidationError) as exc_info:
+            BackfillFlowConfig(
+                start_date="2024-01-01",
+                end_date="2024-01-31",
+            )
+
+        errors = exc_info.value.errors()
+        assert any(error["loc"] == ("dataset",) for error in errors)
+
+    def test_config_model_dump(self):
+        """Test that config can be dumped to dict."""
+
+        config = BackfillFlowConfig(
+            dataset="stock_daily",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            parallel=2,
+        )
+
+        data = config.model_dump()
+
+        assert data["dataset"] == "stock_daily"
+        assert data["start_date"] == "2024-01-01"
+        assert data["end_date"] == "2024-01-31"
+        assert data["parallel"] == 2
 
 
 @pytest.mark.unit
@@ -103,12 +191,13 @@ class TestBackfillFlow:
         mock_result.failed_count = 0
         mock_manager.return_value.backfill_range.return_value = mock_result
 
-        backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
             data_root="/custom/data",
         )
+        backfill_flow(config)
 
         # Verify DataHub was created with custom data_root
         mock_dh.assert_called_once_with(data_root="/custom/data")
@@ -138,12 +227,13 @@ class TestBackfillFlow:
         mock_result.failed_count = 0
         mock_manager.return_value.backfill_range.return_value = mock_result
 
-        backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
             source="tushare",
         )
+        backfill_flow(config)
 
         # Verify IngestionCoordinator was created with correct params
         mock_coordinator_cls.assert_called_once()
@@ -180,11 +270,12 @@ class TestBackfillFlow:
         mock_result.failed_count = 0
         mock_manager.backfill_range.return_value = mock_result
 
-        backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
         )
+        backfill_flow(config)
 
         # Verify BackfillManager was created with correct params
         mock_manager_cls.assert_called_once()
@@ -212,12 +303,13 @@ class TestBackfillFlow:
         mock_result.failed_count = 0
         mock_manager.return_value.backfill_range.return_value = mock_result
 
-        result = backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
             resume_from="2024-01-15",
         )
+        result = backfill_flow(config)
 
         # Verify backfill_range was called with resume_from date
         mock_manager.return_value.backfill_range.assert_called_once()
@@ -245,12 +337,13 @@ class TestBackfillFlow:
         mock_result.failed_count = 0
         mock_manager.return_value.backfill_range.return_value = mock_result
 
-        backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
             parallel=4,
         )
+        backfill_flow(config)
 
         # Verify parallel parameter was passed
         call_kwargs = mock_manager.return_value.backfill_range.call_args.kwargs
@@ -275,11 +368,12 @@ class TestBackfillFlow:
         mock_result.failed_count = 1
         mock_manager.return_value.backfill_range.return_value = mock_result
 
-        result = backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
         )
+        result = backfill_flow(config)
 
         # Verify all keys present
         assert "dataset" in result
@@ -318,11 +412,12 @@ class TestBackfillFlow:
         mock_result.failed_count = 0
         mock_manager.return_value.backfill_range.return_value = mock_result
 
-        backfill_flow(
+        config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
         )
+        backfill_flow(config)
 
         # Verify hub.close() was called
         mock_hub.close.assert_called_once()
@@ -334,12 +429,14 @@ class TestBackfillFlow:
         mock_hub.sources.get.side_effect = ValueError("Test error")
 
         mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
+
+        config = BackfillFlowConfig(
+            dataset="stock_daily",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+        )
         with pytest.raises(ValueError, match="Test error"):
-            backfill_flow(
-                dataset="stock_daily",
-                start_date="2024-01-01",
-                end_date="2024-01-31",
-            )
+            backfill_flow(config)
 
         # Verify hub.close() was still called
         mock_hub.close.assert_called_once()

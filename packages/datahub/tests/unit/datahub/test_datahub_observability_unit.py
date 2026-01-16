@@ -12,6 +12,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import polars as pl
+from ditto_datahub.models.security import SecurityRegistration
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
@@ -217,13 +218,15 @@ class TestObservabilitySecurityStore:
         # Register a security first
         self.store.register(
             sid=1000001,
-            source="tushare",
-            src_code="510300.SZ",
-            symbol="510300",
-            name="CSI 300 ETF",
-            exchange="SZSE",
-            asset_class="ETF",
-            list_date="2012-04-25",
+            registration=SecurityRegistration(
+                source="tushare",
+                src_code="510300.SZ",
+                symbol="510300",
+                name="CSI 300 ETF",
+                exchange="SZSE",
+                asset_class="ETF",
+                list_date="2012-04-25",
+            ),
         )
 
         # Clear previous spans
@@ -242,13 +245,15 @@ class TestObservabilitySecurityStore:
         # Register a security first
         self.store.register(
             sid=1000001,
-            source="tushare",
-            src_code="510300.SZ",
-            symbol="510300",
-            name="CSI 300 ETF",
-            exchange="SZSE",
-            asset_class="ETF",
-            list_date="2012-04-25",
+            registration=SecurityRegistration(
+                source="tushare",
+                src_code="510300.SZ",
+                symbol="510300",
+                name="CSI 300 ETF",
+                exchange="SZSE",
+                asset_class="ETF",
+                list_date="2012-04-25",
+            ),
         )
 
         # Clear previous metrics
@@ -375,13 +380,15 @@ class TestObservabilityIntegration:
         # Register security
         security_store.register(
             sid=1000001,
-            source="tushare",
-            src_code="510300.SZ",
-            symbol="510300",
-            name="CSI 300 ETF",
-            exchange="SZSE",
-            asset_class="ETF",
-            list_date="2012-04-25",
+            registration=SecurityRegistration(
+                source="tushare",
+                src_code="510300.SZ",
+                symbol="510300",
+                name="CSI 300 ETF",
+                exchange="SZSE",
+                asset_class="ETF",
+                list_date="2012-04-25",
+            ),
         )
 
         # Resolve SID to trigger data.sid_resolve span

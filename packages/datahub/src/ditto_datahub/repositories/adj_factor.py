@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-from ditto_datahub.types import OnDuplicate
-
-if TYPE_CHECKING:
-    from ditto_datahub.repositories.bars import WriteResult
-    from ditto_datahub.runtime.file_lock import FileLockManager
+from ditto_datahub.types import OnDuplicate, WriteResult
 
 
 class AdjFactorRepository:
@@ -89,11 +84,6 @@ class AdjFactorRepository:
 
             # Record metrics
             M.data_records.add(len(df), {"dataset": dataset, "operation": "write"})
-
-            # Import WriteResult here to avoid circular imports
-            from ditto_datahub.repositories.bars import (  # noqa: PLC0415 - circular import avoidance
-                WriteResult,
-            )
 
             return WriteResult(
                 file_path=file_path,

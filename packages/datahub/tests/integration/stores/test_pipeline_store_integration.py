@@ -7,7 +7,11 @@ from pathlib import Path
 
 import pytest
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
-from ditto_datahub.stores.pipeline_store import PipelineStore
+from ditto_datahub.stores.pipeline_store import (
+    DQIssueConfig,
+    PipelineRunConfig,
+    PipelineStore,
+)
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
@@ -34,11 +38,12 @@ class TestPipelineStore:
         """Test inserting pipeline run with minimal fields."""
         run_id = "test-run-001"
 
-        pipeline_store.insert_run(
+        config = PipelineRunConfig(
             run_id=run_id,
             task_name="update_bars",
             dataset_id="stock_daily",
         )
+        pipeline_store.insert_run(config)
 
         result = pipeline_store.get_run(run_id)
         assert result is not None
@@ -53,7 +58,7 @@ class TestPipelineStore:
         started = datetime(2024, 1, 15, 10, 0, 0)
         finished = datetime(2024, 1, 15, 10, 5, 30)
 
-        pipeline_store.insert_run(
+        config = PipelineRunConfig(
             run_id=run_id,
             task_name="update_bars",
             dataset_id="stock_daily",
@@ -68,6 +73,7 @@ class TestPipelineStore:
             started_at=started,
             finished_at=finished,
         )
+        pipeline_store.insert_run(config)
 
         result = pipeline_store.get_run(run_id)
         assert result is not None
@@ -84,13 +90,14 @@ class TestPipelineStore:
         """Test inserting failed pipeline run."""
         run_id = "test-run-003"
 
-        pipeline_store.insert_run(
+        config = PipelineRunConfig(
             run_id=run_id,
             task_name="update_bars",
             dataset_id="stock_daily",
             status="failed",
             error_message="Connection timeout",
         )
+        pipeline_store.insert_run(config)
 
         result = pipeline_store.get_run(run_id)
         assert result is not None
@@ -103,23 +110,25 @@ class TestPipelineStore:
     ) -> None:
         """Test rollback on error during insert."""
         # Insert a valid run first
-        pipeline_store.insert_run(
+        config1 = PipelineRunConfig(
             run_id="test-run-004",
             task_name="update_bars",
             dataset_id="stock_daily",
         )
+        pipeline_store.insert_run(config1)
 
         # Mock execute to raise exception
         original_execute = pipeline_store._client.execute
         mocker.patch.object(
             pipeline_store._client, "execute", side_effect=Exception("DB error")
         )
+        config2 = PipelineRunConfig(
+            run_id="test-run-005",
+            task_name="update_bars",
+            dataset_id="stock_daily",
+        )
         with pytest.raises(Exception, match="DB error"):
-            pipeline_store.insert_run(
-                run_id="test-run-005",
-                task_name="update_bars",
-                dataset_id="stock_daily",
-            )
+            pipeline_store.insert_run(config2)
 
         # Restore original execute for verification
         pipeline_store._client.execute = original_execute
@@ -133,11 +142,12 @@ class TestPipelineStore:
     def test_update_run_status(self, pipeline_store: PipelineStore) -> None:
         """Test updating run status."""
         run_id = "test-run-006"
-        pipeline_store.insert_run(
+        config = PipelineRunConfig(
             run_id=run_id,
             task_name="update_bars",
             dataset_id="stock_daily",
         )
+        pipeline_store.insert_run(config)
 
         pipeline_store.update_run(
             run_id=run_id,
@@ -153,11 +163,12 @@ class TestPipelineStore:
     def test_update_run_with_dq_results(self, pipeline_store: PipelineStore) -> None:
         """Test updating run with DQ results."""
         run_id = "test-run-007"
-        pipeline_store.insert_run(
+        config = PipelineRunConfig(
             run_id=run_id,
             task_name="update_bars",
             dataset_id="stock_daily",
         )
+        pipeline_store.insert_run(config)
 
         pipeline_store.update_run(
             run_id=run_id,
@@ -185,7 +196,7 @@ class TestPipelineStore:
 
     def test_insert_dq_issue(self, pipeline_store: PipelineStore) -> None:
         """Test inserting DQ issue."""
-        pipeline_store.insert_dq_issue(
+        config = DQIssueConfig(
             run_id="test-run-008",
             dataset_id="stock_daily",
             year=2024,
@@ -195,6 +206,7 @@ class TestPipelineStore:
             severity="error",
             message="Price is negative for sid 1000001",
         )
+        pipeline_store.insert_dq_issue(config)
 
         issues = pipeline_store.list_dq_issues(run_id="test-run-008")
         assert len(issues) == 1
@@ -205,7 +217,7 @@ class TestPipelineStore:
     def test_insert_multiple_dq_issues(self, pipeline_store: PipelineStore) -> None:
         """Test inserting multiple DQ issues."""
         for i in range(3):
-            pipeline_store.insert_dq_issue(
+            config = DQIssueConfig(
                 run_id="test-run-009",
                 dataset_id="stock_daily",
                 year=2024,
@@ -215,18 +227,20 @@ class TestPipelineStore:
                 severity="error",
                 message=f"Price issue for sid {1000001 + i}",
             )
+            pipeline_store.insert_dq_issue(config)
 
         issues = pipeline_store.list_dq_issues(run_id="test-run-009")
         assert len(issues) == 3
 
     def test_insert_dq_issue_minimal(self, pipeline_store: PipelineStore) -> None:
         """Test inserting DQ issue with minimal fields."""
-        pipeline_store.insert_dq_issue(
+        config = DQIssueConfig(
             run_id="test-run-010",
             dataset_id="stock_daily",
             rule_name="missing_data",
             severity="warning",
         )
+        pipeline_store.insert_dq_issue(config)
 
         issues = pipeline_store.list_dq_issues(run_id="test-run-010")
         assert len(issues) == 1
@@ -238,11 +252,12 @@ class TestPipelineStore:
     def test_get_run_exists(self, pipeline_store: PipelineStore) -> None:
         """Test getting existing run."""
         run_id = "test-run-011"
-        pipeline_store.insert_run(
+        config = PipelineRunConfig(
             run_id=run_id,
             task_name="update_bars",
             dataset_id="stock_daily",
         )
+        pipeline_store.insert_run(config)
 
         result = pipeline_store.get_run(run_id)
         assert result is not None
@@ -258,11 +273,12 @@ class TestPipelineStore:
     def test_list_runs_all(self, pipeline_store: PipelineStore) -> None:
         """Test listing all runs."""
         for i in range(5):
-            pipeline_store.insert_run(
+            config = PipelineRunConfig(
                 run_id=f"test-run-{100 + i}",
                 task_name="update_bars",
                 dataset_id="stock_daily",
             )
+            pipeline_store.insert_run(config)
 
         runs = pipeline_store.list_runs()
         assert len(runs) == 5
@@ -270,21 +286,18 @@ class TestPipelineStore:
     def test_list_runs_by_dataset(self, pipeline_store: PipelineStore) -> None:
         """Test listing runs filtered by dataset."""
         # Insert runs for different datasets
-        pipeline_store.insert_run(
-            run_id="run-001",
-            task_name="update",
-            dataset_id="stock_daily",
+        config1 = PipelineRunConfig(
+            run_id="run-001", task_name="update", dataset_id="stock_daily"
         )
-        pipeline_store.insert_run(
-            run_id="run-002",
-            task_name="update",
-            dataset_id="etf_daily",
+        config2 = PipelineRunConfig(
+            run_id="run-002", task_name="update", dataset_id="etf_daily"
         )
-        pipeline_store.insert_run(
-            run_id="run-003",
-            task_name="update",
-            dataset_id="stock_daily",
+        config3 = PipelineRunConfig(
+            run_id="run-003", task_name="update", dataset_id="stock_daily"
         )
+        pipeline_store.insert_run(config1)
+        pipeline_store.insert_run(config2)
+        pipeline_store.insert_run(config3)
 
         runs = pipeline_store.list_runs(dataset_id="stock_daily")
         assert len(runs) == 2
@@ -292,18 +305,20 @@ class TestPipelineStore:
 
     def test_list_runs_by_status(self, pipeline_store: PipelineStore) -> None:
         """Test listing runs filtered by status."""
-        pipeline_store.insert_run(
+        config1 = PipelineRunConfig(
             run_id="run-004",
             task_name="update",
             dataset_id="stock_daily",
             status="running",
         )
-        pipeline_store.insert_run(
+        config2 = PipelineRunConfig(
             run_id="run-005",
             task_name="update",
             dataset_id="stock_daily",
             status="completed",
         )
+        pipeline_store.insert_run(config1)
+        pipeline_store.insert_run(config2)
 
         runs = pipeline_store.list_runs(status="running")
         assert len(runs) == 1
@@ -312,35 +327,39 @@ class TestPipelineStore:
     def test_list_runs_with_limit(self, pipeline_store: PipelineStore) -> None:
         """Test listing runs with limit."""
         for i in range(10):
-            pipeline_store.insert_run(
+            config = PipelineRunConfig(
                 run_id=f"run-{i:03d}",
                 task_name="update",
                 dataset_id="stock_daily",
             )
+            pipeline_store.insert_run(config)
 
         runs = pipeline_store.list_runs(limit=3)
         assert len(runs) == 3
 
     def test_list_runs_combined_filters(self, pipeline_store: PipelineStore) -> None:
         """Test listing runs with combined filters."""
-        pipeline_store.insert_run(
+        config1 = PipelineRunConfig(
             run_id="run-aa-1",
             task_name="update",
             dataset_id="stock_daily",
             status="completed",
         )
-        pipeline_store.insert_run(
+        config2 = PipelineRunConfig(
             run_id="run-aa-2",
             task_name="update",
             dataset_id="stock_daily",
             status="failed",
         )
-        pipeline_store.insert_run(
+        config3 = PipelineRunConfig(
             run_id="run-bb-1",
             task_name="update",
             dataset_id="etf_daily",
             status="completed",
         )
+        pipeline_store.insert_run(config1)
+        pipeline_store.insert_run(config2)
+        pipeline_store.insert_run(config3)
 
         runs = pipeline_store.list_runs(
             dataset_id="stock_daily",
@@ -353,42 +372,47 @@ class TestPipelineStore:
 
     def test_list_dq_issues_by_run(self, pipeline_store: PipelineStore) -> None:
         """Test listing DQ issues by run_id."""
-        pipeline_store.insert_dq_issue(
+        config1 = DQIssueConfig(
             run_id="run-x",
             dataset_id="stock_daily",
             rule_name="rule1",
             severity="error",
         )
-        pipeline_store.insert_dq_issue(
+        config2 = DQIssueConfig(
             run_id="run-y",
             dataset_id="stock_daily",
             rule_name="rule2",
             severity="warning",
         )
-        pipeline_store.insert_dq_issue(
+        config3 = DQIssueConfig(
             run_id="run-x",
             dataset_id="stock_daily",
             rule_name="rule3",
             severity="error",
         )
+        pipeline_store.insert_dq_issue(config1)
+        pipeline_store.insert_dq_issue(config2)
+        pipeline_store.insert_dq_issue(config3)
 
         issues = pipeline_store.list_dq_issues(run_id="run-x")
         assert len(issues) == 2
 
     def test_list_dq_issues_by_dataset(self, pipeline_store: PipelineStore) -> None:
         """Test listing DQ issues by dataset_id."""
-        pipeline_store.insert_dq_issue(
+        config1 = DQIssueConfig(
             run_id="run-001",
             dataset_id="stock_daily",
             rule_name="rule1",
             severity="error",
         )
-        pipeline_store.insert_dq_issue(
+        config2 = DQIssueConfig(
             run_id="run-002",
             dataset_id="etf_daily",
             rule_name="rule2",
             severity="warning",
         )
+        pipeline_store.insert_dq_issue(config1)
+        pipeline_store.insert_dq_issue(config2)
 
         issues = pipeline_store.list_dq_issues(dataset_id="stock_daily")
         assert len(issues) == 1
@@ -397,19 +421,21 @@ class TestPipelineStore:
     def test_list_dq_issues_by_severity(self, pipeline_store: PipelineStore) -> None:
         """Test listing DQ issues by severity."""
         for i in range(3):
-            pipeline_store.insert_dq_issue(
+            config = DQIssueConfig(
                 run_id=f"run-{i}",
                 dataset_id="stock_daily",
                 rule_name="rule1",
                 severity="error",
             )
+            pipeline_store.insert_dq_issue(config)
         for i in range(2):
-            pipeline_store.insert_dq_issue(
+            config = DQIssueConfig(
                 run_id=f"run-{i + 3}",
                 dataset_id="stock_daily",
                 rule_name="rule2",
                 severity="warning",
             )
+            pipeline_store.insert_dq_issue(config)
 
         issues = pipeline_store.list_dq_issues(severity="error")
         assert len(issues) == 3
@@ -418,12 +444,13 @@ class TestPipelineStore:
     def test_list_dq_issues_with_limit(self, pipeline_store: PipelineStore) -> None:
         """Test listing DQ issues with limit."""
         for i in range(10):
-            pipeline_store.insert_dq_issue(
+            config = DQIssueConfig(
                 run_id=f"run-{i}",
                 dataset_id="stock_daily",
                 rule_name="rule1",
                 severity="error",
             )
+            pipeline_store.insert_dq_issue(config)
 
         issues = pipeline_store.list_dq_issues(limit=5)
         assert len(issues) == 5
@@ -433,56 +460,57 @@ class TestPipelineStore:
     def test_count_runs_all(self, pipeline_store: PipelineStore) -> None:
         """Test counting all runs."""
         for i in range(5):
-            pipeline_store.insert_run(
+            config = PipelineRunConfig(
                 run_id=f"run-count-{i}",
                 task_name="update",
                 dataset_id="stock_daily",
             )
+            pipeline_store.insert_run(config)
 
         count = pipeline_store.count_runs()
         assert count == 5
 
     def test_count_runs_by_dataset(self, pipeline_store: PipelineStore) -> None:
         """Test counting runs by dataset."""
-        pipeline_store.insert_run(
-            run_id="run-001",
-            task_name="update",
-            dataset_id="stock_daily",
+        config1 = PipelineRunConfig(
+            run_id="run-001", task_name="update", dataset_id="stock_daily"
         )
-        pipeline_store.insert_run(
-            run_id="run-002",
-            task_name="update",
-            dataset_id="etf_daily",
+        config2 = PipelineRunConfig(
+            run_id="run-002", task_name="update", dataset_id="etf_daily"
         )
-        pipeline_store.insert_run(
-            run_id="run-003",
-            task_name="update",
-            dataset_id="stock_daily",
+        config3 = PipelineRunConfig(
+            run_id="run-003", task_name="update", dataset_id="stock_daily"
         )
+        pipeline_store.insert_run(config1)
+        pipeline_store.insert_run(config2)
+        pipeline_store.insert_run(config3)
 
         count = pipeline_store.count_runs(dataset_id="stock_daily")
         assert count == 2
 
     def test_count_runs_by_status(self, pipeline_store: PipelineStore) -> None:
         """Test counting runs by status."""
-        pipeline_store.insert_run(
+        config1 = PipelineRunConfig(
             run_id="run-001",
             task_name="update",
             dataset_id="stock_daily",
             status="completed",
         )
-        pipeline_store.insert_run(
+        config2 = PipelineRunConfig(
             run_id="run-002",
             task_name="update",
             dataset_id="stock_daily",
             status="failed",
         )
-        pipeline_store.insert_run(
+        config3 = PipelineRunConfig(
             run_id="run-003",
             task_name="update",
             dataset_id="stock_daily",
             status="completed",
         )
+        pipeline_store.insert_run(config1)
+        pipeline_store.insert_run(config2)
+        pipeline_store.insert_run(config3)
 
         count = pipeline_store.count_runs(status="completed")
         assert count == 2
@@ -492,24 +520,27 @@ class TestPipelineStore:
     def test_get_latest_run(self, pipeline_store: PipelineStore) -> None:
         """Test getting latest run for dataset."""
         # Insert in specific order - last inserted is the latest
-        pipeline_store.insert_run(
+        config1 = PipelineRunConfig(
             run_id="run-2024-01-01",
             task_name="update",
             dataset_id="stock_daily",
             year=2024,
         )
-        pipeline_store.insert_run(
+        config2 = PipelineRunConfig(
             run_id="run-2024-01-02",
             task_name="update",
             dataset_id="stock_daily",
             year=2024,
         )
-        pipeline_store.insert_run(
+        config3 = PipelineRunConfig(
             run_id="run-2024-01-03",
             task_name="update",
             dataset_id="stock_daily",
             year=2024,
         )
+        pipeline_store.insert_run(config1)
+        pipeline_store.insert_run(config2)
+        pipeline_store.insert_run(config3)
 
         latest = pipeline_store.get_latest_run("stock_daily")
         assert latest is not None
@@ -518,24 +549,27 @@ class TestPipelineStore:
 
     def test_get_latest_run_by_year(self, pipeline_store: PipelineStore) -> None:
         """Test getting latest run for dataset and year."""
-        pipeline_store.insert_run(
+        config1 = PipelineRunConfig(
             run_id="run-2023-01",
             task_name="update",
             dataset_id="stock_daily",
             year=2023,
         )
-        pipeline_store.insert_run(
+        config2 = PipelineRunConfig(
             run_id="run-2024-01",
             task_name="update",
             dataset_id="stock_daily",
             year=2024,
         )
-        pipeline_store.insert_run(
+        config3 = PipelineRunConfig(
             run_id="run-2024-02",
             task_name="update",
             dataset_id="stock_daily",
             year=2024,
         )
+        pipeline_store.insert_run(config1)
+        pipeline_store.insert_run(config2)
+        pipeline_store.insert_run(config3)
 
         latest = pipeline_store.get_latest_run("stock_daily", year=2024)
         assert latest is not None
@@ -552,11 +586,12 @@ class TestPipelineStore:
     def test_delete_run(self, pipeline_store: PipelineStore) -> None:
         """Test deleting a run."""
         run_id = "run-delete-001"
-        pipeline_store.insert_run(
+        config = PipelineRunConfig(
             run_id=run_id,
             task_name="update",
             dataset_id="stock_daily",
         )
+        pipeline_store.insert_run(config)
 
         # Verify it exists
         result = pipeline_store.get_run(run_id)
@@ -587,11 +622,12 @@ class TestPipelineStore:
         the function executes). The ALLOWED_COLUMNS whitelist provides defense
         in depth for the dynamic SQL construction inside the method.
         """
-        pipeline_store.insert_run(
+        config = PipelineRunConfig(
             run_id="run-whitelist-002",
             task_name="update",
             dataset_id="stock_daily",
         )
+        pipeline_store.insert_run(config)
 
         # All whitelisted columns should be accepted
         pipeline_store.update_run(

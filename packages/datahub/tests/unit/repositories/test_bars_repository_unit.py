@@ -332,7 +332,7 @@ class TestBarsRepository:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, 'quarantine_store'):
+        if hasattr(self, "quarantine_store"):
             self.quarantine_store.close()
         self.temp_dir.cleanup()
 
@@ -451,7 +451,7 @@ class TestPITSafeAdjustment:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, 'quarantine_store'):
+        if hasattr(self, "quarantine_store"):
             self.quarantine_store.close()
         self.temp_dir.cleanup()
 
@@ -651,7 +651,7 @@ class TestQFQAdjustment:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, 'quarantine_store'):
+        if hasattr(self, "quarantine_store"):
             self.quarantine_store.close()
         self.temp_dir.cleanup()
 
@@ -923,7 +923,7 @@ class TestBarsRepositorySingle:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, 'quarantine_store'):
+        if hasattr(self, "quarantine_store"):
             self.quarantine_store.close()
         self.temp_dir.cleanup()
 
@@ -1116,7 +1116,7 @@ class TestMixedAssetClass:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, 'quarantine_store'):
+        if hasattr(self, "quarantine_store"):
             self.quarantine_store.close()
         self.temp_dir.cleanup()
 
@@ -1345,7 +1345,7 @@ class TestAdjFactorEdgeCases:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, 'quarantine_store'):
+        if hasattr(self, "quarantine_store"):
             self.quarantine_store.close()
         self.temp_dir.cleanup()
 
@@ -1644,7 +1644,7 @@ class TestMarketWideMode:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, 'quarantine_store'):
+        if hasattr(self, "quarantine_store"):
             self.quarantine_store.close()
         self.temp_dir.cleanup()
 

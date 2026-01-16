@@ -128,13 +128,17 @@ mapping = repo.resolve_identifiers_batch(
 # 返回: {"000001.SZ": 1000001, "000002.SZ": 1000002}
 
 # 注册新证券
+from ditto_datahub.models.security import SecurityRegistration
+
 sid = repo.register(
-    src_code="000001.SZ",
-    symbol="平安银行",
-    name="平安银行股份有限公司",
-    exchange="SZ",
-    asset_class="stock",
-    list_date="1991-04-03",
+    SecurityRegistration(
+        src_code="000001.SZ",
+        symbol="平安银行",
+        name="平安银行股份有限公司",
+        exchange="SZ",
+        asset_class="stock",
+        list_date="1991-04-03",
+    )
 )
 ```
 

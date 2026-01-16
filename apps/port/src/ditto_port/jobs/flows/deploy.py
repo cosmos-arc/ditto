@@ -9,15 +9,20 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ditto_foundation import logger
+from prefect import Flow, deploy
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from prefect import Flow
+from ditto_port.jobs.flows import (
+    backfill_flow,
+    daily_ingestion_flow,
+    daily_repair_flow,
+    repair_holes_flow,
+    retry_failed_flow,
+)
 
 
 @dataclass(frozen=True)
@@ -38,14 +43,6 @@ class FlowDeploymentConfig:
 
 def _get_flow(name: str) -> Flow[Any, Any]:
     """动态导入 flow。"""
-    from ditto_port.jobs.flows import (
-        backfill_flow,
-        daily_ingestion_flow,
-        daily_repair_flow,
-        repair_holes_flow,
-        retry_failed_flow,
-    )
-
     flow_map: dict[str, Flow[Any, Any]] = {
         "daily_ingestion_flow": daily_ingestion_flow,
         "daily_repair_flow": daily_repair_flow,
@@ -130,8 +127,6 @@ def deploy_all_flows(
     注意: Prefect 3.x 移除了 Deployment API，改用 flow.deploy()。
 
     """
-    from prefect import deploy
-
     logger.info("开始部署 Prefect Flows", event="deploy_start")
 
     # 准备部署列表 (使用 to_deployment 方法)

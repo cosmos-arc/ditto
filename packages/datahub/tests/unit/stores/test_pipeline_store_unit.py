@@ -4,7 +4,11 @@ from datetime import datetime
 
 import pytest
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
-from ditto_datahub.stores.pipeline_store import PipelineStore
+from ditto_datahub.stores.pipeline_store import (
+    DQIssueConfig,
+    PipelineRunConfig,
+    PipelineStore,
+)
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
@@ -30,11 +34,12 @@ class TestPipelineStore:
 
     def test_insert_run_basic(self) -> None:
         """Test basic pipeline run insertion."""
-        self.store.insert_run(
+        config = PipelineRunConfig(
             run_id="test-run-1",
             task_name="test_task",
             dataset_id="test_dataset",
         )
+        self.store.insert_run(config)
 
         # Verify run was inserted
         run = self.store.get_run("test-run-1")
@@ -49,7 +54,7 @@ class TestPipelineStore:
         started_at = datetime(2024, 1, 1, 10, 0, 0)
         finished_at = datetime(2024, 1, 1, 11, 0, 0)
 
-        self.store.insert_run(
+        config = PipelineRunConfig(
             run_id="test-run-2",
             task_name="test_task",
             dataset_id="test_dataset",
@@ -63,6 +68,7 @@ class TestPipelineStore:
             started_at=started_at,
             finished_at=finished_at,
         )
+        self.store.insert_run(config)
 
         # Verify all fields were inserted
         run = self.store.get_run("test-run-2")
@@ -78,13 +84,14 @@ class TestPipelineStore:
 
     def test_insert_run_with_error(self) -> None:
         """Test pipeline run insertion with error."""
-        self.store.insert_run(
+        config = PipelineRunConfig(
             run_id="test-run-3",
             task_name="test_task",
             dataset_id="test_dataset",
             status="failed",
             error_message="Test error",
         )
+        self.store.insert_run(config)
 
         run = self.store.get_run("test-run-3")
         assert run is not None
@@ -94,11 +101,12 @@ class TestPipelineStore:
     def test_update_run_status(self) -> None:
         """Test updating pipeline run status."""
         # First insert a run
-        self.store.insert_run(
+        config = PipelineRunConfig(
             run_id="test-run-4",
             task_name="test_task",
             dataset_id="test_dataset",
         )
+        self.store.insert_run(config)
 
         # Update status
         self.store.update_run("test-run-4", status="completed")
@@ -114,12 +122,13 @@ class TestPipelineStore:
         finished_at = datetime(2024, 1, 1, 10, 30, 0)
 
         # Insert with started_at
-        self.store.insert_run(
+        config = PipelineRunConfig(
             run_id="test-run-5",
             task_name="test_task",
             dataset_id="test_dataset",
             started_at=started_at,
         )
+        self.store.insert_run(config)
 
         # Update with finished_at
         self.store.update_run("test-run-5", finished_at=finished_at)
@@ -133,11 +142,12 @@ class TestPipelineStore:
 
     def test_update_run_multiple_fields(self) -> None:
         """Test updating multiple fields at once."""
-        self.store.insert_run(
+        config = PipelineRunConfig(
             run_id="test-run-6",
             task_name="test_task",
             dataset_id="test_dataset",
         )
+        self.store.insert_run(config)
 
         # Update multiple fields
         self.store.update_run(
@@ -162,11 +172,12 @@ class TestPipelineStore:
 
     def test_update_run_invalid_column(self) -> None:
         """Test updating with invalid column raises error."""
-        self.store.insert_run(
+        config = PipelineRunConfig(
             run_id="test-run-7",
             task_name="test_task",
             dataset_id="test_dataset",
         )
+        self.store.insert_run(config)
 
         # Try to update a non-allowed column (by manipulating ALLOWED_COLUMNS)
         original_columns = PipelineStore.ALLOWED_COLUMNS
@@ -189,11 +200,12 @@ class TestPipelineStore:
         """Test listing all runs."""
         # Insert multiple runs
         for i in range(3):
-            self.store.insert_run(
+            config = PipelineRunConfig(
                 run_id=f"run-{i}",
                 task_name="test_task",
                 dataset_id="test_dataset",
             )
+            self.store.insert_run(config)
 
         # List all runs
         runs = self.store.list_runs()
@@ -202,9 +214,18 @@ class TestPipelineStore:
     def test_list_runs_with_dataset_filter(self) -> None:
         """Test listing runs filtered by dataset_id."""
         # Insert runs for different datasets
-        self.store.insert_run("run-1", "task1", "dataset_a")
-        self.store.insert_run("run-2", "task2", "dataset_b")
-        self.store.insert_run("run-3", "task3", "dataset_a")
+        config1 = PipelineRunConfig(
+            run_id="run-1", task_name="task1", dataset_id="dataset_a"
+        )
+        config2 = PipelineRunConfig(
+            run_id="run-2", task_name="task2", dataset_id="dataset_b"
+        )
+        config3 = PipelineRunConfig(
+            run_id="run-3", task_name="task3", dataset_id="dataset_a"
+        )
+        self.store.insert_run(config1)
+        self.store.insert_run(config2)
+        self.store.insert_run(config3)
 
         # Filter by dataset
         runs = self.store.list_runs(dataset_id="dataset_a")
@@ -213,9 +234,24 @@ class TestPipelineStore:
 
     def test_list_runs_with_status_filter(self) -> None:
         """Test listing runs filtered by status."""
-        self.store.insert_run("run-1", "task1", "dataset_a", status="running")
-        self.store.insert_run("run-2", "task2", "dataset_b", status="completed")
-        self.store.insert_run("run-3", "task3", "dataset_a", status="completed")
+        config1 = PipelineRunConfig(
+            run_id="run-1", task_name="task1", dataset_id="dataset_a", status="running"
+        )
+        config2 = PipelineRunConfig(
+            run_id="run-2",
+            task_name="task2",
+            dataset_id="dataset_b",
+            status="completed",
+        )
+        config3 = PipelineRunConfig(
+            run_id="run-3",
+            task_name="task3",
+            dataset_id="dataset_a",
+            status="completed",
+        )
+        self.store.insert_run(config1)
+        self.store.insert_run(config2)
+        self.store.insert_run(config3)
 
         # Filter by status
         runs = self.store.list_runs(status="completed")
@@ -226,7 +262,10 @@ class TestPipelineStore:
         """Test listing runs with limit."""
         # Insert 5 runs
         for i in range(5):
-            self.store.insert_run(f"run-{i}", "task", "dataset")
+            config = PipelineRunConfig(
+                run_id=f"run-{i}", task_name="task", dataset_id="dataset"
+            )
+            self.store.insert_run(config)
 
         # List with limit
         runs = self.store.list_runs(limit=3)
@@ -235,9 +274,18 @@ class TestPipelineStore:
     def test_get_latest_run(self) -> None:
         """Test getting latest run for dataset."""
         # Insert runs for same dataset
-        self.store.insert_run("run-1", "task1", "dataset_a", year=2024)
-        self.store.insert_run("run-2", "task2", "dataset_a", year=2024)
-        self.store.insert_run("run-3", "task3", "dataset_a", year=2023)
+        config1 = PipelineRunConfig(
+            run_id="run-1", task_name="task1", dataset_id="dataset_a", year=2024
+        )
+        config2 = PipelineRunConfig(
+            run_id="run-2", task_name="task2", dataset_id="dataset_a", year=2024
+        )
+        config3 = PipelineRunConfig(
+            run_id="run-3", task_name="task3", dataset_id="dataset_a", year=2023
+        )
+        self.store.insert_run(config1)
+        self.store.insert_run(config2)
+        self.store.insert_run(config3)
 
         # Get latest (should be run-2 as it was inserted last for 2024)
         latest = self.store.get_latest_run("dataset_a", year=2024)
@@ -246,8 +294,14 @@ class TestPipelineStore:
 
     def test_get_latest_run_no_year_filter(self) -> None:
         """Test getting latest run without year filter."""
-        self.store.insert_run("run-1", "task1", "dataset_a")
-        self.store.insert_run("run-2", "task2", "dataset_a")
+        config1 = PipelineRunConfig(
+            run_id="run-1", task_name="task1", dataset_id="dataset_a"
+        )
+        config2 = PipelineRunConfig(
+            run_id="run-2", task_name="task2", dataset_id="dataset_a"
+        )
+        self.store.insert_run(config1)
+        self.store.insert_run(config2)
 
         latest = self.store.get_latest_run("dataset_a")
         assert latest is not None
@@ -261,40 +315,76 @@ class TestPipelineStore:
     def test_count_runs_all(self) -> None:
         """Test counting all runs."""
         for i in range(3):
-            self.store.insert_run(f"run-{i}", "task", "dataset")
+            config = PipelineRunConfig(
+                run_id=f"run-{i}", task_name="task", dataset_id="dataset"
+            )
+            self.store.insert_run(config)
 
         count = self.store.count_runs()
         assert count == 3
 
     def test_count_runs_with_dataset_filter(self) -> None:
         """Test counting runs filtered by dataset."""
-        self.store.insert_run("run-1", "task1", "dataset_a")
-        self.store.insert_run("run-2", "task2", "dataset_b")
-        self.store.insert_run("run-3", "task3", "dataset_a")
+        config1 = PipelineRunConfig(
+            run_id="run-1", task_name="task1", dataset_id="dataset_a"
+        )
+        config2 = PipelineRunConfig(
+            run_id="run-2", task_name="task2", dataset_id="dataset_b"
+        )
+        config3 = PipelineRunConfig(
+            run_id="run-3", task_name="task3", dataset_id="dataset_a"
+        )
+        self.store.insert_run(config1)
+        self.store.insert_run(config2)
+        self.store.insert_run(config3)
 
         count = self.store.count_runs(dataset_id="dataset_a")
         assert count == 2
 
     def test_count_runs_with_status_filter(self) -> None:
         """Test counting runs filtered by status."""
-        self.store.insert_run("run-1", "task1", "dataset_a", status="running")
-        self.store.insert_run("run-2", "task2", "dataset_b", status="completed")
-        self.store.insert_run("run-3", "task3", "dataset_a", status="completed")
+        config1 = PipelineRunConfig(
+            run_id="run-1", task_name="task1", dataset_id="dataset_a", status="running"
+        )
+        config2 = PipelineRunConfig(
+            run_id="run-2",
+            task_name="task2",
+            dataset_id="dataset_b",
+            status="completed",
+        )
+        config3 = PipelineRunConfig(
+            run_id="run-3",
+            task_name="task3",
+            dataset_id="dataset_a",
+            status="completed",
+        )
+        self.store.insert_run(config1)
+        self.store.insert_run(config2)
+        self.store.insert_run(config3)
 
         count = self.store.count_runs(status="completed")
         assert count == 2
 
     def test_count_runs_no_filters(self) -> None:
         """Test counting runs without filters returns all."""
-        self.store.insert_run("run-1", "task1", "dataset_a")
-        self.store.insert_run("run-2", "task2", "dataset_b")
+        config1 = PipelineRunConfig(
+            run_id="run-1", task_name="task1", dataset_id="dataset_a"
+        )
+        config2 = PipelineRunConfig(
+            run_id="run-2", task_name="task2", dataset_id="dataset_b"
+        )
+        self.store.insert_run(config1)
+        self.store.insert_run(config2)
 
         count = self.store.count_runs()
         assert count == 2
 
     def test_delete_run_existing(self) -> None:
         """Test deleting existing run."""
-        self.store.insert_run("run-1", "task", "dataset")
+        config = PipelineRunConfig(
+            run_id="run-1", task_name="task", dataset_id="dataset"
+        )
+        self.store.insert_run(config)
 
         # Delete the run
         result = self.store.delete_run("run-1")
@@ -311,13 +401,14 @@ class TestPipelineStore:
 
     def test_insert_dq_issue(self) -> None:
         """Test inserting DQ issue."""
-        self.store.insert_dq_issue(
+        config = DQIssueConfig(
             run_id="test-run",
             dataset_id="test_dataset",
             rule_name="test_rule",
             severity="error",
             message="Test DQ issue",
         )
+        self.store.insert_dq_issue(config)
 
         # Verify DQ issue was inserted
         issues = self.store.list_dq_issues(run_id="test-run")
@@ -327,7 +418,7 @@ class TestPipelineStore:
 
     def test_insert_dq_issue_with_context(self) -> None:
         """Test inserting DQ issue with context fields."""
-        self.store.insert_dq_issue(
+        config = DQIssueConfig(
             run_id="test-run",
             dataset_id="test_dataset",
             rule_name="test_rule",
@@ -336,6 +427,7 @@ class TestPipelineStore:
             sid=1000001,
             trade_date="2024-01-01",
         )
+        self.store.insert_dq_issue(config)
 
         issues = self.store.list_dq_issues(run_id="test-run")
         assert len(issues) == 1
@@ -346,9 +438,21 @@ class TestPipelineStore:
     def test_list_dq_issues_with_filters(self) -> None:
         """Test listing DQ issues with filters."""
         # Insert multiple DQ issues
-        self.store.insert_dq_issue("run-1", "dataset_a", "rule1", "error")
-        self.store.insert_dq_issue("run-2", "dataset_b", "rule2", "warning")
-        self.store.insert_dq_issue("run-1", "dataset_a", "rule3", "error")
+        config1 = DQIssueConfig(
+            run_id="run-1", dataset_id="dataset_a", rule_name="rule1", severity="error"
+        )
+        config2 = DQIssueConfig(
+            run_id="run-2",
+            dataset_id="dataset_b",
+            rule_name="rule2",
+            severity="warning",
+        )
+        config3 = DQIssueConfig(
+            run_id="run-1", dataset_id="dataset_a", rule_name="rule3", severity="error"
+        )
+        self.store.insert_dq_issue(config1)
+        self.store.insert_dq_issue(config2)
+        self.store.insert_dq_issue(config3)
 
         # Filter by run_id
         issues = self.store.list_dq_issues(run_id="run-1")
@@ -365,9 +469,21 @@ class TestPipelineStore:
     def test_count_dq_issues(self) -> None:
         """Test counting DQ issues."""
         # Insert DQ issues
-        self.store.insert_dq_issue("run-1", "dataset_a", "rule1", "error")
-        self.store.insert_dq_issue("run-2", "dataset_b", "rule2", "warning")
-        self.store.insert_dq_issue("run-1", "dataset_a", "rule3", "error")
+        config1 = DQIssueConfig(
+            run_id="run-1", dataset_id="dataset_a", rule_name="rule1", severity="error"
+        )
+        config2 = DQIssueConfig(
+            run_id="run-2",
+            dataset_id="dataset_b",
+            rule_name="rule2",
+            severity="warning",
+        )
+        config3 = DQIssueConfig(
+            run_id="run-1", dataset_id="dataset_a", rule_name="rule3", severity="error"
+        )
+        self.store.insert_dq_issue(config1)
+        self.store.insert_dq_issue(config2)
+        self.store.insert_dq_issue(config3)
 
         # Count all
         count = self.store.count_dq_issues()
@@ -382,12 +498,13 @@ class TestPipelineStore:
 
     def test_dq_passed_default_to_completed_status(self) -> None:
         """Test that dq_passed defaults to True when status is 'completed'."""
-        self.store.insert_run(
+        config = PipelineRunConfig(
             run_id="test-run",
             task_name="test_task",
             dataset_id="test_dataset",
             status="completed",
         )
+        self.store.insert_run(config)
 
         run = self.store.get_run("test-run")
         assert run is not None
@@ -395,13 +512,14 @@ class TestPipelineStore:
 
     def test_dq_passed_explicit_none(self) -> None:
         """Test explicit None for dq_passed when status is not completed."""
-        self.store.insert_run(
+        config = PipelineRunConfig(
             run_id="test-run",
             task_name="test_task",
             dataset_id="test_dataset",
             status="running",
             dq_passed=None,
         )
+        self.store.insert_run(config)
 
         run = self.store.get_run("test-run")
         assert run is not None

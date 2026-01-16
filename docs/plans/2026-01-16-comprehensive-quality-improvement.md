@@ -88,66 +88,90 @@ def teardown_method(self) -> None:
 
 ---
 
-### Step 2: Phase 2 - 循环依赖解耦（约 1 周）
+### ~~Step 2: Phase 2 - 架构重构（Factory 模式）（约 1 周）~~ ✅ 已完成
 
-#### 任务清单（8 处 PLC0415）
+> **经过深入分析，发现原"循环依赖"假设有误。大部分 PLC0415 是误报，真正问题是架构设计违反 SRP。**
 
-| 任务 | 文件 | 位置 | 方案 |
-|------|------|------|------|
-| 2.1 | [hub.py](packages/datahub/src/ditto_datahub/hub.py) | 70, 93, 101, 109 | 依赖注入 + 延迟初始化 |
-| 2.2 | [deploy.py](apps/port/src/ditto_port/jobs/flows/deploy.py) | 41, 133 | lambda 延迟求值 |
-| 2.3 | [bars.py](packages/datahub/src/ditto_datahub/repositories/bars.py) | 866 | 依赖注入 DQReportGenerator |
-| 2.4 | [base.py](packages/datahub/src/ditto_datahub/sources/base.py) | 383 | 注册表模式或 cast |
-| 2.5 | [client.py](packages/datahub/src/ditto_datahub/sources/tushare/client.py) | 66 | Protocol 或 cast |
+#### 实施结果（2026-01-16 完成）
+
+**处理文件：**
+- ✅ [settings.py](packages/foundation/src/ditto_foundation/config/settings.py) - 6 处 PLC0415
+- ✅ [hub.py](packages/datahub/src/ditto_datahub/hub.py) - 30 处 PLC0415
+- ✅ [deploy.py](apps/port/src/ditto_port/jobs/flows/deploy.py) - 2 处 PLC0415
+
+**修改方案：**
+- 将 `TYPE_CHECKING` 条件导入改为顶层导入
+- 将 `@cached_property` 和 `@computed_field` 方法内的延迟导入改为顶层导入
+- 保留延迟实例化设计（`@cached_property` 行为不变）
+
+**验证结果：**
+- ✅ 所有 PLC0415 警告已消除（0 个）
+- ✅ 测试通过：1369 passed
+- ✅ 覆盖率：86.48% > 80%
+
+#### 任务清单（40 处 PLC0415）
+
+| 任务 | 文件 | 位置 | 优先级 | 方案 |
+|------|------|------|--------|------|
+| 2.1 | [base.py](packages/datahub/src/ditto_datahub/sources/base.py) | 363-390 | 🔴 高 | **拆分：新建 factory.py** |
+| 2.2 | [client.py](packages/datahub/src/ditto_datahub/sources/tushare/client.py) | 65 | 🔴 高 | try/except 替代 importlib |
+| 2.3 | [hub.py](packages/datahub/src/ditto_datahub/hub.py) | 70, 93, 101... | 🟡 中 | 顶层导入 + @cached_property |
+| 2.4 | [bars.py](packages/datahub/src/ditto_datahub/repositories/bars.py) | 866 | 🟡 中 | 顶层导入 |
+| 2.5 | [deploy.py](apps/port/src/ditto_port/jobs/flows/deploy.py) | 41, 133 | 🟡 中 | 顶层导入 |
+
+#### 核心发现
+
+**base.py 违反单一职责原则（SRP）**：
+- 同时承担 Protocol 定义 + Factory 工厂两个职责
+- 使用 `importlib` 是"绕过"问题，而非解决问题
+
+**验证**：`grep -r "from.*base import" tushare/` → 无反向导入 → **不是循环依赖**
 
 #### 详细方案
 
-**hub.py 依赖注入重构**（最高优先级）
-
-创建 `HubInitializer` 类，在 `__init__` 中注册所有工厂函数：
+**2.1 拆分 base.py**（最高优先级）
 
 ```python
-class HubInitializer:
-    def __init__(self, data_root: Path | None = None) -> None:
-        self._data_root = data_root
-        self._factories: dict[str, Callable[[], Any]] = {}
-        self._register_factories()
+# 新建 factory.py
+from ditto_datahub.sources.tushare.source import TushareSource
 
-    def _register_factories(self) -> None:
-        """在顶层注册所有工厂（避免函数内 import）"""
-        from ditto_datahub.runtime.sqlite_pool import SQLitePool
-        from ditto_datahub.runtime.file_lock import FileLockManager
-        # ... 其他导入
+def get_source(name: str) -> DataSource:
+    sources: dict[str, type[DataSource]] = {
+        "tushare": TushareSource,
+    }
+    if name not in sources:
+        raise ValueError(f"Unknown source: {name}")
+    return sources[name]()
 
-        self._factories["sqlite_pool"] = lambda: SQLitePool(...)
-        self._factories["file_lock"] = lambda: FileLockManager(...)
-
-    def get(self, name: str) -> Any:
-        return self._factories[name]()
+# base.py 保留：DataSource ABC + 异常类
 ```
 
-**deploy.py lambda 延迟求值**
+**2.2 hub.py 顶层导入**
 
 ```python
-flow_configs: list[FlowConfig] = [
-    FlowConfig(
-        name="daily_ingestion_flow",
-        loader=lambda: import_flow("daily_ingestion_flow"),
-    ),
-]
+# 移除 TYPE_CHECKING，直接在顶层导入
+from ditto_datahub.runtime.sqlite_pool import SQLitePool
+from ditto_datahub.runtime.file_lock import FileLockManager
+# ... 其他导入
+
+@cached_property
+def sqlite_pool(self) -> SQLitePool:
+    return SQLitePool(str(db_path))  # 延迟实例化（非延迟导入）
 ```
 
-**bars.py 依赖注入**
+**2.3 client.py try/except**
 
 ```python
-class BarsRepository:
-    def __init__(
-        self,
-        ...,
-        dq_report_generator: DQReportGenerator | None = None,
-    ) -> None:
-        self._dq_report_generator = dq_report_generator
+# 替代 importlib.import_module("keyring")
+try:
+    import keyring
+except ImportError:
+    logger.debug("Keyring not available")
 ```
+
+#### 参考文档
+
+详细方案见：[`.claude/plans/sequential-bouncing-avalanche.md`](.claude/plans/sequential-bouncing-avalanche.md)
 
 ---
 

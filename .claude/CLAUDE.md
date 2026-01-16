@@ -60,7 +60,7 @@
 - 文件读写改操作使用 Bash 命令
 - SRC源码内大量使用#naqa、#type:ignore, 新增代码优先重构避免
 - 绕过或忽略 pyright、ruff、precommit 检测（例如修改相关配置，使用--no verify提交）
-- 循环依赖，以及使用TYPE_CHECKING解决循环依赖（必须重构代码及架构解决）
+- 循环依赖，以及使用`TYPE_CHECKING`的延迟导入方式解决循环依赖（必须重构代码及架构解决），非必要`禁止延迟导入`
 
 ## 项目架构
 

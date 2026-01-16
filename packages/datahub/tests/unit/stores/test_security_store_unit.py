@@ -2,6 +2,7 @@
 
 import polars as pl
 import pytest
+from ditto_datahub.models.security import SecurityRegistration
 from ditto_datahub.runtime.cache import DataCache
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.security_store import SecurityStore
@@ -313,13 +314,15 @@ class TestSecurityStore:
         """Test registering a new security."""
         sid = self.store.register(
             sid=100000001,
-            source="tushare",
-            src_code="600000.SH",
-            symbol="600000",
-            name="Test Bank",
-            exchange="SSE",
-            asset_class="stock",
-            list_date="1999-11-10",
+            registration=SecurityRegistration(
+                source="tushare",
+                src_code="600000.SH",
+                symbol="600000",
+                name="Test Bank",
+                exchange="SSE",
+                asset_class="stock",
+                list_date="1999-11-10",
+            ),
         )
 
         assert sid == 100000001
@@ -351,13 +354,15 @@ class TestSecurityStore:
         # Register the new security
         new_sid = store_with_cache.register(
             sid=100999001,
-            source="tushare",
-            src_code="600999.SH",
-            symbol="600999",
-            name="New Stock",
-            exchange="SSE",
-            asset_class="stock",
-            list_date="2020-01-01",
+            registration=SecurityRegistration(
+                source="tushare",
+                src_code="600999.SH",
+                symbol="600999",
+                name="New Stock",
+                exchange="SSE",
+                asset_class="stock",
+                list_date="2020-01-01",
+            ),
         )
 
         # After registration, negative cache should be invalidated
@@ -378,13 +383,15 @@ class TestSecurityStore:
         # Register a new security
         store_with_cache.register(
             sid=100999002,
-            source="tushare",
-            src_code="600998.SH",
-            symbol="600998",
-            name="Another Stock",
-            exchange="SSE",
-            asset_class="stock",
-            list_date="2020-01-01",
+            registration=SecurityRegistration(
+                source="tushare",
+                src_code="600998.SH",
+                symbol="600998",
+                name="Another Stock",
+                exchange="SSE",
+                asset_class="stock",
+                list_date="2020-01-01",
+            ),
         )
 
         # After registration, sid_symbol_map cache should be invalidated

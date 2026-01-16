@@ -4,6 +4,41 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import NamedTuple
 
+from ditto_datahub.dq.models import DQResult as DQResultNew
+
+__all__ = [
+    "DQSeverity",
+    "FreezeManifest",
+    "OnDuplicate",
+    "SidRange",
+    "WriteResult",
+    "WriteResultStore",
+]
+
+
+@dataclass(frozen=True)
+class WriteResult:
+    """写入结果统计"""
+
+    file_path: str
+    checksum: str
+    rows_written: int
+    rows_total: int
+    blocked: bool
+    dq_result: DQResultNew | None
+
+
+@dataclass(frozen=True)
+class WriteResultStore:
+    """存储层写入结果统计"""
+
+    file_path: str
+    checksum: str
+    added: int
+    updated: int
+    skipped: int
+    is_merge: bool
+
 
 class SidRange(NamedTuple):
     """

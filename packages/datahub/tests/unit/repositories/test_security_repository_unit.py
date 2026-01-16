@@ -2,6 +2,7 @@
 
 import polars as pl
 import pytest
+from ditto_datahub.models.security import SecurityRegistration
 from ditto_datahub.repositories.security import SecurityRepository
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
@@ -214,12 +215,14 @@ class TestSecurityRepository:
         """Test register allocates new SID."""
         # Act
         sid = self.repo.register(
-            src_code="600001.SH",
-            symbol="600001",
-            name="Test Stock",
-            exchange="SSE",
-            asset_class="stock",
-            list_date="2000-01-01",
+            SecurityRegistration(
+                src_code="600001.SH",
+                symbol="600001",
+                name="Test Stock",
+                exchange="SSE",
+                asset_class="stock",
+                list_date="2000-01-01",
+            )
         )
 
         # Assert

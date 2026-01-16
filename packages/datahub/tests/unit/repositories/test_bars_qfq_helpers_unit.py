@@ -12,6 +12,7 @@ from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
+from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.stock_status_store import StockStatusStore
@@ -34,6 +35,7 @@ def repo() -> BarsRepository:
     # Use empty DQEngine for testing (no config needed)
     dq_engine = DQEngine()
     lock_mgr = FileLockManager(data_root / ".locks")
+    quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
     repo = BarsRepository(
         bars_store,
@@ -42,6 +44,7 @@ def repo() -> BarsRepository:
         stock_status_store,
         dq_engine,
         lock_mgr,
+        quarantine_store,
     )
 
     yield repo
