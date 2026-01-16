@@ -8,9 +8,44 @@ from ditto_datahub import DataHub
 
 from ditto_port.cli.executor import CLIExecutor
 
-# 模块级单例
-_hub: DataHub | None = None
-_hub_lock = threading.Lock()
+
+class _HubRegistry:
+    """
+    Registry for managing DataHub singleton.
+
+    Uses class-level attributes to store singleton state, eliminating
+    the need for global statements while maintaining the same API.
+    Implements thread-safe double-checked locking pattern.
+    """
+
+    hub: DataHub | None = None
+    hub_lock = threading.Lock()
+
+    @classmethod
+    def get_hub(cls, data_root: str | None = None) -> DataHub:
+        """
+        Get or create the thread-safe singleton DataHub instance.
+
+        Uses double-checked locking pattern for thread safety.
+
+        Args:
+            data_root: Data root directory (set on first call)
+
+        Returns:
+            DataHub instance
+
+        """
+        if cls.hub is None:
+            with cls.hub_lock:
+                if cls.hub is None:
+                    cls.hub = DataHub(data_root=data_root)
+        return cls.hub
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the singleton instance (for testing purposes)."""
+        with cls.hub_lock:
+            cls.hub = None
 
 
 def get_hub(data_root: str | None = None) -> DataHub:
@@ -24,12 +59,7 @@ def get_hub(data_root: str | None = None) -> DataHub:
         DataHub 实例（同一进程内返回同一实例）
 
     """
-    global _hub  # noqa: PLW0603 - singleton pattern requires global state
-    if _hub is None:
-        with _hub_lock:
-            if _hub is None:
-                _hub = DataHub(data_root=data_root)
-    return _hub
+    return _HubRegistry.get_hub(data_root)
 
 
 @contextmanager

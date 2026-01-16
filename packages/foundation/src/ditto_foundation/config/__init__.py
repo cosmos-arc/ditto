@@ -13,6 +13,7 @@ from ditto_foundation.config.paths import (
     XDGPaths,
     get_paths,
     reload_paths,
+    reset_paths_for_testing,
 )
 from ditto_foundation.config.settings import (
     APISettings,
@@ -42,4 +43,5 @@ __all__ = [
     "get_settings",
     "reload_paths",
     "reload_settings",
+    "reset_paths_for_testing",
 ]

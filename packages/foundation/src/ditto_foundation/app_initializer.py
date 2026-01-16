@@ -124,8 +124,32 @@ class AppInitializer:
         return errors
 
 
-# Global initializer instance
-_initializer: AppInitializer | None = None
+class _AppInitializerRegistry:
+    """
+    Registry for managing AppInitializer singleton.
+
+    Uses class-level attributes to store singleton state, eliminating
+    the need for global statements while maintaining the same API.
+    """
+
+    instance: AppInitializer | None = None
+
+    @classmethod
+    def get_instance(cls) -> AppInitializer:
+        """Get or create the singleton AppInitializer instance."""
+        if cls.instance is None:
+            cls.instance = AppInitializer()
+        return cls.instance
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the singleton instance (for testing purposes)."""
+        cls.instance = None
+
+    @classmethod
+    def get(cls) -> AppInitializer | None:
+        """Get the current instance without creating one."""
+        return cls.instance
 
 
 def initialize_app() -> dict[str, Any]:
@@ -136,12 +160,8 @@ def initialize_app() -> dict[str, Any]:
         Initialization status dictionary.
 
     """
-    global _initializer  # noqa: PLW0603 - singleton pattern requires global state
-
-    if _initializer is None:
-        _initializer = AppInitializer()
-
-    return _initializer.initialize()
+    initializer = _AppInitializerRegistry.get_instance()
+    return initializer.initialize()
 
 
 def get_initializer() -> AppInitializer | None:
@@ -152,4 +172,18 @@ def get_initializer() -> AppInitializer | None:
         AppInitializer instance or None.
 
     """
-    return _initializer
+    return _AppInitializerRegistry.get()
+
+
+def reset_for_testing() -> None:
+    """
+    Reset the singleton initializer (for testing purposes only).
+
+    This function allows tests to reset the global state between test runs.
+    """
+    _AppInitializerRegistry.reset()
+
+
+# Module-level accessor for backward compatibility with tests
+# Exposes registry instance as module-level variable for test access
+_initializer = _AppInitializerRegistry.instance

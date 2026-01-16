@@ -357,34 +357,3 @@ class DataSource(ABC):
 
         """
         pass
-
-
-def get_source(name: str) -> DataSource:
-    """
-    Factory function to get DataSource instance.
-
-    Args:
-        name: Source name ("tushare" or "akshare").
-
-    Returns:
-        DataSource instance.
-
-    Raises:
-        ValueError: If source name is unknown or not implemented.
-
-    """
-    normalized_name = name.lower().strip()
-
-    if normalized_name == "tushare":
-        from ditto_datahub.sources.tushare.source import (  # noqa: PLC0415 - circular import avoidance
-            TushareSource,
-        )
-
-        return TushareSource()
-
-    if normalized_name == "akshare":
-        raise ValueError(
-            f"Source '{name}' is not yet implemented. Planned for Sprint-02."
-        )
-
-    raise ValueError(f"Unknown source: '{name}'. Supported sources: tushare")

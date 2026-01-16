@@ -15,6 +15,7 @@ from ditto_datahub.dq.engine import DQEngine
 
 # Authoritative DQResult with issues list (from dq.engine)
 from ditto_datahub.dq.models import DQResult as DQResultNew
+from ditto_datahub.dq.report import DQReportGenerator
 from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
@@ -864,10 +865,6 @@ class BarsRepository:
 
         """
         try:
-            from ditto_datahub.dq.report import (  # noqa: PLC0415 - circular import avoidance
-                DQReportGenerator,
-            )
-
             data_root = self._bars_store.data_root
             reports_dir = data_root / "reports" / "dq"
             reports_dir.mkdir(parents=True, exist_ok=True)

@@ -3,10 +3,10 @@
 import os
 from typing import Any
 
-import ditto_foundation.app_initializer as init_module
 import ditto_foundation.config.paths as paths_module
 import ditto_foundation.config.settings as settings_module
 import pytest
+from ditto_foundation import reset_initializer
 from ditto_foundation.app_initializer import (
     AppInitializer,
     get_initializer,
@@ -46,7 +46,7 @@ def test_initialize_app_creates_directories(tmp_path: Any) -> None:
         os.environ["XDG_STATE_HOME"] = str(xdg_state)
 
         # Reset global initializer and settings for testing
-        init_module._initializer = None
+        reset_initializer()
         settings_module._settings = None
 
         result = initialize_app()
@@ -79,14 +79,14 @@ def test_initialize_app_creates_directories(tmp_path: Any) -> None:
             del os.environ["XDG_STATE_HOME"]
 
         # Reset global initializer and paths cache
-        init_module._initializer = None
+        reset_initializer()
         settings_module._settings = None
         paths_module._paths = None
 
 
 def test_app_initializer_already_initialized() -> None:
     """Test handling of duplicate initialization."""
-    init_module._initializer = None
+    reset_initializer()
 
     initializer = AppInitializer()
     initializer.initialize()
@@ -98,7 +98,7 @@ def test_app_initializer_already_initialized() -> None:
 @pytest.mark.serial
 def test_get_initializer() -> None:
     """Test getting global initializer."""
-    init_module._initializer = None
+    reset_initializer()
 
     # Before initialization
     assert get_initializer() is None

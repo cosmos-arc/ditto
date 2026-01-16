@@ -130,57 +130,6 @@ unfixable = []
 # __init__.py
 "__init__.py" = ["D104"]
 
-# 延迟初始化模式 - cached_property 避免启动时重初始化
-"packages/datahub/src/ditto_datahub/hub.py" = ["PLC0415"]
-"packages/foundation/src/ditto_foundation/config/settings.py" = [
-    "PLC0415",
-    "S104",
-] # S104: API server default
-
-# 动态导入 - deploy.py 需要动态导入 flows 避免循环依赖
-"apps/port/src/ditto_port/jobs/flows/deploy.py" = ["PLC0415"]
-
-# 类型收窄 - assert 用于类型收窄（Type narrowing）
-"packages/datahub/src/ditto_datahub/runtime/freeze_manager.py" = ["S101"]
-"packages/datahub/src/ditto_datahub/sources/tushare/client.py" = ["S101"]
-"packages/datahub/src/ditto_datahub/stores/ingestion_log.py" = ["S101"]
-
-# 数据协调器 - 多返回语句
-"apps/port/src/ditto_port/services/ingestion/coordinator.py" = ["PLR0911"]
-
-# 测试 conftest - 延迟导入
-"apps/port/tests/unit/test_conftest.py" = ["E402"]
-
-# DQ 检查器 - SQL 动态查询
-"packages/datahub/src/ditto_datahub/dq/checkers/technical.py" = ["S608"]
-
-# DQ 模型 - 忽略无效配置文件
-"packages/datahub/src/ditto_datahub/dq/models.py" = ["S112"]
-
-# Security repository - 参数过多
-"packages/datahub/src/ditto_datahub/repositories/security.py" = ["PLR0913"]
-
-# PIT helper - SQL 包装器
-"packages/datahub/src/ditto_datahub/runtime/pit_helper.py" = ["S608"]
-
-# SQL engine - MD5 用于缓存键（非安全用途）+ View 创建
-"packages/datahub/src/ditto_datahub/runtime/sql_engine.py" = ["S324", "S608"]
-
-# Pipeline store - 复杂度高 + SQL 动态更新
-"packages/datahub/src/ditto_datahub/stores/pipeline_store.py" = ["C901", "PLR0913", "S608"]
-
-# Security store - SQL 动态查询 + 参数过多
-"packages/datahub/src/ditto_datahub/stores/security_store.py" = ["S608", "PLR0913"]
-
-# SQLite client - 表名参数化
-"packages/datahub/src/ditto_datahub/stores/sqlite_client.py" = ["S608"]
-
-# 集成测试 - assert Exception
-"packages/datahub/tests/integration/runtime/test_sql_engine_injection_integration.py" = ["B017"]
-
-# PathResolver - 参数过多
-"packages/foundation/src/ditto_foundation/config/paths.py" = ["PLR0913"]
-
 # --- Ruff Formatter (格式化器) 配置 ---
 [tool.ruff.format]
 quote-style = "double"
@@ -310,6 +259,7 @@ markers = [
     "data: Mark test that requires data fixtures",
     "external: Mark test that calls external APIs (Tushare, etc.)",
     "observability: Mark test that requires observability stack",
+    "serial: Mark test that must run serially (not in parallel)",
 ]
 
 log_cli = true

@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING
 
 from ditto_foundation import logger
 
-from ditto_datahub.sources.base import DataSource, get_source
+from ditto_datahub.sources.base import DataSource
+from ditto_datahub.sources.tushare.source import TushareSource
 
 if TYPE_CHECKING:
     pass
@@ -31,7 +32,7 @@ class SourcesAccessor:
 
         """
         logger.debug("Creating TushareSource", event="sources_tushare_create")
-        return get_source("tushare")
+        return TushareSource()
 
     def get(self, name: str) -> DataSource:
         """
@@ -47,4 +48,9 @@ class SourcesAccessor:
             ValueError: If source name is unknown.
 
         """
-        return get_source(name)
+        normalized_name = name.lower().strip()
+
+        if normalized_name == "tushare":
+            return TushareSource()
+
+        raise ValueError(f"Unknown source: '{name}'. Supported sources: tushare")
