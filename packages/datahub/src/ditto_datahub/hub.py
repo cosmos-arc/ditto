@@ -31,7 +31,6 @@ from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
-from ditto_datahub.stores.pipeline_store import PipelineStore
 from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
@@ -50,7 +49,7 @@ class DataHub:
     Attribute layers:
     - Runtime Layer: sqlite_pool, file_lock, sid_allocator, dq_engine, freeze
     - Store Layer: security_store, calendar_store, bars_store, adj_factor_store,
-      pipeline_store, universe_store, index_weight_store
+      universe_store, index_weight_store, ingestion_log
     - Repository Layer: securities, bars, calendar, universe, index
     - Sources Layer: sources (external data sources: Tushare, Akshare)
     - SQL Engine: sql_engine
@@ -141,11 +140,6 @@ class DataHub:
     def stock_status_store(self) -> StockStatusStore:  # B.3
         """Stock status store (Parquet, year partitioned)."""
         return StockStatusStore(data_root=self.data_root)
-
-    @cached_property
-    def pipeline_store(self) -> PipelineStore:
-        """Pipeline run store."""
-        return PipelineStore(SQLiteClient(self.sqlite_pool))
 
     @cached_property
     def universe_store(self) -> UniverseStore:
@@ -377,7 +371,7 @@ class DataHub:
         This method is idempotent - can be called multiple times safely.
 
         Closes in reverse order of initialization to avoid dependency issues:
-        1. Stores with SQLite clients (pipeline_store, calendar_store, security_store,
+        1. Stores with SQLite clients (calendar_store, security_store,
            universe_store, index_weight_store, ingestion_log)
         2. SQL engine (DuckDB)
         3. SQLite pool (connection manager)
@@ -387,7 +381,6 @@ class DataHub:
         # Close stores that hold SQLiteClient references
         # These must be closed before sqlite_pool
         for store_name in (
-            "pipeline_store",
             "calendar_store",
             "security_store",
             "universe_store",

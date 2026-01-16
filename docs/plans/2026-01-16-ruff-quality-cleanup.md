@@ -12,12 +12,12 @@
 - `2026-01-16-comprehensive-quality-improvement.md` - ✅ 已完成
 - `2026-01-15-noqa-cleanup-plan.md` - ✅ 已完成
 
-**遗留问题**: Ruff 检测出 **19 个非豁免问题**需要解决：
+**遗留问题**: Ruff 检测出 **15 个非豁免问题**需要解决（已删除 PipelineStore 相关的 4 个问题）：
 
 | 优先级 | 类型 | 数量 | 说明 |
 |--------|------|------|------|
-| P1 | PLR0913（参数过多） | 6 处 | 函数接口设计问题 |
-| P1 | C901（复杂度过高） | 1 处 | 可维护性问题 |
+| P1 | PLR0913（参数过多） | 3 处 | 函数接口设计问题 |
+| P1 | C901（复杂度过高） | 0 处 | ✅ 已解决（删除 PipelineStore） |
 | P2 | PLR0911（返回语句过多） | 2 处 | 控制流复杂度 |
 | P2 | S112（异常吞噬） | 1 处 | 错误处理 |
 | P3 | S101（assert 使用） | 5 处 | 生产代码健壮性 |
@@ -33,75 +33,20 @@
 
 ## Phase 1: 高优先级 - 参数过多与复杂度优化（P1）
 
-### 任务 1.1: pipeline_store.py 重构（3 个问题）
+### 任务 1.1: pipeline_store.py 删除 ✅
 
-**文件**: `packages/datahub/src/ditto_datahub/stores/pipeline_store.py`
+**状态**: 已删除（2026-01-16）
 
-**问题**:
-- 第 79 行: `insert_run` - 13 个参数 (PLR0913)
-- 第 163 行: `update_run` - 9 个参数 (PLR0913)，复杂度 13 (C901)
+**原因**: `PipelineStore` 是早期设计中的遗留代码，实际实现时采用了简化的 `IngestionLogStore`。类似于 `IngestionCursorStore` 的处理方式，已彻底移除。
 
-**解决方案**:
+**删除内容**:
+- `packages/datahub/src/ditto_datahub/stores/pipeline_store.py`
+- `packages/datahub/tests/unit/stores/test_pipeline_store_unit.py`
+- `packages/datahub/tests/integration/stores/test_pipeline_store_integration.py`
+- `schema.sql` 中的 `pipeline_run` 和 `dq_issue` 表定义
+- `hub.py` 中的 `pipeline_store` 属性
 
-1. **创建配置对象**（在文件顶部）:
-```python
-@dataclass(frozen=True)
-class _PipelineRunConfig:
-    """Pipeline run 配置对象"""
-    run_id: str
-    task_name: str
-    dataset_id: str
-    year: int | None = None
-    rows_read: int | None = None
-    rows_written: int | None = None
-    status: str = "running"
-    error_message: str | None = None
-    dq_passed: bool | None = None
-    dq_fail_count: int = 0
-    dq_warn_count: int = 0
-    started_at: datetime | None = None
-    finished_at: datetime | None = None
-
-@dataclass(frozen=True)
-class _PipelineRunUpdate:
-    """Pipeline run 更新配置对象"""
-    run_id: str
-    status: str | None = None
-    error_message: str | None = None
-    rows_read: int | None = None
-    rows_written: int | None = None
-    dq_passed: bool | None = None
-    dq_fail_count: int | None = None
-    dq_warn_count: int | None = None
-    finished_at: datetime | None = None
-```
-
-2. **重构 insert_run**:
-```python
-def insert_run(self, config: _PipelineRunConfig) -> None:
-    """Insert pipeline run record using config object."""
-```
-
-3. **重构 update_run**（提取辅助方法降低复杂度）:
-```python
-def _build_update_fields(self, update: _PipelineRunUpdate) -> tuple[list[str], list[Any]]:
-    """构建 UPDATE 语句的字段和参数"""
-
-def update_run(self, update: _PipelineRunUpdate) -> None:
-    """Update pipeline run record with reduced complexity"""
-    updates, params = self._build_update_fields(update)
-    # ... 其余逻辑
-```
-
-**验证步骤**:
-```bash
-pixi run -e dev test packages/datahub/tests/unit/stores/test_pipeline_store_unit.py
-ruff check packages/datahub/src/ditto_datahub/stores/pipeline_store.py
-```
-
-**更新调用方**（如果存在直接调用）:
-- 搜索 `insert_run(` 并替换为配置对象
-- 搜索 `update_run(` 并替换为配置对象
+**替换方案**: 使用 `IngestionLogStore` 统一管理摄取元数据（按交易日 UPSERT 模式）
 
 ---
 
@@ -207,29 +152,11 @@ pixi run -e dev type packages/foundation/src/ditto_foundation/config/paths.py
 
 ---
 
-### 任务 1.5: pipeline_store.py insert_dq_issue 参数封装
+### 任务 1.5: pipeline_store.py insert_dq_issue 删除 ✅
 
-**文件**: `packages/datahub/src/ditto_datahub/stores/pipeline_store.py`
+**状态**: 已删除（2026-01-16）
 
-**问题**: 第 396 行: `insert_dq_issue` - 8 个参数
-
-**解决方案**:
-```python
-@dataclass(frozen=True)
-class DQIssueConfig:
-    """数据质量问题配置对象"""
-    run_id: str
-    dataset: str
-    table_name: str
-    issue_type: str
-    severity: str
-    description: str
-    affected_rows: int = 0
-    details: str | None = None
-
-def insert_dq_issue(self, config: DQIssueConfig) -> None:
-    """Insert DQ issue record."""
-```
+**原因**: 随 `PipelineStore` 一起删除（见任务 1.1）
 
 ---
 
@@ -416,10 +343,10 @@ host: str = Field(
 ## 关键文件清单
 
 ### 修改文件
-1. `packages/datahub/src/ditto_datahub/stores/pipeline_store.py` - 最高优先级
+1. ~~`packages/datahub/src/ditto_datahub/stores/pipeline_store.py`~~ ✅ 已删除
 2. `packages/datahub/src/ditto_datahub/repositories/security.py`
 3. `packages/datahub/src/ditto_datahub/stores/security_store.py`
-4. `packages/foundation/src/ditto_foundation/config/paths.py`
+4. `packages/foundation/src/ditto_foundation/config/paths.py` ✅ 已完成
 5. `apps/port/src/ditto_port/services/ingestion/coordinator.py`
 6. `packages/datahub/src/ditto_datahub/dq/models.py`
 7. `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py`
@@ -429,11 +356,11 @@ host: str = Field(
 11. `packages/foundation/src/ditto_foundation/config/settings.py`
 
 ### 新增配置类
-- `_PipelineRunConfig` - pipeline_store.py 内部类
-- `_PipelineRunUpdate` - pipeline_store.py 内部类
-- `DQIssueConfig` - pipeline_store.py 内部类
+- ~~`_PipelineRunConfig`~~ ✅ 已删除（随 PipelineStore）
+- ~~`_PipelineRunUpdate`~~ ✅ 已删除（随 PipelineStore）
+- ~~`DQIssueConfig`~~ ✅ 已删除（随 PipelineStore）
 - `SecurityRegistration` - repositories/security.py 或独立 models.py
-- `PathResolverConfig` - config/paths.py 顶部
+- `PathResolverConfig` ✅ 已完成 - config/paths.py 顶部
 
 ---
 
@@ -467,10 +394,10 @@ pixi run -e dev lint 2>&1 | grep -v "S608\|S108\|S110" | grep -E "PLR|C90|S101|S
 
 | Phase | 任务数 | 工作量 |
 |-------|--------|--------|
-| Phase 1 | 5 | 3-4 人日 |
+| Phase 1 | 3（2 已完成） | 1-2 人日（剩余 2 任务） |
 | Phase 2 | 2 | 2-3 人日 |
 | Phase 3 | 5 | 1-2 人日 |
-| **总计** | **12** | **6-9 人日** |
+| **总计** | **10** | **4-7 人日** |
 
 ---
 

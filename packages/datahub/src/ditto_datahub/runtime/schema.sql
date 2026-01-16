@@ -1,6 +1,6 @@
 -- SQLite Database Schema for Ditto DataHub
 -- This schema supports SID allocation, security master, PIT queries,
--- trading calendar, pipeline tracking, data quality, and universe management.
+-- trading calendar, freeze points, and universe management.
 
 -- SID 序列 (百万级范围，与 SidRange 保持一致)
 CREATE TABLE IF NOT EXISTS sid_sequence (
@@ -67,38 +67,6 @@ CREATE TABLE IF NOT EXISTS trading_calendar (
     is_week_end BOOLEAN,
     is_month_end BOOLEAN,
     is_quarter_end BOOLEAN
-);
-
--- Pipeline 运行
-CREATE TABLE IF NOT EXISTS pipeline_run (
-    run_id TEXT PRIMARY KEY,
-    task_name TEXT NOT NULL,
-    dataset_id TEXT NOT NULL,
-    year INTEGER,
-    rows_read INTEGER,
-    rows_written INTEGER,
-    status TEXT NOT NULL,
-    error_message TEXT,
-    dq_passed BOOLEAN,
-    dq_fail_count INTEGER DEFAULT 0,
-    dq_warn_count INTEGER DEFAULT 0,
-    started_at TIMESTAMP,
-    finished_at TIMESTAMP,
-    duration_sec REAL
-);
-
--- DQ 异常
-CREATE TABLE IF NOT EXISTS dq_issue (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    run_id TEXT NOT NULL,
-    dataset_id TEXT NOT NULL,
-    year INTEGER,
-    sid INTEGER,
-    trade_date DATE,
-    rule_name TEXT NOT NULL,
-    severity TEXT NOT NULL,
-    message TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Freeze 冻结点

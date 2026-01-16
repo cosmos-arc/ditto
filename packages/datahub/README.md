@@ -61,7 +61,6 @@ DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
 | `CalendarStore` | 交易日历 | SQLite + 内存缓存 |
 | `BarsStore` | OHLCV 行情 | Parquet (分区: sid/year) |
 | `AdjFactorStore` | 复权因子 | Parquet (分区: sid/year) |
-| `PipelineStore` | ETL 流水 | SQLite |
 | `UniverseStore` | 股票池 | SQLite |
 | `IndexWeightStore` | 指数权重 | SQLite |
 | `IngestionLogStore` | 数据摄取事件日志 | SQLite |

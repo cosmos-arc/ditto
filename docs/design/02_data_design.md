@@ -6,6 +6,14 @@
 
 ---
 
+## 变更记录
+
+| 日期 | 变更内容 |
+|------|----------|
+| 2026-01-16 | **架构简化**: 移除 `PipelineStore`（pipeline_run + dq_issue 表），采用简化的 `IngestionLogStore` 统一摄取元数据管理。原设计中的 run_id 跟踪和 DQ 详情记录被简化为按交易日的 UPSERT 模式，避免游标倒退问题并降低复杂度。 |
+
+---
+
 ## 一、架构总览
 
 ### 1.1 分层架构图
@@ -54,7 +62,7 @@
 │                                                                              │
 │   ┌─────────────────────────────────────────────────────────────┐           │
 │   │                    SQLite Stores                            │           │
-│   │  SecurityStore │ CalendarStore │ PipelineStore              │           │
+│   │  SecurityStore │ CalendarStore │ IngestionLogStore          │           │
 │   └───────────────────────────┬─────────────────────────────────┘           │
 │                               │                                             │
 │   ┌───────────────────────────┼─────────────────────────────────┐           │
@@ -227,7 +235,7 @@ packages/
           sqlite_client.py        # sqlite_client 客户端
           security_store.py       # security + security_mapping（含 PIT）
           calendar_store.py       # trading_calendar
-          pipeline_store.py       # pipeline_run + dq_issue
+          ingestion_log.py        # 摄取事件日志（SUCCESS/FAIL + 重试）
 
           # Parquet Stores（年分区）
           bars_store.py           # stock_daily / etf_daily 读写
@@ -1342,7 +1350,7 @@ import polars as pl
 if TYPE_CHECKING:
     from .stores.security_store import SecurityStore
     from .stores.calendar_store import CalendarStore
-    from .stores.pipeline_store import PipelineStore
+    from .stores.ingestion_log import IngestionLogStore
     from .stores.bars_store import BarsStore
     from .stores.index_store import IndexStore
     from .stores.adj_factor_store import AdjFactorStore
