@@ -4,10 +4,7 @@
 提供测试环境中重置和查询可观测性数据的功能.
 """
 
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from opentelemetry.sdk.trace import ReadableSpan
+from typing import Any
 
 from . import metrics, tracing
 
@@ -18,7 +15,7 @@ def reset_for_testing() -> None:
     metrics.reset_metrics()
 
 
-def get_recorded_spans() -> list[ReadableSpan]:
+def get_recorded_spans() -> list[Any]:
     """
     获取记录的 Spans（测试用）.
 
