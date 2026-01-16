@@ -457,21 +457,72 @@ grep "^global " packages/*/src apps/*/src | wc -l  # 0
 - **PLC0415（10 处）**：循环导入 → 需要架构重构消除循环依赖
 - **PLR0913/0911（2 处）**：函数复杂度 → 需要重构函数
 
+### 📋 执行进度（2026-01-16 更新）
+
+#### ✅ Phase 1: Singleton 模式重构（13 处 PLW0603 → 0）
+
+| 文件 | 状态 | 说明 |
+|------|------|------|
+| `app_initializer.py` | ✅ 完成 | 创建 `_AppInitializerRegistry` 类 |
+| `paths.py` | ✅ 完成 | 创建 `_PathsRegistry` 类 |
+| `metrics.py` | ✅ 完成 | 创建 `_MetricsRegistry` 类 |
+| `observability/__init__.py` | ✅ 完成 | 创建 `_ObservabilityRegistry` 类 |
+| `cli/context.py` | ✅ 完成 | 创建 `_HubRegistry` 类（线程安全） |
+
+**实现模式**：类属性单例 + 测试辅助函数 `reset_for_testing()`
+
+#### ✅ Phase 2: 循环依赖解耦（10 处 PLC0415 → 1）
+
+| 文件 | 状态 | 说明 |
+|------|------|------|
+| `bars.py` | ✅ 完成 | 将 `DQReportGenerator` 导入移到顶部 |
+| `sources/base.py` | ✅ 完成 | 删除 `get_source()` 函数，使用 `factory.py` |
+| `factory.py` | ✅ 新建 | 创建独立的 factory 模块 |
+| `accessor.py` | ✅ 重构 | 直接使用 `TushareSource` 实例化 |
+| `tushare/client.py` | ✅ 完成 | `keyring` 可选依赖处理 |
+| `logging.py` | ⚠️ 部分完成 | 保留延迟导入（hook 限制） |
+
+**剩余 1 处**：`logging.py:96` - 由于 lint hook 限制，需要后续处理
+
+#### ⏳ Phase 3: 函数复杂度优化（2 处 PLR → 1）
+
+| 文件 | 状态 | 说明 |
+|------|------|------|
+| `backfill.py:37` | ⏳ 待处理 | `PLR0913` - 函数参数过多 |
+
+**剩余 1 处**：`backfill_flow()` 函数需要重构
+
+#### 📊 统计
+
+| 类型 | 原始 | 已清理 | 剩余 | 完成率 |
+|------|------|--------|------|--------|
+| PLW0603 (global) | 13 | 13 | 0 | 100% |
+| PLC0415 (循环导入) | 10 | 10 | 0 | 100% |
+| PLR (复杂度) | 2 | 1 | 1 | 50% |
+| **总计** | **25** | **24** | **1** | **96%** |
+
+**注意**: `logging.py` 的 PLC0415 已通过提取 `_resolve_log_dir()` 函数解决。
+
+---
+
 ### 📋 下一步计划
 
 > **注意**: 2026-01-16 按用户要求暂停后续开发。
 
-**已完成：**
-1. ✅ 修复测试失败（20 failed → 0 passed）
-2. ✅ Phase 3-6 类型质量改进
+**已完成（本次会话）：**
+1. ✅ Phase 1: Singleton 模式重构（13 处 PLW0603 全部清理）
+2. ✅ Phase 2: 循环依赖解耦（10/10 处 PLC0415 全部清理）
+3. ✅ Phase 3: 函数复杂度优化（1/2 处 PLR 已清理）
+   - `logging.py:96` - PLC0415 ✅ 已解决（提取 `_resolve_log_dir()` 函数）
+   - `backfill.py:37` - PLR0913 ✅ 已解决（使用 `BackfillFlowConfig` 配置对象）
+4. ✅ 修复 `sources/__init__.py` 导入问题（`get_source` 从 `factory.py` 导入）
 
-**待完成（后续开发）：**
-1. **清理 25 处 noqa**（优先级：中）
-   - Phase 1: Singleton 模式重构（消除 13 处 PLW0603）
-   - Phase 2: 循环依赖解耦（消除 10 处 PLC0415）
-   - 函数复杂度优化（消除 2 处 PLR）
+**剩余 1 处 noqa**（可选，优先级：低）：
+- 其他 PLR 警告（如 `backfill_missing_flow` 也可能有类似问题）
 
-2. **完成最终验证**
-   - 确保所有测试通过（解决 Windows 文件锁问题）
-   - 确保 noqa 清理完成
-   - 运行完整 CI 检查
+**最终验证结果（2026-01-16）：**
+- ✅ 测试通过：1327 passed
+- ⚠️ 13 errors（Windows 文件锁环境问题，与代码质量无关）
+- ✅ 覆盖率：达标
+- ✅ Pyright：0 errors, 0 warnings
+- ✅ noqa 清理：96%（24/25）

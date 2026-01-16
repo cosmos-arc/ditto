@@ -12,6 +12,7 @@ Prefect flows for data ingestion.
 
 # 新版 flows（基于 IngestionCoordinator）
 from ditto_port.jobs.flows.backfill import (
+    BackfillFlowConfig,
     backfill_flow,
     backfill_missing_flow,
 )
@@ -23,6 +24,7 @@ from ditto_port.jobs.flows.repair import (
 )
 
 __all__ = [
+    "BackfillFlowConfig",
     "backfill_flow",
     "backfill_missing_flow",
     "daily_ingestion_flow",

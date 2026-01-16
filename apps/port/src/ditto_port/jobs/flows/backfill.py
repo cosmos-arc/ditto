@@ -20,6 +20,20 @@ if TYPE_CHECKING:
     pass
 
 
+class BackfillFlowConfig(BaseModel):
+    """回补 Flow 配置。"""
+
+    dataset: str
+    start_date: str
+    end_date: str
+    source: str = "tushare"
+    data_root: str = "data"
+    parallel: int = 1
+    chunk_size: int = 10
+    resume_from: str | None = None
+    skip_existing: bool = False
+
+
 class BackfillFlowResult(BaseModel):
     """回补 Flow 结果。"""
 
@@ -34,17 +48,7 @@ class BackfillFlowResult(BaseModel):
 
 
 @flow(name="backfill", description="全量数据回补流程")
-def backfill_flow(  # noqa: PLR0913
-    dataset: str,
-    start_date: str,
-    end_date: str,
-    source: str = "tushare",
-    data_root: str = "data",
-    parallel: int = 1,
-    chunk_size: int = 10,
-    resume_from: str | None = None,
-    skip_existing: bool = False,
-) -> dict[str, object]:
+def backfill_flow(config: BackfillFlowConfig) -> dict[str, object]:
     """
     全量数据回补流程。
 
@@ -55,21 +59,16 @@ def backfill_flow(  # noqa: PLR0913
     4. 跳过已存在数据（skip_existing）
 
     Args:
-        dataset: 数据集名称（如 "stock_daily"）
-        start_date: 开始日期 (YYYY-MM-DD)
-        end_date: 结束日期 (YYYY-MM-DD)
-        source: 数据源名称
-        data_root: DataHub 根目录
-        parallel: 并行度，默认为 1（串行）
-        chunk_size: 分块大小，用于进度追踪
-        resume_from: 从指定日期恢复回补
-        skip_existing: 是否跳过已存在的数据
+        config: 回补配置对象
 
     Returns:
         回补结果字典
 
     """
-    with create_ingestion_context(data_root=data_root, source=source) as (
+    # 处理 resume_from
+    start_date = config.resume_from or config.start_date
+
+    with create_ingestion_context(data_root=config.data_root, source=config.source) as (
         hub,
         coordinator,
     ):
@@ -80,22 +79,18 @@ def backfill_flow(  # noqa: PLR0913
             ingestion_log_store=hub.ingestion_log,
         )
 
-        # 处理 resume_from
-        if resume_from:
-            start_date = resume_from
-
         # 执行回补
         result = backfill_manager.backfill_range(
-            dataset=dataset,
+            dataset=config.dataset,
             start_date=start_date,
-            end_date=end_date,
-            parallel=parallel,
+            end_date=config.end_date,
+            parallel=config.parallel,
         )
 
         return {
             "dataset": result.dataset,
             "start_date": start_date,
-            "end_date": end_date,
+            "end_date": config.end_date,
             "total_dates": result.total_dates,
             "success_count": result.success_count,
             "skipped_count": result.skipped_count,

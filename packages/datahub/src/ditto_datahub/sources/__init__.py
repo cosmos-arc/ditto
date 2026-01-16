@@ -9,8 +9,8 @@ from ditto_datahub.sources.base import (
     SourceFetchError,
     SourceRateLimitError,
     SourceTransformationError,
-    get_source,
 )
+from ditto_datahub.sources.factory import get_source
 from ditto_datahub.sources.tushare.source import TushareSource
 
 __all__ = [
