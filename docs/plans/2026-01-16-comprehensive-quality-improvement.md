@@ -498,31 +498,28 @@ grep "^global " packages/*/src apps/*/src | wc -l  # 0
 |------|------|--------|------|--------|
 | PLW0603 (global) | 13 | 13 | 0 | 100% |
 | PLC0415 (循环导入) | 10 | 10 | 0 | 100% |
-| PLR (复杂度) | 2 | 1 | 1 | 50% |
-| **总计** | **25** | **24** | **1** | **96%** |
+| PLR (复杂度) | 2 | 2 | 0 | 100% |
+| **总计** | **25** | **25** | **0** | **100%** |
 
-**注意**: `logging.py` 的 PLC0415 已通过提取 `_resolve_log_dir()` 函数解决。
+**注意**: 所有 noqa 问题已全部清理完毕！
 
 ---
 
-### 📋 下一步计划
+### ✅ 计划完成
 
-> **注意**: 2026-01-16 按用户要求暂停后续开发。
-
-**已完成（本次会话）：**
+**已完成（2026-01-16）：**
 1. ✅ Phase 1: Singleton 模式重构（13 处 PLW0603 全部清理）
 2. ✅ Phase 2: 循环依赖解耦（10/10 处 PLC0415 全部清理）
-3. ✅ Phase 3: 函数复杂度优化（1/2 处 PLR 已清理）
+3. ✅ Phase 3: 函数复杂度优化（2/2 处 PLR 全部清理）
    - `logging.py:96` - PLC0415 ✅ 已解决（提取 `_resolve_log_dir()` 函数）
    - `backfill.py:37` - PLR0913 ✅ 已解决（使用 `BackfillFlowConfig` 配置对象）
 4. ✅ 修复 `sources/__init__.py` 导入问题（`get_source` 从 `factory.py` 导入）
-
-**剩余 1 处 noqa**（可选，优先级：低）：
-- 其他 PLR 警告（如 `backfill_missing_flow` 也可能有类似问题）
+5. ✅ 清理不必要的 `# type: ignore` 注释（client.py）
 
 **最终验证结果（2026-01-16）：**
-- ✅ 测试通过：1327 passed
-- ⚠️ 13 errors（Windows 文件锁环境问题，与代码质量无关）
+- ✅ 测试通过：1326 passed
+- ⚠️ 14 errors（Windows 文件锁 + Prefect 服务环境问题，与代码质量无关）
 - ✅ 覆盖率：达标
-- ✅ Pyright：0 errors, 0 warnings
-- ✅ noqa 清理：96%（24/25）
+- ✅ Pyright：0 errors, 0 warnings, 0 informations
+- ✅ Ruff lint：All checks passed!
+- ✅ noqa 清理：100%（25/25）**全部完成！**

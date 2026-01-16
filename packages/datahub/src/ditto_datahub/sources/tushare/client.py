@@ -15,6 +15,11 @@ from tenacity import (
     wait_exponential,
 )
 
+try:
+    import keyring
+except ImportError:
+    keyring = None
+
 from ditto_datahub.sources.base import (
     SourceConfigurationError,
     SourceFetchError,
@@ -60,21 +65,20 @@ def _get_tushare_token(token: str | None = None) -> str:
         return token
 
     # 2. Try keyring (recommended)
-    try:
-        import keyring  # noqa: PLC0415 - circular import avoidance
-
-        if keyring_token := keyring.get_password("ditto", "tushare"):
-            # keyring.get_password returns str | None
-            assert isinstance(keyring_token, str)
-            logger.debug(
-                "Token loaded from keyring",
-                event="token_loaded",
-                source="keyring",
-            )
-            return keyring_token
-    except Exception as e:
-        # keyring may not be available or configured
-        logger.debug("Keyring not available, skipping", error=str(e))
+    if keyring is not None:
+        try:
+            if keyring_token := keyring.get_password("ditto", "tushare"):
+                # keyring.get_password returns str | None
+                assert isinstance(keyring_token, str)
+                logger.debug(
+                    "Token loaded from keyring",
+                    event="token_loaded",
+                    source="keyring",
+                )
+                return keyring_token
+        except Exception as e:
+            # keyring may not be available or configured
+            logger.debug("Keyring not available, skipping", error=str(e))
 
     # 3. Try ~/.ditto/secrets.toml (fallback)
     config_file = Path.home() / ".ditto" / "secrets.toml"
