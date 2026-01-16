@@ -50,43 +50,30 @@
 
 ---
 
-### 任务 1.2: security.py 参数封装
+### 任务 1.2: security.py 参数封装 ✅
 
-**文件**: `packages/datahub/src/ditto_datahub/repositories/security.py`
+**状态**: 已完成（2026-01-16）
 
-**问题**: 第 218 行: `register` - 8 个参数
+**实现**: 创建 `SecurityRegistration` 配置类（在 `security_store.py` 顶部）
 
-**解决方案**:
-```python
-# 创建配置类（建议放在 models.py 或本文件顶部）
-@dataclass(frozen=True)
-class SecurityRegistration:
-    """证券注册信息配置对象"""
-    src_code: str
-    symbol: str
-    name: str
-    exchange: str
-    asset_class: str
-    list_date: str
-    source: str = "tushare"
-    board: str | None = None
+**变更**:
+- `SecurityRepository.register()` 现在接受 `SecurityRegistration` 对象
+- 更新内部调用（`register_batch`, `resolve_or_create_batch`）使用配置对象
+- 更新测试用例使用新 API
 
-def register(self, registration: SecurityRegistration) -> int:
-    """Register a new security and allocate SID."""
-```
-
-**验证步骤**:
-```bash
-pixi run -e dev test packages/datahub/tests/unit/repositories/test_security_repository_unit.py
-```
+**测试**: ✅ 21 个测试全部通过
 
 ---
 
-### 任务 1.3: security_store.py 参数封装
+### 任务 1.3: security_store.py 参数封装 ✅
 
-**文件**: `packages/datahub/src/ditto_datahub/stores/security_store.py`
+**状态**: 已完成（2026-01-16）
 
-**问题**: 第 495 行: `register` - 9 个参数
+**实现**: 复用 `SecurityRegistration` 配置类
+
+**变更**:
+- `SecurityStore.register(sid, registration)` 替代原来的 9 个参数
+- 保持数据库事务逻辑不变
 
 **解决方案**: 复用 `SecurityRegistration` 配置对象
 ```python

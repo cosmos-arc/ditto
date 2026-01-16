@@ -8,7 +8,7 @@ import polars as pl
 from ditto_foundation import M, logger, traced
 from ditto_foundation.util.checksum import ChecksumCompute
 
-from ditto_datahub.stores.security_store import SecurityStore
+from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 
 if TYPE_CHECKING:
     from ditto_datahub.runtime.sid_allocator import SidAllocator
@@ -215,29 +215,12 @@ class SecurityRepository:
         return self._security_store.get_src_code(sid, source, asof)
 
     @traced("repository.security.register")
-    def register(
-        self,
-        src_code: str,
-        symbol: str,
-        name: str,
-        exchange: str,
-        asset_class: str,
-        list_date: str,
-        source: str = "tushare",
-        board: str | None = None,
-    ) -> int:
+    def register(self, registration: SecurityRegistration) -> int:
         """
         Register a new security and allocate SID.
 
         Args:
-            src_code: Source code.
-            symbol: Display symbol.
-            name: Security name.
-            exchange: Exchange code.
-            asset_class: Asset class (stock/etf/index).
-            list_date: Listing date.
-            source: Data source identifier.
-            board: Board code (optional).
+            registration: Security registration configuration.
 
         Returns:
             Allocated SID.
@@ -246,32 +229,24 @@ class SecurityRepository:
         logger.info(
             "Registering new security",
             event="security_register_start",
-            symbol=symbol,
-            src_code=src_code,
-            asset_class=asset_class,
+            symbol=registration.symbol,
+            src_code=registration.src_code,
+            asset_class=registration.asset_class,
         )
 
         # Allocate SID
-        sid = self._sid_allocator.allocate(asset_class)
+        sid = self._sid_allocator.allocate(registration.asset_class)
 
         # Register to security store
         registered_sid = self._security_store.register(
-            sid=sid,
-            source=source,
-            src_code=src_code,
-            symbol=symbol,
-            name=name,
-            exchange=exchange,
-            asset_class=asset_class,
-            list_date=list_date,
-            board=board,
+            sid=sid, registration=registration
         )
 
         logger.info(
             "Security registered successfully",
             event="security_register_complete",
             sid=registered_sid,
-            symbol=symbol,
+            symbol=registration.symbol,
         )
 
         # Record metrics
@@ -328,14 +303,16 @@ class SecurityRepository:
 
             # Register new security
             self.register(
-                src_code=src_code,
-                symbol=row["symbol"],
-                name=row["name"],
-                exchange=row["exchange"],
-                asset_class=asset_class,
-                list_date=row["list_date"],
-                source=source,
-                board=row.get("board"),
+                SecurityRegistration(
+                    src_code=src_code,
+                    symbol=row["symbol"],
+                    name=row["name"],
+                    exchange=row["exchange"],
+                    asset_class=asset_class,
+                    list_date=row["list_date"],
+                    source=source,
+                    board=row.get("board"),
+                )
             )
             registered_count += 1
 
@@ -427,13 +404,15 @@ class SecurityRepository:
 
             # 不存在则创建新证券
             sid = self.register(
-                src_code=src_code,
-                symbol=row["symbol"],
-                name=row["name"],
-                exchange=row["exchange"],
-                asset_class=asset_class,
-                list_date=row["list_date"],
-                source=source,
+                SecurityRegistration(
+                    src_code=src_code,
+                    symbol=row["symbol"],
+                    name=row["name"],
+                    exchange=row["exchange"],
+                    asset_class=asset_class,
+                    list_date=row["list_date"],
+                    source=source,
+                )
             )
             result[src_code] = sid
             created_count += 1

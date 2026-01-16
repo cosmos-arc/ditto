@@ -9,6 +9,7 @@ Following design document at docs/design/02_data_design.md
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, cast
 
 import polars as pl
@@ -16,6 +17,24 @@ from ditto_foundation import M, logger, traced
 
 from ditto_datahub.runtime.cache import DataCache
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+
+
+@dataclass(frozen=True)
+class SecurityRegistration:
+    """
+    证券注册信息配置对象。
+
+    用于封装证券注册所需的所有参数，避免函数参数过多。
+    """
+
+    src_code: str
+    symbol: str
+    name: str
+    exchange: str
+    asset_class: str
+    list_date: str
+    source: str = "tushare"
+    board: str | None = None
 
 
 def _build_in_clause(
@@ -492,31 +511,13 @@ class SecurityStore:
 
         return df.join(symbol_df, on="sid", how="left")
 
-    def register(
-        self,
-        sid: int,
-        source: str,
-        src_code: str,
-        symbol: str,
-        name: str,
-        exchange: str,
-        asset_class: str,
-        list_date: str,
-        board: str | None = None,
-    ) -> int:
+    def register(self, sid: int, registration: SecurityRegistration) -> int:
         """
         Register a new security.
 
         Args:
             sid: Security ID.
-            source: Data source identifier.
-            src_code: Source code.
-            symbol: Display symbol.
-            name: Security name.
-            exchange: Exchange code.
-            asset_class: Asset class.
-            list_date: Listing date.
-            board: Board code (optional).
+            registration: Security registration configuration.
 
         Returns:
             The registered sid.
@@ -526,11 +527,11 @@ class SecurityStore:
             "Starting security registration",
             event="security_register_start",
             sid=sid,
-            symbol=symbol,
-            src_code=src_code,
-            source=source,
-            asset_class=asset_class,
-            exchange=exchange,
+            symbol=registration.symbol,
+            src_code=registration.src_code,
+            source=registration.source,
+            asset_class=registration.asset_class,
+            exchange=registration.exchange,
         )
 
         try:
@@ -539,7 +540,15 @@ class SecurityStore:
                 """INSERT INTO security
                 (sid, symbol, name, exchange, board, asset_class, list_date, is_active)
                 VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)""",
-                [sid, symbol, name, exchange, board, asset_class, list_date],
+                [
+                    sid,
+                    registration.symbol,
+                    registration.name,
+                    registration.exchange,
+                    registration.board,
+                    registration.asset_class,
+                    registration.list_date,
+                ],
             )
 
             # Insert into mapping table
@@ -547,13 +556,18 @@ class SecurityStore:
                 """INSERT INTO security_mapping
                 (sid, source, src_code, effective_from, is_primary)
                 VALUES (?, ?, ?, ?, TRUE)""",
-                [sid, source, src_code, list_date],
+                [
+                    sid,
+                    registration.source,
+                    registration.src_code,
+                    registration.list_date,
+                ],
             )
 
             # 失效相关缓存
             if self._data_cache:
                 # 失效特定 src_code 的负缓存（如果有）
-                cache_key = f"sid:{src_code}:{source}:current"
+                cache_key = f"sid:{registration.src_code}:{registration.source}:current"
                 self._data_cache.invalidate(cache_key)
                 # 失效 sid_symbol_map 缓存
                 self._data_cache.invalidate_pattern("sid_symbol_map:*")
@@ -564,7 +578,7 @@ class SecurityStore:
                 "Security registered successfully",
                 event="security_register_complete",
                 sid=sid,
-                symbol=symbol,
+                symbol=registration.symbol,
             )
 
             return sid
@@ -575,7 +589,7 @@ class SecurityStore:
                 "Security registration failed",
                 event="security_register_failed",
                 sid=sid,
-                symbol=symbol,
+                symbol=registration.symbol,
             )
             raise
 

@@ -5,7 +5,7 @@ import pytest
 from ditto_datahub.repositories.security import SecurityRepository
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
-from ditto_datahub.stores.security_store import SecurityStore
+from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
@@ -213,7 +213,7 @@ class TestSecurityRepository:
     def test_register_allocates_sid(self) -> None:
         """Test register allocates new SID."""
         # Act
-        sid = self.repo.register(
+        registration = SecurityRegistration(
             src_code="600001.SH",
             symbol="600001",
             name="Test Stock",
@@ -221,6 +221,7 @@ class TestSecurityRepository:
             asset_class="stock",
             list_date="2000-01-01",
         )
+        sid = self.repo.register(registration)
 
         # Assert
         assert sid == 1000001  # First stock SID (starts at STOCK_MIN + 1)
