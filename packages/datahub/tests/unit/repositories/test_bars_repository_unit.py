@@ -16,6 +16,7 @@ from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
+from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
@@ -281,7 +282,8 @@ class TestResolvedQuery:
 
 @pytest.mark.pit
 class TestBarsRepository:
-    """Tests for BarsRepository.
+    """
+    Tests for BarsRepository.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
@@ -302,6 +304,7 @@ class TestBarsRepository:
         self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
+        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.repo = BarsRepository(
             self.bars_store,
@@ -310,6 +313,7 @@ class TestBarsRepository:
             self.stock_status_store,  # B.3
             self.dq_engine,
             self.file_lock_manager,
+            self.quarantine_store,
         )
 
         # Insert test security
@@ -327,6 +331,9 @@ class TestBarsRepository:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
+        # Close SQLite connection before cleanup (Windows file lock)
+        if hasattr(self, 'quarantine_store'):
+            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_get_returns_empty_dataframe_for_no_data(self) -> None:
@@ -421,6 +428,7 @@ class TestPITSafeAdjustment:
         self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
+        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.repo = BarsRepository(
             self.bars_store,
@@ -429,6 +437,7 @@ class TestPITSafeAdjustment:
             self.stock_status_store,  # B.3
             self.dq_engine,
             self.file_lock_manager,
+            self.quarantine_store,
         )
 
         # Insert test security
@@ -441,10 +450,14 @@ class TestPITSafeAdjustment:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
+        # Close SQLite connection before cleanup (Windows file lock)
+        if hasattr(self, 'quarantine_store'):
+            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_qfq_uses_knowledge_date_not_trade_date(self) -> None:
-        """Test that QFQ adjustment uses knowledge_date for PIT safety.
+        """
+        Test that QFQ adjustment uses knowledge_date for PIT safety.
 
         Scenario:
         - Trade date: 2024-01-03
@@ -520,7 +533,8 @@ class TestPITSafeAdjustment:
         assert abs(result_sorted["close"][2] - 11.00) < 0.01  # 2024-01-04
 
     def test_qfq_with_knowledge_date_uses_later_factors(self) -> None:
-        """Test QFQ with knowledge_date uses later factors when asof allows.
+        """
+        Test QFQ with knowledge_date uses later factors when asof allows.
 
         Scenario:
         - Same data as above
@@ -614,6 +628,7 @@ class TestQFQAdjustment:
         self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
+        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.repo = BarsRepository(
             self.bars_store,
@@ -622,6 +637,7 @@ class TestQFQAdjustment:
             self.stock_status_store,  # B.3
             self.dq_engine,
             self.file_lock_manager,
+            self.quarantine_store,
         )
 
         # Insert test security
@@ -634,6 +650,9 @@ class TestQFQAdjustment:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
+        # Close SQLite connection before cleanup (Windows file lock)
+        if hasattr(self, 'quarantine_store'):
+            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_qfq_uses_latest_adj_factor(self) -> None:
@@ -876,6 +895,7 @@ class TestBarsRepositorySingle:
         self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
+        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.repo = BarsRepository(
             self.bars_store,
@@ -884,6 +904,7 @@ class TestBarsRepositorySingle:
             self.stock_status_store,  # B.3
             self.dq_engine,
             self.file_lock_manager,
+            self.quarantine_store,
         )
 
         # Insert test security
@@ -901,6 +922,9 @@ class TestBarsRepositorySingle:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
+        # Close SQLite connection before cleanup (Windows file lock)
+        if hasattr(self, 'quarantine_store'):
+            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_get_single_by_src_code(self) -> None:
@@ -1062,6 +1086,7 @@ class TestMixedAssetClass:
         self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
+        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.repo = BarsRepository(
             self.bars_store,
@@ -1070,6 +1095,7 @@ class TestMixedAssetClass:
             self.stock_status_store,  # B.3
             self.dq_engine,
             self.file_lock_manager,
+            self.quarantine_store,
         )
 
         # Insert stock security (SID: 100,000,000 - 199,999,999)
@@ -1089,6 +1115,9 @@ class TestMixedAssetClass:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
+        # Close SQLite connection before cleanup (Windows file lock)
+        if hasattr(self, 'quarantine_store'):
+            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_get_with_mixed_sids_raises_error(self) -> None:
@@ -1293,6 +1322,7 @@ class TestAdjFactorEdgeCases:
         self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
+        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.repo = BarsRepository(
             self.bars_store,
@@ -1301,6 +1331,7 @@ class TestAdjFactorEdgeCases:
             self.stock_status_store,  # B.3
             self.dq_engine,
             self.file_lock_manager,
+            self.quarantine_store,
         )
 
         # Insert test security
@@ -1313,6 +1344,9 @@ class TestAdjFactorEdgeCases:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
+        # Close SQLite connection before cleanup (Windows file lock)
+        if hasattr(self, 'quarantine_store'):
+            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_qfq_with_all_missing_factors_returns_original(self) -> None:
@@ -1584,6 +1618,7 @@ class TestMarketWideMode:
         self.stock_status_store = StockStatusStore(data_root)
         self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
+        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.repo = BarsRepository(
             self.bars_store,
@@ -1592,6 +1627,7 @@ class TestMarketWideMode:
             self.stock_status_store,
             self.dq_engine,
             self.file_lock_manager,
+            self.quarantine_store,
         )
 
         # Insert multiple active stocks
@@ -1607,6 +1643,9 @@ class TestMarketWideMode:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
+        # Close SQLite connection before cleanup (Windows file lock)
+        if hasattr(self, 'quarantine_store'):
+            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_market_wide_returns_all_active_stocks(self) -> None:

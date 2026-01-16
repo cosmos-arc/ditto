@@ -6,6 +6,7 @@ from typing import Any
 import ditto_foundation.app_initializer as init_module
 import ditto_foundation.config.paths as paths_module
 import ditto_foundation.config.settings as settings_module
+import pytest
 from ditto_foundation.app_initializer import (
     AppInitializer,
     get_initializer,
@@ -30,6 +31,7 @@ def test_initialize_app_basic() -> None:
     assert "observability_initialized" in result
 
 
+@pytest.mark.serial
 def test_initialize_app_creates_directories(tmp_path: Any) -> None:
     """Test initialization creates required directories using XDG paths."""
     # Set XDG base directory to temp path for testing
@@ -93,6 +95,7 @@ def test_app_initializer_already_initialized() -> None:
     assert result2["status"] == "already_initialized"
 
 
+@pytest.mark.serial
 def test_get_initializer() -> None:
     """Test getting global initializer."""
     init_module._initializer = None

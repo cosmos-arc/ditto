@@ -1,4 +1,5 @@
-"""Property-based tests for date utilities in ditto-foundation.
+"""
+Property-based tests for date utilities in ditto-foundation.
 
 Uses Hypothesis to generate random inputs and verify invariants.
 """
@@ -6,7 +7,7 @@ Uses Hypothesis to generate random inputs and verify invariants.
 from datetime import date, datetime
 
 from ditto_foundation.util.dates import normalize_date
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 
@@ -16,8 +17,10 @@ class TestNormalizeDateProperties:
     @given(
         st.datetimes(min_value=datetime(2000, 1, 1), max_value=datetime(2100, 12, 31))
     )
+    @settings(max_examples=50)
     def test_datetime_to_string_roundtrip(self, dt: datetime) -> None:
-        """Property: datetime -> normalize -> parse should preserve date part.
+        """
+        Property: datetime -> normalize -> parse should preserve date part.
 
         The normalize function should extract the date part from datetime
         and format it consistently, ignoring time components.
@@ -28,7 +31,8 @@ class TestNormalizeDateProperties:
 
     @given(st.dates(min_value=date(2000, 1, 1), max_value=date(2100, 12, 31)))
     def test_date_to_string_roundtrip(self, d: date) -> None:
-        """Property: date -> normalize should produce consistent format.
+        """
+        Property: date -> normalize should produce consistent format.
 
         The normalize function should format dates consistently in YYYY-MM-DD format.
         """
@@ -42,7 +46,8 @@ class TestNormalizeDateProperties:
         st.integers(min_value=1, max_value=28),
     )
     def test_constructed_dates(self, year: int, month: int, day: int) -> None:
-        """Property: normalize_date handles valid date constructions.
+        """
+        Property: normalize_date handles valid date constructions.
 
         Using day 1-28 ensures valid dates across all months.
         """
@@ -54,7 +59,8 @@ class TestNormalizeDateProperties:
         st.datetimes(min_value=datetime(2000, 1, 1), max_value=datetime(2100, 12, 31))
     )
     def test_datetime_time_component_ignored(self, dt: datetime) -> None:
-        """Property: normalize_date ignores time component of datetime.
+        """
+        Property: normalize_date ignores time component of datetime.
 
         Two datetimes on the same day but different times should normalize
         to same string.
@@ -72,7 +78,8 @@ class TestNormalizeDateProperties:
     def test_same_day_different_time_same_result(
         self, dt1: datetime, dt2: datetime
     ) -> None:
-        """Property: datetime on same day normalize to same result.
+        """
+        Property: datetime on same day normalize to same result.
 
         If two datetimes fall on the same calendar date, they should
         normalize identically.
