@@ -16,8 +16,66 @@ Ditto 路径管理 - 遵循 XDG Base Directory 规范.
 
 import os
 import sys
+from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
+
+
+@dataclass(frozen=True)
+class EnvVarConfig:
+    """环境变量配置."""
+
+    ditto_env: str
+    """Ditto 特定环境变量名(如 "DITTO_CONFIG_DIR")"""
+
+    xdg_env: str
+    """XDG 标准环境变量名(如 "XDG_CONFIG_HOME")"""
+
+
+@dataclass(frozen=True)
+class PlatformConfig:
+    """平台相关配置."""
+
+    platform: str
+    """平台标识(linux/darwin/win32)"""
+
+    unix_default: str
+    """Unix 平台默认路径(如 "~/.config")"""
+
+    default_windows_base: str = "D:\\data\\ditto"
+    """Windows 默认基础目录"""
+
+
+@dataclass(frozen=True)
+class AppConfig:
+    """应用配置."""
+
+    app_name: str
+    """应用名称(如 "ditto")"""
+
+    subdir: str
+    """子目录名称(如 "config")"""
+
+
+@dataclass(frozen=True)
+class PathResolverConfig:
+    """
+    路径解析器配置对象.
+
+    通过组合内聚的小配置对象，避免单一配置类参数过多（PLR0913）.
+    """
+
+    env: EnvVarConfig
+    """环境变量配置"""
+
+    platform: PlatformConfig
+    """平台配置"""
+
+    app: AppConfig
+    """应用配置"""
+
+    base_override: Path | None = None
+    """测试模式的基础目录(可选)"""
 
 
 class PathResolver:
@@ -34,39 +92,22 @@ class PathResolver:
 
     DEFAULT_WINDOWS_BASE: str = "D:\\data\\ditto"
 
-    def __init__(
-        self,
-        ditto_env: str,
-        xdg_env: str,
-        subdir: str,
-        unix_default: str,
-        app_name: str,
-        platform: str,
-        base_override: Path | None,
-        default_windows_base: str = DEFAULT_WINDOWS_BASE,
-    ) -> None:
+    def __init__(self, config: PathResolverConfig) -> None:
         """
         初始化路径解析器.
 
         Args:
-            ditto_env: Ditto 特定环境变量名
-            xdg_env: XDG 标准环境变量名
-            subdir: 子目录名称
-            unix_default: Unix 平台默认路径
-            app_name: 应用名称
-            platform: 平台标识（linux/darwin/win32）
-            base_override: 测试模式的基础目录
-            default_windows_base: Windows 默认基础目录
+            config: 路径解析器配置对象
 
         """
-        self.ditto_env = ditto_env
-        self.xdg_env = xdg_env
-        self.subdir = subdir
-        self.unix_default = unix_default
-        self.app_name = app_name
-        self.platform = platform
-        self.base_override = base_override
-        self.default_windows_base = default_windows_base
+        self.ditto_env = config.env.ditto_env
+        self.xdg_env = config.env.xdg_env
+        self.subdir = config.app.subdir
+        self.unix_default = config.platform.unix_default
+        self.app_name = config.app.app_name
+        self.platform = config.platform.platform
+        self.base_override = config.base_override
+        self.default_windows_base = config.platform.default_windows_base
 
     def resolve(self) -> Path:
         """
@@ -362,16 +403,21 @@ class XDGPaths:
             解析后的路径.
 
         """
-        resolver = PathResolver(
-            ditto_env=ditto_env,
-            xdg_env=xdg_env,
-            subdir=subdir,
-            unix_default=unix_default,
-            app_name=self.APP_NAME,
+        env = EnvVarConfig(ditto_env=ditto_env, xdg_env=xdg_env)
+        platform = PlatformConfig(
             platform=self._platform,
-            base_override=self._base_override,
+            unix_default=unix_default,
             default_windows_base=self.DEFAULT_WINDOWS_BASE,
         )
+        app = AppConfig(app_name=self.APP_NAME, subdir=subdir)
+
+        config = PathResolverConfig(
+            env=env,
+            platform=platform,
+            app=app,
+            base_override=self._base_override,
+        )
+        resolver = PathResolver(config)
         return resolver.resolve()
 
     # ==================== 工具方法 ====================
@@ -413,6 +459,30 @@ class XDGPaths:
 _paths: XDGPaths | None = None
 
 
+class _PathsRegistry:
+    """
+    Registry for managing XDGPaths singleton.
+
+    Uses class-level attributes to store singleton state, eliminating
+    the need for global statements while maintaining the same API.
+    """
+
+    instance: XDGPaths | None = None
+
+    @classmethod
+    def get_instance(cls) -> XDGPaths:
+        """Get or create the singleton XDGPaths instance."""
+        if cls.instance is None:
+            cls.instance = XDGPaths()
+            cls.instance.ensure_all()
+        return cls.instance
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the singleton instance (for testing purposes)."""
+        cls.instance = None
+
+
 def get_paths() -> XDGPaths:
     """
     获取全局路径管理器实例.
@@ -423,11 +493,7 @@ def get_paths() -> XDGPaths:
         XDGPaths: 路径管理器实例.
 
     """
-    global _paths  # noqa: PLW0603 - singleton pattern requires global state
-    if _paths is None:
-        _paths = XDGPaths()
-        _paths.ensure_all()
-    return _paths
+    return _PathsRegistry.get_instance()
 
 
 def reload_paths() -> XDGPaths:
@@ -438,6 +504,18 @@ def reload_paths() -> XDGPaths:
         XDGPaths: 新的路径管理器实例.
 
     """
-    global _paths  # noqa: PLW0603 - singleton pattern requires global state
-    _paths = None
+    _PathsRegistry.reset()
     return get_paths()
+
+
+def reset_paths_for_testing() -> None:
+    """
+    Reset the singleton paths (for testing purposes only).
+
+    This function allows tests to reset the global state between test runs.
+    """
+    _PathsRegistry.reset()
+
+
+# Module-level accessor for backward compatibility with tests
+_paths = _PathsRegistry.instance
