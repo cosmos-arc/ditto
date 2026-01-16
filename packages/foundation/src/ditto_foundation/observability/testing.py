@@ -4,10 +4,10 @@
 提供测试环境中重置和查询可观测性数据的功能.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-# 为了类型检查，导入 ReadableSpan（但在运行时不使用）
-from opentelemetry.sdk.trace import ReadableSpan  # type: ignore[unused-import]
+if TYPE_CHECKING:
+    from opentelemetry.sdk.trace import ReadableSpan
 
 from . import metrics, tracing
 
