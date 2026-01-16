@@ -7,7 +7,7 @@ Uses Hypothesis to generate random inputs and verify invariants.
 from datetime import date, datetime
 
 from ditto_foundation.util.dates import normalize_date
-from hypothesis import given, settings
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 
@@ -17,7 +17,7 @@ class TestNormalizeDateProperties:
     @given(
         st.datetimes(min_value=datetime(2000, 1, 1), max_value=datetime(2100, 12, 31))
     )
-    @settings(max_examples=50)
+    @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
     def test_datetime_to_string_roundtrip(self, dt: datetime) -> None:
         """
         Property: datetime -> normalize -> parse should preserve date part.

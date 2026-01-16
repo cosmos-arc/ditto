@@ -31,10 +31,12 @@ class TestDataHub:
         pool.close()
 
     def _get_sample_calendar_rows(self) -> list[tuple]:
-        """Get sample trading calendar rows for testing.
+        """
+        Get sample trading calendar rows for testing.
 
         Returns:
             List of calendar row tuples matching trading_calendar schema.
+
         """
         return [
             (
@@ -79,10 +81,12 @@ class TestDataHub:
         ]
 
     def _insert_calendar_data(self, rows: list[tuple] | None = None) -> None:
-        """Insert calendar test data into database.
+        """
+        Insert calendar test data into database.
 
         Args:
             rows: Calendar rows to insert. If None, uses sample data.
+
         """
         if rows is None:
             rows = self._get_sample_calendar_rows()
@@ -295,7 +299,6 @@ class TestDataHub:
 
     def test_resolve_sid_raises_sid_not_found_error(self) -> None:
         """Test resolve_sid raises SidNotFoundError when identifier not found."""
-
         with DataHub(self.data_root) as hub:
             # Try to resolve a non-existent identifier
             with pytest.raises(SidNotFoundError) as exc_info:
@@ -308,7 +311,6 @@ class TestDataHub:
 
     def test_resolve_sid_with_custom_source(self) -> None:
         """Test resolve_sid with custom source parameter."""
-
         with DataHub(self.data_root) as hub:
             # Try to resolve with custom source
             with pytest.raises(SidNotFoundError) as exc_info:
@@ -318,7 +320,6 @@ class TestDataHub:
 
     def test_resolve_sid_with_asof_parameter(self) -> None:
         """Test resolve_sid with asof parameter for PIT queries."""
-
         with DataHub(self.data_root) as hub:
             # Try to resolve with asof parameter
             with pytest.raises(SidNotFoundError) as exc_info:
@@ -364,12 +365,12 @@ class TestDataHub:
 
     def test_init_with_none_uses_default_path(self, mocker) -> None:
         """Test __init__ with data_root=None uses default path."""
-
         # Mock get_paths 返回值
         mock_path_obj = Path("D:/test/ditto/data")
 
         # 使用 mocker.patch 替代 patch
-        mock_get_paths = mocker.patch("ditto_foundation.config.paths.get_paths")
+        # 需要匹配 hub.py 中的导入位置
+        mock_get_paths = mocker.patch("ditto_datahub.hub.get_paths")
         mock_get_paths.return_value.data_home = mock_path_obj
 
         with DataHub(data_root=None) as hub:

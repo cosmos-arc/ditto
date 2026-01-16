@@ -24,6 +24,8 @@ def mock_hub_bars_write(file_path: str, checksum: str) -> WriteResult:
         checksum=checksum,
         rows_written=0,
         rows_total=0,
+        blocked=False,
+        dq_result=None,
     )
 
 

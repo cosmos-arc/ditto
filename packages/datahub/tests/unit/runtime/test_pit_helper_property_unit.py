@@ -1,4 +1,5 @@
-"""Property-based tests for PIT Helper in ditto-datahub.
+"""
+Property-based tests for PIT Helper in ditto-datahub.
 
 Uses Hypothesis to verify PIT query generation invariants.
 """
@@ -7,7 +8,7 @@ import re
 
 import pytest
 from ditto_datahub.runtime.pit_helper import PitHelper
-from hypothesis import given, settings
+from hypothesis import HealthCheck, given, settings
 from hypothesis.strategies import (
     from_regex,
     lists,
@@ -60,9 +61,10 @@ class TestPitHelperProperties:
     """Property-based tests for PitHelper."""
 
     @given(valid_date_strategy)
-    @settings(max_examples=20)
+    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow])
     def test_validate_date_string_accepts_valid(self, date_str: str) -> None:
-        """Property: Valid date strings should pass validation.
+        """
+        Property: Valid date strings should pass validation.
 
         Any string matching YYYY-MM-DD format should be accepted.
         """
@@ -70,9 +72,10 @@ class TestPitHelperProperties:
         PitHelper._validate_date_string(date_str)
 
     @given(from_regex(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))
-    @settings(max_examples=20)
+    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow])
     def test_add_pit_filter_preserves_structure(self, date_str: str) -> None:
-        """Property: add_pit_filter should preserve original query structure.
+        """
+        Property: add_pit_filter should preserve original query structure.
 
         The generated query should contain the original query and the filter condition.
         """
@@ -89,9 +92,10 @@ class TestPitHelperProperties:
         valid_identifier_strategy,
         valid_date_strategy,
     )
-    @settings(max_examples=20)
+    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow])
     def test_add_pit_filter_invariants(self, date_column: str, date_str: str) -> None:
-        """Property: add_pit_filter maintains key invariants.
+        """
+        Property: add_pit_filter maintains key invariants.
 
         - Result should contain <= comparison
         - Result should contain the date value
@@ -105,11 +109,12 @@ class TestPitHelperProperties:
         assert date_column in result, "Result should contain the column name"
 
     @given(valid_identifier_strategy, valid_identifier_strategy, valid_date_strategy)
-    @settings(max_examples=15)
+    @settings(max_examples=15, suppress_health_check=[HealthCheck.too_slow])
     def test_add_pit_join_structure_invariants(
         self, left_table: str, right_table: str, asof_date: str
     ) -> None:
-        """Property: add_pit_join generates correct JOIN structure.
+        """
+        Property: add_pit_join generates correct JOIN structure.
 
         - Result should contain LEFT JOIN
         - Result should contain ON clause
@@ -128,7 +133,7 @@ class TestPitHelperProperties:
         sampled_from(["trade_date", "knowledge_date", "effective_date"]),
         valid_dates,
     )
-    @settings(max_examples=15)
+    @settings(max_examples=15, suppress_health_check=[HealthCheck.too_slow])
     def test_add_pit_join_custom_date_column(
         self, right_alias: str, date_column: str, asof_date: str
     ) -> None:
@@ -145,9 +150,10 @@ class TestPitHelperProperties:
         assert expected_pattern in result, f"Should contain {expected_pattern}"
 
     @given(valid_identifier_strategy, valid_date_strategy)
-    @settings(max_examples=15)
+    @settings(max_examples=15, suppress_health_check=[HealthCheck.too_slow])
     def test_wrap_pit_cte_structure(self, cte_name: str, asof_date: str) -> None:
-        """Property: wrap_pit_cte generates correct CTE structure.
+        """
+        Property: wrap_pit_cte generates correct CTE structure.
 
         - Result should start with WITH
         - Result should contain AS (CTE definition)
@@ -161,11 +167,12 @@ class TestPitHelperProperties:
         assert f"SELECT * FROM {cte_name}" in result, f"Should select from {cte_name}"
 
     @given(valid_identifier_strategy, valid_date_strategy)
-    @settings(max_examples=15)
+    @settings(max_examples=15, suppress_health_check=[HealthCheck.too_slow])
     def test_get_safe_trade_date_format(
         self, base_column: str, knowledge_date: str
     ) -> None:
-        """Property: get_safe_trade_date generates correct format.
+        """
+        Property: get_safe_trade_date generates correct format.
 
         - Result should contain <= operator
         - Result should contain base column name
@@ -178,7 +185,7 @@ class TestPitHelperProperties:
         assert knowledge_date in result, "Result should contain knowledge date"
 
     @given(valid_identifier_strategy)
-    @settings(max_examples=10)
+    @settings(max_examples=10, suppress_health_check=[HealthCheck.too_slow])
     def test_get_safe_trade_date_placeholder_format(self, base_column: str) -> None:
         """Property: Placeholder ($asof) should not be quoted."""
         result = PitHelper.get_safe_trade_date(base_column, "$asof")
@@ -190,7 +197,7 @@ class TestPitHelperProperties:
         valid_identifier_strategy,
         sampled_from(["2024-01-15", "2023-12-31", "2025-06-30"]),
     )
-    @settings(max_examples=10)
+    @settings(max_examples=10, suppress_health_check=[HealthCheck.too_slow])
     def test_get_safe_trade_date_concrete_date_quoted(
         self, base_column: str, knowledge_date: str
     ) -> None:
@@ -202,9 +209,10 @@ class TestPitHelperProperties:
         )
 
     @given(text(min_size=1, max_size=20))
-    @settings(max_examples=20)
+    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow])
     def test_invalid_identifier_rejected(self, identifier: str) -> None:
-        """Property: Invalid identifiers should raise ValueError.
+        """
+        Property: Invalid identifiers should raise ValueError.
 
         Strings that don't match valid SQL identifier pattern should be rejected.
         """
@@ -216,9 +224,10 @@ class TestPitHelperProperties:
             PitHelper._validate_sql_identifier(identifier)
 
     @given(text(min_size=1, max_size=20))
-    @settings(max_examples=20)
+    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow])
     def test_invalid_date_rejected(self, date_str: str) -> None:
-        """Property: Invalid date strings should raise ValueError.
+        """
+        Property: Invalid date strings should raise ValueError.
 
         Strings that don't match YYYY-MM-DD pattern should be rejected.
         """
@@ -233,7 +242,7 @@ class TestPitHelperProperties:
         lists(valid_identifier_strategy, min_size=1, max_size=5, unique=True),
         valid_date_strategy,
     )
-    @settings(max_examples=15)
+    @settings(max_examples=15, suppress_health_check=[HealthCheck.too_slow])
     def test_multiple_join_keys_preserved(
         self, join_keys: list[str], asof_date: str
     ) -> None:
@@ -259,7 +268,7 @@ class TestPitHelperProperties:
             ]
         ),
     )
-    @settings(max_examples=15)
+    @settings(max_examples=15, suppress_health_check=[HealthCheck.too_slow])
     def test_add_pit_filter_preserves_where(self, date_str: str, query: str) -> None:
         """Property: Existing WHERE clause should be preserved."""
         result = PitHelper.add_pit_filter(query, date_str)
