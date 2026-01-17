@@ -15,8 +15,9 @@ from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.dq.report import DQReportGenerator
 
 # Authoritative DQResult with issues list (from dq.engine)
-from ditto_datahub.models import DQIssue, OnDuplicate, SidRange, WriteResult
+from ditto_datahub.models import AssetSidRange, DQIssue, OnDuplicate, WriteResult
 from ditto_datahub.models import DQResult as DQResultNew
+from ditto_datahub.repositories.bars.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
@@ -533,9 +534,9 @@ class BarsRepository:
             ValueError: 如果检测到混合资产类别或无法识别。
 
         """
-        stock_range = SidRange.get_range("stock")
-        etf_range = SidRange.get_range("etf")
-        index_range = SidRange.get_range("index")
+        stock_range = AssetSidRange.get_range("stock")
+        etf_range = AssetSidRange.get_range("etf")
+        index_range = AssetSidRange.get_range("index")
 
         # 检测每个资产类别
         has_stock = any(
@@ -626,154 +627,9 @@ class BarsRepository:
 
         # 根据调整类型调用相应方法
         if adj == AdjType.QFQ:
-            return self._apply_qfq_adj(df, adj_df, resolved.asof)
+            return apply_qfq_adj(df, adj_df, resolved.asof)
         else:  # HFQ
-            return self._apply_hfq_adj(df, adj_df)
-
-    def _parse_asof_date(self, asof: date | str) -> date:
-        """
-        解析 asof 参数为 date 对象。
-
-        Args:
-            asof: date 对象或 ISO 格式字符串。
-
-        Returns:
-            解析后的 date 对象。
-
-        """
-        if isinstance(asof, str):
-            return date.fromisoformat(asof)
-        return asof
-
-    def _filter_baseline_by_asof(
-        self, adj_df: pl.DataFrame, pit_dt: date
-    ) -> pl.DataFrame:
-        """
-        根据 asof 日期过滤调整因子数据（用于计算 baseline）。
-
-        优先使用 knowledge_date，如果不存在则使用 trade_date（会记录警告）。
-
-        Args:
-            adj_df: 调整因子数据。
-            pit_dt: Point-in-Time 日期。
-
-        Returns:
-            过滤后的调整因子数据。
-
-        """
-        if "knowledge_date" in adj_df.columns:
-            return adj_df.filter(pl.col("knowledge_date") <= pit_dt)
-        else:
-            logger.warning(
-                "Adj factors missing knowledge_date, using trade_date (not PIT-safe)",
-                event="bars_adj_missing_knowledge_date",
-            )
-            return adj_df.filter(pl.col("trade_date") <= pit_dt)
-
-    def _apply_qfq_adj(
-        self,
-        df: pl.DataFrame,
-        adj_df: pl.DataFrame,
-        asof: date | str | None = None,
-    ) -> pl.DataFrame:
-        """
-        应用前复权（QFQ）调整。
-
-        Tushare QFQ: adj_price = orig_price * cur_factor / latest_factor。
-
-        如果提供 asof，baseline (latest_factor) 将基于 asof 日期之前的因子计算。
-
-        注意：pre_close 字段不需要复权调整
-        - Tushare 返回的 pre_close 已经是除权参考价（已处理除权除息）
-        - 只对 open/high/low/close 进行复权（这些是原始价格）
-        - pre_close 保持原样即可，当日涨跌幅计算已正确
-
-        Args:
-            df: 已关联 adj_factor 的 K线数据。
-            adj_df: 调整因子数据（已排序，包含所有因子）。
-            asof: Point-in-Time 日期（date 对象或字符串）。
-                如果提供，baseline 计算将使用该日期之前的因子。
-
-        Returns:
-            QFQ 调整后的 DataFrame.
-
-        """
-        # 计算 baseline：如果提供了 asof，需要过滤
-        if asof is None:
-            baseline_df = adj_df
-        else:
-            # 转换为 date 对象
-            pit_dt = self._parse_asof_date(asof)
-            # 过滤 baseline
-            baseline_df = self._filter_baseline_by_asof(adj_df, pit_dt)
-
-        # 获取每个 SID 的最新因子（基于 baseline）
-        latest_factors = baseline_df.group_by("sid").agg(
-            pl.col("adj_factor").last().alias("latest_factor")
-        )
-        df = df.join(latest_factors, on="sid", how="left")
-
-        # 应用 QFQ 公式，缺失值使用 1.0（返回原始价格）
-        df = df.with_columns(
-            [
-                (
-                    pl.col("open")
-                    * pl.coalesce("adj_factor", 1.0)
-                    / pl.coalesce("latest_factor", 1.0)
-                ).alias("open"),
-                (
-                    pl.col("high")
-                    * pl.coalesce("adj_factor", 1.0)
-                    / pl.coalesce("latest_factor", 1.0)
-                ).alias("high"),
-                (
-                    pl.col("low")
-                    * pl.coalesce("adj_factor", 1.0)
-                    / pl.coalesce("latest_factor", 1.0)
-                ).alias("low"),
-                (
-                    pl.col("close")
-                    * pl.coalesce("adj_factor", 1.0)
-                    / pl.coalesce("latest_factor", 1.0)
-                ).alias("close"),
-            ]
-        )
-        return df.drop(["adj_factor", "latest_factor"])
-
-    def _apply_hfq_adj(
-        self,
-        df: pl.DataFrame,
-        adj_df: pl.DataFrame,
-    ) -> pl.DataFrame:
-        """
-        应用后复权（HFQ）调整。
-
-        后复权：adj_price = orig_price * cur_factor
-        缺失值使用 1.0（返回原始价格）。
-
-        注意：pre_close 字段不需要复权调整
-        - Tushare 返回的 pre_close 已经是除权参考价（已处理除权除息）
-        - 只对 open/high/low/close 进行复权（这些是原始价格）
-        - pre_close 保持原样即可，当日涨跌幅计算已正确
-
-        Args:
-            df: 已关联 adj_factor 的 K线数据。
-            adj_df: 调整因子数据（未使用，保持参数一致性）。
-
-        Returns:
-            HFQ 调整后的 DataFrame.
-
-        """
-        # 应用 HFQ 公式，缺失值使用 1.0
-        df = df.with_columns(
-            [
-                (pl.col("open") * pl.coalesce("adj_factor", 1.0)).alias("open"),
-                (pl.col("high") * pl.coalesce("adj_factor", 1.0)).alias("high"),
-                (pl.col("low") * pl.coalesce("adj_factor", 1.0)).alias("low"),
-                (pl.col("close") * pl.coalesce("adj_factor", 1.0)).alias("close"),
-            ]
-        )
-        return df.drop("adj_factor")
+            return apply_hfq_adj(df, adj_df)
 
     def _save_to_quarantine(
         self,
