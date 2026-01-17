@@ -1,6 +1,7 @@
 # 测试文件允许函数内导入
 
-"""Tests for DQ L1 blocking behavior in coordinator.
+"""
+Tests for DQ L1 blocking behavior in coordinator.
 
 This module tests that when DQ L1 checks fail:
 1. The ingestion result status is "failed"
@@ -74,7 +75,7 @@ class TestDQBlockingBehavior:
         """Test that DQ blocked ingestion logs FAIL status for retry."""
         from ditto_datahub.dq import DQResult
         from ditto_datahub.repositories.bars import WriteResult
-        from ditto_datahub.sources.metadata import IngestionStatus
+        from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
         from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
         # Mock DataHub
@@ -120,8 +121,11 @@ class TestDQBlockingBehavior:
 
         # Verify log was saved with FAIL status
         mock_hub.ingestion_log.save_log.assert_called_once()
-        call_kwargs = mock_hub.ingestion_log.save_log.call_args.kwargs
+        # 获取位置参数中的 IngestionLog 对象
+        call_args = mock_hub.ingestion_log.save_log.call_args.args
+        log_entry = call_args[0]
 
-        assert call_kwargs["status"] == IngestionStatus.FAIL
-        assert call_kwargs["error_code"] == "DQ_BLOCKED"
-        assert "DQ L1 check failed" in call_kwargs["error_message"]
+        assert isinstance(log_entry, IngestionLog)
+        assert log_entry.status == IngestionStatus.FAIL
+        assert log_entry.error_code == "DQ_BLOCKED"
+        assert "DQ L1 check failed" in log_entry.error_message
