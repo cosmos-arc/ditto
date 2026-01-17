@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
 from collections.abc import Sequence
 from typing import ClassVar
 
 import orjson
 import polars as pl
+import xxhash
 
 from ditto_foundation import logger
 
@@ -24,7 +24,7 @@ class ChecksumCompute:
     统一的 Checksum 计算工具。
 
     特性:
-    - 算法统一: MD5 (性能优于 SHA-256，非安全场景)
+    - 算法统一: XXH3_128 (超快哈希，非安全场景)
     - 排序统一: 按数据集类型确定性行排序
     - 字段统一: 包含 DataFrame 的所有字段（包括 sid、source）
     """
@@ -61,12 +61,12 @@ class ChecksumCompute:
             fallback_sort_keys: 备用排序键（如果 dataset 不在预定义列表中）
 
         Returns:
-            MD5 hex string (32 字符)
+            XXH3_128 hex string (32 字符)
 
         """
         if df.is_empty():
             # 空数据的固定 checksum
-            return hashlib.md5(b"", usedforsecurity=False).hexdigest()
+            return xxhash.xxh3_128_hexdigest(b"")
 
         # 1. 获取排序键
         sort_keys = ChecksumCompute.SORT_KEYS.get(dataset, fallback_sort_keys or [])
@@ -99,8 +99,8 @@ class ChecksumCompute:
             default=_json_serializable,
         )
 
-        # 5. 计算 MD5
-        checksum = hashlib.md5(json_bytes, usedforsecurity=False).hexdigest()
+        # 5. 计算 XXH3_128 checksum
+        checksum = xxhash.xxh3_128_hexdigest(json_bytes)
 
         logger.debug(
             "Checksum computed from DataFrame",
