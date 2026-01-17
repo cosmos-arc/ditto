@@ -37,6 +37,9 @@ from ditto_foundation.observability import (
     traced,
 )
 
+# Export version management
+from ditto_foundation.version import compute_checksum
+
 __all__ = [
     "AppInitializer",
     "CacheStats",
@@ -47,6 +50,7 @@ __all__ = [
     "Mode",
     "ObservabilityConfig",
     "SQLitePool",
+    "compute_checksum",
     "get_recorded_metrics",
     "get_recorded_spans",
     "get_span_id",
