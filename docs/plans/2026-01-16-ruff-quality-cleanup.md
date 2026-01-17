@@ -14,15 +14,15 @@
 
 **遗留问题**: Ruff 检测出 **15 个非豁免问题**需要解决（已删除 PipelineStore 相关的 4 个问题）：
 
-| 优先级 | 类型 | 数量 | 说明 |
-|--------|------|------|------|
-| P1 | PLR0913（参数过多） | 3 处 | 函数接口设计问题 |
-| P1 | C901（复杂度过高） | 0 处 | ✅ 已解决（删除 PipelineStore） |
-| P2 | PLR0911（返回语句过多） | 2 处 | 控制流复杂度 |
-| P2 | S112（异常吞噬） | 1 处 | 错误处理 |
-| P3 | S101（assert 使用） | 5 处 | 生产代码健壮性 |
-| P3 | S324（MD5 使用） | 1 处 | 安全说明 |
-| P3 | S104（网络绑定） | 1 处 | 安全说明 |
+| 优先级 | 类型 | 数量 | 状态 | 说明 |
+|--------|------|------|------|------|
+| P1 | PLR0913（参数过多） | 3 处 | ✅ 已完成 | 函数接口设计问题 |
+| P1 | C901（复杂度过高） | 0 处 | ✅ 已解决 | 删除 PipelineStore |
+| P2 | PLR0911（返回语句过多） | 2 处 | ✅ 已完成 | 控制流复杂度 |
+| P2 | S112（异常吞噬） | 1 处 | ✅ 已完成 | 错误处理 |
+| P3 | S101（assert 使用） | 5 处 | ⏳ 待处理 | 生产代码健壮性 |
+| P3 | S324（MD5 使用） | 1 处 | ⏳ 待处理 | 安全说明 |
+| P3 | S104（网络绑定） | 1 处 | ⏳ 待处理 | 安全说明 |
 
 **关键约束**:
 - 核心源码零容忍：不允许 `# noqa` 和 `# type: ignore`（除 S608/S108/S110）
@@ -149,7 +149,9 @@ pixi run -e dev type packages/foundation/src/ditto_foundation/config/paths.py
 
 ## Phase 2: 中优先级 - 返回语句与异常处理（P2）
 
-### 任务 2.1: coordinator.py 返回语句优化
+### 任务 2.1: coordinator.py 返回语句优化 ✅
+
+**状态**: 已完成（2026-01-17）
 
 **文件**: `apps/port/src/ditto_port/services/ingestion/coordinator.py`
 
@@ -196,14 +198,25 @@ def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
     return source_method(trade_date)
 ```
 
-**验证步骤**:
+**验证步骤**: ✅ 已完成
 ```bash
 pixi run -e dev test apps/port/tests -m integration
+# 37 passed
 ```
+
+**提交**: `b7a68ef` - refactor(port): 优化 coordinator.py 返回语句复杂度
+
+**成果**:
+- `ingest_date`: 8 → 3 个返回语句 ✅
+- `_fetch_data`: 7 → 3 个返回语句 ✅
+- 提取 10 个辅助方法（6 个错误处理方法）
+- 所有测试通过
 
 ---
 
-### 任务 2.2: models.py 异常处理细化
+### 任务 2.2: models.py 异常处理细化 ✅
+
+**状态**: 已完成（2026-01-17）
 
 **文件**: `packages/datahub/src/ditto_datahub/dq/models.py`
 
@@ -223,6 +236,20 @@ except yaml.YAMLError as e:
     logger.warning("Failed to parse YAML config, skipping", event="dq_config_parse_error", file=str(config_file), error=str(e))
     continue
 ```
+
+**验证步骤**: ✅ 已完成
+```bash
+pixi run -e dev test packages/datahub/tests/unit/dq/test_models_unit.py
+# 15 passed
+```
+
+**提交**: `80a18f5` - refactor(datahub): 细化 models.py 异常处理
+
+**成果**:
+- 区分 `ValidationError`, `ValueError`, `yaml.YAMLError` 异常类型 ✅
+- 使用结构化日志记录 `logger.warning` ✅
+- 新增 5 个异常处理测试用例 ✅
+- 所有测试通过
 
 ---
 
@@ -381,10 +408,10 @@ pixi run -e dev lint 2>&1 | grep -v "S608\|S108\|S110" | grep -E "PLR|C90|S101|S
 
 | Phase | 任务数 | 工作量 |
 |-------|--------|--------|
-| Phase 1 | 3（2 已完成） | 1-2 人日（剩余 2 任务） |
-| Phase 2 | 2 | 2-3 人日 |
+| Phase 1 | 5 | ✅ 已完成 |
+| Phase 2 | 2 | ✅ 已完成 |
 | Phase 3 | 5 | 1-2 人日 |
-| **总计** | **10** | **4-7 人日** |
+| **总计** | **12** | **Phase 1+2 已完成，Phase 3 待执行** |
 
 ---
 
