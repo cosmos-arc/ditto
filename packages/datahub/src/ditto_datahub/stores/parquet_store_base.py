@@ -18,18 +18,7 @@ from ditto_foundation import logger, traced
 from ditto_foundation.util.io import atomic_write, file_md5
 
 from ditto_datahub.types import OnDuplicate
-
-
-@dataclass(frozen=True)
-class WriteResult:
-    """写入结果统计"""
-
-    file_path: str
-    checksum: str
-    added: int
-    updated: int
-    skipped: int
-    is_merge: bool
+from ditto_datahub.types import WriteResultStore as WriteResult
 
 
 @dataclass(frozen=True)

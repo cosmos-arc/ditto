@@ -9,8 +9,9 @@ from typing import Any
 
 import polars as pl
 import pytest
-from ditto_datahub.stores.parquet_store_base import ParquetStoreBase, WriteResult
+from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
 from ditto_datahub.types import OnDuplicate
+from ditto_datahub.types import WriteResultStore as WriteResult
 
 # ============ Mock Implementation ============
 
