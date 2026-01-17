@@ -10,7 +10,6 @@ from ditto_datahub.sources.base import (
     SourceRateLimitError,
     SourceTransformationError,
 )
-from ditto_datahub.sources.factory import get_source
 from ditto_datahub.sources.tushare.source import TushareSource
 
 __all__ = [
@@ -23,5 +22,4 @@ __all__ = [
     "SourceTransformationError",
     "SourcesAccessor",
     "TushareSource",
-    "get_source",
 ]
