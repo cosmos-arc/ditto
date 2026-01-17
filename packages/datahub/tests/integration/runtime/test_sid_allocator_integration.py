@@ -86,3 +86,23 @@ class TestSidAllocator:
         """Test allocating SID for unknown asset class."""
         with pytest.raises(ValueError, match="Unknown asset class"):
             self.allocator.allocate("unknown")
+
+    def test_allocate_logs_error_on_exception(self) -> None:
+        """Test allocate logs error with error_type and error_message on exception."""
+        from unittest.mock import patch
+
+        # Mock pool.execute to raise an exception during transaction
+        with patch.object(
+            self.pool, "execute", side_effect=RuntimeError("Connection lost")
+        ):
+            with patch("ditto_datahub.runtime.sid_allocator.logger") as mock_logger:
+                with pytest.raises(RuntimeError):
+                    self.allocator.allocate("stock")
+
+                # Verify logger.error was called with error_type and error_message
+                mock_logger.error.assert_called_once()
+                call_kwargs = mock_logger.error.call_args.kwargs
+                assert "error_type" in call_kwargs
+                assert "error_message" in call_kwargs
+                assert call_kwargs["event"] == "sid_allocate"
+                assert call_kwargs["error_type"] == "RuntimeError"

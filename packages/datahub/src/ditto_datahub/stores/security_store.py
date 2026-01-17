@@ -583,13 +583,15 @@ class SecurityStore:
 
             return sid
 
-        except Exception:
+        except Exception as e:
             self._client.rollback()
             logger.error(
                 "Security registration failed",
                 event="security_register_failed",
                 sid=sid,
                 symbol=registration.symbol,
+                error_type=type(e).__name__,
+                error_message=str(e),
             )
             raise
 

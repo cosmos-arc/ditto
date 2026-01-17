@@ -82,12 +82,14 @@ class SidAllocator:
             )
             return new_sid
 
-        except Exception:
+        except Exception as e:
             # 发生任何错误都要回滚
             self._pool.rollback()
             logger.error(
                 "sid_allocate_failed",
                 event="sid_allocate",
                 asset_class=asset_class,
+                error_type=type(e).__name__,
+                error_message=str(e),
             )
             raise
