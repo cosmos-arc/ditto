@@ -28,6 +28,9 @@ class SqlEngine:
     - PIT queries (asof parameter)
     """
 
+    # Query preview length for logging
+    QUERY_PREVIEW_LENGTH = 200
+
     # SQLite table names for auto-detection
     SQLITE_TABLES = frozenset(
         [
@@ -271,20 +274,15 @@ class SqlEngine:
             duration: Query execution duration in seconds.
 
         """
-        # 记录慢查询指标（duration 已在 execute() 中记录，这里只记录慢查询计数）
         M.sql_slow_query_total.add(1)
 
-        # 记录日志
-        _QUERY_PREVIEW_LENGTH = 200
-        if len(query) > _QUERY_PREVIEW_LENGTH:
-            _preview = query[:_QUERY_PREVIEW_LENGTH]
-        else:
-            _preview = query
+        limit = self.QUERY_PREVIEW_LENGTH
+        preview = query[:limit] if len(query) > limit else query
         logger.warning(
             "Slow query detected",
             event="sql_slow_query",
             duration_seconds=duration,
-            query_preview=_preview,
+            query_preview=preview,
         )
 
     def _needs_sqlite(self, query: str) -> bool:
@@ -347,32 +345,20 @@ class SqlEngine:
         # 使用参数化查询处理 $asof
         if asof is not None:
             # 验证 ISO 日期格式 (YYYY-MM-DD) 以防止 SQL 注入
-            # 只允许安全字符：特定格式的数字和连字符
             if not re.match(r"^\d{4}-\d{2}-\d{2}$", asof):
                 raise ValueError(
                     f"Invalid asof date format: {asof}. Expected YYYY-MM-DD format."
                 )
 
-            # 检查是否可以与 params 组合使用
             if isinstance(params, dict):
                 raise ValueError(
                     "Cannot combine $asof parameter with dict params. "
                     + "Use list params instead."
                 )
 
-            # 将 $asof 替换为 DuckDB 参数占位符
-            # 策略：将 $asof 替换为新的参数占位符，避免与现有参数冲突
-            # 例如：如果查询有 $1, $2，则 $asof 变为 $3
-
-            # 计算查询中已有的参数数量
-            existing_params = 0
-            if params:
-                existing_params = len(params)
-
-            # 新的参数编号
+            # 将 $asof 替换为新的参数占位符
+            existing_params = len(params) if params else 0
             new_param_num = existing_params + 1
-
-            # 替换 $asof 为新的参数占位符
             prepared_query = prepared_query.replace("$asof", f"${new_param_num}")
 
             # 合并参数

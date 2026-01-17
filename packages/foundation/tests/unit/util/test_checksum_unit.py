@@ -1,19 +1,18 @@
 """Checksum 计算工具单元测试."""
 
-import hashlib
-
 import polars as pl
+import xxhash
 from ditto_foundation.util.checksum import ChecksumCompute
 
 
 class TestChecksumCompute:
     """ChecksumCompute 单元测试."""
 
-    def test_empty_dataframe_returns_md5_of_empty_bytes(self) -> None:
-        """空 DataFrame 应返回 MD5 of empty bytes."""
+    def test_empty_dataframe_returns_xxh3_128_of_empty_bytes(self) -> None:
+        """空 DataFrame 应返回 XXH3_128 of empty bytes."""
         df = pl.DataFrame()
         checksum = ChecksumCompute.from_dataframe(df, "stock_daily")
-        expected = hashlib.md5(b"", usedforsecurity=False).hexdigest()
+        expected = xxhash.xxh3_128_hexdigest(b"")
         assert checksum == expected
 
     def test_deterministic_irrespective_of_row_order(self) -> None:
@@ -81,8 +80,8 @@ class TestChecksumCompute:
 
         assert checksum1 != checksum2, "不同 source 应产生不同 checksum"
 
-    def test_uses_md5_algorithm_32_char_hex(self) -> None:
-        """验证使用 MD5 算法（32 字符 hex）."""
+    def test_uses_xxh3_128_algorithm_32_char_hex(self) -> None:
+        """验证使用 XXH3_128 算法（32 字符 hex）."""
         df = pl.DataFrame(
             {
                 "trade_date": ["2024-01-01"],
@@ -92,7 +91,7 @@ class TestChecksumCompute:
 
         checksum = ChecksumCompute.from_dataframe(df, "stock_daily")
 
-        # MD5 应该是 32 字符 hex string
+        # XXH3_128 应该是 32 字符 hex string
         assert len(checksum) == 32
         assert all(c in "0123456789abcdef" for c in checksum)
 

@@ -123,11 +123,11 @@ class BarsStore(ParquetStoreBase):
 
         if start_date:
             start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
-            lf = lf.filter(pl.col("trade_date") >= pl.lit(start_dt))
+            lf = lf.filter(pl.col("trade_date") >= start_dt)
 
         if end_date:
             end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
-            lf = lf.filter(pl.col("trade_date") <= pl.lit(end_dt))
+            lf = lf.filter(pl.col("trade_date") <= end_dt)
 
         return lf
 
