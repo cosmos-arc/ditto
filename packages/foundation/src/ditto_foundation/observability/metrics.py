@@ -9,7 +9,7 @@ Histogram Buckets 配置 (秒):
 适用于所有 duration 类型的 Histogram 指标.
 """
 
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict
+from typing import Any, TypedDict
 
 from opentelemetry import metrics
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -65,25 +65,6 @@ class _MetricsRegistry:
 
 # Histogram buckets 配置 (秒)
 _HISTOGRAM_BUCKETS = (0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0)
-
-
-# 用于类型检查的 Gauge 接口协议
-if TYPE_CHECKING:
-
-    class GaugeWrapper(Protocol):
-        """Gauge 接口协议 (类型检查用)."""
-
-        def set(self, value: float) -> None:
-            """设置指标值."""
-            ...
-
-        def inc(self, delta: float = 1.0) -> None:
-            """增加指标值."""
-            ...
-
-        def dec(self, delta: float = 1.0) -> None:
-            """减少指标值."""
-            ...
 
 
 class MetricDefinition(TypedDict):
@@ -385,25 +366,25 @@ class M:
     # 数据指标
     data_update_duration: Histogram
     data_records: Counter
-    data_freshness: "GaugeWrapper"
+    data_freshness: SimpleGauge
     data_errors: Counter
 
     # 因子指标
     factor_calc_duration: Histogram
-    factor_ic: "GaugeWrapper"
-    factor_health: "GaugeWrapper"
+    factor_ic: SimpleGauge
+    factor_health: SimpleGauge
 
     # 策略指标
     signal_total: Counter
     rebalance_total: Counter
 
     # 组合指标
-    portfolio_value: "GaugeWrapper"
-    portfolio_drawdown: "GaugeWrapper"
-    portfolio_drawdown_3d: "GaugeWrapper"
+    portfolio_value: SimpleGauge
+    portfolio_drawdown: SimpleGauge
+    portfolio_drawdown_3d: SimpleGauge
 
     # 风控指标
-    kill_switch_level: "GaugeWrapper"
+    kill_switch_level: SimpleGauge
     kill_switch_total: Counter
 
     # 系统指标
@@ -414,10 +395,10 @@ class M:
     # 缓存指标
     cache_hit: Counter
     cache_miss: Counter
-    cache_hit_rate: "GaugeWrapper"
+    cache_hit_rate: SimpleGauge
     cache_invalidations: Counter
     cache_evictions: Counter
-    cache_size: "GaugeWrapper"
+    cache_size: SimpleGauge
 
     # SQL 指标
     sql_query_duration: Histogram

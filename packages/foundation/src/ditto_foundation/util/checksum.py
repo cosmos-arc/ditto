@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import hashlib
-from typing import TYPE_CHECKING, ClassVar
+from collections.abc import Sequence
+from typing import ClassVar
 
 import orjson
 import polars as pl
 
 from ditto_foundation import logger
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 
 def _json_serializable(obj: object) -> object:

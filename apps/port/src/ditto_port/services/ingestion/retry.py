@@ -7,8 +7,7 @@
 - 限制重试数量以防资源耗尽
 """
 
-from typing import TYPE_CHECKING
-
+from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_foundation import logger
 from pydantic import BaseModel
 
@@ -17,9 +16,6 @@ from ditto_port.services.ingestion.coordinator import (
     IngestionResult,
 )
 from ditto_port.services.ingestion.result_utils import count_results
-
-if TYPE_CHECKING:
-    from ditto_datahub.stores.ingestion_log import IngestionLogStore
 
 
 class RetryResult(BaseModel):
@@ -39,7 +35,7 @@ class RetryManager:
     def __init__(
         self,
         coordinator: IngestionCoordinator,
-        ingestion_log_store: "IngestionLogStore",
+        ingestion_log_store: IngestionLogStore,
         source: str = "tushare",
     ) -> None:
         """

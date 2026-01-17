@@ -7,16 +7,12 @@ coordinating UniverseStore and SidAllocator.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.universe_store import UniverseStore
-
-if TYPE_CHECKING:
-    from ditto_datahub.runtime.sid_allocator import SidAllocator
 
 
 class UniverseRepository:

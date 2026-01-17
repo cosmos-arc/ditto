@@ -8,9 +8,10 @@
 - 记录摄取日志
 """
 
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import ClassVar, Literal
 
 import polars as pl
+from ditto_datahub.hub import DataHub
 from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_datahub.types import OnDuplicate, WriteResult
@@ -19,9 +20,6 @@ from ditto_foundation.util.checksum import ChecksumCompute
 
 from ditto_port.common.types import IngestionResult
 from ditto_port.services.ingestion.metadata import MetadataManager
-
-if TYPE_CHECKING:
-    from ditto_datahub.hub import DataHub
 
 
 class IngestionCoordinator:
@@ -39,7 +37,7 @@ class IngestionCoordinator:
 
     def __init__(
         self,
-        hub: "DataHub",
+        hub: DataHub,
         source: DataSource,
         source_name: str = "tushare",
     ) -> None:

@@ -6,17 +6,15 @@ import hashlib
 import re
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import duckdb
 import polars as pl
 from ditto_foundation import M, logger
 
-if TYPE_CHECKING:
-    from ditto_datahub.stores.calendar_store import CalendarStore
-    from ditto_datahub.stores.security_store import SecurityStore
-
 from ditto_datahub.runtime.pit_helper import PitHelper
+from ditto_datahub.stores.calendar_store import CalendarStore
+from ditto_datahub.stores.security_store import SecurityStore
 
 
 class SqlEngine:

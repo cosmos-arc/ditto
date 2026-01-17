@@ -2,18 +2,15 @@
 
 from collections import defaultdict
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING
 
+from ditto_datahub.stores.calendar_store import CalendarStore
+from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_foundation import logger
 from pydantic import BaseModel
 
 from ditto_port.common.types import IngestionResult
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 from ditto_port.services.ingestion.result_utils import count_results
-
-if TYPE_CHECKING:
-    from ditto_datahub.stores.calendar_store import CalendarStore
-    from ditto_datahub.stores.ingestion_log import IngestionLogStore
 
 
 class BackfillResult(BaseModel):
@@ -33,8 +30,8 @@ class BackfillManager:
     def __init__(
         self,
         coordinator: IngestionCoordinator,
-        calendar_store: "CalendarStore",
-        ingestion_log_store: "IngestionLogStore",
+        calendar_store: CalendarStore,
+        ingestion_log_store: IngestionLogStore,
     ) -> None:
         """
         初始化 BackfillManager。

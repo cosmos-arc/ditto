@@ -1,19 +1,15 @@
 """SID allocator for managing unique security identifiers."""
 
-from typing import TYPE_CHECKING
-
 from ditto_foundation import logger, span
 
+from ..runtime.sqlite_pool import SQLitePool
 from ..types import SidRange
-
-if TYPE_CHECKING:
-    from .sqlite_pool import SQLitePool
 
 
 class SidAllocator:
     """SID allocator for managing unique security identifiers."""
 
-    def __init__(self, sqlite_pool: "SQLitePool") -> None:
+    def __init__(self, sqlite_pool: SQLitePool) -> None:
         """Initialize SID allocator."""
         self._pool = sqlite_pool
 

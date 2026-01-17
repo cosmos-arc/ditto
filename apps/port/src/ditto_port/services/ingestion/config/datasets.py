@@ -13,14 +13,12 @@ The registry enables:
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import time
 from enum import Enum
-from typing import TYPE_CHECKING, Annotated, cast, overload
+from typing import Annotated, cast, overload
 
 from pydantic import BaseModel, Field
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 
 class Dataset(str, Enum):
