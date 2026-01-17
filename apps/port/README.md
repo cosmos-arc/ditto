@@ -44,8 +44,9 @@
 
 ```
                     ┌─────────────┐
-                    │   common/   │  共享类型层
-                    │  (types.py) │
+                    │  models/    │  模型层
+                    │ (config.py) │
+                    │(ingestion.py)│
                     └──────┬──────┘
                            │
               ┌────────────┴────────────┐
@@ -64,20 +65,22 @@
 ```
 
 **依赖规则**:
-- `jobs/` → `common/` ✅
-- `services/` → `common/` ✅
+- `jobs/` → `models/` ✅
+- `services/` → `models/` ✅
 - `jobs/` → `services/` ✅
-- `common/` → 任何模块 ❌ (独立的类型层)
+- `models/` → 任何模块 ❌ (独立的模型层)
 
-**关键设计**: `common/` 作为共享类型层消除了 `jobs/` 和 `services/` 之间的循环依赖。
+**关键设计**: `models/` 作为共享模型层消除了 `jobs/` 和 `services/` 之间的循环依赖。
 
 ## 三、目录结构
 
 ```
 apps/port/src/ditto_port/
-├── common/                    # 共享类型层
+├── models/                    # 模型层
 │   ├── __init__.py
-│   └── types.py               # IngestionResult, ResultCounts
+│   ├── common.py              # ErrorResponse (API 响应)
+│   ├── config.py              # DatasetSpec, T1ConfigSpec, DATASET_REGISTRY
+│   └── ingestion.py           # IngestionResult, ResultCounts, BackfillResult, RetryResult
 ├── jobs/                      # 任务编排层
 │   ├── flows/                 # Prefect Flows
 │   │   ├── daily.py           # 每日摄取 Flow
