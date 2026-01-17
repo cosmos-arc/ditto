@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import re
 import time
 from pathlib import Path
@@ -10,6 +9,7 @@ from typing import Any
 
 import duckdb
 import polars as pl
+import xxhash
 from ditto_foundation import M, logger
 
 from ditto_datahub.runtime.pit_helper import PitHelper
@@ -238,12 +238,12 @@ class SqlEngine:
         if not self._enable_plan_cache:
             return normalized, False
 
-        # Generate cache key using MD5 hash
-        # 安全说明: 此处使用 MD5 仅用于缓存键生成（非安全用途）
+        # Generate cache key using xxhash (faster than MD5)
+        # 安全说明: 此处使用 xxhash 仅用于缓存键生成（非安全用途）
         # - 输入: 标准化的 SQL 查询字符串
         # - 用途: 快速哈希以识别重复查询
-        # - 风险: 不涉及密码或敏感数据，MD5 碰撞对缓存场景影响可忽略
-        cache_key = hashlib.md5(normalized.encode()).hexdigest()  # noqa: S324 - 仅用于缓存键生成（非安全用途）
+        # - 风险: 不涉及密码或敏感数据
+        cache_key = xxhash.xxh3_64_hexdigest(normalized.encode())
 
         if cache_key in self._plan_cache:
             M.sql_query_plan_cache_hit.add(1)

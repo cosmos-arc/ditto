@@ -64,6 +64,7 @@ ditto-port = { path = "apps/port", editable = true }
 cachebox = ">=5.0,<6"
 granian = ">=1.0,<2"
 orjson = ">=3.10,<4"
+xxhash = ">=3.5,<4"
 
 # 数据源
 akshare = ">=1.15,<2"
