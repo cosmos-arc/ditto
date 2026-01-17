@@ -3,7 +3,7 @@
 import polars as pl
 import pytest
 from ditto_datahub.dq.checkers.technical import TechnicalChecker
-from ditto_datahub.dq.models import DQLevel, DQSeverity
+from ditto_datahub.models import DQLevel, DQSeverity
 
 
 class TestTechnicalChecker:

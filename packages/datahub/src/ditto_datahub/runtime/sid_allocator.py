@@ -2,7 +2,7 @@
 
 from ditto_foundation import logger, span
 
-from ..models import SidRange
+from ..models import AssetSidRange
 from ..runtime.sqlite_pool import SQLitePool
 
 
@@ -21,7 +21,7 @@ class SidAllocator:
     def _allocate_impl(self, asset_class: str) -> int:
         """Internal implementation of SID allocation."""
         # 获取资产类别的SID范围
-        min_sid, max_sid = SidRange.get_range(asset_class)
+        min_sid, max_sid = AssetSidRange.get_range(asset_class)
 
         logger.info(
             "sid_allocate_start",

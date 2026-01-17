@@ -1,10 +1,10 @@
 """Ingestion configuration package."""
 
-from ditto_port.services.ingestion.config.config import IngestionConfig
-from ditto_port.services.ingestion.config.datasets import (
+from ditto_port.models import (
     DATASET_REGISTRY,
     Dataset,
-    DatasetConfig,
+    DatasetSpec,
+    T1ConfigSpec,
     TaskTier,
     create_t0_config,
     create_t1_config,
@@ -14,12 +14,14 @@ from ditto_port.services.ingestion.config.datasets import (
     get_parallel_datasets,
     iter_tier_datasets,
 )
+from ditto_port.services.ingestion.config.config import IngestionConfig
 
 __all__ = [
     "DATASET_REGISTRY",
     "Dataset",
-    "DatasetConfig",
+    "DatasetSpec",
     "IngestionConfig",
+    "T1ConfigSpec",
     "TaskTier",
     "create_t0_config",
     "create_t1_config",

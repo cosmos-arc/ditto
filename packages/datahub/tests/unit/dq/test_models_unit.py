@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 import yaml
-from ditto_datahub.dq.models import (
+from ditto_datahub.models import (
     DatasetRules,
-    DQConfig,
+    DQSpec,
     NotNullRule,
     RangeCheckRule,
     UniqueRule,
@@ -139,12 +139,12 @@ class TestRuleModels:
         assert rule.max_ratio == 1.11
 
 
-class TestDQConfig:
-    """Test DQConfig model."""
+class TestDQSpec:
+    """Test DQSpec model."""
 
     def test_empty_config(self) -> None:
         """Test creating empty config."""
-        config = DQConfig()
+        config = DQSpec()
 
         assert len(config.datasets) == 0
         assert config.get_rules("nonexistent") is None
@@ -157,7 +157,7 @@ class TestDQConfig:
         if not config_dir.exists():
             pytest.skip(f"Config directory not found: {config_dir}")
 
-        config = DQConfig.from_yaml_dir(config_dir)
+        config = DQSpec.from_yaml_dir(config_dir)
 
         # Should load datasets
         assert len(config.datasets) > 0
@@ -170,7 +170,7 @@ class TestDQConfig:
 
     def test_has_dataset(self) -> None:
         """Test has_dataset method."""
-        config = DQConfig(
+        config = DQSpec(
             datasets={
                 "etf_daily": DatasetRules(
                     dataset="etf_daily",
@@ -189,14 +189,14 @@ class TestDQConfig:
             description="Market daily",
         )
 
-        config = DQConfig(datasets={"stock_daily": dataset_rules})
+        config = DQSpec(datasets={"stock_daily": dataset_rules})
 
         assert config.get_rules("stock_daily") is dataset_rules
         assert config.get_rules("nonexistent") is None
 
 
-class TestDQConfigErrorHandling:
-    """Test error handling in DQConfig.from_yaml_dir."""
+class TestDQSpecErrorHandling:
+    """Test error handling in DQSpec.from_yaml_dir."""
 
     def test_skips_invalid_yaml_files(self, tmp_path: Path) -> None:
         """Test that invalid YAML files are skipped without crashing."""
@@ -221,7 +221,7 @@ class TestDQConfigErrorHandling:
         )
 
         # Load config - should skip invalid file and not crash
-        config = DQConfig.from_yaml_dir(tmp_path)
+        config = DQSpec.from_yaml_dir(tmp_path)
 
         # Should load only the valid file
         assert len(config.datasets) == 1
@@ -255,7 +255,7 @@ class TestDQConfigErrorHandling:
         )
 
         # Load config - should skip invalid file and not crash
-        config = DQConfig.from_yaml_dir(tmp_path)
+        config = DQSpec.from_yaml_dir(tmp_path)
 
         # Should load only the valid file
         assert len(config.datasets) == 1
@@ -290,7 +290,7 @@ class TestDQConfigErrorHandling:
         )
 
         # Load config - should skip file without dataset key (no error expected)
-        config = DQConfig.from_yaml_dir(tmp_path)
+        config = DQSpec.from_yaml_dir(tmp_path)
 
         # Should load only the valid file
         assert len(config.datasets) == 1
@@ -324,7 +324,7 @@ class TestDQConfigErrorHandling:
         (tmp_path / "empty.yml").write_text("")
 
         # Load config - should load only valid files and skip invalid ones
-        config = DQConfig.from_yaml_dir(tmp_path)
+        config = DQSpec.from_yaml_dir(tmp_path)
 
         # Should load 3 valid files
         assert len(config.datasets) == 3
@@ -334,6 +334,6 @@ class TestDQConfigErrorHandling:
     def test_returns_empty_config_for_nonexistent_dir(self) -> None:
         """Test that nonexistent directory returns empty config."""
         nonexistent_path = Path("/nonexistent/path/that/does/not/exist")
-        config = DQConfig.from_yaml_dir(nonexistent_path)
+        config = DQSpec.from_yaml_dir(nonexistent_path)
 
         assert len(config.datasets) == 0

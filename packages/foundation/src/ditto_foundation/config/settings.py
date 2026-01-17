@@ -59,11 +59,11 @@ class APISettings(BaseSettings):
     )
 
     host: str = Field(
-        default="0.0.0.0",  # noqa: S104
+        default="127.0.0.1",
         description=(
             "服务器监听地址. "
-            "安全说明: 0.0.0.0 表示监听所有网络接口, 适用于容器化部署场景. "
-            "生产环境应通过环境变量 SERVER_HOST 配置为具体地址或通过防火墙限制访问."
+            "容器化部署场景应通过环境变量 SERVER_HOST 配置为 0.0.0.0. "
+            "生产环境应配置具体地址或通过防火墙限制访问."
         ),
     )
     port: int = Field(default=8000, ge=1, le=65535, description="服务器监听端口")

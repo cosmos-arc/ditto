@@ -320,12 +320,23 @@ class XDGPaths:
 
         # 降级方案
         if self._platform == "win32":
-            temp = os.environ.get("TEMP", "/tmp")  # noqa: S108 - Windows TEMP fallback
-            return Path(temp) / self.APP_NAME
+            # Windows: 使用 TEMP 或回退到用户目录
+            temp = os.environ.get("TEMP")
+            if not temp:
+                # 回退到用户目录下的应用子目录
+                temp = str(Path("~").expanduser() / self.APP_NAME / "temp")
+            return Path(temp)
         else:
-            # os.getuid() 在 Windows 上不存在
+            # Unix: 使用 XDG_RUNTIME_DIR 或用户目录下的 .runtime 子目录
+            xdg_runtime = os.environ.get("XDG_RUNTIME_DIR")
+            if xdg_runtime:
+                return Path(xdg_runtime) / self.APP_NAME
+
+            # 回退方案：使用用户目录（避免 /tmp 的安全问题）
             uid = os.getuid() if hasattr(os, "getuid") else os.getpid()
-            return Path(f"/tmp/{self.APP_NAME}-{uid}")  # noqa: S108 - runtime dir fallback
+            runtime_dir = Path(f"~/.cache/{self.APP_NAME}/runtime-{uid}").expanduser()
+            runtime_dir.mkdir(parents=True, exist_ok=True)
+            return runtime_dir
 
     # ==================== 子目录访问器 ====================
 

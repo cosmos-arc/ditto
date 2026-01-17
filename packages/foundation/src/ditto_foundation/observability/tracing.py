@@ -174,9 +174,6 @@ def traced(operation: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """
     装饰器：自动创建 Span.
 
-    注意: 由于 @functools.wraps 的类型推断限制，使用此装饰器时
-    可能需要添加 `# type: ignore[untyped-decorator]` 注解。
-
     Args:
     ----
         operation: 操作名称（用作 Span 名称）

@@ -358,7 +358,7 @@ class TestCalendarStore:
     def test_get_range_returns_immutable_copy(self) -> None:
         """Test that get_range returns a copy to prevent cache pollution."""
         # 测试方法内导入
-        from ditto_datahub.runtime.cache import DataCache
+        from ditto_foundation.cache import DataCache
 
         # Create store with DataCache
         data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)

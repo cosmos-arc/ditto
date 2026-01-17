@@ -61,6 +61,9 @@ class DatasetSpec(BaseModel):
     """
     Configuration for a single dataset.
 
+    配置文件解析模型：使用 lax 模式允许类型转换。
+    数据集配置由代码定义，无需从配置文件加载。
+
     Attributes:
         dataset: Dataset identifier (Dataset enum)
         tier: Task tier for scheduling (T0/T1/T2/T3)
@@ -124,6 +127,7 @@ class T1ConfigSpec(BaseModel):
     """
     T1 数据集配置参数。
 
+    配置文件解析模型：使用 lax 模式允许类型转换。
     封装 T1 数据集配置所需的所有参数，简化 create_t1_config 函数调用。
 
     Attributes:

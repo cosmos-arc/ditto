@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import polars as pl
 import pytest
 from ditto_datahub.dq.checkers.statistical import StatisticalChecker
-from ditto_datahub.dq.models import DQLevel, DQSeverity
+from ditto_datahub.models import DQLevel, DQSeverity
 
 
 @pytest.fixture

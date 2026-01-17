@@ -49,7 +49,12 @@ class RuleType(str, Enum):
 
 
 class BaseRule(BaseModel):
-    """Base rule configuration."""
+    """
+    Base rule configuration.
+
+    配置文件解析模型：使用 lax 模式允许类型转换。
+    extra='allow' 容纳不同规则类型的扩展字段。
+    """
 
     rule: RuleType
     message: str
@@ -202,7 +207,11 @@ class OutlierRule(BaseRule):
 
 
 class DatasetRules(BaseModel):
-    """DQ rules for a dataset."""
+    """
+    DQ rules for a dataset.
+
+    配置文件解析模型：使用 lax 模式允许 YAML 类型转换。
+    """
 
     dataset: str
     description: str
@@ -218,7 +227,11 @@ class DatasetRules(BaseModel):
 
 
 class DQSpec(BaseModel):
-    """DQ specification for all datasets."""
+    """
+    DQ specification for all datasets.
+
+    配置文件解析模型：使用 lax 模式允许 YAML 类型转换。
+    """
 
     datasets: dict[str, DatasetRules] = Field(default_factory=dict)
 

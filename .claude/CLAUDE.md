@@ -6,6 +6,8 @@
 - **风格**：一致、克制、易读
 - **架构**：清晰边界、低耦合、高内聚、可演进
 
+**遇事不决调研业界最佳实践！！！**
+
 ## ⚠️ 核心约束
 
 - **语言**: 中文（回复/文档/Commit/PR）
@@ -74,11 +76,61 @@ ditto/
 ├── apps/              # 应用
 │   ├── port/        # Server 应用
 │   └── web/           # Web 应用
+├── config/            # 环境配置（按环境分组）
+│   ├── development/   # 开发环境配置
+│   ├── testing/       # 测试环境配置
+│   └── production/    # 生产环境配置
 └── docs/              # 文档
 
 依赖方向: core → datahub → foundation
           apps/port → datahub → foundation
 ```
+
+### 环境配置规范
+
+Ditto 采用**双层环境架构**（详见 [04_deployment_topology.md](../docs/design/04_deployment_topology.md#12-环境架构)）：
+
+| 层级 | 变量 | 有效值 | 说明 |
+|------|------|--------|------|
+| Pixi 环境 | 选择环境 | `default`, `dev` | 依赖管理层：default 生产依赖、dev 开发工具 |
+| 运行时环境 | `DITTO_ENV` | `development`, `testing`, `production` | 行为控制层 |
+
+**环境命名规范**：
+
+| 类型 | 规范 | 示例 |
+|------|------|------|
+| Pixi 环境 | 小写，无连字符 | `default`, `dev` |
+| 运行时环境 | 小写，全称 | `development`, `testing`, `production` |
+| 环境变量前缀 | 大写，下划线 | `OBSERVABILITY_`, `DB_`, `API_` |
+
+**配置文件结构**：
+
+```
+config/
+├── development/
+│   ├── observability.env  # OBSERVABILITY_* 前缀
+│   ├── database.env       # DB_* 前缀
+│   ├── api.env            # API_* 前缀
+│   └── data_source.env    # 无前缀
+├── testing/
+│   └── ...
+└── production/
+    └── ...
+```
+
+**使用场景**：
+
+| 场景 | Pixi 环境 | DITTO_ENV | 命令 |
+|------|-----------|-----------|------|
+| 本地开发 | `dev` | `development` | `pixi run -e dev pytest` |
+| 测试执行 | `dev` | `testing` | `pixi run -e dev pytest` (自动设置) |
+| 生产部署 | `default` | `production` | `pixi run server` |
+
+**重要原则**：
+- 环境值必须使用 `Environment` 枚举，禁止硬编码字符串
+- 可观测性使用 OTEL 风格的**独立功能开关**，而非单一"模式"枚举
+- 配置文件按 `config/{environment}/` 结构组织
+- 不同 Settings 类使用不同的环境变量前缀实现隔离
 
 | 层级 | 职责 | 详细规范 |
 |------|------|----------|

@@ -18,8 +18,8 @@ class ErrorResponse(BaseModel):
     timestamp: float | None = None
 
     model_config = ConfigDict(
-        # Python 3.12+ 规范：使用 strict=True
+        # API 响应模型：必须 strict=True 防止类型强制转换
         strict=True,
-        # API 响应不需要 frozen，因为 Pydantic BaseModel 默认可变
-        # 如果需要不可变性，可以添加 frozen=True
+        # 忽略额外字段，确保向后兼容
+        extra="ignore",
     )

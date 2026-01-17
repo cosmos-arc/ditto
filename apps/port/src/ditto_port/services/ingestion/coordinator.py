@@ -8,11 +8,12 @@
 - 记录摄取日志
 """
 
-from typing import ClassVar, Literal
+from collections.abc import Callable
+from typing import Literal
 
 import polars as pl
 from ditto_datahub.hub import DataHub
-from ditto_datahub.models import OnDuplicate, WriteResult
+from ditto_datahub.models import Dataset, OnDuplicate, WriteResult
 from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_foundation import logger
@@ -24,16 +25,6 @@ from ditto_port.services.ingestion.metadata import MetadataManager
 
 class IngestionCoordinator:
     """统一摄取协调器。"""
-
-    _DATASET_METHODS: ClassVar[dict[str, str]] = {
-        "calendar": "fetch_calendar",
-        "etf_basic": "fetch_etf_basic",
-        "etf_daily": "fetch_etf_daily",
-        "stock_basic": "fetch_stock_basic",
-        "stock_daily": "fetch_stock_daily",
-        "adj_factor": "fetch_adj_factor",
-        "fund_adj": "fetch_fund_adj",
-    }
 
     def __init__(
         self,
@@ -63,8 +54,10 @@ class IngestionCoordinator:
         )
 
         # 验证数据集是否支持
-        if dataset not in self._DATASET_METHODS:
-            raise ValueError(f"不支持的数据集: {dataset}")
+        try:
+            Dataset(dataset)  # 验证是否为有效的数据集
+        except ValueError as e:
+            raise ValueError(f"不支持的数据集: {dataset}") from e
 
         # 检查是否应该跳过摄取
         if skip_result := self._check_should_skip(dataset, trade_date, force):
@@ -120,7 +113,12 @@ class IngestionCoordinator:
 
         """
         # P0-2: 行情类数据集在非交易日静默跳过
-        if dataset in ("stock_daily", "etf_daily"):
+        try:
+            dataset_enum = Dataset(dataset)
+        except ValueError:
+            return True
+
+        if dataset_enum in (Dataset.STOCK_DAILY, Dataset.ETF_DAILY):
             return self._hub.calendar_store.is_trading_day(trade_date)
         return True
 
@@ -329,28 +327,34 @@ class IngestionCoordinator:
         return results
 
     def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
-        """根据数据集类型调用对应的 Source 方法获取数据。"""
-        method_name = self._DATASET_METHODS.get(dataset)
-        if method_name is None:
+        """
+        根据数据集类型调用对应的 Source 方法获取数据。
+
+        使用字典映射替代动态 getattr 调用，易于扩展新数据集。
+        """
+        # 转换为枚举
+        try:
+            dataset_enum = Dataset(dataset)
+        except ValueError as e:
+            raise ValueError(f"不支持的数据集: {dataset}") from e
+
+        # 定义数据集获取函数映射（使用枚举作为键）
+        handlers: dict[Dataset, Callable[[], pl.DataFrame]] = {
+            Dataset.CALENDAR: lambda: self._source.fetch_calendar(
+                trade_date, trade_date
+            ),
+            Dataset.STOCK_BASIC: lambda: self._source.fetch_stock_basic(),
+            Dataset.ETF_BASIC: lambda: self._source.fetch_etf_basic(),
+            Dataset.STOCK_DAILY: lambda: self._source.fetch_stock_daily(trade_date),
+            Dataset.ETF_DAILY: lambda: self._source.fetch_etf_daily(trade_date),
+            Dataset.ADJ_FACTOR: lambda: self._source.fetch_adj_factor(trade_date),
+            Dataset.FUND_ADJ: lambda: self._source.fetch_fund_adj(trade_date),
+        }
+
+        if dataset_enum not in handlers:
             raise ValueError(f"不支持的数据集: {dataset}")
 
-        source_method = getattr(self._source, method_name, None)
-        if source_method is None or not callable(source_method):
-            raise ValueError(f"Source 方法不存在: {method_name}")
-
-        # calendar 数据集需要特殊处理（需要 start_date 和 end_date 两个参数）
-        if dataset == "calendar":
-            result: pl.DataFrame = source_method(trade_date, trade_date)  # type: ignore[call-arg]
-            return result
-
-        # basic 类数据集不需要 trade_date 参数
-        if dataset in ("etf_basic", "stock_basic"):
-            result = source_method()  # type: ignore[call-arg]
-            return result
-
-        # 其他数据集（daily、adj_factor 等）只需要 trade_date 参数
-        result = source_method(trade_date)  # type: ignore[call-arg]
-        return result
+        return handlers[dataset_enum]()
 
     def _write_data(
         self,
@@ -362,10 +366,16 @@ class IngestionCoordinator:
         """根据数据集类型写入对应的 Store。"""
         year = int(trade_date[:4])
 
-        if dataset in ("etf_daily", "stock_daily"):
+        # 转换为枚举进行比较
+        try:
+            dataset_enum = Dataset(dataset)
+        except ValueError as e:
+            raise ValueError(f"不支持写入数据集: {dataset}") from e
+
+        if dataset_enum in (Dataset.ETF_DAILY, Dataset.STOCK_DAILY):
             # 补齐 sid/source 字段（使用 SecurityRepository API）
             asset_class: Literal["stock", "etf"] = (
-                "etf" if dataset == "etf_daily" else "stock"
+                "etf" if dataset_enum == Dataset.ETF_DAILY else "stock"
             )
             df = self._hub.securities.enrich_dataframe_with_sid(
                 df,
@@ -382,10 +392,10 @@ class IngestionCoordinator:
                 run_dq_check=True,
                 on_duplicate=on_duplicate,
             )
-        elif dataset in ("adj_factor", "fund_adj"):
+        elif dataset_enum in (Dataset.ADJ_FACTOR, Dataset.FUND_ADJ):
             # 补齐 sid/source 字段（使用 SecurityRepository API）
             adj_asset_class: Literal["stock", "etf"] = (
-                "etf" if dataset == "fund_adj" else "stock"
+                "etf" if dataset_enum == Dataset.FUND_ADJ else "stock"
             )
 
             # 检查是否已有 sid 列（上游可能已处理）
@@ -404,7 +414,7 @@ class IngestionCoordinator:
                 year=year,
                 on_duplicate=on_duplicate,
             )
-        elif dataset == "calendar":
+        elif dataset_enum == Dataset.CALENDAR:
             records = df.to_dicts()
             self._hub.calendar_store.upsert(records)
             file_path = f"calendar_store:{trade_date}"
@@ -418,7 +428,7 @@ class IngestionCoordinator:
                 blocked=False,
                 dq_result=None,
             )
-        elif dataset == "stock_basic":
+        elif dataset_enum == Dataset.STOCK_BASIC:
             file_path, checksum = self._write_stock_basic(df, trade_date)
             return WriteResult(
                 file_path=file_path,
@@ -428,7 +438,7 @@ class IngestionCoordinator:
                 blocked=False,
                 dq_result=None,
             )
-        elif dataset == "etf_basic":
+        elif dataset_enum == Dataset.ETF_BASIC:
             file_path, checksum = self._write_etf_basic(df, trade_date)
             return WriteResult(
                 file_path=file_path,

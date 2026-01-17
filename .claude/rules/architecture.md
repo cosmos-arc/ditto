@@ -4,6 +4,62 @@ paths: ./**/*.py
 
 # 架构设计规范
 
+## 分层架构原则
+
+### 层级依赖规则
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    apps/port (应用层)                    │
+│                         │                                │
+│                         ├──→ packages/datahub (数据层)   │
+│                         │         │                      │
+│                         │         └──→ packages/foundation │
+│                         │                                │
+│                         └──→ packages/core (核心层)      │
+│                                   │                      │
+│                                   └──→ packages/foundation │
+└─────────────────────────────────────────────────────────┘
+```
+
+**依赖规则**：
+- **应用层** (port) → 数据层 (datahub) ✅
+- **应用层** (port) → 核心层 (core) ✅
+- **应用层** (port) → **横切层 (foundation)** ✅ **（允许）**
+- **数据层** (datahub) → 横切层 (foundation) ✅
+- **核心层** (core) → 横切层 (foundation) ✅
+- **数据层** (datahub) → 应用层 (port) ❌ 反向依赖
+- **横切层** (foundation) → 其他层 ❌ 零依赖
+
+### 横切层 (Foundation)
+
+**定义**：提供跨所有层的基础设施服务，可被任何层访问
+
+**包含模块**：
+- `config` - 配置管理（Settings、路径管理）
+- `observability` - 可观测性（日志、追踪、指标）
+- `util` - 通用工具（校验和、日期处理）
+
+**正确使用**：
+```python
+# ✅ 所有层都可以直接使用 foundation
+from ditto_foundation.observability import get_logger
+from ditto_foundation.config import get_settings
+from ditto_foundation.util.checksum import file_checksum
+```
+
+### 层级穿透（禁止）
+
+**违反规则**：跳过中间层直接访问实现细节
+
+| ❌ 禁止 | ✅ 正确 |
+|--------|--------|
+| port → Store (直接访问存储) | port → Repository → Store |
+| port → Source (直接访问数据源) | port → Repository/Service → Source |
+| datahub → core (数据层依赖核心) | core → datahub (核心依赖数据) |
+
+---
+
 ## 单一职责原则（SRP）
 
 ### 禁止混合职责
@@ -101,3 +157,163 @@ def get_source(name: str) -> DataSource:
 **解决**：
 1. 拆分：`base.py`（接口）+ `factory.py`（工厂）
 2. 顶层导入：`from tushare.source import TushareSource`
+
+---
+
+## 子领域分层规范
+
+### 核心原则
+
+| 层级 | 职责 | 典型组件 | 判断标准 |
+|------|------|----------|----------|
+| **Domain Layer** | 业务逻辑、领域知识 | 引擎、算法、规则 | 是否是业务逻辑/规则？ |
+| **Application Layer** | 用例编排、事务边界 | 服务、协调器 | 是否是用例编排？ |
+| **Infrastructure Layer** | 数据访问、持久化 | Store、Repository | 是否是数据访问？ |
+
+### 判断决策树
+
+```
+问题：这个组件属于哪一层？
+
+1. 是否是业务逻辑/规则？
+   YES → Domain Layer (packages/core/)
+
+2. 是否是用例编排（协调多个服务）？
+   YES → Application Layer (apps/port/services/)
+
+3. 是否是数据访问（存储、查询）？
+   YES → Infrastructure Layer (packages/datahub/)
+```
+
+### 各子领域的完整定义
+
+#### Quality（数据质量）
+
+| 层级 | 路径 | 职责 |
+|------|------|------|
+| **Domain** | `packages/core/src/ditto_core/quality/` | 检查规则算法（OHLC、涨跌停、成交量异常） |
+| **Application** | `apps/port/src/ditto_port/services/ingestion/` | 编排 dq 检查流程 |
+| **Infrastructure** | `packages/datahub/src/ditto_datahub/repositories/` | 保存检查结果、隔离失败数据 |
+
+**关键点**：
+- ✅ dq 是量化业务规则（如 OHLC 一致性是金融知识），不是通用技术约束
+- ✅ dq 配置文件（YAML）定义业务规则
+- ❌ 不是"技术约束"，而是"领域知识"
+
+#### Factor（因子计算）
+
+| 层级 | 路径 | 职责 |
+|------|------|------|
+| **Domain** | `packages/core/src/ditto_core/factor/` | 因子计算算法（RS、动量、波动率） |
+| **Application** | `apps/port/src/ditto_port/services/factor/` | 编排计算流程（获取数据、计算、清洗、保存） |
+| **Infrastructure** | `packages/datahub/src/ditto_datahub/stores/factors/` | 因子数据持久化 |
+
+**关键点**：
+- 计算逻辑在 Core（纯函数、无状态）
+- 编排流程在 Application（获取数据、调用计算、保存结果）
+- 存储在 DataHub（parquet 文件）
+
+#### ML（机器学习）
+
+| 层级 | 路径 | 职责 |
+|------|------|------|
+| **Domain** | `packages/core/src/ditto_core/ml/` | ML 算法实现（训练、预测、评估） |
+|  | `core/ml/models/` | ML 模型定义（RandomForest、XGBoost） |
+|  | `core/ml/metrics/` | 评估指标（Sharpe、IC Rank） |
+| **Application** | `apps/port/src/ditto_port/services/ml/` | 编排训练流程（特征工程、训练、验证、部署） |
+| **Infrastructure** | `packages/datahub/src/ditto_datahub/stores/models/` | 模型持久化（pickle、joblib） |
+
+**关键点**：
+- `ml/models` 是算法实现（Domain Layer），不是数据模型（如 ORM）
+- 训练/预测是业务逻辑（Domain Layer）
+- 特征工程编排是应用层（Application Layer）
+
+#### Risk（风险管理）
+
+| 层级 | 路径 | 职责 |
+|------|------|------|
+| **Domain** | `packages/core/src/ditto_core/risk/` | 风险模型（回撤检测、风险度量） |
+| **Application** | `apps/port/src/ditto_port/services/risk/` | 风险监控、告警编排 |
+| **Infrastructure** | `packages/datahub/src/ditto_datahub/stores/risk_metrics/` | 风险指标存储 |
+
+#### Strategy（策略）
+
+| 层级 | 路径 | 职责 |
+|------|------|------|
+| **Domain** | `packages/core/src/ditto_core/strategy/` | 策略逻辑、信号生成 |
+|  | `core/strategy/base.py` | 策略抽象基类 |
+| **Application** | `apps/port/src/ditto_port/services/trading/` | 交易执行编排 |
+| **Infrastructure** | `packages/datahub/src/ditto_datahub/stores/orders/` | 订单存储 |
+
+#### Signal（信号）
+
+| 层级 | 路径 | 职责 |
+|------|------|------|
+| **Domain** | `packages/core/src/ditto_core/strategy/signal/` | 信号生成逻辑 |
+| **Application** | `apps/port/src/ditto_port/services/signal/` | 信号管理编排 |
+| **Infrastructure** | `packages/datahub/src/ditto_datahub/stores/signals/` | 信号存储 |
+
+#### Execution（执行）
+
+| 层级 | 路径 | 职责 |
+|------|------|------|
+| **Domain** | `packages/core/src/ditto_core/strategy/execution/` | 执行逻辑（订单拆分、路由） |
+| **Application** | `apps/port/src/ditto_port/services/execution/` | 执行编排 |
+| **Infrastructure** | `packages/datahub/src/ditto_datahub/stores/trades/` | 成交存储 |
+
+### 统一的依赖关系
+
+```
+Application Layer (apps/port/services/)
+    │
+    ├── quality.QualityEngine.check()
+    ├── factor.FactorEngine.calc()
+    ├── ml.MLEngine.train()
+    ├── risk.RiskEngine.check()
+    ├── strategy.Strategy.generate_signals()
+    └── execution.ExecutionEngine.execute_orders()
+    │
+    ↓ 依赖
+Domain Layer (packages/core/)
+    │
+    └── 依赖
+Infrastructure Layer (packages/datahub/)
+    │
+    └── 依赖
+Foundation Layer (packages/foundation/)
+```
+
+**依赖规则**：
+- ✅ Application → Domain
+- ✅ Application → Infrastructure
+- ✅ Domain → Infrastructure
+- ✅ Infrastructure → Foundation
+- ❌ Infrastructure → Domain（禁止反向依赖）
+- ❌ Foundation → 其他层（零依赖）
+
+### 配置文件位置
+
+| 组件 | 配置类型 | 位置 | 说明 |
+|------|---------|------|------|
+| **quality** | 业务规则 | `data_root/config/dq/*.yaml` | L1/L2/L3 检查规则 |
+| **factor** | 因子定义 | `data_root/config/factors/*.yaml` | 因子公式、参数 |
+| **ml** | 模型配置 | `data_root/config/ml/*.yaml` | 算法选择、超参数 |
+| **risk** | 风险参数 | `data_root/config/risk/*.yaml` | 风险阈值、参数 |
+
+**原则**：配置与代码分离，运行时动态加载。
+
+### 实施检查清单
+
+在添加新组件时，使用以下问题判断其归属：
+
+| 问题 | 回答 Yes → 归属 | 回答 No → 归属 |
+|------|----------------|---------------|
+| 是否直接访问存储文件/数据库？ | DataHub Store | 使用 Repository |
+| 是否包含业务规则/算法逻辑？ | Domain Layer | 不应在此层 |
+| 是流程编排/任务协调？ | Application Layer | 不应在此层 |
+| 是否依赖外部数据源（API/爬虫）？ | DataHub Source | 不应在此层 |
+
+**禁止重复实现**：
+- ❌ Application Layer 重复实现 Domain Layer 已有的业务逻辑
+- ❌ Domain Layer 直接访问存储（应通过 Infrastructure）
+- ❌ 多个地方重复实现相同的业务规则

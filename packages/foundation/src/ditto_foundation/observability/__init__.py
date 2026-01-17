@@ -150,8 +150,8 @@ def shutdown() -> None:
         ]:
             if hasattr(provider, "shutdown") and not hasattr(provider, "_shutdown"):
                 provider.shutdown()
-    except Exception:  # noqa: S110 - graceful shutdown failure should not raise
-        # 静默忽略：优雅关闭失败不应抛出异常
-        pass
+    except Exception as e:
+        # 优雅关闭失败不应抛出异常，但应记录日志用于调试
+        logger.debug(f"Graceful shutdown completed with warnings: {e}")
 
     _ObservabilityRegistry.set_initialized(False)

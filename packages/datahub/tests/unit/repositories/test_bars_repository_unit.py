@@ -11,7 +11,7 @@ import polars as pl
 import pytest
 from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.repositories import AdjType, BarsQuery, BarsRepository
-from ditto_datahub.repositories.bars import _ResolvedQuery
+from ditto_datahub.repositories.bars.repository import _ResolvedQuery
 from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
@@ -1014,7 +1014,7 @@ class TestBarsRepositorySingle:
         self.bars_store.write("stock_daily", test_df, 2024)
 
         # Act: Mock logger and call get_single
-        mock_logger = mocker.patch("ditto_datahub.repositories.bars.logger")
+        mock_logger = mocker.patch("ditto_datahub.repositories.bars.repository.logger")
         result = self.repo.get_single(
             identifier="600000",
             start="2024-01-01",

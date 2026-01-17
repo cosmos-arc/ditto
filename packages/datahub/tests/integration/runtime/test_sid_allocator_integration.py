@@ -32,7 +32,7 @@ class TestSidAllocator:
         """Clean up test environment."""
         try:
             self.pool.execute("COMMIT")
-        except Exception:  # noqa: S110 - cleanup should not raise
+        except Exception:
             pass
         self.pool.close()
         self.temp_dir.cleanup()

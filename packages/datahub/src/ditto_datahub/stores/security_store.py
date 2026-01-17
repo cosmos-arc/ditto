@@ -14,8 +14,8 @@ from typing import Any, cast
 
 import polars as pl
 from ditto_foundation import M, logger, traced
+from ditto_foundation.cache import DataCache
 
-from ditto_datahub.runtime.cache import DataCache
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 

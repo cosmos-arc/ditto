@@ -389,7 +389,7 @@ AssetClass = Literal["stock", "etf", "index", "bond", "future"]
 
 
 # ============ sid 区间常量 ============
-class SidRange:
+class AssetSidRange:
     """sid 预留区间"""
     STOCK_MIN = 100_000_000
     STOCK_MAX = 199_999_999
@@ -5654,7 +5654,7 @@ class SQLitePool:
 ```python
 # src/ditto_data_hub/runtime/sid_allocator.py
 from __future__ import annotations
-from ..types import SidRange
+from ..types import AssetSidRange
 
 
 class SidAllocator:
@@ -5665,7 +5665,7 @@ class SidAllocator:
 
     def allocate(self, asset_class: str) -> int:
         """分配新的 SID（原子操作）"""
-        min_sid, max_sid = SidRange.get_range(asset_class)
+        min_sid, max_sid = AssetSidRange.get_range(asset_class)
 
         try:
             self._sqlite_client.execute("BEGIN IMMEDIATE")

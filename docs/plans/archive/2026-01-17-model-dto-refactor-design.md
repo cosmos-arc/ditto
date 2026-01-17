@@ -343,11 +343,29 @@ class BackfillResult:
 
 ### 验收标准
 
-- [ ] 移除所有 DeprecationWarning 兼容代码
-- [ ] 删除已迁移的旧文件
-- [ ] 所有导入统一使用 `from xxx.models import`
-- [ ] 所有测试通过
-- [ ] 通过 pyright、ruff、ci-check
+- [x] 移除所有 DeprecationWarning 兼容代码
+- [x] 删除已迁移的旧文件
+- [x] 所有导入统一使用 `from xxx.models import`
+- [x] 所有测试通过
+- [x] 通过 pyright、ruff、ci-check
+
+### 完成时间
+
+2026-01-17
+
+### 变更摘要
+
+**文件删除：**
+- ✅ 删除 `packages/datahub/src/ditto_datahub/dq/models.py`
+
+**导入更新：**
+- ✅ 更新所有测试文件导入：`from ditto_datahub.dq.models import` → `from ditto_datahub.models import`
+- ✅ 更新 `apps/port/src/ditto_port/jobs/tasks/monitoring.py` 导入
+- ✅ 更新所有 `DQConfig` → `DQSpec` 引用
+
+**代码质量：**
+- ✅ pyright 类型检查通过（0 errors, 0 warnings）
+- ✅ ruff 代码检查通过
 
 ---
 
@@ -358,8 +376,34 @@ class BackfillResult:
 3. ✅ 内部数据传输统一使用 frozen dataclass
 4. ✅ 命名使用直接业务语义（Config/Options/Spec/Request/Result 等）
 5. ✅ 避免 Input/Params/Args 等技术术语
-6. ✅ 通过 pyright、ruff 检查
-7. ✅ 所有测试通过
+6. ✅ **API 响应模型使用 `strict=True`**（如 `ErrorResponse`）
+7. ✅ **配置文件解析模型使用 lax 模式**（如 `DQSpec`, `DatasetSpec`）
+8. ✅ 通过 pyright、ruff 检查
+9. ✅ 所有测试通过
+
+---
+
+## 规范完善（2026-01-17）
+
+### Pydantic Strict Mode 分层规范
+
+根据业界最佳实践（参考 [Pydantic Strict Mode 官方文档](https://docs.pydantic.dev/latest/concepts/strict_mode/)），对 Pydantic `strict` 模式的使用进行分层规范：
+
+| 场景 | strict 模式 | extra 策略 | 示例 |
+|------|-------------|------------|------|
+| **API 响应** | `strict=True` | `extra='ignore'` | `ErrorResponse` |
+| **配置文件解析** | `lax` (默认) | `extra='allow'` | `DQSpec`, `DatasetSpec`, `BaseRule` |
+| **环境变量加载** | `lax` (默认) | `extra='ignore'` | Settings 模型 |
+
+**理由**：
+- **API 响应**：需要严格类型检查，防止类型强制转换带来的安全隐患
+- **配置文件解析**：需要类型转换的灵活性，YAML/JSON 中的数字/字符串转换是常见需求
+- **环境变量**：Pydantic Settings 默认使用 lax 模式，支持自动类型转换
+
+### 相关文档更新
+
+- ✅ 更新 `2026-01-17-model-dto-standards.md` - 添加 Pydantic 分层约束
+- ✅ 添加业界最佳实践参考链接
 
 ---
 
@@ -374,7 +418,12 @@ class BackfillResult:
 
 ## 参考资料
 
+### 架构与设计
 - [zhanymkanov/fastapi-best-practices](https://github.com/zhanymkanov/fastapi-best-practices)
 - [Structuring a FastAPI Project: Best Practices](https://dev.to/mohammad222pr/structuring-a-fastapi-project-best-practices-53l6)
 - [Pydantic vs Data Classes: Which Should You Use?](https://zakforster.com/posts/pydantic-vs-dataclasses/)
 - [Keep Pydantic out of your Domain Layer](https://news.ycombinator.com/item?id=44656419)
+
+### Pydantic 规范
+- [Pydantic Strict Mode 官方文档](https://docs.pydantic.dev/latest/concepts/strict_mode/)
+- [Pydantic Settings 官方文档](https://docs.pydantic.dev/latest/concepts/pydantic_settings/)

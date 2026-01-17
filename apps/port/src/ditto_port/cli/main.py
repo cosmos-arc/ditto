@@ -5,6 +5,7 @@ import typer
 from ditto_port.cli.commands.adj import app as adj_app
 from ditto_port.cli.commands.calendar import app as calendar_app
 from ditto_port.cli.commands.etf import app as etf_app
+from ditto_port.cli.commands.init import app as init_app
 from ditto_port.cli.commands.stock import app as stock_app
 
 app = typer.Typer(
@@ -15,6 +16,7 @@ app = typer.Typer(
 )
 
 # 注册命令组
+app.add_typer(init_app, name="init")
 app.add_typer(stock_app, name="stock")
 app.add_typer(etf_app, name="etf")
 app.add_typer(calendar_app, name="calendar")

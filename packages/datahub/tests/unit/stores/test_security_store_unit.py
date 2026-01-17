@@ -2,10 +2,10 @@
 
 import polars as pl
 import pytest
-from ditto_datahub.runtime.cache import DataCache
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_foundation.cache import DataCache
 
 
 @pytest.mark.pit

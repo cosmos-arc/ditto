@@ -45,7 +45,6 @@ dataclass = 内部世界的数据载体
 | 环境变量配置 | `Pydantic BaseSettings` | `Settings`, `DatabaseSettings` | 自动加载 |
 | 配置文件解析 | `Pydantic` | `DQSpec`, `DatasetSpec` (YAML/JSON) | 复杂验证、默认值 |
 | API 响应 | `Pydantic` | FastAPI 响应模型 | FastAPI 集成、JSON Schema |
-
 ### 2. 命名规范
 
 #### 核心原则
@@ -86,9 +85,41 @@ dataclass = 内部世界的数据载体
 - 所有 dataclass 必须使用 `frozen=True`（除非有明确理由）
 - 禁止混用：不要同时继承 `BaseModel` 和使用 `@dataclass`
 
-#### Pydantic 约束
-- Pydantic 模型配置 `strict=True`（Python 3.12+）
-- 只在数据边界使用，内部数据传输优先 dataclass
+#### Pydantic 约束（分层规范）
+
+**按使用场景分层配置**：
+
+| 场景 | strict 模式 | extra 策略 | 示例 |
+|------|-------------|------------|------|
+| **API 响应** | `strict=True` | `extra='ignore'` | `ErrorResponse` |
+| **配置文件解析** | `lax` (默认) | `extra='allow'` 或 `extra='ignore'` | `DQSpec`, `DatasetSpec`, `BaseRule` |
+| **环境变量加载** | `lax` (默认) | `extra='ignore'` | Settings 模型 |
+
+**配置示例**：
+
+```python
+# API 响应：必须 strict 模式
+from pydantic import BaseModel, ConfigDict
+
+class ErrorResponse(BaseModel):
+    model_config = ConfigDict(
+        strict=True,  # 防止类型强制转换
+        extra='ignore',
+    )
+    code: int
+    message: str
+
+# 配置文件解析：使用 lax 模式
+class DQSpec(BaseModel):
+    model_config = {"extra": "allow"}
+    dataset: str
+    description: str = ""
+```
+
+**约束**：
+- 只在数据边界使用 Pydantic，内部数据传输优先 dataclass
+- API 响应模型必须使用 `strict=True` 确保类型安全
+- 配置文件解析使用 lax 模式，允许必要的类型转换
 
 ## TDD 流程
 

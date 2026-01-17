@@ -1,6 +1,6 @@
 """DataHub models for data transfer objects."""
 
-from ditto_datahub.models.common import OnDuplicate, SidRange
+from ditto_datahub.models.common import AssetSidRange, Dataset, OnDuplicate
 from ditto_datahub.models.quality import (
     ColumnRule,
     CompletenessRule,
@@ -26,10 +26,10 @@ from ditto_datahub.models.quality import (
     UniqueRule,
     ZScoreRule,
 )
-from ditto_datahub.models.security import SecurityRegistration
 from ditto_datahub.models.storage import FreezeManifest, WriteResult, WriteResultStore
 
 __all__ = [
+    "AssetSidRange",
     "ColumnRule",
     "CompletenessRule",
     "ConsistencyRule",
@@ -38,6 +38,7 @@ __all__ = [
     "DQResult",
     "DQSeverity",
     "DQSpec",
+    "Dataset",
     "DatasetRules",
     "ExpressionRule",
     "ForeignKeyRule",
@@ -50,8 +51,6 @@ __all__ = [
     "PositiveRule",
     "RangeCheckRule",
     "RuleType",
-    "SecurityRegistration",
-    "SidRange",
     "SingleColumnRule",
     "StalePriceRule",
     "TypeCheckRule",

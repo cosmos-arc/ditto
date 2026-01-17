@@ -19,9 +19,9 @@ from typing import Any, Literal, cast
 
 import polars as pl
 from ditto_foundation import logger, span
+from ditto_foundation.cache import DataCache
 
 from ditto_datahub.errors import TradingDateNotFoundError
-from ditto_datahub.runtime.cache import DataCache
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 

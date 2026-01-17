@@ -1,15 +1,19 @@
 """DQ execution engine."""
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import polars as pl
 
 from ditto_datahub.dq.checkers.business import BusinessChecker
 from ditto_datahub.dq.checkers.statistical import StatisticalChecker
 from ditto_datahub.dq.checkers.technical import TechnicalChecker
-from ditto_datahub.hub import DataHub
 from ditto_datahub.models import DQIssue, DQResult, DQSeverity, DQSpec
+
+if TYPE_CHECKING:
+    from ditto_datahub.hub import DataHub
 
 
 class DQEngine:
