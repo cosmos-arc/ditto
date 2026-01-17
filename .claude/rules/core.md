@@ -25,6 +25,71 @@ def calculate_momentum(): ... # snake_case
 MAX_DRAWDOWN = 0.20          # UPPER_SNAKE
 ```
 
+## 模型类与 DTO 规范
+
+### 核心原则
+
+```
+Pydantic = 外部边界的数据守门员
+dataclass = 内部世界的数据载体
+```
+
+### 1. dataclass vs Pydantic 使用边界
+
+| 场景 | 使用类型 | 示例 | 理由 |
+|------|----------|------|------|
+| 内部运行时数据传输 | `frozen dataclass` | `WriteResult`, `IngestionResult` | 可信数据，追求性能 |
+| 不可变数据结构 | `frozen dataclass` | `FreezeManifest`, `IngestionCursor` | 确保安全 |
+| 简单数据容器 | `frozen dataclass` | `CacheStats`, `ResultCounts` | 无需验证逻辑 |
+| 接收外部输入 | `Pydantic` | API 请求体、用户输入 | 需要验证和类型转换 |
+| 环境变量配置 | `Pydantic BaseSettings` | `Settings`, `DatabaseSettings` | 自动加载 |
+| 配置文件解析 | `Pydantic` | `DQSpec`, `DatasetSpec` (YAML/JSON) | 复杂验证、默认值 |
+| API 响应 | `Pydantic` | FastAPI 响应模型 | FastAPI 集成、JSON Schema |
+
+### 2. 命名规范
+
+#### 核心原则
+- 直接用业务语义命名，避免 `Input/Params/Args` 等技术术语
+- 能不加后缀就不加，只有需要区分时才使用
+- 用单数形式（`Options` 除外）
+
+#### 后缀使用场景
+
+| 后缀 | 含义 | 使用场景 | 示例 |
+|------|------|----------|------|
+| `Config` | 完整配置 | 系统/组件的完整配置 | `DatabaseConfig`, `APISettings` |
+| `Options` | 可选行为配置 | 可选的行为选项集合（复数） | `WriteOptions`, `ParserOptions` |
+| `Spec` | 规范/规格 | 定义"是什么"的规范 | `DQSpec`, `DatasetSpec` |
+| `Request` | 请求 | API/任务请求 | `BackfillRequest`, `SearchQuery` |
+| `Response` | 响应 | API 响应 | `ErrorResponse` |
+| `Result` | 结果 | 操作结果 | `WriteResult`, `IngestionResult` |
+| `Stats` | 统计 | 统计数据 | `CacheStats` |
+| `Info` | 元信息 | 元数据 | `VersionInfo` |
+
+#### 避免使用
+
+| ❌ 避免 | ✅ 替代 | 理由 |
+|---------|---------|------|
+| `XXXInput` | 直接业务名，如 `Query`、`Request` | 泛泛的技术术语 |
+| `XXXParams` | `Spec`/`Config`/`Options`/`Request` | 最泛泛、无语义 |
+| `XXXArgs` | `Spec`/`Config`/`Options`/`Request` | 技术实现细节 |
+
+### 3. 包结构规范
+
+- **取消顶层 `types.py`**：避免与 Python 内置 `types` 模块混淆
+- **统一使用 `models/` 包**：所有模型类集中管理
+- **按域分组**：在 `models/` 下按业务域分文件
+
+### 4. 强制约束
+
+#### dataclass 约束
+- 所有 dataclass 必须使用 `frozen=True`（除非有明确理由）
+- 禁止混用：不要同时继承 `BaseModel` 和使用 `@dataclass`
+
+#### Pydantic 约束
+- Pydantic 模型配置 `strict=True`（Python 3.12+）
+- 只在数据边界使用，内部数据传输优先 dataclass
+
 ## TDD 流程
 
 ```

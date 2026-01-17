@@ -60,15 +60,65 @@
 
 #### 2. 命名规范
 
-| 用途 | 命名后缀 | 示例 |
-|------|---------|------|
-| **系统配置** | `Settings` | `DatabaseSettings`, `APISettings` |
-| **数据集规格** | `Spec` | `DQSpec`, `DatasetSpec` |
-| **功能选项** | `Options` | `WriteOptions`, `ParserOptions` |
-| **运行参数** | `Params` | `BackfillParams`, `QueryParams` |
-| **运行时结果** | `Result` | `WriteResult`, `IngestionResult` |
-| **统计数据** | `Stats` | `CacheStats` |
-| **元数据** | `Info` | `VersionInfo` |
+##### 核心原则
+
+1. **直接用业务语义命名**，避免 Input/Params/Args 这样的技术术语
+2. **能不加后缀就不加**，只有在需要区分同类概念时才使用后缀
+3. **用单数形式**，除非真的是集合类型（Options 除外）
+
+##### 后缀使用场景
+
+| 后缀 | 含义 | 使用场景 | 示例 |
+|------|------|----------|------|
+| **`Config`** | 完整配置 | 系统/组件的完整配置 | `DatabaseConfig`, `APISettings` |
+| **`Options`** | 可选行为配置 | 可选的行为选项集合（复数） | `WriteOptions`, `ParserOptions` |
+| **`Spec`** | 规范/规格 | 定义"是什么"的规范 | `DQSpec`, `DatasetSpec` |
+| **`Request`** | 请求 | API/任务请求 | `BackfillRequest`, `SearchQuery` |
+| **`Response`** | 响应 | API 响应 | `ErrorResponse` |
+| **`Result`** | 结果 | 操作结果 | `WriteResult`, `IngestionResult` |
+| **`Stats`** | 统计 | 统计数据 | `CacheStats` |
+| **`Info`** | 元信息 | 元数据 | `VersionInfo` |
+
+##### Config vs Options 的区别
+
+| 维度 | `Config` | `Options` |
+|------|----------|-----------|
+| **语义** | 完整配置 | 可选行为配置 |
+| **必需性** | 通常必需 | 全部可选 |
+| **示例** | `DatabaseConfig` | `WriteOptions` |
+
+```python
+# Config: 完整配置（可能有必需字段）
+class DatabaseConfig(BaseModel):
+    host: str           # 必需
+    port: int = 5432    # 有默认值
+    username: str       # 必需
+
+# Options: 可选行为配置（全部可选）
+class WriteOptions(BaseModel):
+    compression: CompressionType = CompressionType.SNAPPY  # 可选
+    overwrite: bool = False                                # 可选
+    write_metadata: bool = True                            # 可选
+```
+
+##### 避免
+
+| 避免使用 | 原因 | 替代 |
+|---------|------|------|
+| `XXXInput` | 泛泛的技术术语 | 直接用业务名，如 `Query`、`Filter`、`Request` |
+| `XXXParams` | 最泛泛、无语义 | `Spec`/`Config`/`Options`/`Request` |
+| `XXXArgs` | 技术实现细节 | 同上 |
+
+##### 命名对比
+
+| ❌ 避免 | ✅ 推荐 | 理由 |
+|--------|---------|------|
+| `QueryInput` | `Query` 或 `SearchQuery` | 直接业务名 |
+| `ProcessInput` | 具体业务名，如 `TradeRequest` | 业务语义 |
+| `BackfillParams` | `BackfillRequest` | 明确是请求 |
+| `FilterCriteria` | `Filter` 或 `SearchFilter` | 更简洁 |
+| `T1ConfigParams` | `T1ConfigSpec` | Spec 表达规范 |
+| `ErrorResponseParams` | `ErrorResponse` | 直接命名 |
 
 #### 3. 包结构规范
 
@@ -88,9 +138,9 @@
 
 ### 验收标准
 
-- [ ] `.claude/rules/core.md` 新增"模型类与 DTO 规范"章节
-- [ ] 章节包含上述四部分内容
-- [ ] 文档描述清晰、无歧义
+- [x] `.claude/rules/core.md` 新增"模型类与 DTO 规范"章节
+- [x] 章节包含上述四部分内容
+- [x] 文档描述清晰、无歧义
 
 ---
 
@@ -172,7 +222,8 @@ Pydantic → dataclass 转换 + 重命名。
 |--------|--------|--------|--------|--------|--------|
 | `DQConfig` | `DQSpec` | Pydantic | Pydantic | `dq/models.py` | `models/quality.py` |
 | `DatasetConfig` | `DatasetSpec` | Pydantic | Pydantic | `config/datasets.py` | `models/config.py` |
-| `T1ConfigParams` | `T1BackfillParams` | 待确认 | 待确认 | 待查找 | 待查找 |
+| `T1ConfigParams` | `T1ConfigSpec` | Pydantic | Pydantic | `config/datasets.py` | `models/config.py` |
+| `ErrorResponseParams` | `ErrorResponse` | dataclass | Pydantic | `middleware.py` | `models/common.py` |
 
 #### 类型转换
 
@@ -214,12 +265,16 @@ class BackfillResult:
 2. `retry.py` - 更新 `RetryResult` 导入
 3. 所有使用 `DQConfig` 的文件 → `DQSpec`
 4. 所有使用 `DatasetConfig` 的文件 → `DatasetSpec`
+5. `middleware.py` - 更新 `ErrorResponseParams` → `ErrorResponse`
+6. `config/datasets.py` - 更新 `T1ConfigParams` → `T1ConfigSpec`
 
 ### 验收标准
 
 - [ ] `BackfillResult` 和 `RetryResult` 转换为 frozen dataclass
 - [ ] `DQConfig` 重命名为 `DQSpec`
 - [ ] `DatasetConfig` 重命名为 `DatasetSpec`
+- [ ] `T1ConfigParams` 重命名为 `T1ConfigSpec`
+- [ ] `ErrorResponseParams` 重命名为 `ErrorResponse`
 - [ ] 所有导入语句更新
 - [ ] 所有现有测试通过
 - [ ] 通过 pyright、ruff 检查
@@ -260,9 +315,10 @@ class BackfillResult:
 1. ✅ 所有模型类从 `models/` 包统一导入
 2. ✅ Pydantic 只用于外部数据边界
 3. ✅ 内部数据传输统一使用 frozen dataclass
-4. ✅ 命名符合规范（Settings/Spec/Options/Params/Result）
-5. ✅ 通过 pyright、ruff 检查
-6. ✅ 所有测试通过
+4. ✅ 命名使用直接业务语义（Config/Options/Spec/Request/Result 等）
+5. ✅ 避免 Input/Params/Args 等技术术语
+6. ✅ 通过 pyright、ruff 检查
+7. ✅ 所有测试通过
 
 ---
 
