@@ -2,8 +2,8 @@
 
 from ditto_foundation import logger, span
 
+from ..models import SidRange
 from ..runtime.sqlite_pool import SQLitePool
-from ..types import SidRange
 
 
 class SidAllocator:

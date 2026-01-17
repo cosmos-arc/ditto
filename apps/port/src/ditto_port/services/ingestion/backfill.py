@@ -6,22 +6,10 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_foundation import logger
-from pydantic import BaseModel
 
-from ditto_port.common.types import IngestionResult
+from ditto_port.models import BackfillResult, IngestionResult
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 from ditto_port.services.ingestion.result_utils import count_results
-
-
-class BackfillResult(BaseModel):
-    """回补结果统计。"""
-
-    dataset: str
-    total_dates: int
-    success_count: int
-    skipped_count: int
-    failed_count: int
-    results: list[IngestionResult]
 
 
 class BackfillManager:
@@ -85,7 +73,7 @@ class BackfillManager:
                 success_count=0,
                 skipped_count=0,
                 failed_count=0,
-                results=[],
+                results=(),
             )
 
         results: list[IngestionResult] = []
@@ -129,7 +117,7 @@ class BackfillManager:
             success_count=counts.success,
             skipped_count=counts.skipped,
             failed_count=counts.failed,
-            results=results,
+            results=tuple(results),
         )
 
         logger.info(
@@ -180,7 +168,7 @@ class BackfillManager:
                 success_count=0,
                 skipped_count=0,
                 failed_count=0,
-                results=[],
+                results=(),
             )
 
         # 获取所有交易日
@@ -193,7 +181,7 @@ class BackfillManager:
                 success_count=0,
                 skipped_count=0,
                 failed_count=0,
-                results=[],
+                results=(),
             )
 
         # 获取已摄取的日期
@@ -209,7 +197,7 @@ class BackfillManager:
                 success_count=0,
                 skipped_count=0,
                 failed_count=0,
-                results=[],
+                results=(),
             )
 
         # 按日期排序
@@ -246,7 +234,7 @@ class BackfillManager:
             success_count=counts.success,
             skipped_count=counts.skipped,
             failed_count=counts.failed,
-            results=results,
+            results=tuple(results),
         )
 
         logger.info(

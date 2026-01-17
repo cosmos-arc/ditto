@@ -2,7 +2,7 @@
 
 from collections import Counter
 
-from ditto_port.common.types import IngestionResult, ResultCounts
+from ditto_port.models import IngestionResult, ResultCounts
 
 
 def count_results(

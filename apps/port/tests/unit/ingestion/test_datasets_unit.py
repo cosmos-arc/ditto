@@ -3,11 +3,11 @@
 from datetime import time
 
 import pytest
-from ditto_port.services.ingestion.config.datasets import (
+from ditto_port.models import (
     DATASET_REGISTRY,
     Dataset,
-    DatasetConfig,
-    T1ConfigParams,
+    DatasetSpec,
+    T1ConfigSpec,
     TaskTier,
     create_t0_config,
     create_t1_config,
@@ -64,12 +64,12 @@ class TestTaskTierEnum:
 
 
 @pytest.mark.unit
-class TestDatasetConfig:
-    """Test DatasetConfig model."""
+class TestDatasetSpec:
+    """Test DatasetSpec model."""
 
     def test_dataset_config_validation(self) -> None:
-        """Test DatasetConfig model validation with all required fields."""
-        config = DatasetConfig(
+        """Test DatasetSpec model validation with all required fields."""
+        config = DatasetSpec(
             dataset=Dataset.ETF_DAILY,
             tier=TaskTier.T1_INCREMENTAL,
             description="ETF daily bars",
@@ -113,8 +113,8 @@ class TestDatasetConfig:
         ]
 
     def test_dataset_config_with_dependencies(self) -> None:
-        """Test DatasetConfig with depends_on field."""
-        config = DatasetConfig(
+        """Test DatasetSpec with depends_on field."""
+        config = DatasetSpec(
             dataset=Dataset.STOCK_DAILY,
             tier=TaskTier.T1_INCREMENTAL,
             description="Stock daily bars",
@@ -142,7 +142,7 @@ class TestDatasetConfig:
 
     def test_dataset_config_adj_factor_dependencies(self) -> None:
         """Test ADJ_FACTOR depends on STOCK_DAILY."""
-        config = DatasetConfig(
+        config = DatasetSpec(
             dataset=Dataset.ADJ_FACTOR,
             tier=TaskTier.T1_INCREMENTAL,
             description="复权因子",
@@ -176,9 +176,9 @@ class TestDatasetRegistry:
             assert dataset in DATASET_REGISTRY, f"{dataset} not in registry"
 
     def test_registry_configs_are_valid(self) -> None:
-        """Test all registry configs are valid DatasetConfig instances."""
+        """Test all registry configs are valid DatasetSpec instances."""
         for dataset, config in DATASET_REGISTRY.items():
-            assert isinstance(config, DatasetConfig)
+            assert isinstance(config, DatasetSpec)
             assert config.dataset == dataset
 
     def test_t0_meta_datasets_config(self) -> None:
@@ -230,7 +230,6 @@ class TestDatasetRegistry:
 
     def test_required_fields_exist(self) -> None:
         """Test all datasets have required spec fields."""
-
         for _dataset, config in DATASET_REGISTRY.items():
             # Check all required fields are present
             assert hasattr(config, "dataset")
@@ -297,7 +296,7 @@ class TestHelperFunctions:
         """Test get_dataset_config function."""
         config = get_dataset_config(Dataset.ETF_DAILY)
 
-        assert isinstance(config, DatasetConfig)
+        assert isinstance(config, DatasetSpec)
         assert config.dataset == Dataset.ETF_DAILY
         assert config.tier == TaskTier.T1_INCREMENTAL
 
@@ -305,7 +304,7 @@ class TestHelperFunctions:
         """Test get_dataset_config works for all datasets."""
         for dataset in Dataset:
             config = get_dataset_config(dataset)
-            assert isinstance(config, DatasetConfig)
+            assert isinstance(config, DatasetSpec)
             assert config.dataset == dataset
 
 
@@ -377,7 +376,8 @@ class TestExtendedHelperFunctions:
         assert Dataset.ETF_DAILY in all_datasets
 
     def test_get_parallel_datasets_t1(self) -> None:
-        """Test get_parallel_datasets for T1 tier.
+        """
+        Test get_parallel_datasets for T1 tier.
 
         T1 datasets have a dependency chain:
         - Level 0: ETF_DAILY, STOCK_DAILY (depend only on T0)
@@ -439,7 +439,7 @@ class TestFactoryFunctions:
             task_name="ingest_calendar",
         )
 
-        assert isinstance(config, DatasetConfig)
+        assert isinstance(config, DatasetSpec)
         assert config.dataset == Dataset.CALENDAR
         assert config.tier == TaskTier.T0_META
         assert config.description == "交易日历"
@@ -474,7 +474,7 @@ class TestFactoryFunctions:
             task_name="ingest_etf_bars",
         )
 
-        assert isinstance(config, DatasetConfig)
+        assert isinstance(config, DatasetSpec)
         assert config.dataset == Dataset.ETF_DAILY
         assert config.tier == TaskTier.T1_INCREMENTAL
         assert config.description == "ETF日行情数据"
@@ -515,12 +515,12 @@ class TestFactoryFunctions:
 
 
 @pytest.mark.unit
-class TestT1ConfigParams:
-    """Test T1ConfigParams configuration parameter class."""
+class TestT1ConfigSpec:
+    """Test T1ConfigSpec configuration parameter class."""
 
     def test_t1_config_params_creates_valid_params(self) -> None:
-        """Test T1ConfigParams creates valid configuration parameters."""
-        params = T1ConfigParams(
+        """Test T1ConfigSpec creates valid configuration parameters."""
+        params = T1ConfigSpec(
             dataset=Dataset.ETF_DAILY,
             description="ETF日行情数据",
             typical_available_time=time(18, 0),
@@ -539,8 +539,8 @@ class TestT1ConfigParams:
         assert params.timeout_seconds == 300  # default
 
     def test_t1_config_params_with_custom_priority(self) -> None:
-        """Test T1ConfigParams with custom priority."""
-        params = T1ConfigParams(
+        """Test T1ConfigSpec with custom priority."""
+        params = T1ConfigSpec(
             dataset=Dataset.ADJ_FACTOR,
             description="复权因子",
             typical_available_time=time(19, 0),
@@ -553,8 +553,8 @@ class TestT1ConfigParams:
         assert params.priority == 30
 
     def test_t1_config_params_with_custom_timeout(self) -> None:
-        """Test T1ConfigParams with custom timeout_seconds."""
-        params = T1ConfigParams(
+        """Test T1ConfigSpec with custom timeout_seconds."""
+        params = T1ConfigSpec(
             dataset=Dataset.STOCK_DAILY,
             description="股票日行情数据",
             typical_available_time=time(17, 0),
@@ -567,9 +567,9 @@ class TestT1ConfigParams:
         assert params.timeout_seconds == 600
 
     def test_t1_config_params_validation(self) -> None:
-        """Test T1ConfigParams validates required fields."""
+        """Test T1ConfigSpec validates required fields."""
         with pytest.raises(ValueError):
-            T1ConfigParams(
+            T1ConfigSpec(
                 # Missing required field: dataset
                 description="ETF日行情数据",
                 typical_available_time=time(18, 0),
@@ -579,8 +579,8 @@ class TestT1ConfigParams:
             )
 
     def test_create_t1_config_with_params(self) -> None:
-        """Test create_t1_config accepts T1ConfigParams."""
-        params = T1ConfigParams(
+        """Test create_t1_config accepts T1ConfigSpec."""
+        params = T1ConfigSpec(
             dataset=Dataset.ETF_DAILY,
             description="ETF日行情数据",
             typical_available_time=time(18, 0),
@@ -591,7 +591,7 @@ class TestT1ConfigParams:
 
         config = create_t1_config(params)
 
-        assert isinstance(config, DatasetConfig)
+        assert isinstance(config, DatasetSpec)
         assert config.dataset == Dataset.ETF_DAILY
         assert config.tier == TaskTier.T1_INCREMENTAL
         assert config.description == "ETF日行情数据"
@@ -599,8 +599,8 @@ class TestT1ConfigParams:
         assert config.timeout_seconds == 300
 
     def test_create_t1_config_with_params_custom_values(self) -> None:
-        """Test create_t1_config with T1ConfigParams custom values."""
-        params = T1ConfigParams(
+        """Test create_t1_config with T1ConfigSpec custom values."""
+        params = T1ConfigSpec(
             dataset=Dataset.ADJ_FACTOR,
             description="复权因子",
             typical_available_time=time(19, 0),

@@ -1,4 +1,5 @@
-"""Tests for task factory functions.
+"""
+Tests for task factory functions.
 
 This module tests the factory functions that create Prefect tasks for data ingestion.
 The factories are lightweight wrappers that delegate to IngestionCoordinator.
@@ -11,7 +12,7 @@ from ditto_port.jobs.tasks import (
     t0_meta,
 )
 from ditto_port.jobs.tasks.t0_meta import create_ingest_task
-from ditto_port.services.ingestion.config.datasets import (
+from ditto_port.models import (
     DATASET_REGISTRY,
     Dataset,
     TaskTier,

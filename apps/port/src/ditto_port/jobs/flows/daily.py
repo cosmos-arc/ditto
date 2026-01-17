@@ -25,7 +25,7 @@ from ditto_port.jobs.tasks import (
     create_ingest_task_t1_adj,
     create_ingest_task_t1_bars,
 )
-from ditto_port.services.ingestion.config.datasets import (
+from ditto_port.models import (
     Dataset,
     TaskTier,
     get_datasets_by_tier,

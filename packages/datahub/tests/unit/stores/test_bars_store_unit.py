@@ -6,8 +6,8 @@ from tempfile import TemporaryDirectory
 
 import polars as pl
 import pytest
+from ditto_datahub.models import OnDuplicate
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.types import OnDuplicate
 
 
 class TestBarsStore:

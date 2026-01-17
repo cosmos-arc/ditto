@@ -1,4 +1,5 @@
-"""Unit tests for daily ingestion flow.
+"""
+Unit tests for daily ingestion flow.
 
 This module provides unit-level coverage for the daily ingestion flow,
 testing individual code paths and branches without full integration setup.
@@ -14,7 +15,7 @@ from ditto_port.jobs.flows.daily import (
     check_trading_day,
     daily_ingestion_flow,
 )
-from ditto_port.services.ingestion.config.datasets import Dataset
+from ditto_port.models import Dataset
 from prefect.tasks import Task as PrefectTask
 
 
@@ -24,7 +25,6 @@ class TestCheckTradingDay:
 
     def test_returns_true_for_trading_day(self, mocker):
         """Test that task returns True for valid trading day."""
-
         mock_hub = mocker.MagicMock()
         mock_hub.calendar.is_trading_day.return_value = True
 
@@ -40,7 +40,6 @@ class TestCheckTradingDay:
 
     def test_returns_false_for_non_trading_day(self, mocker):
         """Test that task returns False for non-trading day."""
-
         mock_hub = mocker.MagicMock()
         mock_hub.calendar.is_trading_day.return_value = False
 
@@ -55,7 +54,6 @@ class TestCheckTradingDay:
 
     def test_closes_hub_on_exception(self, mocker):
         """Test that hub.close() is called even when is_trading_day raises."""
-
         mock_hub = mocker.MagicMock()
         mock_hub.calendar.is_trading_day.side_effect = ValueError("Test error")
 
@@ -71,7 +69,6 @@ class TestCheckTradingDay:
 
     def test_is_prefect_task(self, mocker):
         """Test that check_trading_day is a Prefect task."""
-
         assert isinstance(check_trading_day, PrefectTask)
         assert check_trading_day.name == "check_trading_day"
 
@@ -82,7 +79,6 @@ class TestDailyIngestionFlowNonTradingDay:
 
     def test_returns_skipped_result_for_non_trading_day(self, mocker):
         """Test that flow returns skipped result for non-trading day."""
-
         mocker.patch(
             "ditto_port.jobs.flows.daily.check_trading_day", return_value=False
         )
@@ -110,7 +106,6 @@ class TestDailyIngestionFlowT0Execution:
 
     def test_executes_t0_datasets(self, mocker):
         """Test that flow executes T0 datasets."""
-
         # Mock check_trading_day to return True
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         # Mock get_datasets_by_tier to return T0 datasets
@@ -150,7 +145,6 @@ class TestDailyIngestionFlowT0Execution:
 
     def test_handles_empty_t0_datasets(self, mocker):
         """Test that flow handles empty T0 datasets list."""
-
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",
@@ -177,7 +171,6 @@ class TestDailyIngestionFlowT1Execution:
 
     def test_uses_correct_task_factory_for_adj_factor(self, mocker):
         """Test that adj_factor uses create_ingest_task_t1_adj."""
-
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",
@@ -214,7 +207,6 @@ class TestDailyIngestionFlowT1Execution:
 
     def test_uses_correct_task_factory_for_fund_adj(self, mocker):
         """Test that fund_adj uses create_ingest_task_t1_adj."""
-
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",
@@ -248,7 +240,6 @@ class TestDailyIngestionFlowT1Execution:
 
     def test_uses_correct_task_factory_for_bars_datasets(self, mocker):
         """Test that bars datasets use create_ingest_task_t1_bars."""
-
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",
@@ -282,7 +273,6 @@ class TestDailyIngestionFlowT1Execution:
 
     def test_handles_multi_level_t1_dependencies(self, mocker):
         """Test that T1 multi-level dependencies use correct wait_for."""
-
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",
@@ -343,7 +333,6 @@ class TestDailyIngestionFlowT1Execution:
 
     def test_handles_empty_t1_datasets(self, mocker):
         """Test that flow handles empty T1 datasets list."""
-
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",
@@ -368,7 +357,6 @@ class TestDailyIngestionFlowResultAggregation:
 
     def test_aggregates_success_status(self, mocker):
         """Test that success status is counted correctly."""
-
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",
@@ -402,7 +390,6 @@ class TestDailyIngestionFlowResultAggregation:
 
     def test_aggregates_failed_status(self, mocker):
         """Test that failed status is counted correctly."""
-
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",
@@ -436,7 +423,6 @@ class TestDailyIngestionFlowResultAggregation:
 
     def test_aggregates_skipped_status(self, mocker):
         """Test that skipped status is counted correctly."""
-
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",
@@ -470,7 +456,6 @@ class TestDailyIngestionFlowResultAggregation:
 
     def test_aggregates_mixed_statuses(self, mocker):
         """Test that mixed statuses are counted correctly."""
-
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",
@@ -514,7 +499,6 @@ class TestDailyIngestionFlowReturnValue:
 
     def test_return_value_contains_all_required_keys(self, mocker):
         """Test that return value contains all required keys."""
-
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",
@@ -548,7 +532,6 @@ class TestDailyIngestionFlowReturnValue:
 
     def test_dqc_results_placeholder(self, mocker):
         """Test that DQC results contain placeholder."""
-
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",

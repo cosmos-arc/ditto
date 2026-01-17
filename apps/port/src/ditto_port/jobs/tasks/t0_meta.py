@@ -10,7 +10,7 @@ from typing import Any
 from ditto_datahub import DataHub
 from prefect import task
 
-from ditto_port.services.ingestion.config.datasets import DATASET_REGISTRY, Dataset
+from ditto_port.models import DATASET_REGISTRY, Dataset
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
 

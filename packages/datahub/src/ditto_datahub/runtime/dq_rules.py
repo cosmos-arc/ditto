@@ -9,7 +9,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import logger
 
-from ..types import DQSeverity
+from ..models import DQSeverity
 
 
 @dataclass(frozen=True)

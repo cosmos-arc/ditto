@@ -6,10 +6,10 @@ from datetime import date
 from pathlib import Path
 
 import polars as pl
+from ditto_datahub.models import OnDuplicate
 from ditto_datahub.repositories.adj_factor import AdjFactorRepository
 from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-from ditto_datahub.types import OnDuplicate
 
 
 class TestAdjFactorRepository:

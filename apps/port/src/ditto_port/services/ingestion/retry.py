@@ -9,24 +9,10 @@
 
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_foundation import logger
-from pydantic import BaseModel
 
-from ditto_port.services.ingestion.coordinator import (
-    IngestionCoordinator,
-    IngestionResult,
-)
+from ditto_port.models import IngestionResult, RetryResult
+from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 from ditto_port.services.ingestion.result_utils import count_results
-
-
-class RetryResult(BaseModel):
-    """重试结果。"""
-
-    dataset: str
-    total_failed: int
-    retried_count: int
-    success_count: int
-    still_failed_count: int
-    results: list[IngestionResult]
 
 
 class RetryManager:
@@ -138,7 +124,7 @@ class RetryManager:
             retried_count=len(results),
             success_count=counts.success,
             still_failed_count=counts.failed,
-            results=results,
+            results=tuple(results),
         )
 
         logger.info(

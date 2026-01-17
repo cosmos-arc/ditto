@@ -9,7 +9,7 @@ from pathlib import Path
 import orjson
 from ditto_foundation import logger, traced
 
-from ..types import FreezeManifest
+from ..models import FreezeManifest
 
 
 class FreezeManager:

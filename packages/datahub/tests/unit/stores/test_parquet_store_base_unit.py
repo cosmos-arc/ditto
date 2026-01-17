@@ -9,9 +9,11 @@ from typing import Any
 
 import polars as pl
 import pytest
+from ditto_datahub.models import OnDuplicate, WriteResultStore
 from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
-from ditto_datahub.types import OnDuplicate
-from ditto_datahub.types import WriteResultStore as WriteResult
+
+# Type alias for backward compatibility with test naming
+WriteResult = WriteResultStore
 
 # ============ Mock Implementation ============
 

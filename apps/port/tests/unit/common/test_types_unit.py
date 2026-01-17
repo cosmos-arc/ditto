@@ -3,7 +3,7 @@
 from dataclasses import FrozenInstanceError
 
 import pytest
-from ditto_port.common.types import IngestionResult, ResultCounts
+from ditto_port.models import IngestionResult, ResultCounts
 
 
 def test_ingestion_result_creation() -> None:

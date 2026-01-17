@@ -2,7 +2,7 @@
 
 import pytest
 from ditto_foundation.observability import Mode, init, reset_for_testing
-from ditto_port.services.ingestion.coordinator import IngestionResult
+from ditto_port.models import IngestionResult
 from ditto_port.services.ingestion.retry import (
     RetryManager,
     RetryResult,
@@ -50,7 +50,7 @@ class TestRetryResult:
 
     def test_create_retry_result(self) -> None:
         """创建重试结果。"""
-        results = [
+        results = (
             IngestionResult(
                 dataset="stock_daily",
                 trade_date="2024-12-25",
@@ -70,7 +70,7 @@ class TestRetryResult:
                 status="success",
                 row_count=1000,
             ),
-        ]
+        )
 
         result = RetryResult(
             dataset="stock_daily",

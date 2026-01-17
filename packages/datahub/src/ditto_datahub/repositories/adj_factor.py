@@ -5,9 +5,9 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.models import OnDuplicate, WriteResult
 from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-from ditto_datahub.types import OnDuplicate, WriteResult
 
 
 class AdjFactorRepository:
