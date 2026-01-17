@@ -11,6 +11,9 @@ __author__ = "Ditto Team"
 from ditto_foundation.app_initializer import AppInitializer, initialize_app
 from ditto_foundation.app_initializer import reset_for_testing as reset_initializer
 
+# Export cache components
+from ditto_foundation.cache import CacheStats, DataCache
+
 # Export observability
 from ditto_foundation.observability import (
     M,
@@ -30,6 +33,8 @@ from ditto_foundation.observability import (
 
 __all__ = [
     "AppInitializer",
+    "CacheStats",
+    "DataCache",
     "M",
     "Mode",
     "ObservabilityConfig",
