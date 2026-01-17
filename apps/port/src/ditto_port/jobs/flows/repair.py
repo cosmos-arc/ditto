@@ -7,16 +7,13 @@
 - 每日修补流程
 """
 
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from prefect import flow
 
 from ditto_port.jobs.flows.helpers import create_ingestion_context
 from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.retry import RetryManager
-
-if TYPE_CHECKING:
-    pass
 
 
 @flow(name="retry-failed", description="重试失败任务")

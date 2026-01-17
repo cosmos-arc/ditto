@@ -7,14 +7,10 @@ Flow 辅助函数和上下文管理器。
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
 
 from ditto_datahub import DataHub
 
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
-
-if TYPE_CHECKING:
-    pass
 
 
 @contextmanager

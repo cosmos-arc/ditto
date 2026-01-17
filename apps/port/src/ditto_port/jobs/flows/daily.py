@@ -15,7 +15,7 @@ Flow 功能：
 """
 
 from itertools import chain
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from prefect import flow, task
 
@@ -32,9 +32,6 @@ from ditto_port.services.ingestion.config.datasets import (
     get_parallel_datasets,
 )
 from ditto_port.services.ingestion.result_utils import count_results
-
-if TYPE_CHECKING:
-    pass
 
 
 def _collect_results(futures: list[Any]) -> dict[str, dict[str, object]]:

@@ -3,15 +3,11 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import TYPE_CHECKING
 
 from ditto_foundation import logger
 
 from ditto_datahub.sources.base import DataSource
 from ditto_datahub.sources.tushare.source import TushareSource
-
-if TYPE_CHECKING:
-    pass
 
 
 class SourcesAccessor:

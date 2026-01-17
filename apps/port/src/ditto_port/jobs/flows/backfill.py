@@ -8,16 +8,11 @@
 - 失败隔离
 """
 
-from typing import TYPE_CHECKING
-
 from prefect import flow
 from pydantic import BaseModel
 
 from ditto_port.jobs.flows.helpers import create_ingestion_context
 from ditto_port.services.ingestion.backfill import BackfillManager
-
-if TYPE_CHECKING:
-    pass
 
 
 class BackfillFlowConfig(BaseModel):
