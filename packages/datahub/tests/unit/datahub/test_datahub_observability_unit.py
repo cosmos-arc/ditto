@@ -16,7 +16,7 @@ from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.calendar_store import CalendarStore
-from ditto_datahub.stores.security_store import SecurityStore
+from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import Mode, get_recorded_metrics, get_recorded_spans, init
 
@@ -217,13 +217,14 @@ class TestObservabilitySecurityStore:
         # Register a security first
         self.store.register(
             sid=1000001,
-            source="tushare",
-            src_code="510300.SZ",
-            symbol="510300",
-            name="CSI 300 ETF",
-            exchange="SZSE",
-            asset_class="etf",
-            list_date="2012-04-25",
+            registration=SecurityRegistration(
+                src_code="510300.SZ",
+                symbol="510300",
+                name="CSI 300 ETF",
+                exchange="SZSE",
+                asset_class="etf",
+                list_date="2012-04-25",
+            ),
         )
 
         # Clear previous spans
@@ -242,13 +243,14 @@ class TestObservabilitySecurityStore:
         # Register a security first
         self.store.register(
             sid=1000001,
-            source="tushare",
-            src_code="510300.SZ",
-            symbol="510300",
-            name="CSI 300 ETF",
-            exchange="SZSE",
-            asset_class="etf",
-            list_date="2012-04-25",
+            registration=SecurityRegistration(
+                src_code="510300.SZ",
+                symbol="510300",
+                name="CSI 300 ETF",
+                exchange="SZSE",
+                asset_class="etf",
+                list_date="2012-04-25",
+            ),
         )
 
         # Clear previous metrics
@@ -375,13 +377,14 @@ class TestObservabilityIntegration:
         # Register security
         security_store.register(
             sid=1000001,
-            source="tushare",
-            src_code="510300.SZ",
-            symbol="510300",
-            name="CSI 300 ETF",
-            exchange="SZSE",
-            asset_class="etf",
-            list_date="2012-04-25",
+            registration=SecurityRegistration(
+                src_code="510300.SZ",
+                symbol="510300",
+                name="CSI 300 ETF",
+                exchange="SZSE",
+                asset_class="etf",
+                list_date="2012-04-25",
+            ),
         )
 
         # Resolve SID to trigger data.sid_resolve span

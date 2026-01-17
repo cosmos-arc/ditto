@@ -143,6 +143,7 @@ class TestDataHub:
     def test_lazy_loading_bars_repository(self) -> None:
         """Test bars repository is lazily loaded."""
         hub = DataHub(self.data_root)
+        self.hub = hub  # 保存引用供 teardown 使用
         assert "bars" not in hub.__dict__
 
         _ = hub.bars

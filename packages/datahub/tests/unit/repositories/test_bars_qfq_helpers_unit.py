@@ -1,5 +1,7 @@
 """Tests for _apply_qfq_adj helper methods."""
 
+import gc
+import time
 from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -50,6 +52,11 @@ def repo() -> BarsRepository:
     yield repo
 
     # Cleanup
+    quarantine_store.close()
+    pool.close()
+    # Force garbage collection to release SQLite file handles on Windows
+    gc.collect()
+    time.sleep(0.1)  # Small delay to let Windows release file locks
     temp_dir.cleanup()
 
 
@@ -126,7 +133,8 @@ class TestFilterBaselineByAsOf:
     def test_filter_baseline_without_knowledge_date(
         self, repo: BarsRepository, mocker
     ) -> None:
-        """Test filtering baseline without knowledge_date column.
+        """
+        Test filtering baseline without knowledge_date column.
 
         Fallback to trade_date when knowledge_date is missing.
         """

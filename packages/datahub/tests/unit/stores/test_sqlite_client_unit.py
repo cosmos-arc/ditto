@@ -222,8 +222,6 @@ class TestSQLiteClient:
             "security",
             "security_mapping",
             "trading_calendar",
-            "pipeline_run",
-            "dq_issue",
             "freeze_point",
             "universe",
             "universe_constituent",

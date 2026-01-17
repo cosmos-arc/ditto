@@ -386,6 +386,7 @@ class DataHub:
             "universe_store",
             "index_weight_store",
             "ingestion_log",
+            "quarantine_store",
         ):
             if store_name in self.__dict__:
                 store = getattr(self, store_name)
