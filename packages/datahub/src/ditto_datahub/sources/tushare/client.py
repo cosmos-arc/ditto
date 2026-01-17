@@ -67,9 +67,10 @@ def _get_tushare_token(token: str | None = None) -> str:
     # 2. Try keyring (recommended)
     if keyring is not None:
         try:
-            if keyring_token := keyring.get_password("ditto", "tushare"):
-                # keyring.get_password returns str | None
-                assert isinstance(keyring_token, str)
+            keyring_token = keyring.get_password("ditto", "tushare")
+            if keyring_token is not None:
+                # Type narrowing: keyring.get_password returns str | None,
+                # the None check above narrows keyring_token to str
                 logger.debug(
                     "Token loaded from keyring",
                     event="token_loaded",
@@ -85,8 +86,10 @@ def _get_tushare_token(token: str | None = None) -> str:
     if config_file.exists():
         try:
             config = tomllib.loads(config_file.read_text())
-            if config_token := config.get("tushare", {}).get("token"):
-                assert isinstance(config_token, str)
+            config_token = config.get("tushare", {}).get("token")
+            if config_token is not None and isinstance(config_token, str):
+                # Type narrowing: config.get() returns Any, so we need explicit
+                # isinstance check to narrow to str before using it
                 logger.debug(
                     "Token loaded from secrets.toml",
                     event="token_loaded",

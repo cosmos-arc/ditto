@@ -293,7 +293,7 @@ class FreezeManager:
                 "Invalid freeze_id: cannot contain path separators or '..'"
             )
 
-    def _try_single_file_mode(self, dataset: str) -> tuple[bool, dict[str, str] | None]:
+    def _try_single_file_mode(self, dataset: str) -> dict[str, str] | None:
         """
         尝试单文件模式（{dataset}.parquet）。
 
@@ -301,7 +301,7 @@ class FreezeManager:
             dataset: 数据集名称
 
         Returns:
-            (是否成功, checksums 字典或 None)
+            checksums 字典或 None（文件不存在时）
 
         """
         single_file_path = self._data_root / f"{dataset}.parquet"
@@ -309,13 +309,11 @@ class FreezeManager:
         if single_file_path.exists():
             checksum = self._compute_checksum(single_file_path)
             rel_path = single_file_path.relative_to(self._data_root).as_posix()
-            return True, {rel_path: checksum}
+            return {rel_path: checksum}
 
-        return False, None
+        return None
 
-    def _try_partitioned_directory_mode(
-        self, dataset: str
-    ) -> tuple[bool, dict[str, str] | None]:
+    def _try_partitioned_directory_mode(self, dataset: str) -> dict[str, str] | None:
         """
         尝试分区目录模式（{dataset}/**/*.parquet）。
 
@@ -323,7 +321,7 @@ class FreezeManager:
             dataset: 数据集名称
 
         Returns:
-            (是否成功, checksums 字典或 None)
+            checksums 字典或 None（目录不存在或为空时）
 
         """
         dataset_dir = self._data_root / dataset
@@ -336,9 +334,9 @@ class FreezeManager:
                     checksum = self._compute_checksum(parquet_file)
                     rel_path = parquet_file.relative_to(self._data_root).as_posix()
                     files[rel_path] = checksum
-                return True, files
+                return files
 
-        return False, None
+        return None
 
     def _handle_missing_files(self, freeze_id: str, missing_files: list[str]) -> None:
         """
@@ -385,20 +383,12 @@ class FreezeManager:
 
         for dataset in datasets:
             # Try single file first
-            success, checksums = self._try_single_file_mode(dataset)
-            if success:
-                assert (
-                    checksums is not None
-                )  # 类型收窄：当 success=True 时，checksums 必须不为 None
+            if checksums := self._try_single_file_mode(dataset):
                 files.update(checksums)
                 continue
 
             # Try partitioned directory
-            success, checksums = self._try_partitioned_directory_mode(dataset)
-            if success:
-                assert (
-                    checksums is not None
-                )  # 类型收窄：当 success=True 时，checksums 必须不为 None
+            if checksums := self._try_partitioned_directory_mode(dataset):
                 files.update(checksums)
                 continue
 

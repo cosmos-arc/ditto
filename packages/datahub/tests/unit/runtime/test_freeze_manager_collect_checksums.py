@@ -21,17 +21,16 @@ class TestFreezeManagerCollectChecksumsRefactor:
         self.temp_dir.cleanup()
 
     def test_try_single_file_mode_success(self) -> None:
-        """Test _try_single_file_mode returns success when file exists."""
+        """Test _try_single_file_mode returns checksums when file exists."""
         # Create test file
         test_file = self.data_root / "bars" / "stock_daily.parquet"
         test_file.parent.mkdir(parents=True)
         test_file.write_bytes(b"test_data")
 
         # Call method
-        success, checksums = self.manager._try_single_file_mode("bars/stock_daily")
+        checksums = self.manager._try_single_file_mode("bars/stock_daily")
 
         # Assertions
-        assert success is True
         assert checksums is not None
         assert "bars/stock_daily.parquet" in checksums
         # SHA-256 hash of "test_data" (9 bytes)
@@ -42,18 +41,17 @@ class TestFreezeManagerCollectChecksumsRefactor:
         )
 
     def test_try_single_file_mode_failure(self) -> None:
-        """Test _try_single_file_mode returns failure when file not found."""
+        """Test _try_single_file_mode returns None when file not found."""
         # Don't create any file
 
         # Call method
-        success, checksums = self.manager._try_single_file_mode("bars/nonexistent")
+        checksums = self.manager._try_single_file_mode("bars/nonexistent")
 
         # Assertions
-        assert success is False
         assert checksums is None
 
     def test_try_partitioned_directory_mode_success(self) -> None:
-        """Test _try_partitioned_directory_mode returns success when dir exists."""
+        """Test _try_partitioned_directory_mode returns checksums when dir exists."""
         # Create partitioned directory structure
         dataset_dir = self.data_root / "bars" / "stock_daily"
         dataset_dir.mkdir(parents=True)
@@ -66,12 +64,9 @@ class TestFreezeManagerCollectChecksumsRefactor:
         (subdir / "part3.parquet").write_bytes(b"data3")
 
         # Call method
-        success, checksums = self.manager._try_partitioned_directory_mode(
-            "bars/stock_daily"
-        )
+        checksums = self.manager._try_partitioned_directory_mode("bars/stock_daily")
 
         # Assertions
-        assert success is True
         assert checksums is not None
         assert len(checksums) == 3
         assert "bars/stock_daily/part1.parquet" in checksums
@@ -79,31 +74,25 @@ class TestFreezeManagerCollectChecksumsRefactor:
         assert "bars/stock_daily/subdir/part3.parquet" in checksums
 
     def test_try_partitioned_directory_mode_failure_no_directory(self) -> None:
-        """Test _try_partitioned_directory_mode returns failure when dir not found."""
+        """Test _try_partitioned_directory_mode returns None when dir not found."""
         # Don't create any directory
 
         # Call method
-        success, checksums = self.manager._try_partitioned_directory_mode(
-            "bars/nonexistent"
-        )
+        checksums = self.manager._try_partitioned_directory_mode("bars/nonexistent")
 
         # Assertions
-        assert success is False
         assert checksums is None
 
     def test_try_partitioned_directory_mode_failure_empty_directory(self) -> None:
-        """Test _try_partitioned_directory_mode returns failure when dir is empty."""
+        """Test _try_partitioned_directory_mode returns None when dir is empty."""
         # Create empty directory
         dataset_dir = self.data_root / "bars" / "empty_dataset"
         dataset_dir.mkdir(parents=True)
 
         # Call method
-        success, checksums = self.manager._try_partitioned_directory_mode(
-            "bars/empty_dataset"
-        )
+        checksums = self.manager._try_partitioned_directory_mode("bars/empty_dataset")
 
         # Assertions
-        assert success is False
         assert checksums is None
 
     def test_handle_missing_files_raises_error(self) -> None:
