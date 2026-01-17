@@ -221,3 +221,35 @@ class TestTushareClientQuery:
         # Assert
         assert call_count == 2
         assert result.height == 1
+
+
+class TestTushareClientResourceManagement:
+    """Tests for TushareClient resource management."""
+
+    def test_close_method(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test close method properly closes HTTP client."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+        client = TushareClient()
+
+        # Verify _client exists and is not closed
+        assert client._client is not None
+        assert not client._client.is_closed
+
+        # Call close
+        client.close()
+
+        # Verify _client is closed
+        assert client._client.is_closed
+
+    def test_context_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test TushareClient supports context manager protocol."""
+        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+
+        with TushareClient() as client:
+            assert client is not None
+            assert isinstance(client, TushareClient)
+            # Verify client is not closed inside the with block
+            assert not client._client.is_closed
+
+        # After with block, client should be closed
+        assert client._client.is_closed

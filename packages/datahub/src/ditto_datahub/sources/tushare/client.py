@@ -276,6 +276,23 @@ class TushareClient:
         # 转换为 polars DataFrame
         return response_to_dataframe(data)
 
+    def close(self) -> None:
+        """
+        显式关闭 HTTP 客户端.
+
+        释放网络资源，推荐在 with 语句中使用或手动调用。
+        """
+        if hasattr(self, "_client"):
+            self._client.close()
+
+    def __enter__(self) -> TushareClient:
+        """支持上下文管理器协议（with 语句）。"""
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        """退出上下文时关闭 HTTP 客户端."""
+        self.close()
+
     def __del__(self) -> None:
         """清理 HTTP 客户端."""
         if hasattr(self, "_client"):
