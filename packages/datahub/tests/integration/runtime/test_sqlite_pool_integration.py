@@ -76,7 +76,6 @@ class TestSQLitePool:
         assert "security" in table_names
         assert "security_mapping" in table_names
         assert "trading_calendar" in table_names
-        assert "pipeline_run" in table_names
         assert "dq_issue" in table_names
         assert "freeze_point" in table_names
         assert "price_limit_config" in table_names

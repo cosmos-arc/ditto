@@ -39,7 +39,6 @@ class SqlEngine:
             "universe",
             "universe_constituent",
             "index_weight",
-            "pipeline_run",
             "dq_issue",
         ]
     )
@@ -122,7 +121,7 @@ class SqlEngine:
                 # Create view with glob pattern for year partitions
                 # dataset is validated against ALLOWED_DATASETS whitelist
                 view_sql = (
-                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "
+                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "  # noqa: S608 - dataset 已通过 ALLOWED_DATASETS 白名单
                     f'"{parquet_path}/*.parquet"'
                 )
                 self.con.execute(view_sql)

@@ -270,7 +270,7 @@ class SQLiteClient:
         if table not in self.ALLOWED_TABLES:
             raise ValueError(f"Invalid table: {table}")
 
-        sql = f"SELECT COUNT(*) FROM {table}"
+        sql = f"SELECT COUNT(*) FROM {table}"  # noqa: S608 - table 已通过 ALLOWED_TABLES 白名单验证
         if where:
             sql += f" WHERE {where}"
 

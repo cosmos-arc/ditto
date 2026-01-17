@@ -1,18 +1,10 @@
 """测试 conftest.py 中的 DatabaseManager 类和 fixtures."""
 
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import duckdb
 import pytest
-
-# 获取项目根目录并添加到 sys.path（为了导入 apps.port.tests.conftest）
-_project_root = Path(__file__).parent.parent.parent.parent.parent
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
-
-from apps.port.tests.conftest import DatabaseManager
+from ditto_port.testing import DatabaseManager
 
 
 @pytest.mark.unit

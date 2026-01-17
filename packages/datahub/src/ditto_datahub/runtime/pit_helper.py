@@ -96,7 +96,7 @@ class PitHelper:
         if re.search(r"\b(ORDER BY|LIMIT|GROUP BY|HAVING)\b", query, re.IGNORECASE):
             # 使用 CTE 包装以避免破坏原有 SQL 结构
             wrapped = (
-                f"WITH _pit_original AS ({query}) "
+                f"WITH _pit_original AS ({query}) "  # noqa: S608 - query 和 date_column 已验证
                 f"SELECT * FROM _pit_original WHERE {date_column} <= '{knowledge_date}'"
             )
             return wrapped
@@ -215,7 +215,7 @@ class PitHelper:
         query = query.strip()
 
         # 构建 CTE
-        cte = f"WITH {cte_name} AS ({query}) SELECT * FROM {cte_name}"
+        cte = f"WITH {cte_name} AS ({query}) SELECT * FROM {cte_name}"  # noqa: S608 - cte_name 已通过验证
 
         # 如果提供了 asof_date，添加 WHERE 子句
         if asof_date:
