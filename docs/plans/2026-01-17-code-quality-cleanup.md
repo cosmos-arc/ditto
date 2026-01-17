@@ -493,15 +493,57 @@ pixi run -e dev test-pit
 | PR-1 | ✅ 完成 | 2026-01-17 | 修复异常处理缺失上下文（3 个文件） |
 | PR-2 | ✅ 完成 | 2026-01-17 | 统一 enrich_with_symbol 实现 |
 | PR-3 | ✅ 完成 | 2026-01-17 | TushareClient 资源管理 |
-| PR-4 | 待执行 | | |
-| PR-5 | 待执行 | | |
+| PR-4 | ✅ 完成 | 2026-01-17 | 替换 MD5 为 xxhash (缓存键) |
+| PR-5 | ✅ 完成 | 2026-01-17 | 硬编码日期提取为常量 |
 | PR-6 | ✅ 完成 | 2026-01-17 | QuarantineStore 吞异常 |
 | PR-7 | ✅ 完成 | 2026-01-17 | 统一 WriteResult 定义 |
 | PR-8 | ✅ 完成 | 2026-01-17 | 删除 DataSourceMethods Protocol |
 | PR-9 | ✅ 完成 | 2026-01-17 | 删除 get_source() 工厂函数 |
-| PR-10 | 待执行 | | |
+| PR-10 | ⚠️ 部分 | 2026-01-17 | PR-10-1/2 完成，PR-10-1 循环导入问题见下方代办 |
 | PR-11.1 | ✅ 完成 | 2026-01-17 | 删除空 TYPE_CHECKING 块（5 个文件） |
 | PR-11.2 | ✅ 完成 | 2026-01-17 | 清理 TYPE_CHECKING（12 个文件） |
+
+---
+
+## 代办问题
+
+### ⚠️ PR-10-1: 循环导入问题（待解决）
+
+**问题描述**：
+- `hub.py` 导入 `DQEngine`
+- `dq/engine.py` 的 `check_statistical` 方法需要 `DataHub` 类型
+- 形成循环依赖：`hub.py → DQEngine → DataHub`
+
+**当前状态**：
+- PR-10-1 将 `hub: Any` 改为 `hub: DataHub`
+- 触发循环导入错误，测试失败
+
+**尝试的解决方案**：
+- ❌ 使用字符串注解 `"DataHub"` + `# type: ignore` - 不符合项目规范
+- ❌ 使用 Protocol 定义 `DataHubAccessor` - 用户不认同此方案
+
+**需要的解决方案**：
+- 通过架构手段解决（重构模块结构或接口设计）
+- 不能使用 `# noqa` 或 `# type: ignore`
+- 不能使用 `TYPE_CHECKING` 延迟导入
+
+**建议方向**：
+1. 将 `check_statistical` 方法从 `DQEngine` 移到独立的模块
+2. 重构 `hub.py` 与 `DQEngine` 的依赖关系
+3. 使用依赖注入模式
+
+---
+
+## 额外完成（超出原计划）
+
+### XXH3_128 性能优化
+
+**修改**：
+- `sql_engine.py`: 缓存键使用 `xxhash.xxh3_64_hexdigest()`
+- `checksum.py`: 数据校验和使用 `xxhash.xxh3_128_hexdigest()`
+- `pixi.toml`: 添加 `xxhash = ">=3.5,<4"` 依赖
+
+**性能提升**：xxhash 比 MD5 快 3-5 倍
 
 ---
 
