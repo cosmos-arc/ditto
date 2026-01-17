@@ -7,7 +7,8 @@ from ditto_datahub.stores.quarantine_store import QuarantineStore
 
 @pytest.mark.pit
 class TestQuarantineStore:
-    """Tests for QuarantineStore.
+    """
+    Tests for QuarantineStore.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
@@ -190,14 +191,14 @@ class TestQuarantineStore:
 
         # Retrieve the DataFrame
         retrieved_df = self.store.get_failed_data_df(row_id)
-        assert retrieved_df is not None
+        assert not retrieved_df.is_empty()
         assert len(retrieved_df) == 2
         assert list(retrieved_df["sid"]) == [1000001, 1000002]
 
     def test_get_failed_data_df_not_found(self) -> None:
         """Test getting failed data with non-existent row ID."""
         result = self.store.get_failed_data_df(99999)
-        assert result is None
+        assert result.is_empty()
 
     def test_get_failed_data_df_empty_result(self) -> None:
         """Test getting failed data when JSON is empty."""
@@ -214,8 +215,26 @@ class TestQuarantineStore:
 
         # Try to retrieve it
         result = self.store.get_failed_data_df(row_id)
-        # Should return None or empty DataFrame for empty JSON
-        assert result is None or len(result) == 0
+        # Should return empty DataFrame for empty JSON
+        assert result.is_empty()
+
+    def test_get_failed_data_df_invalid_json(self) -> None:
+        """Test that invalid JSON returns empty DataFrame."""
+        # Manually insert a record with invalid JSON
+        cursor = self.store._conn.execute(
+            """
+            INSERT INTO quarantine_failed_data
+            (dataset, rule_id, severity, failed_data, affected_rows)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            ("test_dataset", "test_rule", "error", "invalid json", 0),
+        )
+        row_id = cursor.lastrowid
+
+        # Try to retrieve it
+        result = self.store.get_failed_data_df(row_id)
+        # Should return empty DataFrame
+        assert result.is_empty()
 
     def test_clear_old_records(self) -> None:
         """Test clearing old quarantine records."""
@@ -342,7 +361,7 @@ class TestQuarantineStore:
 
         # Retrieve and verify data integrity
         retrieved_df = self.store.get_failed_data_df(row_id)
-        assert retrieved_df is not None
+        assert not retrieved_df.is_empty()
         assert len(retrieved_df) == 2
 
         # Check data types and values

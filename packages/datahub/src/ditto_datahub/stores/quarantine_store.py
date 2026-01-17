@@ -6,6 +6,7 @@ from typing import Any
 
 import orjson
 import polars as pl
+from ditto_foundation import logger
 
 
 class QuarantineStore:
@@ -129,7 +130,7 @@ class QuarantineStore:
 
         return pl.DataFrame(rows, schema=columns, orient="row")
 
-    def get_failed_data_df(self, row_id: int) -> pl.DataFrame | None:
+    def get_failed_data_df(self, row_id: int) -> pl.DataFrame:
         """
         Get failed data DataFrame by row ID.
 
@@ -137,7 +138,7 @@ class QuarantineStore:
             row_id: Quarantine record ID
 
         Returns:
-            Failed data as DataFrame, or None if not found
+            Failed data as DataFrame, or empty DataFrame if not found or parse failed
 
         """
         cursor = self._conn.execute(
@@ -147,14 +148,20 @@ class QuarantineStore:
         row = cursor.fetchone()
 
         if not row:
-            return None
+            return pl.DataFrame()
 
         # Parse JSON back to DataFrame
         try:
             data_dicts = orjson.loads(row[0])
             return pl.DataFrame(data_dicts)
-        except Exception:
-            return None
+        except (orjson.JSONDecodeError, pl.exceptions.SchemaError) as e:
+            logger.error(
+                "Failed to parse quarantined data",
+                event="quarantine_parse_failed",
+                row_id=row_id,
+                error=str(e),
+            )
+            return pl.DataFrame()
 
     def clear_old_records(self, days: int = 30) -> int:
         """
