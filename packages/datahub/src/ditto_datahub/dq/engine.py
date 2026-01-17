@@ -9,6 +9,7 @@ from ditto_datahub.dq.checkers.business import BusinessChecker
 from ditto_datahub.dq.checkers.statistical import StatisticalChecker
 from ditto_datahub.dq.checkers.technical import TechnicalChecker
 from ditto_datahub.dq.models import DQConfig, DQIssue, DQResult, DQSeverity
+from ditto_datahub.hub import DataHub
 
 
 class DQEngine:
@@ -122,7 +123,7 @@ class DQEngine:
         self,
         dataset: str,
         trade_date: str,
-        hub: Any,  # DataHub instance
+        hub: DataHub,
         asset_class: Literal["stock", "etf", "index"] | None = None,
         market_wide: bool = False,
     ) -> DQResult:
