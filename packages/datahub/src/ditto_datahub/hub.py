@@ -10,6 +10,7 @@ from typing import Any
 
 import polars as pl
 from ditto_foundation import logger
+from ditto_foundation.concurrency import FileLockManager
 from ditto_foundation.config.paths import get_paths
 
 from ditto_datahub.dq.engine import DQEngine
@@ -20,7 +21,6 @@ from ditto_datahub.repositories.calendar import CalendarRepository
 from ditto_datahub.repositories.index import IndexRepository
 from ditto_datahub.repositories.security import SecurityRepository
 from ditto_datahub.repositories.universe import UniverseRepository
-from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine

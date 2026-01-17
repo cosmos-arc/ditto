@@ -12,7 +12,6 @@ import pytest
 from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.repositories import AdjType, BarsQuery, BarsRepository
 from ditto_datahub.repositories.bars.repository import _ResolvedQuery
-from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
@@ -20,6 +19,7 @@ from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
+from ditto_foundation.concurrency import FileLockManager
 from pytest_mock import MockerFixture
 
 

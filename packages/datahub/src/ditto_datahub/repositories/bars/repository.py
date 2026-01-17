@@ -9,6 +9,7 @@ from typing import Literal
 
 import polars as pl
 from ditto_foundation import M, logger, traced
+from ditto_foundation.concurrency import FileLockManager
 
 from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.dq.report import DQReportGenerator
@@ -18,7 +19,6 @@ from ditto_datahub.models import AssetSidRange, DQIssue, OnDuplicate, WriteResul
 from ditto_datahub.models import DQResult as DQResultNew
 from ditto_datahub.repositories.bars.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.repositories.bars.dq_filters import filter_failed_rows
-from ditto_datahub.runtime.file_lock import FileLockManager
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.quarantine_store import QuarantineStore
