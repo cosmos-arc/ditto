@@ -17,6 +17,9 @@ from ditto_foundation.cache import CacheStats, DataCache
 # Export concurrency components
 from ditto_foundation.concurrency import FileLockManager, LockAcquisitionError
 
+# Export database components
+from ditto_foundation.db import SQLitePool
+
 # Export observability
 from ditto_foundation.observability import (
     M,
@@ -43,6 +46,7 @@ __all__ = [
     "M",
     "Mode",
     "ObservabilityConfig",
+    "SQLitePool",
     "get_recorded_metrics",
     "get_recorded_spans",
     "get_span_id",
