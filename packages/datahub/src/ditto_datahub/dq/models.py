@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from loguru import logger
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 
 class DQLevel(Enum):
@@ -247,8 +248,21 @@ class DQConfig(BaseModel):
                 if data and "dataset" in data:
                     dataset_rules = DatasetRules(**data)
                     datasets[dataset_rules.dataset] = dataset_rules
-            except Exception:
-                # Skip invalid files but continue loading others
+            except (ValidationError, ValueError) as e:
+                logger.warning(
+                    "Invalid DQ config file, skipping",
+                    event="dq_config_invalid",
+                    file=str(yaml_file),
+                    error=str(e),
+                )
+                continue
+            except yaml.YAMLError as e:
+                logger.warning(
+                    "Failed to parse YAML config, skipping",
+                    event="dq_config_parse_error",
+                    file=str(yaml_file),
+                    error=str(e),
+                )
                 continue
 
         return cls(datasets=datasets)

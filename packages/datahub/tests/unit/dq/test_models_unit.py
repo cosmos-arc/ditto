@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+import yaml
 from ditto_datahub.dq.models import (
     DatasetRules,
     DQConfig,
@@ -192,3 +193,147 @@ class TestDQConfig:
 
         assert config.get_rules("stock_daily") is dataset_rules
         assert config.get_rules("nonexistent") is None
+
+
+class TestDQConfigErrorHandling:
+    """Test error handling in DQConfig.from_yaml_dir."""
+
+    def test_skips_invalid_yaml_files(self, tmp_path: Path) -> None:
+        """Test that invalid YAML files are skipped without crashing."""
+        # Create a valid YAML file
+        valid_file = tmp_path / "valid.yml"
+        valid_file.write_text(
+            yaml.dump(
+                {
+                    "dataset": "valid_dataset",
+                    "description": "Valid dataset",
+                    "l1_technical": [],
+                    "l2_business": [],
+                    "l3_statistical": [],
+                }
+            )
+        )
+
+        # Create an invalid YAML file (malformed YAML)
+        invalid_yaml_file = tmp_path / "invalid.yml"
+        invalid_yaml_file.write_text(
+            "dataset: test\n  invalid_indent: value\n  bad: [unclosed"
+        )
+
+        # Load config - should skip invalid file and not crash
+        config = DQConfig.from_yaml_dir(tmp_path)
+
+        # Should load only the valid file
+        assert len(config.datasets) == 1
+        assert "valid_dataset" in config.datasets
+
+    def test_skips_validation_error_files(self, tmp_path: Path) -> None:
+        """Test that files with validation errors are skipped without crashing."""
+        # Create a valid YAML file
+        valid_file = tmp_path / "valid.yml"
+        valid_file.write_text(
+            yaml.dump(
+                {
+                    "dataset": "valid_dataset",
+                    "description": "Valid dataset",
+                    "l1_technical": [],
+                    "l2_business": [],
+                    "l3_statistical": [],
+                }
+            )
+        )
+
+        # Create a file that fails Pydantic validation (missing required fields)
+        validation_error_file = tmp_path / "validation_error.yml"
+        validation_error_file.write_text(
+            yaml.dump(
+                {
+                    "dataset": "invalid_dataset",
+                    # Missing 'description' field which is required
+                }
+            )
+        )
+
+        # Load config - should skip invalid file and not crash
+        config = DQConfig.from_yaml_dir(tmp_path)
+
+        # Should load only the valid file
+        assert len(config.datasets) == 1
+        assert "valid_dataset" in config.datasets
+        assert "invalid_dataset" not in config.datasets
+
+    def test_skips_files_without_dataset_key(self, tmp_path: Path) -> None:
+        """Test that files without 'dataset' key are silently skipped."""
+        # Create a valid YAML file
+        valid_file = tmp_path / "valid.yml"
+        valid_file.write_text(
+            yaml.dump(
+                {
+                    "dataset": "valid_dataset",
+                    "description": "Valid dataset",
+                    "l1_technical": [],
+                    "l2_business": [],
+                    "l3_statistical": [],
+                }
+            )
+        )
+
+        # Create a file without 'dataset' key
+        no_dataset_file = tmp_path / "no_dataset.yml"
+        no_dataset_file.write_text(
+            yaml.dump(
+                {
+                    "description": "No dataset key",
+                    "l1_technical": [],
+                }
+            )
+        )
+
+        # Load config - should skip file without dataset key (no error expected)
+        config = DQConfig.from_yaml_dir(tmp_path)
+
+        # Should load only the valid file
+        assert len(config.datasets) == 1
+        assert "valid_dataset" in config.datasets
+
+    def test_handles_mixed_valid_and_invalid_files(self, tmp_path: Path) -> None:
+        """Test handling of mixed valid and invalid files."""
+        # Create multiple valid files
+        for i in range(3):
+            valid_file = tmp_path / f"valid_{i}.yml"
+            valid_file.write_text(
+                yaml.dump(
+                    {
+                        "dataset": f"dataset_{i}",
+                        "description": f"Dataset {i}",
+                        "l1_technical": [],
+                        "l2_business": [],
+                        "l3_statistical": [],
+                    }
+                )
+            )
+
+        # Create invalid files
+        # Malformed YAML
+        (tmp_path / "invalid_yaml.yml").write_text("{invalid yaml content")
+        # Missing required field
+        (tmp_path / "invalid_validation.yml").write_text(
+            yaml.dump({"dataset": "no_description"})
+        )
+        # Empty file
+        (tmp_path / "empty.yml").write_text("")
+
+        # Load config - should load only valid files and skip invalid ones
+        config = DQConfig.from_yaml_dir(tmp_path)
+
+        # Should load 3 valid files
+        assert len(config.datasets) == 3
+        for i in range(3):
+            assert f"dataset_{i}" in config.datasets
+
+    def test_returns_empty_config_for_nonexistent_dir(self) -> None:
+        """Test that nonexistent directory returns empty config."""
+        nonexistent_path = Path("/nonexistent/path/that/does/not/exist")
+        config = DQConfig.from_yaml_dir(nonexistent_path)
+
+        assert len(config.datasets) == 0
