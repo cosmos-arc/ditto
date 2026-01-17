@@ -43,7 +43,8 @@ def index_repo(
 
 @pytest.mark.pit
 class TestIndexRepositoryWithMocks:
-    """Tests for IndexRepository with mocked dependencies.
+    """
+    Tests for IndexRepository with mocked dependencies.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
@@ -231,13 +232,17 @@ class TestIndexRepositoryWithMocks:
         )
         mock_index_weight_store.get_constituents.return_value = mock_df
 
-        mock_security_df = pl.DataFrame(
+        # Mock enrich_with_symbol 方法
+        mock_enriched_df = pl.DataFrame(
             {
+                "index_id": ["000300.SH", "000300.SH"],
                 "sid": [1000001, 1000002],
+                "effective_from": ["2024-01-01", "2024-01-01"],
+                "weight": [0.5, 0.5],
                 "symbol": ["SID001", "SID002"],
             }
         )
-        mock_security_store.find_securities.return_value = mock_security_df
+        mock_security_store.enrich_with_symbol.return_value = mock_enriched_df
 
         # Act
         result = index_repo.get_constituents(
@@ -250,7 +255,7 @@ class TestIndexRepositoryWithMocks:
         # Assert
         assert len(result) == 2
         assert "symbol" in result.columns
-        mock_security_store.find_securities.assert_called_once()
+        mock_security_store.enrich_with_symbol.assert_called_once()
 
     def test_get_constituents_with_min_weight(
         self,

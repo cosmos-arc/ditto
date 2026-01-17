@@ -162,7 +162,7 @@ class IndexRepository:
 
         # Add symbol if requested
         if with_symbol and not constituents.is_empty():
-            constituents = self._enrich_with_symbol(constituents)
+            constituents = self._security_store.enrich_with_symbol(constituents)
 
         logger.debug(
             "Constituents fetched",
@@ -331,42 +331,3 @@ class IndexRepository:
         )
 
         return sids
-
-    def _enrich_with_symbol(self, df: pl.DataFrame) -> pl.DataFrame:
-        """
-        Enrich constituents DataFrame with symbol.
-
-        This method joins the constituents DataFrame with the security table
-        to add the symbol column.
-
-        Args:
-            df: Constituents DataFrame with sid column.
-
-        Returns:
-            DataFrame with symbol column added.
-
-        """
-        # Get SIDs from the DataFrame
-        sids = df["sid"].to_list()
-        if not sids:
-            return df
-
-        # Query security symbols for the SIDs
-        securities = self._security_store.find_securities(
-            sids=sids,
-            src_codes=None,
-            source="tushare",
-            asset_class=None,
-            exchange=None,
-            is_active=None,
-            asof=None,
-        )
-
-        if securities.is_empty():
-            return df
-
-        # Select only sid and symbol columns for join
-        security_df = securities.select(["sid", "symbol"])
-
-        # Join
-        return df.join(security_df, on="sid", how="left")
