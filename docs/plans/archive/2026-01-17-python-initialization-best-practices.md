@@ -234,6 +234,8 @@ app = FastAPI(lifespan=lifespan)
 
 ## 五、最终推荐
 
+> **📌 后续评估**：关于轻量级 DI 容器（punq/lagom）的进一步讨论，详见 [2026-01-18-lightweight-di-container-evaluation.md](./2026-01-18-lightweight-di-container-evaluation.md)
+
 ### 5.1 推荐方案：方案 C（Composition Root + 手工 DI 容器）
 
 **理由**：

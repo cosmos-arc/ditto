@@ -1,4 +1,4 @@
-"""Bars Repository for market data access."""
+"""Bars Accessor for market data access."""
 
 from __future__ import annotations
 
@@ -114,7 +114,7 @@ class _ResolvedQuery:
 
 class BarsAccessor:
     """
-    Market data repository for OHLCV bars.
+    Market data accessor for OHLCV bars.
 
     Provides domain-level interface for bars data operations,
     coordinating multiple stores for data access, adjustment,

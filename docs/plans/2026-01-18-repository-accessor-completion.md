@@ -1,0 +1,280 @@
+# Repository → Accessor 重命名完善计划
+
+## 概述
+
+原计划 `2026-01-18-repository-accessor-refactor.md` 已标记为完成，但经检查发现以下遗漏项需要补充完成：
+
+### 发现的主要遗漏
+
+1. **源代码文件名**：`repository.py` 未改为 `accessor.py`
+2. **测试目录名**：`tests/unit/repositories/` 未改为 `accessors/`
+3. **测试文件名**：6个测试文件仍包含 `repository`
+4. **测试变量名**：`self.repo` 未改为 `self.accessor`（5个文件，数百次引用）
+5. **Fixture 函数名**：`index_repo` 未改为 `index_accessor`
+6. **测试方法名**：5个方法名仍包含 `repository`
+7. **文档字符串**：19处模块和类文档仍使用 `Repository`
+8. **代码注释**：4处注释中的 `Repository` 引用
+9. **文档文件**：8+ 个设计/Sprint/规范文档未更新
+
+---
+
+## Phase 1: 源代码文件重命名
+
+### 1.1 Bars 模块文件重命名
+
+**当前文件**: `packages/datahub/src/ditto_datahub/repositories/bars/repository.py`
+**重命名为**: `packages/datahub/src/ditto_datahub/repositories/bars/accessor.py`
+
+### 1.2 更新导入语句
+
+**文件**: `packages/datahub/src/ditto_datahub/repositories/bars/__init__.py`
+- [x] 更新：`from .repository import BarsAccessor` → `from .accessor import BarsAccessor`
+
+**需要更新导入的文件**:
+- [x] `packages/datahub/tests/unit/repositories/test_bars_repository_unit.py` (重命名后)
+- [x] `packages/datahub/tests/unit/test_hub_unit.py`
+- [x] `packages/datahub/src/ditto_datahub/hub.py`
+
+---
+
+## Phase 2: 测试目录和文件重命名
+
+### 2.1 测试目录重命名
+
+- [ ] `packages/datahub/tests/unit/repositories/` → `accessors/`
+
+### 2.2 测试文件重命名（6个文件）
+
+| 当前文件 | 新文件 |
+|---------|--------|
+| `test_bars_repository_unit.py` | `test_bars_accessor_unit.py` |
+| `test_calendar_repository_unit.py` | `test_calendar_accessor_unit.py` |
+| `test_security_repository_unit.py` | `test_security_accessor_unit.py` |
+| `test_universe_repository_unit.py` | `test_universe_accessor_unit.py` |
+| `test_index_repository_unit.py` | `test_index_accessor_unit.py` |
+| `test_adj_factor_repository_unit.py` | `test_adj_factor_accessor_unit.py` |
+
+---
+
+## Phase 3: 测试变量名更新
+
+### 3.1 `self.repo` → `self.accessor`（5个文件）
+
+| 文件 | 行号 | 引用次数 |
+|------|------|---------|
+| `test_calendar_accessor_unit.py` | 19 | ~50 |
+| `test_adj_factor_accessor_unit.py` | 23 | ~30 |
+| `test_universe_accessor_unit.py` | 29 | ~40 |
+| `test_security_accessor_unit.py` | 22 | ~50 |
+| `test_bars_accessor_unit.py` | 309, 433, 633, 900, 1091, 1327, 1623 | ~200 |
+
+### 3.2 Fixture 更新
+
+**文件**: `test_index_accessor_unit.py`
+- [ ] 第 31 行：`def index_repo(...)` → `def index_accessor(...)`
+- [ ] 13个方法参数：`index_repo: IndexAccessor` → `index_accessor: IndexAccessor`
+
+---
+
+## Phase 4: 测试方法名更新
+
+### 4.1 test_hub_unit.py
+
+- [ ] 第 143 行：`test_lazy_loading_bars_repository` → `test_lazy_loading_bars_accessor`
+- [ ] 第 208 行：`test_universe_repository_lazy_loading` → `test_universe_accessor_lazy_loading`
+- [ ] 第 231 行：`test_index_repository_lazy_loading` → `test_index_accessor_lazy_loading`
+
+### 4.2 Repository 测试文件
+
+- [ ] `test_index_accessor_unit.py` 第 53 行：`test_repository_init` → `test_accessor_init`
+- [ ] `test_universe_accessor_unit.py` 第 46 行：`test_repository_init` → `test_accessor_init`
+
+---
+
+## Phase 5: 文档字符串更新（19处）
+
+### 5.1 模块文档字符串（12处）
+
+**universe.py**
+- [ ] 第 2 行：`Universe Repository for...` → `Universe Accessor for...`
+- [ ] 第 20 行：`Security universe repository.` → `Security universe accessor.`
+
+**calendar.py**
+- [ ] 第 1 行：`Calendar Repository for...` → `Calendar Accessor for...`
+- [ ] 第 15 行：`Trading calendar repository.` → `Trading calendar accessor.`
+
+**security.py**
+- [ ] 第 1 行：`Security Repository for...` → `Securities Accessor for...`
+- [ ] 第 17 行：`Securities master data repository.` → `Securities master data accessor.`
+
+**index.py**
+- [ ] 第 1 行：`Index Repository for...` → `Index Accessor for...`
+- [ ] 第 15 行：`Index data repository.` → `Index data accessor.`
+
+**adj_factor.py**
+- [ ] 第 1 行：`AdjFactor Repository for...` → `AdjFactor Accessor for...`
+- [ ] 第 15 行：`Adjustment factor repository for...` → `Adjustment factor accessor for...`
+
+**bars/repository.py** → **bars/accessor.py**
+- [x] 第 1 行：`Bars Repository for...` → `Bars Accessor for...`
+- [x] 第 117 行：`Market data repository for...` → `Market data accessor for...`
+
+### 5.2 DataHub 类文档字符串（7处）
+
+**文件**: `hub.py`
+- [ ] 第 52 行：`- Repository Layer:` → `- Accessor Layer:`
+- [ ] 第 170 行：`Securities master data repository.` → `Securities master data accessor.`
+- [ ] 第 178 行：`OHLCV bars repository.` → `OHLCV bars accessor.`
+- [ ] 第 191 行：`Adjustment factor repository.` → `Adjustment factor accessor.`
+- [ ] 第 199 行：`Trading calendar repository.` → `Trading calendar accessor.`
+- [ ] 第 206 行：`Security universe repository.` → `Security universe accessor.`
+- [ ] 第 215 行：`Index data repository.` → `Index data accessor.`
+
+---
+
+## Phase 6: 代码注释更新（4处）
+
+**hub.py**
+- [ ] 第 165 行：`# Repository Layer` → `# Accessor Layer`
+
+**test_hub_unit.py**
+- [ ] 第 197 行：`# Universe Store and Repository Tests` → `# Universe Store and Accessor Tests`
+- [ ] 第 220 行：`# Index Store and Repository Tests` → `# Index Store and Accessor Tests`
+
+**coordinator.py** (apps/port)
+- [ ] 第 386 行：`# 使用 Repository 层以获得...` → `# 使用 Accessor 层以获得...`
+
+---
+
+## Phase 7: 文档更新
+
+### 7.1 规范文档（P0 - 立即修改）
+
+**README.md**
+- [ ] 第 38 行：架构图中的 `Repository` → `Accessor`
+- [ ] 第 140 行：目录结构中的 `repositories/` → `accessors/`
+
+**.claude/rules/datahub.md**
+- [ ] 第 12 行：`Repository | 业务封装` → `Accessor | 业务封装`
+- [ ] 第 48 行：`Repository 直接写 Parquet` → `Accessor 直接写 Parquet`
+
+**.claude/rules/python-test.md**
+- [ ] 第 35 行：`测 Repository 逻辑` → `测 Accessor 逻辑`
+
+**.claude/rules/core.md**
+- [ ] 确保使用 `Accessor` 术语
+
+### 7.2 设计文档（P1）
+
+**docs/design/02_data_design.md**
+- [ ] 第 101-102 行：概念描述更新
+- [ ] 第 6535-6538 行：架构说明更新
+
+### 7.3 Sprint 文档（P1）
+
+**docs/sprints/sprint-01-data-foundation.md**
+- [ ] 第 121-123 行：表格中的类名和文件路径
+
+**docs/sprints/sprint-02-data-quality.md**
+- [ ] 多处 `Repository` → `Accessor`
+- [ ] `repositories/` → `accessors/`
+
+### 7.4 测试文档
+
+**packages/datahub/tests/README.md**
+- [ ] `repositories/` → `accessors/`
+
+---
+
+## Phase 8: 验证
+
+完成所有修改后执行：
+
+```bash
+# 1. 搜索遗留的 repository 变量名
+git grep "self\.repo" -- "*.py"
+
+# 2. 搜索测试方法中的 repository
+git grep "test_.*repository" -- "*.py"
+
+# 3. 搜索代码中的 Repository 引用（排除注释）
+git grep -i "Repository" -- "*.py" | grep -v "#" | grep -v "\"\"\""
+
+# 4. 类型检查
+pixi run -e dev type --all
+
+# 5. 代码检查
+pixi run -e dev lint
+
+# 6. 格式检查
+pixi run -e dev fmt --check
+
+# 7. 单元测试
+pixi run -e dev test --unit
+
+# 8. 集成测试
+pixi run -e dev test --integration
+
+# 9. 完整 CI
+pixi run -e dev ci
+```
+
+---
+
+## 关键文件清单
+
+### 需要重命名的文件（8个）
+
+| 当前路径 | 新路径 |
+|---------|--------|
+| `repositories/bars/repository.py` | `repositories/bars/accessor.py` |
+| `tests/unit/repositories/` (目录) | `tests/unit/accessors/` |
+| `tests/unit/repositories/test_bars_repository_unit.py` | `tests/unit/accessors/test_bars_accessor_unit.py` |
+| `tests/unit/repositories/test_calendar_repository_unit.py` | `tests/unit/accessors/test_calendar_accessor_unit.py` |
+| `tests/unit/repositories/test_security_repository_unit.py` | `tests/unit/accessors/test_security_accessor_unit.py` |
+| `tests/unit/repositories/test_universe_repository_unit.py` | `tests/unit/accessors/test_universe_accessor_unit.py` |
+| `tests/unit/repositories/test_index_repository_unit.py` | `tests/unit/accessors/test_index_accessor_unit.py` |
+| `tests/unit/repositories/test_adj_factor_repository_unit.py` | `tests/unit/accessors/test_adj_factor_accessor_unit.py` |
+
+### 需要大量修改的文件
+
+| 文件 | 修改类型 | 预估数量 |
+|------|---------|---------|
+| `test_bars_accessor_unit.py` | `self.repo` → `self.accessor` | ~200 处 |
+| `test_hub_unit.py` | 方法名、注释、导入 | 5+ 处 |
+| `hub.py` | 文档字符串、注释 | 8+ 处 |
+| 各 `*.py` 文件 | 文档字符串 | 每文件 2 处 |
+
+---
+
+## 执行建议
+
+1. **Phase 1-2**: 先重命名文件和目录
+2. **更新所有导入语句**
+3. **Phase 3-4**: 修改变量名和方法名
+4. **Phase 5-6**: 更新文档字符串和注释
+5. **Phase 7**: 更新文档文件
+6. **每个 Phase 后运行测试验证**
+7. **Phase 8**: 最后运行完整 CI
+
+---
+
+## 统计
+
+| 类型 | 数量 |
+|------|------|
+| 重命名文件（源+测试） | 8 个 |
+| 重命名目录 | 1 个 |
+| 修改变量名的文件 | 5 个 |
+| 修改 fixture 的文件 | 1 个 |
+| 修改方法名的文件 | 2 个 |
+| 更新文档字符串的文件 | 7 个 |
+| 更新注释的文件 | 3 个 |
+| 更新的文档 | 8+ 个 |
+
+---
+
+## 相关文档
+
+- 原计划：`docs/plans/archive/2026-01-18-repository-accessor-refactor.md`
+- 此计划补充完成原计划的遗漏项
