@@ -1,4 +1,4 @@
-"""Index Repository for index data and constituents access."""
+"""Index Accessor for index data and constituents access."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from ditto_datahub.stores.security_store import SecurityStore
 
 class IndexAccessor:
     """
-    Index data repository.
+    Index data accessor.
 
     Provides domain-level interface for index data operations,
     coordinating BarsStore, IndexWeightStore, and SecurityStore.
@@ -44,7 +44,7 @@ class IndexAccessor:
         self._index_weight_store = index_weight_store
         self._security_store = security_store
 
-    @traced("repository.index.get_bars")
+    @traced("accessor.index.get_bars")
     def get_bars(
         self,
         sids: list[int] | None = None,
@@ -116,7 +116,7 @@ class IndexAccessor:
 
         return result
 
-    @traced("repository.index.get_constituents")
+    @traced("accessor.index.get_constituents")
     def get_constituents(
         self,
         index_id: str,
@@ -179,7 +179,7 @@ class IndexAccessor:
 
         return constituents
 
-    @traced("repository.index.get_constituents_sids")
+    @traced("accessor.index.get_constituents_sids")
     def get_index_constituents_sids(
         self,
         index_id: str,
@@ -217,7 +217,7 @@ class IndexAccessor:
 
         return sids
 
-    @traced("repository.index.get_csi300_bars")
+    @traced("accessor.index.get_csi300_bars")
     def get_csi300_bars(
         self,
         start: str | None = None,
@@ -270,7 +270,7 @@ class IndexAccessor:
 
         return result
 
-    @traced("repository.index.get_csi300_constituents")
+    @traced("accessor.index.get_csi300_constituents")
     def get_csi300_constituents(self, asof: str | None = None) -> list[int]:
         """
         Get CSI 300 index constituents (predefined shortcut).
@@ -301,7 +301,7 @@ class IndexAccessor:
 
         return sids
 
-    @traced("repository.index.get_csi500_constituents")
+    @traced("accessor.index.get_csi500_constituents")
     def get_csi500_constituents(self, asof: str | None = None) -> list[int]:
         """
         Get CSI 500 index constituents (predefined shortcut).

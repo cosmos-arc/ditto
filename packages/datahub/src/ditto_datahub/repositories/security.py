@@ -5,11 +5,10 @@ from __future__ import annotations
 from typing import Any, Literal
 
 import polars as pl
-from ditto_foundation import M, logger, traced
-from ditto_foundation.util.checksum import ChecksumCompute
-
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
+from ditto_foundation import M, logger, traced
+from ditto_foundation.util.checksum import ChecksumCompute
 
 
 class SecuritiesAccessor:

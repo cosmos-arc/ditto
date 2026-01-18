@@ -49,7 +49,7 @@ class DataHub:
     - Runtime Layer: sqlite_pool, file_lock, sid_allocator, dq_engine, freeze
     - Store Layer: security_store, calendar_store, bars_store, adj_factor_store,
       universe_store, index_weight_store, ingestion_log
-    - Repository Layer: securities, bars, calendar, universe, index
+    - Accessor Layer: securities, bars, calendar, universe, index
     - Sources Layer: sources (external data sources: Tushare, Akshare)
     - SQL Engine: sql_engine
     """
@@ -162,12 +162,12 @@ class DataHub:
         return QuarantineStore(quarantine_path)
 
     # ========================================================================
-    # Repository Layer
+    # Accessor Layer
     # ========================================================================
 
     @cached_property
     def securities(self) -> SecuritiesAccessor:
-        """Securities master data repository."""
+        """Securities master data accessor."""
         return SecuritiesAccessor(
             security_store=self.security_store,
             sid_allocator=self.sid_allocator,
@@ -175,7 +175,7 @@ class DataHub:
 
     @cached_property
     def bars(self) -> BarsAccessor:
-        """OHLCV bars repository."""
+        """OHLCV bars accessor."""
         return BarsAccessor(
             bars_store=self.bars_store,
             security_store=self.security_store,
@@ -188,7 +188,7 @@ class DataHub:
 
     @cached_property
     def adj_factor(self) -> AdjFactorAccessor:
-        """Adjustment factor repository."""
+        """Adjustment factor accessor."""
         return AdjFactorAccessor(
             adj_factor_store=self.adj_factor_store,
             file_lock=self.file_lock,
@@ -196,14 +196,14 @@ class DataHub:
 
     @cached_property
     def calendar(self) -> CalendarAccessor:
-        """Trading calendar repository."""
+        """Trading calendar accessor."""
         return CalendarAccessor(
             calendar_store=self.calendar_store,
         )
 
     @cached_property
     def universe(self) -> UniverseAccessor:
-        """Security universe repository."""
+        """Security universe accessor."""
         return UniverseAccessor(
             universe_store=self.universe_store,
             security_store=self.security_store,
@@ -212,7 +212,7 @@ class DataHub:
 
     @cached_property
     def index(self) -> IndexAccessor:
-        """Index data repository."""
+        """Index data accessor."""
         return IndexAccessor(
             bars_store=self.bars_store,
             index_weight_store=self.index_weight_store,

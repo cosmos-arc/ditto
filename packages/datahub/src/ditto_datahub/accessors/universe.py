@@ -1,5 +1,5 @@
 """
-Universe Repository for security universe management.
+Universe Accessor for security universe management.
 
 This module provides the domain-level interface for universe operations,
 coordinating UniverseStore and SidAllocator.
@@ -17,7 +17,7 @@ from ditto_datahub.stores.universe_store import UniverseStore
 
 class UniverseAccessor:
     """
-    Security universe repository.
+    Security universe accessor.
 
     Provides domain-level interface for universe data operations,
     coordinating UniverseStore and SidAllocator.
@@ -49,7 +49,7 @@ class UniverseAccessor:
         self._security_store = security_store
         self._sid_allocator = sid_allocator
 
-    @traced("repository.universe.create")
+    @traced("accessor.universe.create")
     def create(
         self,
         universe_id: str,
@@ -98,7 +98,7 @@ class UniverseAccessor:
         # Record metrics
         M.data_records.add(1, {"dataset": "universe", "operation": "create"})
 
-    @traced("repository.universe.get_constituents")
+    @traced("accessor.universe.get_constituents")
     def get_constituents(
         self,
         universe_id: str,
@@ -149,7 +149,7 @@ class UniverseAccessor:
 
         return constituents
 
-    @traced("repository.universe.add_constituents")
+    @traced("accessor.universe.add_constituents")
     def add_constituents(
         self,
         universe_id: str,
@@ -212,7 +212,7 @@ class UniverseAccessor:
 
         return count
 
-    @traced("repository.universe.list")
+    @traced("accessor.universe.list")
     def list_universes(
         self,
         universe_type: str | None = None,
@@ -243,7 +243,7 @@ class UniverseAccessor:
 
         return result
 
-    @traced("repository.universe.get_csi300")
+    @traced("accessor.universe.get_csi300")
     def get_csi300(self, asof: str | None = None) -> list[int]:
         """
         Get CSI 300 universe constituents (predefined shortcut).
@@ -271,7 +271,7 @@ class UniverseAccessor:
 
         return sids
 
-    @traced("repository.universe.get_csi500")
+    @traced("accessor.universe.get_csi500")
     def get_csi500(self, asof: str | None = None) -> list[int]:
         """
         Get CSI 500 universe constituents (predefined shortcut).

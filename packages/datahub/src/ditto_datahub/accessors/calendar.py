@@ -1,4 +1,4 @@
-"""Calendar Repository for trading calendar data access."""
+"""Calendar Accessor for trading calendar data access."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from ditto_datahub.stores.calendar_store import CalendarStore
 
 class CalendarAccessor:
     """
-    Trading calendar repository.
+    Trading calendar accessor.
 
     Provides domain-level interface for trading calendar operations,
     delegating to CalendarStore for data access.
@@ -31,7 +31,7 @@ class CalendarAccessor:
         """
         self._calendar_store = calendar_store
 
-    @traced("repository.calendar.get")
+    @traced("accessor.calendar.get")
     def get(
         self,
         start: str,

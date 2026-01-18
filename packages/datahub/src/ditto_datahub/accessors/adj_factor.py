@@ -1,4 +1,4 @@
-"""AdjFactor Repository for adjustment factor data access."""
+"""AdjFactor Accessor for adjustment factor data access."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 
 class AdjFactorAccessor:
     """
-    Adjustment factor repository for dividend/split/bonus factors.
+    Adjustment factor accessor for dividend/split/bonus factors.
 
     Provides domain-level interface for adj_factor data operations,
     coordinating AdjFactorStore with file locking for concurrent safety.
@@ -34,7 +34,7 @@ class AdjFactorAccessor:
         self._adj_factor_store = adj_factor_store
         self._file_lock = file_lock
 
-    @traced("repository.adj_factor.write")
+    @traced("accessor.adj_factor.write")
     def write(
         self,
         dataset: str,

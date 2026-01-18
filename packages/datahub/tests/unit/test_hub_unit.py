@@ -194,7 +194,7 @@ class TestDataHub:
         assert "sqlite_pool" in repr_str
 
     # ========================================================================
-    # Universe Store and Repository Tests
+    # Universe Store and Accessor Tests
     # ========================================================================
 
     def test_universe_store_lazy_loading(self) -> None:
@@ -217,7 +217,7 @@ class TestDataHub:
         assert hasattr(hub.universe, "get_csi300")
 
     # ========================================================================
-    # Index Store and Repository Tests
+    # Index Store and Accessor Tests
     # ========================================================================
 
     def test_index_weight_store_lazy_loading(self) -> None:

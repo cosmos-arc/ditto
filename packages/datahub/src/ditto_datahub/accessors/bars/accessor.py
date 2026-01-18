@@ -152,7 +152,7 @@ class BarsAccessor:
         self._file_lock = file_lock
         self._quarantine_store = quarantine_store
 
-    @traced("repository.bars.get")
+    @traced("accessor.bars.get")
     def get(self, query: BarsQuery) -> pl.DataFrame:
         """
         获取行情数据（使用查询对象）。
@@ -284,7 +284,7 @@ class BarsAccessor:
             )
         )
 
-    @traced("repository.bars.write")
+    @traced("accessor.bars.write")
     def write(
         self,
         df: pl.DataFrame,
