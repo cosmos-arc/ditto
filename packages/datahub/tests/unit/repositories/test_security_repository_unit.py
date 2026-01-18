@@ -1,16 +1,16 @@
-"""Tests for SecurityRepository."""
+"""Tests for SecuritiesAccessor."""
 
 import polars as pl
 import pytest
-from ditto_datahub.repositories.security import SecurityRepository
+from ditto_datahub.repositories.security import SecuritiesAccessor
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
 
-class TestSecurityRepository:
-    """Tests for SecurityRepository."""
+class TestSecuritiesAccessor:
+    """Tests for SecuritiesAccessor."""
 
     def setup_method(self) -> None:
         """Set up test database."""
@@ -19,7 +19,7 @@ class TestSecurityRepository:
         self.client = SQLiteClient(self.pool)
         self.security_store = SecurityStore(self.client)
         self.sid_allocator = SidAllocator(self.pool)
-        self.repo = SecurityRepository(
+        self.repo = SecuritiesAccessor(
             self.security_store,
             self.sid_allocator,
         )

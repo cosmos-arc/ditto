@@ -1,8 +1,8 @@
-"""Tests for IndexRepository."""
+"""Tests for IndexAccessor."""
 
 import polars as pl
 import pytest
-from ditto_datahub.repositories.index import IndexRepository
+from ditto_datahub.repositories.index import IndexAccessor
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.security_store import SecurityStore
@@ -32,9 +32,9 @@ def index_repo(
     mock_bars_store: BarsStore,
     mock_index_weight_store: IndexWeightStore,
     mock_security_store: SecurityStore,
-) -> IndexRepository:
-    """Create an IndexRepository with mocked dependencies."""
-    return IndexRepository(
+) -> IndexAccessor:
+    """Create an IndexAccessor with mocked dependencies."""
+    return IndexAccessor(
         mock_bars_store,
         mock_index_weight_store,
         mock_security_store,
@@ -42,23 +42,23 @@ def index_repo(
 
 
 @pytest.mark.pit
-class TestIndexRepositoryWithMocks:
+class TestIndexAccessorWithMocks:
     """
-    Tests for IndexRepository with mocked dependencies.
+    Tests for IndexAccessor with mocked dependencies.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
     """
 
-    def test_repository_init(self, index_repo: IndexRepository) -> None:
-        """Test IndexRepository initialization."""
+    def test_repository_init(self, index_repo: IndexAccessor) -> None:
+        """Test IndexAccessor initialization."""
         assert index_repo._bars_store is not None
         assert index_repo._index_weight_store is not None
         assert index_repo._security_store is not None
 
     def test_get_bars_by_sids(
         self,
-        index_repo: IndexRepository,
+        index_repo: IndexAccessor,
         mock_bars_store: BarsStore,
     ) -> None:
         """Test getting index bars by SIDs."""
@@ -97,7 +97,7 @@ class TestIndexRepositoryWithMocks:
 
     def test_get_bars_by_symbols(
         self,
-        index_repo: IndexRepository,
+        index_repo: IndexAccessor,
         mock_bars_store: BarsStore,
         mock_security_store: SecurityStore,
     ) -> None:
@@ -136,7 +136,7 @@ class TestIndexRepositoryWithMocks:
 
     def test_get_bars_with_asof(
         self,
-        index_repo: IndexRepository,
+        index_repo: IndexAccessor,
         mock_bars_store: BarsStore,
         mock_security_store: SecurityStore,
     ) -> None:
@@ -168,7 +168,7 @@ class TestIndexRepositoryWithMocks:
         )
 
     def test_get_bars_raises_error_when_no_sids_or_symbols(
-        self, index_repo: IndexRepository
+        self, index_repo: IndexAccessor
     ) -> None:
         """Test that get_bars raises error when both sids and symbols are None."""
         # Act & Assert
@@ -183,7 +183,7 @@ class TestIndexRepositoryWithMocks:
 
     def test_get_constituents_basic(
         self,
-        index_repo: IndexRepository,
+        index_repo: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
     ) -> None:
         """Test getting index constituents without symbol."""
@@ -216,7 +216,7 @@ class TestIndexRepositoryWithMocks:
 
     def test_get_constituents_with_symbol(
         self,
-        index_repo: IndexRepository,
+        index_repo: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
         mock_security_store: SecurityStore,
     ) -> None:
@@ -259,7 +259,7 @@ class TestIndexRepositoryWithMocks:
 
     def test_get_constituents_with_min_weight(
         self,
-        index_repo: IndexRepository,
+        index_repo: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
     ) -> None:
         """Test getting index constituents with minimum weight filter."""
@@ -290,7 +290,7 @@ class TestIndexRepositoryWithMocks:
 
     def test_get_constituents_with_asof(
         self,
-        index_repo: IndexRepository,
+        index_repo: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
     ) -> None:
         """Test getting index constituents with PIT asof query."""
@@ -321,7 +321,7 @@ class TestIndexRepositoryWithMocks:
 
     def test_get_index_constituents_sids(
         self,
-        index_repo: IndexRepository,
+        index_repo: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
     ) -> None:
         """Test getting index constituent SIDs as a list."""
@@ -349,7 +349,7 @@ class TestIndexRepositoryWithMocks:
 
     def test_get_csi300_bars(
         self,
-        index_repo: IndexRepository,
+        index_repo: IndexAccessor,
         mock_bars_store: BarsStore,
         mock_security_store: SecurityStore,
     ) -> None:
@@ -381,7 +381,7 @@ class TestIndexRepositoryWithMocks:
 
     def test_get_csi300_constituents(
         self,
-        index_repo: IndexRepository,
+        index_repo: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
     ) -> None:
         """Test get_csi300_constituents predefined shortcut."""
@@ -402,7 +402,7 @@ class TestIndexRepositoryWithMocks:
 
     def test_get_csi500_constituents(
         self,
-        index_repo: IndexRepository,
+        index_repo: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
     ) -> None:
         """Test get_csi500_constituents predefined shortcut."""

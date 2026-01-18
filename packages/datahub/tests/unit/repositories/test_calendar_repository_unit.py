@@ -1,14 +1,14 @@
-"""Tests for CalendarRepository."""
+"""Tests for CalendarAccessor."""
 
 import pytest
-from ditto_datahub.repositories.calendar import CalendarRepository
+from ditto_datahub.repositories.calendar import CalendarAccessor
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
 
-class TestCalendarRepository:
-    """Tests for CalendarRepository."""
+class TestCalendarAccessor:
+    """Tests for CalendarAccessor."""
 
     def setup_method(self) -> None:
         """Set up test database."""
@@ -16,7 +16,7 @@ class TestCalendarRepository:
         self.pool.init_schema()
         self.client = SQLiteClient(self.pool)
         self.calendar_store = CalendarStore(self.client)
-        self.repo = CalendarRepository(self.calendar_store)
+        self.repo = CalendarAccessor(self.calendar_store)
 
         # Insert test data
         self._insert_test_data()

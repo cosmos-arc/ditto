@@ -1,8 +1,8 @@
-"""Tests for UniverseRepository."""
+"""Tests for UniverseAccessor."""
 
 import polars as pl
 import pytest
-from ditto_datahub.repositories.universe import UniverseRepository
+from ditto_datahub.repositories.universe import UniverseAccessor
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
@@ -11,8 +11,8 @@ from ditto_foundation import SQLitePool
 
 
 @pytest.mark.pit
-class TestUniverseRepository:
-    """Tests for UniverseRepository.
+class TestUniverseAccessor:
+    """Tests for UniverseAccessor.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
@@ -26,7 +26,7 @@ class TestUniverseRepository:
         self.universe_store = UniverseStore(self.client)
         self.security_store = SecurityStore(self.client)
         self.sid_allocator = SidAllocator(self.pool)
-        self.repo = UniverseRepository(
+        self.repo = UniverseAccessor(
             self.universe_store,
             self.security_store,
             self.sid_allocator,
@@ -44,7 +44,7 @@ class TestUniverseRepository:
         self.client.commit()
 
     def test_repository_init(self) -> None:
-        """Test UniverseRepository initialization."""
+        """Test UniverseAccessor initialization."""
         assert self.repo._universe_store is not None
         assert self.repo._sid_allocator is not None
 
@@ -381,8 +381,8 @@ class TestUniverseRepository:
         pass
 
 
-class TestUniverseRepositoryWithMocks:
-    """Tests for UniverseRepository with mocked dependencies."""
+class TestUniverseAccessorWithMocks:
+    """Tests for UniverseAccessor with mocked dependencies."""
 
     def test_add_constituents_with_mocks(self, mocker) -> None:
         """Test add_constituents with mocked store and allocator."""
@@ -390,7 +390,7 @@ class TestUniverseRepositoryWithMocks:
         mock_store = mocker.Mock()
         mock_security_store = mocker.Mock()
         mock_allocator = mocker.Mock()
-        repo = UniverseRepository(mock_store, mock_security_store, mock_allocator)
+        repo = UniverseAccessor(mock_store, mock_security_store, mock_allocator)
 
         mock_store.add_constituents.return_value = 2
 
@@ -415,7 +415,7 @@ class TestUniverseRepositoryWithMocks:
         mock_store = mocker.Mock()
         mock_security_store = mocker.Mock()
         mock_allocator = mocker.Mock()
-        repo = UniverseRepository(mock_store, mock_security_store, mock_allocator)
+        repo = UniverseAccessor(mock_store, mock_security_store, mock_allocator)
 
         # Mock return data
         mock_df = pl.DataFrame(
@@ -442,7 +442,7 @@ class TestUniverseRepositoryWithMocks:
         mock_store = mocker.Mock()
         mock_security_store = mocker.Mock()
         mock_allocator = mocker.Mock()
-        repo = UniverseRepository(mock_store, mock_security_store, mock_allocator)
+        repo = UniverseAccessor(mock_store, mock_security_store, mock_allocator)
 
         # Act
         repo.create(
@@ -468,7 +468,7 @@ class TestUniverseRepositoryWithMocks:
         mock_store = mocker.Mock()
         mock_security_store = mocker.Mock()
         mock_allocator = mocker.Mock()
-        repo = UniverseRepository(mock_store, mock_security_store, mock_allocator)
+        repo = UniverseAccessor(mock_store, mock_security_store, mock_allocator)
 
         mock_df = pl.DataFrame(
             {
@@ -487,11 +487,11 @@ class TestUniverseRepositoryWithMocks:
         mock_store.list_universes.assert_called_once_with(universe_type=None)
 
 
-class TestUniverseRepositorySecurityDependency:
-    """Tests for UniverseRepository security store dependency injection."""
+class TestUniverseAccessorSecurityDependency:
+    """Tests for UniverseAccessor security store dependency injection."""
 
     def test_init_requires_security_store(self) -> None:
-        """Test UniverseRepository requires security_store parameter."""
+        """Test UniverseAccessor requires security_store parameter."""
         # Arrange
         pool = SQLitePool(":memory:")
         pool.init_schema()
@@ -501,7 +501,7 @@ class TestUniverseRepositorySecurityDependency:
         sid_allocator = SidAllocator(pool)
 
         # Act & Assert - Should accept security_store
-        repo = UniverseRepository(
+        repo = UniverseAccessor(
             universe_store=universe_store,
             security_store=security_store,
             sid_allocator=sid_allocator,
@@ -518,7 +518,7 @@ class TestUniverseRepositorySecurityDependency:
         mock_security_store = mocker.Mock()
         mock_allocator = mocker.Mock()
 
-        repo = UniverseRepository(
+        repo = UniverseAccessor(
             universe_store=mock_universe_store,
             security_store=mock_security_store,
             sid_allocator=mock_allocator,

@@ -81,7 +81,7 @@ def mock_hub(mocker):
     hub.security_store.resolve_sid.return_value = None  # 默认返回 None（不存在）
     hub.security_store.register.return_value = 1000001  # 返回注册的 SID
 
-    # 添加 Securities Repository mock
+    # 添加 SecuritiesAccessor mock
     # (Coordinator._write_stock_basic/_write_etf_basic 需要)
     hub.securities = mocker.Mock()
 

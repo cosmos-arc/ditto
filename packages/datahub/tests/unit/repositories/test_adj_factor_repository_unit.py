@@ -1,4 +1,4 @@
-"""Tests for AdjFactorRepository."""
+"""Tests for AdjFactorAccessor."""
 
 import shutil
 import tempfile
@@ -7,20 +7,20 @@ from pathlib import Path
 
 import polars as pl
 from ditto_datahub.models import OnDuplicate
-from ditto_datahub.repositories.adj_factor import AdjFactorRepository
+from ditto_datahub.repositories.adj_factor import AdjFactorAccessor
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_foundation.concurrency import FileLockManager
 
 
-class TestAdjFactorRepository:
-    """Tests for AdjFactorRepository."""
+class TestAdjFactorAccessor:
+    """Tests for AdjFactorAccessor."""
 
     def setup_method(self) -> None:
         """Set up test environment."""
         self.temp_dir = Path(tempfile.mkdtemp())
         self.adj_factor_store = AdjFactorStore(data_root=self.temp_dir)
         self.file_lock = FileLockManager(lock_dir=self.temp_dir / "locks")
-        self.repo = AdjFactorRepository(
+        self.repo = AdjFactorAccessor(
             adj_factor_store=self.adj_factor_store,
             file_lock=self.file_lock,
         )

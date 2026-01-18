@@ -373,7 +373,7 @@ class IngestionCoordinator:
             raise ValueError(f"不支持写入数据集: {dataset}") from e
 
         if dataset_enum in (Dataset.ETF_DAILY, Dataset.STOCK_DAILY):
-            # 补齐 sid/source 字段（使用 SecurityRepository API）
+            # 补齐 sid/source 字段（使用 SecuritiesAccessor API）
             asset_class: Literal["stock", "etf"] = (
                 "etf" if dataset_enum == Dataset.ETF_DAILY else "stock"
             )
@@ -393,7 +393,7 @@ class IngestionCoordinator:
                 on_duplicate=on_duplicate,
             )
         elif dataset_enum in (Dataset.ADJ_FACTOR, Dataset.FUND_ADJ):
-            # 补齐 sid/source 字段（使用 SecurityRepository API）
+            # 补齐 sid/source 字段（使用 SecuritiesAccessor API）
             adj_asset_class: Literal["stock", "etf"] = (
                 "etf" if dataset_enum == Dataset.FUND_ADJ else "stock"
             )
@@ -407,7 +407,7 @@ class IngestionCoordinator:
                     src_code_col="src_code",
                 )
 
-            # 使用 AdjFactorRepository 写入（带文件锁保护）
+            # 使用 AdjFactorAccessor 写入（带文件锁保护）
             return self._hub.adj_factor.write(
                 dataset=dataset,
                 df=df,
@@ -453,7 +453,7 @@ class IngestionCoordinator:
 
     def _write_stock_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """写入 stock_basic 数据到 security_store。"""
-        # 使用 SecurityRepository 批量注册（线程安全）
+        # 使用 SecuritiesAccessor 批量注册（线程安全）
         file_path, checksum = self._hub.securities.register_batch(
             df=df,
             source=self._source_name,
@@ -465,7 +465,7 @@ class IngestionCoordinator:
 
     def _write_etf_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """写入 etf_basic 数据到 security_store。"""
-        # 使用 SecurityRepository 批量注册（线程安全）
+        # 使用 SecuritiesAccessor 批量注册（线程安全）
         file_path, checksum = self._hub.securities.register_batch(
             df=df,
             source=self._source_name,

@@ -1,4 +1,4 @@
-"""Tests for BarsRepository."""
+"""Tests for BarsAccessor."""
 
 import random
 import time
@@ -10,8 +10,8 @@ from tempfile import TemporaryDirectory
 import polars as pl
 import pytest
 from ditto_datahub.dq.engine import DQEngine
-from ditto_datahub.repositories import AdjType, BarsQuery, BarsRepository
-from ditto_datahub.repositories.bars.repository import _ResolvedQuery
+from ditto_datahub.repositories import AdjType, BarsQuery
+from ditto_datahub.repositories.bars.repository import BarsAccessor, _ResolvedQuery
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.quarantine_store import QuarantineStore
@@ -281,9 +281,9 @@ class TestResolvedQuery:
 
 
 @pytest.mark.pit
-class TestBarsRepository:
+class TestBarsAccessor:
     """
-    Tests for BarsRepository.
+    Tests for BarsAccessor.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
@@ -306,7 +306,7 @@ class TestBarsRepository:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsRepository(
+        self.repo = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -430,7 +430,7 @@ class TestPITSafeAdjustment:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsRepository(
+        self.repo = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -630,7 +630,7 @@ class TestQFQAdjustment:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsRepository(
+        self.repo = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -877,7 +877,7 @@ class TestQFQAdjustment:
         assert abs(result_sorted["close"][2] - 10.421) < 0.01  # 2024-01-04
 
 
-class TestBarsRepositorySingle:
+class TestBarsAccessorSingle:
     """Tests for get_single method."""
 
     def setup_method(self) -> None:
@@ -897,7 +897,7 @@ class TestBarsRepositorySingle:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsRepository(
+        self.repo = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -1088,7 +1088,7 @@ class TestMixedAssetClass:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsRepository(
+        self.repo = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -1324,7 +1324,7 @@ class TestAdjFactorEdgeCases:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsRepository(
+        self.repo = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -1620,7 +1620,7 @@ class TestMarketWideMode:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsRepository(
+        self.repo = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
