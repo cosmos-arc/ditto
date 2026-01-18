@@ -19,7 +19,7 @@ class TestSecuritiesAccessor:
         self.client = SQLiteClient(self.pool)
         self.security_store = SecurityStore(self.client)
         self.sid_allocator = SidAllocator(self.pool)
-        self.repo = SecuritiesAccessor(
+        self.accessor = SecuritiesAccessor(
             self.security_store,
             self.sid_allocator,
         )
@@ -40,7 +40,7 @@ class TestSecuritiesAccessor:
         self.client.commit()
 
         # Act
-        result = self.repo.get(sids=[1000001])
+        result = self.accessor.get(sids=[1000001])
 
         # Assert
         assert len(result) == 1
@@ -63,7 +63,7 @@ class TestSecuritiesAccessor:
         self.client.commit()
 
         # Act
-        sid = self.repo.resolve_identifier("600000.SH", "tushare")
+        sid = self.accessor.resolve_identifier("600000.SH", "tushare")
 
         # Assert
         assert sid == 1000001
@@ -84,7 +84,7 @@ class TestSecuritiesAccessor:
         self.client.commit()
 
         # Act
-        sid = self.repo.resolve_identifier("600000", "tushare")
+        sid = self.accessor.resolve_identifier("600000", "tushare")
 
         # Assert
         assert sid == 1000001
@@ -92,7 +92,7 @@ class TestSecuritiesAccessor:
     def test_resolve_identifier_not_found(self) -> None:
         """Test resolve_identifier returns None for unknown identifier."""
         # Act
-        sid = self.repo.resolve_identifier("999999.SH", "tushare")
+        sid = self.accessor.resolve_identifier("999999.SH", "tushare")
 
         # Assert
         assert sid is None
@@ -115,7 +115,7 @@ class TestSecuritiesAccessor:
         self.client.commit()
 
         # Act
-        result = self.repo.resolve_identifiers_batch(
+        result = self.accessor.resolve_identifiers_batch(
             ["600000.SH", "600001.SH", "600003.SH"],  # 600003 doesn't exist
             source="tushare",
         )
@@ -136,7 +136,7 @@ class TestSecuritiesAccessor:
         self.client.commit()
 
         # Act
-        result = self.repo.get_by_sid(1000001)
+        result = self.accessor.get_by_sid(1000001)
 
         # Assert
         assert result is not None
@@ -147,7 +147,7 @@ class TestSecuritiesAccessor:
     def test_get_by_sid_not_found(self) -> None:
         """Test getting non-existent sid returns None."""
         # Act
-        result = self.repo.get_by_sid(999999999)
+        result = self.accessor.get_by_sid(999999999)
 
         # Assert
         assert result is None
@@ -166,7 +166,7 @@ class TestSecuritiesAccessor:
         self.client.commit()
 
         # Act
-        sids = self.repo.list_all()
+        sids = self.accessor.list_all()
 
         # Assert
         assert len(sids) == 3
@@ -184,7 +184,7 @@ class TestSecuritiesAccessor:
         self.client.commit()
 
         # Act
-        symbol = self.repo.get_symbol(1000001)
+        symbol = self.accessor.get_symbol(1000001)
 
         # Assert
         assert symbol == "600000"
@@ -205,7 +205,7 @@ class TestSecuritiesAccessor:
         self.client.commit()
 
         # Act
-        src_code = self.repo.get_src_code(1000001, "tushare")
+        src_code = self.accessor.get_src_code(1000001, "tushare")
 
         # Assert
         assert src_code == "600000.SH"
@@ -221,13 +221,13 @@ class TestSecuritiesAccessor:
             asset_class="stock",
             list_date="2000-01-01",
         )
-        sid = self.repo.register(registration)
+        sid = self.accessor.register(registration)
 
         # Assert
         assert sid == 1000001  # First stock SID (starts at STOCK_MIN + 1)
 
         # Verify in database
-        security = self.repo.get_by_sid(sid)
+        security = self.accessor.get_by_sid(sid)
         assert security is not None
         assert security["symbol"] == "600001"
 
@@ -245,7 +245,7 @@ class TestSecuritiesAccessor:
         )
 
         # Act
-        file_path, checksum = self.repo.register_batch(
+        file_path, checksum = self.accessor.register_batch(
             df=df,
             source="tushare",
             asset_class="stock",
@@ -258,9 +258,9 @@ class TestSecuritiesAccessor:
         assert len(checksum) == 32  # MD5 hash length
 
         # Verify all securities were registered
-        assert self.repo.get_by_sid(1000001) is not None
-        assert self.repo.get_by_sid(1000002) is not None
-        assert self.repo.get_by_sid(1000003) is not None
+        assert self.accessor.get_by_sid(1000001) is not None
+        assert self.accessor.get_by_sid(1000002) is not None
+        assert self.accessor.get_by_sid(1000003) is not None
 
     def test_register_batch_handles_existing_securities(self) -> None:
         """Test register_batch skips existing securities."""
@@ -275,7 +275,7 @@ class TestSecuritiesAccessor:
                 "list_date": ["2000-01-01"],
             }
         )
-        self.repo.register_batch(
+        self.accessor.register_batch(
             df=df1, source="tushare", asset_class="stock", src_code_col="src_code"
         )
 
@@ -291,15 +291,15 @@ class TestSecuritiesAccessor:
         )
 
         # Act
-        _file_path, _checksum = self.repo.register_batch(
+        _file_path, _checksum = self.accessor.register_batch(
             df=df2, source="tushare", asset_class="stock", src_code_col="src_code"
         )
 
         # Assert - should only register the new one
-        assert self.repo.get_by_sid(1000001) is not None  # Existing
-        assert self.repo.get_by_sid(1000002) is not None  # New
+        assert self.accessor.get_by_sid(1000001) is not None  # Existing
+        assert self.accessor.get_by_sid(1000002) is not None  # New
         # Third security should not exist (only 2 registered)
-        assert self.repo.get_by_sid(1000003) is None
+        assert self.accessor.get_by_sid(1000003) is None
 
     def test_resolve_or_create_batch_with_empty_dataframe(self) -> None:
         """Test resolve_or_create_batch with empty DataFrame."""
@@ -315,7 +315,7 @@ class TestSecuritiesAccessor:
         )
 
         # Act
-        result = self.repo.resolve_or_create_batch(
+        result = self.accessor.resolve_or_create_batch(
             df=df,
             source="tushare",
             asset_class="stock",
@@ -338,7 +338,7 @@ class TestSecuritiesAccessor:
                 "list_date": ["2000-01-01", "2000-01-02"],
             }
         )
-        self.repo.register_batch(
+        self.accessor.register_batch(
             df=df_existing,
             source="tushare",
             asset_class="stock",
@@ -357,7 +357,7 @@ class TestSecuritiesAccessor:
         )
 
         # Act
-        result = self.repo.resolve_or_create_batch(
+        result = self.accessor.resolve_or_create_batch(
             df=df,
             source="tushare",
             asset_class="stock",
@@ -383,7 +383,7 @@ class TestSecuritiesAccessor:
         )
 
         # Act
-        result = self.repo.resolve_or_create_batch(
+        result = self.accessor.resolve_or_create_batch(
             df=df,
             source="tushare",
             asset_class="stock",
@@ -397,9 +397,9 @@ class TestSecuritiesAccessor:
         assert result["600003.SH"] == 1000003
 
         # Verify securities were created
-        assert self.repo.get_by_sid(1000001) is not None
-        assert self.repo.get_by_sid(1000002) is not None
-        assert self.repo.get_by_sid(1000003) is not None
+        assert self.accessor.get_by_sid(1000001) is not None
+        assert self.accessor.get_by_sid(1000002) is not None
+        assert self.accessor.get_by_sid(1000003) is not None
 
     def test_resolve_or_create_batch_mixed_existing_and_new(self) -> None:
         """Test resolve_or_create_batch with mixed existing and new securities."""
@@ -414,7 +414,7 @@ class TestSecuritiesAccessor:
                 "list_date": ["2000-01-01"],
             }
         )
-        self.repo.register_batch(
+        self.accessor.register_batch(
             df=df_existing,
             source="tushare",
             asset_class="stock",
@@ -433,7 +433,7 @@ class TestSecuritiesAccessor:
         )
 
         # Act
-        result = self.repo.resolve_or_create_batch(
+        result = self.accessor.resolve_or_create_batch(
             df=df,
             source="tushare",
             asset_class="stock",
@@ -460,7 +460,7 @@ class TestSecuritiesAccessor:
         # Act & Assert
         expected_match = "name|exchange|list_date"
         with pytest.raises(KeyError, match=expected_match):
-            self.repo.resolve_or_create_batch(
+            self.accessor.resolve_or_create_batch(
                 df=df,
                 source="tushare",
                 asset_class="stock",
@@ -482,7 +482,7 @@ class TestSecuritiesAccessor:
         )
 
         # Act
-        result = self.repo.enrich_dataframe_with_sid(
+        result = self.accessor.enrich_dataframe_with_sid(
             df=df,
             source="tushare",
             asset_class="stock",
@@ -510,7 +510,7 @@ class TestSecuritiesAccessor:
                 "list_date": ["2000-01-01"],
             }
         )
-        self.repo.register_batch(
+        self.accessor.register_batch(
             df=df_existing,
             source="tushare",
             asset_class="stock",
@@ -529,7 +529,7 @@ class TestSecuritiesAccessor:
         )
 
         # Act
-        result = self.repo.enrich_dataframe_with_sid(
+        result = self.accessor.enrich_dataframe_with_sid(
             df=df,
             source="tushare",
             asset_class="stock",
@@ -554,7 +554,7 @@ class TestSecuritiesAccessor:
         )
 
         # Act
-        result = self.repo.enrich_dataframe_with_sid(
+        result = self.accessor.enrich_dataframe_with_sid(
             df=df,
             source="tushare",
             asset_class="etf",

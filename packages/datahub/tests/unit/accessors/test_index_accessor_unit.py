@@ -28,7 +28,7 @@ def mock_security_store(mocker: MockerFixture) -> SecurityStore:
 
 
 @pytest.fixture
-def index_repo(
+def index_accessor(
     mock_bars_store: BarsStore,
     mock_index_weight_store: IndexWeightStore,
     mock_security_store: SecurityStore,
@@ -50,15 +50,15 @@ class TestIndexAccessorWithMocks:
     These tests require more resources and time than unit tests.
     """
 
-    def test_repository_init(self, index_repo: IndexAccessor) -> None:
+    def test_repository_init(self, index_accessor: IndexAccessor) -> None:
         """Test IndexAccessor initialization."""
-        assert index_repo._bars_store is not None
-        assert index_repo._index_weight_store is not None
-        assert index_repo._security_store is not None
+        assert index_accessor._bars_store is not None
+        assert index_accessor._index_weight_store is not None
+        assert index_accessor._security_store is not None
 
     def test_get_bars_by_sids(
         self,
-        index_repo: IndexAccessor,
+        index_accessor: IndexAccessor,
         mock_bars_store: BarsStore,
     ) -> None:
         """Test getting index bars by SIDs."""
@@ -78,7 +78,7 @@ class TestIndexAccessorWithMocks:
         mock_bars_store.read.return_value = mock_df
 
         # Act
-        result = index_repo.get_bars(
+        result = index_accessor.get_bars(
             sids=[1, 2],
             symbols=None,
             start="2024-01-01",
@@ -97,7 +97,7 @@ class TestIndexAccessorWithMocks:
 
     def test_get_bars_by_symbols(
         self,
-        index_repo: IndexAccessor,
+        index_accessor: IndexAccessor,
         mock_bars_store: BarsStore,
         mock_security_store: SecurityStore,
     ) -> None:
@@ -114,7 +114,7 @@ class TestIndexAccessorWithMocks:
         mock_security_store.resolve_sid.return_value = 1
 
         # Act
-        result = index_repo.get_bars(
+        result = index_accessor.get_bars(
             sids=None,
             symbols=["000300.SH"],
             start="2024-01-01",
@@ -136,7 +136,7 @@ class TestIndexAccessorWithMocks:
 
     def test_get_bars_with_asof(
         self,
-        index_repo: IndexAccessor,
+        index_accessor: IndexAccessor,
         mock_bars_store: BarsStore,
         mock_security_store: SecurityStore,
     ) -> None:
@@ -153,7 +153,7 @@ class TestIndexAccessorWithMocks:
         mock_security_store.resolve_sid.return_value = 1
 
         # Act
-        result = index_repo.get_bars(
+        result = index_accessor.get_bars(
             sids=None,
             symbols=["000300.SH"],
             start="2024-01-01",
@@ -168,12 +168,12 @@ class TestIndexAccessorWithMocks:
         )
 
     def test_get_bars_raises_error_when_no_sids_or_symbols(
-        self, index_repo: IndexAccessor
+        self, index_accessor: IndexAccessor
     ) -> None:
         """Test that get_bars raises error when both sids and symbols are None."""
         # Act & Assert
         with pytest.raises(ValueError, match="Either sids or symbols"):
-            index_repo.get_bars(
+            index_accessor.get_bars(
                 sids=None,
                 symbols=None,
                 start="2024-01-01",
@@ -183,7 +183,7 @@ class TestIndexAccessorWithMocks:
 
     def test_get_constituents_basic(
         self,
-        index_repo: IndexAccessor,
+        index_accessor: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
     ) -> None:
         """Test getting index constituents without symbol."""
@@ -199,7 +199,7 @@ class TestIndexAccessorWithMocks:
         mock_index_weight_store.get_constituents.return_value = mock_df
 
         # Act
-        result = index_repo.get_constituents(
+        result = index_accessor.get_constituents(
             index_id="000300.SH",
             asof=None,
             with_symbol=False,
@@ -216,7 +216,7 @@ class TestIndexAccessorWithMocks:
 
     def test_get_constituents_with_symbol(
         self,
-        index_repo: IndexAccessor,
+        index_accessor: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
         mock_security_store: SecurityStore,
     ) -> None:
@@ -245,7 +245,7 @@ class TestIndexAccessorWithMocks:
         mock_security_store.enrich_with_symbol.return_value = mock_enriched_df
 
         # Act
-        result = index_repo.get_constituents(
+        result = index_accessor.get_constituents(
             index_id="000300.SH",
             asof=None,
             with_symbol=True,
@@ -259,7 +259,7 @@ class TestIndexAccessorWithMocks:
 
     def test_get_constituents_with_min_weight(
         self,
-        index_repo: IndexAccessor,
+        index_accessor: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
     ) -> None:
         """Test getting index constituents with minimum weight filter."""
@@ -275,7 +275,7 @@ class TestIndexAccessorWithMocks:
         mock_index_weight_store.get_constituents.return_value = mock_df
 
         # Act
-        result = index_repo.get_constituents(
+        result = index_accessor.get_constituents(
             index_id="000300.SH",
             asof=None,
             with_symbol=False,
@@ -290,7 +290,7 @@ class TestIndexAccessorWithMocks:
 
     def test_get_constituents_with_asof(
         self,
-        index_repo: IndexAccessor,
+        index_accessor: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
     ) -> None:
         """Test getting index constituents with PIT asof query."""
@@ -306,7 +306,7 @@ class TestIndexAccessorWithMocks:
         mock_index_weight_store.get_constituents.return_value = mock_df
 
         # Act
-        result = index_repo.get_constituents(
+        result = index_accessor.get_constituents(
             index_id="000300.SH",
             asof="2024-06-01",
             with_symbol=False,
@@ -321,7 +321,7 @@ class TestIndexAccessorWithMocks:
 
     def test_get_index_constituents_sids(
         self,
-        index_repo: IndexAccessor,
+        index_accessor: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
     ) -> None:
         """Test getting index constituent SIDs as a list."""
@@ -333,7 +333,7 @@ class TestIndexAccessorWithMocks:
         ]
 
         # Act
-        sids = index_repo.get_index_constituents_sids(
+        sids = index_accessor.get_index_constituents_sids(
             index_id="000300.SH",
             asof=None,
         )
@@ -349,7 +349,7 @@ class TestIndexAccessorWithMocks:
 
     def test_get_csi300_bars(
         self,
-        index_repo: IndexAccessor,
+        index_accessor: IndexAccessor,
         mock_bars_store: BarsStore,
         mock_security_store: SecurityStore,
     ) -> None:
@@ -366,7 +366,7 @@ class TestIndexAccessorWithMocks:
         mock_security_store.resolve_sid.return_value = 300
 
         # Act
-        result = index_repo.get_csi300_bars(
+        result = index_accessor.get_csi300_bars(
             start="2024-01-01",
             end="2024-01-31",
             asof=None,
@@ -381,7 +381,7 @@ class TestIndexAccessorWithMocks:
 
     def test_get_csi300_constituents(
         self,
-        index_repo: IndexAccessor,
+        index_accessor: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
     ) -> None:
         """Test get_csi300_constituents predefined shortcut."""
@@ -392,7 +392,7 @@ class TestIndexAccessorWithMocks:
         ]
 
         # Act
-        sids = index_repo.get_csi300_constituents(asof=None)
+        sids = index_accessor.get_csi300_constituents(asof=None)
 
         # Assert
         assert len(sids) == 2
@@ -402,7 +402,7 @@ class TestIndexAccessorWithMocks:
 
     def test_get_csi500_constituents(
         self,
-        index_repo: IndexAccessor,
+        index_accessor: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
     ) -> None:
         """Test get_csi500_constituents predefined shortcut."""
@@ -413,7 +413,7 @@ class TestIndexAccessorWithMocks:
         ]
 
         # Act
-        sids = index_repo.get_csi500_constituents(asof=None)
+        sids = index_accessor.get_csi500_constituents(asof=None)
 
         # Assert
         assert len(sids) == 2

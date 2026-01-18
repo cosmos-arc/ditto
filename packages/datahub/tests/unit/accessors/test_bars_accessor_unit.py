@@ -306,7 +306,7 @@ class TestBarsAccessor:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsAccessor(
+        self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -338,7 +338,7 @@ class TestBarsAccessor:
 
     def test_get_returns_empty_dataframe_for_no_data(self) -> None:
         """Test get returns empty DataFrame when no data exists."""
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-01",
@@ -366,7 +366,7 @@ class TestBarsAccessor:
         self.bars_store.write("stock_daily", test_df, 2024)
 
         # Act
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-01",
@@ -396,7 +396,7 @@ class TestBarsAccessor:
         self.bars_store.write("stock_daily", test_df, 2024)
 
         # Act
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-01",
@@ -430,7 +430,7 @@ class TestPITSafeAdjustment:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsAccessor(
+        self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -509,7 +509,7 @@ class TestPITSafeAdjustment:
 
         # Act: Get QFQ adjusted data asof 2024-01-03
         # PIT-safe: Should only use adj factors with knowledge_date <= 2024-01-03
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-02",
@@ -584,7 +584,7 @@ class TestPITSafeAdjustment:
 
         # Act: Get QFQ adjusted data asof 2024-01-05
         # All factors should be available (all knowledge_date <= 2024-01-05)
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-02",
@@ -630,7 +630,7 @@ class TestQFQAdjustment:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsAccessor(
+        self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -682,7 +682,7 @@ class TestQFQAdjustment:
         self.adj_factor_store.write("adj_factor", adj_df, 2024)
 
         # Act: Get QFQ adjusted data
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-02",
@@ -730,7 +730,7 @@ class TestQFQAdjustment:
         self.adj_factor_store.write("adj_factor", adj_df, 2024)
 
         # Act: Get QFQ adjusted data
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-02",
@@ -765,7 +765,7 @@ class TestQFQAdjustment:
         self.bars_store.write("stock_daily", bars_df, 2024)
 
         # Act: Get QFQ adjusted data (no adj_factor available)
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-02",
@@ -807,7 +807,7 @@ class TestQFQAdjustment:
         self.adj_factor_store.write("adj_factor", adj_df, 2024)
 
         # Act: Get HFQ adjusted data
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-02",
@@ -854,7 +854,7 @@ class TestQFQAdjustment:
 
         # Act: Get QFQ adjusted data with asof="2024-01-03"
         # This means: use the latest adj_factor as of 2024-01-03 (which is 0.95)
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-02",
@@ -897,7 +897,7 @@ class TestBarsAccessorSingle:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsAccessor(
+        self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -944,7 +944,7 @@ class TestBarsAccessorSingle:
         self.bars_store.write("stock_daily", test_df, 2024)
 
         # Act
-        result = self.repo.get_single(
+        result = self.accessor.get_single(
             identifier="600000.SH",
             start="2024-01-01",
             end="2024-01-31",
@@ -972,7 +972,7 @@ class TestBarsAccessorSingle:
         self.bars_store.write("stock_daily", test_df, 2024)
 
         # Act
-        result = self.repo.get_single(
+        result = self.accessor.get_single(
             identifier="600000",
             start="2024-01-01",
             end="2024-01-31",
@@ -1015,7 +1015,7 @@ class TestBarsAccessorSingle:
 
         # Act: Mock logger and call get_single
         mock_logger = mocker.patch("ditto_datahub.accessors.bars.accessor.logger")
-        result = self.repo.get_single(
+        result = self.accessor.get_single(
             identifier="600000",
             start="2024-01-01",
             end="2024-01-31",
@@ -1054,7 +1054,7 @@ class TestBarsAccessorSingle:
         )
 
         # Act
-        result = self.repo.write(
+        result = self.accessor.write(
             df=test_df,
             year=2024,
             dataset="stock_daily",
@@ -1088,7 +1088,7 @@ class TestMixedAssetClass:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsAccessor(
+        self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -1124,7 +1124,7 @@ class TestMixedAssetClass:
         """Test that mixed stock/ETF SIDs raise ValueError."""
         # Act & Assert
         with pytest.raises(ValueError, match="检测到混合资产类别查询"):
-            self.repo.get(
+            self.accessor.get(
                 query=BarsQuery(
                     sids=[1000001, 2000001],  # stock + ETF
                     start="2024-01-01",
@@ -1135,7 +1135,7 @@ class TestMixedAssetClass:
     def test_get_with_all_stock_sids_succeeds(self) -> None:
         """Test that all stock SIDs succeed."""
         # Should not raise
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001, 1000002],  # both stocks
                 start="2024-01-01",
@@ -1147,7 +1147,7 @@ class TestMixedAssetClass:
     def test_get_with_all_etf_sids_succeeds(self) -> None:
         """Test that all ETF SIDs succeed."""
         # Should not raise
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[2000001, 2000002],  # both ETFs
                 start="2024-01-01",
@@ -1181,7 +1181,7 @@ class TestMixedAssetClass:
         self.bars_store.write("index_daily", index_bars_df, 2024)
 
         # Should route to index_daily and return data (NOT empty from stock_daily)
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[3000001],
                 start="2024-01-01",
@@ -1205,7 +1205,7 @@ class TestMixedAssetClass:
 
         # Act & Assert
         with pytest.raises(ValueError, match="检测到混合资产类别查询"):
-            self.repo.get(
+            self.accessor.get(
                 query=BarsQuery(
                     sids=[1000001, 3000001],  # stock + index
                     start="2024-01-01",
@@ -1244,7 +1244,7 @@ class TestMixedAssetClass:
 
         # Act & Assert: Mixed SIDs (stock + etf) should raise error
         with pytest.raises(ValueError, match="检测到混合资产类别查询"):
-            self.repo.get(
+            self.accessor.get(
                 query=BarsQuery(
                     sids=[1000001, 2000001],
                     start="2024-01-01",
@@ -1278,7 +1278,7 @@ class TestMixedAssetClass:
 
         # Act & Assert: All three asset classes should raise error
         with pytest.raises(ValueError, match="检测到混合资产类别查询"):
-            self.repo.get(
+            self.accessor.get(
                 query=BarsQuery(
                     sids=[1000001, 2000001, 3000001],  # stock + etf + index
                     start="2024-01-01",
@@ -1288,7 +1288,7 @@ class TestMixedAssetClass:
 
         # Verify error message mentions all three classes
         try:
-            self.repo.get(
+            self.accessor.get(
                 query=BarsQuery(
                     sids=[1000001, 2000001, 3000001],
                     start="2024-01-01",
@@ -1324,7 +1324,7 @@ class TestAdjFactorEdgeCases:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsAccessor(
+        self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -1366,7 +1366,7 @@ class TestAdjFactorEdgeCases:
         self.bars_store.write("stock_daily", bars_df, 2024)
 
         # Act: Get QFQ adjusted data (no adj_factor data at all)
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-02",
@@ -1398,7 +1398,7 @@ class TestAdjFactorEdgeCases:
         self.bars_store.write("stock_daily", bars_df, 2024)
 
         # Act: Get HFQ adjusted data (no adj_factor data at all)
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-02",
@@ -1453,7 +1453,7 @@ class TestAdjFactorEdgeCases:
         self.adj_factor_store.write("adj_factor", adj_df_2024, 2024)
 
         # Act: Get QFQ adjusted data across year boundary
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2023-12-29",
@@ -1514,7 +1514,7 @@ class TestAdjFactorEdgeCases:
 
         # Act: Get QFQ adjusted data for full year
         start_time = time.time()
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-01",
@@ -1556,7 +1556,7 @@ class TestAdjFactorEdgeCases:
         self.adj_factor_store.write("adj_factor", adj_df, 2024)
 
         # Act: Get QFQ adjusted data
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 start="2024-01-02",
@@ -1587,7 +1587,7 @@ class TestAdjFactorEdgeCases:
         self.bars_store.write("stock_daily", bars_df, 2024)
 
         # Act: Get data with empty SID list
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[],
                 start="2024-01-01",
@@ -1620,7 +1620,7 @@ class TestMarketWideMode:
         self.file_lock_manager = FileLockManager(data_root / "locks")
         self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-        self.repo = BarsAccessor(
+        self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
@@ -1665,7 +1665,7 @@ class TestMarketWideMode:
         self.bars_store.write("stock_daily", bars_df, 2024)
 
         # Act: Query with market_wide=True
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 market_wide=True,
                 start="2024-01-01",
@@ -1719,7 +1719,7 @@ class TestMarketWideMode:
         self.bars_store.write("etf_daily", etf_bars, 2024)
 
         # Act: Query with market_wide=True and asset_class="stock"
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 market_wide=True,
                 asset_class="stock",
@@ -1751,7 +1751,7 @@ class TestMarketWideMode:
         self.bars_store.write("stock_daily", bars_df, 2024)
 
         # Act: Query with specific SIDs (sample set mode)
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 sids=[1000001],
                 market_wide=False,
@@ -1773,7 +1773,7 @@ class TestMarketWideMode:
         self.client.commit()
 
         # Act: Query with market_wide=True
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 market_wide=True,
                 start="2024-01-01",
@@ -1788,7 +1788,7 @@ class TestMarketWideMode:
     def test_market_wide_with_no_data(self) -> None:
         """Test market_wide=True when no bars data exists."""
         # Act: Query with market_wide=True (no data written)
-        result = self.repo.get(
+        result = self.accessor.get(
             query=BarsQuery(
                 market_wide=True,
                 start="2024-01-01",

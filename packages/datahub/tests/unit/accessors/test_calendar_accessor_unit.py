@@ -16,7 +16,7 @@ class TestCalendarAccessor:
         self.pool.init_schema()
         self.client = SQLiteClient(self.pool)
         self.calendar_store = CalendarStore(self.client)
-        self.repo = CalendarAccessor(self.calendar_store)
+        self.accessor = CalendarAccessor(self.calendar_store)
 
         # Insert test data
         self._insert_test_data()
@@ -94,8 +94,8 @@ class TestCalendarAccessor:
 
     def test_is_trading_day(self) -> None:
         """Test is_trading_day."""
-        assert self.repo.is_trading_day("2024-01-02") is True
-        assert self.repo.is_trading_day("2024-01-01") is False
+        assert self.accessor.is_trading_day("2024-01-02") is True
+        assert self.accessor.is_trading_day("2024-01-01") is False
 
     @pytest.mark.parametrize(
         ("method", "date", "expected"),
@@ -113,50 +113,50 @@ class TestCalendarAccessor:
     ) -> None:
         """Test get_prev and get_next."""
         if method == "prev":
-            result = self.repo.get_prev(date)
+            result = self.accessor.get_prev(date)
         else:
-            result = self.repo.get_next(date)
+            result = self.accessor.get_next(date)
         assert result == expected
 
     def test_list_trading_days(self) -> None:
         """Test list_trading_days."""
-        result = self.repo.list_trading_days("2024-01-02", "2024-01-05")
+        result = self.accessor.list_trading_days("2024-01-02", "2024-01-05")
         assert len(result) == 4
         assert result == ["2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"]
 
     def test_count_trading_days(self) -> None:
         """Test count_trading_days."""
-        count = self.repo.count_trading_days("2024-01-02", "2024-01-05")
+        count = self.accessor.count_trading_days("2024-01-02", "2024-01-05")
         assert count == 4
 
     def test_get_week_ends(self) -> None:
         """Test get_week_ends."""
-        result = self.repo.get_period_ends("2024-01-01", "2024-01-31", "week")
+        result = self.accessor.get_period_ends("2024-01-01", "2024-01-31", "week")
         assert len(result) == 1
         assert result[0] == "2024-01-08"
 
     def test_get_month_ends(self) -> None:
         """Test get_month_ends."""
-        result = self.repo.get_month_ends("2024-01-01", "2024-01-31")
+        result = self.accessor.get_month_ends("2024-01-01", "2024-01-31")
         # Test data doesn't have month end, should return empty
         assert result == []
 
     def test_get_quarter_ends(self) -> None:
         """Test get_quarter_ends."""
-        result = self.repo.get_quarter_ends("2024-01-01", "2024-03-31")
+        result = self.accessor.get_quarter_ends("2024-01-01", "2024-03-31")
         # Test data doesn't have quarter end
         assert result == []
 
     def test_get_returns_dataframe(self) -> None:
         """Test get returns DataFrame."""
-        result = self.repo.get("2024-01-02", "2024-01-05", only_open=True)
+        result = self.accessor.get("2024-01-02", "2024-01-05", only_open=True)
         assert len(result) == 4
         assert "trade_date" in result.columns
         assert "is_open" in result.columns
 
     def test_get_last_trading_day(self) -> None:
         """Test get_last_trading_day."""
-        result = self.repo.get_last_trading_day()
+        result = self.accessor.get_last_trading_day()
         assert result == "2024-01-08"
 
     def teardown_method(self) -> None:

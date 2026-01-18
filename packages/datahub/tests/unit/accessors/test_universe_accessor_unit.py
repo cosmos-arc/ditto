@@ -27,7 +27,7 @@ class TestUniverseAccessor:
         self.universe_store = UniverseStore(self.client)
         self.security_store = SecurityStore(self.client)
         self.sid_allocator = SidAllocator(self.pool)
-        self.repo = UniverseAccessor(
+        self.accessor = UniverseAccessor(
             self.universe_store,
             self.security_store,
             self.sid_allocator,
@@ -46,13 +46,13 @@ class TestUniverseAccessor:
 
     def test_repository_init(self) -> None:
         """Test UniverseAccessor initialization."""
-        assert self.repo._universe_store is not None
-        assert self.repo._sid_allocator is not None
+        assert self.accessor._universe_store is not None
+        assert self.accessor._sid_allocator is not None
 
     def test_create_universe(self) -> None:
         """Test creating a universe."""
         # Act
-        self.repo.create(
+        self.accessor.create(
             universe_id="test_universe",
             name="Test Universe",
             description="Test universe for unit testing",
@@ -70,7 +70,7 @@ class TestUniverseAccessor:
     def test_create_universe_with_source_ref(self) -> None:
         """Test creating a universe with source reference."""
         # Act
-        self.repo.create(
+        self.accessor.create(
             universe_id="index_300",
             name="CSI 300 Index",
             description="CSI 300 Index Universe",
@@ -87,7 +87,7 @@ class TestUniverseAccessor:
     def test_get_constituents_basic(self) -> None:
         """Test getting constituents without symbol."""
         # Arrange
-        self.repo.create("test_u", "Test", "custom")
+        self.accessor.create("test_u", "Test", "custom")
         self._create_securities([100000001, 100000002])
 
         records = [
@@ -97,7 +97,7 @@ class TestUniverseAccessor:
         self.universe_store.add_constituents("test_u", records)
 
         # Act
-        constituents = self.repo.get_constituents(
+        constituents = self.accessor.get_constituents(
             "test_u", asof=None, with_symbol=False
         )
 
@@ -109,7 +109,7 @@ class TestUniverseAccessor:
     def test_get_constituents_with_symbol(self) -> None:
         """Test getting constituents with symbol join."""
         # Arrange
-        self.repo.create("test_u", "Test", "custom")
+        self.accessor.create("test_u", "Test", "custom")
         self._create_securities([100000001, 100000002])
 
         records = [
@@ -119,7 +119,9 @@ class TestUniverseAccessor:
         self.universe_store.add_constituents("test_u", records)
 
         # Act
-        constituents = self.repo.get_constituents("test_u", asof=None, with_symbol=True)
+        constituents = self.accessor.get_constituents(
+            "test_u", asof=None, with_symbol=True
+        )
 
         # Assert
         assert len(constituents) == 2
@@ -131,7 +133,7 @@ class TestUniverseAccessor:
     def test_get_constituents_with_asof(self) -> None:
         """Test getting constituents with PIT asof query."""
         # Arrange
-        self.repo.create("test_u", "Test", "custom")
+        self.accessor.create("test_u", "Test", "custom")
         self._create_securities([100000001, 100000002, 100000003])
 
         records = [
@@ -155,7 +157,7 @@ class TestUniverseAccessor:
         self.universe_store.add_constituents("test_u", records)
 
         # Act - query as of 2021-01-01
-        constituents = self.repo.get_constituents(
+        constituents = self.accessor.get_constituents(
             "test_u", asof="2021-01-01", with_symbol=False
         )
 
@@ -168,11 +170,11 @@ class TestUniverseAccessor:
     def test_add_constituents_with_weights(self) -> None:
         """Test adding constituents with weights."""
         # Arrange
-        self.repo.create("test_u", "Test", "custom")
+        self.accessor.create("test_u", "Test", "custom")
         self._create_securities([100000001, 100000002])
 
         # Act
-        count = self.repo.add_constituents(
+        count = self.accessor.add_constituents(
             universe_id="test_u",
             sids=[100000001, 100000002],
             effective_date="2020-01-01",
@@ -189,11 +191,11 @@ class TestUniverseAccessor:
     def test_add_constituents_default_weights(self) -> None:
         """Test adding constituents without weights (default 1.0)."""
         # Arrange
-        self.repo.create("test_u", "Test", "custom")
+        self.accessor.create("test_u", "Test", "custom")
         self._create_securities([100000001, 100000002])
 
         # Act
-        count = self.repo.add_constituents(
+        count = self.accessor.add_constituents(
             universe_id="test_u",
             sids=[100000001, 100000002],
             effective_date="2020-01-01",
@@ -208,18 +210,18 @@ class TestUniverseAccessor:
     def test_list_universes(self) -> None:
         """Test listing all universes."""
         # Arrange
-        self.repo.create(
+        self.accessor.create(
             "universe1", "Universe 1", description="U1", universe_type="custom"
         )
-        self.repo.create(
+        self.accessor.create(
             "universe2", "Universe 2", description="U2", universe_type="index"
         )
-        self.repo.create(
+        self.accessor.create(
             "universe3", "Universe 3", description="U3", universe_type="custom"
         )
 
         # Act
-        universes = self.repo.list_universes(universe_type=None)
+        universes = self.accessor.list_universes(universe_type=None)
 
         # Assert
         assert len(universes) == 3
@@ -230,18 +232,18 @@ class TestUniverseAccessor:
     def test_list_universes_with_filter(self) -> None:
         """Test listing universes with type filter."""
         # Arrange
-        self.repo.create(
+        self.accessor.create(
             "custom1", "Custom 1", description="Custom 1", universe_type="custom"
         )
-        self.repo.create(
+        self.accessor.create(
             "index1", "Index 1", description="Index 1", universe_type="index"
         )
-        self.repo.create(
+        self.accessor.create(
             "custom2", "Custom 2", description="Custom 2", universe_type="custom"
         )
 
         # Act
-        custom_universes = self.repo.list_universes(universe_type="custom")
+        custom_universes = self.accessor.list_universes(universe_type="custom")
 
         # Assert
         assert len(custom_universes) == 2
@@ -250,7 +252,7 @@ class TestUniverseAccessor:
     def test_get_csi300_returns_sids(self) -> None:
         """Test get_csi300 predefined universe shortcut."""
         # Arrange - Create CSI300 universe
-        self.repo.create(
+        self.accessor.create(
             universe_id="csi300",
             name="CSI 300",
             description="CSI 300 Index",
@@ -267,7 +269,7 @@ class TestUniverseAccessor:
         self.universe_store.add_constituents("csi300", records)
 
         # Act
-        sids = self.repo.get_csi300(asof=None)
+        sids = self.accessor.get_csi300(asof=None)
 
         # Assert
         assert len(sids) == 3
@@ -278,7 +280,7 @@ class TestUniverseAccessor:
     def test_get_csi300_with_asof(self) -> None:
         """Test get_csi300 with PIT query."""
         # Arrange - Create CSI300 universe with changes
-        self.repo.create(
+        self.accessor.create(
             universe_id="csi300",
             name="CSI 300",
             description="CSI 300 Index",
@@ -308,7 +310,7 @@ class TestUniverseAccessor:
         self.universe_store.add_constituents("csi300", records)
 
         # Act - query as of 2021-01-01
-        sids = self.repo.get_csi300(asof="2021-01-01")
+        sids = self.accessor.get_csi300(asof="2021-01-01")
 
         # Assert
         assert len(sids) == 2
@@ -319,7 +321,7 @@ class TestUniverseAccessor:
     def test_get_csi500_returns_sids(self) -> None:
         """Test get_csi500 predefined universe shortcut."""
         # Arrange - Create CSI500 universe
-        self.repo.create(
+        self.accessor.create(
             universe_id="csi500",
             name="CSI 500",
             description="CSI 500 Index",
@@ -335,7 +337,7 @@ class TestUniverseAccessor:
         self.universe_store.add_constituents("csi500", records)
 
         # Act
-        sids = self.repo.get_csi500(asof=None)
+        sids = self.accessor.get_csi500(asof=None)
 
         # Assert
         assert len(sids) == 2
@@ -345,7 +347,7 @@ class TestUniverseAccessor:
     def test_get_csi500_with_asof(self) -> None:
         """Test get_csi500 with PIT query."""
         # Arrange - Create CSI500 universe
-        self.repo.create(
+        self.accessor.create(
             universe_id="csi500",
             name="CSI 500",
             description="CSI 500 Index",
@@ -370,7 +372,7 @@ class TestUniverseAccessor:
         self.universe_store.add_constituents("csi500", records)
 
         # Act - query as of 2021-07-01
-        sids = self.repo.get_csi500(asof="2021-07-01")
+        sids = self.accessor.get_csi500(asof="2021-07-01")
 
         # Assert
         assert len(sids) == 1

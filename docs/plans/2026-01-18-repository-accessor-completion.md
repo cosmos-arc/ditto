@@ -90,19 +90,19 @@
 
 ### 3.1 `self.repo` → `self.accessor`（5个文件）
 
-| 文件 | 行号 | 引用次数 |
-|------|------|---------|
-| `test_calendar_accessor_unit.py` | 19 | ~50 |
-| `test_adj_factor_accessor_unit.py` | 23 | ~30 |
-| `test_universe_accessor_unit.py` | 29 | ~40 |
-| `test_security_accessor_unit.py` | 22 | ~50 |
-| `test_bars_accessor_unit.py` | 309, 433, 633, 900, 1091, 1327, 1623 | ~200 |
+| 文件 | 行号 | 引用次数 | 状态 |
+|------|------|---------|------|
+| `test_calendar_accessor_unit.py` | 19 | ~24 | ✅ 完成 |
+| `test_adj_factor_accessor_unit.py` | 23 | ~8 | ✅ 完成 |
+| `test_universe_accessor_unit.py` | 29 | ~31 | ✅ 完成 |
+| `test_security_accessor_unit.py` | 22 | ~36 | ✅ 完成 |
+| `test_bars_accessor_unit.py` | 309, 433, 633, 900, 1091, 1327, 1623 | ~40 | ✅ 完成 |
 
 ### 3.2 Fixture 更新
 
 **文件**: `test_index_accessor_unit.py`
-- [ ] 第 31 行：`def index_repo(...)` → `def index_accessor(...)`
-- [ ] 13个方法参数：`index_repo: IndexAccessor` → `index_accessor: IndexAccessor`
+- [x] 第 31 行：`def index_repo(...)` → `def index_accessor(...)`
+- [x] 13个方法参数：`index_repo: IndexAccessor` → `index_accessor: IndexAccessor`
 
 ---
 

@@ -20,7 +20,7 @@ class TestAdjFactorAccessor:
         self.temp_dir = Path(tempfile.mkdtemp())
         self.adj_factor_store = AdjFactorStore(data_root=self.temp_dir)
         self.file_lock = FileLockManager(lock_dir=self.temp_dir / "locks")
-        self.repo = AdjFactorAccessor(
+        self.accessor = AdjFactorAccessor(
             adj_factor_store=self.adj_factor_store,
             file_lock=self.file_lock,
         )
@@ -38,7 +38,7 @@ class TestAdjFactorAccessor:
         )
 
         # Act
-        write_result = self.repo.write(
+        write_result = self.accessor.write(
             dataset="adj_factor",
             df=df,
             year=2024,
@@ -74,7 +74,7 @@ class TestAdjFactorAccessor:
             }
         )
 
-        self.repo.write(
+        self.accessor.write(
             dataset="adj_factor",
             df=df1,
             year=2024,
@@ -91,7 +91,7 @@ class TestAdjFactorAccessor:
             }
         )
 
-        self.repo.write(
+        self.accessor.write(
             dataset="adj_factor",
             df=df2,
             year=2024,
