@@ -393,17 +393,17 @@ Scripts 目录：
 
 完成后验证：
 
-- [ ] cache、file_lock、sqlite_pool 已迁移到 foundation
-- [ ] freeze_manager 已拆分，checksum 逻辑在 foundation
-- [ ] schema.sql 已移动到 datahub/scripts/
-- [ ] SQLitePool._get_schema() 已更新路径引用
-- [ ] datahub/runtime 中原文件已删除或改为 re-export
-- [ ] 所有引用方的导入路径已更新
-- [ ] 未使用的配置已删除
-- [ ] 架构规范文档已更新（包含决策树）
-- [ ] 所有测试通过（单元 + 集成）
-- [ ] 类型检查通过（pyright strict）
-- [ ] 代码质量检查通过（ruff）
+- [x] cache、file_lock、sqlite_pool 已迁移到 foundation
+- [x] freeze_manager 已拆分，checksum 逻辑在 foundation
+- [x] schema.sql 已移动到 datahub/scripts/
+- [x] SQLitePool._get_schema() 已更新路径引用
+- [x] datahub/runtime 中原文件已删除（直接删除，非 re-export）
+- [x] 所有引用方的导入路径已更新
+- [x] 未使用的配置已删除
+- [x] 架构规范文档已更新（包含决策树）
+- [x] 所有测试通过（单元 + 集成）
+- [x] 类型检查通过（pyright strict）
+- [ ] 代码质量检查通过（ruff）- 部分错误在其他模块
 
 ---
 
