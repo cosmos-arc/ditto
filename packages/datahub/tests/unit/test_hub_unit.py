@@ -10,7 +10,7 @@ import polars as pl
 import pytest
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.hub import DataHub
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
+from ditto_foundation import SQLitePool
 
 
 class TestDataHub:

@@ -1,9 +1,8 @@
 """SID allocator for managing unique security identifiers."""
 
-from ditto_foundation import logger, span
+from ditto_foundation import SQLitePool, logger, span
 
 from ..models import AssetSidRange
-from ..runtime.sqlite_pool import SQLitePool
 
 
 class SidAllocator:

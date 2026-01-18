@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 from ditto_datahub.runtime.sid_allocator import SidAllocator
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
+from ditto_foundation import SQLitePool
 
 
 class TestSidAllocator:

@@ -1,9 +1,9 @@
 """Tests for UniverseStore."""
 
 import pytest
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.universe_store import UniverseStore
+from ditto_foundation import SQLitePool
 
 
 @pytest.mark.pit

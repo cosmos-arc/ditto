@@ -7,10 +7,10 @@ from tempfile import TemporaryDirectory
 import duckdb
 import pytest
 from ditto_datahub.runtime.sql_engine import SqlEngine
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_foundation import SQLitePool
 
 
 class TestSqlEngineInjection:

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
-from ditto_foundation import logger
+from ditto_foundation import SQLitePool, logger
 from ditto_foundation.concurrency import FileLockManager
 from ditto_foundation.config.paths import get_paths
 
@@ -24,7 +24,6 @@ from ditto_datahub.repositories.universe import UniverseRepository
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.sources.accessor import SourcesAccessor
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore

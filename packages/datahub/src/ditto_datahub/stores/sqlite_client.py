@@ -3,9 +3,7 @@
 import sqlite3
 from typing import Any, cast
 
-from ditto_foundation import logger, span
-
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
+from ditto_foundation import SQLitePool, logger, span
 
 # Maximum SQL length to log (truncates longer queries)
 _MAX_SQL_LOG_LENGTH = 100

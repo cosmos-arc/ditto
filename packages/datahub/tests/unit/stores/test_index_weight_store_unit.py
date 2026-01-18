@@ -1,9 +1,9 @@
 """Tests for IndexWeightStore."""
 
 import pytest
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_foundation import SQLitePool
 
 
 @pytest.mark.pit

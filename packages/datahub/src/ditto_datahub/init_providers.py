@@ -9,15 +9,13 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from ditto_foundation import logger
+from ditto_foundation import SQLitePool, logger
 from ditto_foundation.config.initializer import (
     ConfigInitProvider,
     InitResult,
     InitScope,
     get_config_coordinator,
 )
-
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
 
 
 class DQConfigProvider(ConfigInitProvider):
@@ -210,8 +208,13 @@ class DatabaseSchemaProvider(ConfigInitProvider):
             meta_dir = data_root / "meta"
             meta_dir.mkdir(parents=True, exist_ok=True)
 
+            # 获取 schema.sql 路径
+            # 当前文件: packages/datahub/src/ditto_datahub/init_providers.py
+            # schema.sql: packages/datahub/src/ditto_datahub/scripts/schema.sql
+            schema_path = Path(__file__).parent / "scripts" / "schema.sql"
+
             # 创建 SQLitePool 并初始化 schema
-            pool = SQLitePool(str(db_path))
+            pool = SQLitePool(str(db_path), schema_path=schema_path)
             pool.init_schema()
             pool.close()
 

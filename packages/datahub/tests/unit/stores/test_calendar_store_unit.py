@@ -1,9 +1,9 @@
 """Tests for CalendarStore."""
 
 import pytest
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_foundation import SQLitePool
 
 
 class TestCalendarStore:

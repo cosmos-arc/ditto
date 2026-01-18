@@ -12,13 +12,18 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import polars as pl
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import Mode, get_recorded_metrics, get_recorded_spans, init
+from ditto_foundation import (
+    Mode,
+    SQLitePool,
+    get_recorded_metrics,
+    get_recorded_spans,
+    init,
+)
 
 
 class TestObservabilityBarsStore:
