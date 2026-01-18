@@ -48,9 +48,9 @@
 ┌──────────────────────────────┐    ┌──────────────────────────────┐
 │      Sources Layer            │    │   Domain Repositories        │
 │                              │    │                              │
-│   hub.sources.tushare        │    │   BarsRepository             │
-│   - fetch_calendar           │    │   CalendarRepository         │
-│   - fetch_etf_basic/daily    │    │   SecurityRepository         │
+│   hub.sources.tushare        │    │   BarsAccessor             │
+│   - fetch_calendar           │    │   CalendarAccessor         │
+│   - fetch_etf_basic/daily    │    │   SecurityAccessor         │
 │   - fetch_stock_basic/daily  │    │                              │
 │   - fetch_adj_factor         │    │                              │
 │   - fetch_fund_adj           │    │                              │
@@ -118,9 +118,9 @@
 
 | 组件 | 文件 | 状态 |
 |------|------|------|
-| SecurityRepository | `repositories/security.py` | ✅ |
-| BarsRepository | `repositories/bars.py` | ✅ |
-| CalendarRepository | `repositories/calendar.py` | ✅ |
+| SecurityAccessor | `accessors/security.py` | ✅ |
+| BarsAccessor | `accessors/bars.py` | ✅ |
+| CalendarAccessor | `accessors/calendar.py` | ✅ |
 
 **完成状态**:
 - ✅ 8 个单元测试全部通过
@@ -284,7 +284,7 @@
 - `dq/checkers/business.py` - L2 业务规则（OHLC、涨跌幅）
 - `dq/checkers/statistical.py` - L3 统计异常（Z-score、完整性）
 - `config/dq_rules.yaml` - YAML 规则配置
-- Repository 集成 DQEngine
+- Accessor 集成 DQEngine
 - 隔离区机制实现
 
 ---

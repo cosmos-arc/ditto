@@ -98,8 +98,8 @@
 
 | 原则 | 说明 |
 |-----|------|
-| **单一入口** | 上层只面对 `DataHub`，通过 Repository 访问数据 |
-| **职责分离** | DataHub(Facade) → Repository(业务) → Store(存取) → Runtime(支持) |
+| **单一入口** | 上层只面对 `DataHub`，通过 Accessor 访问数据 |
+| **职责分离** | DataHub(Facade) → Accessor(业务) → Store(存取) → Runtime(支持) |
 | **语义正确** | sid 是唯一身份；(source, src_code) 是映射通道；symbol 仅 UI 展示 |
 | **Point-in-Time** | 任何时点的回测只能看到该时点已公开的信息，包括标识符解析 |
 | **幂等可重跑** | 同一任务对同一日期重跑，产出结果完全一致 |
@@ -1325,13 +1325,13 @@ DataHub - 统一数据入口（Pythonic 版本）
 核心设计：
 - DataHub 既是 Facade 也是 Factory
 - 使用 @cached_property 实现懒加载
-- 显式依赖注入到 Repository
+- 显式依赖注入到 Accessor
 - 无需额外的 Context 类
 
 使用示例：
     hub = DataHub("data")
 
-    # Repository 访问
+    # Accessor 访问
     bars = hub.bars.get(src_codes=["600000.SH"], start="2024-01-01")
 
     # SQL 查询
@@ -6532,10 +6532,10 @@ class SourcesProvider:
 │                                                                             │
 │  可复现性保证      = 代码版本（git）+ PIT 正确性（asof）+ Freeze 验证        │
 │                                                                             │
-│  Repository        = 业务聚合根，封装读写逻辑，处理 PIT/复权等语义           │
+│  Accessor        = 业务聚合根，封装读写逻辑，处理 PIT/复权等语义           │
 │  Store             = 数据存取层，处理物理存储细节                            │
 │  Runtime           = 技术组件，无业务逻辑                                   │
-│  DataHub           = 纯 Facade，路由到 Repository                           │
+│  DataHub           = 纯 Facade，路由到 Accessor                           │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

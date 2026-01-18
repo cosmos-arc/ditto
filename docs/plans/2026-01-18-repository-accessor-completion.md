@@ -197,17 +197,17 @@
 ### 7.2 设计文档（P1）
 
 **docs/design/02_data_design.md**
-- [ ] 第 101-102 行：概念描述更新
-- [ ] 第 6535-6538 行：架构说明更新
+- [x] 概念描述更新：`Repository` → `Accessor` (12处)
+- [x] 架构说明更新：路径和类名更新
 
 ### 7.3 Sprint 文档（P1）
 
 **docs/sprints/sprint-01-data-foundation.md**
-- [ ] 第 121-123 行：表格中的类名和文件路径
+- [x] 表格中的类名和文件路径更新 (14处)
 
 **docs/sprints/sprint-02-data-quality.md**
-- [ ] 多处 `Repository` → `Accessor`
-- [ ] `repositories/` → `accessors/`
+- [x] 多处 `Repository` → `Accessor` (58处)
+- [x] `repositories/` → `accessors/`
 
 ### 7.4 测试文档
 
