@@ -37,14 +37,11 @@ def config(
 
     """
     # 确定数据根目录
-    data_root_path: Path
     if data_root is None:
         data_root = ctx.obj.get("data_root")
-    if data_root is None:
-        data_root_path = get_paths().data_home
-    else:
-        # data_root 是 str 类型（来自 CLI 参数）
-        data_root_path = Path(data_root)
+    data_root_path: Path = (
+        get_paths().data_home if data_root is None else Path(data_root)
+    )
 
     # 注册配置提供者
     register_datahub_providers()
@@ -88,14 +85,11 @@ def dq(
 
     """
     # 确定数据根目录
-    data_root_path: Path
     if data_root is None:
         data_root = ctx.obj.get("data_root")
-    if data_root is None:
-        data_root_path = get_paths().data_home
-    else:
-        # data_root 是 str 类型（来自 CLI 参数）
-        data_root_path = Path(data_root)
+    data_root_path: Path = (
+        get_paths().data_home if data_root is None else Path(data_root)
+    )
 
     # 注册配置提供者
     register_datahub_providers()
@@ -148,14 +142,11 @@ def db(
 
     """
     # 确定数据根目录
-    data_root_path: Path
     if data_root is None:
         data_root = ctx.obj.get("data_root")
-    if data_root is None:
-        data_root_path = get_paths().data_home
-    else:
-        # data_root 是 str 类型（来自 CLI 参数）
-        data_root_path = Path(data_root)
+    data_root_path: Path = (
+        get_paths().data_home if data_root is None else Path(data_root)
+    )
 
     # 注册配置提供者
     register_datahub_providers()

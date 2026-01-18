@@ -24,7 +24,7 @@ from ditto_datahub.repositories.universe import UniverseRepository
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
-from ditto_datahub.sources.accessor import SourcesAccessor
+from ditto_datahub.sources.provider import SourcesProvider
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.calendar_store import CalendarStore
@@ -224,9 +224,9 @@ class DataHub:
     # ========================================================================
 
     @cached_property
-    def sources(self) -> SourcesAccessor:
+    def sources(self) -> SourcesProvider:
         """External data sources accessor (Tushare, Akshare, etc.)."""
-        return SourcesAccessor()
+        return SourcesProvider()
 
     # ========================================================================
     # SQL Engine

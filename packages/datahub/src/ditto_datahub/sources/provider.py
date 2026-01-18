@@ -1,4 +1,4 @@
-"""SourcesAccessor for DataHub integration."""
+"""SourcesProvider for DataHub integration."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from ditto_datahub.sources.base import DataSource
 from ditto_datahub.sources.tushare.source import TushareSource
 
 
-class SourcesAccessor:
+class SourcesProvider:
     """
-    Accessor for external data sources.
+    Provider for external data sources.
 
     Provides convenient access to DataSource instances with caching.
 

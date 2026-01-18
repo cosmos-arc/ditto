@@ -83,6 +83,7 @@ class TestFreezeManagerChecksum:
 
         # Test current SHA-256 implementation (using foundation version)
         from ditto_foundation.version import compute_checksum
+
         sha256_checksum = compute_checksum(test_file)
 
         # Test MD5 implementation
@@ -151,6 +152,7 @@ class TestFreezeManagerChecksum:
 
         # Call compute_checksum from foundation
         from ditto_foundation.version import compute_checksum
+
         result = compute_checksum(test_file)
 
         # Verify SHA-256 was used
