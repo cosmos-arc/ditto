@@ -9,9 +9,9 @@ from tempfile import TemporaryDirectory
 
 import polars as pl
 import pytest
+from ditto_datahub.accessors import AdjType, BarsQuery
+from ditto_datahub.accessors.bars.accessor import BarsAccessor, _ResolvedQuery
 from ditto_datahub.dq.engine import DQEngine
-from ditto_datahub.repositories import AdjType, BarsQuery
-from ditto_datahub.repositories.bars.accessor import BarsAccessor, _ResolvedQuery
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.quarantine_store import QuarantineStore
@@ -1014,7 +1014,7 @@ class TestBarsAccessorSingle:
         self.bars_store.write("stock_daily", test_df, 2024)
 
         # Act: Mock logger and call get_single
-        mock_logger = mocker.patch("ditto_datahub.repositories.bars.accessor.logger")
+        mock_logger = mocker.patch("ditto_datahub.accessors.bars.accessor.logger")
         result = self.repo.get_single(
             identifier="600000",
             start="2024-01-01",

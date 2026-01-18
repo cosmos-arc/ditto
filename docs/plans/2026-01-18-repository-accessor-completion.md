@@ -41,7 +41,7 @@
 
 ### 2.1 测试目录重命名
 
-- [ ] `packages/datahub/tests/unit/repositories/` → `accessors/`
+- [x] `packages/datahub/tests/unit/repositories/` → `accessors/`
 
 ### 2.2 测试文件重命名（6个文件）
 
@@ -53,6 +53,36 @@
 | `test_universe_repository_unit.py` | `test_universe_accessor_unit.py` |
 | `test_index_repository_unit.py` | `test_index_accessor_unit.py` |
 | `test_adj_factor_repository_unit.py` | `test_adj_factor_accessor_unit.py` |
+
+### 2.3 源代码目录重命名（Phase 2+ 新增任务）
+
+- [x] `packages/datahub/src/ditto_datahub/repositories/` → `accessors/`
+
+### 2.4 更新导入语句（Phase 2+ 新增任务）
+
+**源代码文件更新（4个）**:
+- [x] `packages/datahub/src/ditto_datahub/accessors/__init__.py`
+- [x] `packages/datahub/src/ditto_datahub/accessors/bars/__init__.py`
+- [x] `packages/datahub/src/ditto_datahub/accessors/bars/accessor.py`
+- [x] `packages/datahub/src/ditto_datahub/hub.py`
+
+**测试文件更新（8个）**:
+- [x] `packages/datahub/tests/unit/accessors/test_bars_accessor_unit.py`
+- [x] `packages/datahub/tests/unit/accessors/test_adj_factor_accessor_unit.py`
+- [x] `packages/datahub/tests/unit/accessors/test_calendar_accessor_unit.py`
+- [x] `packages/datahub/tests/unit/accessors/test_index_accessor_unit.py`
+- [x] `packages/datahub/tests/unit/accessors/test_security_accessor_unit.py`
+- [x] `packages/datahub/tests/unit/accessors/test_universe_accessor_unit.py`
+- [x] `packages/datahub/tests/unit/accessors/test_filter_failed_rows.py`
+- [x] `packages/datahub/tests/unit/accessors/bars/test_adjustment_unit.py`
+
+**Apps 文件更新（4个）**:
+- [x] `apps/port/src/ditto_port/jobs/tasks/dq_batch.py`
+- [x] `apps/port/tests/unit/ingestion/test_coordinator_unit.py`
+- [x] `apps/port/tests/integration/ingestion/test_coordinator_dq_blocking_integration.py`
+- [x] `apps/port/tests/integration/ingestion/test_adj_factor_ingestion_integration.py`
+
+**导入替换模式**: `from ditto_datahub.repositories.*` → `from ditto_datahub.accessors.*`
 
 ---
 

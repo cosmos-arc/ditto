@@ -19,8 +19,8 @@ class TestDQBlockingBehavior:
 
     def test_dq_blocked_returns_failed_status(self, mocker):
         """Test that DQ blocked ingestion returns failed status."""
+        from ditto_datahub.accessors.bars import WriteResult
         from ditto_datahub.dq import DQResult
-        from ditto_datahub.repositories.bars import WriteResult
         from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
         # Mock DataHub
@@ -73,8 +73,8 @@ class TestDQBlockingBehavior:
 
     def test_dq_blocked_logs_fail_status(self, mocker):
         """Test that DQ blocked ingestion logs FAIL status for retry."""
+        from ditto_datahub.accessors.bars import WriteResult
         from ditto_datahub.dq import DQResult
-        from ditto_datahub.repositories.bars import WriteResult
         from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
         from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 

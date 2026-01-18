@@ -4,9 +4,9 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_datahub.accessors.bars import WriteResult
 from ditto_datahub.dq.engine import DQResult
 from ditto_datahub.models import OnDuplicate
-from ditto_datahub.repositories.bars import WriteResult
 from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_datahub.stores.ingestion_log import IngestionLogStore

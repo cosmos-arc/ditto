@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_datahub.repositories.universe import UniverseAccessor
+from ditto_datahub.accessors.universe import UniverseAccessor
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
@@ -12,7 +12,8 @@ from ditto_foundation import SQLitePool
 
 @pytest.mark.pit
 class TestUniverseAccessor:
-    """Tests for UniverseAccessor.
+    """
+    Tests for UniverseAccessor.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.

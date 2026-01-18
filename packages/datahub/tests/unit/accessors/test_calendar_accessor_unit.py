@@ -1,7 +1,7 @@
 """Tests for CalendarAccessor."""
 
 import pytest
-from ditto_datahub.repositories.calendar import CalendarAccessor
+from ditto_datahub.accessors.calendar import CalendarAccessor
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool

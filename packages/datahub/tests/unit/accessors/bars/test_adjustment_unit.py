@@ -4,7 +4,7 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.repositories.bars.adjustment import (
+from ditto_datahub.accessors.bars.adjustment import (
     apply_hfq_adj,
     apply_qfq_adj,
     filter_baseline_by_asof,

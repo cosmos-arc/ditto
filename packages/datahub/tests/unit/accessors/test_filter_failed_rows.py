@@ -1,8 +1,8 @@
 """Tests for filter_failed_rows function."""
 
 import polars as pl
+from ditto_datahub.accessors.bars.dq_filters import filter_failed_rows
 from ditto_datahub.models import DQIssue, DQLevel, DQSeverity
-from ditto_datahub.repositories.bars.dq_filters import filter_failed_rows
 
 
 class TestFilterFailedRowsNotNull:

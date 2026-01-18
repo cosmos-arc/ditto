@@ -13,14 +13,14 @@ from ditto_foundation import SQLitePool, logger
 from ditto_foundation.concurrency import FileLockManager
 from ditto_foundation.config.paths import get_paths
 
+from ditto_datahub.accessors.adj_factor import AdjFactorAccessor
+from ditto_datahub.accessors.bars import BarsAccessor
+from ditto_datahub.accessors.calendar import CalendarAccessor
+from ditto_datahub.accessors.index import IndexAccessor
+from ditto_datahub.accessors.security import SecuritiesAccessor
+from ditto_datahub.accessors.universe import UniverseAccessor
 from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.errors import SidNotFoundError
-from ditto_datahub.repositories.adj_factor import AdjFactorAccessor
-from ditto_datahub.repositories.bars import BarsAccessor
-from ditto_datahub.repositories.calendar import CalendarAccessor
-from ditto_datahub.repositories.index import IndexAccessor
-from ditto_datahub.repositories.security import SecuritiesAccessor
-from ditto_datahub.repositories.universe import UniverseAccessor
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine

@@ -6,8 +6,8 @@ from datetime import date
 from pathlib import Path
 
 import polars as pl
+from ditto_datahub.accessors.adj_factor import AdjFactorAccessor
 from ditto_datahub.models import OnDuplicate
-from ditto_datahub.repositories.adj_factor import AdjFactorAccessor
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_foundation.concurrency import FileLockManager
 

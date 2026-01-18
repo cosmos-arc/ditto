@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_datahub.repositories.index import IndexAccessor
+from ditto_datahub.accessors.index import IndexAccessor
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.security_store import SecurityStore

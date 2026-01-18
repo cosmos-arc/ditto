@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_datahub.repositories.security import SecuritiesAccessor
+from ditto_datahub.accessors.security import SecuritiesAccessor
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient

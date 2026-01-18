@@ -5,9 +5,9 @@ from typing import Any, Literal
 
 import ditto_datahub
 from ditto_datahub import DataHub
+from ditto_datahub.accessors import BarsQuery
 from ditto_datahub.dq import DQEngine
 from ditto_datahub.models import DQIssue
-from ditto_datahub.repositories import BarsQuery
 from ditto_foundation import M, logger
 from prefect import task
 
