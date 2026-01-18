@@ -1,21 +1,21 @@
-# Repositories 单元测试
+# Accessors 单元测试
 
 ## 测试覆盖
 
-Repositories 单元测试覆盖 Repository 业务逻辑封装。
+Accessors 单元测试覆盖 Accessor 业务逻辑封装。
 
 | 测试文件 | 测试内容 |
 |----------|----------|
-| `test_adj_factor_repository.py` | 复权因子 Repository |
-| `test_bars_repository.py` | 行情 Repository |
-| `test_calendar_repository.py` | 交易日历 Repository |
-| `test_index_repository.py` | 指数 Repository |
-| `test_security_repository.py` | 证券 Repository |
-| `test_universe_repository.py` | 股票池 Repository |
+| `test_adj_factor_accessor.py` | 复权因子 Accessor |
+| `test_bars_accessor.py` | 行情 Accessor |
+| `test_calendar_accessor.py` | 交易日历 Accessor |
+| `test_index_accessor.py` | 指数 Accessor |
+| `test_security_accessor.py` | 证券 Accessor |
+| `test_universe_accessor.py` | 股票池 Accessor |
 
 ## 测试内容
 
-### 复权因子 Repository（test_adj_factor_repository.py）
+### 复权因子 Accessor（test_adj_factor_accessor.py）
 
 **测试内容**：
 - 复权因子查询
@@ -30,7 +30,7 @@ Repositories 单元测试覆盖 Repository 业务逻辑封装。
 4. 写入复权因子数据
 5. 验证复权因子逻辑
 
-### 行情 Repository（test_bars_repository.py）
+### 行情 Accessor（test_bars_accessor.py）
 
 **测试内容**：
 - 日行情查询
@@ -45,7 +45,7 @@ Repositories 单元测试覆盖 Repository 业务逻辑封装。
 4. 行情 OHLC 验证
 5. 行情涨跌幅计算
 
-### 交易日历 Repository（test_calendar_repository.py）
+### 交易日历 Accessor（test_calendar_accessor.py）
 
 **测试内容**：
 - 交易日查询
@@ -60,7 +60,7 @@ Repositories 单元测试覆盖 Repository 业务逻辑封装。
 4. 查询下一个交易日
 5. 查询上一个交易日
 
-### 指数 Repository（test_index_repository.py）
+### 指数 Accessor（test_index_accessor.py）
 
 **测试内容**：
 - 指数成分股查询
@@ -74,7 +74,7 @@ Repositories 单元测试覆盖 Repository 业务逻辑封装。
 3. 查询指数权重
 4. 查询指数历史变更
 
-### 证券 Repository（test_security_repository.py）
+### 证券 Accessor（test_security_accessor.py）
 
 **测试内容**：
 - 证券信息查询
@@ -88,7 +88,7 @@ Repositories 单元测试覆盖 Repository 业务逻辑封装。
 3. 按类型查询证券
 4. 查询证券状态
 
-### 股票池 Repository（test_universe_repository.py）
+### 股票池 Accessor（test_universe_accessor.py）
 
 **测试内容**：
 - 股票池定义
@@ -104,38 +104,38 @@ Repositories 单元测试覆盖 Repository 业务逻辑封装。
 
 ## 运行测试
 
-### 运行所有 Repositories 单元测试
+### 运行所有 Accessors 单元测试
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/repositories -v
+pixi run -e dev pytest packages/datahub/tests/unit/accessors -v
 ```
 
 ### 运行特定测试文件
 
 ```bash
 # 复权因子
-pixi run -e dev pytest packages/datahub/tests/unit/repositories/test_adj_factor_repository.py -v
+pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_adj_factor_accessor.py -v
 
 # 行情
-pixi run -e dev pytest packages/datahub/tests/unit/repositories/test_bars_repository.py -v
+pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_bars_accessor.py -v
 
 # 交易日历
-pixi run -e dev pytest packages/datahub/tests/unit/repositories/test_calendar_repository.py -v
+pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_calendar_accessor.py -v
 
 # 指数
-pixi run -e dev pytest packages/datahub/tests/unit/repositories/test_index_repository.py -v
+pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_index_accessor.py -v
 
 # 证券
-pixi run -e dev pytest packages/datahub/tests/unit/repositories/test_security_repository.py -v
+pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_security_accessor.py -v
 
 # 股票池
-pixi run -e dev pytest packages/datahub/tests/unit/repositories/test_universe_repository.py -v
+pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_universe_accessor.py -v
 ```
 
 ### 运行特定测试函数
 
 ```bash
-pixi run -e dev pytest packages/datahub/tests/unit/repositories/test_calendar_repository.py::test_is_trading_day -v
+pixi run -e dev pytest packages/datahub/tests/unit/accessors/test_calendar_accessor.py::test_is_trading_day -v
 ```
 
 ## Mock 使用
@@ -143,13 +143,13 @@ pixi run -e dev pytest packages/datahub/tests/unit/repositories/test_calendar_re
 ### Mock Store
 
 ```python
-def test_repository_with_mock_store(mocker):
+def test_accessor_with_mock_store(mocker):
     """Mock Store 层"""
     mock_store = mocker.Mock()
     mock_store.read.return_value = sample_data
 
-    repo = CalendarRepository(store=mock_store)
-    result = repo.get_trading_days(start, end)
+    accessor = CalendarAccessor(store=mock_store)
+    result = accessor.get_trading_days(start, end)
 
     mock_store.read.assert_called_once()
 ```
@@ -157,13 +157,13 @@ def test_repository_with_mock_store(mocker):
 ### Mock 缓存
 
 ```python
-def test_repository_cache(mocker):
+def test_accessor_cache(mocker):
     """测试缓存逻辑"""
     mock_cache = mocker.Mock()
     mock_cache.get.return_value = None
 
-    repo = CalendarRepository(cache=mock_cache)
-    result = repo.get_trading_days(start, end)
+    accessor = CalendarAccessor(cache=mock_cache)
+    result = accessor.get_trading_days(start, end)
 
     mock_cache.set.assert_called_once()
 ```

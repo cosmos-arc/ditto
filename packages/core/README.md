@@ -186,7 +186,7 @@ print(f"夏普比率: {result.sharpe_ratio:.2f}")
 
 ```python
 # ✅ 正确：使用 PIT 过滤
-df = hub.bars.get(
+df = hub.sources.bars.get(
     sids=[1, 2],
     start="2024-01-01",
     end="2024-01-31",
@@ -194,7 +194,7 @@ df = hub.bars.get(
 )
 
 # ❌ 错误：使用未来数据
-df = hub.bars.get(
+df = hub.sources.bars.get(
     sids=[1, 2],
     start="2024-01-01",
     end="2024-01-31"

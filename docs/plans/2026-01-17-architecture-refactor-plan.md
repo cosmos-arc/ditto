@@ -4,14 +4,14 @@
 
 基于 `docs/plans/2026-01-17-architecture-audit.md`，针对以下问题进行详细分析：
 
-1. **P0 - apps/port → Store 层穿透**：创建 IngestionLogRepository，通过 accessor 代理 source 依赖
+1. **P0 - apps/port → Store 层穿透**：创建 IngestionLogAccessor，通过 provider 代理 source 依赖
 2. **第 6 点 - 引入 Protocol** 减少动态调用
 3. **第 7 点 - 减少重复代码**（日志装饰器）
 4. **第 4 点 - BarsRepository 改造**：详细分析其他 repo 是否有类似问题
 
 ---
 
-## 一、P0 问题分析：IngestionLogRepository 设计
+## 一、P0 问题分析：IngestionLogAccessor 设计
 
 ### 1.1 当前穿透情况
 
@@ -26,22 +26,22 @@
 
 ### 1.2 用户建议方案
 
-> 提供 ingestionlog 的 repo，source 的依赖目前不是有 accessor 嘛，直接通过 accessor 代理
+> 提供 ingestionlog 的 repo，source 的依赖目前不是有 provider 嘛，直接通过 provider 代理
 
-**当前已有 SourcesAccessor** ([hub.py:228](packages/datahub/src/ditto_datahub/hub.py#L228)):
+**当前已有 SourcesProvider** ([hub.py:228](packages/datahub/src/ditto_datahub/hub.py#L228)):
 ```python
 @cached_property
-def sources(self) -> SourcesAccessor:
-    """External data sources accessor (Tushare, Akshare, etc.)."""
-    return SourcesAccessor()
+def sources(self) -> SourcesProvider:
+    """External data sources provider (Tushare, Akshare, etc.)."""
+    return SourcesProvider()
 ```
 
 ### 1.3 设计方案
 
-#### 方案 A：创建 IngestionLogRepository（推荐）
+#### 方案 A：创建 IngestionLogAccessor（推荐）
 
 ```python
-# packages/datahub/src/ditto_datahub/repositories/ingestion_log.py
+# packages/datahub/src/ditto_datahub/accessors/ingestion_log.py
 
 from typing import Literal
 
@@ -50,11 +50,11 @@ from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_foundation import logger
 
 
-class IngestionLogRepository:
+class IngestionLogAccessor:
     """
-    摄取日志仓储。
+    摄取日志访问器。
 
-    提供 Repository 层的抽象，封装 IngestionLogStore 的访问。
+    提供 Accessor 层的抽象，封装 IngestionLogStore 的访问。
 
     职责：
     - 摄取日志的 CRUD 操作
@@ -176,9 +176,9 @@ class IngestionLogRepository:
 # packages/datahub/src/ditto_datahub/hub.py
 
 @cached_property
-def ingestion_log_repo(self) -> IngestionLogRepository:
-    """摄取日志仓储。"""
-    return IngestionLogRepository(
+def ingestion_log(self) -> IngestionLogAccessor:
+    """摄取日志访问器。"""
+    return IngestionLogAccessor(
         log_store=self.ingestion_log,
     )
 ```
@@ -186,8 +186,8 @@ def ingestion_log_repo(self) -> IngestionLogRepository:
 ### 1.4 Source 依赖处理（用户方案）
 
 **用户决定**：
-1. **`IngestionLog`** - 定义在 `datahub.models` 包，通过 repository 暴露给上层
-2. **`DataSource` 等** - 保留在 sources 层，通过 accessor 代理
+1. **`IngestionLog`** - 定义在 `datahub.models` 包，通过 accessor 暴露给上层
+2. **`DataSource` 等** - 保留在 sources 层，通过 provider 代理
 
 **新的分层结构**：
 ```
@@ -198,8 +198,8 @@ packages/datahub/
 │   └── ...
 ├── sources/                   # 数据源层
 │   ├── base.py                # DataSource, SourceFetchError
-│   └── accessor.py            # SourcesAccessor
-├── repositories/              # 仓储层
+│   └── provider.py            # SourcesProvider
+├── accessors/                 # 访问器层
 │   └── ingestion_log.py       # 使用 models.IngestionLog
 └── stores/                    # 存储层
     └── ingestion_log.py       # 使用 models.IngestionLog
@@ -211,8 +211,8 @@ packages/datahub/
 3. 更新所有引用：
    - `sources.metadata` → `models.ingestion`
    - `stores.ingestion_log` → 使用 `models.ingestion`
-   - `repositories.ingestion_log` → 使用 `models.ingestion`
-4. apps/port 从 `models` 导入类型，从 repositories 导入 Repository
+   - `accessors.ingestion_log` → 使用 `models.ingestion`
+4. apps/port 从 `models` 导入类型，从 accessors 导入 Accessor
 
 ---
 
@@ -678,7 +678,7 @@ DQ 违规数据过滤函数。
 
 | 优先级 | 任务 | 影响范围 | 预计工作量 |
 |--------|------|----------|------------|
-| **P0** | 创建 models 包 + IngestionLogRepository | 架构层级 | 中 |
+| **P0** | 创建 models 包 + IngestionLogAccessor | 架构层级 | 中 |
 | **P1** | coordinator.py match/case 重构 | 单文件 | 小 |
 | **P2** | 共用函数提取（日志/指标/写入） | 多文件 | 中 |
 | **P2** | BarsRepository 重构 | bars.py | 大 |
@@ -688,7 +688,7 @@ DQ 违规数据过滤函数。
 1. **P0 - 创建 models 包**
    - 创建 `packages/datahub/src/ditto_datahub/models/` 目录
    - 移动 `IngestionLog`, `IngestionStatus` 到 `models.ingestion`
-   - 创建 `IngestionLogRepository`
+   - 创建 `IngestionLogAccessor`
    - 更新 DataHub
 
 2. **P1 - coordinator.py 重构**
@@ -733,7 +733,7 @@ pixi run -e dev ci
 |------|------|
 | `packages/datahub/src/ditto_datahub/models/__init__.py` | 领域类型包 |
 | `packages/datahub/src/ditto_datahub/models/ingestion.py` | IngestionLog, IngestionStatus |
-| `packages/datahub/src/ditto_datahub/repositories/ingestion_log.py` | IngestionLogRepository |
+| `packages/datahub/src/ditto_datahub/accessors/ingestion_log.py` | IngestionLogAccessor |
 | `packages/foundation/src/ditto_foundation/logging/context.py` | log_operation, log_event |
 | `packages/foundation/src/ditto_foundation/metrics/tracking.py` | track_metrics 装饰器 |
 | `packages/datahub/src/ditto_datahub/runtime/write_guard.py` | write_with_lock |
@@ -746,11 +746,11 @@ pixi run -e dev ci
 
 | 文件 | 修改内容 |
 |------|----------|
-| `packages/datahub/src/ditto_datahub/hub.py` | 添加 ingestion_log_repo |
+| `packages/datahub/src/ditto_datahub/hub.py` | 添加 ingestion_log |
 | `apps/port/src/ditto_port/services/ingestion/coordinator.py` | match/case 重构 |
 | `apps/port/src/ditto_port/services/ingestion/metadata.py` | 使用 models.ingestion |
-| `apps/port/src/ditto_port/services/ingestion/backfill.py` | 使用 Repository |
+| `apps/port/src/ditto_port/services/ingestion/backfill.py` | 使用 Accessor |
 | `apps/port/src/ditto_port/services/ingestion/retry.py` | 使用 Repository |
-| `packages/datahub/src/ditto_datahub/repositories/bars.py` | 重构提取共用函数 |
+| `packages/datahub/src/ditto_datahub/accessors/bars.py` | 重构提取共用函数 |
 | `packages/datahub/src/ditto_datahub/stores/ingestion_log.py` | 使用 models.ingestion |
 | `packages/datahub/src/ditto_datahub/sources/metadata.py` | 迁移到 models.ingestion |

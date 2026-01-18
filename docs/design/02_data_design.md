@@ -28,16 +28,16 @@
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         DataHub（纯 Facade）                                 │
 │                                                                             │
-│   职责：暴露统一入口，路由到对应 Repository，不持有任何业务逻辑                       │
+│   职责：暴露统一入口，路由到对应 Accessor，不持有任何业务逻辑                        │
 │                                                                             │
-│   hub.bars         → BarsRepository                                         │
-│   hub.calendar     → CalendarRepository                                     │
-│   hub.universe     → UniverseRepository                                     │
-│   hub.securities   → SecurityRepository                                     │
-│   hub.index        → IndexRepository                                        │
+│   hub.bars         → BarsAccessor                                           │
+│   hub.calendar     → CalendarAccessor                                       │
+│   hub.universe     → UniverseAccessor                                       │
+│   hub.securities   → SecuritiesAccessor                                     │
+│   hub.index        → IndexAccessor                                          │
 │   hub.sql(...)     → SqlEngine（DuckDB View + 复权宏）                        │
 │   hub.freeze       → FreezeManager                                          │
-│   hub.sources      → SourcesAccessor                                 │
+│   hub.sources      → SourcesProvider                                        │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -46,11 +46,11 @@
                     ┌───────────────┴───────────────┐
                     ▼                               ▼
 ┌──────────────────────────────┐    ┌──────────────────────────────┐
-│      Sources Layer（新增）    │    │   Domain Repositories        │
+│      Sources Layer（新增）    │    │   Domain Accessors           │
 │                              │    │                              │
-│   hub.sources.tushare        │    │   BarsRepository             │
-│   hub.sources.akshare        │    │   CalendarRepository         │
-│                              │    │   SecurityRepository         │
+│   hub.sources.tushare        │    │   BarsAccessor               │
+│   hub.sources.akshare        │    │   CalendarAccessor           │
+│                              │    │   SecuritiesAccessor         │
 │   支持：                      │    │   ...                        │
 │   - 研究 Notebook 实时查询     │    │                              │
 │   - Server 摄取任务调用        │    │                              │
@@ -217,15 +217,15 @@ packages/
             business.py         # L2 业务规则
             statistical.py      # L3 统计异常
 
-        # ============ Repository 层 ============
-        repositories/
+        # ============ Accessor 层 ============
+        accessors/
           __init__.py
-          base.py                # BaseRepository 基类
-          bars.py                # BarsRepository（股票/ETF 行情）
-          calendar.py            # CalendarRepository（交易日历）
-          universe.py            # UniverseRepository（标的池/成分股）
-          security.py            # SecurityRepository（证券主数据）
-          index.py               # IndexRepository（指数行情/权重）
+          base.py                # BaseAccessor 基类
+          bars.py                # BarsAccessor（股票/ETF 行情）
+          calendar.py            # CalendarAccessor（交易日历）
+          universe.py            # UniverseAccessor（标的池/成分股）
+          securities.py          # SecuritiesAccessor（证券主数据）
+          index.py               # IndexAccessor（指数行情/权重）
 
         # ============ Store 层 ============
         stores/
@@ -357,7 +357,7 @@ $DITTO_DATA_DIR/
 # 1. 用户调用
 bars = hub.bars.get(src_codes=["000022.SZ"], start="2015-01-01", asof="2017-01-01")
 
-# 2. Repository 层：用 asof 解析 src_code → sid
+# 2. Accessor 层：用 asof 解析 src_code → sid
 sid = self.security_store.resolve_sid("000022.SZ", source="tushare", asof="2017-01-01")
 
 # 3. Store 层：用 asof 过滤数据
@@ -1355,11 +1355,11 @@ if TYPE_CHECKING:
     from .stores.index_store import IndexStore
     from .stores.adj_factor_store import AdjFactorStore
     from .stores.universe_store import UniverseStore
-    from .repositories.bars import BarsRepository
-    from .repositories.calendar import CalendarRepository
-    from .repositories.security import SecurityRepository
-    from .repositories.index import IndexRepository
-    from .repositories.universe import UniverseRepository
+    from .accessors.bars import BarsAccessor
+    from .accessors.calendar import CalendarAccessor
+    from .accessors.securities import SecuritiesAccessor
+    from .accessors.index import IndexAccessor
+    from .accessors.universe import UniverseAccessor
     from .runtime.sqlite_pool import SQLitePool
     from .runtime.sql_engine import SqlEngine
     from .runtime.freeze_manager import FreezeManager
@@ -1380,7 +1380,7 @@ class DataHub:
     属性分层：
     - 基础资源：sqlite_pool, db, lock_manager
     - Stores：security_store, calendar_store, bars_store, ...
-    - Repositories：bars, calendar, securities, index, universe
+    - Accessors：bars, calendar, securities, index, universe
     - 工具：sql_engine, freeze
     """
 
@@ -1482,14 +1482,14 @@ class DataHub:
         return AdjFactorStore(self.data_root)
 
     # ========================================================================
-    # Repositories (业务聚合层) - 显式依赖注入
+    # Accessors (业务聚合层) - 显式依赖注入
     # ========================================================================
 
     @cached_property
-    def bars(self) -> "BarsRepository":
-        """行情数据 Repository"""
-        from .repositories.bars import BarsRepository
-        return BarsRepository(
+    def bars(self) -> "BarsAccessor":
+        """行情数据 Accessor"""
+        from .accessors.bars import BarsAccessor
+        return BarsAccessor(
             bars_store=self.bars_store,
             security_store=self.security_store,
             adj_factor_store=self.adj_factor_store,
@@ -1499,25 +1499,25 @@ class DataHub:
         )
 
     @cached_property
-    def calendar(self) -> "CalendarRepository":
-        """交易日历 Repository"""
-        from .repositories.calendar import CalendarRepository
-        return CalendarRepository(calendar_store=self.calendar_store)
+    def calendar(self) -> "CalendarAccessor":
+        """交易日历 Accessor"""
+        from .accessors.calendar import CalendarAccessor
+        return CalendarAccessor(calendar_store=self.calendar_store)
 
     @cached_property
-    def securities(self) -> "SecurityRepository":
-        """证券主数据 Repository"""
-        from .repositories.security import SecurityRepository
-        return SecurityRepository(
+    def securities(self) -> "SecuritiesAccessor":
+        """证券主数据 Accessor"""
+        from .accessors.securities import SecuritiesAccessor
+        return SecuritiesAccessor(
             security_store=self.security_store,
             sid_allocator=self.sid_allocator,
         )
 
     @cached_property
-    def index(self) -> "IndexRepository":
-        """指数数据 Repository"""
-        from .repositories.index import IndexRepository
-        return IndexRepository(
+    def index(self) -> "IndexAccessor":
+        """指数数据 Accessor"""
+        from .accessors.index import IndexAccessor
+        return IndexAccessor(
             index_store=self.index_store,
             security_store=self.security_store,
             dq_checker=self.dq_checker,
@@ -1525,10 +1525,10 @@ class DataHub:
         )
 
     @cached_property
-    def universe(self) -> "UniverseRepository":
-        """标的池 Repository"""
-        from .repositories.universe import UniverseRepository
-        return UniverseRepository(
+    def universe(self) -> "UniverseAccessor":
+        """标的池 Accessor"""
+        from .accessors.universe import UniverseAccessor
+        return UniverseAccessor(
             universe_store=self.universe_store,
             security_store=self.security_store,
             index_store=self.index_store,
@@ -1648,12 +1648,12 @@ class DataHub:
 
 ```
 
-### 9.4 BarsRepository
+### 9.4 BarsAccessor
 
 ```python
-# src/ditto_data_hub/repositories/bars.py
+# src/ditto_data_hub/accessors/bars.py
 """
-行情数据 Repository
+行情数据 Accessor
 
 提供股票/ETF 日线数据的读写操作，支持：
 - PIT (Point-in-Time) 查询
@@ -1679,16 +1679,16 @@ from ..types import WriteRequest, WriteResult, WriteStatus, DatasetId
 from ..errors import SidResolutionError, AmbiguousIdentifierError
 
 
-class BarsRepository:
+class BarsAccessor:
     """
-    行情数据 Repository
+    行情数据 Accessor
 
     使用示例：
         # 读取行情
-        bars = repo.get(src_codes=["600000.SH"], start="2024-01-01", adj="qfq")
+        bars = accessor.get(src_codes=["600000.SH"], start="2024-01-01", adj="qfq")
 
         # 写入行情
-        result = repo.write(df, year=2024, dataset="stock_daily")
+        result = accessor.write(df, year=2024, dataset="stock_daily")
     """
 
     def __init__(
@@ -2078,12 +2078,12 @@ class BarsRepository:
 
 ```
 
-### 9.5 CalendarRepository
+### 9.5 CalendarAccessor
 
 ```python
-# src/ditto_data_hub/repositories/calendar.py
+# src/ditto_data_hub/accessors/calendar.py
 """
-交易日历 Repository
+交易日历 Accessor
 
 提供交易日历查询功能，所有操作都使用内存缓存，性能极高。
 """
@@ -2096,20 +2096,20 @@ if TYPE_CHECKING:
     from ..stores.calendar_store import CalendarStore
 
 
-class CalendarRepository:
+class CalendarAccessor:
     """
-    交易日历 Repository
+    交易日历 Accessor
 
     使用示例：
         # 判断交易日
-        is_open = repo.is_trading_day("2024-01-02")
+        is_open = accessor.is_trading_day("2024-01-02")
 
         # 获取交易日列表
-        days = repo.list_trading_days("2024-01-01", "2024-03-31")
+        days = accessor.list_trading_days("2024-01-01", "2024-03-31")
 
         # 偏移交易日
-        next_day = repo.offset("2024-01-02", 1)
-        prev_5_day = repo.offset("2024-01-02", -5)
+        next_day = accessor.offset("2024-01-02", 1)
+        prev_5_day = accessor.offset("2024-01-02", -5)
     """
 
     def __init__(self, calendar_store: "CalendarStore"):
@@ -2279,12 +2279,12 @@ class CalendarRepository:
 
 ```
 
-### 9.6 SecurityRepository
+### 9.6 SecuritiesAccessor
 
 ```python
-# src/ditto_data_hub/repositories/security.py
+# src/ditto_data_hub/accessors/securities.py
 """
-证券主数据 Repository
+证券主数据 Accessor
 
 提供证券基本信息的查询和管理，支持：
 - SID 解析（PIT）
@@ -2301,16 +2301,16 @@ if TYPE_CHECKING:
     from ..runtime.sid_allocator import SidAllocator
 
 
-class SecurityRepository:
+class SecuritiesAccessor:
     """
-    证券主数据 Repository
+    证券主数据 Accessor
 
     使用示例：
         # 解析 SID
-        sid = repo.resolve_sid("600000.SH")
+        sid = accessor.resolve_sid("600000.SH")
 
         # 注册新证券
-        sid = repo.register(
+        sid = accessor.register(
             source="tushare",
             src_code="688001.SH",
             symbol="688001",
@@ -2321,7 +2321,7 @@ class SecurityRepository:
         )
 
         # 注册代码变更
-        repo.register_code_change(
+        accessor.register_code_change(
             sid=12345,
             source="tushare",
             old_code="000022.SZ",
@@ -2562,12 +2562,12 @@ class SecurityRepository:
         return self.security_store.get_src_code(sid, source, asof)
 ```
 
-### 9.7 IndexRepository
+### 9.7 IndexAccessor
 
 ```python
-# src/ditto_data_hub/repositories/index.py
+# src/ditto_data_hub/accessors/index.py
 """
-指数数据 Repository
+指数数据 Accessor
 
 提供指数行情和成分权重的读写操作。
 """
@@ -2587,19 +2587,19 @@ if TYPE_CHECKING:
 from ..types import WriteResult, WriteStatus, DatasetId
 
 
-class IndexRepository:
+class IndexAccessor:
     """
-    指数数据 Repository
+    指数数据 Accessor
 
     使用示例：
         # 获取指数日线
-        df = repo.get_daily(src_codes=["000300.SH"], start="2024-01-01")
+        df = accessor.get_daily(src_codes=["000300.SH"], start="2024-01-01")
 
         # 获取指数成分权重
-        weights = repo.get_weight(index_code="000300.SH", asof="2024-06-30")
+        weights = accessor.get_weight(index_code="000300.SH", asof="2024-06-30")
 
         # 获取成分股列表
-        sids = repo.get_constituents(index_code="000300.SH", asof="2024-06-30")
+        sids = accessor.get_constituents(index_code="000300.SH", asof="2024-06-30")
     """
 
     def __init__(
@@ -2872,12 +2872,12 @@ class IndexRepository:
 
 ```
 
-### 9.8 UniverseRepository
+### 9.8 UniverseAccessor
 
 ``` python
-# src/ditto_data_hub/repositories/universe.py
+# src/ditto_data_hub/accessors/universe.py
 """
-标的池 Repository
+标的池 Accessor
 
 提供标的池（Universe）的管理功能，支持：
 - 自定义标的池创建和管理
@@ -2898,22 +2898,22 @@ if TYPE_CHECKING:
 from ..errors import UniverseNotFoundError
 
 
-class UniverseRepository:
+class UniverseAccessor:
     """
-    标的池 Repository
+    标的池 Accessor
 
     使用示例：
         # 创建标的池
-        repo.create("my_pool", "我的股票池")
+        accessor.create("my_pool", "我的股票池")
 
         # 添加成分
-        repo.add("my_pool", src_codes=["600000.SH", "000001.SZ"])
+        accessor.add("my_pool", src_codes=["600000.SH", "000001.SZ"])
 
         # 获取成分（PIT）
-        sids = repo.get_constituents("my_pool", asof="2024-06-30")
+        sids = accessor.get_constituents("my_pool", asof="2024-06-30")
 
         # 从指数同步
-        repo.sync_from_index("hs300", "000300.SH")
+        accessor.sync_from_index("hs300", "000300.SH")
     """
 
     def __init__(
@@ -6431,11 +6431,11 @@ SourceAuthenticationError: Tushare authentication failed
 - [ ] 测试日志不包含完整 token
 - [ ] 测试显式参数覆盖其他来源
 
-### 14.3 SourcesAccessor:
+### 14.3 SourcesProvider:
 ``` python
-class SourcesAccessor:
+class SourcesProvider:
     """
-    数据源访问器
+    数据源提供器
 
     使用示例：
     """
@@ -6488,17 +6488,17 @@ class SourcesAccessor:
 - [ ] **FileLockManager 实现**：跨平台文件锁
 - [ ] **DQChecker 实现**：YAML 配置 + 规则执行
 - [ ] **DataHub Facade 实现**：统一入口
-- [ ] **Repository 层实现**：
-  - [ ] BarsRepository（行情读写 + 复权 + PIT）
-  - [ ] CalendarRepository（日历查询）
-  - [ ] SecurityRepository（证券主数据 + 代码变更）
-  - [ ] IndexRepository（指数日线 + 权重）
+- [ ] **Accessor 层实现**：
+  - [ ] BarsAccessor（行情读写 + 复权 + PIT）
+  - [ ] CalendarAccessor（日历查询）
+  - [ ] SecuritiesAccessor（证券主数据 + 代码变更）
+  - [ ] IndexAccessor（指数日线 + 权重）
 
 ### P1 强烈建议
 
 - [ ] **SqlEngine 实现**：DuckDB View + 复权宏
 - [ ] **FreezeManager 实现**：冻结点创建/验证
-- [ ] **UniverseRepository 实现**：标的池管理
+- [ ] **UniverseAccessor 实现**：标的池管理
 
 ### P2 可选增强
 

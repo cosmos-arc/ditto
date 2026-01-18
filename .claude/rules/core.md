@@ -208,7 +208,7 @@ def process_data(data):
 ### 目标（Definition of Done）
 - **生产代码（src 下）必须做到：Pyright Errors = 0 且 Warnings = 0**。
 - **测试代码（tests）不要求清零**，但不应影响生产代码的类型洁净度。
-- 类型问题必须通过“补全类型 / 收敛 Any / 建 stub / 调整 API 形状”解决，而不是长期压制。
+- 类型问题必须通过"补全类型 / 收敛 Any / 建 stub / 调整 API 形状"解决，而不是长期压制。
 
 ---
 
@@ -232,22 +232,22 @@ def process_data(data):
 
 #### 决策顺序（必须按顺序做）
 1. **优先装官方/社区 stub 包**（如 `types-xxx`）。
-2. 若没有可用 stub：用 Pyright 生成“草稿 stub”，再人工收敛：
+2. 若没有可用 stub：用 Pyright 生成"草稿 stub"，再人工收敛：
    - `pyright --createstub <import-name>`
-   - 生成的 stub 是“起点”，通常需要把 `Any/Unknown` 收敛成更精确的类型。 :contentReference[oaicite:2]{index=2}
-3. 自建 stub 的范围必须 **“最小可用”**：
+   - 生成的 stub 是"起点"，通常需要把 `Any/Unknown` 收敛成更精确的类型。 :contentReference[oaicite:2]{index=2}
+3. 自建 stub 的范围必须 **"最小可用"**：
    - 只补齐本项目实际用到的 API 面；
    - 不要把整个库的完整类型都搬进来（维护成本极高）。
 
 #### Stub 质量要求
 - 禁止在 stub 中长期放任 `Any` 扩散：
-  - stub 的目的就是“消除歧义”，能精确就精确；
-  - 实在无法精确：用更窄的上界（如 `Protocol`、`TypedDict`、`Literal`、`Mapping[str, object]` 等），或在调用侧做“边界校验后再 cast”。
+  - stub 的目的就是"消除歧义"，能精确就精确；
+  - 实在无法精确：用更窄的上界（如 `Protocol`、`TypedDict`、`Literal`、`Mapping[str, object]` 等），或在调用侧做"边界校验后再 cast"。
 
 ---
 
 ### 项目内 Typed 规范（PEP 561 / py.typed）
-> 若你希望“包对外提供类型信息”，按 PEP 561 必须在包内加入 `py.typed` 标记文件。 :contentReference[oaicite:3]{index=3}
+> 若你希望"包对外提供类型信息"，按 PEP 561 必须在包内加入 `py.typed` 标记文件。 :contentReference[oaicite:3]{index=3}
 
 #### 适用范围
 - 本仓库内 **任何可能被别的包引用/复用/发布的 package**，都应该：
@@ -266,7 +266,7 @@ def process_data(data):
 - 允许局部变量依赖推导，但一旦出现 Unknown/Any 扩散，必须补注解或重构。
 
 #### 2) Any 的使用边界（强约束）
-- 生产代码中禁止“无边界 Any”：
+- 生产代码中禁止"无边界 Any"：
   - 只能在 **IO/外部边界** 出现（JSON、DB 行、HTTP 响应、第三方动态对象）；
   - 进入领域逻辑前必须完成 **解析/校验/收敛**（TypedDict / dataclass / pydantic / 自定义解析器）。
 - 优先选择：
@@ -284,7 +284,7 @@ def process_data(data):
 
 ### 忽略/压制规则（必须极少使用）
 - **默认不允许** `# type: ignore`。
-- 如必须压制，优先使用 Pyright 的“可定位规则名”的 ignore：
+- 如必须压制，优先使用 Pyright 的"可定位规则名"的 ignore：
   - `x = foo()  # pyright: ignore[reportGeneralTypeIssues]`
   - Pyright 支持在 `# pyright: ignore[...]` 中列出规则名，只压制指定类别。 :contentReference[oaicite:4]{index=4}
 - 每一个 ignore 必须附带原因（为什么无法用更好的类型表达解决），并尽量链接到 issue/任务编号。
@@ -302,7 +302,7 @@ def process_data(data):
 | 层级 | 职责 | 典型组件 | 禁止 |
 |------|------|----------|------|
 | **DataHub Store** | 数据持久化、基础查询 | SecurityStore, BarsStore | 包含业务逻辑 |
-| **DataHub Repository** | 业务封装、领域接口 | SecurityRepository, BarsRepository | 直接访问文件系统 |
+| **DataHub Accessor** | 业务封装、领域接口 | SecurityAccessor, BarsAccessor | 直接访问文件系统 |
 | **DataHub Runtime** | 基础设施（连接池、锁、分配器） | SQLitePool, FileLockManager, SidAllocator | 包含业务逻辑 |
 | **DataHub Source** | 外部数据源适配 | TushareSource, AkshareSource | 包含业务逻辑 |
 | **Server Service** | 流程编排、任务协调 | IngestionCoordinator, RetryManager | 直接数据访问 |
@@ -312,7 +312,7 @@ def process_data(data):
 
 **允许的单向依赖：**
 ```
-Server Flow → Server Service → DataHub Repository → DataHub Store/Runtime → Foundation
+Server Flow → Server Service → DataHub Accessor → DataHub Store/Runtime → Foundation
 ```
 
 **禁止的依赖模式：**
@@ -334,9 +334,9 @@ from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 
-# ✅ Server 层应该使用 Repository
+# ✅ Server 层应该使用 Accessor
 from ditto_datahub import DataHub
-from ditto_datahub.repositories.security import SecurityRepository
+from ditto_datahub.accessors.security import SecurityAccessor
 
 # ✅ DataHub 内部可以导入下层
 # packages/datahub 内的 Store 可以导入 Runtime
@@ -348,23 +348,23 @@ from ditto_datahub.repositories.security import SecurityRepository
 
 | 问题 | 回答 Yes → 归属 | 回答 No → 归属 |
 |------|-----------------|----------------|
-| 是否直接访问存储文件/数据库？ | DataHub Store | 使用 Repository |
-| 是否需要分配/管理唯一标识符（如 SID）？ | DataHub Repository | 不应在此层 |
-| 是否包含数据映射/转换逻辑（如 src_code → sid）？ | DataHub Repository | 不应在此层 |
+| 是否直接访问存储文件/数据库？ | DataHub Store | 使用 Accessor |
+| 是否需要分配/管理唯一标识符（如 SID）？ | DataHub Accessor | 不应在此层 |
+| 是否包含数据映射/转换逻辑（如 src_code → sid）？ | DataHub Accessor | 不应在此层 |
 | 是否依赖外部数据源（API/爬虫）？ | DataHub Source | 不应在此层 |
 | 是否是流程编排/任务协调？ | Server Service | 不应在此层 |
 | 是否是应用层用例组合？ | Server Flow | 不应在此层 |
 
 ### 代码重复检测
 
-在实现新功能前，必须检查 DataHub Repository 是否已有类似实现：
+在实现新功能前，必须检查 DataHub Accessor 是否已有类似实现：
 
 ```bash
-# 检查 SecurityRepository 是否已有相关方法
-grep -r "def.*register" packages/datahub/repositories/
-grep -r "def.*resolve" packages/datahub/repositories/
+# 检查 SecurityAccessor 是否已有相关方法
+grep -r "def.*register" packages/datahub/accessors/
+grep -r "def.*resolve" packages/datahub/accessors/
 ```
 
 **禁止重复实现：**
-- ❌ Server 层重复实现 Repository 已有的数据访问逻辑
+- ❌ Server 层重复实现 Accessor 已有的数据访问逻辑
 - ❌ 多个地方重复实现相同的映射/转换规则

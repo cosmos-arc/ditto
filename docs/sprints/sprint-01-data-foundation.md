@@ -40,6 +40,7 @@
 │                              DataHub（纯 Facade）                             │
 │                                                                              │
 │   hub.bars / hub.calendar / hub.securities / hub.sources / hub.sql         │
+│   (SourcesProvider 提供数据源访问)                                           │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
         ┌───────────────────────────┴───────────────────────────┐
@@ -197,8 +198,8 @@
 - 文件：修改 `packages/datahub/src/ditto_datahub/hub.py`
 - 功能：
   - 添加 `@cached_property sources`
-  - 返回 SourcesAccessor 实例
-  - SourcesAccessor 提供 `tushare` 属性和 `get()` 方法
+  - 返回 SourcesProvider 实例
+  - SourcesProvider 提供 `tushare` 属性和 `get()` 方法
 - 验收标准：
   - ✅ `hub.sources.tushare.fetch_etf_daily()` 可调用
   - ✅ 单例模式生效（多次调用返回同一实例）

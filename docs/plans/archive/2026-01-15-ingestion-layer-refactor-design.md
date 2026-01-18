@@ -8,16 +8,16 @@
 
 | 问题 | 当前实现 | 应该归属 |
 |------|---------|---------|
-| 证券映射逻辑 (src_code → sid) | Server 层 | DataHub Repository |
-| 新证券注册 | Server 层 | DataHub Repository |
-| SID 分配协调 | Server 层 | DataHub Repository |
-| DataFrame 丰富 (enrich_dataframe) | Server 层 | DataHub Repository |
+| 证券映射逻辑 (src_code → sid) | Server 层 | DataHub Accessor |
+| 新证券注册 | Server 层 | DataHub Accessor |
+| SID 分配协调 | Server 层 | DataHub Accessor |
+| DataFrame 丰富 (enrich_dataframe) | Server 层 | DataHub Accessor |
 
 **代码重复：**
-- `SecurityRepository.register_batch()` 已实现批量注册逻辑
+- `SecuritiesAccessor.register_batch()` 已实现批量注册逻辑
 - `SecurityMapper._register_security()` 重复实现相同逻辑
-- `IngestionCoordinator._write_stock_basic()` 调用 Repository
-- `IngestionCoordinator._write_etf_basic()` 调用 Repository
+- `IngestionCoordinator._write_stock_basic()` 调用 Accessor
+- `IngestionCoordinator._write_etf_basic()` 调用 Accessor
 
 ### 1.2 当前 ingestion services 职责分析
 
@@ -68,7 +68,7 @@ ditto-port/services/ingestion/
 | 层级 | 职责 | 典型组件 |
 |------|------|----------|
 | **DataHub Store** | 数据持久化、基础查询 | SecurityStore, BarsStore |
-| **DataHub Repository** | 业务封装、领域接口 | SecurityRepository, BarsRepository |
+| **DataHub Accessor** | 业务封装、领域接口 | SecuritiesAccessor, BarsAccessor |
 | **Server Service** | 流程编排、任务协调 | IngestionCoordinator |
 | **Server Flow** | 应用层用例组合 | DailyFlow, BackfillFlow |
 
@@ -79,7 +79,7 @@ Server Flow (应用层)
     ↓
 Server Service (服务层)
     ↓
-DataHub Repository (领域层)
+DataHub Accessor (领域层)
     ↓
 DataHub Store (存储层)
     ↓
@@ -92,18 +92,18 @@ DataHub Store (存储层)
 
 ### 3.1 方案 A：彻底下沉（推荐）
 
-**核心思想：** 将 `security_mapper.py` 的核心逻辑完全下沉到 DataHub Repository 层
+**核心思想：** 将 `security_mapper.py` 的核心逻辑完全下沉到 DataHub Accessor 层
 
 **变更内容：**
 
-1. **扩展 `SecurityRepository`** (datahub):
+1. **扩展 `SecuritiesAccessor`** (datahub):
    - 添加 `resolve_or_create_batch()` 方法
    - 添加 `enrich_dataframe_with_sid()` 方法
    - 内部协调 `SecurityStore` 和 `SidAllocator`
 
 2. **删除 `security_mapper.py`** (port):
    - 移除文件
-   - 所有调用方改为使用 `SecurityRepository`
+   - 所有调用方改为使用 `SecuritiesAccessor`
 
 3. **更新 `IngestionCoordinator`**:
    - 移除 `SecurityMapper` 依赖
@@ -118,7 +118,7 @@ DataHub Store (存储层)
 
 **缺点：**
 - ⚠️ 需要修改 datahub 公共 API
-- ⚠️ Repository 层略重（包含 DataFrame 处理）
+- ⚠️ Accessor 层略重（包含 DataFrame 处理）
 
 ### 3.2 方案 B：轻量下沉（折中）
 
@@ -126,7 +126,7 @@ DataHub Store (存储层)
 
 **变更内容：**
 
-1. **扩展 `SecurityRepository`** (datahub):
+1. **扩展 `SecuritiesAccessor`** (datahub):
    - 添加 `resolve_or_create_batch()` 方法
    - 返回简单的 `dict[str, int]` 映射
 
@@ -137,7 +137,7 @@ DataHub Store (存储层)
 
 3. **更新 `IngestionCoordinator`**:
    - 保持现有接口不变
-   - 内部实现委托给 Repository
+   - 内部实现委托给 Accessor
 
 **优点：**
 - ✅ 数据访问逻辑下沉到 DataHub
@@ -170,17 +170,17 @@ DataHub Store (存储层)
 ### 4.1 设计理由
 
 1. **职责清晰：** 证券映射和注册是数据访问层的核心业务逻辑
-2. **消除重复：** `SecurityRepository.register_batch()` 已有类似实现，统一后消除重复
-3. **可复用性：** 其他应用（如 Web）可直接使用 Repository 能力
+2. **消除重复：** `SecuritiesAccessor.register_batch()` 已有类似实现，统一后消除重复
+3. **可复用性：** 其他应用（如 Web）可直接使用 Accessor 能力
 4. **架构一致性：** 符合分层架构原则
 
 ### 4.2 实现计划
 
-**Phase 1: 扩展 SecurityRepository**
+**Phase 1: 扩展 SecuritiesAccessor**
 ```python
-# packages/datahub/src/ditto_datahub/repositories/security.py
+# packages/datahub/src/ditto_datahub/accessors/securities.py
 
-class SecurityRepository:
+class SecuritiesAccessor:
     def resolve_or_create_batch(
         self,
         df: pl.DataFrame,
@@ -224,7 +224,7 @@ class IngestionCoordinator:
 
     def _write_data(self, dataset, df, trade_date, on_duplicate):
         if dataset in ("etf_daily", "stock_daily"):
-            # 直接使用 Repository
+            # 直接使用 Accessor
             df = self._hub.securities.enrich_dataframe_with_sid(
                 df,
                 source=self._source_name,
@@ -238,7 +238,7 @@ class IngestionCoordinator:
 
 | 组件 | 职责 | 是否需要调整 |
 |------|------|-------------|
-| `coordinator.py` | 流程编排 | ✅ 调整为使用 Repository |
+| `coordinator.py` | 流程编排 | ✅ 调整为使用 Accessor |
 | `metadata.py` | 增量逻辑 | ❌ 保持现状 |
 | `retry.py` | 重试逻辑 | ❌ 保持现状 |
 | `backfill.py` | 回补逻辑 | ❌ 保持现状 |
@@ -264,9 +264,9 @@ class IngestionCoordinator:
 
 ### Phase 2: 代码重构（已完成）
 
-**任务 2.1: 扩展 SecurityRepository** ✅
+**任务 2.1: 扩展 SecuritiesAccessor** ✅
 
-添加新方法到 `packages/datahub/src/ditto_datahub/repositories/security.py`：
+添加新方法到 `packages/datahub/src/ditto_datahub/accessors/securities.py`：
 - `resolve_or_create_batch()`: 批量解析 src_code，不存在则创建
 - `enrich_dataframe_with_sid()`: 为 DataFrame 添加 sid 列
 
@@ -289,7 +289,7 @@ class IngestionCoordinator:
 
 - [x] 所有测试通过（1346 个单元测试通过）
 - [x] 不再存在跨层依赖（移除了 Server → Store/Runtime 的依赖）
-- [x] 代码重复已消除（统一使用 SecurityRepository API）
+- [x] 代码重复已消除（统一使用 SecuritiesAccessor API）
 - [x] 架构图更新完成（见下方新架构图）
 
 ### 重构后的依赖关系图
@@ -298,7 +298,7 @@ class IngestionCoordinator:
 ditto-port/services/ingestion/
 ├── coordinator.py (已更新)
 │   ↓
-│   Securities Repository (datahub) ✅ 正确的分层依赖
+│   Securities Accessor (datahub) ✅ 正确的分层依赖
 │   DataSource (datahub)
 │   MetadataManager
 │
@@ -317,8 +317,8 @@ ditto-port/services/ingestion/
     CalendarStore (datahub)
     IngestionLogStore
 
-packages/datahub/repositories/
-└── security.py (已扩展)
+packages/datahub/accessors/
+└── securities.py (已扩展)
     ├── resolve_or_create_batch()  ✅ 新增方法
     └── enrich_dataframe_with_sid()  ✅ 新增方法
 ```
@@ -332,9 +332,9 @@ packages/datahub/repositories/
 | 检查项 | DataHub | Server |
 |--------|---------|-------|
 | 是否依赖外部数据源？ | ✅ Source 层 | ❌ 应委托给 DataHub |
-| 是否直接访问存储文件？ | ✅ Store 层 | ❌ 应通过 Repository |
-| 是否包含数据映射逻辑？ | ✅ Repository 层 | ❌ 应下沉到 DataHub |
-| 是否包含业务规则验证？ | ✅ Repository 层 | ❌ 应下沉到 DataHub |
+| 是否直接访问存储文件？ | ✅ Store 层 | ❌ 应通过 Accessor |
+| 是否包含数据映射逻辑？ | ✅ Accessor 层 | ❌ 应下沉到 DataHub |
+| 是否包含业务规则验证？ | ✅ Accessor 层 | ❌ 应下沉到 DataHub |
 | 是否是流程编排？ | ❌ 应在 Server | ✅ Service/Flow 层 |
 | 是否是应用层用例？ | ❌ 应在 Server | ✅ Flow 层 |
 
@@ -342,7 +342,7 @@ packages/datahub/repositories/
 
 **允许的依赖：**
 ```
-Server Flow → Server Service → DataHub Repository → DataHub Store → Foundation
+Server Flow → Server Service → DataHub Accessor → DataHub Store → Foundation
 ```
 
 **禁止的依赖：**
@@ -362,8 +362,8 @@ Server Flow → Server Service → DataHub Repository → DataHub Store → Foun
    # ❌ Server 层不应直接导入 Store
    from ditto_datahub.stores.security_store import SecurityStore
 
-   # ✅ 应该使用 Repository
-   from ditto_datahub.repositories.security import SecurityRepository
+   # ✅ 应该使用 Accessor
+   from ditto_datahub.accessors.securities import SecuritiesAccessor
    ```
 
 2. **职责检查**
@@ -373,7 +373,7 @@ Server Flow → Server Service → DataHub Repository → DataHub Store → Foun
 
 3. **重复代码检查**
    - 是否与 DataHub 中已有逻辑重复？
-   - 检查 `repositories/` 目录下的类似实现
+   - 检查 `accessors/` 目录下的类似实现
 
 4. **跨层调用检查**
    - Server 层是否直接调用 `xxx_store`？
@@ -391,20 +391,20 @@ Server Flow → Server Service → DataHub Repository → DataHub Store → Foun
 
 ## 上下文
 ditto-port 的 security_mapper.py 承担了证券映射和注册职责，
-这些职责属于 DataHub Repository 层，导致：
+这些职责属于 DataHub Accessor 层，导致：
 1. 架构分层不清晰
-2. 代码重复（SecurityRepository.register_batch）
+2. 代码重复（SecuritiesAccessor.register_batch）
 3. 跨层依赖（Server → Store/Runtime）
 
 ## 决策
-将证券映射和注册逻辑完全下沉到 DataHub Repository 层：
-1. 扩展 SecurityRepository 添加 resolve_or_create_batch()
+将证券映射和注册逻辑完全下沉到 DataHub Accessor 层：
+1. 扩展 SecuritiesAccessor 添加 resolve_or_create_batch()
 2. 删除 security_mapper.py
-3. 更新 IngestionCoordinator 使用 Repository API
+3. 更新 IngestionCoordinator 使用 Accessor API
 
 ## 后果
 - 正面：清晰的分层架构、消除重复、更好的可复用性
-- 负面：Repository 层略重（包含 DataFrame 处理）
+- 负面：Accessor 层略重（包含 DataFrame 处理）
 ```
 
 ## 8. 后续架构演进方向

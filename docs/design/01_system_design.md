@@ -98,7 +98,7 @@
 | └── execution | 执行逻辑（订单拆分、路由） | `core/strategy/execution/` |
 | **Infrastructure Layer** | 数据访问、存储、持久化 | `packages/datahub/` |
 | ├── stores | 数据存储（parquet、sqlite） | `datahub/stores/` |
-| ├── repositories | 业务聚合层 | `datahub/repositories/` |
+| ├── accessors | 业务聚合层 | `datahub/accessors/` |
 | └── sources | 外部数据源适配 | `datahub/sources/` |
 | **Application Services** | 用例编排、事务边界 | `apps/port/services/` |
 | ├── ingestion | 数据摄入编排（dq 检查、存储） | `services/ingestion/` |
@@ -215,7 +215,7 @@ packages/
         sources/           # 外部数据源适配
           tushare/         # Tushare 实现
           akshare/         # AkShare 实现
-        repositories/      # 业务聚合层
+        accessors/      # 业务聚合层
           bars.py          # 行情数据
           factors.py       # 因子数据
           models.py        # ML 模型
@@ -279,7 +279,7 @@ packages/
 ┌─────────────────────────────────────────────────┐
 │ Infrastructure Layer (packages/datahub/)        │
 │                                                  │
-│  stores/  repositories/  sources/               │
+│  stores/  accessors/  sources/               │
 │  （数据访问、存储、持久化）                       │
 └─────────────────────────────────────────────────┘
          │

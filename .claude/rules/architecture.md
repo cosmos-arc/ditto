@@ -58,8 +58,8 @@ from ditto_foundation.util.checksum import file_checksum
 
 | ❌ 禁止 | ✅ 正确 |
 |--------|--------|
-| port → Store (直接访问存储) | port → Repository → Store |
-| port → Source (直接访问数据源) | port → Repository/Service → Source |
+| port → Store (直接访问存储) | port → Accessor → Store |
+| port → Source (直接访问数据源) | port → Accessor/Service → Source |
 | datahub → core (数据层依赖核心) | core → datahub (核心依赖数据) |
 
 ---
@@ -172,7 +172,7 @@ def get_source(name: str) -> DataSource:
 |------|------|----------|----------|
 | **Domain Layer** | 业务逻辑、领域知识 | 引擎、算法、规则 | 是否是业务逻辑/规则？ |
 | **Application Layer** | 用例编排、事务边界 | 服务、协调器 | 是否是用例编排？ |
-| **Infrastructure Layer** | 数据访问、持久化 | Store、Repository | 是否是数据访问？ |
+| **Infrastructure Layer** | 数据访问、持久化 | Store、Accessor | 是否是数据访问？ |
 
 ### 判断决策树
 
@@ -197,7 +197,7 @@ def get_source(name: str) -> DataSource:
 |------|------|------|
 | **Domain** | `packages/core/src/ditto_core/quality/` | 检查规则算法（OHLC、涨跌停、成交量异常） |
 | **Application** | `apps/port/src/ditto_port/services/ingestion/` | 编排 dq 检查流程 |
-| **Infrastructure** | `packages/datahub/src/ditto_datahub/repositories/` | 保存检查结果、隔离失败数据 |
+| **Infrastructure** | `packages/datahub/src/ditto_datahub/accessors/` | 保存检查结果、隔离失败数据 |
 
 **关键点**：
 - ✅ dq 是量化业务规则（如 OHLC 一致性是金融知识），不是通用技术约束
@@ -312,7 +312,7 @@ Foundation Layer (packages/foundation/)
 
 | 问题 | 回答 Yes → 归属 | 回答 No → 归属 |
 |------|----------------|---------------|
-| 是否直接访问存储文件/数据库？ | DataHub Store | 使用 Repository |
+| 是否直接访问存储文件/数据库？ | DataHub Store | 使用 Accessor |
 | 是否包含业务规则/算法逻辑？ | Domain Layer | 不应在此层 |
 | 是流程编排/任务协调？ | Application Layer | 不应在此层 |
 | 是否依赖外部数据源（API/爬虫）？ | DataHub Source | 不应在此层 |
@@ -340,7 +340,7 @@ Foundation Layer (packages/foundation/)
 ├── 技术组件 → 是否依赖领域模型？
 │   ├── 是 → runtime/
 │   └── 否 → foundation/
-└── 业务逻辑 → repositories/, stores/, models/
+└── 业务逻辑 → accessors/, stores/, models/
 
 这是代码模块还是项目脚本？
 ├── Python 代码模块 → runtime/ 或 foundation/
