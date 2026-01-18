@@ -110,14 +110,14 @@
 
 ### 4.1 test_hub_unit.py
 
-- [ ] 第 143 行：`test_lazy_loading_bars_repository` → `test_lazy_loading_bars_accessor`
-- [ ] 第 208 行：`test_universe_repository_lazy_loading` → `test_universe_accessor_lazy_loading`
-- [ ] 第 231 行：`test_index_repository_lazy_loading` → `test_index_accessor_lazy_loading`
+- [x] 第 143 行：`test_lazy_loading_bars_repository` → `test_lazy_loading_bars_accessor`
+- [x] 第 208 行：`test_universe_repository_lazy_loading` → `test_universe_accessor_lazy_loading`
+- [x] 第 231 行：`test_index_repository_lazy_loading` → `test_index_accessor_lazy_loading`
 
 ### 4.2 Repository 测试文件
 
-- [ ] `test_index_accessor_unit.py` 第 53 行：`test_repository_init` → `test_accessor_init`
-- [ ] `test_universe_accessor_unit.py` 第 46 行：`test_repository_init` → `test_accessor_init`
+- [x] `test_index_accessor_unit.py` 第 53 行：`test_repository_init` → `test_accessor_init`
+- [x] `test_universe_accessor_unit.py` 第 47 行：`test_repository_init` → `test_accessor_init`
 
 ---
 

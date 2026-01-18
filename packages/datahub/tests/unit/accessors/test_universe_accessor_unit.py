@@ -44,7 +44,7 @@ class TestUniverseAccessor:
             )
         self.client.commit()
 
-    def test_repository_init(self) -> None:
+    def test_accessor_init(self) -> None:
         """Test UniverseAccessor initialization."""
         assert self.accessor._universe_store is not None
         assert self.accessor._sid_allocator is not None

@@ -140,7 +140,7 @@ class TestDataHub:
         _ = hub.sqlite_pool
         assert "sqlite_pool" in hub.__dict__
 
-    def test_lazy_loading_bars_repository(self) -> None:
+    def test_lazy_loading_bars_accessor(self) -> None:
         """Test bars accessor is lazily loaded."""
         hub = DataHub(self.data_root)
         self.hub = hub  # 保存引用供 teardown 使用
@@ -205,7 +205,7 @@ class TestDataHub:
         _ = hub.universe_store
         assert "universe_store" in hub.__dict__
 
-    def test_universe_repository_lazy_loading(self) -> None:
+    def test_universe_accessor_lazy_loading(self) -> None:
         """Test universe accessor is lazily loaded."""
         hub = DataHub(self.data_root)
         assert "universe" not in hub.__dict__
@@ -228,7 +228,7 @@ class TestDataHub:
         _ = hub.index_weight_store
         assert "index_weight_store" in hub.__dict__
 
-    def test_index_repository_lazy_loading(self) -> None:
+    def test_index_accessor_lazy_loading(self) -> None:
         """Test index accessor is lazily loaded."""
         hub = DataHub(self.data_root)
         assert "index" not in hub.__dict__

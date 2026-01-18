@@ -383,7 +383,7 @@ class IngestionCoordinator:
                 asset_class=asset_class,
                 src_code_col="src_code",
             )
-            # 使用 Repository 层以获得文件锁和 DQ 检查保护
+            # 使用 Accessor 层以获得文件锁和 DQ 检查保护
             return self._hub.bars.write(
                 df=df,
                 year=year,

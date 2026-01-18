@@ -50,7 +50,7 @@ class TestIndexAccessorWithMocks:
     These tests require more resources and time than unit tests.
     """
 
-    def test_repository_init(self, index_accessor: IndexAccessor) -> None:
+    def test_accessor_init(self, index_accessor: IndexAccessor) -> None:
         """Test IndexAccessor initialization."""
         assert index_accessor._bars_store is not None
         assert index_accessor._index_weight_store is not None
