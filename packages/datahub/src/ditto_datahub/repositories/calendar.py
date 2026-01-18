@@ -10,7 +10,7 @@ from ditto_foundation import M, logger, traced
 from ditto_datahub.stores.calendar_store import CalendarStore
 
 
-class CalendarRepository:
+class CalendarAccessor:
     """
     Trading calendar repository.
 
@@ -23,7 +23,7 @@ class CalendarRepository:
         calendar_store: CalendarStore,
     ) -> None:
         """
-        Initialize CalendarRepository.
+        Initialize CalendarAccessor.
 
         Args:
             calendar_store: Calendar store for data access.

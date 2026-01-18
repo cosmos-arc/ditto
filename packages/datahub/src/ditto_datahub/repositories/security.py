@@ -12,7 +12,7 @@ from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 
 
-class SecurityRepository:
+class SecuritiesAccessor:
     """
     Securities master data repository.
 
@@ -26,7 +26,7 @@ class SecurityRepository:
         sid_allocator: SidAllocator,
     ) -> None:
         """
-        Initialize SecurityRepository.
+        Initialize SecuritiesAccessor.
 
         Args:
             security_store: Security store for data access.

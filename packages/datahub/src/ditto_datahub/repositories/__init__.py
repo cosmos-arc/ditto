@@ -1,17 +1,19 @@
-"""Domain Repositories for data access."""
+"""Domain Accessors for data access."""
 
-from ditto_datahub.repositories.bars import AdjType, BarsQuery, BarsRepository
-from ditto_datahub.repositories.calendar import CalendarRepository
-from ditto_datahub.repositories.index import IndexRepository
-from ditto_datahub.repositories.security import SecurityRepository
-from ditto_datahub.repositories.universe import UniverseRepository
+from ditto_datahub.repositories.adj_factor import AdjFactorAccessor
+from ditto_datahub.repositories.bars import AdjType, BarsAccessor, BarsQuery
+from ditto_datahub.repositories.calendar import CalendarAccessor
+from ditto_datahub.repositories.index import IndexAccessor
+from ditto_datahub.repositories.security import SecuritiesAccessor
+from ditto_datahub.repositories.universe import UniverseAccessor
 
 __all__ = [
+    "AdjFactorAccessor",
     "AdjType",
+    "BarsAccessor",
     "BarsQuery",
-    "BarsRepository",
-    "CalendarRepository",
-    "IndexRepository",
-    "SecurityRepository",
-    "UniverseRepository",
+    "CalendarAccessor",
+    "IndexAccessor",
+    "SecuritiesAccessor",
+    "UniverseAccessor",
 ]

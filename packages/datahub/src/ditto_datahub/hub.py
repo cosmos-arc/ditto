@@ -15,12 +15,12 @@ from ditto_foundation.config.paths import get_paths
 
 from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.errors import SidNotFoundError
-from ditto_datahub.repositories.adj_factor import AdjFactorRepository
-from ditto_datahub.repositories.bars import BarsRepository
-from ditto_datahub.repositories.calendar import CalendarRepository
-from ditto_datahub.repositories.index import IndexRepository
-from ditto_datahub.repositories.security import SecurityRepository
-from ditto_datahub.repositories.universe import UniverseRepository
+from ditto_datahub.repositories.adj_factor import AdjFactorAccessor
+from ditto_datahub.repositories.bars import BarsAccessor
+from ditto_datahub.repositories.calendar import CalendarAccessor
+from ditto_datahub.repositories.index import IndexAccessor
+from ditto_datahub.repositories.security import SecuritiesAccessor
+from ditto_datahub.repositories.universe import UniverseAccessor
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
@@ -166,17 +166,17 @@ class DataHub:
     # ========================================================================
 
     @cached_property
-    def securities(self) -> SecurityRepository:
+    def securities(self) -> SecuritiesAccessor:
         """Securities master data repository."""
-        return SecurityRepository(
+        return SecuritiesAccessor(
             security_store=self.security_store,
             sid_allocator=self.sid_allocator,
         )
 
     @cached_property
-    def bars(self) -> BarsRepository:
+    def bars(self) -> BarsAccessor:
         """OHLCV bars repository."""
-        return BarsRepository(
+        return BarsAccessor(
             bars_store=self.bars_store,
             security_store=self.security_store,
             adj_factor_store=self.adj_factor_store,
@@ -187,33 +187,33 @@ class DataHub:
         )
 
     @cached_property
-    def adj_factor(self) -> AdjFactorRepository:
+    def adj_factor(self) -> AdjFactorAccessor:
         """Adjustment factor repository."""
-        return AdjFactorRepository(
+        return AdjFactorAccessor(
             adj_factor_store=self.adj_factor_store,
             file_lock=self.file_lock,
         )
 
     @cached_property
-    def calendar(self) -> CalendarRepository:
+    def calendar(self) -> CalendarAccessor:
         """Trading calendar repository."""
-        return CalendarRepository(
+        return CalendarAccessor(
             calendar_store=self.calendar_store,
         )
 
     @cached_property
-    def universe(self) -> UniverseRepository:
+    def universe(self) -> UniverseAccessor:
         """Security universe repository."""
-        return UniverseRepository(
+        return UniverseAccessor(
             universe_store=self.universe_store,
             security_store=self.security_store,
             sid_allocator=self.sid_allocator,
         )
 
     @cached_property
-    def index(self) -> IndexRepository:
+    def index(self) -> IndexAccessor:
         """Index data repository."""
-        return IndexRepository(
+        return IndexAccessor(
             bars_store=self.bars_store,
             index_weight_store=self.index_weight_store,
             security_store=self.security_store,

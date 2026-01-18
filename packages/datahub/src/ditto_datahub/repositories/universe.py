@@ -15,7 +15,7 @@ from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.universe_store import UniverseStore
 
 
-class UniverseRepository:
+class UniverseAccessor:
     """
     Security universe repository.
 
@@ -37,7 +37,7 @@ class UniverseRepository:
         sid_allocator: SidAllocator,
     ) -> None:
         """
-        Initialize UniverseRepository.
+        Initialize UniverseAccessor.
 
         Args:
             universe_store: Universe store for data access.

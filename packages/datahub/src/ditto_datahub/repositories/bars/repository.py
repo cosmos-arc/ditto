@@ -39,7 +39,7 @@ class BarsQuery:
     """
     行情查询参数。
 
-    用于封装 BarsRepository.get() 方法的所有参数，提高可读性和可维护性。
+    用于封装 BarsAccessor.get() 方法的所有参数，提高可读性和可维护性。
 
     Attributes:
         sids: 按 SID 列表过滤。
@@ -84,7 +84,7 @@ class _ResolvedQuery:
     解析后的查询参数。
 
     用于存储解析和验证后的查询参数，传递给数据加载和处理方法。
-    这是内部 API（前导下划线），仅供 BarsRepository 内部使用。
+    这是内部 API（前导下划线），仅供 BarsAccessor 内部使用。
 
     Attributes:
         sids: 解析后的 SID 列表（非空）。
@@ -112,7 +112,7 @@ class _ResolvedQuery:
     asset_class: str | None
 
 
-class BarsRepository:
+class BarsAccessor:
     """
     Market data repository for OHLCV bars.
 
@@ -132,7 +132,7 @@ class BarsRepository:
         quarantine_store: QuarantineStore,  # Injected to avoid circular import
     ) -> None:
         """
-        Initialize BarsRepository.
+        Initialize BarsAccessor.
 
         Args:
             bars_store: Bars data store.

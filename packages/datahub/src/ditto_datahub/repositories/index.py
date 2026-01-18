@@ -10,7 +10,7 @@ from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.security_store import SecurityStore
 
 
-class IndexRepository:
+class IndexAccessor:
     """
     Index data repository.
 
@@ -32,7 +32,7 @@ class IndexRepository:
         security_store: SecurityStore,
     ) -> None:
         """
-        Initialize IndexRepository.
+        Initialize IndexAccessor.
 
         Args:
             bars_store: Bars store for index daily data.

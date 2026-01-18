@@ -10,7 +10,7 @@ from ditto_datahub.models import OnDuplicate, WriteResult
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 
 
-class AdjFactorRepository:
+class AdjFactorAccessor:
     """
     Adjustment factor repository for dividend/split/bonus factors.
 
@@ -24,7 +24,7 @@ class AdjFactorRepository:
         file_lock: FileLockManager,
     ) -> None:
         """
-        Initialize AdjFactorRepository.
+        Initialize AdjFactorAccessor.
 
         Args:
             adj_factor_store: Adjustment factor store.
