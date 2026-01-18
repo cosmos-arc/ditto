@@ -42,44 +42,44 @@
 ### 1.2 Repository 模块
 
 **文件**: `packages/datahub/src/ditto_datahub/repositories/bars/repository.py`
-- [ ] 类名：`BarsRepository` → `BarsAccessor`
-- [ ] 类文档字符串更新
-- [ ] 内部注释更新
+- [x] 类名：`BarsRepository` → `BarsAccessor`
+- [x] 类文档字符串更新
+- [x] 内部注释更新
 
 **文件**: `packages/datahub/src/ditto_datahub/repositories/security.py`
-- [ ] 类名：`SecurityRepository` → `SecuritiesAccessor`
-- [ ] 类文档字符串更新
+- [x] 类名：`SecurityRepository` → `SecuritiesAccessor`
+- [x] 类文档字符串更新
 
 **文件**: `packages/datahub/src/ditto_datahub/repositories/calendar.py`
-- [ ] 类名：`CalendarRepository` → `CalendarAccessor`
-- [ ] 类文档字符串更新
+- [x] 类名：`CalendarRepository` → `CalendarAccessor`
+- [x] 类文档字符串更新
 
 **文件**: `packages/datahub/src/ditto_datahub/repositories/index.py`
-- [ ] 类名：`IndexRepository` → `IndexAccessor`
-- [ ] 类文档字符串更新
+- [x] 类名：`IndexRepository` → `IndexAccessor`
+- [x] 类文档字符串更新
 
 **文件**: `packages/datahub/src/ditto_datahub/repositories/universe.py`
-- [ ] 类名：`UniverseRepository` → `UniverseAccessor`
-- [ ] 类文档字符串更新
+- [x] 类名：`UniverseRepository` → `UniverseAccessor`
+- [x] 类文档字符串更新
 
 **文件**: `packages/datahub/src/ditto_datahub/repositories/adj_factor.py`
-- [ ] 类名：`AdjFactorRepository` → `AdjFactorAccessor`
-- [ ] 类文档字符串更新
+- [x] 类名：`AdjFactorRepository` → `AdjFactorAccessor`
+- [x] 类文档字符串更新
 
 ### 1.3 模块导出更新
 
 **文件**: `packages/datahub/src/ditto_datahub/repositories/__init__.py`
-- [ ] 更新所有导出的类名
-- [ ] 更新模块文档字符串
+- [x] 更新所有导出的类名
+- [x] 更新模块文档字符串
 
 **文件**: `packages/datahub/src/ditto_datahub/repositories/bars/__init__.py`
-- [ ] 更新导出类名
+- [x] 更新导出类名
 
 ### 1.4 DataHub 门面更新
 
 **文件**: `packages/datahub/src/ditto_datahub/hub.py`
-- [ ] 类型注解更新
-- [ ] 属性文档字符串更新（保持属性名不变）
+- [x] 类型注解更新
+- [x] 属性文档字符串更新（保持属性名不变）
 
 ---
 
@@ -88,55 +88,55 @@
 ### 2.1 单元测试文件
 
 **文件**: `packages/datahub/tests/unit/sources/test_accessor_unit.py`
-- [ ] 文件名：`test_accessor_unit.py` → `test_provider_unit.py`
-- [ ] 类名：`TestSourcesAccessor` → `TestSourcesProvider`
-- [ ] 所有导入语句更新
+- [x] 文件名：`test_accessor_unit.py` → `test_provider_unit.py`
+- [x] 类名：`TestSourcesAccessor` → `TestSourcesProvider`
+- [x] 所有导入语句更新
 
 **文件**: `packages/datahub/tests/unit/repositories/test_bars_repository_unit.py`
-- [ ] 类名：`TestBarsRepository` → `TestBarsAccessor`
-- [ ] 所有导入语句更新
-- [ ] 测试方法中的注释更新
+- [x] 类名：`TestBarsRepository` → `TestBarsAccessor`
+- [x] 所有导入语句更新
+- [x] 测试方法中的注释更新
 
 **文件**: `packages/datahub/tests/unit/repositories/test_security_repository_unit.py`
-- [ ] 类名：`TestSecurityRepository` → `TestSecuritiesAccessor`
-- [ ] 所有导入语句更新
+- [x] 类名：`TestSecurityRepository` → `TestSecuritiesAccessor`
+- [x] 所有导入语句更新
 
 **文件**: `packages/datahub/tests/unit/repositories/test_calendar_repository_unit.py`
-- [ ] 类名：`TestCalendarRepository` → `TestCalendarAccessor`
-- [ ] 所有导入语句更新
+- [x] 类名：`TestCalendarRepository` → `TestCalendarAccessor`
+- [x] 所有导入语句更新
 
 **文件**: `packages/datahub/tests/unit/repositories/test_universe_repository_unit.py`
-- [ ] 类名：`TestUniverseRepository` → `TestUniverseAccessor`
-- [ ] 所有导入语句更新
+- [x] 类名：`TestUniverseRepository` → `TestUniverseAccessor`
+- [x] 所有导入语句更新
 
 **文件**: `packages/datahub/tests/unit/repositories/test_index_repository_unit.py`
-- [ ] 类名：`TestIndexRepository` → `TestIndexAccessor`
-- [ ] 所有导入语句更新
+- [x] 类名：`TestIndexRepository` → `TestIndexAccessor`
+- [x] 所有导入语句更新
 
 **文件**: `packages/datahub/tests/unit/repositories/test_adj_factor_repository_unit.py`
-- [ ] 类名：`TestAdjFactorRepository` → `TestAdjFactorAccessor`
-- [ ] 所有导入语句更新
+- [x] 类名：`TestAdjFactorRepository` → `TestAdjFactorAccessor`
+- [x] 所有导入语句更新
 
 **文件**: `packages/datahub/tests/unit/test_hub_unit.py`
-- [ ] 所有导入语句更新
-- [ ] 测试中的注释更新
+- [x] 所有导入语句更新
+- [x] 测试中的注释更新
 
 ### 2.2 集成测试文件
 
 **文件**: `packages/datahub/tests/integration/runtime/test_sid_allocator_integration.py`
-- [ ] 所有导入语句更新
+- [x] 所有导入语句更新
 
 **文件**: `packages/datahub/tests/integration/runtime/test_sql_engine_integration.py`
-- [ ] 所有导入语句更新
+- [x] 所有导入语句更新
 
 **文件**: `packages/datahub/tests/integration/runtime/test_sqlite_pool_integration.py`
-- [ ] 所有导入语句更新
+- [x] 所有导入语句更新
 
 **文件**: `packages/datahub/tests/integration/stores/test_calendar_store_concurrent_integration.py`
-- [ ] 所有导入语句更新
+- [x] 所有导入语句更新
 
 **文件**: `packages/datahub/tests/integration/stores/test_ingestion_log_concurrent_integration.py`
-- [ ] 所有导入语句更新
+- [x] 所有导入语句更新
 
 ---
 
@@ -145,14 +145,14 @@
 ### 3.1 Port 应用
 
 **文件**: `apps/port/src/ditto_port/jobs/tasks/dq_batch.py`
-- [ ] 所有导入语句更新
+- [x] 所有导入语句更新
 
 **文件**: `apps/port/tests/conftest.py`
-- [ ] Mock fixture 中的类型注解更新
-- [ ] 注释更新
+- [x] Mock fixture 中的类型注解更新
+- [x] 注释更新
 
 **文件**: `apps/port/tests/unit/conftest.py`
-- [ ] Mock fixture 中的类型注解更新
+- [x] Mock fixture 中的类型注解更新
 
 ---
 
@@ -161,32 +161,32 @@
 ### 4.1 系统设计文档
 
 **文件**: `docs/design/01_system_design.md`
-- [ ] 架构图更新（Repository 层 → Accessor 层）
-- [ ] 所有类名引用更新
-- [ ] 所有代码示例更新
+- [x] 架构图更新（Repository 层 → Accessor 层）
+- [x] 所有类名引用更新
+- [x] 所有代码示例更新
 
 **文件**: `docs/design/02_data_design.md`
-- [ ] 架构图更新
-- [ ] 类定义代码块更新
-- [ ] `SourcesAccessor` → `SourcesProvider`
-- [ ] 所有 `*Repository` → `*Accessor`
+- [x] 架构图更新
+- [x] 类定义代码块更新
+- [x] `SourcesAccessor` → `SourcesProvider`
+- [x] 所有 `*Repository` → `*Accessor`
 
 **文件**: `docs/design/11_port_architecture.md`
-- [ ] 架构图更新
-- [ ] 类名引用更新
+- [x] 架构图更新
+- [x] 类名引用更新
 
 ### 4.2 Sprint 文档
 
 **文件**: `docs/sprints/sprint-01-data-foundation.md`
-- [ ] Task 描述中的类名更新
-- [ ] 完成状态中的类名更新
+- [x] Task 描述中的类名更新
+- [x] 完成状态中的类名更新
 
 **文件**: `docs/sprints/sprint-02-data-quality.md`
-- [ ] Task 描述中的类名更新
-- [ ] 完成状态中的类名更新
+- [x] Task 描述中的类名更新
+- [x] 完成状态中的类名更新
 
 **文件**: `docs/sprints/backlog.md`
-- [ ] 所有相关引用更新
+- [x] 所有相关引用更新
 
 ---
 
@@ -195,36 +195,36 @@
 ### 5.1 DataHub README
 
 **文件**: `packages/datahub/README.md`
-- [ ] 架构图更新（Repository 层 → Accessor 层）
-- [ ] 层级表格更新
-- [ ] 所有代码示例更新
-- [ ] 复权实现说明更新
-- [ ] 文件路径引用更新
+- [x] 架构图更新（Repository 层 → Accessor 层）
+- [x] 层级表格更新
+- [x] 所有代码示例更新
+- [x] 复权实现说明更新
+- [x] 文件路径引用更新
 
 ### 5.2 子模块 README
 
 **文件**: `packages/datahub/src/ditto_datahub/repositories/README.md`
-- [ ] 目录说明更新（如果目录名也改）
-- [ ] 所有类名引用更新
+- [x] 目录说明更新（如果目录名也改）
+- [x] 所有类名引用更新
 
 **文件**: `packages/datahub/tests/unit/repositories/README.md`
-- [ ] 所有类名引用更新
+- [x] 所有类名引用更新
 
 **文件**: `packages/datahub/tests/unit/sources/README.md`
-- [ ] `SourcesAccessor` → `SourcesProvider`
+- [x] `SourcesAccessor` → `SourcesProvider`
 
 **文件**: `packages/datahub/src/ditto_datahub/sources/README.md`
-- [ ] 所有类名引用更新
+- [x] 所有类名引用更新
 
 ### 5.3 规范文档
 
 **文件**: `.claude/rules/datahub.md`
-- [ ] Repository 层 → Accessor 层
-- [ ] 所有类名引用更新
-- [ ] 所有代码示例更新
+- [x] Repository 层 → Accessor 层
+- [x] 所有类名引用更新
+- [x] 所有代码示例更新
 
 **文件**: `.claude/rules/core.md`
-- [ ] 代码示例中的类名更新
+- [x] 代码示例中的类名更新
 
 ---
 
@@ -233,10 +233,10 @@
 ### 6.1 计划文档
 
 **文件**: `docs/plans/2026-01-17-architecture-refactor-plan.md`
-- [ ] 所有类名引用更新
+- [x] 所有类名引用更新
 
 **文件**: `docs/plans/archive/*.md`（多个）
-- [ ] 历史计划文档中的类名更新
+- [x] 历史计划文档中的类名更新
 
 ---
 
@@ -245,13 +245,13 @@
 ### 7.1 Core README
 
 **文件**: `packages/core/README.md`
-- [ ] 示例代码中的类名更新
+- [x] 示例代码中的类名更新
 
 **文件**: `packages/core/tests/unit/README.md`
-- [ ] 示例代码中的类名更新
+- [x] 示例代码中的类名更新
 
 **文件**: `packages/core/tests/README.md`
-- [ ] 示例代码中的类名更新
+- [x] 示例代码中的类名更新
 
 ---
 
@@ -260,16 +260,16 @@
 ### 8.1 代码注释
 
 **所有源文件**：
-- [ ] 类定义中的注释
-- [ ] 方法中的注释
-- [ ] 行内注释
+- [x] 类定义中的注释
+- [x] 方法中的注释
+- [x] 行内注释
 
 ### 8.2 文档字符串
 
 **所有类和方法**：
-- [ ] 类文档字符串
-- [ ] 方法文档字符串
-- [ ] 参数说明中的类名引用
+- [x] 类文档字符串
+- [x] 方法文档字符串
+- [x] 参数说明中的类名引用
 
 ---
 
@@ -310,11 +310,11 @@ git grep -i "repository" -- "*.md"
 
 ### 语义验证
 
-- [ ] 确认所有类名引用已更新
-- [ ] 确认所有文档字符串已更新
-- [ ] 确认所有注释已更新
-- [ ] 确认 DataHub 属性名保持不变（用户接口不变）
-- [ ] 确认所有测试通过
+- [x] 确认所有类名引用已更新
+- [x] 确认所有文档字符串已更新
+- [x] 确认所有注释已更新
+- [x] 确认 DataHub 属性名保持不变（用户接口不变）
+- [x] 确认所有测试通过
 
 ---
 
