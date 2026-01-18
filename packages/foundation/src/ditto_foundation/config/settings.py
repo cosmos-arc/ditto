@@ -51,24 +51,6 @@ class DataSourceSettings(BaseSettings):
     tushare_token: str = Field(default="", description="Tushare Pro API Token")
 
 
-class APISettings(BaseSettings):
-    """FastAPI 服务配置."""
-
-    model_config = SettingsConfigDict(
-        env_prefix="", env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
-
-    host: str = Field(
-        default="127.0.0.1",
-        description=(
-            "服务器监听地址. "
-            "容器化部署场景应通过环境变量 SERVER_HOST 配置为 0.0.0.0. "
-            "生产环境应配置具体地址或通过防火墙限制访问."
-        ),
-    )
-    port: int = Field(default=8000, ge=1, le=65535, description="服务器监听端口")
-
-
 class SystemSettings(BaseSettings):
     """系统基础配置."""
 
@@ -77,12 +59,6 @@ class SystemSettings(BaseSettings):
     )
 
     ditto_env: str = Field(default="development", description="系统运行环境")
-
-    log_level: str = Field(default="INFO", description="日志级别")
-
-    timezone: str = Field(default="Asia/Shanghai", description="系统时区")
-
-    debug: bool = Field(default=False, description="是否启用调试模式")
 
 
 class FileStorageSettings(BaseSettings):
@@ -140,7 +116,6 @@ class ObservabilitySettings(BaseSettings):
         default="http://localhost:8428/opentelemetry/v1/metrics",
         description="VictoriaMetrics OTLP 端点",
     )
-    metrics_interval_ms: int = Field(default=15000, description="指标导出间隔(毫秒)")
 
 
 class Settings(BaseSettings):
@@ -159,7 +134,6 @@ class Settings(BaseSettings):
 
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     data_source: DataSourceSettings = Field(default_factory=DataSourceSettings)
-    api: APISettings = Field(default_factory=APISettings)
     system: SystemSettings = Field(default_factory=SystemSettings)
     file_storage: FileStorageSettings = Field(default_factory=FileStorageSettings)
     observability: ObservabilitySettings = Field(default_factory=ObservabilitySettings)
@@ -247,7 +221,6 @@ def reload_settings() -> Settings:
 
 
 __all__ = [
-    "APISettings",
     "DataSourceSettings",
     "DatabaseSettings",
     "FileStorageSettings",

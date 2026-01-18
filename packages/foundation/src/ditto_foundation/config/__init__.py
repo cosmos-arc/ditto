@@ -24,7 +24,6 @@ from ditto_foundation.config.paths import (
     reset_paths_for_testing,
 )
 from ditto_foundation.config.settings import (
-    APISettings,
     DatabaseSettings,
     DataSourceSettings,
     FileStorageSettings,
@@ -36,7 +35,6 @@ from ditto_foundation.config.settings import (
 )
 
 __all__ = [
-    "APISettings",
     "ConfigInitCoordinator",
     "ConfigInitProvider",
     "DataSourceSettings",
