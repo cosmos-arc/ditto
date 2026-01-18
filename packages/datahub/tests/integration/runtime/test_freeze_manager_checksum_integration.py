@@ -81,8 +81,9 @@ class TestFreezeManagerChecksum:
         test_file = self.temp_dir / "test.parquet"
         test_file.write_text("test data")
 
-        # Test current SHA-256 implementation
-        sha256_checksum = self.manager._compute_checksum(test_file)
+        # Test current SHA-256 implementation (using foundation version)
+        from ditto_foundation.version import compute_checksum
+        sha256_checksum = compute_checksum(test_file)
 
         # Test MD5 implementation
         md5 = hashlib.md5(usedforsecurity=False)
@@ -138,9 +139,9 @@ class TestFreezeManagerChecksum:
         assert reloaded_manifest.files == original_manifest.files
 
     def test_compute_checksum_implementation(self, mocker):
-        """Test the _compute_checksum implementation uses SHA-256."""
-        # Mock hashlib.sha256
-        mock_hashlib = mocker.patch("ditto_datahub.runtime.freeze_manager.hashlib")
+        """Test the compute_checksum implementation uses SHA-256."""
+        # Mock hashlib.sha256 in the foundation module
+        mock_hashlib = mocker.patch("ditto_foundation.version.hashlib")
         mock_sha256 = mock_hashlib.sha256.return_value
         mock_sha256.hexdigest.return_value = "mock_sha256_hash"
 
@@ -148,8 +149,9 @@ class TestFreezeManagerChecksum:
         test_file = self.temp_dir / "test.parquet"
         test_file.write_text("test data")
 
-        # Call _compute_checksum
-        result = self.manager._compute_checksum(test_file)
+        # Call compute_checksum from foundation
+        from ditto_foundation.version import compute_checksum
+        result = compute_checksum(test_file)
 
         # Verify SHA-256 was used
         mock_hashlib.sha256.assert_called_once()

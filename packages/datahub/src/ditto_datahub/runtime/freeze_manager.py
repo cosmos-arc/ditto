@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import orjson
 from ditto_foundation import logger, traced
+from ditto_foundation.version import compute_checksum
 
 from ..models import FreezeManifest
 
@@ -307,7 +307,7 @@ class FreezeManager:
         single_file_path = self._data_root / f"{dataset}.parquet"
 
         if single_file_path.exists():
-            checksum = self._compute_checksum(single_file_path)
+            checksum = compute_checksum(single_file_path)
             rel_path = single_file_path.relative_to(self._data_root).as_posix()
             return {rel_path: checksum}
 
@@ -331,7 +331,7 @@ class FreezeManager:
             if parquet_files:
                 files: dict[str, str] = {}
                 for parquet_file in parquet_files:
-                    checksum = self._compute_checksum(parquet_file)
+                    checksum = compute_checksum(parquet_file)
                     rel_path = parquet_file.relative_to(self._data_root).as_posix()
                     files[rel_path] = checksum
                 return files
@@ -422,29 +422,12 @@ class FreezeManager:
                 continue
 
             # 使用 SHA-256 验证
-            actual_checksum = self._compute_checksum(file_path)
+            actual_checksum = compute_checksum(file_path)
 
             if actual_checksum != expected_checksum:
                 errors.append(f"Checksum mismatch: {rel_path}")
 
         return errors
-
-    def _compute_checksum(self, file_path: Path) -> str:
-        """
-        计算文件的 SHA-256 checksum。
-
-        Args:
-            file_path: 文件路径
-
-        Returns:
-            SHA-256 hex string
-
-        """
-        sha256 = hashlib.sha256()
-        with file_path.open("rb") as f:
-            for chunk in iter(lambda: f.read(8192), b""):
-                sha256.update(chunk)
-        return sha256.hexdigest()
 
     def _save_manifest(self, path: Path, manifest: FreezeManifest) -> None:
         """
