@@ -11,7 +11,7 @@ class TestSourcesProvider:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Test tushare property returns TushareSource instance."""
+        """Test tushare property returns TushareProvider instance."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         provider = SourcesProvider()
@@ -40,7 +40,7 @@ class TestSourcesProvider:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Test get() method returns TushareSource."""
+        """Test get() method returns TushareProvider."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         provider = SourcesProvider()

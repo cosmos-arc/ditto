@@ -3,10 +3,10 @@
 import httpx
 import polars as pl
 import pytest
-from ditto_datahub.sources.base import (
-    SourceAuthenticationError,
-    SourceFetchError,
-    SourceRateLimitError,
+from ditto_datahub.sources.provider import (
+    ProviderAuthenticationError,
+    ProviderFetchError,
+    ProviderRateLimitError,
 )
 from ditto_datahub.sources.tushare.http_utils import (
     map_http_error,
@@ -41,7 +41,7 @@ class TestValidateTushareResponse:
         }
 
     def test_auth_error_raises_authentication_error(self):
-        """code 2002 抛出 SourceAuthenticationError."""
+        """code 2002 抛出 ProviderAuthenticationError."""
         # Arrange
         response_json: dict[str, object] = {
             "code": 2002,
@@ -49,13 +49,13 @@ class TestValidateTushareResponse:
         }
 
         # Act & Assert
-        with pytest.raises(SourceAuthenticationError) as exc_info:
+        with pytest.raises(ProviderAuthenticationError) as exc_info:
             validate_tushare_response(response_json)
 
         assert "没有权限" in str(exc_info.value)
 
     def test_business_error_raises_fetch_error(self):
-        """其他非零 code 抛出 SourceFetchError."""
+        """其他非零 code 抛出 ProviderFetchError."""
         # Arrange
         response_json: dict[str, object] = {
             "code": 1001,
@@ -63,13 +63,13 @@ class TestValidateTushareResponse:
         }
 
         # Act & Assert
-        with pytest.raises(SourceFetchError) as exc_info:
+        with pytest.raises(ProviderFetchError) as exc_info:
             validate_tushare_response(response_json)
 
         assert "参数错误" in str(exc_info.value)
 
     def test_missing_data_raises_fetch_error(self):
-        """缺少 data 字段抛出 SourceFetchError."""
+        """缺少 data 字段抛出 ProviderFetchError."""
         # Arrange
         response_json: dict[str, object] = {
             "code": 0,
@@ -77,13 +77,13 @@ class TestValidateTushareResponse:
         }
 
         # Act & Assert
-        with pytest.raises(SourceFetchError) as exc_info:
+        with pytest.raises(ProviderFetchError) as exc_info:
             validate_tushare_response(response_json)
 
         assert "缺少 data 字段" in str(exc_info.value)
 
     def test_invalid_data_type_raises_fetch_error(self):
-        """data 字段类型错误抛出 SourceFetchError."""
+        """data 字段类型错误抛出 ProviderFetchError."""
         # Arrange
         response_json: dict[str, object] = {
             "code": 0,
@@ -92,7 +92,7 @@ class TestValidateTushareResponse:
         }
 
         # Act & Assert
-        with pytest.raises(SourceFetchError) as exc_info:
+        with pytest.raises(ProviderFetchError) as exc_info:
             validate_tushare_response(response_json)
 
         assert "类型错误" in str(exc_info.value)
@@ -111,7 +111,7 @@ class TestMapHttpError:
         )
 
         # Act & Assert
-        with pytest.raises(SourceAuthenticationError) as exc_info:
+        with pytest.raises(ProviderAuthenticationError) as exc_info:
             map_http_error(error, "trade_cal")
 
         assert exc_info.value.details.get("source") == "tushare"
@@ -124,7 +124,7 @@ class TestMapHttpError:
         error = httpx.HTTPStatusError("Forbidden", request=request, response=response)
 
         # Act & Assert
-        with pytest.raises(SourceAuthenticationError) as exc_info:
+        with pytest.raises(ProviderAuthenticationError) as exc_info:
             map_http_error(error, "daily")
 
         assert exc_info.value.details.get("source") == "tushare"
@@ -139,7 +139,7 @@ class TestMapHttpError:
         )
 
         # Act & Assert
-        with pytest.raises(SourceRateLimitError) as exc_info:
+        with pytest.raises(ProviderRateLimitError) as exc_info:
             map_http_error(error, "stock_basic")
 
         assert exc_info.value.details.get("source") == "tushare"
@@ -154,7 +154,7 @@ class TestMapHttpError:
         )
 
         # Act & Assert
-        with pytest.raises(SourceFetchError) as exc_info:
+        with pytest.raises(ProviderFetchError) as exc_info:
             map_http_error(error, "adj_factor")
 
         assert exc_info.value.details.get("source") == "tushare"
@@ -166,7 +166,7 @@ class TestMapHttpError:
         error = httpx.NetworkError("Connection failed")
 
         # Act & Assert
-        with pytest.raises(SourceFetchError) as exc_info:
+        with pytest.raises(ProviderFetchError) as exc_info:
             map_http_error(error, "fund_adj")
 
         assert exc_info.value.details.get("source") == "tushare"
@@ -178,7 +178,7 @@ class TestMapHttpError:
         error = httpx.TimeoutException("Request timeout")
 
         # Act & Assert
-        with pytest.raises(SourceFetchError) as exc_info:
+        with pytest.raises(ProviderFetchError) as exc_info:
             map_http_error(error, "trade_cal")
 
         assert exc_info.value.details.get("source") == "tushare"
@@ -190,7 +190,7 @@ class TestMapHttpError:
         error = Exception("Unknown error")
 
         # Act & Assert
-        with pytest.raises(SourceFetchError) as exc_info:
+        with pytest.raises(ProviderFetchError) as exc_info:
             map_http_error(error, "daily")
 
         assert exc_info.value.details.get("source") == "tushare"

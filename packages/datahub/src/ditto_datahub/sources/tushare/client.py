@@ -20,9 +20,9 @@ try:
 except ImportError:
     keyring = None
 
-from ditto_datahub.sources.base import (
-    SourceConfigurationError,
-    SourceFetchError,
+from ditto_datahub.sources.provider import (
+    ProviderConfigurationError,
+    ProviderFetchError,
 )
 from ditto_datahub.sources.tushare.http_utils import (
     map_http_error,
@@ -52,7 +52,7 @@ def _get_tushare_token(token: str | None = None) -> str:
         str: The Tushare API token.
 
     Raises:
-        SourceConfigurationError: If token not found in any source.
+        ProviderConfigurationError: If token not found in any source.
 
     """
     # 1. Explicit parameter
@@ -100,7 +100,7 @@ def _get_tushare_token(token: str | None = None) -> str:
             logger.debug("Failed to load secrets.toml", error=str(e))
 
     # No token found
-    raise SourceConfigurationError(
+    raise ProviderConfigurationError(
         message=(
             "Tushare token not configured. "
             "Use keyring: keyring.set_password('ditto', 'tushare', 'YOUR_TOKEN') "
@@ -138,7 +138,7 @@ class TushareClient:
             rate_config: 限流配置(默认免费账户).
 
         Raises:
-            SourceConfigurationError: If token not found.
+            ProviderConfigurationError: If token not found.
 
         """
         # Get token with fallback chain
@@ -190,9 +190,9 @@ class TushareClient:
             Tushare API 响应的 data 字段
 
         Raises:
-            SourceAuthenticationError: 认证失败
-            SourceRateLimitError: 限流
-            SourceFetchError: 其他错误
+            ProviderAuthenticationError: 认证失败
+            ProviderRateLimitError: 限流
+            ProviderFetchError: 其他错误
 
         """
         # 确定分组并进行限流检查
@@ -239,13 +239,13 @@ class TushareClient:
             map_http_error(e, api_name)
 
         except (httpx.NetworkError, httpx.TimeoutException) as e:
-            # 网络错误和超时,映射到 SourceFetchError
+            # 网络错误和超时,映射到 ProviderFetchError
             map_http_error(e, api_name)
 
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type(SourceFetchError),
+        retry=retry_if_exception_type(ProviderFetchError),
     )
     def query(
         self,
@@ -265,9 +265,9 @@ class TushareClient:
             polars DataFrame
 
         Raises:
-            SourceRateLimitError: If rate limit exceeded after retries.
-            SourceAuthenticationError: If authentication fails.
-            SourceFetchError: If query fails after retries.
+            ProviderRateLimitError: If rate limit exceeded after retries.
+            ProviderAuthenticationError: If authentication fails.
+            ProviderFetchError: If query fails after retries.
 
         """
         # 调用内部 _query 方法获取原始数据

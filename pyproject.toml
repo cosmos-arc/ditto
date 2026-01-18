@@ -134,6 +134,9 @@ unfixable = []
 # __init__.py
 "__init__.py" = ["D104"]
 
+# provider.py - 延迟导入避免循环依赖
+"**/sources/provider.py" = ["PLC0415"]
+
 # --- Ruff Formatter (格式化器) 配置 ---
 [tool.ruff.format]
 quote-style = "double"

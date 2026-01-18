@@ -1,4 +1,4 @@
-"""Tushare data source implementation."""
+"""Tushare data provider implementation."""
 
 from __future__ import annotations
 
@@ -13,11 +13,11 @@ from ditto_datahub.meta.schemas import (
     TUSHARE_ST_SCHEMA,
     TUSHARE_SUSPEND_SCHEMA,
 )
-from ditto_datahub.sources.base import (
-    DataSource,
-    SourceAuthenticationError,
-    SourceFetchError,
-    SourceRateLimitError,
+from ditto_datahub.sources.provider import (
+    DataProvider,
+    ProviderAuthenticationError,
+    ProviderFetchError,
+    ProviderRateLimitError,
 )
 from ditto_datahub.sources.tushare.client import TushareClient
 from ditto_datahub.sources.tushare.transformer import (
@@ -45,16 +45,16 @@ def _record_metrics(row_count: int, dataset: str) -> None:
     try:
         M.data_records.add(
             row_count,
-            {"source": "tushare", "dataset": dataset, "status": "success"},
+            {"provider": "tushare", "dataset": dataset, "status": "success"},
         )
     except (AttributeError, TypeError):
         # Observability 未初始化，静默跳过
         pass
 
 
-class TushareSource(DataSource):
+class TushareProvider(DataProvider):
     """
-    Tushare Pro data source.
+    Tushare Pro data provider.
 
     Fetches market data from Tushare API and transforms to Ditto schema.
 
@@ -65,14 +65,14 @@ class TushareSource(DataSource):
 
     def __init__(self, token: str | None = None) -> None:
         """
-        Initialize Tushare source.
+        Initialize Tushare provider.
 
         Args:
             token: API token. Reads from keyring or ~/.ditto/secrets.toml if None.
 
         """
         self._client = TushareClient(token=token)
-        logger.debug("TushareSource initialized", event="tushare_source_init")
+        logger.debug("TushareProvider initialized", event="tushare_provider_init")
 
     @contextmanager
     def _tushare_fetch_error_handler(
@@ -91,16 +91,16 @@ class TushareSource(DataSource):
             None
 
         Raises:
-            SourceAuthenticationError: 认证错误直接抛出
-            SourceRateLimitError: 限流错误直接抛出
-            SourceFetchError: 其他异常包装为 SourceFetchError
+            ProviderAuthenticationError: 认证错误直接抛出
+            ProviderRateLimitError: 限流错误直接抛出
+            ProviderFetchError: 其他异常包装为 ProviderFetchError
 
         """
         try:
             yield
-        except SourceAuthenticationError:
+        except ProviderAuthenticationError:
             raise
-        except SourceRateLimitError:
+        except ProviderRateLimitError:
             raise
         except Exception as e:
             logger.error(
@@ -109,9 +109,9 @@ class TushareSource(DataSource):
                 error=str(e),
                 api_name=api_name,
             )
-            raise SourceFetchError(
+            raise ProviderFetchError(
                 message=f"Failed to fetch {dataset} from Tushare",
-                source="tushare",
+                provider="tushare",
                 dataset=api_name,
                 original_error=str(e),
             ) from e
@@ -135,7 +135,7 @@ class TushareSource(DataSource):
             - is_open: Boolean
 
         Raises:
-            SourceFetchError: If fetch fails.
+            ProviderFetchError: If fetch fails.
 
         """
         logger.info(
@@ -172,7 +172,7 @@ class TushareSource(DataSource):
             - list_date: Listing date
 
         Raises:
-            SourceFetchError: If fetch fails.
+            ProviderFetchError: If fetch fails.
 
         """
         logger.info(
@@ -207,8 +207,8 @@ class TushareSource(DataSource):
             - pct_change: Float64
 
         Raises:
-            SourceFetchError: If fetch fails.
-            SourceTransformationError: If data transformation fails.
+            ProviderFetchError: If fetch fails.
+            ProviderTransformationError: If data transformation fails.
 
         """
         logger.info(
@@ -245,7 +245,7 @@ class TushareSource(DataSource):
             - list_date: Listing date
 
         Raises:
-            SourceFetchError: If fetch fails.
+            ProviderFetchError: If fetch fails.
 
         """
         logger.info(
@@ -281,8 +281,8 @@ class TushareSource(DataSource):
             - pct_change: Float64
 
         Raises:
-            SourceFetchError: If fetch fails.
-            SourceTransformationError: If data transformation fails.
+            ProviderFetchError: If fetch fails.
+            ProviderTransformationError: If data transformation fails.
 
         """
         logger.info(
@@ -320,7 +320,7 @@ class TushareSource(DataSource):
             - adj_factor: Float64
 
         Raises:
-            SourceFetchError: If fetch fails.
+            ProviderFetchError: If fetch fails.
 
         """
         logger.info(
@@ -357,7 +357,7 @@ class TushareSource(DataSource):
             - adj_factor: Float64
 
         Raises:
-            SourceFetchError: If fetch fails.
+            ProviderFetchError: If fetch fails.
 
         """
         logger.info(
@@ -566,7 +566,7 @@ class TushareSource(DataSource):
             - down_limit: Float64 (跌停价)
 
         Raises:
-            SourceFetchError: If fetch fails.
+            ProviderFetchError: If fetch fails.
 
         """
         logger.info(
@@ -611,7 +611,7 @@ class TushareSource(DataSource):
             - list_status: Utf8 (L=正常, D=退市, P=暂停)
 
         Raises:
-            SourceFetchError: If fetch fails.
+            ProviderFetchError: If fetch fails.
 
         """
         logger.info(

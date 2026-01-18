@@ -7,8 +7,8 @@ import pytest
 from ditto_datahub.accessors.bars import WriteResult
 from ditto_datahub.dq.engine import DQResult
 from ditto_datahub.models import OnDuplicate
-from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
+from ditto_datahub.sources.provider import DataProvider, ProviderFetchError
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_foundation.observability import Mode, init, reset_for_testing
 from ditto_port.services.ingestion.coordinator import (
@@ -119,8 +119,8 @@ def mock_hub(mocker):
 
 @pytest.fixture
 def mock_source(mocker):
-    """创建 Mock DataSource。"""
-    source = mocker.Mock(spec=DataSource)
+    """创建 Mock DataProvider。"""
+    source = mocker.Mock(spec=DataProvider)
     return source
 
 
@@ -374,8 +374,8 @@ class TestIngestDate:
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None
 
-        mock_source.fetch_stock_daily.side_effect = SourceFetchError(
-            "Network error", source="tushare", dataset="stock_daily"
+        mock_source.fetch_stock_daily.side_effect = ProviderFetchError(
+            "Network error", provider="tushare", dataset="stock_daily"
         )
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="stock_daily",
@@ -473,7 +473,7 @@ class TestIngestDate:
     def test_ingest_date_unknown_error(
         self, coordinator, mock_hub, mock_source
     ) -> None:
-        """测试非 SourceFetchError 异常的处理。"""
+        """测试非 ProviderFetchError 异常的处理。"""
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None
         mock_source.fetch_stock_daily.side_effect = RuntimeError("Unexpected error")

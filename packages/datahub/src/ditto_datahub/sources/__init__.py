@@ -1,25 +1,25 @@
-"""Data sources for external data ingestion."""
+"""Data providers for external data ingestion."""
 
-from ditto_datahub.sources.base import (
-    DataSource,
-    DataSourceError,
-    SourceAuthenticationError,
-    SourceConfigurationError,
-    SourceFetchError,
-    SourceRateLimitError,
-    SourceTransformationError,
+from ditto_datahub.sources.provider import (
+    DataProvider,
+    DataProviderError,
+    ProviderAuthenticationError,
+    ProviderConfigurationError,
+    ProviderFetchError,
+    ProviderRateLimitError,
+    ProviderTransformationError,
+    SourcesProvider,
 )
-from ditto_datahub.sources.provider import SourcesProvider
-from ditto_datahub.sources.tushare.source import TushareSource
+from ditto_datahub.sources.tushare.tushare_provider import TushareProvider
 
 __all__ = [
-    "DataSource",
-    "DataSourceError",
-    "SourceAuthenticationError",
-    "SourceConfigurationError",
-    "SourceFetchError",
-    "SourceRateLimitError",
-    "SourceTransformationError",
+    "DataProvider",
+    "DataProviderError",
+    "ProviderAuthenticationError",
+    "ProviderConfigurationError",
+    "ProviderFetchError",
+    "ProviderRateLimitError",
+    "ProviderTransformationError",
     "SourcesProvider",
-    "TushareSource",
+    "TushareProvider",
 ]
