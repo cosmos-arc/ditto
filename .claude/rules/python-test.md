@@ -32,7 +32,7 @@ tests/
 ```
 
 **数据层测试归入 unit/**：
-- 内存DB（DuckDB/SQLite `:memory:`）→ 测 Repository 逻辑
+- 内存DB（DuckDB/SQLite `:memory:`）→ 测 Accessor 逻辑
 - Parquet Store（`tmp_path`）→ 测 Store 读写逻辑
 
 ### 文件命名规范（防止import冲突）

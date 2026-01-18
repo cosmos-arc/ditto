@@ -126,24 +126,24 @@
 ### 5.1 模块文档字符串（12处）
 
 **universe.py**
-- [ ] 第 2 行：`Universe Repository for...` → `Universe Accessor for...`
-- [ ] 第 20 行：`Security universe repository.` → `Security universe accessor.`
+- [x] 第 2 行：`Universe Repository for...` → `Universe Accessor for...`
+- [x] 第 20 行：`Security universe repository.` → `Security universe accessor.`
 
 **calendar.py**
-- [ ] 第 1 行：`Calendar Repository for...` → `Calendar Accessor for...`
-- [ ] 第 15 行：`Trading calendar repository.` → `Trading calendar accessor.`
+- [x] 第 1 行：`Calendar Repository for...` → `Calendar Accessor for...`
+- [x] 第 15 行：`Trading calendar repository.` → `Trading calendar accessor.`
 
 **security.py**
-- [ ] 第 1 行：`Security Repository for...` → `Securities Accessor for...`
-- [ ] 第 17 行：`Securities master data repository.` → `Securities master data accessor.`
+- [x] 第 1 行：`Security Repository for...` → `Securities Accessor for...`
+- [x] 第 17 行：`Securities master data repository.` → `Securities master data accessor.`
 
 **index.py**
-- [ ] 第 1 行：`Index Repository for...` → `Index Accessor for...`
-- [ ] 第 15 行：`Index data repository.` → `Index data accessor.`
+- [x] 第 1 行：`Index Repository for...` → `Index Accessor for...`
+- [x] 第 15 行：`Index data repository.` → `Index data accessor.`
 
 **adj_factor.py**
-- [ ] 第 1 行：`AdjFactor Repository for...` → `AdjFactor Accessor for...`
-- [ ] 第 15 行：`Adjustment factor repository for...` → `Adjustment factor accessor for...`
+- [x] 第 1 行：`AdjFactor Repository for...` → `AdjFactor Accessor for...`
+- [x] 第 15 行：`Adjustment factor repository for...` → `Adjustment factor accessor for...`
 
 **bars/repository.py** → **bars/accessor.py**
 - [x] 第 1 行：`Bars Repository for...` → `Bars Accessor for...`
@@ -152,27 +152,27 @@
 ### 5.2 DataHub 类文档字符串（7处）
 
 **文件**: `hub.py`
-- [ ] 第 52 行：`- Repository Layer:` → `- Accessor Layer:`
-- [ ] 第 170 行：`Securities master data repository.` → `Securities master data accessor.`
-- [ ] 第 178 行：`OHLCV bars repository.` → `OHLCV bars accessor.`
-- [ ] 第 191 行：`Adjustment factor repository.` → `Adjustment factor accessor.`
-- [ ] 第 199 行：`Trading calendar repository.` → `Trading calendar accessor.`
-- [ ] 第 206 行：`Security universe repository.` → `Security universe accessor.`
-- [ ] 第 215 行：`Index data repository.` → `Index data accessor.`
+- [x] 第 52 行：`- Repository Layer:` → `- Accessor Layer:`
+- [x] 第 170 行：`Securities master data repository.` → `Securities master data accessor.`
+- [x] 第 178 行：`OHLCV bars repository.` → `OHLCV bars accessor.`
+- [x] 第 191 行：`Adjustment factor repository.` → `Adjustment factor accessor.`
+- [x] 第 199 行：`Trading calendar repository.` → `Trading calendar accessor.`
+- [x] 第 206 行：`Security universe repository.` → `Security universe accessor.`
+- [x] 第 215 行：`Index data repository.` → `Index data accessor.`
 
 ---
 
 ## Phase 6: 代码注释更新（4处）
 
 **hub.py**
-- [ ] 第 165 行：`# Repository Layer` → `# Accessor Layer`
+- [x] 第 165 行：`# Repository Layer` → `# Accessor Layer`
 
 **test_hub_unit.py**
-- [ ] 第 197 行：`# Universe Store and Repository Tests` → `# Universe Store and Accessor Tests`
-- [ ] 第 220 行：`# Index Store and Repository Tests` → `# Index Store and Accessor Tests`
+- [x] 第 197 行：`# Universe Store and Repository Tests` → `# Universe Store and Accessor Tests`
+- [x] 第 220 行：`# Index Store and Repository Tests` → `# Index Store and Accessor Tests`
 
 **coordinator.py** (apps/port)
-- [ ] 第 386 行：`# 使用 Repository 层以获得...` → `# 使用 Accessor 层以获得...`
+- [x] 第 386 行：`# 使用 Repository 层以获得...` → `# 使用 Accessor 层以获得...`
 
 ---
 
@@ -181,18 +181,18 @@
 ### 7.1 规范文档（P0 - 立即修改）
 
 **README.md**
-- [ ] 第 38 行：架构图中的 `Repository` → `Accessor`
-- [ ] 第 140 行：目录结构中的 `repositories/` → `accessors/`
+- [x] 第 38 行：架构图中的 `Repository` → `Accessor`
+- [x] 第 140 行：目录结构中的 `repositories/` → `accessors/`
 
 **.claude/rules/datahub.md**
-- [ ] 第 12 行：`Repository | 业务封装` → `Accessor | 业务封装`
-- [ ] 第 48 行：`Repository 直接写 Parquet` → `Accessor 直接写 Parquet`
+- [x] 第 12 行：`Repository | 业务封装` → `Accessor | 业务封装`
+- [x] 第 48 行：`Repository 直接写 Parquet` → `Accessor 直接写 Parquet`
 
 **.claude/rules/python-test.md**
-- [ ] 第 35 行：`测 Repository 逻辑` → `测 Accessor 逻辑`
+- [x] 第 35 行：`测 Repository 逻辑` → `测 Accessor 逻辑`
 
 **.claude/rules/core.md**
-- [ ] 确保使用 `Accessor` 术语
+- [x] 确保使用 `Accessor` 术语
 
 ### 7.2 设计文档（P1）
 
@@ -212,7 +212,7 @@
 ### 7.4 测试文档
 
 **packages/datahub/tests/README.md**
-- [ ] `repositories/` → `accessors/`
+- [x] `repositories/` → `accessors/`
 
 ---
 
@@ -308,3 +308,61 @@ pixi run -e dev ci
 
 - 原计划：`docs/plans/archive/2026-01-18-repository-accessor-refactor.md`
 - 此计划补充完成原计划的遗漏项
+
+---
+
+## 后续任务
+
+### Sources 目录命名统一（Phase 9: 待执行）
+
+**方案确认**: 按照项目规范统一使用 **Provider 命名**
+
+#### 命名规则
+
+- `DataSource` → `DataProvider`（基类）
+- `TushareSource` → `TushareProvider`（具体实现）
+- `SourcesProvider` 保持不变（已经是 Provider）
+- 所有异常类：`*SourceError` → `*ProviderError`
+
+#### Phase 9.1 文件重命名
+
+- [ ] `packages/datahub/src/ditto_datahub/sources/base.py` → `provider.py`
+- [ ] `packages/datahub/src/ditto_datahub/sources/tushare/source.py` → `tushare_provider.py`
+
+#### Phase 9.2 类名重命名
+
+- [ ] `DataSource` → `DataProvider`（基类）
+- [ ] `TushareSource` → `TushareProvider`（具体实现）
+- [ ] `DataSourceError` → `DataProviderError`
+- [ ] `SourceConfigurationError` → `ProviderConfigurationError`
+- [ ] `SourceAuthenticationError` → `ProviderAuthenticationError`
+- [ ] `SourceRateLimitError` → `ProviderRateLimitError`
+- [ ] `SourceFetchError` → `ProviderFetchError`
+- [ ] `SourceTransformationError` → `ProviderTransformationError`
+
+#### Phase 9.3 导入语句更新（需要更新的文件）
+
+**源代码文件**:
+- [ ] `packages/datahub/src/ditto_datahub/sources/__init__.py`
+- [ ] `packages/datahub/src/ditto_datahub/sources/provider.py` (SourcesProvider)
+- [ ] `packages/datahub/src/ditto_datahub/sources/tushare/__init__.py`
+- [ ] `packages/datahub/src/ditto_datahub/hub.py`
+
+**测试文件**:
+- [ ] `packages/datahub/tests/unit/sources/test_*.py`（所有测试文件）
+- [ ] `packages/datahub/tests/integration/sources/`（如有）
+
+#### Phase 9.4 文档和注释更新
+
+- [ ] `packages/datahub/src/ditto_datahub/sources/README.md`
+- [ ] 所有文档字符串中的 `Source` → `Provider`（语义保持一致）
+- [ ] 所有注释中的 `Source` → `Provider`
+
+#### Phase 9.5 验证
+
+- [ ] 类型检查: `pixi run -e dev type --all`
+- [ ] 代码检查: `pixi run -e dev lint`
+- [ ] 单元测试: `pixi run -e dev test --unit`
+- [ ] 集成测试: `pixi run -e dev test --integration`
+
+**注意**: 此任务需要在新的计划文档中详细规划并执行。

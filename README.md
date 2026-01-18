@@ -35,7 +35,7 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
                        ┌─────────────────┐    ┌─────────────────┐
                        │   External      │    │   Data Layer    │
                        │   APIs          │◄──►│   - DataHub      │
-                       │                 │    │   - Repository  │
+                       │                 │    │   - Accessor     │
                        │ - Tushare       │    │   - Store       │
                        │ - MINIQMT       │    │   - Runtime      │
                        │                 │    │   - PIT Safe     │
@@ -137,7 +137,7 @@ ditto/
 │   ├── datahub/               # 数据访问层
 │   │   ├── src/
 │   │   │   ├── hub.py         # DataHub 统一入口
-│   │   │   ├── repositories/  # 业务聚合
+│   │   │   ├── accessors/     # 业务聚合
 │   │   │   ├── stores/        # 数据存储
 │   │   │   └── runtime/       # 运行时支持
 │   │   └── tests/             # 数据层测试

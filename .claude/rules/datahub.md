@@ -9,7 +9,7 @@ paths: packages/datahub/**/*.py
 | 层级 | 职责 | 禁止 | 必须 |
 |------|------|------|------|
 | Store | 数据持久化 | 包含业务逻辑 | @traced 装饰器 |
-| Repository | 业务封装 | 直接访问文件系统 | 通过 Store 访问 |
+| Accessor | 业务封装 | 直接访问文件系统 | 通过 Store 访问 |
 | Runtime | 基础设施 | 包含业务逻辑 | - |
 | Source | 外部数据源 | 包含业务逻辑 | 重试、限流、监控埋点 |
 
@@ -45,7 +45,7 @@ paths: packages/datahub/**/*.py
 
 | 禁止 | 替代 |
 |------|------|
-| Repository 直接写 Parquet | 通过对应的 Store |
+| Accessor 直接写 Parquet | 通过对应的 Store |
 | 绕过 DQ 检查写入 | hub.xxx.write() 自动触发 |
 | 硬编码数据路径 | 使用 get_paths() |
 | Parquet 写入不加锁 | FileLock (超时 30s) |
