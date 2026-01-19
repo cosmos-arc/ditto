@@ -17,6 +17,7 @@ from ditto_datahub.accessors.adj_factor import AdjFactorAccessor
 from ditto_datahub.accessors.bars import BarsAccessor
 from ditto_datahub.accessors.calendar import CalendarAccessor
 from ditto_datahub.accessors.index import IndexAccessor
+from ditto_datahub.accessors.ingestion_log import IngestionLogAccessor
 from ditto_datahub.accessors.security import SecuritiesAccessor
 from ditto_datahub.accessors.universe import UniverseAccessor
 from ditto_datahub.dq.engine import DQEngine
@@ -48,8 +49,8 @@ class DataHub:
     Attribute layers:
     - Runtime Layer: sqlite_pool, file_lock, sid_allocator, dq_engine, freeze
     - Store Layer: security_store, calendar_store, bars_store, adj_factor_store,
-      universe_store, index_weight_store, ingestion_log
-    - Accessor Layer: securities, bars, calendar, universe, index
+      universe_store, index_weight_store, ingestion_log_store
+    - Accessor Layer: securities, bars, calendar, universe, index, ingestion_log
     - Sources Layer: sources (external data sources: Tushare, Akshare)
     - SQL Engine: sql_engine
     """
@@ -151,8 +152,8 @@ class DataHub:
         return IndexWeightStore(SQLiteClient(self.sqlite_pool))
 
     @cached_property
-    def ingestion_log(self) -> IngestionLogStore:
-        """Ingestion event log store (new system)."""
+    def ingestion_log_store(self) -> IngestionLogStore:
+        """摄取日志存储."""
         return IngestionLogStore(SQLiteClient(self.sqlite_pool))
 
     @cached_property
@@ -217,6 +218,13 @@ class DataHub:
             bars_store=self.bars_store,
             index_weight_store=self.index_weight_store,
             security_store=self.security_store,
+        )
+
+    @cached_property
+    def ingestion_log(self) -> IngestionLogAccessor:
+        """摄取日志访问器."""
+        return IngestionLogAccessor(
+            ingestion_log_store=self.ingestion_log_store,
         )
 
     # ========================================================================
@@ -371,7 +379,7 @@ class DataHub:
 
         Closes in reverse order of initialization to avoid dependency issues:
         1. Stores with SQLite clients (calendar_store, security_store,
-           universe_store, index_weight_store, ingestion_log)
+           universe_store, index_weight_store, ingestion_log_store)
         2. SQL engine (DuckDB)
         3. SQLite pool (connection manager)
         """
@@ -384,7 +392,7 @@ class DataHub:
             "security_store",
             "universe_store",
             "index_weight_store",
-            "ingestion_log",
+            "ingestion_log_store",
             "quarantine_store",
         ):
             if store_name in self.__dict__:
