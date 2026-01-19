@@ -333,8 +333,8 @@ def get_source(name: str) -> DataSource:
 **分析**：
 - 全局搜索生产代码：**0 处使用**
 - 测试代码：仅 `test_base_unit.py` 中测试此函数
-- 功能与 `SourcesProvider` 重复
-- `DataHub` 使用 `SourcesProvider`，不是 `get_source()`
+- 功能与 `DataSources` 重复
+- `DataHub` 使用 `DataSources`，不是 `get_source()`
 
 **修改**：
 1. 删除 `factory.py` 整个文件

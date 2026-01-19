@@ -1,4 +1,4 @@
-"""Tests for TushareProvider."""
+"""Tests for TushareSource."""
 
 import json
 from datetime import date
@@ -6,16 +6,16 @@ from datetime import date
 import httpx
 import polars as pl
 import pytest
-from ditto_datahub.providers.provider import (
-    ProviderAuthenticationError,
-    ProviderFetchError,
-    ProviderRateLimitError,
+from ditto_datahub.sources.source import (
+    SourceAuthenticationError,
+    SourceFetchError,
+    SourceRateLimitError,
 )
-from ditto_datahub.providers.tushare.tushare_provider import TushareProvider
+from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
 
-class TestTushareProviderCalendar:
-    """Tests for TushareProvider.fetch_calendar."""
+class TestTushareSourceCalendar:
+    """Tests for TushareSource.fetch_calendar."""
 
     def test_fetch_calendar_returns_dataframe(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
@@ -38,7 +38,7 @@ class TestTushareProviderCalendar:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_calendar("2024-01-01", "2024-01-03")
 
         # Verify schema
@@ -72,7 +72,7 @@ class TestTushareProviderCalendar:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_calendar("2024-01-01", "2024-01-03")
 
         assert result.is_empty()
@@ -80,7 +80,7 @@ class TestTushareProviderCalendar:
     def test_fetch_calendar_api_error_raises(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test fetch_calendar raises ProviderFetchError on API error."""
+        """Test fetch_calendar raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - API 错误
@@ -88,14 +88,14 @@ class TestTushareProviderCalendar:
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareProvider()
+        source = TushareSource()
 
-        with pytest.raises(ProviderFetchError):
+        with pytest.raises(SourceFetchError):
             source.fetch_calendar("2024-01-01", "2024-01-03")
 
 
-class TestTushareProviderEtfBasic:
-    """Tests for TushareProvider.fetch_etf_basic."""
+class TestTushareSourceEtfBasic:
+    """Tests for TushareSource.fetch_etf_basic."""
 
     def test_fetch_etf_basic_returns_dataframe(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
@@ -122,7 +122,7 @@ class TestTushareProviderEtfBasic:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_etf_basic()
 
         # Verify schema
@@ -173,14 +173,14 @@ class TestTushareProviderEtfBasic:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_etf_basic()
 
         assert result.is_empty()
 
 
-class TestTushareProviderEtfDaily:
-    """Tests for TushareProvider.fetch_etf_daily."""
+class TestTushareSourceEtfDaily:
+    """Tests for TushareSource.fetch_etf_daily."""
 
     def test_fetch_etf_daily_returns_dataframe(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
@@ -230,7 +230,7 @@ class TestTushareProviderEtfDaily:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_etf_daily("2024-01-02")
 
         # Verify schema matches ETF_DAILY_SCHEMA
@@ -297,14 +297,14 @@ class TestTushareProviderEtfDaily:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_etf_daily("2024-01-02")
 
         assert result.is_empty()
 
 
-class TestTushareProviderStockBasic:
-    """Tests for TushareProvider.fetch_stock_basic."""
+class TestTushareSourceStockBasic:
+    """Tests for TushareSource.fetch_stock_basic."""
 
     def test_fetch_stock_basic_returns_dataframe(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
@@ -337,7 +337,7 @@ class TestTushareProviderStockBasic:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_stock_basic()
 
         # Verify schema
@@ -394,7 +394,7 @@ class TestTushareProviderStockBasic:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_stock_basic()
 
         assert result.is_empty()
@@ -402,7 +402,7 @@ class TestTushareProviderStockBasic:
     def test_fetch_stock_basic_api_error_raises(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test fetch_stock_basic raises ProviderFetchError on API error."""
+        """Test fetch_stock_basic raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - API 错误
@@ -410,14 +410,14 @@ class TestTushareProviderStockBasic:
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareProvider()
+        source = TushareSource()
 
-        with pytest.raises(ProviderFetchError):
+        with pytest.raises(SourceFetchError):
             source.fetch_stock_basic()
 
 
-class TestTushareProviderStockDaily:
-    """Tests for TushareProvider.fetch_stock_daily."""
+class TestTushareSourceStockDaily:
+    """Tests for TushareSource.fetch_stock_daily."""
 
     def test_fetch_stock_daily_returns_dataframe(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
@@ -467,7 +467,7 @@ class TestTushareProviderStockDaily:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_stock_daily("2024-01-02")
 
         # Verify schema matches STOCK_DAILY_SCHEMA
@@ -534,7 +534,7 @@ class TestTushareProviderStockDaily:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_stock_daily("2024-01-02")
 
         assert result.is_empty()
@@ -542,7 +542,7 @@ class TestTushareProviderStockDaily:
     def test_fetch_stock_daily_api_error_raises(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test fetch_stock_daily raises ProviderFetchError on API error."""
+        """Test fetch_stock_daily raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - API 错误
@@ -550,14 +550,14 @@ class TestTushareProviderStockDaily:
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareProvider()
+        source = TushareSource()
 
-        with pytest.raises(ProviderFetchError):
+        with pytest.raises(SourceFetchError):
             source.fetch_stock_daily("2024-01-02")
 
 
-class TestTushareProviderAdjFactor:
-    """Tests for TushareProvider.fetch_adj_factor."""
+class TestTushareSourceAdjFactor:
+    """Tests for TushareSource.fetch_adj_factor."""
 
     def test_fetch_adj_factor_returns_dataframe(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
@@ -583,7 +583,7 @@ class TestTushareProviderAdjFactor:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_adj_factor("2024-01-02")
 
         # Verify schema
@@ -632,7 +632,7 @@ class TestTushareProviderAdjFactor:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_adj_factor("2024-01-02")
 
         assert result.is_empty()
@@ -640,7 +640,7 @@ class TestTushareProviderAdjFactor:
     def test_fetch_adj_factor_api_error_raises(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test fetch_adj_factor raises ProviderFetchError on API error."""
+        """Test fetch_adj_factor raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - API 错误
@@ -648,14 +648,14 @@ class TestTushareProviderAdjFactor:
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareProvider()
+        source = TushareSource()
 
-        with pytest.raises(ProviderFetchError):
+        with pytest.raises(SourceFetchError):
             source.fetch_adj_factor("2024-01-02")
 
 
-class TestTushareProviderFundAdj:
-    """Tests for TushareProvider.fetch_fund_adj."""
+class TestTushareSourceFundAdj:
+    """Tests for TushareSource.fetch_fund_adj."""
 
     def test_fetch_fund_adj_returns_dataframe(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
@@ -681,7 +681,7 @@ class TestTushareProviderFundAdj:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_fund_adj("2024-01-02")
 
         # Verify schema
@@ -730,7 +730,7 @@ class TestTushareProviderFundAdj:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source.fetch_fund_adj("2024-01-02")
 
         assert result.is_empty()
@@ -738,7 +738,7 @@ class TestTushareProviderFundAdj:
     def test_fetch_fund_adj_api_error_raises(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test fetch_fund_adj raises ProviderFetchError on API error."""
+        """Test fetch_fund_adj raises SourceFetchError on API error."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - API 错误
@@ -746,51 +746,51 @@ class TestTushareProviderFundAdj:
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareProvider()
+        source = TushareSource()
 
-        with pytest.raises(ProviderFetchError):
+        with pytest.raises(SourceFetchError):
             source.fetch_fund_adj("2024-01-02")
 
 
-class TestTushareProviderErrorHandler:
-    """Tests for TushareProvider._tushare_fetch_error_handler context manager."""
+class TestTushareSourceErrorHandler:
+    """Tests for TushareSource._tushare_fetch_error_handler context manager."""
 
     def test_error_handler_re_raises_authentication_error(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test context manager re-raises ProviderAuthenticationError."""
+        """Test context manager re-raises SourceAuthenticationError."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-        source = TushareProvider()
+        source = TushareSource()
 
         # 验证方法存在（会失败因为还未实现）
         assert hasattr(source, "_tushare_fetch_error_handler")
 
         # 测试认证错误直接抛出
-        with pytest.raises(ProviderAuthenticationError):
+        with pytest.raises(SourceAuthenticationError):
             with source._tushare_fetch_error_handler("test_dataset", "test_api"):
-                raise ProviderAuthenticationError("Auth failed")
+                raise SourceAuthenticationError("Auth failed")
 
     def test_error_handler_re_raises_rate_limit_error(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test context manager re-raises ProviderRateLimitError."""
+        """Test context manager re-raises SourceRateLimitError."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-        source = TushareProvider()
+        source = TushareSource()
 
         # 测试限流错误直接抛出
-        with pytest.raises(ProviderRateLimitError):
+        with pytest.raises(SourceRateLimitError):
             with source._tushare_fetch_error_handler("test_dataset", "test_api"):
-                raise ProviderRateLimitError("Rate limit exceeded")
+                raise SourceRateLimitError("Rate limit exceeded")
 
     def test_error_handler_wraps_generic_exception(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test context manager wraps generic exceptions as ProviderFetchError."""
+        """Test context manager wraps generic exceptions as SourceFetchError."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-        source = TushareProvider()
+        source = TushareSource()
 
-        # 测试普通异常被包装为 ProviderFetchError
-        with pytest.raises(ProviderFetchError) as exc_info:
+        # 测试普通异常被包装为 SourceFetchError
+        with pytest.raises(SourceFetchError) as exc_info:
             with source._tushare_fetch_error_handler("test_dataset", "test_api"):
                 raise ValueError("Generic error")
 
@@ -799,8 +799,8 @@ class TestTushareProviderErrorHandler:
         assert "Generic error" in exc_info.value.details.get("original_error", "")
 
 
-class TestTushareProviderFetchSuspendData:
-    """Tests for TushareProvider._fetch_suspend_data private method."""
+class TestTushareSourceFetchSuspendData:
+    """Tests for TushareSource._fetch_suspend_data private method."""
 
     def test_fetch_suspend_data_returns_dataframe_with_data(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
@@ -828,7 +828,7 @@ class TestTushareProviderFetchSuspendData:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._fetch_suspend_data("20240102")
 
         # Verify schema
@@ -864,7 +864,7 @@ class TestTushareProviderFetchSuspendData:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._fetch_suspend_data("20240102")
 
         # Should return empty DataFrame with correct schema
@@ -885,7 +885,7 @@ class TestTushareProviderFetchSuspendData:
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._fetch_suspend_data("20240102")
 
         # Should return empty DataFrame with correct schema
@@ -922,7 +922,7 @@ class TestTushareProviderFetchSuspendData:
 
         respx_mock.post("http://api.tushare.pro").mock(side_effect=capture_request)
 
-        source = TushareProvider()
+        source = TushareSource()
         # _fetch_suspend_data expects ts_date in YYYYMMDD format
         source._fetch_suspend_data("20240102")
 
@@ -931,8 +931,8 @@ class TestTushareProviderFetchSuspendData:
         assert request_captured[0]["params"]["suspend_date"] == "20240102"
 
 
-class TestTushareProviderFetchStData:
-    """Tests for TushareProvider._fetch_st_data private method."""
+class TestTushareSourceFetchStData:
+    """Tests for TushareSource._fetch_st_data private method."""
 
     def test_fetch_st_data_returns_dataframe_with_data(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
@@ -960,7 +960,7 @@ class TestTushareProviderFetchStData:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._fetch_st_data()
 
         # Verify schema
@@ -996,7 +996,7 @@ class TestTushareProviderFetchStData:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._fetch_st_data()
 
         # Should return empty DataFrame with correct schema
@@ -1017,7 +1017,7 @@ class TestTushareProviderFetchStData:
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._fetch_st_data()
 
         # Should return empty DataFrame with correct schema
@@ -1054,7 +1054,7 @@ class TestTushareProviderFetchStData:
 
         respx_mock.post("http://api.tushare.pro").mock(side_effect=capture_request)
 
-        source = TushareProvider()
+        source = TushareSource()
         source._fetch_st_data()
 
         # Verify the API was called without date parameter
@@ -1067,8 +1067,8 @@ class TestTushareProviderFetchStData:
         assert "trade_date" not in request_body["params"]
 
 
-class TestTushareProviderFetchListStatusData:
-    """Tests for TushareProvider._fetch_list_status_data private method."""
+class TestTushareSourceFetchListStatusData:
+    """Tests for TushareSource._fetch_list_status_data private method."""
 
     def test_fetch_list_status_data_returns_dataframe_with_data(
         self, respx_mock, monkeypatch: pytest.MonkeyPatch
@@ -1097,7 +1097,7 @@ class TestTushareProviderFetchListStatusData:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._fetch_list_status_data()
 
         # Verify schema
@@ -1134,7 +1134,7 @@ class TestTushareProviderFetchListStatusData:
             )
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._fetch_list_status_data()
 
         # Should return empty DataFrame with correct schema
@@ -1155,7 +1155,7 @@ class TestTushareProviderFetchListStatusData:
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._fetch_list_status_data()
 
         # Should return empty DataFrame with correct schema
@@ -1192,7 +1192,7 @@ class TestTushareProviderFetchListStatusData:
 
         respx_mock.post("http://api.tushare.pro").mock(side_effect=capture_request)
 
-        source = TushareProvider()
+        source = TushareSource()
         source._fetch_list_status_data()
 
         # Verify the API was called correctly
@@ -1205,8 +1205,8 @@ class TestTushareProviderFetchListStatusData:
         assert "trade_date" not in request_body["params"]
 
 
-class TestTushareProviderMergeStatusData:
-    """Tests for TushareProvider._merge_status_data private method."""
+class TestTushareSourceMergeStatusData:
+    """Tests for TushareSource._merge_status_data private method."""
 
     def test_merge_status_data_with_all_sources(
         self, monkeypatch: pytest.MonkeyPatch
@@ -1236,7 +1236,7 @@ class TestTushareProviderMergeStatusData:
             }
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._merge_status_data(
             list_status_df, suspend_df, st_df, "2024-01-02"
         )
@@ -1309,7 +1309,7 @@ class TestTushareProviderMergeStatusData:
             }
         )
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._merge_status_data(
             list_status_df, suspend_df, st_df, "2024-01-02"
         )
@@ -1359,7 +1359,7 @@ class TestTushareProviderMergeStatusData:
 
         st_df = pl.DataFrame(schema={"ts_code": pl.String, "name": pl.String})
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._merge_status_data(
             list_status_df, suspend_df, st_df, "2024-01-02"
         )
@@ -1406,7 +1406,7 @@ class TestTushareProviderMergeStatusData:
 
         st_df = pl.DataFrame(schema={"ts_code": pl.String, "name": pl.String})
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._merge_status_data(
             list_status_df, suspend_df, st_df, "2024-01-02"
         )
@@ -1444,7 +1444,7 @@ class TestTushareProviderMergeStatusData:
 
         st_df = pl.DataFrame(schema={"ts_code": pl.String, "name": pl.String})
 
-        source = TushareProvider()
+        source = TushareSource()
         result = source._merge_status_data(
             list_status_df, suspend_df, st_df, "2024-01-02"
         )

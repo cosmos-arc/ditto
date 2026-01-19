@@ -99,7 +99,7 @@
 | **Infrastructure Layer** | 数据访问、存储、持久化 | `packages/datahub/` |
 | ├── stores | 数据存储（parquet、sqlite） | `datahub/stores/` |
 | ├── accessors | 业务聚合层 | `datahub/accessors/` |
-| └── sources | 外部数据源适配 | `datahub/sources/` |
+| └── providers | 外部数据源适配 | `datahub/providers/` |
 | **Application Services** | 用例编排、事务边界 | `apps/port/services/` |
 | ├── ingestion | 数据摄入编排（dq 检查、存储） | `services/ingestion/` |
 | ├── factor | 因子计算编排（获取、计算、保存） | `services/factor/` |
@@ -212,7 +212,7 @@ packages/
     src/
       ditto_datahub/
         hub.py             # DataHub Facade
-        sources/           # 外部数据源适配
+        providers/          # 外部数据提供者
           tushare/         # Tushare 实现
           akshare/         # AkShare 实现
         accessors/      # 业务聚合层
@@ -279,7 +279,7 @@ packages/
 ┌─────────────────────────────────────────────────┐
 │ Infrastructure Layer (packages/datahub/)        │
 │                                                  │
-│  stores/  accessors/  sources/               │
+│  stores/  accessors/  providers/             │
 │  （数据访问、存储、持久化）                       │
 └─────────────────────────────────────────────────┘
          │

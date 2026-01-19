@@ -18,8 +18,8 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.providers.provider import ProviderAuthenticationError
-from ditto_datahub.providers.tushare.tushare_provider import TushareProvider
+from ditto_datahub.sources.source import SourceAuthenticationError
+from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
 
 @pytest.mark.integration
@@ -42,7 +42,7 @@ class TestTushareEndToEnd:
         - 网络连接正常
         """
         # 1. 初始化 Source（从环境变量读取 token）
-        source = TushareProvider()
+        source = TushareSource()
 
         # 2. 测试 calendar 获取
         calendar = source.fetch_calendar("2024-01-01", "2024-01-05")
@@ -119,7 +119,7 @@ class TestTushareEndToEnd:
         - TUSHARE_TOKEN 环境变量已设置
         - 网络连接正常
         """
-        source = TushareProvider()
+        source = TushareSource()
 
         # 1. 测试 etf_basic 获取
         etf_basic = source.fetch_etf_basic()
@@ -170,7 +170,7 @@ class TestTushareEndToEnd:
         - TUSHARE_TOKEN 环境变量已设置
         - 网络连接正常
         """
-        source = TushareProvider()
+        source = TushareSource()
 
         # 1. 测试 stock adj_factor 获取
         adj_factor = source.fetch_adj_factor("2024-01-02")
@@ -211,7 +211,7 @@ class TestTushareEndToEnd:
         - TUSHARE_TOKEN 环境变量已设置
         - 网络连接正常
         """
-        source = TushareProvider()
+        source = TushareSource()
 
         # 1. 测试 stock_limit 获取
         stock_limit = source.fetch_stock_limit("2024-01-02")
@@ -262,7 +262,7 @@ class TestTushareEndToEnd:
         - TUSHARE_TOKEN 环境变量已设置
         - 网络连接正常
         """
-        source = TushareProvider()
+        source = TushareSource()
 
         # 连续调用多次 calendar API
         start_time = time.time()
@@ -293,10 +293,10 @@ class TestTushareEndToEnd:
         - 网络连接正常
         """
         # 使用无效 token（直接传递参数，绕过 keyring）
-        source = TushareProvider(token="invalid_token_12345")
+        source = TushareSource(token="invalid_token_12345")
 
         # 应该抛出认证错误
-        with pytest.raises(ProviderAuthenticationError):
+        with pytest.raises(SourceAuthenticationError):
             source.fetch_calendar("2024-01-01", "2024-01-05")
 
     def test_data_consistency_multiple_calls(self) -> None:
@@ -311,7 +311,7 @@ class TestTushareEndToEnd:
         - TUSHARE_TOKEN 环境变量已设置
         - 网络连接正常
         """
-        source = TushareProvider()
+        source = TushareSource()
 
         # 多次调用 stock_basic（静态数据）
         stocks1 = source.fetch_stock_basic()

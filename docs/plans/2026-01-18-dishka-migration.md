@@ -8,7 +8,7 @@
 ## 背景与目标
 
 ### 当前问题
-1. DataHub 和 SourcesProvider 使用 `@cached_property` + 手工 DI，依赖传递冗长
+1. DataHub 和 DataSources 使用 `@cached_property` + 手工 DI，依赖传递冗长
 2. 资源生命周期管理分散（`atexit`、`close()`、`shutdown()`）
 3. 无循环依赖检测
 4. 测试时需要手工 `mocker.patch`，容易遗漏
@@ -163,12 +163,12 @@ def test_security_store(test_container):
 
 ---
 
-### Phase 2: SourcesProvider 迁移（0.5 天）
+### Phase 2: DataSources 迁移（0.5 天）
 
-#### Task 2.1: 创建 SourcesProvider（root 注入）`[M]`
+#### Task 2.1: 创建 DataSources（root 注入）`[M]`
 - **描述**: 在 port 端 Provider 中集中注册外部数据源组件
 - **验收**:
-  - `SourcesProvider` 继承 `Provider`
+  - `DataSources` 继承 `Provider`
   - TushareSource 在 Provider 中注册为 `@provide`
   - 与 DataHub Provider 可组合使用
   - 数据源类保持不变，不添加 `@provide` 装饰器
@@ -303,8 +303,8 @@ Phase 1: 基础设施 (1 天)
   ├─ Task 1.3: SQLitePool
   └─ Task 1.4: DataHub Provider（root 注入）
 
-Phase 2: SourcesProvider (0.5 天)
-  └─ Task 2.1: 创建 SourcesProvider（root 注入）
+Phase 2: DataSources (0.5 天)
+  └─ Task 2.1: 创建 DataSources（root 注入）
 
 Phase 3: FastAPI 集成 (0.5 天)
   ├─ Task 3.1: 更新 lifespan

@@ -11,7 +11,38 @@ paths: packages/datahub/**/*.py
 | Store | 数据持久化 | 包含业务逻辑 | @traced 装饰器 |
 | Accessor | 业务封装 | 直接访问文件系统 | 通过 Store 访问 |
 | Runtime | 基础设施 | 包含业务逻辑 | - |
-| Source | 外部数据源 | 包含业务逻辑 | 重试、限流、监控埋点 |
+| Provider | 外部数据源 | 包含业务逻辑 | 重试、限流、监控埋点 |
+
+## 层级访问规则（2026-01-19 更新）
+
+### Apps 层访问规则
+
+| 访问类型 | ✅ 允许 | ❌ 禁止 | 说明 |
+|---------|--------|--------|------|
+| **通过 DataHub** | `hub.sources` | - | **官方接口**，推荐使用 |
+| **直接导入** | `from ditto_datahub.sources.*` | `from ditto_datahub.stores.*` | Providers 可直接访问，Stores 禁止 |
+| **Accessor** | `hub.bars`, `hub.calendar` 等 | - | **数据查询**的推荐方式 |
+| **Store** | - | `直接实例化 Store 类` | **禁止**直接访问 Store 层 |
+
+### 正确示例
+
+```python
+# ✅ 推荐：通过 DataHub providers 获取数据
+provider = hub.sources.get("tushare")
+df = provider.fetch_stock_daily("2024-01-02")
+
+# ✅ 推荐：通过 Accessor 查询数据
+bars = hub.bars.get(...)
+df = bars.query(...)
+
+# ❌ 禁止：直接访问 Store（即使技术上可行）
+from ditto_datahub.stores.bars_store import BarsStore  # ❌
+store = BarsStore(...)  # ❌
+```
+
+**原则**：
+- Providers 层（数据获取）可由 Apps 层直接访问
+- Stores 层（数据存储）必须通过 Accessor 间接访问
 
 ## 数据质量（DQ）规范
 

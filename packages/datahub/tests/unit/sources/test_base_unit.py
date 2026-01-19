@@ -1,41 +1,41 @@
-"""Tests for DataProvider base classes and exceptions."""
+"""Tests for DataSource base classes and exceptions."""
 
 from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.providers.provider import (
-    DataProvider,
-    DataProviderError,
-    ProviderAuthenticationError,
-    ProviderConfigurationError,
-    ProviderFetchError,
-    ProviderRateLimitError,
-    ProviderTransformationError,
+from ditto_datahub.sources.source import (
+    DataSource,
+    DataSourceError,
+    SourceAuthenticationError,
+    SourceConfigurationError,
+    SourceFetchError,
+    SourceRateLimitError,
+    SourceTransformationError,
 )
 
 
-class TestDataProviderError:
-    """Tests for DataProviderError base class."""
+class TestDataSourceError:
+    """Tests for DataSourceError base class."""
 
     def test_initialization_with_message_only(self) -> None:
         """Test error initialization with message only."""
-        error = DataProviderError("Test error")
+        error = DataSourceError("Test error")
         assert str(error) == "Test error"
         assert error.details == {}
 
     def test_initialization_with_details(self) -> None:
         """Test error initialization with details."""
-        error = DataProviderError("Test error", details={"key": "value"})
+        error = DataSourceError("Test error", details={"key": "value"})
         assert error.details["key"] == "value"
 
 
-class TestProviderConfigurationError:
-    """Tests for ProviderConfigurationError."""
+class TestSourceConfigurationError:
+    """Tests for SourceConfigurationError."""
 
     def test_missing_token(self) -> None:
         """Test error when token is missing."""
-        error = ProviderConfigurationError(
+        error = SourceConfigurationError(
             message="Token not found",
             env_var="TUSHARE_TOKEN",
         )
@@ -43,19 +43,19 @@ class TestProviderConfigurationError:
 
     def test_with_config_key(self) -> None:
         """Test error with config_key parameter."""
-        error = ProviderConfigurationError(
+        error = SourceConfigurationError(
             message="Invalid config",
             config_key="api_timeout",
         )
         assert error.details["config_key"] == "api_timeout"
 
 
-class TestProviderAuthenticationError:
-    """Tests for ProviderAuthenticationError."""
+class TestSourceAuthenticationError:
+    """Tests for SourceAuthenticationError."""
 
     def test_invalid_credentials(self) -> None:
         """Test error for invalid credentials."""
-        error = ProviderAuthenticationError(
+        error = SourceAuthenticationError(
             message="Authentication failed",
             provider="tushare",
         )
@@ -63,16 +63,16 @@ class TestProviderAuthenticationError:
 
     def test_without_provider(self) -> None:
         """Test error without provider parameter."""
-        error = ProviderAuthenticationError(message="Auth failed")
+        error = SourceAuthenticationError(message="Auth failed")
         assert error.details == {}
 
 
-class TestProviderRateLimitError:
-    """Tests for ProviderRateLimitError."""
+class TestSourceRateLimitError:
+    """Tests for SourceRateLimitError."""
 
     def test_rate_limit_details(self) -> None:
         """Test error includes rate limit details."""
-        error = ProviderRateLimitError(
+        error = SourceRateLimitError(
             message="Rate limit exceeded",
             provider="tushare",
             limit=200,
@@ -83,7 +83,7 @@ class TestProviderRateLimitError:
 
     def test_partial_details(self) -> None:
         """Test error with partial details."""
-        error = ProviderRateLimitError(
+        error = SourceRateLimitError(
             message="Too many requests",
             limit=100,
         )
@@ -91,12 +91,12 @@ class TestProviderRateLimitError:
         assert "window" not in error.details
 
 
-class TestProviderFetchError:
-    """Tests for ProviderFetchError."""
+class TestSourceFetchError:
+    """Tests for SourceFetchError."""
 
     def test_fetch_error_with_date(self) -> None:
         """Test error includes fetch context."""
-        error = ProviderFetchError(
+        error = SourceFetchError(
             message="Failed to fetch data",
             provider="tushare",
             dataset="etf_daily",
@@ -107,19 +107,19 @@ class TestProviderFetchError:
 
     def test_fetch_error_with_original_error(self) -> None:
         """Test error includes original error message."""
-        error = ProviderFetchError(
+        error = SourceFetchError(
             message="API error",
             original_error="Connection timeout",
         )
         assert error.details["original_error"] == "Connection timeout"
 
 
-class TestProviderTransformationError:
-    """Tests for ProviderTransformationError."""
+class TestSourceTransformationError:
+    """Tests for SourceTransformationError."""
 
     def test_schema_mismatch(self) -> None:
         """Test error for schema mismatch."""
-        error = ProviderTransformationError(
+        error = SourceTransformationError(
             message="Schema validation failed",
             provider="tushare",
             dataset="etf_daily",
@@ -131,24 +131,24 @@ class TestProviderTransformationError:
 
     def test_transformation_error_minimal(self) -> None:
         """Test error with minimal information."""
-        error = ProviderTransformationError(
+        error = SourceTransformationError(
             message="Transform failed",
         )
         assert error.details == {}
 
 
-class TestDataProviderABC:
-    """Tests for DataProvider abstract base class."""
+class TestDataSourceABC:
+    """Tests for DataSource abstract base class."""
 
     def test_cannot_instantiate_abstract_class(self) -> None:
-        """Test that DataProvider cannot be instantiated directly."""
+        """Test that DataSource cannot be instantiated directly."""
         with pytest.raises(TypeError):
-            DataProvider()  # type: ignore[abstract]
+            DataSource()  # type: ignore[abstract]
 
     def test_subclass_must_implement_all_methods(self) -> None:
         """Test subclass must implement all abstract methods."""
 
-        class IncompleteProvider(DataProvider):
+        class IncompleteProvider(DataSource):
             def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
@@ -163,7 +163,7 @@ class TestDataProviderABC:
     def test_complete_subclass_can_be_instantiated(self) -> None:
         """Test complete subclass can be instantiated."""
 
-        class CompleteProvider(DataProvider):
+        class CompleteProvider(DataSource):
             def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
@@ -187,4 +187,4 @@ class TestDataProviderABC:
 
         # Should not raise
         provider = CompleteProvider()
-        assert isinstance(provider, DataProvider)
+        assert isinstance(provider, DataSource)

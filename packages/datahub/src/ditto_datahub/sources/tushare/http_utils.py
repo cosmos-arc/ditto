@@ -5,10 +5,10 @@ from typing import Any, NoReturn, cast
 import httpx
 import polars as pl
 
-from ditto_datahub.providers.provider import (
-    ProviderAuthenticationError,
-    ProviderFetchError,
-    ProviderRateLimitError,
+from ditto_datahub.sources.source import (
+    SourceAuthenticationError,
+    SourceFetchError,
+    SourceRateLimitError,
 )
 
 
@@ -23,8 +23,8 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
         验证后的 data 字段
 
     Raises:
-        ProviderAuthenticationError: code == 2002
-        ProviderFetchError: code != 0 或缺少 data 字段
+        SourceAuthenticationError: code == 2002
+        SourceFetchError: code != 0 或缺少 data 字段
 
     """
     code = response_json.get("code")
@@ -34,7 +34,7 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
     # 2002: 权限不足/无权限
     # 40101: 用户Token格式错误或无效
     if code in (2002, 40101):
-        raise ProviderAuthenticationError(
+        raise SourceAuthenticationError(
             message=(msg if isinstance(msg, str) else None) or "Tushare 认证失败",
             provider="tushare",
         )
@@ -43,28 +43,28 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
     if code != 0:
         msg_str = msg if isinstance(msg, str) else None
         error_msg = msg_str or f"Tushare API 返回错误码: {code}"
-        raise ProviderFetchError(
+        raise SourceFetchError(
             message=error_msg,
             provider="tushare",
         )
 
     # 检查 data 字段
     if "data" not in response_json:
-        raise ProviderFetchError(
+        raise SourceFetchError(
             message="响应缺少 data 字段",
             provider="tushare",
         )
 
     data_value = response_json.get("data")
     if data_value is None:
-        raise ProviderFetchError(
+        raise SourceFetchError(
             message="响应缺少 data 字段",
             provider="tushare",
         )
 
     # 检查 data 字段类型
     if not isinstance(data_value, dict):
-        raise ProviderFetchError(
+        raise SourceFetchError(
             message="响应 data 字段类型错误",
             provider="tushare",
         )
@@ -82,9 +82,9 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
         api_name: API 名称(用于日志)
 
     Raises:
-        ProviderAuthenticationError: HTTP 401/403
-        ProviderRateLimitError: HTTP 429
-        ProviderFetchError: 其他网络错误
+        SourceAuthenticationError: HTTP 401/403
+        SourceRateLimitError: HTTP 429
+        SourceFetchError: 其他网络错误
 
     """
     # 处理 HTTP 状态码错误
@@ -92,7 +92,7 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
         status_code = error.response.status_code
 
         if status_code in (401, 403):
-            raise ProviderAuthenticationError(
+            raise SourceAuthenticationError(
                 message=f"Tushare API 认证失败 (API: {api_name})",
                 provider="tushare",
             )
@@ -102,21 +102,21 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
         _HTTP_SERVER_ERROR = 500
 
         if status_code == _HTTP_RATE_LIMIT:
-            raise ProviderRateLimitError(
+            raise SourceRateLimitError(
                 message=f"Tushare API 限流 (API: {api_name})",
                 provider="tushare",
             )
 
         # 5xx 服务器错误
         if status_code >= _HTTP_SERVER_ERROR:
-            raise ProviderFetchError(
+            raise SourceFetchError(
                 message=f"Tushare API 服务器错误 (API: {api_name})",
                 provider="tushare",
                 original_error=str(error),
             )
 
         # 其他 4xx 错误
-        raise ProviderFetchError(
+        raise SourceFetchError(
             message=f"Tushare API 请求失败 (API: {api_name})",
             provider="tushare",
             original_error=str(error),
@@ -124,7 +124,7 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
 
     # 处理网络错误
     if isinstance(error, httpx.NetworkError):
-        raise ProviderFetchError(
+        raise SourceFetchError(
             message=f"Tushare API 网络错误 (API: {api_name})",
             provider="tushare",
             original_error=str(error),
@@ -132,14 +132,14 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
 
     # 处理超时错误
     if isinstance(error, httpx.TimeoutException):
-        raise ProviderFetchError(
+        raise SourceFetchError(
             message=f"Tushare API 请求超时 (API: {api_name})",
             provider="tushare",
             original_error=str(error),
         )
 
     # 未知错误
-    raise ProviderFetchError(
+    raise SourceFetchError(
         message=f"Tushare API 未知错误 (API: {api_name})",
         provider="tushare",
         original_error=str(error),

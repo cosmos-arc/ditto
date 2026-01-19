@@ -337,9 +337,9 @@ pixi run -e dev ci
 
 #### 命名规则
 
-- `DataSource` → `DataProvider`（基类）
-- `TushareSource` → `TushareProvider`（具体实现）
-- `SourcesProvider` 保持不变（已经是 Provider）
+- `DataSource` → `DataSource`（基类）
+- `TushareSource` → `TushareSource`（具体实现）
+- `DataSources` 保持不变（已经是 Provider）
 - 所有异常类：`*SourceError` → `*ProviderError`
 
 #### Phase 9.1 文件重命名
@@ -349,9 +349,9 @@ pixi run -e dev ci
 
 #### Phase 9.2 类名重命名
 
-- [x] `DataSource` → `DataProvider`（基类）
-- [x] `TushareSource` → `TushareProvider`（具体实现）
-- [x] `DataSourceError` → `DataProviderError`
+- [x] `DataSource` → `DataSource`（基类）
+- [x] `TushareSource` → `TushareSource`（具体实现）
+- [x] `DataSourceError` → `DataSourceError`
 - [x] `SourceConfigurationError` → `ProviderConfigurationError`
 - [x] `SourceAuthenticationError` → `ProviderAuthenticationError`
 - [x] `SourceRateLimitError` → `ProviderRateLimitError`
@@ -362,7 +362,7 @@ pixi run -e dev ci
 
 **源代码文件**:
 - [x] `packages/datahub/src/ditto_datahub/sources/__init__.py`
-- [x] `packages/datahub/src/ditto_datahub/sources/provider.py` (SourcesProvider)
+- [x] `packages/datahub/src/ditto_datahub/sources/provider.py` (DataSources)
 - [x] `packages/datahub/src/ditto_datahub/sources/tushare/__init__.py`
 - [x] `packages/datahub/src/ditto_datahub/hub.py`
 - [x] `packages/datahub/src/ditto_datahub/sources/tushare/client.py`

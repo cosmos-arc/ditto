@@ -1,20 +1,20 @@
-"""Tests for SourcesProvider."""
+"""Tests for DataSources."""
 
 import pytest
-from ditto_datahub.providers.provider import SourcesProvider
+from ditto_datahub.sources.source import DataSources
 
 
-class TestSourcesProvider:
-    """Tests for SourcesProvider."""
+class TestDataSources:
+    """Tests for DataSources."""
 
     def test_tushare_property_returns_source(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Test tushare property returns TushareProvider instance."""
+        """Test tushare property returns TushareSource instance."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        provider = SourcesProvider()
+        provider = DataSources()
         source = provider.tushare
 
         assert source is not None
@@ -29,7 +29,7 @@ class TestSourcesProvider:
         """Test tushare property is cached."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        provider = SourcesProvider()
+        provider = DataSources()
         source1 = provider.tushare
         source2 = provider.tushare
 
@@ -40,10 +40,10 @@ class TestSourcesProvider:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Test get() method returns TushareProvider."""
+        """Test get() method returns TushareSource."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        provider = SourcesProvider()
+        provider = DataSources()
         source = provider.get("tushare")
 
         assert source is not None
@@ -56,7 +56,7 @@ class TestSourcesProvider:
         """Test get() normalizes case."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        provider = SourcesProvider()
+        provider = DataSources()
         source1 = provider.get("TUSHARE")
         source2 = provider.get("tushare")
 
@@ -68,7 +68,7 @@ class TestSourcesProvider:
 
     def test_get_invalid_name_raises_error(self) -> None:
         """Test get() raises error for invalid source name."""
-        provider = SourcesProvider()
+        provider = DataSources()
 
         with pytest.raises(ValueError, match="Unknown provider"):
             provider.get("invalid_source")

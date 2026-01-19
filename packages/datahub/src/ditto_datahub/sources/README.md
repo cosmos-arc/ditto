@@ -95,7 +95,7 @@ from ditto_datahub import DataHub
 
 hub = DataHub(data_root="data")
 
-# 通过 SourcesProvider 访问
+# 通过 DataSources 访问
 etf_basic = hub.sources.tushare.fetch_etf_basic()
 
 # 或使用工厂函数

@@ -15,7 +15,7 @@ import polars as pl
 from ditto_datahub.hub import DataHub
 from ditto_datahub.models import Dataset, OnDuplicate, WriteResult
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
-from ditto_datahub.providers.provider import DataProvider, ProviderFetchError
+from ditto_datahub.sources.source import DataSource, SourceFetchError
 from ditto_foundation import logger
 from ditto_foundation.util.checksum import ChecksumCompute
 
@@ -29,7 +29,7 @@ class IngestionCoordinator:
     def __init__(
         self,
         hub: DataHub,
-        source: DataProvider,
+        source: DataSource,
         source_name: str = "tushare",
     ) -> None:
         """初始化 IngestionCoordinator。"""
@@ -139,7 +139,7 @@ class IngestionCoordinator:
         """获取数据并执行摄取（统一错误处理）。"""
         try:
             df = self._fetch_data(dataset, trade_date)
-        except ProviderFetchError as e:
+        except SourceFetchError as e:
             return self._handle_fetch_error(dataset, trade_date, e)
         except Exception as e:
             return self._handle_unknown_error(dataset, trade_date, e)
@@ -163,7 +163,7 @@ class IngestionCoordinator:
         return self._handle_success(dataset, trade_date, df, write_result)
 
     def _handle_fetch_error(
-        self, dataset: str, trade_date: str, error: ProviderFetchError
+        self, dataset: str, trade_date: str, error: SourceFetchError
     ) -> IngestionResult:
         """处理数据获取错误。"""
         self._hub.ingestion_log.save_log(

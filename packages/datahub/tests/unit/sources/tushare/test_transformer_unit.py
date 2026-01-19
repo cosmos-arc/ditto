@@ -3,7 +3,7 @@
 from datetime import date
 
 import polars as pl
-from ditto_datahub.providers.tushare.transformer import (
+from ditto_datahub.sources.tushare.transformer import (
     ADJ_FACTOR_MAPPING,
     CALENDAR_MAPPING,
     DAILY_OHLCV_MAPPING,

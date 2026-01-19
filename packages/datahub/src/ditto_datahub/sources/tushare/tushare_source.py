@@ -13,14 +13,14 @@ from ditto_datahub.meta.schemas import (
     TUSHARE_ST_SCHEMA,
     TUSHARE_SUSPEND_SCHEMA,
 )
-from ditto_datahub.providers.provider import (
-    DataProvider,
-    ProviderAuthenticationError,
-    ProviderFetchError,
-    ProviderRateLimitError,
+from ditto_datahub.sources.source import (
+    DataSource,
+    SourceAuthenticationError,
+    SourceFetchError,
+    SourceRateLimitError,
 )
-from ditto_datahub.providers.tushare.client import TushareClient
-from ditto_datahub.providers.tushare.transformer import (
+from ditto_datahub.sources.tushare.client import TushareClient
+from ditto_datahub.sources.tushare.transformer import (
     ADJ_FACTOR_MAPPING,
     CALENDAR_MAPPING,
     ETF_BASIC_MAPPING,
@@ -52,7 +52,7 @@ def _record_metrics(row_count: int, dataset: str) -> None:
         pass
 
 
-class TushareProvider(DataProvider):
+class TushareSource(DataSource):
     """
     Tushare Pro data provider.
 
@@ -91,16 +91,16 @@ class TushareProvider(DataProvider):
             None
 
         Raises:
-            ProviderAuthenticationError: 认证错误直接抛出
-            ProviderRateLimitError: 限流错误直接抛出
-            ProviderFetchError: 其他异常包装为 ProviderFetchError
+            SourceAuthenticationError: 认证错误直接抛出
+            SourceRateLimitError: 限流错误直接抛出
+            SourceFetchError: 其他异常包装为 SourceFetchError
 
         """
         try:
             yield
-        except ProviderAuthenticationError:
+        except SourceAuthenticationError:
             raise
-        except ProviderRateLimitError:
+        except SourceRateLimitError:
             raise
         except Exception as e:
             logger.error(
@@ -109,7 +109,7 @@ class TushareProvider(DataProvider):
                 error=str(e),
                 api_name=api_name,
             )
-            raise ProviderFetchError(
+            raise SourceFetchError(
                 message=f"Failed to fetch {dataset} from Tushare",
                 provider="tushare",
                 dataset=api_name,
@@ -135,7 +135,7 @@ class TushareProvider(DataProvider):
             - is_open: Boolean
 
         Raises:
-            ProviderFetchError: If fetch fails.
+            SourceFetchError: If fetch fails.
 
         """
         logger.info(
@@ -172,7 +172,7 @@ class TushareProvider(DataProvider):
             - list_date: Listing date
 
         Raises:
-            ProviderFetchError: If fetch fails.
+            SourceFetchError: If fetch fails.
 
         """
         logger.info(
@@ -207,8 +207,8 @@ class TushareProvider(DataProvider):
             - pct_change: Float64
 
         Raises:
-            ProviderFetchError: If fetch fails.
-            ProviderTransformationError: If data transformation fails.
+            SourceFetchError: If fetch fails.
+            SourceTransformationError: If data transformation fails.
 
         """
         logger.info(
@@ -245,7 +245,7 @@ class TushareProvider(DataProvider):
             - list_date: Listing date
 
         Raises:
-            ProviderFetchError: If fetch fails.
+            SourceFetchError: If fetch fails.
 
         """
         logger.info(
@@ -281,8 +281,8 @@ class TushareProvider(DataProvider):
             - pct_change: Float64
 
         Raises:
-            ProviderFetchError: If fetch fails.
-            ProviderTransformationError: If data transformation fails.
+            SourceFetchError: If fetch fails.
+            SourceTransformationError: If data transformation fails.
 
         """
         logger.info(
@@ -320,7 +320,7 @@ class TushareProvider(DataProvider):
             - adj_factor: Float64
 
         Raises:
-            ProviderFetchError: If fetch fails.
+            SourceFetchError: If fetch fails.
 
         """
         logger.info(
@@ -357,7 +357,7 @@ class TushareProvider(DataProvider):
             - adj_factor: Float64
 
         Raises:
-            ProviderFetchError: If fetch fails.
+            SourceFetchError: If fetch fails.
 
         """
         logger.info(
@@ -566,7 +566,7 @@ class TushareProvider(DataProvider):
             - down_limit: Float64 (跌停价)
 
         Raises:
-            ProviderFetchError: If fetch fails.
+            SourceFetchError: If fetch fails.
 
         """
         logger.info(
@@ -611,7 +611,7 @@ class TushareProvider(DataProvider):
             - list_status: Utf8 (L=正常, D=退市, P=暂停)
 
         Raises:
-            ProviderFetchError: If fetch fails.
+            SourceFetchError: If fetch fails.
 
         """
         logger.info(

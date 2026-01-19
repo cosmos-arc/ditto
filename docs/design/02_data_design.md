@@ -37,7 +37,7 @@
 │   hub.index        → IndexAccessor                                          │
 │   hub.sql(...)     → SqlEngine（DuckDB View + 复权宏）                        │
 │   hub.freeze       → FreezeManager                                          │
-│   hub.sources      → SourcesProvider                                        │
+│   hub.sources      → DataSources                                        │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -193,17 +193,17 @@ packages/
         errors.py                # 统一异常
         settings.py              # 配置（paths, defaults）
         # ============ 数据源层 ============
-        sources/
-          __init__.py           # 导出 get_source, DataSource
+        providers/
+          __init__.py           # 导出 get_provider, DataSource
           base.py               # DataSource 基类 + 工厂 + 异常定义
           tushare/
             __init__.py
             client.py           # Tushare 客户端（连接、限流、重试）
-            source.py           # TushareSource 实现
+            provider.py         # TushareSource 实现
           akshare/
             __init__.py
             client.py
-            source.py
+            provider.py
 
         # ============ 数据质量层（重构）============
         dq/
@@ -6431,9 +6431,9 @@ SourceAuthenticationError: Tushare authentication failed
 - [ ] 测试日志不包含完整 token
 - [ ] 测试显式参数覆盖其他来源
 
-### 14.3 SourcesProvider:
+### 14.3 DataSources:
 ``` python
-class SourcesProvider:
+class DataSources:
     """
     数据源提供器
 

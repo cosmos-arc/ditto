@@ -5,12 +5,12 @@ import os
 import httpx
 import pytest
 import pytest_mock
-from ditto_datahub.providers.provider import (
-    ProviderAuthenticationError,
-    ProviderConfigurationError,
+from ditto_datahub.sources.source import (
+    SourceAuthenticationError,
+    SourceConfigurationError,
 )
-from ditto_datahub.providers.tushare.client import TushareClient
-from ditto_datahub.providers.tushare.rate_limiter import (
+from ditto_datahub.sources.tushare.client import TushareClient
+from ditto_datahub.sources.tushare.rate_limiter import (
     TushareRateLimitConfig,
     TushareRateLimiter,
 )
@@ -32,12 +32,12 @@ class TestTushareClientInit:
                 return token
             if env_token := os.getenv("TUSHARE_TOKEN"):
                 return env_token
-            raise ProviderConfigurationError("Token not found")
+            raise SourceConfigurationError("Token not found")
 
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token_123")
 
         mocker.patch(
-            "ditto_datahub.providers.tushare.client._get_tushare_token",
+            "ditto_datahub.sources.tushare.client._get_tushare_token",
             side_effect=mock_get_token,
         )
         client = TushareClient()
@@ -52,15 +52,15 @@ class TestTushareClientInit:
 
         # Mock _get_tushare_token to always raise error
         def mock_get_token(token: str | None = None) -> str:
-            raise ProviderConfigurationError("Token not found")
+            raise SourceConfigurationError("Token not found")
 
         monkeypatch.delenv("TUSHARE_TOKEN", raising=False)
 
         mocker.patch(
-            "ditto_datahub.providers.tushare.client._get_tushare_token",
+            "ditto_datahub.sources.tushare.client._get_tushare_token",
             side_effect=mock_get_token,
         )
-        with pytest.raises(ProviderConfigurationError):
+        with pytest.raises(SourceConfigurationError):
             TushareClient()
 
     def test_init_custom_rate_limit(
@@ -190,7 +190,7 @@ class TestTushareClientQuery:
 
         # Act & Assert
         client = TushareClient(token="invalid_token")
-        with pytest.raises(ProviderAuthenticationError):
+        with pytest.raises(SourceAuthenticationError):
             client.query("trade_cal", "cal_date", exchange="SSE")
 
     def test_retry_on_5xx_status(self, respx_mock) -> None:

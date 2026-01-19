@@ -10,7 +10,7 @@ import polars as pl
 from ditto_foundation import logger
 
 
-class DataProviderError(Exception):
+class DataSourceError(Exception):
     """DataHub data provider base exception."""
 
     def __init__(
@@ -30,7 +30,7 @@ class DataProviderError(Exception):
         self.details = details or {}
 
 
-class ProviderConfigurationError(DataProviderError):
+class SourceConfigurationError(DataSourceError):
     """Configuration error (missing env var, invalid settings)."""
 
     def __init__(
@@ -56,7 +56,7 @@ class ProviderConfigurationError(DataProviderError):
         super().__init__(message, details if details else None)
 
 
-class ProviderAuthenticationError(DataProviderError):
+class SourceAuthenticationError(DataSourceError):
     """Authentication failure (invalid token, credentials)."""
 
     def __init__(
@@ -74,11 +74,11 @@ class ProviderAuthenticationError(DataProviderError):
         """
         details: dict[str, object] = {}
         if provider:
-            details["provider"] = provider
+            details["source"] = provider
         super().__init__(message, details if details else None)
 
 
-class ProviderRateLimitError(DataProviderError):
+class SourceRateLimitError(DataSourceError):
     """Rate limit exceeded."""
 
     def __init__(
@@ -100,7 +100,7 @@ class ProviderRateLimitError(DataProviderError):
         """
         details: dict[str, object] = {}
         if provider:
-            details["provider"] = provider
+            details["source"] = provider
         if limit:
             details["limit"] = limit
         if window:
@@ -108,7 +108,7 @@ class ProviderRateLimitError(DataProviderError):
         super().__init__(message, details if details else None)
 
 
-class ProviderFetchError(DataProviderError):
+class SourceFetchError(DataSourceError):
     """Data fetch failure (network error, API error)."""
 
     def __init__(
@@ -132,7 +132,7 @@ class ProviderFetchError(DataProviderError):
         """
         details: dict[str, object] = {}
         if provider:
-            details["provider"] = provider
+            details["source"] = provider
         if dataset:
             details["dataset"] = dataset
         if trade_date:
@@ -142,7 +142,7 @@ class ProviderFetchError(DataProviderError):
         super().__init__(message, details if details else None)
 
 
-class ProviderTransformationError(DataProviderError):
+class SourceTransformationError(DataSourceError):
     """Data transformation error (schema mismatch, conversion failure)."""
 
     def __init__(
@@ -166,7 +166,7 @@ class ProviderTransformationError(DataProviderError):
         """
         details: dict[str, object] = {}
         if provider:
-            details["provider"] = provider
+            details["source"] = provider
         if dataset:
             details["dataset"] = dataset
         if expected_columns:
@@ -176,7 +176,7 @@ class ProviderTransformationError(DataProviderError):
         super().__init__(message, details if details else None)
 
 
-class DataProvider(ABC):
+class DataSource(ABC):
     """Abstract base class for external data providers."""
 
     @abstractmethod
@@ -328,7 +328,7 @@ class DataProvider(ABC):
         pass
 
 
-class SourcesProvider:
+class DataSources:
     """
     Provider for external data sources.
 
@@ -337,22 +337,22 @@ class SourcesProvider:
     """
 
     @cached_property
-    def tushare(self) -> DataProvider:
+    def tushare(self) -> DataSource:
         """
         Get Tushare data provider.
 
         Returns:
-            TushareProvider instance.
+            TushareSource instance.
 
         """
-        from ditto_datahub.providers.tushare.tushare_provider import (  # noqa: PLC0415
-            TushareProvider,
+        from ditto_datahub.sources.tushare.tushare_source import (  # noqa: PLC0415
+            TushareSource,
         )
 
-        logger.debug("Creating TushareProvider", event="sources_tushare_create")
-        return TushareProvider()
+        logger.debug("Creating TushareSource", event="sources_tushare_create")
+        return TushareSource()
 
-    def get(self, name: str) -> DataProvider:
+    def get(self, name: str) -> DataSource:
         """
         Get data provider by name.
 
@@ -366,13 +366,13 @@ class SourcesProvider:
             ValueError: If provider name is unknown.
 
         """
-        from ditto_datahub.providers.tushare.tushare_provider import (  # noqa: PLC0415
-            TushareProvider,
+        from ditto_datahub.sources.tushare.tushare_source import (  # noqa: PLC0415
+            TushareSource,
         )
 
         normalized_name = name.lower().strip()
 
         if normalized_name == "tushare":
-            return TushareProvider()
+            return TushareSource()
 
         raise ValueError(f"Unknown provider: '{name}'. Supported providers: tushare")

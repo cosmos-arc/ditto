@@ -86,7 +86,7 @@ DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
 |------|------|
 | `TushareClient` | Tushare API 客户端 |
 | `TushareSource` | Tushare 数据源实现 |
-| `SourcesProvider` | 数据源统一访问入口 |
+| `DataSources` | 数据源统一访问入口 |
 
 ## 安装
 

@@ -1,6 +1,6 @@
 """Tests for TushareRateLimiter and related classes."""
 
-from ditto_datahub.providers.tushare.rate_limiter import (
+from ditto_datahub.sources.tushare.rate_limiter import (
     TushareAPIGroup,
     TushareRateLimitConfig,
     TushareRateLimiter,

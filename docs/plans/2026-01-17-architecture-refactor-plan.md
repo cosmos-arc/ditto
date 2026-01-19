@@ -28,12 +28,12 @@
 
 > 提供 ingestionlog 的 repo，source 的依赖目前不是有 provider 嘛，直接通过 provider 代理
 
-**当前已有 SourcesProvider** ([hub.py:228](packages/datahub/src/ditto_datahub/hub.py#L228)):
+**当前已有 DataSources** ([hub.py:228](packages/datahub/src/ditto_datahub/hub.py#L228)):
 ```python
 @cached_property
-def sources(self) -> SourcesProvider:
+def sources(self) -> DataSources:
     """External data sources provider (Tushare, Akshare, etc.)."""
-    return SourcesProvider()
+    return DataSources()
 ```
 
 ### 1.3 设计方案
@@ -198,7 +198,7 @@ packages/datahub/
 │   └── ...
 ├── sources/                   # 数据源层
 │   ├── base.py                # DataSource, SourceFetchError
-│   └── provider.py            # SourcesProvider
+│   └── provider.py            # DataSources
 ├── accessors/                 # 访问器层
 │   └── ingestion_log.py       # 使用 models.IngestionLog
 └── stores/                    # 存储层

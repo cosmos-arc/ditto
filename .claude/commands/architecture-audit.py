@@ -262,20 +262,21 @@ class ArchitectureAuditor:
 
         for module in port_modules:
             for dep in self.import_graph.get(module, set()):
-                # 检查是否依赖了 packages 中的具体实现
-                if dep.startswith("packages.datahub.stores.") or dep.startswith("packages.datahub.providers."):
+                # 检查是否依赖了 stores（禁止）
+                if dep.startswith("packages.datahub.stores."):
                     self.findings.append(
                         {
                             "id": "ARCH-001",
                             "severity": "High",
                             "category": "Layering",
                             "location": f"{module} -> {dep}",
-                            "evidence": "应用层直接依赖数据访问层的具体实现",
-                            "why": "违反分层架构原则，应该通过 DataHub Facade 访问",
-                            "fix": "使用 DataHub 提供的接口，而非直接访问 Store/Source",
+                            "evidence": "应用层直接访问 Store 层",
+                            "why": "违反分层架构原则，必须通过 Accessor 访问数据",
+                            "fix": "使用 hub.xxx accessor（如 hub.bars、hub.calendar）访问",
                             "effort": "M",
                         }
                     )
+                # 注意：providers 导入是允许的（hub.sources 是官方接口）
 
     def _check_unused_protocols(self) -> None:
         """检查未使用的 Protocol"""

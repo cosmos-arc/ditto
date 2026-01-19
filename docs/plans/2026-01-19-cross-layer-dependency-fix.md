@@ -5,7 +5,7 @@
 根据 2026-01-18 架构审计报告 [ARCH-001]，发现 Port 层存在 5 处跨层访问 Store 的问题。经分析确认：
 
 - **实际违规**: 3 处（backfill.py, metadata.py, retry.py）
-- **合理设计**: 1 处（coordinator.py - 摄取协调器需要直接使用 DataProvider）
+- **合理设计**: 1 处（coordinator.py - 摄取协调器需要直接使用 DataSource）
 - **已正确使用 Accessor**: 1 处（dq_batch.py - 使用 BarsQuery）
 
 ## 架构问题分析
@@ -18,7 +18,7 @@ Port 层                      DataHub 层
 backfill.py          ──→      CalendarStore        ❌
 metadata.py          ──→      IngestionLogStore    ❌
 retry.py             ──→      IngestionLogStore    ❌
-coordinator.py       ──→      DataProvider         ✅ (合理)
+coordinator.py       ──→      DataSource         ✅ (合理)
 dq_batch.py          ──→      BarsQuery            ✅ (正确)
 ```
 
@@ -283,7 +283,7 @@ def __init__(
     hub: DataHub,  # 改为使用 DataHub
     # calendar_store: CalendarStore,  # 删除
     # ingestion_log_store: IngestionLogStore,  # 删除
-    source: DataProvider = ...,  # 保留
+    source: DataSource = ...,  # 保留
 ) -> None:
     self._hub = hub
     self._source = source

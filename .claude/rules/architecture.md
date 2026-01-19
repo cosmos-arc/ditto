@@ -59,8 +59,27 @@ from ditto_foundation.util.checksum import file_checksum
 | ❌ 禁止 | ✅ 正确 |
 |--------|--------|
 | port → Store (直接访问存储) | port → Accessor → Store |
-| port → Source (直接访问数据源) | port → Accessor/Service → Source |
+| port → providers (直接访问数据源) | ✅ **允许** - providers 是数据访问接口 |
 | datahub → core (数据层依赖核心) | core → datahub (核心依赖数据) |
+
+**重要更新（2026-01-19）**：
+- ✅ **允许直接访问 `hub.sources`** - providers 层是官方的数据访问接口
+- ❌ **禁止直接访问 `hub.xxx_store`** - 必须通过 Accessor 访问数据
+
+**正确的访问模式**：
+```python
+# ✅ 正确：直接使用 providers
+provider = hub.sources.get("tushare")
+etf_basic = hub.sources.tushare.fetch_etf_basic()
+
+# ✅ 正确：通过 accessor 访问数据
+bars = hub.bars.get(...)
+calendar = hub.calendar.get_trading_days(...)
+
+# ❌ 错误：直接访问 store（即使技术上可行）
+from ditto_datahub.stores.bars_store import BarsStore  # ❌
+store = BarsStore(...)  # ❌
+```
 
 ---
 

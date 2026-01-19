@@ -3,21 +3,21 @@
 ## 概述
 
 将 Ditto 项目中的数据访问层命名统一化：
-- **外部数据源**：`SourcesAccessor` → `SourcesProvider`（提供数据）
+- **外部数据源**：`SourcesAccessor` → `DataSources`（提供数据）
 - **内部数据访问**：`*Repository` → `*Accessor`（访问数据）
 
 **设计决策背景：**
 - 原命名 `Repository` 来自 DDD 模式，但 Ditto 的实现更接近 Table Data Gateway（Fowler）+ DAO 混合模式
 - Repository 在 DDD 中表示聚合根容器，需要完整生命周期管理和事务边界，但 Ditto 实际是 DataFrame 操作（贫血模型）
 - 新命名更准确反映实际职责：
-  - `SourcesProvider` - 外部数据提供者（pull data）
+  - `DataSources` - 外部数据提供者（pull data）
   - `*Accessor` - 内部数据访问（expose data with business logic）
 
 ## 重命名映射表
 
 | 当前名称 | 新名称 | 文件路径 |
 |---------|--------|----------|
-| `SourcesAccessor` | `SourcesProvider` | `packages/datahub/src/ditto_datahub/sources/accessor.py` |
+| `SourcesAccessor` | `DataSources` | `packages/datahub/src/ditto_datahub/sources/accessor.py` |
 | `BarsRepository` | `BarsAccessor` | `packages/datahub/src/ditto_datahub/repositories/bars/repository.py` |
 | `SecurityRepository` | `SecuritiesAccessor` | `packages/datahub/src/ditto_datahub/repositories/security.py` |
 | `CalendarRepository` | `CalendarAccessor` | `packages/datahub/src/ditto_datahub/repositories/calendar.py` |
@@ -32,7 +32,7 @@
 ### 1.1 Sources 模块
 
 **文件**: `packages/datahub/src/ditto_datahub/sources/accessor.py`
-- [x] 类名：`SourcesAccessor` → `SourcesProvider`
+- [x] 类名：`SourcesAccessor` → `DataSources`
 - [x] 文件名：`accessor.py` → `provider.py`
 - [x] 类文档字符串更新
 
@@ -89,7 +89,7 @@
 
 **文件**: `packages/datahub/tests/unit/sources/test_accessor_unit.py`
 - [x] 文件名：`test_accessor_unit.py` → `test_provider_unit.py`
-- [x] 类名：`TestSourcesAccessor` → `TestSourcesProvider`
+- [x] 类名：`TestSourcesAccessor` → `TestDataSources`
 - [x] 所有导入语句更新
 
 **文件**: `packages/datahub/tests/unit/repositories/test_bars_repository_unit.py`
@@ -168,7 +168,7 @@
 **文件**: `docs/design/02_data_design.md`
 - [x] 架构图更新
 - [x] 类定义代码块更新
-- [x] `SourcesAccessor` → `SourcesProvider`
+- [x] `SourcesAccessor` → `DataSources`
 - [x] 所有 `*Repository` → `*Accessor`
 
 **文件**: `docs/design/11_port_architecture.md`
@@ -211,7 +211,7 @@
 - [x] 所有类名引用更新
 
 **文件**: `packages/datahub/tests/unit/sources/README.md`
-- [x] `SourcesAccessor` → `SourcesProvider`
+- [x] `SourcesAccessor` → `DataSources`
 
 **文件**: `packages/datahub/src/ditto_datahub/sources/README.md`
 - [x] 所有类名引用更新

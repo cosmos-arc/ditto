@@ -21,10 +21,10 @@ from ditto_datahub.accessors.security import SecuritiesAccessor
 from ditto_datahub.accessors.universe import UniverseAccessor
 from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.errors import SidNotFoundError
-from ditto_datahub.providers.provider import SourcesProvider
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
+from ditto_datahub.sources.source import DataSources
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.calendar_store import CalendarStore
@@ -224,9 +224,9 @@ class DataHub:
     # ========================================================================
 
     @cached_property
-    def sources(self) -> SourcesProvider:
+    def sources(self) -> DataSources:
         """External data sources accessor (Tushare, Akshare, etc.)."""
-        return SourcesProvider()
+        return DataSources()
 
     # ========================================================================
     # SQL Engine

@@ -2,7 +2,7 @@
 
 ## 任务概述
 
-Phase 9 完成了 `DataSource` → `DataProvider` 的类名重命名，但遗漏了：
+Phase 9 完成了 `DataSource` → `DataSource` 的类名重命名，但遗漏了：
 1. **sources 目录本身** 未重命名为 providers
 2. **文档和注释** 中的 sources 路径引用未更新
 3. **架构分层违反**：`stores/ingestion_log.py` 导入 `sources/metadata.py`
@@ -45,7 +45,7 @@ stores/ingestion_log.py    sources/metadata.py
 | 类型 | 旧名称 | 新名称 |
 |------|--------|--------|
 | 目录 | `sources/` | `providers/` |
-| 模块 | `ditto_datahub.sources.*` | `ditto_datahub.providers.*` |
+| 模块 | `ditto_datahub.sources.*` | `ditto_datahub.sources.*` |
 | 文档引用 | `sources/` | `providers/` |
 | 共享模型 | `sources/metadata.py` | `models/ingestion.py` |
 
@@ -156,7 +156,7 @@ git mv sources providers
 - `packages/datahub/src/ditto_datahub/providers/tushare/__init__.py`
 - `packages/datahub/src/ditto_datahub/hub.py`
 
-**导入替换模式**：`from ditto_datahub.sources.*` → `from ditto_datahub.providers.*`
+**导入替换模式**：`from ditto_datahub.sources.*` → `from ditto_datahub.sources.*`
 
 **验证**：
 ```bash
