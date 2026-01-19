@@ -1,4 +1,4 @@
-"""Tushare data provider implementation."""
+"""Tushare data source implementation."""
 
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ def _record_metrics(row_count: int, dataset: str) -> None:
     try:
         M.data_records.add(
             row_count,
-            {"provider": "tushare", "dataset": dataset, "status": "success"},
+            {"source": "tushare", "dataset": dataset, "status": "success"},
         )
     except (AttributeError, TypeError):
         # Observability 未初始化，静默跳过
@@ -54,7 +54,7 @@ def _record_metrics(row_count: int, dataset: str) -> None:
 
 class TushareSource(DataSource):
     """
-    Tushare Pro data provider.
+    Tushare Pro data source.
 
     Fetches market data from Tushare API and transforms to Ditto schema.
 
@@ -65,14 +65,14 @@ class TushareSource(DataSource):
 
     def __init__(self, token: str | None = None) -> None:
         """
-        Initialize Tushare provider.
+        Initialize Tushare source.
 
         Args:
             token: API token. Reads from keyring or ~/.ditto/secrets.toml if None.
 
         """
         self._client = TushareClient(token=token)
-        logger.debug("TushareProvider initialized", event="tushare_provider_init")
+        logger.debug("TushareSource initialized", event="tushare_source_init")
 
     @contextmanager
     def _tushare_fetch_error_handler(
@@ -111,7 +111,7 @@ class TushareSource(DataSource):
             )
             raise SourceFetchError(
                 message=f"Failed to fetch {dataset} from Tushare",
-                provider="tushare",
+                source="tushare",
                 dataset=api_name,
                 original_error=str(e),
             ) from e

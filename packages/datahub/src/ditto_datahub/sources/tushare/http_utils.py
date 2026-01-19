@@ -36,7 +36,7 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
     if code in (2002, 40101):
         raise SourceAuthenticationError(
             message=(msg if isinstance(msg, str) else None) or "Tushare 认证失败",
-            provider="tushare",
+            source="tushare",
         )
 
     # 检查其他业务错误
@@ -45,28 +45,28 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
         error_msg = msg_str or f"Tushare API 返回错误码: {code}"
         raise SourceFetchError(
             message=error_msg,
-            provider="tushare",
+            source="tushare",
         )
 
     # 检查 data 字段
     if "data" not in response_json:
         raise SourceFetchError(
             message="响应缺少 data 字段",
-            provider="tushare",
+            source="tushare",
         )
 
     data_value = response_json.get("data")
     if data_value is None:
         raise SourceFetchError(
             message="响应缺少 data 字段",
-            provider="tushare",
+            source="tushare",
         )
 
     # 检查 data 字段类型
     if not isinstance(data_value, dict):
         raise SourceFetchError(
             message="响应 data 字段类型错误",
-            provider="tushare",
+            source="tushare",
         )
 
     data = cast(dict[str, Any], data_value)
@@ -94,7 +94,7 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
         if status_code in (401, 403):
             raise SourceAuthenticationError(
                 message=f"Tushare API 认证失败 (API: {api_name})",
-                provider="tushare",
+                source="tushare",
             )
 
         # HTTP 状态码常量
@@ -104,21 +104,21 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
         if status_code == _HTTP_RATE_LIMIT:
             raise SourceRateLimitError(
                 message=f"Tushare API 限流 (API: {api_name})",
-                provider="tushare",
+                source="tushare",
             )
 
         # 5xx 服务器错误
         if status_code >= _HTTP_SERVER_ERROR:
             raise SourceFetchError(
                 message=f"Tushare API 服务器错误 (API: {api_name})",
-                provider="tushare",
+                source="tushare",
                 original_error=str(error),
             )
 
         # 其他 4xx 错误
         raise SourceFetchError(
             message=f"Tushare API 请求失败 (API: {api_name})",
-            provider="tushare",
+            source="tushare",
             original_error=str(error),
         )
 
@@ -126,7 +126,7 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
     if isinstance(error, httpx.NetworkError):
         raise SourceFetchError(
             message=f"Tushare API 网络错误 (API: {api_name})",
-            provider="tushare",
+            source="tushare",
             original_error=str(error),
         )
 
@@ -134,14 +134,14 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
     if isinstance(error, httpx.TimeoutException):
         raise SourceFetchError(
             message=f"Tushare API 请求超时 (API: {api_name})",
-            provider="tushare",
+            source="tushare",
             original_error=str(error),
         )
 
     # 未知错误
     raise SourceFetchError(
         message=f"Tushare API 未知错误 (API: {api_name})",
-        provider="tushare",
+        source="tushare",
         original_error=str(error),
     )
 

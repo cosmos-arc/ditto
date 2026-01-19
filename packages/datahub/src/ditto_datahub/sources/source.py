@@ -1,4 +1,4 @@
-"""DataProvider base classes, exception hierarchy, and SourcesProvider."""
+"""DataSource base classes, exception hierarchy, and SourcesProvider."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from ditto_foundation import logger
 
 
 class DataSourceError(Exception):
-    """DataHub data provider base exception."""
+    """DataHub data source base exception."""
 
     def __init__(
         self,
@@ -19,7 +19,7 @@ class DataSourceError(Exception):
         details: dict[str, object] | None = None,
     ) -> None:
         """
-        Initialize DataProvider error.
+        Initialize DataSource error.
 
         Args:
             message: Error message.
@@ -35,7 +35,7 @@ class SourceConfigurationError(DataSourceError):
 
     def __init__(
         self,
-        message: str = "Provider configuration error",
+        message: str = "Source configuration error",
         env_var: str | None = None,
         config_key: str | None = None,
     ) -> None:
@@ -62,19 +62,19 @@ class SourceAuthenticationError(DataSourceError):
     def __init__(
         self,
         message: str = "Authentication failed",
-        provider: str | None = None,
+        source: str | None = None,
     ) -> None:
         """
         Initialize authentication error.
 
         Args:
             message: Error message.
-            provider: Data provider identifier.
+            source: Data source identifier.
 
         """
         details: dict[str, object] = {}
-        if provider:
-            details["source"] = provider
+        if source:
+            details["source"] = source
         super().__init__(message, details if details else None)
 
 
@@ -84,7 +84,7 @@ class SourceRateLimitError(DataSourceError):
     def __init__(
         self,
         message: str = "Rate limit exceeded",
-        provider: str | None = None,
+        source: str | None = None,
         limit: int | None = None,
         window: int | None = None,
     ) -> None:
@@ -93,14 +93,14 @@ class SourceRateLimitError(DataSourceError):
 
         Args:
             message: Error message.
-            provider: Data provider identifier.
+            source: Data source identifier.
             limit: Request limit.
             window: Time window in seconds.
 
         """
         details: dict[str, object] = {}
-        if provider:
-            details["source"] = provider
+        if source:
+            details["source"] = source
         if limit:
             details["limit"] = limit
         if window:
@@ -114,7 +114,7 @@ class SourceFetchError(DataSourceError):
     def __init__(
         self,
         message: str = "Failed to fetch data",
-        provider: str | None = None,
+        source: str | None = None,
         dataset: str | None = None,
         trade_date: date | None = None,
         original_error: str | None = None,
@@ -124,15 +124,15 @@ class SourceFetchError(DataSourceError):
 
         Args:
             message: Error message.
-            provider: Data provider identifier.
+            source: Data source identifier.
             dataset: Dataset name.
             trade_date: Trade date being fetched.
             original_error: Original error message.
 
         """
         details: dict[str, object] = {}
-        if provider:
-            details["source"] = provider
+        if source:
+            details["source"] = source
         if dataset:
             details["dataset"] = dataset
         if trade_date:
@@ -148,7 +148,7 @@ class SourceTransformationError(DataSourceError):
     def __init__(
         self,
         message: str = "Data transformation failed",
-        provider: str | None = None,
+        source: str | None = None,
         dataset: str | None = None,
         expected_columns: list[str] | None = None,
         actual_columns: list[str] | None = None,
@@ -158,15 +158,15 @@ class SourceTransformationError(DataSourceError):
 
         Args:
             message: Error message.
-            provider: Data provider identifier.
+            source: Data source identifier.
             dataset: Dataset name.
             expected_columns: Expected column names.
             actual_columns: Actual column names received.
 
         """
         details: dict[str, object] = {}
-        if provider:
-            details["source"] = provider
+        if source:
+            details["source"] = source
         if dataset:
             details["dataset"] = dataset
         if expected_columns:
@@ -177,7 +177,7 @@ class SourceTransformationError(DataSourceError):
 
 
 class DataSource(ABC):
-    """Abstract base class for external data providers."""
+    """Abstract base class for external data sources."""
 
     @abstractmethod
     def fetch_calendar(
@@ -198,7 +198,7 @@ class DataSource(ABC):
             - is_open: Boolean
 
         Raises:
-            ProviderFetchError: If fetch fails.
+            SourceFetchError: If fetch fails.
 
         """
         pass
@@ -217,7 +217,7 @@ class DataSource(ABC):
             - list_date: Listing date
 
         Raises:
-            ProviderFetchError: If fetch fails.
+            SourceFetchError: If fetch fails.
 
         """
         pass
@@ -239,8 +239,8 @@ class DataSource(ABC):
             - pct_change: Float64
 
         Raises:
-            ProviderFetchError: If fetch fails.
-            ProviderTransformationError: If data transformation fails.
+            SourceFetchError: If fetch fails.
+            SourceTransformationError: If data transformation fails.
 
         """
         pass
@@ -259,7 +259,7 @@ class DataSource(ABC):
             - list_date: Listing date
 
         Raises:
-            ProviderFetchError: If fetch fails.
+            SourceFetchError: If fetch fails.
 
         """
         pass
@@ -281,8 +281,8 @@ class DataSource(ABC):
             - pct_change: Float64
 
         Raises:
-            ProviderFetchError: If fetch fails.
-            ProviderTransformationError: If data transformation fails.
+            SourceFetchError: If fetch fails.
+            SourceTransformationError: If data transformation fails.
 
         """
         pass
@@ -302,7 +302,7 @@ class DataSource(ABC):
             - adj_factor: Float64
 
         Raises:
-            ProviderFetchError: If fetch fails.
+            SourceFetchError: If fetch fails.
 
         """
         pass
@@ -322,7 +322,7 @@ class DataSource(ABC):
             - adj_factor: Float64
 
         Raises:
-            ProviderFetchError: If fetch fails.
+            SourceFetchError: If fetch fails.
 
         """
         pass
@@ -330,16 +330,16 @@ class DataSource(ABC):
 
 class DataSources:
     """
-    Provider for external data sources.
+    Source for external data sources.
 
-    Provides convenient access to DataProvider instances with caching.
+    Provides convenient access to DataSource instances with caching.
 
     """
 
     @cached_property
     def tushare(self) -> DataSource:
         """
-        Get Tushare data provider.
+        Get Tushare data source.
 
         Returns:
             TushareSource instance.
@@ -354,16 +354,16 @@ class DataSources:
 
     def get(self, name: str) -> DataSource:
         """
-        Get data provider by name.
+        Get data source by name.
 
         Args:
-            name: Provider name (e.g., "tushare", "akshare").
+            name: Source name (e.g., "tushare", "akshare").
 
         Returns:
-            DataProvider instance.
+            DataSource instance.
 
         Raises:
-            ValueError: If provider name is unknown.
+            ValueError: If source name is unknown.
 
         """
         from ditto_datahub.sources.tushare.tushare_source import (  # noqa: PLC0415
@@ -375,4 +375,4 @@ class DataSources:
         if normalized_name == "tushare":
             return TushareSource()
 
-        raise ValueError(f"Unknown provider: '{name}'. Supported providers: tushare")
+        raise ValueError(f"Unknown source: '{name}'. Supported sources: tushare")

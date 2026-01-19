@@ -1,4 +1,4 @@
-"""Data providers for external data ingestion."""
+"""Data sources for external data ingestion."""
 
 from ditto_datahub.models.ingestion import (
     DataChangedError,
