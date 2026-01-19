@@ -7,10 +7,10 @@
 
 运行方式：
     # 只运行 external 测试（需要 token）
-    pytest packages/datahub/tests/integration/providers/tushare/... -m external
+    pytest packages/datahub/tests/integration/sources/tushare/... -m external
 
     # 跳过 external 测试（CI 默认）
-    pytest packages/datahub/tests/integration/providers/tushare/... -m "not external"
+    pytest packages/datahub/tests/integration/sources/tushare/... -m "not external"
 """
 
 import time

@@ -148,7 +148,7 @@ class TestDataSourceABC:
     def test_subclass_must_implement_all_methods(self) -> None:
         """Test subclass must implement all abstract methods."""
 
-        class IncompleteProvider(DataSource):
+        class IncompleteSource(DataSource):
             def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
@@ -158,12 +158,12 @@ class TestDataSourceABC:
             # Missing fetch_etf_daily
 
         with pytest.raises(TypeError):
-            IncompleteProvider()  # type: ignore[abstract]
+            IncompleteSource()  # type: ignore[abstract]
 
     def test_complete_subclass_can_be_instantiated(self) -> None:
         """Test complete subclass can be instantiated."""
 
-        class CompleteProvider(DataSource):
+        class CompleteSourcer(DataSource):
             def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
@@ -186,5 +186,5 @@ class TestDataSourceABC:
                 return pl.DataFrame()
 
         # Should not raise
-        provider = CompleteProvider()
-        assert isinstance(provider, DataSource)
+        source = CompleteSourcer()
+        assert isinstance(source, DataSource)

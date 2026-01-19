@@ -33,10 +33,21 @@ pixi run -e dev test --integration
 
 ### 3. LSP 语义分析（优先）
 
+> 使用 `.claude/scripts/lsp_pyright.py` 进行 LSP 分析
+
 **架构约束检查**：
-- 使用 `findReferences` 检测死代码和未引用导出
-- 使用 `goToDefinition` 追踪依赖链，检测循环依赖
-- 使用 `documentSymbol` 分析类/函数规模和结构
+- 使用 `refs` 检测死代码和未引用导出
+  ```bash
+  pixi run -e dev python .claude/scripts/lsp_pyright.py refs <file> <line> <col>
+  ```
+- 使用 `goto` 追踪依赖链，检测循环依赖
+  ```bash
+  pixi run -e dev python .claude/scripts/lsp_pyright.py goto <file> <line> <col>
+  ```
+- 使用 `symbols` 分析类/函数规模和结构
+  ```bash
+  pixi run -e dev python .claude/scripts/lsp_pyright.py symbols <file>
+  ```
 - 从 port 层出发，检查是否存在**真正的层级穿透**：
 
 **层级穿透定义**（注意：Foundation 是横切层，可跨层访问）：
@@ -46,13 +57,19 @@ pixi run -e dev test --integration
 - ✅ port → datahub → foundation（正常依赖链）
 
 **工程实践检查**：
-- 使用 `documentSymbol` 识别类规模（>300行）、方法数量（>15个）
+- 使用 `symbols` 识别类规模（>300行）、方法数量（>15个）
 - 使用 `hover` 获取类型信息，检测 Any 类型滥用
-- 使用 `getDiagnostics` 收集实时错误和警告
+  ```bash
+  pixi run -e dev python .claude/scripts/lsp_pyright.py hover <file> <line> <col>
+  ```
+- 使用 `diagnose` 收集实时错误和警告
+  ```bash
+  pixi run -e dev python .claude/scripts/lsp_pyright.py diagnose <file>
+  ```
 
 **命名与概念检查**：
-- 使用 `documentSymbol` 获取类/函数的符号列表，提取命名
-- 使用 `findReferences` 追踪命名使用情况，检测孤立命名
+- 使用 `symbols` 获取类/函数的符号列表，提取命名
+- 使用 `refs` 追踪命名使用情况，检测孤立命名
 - 使用 `hover` 获取类型信息，分析命名与类型的语义匹配度
 - 对比类名与其方法/属性命名，检测职责一致性
 - 分析 Port 层命名是否混用技术术语（如 `SQLBarLoader`）

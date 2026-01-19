@@ -37,6 +37,7 @@ pydantic-settings = ">=2.6,<3"
 # 网络请求
 httpx = ">=0.28,<1"
 aiohttp = ">=3.11,<4"
+requests = ">=2.32.3,<2.32.4"  # multilspy 依赖
 
 # 配置与日志
 python-dotenv = ">=1.0,<2"
@@ -121,6 +122,9 @@ jupyter = ">=1.1,<2"
 [feature.dev.pypi-dependencies]
 # Pyright 类型检查（替代 mypy）
 pyright = ">=1.1.390,<2"
+
+# LSP 客户端（Pyright LSP）
+multilspy = ">=0.0.15,<0.1"
 
 # ==========================================================
 # 环境定义

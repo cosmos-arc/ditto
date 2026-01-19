@@ -44,15 +44,67 @@
 | 编辑文件 | `Edit` 工具 | `sed` |
 | 创建目录 | `mkdir` | - |
 
-### 代码智能分析（LSP 优先）- 类、方法引用查找(**重构必须使用**)
+### 代码智能分析（LSP 辅助脚本）- 类、方法引用查找(**重构必须使用**)
 
-| 操作 | LSP 工具 | 降级方案 |
-|------|----------|----------|
-| 查找定义 | `goToDefinition` | `Grep "class Foo"` → `Glob "**/*foo*.py"` |
-| 查找引用 | `findReferences` | `Grep "def bar\|bar\("` |
-| 理解结构 | `documentSymbol` | `Read` 工具 |
-| 类型信息 | `hover` | - |
-| 错误检查 | `getDiagnostics` | - |
+> **GLM-4.7 无原生 LSP 能力，使用项目提供的 LSP 辅助脚本**
+>
+> 脚本位置: `.claude/scripts/lsp_pyright.py` (Pyright LSP，推荐)
+> 备用脚本: `.claude/scripts/lsp_helper.py` (Jedi，更快但功能有限)
+
+| 操作 | 命令 | 说明 |
+|------|------|------|
+| 查找定义 | `pixi run -e dev python .claude/scripts/lsp_pyright.py goto <file> <line> <col>` | 跳转到符号定义 |
+| 查找引用 | `pixi run -e dev python .claude/scripts/lsp_pyright.py refs <file> <line> <col>` | 查找所有引用位置 |
+| 文档符号 | `pixi run -e dev python .claude/scripts/lsp_pyright.py symbols <file>` | 获取类/函数/方法列表 |
+| 类型信息 | `pixi run -e dev python .claude/scripts/lsp_pyright.py hover <file> <line> <col>` | 获取类型和文档 |
+| 代码补全 | `pixi run -e dev python .claude/scripts/lsp_pyright.py complete <file> <line> <col>` | 获取补全建议 |
+| 类型诊断 | `pixi run -e dev python .claude/scripts/lsp_pyright.py diagnose [file]` | Pyright 类型检查 |
+
+**⚠️ 列号定位注意事项**：
+
+LSP 命令中的 `<col>` 参数必须指向**符号名称（identifier）内部**，不能指向行首或关键字：
+
+```python
+# 示例：class DataSource(ABC):
+#        1         2
+# 123456789012345678901234567890
+# class DataSource(ABC):
+#       ^-- 列6 (符号起始位置)
+#         ^-- 列7
+#          ^-- 列8 ✅ 正确（符号名称内部）
+```
+
+| 列号 | 结果 | 原因 |
+|------|------|------|
+| `1` | ❌ 错误 | 指向行首空格，非符号位置 |
+| `8` | ✅ 正确 | 指向 `DataSource` 标识符内部 |
+
+**最佳实践**：
+- 如果不确定列号，先用 `symbols` 命令查看符号列表
+- 或取符号名称的中间位置（如列 8-10）
+- 避免 `1` 这样的行首列号
+
+**其他注意事项**：
+
+| 项目 | 说明 |
+|------|------|
+| **行号** | 从 **1** 开始（符合编辑器习惯） |
+| **列号** | 从 **0** 开始（符合 LSP 标准） |
+| **工作目录** | 必须在项目根目录（`d:\code\quant\ditto`）运行 |
+| **依赖** | 需要 `multilspy` 包（已包含在 dev 环境） |
+| **性能** | 每次命令都会启动/停止 LSP 服务器，可能有 1-2 秒延迟 |
+
+**常见错误处理**：
+
+| 错误 | 原因 | 解决方案 |
+|------|------|----------|
+| `refs 失败: Unexpected response: None` | 列号未指向符号 | 调整列号到符号名称内部 |
+| `multilspy 未安装` | 环境不正确 | 使用 `pixi run -e dev` 前缀 |
+| `未找到定义/引用` | 符号不在索引中 | 确认文件在项目内，尝试运行 `diagnose` |
+
+**降级方案**（当 LSP 脚本不可用时）：
+- 搜索定义: `Grep "class Foo"` → `Glob "**/*foo*.py"`
+- 搜索引用: `Grep "def bar\|bar\("`
 
 ## 绝对禁止
 
@@ -274,7 +326,10 @@ def write_data(df, on_duplicate=OnDuplicate.KEEP_FIRST):
 ### 文件依赖追踪
 
 修改文件时，必须检查：
-- [ ] 导入此文件的其他文件（使用 `findReferences`）
+- [ ] 导入此文件的其他文件（使用 LSP 辅助脚本）
+  ```bash
+  pixi run -e dev python .claude/scripts/lsp_pyright.py refs <file> <line> <col>
+  ```
 - [ ] 此文件导入的依赖文件
 - [ ] 相关的测试文件
 - [ ] 相关的文档文件

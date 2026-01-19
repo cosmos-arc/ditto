@@ -45,7 +45,7 @@ def retry_failed_flow(
         # 创建重试管理器
         retry_manager = RetryManager(
             coordinator=coordinator,
-            ingestion_log_store=hub.ingestion_log_store,
+            hub=hub,
             source=source,
         )
 

@@ -276,7 +276,7 @@ class ArchitectureAuditor:
                             "effort": "M",
                         }
                     )
-                # 注意：providers 导入是允许的（hub.sources 是官方接口）
+                # 注意：sources 导入是允许的（hub.sources 是官方接口）
 
     def _check_unused_protocols(self) -> None:
         """检查未使用的 Protocol"""
