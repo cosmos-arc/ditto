@@ -20,7 +20,7 @@ try:
 except ImportError:
     keyring = None
 
-from ditto_datahub.sources.source import (
+from ditto_datahub.sources.base import (
     SourceConfigurationError,
     SourceFetchError,
 )

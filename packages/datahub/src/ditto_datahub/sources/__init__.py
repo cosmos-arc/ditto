@@ -7,16 +7,16 @@ from ditto_datahub.models.ingestion import (
     IngestionStatus,
     NotTradingDayError,
 )
-from ditto_datahub.sources.source import (
+from ditto_datahub.sources.base import (
     DataSource,
     DataSourceError,
-    DataSources,
     SourceAuthenticationError,
     SourceConfigurationError,
     SourceFetchError,
     SourceRateLimitError,
     SourceTransformationError,
 )
+from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
 __all__ = [

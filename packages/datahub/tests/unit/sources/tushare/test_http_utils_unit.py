@@ -3,7 +3,7 @@
 import httpx
 import polars as pl
 import pytest
-from ditto_datahub.sources.source import (
+from ditto_datahub.sources.base import (
     SourceAuthenticationError,
     SourceFetchError,
     SourceRateLimitError,

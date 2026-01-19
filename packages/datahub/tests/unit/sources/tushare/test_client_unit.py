@@ -5,7 +5,7 @@ import os
 import httpx
 import pytest
 import pytest_mock
-from ditto_datahub.sources.source import (
+from ditto_datahub.sources.base import (
     SourceAuthenticationError,
     SourceConfigurationError,
 )

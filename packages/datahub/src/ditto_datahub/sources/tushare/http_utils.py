@@ -5,7 +5,7 @@ from typing import Any, NoReturn, cast
 import httpx
 import polars as pl
 
-from ditto_datahub.sources.source import (
+from ditto_datahub.sources.base import (
     SourceAuthenticationError,
     SourceFetchError,
     SourceRateLimitError,

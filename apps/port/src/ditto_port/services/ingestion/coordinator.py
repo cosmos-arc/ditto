@@ -15,7 +15,7 @@ import polars as pl
 from ditto_datahub.hub import DataHub
 from ditto_datahub.models import Dataset, OnDuplicate, WriteResult
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
-from ditto_datahub.sources.source import DataSource, SourceFetchError
+from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_foundation import logger
 from ditto_foundation.util.checksum import ChecksumCompute
 

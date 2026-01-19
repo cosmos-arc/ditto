@@ -4,7 +4,7 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.sources.source import (
+from ditto_datahub.sources.base import (
     DataSource,
     DataSourceError,
     SourceAuthenticationError,

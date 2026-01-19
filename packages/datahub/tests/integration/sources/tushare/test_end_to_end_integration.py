@@ -18,7 +18,7 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.sources.source import SourceAuthenticationError
+from ditto_datahub.sources.base import SourceAuthenticationError
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
 

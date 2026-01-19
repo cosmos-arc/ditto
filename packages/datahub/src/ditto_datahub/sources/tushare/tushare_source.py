@@ -13,7 +13,7 @@ from ditto_datahub.meta.schemas import (
     TUSHARE_ST_SCHEMA,
     TUSHARE_SUSPEND_SCHEMA,
 )
-from ditto_datahub.sources.source import (
+from ditto_datahub.sources.base import (
     DataSource,
     SourceAuthenticationError,
     SourceFetchError,
