@@ -345,7 +345,9 @@ class SourcesProvider:
             TushareProvider instance.
 
         """
-        from ditto_datahub.sources.tushare.tushare_provider import TushareProvider
+        from ditto_datahub.providers.tushare.tushare_provider import (  # noqa: PLC0415
+            TushareProvider,
+        )
 
         logger.debug("Creating TushareProvider", event="sources_tushare_create")
         return TushareProvider()
@@ -364,7 +366,9 @@ class SourcesProvider:
             ValueError: If provider name is unknown.
 
         """
-        from ditto_datahub.sources.tushare.tushare_provider import TushareProvider
+        from ditto_datahub.providers.tushare.tushare_provider import (  # noqa: PLC0415
+            TushareProvider,
+        )
 
         normalized_name = name.lower().strip()
 

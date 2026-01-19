@@ -7,7 +7,7 @@ from ditto_datahub.models.ingestion import (
     IngestionStatus,
     NotTradingDayError,
 )
-from ditto_datahub.sources.provider import (
+from ditto_datahub.providers.provider import (
     DataProvider,
     DataProviderError,
     ProviderAuthenticationError,
@@ -17,7 +17,7 @@ from ditto_datahub.sources.provider import (
     ProviderTransformationError,
     SourcesProvider,
 )
-from ditto_datahub.sources.tushare.tushare_provider import TushareProvider
+from ditto_datahub.providers.tushare.tushare_provider import TushareProvider
 
 __all__ = [
     "DataChangedError",

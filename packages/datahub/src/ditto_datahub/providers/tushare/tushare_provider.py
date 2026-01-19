@@ -13,14 +13,14 @@ from ditto_datahub.meta.schemas import (
     TUSHARE_ST_SCHEMA,
     TUSHARE_SUSPEND_SCHEMA,
 )
-from ditto_datahub.sources.provider import (
+from ditto_datahub.providers.provider import (
     DataProvider,
     ProviderAuthenticationError,
     ProviderFetchError,
     ProviderRateLimitError,
 )
-from ditto_datahub.sources.tushare.client import TushareClient
-from ditto_datahub.sources.tushare.transformer import (
+from ditto_datahub.providers.tushare.client import TushareClient
+from ditto_datahub.providers.tushare.transformer import (
     ADJ_FACTOR_MAPPING,
     CALENDAR_MAPPING,
     ETF_BASIC_MAPPING,
