@@ -215,9 +215,6 @@ def mock_datahub() -> MagicMock:
     mock.calendar_store.get_last_trading_day.return_value = "2024-01-31"
     mock.calendar_store.get_range.return_value = ["2024-01-02", "2024-01-03"]
 
-    # Providers mock
-    mock.providers.get.return_value = MagicMock()
-
     # Ingestion log mock
     mock.ingestion_log.get_failed_dates.return_value = []
     mock.ingestion_log.get_ingested_dates.return_value = []

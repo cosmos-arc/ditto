@@ -1,5 +1,4 @@
-"""
-Tests for helpers.py context managers.
+"""Tests for helpers.py context managers.
 
 This module tests the helpers context managers with real dependencies
 but mocked data sources.
@@ -89,16 +88,16 @@ class TestCreateIngestionContext:
             _hub,
             _coordinator,
         ):
-            # Verify providers.get was called with custom source
-            patch_datahub.providers.get.assert_called_with("custom_source")
+            # Verify sources.get was called with custom source
+            patch_datahub.sources.get.assert_called_with("custom_source")
 
     def test_context_default_source_is_tushare(self, patch_datahub):
         """Test that default source parameter is 'tushare'."""
         from ditto_port.jobs.flows.helpers import create_ingestion_context
 
         with create_ingestion_context(data_root="data") as (_hub, _coordinator):
-            # Verify providers.get was called with default "tushare"
-            patch_datahub.providers.get.assert_called_with("tushare")
+            # Verify sources.get was called with default "tushare"
+            patch_datahub.sources.get.assert_called_with("tushare")
 
     def test_context_supports_coordinator_usage(self, patch_datahub):
         """Test that coordinator can be used within context."""

@@ -78,7 +78,7 @@ def create_executor(data_root: str | None):
     """
     hub = get_hub(data_root)
     try:
-        app_ctx = _AppContext(hub=hub, source=hub.providers)
+        app_ctx = _AppContext(hub=hub, source=hub.sources)
         executor = CLIExecutor(app_ctx)
         yield executor
     finally:

@@ -82,7 +82,7 @@ def create_ingest_task(dataset: Dataset) -> Any:
         hub = DataHub(data_root=data_root)
         try:
             # 获取数据源
-            data_source = hub.providers.get(source)
+            data_source = hub.sources.get(source)
 
             # 创建协调器并执行摄取
             coordinator = IngestionCoordinator(

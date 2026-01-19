@@ -95,11 +95,11 @@ from ditto_datahub import DataHub
 
 hub = DataHub(data_root="data")
 
-# 通过 Providers 访问
-etf_basic = hub.providers.tushare.fetch_etf_basic()
+# 通过 SourcesProvider 访问
+etf_basic = hub.sources.tushare.fetch_etf_basic()
 
 # 或使用工厂函数
-provider = hub.providers.get("tushare")
+source = hub.sources.get("tushare")
 stock_daily = source.fetch_stock_daily("2024-01-02")
 ```
 

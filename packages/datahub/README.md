@@ -173,10 +173,10 @@ from ditto_datahub import DataHub
 hub = DataHub()
 
 # 获取数据源访问器
-providers = hub.providers
+sources = hub.sources
 
 # 使用 Tushare 数据源
-tushare = providers.tushare
+tushare = sources.tushare
 
 # 获取证券列表
 securities = tushare.get_securities()

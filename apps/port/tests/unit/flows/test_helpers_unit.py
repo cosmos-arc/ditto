@@ -1,5 +1,4 @@
-"""
-Unit tests for helpers.py flow context managers.
+"""Unit tests for helpers.py flow context managers.
 
 This module provides unit-level coverage for the helpers module,
 testing the context manager behavior with mocked dependencies.
@@ -25,7 +24,7 @@ class TestCreateIngestionContext:
         """Test that context creates DataHub with data_root parameter."""
         mock_hub = mocker.MagicMock()
         mock_source = mocker.MagicMock()
-        mock_hub.providers.get.return_value = mock_source
+        mock_hub.sources.get.return_value = mock_source
 
         # Patch where the symbol is imported, not where it's defined
         mock_dh = mocker.patch(
@@ -46,7 +45,7 @@ class TestCreateIngestionContext:
         """Test that context gets data source with source parameter."""
         mock_hub = mocker.MagicMock()
         mock_source = mocker.MagicMock()
-        mock_hub.providers.get.return_value = mock_source
+        mock_hub.sources.get.return_value = mock_source
 
         mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
         mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
@@ -57,14 +56,14 @@ class TestCreateIngestionContext:
         ):
             pass
 
-        # Verify providers.get was called with correct source
-        mock_hub.providers.get.assert_called_once_with("custom_source")
+        # Verify sources.get was called with correct source
+        mock_hub.sources.get.assert_called_once_with("custom_source")
 
     def test_creates_ingestion_coordinator(self, mocker):
         """Test that context creates IngestionCoordinator with correct params."""
         mock_hub = mocker.MagicMock()
         mock_source = mocker.MagicMock()
-        mock_hub.providers.get.return_value = mock_source
+        mock_hub.sources.get.return_value = mock_source
 
         mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
         mock_coordinator_cls = mocker.patch(
@@ -90,7 +89,7 @@ class TestCreateIngestionContext:
         """Test that context yields hub and coordinator instances."""
         mock_hub = mocker.MagicMock()
         mock_source = mocker.MagicMock()
-        mock_hub.providers.get.return_value = mock_source
+        mock_hub.sources.get.return_value = mock_source
 
         mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
         mock_coordinator_cls = mocker.patch(
@@ -110,7 +109,7 @@ class TestCreateIngestionContext:
         """Test that hub.close() is called on successful completion."""
         mock_hub = mocker.MagicMock()
         mock_source = mocker.MagicMock()
-        mock_hub.providers.get.return_value = mock_source
+        mock_hub.sources.get.return_value = mock_source
 
         mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
         mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
@@ -128,7 +127,7 @@ class TestCreateIngestionContext:
         """Test that hub.close() is called even when exception occurs."""
         mock_hub = mocker.MagicMock()
         mock_source = mocker.MagicMock()
-        mock_hub.providers.get.return_value = mock_source
+        mock_hub.sources.get.return_value = mock_source
 
         mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
         mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
@@ -147,7 +146,7 @@ class TestCreateIngestionContext:
         """Test that default source parameter is 'tushare'."""
         mock_hub = mocker.MagicMock()
         mock_source = mocker.MagicMock()
-        mock_hub.providers.get.return_value = mock_source
+        mock_hub.sources.get.return_value = mock_source
 
         mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
         mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
@@ -156,13 +155,13 @@ class TestCreateIngestionContext:
             pass
 
         # Verify sources.get was called with default "tushare"
-        mock_hub.providers.get.assert_called_once_with("tushare")
+        mock_hub.sources.get.assert_called_once_with("tushare")
 
     def test_context_manager_allows_using_coordinator(self, mocker):
         """Test that coordinator can be used within context."""
         mock_hub = mocker.MagicMock()
         mock_source = mocker.MagicMock()
-        mock_hub.providers.get.return_value = mock_source
+        mock_hub.sources.get.return_value = mock_source
 
         mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
         mock_coordinator_cls = mocker.patch(

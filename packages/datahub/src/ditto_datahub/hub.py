@@ -220,12 +220,12 @@ class DataHub:
         )
 
     # ========================================================================
-    # Providers Layer (External Data Providers)
+    # Sources Layer (External Data Sources)
     # ========================================================================
 
     @cached_property
-    def providers(self) -> SourcesProvider:
-        """External data providers accessor (Tushare, Akshare, etc.)."""
+    def sources(self) -> SourcesProvider:
+        """External data sources accessor (Tushare, Akshare, etc.)."""
         return SourcesProvider()
 
     # ========================================================================
