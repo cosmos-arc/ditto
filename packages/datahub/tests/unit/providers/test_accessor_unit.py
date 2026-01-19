@@ -1,7 +1,7 @@
 """Tests for SourcesProvider."""
 
 import pytest
-from ditto_datahub.sources.provider import SourcesProvider
+from ditto_datahub.providers.provider import SourcesProvider
 
 
 class TestSourcesProvider:
@@ -70,5 +70,5 @@ class TestSourcesProvider:
         """Test get() raises error for invalid source name."""
         provider = SourcesProvider()
 
-        with pytest.raises(ValueError, match="Unknown source"):
+        with pytest.raises(ValueError, match="Unknown provider"):
             provider.get("invalid_source")

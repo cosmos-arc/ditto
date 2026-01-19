@@ -3,12 +3,12 @@
 import httpx
 import polars as pl
 import pytest
-from ditto_datahub.sources.provider import (
+from ditto_datahub.providers.provider import (
     ProviderAuthenticationError,
     ProviderFetchError,
     ProviderRateLimitError,
 )
-from ditto_datahub.sources.tushare.http_utils import (
+from ditto_datahub.providers.tushare.http_utils import (
     map_http_error,
     response_to_dataframe,
     validate_tushare_response,
@@ -114,7 +114,7 @@ class TestMapHttpError:
         with pytest.raises(ProviderAuthenticationError) as exc_info:
             map_http_error(error, "trade_cal")
 
-        assert exc_info.value.details.get("source") == "tushare"
+        assert exc_info.value.details.get("provider") == "tushare"
 
     def test_403_raises_authentication_error(self):
         """403 映射到认证错误."""
@@ -127,7 +127,7 @@ class TestMapHttpError:
         with pytest.raises(ProviderAuthenticationError) as exc_info:
             map_http_error(error, "daily")
 
-        assert exc_info.value.details.get("source") == "tushare"
+        assert exc_info.value.details.get("provider") == "tushare"
 
     def test_429_raises_rate_limit_error(self):
         """429 映射到限流错误."""
@@ -142,7 +142,7 @@ class TestMapHttpError:
         with pytest.raises(ProviderRateLimitError) as exc_info:
             map_http_error(error, "stock_basic")
 
-        assert exc_info.value.details.get("source") == "tushare"
+        assert exc_info.value.details.get("provider") == "tushare"
 
     def test_5xx_raises_fetch_error_with_retry(self):
         """5xx 映射到抓取错误并支持重试."""
@@ -157,7 +157,7 @@ class TestMapHttpError:
         with pytest.raises(ProviderFetchError) as exc_info:
             map_http_error(error, "adj_factor")
 
-        assert exc_info.value.details.get("source") == "tushare"
+        assert exc_info.value.details.get("provider") == "tushare"
         assert exc_info.value.details.get("original_error") is not None
 
     def test_network_error_raises_fetch_error(self):
@@ -169,7 +169,7 @@ class TestMapHttpError:
         with pytest.raises(ProviderFetchError) as exc_info:
             map_http_error(error, "fund_adj")
 
-        assert exc_info.value.details.get("source") == "tushare"
+        assert exc_info.value.details.get("provider") == "tushare"
         assert exc_info.value.details.get("original_error") is not None
 
     def test_timeout_raises_fetch_error(self):
@@ -181,7 +181,7 @@ class TestMapHttpError:
         with pytest.raises(ProviderFetchError) as exc_info:
             map_http_error(error, "trade_cal")
 
-        assert exc_info.value.details.get("source") == "tushare"
+        assert exc_info.value.details.get("provider") == "tushare"
         assert exc_info.value.details.get("original_error") is not None
 
     def test_unknown_error_raises_fetch_error(self):
@@ -193,7 +193,7 @@ class TestMapHttpError:
         with pytest.raises(ProviderFetchError) as exc_info:
             map_http_error(error, "daily")
 
-        assert exc_info.value.details.get("source") == "tushare"
+        assert exc_info.value.details.get("provider") == "tushare"
         assert exc_info.value.details.get("original_error") is not None
 
 

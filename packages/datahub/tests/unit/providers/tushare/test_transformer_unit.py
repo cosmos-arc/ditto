@@ -3,7 +3,7 @@
 from datetime import date
 
 import polars as pl
-from ditto_datahub.sources.tushare.transformer import (
+from ditto_datahub.providers.tushare.transformer import (
     ADJ_FACTOR_MAPPING,
     CALENDAR_MAPPING,
     DAILY_OHLCV_MAPPING,
@@ -308,8 +308,10 @@ class TestTushareDataTransformer:
         }
 
     def test_transform_etf_basic_empty(self) -> None:
-        """Test transform with empty ETF basic DataFrame - computed columns type
-        inference."""
+        """
+        Test transform with empty ETF basic DataFrame - computed columns type
+        inference.
+        """
         # 创建空 DataFrame，但有正确的 schema
         input_df = pl.DataFrame(
             schema={

@@ -4,7 +4,7 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.sources.provider import (
+from ditto_datahub.providers.provider import (
     DataProvider,
     DataProviderError,
     ProviderAuthenticationError,

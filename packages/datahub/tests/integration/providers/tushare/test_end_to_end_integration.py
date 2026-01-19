@@ -18,8 +18,8 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.sources.provider import ProviderAuthenticationError
-from ditto_datahub.sources.tushare.tushare_provider import TushareProvider
+from ditto_datahub.providers.provider import ProviderAuthenticationError
+from ditto_datahub.providers.tushare.tushare_provider import TushareProvider
 
 
 @pytest.mark.integration

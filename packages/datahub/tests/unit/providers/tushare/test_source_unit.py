@@ -6,12 +6,12 @@ from datetime import date
 import httpx
 import polars as pl
 import pytest
-from ditto_datahub.sources.provider import (
+from ditto_datahub.providers.provider import (
     ProviderAuthenticationError,
     ProviderFetchError,
     ProviderRateLimitError,
 )
-from ditto_datahub.sources.tushare.tushare_provider import TushareProvider
+from ditto_datahub.providers.tushare.tushare_provider import TushareProvider
 
 
 class TestTushareProviderCalendar:

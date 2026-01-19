@@ -5,12 +5,12 @@ import os
 import httpx
 import pytest
 import pytest_mock
-from ditto_datahub.sources.provider import (
+from ditto_datahub.providers.provider import (
     ProviderAuthenticationError,
     ProviderConfigurationError,
 )
-from ditto_datahub.sources.tushare.client import TushareClient
-from ditto_datahub.sources.tushare.rate_limiter import (
+from ditto_datahub.providers.tushare.client import TushareClient
+from ditto_datahub.providers.tushare.rate_limiter import (
     TushareRateLimitConfig,
     TushareRateLimiter,
 )
@@ -37,7 +37,7 @@ class TestTushareClientInit:
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token_123")
 
         mocker.patch(
-            "ditto_datahub.sources.tushare.client._get_tushare_token",
+            "ditto_datahub.providers.tushare.client._get_tushare_token",
             side_effect=mock_get_token,
         )
         client = TushareClient()
@@ -57,7 +57,7 @@ class TestTushareClientInit:
         monkeypatch.delenv("TUSHARE_TOKEN", raising=False)
 
         mocker.patch(
-            "ditto_datahub.sources.tushare.client._get_tushare_token",
+            "ditto_datahub.providers.tushare.client._get_tushare_token",
             side_effect=mock_get_token,
         )
         with pytest.raises(ProviderConfigurationError):
