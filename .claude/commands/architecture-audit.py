@@ -263,7 +263,7 @@ class ArchitectureAuditor:
         for module in port_modules:
             for dep in self.import_graph.get(module, set()):
                 # 检查是否依赖了 packages 中的具体实现
-                if dep.startswith("packages.datahub.stores.") or dep.startswith("packages.datahub.sources."):
+                if dep.startswith("packages.datahub.stores.") or dep.startswith("packages.datahub.providers."):
                     self.findings.append(
                         {
                             "id": "ARCH-001",

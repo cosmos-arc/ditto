@@ -310,7 +310,7 @@ grep -r "sources/" docs/ packages/ --include="*.md" | grep -v "providers/"
 
 ## 成功标准
 
-- [ ] **架构健康**：无循环依赖，stores 不导入 providers
+- [x] **架构健康**：无循环依赖，stores 不导入 providers
 - [ ] 所有测试通过（100%）
 - [ ] pyright 类型检查通过（0 errors）
 - [ ] ruff 代码检查通过
