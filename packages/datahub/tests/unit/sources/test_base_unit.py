@@ -57,12 +57,12 @@ class TestSourceAuthenticationError:
         """Test error for invalid credentials."""
         error = SourceAuthenticationError(
             message="Authentication failed",
-            provider="tushare",
+            source="tushare",
         )
-        assert error.details["provider"] == "tushare"
+        assert error.details["source"] == "tushare"
 
-    def test_without_provider(self) -> None:
-        """Test error without provider parameter."""
+    def test_without_source(self) -> None:
+        """Test error without source parameter."""
         error = SourceAuthenticationError(message="Auth failed")
         assert error.details == {}
 
@@ -74,7 +74,7 @@ class TestSourceRateLimitError:
         """Test error includes rate limit details."""
         error = SourceRateLimitError(
             message="Rate limit exceeded",
-            provider="tushare",
+            source="tushare",
             limit=200,
             window=60,
         )
@@ -98,7 +98,7 @@ class TestSourceFetchError:
         """Test error includes fetch context."""
         error = SourceFetchError(
             message="Failed to fetch data",
-            provider="tushare",
+            source="tushare",
             dataset="etf_daily",
             trade_date=date(2024, 12, 27),
         )
@@ -121,7 +121,7 @@ class TestSourceTransformationError:
         """Test error for schema mismatch."""
         error = SourceTransformationError(
             message="Schema validation failed",
-            provider="tushare",
+            source="tushare",
             dataset="etf_daily",
             expected_columns=["src_code", "trade_date", "close"],
             actual_columns=["code", "date", "price"],

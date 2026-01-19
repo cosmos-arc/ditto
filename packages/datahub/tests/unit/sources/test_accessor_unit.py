@@ -14,8 +14,8 @@ class TestDataSources:
         """Test tushare property returns TushareSource instance."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        provider = DataSources()
-        source = provider.tushare
+        sources = DataSources()
+        source = sources.tushare
 
         assert source is not None
         assert hasattr(source, "fetch_calendar")
@@ -29,9 +29,9 @@ class TestDataSources:
         """Test tushare property is cached."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        provider = DataSources()
-        source1 = provider.tushare
-        source2 = provider.tushare
+        sources = DataSources()
+        source1 = sources.tushare
+        source2 = sources.tushare
 
         # Should return the same instance
         assert source1 is source2
@@ -43,8 +43,8 @@ class TestDataSources:
         """Test get() method returns TushareSource."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        provider = DataSources()
-        source = provider.get("tushare")
+        sources = DataSources()
+        source = sources.get("tushare")
 
         assert source is not None
         assert hasattr(source, "fetch_calendar")
@@ -56,9 +56,9 @@ class TestDataSources:
         """Test get() normalizes case."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        provider = DataSources()
-        source1 = provider.get("TUSHARE")
-        source2 = provider.get("tushare")
+        sources = DataSources()
+        source1 = sources.get("TUSHARE")
+        source2 = sources.get("tushare")
 
         # Both should return valid source instances
         assert source1 is not None
@@ -68,7 +68,7 @@ class TestDataSources:
 
     def test_get_invalid_name_raises_error(self) -> None:
         """Test get() raises error for invalid source name."""
-        provider = DataSources()
+        sources = DataSources()
 
-        with pytest.raises(ValueError, match="Unknown provider"):
-            provider.get("invalid_source")
+        with pytest.raises(ValueError, match="Unknown source"):
+            sources.get("invalid_source")
