@@ -7,8 +7,8 @@
 """
 
 import polars as pl
+from ditto_datahub import DataHub
 from ditto_datahub.models.ingestion import IngestionLog
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_foundation import logger
 from ditto_foundation.util.checksum import ChecksumCompute
 
@@ -23,19 +23,19 @@ class MetadataManager:
     - 判断是否需要跳过
 
     Attributes:
-        _log_store: IngestionLogStore 实例, 用于访问摄取日志。
+        _hub: DataHub 实例, 用于访问数据摄取日志等数据。
 
     """
 
-    def __init__(self, log_store: IngestionLogStore | None = None) -> None:
+    def __init__(self, hub: DataHub) -> None:
         """
         初始化 MetadataManager。
 
         Args:
-            log_store: IngestionLogStore 实例。如果为 None, 必须稍后设置。
+            hub: DataHub 实例。
 
         """
-        self._log_store = log_store
+        self._hub = hub
 
     def should_skip(
         self,
@@ -71,16 +71,7 @@ class MetadataManager:
             return False, None
 
         # 检查是否有历史记录
-        if self._log_store is None:
-            logger.warning(
-                "log_store not set, cannot check history",
-                event="should_skip_log_store_missing",
-                dataset=dataset,
-                trade_date=trade_date,
-            )
-            return False, None
-
-        existing = self._log_store.get_log(
+        existing = self._hub.ingestion_log.get_log(
             dataset=dataset,
             source=source,
             trade_date=trade_date,

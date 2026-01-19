@@ -36,7 +36,7 @@ class IngestionCoordinator:
         self._hub = hub
         self._source = source
         self._source_name = source_name
-        self._metadata_manager = MetadataManager(log_store=hub.ingestion_log_store)
+        self._metadata_manager = MetadataManager(hub)
 
     def ingest_date(
         self,
