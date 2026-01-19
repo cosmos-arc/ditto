@@ -1,4 +1,5 @@
-"""Unit tests for backfill flow.
+"""
+Unit tests for backfill flow.
 
 This module provides unit-level coverage for the backfill flow,
 testing individual code paths and branches without full integration setup.
@@ -23,7 +24,6 @@ class TestBackfillFlowConfig:
 
     def test_config_with_required_fields(self):
         """Test that config accepts required fields."""
-
         config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
@@ -36,7 +36,6 @@ class TestBackfillFlowConfig:
 
     def test_config_with_all_fields(self):
         """Test that config accepts all fields."""
-
         config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
@@ -59,7 +58,6 @@ class TestBackfillFlowConfig:
 
     def test_config_defaults(self):
         """Test that config has correct defaults."""
-
         config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
@@ -75,7 +73,6 @@ class TestBackfillFlowConfig:
 
     def test_config_validates_required_fields(self):
         """Test that config validates required fields."""
-
         with pytest.raises(ValidationError) as exc_info:
             BackfillFlowConfig(
                 start_date="2024-01-01",
@@ -87,7 +84,6 @@ class TestBackfillFlowConfig:
 
     def test_config_model_dump(self):
         """Test that config can be dumped to dict."""
-
         config = BackfillFlowConfig(
             dataset="stock_daily",
             start_date="2024-01-01",
@@ -109,7 +105,6 @@ class TestBackfillFlowResult:
 
     def test_model_with_valid_data(self):
         """Test that model accepts valid data."""
-
         result = BackfillFlowResult(
             dataset="stock_daily",
             start_date="2024-01-01",
@@ -130,7 +125,6 @@ class TestBackfillFlowResult:
 
     def test_model_message_default(self):
         """Test that message field has default empty string."""
-
         result = BackfillFlowResult(
             dataset="stock_daily",
             start_date="2024-01-01",
@@ -145,7 +139,6 @@ class TestBackfillFlowResult:
 
     def test_model_with_custom_message(self):
         """Test that model accepts custom message."""
-
         result = BackfillFlowResult(
             dataset="stock_daily",
             start_date="2024-01-01",
@@ -166,15 +159,13 @@ class TestBackfillFlow:
 
     def test_is_prefect_flow(self):
         """Test that backfill_flow is a Prefect flow."""
-
         assert isinstance(backfill_flow, Flow)
         assert backfill_flow.name == "backfill"
 
     def test_creates_datahub_with_data_root(self, mocker):
         """Test that flow creates DataHub with data_root parameter."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.providers.get.return_value = mocker.MagicMock()
         mock_hub.calendar_store = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
@@ -204,10 +195,9 @@ class TestBackfillFlow:
 
     def test_creates_ingestion_coordinator(self, mocker):
         """Test that flow creates IngestionCoordinator."""
-
         mock_hub = mocker.MagicMock()
         mock_source = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mock_source
+        mock_hub.providers.get.return_value = mock_source
         mock_hub.calendar_store = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
@@ -244,9 +234,8 @@ class TestBackfillFlow:
 
     def test_creates_backfill_manager(self, mocker):
         """Test that flow creates BackfillManager."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.providers.get.return_value = mocker.MagicMock()
         mock_calendar_store = mocker.MagicMock()
         mock_ingestion_log = mocker.MagicMock()
         mock_hub.calendar_store = mock_calendar_store
@@ -286,9 +275,8 @@ class TestBackfillFlow:
 
     def test_respects_resume_from_parameter(self, mocker):
         """Test that flow overrides start_date when resume_from is provided."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.providers.get.return_value = mocker.MagicMock()
         mock_hub.calendar_store = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
@@ -320,9 +308,8 @@ class TestBackfillFlow:
 
     def test_passes_parallel_to_backfill_range(self, mocker):
         """Test that flow passes parallel parameter to backfill_range."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.providers.get.return_value = mocker.MagicMock()
         mock_hub.calendar_store = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
@@ -351,9 +338,8 @@ class TestBackfillFlow:
 
     def test_returns_result_dict_with_all_keys(self, mocker):
         """Test that flow returns dict with all required keys."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.providers.get.return_value = mocker.MagicMock()
         mock_hub.calendar_store = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
@@ -395,9 +381,8 @@ class TestBackfillFlow:
 
     def test_closes_hub_on_success(self, mocker):
         """Test that hub.close() is called on successful completion."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.providers.get.return_value = mocker.MagicMock()
         mock_hub.calendar_store = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
@@ -424,9 +409,8 @@ class TestBackfillFlow:
 
     def test_closes_hub_on_exception(self, mocker):
         """Test that hub.close() is called even when exception occurs."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.side_effect = ValueError("Test error")
+        mock_hub.providers.get.side_effect = ValueError("Test error")
 
         mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
 
@@ -448,15 +432,13 @@ class TestBackfillMissingFlow:
 
     def test_is_prefect_flow(self):
         """Test that backfill_missing_flow is a Prefect flow."""
-
         assert isinstance(backfill_missing_flow, Flow)
         assert backfill_missing_flow.name == "backfill-missing"
 
     def test_creates_datahub_with_data_root(self, mocker):
         """Test that flow creates DataHub with data_root parameter."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.providers.get.return_value = mocker.MagicMock()
         mock_hub.calendar_store = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
@@ -483,10 +465,9 @@ class TestBackfillMissingFlow:
 
     def test_creates_ingestion_coordinator(self, mocker):
         """Test that flow creates IngestionCoordinator."""
-
         mock_hub = mocker.MagicMock()
         mock_source = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mock_source
+        mock_hub.providers.get.return_value = mock_source
         mock_hub.calendar_store = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
@@ -520,9 +501,8 @@ class TestBackfillMissingFlow:
 
     def test_creates_backfill_manager(self, mocker):
         """Test that flow creates BackfillManager."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.providers.get.return_value = mocker.MagicMock()
         mock_calendar_store = mocker.MagicMock()
         mock_ingestion_log = mocker.MagicMock()
         mock_hub.calendar_store = mock_calendar_store
@@ -557,9 +537,8 @@ class TestBackfillMissingFlow:
 
     def test_passes_parallel_to_backfill_missing(self, mocker):
         """Test that flow passes parallel parameter to backfill_missing."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.providers.get.return_value = mocker.MagicMock()
         mock_hub.calendar_store = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
@@ -585,9 +564,8 @@ class TestBackfillMissingFlow:
 
     def test_returns_result_with_missing_data(self, mocker):
         """Test that flow returns correct result when there are missing dates."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.providers.get.return_value = mocker.MagicMock()
         mock_hub.calendar_store = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
@@ -622,9 +600,8 @@ class TestBackfillMissingFlow:
 
     def test_returns_result_with_no_missing_data(self, mocker):
         """Test that flow returns correct result when there are no missing dates."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.providers.get.return_value = mocker.MagicMock()
         mock_hub.calendar_store = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
@@ -649,9 +626,8 @@ class TestBackfillMissingFlow:
 
     def test_closes_hub_on_success(self, mocker):
         """Test that hub.close() is called on successful completion."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.providers.get.return_value = mocker.MagicMock()
         mock_hub.calendar_store = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
@@ -675,9 +651,8 @@ class TestBackfillMissingFlow:
 
     def test_closes_hub_on_exception(self, mocker):
         """Test that hub.close() is called even when exception occurs."""
-
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.side_effect = ValueError("Test error")
+        mock_hub.providers.get.side_effect = ValueError("Test error")
 
         mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
         with pytest.raises(ValueError, match="Test error"):

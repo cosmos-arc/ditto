@@ -92,7 +92,7 @@ class TestCreateIngestTask:
 
         # Mock the sources.get() to return a mock source
         mock_source = mocker.Mock()
-        mock_hub.sources.get.return_value = mock_source
+        mock_hub.providers.get.return_value = mock_source
 
         mocker.patch("ditto_port.jobs.tasks.t0_meta.DataHub", return_value=mock_hub)
         mocker.patch(
@@ -133,7 +133,7 @@ class TestCreateIngestTask:
         mock_coordinator.ingest_date.return_value = mock_result
 
         mock_source = mocker.Mock()
-        mock_hub.sources.get.return_value = mock_source
+        mock_hub.providers.get.return_value = mock_source
 
         mocker.patch("ditto_port.jobs.tasks.t0_meta.DataHub", return_value=mock_hub)
         mocker.patch(
@@ -161,7 +161,7 @@ class TestCreateIngestTask:
         mock_hub = mocker.Mock()
 
         mock_source = mocker.Mock()
-        mock_hub.sources.get.return_value = mock_source
+        mock_hub.providers.get.return_value = mock_source
 
         mocker.patch("ditto_port.jobs.tasks.t0_meta.DataHub", return_value=mock_hub)
         mocker.patch(
@@ -258,7 +258,7 @@ class TestTaskIntegration:
         mock_coordinator.ingest_date.return_value = mock_result
 
         mock_source = mocker.Mock()
-        mock_hub.sources.get.return_value = mock_source
+        mock_hub.providers.get.return_value = mock_source
 
         mocker.patch("ditto_port.jobs.tasks.t0_meta.DataHub", return_value=mock_hub)
         mocker.patch(

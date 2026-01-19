@@ -41,7 +41,7 @@ from ditto_datahub import DataHub
 hub = DataHub(data_root="data")
 
 # 获取 Tushare 数据源
-source = hub.sources.get("tushare")
+provider = hub.providers.get("tushare")
 
 # 获取交易日历
 calendar = source.fetch_calendar("2024-01-01", "2024-01-31")
@@ -320,7 +320,7 @@ source.py 转换逻辑  列重命名、类型转换、过滤
 DataHub 支持多数据源，初始化时指定：
 
 ```python
-source = hub.sources.get("akshare")  # 切换到 Akshare
+provider = hub.providers.get("akshare")  # 切换到 Akshare
 ```
 
 ---

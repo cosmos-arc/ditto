@@ -45,7 +45,7 @@ def create_ingestion_context(
     hub = DataHub(data_root=data_root)
     try:
         # 获取数据源
-        data_source = hub.sources.get(source)
+        data_source = hub.providers.get(source)
 
         # 创建协调器
         coordinator = IngestionCoordinator(
