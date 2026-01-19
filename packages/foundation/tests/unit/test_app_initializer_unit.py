@@ -7,7 +7,7 @@ import ditto_foundation.config.paths as paths_module
 import ditto_foundation.config.settings as settings_module
 import pytest
 from ditto_foundation import reset_initializer
-from ditto_foundation.app_initializer import (
+from ditto_foundation.bootstrap import (
     AppInitializer,
     get_initializer,
     initialize_app,

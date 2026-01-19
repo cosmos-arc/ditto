@@ -4,7 +4,7 @@ import hashlib
 from pathlib import Path
 
 import pytest
-from ditto_foundation.version import compute_checksum
+from ditto_foundation.checksum import compute_checksum
 
 
 class TestComputeChecksum:

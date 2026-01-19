@@ -7,7 +7,7 @@ from pathlib import Path
 
 import orjson
 from ditto_foundation import logger, traced
-from ditto_foundation.version import compute_checksum
+from ditto_foundation.checksum import compute_checksum
 
 from ..models import FreezeManifest
 

@@ -7,12 +7,15 @@ Ditto 共享模块.
 __version__ = "0.1.0"
 __author__ = "Ditto Team"
 
-# Export app initializer
-from ditto_foundation.app_initializer import AppInitializer, initialize_app
-from ditto_foundation.app_initializer import reset_for_testing as reset_initializer
+# Export app bootstrap
+from ditto_foundation.bootstrap import AppInitializer, initialize_app
+from ditto_foundation.bootstrap import reset_for_testing as reset_initializer
 
 # Export cache components
 from ditto_foundation.cache import CacheStats, DataCache
+
+# Export checksum components
+from ditto_foundation.checksum import compute_checksum
 
 # Export concurrency components
 from ditto_foundation.concurrency import FileLockManager, LockAcquisitionError
@@ -36,9 +39,6 @@ from ditto_foundation.observability import (
     span,
     traced,
 )
-
-# Export version management
-from ditto_foundation.version import compute_checksum
 
 __all__ = [
     "AppInitializer",

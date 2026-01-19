@@ -82,7 +82,7 @@ class TestFreezeManagerChecksum:
         test_file.write_text("test data")
 
         # Test current SHA-256 implementation (using foundation version)
-        from ditto_foundation.version import compute_checksum
+        from ditto_foundation.checksum import compute_checksum
 
         sha256_checksum = compute_checksum(test_file)
 
@@ -142,7 +142,7 @@ class TestFreezeManagerChecksum:
     def test_compute_checksum_implementation(self, mocker):
         """Test the compute_checksum implementation uses SHA-256."""
         # Mock hashlib.sha256 in the foundation module
-        mock_hashlib = mocker.patch("ditto_foundation.version.hashlib")
+        mock_hashlib = mocker.patch("ditto_foundation.checksum.file.hashlib")
         mock_sha256 = mock_hashlib.sha256.return_value
         mock_sha256.hexdigest.return_value = "mock_sha256_hash"
 
@@ -151,7 +151,7 @@ class TestFreezeManagerChecksum:
         test_file.write_text("test data")
 
         # Call compute_checksum from foundation
-        from ditto_foundation.version import compute_checksum
+        from ditto_foundation.checksum import compute_checksum
 
         result = compute_checksum(test_file)
 

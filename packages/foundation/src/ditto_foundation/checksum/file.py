@@ -1,7 +1,7 @@
 """
-版本管理工具。
+文件校验和工具。
 
-提供通用的版本管理能力，包括文件校验和计算、版本标识等。
+提供通用的文件校验和能力，包括文件校验和计算等。
 这些工具不依赖任何领域特定逻辑，可用于任何文件的完整性验证。
 """
 
@@ -30,7 +30,7 @@ def compute_checksum(file_path: Path) -> str:
 
     Examples:
         >>> from pathlib import Path
-        >>> from ditto_foundation.version import compute_checksum
+        >>> from ditto_foundation.checksum import compute_checksum
         >>> checksum = compute_checksum(Path("data.parquet"))
         >>> len(checksum)
         64
