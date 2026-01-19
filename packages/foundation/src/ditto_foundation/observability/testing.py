@@ -21,10 +21,10 @@ def get_recorded_spans() -> list[Any]:
 
     Returns
     -------
-        list: 已完成的 Span 列表
+        list[ReadableSpan]: 已完成的 Span 列表
 
     """
-    exporter = tracing._get_in_memory_exporter()
+    exporter = tracing.get_in_memory_exporter()
     if exporter is not None:
         return list(exporter.get_finished_spans())
     return []
@@ -41,7 +41,7 @@ def get_recorded_metrics() -> dict[str, Any]:
     """
     # InMemoryMetricReader 的 get_metrics_data() 返回 ResourceMetrics
     # 这是一个复杂的结构，测试中我们只需要验证它不是 None
-    reader = metrics._get_in_memory_reader()
+    reader = metrics.get_in_memory_reader()
     if reader is not None:
         data = reader.get_metrics_data()
         if data is not None:

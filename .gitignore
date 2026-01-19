@@ -87,7 +87,8 @@ assets/
 
 # 模型文件
 # 模型文件通常较大，不建议直接存入 Git
-models/
+# 注意: 不要忽略 packages/ 下的 models/ 目录（那是代码模型）
+/models/
 *.model
 *.pt
 *.pth
@@ -139,7 +140,7 @@ tmpclaude-*-cwd
 .env
 .env.*
 !.env.example
-!,.env.template
+!.env.template
 config.local.py
 local.settings.json
 

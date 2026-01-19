@@ -7,30 +7,12 @@
 - 限制重试数量以防资源耗尽
 """
 
-from typing import TYPE_CHECKING
-
+from ditto_datahub import DataHub
 from ditto_foundation import logger
-from pydantic import BaseModel
 
-from ditto_port.services.ingestion.coordinator import (
-    IngestionCoordinator,
-    IngestionResult,
-)
+from ditto_port.models import IngestionResult, RetryResult
+from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 from ditto_port.services.ingestion.result_utils import count_results
-
-if TYPE_CHECKING:
-    from ditto_datahub.stores.ingestion_log import IngestionLogStore
-
-
-class RetryResult(BaseModel):
-    """重试结果。"""
-
-    dataset: str
-    total_failed: int
-    retried_count: int
-    success_count: int
-    still_failed_count: int
-    results: list[IngestionResult]
 
 
 class RetryManager:
@@ -39,7 +21,7 @@ class RetryManager:
     def __init__(
         self,
         coordinator: IngestionCoordinator,
-        ingestion_log_store: "IngestionLogStore",
+        hub: DataHub,
         source: str = "tushare",
     ) -> None:
         """
@@ -47,12 +29,12 @@ class RetryManager:
 
         Args:
             coordinator: 摄取协调器
-            ingestion_log_store: 摄取日志存储
+            hub: 数据访问中心
             source: 数据源标识符
 
         """
         self._coordinator = coordinator
-        self._ingestion_log_store = ingestion_log_store
+        self._hub = hub
         self._source = source
 
     def get_failed_dates(
@@ -73,7 +55,7 @@ class RetryManager:
             失败的交易日期列表（YYYY-MM-DD）
 
         """
-        failed_dates = self._ingestion_log_store.get_failed_dates(
+        failed_dates = self._hub.ingestion_log.get_failed_dates(
             dataset=dataset,
             source=self._source,
             limit=limit,
@@ -142,7 +124,7 @@ class RetryManager:
             retried_count=len(results),
             success_count=counts.success,
             still_failed_count=counts.failed,
-            results=results,
+            results=tuple(results),
         )
 
         logger.info(

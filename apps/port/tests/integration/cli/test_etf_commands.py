@@ -10,11 +10,11 @@ runner = CliRunner()
 
 
 @pytest.mark.integration
-def test_etf_daily_command(temp_dir: Path):
+def test_etf_daily_command(tmp_path: Path):
     """测试 etf daily 命令."""
     result = runner.invoke(
         app,
-        ["--data-root", str(temp_dir), "etf", "daily", "2024-01-02"],
+        ["--data-root", str(tmp_path), "etf", "daily", "2024-01-02"],
     )
     assert result.exit_code == 0 or "unable to open database file" in str(
         result.exception
@@ -24,11 +24,11 @@ def test_etf_daily_command(temp_dir: Path):
 
 
 @pytest.mark.integration
-def test_etf_daily_with_force(temp_dir: Path):
+def test_etf_daily_with_force(tmp_path: Path):
     """测试 etf daily --force 命令."""
     result = runner.invoke(
         app,
-        ["--data-root", str(temp_dir), "etf", "daily", "2024-01-02", "--force"],
+        ["--data-root", str(tmp_path), "etf", "daily", "2024-01-02", "--force"],
     )
     assert result.exit_code == 0 or "unable to open database file" in str(
         result.exception
@@ -44,13 +44,13 @@ def test_etf_daily_invalid_date():
 
 
 @pytest.mark.integration
-def test_etf_backfill_command(temp_dir: Path):
+def test_etf_backfill_command(tmp_path: Path):
     """测试 etf backfill 命令."""
     result = runner.invoke(
         app,
         [
             "--data-root",
-            str(temp_dir),
+            str(tmp_path),
             "etf",
             "backfill",
             "--start",
@@ -65,13 +65,13 @@ def test_etf_backfill_command(temp_dir: Path):
 
 
 @pytest.mark.integration
-def test_etf_backfill_with_parallel(temp_dir: Path):
+def test_etf_backfill_with_parallel(tmp_path: Path):
     """测试 etf backfill --parallel 命令."""
     result = runner.invoke(
         app,
         [
             "--data-root",
-            str(temp_dir),
+            str(tmp_path),
             "etf",
             "backfill",
             "--start",
@@ -88,9 +88,9 @@ def test_etf_backfill_with_parallel(temp_dir: Path):
 
 
 @pytest.mark.integration
-def test_etf_basic_command(temp_dir: Path):
+def test_etf_basic_command(tmp_path: Path):
     """测试 etf basic 命令."""
-    result = runner.invoke(app, ["--data-root", str(temp_dir), "etf", "basic"])
+    result = runner.invoke(app, ["--data-root", str(tmp_path), "etf", "basic"])
     assert result.exit_code == 0 or "unable to open database file" in str(
         result.exception
     )

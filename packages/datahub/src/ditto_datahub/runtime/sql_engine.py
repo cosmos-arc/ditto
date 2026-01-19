@@ -2,21 +2,19 @@
 
 from __future__ import annotations
 
-import hashlib
 import re
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import duckdb
 import polars as pl
+import xxhash
 from ditto_foundation import M, logger
 
-if TYPE_CHECKING:
-    from ditto_datahub.stores.calendar_store import CalendarStore
-    from ditto_datahub.stores.security_store import SecurityStore
-
 from ditto_datahub.runtime.pit_helper import PitHelper
+from ditto_datahub.stores.calendar_store import CalendarStore
+from ditto_datahub.stores.security_store import SecurityStore
 
 
 class SqlEngine:
@@ -30,6 +28,9 @@ class SqlEngine:
     - PIT queries (asof parameter)
     """
 
+    # Query preview length for logging
+    QUERY_PREVIEW_LENGTH = 200
+
     # SQLite table names for auto-detection
     SQLITE_TABLES = frozenset(
         [
@@ -39,7 +40,6 @@ class SqlEngine:
             "universe",
             "universe_constituent",
             "index_weight",
-            "pipeline_run",
             "dq_issue",
         ]
     )
@@ -122,7 +122,7 @@ class SqlEngine:
                 # Create view with glob pattern for year partitions
                 # dataset is validated against ALLOWED_DATASETS whitelist
                 view_sql = (
-                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "  # nosec B608
+                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "  # noqa: S608 - dataset 已通过 ALLOWED_DATASETS 白名单
                     f'"{parquet_path}/*.parquet"'
                 )
                 self.con.execute(view_sql)
@@ -241,8 +241,12 @@ class SqlEngine:
         if not self._enable_plan_cache:
             return normalized, False
 
-        # Generate cache key using MD5 hash (非安全用途，仅用于缓存键生成)
-        cache_key = hashlib.md5(normalized.encode()).hexdigest()  # nosec B324
+        # Generate cache key using xxhash (faster than MD5)
+        # 安全说明: 此处使用 xxhash 仅用于缓存键生成（非安全用途）
+        # - 输入: 标准化的 SQL 查询字符串
+        # - 用途: 快速哈希以识别重复查询
+        # - 风险: 不涉及密码或敏感数据
+        cache_key = xxhash.xxh3_64_hexdigest(normalized.encode())
 
         if cache_key in self._plan_cache:
             M.sql_query_plan_cache_hit.add(1)
@@ -270,15 +274,15 @@ class SqlEngine:
             duration: Query execution duration in seconds.
 
         """
-        # 记录慢查询指标（duration 已在 execute() 中记录，这里只记录慢查询计数）
         M.sql_slow_query_total.add(1)
 
-        # 记录日志
+        limit = self.QUERY_PREVIEW_LENGTH
+        preview = query[:limit] if len(query) > limit else query
         logger.warning(
             "Slow query detected",
             event="sql_slow_query",
             duration_seconds=duration,
-            query_preview=query[:200] if len(query) > 200 else query,
+            query_preview=preview,
         )
 
     def _needs_sqlite(self, query: str) -> bool:
@@ -341,39 +345,24 @@ class SqlEngine:
         # 使用参数化查询处理 $asof
         if asof is not None:
             # 验证 ISO 日期格式 (YYYY-MM-DD) 以防止 SQL 注入
-            # 只允许安全字符：特定格式的数字和连字符
-            if not isinstance(asof, str) or not re.match(r"^\d{4}-\d{2}-\d{2}$", asof):
+            if not re.match(r"^\d{4}-\d{2}-\d{2}$", asof):
                 raise ValueError(
                     f"Invalid asof date format: {asof}. Expected YYYY-MM-DD format."
                 )
 
-            # 检查是否可以与 params 组合使用
             if isinstance(params, dict):
                 raise ValueError(
                     "Cannot combine $asof parameter with dict params. "
-                    "Use list params instead."
+                    + "Use list params instead."
                 )
 
-            # 将 $asof 替换为 DuckDB 参数占位符
-            # 策略：将 $asof 替换为新的参数占位符，避免与现有参数冲突
-            # 例如：如果查询有 $1, $2，则 $asof 变为 $3
-
-            # 计算查询中已有的参数数量
-            existing_params = 0
-            if params and isinstance(params, list):
-                existing_params = len(params)
-
-            # 新的参数编号
+            # 将 $asof 替换为新的参数占位符
+            existing_params = len(params) if params else 0
             new_param_num = existing_params + 1
-
-            # 替换 $asof 为新的参数占位符
             prepared_query = prepared_query.replace("$asof", f"${new_param_num}")
 
             # 合并参数
-            if params is None:
-                params = [asof]
-            elif isinstance(params, list):
-                params = [*params, asof]
+            params = [asof] if params is None else [*params, asof]
 
         # Execute query and convert to polars DataFrame
         if params:

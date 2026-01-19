@@ -6,7 +6,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import logger
 
-from ditto_datahub.dq.models import DQIssue, DQLevel, DQSeverity
+from ditto_datahub.models import DQIssue, DQLevel, DQSeverity
 
 
 class TechnicalChecker:
@@ -23,7 +23,6 @@ class TechnicalChecker:
             "universe",
             "universe_constituent",
             "index_weight",
-            "pipeline_run",
             "dq_issue",
             # Parquet views
             "stock_daily",
@@ -222,7 +221,7 @@ class TechnicalChecker:
 
         try:
             # Query reference values
-            query = f"SELECT DISTINCT {ref_column} FROM {ref_dataset}"  # nosec B608 - ref_column and ref_dataset are validated inputs from config
+            query = f"SELECT DISTINCT {ref_column} FROM {ref_dataset}"  # noqa: S608 - ref_column/ref_dataset 已通过内部验证
             result_df = hub.sql(query)
 
             if result_df.is_empty() or ref_column not in result_df.columns:

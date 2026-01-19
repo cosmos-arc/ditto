@@ -15,6 +15,10 @@ from ditto_foundation import M, logger, traced
 
 from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
 
+# Default year range for date filters
+DEFAULT_START_YEAR = 1990
+DEFAULT_END_YEAR = 2099
+
 
 class BarsStore(ParquetStoreBase):
     """
@@ -119,11 +123,11 @@ class BarsStore(ParquetStoreBase):
 
         if start_date:
             start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
-            lf = lf.filter(pl.col("trade_date") >= pl.lit(start_dt))
+            lf = lf.filter(pl.col("trade_date") >= start_dt)
 
         if end_date:
             end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
-            lf = lf.filter(pl.col("trade_date") <= pl.lit(end_dt))
+            lf = lf.filter(pl.col("trade_date") <= end_dt)
 
         return lf
 
@@ -151,8 +155,8 @@ class BarsStore(ParquetStoreBase):
         start_time = time.time()
 
         # Determine year range from date filters
-        start_year = int(start_date[:4]) if start_date else 1990
-        end_year = int(end_date[:4]) if end_date else 2099
+        start_year = int(start_date[:4]) if start_date else DEFAULT_START_YEAR
+        end_year = int(end_date[:4]) if end_date else DEFAULT_END_YEAR
 
         paths = self._collect_paths(dataset, start_year, end_year)
 

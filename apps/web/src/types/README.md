@@ -1191,7 +1191,7 @@ import { BacktestResult, Position, ChartConfig } from '@/types';
 
 - [TypeScript 官方文档](https://www.typescriptlang.org/)
 - [React TypeScript Cheatsheet](https://react-typescript-cheatsheet.netlify.app/)
-- [后端 Pydantic 模型](../../apps/server/src/ditto_server/models/)
+- [后端 Pydantic 模型](../../apps/port/src/ditto_server/models/)
 
 ---
 

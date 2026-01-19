@@ -5,16 +5,13 @@ T0 元数据摄取任务工厂.
 任务是轻量 wrapper，真正逻辑在 IngestionCoordinator。
 """
 
-from __future__ import annotations
+from typing import Any
 
-from typing import TYPE_CHECKING, Any
-
+from ditto_datahub import DataHub
 from prefect import task
 
-from ditto_port.services.ingestion.config.datasets import DATASET_REGISTRY, Dataset
-
-if TYPE_CHECKING:
-    pass
+from ditto_port.models import DATASET_REGISTRY, Dataset
+from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
 
 # Prefect Task 返回类型是复杂的泛型，使用 Any 简化类型注解
@@ -82,13 +79,6 @@ def create_ingest_task(dataset: Dataset) -> Any:
             Exception: 摄取失败时抛出异常
 
         """
-        # 延迟导入避免循环依赖
-        from ditto_datahub import DataHub  # noqa: PLC0415
-
-        from ditto_port.services.ingestion.coordinator import (  # noqa: PLC0415
-            IngestionCoordinator,
-        )
-
         hub = DataHub(data_root=data_root)
         try:
             # 获取数据源

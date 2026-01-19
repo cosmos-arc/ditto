@@ -1,4 +1,5 @@
-"""Property-based tests for Statistical checker in ditto-datahub.
+"""
+Property-based tests for Statistical checker in ditto-datahub.
 
 Uses Hypothesis and polars.testing.parametric to verify statistical invariants.
 """
@@ -34,7 +35,8 @@ class TestZScoreProperties:
     )
     @settings(max_examples=10, suppress_health_check=[HealthCheck.too_slow])
     def test_zscore_mean_is_zero(self, df: pl.DataFrame) -> None:
-        """Property: Z-score transformed data should have mean approximately zero.
+        """
+        Property: Z-score transformed data should have mean approximately zero.
 
         For any dataset with reasonable variance, after Z-score transformation:
         mean ≈ 0 (within floating point precision)
@@ -67,7 +69,8 @@ class TestZScoreProperties:
     )
     @settings(max_examples=10, suppress_health_check=[HealthCheck.too_slow])
     def test_zscore_std_is_one(self, df: pl.DataFrame) -> None:
-        """Property: Z-score transformed data should have standard deviation of 1.0.
+        """
+        Property: Z-score transformed data should have standard deviation of 1.0.
 
         For any dataset with variance, after Z-score transformation: std ≈ 1.0
         """
@@ -99,9 +102,10 @@ class TestZScoreProperties:
             max_size=20,
         )
     )
-    @settings(max_examples=10)
+    @settings(max_examples=10, suppress_health_check=[HealthCheck.too_slow])
     def test_zscore_all_finite(self, df: pl.DataFrame) -> None:
-        """Property: Z-score values should be finite for valid input.
+        """
+        Property: Z-score values should be finite for valid input.
 
         No NaN or Inf values should appear in Z-scores for valid numeric data.
         """
@@ -130,9 +134,10 @@ class TestZScoreProperties:
             max_size=20,
         )
     )
-    @settings(max_examples=10)
+    @settings(max_examples=10, suppress_health_check=[HealthCheck.too_slow])
     def test_zscore_threshold_filtering(self, df: pl.DataFrame) -> None:
-        """Property: Threshold filtering should correctly identify outliers.
+        """
+        Property: Threshold filtering should correctly identify outliers.
 
         When filtering by |zscore| > threshold:
         - All remaining values should exceed threshold
@@ -169,9 +174,10 @@ class TestZScoreProperties:
             max_size=30,
         )
     )
-    @settings(max_examples=8)
+    @settings(max_examples=8, suppress_health_check=[HealthCheck.too_slow])
     def test_grouped_zscore_properties(self, df: pl.DataFrame) -> None:
-        """Property: Grouped Z-score should respect group boundaries.
+        """
+        Property: Grouped Z-score should respect group boundaries.
 
         When calculating Z-scores by group:
         - Each group should have mean ≈ 0
@@ -232,7 +238,8 @@ class TestZScoreProperties:
     )
     @settings(max_examples=8, suppress_health_check=[HealthCheck.too_slow])
     def test_zscore_idempotent(self, df: pl.DataFrame) -> None:
-        """Property: Applying Z-score twice should produce same distribution.
+        """
+        Property: Applying Z-score twice should produce same distribution.
 
         Z-score transformation is idempotent in terms of distribution shape:
         mean=0, std=1 regardless of how many times applied.

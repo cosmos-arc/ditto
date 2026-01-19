@@ -1,14 +1,19 @@
 """DQ execution engine."""
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import polars as pl
 
 from ditto_datahub.dq.checkers.business import BusinessChecker
 from ditto_datahub.dq.checkers.statistical import StatisticalChecker
 from ditto_datahub.dq.checkers.technical import TechnicalChecker
-from ditto_datahub.dq.models import DQConfig, DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_datahub.models import DQIssue, DQResult, DQSeverity, DQSpec
+
+if TYPE_CHECKING:
+    from ditto_datahub.hub import DataHub
 
 
 class DQEngine:
@@ -20,7 +25,7 @@ class DQEngine:
 
     def __init__(
         self,
-        config: DQConfig | None = None,
+        config: DQSpec | None = None,
         config_path: str | Path | None = None,
         data_root: str | Path | None = None,
     ) -> None:
@@ -40,14 +45,14 @@ class DQEngine:
             default_config_dir = (
                 Path(__file__).parent.parent.parent / "config" / "dq_rules"
             )
-            self.config = DQConfig.load_with_user_override(
+            self.config = DQSpec.load_with_user_override(
                 default_config_dir=default_config_dir, data_root=Path(data_root)
             )
         elif config_path is not None:
             # Legacy: Load from single path
-            self.config = DQConfig.from_yaml_dir(config_path)
+            self.config = DQSpec.from_yaml_dir(config_path)
         else:
-            self.config = DQConfig()
+            self.config = DQSpec()
 
         # Initialize checkers
         self.technical_checker = TechnicalChecker()
@@ -55,7 +60,7 @@ class DQEngine:
         self.statistical_checker = StatisticalChecker()
 
     @property
-    def _config(self) -> DQConfig:
+    def _config(self) -> DQSpec:
         """Backward compatibility for _config attribute."""
         return self.config
 
@@ -122,7 +127,7 @@ class DQEngine:
         self,
         dataset: str,
         trade_date: str,
-        hub: Any,  # DataHub instance
+        hub: DataHub,
         asset_class: Literal["stock", "etf", "index"] | None = None,
         market_wide: bool = False,
     ) -> DQResult:

@@ -1,16 +1,15 @@
 """pytest配置文件."""
 
-import os
 import sqlite3
 from collections.abc import Generator
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Any
 from unittest.mock import MagicMock
 
 import duckdb
 import pytest
 from ditto_foundation.config import Settings
+from ditto_port.testing import DatabaseManager
 
 
 def pytest_configure(config) -> None:
@@ -21,80 +20,11 @@ def pytest_configure(config) -> None:
     """
     # 预加载 flows 模块,避免每个测试都重新导入
     # fmt: off
-    from ditto_port.jobs.flows import (
-        backfill,  # noqa: F401
-        daily,  # noqa: F401
-        repair,  # noqa: F401
-    )
     # fmt: on
 
 
-class DatabaseManager:
-    """数据库连接池管理器。"""
-
-    _duckdb_conn: duckdb.DuckDBPyConnection | None
-
-    def __init__(self) -> None:
-        self._duckdb_conn = None
-
-    def get_duckdb_conn(self) -> duckdb.DuckDBPyConnection:
-        """获取 DuckDB 连接。
-
-        如果连接不存在，则创建新的连接并初始化表结构。
-        连接使用 :memory: 数据库，在测试会话中复用。
-
-        Returns:
-            DuckDB 连接对象
-        """
-        if self._duckdb_conn is None:
-            self._duckdb_conn = duckdb.connect(":memory:")
-            self._init_duckdb_tables()
-        return self._duckdb_conn
-
-    def _init_duckdb_tables(self) -> None:
-        """初始化 DuckDB 表结构。"""
-        conn = self._duckdb_conn
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS etf_list (
-                symbol VARCHAR, name VARCHAR, market VARCHAR,
-                category VARCHAR, establish_date DATE, fund_manager VARCHAR,
-                tracking_index VARCHAR, knowledge_date DATE
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS daily_price_raw (
-                symbol VARCHAR, date DATE, open_price DOUBLE, high_price DOUBLE,
-                low_price DOUBLE, close_price DOUBLE, volume BIGINT,
-                amount DOUBLE, knowledge_date DATE
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS daily_price_adjusted (
-                symbol VARCHAR, date DATE, open DOUBLE, high DOUBLE,
-                low DOUBLE, close DOUBLE, volume BIGINT, knowledge_date DATE
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS adjustment_factors (
-                symbol VARCHAR, ex_date DATE, adj_factor DOUBLE, knowledge_date DATE
-            )
-        """)
-
-    def clean_duckdb(self) -> None:
-        """清理数据。
-
-        删除所有表中的数据，但保留表结构。
-        如果连接不存在，则不执行任何操作。
-        """
-        if self._duckdb_conn:
-            self._duckdb_conn.execute("DELETE FROM etf_list")
-            self._duckdb_conn.execute("DELETE FROM daily_price_raw")
-            self._duckdb_conn.execute("DELETE FROM daily_price_adjusted")
-            self._duckdb_conn.execute("DELETE FROM adjustment_factors")
-
-
 @pytest.fixture
-def fake_time(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
+def fake_time(monkeypatch: pytest.MonkeyPatch) -> None:
     """可控的时间 fixture，通过 monkeypatch 替换时间函数.
 
     使 time.sleep 立即完成，time.time 按预期前进，提高测试速度和确定性。
@@ -110,65 +40,47 @@ def fake_time(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
     monkeypatch.setattr("time.sleep", fake_sleep)
     monkeypatch.setattr("time.time", fake_time_func)
 
-    return
-
 
 @pytest.fixture
-def temp_dir() -> Generator[Path, None, None]:
-    """临时目录fixture."""
-    with TemporaryDirectory() as tmpdir:
-        yield Path(tmpdir)
+def test_settings(tmp_path: Path) -> Settings:
+    """测试配置fixture.
 
+    使用 pytest 内置 tmp_path，每个测试获得独立的 Settings 实例和临时目录。
+    使用依赖注入而非环境变量，支持并行测试。
 
-@pytest.fixture
-def test_settings(temp_dir: Path) -> Settings:
-    """测试配置fixture."""
-    # 通过环境变量设置数据库路径
-    os.environ["DB_DUCKDB_PATH"] = str(temp_dir / "test.duckdb")
-    os.environ["DB_SQLITE_PATH"] = str(temp_dir / "test.sqlite")
-    os.environ["TUSHARE_TOKEN"] = "test_token"
-    os.environ["DITTO_ENV"] = "testing"
+    Args:
+        tmp_path: pytest 内置 fixture，每个测试自动创建独立临时目录
 
-    settings = Settings()
+    Returns:
+        Settings: 测试配置对象
+    """
+    from ditto_foundation.config.settings import DataSourceSettings, SystemSettings
 
-    # 清理环境变量
-    del os.environ["DB_DUCKDB_PATH"]
-    del os.environ["DB_SQLITE_PATH"]
-    del os.environ["TUSHARE_TOKEN"]
-    del os.environ["DITTO_ENV"]
-
+    settings = Settings(
+        duckdb_path=tmp_path / "test.duckdb",
+        sqlite_path=tmp_path / "test.sqlite",
+        data_source=DataSourceSettings(tushare_token="test_token"),
+        system=SystemSettings(ditto_env="testing"),
+    )
     return settings
 
 
-@pytest.fixture(scope="session")
-def test_settings_session() -> Generator[Settings, None, None]:
-    """Session 级别的 Settings，避免重复初始化."""
-    with TemporaryDirectory() as tmpdir:
-        temp_path = Path(tmpdir)
+@pytest.fixture
+def db_manager(tmp_path: Path) -> Generator[DatabaseManager, None, None]:
+    """每个测试独立的数据库管理器.
 
-        os.environ["DB_DUCKDB_PATH"] = str(temp_path / "test.duckdb")
-        os.environ["DB_SQLITE_PATH"] = str(temp_path / "test.sqlite")
-        os.environ["TUSHARE_TOKEN"] = "test_token"
-        os.environ["DITTO_ENV"] = "testing"
+    使用 pytest 内置 tmp_path，每个测试获得独立的数据库实例。
+    支持并行测试。
 
-        settings = Settings()
+    Args:
+        tmp_path: pytest 内置 fixture，提供独立临时目录
 
-        yield settings
-
-        # 清理环境变量
-        del os.environ["DB_DUCKDB_PATH"]
-        del os.environ["DB_SQLITE_PATH"]
-        del os.environ["TUSHARE_TOKEN"]
-        del os.environ["DITTO_ENV"]
-
-
-@pytest.fixture(scope="session")
-def db_manager() -> Generator[DatabaseManager, None, None]:
-    """Session 级别的数据库管理器."""
-    manager = DatabaseManager()
+    Yields:
+        DatabaseManager: 数据库管理器实例
+    """
+    manager = DatabaseManager(database_path=tmp_path / "test.duckdb")
     yield manager
-    if manager._duckdb_conn:
-        manager._duckdb_conn.close()
+    manager.close()
 
 
 @pytest.fixture
@@ -180,10 +92,17 @@ def clean_duckdb(db_manager: DatabaseManager) -> duckdb.DuckDBPyConnection:
 
 @pytest.fixture
 def sqlite_conn(
-    test_settings_session: Settings,
+    tmp_path: Path,
 ) -> Generator[sqlite3.Connection, None, None]:
-    """SQLite连接fixture."""
-    conn = sqlite3.connect(str(test_settings_session.database.sqlite_path))
+    """SQLite 连接 fixture.
+
+    使用 pytest 内置 tmp_path，每个测试获得独立的 SQLite 数据库。
+
+    Args:
+        tmp_path: pytest 内置 fixture，提供独立临时目录
+    """
+    sqlite_path = tmp_path / "test.sqlite"
+    conn = sqlite3.connect(str(sqlite_path))
 
     # 初始化表结构
     conn.execute("""
@@ -279,11 +198,14 @@ def obs_assertions() -> None:
     init(mode=Mode.TESTING_WITH_ASSERTIONS)
 
 
-@pytest.fixture(scope="session")
-def mock_datahub_session() -> MagicMock:
-    """Session 级别的 Mock DataHub，避免每个测试重复创建.
+@pytest.fixture
+def mock_datahub() -> MagicMock:
+    """每个测试独立的 Mock DataHub.
 
-    这个 fixture 预构建了所有测试需要的 Mock 对象，显著减少测试时间.
+    使用 function 作用域确保测试隔离，支持并行测试。
+
+    Returns:
+        MagicMock: Mock DataHub 对象
     """
     mock = MagicMock()
 
@@ -301,7 +223,7 @@ def mock_datahub_session() -> MagicMock:
 
 
 @pytest.fixture
-def patch_datahub(mock_datahub_session: MagicMock, mocker: Any) -> MagicMock:
+def patch_datahub(mock_datahub: MagicMock, mocker: Any) -> MagicMock:
     """将 DataHub 替换为 Mock 对象.
 
     使用方式：
@@ -309,27 +231,15 @@ def patch_datahub(mock_datahub_session: MagicMock, mocker: Any) -> MagicMock:
             patch_datahub.calendar.is_trading_day.return_value = False
             # ... 测试逻辑
 
+    Args:
+        mock_datahub: 独立的 Mock DataHub 对象
+        mocker: pytest-mock fixture
+
     Returns:
-        MagicMock: mock_datahub_session 对象，可以直接用于配置 mock 行为
+        MagicMock: mock_datahub 对象，可以直接用于配置 mock 行为
 
     Note:
-        每个 test 函数会自动重置 mock 状态，确保测试隔离性。
+        使用 function 作用域的 mock_datahub，确保测试隔离，支持并行测试。
     """
-    # 重置 mock 状态，确保测试隔离
-    mock_datahub_session.reset_mock()
-
-    # 重置子 mock 的 return_value
-    mock_datahub_session.calendar.is_trading_day.return_value = True
-    mock_datahub_session.calendar_store.get_first_trading_day.return_value = (
-        "2024-01-02"
-    )
-    mock_datahub_session.calendar_store.get_last_trading_day.return_value = "2024-01-31"
-    mock_datahub_session.calendar_store.get_range.return_value = [
-        "2024-01-02",
-        "2024-01-03",
-    ]
-    mock_datahub_session.ingestion_log.get_failed_dates.return_value = []
-    mock_datahub_session.ingestion_log.get_ingested_dates.return_value = []
-
-    mocker.patch("ditto_datahub.DataHub", return_value=mock_datahub_session)
-    return mock_datahub_session
+    mocker.patch("ditto_datahub.DataHub", return_value=mock_datahub)
+    return mock_datahub

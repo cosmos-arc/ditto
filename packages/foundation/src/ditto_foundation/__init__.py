@@ -7,8 +7,21 @@ Ditto 共享模块.
 __version__ = "0.1.0"
 __author__ = "Ditto Team"
 
-# Export app initializer
-from ditto_foundation.app_initializer import AppInitializer, initialize_app
+# Export app bootstrap
+from ditto_foundation.bootstrap import AppInitializer, initialize_app
+from ditto_foundation.bootstrap import reset_for_testing as reset_initializer
+
+# Export cache components
+from ditto_foundation.cache import CacheStats, DataCache
+
+# Export checksum components
+from ditto_foundation.checksum import compute_checksum
+
+# Export concurrency components
+from ditto_foundation.concurrency import FileLockManager, LockAcquisitionError
+
+# Export database components
+from ditto_foundation.db import SQLitePool
 
 # Export observability
 from ditto_foundation.observability import (
@@ -29,9 +42,15 @@ from ditto_foundation.observability import (
 
 __all__ = [
     "AppInitializer",
+    "CacheStats",
+    "DataCache",
+    "FileLockManager",
+    "LockAcquisitionError",
     "M",
     "Mode",
     "ObservabilityConfig",
+    "SQLitePool",
+    "compute_checksum",
     "get_recorded_metrics",
     "get_recorded_spans",
     "get_span_id",
@@ -40,6 +59,7 @@ __all__ = [
     "initialize_app",
     "logger",
     "reset_for_testing",
+    "reset_initializer",
     "shutdown",
     "span",
     "traced",

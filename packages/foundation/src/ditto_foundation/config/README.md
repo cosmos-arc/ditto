@@ -27,7 +27,7 @@
 ```
 ditto-foundation/config
     ↓ 被所有模块引用
-ditto-datahub, ditto-core, apps/server
+ditto-datahub, ditto-core, apps/port
 ```
 
 - **层级**：基础设施层

@@ -106,7 +106,7 @@ class TestTushareDataTransformer:
         )
 
         # 验证 schema
-        assert result.schema == {
+        assert dict(result.schema) == {
             "src_code": pl.String,
             "trade_date": pl.Date,
             "open": pl.Float64,
@@ -169,8 +169,8 @@ class TestTushareDataTransformer:
         )
 
         # 验证返回正确 schema 的空 DataFrame
-        assert result.is_empty()
-        assert result.schema == {
+        assert len(result) == 0
+        assert dict(result.schema) == {
             "src_code": pl.String,
             "trade_date": pl.Date,
             "open": pl.Float64,
@@ -201,7 +201,7 @@ class TestTushareDataTransformer:
         )
 
         # 验证 schema
-        assert result.schema == {
+        assert dict(result.schema) == {
             "trade_date": pl.Date,
             "is_open": pl.Boolean,
         }
@@ -232,7 +232,7 @@ class TestTushareDataTransformer:
         )
 
         # 验证 schema
-        assert result.schema == {
+        assert dict(result.schema) == {
             "src_code": pl.String,
             "symbol": pl.String,
             "name": pl.String,
@@ -277,7 +277,7 @@ class TestTushareDataTransformer:
 
         # 验证返回正确 schema 的空 DataFrame
         assert result.is_empty()
-        assert result.schema == {
+        assert dict(result.schema) == {
             "trade_date": pl.Date,
             "is_open": pl.Boolean,
         }
@@ -300,7 +300,7 @@ class TestTushareDataTransformer:
 
         # 验证返回正确 schema 的空 DataFrame
         assert result.is_empty()
-        assert result.schema == {
+        assert dict(result.schema) == {
             "src_code": pl.String,
             "trade_date": pl.Date,
             "knowledge_date": pl.Date,
@@ -308,8 +308,10 @@ class TestTushareDataTransformer:
         }
 
     def test_transform_etf_basic_empty(self) -> None:
-        """Test transform with empty ETF basic DataFrame - computed columns type
-        inference."""
+        """
+        Test transform with empty ETF basic DataFrame - computed columns type
+        inference.
+        """
         # 创建空 DataFrame，但有正确的 schema
         input_df = pl.DataFrame(
             schema={
@@ -327,7 +329,7 @@ class TestTushareDataTransformer:
         # 验证返回正确 schema 的空 DataFrame
         # 关键验证: symbol 和 exchange 是 computed_columns,类型应该是 pl.String
         assert result.is_empty()
-        assert result.schema == {
+        assert dict(result.schema) == {
             "src_code": pl.String,
             "symbol": pl.String,
             "name": pl.String,

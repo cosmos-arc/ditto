@@ -2,26 +2,24 @@
 
 import polars as pl
 import pytest
-from ditto_datahub.runtime.cache import DataCache
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
-from ditto_datahub.stores.security_store import SecurityStore
+from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_foundation.cache import DataCache
 
 
 @pytest.mark.pit
 class TestSecurityStore:
-    """Tests for SecurityStore.
+    """
+    Tests for SecurityStore.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
     """
 
-    def setup_method(self) -> None:
-        """Set up test database."""
-        # Create in-memory database for testing
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        self.client = sqlite_client
         self.store = SecurityStore(self.client)
 
     def test_resolve_sid_current_mapping(self) -> None:
@@ -190,6 +188,41 @@ class TestSecurityStore:
         assert 100000001 in sse_sids
         assert 100000002 in sse_sids
 
+    def test_list_sids_with_is_active_none(self) -> None:
+        """Test listing sids with is_active=None returns both active and inactive."""
+        # Insert test data: 2 active, 1 inactive
+        for i in range(3):
+            sid = 100000001 + i
+            is_active = "TRUE" if i < 2 else "FALSE"
+            sql = (
+                "INSERT INTO security "
+                "(sid, symbol, name, exchange, asset_class, list_date, is_active) "
+                f"VALUES ({sid}, '60{i:04d}', 'Stock{i}', 'SSE', 'stock', "
+                f"'2000-01-01', {is_active})"
+            )
+            self.client.execute(sql)
+
+        self.client.commit()
+
+        # Default (is_active=True) should return only active
+        active_sids = self.store.list_sids()
+        assert len(active_sids) == 2
+        assert 100000001 in active_sids
+        assert 100000002 in active_sids
+        assert 100000003 not in active_sids
+
+        # is_active=False should return only inactive
+        inactive_sids = self.store.list_sids(is_active=False)
+        assert len(inactive_sids) == 1
+        assert 100000003 in inactive_sids
+
+        # is_active=None should return ALL (both active and inactive)
+        all_sids = self.store.list_sids(is_active=None)
+        assert len(all_sids) == 3
+        assert 100000001 in all_sids
+        assert 100000002 in all_sids
+        assert 100000003 in all_sids
+
     def test_get_symbol(self) -> None:
         """Test getting symbol by sid."""
         self.client.execute("""
@@ -278,13 +311,14 @@ class TestSecurityStore:
         """Test registering a new security."""
         sid = self.store.register(
             sid=100000001,
-            source="tushare",
-            src_code="600000.SH",
-            symbol="600000",
-            name="Test Bank",
-            exchange="SSE",
-            asset_class="stock",
-            list_date="1999-11-10",
+            registration=SecurityRegistration(
+                src_code="600000.SH",
+                symbol="600000",
+                name="Test Bank",
+                exchange="SSE",
+                asset_class="stock",
+                list_date="1999-11-10",
+            ),
         )
 
         assert sid == 100000001
@@ -316,13 +350,14 @@ class TestSecurityStore:
         # Register the new security
         new_sid = store_with_cache.register(
             sid=100999001,
-            source="tushare",
-            src_code="600999.SH",
-            symbol="600999",
-            name="New Stock",
-            exchange="SSE",
-            asset_class="stock",
-            list_date="2020-01-01",
+            registration=SecurityRegistration(
+                src_code="600999.SH",
+                symbol="600999",
+                name="New Stock",
+                exchange="SSE",
+                asset_class="stock",
+                list_date="2020-01-01",
+            ),
         )
 
         # After registration, negative cache should be invalidated
@@ -343,13 +378,14 @@ class TestSecurityStore:
         # Register a new security
         store_with_cache.register(
             sid=100999002,
-            source="tushare",
-            src_code="600998.SH",
-            symbol="600998",
-            name="Another Stock",
-            exchange="SSE",
-            asset_class="stock",
-            list_date="2020-01-01",
+            registration=SecurityRegistration(
+                src_code="600998.SH",
+                symbol="600998",
+                name="Another Stock",
+                exchange="SSE",
+                asset_class="stock",
+                list_date="2020-01-01",
+            ),
         )
 
         # After registration, sid_symbol_map cache should be invalidated
@@ -359,6 +395,34 @@ class TestSecurityStore:
         assert 100999002 in map2
         assert map2[100999002] == "600998"
 
+    def test_register_logs_error_on_exception(self) -> None:
+        """Test register logs error with error_type and error_message on exception."""
+        from unittest.mock import patch
+
+        # Mock client.commit to raise an exception
+        with patch.object(self.client, "commit", side_effect=RuntimeError("DB error")):
+            with patch("ditto_datahub.stores.security_store.logger") as mock_logger:
+                with pytest.raises(RuntimeError):
+                    self.store.register(
+                        sid=100000001,
+                        registration=SecurityRegistration(
+                            src_code="600000.SH",
+                            symbol="600000",
+                            name="Test Bank",
+                            exchange="SSE",
+                            asset_class="stock",
+                            list_date="1999-11-10",
+                        ),
+                    )
+
+                # Verify logger.error was called with error_type and error_message
+                mock_logger.error.assert_called_once()
+                call_kwargs = mock_logger.error.call_args.kwargs
+                assert "error_type" in call_kwargs
+                assert "error_message" in call_kwargs
+                assert call_kwargs["event"] == "security_register_failed"
+                assert call_kwargs["error_type"] == "RuntimeError"
+
     def teardown_method(self) -> None:
         """Clean up after test."""
         # No cleanup needed for in-memory database
@@ -367,17 +431,17 @@ class TestSecurityStore:
 
 @pytest.mark.pit
 class TestSqlInjectionProtection:
-    """Tests for SQL injection protection in IN clause construction.
+    """
+    Tests for SQL injection protection in IN clause construction.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
     """
 
-    def setup_method(self) -> None:
-        """Set up test database."""
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        self.client = sqlite_client
         self.store = SecurityStore(self.client)
 
     def test_in_clause_with_many_sids(self) -> None:

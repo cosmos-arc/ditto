@@ -8,7 +8,7 @@ from collections.abc import Callable
 
 import typer
 
-from ditto_port.cli.context import ensure_executor
+from ditto_port.cli.context import create_executor
 from ditto_port.cli.utils.output import print_backfill_summary, print_ingestion_result
 from ditto_port.cli.utils.validation import validate_date_format
 
@@ -21,7 +21,7 @@ def create_daily_command(
 
     生成一个用于单日数据摄取的命令函数，该命令会:
     1. 验证日期格式
-    2. 确保执行器已初始化
+    2. 使用 create_executor 上下文管理器
     3. 调用 executor.ingest_daily()
     4. 打印摄取结果
 
@@ -43,12 +43,10 @@ def create_daily_command(
     def command(ctx: typer.Context, date: str, force: bool) -> None:
         validate_date_format(date)
 
-        ensure_executor(ctx)
-        executor = ctx.obj["executor"]
-
-        result = executor.ingest_daily(dataset, date, force)
-
-        print_ingestion_result(result, ctx.obj["verbose"])
+        data_root = ctx.obj.get("data_root")
+        with create_executor(data_root) as executor:
+            result = executor.ingest_daily(dataset, date, force)
+            print_ingestion_result(result, ctx.obj["verbose"])
 
     command.__doc__ = description
     return command
@@ -62,7 +60,7 @@ def create_backfill_command(
 
     生成一个用于历史数据回补的命令函数，该命令会:
     1. 验证开始和结束日期格式
-    2. 确保执行器已初始化
+    2. 使用 create_executor 上下文管理器
     3. 调用 executor.backfill_range()
     4. 打印回补摘要
 
@@ -90,12 +88,10 @@ def create_backfill_command(
         validate_date_format(start)
         validate_date_format(end)
 
-        ensure_executor(ctx)
-        executor = ctx.obj["executor"]
-
-        result = executor.backfill_range(dataset, start, end, parallel)
-
-        print_backfill_summary(result)
+        data_root = ctx.obj.get("data_root")
+        with create_executor(data_root) as executor:
+            result = executor.backfill_range(dataset, start, end, parallel)
+            print_backfill_summary(result)
 
     command.__doc__ = description
     return command
@@ -108,7 +104,7 @@ def create_basic_command(
     创建 basic 命令的工厂函数.
 
     生成一个用于基础信息摄取的命令函数，该命令会:
-    1. 确保执行器已初始化
+    1. 使用 create_executor 上下文管理器
     2. 调用 executor.ingest_daily() 并传入空字符串作为日期
     3. 打印摄取结果
 
@@ -128,12 +124,10 @@ def create_basic_command(
     """
 
     def command(ctx: typer.Context, force: bool) -> None:
-        ensure_executor(ctx)
-        executor = ctx.obj["executor"]
-
-        result = executor.ingest_daily(dataset, "", force)
-
-        print_ingestion_result(result, ctx.obj["verbose"])
+        data_root = ctx.obj.get("data_root")
+        with create_executor(data_root) as executor:
+            result = executor.ingest_daily(dataset, "", force)
+            print_ingestion_result(result, ctx.obj["verbose"])
 
     command.__doc__ = description
     return command

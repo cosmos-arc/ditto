@@ -9,7 +9,7 @@ Histogram Buckets 配置 (秒):
 适用于所有 duration 类型的 Histogram 指标.
 """
 
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict
+from typing import Any, TypedDict
 
 from opentelemetry import metrics
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -24,31 +24,47 @@ from opentelemetry.sdk.resources import Resource
 
 from .config import Mode, ObservabilityConfig
 
-# 全局变量
-_meter: metrics.Meter | None = None
-_in_memory_reader: InMemoryMetricReader | None = None
+
+class _MetricsRegistry:
+    """
+    Registry for managing metrics singleton.
+
+    Uses class-level attributes to store singleton state, eliminating
+    the need for global statements while maintaining the same API.
+    """
+
+    meter: metrics.Meter | None = None
+    in_memory_reader: InMemoryMetricReader | None = None
+
+    @classmethod
+    def get_meter(cls) -> metrics.Meter | None:
+        """Get the current meter instance."""
+        return cls.meter
+
+    @classmethod
+    def get_in_memory_reader(cls) -> InMemoryMetricReader | None:
+        """Get the current in-memory reader instance."""
+        return cls.in_memory_reader
+
+    @classmethod
+    def set_meter(cls, meter: metrics.Meter) -> None:
+        """Set the meter instance."""
+        cls.meter = meter
+
+    @classmethod
+    def set_in_memory_reader(cls, reader: InMemoryMetricReader) -> None:
+        """Set the in-memory reader instance."""
+        cls.in_memory_reader = reader
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset all metrics state (for testing purposes)."""
+        cls.meter = None
+        cls.in_memory_reader = None
+
 
 # Histogram buckets 配置 (秒)
 _HISTOGRAM_BUCKETS = (0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0)
-
-
-# 用于类型检查的 Gauge 接口协议
-if TYPE_CHECKING:
-
-    class GaugeWrapper(Protocol):
-        """Gauge 接口协议 (类型检查用)."""
-
-        def set(self, value: float) -> None:
-            """设置指标值."""
-            ...
-
-        def inc(self, delta: float = 1.0) -> None:
-            """增加指标值."""
-            ...
-
-        def dec(self, delta: float = 1.0) -> None:
-            """减少指标值."""
-            ...
 
 
 class MetricDefinition(TypedDict):
@@ -252,6 +268,25 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "counter",
         "description": "Total JSON bytes processed",
     },
+    # DQ 批量检查指标
+    {
+        "name": "dq_batch_checks",
+        "instrument_name": "ditto.dq.batch.checks_total",
+        "type": "counter",
+        "description": "Total DQ batch checks executed",
+    },
+    {
+        "name": "dq_batch_issues",
+        "instrument_name": "ditto.dq.batch.issues_total",
+        "type": "counter",
+        "description": "Total DQ batch issues found",
+    },
+    {
+        "name": "dq_batch_alerts",
+        "instrument_name": "ditto.dq.batch.alerts_total",
+        "type": "counter",
+        "description": "Total DQ batch alerts generated",
+    },
 ]
 
 
@@ -331,25 +366,25 @@ class M:
     # 数据指标
     data_update_duration: Histogram
     data_records: Counter
-    data_freshness: "GaugeWrapper"
+    data_freshness: SimpleGauge
     data_errors: Counter
 
     # 因子指标
     factor_calc_duration: Histogram
-    factor_ic: "GaugeWrapper"
-    factor_health: "GaugeWrapper"
+    factor_ic: SimpleGauge
+    factor_health: SimpleGauge
 
     # 策略指标
     signal_total: Counter
     rebalance_total: Counter
 
     # 组合指标
-    portfolio_value: "GaugeWrapper"
-    portfolio_drawdown: "GaugeWrapper"
-    portfolio_drawdown_3d: "GaugeWrapper"
+    portfolio_value: SimpleGauge
+    portfolio_drawdown: SimpleGauge
+    portfolio_drawdown_3d: SimpleGauge
 
     # 风控指标
-    kill_switch_level: "GaugeWrapper"
+    kill_switch_level: SimpleGauge
     kill_switch_total: Counter
 
     # 系统指标
@@ -360,10 +395,10 @@ class M:
     # 缓存指标
     cache_hit: Counter
     cache_miss: Counter
-    cache_hit_rate: "GaugeWrapper"
+    cache_hit_rate: SimpleGauge
     cache_invalidations: Counter
     cache_evictions: Counter
-    cache_size: "GaugeWrapper"
+    cache_size: SimpleGauge
 
     # SQL 指标
     sql_query_duration: Histogram
@@ -375,6 +410,11 @@ class M:
     json_serialize_duration: Histogram
     json_deserialize_duration: Histogram
     json_bytes_total: Counter
+
+    # DQ 批量检查指标
+    dq_batch_checks: Counter
+    dq_batch_issues: Counter
+    dq_batch_alerts: Counter
 
     @classmethod
     def setup(cls, meter: metrics.Meter) -> None:
@@ -447,8 +487,6 @@ def configure_metrics(config: ObservabilityConfig, mode: Mode) -> metrics.Meter:
         metrics.Meter: 配置好的 Meter 实例
 
     """
-    global _meter, _in_memory_reader
-
     # 资源定义
     resource = Resource.create({"service.name": config.service_name})
 
@@ -476,16 +514,18 @@ def configure_metrics(config: ObservabilityConfig, mode: Mode) -> metrics.Meter:
 
     # TESTING 或 TESTING_WITH_ASSERTIONS：使用 InMemory Reader
     if mode.is_testing():
-        _in_memory_reader = InMemoryMetricReader()
+        in_memory_reader = InMemoryMetricReader()
         provider = MeterProvider(
-            metric_readers=[_in_memory_reader],
+            metric_readers=[in_memory_reader],
             resource=resource,
             views=duration_histogram_views,
         )
         # 直接从 provider 获取 meter，不设置全局 provider
-        _meter = provider.get_meter(__name__)
-        M.setup(_meter)
-        return _meter
+        meter = provider.get_meter(__name__)
+        _MetricsRegistry.set_meter(meter)
+        _MetricsRegistry.set_in_memory_reader(in_memory_reader)
+        M.setup(meter)
+        return meter
 
     # PRODUCTION / DEVELOPMENT：配置 OTLP Exporter
     # 将指标推送到 VictoriaMetrics
@@ -503,21 +543,19 @@ def configure_metrics(config: ObservabilityConfig, mode: Mode) -> metrics.Meter:
         views=duration_histogram_views,
     )
     metrics.set_meter_provider(provider)
-    _meter = metrics.get_meter(config.service_name)
-    M.setup(_meter)
+    meter = metrics.get_meter(config.service_name)
+    _MetricsRegistry.set_meter(meter)
+    M.setup(meter)
 
-    return _meter
+    return meter
 
 
 def reset_metrics() -> None:
     """重置 Metrics 状态（用于测试）."""
-    global _meter, _in_memory_reader
-
-    _meter = None
-    _in_memory_reader = None
+    _MetricsRegistry.reset()
 
 
-def _get_in_memory_reader() -> InMemoryMetricReader | None:
+def get_in_memory_reader() -> InMemoryMetricReader | None:
     """
     获取 InMemory Metric Reader（测试用）.
 
@@ -526,4 +564,4 @@ def _get_in_memory_reader() -> InMemoryMetricReader | None:
         InMemoryMetricReader | None: 当前的 InMemory Metric Reader 实例
 
     """
-    return _in_memory_reader
+    return _MetricsRegistry.get_in_memory_reader()

@@ -11,7 +11,7 @@ from ditto_datahub.sources.base import (
     SourceFetchError,
     SourceRateLimitError,
 )
-from ditto_datahub.sources.tushare.source import TushareSource
+from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
 
 class TestTushareSourceCalendar:
@@ -42,7 +42,7 @@ class TestTushareSourceCalendar:
         result = source.fetch_calendar("2024-01-01", "2024-01-03")
 
         # Verify schema
-        assert result.schema == {
+        assert dict(result.schema) == {
             "trade_date": pl.Date,
             "is_open": pl.Boolean,
         }
@@ -126,7 +126,7 @@ class TestTushareSourceEtfBasic:
         result = source.fetch_etf_basic()
 
         # Verify schema
-        assert result.schema == {
+        assert dict(result.schema) == {
             "src_code": pl.String,
             "symbol": pl.String,
             "name": pl.String,
@@ -341,7 +341,7 @@ class TestTushareSourceStockBasic:
         result = source.fetch_stock_basic()
 
         # Verify schema
-        assert result.schema == {
+        assert dict(result.schema) == {
             "src_code": pl.String,
             "symbol": pl.String,
             "name": pl.String,
@@ -832,7 +832,7 @@ class TestTushareSourceFetchSuspendData:
         result = source._fetch_suspend_data("20240102")
 
         # Verify schema
-        assert result.schema == {
+        assert dict(result.schema) == {
             "ts_code": pl.String,
             "suspend_timing": pl.String,
         }
@@ -869,7 +869,7 @@ class TestTushareSourceFetchSuspendData:
 
         # Should return empty DataFrame with correct schema
         assert result.is_empty()
-        assert result.schema == {
+        assert dict(result.schema) == {
             "ts_code": pl.String,
             "suspend_timing": pl.String,
         }
@@ -891,7 +891,7 @@ class TestTushareSourceFetchSuspendData:
         # Should return empty DataFrame with correct schema
         # (The method logs a warning but doesn't raise exception)
         assert result.is_empty()
-        assert result.schema == {
+        assert dict(result.schema) == {
             "ts_code": pl.String,
             "suspend_timing": pl.String,
         }
@@ -964,7 +964,7 @@ class TestTushareSourceFetchStData:
         result = source._fetch_st_data()
 
         # Verify schema
-        assert result.schema == {
+        assert dict(result.schema) == {
             "ts_code": pl.String,
             "name": pl.String,
         }
@@ -1001,7 +1001,7 @@ class TestTushareSourceFetchStData:
 
         # Should return empty DataFrame with correct schema
         assert result.is_empty()
-        assert result.schema == {
+        assert dict(result.schema) == {
             "ts_code": pl.String,
             "name": pl.String,
         }
@@ -1023,7 +1023,7 @@ class TestTushareSourceFetchStData:
         # Should return empty DataFrame with correct schema
         # (The method logs a warning but doesn't raise exception)
         assert result.is_empty()
-        assert result.schema == {
+        assert dict(result.schema) == {
             "ts_code": pl.String,
             "name": pl.String,
         }
@@ -1101,7 +1101,7 @@ class TestTushareSourceFetchListStatusData:
         result = source._fetch_list_status_data()
 
         # Verify schema
-        assert result.schema == {
+        assert dict(result.schema) == {
             "ts_code": pl.String,
             "list_status": pl.String,
         }
@@ -1139,7 +1139,7 @@ class TestTushareSourceFetchListStatusData:
 
         # Should return empty DataFrame with correct schema
         assert result.is_empty()
-        assert result.schema == {
+        assert dict(result.schema) == {
             "ts_code": pl.String,
             "list_status": pl.String,
         }
@@ -1161,7 +1161,7 @@ class TestTushareSourceFetchListStatusData:
         # Should return empty DataFrame with correct schema
         # (The method logs a warning but doesn't raise exception)
         assert result.is_empty()
-        assert result.schema == {
+        assert dict(result.schema) == {
             "ts_code": pl.String,
             "list_status": pl.String,
         }

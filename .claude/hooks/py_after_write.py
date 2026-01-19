@@ -6,8 +6,8 @@ Claude Code post-write hook.
 
 从 stdin 读取 JSON 格式的工具调用信息，判断是否为 Write/Edit 操作且目标
 文件为 .py 文件。如果是，则依次执行：
-1. pixi run format - Ruff 格式化
-2. pixi run lint-fix - Ruff 自动修复
+1. pixi run lint --fix - Ruff 自动修复
+2. pixi run fmt - Ruff 格式化
 
 输入格式（JSON）:
 {
@@ -25,11 +25,19 @@ from pathlib import Path
 
 def run(cmd: list[str], cwd: str) -> int:
     """运行命令并输出 stdout/stderr，返回退出码。"""
-    p = subprocess.run(cmd, check=False, cwd=cwd, capture_output=True, text=True)  # noqa: S603
+    p = subprocess.run(
+        cmd,
+        check=False,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     if p.stdout:
-        print(p.stdout)  # noqa: T201
+        print(p.stdout)
     if p.stderr:
-        print(p.stderr, file=sys.stderr)  # noqa: T201
+        print(p.stderr, file=sys.stderr)
     return p.returncode
 
 
@@ -47,15 +55,15 @@ def main() -> int:
     if p.suffix != ".py":
         return 0
 
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()  # noqa: PTH109
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
 
     # 用 pixi task 替代 ruff
-    # 参数会自动追加到任务命令末尾：pixi run format <file>  => ruff format <file>
+    # 参数会自动追加到任务命令末尾：pixi run lint --fix <file>
     # 先修复，再格式化
-    rc = run(["pixi", "run", "-e", "dev", "lint-fix-staged", str(p)], cwd=project_dir)
+    rc = run(["pixi", "run", "-e", "dev", "lint", "--fix", str(p)], cwd=project_dir)
     if rc != 0:
         return rc
-    rc = run(["pixi", "run", "-e", "dev", "format-staged", str(p)], cwd=project_dir)
+    rc = run(["pixi", "run", "-e", "dev", "fmt", str(p)], cwd=project_dir)
     return rc
 
 

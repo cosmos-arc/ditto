@@ -12,13 +12,18 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import polars as pl
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
+import pytest
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.calendar_store import CalendarStore
-from ditto_datahub.stores.security_store import SecurityStore
+from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import Mode, get_recorded_metrics, get_recorded_spans, init
+from ditto_foundation import (
+    Mode,
+    get_recorded_metrics,
+    get_recorded_spans,
+    init,
+)
 
 
 class TestObservabilityBarsStore:
@@ -199,13 +204,11 @@ class TestObservabilityAdjFactorStore:
 class TestObservabilitySecurityStore:
     """Test observability features in SecurityStore."""
 
-    def setup_method(self) -> None:
-        """Set up test environment with assertions mode."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
-        # Create in-memory database for testing
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
         self.store = SecurityStore(self.client)
 
     def teardown_method(self) -> None:
@@ -217,13 +220,14 @@ class TestObservabilitySecurityStore:
         # Register a security first
         self.store.register(
             sid=1000001,
-            source="tushare",
-            src_code="510300.SZ",
-            symbol="510300",
-            name="CSI 300 ETF",
-            exchange="SZSE",
-            asset_class="ETF",
-            list_date="2012-04-25",
+            registration=SecurityRegistration(
+                src_code="510300.SZ",
+                symbol="510300",
+                name="CSI 300 ETF",
+                exchange="SZSE",
+                asset_class="etf",
+                list_date="2012-04-25",
+            ),
         )
 
         # Clear previous spans
@@ -242,13 +246,14 @@ class TestObservabilitySecurityStore:
         # Register a security first
         self.store.register(
             sid=1000001,
-            source="tushare",
-            src_code="510300.SZ",
-            symbol="510300",
-            name="CSI 300 ETF",
-            exchange="SZSE",
-            asset_class="ETF",
-            list_date="2012-04-25",
+            registration=SecurityRegistration(
+                src_code="510300.SZ",
+                symbol="510300",
+                name="CSI 300 ETF",
+                exchange="SZSE",
+                asset_class="etf",
+                list_date="2012-04-25",
+            ),
         )
 
         # Clear previous metrics
@@ -277,13 +282,11 @@ class TestObservabilitySecurityStore:
 class TestObservabilityCalendarStore:
     """Test observability features in CalendarStore."""
 
-    def setup_method(self) -> None:
-        """Set up test environment with assertions mode."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
-        # Create in-memory database for testing
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
         self.store = CalendarStore(self.client)
 
     def teardown_method(self) -> None:
@@ -349,14 +352,12 @@ class TestObservabilityCalendarStore:
 class TestObservabilityIntegration:
     """Integration tests for observability across datahub."""
 
-    def setup_method(self) -> None:
-        """Set up test environment with assertions mode."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
         self.temp_dir = TemporaryDirectory()
-        # Create in-memory database for SecurityStore
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
@@ -375,13 +376,14 @@ class TestObservabilityIntegration:
         # Register security
         security_store.register(
             sid=1000001,
-            source="tushare",
-            src_code="510300.SZ",
-            symbol="510300",
-            name="CSI 300 ETF",
-            exchange="SZSE",
-            asset_class="ETF",
-            list_date="2012-04-25",
+            registration=SecurityRegistration(
+                src_code="510300.SZ",
+                symbol="510300",
+                name="CSI 300 ETF",
+                exchange="SZSE",
+                asset_class="etf",
+                list_date="2012-04-25",
+            ),
         )
 
         # Resolve SID to trigger data.sid_resolve span

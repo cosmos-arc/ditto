@@ -25,7 +25,7 @@ DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
         ┌───────┴───────┬───────────────┬───────────────┐
         ▼               ▼               ▼               ▼
 ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ Runtime层    │ │  Store层     │ │ Repository层  │ │  Sources层   │
+│ Runtime层    │ │  Store层     │ │ Accessor层   │ │  Sources层   │
 │              │ │              │ │              │ │              │
 │ SQLitePool   │ │ SecurityStore│ │ Securities   │ │ Tushare      │
 │ FileLock     │ │ CalendarStore│ │ Bars         │ │ Akshare      │
@@ -61,23 +61,22 @@ DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
 | `CalendarStore` | 交易日历 | SQLite + 内存缓存 |
 | `BarsStore` | OHLCV 行情 | Parquet (分区: sid/year) |
 | `AdjFactorStore` | 复权因子 | Parquet (分区: sid/year) |
-| `PipelineStore` | ETL 流水 | SQLite |
 | `UniverseStore` | 股票池 | SQLite |
 | `IndexWeightStore` | 指数权重 | SQLite |
 | `IngestionLogStore` | 数据摄取事件日志 | SQLite |
 | `QuarantineStore` | 数据隔离区 | SQLite |
 
-### Repository 层
+### Accessor 层
 
 业务逻辑封装层：
 
 | 组件 | 说明 |
 |------|------|
-| `SecurityRepository` | 证券查询、注册、标识符解析 |
-| `BarsRepository` | 行情查询、复权计算 |
-| `CalendarRepository` | 交易日历查询、日期偏移 |
-| `UniverseRepository` | 股票池管理 |
-| `IndexRepository` | 指数成分股管理 |
+| `SecurityAccessor` | 证券查询、注册、标识符解析 |
+| `BarsAccessor` | 行情查询、复权计算 |
+| `CalendarAccessor` | 交易日历查询、日期偏移 |
+| `UniverseAccessor` | 股票池管理 |
+| `IndexAccessor` | 指数成分股管理 |
 
 ### Sources 层
 
@@ -87,7 +86,7 @@ DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
 |------|------|
 | `TushareClient` | Tushare API 客户端 |
 | `TushareSource` | Tushare 数据源实现 |
-| `SourcesAccessor` | 数据源统一访问入口 |
+| `DataSources` | 数据源统一访问入口 |
 
 ## 安装
 
@@ -150,7 +149,7 @@ hub = DataHub()
 # 确保只使用该时点之前公布的数据，避免未来函数
 decision_date = "2024-01-15"
 
-# 使用 Repository 层的 PIT 安全方法
+# 使用 Accessor 层的 PIT 安全方法
 bars = hub.bars.get(
     sids=[1],
     start="2024-01-01",
@@ -402,7 +401,7 @@ def _apply_qfq_adj(df, adj_df, asof=None):
     ])
 ```
 
-相关代码：[repositories/bars.py](src/ditto_datahub/repositories/bars.py)
+相关代码：[accessors/bars.py](src/ditto_datahub/accessors/bars.py)
 
 ## 数据目录结构
 

@@ -5,10 +5,10 @@ from pathlib import Path
 import pytest
 import yaml
 from ditto_datahub.dq.engine import DQEngine
-from ditto_datahub.dq.models import DQConfig
+from ditto_datahub.models import DQSpec
 
 
-class TestDQConfigLoading:
+class TestDQSpecLoading:
     """Test DQ configuration loading with user override."""
 
     def test_load_default_config_only(self, tmp_path: Path) -> None:
@@ -42,7 +42,7 @@ class TestDQConfigLoading:
             yaml.dump(default_config, f)
 
         # Act: 加载配置
-        config = DQConfig.from_yaml_dir(default_config_dir)
+        config = DQSpec.from_yaml_dir(default_config_dir)
 
         # Assert: 验证加载成功
         assert config.has_dataset("test_dataset")
@@ -108,7 +108,7 @@ class TestDQConfigLoading:
             yaml.dump(user_config, f)
 
         # Act: 使用新的加载方法
-        merged_config = DQConfig.load_with_user_override(
+        merged_config = DQSpec.load_with_user_override(
             default_config_dir=default_config_dir, data_root=data_root
         )
 
@@ -165,7 +165,7 @@ class TestDQConfigLoading:
             yaml.dump(user_config, f)
 
         # Act: 使用新的加载方法
-        merged_config = DQConfig.load_with_user_override(
+        merged_config = DQSpec.load_with_user_override(
             default_config_dir=default_config_dir, data_root=data_root
         )
 
@@ -209,7 +209,7 @@ class TestDQConfigLoading:
         assert not user_config_dir.exists()
 
         # 应能加载默认配置
-        config = DQConfig.load_with_user_override(
+        config = DQSpec.load_with_user_override(
             default_config_dir=default_config_dir, data_root=data_root
         )
         assert config.has_dataset("test_dataset")
@@ -246,7 +246,7 @@ class TestDQConfigLoading:
         user_config_dir.mkdir(parents=True)
 
         # Act: 使用新的加载方法
-        merged_config = DQConfig.load_with_user_override(
+        merged_config = DQSpec.load_with_user_override(
             default_config_dir=default_config_dir, data_root=data_root
         )
 
@@ -283,7 +283,7 @@ class TestDQEngineWithUserConfig:
             yaml.dump(default_config, f)
 
         # Act: 使用默认配置创建引擎
-        config = DQConfig.from_yaml_dir(default_config_dir)
+        config = DQSpec.from_yaml_dir(default_config_dir)
         engine = DQEngine(config=config)
 
         # Assert: 验证配置加载成功

@@ -19,9 +19,9 @@ from typing import Any, Literal, cast
 
 import polars as pl
 from ditto_foundation import logger, span
+from ditto_foundation.cache import DataCache
 
 from ditto_datahub.errors import TradingDateNotFoundError
-from ditto_datahub.runtime.cache import DataCache
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
@@ -594,12 +594,14 @@ class CalendarStore:
             )
             return count
 
-        except Exception:
+        except Exception as e:
             self._client.rollback()
             logger.error(
                 "Calendar upsert failed",
                 event="calendar_upsert_failed",
                 record_count=len(records),
+                error_type=type(e).__name__,
+                error_message=str(e),
             )
             raise
 

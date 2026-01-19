@@ -1,10 +1,11 @@
 """Alert manager for coordinating multiple alert channels."""
 
-from typing import Any
-
 from ditto_foundation import logger
 
 from ditto_datahub.alerts.base import AlertLevel, AlertMessage, AlertSender
+
+# Type alias for alert context values
+AlertContextValue = str | int | float | bool | list[str] | None
 
 
 class AlertManager:
@@ -30,7 +31,7 @@ class AlertManager:
         level: AlertLevel,
         title: str,
         message: str,
-        **context: Any,
+        **context: AlertContextValue,
     ) -> dict[str, bool]:
         """
         Send alert to all configured channels.
@@ -158,25 +159,18 @@ class LoggingAlertSender(AlertSender):
     def send(self, message: AlertMessage) -> bool:
         """Log alert message."""
         formatted = message.format()
+
         if message.level >= AlertLevel.ERROR:
-            logger.error(
-                formatted,
-                event="alert_logged",
-                level=message.level.value,
-                title=message.title,
-            )
+            log_func = logger.error
         elif message.level >= AlertLevel.WARNING:
-            logger.warning(
-                formatted,
-                event="alert_logged",
-                level=message.level.value,
-                title=message.title,
-            )
+            log_func = logger.warning
         else:
-            logger.info(
-                formatted,
-                event="alert_logged",
-                level=message.level.value,
-                title=message.title,
-            )
+            log_func = logger.info
+
+        log_func(
+            formatted,
+            event="alert_logged",
+            level=message.level.value,
+            title=message.title,
+        )
         return True

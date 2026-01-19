@@ -4,12 +4,12 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_datahub.accessors.bars import WriteResult
 from ditto_datahub.dq.engine import DQResult
-from ditto_datahub.repositories.bars import WriteResult
+from ditto_datahub.models import OnDuplicate
+from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_datahub.sources.base import DataSource, SourceFetchError
-from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
-from ditto_datahub.types import OnDuplicate
 from ditto_foundation.observability import Mode, init, reset_for_testing
 from ditto_port.services.ingestion.coordinator import (
     IngestionCoordinator,
@@ -24,6 +24,8 @@ def mock_hub_bars_write(file_path: str, checksum: str) -> WriteResult:
         checksum=checksum,
         rows_written=0,
         rows_total=0,
+        blocked=False,
+        dq_result=None,
     )
 
 
@@ -79,7 +81,7 @@ def mock_hub(mocker):
     hub.security_store.resolve_sid.return_value = None  # 默认返回 None（不存在）
     hub.security_store.register.return_value = 1000001  # 返回注册的 SID
 
-    # 添加 Securities Repository mock
+    # 添加 SecuritiesAccessor mock
     # (Coordinator._write_stock_basic/_write_etf_basic 需要)
     hub.securities = mocker.Mock()
 
@@ -90,6 +92,27 @@ def mock_hub(mocker):
         return (file_path, checksum)
 
     hub.securities.register_batch.side_effect = register_batch_side_effect
+
+    # 添加 enrich_dataframe_with_sid mock
+    # 方法签名: enrich_dataframe_with_sid(df, source, asset_class, src_code_col)
+    def enrich_dataframe_with_sid_side_effect(df, source, asset_class, src_code_col):
+        """根据 asset_class 返回不同的 sid。"""
+        if asset_class == "stock":
+            sid = stock_counter[0]
+            stock_counter[0] += 1
+        elif asset_class == "etf":
+            sid = etf_counter[0]
+            etf_counter[0] += 1
+        else:
+            raise ValueError(f"Unknown asset class: {asset_class}")
+        return df.with_columns(
+            pl.lit(sid).alias("sid"),
+            pl.lit(source).alias("source"),
+        )
+
+    hub.securities.enrich_dataframe_with_sid = mocker.Mock(
+        side_effect=enrich_dataframe_with_sid_side_effect
+    )
 
     return hub
 
@@ -225,15 +248,6 @@ class TestIngestDate:
             rows=2,
         )
 
-        # Mock SecurityMapper.enrich_dataframe
-        enriched_df = source_df.with_columns(
-            pl.lit(2000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
-        )
-
         # Act
         result = coordinator.ingest_date("etf_daily", "2024-12-27")
 
@@ -279,15 +293,6 @@ class TestIngestDate:
             status=IngestionStatus.SUCCESS,
             checksum="checksum456",
             rows=1,
-        )
-
-        # Mock SecurityMapper.enrich_dataframe
-        enriched_df = source_df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
         )
 
         # Act
@@ -457,15 +462,6 @@ class TestIngestDate:
             rows=1,
         )
 
-        # Mock SecurityMapper.enrich_dataframe
-        enriched_df = source_df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
-        )
-
         # Act
         result = coordinator.ingest_date("stock_daily", "2024-12-27", force=True)
 
@@ -534,14 +530,6 @@ class TestIngestDate:
             status=IngestionStatus.FAIL,
             error_code="DQ_BLOCKED",
             error_message="DQ L1 check failed: 10 errors",
-        )
-
-        enriched_df = source_df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
         )
 
         # Act
@@ -613,15 +601,6 @@ class TestIngestRange:
             rows=1,
         )
 
-        # Mock SecurityMapper.enrich_dataframe
-        enriched_df = source_df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
-        )
-
         # Act
         results = coordinator.ingest_range("stock_daily", "2024-12-25", "2024-12-27")
 
@@ -691,15 +670,6 @@ class TestIngestRange:
             rows=1,
         )
 
-        # Mock SecurityMapper.enrich_dataframe
-        enriched_df = source_df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
-        )
-
         # Act
         results = coordinator.ingest_range("stock_daily", "2024-12-25", "2024-12-27")
 
@@ -759,15 +729,6 @@ class TestIngestRange:
             status=IngestionStatus.SUCCESS,
             checksum="checksum123",
             rows=1,
-        )
-
-        # Mock SecurityMapper.enrich_dataframe
-        enriched_df = source_df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
         )
 
         # Act
@@ -923,27 +884,18 @@ class TestWriteT1Data:
             "checksum123",
         )
 
-        # Mock SecurityMapper.enrich_dataframe 返回补齐后的 DataFrame
-        enriched_df = df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
-        )
-
         # Act
         write_result = coordinator._write_data("stock_daily", df, "2024-12-27")
 
         # Assert
         assert write_result.file_path == "/path/to/stock_daily/2024.parquet"
         assert write_result.checksum == "checksum123"
-        # 验证 enrich_dataframe 被正确调用
-        coordinator._security_mapper.enrich_dataframe.assert_called_once_with(
+        # 验证 enrich_dataframe_with_sid 被正确调用
+        mock_hub.securities.enrich_dataframe_with_sid.assert_called_once_with(
             df,
-            src_code_col="src_code",
-            asset_class="stock",
             source="tushare",
+            asset_class="stock",
+            src_code_col="src_code",
         )
         # 验证 bars.write 被调用，且 DataFrame 包含 sid 和 source 列
         mock_hub.bars.write.assert_called_once()
@@ -980,27 +932,18 @@ class TestWriteT1Data:
             "checksum456",
         )
 
-        # Mock SecurityMapper.enrich_dataframe 返回补齐后的 DataFrame
-        enriched_df = df.with_columns(
-            pl.lit(2000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
-        )
-
         # Act
         write_result = coordinator._write_data("etf_daily", df, "2024-12-27")
 
         # Assert
         assert write_result.file_path == "/path/to/etf_daily/2024.parquet"
         assert write_result.checksum == "checksum456"
-        # 验证 enrich_dataframe 被正确调用
-        coordinator._security_mapper.enrich_dataframe.assert_called_once_with(
+        # 验证 enrich_dataframe_with_sid 被正确调用
+        mock_hub.securities.enrich_dataframe_with_sid.assert_called_once_with(
             df,
-            src_code_col="src_code",
-            asset_class="etf",
             source="tushare",
+            asset_class="etf",
+            src_code_col="src_code",
         )
         # 验证 bars.write 被调用，且 DataFrame 包含 sid 和 source 列
         mock_hub.bars.write.assert_called_once()
@@ -1052,14 +995,6 @@ class TestForceParameter:
             rows=1,
         )
 
-        enriched_df = source_df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
-        )
-
         # Act
         coordinator.ingest_date("stock_daily", "2024-12-27", force=False)
 
@@ -1103,14 +1038,6 @@ class TestForceParameter:
             status=IngestionStatus.SUCCESS,
             checksum="checksum123",
             rows=1,
-        )
-
-        enriched_df = source_df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
         )
 
         # Act
@@ -1226,17 +1153,14 @@ class TestAdjFactorWithExistingSid:
             "checksum789",
         )
 
-        # Mock SecurityMapper.enrich_dataframe
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock()
-
         # Act
         write_result = coordinator._write_data("adj_factor", df, "2024-12-27")
 
         # Assert
         assert write_result.file_path == "/path/to/file.parquet"
         assert write_result.checksum == "checksum789"
-        # 验证没有调用 enrich_dataframe（因为已有 sid 列）
-        coordinator._security_mapper.enrich_dataframe.assert_not_called()
+        # 验证没有调用 enrich_dataframe_with_sid（因为已有 sid 列）
+        mock_hub.securities.enrich_dataframe_with_sid.assert_not_called()
         # 验证 adj_factor_store.write 被调用
         mock_hub.adj_factor.write.assert_called_once()
 
@@ -1260,17 +1184,14 @@ class TestAdjFactorWithExistingSid:
             "checksum999",
         )
 
-        # Mock SecurityMapper.enrich_dataframe
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock()
-
         # Act
         write_result = coordinator._write_data("fund_adj", df, "2024-12-27")
 
         # Assert
         assert write_result.file_path == "/path/to/file.parquet"
         assert write_result.checksum == "checksum999"
-        # 验证没有调用 enrich_dataframe（因为已有 sid 列）
-        coordinator._security_mapper.enrich_dataframe.assert_not_called()
+        # 验证没有调用 enrich_dataframe_with_sid（因为已有 sid 列）
+        mock_hub.securities.enrich_dataframe_with_sid.assert_not_called()
         # 验证 adj_factor_store.write 被调用
         mock_hub.adj_factor.write.assert_called_once()
 
@@ -1293,26 +1214,18 @@ class TestAdjFactorWithExistingSid:
             "checksum789",
         )
 
-        # Mock SecurityMapper.enrich_dataframe
-        enriched_df = df.with_columns(
-            pl.lit(1000001).alias("sid"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
-        )
-
         # Act
         write_result = coordinator._write_data("adj_factor", df, "2024-12-27")
 
         # Assert
         assert write_result.file_path == "/path/to/file.parquet"
         assert write_result.checksum == "checksum789"
-        # 验证调用了 enrich_dataframe（因为没有 sid 列）
-        coordinator._security_mapper.enrich_dataframe.assert_called_once_with(
+        # 验证调用了 enrich_dataframe_with_sid（因为没有 sid 列）
+        mock_hub.securities.enrich_dataframe_with_sid.assert_called_once_with(
             df,
-            src_code_col="src_code",
-            asset_class="stock",
             source="tushare",
+            asset_class="stock",
+            src_code_col="src_code",
         )
         # 验证 adj_factor_store.write 被调用
         mock_hub.adj_factor.write.assert_called_once()
@@ -1397,14 +1310,6 @@ class TestTradingDayCheck:
             status=IngestionStatus.SUCCESS,
             checksum="checksum123",
             rows=1,
-        )
-
-        enriched_df = source_df.with_columns(
-            pl.lit(1000001).alias("sid"),
-            pl.lit("tushare").alias("source"),
-        )
-        coordinator._security_mapper.enrich_dataframe = mocker.Mock(
-            return_value=enriched_df
         )
 
         # Act

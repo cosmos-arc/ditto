@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
+from ditto_foundation import SQLitePool
 
 
 class TestSQLitePool:
@@ -15,6 +15,17 @@ class TestSQLitePool:
         """Set up test environment."""
         self.temp_dir = TemporaryDirectory()
         self.db_path = Path(self.temp_dir.name) / "test.db"
+        # Get schema path
+        # Test file: packages/datahub/tests/integration/runtime/test_sqlite_pool_integration.py  # noqa: E501
+        # Schema file: packages/datahub/src/ditto_datahub/scripts/schema.sql
+        current_file = Path(__file__)
+        self.schema_path = (
+            current_file.parent.parent.parent.parent
+            / "src"
+            / "ditto_datahub"
+            / "scripts"
+            / "schema.sql"
+        )
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
@@ -61,7 +72,7 @@ class TestSQLitePool:
 
     def test_init_schema_creates_tables(self) -> None:
         """Test init_schema creates all required tables."""
-        self.pool = SQLitePool(str(self.db_path))
+        self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
         # Check that key tables exist
@@ -76,16 +87,15 @@ class TestSQLitePool:
         assert "security" in table_names
         assert "security_mapping" in table_names
         assert "trading_calendar" in table_names
-        assert "pipeline_run" in table_names
-        assert "dq_issue" in table_names
         assert "freeze_point" in table_names
         assert "price_limit_config" in table_names
         assert "universe" in table_names
         assert "universe_constituent" in table_names
+        assert "index_weight" in table_names
 
     def test_init_schema_idempotent(self) -> None:
         """Test init_schema can be called multiple times safely."""
-        self.pool = SQLitePool(str(self.db_path))
+        self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
         self.pool.init_schema()  # Should not fail
 
@@ -97,7 +107,7 @@ class TestSQLitePool:
 
     def test_init_schema_initializes_sid_sequence(self) -> None:
         """Test init_schema initializes SID sequence values."""
-        self.pool = SQLitePool(str(self.db_path))
+        self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
         # Check initial SID sequence values
@@ -115,7 +125,7 @@ class TestSQLitePool:
 
     def test_execute_method_works(self) -> None:
         """Test execute method works for basic queries."""
-        self.pool = SQLitePool(str(self.db_path))
+        self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
         # Query sid_sequence table
@@ -124,7 +134,7 @@ class TestSQLitePool:
 
     def test_commit_method_works(self) -> None:
         """Test commit method works."""
-        self.pool = SQLitePool(str(self.db_path))
+        self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
         # Insert a test record
@@ -146,7 +156,7 @@ class TestSQLitePool:
 
     def test_rollback_method_works(self) -> None:
         """Test rollback method works."""
-        self.pool = SQLitePool(str(self.db_path))
+        self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
         # Begin transaction, insert, rollback
@@ -168,7 +178,7 @@ class TestSQLitePool:
 
     def test_close_method_works(self) -> None:
         """Test close method closes connection."""
-        self.pool = SQLitePool(str(self.db_path))
+        self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
         conn = self.pool.get_connection()
@@ -184,7 +194,7 @@ class TestSQLitePool:
 
     def test_foreign_key_constraint_enforced(self) -> None:
         """Test that foreign key constraints are enforced."""
-        self.pool = SQLitePool(str(self.db_path))
+        self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
         # Insert a valid security first
@@ -206,7 +216,7 @@ class TestSQLitePool:
 
     def test_foreign_key_constraint_allows_valid_mapping(self) -> None:
         """Test that foreign key constraints allow valid mappings."""
-        self.pool = SQLitePool(str(self.db_path))
+        self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
         # Insert a valid security

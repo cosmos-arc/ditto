@@ -3,9 +3,7 @@
 import sqlite3
 from typing import Any, cast
 
-from ditto_foundation import logger, span
-
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
+from ditto_foundation import SQLitePool, logger, span
 
 # Maximum SQL length to log (truncates longer queries)
 _MAX_SQL_LOG_LENGTH = 100
@@ -27,8 +25,6 @@ class SQLiteClient:
             "security",
             "security_mapping",
             "trading_calendar",
-            "pipeline_run",
-            "dq_issue",
             "freeze_point",
             "universe",
             "universe_constituent",
@@ -272,9 +268,9 @@ class SQLiteClient:
         if table not in self.ALLOWED_TABLES:
             raise ValueError(f"Invalid table: {table}")
 
-        sql = f"SELECT COUNT(*) FROM {table}"  # nosec B608 - table is validated against ALLOWED_TABLES whitelist
+        sql = f"SELECT COUNT(*) FROM {table}"  # noqa: S608 - table 已通过 ALLOWED_TABLES 白名单验证
         if where:
-            sql += f" WHERE {where}"  # nosec B608 - where clause is validated input
+            sql += f" WHERE {where}"
 
         result = self.fetchval(sql, params)
         # COUNT(*) always returns int, but pyright can't infer that

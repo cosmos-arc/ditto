@@ -170,7 +170,7 @@ D:\Ditto\                              # 项目根目录
 ### 4.3 Prefect 部署配置
 
 ```python
-# apps/server/src/ditto_port/ingestion/schedules.py
+# apps/port/src/ditto_port/ingestion/schedules.py
 
 from prefect.client.schemas.schedules import CronSchedule
 
@@ -203,7 +203,7 @@ heartbeat_deployment = heartbeat_flow.to_deployment(
 ### 4.4 Flow 实现示例
 
 ```python
-# apps/server/src/ditto_port/ingestion/flows/daily_ingest.py
+# apps/port/src/ditto_port/ingestion/flows/daily_ingest.py
 
 from prefect import flow, get_run_logger
 from ditto_data_hub import DataHub
@@ -317,7 +317,7 @@ Action Required: Review and manually confirm
 ### 5.4 Prefect 告警 Hook
 
 ```python
-# apps/server/src/ditto_port/ingestion/hooks.py
+# apps/port/src/ditto_port/ingestion/hooks.py
 
 from prefect import flow
 from prefect.blocks.notifications import SlackWebhook
@@ -452,7 +452,7 @@ PRAGMA busy_timeout=5000;
 ### 8.2 API 端点
 
 ```python
-# apps/server/src/ditto_port/api/health.py
+# apps/port/src/ditto_port/api/health.py
 
 @router.get("/healthz")
 async def healthz():
@@ -601,6 +601,240 @@ Write-Host "Backup completed: $backupDir"
 | SQLite | - | 256MB | 1GB |
 | Parquet 数据 | - | - | 10GB+ |
 | **总计** | 2-4 核 | 2GB | 15GB+ |
+
+---
+
+## 12. 环境架构
+
+### 12.1 双层环境设计
+
+Ditto 采用**双层环境架构**，将**依赖管理**与**行为控制**分离：
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   环境控制层次（从外到内）                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  Layer 1: Pixi 环境 (依赖管理层)                          │    │
+│  │                                                          │    │
+│  │  default → 生产依赖（polars, fastapi, prefect...）       │    │
+│  │  dev      → default + 开发工具（pytest, ruff...）        │    │
+│  │                                                          │    │
+│  │  控制内容: 安装哪些包、哪些命令可用                         │    │
+│  │  切换方式: pixi run -e dev / pixi run                    │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                          ↓                                       │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  Layer 2: 运行时环境 (行为控制层)                          │    │
+│  │                                                          │    │
+│  │  DITTO_ENV = development | testing | production         │    │
+│  │                                                          │    │
+│  │  控制内容: 日志级别、调试模式、功能开关、错误处理           │    │
+│  │  切换方式: 环境变量、.env 文件                             │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                          ↓                                       │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  Layer 3: 可观测性开关 (细粒度控制层)                      │    │
+│  │                                                          │    │
+│  │  独立功能开关（OTEL 风格）:                                 │    │
+│  │  - log_format, log_to_console, log_to_file               │    │
+│  │  - tracing_enabled, tracing_exporter                     │    │
+│  │  - metrics_enabled, metrics_exporter                     │    │
+│  │                                                          │    │
+│  │  控制内容: 日志格式、指标导出、tracing 开关                │    │
+│  │  派生方式: 从 config/{environment}/ 加载                  │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 12.2 Pixi 环境使用
+
+| Pixi 环境 | 用途 | 依赖 | 使用场景 |
+|-----------|------|------|----------|
+| `default` | 生产依赖 | 核心运行时依赖 | 部署、运行、生产环境 |
+| `dev` | 开发依赖 | default + 测试/检查工具 | 开发、测试、CI/CD |
+
+**使用示例**：
+```bash
+# 开发环境（运行测试）
+pixi run -e dev pytest
+
+# 生产环境（启动服务）
+pixi run -e default python -m ditto_port.main
+# 或简写（default 是默认环境）
+pixi run server
+```
+
+### 12.3 运行时环境
+
+**Environment 枚举**提供类型安全的环境值定义：
+
+```python
+class Environment(str, Enum):
+    """系统运行环境枚举."""
+    DEVELOPMENT = "development"
+    TESTING = "testing"
+    PRODUCTION = "production"
+```
+
+**环境切换方式**：
+
+```bash
+# 方式 1: 环境变量
+export DITTO_ENV=production
+pixi run server
+
+# 方式 2: .env 文件
+echo "DITTO_ENV=production" >> .env
+
+# 方式 3: config/ 目录（推荐）
+# 自动加载 config/{environment}/ 下的所有配置文件
+```
+
+### 12.4 环境配置文件结构
+
+采用 `config/{environment}/` 清晰结构：
+
+```
+config/
+├── development/
+│   ├── observability.env      # 可观测性配置
+│   ├── database.env            # 数据库配置
+│   ├── api.env                 # API 配置
+│   └── data_source.env         # 数据源配置
+├── testing/
+│   ├── observability.env
+│   ├── database.env
+│   ├── api.env
+│   └── data_source.env
+└── production/
+    ├── observability.env
+    ├── database.env
+    ├── api.env
+    └── data_source.env
+```
+
+**配置加载流程**：
+
+1. 根据 `DITTO_ENV` 确定环境
+2. `ConfigCoordinator` 加载 `config/{environment}/` 下的所有 `.env` 文件
+3. Pydantic Settings 自动读取对应前缀的环境变量
+4. 应用启动时使用 `get_settings()` 获取配置
+
+**配置示例**：
+
+`config/development/observability.env`:
+```bash
+# 开发环境：详细日志、彩色输出、启用断言
+OBSERVABILITY_LOG_LEVEL=DEBUG
+OBSERVABILITY_LOG_FORMAT=console
+OBSERVABILITY_LOG_TO_CONSOLE=true
+OBSERVABILITY_LOG_TO_FILE=true
+
+OBSERVABILITY_TRACING_ENABLED=true
+OBSERVABILITY_TRACING_EXPORTER=otlp
+OBSERVABILITY_TRACING_SAMPLE_RATE=1.0
+
+OBSERVABILITY_METRICS_ENABLED=true
+OBSERVABILITY_METRICS_EXPORTER=victoriametrics
+
+OBSERVABILITY_ASSERTIONS_ENABLED=true
+```
+
+`config/testing/observability.env`:
+```bash
+# 测试环境：最小化配置、快速执行
+OBSERVABILITY_LOG_LEVEL=WARNING
+OBSERVABILITY_LOG_TO_FILE=false
+
+OBSERVABILITY_TRACING_ENABLED=false
+OBSERVABILITY_TRACING_EXPORTER=none
+
+OBSERVABILITY_METRICS_ENABLED=false
+OBSERVABILITY_METRICS_EXPORTER=none
+
+OBSERVABILITY_ASSERTIONS_ENABLED=false
+```
+
+`config/production/observability.env`:
+```bash
+# 生产环境：JSON 日志、降低采样率
+OBSERVABILITY_LOG_LEVEL=INFO
+OBSERVABILITY_LOG_FORMAT=json
+OBSERVABILITY_LOG_TO_CONSOLE=false
+OBSERVABILITY_LOG_TO_FILE=true
+
+OBSERVABILITY_TRACING_ENABLED=true
+OBSERVABILITY_TRACING_EXPORTER=otlp
+OBSERVABILITY_TRACING_SAMPLE_RATE=0.1
+
+OBSERVABILITY_METRICS_ENABLED=true
+OBSERVABILITY_METRICS_EXPORTER=victoriametrics
+```
+
+### 12.5 多 Pydantic Settings 模式
+
+不同 Settings 类使用不同的环境变量前缀，实现配置隔离：
+
+```python
+class ObservabilitySettings(BaseSettings):
+    """可观测性配置."""
+    model_config = SettingsConfigDict(
+        env_prefix="OBSERVABILITY_",
+        env_file="config/development/observability.env",
+    )
+    log_level: str = "INFO"
+    log_format: str = "console"
+    # ...
+
+class DatabaseSettings(BaseSettings):
+    """数据库配置."""
+    model_config = SettingsConfigDict(
+        env_prefix="DB_",
+        env_file="config/development/database.env",
+    )
+    pool_size: int = 10
+    # ...
+
+class APISettings(BaseSettings):
+    """API 配置."""
+    model_config = SettingsConfigDict(
+        env_prefix="API_",
+        env_file="config/development/api.env",
+    )
+    host: str = "127.0.0.1"
+    port: int = 8000
+    # ...
+```
+
+### 12.6 环境配置最佳实践
+
+**命名规范**：
+
+| 类型 | 规范 | 示例 |
+|------|------|------|
+| Pixi 环境 | 小写，无连字符 | `default`, `dev` |
+| 运行时环境 | 小写，全称 | `development`, `testing`, `production` |
+| 环境变量前缀 | 大写，下划线 | `OBSERVABILITY_`, `DB_`, `API_` |
+| 配置文件 | 小写，下划线 | `observability.env`, `database.env` |
+
+**切换规则**：
+
+| 场景 | Pixi 环境 | DITTO_ENV | 说明 |
+|------|-----------|-----------|------|
+| 本地开发 | `dev` | `development` | 运行测试、检查代码 |
+| 本地运行服务 | `dev` | `development` | 开发模式启动服务 |
+| 测试执行 | `dev` | `testing` | pytest 自动设置 |
+| 生产部署 | `default` | `production` | 生产环境启动 |
+
+**配置优先级**（从高到低）：
+
+1. 环境变量（显式设置）
+2. `config/{environment}/*.env` 文件
+3. `.env` 文件（基础配置）
+4. Pydantic Settings 默认值
 
 ---
 

@@ -42,7 +42,7 @@ jobs:
           filters: |
             python:
               - 'packages/**/*.py'
-              - 'apps/server/**/*.py'
+              - 'apps/port/**/*.py'
               - 'tests/**/*.py'
               - 'scripts/**/*.py'
               - 'pyproject.toml'
@@ -124,9 +124,21 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pixi run -e dev pytest \
-            -m "not integration and not e2e and not slow" \
+          # DataHub 单元测试：并行（已验证安全）
+          pixi run -e dev pytest packages/datahub/tests/unit/ \
+            -n auto \
             --cov=packages \
+            --cov-report=xml:coverage-unit.xml \
+            --cov-report=term-missing \
+            --cov-fail-under=80 \
+            --junitxml=junit-unit.xml \
+            -v \
+            --durations=10
+
+          # Port 单元测试：有限并行（需验证）
+          pixi run -e dev pytest apps/port/tests/unit/ \
+            -m "not integration and not e2e and not slow" \
+            -n 2 \
             --cov=apps \
             --cov-report=xml:coverage-unit.xml \
             --cov-report=term-missing \
@@ -156,7 +168,7 @@ jobs:
   # ============================================================
   build:
     name: Build Validation
-    needs: [lint, type-check, security, test-unit]
+    needs: [lint, type-check, test-unit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
@@ -225,13 +237,13 @@ jobs:
   # ============================================================
   ci-success:
     name: ci-success
-    needs: [lint, type-check, security, test-unit]
+    needs: [lint, type-check, test-unit]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check required jobs
         run: |
-          results=("${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.security.result }}" "${{ needs.test-unit.result }}")
+          results=("${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.test-unit.result }}")
           for result in "${results[@]}"; do
             if [[ "$result" == "failure" ]]; then
               echo "::error::One or more required CI checks failed"

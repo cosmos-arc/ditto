@@ -14,28 +14,24 @@ Flow 功能：
 使用 Prefect 原生依赖机制（@task + wait_for）实现声明式编排。
 """
 
-from __future__ import annotations
-
 from itertools import chain
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from prefect import flow, task
 
+from ditto_port.jobs.flows.helpers import create_ingestion_context
 from ditto_port.jobs.tasks import (
     create_ingest_task_t0,
     create_ingest_task_t1_adj,
     create_ingest_task_t1_bars,
 )
-from ditto_port.services.ingestion.config.datasets import (
+from ditto_port.models import (
     Dataset,
     TaskTier,
     get_datasets_by_tier,
     get_parallel_datasets,
 )
 from ditto_port.services.ingestion.result_utils import count_results
-
-if TYPE_CHECKING:
-    pass
 
 
 def _collect_results(futures: list[Any]) -> dict[str, dict[str, object]]:
@@ -71,15 +67,8 @@ def check_trading_day(trade_date: str, data_root: str) -> bool:
         是否为交易日
 
     """
-    from typing import cast  # noqa: PLC0415
-
-    from ditto_datahub import DataHub  # noqa: PLC0415
-
-    from ditto_port.jobs.flows.helpers import create_ingestion_context  # noqa: PLC0415
-
     with create_ingestion_context(data_root=data_root) as (hub, _):
-        hub_typed = cast(DataHub, hub)
-        return hub_typed.calendar.is_trading_day(trade_date)
+        return hub.calendar.is_trading_day(trade_date)
 
 
 @flow(name="daily-ingestion", description="每日增量数据摄取流程")

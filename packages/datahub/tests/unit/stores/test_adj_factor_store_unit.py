@@ -8,8 +8,8 @@ from typing import Any
 
 import polars as pl
 import pytest
+from ditto_datahub.models import OnDuplicate
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-from ditto_datahub.types import OnDuplicate
 from ditto_foundation.util.io import file_md5
 
 

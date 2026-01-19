@@ -1,4 +1,5 @@
-"""Tests for task factory functions.
+"""
+Tests for task factory functions.
 
 This module tests the factory functions that create Prefect tasks for data ingestion.
 The factories are lightweight wrappers that delegate to IngestionCoordinator.
@@ -11,7 +12,7 @@ from ditto_port.jobs.tasks import (
     t0_meta,
 )
 from ditto_port.jobs.tasks.t0_meta import create_ingest_task
-from ditto_port.services.ingestion.config.datasets import (
+from ditto_port.models import (
     DATASET_REGISTRY,
     Dataset,
     TaskTier,
@@ -93,9 +94,9 @@ class TestCreateIngestTask:
         mock_source = mocker.Mock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.tasks.t0_meta.DataHub", return_value=mock_hub)
         mocker.patch(
-            "ditto_port.services.ingestion.coordinator.IngestionCoordinator",
+            "ditto_port.jobs.tasks.t0_meta.IngestionCoordinator",
             return_value=mock_coordinator,
         )
 
@@ -134,9 +135,9 @@ class TestCreateIngestTask:
         mock_source = mocker.Mock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.tasks.t0_meta.DataHub", return_value=mock_hub)
         mocker.patch(
-            "ditto_port.services.ingestion.coordinator.IngestionCoordinator",
+            "ditto_port.jobs.tasks.t0_meta.IngestionCoordinator",
             return_value=mock_coordinator,
         )
 
@@ -162,9 +163,9 @@ class TestCreateIngestTask:
         mock_source = mocker.Mock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.tasks.t0_meta.DataHub", return_value=mock_hub)
         mocker.patch(
-            "ditto_port.services.ingestion.coordinator.IngestionCoordinator",
+            "ditto_port.jobs.tasks.t0_meta.IngestionCoordinator",
             side_effect=Exception("Coordinator error"),
         )
 
@@ -259,9 +260,9 @@ class TestTaskIntegration:
         mock_source = mocker.Mock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.tasks.t0_meta.DataHub", return_value=mock_hub)
         mocker.patch(
-            "ditto_port.services.ingestion.coordinator.IngestionCoordinator",
+            "ditto_port.jobs.tasks.t0_meta.IngestionCoordinator",
             return_value=mock_coordinator,
         )
 

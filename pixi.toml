@@ -37,6 +37,7 @@ pydantic-settings = ">=2.6,<3"
 # 网络请求
 httpx = ">=0.28,<1"
 aiohttp = ">=3.11,<4"
+requests = ">=2.32.3,<2.32.4"  # multilspy 依赖
 
 # 配置与日志
 python-dotenv = ">=1.0,<2"
@@ -64,6 +65,7 @@ ditto-port = { path = "apps/port", editable = true }
 cachebox = ">=5.0,<6"
 granian = ">=1.0,<2"
 orjson = ">=3.10,<4"
+xxhash = ">=3.5,<4"
 
 # 数据源
 akshare = ">=1.15,<2"
@@ -121,6 +123,9 @@ jupyter = ">=1.1,<2"
 # Pyright 类型检查（替代 mypy）
 pyright = ">=1.1.390,<2"
 
+# LSP 客户端（Pyright LSP）
+multilspy = ">=0.0.15,<0.1"
+
 # ==========================================================
 # 环境定义
 # ==========================================================
@@ -135,74 +140,56 @@ dev = { features = ["dev"], solve-group = "default" }
 # ──────────────────────────────────────────────────────────
 # 代码质量
 # ──────────────────────────────────────────────────────────
+# Lint：代码检查
 lint = "ruff check ."
-lint-fix = "ruff check --fix --exit-non-zero-on-fix --show-fixes ."
-# 给 pre-commit 用：不带 "."，让 pre-commit 传入的文件列表生效
-lint-staged = "ruff check"
-lint-fix-staged = "ruff check --fix --exit-non-zero-on-fix --show-fixes"
 
-format-check = "ruff format --check --diff ."
-format-check-staged = "ruff format --check --diff"
+# Format：代码格式化
+fmt = "ruff format ."
 
-format = "ruff format ."
-format-staged = "ruff format"
-
-# 类型检查 - 源码（standard + strict 核心目录）
-typecheck = "pyright --warnings"
-
-# 类型检查 - 测试（basic 模式，宽松）
-typecheck-tests = "pyright --project pyright.tests.json"
-
-# 类型检查 - 全部（CI 用）
-typecheck-all = { depends-on = ["typecheck", "typecheck-tests"] }
+# Type：类型检查（使用包装脚本）
+type = "python scripts/type.py"
 
 # ──────────────────────────────────────────────────────────
-# 测试
+# 测试（使用包装脚本，支持参数驱动）
 # ──────────────────────────────────────────────────────────
-test = "pytest"
-test-unit = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q"
-test-fast = "pytest -m 'not slow and not integration and not e2e and not external' --no-cov -q --tb=no -x -n0"
-test-integration = "pytest -m integration -v"
-test-pit = "pytest -m pit -v --tb=long"
-test-cov = "pytest --cov --cov-report=html --cov-report=term-missing"
-test-cov-xml = "pytest --cov --cov-report=xml --cov-report=term-missing --cov-fail-under=80"
-test-benchmark = "pytest -m benchmark --benchmark-only"
+# pixi run test              # 默认：单元测试（并行）
+# pixi run test --unit       # 只跑单元测试（并行）
+# pixi run test --integration # 只跑集成测试（串行）
+# pixi run test --fast       # 快速测试（跳过 slow/integration/e2e）
+# pixi run test --cov        # 带覆盖率报告
+# pixi run test --cov-xml    # 覆盖率 XML（CI 用）
+# pixi run test --snapshot   # 支持 inline-snapshot（串行）
+test = "python scripts/test.py"
 
 # ──────────────────────────────────────────────────────────
-# Pre-commit
+# 组合命令
 # ──────────────────────────────────────────────────────────
-pre-commit-install = "pre-commit install --hook-type commit-msg --hook-type pre-commit --hook-type pre-push"
-pre-commit-run = "pre-commit run --all-files"
-pre-commit-update = "pre-commit autoupdate"
+# Check：快速验证（开发时用）
+check = { depends-on = ["lint", "fmt", "type", "test-fast"] }
+
+# CI：完整检查（CI 用）
+ci = { depends-on = ["lint", "fmt-check", "type-all", "test-cov-xml"] }
 
 # ──────────────────────────────────────────────────────────
-# 复合任务
+# 辅助命令
 # ──────────────────────────────────────────────────────────
-# CI 完整检查
-ci-check = { depends-on = [
-    "lint",
-    "format-check",
-    "typecheck-all",
-    "security",
-    "test-cov-xml",
-] }
+# Dev：开发服务（热重载）
+dev = "granian apps.port.src.ditto_port.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
 
-# 快速检查（开发时用）
-quick-check = { depends-on = ["lint-fix", "format", "test-fast"] }
+# Server：生产服务
+server = "granian apps.port.src.ditto_port.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
 
-# ──────────────────────────────────────────────────────────
-# 服务
-# ──────────────────────────────────────────────────────────
-server = "granian apps.port.src.ditto_port.main:app --interface asgi --reload --host 0.0.0.0 --port 8000"
-server-prod = "granian apps.port.src.ditto_port.main:app --interface asgi --host 0.0.0.0 --port 8000 --workers 4"
-ditto = "python -m ditto_port.cli.main"
-
-# ──────────────────────────────────────────────────────────
-# 清理
-# ──────────────────────────────────────────────────────────
+# Clean：清理缓存
 clean = """
 rm -rf dist/ build/ *.egg-info \
     .pytest_cache .ruff_cache \
     htmlcov .coverage coverage.xml \
     **/__pycache__
 """
+
+# ──────────────────────────────────────────────────────────
+# Pre-commit 工具
+# ──────────────────────────────────────────────────────────
+pre-commit-install = "pre-commit install --hook-type commit-msg --hook-type pre-commit --hook-type pre-push"
+pre-commit-run = "pre-commit run --all-files"
+pre-commit-update = "pre-commit autoupdate"

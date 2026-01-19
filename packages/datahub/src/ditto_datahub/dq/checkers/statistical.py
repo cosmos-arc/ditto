@@ -6,7 +6,7 @@ from typing import Any, Literal
 import polars as pl
 from ditto_foundation import logger
 
-from ditto_datahub.dq.models import DQIssue, DQLevel, DQSeverity
+from ditto_datahub.models import DQIssue, DQLevel, DQSeverity
 
 
 class StatisticalChecker:

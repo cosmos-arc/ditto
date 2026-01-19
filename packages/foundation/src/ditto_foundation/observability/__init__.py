@@ -54,7 +54,31 @@ __all__ = [
     "traced",
 ]
 
-_initialized = False
+
+class _ObservabilityRegistry:
+    """
+    Registry for managing observability initialization state.
+
+    Uses class-level attributes to store singleton state, eliminating
+    the need for global statements while maintaining the same API.
+    """
+
+    initialized: bool = False
+
+    @classmethod
+    def is_initialized(cls) -> bool:
+        """Check if observability has been initialized."""
+        return cls.initialized
+
+    @classmethod
+    def set_initialized(cls, value: bool) -> None:
+        """Set the initialization state."""
+        cls.initialized = value
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the initialization state (for testing purposes)."""
+        cls.initialized = False
 
 
 def init(
@@ -80,9 +104,7 @@ def init(
         force: 强制重新初始化（用于测试）
 
     """
-    global _initialized
-
-    if _initialized and not force:
+    if _ObservabilityRegistry.is_initialized() and not force:
         return
 
     config = ObservabilityConfig(
@@ -114,7 +136,7 @@ def init(
             mode=actual_mode.value,
         )
 
-    _initialized = True
+    _ObservabilityRegistry.set_initialized(True)
 
 
 def shutdown() -> None:
@@ -128,8 +150,8 @@ def shutdown() -> None:
         ]:
             if hasattr(provider, "shutdown") and not hasattr(provider, "_shutdown"):
                 provider.shutdown()
-    except Exception:
-        pass
+    except Exception as e:
+        # 优雅关闭失败不应抛出异常，但应记录日志用于调试
+        logger.debug(f"Graceful shutdown completed with warnings: {e}")
 
-    global _initialized
-    _initialized = False
+    _ObservabilityRegistry.set_initialized(False)

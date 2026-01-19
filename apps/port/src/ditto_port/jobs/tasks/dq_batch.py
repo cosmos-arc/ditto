@@ -5,9 +5,9 @@ from typing import Any, Literal
 
 import ditto_datahub
 from ditto_datahub import DataHub
+from ditto_datahub.accessors import BarsQuery
 from ditto_datahub.dq import DQEngine
-from ditto_datahub.dq.models import DQIssue
-from ditto_datahub.repositories import BarsQuery
+from ditto_datahub.models import DQIssue
 from ditto_foundation import M, logger
 from prefect import task
 
@@ -162,12 +162,9 @@ def dq_batch_check(
             _send_dq_alert(trade_date, all_issues)
 
         # 记录指标
-        if hasattr(M, "dq_batch_checks"):
-            M.dq_batch_checks.increment()
-        if hasattr(M, "dq_batch_issues"):
-            M.dq_batch_issues.add(summary["total_issues"], {"trade_date": trade_date})
-        if hasattr(M, "dq_batch_alerts"):
-            M.dq_batch_alerts.add(summary["alert_count"], {"trade_date": trade_date})
+        M.dq_batch_checks.add(1.0, {"trade_date": trade_date})
+        M.dq_batch_issues.add(float(total_issues), {"trade_date": trade_date})
+        M.dq_batch_alerts.add(float(alert_count), {"trade_date": trade_date})
 
         return summary
     finally:

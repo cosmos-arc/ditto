@@ -4,7 +4,7 @@ This module tests the helpers context managers with real dependencies
 but mocked data sources.
 """
 
-# ruff: noqa: PLC0415  # 测试文件允许函数内导入
+# 测试文件允许函数内导入
 
 import pytest
 
@@ -37,7 +37,7 @@ class TestCreateIngestionContext:
         from ditto_port.jobs.flows.helpers import create_ingestion_context
 
         with create_ingestion_context(data_root="data", source="tushare") as (
-            hub,
+            _hub,
             coordinator,
         ):
             assert coordinator is not None
@@ -48,8 +48,8 @@ class TestCreateIngestionContext:
         from ditto_port.jobs.flows.helpers import create_ingestion_context
 
         with create_ingestion_context(data_root="data", source="tushare") as (
-            hub,
-            coordinator,
+            _hub,
+            _coordinator,
         ):
             pass
 
@@ -62,8 +62,8 @@ class TestCreateIngestionContext:
 
         with pytest.raises(ValueError, match="Test error"):
             with create_ingestion_context(data_root="data", source="tushare") as (
-                hub,
-                coordinator,
+                _hub,
+                _coordinator,
             ):
                 raise ValueError("Test error")
 
@@ -76,7 +76,7 @@ class TestCreateIngestionContext:
 
         with create_ingestion_context(data_root="/custom/data", source="tushare") as (
             hub,
-            coordinator,
+            _coordinator,
         ):
             assert hub is not None
 
@@ -85,8 +85,8 @@ class TestCreateIngestionContext:
         from ditto_port.jobs.flows.helpers import create_ingestion_context
 
         with create_ingestion_context(data_root="data", source="custom_source") as (
-            hub,
-            coordinator,
+            _hub,
+            _coordinator,
         ):
             # Verify sources.get was called with custom source
             patch_datahub.sources.get.assert_called_with("custom_source")
@@ -95,7 +95,7 @@ class TestCreateIngestionContext:
         """Test that default source parameter is 'tushare'."""
         from ditto_port.jobs.flows.helpers import create_ingestion_context
 
-        with create_ingestion_context(data_root="data") as (hub, coordinator):
+        with create_ingestion_context(data_root="data") as (_hub, _coordinator):
             # Verify sources.get was called with default "tushare"
             patch_datahub.sources.get.assert_called_with("tushare")
 
@@ -110,7 +110,7 @@ class TestCreateIngestionContext:
         mock_result.status = "success"
 
         with create_ingestion_context(data_root="data", source="tushare") as (
-            hub,
+            _hub,
             coordinator,
         ):
             # Verify coordinator has the expected methods
@@ -123,7 +123,7 @@ class TestCreateIngestionContext:
 
         with create_ingestion_context(data_root="data1", source="tushare") as (
             hub1,
-            coord1,
+            _coord1,
         ):
             assert hub1 is not None
 
@@ -132,7 +132,7 @@ class TestCreateIngestionContext:
 
         with create_ingestion_context(data_root="data2", source="tushare") as (
             hub2,
-            coord2,
+            _coord2,
         ):
             assert hub2 is not None
 

@@ -14,7 +14,7 @@
   - 复权基准已使用 asof（Sprint 1 已修复）
   - 验证 SQL 引擎与 Repo 层行为一致性
   - 添加端到端 PIT 安全测试
-- **影响范围**: `repositories/bars.py`, `runtime/sql_engine.py`, 测试
+- **影响范围**: `accessors/bars.py`, `runtime/sql_engine.py`, 测试
 - **预计工作量**: M
 - **关联**: Code Review #5（部分已完成）
 
@@ -23,24 +23,24 @@
 ### [datahub] 数据源参数支持
 - **描述**: 允许 bars.get() 指定数据源
 - **变更**: `bars.get()` 添加 `source` 参数，支持 tushare/akshare
-- **影响范围**: `repositories/bars.py`
+- **影响范围**: `accessors/bars.py`
 - **预计工作量**: S
 - **关联**: Code Review #8
 
 ### [datahub] 成交量复权
 - **描述**: 前复权时同时调整成交量
 - **变更**: QFQ 调整时同步调整 volume/amount
-- **影响范围**: `repositories/bars.py`
+- **影响范围**: `accessors/bars.py`
 - **预计工作量**: S
 - **关联**: Code Review #9
 
-### [server] 实时监控仪表板
+### [port] 实时监控仪表板
 - **描述**: 数据摄取和质量监控的实时仪表板
 - **变更**:
   - Grafana 集成
   - Prometheus 指标导出
   - 实时告警展示
-- **影响范围**: `apps/server/`
+- **影响范围**: `apps/port/`
 - **预计工作量**: L
 
 ## 低优先级

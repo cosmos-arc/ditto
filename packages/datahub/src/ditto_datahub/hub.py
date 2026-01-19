@@ -2,39 +2,40 @@
 
 from __future__ import annotations
 
+import atexit
 import types
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import polars as pl
-from ditto_foundation import logger
+from ditto_foundation import SQLitePool, logger
+from ditto_foundation.concurrency import FileLockManager
+from ditto_foundation.config.paths import get_paths
 
+from ditto_datahub.accessors.adj_factor import AdjFactorAccessor
+from ditto_datahub.accessors.bars import BarsAccessor
+from ditto_datahub.accessors.calendar import CalendarAccessor
+from ditto_datahub.accessors.index import IndexAccessor
+from ditto_datahub.accessors.ingestion_log import IngestionLogAccessor
+from ditto_datahub.accessors.security import SecuritiesAccessor
+from ditto_datahub.accessors.universe import UniverseAccessor
+from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.errors import SidNotFoundError
-
-if TYPE_CHECKING:
-    from ditto_datahub.dq.engine import DQEngine
-    from ditto_datahub.repositories.adj_factor import AdjFactorRepository
-    from ditto_datahub.repositories.bars import BarsRepository
-    from ditto_datahub.repositories.calendar import CalendarRepository
-    from ditto_datahub.repositories.index import IndexRepository
-    from ditto_datahub.repositories.security import SecurityRepository
-    from ditto_datahub.repositories.universe import UniverseRepository
-    from ditto_datahub.runtime.file_lock import FileLockManager
-    from ditto_datahub.runtime.freeze_manager import FreezeManager
-    from ditto_datahub.runtime.sid_allocator import SidAllocator
-    from ditto_datahub.runtime.sql_engine import SqlEngine
-    from ditto_datahub.runtime.sqlite_pool import SQLitePool
-    from ditto_datahub.sources.accessor import SourcesAccessor
-    from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-    from ditto_datahub.stores.bars_store import BarsStore
-    from ditto_datahub.stores.calendar_store import CalendarStore
-    from ditto_datahub.stores.index_weight_store import IndexWeightStore
-    from ditto_datahub.stores.ingestion_log import IngestionLogStore
-    from ditto_datahub.stores.pipeline_store import PipelineStore
-    from ditto_datahub.stores.security_store import SecurityStore
-    from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
-    from ditto_datahub.stores.universe_store import UniverseStore
+from ditto_datahub.runtime.freeze_manager import FreezeManager
+from ditto_datahub.runtime.sid_allocator import SidAllocator
+from ditto_datahub.runtime.sql_engine import SqlEngine
+from ditto_datahub.sources.source import DataSources
+from ditto_datahub.stores.adj_factor_store import AdjFactorStore
+from ditto_datahub.stores.bars_store import BarsStore
+from ditto_datahub.stores.calendar_store import CalendarStore
+from ditto_datahub.stores.index_weight_store import IndexWeightStore
+from ditto_datahub.stores.ingestion_log import IngestionLogStore
+from ditto_datahub.stores.quarantine_store import QuarantineStore
+from ditto_datahub.stores.security_store import SecurityStore
+from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
+from ditto_datahub.stores.universe_store import UniverseStore
 
 
 class DataHub:
@@ -48,8 +49,8 @@ class DataHub:
     Attribute layers:
     - Runtime Layer: sqlite_pool, file_lock, sid_allocator, dq_engine, freeze
     - Store Layer: security_store, calendar_store, bars_store, adj_factor_store,
-      pipeline_store, universe_store, index_weight_store
-    - Repository Layer: securities, bars, calendar, universe, index
+      universe_store, index_weight_store, ingestion_log_store
+    - Accessor Layer: securities, bars, calendar, universe, index, ingestion_log
     - Sources Layer: sources (external data sources: Tushare, Akshare)
     - SQL Engine: sql_engine
     """
@@ -65,11 +66,13 @@ class DataHub:
 
         """
         if data_root is None:
-            from ditto_foundation.config.paths import get_paths
-
             self.data_root = get_paths().data_home
         else:
             self.data_root = Path(data_root)
+
+        self._closed = False
+        # 注册进程退出清理
+        atexit.register(self._cleanup_on_exit)
 
         logger.debug(
             "DataHub initialized",
@@ -84,39 +87,29 @@ class DataHub:
     @cached_property
     def sqlite_pool(self) -> SQLitePool:
         """SQLite connection pool."""
-        from ditto_datahub.runtime.sqlite_pool import SQLitePool
-
         db_path = self.data_root / "meta" / "hub.sqlite"
         return SQLitePool(str(db_path))
 
     @cached_property
     def file_lock(self) -> FileLockManager:
         """File lock manager for concurrent write safety."""
-        from ditto_datahub.runtime.file_lock import FileLockManager
-
         lock_dir = self.data_root / "locks"
         return FileLockManager(lock_dir)
 
     @cached_property
     def sid_allocator(self) -> SidAllocator:
         """SID allocator for new securities."""
-        from ditto_datahub.runtime.sid_allocator import SidAllocator
-
         return SidAllocator(self.sqlite_pool)
 
     @cached_property
     def dq_engine(self) -> DQEngine:
         """New DQ engine with user override support."""
-        from ditto_datahub.dq.engine import DQEngine
-
         # Use new method: load config with user override
         return DQEngine(data_root=self.data_root)
 
     @cached_property
     def freeze(self) -> FreezeManager:
         """Freeze manager for data version tracking."""
-        from ditto_datahub.runtime.freeze_manager import FreezeManager
-
         return FreezeManager(data_root=str(self.data_root))
 
     # ========================================================================
@@ -126,138 +119,112 @@ class DataHub:
     @cached_property
     def security_store(self) -> SecurityStore:
         """Security data store."""
-        from ditto_datahub.stores.security_store import SecurityStore
-        from ditto_datahub.stores.sqlite_client import SQLiteClient
-
         return SecurityStore(SQLiteClient(self.sqlite_pool))
 
     @cached_property
     def calendar_store(self) -> CalendarStore:
         """Trading calendar store."""
-        from ditto_datahub.stores.calendar_store import CalendarStore
-        from ditto_datahub.stores.sqlite_client import SQLiteClient
-
         return CalendarStore(SQLiteClient(self.sqlite_pool))
 
     @cached_property
     def bars_store(self) -> BarsStore:
         """OHLCV bars store (Parquet)."""
-        from ditto_datahub.stores.bars_store import BarsStore
-
         return BarsStore(data_root=self.data_root)
 
     @cached_property
     def adj_factor_store(self) -> AdjFactorStore:
         """Adjustment factor store (Parquet)."""
-        from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-
         return AdjFactorStore(data_root=self.data_root)
 
     @cached_property
     def stock_status_store(self) -> StockStatusStore:  # B.3
         """Stock status store (Parquet, year partitioned)."""
-        from ditto_datahub.stores.stock_status_store import StockStatusStore
-
         return StockStatusStore(data_root=self.data_root)
-
-    @cached_property
-    def pipeline_store(self) -> PipelineStore:
-        """Pipeline run store."""
-        from ditto_datahub.stores.pipeline_store import PipelineStore
-        from ditto_datahub.stores.sqlite_client import SQLiteClient
-
-        return PipelineStore(SQLiteClient(self.sqlite_pool))
 
     @cached_property
     def universe_store(self) -> UniverseStore:
         """Universe store for security universe data."""
-        from ditto_datahub.stores.sqlite_client import SQLiteClient
-        from ditto_datahub.stores.universe_store import UniverseStore
-
         return UniverseStore(SQLiteClient(self.sqlite_pool))
 
     @cached_property
     def index_weight_store(self) -> IndexWeightStore:
         """Index weight store for index constituent data."""
-        from ditto_datahub.stores.index_weight_store import IndexWeightStore
-        from ditto_datahub.stores.sqlite_client import SQLiteClient
-
         return IndexWeightStore(SQLiteClient(self.sqlite_pool))
 
     @cached_property
-    def ingestion_log(self) -> IngestionLogStore:
-        """Ingestion event log store (new system)."""
-        from ditto_datahub.stores.ingestion_log import IngestionLogStore
-        from ditto_datahub.stores.sqlite_client import SQLiteClient
-
+    def ingestion_log_store(self) -> IngestionLogStore:
+        """摄取日志存储."""
         return IngestionLogStore(SQLiteClient(self.sqlite_pool))
 
+    @cached_property
+    def quarantine_store(self) -> QuarantineStore:
+        """Quarantine store for failed data."""
+        quarantine_path = self.data_root / "quarantine.db"
+        return QuarantineStore(quarantine_path)
+
     # ========================================================================
-    # Repository Layer
+    # Accessor Layer
     # ========================================================================
 
     @cached_property
-    def securities(self) -> SecurityRepository:
-        """Securities master data repository."""
-        from ditto_datahub.repositories.security import SecurityRepository
-
-        return SecurityRepository(
+    def securities(self) -> SecuritiesAccessor:
+        """Securities master data accessor."""
+        return SecuritiesAccessor(
             security_store=self.security_store,
             sid_allocator=self.sid_allocator,
         )
 
     @cached_property
-    def bars(self) -> BarsRepository:
-        """OHLCV bars repository."""
-        from ditto_datahub.repositories.bars import BarsRepository
-
-        return BarsRepository(
+    def bars(self) -> BarsAccessor:
+        """OHLCV bars accessor."""
+        return BarsAccessor(
             bars_store=self.bars_store,
             security_store=self.security_store,
             adj_factor_store=self.adj_factor_store,
             stock_status_store=self.stock_status_store,  # B.3
             dq_engine=self.dq_engine,  # Use new DQEngine
             file_lock=self.file_lock,
+            quarantine_store=self.quarantine_store,
         )
 
     @cached_property
-    def adj_factor(self) -> AdjFactorRepository:
-        """Adjustment factor repository."""
-        from ditto_datahub.repositories.adj_factor import AdjFactorRepository
-
-        return AdjFactorRepository(
+    def adj_factor(self) -> AdjFactorAccessor:
+        """Adjustment factor accessor."""
+        return AdjFactorAccessor(
             adj_factor_store=self.adj_factor_store,
             file_lock=self.file_lock,
         )
 
     @cached_property
-    def calendar(self) -> CalendarRepository:
-        """Trading calendar repository."""
-        from ditto_datahub.repositories.calendar import CalendarRepository
-
-        return CalendarRepository(
+    def calendar(self) -> CalendarAccessor:
+        """Trading calendar accessor."""
+        return CalendarAccessor(
             calendar_store=self.calendar_store,
         )
 
     @cached_property
-    def universe(self) -> UniverseRepository:
-        """Security universe repository."""
-        from ditto_datahub.repositories.universe import UniverseRepository
-
-        return UniverseRepository(
+    def universe(self) -> UniverseAccessor:
+        """Security universe accessor."""
+        return UniverseAccessor(
             universe_store=self.universe_store,
+            security_store=self.security_store,
             sid_allocator=self.sid_allocator,
         )
 
     @cached_property
-    def index(self) -> IndexRepository:
-        """Index data repository."""
-        from ditto_datahub.repositories.index import IndexRepository
-
-        return IndexRepository(
+    def index(self) -> IndexAccessor:
+        """Index data accessor."""
+        return IndexAccessor(
             bars_store=self.bars_store,
             index_weight_store=self.index_weight_store,
             security_store=self.security_store,
+        )
+
+    @cached_property
+    def ingestion_log(self) -> IngestionLogAccessor:
+        """摄取日志访问器."""
+        return IngestionLogAccessor(
+            ingestion_log_store=self.ingestion_log_store,
         )
 
     # ========================================================================
@@ -265,11 +232,9 @@ class DataHub:
     # ========================================================================
 
     @cached_property
-    def sources(self) -> SourcesAccessor:
+    def sources(self) -> DataSources:
         """External data sources accessor (Tushare, Akshare, etc.)."""
-        from ditto_datahub.sources.accessor import SourcesAccessor
-
-        return SourcesAccessor()
+        return DataSources()
 
     # ========================================================================
     # SQL Engine
@@ -278,8 +243,6 @@ class DataHub:
     @cached_property
     def sql_engine(self) -> SqlEngine:
         """DuckDB SQL engine."""
-        from ditto_datahub.runtime.sql_engine import SqlEngine
-
         return SqlEngine(
             data_root=self.data_root,
             security_store=self.security_store,
@@ -400,6 +363,11 @@ class DataHub:
     # Resource Management
     # ========================================================================
 
+    def _cleanup_on_exit(self) -> None:
+        """进程退出时清理（由 atexit 自动调用）."""
+        if not self._closed:
+            self.close()
+
     def close(self) -> None:
         """
         Close resources.
@@ -407,21 +375,25 @@ class DataHub:
         Only closes resources that have been accessed (initialized).
         Unaccessed resources are never created and don't need closing.
 
+        This method is idempotent - can be called multiple times safely.
+
         Closes in reverse order of initialization to avoid dependency issues:
-        1. Stores with SQLite clients (pipeline_store, calendar_store, security_store,
-           universe_store, index_weight_store, ingestion_log)
+        1. Stores with SQLite clients (calendar_store, security_store,
+           universe_store, index_weight_store, ingestion_log_store)
         2. SQL engine (DuckDB)
         3. SQLite pool (connection manager)
         """
+        if self._closed:
+            return
         # Close stores that hold SQLiteClient references
         # These must be closed before sqlite_pool
         for store_name in (
-            "pipeline_store",
             "calendar_store",
             "security_store",
             "universe_store",
             "index_weight_store",
-            "ingestion_log",
+            "ingestion_log_store",
+            "quarantine_store",
         ):
             if store_name in self.__dict__:
                 store = getattr(self, store_name)
@@ -435,6 +407,8 @@ class DataHub:
         # Close SQLite pool
         if "sqlite_pool" in self.__dict__:
             self.sqlite_pool.close()
+
+        self._closed = True
 
         logger.debug(
             "DataHub closed",

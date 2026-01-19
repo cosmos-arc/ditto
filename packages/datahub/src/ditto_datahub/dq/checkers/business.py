@@ -5,7 +5,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import logger
 
-from ditto_datahub.dq.models import DQIssue, DQLevel, DQSeverity
+from ditto_datahub.models import DQIssue, DQLevel, DQSeverity
 
 
 class BusinessChecker:
@@ -141,7 +141,7 @@ class BusinessChecker:
         min_val = rule.get("min")
         max_val = rule.get("max")
 
-        conditions = []
+        conditions: list[pl.Expr] = []
         if min_val is not None:
             conditions.append(pl.col(column) < min_val)
         if max_val is not None:
@@ -151,7 +151,7 @@ class BusinessChecker:
             return None
 
         # Combine conditions with OR
-        condition = conditions[0]
+        condition: pl.Expr = conditions[0]
         for cond in conditions[1:]:
             condition = condition | cond
 

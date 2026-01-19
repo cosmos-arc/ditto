@@ -47,10 +47,10 @@
 **完成日期**: 2025-12-28
 
 **涉及文件**：
-- `packages/datahub/src/ditto_datahub/repositories/bars.py`
+- `packages/datahub/src/ditto_datahub/accessors/bars.py`
 - `packages/datahub/src/ditto_data_hub/stores/adj_factor_store.py`
 - `packages/datahub/src/ditto_data_hub/runtime/sqlite_pool.py`
-- `packages/datahub/tests/unit/repositories/test_bars_repository.py`
+- `packages/datahub/tests/unit/accessors/test_bars_repository.py`
 - `packages/datahub/tests/test_adj_factor_store.py`
 
 **关键任务**：
@@ -121,7 +121,7 @@ packages/datahub/
     └── unit/stores/
         └── test_quarantine_store.py  # 隔离区测试
 
-apps/server/src/ditto_port/
+apps/port/src/ditto_port/
 └── ingestion/
     └── tasks/
         └── dq_batch.py               # L3 批量检查任务
@@ -137,8 +137,8 @@ apps/server/src/ditto_port/
 | 1.5 | 实现 BusinessChecker（L2） | `dq/checkers/business.py` | ✅ |
 | 1.6 | 实现 StatisticalChecker（L3） | `dq/checkers/statistical.py` | ✅ |
 | 1.7 | 隔离区机制 | `stores/quarantine_store.py` | ✅ |
-| 1.8 | Repository 集成 DQEngine | `repositories/bars.py` | 📝 延后到 Phase 3 |
-| 1.9 | Server 批量 DQ 检查任务 | `apps/server/.../tasks/dq_batch.py` | ✅ |
+| 1.8 | Accessor 集成 DQEngine | `accessors/bars.py` | 📝 延后到 Phase 3 |
+| 1.9 | Server 批量 DQ 检查任务 | `apps/port/.../tasks/dq_batch.py` | ✅ |
 | 1.10 | DQ 报告生成 | `dq/report.py` | ✅ |
 
 **DQ 三层规则**：
@@ -182,11 +182,11 @@ apps/server/src/ditto_port/
 - [x] 代码质量检查通过（无 linting 错误）
 
 **延后说明**：
-- **Task 1.8（Repository 集成 DQEngine）延后到 Phase 3**
+- **Task 1.8（Accessor 集成 DQEngine）延后到 Phase 3**
 - **延后原因**：
-  1. **架构依赖**：需要在实际的写入流程中集成 DQ 检查，涉及修改 `repositories/bars.py` 的 write 方法
+  1. **架构依赖**：需要在实际的写入流程中集成 DQ 检查，涉及修改 `accessors/bars.py` 的 write 方法
   2. **Phase 3 配合**：Phase 3 会实现数据摄取增强（增量更新、质量监控、告警发送），DQ 检查应该在摄取流程中统一集成
-  3. **测试完整性**：Repository 集成需要在实际的数据流场景中测试，Phase 3 的摄取任务提供完整的测试环境
+  3. **测试完整性**：Accessor 集成需要在实际的数据流场景中测试，Phase 3 的摄取任务提供完整的测试环境
 
 ---
 
@@ -200,9 +200,9 @@ packages/datahub/src/ditto_datahub/
 ├── stores/
 │   ├── universe_store.py             # UniverseStore (PIT 查询)
 │   └── index_weight_store.py         # IndexWeightStore (PIT 查询)
-├── repositories/
-│   ├── universe.py                   # UniverseRepository
-│   └── index.py                      # IndexRepository
+├── accessors/
+│   ├── universe.py                   # UniverseAccessor
+│   └── index.py                      # IndexAccessor
 ├── runtime/
 │   └── freeze_manager.py             # FreezeManager
 └── hub.py                             # DataHub 增强
@@ -211,8 +211,8 @@ packages/datahub/src/ditto_datahub/
 **关键任务**：
 | Task | 描述 | 接口 | 状态 |
 |------|------|------|------|
-| 2.1 | UniverseStore/Repository | `get_constituents()`, `list_universes()` | ✅ |
-| 2.2 | IndexStore/Repository | `get_index_bars()`, `get_constituents()` | ✅ |
+| 2.1 | UniverseStore/Accessor | `get_constituents()`, `list_universes()` | ✅ |
+| 2.2 | IndexStore/Accessor | `get_index_bars()`, `get_constituents()` | ✅ |
 | 2.3 | FreezeManager | `create()`, `verify()`, `delete()` | ✅ |
 | 2.4 | DataHub.freeze() | freeze manager 接口 | ✅ |
 | 2.5 | DataHub.universe() | universe repository | ✅ |
@@ -222,9 +222,9 @@ packages/datahub/src/ditto_datahub/
 
 **完成总结**：
 - 创建 UniverseStore：标的池存储层，支持 PIT 查询（16 测试）
-- 创建 UniverseRepository：标的池仓库，预定义 CSI300/CSI500（18 测试）
+- 创建 UniverseAccessor：标的池仓库，预定义 CSI300/CSI500（18 测试）
 - 创建 IndexWeightStore：指数成分股权重存储（PIT）（15 测试）
-- 创建 IndexRepository：指数数据仓库，支持日线和成分股查询（13 测试）
+- 创建 IndexAccessor：指数数据仓库，支持日线和成分股查询（13 测试）
 - 创建 FreezeManager：轻量级 checksum 校验，不做回滚（14 测试）
 - DataHub 集成：新增 universe、index、freeze 属性，新增元数据查询便捷方法（16 测试）
 - 测试覆盖：92 个测试全部通过，测试覆盖率 > 90%
@@ -259,7 +259,7 @@ packages/datahub/src/ditto_datahub/
 └── stores/
     └── ingestion_metadata_store.py    # 摄取元数据存储
 
-apps/server/src/ditto_port/ingestion/
+apps/port/src/ditto_port/ingestion/
 ├── flows/
 │   └── scheduled_ingest.py            # 定时摄取流程
 └── tasks/
@@ -277,14 +277,14 @@ apps/server/src/ditto_port/ingestion/
 | 3.6 | API 触发接口 | `/ingestion/trigger/{trade_date}` | 📝 延后 |
 | 3.7 | AkShare 适配器 | 接口对齐 Tushare | 📝 延后 |
 | 3.8 | 数据源自动切换 | FailoverSource | 📝 延后 |
-| **1.8** | **Repository 集成 DQEngine** | **写入时 DQ 检查** | ✅ |
+| **1.8** | **Accessor 集成 DQEngine** | **写入时 DQ 检查** | ✅ |
 
 **完成总结**：
 - **告警系统**：创建 AlertSender 抽象基类，实现 Email/Telegram/WeChat 三个渠道
 - **AlertManager**：统一管理多个告警渠道，支持按优先级路由
 - **摄取元数据**：IngestionMetadataStore 记录每次摄取的元数据（trade_date, rows_fetched, status）
 - **增量更新**：TushareSource 实现基于 `trade_date` 的增量查询
-- **Repository DQ 集成**：BarsRepository.write() 集成 L1/L2 DQ 检查
+- **Accessor DQ 集成**：BarsAccessor.write() 集成 L1/L2 DQ 检查
 - **质量监控**：monitor_ingestion_quality 任务记录摄取指标（行数、耗时、DQ 结果）
 - **定时摄取流程**：scheduled_ingest.py 使用 Prefect 部署定时摄取流程
 - **测试覆盖**：31 个新增测试全部通过
@@ -296,7 +296,7 @@ apps/server/src/ditto_port/ingestion/
 - [x] 告警正确发送（Email/Telegram/WeChat 抽象实现）
 - [ ] API 触发接口可用（延后）
 - [ ] AkShare 降级切换（延后）
-- [x] Repository 写入时执行 DQ 检查（L1/L2）
+- [x] Accessor 写入时执行 DQ 检查（L1/L2）
 
 **延后说明**：
 - **Task 3.6（API 触发接口）延后**：需要在 Server 层实现 FastAPI 路由，待后续 Sprint 补充
@@ -310,7 +310,7 @@ apps/server/src/ditto_port/ingestion/
 **完成日期**: 2025-12-30
 
 **PR #19 代码审查修复**（2025-12-30）：
-- **B.1**: BarsRepository 复权计算 PIT 安全隐患修复
+- **B.1**: BarsAccessor 复权计算 PIT 安全隐患修复
 - **B.2**: BarsStore Last-Write-Wins 数据覆盖风险防护
 - **B.3**: 风控字段缺失（涨跌停价、停牌状态）完善
 - **B.4**: 抽取 ParquetStoreBase 基类（消除 394 行重复代码）
@@ -332,7 +332,7 @@ packages/datahub/src/ditto_datahub/stores/
 packages/datahub/README.md              # DataHub 文档 (A.9)
 docs/plans/2025-12-29-pr19-review-fixes.md  # PR #19 修复计划
 
-apps/server/src/ditto_port/
+apps/port/src/ditto_port/
 └── main.py                            # Granian + ORJSONResponse
 ```
 
@@ -396,7 +396,7 @@ apps/server/src/ditto_port/
 
 **新增文件结构**：
 ```
-apps/server/src/ditto_port/validation/
+apps/port/src/ditto_port/validation/
 ├── __init__.py
 ├── golden_dataset.py                  # 黄金数据集管理
 ├── comparison.py                      # 数据比对引擎
@@ -579,9 +579,9 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 | `packages/datahub/src/ditto_datahub/stores/universe_store.py` | Universe 存储 | ✅ |
 | `packages/datahub/src/ditto_datahub/stores/index_weight_store.py` | Index 权重存储 | ✅ |
 | `packages/datahub/src/ditto_datahub/stores/ingestion_metadata_store.py` | 摄取元数据 | ✅ Phase 3 |
-| `packages/datahub/src/ditto_datahub/repositories/universe.py` | Universe 仓库 | ✅ |
-| `packages/datahub/src/ditto_datahub/repositories/index.py` | Index 仓库 | ✅ |
-| `packages/datahub/src/ditto_datahub/repositories/bars.py` | Bars (含 DQ) | ✅ Phase 3 |
+| `packages/datahub/src/ditto_datahub/accessors/universe.py` | Universe 仓库 | ✅ |
+| `packages/datahub/src/ditto_datahub/accessors/index.py` | Index 仓库 | ✅ |
+| `packages/datahub/src/ditto_datahub/accessors/bars.py` | Bars (含 DQ) | ✅ Phase 3 |
 | `packages/datahub/src/ditto_datahub/runtime/freeze_manager.py` | Freeze 管理 | ✅ |
 | `packages/datahub/src/ditto_datahub/types.py` | FreezeManifest 类型 | ✅ |
 | `packages/datahub/src/ditto_datahub/alerts/base.py` | AlertSender 基类 | ✅ Phase 3 |
@@ -592,16 +592,16 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 | `packages/datahub/src/ditto_datahub/sources/base.py` | 增量接口 | ✅ Phase 3 |
 | `packages/datahub/src/ditto_datahub/sources/metadata.py` | 元数据源 | ✅ Phase 3 |
 | `packages/datahub/src/ditto_datahub/sources/tushare/source.py` | Tushare 增量 | ✅ Phase 3 |
-| `apps/server/src/ditto_port/ingestion/tasks/dq_batch.py` | L3 任务 | ✅ |
-| `apps/server/src/ditto_port/ingestion/tasks/monitoring.py` | 质量监控 | ✅ Phase 3 |
-| `apps/server/src/ditto_port/ingestion/flows/scheduled_ingest.py` | 定时摄取 | ✅ Phase 3 |
+| `apps/port/src/ditto_port/ingestion/tasks/dq_batch.py` | L3 任务 | ✅ |
+| `apps/port/src/ditto_port/ingestion/tasks/monitoring.py` | 质量监控 | ✅ Phase 3 |
+| `apps/port/src/ditto_port/ingestion/flows/scheduled_ingest.py` | 定时摄取 | ✅ Phase 3 |
 | **测试文件** (22 个) | | |
 | `packages/datahub/tests/unit/dq/*.py` | DQ 测试 | ✅ |
 | `packages/datahub/tests/unit/stores/test_*.py` | Store 测试 | ✅ |
-| `packages/datahub/tests/unit/repositories/test_*.py` | Repository 测试 | ✅ |
+| `packages/datahub/tests/unit/accessors/test_*.py` | Accessor 测试 | ✅ |
 | `packages/datahub/tests/unit/alerts/*.py` | Alerts 测试 | ✅ Phase 3 |
 | `packages/datahub/tests/unit/sources/test_*.py` | Source 测试 | ✅ Phase 3 |
-| `apps/server/tests/unit/ingestion/test_monitoring.py` | 监控测试 | ✅ Phase 3 |
+| `apps/port/tests/unit/ingestion/test_monitoring.py` | 监控测试 | ✅ Phase 3 |
 
 ### 待建文件（Phase 4-5）
 | 文件路径 | 用途 | 状态 |
@@ -611,9 +611,9 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 | `packages/datahub/tests/unit/runtime/test_cache.py` | 缓存测试 | ✅ Phase 4 |
 | `packages/datahub/tests/unit/runtime/test_pit_helper.py` | PIT 测试 | ✅ Phase 4 |
 | `packages/datahub/src/ditto_datahub/sources/failover.py` | 自动切换 | ❌ |
-| `apps/server/src/ditto_port/validation/golden_dataset.py` | 黄金数据集管理器 | ❌ |
-| `apps/server/src/ditto_port/validation/comparison.py` | 数据比对引擎 | ❌ |
-| `apps/server/src/ditto_port/validation/report.py` | 验证报告生成 | ❌ |
+| `apps/port/src/ditto_port/validation/golden_dataset.py` | 黄金数据集管理器 | ❌ |
+| `apps/port/src/ditto_port/validation/comparison.py` | 数据比对引擎 | ❌ |
+| `apps/port/src/ditto_port/validation/report.py` | 验证报告生成 | ❌ |
 | `doc/validation/golden_dataset_baseline_v1.md` | 数据质量基线报告 | ❌ |
 
 ### 修改文件
@@ -627,17 +627,17 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 | `packages/datahub/src/ditto_datahub/runtime/__init__.py` | 导出 DataCache, PitHelper | ✅ Phase 4 |
 | `packages/datahub/src/ditto_datahub/stores/calendar_store.py` | 集成 DataCache | ✅ Phase 4 |
 | `packages/datahub/src/ditto_datahub/stores/security_store.py` | 集成 DataCache，移除 @lru_cache | ✅ Phase 4 |
-| `apps/server/src/ditto_port/main.py` | Granian 服务器 + ORJSONResponse | ✅ Phase 4 |
-| `packages/datahub/src/ditto_datahub/repositories/bars.py` | 集成 DQEngine (Task 1.8) | 📝 Phase 3 |
+| `apps/port/src/ditto_port/main.py` | Granian 服务器 + ORJSONResponse | ✅ Phase 4 |
+| `packages/datahub/src/ditto_datahub/accessors/bars.py` | 集成 DQEngine (Task 1.8) | 📝 Phase 3 |
 | `packages/datahub/src/ditto_datahub/sources/base.py` | 增量更新接口 | ❌ |
 | `packages/datahub/src/ditto_datahub/sources/tushare/source.py` | 增量适配 | ❌ |
 | `packages/datahub/src/ditto_datahub/runtime/schema.sql` | 添加 index_weight 表 | ✅ |
 | `packages/datahub/src/ditto_datahub/stores/__init__.py` | 导出新 Store | ✅ |
-| `packages/datahub/src/ditto_datahub/repositories/__init__.py` | 导出新 Repository | ✅ |
+| `packages/datahub/src/ditto_datahub/accessors/__init__.py` | 导出新 Accessor | ✅ |
 | `packages/datahub/src/ditto_datahub/hub.py` | freeze/universe/index 接口 | ✅ |
 | `packages/datahub/tests/unit/test_hub.py` | DataHub 集成测试 | ✅ |
-| `apps/server/src/ditto_port/ingestion/scheduler.py` | 定时调度 | ❌ |
-| `apps/server/src/ditto_port/api/ingestion.py` | API 触发 | ❌ |
+| `apps/port/src/ditto_port/ingestion/scheduler.py` | 定时调度 | ❌ |
+| `apps/port/src/ditto_port/api/ingestion.py` | API 触发 | ❌ |
 
 ---
 
@@ -683,13 +683,13 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
   - 创建 AlertManager 统一管理告警渠道
   - 创建 IngestionMetadataStore 记录摄取元数据
   - TushareSource 实现基于 trade_date 的增量查询
-  - BarsRepository.write() 集成 L1/L2 DQ 检查
+  - BarsAccessor.write() 集成 L1/L2 DQ 检查
   - 实现 monitor_ingestion_quality 质量监控任务
   - 实现 scheduled_ingest.py 定时摄取流程
   - 测试覆盖：31 个新增测试全部通过
 - ✅ **Phase 2 完成**：DataHub 完整实现（8 任务）
-  - 创建 UniverseStore（16 测试）和 UniverseRepository（18 测试）
-  - 创建 IndexWeightStore（15 测试）和 IndexRepository（13 测试）
+  - 创建 UniverseStore（16 测试）和 UniverseAccessor（18 测试）
+  - 创建 IndexWeightStore（15 测试）和 IndexAccessor（13 测试）
   - 创建 FreezeManager（14 测试）
   - DataHub 集成（16 测试）
   - 测试覆盖：92 个测试全部通过，覆盖率 > 90%
@@ -710,10 +710,10 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
     - `asof` 参数通过参数绑定传递，不再字符串拼接
     - 添加日期格式验证 (`YYYY-MM-DD`)
   - **DQ 系统统一迁移** (commit b961710)
-    - BarsRepository 从 DQChecker 迁移到 DQEngine
+    - BarsAccessor 从 DQChecker 迁移到 DQEngine
     - DataHub 统一使用 DQEngine
     - 移除 DQCheckResult 的 TYPE_CHECKING 导入（运行时修复）
-  - **CalendarRepository 增强**
+  - **CalendarAccessor 增强**
     - 暴露 `get_last_trading_day()` 方法 (commit ee1bbd0)
   - **DataCache TTL 增强**
     - 迁移到 VTTLCache 支持单条目 TTL
@@ -739,9 +739,9 @@ Phase 5: 黄金数据集验证 ⭐ 最终验收
 - 创建 dq/models.py、dq/engine.py、dq/result.py、dq/report.py
 - 创建 dq/checkers/technical.py、business.py、statistical.py
 - 创建 stores/quarantine_store.py
-- 创建 apps/server/.../tasks/dq_batch.py
+- 创建 apps/port/.../tasks/dq_batch.py
 - 测试覆盖：53 个 DQ 相关测试全部通过
-- **Task 1.8 延后原因**：Repository 集成 DQEngine 需要与 Phase 3 数据摄取增强配合，在摄取流程中统一集成 DQ 检查
+- **Task 1.8 延后原因**：Accessor 集成 DQEngine 需要与 Phase 3 数据摄取增强配合，在摄取流程中统一集成 DQ 检查
 
 ### 2026-01-04
 - ✅ **代码审查修复完成**：修复 7 个 ruff PLC0415 错误

@@ -4,7 +4,7 @@ import time
 
 import pytest
 import time_machine as time_machine_lib
-from ditto_datahub.runtime.cache import DataCache
+from ditto_foundation.cache import DataCache
 
 
 def test_individual_ttl(time_machine: None) -> None:

@@ -283,3 +283,48 @@ class TestReset:
 
         spans = get_recorded_spans()
         assert len(spans) == 0
+
+
+class TestResolveLogDir:
+    """测试日志目录解析功能."""
+
+    def test_resolve_log_dir_default_uses_xdg_paths(self) -> None:
+        """测试默认 'logs' 使用 XDGPaths."""
+        from ditto_foundation.observability.config import ObservabilityConfig
+        from ditto_foundation.observability.logging import _resolve_log_dir
+
+        config = ObservabilityConfig(log_dir="logs")
+        log_dir = _resolve_log_dir(config)
+
+        # 应该使用 XDGPaths 的 state_subdir
+        # 路径应该包含 "logs"
+        assert log_dir.name == "logs" or "logs" in log_dir.parts
+
+    def test_resolve_log_dir_custom_path(self) -> None:
+        """测试自定义路径."""
+        import tempfile
+
+        from ditto_foundation.observability.config import ObservabilityConfig
+        from ditto_foundation.observability.logging import _resolve_log_dir
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config = ObservabilityConfig(log_dir=tmpdir)
+            log_dir = _resolve_log_dir(config)
+
+            assert str(log_dir) == tmpdir
+            assert log_dir.exists()
+
+    def test_resolve_log_dir_creates_directory(self) -> None:
+        """测试自动创建目录."""
+        import tempfile
+
+        from ditto_foundation.observability.config import ObservabilityConfig
+        from ditto_foundation.observability.logging import _resolve_log_dir
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            custom_path = f"{tmpdir}/custom/nested/logs"
+            config = ObservabilityConfig(log_dir=custom_path)
+            log_dir = _resolve_log_dir(config)
+
+            assert log_dir.exists()
+            assert log_dir.is_dir()

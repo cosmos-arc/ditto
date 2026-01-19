@@ -138,8 +138,8 @@ DRAWDOWN_TOLERANCE = 0.005    # 0.5%
 
 #### 任务7: API集成
 - **文件**：
-  - `apps/server/src/ditto_port/api/v1/backtest.py`
-  - `apps/server/src/ditto_port/services/backtest_svc.py`
+  - `apps/port/src/ditto_port/api/v1/backtest.py`
+  - `apps/port/src/ditto_port/services/backtest_svc.py`
 - **功能**：
   - RESTful API
   - 回测任务管理
@@ -271,7 +271,7 @@ packages/core/src/ditto_core/
 │   ├── kill_switch.py            # 熔断机制
 │   └── drawdown_monitor.py       # 回撤监控
 
-apps/server/src/ditto_port/
+apps/port/src/ditto_port/
 ├── api/v1/
 │   └── backtest.py               # 回测API
 └── services/

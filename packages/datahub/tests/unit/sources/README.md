@@ -6,7 +6,7 @@ Sources 单元测试覆盖数据源客户端的核心功能。
 
 | 测试文件 | 测试内容 |
 |----------|----------|
-| `test_accessor.py` | 数据访问器 |
+| `test_provider.py` | 数据提供器 |
 | `test_base.py` | 数据源基类 |
 | `tushare/test_client.py` | Tushare 客户端 |
 | `tushare/test_http_utils.py` | HTTP 工具函数 |
@@ -15,7 +15,7 @@ Sources 单元测试覆盖数据源客户端的核心功能。
 
 ## 测试内容
 
-### 数据访问器（test_accessor.py）
+### 数据提供器（test_provider.py）
 
 **测试内容**：
 - 列访问

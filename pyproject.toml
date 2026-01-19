@@ -18,6 +18,7 @@ src = ["packages", "apps", "scripts", "tests"]
 # 全局排除不需要检查的文件和目录。
 exclude = [
     ".bzr",
+    ".claude",
     ".direnv",
     ".eggs",
     ".git",
@@ -92,17 +93,49 @@ unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
 # 测试文件 - 最宽松
-"tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "ANN", "D"]
-"**/tests/**/*.py" = ["PLR2004", "PLR0913", "S101", "ANN", "D"]
+"tests/**/*.py" = [
+    "PLR2004",
+    "PLR0913",
+    "S101",
+    "S106",
+    "S311",
+    "S608",
+    "ANN",
+    "D",
+    "PLC0415",
+    "C901",
+    "S105",
+    "S108",
+    "S110",
+]
+"**/tests/**/*.py" = [
+    "PLR2004",
+    "PLR0913",
+    "S101",
+    "S106",
+    "S311",
+    "S608",
+    "ANN",
+    "D",
+    "PLC0415",
+    "C901",
+    "S105",
+    "S108",
+    "S110",
+]
 "**/conftest.py" = ["ANN", "D", "PLC0415"]
 
 # 脚本文件
 "scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN"]
 "**/cli.py" = ["T201"]
+"**/cli/*.py" = ["T201"]
 "**/main.py" = ["T201"]
 
 # __init__.py
 "__init__.py" = ["D104"]
+
+# provider.py - 延迟导入避免循环依赖
+"**/sources/provider.py" = ["PLC0415"]
 
 # --- Ruff Formatter (格式化器) 配置 ---
 [tool.ruff.format]
@@ -179,7 +212,13 @@ reportUnusedImport = "none"
 reportUnusedVariable = "none"
 
 # 第三方库 stub 不完整时的处理
-reportMissingTypeStubs = "none"
+reportMissingTypeStubs = "warning"
+
+# 检测不必要的 type: ignore 注释
+reportUnnecessaryTypeIgnoreComment = "error"
+
+# 检测隐式字符串拼接
+reportImplicitStringConcatenation = "error"
 
 # 对于 standard 模式下的 Unknown 类型，降级为 warning
 # 这样编辑器里能看到黄线提醒，但不会阻塞 CI
@@ -227,6 +266,7 @@ markers = [
     "data: Mark test that requires data fixtures",
     "external: Mark test that calls external APIs (Tushare, etc.)",
     "observability: Mark test that requires observability stack",
+    "serial: Mark test that must run serially (not in parallel)",
 ]
 
 log_cli = true
@@ -236,8 +276,7 @@ asyncio_mode = "strict"
 addopts = [
     "-ra",
     "-v",
-    "-n",
-    "auto",
+    # "-n", "auto",  # 移除全局并行配置，改为命令级别控制（支持分层并行策略）
     "--strict-markers",
     "--strict-config",
     "--cov=packages",

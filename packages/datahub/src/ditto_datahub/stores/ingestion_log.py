@@ -1,10 +1,11 @@
 """Ingestion log store for tracking per-trade-date ingestion events."""
 
 from datetime import datetime
+from typing import Any
 
 from ditto_foundation import logger
 
-from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
+from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
@@ -59,10 +60,14 @@ class IngestionLogStore:
         """
         self._client.execute(sql)
 
-        # Create index for status queries
+        # Drop old index (doesn't match query patterns)
+        self._client.execute("DROP INDEX IF EXISTS idx_ingestion_log_status_date")
+
+        # Create new index that matches actual query patterns
+        # All queries include dataset and source prefix
         index_sql = """
-            CREATE INDEX IF NOT EXISTS idx_ingestion_log_status_date
-            ON ingestion_log(status, trade_date)
+            CREATE INDEX IF NOT EXISTS idx_ingestion_log_dataset_source_status_date
+            ON ingestion_log(dataset, source, status, trade_date)
         """
         self._client.execute(index_sql)
 
@@ -72,134 +77,94 @@ class IngestionLogStore:
             event="ingestion_log_table_created",
         )
 
-    def save_log(
-        self,
-        dataset: str,
-        source: str,
-        trade_date: str,
-        status: IngestionStatus,
-        checksum: str | None = None,
-        rows: int | None = None,
-        error_code: str | None = None,
-        error_message: str | None = None,
-    ) -> IngestionLog:
-        """
-        Save or update ingestion log record (UPSERT).
+    def _row_to_log(self, row: dict[str, Any]) -> IngestionLog:
+        """Convert database row to IngestionLog object."""
+        return IngestionLog(
+            dataset=row["dataset"],
+            source=row["source"],
+            trade_date=row["trade_date"],
+            status=IngestionStatus(row["status"]),
+            checksum=row["checksum"],
+            rows=row["rows"],
+            error_code=row["error_code"],
+            error_message=row["error_message"],
+            attempts=row["attempts"],
+            first_attempt_at=row["first_attempt_at"],
+            last_attempt_at=row["last_attempt_at"],
+        )
 
-        If record exists, increments attempts and updates last_attempt_at.
+    def save_log(self, log: IngestionLog) -> IngestionLog:
+        """
+        Save or update ingestion log record (atomic UPSERT).
+
+        Uses SQLite's ON CONFLICT clause to atomically handle concurrent writes.
+        If record exists, increments attempts atomically at database level.
 
         Args:
-            dataset: Dataset name (e.g., "stock_daily")
-            source: Data source identifier (e.g., "tushare")
-            trade_date: Trade date (YYYY-MM-DD)
-            status: Current status (SUCCESS or FAIL)
-            checksum: Data checksum (only when SUCCESS)
-            rows: Number of rows (only when SUCCESS)
-            error_code: Error code (only when FAIL)
-            error_message: Error message (only when FAIL)
+            log: IngestionLog object to save.
 
         Returns:
-            The saved IngestionLog.
+            The saved IngestionLog with updated timestamps and attempts.
 
         """
         now = datetime.now().isoformat()
 
-        # Check if record exists
-        existing = self.get_log(dataset, source, trade_date)
+        sql = """
+            INSERT INTO ingestion_log
+            (dataset, source, trade_date, status, checksum, rows,
+             error_code, error_message, attempts, first_attempt_at, last_attempt_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+            ON CONFLICT(dataset, source, trade_date)
+            DO UPDATE SET
+                status = excluded.status,
+                checksum = excluded.checksum,
+                rows = excluded.rows,
+                error_code = excluded.error_code,
+                error_message = excluded.error_message,
+                attempts = attempts + 1,
+                last_attempt_at = excluded.last_attempt_at
+            RETURNING dataset, source, trade_date, status,
+                      checksum, rows, error_code, error_message,
+                      attempts, first_attempt_at, last_attempt_at
+        """
 
-        if existing:
-            # Update existing record
-            new_attempts = existing.attempts + 1
-            sql = """
-                UPDATE ingestion_log
-                SET status = ?,
-                    checksum = ?,
-                    rows = ?,
-                    error_code = ?,
-                    error_message = ?,
-                    attempts = ?,
-                    last_attempt_at = ?
-                WHERE dataset = ? AND source = ? AND trade_date = ?
-            """
-            self._client.execute(
-                sql,
-                [
-                    status.value,
-                    checksum,
-                    rows,
-                    error_code,
-                    error_message,
-                    new_attempts,
-                    now,
-                    dataset,
-                    source,
-                    trade_date,
-                ],
-            )
-            log = IngestionLog(
-                dataset=dataset,
-                source=source,
-                trade_date=trade_date,
-                status=status,
-                checksum=checksum,
-                rows=rows,
-                error_code=error_code,
-                error_message=error_message,
-                attempts=new_attempts,
-                first_attempt_at=existing.first_attempt_at,
-                last_attempt_at=now,
-            )
-        else:
-            # Insert new record
-            sql = """
-                INSERT INTO ingestion_log
-                (dataset, source, trade_date, status, checksum, rows,
-                 error_code, error_message, attempts, first_attempt_at, last_attempt_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """
-            self._client.execute(
-                sql,
-                [
-                    dataset,
-                    source,
-                    trade_date,
-                    status.value,
-                    checksum,
-                    rows,
-                    error_code,
-                    error_message,
-                    1,
-                    now,
-                    now,
-                ],
-            )
-            log = IngestionLog(
-                dataset=dataset,
-                source=source,
-                trade_date=trade_date,
-                status=status,
-                checksum=checksum,
-                rows=rows,
-                error_code=error_code,
-                error_message=error_message,
-                attempts=1,
-                first_attempt_at=now,
-                last_attempt_at=now,
+        row = self._client.fetchone(
+            sql,
+            [
+                log.dataset,
+                log.source,
+                log.trade_date,
+                log.status.value,
+                log.checksum,
+                log.rows,
+                log.error_code,
+                log.error_message,
+                now,
+                now,
+            ],
+        )
+
+        # UPSERT with RETURNING always returns a row
+        if row is None:
+            raise RuntimeError(
+                "UPSERT RETURNING should always return a row but got None"
             )
 
         self._client.commit()
 
+        result = self._row_to_log(row)
+
         logger.debug(
             "Ingestion log saved",
             event="ingestion_log_saved",
-            dataset=dataset,
-            source=source,
-            trade_date=trade_date,
-            status=status.value,
-            attempts=log.attempts,
+            dataset=log.dataset,
+            source=log.source,
+            trade_date=log.trade_date,
+            status=log.status.value,
+            attempts=result.attempts,
         )
 
-        return log
+        return result
 
     def get_log(
         self,
@@ -232,19 +197,7 @@ class IngestionLogStore:
         if not row:
             return None
 
-        return IngestionLog(
-            dataset=row["dataset"],
-            source=row["source"],
-            trade_date=row["trade_date"],
-            status=IngestionStatus(row["status"]),
-            checksum=row["checksum"],
-            rows=row["rows"],
-            error_code=row["error_code"],
-            error_message=row["error_message"],
-            attempts=row["attempts"],
-            first_attempt_at=row["first_attempt_at"],
-            last_attempt_at=row["last_attempt_at"],
-        )
+        return self._row_to_log(row)
 
     def get_failed_dates(
         self,
@@ -421,22 +374,7 @@ class IngestionLogStore:
 
         rows = self._client.fetchall(sql, [dataset, source, max_attempts, limit])
 
-        return [
-            IngestionLog(
-                dataset=row["dataset"],
-                source=row["source"],
-                trade_date=row["trade_date"],
-                status=IngestionStatus(row["status"]),
-                checksum=row["checksum"],
-                rows=row["rows"],
-                error_code=row["error_code"],
-                error_message=row["error_message"],
-                attempts=row["attempts"],
-                first_attempt_at=row["first_attempt_at"],
-                last_attempt_at=row["last_attempt_at"],
-            )
-            for row in rows
-        ]
+        return [self._row_to_log(row) for row in rows]
 
     def get_last_success_date(
         self,

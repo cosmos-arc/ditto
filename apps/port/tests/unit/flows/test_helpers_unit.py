@@ -26,8 +26,11 @@ class TestCreateIngestionContext:
         mock_source = mocker.MagicMock()
         mock_hub.sources.get.return_value = mock_source
 
-        mock_dh = mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.services.ingestion.coordinator.IngestionCoordinator")
+        # Patch where the symbol is imported, not where it's defined
+        mock_dh = mocker.patch(
+            "ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub
+        )
+        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
 
         with create_ingestion_context(data_root="/custom/data", source="tushare") as (
             _hub,
@@ -44,8 +47,8 @@ class TestCreateIngestionContext:
         mock_source = mocker.MagicMock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.services.ingestion.coordinator.IngestionCoordinator")
+        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
 
         with create_ingestion_context(data_root="data", source="custom_source") as (
             _hub,
@@ -62,9 +65,9 @@ class TestCreateIngestionContext:
         mock_source = mocker.MagicMock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
         mock_coordinator_cls = mocker.patch(
-            "ditto_port.services.ingestion.coordinator.IngestionCoordinator"
+            "ditto_port.jobs.flows.helpers.IngestionCoordinator"
         )
         mock_coordinator = mocker.MagicMock()
         mock_coordinator_cls.return_value = mock_coordinator
@@ -88,9 +91,9 @@ class TestCreateIngestionContext:
         mock_source = mocker.MagicMock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
         mock_coordinator_cls = mocker.patch(
-            "ditto_port.services.ingestion.coordinator.IngestionCoordinator"
+            "ditto_port.jobs.flows.helpers.IngestionCoordinator"
         )
         mock_coordinator = mocker.MagicMock()
         mock_coordinator_cls.return_value = mock_coordinator
@@ -108,8 +111,8 @@ class TestCreateIngestionContext:
         mock_source = mocker.MagicMock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.services.ingestion.coordinator.IngestionCoordinator")
+        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
 
         with create_ingestion_context(data_root="data", source="tushare") as (
             _hub,
@@ -126,8 +129,8 @@ class TestCreateIngestionContext:
         mock_source = mocker.MagicMock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.services.ingestion.coordinator.IngestionCoordinator")
+        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
 
         with pytest.raises(ValueError, match="Test error"):
             with create_ingestion_context(data_root="data", source="tushare") as (
@@ -145,8 +148,8 @@ class TestCreateIngestionContext:
         mock_source = mocker.MagicMock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.services.ingestion.coordinator.IngestionCoordinator")
+        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
 
         with create_ingestion_context(data_root="data") as (_hub, _coordinator):
             pass
@@ -160,9 +163,9 @@ class TestCreateIngestionContext:
         mock_source = mocker.MagicMock()
         mock_hub.sources.get.return_value = mock_source
 
-        mocker.patch("ditto_datahub.DataHub", return_value=mock_hub)
+        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
         mock_coordinator_cls = mocker.patch(
-            "ditto_port.services.ingestion.coordinator.IngestionCoordinator"
+            "ditto_port.jobs.flows.helpers.IngestionCoordinator"
         )
         mock_coordinator = mocker.MagicMock()
         mock_result = mocker.MagicMock()
@@ -193,8 +196,10 @@ class TestCreateIngestionContext:
         mock_hub1.sources.get.return_value = mock_source1
         mock_hub2.sources.get.return_value = mock_source2
 
-        mocker.patch("ditto_datahub.DataHub", side_effect=[mock_hub1, mock_hub2])
-        mocker.patch("ditto_port.services.ingestion.coordinator.IngestionCoordinator")
+        mocker.patch(
+            "ditto_port.jobs.flows.helpers.DataHub", side_effect=[mock_hub1, mock_hub2]
+        )
+        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
 
         with create_ingestion_context(data_root="data1", source="tushare") as (
             hub1,

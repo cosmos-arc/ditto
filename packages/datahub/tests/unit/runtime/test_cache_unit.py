@@ -3,7 +3,7 @@
 import time
 
 import time_machine as time_machine_lib
-from ditto_datahub.runtime.cache import CacheStats, DataCache
+from ditto_foundation.cache import CacheStats, DataCache
 
 
 class TestDataCache:

@@ -1,18 +1,10 @@
 """测试 conftest.py 中的 DatabaseManager 类和 fixtures."""
 
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import duckdb
 import pytest
-
-# 获取项目根目录并添加到 sys.path（为了导入 apps.port.tests.conftest）
-_project_root = Path(__file__).parent.parent.parent.parent.parent
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
-
-from apps.port.tests.conftest import DatabaseManager  # noqa: E402
+from ditto_port.testing import DatabaseManager
 
 
 @pytest.mark.unit
@@ -252,53 +244,45 @@ class TestDatabaseManager:
 
 
 @pytest.mark.unit
-class TestMockDatahubSessionFixture:
-    """测试 mock_datahub_session fixture."""
+class TestMockDatahubFixture:
+    """测试 mock_datahub fixture."""
 
-    def test_mock_datahub_session_exists(self, mock_datahub_session: MagicMock):
-        """测试 mock_datahub_session fixture 存在并可正常工作."""
+    def test_mock_datahub_exists(self, mock_datahub: MagicMock):
+        """测试 mock_datahub fixture 存在并可正常工作."""
         # 验证 fixture 返回的是 MagicMock 对象
-        assert mock_datahub_session is not None
-        assert isinstance(mock_datahub_session, MagicMock)
+        assert mock_datahub is not None
+        assert isinstance(mock_datahub, MagicMock)
 
-    def test_mock_datahub_session_calendar_mock(self, mock_datahub_session: MagicMock):
+    def test_mock_datahub_calendar_mock(self, mock_datahub: MagicMock):
         """测试 calendar mock 配置."""
         # 验证 calendar.is_trading_day 返回 True
-        assert mock_datahub_session.calendar.is_trading_day() is True
+        assert mock_datahub.calendar.is_trading_day() is True
 
         # 验证 calendar_store.get_first_trading_day 返回正确日期
-        assert (
-            mock_datahub_session.calendar_store.get_first_trading_day() == "2024-01-02"
-        )
+        assert mock_datahub.calendar_store.get_first_trading_day() == "2024-01-02"
 
         # 验证 calendar_store.get_last_trading_day 返回正确日期
-        assert (
-            mock_datahub_session.calendar_store.get_last_trading_day() == "2024-01-31"
-        )
+        assert mock_datahub.calendar_store.get_last_trading_day() == "2024-01-31"
 
         # 验证 calendar_store.get_range 返回正确日期范围
-        assert mock_datahub_session.calendar_store.get_range() == [
+        assert mock_datahub.calendar_store.get_range() == [
             "2024-01-02",
             "2024-01-03",
         ]
 
-    def test_mock_datahub_session_ingestion_log_mock(
-        self, mock_datahub_session: MagicMock
-    ):
+    def test_mock_datahub_ingestion_log_mock(self, mock_datahub: MagicMock):
         """测试 ingestion_log mock 配置."""
         # 验证 ingestion_log.get_failed_dates 返回空列表
-        assert mock_datahub_session.ingestion_log.get_failed_dates() == []
+        assert mock_datahub.ingestion_log.get_failed_dates() == []
 
         # 验证 ingestion_log.get_ingested_dates 返回空列表
-        assert mock_datahub_session.ingestion_log.get_ingested_dates() == []
+        assert mock_datahub.ingestion_log.get_ingested_dates() == []
 
-    def test_mock_datahub_session_is_session_scoped(
-        self, mock_datahub_session: MagicMock
-    ):
-        """测试 fixture 是 session 级别的（通过验证可以多次调用）."""
+    def test_mock_datahub_is_function_scoped(self, mock_datahub: MagicMock):
+        """测试 fixture 是 function 级别的（通过验证可以多次调用）."""
         # 多次调用同一个 mock 方法，应该返回相同的结果
-        result1 = mock_datahub_session.calendar.is_trading_day()
-        result2 = mock_datahub_session.calendar.is_trading_day()
+        result1 = mock_datahub.calendar.is_trading_day()
+        result2 = mock_datahub.calendar.is_trading_day()
         assert result1 is result2 is True
 
 
@@ -313,10 +297,10 @@ class TestPatchDatahubFixture:
         assert isinstance(patch_datahub, MagicMock)
 
     def test_patch_datahub_has_default_mock_behavior(
-        self, patch_datahub: MagicMock, mock_datahub_session: MagicMock
+        self, patch_datahub: MagicMock, mock_datahub: MagicMock
     ) -> None:
         """验证 patch_datahub 具有默认的 mock 行为."""
-        # patch_datahub 返回的是 mock_datahub_session
+        # patch_datahub 返回的是 mock_datahub
         # 所以行为应该一致
         assert patch_datahub.calendar.is_trading_day() is True
 
@@ -343,14 +327,14 @@ class TestPatchDatahubFixture:
         assert patch_datahub.calendar.is_trading_day() is False
 
     def test_patch_datahub_patches_ditto_datahub(
-        self, patch_datahub: MagicMock, mock_datahub_session: MagicMock
+        self, patch_datahub: MagicMock, mock_datahub: MagicMock
     ) -> None:
         """验证 patch_datahub 正确 patch 了 ditto_datahub.DataHub."""
         # 在 patch 后导入 DataHub，确保使用被 patch 的版本
-        from ditto_datahub import DataHub  # noqa: PLC0415
+        from ditto_datahub import DataHub
 
-        # 调用 DataHub 应该返回 mock_datahub_session
-        # patch_datahub 就是 mock_datahub_session 的别名
+        # 调用 DataHub 应该返回 mock_datahub
+        # patch_datahub 就是 mock_datahub 的别名
         result = DataHub()
-        assert result is mock_datahub_session
+        assert result is mock_datahub
         assert result is patch_datahub

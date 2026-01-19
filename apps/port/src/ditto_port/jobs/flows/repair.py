@@ -7,16 +7,13 @@
 - 每日修补流程
 """
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from typing import cast
 
 from prefect import flow
 
+from ditto_port.jobs.flows.helpers import create_ingestion_context
+from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.retry import RetryManager
-
-if TYPE_CHECKING:
-    pass
 
 
 @flow(name="retry-failed", description="重试失败任务")
@@ -41,8 +38,6 @@ def retry_failed_flow(
         重试结果字典
 
     """
-    from ditto_port.jobs.flows.helpers import create_ingestion_context  # noqa: PLC0415
-
     with create_ingestion_context(data_root=data_root, source=source) as (
         hub,
         coordinator,
@@ -50,7 +45,7 @@ def retry_failed_flow(
         # 创建重试管理器
         retry_manager = RetryManager(
             coordinator=coordinator,
-            ingestion_log_store=hub.ingestion_log,
+            hub=hub,
             source=source,
         )
 
@@ -96,9 +91,6 @@ def repair_holes_flow(
         修补结果字典
 
     """
-    from ditto_port.jobs.flows.helpers import create_ingestion_context  # noqa: PLC0415
-    from ditto_port.services.ingestion.backfill import BackfillManager  # noqa: PLC0415
-
     with create_ingestion_context(data_root=data_root, source=source) as (
         hub,
         coordinator,
@@ -106,8 +98,7 @@ def repair_holes_flow(
         # 创建回补管理器
         backfill_manager = BackfillManager(
             coordinator=coordinator,
-            calendar_store=hub.calendar_store,
-            ingestion_log_store=hub.ingestion_log,
+            hub=hub,
         )
 
         # 回补缺失数据
@@ -130,7 +121,7 @@ def repair_holes_flow(
 
 
 @flow(name="daily-repair", description="每日修补流程")
-def daily_repair_flow(  # noqa: PLR0913
+def daily_repair_flow(
     datasets: list[str] | None = None,
     max_attempts: int = 3,
     retry_limit: int = 10,
@@ -163,8 +154,8 @@ def daily_repair_flow(  # noqa: PLR0913
     if datasets is None:
         datasets = ["etf_daily", "stock_daily", "adj_factor", "fund_adj"]
 
-    retry_results = {}
-    holes_results = {}
+    retry_results: dict[str, dict[str, object]] = {}
+    holes_results: dict[str, dict[str, object]] = {}
 
     for dataset in datasets:
         # 1. 重试失败任务
@@ -187,8 +178,12 @@ def daily_repair_flow(  # noqa: PLR0913
         holes_results[dataset] = holes_result
 
     # 汇总结果
-    total_retried = sum(r.get("retried_count", 0) for r in retry_results.values())
-    total_repaired = sum(r.get("repaired_count", 0) for r in holes_results.values())
+    total_retried = sum(
+        cast(int, r.get("retried_count", 0)) for r in retry_results.values()
+    )
+    total_repaired = sum(
+        cast(int, r.get("repaired_count", 0)) for r in holes_results.values()
+    )
 
     return {
         "retry_result": retry_results,

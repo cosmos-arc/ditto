@@ -35,7 +35,7 @@ tests/
 │   ├── datahub/             # DataHub 门面
 │   ├── dq/                  # 数据质量引擎
 │   ├── meta/                # 元数据验证
-│   ├── repositories/        # Repository 业务逻辑
+│   ├── accessors/           # Accessor 业务逻辑
 │   ├── runtime/             # 运行时基础设施
 │   ├── sources/             # 数据源客户端
 │   ├── stores/              # 存储抽象

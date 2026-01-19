@@ -1,24 +1,12 @@
 """结果统计辅助函数。"""
 
 from collections import Counter
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from ditto_port.services.ingestion.coordinator import IngestionResult
-
-
-@dataclass(frozen=True)
-class ResultCounts:
-    """结果统计。"""
-
-    success: int
-    failed: int
-    skipped: int
+from ditto_port.models import IngestionResult, ResultCounts
 
 
 def count_results(
-    results: list["IngestionResult"] | dict[str, dict[str, object]],
+    results: list[IngestionResult] | dict[str, dict[str, object]],
 ) -> ResultCounts:
     """
     统计摄取结果。
@@ -62,16 +50,10 @@ def count_results(
     """
     if isinstance(results, list):
         # 处理 IngestionResult 列表
-        statuses = [r.status for r in results if r is not None and hasattr(r, "status")]
-    elif isinstance(results, dict):
-        # 处理字典类型结果
-        statuses = [
-            v.get("status")
-            for v in results.values()
-            if isinstance(v, dict) and "status" in v
-        ]
+        statuses = [r.status for r in results if hasattr(r, "status")]
     else:
-        statuses = []
+        # 处理字典类型结果
+        statuses = [v.get("status") for v in results.values() if "status" in v]
 
     # 使用 Counter 统计
     counter = Counter(statuses)

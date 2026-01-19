@@ -1,3 +1,13 @@
+## 北极星原则
+> 以**卓越代码质量**为底线、以**艺术般的可读性与一致风格**为追求，持续产出**清晰、整洁、可演进的架构**与**可长期维护的工程实现**。
+
+**不可妥协：**
+- **质量**：正确性、可测试、可维护
+- **风格**：一致、克制、易读
+- **架构**：清晰边界、低耦合、高内聚、可演进
+
+**遇事不决调研业界最佳实践！！！**
+
 ## ⚠️ 核心约束
 
 - **语言**: 中文（回复/文档/Commit/PR）
@@ -18,8 +28,10 @@
 - **文档**: 文档驱动开发，及时更新 README/Sprint/Plan/ADR
 - **开发**:
     - **Python核心规范**：详见 [core.md](.claude/rules/core.md)
-- **测试**: 尊师测试依赖，分支覆盖率 >= 80% （详见 [python-test.md](.claude/rules/python-test.md)）
-- **重构**: 必须移除旧代码，非数据格式兼容外不留兼容代码
+    - **noqa/type:ignore 规范**：详见 [noqa-ignore.md](.claude/rules/noqa-ignore.md)
+- **测试**: 遵循测试依赖，分支覆盖率 >= 80% （详见 [python-test.md](.claude/rules/python-test.md)）
+- **质量**：必须通过 pyright、ruff检测
+- **重构**: 数据存储、API协议格式的兼容考量外，无需考虑向后兼容性，所有包均项目内使用，重构完成必须移除废弃代码和配置
 
 ## 工具使用规范
 
@@ -32,15 +44,67 @@
 | 编辑文件 | `Edit` 工具 | `sed` |
 | 创建目录 | `mkdir` | - |
 
-### 代码智能分析（LSP 优先）
+### 代码智能分析（LSP 辅助脚本）- 类、方法引用查找(**重构必须使用**)
 
-| 操作 | LSP 工具 | 降级方案 |
-|------|----------|----------|
-| 查找定义 | `goToDefinition` | `Grep "class Foo"` → `Glob "**/*foo*.py"` |
-| 查找引用 | `findReferences` | `Grep "def bar\|bar\("` |
-| 理解结构 | `documentSymbol` | `Read` 工具 |
-| 类型信息 | `hover` | - |
-| 错误检查 | `getDiagnostics` | - |
+> **GLM-4.7 无原生 LSP 能力，使用项目提供的 LSP 辅助脚本**
+>
+> 脚本位置: `.claude/scripts/lsp_pyright.py` (Pyright LSP，推荐)
+> 备用脚本: `.claude/scripts/lsp_helper.py` (Jedi，更快但功能有限)
+
+| 操作 | 命令 | 说明 |
+|------|------|------|
+| 查找定义 | `pixi run -e dev python .claude/scripts/lsp_pyright.py goto <file> <line> <col>` | 跳转到符号定义 |
+| 查找引用 | `pixi run -e dev python .claude/scripts/lsp_pyright.py refs <file> <line> <col>` | 查找所有引用位置 |
+| 文档符号 | `pixi run -e dev python .claude/scripts/lsp_pyright.py symbols <file>` | 获取类/函数/方法列表 |
+| 类型信息 | `pixi run -e dev python .claude/scripts/lsp_pyright.py hover <file> <line> <col>` | 获取类型和文档 |
+| 代码补全 | `pixi run -e dev python .claude/scripts/lsp_pyright.py complete <file> <line> <col>` | 获取补全建议 |
+| 类型诊断 | `pixi run -e dev python .claude/scripts/lsp_pyright.py diagnose [file]` | Pyright 类型检查 |
+
+**⚠️ 列号定位注意事项**：
+
+LSP 命令中的 `<col>` 参数必须指向**符号名称（identifier）内部**，不能指向行首或关键字：
+
+```python
+# 示例：class DataSource(ABC):
+#        1         2
+# 123456789012345678901234567890
+# class DataSource(ABC):
+#       ^-- 列6 (符号起始位置)
+#         ^-- 列7
+#          ^-- 列8 ✅ 正确（符号名称内部）
+```
+
+| 列号 | 结果 | 原因 |
+|------|------|------|
+| `1` | ❌ 错误 | 指向行首空格，非符号位置 |
+| `8` | ✅ 正确 | 指向 `DataSource` 标识符内部 |
+
+**最佳实践**：
+- 如果不确定列号，先用 `symbols` 命令查看符号列表
+- 或取符号名称的中间位置（如列 8-10）
+- 避免 `1` 这样的行首列号
+
+**其他注意事项**：
+
+| 项目 | 说明 |
+|------|------|
+| **行号** | 从 **1** 开始（符合编辑器习惯） |
+| **列号** | 从 **0** 开始（符合 LSP 标准） |
+| **工作目录** | 必须在项目根目录（`d:\code\quant\ditto`）运行 |
+| **依赖** | 需要 `multilspy` 包（已包含在 dev 环境） |
+| **性能** | 每次命令都会启动/停止 LSP 服务器，可能有 1-2 秒延迟 |
+
+**常见错误处理**：
+
+| 错误 | 原因 | 解决方案 |
+|------|------|----------|
+| `refs 失败: Unexpected response: None` | 列号未指向符号 | 调整列号到符号名称内部 |
+| `multilspy 未安装` | 环境不正确 | 使用 `pixi run -e dev` 前缀 |
+| `未找到定义/引用` | 符号不在索引中 | 确认文件在项目内，尝试运行 `diagnose` |
+
+**降级方案**（当 LSP 脚本不可用时）：
+- 搜索定义: `Grep "class Foo"` → `Glob "**/*foo*.py"`
+- 搜索引用: `Grep "def bar\|bar\("`
 
 ## 绝对禁止
 
@@ -49,7 +113,9 @@
 - 跳过风控检查
 - 直接提交 main
 - 文件读写改操作使用 Bash 命令
-- 绕过或忽略 pyright、ruff、precommit 检测
+- SRC源码内大量使用#naqa、#type:ignore, 新增代码优先重构避免
+- 绕过或忽略 pyright、ruff、precommit 检测（例如修改相关配置，使用--no verify提交）
+- 绝对禁止使用`TYPE_CHECKING`的延迟导入方式解决循环依赖（必须重构代码及架构解决），非必要`禁止延迟导入`
 
 ## 项目架构
 
@@ -60,13 +126,63 @@ ditto/
 │   ├── datahub/       # 数据访问层
 │   └── core/          # 核心引擎
 ├── apps/              # 应用
-│   ├── server/        # Server 应用
+│   ├── port/        # Server 应用
 │   └── web/           # Web 应用
+├── config/            # 环境配置（按环境分组）
+│   ├── development/   # 开发环境配置
+│   ├── testing/       # 测试环境配置
+│   └── production/    # 生产环境配置
 └── docs/              # 文档
 
 依赖方向: core → datahub → foundation
-          apps/server → datahub → foundation
+          apps/port → datahub → foundation
 ```
+
+### 环境配置规范
+
+Ditto 采用**双层环境架构**（详见 [04_deployment_topology.md](../docs/design/04_deployment_topology.md#12-环境架构)）：
+
+| 层级 | 变量 | 有效值 | 说明 |
+|------|------|--------|------|
+| Pixi 环境 | 选择环境 | `default`, `dev` | 依赖管理层：default 生产依赖、dev 开发工具 |
+| 运行时环境 | `DITTO_ENV` | `development`, `testing`, `production` | 行为控制层 |
+
+**环境命名规范**：
+
+| 类型 | 规范 | 示例 |
+|------|------|------|
+| Pixi 环境 | 小写，无连字符 | `default`, `dev` |
+| 运行时环境 | 小写，全称 | `development`, `testing`, `production` |
+| 环境变量前缀 | 大写，下划线 | `OBSERVABILITY_`, `DB_`, `API_` |
+
+**配置文件结构**：
+
+```
+config/
+├── development/
+│   ├── observability.env  # OBSERVABILITY_* 前缀
+│   ├── database.env       # DB_* 前缀
+│   ├── api.env            # API_* 前缀
+│   └── data_source.env    # 无前缀
+├── testing/
+│   └── ...
+└── production/
+    └── ...
+```
+
+**使用场景**：
+
+| 场景 | Pixi 环境 | DITTO_ENV | 命令 |
+|------|-----------|-----------|------|
+| 本地开发 | `dev` | `development` | `pixi run -e dev pytest` |
+| 测试执行 | `dev` | `testing` | `pixi run -e dev pytest` (自动设置) |
+| 生产部署 | `default` | `production` | `pixi run server` |
+
+**重要原则**：
+- 环境值必须使用 `Environment` 枚举，禁止硬编码字符串
+- 可观测性使用 OTEL 风格的**独立功能开关**，而非单一"模式"枚举
+- 配置文件按 `config/{environment}/` 结构组织
+- 不同 Settings 类使用不同的环境变量前缀实现隔离
 
 | 层级 | 职责 | 详细规范 |
 |------|------|----------|
@@ -87,36 +203,65 @@ ditto/
 ## 常用命令
 
 ```bash
-# 检查
-pixi run -e dev quick-check     # 开发时
-pixi run -e dev pre-commit-run  # 提交前
-pixi run -e dev ci-check        # CI 完整
+# 快速验证（开发时）
+pixi run -e dev check          # lint + fmt + type + test --fast
+
+# 提交前检查
+pixi run -e dev pre-commit-run # pre-commit hooks
+pixi run -e dev ci             # CI 完整检查
 
 # 测试
-pixi run -e dev pytest          # 全部
-pixi run -e dev pytest -m unit  # 单元测试
-pixi run -e dev pytest -m pit   # PIT 测试
-pixi run -e dev pytest -m integration  # 集成测试
+pixi run -e dev test              # 默认：单元测试（并行）
+pixi run -e dev test --unit       # 只运行单元测试（并行）
+pixi run -e dev test --integration # 只运行集成测试（串行）
+pixi run -e dev test --fast       # 快速测试（跳过慢速）
+pixi run -e dev test --snapshot   # 支持 inline-snapshot（串行）
+pixi run -e dev test-pit          # PIT 测试
+
+# 类型检查
+pixi run -e dev type          # 源码类型检查（strict）
+pixi run -e dev type --tests  # 测试类型检查（basic）
+pixi run -e dev type --all    # 完整类型检查
+
+# 代码质量
+pixi run -e dev lint          # 代码检查
+pixi run -e dev lint --fix    # 自动修复
+pixi run -e dev fmt           # 格式化
+pixi run -e dev fmt --check   # 只检查不修改
 ```
 
 ## ⚠️ SKILLS 执行规则
 
 **在执行任何任务前，必须先检查并调用相关的 skills**
 
+### 🚨 历史数据警告
+
+基于 2,978 个历史会话（604.4 MB 数据）的分析：
+
+| 指标 | 历史值 | 后果 |
+|------|--------|------|
+| **Skill 调用率** | 0% | ❌ 失败率 40-50%，重试率 80% |
+| **Read/Edit 比** | 0.9-1.4 | ❌ 未充分理解代码就修改 |
+| **TDD 遵循率** | 低 | ❌ 频繁返工，调试时间长 |
+
+**结论**: 不使用 Skills 直接开始工作，会导致 **3-5 倍的返工时间**。
+
 ### 执行流程
 
 ```
-用户请求 → 检查是否涉及任何 skill → 如果有，立即调用 Skill 工具 → 再开始工作
+用户请求 → 检查是否涉及任何 skill → 立即调用 Skill 工具 → 再开始工作
+          ↓
+    如果跳过此步骤 → ❌ 高概率失败 → 高概率重试 → 浪费时间
 ```
 
 ### 流程控制类（最高优先级）
 
-| Skill | 使用时机 | 强制级别 |
-|-------|---------|---------|
-| `superpowers:brainstorming` | 任何创意工作、创建功能、构建组件 | ⭐⭐⭐ 必须 |
-| `superpowers:systematic-debugging` | 遇到任何 bug、测试失败、异常行为 | ⭐⭐⭐ 必须 |
-| `superpowers:test-driven-development` | 实现任何功能或 bugfix | ⭐⭐⭐ 必须 TDD |
-| `superpowers:verification-before-completion` | 准备声明工作完成、提交/PR 前 | ⭐⭐⭐ 必须 |
+| Skill | 使用时机 | 强制级别 | 跳过的后果 |
+|-------|---------|---------|-----------|
+| `superpowers:brainstorming` | 任何创意工作、创建功能、构建组件 | ⭐⭐⭐ 必须 | 设计不完整，频繁重构 |
+| `superpowers:systematic-debugging` | 遇到任何 bug、测试失败、异常行为 | ⭐⭐⭐ 必须 | 盲目重试，80% 失败率 |
+| `superpowers:test-driven-development` | 实现任何功能或 bugfix | ⭐⭐⭐ 必须 | 引入 bug，破坏现有功能 |
+| `superpowers:verification-before-completion` | 准备声明工作完成、提交/PR 前 | ⭐⭐⭐ 必须 | 提交未验证的代码 |
 
 ### 任务管理类
 
@@ -164,14 +309,46 @@ pixi run -e dev pytest -m integration  # 集成测试
 
 ### 无例外清单
 
-| 场景 | 必须 | 禁止 |
-|------|------|------|
-| "简单查询" | 检查相关 skill | 直接搜索文件 |
-| "快速修复" | 调用 TDD | 直接改代码 |
-| "查查这个" | 使用 Explore agent | 直接读文件 |
-| "小改动" | 写 plan | 直接实现 |
+| 场景 | 必须 | 禁止 | 后果 |
+|------|------|------|------|
+| "简单查询" | 检查相关 skill | 直接搜索文件 | 可能遗漏重要信息 |
+| "快速修复" | 调用 TDD | 直接改代码 | 引入新 bug |
+| "查查这个" | 使用 Explore agent | 直接读文件 | 不全面的分析 |
+| "小改动" | 写 plan | 直接实现 | 遗漏边界情况 |
 
 **判断标准**: **只要涉及代码，100% 检查 skill**
+
+## ⚠️ 工具使用标准
+
+### 🚨 读/写比强制要求
+
+**历史数据**：Read/Edit 比 0.9-1.4 → 失败率 40-50%
+**目标**：Read/Edit 比 ≥ 2.0
+
+| 任务类型 | 最低 Read/Edit 比 | 强制要求 |
+|---------|-------------------|----------|
+| 简单修改 | 2.0 | 1 次 Edit 前至少 2 次 Read |
+| 中等修改 | 3.0 | 实现文件 + 测试文件 |
+| 重构任务 | 5.0 | 所有相关文件 + LSP 引用查找 |
+
+### 标准修改流程
+
+```bash
+# 修改前必须完成
+Read <file>           # 理解当前实现
+Read <test_file>      # 理解预期行为
+Grep "<pattern>"      # 查找相关代码
+# LSP refs           # 查找引用（重构必须）
+Edit <file>           # 现在才修改
+```
+
+### 禁止模式
+
+| ❌ 禁止 | ✅ 正确 |
+|---------|---------|
+| 连续 Edit | Read → Edit |
+| Edit → 失败 → 直接 Edit | 调用 systematic-debugging |
+| 不读代码直接改 | 先理解再修改 |
 
 ## 上下文管理指南
 
@@ -195,7 +372,10 @@ def write_data(df, on_duplicate=OnDuplicate.KEEP_FIRST):
 ### 文件依赖追踪
 
 修改文件时，必须检查：
-- [ ] 导入此文件的其他文件（使用 `findReferences`）
+- [ ] 导入此文件的其他文件（使用 LSP 辅助脚本）
+  ```bash
+  pixi run -e dev python .claude/scripts/lsp_pyright.py refs <file> <line> <col>
+  ```
 - [ ] 此文件导入的依赖文件
 - [ ] 相关的测试文件
 - [ ] 相关的文档文件

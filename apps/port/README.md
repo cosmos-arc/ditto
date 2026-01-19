@@ -40,18 +40,63 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### 2.2 依赖关系
+
+```
+                    ┌─────────────┐
+                    │  models/    │  模型层
+                    │ (config.py) │
+                    │(ingestion.py)│
+                    └──────┬──────┘
+                           │
+              ┌────────────┴────────────┐
+              ▼                         ▼
+        ┌──────────┐              ┌──────────┐
+        │  jobs/   │              │services/ │
+        │ (编排层) │              │(逻辑层)  │
+        └────┬─────┘              └─────┬────┘
+             │                          │
+             └──────────┬───────────────┘
+                        ▼
+                 ┌──────────────┐
+                 │  datahub/    │
+                 │  (数据层)    │
+                 └──────────────┘
+```
+
+**依赖规则**:
+- `jobs/` → `models/` ✅
+- `services/` → `models/` ✅
+- `jobs/` → `services/` ✅
+- `models/` → 任何模块 ❌ (独立的模型层)
+
+**关键设计**: `models/` 作为共享模型层消除了 `jobs/` 和 `services/` 之间的循环依赖。
+
 ## 三、目录结构
 
 ```
-apps/server/src/ditto_server/
-├── main.py                    # FastAPI 应用入口
-├── ingestion/                 # 数据摄取模块
-│   ├── flows/                 # Prefect Flows（编排层）
-│   │   └── daily_ingest.py    # 每日摄取 Flow（7 tasks）
-│   └── tasks/                 # Prefect Tasks（执行层）
-│       ├── bars.py            # ETF K线摄取
-│       ├── stock.py           # 股票摄取（basic + daily）
-│       └── adj_factor.py      # 复权因子摄取
+apps/port/src/ditto_port/
+├── models/                    # 模型层
+│   ├── __init__.py
+│   ├── common.py              # ErrorResponse (API 响应)
+│   ├── config.py              # DatasetSpec, T1ConfigSpec, DATASET_REGISTRY
+│   └── ingestion.py           # IngestionResult, ResultCounts, BackfillResult, RetryResult
+├── jobs/                      # 任务编排层
+│   ├── flows/                 # Prefect Flows
+│   │   ├── daily.py           # 每日摄取 Flow
+│   │   ├── backfill.py        # 历史数据回补
+│   │   ├── repair.py          # 数据修补
+│   │   └── helpers.py         # Flow 辅助函数
+│   └── tasks/                 # Prefect Tasks
+│       ├── t0_meta.py         # T0 元数据任务
+│       └── dq_batch.py        # DQ 批量检查
+└── services/                  # 业务逻辑层
+    └── ingestion/             # 数据摄取服务
+        ├── coordinator.py     # 统一摄取协调器
+        ├── backfill.py        # 回补管理器
+        ├── result_utils.py    # 结果统计工具
+        ├── retry.py           # 重试管理器
+        └── security_mapper.py # 证券映射器
 ```
 
 ## 四、摄取任务

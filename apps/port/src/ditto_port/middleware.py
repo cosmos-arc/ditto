@@ -1,7 +1,6 @@
 """错误处理中间件."""
 
 import time
-from dataclasses import dataclass
 from typing import Any
 
 from ditto_foundation.observability import logger
@@ -11,21 +10,10 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .exceptions import DittoException
+from .models.common import ErrorResponse
 
 
-@dataclass
-class ErrorResponseParams:
-    """错误响应参数."""
-
-    status_code: int
-    error: str
-    detail: str | None = None
-    error_code: str | None = None
-    request_id: str | None = None
-    timestamp: float | None = None
-
-
-def create_error_response(params: ErrorResponseParams) -> JSONResponse:
+def create_error_response(params: ErrorResponse) -> JSONResponse:
     """创建标准化的错误响应."""
     if params.timestamp is None:
         params.timestamp = time.time()
@@ -71,7 +59,7 @@ async def ditto_exception_handler(
     )
 
     return create_error_response(
-        ErrorResponseParams(
+        ErrorResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             error=exc.__class__.__name__,
             detail=exc.message,
@@ -100,7 +88,7 @@ async def http_exception_handler(
     )
 
     return create_error_response(
-        ErrorResponseParams(
+        ErrorResponse(
             status_code=exc.status_code,
             error="HTTP_ERROR",
             detail=str(exc.detail),
@@ -120,7 +108,7 @@ async def validation_exception_handler(
     request_id = getattr(request.state, "request_id", None)
 
     # 格式化验证错误
-    errors = []
+    errors: list[dict[str, object]] = []
     for error in exc.errors():
         errors.append(
             {
@@ -139,7 +127,7 @@ async def validation_exception_handler(
     )
 
     return create_error_response(
-        ErrorResponseParams(
+        ErrorResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             error="VALIDATION_ERROR",
             detail="Invalid request parameters",
@@ -166,7 +154,7 @@ async def general_exception_handler(
     )
 
     return create_error_response(
-        ErrorResponseParams(
+        ErrorResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             error="INTERNAL_SERVER_ERROR",
             detail="An unexpected error occurred",

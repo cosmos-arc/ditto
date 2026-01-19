@@ -1,6 +1,6 @@
 """Tushare HTTP 工具函数."""
 
-from typing import NoReturn, cast
+from typing import Any, NoReturn, cast
 
 import httpx
 import polars as pl
@@ -55,13 +55,21 @@ def validate_tushare_response(response_json: dict[str, object]) -> dict[str, obj
             source="tushare",
         )
 
-    data = response_json["data"]
-    if not isinstance(data, dict):
+    data_value = response_json.get("data")
+    if data_value is None:
+        raise SourceFetchError(
+            message="响应缺少 data 字段",
+            source="tushare",
+        )
+
+    # 检查 data 字段类型
+    if not isinstance(data_value, dict):
         raise SourceFetchError(
             message="响应 data 字段类型错误",
             source="tushare",
         )
 
+    data = cast(dict[str, Any], data_value)
     return data
 
 
@@ -89,14 +97,18 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
                 source="tushare",
             )
 
-        if status_code == 429:
+        # HTTP 状态码常量
+        _HTTP_RATE_LIMIT = 429
+        _HTTP_SERVER_ERROR = 500
+
+        if status_code == _HTTP_RATE_LIMIT:
             raise SourceRateLimitError(
                 message=f"Tushare API 限流 (API: {api_name})",
                 source="tushare",
             )
 
         # 5xx 服务器错误
-        if status_code >= 500:
+        if status_code >= _HTTP_SERVER_ERROR:
             raise SourceFetchError(
                 message=f"Tushare API 服务器错误 (API: {api_name})",
                 source="tushare",

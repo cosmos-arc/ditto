@@ -12,25 +12,13 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import polars as pl
-from ditto_foundation import M, logger, traced
+from ditto_foundation import logger, traced
 from ditto_foundation.util.io import atomic_write, file_md5
 
-from ditto_datahub.types import OnDuplicate
-
-
-@dataclass(frozen=True)
-class WriteResult:
-    """写入结果统计"""
-
-    file_path: str
-    checksum: str
-    added: int
-    updated: int
-    skipped: int
-    is_merge: bool
+from ditto_datahub.models import OnDuplicate
+from ditto_datahub.models.storage import WriteResultStore as WriteResult
 
 
 @dataclass(frozen=True)
@@ -66,6 +54,13 @@ class ParquetStoreBase(ABC):
 
         """
         self._data_root = Path(data_root)
+
+    # ============ Public properties ============
+
+    @property
+    def data_root(self) -> Path:
+        """Get the data root directory."""
+        return self._data_root
 
     # ============ Path operations ============
 

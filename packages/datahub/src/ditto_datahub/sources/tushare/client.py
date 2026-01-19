@@ -15,10 +15,14 @@ from tenacity import (
     wait_exponential,
 )
 
+try:
+    import keyring
+except ImportError:
+    keyring = None
+
 from ditto_datahub.sources.base import (
     SourceConfigurationError,
     SourceFetchError,
-    SourceRateLimitError,
 )
 from ditto_datahub.sources.tushare.http_utils import (
     map_http_error,
@@ -61,37 +65,39 @@ def _get_tushare_token(token: str | None = None) -> str:
         return token
 
     # 2. Try keyring (recommended)
-    try:
-        import keyring
-
-        if keyring_token := keyring.get_password("ditto", "tushare"):
-            # keyring.get_password returns str | None
-            assert isinstance(keyring_token, str)
-            logger.debug(
-                "Token loaded from keyring",
-                event="token_loaded",
-                source="keyring",
-            )
-            return keyring_token
-    except Exception:
-        # keyring may not be available or configured, silently continue
-        pass
+    if keyring is not None:
+        try:
+            keyring_token = keyring.get_password("ditto", "tushare")
+            if keyring_token is not None:
+                # Type narrowing: keyring.get_password returns str | None,
+                # the None check above narrows keyring_token to str
+                logger.debug(
+                    "Token loaded from keyring",
+                    event="token_loaded",
+                    source="keyring",
+                )
+                return keyring_token
+        except Exception as e:
+            # keyring may not be available or configured
+            logger.debug("Keyring not available, skipping", error=str(e))
 
     # 3. Try ~/.ditto/secrets.toml (fallback)
     config_file = Path.home() / ".ditto" / "secrets.toml"
     if config_file.exists():
         try:
             config = tomllib.loads(config_file.read_text())
-            if config_token := config.get("tushare", {}).get("token"):
-                assert isinstance(config_token, str)
+            config_token = config.get("tushare", {}).get("token")
+            if config_token is not None and isinstance(config_token, str):
+                # Type narrowing: config.get() returns Any, so we need explicit
+                # isinstance check to narrow to str before using it
                 logger.debug(
                     "Token loaded from secrets.toml",
                     event="token_loaded",
                     source="secrets.toml",
                 )
                 return config_token
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to load secrets.toml", error=str(e))
 
     # No token found
     raise SourceConfigurationError(
@@ -269,6 +275,23 @@ class TushareClient:
 
         # 转换为 polars DataFrame
         return response_to_dataframe(data)
+
+    def close(self) -> None:
+        """
+        显式关闭 HTTP 客户端.
+
+        释放网络资源，推荐在 with 语句中使用或手动调用。
+        """
+        if hasattr(self, "_client"):
+            self._client.close()
+
+    def __enter__(self) -> TushareClient:
+        """支持上下文管理器协议（with 语句）。"""
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        """退出上下文时关闭 HTTP 客户端."""
+        self.close()
 
     def __del__(self) -> None:
         """清理 HTTP 客户端."""

@@ -7,9 +7,9 @@ import polars as pl
 import pytest
 from ditto_datahub.dq import (
     DatasetRules,
-    DQConfig,
     DQEngine,
     DQResult,
+    DQSpec,
 )
 
 
@@ -19,7 +19,7 @@ class TestDQEngine:
     def setup_method(self) -> None:
         """Set up test environment."""
         # Create real config with DatasetRules
-        self.config = DQConfig(
+        self.config = DQSpec(
             datasets={
                 "test_dataset": DatasetRules(
                     dataset="test_dataset",
@@ -231,7 +231,6 @@ class TestDQEngineEdgeCases:
 
     def test_init_with_data_root(self) -> None:
         """Test engine initialization with data_root parameter."""
-
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create a default config directory structure
             default_config = (
@@ -250,7 +249,7 @@ class TestDQEngineEdgeCases:
         engine = DQEngine()
 
         assert engine.config is not None
-        assert isinstance(engine.config, DQConfig)
+        assert isinstance(engine.config, DQSpec)
 
     def test_config_property(self) -> None:
         """Test _config property for backward compatibility."""
@@ -261,7 +260,7 @@ class TestDQEngineEdgeCases:
 
     def test_check_with_empty_rule_lists(self) -> None:
         """Test check with dataset rules but empty L1/L2 lists."""
-        config = DQConfig(
+        config = DQSpec(
             datasets={
                 "test_dataset": DatasetRules(
                     dataset="test_dataset",
@@ -285,7 +284,7 @@ class TestDQEngineEdgeCases:
 
     def test_check_with_levels_none(self) -> None:
         """Test check with levels=None (default behavior)."""
-        config = DQConfig(
+        config = DQSpec(
             datasets={
                 "test_dataset": DatasetRules(
                     dataset="test_dataset",
@@ -313,7 +312,7 @@ class TestDQEngineEdgeCases:
 
     def test_check_with_both_levels(self) -> None:
         """Test check with both L1 and L2 levels."""
-        config = DQConfig(
+        config = DQSpec(
             datasets={
                 "test_dataset": DatasetRules(
                     dataset="test_dataset",
@@ -348,7 +347,7 @@ class TestDQEngineEdgeCases:
 
     def test_check_statistical_basic(self, mocker) -> None:
         """Test check_statistical with mock hub."""
-        config = DQConfig(
+        config = DQSpec(
             datasets={
                 "test_dataset": DatasetRules(
                     dataset="test_dataset",
@@ -399,7 +398,7 @@ class TestDQEngineEdgeCases:
 
     def test_check_statistical_with_asset_class(self, mocker) -> None:
         """Test check_statistical with asset_class parameter."""
-        config = DQConfig(
+        config = DQSpec(
             datasets={
                 "stock_daily": DatasetRules(
                     dataset="stock_daily",
@@ -433,7 +432,7 @@ class TestDQEngineEdgeCases:
 
     def test_check_with_no_matching_levels(self) -> None:
         """Test check with levels that don't match configured rules."""
-        config = DQConfig(
+        config = DQSpec(
             datasets={
                 "test_dataset": DatasetRules(
                     dataset="test_dataset",

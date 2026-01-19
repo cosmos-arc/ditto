@@ -41,7 +41,7 @@ coverage:
 
     server:
       paths:
-        - apps/server/src/
+        - apps/port/src/
       target: 80%
 
 ignore:

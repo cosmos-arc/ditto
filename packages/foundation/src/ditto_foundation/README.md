@@ -27,10 +27,27 @@
 
 ```
 src/ditto_foundation/
-├── app_initializer.py      # 应用初始化
+├── bootstrap/              # 应用启动引导
+│   ├── __init__.py
+│   └── initializer.py      # AppInitializer, initialize_app()
+├── cache/                  # 缓存能力
+│   ├── __init__.py
+│   └── core.py             # DataCache, CacheStats
+├── checksum/               # 数据完整性校验
+│   ├── __init__.py
+│   └── file.py             # compute_checksum()
+├── concurrency/            # 并发控制
+│   ├── __init__.py
+│   └── filelock.py         # FileLockManager, LockAcquisitionError
 ├── config/                 # 配置管理
 │   ├── __init__.py
-│   └── settings.py         # Pydantic Settings (主配置)
+│   ├── settings.py         # Pydantic Settings (主配置)
+│   ├── manager.py          # 配置管理器
+│   ├── initializer.py      # 配置初始化
+│   └── paths.py            # XDG 路径配置
+├── db/                     # 数据库连接池
+│   ├── __init__.py
+│   └── sqlite_pool.py      # SQLitePool
 ├── observability/          # 可观测性模块
 │   ├── __init__.py         # 主入口: init(), shutdown()
 │   ├── config.py           # Mode, ObservabilityConfig
@@ -39,14 +56,81 @@ src/ditto_foundation/
 │   ├── metrics.py          # M 类 (预定义指标)
 │   └── testing.py          # 测试辅助: reset_for_testing()
 └── util/                   # 工具函数
-    ├── io.py               # IO 工具 (atomic_write, file_md5)
+    ├── __init__.py
+    ├── checksum.py         # DataFrame 校验和计算
     ├── dates.py            # 日期规范化 (normalize_date)
-    └── __init__.py
+    └── io.py               # IO 工具 (atomic_write, file_md5)
 ```
 
 ## 四、关键模块说明
 
-### observability/ - 可观测性模块 (NEW)
+### bootstrap/ - 应用启动引导
+
+应用生命周期管理和初始化。
+
+```python
+from ditto_foundation import initialize_app, AppInitializer
+
+# 快速初始化（单例模式）
+result = initialize_app()
+# {"status": "initialized", "observability_initialized": True, ...}
+
+# 手动管理
+initializer = AppInitializer()
+result = initializer.initialize()
+```
+
+### cache/ - 缓存能力
+
+基于 cachebox 的通用缓存封装，支持 TTL、LRU、OpenTelemetry 指标。
+
+```python
+from ditto_foundation import DataCache
+
+# 创建缓存（5分钟TTL，最大10000条）
+cache = DataCache(ttl_seconds=300, max_size=10000)
+
+# 设置/获取
+cache.set("my_key", {"data": "value"})
+value = cache.get("my_key")
+
+# 模式失效
+cache.invalidate_pattern("sid:*")
+
+# 统计
+stats = cache.get_stats()
+print(f"命中率: {stats.hit_rate:.2%}")
+```
+
+### checksum/ - 数据完整性校验
+
+文件校验和计算工具（SHA-256）。
+
+```python
+from ditto_foundation import compute_checksum
+from pathlib import Path
+
+# 计算文件校验和
+checksum = compute_checksum(Path("data.parquet"))
+# 返回 64 字符的 SHA-256 hex string
+```
+
+### concurrency/ - 并发控制
+
+跨平台文件锁管理器。
+
+```python
+from ditto_foundation import FileLockManager
+from pathlib import Path
+
+manager = FileLockManager(Path("/tmp/locks"))
+
+with manager.acquire("my_resource", timeout=30.0):
+    # 临界区代码
+    process_data()
+```
+
+### observability/ - 可观测性模块
 
 统一的日志、追踪和指标接口，支持多种运行模式。
 
@@ -159,14 +243,12 @@ M.data_update_duration.record(1.5, {"source": "tushare"})
 - `get_settings()`: 全局配置单例
 
 ### util/ - 工具函数
+- `ChecksumCompute`: 统一的 Checksum 计算工具（MD5 算法，确定性排序）
+  - `from_dataframe()`: 计算 DataFrame 的确定性 checksum
+  - `get_sort_keys()`: 获取数据集的排序键配置
 - `atomic_write()`: 原子写入 Parquet
 - `file_md5()`: 文件 MD5 校验
 - `normalize_date()`: 日期格式规范化
-
-### app_initializer - 应用初始化
-- `AppInitializer`: 应用初始化类
-  - `initialize()`: 执行完整初始化（目录创建、日志设置、配置验证）
-- `initialize_app()`: 快速初始化函数（单例模式）
 
 ## 五、注意事项
 

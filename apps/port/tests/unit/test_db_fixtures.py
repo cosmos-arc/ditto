@@ -1,4 +1,4 @@
-"""测试 session-scoped 数据库 fixtures."""
+"""测试 function-scoped 数据库 fixtures."""
 
 import duckdb
 import pytest
@@ -6,19 +6,19 @@ from ditto_foundation.config import Settings
 
 
 @pytest.mark.unit
-class TestSettingsSessionFixture:
-    """测试 test_settings_session fixture."""
+class TestSettingsFixture:
+    """测试 test_settings fixture."""
 
-    def test_settings_session_returns_settings(self, test_settings_session: Settings):
-        """测试 test_settings_session 返回 Settings 实例."""
-        assert isinstance(test_settings_session, Settings)
-        assert test_settings_session.is_testing
-        assert test_settings_session.data_source.tushare_token == "test_token"
+    def test_settings_returns_settings(self, test_settings: Settings):
+        """测试 test_settings 返回 Settings 实例."""
+        assert isinstance(test_settings, Settings)
+        assert test_settings.is_testing
+        assert test_settings.data_source.tushare_token == "test_token"
 
-    def test_settings_session_has_database_paths(self, test_settings_session: Settings):
-        """测试 test_settings_session 配置了数据库路径."""
-        assert test_settings_session.database.duckdb_path.exists()
-        assert test_settings_session.database.sqlite_path.exists()
+    def test_settings_has_database_paths(self, test_settings: Settings):
+        """测试 test_settings 配置了数据库路径."""
+        assert test_settings.database.duckdb_path.exists()
+        assert test_settings.database.sqlite_path.exists()
 
 
 @pytest.mark.unit
@@ -32,8 +32,8 @@ class TestDatabaseManagerFixture:
         assert hasattr(db_manager, "get_duckdb_conn")
         assert hasattr(db_manager, "clean_duckdb")
 
-    def test_db_manager_is_singleton_across_tests(self, db_manager):
-        """测试 db_manager 在测试间是单例."""
+    def test_db_manager_is_function_scoped(self, db_manager):
+        """测试 db_manager 是 function 作用域的（每个测试独立）."""
         # 验证 db_manager 有正确的类型
         assert hasattr(db_manager, "_duckdb_conn")
         assert hasattr(db_manager, "get_duckdb_conn")

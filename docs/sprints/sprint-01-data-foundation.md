@@ -40,6 +40,7 @@
 │                              DataHub（纯 Facade）                             │
 │                                                                              │
 │   hub.bars / hub.calendar / hub.securities / hub.sources / hub.sql         │
+│   (DataSources 提供数据源访问)                                           │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
         ┌───────────────────────────┴───────────────────────────┐
@@ -47,9 +48,9 @@
 ┌──────────────────────────────┐    ┌──────────────────────────────┐
 │      Sources Layer            │    │   Domain Repositories        │
 │                              │    │                              │
-│   hub.sources.tushare        │    │   BarsRepository             │
-│   - fetch_calendar           │    │   CalendarRepository         │
-│   - fetch_etf_basic/daily    │    │   SecurityRepository         │
+│   hub.sources.tushare        │    │   BarsAccessor             │
+│   - fetch_calendar           │    │   CalendarAccessor         │
+│   - fetch_etf_basic/daily    │    │   SecurityAccessor         │
 │   - fetch_stock_basic/daily  │    │                              │
 │   - fetch_adj_factor         │    │                              │
 │   - fetch_fund_adj           │    │                              │
@@ -117,9 +118,9 @@
 
 | 组件 | 文件 | 状态 |
 |------|------|------|
-| SecurityRepository | `repositories/security.py` | ✅ |
-| BarsRepository | `repositories/bars.py` | ✅ |
-| CalendarRepository | `repositories/calendar.py` | ✅ |
+| SecurityAccessor | `accessors/security.py` | ✅ |
+| BarsAccessor | `accessors/bars.py` | ✅ |
+| CalendarAccessor | `accessors/calendar.py` | ✅ |
 
 **完成状态**:
 - ✅ 8 个单元测试全部通过
@@ -197,8 +198,8 @@
 - 文件：修改 `packages/datahub/src/ditto_datahub/hub.py`
 - 功能：
   - 添加 `@cached_property sources`
-  - 返回 SourcesAccessor 实例
-  - SourcesAccessor 提供 `tushare` 属性和 `get()` 方法
+  - 返回 DataSources 实例
+  - DataSources 提供 `tushare` 属性和 `get()` 方法
 - 验收标准：
   - ✅ `hub.sources.tushare.fetch_etf_daily()` 可调用
   - ✅ 单例模式生效（多次调用返回同一实例）
@@ -214,9 +215,9 @@
 
 **6.1 Prefect 基础设施** [S] ✅
 - 文件：
-  - `apps/server/pyproject.toml`（新增包）
-  - `apps/server/src/ditto_port/__init__.py`
-  - `apps/server/src/ditto_port/main.py`
+  - `apps/port/pyproject.toml`（新增包）
+  - `apps/port/src/ditto_port/__init__.py`
+  - `apps/port/src/ditto_port/main.py`
 - 功能：
   - FastAPI 基础应用
   - Prefect 本地 Server 启动
@@ -238,12 +239,12 @@
 
 **6.2 完整摄取 Flow 实现** [L] ✅
 - 文件：
-  - `apps/server/src/ditto_port/ingestion/flows/__init__.py`
-  - `apps/server/src/ditto_port/ingestion/flows/daily_ingest.py`
-  - `apps/server/src/ditto_port/ingestion/tasks/__init__.py`
-  - `apps/server/src/ditto_port/ingestion/tasks/bars.py`
-  - `apps/server/src/ditto_port/ingestion/tasks/stock.py`
-  - `apps/server/src/ditto_port/ingestion/tasks/adj_factor.py`
+  - `apps/port/src/ditto_port/ingestion/flows/__init__.py`
+  - `apps/port/src/ditto_port/ingestion/flows/daily_ingest.py`
+  - `apps/port/src/ditto_port/ingestion/tasks/__init__.py`
+  - `apps/port/src/ditto_port/ingestion/tasks/bars.py`
+  - `apps/port/src/ditto_port/ingestion/tasks/stock.py`
+  - `apps/port/src/ditto_port/ingestion/tasks/adj_factor.py`
 - 功能：
   - **daily_ingest_flow**：
     - 完整版本，支持 7 个摄取任务
@@ -283,7 +284,7 @@
 - `dq/checkers/business.py` - L2 业务规则（OHLC、涨跌幅）
 - `dq/checkers/statistical.py` - L3 统计异常（Z-score、完整性）
 - `config/dq_rules.yaml` - YAML 规则配置
-- Repository 集成 DQEngine
+- Accessor 集成 DQEngine
 - 隔离区机制实现
 
 ---
@@ -409,7 +410,7 @@ packages/datahub/
 │       ├── client.py               # Tushare 客户端（限流、重试、keyring）
 │       └── source.py               # TushareSource 实现（7个fetch方法）
 │
-apps/server/
+apps/port/
 ├── README.md                       # Server 模块说明
 ├── pyproject.toml                  # Server 包配置
 └── src/ditto_port/

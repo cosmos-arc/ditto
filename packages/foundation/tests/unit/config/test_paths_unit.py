@@ -5,7 +5,11 @@ from pathlib import Path
 from typing import Any
 
 from ditto_foundation.config.paths import (
+    AppConfig,
+    EnvVarConfig,
     PathResolver,
+    PathResolverConfig,
+    PlatformConfig,
     XDGPaths,
     get_paths,
     reload_paths,
@@ -25,15 +29,13 @@ class TestPathResolver:
             # 同时设置 XDG 环境变量（应该被忽略）
             os.environ["XDG_CONFIG_HOME"] = str(tmp_path / "xdg_config")
 
-            resolver = PathResolver(
-                ditto_env="DITTO_CONFIG_DIR",
-                xdg_env="XDG_CONFIG_HOME",
-                subdir="config",
-                unix_default="~/.config",
-                app_name="ditto",
-                platform="linux",
-                base_override=None,
+            env = EnvVarConfig(ditto_env="DITTO_CONFIG_DIR", xdg_env="XDG_CONFIG_HOME")
+            platform = PlatformConfig(platform="linux", unix_default="~/.config")
+            app = AppConfig(app_name="ditto", subdir="config")
+            config = PathResolverConfig(
+                env=env, platform=platform, app=app, base_override=None
             )
+            resolver = PathResolver(config)
 
             result = resolver.resolve()
 
@@ -52,15 +54,13 @@ class TestPathResolver:
         os.environ["XDG_CONFIG_HOME"] = xdg_config
 
         try:
-            resolver = PathResolver(
-                ditto_env="DITTO_CONFIG_DIR",
-                xdg_env="XDG_CONFIG_HOME",
-                subdir="config",
-                unix_default="~/.config",
-                app_name="ditto",
-                platform="linux",
-                base_override=None,
+            env = EnvVarConfig(ditto_env="DITTO_CONFIG_DIR", xdg_env="XDG_CONFIG_HOME")
+            platform = PlatformConfig(platform="linux", unix_default="~/.config")
+            app = AppConfig(app_name="ditto", subdir="config")
+            config = PathResolverConfig(
+                env=env, platform=platform, app=app, base_override=None
             )
+            resolver = PathResolver(config)
 
             result = resolver.resolve()
 
@@ -77,15 +77,13 @@ class TestPathResolver:
         os.environ["DITTO_BASE_DIR"] = base_dir
 
         try:
-            resolver = PathResolver(
-                ditto_env="DITTO_CONFIG_DIR",
-                xdg_env="XDG_CONFIG_HOME",
-                subdir="config",
-                unix_default="~/.config",
-                app_name="ditto",
-                platform="linux",
-                base_override=None,
+            env = EnvVarConfig(ditto_env="DITTO_CONFIG_DIR", xdg_env="XDG_CONFIG_HOME")
+            platform = PlatformConfig(platform="linux", unix_default="~/.config")
+            app = AppConfig(app_name="ditto", subdir="config")
+            config = PathResolverConfig(
+                env=env, platform=platform, app=app, base_override=None
             )
+            resolver = PathResolver(config)
 
             result = resolver.resolve()
 
@@ -100,15 +98,13 @@ class TestPathResolver:
         """测试 base_override 降级（测试模式）."""
         base_override = tmp_path / "test_base"
 
-        resolver = PathResolver(
-            ditto_env="DITTO_CONFIG_DIR",
-            xdg_env="XDG_CONFIG_HOME",
-            subdir="config",
-            unix_default="~/.config",
-            app_name="ditto",
-            platform="linux",
-            base_override=base_override,
+        env = EnvVarConfig(ditto_env="DITTO_CONFIG_DIR", xdg_env="XDG_CONFIG_HOME")
+        platform = PlatformConfig(platform="linux", unix_default="~/.config")
+        app = AppConfig(app_name="ditto", subdir="config")
+        config = PathResolverConfig(
+            env=env, platform=platform, app=app, base_override=base_override
         )
+        resolver = PathResolver(config)
 
         result = resolver.resolve()
 
@@ -117,15 +113,13 @@ class TestPathResolver:
 
     def test_linux_platform_default(self) -> None:
         """测试 Linux 平台默认路径."""
-        resolver = PathResolver(
-            ditto_env="DITTO_CONFIG_DIR",
-            xdg_env="XDG_CONFIG_HOME",
-            subdir="config",
-            unix_default="~/.config",
-            app_name="ditto",
-            platform="linux",
-            base_override=None,
+        env = EnvVarConfig(ditto_env="DITTO_CONFIG_DIR", xdg_env="XDG_CONFIG_HOME")
+        platform = PlatformConfig(platform="linux", unix_default="~/.config")
+        app = AppConfig(app_name="ditto", subdir="config")
+        config = PathResolverConfig(
+            env=env, platform=platform, app=app, base_override=None
         )
+        resolver = PathResolver(config)
 
         result = resolver.resolve()
 
@@ -135,15 +129,13 @@ class TestPathResolver:
 
     def test_macos_platform_default(self) -> None:
         """测试 macOS 平台默认路径."""
-        resolver = PathResolver(
-            ditto_env="DITTO_CONFIG_DIR",
-            xdg_env="XDG_CONFIG_HOME",
-            subdir="data",
-            unix_default="~/.local/share",
-            app_name="ditto",
-            platform="darwin",
-            base_override=None,
+        env = EnvVarConfig(ditto_env="DITTO_CONFIG_DIR", xdg_env="XDG_CONFIG_HOME")
+        platform = PlatformConfig(platform="darwin", unix_default="~/.local/share")
+        app = AppConfig(app_name="ditto", subdir="data")
+        config = PathResolverConfig(
+            env=env, platform=platform, app=app, base_override=None
         )
+        resolver = PathResolver(config)
 
         result = resolver.resolve()
 
@@ -159,16 +151,17 @@ class TestPathResolver:
         d_drive = tmp_path / "d_drive"
         d_drive.mkdir(parents=True, exist_ok=True)
 
-        resolver = PathResolver(
-            ditto_env="DITTO_CONFIG_DIR",
-            xdg_env="XDG_CONFIG_HOME",
-            subdir="config",
-            unix_default="~/.config",
-            app_name="ditto",
+        env = EnvVarConfig(ditto_env="DITTO_CONFIG_DIR", xdg_env="XDG_CONFIG_HOME")
+        platform = PlatformConfig(
             platform="win32",
-            base_override=None,
+            unix_default="~/.config",
             default_windows_base=str(d_drive),
         )
+        app = AppConfig(app_name="ditto", subdir="config")
+        config = PathResolverConfig(
+            env=env, platform=platform, app=app, base_override=None
+        )
+        resolver = PathResolver(config)
 
         result = resolver.resolve()
 
@@ -186,16 +179,17 @@ class TestPathResolver:
         localappdata = Path("C:\\Users\\test\\AppData\\Local")
         monkeypatch.setenv("LOCALAPPDATA", str(localappdata))
 
-        resolver = PathResolver(
-            ditto_env="DITTO_CONFIG_DIR",
-            xdg_env="XDG_CONFIG_HOME",
-            subdir="config",
-            unix_default="~/.config",
-            app_name="ditto",
+        env = EnvVarConfig(ditto_env="DITTO_CONFIG_DIR", xdg_env="XDG_CONFIG_HOME")
+        platform = PlatformConfig(
             platform="win32",
-            base_override=None,
+            unix_default="~/.config",
             default_windows_base=str(non_existent_d),
         )
+        app = AppConfig(app_name="ditto", subdir="config")
+        config = PathResolverConfig(
+            env=env, platform=platform, app=app, base_override=None
+        )
+        resolver = PathResolver(config)
 
         result = resolver.resolve()
 

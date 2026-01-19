@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_foundation import SQLitePool
 
 
 @pytest.fixture
@@ -17,7 +17,18 @@ def db_path(tmp_path: Path) -> Path:
 @pytest.fixture
 def sqlite_pool(db_path: Path) -> SQLitePool:
     """Provide SQLite pool with temporary database."""
-    pool = SQLitePool(str(db_path))
+    # Get schema path - use relative path from test file
+    # Test file: packages/datahub/tests/unit/stores/test_sqlite_client_unit.py
+    # Schema file: packages/datahub/src/ditto_datahub/scripts/schema.sql
+    # 4 parents up: stores -> unit -> tests -> datahub
+    schema_path = (
+        Path(__file__).parent.parent.parent.parent
+        / "src"
+        / "ditto_datahub"
+        / "scripts"
+        / "schema.sql"
+    )
+    pool = SQLitePool(str(db_path), schema_path=schema_path)
     pool.init_schema()
     yield pool
     pool.close()
@@ -222,8 +233,6 @@ class TestSQLiteClient:
             "security",
             "security_mapping",
             "trading_calendar",
-            "pipeline_run",
-            "dq_issue",
             "freeze_point",
             "universe",
             "universe_constituent",

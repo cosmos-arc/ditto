@@ -18,7 +18,7 @@
 - [ ] `packages/core` - 核心业务逻辑
 - [ ] `packages/datahub` - 数据存储层
 - [ ] `packages/foundation` - 基础设施
-- [ ] `apps/server` - 后端服务
+- [ ] `apps/port` - 后端服务
 - [ ] `apps/web` - 前端应用
 - [ ] 其他:
 

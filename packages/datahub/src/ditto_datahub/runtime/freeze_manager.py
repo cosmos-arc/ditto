@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import orjson
 from ditto_foundation import logger, traced
+from ditto_foundation.checksum import compute_checksum
 
-from ..types import FreezeManifest
+from ..models import FreezeManifest
 
 
 class FreezeManager:
@@ -160,7 +160,7 @@ class FreezeManager:
             event="freeze_list",
         )
 
-        manifests = []
+        manifests: list[FreezeManifest] = []
         for manifest_path in self._freezes_dir.glob("*.json"):
             manifest = self._load_manifest(manifest_path)
             manifests.append(manifest)
@@ -249,10 +249,8 @@ class FreezeManager:
             max_age_days=max_age,
         )
 
-        from datetime import datetime, timedelta
-
         cutoff = datetime.now() - timedelta(days=max_age)
-        deleted = []
+        deleted: list[str] = []
 
         for manifest_path in self._freezes_dir.glob("*.json"):
             try:
@@ -295,7 +293,7 @@ class FreezeManager:
                 "Invalid freeze_id: cannot contain path separators or '..'"
             )
 
-    def _try_single_file_mode(self, dataset: str) -> tuple[bool, dict[str, str] | None]:
+    def _try_single_file_mode(self, dataset: str) -> dict[str, str] | None:
         """
         尝试单文件模式（{dataset}.parquet）。
 
@@ -303,21 +301,19 @@ class FreezeManager:
             dataset: 数据集名称
 
         Returns:
-            (是否成功, checksums 字典或 None)
+            checksums 字典或 None（文件不存在时）
 
         """
         single_file_path = self._data_root / f"{dataset}.parquet"
 
         if single_file_path.exists():
-            checksum = self._compute_checksum(single_file_path)
+            checksum = compute_checksum(single_file_path)
             rel_path = single_file_path.relative_to(self._data_root).as_posix()
-            return True, {rel_path: checksum}
+            return {rel_path: checksum}
 
-        return False, None
+        return None
 
-    def _try_partitioned_directory_mode(
-        self, dataset: str
-    ) -> tuple[bool, dict[str, str] | None]:
+    def _try_partitioned_directory_mode(self, dataset: str) -> dict[str, str] | None:
         """
         尝试分区目录模式（{dataset}/**/*.parquet）。
 
@@ -325,7 +321,7 @@ class FreezeManager:
             dataset: 数据集名称
 
         Returns:
-            (是否成功, checksums 字典或 None)
+            checksums 字典或 None（目录不存在或为空时）
 
         """
         dataset_dir = self._data_root / dataset
@@ -335,12 +331,12 @@ class FreezeManager:
             if parquet_files:
                 files: dict[str, str] = {}
                 for parquet_file in parquet_files:
-                    checksum = self._compute_checksum(parquet_file)
+                    checksum = compute_checksum(parquet_file)
                     rel_path = parquet_file.relative_to(self._data_root).as_posix()
                     files[rel_path] = checksum
-                return True, files
+                return files
 
-        return False, None
+        return None
 
     def _handle_missing_files(self, freeze_id: str, missing_files: list[str]) -> None:
         """
@@ -387,20 +383,12 @@ class FreezeManager:
 
         for dataset in datasets:
             # Try single file first
-            success, checksums = self._try_single_file_mode(dataset)
-            if success:
-                assert (
-                    checksums is not None
-                )  # 类型收窄：当 success=True 时，checksums 必须不为 None
+            if checksums := self._try_single_file_mode(dataset):
                 files.update(checksums)
                 continue
 
             # Try partitioned directory
-            success, checksums = self._try_partitioned_directory_mode(dataset)
-            if success:
-                assert (
-                    checksums is not None
-                )  # 类型收窄：当 success=True 时，checksums 必须不为 None
+            if checksums := self._try_partitioned_directory_mode(dataset):
                 files.update(checksums)
                 continue
 
@@ -434,29 +422,12 @@ class FreezeManager:
                 continue
 
             # 使用 SHA-256 验证
-            actual_checksum = self._compute_checksum(file_path)
+            actual_checksum = compute_checksum(file_path)
 
             if actual_checksum != expected_checksum:
                 errors.append(f"Checksum mismatch: {rel_path}")
 
         return errors
-
-    def _compute_checksum(self, file_path: Path) -> str:
-        """
-        计算文件的 SHA-256 checksum。
-
-        Args:
-            file_path: 文件路径
-
-        Returns:
-            SHA-256 hex string
-
-        """
-        sha256 = hashlib.sha256()
-        with file_path.open("rb") as f:
-            for chunk in iter(lambda: f.read(8192), b""):
-                sha256.update(chunk)
-        return sha256.hexdigest()
 
     def _save_manifest(self, path: Path, manifest: FreezeManifest) -> None:
         """
@@ -509,7 +480,7 @@ class FreezeManager:
         if "version" not in data or "checksum_type" not in data:
             raise ValueError(
                 "Invalid freeze manifest: missing version or checksum_type field. "
-                "This version only supports v2.0 manifests with SHA-256 checksums."
+                + "This version only supports v2.0 manifests with SHA-256 checksums."
             )
 
         version = data["version"]
@@ -518,8 +489,8 @@ class FreezeManager:
         # 验证版本和校验和类型
         if version != "2.0" or checksum_type != "sha256":
             raise ValueError(
-                f"Invalid freeze manifest: expected v2.0/sha256, "
-                f"got {version}/{checksum_type}"
+                "Invalid freeze manifest: expected v2.0/sha256, "
+                + f"got {version}/{checksum_type}"
             )
 
         return FreezeManifest(

@@ -37,11 +37,10 @@ repos:
   # ==========================================================
   - repo: local
     hooks:
-    hooks:
       # Ruff Lint Fix（先修复）
       - id: ruff-lint-fix
         name: ruff lint (fix)
-        entry: pixi run -e dev lint-fix-staged
+        entry: pixi run -e dev lint --fix
         language: system
         types: [python]
         require_serial: false
@@ -49,14 +48,14 @@ repos:
       # Ruff Format（再格式化）
       - id: ruff-format
         name: ruff format
-        entry: pixi run -e dev format-staged
+        entry: pixi run -e dev fmt
         language: system
         types: [python]
         require_serial: false
 
       - id: pyright
         name: pyright (src, warnings=fail)
-        entry: pixi run -e dev typecheck
+        entry: pixi run -e dev type
         language: system
         pass_filenames: false
         require_serial: true
@@ -66,7 +65,7 @@ repos:
       # --------------------------------------------------------
       - id: pytest-fast
         name: pytest (fast)
-        entry: pixi run -e dev test-fast
+        entry: pixi run -e dev test --fast
         language: system
         pass_filenames: false
         types: [python]

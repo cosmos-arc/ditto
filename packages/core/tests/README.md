@@ -228,7 +228,7 @@ def test_factor_engine_with_mock():
     hub = Mock()
 
     # Mock 返回数据
-    hub.bars.get.return_value = pl.DataFrame({
+    hub.sources.bars.get.return_value = pl.DataFrame({
         "symbol": ["510300.SH"],
         "close": [4.5],
         "trade_date": [date(2024, 1, 31)]
@@ -239,7 +239,7 @@ def test_factor_engine_with_mock():
     factors = engine.calc_factors(["510300.SH"], date(2024, 1, 31))
 
     # 验证
-    hub.bars.get.assert_called_once()
+    hub.sources.bars.get.assert_called_once()
     assert factors is not None
 ```
 

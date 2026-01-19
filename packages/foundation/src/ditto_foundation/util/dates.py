@@ -1,9 +1,24 @@
 """日期规范化工具函数，将各种日期类型转换为 YYYY-MM-DD 格式."""
 
 from datetime import date, datetime
+from typing import TypeGuard
 
 # 日期输入类型别名
 DateInput = str | date | datetime | None
+
+
+def _is_pure_date(value: object) -> TypeGuard[date]:
+    """
+    检查是否是纯 date 类型（不是 datetime）.
+
+    Args:
+        value: 待检查的日期/日期时间对象
+
+    Returns:
+        如果是纯 date 类型返回 True，否则返回 False
+
+    """
+    return isinstance(value, date) and not isinstance(value, datetime)
 
 
 def normalize_date(value: DateInput) -> str | None:
@@ -35,8 +50,8 @@ def normalize_date(value: DateInput) -> str | None:
         # 将 datetime 转换为日期字符串
         return value.strftime("%Y-%m-%d")
 
-    if isinstance(value, date):
-        # 格式化 date 对象
+    # 类型收窄：使用 TypeGuard 确保这是纯 date 类型（不是 datetime）
+    if _is_pure_date(value):
         return value.strftime("%Y-%m-%d")
 
-    raise TypeError(f"Unsupported date type: {type(value)}")
+    raise TypeError(f"Unsupported date type: {type(value).__name__}")

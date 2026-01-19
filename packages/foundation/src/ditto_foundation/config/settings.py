@@ -9,13 +9,13 @@ Ditto 系统配置管理.
 """
 
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# 延迟导入以避免循环依赖
-# get_paths 会在使用时导入
+from ditto_foundation.config.manager import SingletonManager
+from ditto_foundation.config.paths import get_paths
 
 
 class DatabaseSettings(BaseSettings):
@@ -32,16 +32,12 @@ class DatabaseSettings(BaseSettings):
     @property
     def duckdb_path(self) -> Path:
         """DuckDB 数据库文件路径."""
-        from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
-
         return get_paths().data_subdir("db/duckdb/ditto.duckdb")
 
     @computed_field
     @property
     def sqlite_path(self) -> Path:
         """SQLite 数据库文件路径."""
-        from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
-
         return get_paths().data_subdir("db/sqlite/hub.sqlite")
 
 
@@ -55,17 +51,6 @@ class DataSourceSettings(BaseSettings):
     tushare_token: str = Field(default="", description="Tushare Pro API Token")
 
 
-class APISettings(BaseSettings):
-    """FastAPI 服务配置."""
-
-    model_config = SettingsConfigDict(
-        env_prefix="", env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
-
-    host: str = Field(default="0.0.0.0", description="服务器监听地址")
-    port: int = Field(default=8000, ge=1, le=65535, description="服务器监听端口")
-
-
 class SystemSettings(BaseSettings):
     """系统基础配置."""
 
@@ -74,12 +59,6 @@ class SystemSettings(BaseSettings):
     )
 
     ditto_env: str = Field(default="development", description="系统运行环境")
-
-    log_level: str = Field(default="INFO", description="日志级别")
-
-    timezone: str = Field(default="Asia/Shanghai", description="系统时区")
-
-    debug: bool = Field(default=False, description="是否启用调试模式")
 
 
 class FileStorageSettings(BaseSettings):
@@ -97,32 +76,24 @@ class FileStorageSettings(BaseSettings):
     @property
     def data_root(self) -> Path:
         """数据存储根目录."""
-        from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
-
         return get_paths().data_home
 
     @computed_field
     @property
     def log_root(self) -> Path:
         """日志存储根目录."""
-        from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
-
         return get_paths().state_subdir("logs")
 
     @computed_field
     @property
     def backup_root(self) -> Path:
         """备份存储根目录."""
-        from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
-
         return get_paths().state_subdir("backups")
 
     @computed_field
     @property
     def temp_root(self) -> Path:
         """临时文件存储根目录."""
-        from ditto_foundation.config.paths import get_paths  # noqa: PLC0415
-
         return get_paths().cache_subdir("temp")
 
 
@@ -145,7 +116,6 @@ class ObservabilitySettings(BaseSettings):
         default="http://localhost:8428/opentelemetry/v1/metrics",
         description="VictoriaMetrics OTLP 端点",
     )
-    metrics_interval_ms: int = Field(default=15000, description="指标导出间隔(毫秒)")
 
 
 class Settings(BaseSettings):
@@ -164,7 +134,6 @@ class Settings(BaseSettings):
 
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     data_source: DataSourceSettings = Field(default_factory=DataSourceSettings)
-    api: APISettings = Field(default_factory=APISettings)
     system: SystemSettings = Field(default_factory=SystemSettings)
     file_storage: FileStorageSettings = Field(default_factory=FileStorageSettings)
     observability: ObservabilitySettings = Field(default_factory=ObservabilitySettings)
@@ -205,8 +174,22 @@ class Settings(BaseSettings):
         return self.system.ditto_env == "testing"
 
 
-# 全局配置实例
-_settings: Settings | None = None
+# ============ Settings 单例管理器 ============
+
+
+class SettingsManager(SingletonManager["Settings"]):
+    """
+    Settings 单例管理器.
+
+    使用类属性而非 global 变量实现单例模式，避免 PLW0603 警告。
+    """
+
+    _instance: ClassVar["Settings | None"] = None
+
+    @classmethod
+    def _create_instance(cls) -> "Settings":
+        """创建 Settings 实例."""
+        return Settings()
 
 
 def get_settings() -> Settings:
@@ -220,10 +203,7 @@ def get_settings() -> Settings:
         Settings: 配置实例
 
     """
-    global _settings  # noqa: PLW0603 - singleton pattern, ensures single instance
-    if _settings is None:
-        _settings = Settings()
-    return _settings
+    return SettingsManager.get()
 
 
 def reload_settings() -> Settings:
@@ -237,6 +217,17 @@ def reload_settings() -> Settings:
         Settings: 新的配置实例
 
     """
-    global _settings  # noqa: PLW0603 - singleton pattern, reloads instance
-    _settings = Settings()
-    return _settings
+    return SettingsManager.reload()
+
+
+__all__ = [
+    "DataSourceSettings",
+    "DatabaseSettings",
+    "FileStorageSettings",
+    "ObservabilitySettings",
+    "Settings",
+    "SettingsManager",
+    "SystemSettings",
+    "get_settings",
+    "reload_settings",
+]

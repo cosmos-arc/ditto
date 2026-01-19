@@ -30,7 +30,7 @@ class ColumnMapping:
     int_columns: tuple[str, ...] = ()
     boolean_columns: tuple[str, ...] = ()
     # 计算列：列名 -> Polars 表达式（用于动态计算，如从 ts_code 提取 symbol/exchange）
-    computed_columns: dict[str, pl.Expr] = field(default_factory=dict)
+    computed_columns: dict[str, pl.Expr] = field(default_factory=lambda: {})
     # 需要保留的输出列（重命名后），None 表示保留所有列
     output_columns: tuple[str, ...] | None = None
 
@@ -187,7 +187,7 @@ class TushareDataTransformer:
         result = df.rename(mapping.rename)
 
         # 2. 应用类型转换
-        transforms = []
+        transforms: list[pl.Expr] = []
         for col, fmt in mapping.date_columns.items():
             transforms.append(pl.col(col).str.to_date(fmt))
         for col in mapping.float_columns:
@@ -242,7 +242,7 @@ class TushareDataTransformer:
         result = df.rename(mapping.rename)
 
         # 应用类型转换
-        transforms = []
+        transforms: list[pl.Expr] = []
         for col, fmt in mapping.date_columns.items():
             transforms.append(pl.col(col).str.to_date(fmt))
         for col in mapping.float_columns:
@@ -294,8 +294,8 @@ class TushareDataTransformer:
             root_names = expr.meta.root_names()
             if len(root_names) == 1:
                 return column_types.get(root_names[0], pl.String)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to infer column type from expression", error=str(e))
         return pl.String
 
     @staticmethod

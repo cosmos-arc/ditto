@@ -1,44 +1,11 @@
-"""DataSource base classes and exception hierarchy."""
+"""DataSource abstract base class and exception hierarchy."""
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import Protocol
 
 import polars as pl
-
-
-class DataSourceMethods(Protocol):
-    """DataSource 方法协议（用于动态方法调用的类型推断）。"""
-
-    def fetch_calendar(self, start: str, end: str) -> pl.DataFrame:
-        """获取交易日历。"""
-        ...
-
-    def fetch_etf_basic(self) -> pl.DataFrame:
-        """获取 ETF 基础信息。"""
-        ...
-
-    def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
-        """获取 ETF 日行情。"""
-        ...
-
-    def fetch_stock_basic(self) -> pl.DataFrame:
-        """获取股票基础信息。"""
-        ...
-
-    def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
-        """获取股票日行情。"""
-        ...
-
-    def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
-        """获取股票复权因子。"""
-        ...
-
-    def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
-        """获取基金复权因子。"""
-        ...
 
 
 class DataSourceError(Exception):
@@ -357,32 +324,3 @@ class DataSource(ABC):
 
         """
         pass
-
-
-def get_source(name: str) -> DataSource:
-    """
-    Factory function to get DataSource instance.
-
-    Args:
-        name: Source name ("tushare" or "akshare").
-
-    Returns:
-        DataSource instance.
-
-    Raises:
-        ValueError: If source name is unknown or not implemented.
-
-    """
-    normalized_name = name.lower().strip()
-
-    if normalized_name == "tushare":
-        from ditto_datahub.sources.tushare.source import TushareSource
-
-        return TushareSource()
-
-    if normalized_name == "akshare":
-        raise ValueError(
-            f"Source '{name}' is not yet implemented. Planned for Sprint-02."
-        )
-
-    raise ValueError(f"Unknown source: '{name}'. Supported sources: tushare")

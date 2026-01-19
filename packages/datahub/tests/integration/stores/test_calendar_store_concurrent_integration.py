@@ -1,4 +1,5 @@
-"""Concurrency tests for CalendarStore.
+"""
+Concurrency tests for CalendarStore.
 
 Tests thread-safety of reload() method using concurrent readers and writers.
 """
@@ -9,10 +10,10 @@ import tempfile
 import threading
 import time
 
-from ditto_datahub.runtime.cache import DataCache
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_foundation import SQLitePool
+from ditto_foundation.cache import DataCache
 
 
 class TestCalendarStoreConcurrent:
@@ -194,7 +195,8 @@ class TestCalendarStoreConcurrent:
         self.store._load_cache()
 
     def test_reload_thread_safety(self) -> None:
-        """Test concurrent reload operations for thread safety.
+        """
+        Test concurrent reload operations for thread safety.
 
         This test creates multiple reader threads and a reloader thread
         that operate concurrently. It verifies that:

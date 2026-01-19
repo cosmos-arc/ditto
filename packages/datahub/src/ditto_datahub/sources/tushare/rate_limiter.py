@@ -1,5 +1,6 @@
 """Tushare rate limiting using limits library."""
 
+import time
 from dataclasses import dataclass
 from enum import Enum
 
@@ -132,8 +133,6 @@ class TushareRateLimiter:
         }[group]
 
         # 使用 test() 检查但不消耗，等待直到可以请求
-        import time
-
         while True:
             # 同时检查全局限流和分组限流
             global_ok = self._limiter.test(self._global_rate, "tushare", "global")

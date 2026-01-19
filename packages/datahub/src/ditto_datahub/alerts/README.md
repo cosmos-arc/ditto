@@ -638,5 +638,5 @@ class FallbackAlertManager(AlertManager):
 ## 相关文档
 
 - [DQ 模块](../dq/README.md)
-- [Ingestion 模块](../../../../../apps/server/src/ditto_server/ingestion/)
+- [Ingestion 模块](../../../../../apps/port/src/ditto_server/ingestion/)
 - [日志设计](../../../../../docs/design/05_observability_design.md)

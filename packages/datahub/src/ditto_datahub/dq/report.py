@@ -2,9 +2,8 @@
 
 from io import StringIO
 from pathlib import Path
-from typing import Any
 
-from ditto_datahub.dq.models import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_datahub.models import DQIssue, DQLevel, DQResult, DQSeverity
 
 
 class DQReportGenerator:
@@ -169,7 +168,7 @@ class DQReportGenerator:
         if not issues:
             return "<p>无问题 &#10003;</p>"
 
-        html = []
+        html: list[str] = []
         for issue in issues:
             severity_class = (
                 "error"

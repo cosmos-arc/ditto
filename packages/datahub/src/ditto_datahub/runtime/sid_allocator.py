@@ -1,19 +1,14 @@
 """SID allocator for managing unique security identifiers."""
 
-from typing import TYPE_CHECKING
+from ditto_foundation import SQLitePool, logger, span
 
-from ditto_foundation import logger, span
-
-from ..types import SidRange
-
-if TYPE_CHECKING:
-    from .sqlite_pool import SQLitePool
+from ..models import AssetSidRange
 
 
 class SidAllocator:
     """SID allocator for managing unique security identifiers."""
 
-    def __init__(self, sqlite_pool: "SQLitePool") -> None:
+    def __init__(self, sqlite_pool: SQLitePool) -> None:
         """Initialize SID allocator."""
         self._pool = sqlite_pool
 
@@ -25,7 +20,7 @@ class SidAllocator:
     def _allocate_impl(self, asset_class: str) -> int:
         """Internal implementation of SID allocation."""
         # 获取资产类别的SID范围
-        min_sid, max_sid = SidRange.get_range(asset_class)
+        min_sid, max_sid = AssetSidRange.get_range(asset_class)
 
         logger.info(
             "sid_allocate_start",
@@ -82,12 +77,14 @@ class SidAllocator:
             )
             return new_sid
 
-        except Exception:
+        except Exception as e:
             # 发生任何错误都要回滚
             self._pool.rollback()
             logger.error(
                 "sid_allocate_failed",
                 event="sid_allocate",
                 asset_class=asset_class,
+                error_type=type(e).__name__,
+                error_message=str(e),
             )
             raise

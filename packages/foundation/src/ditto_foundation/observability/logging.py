@@ -4,15 +4,41 @@
 基于 loguru 的结构化日志配置，支持多环境和 JSON 格式输出.
 """
 
-import json
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import orjson
 from loguru import logger as _logger
 
+from ditto_foundation.config.paths import get_paths
+
 from .config import Mode, ObservabilityConfig
+
+
+def _resolve_log_dir(config: ObservabilityConfig) -> Path:
+    """
+    解析日志目录路径.
+
+    如果 config.log_dir 是默认值 "logs"，使用 XDGPaths 的 state_subdir.
+    否则，使用指定的路径并创建目录.
+
+    Args:
+    ----
+        config: 可观测性配置
+
+    Returns:
+    -------
+        Path: 日志目录路径
+
+    """
+    if config.log_dir == "logs":
+        return get_paths().state_subdir("logs")
+
+    log_dir = Path(config.log_dir)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir
 
 
 def _build_log_record(record: dict[str, Any] | Any) -> dict[str, Any]:
@@ -70,7 +96,7 @@ def _json_formatter(record: dict[str, Any] | Any) -> str:
 
     """
     log_entry = _build_log_record(record)
-    return json.dumps(log_entry, ensure_ascii=False) + "\n"
+    return orjson.dumps(log_entry).decode("utf-8") + "\n"
 
 
 def configure_logging(config: ObservabilityConfig, mode: Mode) -> None:
@@ -90,15 +116,8 @@ def configure_logging(config: ObservabilityConfig, mode: Mode) -> None:
     if mode.is_silent():
         return
 
-    # 使用 XDG Base Directory 规范获取日志目录
-    # 如果 config.log_dir 是默认值 "logs"，使用 XDGPaths
-    if config.log_dir == "logs":
-        from ditto_foundation.config.paths import get_paths
-
-        log_dir = get_paths().state_subdir("logs")
-    else:
-        log_dir = Path(config.log_dir)
-        log_dir.mkdir(parents=True, exist_ok=True)
+    # 解析日志目录
+    log_dir = _resolve_log_dir(config)
 
     # Console sink
     console_format = (

@@ -4,13 +4,12 @@ CLI 本地执行器.
 封装 IngestionCoordinator 和 BackfillManager，为 CLI 命令提供统一执行接口。
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
+
+from ditto_datahub.hub import DataHub
 
 from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
-
-if TYPE_CHECKING:
-    from ditto_datahub.hub import DataHub
 
 
 class CLIExecutor:
@@ -35,8 +34,7 @@ class CLIExecutor:
 
         self._backfill_manager = BackfillManager(
             coordinator=self._coordinator,
-            calendar_store=self._hub.calendar_store,
-            ingestion_log_store=self._hub.ingestion_log,
+            hub=self._hub,
         )
 
     def ingest_daily(

@@ -1,32 +1,14 @@
 """Backfill manager for historical data backfill operations."""
 
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
+from ditto_datahub import DataHub
 from ditto_foundation import logger
-from pydantic import BaseModel
 
-from ditto_port.services.ingestion.coordinator import (
-    IngestionCoordinator,
-    IngestionResult,
-)
+from ditto_port.models import BackfillResult, IngestionResult
+from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 from ditto_port.services.ingestion.result_utils import count_results
-
-if TYPE_CHECKING:
-    from ditto_datahub.stores.calendar_store import CalendarStore
-    from ditto_datahub.stores.ingestion_log import IngestionLogStore
-
-
-class BackfillResult(BaseModel):
-    """回补结果统计。"""
-
-    dataset: str
-    total_dates: int
-    success_count: int
-    skipped_count: int
-    failed_count: int
-    results: list[IngestionResult]
 
 
 class BackfillManager:
@@ -35,21 +17,18 @@ class BackfillManager:
     def __init__(
         self,
         coordinator: IngestionCoordinator,
-        calendar_store: "CalendarStore",
-        ingestion_log_store: "IngestionLogStore",
+        hub: DataHub,
     ) -> None:
         """
         初始化 BackfillManager。
 
         Args:
             coordinator: IngestionCoordinator 实例。
-            calendar_store: CalendarStore 实例。
-            ingestion_log_store: IngestionLogStore 实例。
+            hub: DataHub 实例。
 
         """
         self._coordinator = coordinator
-        self._calendar_store = calendar_store
-        self._ingestion_log_store = ingestion_log_store
+        self._hub = hub
 
     def backfill_range(
         self,
@@ -81,7 +60,7 @@ class BackfillManager:
         )
 
         # 获取日期范围内的所有交易日
-        trade_dates = self._calendar_store.get_range(start_date, end_date)
+        trade_dates = self._hub.calendar.list_trading_days(start_date, end_date)
 
         if not trade_dates:
             return BackfillResult(
@@ -90,14 +69,14 @@ class BackfillManager:
                 success_count=0,
                 skipped_count=0,
                 failed_count=0,
-                results=[],
+                results=(),
             )
 
         results: list[IngestionResult] = []
 
         if parallel > 1:
             # 年份级并行，年内串行（避免文件锁冲突）
-            dates_by_year = defaultdict(list)
+            dates_by_year: defaultdict[str, list[str]] = defaultdict(list)
             for trade_date in trade_dates:
                 year = trade_date[:4]  # 提取年份
                 dates_by_year[year].append(trade_date)
@@ -105,7 +84,7 @@ class BackfillManager:
             with ThreadPoolExecutor(
                 max_workers=min(parallel, len(dates_by_year))
             ) as executor:
-                futures = {}
+                futures: dict[Future[IngestionResult], str] = {}
                 for _year, year_dates in dates_by_year.items():
                     # 每个年份串行处理
                     for date in year_dates:
@@ -134,7 +113,7 @@ class BackfillManager:
             success_count=counts.success,
             skipped_count=counts.skipped,
             failed_count=counts.failed,
-            results=results,
+            results=tuple(results),
         )
 
         logger.info(
@@ -175,8 +154,8 @@ class BackfillManager:
         )
 
         # 获取日历的完整日期范围
-        first_date = self._calendar_store.get_first_trading_day()
-        last_date = self._calendar_store.get_last_trading_day()
+        first_date = self._hub.calendar.get_first_trading_day()
+        last_date = self._hub.calendar.get_last_trading_day()
 
         if not first_date or not last_date:
             return BackfillResult(
@@ -185,11 +164,11 @@ class BackfillManager:
                 success_count=0,
                 skipped_count=0,
                 failed_count=0,
-                results=[],
+                results=(),
             )
 
         # 获取所有交易日
-        all_trade_dates = self._calendar_store.get_range(first_date, last_date)
+        all_trade_dates = self._hub.calendar.list_trading_days(first_date, last_date)
 
         if not all_trade_dates:
             return BackfillResult(
@@ -198,11 +177,11 @@ class BackfillManager:
                 success_count=0,
                 skipped_count=0,
                 failed_count=0,
-                results=[],
+                results=(),
             )
 
         # 获取已摄取的日期
-        ingested_dates = self._ingestion_log_store.get_ingested_dates(dataset, source)
+        ingested_dates = self._hub.ingestion_log.get_ingested_dates(dataset, source)
 
         # 计算缺失的日期
         missing_dates = set(all_trade_dates) - set(ingested_dates)
@@ -214,7 +193,7 @@ class BackfillManager:
                 success_count=0,
                 skipped_count=0,
                 failed_count=0,
-                results=[],
+                results=(),
             )
 
         # 按日期排序
@@ -251,7 +230,7 @@ class BackfillManager:
             success_count=counts.success,
             skipped_count=counts.skipped,
             failed_count=counts.failed,
-            results=results,
+            results=tuple(results),
         )
 
         logger.info(

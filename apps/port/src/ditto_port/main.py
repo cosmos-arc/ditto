@@ -18,7 +18,9 @@ import granian
 import orjson
 
 # Local imports - using editable packages
-# 使用新的 observability 模块
+from ditto_datahub import register_datahub_providers
+from ditto_foundation.config.initializer import InitScope, get_config_coordinator
+from ditto_foundation.config.paths import get_paths
 from ditto_foundation.observability import M, Mode, init, logger, shutdown
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -88,6 +90,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "Observability configured",
             event="observability_ready",
             environment=env,
+        )
+
+        # 初始化配置（静默自动初始化）
+        logger.info("Initializing configuration", event="config_init_start")
+        register_datahub_providers()
+        coordinator = get_config_coordinator()
+        data_root = get_paths().data_home
+        coordinator.initialize(scope=InitScope.STARTUP, data_root=data_root)
+        logger.info(
+            "Configuration initialized",
+            event="config_init_complete",
+            data_root=str(data_root),
         )
 
         # Note: Prefect 3.x uses daemon/workers, not embedded server

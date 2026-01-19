@@ -8,66 +8,37 @@
 - 记录摄取日志
 """
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, Literal, cast
+from collections.abc import Callable
+from typing import Literal
 
 import polars as pl
-from ditto_datahub.repositories.bars import WriteResult
+from ditto_datahub.hub import DataHub
+from ditto_datahub.models import Dataset, OnDuplicate, WriteResult
+from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_datahub.sources.base import DataSource, SourceFetchError
-from ditto_datahub.sources.metadata import IngestionStatus
-from ditto_datahub.types import OnDuplicate
 from ditto_foundation import logger
+from ditto_foundation.util.checksum import ChecksumCompute
 
+from ditto_port.models import IngestionResult
 from ditto_port.services.ingestion.metadata import MetadataManager
-from ditto_port.services.ingestion.security_mapper import SecurityMapper
-
-if TYPE_CHECKING:
-    from ditto_datahub.hub import DataHub
-
-
-@dataclass(frozen=True)
-class IngestionResult:
-    """数据摄取结果。"""
-
-    dataset: str
-    trade_date: str
-    status: Literal["success", "skipped", "failed"]
-    row_count: int | None = None
-    checksum: str | None = None
-    message: str = ""
-    error: str | None = None
 
 
 class IngestionCoordinator:
     """统一摄取协调器。"""
 
-    _DATASET_METHODS: ClassVar[dict[str, str]] = {
-        "calendar": "fetch_calendar",
-        "etf_basic": "fetch_etf_basic",
-        "etf_daily": "fetch_etf_daily",
-        "stock_basic": "fetch_stock_basic",
-        "stock_daily": "fetch_stock_daily",
-        "adj_factor": "fetch_adj_factor",
-        "fund_adj": "fetch_fund_adj",
-    }
-
     def __init__(
         self,
-        hub: "DataHub",
+        hub: DataHub,
         source: DataSource,
         source_name: str = "tushare",
-        security_mapper: SecurityMapper | None = None,
     ) -> None:
         """初始化 IngestionCoordinator。"""
         self._hub = hub
         self._source = source
         self._source_name = source_name
-        self._metadata_manager = MetadataManager(log_store=hub.ingestion_log)
-        self._security_mapper = security_mapper or SecurityMapper(
-            security_store=hub.security_store, sid_allocator=hub.sid_allocator
-        )
+        self._metadata_manager = MetadataManager(hub)
 
-    def ingest_date(  # noqa: PLR0911
+    def ingest_date(
         self,
         dataset: str,
         trade_date: str,
@@ -83,9 +54,33 @@ class IngestionCoordinator:
         )
 
         # 验证数据集是否支持
-        if dataset not in self._DATASET_METHODS:
-            raise ValueError(f"不支持的数据集: {dataset}")
+        try:
+            Dataset(dataset)  # 验证是否为有效的数据集
+        except ValueError as e:
+            raise ValueError(f"不支持的数据集: {dataset}") from e
 
+        # 检查是否应该跳过摄取
+        if skip_result := self._check_should_skip(dataset, trade_date, force):
+            return skip_result
+
+        # 检查交易日（仅行情类数据集）
+        if not self._is_trading_day_for_dataset(dataset, trade_date):
+            return self._create_skipped_result(dataset, trade_date, "非交易日, 跳过")
+
+        # 获取数据并执行摄取
+        return self._fetch_and_ingest(dataset, trade_date, force)
+
+    def _check_should_skip(
+        self, dataset: str, trade_date: str, force: bool
+    ) -> IngestionResult | None:
+        """
+        检查是否应该跳过摄取。
+
+        Returns:
+            IngestionResult: 如果应该跳过，返回跳过结果
+            None: 如果不应该跳过
+
+        """
         should_skip, skip_reason = self._metadata_manager.should_skip(
             dataset=dataset,
             trade_date=trade_date,
@@ -100,73 +95,57 @@ class IngestionCoordinator:
                 status="skipped",
                 message=skip_reason or "数据已存在且摄取成功",
             )
+        return None
 
-        # 对于行情类数据集，检查是否为交易日（P0-2）
+    def _is_trading_day_for_dataset(self, dataset: str, trade_date: str) -> bool:
+        """
+        检查数据集是否需要交易日验证。
+
+        对于行情类数据集（stock_daily, etf_daily），非交易日返回 False。
+        其他数据集不需要交易日验证，返回 True。
+
+        Args:
+            dataset: 数据集名称
+            trade_date: 交易日期
+
+        Returns:
+            bool: True 表示可以继续，False 表示应该跳过
+
+        """
         # P0-2: 行情类数据集在非交易日静默跳过
-        if dataset in (
-            "stock_daily",
-            "etf_daily",
-        ) and not self._hub.calendar_store.is_trading_day(trade_date):
-            return IngestionResult(
-                dataset=dataset,
-                trade_date=trade_date,
-                status="skipped",
-                message="非交易日, 跳过",
-            )
+        try:
+            dataset_enum = Dataset(dataset)
+        except ValueError:
+            return True
 
+        if dataset_enum in (Dataset.STOCK_DAILY, Dataset.ETF_DAILY):
+            return self._hub.calendar_store.is_trading_day(trade_date)
+        return True
+
+    def _create_skipped_result(
+        self, dataset: str, trade_date: str, message: str
+    ) -> IngestionResult:
+        """创建跳过结果。"""
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="skipped",
+            message=message,
+        )
+
+    def _fetch_and_ingest(
+        self, dataset: str, trade_date: str, force: bool
+    ) -> IngestionResult:
+        """获取数据并执行摄取（统一错误处理）。"""
         try:
             df = self._fetch_data(dataset, trade_date)
         except SourceFetchError as e:
-            self._hub.ingestion_log.save_log(
-                dataset=dataset,
-                source=self._source_name,
-                trade_date=trade_date,
-                status=IngestionStatus.FAIL,
-                error_code="FETCH_ERROR",
-                error_message=str(e),
-            )
-            return IngestionResult(
-                dataset=dataset,
-                trade_date=trade_date,
-                status="failed",
-                error="FETCH_ERROR",
-                message=f"获取数据失败: {e}",
-            )
+            return self._handle_fetch_error(dataset, trade_date, e)
         except Exception as e:
-            self._hub.ingestion_log.save_log(
-                dataset=dataset,
-                source=self._source_name,
-                trade_date=trade_date,
-                status=IngestionStatus.FAIL,
-                error_code="UNKNOWN_ERROR",
-                error_message=f"{type(e).__name__}: {e}",
-            )
-            return IngestionResult(
-                dataset=dataset,
-                trade_date=trade_date,
-                status="failed",
-                error="UNKNOWN_ERROR",
-                message=f"未知错误: {e}",
-            )
+            return self._handle_unknown_error(dataset, trade_date, e)
 
         if df.is_empty():
-            self._hub.ingestion_log.save_log(
-                dataset=dataset,
-                source=self._source_name,
-                trade_date=trade_date,
-                status=IngestionStatus.FAIL,
-                error_code="EMPTY_DATA",
-                error_message="获取的数据为空",
-            )
-            return IngestionResult(
-                dataset=dataset,
-                trade_date=trade_date,
-                status="failed",
-                error="EMPTY_DATA",
-                message="获取的数据为空",
-            )
-
-        checksum = self._metadata_manager.compute_checksum(df)
+            return self._handle_empty_data(dataset, trade_date)
 
         # 将 force 映射到 on_duplicate
         on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
@@ -174,28 +153,110 @@ class IngestionCoordinator:
         try:
             write_result = self._write_data(dataset, df, trade_date, on_duplicate)
         except Exception as e:
-            self._hub.ingestion_log.save_log(
+            return self._handle_write_error(dataset, trade_date, e)
+
+        # 检查 DQ 阻断
+        if write_result.blocked:
+            return self._handle_dq_blocked(dataset, trade_date, write_result)
+
+        # 成功写入
+        return self._handle_success(dataset, trade_date, df, write_result)
+
+    def _handle_fetch_error(
+        self, dataset: str, trade_date: str, error: SourceFetchError
+    ) -> IngestionResult:
+        """处理数据获取错误。"""
+        self._hub.ingestion_log.save_log(
+            IngestionLog(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.FAIL,
+                error_code="FETCH_ERROR",
+                error_message=str(error),
+            )
+        )
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="failed",
+            error="FETCH_ERROR",
+            message=f"获取数据失败: {error}",
+        )
+
+    def _handle_unknown_error(
+        self, dataset: str, trade_date: str, error: Exception
+    ) -> IngestionResult:
+        """处理未知错误。"""
+        self._hub.ingestion_log.save_log(
+            IngestionLog(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.FAIL,
+                error_code="UNKNOWN_ERROR",
+                error_message=f"{type(error).__name__}: {error}",
+            )
+        )
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="failed",
+            error="UNKNOWN_ERROR",
+            message=f"未知错误: {error}",
+        )
+
+    def _handle_empty_data(self, dataset: str, trade_date: str) -> IngestionResult:
+        """处理空数据。"""
+        self._hub.ingestion_log.save_log(
+            IngestionLog(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.FAIL,
+                error_code="EMPTY_DATA",
+                error_message="获取的数据为空",
+            )
+        )
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="failed",
+            error="EMPTY_DATA",
+            message="获取的数据为空",
+        )
+
+    def _handle_write_error(
+        self, dataset: str, trade_date: str, error: Exception
+    ) -> IngestionResult:
+        """处理写入错误。"""
+        self._hub.ingestion_log.save_log(
+            IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
                 trade_date=trade_date,
                 status=IngestionStatus.FAIL,
                 error_code="WRITE_ERROR",
-                error_message=str(e),
+                error_message=str(error),
             )
-            return IngestionResult(
-                dataset=dataset,
-                trade_date=trade_date,
-                status="failed",
-                error="WRITE_ERROR",
-                message=f"写入数据失败: {e}",
-            )
+        )
+        return IngestionResult(
+            dataset=dataset,
+            trade_date=trade_date,
+            status="failed",
+            error="WRITE_ERROR",
+            message=f"写入数据失败: {error}",
+        )
 
-        # 检查 DQ 阻断
-        if write_result.blocked:
-            error_count = (
-                write_result.dq_result.error_count if write_result.dq_result else 0
-            )
-            self._hub.ingestion_log.save_log(
+    def _handle_dq_blocked(
+        self, dataset: str, trade_date: str, write_result: WriteResult
+    ) -> IngestionResult:
+        """处理 DQ 阻断。"""
+        error_count = (
+            write_result.dq_result.error_count if write_result.dq_result else 0
+        )
+        self._hub.ingestion_log.save_log(
+            IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
                 trade_date=trade_date,
@@ -203,24 +264,36 @@ class IngestionCoordinator:
                 error_code="DQ_BLOCKED",
                 error_message=f"DQ L1 check failed: {error_count} errors",
             )
+        )
 
-            return IngestionResult(
-                dataset=dataset,
-                trade_date=trade_date,
-                status="failed",
-                error="DQ_BLOCKED",
-                message=(
-                    "DQ L1 check failed, data rejected (will retry via reprocess task)"
-                ),
-            )
-
-        self._hub.ingestion_log.save_log(
+        return IngestionResult(
             dataset=dataset,
-            source=self._source_name,
             trade_date=trade_date,
-            status=IngestionStatus.SUCCESS,
-            checksum=write_result.checksum or checksum,
-            rows=len(df),
+            status="failed",
+            error="DQ_BLOCKED",
+            message=(
+                "DQ L1 check failed, data rejected (will retry via reprocess task)"
+            ),
+        )
+
+    def _handle_success(
+        self,
+        dataset: str,
+        trade_date: str,
+        df: pl.DataFrame,
+        write_result: WriteResult,
+    ) -> IngestionResult:
+        """处理成功写入。"""
+        self._hub.ingestion_log.save_log(
+            IngestionLog(
+                dataset=dataset,
+                source=self._source_name,
+                trade_date=trade_date,
+                status=IngestionStatus.SUCCESS,
+                # 修复：统一使用 write_result.checksum（落盘后包含所有字段的 checksum）
+                checksum=write_result.checksum,
+                rows=len(df),
+            )
         )
 
         return IngestionResult(
@@ -228,7 +301,8 @@ class IngestionCoordinator:
             trade_date=trade_date,
             status="success",
             row_count=len(df),
-            checksum=write_result.checksum or checksum,
+            # 修复：统一使用 write_result.checksum（落盘后包含所有字段的 checksum）
+            checksum=write_result.checksum,
             message="数据摄取成功",
         )
 
@@ -252,33 +326,35 @@ class IngestionCoordinator:
 
         return results
 
-    def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:  # noqa: PLR0911
-        """根据数据集类型调用对应的 Source 方法获取数据。"""
-        from ditto_datahub.sources.base import DataSourceMethods  # noqa: PLC0415
+    def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
+        """
+        根据数据集类型调用对应的 Source 方法获取数据。
 
-        method_name = self._DATASET_METHODS.get(dataset)
-        if method_name is None:
+        使用字典映射替代动态 getattr 调用，易于扩展新数据集。
+        """
+        # 转换为枚举
+        try:
+            dataset_enum = Dataset(dataset)
+        except ValueError as e:
+            raise ValueError(f"不支持的数据集: {dataset}") from e
+
+        # 定义数据集获取函数映射（使用枚举作为键）
+        handlers: dict[Dataset, Callable[[], pl.DataFrame]] = {
+            Dataset.CALENDAR: lambda: self._source.fetch_calendar(
+                trade_date, trade_date
+            ),
+            Dataset.STOCK_BASIC: lambda: self._source.fetch_stock_basic(),
+            Dataset.ETF_BASIC: lambda: self._source.fetch_etf_basic(),
+            Dataset.STOCK_DAILY: lambda: self._source.fetch_stock_daily(trade_date),
+            Dataset.ETF_DAILY: lambda: self._source.fetch_etf_daily(trade_date),
+            Dataset.ADJ_FACTOR: lambda: self._source.fetch_adj_factor(trade_date),
+            Dataset.FUND_ADJ: lambda: self._source.fetch_fund_adj(trade_date),
+        }
+
+        if dataset_enum not in handlers:
             raise ValueError(f"不支持的数据集: {dataset}")
 
-        source: DataSourceMethods = cast(DataSourceMethods, self._source)
-
-        if dataset == "calendar":
-            return source.fetch_calendar(trade_date, trade_date)
-        if dataset == "etf_basic":
-            return source.fetch_etf_basic()
-        if dataset == "stock_basic":
-            return source.fetch_stock_basic()
-        if dataset == "etf_daily":
-            return source.fetch_etf_daily(trade_date)
-        if dataset == "stock_daily":
-            return source.fetch_stock_daily(trade_date)
-        if dataset == "adj_factor":
-            return source.fetch_adj_factor(trade_date)
-        if dataset == "fund_adj":
-            return source.fetch_fund_adj(trade_date)
-
-        # 不应该到达这里（前面已经验证过 dataset）
-        raise ValueError(f"不支持的数据集: {dataset}")
+        return handlers[dataset_enum]()
 
     def _write_data(
         self,
@@ -290,18 +366,24 @@ class IngestionCoordinator:
         """根据数据集类型写入对应的 Store。"""
         year = int(trade_date[:4])
 
-        if dataset in ("etf_daily", "stock_daily"):
-            # 补齐 sid/source 字段
+        # 转换为枚举进行比较
+        try:
+            dataset_enum = Dataset(dataset)
+        except ValueError as e:
+            raise ValueError(f"不支持写入数据集: {dataset}") from e
+
+        if dataset_enum in (Dataset.ETF_DAILY, Dataset.STOCK_DAILY):
+            # 补齐 sid/source 字段（使用 SecuritiesAccessor API）
             asset_class: Literal["stock", "etf"] = (
-                "etf" if dataset == "etf_daily" else "stock"
+                "etf" if dataset_enum == Dataset.ETF_DAILY else "stock"
             )
-            df = self._security_mapper.enrich_dataframe(
+            df = self._hub.securities.enrich_dataframe_with_sid(
                 df,
-                src_code_col="src_code",
-                asset_class=asset_class,
                 source=self._source_name,
+                asset_class=asset_class,
+                src_code_col="src_code",
             )
-            # 使用 Repository 层以获得文件锁和 DQ 检查保护
+            # 使用 Accessor 层以获得文件锁和 DQ 检查保护
             return self._hub.bars.write(
                 df=df,
                 year=year,
@@ -310,33 +392,34 @@ class IngestionCoordinator:
                 run_dq_check=True,
                 on_duplicate=on_duplicate,
             )
-        elif dataset in ("adj_factor", "fund_adj"):
-            # 补齐 sid/source 字段
+        elif dataset_enum in (Dataset.ADJ_FACTOR, Dataset.FUND_ADJ):
+            # 补齐 sid/source 字段（使用 SecuritiesAccessor API）
             adj_asset_class: Literal["stock", "etf"] = (
-                "etf" if dataset == "fund_adj" else "stock"
+                "etf" if dataset_enum == Dataset.FUND_ADJ else "stock"
             )
 
             # 检查是否已有 sid 列（上游可能已处理）
             if "sid" not in df.columns:
-                df = self._security_mapper.enrich_dataframe(
+                df = self._hub.securities.enrich_dataframe_with_sid(
                     df,
-                    src_code_col="src_code",
-                    asset_class=adj_asset_class,
                     source=self._source_name,
+                    asset_class=adj_asset_class,
+                    src_code_col="src_code",
                 )
 
-            # 使用 AdjFactorRepository 写入（带文件锁保护）
+            # 使用 AdjFactorAccessor 写入（带文件锁保护）
             return self._hub.adj_factor.write(
                 dataset=dataset,
                 df=df,
                 year=year,
                 on_duplicate=on_duplicate,
             )
-        elif dataset == "calendar":
+        elif dataset_enum == Dataset.CALENDAR:
             records = df.to_dicts()
             self._hub.calendar_store.upsert(records)
             file_path = f"calendar_store:{trade_date}"
-            checksum = self._metadata_manager.compute_checksum(df)
+            # 修复：使用统一的 ChecksumCompute（MD5 算法，确定性排序）
+            checksum = ChecksumCompute.from_dataframe(df, "calendar")
             return WriteResult(
                 file_path=file_path,
                 checksum=checksum,
@@ -345,7 +428,7 @@ class IngestionCoordinator:
                 blocked=False,
                 dq_result=None,
             )
-        elif dataset == "stock_basic":
+        elif dataset_enum == Dataset.STOCK_BASIC:
             file_path, checksum = self._write_stock_basic(df, trade_date)
             return WriteResult(
                 file_path=file_path,
@@ -355,7 +438,7 @@ class IngestionCoordinator:
                 blocked=False,
                 dq_result=None,
             )
-        elif dataset == "etf_basic":
+        elif dataset_enum == Dataset.ETF_BASIC:
             file_path, checksum = self._write_etf_basic(df, trade_date)
             return WriteResult(
                 file_path=file_path,
@@ -370,7 +453,7 @@ class IngestionCoordinator:
 
     def _write_stock_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """写入 stock_basic 数据到 security_store。"""
-        # 使用 SecurityRepository 批量注册（线程安全）
+        # 使用 SecuritiesAccessor 批量注册（线程安全）
         file_path, checksum = self._hub.securities.register_batch(
             df=df,
             source=self._source_name,
@@ -382,7 +465,7 @@ class IngestionCoordinator:
 
     def _write_etf_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """写入 etf_basic 数据到 security_store。"""
-        # 使用 SecurityRepository 批量注册（线程安全）
+        # 使用 SecuritiesAccessor 批量注册（线程安全）
         file_path, checksum = self._hub.securities.register_batch(
             df=df,
             source=self._source_name,

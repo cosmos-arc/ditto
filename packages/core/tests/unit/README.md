@@ -339,7 +339,7 @@ import polars as pl
 def mock_hub():
     """创建 Mock DataHub"""
     hub = Mock()
-    hub.bars.get.return_value = pl.DataFrame({
+    hub.sources.bars.get.return_value = pl.DataFrame({
         "symbol": ["510300.SH", "510500.SH"],
         "close": [4.5, 4.2],
         "trade_date": [date(2024, 1, 31), date(2024, 1, 31)]
@@ -354,7 +354,7 @@ def test_with_mock_hub(mock_hub):
         end_date=date(2024, 1, 31)
     )
 
-    mock_hub.bars.get.assert_called_once()
+    mock_hub.sources.bars.get.assert_called_once()
     assert result is not None
 ```
 

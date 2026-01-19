@@ -1,7 +1,6 @@
 """Tests for IndexWeightStore."""
 
 import pytest
-from ditto_datahub.runtime.sqlite_pool import SQLitePool
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
@@ -14,12 +13,10 @@ class TestIndexWeightStore:
     These tests require more resources and time than unit tests.
     """
 
-    def setup_method(self) -> None:
-        """Set up test database."""
-        # Create in-memory database for testing
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        self.client = sqlite_client
         self.store = IndexWeightStore(self.client)
 
     def test_index_weight_store_init(self) -> None:
@@ -230,11 +227,10 @@ class TestIndexWeightStorePITSafety:
     These tests require more resources and time than unit tests.
     """
 
-    def setup_method(self) -> None:
-        """Set up test database."""
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        self.client = sqlite_client
         self.store = IndexWeightStore(self.client)
 
     def test_pit_query_effective_boundary(self) -> None:

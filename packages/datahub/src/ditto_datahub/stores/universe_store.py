@@ -249,24 +249,8 @@ class UniverseStore:
             List of security IDs.
 
         """
-        if asof:
-            rows = self._client.fetchall(
-                """SELECT sid FROM universe_constituent
-                WHERE universe_id = ?
-                  AND effective_from <= ?
-                  AND (effective_to IS NULL OR effective_to > ?)
-                ORDER BY sid""",
-                [universe_id, asof, asof],
-            )
-        else:
-            rows = self._client.fetchall(
-                """SELECT sid FROM universe_constituent
-                WHERE universe_id = ? AND effective_to IS NULL
-                ORDER BY sid""",
-                [universe_id],
-            )
-
-        return [int(r["sid"]) for r in rows]
+        df = self.get_constituents(universe_id, asof)
+        return df["sid"].to_list() if not df.is_empty() else []
 
     @traced("data.universe_remove_constituent")
     def remove_constituent(
