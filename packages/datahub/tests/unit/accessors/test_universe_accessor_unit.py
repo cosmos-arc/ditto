@@ -19,11 +19,11 @@ class TestUniverseAccessor:
     These tests require more resources and time than unit tests.
     """
 
-    def setup_method(self) -> None:
-        """Set up test database."""
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient, sqlite_pool: SQLitePool) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端和连接池。"""
+        self.pool = sqlite_pool
+        self.client = sqlite_client
         self.universe_store = UniverseStore(self.client)
         self.security_store = SecurityStore(self.client)
         self.sid_allocator = SidAllocator(self.pool)

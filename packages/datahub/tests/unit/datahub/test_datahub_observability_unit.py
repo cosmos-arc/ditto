@@ -12,6 +12,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import polars as pl
+import pytest
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.calendar_store import CalendarStore
@@ -19,7 +20,6 @@ from ditto_datahub.stores.security_store import SecurityRegistration, SecuritySt
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import (
     Mode,
-    SQLitePool,
     get_recorded_metrics,
     get_recorded_spans,
     init,
@@ -204,13 +204,11 @@ class TestObservabilityAdjFactorStore:
 class TestObservabilitySecurityStore:
     """Test observability features in SecurityStore."""
 
-    def setup_method(self) -> None:
-        """Set up test environment with assertions mode."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
-        # Create in-memory database for testing
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
         self.store = SecurityStore(self.client)
 
     def teardown_method(self) -> None:
@@ -284,13 +282,11 @@ class TestObservabilitySecurityStore:
 class TestObservabilityCalendarStore:
     """Test observability features in CalendarStore."""
 
-    def setup_method(self) -> None:
-        """Set up test environment with assertions mode."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
-        # Create in-memory database for testing
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
         self.store = CalendarStore(self.client)
 
     def teardown_method(self) -> None:
@@ -356,14 +352,12 @@ class TestObservabilityCalendarStore:
 class TestObservabilityIntegration:
     """Integration tests for observability across datahub."""
 
-    def setup_method(self) -> None:
-        """Set up test environment with assertions mode."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
         self.temp_dir = TemporaryDirectory()
-        # Create in-memory database for SecurityStore
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
 
     def teardown_method(self) -> None:
         """Clean up test environment."""

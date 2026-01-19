@@ -341,9 +341,13 @@ class TestDatabaseSchemaProvider:
         assert result.success is True
         assert result.skipped is False
 
-        # 验证数据库路径正确
+        # 验证数据库路径正确（现在包含 schema_path 参数）
         expected_db_path = str(data_root / "meta" / "hub.sqlite")
-        mock_pool.assert_called_once_with(expected_db_path)
+        mock_pool.assert_called_once()
+        call_args = mock_pool.call_args
+        assert call_args[0][0] == expected_db_path
+        assert "schema_path" in call_args[1]
+        assert call_args[1]["schema_path"].name == "schema.sql"
 
         # 验证 schema 初始化被调用
         mock_instance.init_schema.assert_called_once()

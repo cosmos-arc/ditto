@@ -4,17 +4,15 @@ import pytest
 from ditto_datahub.accessors.calendar import CalendarAccessor
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import SQLitePool
 
 
 class TestCalendarAccessor:
     """Tests for CalendarAccessor."""
 
-    def setup_method(self) -> None:
-        """Set up test database."""
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        self.client = sqlite_client
         self.calendar_store = CalendarStore(self.client)
         self.accessor = CalendarAccessor(self.calendar_store)
 

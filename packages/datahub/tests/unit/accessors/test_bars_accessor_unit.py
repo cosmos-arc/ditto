@@ -18,7 +18,6 @@ from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
-from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager
 from pytest_mock import MockerFixture
 
@@ -289,14 +288,13 @@ class TestBarsAccessor:
     These tests require more resources and time than unit tests.
     """
 
-    def setup_method(self) -> None:
-        """Set up test environment."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
@@ -413,14 +411,13 @@ class TestBarsAccessor:
 class TestPITSafeAdjustment:
     """Tests for PIT-safe (Point-in-Time) adjustment calculation."""
 
-    def setup_method(self) -> None:
-        """Set up test environment."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
@@ -613,14 +610,13 @@ class TestPITSafeAdjustment:
 class TestQFQAdjustment:
     """Tests for QFQ (前复权) adjustment."""
 
-    def setup_method(self) -> None:
-        """Set up test environment."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
@@ -880,14 +876,13 @@ class TestQFQAdjustment:
 class TestBarsAccessorSingle:
     """Tests for get_single method."""
 
-    def setup_method(self) -> None:
-        """Set up test environment."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
@@ -1071,14 +1066,13 @@ class TestBarsAccessorSingle:
 class TestMixedAssetClass:
     """Tests for mixed asset class handling."""
 
-    def setup_method(self) -> None:
-        """Set up test environment."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
@@ -1307,14 +1301,13 @@ class TestMixedAssetClass:
 class TestAdjFactorEdgeCases:
     """复权因子边缘情况测试."""
 
-    def setup_method(self) -> None:
-        """Set up test environment."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
@@ -1603,14 +1596,13 @@ class TestAdjFactorEdgeCases:
 class TestMarketWideMode:
     """Tests for market_wide query mode."""
 
-    def setup_method(self) -> None:
-        """Set up test environment with multiple securities."""
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端。"""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+        self.client = sqlite_client
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)

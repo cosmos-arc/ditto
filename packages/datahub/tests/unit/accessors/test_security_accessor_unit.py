@@ -12,11 +12,11 @@ from ditto_foundation import SQLitePool
 class TestSecuritiesAccessor:
     """Tests for SecuritiesAccessor."""
 
-    def setup_method(self) -> None:
-        """Set up test database."""
-        self.pool = SQLitePool(":memory:")
-        self.pool.init_schema()
-        self.client = SQLiteClient(self.pool)
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient, sqlite_pool: SQLitePool) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端和连接池。"""
+        self.pool = sqlite_pool
+        self.client = sqlite_client
         self.security_store = SecurityStore(self.client)
         self.sid_allocator = SidAllocator(self.pool)
         self.accessor = SecuritiesAccessor(

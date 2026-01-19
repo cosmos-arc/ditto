@@ -12,6 +12,15 @@ from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.hub import DataHub
 from ditto_foundation import SQLitePool
 
+# Schema 文件路径
+_SCHEMA_PATH = (
+    Path(__file__).parent.parent.parent
+    / "src"
+    / "ditto_datahub"
+    / "scripts"
+    / "schema.sql"
+)
+
 
 class TestDataHub:
     """Test cases for DataHub Facade."""
@@ -26,7 +35,9 @@ class TestDataHub:
         (self.data_root / "locks").mkdir(parents=True, exist_ok=True)
 
         # Initialize database schema
-        pool = SQLitePool(str(self.data_root / "meta" / "hub.sqlite"))
+        pool = SQLitePool(
+            str(self.data_root / "meta" / "hub.sqlite"), schema_path=_SCHEMA_PATH
+        )
         pool.init_schema()
         pool.close()
 
