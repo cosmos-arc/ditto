@@ -7,7 +7,7 @@
 """
 
 import polars as pl
-from ditto_datahub.sources.metadata import IngestionLog
+from ditto_datahub.models.ingestion import IngestionLog
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_foundation import logger
 from ditto_foundation.util.checksum import ChecksumCompute

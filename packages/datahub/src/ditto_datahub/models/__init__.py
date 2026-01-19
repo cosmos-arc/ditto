@@ -1,6 +1,13 @@
 """DataHub models for data transfer objects."""
 
 from ditto_datahub.models.common import AssetSidRange, Dataset, OnDuplicate
+from ditto_datahub.models.ingestion import (
+    DataChangedError,
+    IngestionCursor,
+    IngestionLog,
+    IngestionStatus,
+    NotTradingDayError,
+)
 from ditto_datahub.models.quality import (
     ColumnRule,
     CompletenessRule,
@@ -38,14 +45,19 @@ __all__ = [
     "DQResult",
     "DQSeverity",
     "DQSpec",
+    "DataChangedError",
     "Dataset",
     "DatasetRules",
     "ExpressionRule",
     "ForeignKeyRule",
     "FreezeManifest",
+    "IngestionCursor",
+    "IngestionLog",
+    "IngestionStatus",
     "MonotonicDecreaseRule",
     "NoZeroVolumeRule",
     "NotNullRule",
+    "NotTradingDayError",
     "OnDuplicate",
     "OutlierRule",
     "PositiveRule",

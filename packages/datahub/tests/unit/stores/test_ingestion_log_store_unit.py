@@ -1,7 +1,7 @@
 """Tests for IngestionLogStore."""
 
 import pytest
-from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
+from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
@@ -9,7 +9,8 @@ from ditto_foundation import SQLitePool
 
 @pytest.mark.pit
 class TestIngestionLogStore:
-    """Tests for IngestionLogStore.
+    """
+    Tests for IngestionLogStore.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.

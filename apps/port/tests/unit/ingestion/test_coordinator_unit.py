@@ -7,7 +7,7 @@ import pytest
 from ditto_datahub.accessors.bars import WriteResult
 from ditto_datahub.dq.engine import DQResult
 from ditto_datahub.models import OnDuplicate
-from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
+from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_datahub.sources.provider import DataProvider, ProviderFetchError
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_foundation.observability import Mode, init, reset_for_testing

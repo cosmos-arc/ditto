@@ -1,4 +1,5 @@
-"""Concurrency tests for IngestionLogStore.
+"""
+Concurrency tests for IngestionLogStore.
 
 Tests thread-safety of save_log() method using atomic UPSERT.
 Validates that attempts counter increments correctly under concurrent access.
@@ -10,7 +11,7 @@ import tempfile
 import threading
 
 import pytest
-from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
+from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
@@ -18,7 +19,8 @@ from ditto_foundation import SQLitePool
 
 @pytest.mark.pit
 class TestIngestionLogConcurrent:
-    """Tests for IngestionLogStore concurrent access.
+    """
+    Tests for IngestionLogStore concurrent access.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
@@ -37,7 +39,8 @@ class TestIngestionLogConcurrent:
         self.store = IngestionLogStore(self.client)
 
     def test_concurrent_save_log_attempts_increment(self) -> None:
-        """Test concurrent save_log increments attempts atomically.
+        """
+        Test concurrent save_log increments attempts atomically.
 
         This test creates multiple threads that all try to save the same log
         record concurrently. It verifies that:
@@ -87,7 +90,8 @@ class TestIngestionLogConcurrent:
         assert final_log.last_attempt_at is not None, "last_attempt_at should be set"
 
     def test_concurrent_save_log_different_dates(self) -> None:
-        """Test concurrent saves for different dates don't interfere.
+        """
+        Test concurrent saves for different dates don't interfere.
 
         This test verifies that concurrent saves for different trade dates
         don't cause any cross-interference or race conditions.
@@ -134,7 +138,8 @@ class TestIngestionLogConcurrent:
             assert log.attempts == 1, f"Date {date} should have attempts=1"
 
     def test_concurrent_save_then_update(self) -> None:
-        """Test concurrent save followed by updates.
+        """
+        Test concurrent save followed by updates.
 
         This test simulates a scenario where one thread creates a record
         and multiple threads try to update it concurrently.
@@ -198,7 +203,8 @@ class TestIngestionLogConcurrent:
         assert final_log.status == IngestionStatus.SUCCESS
 
     def test_concurrent_mixed_operations(self) -> None:
-        """Test concurrent mixed operations (save, get, query).
+        """
+        Test concurrent mixed operations (save, get, query).
 
         This test verifies that concurrent reads and writes don't cause issues.
         """

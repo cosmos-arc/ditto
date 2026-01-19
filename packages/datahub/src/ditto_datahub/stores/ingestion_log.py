@@ -5,7 +5,7 @@ from typing import Any
 
 from ditto_foundation import logger
 
-from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
+from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 

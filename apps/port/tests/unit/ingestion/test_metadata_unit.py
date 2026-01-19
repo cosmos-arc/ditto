@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
+from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_foundation.observability import Mode, init, reset_for_testing
 from ditto_foundation.util.checksum import ChecksumCompute
 from ditto_port.services.ingestion.metadata import MetadataManager

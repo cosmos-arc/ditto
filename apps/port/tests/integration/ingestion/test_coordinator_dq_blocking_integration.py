@@ -75,7 +75,7 @@ class TestDQBlockingBehavior:
         """Test that DQ blocked ingestion logs FAIL status for retry."""
         from ditto_datahub.accessors.bars import WriteResult
         from ditto_datahub.dq import DQResult
-        from ditto_datahub.sources.metadata import IngestionLog, IngestionStatus
+        from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
         from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
         # Mock DataHub

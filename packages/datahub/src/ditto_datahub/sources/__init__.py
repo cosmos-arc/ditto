@@ -1,5 +1,12 @@
 """Data providers for external data ingestion."""
 
+from ditto_datahub.models.ingestion import (
+    DataChangedError,
+    IngestionCursor,
+    IngestionLog,
+    IngestionStatus,
+    NotTradingDayError,
+)
 from ditto_datahub.sources.provider import (
     DataProvider,
     DataProviderError,
@@ -13,8 +20,13 @@ from ditto_datahub.sources.provider import (
 from ditto_datahub.sources.tushare.tushare_provider import TushareProvider
 
 __all__ = [
+    "DataChangedError",
     "DataProvider",
     "DataProviderError",
+    "IngestionCursor",
+    "IngestionLog",
+    "IngestionStatus",
+    "NotTradingDayError",
     "ProviderAuthenticationError",
     "ProviderConfigurationError",
     "ProviderFetchError",
