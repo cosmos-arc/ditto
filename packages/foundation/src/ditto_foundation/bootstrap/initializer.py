@@ -11,7 +11,8 @@ from pathlib import Path
 from typing import Any
 
 from ditto_foundation.config import get_settings
-from ditto_foundation.observability import Mode, init
+from ditto_foundation.observability import init
+from ditto_foundation.observability.config import ObservabilityConfig
 from ditto_foundation.observability.logging import logger
 
 
@@ -84,33 +85,24 @@ class AppInitializer:
     def _setup_observability(self, settings: Any) -> None:
         """Set up observability (logging, tracing, metrics)."""
         obs_settings = settings.observability
+        environment = settings.system.ditto_env
 
-        # 检查是否启用
-        if not obs_settings.enabled:
-            logger.info("Observability disabled by configuration")
-            return
-
-        # 解析 mode
-        mode_mapping: dict[str, Mode | None] = {
-            "auto": None,
-            "production": Mode.PRODUCTION,
-            "development": Mode.DEVELOPMENT,
-            "testing": Mode.TESTING,
-        }
-
-        configured_mode = mode_mapping.get(obs_settings.mode.lower(), None)
-        actual_mode = configured_mode or (
-            Mode.PRODUCTION if settings.is_production else Mode.DEVELOPMENT
-        )
+        # 使用 ObservabilityConfig.detect_runtime_flags() 检测运行时标志
+        runtime_flags = ObservabilityConfig.detect_runtime_flags(environment)
+        pytest_running = runtime_flags["pytest_running"]
+        assertions_enabled = runtime_flags["assertions_enabled"]
+        verbose_logging = runtime_flags["verbose_logging"]
 
         # 初始化
         init(
             service_name="ditto",
-            environment=settings.system.ditto_env,
+            environment=environment.value,  # 使用 enum value 而非 str()
             log_level=obs_settings.log_level,
             log_dir=str(settings.file_storage.log_root),
             vm_endpoint=obs_settings.vm_endpoint,
-            mode=actual_mode,
+            pytest_running=pytest_running,
+            assertions_enabled=assertions_enabled,
+            verbose_logging=verbose_logging,
         )
 
     def _validate_config(self, settings: Any) -> list[str]:

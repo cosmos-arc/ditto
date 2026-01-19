@@ -10,7 +10,7 @@ from ditto_datahub.models import OnDuplicate
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
-from ditto_foundation.observability import Mode, init, reset_for_testing
+from ditto_foundation.observability import init, reset_for_testing
 from ditto_port.services.ingestion.coordinator import (
     IngestionCoordinator,
     IngestionResult,
@@ -45,7 +45,12 @@ def mock_hub_adj_factor_write(file_path: str, checksum: str) -> WriteResult:
 def setup_observability():
     """初始化可观测性。"""
     reset_for_testing()
-    init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+    init(
+        pytest_running=True,
+        assertions_enabled=True,
+        verbose_logging=False,
+        force=True,
+    )
     yield
     reset_for_testing()
 

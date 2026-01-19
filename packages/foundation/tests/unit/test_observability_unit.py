@@ -4,12 +4,11 @@
 测试日志、追踪和指标功能的核心行为.
 """
 
-import os
 import re
 
 from ditto_foundation import (
+    EffectiveConfig,
     M,
-    Mode,
     ObservabilityConfig,
     get_recorded_metrics,
     get_recorded_spans,
@@ -23,44 +22,163 @@ from ditto_foundation import (
 )
 
 
-class TestMode:
-    """测试运行模式."""
+class TestPresetConfig:
+    """测试预设配置系统."""
 
-    def test_mode_detection(self) -> None:
-        """测试模式检测."""
-        # 保存原始环境变量
-        original_mode = os.environ.get("DITTO_OBSERVABILITY_MODE")
+    def test_development_preset_defaults(self) -> None:
+        """测试开发环境预设默认值."""
+        config = ObservabilityConfig(profile="development")
+        effective = config.get_effective_config()
 
-        try:
-            # 测试 production 模式
-            os.environ["DITTO_OBSERVABILITY_MODE"] = "production"
-            config = ObservabilityConfig(environment="production")
-            assert config.detect_mode() == Mode.PRODUCTION
+        assert effective.log_level == "DEBUG"
+        assert effective.tracing_enabled is True
+        assert effective.tracing_sample_rate == 1.0
+        assert effective.metrics_enabled is True
+        assert effective.assertions_enabled is True
+        assert effective.verbose_logging is True
+        assert effective.pytest_running is False
 
-            # 测试 development 模式
-            os.environ["DITTO_OBSERVABILITY_MODE"] = "development"
-            config = ObservabilityConfig(environment="dev")
-            assert config.detect_mode() == Mode.DEVELOPMENT
+    def test_testing_preset_defaults(self) -> None:
+        """测试测试环境预设默认值."""
+        config = ObservabilityConfig(profile="testing")
+        effective = config.get_effective_config()
 
-        finally:
-            # 恢复原始环境变量
-            if original_mode is None:
-                os.environ.pop("DITTO_OBSERVABILITY_MODE", None)
-            else:
-                os.environ["DITTO_OBSERVABILITY_MODE"] = original_mode
+        assert effective.log_level == "WARNING"
+        assert effective.tracing_enabled is False
+        assert effective.tracing_sample_rate == 0.0
+        assert effective.metrics_enabled is False
+        assert effective.assertions_enabled is False
+        assert effective.verbose_logging is False
+        assert effective.pytest_running is False
 
-    def test_mode_is_testing(self) -> None:
-        """测试 is_testing 方法."""
-        assert Mode.TESTING.is_testing() is True
-        assert Mode.TESTING_WITH_ASSERTIONS.is_testing() is True
-        assert Mode.PRODUCTION.is_testing() is False
-        assert Mode.DEVELOPMENT.is_testing() is False
+    def test_production_preset_defaults(self) -> None:
+        """测试生产环境预设默认值."""
+        config = ObservabilityConfig(profile="production")
+        effective = config.get_effective_config()
 
-    def test_mode_is_silent(self) -> None:
-        """测试 is_silent 方法."""
-        assert Mode.TESTING.is_silent() is True
-        assert Mode.TESTING_WITH_ASSERTIONS.is_silent() is False
-        assert Mode.PRODUCTION.is_silent() is False
+        assert effective.log_level == "INFO"
+        assert effective.tracing_enabled is True
+        assert effective.tracing_sample_rate == 0.1
+        assert effective.metrics_enabled is True
+        assert effective.assertions_enabled is False
+        assert effective.verbose_logging is False
+        assert effective.pytest_running is False
+
+    def test_override_log_level(self) -> None:
+        """测试覆盖日志级别."""
+        config = ObservabilityConfig(profile="development", log_level="ERROR")
+        effective = config.get_effective_config()
+
+        assert effective.log_level == "ERROR"
+        # 其他值应该使用预设
+        assert effective.tracing_enabled is True
+        assert effective.metrics_enabled is True
+
+    def test_override_tracing(self) -> None:
+        """测试覆盖追踪配置."""
+        config = ObservabilityConfig(
+            profile="development",
+            tracing_enabled=False,
+            tracing_sample_rate=0.5,
+        )
+        effective = config.get_effective_config()
+
+        assert effective.tracing_enabled is False
+        assert effective.tracing_sample_rate == 0.5
+        # 其他值应该使用预设
+        assert effective.log_level == "DEBUG"
+        assert effective.metrics_enabled is True
+
+    def test_override_multiple_fields(self) -> None:
+        """测试覆盖多个字段."""
+        config = ObservabilityConfig(
+            profile="production",
+            log_level="DEBUG",
+            tracing_sample_rate=1.0,
+            assertions_enabled=True,
+        )
+        effective = config.get_effective_config()
+
+        assert effective.log_level == "DEBUG"  # 覆盖
+        assert effective.tracing_enabled is True  # 预设
+        assert effective.tracing_sample_rate == 1.0  # 覆盖
+        assert effective.metrics_enabled is True  # 预设
+        assert effective.assertions_enabled is True  # 覆盖
+        assert effective.verbose_logging is False  # 预设
+
+    def test_pytest_running_flag(self) -> None:
+        """测试 pytest_running 标志."""
+        config = ObservabilityConfig(profile="development", pytest_running=True)
+        effective = config.get_effective_config()
+
+        assert effective.pytest_running is True
+        # 其他值应该使用预设
+        assert effective.log_level == "DEBUG"
+        assert effective.assertions_enabled is True
+
+    def test_none_values_use_preset(self) -> None:
+        """测试 None 值使用预设."""
+        config = ObservabilityConfig(
+            profile="testing",
+            log_level=None,
+            tracing_enabled=None,
+            metrics_enabled=None,
+        )
+        effective = config.get_effective_config()
+
+        assert effective.log_level == "WARNING"
+        assert effective.tracing_enabled is False
+        assert effective.metrics_enabled is False
+
+    def test_effective_config_type(self) -> None:
+        """测试 EffectiveConfig 类型."""
+        config = ObservabilityConfig(profile="development")
+        effective = config.get_effective_config()
+
+        assert isinstance(effective, EffectiveConfig)
+        # 验证所有字段都存在
+        assert hasattr(effective, "log_level")
+        assert hasattr(effective, "tracing_enabled")
+        assert hasattr(effective, "tracing_sample_rate")
+        assert hasattr(effective, "metrics_enabled")
+        assert hasattr(effective, "vm_endpoint")
+        assert hasattr(effective, "assertions_enabled")
+        assert hasattr(effective, "verbose_logging")
+        assert hasattr(effective, "pytest_running")
+
+
+class TestRuntimeFlags:
+    """测试运行时行为标志."""
+
+    def test_detect_runtime_flags_testing(self) -> None:
+        """测试测试环境的运行时标志检测."""
+        from ditto_foundation.config.environment import Environment
+
+        flags = ObservabilityConfig.detect_runtime_flags(Environment.TESTING)
+        # 在 pytest 环境中运行，pytest_running 应该是 True
+        assert flags["pytest_running"] is True  # 在 pytest 中运行
+        assert flags["assertions_enabled"] is True
+        assert flags["verbose_logging"] is False  # 静默模式
+
+    def test_detect_runtime_flags_production(self) -> None:
+        """测试生产环境的运行时标志检测."""
+        from ditto_foundation.config.environment import Environment
+
+        flags = ObservabilityConfig.detect_runtime_flags(Environment.PRODUCTION)
+        # 在 pytest 环境中运行，pytest_running 应该是 True
+        assert flags["pytest_running"] is True  # 在 pytest 中运行
+        assert flags["assertions_enabled"] is False
+        assert flags["verbose_logging"] is False
+
+    def test_detect_runtime_flags_development(self) -> None:
+        """测试开发环境的运行时标志检测."""
+        from ditto_foundation.config.environment import Environment
+
+        flags = ObservabilityConfig.detect_runtime_flags(Environment.DEVELOPMENT)
+        # 在 pytest 环境中运行，pytest_running 应该是 True
+        assert flags["pytest_running"] is True  # 在 pytest 中运行
+        assert flags["assertions_enabled"] is True
+        assert flags["verbose_logging"] is True
 
 
 class TestInit:
@@ -72,17 +190,31 @@ class TestInit:
         init(force=True)
         # 应该成功初始化不报错
 
-    def test_init_with_mode(self) -> None:
-        """测试指定模式初始化."""
+    def test_init_with_testing_flags(self) -> None:
+        """测试使用测试标志初始化."""
         reset_for_testing()
-        init(mode=Mode.TESTING, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=False,
+            verbose_logging=False,
+            force=True,
+        )
         # 应该成功初始化不报错
 
     def test_init_idempotent(self) -> None:
         """测试多次初始化幂等性."""
         reset_for_testing()
-        init(mode=Mode.TESTING, force=True)
-        init(mode=Mode.TESTING)  # 第二次调用应该被忽略(不报错)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+        )  # 第二次调用应该被忽略(不报错)
 
 
 class TestSpan:
@@ -91,7 +223,12 @@ class TestSpan:
     def test_span_created(self) -> None:
         """测试 Span 创建."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         with span("test_operation", key="value"):
             pass
@@ -104,7 +241,12 @@ class TestSpan:
     def test_span_attributes(self) -> None:
         """测试 Span 属性设置."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         with span("test_op", source="tushare") as s:
             s.set_attribute("rows", 100)
@@ -116,7 +258,12 @@ class TestSpan:
     def test_nested_spans(self) -> None:
         """测试嵌套 Span."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         with span("parent"):
             with span("child"):
@@ -130,7 +277,12 @@ class TestSpan:
     def test_span_records_exception(self) -> None:
         """测试 Span 记录异常."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         try:
             with span("test_operation"):
@@ -145,7 +297,12 @@ class TestSpan:
     def test_traced_decorator(self) -> None:
         """测试 @traced 装饰器."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         @traced("my_operation")
         def my_func(x: int) -> int:
@@ -165,7 +322,12 @@ class TestTraceId:
     def test_trace_id_format(self) -> None:
         """测试 trace_id 格式 (UUID)."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         with span("test_op"):
             trace_id = get_trace_id()
@@ -181,7 +343,12 @@ class TestTraceId:
     def test_span_id_format(self) -> None:
         """测试 span_id 格式 (16位十六进制)."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         with span("test_op"):
             span_id = get_span_id()
@@ -194,7 +361,12 @@ class TestTraceId:
     def test_trace_id_consistency(self) -> None:
         """测试同一 trace 中 trace_id 一致."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         with span("parent"):
             trace_id_1 = get_trace_id()
@@ -210,7 +382,12 @@ class TestMetrics:
     def test_counter_incremented(self) -> None:
         """测试 Counter 递增."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         M.data_records.add(
             100, {"source": "test", "table": "test", "status": "success"}
@@ -223,7 +400,12 @@ class TestMetrics:
     def test_gauge_set(self) -> None:
         """测试 Gauge 设置."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         M.kill_switch_level.set(2.0)
 
@@ -233,7 +415,12 @@ class TestMetrics:
     def test_histogram_record(self) -> None:
         """测试 Histogram 记录."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         M.data_update_duration.record(1.5, {"source": "test", "table": "test"})
 
@@ -247,7 +434,12 @@ class TestLogging:
     def test_logger_with_event_field(self) -> None:
         """测试带 event 字段的日志."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         # 不应该报错
         logger.info("Test message", event="test_event", key="value")
@@ -255,7 +447,12 @@ class TestLogging:
     def test_logger_with_trace_id_context(self) -> None:
         """测试带 trace_id 上下文的日志."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         with span("test_op"):
             trace_id = get_trace_id()
@@ -271,7 +468,12 @@ class TestReset:
     def test_reset_for_testing(self) -> None:
         """测试重置功能."""
         reset_for_testing()
-        init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+        init(
+            pytest_running=True,
+            assertions_enabled=True,
+            verbose_logging=False,
+            force=True,
+        )
 
         with span("test_op"):
             pass

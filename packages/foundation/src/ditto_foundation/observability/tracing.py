@@ -16,7 +16,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from .config import Mode, ObservabilityConfig
+from .config import ObservabilityConfig
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -113,22 +113,21 @@ class SpanContext:
             self._span.set_attribute("status", status)
 
 
-def configure_tracing(config: ObservabilityConfig, mode: Mode) -> trace.Tracer:
+def configure_tracing(config: ObservabilityConfig) -> trace.Tracer:
     """
     配置 OTel Tracing.
 
     Args:
     ----
         config: 可观测性配置
-        mode: 运行模式
 
     Returns:
     -------
         trace.Tracer: 配置好的 Tracer 实例
 
     """
-    # 静默模式：使用 NoOp Tracer
-    if mode == Mode.TESTING:
+    # 静默模式（pytest_running 且不启用断言）：使用 NoOp Tracer
+    if config.pytest_running and not config.assertions_enabled:
         _state.tracer = trace.get_tracer(__name__)
         return _state.tracer
 
@@ -136,7 +135,7 @@ def configure_tracing(config: ObservabilityConfig, mode: Mode) -> trace.Tracer:
     resource = Resource.create({"service.name": config.service_name})
 
     # TESTING_WITH_ASSERTIONS：使用 InMemory Exporter
-    if mode == Mode.TESTING_WITH_ASSERTIONS:
+    if config.pytest_running and config.assertions_enabled:
         _state.in_memory_exporter = InMemorySpanExporter()
         provider = TracerProvider(resource=resource)
         provider.add_span_processor(SimpleSpanProcessor(_state.in_memory_exporter))

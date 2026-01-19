@@ -9,7 +9,8 @@ SimpleGauge 单元测试.
 """
 
 import pytest
-from ditto_foundation import Mode, ObservabilityConfig, reset_for_testing
+from ditto_foundation import ObservabilityConfig, reset_for_testing
+from ditto_foundation.config.environment import Environment
 from ditto_foundation.observability.metrics import SimpleGauge, configure_metrics
 
 
@@ -20,8 +21,8 @@ class TestSimpleGauge:
         """测试设置初始值."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        meter = configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        meter = configure_metrics(config)
 
         gauge = SimpleGauge(meter, "test.gauge", "Test gauge")
 
@@ -35,8 +36,8 @@ class TestSimpleGauge:
         """测试 set() 覆盖之前的值."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        meter = configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        meter = configure_metrics(config)
 
         gauge = SimpleGauge(meter, "test.gauge2", "Test gauge 2")
 
@@ -50,8 +51,8 @@ class TestSimpleGauge:
         """测试 inc() 增加值."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        meter = configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        meter = configure_metrics(config)
 
         gauge = SimpleGauge(meter, "test.gauge3", "Test gauge 3")
 
@@ -65,8 +66,8 @@ class TestSimpleGauge:
         """测试 inc() 默认增量为 1.0."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        meter = configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        meter = configure_metrics(config)
 
         gauge = SimpleGauge(meter, "test.gauge4", "Test gauge 4")
 
@@ -80,8 +81,8 @@ class TestSimpleGauge:
         """测试从零开始增加."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        meter = configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        meter = configure_metrics(config)
 
         gauge = SimpleGauge(meter, "test.gauge5", "Test gauge 5")
 
@@ -94,8 +95,8 @@ class TestSimpleGauge:
         """测试 dec() 减少值."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        meter = configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        meter = configure_metrics(config)
 
         gauge = SimpleGauge(meter, "test.gauge6", "Test gauge 6")
 
@@ -109,8 +110,8 @@ class TestSimpleGauge:
         """测试 dec() 默认减量为 1.0."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        meter = configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        meter = configure_metrics(config)
 
         gauge = SimpleGauge(meter, "test.gauge7", "Test gauge 7")
 
@@ -124,8 +125,8 @@ class TestSimpleGauge:
         """测试 dec() 不会让值变为负数."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        meter = configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        meter = configure_metrics(config)
 
         gauge = SimpleGauge(meter, "test.gauge8", "Test gauge 8")
 
@@ -139,8 +140,8 @@ class TestSimpleGauge:
         """测试 set() 方法不接受 attributes 参数 (简化接口)."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        meter = configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        meter = configure_metrics(config)
 
         gauge = SimpleGauge(meter, "test.gauge9", "Test gauge 9")
 
@@ -153,8 +154,8 @@ class TestSimpleGauge:
         """测试 inc() 使用负数时也会限制在 0.0."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        meter = configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        meter = configure_metrics(config)
 
         gauge = SimpleGauge(meter, "test.gauge10", "Test gauge 10")
 

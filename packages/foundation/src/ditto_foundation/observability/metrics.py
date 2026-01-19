@@ -22,7 +22,7 @@ from opentelemetry.sdk.metrics.export import (
 from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
 from opentelemetry.sdk.resources import Resource
 
-from .config import Mode, ObservabilityConfig
+from .config import ObservabilityConfig
 
 
 class _MetricsRegistry:
@@ -473,20 +473,22 @@ def _create_gauge(
     return SimpleGauge(meter, name, description)
 
 
-def configure_metrics(config: ObservabilityConfig, mode: Mode) -> metrics.Meter:
+def configure_metrics(config: ObservabilityConfig) -> metrics.Meter:
     """
     配置 OTel Metrics.
 
     Args:
     ----
         config: 可观测性配置
-        mode: 运行模式
 
     Returns:
     -------
         metrics.Meter: 配置好的 Meter 实例
 
     """
+    # 获取生效配置
+    effective = config.get_effective_config()
+
     # 资源定义
     resource = Resource.create({"service.name": config.service_name})
 
@@ -513,7 +515,7 @@ def configure_metrics(config: ObservabilityConfig, mode: Mode) -> metrics.Meter:
     ]
 
     # TESTING 或 TESTING_WITH_ASSERTIONS：使用 InMemory Reader
-    if mode.is_testing():
+    if config.environment.is_testing or config.pytest_running:
         in_memory_reader = InMemoryMetricReader()
         provider = MeterProvider(
             metric_readers=[in_memory_reader],
@@ -530,7 +532,7 @@ def configure_metrics(config: ObservabilityConfig, mode: Mode) -> metrics.Meter:
     # PRODUCTION / DEVELOPMENT：配置 OTLP Exporter
     # 将指标推送到 VictoriaMetrics
     otlp_exporter = OTLPMetricExporter(
-        endpoint=config.vm_endpoint,
+        endpoint=effective.vm_endpoint,
         timeout=30,
     )
     period_exporter = PeriodicExportingMetricReader(

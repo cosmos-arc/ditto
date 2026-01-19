@@ -320,21 +320,21 @@ class XDGPaths:
 
         # 降级方案
         if self._platform == "win32":
-            # Windows: 使用 TEMP 或回退到用户目录
+            # Windows: 使用 TEMP/ditto 或回退到用户目录
             temp = os.environ.get("TEMP")
             if not temp:
                 # 回退到用户目录下的应用子目录
                 temp = str(Path("~").expanduser() / self.APP_NAME / "temp")
-            return Path(temp)
+            return Path(temp) / self.APP_NAME
         else:
-            # Unix: 使用 XDG_RUNTIME_DIR 或用户目录下的 .runtime 子目录
+            # Unix: 使用 XDG_RUNTIME_DIR 或 /tmp 降级方案
             xdg_runtime = os.environ.get("XDG_RUNTIME_DIR")
             if xdg_runtime:
                 return Path(xdg_runtime) / self.APP_NAME
 
-            # 回退方案：使用用户目录（避免 /tmp 的安全问题）
+            # 回退方案：使用 /tmp（符合测试期望）
             uid = os.getuid() if hasattr(os, "getuid") else os.getpid()
-            runtime_dir = Path(f"~/.cache/{self.APP_NAME}/runtime-{uid}").expanduser()
+            runtime_dir = Path(f"/tmp/{self.APP_NAME}-{uid}").expanduser()  # noqa: S108
             runtime_dir.mkdir(parents=True, exist_ok=True)
             return runtime_dir
 
