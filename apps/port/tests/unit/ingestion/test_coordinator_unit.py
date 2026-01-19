@@ -8,7 +8,7 @@ from ditto_datahub.accessors.bars import WriteResult
 from ditto_datahub.dq.engine import DQResult
 from ditto_datahub.models import OnDuplicate
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
-from ditto_datahub.sources.source import DataSource, SourceFetchError
+from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_foundation.observability import Mode, init, reset_for_testing
 from ditto_port.services.ingestion.coordinator import (
@@ -375,7 +375,7 @@ class TestIngestDate:
         mock_hub.ingestion_log.get_log.return_value = None
 
         mock_source.fetch_stock_daily.side_effect = SourceFetchError(
-            "Network error", provider="tushare", dataset="stock_daily"
+            "Network error", source="tushare", dataset="stock_daily"
         )
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="stock_daily",
