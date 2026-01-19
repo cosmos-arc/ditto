@@ -96,7 +96,7 @@ class AppInitializer:
         # 初始化
         init(
             service_name="ditto",
-            environment=str(environment),  # Environment 是 str, Enum，可以直接转字符串
+            environment=environment.value,  # 使用 enum value 而非 str()
             log_level=obs_settings.log_level,
             log_dir=str(settings.file_storage.log_root),
             vm_endpoint=obs_settings.vm_endpoint,

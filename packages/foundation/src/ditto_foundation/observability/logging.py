@@ -114,35 +114,38 @@ def configure_logging(config: ObservabilityConfig) -> None:
     # 移除默认 handler
     _logger.remove()
 
-    # 静默模式：不添加任何 handler
-    if not effective.verbose_logging:
+    # 静默模式：pytest 运行时不添加任何 handler
+    if effective.pytest_running:
         return
 
     # 解析日志目录
     log_dir = _resolve_log_dir(config)
 
     # Console sink
-    console_format = (
-        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-        "<level>{level: <8}</level> | "
-        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
-        "<level>{message}</level>"
-    )
-
-    if config.environment.is_production:
-        # 生产环境：简化格式
+    # verbose_logging=True: 详细格式（带颜色、毫秒）
+    # verbose_logging=False: 简洁格式（无颜色、无毫秒）
+    if effective.verbose_logging:
+        console_format = (
+            "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
+            "<level>{level: <8}</level> | "
+            "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
+            "<level>{message}</level>"
+        )
+        colorize = True
+    else:
         console_format = (
             "{time:YYYY-MM-DD HH:mm:ss} | "
             "{level: <8} | "
             "{name}:{function}:{line} | "
             "{message}"
         )
+        colorize = False
 
     _logger.add(
         sys.stdout,
         format=console_format,
         level=effective.log_level,
-        colorize=config.environment.is_development,
+        colorize=colorize,
     )
 
     # File sink - JSON 格式（生产环境）
@@ -175,7 +178,7 @@ def configure_logging(config: ObservabilityConfig) -> None:
     _logger.add(
         error_log_file,
         level="ERROR",
-        format=console_format if config.environment.is_development else _json_formatter,
+        format=console_format if effective.verbose_logging else _json_formatter,
         rotation="1 day",
         retention="30 days",
         compression="gz",
@@ -186,6 +189,8 @@ def configure_logging(config: ObservabilityConfig) -> None:
         _logger.debug("Logging configured for development environment")
     elif config.environment.is_production:
         _logger.info("Logging configured for production environment")
+    elif config.environment.is_testing:
+        _logger.info("Logging configured for testing environment")
 
 
 # 导出 logger 供外部使用
