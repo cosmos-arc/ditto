@@ -4,7 +4,7 @@ import polars as pl
 import pytest
 from ditto_datahub import DataHub
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
-from ditto_foundation.observability import Mode, init, reset_for_testing
+from ditto_foundation.observability import init, reset_for_testing
 from ditto_foundation.util.checksum import ChecksumCompute
 from ditto_port.services.ingestion.metadata import MetadataManager
 
@@ -13,7 +13,12 @@ from ditto_port.services.ingestion.metadata import MetadataManager
 def setup_observability():
     """初始化可观测性。"""
     reset_for_testing()
-    init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+    init(
+        pytest_running=True,
+        assertions_enabled=True,
+        verbose_logging=False,
+        force=True,
+    )
     yield
     reset_for_testing()
 

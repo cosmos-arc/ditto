@@ -185,17 +185,25 @@ def reset_observability() -> Generator[None, None, None]:
 @pytest.fixture
 def obs_noop() -> None:
     """静默模式 - 最快, 不输出日志."""
-    from ditto_foundation import Mode, init
+    from ditto_foundation import init
 
-    init(mode=Mode.TESTING)
+    init(
+        pytest_running=True,
+        assertions_enabled=False,
+        verbose_logging=False,
+    )
 
 
 @pytest.fixture
 def obs_assertions() -> None:
     """断言模式 - 可验证, 内存记录."""
-    from ditto_foundation import Mode, init
+    from ditto_foundation import init
 
-    init(mode=Mode.TESTING_WITH_ASSERTIONS)
+    init(
+        pytest_running=True,
+        assertions_enabled=True,
+        verbose_logging=False,
+    )
 
 
 @pytest.fixture

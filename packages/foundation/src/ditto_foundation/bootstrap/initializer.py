@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from ditto_foundation.config import get_settings
-from ditto_foundation.observability import Mode, init
+from ditto_foundation.observability import init
 from ditto_foundation.observability.logging import logger
 
 
@@ -90,27 +90,22 @@ class AppInitializer:
             logger.info("Observability disabled by configuration")
             return
 
-        # 解析 mode
-        mode_mapping: dict[str, Mode | None] = {
-            "auto": None,
-            "production": Mode.PRODUCTION,
-            "development": Mode.DEVELOPMENT,
-            "testing": Mode.TESTING,
-        }
-
-        configured_mode = mode_mapping.get(obs_settings.mode.lower(), None)
-        actual_mode = configured_mode or (
-            Mode.PRODUCTION if settings.is_production else Mode.DEVELOPMENT
-        )
+        # 确定运行时行为标志
+        environment = settings.system.ditto_env
+        pytest_running = environment.is_testing
+        assertions_enabled = environment.is_testing  # 测试环境默认启用断言
+        verbose_logging = environment.is_development  # 开发环境启用详细日志
 
         # 初始化
         init(
             service_name="ditto",
-            environment=settings.system.ditto_env,
+            environment=str(environment),  # Environment 是 str, Enum，可以直接转字符串
             log_level=obs_settings.log_level,
             log_dir=str(settings.file_storage.log_root),
             vm_endpoint=obs_settings.vm_endpoint,
-            mode=actual_mode,
+            pytest_running=pytest_running,
+            assertions_enabled=assertions_enabled,
+            verbose_logging=verbose_logging,
         )
 
     def _validate_config(self, settings: Any) -> list[str]:

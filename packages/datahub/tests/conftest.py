@@ -5,13 +5,17 @@ from pathlib import Path
 
 import pytest
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import Mode, SQLitePool, init
+from ditto_foundation import SQLitePool, init
 
 
 @pytest.fixture(autouse=True)
 def init_observability() -> None:
     """Initialize observability in testing mode for all tests."""
-    init(mode=Mode.TESTING)
+    init(
+        pytest_running=True,
+        assertions_enabled=False,
+        verbose_logging=False,
+    )
     # Cleanup is handled by reset_for_testing if needed
 
 

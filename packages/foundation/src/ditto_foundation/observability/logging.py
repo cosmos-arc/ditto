@@ -14,7 +14,7 @@ from loguru import logger as _logger
 
 from ditto_foundation.config.paths import get_paths
 
-from .config import Mode, ObservabilityConfig
+from .config import ObservabilityConfig
 
 
 def _resolve_log_dir(config: ObservabilityConfig) -> Path:
@@ -99,21 +99,23 @@ def _json_formatter(record: dict[str, Any] | Any) -> str:
     return orjson.dumps(log_entry).decode("utf-8") + "\n"
 
 
-def configure_logging(config: ObservabilityConfig, mode: Mode) -> None:
+def configure_logging(config: ObservabilityConfig) -> None:
     """
     配置 Loguru 日志系统.
 
     Args:
     ----
         config: 可观测性配置
-        mode: 运行模式
 
     """
+    # 获取生效配置
+    effective = config.get_effective_config()
+
     # 移除默认 handler
     _logger.remove()
 
     # 静默模式：不添加任何 handler
-    if mode.is_silent():
+    if not effective.verbose_logging:
         return
 
     # 解析日志目录
@@ -127,7 +129,7 @@ def configure_logging(config: ObservabilityConfig, mode: Mode) -> None:
         "<level>{message}</level>"
     )
 
-    if mode == Mode.PRODUCTION:
+    if config.environment.is_production:
         # 生产环境：简化格式
         console_format = (
             "{time:YYYY-MM-DD HH:mm:ss} | "
@@ -139,17 +141,17 @@ def configure_logging(config: ObservabilityConfig, mode: Mode) -> None:
     _logger.add(
         sys.stdout,
         format=console_format,
-        level=config.log_level,
-        colorize=mode == Mode.DEVELOPMENT,
+        level=effective.log_level,
+        colorize=config.environment.is_development,
     )
 
     # File sink - JSON 格式（生产环境）
-    if mode == Mode.PRODUCTION:
+    if config.environment.is_production:
         log_file = log_dir / "ditto.jsonl"
         _logger.add(
             log_file,
             format=_json_formatter,
-            level=config.log_level,
+            level=effective.log_level,
             rotation="1 day",
             retention="30 days",
             compression="gz",
@@ -157,12 +159,12 @@ def configure_logging(config: ObservabilityConfig, mode: Mode) -> None:
         )
 
     # File sink - 文本格式（开发环境）
-    if mode == Mode.DEVELOPMENT:
+    if config.environment.is_development:
         log_file = log_dir / "ditto.log"
         _logger.add(
             log_file,
             format=console_format,
-            level=config.log_level,
+            level=effective.log_level,
             rotation="1 day",
             retention="30 days",
             compression="gz",
@@ -173,16 +175,16 @@ def configure_logging(config: ObservabilityConfig, mode: Mode) -> None:
     _logger.add(
         error_log_file,
         level="ERROR",
-        format=console_format if mode == Mode.DEVELOPMENT else _json_formatter,
+        format=console_format if config.environment.is_development else _json_formatter,
         rotation="1 day",
         retention="30 days",
         compression="gz",
     )
 
     # 初始化日志
-    if mode == Mode.DEVELOPMENT:
+    if config.environment.is_development:
         _logger.debug("Logging configured for development environment")
-    elif mode == Mode.PRODUCTION:
+    elif config.environment.is_production:
         _logger.info("Logging configured for production environment")
 
 

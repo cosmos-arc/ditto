@@ -21,7 +21,7 @@ import orjson
 from ditto_datahub import register_datahub_providers
 from ditto_foundation.config.initializer import InitScope, get_config_coordinator
 from ditto_foundation.config.paths import get_paths
-from ditto_foundation.observability import M, Mode, init, logger, shutdown
+from ditto_foundation.observability import M, init, logger, shutdown
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -83,7 +83,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             environment=env,
             log_level=log_level,
             log_dir=log_dir,
-            mode=Mode.DEVELOPMENT if env == "development" else Mode.PRODUCTION,
+            pytest_running=False,
+            assertions_enabled=False,
+            verbose_logging=(env == "development"),
         )
 
         logger.info(

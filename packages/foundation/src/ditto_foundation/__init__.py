@@ -25,8 +25,8 @@ from ditto_foundation.db import SQLitePool
 
 # Export observability
 from ditto_foundation.observability import (
+    EffectiveConfig,
     M,
-    Mode,
     ObservabilityConfig,
     get_recorded_metrics,
     get_recorded_spans,
@@ -44,10 +44,10 @@ __all__ = [
     "AppInitializer",
     "CacheStats",
     "DataCache",
+    "EffectiveConfig",
     "FileLockManager",
     "LockAcquisitionError",
     "M",
-    "Mode",
     "ObservabilityConfig",
     "SQLitePool",
     "compute_checksum",

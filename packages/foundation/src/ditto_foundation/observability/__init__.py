@@ -26,7 +26,9 @@ Ditto 可观测性模块.
 from opentelemetry import metrics as otel_metrics
 from opentelemetry import trace as otel_trace
 
-from .config import Mode, ObservabilityConfig
+from ditto_foundation.config.environment import Environment
+
+from .config import EffectiveConfig, ObservabilityConfig
 from .logging import configure_logging, logger
 from .metrics import M, configure_metrics
 from .testing import get_recorded_metrics, get_recorded_spans, reset_for_testing
@@ -39,8 +41,8 @@ from .tracing import (
 )
 
 __all__ = [
+    "EffectiveConfig",
     "M",
-    "Mode",
     "ObservabilityConfig",
     "get_recorded_metrics",
     "get_recorded_spans",
@@ -81,13 +83,15 @@ class _ObservabilityRegistry:
         cls.initialized = False
 
 
-def init(
+def init(  # noqa: PLR0913
     service_name: str = "ditto",
     environment: str = "dev",
     log_level: str = "INFO",
     log_dir: str = "logs",
     vm_endpoint: str = "http://localhost:8428/opentelemetry/v1/metrics",
-    mode: Mode | None = None,
+    pytest_running: bool = False,
+    assertions_enabled: bool = True,
+    verbose_logging: bool = True,
     force: bool = False,
 ) -> None:
     """
@@ -100,40 +104,55 @@ def init(
         log_level: 日志级别
         log_dir: 日志目录
         vm_endpoint: VictoriaMetrics OTLP 端点
-        mode: 运行模式，None 表示自动检测
+        pytest_running: 是否在 pytest 中运行
+        assertions_enabled: 是否启用断言
+        verbose_logging: 是否启用详细日志
         force: 强制重新初始化（用于测试）
 
     """
     if _ObservabilityRegistry.is_initialized() and not force:
         return
 
+    # 转换 environment 字符串为 Environment 枚举
+    # 支持简写: dev -> development, prod -> production
+    env_mapping = {
+        "dev": "development",
+        "development": "development",
+        "test": "testing",
+        "testing": "testing",
+        "prod": "production",
+        "production": "production",
+    }
+    normalized_env = env_mapping.get(environment.lower(), "development")
+    env_enum = Environment.from_str(normalized_env)
+
     config = ObservabilityConfig(
         service_name=service_name,
-        environment=environment,
+        environment=env_enum,
         log_level=log_level,
         log_dir=log_dir,
         vm_endpoint=vm_endpoint,
+        pytest_running=pytest_running,
+        assertions_enabled=assertions_enabled,
+        verbose_logging=verbose_logging,
     )
 
-    actual_mode = mode or config.detect_mode()
-
     # 配置日志
-    configure_logging(config, actual_mode)
+    configure_logging(config)
 
     # 配置追踪
-    configure_tracing(config, actual_mode)
+    configure_tracing(config)
 
     # 配置指标
-    configure_metrics(config, actual_mode)
+    configure_metrics(config)
 
     # 记录初始化日志
-    if not actual_mode.is_silent():
+    if verbose_logging:
         logger.info(
             "Observability initialized",
             event="observability_init",
             service=service_name,
             environment=environment,
-            mode=actual_mode.value,
         )
 
     _ObservabilityRegistry.set_initialized(True)

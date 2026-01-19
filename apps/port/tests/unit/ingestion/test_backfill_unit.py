@@ -2,7 +2,7 @@
 
 import pytest
 from ditto_datahub import DataHub
-from ditto_foundation.observability import Mode, init, reset_for_testing
+from ditto_foundation.observability import init, reset_for_testing
 from ditto_port.services.ingestion.backfill import (
     BackfillManager,
     BackfillResult,
@@ -14,7 +14,12 @@ from ditto_port.services.ingestion.coordinator import IngestionResult
 def setup_observability():
     """初始化可观测性。"""
     reset_for_testing()
-    init(mode=Mode.TESTING_WITH_ASSERTIONS, force=True)
+    init(
+        pytest_running=True,
+        assertions_enabled=True,
+        verbose_logging=False,
+        force=True,
+    )
     yield
     reset_for_testing()
 

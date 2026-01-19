@@ -7,7 +7,8 @@ METRIC_DEFINITIONS 配置驱动的指标注册测试.
 - 验证指标名称和描述正确
 """
 
-from ditto_foundation import Mode, ObservabilityConfig, reset_for_testing
+from ditto_foundation import ObservabilityConfig, reset_for_testing
+from ditto_foundation.config.environment import Environment
 from ditto_foundation.observability.metrics import M, configure_metrics
 from opentelemetry.sdk.metrics import Counter as SDKCounter
 from opentelemetry.sdk.metrics import Histogram as SDKHistogram
@@ -20,8 +21,8 @@ class TestMetricDefinitions:
         """测试所有指标被正确创建."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        configure_metrics(config)
 
         # 验证所有数据指标存在
         assert hasattr(M, "data_update_duration")
@@ -75,8 +76,8 @@ class TestMetricDefinitions:
         """测试 Histogram 类型的指标有 record 方法."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        configure_metrics(config)
 
         # 验证 Histogram 类型指标有 record 方法
         assert hasattr(M.data_update_duration, "record")
@@ -90,8 +91,8 @@ class TestMetricDefinitions:
         """测试 Counter 类型的指标有 add 方法."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        configure_metrics(config)
 
         # 验证 Counter 类型指标有 add 方法
         assert hasattr(M.data_records, "add")
@@ -114,8 +115,8 @@ class TestMetricDefinitions:
         """测试 Gauge 类型的指标有 set/inc/dec 方法."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        configure_metrics(config)
 
         # 验证 Gauge 类型指标有 set/inc/dec 方法
         for metric_name in [
@@ -138,8 +139,8 @@ class TestMetricDefinitions:
         """测试指标名称与预期一致."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        configure_metrics(config)
 
         # 验证部分指标名称（通过调用它们的底层方法）
         # 这里我们只验证几个关键指标，确保名称正确
@@ -155,8 +156,8 @@ class TestMetricDefinitions:
         """测试创建的指标数量与 METRIC_DEFINITIONS 中的定义一致."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        configure_metrics(config)
 
         # 统计 M 类中定义的指标数量
         metric_count = 0
@@ -187,8 +188,8 @@ class TestMetricDefinitions:
         """测试指标可以被正常使用（不会被报错）."""
         reset_for_testing()
 
-        config = ObservabilityConfig(environment="testing")
-        configure_metrics(config, Mode.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        configure_metrics(config)
 
         # 测试 Counter
         M.data_records.add(100, {"source": "test"})
