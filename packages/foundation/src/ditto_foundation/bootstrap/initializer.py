@@ -12,6 +12,7 @@ from typing import Any
 
 from ditto_foundation.config import get_settings
 from ditto_foundation.observability import init
+from ditto_foundation.observability.config import ObservabilityConfig
 from ditto_foundation.observability.logging import logger
 
 
@@ -86,10 +87,11 @@ class AppInitializer:
         obs_settings = settings.observability
         environment = settings.system.ditto_env
 
-        # 确定运行时行为标志
-        pytest_running = environment.is_testing
-        assertions_enabled = environment.is_testing  # 测试环境默认启用断言
-        verbose_logging = environment.is_development  # 开发环境启用详细日志
+        # 使用 ObservabilityConfig.detect_runtime_flags() 检测运行时标志
+        runtime_flags = ObservabilityConfig.detect_runtime_flags(environment)
+        pytest_running = runtime_flags["pytest_running"]
+        assertions_enabled = runtime_flags["assertions_enabled"]
+        verbose_logging = runtime_flags["verbose_logging"]
 
         # 初始化
         init(
