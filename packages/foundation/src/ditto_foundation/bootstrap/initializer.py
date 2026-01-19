@@ -84,14 +84,9 @@ class AppInitializer:
     def _setup_observability(self, settings: Any) -> None:
         """Set up observability (logging, tracing, metrics)."""
         obs_settings = settings.observability
-
-        # 检查是否启用
-        if not obs_settings.enabled:
-            logger.info("Observability disabled by configuration")
-            return
+        environment = settings.system.ditto_env
 
         # 确定运行时行为标志
-        environment = settings.system.ditto_env
         pytest_running = environment.is_testing
         assertions_enabled = environment.is_testing  # 测试环境默认启用断言
         verbose_logging = environment.is_development  # 开发环境启用详细日志
