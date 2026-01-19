@@ -386,6 +386,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/1c/5b/48b6ff1ad541783bf30c506293b25b83c2cb7bb3038d15f4dacb07f719e4/akshare-1.18.12-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/97/dd/ef8571c352da469db6777b4750f1b3d44574943677e1860ab5583f135237/cachebox-5.2.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/7c/d2/ce907c9b37b5caf76ac08db40cc4ce3d9f94c5500db68a195af3513eacbc/curl_cffi-0.14.0-cp39-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/b0/e9/3ab0ae083d21ebffe1f4fe4b84e317530e9ea8ae592052103f2aa3cc4277/dishka-0.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c4/ab/09169d5a4612a5f92490806649ac8d41e3ec9129c636754575b3553f4ea4/googleapis_common_protos-1.72.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9e/03/eb9071203aec1267547ca1e674a18f6610d5f78ed7ccd7787b3e244abbe5/granian-1.7.6-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -731,6 +732,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/1c/5b/48b6ff1ad541783bf30c506293b25b83c2cb7bb3038d15f4dacb07f719e4/akshare-1.18.12-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5a/ad/838d93d352c23aa775a2e6a943397ce63da2429d3c4ff9bfca28c85227d6/cachebox-5.2.1-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/a2/77/78900e9b0833066d2274bda75cba426fdb4cef7fbf6a4f6a6ca447607bec/curl_cffi-0.14.0-cp39-abi3-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/b0/e9/3ab0ae083d21ebffe1f4fe4b84e317530e9ea8ae592052103f2aa3cc4277/dishka-0.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c4/ab/09169d5a4612a5f92490806649ac8d41e3ec9129c636754575b3553f4ea4/googleapis_common_protos-1.72.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f7/7a/7a0827be2a7b62ee27df9d2225a03adde7020c1e78b43abb340992b3875a/granian-1.7.6-cp312-cp312-win_amd64.whl
@@ -1248,6 +1250,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/97/dd/ef8571c352da469db6777b4750f1b3d44574943677e1860ab5583f135237/cachebox-5.2.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/d8/2b/a40e1488fdfa02d3f9a653a61a5935ea08b3c2225ee818db6a76c7ba9695/cattrs-25.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7c/d2/ce907c9b37b5caf76ac08db40cc4ce3d9f94c5500db68a195af3513eacbc/curl_cffi-0.14.0-cp39-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/b0/e9/3ab0ae083d21ebffe1f4fe4b84e317530e9ea8ae592052103f2aa3cc4277/dishka-0.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/56/7b/af3d0da15bed3a8665419bb3a630585756920f4ad67abfdfef26240ebcc0/docstring_to_markdown-0.17-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c4/ab/09169d5a4612a5f92490806649ac8d41e3ec9129c636754575b3553f4ea4/googleapis_common_protos-1.72.0-py3-none-any.whl
@@ -1701,6 +1704,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/5a/ad/838d93d352c23aa775a2e6a943397ce63da2429d3c4ff9bfca28c85227d6/cachebox-5.2.1-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/d8/2b/a40e1488fdfa02d3f9a653a61a5935ea08b3c2225ee818db6a76c7ba9695/cattrs-25.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a2/77/78900e9b0833066d2274bda75cba426fdb4cef7fbf6a4f6a6ca447607bec/curl_cffi-0.14.0-cp39-abi3-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/b0/e9/3ab0ae083d21ebffe1f4fe4b84e317530e9ea8ae592052103f2aa3cc4277/dishka-0.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/56/7b/af3d0da15bed3a8665419bb3a630585756920f4ad67abfdfef26240ebcc0/docstring_to_markdown-0.17-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c4/ab/09169d5a4612a5f92490806649ac8d41e3ec9129c636754575b3553f4ea4/googleapis_common_protos-1.72.0-py3-none-any.whl
@@ -3534,6 +3538,13 @@ packages:
   - pkg:pypi/deprecated?source=hash-mapping
   size: 15815
   timestamp: 1761813872696
+- pypi: https://files.pythonhosted.org/packages/b0/e9/3ab0ae083d21ebffe1f4fe4b84e317530e9ea8ae592052103f2aa3cc4277/dishka-0.9.0-py3-none-any.whl
+  name: dishka
+  version: 0.9.0
+  sha256: 8967820fd59168d2916c59f84665c4240f70005bc97ac4ff8d0b86e3456a099d
+  requires_dist:
+  - exceptiongroup>=1.1.3 ; python_full_version < '3.11'
+  requires_python: '>=3.10'
 - conda: https://conda.anaconda.org/conda-forge/noarch/distlib-0.4.0-pyhd8ed1ab_0.conda
   sha256: 6d977f0b2fc24fee21a9554389ab83070db341af6d6f09285360b2e09ef8b26e
   md5: 003b8ba0a94e2f1e117d0bd46aebc901

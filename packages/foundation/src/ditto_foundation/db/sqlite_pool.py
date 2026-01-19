@@ -16,9 +16,13 @@ from ditto_foundation.observability import logger, span, traced
 
 class SQLitePool:
     """
-    SQLite 连接池包装器.
+    SQLite 连接池包装器（轻量级改进版）.
 
     提供线程本地连接，支持并发访问和事务管理。
+
+    改进内容：
+    - 添加 ping() 健康检查方法
+    - 添加连接数监控（告警阈值 WARN_CONNECTION_COUNT）
 
     Example:
         >>> pool = SQLitePool("data.db")
@@ -26,6 +30,9 @@ class SQLitePool:
         >>> pool.execute("SELECT * FROM users")
 
     """
+
+    # 连接数告警阈值（只告警，不限制）
+    WARN_CONNECTION_COUNT = 50
 
     def __init__(self, db_path: str, schema_path: Path | None = None) -> None:
         """
@@ -40,6 +47,8 @@ class SQLitePool:
         self._db_path = Path(db_path)
         self._schema_path = schema_path
         self._local = threading.local()
+        self._connection_count = 0  # 连接数计数器（仅用于告警）
+        self._count_lock = threading.Lock()
 
         logger.debug(
             "SQLite pool initialized",
@@ -50,9 +59,10 @@ class SQLitePool:
 
     def get_connection(self) -> sqlite3.Connection:
         """
-        获取线程本地连接.
+        获取线程本地连接（带连接数监控）.
 
         如果当前线程还没有连接，则创建新连接并启用外键约束。
+        连接数达到 WARN_CONNECTION_COUNT 时记录警告日志。
 
         Returns:
             SQLite 连接对象，row_factory 设置为 sqlite3.Row
@@ -67,10 +77,22 @@ class SQLitePool:
             conn.execute("PRAGMA foreign_keys = ON;")
             self._local.conn = conn
 
+            # 连接数计数（仅用于告警）
+            with self._count_lock:
+                self._connection_count += 1
+                if self._connection_count >= self.WARN_CONNECTION_COUNT:
+                    logger.warning(
+                        "SQLite connection count exceeds warning threshold",
+                        event="connection_count_warning",
+                        count=self._connection_count,
+                        threshold=self.WARN_CONNECTION_COUNT,
+                    )
+
             logger.debug(
                 "SQLite connection created",
                 event="connection_created",
                 thread_id=threading.get_ident(),
+                total_count=self._connection_count,
             )
         # Cast to help pyright infer type from threading.local
         return cast(sqlite3.Connection, self._local.conn)
@@ -181,14 +203,38 @@ class SQLitePool:
 
         return self._schema_path.read_text(encoding="utf-8")
 
+    def ping(self) -> bool:
+        """
+        健康检查 - 测试连接是否可用.
+
+        Returns:
+            True 如果连接正常，False 否则
+
+        """
+        try:
+            self.execute("SELECT 1")
+            return True
+        except Exception as e:
+            logger.warning(
+                "SQLite ping failed",
+                event="ping_failed",
+                error=str(e),
+            )
+            return False
+
     def close(self) -> None:
-        """关闭当前线程的连接."""
+        """关闭当前线程的连接（减少连接数计数）."""
         if hasattr(self._local, "conn"):
             self._local.conn.close()
             delattr(self._local, "conn")
+
+            # 减少连接数计数
+            with self._count_lock:
+                self._connection_count -= 1
 
             logger.debug(
                 "SQLite connection closed",
                 event="connection_closed",
                 thread_id=threading.get_ident(),
+                total_count=self._connection_count,
             )
