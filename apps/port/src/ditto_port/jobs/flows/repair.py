@@ -45,7 +45,7 @@ def retry_failed_flow(
         # 创建重试管理器
         retry_manager = RetryManager(
             coordinator=coordinator,
-            ingestion_log_store=hub.ingestion_log,
+            ingestion_log_store=hub.ingestion_log_store,
             source=source,
         )
 
@@ -98,8 +98,7 @@ def repair_holes_flow(
         # 创建回补管理器
         backfill_manager = BackfillManager(
             coordinator=coordinator,
-            calendar_store=hub.calendar_store,
-            ingestion_log_store=hub.ingestion_log,
+            hub=hub,
         )
 
         # 回补缺失数据

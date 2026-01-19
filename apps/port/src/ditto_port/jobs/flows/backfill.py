@@ -70,8 +70,7 @@ def backfill_flow(config: BackfillFlowConfig) -> dict[str, object]:
         # 创建回补管理器
         backfill_manager = BackfillManager(
             coordinator=coordinator,
-            calendar_store=hub.calendar_store,
-            ingestion_log_store=hub.ingestion_log,
+            hub=hub,
         )
 
         # 执行回补
@@ -123,8 +122,7 @@ def backfill_missing_flow(
         # 创建回补管理器
         backfill_manager = BackfillManager(
             coordinator=coordinator,
-            calendar_store=hub.calendar_store,
-            ingestion_log_store=hub.ingestion_log,
+            hub=hub,
         )
 
         # 执行回补

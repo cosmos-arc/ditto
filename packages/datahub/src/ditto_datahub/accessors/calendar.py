@@ -108,6 +108,16 @@ class CalendarAccessor:
         """
         return self._calendar_store.get_last_trading_day()
 
+    def get_first_trading_day(self) -> str | None:
+        """
+        Get the first (earliest) trading day in the calendar.
+
+        Returns:
+            Earliest trading day as YYYY-MM-DD string, or None if calendar is empty.
+
+        """
+        return self._calendar_store.get_first_trading_day()
+
     def get_prev(self, date: str) -> str | None:
         """
         Get previous trading day.

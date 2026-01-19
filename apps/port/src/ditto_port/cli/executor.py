@@ -34,8 +34,7 @@ class CLIExecutor:
 
         self._backfill_manager = BackfillManager(
             coordinator=self._coordinator,
-            calendar_store=self._hub.calendar_store,
-            ingestion_log_store=self._hub.ingestion_log,
+            hub=self._hub,
         )
 
     def ingest_daily(

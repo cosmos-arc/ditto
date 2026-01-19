@@ -3,8 +3,7 @@
 from collections import defaultdict
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
-from ditto_datahub.stores.calendar_store import CalendarStore
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
+from ditto_datahub import DataHub
 from ditto_foundation import logger
 
 from ditto_port.models import BackfillResult, IngestionResult
@@ -18,21 +17,18 @@ class BackfillManager:
     def __init__(
         self,
         coordinator: IngestionCoordinator,
-        calendar_store: CalendarStore,
-        ingestion_log_store: IngestionLogStore,
+        hub: DataHub,
     ) -> None:
         """
         初始化 BackfillManager。
 
         Args:
             coordinator: IngestionCoordinator 实例。
-            calendar_store: CalendarStore 实例。
-            ingestion_log_store: IngestionLogStore 实例。
+            hub: DataHub 实例。
 
         """
         self._coordinator = coordinator
-        self._calendar_store = calendar_store
-        self._ingestion_log_store = ingestion_log_store
+        self._hub = hub
 
     def backfill_range(
         self,
@@ -64,7 +60,7 @@ class BackfillManager:
         )
 
         # 获取日期范围内的所有交易日
-        trade_dates = self._calendar_store.get_range(start_date, end_date)
+        trade_dates = self._hub.calendar.list_trading_days(start_date, end_date)
 
         if not trade_dates:
             return BackfillResult(
@@ -158,8 +154,8 @@ class BackfillManager:
         )
 
         # 获取日历的完整日期范围
-        first_date = self._calendar_store.get_first_trading_day()
-        last_date = self._calendar_store.get_last_trading_day()
+        first_date = self._hub.calendar.get_first_trading_day()
+        last_date = self._hub.calendar.get_last_trading_day()
 
         if not first_date or not last_date:
             return BackfillResult(
@@ -172,7 +168,7 @@ class BackfillManager:
             )
 
         # 获取所有交易日
-        all_trade_dates = self._calendar_store.get_range(first_date, last_date)
+        all_trade_dates = self._hub.calendar.list_trading_days(first_date, last_date)
 
         if not all_trade_dates:
             return BackfillResult(
@@ -185,7 +181,7 @@ class BackfillManager:
             )
 
         # 获取已摄取的日期
-        ingested_dates = self._ingestion_log_store.get_ingested_dates(dataset, source)
+        ingested_dates = self._hub.ingestion_log.get_ingested_dates(dataset, source)
 
         # 计算缺失的日期
         missing_dates = set(all_trade_dates) - set(ingested_dates)
