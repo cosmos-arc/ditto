@@ -193,17 +193,17 @@ packages/
         errors.py                # 统一异常
         settings.py              # 配置（paths, defaults）
         # ============ 数据源层 ============
-        providers/
-          __init__.py           # 导出 get_provider, DataSource
+        sources/
+          __init__.py           # 导出 get_source, DataSource
           base.py               # DataSource 基类 + 工厂 + 异常定义
           tushare/
             __init__.py
             client.py           # Tushare 客户端（连接、限流、重试）
-            provider.py         # TushareSource 实现
+            source.py           # TushareSource 实现
           akshare/
             __init__.py
             client.py
-            provider.py
+            source.py
 
         # ============ 数据质量层（重构）============
         dq/
