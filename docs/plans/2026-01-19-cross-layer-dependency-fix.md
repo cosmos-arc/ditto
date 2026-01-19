@@ -445,10 +445,119 @@ grep -r "from.*models.*ingestion" apps/port/src/
 
 ## 实施步骤
 
-1. **创建 models 层**（向后兼容重新导出）
-2. **创建 IngestionLogAccessor**
-3. **更新 DataHub**（新增 Accessor 属性）
-4. **更新 Port 层文件**（使用 Accessor）
-5. **更新测试文件**
-6. **运行验证**
-7. **清理兼容性代码**（删除 sources/metadata.py 中的重新导出）
+- [x] **创建 models 层**（已完成，models 层已存在）
+- [x] **创建 IngestionLogAccessor**（✅ 完成）
+- [x] **更新 DataHub**（✅ 完成）
+- [x] **更新 Port 层文件**（✅ 完成）
+- [x] **更新测试文件**（✅ 完成）
+- [x] **运行验证**（✅ 完成）
+- [ ] **清理兼容性代码**（未执行，无必要）
+
+---
+
+## 实施完成记录
+
+### 执行时间
+
+2026-01-19
+
+### 执行分支
+
+`feature/pyright-cleanup-batch-0`
+
+### 完成任务
+
+#### Phase 1: Models 层 ✅
+
+**状态**: 已完成（models 层已存在）
+
+- [x] `models/ingestion.py` 存在，包含 `IngestionLog`、`IngestionStatus`、`IngestionCursor`
+- [x] `models/__init__.py` 导出所有模型
+
+#### Phase 2: 创建 IngestionLogAccessor ✅
+
+**状态**: 已完成
+
+**Commits**:
+- `eecfc98` - feat: 添加 IngestionLogAccessor（初始实现）
+- `716c56e` - feat: 导出 IngestionLogAccessor
+- `d906f4a` - refactor: 将 DataHub.ingestion_log 改为返回 Accessor
+
+**文件变更**:
+- 新增: `packages/datahub/src/ditto_datahub/accessors/ingestion_log.py`
+- 修改: `packages/datahub/src/ditto_datahub/accessors/__init__.py`
+- 修改: `packages/datahub/src/ditto_datahub/hub.py`
+
+#### Phase 3: 修复 Port 层跨层依赖 ✅
+
+**状态**: 已完成
+
+**Commits**:
+- backfill.py 修复（包含 CalendarAccessor.get_first_trading_day() 添加）
+- `0cd3b0b` - refactor: metadata.py 改用 DataHub Accessor
+- `6504976` - refactor: retry.py 改用 DataHub Accessor
+
+**文件变更**:
+- 修改: `apps/port/src/ditto_port/services/ingestion/backfill.py`
+- 修改: `apps/port/src/ditto_port/services/ingestion/metadata.py`
+- 修改: `apps/port/src/ditto_port/services/ingestion/retry.py`
+- 修改: `apps/port/src/ditto_port/jobs/flows/backfill.py`
+- 修改: `apps/port/src/ditto_port/jobs/flows/repair.py`
+- 修改: `apps/port/src/ditto_port/cli/executor.py`
+- 修改: `packages/datahub/src/ditto_datahub/accessors/calendar.py`（添加 `get_first_trading_day()`）
+- 修改: 所有相关测试文件
+
+#### Phase 4: 验证 ✅
+
+**状态**: 已完成
+
+**测试结果**:
+- ✅ backfill 单元测试: 11/11 通过
+- ✅ metadata 单元测试: 13/13 通过
+- ✅ retry 单元测试: 12/12 通过
+- ✅ Pyright 类型检查: 0 errors
+- ✅ Ruff 代码检查: 通过
+
+### 架构改进
+
+**修改前**:
+```
+Port 层                      DataHub 层
+──────────────────────────────────────────────────────
+backfill.py          ──→      CalendarStore        ❌
+                             IngestionLogStore    ❌
+
+metadata.py          ──→      IngestionLogStore    ❌
+
+retry.py             ──→      IngestionLogStore    ❌
+```
+
+**修改后**:
+```
+Port 层                      DataHub 层
+──────────────────────────────────────────────────────
+backfill.py          ──→      DataHub.calendar     ✅
+                             DataHub.ingestion_log ✅
+
+metadata.py          ──→      DataHub.ingestion_log ✅
+
+retry.py             ──→      DataHub.ingestion_log ✅
+```
+
+### 影响范围
+
+**新增文件**: 1 个
+- `packages/datahub/src/ditto_datahub/accessors/ingestion_log.py`
+
+**修改文件**: 15+ 个
+- DataHub 层: 3 个文件
+- Port 层服务: 3 个文件
+- Port 层 flows: 2 个文件
+- Port 层 CLI: 1 个文件
+- 测试文件: 6+ 个
+
+### 下一步
+
+1. 合并到 `main` 分支
+2. 运行完整架构审计确认 ARCH-001 已解决
+3. 更新相关 README 文档
