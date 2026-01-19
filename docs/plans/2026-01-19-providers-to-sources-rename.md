@@ -315,6 +315,37 @@ git diff --stat
 
 ---
 
+### Phase 8: 残留修复（2026-01-19）
+
+**背景**：Phase 1-7 完成后，发现仍有大量残留未修复，包括：
+- 参数名 `provider` 未改为 `source`
+- 文档字符串中 "data provider" 未改为 "data source"
+- 测试断言中 `error.details["provider"]` 未改为 `error.details["source"]`
+- 设计文档中的 `providers/` 路径引用
+
+**批次 1：核心源代码修复**（commit: fbd90f1）
+- `packages/datahub/src/ditto_datahub/sources/source.py` - 参数名、文档字符串（约 30 处）
+- `packages/datahub/src/ditto_datahub/sources/tushare/http_utils.py` - 参数 `provider="tushare"` → `source="tushare"`（13 处）
+- `packages/datahub/src/ditto_datahub/sources/tushare/tushare_source.py` - 文档、日志、参数（6 处）
+- `packages/datahub/src/ditto_datahub/sources/__init__.py` - 模块文档（1 处）
+
+**批次 2：单元测试修复**（commit: bdbe3ed）
+- `packages/datahub/tests/unit/sources/test_base_unit.py` - 参数、断言、方法名（6 处）
+- `packages/datahub/tests/unit/sources/tushare/test_http_utils_unit.py` - 断言 `error.details["provider"]` → `error.details["source"]`（7 处）
+- `packages/datahub/tests/unit/sources/test_accessor_unit.py` - 变量命名、错误消息（6 处）
+
+**批次 3：设计文档修复**（commit: 3e3e3cb）
+- `docs/design/01_system_design.md` - 架构表、目录结构、依赖图（3 处）
+- `docs/design/02_data_design.md` - 目录名、导出函数、文件名（4 处）
+
+**验证**：
+```bash
+pixi run -e dev type
+pixi run -e dev pytest packages/datahub/tests/unit/sources/ -v
+```
+
+---
+
 ## 关键文件清单
 
 ### 需要重命名的文件（3 个）
@@ -348,15 +379,17 @@ git diff --stat
 
 ## 成功标准
 
-- [ ] 所有类名已重命名（DataSource → DataSource）
-- [ ] 所有目录已重命名（providers/ → sources/）
-- [ ] 所有测试通过（100%+）
-- [ ] pyright 类型检查通过（0 errors）
-- [ ] ruff 代码检查通过
-- [ ] 无残留的 `from ditto_datahub.sources.` 引用
-- [ ] 无残留的 `DataSource` 类名引用
-- [ ] 异常 details 字段使用 "source" 而非 "provider"
-- [ ] `hub.sources` 属性正常工作
+- [x] 所有类名已重命名（DataSource → DataSource）
+- [x] 所有目录已重命名（providers/ → sources/）
+- [x] 所有测试通过（100%+）
+- [x] pyright 类型检查通过（0 errors）
+- [x] ruff 代码检查通过
+- [x] 无残留的 `from ditto_datahub.sources.` 引用
+- [x] 无残留的 `DataSource` 类名引用
+- [x] 异常 details 字段使用 "source" 而非 "provider"
+- [x] `hub.sources` 属性正常工作
+
+**完成日期**：2026-01-19（Phase 8 残留修复完成）
 
 ---
 
@@ -371,5 +404,9 @@ git diff --stat
 5. `Phase 5: update documentation`
 6. `Phase 6: update exception details field (provider → source)`
 7. `Phase 7: final verification and cleanup`
+8. `Phase 8: 残留修复（2026-01-19）`
+   - 批次 1: `fbd90f1` - 修复核心源代码中的 provider 残留
+   - 批次 2: `bdbe3ed` - 修复单元测试中的 provider 残留
+   - 批次 3: `3e3e3cb` - 修复设计文档中的 providers 残留
 
 最终合并到 `main` 前创建 PR 进行代码审查。
