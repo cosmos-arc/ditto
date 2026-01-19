@@ -17,7 +17,7 @@ class TestIngestionLogAccessor:
 
     def test_init(self) -> None:
         """Test initialization."""
-        assert self.accessor._store is self.mock_store
+        assert self.accessor._ingestion_log_store is self.mock_store
 
     def test_save_log_success(self) -> None:
         """Test save_log with successful ingestion."""

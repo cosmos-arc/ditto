@@ -1,6 +1,7 @@
 """IngestionLog Accessor for ingestion log data access."""
 
-from ditto_foundation import logger, traced
+from ditto_foundation.observability.tracing import traced
+from loguru import logger
 
 from ditto_datahub.models.ingestion import IngestionLog
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
@@ -22,13 +23,13 @@ class IngestionLogAccessor:
             ingestion_log_store: 摄取日志存储实例。
 
         """
-        self._store = ingestion_log_store
+        self._ingestion_log_store = ingestion_log_store
         logger.debug(
             "IngestionLogAccessor initialized",
             event="ingestion_log_accessor_init",
         )
 
-    @traced("accessor.ingestion_log.save")
+    @traced("accessor.ingestion_log.save_log")
     def save_log(self, log: IngestionLog) -> IngestionLog:
         """
         保存摄取日志。
@@ -40,7 +41,7 @@ class IngestionLogAccessor:
             保存后的摄取日志（包含更新后的时间戳和尝试次数）。
 
         """
-        logger.debug(
+        logger.info(
             "Saving ingestion log",
             event="ingestion_log_save_start",
             dataset=log.dataset,
@@ -49,9 +50,9 @@ class IngestionLogAccessor:
             status=log.status.value,
         )
 
-        result = self._store.save_log(log)
+        result = self._ingestion_log_store.save_log(log)
 
-        logger.debug(
+        logger.info(
             "Ingestion log saved",
             event="ingestion_log_save_complete",
             dataset=log.dataset,
@@ -62,7 +63,7 @@ class IngestionLogAccessor:
 
         return result
 
-    @traced("accessor.ingestion_log.get")
+    @traced("accessor.ingestion_log.get_log")
     def get_log(
         self,
         dataset: str,
@@ -89,7 +90,7 @@ class IngestionLogAccessor:
             trade_date=trade_date,
         )
 
-        result = self._store.get_log(dataset, source, trade_date)
+        result = self._ingestion_log_store.get_log(dataset, source, trade_date)
 
         logger.debug(
             "Ingestion log fetched",
@@ -132,7 +133,9 @@ class IngestionLogAccessor:
             max_attempts=max_attempts,
         )
 
-        result = self._store.get_failed_dates(dataset, source, limit, max_attempts)
+        result = self._ingestion_log_store.get_failed_dates(
+            dataset, source, limit, max_attempts
+        )
 
         logger.debug(
             "Failed dates fetched",
@@ -168,7 +171,7 @@ class IngestionLogAccessor:
             source=source,
         )
 
-        result = self._store.get_ingested_dates(dataset, source)
+        result = self._ingestion_log_store.get_ingested_dates(dataset, source)
 
         logger.debug(
             "Ingested dates fetched",
@@ -204,7 +207,7 @@ class IngestionLogAccessor:
             source=source,
         )
 
-        result = self._store.get_stats(dataset, source)
+        result = self._ingestion_log_store.get_stats(dataset, source)
 
         logger.debug(
             "Ingestion stats fetched",
@@ -240,7 +243,7 @@ class IngestionLogAccessor:
             source=source,
         )
 
-        result = self._store.get_last_success_date(dataset, source)
+        result = self._ingestion_log_store.get_last_success_date(dataset, source)
 
         logger.debug(
             "Last success date fetched",
