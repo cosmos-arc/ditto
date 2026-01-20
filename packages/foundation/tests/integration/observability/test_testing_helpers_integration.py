@@ -1,7 +1,9 @@
 """
-Observability testing 模块测试.
+测试辅助功能集成测试.
 
 测试 reset_for_testing, get_recorded_spans, get_recorded_metrics 等测试辅助功能.
+
+使用真实组件验证测试辅助功能与 OpenTelemetry SDK 的集成.
 """
 
 import pytest
@@ -15,6 +17,7 @@ from ditto_foundation import (
 )
 
 
+@pytest.mark.integration
 class TestResetForTesting:
     """测试 reset_for_testing 函数."""
 
@@ -139,6 +142,7 @@ class TestResetForTesting:
         reset_for_testing()
 
 
+@pytest.mark.integration
 class TestGetRecordedSpans:
     """测试 get_recorded_spans 函数."""
 
@@ -219,6 +223,7 @@ class TestGetRecordedSpans:
         # [REVIEW] span 中
 
 
+@pytest.mark.integration
 class TestGetRecordedMetrics:
     """测试 get_recorded_metrics 函数."""
 
@@ -311,6 +316,7 @@ class TestGetRecordedMetrics:
         assert metrics_data is not None
 
 
+@pytest.mark.integration
 class TestIntegrationScenarios:
     """集成测试场景."""
 

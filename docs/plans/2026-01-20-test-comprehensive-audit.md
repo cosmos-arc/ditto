@@ -371,14 +371,13 @@ def test_read_filter_by_sids(self, store, sample_df, sids, expected_count):
 
 ### 6.1 Foundation 包 - 严重遗漏
 
-**模块覆盖率**: 7/8 (87.5%)
+**模块覆盖率**: 6/7 (85.7%)
 
 **完全无测试的模块**:
-1. ❌ `bootstrap/` - 应用初始化逻辑
-2. ❌ `cache/` - 缓存实现（虽然有 DataCache 测试，但仅 1 个文件）
-3. ❌ `checksum/` - 校验和计算
-4. ❌ `db/` - SQLitePool、SQLiteClient（核心基础设施）
-5. ❌ `observability/` - 可观测性基础设施（Metrics、Tracing）
+1. ❌ `cache/` - 缓存实现（虽然有 DataCache 测试，但仅 1 个文件）
+2. ❌ `checksum/` - 校验和计算
+3. ❌ `db/` - SQLitePool、SQLiteClient（核心基础设施）
+4. ❌ `observability/` - 可观测性基础设施（Metrics、Tracing）
 
 **影响**: 这些是核心基础设施，缺少测试会导致生产环境风险
 
@@ -564,9 +563,8 @@ testpaths = ["packages/*/tests", "apps/*/tests"]  # 移除 "tests"
 | P1-3 | 重复代码 | 维护性差 | 提取共享 fixtures 到 conftest.py | 3 小时 |
 | P1-4 | 参数化测试不足 | 代码冗余 | 重构重复测试为参数化测试 | 3 小时 |
 | P1-5 | 异常路径测试 | 覆盖率不够 | 补充网络、文件系统、并发异常测试 | 4 小时 |
-| P1-6 | Foundation/bootstrap 测试 | 初始化逻辑无覆盖 | 补充应用初始化测试 | 3 小时 |
 
-**P1 总计**: ~23 小时
+**P1 总计**: ~20 小时
 
 ---
 

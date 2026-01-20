@@ -1,7 +1,9 @@
 """
-Observability logging 模块测试.
+日志配置集成测试.
 
 测试日志配置、格式化、文件输出等功能.
+
+使用真实组件验证日志系统与 loguru 和文件系统的集成.
 """
 
 import tempfile
@@ -17,65 +19,7 @@ from ditto_foundation.observability.logging import (
 )
 
 
-class TestBuildLogRecord:
-    """测试 _build_log_record 函数."""
-
-    def test_build_log_record_basic_fields(self) -> None:
-        """测试基本日志字段."""
-        # [REVIEW] loguru 记录结构
-        {
-            "record": {
-                "time": pytest.approx,  # [REVIEW] time mocker 或实际时间戳
-                "level": type("Level", (), {"name": "INFO"})(),
-                "name": "test.logger",
-                "function": "test_func",
-                "line": 42,
-                "message": "Test message",
-                "exception": None,
-            },
-            "extra": {"event": "test_event", "trace_id": "abc123"},
-        }
-
-        # [REVIEW] loguru Record 对象
-        # [REVIEW]
-        # [REVIEW]
-
-    def test_build_log_record_with_exception(self) -> None:
-        """测试带异常信息的日志记录."""
-        # [REVIEW]
-        # [REVIEW]
-        pass
-
-
-class TestJsonFormatter:
-    """测试 _json_formatter 函数."""
-
-    def test_json_formatter_returns_valid_json(self) -> None:
-        """测试 JSON 格式化器返回有效 JSON."""
-        # [REVIEW] loguru 记录
-        {
-            "record": {
-                "time": type("Time", (), {"timestamp": lambda: 1234567890.0})(),
-                "level": type("Level", (), {"name": "INFO"})(),
-                "name": "test.logger",
-                "function": "test_func",
-                "line": 42,
-                "message": "Test message",
-                "exception": None,
-            },
-            "extra": {"event": "test_event"},
-        }
-
-        # [REVIEW] loguru Record 对象
-        # [REVIEW] _json_formatter 可调用
-        # [REVIEW] JSON 验证在集成测试中进行
-
-    def test_json_formatter_includes_newline(self) -> None:
-        """测试 JSON 格式化输出以换行符结尾."""
-        # Verify格式化输出包含换行符
-        pass
-
-
+@pytest.mark.integration
 class TestResolveLogDir:
     """测试 _resolve_log_dir 函数."""
 
@@ -132,6 +76,7 @@ class TestResolveLogDir:
                 os.chdir(original_cwd)
 
 
+@pytest.mark.integration
 class TestConfigureLogging:
     """测试 configure_logging 函数."""
 
@@ -266,6 +211,7 @@ class TestConfigureLogging:
         # Verify：不应该有默认的 stderr handler
 
 
+@pytest.mark.integration
 class TestJsonLogOutput:
     """测试 JSON 日志输出."""
 
@@ -308,6 +254,7 @@ class TestJsonLogOutput:
         # Verify JSON 包含异常信息
 
 
+@pytest.mark.integration
 class TestTextLogOutput:
     """测试文本日志输出."""
 

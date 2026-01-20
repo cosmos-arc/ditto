@@ -27,9 +27,6 @@
 
 ```
 src/ditto_foundation/
-├── bootstrap/              # 应用启动引导
-│   ├── __init__.py
-│   └── initializer.py      # AppInitializer, initialize_app()
 ├── cache/                  # 缓存能力
 │   ├── __init__.py
 │   └── core.py             # DataCache, CacheStats
@@ -63,22 +60,6 @@ src/ditto_foundation/
 ```
 
 ## 四、关键模块说明
-
-### bootstrap/ - 应用启动引导
-
-应用生命周期管理和初始化。
-
-```python
-from ditto_foundation import initialize_app, AppInitializer
-
-# 快速初始化（单例模式）
-result = initialize_app()
-# {"status": "initialized", "observability_initialized": True, ...}
-
-# 手动管理
-initializer = AppInitializer()
-result = initializer.initialize()
-```
 
 ### cache/ - 缓存能力
 
