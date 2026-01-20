@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ditto_datahub.models.quality import DQResult
+    from ditto_core.quality.spec import DQResult
 
 __all__ = [
     "FreezeManifest",

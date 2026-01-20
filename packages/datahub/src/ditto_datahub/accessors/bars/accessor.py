@@ -8,17 +8,16 @@ from enum import Enum
 from typing import Literal
 
 import polars as pl
+from ditto_core.quality import DQReportGenerator, QualityEngine
+
+# Authoritative DQResult with issues list (from ditto_core.quality)
+from ditto_core.quality.spec import DQIssue, DQResult
 from ditto_foundation import M, logger, traced
 from ditto_foundation.concurrency import FileLockManager
 
 from ditto_datahub.accessors.bars.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.accessors.bars.dq_filters import filter_failed_rows
-from ditto_datahub.dq.engine import DQEngine
-from ditto_datahub.dq.report import DQReportGenerator
-
-# Authoritative DQResult with issues list (from dq.engine)
-from ditto_datahub.models import AssetSidRange, DQIssue, OnDuplicate, WriteResult
-from ditto_datahub.models import DQResult as DQResultNew
+from ditto_datahub.models import AssetSidRange, OnDuplicate, WriteResult
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.quarantine_store import QuarantineStore
@@ -127,7 +126,7 @@ class BarsAccessor:
         adj_factor_store: AdjFactorStore,
         security_store: SecurityStore,
         stock_status_store: StockStatusStore,  # B.3
-        dq_engine: DQEngine,  # New DQ engine
+        dq_engine: QualityEngine,  # New DQ engine
         file_lock: FileLockManager,
         quarantine_store: QuarantineStore,  # Injected to avoid circular import
     ) -> None:
@@ -139,7 +138,7 @@ class BarsAccessor:
             adj_factor_store: Adjustment factor store.
             security_store: Security store for identifier resolution.
             stock_status_store: Stock status store (B.3).
-            dq_engine: Data quality engine (new DQEngine from dq.engine).
+            dq_engine: Data quality engine (new QualityEngine from dq.engine).
             file_lock: File lock manager for concurrent writes.
             quarantine_store: Quarantine store for failed data.
 
@@ -320,8 +319,8 @@ class BarsAccessor:
         # Use file lock for concurrent safety
         lock_name = f"bars_write_{dataset}_{year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
-            # Data quality check using DQEngine
-            dq_result: DQResultNew | None = None
+            # Data quality check using QualityEngine
+            dq_result: DQResult | None = None
 
             if run_dq_check:
                 dq_result = self._dq_engine.check(df, dataset)
@@ -708,7 +707,7 @@ class BarsAccessor:
             severity=issue.severity.value,
         )
 
-    def _generate_dq_report(self, result: DQResultNew, dataset: str) -> None:
+    def _generate_dq_report(self, result: DQResult, dataset: str) -> None:
         """
         Generate DQ report and save to file.
 

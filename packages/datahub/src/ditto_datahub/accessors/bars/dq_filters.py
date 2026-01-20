@@ -7,8 +7,7 @@ DQ 违规数据过滤函数。
 from itertools import combinations
 
 import polars as pl
-
-from ditto_datahub.models import DQIssue
+from ditto_core.quality.spec import DQIssue
 
 
 def filter_not_null_violations(df: pl.DataFrame, issue: DQIssue) -> pl.DataFrame:

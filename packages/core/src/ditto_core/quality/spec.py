@@ -339,7 +339,7 @@ class DQSpec(BaseModel):
         return dataset in self.datasets
 
 
-# Result Models (re-export from result.py)
+# Result Models
 
 
 @dataclass(frozen=True)

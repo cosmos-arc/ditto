@@ -1,28 +1,15 @@
 """DQ batch check tasks for L3 statistical anomaly detection."""
 
-from pathlib import Path
 from typing import Any, Literal
 
-import ditto_datahub
+from ditto_core.quality import QualityEngine
+from ditto_core.quality.spec import DQIssue
 from ditto_datahub.accessors import BarsQuery
-from ditto_datahub.dq import DQEngine
-from ditto_datahub.models import DQIssue
 from ditto_foundation import M, logger
 from prefect import task
 
 from ditto_port.jobs.context import create_datahub_context
-
-
-def get_default_dq_config_path() -> str:
-    """
-    获取默认 DQ 规则配置路径。
-
-    Returns:
-        指向 packages/datahub/config/dq_rules 的绝对路径字符串
-
-    """
-    package_root = Path(ditto_datahub.__file__).parent.parent.parent
-    return str(package_root / "config" / "dq_rules")
+from ditto_port.services.ingestion.quality import L3BatchService
 
 
 @task(
@@ -30,10 +17,9 @@ def get_default_dq_config_path() -> str:
     description="批量数据质量检查(L3 统计异常)",
     tags=["dq", "batch", "l3"],
 )
-def dq_batch_check(
+async def dq_batch_check(
     trade_date: str | None = None,
     datasets: list[str] | None = None,
-    config_path: str | None = None,
     market_wide: bool = False,
 ) -> dict[str, Any]:
     """
@@ -42,7 +28,6 @@ def dq_batch_check(
     Args:
         trade_date: 交易日期(YYYY-MM-DD)，默认为最后一个交易日
         datasets: 要检查的数据集列表，默认为常用数据集
-        config_path: DQ 规则配置目录路径
         market_wide: 是否使用全市场查询模式
 
     Returns:
@@ -75,11 +60,11 @@ def dq_batch_check(
         if datasets is None:
             datasets = ["etf_daily", "index_daily", "stock_daily", "adj_factor"]
 
-        # 初始化 DQ 引擎
-        if config_path is None:
-            config_path = get_default_dq_config_path()
+        # 初始化 Quality Engine
+        engine = QualityEngine()
 
-        engine = DQEngine(config_path=config_path)
+        # 初始化 L3 Batch Service
+        l3_service = L3BatchService(engine=engine, hub=hub)
 
         all_issues: list[DQIssue] = []
         results_by_dataset: dict[str, dict[str, Any]] = {}
@@ -101,28 +86,29 @@ def dq_batch_check(
                 if asset_class is None:
                     raise ValueError(f"Unknown dataset: {dataset}")
 
-                result = engine.check_statistical(
+                result = await l3_service.check_dataset(
                     dataset=dataset,
                     trade_date=trade_date,
-                    hub=hub,
                     asset_class=asset_class,
                     market_wide=market_wide,
                 )
 
                 results_by_dataset[dataset] = {
-                    "passed": result.passed,
-                    "issue_count": len(result.issues),
-                    "alert_count": result.alert_count,
+                    "passed": result["passed"],
+                    "issue_count": result.get("issue_count", 0),
+                    "alert_count": result.get("alert_count", 0),
                 }
 
-                all_issues.extend(result.issues)
+                # 收集 issues（如果有）
+                if "issues" in result:
+                    all_issues.extend(result["issues"])
 
-                if result.issues:
+                if result.get("alert_count", 0) > 0:
                     logger.warning(
                         "L3 DQ issues found",
                         event="dq_batch_issues",
                         dataset=dataset,
-                        count=len(result.issues),
+                        count=result.get("issue_count", 0),
                     )
 
             except Exception as e:

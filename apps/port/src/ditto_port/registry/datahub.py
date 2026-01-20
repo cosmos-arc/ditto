@@ -9,6 +9,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
+from ditto_core.quality import QualityEngine
 from ditto_datahub import DataHub
 from ditto_datahub.accessors.adj_factor import AdjFactorAccessor
 from ditto_datahub.accessors.bars import BarsAccessor
@@ -17,7 +18,6 @@ from ditto_datahub.accessors.index import IndexAccessor
 from ditto_datahub.accessors.ingestion_log import IngestionLogAccessor
 from ditto_datahub.accessors.security import SecuritiesAccessor
 from ditto_datahub.accessors.universe import UniverseAccessor
-from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
@@ -75,9 +75,9 @@ class DataHubProvider(Provider):
         return SidAllocator(sqlite_pool)
 
     @provide
-    def dq_engine(self, data_root: Path) -> DQEngine:
+    def dq_engine(self, data_root: Path) -> QualityEngine:
         """数据质量引擎."""
-        return DQEngine(data_root=data_root)
+        return QualityEngine(data_root=data_root)
 
     @provide
     def freeze_manager(self, data_root: Path) -> FreezeManager:
@@ -179,7 +179,7 @@ class DataHubProvider(Provider):
         security_store: SecurityStore,
         adj_factor_store: AdjFactorStore,
         stock_status_store: StockStatusStore,
-        dq_engine: DQEngine,
+        dq_engine: QualityEngine,
         file_lock: FileLockManager,
         quarantine_store: QuarantineStore,
     ) -> BarsAccessor:
@@ -274,7 +274,7 @@ class DataHubProvider(Provider):
         sqlite_pool: SQLitePool,
         file_lock: FileLockManager,
         sid_allocator: SidAllocator,
-        dq_engine: DQEngine,
+        dq_engine: QualityEngine,
         freeze_manager: FreezeManager,
         securities: SecuritiesAccessor,
         calendar: CalendarAccessor,

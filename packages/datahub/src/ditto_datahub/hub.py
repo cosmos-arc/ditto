@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
+from ditto_core.quality import QualityEngine
 from ditto_foundation import SQLitePool, logger
 from ditto_foundation.concurrency import FileLockManager
 
@@ -18,7 +19,6 @@ from ditto_datahub.accessors.index import IndexAccessor
 from ditto_datahub.accessors.ingestion_log import IngestionLogAccessor
 from ditto_datahub.accessors.security import SecuritiesAccessor
 from ditto_datahub.accessors.universe import UniverseAccessor
-from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
@@ -46,7 +46,7 @@ class DataHub:
         sqlite_pool: SQLitePool,
         file_lock: FileLockManager,
         sid_allocator: SidAllocator,
-        dq_engine: DQEngine,
+        dq_engine: QualityEngine,
         freeze_manager: FreezeManager,
         securities: SecuritiesAccessor,
         calendar: CalendarAccessor,

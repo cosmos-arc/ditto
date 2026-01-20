@@ -1,26 +1,24 @@
-"""DQ execution engine."""
+"""Quality execution engine."""
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 import polars as pl
 
-from ditto_datahub.dq.checkers.business import BusinessChecker
-from ditto_datahub.dq.checkers.statistical import StatisticalChecker
-from ditto_datahub.dq.checkers.technical import TechnicalChecker
-from ditto_datahub.models import DQIssue, DQResult, DQSeverity, DQSpec
-
-if TYPE_CHECKING:
-    from ditto_datahub.hub import DataHub
+from ditto_core.quality.checkers.business import BusinessChecker
+from ditto_core.quality.checkers.statistical import StatisticalChecker
+from ditto_core.quality.checkers.technical import TechnicalChecker
+from ditto_core.quality.spec import DQIssue, DQResult, DQSeverity, DQSpec
 
 
-class DQEngine:
+class QualityEngine:
     """
-    DQ execution engine.
+    Quality execution engine.
 
     Orchestrates data quality checks across L1/L2/L3 levels.
+    Core layer: Pure business logic, no data access dependencies.
     """
 
     def __init__(
@@ -30,7 +28,7 @@ class DQEngine:
         data_root: str | Path | None = None,
     ) -> None:
         """
-        Initialize DQ engine.
+        Initialize Quality engine.
 
         Args:
             config: Pre-loaded DQ configuration
@@ -78,7 +76,7 @@ class DQEngine:
             df: Data to check
             dataset: Dataset identifier
             levels: Check levels to run (default: ["l1", "l2"])
-            context: Additional context (e.g., hub for foreign key checks)
+            context: Additional context (e.g., reference_values for foreign key checks)
 
         Returns:
             DQResult with check results
@@ -126,20 +124,18 @@ class DQEngine:
     def check_statistical(
         self,
         dataset: str,
-        trade_date: str,
-        hub: DataHub,
-        asset_class: Literal["stock", "etf", "index"] | None = None,
-        market_wide: bool = False,
+        current: pl.DataFrame,
+        historical: pl.DataFrame | None = None,
+        calendar: pl.DataFrame | None = None,
     ) -> DQResult:
         """
         Execute L3 statistical anomaly checks (batch).
 
         Args:
             dataset: Dataset identifier
-            trade_date: Trade date to check (YYYY-MM-DD)
-            hub: DataHub instance for historical data access
-            asset_class: Asset class for market-wide queries (stock/etf/index)
-            market_wide: Whether to use market-wide query mode
+            current: Current data to check
+            historical: Historical data for statistical calculations (for zscore)
+            calendar: Trading calendar (for completeness check)
 
         Returns:
             DQResult with L3 check results
@@ -155,12 +151,10 @@ class DQEngine:
         # Run L3 statistical checks
         if dataset_rules.l3_statistical:
             l3_issues = self.statistical_checker.check(
-                dataset=dataset,
-                trade_date=trade_date,
+                current=current,
+                historical=historical,
+                calendar=calendar,
                 rules=dataset_rules.l3_statistical,
-                hub=hub,
-                asset_class=asset_class,
-                market_wide=market_wide,
             )
             issues.extend(l3_issues)
 

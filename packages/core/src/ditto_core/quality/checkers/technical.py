@@ -1,36 +1,15 @@
 """L1 Technical checker."""
 
-import re
 from typing import Any
 
 import polars as pl
-from ditto_foundation import logger
+from loguru import logger
 
-from ditto_datahub.models import DQIssue, DQLevel, DQSeverity
+from ditto_core.quality.spec import DQIssue, DQLevel, DQSeverity
 
 
 class TechnicalChecker:
     """L1 technical validation checker."""
-
-    # 允许的外键引用数据集白名单
-    # （与 SqlEngine.SQLITE_TABLES + ALLOWED_DATASETS 保持一致）
-    _ALLOWED_REF_DATASETS = frozenset(
-        {
-            # SQLite tables
-            "security",
-            "security_mapping",
-            "trading_calendar",
-            "universe",
-            "universe_constituent",
-            "index_weight",
-            "dq_issue",
-            # Parquet views
-            "stock_daily",
-            "etf_daily",
-            "index_daily",
-            "adj_factor",
-        }
-    )
 
     def check(
         self,
@@ -44,7 +23,7 @@ class TechnicalChecker:
         Args:
             df: Data to check
             rules: List of L1 rule configurations
-            context: Additional context (e.g., hub for FK checks)
+            context: Additional context (e.g., reference_values for FK checks)
 
         Returns:
             List of DQIssue (ERROR severity)
@@ -159,8 +138,10 @@ class TechnicalChecker:
 
         Args:
             df: Data to check
-            rule: Rule config with "column" and "reference" (format: "dataset.column")
-            context: Optional context containing "hub" for querying reference data
+            rule: Rule config with "column" and "reference"
+                (format: "dataset.column")
+            context: Optional context containing "reference_values"
+                (set of valid values) provided by Application Layer
 
         Returns:
             DQIssue if FK violation, None otherwise
@@ -173,8 +154,8 @@ class TechnicalChecker:
         if not column or not reference:
             return None
 
-        # Need hub context to validate
-        if not context or "hub" not in context:
+        # Need reference_values from context (provided by Application Layer)
+        if not context or "reference_values" not in context:
             logger.debug(
                 "dq_fk_skip_no_context",
                 event="dq_check",
@@ -183,91 +164,38 @@ class TechnicalChecker:
             )
             return None
 
-        # Parse reference: "dataset.column" -> dataset, column
-        if "." not in reference:
-            logger.warning(
-                "dq_fk_invalid_reference",
-                event="dq_check",
-                reference=reference,
-            )
-            return None
-
-        ref_dataset, ref_column = reference.rsplit(".", 1)
-        hub = context["hub"]
+        reference_values: set[Any] = context["reference_values"]
         issue: DQIssue | None = None
 
-        # ====================
-        # SQL 注入防护
-        # ====================
-        # 1. 白名单验证数据集名称
-        if ref_dataset not in self._ALLOWED_REF_DATASETS:
-            logger.warning(
-                "dq_fk_invalid_dataset",
-                event="dq_check",
-                rule="foreign_key",
-                dataset=ref_dataset,
+        if column not in df.columns:
+            pass  # Column doesn't exist, skip check
+        else:
+            # Perform FK validation
+            invalid_rows = df.filter(
+                ~pl.col(column).is_null() & ~pl.col(column).is_in(reference_values)
             )
-            return None
 
-        # 2. 列名格式验证（只允许字母、数字、下划线）
-        if not ref_column or not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", ref_column):
-            logger.warning(
-                "dq_fk_invalid_column",
-                event="dq_check",
-                rule="foreign_key",
-                column=ref_column,
-            )
-            return None
-
-        try:
-            # Query reference values
-            query = f"SELECT DISTINCT {ref_column} FROM {ref_dataset}"  # noqa: S608 - ref_column/ref_dataset 已通过内部验证
-            result_df = hub.sql(query)
-
-            if result_df.is_empty() or ref_column not in result_df.columns:
+            if invalid_rows.height > 0:
                 logger.warning(
-                    "dq_fk_empty_reference",
+                    "dq_rule_fk_violation",
                     event="dq_check",
-                    dataset=ref_dataset,
-                    column=ref_column,
+                    rule="foreign_key",
+                    column=column,
+                    reference=reference,
+                    invalid_count=invalid_rows.height,
                 )
-            elif column not in df.columns:
-                pass  # Column doesn't exist, skip check
-            else:
-                # Perform FK validation
-                valid_values = set(result_df[ref_column].drop_nulls().to_list())
-                invalid_rows = df.filter(
-                    ~pl.col(column).is_null() & ~pl.col(column).is_in(valid_values)
+                msg = (
+                    f"Column '{column}' has {invalid_rows.height} "
+                    f"invalid references to {reference}"
                 )
-
-                if invalid_rows.height > 0:
-                    logger.warning(
-                        "dq_rule_fk_violation",
-                        event="dq_check",
-                        rule="foreign_key",
-                        column=column,
-                        reference=reference,
-                        invalid_count=invalid_rows.height,
-                    )
-                    msg = (
-                        f"Column '{column}' has {invalid_rows.height} "
-                        f"invalid references to {reference}"
-                    )
-                    issue = DQIssue(
-                        level=DQLevel.L1_TECHNICAL,
-                        severity=DQSeverity.ERROR,
-                        rule_name="foreign_key",
-                        message=msg,
-                        affected_rows=invalid_rows.height,
-                        sample_data=invalid_rows.select(column).head(5).to_dicts(),
-                    )
-
-        except Exception as e:
-            logger.error(
-                "dq_fk_check_error",
-                event="dq_check",
-                error=str(e),
-            )
+                issue = DQIssue(
+                    level=DQLevel.L1_TECHNICAL,
+                    severity=DQSeverity.ERROR,
+                    rule_name="foreign_key",
+                    message=msg,
+                    affected_rows=invalid_rows.height,
+                    sample_data=invalid_rows.select(column).head(5).to_dicts(),
+                )
 
         return issue
 
