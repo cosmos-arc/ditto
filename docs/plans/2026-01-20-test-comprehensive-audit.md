@@ -653,6 +653,115 @@ pixi run -e dev ci
 
 ---
 
+## 十一、执行进度跟踪
+
+**执行日期**: 2026-01-20
+**执行分支**: `feature/dishka-migration`
+
+### 📊 总体进度
+
+| 优先级 | 已完成 | 总计 | 进度 |
+|--------|--------|------|------|
+| P0 | 7 | 8 | 87.5% |
+| P1 | 0 | 6 | 0% |
+| P2 | 0 | 6 | 0% |
+| **总计** | **7** | **20** | **35%** |
+
+---
+
+### ✅ 已完成任务（7/20）
+
+#### P0-1: Import 冲突
+- **状态**: ✅ 已完成
+- **提交**: `6394523`
+- **修改**:
+  - `packages/foundation/tests/unit/test_cache_unit.py` → `test_cache_data_unit.py`
+  - `packages/datahub/tests/unit/runtime/test_cache_unit.py` → `test_cache_runtime_unit.py`
+
+#### P0-2: assert True 假测试
+- **状态**: ✅ 已完成
+- **提交**: `daa920e`
+- **修改**: `test_common_unit.py:45` - 验证实际值 `Dataset.ETF_DAILY.value == "etf_daily"`
+
+#### P0-4: 未实现测试
+- **状态**: ✅ 无需修改
+- **说明**: 代码已实现，`pass` 语句在 except 块中用于测试异常捕获
+
+#### P0-7: 测试标记简化
+- **状态**: ✅ 已完成
+- **说明**: pyproject.toml 已简化为 4 个标记（unit/integration/slow/serial）
+
+#### P0-8: 根目录 tests/ 清理
+- **状态**: ✅ 已完成
+- **提交**: `f3472ca`
+- **修改**:
+  - 删除根目录 `tests/` 目录
+  - 更新 pyproject.toml testpaths（移除 "tests"）
+
+#### P0-3: 空 pass 语句
+- **状态**: ✅ 已完成
+- **提交**: `769c6f3`
+- **修改**:
+  - `test_file_lock_unit.py`: 8 处 - 添加 `mock_lock.__enter__.assert_called_once()`
+  - `test_observability_unit.py`: 4 处 - 添加 span 断言和属性设置
+
+#### P0-5: Foundation/db 测试
+- **状态**: ✅ 测试框架已创建
+- **提交**: `2da0424`
+- **说明**: 创建 `test_db_unit.py`，包含完整的 SQLitePool 测试套件
+- **待优化**: Windows 文件锁定问题需要进一步调试
+
+---
+
+### 🔄 进行中（0/20）
+
+无
+
+---
+
+### ⏳ 待执行（13/20）
+
+#### P0 剩余任务
+- **P0-6**: Foundation/observability 测试（Metrics、Tracing）
+
+#### P1 任务（质量提升）
+- **P1-1**: unittest.mock 迁移（24 个文件）
+- **P1-2**: 边界测试补充
+- **P1-3**: 提取共享 fixtures
+- **P1-4**: 参数化测试重构
+- **P1-5**: 异常路径测试
+- **P1-6**: Foundation/bootstrap 测试
+
+#### P2 任务（技术债务）
+- **P2-1**: 中英文统一
+- **P2-2**: 函数名重构
+- **P2-3**: Core 包测试（等待实现）
+- **P2-4**: cache 测试扩展
+- **P2-5**: checksum 测试
+- **P2-6**: 文档更新
+
+---
+
+### 📝 提交记录
+
+| 提交 | 说明 | 日期 |
+|------|------|------|
+| `6394523` | test: 修复 pytest import 冲突 - 重命名 test_cache_unit.py | 2026-01-20 |
+| `daa920e` | test: 修复 assert True 假测试 - test_common_unit.py | 2026-01-20 |
+| `f3472ca` | test: 清理根目录 tests/ 目录 | 2026-01-20 |
+| `769c6f3` | test: 修复假测试 - 将空 pass 替换为实际断言 | 2026-01-20 |
+| `2da0424` | test: 添加 Foundation/db 测试 - SQLitePool | 2026-01-20 |
+
+---
+
+### 🎯 下一步行动
+
+1. **立即执行**（P0-6）: 编写 Foundation/observability 测试
+2. **本 Sprint**（P1）: Mock 迁移、边界测试补充
+3. **技术债务**（P2）: 命名统一、文档更新
+
+---
+
 **报告结束**
 
-**下一步**: 审查本报告，确认后逐步实施修复。
+**下一步**: 继续执行 P0-6 和 P1 任务。
