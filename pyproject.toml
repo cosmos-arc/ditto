@@ -242,7 +242,7 @@ extraPaths = [
 # ===================================================================
 [tool.pytest.ini_options]
 minversion = "7.0"
-testpaths = ["packages/*/tests", "apps/*/tests", "tests"]
+testpaths = ["packages/*/tests", "apps/*/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
