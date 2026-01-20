@@ -13,7 +13,7 @@ import polars as pl
 import pytest
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 class TestDQBlockingBehavior:
     """Tests for DQ L1 blocking behavior."""
 
