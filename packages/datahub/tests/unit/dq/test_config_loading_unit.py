@@ -13,7 +13,7 @@ class TestDQSpecLoading:
 
     def test_load_default_config_only(self, tmp_path: Path) -> None:
         """
-        测试只加载默认配置（无用户配置覆盖）。
+        测试只加载默认配置(无用户配置覆盖).
 
         Given: 只有包内默认配置
         When: 加载 DQ 配置
@@ -55,7 +55,7 @@ class TestDQSpecLoading:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """
-        测试用户配置覆盖默认配置。
+        测试用户配置覆盖默认配置.
 
         Given: 存在默认配置和用户配置
         When: 使用 load_with_user_override 加载 DQ 配置
@@ -83,12 +83,12 @@ class TestDQSpecLoading:
         with config_file.open("w", encoding="utf-8") as f:
             yaml.dump(default_config, f)
 
-        # 创建用户配置目录
+        # [REVIEW]
         data_root = tmp_path / "data"
         user_config_dir = data_root / "config" / "dq"
         user_config_dir.mkdir(parents=True)
 
-        # 用户配置覆盖
+        # [REVIEW]
         user_config = {
             "dataset": "test_dataset",
             "description": "User custom description",
@@ -125,13 +125,13 @@ class TestDQSpecLoading:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """
-        测试用户配置添加新数据集。
+        测试用户配置添加新数据集.
 
         Given: 默认配置有 dataset_a，用户配置有 dataset_b
         When: 使用 load_with_user_override 加载 DQ 配置
         Then: 应同时包含两个数据集
         """
-        # Arrange: 创建默认配置（只有 dataset_a）
+        # Arrange: 创建默认配置(只有 dataset_a)
         default_config_dir = tmp_path / "default_config"
         default_config_dir.mkdir()
 
@@ -147,7 +147,7 @@ class TestDQSpecLoading:
         with config_file.open("w", encoding="utf-8") as f:
             yaml.dump(default_config, f)
 
-        # 创建用户配置（只有 dataset_b）
+        # [REVIEW](只有 dataset_b)
         data_root = tmp_path / "data"
         user_config_dir = data_root / "config" / "dq"
         user_config_dir.mkdir(parents=True)
@@ -179,7 +179,7 @@ class TestDQSpecLoading:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """
-        测试用户配置目录不存在时使用默认配置。
+        测试用户配置目录不存在时使用默认配置.
 
         Given: 只有默认配置，用户配置目录不存在
         When: 使用 load_with_user_override 加载 DQ 配置
@@ -201,14 +201,14 @@ class TestDQSpecLoading:
         with config_file.open("w", encoding="utf-8") as f:
             yaml.dump(default_config, f)
 
-        # 用户配置目录不存在
+        # [REVIEW]
         data_root = tmp_path / "data"
         user_config_dir = data_root / "config" / "dq"
 
         # Act & Assert: 验证用户配置目录不存在
         assert not user_config_dir.exists()
 
-        # 应能加载默认配置
+        # [REVIEW]
         config = DQSpec.load_with_user_override(
             default_config_dir=default_config_dir, data_root=data_root
         )
@@ -218,7 +218,7 @@ class TestDQSpecLoading:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """
-        测试用户配置目录为空时使用默认配置。
+        测试用户配置目录为空时使用默认配置.
 
         Given: 默认配置存在，用户配置目录存在但为空
         When: 使用 load_with_user_override 加载 DQ 配置
@@ -240,7 +240,7 @@ class TestDQSpecLoading:
         with config_file.open("w", encoding="utf-8") as f:
             yaml.dump(default_config, f)
 
-        # 创建空的用户配置目录
+        # [REVIEW]
         data_root = tmp_path / "data"
         user_config_dir = data_root / "config" / "dq"
         user_config_dir.mkdir(parents=True)
@@ -260,7 +260,7 @@ class TestDQEngineWithUserConfig:
 
     def test_engine_uses_default_config_without_data_root(self, tmp_path: Path) -> None:
         """
-        测试 DQEngine 在没有 data_root 时使用默认配置。
+        测试 DQEngine 在没有 data_root 时使用默认配置.
 
         Given: 创建 DQEngine 时不指定 data_root
         When: 执行 DQ 检查
@@ -293,7 +293,7 @@ class TestDQEngineWithUserConfig:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """
-        测试 DQEngine 使用 data_root 加载用户配置。
+        测试 DQEngine 使用 data_root 加载用户配置.
 
         Given: 指定 data_root，存在用户配置
         When: 创建 DQEngine
@@ -304,7 +304,7 @@ class TestDQEngineWithUserConfig:
         user_config_dir = data_root / "config" / "dq"
         user_config_dir.mkdir(parents=True)
 
-        # 创建用户自定义配置，覆盖包内默认的 stock_daily
+        # [REVIEW] stock_daily
         user_config = {
             "dataset": "stock_daily",
             "description": "User custom stock daily config",
@@ -332,7 +332,7 @@ class TestDQEngineWithUserConfig:
         assert rules is not None
         assert rules.description == "User custom stock daily config"
         assert len(rules.l1_technical) == 1
-        # 验证用户自定义的列配置
+        # Verify用户自定义的列配置
         assert rules.l1_technical[0]["columns"] == [
             "sid",
             "trade_date",

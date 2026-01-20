@@ -587,17 +587,36 @@ def test_partitioned_write(store, sample_quotes):
 
 ## Marker 规范
 
-| Marker | 用途 | 运行时机 |
-|--------|------|----------|
-| `@pytest.mark.unit` | 单元测试（完全 Mock） | 每次提交/CI |
-| `@pytest.mark.integration` | 集成测试（"接缝"处） | CI |
-| `@pytest.mark.slow` | 耗时测试 | CI/手动 |
-| `@pytest.mark.smoke` | 冒烟测试，核心功能 | 每次提交 |
-| `@pytest.mark.benchmark` | 性能基准测试 | 手动/定期 |
-| `@pytest.mark.pit` | PIT数据正确性验证 | CI |
-| `@pytest.mark.data` | 需要数据fixtures | 按需 |
-| `@pytest.mark.external` | 调用外部API（Tushare等） | 手动/CI |
-| `@pytest.mark.observability` | 可观测性堆栈测试 | 按需/CI |
+### 自动标记（基于目录结构）
+
+**项目已实现自动标记功能**：测试文件会根据其所在的目录自动添加对应的 marker。
+
+| 目录 | 自动添加的 Marker |
+|------|-----------------|
+| `tests/unit/` | `@pytest.mark.unit` |
+| `tests/integration/` | `@pytest.mark.integration` |
+
+**实现原理**：
+- 使用 `pytest_collection_modifyitems` hook 在测试收集时自动标记
+- 配置文件位置：
+  - DataHub: `packages/datahub/tests/conftest.py`
+  - Foundation: `packages/foundation/tests/unit/conftest.py`
+
+**手动标记需求**：
+- ✅ `@pytest.mark.slow` - 耗时测试（需要手动标记）
+- ✅ `@pytest.mark.serial` - 必须串行运行的测试
+- ❌ `@pytest.mark.unit` / `@pytest.mark.integration` - 不需要手动标记
+
+### Marker 列表
+
+| Marker | 用途 | 运行时机 | 是否需要手动标记 |
+|--------|------|----------|----------------|
+| `@pytest.mark.unit` | 单元测试（完全 Mock） | 每次提交/CI | ❌ 自动标记 |
+| `@pytest.mark.integration` | 集成测试（"接缝"处） | CI | ❌ 自动标记 |
+| `@pytest.mark.slow` | 耗时测试 | CI/手动 | ✅ 需要手动标记 |
+| `@pytest.mark.serial` | 串行测试 | CI | ✅ 需要手动标记 |
+| `@pytest.mark.smoke` | 冒烟测试，核心功能 | 每次提交 | ✅ 需要手动标记 |
+| `@pytest.mark.benchmark` | 性能基准测试 | 手动/定期 | ✅ 需要手动标记 |
 
 ### 使用示例
 

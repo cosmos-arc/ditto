@@ -279,7 +279,7 @@ class TestResolvedQuery:
         assert resolved.asof == date(2024, 1, 15)
 
 
-@pytest.mark.pit
+@pytest.mark.integration
 class TestBarsAccessor:
     """
     Tests for BarsAccessor.
@@ -290,7 +290,7 @@ class TestBarsAccessor:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -413,7 +413,7 @@ class TestPITSafeAdjustment:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -612,7 +612,7 @@ class TestQFQAdjustment:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -878,7 +878,7 @@ class TestBarsAccessorSingle:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -1068,7 +1068,7 @@ class TestMixedAssetClass:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -1208,7 +1208,7 @@ class TestMixedAssetClass:
             )
 
     def test_mixed_asset_with_boundary_sids(self) -> None:
-        """测试 SID 范围边界值（使用已存在的 1000001 和 2000001）."""
+        """测试 SID 范围边界值(使用已存在的 1000001 和 2000001)."""
         # Write test data for existing SIDs from setup
         # setup already has: 1000001 (stock) and 2000001 (etf)
         stock_bars = pl.DataFrame(
@@ -1303,7 +1303,7 @@ class TestAdjFactorEdgeCases:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -1467,7 +1467,7 @@ class TestAdjFactorEdgeCases:
         assert abs(result_sorted["close"][2] - 11.00) < 0.01
 
     def test_qfq_large_dataset_performance(self) -> None:
-        """QFQ 大数据集性能测试（365 个交易日）."""
+        """QFQ 大数据集性能测试(365 个交易日)."""
         # Arrange: Create dataset for full year (365 trading days)
         random.seed(42)
         # Generate dates for full year 2024
@@ -1598,7 +1598,7 @@ class TestMarketWideMode:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 

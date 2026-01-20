@@ -16,10 +16,10 @@ if TYPE_CHECKING:
         RuleType,
     )
 
-# 绕过包的 __init__.py，直接导入模块以避免循环导入
+# [REVIEW] __init__.py，直接导入模块以避免循环导入
 import importlib.util
 
-# 获取正确的文件路径
+# [REVIEW]
 quality_file = (
     Path(__file__).parent.parent.parent.parent
     / "src"
@@ -37,7 +37,7 @@ if spec is None:
 quality_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(quality_module)
 
-# 从模块中提取需要的类
+# [REVIEW]
 DatasetRules = quality_module.DatasetRules
 DQIssue = quality_module.DQIssue
 DQLevel = quality_module.DQLevel

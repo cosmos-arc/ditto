@@ -104,7 +104,7 @@ class TestTushareSourceEtfBasic:
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - fund_basic API
-        # 注意: fund_basic 返回 ts_code, name, exchange, list_date
+        # [REVIEW]: fund_basic 返回 ts_code, name, exchange, list_date
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(
                 200,
@@ -189,7 +189,7 @@ class TestTushareSourceEtfDaily:
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - fund_daily API
-        # 注意: fund_daily 返回 vol, amount, pct_chg
+        # [REVIEW]: fund_daily 返回 vol, amount, pct_chg
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(
                 200,
@@ -313,7 +313,7 @@ class TestTushareSourceStockBasic:
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - stock_basic API
-        # 注意: stock_basic API 返回 ts_code, symbol, name, exchange, list_date
+        # [REVIEW]: stock_basic API 返回 ts_code, symbol, name, exchange, list_date
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(
                 200,
@@ -426,7 +426,7 @@ class TestTushareSourceStockDaily:
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - daily API
-        # 注意: daily API 返回 vol, amount, pct_chg
+        # [REVIEW]: daily API 返回 vol, amount, pct_chg
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(
                 200,
@@ -762,10 +762,10 @@ class TestTushareSourceErrorHandler:
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
         source = TushareSource()
 
-        # 验证方法存在（会失败因为还未实现）
+        # Verify方法存在(会失败因为还未实现)
         assert hasattr(source, "_tushare_fetch_error_handler")
 
-        # 测试认证错误直接抛出
+        # [REVIEW]
         with pytest.raises(SourceAuthenticationError):
             with source._tushare_fetch_error_handler("test_dataset", "test_api"):
                 raise SourceAuthenticationError("Auth failed")
@@ -777,7 +777,7 @@ class TestTushareSourceErrorHandler:
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
         source = TushareSource()
 
-        # 测试限流错误直接抛出
+        # [REVIEW]
         with pytest.raises(SourceRateLimitError):
             with source._tushare_fetch_error_handler("test_dataset", "test_api"):
                 raise SourceRateLimitError("Rate limit exceeded")
@@ -789,12 +789,12 @@ class TestTushareSourceErrorHandler:
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
         source = TushareSource()
 
-        # 测试普通异常被包装为 SourceFetchError
+        # [REVIEW] SourceFetchError
         with pytest.raises(SourceFetchError) as exc_info:
             with source._tushare_fetch_error_handler("test_dataset", "test_api"):
                 raise ValueError("Generic error")
 
-        # 验证错误信息包含原始错误
+        # Verify错误信息包含原始错误
         assert "test_dataset" in str(exc_info.value)
         assert "Generic error" in exc_info.value.details.get("original_error", "")
 

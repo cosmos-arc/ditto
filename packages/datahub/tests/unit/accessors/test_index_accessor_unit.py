@@ -41,7 +41,7 @@ def index_accessor(
     )
 
 
-@pytest.mark.pit
+@pytest.mark.integration
 class TestIndexAccessorWithMocks:
     """
     Tests for IndexAccessor with mocked dependencies.

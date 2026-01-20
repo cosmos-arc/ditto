@@ -7,7 +7,7 @@ from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
 
-@pytest.mark.pit
+@pytest.mark.integration
 class TestIngestionLogStore:
     """
     Tests for IngestionLogStore.

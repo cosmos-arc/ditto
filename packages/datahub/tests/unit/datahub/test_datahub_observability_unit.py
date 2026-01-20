@@ -215,7 +215,7 @@ class TestObservabilitySecurityStore:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         init(
             pytest_running=True,
             assertions_enabled=True,
@@ -298,7 +298,7 @@ class TestObservabilityCalendarStore:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         init(
             pytest_running=True,
             assertions_enabled=True,
@@ -373,7 +373,7 @@ class TestObservabilityIntegration:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         init(
             pytest_running=True,
             assertions_enabled=True,

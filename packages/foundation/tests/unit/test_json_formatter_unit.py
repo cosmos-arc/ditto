@@ -16,7 +16,7 @@ class TestJSONFormatterBasicFields:
 
     def test_basic_fields(self) -> None:
         """测试基本日志字段."""
-        # 创建模拟的 loguru 记录
+        # [REVIEW] loguru 记录
         record = {
             "record": {
                 "time": datetime(2025, 1, 11, 12, 30, 45),
@@ -59,7 +59,7 @@ class TestJSONFormatterBasicFields:
         result = _json_formatter(record)
         log_entry = json.loads(result)
 
-        # 验证 ISO 格式
+        # Verify ISO 格式
         assert log_entry["timestamp"] == "2025-06-15T14:30:45"
 
     def test_output_ends_with_newline(self) -> None:
@@ -191,7 +191,7 @@ class TestJSONFormatterExtraFields:
         result = _json_formatter(record)
         log_entry = json.loads(result)
 
-        # 应该只包含基本字段
+        # [REVIEW]
         assert "event" not in log_entry
         assert "trace_id" not in log_entry
 
@@ -277,7 +277,7 @@ class TestJSONFormatterSerialization:
 
         result = _json_formatter(record)
 
-        # 中文字符应该保持原样，不被转义为 \uXXXX
+        # [REVIEW] \uXXXX
         assert "测试中文消息" in result
         assert "数据读取" in result
         assert "\\u" not in result
@@ -299,5 +299,5 @@ class TestJSONFormatterSerialization:
 
         result = _json_formatter(record)
 
-        # 应该能成功解析为 JSON（去除换行符后）
+        # [REVIEW] JSON(去除换行符后)
         json.loads(result.rstrip("\n"))

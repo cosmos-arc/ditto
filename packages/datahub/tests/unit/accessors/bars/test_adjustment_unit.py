@@ -129,7 +129,7 @@ class TestApplyQfqAdj:
             }
         )
 
-        # 调整因子数据
+        # [REVIEW]
         adj_df = pl.DataFrame(
             {
                 "sid": [1, 1, 1],
@@ -183,7 +183,7 @@ class TestApplyQfqAdj:
             }
         )
 
-        # 调整因子数据 with knowledge_date
+        # [REVIEW] with knowledge_date
         adj_df = pl.DataFrame(
             {
                 "sid": [1, 1, 1, 1],

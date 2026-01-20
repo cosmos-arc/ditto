@@ -1,10 +1,9 @@
 """CLIExecutor 单元测试."""
 
-from unittest.mock import Mock, patch
-
 import pytest
 from ditto_datahub.models import Source
 from ditto_port.cli.executor import CLIExecutor
+from pytest_mock import MockerFixture
 
 
 @pytest.mark.unit
@@ -18,13 +17,11 @@ def test_executor_init_with_hub(mock_hub):
 
 
 @pytest.mark.unit
-@patch("ditto_port.cli.executor.create_coordinator")
-@patch("ditto_port.cli.executor.BackfillManager")
-def test_ingest_daily_success(mock_backfill_mgr_cls, mock_create_coord, mock_hub):
+def test_ingest_daily_success(mock_hub, mocker: MockerFixture):
     """测试 ingest_daily 成功场景"""
     # Mock coordinator 返回成功结果
-    mock_coordinator = Mock()
-    mock_result = Mock()
+    mock_coordinator = mocker.Mock()
+    mock_result = mocker.Mock()
     mock_result.status = "success"
     mock_result.trade_date = "2024-01-02"
     mock_result.dataset = "stock_daily"
@@ -35,14 +32,15 @@ def test_ingest_daily_success(mock_backfill_mgr_cls, mock_create_coord, mock_hub
     mock_coordinator.ingest_date.return_value = mock_result
 
     # 设置 create_coordinator mock 上下文管理器
-    mock_context = Mock()
-    mock_context.__enter__ = Mock(return_value=mock_coordinator)
-    mock_context.__exit__ = Mock(return_value=None)
-    mock_create_coord.return_value = mock_context
+    mock_context = mocker.Mock()
+    mock_context.__enter__ = mocker.Mock(return_value=mock_coordinator)
+    mock_context.__exit__ = mocker.Mock(return_value=None)
 
     # Mock BackfillManager
-    mock_backfill_mgr = Mock()
-    mock_backfill_mgr_cls.return_value = mock_backfill_mgr
+    mock_backfill_mgr = mocker.Mock()
+    mocker.patch(
+        "ditto_port.cli.executor.BackfillManager", return_value=mock_backfill_mgr
+    )
 
     with CLIExecutor.create(hub=mock_hub, source_name=Source.TUSHARE) as executor:
         result = executor.ingest_daily("stock_daily", "2024-01-02", force=False)
@@ -60,12 +58,10 @@ def test_ingest_daily_success(mock_backfill_mgr_cls, mock_create_coord, mock_hub
 
 
 @pytest.mark.unit
-@patch("ditto_port.cli.executor.create_coordinator")
-@patch("ditto_port.cli.executor.BackfillManager")
-def test_ingest_daily_skipped(mock_backfill_mgr_cls, mock_create_coord, mock_hub):
+def test_ingest_daily_skipped(mock_hub, mocker: MockerFixture):
     """测试 ingest_daily 跳过场景"""
-    mock_coordinator = Mock()
-    mock_result = Mock()
+    mock_coordinator = mocker.Mock()
+    mock_result = mocker.Mock()
     mock_result.status = "skipped"
     mock_result.trade_date = "2024-01-02"
     mock_result.dataset = "stock_daily"
@@ -74,13 +70,15 @@ def test_ingest_daily_skipped(mock_backfill_mgr_cls, mock_create_coord, mock_hub
     mock_result.error = None
     mock_coordinator.ingest_date.return_value = mock_result
 
-    mock_context = Mock()
-    mock_context.__enter__ = Mock(return_value=mock_coordinator)
-    mock_context.__exit__ = Mock(return_value=None)
-    mock_create_coord.return_value = mock_context
+    mock_context = mocker.Mock()
+    mock_context.__enter__ = mocker.Mock(return_value=mock_coordinator)
+    mock_context.__exit__ = mocker.Mock(return_value=None)
+    # Context manager set up, patch handled by factory method
 
-    mock_backfill_mgr = Mock()
-    mock_backfill_mgr_cls.return_value = mock_backfill_mgr
+    mock_backfill_mgr = mocker.Mock()
+    mocker.patch(
+        "ditto_port.cli.executor.BackfillManager", return_value=mock_backfill_mgr
+    )
 
     with CLIExecutor.create(hub=mock_hub, source_name=Source.TUSHARE) as executor:
         result = executor.ingest_daily("stock_daily", "2024-01-02", force=False)
@@ -91,12 +89,10 @@ def test_ingest_daily_skipped(mock_backfill_mgr_cls, mock_create_coord, mock_hub
 
 
 @pytest.mark.unit
-@patch("ditto_port.cli.executor.create_coordinator")
-@patch("ditto_port.cli.executor.BackfillManager")
-def test_ingest_daily_failed(mock_backfill_mgr_cls, mock_create_coord, mock_hub):
+def test_ingest_daily_failed(mock_hub, mocker: MockerFixture):
     """测试 ingest_daily 失败场景"""
-    mock_coordinator = Mock()
-    mock_result = Mock()
+    mock_coordinator = mocker.Mock()
+    mock_result = mocker.Mock()
     mock_result.status = "failed"
     mock_result.trade_date = "2024-01-02"
     mock_result.dataset = "stock_daily"
@@ -105,13 +101,15 @@ def test_ingest_daily_failed(mock_backfill_mgr_cls, mock_create_coord, mock_hub)
     mock_result.error = "FETCH_ERROR"
     mock_coordinator.ingest_date.return_value = mock_result
 
-    mock_context = Mock()
-    mock_context.__enter__ = Mock(return_value=mock_coordinator)
-    mock_context.__exit__ = Mock(return_value=None)
-    mock_create_coord.return_value = mock_context
+    mock_context = mocker.Mock()
+    mock_context.__enter__ = mocker.Mock(return_value=mock_coordinator)
+    mock_context.__exit__ = mocker.Mock(return_value=None)
+    # Context manager set up, patch handled by factory method
 
-    mock_backfill_mgr = Mock()
-    mock_backfill_mgr_cls.return_value = mock_backfill_mgr
+    mock_backfill_mgr = mocker.Mock()
+    mocker.patch(
+        "ditto_port.cli.executor.BackfillManager", return_value=mock_backfill_mgr
+    )
 
     with CLIExecutor.create(hub=mock_hub, source_name=Source.TUSHARE) as executor:
         result = executor.ingest_daily("stock_daily", "2024-01-02", force=False)
@@ -122,28 +120,28 @@ def test_ingest_daily_failed(mock_backfill_mgr_cls, mock_create_coord, mock_hub)
 
 
 @pytest.mark.unit
-@patch("ditto_port.cli.executor.create_coordinator")
-@patch("ditto_port.cli.executor.BackfillManager")
-def test_backfill_range_success(mock_backfill_mgr_cls, mock_create_coord, mock_hub):
+def test_backfill_range_success(mock_hub, mocker: MockerFixture):
     """测试 backfill_range 成功场景"""
     # Mock coordinator
-    mock_coordinator = Mock()
+    mock_coordinator = mocker.Mock()
 
-    mock_context = Mock()
-    mock_context.__enter__ = Mock(return_value=mock_coordinator)
-    mock_context.__exit__ = Mock(return_value=None)
-    mock_create_coord.return_value = mock_context
+    mock_context = mocker.Mock()
+    mock_context.__enter__ = mocker.Mock(return_value=mock_coordinator)
+    mock_context.__exit__ = mocker.Mock(return_value=None)
+    # Context manager set up, patch handled by factory method
 
     # Mock backfill manager
-    mock_backfill_mgr = Mock()
-    mock_backfill_result = Mock()
+    mock_backfill_mgr = mocker.Mock()
+    mock_backfill_result = mocker.Mock()
     mock_backfill_result.dataset = "stock_daily"
     mock_backfill_result.total_dates = 5
     mock_backfill_result.success_count = 4
     mock_backfill_result.skipped_count = 1
     mock_backfill_result.failed_count = 0
     mock_backfill_mgr.backfill_range.return_value = mock_backfill_result
-    mock_backfill_mgr_cls.return_value = mock_backfill_mgr
+    mocker.patch(
+        "ditto_port.cli.executor.BackfillManager", return_value=mock_backfill_mgr
+    )
 
     with CLIExecutor.create(hub=mock_hub, source_name=Source.TUSHARE) as executor:
         result = executor.backfill_range(
@@ -165,21 +163,17 @@ def test_backfill_range_success(mock_backfill_mgr_cls, mock_create_coord, mock_h
 
 
 @pytest.mark.unit
-@patch("ditto_port.cli.executor.create_coordinator")
-@patch("ditto_port.cli.executor.BackfillManager")
-def test_backfill_range_with_failures(
-    mock_backfill_mgr_cls, mock_create_coord, mock_hub
-):
+def test_backfill_range_with_failures(mock_hub, mocker: MockerFixture):
     """测试 backfill_range 带失败的场景"""
-    mock_coordinator = Mock()
+    mock_coordinator = mocker.Mock()
 
-    mock_context = Mock()
-    mock_context.__enter__ = Mock(return_value=mock_coordinator)
-    mock_context.__exit__ = Mock(return_value=None)
-    mock_create_coord.return_value = mock_context
+    mock_context = mocker.Mock()
+    mock_context.__enter__ = mocker.Mock(return_value=mock_coordinator)
+    mock_context.__exit__ = mocker.Mock(return_value=None)
+    # Context manager set up, patch handled by factory method
 
-    mock_backfill_mgr = Mock()
-    mock_backfill_result = Mock()
+    mock_backfill_mgr = mocker.Mock()
+    mock_backfill_result = mocker.Mock()
     mock_backfill_result.dataset = "stock_daily"
     mock_backfill_result.total_dates = 5
     mock_backfill_result.success_count = 3
@@ -187,7 +181,9 @@ def test_backfill_range_with_failures(
     mock_backfill_result.failed_count = 2
     mock_backfill_result.results = []
     mock_backfill_mgr.backfill_range.return_value = mock_backfill_result
-    mock_backfill_mgr_cls.return_value = mock_backfill_mgr
+    mocker.patch(
+        "ditto_port.cli.executor.BackfillManager", return_value=mock_backfill_mgr
+    )
 
     with CLIExecutor.create(hub=mock_hub, source_name=Source.TUSHARE) as executor:
         result = executor.backfill_range(

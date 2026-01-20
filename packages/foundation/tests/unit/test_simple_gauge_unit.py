@@ -26,10 +26,10 @@ class TestSimpleGauge:
 
         gauge = SimpleGauge(meter, "test.gauge", "Test gauge")
 
-        # 设置值
+        # [REVIEW]
         gauge.set(42.0)
 
-        # 验证值被正确设置
+        # Verify值被正确设置
         assert gauge._value == 42.0
 
     def test_set_overwrites_previous_value(self) -> None:
@@ -44,7 +44,7 @@ class TestSimpleGauge:
         gauge.set(10.0)
         gauge.set(20.0)
 
-        # 验证最后设置的值是 20.0
+        # Verify最后设置的值是 20.0
         assert gauge._value == 20.0
 
     def test_inc_increments_value(self) -> None:
@@ -59,7 +59,7 @@ class TestSimpleGauge:
         gauge.set(5.0)
         gauge.inc(3.0)
 
-        # 验证值从 5.0 增加到 8.0
+        # Verify值从 5.0 增加到 8.0
         assert gauge._value == 8.0
 
     def test_inc_default_delta(self) -> None:
@@ -74,7 +74,7 @@ class TestSimpleGauge:
         gauge.set(10.0)
         gauge.inc()
 
-        # 验证值从 10.0 增加到 11.0 (默认增量 1.0)
+        # Verify值从 10.0 增加到 11.0 (默认增量 1.0)
         assert gauge._value == 11.0
 
     def test_inc_from_zero(self) -> None:
@@ -88,7 +88,7 @@ class TestSimpleGauge:
 
         gauge.inc(5.0)
 
-        # 验证值从 0.0 增加到 5.0
+        # Verify值从 0.0 增加到 5.0
         assert gauge._value == 5.0
 
     def test_dec_decrements_value(self) -> None:
@@ -103,7 +103,7 @@ class TestSimpleGauge:
         gauge.set(10.0)
         gauge.dec(3.0)
 
-        # 验证值从 10.0 减少到 7.0
+        # Verify值从 10.0 减少到 7.0
         assert gauge._value == 7.0
 
     def test_dec_default_delta(self) -> None:
@@ -118,7 +118,7 @@ class TestSimpleGauge:
         gauge.set(10.0)
         gauge.dec()
 
-        # 验证值从 10.0 减少到 9.0 (默认减量 1.0)
+        # Verify值从 10.0 减少到 9.0 (默认减量 1.0)
         assert gauge._value == 9.0
 
     def test_dec_clamps_at_zero(self) -> None:
@@ -133,7 +133,7 @@ class TestSimpleGauge:
         gauge.set(5.0)
         gauge.dec(10.0)
 
-        # 验证值被限制在 0.0，不允许负值
+        # Verify值被限制在 0.0，不允许负值
         assert gauge._value == 0.0
 
     def test_no_attributes_parameter(self) -> None:
@@ -146,7 +146,7 @@ class TestSimpleGauge:
         gauge = SimpleGauge(meter, "test.gauge9", "Test gauge 9")
 
         # set() 方法不应该接受 attributes 参数
-        # 如果尝试传入 attributes，应该得到 TypeError
+        # [REVIEW] attributes，应该得到 TypeError
         with pytest.raises(TypeError):
             gauge.set(10.0, {"key": "value"})  # type: ignore
 
@@ -162,5 +162,5 @@ class TestSimpleGauge:
         gauge.set(5.0)
         gauge.inc(-10.0)
 
-        # 验证值被限制在 0.0，不允许负值
+        # Verify值被限制在 0.0，不允许负值
         assert gauge._value == 0.0

@@ -39,13 +39,13 @@ class TestColumnMapping:
         )
 
         assert mapping.boolean_columns == ("is_open", "is_trading")
-        # 验证默认值为空元组
+        # Verify默认值为空元组
         default_mapping = ColumnMapping(rename={}, date_columns={}, float_columns=[])
         assert default_mapping.boolean_columns == ()
 
     def test_column_mapping_with_computed_columns(self) -> None:
         """Test ColumnMapping with computed_columns field."""
-        # 创建包含 computed_columns 的映射配置
+        # [REVIEW] computed_columns 的映射配置
         mapping = ColumnMapping(
             rename={"ts_code": "src_code"},
             date_columns={},
@@ -56,16 +56,16 @@ class TestColumnMapping:
             },
         )
 
-        # 验证 computed_columns 的键（因为 Expr 对象不能直接用 == 比较）
+        # Verify computed_columns 的键(因为 Expr 对象不能直接用 == 比较)
         assert set(mapping.computed_columns.keys()) == {"symbol", "exchange"}
         assert isinstance(mapping.computed_columns["symbol"], pl.Expr)
         assert isinstance(mapping.computed_columns["exchange"], pl.Expr)
 
-        # 验证默认值为空字典
+        # Verify默认值为空字典
         default_mapping = ColumnMapping(rename={}, date_columns={}, float_columns=[])
         assert default_mapping.computed_columns == {}
 
-        # 验证 computed_columns 是独立的（不共享可变默认值）
+        # Verify computed_columns 是独立的(不共享可变默认值)
         mapping1 = ColumnMapping(
             rename={},
             date_columns={},
@@ -84,7 +84,7 @@ class TestTushareDataTransformer:
 
     def test_transform_daily_ohlcv_with_data(self) -> None:
         """Test transform_daily_ohlcv with actual data."""
-        # 创建输入 DataFrame（模拟 Tushare API 返回）
+        # [REVIEW] DataFrame(模拟 Tushare API 返回)
         input_df = pl.DataFrame(
             {
                 "ts_code": ["000001.SZ", "600000.SH"],
@@ -100,12 +100,12 @@ class TestTushareDataTransformer:
             }
         )
 
-        # 执行转换
+        # [REVIEW]
         result = TushareDataTransformer.transform_daily_ohlcv(
             input_df, "test_dataset", DAILY_OHLCV_MAPPING
         )
 
-        # 验证 schema
+        # Verify schema
         assert dict(result.schema) == {
             "src_code": pl.String,
             "trade_date": pl.Date,
@@ -119,7 +119,7 @@ class TestTushareDataTransformer:
             "pct_change": pl.Float64,
         }
 
-        # 验证数据
+        # Verify数据
         assert result.to_dicts() == [
             {
                 "src_code": "000001.SZ",
@@ -168,7 +168,7 @@ class TestTushareDataTransformer:
             input_df, "test_dataset", DAILY_OHLCV_MAPPING
         )
 
-        # 验证返回正确 schema 的空 DataFrame
+        # Verify返回正确 schema 的空 DataFrame
         assert len(result) == 0
         assert dict(result.schema) == {
             "src_code": pl.String,
@@ -185,28 +185,28 @@ class TestTushareDataTransformer:
 
     def test_transform_with_boolean_columns(self) -> None:
         """Test transform with boolean type columns conversion."""
-        # 模拟 Tushare API 返回的交易日历数据
+        # [REVIEW] Tushare API 返回的交易日历数据
         # is_open 字段是整数 0/1，需要转换为 pl.Boolean
         input_df = pl.DataFrame(
             {
                 "cal_date": ["20240102", "20240103", "20240104", "20240105"],
-                "is_open": [1, 1, 0, 0],  # 整数形式：1=开市，0=休市
+                "is_open": [1, 1, 0, 0],  # [REVIEW]1=开市，0=休市
             }
         )
 
-        # 调用通用 transform() 方法
-        # 注意：这个方法还未实现，测试会失败
+        # [REVIEW] transform() 方法
+        # [REVIEW]
         result = TushareDataTransformer.transform(
             input_df, "calendar", CALENDAR_MAPPING
         )
 
-        # 验证 schema
+        # Verify schema
         assert dict(result.schema) == {
             "trade_date": pl.Date,
             "is_open": pl.Boolean,
         }
 
-        # 验证数据转换正确
+        # Verify数据转换正确
         assert result.to_dicts() == [
             {"trade_date": date(2024, 1, 2), "is_open": True},
             {"trade_date": date(2024, 1, 3), "is_open": True},
@@ -216,7 +216,7 @@ class TestTushareDataTransformer:
 
     def test_transform_with_computed_columns(self) -> None:
         """Test transform with computed columns (symbol/exchange extraction)."""
-        # 模拟 Tushare API 返回的 ETF 基本信息数据
+        # [REVIEW] Tushare API 返回的 ETF 基本信息数据
         input_df = pl.DataFrame(
             {
                 "ts_code": ["510300.SH", "159919.SZ", "512100.SH"],
@@ -225,13 +225,13 @@ class TestTushareDataTransformer:
             }
         )
 
-        # 调用通用 transform() 方法
-        # 注意：这个方法还未实现，测试会失败
+        # [REVIEW] transform() 方法
+        # [REVIEW]
         result = TushareDataTransformer.transform(
             input_df, "etf_basic", ETF_BASIC_MAPPING
         )
 
-        # 验证 schema
+        # Verify schema
         assert dict(result.schema) == {
             "src_code": pl.String,
             "symbol": pl.String,
@@ -240,7 +240,7 @@ class TestTushareDataTransformer:
             "list_date": pl.Date,
         }
 
-        # 验证数据转换正确
+        # Verify数据转换正确
         assert result.to_dicts() == [
             {
                 "src_code": "510300.SH",
@@ -267,15 +267,15 @@ class TestTushareDataTransformer:
 
     def test_transform_calendar_empty(self) -> None:
         """Test transform with empty calendar DataFrame."""
-        # 创建空 DataFrame，但有正确的 schema
+        # [REVIEW] DataFrame，但有正确的 schema
         input_df = pl.DataFrame(schema={"cal_date": pl.String, "is_open": pl.Int64})
 
-        # 调用通用 transform() 方法
+        # [REVIEW] transform() 方法
         result = TushareDataTransformer.transform(
             input_df, "calendar", CALENDAR_MAPPING
         )
 
-        # 验证返回正确 schema 的空 DataFrame
+        # Verify返回正确 schema 的空 DataFrame
         assert result.is_empty()
         assert dict(result.schema) == {
             "trade_date": pl.Date,
@@ -284,7 +284,7 @@ class TestTushareDataTransformer:
 
     def test_transform_adj_factor_empty(self) -> None:
         """Test transform with empty adj_factor DataFrame."""
-        # 创建空 DataFrame，但有正确的 schema
+        # [REVIEW] DataFrame，但有正确的 schema
         input_df = pl.DataFrame(
             schema={
                 "ts_code": pl.String,
@@ -293,12 +293,12 @@ class TestTushareDataTransformer:
             }
         )
 
-        # 调用通用 transform() 方法
+        # [REVIEW] transform() 方法
         result = TushareDataTransformer.transform(
             input_df, "adj_factor", ADJ_FACTOR_MAPPING
         )
 
-        # 验证返回正确 schema 的空 DataFrame
+        # Verify返回正确 schema 的空 DataFrame
         assert result.is_empty()
         assert dict(result.schema) == {
             "src_code": pl.String,
@@ -312,7 +312,7 @@ class TestTushareDataTransformer:
         Test transform with empty ETF basic DataFrame - computed columns type
         inference.
         """
-        # 创建空 DataFrame，但有正确的 schema
+        # [REVIEW] DataFrame，但有正确的 schema
         input_df = pl.DataFrame(
             schema={
                 "ts_code": pl.String,
@@ -321,13 +321,13 @@ class TestTushareDataTransformer:
             }
         )
 
-        # 调用通用 transform() 方法
+        # [REVIEW] transform() 方法
         result = TushareDataTransformer.transform(
             input_df, "etf_basic", ETF_BASIC_MAPPING
         )
 
-        # 验证返回正确 schema 的空 DataFrame
-        # 关键验证: symbol 和 exchange 是 computed_columns,类型应该是 pl.String
+        # Verify返回正确 schema 的空 DataFrame
+        # [REVIEW]: symbol 和 exchange 是 computed_columns,类型应该是 pl.String
         assert result.is_empty()
         assert dict(result.schema) == {
             "src_code": pl.String,

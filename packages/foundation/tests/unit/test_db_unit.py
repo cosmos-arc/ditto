@@ -308,3 +308,74 @@ class TestSQLitePoolClose:
             # Should not raise
             pool.close()
             pool.close()
+
+
+@pytest.mark.unit
+class TestSQLitePoolExceptionPaths:
+    """Tests for SQLitePool exception handling."""
+
+    def test_get_connection_with_invalid_path(self) -> None:
+        """Test get_connection raises error with invalid database path."""
+        # Use a path that cannot be created (non-existent directory with no permissions)
+        pool = SQLitePool("/root/nonexistent/path/test.db")
+
+        # OSError or PermissionError expected for invalid path
+        with pytest.raises(Exception):  # noqa: B017  # OSError, PermissionError
+            pool.get_connection()
+
+    def test_init_schema_with_invalid_sql_content(self, tmp_path: Path) -> None:
+        """Test init_schema raises error with invalid SQL content."""
+        db_path = tmp_path / "test.db"
+        schema_path = tmp_path / "schema.sql"
+
+        # Create invalid SQL file
+        schema_path.write_text("INVALID SQL SYNTAX HERE")
+
+        pool = SQLitePool(str(db_path), schema_path=schema_path)
+
+        # sqlite3.DatabaseError expected for invalid SQL
+        with pytest.raises(Exception):  # noqa: B017  # sqlite3.DatabaseError
+            pool.init_schema()
+
+    def test_execute_with_invalid_sql(self, tmp_path: Path) -> None:
+        """Test execute raises error with invalid SQL."""
+        db_path = tmp_path / "test.db"
+        pool = SQLitePool(str(db_path))
+
+        with pool.get_connection() as conn:
+            # sqlite3.OperationalError expected for invalid SQL
+            with pytest.raises(Exception):  # noqa: B017  # sqlite3.OperationalError
+                conn.execute("INVALID SQL QUERY")
+
+    def test_execute_fetchone_with_connection_closed(self, tmp_path: Path) -> None:
+        """Test execute/fetchone raises error when connection is closed."""
+        db_path = tmp_path / "test.db"
+        pool = SQLitePool(str(db_path))
+
+        conn = pool.get_connection()
+        pool.close()  # Close the pool
+
+        # ProgrammingError expected for closed connection
+        with pytest.raises(Exception):  # noqa: B017  # sqlite3.ProgrammingError
+            conn.execute("SELECT 1")
+
+    def test_multiple_connections_exhaust_pool(self, tmp_path: Path) -> None:
+        """Test behavior when creating multiple connections."""
+        db_path = tmp_path / "test.db"
+        pool = SQLitePool(str(db_path))
+
+        # Get first connection
+        conn1 = pool.get_connection()
+        initial_count = pool._connection_count
+        assert initial_count == 1
+
+        # Second call returns same connection (thread-local)
+        conn2 = pool.get_connection()
+        assert pool._connection_count == 1  # No new connection created
+
+        # Verify same connection
+        assert conn1 is conn2
+
+        # Cleanup
+        conn1.close()
+        # Note: thread-local connections persist until thread ends

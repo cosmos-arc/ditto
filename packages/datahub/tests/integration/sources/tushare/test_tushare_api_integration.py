@@ -3,14 +3,10 @@
 这些测试调用真实的 Tushare API，需要：
 1. 有效的 TUSHARE_TOKEN 环境变量
 2. 网络连接
-3. 手动运行（标记为 @pytest.mark.external）
+3. 手动运行(标记为 @pytest.mark.integration)
 
 运行方式：
-    # 只运行 external 测试（需要 token）
-    pytest packages/datahub/tests/integration/sources/tushare/... -m external
-
-    # 跳过 external 测试（CI 默认）
-    pytest packages/datahub/tests/integration/sources/tushare/... -m "not external"
+    pytest packages/datahub/tests/integration/sources/tushare/... -m integration
 """
 
 import time
@@ -23,7 +19,6 @@ from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
 
 @pytest.mark.integration
-@pytest.mark.external
 class TestTushareEndToEnd:
     """端到端集成测试：验证完整的 Tushare API 调用流程."""
 
@@ -41,7 +36,7 @@ class TestTushareEndToEnd:
         - TUSHARE_TOKEN 环境变量已设置
         - 网络连接正常
         """
-        # 1. 初始化 Source（从环境变量读取 token）
+        # 1. 初始化 Source(从环境变量读取 token)
         source = TushareSource()
 
         # 2. 测试 calendar 获取
@@ -52,7 +47,7 @@ class TestTushareEndToEnd:
             "is_open": pl.Boolean,
         }
 
-        # 验证数据转换正确性
+        # Verify数据转换正确性
         calendar_dict = calendar.to_dicts()
         assert isinstance(calendar_dict, list)
         assert all(isinstance(d["trade_date"], date) for d in calendar_dict)
@@ -69,7 +64,7 @@ class TestTushareEndToEnd:
             "list_date": pl.Date,
         }
 
-        # 验证数据转换正确性
+        # Verify数据转换正确性
         stocks_dict = stocks.to_dicts()
         assert isinstance(stocks_dict, list)
         assert all("." in d["src_code"] for d in stocks_dict)
@@ -78,7 +73,7 @@ class TestTushareEndToEnd:
             d["exchange"] in stocks["exchange"].unique().to_list() for d in stocks_dict
         )
 
-        # 4. 测试 stock_daily 获取（使用交易日 2024-01-02）
+        # 4. 测试 stock_daily 获取(使用交易日 2024-01-02)
         daily = source.fetch_stock_daily("2024-01-02")
         assert daily.height > 0, "Stock daily 数据不应为空"
         assert daily.schema == {
@@ -94,7 +89,7 @@ class TestTushareEndToEnd:
             "pct_change": pl.Float64,
         }
 
-        # 验证数据转换正确性
+        # Verify数据转换正确性
         daily_dict = daily.to_dicts()
         assert isinstance(daily_dict, list)
         assert all(d["trade_date"] == date(2024, 1, 2) for d in daily_dict)
@@ -132,7 +127,7 @@ class TestTushareEndToEnd:
             "list_date": pl.Date,
         }
 
-        # 验证数据转换正确性
+        # Verify数据转换正确性
         etf_dict = etf_basic.to_dicts()
         assert isinstance(etf_dict, list)
         assert all("." in d["src_code"] for d in etf_dict)
@@ -153,7 +148,7 @@ class TestTushareEndToEnd:
             "pct_change": pl.Float64,
         }
 
-        # 验证 OHLC 逻辑正确性
+        # Verify OHLC 逻辑正确性
         etf_daily_dict = etf_daily.to_dicts()
         for row in etf_daily_dict:
             assert row["high"] >= row["low"], "High 价应 >= Low 价"
@@ -182,7 +177,7 @@ class TestTushareEndToEnd:
             "adj_factor": pl.Float64,
         }
 
-        # 验证 knowledge_date = trade_date（数据即日可用）
+        # Verify knowledge_date = trade_date(数据即日可用)
         adj_dict = adj_factor.to_dicts()
         for row in adj_dict:
             assert row["knowledge_date"] == row["trade_date"], (
@@ -223,7 +218,7 @@ class TestTushareEndToEnd:
             "down_limit": pl.Float64,
         }
 
-        # 验证涨跌停价逻辑
+        # Verify涨跌停价逻辑
         limit_dict = stock_limit.to_dicts()
         for row in limit_dict:
             assert row["up_limit"] > row["down_limit"], "涨停价应大于跌停价"
@@ -243,7 +238,7 @@ class TestTushareEndToEnd:
             "list_status": pl.String,
         }
 
-        # 验证状态逻辑
+        # Verify状态逻辑
         status_dict = stock_status.to_dicts()
         for row in status_dict:
             assert isinstance(row["is_suspended"], bool), "is_suspended 应为布尔值"
@@ -264,7 +259,7 @@ class TestTushareEndToEnd:
         """
         source = TushareSource()
 
-        # 连续调用多次 calendar API
+        # [REVIEW] calendar API
         start_time = time.time()
         results = []
         for _i in range(3):
@@ -272,12 +267,12 @@ class TestTushareEndToEnd:
             results.append(result)
         elapsed_time = time.time() - start_time
 
-        # 验证所有调用都成功
+        # Verify所有调用都成功
         assert all(r.height > 0 for r in results), "所有请求都应成功"
 
-        # 验证限流：Tushare 免费账户限流 200次/分钟
-        # 3 次请求至少应该有适当的间隔（基于限流配置）
-        # 注意：这里只验证不会因为限流失败，具体时间取决于限流配置
+        # Verify限流：Tushare 免费账户限流 200次/分钟
+        # 3 次请求至少应该有适当的间隔(基于限流配置)
+        # [REVIEW]
         assert elapsed_time > 0, "请求应该有耗时"
 
     def test_error_handling_invalid_token(
@@ -292,10 +287,10 @@ class TestTushareEndToEnd:
         前置条件：
         - 网络连接正常
         """
-        # 使用无效 token（直接传递参数，绕过 keyring）
+        # [REVIEW] token(直接传递参数，绕过 keyring)
         source = TushareSource(token="invalid_token_12345")
 
-        # 应该抛出认证错误
+        # [REVIEW]
         with pytest.raises(SourceAuthenticationError):
             source.fetch_calendar("2024-01-01", "2024-01-05")
 
@@ -305,7 +300,7 @@ class TestTushareEndToEnd:
         测试场景：
         1. 同一参数多次调用同一 API
         2. 验证返回的数据结构一致
-        3. 验证数据内容一致（对于静态数据如 stock_basic）
+        3. 验证数据内容一致(对于静态数据如 stock_basic)
 
         前置条件：
         - TUSHARE_TOKEN 环境变量已设置
@@ -313,17 +308,17 @@ class TestTushareEndToEnd:
         """
         source = TushareSource()
 
-        # 多次调用 stock_basic（静态数据）
+        # [REVIEW] stock_basic(静态数据)
         stocks1 = source.fetch_stock_basic()
         stocks2 = source.fetch_stock_basic()
 
-        # 验证数据行数一致
+        # Verify数据行数一致
         assert stocks1.height == stocks2.height, "多次调用返回行数应一致"
 
-        # 验证 schema 一致
+        # Verify schema 一致
         assert stocks1.schema == stocks2.schema, "多次调用返回 schema 应一致"
 
-        # 验证内容一致（按 src_code 排序后比较）
+        # Verify内容一致(按 src_code 排序后比较)
         sorted1 = stocks1.sort("src_code")
         sorted2 = stocks2.sort("src_code")
         assert sorted1.equals(sorted2), "多次调用返回内容应一致"

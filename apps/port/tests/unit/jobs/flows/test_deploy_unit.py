@@ -1,7 +1,5 @@
 """部署脚本单元测试."""
 
-from unittest.mock import MagicMock, patch
-
 import pytest
 from ditto_port.jobs.flows.deploy import (
     FlowDeploymentConfig,
@@ -10,6 +8,7 @@ from ditto_port.jobs.flows.deploy import (
     deploy_all_flows,
     list_flows,
 )
+from pytest_mock import MockerFixture
 
 
 @pytest.mark.unit
@@ -71,15 +70,17 @@ class TestListFlows:
     # 注意：list_flows 依赖 flow.name 属性，但在单元测试中 @flow 被 mock
     # 因此这些测试需要使用真实 Flow 或 mock flow 对象
 
-    @patch("ditto_port.jobs.flows.deploy._get_flow_configs")
-    def test_list_flows_returns_dict(self, mock_get_configs):
+    def test_list_flows_returns_dict(self, mocker: MockerFixture):
         """测试返回 flow 名称到描述的映射。"""
         # Arrange - mock flow configs
-        mock_flow = MagicMock()
+        mock_get_configs = mocker.patch(
+            "ditto_port.jobs.flows.deploy._get_flow_configs"
+        )
+        mock_flow = mocker.Mock()
         mock_flow.name = "test_flow"
         mock_flow.__name__ = "test_flow"  # 同时设置 __name__ 以防万一
 
-        mock_config = MagicMock()
+        mock_config = mocker.Mock()
         mock_config.flow.return_value = mock_flow
         mock_config.description = "Test description"
         mock_get_configs.return_value = [mock_config]
@@ -91,14 +92,16 @@ class TestListFlows:
         assert isinstance(flows, dict)
         assert "test_flow" in flows
 
-    @patch("ditto_port.jobs.flows.deploy._get_flow_configs")
-    def test_list_flows_has_descriptions(self, mock_get_configs):
+    def test_list_flows_has_descriptions(self, mocker: MockerFixture):
         """测试每个 flow 都有描述。"""
         # Arrange
-        mock_flow = MagicMock()
+        mock_get_configs = mocker.patch(
+            "ditto_port.jobs.flows.deploy._get_flow_configs"
+        )
+        mock_flow = mocker.Mock()
         mock_flow.name = "test_flow"
 
-        mock_config = MagicMock()
+        mock_config = mocker.Mock()
         mock_config.flow.return_value = mock_flow
         mock_config.description = "Test description"
         mock_get_configs.return_value = [mock_config]
@@ -114,16 +117,18 @@ class TestListFlows:
 class TestDeployAllFlows:
     """测试 deploy_all_flows 函数。"""
 
-    @patch("ditto_port.jobs.flows.deploy.deploy")
-    @patch("ditto_port.jobs.flows.deploy._get_flow_configs")
-    def test_deploy_all_flows_calls_deploy(self, mock_get_configs, mock_deploy):
+    def test_deploy_all_flows_calls_deploy(self, mocker: MockerFixture):
         """测试调用 prefect.deploy。"""
         # Arrange - mock flow configs with callable flows
-        mock_flow = MagicMock()
-        mock_deployment = MagicMock()
+        mock_deploy = mocker.patch("ditto_port.jobs.flows.deploy.deploy")
+        mock_get_configs = mocker.patch(
+            "ditto_port.jobs.flows.deploy._get_flow_configs"
+        )
+        mock_flow = mocker.Mock()
+        mock_deployment = mocker.Mock()
         mock_flow.to_deployment.return_value = mock_deployment
 
-        mock_config = MagicMock()
+        mock_config = mocker.Mock()
         mock_config.flow.return_value = mock_flow
         mock_config.deployment_name = "test-deployment"
         mock_config.description = "Test description"
@@ -140,16 +145,18 @@ class TestDeployAllFlows:
         call_args = mock_deploy.call_args
         assert call_args.kwargs["work_pool_name"] == "test-pool"
 
-    @patch("ditto_port.jobs.flows.deploy.deploy")
-    @patch("ditto_port.jobs.flows.deploy._get_flow_configs")
-    def test_deploy_all_flows_with_image(self, mock_get_configs, mock_deploy):
+    def test_deploy_all_flows_with_image(self, mocker: MockerFixture):
         """测试使用自定义镜像。"""
         # Arrange
-        mock_flow = MagicMock()
-        mock_deployment = MagicMock()
+        mock_deploy = mocker.patch("ditto_port.jobs.flows.deploy.deploy")
+        mock_get_configs = mocker.patch(
+            "ditto_port.jobs.flows.deploy._get_flow_configs"
+        )
+        mock_flow = mocker.Mock()
+        mock_deployment = mocker.Mock()
         mock_flow.to_deployment.return_value = mock_deployment
 
-        mock_config = MagicMock()
+        mock_config = mocker.Mock()
         mock_config.flow.return_value = mock_flow
         mock_get_configs.return_value = [mock_config]
 
@@ -160,16 +167,18 @@ class TestDeployAllFlows:
         call_args = mock_deploy.call_args
         assert call_args.kwargs["image"] == "test-image:latest"
 
-    @patch("ditto_port.jobs.flows.deploy.deploy")
-    @patch("ditto_port.jobs.flows.deploy._get_flow_configs")
-    def test_deploy_all_flows_with_push(self, mock_get_configs, mock_deploy):
+    def test_deploy_all_flows_with_push(self, mocker: MockerFixture):
         """测试 push 参数。"""
         # Arrange
-        mock_flow = MagicMock()
-        mock_deployment = MagicMock()
+        mock_deploy = mocker.patch("ditto_port.jobs.flows.deploy.deploy")
+        mock_get_configs = mocker.patch(
+            "ditto_port.jobs.flows.deploy._get_flow_configs"
+        )
+        mock_flow = mocker.Mock()
+        mock_deployment = mocker.Mock()
         mock_flow.to_deployment.return_value = mock_deployment
 
-        mock_config = MagicMock()
+        mock_config = mocker.Mock()
         mock_config.flow.return_value = mock_flow
         mock_get_configs.return_value = [mock_config]
 
@@ -185,15 +194,15 @@ class TestDeployAllFlows:
 class TestMain:
     """测试 main 函数。"""
 
-    @patch("ditto_port.jobs.flows.deploy.list_flows")
-    @patch("ditto_port.jobs.flows.deploy.logger")
-    def test_main_list_command(self, mock_logger, mock_list_flows):
+    def test_main_list_command(self, mocker: MockerFixture):
         """测试 list 命令。"""
         # Arrange
         import sys
 
         original_argv = sys.argv
         sys.argv = ["deploy", "list"]
+        mock_list_flows = mocker.patch("ditto_port.jobs.flows.deploy.list_flows")
+        mocker.patch("ditto_port.jobs.flows.deploy.logger")
         mock_list_flows.return_value = {
             "flow1": "description1",
             "flow2": "description2",
@@ -210,14 +219,14 @@ class TestMain:
         # Assert
         mock_list_flows.assert_called_once()
 
-    @patch("ditto_port.jobs.flows.deploy.deploy_all_flows")
-    def test_main_deploy_command(self, mock_deploy):
+    def test_main_deploy_command(self, mocker: MockerFixture):
         """测试默认部署命令。"""
         # Arrange
         import sys
 
         original_argv = sys.argv
         sys.argv = ["deploy"]
+        mock_deploy = mocker.patch("ditto_port.jobs.flows.deploy.deploy_all_flows")
 
         try:
             # Act

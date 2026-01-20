@@ -11,8 +11,8 @@ class TestComputeChecksum:
     """compute_checksum 函数单元测试."""
 
     def test_returns_sha256_hex_string(self, tmp_path: Path) -> None:
-        """验证返回 SHA-256 hex string（64 字符）."""
-        # 创建测试文件
+        """验证返回 SHA-256 hex string(64 字符)."""
+        # [REVIEW]
         test_file = tmp_path / "test.txt"
         test_file.write_text("Hello, World!")
 
@@ -55,10 +55,10 @@ class TestComputeChecksum:
         content = b"Binary test content"
         test_file.write_bytes(content)
 
-        # 使用 compute_checksum
+        # [REVIEW] compute_checksum
         checksum = compute_checksum(test_file)
 
-        # 使用标准 hashlib
+        # [REVIEW] hashlib
         expected = hashlib.sha256(content).hexdigest()
 
         assert checksum == expected
@@ -70,7 +70,7 @@ class TestComputeChecksum:
 
         checksum = compute_checksum(empty_file)
 
-        # 空文件的 SHA-256 是固定值
+        # [REVIEW] SHA-256 是固定值
         expected = hashlib.sha256(b"").hexdigest()
         assert checksum == expected
 
@@ -82,17 +82,17 @@ class TestComputeChecksum:
             compute_checksum(non_existent)
 
     def test_large_file_chunked_reading(self, tmp_path: Path) -> None:
-        """验证大文件使用分块读取（避免内存问题）."""
-        # 创建 1MB 文件
+        """验证大文件使用分块读取(避免内存问题)."""
+        # [REVIEW] 1MB 文件
         large_file = tmp_path / "large.bin"
         large_content = b"x" * (1024 * 1024)
         large_file.write_bytes(large_content)
 
         checksum = compute_checksum(large_file)
 
-        # 验证结果正确
+        # Verify结果正确
         expected = hashlib.sha256(large_content).hexdigest()
         assert checksum == expected
 
-        # 验证格式
+        # Verify格式
         assert len(checksum) == 64

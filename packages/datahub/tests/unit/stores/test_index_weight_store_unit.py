@@ -5,7 +5,7 @@ from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
-@pytest.mark.pit
+@pytest.mark.integration
 class TestIndexWeightStore:
     """Tests for IndexWeightStore.
 
@@ -15,7 +15,7 @@ class TestIndexWeightStore:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.client = sqlite_client
         self.store = IndexWeightStore(self.client)
 
@@ -219,7 +219,7 @@ class TestIndexWeightStore:
         assert sids_500 == [1000002]
 
 
-@pytest.mark.pit
+@pytest.mark.integration
 class TestIndexWeightStorePITSafety:
     """Tests for PIT safety in IndexWeightStore.
 
@@ -229,7 +229,7 @@ class TestIndexWeightStorePITSafety:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.client = sqlite_client
         self.store = IndexWeightStore(self.client)
 

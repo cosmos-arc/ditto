@@ -5,7 +5,7 @@ import pytest
 from ditto_datahub.stores.quarantine_store import QuarantineStore
 
 
-@pytest.mark.pit
+@pytest.mark.integration
 class TestQuarantineStore:
     """
     Tests for QuarantineStore.

@@ -88,7 +88,7 @@ class TestValidateTushareResponse:
         response_json: dict[str, object] = {
             "code": 0,
             "msg": None,
-            "data": "not_a_dict",  # 字符串而非 dict
+            "data": "not_a_dict",  # [REVIEW] dict
         }
 
         # Act & Assert
@@ -232,7 +232,7 @@ class TestResponseToDataFrame:
         result = response_to_dataframe(response_data)
 
         # Assert
-        # 空数据时 Polars 会推断为 Null 类型,这是正常行为
+        # [REVIEW] Polars 会推断为 Null 类型,这是正常行为
         assert result.height == 0
         assert result.columns == ["cal_date", "is_open"]
 

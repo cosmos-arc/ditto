@@ -1,11 +1,33 @@
 """Pytest configuration for datahub tests."""
 
 from collections.abc import Generator
+from datetime import date
 from pathlib import Path
+from typing import Any
 
+import polars as pl
 import pytest
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool, init
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """
+    Auto-mark tests based on their directory location.
+
+    - tests/unit/ -> unit
+    - tests/integration/ -> integration
+    Only special cases need manual markers.
+    """
+    for item in items:
+        # Get the relative path from the tests directory
+        rel_path = item.path.relative_to(Path(__file__).parent)
+
+        # Mark based on directory
+        if "integration" in str(rel_path):
+            item.add_marker(pytest.mark.integration)
+        elif "unit" in str(rel_path):
+            item.add_marker(pytest.mark.unit)
 
 
 @pytest.fixture(autouse=True)
@@ -91,3 +113,141 @@ def fake_time(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
     monkeypatch.setattr("time.time", fake_time_func)
 
     return
+
+
+# ============ Shared test data fixtures ============
+
+
+@pytest.fixture
+def sample_adj_factor_df() -> pl.DataFrame:
+    """
+    Create sample adjustment factor data for testing.
+
+    Returns:
+        DataFrame with sid, trade_date, and adj_factor columns.
+    """
+    data: dict[str, list[Any]] = {
+        "sid": [1000001, 1000001, 1000001, 1000002],
+        "trade_date": [
+            date(2024, 1, 2),
+            date(2024, 1, 3),
+            date(2024, 1, 4),
+            date(2024, 1, 2),
+        ],
+        "adj_factor": [1.0, 1.0, 0.95, 1.0],
+    }
+    return pl.DataFrame(data)
+
+
+@pytest.fixture
+def sample_stock_status_df() -> pl.DataFrame:
+    """
+    Create sample stock status data for testing.
+
+    Returns:
+        DataFrame with stock status columns including is_suspended, is_st, etc.
+    """
+    data: dict[str, list[Any]] = {
+        "sid": [100000001, 100000001, 100000001, 100000002],
+        "trade_date": [
+            date(2024, 1, 2),
+            date(2024, 1, 3),
+            date(2024, 1, 4),
+            date(2024, 1, 2),
+        ],
+        "is_suspended": [False, False, True, False],
+        "suspend_timing": [None, None, "09:30-10:00", None],
+        "is_st": [False, False, False, True],
+        "st_type": [None, None, None, "ST"],
+        "list_status": ["L", "L", "L", "L"],
+        "source": ["tushare", "tushare", "tushare", "tushare"],
+        "src_code": ["000001.SZ", "000001.SZ", "000001.SZ", "000002.SZ"],
+    }
+    return pl.DataFrame(data)
+
+
+@pytest.fixture
+def sample_stock_daily_df() -> pl.DataFrame:
+    """
+    Create sample stock daily OHLC data for testing.
+
+    Returns:
+        DataFrame with sid, trade_date, open, high, low, close, volume, amount.
+    """
+    data: dict[str, list[Any]] = {
+        "sid": [1_000_001, 1_000_001, 1_000_001, 1_000_002],
+        "trade_date": [
+            date(2024, 1, 1),
+            date(2024, 1, 2),
+            date(2024, 1, 3),
+            date(2024, 1, 2),
+        ],
+        "open": [10.0, 10.5, 11.0, 20.0],
+        "high": [10.5, 11.0, 11.5, 20.5],
+        "low": [9.5, 10.0, 10.5, 19.5],
+        "close": [10.0, 10.5, 11.0, 20.0],
+        "pre_close": [9.8, 10.0, 10.5, 19.8],
+        "volume": [1000, 1500, 2000, 3000],
+        "amount": [10000.0, 15000.0, 20000.0, 60000.0],
+    }
+    return pl.DataFrame(data)
+
+
+@pytest.fixture
+def sample_calendar_df() -> pl.DataFrame:
+    """
+    Create sample calendar data for testing.
+
+    Returns:
+        DataFrame with trade_date and is_open columns.
+    """
+    data: dict[str, list[Any]] = {
+        "trade_date": [
+            date(2024, 1, 1),
+            date(2024, 1, 2),
+            date(2024, 1, 3),
+            date(2024, 1, 6),
+        ],
+        "is_open": [False, True, True, False],  # Jan 1 and Jan 6 (Sat) are closed
+    }
+    return pl.DataFrame(data)
+
+
+@pytest.fixture
+def sample_etf_daily_df() -> pl.DataFrame:
+    """
+    Create sample ETF daily OHLC data for testing.
+
+    Returns:
+        DataFrame with sid, trade_date, open, high, low, close, volume, amount.
+    """
+    data: dict[str, list[Any]] = {
+        "sid": [2_000_001, 2_000_001, 2_000_001],
+        "trade_date": [
+            date(2024, 1, 1),
+            date(2024, 1, 2),
+            date(2024, 1, 3),
+        ],
+        "open": [3.5, 3.6, 3.7],
+        "high": [3.6, 3.7, 3.8],
+        "low": [3.4, 3.5, 3.6],
+        "close": [3.5, 3.6, 3.7],
+        "pre_close": [3.45, 3.5, 3.6],
+        "volume": [5000, 6000, 7000],
+        "amount": [17500.0, 21600.0, 25900.0],
+    }
+    return pl.DataFrame(data)
+
+
+@pytest.fixture
+def data_root(tmp_path: Path) -> Path:
+    """
+    Create temporary data root directory for testing.
+
+    Args:
+        tmp_path: pytest's temporary path fixture
+
+    Returns:
+        Path: temporary data directory
+    """
+    return tmp_path / "data"

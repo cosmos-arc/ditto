@@ -109,8 +109,11 @@ class SpanContext:
             status: 状态描述
 
         """
-        if self._span is not None:
-            self._span.set_attribute("status", status)
+        # 使用 get_current_span() 而不是 self._span
+        # 因为 self._span 是 context manager，不是 Span 对象
+        current = trace.get_current_span()
+        if current.is_recording():
+            current.set_attribute("status", status)
 
 
 def configure_tracing(config: ObservabilityConfig) -> trace.Tracer:

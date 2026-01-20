@@ -13,9 +13,9 @@ def test_individual_ttl(time_machine: None) -> None:
         cache = DataCache(ttl_seconds=300)
 
         cache.set("key1", "value1", ttl=2)  # 2 秒过期
-        cache.set("key2", "value2")  # 使用默认 300 秒
+        cache.set("key2", "value2")  # [REVIEW] 300 秒
 
-        # 前进 3 秒
+        # [REVIEW] 3 秒
         time.sleep(3)
 
         # key1 应该已过期
@@ -29,9 +29,9 @@ def test_individual_ttl_with_zero():
     """测试 TTL 为 0 的情况."""
     cache = DataCache(ttl_seconds=300)
 
-    # cachebox 允许零 TTL（表示永不过期）
+    # cachebox 允许零 TTL(表示永不过期)
     cache.set("key1", "value1", ttl=0)
-    assert cache.get("key1") == "value1"  # 应该成功设置
+    assert cache.get("key1") == "value1"  # [REVIEW]
 
 
 def test_individual_ttl_with_negative():
@@ -48,13 +48,13 @@ def test_individual_ttl_none_value(time_machine: None) -> None:
     with time_machine_lib.travel(0, tick=False):
         cache = DataCache(ttl_seconds=300)
 
-        cache.set("key1", "value1")  # 使用默认 TTL
+        cache.set("key1", "value1")  # [REVIEW] TTL
         cache.set("key2", "value2", ttl=2)  # 2 秒过期
 
-        # 前进 3 秒
+        # [REVIEW] 3 秒
         time.sleep(3)
 
-        # key1 仍然有效（使用默认 TTL）
+        # key1 仍然有效(使用默认 TTL)
         assert cache.get("key1") == "value1"
 
         # key2 已过期
@@ -66,27 +66,27 @@ def test_individual_ttl_get_stats(time_machine: None) -> None:
     with time_machine_lib.travel(0, tick=False):
         cache = DataCache(ttl_seconds=300)
 
-        # 设置一些值
+        # [REVIEW]
         cache.set("key1", "value1", ttl=2)
         cache.set("key2", "value2", ttl=2)
 
-        # 获取值（应该命中）
+        # [REVIEW](应该命中)
         assert cache.get("key1") == "value1"
         assert cache.get("key2") == "value2"
 
-        # 获取统计信息
+        # [REVIEW]
         stats = cache.get_stats()
         assert stats.hit_count >= 2
         assert stats.miss_count == 0
 
-        # 前进 3 秒
+        # [REVIEW] 3 秒
         time.sleep(3)
 
-        # 再次获取（应该未命中）
+        # [REVIEW](应该未命中)
         assert cache.get("key1") is None
         assert cache.get("key2") is None
 
-        # 获取统计信息
+        # [REVIEW]
         stats = cache.get_stats()
         assert stats.hit_count >= 2
         assert stats.miss_count >= 2

@@ -40,8 +40,8 @@ class TestSingletonManagerBasic:
         """每个测试后清理单例状态."""
         MockConfigManager.reset()
 
-    def test_get_returns_instance(self) -> None:
-        """get() 应返回实例."""
+    def test_get_returns_singleton_instance_on_first_call(self) -> None:
+        """Test that get() returns a new singleton instance on first call."""
         instance = MockConfigManager.get()
 
         assert instance is not None
@@ -49,7 +49,7 @@ class TestSingletonManagerBasic:
         assert instance.value == 42
 
     def test_get_returns_same_instance(self) -> None:
-        """多次调用 get() 应返回同一实例（单例行为）."""
+        """多次调用 get() 应返回同一实例(单例行为)."""
         instance1 = MockConfigManager.get()
         instance2 = MockConfigManager.get()
 
@@ -133,8 +133,8 @@ class TestSingletonManagerEdgeCases:
 
     def test_reset_on_empty_is_safe(self) -> None:
         """在没有实例时调用 reset() 应安全."""
-        MockConfigManager.reset()  # 不应抛出异常
-        MockConfigManager.reset()  # 再次调用也不应抛出异常
+        MockConfigManager.reset()  # [REVIEW]
+        MockConfigManager.reset()  # [REVIEW]
 
     def test_reload_on_empty_creates_instance(self) -> None:
         """在没有实例时调用 reload() 应创建实例."""

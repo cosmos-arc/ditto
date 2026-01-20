@@ -11,7 +11,7 @@ class TestDataCache:
 
     def setup_method(self) -> None:
         """Set up test environment."""
-        # 使用较小的 TTL 和 size 进行测试
+        # [REVIEW] TTL 和 size 进行测试
         self.cache = DataCache(ttl_seconds=1, max_size=5, enable_metrics=False)
 
     def test_set_and_get(self) -> None:
@@ -73,7 +73,7 @@ class TestDataCache:
         self.cache.set("trading_days:2024-01", "value3")
         self.cache.set("other:key", "value4")
 
-        # 失效所有 sid: 开头的键
+        # [REVIEW] sid: 开头的键
         count = self.cache.invalidate_pattern("sid:*")
 
         assert count == 2
@@ -124,13 +124,13 @@ class TestDataCache:
         with time_machine_lib.travel(0, tick=False):
             self.cache.set("key1", "value1")
 
-            # 立即获取应该成功
+            # [REVIEW]
             assert self.cache.get("key1") == "value1"
 
-            # 等待 TTL 过期（1 秒 + buffer）
+            # [REVIEW] TTL 过期(1 秒 + buffer)
             time.sleep(1.2)
 
-            # 过期后应该返回 None
+            # [REVIEW] None
             assert self.cache.get("key1") is None
 
     def test_lru_eviction(self) -> None:
@@ -139,11 +139,11 @@ class TestDataCache:
         for i in range(7):
             self.cache.set(f"key{i}", f"value{i}")
 
-        # 只有最新的 5 个键存在
+        # [REVIEW] 5 个键存在
         assert len(self.cache) <= 5
         assert self.cache.get("key6") is not None
         assert self.cache.get("key5") is not None
-        # 最早的键应该被淘汰
+        # [REVIEW]
         assert self.cache.get("key0") is None
         assert self.cache.get("key1") is None
 
@@ -162,7 +162,7 @@ class TestDataCache:
 
         stats = self.cache.get_stats()
 
-        assert stats.total_entries == 1  # 只有 key2
+        assert stats.total_entries == 1  # [REVIEW] key2
         assert stats.hit_count == 2
         assert stats.miss_count == 1
         assert stats.hit_rate == 2 / 3
@@ -187,7 +187,7 @@ class TestDataCache:
 
     def test_cache_key_naming_convention(self) -> None:
         """Test cache follows recommended naming convention."""
-        # 测试推荐的命名格式
+        # [REVIEW]
         self.cache.set("trading_days:2024-01", ["2024-01-01", "2024-01-02"])
         self.cache.set("sid:current:tushare:600000.SH", "600000.SH")
         self.cache.set("sid:pit:tushare:600000.SH:2024-06", "600000.SH")
@@ -201,13 +201,13 @@ class TestDataCache:
         # ttl=None 应该使用默认 TTL (1秒)
         self.cache.set("key1", "value1", ttl=None)
 
-        # 应该立即可以获取
+        # [REVIEW]
         assert self.cache.get("key1") == "value1"
 
-        # 等待 TTL 过期
+        # [REVIEW] TTL 过期
         time.sleep(1.2)
 
-        # 过期后应该返回 None
+        # [REVIEW] None
         assert self.cache.get("key1") is None
 
     def test_set_with_ttl_zero_no_expiration(self) -> None:
@@ -215,25 +215,25 @@ class TestDataCache:
         # ttl=0 表示永不过期
         self.cache.set("key1", "value1", ttl=0)
 
-        # 等待超过默认 TTL
+        # [REVIEW] TTL
         time.sleep(1.2)
 
-        # 应该仍然存在（因为设置了 ttl=0，永不过期）
+        # [REVIEW](因为设置了 ttl=0，永不过期)
         assert self.cache.get("key1") == "value1"
 
     def test_set_with_custom_ttl(self) -> None:
         """Test set with custom TTL value."""
-        # 设置自定义 TTL 为 2 秒
+        # [REVIEW] TTL 为 2 秒
         self.cache.set("key1", "value1", ttl=2)
 
-        # 立即获取应该成功
+        # [REVIEW]
         assert self.cache.get("key1") == "value1"
 
-        # 等待 1 秒，应该还在
+        # [REVIEW] 1 秒，应该还在
         time.sleep(1)
         assert self.cache.get("key1") == "value1"
 
-        # 再等待 1.2 秒，应该过期
+        # [REVIEW] 1.2 秒，应该过期
         time.sleep(1.2)
         assert self.cache.get("key1") is None
 
@@ -283,7 +283,7 @@ class TestDataCacheWithMetrics:
         stats = self.cache.get_stats()
 
         # Should have correct counts even in metrics mode
-        assert stats.total_entries == 1  # 只有 key2
+        assert stats.total_entries == 1  # [REVIEW] key2
         assert stats.hit_count == 2
         assert stats.miss_count == 1
         assert stats.hit_rate == 2 / 3
@@ -304,7 +304,7 @@ class TestDataCacheWithMetrics:
         self.cache.set("sid:600000.SH", "value1")
         self.cache.set("sid:600000.SH:2024-01", "value2")
 
-        # 失效所有 sid: 开头的键 - 这会触发 line 168 的 M.cache_invalidations.add(1)
+        # [REVIEW] sid: 开头的键 - 这会触发 line 168 的 M.cache_invalidations.add(1)
         count = self.cache.invalidate_pattern("sid:*")
 
         assert count == 2

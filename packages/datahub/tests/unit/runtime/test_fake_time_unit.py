@@ -4,8 +4,8 @@ import time
 
 
 def test_fake_time_sleep_is_instant(fake_time: None) -> None:
-    """测试 fake_time 使 sleep 立即完成（真实时间接近 0）."""
-    # 使用 perf_counter 测量真实经过时间
+    """测试 fake_time 使 sleep 立即完成(真实时间接近 0)."""
+    # [REVIEW] perf_counter 测量真实经过时间
     start = time.perf_counter()
     time.sleep(10)
     end = time.perf_counter()
@@ -32,5 +32,5 @@ def test_fake_time_multiple_sleeps(fake_time: None) -> None:
     time.sleep(3)
     after = time.time()
 
-    # 总共应该前进了 6 秒
+    # [REVIEW] 6 秒
     assert after - before == 6.0

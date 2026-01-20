@@ -16,8 +16,8 @@ class TestChecksumCompute:
         assert checksum == expected
 
     def test_deterministic_irrespective_of_row_order(self) -> None:
-        """验证行顺序不影响 checksum（核心测试）."""
-        # 相同数据，不同行顺序
+        """验证行顺序不影响 checksum(核心测试)."""
+        # [REVIEW]
         df1 = pl.DataFrame(
             {
                 "trade_date": ["2024-01-02", "2024-01-01"],
@@ -42,7 +42,7 @@ class TestChecksumCompute:
         assert checksum1 == checksum2, "相同数据不同行顺序应产生相同 checksum"
 
     def test_checksum_includes_all_fields_including_sid_and_source(self) -> None:
-        """验证 checksum 包含所有字段（包括 sid、source）."""
+        """验证 checksum 包含所有字段(包括 sid、source)."""
         df_with_sid = pl.DataFrame(
             {
                 "trade_date": ["2024-01-01"],
@@ -81,7 +81,7 @@ class TestChecksumCompute:
         assert checksum1 != checksum2, "不同 source 应产生不同 checksum"
 
     def test_uses_xxh3_128_algorithm_32_char_hex(self) -> None:
-        """验证使用 XXH3_128 算法（32 字符 hex）."""
+        """验证使用 XXH3_128 算法(32 字符 hex)."""
         df = pl.DataFrame(
             {
                 "trade_date": ["2024-01-01"],
@@ -133,14 +133,14 @@ class TestChecksumCompute:
             }
         )
 
-        # 使用备用排序键
+        # [REVIEW]
         checksum = ChecksumCompute.from_dataframe(
             df,
             "unknown_dataset",
             fallback_sort_keys=["id"],
         )
 
-        # 相同数据不同顺序应产生相同 checksum
+        # [REVIEW] checksum
         checksum_reversed = ChecksumCompute.from_dataframe(
             df.reverse(),
             "unknown_dataset",
@@ -159,3 +159,99 @@ class TestChecksumCompute:
 
         keys_unknown = ChecksumCompute.get_sort_keys("unknown")
         assert list(keys_unknown) == []
+
+    def test_handles_missing_sort_keys_gracefully(self) -> None:
+        """验证缺失排序键时能优雅处理（不排序，记录警告）."""
+        df = pl.DataFrame(
+            {
+                "unknown_col": [1, 2],
+                "value": [10.0, 11.0],
+            }
+        )
+
+        # 使用不匹配的排序键，应该产生不同 checksum
+        checksum1 = ChecksumCompute.from_dataframe(df, "stock_daily")
+        checksum2 = ChecksumCompute.from_dataframe(df.reverse(), "stock_daily")
+
+        # 由于排序键不存在，行顺序会影响结果
+        assert checksum1 != checksum2
+
+    def test_different_data_types_affect_checksum(self) -> None:
+        """验证不同数据类型产生不同 checksum."""
+        df_int = pl.DataFrame({"value": [1]})
+        df_float = pl.DataFrame({"value": [1.0]})
+        df_str = pl.DataFrame({"value": ["1"]})
+        df_bool = pl.DataFrame({"value": [True]})
+
+        checksums = [
+            ChecksumCompute.from_dataframe(df_int, "test"),
+            ChecksumCompute.from_dataframe(df_float, "test"),
+            ChecksumCompute.from_dataframe(df_str, "test"),
+            ChecksumCompute.from_dataframe(df_bool, "test"),
+        ]
+
+        # 所有 checksum 应该不同
+        assert len(set(checksums)) == 4
+
+    def test_handles_null_values(self) -> None:
+        """验证处理 None/null 值."""
+        df_with_null = pl.DataFrame(
+            {
+                "trade_date": ["2024-01-01"],
+                "value": [None],
+            }
+        )
+
+        df_with_zero = pl.DataFrame(
+            {
+                "trade_date": ["2024-01-01"],
+                "value": [0],
+            }
+        )
+
+        checksum1 = ChecksumCompute.from_dataframe(df_with_null, "test")
+        checksum2 = ChecksumCompute.from_dataframe(df_with_zero, "test")
+
+        assert checksum1 != checksum2
+
+    def test_multi_row_dataframe_checksum(self) -> None:
+        """验证多行 DataFrame 的 checksum 计算."""
+        df = pl.DataFrame(
+            {
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                "sid": [1, 2, 3],
+                "close": [10.0, 11.0, 12.0],
+            }
+        )
+
+        checksum = ChecksumCompute.from_dataframe(df, "stock_daily")
+
+        # 验证 checksum 格式
+        assert len(checksum) == 32
+        assert all(c in "0123456789abcdef" for c in checksum)
+
+    def test_adj_factor_dataset_sorting(self) -> None:
+        """验证 adj_factor 数据集使用正确的排序键."""
+        df = pl.DataFrame(
+            {
+                "trade_date": ["2024-01-02", "2024-01-01"],
+                "sid": [2, 1],
+                "adj_factor": [1.0, 0.95],
+            }
+        )
+
+        checksum1 = ChecksumCompute.from_dataframe(df, "adj_factor")
+        checksum2 = ChecksumCompute.from_dataframe(df.reverse(), "adj_factor")
+
+        # 应该相同（按 trade_date, sid 排序）
+        assert checksum1 == checksum2
+
+    def test_empty_string_vs_none(self) -> None:
+        """验证空字符串与 None 产生不同 checksum."""
+        df_empty_str = pl.DataFrame({"value": [""]})
+        df_none = pl.DataFrame({"value": [None]})
+
+        checksum1 = ChecksumCompute.from_dataframe(df_empty_str, "test")
+        checksum2 = ChecksumCompute.from_dataframe(df_none, "test")
+
+        assert checksum1 != checksum2

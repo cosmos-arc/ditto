@@ -3,6 +3,7 @@
 import pytest
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from pytest_mock import MockerFixture
 
 
 class TestCalendarStore:
@@ -10,7 +11,7 @@ class TestCalendarStore:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.client = sqlite_client
         self.store = CalendarStore(self.client)
 
@@ -328,10 +329,8 @@ class TestCalendarStore:
 
         # Verify the record was inserted
 
-    def test_upsert_logs_error_on_exception(self) -> None:
+    def test_upsert_logs_error_on_exception(self, mocker: MockerFixture) -> None:
         """Test upsert logs error with error_type and error_message on exception."""
-        from unittest.mock import patch
-
         records = [
             {
                 "trade_date": "2024-01-15",
@@ -340,22 +339,25 @@ class TestCalendarStore:
         ]
 
         # Mock client.execute to raise an exception
-        with patch.object(self.client, "execute", side_effect=RuntimeError("DB error")):
-            with patch("ditto_datahub.stores.calendar_store.logger") as mock_logger:
-                with pytest.raises(RuntimeError):
-                    self.store.upsert(records)
+        with mocker.patch.object(
+            self.client, "execute", side_effect=RuntimeError("DB error")
+        ):
+            mock_logger = mocker.patch("ditto_datahub.stores.calendar_store.logger")
 
-                # Verify logger.error was called with error_type and error_message
-                mock_logger.error.assert_called_once()
-                call_kwargs = mock_logger.error.call_args.kwargs
-                assert "error_type" in call_kwargs
-                assert "error_message" in call_kwargs
-                assert call_kwargs["event"] == "calendar_upsert_failed"
-                assert call_kwargs["error_type"] == "RuntimeError"
+            with pytest.raises(RuntimeError):
+                self.store.upsert(records)
+
+            # Verify logger.error was called with error_type and error_message
+            mock_logger.error.assert_called_once()
+            call_kwargs = mock_logger.error.call_args.kwargs
+            assert "error_type" in call_kwargs
+            assert "error_message" in call_kwargs
+            assert call_kwargs["event"] == "calendar_upsert_failed"
+            assert call_kwargs["error_type"] == "RuntimeError"
 
     def test_get_range_returns_immutable_copy(self) -> None:
         """Test that get_range returns a copy to prevent cache pollution."""
-        # 测试方法内导入
+        # [REVIEW]
         from ditto_foundation.cache import DataCache
 
         # Create store with DataCache

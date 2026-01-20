@@ -1,12 +1,12 @@
 """Unit tests for BarsAccessor."""
 
 from datetime import date
-from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
 from ditto_datahub.accessors.bars.accessor import AdjType, BarsAccessor, BarsQuery
 from ditto_datahub.models import WriteResult
+from pytest_mock import MockerFixture
 
 
 @pytest.mark.unit
@@ -66,15 +66,15 @@ class TestBarsQuery:
 class TestBarsAccessor:
     """Tests for BarsAccessor."""
 
-    def test_initialization(self) -> None:
+    def test_initialization(self, mocker: MockerFixture) -> None:
         """Test that BarsAccessor initializes with all dependencies."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
 
         accessor = BarsAccessor(
             bars_store=mock_bars_store,
@@ -90,15 +90,17 @@ class TestBarsAccessor:
         assert accessor._adj_factor_store is mock_adj_store
         assert accessor._security_store is mock_security_store
 
-    def test_get_returns_empty_for_unresolvable_sid(self) -> None:
+    def test_get_returns_empty_for_unresolvable_sid(
+        self, mocker: MockerFixture
+    ) -> None:
         """Test that get returns empty DataFrame when SID cannot be resolved."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
 
         # Mock resolve_sids_batch to return empty
         mock_security_store.resolve_sids_batch.return_value = {}
@@ -121,15 +123,15 @@ class TestBarsAccessor:
         # Should return empty DataFrame
         assert result.is_empty()
 
-    def test_get_with_valid_sids(self) -> None:
+    def test_get_with_valid_sids(self, mocker: MockerFixture) -> None:
         """Test that get returns data for valid SIDs."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
 
         # Mock returns
         mock_df = pl.DataFrame(
@@ -158,15 +160,15 @@ class TestBarsAccessor:
         # Verify bars_store.read was called
         mock_bars_store.read.assert_called_once()
 
-    def test_get_single_with_src_code(self) -> None:
+    def test_get_single_with_src_code(self, mocker: MockerFixture) -> None:
         """Test get_single resolves src_code to SID."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
 
         # Mock SID resolution
         mock_security_store.resolve_sid.return_value = 123
@@ -191,15 +193,15 @@ class TestBarsAccessor:
         # Verify resolve_sid was called
         mock_security_store.resolve_sid.assert_called_once()
 
-    def test_get_single_with_symbol_fallback(self) -> None:
+    def test_get_single_with_symbol_fallback(self, mocker: MockerFixture) -> None:
         """Test get_single falls back to symbol when src_code fails."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
 
         # Mock src_code resolution fails, symbol succeeds
         mock_security_store.resolve_sid.return_value = None
@@ -225,15 +227,21 @@ class TestBarsAccessor:
         # Verify symbol resolution was called as fallback
         mock_security_store.resolve_by_symbol.assert_called_once()
 
-    def test_write_without_dq_check(self) -> None:
+    def test_write_without_dq_check(self, mocker: MockerFixture) -> None:
         """Test write without DQ check."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
+
+        # Mock file lock context manager
+        mock_lock_ctx = mocker.MagicMock()
+        mock_lock_ctx.__enter__ = mocker.Mock(return_value=mock_lock_ctx)
+        mock_lock_ctx.__exit__ = mocker.Mock(return_value=False)
+        mock_file_lock.acquire.return_value = mock_lock_ctx
 
         # Mock write result
         mock_bars_store.write.return_value = WriteResult(
@@ -263,18 +271,24 @@ class TestBarsAccessor:
         mock_bars_store.write.assert_called_once()
         assert result.blocked is False
 
-    def test_write_with_dq_check_passed(self) -> None:
+    def test_write_with_dq_check_passed(self, mocker: MockerFixture) -> None:
         """Test write with DQ check that passes."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
+
+        # Mock file lock context manager
+        mock_lock_ctx = mocker.MagicMock()
+        mock_lock_ctx.__enter__ = mocker.Mock(return_value=mock_lock_ctx)
+        mock_lock_ctx.__exit__ = mocker.Mock(return_value=False)
+        mock_file_lock.acquire.return_value = mock_lock_ctx
 
         # Mock DQ engine - check passes
-        mock_dq_result = MagicMock()
+        mock_dq_result = mocker.Mock()
         mock_dq_result.has_errors = False
         mock_dq_result.has_warnings = False
         mock_dq_result.passed = True
@@ -307,21 +321,28 @@ class TestBarsAccessor:
         mock_dq_engine.check.assert_called_once()
         assert result.blocked is False
 
-    def test_write_with_dq_check_blocked(self) -> None:
+    def test_write_with_dq_check_blocked(self, mocker: MockerFixture) -> None:
         """Test write with DQ check that blocks."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
+
+        # Mock file lock context manager
+        mock_lock_ctx = mocker.MagicMock()
+        mock_lock_ctx.__enter__ = mocker.Mock(return_value=mock_lock_ctx)
+        mock_lock_ctx.__exit__ = mocker.Mock(return_value=False)
+        mock_file_lock.acquire.return_value = mock_lock_ctx
 
         # Mock DQ engine - check fails with errors
-        mock_issue = MagicMock()
+        mock_issue = mocker.Mock()
         mock_issue.rule_name = "not_null"
         mock_issue.severity.value = "error"
-        mock_dq_result = MagicMock()
+        mock_issue.message = "sid has null values"
+        mock_dq_result = mocker.Mock()
         mock_dq_result.has_errors = True
         mock_dq_result.error_count = 5
         mock_dq_result.issues = [mock_issue]
@@ -344,15 +365,15 @@ class TestBarsAccessor:
         assert result.blocked is True
         assert result.rows_written == 0
 
-    def test_detect_asset_class_from_sids_stock(self) -> None:
+    def test_detect_asset_class_from_sids_stock(self, mocker: MockerFixture) -> None:
         """Test detecting stock asset class from SIDs."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
 
         accessor = BarsAccessor(
             bars_store=mock_bars_store,
@@ -367,15 +388,15 @@ class TestBarsAccessor:
         asset_class = accessor._detect_asset_class_from_sids([1_000_001, 1_000_002])
         assert asset_class == "stock"
 
-    def test_detect_asset_class_from_sids_etf(self) -> None:
+    def test_detect_asset_class_from_sids_etf(self, mocker: MockerFixture) -> None:
         """Test detecting ETF asset class from SIDs."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
 
         accessor = BarsAccessor(
             bars_store=mock_bars_store,
@@ -390,15 +411,15 @@ class TestBarsAccessor:
         asset_class = accessor._detect_asset_class_from_sids([2_000_001, 2_000_002])
         assert asset_class == "etf"
 
-    def test_detect_asset_class_from_sids_index(self) -> None:
+    def test_detect_asset_class_from_sids_index(self, mocker: MockerFixture) -> None:
         """Test detecting index asset class from SIDs."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
 
         accessor = BarsAccessor(
             bars_store=mock_bars_store,
@@ -413,15 +434,15 @@ class TestBarsAccessor:
         asset_class = accessor._detect_asset_class_from_sids([3_000_001, 3_000_002])
         assert asset_class == "index"
 
-    def test_detect_asset_class_raises_on_mixed(self) -> None:
+    def test_detect_asset_class_raises_on_mixed(self, mocker: MockerFixture) -> None:
         """Test detecting mixed asset classes raises ValueError."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
 
         accessor = BarsAccessor(
             bars_store=mock_bars_store,
@@ -438,15 +459,15 @@ class TestBarsAccessor:
 
         assert "混合资产类别" in str(exc_info.value)
 
-    def test_resolve_query_with_sids(self) -> None:
+    def test_resolve_query_with_sids(self, mocker: MockerFixture) -> None:
         """Test _resolve_query with SID list."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
 
         accessor = BarsAccessor(
             bars_store=mock_bars_store,
@@ -465,15 +486,15 @@ class TestBarsAccessor:
         assert resolved.start == date(2024, 1, 1)
         assert resolved.end == date(2024, 1, 31)
 
-    def test_resolve_query_with_src_codes(self) -> None:
+    def test_resolve_query_with_src_codes(self, mocker: MockerFixture) -> None:
         """Test _resolve_query with src_codes."""
-        mock_bars_store = MagicMock()
-        mock_adj_store = MagicMock()
-        mock_security_store = MagicMock()
-        mock_status_store = MagicMock()
-        mock_dq_engine = MagicMock()
-        mock_file_lock = MagicMock()
-        mock_quarantine_store = MagicMock()
+        mock_bars_store = mocker.Mock()
+        mock_adj_store = mocker.Mock()
+        mock_security_store = mocker.Mock()
+        mock_status_store = mocker.Mock()
+        mock_dq_engine = mocker.Mock()
+        mock_file_lock = mocker.Mock()
+        mock_quarantine_store = mocker.Mock()
 
         # Mock src_code resolution
         mock_security_store.resolve_sids_batch.return_value = {

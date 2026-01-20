@@ -3,7 +3,7 @@ METRIC_DEFINITIONS 配置驱动的指标注册测试.
 
 测试基于 METRIC_DEFINITIONS 配置字典的指标注册功能：
 - 验证所有指标被正确创建
-- 验证指标类型正确（Histogram/Counter/Gauge）
+- 验证指标类型正确(Histogram/Counter/Gauge)
 - 验证指标名称和描述正确
 """
 
@@ -24,36 +24,36 @@ class TestMetricDefinitions:
         config = ObservabilityConfig(environment=Environment.TESTING)
         configure_metrics(config)
 
-        # 验证所有数据指标存在
+        # Verify所有数据指标存在
         assert hasattr(M, "data_update_duration")
         assert hasattr(M, "data_records")
         assert hasattr(M, "data_freshness")
         assert hasattr(M, "data_errors")
 
-        # 验证所有因子指标存在
+        # Verify所有因子指标存在
         assert hasattr(M, "factor_calc_duration")
         assert hasattr(M, "factor_ic")
         assert hasattr(M, "factor_health")
 
-        # 验证所有策略指标存在
+        # Verify所有策略指标存在
         assert hasattr(M, "signal_total")
         assert hasattr(M, "rebalance_total")
 
-        # 验证所有组合指标存在
+        # Verify所有组合指标存在
         assert hasattr(M, "portfolio_value")
         assert hasattr(M, "portfolio_drawdown")
         assert hasattr(M, "portfolio_drawdown_3d")
 
-        # 验证所有风控指标存在
+        # Verify所有风控指标存在
         assert hasattr(M, "kill_switch_level")
         assert hasattr(M, "kill_switch_total")
 
-        # 验证所有系统指标存在
+        # Verify所有系统指标存在
         assert hasattr(M, "scheduler_jobs")
         assert hasattr(M, "api_requests")
         assert hasattr(M, "api_duration")
 
-        # 验证所有缓存指标存在
+        # Verify所有缓存指标存在
         assert hasattr(M, "cache_hit")
         assert hasattr(M, "cache_miss")
         assert hasattr(M, "cache_hit_rate")
@@ -61,13 +61,13 @@ class TestMetricDefinitions:
         assert hasattr(M, "cache_evictions")
         assert hasattr(M, "cache_size")
 
-        # 验证所有 SQL 指标存在
+        # Verify所有 SQL 指标存在
         assert hasattr(M, "sql_query_duration")
         assert hasattr(M, "sql_slow_query_total")
         assert hasattr(M, "sql_query_plan_cache_hit")
         assert hasattr(M, "sql_query_plan_cache_miss")
 
-        # 验证所有 JSON 指标存在
+        # Verify所有 JSON 指标存在
         assert hasattr(M, "json_serialize_duration")
         assert hasattr(M, "json_deserialize_duration")
         assert hasattr(M, "json_bytes_total")
@@ -79,7 +79,7 @@ class TestMetricDefinitions:
         config = ObservabilityConfig(environment=Environment.TESTING)
         configure_metrics(config)
 
-        # 验证 Histogram 类型指标有 record 方法
+        # Verify Histogram 类型指标有 record 方法
         assert hasattr(M.data_update_duration, "record")
         assert hasattr(M.factor_calc_duration, "record")
         assert hasattr(M.api_duration, "record")
@@ -94,7 +94,7 @@ class TestMetricDefinitions:
         config = ObservabilityConfig(environment=Environment.TESTING)
         configure_metrics(config)
 
-        # 验证 Counter 类型指标有 add 方法
+        # Verify Counter 类型指标有 add 方法
         assert hasattr(M.data_records, "add")
         assert hasattr(M.data_errors, "add")
         assert hasattr(M.signal_total, "add")
@@ -118,7 +118,7 @@ class TestMetricDefinitions:
         config = ObservabilityConfig(environment=Environment.TESTING)
         configure_metrics(config)
 
-        # 验证 Gauge 类型指标有 set/inc/dec 方法
+        # Verify Gauge 类型指标有 set/inc/dec 方法
         for metric_name in [
             "data_freshness",
             "factor_ic",
@@ -142,8 +142,8 @@ class TestMetricDefinitions:
         config = ObservabilityConfig(environment=Environment.TESTING)
         configure_metrics(config)
 
-        # 验证部分指标名称（通过调用它们的底层方法）
-        # 这里我们只验证几个关键指标，确保名称正确
+        # Verify部分指标名称(通过调用它们的底层方法)
+        # [REVIEW]
 
         # data_update_duration 应该是 Histogram
         assert isinstance(M.data_update_duration, SDKHistogram)
@@ -159,12 +159,12 @@ class TestMetricDefinitions:
         config = ObservabilityConfig(environment=Environment.TESTING)
         configure_metrics(config)
 
-        # 统计 M 类中定义的指标数量
+        # [REVIEW] M 类中定义的指标数量
         metric_count = 0
         for attr_name in dir(M):
             if not attr_name.startswith("_"):
                 attr = getattr(M, attr_name)
-                # 检查是否是指标类型（有特定的方法）
+                # [REVIEW](有特定的方法)
                 if (
                     hasattr(attr, "record")
                     or hasattr(attr, "add")
@@ -172,32 +172,33 @@ class TestMetricDefinitions:
                 ):
                     metric_count += 1
 
-        # 应该有 28 个指标（根据任务描述）
-        # 数据: 4, 因子: 3, 策略: 2, 组合: 3, 风控: 2, 系统: 3, 缓存: 6, SQL: 4, JSON: 3
-        # 总计: 4 + 3 + 2 + 3 + 2 + 3 + 6 + 4 + 3 = 30
-        # 注意：setup 是类方法，不是指标
-        # 排除类方法和其他非指标属性
+        # [REVIEW] 28 个指标(根据任务描述)
+        # [REVIEW]: 4, 因子: 3, 策略: 2, 组合: 3, 风控: 2,
+        #           系统: 3, 缓存: 6, SQL: 4, JSON: 3
+        # [REVIEW]: 4 + 3 + 2 + 3 + 2 + 3 + 6 + 4 + 3 = 30
+        # [REVIEW]setup 是类方法，不是指标
+        # [REVIEW]
         expected_metric_count = 30
 
-        # 允许一定的误差（因为可能有其他类属性）
+        # [REVIEW](因为可能有其他类属性)
         assert metric_count >= expected_metric_count, (
             f"Expected at least {expected_metric_count} metrics, found {metric_count}"
         )
 
     def test_metrics_are_functional(self) -> None:
-        """测试指标可以被正常使用（不会被报错）."""
+        """测试指标可以被正常使用(不会被报错)."""
         reset_for_testing()
 
         config = ObservabilityConfig(environment=Environment.TESTING)
         configure_metrics(config)
 
-        # 测试 Counter
+        # [REVIEW] Counter
         M.data_records.add(100, {"source": "test"})
 
-        # 测试 Histogram
+        # [REVIEW] Histogram
         M.data_update_duration.record(1.5, {"source": "test"})
 
-        # 测试 Gauge
+        # [REVIEW] Gauge
         M.kill_switch_level.set(2.0)
         M.kill_switch_level.inc(1.0)
         M.kill_switch_level.dec(0.5)

@@ -71,7 +71,7 @@ class TestPresetConfig:
         effective = config.get_effective_config()
 
         assert effective.log_level == "ERROR"
-        # 其他值应该使用预设
+        # [REVIEW]
         assert effective.tracing_enabled is True
         assert effective.metrics_enabled is True
 
@@ -86,7 +86,7 @@ class TestPresetConfig:
 
         assert effective.tracing_enabled is False
         assert effective.tracing_sample_rate == 0.5
-        # 其他值应该使用预设
+        # [REVIEW]
         assert effective.log_level == "DEBUG"
         assert effective.metrics_enabled is True
 
@@ -100,12 +100,12 @@ class TestPresetConfig:
         )
         effective = config.get_effective_config()
 
-        assert effective.log_level == "DEBUG"  # 覆盖
-        assert effective.tracing_enabled is True  # 预设
-        assert effective.tracing_sample_rate == 1.0  # 覆盖
-        assert effective.metrics_enabled is True  # 预设
-        assert effective.assertions_enabled is True  # 覆盖
-        assert effective.verbose_logging is False  # 预设
+        assert effective.log_level == "DEBUG"  # [REVIEW]
+        assert effective.tracing_enabled is True  # [REVIEW]
+        assert effective.tracing_sample_rate == 1.0  # [REVIEW]
+        assert effective.metrics_enabled is True  # [REVIEW]
+        assert effective.assertions_enabled is True  # [REVIEW]
+        assert effective.verbose_logging is False  # [REVIEW]
 
     def test_pytest_running_flag(self) -> None:
         """测试 pytest_running 标志."""
@@ -113,7 +113,7 @@ class TestPresetConfig:
         effective = config.get_effective_config()
 
         assert effective.pytest_running is True
-        # 其他值应该使用预设
+        # [REVIEW]
         assert effective.log_level == "DEBUG"
         assert effective.assertions_enabled is True
 
@@ -137,7 +137,7 @@ class TestPresetConfig:
         effective = config.get_effective_config()
 
         assert isinstance(effective, EffectiveConfig)
-        # 验证所有字段都存在
+        # Verify所有字段都存在
         assert hasattr(effective, "log_level")
         assert hasattr(effective, "tracing_enabled")
         assert hasattr(effective, "tracing_sample_rate")
@@ -156,18 +156,18 @@ class TestRuntimeFlags:
         from ditto_foundation.config.environment import Environment
 
         flags = ObservabilityConfig.detect_runtime_flags(Environment.TESTING)
-        # 在 pytest 环境中运行，pytest_running 应该是 True
-        assert flags["pytest_running"] is True  # 在 pytest 中运行
+        # [REVIEW] pytest 环境中运行，pytest_running 应该是 True
+        assert flags["pytest_running"] is True  # [REVIEW] pytest 中运行
         assert flags["assertions_enabled"] is True
-        assert flags["verbose_logging"] is False  # 静默模式
+        assert flags["verbose_logging"] is False  # [REVIEW]
 
     def test_detect_runtime_flags_production(self) -> None:
         """测试生产环境的运行时标志检测."""
         from ditto_foundation.config.environment import Environment
 
         flags = ObservabilityConfig.detect_runtime_flags(Environment.PRODUCTION)
-        # 在 pytest 环境中运行，pytest_running 应该是 True
-        assert flags["pytest_running"] is True  # 在 pytest 中运行
+        # [REVIEW] pytest 环境中运行，pytest_running 应该是 True
+        assert flags["pytest_running"] is True  # [REVIEW] pytest 中运行
         assert flags["assertions_enabled"] is False
         assert flags["verbose_logging"] is False
 
@@ -176,8 +176,8 @@ class TestRuntimeFlags:
         from ditto_foundation.config.environment import Environment
 
         flags = ObservabilityConfig.detect_runtime_flags(Environment.DEVELOPMENT)
-        # 在 pytest 环境中运行，pytest_running 应该是 True
-        assert flags["pytest_running"] is True  # 在 pytest 中运行
+        # [REVIEW] pytest 环境中运行，pytest_running 应该是 True
+        assert flags["pytest_running"] is True  # [REVIEW] pytest 中运行
         assert flags["assertions_enabled"] is True
         assert flags["verbose_logging"] is True
 
@@ -189,7 +189,7 @@ class TestInit:
         """测试默认初始化."""
         reset_for_testing()
         init(force=True)
-        # 应该成功初始化不报错
+        # [REVIEW]
 
     def test_init_with_testing_flags(self) -> None:
         """测试使用测试标志初始化."""
@@ -200,7 +200,7 @@ class TestInit:
             verbose_logging=False,
             force=True,
         )
-        # 应该成功初始化不报错
+        # [REVIEW]
 
     def test_init_idempotent(self) -> None:
         """测试多次初始化幂等性."""
@@ -215,7 +215,7 @@ class TestInit:
             pytest_running=True,
             assertions_enabled=True,
             verbose_logging=False,
-        )  # 第二次调用应该被忽略(不报错)
+        )  # [REVIEW](不报错)
 
 
 class TestSpan:
@@ -293,7 +293,7 @@ class TestSpan:
 
         spans = get_recorded_spans()
         assert len(spans) == 1
-        # 检查是否记录了异常
+        # [REVIEW]
 
     def test_traced_decorator(self) -> None:
         """测试 @traced 装饰器."""
@@ -394,7 +394,7 @@ class TestMetrics:
             100, {"source": "test", "table": "test", "status": "success"}
         )
 
-        # 指标应该被记录
+        # [REVIEW]
         metrics_data = get_recorded_metrics()
         assert metrics_data is not None
 
@@ -442,7 +442,7 @@ class TestLogging:
             force=True,
         )
 
-        # 不应该报错
+        # [REVIEW]
         logger.info("Test message", event="test_event", key="value")
 
     def test_logger_with_trace_id_context(self) -> None:
@@ -499,8 +499,8 @@ class TestResolveLogDir:
         config = ObservabilityConfig(log_dir="logs")
         log_dir = _resolve_log_dir(config)
 
-        # 应该使用 XDGPaths 的 state_subdir
-        # 路径应该包含 "logs"
+        # [REVIEW] XDGPaths 的 state_subdir
+        # [REVIEW] "logs"
         assert log_dir.name == "logs" or "logs" in log_dir.parts
 
     def test_resolve_log_dir_custom_path(self) -> None:

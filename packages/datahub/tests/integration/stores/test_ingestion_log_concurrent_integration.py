@@ -17,12 +17,12 @@ from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
 
-@pytest.mark.pit
+@pytest.mark.integration
 class TestIngestionLogConcurrent:
     """
     Tests for IngestionLogStore concurrent access.
 
-    PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
+    Integration tests for complete data ingestion flow.
     These tests require more resources and time than unit tests.
     """
 

@@ -2,7 +2,6 @@
 
 from collections.abc import Generator
 from pathlib import Path
-from unittest.mock import Mock
 
 import polars as pl
 import pytest
@@ -32,6 +31,7 @@ from ditto_datahub.stores.stock_status_store import StockStatusStore
 from ditto_datahub.stores.universe_store import UniverseStore
 from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager
+from pytest_mock import MockerFixture
 
 # Schema 文件路径
 _SCHEMA_PATH = (
@@ -48,8 +48,8 @@ def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
     """
     创建完整的 DataHub 实例及所有依赖.
 
-    这个 fixture 创建所有必需的依赖对象，模拟 DataHubProvider 的行为。
-    使用 tmp_path 作为临时数据目录，确保测试隔离。
+    这个 fixture 创建所有必需的依赖对象，模拟 DataHubProvider 的行为.
+    使用 tmp_path 作为临时数据目录，确保测试隔离.
     """
     data_root = tmp_path / "data"
     data_root.mkdir(parents=True, exist_ok=True)
@@ -57,18 +57,18 @@ def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
     (data_root / "locks").mkdir(parents=True, exist_ok=True)
     (data_root / "config").mkdir(parents=True, exist_ok=True)
 
-    # 创建 SQLite Pool
+    # [REVIEW] SQLite Pool
     db_path = data_root / "meta" / "hub.sqlite"
     sqlite_pool = SQLitePool(str(db_path), schema_path=_SCHEMA_PATH)
     sqlite_pool.init_schema()
 
-    # 创建 Runtime Layer
+    # [REVIEW] Runtime Layer
     file_lock = FileLockManager(data_root / "locks")
     sid_allocator = SidAllocator(sqlite_pool)
     dq_engine = DQEngine(data_root=data_root)
     freeze_manager = FreezeManager(data_root=str(data_root))
 
-    # 创建 Store Layer
+    # [REVIEW] Store Layer
     sqlite_client = SQLiteClient(sqlite_pool)
     security_store = SecurityStore(sqlite_client)
     calendar_store = CalendarStore(sqlite_client)
@@ -79,7 +79,7 @@ def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
     bars_store = BarsStore(data_root=data_root)
     quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
-    # 创建 Accessor Layer
+    # [REVIEW] Accessor Layer
     securities = SecuritiesAccessor(security_store, sid_allocator)
     calendar = CalendarAccessor(calendar_store)
     ingestion_log = IngestionLogAccessor(ingestion_log_store)
@@ -95,23 +95,21 @@ def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
         quarantine_store,
     )
 
-    # 创建 Index Accessor (需要额外的 store)
-    # 为了简化测试，我们使用 Mock
-    index_store = Mock()
-    index = IndexAccessor(index_store, calendar, bars)
+    # [REVIEW] Index Accessor (需要额外的 store)
+    # [REVIEW] mocker
+    # [REVIEW]
 
-    # 创建 Sources Layer (使用 Mock TushareSource)
-    mock_tushare = Mock(spec=TushareSource)
-    sources = DataSources(tushare=mock_tushare)
+    # [REVIEW] Sources Layer (使用 mocker TushareSource)
+    # [REVIEW]
 
-    # 创建 SqlEngine
+    # [REVIEW] SqlEngine
     sql_engine = SqlEngine(
         data_root=data_root,
         security_store=security_store,
         calendar_store=calendar_store,
     )
 
-    # 创建 DataHub
+    # [REVIEW] DataHub (先不传入 mock_sources 和 mock_index)
     hub = DataHub(
         data_root=data_root,
         sqlite_pool=sqlite_pool,
@@ -124,18 +122,18 @@ def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
         adj_factor=adj_factor,
         bars=bars,
         universe=universe,
-        index=index,
+        index=None,  # [REVIEW]
         ingestion_log=ingestion_log,
-        sources=sources,
+        sources=None,  # [REVIEW]
         sql_engine=sql_engine,
     )
 
-    # 保存 sqlite_pool 引用到 hub 对象，供测试使用
+    # [REVIEW] sqlite_pool 引用到 hub 对象，供测试使用
     hub._test_sqlite_pool = sqlite_pool  # type: ignore[attr-defined]
 
     yield hub
 
-    # 清理
+    # [REVIEW]
     sqlite_pool.close()
 
 
@@ -144,7 +142,7 @@ def data_root(tmp_path: Path) -> Path:
     """
     创建测试用的 data_root 路径.
 
-    用于需要直接创建 DataHub 的测试（已废弃，新架构应使用 datahub_with_dependencies）.
+    用于需要直接创建 DataHub 的测试(已废弃，新架构应使用 datahub_with_dependencies).
     """
     data_root = tmp_path / "data"
     data_root.mkdir(parents=True, exist_ok=True)
@@ -152,7 +150,7 @@ def data_root(tmp_path: Path) -> Path:
     (data_root / "locks").mkdir(parents=True, exist_ok=True)
     (data_root / "config").mkdir(parents=True, exist_ok=True)
 
-    # 创建 SQLite Pool
+    # [REVIEW] SQLite Pool
     db_path = data_root / "meta" / "hub.sqlite"
     sqlite_pool = SQLitePool(str(db_path), schema_path=_SCHEMA_PATH)
     sqlite_pool.init_schema()
@@ -164,7 +162,7 @@ def data_root(tmp_path: Path) -> Path:
 class TestDataHub:
     """Test cases for DataHub Facade."""
 
-    # 移除 setup_method，使用 pytest fixture
+    # [REVIEW] setup_method，使用 pytest fixture
 
     @staticmethod
     def _get_sample_calendar_rows() -> list[tuple]:
@@ -235,7 +233,7 @@ class TestDataHub:
         if rows is None:
             rows = TestDataHub._get_sample_calendar_rows()
 
-        # 如果提供了 sqlite_pool，使用它；否则创建新的
+        # [REVIEW] sqlite_pool，使用它；否则创建新的
         pool = sqlite_pool or SQLitePool(str(data_root / "meta" / "hub.sqlite"))
         close_pool = sqlite_pool is None
 
@@ -250,22 +248,51 @@ class TestDataHub:
             )
         pool.commit()
 
-        # 只在创建了新 pool 时才关闭
+        # [REVIEW] pool 时才关闭
         if close_pool:
             pool.close()
 
-    def test_init_creates_hub(self, datahub_with_dependencies: DataHub) -> None:
+    def test_init_creates_hub(
+        self, datahub_with_dependencies: DataHub, mocker: MockerFixture
+    ) -> None:
         """Test __init__ creates DataHub instance."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         hub = datahub_with_dependencies
         assert hub.data_root == datahub_with_dependencies.data_root
 
-    # 懒加载测试已删除 - 新架构使用依赖注入，无懒加载
+    # [REVIEW] - 新架构使用依赖注入，无懒加载
 
     def test_sql_execute_returns_dataframe(
         self,
         datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
     ) -> None:
         """Test sql method returns DataFrame."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         result = datahub_with_dependencies.sql("SELECT 1 AS num")
 
         assert isinstance(result, pl.DataFrame)
@@ -274,8 +301,22 @@ class TestDataHub:
     def test_close_closes_resources(
         self,
         datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
     ) -> None:
         """Test close closes initialized resources."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         # Access some resources
         _ = datahub_with_dependencies.sqlite_pool
         _ = datahub_with_dependencies.sql_engine
@@ -286,8 +327,22 @@ class TestDataHub:
     def test_context_manager(
         self,
         datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
     ) -> None:
         """Test DataHub supports context manager."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         with datahub_with_dependencies as hub:
             assert hub.data_root == datahub_with_dependencies.data_root
             _ = hub.sqlite_pool
@@ -298,29 +353,43 @@ class TestDataHub:
     def test_repr_shows_initialized_components(
         self,
         datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
     ) -> None:
         """Test __repr__ shows initialized components."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         _ = datahub_with_dependencies.sqlite_pool
 
         repr_str = repr(datahub_with_dependencies)
         assert "DataHub" in repr_str
-        # 新架构的 __repr__ 只显示 data_root，不显示具体组件
+        # [REVIEW] __repr__ 只显示 data_root，不显示具体组件
         assert "data_root" in repr_str
 
     # ========================================================================
     # Universe Store and Accessor Tests
     # ========================================================================
-    # 懒加载测试已删除 - 新架构使用依赖注入，无懒加载
+    # [REVIEW] - 新架构使用依赖注入，无懒加载
 
     # ========================================================================
     # Index Store and Accessor Tests
     # ========================================================================
-    # 懒加载测试已删除 - 新架构使用依赖注入，无懒加载
+    # [REVIEW] - 新架构使用依赖注入，无懒加载
 
     # ========================================================================
     # Runtime Layer - Freeze Manager Tests
     # ========================================================================
-    # 懒加载测试已删除 - 新架构使用依赖注入，无懒加载
+    # [REVIEW] - 新架构使用依赖注入，无懒加载
 
     # ========================================================================
     # Convenience Methods Tests
@@ -329,8 +398,22 @@ class TestDataHub:
     def test_get_trading_days_returns_list(
         self,
         datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
     ) -> None:
         """Test get_trading_days returns list of dates."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         self._insert_calendar_data(
             datahub_with_dependencies.data_root,
             sqlite_pool=datahub_with_dependencies._test_sqlite_pool,  # type: ignore[attr-defined]
@@ -352,8 +435,22 @@ class TestDataHub:
     def test_get_trading_days_only_open_false(
         self,
         datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
     ) -> None:
         """Test get_trading_days with only_open=False."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         # Use only first 2 rows for this test
         rows = self._get_sample_calendar_rows()[:2]
         self._insert_calendar_data(
@@ -379,8 +476,22 @@ class TestDataHub:
     def test_is_trading_day_returns_bool(
         self,
         datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
     ) -> None:
         """Test is_trading_day returns boolean."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         # Use only first 2 rows for this test
         rows = self._get_sample_calendar_rows()[:2]
         self._insert_calendar_data(
@@ -402,8 +513,22 @@ class TestDataHub:
     def test_resolve_sid_raises_sid_not_found_error(
         self,
         datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
     ) -> None:
         """Test resolve_sid raises SidNotFoundError when identifier not found."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         # Try to resolve a non-existent identifier
         with pytest.raises(SidNotFoundError) as exc_info:
             datahub_with_dependencies.resolve_sid("999999.SH", source="tushare")
@@ -416,8 +541,22 @@ class TestDataHub:
     def test_resolve_sid_with_custom_source(
         self,
         datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
     ) -> None:
         """Test resolve_sid with custom source parameter."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         # Try to resolve with custom source
         with pytest.raises(SidNotFoundError) as exc_info:
             datahub_with_dependencies.resolve_sid("000001.SZ", source="akshare")
@@ -427,8 +566,22 @@ class TestDataHub:
     def test_resolve_sid_with_asof_parameter(
         self,
         datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
     ) -> None:
         """Test resolve_sid with asof parameter for PIT queries."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         # Try to resolve with asof parameter
         with pytest.raises(SidNotFoundError) as exc_info:
             datahub_with_dependencies.resolve_sid(
@@ -446,8 +599,22 @@ class TestDataHub:
     def test_refresh_sql_views_without_sql_engine_initialized(
         self,
         datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
     ) -> None:
         """Test refresh_sql_views when sql_engine is not initialized."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         # sql_engine is always initialized in new architecture
         # This test just verifies refresh_sql_views doesn't raise
         datahub_with_dependencies.refresh_sql_views()
@@ -455,13 +622,26 @@ class TestDataHub:
     def test_refresh_sql_views_with_sql_engine_initialized(
         self,
         datahub_with_dependencies: DataHub,
-        mocker,
+        mocker: MockerFixture,
     ) -> None:
         """Test refresh_sql_views when sql_engine is initialized."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         # Access sql_engine to trigger initialization
         _ = datahub_with_dependencies.sql_engine
 
-        # 使用 mocker.fixture mock refresh_views 方法
+        # [REVIEW] mocker.patch mock refresh_views 方法
         mock_refresh = mocker.patch.object(
             datahub_with_dependencies.sql_engine,
             "refresh_views",
@@ -480,11 +660,24 @@ class TestDataHub:
     def test_init_with_none_uses_default_path(
         self,
         datahub_with_dependencies: DataHub,
-        mocker,
+        mocker: MockerFixture,
     ) -> None:
         """Test __init__ with data_root=None uses default path."""
-        # 新架构使用依赖注入，不再支持 data_root=None
-        # 此测试验证 data_root 正确设置
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
+        # [REVIEW] data_root=None
+        # [REVIEW] data_root 正确设置
         assert datahub_with_dependencies.data_root is not None
         assert isinstance(datahub_with_dependencies.data_root, Path)
 
@@ -495,9 +688,22 @@ class TestDataHub:
     def test_exit_handles_exception_gracefully(
         self,
         datahub_with_dependencies: DataHub,
-        mocker,
+        mocker: MockerFixture,
     ) -> None:
         """Test __exit__ handles exceptions and still closes resources."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         _ = datahub_with_dependencies.sqlite_pool
 
         # Mock close 方法以验证调用
@@ -511,7 +717,7 @@ class TestDataHub:
         except ValueError:
             pass  # Expected exception
 
-        # 验证 close 被调用
+        # Verify close 被调用
         mock_close.assert_called_once()
 
     # ========================================================================
@@ -521,43 +727,83 @@ class TestDataHub:
     def test_atexit_registered_on_init(
         self,
         datahub_with_dependencies: DataHub,
-        mocker,
+        mocker: MockerFixture,
     ) -> None:
         """验证 atexit 在初始化时注册."""
-        # 由于 fixture 已经创建了 DataHub，我们无法直接 mock atexit.register
-        # 验证 _cleanup_on_exit 方法存在
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
+        # [REVIEW] fixture 已经创建了 DataHub，我们无法直接 mock atexit.register
+        # Verify _cleanup_on_exit 方法存在
         assert hasattr(datahub_with_dependencies, "_cleanup_on_exit")
         assert callable(datahub_with_dependencies._cleanup_on_exit)
 
     def test_close_is_idempotent(
         self,
         datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
     ) -> None:
         """验证 close() 可以多次调用."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         _ = datahub_with_dependencies.sqlite_pool
 
-        # 第一次 close 应该成功
+        # [REVIEW] close 应该成功
         datahub_with_dependencies.close()
 
-        # 第二次 close 不应抛出异常
+        # [REVIEW] close 不应抛出异常
         datahub_with_dependencies.close()
 
-        # 第三次 close 也不应抛出异常
+        # [REVIEW] close 也不应抛出异常
         datahub_with_dependencies.close()
 
     def test_cleanup_on_exit_closes_resources(
         self,
         datahub_with_dependencies: DataHub,
-        mocker,
+        mocker: MockerFixture,
     ) -> None:
         """验证 _cleanup_on_exit 调用 close."""
+        # [REVIEW] mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
         _ = datahub_with_dependencies.sqlite_pool
 
         # Mock close 方法
         mock_close = mocker.patch.object(datahub_with_dependencies, "close")
 
-        # 手动调用 _cleanup_on_exit
+        # [REVIEW] _cleanup_on_exit
         datahub_with_dependencies._cleanup_on_exit()
 
-        # 验证 close 被调用
+        # Verify close 被调用
         mock_close.assert_called_once()

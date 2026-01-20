@@ -1,23 +1,31 @@
-"""Pytest configuration for unit tests.
+"""Pytest configuration for unit tests."""
 
-这个文件为 tests/unit/ 目录下的所有测试自动添加 @pytest.mark.unit marker。
-"""
+from pathlib import Path
 
 import pytest
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """为 unit 目录下的所有测试自动添加 unit marker.
+    """
+    Auto-mark tests based on their directory location.
 
-    Args:
-        items: pytest 收集到的所有测试项
+    - tests/unit/ -> unit
+    - tests/integration/ -> integration
+    Only special cases need manual markers (e.g., @pytest.mark.slow).
     """
     for item in items:
-        # 检查测试文件是否在 unit 目录下且没有 unit marker
-        is_unit_path = "/tests/unit/" in str(item.fspath) or "\\tests\\unit\\" in str(
-            item.fspath
-        )
-        has_unit_marker = "unit" in [mark.name for mark in item.iter_markers()]
+        # Get the relative path from the tests directory
+        rel_path_str = str(item.fspath)  # Initialize with fallback value
+        try:
+            # Try to get path relative to tests directory
+            tests_root = Path(__file__).parent.parent  # up to tests/
+            rel_path = item.path.relative_to(tests_root)
+        except ValueError:
+            rel_path = None  # Will use string matching instead
 
-        if is_unit_path and not has_unit_marker:
+        # Mark based on directory
+        path_to_check = str(rel_path) if rel_path else rel_path_str
+        if "integration" in path_to_check:
+            item.add_marker(pytest.mark.integration)
+        elif "unit" in path_to_check:
             item.add_marker(pytest.mark.unit)

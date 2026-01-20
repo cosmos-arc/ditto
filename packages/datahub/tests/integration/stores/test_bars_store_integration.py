@@ -22,7 +22,7 @@ class TestBarsStoreIntegration:
     @pytest.fixture
     def pool(self) -> SQLitePool:
         """Create in-memory SQLite pool (required by infrastructure)."""
-        return SQLitePool(connection_string="file::memory:?cache=shared", pool_size=1)
+        return SQLitePool(db_path="file::memory:?cache=shared")
 
     @pytest.fixture
     def store(self, data_root: Path, pool: SQLitePool) -> BarsStore:
@@ -474,3 +474,22 @@ class TestBarsStoreIntegration:
         assert "close" in result.columns
         assert "volume" in result.columns
         assert "amount" in result.columns
+
+    def test_read_corrupted_parquet_file_raises_error(
+        self, store: BarsStore, data_root: Path
+    ) -> None:
+        """Test reading corrupted parquet file raises exception."""
+        # Create dataset directory
+        dataset_dir = data_root / "stock_daily"
+        dataset_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write invalid/corrupted parquet file
+        corrupted_file = dataset_dir / "2024.parquet"
+        corrupted_file.write_text("This is not a valid parquet file")
+
+        # Reading should raise an exception
+        # polars.ParquetError or similar for corrupted parquet files
+        with pytest.raises(  # noqa: B017
+            Exception
+        ):  # Could be more specific but polars doesn't expose specific error types
+            store.read("stock_daily")

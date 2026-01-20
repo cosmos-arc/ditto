@@ -1,25 +1,24 @@
 """Unit tests for SidAllocator."""
 
-from unittest.mock import MagicMock
-
 import pytest
 from ditto_datahub.models.common import AssetSidRange
 from ditto_datahub.runtime.sid_allocator import SidAllocator
+from pytest_mock import MockerFixture
 
 
 @pytest.mark.unit
 class TestSidAllocator:
     """Tests for SidAllocator."""
 
-    def test_initialization(self) -> None:
+    def test_initialization(self, mocker: MockerFixture) -> None:
         """Test that SidAllocator initializes with SQLite pool."""
-        mock_pool = MagicMock()
+        mock_pool = mocker.Mock()
         allocator = SidAllocator(mock_pool)
         assert allocator._pool is mock_pool
 
-    def test_allocate_stock_sid_first_allocation(self) -> None:
+    def test_allocate_stock_sid_first_allocation(self, mocker: MockerFixture) -> None:
         """Test allocating first stock SID starts at min range."""
-        mock_pool = MagicMock()
+        mock_pool = mocker.Mock()
         # No existing record
         mock_pool.execute.return_value.fetchone.return_value = None
 
@@ -35,9 +34,9 @@ class TestSidAllocator:
         )
         mock_pool.commit.assert_called_once()
 
-    def test_allocate_etf_sid_first_allocation(self) -> None:
+    def test_allocate_etf_sid_first_allocation(self, mocker: MockerFixture) -> None:
         """Test allocating first ETF SID starts at min range."""
-        mock_pool = MagicMock()
+        mock_pool = mocker.Mock()
         mock_pool.execute.return_value.fetchone.return_value = None
 
         allocator = SidAllocator(mock_pool)
@@ -50,9 +49,9 @@ class TestSidAllocator:
             ["etf", 2_000_000],
         )
 
-    def test_allocate_index_sid_first_allocation(self) -> None:
+    def test_allocate_index_sid_first_allocation(self, mocker: MockerFixture) -> None:
         """Test allocating first index SID starts at min range."""
-        mock_pool = MagicMock()
+        mock_pool = mocker.Mock()
         mock_pool.execute.return_value.fetchone.return_value = None
 
         allocator = SidAllocator(mock_pool)
@@ -65,9 +64,9 @@ class TestSidAllocator:
             ["index", 3_000_000],
         )
 
-    def test_allocate_increments_existing_sid(self) -> None:
+    def test_allocate_increments_existing_sid(self, mocker: MockerFixture) -> None:
         """Test that allocation increments existing SID."""
-        mock_pool = MagicMock()
+        mock_pool = mocker.Mock()
         # Existing record with current_max = 1,000,005
         mock_pool.execute.return_value.fetchone.return_value = {
             "current_max": 1_000_005
@@ -83,9 +82,9 @@ class TestSidAllocator:
             [1_000_006, "stock"],
         )
 
-    def test_allocate_is_deterministic_sequential(self) -> None:
+    def test_allocate_is_deterministic_sequential(self, mocker: MockerFixture) -> None:
         """Test that allocations are sequential and deterministic."""
-        mock_pool = MagicMock()
+        mock_pool = mocker.Mock()
 
         # First allocation returns None (no existing record)
         mock_pool.execute.return_value.fetchone.side_effect = [
@@ -113,9 +112,11 @@ class TestSidAllocator:
             [1_000_001, "stock"],
         )
 
-    def test_allocate_raises_overflow_when_exhausted(self) -> None:
+    def test_allocate_raises_overflow_when_exhausted(
+        self, mocker: MockerFixture
+    ) -> None:
         """Test that allocation raises OverflowError when range exhausted."""
-        mock_pool = MagicMock()
+        mock_pool = mocker.Mock()
         # Return current_max at max range
         mock_pool.execute.return_value.fetchone.return_value = {
             "current_max": 1_999_999
@@ -129,9 +130,9 @@ class TestSidAllocator:
         assert "SID exhausted for stock" in str(exc_info.value)
         mock_pool.rollback.assert_called_once()
 
-    def test_allocate_begins_transaction(self) -> None:
+    def test_allocate_begins_transaction(self, mocker: MockerFixture) -> None:
         """Test that allocation uses BEGIN IMMEDIATE."""
-        mock_pool = MagicMock()
+        mock_pool = mocker.Mock()
         mock_pool.execute.return_value.fetchone.return_value = None
 
         allocator = SidAllocator(mock_pool)
@@ -140,9 +141,9 @@ class TestSidAllocator:
         # Check that BEGIN IMMEDIATE was called
         mock_pool.execute.assert_any_call("BEGIN IMMEDIATE")
 
-    def test_allocate_commits_on_success(self) -> None:
+    def test_allocate_commits_on_success(self, mocker: MockerFixture) -> None:
         """Test that allocation commits on success."""
-        mock_pool = MagicMock()
+        mock_pool = mocker.Mock()
         mock_pool.execute.return_value.fetchone.return_value = None
 
         allocator = SidAllocator(mock_pool)
@@ -150,9 +151,9 @@ class TestSidAllocator:
 
         mock_pool.commit.assert_called_once()
 
-    def test_allocate_rolls_back_on_error(self) -> None:
+    def test_allocate_rolls_back_on_error(self, mocker: MockerFixture) -> None:
         """Test that allocation rolls back on any error."""
-        mock_pool = MagicMock()
+        mock_pool = mocker.Mock()
         # Simulate database error
         mock_pool.execute.side_effect = RuntimeError("Database error")
 

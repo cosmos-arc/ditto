@@ -1,4 +1,5 @@
-"""Tests for helpers.py context managers.
+"""
+Tests for helpers.py context managers.
 
 This module tests the helpers context managers with real dependencies
 but mocked data sources.
@@ -7,6 +8,7 @@ but mocked data sources.
 # 测试文件允许函数内导入
 
 import pytest
+from pytest_mock import MockerFixture
 
 
 @pytest.mark.integration
@@ -99,14 +101,14 @@ class TestCreateIngestionContext:
             # Verify sources.get was called with default "tushare"
             patch_datahub.sources.get.assert_called_with("tushare")
 
-    def test_context_supports_coordinator_usage(self, patch_datahub):
+    def test_context_supports_coordinator_usage(
+        self, patch_datahub, mocker: MockerFixture
+    ):
         """Test that coordinator can be used within context."""
         # Mock the coordinator's ingest_date method
-        from unittest.mock import MagicMock
-
         from ditto_port.jobs.flows.helpers import create_ingestion_context
 
-        mock_result = MagicMock()
+        mock_result = mocker.Mock()
         mock_result.status = "success"
 
         with create_ingestion_context(data_root="data", source="tushare") as (

@@ -1,20 +1,19 @@
 """Tests for DataSources."""
 
-from unittest.mock import Mock
-
 import pytest
 from ditto_datahub.sources.source import DataSources
+from pytest_mock import MockerFixture
 
 
 class TestDataSources:
     """Tests for DataSources."""
 
-    def test_tushare_property_returns_source(self) -> None:
+    def test_tushare_property_returns_source(self, mocker: MockerFixture) -> None:
         """Test tushare property returns TushareSource instance."""
-        mock_tushare = Mock()
-        mock_tushare.fetch_calendar = Mock()
-        mock_tushare.fetch_etf_basic = Mock()
-        mock_tushare.fetch_etf_daily = Mock()
+        mock_tushare = mocker.Mock()
+        mock_tushare.fetch_calendar = mocker.Mock()
+        mock_tushare.fetch_etf_basic = mocker.Mock()
+        mock_tushare.fetch_etf_daily = mocker.Mock()
 
         sources = DataSources(tushare=mock_tushare)
         source = sources.tushare
@@ -25,9 +24,9 @@ class TestDataSources:
         assert hasattr(source, "fetch_etf_basic")
         assert hasattr(source, "fetch_etf_daily")
 
-    def test_tushare_property_is_cached(self) -> None:
+    def test_tushare_property_is_cached(self, mocker: MockerFixture) -> None:
         """Test tushare property is cached."""
-        mock_tushare = Mock()
+        mock_tushare = mocker.Mock()
 
         sources = DataSources(tushare=mock_tushare)
         source1 = sources.tushare
@@ -37,10 +36,10 @@ class TestDataSources:
         assert source1 is source2
         assert source1 is mock_tushare
 
-    def test_get_returns_tushare_source(self) -> None:
+    def test_get_returns_tushare_source(self, mocker: MockerFixture) -> None:
         """Test get() method returns TushareSource."""
-        mock_tushare = Mock()
-        mock_tushare.fetch_calendar = Mock()
+        mock_tushare = mocker.Mock()
+        mock_tushare.fetch_calendar = mocker.Mock()
 
         sources = DataSources(tushare=mock_tushare)
         source = sources.get("tushare")
@@ -49,9 +48,9 @@ class TestDataSources:
         assert source is mock_tushare
         assert hasattr(source, "fetch_calendar")
 
-    def test_get_is_case_insensitive(self) -> None:
+    def test_get_is_case_insensitive(self, mocker: MockerFixture) -> None:
         """Test get() normalizes case."""
-        mock_tushare = Mock()
+        mock_tushare = mocker.Mock()
 
         sources = DataSources(tushare=mock_tushare)
         source1 = sources.get("TUSHARE")
@@ -66,9 +65,9 @@ class TestDataSources:
         assert source1 is mock_tushare
         assert source2 is mock_tushare
 
-    def test_get_invalid_name_raises_error(self) -> None:
+    def test_get_invalid_name_raises_error(self, mocker: MockerFixture) -> None:
         """Test get() raises error for invalid source name."""
-        mock_tushare = Mock()
+        mock_tushare = mocker.Mock()
         sources = DataSources(tushare=mock_tushare)
 
         with pytest.raises(ValueError, match="Unknown source"):

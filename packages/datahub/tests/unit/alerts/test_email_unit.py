@@ -1,10 +1,9 @@
 """Unit tests for Email sender."""
 
-from unittest.mock import MagicMock, patch
-
 import pytest
 from ditto_datahub.alerts.base import AlertLevel, AlertMessage
 from ditto_datahub.alerts.email import EmailAlertSender
+from pytest_mock import MockerFixture
 
 
 @pytest.mark.unit
@@ -39,22 +38,22 @@ class TestEmailAlertSender:
         assert sender._from_addr == "sender@example.com"
         assert sender._to_addrs == ["recipient1@example.com", "recipient2@example.com"]
 
-    def test_initialization_defaults_from_env(self) -> None:
+    def test_initialization_defaults_from_env(self, mocker: MockerFixture) -> None:
         """Test initialization uses environment variables as defaults."""
-        with patch("os.getenv") as mock_getenv:
-            mock_getenv.side_effect = lambda key, default=None: {
-                "SMTP_HOST": "env-host.com",
-                "SMTP_PORT": "25",
-                "EMAIL_FROM": "env-from@example.com",
-                "EMAIL_TO": "env-to@example.com",
-            }.get(key, default)
+        mock_getenv = mocker.patch("os.getenv")
+        mock_getenv.side_effect = lambda key, default=None: {
+            "SMTP_HOST": "env-host.com",
+            "SMTP_PORT": "25",
+            "EMAIL_FROM": "env-from@example.com",
+            "EMAIL_TO": "env-to@example.com",
+        }.get(key, default)
 
-            sender = EmailAlertSender()
+        sender = EmailAlertSender()
 
-            assert sender._smtp_host == "env-host.com"
-            assert sender._smtp_port == 25
-            assert sender._from_addr == "env-from@example.com"
-            assert sender._to_addrs == ["env-to@example.com"]
+        assert sender._smtp_host == "env-host.com"
+        assert sender._smtp_port == 25
+        assert sender._from_addr == "env-from@example.com"
+        assert sender._to_addrs == ["env-to@example.com"]
 
     def test_send_returns_false_when_no_recipients(self) -> None:
         """Test that send returns False when no recipients configured."""
@@ -70,144 +69,144 @@ class TestEmailAlertSender:
 
         assert result is False
 
-    def test_send_returns_true_on_success(self) -> None:
+    def test_send_returns_true_on_success(self, mocker: MockerFixture) -> None:
         """Test that send returns True on successful email send."""
-        with patch("smtplib.SMTP") as mock_smtp:
-            mock_server = MagicMock()
-            mock_smtp.return_value.__enter__.return_value = mock_server
+        mock_smtp = mocker.patch("smtplib.SMTP")
+        mock_server = mocker.Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
 
-            sender = EmailAlertSender(
-                to_addrs=["recipient@example.com"],
-                username="user",
-                password="pass",
-            )
+        sender = EmailAlertSender(
+            to_addrs=["recipient@example.com"],
+            username="user",
+            password="pass",
+        )
 
-            message = AlertMessage(
-                level=AlertLevel.ERROR,
-                title="Test Alert",
-                content="Test content",
-            )
+        message = AlertMessage(
+            level=AlertLevel.ERROR,
+            title="Test Alert",
+            content="Test content",
+        )
 
-            result = sender.send(message)
+        result = sender.send(message)
 
-            assert result is True
-            mock_server.starttls.assert_called_once()
-            mock_server.login.assert_called_once_with("user", "pass")
-            mock_server.send_message.assert_called_once()
+        assert result is True
+        mock_server.starttls.assert_called_once()
+        mock_server.login.assert_called_once_with("user", "pass")
+        mock_server.send_message.assert_called_once()
 
-    def test_send_without_auth(self) -> None:
+    def test_send_without_auth(self, mocker: MockerFixture) -> None:
         """Test that send works without authentication."""
-        with patch("smtplib.SMTP") as mock_smtp:
-            mock_server = MagicMock()
-            mock_smtp.return_value.__enter__.return_value = mock_server
+        mock_smtp = mocker.patch("smtplib.SMTP")
+        mock_server = mocker.Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
 
-            sender = EmailAlertSender(
-                to_addrs=["recipient@example.com"],
-            )
+        sender = EmailAlertSender(
+            to_addrs=["recipient@example.com"],
+        )
 
-            message = AlertMessage(
-                level=AlertLevel.WARNING,
-                title="Test Warning",
-                content="Warning content",
-            )
+        message = AlertMessage(
+            level=AlertLevel.WARNING,
+            title="Test Warning",
+            content="Warning content",
+        )
 
-            result = sender.send(message)
+        result = sender.send(message)
 
-            assert result is True
-            mock_server.starttls.assert_not_called()
-            mock_server.login.assert_not_called()
-            mock_server.send_message.assert_called_once()
+        assert result is True
+        mock_server.starttls.assert_not_called()
+        mock_server.login.assert_not_called()
+        mock_server.send_message.assert_called_once()
 
-    def test_send_returns_false_on_exception(self) -> None:
+    def test_send_returns_false_on_exception(self, mocker: MockerFixture) -> None:
         """Test that send returns False when exception occurs."""
-        with patch("smtplib.SMTP") as mock_smtp:
-            mock_smtp.side_effect = Exception("SMTP error")
+        mock_smtp = mocker.patch("smtplib.SMTP")
+        mock_smtp.side_effect = Exception("SMTP error")
 
-            sender = EmailAlertSender(
-                to_addrs=["recipient@example.com"],
-            )
+        sender = EmailAlertSender(
+            to_addrs=["recipient@example.com"],
+        )
 
-            message = AlertMessage(
-                level=AlertLevel.ERROR,
-                title="Test Alert",
-                content="Test content",
-            )
+        message = AlertMessage(
+            level=AlertLevel.ERROR,
+            title="Test Alert",
+            content="Test content",
+        )
 
-            result = sender.send(message)
+        result = sender.send(message)
 
-            assert result is False
+        assert result is False
 
-    def test_send_formats_message_correctly(self) -> None:
+    def test_send_formats_message_correctly(self, mocker: MockerFixture) -> None:
         """Test that send formats message correctly."""
-        with patch("smtplib.SMTP") as mock_smtp:
-            mock_server = MagicMock()
-            mock_smtp.return_value.__enter__.return_value = mock_server
+        mock_smtp = mocker.patch("smtplib.SMTP")
+        mock_server = mocker.Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
 
-            sender = EmailAlertSender(
-                from_addr="sender@example.com",
-                to_addrs=["recipient@example.com"],
-            )
+        sender = EmailAlertSender(
+            from_addr="sender@example.com",
+            to_addrs=["recipient@example.com"],
+        )
 
-            message = AlertMessage(
-                level=AlertLevel.CRITICAL,
-                title="Critical Alert",
-                content="Critical content",
-                context={"key": "value"},
-            )
+        message = AlertMessage(
+            level=AlertLevel.CRITICAL,
+            title="Critical Alert",
+            content="Critical content",
+            context={"key": "value"},
+        )
 
-            sender.send(message)
+        sender.send(message)
 
-            # Check email headers
-            sent_msg = mock_server.send_message.call_args[0][0]
-            assert sent_msg["From"] == "sender@example.com"
-            assert sent_msg["To"] == "recipient@example.com"
-            assert "[CRITICAL]" in sent_msg["Subject"]
-            assert "Critical Alert" in sent_msg["Subject"]
+        # Check email headers
+        sent_msg = mock_server.send_message.call_args[0][0]
+        assert sent_msg["From"] == "sender@example.com"
+        assert sent_msg["To"] == "recipient@example.com"
+        assert "[CRITICAL]" in sent_msg["Subject"]
+        assert "Critical Alert" in sent_msg["Subject"]
 
-            # Check email body
-            body = sent_msg.get_content()
-            assert "Critical Alert" in body
-            assert "Critical content" in body
-            assert "key: value" in body
+        # Check email body
+        body = sent_msg.get_content()
+        assert "Critical Alert" in body
+        assert "Critical content" in body
+        assert "key: value" in body
 
-    def test_multiple_recipients_joined_with_comma(self) -> None:
+    def test_multiple_recipients_joined_with_comma(self, mocker: MockerFixture) -> None:
         """Test that multiple recipients are joined correctly."""
-        with patch("smtplib.SMTP") as mock_smtp:
-            mock_server = MagicMock()
-            mock_smtp.return_value.__enter__.return_value = mock_server
+        mock_smtp = mocker.patch("smtplib.SMTP")
+        mock_server = mocker.Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
 
-            sender = EmailAlertSender(
-                to_addrs=["recipient1@example.com", "recipient2@example.com"],
-            )
+        sender = EmailAlertSender(
+            to_addrs=["recipient1@example.com", "recipient2@example.com"],
+        )
 
-            message = AlertMessage(
-                level=AlertLevel.INFO,
-                title="Test",
-                content="Content",
-            )
+        message = AlertMessage(
+            level=AlertLevel.INFO,
+            title="Test",
+            content="Content",
+        )
 
-            sender.send(message)
+        sender.send(message)
 
-            sent_msg = mock_server.send_message.call_args[0][0]
-            assert sent_msg["To"] == "recipient1@example.com, recipient2@example.com"
+        sent_msg = mock_server.send_message.call_args[0][0]
+        assert sent_msg["To"] == "recipient1@example.com, recipient2@example.com"
 
-    def test_smtp_host_default_to_localhost(self) -> None:
+    def test_smtp_host_default_to_localhost(self, mocker: MockerFixture) -> None:
         """Test that SMTP host defaults to localhost."""
-        with patch("os.getenv") as mock_getenv:
-            mock_getenv.side_effect = lambda key, default=None: default
-            sender = EmailAlertSender()
-            assert sender._smtp_host == "localhost"
+        mock_getenv = mocker.patch("os.getenv")
+        mock_getenv.side_effect = lambda key, default=None: default
+        sender = EmailAlertSender()
+        assert sender._smtp_host == "localhost"
 
-    def test_smtp_port_default_to_587(self) -> None:
+    def test_smtp_port_default_to_587(self, mocker: MockerFixture) -> None:
         """Test that SMTP port defaults to 587."""
-        with patch("os.getenv") as mock_getenv:
-            mock_getenv.side_effect = lambda key, default=None: default
-            sender = EmailAlertSender()
-            assert sender._smtp_port == 587
+        mock_getenv = mocker.patch("os.getenv")
+        mock_getenv.side_effect = lambda key, default=None: default
+        sender = EmailAlertSender()
+        assert sender._smtp_port == 587
 
-    def test_from_addr_default_to_noreply(self) -> None:
+    def test_from_addr_default_to_noreply(self, mocker: MockerFixture) -> None:
         """Test that from address defaults to noreply@ditto.local."""
-        with patch("os.getenv") as mock_getenv:
-            mock_getenv.side_effect = lambda key, default=None: default
-            sender = EmailAlertSender()
-            assert sender._from_addr == "noreply@ditto.local"
+        mock_getenv = mocker.patch("os.getenv")
+        mock_getenv.side_effect = lambda key, default=None: default
+        sender = EmailAlertSender()
+        assert sender._from_addr == "noreply@ditto.local"

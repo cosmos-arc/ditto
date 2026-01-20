@@ -14,7 +14,7 @@ class TestSecuritiesAccessor:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient, sqlite_pool: SQLitePool) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端和连接池。"""
+        """使用 fixture 自动注入已初始化的数据库客户端和连接池."""
         self.pool = sqlite_pool
         self.client = sqlite_client
         self.security_store = SecurityStore(self.client)

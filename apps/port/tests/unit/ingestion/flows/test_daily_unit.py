@@ -7,8 +7,6 @@ testing individual code paths and branches without full integration setup.
 
 from __future__ import annotations
 
-from unittest import mock
-
 import pytest
 from ditto_port.jobs.flows.daily import (
     _collect_results,
@@ -17,13 +15,14 @@ from ditto_port.jobs.flows.daily import (
 )
 from ditto_port.models import Dataset
 from prefect.tasks import Task as PrefectTask
+from pytest_mock import MockerFixture
 
 
 @pytest.mark.unit
 class TestCheckTradingDay:
     """Unit tests for check_trading_day task."""
 
-    def test_returns_true_for_trading_day(self, mocker):
+    def test_returns_true_for_trading_day(self, mocker: MockerFixture):
         """Test that task returns True for valid trading day."""
         mock_hub = mocker.MagicMock()
         mock_hub.calendar.is_trading_day.return_value = True
@@ -41,7 +40,7 @@ class TestCheckTradingDay:
         assert result is True
         mock_hub.calendar.is_trading_day.assert_called_once_with("2024-01-02")
 
-    def test_returns_false_for_non_trading_day(self, mocker):
+    def test_returns_false_for_non_trading_day(self, mocker: MockerFixture):
         """Test that task returns False for non-trading day."""
         mock_hub = mocker.MagicMock()
         mock_hub.calendar.is_trading_day.return_value = False
@@ -58,7 +57,7 @@ class TestCheckTradingDay:
 
         assert result is False
 
-    def test_propagates_exception(self, mocker):
+    def test_propagates_exception(self, mocker: MockerFixture):
         """Test that exceptions are propagated."""
         mock_hub = mocker.MagicMock()
         mock_hub.calendar.is_trading_day.side_effect = ValueError("Test error")
@@ -74,7 +73,7 @@ class TestCheckTradingDay:
         with pytest.raises(ValueError, match="Test error"):
             check_trading_day(trade_date="2024-01-02")
 
-    def test_is_prefect_task(self, mocker):
+    def test_is_prefect_task(self, mocker: MockerFixture):
         """Test that check_trading_day is a Prefect task."""
         assert isinstance(check_trading_day, PrefectTask)
         assert check_trading_day.name == "check_trading_day"
@@ -84,7 +83,7 @@ class TestCheckTradingDay:
 class TestDailyIngestionFlowNonTradingDay:
     """Unit tests for daily_ingestion_flow non-trading day branch."""
 
-    def test_returns_skipped_result_for_non_trading_day(self, mocker):
+    def test_returns_skipped_result_for_non_trading_day(self, mocker: MockerFixture):
         """Test that flow returns skipped result for non-trading day."""
         mocker.patch(
             "ditto_port.jobs.flows.daily.check_trading_day", return_value=False
@@ -110,7 +109,7 @@ class TestDailyIngestionFlowNonTradingDay:
 class TestDailyIngestionFlowT0Execution:
     """Unit tests for T0 task execution."""
 
-    def test_executes_t0_datasets(self, mocker):
+    def test_executes_t0_datasets(self, mocker: MockerFixture):
         """Test that flow executes T0 datasets."""
         # Mock check_trading_day to return True
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
@@ -124,8 +123,8 @@ class TestDailyIngestionFlowT0Execution:
         mock_create_task = mocker.patch(
             "ditto_port.jobs.flows.daily.create_ingest_task_t0"
         )
-        mock_task = mocker.MagicMock()
-        mock_future = mocker.MagicMock()
+        mock_task = mocker.Mock()
+        mock_future = mocker.Mock()
         mock_future.result.return_value = {
             "dataset": "calendar",
             "status": "success",
@@ -148,7 +147,7 @@ class TestDailyIngestionFlowT0Execution:
         assert mock_task.submit.call_count == 2
         assert "calendar" in result["t0_results"]
 
-    def test_handles_empty_t0_datasets(self, mocker):
+    def test_handles_empty_t0_datasets(self, mocker: MockerFixture):
         """Test that flow handles empty T0 datasets list."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
@@ -173,7 +172,7 @@ class TestDailyIngestionFlowT0Execution:
 class TestDailyIngestionFlowT1Execution:
     """Unit tests for T1 task execution."""
 
-    def test_uses_correct_task_factory_for_adj_factor(self, mocker):
+    def test_uses_correct_task_factory_for_adj_factor(self, mocker: MockerFixture):
         """Test that adj_factor uses create_ingest_task_t1_adj."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
@@ -188,8 +187,8 @@ class TestDailyIngestionFlowT1Execution:
         mock_t1_adj = mocker.patch(
             "ditto_port.jobs.flows.daily.create_ingest_task_t1_adj"
         )
-        mock_task = mocker.MagicMock()
-        mock_future = mocker.MagicMock()
+        mock_task = mocker.Mock()
+        mock_future = mocker.Mock()
         mock_future.result.return_value = {
             "dataset": "adj_factor",
             "status": "success",
@@ -208,7 +207,7 @@ class TestDailyIngestionFlowT1Execution:
         mock_t1_adj.assert_called_once_with(Dataset.ADJ_FACTOR)
         assert "adj_factor" in result["t1_results"]
 
-    def test_uses_correct_task_factory_for_fund_adj(self, mocker):
+    def test_uses_correct_task_factory_for_fund_adj(self, mocker: MockerFixture):
         """Test that fund_adj uses create_ingest_task_t1_adj."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
@@ -222,8 +221,8 @@ class TestDailyIngestionFlowT1Execution:
         mock_t1_adj = mocker.patch(
             "ditto_port.jobs.flows.daily.create_ingest_task_t1_adj"
         )
-        mock_task = mocker.MagicMock()
-        mock_future = mocker.MagicMock()
+        mock_task = mocker.Mock()
+        mock_future = mocker.Mock()
         mock_future.result.return_value = {
             "dataset": "fund_adj",
             "status": "success",
@@ -240,7 +239,7 @@ class TestDailyIngestionFlowT1Execution:
         mock_t1_adj.assert_called_once_with(Dataset.FUND_ADJ)
         assert "fund_adj" in result["t1_results"]
 
-    def test_uses_correct_task_factory_for_bars_datasets(self, mocker):
+    def test_uses_correct_task_factory_for_bars_datasets(self, mocker: MockerFixture):
         """Test that bars datasets use create_ingest_task_t1_bars."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
@@ -254,8 +253,8 @@ class TestDailyIngestionFlowT1Execution:
         mock_t1_bars = mocker.patch(
             "ditto_port.jobs.flows.daily.create_ingest_task_t1_bars"
         )
-        mock_task = mocker.MagicMock()
-        mock_future = mocker.MagicMock()
+        mock_task = mocker.Mock()
+        mock_future = mocker.Mock()
         mock_future.result.return_value = {
             "dataset": "stock_daily",
             "status": "success",
@@ -272,7 +271,7 @@ class TestDailyIngestionFlowT1Execution:
         # Verify t1_bars factory was called for both datasets
         assert mock_t1_bars.call_count == 2
 
-    def test_handles_multi_level_t1_dependencies(self, mocker):
+    def test_handles_multi_level_t1_dependencies(self, mocker: MockerFixture):
         """Test that T1 multi-level dependencies use correct wait_for."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
@@ -295,8 +294,8 @@ class TestDailyIngestionFlowT1Execution:
             "ditto_port.jobs.flows.daily.create_ingest_task_t1_adj"
         )
         # Setup mocks
-        mock_t0_task = mocker.MagicMock()
-        t0_future = mocker.MagicMock()
+        mock_t0_task = mocker.Mock()
+        t0_future = mocker.Mock()
         t0_future.result.return_value = {
             "dataset": "calendar",
             "status": "success",
@@ -304,8 +303,8 @@ class TestDailyIngestionFlowT1Execution:
         mock_t0_task.submit.return_value = t0_future
         mock_t0.return_value = mock_t0_task
 
-        mock_t1_bars_task = mocker.MagicMock()
-        t1_bars_future = mocker.MagicMock()
+        mock_t1_bars_task = mocker.Mock()
+        t1_bars_future = mocker.Mock()
         t1_bars_future.result.return_value = {
             "dataset": "stock_daily",
             "status": "success",
@@ -313,8 +312,8 @@ class TestDailyIngestionFlowT1Execution:
         mock_t1_bars_task.submit.return_value = t1_bars_future
         mock_t1_bars.return_value = mock_t1_bars_task
 
-        mock_t1_adj_task = mocker.MagicMock()
-        t1_adj_future = mocker.MagicMock()
+        mock_t1_adj_task = mocker.Mock()
+        t1_adj_future = mocker.Mock()
         t1_adj_future.result.return_value = {
             "dataset": "adj_factor",
             "status": "success",
@@ -331,7 +330,7 @@ class TestDailyIngestionFlowT1Execution:
         t1_adj_submit_call = mock_t1_adj_task.submit.call_args
         assert "wait_for" in t1_adj_submit_call.kwargs
 
-    def test_handles_empty_t1_datasets(self, mocker):
+    def test_handles_empty_t1_datasets(self, mocker: MockerFixture):
         """Test that flow handles empty T1 datasets list."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
@@ -354,7 +353,7 @@ class TestDailyIngestionFlowT1Execution:
 class TestDailyIngestionFlowResultAggregation:
     """Unit tests for result aggregation logic."""
 
-    def test_aggregates_success_status(self, mocker):
+    def test_aggregates_success_status(self, mocker: MockerFixture):
         """Test that success status is counted correctly."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
@@ -368,8 +367,8 @@ class TestDailyIngestionFlowResultAggregation:
         mock_factory = mocker.patch(
             "ditto_port.jobs.flows.daily.create_ingest_task_t1_bars"
         )
-        mock_task = mocker.MagicMock()
-        mock_future = mocker.MagicMock()
+        mock_task = mocker.Mock()
+        mock_future = mocker.Mock()
         mock_future.result.return_value = {
             "dataset": "test",
             "status": "success",
@@ -386,7 +385,7 @@ class TestDailyIngestionFlowResultAggregation:
         assert result["summary"]["failed_count"] == 0
         assert result["summary"]["skipped_count"] == 0
 
-    def test_aggregates_failed_status(self, mocker):
+    def test_aggregates_failed_status(self, mocker: MockerFixture):
         """Test that failed status is counted correctly."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
@@ -400,8 +399,8 @@ class TestDailyIngestionFlowResultAggregation:
         mock_factory = mocker.patch(
             "ditto_port.jobs.flows.daily.create_ingest_task_t1_bars"
         )
-        mock_task = mocker.MagicMock()
-        mock_future = mocker.MagicMock()
+        mock_task = mocker.Mock()
+        mock_future = mocker.Mock()
         mock_future.result.return_value = {
             "dataset": "test",
             "status": "failed",
@@ -418,7 +417,7 @@ class TestDailyIngestionFlowResultAggregation:
         assert result["summary"]["failed_count"] == 1
         assert result["summary"]["skipped_count"] == 0
 
-    def test_aggregates_skipped_status(self, mocker):
+    def test_aggregates_skipped_status(self, mocker: MockerFixture):
         """Test that skipped status is counted correctly."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
@@ -432,8 +431,8 @@ class TestDailyIngestionFlowResultAggregation:
         mock_factory = mocker.patch(
             "ditto_port.jobs.flows.daily.create_ingest_task_t1_bars"
         )
-        mock_task = mocker.MagicMock()
-        mock_future = mocker.MagicMock()
+        mock_task = mocker.Mock()
+        mock_future = mocker.Mock()
         mock_future.result.return_value = {
             "dataset": "test",
             "status": "skipped",
@@ -450,7 +449,7 @@ class TestDailyIngestionFlowResultAggregation:
         assert result["summary"]["failed_count"] == 0
         assert result["summary"]["skipped_count"] == 1
 
-    def test_aggregates_mixed_statuses(self, mocker):
+    def test_aggregates_mixed_statuses(self, mocker: MockerFixture):
         """Test that mixed statuses are counted correctly."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
@@ -467,8 +466,8 @@ class TestDailyIngestionFlowResultAggregation:
         mock_factory = mocker.patch(
             "ditto_port.jobs.flows.daily.create_ingest_task_t1_bars"
         )
-        mock_task = mocker.MagicMock()
-        mock_future = mocker.MagicMock()
+        mock_task = mocker.Mock()
+        mock_future = mocker.Mock()
         mock_future.result.side_effect = [
             {"dataset": "test1", "status": "success"},
             {"dataset": "test2", "status": "failed"},
@@ -492,7 +491,7 @@ class TestDailyIngestionFlowResultAggregation:
 class TestDailyIngestionFlowReturnValue:
     """Unit tests for return value structure."""
 
-    def test_return_value_contains_all_required_keys(self, mocker):
+    def test_return_value_contains_all_required_keys(self, mocker: MockerFixture):
         """Test that return value contains all required keys."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
@@ -524,7 +523,7 @@ class TestDailyIngestionFlowReturnValue:
         assert "failed_count" in result["summary"]
         assert "skipped_count" in result["summary"]
 
-    def test_dqc_results_placeholder(self, mocker):
+    def test_dqc_results_placeholder(self, mocker: MockerFixture):
         """Test that DQC results contain placeholder."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
@@ -566,9 +565,9 @@ class TestCollectResults:
         result = _collect_results([])
         assert result == {}
 
-    def test_collects_single_future(self):
+    def test_collects_single_future(self, mocker: MockerFixture):
         """Test that single future is collected correctly."""
-        mock_future = mock.MagicMock()
+        mock_future = mocker.Mock()
         mock_future.result.return_value = {
             "dataset": "calendar",
             "status": "success",
@@ -580,14 +579,14 @@ class TestCollectResults:
         assert result["calendar"]["status"] == "success"
         mock_future.result.assert_called_once()
 
-    def test_collects_multiple_futures(self):
+    def test_collects_multiple_futures(self, mocker: MockerFixture):
         """Test that multiple futures are collected correctly."""
-        mock_future1 = mock.MagicMock()
+        mock_future1 = mocker.Mock()
         mock_future1.result.return_value = {
             "dataset": "calendar",
             "status": "success",
         }
-        mock_future2 = mock.MagicMock()
+        mock_future2 = mocker.Mock()
         mock_future2.result.return_value = {
             "dataset": "stock_basic",
             "status": "success",
@@ -599,9 +598,9 @@ class TestCollectResults:
         assert "stock_basic" in result
         assert len(result) == 2
 
-    def test_handles_missing_dataset_key(self):
+    def test_handles_missing_dataset_key(self, mocker: MockerFixture):
         """Test that future without 'dataset' key uses 'unknown' as key."""
-        mock_future = mock.MagicMock()
+        mock_future = mocker.Mock()
         mock_future.result.return_value = {
             "status": "success",
         }
@@ -611,11 +610,11 @@ class TestCollectResults:
         assert "unknown" in result
         assert result["unknown"]["status"] == "success"
 
-    def test_handles_multiple_missing_dataset_keys(self):
+    def test_handles_multiple_missing_dataset_keys(self, mocker: MockerFixture):
         """Test that multiple futures without 'dataset' key create separate entries."""
-        mock_future1 = mock.MagicMock()
+        mock_future1 = mocker.Mock()
         mock_future1.result.return_value = {"status": "success"}
-        mock_future2 = mock.MagicMock()
+        mock_future2 = mocker.Mock()
         mock_future2.result.return_value = {"status": "failed"}
 
         result = _collect_results([mock_future1, mock_future2])
@@ -624,9 +623,9 @@ class TestCollectResults:
         assert "unknown" in result
         assert result["unknown"]["status"] == "failed"
 
-    def test_preserves_all_result_fields(self):
+    def test_preserves_all_result_fields(self, mocker: MockerFixture):
         """Test that all fields in result are preserved."""
-        mock_future = mock.MagicMock()
+        mock_future = mocker.Mock()
         mock_future.result.return_value = {
             "dataset": "test_dataset",
             "status": "success",

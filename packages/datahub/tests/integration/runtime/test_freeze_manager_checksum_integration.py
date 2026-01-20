@@ -19,7 +19,7 @@ class TestFreezeManagerChecksum:
 
     def teardown_method(self):
         """Clean up test fixtures."""
-        # 测试方法内导入
+        # [REVIEW]
         import shutil
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
