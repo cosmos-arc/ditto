@@ -40,7 +40,7 @@ class TestFileLockManager:
         mock_filelock_class.return_value = mock_lock
 
         with manager.acquire("test_lock"):
-            pass
+            mock_lock.__enter__.assert_called_once()
 
         # Verify FileLock was created with correct path
         mock_filelock_class.assert_called_once()
@@ -61,7 +61,7 @@ class TestFileLockManager:
         mock_filelock_class.return_value = mock_lock
 
         with manager.acquire("test_lock"):
-            pass
+            mock_lock.__enter__.assert_called_once()
 
         # Verify FileLock was called
         mock_filelock_class.assert_called_once()
@@ -77,7 +77,7 @@ class TestFileLockManager:
         mock_filelock_class.return_value = mock_lock
 
         with manager.acquire("test_lock"):
-            pass
+            mock_lock.__enter__.assert_called_once()
 
         # Verify FileLock was created with default timeout
         call_args = mock_filelock_class.call_args
@@ -94,7 +94,7 @@ class TestFileLockManager:
         mock_filelock_class.return_value = mock_lock
 
         with manager.acquire("test_lock", timeout=60.0):
-            pass
+            mock_lock.__enter__.assert_called_once()
 
         # Verify FileLock was created with custom timeout
         call_args = mock_filelock_class.call_args
@@ -114,7 +114,7 @@ class TestFileLockManager:
 
         with pytest.raises(LockAcquisitionError) as exc_info:
             with manager.acquire("test_lock"):
-                pass
+                mock_lock.__enter__.assert_called_once()
 
         assert "test_lock" in str(exc_info.value)
         # Error message says "within" not "timeout"
@@ -151,7 +151,7 @@ class TestFileLockManager:
 
         with manager.acquire("lock1"):
             with manager.acquire("lock2"):
-                pass
+                mock_lock.__enter__.assert_called()
 
         # Verify FileLock was called twice with different paths
         assert mock_filelock_class.call_count == 2
@@ -167,7 +167,7 @@ class TestFileLockManager:
         mock_filelock_class.return_value = mock_lock
 
         with manager.acquire("test_lock"):
-            pass
+            mock_lock.__enter__.assert_called_once()
 
         # Verify .lock suffix is added
         call_args = mock_filelock_class.call_args
@@ -187,7 +187,7 @@ class TestFileLockManager:
 
         # Lock names with path separators or special chars
         with manager.acquire("data/ingestion/stock"):
-            pass
+            mock_lock.__enter__.assert_called_once()
 
         call_args = mock_filelock_class.call_args
         # The name should be used as-is with .lock suffix

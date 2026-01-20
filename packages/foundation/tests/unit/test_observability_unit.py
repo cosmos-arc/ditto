@@ -6,6 +6,7 @@
 
 import re
 
+import pytest
 from ditto_foundation import (
     EffectiveConfig,
     M,
@@ -230,8 +231,9 @@ class TestSpan:
             force=True,
         )
 
-        with span("test_operation", key="value"):
-            pass
+        with span("test_operation", key="value") as s:
+            assert s is not None
+            s.set_attribute("extra", "data")
 
         spans = get_recorded_spans()
         assert len(spans) == 1
@@ -265,9 +267,10 @@ class TestSpan:
             force=True,
         )
 
-        with span("parent"):
-            with span("child"):
-                pass
+        with span("parent") as parent:
+            with span("child") as child:
+                assert parent is not None
+                assert child is not None
 
         spans = get_recorded_spans()
         assert len(spans) == 2
@@ -284,11 +287,9 @@ class TestSpan:
             force=True,
         )
 
-        try:
+        with pytest.raises(ValueError, match="test error"):
             with span("test_operation"):
                 raise ValueError("test error")
-        except ValueError:
-            pass
 
         spans = get_recorded_spans()
         assert len(spans) == 1
@@ -475,8 +476,8 @@ class TestReset:
             force=True,
         )
 
-        with span("test_op"):
-            pass
+        with span("test_op") as s:
+            assert s is not None
 
         spans = get_recorded_spans()
         assert len(spans) == 1
