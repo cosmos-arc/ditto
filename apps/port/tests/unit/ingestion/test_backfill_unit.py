@@ -54,6 +54,7 @@ def backfill_manager(mock_coordinator, mock_hub):
     )
 
 
+@pytest.mark.unit
 class TestBackfillResult:
     """测试 BackfillResult 类。"""
 
@@ -98,6 +99,7 @@ class TestBackfillResult:
         assert len(result.results) == 3
 
 
+@pytest.mark.unit
 class TestBackfillRange:
     """测试 backfill_range 方法。"""
 
@@ -294,6 +296,7 @@ class TestBackfillRange:
         assert mock_coordinator.ingest_date.call_count == 3
 
 
+@pytest.mark.unit
 class TestBackfillMissing:
     """测试 backfill_missing 方法。"""
 
@@ -497,3 +500,116 @@ class TestBackfillMissing:
         assert result.total_dates > 0
         assert result.success_count == 4
         assert mock_coordinator.ingest_date.call_count == 4
+
+    def test_backfill_missing_parallel_execution(
+        self,
+        backfill_manager,
+        mock_coordinator,
+        mock_hub,
+    ) -> None:
+        """测试 backfill_missing 并行执行。"""
+        # Arrange
+        mock_hub.calendar.list_trading_days.return_value = [
+            "2024-12-23",
+            "2024-12-24",
+            "2024-12-25",
+            "2024-12-26",
+            "2024-12-27",
+        ]
+
+        # 已摄取2个日期，缺失3个
+        mock_hub.ingestion_log.get_ingested_dates.return_value = [
+            "2024-12-23",
+            "2024-12-27",
+        ]
+
+        mock_coordinator.ingest_date.side_effect = [
+            IngestionResult(
+                dataset="stock_daily",
+                trade_date=date,
+                status="success",
+                row_count=1000,
+            )
+            for date in ["2024-12-24", "2024-12-25", "2024-12-26"]
+        ]
+
+        # Act
+        result = backfill_manager.backfill_missing(
+            dataset="stock_daily",
+            parallel=2,
+        )
+
+        # Assert
+        assert result.total_dates == 3
+        assert result.success_count == 3
+        assert mock_coordinator.ingest_date.call_count == 3
+
+    def test_backfill_missing_empty_calendar(
+        self,
+        backfill_manager,
+        mock_hub,
+    ) -> None:
+        """测试当日历没有数据时的处理。"""
+        # Arrange - 日历为空
+        mock_hub.calendar.get_first_trading_day.return_value = None
+        mock_hub.calendar.get_last_trading_day.return_value = None
+
+        # Act
+        result = backfill_manager.backfill_missing(dataset="stock_daily")
+
+        # Assert
+        assert result.total_dates == 0
+        assert result.success_count == 0
+        assert result.skipped_count == 0
+        assert result.failed_count == 0
+
+    def test_backfill_missing_calendar_has_no_trading_days(
+        self,
+        backfill_manager,
+        mock_hub,
+    ) -> None:
+        """测试当日历有首尾日期但没有交易日时的处理。"""
+        # Arrange - 有首尾日期，但没有交易日
+        mock_hub.calendar.get_first_trading_day.return_value = "2024-12-01"
+        mock_hub.calendar.get_last_trading_day.return_value = "2024-12-31"
+        mock_hub.calendar.list_trading_days.return_value = []
+
+        # Act
+        result = backfill_manager.backfill_missing(dataset="stock_daily")
+
+        # Assert
+        assert result.total_dates == 0
+        assert result.success_count == 0
+        assert result.skipped_count == 0
+        assert result.failed_count == 0
+
+    def test_backfill_range_propagates_coordinator_error(
+        self,
+        backfill_manager,
+        mock_coordinator,
+        mock_hub,
+    ) -> None:
+        """测试 coordinator 错误传播。"""
+        # Arrange
+        mock_hub.calendar.list_trading_days.return_value = [
+            "2024-12-25",
+            "2024-12-26",
+        ]
+
+        mock_coordinator.ingest_date.side_effect = [
+            IngestionResult(
+                dataset="stock_daily",
+                trade_date="2024-12-25",
+                status="success",
+                row_count=1000,
+            ),
+            Exception("Network error"),
+        ]
+
+        # Act & Assert
+        with pytest.raises(Exception, match="Network error"):
+            backfill_manager.backfill_range(
+                dataset="stock_daily",
+                start_date="2024-12-25",
+                end_date="2024-12-26",
+            )

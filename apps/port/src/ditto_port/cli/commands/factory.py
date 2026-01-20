@@ -43,8 +43,7 @@ def create_daily_command(
     def command(ctx: typer.Context, date: str, force: bool) -> None:
         validate_date_format(date)
 
-        data_root = ctx.obj.get("data_root")
-        with create_executor(data_root) as executor:
+        with create_executor() as executor:
             result = executor.ingest_daily(dataset, date, force)
             print_ingestion_result(result, ctx.obj["verbose"])
 
@@ -88,8 +87,7 @@ def create_backfill_command(
         validate_date_format(start)
         validate_date_format(end)
 
-        data_root = ctx.obj.get("data_root")
-        with create_executor(data_root) as executor:
+        with create_executor() as executor:
             result = executor.backfill_range(dataset, start, end, parallel)
             print_backfill_summary(result)
 
@@ -124,8 +122,7 @@ def create_basic_command(
     """
 
     def command(ctx: typer.Context, force: bool) -> None:
-        data_root = ctx.obj.get("data_root")
-        with create_executor(data_root) as executor:
+        with create_executor() as executor:
             result = executor.ingest_daily(dataset, "", force)
             print_ingestion_result(result, ctx.obj["verbose"])
 

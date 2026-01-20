@@ -29,7 +29,7 @@
 - **开发**:
     - **Python核心规范**：详见 [core.md](.claude/rules/core.md)
     - **noqa/type:ignore 规范**：详见 [noqa-ignore.md](.claude/rules/noqa-ignore.md)
-- **测试**: 遵循测试依赖，分支覆盖率 >= 80% （详见 [python-test.md](.claude/rules/python-test.md)）
+- **测试**: 遵循测试依赖，分支覆盖率 >= 80%，所有测试类或方法必须带测试mark （详见 [python-test.md](.claude/rules/python-test.md)）
 - **质量**：必须通过 pyright、ruff检测
 - **重构**: 数据存储、API协议格式的兼容考量外，无需考虑向后兼容性，所有包均项目内使用，重构完成必须移除废弃代码和配置
 

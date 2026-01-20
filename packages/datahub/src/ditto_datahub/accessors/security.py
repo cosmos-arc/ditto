@@ -492,3 +492,20 @@ class SecuritiesAccessor:
         )
 
         return result
+
+    def resolve_sid(
+        self, identifier: str, source: str = "tushare", asof: str | None = None
+    ) -> int | None:
+        """
+        Resolve identifier to SID (supports PIT).
+
+        Args:
+            identifier: Source code or symbol.
+            source: Data source identifier.
+            asof: Point-in-time query date.
+
+        Returns:
+            SID if found, None otherwise.
+
+        """
+        return self._security_store.resolve_sid(identifier, source, asof)

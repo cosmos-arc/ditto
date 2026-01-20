@@ -6,6 +6,7 @@ import pytest
 from ditto_port.models import IngestionResult, ResultCounts
 
 
+@pytest.mark.unit
 def test_ingestion_result_creation() -> None:
     """测试 IngestionResult 创建。"""
     result = IngestionResult(
@@ -22,6 +23,7 @@ def test_ingestion_result_creation() -> None:
     assert result.error is None
 
 
+@pytest.mark.unit
 def test_ingestion_result_with_all_fields() -> None:
     """测试 IngestionResult 带所有字段。"""
     result = IngestionResult(
@@ -37,6 +39,7 @@ def test_ingestion_result_with_all_fields() -> None:
     assert result.message == "数据摄取成功"
 
 
+@pytest.mark.unit
 def test_ingestion_result_frozen() -> None:
     """测试 IngestionResult 不可变。"""
     result = IngestionResult(
@@ -48,6 +51,7 @@ def test_ingestion_result_frozen() -> None:
         result.status = "failed"  # type: ignore[misc]
 
 
+@pytest.mark.unit
 def test_ingestion_result_failed() -> None:
     """测试 IngestionResult 失败状态。"""
     result = IngestionResult(
@@ -61,6 +65,7 @@ def test_ingestion_result_failed() -> None:
     assert result.error == "FETCH_ERROR"
 
 
+@pytest.mark.unit
 def test_ingestion_result_skipped() -> None:
     """测试 IngestionResult 跳过状态。"""
     result = IngestionResult(
@@ -72,6 +77,7 @@ def test_ingestion_result_skipped() -> None:
     assert result.status == "skipped"
 
 
+@pytest.mark.unit
 def test_result_counts_creation() -> None:
     """测试 ResultCounts 创建。"""
     counts = ResultCounts(success=10, failed=2, skipped=1)
@@ -80,6 +86,7 @@ def test_result_counts_creation() -> None:
     assert counts.skipped == 1
 
 
+@pytest.mark.unit
 def test_result_counts_frozen() -> None:
     """测试 ResultCounts 不可变。"""
     counts = ResultCounts(success=10, failed=2, skipped=1)

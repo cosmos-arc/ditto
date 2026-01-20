@@ -71,8 +71,8 @@ def test_create_daily_command_uses_create_executor(app_ctx):
             with patch("ditto_port.cli.commands.factory.print_ingestion_result"):
                 cmd(ctx, "2024-01-02", False)
 
-        # 验证 create_executor 被正确调用
-        mock_create_exec.assert_called_once_with(MOCK_DATA_ROOT)
+        # 验证 create_executor 被正确调用（DI 迁移后不再传参）
+        mock_create_exec.assert_called_once_with()
         # 验证 executor.ingest_daily 被调用
         mock_executor.ingest_daily.assert_called_once_with(
             "test_dataset", "2024-01-02", False

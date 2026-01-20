@@ -7,11 +7,10 @@ T0 元数据摄取任务工厂.
 
 from typing import Any
 
-from ditto_datahub import DataHub
 from prefect import task
 
+from ditto_port.jobs.context import create_ingestion_context
 from ditto_port.models import DATASET_REGISTRY, Dataset
-from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
 
 # Prefect Task 返回类型是复杂的泛型，使用 Any 简化类型注解
@@ -53,7 +52,6 @@ def create_ingest_task(dataset: Dataset) -> Any:
     def ingest_task(
         trade_date: str,
         source: str = "tushare",
-        data_root: str = "data",
         force: bool = False,
     ) -> dict[str, object]:
         """
@@ -62,7 +60,6 @@ def create_ingest_task(dataset: Dataset) -> Any:
         Args:
             trade_date: 交易日期 (YYYY-MM-DD)
             source: 数据源名称
-            data_root: DataHub 根目录
             force: 是否强制重新摄取（忽略缓存）
 
         Returns:
@@ -79,18 +76,7 @@ def create_ingest_task(dataset: Dataset) -> Any:
             Exception: 摄取失败时抛出异常
 
         """
-        hub = DataHub(data_root=data_root)
-        try:
-            # 获取数据源
-            data_source = hub.sources.get(source)
-
-            # 创建协调器并执行摄取
-            coordinator = IngestionCoordinator(
-                hub=hub,
-                source=data_source,
-                source_name=source,
-            )
-
+        with create_ingestion_context(source=source) as (_, coordinator):
             result = coordinator.ingest_date(
                 dataset=dataset.value,
                 trade_date=trade_date,
@@ -107,9 +93,6 @@ def create_ingest_task(dataset: Dataset) -> Any:
                 "message": result.message,
                 "error": result.error,
             }
-        finally:
-            # 确保关闭 DataHub，防止连接泄露
-            hub.close()
 
     return ingest_task
 

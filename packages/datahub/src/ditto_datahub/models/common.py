@@ -8,6 +8,7 @@ __all__ = [
     "DQSeverity",
     "Dataset",
     "OnDuplicate",
+    "Source",
 ]
 
 
@@ -56,6 +57,18 @@ class Dataset(str, Enum):
     def is_calendar_dataset(cls, dataset: str) -> bool:
         """判断是否为 calendar 数据集。"""
         return dataset == cls.CALENDAR.value
+
+
+# ============ Source 枚举 ============
+class Source(str, Enum):
+    """
+    支持的数据源类型。
+
+    数据源枚举，统一管理所有外部数据源。
+    """
+
+    TUSHARE = "tushare"
+    AKSHARE = "akshare"  # 预留，未来支持
 
 
 # ============ Store 枚举 ============

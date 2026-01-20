@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 import polars as pl
 from ditto_foundation import M, logger, traced
@@ -205,3 +205,13 @@ class CalendarAccessor:
 
         """
         return self._calendar_store.get_quarter_ends(start, end)
+
+    def upsert(self, records: list[dict[str, Any]]) -> None:
+        """
+        Insert or update calendar records.
+
+        Args:
+            records: List of calendar record dictionaries.
+
+        """
+        self._calendar_store.upsert(records)

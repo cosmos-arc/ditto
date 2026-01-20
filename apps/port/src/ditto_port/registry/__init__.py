@@ -7,5 +7,6 @@ Composition Root 模式：所有依赖在应用入口点（apps/port/）组装�
 
 from ditto_port.registry.app import AppProvider
 from ditto_port.registry.datahub import DataHubProvider
+from ditto_port.registry.sources import DataSourcesProvider
 
-__all__ = ["AppProvider", "DataHubProvider"]
+__all__ = ["AppProvider", "DataHubProvider", "DataSourcesProvider"]

@@ -11,7 +11,7 @@
 from prefect import flow
 from pydantic import BaseModel
 
-from ditto_port.jobs.flows.helpers import create_ingestion_context
+from ditto_port.jobs.context import create_ingestion_context
 from ditto_port.services.ingestion.backfill import BackfillManager
 
 
@@ -63,7 +63,7 @@ def backfill_flow(config: BackfillFlowConfig) -> dict[str, object]:
     # 处理 resume_from
     start_date = config.resume_from or config.start_date
 
-    with create_ingestion_context(data_root=config.data_root, source=config.source) as (
+    with create_ingestion_context(source=config.source) as (
         hub,
         coordinator,
     ):
@@ -97,7 +97,6 @@ def backfill_flow(config: BackfillFlowConfig) -> dict[str, object]:
 def backfill_missing_flow(
     dataset: str,
     source: str = "tushare",
-    data_root: str = "data",
     parallel: int = 1,
 ) -> dict[str, object]:
     """
@@ -108,14 +107,13 @@ def backfill_missing_flow(
     Args:
         dataset: 数据集名称
         source: 数据源名称
-        data_root: DataHub 根目录
         parallel: 并行度
 
     Returns:
         回补结果字典
 
     """
-    with create_ingestion_context(data_root=data_root, source=source) as (
+    with create_ingestion_context(source=source) as (
         hub,
         coordinator,
     ):

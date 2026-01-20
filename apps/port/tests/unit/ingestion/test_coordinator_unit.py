@@ -356,8 +356,8 @@ class TestIngestDate:
             }
         )
 
-        mock_hub.calendar_store = mocker.Mock()
-        mock_hub.calendar_store.upsert.return_value = 2
+        mock_hub.calendar = mocker.Mock()
+        mock_hub.calendar.upsert.return_value = 2
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="calendar",
             source="tushare",
@@ -566,8 +566,8 @@ class TestIngestRange:
     ) -> None:
         """成功摄取日期范围内的多个交易日。"""
         # Arrange
-        mock_hub.calendar_store = mocker.Mock()
-        mock_hub.calendar_store.get_range.return_value = [
+        mock_hub.calendar = mocker.Mock()
+        mock_hub.calendar.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
@@ -612,7 +612,7 @@ class TestIngestRange:
         # Assert
         assert len(results) == 3
         assert all(r.status == "success" for r in results)
-        mock_hub.calendar_store.get_range.assert_called_once_with(
+        mock_hub.calendar.list_trading_days.assert_called_once_with(
             "2024-12-25", "2024-12-27"
         )
         assert mock_source.fetch_stock_daily.call_count == 3
@@ -622,8 +622,8 @@ class TestIngestRange:
     ) -> None:
         """日期范围内有跳过的日期。"""
         # Arrange
-        mock_hub.calendar_store = mocker.Mock()
-        mock_hub.calendar_store.get_range.return_value = [
+        mock_hub.calendar = mocker.Mock()
+        mock_hub.calendar.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
@@ -688,8 +688,8 @@ class TestIngestRange:
     def test_ingest_range_empty_range(self, coordinator, mock_hub, mocker) -> None:
         """日期范围为空时返回空列表。"""
         # Arrange
-        mock_hub.calendar_store = mocker.Mock()
-        mock_hub.calendar_store.get_range.return_value = []
+        mock_hub.calendar = mocker.Mock()
+        mock_hub.calendar.list_trading_days.return_value = []
 
         # Act
         results = coordinator.ingest_range("stock_daily", "2024-12-25", "2024-12-27")
@@ -702,8 +702,8 @@ class TestIngestRange:
     ) -> None:
         """force=True 时跳过所有历史检查。"""
         # Arrange
-        mock_hub.calendar_store = mocker.Mock()
-        mock_hub.calendar_store.get_range.return_value = ["2024-12-27"]
+        mock_hub.calendar = mocker.Mock()
+        mock_hub.calendar.list_trading_days.return_value = ["2024-12-27"]
 
         source_df = pl.DataFrame(
             {
@@ -1246,8 +1246,8 @@ class TestTradingDayCheck:
         """stock_daily 在非交易日静默跳过。"""
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None  # 无历史记录
-        mock_hub.calendar_store = mocker.Mock()
-        mock_hub.calendar_store.is_trading_day.return_value = False
+        mock_hub.calendar = mocker.Mock()
+        mock_hub.calendar.is_trading_day.return_value = False
 
         # Act
         result = coordinator.ingest_date("stock_daily", "2024-12-28")
@@ -1266,8 +1266,8 @@ class TestTradingDayCheck:
         """etf_daily 在非交易日静默跳过。"""
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None
-        mock_hub.calendar_store = mocker.Mock()
-        mock_hub.calendar_store.is_trading_day.return_value = False
+        mock_hub.calendar = mocker.Mock()
+        mock_hub.calendar.is_trading_day.return_value = False
 
         # Act
         result = coordinator.ingest_date("etf_daily", "2024-12-28")
@@ -1284,8 +1284,8 @@ class TestTradingDayCheck:
         """stock_daily 在交易日继续处理。"""
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None
-        mock_hub.calendar_store = mocker.Mock()
-        mock_hub.calendar_store.is_trading_day.return_value = True
+        mock_hub.calendar = mocker.Mock()
+        mock_hub.calendar.is_trading_day.return_value = True
 
         source_df = pl.DataFrame(
             {
@@ -1331,9 +1331,9 @@ class TestTradingDayCheck:
         """adj_factor 不检查交易日（参考类数据集）。"""
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None
-        mock_hub.calendar_store = mocker.Mock()
-        # 即使 calendar_store 返回非交易日，adj_factor 也不应该检查
-        mock_hub.calendar_store.is_trading_day.return_value = False
+        mock_hub.calendar = mocker.Mock()
+        # 即使 calendar 返回非交易日，adj_factor 也不应该检查
+        mock_hub.calendar.is_trading_day.return_value = False
 
         mock_source.fetch_adj_factor.return_value = pl.DataFrame(
             {
@@ -1365,7 +1365,7 @@ class TestTradingDayCheck:
         # 验证调用了 source（没有因为非交易日而跳过）
         mock_source.fetch_adj_factor.assert_called_once()
         # 验证没有调用 is_trading_day
-        mock_hub.calendar_store.is_trading_day.assert_not_called()
+        mock_hub.calendar.is_trading_day.assert_not_called()
 
     def test_calendar_does_not_check_trading_day(
         self, coordinator, mock_hub, mock_source, mocker
@@ -1373,8 +1373,8 @@ class TestTradingDayCheck:
         """calendar 不检查交易日（基础类数据集）。"""
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None
-        mock_hub.calendar_store = mocker.Mock()
-        mock_hub.calendar_store.is_trading_day.return_value = False
+        mock_hub.calendar = mocker.Mock()
+        mock_hub.calendar.is_trading_day.return_value = False
 
         mock_source.fetch_calendar.return_value = pl.DataFrame(
             {
@@ -1383,8 +1383,8 @@ class TestTradingDayCheck:
             }
         )
 
-        mock_hub.calendar_store = mocker.Mock()
-        mock_hub.calendar_store.upsert.return_value = 1
+        mock_hub.calendar = mocker.Mock()
+        mock_hub.calendar.upsert.return_value = 1
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="calendar",
             source="tushare",
@@ -1402,4 +1402,4 @@ class TestTradingDayCheck:
         # 验证调用了 source（没有因为非交易日而跳过）
         mock_source.fetch_calendar.assert_called_once()
         # 验证没有调用 is_trading_day
-        mock_hub.calendar_store.is_trading_day.assert_not_called()
+        mock_hub.calendar.is_trading_day.assert_not_called()

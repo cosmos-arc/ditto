@@ -18,10 +18,12 @@ import granian
 import orjson
 
 # Local imports - using editable packages
+from dishka import make_async_container
+from dishka.integrations.fastapi import setup_dishka
 from ditto_datahub import register_datahub_providers
 from ditto_foundation.config.initializer import InitScope, get_config_coordinator
 from ditto_foundation.config.paths import get_paths
-from ditto_foundation.observability import M, init, logger, shutdown
+from ditto_foundation.observability import M, logger
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,6 +37,7 @@ from ditto_port.middleware import (
     http_exception_handler,
     validation_exception_handler,
 )
+from ditto_port.registry import AppProvider, DataHubProvider, DataSourcesProvider
 
 # Initialize project root
 project_root = Path(__file__).parent.parent.parent.parent
@@ -68,31 +71,26 @@ class ORJSONResponse(JSONResponse):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan manager."""
-    # Startup
+    """
+    Application lifespan manager（使用 dishka 容器）.
+
+    容器负责：
+    - Observability 初始化/关闭
+    - SQLitePool 创建/关闭
+    - DataHub 创建
+    """
     logger.info("Starting Ditto API server", event="server_start")
+
+    # 创建容器（在 try 块之前，避免未绑定问题）
+    container = make_async_container(
+        AppProvider(),
+        DataHubProvider(),
+        DataSourcesProvider(),
+    )
+
     try:
-        # Initialize observability with environment-specific config
-        env = os.getenv("DITTO_ENV", "development")
-        log_level = "DEBUG" if env == "development" else "INFO"
-        log_dir = str(project_root / "logs")
-
-        # 使用新的 observability init
-        init(
-            service_name="ditto-server",
-            environment=env,
-            log_level=log_level,
-            log_dir=log_dir,
-            pytest_running=False,
-            assertions_enabled=False,
-            verbose_logging=(env == "development"),
-        )
-
-        logger.info(
-            "Observability configured",
-            event="observability_ready",
-            environment=env,
-        )
+        # 集成到 FastAPI
+        setup_dishka(container=container, app=app)
 
         # 初始化配置（静默自动初始化）
         logger.info("Initializing configuration", event="config_init_start")
@@ -106,15 +104,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             data_root=str(data_root),
         )
 
-        # Note: Prefect 3.x uses daemon/workers, not embedded server
-        # Flows are automatically registered when imported
-        # To start Prefect UI: run `prefect server dev` in a separate terminal
-        logger.info(
-            "Prefect flows ready for deployment",
-            event="prefect_ready",
-            mode="daemon/worker (run 'prefect server dev' for UI)",
-        )
-
         yield
     except Exception as e:
         logger.exception(
@@ -124,9 +113,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
         raise
     finally:
-        # Shutdown
+        # 关闭容器（自动清理所有资源）
         logger.info("Shutting down Ditto API server", event="server_shutdown")
-        shutdown()
+        await container.close()
 
 
 # 创建FastAPI应用实例

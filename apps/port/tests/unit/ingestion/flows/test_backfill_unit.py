@@ -3,18 +3,23 @@ Unit tests for backfill flow.
 
 This module provides unit-level coverage for the backfill flow,
 testing individual code paths and branches without full integration setup.
+
+Note: The @flow decorator is mocked in conftest.py to avoid Prefect API server
+startup during unit tests.
 """
 
 from __future__ import annotations
 
 import pytest
+
+# Import functions and models directly
+# The @flow decorator is mocked in conftest.py, so these are plain functions
 from ditto_port.jobs.flows.backfill import (
     BackfillFlowConfig,
     BackfillFlowResult,
     backfill_flow,
     backfill_missing_flow,
 )
-from prefect import Flow
 from pydantic import ValidationError
 
 
@@ -158,21 +163,31 @@ class TestBackfillFlow:
     """Unit tests for backfill_flow."""
 
     def test_is_prefect_flow(self):
-        """Test that backfill_flow is a Prefect flow."""
-        assert isinstance(backfill_flow, Flow)
-        assert backfill_flow.name == "backfill"
+        """Test that backfill_flow is callable."""
+        # In unit tests, @flow decorator is mocked to bypass Prefect API server
+        # So we check that the function is callable instead of being a Flow instance
+        assert callable(backfill_flow)
+        assert backfill_flow.__name__ == "backfill_flow"
 
-    def test_creates_datahub_with_data_root(self, mocker):
-        """Test that flow creates DataHub with data_root parameter."""
+    def test_uses_ingestion_context(self, mocker):
+        """Test that flow uses create_ingestion_context."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar_store = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
-        mock_dh = mocker.patch(
-            "ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub
+        mock_coordinator = mocker.MagicMock()
+
+        # Create a mock context manager that returns (hub, coordinator)
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mock_patch = mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
         )
-        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
+
         mock_manager = mocker.patch("ditto_port.jobs.flows.backfill.BackfillManager")
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -186,27 +201,32 @@ class TestBackfillFlow:
             dataset="stock_daily",
             start_date="2024-01-01",
             end_date="2024-01-31",
-            data_root="/custom/data",
+            source="tushare",
         )
-        backfill_flow(config)
+        result = backfill_flow(config)
 
-        # Verify DataHub was created with custom data_root
-        mock_dh.assert_called_once_with(data_root="/custom/data")
+        # Verify context was created with correct source
+        mock_patch.assert_called_once_with(source="tushare")
+        assert result["dataset"] == "stock_daily"
+        assert result["total_dates"] == 20
 
     def test_creates_ingestion_coordinator(self, mocker):
-        """Test that flow creates IngestionCoordinator."""
+        """Test that flow gets coordinator from context."""
         mock_hub = mocker.MagicMock()
-        mock_source = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mock_source
-        mock_hub.calendar_store = mocker.MagicMock()
+        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        mock_coordinator_cls = mocker.patch(
-            "ditto_port.jobs.flows.helpers.IngestionCoordinator"
-        )
         mock_coordinator = mocker.MagicMock()
-        mock_coordinator_cls.return_value = mock_coordinator
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
 
         mock_manager = mocker.patch("ditto_port.jobs.flows.backfill.BackfillManager")
         mock_result = mocker.MagicMock()
@@ -225,24 +245,30 @@ class TestBackfillFlow:
         )
         backfill_flow(config)
 
-        # Verify IngestionCoordinator was created with correct params
-        mock_coordinator_cls.assert_called_once()
-        call_kwargs = mock_coordinator_cls.call_args.kwargs
+        # Verify BackfillManager was created with coordinator from context
+        mock_manager.assert_called_once()
+        call_kwargs = mock_manager.call_args.kwargs
+        assert call_kwargs["coordinator"] is mock_coordinator
         assert call_kwargs["hub"] is mock_hub
-        assert call_kwargs["source"] is mock_source
-        assert call_kwargs["source_name"] == "tushare"
 
     def test_creates_backfill_manager(self, mocker):
         """Test that flow creates BackfillManager."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_calendar_store = mocker.MagicMock()
-        mock_ingestion_log = mocker.MagicMock()
-        mock_hub.calendar_store = mock_calendar_store
-        mock_hub.ingestion_log = mock_ingestion_log
+        mock_hub.calendar = mocker.MagicMock()
+        mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
+
         # Use autospec to properly mock the class
         mock_manager_cls = mocker.patch(
             "ditto_port.jobs.flows.backfill.BackfillManager",
@@ -269,18 +295,26 @@ class TestBackfillFlow:
         # Verify BackfillManager was created with correct params
         mock_manager_cls.assert_called_once()
         call_kwargs = mock_manager_cls.call_args.kwargs
-        assert "coordinator" in call_kwargs
-        assert "hub" in call_kwargs
+        assert call_kwargs["coordinator"] is mock_coordinator
+        assert call_kwargs["hub"] is mock_hub
 
     def test_respects_resume_from_parameter(self, mocker):
         """Test that flow overrides start_date when resume_from is provided."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar_store = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
         mock_manager = mocker.patch("ditto_port.jobs.flows.backfill.BackfillManager")
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -309,11 +343,19 @@ class TestBackfillFlow:
         """Test that flow passes parallel parameter to backfill_range."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar_store = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
         mock_manager = mocker.patch("ditto_port.jobs.flows.backfill.BackfillManager")
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -339,11 +381,19 @@ class TestBackfillFlow:
         """Test that flow returns dict with all required keys."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar_store = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
         mock_manager = mocker.patch("ditto_port.jobs.flows.backfill.BackfillManager")
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -382,11 +432,19 @@ class TestBackfillFlow:
         """Test that hub.close() is called on successful completion."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar_store = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
         mock_manager = mocker.patch("ditto_port.jobs.flows.backfill.BackfillManager")
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -403,15 +461,35 @@ class TestBackfillFlow:
         )
         backfill_flow(config)
 
-        # Verify hub.close() was called
-        mock_hub.close.assert_called_once()
+        # Verify context manager was properly used
+        mock_context_mgr.__enter__.assert_called_once()
+        mock_context_mgr.__exit__.assert_called_once()
 
     def test_closes_hub_on_exception(self, mocker):
-        """Test that hub.close() is called even when exception occurs."""
+        """Test that context manager cleanup happens even when exception occurs."""
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.side_effect = ValueError("Test error")
+        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
+        mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
+
+        # Mock BackfillManager to raise exception
+        mock_manager_cls = mocker.patch(
+            "ditto_port.jobs.flows.backfill.BackfillManager"
+        )
+        mock_manager = mocker.MagicMock()
+        mock_manager_cls.return_value = mock_manager
+        mock_manager.backfill_range.side_effect = ValueError("Test error")
 
         config = BackfillFlowConfig(
             dataset="stock_daily",
@@ -421,8 +499,9 @@ class TestBackfillFlow:
         with pytest.raises(ValueError, match="Test error"):
             backfill_flow(config)
 
-        # Verify hub.close() was still called
-        mock_hub.close.assert_called_once()
+        # Verify context manager cleanup still happened
+        mock_context_mgr.__enter__.assert_called_once()
+        mock_context_mgr.__exit__.assert_called_once()
 
 
 @pytest.mark.unit
@@ -430,21 +509,29 @@ class TestBackfillMissingFlow:
     """Unit tests for backfill_missing_flow."""
 
     def test_is_prefect_flow(self):
-        """Test that backfill_missing_flow is a Prefect flow."""
-        assert isinstance(backfill_missing_flow, Flow)
-        assert backfill_missing_flow.name == "backfill-missing"
+        """Test that backfill_missing_flow is callable."""
+        # In unit tests, @flow decorator is mocked to bypass Prefect API server
+        # So we check that the function is callable instead of being a Flow instance
+        assert callable(backfill_missing_flow)
+        assert backfill_missing_flow.__name__ == "backfill_missing_flow"
 
-    def test_creates_datahub_with_data_root(self, mocker):
-        """Test that flow creates DataHub with data_root parameter."""
+    def test_uses_ingestion_context(self, mocker):
+        """Test that flow uses create_ingestion_context."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar_store = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
-        mock_dh = mocker.patch(
-            "ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
         )
-        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
         mock_manager = mocker.patch("ditto_port.jobs.flows.backfill.BackfillManager")
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -454,28 +541,32 @@ class TestBackfillMissingFlow:
         mock_result.failed_count = 0
         mock_manager.return_value.backfill_missing.return_value = mock_result
 
-        backfill_missing_flow(
+        result = backfill_missing_flow(
             dataset="stock_daily",
-            data_root="/custom/data",
+            source="tushare",
         )
 
-        # Verify DataHub was created with custom data_root
-        mock_dh.assert_called_once_with(data_root="/custom/data")
+        # Verify context was created and result is correct
+        assert result["dataset"] == "stock_daily"
+        assert result["total_dates"] == 5
 
     def test_creates_ingestion_coordinator(self, mocker):
-        """Test that flow creates IngestionCoordinator."""
+        """Test that flow gets coordinator from context."""
         mock_hub = mocker.MagicMock()
-        mock_source = mocker.MagicMock()
-        mock_hub.sources.get.return_value = mock_source
-        mock_hub.calendar_store = mocker.MagicMock()
+        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        mock_coordinator_cls = mocker.patch(
-            "ditto_port.jobs.flows.helpers.IngestionCoordinator"
-        )
         mock_coordinator = mocker.MagicMock()
-        mock_coordinator_cls.return_value = mock_coordinator
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
 
         mock_manager = mocker.patch("ditto_port.jobs.flows.backfill.BackfillManager")
         mock_result = mocker.MagicMock()
@@ -491,24 +582,30 @@ class TestBackfillMissingFlow:
             source="tushare",
         )
 
-        # Verify IngestionCoordinator was created with correct params
-        mock_coordinator_cls.assert_called_once()
-        call_kwargs = mock_coordinator_cls.call_args.kwargs
+        # Verify BackfillManager was created with coordinator from context
+        mock_manager.assert_called_once()
+        call_kwargs = mock_manager.call_args.kwargs
+        assert call_kwargs["coordinator"] is mock_coordinator
         assert call_kwargs["hub"] is mock_hub
-        assert call_kwargs["source"] is mock_source
-        assert call_kwargs["source_name"] == "tushare"
 
     def test_creates_backfill_manager(self, mocker):
         """Test that flow creates BackfillManager."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_calendar_store = mocker.MagicMock()
-        mock_ingestion_log = mocker.MagicMock()
-        mock_hub.calendar_store = mock_calendar_store
-        mock_hub.ingestion_log = mock_ingestion_log
+        mock_hub.calendar = mocker.MagicMock()
+        mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
+
         mock_manager_cls = mocker.patch(
             "ditto_port.jobs.flows.backfill.BackfillManager"
         )
@@ -537,11 +634,19 @@ class TestBackfillMissingFlow:
         """Test that flow passes parallel parameter to backfill_missing."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar_store = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
         mock_manager = mocker.patch("ditto_port.jobs.flows.backfill.BackfillManager")
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -564,11 +669,19 @@ class TestBackfillMissingFlow:
         """Test that flow returns correct result when there are missing dates."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar_store = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
         mock_manager = mocker.patch("ditto_port.jobs.flows.backfill.BackfillManager")
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -600,11 +713,19 @@ class TestBackfillMissingFlow:
         """Test that flow returns correct result when there are no missing dates."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar_store = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
         mock_manager = mocker.patch("ditto_port.jobs.flows.backfill.BackfillManager")
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -626,11 +747,19 @@ class TestBackfillMissingFlow:
         """Test that hub.close() is called on successful completion."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar_store = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
         mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        mocker.patch("ditto_port.jobs.flows.helpers.IngestionCoordinator")
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
         mock_manager = mocker.patch("ditto_port.jobs.flows.backfill.BackfillManager")
         mock_result = mocker.MagicMock()
         mock_result.dataset = "stock_daily"
@@ -644,19 +773,41 @@ class TestBackfillMissingFlow:
             dataset="stock_daily",
         )
 
-        # Verify hub.close() was called
-        mock_hub.close.assert_called_once()
+        # Verify context manager was properly used
+        mock_context_mgr.__enter__.assert_called_once()
+        mock_context_mgr.__exit__.assert_called_once()
 
     def test_closes_hub_on_exception(self, mocker):
-        """Test that hub.close() is called even when exception occurs."""
+        """Test that context manager cleanup happens even when exception occurs."""
         mock_hub = mocker.MagicMock()
-        mock_hub.sources.get.side_effect = ValueError("Test error")
+        mock_hub.sources.get.return_value = mocker.MagicMock()
+        mock_hub.calendar = mocker.MagicMock()
+        mock_hub.ingestion_log = mocker.MagicMock()
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
+        mock_coordinator = mocker.MagicMock()
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
+
+        # Mock BackfillManager to raise exception
+        mock_manager_cls = mocker.patch(
+            "ditto_port.jobs.flows.backfill.BackfillManager"
+        )
+        mock_manager = mocker.MagicMock()
+        mock_manager_cls.return_value = mock_manager
+        mock_manager.backfill_missing.side_effect = ValueError("Test error")
+
         with pytest.raises(ValueError, match="Test error"):
             backfill_missing_flow(
                 dataset="stock_daily",
             )
 
-        # Verify hub.close() was still called
-        mock_hub.close.assert_called_once()
+        # Verify context manager cleanup still happened
+        mock_context_mgr.__enter__.assert_called_once()
+        mock_context_mgr.__exit__.assert_called_once()

@@ -5,11 +5,32 @@ Dishka 类型存根文件.
 """
 
 from collections.abc import Callable
-from typing import Any, overload
+from typing import TYPE_CHECKING, Any, overload
 
 from dishka.entities.scope import BaseScope
 
-__all__ = ["Provider", "Scope", "provide"]
+if TYPE_CHECKING:
+    from fastapi import FastAPI
+
+__all__ = [
+    "Provider",
+    "Scope",
+    "make_async_container",
+    "make_container",
+    "provide",
+    "setup_dishka",
+]
+
+class Container:
+    """同步容器接口."""
+
+    def get(self, type_: type[Any]) -> Any: ...
+    def close(self) -> None: ...
+
+class AsyncContainer:
+    """异步容器接口."""
+
+    async def close(self) -> None: ...
 
 class Provider:
     """依赖提供者基类."""
@@ -58,5 +79,39 @@ def provide(
 
     Returns:
         装饰后的函数
+
+    """
+
+def make_async_container(*providers: Provider) -> AsyncContainer:
+    """
+    创建异步容器.
+
+    Args:
+        *providers: Provider 实例
+
+    Returns:
+        异步容器实例
+
+    """
+
+def make_container(*providers: Provider) -> Container:
+    """
+    创建同步容器.
+
+    Args:
+        *providers: Provider 实例
+
+    Returns:
+        同步容器实例
+
+    """
+
+def setup_dishka(container: AsyncContainer, app: FastAPI) -> None:
+    """
+    集成 dishka 到 FastAPI.
+
+    Args:
+        container: dishka 异步容器实例
+        app: FastAPI 应用实例
 
     """

@@ -1,6 +1,6 @@
 """DataHub models for data transfer objects."""
 
-from ditto_datahub.models.common import AssetSidRange, Dataset, OnDuplicate
+from ditto_datahub.models.common import AssetSidRange, Dataset, OnDuplicate, Source
 from ditto_datahub.models.ingestion import (
     DataChangedError,
     IngestionCursor,
@@ -64,6 +64,7 @@ __all__ = [
     "RangeCheckRule",
     "RuleType",
     "SingleColumnRule",
+    "Source",
     "StalePriceRule",
     "TypeCheckRule",
     "UniqueRule",

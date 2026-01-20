@@ -4,12 +4,13 @@ from pathlib import Path
 from typing import Any, Literal
 
 import ditto_datahub
-from ditto_datahub import DataHub
 from ditto_datahub.accessors import BarsQuery
 from ditto_datahub.dq import DQEngine
 from ditto_datahub.models import DQIssue
 from ditto_foundation import M, logger
 from prefect import task
+
+from ditto_port.jobs.context import create_datahub_context
 
 
 def get_default_dq_config_path() -> str:
@@ -56,8 +57,7 @@ def dq_batch_check(
         market_wide=market_wide,
     )
 
-    hub = DataHub()
-    try:
+    with create_datahub_context() as hub:
         # 获取最后一个交易日
         if trade_date is None:
             trade_date = hub.calendar.get_last_trading_day()
@@ -167,8 +167,6 @@ def dq_batch_check(
         M.dq_batch_alerts.add(float(alert_count), {"trade_date": trade_date})
 
         return summary
-    finally:
-        hub.close()
 
 
 def _send_dq_alert(trade_date: str, issues: list[Any]) -> None:
@@ -217,8 +215,7 @@ def dq_completeness_check(
         完整性检查结果
 
     """
-    hub = DataHub()
-    try:
+    with create_datahub_context() as hub:
         # 读取实际数据
         query = BarsQuery(
             start=trade_date,
@@ -258,5 +255,3 @@ def dq_completeness_check(
         )
 
         return result
-    finally:
-        hub.close()

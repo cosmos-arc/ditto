@@ -2,7 +2,6 @@
 
 import polars as pl
 import pytest
-from ditto_datahub import DataHub
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_foundation.observability import init, reset_for_testing
 from ditto_foundation.util.checksum import ChecksumCompute
@@ -30,7 +29,7 @@ class TestShouldSkip:
     def test_should_not_skip_when_force_is_true(self, mocker) -> None:
         """force=True 时不跳过。"""
 
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
         manager = MetadataManager(mock_hub)
 
         should_skip, reason = manager.should_skip(
@@ -45,7 +44,7 @@ class TestShouldSkip:
     def test_should_not_skip_when_no_history(self, mocker) -> None:
         """无历史记录时不跳过。"""
 
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
         # Mock get_log 返回 None（无历史记录）
         mock_hub.ingestion_log.get_log.return_value = None
         manager = MetadataManager(mock_hub)
@@ -63,7 +62,7 @@ class TestShouldSkip:
     def test_should_skip_when_previous_success(self, mocker) -> None:
         """历史成功时跳过。"""
 
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
         # Mock get_log 返回成功的历史记录
         mock_hub.ingestion_log.get_log.return_value = IngestionLog(
             dataset="stock_daily",
@@ -88,7 +87,7 @@ class TestShouldSkip:
     def test_should_not_skip_when_previous_failed(self, mocker) -> None:
         """历史失败时不跳过。"""
 
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
         # Mock get_log 返回失败的历史记录
         mock_hub.ingestion_log.get_log.return_value = IngestionLog(
             dataset="stock_daily",
@@ -112,7 +111,7 @@ class TestShouldSkip:
     def test_should_not_skip_when_log_store_not_set(self, mocker) -> None:
         """hub 始终需要提供，不再支持 log_store=None 的情况。"""
 
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
         manager = MetadataManager(mock_hub)
 
         should_skip, reason = manager.should_skip(
@@ -127,7 +126,7 @@ class TestShouldSkip:
 
     def test_should_skip_uses_source_parameter(self, mocker) -> None:
         """should_skip 应使用传入的 source 参数，而非硬编码。"""
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
 
         # Mock get_log 返回成功的历史记录
         mock_hub.ingestion_log.get_log.return_value = IngestionLog(
@@ -166,7 +165,7 @@ class TestCompareData:
     def test_compare_returns_true_when_data_same(self, mocker) -> None:
         """相同数据返回 True。"""
 
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
         manager = MetadataManager(mock_hub)
 
         df = pl.DataFrame(
@@ -194,7 +193,7 @@ class TestCompareData:
     def test_compare_returns_false_when_data_different(self, mocker) -> None:
         """不同数据返回 False。"""
 
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
         manager = MetadataManager(mock_hub)
 
         df = pl.DataFrame(
@@ -221,7 +220,7 @@ class TestCompareData:
     def test_compare_returns_false_when_row_count_different(self, mocker) -> None:
         """行数不同返回 False。"""
 
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
         manager = MetadataManager(mock_hub)
 
         df = pl.DataFrame(
@@ -250,7 +249,7 @@ class TestCompareData:
     def test_compare_handles_null_checksum_in_log(self, mocker) -> None:
         """处理 log 中 checksum 为 None 的情况。"""
 
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
         manager = MetadataManager(mock_hub)
 
         df = pl.DataFrame(
@@ -277,7 +276,7 @@ class TestCompareData:
 
     def test_compare_returns_true_when_rows_is_none(self, mocker) -> None:
         """当 existing_log.rows 为 None 时，仅比较 checksum。"""
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
         manager = MetadataManager(mock_hub)
 
         df = pl.DataFrame(
@@ -311,7 +310,7 @@ class TestShouldSkipEdgeCases:
 
     def test_skip_reason_contains_checksum_and_rows(self, mocker) -> None:
         """跳过原因应包含 checksum 和 rows 信息。"""
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
 
         # Mock get_log 返回成功的历史记录
         mock_hub.ingestion_log.get_log.return_value = IngestionLog(
@@ -338,7 +337,7 @@ class TestShouldSkipEdgeCases:
 
     def test_skip_reason_handles_missing_checksum(self, mocker) -> None:
         """跳过原因应处理 checksum 为 None 的情况。"""
-        mock_hub = mocker.Mock(spec=DataHub)
+        mock_hub = mocker.Mock()
 
         # Mock get_log 返回成功但无 checksum 的历史记录
         mock_hub.ingestion_log.get_log.return_value = IngestionLog(

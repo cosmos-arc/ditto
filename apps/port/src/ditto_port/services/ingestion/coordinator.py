@@ -119,7 +119,7 @@ class IngestionCoordinator:
             return True
 
         if dataset_enum in (Dataset.STOCK_DAILY, Dataset.ETF_DAILY):
-            return self._hub.calendar_store.is_trading_day(trade_date)
+            return self._hub.calendar.is_trading_day(trade_date)
         return True
 
     def _create_skipped_result(
@@ -314,7 +314,7 @@ class IngestionCoordinator:
         force: bool = False,
     ) -> list[IngestionResult]:
         """摄取日期范围数据。"""
-        trade_dates = self._hub.calendar_store.get_range(start_date, end_date)
+        trade_dates = self._hub.calendar.list_trading_days(start_date, end_date)
 
         if not trade_dates:
             return []
@@ -416,7 +416,7 @@ class IngestionCoordinator:
             )
         elif dataset_enum == Dataset.CALENDAR:
             records = df.to_dicts()
-            self._hub.calendar_store.upsert(records)
+            self._hub.calendar.upsert(records)
             file_path = f"calendar_store:{trade_date}"
             # 修复：使用统一的 ChecksumCompute（MD5 算法，确定性排序）
             checksum = ChecksumCompute.from_dataframe(df, "calendar")

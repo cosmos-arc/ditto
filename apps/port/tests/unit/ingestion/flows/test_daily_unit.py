@@ -28,44 +28,51 @@ class TestCheckTradingDay:
         mock_hub = mocker.MagicMock()
         mock_hub.calendar.is_trading_day.return_value = True
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        result = check_trading_day(
-            trade_date="2024-01-02",
-            data_root="data",
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mocker.MagicMock())
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.daily.create_ingestion_context",
+            return_value=mock_context_mgr,
         )
+        result = check_trading_day(trade_date="2024-01-02")
 
         assert result is True
         mock_hub.calendar.is_trading_day.assert_called_once_with("2024-01-02")
-        mock_hub.close.assert_called_once()
 
     def test_returns_false_for_non_trading_day(self, mocker):
         """Test that task returns False for non-trading day."""
         mock_hub = mocker.MagicMock()
         mock_hub.calendar.is_trading_day.return_value = False
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        result = check_trading_day(
-            trade_date="2024-01-06",
-            data_root="data",
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mocker.MagicMock())
+        mock_context_mgr.__exit__.return_value = None
+
+        mocker.patch(
+            "ditto_port.jobs.flows.daily.create_ingestion_context",
+            return_value=mock_context_mgr,
         )
+        result = check_trading_day(trade_date="2024-01-06")
 
         assert result is False
-        mock_hub.close.assert_called_once()
 
-    def test_closes_hub_on_exception(self, mocker):
-        """Test that hub.close() is called even when is_trading_day raises."""
+    def test_propagates_exception(self, mocker):
+        """Test that exceptions are propagated."""
         mock_hub = mocker.MagicMock()
         mock_hub.calendar.is_trading_day.side_effect = ValueError("Test error")
 
-        mocker.patch("ditto_port.jobs.flows.helpers.DataHub", return_value=mock_hub)
-        with pytest.raises(ValueError, match="Test error"):
-            check_trading_day(
-                trade_date="2024-01-02",
-                data_root="data",
-            )
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = (mock_hub, mocker.MagicMock())
+        mock_context_mgr.__exit__.return_value = None
 
-        # Verify close was still called
-        mock_hub.close.assert_called_once()
+        mocker.patch(
+            "ditto_port.jobs.flows.daily.create_ingestion_context",
+            return_value=mock_context_mgr,
+        )
+        with pytest.raises(ValueError, match="Test error"):
+            check_trading_day(trade_date="2024-01-02")
 
     def test_is_prefect_task(self, mocker):
         """Test that check_trading_day is a Prefect task."""
@@ -85,7 +92,6 @@ class TestDailyIngestionFlowNonTradingDay:
         result = daily_ingestion_flow(
             trade_date="2024-01-06",
             source="tushare",
-            data_root="data",
         )
 
         assert result["skipped"] is True
@@ -135,7 +141,6 @@ class TestDailyIngestionFlowT0Execution:
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         # Verify T0 task was created and submitted
@@ -157,7 +162,6 @@ class TestDailyIngestionFlowT0Execution:
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         assert result["t0_results"] == {}
@@ -198,7 +202,6 @@ class TestDailyIngestionFlowT1Execution:
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         # Verify t1_adj factory was used for adj_factor
@@ -232,7 +235,6 @@ class TestDailyIngestionFlowT1Execution:
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         mock_t1_adj.assert_called_once_with(Dataset.FUND_ADJ)
@@ -265,7 +267,6 @@ class TestDailyIngestionFlowT1Execution:
         daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         # Verify t1_bars factory was called for both datasets
@@ -324,7 +325,6 @@ class TestDailyIngestionFlowT1Execution:
         daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         # Verify level 1 (adj_factor) waits for level 0 (stock_daily)
@@ -345,7 +345,6 @@ class TestDailyIngestionFlowT1Execution:
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         assert result["t1_results"] == {}
@@ -381,7 +380,6 @@ class TestDailyIngestionFlowResultAggregation:
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         assert result["summary"]["success_count"] == 1
@@ -414,7 +412,6 @@ class TestDailyIngestionFlowResultAggregation:
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         assert result["summary"]["success_count"] == 0
@@ -447,7 +444,6 @@ class TestDailyIngestionFlowResultAggregation:
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         assert result["summary"]["success_count"] == 0
@@ -484,7 +480,6 @@ class TestDailyIngestionFlowResultAggregation:
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         assert result["summary"]["success_count"] == 1
@@ -511,7 +506,6 @@ class TestDailyIngestionFlowReturnValue:
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         # Verify all top-level keys
@@ -544,7 +538,6 @@ class TestDailyIngestionFlowReturnValue:
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
-            data_root="data",
         )
 
         assert result["dqc_results"]["status"] == "skipped"

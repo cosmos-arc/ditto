@@ -6,7 +6,28 @@
 from collections.abc import Generator
 from unittest.mock import MagicMock
 
+import prefect
+import prefect.flows
 import pytest
+
+# Mock the @flow decorator to bypass Prefect flow wrapper in unit tests
+_original_flow_decorator = prefect.flows.flow
+
+
+def _mock_flow_decorator(*args, **kwargs):
+    """Mock @flow decorator that returns the function unchanged."""
+
+    def decorator(func):
+        return func
+
+    # Support @flow() and @flow syntax
+    if args and callable(args[0]):
+        return args[0]  # Direct @flow without parentheses
+    return decorator
+
+
+# Apply the mock globally
+prefect.flows.flow = _mock_flow_decorator
 
 
 @pytest.fixture(autouse=True)
@@ -26,10 +47,7 @@ def no_api_server() -> Generator[None, None, None]:
 
 @pytest.fixture
 def app_ctx() -> MagicMock:
-    """CLI 测试用的 AppContext mock.
-
-    提供模拟的 DataHub 和 DataSource，用于 CLIExecutor 测试。
-    """
+    """CLI 测试用的 AppContext mock (兼容旧测试)."""
     from unittest.mock import MagicMock
 
     mock = MagicMock()
@@ -40,7 +58,7 @@ def app_ctx() -> MagicMock:
     mock.hub.ingestion_log.get_ingested_dates.return_value = []
     mock.hub.ingestion_log.save_log.return_value = None
 
-    # DataSource mock
+    # DataSource mock (已废弃 - 仅用于向后兼容)
     mock.source.fetch_stock_daily.return_value = None
     mock.source.fetch_etf_daily.return_value = None
     mock.source.fetch_calendar.return_value = None
@@ -48,5 +66,19 @@ def app_ctx() -> MagicMock:
     mock.source.fetch_etf_basic.return_value = None
     mock.source.fetch_adj_factor.return_value = None
     mock.source.fetch_fund_adj.return_value = None
+
+    return mock
+
+
+@pytest.fixture
+def mock_hub() -> MagicMock:
+    """DataHub mock 用于 CLIExecutor 测试."""
+    from unittest.mock import MagicMock
+
+    mock = MagicMock()
+    mock.calendar_store.is_trading_day.return_value = True
+    mock.calendar_store.get_range.return_value = ["2024-01-02", "2024-01-03"]
+    mock.ingestion_log.get_ingested_dates.return_value = []
+    mock.ingestion_log.save_log.return_value = None
 
     return mock

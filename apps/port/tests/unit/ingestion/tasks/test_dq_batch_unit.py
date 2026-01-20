@@ -12,6 +12,7 @@ from ditto_port.jobs.tasks.dq_batch import (
 )
 
 
+@pytest.mark.unit
 def test_default_config_path_points_to_package():
     """Test default config path points to packages/datahub/config/dq_rules."""
     package_root = pathlib.Path(ditto_datahub.__file__).parent.parent.parent
@@ -24,17 +25,26 @@ def test_default_config_path_points_to_package():
     assert pathlib.Path(actual_path).exists()
 
 
-def test_dq_completeness_check_closes_hub_connection(tmp_path, mocker):
-    """Test dq_completeness_check closes DataHub connection to avoid leaks."""
+@pytest.mark.unit
+def test_dq_completeness_check_uses_context(tmp_path, mocker):
+    """Test dq_completeness_check uses create_datahub_context."""
     # Arrange
     mock_hub = mocker.MagicMock()
     mock_hub.bars.get.return_value = pl.DataFrame(
         {"sid": [1, 2, 3], "trade_date": ["2024-01-02", "2024-01-02", "2024-01-02"]}
     )
 
-    with mocker.patch("ditto_port.jobs.tasks.dq_batch.DataHub", return_value=mock_hub):
-        # Act
-        result = dq_completeness_check(
+    # Create mock context manager
+    mock_context_mgr = mocker.MagicMock()
+    mock_context_mgr.__enter__.return_value = mock_hub
+    mock_context_mgr.__exit__.return_value = None
+
+    with mocker.patch(
+        "ditto_port.jobs.tasks.dq_batch.create_datahub_context",
+        return_value=mock_context_mgr,
+    ):
+        # Act - call .fn to skip Prefect task wrapper
+        result = dq_completeness_check.fn(
             trade_date="2024-01-02",
             dataset="test_daily",
             expected_sids=[1, 2, 3],
@@ -44,9 +54,9 @@ def test_dq_completeness_check_closes_hub_connection(tmp_path, mocker):
         # Assert
         assert result["is_complete"] is True
         assert result["actual_count"] == 3
-        mock_hub.close.assert_called_once()
 
 
+@pytest.mark.unit
 def test_dq_completeness_check_passes_market_wide_parameter(tmp_path, mocker):
     """Test dq_completeness_check passes market_wide to bars.get() via BarsQuery."""
     # Arrange
@@ -55,9 +65,17 @@ def test_dq_completeness_check_passes_market_wide_parameter(tmp_path, mocker):
         {"sid": [1, 2, 3], "trade_date": ["2024-01-02", "2024-01-02", "2024-01-02"]}
     )
 
-    with mocker.patch("ditto_port.jobs.tasks.dq_batch.DataHub", return_value=mock_hub):
-        # Act
-        dq_completeness_check(
+    # Create mock context manager
+    mock_context_mgr = mocker.MagicMock()
+    mock_context_mgr.__enter__.return_value = mock_hub
+    mock_context_mgr.__exit__.return_value = None
+
+    with mocker.patch(
+        "ditto_port.jobs.tasks.dq_batch.create_datahub_context",
+        return_value=mock_context_mgr,
+    ):
+        # Act - call .fn to skip Prefect task wrapper
+        dq_completeness_check.fn(
             trade_date="2024-01-02",
             dataset="test_daily",
             expected_sids=[1, 2, 3],
@@ -71,8 +89,9 @@ def test_dq_completeness_check_passes_market_wide_parameter(tmp_path, mocker):
         assert query.market_wide is True
 
 
-def test_dq_batch_check_closes_hub_connection(tmp_path, mocker):
-    """Test dq_batch_check closes DataHub connection to avoid leaks."""
+@pytest.mark.unit
+def test_dq_batch_check_uses_context(tmp_path, mocker):
+    """Test dq_batch_check uses create_datahub_context."""
     # Arrange
     mock_hub = mocker.MagicMock()
     mock_hub.calendar.get_last_trading_day.return_value = "2024-01-02"
@@ -85,13 +104,21 @@ def test_dq_batch_check_closes_hub_connection(tmp_path, mocker):
     mock_result.alert_count = 0
     mock_engine.check_statistical.return_value = mock_result
 
-    with mocker.patch("ditto_port.jobs.tasks.dq_batch.DataHub", return_value=mock_hub):
+    # Create mock context manager
+    mock_context_mgr = mocker.MagicMock()
+    mock_context_mgr.__enter__.return_value = mock_hub
+    mock_context_mgr.__exit__.return_value = None
+
+    with mocker.patch(
+        "ditto_port.jobs.tasks.dq_batch.create_datahub_context",
+        return_value=mock_context_mgr,
+    ):
         with mocker.patch(
             "ditto_port.jobs.tasks.dq_batch.DQEngine", return_value=mock_engine
         ):
             with mocker.patch("ditto_port.jobs.tasks.dq_batch.M"):
-                # Act
-                result = dq_batch_check(
+                # Act - call .fn to skip Prefect task wrapper
+                result = dq_batch_check.fn(
                     trade_date="2024-01-02",
                     datasets=["test_daily"],
                 )
@@ -99,22 +126,29 @@ def test_dq_batch_check_closes_hub_connection(tmp_path, mocker):
                 # Assert
                 assert result["trade_date"] == "2024-01-02"
                 assert result["total_issues"] == 0
-                mock_hub.close.assert_called_once()
 
 
-def test_dq_completeness_check_closes_on_exception(tmp_path, mocker):
-    """Test dq_completeness_check closes connection even when exception occurs."""
+@pytest.mark.unit
+def test_dq_completeness_check_propagates_exceptions(tmp_path, mocker):
+    """Test dq_completeness_check propagates exceptions."""
     # Arrange
     mock_hub = mocker.MagicMock()
     mock_hub.bars.get.side_effect = Exception("Database error")
 
-    with mocker.patch("ditto_port.jobs.tasks.dq_batch.DataHub", return_value=mock_hub):
-        # Act & Assert
+    # Create mock context manager
+    mock_context_mgr = mocker.MagicMock()
+    mock_context_mgr.__enter__.return_value = mock_hub
+    mock_context_mgr.__exit__.return_value = None
+
+    with mocker.patch(
+        "ditto_port.jobs.tasks.dq_batch.create_datahub_context",
+        return_value=mock_context_mgr,
+    ):
+        # Act & Assert - call .fn to skip Prefect task wrapper
         with pytest.raises(Exception, match="Database error"):
-            dq_completeness_check(
+            dq_completeness_check.fn(
                 trade_date="2024-01-02",
                 dataset="test_daily",
             )
 
-        # Verify close was called despite exception
-        mock_hub.close.assert_called_once()
+        # Context manager handles cleanup

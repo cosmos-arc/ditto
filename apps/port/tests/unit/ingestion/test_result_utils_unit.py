@@ -1,9 +1,11 @@
 """测试结果统计辅助函数。"""
 
+import pytest
 from ditto_port.services.ingestion.coordinator import IngestionResult
 from ditto_port.services.ingestion.result_utils import count_results
 
 
+@pytest.mark.unit
 class TestCountResultsWithIngestionResultList:
     """测试 count_results 函数处理 IngestionResult 列表。"""
 
@@ -119,6 +121,7 @@ class TestCountResultsWithIngestionResultList:
         assert counts.skipped == 0
 
 
+@pytest.mark.unit
 class TestCountResultsWithDict:
     """测试 count_results 函数处理字典结果。"""
 
@@ -156,6 +159,7 @@ class TestCountResultsWithDict:
         assert counts.skipped == 0
 
 
+@pytest.mark.unit
 class TestCountResultsEdgeCases:
     """测试边界情况。"""
 

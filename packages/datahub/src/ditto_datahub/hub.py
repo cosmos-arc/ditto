@@ -4,14 +4,12 @@ from __future__ import annotations
 
 import atexit
 import types
-from functools import cached_property
 from pathlib import Path
 from typing import Any
 
 import polars as pl
 from ditto_foundation import SQLitePool, logger
 from ditto_foundation.concurrency import FileLockManager
-from ditto_foundation.config.paths import get_paths
 
 from ditto_datahub.accessors.adj_factor import AdjFactorAccessor
 from ditto_datahub.accessors.bars import BarsAccessor
@@ -26,49 +24,79 @@ from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
-from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.calendar_store import CalendarStore
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
-from ditto_datahub.stores.quarantine_store import QuarantineStore
-from ditto_datahub.stores.security_store import SecurityStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
-from ditto_datahub.stores.universe_store import UniverseStore
 
 
 class DataHub:
     """
     Unified data entry point (Facade).
 
-    Uses @cached_property for lazy loading:
-    - Components are only initialized on first access
-    - Reduces startup time and allocates resources on demand
+    All dependencies are injected through __init__ - no lazy loading.
+    Component lifecycle is managed by the dishka container.
 
     Attribute layers:
     - Runtime Layer: sqlite_pool, file_lock, sid_allocator, dq_engine, freeze
-    - Store Layer: security_store, calendar_store, bars_store, adj_factor_store,
-      universe_store, index_weight_store, ingestion_log_store
     - Accessor Layer: securities, bars, calendar, universe, index, ingestion_log
     - Sources Layer: sources (external data sources: Tushare, Akshare)
     - SQL Engine: sql_engine
     """
 
-    def __init__(self, data_root: str | Path | None = None) -> None:
-        r"""
-        Initialize DataHub.
+    def __init__(  # noqa: PLR0913
+        self,
+        data_root: Path,
+        sqlite_pool: SQLitePool,
+        file_lock: FileLockManager,
+        sid_allocator: SidAllocator,
+        dq_engine: DQEngine,
+        freeze_manager: FreezeManager,
+        securities: SecuritiesAccessor,
+        calendar: CalendarAccessor,
+        adj_factor: AdjFactorAccessor,
+        bars: BarsAccessor,
+        universe: UniverseAccessor,
+        index: IndexAccessor,
+        ingestion_log: IngestionLogAccessor,
+        sources: DataSources,
+        sql_engine: SqlEngine,
+    ) -> None:
+        """
+        Initialize DataHub with all dependencies injected.
+
+        All components are created by the dishka container and passed in.
+        This eliminates lazy loading and makes dependencies explicit.
 
         Args:
             data_root: Data root directory path.
-                If None, uses XDG Base Directory spec
-                (D:\\data\\ditto\\data on Windows).
+            sqlite_pool: SQLite connection pool.
+            file_lock: File lock manager for concurrent write safety.
+            sid_allocator: SID allocator for new securities.
+            dq_engine: Data quality engine.
+            freeze_manager: Freeze manager for data version tracking.
+            securities: Securities master data accessor.
+            calendar: Trading calendar accessor.
+            adj_factor: Adjustment factor accessor.
+            bars: OHLCV bars accessor.
+            universe: Security universe accessor.
+            index: Index data accessor.
+            ingestion_log: Ingestion log accessor.
+            sources: External data sources.
+            sql_engine: DuckDB SQL engine.
 
         """
-        if data_root is None:
-            self.data_root = get_paths().data_home
-        else:
-            self.data_root = Path(data_root)
+        self.data_root = data_root
+        self.sqlite_pool = sqlite_pool
+        self.file_lock = file_lock
+        self.sid_allocator = sid_allocator
+        self.dq_engine = dq_engine
+        self.freeze = freeze_manager
+        self.securities = securities
+        self.calendar = calendar
+        self.adj_factor = adj_factor
+        self.bars = bars
+        self.universe = universe
+        self.index = index
+        self.ingestion_log = ingestion_log
+        self.sources = sources
+        self.sql_engine = sql_engine
 
         self._closed = False
         # 注册进程退出清理
@@ -78,175 +106,6 @@ class DataHub:
             "DataHub initialized",
             event="datahub_init",
             data_root=str(self.data_root),
-        )
-
-    # ========================================================================
-    # Runtime Layer
-    # ========================================================================
-
-    @cached_property
-    def sqlite_pool(self) -> SQLitePool:
-        """SQLite connection pool."""
-        db_path = self.data_root / "meta" / "hub.sqlite"
-        return SQLitePool(str(db_path))
-
-    @cached_property
-    def file_lock(self) -> FileLockManager:
-        """File lock manager for concurrent write safety."""
-        lock_dir = self.data_root / "locks"
-        return FileLockManager(lock_dir)
-
-    @cached_property
-    def sid_allocator(self) -> SidAllocator:
-        """SID allocator for new securities."""
-        return SidAllocator(self.sqlite_pool)
-
-    @cached_property
-    def dq_engine(self) -> DQEngine:
-        """New DQ engine with user override support."""
-        # Use new method: load config with user override
-        return DQEngine(data_root=self.data_root)
-
-    @cached_property
-    def freeze(self) -> FreezeManager:
-        """Freeze manager for data version tracking."""
-        return FreezeManager(data_root=str(self.data_root))
-
-    # ========================================================================
-    # Store Layer
-    # ========================================================================
-
-    @cached_property
-    def security_store(self) -> SecurityStore:
-        """Security data store."""
-        return SecurityStore(SQLiteClient(self.sqlite_pool))
-
-    @cached_property
-    def calendar_store(self) -> CalendarStore:
-        """Trading calendar store."""
-        return CalendarStore(SQLiteClient(self.sqlite_pool))
-
-    @cached_property
-    def bars_store(self) -> BarsStore:
-        """OHLCV bars store (Parquet)."""
-        return BarsStore(data_root=self.data_root)
-
-    @cached_property
-    def adj_factor_store(self) -> AdjFactorStore:
-        """Adjustment factor store (Parquet)."""
-        return AdjFactorStore(data_root=self.data_root)
-
-    @cached_property
-    def stock_status_store(self) -> StockStatusStore:  # B.3
-        """Stock status store (Parquet, year partitioned)."""
-        return StockStatusStore(data_root=self.data_root)
-
-    @cached_property
-    def universe_store(self) -> UniverseStore:
-        """Universe store for security universe data."""
-        return UniverseStore(SQLiteClient(self.sqlite_pool))
-
-    @cached_property
-    def index_weight_store(self) -> IndexWeightStore:
-        """Index weight store for index constituent data."""
-        return IndexWeightStore(SQLiteClient(self.sqlite_pool))
-
-    @cached_property
-    def ingestion_log_store(self) -> IngestionLogStore:
-        """摄取日志存储."""
-        return IngestionLogStore(SQLiteClient(self.sqlite_pool))
-
-    @cached_property
-    def quarantine_store(self) -> QuarantineStore:
-        """Quarantine store for failed data."""
-        quarantine_path = self.data_root / "quarantine.db"
-        return QuarantineStore(quarantine_path)
-
-    # ========================================================================
-    # Accessor Layer
-    # ========================================================================
-
-    @cached_property
-    def securities(self) -> SecuritiesAccessor:
-        """Securities master data accessor."""
-        return SecuritiesAccessor(
-            security_store=self.security_store,
-            sid_allocator=self.sid_allocator,
-        )
-
-    @cached_property
-    def bars(self) -> BarsAccessor:
-        """OHLCV bars accessor."""
-        return BarsAccessor(
-            bars_store=self.bars_store,
-            security_store=self.security_store,
-            adj_factor_store=self.adj_factor_store,
-            stock_status_store=self.stock_status_store,  # B.3
-            dq_engine=self.dq_engine,  # Use new DQEngine
-            file_lock=self.file_lock,
-            quarantine_store=self.quarantine_store,
-        )
-
-    @cached_property
-    def adj_factor(self) -> AdjFactorAccessor:
-        """Adjustment factor accessor."""
-        return AdjFactorAccessor(
-            adj_factor_store=self.adj_factor_store,
-            file_lock=self.file_lock,
-        )
-
-    @cached_property
-    def calendar(self) -> CalendarAccessor:
-        """Trading calendar accessor."""
-        return CalendarAccessor(
-            calendar_store=self.calendar_store,
-        )
-
-    @cached_property
-    def universe(self) -> UniverseAccessor:
-        """Security universe accessor."""
-        return UniverseAccessor(
-            universe_store=self.universe_store,
-            security_store=self.security_store,
-            sid_allocator=self.sid_allocator,
-        )
-
-    @cached_property
-    def index(self) -> IndexAccessor:
-        """Index data accessor."""
-        return IndexAccessor(
-            bars_store=self.bars_store,
-            index_weight_store=self.index_weight_store,
-            security_store=self.security_store,
-        )
-
-    @cached_property
-    def ingestion_log(self) -> IngestionLogAccessor:
-        """摄取日志访问器."""
-        return IngestionLogAccessor(
-            ingestion_log_store=self.ingestion_log_store,
-        )
-
-    # ========================================================================
-    # Sources Layer (External Data Sources)
-    # ========================================================================
-
-    @cached_property
-    def sources(self) -> DataSources:
-        """External data sources accessor (Tushare, Akshare, etc.)."""
-        return DataSources()
-
-    # ========================================================================
-    # SQL Engine
-    # ========================================================================
-
-    @cached_property
-    def sql_engine(self) -> SqlEngine:
-        """DuckDB SQL engine."""
-        return SqlEngine(
-            data_root=self.data_root,
-            security_store=self.security_store,
-            calendar_store=self.calendar_store,
         )
 
     # ========================================================================
@@ -306,7 +165,7 @@ class DataHub:
             SidNotFoundError: If identifier cannot be resolved.
 
         """
-        result = self.security_store.resolve_sid(identifier, source, asof)
+        result = self.securities.resolve_sid(identifier, source, asof)
         if result is None:
             raise SidNotFoundError(
                 message=f"Identifier '{identifier}' not found in source '{source}'",
@@ -322,8 +181,7 @@ class DataHub:
         This should be called after writing new data to refresh
         the DuckDB views that reference Parquet files.
         """
-        if "sql_engine" in self.__dict__:
-            self.sql_engine.refresh_views()
+        self.sql_engine.refresh_views()
 
     def get_trading_days(
         self,
@@ -372,40 +230,17 @@ class DataHub:
         """
         Close resources.
 
-        Only closes resources that have been accessed (initialized).
-        Unaccessed resources are never created and don't need closing.
-
         This method is idempotent - can be called multiple times safely.
 
-        Closes in reverse order of initialization to avoid dependency issues:
-        1. Stores with SQLite clients (calendar_store, security_store,
-           universe_store, index_weight_store, ingestion_log_store)
-        2. SQL engine (DuckDB)
-        3. SQLite pool (connection manager)
+        Note: Most resources are managed by the dishka container.
+        This method mainly ensures sqlite_pool is closed when used
+        outside the container (backward compatibility).
         """
         if self._closed:
             return
-        # Close stores that hold SQLiteClient references
-        # These must be closed before sqlite_pool
-        for store_name in (
-            "calendar_store",
-            "security_store",
-            "universe_store",
-            "index_weight_store",
-            "ingestion_log_store",
-            "quarantine_store",
-        ):
-            if store_name in self.__dict__:
-                store = getattr(self, store_name)
-                if hasattr(store, "close"):
-                    store.close()
 
-        # Close SQL engine
-        if "sql_engine" in self.__dict__:
-            self.sql_engine.close()
-
-        # Close SQLite pool
-        if "sqlite_pool" in self.__dict__:
+        # Close SQLite pool if it hasn't been closed by container
+        if hasattr(self, "sqlite_pool"):
             self.sqlite_pool.close()
 
         self._closed = True
@@ -421,16 +256,13 @@ class DataHub:
 
     def __exit__(
         self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: types.TracebackType | None,
+        _exc_type: type[BaseException] | None,
+        _exc_val: BaseException | None,
+        _exc_tb: types.TracebackType | None,
     ) -> None:
         """Auto-close on exit."""
         self.close()
 
     def __repr__(self) -> str:
-        """Show initialized components."""
-        initialized = [
-            k for k in self.__dict__ if not k.startswith("_") and k != "data_root"
-        ]
-        return f"DataHub(data_root='{self.data_root}', initialized={initialized})"
+        """Show DataHub info."""
+        return f"DataHub(data_root='{self.data_root}')"

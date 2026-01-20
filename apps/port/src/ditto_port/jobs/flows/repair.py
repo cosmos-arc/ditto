@@ -11,7 +11,7 @@ from typing import cast
 
 from prefect import flow
 
-from ditto_port.jobs.flows.helpers import create_ingestion_context
+from ditto_port.jobs.context import create_ingestion_context
 from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.retry import RetryManager
 
@@ -22,7 +22,6 @@ def retry_failed_flow(
     max_attempts: int = 3,
     limit: int = 10,
     source: str = "tushare",
-    data_root: str = "data",
 ) -> dict[str, object]:
     """
     重试失败任务流程。
@@ -32,13 +31,12 @@ def retry_failed_flow(
         max_attempts: 最大尝试次数筛选条件
         limit: 重试的最大任务数量
         source: 数据源名称
-        data_root: DataHub 根目录
 
     Returns:
         重试结果字典
 
     """
-    with create_ingestion_context(data_root=data_root, source=source) as (
+    with create_ingestion_context(source=source) as (
         hub,
         coordinator,
     ):
@@ -70,7 +68,6 @@ def retry_failed_flow(
 def repair_holes_flow(
     dataset: str,
     source: str = "tushare",
-    data_root: str = "data",
     parallel: int = 1,
 ) -> dict[str, object]:
     """
@@ -84,14 +81,13 @@ def repair_holes_flow(
     Args:
         dataset: 数据集名称
         source: 数据源名称
-        data_root: DataHub 根目录
         parallel: 并行度
 
     Returns:
         修补结果字典
 
     """
-    with create_ingestion_context(data_root=data_root, source=source) as (
+    with create_ingestion_context(source=source) as (
         hub,
         coordinator,
     ):
@@ -126,7 +122,6 @@ def daily_repair_flow(
     max_attempts: int = 3,
     retry_limit: int = 10,
     source: str = "tushare",
-    data_root: str = "data",
     parallel: int = 1,
 ) -> dict[str, object]:
     """
@@ -143,7 +138,6 @@ def daily_repair_flow(
         max_attempts: 重试的最大尝试次数
         retry_limit: 重试的最大任务数
         source: 数据源名称
-        data_root: DataHub 根目录
         parallel: 并行度
 
     Returns:
@@ -164,7 +158,6 @@ def daily_repair_flow(
             max_attempts=max_attempts,
             limit=retry_limit,
             source=source,
-            data_root=data_root,
         )
         retry_results[dataset] = retry_result
 
@@ -172,7 +165,6 @@ def daily_repair_flow(
         holes_result = repair_holes_flow(
             dataset=dataset,
             source=source,
-            data_root=data_root,
             parallel=parallel,
         )
         holes_results[dataset] = holes_result
