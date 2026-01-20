@@ -35,6 +35,115 @@ tests/
 - **单元测试**：完全 Mock，测试单个类的自身逻辑
 - **集成测试**：真实组件，测试系统与外部的"接缝"处（DAO 写入数据库、HTTP Client 解析 API 响应）
 
+### 🔴 强制要求：测试目录必须镜像源码目录结构
+
+**核心原则**：测试目录结构必须与源码目录结构保持一致，任何源码目录重构必须同步更新测试目录。
+
+#### 目录映射规则
+
+```
+src/ditto_foundation/                    tests/unit/
+├── cache/                    →          ├── cache/
+├── checksum/                 →          ├── checksum/
+├── config/                   →          ├── config/
+├── db/                       →          ├── db/
+└── observability/            →          └── observability/
+
+src/ditto_datahub/                       tests/unit/
+├── alerts/                   →          ├── alerts/
+├── accessors/                →          ├── accessors/
+├── stores/                   →          ├── stores/
+├── dq/                       →          ├── dq/
+├── models/                   →          ├── models/
+└── runtime/                  →          └── runtime/
+
+src/ditto_port/                           tests/unit/
+├── cli/                      →          ├── cli/
+├── services/                 →          ├── services/
+├── jobs/                     →          ├── jobs/
+├── models/                   →          ├── models/
+└── registry/                 →          └── registry/
+```
+
+#### 源码重构时的测试目录更新检查清单
+
+**任何涉及以下操作的重构，必须同步更新测试目录**：
+
+- [ ] 创建新源码目录 → 创建对应的测试目录
+- [ ] 删除源码目录 → 删除对应的测试目录
+- [ ] 重命名源码目录 → 重命名对应的测试目录
+- [ ] 移动源码文件 → 移动对应的测试文件
+- [ ] 合并源码目录 → 合并对应的测试目录
+
+#### 禁止的目录结构模式
+
+| ❌ 禁止模式 | ✅ 正确模式 | 原因 |
+|-----------|-----------|------|
+| 测试文件散布在根目录 | 按源码模块分组 | 难以维护 |
+| `utils/` 测试目录（源码无 utils） | 对应具体源码模块 | 镜像原则 |
+| `test_observability_unit.py` 重复 | 使用唯一命名或子目录 | 避免 import 冲突 |
+| `ingestion/` 测试（源码是 `services/ingestion/`） | `services/ingestion/` | 保持一致 |
+
+#### 检测命令
+
+**重构后必须运行**：
+
+```bash
+# 1. 检查测试收集是否正常（无 import 冲突）
+pixi run -e dev pytest --collect-only -q 2>&1 | grep -i "error\|mismatch"
+
+# 2. 验证目录结构一致性
+# 对比源码和测试目录结构
+python -c "
+import os
+from pathlib import Path
+
+def get_dirs(path):
+    return {d.name for d in Path(path).rglob('*') if d.is_dir() and '__pycache__' not in str(d)}
+
+src_dirs = get_dirs('packages/foundation/src')
+test_dirs = get_dirs('packages/foundation/tests/unit')
+
+missing = src_dirs - test_dirs
+extra = test_dirs - src_dirs
+
+if missing:
+    print(f'❌ 缺失测试目录: {missing}')
+if extra:
+    print(f'⚠️  多余测试目录: {extra}')
+if not missing and not extra:
+    print('✅ 目录结构一致')
+"
+```
+
+#### 示例：正确的重构流程
+
+```bash
+# 场景：重命名源码目录 cache/ → caching/
+
+# 1. 重命名源码目录
+git mv src/ditto_foundation/cache/ src/ditto_foundation/caching/
+
+# 2. 同步重命名测试目录（强制要求）
+git mv tests/unit/cache/ tests/unit/caching/
+
+# 3. 更新导入语句
+# （IDE 会自动处理）
+
+# 4. 验证测试收集
+pixi run -e dev pytest --collect-only -q
+
+# 5. 运行测试验证
+pixi run -e dev pytest tests/unit/caching/
+
+# 6. 提交变更（源码 + 测试一起提交）
+git commit -m "refactor: rename cache to caching
+
+- 重命名源码目录 cache/ → caching/
+- 同步更新测试目录结构
+- 更新相关导入语句"
+```
+
 ---
 
 ## 单元测试 vs 集成测试边界
@@ -275,23 +384,91 @@ CLI 集成测试关注点：
 └─ 外部 API 调用（由 Client 集成测试保证）
 ```
 
-### 文件命名规范（防止import冲突）
+### 🔴 强制要求：文件命名规范（防止 import 冲突）
 
-**禁止同名测试文件存在于不同测试层级**：
+**绝对禁止同名测试文件存在于不同测试层级**：
 
 ```
 # ❌ 错误：会导致 pytest 收集冲突
 packages/datahub/tests/unit/stores/test_pipeline_store.py
 packages/datahub/tests/integration/stores/test_pipeline_store.py
 
+# ❌ 错误：跨包同名也会冲突
+packages/foundation/tests/unit/observability/test_observability_unit.py
+packages/datahub/tests/unit/stores/test_observability_unit.py
+
 # ✅ 正确：添加层级后缀区分
 packages/datahub/tests/unit/stores/test_pipeline_store_unit.py
 packages/datahub/tests/integration/stores/test_pipeline_store_integration.py
+
+# ✅ 正确：添加模块前缀避免跨包冲突
+packages/foundation/tests/unit/observability/test_observability_unit.py
+packages/datahub/tests/unit/stores/test_stores_observability_unit.py
 ```
 
-**命名规则**：
-- 单元测试: `test_{module}_unit.py`
-- 集成测试: `test_{module}_integration.py`
+#### 命名规则
+
+| 测试类型 | 文件命名格式 | 示例 |
+|---------|-------------|------|
+| 单元测试 | `test_{module}_unit.py` | `test_bars_accessor_unit.py` |
+| 集成测试 | `test_{module}_integration.py` | `test_bars_store_integration.py` |
+
+#### 特殊命名场景
+
+| 场景 | 命名策略 | 示例 |
+|------|---------|------|
+| 跨包可能冲突 | 添加包/模块前缀 | `test_stores_observability_unit.py` |
+| 测试多个类 | 使用主要类名 | `test_backfill_manager_unit.py` |
+| 测试配置类 | 添加 `_config` 后缀 | `test_ingestion_config_unit.py` |
+| 特定功能测试 | 添加功能前缀 | `test_sql_engine_injection_unit.py` |
+
+#### 检测命令
+
+**提交前必须运行**：
+
+```bash
+# 1. 检查 import 冲突
+pixi run -e dev pytest --collect-only -q 2>&1 | grep -i "import mismatch"
+
+# 2. 检查同名文件
+python -c "
+from collections import defaultdict
+from pathlib import Path
+
+test_files = defaultdict(list)
+for py_file in Path('.').rglob('tests/**/test_*.py'):
+    name = py_file.name
+    test_files[name].append(py_file)
+
+for name, files in test_files.items():
+    if len(files) > 1:
+        print(f'❌ 同名文件冲突: {name}')
+        for f in files:
+            print(f'   - {f}')
+"
+
+# 3. 验证命名规范
+python -c "
+from pathlib import Path
+import re
+
+unit_tests = list(Path('.').rglob('tests/unit/**/test_*_unit.py'))
+integration_tests = list(Path('.').rglob('tests/integration/**/test_*_integration.py'))
+
+print(f'✅ 单元测试: {len(unit_tests)} 个')
+print(f'✅ 集成测试: {len(integration_tests)} 个')
+
+# 检查命名不符合规范的
+for test_file in Path('.').rglob('tests/**/test_*.py'):
+    name = test_file.name
+    if 'unit' in str(test_file):
+        if not name.endswith('_unit.py'):
+            print(f'⚠️  单元测试命名不规范: {test_file}')
+    elif 'integration' in str(test_file):
+        if not name.endswith('_integration.py'):
+            print(f'⚠️  集成测试命名不规范: {test_file}')
+"
+```
 
 ---
 
@@ -773,6 +950,8 @@ pytest -m observability
 
 提交测试代码前，确认：
 
+### 基础规范
+
 - [ ] 测试命名清晰描述了被测行为
 - [ ] 遵循 AAA 模式
 - [ ] 每个测试只验证一个行为
@@ -784,18 +963,65 @@ pytest -m observability
 - [ ] 无 sleep/time.sleep 等待
 - [ ] 无硬编码路径或环境依赖
 - [ ] 无假测试（assert True、assert False、空 pass）
-- [ ] 无 import 冲突（同名测试文件）
 - [ ] 使用参数化测试减少重复
+
+### 🔴 目录结构强制检查
+
+- [ ] **测试目录镜像源码目录结构**
+- [ ] **源码目录重构时同步更新测试目录**
+- [ ] **无 import 冲突（同名测试文件）**
+- [ ] **测试文件命名符合规范**（`_unit.py` / `_integration.py`）
+
+**源码重构时额外确认**：
+- [ ] 创建源码目录 → 创建对应测试目录
+- [ ] 删除源码目录 → 删除对应测试目录
+- [ ] 重命名源码目录 → 重命名对应测试目录
+- [ ] 移动源码文件 → 移动对应测试文件
+- [ ] 合并源码目录 → 合并对应测试目录
 
 ---
 
 ## 检测问题命令（提交前必跑）
 
 ```bash
+# 假测试检测
 grep -r "assert True" tests/          # 假测试检测
 grep -r "assert False" tests/
+
+# import 冲突检测
 pytest --collect-only 2>&1 | grep "import mismatch"  # import冲突
-grep -r "from unittest.mock" tests/   # 应迁移到pytest-mock
+
+# 目录结构一致性检测（源码重构后必跑）
+python -c "
+from pathlib import Path
+
+def check_structure(src_path, test_path, name):
+    src_dirs = {d.name for d in Path(src_path).rglob('*') if d.is_dir() and '__pycache__' not in str(d)}
+    test_dirs = {d.name for d in Path(test_path).rglob('*') if d.is_dir() and '__pycache__' not in str(d)}
+
+    missing = src_dirs - test_dirs
+    extra = test_dirs - src_dirs
+
+    if missing or extra:
+        print(f'❌ {name} 目录结构不一致:')
+        if missing:
+            print(f'   缺失测试目录: {missing}')
+        if extra:
+            print(f'   多余测试目录: {extra}')
+        return False
+    return True
+
+all_ok = True
+all_ok &= check_structure('packages/foundation/src', 'packages/foundation/tests/unit', 'Foundation')
+all_ok &= check_structure('packages/datahub/src', 'packages/datahub/tests/unit', 'DataHub')
+all_ok &= check_structure('apps/port/src', 'apps/port/tests/unit', 'Port')
+
+if all_ok:
+    print('✅ 所有包目录结构一致')
+"
+
+# 应迁移到 pytest-mock
+grep -r "from unittest.mock" tests/
 grep -r "@patch" tests/
 ```
 
