@@ -21,7 +21,7 @@ class TestDQReportGenerator:
 
         report = self.generator.generate_markdown_report(result)
 
-        assert "# [REVIEW]" in report
+        assert "# 数据质量检查报告" in report
         assert "test_dataset" in report
         assert "✅ 通过" in report
         assert "无问题 ✅" in report

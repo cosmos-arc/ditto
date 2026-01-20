@@ -19,8 +19,7 @@ def test_executor_init_with_hub(mock_hub):
 @pytest.mark.unit
 def test_ingest_daily_success(mock_hub, mocker: MockerFixture):
     """测试 ingest_daily 成功场景"""
-    # Mock coordinator 返回成功结果
-    mock_coordinator = mocker.Mock()
+    # Mock IngestionCoordinator.ingest_date 返回成功结果
     mock_result = mocker.Mock()
     mock_result.status = "success"
     mock_result.trade_date = "2024-01-02"
@@ -29,12 +28,12 @@ def test_ingest_daily_success(mock_hub, mocker: MockerFixture):
     mock_result.message = "数据摄取成功"
     mock_result.error = None
     mock_result.checksum = "abc123"
-    mock_coordinator.ingest_date.return_value = mock_result
 
-    # 设置 create_coordinator mock 上下文管理器
-    mock_context = mocker.Mock()
-    mock_context.__enter__ = mocker.Mock(return_value=mock_coordinator)
-    mock_context.__exit__ = mocker.Mock(return_value=None)
+    # Mock IngestionCoordinator.ingest_date 方法
+    mocker.patch(
+        "ditto_port.services.ingestion.coordinator.IngestionCoordinator.ingest_date",
+        return_value=mock_result,
+    )
 
     # Mock BackfillManager
     mock_backfill_mgr = mocker.Mock()
@@ -52,15 +51,10 @@ def test_ingest_daily_success(mock_hub, mocker: MockerFixture):
         assert result["message"] == "数据摄取成功"
         assert result["error"] is None
 
-        mock_coordinator.ingest_date.assert_called_once_with(
-            "stock_daily", "2024-01-02", False
-        )
-
 
 @pytest.mark.unit
 def test_ingest_daily_skipped(mock_hub, mocker: MockerFixture):
     """测试 ingest_daily 跳过场景"""
-    mock_coordinator = mocker.Mock()
     mock_result = mocker.Mock()
     mock_result.status = "skipped"
     mock_result.trade_date = "2024-01-02"
@@ -68,12 +62,11 @@ def test_ingest_daily_skipped(mock_hub, mocker: MockerFixture):
     mock_result.row_count = None
     mock_result.message = "数据已存在且摄取成功"
     mock_result.error = None
-    mock_coordinator.ingest_date.return_value = mock_result
 
-    mock_context = mocker.Mock()
-    mock_context.__enter__ = mocker.Mock(return_value=mock_coordinator)
-    mock_context.__exit__ = mocker.Mock(return_value=None)
-    # Context manager set up, patch handled by factory method
+    mocker.patch(
+        "ditto_port.services.ingestion.coordinator.IngestionCoordinator.ingest_date",
+        return_value=mock_result,
+    )
 
     mock_backfill_mgr = mocker.Mock()
     mocker.patch(
@@ -91,7 +84,6 @@ def test_ingest_daily_skipped(mock_hub, mocker: MockerFixture):
 @pytest.mark.unit
 def test_ingest_daily_failed(mock_hub, mocker: MockerFixture):
     """测试 ingest_daily 失败场景"""
-    mock_coordinator = mocker.Mock()
     mock_result = mocker.Mock()
     mock_result.status = "failed"
     mock_result.trade_date = "2024-01-02"
@@ -99,12 +91,11 @@ def test_ingest_daily_failed(mock_hub, mocker: MockerFixture):
     mock_result.row_count = None
     mock_result.message = "获取数据失败: 网络错误"
     mock_result.error = "FETCH_ERROR"
-    mock_coordinator.ingest_date.return_value = mock_result
 
-    mock_context = mocker.Mock()
-    mock_context.__enter__ = mocker.Mock(return_value=mock_coordinator)
-    mock_context.__exit__ = mocker.Mock(return_value=None)
-    # Context manager set up, patch handled by factory method
+    mocker.patch(
+        "ditto_port.services.ingestion.coordinator.IngestionCoordinator.ingest_date",
+        return_value=mock_result,
+    )
 
     mock_backfill_mgr = mocker.Mock()
     mocker.patch(

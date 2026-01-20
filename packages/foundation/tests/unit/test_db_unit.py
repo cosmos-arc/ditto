@@ -63,6 +63,8 @@ class TestSQLitePoolConnection:
             assert conn is not None
             assert isinstance(conn, sqlite3.Connection)
 
+            pool.close()
+
     def test_get_connection_returns_row_factory(self) -> None:
         """Test that connection has row_factory set to sqlite3.Row."""
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -72,6 +74,8 @@ class TestSQLitePoolConnection:
             conn = pool.get_connection()
 
             assert conn.row_factory == sqlite3.Row
+
+            pool.close()
 
     def test_get_connection_enables_foreign_keys(self) -> None:
         """Test that foreign keys are enabled."""
@@ -85,6 +89,8 @@ class TestSQLitePoolConnection:
 
             assert result[0] == 1
 
+            pool.close()
+
     def test_get_connection_thread_local(self) -> None:
         """Test that connections are thread-local."""
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -96,6 +102,8 @@ class TestSQLitePoolConnection:
 
             # Same connection for same thread
             assert conn1 is conn2
+
+            pool.close()
 
     def test_close_connection(self) -> None:
         """Test closing a connection."""
@@ -134,6 +142,8 @@ class TestSQLitePoolExecute:
             assert result["id"] == 1
             assert result["name"] == "Alice"
 
+            pool.close()
+
     def test_execute_with_params(self) -> None:
         """Test execute with parameters."""
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -149,6 +159,8 @@ class TestSQLitePoolExecute:
 
             assert result["value"] == "test"
 
+            pool.close()
+
     def test_execute_without_params(self) -> None:
         """Test execute without parameters."""
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -159,6 +171,8 @@ class TestSQLitePoolExecute:
             result = cursor.fetchone()
 
             assert result["result"] == 1
+
+            pool.close()
 
 
 @pytest.mark.unit
@@ -180,6 +194,8 @@ class TestSQLitePoolTransactions:
 
             assert result["count"] == 1
 
+            pool.close()
+
     def test_rollback_transaction(self) -> None:
         """Test rolling back a transaction."""
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -197,6 +213,8 @@ class TestSQLitePoolTransactions:
             # SQLite default is auto-commit
             assert result["count"] == 0
 
+            pool.close()
+
 
 @pytest.mark.unit
 class TestSQLitePoolSchema:
@@ -210,6 +228,8 @@ class TestSQLitePoolSchema:
 
             # Should not raise, just log warning
             pool.init_schema()
+
+            pool.close()
 
     def test_init_schema_from_file(self) -> None:
         """Test init_schema reads and executes schema file."""
@@ -234,6 +254,8 @@ class TestSQLitePoolSchema:
             assert result is not None
             assert result["name"] == "users"
 
+            pool.close()
+
     def test_init_schema_empty_file(self) -> None:
         """Test init_schema with empty schema file."""
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -248,6 +270,8 @@ class TestSQLitePoolSchema:
             # Should not raise
             pool.init_schema()
 
+            pool.close()
+
     def test_init_schema_missing_file(self) -> None:
         """Test init_schema when schema file doesn't exist."""
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -258,6 +282,8 @@ class TestSQLitePoolSchema:
 
             with pytest.raises(ValueError, match="Schema file does not exist"):
                 pool.init_schema()
+
+            pool.close()
 
 
 @pytest.mark.unit
@@ -271,6 +297,8 @@ class TestSQLitePoolPing:
             pool = SQLitePool(str(db_path))
 
             assert pool.ping() is True
+
+            pool.close()
 
     def test_ping_returns_false_for_invalid_connection(self) -> None:
         """Test ping returns False when connection fails."""
@@ -298,6 +326,9 @@ class TestSQLitePoolClose:
             # Close connection
             pool.close()
             assert pool._connection_count == initial_count - 1
+
+            # Second close is safe
+            pool.close()
 
     def test_close_when_no_connection(self) -> None:
         """Test close when no connection exists."""
@@ -337,6 +368,8 @@ class TestSQLitePoolExceptionPaths:
         with pytest.raises(Exception):  # noqa: B017  # sqlite3.DatabaseError
             pool.init_schema()
 
+        pool.close()
+
     def test_execute_with_invalid_sql(self, tmp_path: Path) -> None:
         """Test execute raises error with invalid SQL."""
         db_path = tmp_path / "test.db"
@@ -346,6 +379,8 @@ class TestSQLitePoolExceptionPaths:
             # sqlite3.OperationalError expected for invalid SQL
             with pytest.raises(Exception):  # noqa: B017  # sqlite3.OperationalError
                 conn.execute("INVALID SQL QUERY")
+
+        pool.close()
 
     def test_execute_fetchone_with_connection_closed(self, tmp_path: Path) -> None:
         """Test execute/fetchone raises error when connection is closed."""
@@ -358,6 +393,9 @@ class TestSQLitePoolExceptionPaths:
         # ProgrammingError expected for closed connection
         with pytest.raises(Exception):  # noqa: B017  # sqlite3.ProgrammingError
             conn.execute("SELECT 1")
+
+        # Pool is already closed, but safe to call again
+        pool.close()
 
     def test_multiple_connections_exhaust_pool(self, tmp_path: Path) -> None:
         """Test behavior when creating multiple connections."""
@@ -377,5 +415,5 @@ class TestSQLitePoolExceptionPaths:
         assert conn1 is conn2
 
         # Cleanup
-        conn1.close()
+        pool.close()
         # Note: thread-local connections persist until thread ends
