@@ -20,14 +20,19 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     Only special cases need manual markers.
     """
     for item in items:
-        # Get the relative path from the tests directory
-        rel_path = item.path.relative_to(Path(__file__).parent)
+        try:
+            # Get the relative path from the tests directory
+            rel_path = item.path.relative_to(Path(__file__).parent)
 
-        # Mark based on directory
-        if "integration" in str(rel_path):
-            item.add_marker(pytest.mark.integration)
-        elif "unit" in str(rel_path):
-            item.add_marker(pytest.mark.unit)
+            # Mark based on directory
+            if "integration" in str(rel_path):
+                item.add_marker(pytest.mark.integration)
+            elif "unit" in str(rel_path):
+                item.add_marker(pytest.mark.unit)
+        except ValueError:
+            # Item is not under this conftest's directory, skip
+            # It will be handled by its own package's conftest
+            pass
 
 
 @pytest.fixture(autouse=True)
