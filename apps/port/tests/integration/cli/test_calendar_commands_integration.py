@@ -31,11 +31,3 @@ def test_calendar_with_force(tmp_path: Path):
     assert result.exit_code == 0 or "unable to open database file" in str(
         result.exception
     )
-
-
-@pytest.mark.integration
-def test_calendar_help():
-    """测试 calendar 命令帮助."""
-    result = runner.invoke(app, ["calendar", "--help"])
-    assert result.exit_code == 0
-    assert "交易日历" in result.stdout

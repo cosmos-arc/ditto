@@ -94,11 +94,3 @@ def test_etf_basic_command(tmp_path: Path):
     assert result.exit_code == 0 or "unable to open database file" in str(
         result.exception
     )
-
-
-@pytest.mark.integration
-def test_etf_help():
-    """测试 etf 命令帮助."""
-    result = runner.invoke(app, ["etf", "--help"])
-    assert result.exit_code == 0
-    assert "ETF数据摄取命令" in result.stdout

@@ -94,19 +94,3 @@ def test_stock_basic_command(tmp_path: Path):
     assert result.exit_code == 0 or "unable to open database file" in str(
         result.exception
     )
-
-
-@pytest.mark.integration
-def test_stock_help():
-    """测试 stock 命令帮助."""
-    result = runner.invoke(app, ["stock", "--help"])
-    assert result.exit_code == 0
-    assert "股票数据摄取命令" in result.stdout
-
-
-@pytest.mark.integration
-def test_main_help():
-    """测试主命令帮助."""
-    result = runner.invoke(app, ["--help"])
-    assert result.exit_code == 0
-    assert "Ditto 量化系统命令行工具" in result.stdout

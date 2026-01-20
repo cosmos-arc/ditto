@@ -21,7 +21,11 @@ import importlib.util
 
 # 获取正确的文件路径
 quality_file = (
-    Path(__file__).parent.parent / "src" / "ditto_datahub" / "models" / "quality.py"
+    Path(__file__).parent.parent.parent.parent
+    / "src"
+    / "ditto_datahub"
+    / "models"
+    / "quality.py"
 )
 spec = importlib.util.spec_from_file_location(
     "quality",

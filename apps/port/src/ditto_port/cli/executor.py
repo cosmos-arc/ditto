@@ -47,7 +47,7 @@ class CLIExecutor:
         if self._coordinator is None:
             raise RuntimeError(
                 "Coordinator not initialized. "
-                "Use with CLIExecutor.create() context manager."
+                + "Use with CLIExecutor.create() context manager."
             )
         return self._coordinator
 
@@ -57,7 +57,7 @@ class CLIExecutor:
         if self._backfill_manager is None:
             raise RuntimeError(
                 "BackfillManager not initialized. "
-                "Use with CLIExecutor.create() context manager."
+                + "Use with CLIExecutor.create() context manager."
             )
         return self._backfill_manager
 

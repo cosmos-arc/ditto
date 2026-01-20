@@ -1,5 +1,7 @@
 """Tests for DataSources."""
 
+from unittest.mock import Mock
+
 import pytest
 from ditto_datahub.sources.source import DataSources
 
@@ -7,56 +9,51 @@ from ditto_datahub.sources.source import DataSources
 class TestDataSources:
     """Tests for DataSources."""
 
-    def test_tushare_property_returns_source(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
+    def test_tushare_property_returns_source(self) -> None:
         """Test tushare property returns TushareSource instance."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+        mock_tushare = Mock()
+        mock_tushare.fetch_calendar = Mock()
+        mock_tushare.fetch_etf_basic = Mock()
+        mock_tushare.fetch_etf_daily = Mock()
 
-        sources = DataSources()
+        sources = DataSources(tushare=mock_tushare)
         source = sources.tushare
 
         assert source is not None
+        assert source is mock_tushare
         assert hasattr(source, "fetch_calendar")
         assert hasattr(source, "fetch_etf_basic")
         assert hasattr(source, "fetch_etf_daily")
 
-    def test_tushare_property_is_cached(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
+    def test_tushare_property_is_cached(self) -> None:
         """Test tushare property is cached."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+        mock_tushare = Mock()
 
-        sources = DataSources()
+        sources = DataSources(tushare=mock_tushare)
         source1 = sources.tushare
         source2 = sources.tushare
 
         # Should return the same instance
         assert source1 is source2
+        assert source1 is mock_tushare
 
-    def test_get_returns_tushare_source(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
+    def test_get_returns_tushare_source(self) -> None:
         """Test get() method returns TushareSource."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+        mock_tushare = Mock()
+        mock_tushare.fetch_calendar = Mock()
 
-        sources = DataSources()
+        sources = DataSources(tushare=mock_tushare)
         source = sources.get("tushare")
 
         assert source is not None
+        assert source is mock_tushare
         assert hasattr(source, "fetch_calendar")
 
-    def test_get_is_case_insensitive(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
+    def test_get_is_case_insensitive(self) -> None:
         """Test get() normalizes case."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
+        mock_tushare = Mock()
 
-        sources = DataSources()
+        sources = DataSources(tushare=mock_tushare)
         source1 = sources.get("TUSHARE")
         source2 = sources.get("tushare")
 
@@ -65,10 +62,14 @@ class TestDataSources:
         assert source2 is not None
         # Both should have the same type
         assert isinstance(source1, type(source2))
+        # Both should be the same mock
+        assert source1 is mock_tushare
+        assert source2 is mock_tushare
 
     def test_get_invalid_name_raises_error(self) -> None:
         """Test get() raises error for invalid source name."""
-        sources = DataSources()
+        mock_tushare = Mock()
+        sources = DataSources(tushare=mock_tushare)
 
         with pytest.raises(ValueError, match="Unknown source"):
             sources.get("invalid_source")

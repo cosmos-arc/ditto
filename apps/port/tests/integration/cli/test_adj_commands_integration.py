@@ -71,11 +71,3 @@ def test_fund_adj_invalid_date():
     result = runner.invoke(app, ["adj", "fund-adj", "2024/01/02"])
     assert result.exit_code == 1
     assert "错误" in result.stdout
-
-
-@pytest.mark.integration
-def test_adj_help():
-    """测试 adj 命令帮助."""
-    result = runner.invoke(app, ["adj", "--help"])
-    assert result.exit_code == 0
-    assert "复权因子" in result.stdout

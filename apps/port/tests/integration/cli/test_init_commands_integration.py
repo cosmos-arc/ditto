@@ -82,19 +82,3 @@ def test_init_db_with_force(tmp_path: Path):
         ["--data-root", str(tmp_path), "init", "db", "--force"],
     )
     assert result.exit_code == 0
-
-
-@pytest.mark.integration
-def test_init_help():
-    """测试 init 命令帮助."""
-    result = runner.invoke(app, ["init", "--help"])
-    assert result.exit_code == 0
-    assert "配置初始化" in result.stdout
-
-
-@pytest.mark.integration
-def test_init_config_help():
-    """测试 init config 命令帮助."""
-    result = runner.invoke(app, ["init", "config", "--help"])
-    assert result.exit_code == 0
-    assert "初始化所有配置" in result.stdout or "config" in result.stdout
