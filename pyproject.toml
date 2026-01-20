@@ -258,15 +258,8 @@ filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]
 markers = [
     "unit: Mark test as a unit test",
     "integration: Mark test as an integration test",
-    "e2e: Mark test as an end-to-end test",
     "slow: Mark test as slow running (skip with -m 'not slow')",
-    "smoke: Mark test as a smoke test",
-    "benchmark: Mark test as a performance benchmark test",
-    "pit: Mark test for Point-in-Time data validation",
-    "data: Mark test that requires data fixtures",
-    "external: Mark test that calls external APIs (Tushare, etc.)",
-    "observability: Mark test that requires observability stack",
-    "serial: Mark test that must run serially (not in parallel)",
+    "serial: Mark test that must run serially",
 ]
 
 log_cli = true

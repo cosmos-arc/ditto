@@ -37,7 +37,7 @@ pydantic-settings = ">=2.6,<3"
 # 网络请求
 httpx = ">=0.28,<1"
 aiohttp = ">=3.11,<4"
-requests = ">=2.32.3,<2.32.4"  # multilspy 依赖
+requests = ">=2.32.3,<2.32.4" # multilspy 依赖
 
 # 配置与日志
 python-dotenv = ">=1.0,<2"
@@ -158,7 +158,7 @@ type = "python scripts/type.py"
 # pixi run test              # 默认：单元测试（并行）
 # pixi run test --unit       # 只跑单元测试（并行）
 # pixi run test --integration # 只跑集成测试（串行）
-# pixi run test --fast       # 快速测试（跳过 slow/integration/e2e）
+# pixi run test --fast       # 快速测试（跳过 slow/integration）
 # pixi run test --cov        # 带覆盖率报告
 # pixi run test --cov-xml    # 覆盖率 XML（CI 用）
 # pixi run test --snapshot   # 支持 inline-snapshot（串行）

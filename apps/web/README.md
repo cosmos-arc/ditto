@@ -352,9 +352,6 @@ pnpm dev
 # 运行测试
 pnpm test
 
-# 运行 E2E 测试（Playwright）
-pnpm test:e2e
-
 # 生成覆盖率报告
 pnpm test:coverage
 ```

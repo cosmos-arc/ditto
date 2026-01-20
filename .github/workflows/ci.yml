@@ -4,7 +4,7 @@
 # 特点：
 # - 使用 Pixi 包管理器
 # - Monorepo 变更检测（packages/* + apps/*）
-# - 分层测试策略（unit → integration → e2e）
+# - 分层测试策略（unit → integration）
 # - 前端工作流预留
 
 name: CI
@@ -137,7 +137,7 @@ jobs:
 
           # Port 单元测试：有限并行（需验证）
           pixi run -e dev pytest apps/port/tests/unit/ \
-            -m "not integration and not e2e and not slow" \
+            -m "not integration and not slow" \
             -n 2 \
             --cov=apps \
             --cov-report=xml:coverage-unit.xml \

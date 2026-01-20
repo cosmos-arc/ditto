@@ -42,7 +42,7 @@ class TestDataset:
         # 可以用于 match/case
         match "etf_daily":
             case Dataset.ETF_DAILY:
-                assert True
+                assert Dataset.ETF_DAILY.value == "etf_daily"
             case _:
                 pytest.fail("应该匹配到 ETF_DAILY")
 
