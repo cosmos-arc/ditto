@@ -141,7 +141,7 @@ dev = { features = ["dev"], solve-group = "default" }
 # ==========================================================
 [feature.dev.tasks]
 # 分析慢速测试
-analyze-slow-tests = { cmd = "python scripts/analyze_slow_tests.py", depends-on = ["dev"] }
+analyze-slow-tests = "python scripts/analyze_slow_tests.py"
 
 # ==========================================================
 # 任务定义
