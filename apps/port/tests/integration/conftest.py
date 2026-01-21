@@ -9,6 +9,19 @@ import pytest
 from prefect.testing.utilities import prefect_test_harness
 
 
+@pytest.fixture(autouse=True)
+def ensure_sqlite_cleanup() -> Generator[None, None, None]:
+    """确保 SQLite 连接在测试后正确关闭（Windows 兼容）。
+
+    Windows 文件锁机制更严格，SQLite 连接未正确关闭会导致临时文件无法删除。
+    通过强制垃圾回收确保连接在测试间被释放。
+    """
+    yield
+    import gc
+
+    gc.collect()
+
+
 @pytest.fixture(scope="session")
 def prefect_test_session() -> Generator[None, None, None]:
     """Session 级别的 Prefect test harness。
