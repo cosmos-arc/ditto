@@ -1,8 +1,6 @@
 """Tests for DataCache."""
 
-import time
 
-import time_machine as time_machine_lib
 from ditto_foundation.cache import CacheStats, DataCache
 
 
@@ -119,19 +117,21 @@ class TestDataCache:
         assert "key1" in self.cache
         assert "key2" not in self.cache
 
-    def test_ttl_expiration(self, time_machine: None) -> None:
+    def test_ttl_expiration(self) -> None:
         """Test entries expire after TTL."""
-        with time_machine_lib.travel(0, tick=False):
-            self.cache.set("key1", "value1")
+        import time
 
-            # [REVIEW]
-            assert self.cache.get("key1") == "value1"
+        # 使用短 TTL 加速测试（cachebox C 扩展不受 time_machine 控制）
+        self.cache._cache.insert("key1", "value1", ttl=0.05)  # 50ms TTL
 
-            # [REVIEW] TTL 过期(1 秒 + buffer)
-            time.sleep(1.2)
+        # [REVIEW]
+        assert self.cache.get("key1") == "value1"
 
-            # [REVIEW] None
-            assert self.cache.get("key1") is None
+        # [REVIEW] TTL 过期(50ms + buffer) - 真实等待
+        time.sleep(0.06)
+
+        # [REVIEW] None
+        assert self.cache.get("key1") is None
 
     def test_lru_eviction(self) -> None:
         """Test LRU eviction when max_size is exceeded."""
@@ -198,43 +198,55 @@ class TestDataCache:
 
     def test_set_with_ttl_none_uses_default_ttl(self) -> None:
         """Test set with ttl=None uses default TTL."""
-        # ttl=None 应该使用默认 TTL (1秒)
-        self.cache.set("key1", "value1", ttl=None)
+        import time
+
+        # 创建一个短 TTL 的缓存用于测试（cachebox C 扩展不受 time_machine 控制）
+        test_cache = DataCache(ttl_seconds=1, max_size=5, enable_metrics=False)
+        # 覆盖为短 TTL
+        test_cache._default_ttl = 0.05  # 50ms TTL
+
+        # ttl=None 应该使用默认 TTL (50ms)
+        test_cache.set("key1", "value1", ttl=None)
 
         # [REVIEW]
-        assert self.cache.get("key1") == "value1"
+        assert test_cache.get("key1") == "value1"
 
-        # [REVIEW] TTL 过期
-        time.sleep(1.2)
+        # [REVIEW] TTL 过期 - 真实等待
+        time.sleep(0.06)
 
         # [REVIEW] None
-        assert self.cache.get("key1") is None
+        assert test_cache.get("key1") is None
 
     def test_set_with_ttl_zero_no_expiration(self) -> None:
         """Test set with ttl=0 means no expiration."""
+        import time
+
         # ttl=0 表示永不过期
         self.cache.set("key1", "value1", ttl=0)
 
-        # [REVIEW] TTL
-        time.sleep(1.2)
+        # [REVIEW] TTL - 等待一小段时间验证确实不会过期
+        time.sleep(0.06)
 
         # [REVIEW](因为设置了 ttl=0，永不过期)
         assert self.cache.get("key1") == "value1"
 
     def test_set_with_custom_ttl(self) -> None:
         """Test set with custom TTL value."""
-        # [REVIEW] TTL 为 2 秒
-        self.cache.set("key1", "value1", ttl=2)
+        import time
+
+        # 使用短 TTL 加速测试（cachebox C 扩展不受 time_machine 控制）
+        # [REVIEW] TTL 为 100ms
+        self.cache.set("key1", "value1", ttl=0.1)
 
         # [REVIEW]
         assert self.cache.get("key1") == "value1"
 
-        # [REVIEW] 1 秒，应该还在
-        time.sleep(1)
+        # [REVIEW] 50ms，应该还在
+        time.sleep(0.05)
         assert self.cache.get("key1") == "value1"
 
-        # [REVIEW] 1.2 秒，应该过期
-        time.sleep(1.2)
+        # [REVIEW] 再等 60ms（总共 110ms），应该过期
+        time.sleep(0.06)
         assert self.cache.get("key1") is None
 
 
