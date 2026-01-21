@@ -1,6 +1,6 @@
 """Pytest fixtures for runtime tests.
 
-提供虚拟时间控制，替代真实的 time.sleep()。
+提供虚拟时间控制,替代真实的 time.sleep().
 """
 
 from collections.abc import Generator
@@ -13,7 +13,7 @@ import time_machine
 def frozen_time(
     time_machine: time_machine.TimeMachineFixture,
 ) -> Generator[time_machine.TimeMachineFixture, None, None]:
-    """提供完全控制的虚拟时间（替代真实 sleep）.
+    """提供完全控制的虚拟时间(替代真实 sleep).
 
     使用方式:
         def test_cache_expires(frozen_time):
