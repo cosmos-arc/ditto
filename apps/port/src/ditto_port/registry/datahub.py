@@ -9,6 +9,7 @@ Root 注入模式：在 Provider 中集中注册所有 DataHub 组件。
 from __future__ import annotations
 
 from collections.abc import Iterator
+from importlib.resources import files
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
@@ -60,14 +61,14 @@ class DataHubProvider(Provider):
     @provide
     def sqlite_pool(self, data_root: Path) -> Iterator[SQLitePool]:
         """SQLite 连接池（应用级单例）."""
-        from importlib.resources import files
-
         db_path = data_root / "meta" / "hub.sqlite"
         # 确保父目录存在
         db_path.parent.mkdir(parents=True, exist_ok=True)
         # 获取 schema.sql 路径
-        schema_path = files("ditto_datahub.scripts") / "schema.sql"
-        pool = SQLitePool(str(db_path), schema_path=Path(schema_path))
+        # 将 Traversable 转换为 Path（importlib.resources.files 返回 Traversable）
+        schema_traversable = files("ditto_datahub.scripts") / "schema.sql"
+        schema_path = Path(str(schema_traversable))
+        pool = SQLitePool(str(db_path), schema_path=schema_path)
         pool.init_schema()
         yield pool
         pool.close()

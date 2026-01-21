@@ -260,6 +260,7 @@ markers = [
     "integration: Mark test as an integration test",
     "slow: Mark test as slow running (skip with -m 'not slow')",
     "serial: Mark test that must run serially",
+    "snapshot: Mark test that uses inline-snapshot (must run serially)",
 ]
 
 log_cli = true
