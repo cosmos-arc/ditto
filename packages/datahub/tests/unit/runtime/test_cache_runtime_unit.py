@@ -1,6 +1,5 @@
 """Tests for DataCache."""
 
-
 from ditto_foundation.cache import CacheStats, DataCache
 
 

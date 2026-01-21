@@ -249,9 +249,14 @@ def test_tushare_client_can_parse_api_response(respx_mock):
 - ✅ 关注"组件 A 传给组件 B 的数据，B 能不能认"
 
 **资源隔离策略**：
-- **SQLite**：使用 `:memory:`（内存数据库）
-- **文件**：使用 `tmp_path`（临时目录）
-- **HTTP**：使用 `respx.mock()`（Mock 响应，真实 Client）
+
+| 资源类型 | 单元测试 | 集成测试 |
+|---------|---------|-------------|
+| **SQLite** | Mock SQLitePool | `:memory:` 数据库 |
+| **文件** | Mock 文件操作 | `tmp_path` fixture |
+| **HTTP** | `respx.mock()` | 真实 Client + Mock 响应 |
+| **可观测性** | Mock Registry | 内存 CollectorRegistry |
+| **时间** | `fake_time` / `time_machine` | 真实时间或 `time_machine` |
 
 ### 测试分类决策树
 
@@ -792,6 +797,7 @@ def test_partitioned_write(store, sample_quotes):
 | `@pytest.mark.integration` | 集成测试（"接缝"处） | CI | ❌ 自动标记 |
 | `@pytest.mark.slow` | 耗时测试 | CI/手动 | ✅ 需要手动标记 |
 | `@pytest.mark.serial` | 串行测试 | CI | ✅ 需要手动标记 |
+| `@pytest.mark.snapshot` | inline-snapshot 测试 | Snapshot 更新时 | ✅ 需要手动标记 |
 | `@pytest.mark.smoke` | 冒烟测试，核心功能 | 每次提交 | ✅ 需要手动标记 |
 | `@pytest.mark.benchmark` | 性能基准测试 | 定期运行 | ✅ 需要手动标记 |
 
@@ -1264,3 +1270,274 @@ async def test_logging():  # ← 函数名以test_开头
 # ✅ 重命名避免歧义
 async def generate_test_logs():
 ```
+
+---
+
+## 🔴 禁止模式（测试性能与隔离）
+
+### 绝对禁止的测试模式
+
+| ❌ 禁止 | ✅ 正确 | 原因 |
+|---------|---------|------|
+| 单元测试中使用 `TemporaryDirectory()` | Mock 文件操作 | 单元测试应无真实 IO |
+| 单元测试中使用真实 SQLite | Mock SQLitePool | 单元测试应完全隔离 |
+| 集成测试连接外部服务 | 使用内存 Mock | 集成测试应可重复 |
+| `time.sleep(n)` 等待真实时间 | `time_machine.move_to(n)` | 测试应快速、确定性 |
+| `assert True` | 验证具体行为 | 假测试无价值 |
+
+### 时间测试规范（强制）
+
+**问题**：真实 `time.sleep()` 会导致测试慢且不确定
+
+**正确方式**：
+
+```python
+# ✅ 单元测试：使用 fake_time fixture
+def test_cache_ttl_expires(fake_time):
+    """测试缓存过期（虚拟时间）"""
+    cache = DataCache(ttl_seconds=300)
+    cache.set("key1", "value1", ttl=2)
+
+    # fake_time 使 time.sleep 立即返回
+    time.sleep(3)
+
+    assert cache.get("key1") is None
+
+# ✅ 集成测试：使用 time_machine.move_to()
+@pytest.mark.integration
+def test_cache_ttl_expires_integration():
+    """测试缓存过期（控制时间前进）"""
+    with time_machine.travel(0, tick=True):
+        cache = DataCache(ttl_seconds=300)
+        cache.set("key1", "value1", ttl=2)
+
+        # 虚拟时间前进 2 秒（无需真实等待）
+        time_machine.move_to(2)
+
+        assert cache.get("key1") is None
+```
+
+**❌ 错误示例**：
+
+```python
+# ❌ 真实等待 3 秒
+def test_cache_ttl_slow():
+    cache = DataCache(ttl_seconds=300)
+    cache.set("key1", "value1", ttl=2)
+    time.sleep(3)  # 真实等待 3 秒！
+    assert cache.get("key1") is None
+```
+
+**性能影响**：
+- 单个测试：0.01s → 3s（**300x 慢**）
+- 10 个测试：0.1s → 30s（**300x 慢**）
+
+**可共享的 time_machine fixture**（推荐添加到 `conftest.py`）：
+
+```python
+# packages/*/tests/unit/conftest.py
+import time_machine
+
+@pytest.fixture
+def frozen_time(time_machine):
+    """提供完全控制的虚拟时间（替代真实 sleep）"""
+    with time_machine.travel(0, tick=True):
+        yield time_machine
+```
+
+---
+
+### SQLite 连接清理规范（Windows 兼容）
+
+**问题**：Windows 上 `PermissionError: [WinError 32]` 文件锁未释放
+
+**正确方式**：
+
+```python
+# ✅ 使用 autouse fixture 自动清理
+@pytest.fixture(autouse=True)
+def ensure_sqlite_cleanup():
+    """确保 SQLite 连接在测试后正确关闭"""
+    yield
+    import gc
+    gc.collect()
+
+# ✅ 或在 teardown_method 中手动清理
+def teardown_method(self) -> None:
+    """Clean up test environment."""
+    try:
+        if hasattr(self, "pool"):
+            self.pool.close()
+            del self.pool
+    except Exception:
+        pass
+    import gc
+    gc.collect()
+    import time
+    time.sleep(0.1)  # 给 Windows 文件系统时间释放锁
+```
+
+---
+
+### 可观测性测试规范（禁止外部依赖）
+
+**问题**：集成测试尝试连接 VictoriaMetrics (localhost:8428)，但服务未运行
+
+**正确方式**：
+
+```python
+# ✅ 使用内存 Registry（不依赖外部服务）
+from prometheus_client import CollectorRegistry, Counter
+
+@pytest.mark.integration
+def test_metrics_integration(metrics_registry):
+    """测试代码正确发射了指标"""
+    # 使用内存 Registry（与真实数据隔离）
+    counter = Counter("api_requests_total", "Total API requests", registry=metrics_registry)
+    counter.labels(method="GET", endpoint="/api/quote").inc()
+
+    # 验证指标已发射
+    metric_value = metrics_registry.get_sample_value("api_requests_total", {
+        "method": "GET",
+        "endpoint": "/api/quote"
+    })
+
+    assert metric_value == 1.0
+```
+
+**共享的 metrics_registry fixture**（推荐添加到 `conftest.py`）：
+
+```python
+# packages/*/tests/integration/conftest.py
+from prometheus_client import CollectorRegistry
+
+@pytest.fixture
+def metrics_registry():
+    """提供内存 Registry（不依赖外部服务）"""
+    registry = CollectorRegistry()
+    yield registry
+    registry.clear()  # 清理
+```
+
+**❌ 错误示例**：
+
+```python
+# ❌ 连接真实服务（不要这样做）
+@pytest.mark.integration
+def test_victoriametrics_saves_metrics():
+    """错误：测试外部服务本身"""
+    response = requests.get("http://localhost:8428/api/v1/query")
+    assert response.status_code == 200  # 这是测试服务，不是你的代码
+```
+
+---
+
+## 🔴 inline-snapshot 并行测试规范
+
+### Snapshot Marker（必须使用）
+
+**问题**：inline-snapshot 与 pytest-xdist 并行冲突
+
+**解决方案**：使用 `@pytest.mark.snapshot` 标记所有使用 inline-snapshot 的测试
+
+### Marker 定义
+
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+markers = [
+    "snapshot: Mark test that uses inline-snapshot (must run serially)",
+]
+```
+
+### 使用示例
+
+```python
+# ✅ 在使用 snapshot 的测试文件中添加 marker
+@pytest.mark.snapshot  # 必须添加
+@pytest.mark.unit
+def test_backtest_output():
+    result = run_backtest(...)
+    assert result.summary == snapshot({
+        "total_return": 0.156,
+        "sharpe_ratio": 1.23,
+    })
+```
+
+### 并行策略
+
+| 命令 | Marker | 并行 | 说明 |
+|------|--------|------|------|
+| `pixi run test --snapshot` | `snapshot` | ❌ 串行 | Snapshot 更新模式 |
+| `pixi run test --unit` | `unit and not snapshot` | ✅ auto | 单元测试并行 |
+| `pixi run test --integration` | `integration and not snapshot` | ❌ 串行 | 集成测试串行 |
+| `pixi run test --fast` | `not slow and not integration and not snapshot` | ✅ auto | 快速测试 |
+| `pixi run test` | `not snapshot` | ✅ auto | 默认并行 |
+
+### pyproject.toml 配置
+
+```toml
+[tool.pytest.ini_options]
+addopts = [
+    "-ra",
+    "-v",
+    "-n", "auto",           # 默认并行
+    "--dist", "loadfile",   # 同文件测试串行（避免 snapshot 冲突）
+    "--strict-markers",
+    "--strict-config",
+    "--durations=10",
+]
+```
+
+---
+
+## 测试耗时规范（强制执行）
+
+### 性能阈值
+
+| 测试类型 | 单个测试最大耗时 | 并行运行 | 检查频率 |
+|---------|----------------|---------|---------|
+| **单元测试** | **500ms** | ✅ 必须支持并行 | 每次提交 |
+| **集成测试** | **5s** | ⚠️ 视情况而定 | CI 运行 |
+
+### 慢速测试检测
+
+```bash
+# 显示最慢的 20 个测试
+pixi run -e dev pytest --durations=20
+
+# 只看单元测试
+pixi run -e dev pytest tests/unit --durations=20
+
+# 只看集成测试
+pixi run -e dev pytest tests/integration --durations=20
+```
+
+### 慢速测试修复流程
+
+```
+1. 运行 pytest --durations=20
+   ↓
+2. 识别超过阈值的测试
+   - 单元测试 >500ms → 需要优化
+   - 集成测试 >5s → 需要优化
+   ↓
+3. 分析慢速原因
+   - 是否有未 mock 的外部依赖？
+   - 是否有不必要的 sleep？
+   - 是否有重复的 fixture 初始化？
+   ↓
+4. 修复并验证
+```
+
+### 常见慢速测试原因及修复
+
+| 问题 | 症状 | 解决方案 |
+|------|------|----------|
+| **time.sleep(n)** | 测试 >1s | 使用 `time_machine.move_to(n)` |
+| **未 mock 的装饰器** | 单元测试 >1s | Mock `@flow`, `@task` 等装饰器 |
+| **真实数据库连接** | 单元测试 >500ms | 使用 `:memory:` 或 Mock |
+| **HTTP 调用** | 测试 >1s | 使用 `respx.mock()` |
+| **重复 fixture 初始化** | 测试套件慢 | 使用 `module`/`session` 作用域 |
+
+---

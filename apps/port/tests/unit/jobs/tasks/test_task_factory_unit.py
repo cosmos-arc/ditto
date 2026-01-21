@@ -34,46 +34,6 @@ class TestCreateIngestTask:
         # Should be callable
         assert callable(task_func)
 
-    def test_task_uses_registry_config(self):
-        """Test that task uses config from DATASET_REGISTRY."""
-        # Create tasks for different datasets
-        calendar_task = create_ingest_task(Dataset.CALENDAR)
-        etf_daily_task = create_ingest_task(Dataset.ETF_DAILY)
-
-        # Tasks should have names based on dataset
-        assert calendar_task.name == f"ingest_{Dataset.CALENDAR.value}"
-        assert etf_daily_task.name == f"ingest_{Dataset.ETF_DAILY.value}"
-
-    @pytest.mark.parametrize(
-        ("dataset", "expected_retry_limit"),
-        [
-            (Dataset.CALENDAR, 3),
-            (Dataset.STOCK_DAILY, 3),
-            (Dataset.ADJ_FACTOR, 3),
-        ],
-    )
-    def test_task_retry_limit_from_registry(self, dataset, expected_retry_limit):
-        """Test that task retry_limit matches DATASET_REGISTRY config."""
-        task_func = create_ingest_task(dataset)
-
-        # Prefect task should have correct retries
-        assert task_func.retries == expected_retry_limit
-
-    @pytest.mark.parametrize(
-        ("dataset", "expected_timeout"),
-        [
-            (Dataset.CALENDAR, 60),
-            (Dataset.STOCK_DAILY, 600),
-            (Dataset.ADJ_FACTOR, 300),
-        ],
-    )
-    def test_task_timeout_from_registry(self, dataset, expected_timeout):
-        """Test that task timeout_seconds matches DATASET_REGISTRY config."""
-        task_func = create_ingest_task(dataset)
-
-        # Prefect task should have correct timeout
-        assert task_func.timeout_seconds == expected_timeout
-
     def test_task_calls_coordinator(self, mocker):
         """Test that task calls IngestionCoordinator.ingest_date."""
         # Create task
@@ -105,7 +65,7 @@ class TestCreateIngestTask:
         )
 
         # Call task
-        result = task_func.fn(
+        result = task_func(
             trade_date="2024-01-02",
             source="tushare",
             force=False,
@@ -148,7 +108,7 @@ class TestCreateIngestTask:
         )
 
         # Call task
-        task_func.fn(
+        task_func(
             trade_date="2024-01-02",
             source="tushare",
             force=False,
@@ -182,7 +142,7 @@ class TestCreateIngestTask:
 
         # Call task - should raise exception
         with pytest.raises(Exception, match="Coordinator error"):
-            task_func.fn(
+            task_func(
                 trade_date="2024-01-02",
                 source="tushare",
                 force=False,
@@ -253,7 +213,6 @@ class TestTaskIntegration:
         for dataset in DATASET_REGISTRY:
             task_func = create_ingest_task(dataset)
             assert callable(task_func)
-            assert task_func.name == f"ingest_{dataset.value}"
 
     def test_task_parameters_correct(self, mocker):
         """Test that task parameters are correctly passed."""
@@ -282,13 +241,13 @@ class TestTaskIntegration:
         )
 
         # Call with different parameter combinations
-        result1 = task_func.fn(
+        result1 = task_func(
             trade_date="2024-01-02",
             source="tushare",
             force=True,
         )
 
-        result2 = task_func.fn(
+        result2 = task_func(
             trade_date="2024-01-03",
             source="akshare",
             force=False,

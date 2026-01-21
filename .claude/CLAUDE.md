@@ -11,7 +11,7 @@
 
 ## ⚠️ 核心约束
 
-- **语言**: 中文（回复/文档/Commit/PR）
+- **语言**: `中文`（回复/文档/Commit/PR），文件编码使用`UTF-8`
 - **分支**: 从 main 拉取开发分支，PR 合并
 - **TDD**: RED → GREEN → REFACTOR
 - **依赖**: **严格禁止**使用非以下功能分类中的其他功能库
@@ -106,6 +106,51 @@ LSP 命令中的 `<col>` 参数必须指向**符号名称（identifier）内部*
 **降级方案**（当 LSP 脚本不可用时）：
 - 搜索定义: `Grep "class Foo"` → `Glob "**/*foo*.py"`
 - 搜索引用: `Grep "def bar\|bar\("`
+
+---
+
+## 🚨 Python 源码处理 - LSP 优先强制规则
+
+**核心原则：处理 Python 源码时，LSP 是第一选择，Grep/Glob/Read 是降级方案**
+
+### 必须使用 LSP 的场景
+
+| 场景 | 命令 | 禁止使用 |
+|------|------|----------|
+| 查找类/函数定义 | `lsp_pyright.py goto` | ❌ Grep 搜索类名 |
+| 查找所有引用 | `lsp_pyright.py refs` | ❌ Grep 搜索符号 |
+| 理解模块结构 | `lsp_pyright.py symbols` | ❌ 直接 Read 整个文件 |
+| 重构前检查 | **必须用 `lsp refs`** | ❌ 不检查直接 Edit |
+
+### 强制检查点
+
+**每次处理 Python 源码时：**
+
+1. **说"查找"时 → 用 LSP**
+   ```
+   ❌ "让我 Grep 查找 DataSource 的引用"
+   ✅ "让我用 LSP 查找 DataSource 的所有引用"
+   ```
+
+2. **Edit 前检查（重构必须）**
+   ```
+   检查清单：
+   - [ ] lsp_pyright.py refs <file> <line> <col>
+   - [ ] 确认所有引用位置
+   - [ ] 然后才 Edit
+   ```
+
+3. **理解代码时 → 先 symbols 后 Read**
+   ```
+   ✅ 第一步：lsp_pyright.py symbols 获取结构
+   ✅ 第二步：有针对性地 Read 具体代码
+   ```
+
+### 不需要 LSP 的场景
+
+- 配置文件（pixi.toml, .env, YAML）
+- 文档（.md）
+- 非 Python 代码
 
 ## 绝对禁止
 

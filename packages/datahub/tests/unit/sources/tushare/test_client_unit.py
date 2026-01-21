@@ -148,7 +148,7 @@ class TestTushareClientQuery:
         wait_spy.assert_called_once()
 
     def test_retry_on_network_error(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+        self, respx_mock, fake_time, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """网络错误自动重试."""
         # Arrange
@@ -193,7 +193,7 @@ class TestTushareClientQuery:
         with pytest.raises(SourceAuthenticationError):
             client.query("trade_cal", "cal_date", exchange="SSE")
 
-    def test_retry_on_5xx_status(self, respx_mock) -> None:
+    def test_retry_on_5xx_status(self, respx_mock, fake_time) -> None:
         """5xx 状态码自动重试."""
         # Arrange
         call_count = 0
