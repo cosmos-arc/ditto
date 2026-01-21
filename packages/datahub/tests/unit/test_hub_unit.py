@@ -12,7 +12,6 @@ from ditto_datahub.accessors.index import IndexAccessor
 from ditto_datahub.accessors.ingestion_log import IngestionLogAccessor
 from ditto_datahub.accessors.security import SecuritiesAccessor
 from ditto_datahub.accessors.universe import UniverseAccessor
-from ditto_datahub.dq.engine import DQEngine
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.hub import DataHub
 from ditto_datahub.runtime.freeze_manager import FreezeManager
@@ -24,7 +23,6 @@ from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
-from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.stock_status_store import StockStatusStore
@@ -65,7 +63,6 @@ def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
     # [REVIEW] Runtime Layer
     file_lock = FileLockManager(data_root / "locks")
     sid_allocator = SidAllocator(sqlite_pool)
-    dq_engine = DQEngine(data_root=data_root)
     freeze_manager = FreezeManager(data_root=str(data_root))
 
     # [REVIEW] Store Layer
@@ -77,7 +74,6 @@ def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
     stock_status_store = StockStatusStore(data_root=data_root)
     adj_factor_store = AdjFactorStore(data_root=data_root)
     bars_store = BarsStore(data_root=data_root)
-    quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
     # [REVIEW] Accessor Layer
     securities = SecuritiesAccessor(security_store, sid_allocator)
@@ -90,9 +86,7 @@ def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
         adj_factor_store,
         security_store,
         stock_status_store,
-        dq_engine,
         file_lock,
-        quarantine_store,
     )
 
     # [REVIEW] Index Accessor (需要额外的 store)
@@ -115,7 +109,6 @@ def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
         sqlite_pool=sqlite_pool,
         file_lock=file_lock,
         sid_allocator=sid_allocator,
-        dq_engine=dq_engine,
         freeze_manager=freeze_manager,
         securities=securities,
         calendar=calendar,

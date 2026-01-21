@@ -1,6 +1,6 @@
 """Tests for DQ result models."""
 
-from ditto_datahub.models import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_core.quality.spec import DQIssue, DQLevel, DQResult, DQSeverity
 
 
 class TestDQLevel:
@@ -98,72 +98,66 @@ class TestDQResult:
                 DQIssue(
                     level=DQLevel.L1_TECHNICAL,
                     severity=DQSeverity.ERROR,
-                    rule_name="pk_unique",
-                    message="Duplicate",
-                ),
-                DQIssue(
-                    level=DQLevel.L2_BUSINESS,
-                    severity=DQSeverity.WARNING,
-                    rule_name="ohlc",
-                    message="OHLC violated",
-                ),
+                    rule_name="test",
+                    message="Test",
+                )
             ],
         )
-        assert result_with_errors.has_errors is True
-        assert result_with_errors.has_warnings is True
 
-        # With only WARNING issues
-        result_only_warnings = DQResult(
+        assert result_with_errors.has_errors is True
+
+        # Without ERROR issues
+        result_no_errors = DQResult(
             dataset="etf_daily",
             passed=True,
             issues=[
                 DQIssue(
                     level=DQLevel.L2_BUSINESS,
                     severity=DQSeverity.WARNING,
-                    rule_name="ohlc",
-                    message="OHLC violated",
-                ),
+                    rule_name="test",
+                    message="Test",
+                )
             ],
         )
-        assert result_only_warnings.has_errors is False
-        assert result_only_warnings.has_warnings is True
 
-        # With no issues
-        result_clean = DQResult(
+        assert result_no_errors.has_errors is False
+
+    def test_has_warnings_property(self) -> None:
+        """Test has_warnings property."""
+        result_with_warnings = DQResult(
             dataset="etf_daily",
-            passed=True,
-            issues=[],
+            passed=False,
+            issues=[
+                DQIssue(
+                    level=DQLevel.L2_BUSINESS,
+                    severity=DQSeverity.WARNING,
+                    rule_name="test",
+                    message="Test",
+                )
+            ],
         )
-        assert result_clean.has_errors is False
-        assert result_clean.has_warnings is False
 
-    def test_error_count_property(self) -> None:
-        """Test error_count calculation."""
+        assert result_with_warnings.has_warnings is True
+
+    def test_alert_count_property(self) -> None:
+        """Test alert_count property."""
         result = DQResult(
             dataset="etf_daily",
             passed=False,
             issues=[
                 DQIssue(
-                    level=DQLevel.L1_TECHNICAL,
-                    severity=DQSeverity.ERROR,
-                    rule_name="pk_unique",
-                    message="Duplicate",
+                    level=DQLevel.L3_STATISTICAL,
+                    severity=DQSeverity.ALERT,
+                    rule_name="test",
+                    message="Test",
                 ),
                 DQIssue(
-                    level=DQLevel.L1_TECHNICAL,
-                    severity=DQSeverity.ERROR,
-                    rule_name="null_check",
-                    message="Null value",
-                ),
-                DQIssue(
-                    level=DQLevel.L2_BUSINESS,
-                    severity=DQSeverity.WARNING,
-                    rule_name="ohlc",
-                    message="OHLC violated",
+                    level=DQLevel.L3_STATISTICAL,
+                    severity=DQSeverity.ALERT,
+                    rule_name="test2",
+                    message="Test2",
                 ),
             ],
         )
 
-        # error_count should only count ERROR severity
-        assert result.error_count == 2
-        # We'll add warn_count property later
+        assert result.alert_count == 2

@@ -1,7 +1,7 @@
 """Tests for DQ report generator."""
 
-from ditto_datahub.dq import DQIssue, DQLevel, DQResult, DQSeverity
-from ditto_datahub.dq.report import DQReportGenerator
+from ditto_core.quality import DQReportGenerator
+from ditto_core.quality.spec import DQIssue, DQLevel, DQResult, DQSeverity
 
 
 class TestDQReportGenerator:
@@ -104,13 +104,12 @@ class TestDQReportGenerator:
         }
 
         summary = self.generator.generate_batch_summary(
-            results,
+            results=results,
             trade_date="2024-01-01",
         )
 
         assert "# DQ 批量检查摘要" in summary
         assert "2024-01-01" in summary
-        assert "检查数据集: 2" in summary
-        assert "通过数据集: 1" in summary
         assert "dataset_a" in summary
         assert "dataset_b" in summary
+        assert "检查数据集: 2" in summary

@@ -35,6 +35,15 @@
 
 ```
 src/ditto_core/
+├── quality/           # 数据质量模块（Domain Layer）
+│   ├── checkers/      # DQ 检查器
+│   │   ├── technical.py      # L1 技术检查
+│   │   ├── business.py       # L2 业务检查
+│   │   └── statistical.py    # L3 统计检查
+│   ├── spec.py        # 规则配置模型
+│   ├── config.py      # DQ 配置（pydantic-settings）
+│   ├── engine.py      # QualityEngine
+│   └── report.py      # 报告生成器
 ├── engine/            # 引擎模块
 │   ├── regime/        # Regime 识别（牛/震荡/熊）
 │   ├── factor/        # 因子计算（RS/Value/Vol/Crowding）
@@ -53,6 +62,22 @@ src/ditto_core/
 ```
 
 ## 四、关键模块说明
+
+### quality/ - 数据质量模块
+
+| 模块 | 说明 |
+|------|------|
+| `QualityEngine` | DQ 检查引擎，协调 L1/L2/L3 检查 |
+| `TechnicalChecker` | L1 技术检查（非空、唯一、外键、类型） |
+| `BusinessChecker` | L2 业务检查（正数、范围、 completeness） |
+| `StatisticalChecker` | L3 统计检查（Z-score 异常、波动检测） |
+| `DQSettings` | DQ 配置（pydantic-settings，支持环境变量） |
+| `DQReportGenerator` | DQ 报告生成器（Markdown/HTML） |
+
+**架构特点**：
+- 纯函数式业务逻辑，零依赖 DataHub
+- 所有数据通过参数注入（由 Application Layer 提供）
+- 支持多级 DQ 检查（L1 阻断、L2 警告、L3 告警）
 
 ### engine/ - 引擎层
 
@@ -118,21 +143,40 @@ logger.info(
 ## 七、使用示例
 
 ```python
+from pathlib import Path
+from ditto_core.quality import QualityEngine
 from ditto_core.engine import RegimeEngine, FactorEngine
 from ditto_core.portfolio import PortfolioManager
 from ditto_datahub import DataHub
+import polars as pl
 
 # 初始化
 hub = DataHub()
 
-# Regime 识别
+# === 数据质量检查 ===
+# L1/L2 检查（写入时）
+dq_engine = QualityEngine(data_root=Path("data"))
+result = dq_engine.check(df, dataset="stock_daily")
+if result.has_errors:
+    print(f"DQ 检查失败: {result.error_count} 个错误")
+
+# L3 统计检查（批量监控）
+historical = hub.bars.get(start="2024-01-01", end="2024-01-31")
+current = hub.bars.get(start="2024-02-01", end="2024-02-01")
+result = dq_engine.check_statistical(
+    dataset="stock_daily",
+    current=current,      # 注入当前数据
+    historical=historical, # 注入历史数据
+)
+
+# === Regime 识别 ===
 regime_engine = RegimeEngine(hub)
 result = regime_engine.calc_regime_for_range(
     start_date="2024-01-01",
     end_date="2024-01-31"
 )
 
-# 因子计算
+# === 因子计算 ===
 factor_engine = FactorEngine(hub)
 factors = factor_engine.calc_factors(
     universe=["510300.SH", "510500.SH"],
@@ -140,7 +184,7 @@ factors = factor_engine.calc_factors(
     end_date="2024-01-31"
 )
 
-# 组合管理
+# === 组合管理 ===
 portfolio_mgr = PortfolioManager(hub)
 portfolio = portfolio_mgr.build_portfolio(
     strategy_name="etf_rotation",

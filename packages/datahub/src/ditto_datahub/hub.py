@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
-from ditto_core.quality import QualityEngine
 from ditto_foundation import SQLitePool, logger
 from ditto_foundation.concurrency import FileLockManager
 
@@ -34,10 +33,12 @@ class DataHub:
     Component lifecycle is managed by the dishka container.
 
     Attribute layers:
-    - Runtime Layer: sqlite_pool, file_lock, sid_allocator, dq_engine, freeze
+    - Runtime Layer: sqlite_pool, file_lock, sid_allocator, freeze
     - Accessor Layer: securities, bars, calendar, universe, index, ingestion_log
     - Sources Layer: sources (external data sources: Tushare, Akshare)
     - SQL Engine: sql_engine
+
+    Note: DQ checks are handled at the application layer (Port), not in DataHub.
     """
 
     def __init__(  # noqa: PLR0913
@@ -46,7 +47,6 @@ class DataHub:
         sqlite_pool: SQLitePool,
         file_lock: FileLockManager,
         sid_allocator: SidAllocator,
-        dq_engine: QualityEngine,
         freeze_manager: FreezeManager,
         securities: SecuritiesAccessor,
         calendar: CalendarAccessor,
@@ -69,7 +69,6 @@ class DataHub:
             sqlite_pool: SQLite connection pool.
             file_lock: File lock manager for concurrent write safety.
             sid_allocator: SID allocator for new securities.
-            dq_engine: Data quality engine.
             freeze_manager: Freeze manager for data version tracking.
             securities: Securities master data accessor.
             calendar: Trading calendar accessor.
@@ -86,7 +85,6 @@ class DataHub:
         self.sqlite_pool = sqlite_pool
         self.file_lock = file_lock
         self.sid_allocator = sid_allocator
-        self.dq_engine = dq_engine
         self.freeze = freeze_manager
         self.securities = securities
         self.calendar = calendar

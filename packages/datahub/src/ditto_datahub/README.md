@@ -33,19 +33,27 @@ src/ditto_datahub/
 │   ├── security_store.py    # 证券信息
 │   ├── bars_store.py        # K线数据
 │   ├── adj_factor_store.py  # 复权因子
-│   ├── pipeline_store.py    # Pipeline状态
+│   ├── quarantine_store.py  # 隔离区存储
 │   └── sqlite_client.py     # SQLite客户端
+├── accessors/        # 数据访问器
+│   ├── bars/               # K线数据访问
+│   ├── calendar.py         # 交易日历访问
+│   ├── security.py         # 证券信息访问
+│   └── ...
 ├── runtime/           # 运行时支持
 │   ├── sid_allocator.py     # SID分配器
-│   ├── dq_checker.py        # 数据质量检查
-│   ├── dq_rules.py          # DQ规则定义
-│   ├── file_lock.py         # 文件锁
-│   └── sqlite_pool.py       # 连接池
+│   ├── freeze_manager.py    # 数据版本管理
+│   └── sql_engine.py        # SQL分析引擎
+├── sources/          # 外部数据源
+│   └── tushare/            # Tushare数据源
 ├── meta/              # 元数据
 │   └── schemas.py           # Parquet Schema定义
-├── types.py           # 类型定义
-└── errors.py          # 异常定义
+└── models/           # 数据模型
+    ├── storage.py           # 存储结果模型
+    └── ingestion.py         # 摄取日志模型
 ```
+
+**注意**: 数据质量（DQ）检查功能已迁移到 `ditto-core` 包的 `quality` 模块。
 
 ## 四、关键模块说明
 
@@ -54,14 +62,20 @@ src/ditto_datahub/
 - `AdjFactorStore`: 复权因子 Parquet 年分区存储
 - `CalendarStore`: 交易日历 SQLite 存储
 - `SecurityStore`: 证券元数据 PIT 映射存储
-- `PipelineStore`: Pipeline 运行状态管理
+- `QuarantineStore`: DQ 隔离区存储
 - `sqlite_client`: SQLite 连接管理与 SQL 路由
 
+### accessors/ - 数据访问层
+- `BarsAccessor`: K线数据访问（含复权、PIT 语义）
+- `CalendarAccessor`: 交易日历访问
+- `SecuritiesAccessor`: 证券信息访问（SID 解析）
+- `IngestionLogAccessor`: 摄取日志访问
+
 ### runtime/ - 运行时支持
-- `SidAllocator`: 内部唯一 ID 分配 (100M-299M for ETF)
+- `SidAllocator`: 内部唯一 ID 分配
 - `FileLockManager`: 跨进程文件锁
 - `FreezeManager`: 轻量级数据版本管理 (SHA-256 checksum)
-- `SQLitePool`: SQLite 连接池
+- `SqlEngine`: DuckDB SQL 分析引擎
 
 ### meta/ - 元数据
 - `schemas.py`: Polars Schema 定义
@@ -75,7 +89,7 @@ src/ditto_datahub/
 2. **SID 标识**: 使用内部 SID 而非外部代码
 3. **双存储职责**: DuckDB 用于分析/因子，SQLite 用于事务/配置
 4. **原子写入**: 使用 `atomic_write()` 确保写入完整性
-5. **DQ 规则**: 数据写入前必须通过 DQ 检查
+5. **DQ 检查**: 数据质量检查由应用层（Port）调用 `ditto-core.quality` 模块完成
 6. **统一日志**: 所有模块使用 loguru 记录结构化日志，禁止使用 print
 
 ## 六、日志使用说明 (NEW)
@@ -109,19 +123,21 @@ logger.info(
 ## 七、使用示例
 
 ```python
+from pathlib import Path
+from ditto_datahub import DataHub
 from ditto_datahub.stores import BarsStore, CalendarStore
 from ditto_datahub.runtime import SidAllocator
-from ditto_datahub.dq import DQEngine
 
 # SID 分配
-allocator = SidAllocator()
+allocator = SidAllocator(sqlite_pool)
 etf_sid = allocator.get_or_allocate_sid("510300.SH", "etf")
 
 # K线数据读取
 bars_store = BarsStore(data_root=Path("data"))
 df = bars_store.read("etf_daily", sids=[etf_sid], start_date="2024-01-01")
 
-# 数据质量检查
-dq_engine = DQEngine(data_root=Path("data"))
-result = dq_engine.check(df, dataset_id="etf_daily")
+# 数据质量检查（需使用 ditto-core.quality 模块）
+from ditto_core.quality import QualityEngine
+dq_engine = QualityEngine(data_root=Path("data"))
+result = dq_engine.check(df, dataset="etf_daily")
 ```

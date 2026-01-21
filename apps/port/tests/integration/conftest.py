@@ -11,7 +11,19 @@ from prefect.testing.utilities import prefect_test_harness
 
 @pytest.fixture(scope="session")
 def prefect_test_session() -> Generator[None, None, None]:
-    """Session 级别的 Prefect test harness。"""
+    """Session 级别的 Prefect test harness。
+
+    禁用 Prefect 控制台日志，避免测试结束时 Rich Console I/O 错误：
+    - pytest 测试结束时关闭 stderr
+    - 但 Prefect server.stop() 在 atexit 时记录日志
+    - 导致 Rich Console 尝试写入已关闭的文件句柄
+    """
+    import os
+
+    # 禁用 Prefect 控制台日志，避免 Rich Console I/O 错误
+    os.environ["PREFECT_LOGGING_COLORS"] = "False"
+    os.environ["PREFECT_SERVER_LOGGING_LEVEL"] = "CRITICAL"
+
     with prefect_test_harness(server_startup_timeout=30):
         yield
 

@@ -4,10 +4,9 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.accessors.bars import WriteResult
-from ditto_datahub.dq.engine import DQResult
 from ditto_datahub.models import OnDuplicate
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
+from ditto_datahub.models.storage import WriteResult
 from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_foundation.observability import init, reset_for_testing
@@ -25,7 +24,6 @@ def mock_hub_bars_write(file_path: str, checksum: str) -> WriteResult:
         rows_written=0,
         rows_total=0,
         blocked=False,
-        dq_result=None,
     )
 
 
@@ -37,7 +35,6 @@ def mock_hub_adj_factor_write(file_path: str, checksum: str) -> WriteResult:
         rows_written=0,
         rows_total=0,
         blocked=False,
-        dq_result=None,
     )
 
 
@@ -517,16 +514,12 @@ class TestIngestDate:
 
         mock_hub.bars = mocker.Mock()
 
-        mock_dq_result = mocker.Mock(spec=DQResult)
-        mock_dq_result.error_count = 10
-
         mock_hub.bars.write.return_value = WriteResult(
             file_path="/path/to/file.parquet",
             checksum="checksum123",
             rows_written=0,
             rows_total=0,
             blocked=True,
-            dq_result=mock_dq_result,
         )
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="stock_daily",

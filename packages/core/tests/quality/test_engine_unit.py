@@ -1,20 +1,20 @@
-"""Tests for DQEngine."""
+"""Tests for QualityEngine."""
 
-import tempfile
+from datetime import date, timedelta
 from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.dq import (
+from ditto_core.quality import QualityEngine
+from ditto_core.quality.spec import (
     DatasetRules,
-    DQEngine,
     DQResult,
     DQSpec,
 )
 
 
-class TestDQEngine:
-    """Test cases for DQEngine."""
+class TestQualityEngine:
+    """Test cases for QualityEngine."""
 
     def setup_method(self) -> None:
         """Set up test environment."""
@@ -45,26 +45,30 @@ class TestDQEngine:
 
     def test_init_with_config(self) -> None:
         """Test engine initialization with config."""
-        engine = DQEngine(config=self.config)
+        engine = QualityEngine(config=self.config)
 
         assert engine.config is self.config
 
     def test_init_from_yaml_dir(self) -> None:
         """Test engine initialization from YAML directory."""
-        # Use actual config directory
-        config_dir = Path(__file__).parent.parent.parent.parent / "config" / "dq_rules"
+        config_dir = (
+            Path(__file__).parent.parent.parent.parent
+            / "config"
+            / "default"
+            / "dq_rules"
+        )
 
         if not config_dir.exists():
             pytest.skip(f"Config directory not found: {config_dir}")
 
-        engine = DQEngine(config_path=config_dir)
+        engine = QualityEngine(config_path=config_dir)
 
         assert engine.config is not None
         assert engine.config.has_dataset("etf_daily") is True
 
     def test_check_valid_data(self) -> None:
         """Test checking valid data passes all rules."""
-        engine = DQEngine(config=self.config)
+        engine = QualityEngine(config=self.config)
 
         df = pl.DataFrame(
             {
@@ -83,7 +87,7 @@ class TestDQEngine:
 
     def test_check_with_null_sid(self) -> None:
         """Test checking data with null SID fails L1."""
-        engine = DQEngine(config=self.config)
+        engine = QualityEngine(config=self.config)
 
         df = pl.DataFrame(
             {
@@ -101,7 +105,7 @@ class TestDQEngine:
 
     def test_check_with_negative_value(self) -> None:
         """Test checking data with negative value generates L2 warning."""
-        engine = DQEngine(config=self.config)
+        engine = QualityEngine(config=self.config)
 
         df = pl.DataFrame(
             {
@@ -119,7 +123,7 @@ class TestDQEngine:
 
     def test_check_unknown_dataset(self) -> None:
         """Test checking unknown dataset returns empty result."""
-        engine = DQEngine(config=self.config)
+        engine = QualityEngine(config=self.config)
 
         df = pl.DataFrame({"test": [1, 2, 3]})
 
@@ -143,7 +147,7 @@ class TestDQEngine:
         expected_has_errors: bool,
     ) -> None:
         """Test checking with specific rule levels."""
-        engine = DQEngine(config=self.config)
+        engine = QualityEngine(config=self.config)
 
         df = pl.DataFrame({"sid": [1, 2], "value": [-10.0, 20.0]})
 
@@ -153,30 +157,35 @@ class TestDQEngine:
         assert result.has_warnings is expected_has_warnings
         assert result.has_errors is expected_has_errors
 
-    def test_check_with_context(self, mocker) -> None:
+    def test_check_with_context(self) -> None:
         """Test checking with additional context."""
-        engine = DQEngine(config=self.config)
+        engine = QualityEngine(config=self.config)
 
         df = pl.DataFrame({"sid": [1, 2], "value": [10.0, 20.0]})
 
-        context = {"hub": mocker.Mock(), "source": "test"}
+        context = {"source": "test"}
 
         result = engine.check(df, "test_dataset", context=context)
 
         assert isinstance(result, DQResult)
 
 
-class TestDQEngineIntegration:
+class TestQualityEngineIntegration:
     """Integration tests with real YAML config."""
 
     def test_check_etf_daily_with_real_config(self) -> None:
         """Test checking ETF daily data with real YAML config."""
-        config_dir = Path(__file__).parent.parent.parent.parent / "config" / "dq_rules"
+        config_dir = (
+            Path(__file__).parent.parent.parent.parent
+            / "config"
+            / "default"
+            / "dq_rules"
+        )
 
         if not config_dir.exists():
             pytest.skip(f"Config directory not found: {config_dir}")
 
-        engine = DQEngine(config_path=config_dir)
+        engine = QualityEngine(config_path=config_dir)
 
         # Valid ETF data
         df = pl.DataFrame(
@@ -197,66 +206,123 @@ class TestDQEngineIntegration:
         assert result.dataset == "etf_daily"
         assert result.passed is True  # Valid data passes
 
-    def test_check_etf_daily_with_ohlc_violation(self) -> None:
-        """Test ETF data with OHLC violation generates L2 warning."""
-        config_dir = Path(__file__).parent.parent.parent.parent / "config" / "dq_rules"
 
-        if not config_dir.exists():
-            pytest.skip(f"Config directory not found: {config_dir}")
+class TestQualityEngineStatistical:
+    """Test statistical check with new interface."""
 
-        engine = DQEngine(config_path=config_dir)
-
-        # Invalid OHLC data (high < low)
-        df = pl.DataFrame(
-            {
-                "sid": [200001],
-                "trade_date": ["2024-01-01"],
-                "open": [10.5],
-                "high": [10.0],  # High < open
-                "low": [10.8],  # Low > open
-                "close": [10.1],
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.config = DQSpec(
+            datasets={
+                "test_dataset": DatasetRules(
+                    dataset="test_dataset",
+                    description="Test dataset",
+                    l3_statistical=[
+                        {
+                            "rule": "zscore",
+                            "column": "close",
+                            "window": 60,
+                            "threshold": 3.0,
+                        }
+                    ],
+                )
             }
         )
 
-        result = engine.check(df, "etf_daily")
-
-        # Should pass overall (L2 is warning), but have warnings
-        assert result.dataset == "etf_daily"
-        # OHLC check not yet implemented, so this might pass for now
-        assert isinstance(result, DQResult)
-
-
-class TestDQEngineEdgeCases:
-    """Test edge cases and additional coverage for DQEngine."""
-
-    def test_init_with_data_root(self) -> None:
-        """Test engine initialization with data_root parameter."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # Create a default config directory structure
-            default_config = (
-                Path(__file__).parent.parent.parent.parent / "config" / "dq_rules"
+    @pytest.fixture
+    def historical_data(self):
+        """Create historical data."""
+        dates = [date.today() - timedelta(days=i) for i in range(60, 0, -1)]
+        rows = []
+        for d in dates:
+            rows.extend(
+                [
+                    {"sid": 1, "trade_date": d, "close": 100.0},
+                    {"sid": 2, "trade_date": d, "close": 200.0},
+                ]
             )
+        return pl.DataFrame(rows)
 
-            if not default_config.exists():
-                pytest.skip(f"Default config directory not found: {default_config}")
+    def test_check_statistical_basic(self, historical_data) -> None:
+        """Test check_statistical with data injection."""
+        engine = QualityEngine(config=self.config)
 
-            engine = DQEngine(data_root=tmpdir)
+        current_data = pl.DataFrame(
+            {
+                "sid": [1, 2],
+                "trade_date": [date.today(), date.today()],
+                "close": [105.0, 210.0],
+            }
+        )
 
-            assert engine.config is not None
+        result = engine.check_statistical(
+            dataset="test_dataset",
+            current=current_data,
+            historical=historical_data,
+            calendar=None,
+        )
+
+        # check_statistical always passes (alerts only)
+        assert result.passed is True
+        assert result.dataset == "test_dataset"
+
+    def test_check_statistical_unknown_dataset(self, historical_data) -> None:
+        """Test check_statistical with unknown dataset."""
+        engine = QualityEngine()
+
+        current_data = pl.DataFrame(
+            {
+                "sid": [1],
+                "trade_date": [date.today()],
+                "close": [105.0],
+            }
+        )
+
+        result = engine.check_statistical(
+            dataset="unknown_dataset",
+            current=current_data,
+            historical=historical_data,
+            calendar=None,
+        )
+
+        # Unknown dataset should pass with no issues
+        assert result.passed is True
+        assert len(result.issues) == 0
+
+    def test_check_statistical_detects_anomalies(self, historical_data) -> None:
+        """Test check_statistical detects outliers."""
+        engine = QualityEngine(config=self.config)
+
+        # Current data with anomaly
+        current_data = pl.DataFrame(
+            {
+                "sid": [1, 2],
+                "trade_date": [date.today(), date.today()],
+                "close": [500.0, 210.0],  # 500 is way outside normal range
+            }
+        )
+
+        result = engine.check_statistical(
+            dataset="test_dataset",
+            current=current_data,
+            historical=historical_data,
+            calendar=None,
+        )
+
+        # Should detect anomaly but still pass (L3 is alert only)
+        assert result.passed is True
+        assert result.alert_count >= 1
+
+
+class TestQualityEngineEdgeCases:
+    """Test edge cases and additional coverage for QualityEngine."""
 
     def test_init_with_no_params(self) -> None:
         """Test engine initialization with no parameters (default empty config)."""
-        engine = DQEngine()
+        engine = QualityEngine()
 
         assert engine.config is not None
         assert isinstance(engine.config, DQSpec)
-
-    def test_config_property(self) -> None:
-        """Test _config property for backward compatibility."""
-        engine = DQEngine()
-
-        # _config property should return the same as config
-        assert engine._config is engine.config
 
     def test_check_with_empty_rule_lists(self) -> None:
         """Test check with dataset rules but empty L1/L2 lists."""
@@ -272,7 +338,7 @@ class TestDQEngineEdgeCases:
             }
         )
 
-        engine = DQEngine(config=config)
+        engine = QualityEngine(config=config)
 
         df = pl.DataFrame({"sid": [1, 2, 3], "value": [10.0, 20.0, 30.0]})
 
@@ -301,7 +367,7 @@ class TestDQEngineEdgeCases:
             }
         )
 
-        engine = DQEngine(config=config)
+        engine = QualityEngine(config=config)
 
         df = pl.DataFrame({"sid": [1, 2, 3]})
 
@@ -335,7 +401,7 @@ class TestDQEngineEdgeCases:
             }
         )
 
-        engine = DQEngine(config=config)
+        engine = QualityEngine(config=config)
 
         df = pl.DataFrame({"sid": [1, 2, 3], "value": [-5.0, 10.0, 20.0]})
 
@@ -345,93 +411,8 @@ class TestDQEngineEdgeCases:
         assert result.passed is True  # No L1 errors
         assert result.has_warnings is True  # L2 warning
 
-    def test_check_statistical_basic(self, mocker) -> None:
-        """Test check_statistical with mock hub."""
-        config = DQSpec(
-            datasets={
-                "test_dataset": DatasetRules(
-                    dataset="test_dataset",
-                    description="Test dataset",
-                    l3_statistical=[
-                        {
-                            "rule": "zscore",
-                            "column": "close",
-                            "window": 60,
-                            "threshold": 3.0,
-                        }
-                    ],
-                )
-            }
-        )
-
-        engine = DQEngine(config=config)
-
-        # Mock hub
-        mock_hub = mocker.MagicMock()
-        mock_hub.bars.get.return_value = pl.DataFrame()
-
-        result = engine.check_statistical(
-            dataset="test_dataset",
-            trade_date="2024-01-01",
-            hub=mock_hub,
-        )
-
-        # check_statistical always passes (alerts only)
-        assert result.passed is True
-        assert result.dataset == "test_dataset"
-
-    def test_check_statistical_unknown_dataset(self, mocker) -> None:
-        """Test check_statistical with unknown dataset."""
-        engine = DQEngine()
-
-        mock_hub = mocker.MagicMock()
-
-        result = engine.check_statistical(
-            dataset="unknown_dataset",
-            trade_date="2024-01-01",
-            hub=mock_hub,
-        )
-
-        # Unknown dataset should pass with no issues
-        assert result.passed is True
-        assert len(result.issues) == 0
-
-    def test_check_statistical_with_asset_class(self, mocker) -> None:
-        """Test check_statistical with asset_class parameter."""
-        config = DQSpec(
-            datasets={
-                "stock_daily": DatasetRules(
-                    dataset="stock_daily",
-                    description="Stock daily data",
-                    l3_statistical=[
-                        {
-                            "rule": "zscore",
-                            "column": "close",
-                            "window": 60,
-                            "threshold": 3.0,
-                        }
-                    ],
-                )
-            }
-        )
-
-        engine = DQEngine(config=config)
-
-        mock_hub = mocker.MagicMock()
-        mock_hub.bars.get.return_value = pl.DataFrame()
-
-        result = engine.check_statistical(
-            dataset="stock_daily",
-            trade_date="2024-01-01",
-            hub=mock_hub,
-            asset_class="stock",
-            market_wide=True,
-        )
-
-        assert result.passed is True
-
-    def test_check_with_no_matching_levels(self) -> None:
-        """Test check with levels that don't match configured rules."""
+    def test_check_with_empty_dataframe(self) -> None:
+        """Test check with empty dataframe."""
         config = DQSpec(
             datasets={
                 "test_dataset": DatasetRules(
@@ -444,16 +425,17 @@ class TestDQEngineEdgeCases:
                             "message": "SID required",
                         }
                     ],
+                    l2_business=[],
                 )
             }
         )
 
-        engine = DQEngine(config=config)
+        engine = QualityEngine(config=config)
 
-        df = pl.DataFrame({"sid": [1, 2, 3]})
+        df = pl.DataFrame({"sid": [], "value": []})
 
-        # Only check L2, but dataset has no L2 rules
-        result = engine.check(df, "test_dataset", levels=["l2"])
+        result = engine.check(df, "test_dataset")
 
+        # Empty dataframe should pass
         assert result.passed is True
         assert len(result.issues) == 0

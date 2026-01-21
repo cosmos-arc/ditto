@@ -793,7 +793,7 @@ def test_partitioned_write(store, sample_quotes):
 | `@pytest.mark.slow` | 耗时测试 | CI/手动 | ✅ 需要手动标记 |
 | `@pytest.mark.serial` | 串行测试 | CI | ✅ 需要手动标记 |
 | `@pytest.mark.smoke` | 冒烟测试，核心功能 | 每次提交 | ✅ 需要手动标记 |
-| `@pytest.mark.benchmark` | 性能基准测试 | 手动/定期 | ✅ 需要手动标记 |
+| `@pytest.mark.benchmark` | 性能基准测试 | 定期运行 | ✅ 需要手动标记 |
 
 ### 使用示例
 
@@ -857,22 +857,38 @@ open htmlcov/index.html
 
 ```bash
 # 本地开发 - 跳过慢速和外部测试
-pytest tests/unit/ -m "not slow and not external"
+pixi run -e dev pytest tests/unit/ -m "not slow and not external"
 
 # 快速检查
-pytest tests/unit/ -x --ff
+pixi run -e dev pytest tests/unit/ -x --ff
 
 # 冒烟测试
-pytest -m smoke
+pixi run -e dev pytest -m smoke
 
 # CI完整测试（跳过external）
-pytest -m "not external" --cov
+pixi run -e dev pytest -m "not external" --cov
 
 # 集成测试
-pytest -m integration
+pixi run -e dev pytest -m integration
 
 # PIT验证测试
-pytest -m pit
+pixi run -e dev pytest -m pit
+
+# === 性能测量命令 ===
+# 识别最慢的 20 个测试
+pixi run -e dev pytest --durations=20
+
+# 只测量单元测试性能
+pixi run -e dev pytest tests/unit --durations=20
+
+# 只测量集成测试性能
+pixi run -e dev pytest tests/integration --durations=20
+
+# 并行运行测试（加速）
+pixi run -e dev pytest tests/unit -n auto
+
+# 运行性能基准测试
+pixi run -e dev pytest -m benchmark --benchmark-only
 ```
 
 ---
@@ -1023,6 +1039,193 @@ if all_ok:
 # 应迁移到 pytest-mock
 grep -r "from unittest.mock" tests/
 grep -r "@patch" tests/
+```
+
+---
+
+## 测试性能规范
+
+### 性能阈值标准
+
+| 测试类型 | 单个测试最大耗时 | 并行运行建议 | 检查频率 |
+|---------|----------------|-------------|---------|
+| **单元测试** | 500ms | ✅ 必须支持并行 | 每次提交 |
+| **集成测试** | 5s | ⚠️ 视情况而定 | CI 运行 |
+| **性能基准测试** | N/A（基准比较） | ❌ 串行运行 | 定期运行 |
+
+### 性能测量工具
+
+#### 1. pytest --durations（快速识别慢速测试）
+
+**用途**: 识别最慢的 N 个测试（setup + call + teardown）
+
+**标准命令**:
+```bash
+# 显示最慢的 20 个测试
+pixi run -e dev pytest --durations=20
+
+# 只看单元测试
+pixi run -e dev pytest tests/unit --durations=20
+
+# 只看集成测试
+pixi run -e dev pytest tests/integration --durations=20
+
+# 静默模式（减少输出）
+pixi run -e dev pytest --durations=20 --tb=no -q
+```
+
+**输出示例**:
+```
+==== slowest 20 test durations ===
+23.00s call     tests/unit/jobs/flows/test_daily_unit.py::test_returns_true_for_trading_day
+2.50s setup    tests/integration/flows/test_helpers_integration.py::test_flow_execution
+0.80s call     tests/unit/services/test_ingestion_unit.py::test_process_data
+```
+
+**性能优化流程**:
+```
+1. 运行 pytest --durations=20
+   ↓
+2. 识别超过阈值的测试
+   - 单元测试 >500ms → 需要优化
+   - 集成测试 >5s → 需要优化
+   ↓
+3. 分析慢速原因
+   - 是否有未 mock 的外部依赖？
+   - 是否有不必要的 sleep？
+   - 是否有重复的 fixture 初始化？
+   ↓
+4. 修复并验证
+```
+
+#### 2. pytest-benchmark（性能回归检测）
+
+**用途**: 为关键函数建立性能基准，防止性能退化
+
+**安装**: `pixi add pytest-benchmark`
+
+**使用示例**:
+```python
+import pytest
+
+@pytest.mark.benchmark
+def test_data_processing_performance(benchmark):
+    """测试数据处理性能，建立基准"""
+
+    def process():
+        data = load_large_dataset()
+        return transform(data)
+
+    # benchmark 会多次运行并统计
+    result = benchmark(process)
+
+    # 验证结果正确性
+    assert result is not None
+```
+
+**运行命令**:
+```bash
+# 运行基准测试
+pixi run -e dev pytest -m benchmark --benchmark-only
+
+# 保存基准数据
+pixi run -e dev pytest -m benchmark --benchmark-autosave --benchmark-save-data
+
+# 与历史基准比较（检测性能退化）
+pixi run -e dev pytest -m benchmark --benchmark-compare-fail=mean:5%
+```
+
+**适用场景**:
+- ✅ 关键路径函数（如数据转换、计算密集型操作）
+- ✅ 需要长期监控性能的场景
+- ❌ 日常开发（基准测试较慢）
+
+#### 3. pytest-xdist（并行测试加速）
+
+**用途**: 并行运行测试，加快整体测试速度
+
+**标准命令**:
+```bash
+# 自动检测 CPU 核心数并并行运行
+pixi run -e dev pytest -n auto
+
+# 指定并行进程数
+pixi run -e dev pytest -n 4
+
+# 只并行运行单元测试
+pixi run -e dev pytest tests/unit -n auto
+
+# 集成测试串行运行（可能有共享状态）
+pixi run -e dev pytest tests/integration -n 1
+```
+
+**注意事项**:
+- 测试必须独立（无共享状态）
+- 使用 `tmp_path` 而非固定路径
+- 避免使用全局变量
+
+**预期提速**: 2-4 倍（取决于 CPU 核心数和测试类型）
+
+### 常见性能问题及修复
+
+| 问题 | 症状 | 解决方案 |
+|------|------|---------|
+| **未 mock 的装饰器** | 单元测试 >1s | Mock `@flow`, `@task` 等装饰器 |
+| **真实数据库连接** | 单元测试 >500ms | 使用 `:memory:` 或 Mock |
+| **HTTP 调用** | 测试 >1s | 使用 `respx.mock()` |
+| **重复 fixture 初始化** | 测试套件慢 | 使用 `module`/`session` 作用域 |
+| **sleep/time.sleep** | 测试 >1s | 使用 `mocker.patch('time.sleep')` |
+
+### 示例: 修复慢速单元测试
+
+**问题**: `test_returns_true_for_trading_day` 耗时 24s
+
+**原因**: `@task` 装饰器未 mock，触发了完整的 Prefect 任务引擎
+
+**修复**: 在 `conftest.py` 中添加装饰器 mock
+
+```python
+# apps/port/tests/unit/conftest.py
+import prefect.tasks
+
+@pytest.fixture(autouse=True, scope="session")
+def mock_prefect_decorators():
+    """Mock Prefect 装饰器，避免单元测试触发完整引擎"""
+    original_task = prefect.tasks.task
+
+    def _mock_task_decorator(*args, **kwargs):
+        def decorator(func):
+            return func
+        if args and callable(args[0]):
+            return args[0]
+        return decorator
+
+    prefect.tasks.task = _mock_task_decorator
+    yield
+    prefect.tasks.task = original_task
+```
+
+**结果**: 24s → 0.01s（2400 倍提升）
+
+### CI 性能监控
+
+**CI 配置建议**:
+```yaml
+# .github/workflows/ci.yml
+- name: Run tests with duration tracking
+  run: |
+    pytest --durations=20 --cov --cov-report=xml
+
+- name: Comment slow tests on PR
+  if: failure()
+  uses: actions/github-script@v7
+  with:
+    script: |
+      const output = `Some tests exceeded performance thresholds:
+      - Unit test should be <500ms
+      - Integration test should be <5s
+      See test output above for details.`;
+      github.rest.issues.createComment({...});
 ```
 
 ---

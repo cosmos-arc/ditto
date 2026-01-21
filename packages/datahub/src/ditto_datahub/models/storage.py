@@ -1,10 +1,6 @@
 """Storage models for DataHub."""
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ditto_core.quality.spec import DQResult
 
 __all__ = [
     "FreezeManifest",
@@ -22,7 +18,6 @@ class WriteResult:
     rows_written: int
     rows_total: int
     blocked: bool
-    dq_result: "DQResult | None"
 
 
 @dataclass(frozen=True)

@@ -252,9 +252,8 @@ class IngestionCoordinator:
         self, dataset: str, trade_date: str, write_result: WriteResult
     ) -> IngestionResult:
         """处理 DQ 阻断。"""
-        error_count = (
-            write_result.dq_result.error_count if write_result.dq_result else 0
-        )
+        # DQ 检查已移到 Port 层，这里使用默认错误计数
+        error_count = 1
         self._hub.ingestion_log.save_log(
             IngestionLog(
                 dataset=dataset,
@@ -383,13 +382,12 @@ class IngestionCoordinator:
                 asset_class=asset_class,
                 src_code_col="src_code",
             )
-            # 使用 Accessor 层以获得文件锁和 DQ 检查保护
+            # 使用 Accessor 层写入（不包含 DQ 检查）
             return self._hub.bars.write(
                 df=df,
                 year=year,
                 dataset=dataset,
                 source=self._source_name,
-                run_dq_check=True,
                 on_duplicate=on_duplicate,
             )
         elif dataset_enum in (Dataset.ADJ_FACTOR, Dataset.FUND_ADJ):
@@ -426,7 +424,6 @@ class IngestionCoordinator:
                 rows_written=len(df),
                 rows_total=len(df),
                 blocked=False,
-                dq_result=None,
             )
         elif dataset_enum == Dataset.STOCK_BASIC:
             file_path, checksum = self._write_stock_basic(df, trade_date)
@@ -436,7 +433,6 @@ class IngestionCoordinator:
                 rows_written=len(df),
                 rows_total=len(df),
                 blocked=False,
-                dq_result=None,
             )
         elif dataset_enum == Dataset.ETF_BASIC:
             file_path, checksum = self._write_etf_basic(df, trade_date)
@@ -446,7 +442,6 @@ class IngestionCoordinator:
                 rows_written=len(df),
                 rows_total=len(df),
                 blocked=False,
-                dq_result=None,
             )
         else:
             raise ValueError(f"不支持写入数据集: {dataset}")

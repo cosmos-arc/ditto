@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from ditto_datahub.models import (
+from ditto_core.quality.spec import (
     DatasetRules,
     DQSpec,
     NotNullRule,
@@ -152,7 +152,12 @@ class TestDQSpec:
     def test_from_yaml_dir(self) -> None:
         """Test loading config from YAML directory."""
         # Use the actual config directory
-        config_dir = Path(__file__).parent.parent.parent.parent / "config" / "dq_rules"
+        config_dir = (
+            Path(__file__).parent.parent.parent.parent
+            / "config"
+            / "default"
+            / "dq_rules"
+        )
 
         if not config_dir.exists():
             pytest.skip(f"Config directory not found: {config_dir}")

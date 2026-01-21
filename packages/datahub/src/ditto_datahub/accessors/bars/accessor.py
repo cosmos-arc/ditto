@@ -3,24 +3,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from enum import Enum
 from typing import Literal
 
 import polars as pl
-from ditto_core.quality import DQReportGenerator, QualityEngine
-
-# Authoritative DQResult with issues list (from ditto_core.quality)
-from ditto_core.quality.spec import DQIssue, DQResult
 from ditto_foundation import M, logger, traced
 from ditto_foundation.concurrency import FileLockManager
 
 from ditto_datahub.accessors.bars.adjustment import apply_hfq_adj, apply_qfq_adj
-from ditto_datahub.accessors.bars.dq_filters import filter_failed_rows
 from ditto_datahub.models import AssetSidRange, OnDuplicate, WriteResult
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
 
@@ -118,6 +112,8 @@ class BarsAccessor:
     Provides domain-level interface for bars data operations,
     coordinating multiple stores for data access, adjustment,
     and identifier resolution.
+
+    Note: DQ checks are handled at the application layer (Port), not in DataHub.
     """
 
     def __init__(
@@ -126,9 +122,7 @@ class BarsAccessor:
         adj_factor_store: AdjFactorStore,
         security_store: SecurityStore,
         stock_status_store: StockStatusStore,  # B.3
-        dq_engine: QualityEngine,  # New DQ engine
         file_lock: FileLockManager,
-        quarantine_store: QuarantineStore,  # Injected to avoid circular import
     ) -> None:
         """
         Initialize BarsAccessor.
@@ -138,18 +132,14 @@ class BarsAccessor:
             adj_factor_store: Adjustment factor store.
             security_store: Security store for identifier resolution.
             stock_status_store: Stock status store (B.3).
-            dq_engine: Data quality engine (new QualityEngine from dq.engine).
             file_lock: File lock manager for concurrent writes.
-            quarantine_store: Quarantine store for failed data.
 
         """
         self._bars_store = bars_store
         self._adj_factor_store = adj_factor_store
         self._security_store = security_store
         self._stock_status_store = stock_status_store  # B.3
-        self._dq_engine = dq_engine
         self._file_lock = file_lock
-        self._quarantine_store = quarantine_store
 
     @traced("accessor.bars.get")
     def get(self, query: BarsQuery) -> pl.DataFrame:
@@ -290,18 +280,19 @@ class BarsAccessor:
         year: int,
         dataset: str = "stock_daily",
         source: str = "tushare",
-        run_dq_check: bool = True,
         on_duplicate: OnDuplicate = OnDuplicate.ERROR,
     ) -> WriteResult:
         """
         Write bars data.
+
+        Note: DQ checks should be performed at the application layer (Port)
+        before calling this method. This method only handles data storage.
 
         Args:
             df: Bars data DataFrame.
             year: Year partition for storage.
             dataset: Dataset name.
             source: Data source identifier.
-            run_dq_check: Whether to run data quality checks.
             on_duplicate: Strategy for handling duplicate data.
 
         Returns:
@@ -319,54 +310,6 @@ class BarsAccessor:
         # Use file lock for concurrent safety
         lock_name = f"bars_write_{dataset}_{year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
-            # Data quality check using QualityEngine
-            dq_result: DQResult | None = None
-
-            if run_dq_check:
-                dq_result = self._dq_engine.check(df, dataset)
-
-                # Check for L1 errors (blocking)
-                if dq_result.has_errors:
-                    logger.error(
-                        "DQ check failed with L1 errors - blocking write",
-                        event="bars_dq_blocked",
-                        dataset=dataset,
-                        error_count=dq_result.error_count,
-                    )
-
-                    # Save failed data to quarantine
-                    for issue in dq_result.issues:
-                        if issue.severity.value == "error":
-                            self._save_to_quarantine_from_result(
-                                df=df,
-                                issue=issue,
-                                dataset=dataset,
-                            )
-
-                    # Record metrics
-                    M.data_errors.add(
-                        dq_result.error_count,
-                        {"dataset": dataset, "operation": "write_blocked"},
-                    )
-
-                    return WriteResult(
-                        file_path="",
-                        checksum="",
-                        rows_written=0,
-                        rows_total=0,
-                        blocked=True,
-                        dq_result=dq_result,
-                    )
-
-                # Log L2 warnings (non-blocking)
-                if dq_result.has_warnings:
-                    logger.warning(
-                        "DQ check found L2 warnings - proceeding",
-                        event="bars_dq_warnings",
-                        dataset=dataset,
-                        warning_count=dq_result.warn_count,
-                    )
-
             # Write data
             result = self._bars_store.write(
                 dataset, df, year, on_duplicate=on_duplicate
@@ -395,10 +338,6 @@ class BarsAccessor:
                 rows_total=total_rows,
             )
 
-            # Generate DQ report if enabled
-            if dq_result and not dq_result.passed:
-                self._generate_dq_report(dq_result, dataset)
-
             # Record metrics
             M.data_records.add(len(df), {"dataset": "bars", "operation": "write"})
 
@@ -408,7 +347,6 @@ class BarsAccessor:
                 rows_written=len(df),
                 rows_total=total_rows,
                 blocked=False,
-                dq_result=dq_result,
             )
 
     def _resolve_query(self, query: BarsQuery) -> _ResolvedQuery:
@@ -629,118 +567,6 @@ class BarsAccessor:
             return apply_qfq_adj(df, adj_df, resolved.asof)
         else:  # HFQ
             return apply_hfq_adj(df, adj_df)
-
-    def _save_to_quarantine(
-        self,
-        df: pl.DataFrame,
-        dataset: str,
-        rule_id: str,
-        severity: str,
-        trade_date: str | None = None,
-    ) -> None:
-        """
-        Save failed data to quarantine store.
-
-        Args:
-            df: Failed data rows.
-            dataset: Dataset name.
-            rule_id: Rule that failed.
-            severity: Severity level.
-            trade_date: Optional trade date.
-
-        """
-        if df.is_empty():
-            return
-
-        try:
-            # Use injected quarantine store to avoid circular import
-            self._quarantine_store.save_failed_data(
-                dataset=dataset,
-                rule_id=rule_id,
-                severity=severity,
-                failed_data=df,
-                trade_date=trade_date,
-            )
-
-            logger.info(
-                "Failed data saved to quarantine",
-                event="quarantine_saved",
-                dataset=dataset,
-                rule_id=rule_id,
-                rows=len(df),
-            )
-
-        except Exception as e:
-            logger.error(
-                "Failed to save to quarantine",
-                event="quarantine_save_failed",
-                dataset=dataset,
-                rule_id=rule_id,
-                error=str(e),
-            )
-
-    def _save_to_quarantine_from_result(
-        self,
-        df: pl.DataFrame,
-        issue: DQIssue,
-        dataset: str,
-    ) -> None:
-        """
-        Save failed data to quarantine store from DQIssue.
-
-        Args:
-            df: Full data DataFrame.
-            issue: DQIssue with failure information.
-            dataset: Dataset name.
-
-        """
-        # Filter failed rows
-        failed_df = filter_failed_rows(df, issue)
-
-        if failed_df.is_empty():
-            return
-
-        self._save_to_quarantine(
-            df=failed_df,
-            dataset=dataset,
-            rule_id=issue.rule_name,
-            severity=issue.severity.value,
-        )
-
-    def _generate_dq_report(self, result: DQResult, dataset: str) -> None:
-        """
-        Generate DQ report and save to file.
-
-        Args:
-            result: DQ check result (new format).
-            dataset: Dataset name.
-
-        """
-        try:
-            data_root = self._bars_store.data_root
-            reports_dir = data_root / "reports" / "dq"
-            reports_dir.mkdir(parents=True, exist_ok=True)
-
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            report_path = reports_dir / f"{dataset}_{timestamp}.md"
-
-            generator = DQReportGenerator()
-            generator.save_report(result, report_path, report_format="markdown")
-
-            logger.info(
-                "DQ report generated",
-                event="dq_report_generated",
-                dataset=dataset,
-                report_path=str(report_path),
-            )
-
-        except Exception as e:
-            logger.error(
-                "Failed to generate DQ report",
-                event="dq_report_failed",
-                dataset=dataset,
-                error=str(e),
-            )
 
     def _enrich_with_status(
         self,

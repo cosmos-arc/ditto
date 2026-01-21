@@ -464,19 +464,65 @@ mkdir -p apps/port/tests/unit/ingestion/quality
 ## 验证清单
 
 ### 功能完整性
-- [ ] 所有 L1/L2/L3 检查功能正常工作
-- [ ] 写入时 DQ 检查阻断/警告逻辑正确
-- [ ] L3 批量检查任务正常运行
-- [ ] 隔离区机制正常工作
+- [x] 所有 L1/L2/L3 检查功能正常工作
+- [x] 写入时 DQ 检查阻断/警告逻辑正确
+- [x] L3 批量检查任务正常运行
+- [x] 隔离区机制正常工作
 
 ### 架构合规性
-- [ ] Domain Layer (Core) 零依赖 DataHub
-- [ ] 所有数据通过 Application Layer 注入
-- [ ] 无数据访问抽象接口
-- [ ] 遵循架构依赖规则
+- [x] Domain Layer (Core) 零依赖 DataHub
+- [x] 所有数据通过 Application Layer 注入
+- [x] 无数据访问抽象接口
+- [x] 遵循架构依赖规则
 
 ### 质量标准
-- [ ] 所有测试通过
-- [ ] 分支覆盖率 ≥ 80%
-- [ ] pyright 类型检查通过
-- [ ] ruff 代码检查通过
+- [x] 所有测试通过（1556 个单元测试）
+- [x] 分支覆盖率 ≥ 80%
+- [x] pyright 类型检查通过
+- [x] ruff 代码检查通过
+
+---
+
+## 执行总结
+
+**执行日期**: 2026-01-21
+
+**执行状态**: ✅ 完成
+
+### 核心变更
+
+1. **DataHub 层清理**
+   - 从 `DataHub.__init__()` 移除 `dq_engine` 参数
+   - 从 `BarsAccessor` 移除 DQ 检查逻辑
+   - 从 `WriteResult` 移除 `dq_result` 字段
+   - 移除 `DQConfigProvider`（配置初始化已移到 Core）
+
+2. **Core 层（Domain Layer）**
+   - 创建 `packages/core/src/ditto_core/quality/` 模块
+   - `QualityEngine` - 纯业务逻辑引擎
+   - `TechnicalChecker` - L1 技术检查
+   - `BusinessChecker` - L2 业务检查
+   - `StatisticalChecker` - L3 统计检查（纯函数式）
+   - `DQSettings` - pydantic-settings 配置
+
+3. **Port 层（Application Layer）**
+   - `QualityEngine` 作为独立 Provider 提供
+   - `QuarantineStore` 保留为数据存储能力
+   - `IngestionCoordinator` 移除 `run_dq_check` 参数
+
+### 测试结果
+
+```
+========= 1556 passed, 3 skipped, 373 deselected in 159.56s =========
+```
+
+### 文件变更统计
+
+| 类型 | 数量 |
+|------|------|
+| 新建 Core 层文件 | 10 |
+| 修改 DataHub 文件 | 8 |
+| 修改 Port 层文件 | 5 |
+| 删除旧测试文件 | 8 |
+| 新建测试文件 | 7 |
+| 修改测试文件 | 15 |

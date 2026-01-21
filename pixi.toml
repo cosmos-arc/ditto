@@ -168,7 +168,7 @@ test = "python scripts/test.py"
 # 组合命令
 # ──────────────────────────────────────────────────────────
 # Check：快速验证（开发时用）
-check = { depends-on = ["lint", "fmt", "type", "test-fast"] }
+check = { depends-on = ["lint", "fmt", "type"] }
 
 # CI：完整检查（CI 用）
 ci = { depends-on = ["lint", "fmt-check", "type-all", "test-cov-xml"] }

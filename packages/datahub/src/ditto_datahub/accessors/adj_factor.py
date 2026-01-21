@@ -91,5 +91,4 @@ class AdjFactorAccessor:
                 rows_written=len(df),
                 rows_total=len(df),
                 blocked=False,
-                dq_result=None,
             )

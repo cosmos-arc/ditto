@@ -5,6 +5,9 @@ Root 注入模式：在 Provider 中集中注册所有 DataHub 组件。
 所有依赖通过 Provider 管理，DataHub 不再使用 @cached_property.
 """
 
+# 延迟类型注解评估，避免前向引用问题
+from __future__ import annotations
+
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -57,8 +60,14 @@ class DataHubProvider(Provider):
     @provide
     def sqlite_pool(self, data_root: Path) -> Iterator[SQLitePool]:
         """SQLite 连接池（应用级单例）."""
+        from importlib.resources import files
+
         db_path = data_root / "meta" / "hub.sqlite"
-        pool = SQLitePool(str(db_path))
+        # 确保父目录存在
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        # 获取 schema.sql 路径
+        schema_path = files("ditto_datahub.scripts") / "schema.sql"
+        pool = SQLitePool(str(db_path), schema_path=Path(schema_path))
         pool.init_schema()
         yield pool
         pool.close()
@@ -73,11 +82,6 @@ class DataHubProvider(Provider):
     def sid_allocator(self, sqlite_pool: SQLitePool) -> SidAllocator:
         """SID 分配器."""
         return SidAllocator(sqlite_pool)
-
-    @provide
-    def dq_engine(self, data_root: Path) -> QualityEngine:
-        """数据质量引擎."""
-        return QualityEngine(data_root=data_root)
 
     @provide
     def freeze_manager(self, data_root: Path) -> FreezeManager:
@@ -139,6 +143,11 @@ class DataHubProvider(Provider):
         quarantine_path = data_root / "quarantine.db"
         return QuarantineStore(quarantine_path)
 
+    @provide
+    def dq_engine(self, data_root: Path) -> QualityEngine:
+        """数据质量引擎（应用层 DQ 检查使用）."""
+        return QualityEngine(data_root=data_root)
+
     # ========================================================================
     # Accessor Layer
     # ========================================================================
@@ -179,9 +188,7 @@ class DataHubProvider(Provider):
         security_store: SecurityStore,
         adj_factor_store: AdjFactorStore,
         stock_status_store: StockStatusStore,
-        dq_engine: QualityEngine,
         file_lock: FileLockManager,
-        quarantine_store: QuarantineStore,
     ) -> BarsAccessor:
         """OHLCV 数据访问器."""
         return BarsAccessor(
@@ -189,9 +196,7 @@ class DataHubProvider(Provider):
             security_store=security_store,
             adj_factor_store=adj_factor_store,
             stock_status_store=stock_status_store,
-            dq_engine=dq_engine,
             file_lock=file_lock,
-            quarantine_store=quarantine_store,
         )
 
     @provide
@@ -274,7 +279,6 @@ class DataHubProvider(Provider):
         sqlite_pool: SQLitePool,
         file_lock: FileLockManager,
         sid_allocator: SidAllocator,
-        dq_engine: QualityEngine,
         freeze_manager: FreezeManager,
         securities: SecuritiesAccessor,
         calendar: CalendarAccessor,
@@ -297,7 +301,6 @@ class DataHubProvider(Provider):
             sqlite_pool=sqlite_pool,
             file_lock=file_lock,
             sid_allocator=sid_allocator,
-            dq_engine=dq_engine,
             freeze_manager=freeze_manager,
             securities=securities,
             calendar=calendar,

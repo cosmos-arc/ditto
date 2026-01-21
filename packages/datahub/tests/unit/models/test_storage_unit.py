@@ -22,7 +22,6 @@ class TestWriteResult:
             rows_written=1000,
             rows_total=1000,
             blocked=False,
-            dq_result=None,
         )
 
         assert result.file_path == "/data/stock_daily/2024-01-02.parquet"
@@ -30,40 +29,19 @@ class TestWriteResult:
         assert result.rows_written == 1000
         assert result.rows_total == 1000
         assert result.blocked is False
-        assert result.dq_result is None
 
     def test_create_write_result_blocked(self) -> None:
         """Test creating WriteResult for blocked write."""
-        from ditto_datahub.models.quality import DQIssue, DQLevel, DQResult, DQSeverity
-
-        dq_result = DQResult(
-            dataset="stock_daily",
-            passed=False,
-            issues=[
-                DQIssue(
-                    level=DQLevel.L1_TECHNICAL,
-                    severity=DQSeverity.ERROR,
-                    rule_name="not_null",
-                    message="Null values found",
-                    affected_rows=5,
-                )
-            ],
-        )
-
         result = WriteResult(
             file_path="/data/stock_daily/2024-01-02.parquet",
             checksum="abc123",
             rows_written=0,
             rows_total=1000,
             blocked=True,
-            dq_result=dq_result,
         )
 
         assert result.blocked is True
         assert result.rows_written == 0
-        assert result.dq_result is not None
-        assert result.dq_result.has_errors is True
-        assert result.dq_result.error_count == 1
 
     def test_write_result_is_frozen(self) -> None:
         """Test that WriteResult is frozen (immutable)."""
@@ -73,7 +51,6 @@ class TestWriteResult:
             rows_written=100,
             rows_total=100,
             blocked=False,
-            dq_result=None,
         )
         with pytest.raises(dataclasses.FrozenInstanceError):
             result.file_path = "/other/path"

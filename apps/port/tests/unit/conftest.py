@@ -46,8 +46,25 @@ def _mock_flow_decorator(*args, **kwargs):
     return decorator
 
 
-# Apply the mock globally
+# Mock the @task decorator to bypass Prefect task engine in unit tests
+_original_task_decorator = prefect.tasks.task
+
+
+def _mock_task_decorator(*args, **kwargs):
+    """Mock @task decorator that returns the function unchanged."""
+
+    def decorator(func):
+        return func
+
+    # Support @task() and @task syntax
+    if args and callable(args[0]):
+        return args[0]  # Direct @task without parentheses
+    return decorator
+
+
+# Apply the mocks globally
 prefect.flows.flow = _mock_flow_decorator
+prefect.tasks.task = _mock_task_decorator
 
 
 @pytest.fixture(autouse=True)
