@@ -13,7 +13,6 @@ from importlib.resources import files
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_core.quality import QualityEngine
 from ditto_datahub import DataHub
 from ditto_datahub.accessors.adj_factor import AdjFactorAccessor
 from ditto_datahub.accessors.bars import BarsAccessor
@@ -143,11 +142,6 @@ class DataHubProvider(Provider):
         """隔离区存储."""
         quarantine_path = data_root / "quarantine.db"
         return QuarantineStore(quarantine_path)
-
-    @provide
-    def dq_engine(self, data_root: Path) -> QualityEngine:
-        """数据质量引擎（应用层 DQ 检查使用）."""
-        return QualityEngine(data_root=data_root)
 
     # ========================================================================
     # Accessor Layer
