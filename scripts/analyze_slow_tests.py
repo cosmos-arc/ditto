@@ -3,6 +3,7 @@
 
 import subprocess
 import sys
+from pathlib import Path
 
 # 性能阈值（秒）
 UNIT_TEST_THRESHOLD = 0.5
@@ -11,7 +12,14 @@ _MIN_PARTS = 3
 
 
 def get_durations(test_path: str, count: int = 50) -> dict:
-    """运行 pytest 并获取耗时数据"""
+    """运行 pytest 并获取耗时数据
+
+    如果测试路径不存在，返回空字典
+    """
+    # 检查路径是否存在
+    if not Path(test_path).exists():
+        return {}
+
     cmd = [
         "pytest",
         test_path,
@@ -24,14 +32,16 @@ def get_durations(test_path: str, count: int = 50) -> dict:
 
     result = subprocess.run(
         cmd,
-        capture_output=True,
-        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        encoding="utf-8",  # 明确指定编码
+        errors="replace",  # 替换无法解码的字符
         check=False,
     )
 
     # 解析输出
     durations = {}
-    for line in result.stderr.split("\n"):
+    for line in result.stdout.split("\n"):
         if "s setup" in line or "s call" in line:
             # 格式: "2.34s call     tests/unit/test_foo.py::test_bar"
             parts = line.split()
@@ -52,7 +62,10 @@ def analyze_slow_tests() -> None:
 
     # 分析单元测试
     print("[*] 分析单元测试...")
-    unit_durations = get_durations("packages/*/tests/unit", count=50)
+    unit_durations = {}
+    for package in ["core", "datahub", "foundation"]:
+        path = f"packages/{package}/tests/unit"
+        unit_durations.update(get_durations(path, count=50))
 
     slow_unit_tests = {
         name: duration
@@ -62,10 +75,15 @@ def analyze_slow_tests() -> None:
 
     # 分析集成测试
     print("[*] 分析集成测试...")
-    integration_durations = get_durations(
-        "packages/*/tests/integration",
-        count=50,
-    )
+    integration_durations = {}
+    for package in ["core", "datahub", "foundation"]:
+        path = f"packages/{package}/tests/integration"
+        integration_durations.update(get_durations(path, count=50))
+
+    # 也分析 apps
+    for app in ["port"]:
+        path = f"apps/{app}/tests/integration"
+        integration_durations.update(get_durations(path, count=50))
 
     slow_integration_tests = {
         name: duration
