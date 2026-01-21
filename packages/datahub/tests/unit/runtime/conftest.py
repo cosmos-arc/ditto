@@ -21,5 +21,7 @@ def frozen_time(
             frozen_time.move_to(2)  # 虚拟前进 2 秒
             assert cache.get("key") is None
     """
-    with time_machine.travel(0, tick=True):
+    import time_machine as tm
+
+    with tm.travel(0, tick=True):
         yield time_machine
