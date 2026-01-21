@@ -40,10 +40,10 @@ def build_pytest_command() -> list[str]:
         not in ["--snapshot", "--unit", "--integration", "--fast", "--cov", "--cov-xml"]
     ]
 
-    # inline-snapshot 模式：串行运行
+    # Snapshot 模式：只运行 snapshot 测试（串行）
     if has_snapshot:
         cmd.append("--snapshot-update")
-        # snapshot 模式不并行，避免兼容性问题
+        cmd.extend(["-m", "snapshot"])
         if paths:
             cmd.extend(paths)
         return cmd
@@ -63,18 +63,19 @@ def build_pytest_command() -> list[str]:
 
     # 测试类型选择
     if has_integration:
-        # 集成测试：串行
-        cmd.extend(["-m", "integration", "-n", "0"])
+        # 集成测试：串行（排除 snapshot）
+        cmd.extend(["-m", "integration and not snapshot", "-n", "0"])
     elif has_fast:
-        # 快速测试：跳过 slow/integration
-        cmd.extend(["-m", "not slow and not integration", "--no-cov", "-q"])
+        # 快速测试：跳过 slow/integration/snapshot
+        cmd.extend(
+            ["-m", "not slow and not integration and not snapshot", "--no-cov", "-q"]
+        )
     elif has_unit:
-        # 单元测试：并行
-        cmd.extend(["-m", "not integration", "-n", "auto"])
+        # 单元测试：并行（排除 snapshot）
+        cmd.extend(["-m", "unit and not snapshot", "-n", "auto"])
     else:
-        # 默认：先跑单元测试（并行），再跑集成测试（串行）
-        # 这里只运行单元测试，集成测试由用户显式指定
-        cmd.extend(["-m", "not integration", "-n", "auto"])
+        # 默认：并行运行非 snapshot 测试
+        cmd.extend(["-m", "not snapshot", "-n", "auto"])
 
     # 添加路径参数
     if paths:
