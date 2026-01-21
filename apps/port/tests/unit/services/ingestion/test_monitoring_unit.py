@@ -44,7 +44,7 @@ class TestMonitorIngestionQuality:
         }
 
         # Should not raise
-        result = monitor_ingestion_quality.fn(
+        result = monitor_ingestion_quality(
             trade_date="2024-12-27",
             ingestion_results=ingestion_results,
         )
@@ -89,7 +89,7 @@ class TestMonitorIngestionQuality:
             }
         }
 
-        result = monitor_ingestion_quality.fn(
+        result = monitor_ingestion_quality(
             trade_date="2024-12-27",
             ingestion_results=ingestion_results,
         )
@@ -125,7 +125,7 @@ class TestMonitorIngestionQuality:
             },
         }
 
-        result = monitor_ingestion_quality.fn(
+        result = monitor_ingestion_quality(
             trade_date="2024-12-27",
             ingestion_results=ingestion_results,
         )
@@ -140,7 +140,7 @@ class TestMonitorIngestionQuality:
 
     def test_monitor_handles_empty_results(self) -> None:
         """Test monitoring handles empty ingestion results."""
-        result = monitor_ingestion_quality.fn(
+        result = monitor_ingestion_quality(
             trade_date="2024-12-27",
             ingestion_results={},
         )
@@ -165,7 +165,7 @@ class TestMonitorIngestionQuality:
         }
 
         # Should not raise
-        result = monitor_ingestion_quality.fn(
+        result = monitor_ingestion_quality(
             trade_date="2024-12-27",
             ingestion_results=ingestion_results,
         )
