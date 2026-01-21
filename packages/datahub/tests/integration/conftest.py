@@ -4,8 +4,10 @@
 """
 
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
+from ditto_foundation import SQLitePool
 from prometheus_client import CollectorRegistry
 
 
@@ -59,3 +61,46 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 
         if is_integration_path and not has_integration_marker:
             item.add_marker(pytest.mark.integration)
+
+
+@pytest.fixture
+def sqlite_schema_path() -> Path:
+    """获取 schema.sql 路径。
+
+    返回 datahub 的数据库 schema 文件路径，用于初始化测试数据库。
+
+    Returns:
+        Path: schema.sql 文件的路径
+    """
+    return (
+        Path(__file__).parent.parent.parent  # tests/integration/conftest.py -> datahub
+        / "src"
+        / "ditto_datahub"
+        / "scripts"
+        / "schema.sql"
+    )
+
+
+@pytest.fixture
+def sqlite_pool_with_schema(
+    sqlite_schema_path: Path, tmp_path: Path
+) -> Generator[SQLitePool, None, None]:
+    """创建已初始化 schema 的 SQLite 连接池。
+
+    使用临时文件数据库（而非内存数据库），更适合集成测试场景。
+    每个测试函数获得独立的数据库文件，确保测试隔离。
+
+    Args:
+        sqlite_schema_path: Schema 文件路径
+        tmp_path: pytest 的临时目录 fixture
+
+    Yields:
+        SQLitePool: 已初始化表结构的连接池
+    """
+    db_path = tmp_path / "meta" / "hub.sqlite"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    pool = SQLitePool(str(db_path), schema_path=sqlite_schema_path)
+    pool.init_schema()
+    yield pool
+    pool.close()
