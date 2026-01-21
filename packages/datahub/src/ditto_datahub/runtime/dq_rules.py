@@ -7,8 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import polars as pl
-from ditto_core.quality.spec import DQSeverity
-from ditto_foundation import logger
+from ditto_foundation import DQSeverity, logger
 
 
 @dataclass(frozen=True)

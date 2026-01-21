@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from ditto_foundation import DQSeverity
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
@@ -16,14 +17,6 @@ class DQLevel(Enum):
     L1_TECHNICAL = "l1_technical"
     L2_BUSINESS = "l2_business"
     L3_STATISTICAL = "l3_statistical"
-
-
-class DQSeverity(Enum):
-    """DQ severity level."""
-
-    ERROR = "error"
-    WARNING = "warning"
-    ALERT = "alert"
 
 
 class RuleType(str, Enum):
