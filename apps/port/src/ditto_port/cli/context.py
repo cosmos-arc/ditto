@@ -9,7 +9,12 @@ from ditto_datahub import DataHub
 from ditto_datahub.models import Source
 
 from ditto_port.cli.executor import CLIExecutor
-from ditto_port.registry import AppProvider, DataHubProvider, DataSourcesProvider
+from ditto_port.registry import (
+    ConfigProvider,
+    CoreProvider,
+    DataHubProvider,
+    DataSourcesProvider,
+)
 
 
 @contextmanager
@@ -28,7 +33,8 @@ def create_cli_host() -> Generator[Any, None, None]:
     """
     # 创建同步容器
     container = make_container(
-        AppProvider(),
+        ConfigProvider(),
+        CoreProvider(),
         DataHubProvider(),
         DataSourcesProvider(),
     )

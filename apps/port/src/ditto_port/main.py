@@ -37,7 +37,12 @@ from ditto_port.middleware import (
     http_exception_handler,
     validation_exception_handler,
 )
-from ditto_port.registry import AppProvider, DataHubProvider, DataSourcesProvider
+from ditto_port.registry import (
+    ConfigProvider,
+    CoreProvider,
+    DataHubProvider,
+    DataSourcesProvider,
+)
 
 # Initialize project root
 project_root = Path(__file__).parent.parent.parent.parent
@@ -83,7 +88,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 创建容器（在 try 块之前，避免未绑定问题）
     container = make_async_container(
-        AppProvider(),
+        ConfigProvider(),
+        CoreProvider(),
         DataHubProvider(),
         DataSourcesProvider(),
     )

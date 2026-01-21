@@ -12,7 +12,12 @@ from typing import Any
 from dishka import make_container
 from ditto_datahub import DataHub
 
-from ditto_port.registry import AppProvider, DataHubProvider, DataSourcesProvider
+from ditto_port.registry import (
+    ConfigProvider,
+    CoreProvider,
+    DataHubProvider,
+    DataSourcesProvider,
+)
 from ditto_port.services.ingestion import create_coordinator
 
 
@@ -31,7 +36,8 @@ def create_prefect_host() -> Iterator[Any]:
 
     """
     container = make_container(
-        AppProvider(),
+        ConfigProvider(),
+        CoreProvider(),
         DataHubProvider(),
         DataSourcesProvider(),
     )
