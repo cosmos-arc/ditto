@@ -1,32 +1,6 @@
 """DataHub models for data transfer objects."""
 
-# Re-export DQ models from Core Layer for backward compatibility
-from ditto_core.quality.spec import (
-    ColumnRule,
-    CompletenessRule,
-    ConsistencyRule,
-    DatasetRules,
-    DQIssue,
-    DQLevel,
-    DQResult,
-    DQSeverity,
-    DQSpec,
-    ExpressionRule,
-    ForeignKeyRule,
-    MonotonicDecreaseRule,
-    NotNullRule,
-    NoZeroVolumeRule,
-    OutlierRule,
-    PositiveRule,
-    RangeCheckRule,
-    RuleType,
-    SingleColumnRule,
-    StalePriceRule,
-    TypeCheckRule,
-    UniqueRule,
-    ZScoreRule,
-)
-
+# DataHub 层自己的 models
 from ditto_datahub.models.common import AssetSidRange, Dataset, OnDuplicate, Source
 from ditto_datahub.models.ingestion import (
     DataChangedError,
@@ -39,38 +13,15 @@ from ditto_datahub.models.storage import FreezeManifest, WriteResult, WriteResul
 
 __all__ = [
     "AssetSidRange",
-    "ColumnRule",
-    "CompletenessRule",
-    "ConsistencyRule",
-    "DQIssue",
-    "DQLevel",
-    "DQResult",
-    "DQSeverity",
-    "DQSpec",
     "DataChangedError",
     "Dataset",
-    "DatasetRules",
-    "ExpressionRule",
-    "ForeignKeyRule",
     "FreezeManifest",
     "IngestionCursor",
     "IngestionLog",
     "IngestionStatus",
-    "MonotonicDecreaseRule",
-    "NoZeroVolumeRule",
-    "NotNullRule",
     "NotTradingDayError",
     "OnDuplicate",
-    "OutlierRule",
-    "PositiveRule",
-    "RangeCheckRule",
-    "RuleType",
-    "SingleColumnRule",
     "Source",
-    "StalePriceRule",
-    "TypeCheckRule",
-    "UniqueRule",
     "WriteResult",
     "WriteResultStore",
-    "ZScoreRule",
 ]
