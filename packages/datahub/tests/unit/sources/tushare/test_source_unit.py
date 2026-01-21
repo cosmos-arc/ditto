@@ -77,21 +77,15 @@ class TestTushareSourceCalendar:
 
         assert result.is_empty()
 
-    def test_fetch_calendar_api_error_raises(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_calendar_api_error_raises(self, tushare_source, respx_mock) -> None:
         """Test fetch_calendar raises SourceFetchError on API error."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Mock HTTP 响应 - API 错误
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareSource()
-
         with pytest.raises(SourceFetchError):
-            source.fetch_calendar("2024-01-01", "2024-01-03")
+            tushare_source.fetch_calendar("2024-01-01", "2024-01-03")
 
 
 class TestTushareSourceEtfBasic:
@@ -400,20 +394,16 @@ class TestTushareSourceStockBasic:
         assert result.is_empty()
 
     def test_fetch_stock_basic_api_error_raises(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+        self, tushare_source, respx_mock
     ) -> None:
         """Test fetch_stock_basic raises SourceFetchError on API error."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Mock HTTP 响应 - API 错误
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareSource()
-
         with pytest.raises(SourceFetchError):
-            source.fetch_stock_basic()
+            tushare_source.fetch_stock_basic()
 
 
 class TestTushareSourceStockDaily:
@@ -540,20 +530,16 @@ class TestTushareSourceStockDaily:
         assert result.is_empty()
 
     def test_fetch_stock_daily_api_error_raises(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+        self, tushare_source, respx_mock
     ) -> None:
         """Test fetch_stock_daily raises SourceFetchError on API error."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Mock HTTP 响应 - API 错误
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareSource()
-
         with pytest.raises(SourceFetchError):
-            source.fetch_stock_daily("2024-01-02")
+            tushare_source.fetch_stock_daily("2024-01-02")
 
 
 class TestTushareSourceAdjFactor:
@@ -638,20 +624,16 @@ class TestTushareSourceAdjFactor:
         assert result.is_empty()
 
     def test_fetch_adj_factor_api_error_raises(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+        self, tushare_source, respx_mock
     ) -> None:
         """Test fetch_adj_factor raises SourceFetchError on API error."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Mock HTTP 响应 - API 错误
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareSource()
-
         with pytest.raises(SourceFetchError):
-            source.fetch_adj_factor("2024-01-02")
+            tushare_source.fetch_adj_factor("2024-01-02")
 
 
 class TestTushareSourceFundAdj:
@@ -735,21 +717,15 @@ class TestTushareSourceFundAdj:
 
         assert result.is_empty()
 
-    def test_fetch_fund_adj_api_error_raises(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_fund_adj_api_error_raises(self, tushare_source, respx_mock) -> None:
         """Test fetch_fund_adj raises SourceFetchError on API error."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Mock HTTP 响应 - API 错误
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareSource()
-
         with pytest.raises(SourceFetchError):
-            source.fetch_fund_adj("2024-01-02")
+            tushare_source.fetch_fund_adj("2024-01-02")
 
 
 class TestTushareSourceErrorHandler:
@@ -875,18 +851,15 @@ class TestTushareSourceFetchSuspendData:
         }
 
     def test_fetch_suspend_data_returns_empty_dataframe_on_api_error(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+        self, tushare_source, respx_mock
     ) -> None:
         """Test _fetch_suspend_data returns empty DataFrame on API error."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Mock HTTP 响应 - API 错误
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareSource()
-        result = source._fetch_suspend_data("20240102")
+        result = tushare_source._fetch_suspend_data("20240102")
 
         # Should return empty DataFrame with correct schema
         # (The method logs a warning but doesn't raise exception)
@@ -1007,18 +980,15 @@ class TestTushareSourceFetchStData:
         }
 
     def test_fetch_st_data_returns_empty_dataframe_on_api_error(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+        self, tushare_source, respx_mock
     ) -> None:
         """Test _fetch_st_data returns empty DataFrame on API error."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Mock HTTP 响应 - API 错误
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareSource()
-        result = source._fetch_st_data()
+        result = tushare_source._fetch_st_data()
 
         # Should return empty DataFrame with correct schema
         # (The method logs a warning but doesn't raise exception)
@@ -1145,18 +1115,15 @@ class TestTushareSourceFetchListStatusData:
         }
 
     def test_fetch_list_status_data_returns_empty_dataframe_on_api_error(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+        self, tushare_source, respx_mock
     ) -> None:
         """Test _fetch_list_status_data returns empty DataFrame on API error."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Mock HTTP 响应 - API 错误
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(500, text="Internal Server Error")
         )
 
-        source = TushareSource()
-        result = source._fetch_list_status_data()
+        result = tushare_source._fetch_list_status_data()
 
         # Should return empty DataFrame with correct schema
         # (The method logs a warning but doesn't raise exception)
