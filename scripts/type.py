@@ -8,13 +8,25 @@ pixi type 命令包装脚本
 - pixi run type --all    # 源码 + 测试全部检查
 """
 
+import shutil
 import subprocess
 import sys
+from pathlib import Path
+
+
+def clear_pyright_cache() -> None:
+    """清除 pyright 缓存以确保类型检查准确。"""
+    cache_dir = Path.cwd() / ".pyright_cache"
+    if cache_dir.exists():
+        shutil.rmtree(cache_dir, ignore_errors=True)
 
 
 def main() -> int:
     """主函数"""
     args = sys.argv[1:]
+
+    # 清除缓存以确保类型检查准确
+    clear_pyright_cache()
 
     has_tests = "--tests" in args
     has_all = "--all" in args

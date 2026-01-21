@@ -1,0 +1,143 @@
+"""
+配置 Provider（Composition Root）.
+
+所有配置通过 DI 容器注入，在应用层（port）统一管理配置加载。
+Foundation 层只提供基础设施（Environment、ConfigLoader、Settings 类）。
+"""
+
+from __future__ import annotations
+
+import os
+from collections.abc import Iterator
+from pathlib import Path
+
+from dishka import Provider, Scope, provide
+from ditto_core.quality.config import DQSettings
+from ditto_foundation.config import (
+    ConfigLoader,
+    Environment,
+)
+from ditto_foundation.config.paths import get_paths
+from ditto_foundation.config.settings import (
+    Settings,
+)
+from dotenv import dotenv_values
+
+__all__ = ["ConfigProvider"]
+
+
+class ConfigProvider(Provider):
+    """
+    统一配置提供者（Composition Root）.
+
+    职责：
+        1. 根据环境创建 ConfigLoader
+        2. 从 config/{env}/*.env 加载所有配置
+        3. 提供统一的配置访问接口
+        4. 注入环境信息到各个配置
+
+    架构分层：
+        Foundation: Settings 类定义（不依赖 DI）
+        Port (这里): ConfigProvider 组装所有配置
+    """
+
+    scope = Scope.APP  # 应用级单例
+
+    @provide
+    def environment(self) -> Environment:
+        """
+        运行时环境（应用级单例）.
+
+        从 DITTO_ENV 环境变量读取，默认为 development.
+        """
+        env_str = os.getenv("DITTO_ENV", "development")
+        return Environment.from_str(env_str)
+
+    @provide
+    def config_loader(self, environment: Environment) -> ConfigLoader:
+        """配置加载器（应用级单例）."""
+        return ConfigLoader(environment)
+
+    @provide
+    def data_root(self) -> Path:
+        """数据根目录."""
+        return get_paths().data_home
+
+    @provide
+    def settings(
+        self,
+        config_loader: ConfigLoader,
+    ) -> Settings:
+        """
+        主配置 Settings（应用级单例）.
+
+        从各个 env 文件加载配置，保持配置加载逻辑统一。
+        """
+        # 从各个 env 文件加载配置
+        database_values = dotenv_values(config_loader.get_env_file("database"))
+        observability_values = dotenv_values(
+            config_loader.get_env_file("observability")
+        )
+        data_source_values = dotenv_values(config_loader.get_env_file("data_source"))
+        system_values = dotenv_values(config_loader.get_env_file("system"))
+
+        # 使用 model_validate 创建配置实例
+        return Settings.model_validate(
+            {
+                "database": database_values,
+                "observability": observability_values,
+                "data_source": data_source_values,
+                "system": system_values,
+                "file_storage": system_values,  # file_storage 共用 system.env
+            }
+        )
+
+    @provide
+    def dq_settings(
+        self,
+        config_loader: ConfigLoader,
+        environment: Environment,
+    ) -> DQSettings:
+        """
+        DQ 配置（应用级单例）.
+
+        ✅ 统一规则：从 config/{env}/dq.env 加载
+        ✅ 注入环境信息，DQSettings 无需内部读取 get_settings()
+        """
+        dq_values = dotenv_values(config_loader.get_env_file("dq"))
+        # 注入环境信息
+        return DQSettings.model_validate(
+            {
+                **dq_values,
+                "env": environment.value,  # 注入环境
+            }
+        )
+
+    @provide
+    def observability(
+        self,
+        settings: Settings,
+    ) -> Iterator[None]:
+        """
+        Observability 初始化（应用级单例）.
+
+        生命周期：容器启动时初始化，容器关闭时调用 shutdown().
+        """
+        from ditto_foundation.observability import init, shutdown
+
+        config = settings.observability
+        init(
+            service_name="ditto-server",
+            environment=settings.system.ditto_env.value,
+            log_level=config.log_level,
+            log_dir="logs",
+            vm_endpoint=config.vm_endpoint,
+            pytest_running=False,
+            assertions_enabled=False,
+            verbose_logging=(settings.system.ditto_env.is_development),
+        )
+
+        yield
+
+        # 容器关闭时调用 shutdown
+        shutdown()
