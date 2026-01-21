@@ -4,9 +4,35 @@
 """
 
 from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 import pytest
 from prefect.testing.utilities import prefect_test_harness
+
+if TYPE_CHECKING:
+    from prometheus_client import CollectorRegistry
+
+
+@pytest.fixture
+def metrics_registry() -> Generator["CollectorRegistry", None, None]:
+    """提供内存 Registry（不依赖外部服务）。
+
+    使用方式:
+        def test_metrics(metrics_registry):
+            from prometheus_client import Counter
+            counter = Counter("api_requests", "API 请求计数", registry=metrics_registry)
+            counter.inc()
+            # 验证指标值
+            for metric in metrics_registry.collect():
+                for sample in metric.samples:
+                    if sample.name == "api_requests_total":
+                        assert sample.value == 1.0
+    """
+    from prometheus_client import CollectorRegistry
+
+    registry = CollectorRegistry()
+    yield registry
+    registry.clear()  # 清理
 
 
 @pytest.fixture(autouse=True)
