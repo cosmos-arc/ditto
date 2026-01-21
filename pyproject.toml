@@ -270,7 +270,8 @@ asyncio_mode = "strict"
 addopts = [
     "-ra",
     "-v",
-    # "-n", "auto",  # 移除全局并行配置，改为命令级别控制（支持分层并行策略）
+    "-n", "auto",           # 默认并行运行
+    "--dist", "loadfile",   # 同文件测试串行（避免 snapshot 冲突）
     "--strict-markers",
     "--strict-config",
     "--cov=packages",
@@ -280,7 +281,7 @@ addopts = [
     "--cov-report=xml",
     "--cov-branch",
     "--cov-fail-under=80",
-    "--durations=10",
+    "--durations=10",       # 报告最慢的 10 个测试
 ]
 
 # ===================================================================
