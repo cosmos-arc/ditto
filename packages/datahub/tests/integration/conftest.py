@@ -4,16 +4,13 @@
 """
 
 from collections.abc import Generator
-from typing import TYPE_CHECKING
 
 import pytest
-
-if TYPE_CHECKING:
-    from prometheus_client import CollectorRegistry
+from prometheus_client import CollectorRegistry
 
 
 @pytest.fixture
-def metrics_registry() -> Generator["CollectorRegistry", None, None]:
+def metrics_registry() -> Generator[CollectorRegistry, None, None]:
     """提供内存 Registry（不依赖外部服务）。
 
     使用方式:
@@ -27,8 +24,6 @@ def metrics_registry() -> Generator["CollectorRegistry", None, None]:
                     if sample.name == "api_requests_total":
                         assert sample.value == 1.0
     """
-    from prometheus_client import CollectorRegistry
-
     registry = CollectorRegistry()
     yield registry
     registry.clear()  # 清理
