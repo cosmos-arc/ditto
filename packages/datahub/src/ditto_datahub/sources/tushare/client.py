@@ -19,8 +19,12 @@ from ditto_datahub.config import DataSourceSettings
 
 try:
     import keyring
+    import keyring.errors
 except ImportError:
     keyring = None
+    keyring_errors = None
+else:
+    keyring_errors = keyring.errors
 
 from ditto_datahub.sources.base import (
     SourceConfigurationError,
@@ -38,7 +42,7 @@ from ditto_datahub.sources.tushare.utils.rate_limiter import (
 )
 
 
-def _get_tushare_token(token: str | None = None) -> str:
+def _get_tushare_token(token: str | None = None) -> str:  # noqa: C901, PLR0912
     """
     Get Tushare token with graceful fallback.
 
@@ -81,7 +85,33 @@ def _get_tushare_token(token: str | None = None) -> str:
                 return keyring_token
         except Exception as e:
             # keyring may not be available or configured
-            logger.debug("Keyring not available, skipping", error=str(e))
+            if keyring_errors is not None:
+                # 已知 keyring 错误类型
+                if isinstance(
+                    e,
+                    (
+                        keyring_errors.KeyringError,
+                        keyring_errors.KeyringLocked,
+                        keyring_errors.PasswordSetError,
+                    ),
+                ):
+                    logger.debug(
+                        "Keyring not available, skipping",
+                        keyring_error=type(e).__name__,
+                    )
+                elif isinstance(e, OSError):
+                    logger.debug(
+                        "Keyring OS error, skipping",
+                        os_error=str(e),
+                    )
+                else:
+                    # 其他未知 keyring 错误
+                    logger.debug(
+                        "Keyring unknown error, skipping",
+                        error=str(e),
+                    )
+            else:
+                logger.debug("Keyring not available, skipping", error=str(e))
 
     # 3. Try ~/.ditto/secrets.toml (fallback)
     config_file = Path.home() / ".ditto" / "secrets.toml"
@@ -98,8 +128,18 @@ def _get_tushare_token(token: str | None = None) -> str:
                     source="secrets.toml",
                 )
                 return config_token
-        except Exception as e:
-            logger.debug("Failed to load secrets.toml", error=str(e))
+        except (OSError, tomllib.TOMLDecodeError) as e:
+            # 文件系统错误或 TOML 解析错误
+            logger.debug(
+                "Failed to load secrets.toml",
+                file_error=str(e),
+            )
+        except (AttributeError, TypeError) as e:
+            # 配置结构错误
+            logger.debug(
+                "Invalid secrets.toml structure",
+                error=str(e),
+            )
 
     # No token found
     raise SourceConfigurationError(
