@@ -5,9 +5,10 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.sources.tushare.adapters import StockStatusAdapter
 from ditto_datahub.sources.tushare.base import BaseTushareSource
 from ditto_datahub.sources.tushare.error_handler import tushare_fetch_error_handler
-from ditto_datahub.sources.tushare.status_merger import StockStatusMerger
+from ditto_datahub.sources.tushare.processors import StatusMerger
 from ditto_datahub.sources.tushare.transformer import (
     ADJ_FACTOR_MAPPING,
     STOCK_BASIC_MAPPING,
@@ -233,19 +234,20 @@ class StockTushareSource(BaseTushareSource):
         with tushare_fetch_error_handler("stock_status", "stock_status"):
             ts_date = trade_date.replace("-", "")
 
-            # 使用 StockStatusMerger 获取并合并状态数据
-            merger = StockStatusMerger(self._client)
+            # 使用 Adapter 获取状态数据
+            adapter = StockStatusAdapter(self._client)
 
             # 1. Fetch suspension data from suspend_d API
-            suspend_df = merger.fetch_suspend_data(ts_date)
+            suspend_df = adapter.fetch_suspend_data(ts_date)
 
             # 2. Fetch ST status from stock_st API
-            st_df = merger.fetch_st_data()
+            st_df = adapter.fetch_st_data()
 
             # 3. Fetch list_status from stock_basic API
-            list_status_df = merger.fetch_list_status_data()
+            list_status_df = adapter.fetch_list_status_data()
 
-            # 4. Merge all data sources
+            # 4. 使用 Processor 合并数据
+            merger = StatusMerger()
             result = merger.merge_status_data(
                 list_status_df, suspend_df, st_df, trade_date
             )
