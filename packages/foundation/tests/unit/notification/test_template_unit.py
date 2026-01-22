@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 from ditto_foundation.notification.message import (
+    Notification,
     NotificationLevel,
-    NotificationMessage,
 )
 from ditto_foundation.notification.template import TemplateEngine
 from jinja2 import TemplateNotFound
@@ -28,7 +28,7 @@ class TestTemplateEngine:
 
         engine = TemplateEngine([tmp_path])
 
-        message = NotificationMessage(
+        message = Notification(
             template="test",
             context={"name": "World"},
             level=NotificationLevel.INFO,
@@ -44,7 +44,7 @@ class TestTemplateEngine:
 
         engine = TemplateEngine([tmp_path])
 
-        message = NotificationMessage(
+        message = Notification(
             template="alert",
             context={},
             level=NotificationLevel.ERROR,
@@ -61,7 +61,7 @@ class TestTemplateEngine:
         engine = TemplateEngine([tmp_path])
 
         now = datetime.now()
-        message = NotificationMessage(
+        message = Notification(
             template="event",
             context={},
             level=NotificationLevel.INFO,
@@ -86,7 +86,7 @@ class TestTemplateEngine:
 
         engine = TemplateEngine([primary, secondary])
 
-        message = NotificationMessage(
+        message = Notification(
             template="fallback",
             context={},
             level=NotificationLevel.INFO,
@@ -99,7 +99,7 @@ class TestTemplateEngine:
         """Test error when template is not found."""
         engine = TemplateEngine([tmp_path])
 
-        message = NotificationMessage(
+        message = Notification(
             template="nonexistent",
             context={},
             level=NotificationLevel.INFO,
@@ -118,7 +118,7 @@ class TestTemplateEngine:
 
         engine = TemplateEngine([tmp_path])
 
-        message = NotificationMessage(
+        message = Notification(
             template="complex",
             context={
                 "dataset": "stock_daily",

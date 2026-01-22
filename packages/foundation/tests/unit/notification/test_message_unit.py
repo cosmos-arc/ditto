@@ -4,8 +4,8 @@ from datetime import datetime
 
 import pytest
 from ditto_foundation.notification.message import (
+    Notification,
     NotificationLevel,
-    NotificationMessage,
 )
 
 
@@ -32,12 +32,12 @@ class TestNotificationLevel:
         assert NotificationLevel.ERROR >= NotificationLevel.ERROR
 
 
-class TestNotificationMessage:
-    """NotificationMessage dataclass tests."""
+class TestNotification:
+    """Notification dataclass tests."""
 
     def test_create_minimal_message(self) -> None:
         """Test creating message with required fields only."""
-        message = NotificationMessage(
+        message = Notification(
             template="test_template",
             context={"key": "value"},
             level=NotificationLevel.INFO,
@@ -50,7 +50,7 @@ class TestNotificationMessage:
     def test_create_message_with_timestamp(self) -> None:
         """Test creating message with timestamp."""
         now = datetime.now()
-        message = NotificationMessage(
+        message = Notification(
             template="test_template",
             context={},
             level=NotificationLevel.WARNING,
@@ -60,7 +60,7 @@ class TestNotificationMessage:
 
     def test_message_is_frozen(self) -> None:
         """Test that message is immutable."""
-        message = NotificationMessage(
+        message = Notification(
             template="test",
             context={},
             level=NotificationLevel.INFO,
@@ -72,7 +72,7 @@ class TestNotificationMessage:
 
     def test_context_with_none_default(self) -> None:
         """Test context handling."""
-        message = NotificationMessage(
+        message = Notification(
             template="test",
             context=None,  # type: ignore[arg-type]
             level=NotificationLevel.INFO,

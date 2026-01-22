@@ -46,7 +46,7 @@ class NotificationLevel(str, Enum):
 
 
 @dataclass(frozen=True)
-class NotificationMessage:
+class Notification:
     """
     Structure notification message (format-agnostic).
 
@@ -67,6 +67,6 @@ class NotificationMessage:
 
 
 __all__ = [
+    "Notification",
     "NotificationLevel",
-    "NotificationMessage",
 ]

@@ -5,7 +5,7 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from ditto_foundation.notification.message import NotificationMessage
+from ditto_foundation.notification.message import Notification
 
 
 class TemplateEngine:
@@ -35,7 +35,7 @@ class TemplateEngine:
 
     def render(
         self,
-        message: NotificationMessage,
+        message: Notification,
         channel: str,  # "email", "telegram", "webhook"
     ) -> str:
         """
