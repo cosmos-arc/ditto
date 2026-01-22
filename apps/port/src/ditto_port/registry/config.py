@@ -27,6 +27,7 @@ from ditto_foundation.config.settings import (
     Settings,
 )
 from ditto_foundation.observability import init, shutdown
+from ditto_foundation.observability.config import ObservabilityConfig
 from dotenv import dotenv_values
 
 __all__ = ["ConfigProvider"]
@@ -173,16 +174,20 @@ class ConfigProvider(Provider):
         生命周期：容器启动时初始化，容器关闭时调用 shutdown().
         """
         config = settings.observability
+        ditto_env = settings.system.ditto_env
+
+        # 动态检测运行时标志（pytest、assertions、verbose）
+        runtime_flags = ObservabilityConfig.detect_runtime_flags(ditto_env)
 
         init(
             service_name="ditto-server",
-            environment=settings.system.ditto_env.value,
+            environment=ditto_env.value,
             log_level=config.log_level,
             log_dir="logs",
             vm_endpoint=config.vm_endpoint,
-            pytest_running=False,
-            assertions_enabled=False,
-            verbose_logging=(settings.system.ditto_env.is_development),
+            pytest_running=runtime_flags["pytest_running"],
+            assertions_enabled=runtime_flags["assertions_enabled"],
+            verbose_logging=runtime_flags["verbose_logging"],
         )
 
         yield

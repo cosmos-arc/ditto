@@ -32,7 +32,7 @@ class L3BatchService:
         self._engine = engine
         self._hub = hub
 
-    async def check_dataset(
+    def check_dataset(
         self,
         dataset: str,
         trade_date: str,

@@ -86,7 +86,7 @@ async def dq_batch_check(
                 if asset_class is None:
                     raise ValueError(f"Unknown dataset: {dataset}")
 
-                result = await l3_service.check_dataset(
+                result = l3_service.check_dataset(
                     dataset=dataset,
                     trade_date=trade_date,
                     asset_class=asset_class,
