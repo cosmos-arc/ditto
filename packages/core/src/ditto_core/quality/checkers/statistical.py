@@ -3,6 +3,7 @@
 from typing import Any
 
 import polars as pl
+import polars.exceptions as pl_exceptions
 from loguru import logger
 
 from ditto_core.quality.spec import DQIssue, DQLevel, DQSeverity
@@ -163,21 +164,40 @@ class StatisticalChecker:
                     .to_dicts(),
                 )
 
-        except Exception as e:
-            # 使用 logger.exception 记录完整堆栈
+        except (
+            pl_exceptions.ComputeError,
+            pl_exceptions.SchemaError,
+            pl_exceptions.ColumnNotFoundError,
+        ) as e:
+            # Polars 相关错误 - ALERT 级别
             logger.exception(
                 "dq_zscore_computation_failed",
-                event="dq_check",
+                error_type=type(e).__name__,
                 column=column,
                 rule_type="zscore",
             )
-            # 返回 ALERT 级别的 DQIssue 而非 None
             exc_type = type(e).__name__
             return DQIssue(
                 level=DQLevel.L3_STATISTICAL,
                 severity=DQSeverity.ALERT,
                 rule_name="zscore",
                 message=f"Z-score check failed for column '{column}': {exc_type}",
+                affected_rows=0,
+                sample_data=[],
+            )
+        except ValueError as e:
+            # 数值错误（如除零）- WARNING 级别
+            logger.warning(
+                "dq_zscore_invalid_value",
+                error=str(e),
+                column=column,
+                rule_type="zscore",
+            )
+            return DQIssue(
+                level=DQLevel.L3_STATISTICAL,
+                severity=DQSeverity.WARNING,
+                rule_name="zscore",
+                message=f"Invalid statistical value for '{column}': {e}",
                 affected_rows=0,
                 sample_data=[],
             )
@@ -249,10 +269,15 @@ class StatisticalChecker:
                     affected_rows=len(missing_dates),
                 )
 
-        except Exception as e:
+        except (
+            pl_exceptions.ComputeError,
+            pl_exceptions.SchemaError,
+            pl_exceptions.ColumnNotFoundError,
+        ) as e:
+            # Polars 相关错误 - ALERT 级别
             logger.exception(
                 "dq_completeness_check_failed",
-                event="dq_check",
+                error_type=type(e).__name__,
                 rule_type="completeness",
             )
             return DQIssue(
@@ -260,6 +285,21 @@ class StatisticalChecker:
                 severity=DQSeverity.ALERT,
                 rule_name="completeness",
                 message=f"Completeness check failed: {type(e).__name__}",
+                affected_rows=0,
+                sample_data=[],
+            )
+        except ValueError as e:
+            # 数值错误 - WARNING 级别
+            logger.warning(
+                "dq_completeness_invalid_value",
+                error=str(e),
+                rule_type="completeness",
+            )
+            return DQIssue(
+                level=DQLevel.L3_STATISTICAL,
+                severity=DQSeverity.WARNING,
+                rule_name="completeness",
+                message=f"Invalid value in completeness check: {e}",
                 affected_rows=0,
                 sample_data=[],
             )
