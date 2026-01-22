@@ -2,8 +2,8 @@
 
 import pytest
 from ditto_datahub.sources.tushare.client import TushareClient
-from ditto_datahub.sources.tushare.http_utils import response_to_dataframe
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
+from ditto_datahub.sources.tushare.utils.http_utils import response_to_dataframe
 
 
 class NoRetryTushareClient(TushareClient):

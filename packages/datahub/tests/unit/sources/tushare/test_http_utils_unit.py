@@ -8,7 +8,7 @@ from ditto_datahub.sources.base import (
     SourceFetchError,
     SourceRateLimitError,
 )
-from ditto_datahub.sources.tushare.http_utils import (
+from ditto_datahub.sources.tushare.utils.http_utils import (
     map_http_error,
     response_to_dataframe,
     validate_tushare_response,

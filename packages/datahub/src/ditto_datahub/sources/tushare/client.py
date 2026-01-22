@@ -24,12 +24,12 @@ from ditto_datahub.sources.base import (
     SourceConfigurationError,
     SourceFetchError,
 )
-from ditto_datahub.sources.tushare.http_utils import (
+from ditto_datahub.sources.tushare.utils.http_utils import (
     map_http_error,
     response_to_dataframe,
     validate_tushare_response,
 )
-from ditto_datahub.sources.tushare.rate_limiter import (
+from ditto_datahub.sources.tushare.utils.rate_limiter import (
     TushareAPIGroup,
     TushareRateLimitConfig,
     TushareRateLimiter,

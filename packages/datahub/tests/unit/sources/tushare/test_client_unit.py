@@ -10,7 +10,7 @@ from ditto_datahub.sources.base import (
     SourceConfigurationError,
 )
 from ditto_datahub.sources.tushare.client import TushareClient
-from ditto_datahub.sources.tushare.rate_limiter import (
+from ditto_datahub.sources.tushare.utils.rate_limiter import (
     TushareRateLimitConfig,
     TushareRateLimiter,
 )
