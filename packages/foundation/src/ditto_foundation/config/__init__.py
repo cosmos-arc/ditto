@@ -16,10 +16,6 @@ from ditto_foundation.config.initializer import (
     reset_coordinator_for_testing,
 )
 from ditto_foundation.config.loader import ConfigLoader
-from ditto_foundation.config.manager import (
-    PathsManager,
-    SingletonManager,
-)
 from ditto_foundation.config.paths import (
     PathResolver,
     XDGPaths,
@@ -42,9 +38,7 @@ __all__ = [
     "InitScope",
     "ObservabilitySettings",
     "PathResolver",
-    "PathsManager",
     "Settings",
-    "SingletonManager",
     "SystemSettings",
     "XDGPaths",
     "get_config_coordinator",

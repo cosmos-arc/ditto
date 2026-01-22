@@ -1,43 +1,27 @@
 """
-基础设施组件注册.
+基础设施组件注册（已迁移到 ConfigProvider）.
 
-注册应用级单例组件：Observability、SQLitePool、XDGPaths 等。
+⚠️ AppProvider 已废弃，所有配置相关 Provider 已迁移到 ConfigProvider.
+
+保留此文件是为了向后兼容，未来版本可能移除。
 """
 
-import os
-from collections.abc import Iterator
-
-from dishka import Provider, Scope, provide
-from ditto_foundation.observability import init, shutdown
+from dishka import Provider, Scope
 
 __all__ = ["AppProvider"]
 
 
 class AppProvider(Provider):
-    """基础设施组件 Provider."""
+    """
+    基础设施组件 Provider（已废弃）.
+
+    ⚠️ 所有功能已迁移到 ConfigProvider。
+    此 Provider 保留为空类，用于向后兼容。
+
+    迁移指南：
+        旧方式: AppProvider + DataHubProvider
+        新方式: ConfigProvider + DataHubProvider
+    """
 
     scope = Scope.APP
-
-    @provide
-    def observability(self) -> Iterator[None]:
-        """
-        初始化 Observability，应用级单例.
-
-        生命周期：容器启动时初始化，容器关闭时调用 shutdown().
-        """
-        env = os.getenv("DITTO_ENV", "development")
-
-        init(
-            service_name="ditto-server",
-            environment=env,
-            log_level="DEBUG" if env == "development" else "INFO",
-            log_dir="logs",  # 内部使用 XDGPaths.state_subdir("logs") 解析
-            pytest_running=False,
-            assertions_enabled=False,
-            verbose_logging=(env == "development"),
-        )
-
-        yield
-
-        # 容器关闭时调用 shutdown
-        shutdown()
+    # 所有 provider 方法已迁移到 ConfigProvider

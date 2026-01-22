@@ -156,8 +156,14 @@ lint = "ruff check ."
 # Format：代码格式化
 fmt = "ruff format ."
 
-# Type：类型检查（使用包装脚本）
+# Format check：只检查不修改（供 CI 使用）
+fmt-check = "ruff format --check ."
+
+# Type：类型检查（使用包装脚本，参数驱动）
 type = "python scripts/type.py"
+
+# Type all：完整类型检查（供 CI 使用）
+type-all = "python scripts/type.py --all"
 
 # ──────────────────────────────────────────────────────────
 # 测试（使用包装脚本，支持参数驱动）
@@ -170,6 +176,9 @@ type = "python scripts/type.py"
 # pixi run test --cov-xml    # 覆盖率 XML（CI 用）
 # pixi run test --snapshot   # 支持 inline-snapshot（串行）
 test = "python scripts/test.py"
+
+# Test with coverage XML（供 CI 使用）
+test-cov-xml = "python scripts/test.py --cov-xml"
 
 # ──────────────────────────────────────────────────────────
 # 组合命令

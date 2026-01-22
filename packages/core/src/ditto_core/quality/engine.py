@@ -10,6 +10,7 @@ import polars as pl
 from ditto_core.quality.checkers.business import BusinessChecker
 from ditto_core.quality.checkers.statistical import StatisticalChecker
 from ditto_core.quality.checkers.technical import TechnicalChecker
+from ditto_core.quality.config import DQSettings
 from ditto_core.quality.spec import DQIssue, DQResult, DQSeverity, DQSpec
 
 
@@ -26,6 +27,8 @@ class QualityEngine:
         config: DQSpec | None = None,
         config_path: str | Path | None = None,
         data_root: str | Path | None = None,
+        # ✅ 新增：接受 DQSettings 注入
+        dq_settings: DQSettings | None = None,
     ) -> None:
         """
         Initialize Quality engine.
@@ -34,8 +37,12 @@ class QualityEngine:
             config: Pre-loaded DQ configuration
             config_path: Path to YAML configuration directory (legacy)
             data_root: Data root for user config override (new)
+            dq_settings: DQ 配置（可选，用于检查开关状态）
 
         """
+        # 保存 DQSettings（如果有）
+        self._dq_settings = dq_settings
+
         if config is not None:
             self.config = config
         elif data_root is not None:
@@ -95,21 +102,29 @@ class QualityEngine:
 
         # Run L1 technical checks
         if "l1" in levels and dataset_rules.l1_technical:
-            l1_issues = self.technical_checker.check(
-                df=df,
-                rules=dataset_rules.l1_technical,
-                context=context,
-            )
-            issues.extend(l1_issues)
+            # ✅ 检查 L1 开关
+            if self._dq_settings and not self._dq_settings.l1_enabled:
+                pass  # 跳过 L1 检查
+            else:
+                l1_issues = self.technical_checker.check(
+                    df=df,
+                    rules=dataset_rules.l1_technical,
+                    context=context,
+                )
+                issues.extend(l1_issues)
 
         # Run L2 business checks
         if "l2" in levels and dataset_rules.l2_business:
-            l2_issues = self.business_checker.check(
-                df=df,
-                rules=dataset_rules.l2_business,
-                context=context,
-            )
-            issues.extend(l2_issues)
+            # ✅ 检查 L2 开关
+            if self._dq_settings and not self._dq_settings.l2_enabled:
+                pass  # 跳过 L2 检查
+            else:
+                l2_issues = self.business_checker.check(
+                    df=df,
+                    rules=dataset_rules.l2_business,
+                    context=context,
+                )
+                issues.extend(l2_issues)
 
         # Determine if passed (L1 errors cause failure)
         has_errors = any(i.severity == DQSeverity.ERROR for i in issues)
