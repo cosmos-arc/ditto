@@ -13,6 +13,11 @@ from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from ditto_core.quality.config import DQSettings
+from ditto_datahub.config import (
+    DatabaseSettings,
+    DataSourceSettings,
+    FileStorageSettings,
+)
 from ditto_foundation.config import (
     ConfigLoader,
     Environment,
@@ -38,6 +43,7 @@ class ConfigProvider(Provider):
 
     架构分层：
         Foundation: Settings 类定义（不依赖 DI）
+        DataHub: 数据相关配置
         Port (这里): ConfigProvider 组装所有配置
     """
 
@@ -112,6 +118,48 @@ class ConfigProvider(Provider):
                 "env": environment.value,  # 注入环境
             }
         )
+
+    @provide
+    def database_settings(
+        self,
+        config_loader: ConfigLoader,
+    ) -> DatabaseSettings:
+        """
+        Database 配置（应用级单例）.
+
+        ✅ 统一规则：从 config/{env}/database.env 加载
+        ✅ DataHub 层配置：通过 DI 容器注入，与 Foundation 解耦
+        """
+        database_values = dotenv_values(config_loader.get_env_file("database"))
+        return DatabaseSettings.model_validate(database_values)
+
+    @provide
+    def data_source_settings(
+        self,
+        config_loader: ConfigLoader,
+    ) -> DataSourceSettings:
+        """
+        DataSource 配置（应用级单例）.
+
+        ✅ 统一规则：从 config/{env}/data_source.env 加载
+        ✅ DataHub 层配置：通过 DI 容器注入，与 Foundation 解耦
+        """
+        data_source_values = dotenv_values(config_loader.get_env_file("data_source"))
+        return DataSourceSettings.model_validate(data_source_values)
+
+    @provide
+    def file_storage_settings(
+        self,
+        config_loader: ConfigLoader,
+    ) -> FileStorageSettings:
+        """
+        FileStorage 配置（应用级单例）.
+
+        ✅ 统一规则：从 config/{env}/system.env 加载（共用 system.env）
+        ✅ DataHub 层配置：通过 DI 容器注入，与 Foundation 解耦
+        """
+        system_values = dotenv_values(config_loader.get_env_file("system"))
+        return FileStorageSettings.model_validate(system_values)
 
     @provide
     def observability(
