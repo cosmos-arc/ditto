@@ -6,8 +6,10 @@ import polars as pl
 from ditto_foundation import logger, traced
 
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareSource
-from ditto_datahub.sources.tushare.error_handler import tushare_fetch_error_handler
-from ditto_datahub.sources.tushare.transformer import (
+from ditto_datahub.sources.tushare.processors.error_handler import (
+    tushare_fetch_error_handler,
+)
+from ditto_datahub.sources.tushare.processors.transformer import (
     CALENDAR_MAPPING,
     TushareDataTransformer,
 )
