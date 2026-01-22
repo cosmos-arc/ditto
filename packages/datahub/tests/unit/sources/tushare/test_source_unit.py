@@ -10,7 +10,9 @@ from ditto_datahub.sources.base import (
     SourceFetchError,
     SourceRateLimitError,
 )
-from ditto_datahub.sources.tushare.error_handler import tushare_fetch_error_handler
+from ditto_datahub.sources.tushare.processors.error_handler import (
+    tushare_fetch_error_handler,
+)
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
 
