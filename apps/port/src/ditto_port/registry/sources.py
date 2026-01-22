@@ -25,9 +25,12 @@ class DataSourcesProvider(Provider):
         """
         Tushare 数据源（应用级单例）.
 
-        Token 从 DataSourceSettings 注入.
+        Token 和配置从 DataSourceSettings 注入.
         """
-        return TushareSource(token=data_source_settings.tushare_token)
+        return TushareSource(
+            token=data_source_settings.tushare_token,
+            settings=data_source_settings,
+        )
 
     @provide
     def data_sources(self, tushare_source: TushareSource) -> DataSources:

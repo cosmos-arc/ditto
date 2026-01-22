@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import polars as pl
 
+from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.base import DataSource
 from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareAdapter
 from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
@@ -26,17 +27,22 @@ class TushareSource(DataSource):
 
     """
 
-    def __init__(self, token: str | None = None) -> None:
+    def __init__(
+        self,
+        token: str | None = None,
+        settings: DataSourceSettings | None = None,
+    ) -> None:
         """
         Initialize Tushare source.
 
         Args:
             token: API token. Reads from keyring or ~/.ditto/secrets.toml if None.
+            settings: 数据源配置（包含 URL/timeout 等参数）.
 
         """
-        self._calendar = CalendarTushareAdapter(token=token)
-        self._stock = StockTushareAdapter(token=token)
-        self._etf = ETFTushareAdapter(token=token)
+        self._calendar = CalendarTushareAdapter(token=token, settings=settings)
+        self._stock = StockTushareAdapter(token=token, settings=settings)
+        self._etf = ETFTushareAdapter(token=token, settings=settings)
 
     # Calendar 相关方法 - 委托给 CalendarTushareAdapter
     def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:

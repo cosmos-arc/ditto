@@ -15,6 +15,8 @@ from tenacity import (
     wait_exponential,
 )
 
+from ditto_datahub.config import DataSourceSettings
+
 try:
     import keyring
 except ImportError:
@@ -118,10 +120,12 @@ class TushareClient:
     - Multi-level rate limiting using limits library
     - Retry with exponential backoff (Tenacity)
     - Error handling and logging
+    - Configurable via DataSourceSettings
 
     Attributes:
         _token: Tushare API token.
         _limiter: Rate limiter instance.
+        _settings: Data source configuration.
 
     """
 
@@ -129,6 +133,7 @@ class TushareClient:
         self,
         token: str | None = None,
         rate_config: TushareRateLimitConfig | None = None,
+        settings: DataSourceSettings | None = None,
     ) -> None:
         """
         Initialize Tushare client.
@@ -136,28 +141,36 @@ class TushareClient:
         Args:
             token: API token (auto-detected if None).
             rate_config: 限流配置(默认免费账户).
+            settings: 数据源配置，包含 URL/timeout 等参数.
 
         Raises:
             SourceConfigurationError: If token not found.
 
         """
+        # 存储 settings
+        self._settings = settings or DataSourceSettings()
+
         # Get token with fallback chain
-        self._token = _get_tushare_token(token)
+        # 优先使用 settings 中的 token（如果设置）
+        token_to_use = token or self._settings.tushare_token or None
+        self._token = _get_tushare_token(token_to_use if token_to_use else None)
 
         # 配置限流器(默认免费账户)
         config = rate_config or TushareRateLimitConfig.free()
         self._limiter = TushareRateLimiter(config)
 
-        # Initialize HTTP client
+        # Initialize HTTP client with settings
         self._client = httpx.Client(
-            base_url="http://api.tushare.pro",
-            timeout=30.0,
+            base_url=self._settings.http_base_url,
+            timeout=self._settings.http_timeout,
             headers={"Content-Type": "application/json"},
         )
 
         logger.debug(
-            "TushareClient initialized with HTTP client",
+            "TushareClient initialized",
             event="tushare_client_init",
+            base_url=self._settings.http_base_url,
+            timeout=self._settings.http_timeout,
             rate_config=config,
         )
 
