@@ -5,9 +5,9 @@
 **目标:** 将 `TushareSource` 重构为组合模式，按数据类型拆分为多个专门的 Source 类，提高可维护性。
 
 **架构:** 使用组合模式（Composition Pattern），将原本的单体 `TushareSource` 拆分为：
-- `CalendarTushareSource` - 处理交易日历
-- `StockTushareSource` - 处理股票相关数据
-- `ETFTushareSource` - 处理 ETF 相关数据
+- `CalendarTushareAdapter` - 处理交易日历
+- `StockTushareAdapter` - 处理股票相关数据
+- `ETFTushareAdapter` - 处理 ETF 相关数据
 - `TushareSource` - 入口类，组合上述专门类
 
 **技术栈:** Python 3.12+, Polars, Pytest, 项目现有测试框架
@@ -111,14 +111,14 @@ git commit -m "feat(tushare): add _BaseTushareSource base class"
 
 ## 阶段 2: 创建专门 Source 类
 
-### Task 2: 创建 CalendarTushareSource
+### Task 2: 创建 CalendarTushareAdapter
 
 **目的:** 处理交易日历数据
 
 **文件:**
 - Create: `packages/datahub/src/ditto_datahub/sources/tushare/calendar_source.py`
 
-**步骤 1: 创建 CalendarTushareSource 类**
+**步骤 1: 创建 CalendarTushareAdapter 类**
 
 ```python
 """Tushare calendar source."""
@@ -136,7 +136,7 @@ from ditto_datahub.sources.tushare.transformer import (
 )
 
 
-class CalendarTushareSource(_BaseTushareSource):
+class CalendarTushareAdapter(_BaseTushareSource):
     """
     Tushare trading calendar source.
 
@@ -199,19 +199,19 @@ pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/calendar
 
 ```bash
 git add packages/datahub/src/ditto_datahub/sources/tushare/calendar_source.py
-git commit -m "feat(tushare): add CalendarTushareSource for calendar data"
+git commit -m "feat(tushare): add CalendarTushareAdapter for calendar data"
 ```
 
 ---
 
-### Task 3: 创建 StockTushareSource
+### Task 3: 创建 StockTushareAdapter
 
 **目的:** 处理股票相关数据
 
 **文件:**
 - Create: `packages/datahub/src/ditto_datahub/sources/tushare/stock_source.py`
 
-**步骤 1: 创建 StockTushareSource 类**
+**步骤 1: 创建 StockTushareAdapter 类**
 
 ```python
 """Tushare stock source."""
@@ -253,7 +253,7 @@ def _record_metrics(row_count: int, dataset: str) -> None:
         pass
 
 
-class StockTushareSource(_BaseTushareSource):
+class StockTushareAdapter(_BaseTushareSource):
     """
     Tushare stock data source.
 
@@ -489,19 +489,19 @@ pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/stock_so
 
 ```bash
 git add packages/datahub/src/ditto_datahub/sources/tushare/stock_source.py
-git commit -m "feat(tushare): add StockTushareSource for stock data"
+git commit -m "feat(tushare): add StockTushareAdapter for stock data"
 ```
 
 ---
 
-### Task 4: 创建 ETFTushareSource
+### Task 4: 创建 ETFTushareAdapter
 
 **目的:** 处理 ETF 相关数据
 
 **文件:**
 - Create: `packages/datahub/src/ditto_datahub/sources/tushare/etf_source.py`
 
-**步骤 1: 创建 ETFTushareSource 类**
+**步骤 1: 创建 ETFTushareAdapter 类**
 
 ```python
 """Tushare ETF source."""
@@ -520,7 +520,7 @@ from ditto_datahub.sources.tushare.transformer import (
 )
 
 
-class ETFTushareSource(_BaseTushareSource):
+class ETFTushareAdapter(_BaseTushareSource):
     """
     Tushare ETF data source.
 
@@ -654,7 +654,7 @@ pixi run -e dev type packages/datahub/src/ditto_datahub/sources/tushare/etf_sour
 
 ```bash
 git add packages/datahub/src/ditto_datahub/sources/tushare/etf_source.py
-git commit -m "feat(tushare): add ETFTushareSource for ETF data"
+git commit -m "feat(tushare): add ETFTushareAdapter for ETF data"
 ```
 
 ---
@@ -690,9 +690,9 @@ import polars as pl
 
 from ditto_datahub.sources.base import DataSource
 from ditto_datahub.sources.tushare._base import _BaseTushareSource
-from ditto_datahub.sources.tushare.calendar_source import CalendarTushareSource
-from ditto_datahub.sources.tushare.etf_source import ETFTushareSource
-from ditto_datahub.sources.tushare.stock_source import StockTushareSource
+from ditto_datahub.sources.tushare.calendar_source import CalendarTushareAdapter
+from ditto_datahub.sources.tushare.etf_source import ETFTushareAdapter
+from ditto_datahub.sources.tushare.stock_source import StockTushareAdapter
 
 
 class TushareSource(DataSource):
@@ -703,9 +703,9 @@ class TushareSource(DataSource):
 
     This class uses composition pattern to delegate specialized data fetching
     to dedicated source classes:
-    - CalendarTushareSource: Trading calendar
-    - StockTushareSource: Stock-related data
-    - ETFTushareSource: ETF-related data
+    - CalendarTushareAdapter: Trading calendar
+    - StockTushareAdapter: Stock-related data
+    - ETFTushareAdapter: ETF-related data
 
     Attributes:
         _calendar: Calendar data source.
@@ -723,11 +723,11 @@ class TushareSource(DataSource):
 
         """
         # 组合专门的 Source 类
-        self._calendar = CalendarTushareSource(token=token)
-        self._stock = StockTushareSource(token=token)
-        self._etf = ETFTushareSource(token=token)
+        self._calendar = CalendarTushareAdapter(token=token)
+        self._stock = StockTushareAdapter(token=token)
+        self._etf = ETFTushareAdapter(token=token)
 
-    # Calendar 相关方法 - 委托给 CalendarTushareSource
+    # Calendar 相关方法 - 委托给 CalendarTushareAdapter
 
     def fetch_calendar(
         self,
@@ -752,7 +752,7 @@ class TushareSource(DataSource):
         """
         return self._calendar.fetch_calendar(start_date, end_date)
 
-    # Stock 相关方法 - 委托给 StockTushareSource
+    # Stock 相关方法 - 委托给 StockTushareAdapter
 
     def fetch_stock_basic(self) -> pl.DataFrame:
         """
@@ -862,7 +862,7 @@ class TushareSource(DataSource):
         """
         return self._stock.fetch_stock_status(trade_date)
 
-    # ETF 相关方法 - 委托给 ETFTushareSource
+    # ETF 相关方法 - 委托给 ETFTushareAdapter
 
     def fetch_etf_basic(self) -> pl.DataFrame:
         """
@@ -969,9 +969,9 @@ cat packages/datahub/src/ditto_datahub/sources/tushare/__init__.py
 
 确保导出以下内容：
 - `TushareSource` - 主入口类
-- `CalendarTushareSource` - 可选：如果需要单独使用
-- `StockTushareSource` - 可选：如果需要单独使用
-- `ETFTushareSource` - 可选：如果需要单独使用
+- `CalendarTushareAdapter` - 可选：如果需要单独使用
+- `StockTushareAdapter` - 可选：如果需要单独使用
+- `ETFTushareAdapter` - 可选：如果需要单独使用
 
 **步骤 3: 提交**
 

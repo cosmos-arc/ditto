@@ -9,10 +9,10 @@
 
 ```
 sources/tushare/
-├── base.py            # BaseTushareSource (806 bytes)
-├── calendar_source.py # CalendarTushareSource (1838 bytes)
-├── stock_source.py    # StockTushareSource (8184 bytes)
-├── etf_source.py      # ETFTushareSource (4230 bytes)
+├── base.py            # BaseTushareAdapter (806 bytes)
+├── calendar_source.py # CalendarTushareAdapter (1838 bytes)
+├── stock_source.py    # StockTushareAdapter (8184 bytes)
+├── etf_source.py      # ETFTushareAdapter (4230 bytes)
 ├── status_merger.py   # StockStatusMerger (6846 bytes) - 职责混杂
 ├── error_handler.py   # tushare_fetch_error_handler (1994 bytes)
 ├── transformer.py     # TushareDataTransformer
@@ -339,10 +339,10 @@ mv rate_limiter.py utils/rate_limiter.py
 ### Step 6: 更新适配器类名（*Source → *Adapter）
 
 **需要重命名的类**：
-- `BaseTushareSource` → `BaseTushareAdapter`
-- `CalendarTushareSource` → `CalendarTushareAdapter`
-- `StockTushareSource` → `StockTushareAdapter`
-- `ETFTushareSource` → `ETFTushareAdapter`
+- `BaseTushareAdapter` → `BaseTushareAdapter`
+- `CalendarTushareAdapter` → `CalendarTushareAdapter`
+- `StockTushareAdapter` → `StockTushareAdapter`
+- `ETFTushareAdapter` → `ETFTushareAdapter`
 
 ### Step 7: 创建 __init__.py 文件
 
@@ -453,10 +453,10 @@ pixi run -e dev pytest packages/datahub/tests/integration/sources/tushare/ -v
 
 ```python
 # 之前
-from ditto_datahub.sources.tushare.base import BaseTushareSource
-from ditto_datahub.sources.tushare.calendar_source import CalendarTushareSource
-from ditto_datahub.sources.tushare.stock_source import StockTushareSource
-from ditto_datahub.sources.tushare.etf_source import ETFTushareSource
+from ditto_datahub.sources.tushare.base import BaseTushareAdapter
+from ditto_datahub.sources.tushare.calendar_source import CalendarTushareAdapter
+from ditto_datahub.sources.tushare.stock_source import StockTushareAdapter
+from ditto_datahub.sources.tushare.etf_source import ETFTushareAdapter
 from ditto_datahub.sources.tushare.status_merger import StockStatusMerger
 from ditto_datahub.sources.tushare.error_handler import tushare_fetch_error_handler
 from ditto_datahub.sources.tushare.transformer import TushareDataTransformer
