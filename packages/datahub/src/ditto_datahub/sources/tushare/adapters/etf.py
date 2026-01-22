@@ -1,11 +1,11 @@
-"""ETF 数据源实现."""
+"""ETF 适配器实现."""
 
 from __future__ import annotations
 
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.sources.tushare.adapters.base import BaseTushareSource
+from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
 )
@@ -16,9 +16,9 @@ from ditto_datahub.sources.tushare.processors.transformer import (
 )
 
 
-class ETFTushareSource(BaseTushareSource):
+class ETFTushareAdapter(BaseTushareAdapter):
     """
-    ETF Tushare 数据源.
+    ETF Tushare 适配器.
 
     专门处理 ETF 相关数据获取，包括：
     - ETF 基本信息

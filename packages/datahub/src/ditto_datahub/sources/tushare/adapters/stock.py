@@ -1,12 +1,12 @@
-"""股票数据源实现."""
+"""股票适配器实现."""
 
 from __future__ import annotations
 
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.sources.tushare.adapters import StockStatusAdapter
-from ditto_datahub.sources.tushare.adapters.base import BaseTushareSource
+from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
+from ditto_datahub.sources.tushare.adapters.stock_status import StockStatusAdapter
 from ditto_datahub.sources.tushare.processors import StatusMerger
 from ditto_datahub.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
@@ -40,9 +40,9 @@ def _record_metrics(row_count: int, dataset: str) -> None:
         pass
 
 
-class StockTushareSource(BaseTushareSource):
+class StockTushareAdapter(BaseTushareAdapter):
     """
-    股票 Tushare 数据源.
+    股票 Tushare 适配器.
 
     专门处理股票相关数据获取，包括：
     - 股票基本信息

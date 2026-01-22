@@ -26,18 +26,18 @@ class NoRetryTushareSource(TushareSource):
     """使用 NoRetryTushareClient 的 TushareSource (组合模式)."""
 
     def __init__(self, token: str | None = None) -> None:
-        """初始化时创建无重试的专门 Source 实例."""
-        # 导入专门的数据源类
+        """初始化时创建无重试的专门 Adapter 实例."""
+        # 导入专门的适配器类
         from ditto_datahub.sources.tushare.adapters.calendar import (
-            CalendarTushareSource,
+            CalendarTushareAdapter,
         )
-        from ditto_datahub.sources.tushare.adapters.etf import ETFTushareSource
-        from ditto_datahub.sources.tushare.adapters.stock import StockTushareSource
+        from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
+        from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
 
-        # 为每个专门 Source 创建无重试的实例
-        self._calendar = CalendarTushareSource(token=token)
-        self._stock = StockTushareSource(token=token)
-        self._etf = ETFTushareSource(token=token)
+        # 为每个专门 Adapter 创建无重试的实例
+        self._calendar = CalendarTushareAdapter(token=token)
+        self._stock = StockTushareAdapter(token=token)
+        self._etf = ETFTushareAdapter(token=token)
 
         # 替换它们的 client 为无重试版本（从现有 client 获取 token）
         self._calendar._client = NoRetryTushareClient(

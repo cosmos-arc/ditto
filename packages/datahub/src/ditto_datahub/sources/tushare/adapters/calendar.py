@@ -1,11 +1,11 @@
-"""交易日历数据源."""
+"""交易日历适配器."""
 
 from __future__ import annotations
 
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.sources.tushare.adapters.base import BaseTushareSource
+from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
 )
@@ -15,9 +15,9 @@ from ditto_datahub.sources.tushare.processors.transformer import (
 )
 
 
-class CalendarTushareSource(BaseTushareSource):
+class CalendarTushareAdapter(BaseTushareAdapter):
     """
-    交易日历数据源.
+    交易日历适配器.
 
     专门用于从 Tushare 获取交易日历数据.
 

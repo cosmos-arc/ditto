@@ -7,11 +7,11 @@ from ditto_foundation import logger
 from ditto_datahub.sources.tushare.client import TushareClient
 
 
-class BaseTushareSource:
+class BaseTushareAdapter:
     """
-    Tushare source base class.
+    Tushare adapter base class.
 
-    Provides shared client initialization for all specialized Tushare sources.
+    Provides shared client initialization for all specialized Tushare adapters.
 
     Attributes:
         _client: Tushare API client.
@@ -20,7 +20,7 @@ class BaseTushareSource:
 
     def __init__(self, token: str | None = None) -> None:
         """
-        Initialize Tushare source.
+        Initialize Tushare adapter.
 
         Args:
             token: API token. Reads from keyring or ~/.ditto/secrets.toml if None.
@@ -29,5 +29,5 @@ class BaseTushareSource:
         self._client = TushareClient(token=token)
         logger.debug(
             f"{self.__class__.__name__} initialized",
-            event="tushare_source_init",
+            event="tushare_adapter_init",
         )

@@ -5,24 +5,24 @@ from __future__ import annotations
 import polars as pl
 
 from ditto_datahub.sources.base import DataSource
-from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareSource
-from ditto_datahub.sources.tushare.adapters.etf import ETFTushareSource
-from ditto_datahub.sources.tushare.adapters.stock import StockTushareSource
+from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareAdapter
+from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
+from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
 
 
 class TushareSource(DataSource):
     """
     Tushare Pro data source (组合模式入口).
 
-    使用组合模式委托给专门的 Source 类：
-    - CalendarTushareSource: Trading calendar
-    - StockTushareSource: Stock-related data
-    - ETFTushareSource: ETF-related data
+    使用组合模式委托给专门的 Adapter 类：
+    - CalendarTushareAdapter: Trading calendar
+    - StockTushareAdapter: Stock-related data
+    - ETFTushareAdapter: ETF-related data
 
     Attributes:
-        _calendar: Calendar data source.
-        _stock: Stock data source.
-        _etf: ETF data source.
+        _calendar: Calendar data adapter.
+        _stock: Stock data adapter.
+        _etf: ETF data adapter.
 
     """
 
@@ -34,11 +34,11 @@ class TushareSource(DataSource):
             token: API token. Reads from keyring or ~/.ditto/secrets.toml if None.
 
         """
-        self._calendar = CalendarTushareSource(token=token)
-        self._stock = StockTushareSource(token=token)
-        self._etf = ETFTushareSource(token=token)
+        self._calendar = CalendarTushareAdapter(token=token)
+        self._stock = StockTushareAdapter(token=token)
+        self._etf = ETFTushareAdapter(token=token)
 
-    # Calendar 相关方法 - 委托给 CalendarTushareSource
+    # Calendar 相关方法 - 委托给 CalendarTushareAdapter
     def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
         """
         Fetch trading calendar.
@@ -58,7 +58,7 @@ class TushareSource(DataSource):
         """
         return self._calendar.fetch_calendar(start_date, end_date)
 
-    # Stock 相关方法 - 委托给 StockTushareSource
+    # Stock 相关方法 - 委托给 StockTushareAdapter
     def fetch_stock_basic(self) -> pl.DataFrame:
         """
         Fetch stock basic information.
@@ -167,7 +167,7 @@ class TushareSource(DataSource):
         """
         return self._stock.fetch_stock_status(trade_date)
 
-    # ETF 相关方法 - 委托给 ETFTushareSource
+    # ETF 相关方法 - 委托给 ETFTushareAdapter
     def fetch_etf_basic(self) -> pl.DataFrame:
         """
         Fetch ETF basic information.
