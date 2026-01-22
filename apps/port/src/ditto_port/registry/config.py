@@ -26,6 +26,7 @@ from ditto_foundation.config.paths import get_paths
 from ditto_foundation.config.settings import (
     Settings,
 )
+from ditto_foundation.observability import init, shutdown
 from dotenv import dotenv_values
 
 __all__ = ["ConfigProvider"]
@@ -171,9 +172,8 @@ class ConfigProvider(Provider):
 
         生命周期：容器启动时初始化，容器关闭时调用 shutdown().
         """
-        from ditto_foundation.observability import init, shutdown
-
         config = settings.observability
+
         init(
             service_name="ditto-server",
             environment=settings.system.ditto_env.value,

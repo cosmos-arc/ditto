@@ -5,6 +5,7 @@
 """
 
 from dishka import Provider, Scope, provide
+from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
@@ -17,13 +18,16 @@ class DataSourcesProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def tushare_source(self) -> TushareSource:
+    def tushare_source(
+        self,
+        data_source_settings: DataSourceSettings,
+    ) -> TushareSource:
         """
         Tushare 数据源（应用级单例）.
 
-        Token 自动从 keyring 或配置文件读取.
+        Token 从 DataSourceSettings 注入.
         """
-        return TushareSource()
+        return TushareSource(token=data_source_settings.tushare_token)
 
     @provide
     def data_sources(self, tushare_source: TushareSource) -> DataSources:

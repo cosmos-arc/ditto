@@ -21,6 +21,7 @@ from ditto_datahub.accessors.index import IndexAccessor
 from ditto_datahub.accessors.ingestion_log import IngestionLogAccessor
 from ditto_datahub.accessors.security import SecuritiesAccessor
 from ditto_datahub.accessors.universe import UniverseAccessor
+from ditto_datahub.config import DatabaseSettings
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
@@ -58,9 +59,12 @@ class DataHubProvider(Provider):
     # ========================================================================
 
     @provide
-    def sqlite_pool(self, data_root: Path) -> Iterator[SQLitePool]:
+    def sqlite_pool(
+        self,
+        database_settings: DatabaseSettings,
+    ) -> Iterator[SQLitePool]:
         """SQLite 连接池（应用级单例）."""
-        db_path = data_root / "meta" / "hub.sqlite"
+        db_path = database_settings.sqlite_path
         # 确保父目录存在
         db_path.parent.mkdir(parents=True, exist_ok=True)
         # 获取 schema.sql 路径
