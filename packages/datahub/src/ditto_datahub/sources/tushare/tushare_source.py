@@ -5,9 +5,9 @@ from __future__ import annotations
 import polars as pl
 
 from ditto_datahub.sources.base import DataSource
-from ditto_datahub.sources.tushare.calendar_source import CalendarTushareSource
-from ditto_datahub.sources.tushare.etf_source import ETFTushareSource
-from ditto_datahub.sources.tushare.stock_source import StockTushareSource
+from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareSource
+from ditto_datahub.sources.tushare.adapters.etf import ETFTushareSource
+from ditto_datahub.sources.tushare.adapters.stock import StockTushareSource
 
 
 class TushareSource(DataSource):

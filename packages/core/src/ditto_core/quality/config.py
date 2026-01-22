@@ -57,8 +57,8 @@ class DQSettings(BaseSettings):
         # 如果 rules_dir 是绝对路径，直接使用
         if Path(self.rules_dir).is_absolute():
             return Path(self.rules_dir)
-        # 否则基于当前环境
-        return Path(f"config/{self.env}/dq_rules")
+        # 相对路径：基于用户配置的 rules_dir 解析
+        return Path(self.rules_dir)
 
     def get_rules_paths(self, dataset: str) -> list[Path]:
         """

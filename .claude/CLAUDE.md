@@ -102,6 +102,25 @@ LSP 命令中的 `<col>` 参数必须指向**符号名称（identifier）内部*
 | `refs 失败: Unexpected response: None` | 列号未指向符号 | 调整列号到符号名称内部 |
 | `multilspy 未安装` | 环境不正确 | 使用 `pixi run -e dev` 前缀 |
 | `未找到定义/引用` | 符号不在索引中 | 确认文件在项目内，尝试运行 `diagnose` |
+| `File read failed: No such file or directory` | 路径记忆错误 | **先用 Glob 验证路径** |
+
+**🚨 路径验证铁律**：
+
+| ❌ 禁止 | ✅ 必须 |
+|---------|---------|
+| 凭记忆输入路径 | 先 Glob 找到准确路径 |
+| 路径错误直接重试 | Glob 验证后再运行 LSP |
+
+```bash
+# 正确流程
+# Step 1: 先 Glob 验证路径
+Glob "**/tushare_source.py"
+
+# Step 2: 使用 Glob 返回的准确路径
+pixi run -e dev python .claude/scripts/lsp_pyright.py symbols "<Glob返回的路径>"
+```
+
+**记忆口诀**：> "LSP 前先 Glob，路径不慌神"
 
 **降级方案**（当 LSP 脚本不可用时）：
 - 搜索定义: `Grep "class Foo"` → `Glob "**/*foo*.py"`

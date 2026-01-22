@@ -23,17 +23,28 @@ class NoRetryTushareClient(TushareClient):
 
 
 class NoRetryTushareSource(TushareSource):
-    """使用 NoRetryTushareClient 的 TushareSource."""
+    """使用 NoRetryTushareClient 的 TushareSource (组合模式)."""
 
     def __init__(self, token: str | None = None) -> None:
-        """初始化时创建 NoRetryTushareClient."""
-        # 复用父类的 token 获取逻辑
-        from ditto_datahub.sources.tushare.client import _get_tushare_token
+        """初始化时创建无重试的专门 Source 实例."""
+        # 导入专门的数据源类
+        from ditto_datahub.sources.tushare.adapters.calendar import (
+            CalendarTushareSource,
+        )
+        from ditto_datahub.sources.tushare.adapters.etf import ETFTushareSource
+        from ditto_datahub.sources.tushare.adapters.stock import StockTushareSource
 
-        # 优先使用测试 token
-        self._token = token or _get_tushare_token(token)
-        # 创建无重试的 client
-        self._client = NoRetryTushareClient(token=self._token)
+        # 为每个专门 Source 创建无重试的实例
+        self._calendar = CalendarTushareSource(token=token)
+        self._stock = StockTushareSource(token=token)
+        self._etf = ETFTushareSource(token=token)
+
+        # 替换它们的 client 为无重试版本（从现有 client 获取 token）
+        self._calendar._client = NoRetryTushareClient(
+            token=self._calendar._client._token
+        )
+        self._stock._client = NoRetryTushareClient(token=self._stock._client._token)
+        self._etf._client = NoRetryTushareClient(token=self._etf._client._token)
 
 
 @pytest.fixture

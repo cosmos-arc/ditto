@@ -79,24 +79,20 @@ class ConfigProvider(Provider):
         """
         主配置 Settings（应用级单例）.
 
-        从各个 env 文件加载配置，保持配置加载逻辑统一。
+        从 env 文件加载配置，保持配置加载逻辑统一。
+        注：database/data_source 已迁移到 DataHub 层，由独立 provider 加载。
         """
-        # 从各个 env 文件加载配置
-        database_values = dotenv_values(config_loader.get_env_file("database"))
+        # 只加载 Settings 类实际包含的配置
         observability_values = dotenv_values(
             config_loader.get_env_file("observability")
         )
-        data_source_values = dotenv_values(config_loader.get_env_file("data_source"))
         system_values = dotenv_values(config_loader.get_env_file("system"))
 
         # 使用 model_validate 创建配置实例
         return Settings.model_validate(
             {
-                "database": database_values,
                 "observability": observability_values,
-                "data_source": data_source_values,
                 "system": system_values,
-                "file_storage": system_values,  # file_storage 共用 system.env
             }
         )
 
