@@ -45,7 +45,7 @@ class TestDQBlockingBehavior:
             return_value=pl.DataFrame({"src_code": ["000001.SZ"], "close": [None]}),
         )
 
-        # Mock _write_data to return blocked result
+        # Mock _data_writer.write_data to return blocked result
         mock_dq_result = mocker.MagicMock(spec=DQResult)
         mock_dq_result.has_errors = True
         mock_dq_result.error_count = 1
@@ -58,7 +58,9 @@ class TestDQBlockingBehavior:
             blocked=True,
         )
 
-        mocker.patch.object(coordinator, "_write_data", return_value=blocked_result)
+        mocker.patch.object(
+            coordinator._data_writer, "write_data", return_value=blocked_result
+        )
 
         # Execute ingestion
         result = coordinator.ingest_date("stock_daily", "2024-01-02")
@@ -99,7 +101,7 @@ class TestDQBlockingBehavior:
             return_value=pl.DataFrame({"src_code": ["000001.SZ"], "close": [None]}),
         )
 
-        # Mock _write_data to return blocked result
+        # Mock _data_writer.write_data to return blocked result
         mock_dq_result = mocker.MagicMock(spec=DQResult)
         mock_dq_result.has_errors = True
         mock_dq_result.error_count = 1
@@ -112,7 +114,9 @@ class TestDQBlockingBehavior:
             blocked=True,
         )
 
-        mocker.patch.object(coordinator, "_write_data", return_value=blocked_result)
+        mocker.patch.object(
+            coordinator._data_writer, "write_data", return_value=blocked_result
+        )
 
         # Execute ingestion
         coordinator.ingest_date("stock_daily", "2024-01-02")
