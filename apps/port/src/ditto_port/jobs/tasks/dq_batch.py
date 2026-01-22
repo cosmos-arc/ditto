@@ -2,13 +2,15 @@
 
 from typing import Any, Literal
 
-from ditto_core.quality import QualityEngine
 from ditto_core.quality.spec import DQIssue
 from ditto_datahub.accessors import BarsQuery
 from ditto_foundation import M, logger
 from prefect import task
 
-from ditto_port.jobs.context import create_datahub_context
+from ditto_port.jobs.context import (
+    create_datahub_context,
+    create_dq_and_datahub_context,
+)
 from ditto_port.services.ingestion.quality import L3BatchService
 
 
@@ -42,7 +44,7 @@ async def dq_batch_check(
         market_wide=market_wide,
     )
 
-    with create_datahub_context() as hub:
+    with create_dq_and_datahub_context() as (engine, hub):
         # 获取最后一个交易日
         if trade_date is None:
             trade_date = hub.calendar.get_last_trading_day()
@@ -59,9 +61,6 @@ async def dq_batch_check(
         # 默认数据集
         if datasets is None:
             datasets = ["etf_daily", "index_daily", "stock_daily", "adj_factor"]
-
-        # 初始化 Quality Engine
-        engine = QualityEngine()
 
         # 初始化 L3 Batch Service
         l3_service = L3BatchService(engine=engine, hub=hub)

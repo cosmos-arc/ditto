@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Literal
 
 import polars as pl
+from ditto_foundation import DQSeverity
 
 from ditto_core.quality.checkers.business import BusinessChecker
 from ditto_core.quality.checkers.statistical import StatisticalChecker
 from ditto_core.quality.checkers.technical import TechnicalChecker
 from ditto_core.quality.config import DQSettings
-from ditto_core.quality.spec import DQIssue, DQResult, DQSeverity, DQSpec
+from ditto_core.quality.spec import DQIssue, DQResult, DQSpec
 
 
 class QualityEngine:
@@ -24,9 +24,7 @@ class QualityEngine:
 
     def __init__(
         self,
-        config: DQSpec | None = None,
-        config_path: str | Path | None = None,
-        data_root: str | Path | None = None,
+        config: DQSpec,
         # ✅ 新增：接受 DQSettings 注入
         dq_settings: DQSettings | None = None,
     ) -> None:
@@ -34,40 +32,17 @@ class QualityEngine:
         Initialize Quality engine.
 
         Args:
-            config: Pre-loaded DQ configuration
-            config_path: Path to YAML configuration directory (legacy)
-            data_root: Data root for user config override (new)
+            config: DQ 配置规范（由上层通过 DI 注入）
             dq_settings: DQ 配置（可选，用于检查开关状态）
 
         """
-        # 保存 DQSettings（如果有）
+        self.config = config
         self._dq_settings = dq_settings
-
-        if config is not None:
-            self.config = config
-        elif data_root is not None:
-            # New: Load with user override
-            default_config_dir = (
-                Path(__file__).parent.parent.parent / "config" / "dq_rules"
-            )
-            self.config = DQSpec.load_with_user_override(
-                default_config_dir=default_config_dir, data_root=Path(data_root)
-            )
-        elif config_path is not None:
-            # Legacy: Load from single path
-            self.config = DQSpec.from_yaml_dir(config_path)
-        else:
-            self.config = DQSpec()
 
         # Initialize checkers
         self.technical_checker = TechnicalChecker()
         self.business_checker = BusinessChecker()
         self.statistical_checker = StatisticalChecker()
-
-    @property
-    def _config(self) -> DQSpec:
-        """Backward compatibility for _config attribute."""
-        return self.config
 
     def check(
         self,

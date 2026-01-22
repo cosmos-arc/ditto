@@ -1,7 +1,6 @@
 """Tests for QualityEngine."""
 
 from datetime import date, timedelta
-from pathlib import Path
 
 import polars as pl
 import pytest
@@ -42,29 +41,6 @@ class TestQualityEngine:
                 )
             }
         )
-
-    def test_init_with_config(self) -> None:
-        """Test engine initialization with config."""
-        engine = QualityEngine(config=self.config)
-
-        assert engine.config is self.config
-
-    def test_init_from_yaml_dir(self) -> None:
-        """Test engine initialization from YAML directory."""
-        config_dir = (
-            Path(__file__).parent.parent.parent.parent
-            / "config"
-            / "default"
-            / "dq_rules"
-        )
-
-        if not config_dir.exists():
-            pytest.skip(f"Config directory not found: {config_dir}")
-
-        engine = QualityEngine(config_path=config_dir)
-
-        assert engine.config is not None
-        assert engine.config.has_dataset("etf_daily") is True
 
     def test_check_valid_data(self) -> None:
         """Test checking valid data passes all rules."""
@@ -170,43 +146,6 @@ class TestQualityEngine:
         assert isinstance(result, DQResult)
 
 
-class TestQualityEngineIntegration:
-    """Integration tests with real YAML config."""
-
-    def test_check_etf_daily_with_real_config(self) -> None:
-        """Test checking ETF daily data with real YAML config."""
-        config_dir = (
-            Path(__file__).parent.parent.parent.parent
-            / "config"
-            / "default"
-            / "dq_rules"
-        )
-
-        if not config_dir.exists():
-            pytest.skip(f"Config directory not found: {config_dir}")
-
-        engine = QualityEngine(config_path=config_dir)
-
-        # Valid ETF data
-        df = pl.DataFrame(
-            {
-                "sid": [200001, 200001],
-                "trade_date": ["2024-01-01", "2024-01-02"],
-                "open": [10.0, 10.5],
-                "high": [10.2, 10.8],
-                "low": [9.8, 10.2],
-                "close": [10.1, 10.6],
-            }
-        )
-
-        result = engine.check(df, "etf_daily")
-
-        # Should pass basic validation
-        assert isinstance(result, DQResult)
-        assert result.dataset == "etf_daily"
-        assert result.passed is True  # Valid data passes
-
-
 class TestQualityEngineStatistical:
     """Test statistical check with new interface."""
 
@@ -268,7 +207,7 @@ class TestQualityEngineStatistical:
 
     def test_check_statistical_unknown_dataset(self, historical_data) -> None:
         """Test check_statistical with unknown dataset."""
-        engine = QualityEngine()
+        engine = QualityEngine(config=DQSpec())
 
         current_data = pl.DataFrame(
             {
@@ -317,11 +256,12 @@ class TestQualityEngineStatistical:
 class TestQualityEngineEdgeCases:
     """Test edge cases and additional coverage for QualityEngine."""
 
-    def test_init_with_no_params(self) -> None:
-        """Test engine initialization with no parameters (default empty config)."""
-        engine = QualityEngine()
+    def test_init_with_empty_config(self) -> None:
+        """Test engine initialization with empty config."""
+        empty_config = DQSpec()
+        engine = QualityEngine(config=empty_config)
 
-        assert engine.config is not None
+        assert engine.config is empty_config
         assert isinstance(engine.config, DQSpec)
 
     def test_check_with_empty_rule_lists(self) -> None:

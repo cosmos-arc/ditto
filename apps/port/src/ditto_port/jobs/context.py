@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from typing import Any
 
 from dishka import make_container
+from ditto_core.quality import QualityEngine
 from ditto_datahub import DataHub
 
 from ditto_port.registry import (
@@ -94,3 +95,41 @@ def create_datahub_context() -> Iterator[DataHub]:
     """
     with create_prefect_host() as container:
         yield container.get(DataHub)
+
+
+@contextmanager
+def create_dq_context() -> Iterator[QualityEngine]:
+    """
+    创建 DQ 上下文，使用 dishka 容器管理依赖.
+
+    用于需要 QualityEngine 的场景（如 DQ 批量检查）。
+
+    Yields:
+        QualityEngine: 容器管理的 QualityEngine 实例
+
+    Example:
+        with create_dq_context() as engine:
+            result = engine.check(...)
+
+    """
+    with create_prefect_host() as container:
+        yield container.get(QualityEngine)
+
+
+@contextmanager
+def create_dq_and_datahub_context() -> Iterator[tuple[QualityEngine, DataHub]]:
+    """
+    创建 DQ 和 DataHub 上下文，使用 dishka 容器管理依赖.
+
+    用于同时需要 QualityEngine 和 DataHub 的场景。
+
+    Yields:
+        tuple: (QualityEngine, DataHub) - 容器管理的实例
+
+    Example:
+        with create_dq_and_datahub_context() as (engine, hub):
+            result = engine.check(...)
+
+    """
+    with create_prefect_host() as container:
+        yield container.get(QualityEngine), container.get(DataHub)

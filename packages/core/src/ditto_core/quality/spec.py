@@ -2,13 +2,10 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 from typing import Any
 
-import yaml
 from ditto_foundation import DQSeverity
-from loguru import logger
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class DQLevel(Enum):
@@ -227,83 +224,6 @@ class DQSpec(BaseModel):
     """
 
     datasets: dict[str, DatasetRules] = Field(default_factory=dict)
-
-    @classmethod
-    def from_yaml_dir(cls, config_dir: str | Path) -> "DQSpec":
-        """
-        Load DQ spec from YAML directory.
-
-        Args:
-            config_dir: Path to directory containing YAML rule files
-
-        Returns:
-            DQSpec instance
-
-        """
-        config_path = Path(config_dir)
-        if not config_path.exists():
-            return cls()
-
-        datasets: dict[str, DatasetRules] = {}
-
-        for yaml_file in config_path.glob("*.yml"):
-            try:
-                with yaml_file.open(encoding="utf-8") as f:
-                    data = yaml.safe_load(f)
-
-                if data and "dataset" in data:
-                    dataset_rules = DatasetRules(**data)
-                    datasets[dataset_rules.dataset] = dataset_rules
-            except (ValidationError, ValueError) as e:
-                logger.warning(
-                    "Invalid DQ config file, skipping",
-                    event="dq_config_invalid",
-                    file=str(yaml_file),
-                    error=str(e),
-                )
-                continue
-            except yaml.YAMLError as e:
-                logger.warning(
-                    "Failed to parse YAML config, skipping",
-                    event="dq_config_parse_error",
-                    file=str(yaml_file),
-                    error=str(e),
-                )
-                continue
-
-        return cls(datasets=datasets)
-
-    @classmethod
-    def load_with_user_override(
-        cls, default_config_dir: str | Path, data_root: str | Path
-    ) -> "DQSpec":
-        """
-        加载 DQ 配置，支持用户自定义覆盖。
-
-        加载优先级:
-        1. 用户配置: {data_root}/config/dq/*.yml
-        2. 默认配置: {default_config_dir}/*.yml
-
-        Args:
-            default_config_dir: 包内默认配置目录
-            data_root: 数据根目录
-
-        Returns:
-            DQSpec 实例
-
-        """
-        # 1. 加载包内默认配置
-        default_config = cls.from_yaml_dir(default_config_dir)
-
-        # 2. 加载用户自定义配置（覆盖默认配置）
-        user_config_dir = Path(data_root) / "config" / "dq"
-        user_config = cls.from_yaml_dir(user_config_dir)
-
-        # 3. 合并配置（用户配置覆盖默认配置）
-        merged_datasets = default_config.datasets.copy()
-        merged_datasets.update(user_config.datasets)
-
-        return cls(datasets=merged_datasets)
 
     def get_rules(self, dataset: str) -> DatasetRules | None:
         """
