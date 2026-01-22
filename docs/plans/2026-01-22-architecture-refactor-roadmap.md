@@ -94,136 +94,20 @@ grep -r "from ditto_datahub.stores" apps/port/src --include="*.py" | grep -v "re
 
 ## Phase 2: P1 工程改进 (Q1 第3-5周)
 
-### Task 2.1: 统一配置访问模式
+### Task 2.1: 统一配置访问模式 ✅ 已完成 (2026-01-22)
 
-**问题:** ENG-001 - 6 处直接 `os.environ` 调用
+**问题:** ENG-001 - 直接 `os.environ` 调用
 
-**位置:**
-- `packages/foundation/src/ditto_foundation/config/settings.py:88`
-- `packages/foundation/src/ditto_foundation/config/paths.py`
-- `packages/foundation/src/ditto_foundation/observability/config.py`
-- `packages/datahub/src/ditto_datahub/alerts/email.py:36-40`
-- `packages/datahub/src/ditto_datahub/alerts/telegram.py:38`
-- `packages/datahub/src/ditto_datahub/alerts/wechat.py:37`
+**状态:** ✅ 已迁移
 
-#### Step 1: 创建 AlertSettings 类
+**迁移说明:**
+- Notification/Alert 配置已迁移至 `foundation.notification.config.NotificationSettings`
+- `datahub.alerts` 模块已完全移除
+- 业务方法迁移至 `port.notifications.business`
 
-**Files:**
-- Create: `packages/datahub/src/ditto_datahub/config/alert.py`
-
-```python
-"""Alert configuration settings."""
-
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-class AlertSettings(BaseSettings):
-    """Alert notification settings."""
-
-    model_config = SettingsConfigDict(
-        env_prefix="ALERT_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
-
-    # Email settings
-    email_smtp_host: str = Field(default="localhost", description="SMTP server host")
-    email_smtp_port: int = Field(default=587, description="SMTP server port")
-    email_username: str | None = Field(default=None, description="SMTP username")
-    email_password: str | None = Field(default=None, description="SMTP password")
-    email_from: str = Field(default="noreply@ditto.local", description="From address")
-    email_to: str = Field(default="", description="To addresses (comma-separated)")
-
-    # Telegram settings
-    telegram_bot_token: str | None = Field(default=None, description="Telegram bot token")
-    telegram_chat_id: str | None = Field(default=None, description="Telegram chat ID")
-
-    # WeChat settings
-    wechat_webhook_url: str | None = Field(default=None, description="WeChat webhook URL")
-    wechat_corp_id: str | None = Field(default=None, description="WeChat corp ID")
-    wechat_agent_id: str | None = Field(default=None, description="WeChat agent ID")
-
-    # DingTalk settings
-    dingtalk_webhook_url: str | None = Field(default=None, description="DingTalk webhook URL")
-    dingtalk_secret: str | None = Field(default=None, description="DingTalk secret")
-
-
-__all__ = ["AlertSettings"]
-```
-
-#### Step 2: 更新 AlertSender 实现
-
-**Files:**
-- Modify: `packages/datahub/src/ditto_datahub/alerts/email.py`
-- Modify: `packages/datahub/src/ditto_datahub/alerts/telegram.py`
-- Modify: `packages/datahub/src/ditto_datahub/alerts/wechat.py`
-
-```python
-# email.py 修改
-from ditto_datahub.config.alert import AlertSettings
-
-class EmailAlertSender(AlertSender):
-    def __init__(self, settings: AlertSettings | None = None) -> None:
-        self._settings = settings or AlertSettings()
-        self._from_addr = self._settings.email_from
-        self._to_addrs = self._settings.email_to.split(",") if self._settings.email_to else []
-        # ... 其他配置
-
-    @property
-    def name(self) -> str:
-        return "email"
-```
-
-#### Step 3: 更新 DI 配置
-
-**Files:**
-- Modify: `apps/port/src/ditto_port/registry/datahub.py`
-
-```python
-from ditto_datahub.config.alert import AlertSettings
-from ditto_datahub.alerts.email import EmailAlertSender
-from ditto_datahub.alerts.telegram import TelegramAlertSender
-from ditto_datahub.alerts.wechat import WeChatAlertSender
-
-@provide
-def alert_settings() -> AlertSettings:
-    """Alert settings."""
-    return AlertSettings()
-
-@provide
-def email_sender(alert_settings: AlertSettings) -> EmailAlertSender:
-    """Email alert sender."""
-    return EmailAlertSender(alert_settings)
-```
-
-#### Step 4: 验证配置加载
-
-**测试文件:** `packages/datahub/tests/alerts/test_config.py`
-
-```python
-import os
-import pytest
-from ditto_datahub.config.alert import AlertSettings
-
-def test_alert_settings_defaults():
-    settings = AlertSettings()
-    assert settings.email_smtp_host == "localhost"
-    assert settings.email_smtp_port == 587
-
-def test_alert_settings_from_env(monkeypatch):
-    monkeypatch.setenv("ALERT_EMAIL_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setenv("ALERT_EMAIL_SMTP_PORT", "2525")
-    settings = AlertSettings()
-    assert settings.email_smtp_host == "smtp.example.com"
-    assert settings.email_smtp_port == 2525
-```
-
-**运行测试:**
-```bash
-pixi run -e dev test packages/datahub/tests/alerts/test_config.py -v
-```
+**参考:**
+- Foundation 层: `packages/foundation/src/ditto_foundation/notification/config.py`
+- Application 层: `apps/port/src/ditto_port/notifications/business.py`
 
 ---
 
