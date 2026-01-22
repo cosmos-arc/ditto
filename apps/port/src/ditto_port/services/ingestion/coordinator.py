@@ -10,7 +10,9 @@
 
 from collections.abc import Callable
 
+import httpx
 import polars as pl
+import polars.exceptions as pl_exceptions
 from ditto_datahub.hub import DataHub
 from ditto_datahub.models import Dataset, OnDuplicate
 from ditto_datahub.sources.base import DataSource, SourceFetchError
@@ -134,15 +136,38 @@ class IngestionCoordinator:
             message=message,
         )
 
-    def _fetch_and_ingest(
+    def _fetch_and_ingest(  # noqa: PLR0911
         self, dataset: str, trade_date: str, force: bool
     ) -> IngestionResult:
         """获取数据并执行摄取（统一错误处理）。"""
         try:
             df = self._fetch_data(dataset, trade_date)
         except SourceFetchError as e:
+            # 已知的业务异常，直接处理
             return self._result_handler.handle_fetch_error(dataset, trade_date, e)
+        except (httpx.NetworkError, httpx.TimeoutException) as e:
+            # 网络相关异常，记录后转换为业务异常
+            logger.exception(
+                "network_error_during_fetch",
+                dataset=dataset,
+                trade_date=trade_date,
+                error_type=type(e).__name__,
+            )
+            fetch_error = SourceFetchError(
+                message=f"Network error fetching {dataset}: {e}",
+                source=type(e).__name__,
+            )
+            return self._result_handler.handle_fetch_error(
+                dataset, trade_date, fetch_error
+            )
         except Exception as e:
+            # 未知异常，记录完整堆栈
+            logger.exception(
+                "unexpected_error_during_fetch",
+                dataset=dataset,
+                trade_date=trade_date,
+                error_type=type(e).__name__,
+            )
             return self._result_handler.handle_unknown_error(dataset, trade_date, e)
 
         if df.is_empty():
@@ -155,8 +180,24 @@ class IngestionCoordinator:
             write_result = self._data_writer.write_data(
                 dataset, df, trade_date, on_duplicate
             )
-        except Exception as e:
+        except (pl_exceptions.ComputeError, pl_exceptions.SchemaError, ValueError) as e:
+            # 数据处理相关异常
+            logger.exception(
+                "data_processing_error_during_write",
+                dataset=dataset,
+                trade_date=trade_date,
+                error_type=type(e).__name__,
+            )
             return self._result_handler.handle_write_error(dataset, trade_date, e)
+        except Exception as e:
+            # 未知异常
+            logger.exception(
+                "unexpected_error_during_write",
+                dataset=dataset,
+                trade_date=trade_date,
+                error_type=type(e).__name__,
+            )
+            return self._result_handler.handle_unknown_error(dataset, trade_date, e)
 
         # 检查 DQ 阻断
         if write_result.blocked:
