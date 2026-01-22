@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import polars as pl
 from ditto_foundation import logger
 
@@ -10,7 +12,14 @@ from ditto_datahub.meta.schemas import (
     TUSHARE_ST_SCHEMA,
     TUSHARE_SUSPEND_SCHEMA,
 )
-from ditto_datahub.sources.tushare.client import TushareClient
+from ditto_datahub.sources.base import (
+    SourceAuthenticationError,
+    SourceFetchError,
+    SourceRateLimitError,
+)
+
+if TYPE_CHECKING:
+    from ditto_datahub.sources.tushare.client import TushareClient
 
 
 class StockStatusAdapter:
@@ -58,7 +67,7 @@ class StockStatusAdapter:
             )
             if len(suspend_response) > 0:
                 suspend_df = suspend_response
-        except Exception as e:
+        except (SourceFetchError, SourceAuthenticationError, SourceRateLimitError) as e:
             logger.warning(
                 "Failed to fetch suspend_d data",
                 event="tushare_suspend_d_fetch_error",
@@ -86,7 +95,7 @@ class StockStatusAdapter:
             )
             if len(st_response) > 0:
                 st_df = st_response
-        except Exception as e:
+        except (SourceFetchError, SourceAuthenticationError, SourceRateLimitError) as e:
             logger.warning(
                 "Failed to fetch stock_st data",
                 event="tushare_stock_st_fetch_error",
@@ -115,7 +124,7 @@ class StockStatusAdapter:
             )
             if len(basic_response) > 0:
                 list_status_df = basic_response
-        except Exception as e:
+        except (SourceFetchError, SourceAuthenticationError, SourceRateLimitError) as e:
             logger.warning(
                 "Failed to fetch stock_basic list_status",
                 event="tushare_stock_basic_fetch_error",
