@@ -145,37 +145,6 @@ class TestSingletonManagerEdgeCases:
         assert isinstance(instance, MockConfig)
 
 
-class TestSettingsManager:
-    """SettingsManager 集成测试."""
-
-    def test_settings_manager_exists(self) -> None:
-        """SettingsManager 应该存在."""
-        from ditto_foundation.config.settings import SettingsManager
-
-        assert SettingsManager is not None
-
-    def test_settings_manager_get_returns_settings(self) -> None:
-        """SettingsManager.get() 应返回 Settings 实例."""
-        from ditto_foundation.config.settings import Settings, SettingsManager
-
-        try:
-            instance = SettingsManager.get()
-            assert isinstance(instance, Settings)
-        finally:
-            SettingsManager.reset()
-
-    def test_settings_manager_singleton_behavior(self) -> None:
-        """SettingsManager 应表现出单例行为."""
-        from ditto_foundation.config.settings import SettingsManager
-
-        try:
-            instance1 = SettingsManager.get()
-            instance2 = SettingsManager.get()
-            assert instance1 is instance2
-        finally:
-            SettingsManager.reset()
-
-
 class TestPathsManager:
     """PathsManager 集成测试."""
 

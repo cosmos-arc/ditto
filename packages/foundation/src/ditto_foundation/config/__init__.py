@@ -13,6 +13,7 @@ from ditto_foundation.config.initializer import (
     get_config_coordinator,
     reset_coordinator_for_testing,
 )
+from ditto_foundation.config.loader import ConfigLoader
 from ditto_foundation.config.manager import (
     PathsManager,
     SingletonManager,
@@ -28,34 +29,31 @@ from ditto_foundation.config.settings import (
     DatabaseSettings,
     DataSourceSettings,
     FileStorageSettings,
+    ObservabilitySettings,
     Settings,
-    SettingsManager,
     SystemSettings,
-    get_settings,
-    reload_settings,
 )
 
 __all__ = [
     "ConfigInitCoordinator",
     "ConfigInitProvider",
+    "ConfigLoader",
     "DataSourceSettings",
     "DatabaseSettings",
     "Environment",
     "FileStorageSettings",
     "InitResult",
     "InitScope",
+    "ObservabilitySettings",
     "PathResolver",
     "PathsManager",
     "Settings",
-    "SettingsManager",
     "SingletonManager",
     "SystemSettings",
     "XDGPaths",
     "get_config_coordinator",
     "get_paths",
-    "get_settings",
     "reload_paths",
-    "reload_settings",
     "reset_coordinator_for_testing",
     "reset_paths_for_testing",
 ]

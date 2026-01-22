@@ -10,7 +10,7 @@ Ditto 系统配置管理.
 
 import os
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any
 
 from dotenv import dotenv_values
 from pydantic import Field, computed_field
@@ -18,7 +18,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ditto_foundation.config.environment import Environment
 from ditto_foundation.config.loader import ConfigLoader
-from ditto_foundation.config.manager import SingletonManager
 from ditto_foundation.config.paths import get_paths
 
 
@@ -235,60 +234,11 @@ class Settings(BaseSettings):
         return self.system.ditto_env.is_testing
 
 
-# ============ Settings 单例管理器 ============
-
-
-class SettingsManager(SingletonManager["Settings"]):
-    """
-    Settings 单例管理器.
-
-    使用类属性而非 global 变量实现单例模式，避免 PLW0603 警告。
-    """
-
-    _instance: ClassVar["Settings | None"] = None
-
-    @classmethod
-    def _create_instance(cls) -> "Settings":
-        """创建 Settings 实例."""
-        return Settings()
-
-
-def get_settings() -> Settings:
-    """
-    获取全局配置实例.
-
-    使用单例模式, 避免重复加载配置
-
-    Returns
-    -------
-        Settings: 配置实例
-
-    """
-    return SettingsManager.get()
-
-
-def reload_settings() -> Settings:
-    """
-    重新加载配置.
-
-    主要用于测试或配置热更新场景
-
-    Returns
-    -------
-        Settings: 新的配置实例
-
-    """
-    return SettingsManager.reload()
-
-
 __all__ = [
     "DataSourceSettings",
     "DatabaseSettings",
     "FileStorageSettings",
     "ObservabilitySettings",
     "Settings",
-    "SettingsManager",
     "SystemSettings",
-    "get_settings",
-    "reload_settings",
 ]
