@@ -106,17 +106,18 @@ class L3BatchService:
             }
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "L3 batch check failed",
                 event="l3_batch_error",
                 dataset=dataset,
-                error=str(e),
+                trade_date=trade_date,
+                error_type=type(e).__name__,
             )
             return {
                 "dataset": dataset,
                 "trade_date": trade_date,
                 "passed": False,
-                "error": str(e),
+                "error": f"{type(e).__name__}: {e!s}",
             }
 
     def _fetch_data(
