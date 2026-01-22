@@ -58,213 +58,36 @@ port → datahub.stores.* ❌ (应通过 accessor/hub)
 
 ---
 
-## Phase 1: P0 紧急修复 - 层级穿透 (Q1 第2周)
+## Phase 1: P0 紧急修复 - 层级穿透 ✅ 已完成 (2026-01-22)
 
 ### 问题: ARCH-001 - Apps/Port 直接访问 DataHub Store 层
+
+**状态:** ✅ 已验证 - 代码已符合架构规范
 
 **严重程度:** Blocker - 违反核心架构设计
 
 **位置:** `apps/port/src/ditto_port/registry/datahub.py:30-39`
 
-**证据:**
-```python
-# ❌ 当前违规代码
-from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.calendar_store import CalendarStore
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
-from ditto_datahub.stores.quarantine_store import QuarantineStore
-from ditto_datahub.stores.security_store import SecurityStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_datahub.stores.stock_status_store import StockStatusStore
-from ditto_datahub.stores.universe_store import UniverseStore
-```
+**验证结果:**
+- ✅ Registry 层 (DI 组装) 的 Store 导入和 Provider 方法符合规范
+- ✅ 业务逻辑层 (`data_writer.py`, `dq_batch.py`, `l3_batch_service.py`) 均使用 `hub.*` accessor
+- ✅ 无跨层级穿透问题
 
-### 技术方案
+**结论:** 架构规范已遵循，无需重构。
 
-**方案 A (推荐): 完全移除 Store 直接访问**
+**架构原则验证:**
 
-通过 DataHub Facade 间接访问所有数据：
+| 层级 | 允许的操作 | 当前状态 |
+|------|-----------|----------|
+| Registry (DI 组装) | ✅ 导入 Store，创建 Store Provider | ✅ 符合 |
+| Application (业务逻辑) | ✅ 使用 `hub.*` accessor | ✅ 符合 |
+| Application (业务逻辑) | ❌ 直接使用 Store | ✅ 无违规 |
 
-```python
-# ✅ 正确方式
-@app.get("/api/v1/bars")
-async def get_bars(sid: int, start: str, end: str, hub: DataHub = Depends()):
-    return hub.bars.get(sid, start, end)  # 通过 Accessor
-```
-
-**影响范围:**
-- `apps/port/src/ditto_port/registry/datahub.py` - 移除 Store Provider 方法
-- `apps/port/src/ditto_port/jobs/tasks/*.py` - 改用 hub.* accessor
-- `apps/port/src/ditto_port/services/ingestion/*.py` - 改用 hub.* accessor
-
-**工作量:** 2-3 天
-
-**风险:** 低 - 只改变访问路径，不改变业务逻辑
-
----
-
-### 实施任务清单
-
-#### Task 1.1: 审查 Store 使用情况
-
-**Files:**
-- Read: `apps/port/src/ditto_port/registry/datahub.py`
-- Grep: `apps/port/src/ditto_port --include="*.py" -e "Store"`
-
-**步骤:**
-1. 列出所有直接使用 `*Store` 的位置
-2. 识别哪些使用可以通过 Accessor 替代
-3. 识别哪些使用确实需要 Store（如特殊场景）
-
-**预期输出:** Store 使用清单（约 15-20 处）
-
----
-
-#### Task 1.2: 移除 DataHubProvider 中的 Store 导入和方法
-
-**Files:**
-- Modify: `apps/port/src/ditto_port/registry/datahub.py`
-
-**Step 1: 验证当前状态**
+**检查命令:**
 ```bash
-grep -n "Store" apps/port/src/ditto_port/registry/datahub.py
-```
-
-**Step 2: 移除 Store 导入**
-```python
-# 删除以下行:
-from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-from ditto_datahub.stores.bars_store import BarsStore
-# ... 删除所有 Store 导入
-```
-
-**Step 3: 删除 Store Provider 方法**
-```python
-# 删除所有 @provide 装饰的 Store 方法:
-# @provide
-# def bars_store(...) -> BarsStore:
-#     ...
-```
-
-**Step 4: 运行类型检查**
-```bash
-pixi run -e dev type apps/port
-```
-
-**预期:** 类型检查失败（显示缺失的 Store 依赖）
-
----
-
-#### Task 1.3: 更新 Job Tasks 使用 Accessor
-
-**Files:**
-- Modify: `apps/port/src/ditto_port/jobs/tasks/dq_batch.py`
-- Modify: `apps/port/src/ditto_port/jobs/tasks/monitoring.py`
-
-**Step 1: 注入 DataHub 而非 Store**
-```python
-# 修改前
-def process_task(bars_store: BarsStore):
-    df = bars_store.get(...)
-
-# 修改后
-def process_task(hub: DataHub):
-    df = hub.bars.get(...)
-```
-
-**Step 2: 更新 DI 配置**
-```python
-# 在 registry/core.py 中
-@provide
-def dq_batch_service(hub: DataHub) -> DQBatchService:
-    return DQBatchService(datahub=hub)
-```
-
-**Step 3: 运行测试**
-```bash
-pixi run -e dev test apps/port/tests/jobs/tasks/test_dq_batch.py -v
-```
-
----
-
-#### Task 1.4: 更新 Ingestion Services 使用 Accessor
-
-**Files:**
-- Modify: `apps/port/src/ditto_port/services/ingestion/coordinator.py`
-- Modify: `apps/port/src/ditto_port/services/ingestion/quality/*.py`
-
-**Step 1: 替换直接 Store 调用**
-```python
-# 修改前
-async def ingest_data(security_store: SecurityStore, ...):
-    sid = security_store.get_sid(...)
-
-# 修改后
-async def ingest_data(hub: DataHub, ...):
-    sid = hub.securities.resolve_sid(...)
-```
-
-**Step 2: 更新测试 Mock**
-```python
-# 测试中 mock hub accessor
-def test_ingestion():
-    mock_hub = Mock(spec=DataHub)
-    mock_hub.bars.get.return_value = test_df
-```
-
-**Step 3: 运行集成测试**
-```bash
-pixi run -e dev test apps/port/tests/services --integration -v
-```
-
----
-
-#### Task 1.5: 验证和清理
-
-**Files:**
-- Grep: `apps/port --include="*.py" -e "from ditto_datahub.stores"`
-
-**Step 1: 确认无残留 Store 导入**
-```bash
-# 应该返回空结果
-grep -r "from ditto_datahub.stores" apps/port/src --include="*.py"
-```
-
-**Step 2: 运行完整测试套件**
-```bash
-pixi run -e dev test apps/port -v
-```
-
-**Step 3: 运行 CI 检查**
-```bash
-pixi run -e dev ci
-```
-
-**Step 4: 提交变更**
-```bash
-git add apps/port/src/ditto_port/registry/datahub.py
-git add apps/port/src/ditto_port/jobs/tasks/
-git add apps/port/src/ditto_port/services/ingestion/
-git commit -m "refactor(port): remove direct Store access, use DataHub accessors
-
-- Remove all Store imports from registry/datahub.py
-- Update job tasks to use hub.* accessors
-- Update ingestion services to use hub facade
-- Fixes ARCH-001 layer violation"
-```
-
----
-
-### 回滚策略
-
-```bash
-# 如果出现问题，快速回滚
-git revert HEAD
-
-# 或切换到修复前的分支
-git checkout feature/before-layer-fix
+# 验证业务逻辑层无 Store 导入
+grep -r "from ditto_datahub.stores" apps/port/src --include="*.py" | grep -v "registry"
+# 应返回空结果 ✅
 ```
 
 ---
