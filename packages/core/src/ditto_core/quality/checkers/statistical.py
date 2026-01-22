@@ -164,13 +164,23 @@ class StatisticalChecker:
                 )
 
         except Exception as e:
-            logger.error(
-                "dq_zscore_error",
+            # 使用 logger.exception 记录完整堆栈
+            logger.exception(
+                "dq_zscore_computation_failed",
                 event="dq_check",
-                error=str(e),
+                column=column,
+                rule_type="zscore",
             )
-
-        return None
+            # 返回 ALERT 级别的 DQIssue 而非 None
+            exc_type = type(e).__name__
+            return DQIssue(
+                level=DQLevel.L3_STATISTICAL,
+                severity=DQSeverity.ALERT,
+                rule_name="zscore",
+                message=f"Z-score check failed for column '{column}': {exc_type}",
+                affected_rows=0,
+                sample_data=[],
+            )
 
     def _check_completeness(
         self,
@@ -240,10 +250,16 @@ class StatisticalChecker:
                 )
 
         except Exception as e:
-            logger.error(
-                "dq_completeness_error",
+            logger.exception(
+                "dq_completeness_check_failed",
                 event="dq_check",
-                error=str(e),
+                rule_type="completeness",
             )
-
-        return None
+            return DQIssue(
+                level=DQLevel.L3_STATISTICAL,
+                severity=DQSeverity.ALERT,
+                rule_name="completeness",
+                message=f"Completeness check failed: {type(e).__name__}",
+                affected_rows=0,
+                sample_data=[],
+            )

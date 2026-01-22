@@ -162,8 +162,11 @@ class TestZScoreChecker:
             rules=[rule],
         )
 
-        # Should return empty issues when column missing
-        assert len(issues) == 0
+        # 新行为：列缺失时返回 ALERT 而不是静默失败
+        assert len(issues) == 1
+        assert issues[0].level == DQLevel.L3_STATISTICAL
+        assert issues[0].severity == DQSeverity.ALERT
+        assert "close" in issues[0].message.lower()
 
     def test_zscore_no_column_specified(self, current_data, historical_data):
         """Test Z-score check without column specified."""
@@ -375,3 +378,70 @@ class TestMultipleRules:
 
         # Both rules should pass
         assert len(issues) == 0
+
+
+class TestErrorHandling:
+    """Test cases for error handling in statistical checks."""
+
+    def test_zscore_returns_alert_on_compute_error(self):
+        """Test that computation errors return ALERT issue instead of silent None."""
+        # current 有 price 列，但 historical 没有（会在计算统计量时触发异常）
+        current = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                "price": [10.0, 20.0, 30.0],
+            }
+        )
+        # 历史数据没有 price 列（会触发异常）
+        historical = pl.DataFrame(
+            {
+                "sid": [1, 2],
+                "other_column": [100.0, 200.0],
+            }
+        )
+
+        checker = StatisticalChecker()
+        rule = {
+            "rule": "zscore",
+            "column": "price",
+            "threshold": 3.0,
+        }
+
+        result = checker._check_zscore(current, historical, rule)
+
+        # 应该返回 DQIssue 而非 None
+        assert result is not None, "Exception should return ALERT issue, not None"
+        assert result.level == DQLevel.L3_STATISTICAL
+        assert result.severity == DQSeverity.ALERT
+        assert "error" in result.message.lower() or "failed" in result.message.lower()
+
+    def test_completeness_returns_alert_on_compute_error(self):
+        """Test that completeness check errors return ALERT issue."""
+        # 创建无效的日历数据（缺少必需列）
+        current = pl.DataFrame(
+            {
+                "sid": [1, 2, 3],
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+            }
+        )
+        # 日历缺少 is_open 列（会导致计算失败）
+        calendar = pl.DataFrame(
+            {
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                # 缺少 is_open 列
+            }
+        )
+
+        checker = StatisticalChecker()
+        rule = {
+            "rule": "completeness",
+            "lookback_days": 5,
+        }
+
+        result = checker._check_completeness(current, calendar, rule)
+
+        # 应该返回 DQIssue 而非 None
+        assert result is not None, "Exception should return ALERT issue, not None"
+        assert result.severity == DQSeverity.ALERT
+        assert "error" in result.message.lower() or "failed" in result.message.lower()
