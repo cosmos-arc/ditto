@@ -111,9 +111,31 @@ grep -r "from ditto_datahub.stores" apps/port/src --include="*.py" | grep -v "re
 
 ---
 
-### Task 2.2: 改进异常处理精确度
+### Task 2.2: 改进异常处理精确度 ✅ 部分完成 (2026-01-22)
 
 **问题:** ENG-002 - 26 处宽泛 `except Exception` 捕获
+
+**状态:** ✅ 部分完成 - 已完成约 15 处改进
+
+**完成的改进:**
+- ✅ Batch 1: `packages/core/src/ditto_core/quality/checkers/statistical.py` - Polars 异常精确捕获
+- ✅ Batch 2: `packages/datahub/src/ditto_datahub/sources/tushare/client.py` - keyring 和 IO 异常处理
+- ✅ Batch 3 部分: `coordinator.py`, `main.py`, `notification.py`, `manager.py` - 顶层异常处理
+
+**改进效果:**
+- 宽泛异常捕获减少约 60%
+- 所有异常日志添加 `error_type` 字段
+- 未知异常使用 `logger.exception()` 记录完整堆栈
+- 区分 Polars 异常（ALERT）vs ValueError（WARNING）
+
+**未完成部分:**
+- `l3_batch_service.py`, `dq_batch.py` - 数据处理异常处理（因批量替换问题，需手动处理）
+
+**参考提交:**
+- `83e16ed` - refactor(core): improve exception handling in StatisticalChecker
+- `afa36bb` - refactor(datahub): improve exception handling in TushareClient
+- `1dee84f` - refactor(port): improve exception handling in IngestionCoordinator
+- `f8864b9` - refactor(port): improve exception handling in application layer
 
 **分类处理策略:**
 
