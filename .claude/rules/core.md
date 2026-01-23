@@ -183,11 +183,102 @@ class DQSpec(BaseModel):
 
 ## 错误处理
 
+### 核心原则
+
 | ✅ 正确 | ❌ 错误 |
 |---------|---------|
 | `raise DataHubError("msg")` | `raise Exception("msg")` |
 | `except DataHubError as e` | `except Exception` |
 | `except SpecificError` | 捕获所有 Exception |
+
+### 异常处理策略
+
+#### 1. 分层处理原则
+
+| 层级 | 处理策略 | 示例 |
+|------|----------|------|
+| **Foundation/DataHub** | 直接抛出原生异常或领域异常 | `raise SourceFetchError(...)` |
+| **Application** | 统一捕获 + 日志 + 业务响应 | `except Exception: logger.exception(...); return IngestionResult.failed(...)` |
+| **Interface** | 统一异常处理器 + 用户友好响应 | FastAPI middleware |
+
+**核心原则**：Raise low, catch high（底层抛出，高层捕获）
+
+#### 2. 何时捕获 vs 抛出异常
+
+| 场景 | 操作 | 原因 |
+|------|------|------|
+| **调用外部库（polars, httpx）** | 根据处理需求决定 | 需要转换为业务问题则捕获，否则抛出 |
+| **数据质量检查** | 捕获并转换为 DQIssue | 技术异常 → 业务问题，有语义价值 |
+| **容错组件（隔离存储）** | 捕获并返回默认值 | 失败不应阻塞主流程 |
+| **应用层协调器** | 统一捕获所有异常 | 日志 + 业务响应，无需细分异常类型 |
+
+#### 3. 避免过度分类
+
+**❌ 避免以下过度设计**：
+
+```python
+# 过度：为每种处理方式相同的异常单独捕获
+except (pl.ComputeError, pl.SchemaError, ValueError) as e:
+    return handle_error("WRITE_ERROR", e)
+except Exception as e:
+    return handle_error("UNKNOWN_ERROR", e)
+
+# 正确：处理方式相同时统一捕获
+except Exception as e:
+    logger.exception("write_failed", error_type=type(e).__name__, ...)
+    return handle_unknown_error(e)
+```
+
+**判断标准**：
+- 如果不同异常的**最终处理逻辑相同**，无需单独捕获
+- 日志中的 `error_type` 字段已足够诊断
+- 遵循 DRY 原则
+
+#### 4. 异常转换场景
+
+**需要转换**（有业务价值）：
+- 技术异常 → 业务问题（`polars.ComputeError` → `DQIssue`）
+- 外部异常 → 领域异常（`httpx.HTTPStatusError` → `SourceFetchError`）
+- 通用异常 → 特定异常（`ValueError` → `ValidationError` with context）
+
+**无需转换**（处理逻辑相同）：
+- 多种异常类型执行相同的处理逻辑
+- 日志已记录足够信息供诊断
+- 上层不需要根据异常类型做不同决策
+
+#### 5. 日志记录规范
+
+| 异常类型 | 日志级别 | 日志方法 | 必需字段 |
+|----------|----------|----------|----------|
+| 未知/未预期异常 | ERROR | `logger.exception()` | `error_type`, 业务上下文 |
+| 已知业务异常 | ERROR | `logger.error()` | `event`, 业务上下文 |
+| 可恢复异常 | WARNING | `logger.warning()` | `error`, 业务上下文 |
+| 资源清理失败 | WARNING | `logger.warning()` | `error` |
+
+**关键点**：
+- 使用 `logger.exception()` 记录完整堆栈（未知异常）
+- 包含业务上下文（`dataset`, `trade_date` 等）
+- 避免在日志中暴露敏感信息
+
+#### 6. 自定义异常设计
+
+**异常层次结构**：
+```python
+# 基础异常
+class DataHubError(Exception):
+    def __init__(self, message: str, details: dict[str, object] | None = None):
+        self.details = details or {}
+
+# 领域异常
+class DataSourceError(DataHubError): ...
+class SourceFetchError(DataSourceError): ...
+class SourceAuthenticationError(DataSourceError): ...
+```
+
+**设计原则**：
+- 按捕获方式定义异常（而非按来源）
+- 携带详细上下文（`details` 字典）
+- 保留异常链（`raise ... from e`）
 
 ## 导入规范（汇总）
 

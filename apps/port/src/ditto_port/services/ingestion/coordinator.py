@@ -12,7 +12,6 @@ from collections.abc import Callable
 
 import httpx
 import polars as pl
-import polars.exceptions as pl_exceptions
 from ditto_datahub.hub import DataHub
 from ditto_datahub.models import Dataset, OnDuplicate
 from ditto_datahub.sources.base import DataSource, SourceFetchError
@@ -180,19 +179,9 @@ class IngestionCoordinator:
             write_result = self._data_writer.write_data(
                 dataset, df, trade_date, on_duplicate
             )
-        except (pl_exceptions.ComputeError, pl_exceptions.SchemaError, ValueError) as e:
-            # 数据处理相关异常
-            logger.exception(
-                "data_processing_error_during_write",
-                dataset=dataset,
-                trade_date=trade_date,
-                error_type=type(e).__name__,
-            )
-            return self._result_handler.handle_write_error(dataset, trade_date, e)
         except Exception as e:
-            # 未知异常
             logger.exception(
-                "unexpected_error_during_write",
+                "write_data_failed",
                 dataset=dataset,
                 trade_date=trade_date,
                 error_type=type(e).__name__,
