@@ -186,3 +186,39 @@ class TestDataCache:
         assert cache.get("key1") is None
         assert cache.get("key2") is None
         assert cache.get("key3") is None
+
+    def test_generic_type_inference_with_str(self) -> None:
+        """Test that type checker correctly infers cache value types for strings."""
+        # 显式指定类型参数
+        cache: DataCache[str] = DataCache(enable_metrics=False)
+
+        # 类型检查器应该推断 value 为 str | None
+        cache.set("key1", "string_value")
+        value: str | None = cache.get("key1")
+        assert value == "string_value"
+
+        # 类型检查器应该允许类型特定操作
+        if value is not None:
+            # 这里应该有类型提示支持，无需类型断言
+            upper_value = value.upper()
+            assert upper_value == "STRING_VALUE"
+
+    def test_generic_type_inference_with_int(self) -> None:
+        """Test generic cache with int type."""
+        cache: DataCache[int] = DataCache(enable_metrics=False)
+
+        cache.set("count", 42)
+        result = cache.get("count")
+        # result 类型应该是 int | None
+        assert result == 42
+
+    def test_generic_type_inference_with_dict(self) -> None:
+        """Test generic cache with dict type."""
+        cache: DataCache[dict[str, int]] = DataCache(enable_metrics=False)
+
+        cache.set("data", {"count": 10, "value": 20})
+        result = cache.get("data")
+        # result 类型应该是 dict[str, int] | None
+        assert result is not None
+        assert result["count"] == 10
+        assert result["value"] == 20

@@ -94,7 +94,7 @@ class SecurityStore:
     def __init__(
         self,
         sqlite_client: SQLiteClient,
-        data_cache: DataCache | None = None,
+        data_cache: DataCache[Any] | None = None,
     ) -> None:
         """
         Initialize SecurityStore.

@@ -236,97 +236,67 @@ def test_quality_check_handles_invalid_data():
 
 ## Phase 3: P2 优化改进 (Q2 第1-2周)
 
-### Task 3.1: 减少 Any 类型使用
+### Task 3.1: 减少 Any 类型使用 ✅ 已完成 (2026-01-23)
 
 **问题:** ENG-004 - Cache 返回值类型不明确
 
+**状态:** ✅ 已完成
+
+**实施的变更:**
+- ✅ `DataCache` 类使用 Python 3.12 泛型语法 `class DataCache[T]:`
+- ✅ `get` 方法返回类型为 `T | None`
+- ✅ `set` 方法 value 参数类型为 `T`
+- ✅ 添加泛型类型推断测试（str, int, dict）
+- ✅ 所有现有测试通过（21 个测试）
+- ✅ pyright 类型检查通过（0 errors, 0 warnings）
+
+**参考提交:**
+- `TODO` - 待提交
+
+**技术细节:**
+- 使用 PEP 695 新泛型语法（Python 3.12+）
+- 类型参数 `T` 作用域自动限定在类内
+- 无需导入 `TypeVar` 或 `Generic`
+
 **Files:**
 - Modify: `packages/foundation/src/ditto_foundation/cache/core.py`
-
-```python
-# 修改前
-def get(self, key: str, default: Any = None) -> Any:
-    ...
-
-# 修改后
-from typing import TypeVar
-
-T = TypeVar("T")
-
-class DataCache:
-    def get(self, key: str, default: T | None = None) -> T | None:
-        """Get cached value with type inference."""
-        try:
-            value = self._cache[key]
-            if self._enable_metrics:
-                M.cache_hit.add(1, {"type": "data_cache"})
-            return value
-        except KeyError:
-            if self._enable_metrics:
-                M.cache_miss.add(1, {"type": "data_cache"})
-            return default
-```
+- Modify: `packages/foundation/tests/unit/cache/test_cache_data_unit.py`
 
 **验证类型检查:**
 ```bash
 pixi run -e dev pyright packages/foundation/src/ditto_foundation/cache/core.py
+# 0 errors, 0 warnings, 0 informations
 ```
 
 ---
 
-### Task 3.2: 统一 SQLite 连接管理
+### Task 3.2: 统一 SQLite 连接管理 ✅ 已完成 (2026-01-23)
 
 **问题:** ENG-005 - QuarantineStore 直接使用 sqlite3.connect()
 
+**状态:** ✅ 已完成
+
+**实施的变更:**
+- ✅ 添加 `quarantine_failed_data` 表到 `schema.sql`（统一 schema 管理）
+- ✅ `QuarantineStore` 改为使用 `SQLiteClient`（与其他 Store 一致）
+- ✅ 更新 DI 配置 `quarantine_store` provider
+- ✅ 适配所有单元测试
+- ✅ 移除废弃的 `quarantine_path` 配置项
+
+**参考提交:**
+- `TODO` - 待提交
+
+**架构改进:**
+- 移除独立数据库 `quarantine.db`，统一使用主数据库
+- Schema 由 `schema.sql` 统一管理
+- 连接管理与其他 Store 保持一致
+
 **Files:**
 - Modify: `packages/datahub/src/ditto_datahub/stores/quarantine_store.py`
-
-```python
-# 修改前
-def __init__(self, db_path: str | Path) -> None:
-    self._db_path = Path(db_path)
-    self._conn = sqlite3.connect(self._db_path)
-    self._init_schema()
-
-# 修改后
-def __init__(self, sqlite_pool: SQLitePool) -> None:
-    """Initialize quarantine store with connection pool.
-
-    Args:
-        sqlite_pool: SQLite connection pool for database access
-    """
-    self._pool = sqlite_pool
-    # Schema initialization happens on first use
-    self._initialized = False
-
-def _ensure_schema(self) -> None:
-    """Initialize schema if not already done."""
-    if self._initialized:
-        return
-
-    with self._pool.get_connection() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS quarantine_failed_data (...)
-        """)
-    self._initialized = True
-
-def save_failed_data(self, ...) -> int:
-    """Save failed data using connection pool."""
-    self._ensure_schema()
-    with self._pool.get_connection() as conn:
-        cursor = conn.execute(...)
-        conn.commit()
-        return cursor.lastrowid
-```
-
-**更新 DI 配置:**
-```python
-# registry/datahub.py
-@provide
-def quarantine_store(sqlite_pool: SQLitePool) -> QuarantineStore:
-    """Quarantine store with pooled connections."""
-    return QuarantineStore(sqlite_pool)
-```
+- Modify: `packages/datahub/src/ditto_datahub/scripts/schema.sql`
+- Modify: `apps/port/src/ditto_port/registry/datahub.py`
+- Modify: `packages/datahub/tests/unit/stores/test_quarantine_store_unit.py`
+- Modify: `packages/core/src/ditto_core/quality/config.py`
 
 ---
 
