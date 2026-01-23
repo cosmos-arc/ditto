@@ -243,7 +243,7 @@ export XDG_DATA_HOME=~/.local/share
 
 ## 5. 配置项详细说明
 
-### 4.1 系统配置 (system.env)
+### 5.1 系统配置 (system.env)
 
 | 环境变量 | 类型 | 默认值 | 说明 | 建议 |
 |----------|------|--------|------|------|
@@ -266,7 +266,7 @@ DITTO_ENV=production
 DEBUG=false
 ```
 
-### 4.2 API 配置 (api.env)
+### 5.2 API 配置 (api.env)
 
 | 环境变量 | 类型 | 默认值 | 说明 | 建议 |
 |----------|------|--------|------|------|
@@ -274,7 +274,7 @@ DEBUG=false
 | `API_PORT` | int | `8000` | 监听端口 | 避免冲突即可 |
 | `API_WORKERS` | int | `1` (dev) / `4` (prod) | Worker 进程数 | CPU 核心数 |
 
-### 4.3 数据库路径配置（XDG Base Directory 规范）
+### 5.3 数据库路径配置（XDG Base Directory 规范）
 
 数据库路径由 `XDGPaths` 自动管理，遵循以下优先级：
 
@@ -293,7 +293,7 @@ DEBUG=false
 | Linux | `~/.local/share/ditto/data/db/duckdb/ditto.duckdb` | `~/.local/share/ditto/data/db/sqlite/hub.sqlite` | 遵循 XDG 规范 |
 | macOS | `~/Library/Application Support/ditto/data/...` | 同左 | Mac 标准位置 |
 
-### 4.4 数据源配置 (data_source.env)
+### 5.4 数据源配置 (data_source.env)
 
 | 环境变量 | 类型 | 默认值 | 说明 | 建议 |
 |----------|------|--------|------|------|
@@ -323,9 +323,9 @@ DEBUG=false
 
 ---
 
-## 5. 可观测性与 DQ 配置
+## 6. 可观测性与 DQ 配置
 
-### 5.1 可观测性配置 (observability.env)
+### 6.1 可观测性配置 (observability.env)
 
 前缀：`DITTO_OTEL_`
 
@@ -354,7 +354,7 @@ DEBUG=false
 | `tracing_sample_rate` | `1.0` | `0.0` | `0.1` |
 | `metrics_enabled` | `true` | `false` | `true` |
 
-### 5.2 DQ 数据质量配置 (dq.env)
+### 6.2 DQ 数据质量配置 (dq.env)
 
 前缀：`DITTO_DQ_`
 
@@ -373,15 +373,15 @@ DEBUG=false
 | `DITTO_DQ_REPORT_ENABLED` | boolean | `true` | 启用报告 | 保持开启 |
 | `DITTO_DQ_REPORT_PATH` | string | `data/reports/dq` | 报告输出路径 | 相对路径 |
 
-### 5.3 性能配置 (performance.env)
+### 6.3 性能配置 (performance.env)
 
 当前为空文件，保留用于未来扩展。
 
 ---
 
-## 6. 常用运维命令汇总
+## 7. 常用运维命令汇总
 
-### 6.1 服务管理
+### 7.1 服务管理
 
 | 操作 | 命令 |
 |------|------|
@@ -391,7 +391,7 @@ DEBUG=false
 | **启动 Prefect Worker** | `prefect worker start -p my-work-pool` |
 | **一键启动所有** | `.\scripts\start_all.ps1` |
 
-### 6.2 代码质量检查
+### 7.2 代码质量检查
 
 | 命令 | 功能 |
 |------|------|
@@ -402,7 +402,7 @@ DEBUG=false
 | `pixi run type` | 类型检查（源码） |
 | `pixi run type --all` | 完整类型检查 |
 
-### 6.3 测试命令
+### 7.3 测试命令
 
 | 命令 | 功能 |
 |------|------|
@@ -413,7 +413,7 @@ DEBUG=false
 | `pixi run test --cov` | 带覆盖率报告 |
 | `pixi run ci` | CI 完整检查 |
 
-### 6.4 Prefect 运维命令
+### 7.4 Prefect 运维命令
 
 | 操作 | 命令 |
 |------|------|
@@ -425,7 +425,7 @@ DEBUG=false
 | **部署所有 Flows** | `python -m ditto_port.jobs.flows.deploy` |
 | **列出可用 Flows** | `python -m ditto_port.jobs.flows.deploy list` |
 
-### 6.5 Keyring 管理命令
+### 7.5 Keyring 管理命令
 
 | 操作 | 命令 |
 |------|------|
@@ -434,7 +434,7 @@ DEBUG=false
 | **删除 Token** | `pixi run -e dev python -c "import keyring; keyring.delete_password('ditto', 'tushare')"` |
 | **列出所有凭据** | `pixi run -e dev python -c "import keyring; print(keyring.get_credential())"` |
 
-### 6.6 健康检查
+### 7.6 健康检查
 
 | 端点 | URL | 说明 |
 |------|-----|------|
@@ -445,9 +445,9 @@ DEBUG=false
 
 ---
 
-## 7. 故障排查与日志
+## 8. 故障排查与日志
 
-### 7.1 日志位置
+### 8.1 日志位置
 
 | 日志类型 | 路径（Windows） | 路径（Linux/macOS） |
 |----------|-----------------|---------------------|
@@ -455,7 +455,7 @@ DEBUG=false
 | Prefect 日志 | `~\.prefect\prefect.log` | `~/.prefect/prefect.log` |
 | 测试日志 | 控制台输出（带 `--log-cli`） | 同左 |
 
-### 7.2 常见问题排查
+### 8.2 常见问题排查
 
 | 问题 | 排查步骤 |
 |------|----------|
@@ -464,7 +464,7 @@ DEBUG=false
 | **Token 无效** | 1. 验证 keyring: `keyring.get_password('ditto', 'tushare')`<br>2. 检查环境变量<br>3. 确认 Tushare 积分余额 |
 | **数据库连接失败** | 1. 检查数据目录权限<br>2. 确认路径存在（XDG 自动创建）<br>3. 查看 SQLite WAL 模式是否启用 |
 
-### 7.3 数据备份
+### 8.3 数据备份
 
 | 备份类型 | 路径 | 频率 |
 |----------|------|------|
