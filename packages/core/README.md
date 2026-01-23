@@ -1,19 +1,23 @@
 # ditto-core
 
-> 量化交易系统核心引擎 - 回测引擎、组合管理、策略框架
+**版本**: v0.2.0
+**最后更新**: 2026-01-23
+**状态**: 🔄 开发中
 
-## 概述
+## 概要
 
-`ditto-core` 是 Ditto 量化系统的核心业务逻辑层，提供：
+量化交易系统核心引擎，提供回测引擎、组合管理、策略框架、市场识别、因子系统和风险管理。
 
-- **回测引擎**：向量化 Fast 引擎 + 事件驱动 Production 引擎
-- **组合管理**：多策略协调、持仓管理、风险控制
-- **策略框架**：抽象策略基类、信号生成、订单执行
-- **市场识别**：Regime（牛/震荡/熊）引擎 + 自适应阈值
-- **因子系统**：多因子计算 + 健康度监控
-- **风险管理**：三层 Kill Switch + 回撤速度检测
+## 核心功能
 
-## 架构定位
+- **回测引擎**: 向量化 Fast 引擎 + 事件驱动 Production 引擎
+- **组合管理**: 多策略协调、持仓管理、风险控制
+- **策略框架**: 抽象策略基类、信号生成、订单执行
+- **市场识别**: Regime（牛/震荡/熊）引擎 + 自适应阈值
+- **因子系统**: 多因子计算 + 健康度监控
+- **风险管理**: 三层 Kill Switch + 回撤速度检测
+
+## 架构
 
 ```
 ┌─────────────────────────────────────┐
@@ -73,44 +77,7 @@
 | `SignalGenerator` | 信号生成接口 | 🔄 规划中 |
 | `OrderExecutor` | 订单执行接口 | 🔄 规划中 |
 
-## 目录结构
-
-```
-packages/core/
-├── src/
-│   └── ditto_core/
-│       ├── engine/           # 引擎模块
-│       │   ├── regime/       # Regime 识别
-│       │   ├── factor/       # 因子计算
-│       │   ├── rotation/     # 轮动策略
-│       │   ├── backtest/     # 回测引擎
-│       │   └── risk/         # 风险管理
-│       ├── portfolio/        # 组合管理
-│       │   ├── manager/      # 组合管理器
-│       │   ├── builder/      # 组合构建器
-│       │   └── position/     # 持仓管理
-│       └── strategy/         # 策略模块
-│           ├── base/         # 策略基类
-│           ├── signal/       # 信号生成
-│           └── execution/    # 订单执行
-├── tests/
-│   ├── unit/                 # 单元测试
-│   └── integration/          # 集成测试
-├── data/                     # 测试数据
-└── pyproject.toml
-```
-
-## 快速开始
-
-### 安装
-
-```bash
-# 通过 pixi 安装（推荐）
-pixi install
-
-# 开发模式安装
-pip install -e ./packages/core
-```
+## 使用示例
 
 ### 基本用法
 
@@ -129,7 +96,6 @@ regime_result = regime_engine.calc_regime_for_range(
     end_date="2024-01-31",
     index_code="000300.SH"
 )
-print(regime_result)  # 包含 regime_type, regime_score 等
 
 # 因子计算
 factor_engine = FactorEngine(hub)
@@ -138,7 +104,6 @@ factors = factor_engine.calc_factors(
     start_date="2024-01-01",
     end_date="2024-01-31"
 )
-print(factors)  # 包含 RS, Value, Vol, Crowding 因子
 
 # 组合管理
 portfolio_mgr = PortfolioManager(hub)
@@ -147,7 +112,6 @@ portfolio = portfolio_mgr.build_portfolio(
     rebalance_date="2024-01-31",
     regime="bull"
 )
-print(portfolio.positions)
 ```
 
 ### 回测示例
@@ -192,13 +156,6 @@ df = hub.sources.bars.get(
     end="2024-01-31",
     asof="2024-01-15"  # 只使用该时点之前的数据
 )
-
-# ❌ 错误：使用未来数据
-df = hub.sources.bars.get(
-    sids=[1, 2],
-    start="2024-01-01",
-    end="2024-01-31"
-)
 ```
 
 ### 2. 涨跌停感知
@@ -206,11 +163,9 @@ df = hub.sources.bars.get(
 回测引擎必须过滤涨跌停无法成交的情况：
 
 ```python
-# 检查涨跌停
 def is_limit_price(bar: Bar) -> bool:
     return bar.close == bar.high or bar.close == bar.low
 
-# 过滤无法成交的订单
 filtered_orders = [
     order for order in orders
     if not is_limit_price(order.bar)
@@ -224,7 +179,6 @@ filtered_orders = [
 ```python
 import polars as pl
 
-# ✅ 推荐：向量化计算
 df = (
     pl.scan_parquet("data.parquet")
     .filter(pl.col("date") >= start_date)
@@ -241,11 +195,9 @@ df = (
 Fast 与 Production 引擎必须对齐，误差 ≤ 0.1%：
 
 ```python
-# 运行双引擎
 fast_result = FastBacktester(hub).run(strategy, ...)
 prod_result = ProductionBacktester(hub).run(strategy, ...)
 
-# 验证对齐
 assert abs(fast_result.total_return - prod_result.total_return) < 0.001
 ```
 
@@ -268,7 +220,7 @@ assert abs(fast_result.total_return - prod_result.total_return) < 0.001
 
 ### 风险管理
 
-**三层 Kill Switch**（按风险宪法）：
+**三层 Kill Switch**：
 
 | Level | 触发条件 | 操作 | 恢复条件 |
 |-------|---------|------|----------|
@@ -284,65 +236,26 @@ assert abs(fast_result.total_return - prod_result.total_return) < 0.001
 | Osc    | 50-70% | 12% |
 | Bear   | 10-40% | 10% |
 
-## 开发
-
-### 运行测试
-
-```bash
-# 单元测试（快速）
-pixi run -e dev pytest packages/core/tests/unit
-
-# 集成测试
-pixi run -e dev pytest packages/core/tests/integration
-
-# 完整测试（带覆盖率）
-pixi run -e dev pytest packages/core/tests --cov=ditto_core
-```
-
-### 代码质量检查
-
-```bash
-# 快速检查
-pixi run -e dev quick-check
-
-# 提交前检查
-pixi run -e dev pre-commit-run
-
-# 完整 CI 检查
-pixi run -e dev ci-check
-```
-
-### TDD 开发流程
-
-1. **RED**: 编写失败测试
-2. **GREEN**: 最小实现通过测试
-3. **REFACTOR**: 重构优化代码
-
-```python
-# 示例：测试 RegimeEngine
-def test_regime_engine_bull_market():
-    # Arrange
-    engine = RegimeEngine(hub)
-    start = date(2024, 1, 1)
-    end = date(2024, 1, 31)
-
-    # Act
-    result = engine.calc_regime_for_range(start, end)
-
-    # Assert
-    assert "regime_type" in result.columns
-    assert result["regime_type"].is_in(["bull", "osc", "bear"]).all()
-```
-
 ## 相关文档
 
-- [引擎设计文档](../../../docs/design/03_engine_design.md)
-- [风险宪法](../../../docs/design/08_risk_constitution.md)
-- [系统设计总览](../../../docs/design/01_system_design.md)
-- [数据层设计](../../../docs/design/02_data_design.md)
-- [PIT 安全指南](../../../.claude/skills/pit-guide/SKILL.md)
-- [Polars 使用指南](../../../.claude/skills/polars-guide/SKILL.md)
+- [引擎设计文档](../../docs/design/03_engine_design.md)
+- [风险宪法](../../docs/design/08_risk_constitution.md)
+- [系统设计总览](../../docs/design/01_system_design.md)
+- [PIT 安全指南](../../.claude/skills/pit-guide/SKILL.md)
 
-## 许可证
+## 变更记录
 
-MIT License
+### v0.2.0 (2026-01-23)
+**新增**
+- README 标准化，添加版本、日期、状态元数据
+- 添加变更记录部分
+
+**改进**
+- 完善模块说明
+- 添加核心设计原则文档
+
+### v0.1.0 (2025-12-08)
+**新增**
+- 初始核心模块结构
+- 架构设计文档
+- 策略框架定义

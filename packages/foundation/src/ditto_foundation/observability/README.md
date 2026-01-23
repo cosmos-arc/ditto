@@ -1,8 +1,14 @@
 # observability
 
-> 统一的可观测性接口 - 日志、追踪、指标
+**版本**: v0.5.0
+**最后更新**: 2026-01-23
+**状态**: ✅ 稳定
 
-## 一、概述
+## 概要
+
+统一的可观测性接口 - 日志、追踪、指标，整合了日志（Loguru）、分布式追踪（OpenTelemetry）和指标收集（OpenTelemetry Metrics）。
+
+## 核心功能
 
 本模块提供统一的可观测性功能，整合了日志（Loguru）、分布式追踪（OpenTelemetry）和指标收集（OpenTelemetry Metrics），支持多种运行模式。
 
