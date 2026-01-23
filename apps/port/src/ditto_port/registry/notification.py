@@ -6,6 +6,7 @@ Notification 组件注册 (DI Provider).
 
 from __future__ import annotations
 
+import smtplib
 from importlib.resources import files
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from ditto_foundation.notification.channels import EmailSender, WebhookSender
 from ditto_foundation.notification.sender import NotificationSender
 from ditto_foundation.notification.template import TemplateEngine
 from loguru import logger
+from pydantic import ValidationError
 
 from ditto_port.notifications.manager import AlertManager
 
@@ -48,9 +50,15 @@ class NotificationProvider(Provider):
         """
         try:
             return NotificationSettings()
-        except Exception as e:
+        except ValidationError as e:
             logger.warning(
-                "Failed to load notification settings, using defaults",
+                "notification_settings_validation_failed",
+                error_count=len(e.errors()),
+            )
+            return NotificationSettings()
+        except (AttributeError, TypeError) as e:
+            logger.warning(
+                "notification_settings_structure_error",
                 error=str(e),
             )
             return NotificationSettings()
@@ -111,10 +119,10 @@ class NotificationProvider(Provider):
                     "Email sender initialized",
                     recipients=notification_settings.email_to,
                 )
-            except Exception as e:
+            except (smtplib.SMTPException, ConnectionError, TimeoutError) as e:
                 logger.warning(
-                    "Failed to initialize email sender",
-                    error=str(e),
+                    "email_sender_initialization_failed",
+                    error_type=type(e).__name__,
                 )
 
         # Webhook 发送器（通用）
@@ -125,10 +133,10 @@ class NotificationProvider(Provider):
                     "Webhook sender initialized",
                     url=notification_settings.webhook_url,
                 )
-            except Exception as e:
+            except (ConnectionError, TimeoutError, ValueError) as e:
                 logger.warning(
-                    "Failed to initialize webhook sender",
-                    error=str(e),
+                    "webhook_sender_initialization_failed",
+                    error_type=type(e).__name__,
                 )
 
         # 可以在此添加更多发送器（Telegram, WeChat, DingTalk, Slack）
