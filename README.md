@@ -64,11 +64,31 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
    ```
 
 3. **配置环境变量**
+
+   系统采用双层环境架构，配置文件按环境分组在 `config/` 目录：
+
    ```bash
-   cp .env.example .env
-   # 编辑 .env 文件，配置必要的环境变量
-   # 注意：Tushare token 需要通过 keyring 或 ~/.ditto/secrets.toml 配置
-   # 参考 .env.example 中的说明
+   # 配置文件结构（按需修改）
+   config/
+   ├── development/    # 开发环境配置
+   ├── testing/        # 测试环境配置
+   └── production/     # 生产环境配置
+   ```
+
+   设置运行时环境（默认为 development）：
+   ```bash
+   export DITTO_ENV=development  # Linux/macOS
+   # 或
+   set DITTO_ENV=development     # Windows
+   ```
+
+   **注意**：Tushare token 需要通过 keyring 或 `~/.ditto/secrets.toml` 配置
+   ```bash
+   # 方式1: Keyring（推荐）
+   pixi run -e dev python -c "
+   import keyring
+   keyring.set_password('ditto', 'tushare', 'your_token_here')
+   "
    ```
 
 4. **初始化数据库**
