@@ -19,7 +19,7 @@ from ditto_port.services.ingestion.quality import L3BatchService
     description="批量数据质量检查(L3 统计异常)",
     tags=["dq", "batch", "l3"],
 )
-async def dq_batch_check(
+async def dq_batch_check(  # noqa: C901
     trade_date: str | None = None,
     datasets: list[str] | None = None,
     market_wide: bool = False,
@@ -110,12 +110,22 @@ async def dq_batch_check(
                         count=result.get("issue_count", 0),
                     )
 
-            except Exception as e:
-                logger.error(
-                    "L3 DQ check failed",
+            except (ValueError, TypeError, KeyError, AttributeError) as e:
+                # 已知的数据处理异常
+                logger.warning(
+                    "dq_batch_known_error",
                     event="dq_batch_error",
                     dataset=dataset,
+                    error_type=type(e).__name__,
                     error=str(e),
+                )
+            except Exception as e:
+                # 未知异常
+                logger.exception(
+                    "dq_batch_unknown_error",
+                    event="dq_batch_error",
+                    dataset=dataset,
+                    error_type=type(e).__name__,
                 )
                 results_by_dataset[dataset] = {
                     "passed": False,

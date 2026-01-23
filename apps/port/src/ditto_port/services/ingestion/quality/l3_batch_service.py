@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from typing import Any, Literal
 
 import polars as pl
+import polars.exceptions as pl_exceptions
 from ditto_core.quality import QualityEngine
 from loguru import logger
 
@@ -105,9 +106,25 @@ class L3BatchService:
                 "alert_count": result.alert_count,
             }
 
-        except Exception as e:
+        except (pl_exceptions.ComputeError, pl_exceptions.SchemaError, ValueError) as e:
+            # 数据处理相关异常
             logger.exception(
-                "L3 batch check failed",
+                "l3_batch_check_data_processing_failed",
+                event="l3_batch_error",
+                dataset=dataset,
+                trade_date=trade_date,
+                error_type=type(e).__name__,
+            )
+            return {
+                "dataset": dataset,
+                "trade_date": trade_date,
+                "passed": False,
+                "error": f"{type(e).__name__}: {e!s}",
+            }
+        except Exception as e:
+            # 未知异常
+            logger.exception(
+                "l3_batch_check_unknown_error",
                 event="l3_batch_error",
                 dataset=dataset,
                 trade_date=trade_date,
