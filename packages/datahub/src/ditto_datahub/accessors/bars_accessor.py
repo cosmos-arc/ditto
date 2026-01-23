@@ -35,10 +35,11 @@ class BarsQuery:
 
     用于封装 BarsAccessor.get() 方法的所有参数，提高可读性和可维护性。
 
+    注意: 只接受 sids 参数，不再接受 src_codes/symbols。
+    请使用 DataHub 的便捷方法进行标识符转换。
+
     Attributes:
         sids: 按 SID 列表过滤。
-        src_codes: 按源代码列表过滤。
-        symbols: 按代码列表过滤。
         start: 开始日期 (YYYY-MM-DD)。
         end: 结束日期 (YYYY-MM-DD)。
         adj: 复权类型。
@@ -59,8 +60,6 @@ class BarsQuery:
     """
 
     sids: list[int] | None = None
-    src_codes: list[str] | None = None
-    symbols: list[str] | None = None
     start: str | None = None
     end: str | None = None
     adj: AdjType = AdjType.NONE
@@ -373,9 +372,7 @@ class BarsAccessor:
             )
         else:
             # 样本集模式：使用 _resolve_sids
-            resolved_sids = self._resolve_sids(
-                query.sids, query.src_codes, query.symbols, query.asof
-            )
+            resolved_sids = self._resolve_sids(query.sids)
 
         if not resolved_sids:
             raise ValueError("无法解析出有效的 SID")
@@ -432,29 +429,22 @@ class BarsAccessor:
     def _resolve_sids(
         self,
         sids: list[int] | None,
-        src_codes: list[str] | None,
-        symbols: list[str] | None,
-        asof: str | None,
-        source: str = "tushare",
     ) -> list[int]:
-        """解析标识符为 SID 列表。"""
-        resolved: set[int] = set()
+        """
+        解析 SID 列表。
 
-        if sids:
-            resolved.update(sids)
+        注意: 标识符转换已移至 DataHub 层，此方法现在只处理 sids。
 
-        if src_codes:
-            mapping = self._security_store.resolve_sids_batch(src_codes, source, asof)
-            resolved.update(mapping.values())
+        Args:
+            sids: SID 列表（可能为 None 或空）。
 
-        if symbols:
-            for symbol in symbols:
-                sids_from_symbol = self._security_store.resolve_by_symbol(
-                    symbol, source
-                )
-                resolved.update(sids_from_symbol)
+        Returns:
+            去重后的 SID 列表（排序）。
 
-        return sorted(resolved)
+        """
+        if not sids:
+            return []
+        return sorted(set(sids))
 
     def _detect_asset_class_from_sids(
         self, sids: list[int]

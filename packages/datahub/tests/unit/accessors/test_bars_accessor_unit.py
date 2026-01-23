@@ -10,7 +10,7 @@ from tempfile import TemporaryDirectory
 import polars as pl
 import pytest
 from ditto_datahub.accessors import AdjType, BarsQuery
-from ditto_datahub.accessors.bars.accessor import BarsAccessor, _ResolvedQuery
+from ditto_datahub.accessors.bars_accessor import BarsAccessor, _ResolvedQuery
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.security_store import SecurityStore
@@ -30,8 +30,6 @@ class TestBarsQuery:
 
         # Assert
         assert query.sids is None
-        assert query.src_codes is None
-        assert query.symbols is None
         assert query.start is None
         assert query.end is None
         assert query.adj == AdjType.NONE
@@ -47,8 +45,6 @@ class TestBarsQuery:
         # Act
         query = BarsQuery(
             sids=[1, 2, 3],
-            src_codes=["600000.SH", "600001.SH"],
-            symbols=["600000", "600001"],
             start="2024-01-01",
             end="2024-01-31",
             adj=AdjType.QFQ,
@@ -62,8 +58,6 @@ class TestBarsQuery:
 
         # Assert
         assert query.sids == [1, 2, 3]
-        assert query.src_codes == ["600000.SH", "600001.SH"]
-        assert query.symbols == ["600000", "600001"]
         assert query.start == "2024-01-01"
         assert query.end == "2024-01-31"
         assert query.adj == AdjType.QFQ
@@ -979,7 +973,7 @@ class TestBarsAccessorSingle:
         self.bars_store.write("stock_daily", test_df, 2024)
 
         # Act: Mock logger and call get_single
-        mock_logger = mocker.patch("ditto_datahub.accessors.bars.accessor.logger")
+        mock_logger = mocker.patch("ditto_datahub.accessors.bars_accessor.logger")
         result = self.accessor.get_single(
             identifier="600000",
             start="2024-01-01",
