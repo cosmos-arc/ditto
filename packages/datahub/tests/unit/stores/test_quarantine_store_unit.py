@@ -3,6 +3,8 @@
 import polars as pl
 import pytest
 from ditto_datahub.stores.quarantine_store import QuarantineStore
+from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_foundation import SQLitePool
 
 
 @pytest.mark.integration
@@ -17,17 +19,33 @@ class TestQuarantineStore:
     def setup_method(self) -> None:
         """Set up test database."""
         # Use in-memory database for testing
-        self.store = QuarantineStore(":memory:")
+        self.pool = SQLitePool(":memory:")
+        # Initialize schema with quarantine table
+        self.pool.execute("""
+            CREATE TABLE IF NOT EXISTS quarantine_failed_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                dataset TEXT NOT NULL,
+                rule_id TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                failed_data TEXT,
+                affected_rows INTEGER DEFAULT 0,
+                trade_date TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        self.pool.commit()
+        self.client = SQLiteClient(self.pool)
+        self.store = QuarantineStore(self.client)
 
     def teardown_method(self) -> None:
         """Clean up after test."""
-        self.store.close()
+        # Connection is managed by SQLitePool
+        self.pool.close()
 
     def test_quarantine_store_init(self) -> None:
         """Test QuarantineStore initialization."""
-        assert self.store._conn is not None
-        # _db_path is a Path object, compare as string or use .as_posix()
-        assert str(self.store._db_path) == ":memory:"
+        assert self.store._client is not None
+        assert self.store._client.conn is not None
 
     def test_save_failed_data_basic(self) -> None:
         """Test saving failed data to quarantine."""
@@ -203,7 +221,7 @@ class TestQuarantineStore:
     def test_get_failed_data_df_empty_result(self) -> None:
         """Test getting failed data when JSON is empty."""
         # Manually insert a record with empty JSON
-        cursor = self.store._conn.execute(
+        cursor = self.client.execute(
             """
             INSERT INTO quarantine_failed_data
             (dataset, rule_id, severity, failed_data, affected_rows)
@@ -211,6 +229,7 @@ class TestQuarantineStore:
             """,
             ("test_dataset", "test_rule", "error", "{}", 0),
         )
+        self.client.commit()
         row_id = cursor.lastrowid
 
         # Try to retrieve it
@@ -221,7 +240,7 @@ class TestQuarantineStore:
     def test_get_failed_data_df_invalid_json(self) -> None:
         """Test that invalid JSON returns empty DataFrame."""
         # Manually insert a record with invalid JSON
-        cursor = self.store._conn.execute(
+        cursor = self.client.execute(
             """
             INSERT INTO quarantine_failed_data
             (dataset, rule_id, severity, failed_data, affected_rows)
@@ -229,6 +248,7 @@ class TestQuarantineStore:
             """,
             ("test_dataset", "test_rule", "error", "invalid json", 0),
         )
+        self.client.commit()
         row_id = cursor.lastrowid
 
         # Try to retrieve it
@@ -322,7 +342,24 @@ class TestQuarantineStore:
         """Test using QuarantineStore as a context manager."""
         failed_df = pl.DataFrame({"sid": [1000001], "close": [100.0]})
 
-        with QuarantineStore(":memory:") as store:
+        # Create pool and client for context manager test
+        pool = SQLitePool(":memory:")
+        pool.execute("""
+            CREATE TABLE IF NOT EXISTS quarantine_failed_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                dataset TEXT NOT NULL,
+                rule_id TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                failed_data TEXT,
+                affected_rows INTEGER DEFAULT 0,
+                trade_date TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        pool.commit()
+        client = SQLiteClient(pool)
+
+        with QuarantineStore(client) as store:
             # Use the store
             row_id = store.save_failed_data(
                 dataset="test_dataset",
@@ -336,8 +373,7 @@ class TestQuarantineStore:
             result = store.get_quarantined_data()
             assert len(result) == 1
 
-        # Connection should be closed after exiting context
-        # (This is implicit - if it works, no exception is raised)
+        pool.close()
 
     def test_save_failed_data_json_serialization(self) -> None:
         """Test that DataFrame is correctly serialized to JSON."""

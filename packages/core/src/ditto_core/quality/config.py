@@ -16,7 +16,6 @@ class DQSettings(BaseSettings):
         DITTO_DQ_L3_ENABLED: Enable L3 statistical checks
         DITTO_DQ_RULES_DIR: DQ rules directory path
         DITTO_DQ_QUARANTINE_ENABLED: Enable quarantine feature
-        DITTO_DQ_QUARANTINE_PATH: Quarantine data path
         DITTO_DQ_REPORT_ENABLED: Enable DQ report generation
         DITTO_DQ_REPORT_PATH: DQ report output path
     """
@@ -45,7 +44,6 @@ class DQSettings(BaseSettings):
 
     # Quarantine
     quarantine_enabled: bool = True
-    quarantine_path: str = "data/quarantine"
 
     # Reports
     report_enabled: bool = True

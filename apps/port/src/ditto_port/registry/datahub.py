@@ -142,10 +142,9 @@ class DataHubProvider(Provider):
         return IngestionLogStore(sqlite_client)
 
     @provide
-    def quarantine_store(self, data_root: Path) -> QuarantineStore:
-        """隔离区存储."""
-        quarantine_path = data_root / "quarantine.db"
-        return QuarantineStore(quarantine_path)
+    def quarantine_store(self, sqlite_client: SQLiteClient) -> QuarantineStore:
+        """隔离区存储（使用主数据库）."""
+        return QuarantineStore(sqlite_client)
 
     # ========================================================================
     # Accessor Layer

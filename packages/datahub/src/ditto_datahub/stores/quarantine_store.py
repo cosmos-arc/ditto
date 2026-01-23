@@ -1,44 +1,26 @@
 """Quarantine store for failed DQ data."""
 
-import sqlite3
-from pathlib import Path
 from typing import Any
 
 import orjson
 import polars as pl
 from ditto_foundation import logger
 
+from ditto_datahub.stores.sqlite_client import SQLiteClient
+
 
 class QuarantineStore:
     """SQLite-based quarantine store for DQ failed data."""
 
-    def __init__(self, db_path: str | Path) -> None:
+    def __init__(self, sqlite_client: SQLiteClient) -> None:
         """
-        Initialize quarantine store.
+        Initialize quarantine store with SQLite client.
 
         Args:
-            db_path: Path to SQLite database
+            sqlite_client: SQLite client with pooled connection
 
         """
-        self._db_path = Path(db_path)
-        self._conn = sqlite3.connect(self._db_path)
-        self._init_schema()
-
-    def _init_schema(self) -> None:
-        """Initialize quarantine table schema."""
-        self._conn.execute("""
-            CREATE TABLE IF NOT EXISTS quarantine_failed_data (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                dataset TEXT NOT NULL,
-                rule_id TEXT NOT NULL,
-                severity TEXT NOT NULL,
-                failed_data TEXT,  -- JSON stored failed records
-                affected_rows INTEGER DEFAULT 0,
-                trade_date TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        self._conn.commit()
+        self._client = sqlite_client
 
     def save_failed_data(
         self,
@@ -63,13 +45,11 @@ class QuarantineStore:
 
         """
         # Convert DataFrame to dict for JSON serialization
-        # Use arrow format for reliable serialization
-
         # Convert to list of dicts (records format)
         data_dicts = failed_data.to_dicts()
         data_json = orjson.dumps(data_dicts).decode("utf-8")
 
-        cursor = self._conn.execute(
+        cursor = self._client.execute(
             """
             INSERT INTO quarantine_failed_data
             (dataset, rule_id, severity, failed_data, affected_rows, trade_date)
@@ -84,13 +64,13 @@ class QuarantineStore:
                 trade_date,
             ),
         )
-        self._conn.commit()
+        self._client.commit()
         row_id = cursor.lastrowid
         if row_id is None:
             # Fallback: get the last inserted row ID
-            cursor = self._conn.execute("SELECT last_insert_rowid()")
-            row_id = cursor.fetchone()[0]
-        return row_id
+            row_id = self._client.fetchval("SELECT last_insert_rowid()")
+        # Ensure we return int (fetchval returns str | int | float)
+        return int(row_id) if row_id is not None else 0
 
     def get_quarantined_data(
         self,
@@ -124,7 +104,7 @@ class QuarantineStore:
         query += " ORDER BY created_at DESC LIMIT ?"
         params.append(limit)
 
-        cursor = self._conn.execute(query, params)
+        cursor = self._client.execute(query, params)
         rows = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
 
@@ -141,18 +121,17 @@ class QuarantineStore:
             Failed data as DataFrame, or empty DataFrame if not found or parse failed
 
         """
-        cursor = self._conn.execute(
+        row = self._client.fetchone(
             "SELECT failed_data FROM quarantine_failed_data WHERE id = ?",
             (row_id,),
         )
-        row = cursor.fetchone()
 
         if not row:
             return pl.DataFrame()
 
         # Parse JSON back to DataFrame
         try:
-            data_dicts = orjson.loads(row[0])
+            data_dicts = orjson.loads(row["failed_data"])
             return pl.DataFrame(data_dicts)
         except (orjson.JSONDecodeError, pl.exceptions.SchemaError) as e:
             logger.error(
@@ -174,14 +153,14 @@ class QuarantineStore:
             Number of records deleted
 
         """
-        cursor = self._conn.execute(
+        cursor = self._client.execute(
             """
             DELETE FROM quarantine_failed_data
             WHERE julianday('now') - julianday(created_at) > ?
             """,
             (days,),
         )
-        self._conn.commit()
+        self._client.commit()
         return cursor.rowcount
 
     def get_stats(self) -> list[dict[str, Any]]:
@@ -192,7 +171,7 @@ class QuarantineStore:
             Dictionary with stats
 
         """
-        cursor = self._conn.execute("""
+        rows = self._client.fetchall("""
             SELECT
                 dataset,
                 rule_id,
@@ -203,27 +182,25 @@ class QuarantineStore:
             GROUP BY dataset, rule_id, severity
             ORDER BY count DESC
         """)
-
-        rows = cursor.fetchall()
         return [
             {
-                "dataset": row[0],
-                "rule_id": row[1],
-                "severity": row[2],
-                "count": row[3],
-                "total_affected": row[4],
+                "dataset": row["dataset"],
+                "rule_id": row["rule_id"],
+                "severity": row["severity"],
+                "count": row["count"],
+                "total_affected": row["total_affected"],
             }
             for row in rows
         ]
-
-    def close(self) -> None:
-        """Close database connection."""
-        self._conn.close()
 
     def __enter__(self) -> "QuarantineStore":
         """Context manager entry."""
         return self
 
-    def __exit__(self, *args: Any) -> None:
-        """Context manager exit."""
-        self.close()
+    def __exit__(self, *_args: Any) -> None:
+        """
+        Context manager exit.
+
+        Connection is managed by SQLitePool, no need to close here.
+        """
+        pass
