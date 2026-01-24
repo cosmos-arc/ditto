@@ -286,7 +286,6 @@ class BarsAccessor:
         start: date | None,
         end: date | None,
         asset_class: Literal["stock", "etf", "index"],
-        source: str | None = None,
     ) -> pl.DataFrame:
         """
         加载核心行情数据（不含复权和增强）。
@@ -296,7 +295,6 @@ class BarsAccessor:
             start: 开始日期。
             end: 结束日期。
             asset_class: 资产类别。
-            source: 数据源过滤（可选，None 表示所有数据源）。
 
         Returns:
             原始行情数据 DataFrame（不含复权和状态增强）。
@@ -311,7 +309,6 @@ class BarsAccessor:
             sids=sids,
             start_date=start.isoformat() if start else None,
             end_date=end.isoformat() if end else None,
-            source=source,
         )
 
         return df
