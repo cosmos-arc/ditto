@@ -5,13 +5,14 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.accessors.adj_factor import AdjFactorAccessor
-from ditto_datahub.accessors.bars import BarsAccessor
-from ditto_datahub.accessors.calendar import CalendarAccessor
-from ditto_datahub.accessors.index import IndexAccessor
-from ditto_datahub.accessors.ingestion_log import IngestionLogAccessor
-from ditto_datahub.accessors.security import SecuritiesAccessor
-from ditto_datahub.accessors.universe import UniverseAccessor
+from ditto_datahub.accessors.adj_factor_accessor import AdjFactorAccessor
+from ditto_datahub.accessors.bars_accessor import BarsAccessor
+from ditto_datahub.accessors.calendar_accessor import CalendarAccessor
+from ditto_datahub.accessors.index_accessor import IndexAccessor
+from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
+from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
+from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
+from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.hub import DataHub
 from ditto_datahub.runtime.freeze_manager import FreezeManager
@@ -23,6 +24,7 @@ from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
+from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.stock_status_store import StockStatusStore
@@ -42,43 +44,65 @@ _SCHEMA_PATH = (
 
 
 @pytest.fixture
-def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
+def sqlite_pool(tmp_path: Path) -> Generator[SQLitePool, None, None]:
+    """
+    SQLite 连接池 fixture（单元测试专用）.
+
+    生命周期由 fixture 管理，yield 后自动清理.
+    """
+    data_root = tmp_path / "data"
+    data_root.mkdir(parents=True, exist_ok=True)
+    (data_root / "meta").mkdir(parents=True, exist_ok=True)
+
+    db_path = data_root / "meta" / "hub.sqlite"
+    pool = SQLitePool(str(db_path), schema_path=_SCHEMA_PATH)
+    pool.init_schema()
+
+    yield pool
+
+    # fixture cleanup 自动清理
+    pool.close()
+
+
+@pytest.fixture
+def datahub_with_dependencies(
+    tmp_path: Path,
+    sqlite_pool: SQLitePool,
+) -> Generator[DataHub, None, None]:
     """
     创建完整的 DataHub 实例及所有依赖.
 
     这个 fixture 创建所有必需的依赖对象，模拟 DataHubProvider 的行为.
     使用 tmp_path 作为临时数据目录，确保测试隔离.
+
+    Note: sqlite_pool 由独立的 fixture 提供，生命周期由该 fixture 管理.
     """
     data_root = tmp_path / "data"
     data_root.mkdir(parents=True, exist_ok=True)
-    (data_root / "meta").mkdir(parents=True, exist_ok=True)
     (data_root / "locks").mkdir(parents=True, exist_ok=True)
     (data_root / "config").mkdir(parents=True, exist_ok=True)
 
-    # [REVIEW] SQLite Pool
-    db_path = data_root / "meta" / "hub.sqlite"
-    sqlite_pool = SQLitePool(str(db_path), schema_path=_SCHEMA_PATH)
-    sqlite_pool.init_schema()
-
-    # [REVIEW] Runtime Layer
+    # Runtime Layer
     file_lock = FileLockManager(data_root / "locks")
     sid_allocator = SidAllocator(sqlite_pool)
     freeze_manager = FreezeManager(data_root=str(data_root))
 
-    # [REVIEW] Store Layer
+    # Store Layer
     sqlite_client = SQLiteClient(sqlite_pool)
     security_store = SecurityStore(sqlite_client)
     calendar_store = CalendarStore(sqlite_client)
     ingestion_log_store = IngestionLogStore(sqlite_client)
+    quarantine_store = QuarantineStore(sqlite_client)
     universe_store = UniverseStore(sqlite_client)
     stock_status_store = StockStatusStore(data_root=data_root)
     adj_factor_store = AdjFactorStore(data_root=data_root)
     bars_store = BarsStore(data_root=data_root)
 
-    # [REVIEW] Accessor Layer
+    # Accessor Layer
     securities = SecuritiesAccessor(security_store, sid_allocator)
     calendar = CalendarAccessor(calendar_store)
     ingestion_log = IngestionLogAccessor(ingestion_log_store)
+    quarantine = QuarantineAccessor(quarantine_store)
     universe = UniverseAccessor(universe_store, security_store, sid_allocator)
     adj_factor = AdjFactorAccessor(adj_factor_store, file_lock)
     bars = BarsAccessor(
@@ -89,45 +113,36 @@ def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
         file_lock,
     )
 
-    # [REVIEW] Index Accessor (需要额外的 store)
-    # [REVIEW] mocker
-    # [REVIEW]
-
-    # [REVIEW] Sources Layer (使用 mocker TushareSource)
-    # [REVIEW]
-
-    # [REVIEW] SqlEngine
+    # SqlEngine
     sql_engine = SqlEngine(
         data_root=data_root,
         security_store=security_store,
         calendar_store=calendar_store,
     )
 
-    # [REVIEW] DataHub (先不传入 mock_sources 和 mock_index)
+    # DataHub
     hub = DataHub(
         data_root=data_root,
         sqlite_pool=sqlite_pool,
         file_lock=file_lock,
         sid_allocator=sid_allocator,
         freeze_manager=freeze_manager,
+        security_store=security_store,
         securities=securities,
         calendar=calendar,
         adj_factor=adj_factor,
         bars=bars,
         universe=universe,
-        index=None,  # [REVIEW]
+        index=None,
         ingestion_log=ingestion_log,
-        sources=None,  # [REVIEW]
+        quarantine=quarantine,
+        sources=None,
         sql_engine=sql_engine,
     )
 
-    # [REVIEW] sqlite_pool 引用到 hub 对象，供测试使用
-    hub._test_sqlite_pool = sqlite_pool  # type: ignore[attr-defined]
+    return hub
 
-    yield hub
-
-    # [REVIEW]
-    sqlite_pool.close()
+    # sqlite_pool 的清理由 sqlite_pool fixture 负责
 
 
 @pytest.fixture
@@ -291,65 +306,13 @@ class TestDataHub:
         assert isinstance(result, pl.DataFrame)
         assert result["num"][0] == 1
 
-    def test_close_closes_resources(
-        self,
-        datahub_with_dependencies: DataHub,
-        mocker: MockerFixture,
-    ) -> None:
-        """Test close closes initialized resources."""
-        # [REVIEW] mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
-        mock_tushare = mocker.Mock(spec=TushareSource)
-        sources = DataSources(tushare=mock_tushare)
-        datahub_with_dependencies._sources = sources
-
-        # Access some resources
-        _ = datahub_with_dependencies.sqlite_pool
-        _ = datahub_with_dependencies.sql_engine
-
-        # Close should not raise
-        datahub_with_dependencies.close()
-
-    def test_context_manager(
-        self,
-        datahub_with_dependencies: DataHub,
-        mocker: MockerFixture,
-    ) -> None:
-        """Test DataHub supports context manager."""
-        # [REVIEW] mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
-        mock_tushare = mocker.Mock(spec=TushareSource)
-        sources = DataSources(tushare=mock_tushare)
-        datahub_with_dependencies._sources = sources
-
-        with datahub_with_dependencies as hub:
-            assert hub.data_root == datahub_with_dependencies.data_root
-            _ = hub.sqlite_pool
-
-        # After exit, resources should be closed
-        # Note: We can't directly test if closed, but we can verify no errors
-
     def test_repr_shows_initialized_components(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
         """Test __repr__ shows initialized components."""
-        # [REVIEW] mock index 和 sources
+        # mock index 和 sources
         index_store = mocker.Mock()
         index = IndexAccessor(
             index_store,
@@ -366,23 +329,23 @@ class TestDataHub:
 
         repr_str = repr(datahub_with_dependencies)
         assert "DataHub" in repr_str
-        # [REVIEW] __repr__ 只显示 data_root，不显示具体组件
+        # __repr__ 只显示 data_root，不显示具体组件
         assert "data_root" in repr_str
 
     # ========================================================================
     # Universe Store and Accessor Tests
     # ========================================================================
-    # [REVIEW] - 新架构使用依赖注入，无懒加载
+    # - 新架构使用依赖注入，无懒加载
 
     # ========================================================================
     # Index Store and Accessor Tests
     # ========================================================================
-    # [REVIEW] - 新架构使用依赖注入，无懒加载
+    # - 新架构使用依赖注入，无懒加载
 
     # ========================================================================
     # Runtime Layer - Freeze Manager Tests
     # ========================================================================
-    # [REVIEW] - 新架构使用依赖注入，无懒加载
+    # - 新架构使用依赖注入，无懒加载
 
     # ========================================================================
     # Convenience Methods Tests
@@ -391,10 +354,11 @@ class TestDataHub:
     def test_get_trading_days_returns_list(
         self,
         datahub_with_dependencies: DataHub,
+        sqlite_pool: SQLitePool,
         mocker: MockerFixture,
     ) -> None:
         """Test get_trading_days returns list of dates."""
-        # [REVIEW] mock index 和 sources
+        # mock index 和 sources
         index_store = mocker.Mock()
         index = IndexAccessor(
             index_store,
@@ -409,7 +373,7 @@ class TestDataHub:
 
         self._insert_calendar_data(
             datahub_with_dependencies.data_root,
-            sqlite_pool=datahub_with_dependencies._test_sqlite_pool,  # type: ignore[attr-defined]
+            sqlite_pool=sqlite_pool,
         )
 
         # Reload calendar cache to pick up the inserted data
@@ -428,10 +392,11 @@ class TestDataHub:
     def test_get_trading_days_only_open_false(
         self,
         datahub_with_dependencies: DataHub,
+        sqlite_pool: SQLitePool,
         mocker: MockerFixture,
     ) -> None:
         """Test get_trading_days with only_open=False."""
-        # [REVIEW] mock index 和 sources
+        # mock index 和 sources
         index_store = mocker.Mock()
         index = IndexAccessor(
             index_store,
@@ -449,7 +414,7 @@ class TestDataHub:
         self._insert_calendar_data(
             datahub_with_dependencies.data_root,
             rows,
-            sqlite_pool=datahub_with_dependencies._test_sqlite_pool,  # type: ignore[attr-defined]
+            sqlite_pool=sqlite_pool,
         )
 
         # Reload calendar cache to pick up the inserted data
@@ -469,10 +434,11 @@ class TestDataHub:
     def test_is_trading_day_returns_bool(
         self,
         datahub_with_dependencies: DataHub,
+        sqlite_pool: SQLitePool,
         mocker: MockerFixture,
     ) -> None:
         """Test is_trading_day returns boolean."""
-        # [REVIEW] mock index 和 sources
+        # mock index 和 sources
         index_store = mocker.Mock()
         index = IndexAccessor(
             index_store,
@@ -490,7 +456,7 @@ class TestDataHub:
         self._insert_calendar_data(
             datahub_with_dependencies.data_root,
             rows,
-            sqlite_pool=datahub_with_dependencies._test_sqlite_pool,  # type: ignore[attr-defined]
+            sqlite_pool=sqlite_pool,
         )
 
         # Reload calendar cache to pick up the inserted data
@@ -669,22 +635,25 @@ class TestDataHub:
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
 
-        # [REVIEW] data_root=None
-        # [REVIEW] data_root 正确设置
+        # data_root 正确设置
         assert datahub_with_dependencies.data_root is not None
         assert isinstance(datahub_with_dependencies.data_root, Path)
 
+    # Note: DataHub resource lifecycle is managed by the dependency injection container.
+    # The sqlite_pool is created and closed by the Provider/factory that created it.
+    # DataHub does not implement close() or context manager protocol anymore.
+
     # ========================================================================
-    # __exit__ Exception Handling Tests
+    # Convenience API with Params Tests (Task 2.4)
     # ========================================================================
 
-    def test_exit_handles_exception_gracefully(
+    def test_bars_params_creation(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test __exit__ handles exceptions and still closes resources."""
-        # [REVIEW] mock index 和 sources
+        """Test BarsQuerySpec dataclass creation and frozen property."""
+        # mock index 和 sources
         index_store = mocker.Mock()
         index = IndexAccessor(
             index_store,
@@ -697,33 +666,34 @@ class TestDataHub:
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
 
-        _ = datahub_with_dependencies.sqlite_pool
+        from ditto_datahub.hub import BarsQuerySpec
 
-        # Mock close 方法以验证调用
-        mock_close = mocker.patch.object(datahub_with_dependencies, "close")
+        # 测试创建参数对象
+        params = BarsQuerySpec(
+            identifiers=["000001.SZ", "万科A"],
+            start="2024-01-01",
+            end="2024-01-31",
+            adj="qfq",
+        )
 
-        # Simulate an exception in the with block
-        try:
-            with datahub_with_dependencies:
-                _ = datahub_with_dependencies.sql_engine
-                raise ValueError("Test exception")
-        except ValueError:
-            pass  # Expected exception
+        assert params.identifiers == ["000001.SZ", "万科A"]
+        assert params.start == "2024-01-01"
+        assert params.adj == "qfq"
 
-        # Verify close 被调用
-        mock_close.assert_called_once()
+        # 测试 frozen 属性（不可变）
+        # frozen dataclass 抛出 FrozenInstanceError
+        from dataclasses import FrozenInstanceError
 
-    # ========================================================================
-    # Resource Lifecycle Tests
-    # ========================================================================
+        with pytest.raises(FrozenInstanceError):
+            params.identifiers = ["000002.SZ"]  # type: ignore
 
-    def test_atexit_registered_on_init(
+    def test_securities_params_creation(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """验证 atexit 在初始化时注册."""
-        # [REVIEW] mock index 和 sources
+        """Test SecuritiesQuerySpec dataclass creation."""
+        # mock index 和 sources
         index_store = mocker.Mock()
         index = IndexAccessor(
             index_store,
@@ -736,18 +706,26 @@ class TestDataHub:
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
 
-        # [REVIEW] fixture 已经创建了 DataHub，我们无法直接 mock atexit.register
-        # Verify _cleanup_on_exit 方法存在
-        assert hasattr(datahub_with_dependencies, "_cleanup_on_exit")
-        assert callable(datahub_with_dependencies._cleanup_on_exit)
+        from ditto_datahub.hub import SecuritiesQuerySpec
 
-    def test_close_is_idempotent(
+        # 测试创建参数对象
+        params = SecuritiesQuerySpec(
+            identifiers=["000001.SZ"],
+            asset_class="stock",
+            is_active=True,
+        )
+
+        assert params.identifiers == ["000001.SZ"]
+        assert params.asset_class == "stock"
+        assert params.is_active is True
+
+    def test_get_bars_with_params_sid_only(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """验证 close() 可以多次调用."""
-        # [REVIEW] mock index 和 sources
+        """Test get_bars with BarsQuerySpec using SID identifiers."""
+        # mock index 和 sources
         index_store = mocker.Mock()
         index = IndexAccessor(
             index_store,
@@ -760,24 +738,29 @@ class TestDataHub:
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
 
-        _ = datahub_with_dependencies.sqlite_pool
+        from ditto_datahub.hub import BarsQuerySpec
 
-        # [REVIEW] close 应该成功
-        datahub_with_dependencies.close()
+        # Mock bars.get 返回空 DataFrame（因为没有真实数据）
+        mock_bars_get = mocker.patch.object(
+            datahub_with_dependencies.bars, "get", return_value=pl.DataFrame()
+        )
 
-        # [REVIEW] close 不应抛出异常
-        datahub_with_dependencies.close()
+        # 测试 SID 标识符
+        params = BarsQuerySpec(identifiers=[1, 2, 3])
+        result = datahub_with_dependencies.get_bars(params)
 
-        # [REVIEW] close 也不应抛出异常
-        datahub_with_dependencies.close()
+        # 验证 bars.get 被调用
+        assert mock_bars_get.called
+        # 验证返回类型
+        assert isinstance(result, pl.DataFrame)
 
-    def test_cleanup_on_exit_closes_resources(
+    def test_get_bars_with_params_mixed_identifiers(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """验证 _cleanup_on_exit 调用 close."""
-        # [REVIEW] mock index 和 sources
+        """Test get_bars with BarsQuerySpec using mixed identifiers."""
+        # mock index 和 sources
         index_store = mocker.Mock()
         index = IndexAccessor(
             index_store,
@@ -790,13 +773,61 @@ class TestDataHub:
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
 
-        _ = datahub_with_dependencies.sqlite_pool
+        from ditto_datahub.hub import BarsQuerySpec
 
-        # Mock close 方法
-        mock_close = mocker.patch.object(datahub_with_dependencies, "close")
+        # Mock resolve_sids_from_inputs 返回空列表
+        mocker.patch.object(
+            datahub_with_dependencies,
+            "resolve_sids_from_inputs",
+            return_value=[],
+        )
 
-        # [REVIEW] _cleanup_on_exit
-        datahub_with_dependencies._cleanup_on_exit()
+        # 测试混合标识符
+        params = BarsQuerySpec(
+            identifiers=[1, "000001.SZ", "万科A"],
+            start="2024-01-01",
+        )
+        result = datahub_with_dependencies.get_bars(params)
 
-        # Verify close 被调用
-        mock_close.assert_called_once()
+        # 验证返回空 DataFrame（因为没有解析到 SID）
+        assert isinstance(result, pl.DataFrame)
+        assert len(result) == 0
+
+    def test_get_securities_with_params(
+        self,
+        datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
+    ) -> None:
+        """Test get_securities with SecuritiesQuerySpec."""
+        # mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
+        from ditto_datahub.hub import SecuritiesQuerySpec
+
+        # Mock securities.get 返回空 DataFrame
+        mock_securities_get = mocker.patch.object(
+            datahub_with_dependencies.securities,
+            "get",
+            return_value=pl.DataFrame(),
+        )
+
+        # 测试参数对象
+        params = SecuritiesQuerySpec(
+            identifiers=["000001.SZ"],
+            asset_class="stock",
+        )
+        result = datahub_with_dependencies.get_securities(params)
+
+        # 验证 securities.get 被调用
+        assert mock_securities_get.called
+        assert isinstance(result, pl.DataFrame)

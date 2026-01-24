@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import polars as pl
 from ditto_foundation import logger
 
@@ -17,12 +15,11 @@ from ditto_datahub.sources.base import (
     SourceFetchError,
     SourceRateLimitError,
 )
+from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
+from ditto_datahub.sources.tushare.client import TushareClient
 
-if TYPE_CHECKING:
-    from ditto_datahub.sources.tushare.client import TushareClient
 
-
-class StockStatusAdapter:
+class StockStatusAdapter(BaseTushareAdapter):
     """
     股票状态数据适配器.
 
@@ -36,15 +33,15 @@ class StockStatusAdapter:
 
     """
 
-    def __init__(self, client: TushareClient) -> None:
+    def __init__(self, *, client: TushareClient) -> None:
         """
         初始化 StockStatusAdapter.
 
         Args:
-            client: Tushare API 客户端实例.
+            client: Tushare API 客户端实例（必须传入）.
 
         """
-        self._client = client
+        super().__init__(_client=client)
 
     def fetch_suspend_data(self, ts_date: str) -> pl.DataFrame:
         """

@@ -82,13 +82,33 @@ class EmailSender(NotificationSender):
             )
             return True
 
+        except smtplib.SMTPAuthenticationError:
+            event = "email_auth_error"
+        except smtplib.SMTPConnectError:
+            event = "email_connect_error"
+        except smtplib.SMTPRecipientsRefused:
+            event = "email_recipients_refused"
+        except smtplib.SMTPException:
+            event = "email_smtp_error"
+        except (OSError, TimeoutError):
+            event = "email_network_error"
         except Exception as e:
+            # 未预期的错误应该抛出，让调用方处理
             logger.error(
-                "Email alert failed",
-                event="email_error",
+                "Email send failed with unexpected error",
+                event="email_unexpected_error",
+                error_type=type(e).__name__,
                 error=str(e),
+                exc_info=True,
             )
-            return False
+            raise
+
+        # 处理已知的错误类型
+        logger.error(
+            f"Email send failed: {event}",
+            event=event,
+        )
+        return False
 
 
 __all__ = ["EmailSender"]

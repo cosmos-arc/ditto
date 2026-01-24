@@ -1,7 +1,7 @@
 """Tests for IngestionLogAccessor."""
 
 import pytest
-from ditto_datahub.accessors.ingestion_log import IngestionLogAccessor
+from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from pytest_mock import MockerFixture

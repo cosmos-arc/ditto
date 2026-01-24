@@ -6,13 +6,26 @@
 
 from typing import Any
 
+from ditto_foundation import shutdown
+
 from . import metrics, tracing
 
 
 def reset_for_testing() -> None:
     """重置所有可观测性状态（测试用）."""
+    # 先调用 shutdown 清理资源
+
+    try:
+        shutdown()
+    except Exception:  # noqa: S110 - shutdown 失败不应继续重置流程
+        pass  # shutdown 失败不影响继续重置
+
+    # 重置 tracing 和 metrics
     tracing.reset_tracing()
     metrics.reset_metrics()
+
+    # 重置注册表状态（通过 shutdown 已经重置，但确保状态一致）
+    # shutdown() 会调用 _ObservabilityRegistry.set_initialized(False)
 
 
 def get_recorded_spans() -> list[Any]:

@@ -7,6 +7,9 @@ Tests for create_ingestion_context context manager.
 import pytest
 from ditto_datahub import DataHub
 
+# 标记为串行执行，避免并行测试时数据库文件冲突
+pytestmark = pytest.mark.serial
+
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("prefect_test_session")

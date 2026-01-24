@@ -14,6 +14,10 @@ from ditto_datahub.accessors.internal.enrichment import (
     enrich_with_status,
     enrich_with_symbol,
 )
+from ditto_datahub.accessors.internal.pit import (
+    filter_by_knowledge_date,
+    parse_asof_date,
+)
 
 __all__ = [
     # adjustment
@@ -23,4 +27,7 @@ __all__ = [
     "enrich_with_sid",
     "enrich_with_status",
     "enrich_with_symbol",
+    # pit
+    "filter_by_knowledge_date",
+    "parse_asof_date",
 ]

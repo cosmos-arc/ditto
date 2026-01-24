@@ -52,9 +52,12 @@ class BarsQuery:
         with_status: 是否添加股票状态列（仅对股票数据有效）。
         market_wide: 全市场查询模式。为 True 时获取所有活跃证券，不限制 SID 范围。
         raw: 是否跳过复权和状态增强。为 True 时返回原始数据，不应用复权和状态增强。
+        source: 数据源过滤（可选，None 表示所有数据源）。
 
     Examples:
         >>> query = BarsQuery(sids=[1, 2, 3], start="2024-01-01", end="2024-01-31")
+        >>> repo.get(query)
+        >>> query = BarsQuery(sids=[1, 2, 3], source="tushare")
         >>> repo.get(query)
 
     """
@@ -69,40 +72,7 @@ class BarsQuery:
     with_status: bool = False
     market_wide: bool = False
     raw: bool = False
-
-
-@dataclass(frozen=True, slots=True)
-class _ResolvedQuery:
-    """
-    解析后的查询参数。
-
-    用于存储解析和验证后的查询参数，传递给数据加载和处理方法。
-    这是内部 API（前导下划线），仅供 BarsAccessor 内部使用。
-
-    Attributes:
-        sids: 解析后的 SID 列表（非空）。
-        start: 开始日期（解析为 date 对象）。
-        end: 结束日期（解析为 date 对象）。
-        asof: 时间点查询日期（解析为 date 对象，PIT-safe）。
-        asset_class: 资产类别（如 "stock", "etf", "index"）。
-
-    Examples:
-        >>> from datetime import date
-        >>> resolved = _ResolvedQuery(
-        ...     sids=[1, 2, 3],
-        ...     start=date(2024, 1, 1),
-        ...     end=date(2024, 1, 31),
-        ...     asof=None,
-        ...     asset_class="stock",
-        ... )
-
-    """
-
-    sids: list[int]
-    start: date | None
-    end: date | None
-    asof: date | None
-    asset_class: str | None
+    source: str | None = None
 
 
 class BarsAccessor:
@@ -170,36 +140,55 @@ class BarsAccessor:
             market_wide=query.market_wide,
         )
 
-        # 1. 参数验证和解析
-        try:
-            resolved = self._resolve_query(query)
-        except ValueError as e:
-            # 如果无法解析出有效的 SID，返回空 DataFrame
-            # 其他 ValueError（如混合资产类别）应该继续抛出
-            if "无法解析出有效的 SID" in str(e):
-                return pl.DataFrame()
-            raise
+        # 1. 解析 SID 列表
+        # 全市场模式：获取所有活跃 SID
+        if not query.market_wide and not query.sids:
+            return pl.DataFrame()
+        sids = sorted(set(query.sids or []))
 
-        # 2. 加载核心数据
-        df = self._load_bars_core(resolved)
+        # 2. 解析日期参数（字符串 -> date 对象）
+        start_date: date | None = None
+        if query.start:
+            start_date = date.fromisoformat(query.start)
+
+        end_date: date | None = None
+        if query.end:
+            end_date = date.fromisoformat(query.end)
+
+        asof_date: date | None = None
+        if query.asof:
+            asof_date = date.fromisoformat(query.asof)
+
+        # 3. 确定资产类别
+        asset_class: Literal["stock", "etf", "index"] | None = query.asset_class
+        if not asset_class:
+            asset_class = self._detect_asset_class_from_sids(sids)
+
+        # 4. 加载核心数据
+        df = self._load_bars_core(
+            sids=sids,
+            start=start_date,
+            end=end_date,
+            asset_class=asset_class,
+        )
 
         if df.is_empty():
             return pl.DataFrame()
 
-        # 3. 应用复权（如果需要且不是 raw 模式）
+        # 5. 应用复权（如果需要且不是 raw 模式）
         if not query.raw and query.adj != AdjType.NONE:
-            df = self._apply_adjustment(df, query.adj, resolved)
+            df = self._apply_adjustment(
+                df, query.adj, sids, start_date, end_date, asof_date
+            )
 
-        # 4. 增强 data
-        # 4.1 添加 symbol 列（如果需要）
+        # 6. 增强 data
+        # 6.1 添加 symbol 列（如果需要）
         if query.with_symbol:
             df = self._security_store.enrich_with_symbol(df)
 
-        # 4.2 添加状态列（如果需要且不是 raw 模式）
-        if query.with_status and not query.raw and resolved.asset_class == "stock":
-            df = self._enrich_with_status(
-                df, resolved.sids, resolved.start, resolved.end
-            )
+        # 6.2 添加状态列（如果需要且不是 raw 模式）
+        if query.with_status and not query.raw and asset_class == "stock":
+            df = self._enrich_with_status(df, sids, start_date, end_date)
 
         logger.debug(
             "Bars data fetched",
@@ -214,64 +203,6 @@ class BarsAccessor:
         )
 
         return df
-
-    def get_single(
-        self,
-        identifier: str,
-        start: str,
-        end: str,
-        source: str = "tushare",
-        adj: AdjType = AdjType.NONE,
-        asof: str | None = None,
-    ) -> pl.DataFrame:
-        """
-        Get bars data for a single security.
-
-        Args:
-            identifier: Source code or symbol.
-            start: Start date (YYYY-MM-DD).
-            end: End date (YYYY-MM-DD).
-            source: Data source identifier.
-            adj: Adjustment type.
-            asof: Point-in-time date (for PIT-safe identifier resolution and query).
-
-        Returns:
-            Bars data DataFrame.
-
-        """
-        # Resolve identifier (try src_code first, then symbol)
-        # Note: asof is passed here for PIT-safe identifier resolution
-        sid = self._security_store.resolve_sid(identifier, source, asof)
-        if not sid:
-            # Try as symbol
-            sids = self._security_store.resolve_by_symbol(identifier, source)
-            if not sids:
-                return pl.DataFrame()
-
-            # Warn if multiple SIDs match the same symbol
-            if len(sids) > 1:
-                logger.warning(
-                    "Multiple SIDs found for symbol, using first match",
-                    event="symbol_multiple_matches",
-                    symbol=identifier,
-                    sids=sids,
-                    selected_sid=sids[0],
-                    match_count=len(sids),
-                )
-
-            sid = sids[0]
-
-        # Get data (使用 BarsQuery)
-        return self.get(
-            query=BarsQuery(
-                sids=[sid],
-                start=start,
-                end=end,
-                adj=adj,
-                asof=asof,
-                with_symbol=True,
-            )
-        )
 
     @traced("accessor.bars.write")
     def write(
@@ -349,102 +280,41 @@ class BarsAccessor:
                 blocked=False,
             )
 
-    def _resolve_query(self, query: BarsQuery) -> _ResolvedQuery:
-        """
-        解析和验证查询参数。
-
-        Args:
-            query: BarsQuery 查询对象。
-
-        Returns:
-            解析后的查询参数（_ResolvedQuery）。
-
-        Raises:
-            ValueError: 如果无法解析出有效的 SID。
-
-        """
-        # 1. 解析 SID 列表
-        # 全市场模式：获取所有活跃 SID
-        if query.market_wide:
-            resolved_sids = self._security_store.list_sids(
-                asset_class=query.asset_class,
-                is_active=True,
-            )
-        else:
-            # 样本集模式：使用 _resolve_sids
-            resolved_sids = self._resolve_sids(query.sids)
-
-        if not resolved_sids:
-            raise ValueError("无法解析出有效的 SID")
-
-        # 2. 解析日期参数（字符串 -> date 对象）
-        start_date: date | None = None
-        end_date: date | None = None
-        asof_date: date | None = None
-
-        if query.start:
-            start_date = date.fromisoformat(query.start)
-        if query.end:
-            end_date = date.fromisoformat(query.end)
-        if query.asof:
-            asof_date = date.fromisoformat(query.asof)
-
-        # 3. 确定资产类别
-        asset_class: Literal["stock", "etf", "index"] | None = query.asset_class
-        if not asset_class:
-            asset_class = self._detect_asset_class_from_sids(resolved_sids)
-
-        return _ResolvedQuery(
-            sids=resolved_sids,
-            start=start_date,
-            end=end_date,
-            asof=asof_date,
-            asset_class=asset_class,
-        )
-
-    def _load_bars_core(self, resolved: _ResolvedQuery) -> pl.DataFrame:
+    def _load_bars_core(
+        self,
+        sids: list[int],
+        start: date | None,
+        end: date | None,
+        asset_class: Literal["stock", "etf", "index"],
+        source: str | None = None,
+    ) -> pl.DataFrame:
         """
         加载核心行情数据（不含复权和增强）。
 
         Args:
-            resolved: 解析后的查询参数。
+            sids: SID 列表。
+            start: 开始日期。
+            end: 结束日期。
+            asset_class: 资产类别。
+            source: 数据源过滤（可选，None 表示所有数据源）。
 
         Returns:
             原始行情数据 DataFrame（不含复权和状态增强）。
 
         """
         # 确定数据集名称
-        dataset = f"{resolved.asset_class}_daily"
+        dataset = f"{asset_class}_daily"
 
         # 读取原始数据
         df = self._bars_store.read(
             dataset=dataset,
-            sids=resolved.sids,
-            start_date=resolved.start.isoformat() if resolved.start else None,
-            end_date=resolved.end.isoformat() if resolved.end else None,
+            sids=sids,
+            start_date=start.isoformat() if start else None,
+            end_date=end.isoformat() if end else None,
+            source=source,
         )
 
         return df
-
-    def _resolve_sids(
-        self,
-        sids: list[int] | None,
-    ) -> list[int]:
-        """
-        解析 SID 列表。
-
-        注意: 标识符转换已移至 DataHub 层，此方法现在只处理 sids。
-
-        Args:
-            sids: SID 列表（可能为 None 或空）。
-
-        Returns:
-            去重后的 SID 列表（排序）。
-
-        """
-        if not sids:
-            return []
-        return sorted(set(sids))
 
     def _detect_asset_class_from_sids(
         self, sids: list[int]
@@ -502,15 +372,21 @@ class BarsAccessor:
         self,
         df: pl.DataFrame,
         adj: AdjType,
-        resolved: _ResolvedQuery,
+        sids: list[int],
+        start: date | None,
+        end: date | None,
+        asof: date | None,
     ) -> pl.DataFrame:
         """
-        应用价格调整（使用 _ResolvedQuery）。
+        应用价格调整。
 
         Args:
             df: K线数据 DataFrame。
             adj: 调整类型。
-            resolved: 解析后的查询参数。
+            sids: SID 列表。
+            start: 开始日期。
+            end: 结束日期。
+            asof: Point-in-Time 查询日期。
 
         Returns:
             调整后的 DataFrame。
@@ -519,9 +395,9 @@ class BarsAccessor:
         # 读取调整因子
         adj_df = self._adj_factor_store.read(
             dataset="adj_factor",
-            sids=resolved.sids,
-            start_date=resolved.start.isoformat() if resolved.start else None,
-            end_date=resolved.end.isoformat() if resolved.end else None,
+            sids=sids,
+            start_date=start.isoformat() if start else None,
+            end_date=end.isoformat() if end else None,
         )
 
         if adj_df.is_empty():
@@ -539,9 +415,9 @@ class BarsAccessor:
         # - 有 knowledge_date：必须在 join 前过滤（PIT-safe）
         # - 无 knowledge_date：不在 join 前过滤（向后兼容，在 _apply_qfq_adj 中处理）
         join_adj_df = adj_df
-        if resolved.asof is not None and "knowledge_date" in adj_df.columns:
+        if asof is not None and "knowledge_date" in adj_df.columns:
             # 只保留在 asof 日期前已知的因子（这些因子才能出现在 join 结果中）
-            join_adj_df = adj_df.filter(pl.col("knowledge_date") <= resolved.asof)
+            join_adj_df = adj_df.filter(pl.col("knowledge_date") <= asof)
 
         # 关联调整因子（包含 knowledge_date）
         cols = ["sid", "trade_date", "adj_factor"]
@@ -555,7 +431,7 @@ class BarsAccessor:
 
         # 根据调整类型调用相应方法
         if adj == AdjType.QFQ:
-            return apply_qfq_adj(df, adj_df, resolved.asof)
+            return apply_qfq_adj(df, adj_df, asof)
         else:  # HFQ
             return apply_hfq_adj(df, adj_df)
 

@@ -107,59 +107,6 @@ class SecuritiesAccessor:
         """
         return self._security_store.get_by_sid(sid)
 
-    def resolve_identifier(
-        self,
-        identifier: str,
-        source: str = "tushare",
-        asof: str | None = None,
-    ) -> int | None:
-        """
-        Resolve identifier to SID.
-
-        Tries src_code first, then symbol.
-
-        Args:
-            identifier: Source code or symbol.
-            source: Data source identifier.
-            asof: Point-in-time query date.
-
-        Returns:
-            SID, or None if not found.
-
-        """
-        # Try as src_code first
-        sid = self._security_store.resolve_sid(identifier, source, asof)
-        if sid:
-            return sid
-
-        # Try as symbol
-        sids = self._security_store.resolve_by_symbol(identifier, source)
-        if sids:
-            # Return first match (should be unique for active mappings)
-            return sids[0]
-
-        return None
-
-    def resolve_identifiers_batch(
-        self,
-        identifiers: list[str],
-        source: str = "tushare",
-        asof: str | None = None,
-    ) -> dict[str, int]:
-        """
-        Batch resolve identifiers to SIDs.
-
-        Args:
-            identifiers: List of identifiers.
-            source: Data source identifier.
-            asof: Point-in-time query date.
-
-        Returns:
-            Dictionary mapping identifier to SID (only for found identifiers).
-
-        """
-        return self._security_store.resolve_sids_batch(identifiers, source, asof)
-
     def list_all(
         self,
         asset_class: str | None = None,
@@ -486,20 +433,3 @@ class SecuritiesAccessor:
         )
 
         return result
-
-    def resolve_sid(
-        self, identifier: str, source: str = "tushare", asof: str | None = None
-    ) -> int | None:
-        """
-        Resolve identifier to SID (supports PIT).
-
-        Args:
-            identifier: Source code or symbol.
-            source: Data source identifier.
-            asof: Point-in-time query date.
-
-        Returns:
-            SID if found, None otherwise.
-
-        """
-        return self._security_store.resolve_sid(identifier, source, asof)

@@ -23,6 +23,8 @@ class BaseTushareAdapter:
         self,
         token: str | None = None,
         settings: DataSourceSettings | None = None,
+        *,
+        _client: TushareClient | None = None,
     ) -> None:
         """
         Initialize Tushare adapter.
@@ -30,9 +32,13 @@ class BaseTushareAdapter:
         Args:
             token: API token. Reads from keyring or ~/.ditto/secrets.toml if None.
             settings: 数据源配置（包含 URL/timeout 等参数）.
+            _client: 已存在的 client（用于依赖注入）.
 
         """
-        self._client = TushareClient(token=token, settings=settings)
+        if _client is not None:
+            self._client = _client
+        else:
+            self._client = TushareClient(token=token, settings=settings)
         logger.debug(
             f"{self.__class__.__name__} initialized",
             event="tushare_adapter_init",

@@ -237,7 +237,7 @@ class StockTushareAdapter(BaseTushareAdapter):
             ts_date = trade_date.replace("-", "")
 
             # 使用 Adapter 获取状态数据
-            adapter = StockStatusAdapter(self._client)
+            adapter = StockStatusAdapter(client=self._client)
 
             # 1. Fetch suspension data from suspend_d API
             suspend_df = adapter.fetch_suspend_data(ts_date)

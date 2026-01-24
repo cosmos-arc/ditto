@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_datahub.accessors.universe import UniverseAccessor
+from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient

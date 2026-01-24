@@ -229,91 +229,81 @@ def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
     sqlite_pool.close()  # 手动清理
 ```
 
-**测试策略分析**:
+**根本问题分析**:
 
-| 测试类型 | 容器使用 | 资源管理 | close() 需求 |
-|----------|----------|----------|-------------|
-| 单元测试 | ❌ 不使用 | 手动 fixture | ✅ **需要** |
-| 集成测试 | ✅ 使用 | 容器管理 | ❌ 不需要 |
-
-**关键矛盾**:
-- 单元测试策略是**手动构造依赖**，不使用容器
-- 但这样会导致 `sqlite_pool.close()` 在测试中手动调用
-- 如果去除 `DataHub.close()`，测试需要替代方案
-
-**解决方案讨论**:
-
-**方案 A: 保留 close() 方法（推荐）**
-
-```python
-def close(self) -> None:
-    """
-    Close resources.
-
-    - 单元测试: 手动调用此方法清理 sqlite_pool
-    - 容器环境: Provider 负责清理，此调用为冗余但无害（幂等）
-    """
-    if self._closed:
-        return
-    if hasattr(self, "sqlite_pool"):
-        self.sqlite_pool.close()
-    self._closed = True
+```
+DataHub 接收 sqlite_pool 作为依赖注入  ←  符合 DI 原则
+         ↓
+DataHub.close() 负责关闭 sqlite_pool   ←  违反"谁创建谁销毁"原则
 ```
 
-**理由**:
-- 单元测试不需要重构
-- 符合项目测试规范（单元测试不依赖容器）
-- 在容器环境中调用也无害（幂等设计）
+这导致了**责任模糊**：
+- `sqlite_pool` 是外部传入的，但销毁责任在 `DataHub`
+- 在容器环境中，Provider 也要负责销毁（yield 后调用 `sqlite_pool.close()`）
+- 单元测试中，fixture 也要负责销毁（yield 后调用 `sqlite_pool.close()`）
 
-**方案 B: 单元测试改用容器（不推荐）**
+**不同场景的生命周期**:
+
+| 场景 | sqlite_pool 来源 | 谁应该负责销毁？ |
+|------|-----------------|-----------------|
+| dishka 容器 | Provider 创建 | **Provider** (yield 后) |
+| 单元测试 | Fixture 创建 | **Fixture** (yield 后) |
+| 直接使用（罕见） | 用户手动创建 | **用户** |
+
+**解决方案: 移除 close() 方法，使用独立 sqlite_pool fixture**:
+
+**1. DataHub 移除 close() 相关代码**
+
+```python
+# 移除以下内容：
+# - close() 方法
+# - _closed 标志
+# - atexit.register(_cleanup_on_exit)
+# - __exit__ 方法
+# - _cleanup_on_exit() 方法
+```
+
+**2. 单元测试使用独立 sqlite_pool fixture（推荐）**
 
 ```python
 @pytest.fixture
-def datahub_with_dependencies(tmp_path: Path) -> Generator[DataHub, None, None]:
-    # 使用容器
-    container = make_container(DataHubProvider(), ...)
-    hub = container.get(DataHub)
+def sqlite_pool(tmp_path: Path) -> Generator[SQLitePool, None, None]:
+    """SQLite 连接池 fixture（单元测试专用）."""
+    db_path = tmp_path / "meta" / "hub.sqlite"
+    schema_path = _SCHEMA_PATH
+
+    pool = SQLitePool(str(db_path), schema_path=schema_path)
+    pool.init_schema()
+
+    yield pool
+    # fixture cleanup 会自动清理
+    pool.close()
+
+@pytest.fixture
+def datahub_with_dependencies(
+    sqlite_pool: SQLitePool,  # 依赖注入
+    # ... 其他依赖
+) -> Generator[DataHub, None, None]:
+    """DataHub with all dependencies（单元测试专用）."""
+    hub = DataHub(
+        data_root=data_root,
+        sqlite_pool=sqlite_pool,  # 直接使用
+        # ...
+    )
     yield hub
-    container.close()  # 容器负责清理
+    # 不需要手动清理，sqlite_pool fixture 会负责
 ```
 
-**问题**:
-- 违反单元测试规范（单元测试不应依赖容器）
-- 测试运行更慢
-- 单元测试应该快速、隔离
+**收益**:
 
-**方案 C: 使用上下文管理器（可选优化）**
+1. ✅ **职责清晰**: DataHub 只是使用者，不拥有 sqlite_pool
+2. ✅ **符合 DI 原则**: 谁创建，谁销毁
+3. ✅ **符合 pytest 最佳实践**: 独立 fixture 管理资源生命周期
+4. ✅ **可复用**: sqlite_pool fixture 可被其他测试复用
+5. ✅ **简化代码**: 移除 close()、atexit、_closed 等复杂性
+6. ✅ **一致性**: 所有场景（容器/测试/直接使用）都遵循"创建者负责销毁"原则
 
-```python
-# 在测试中使用
-with DataHub.from_dependencies(...) as hub:
-    # 测试代码
-    pass
-# 自动清理
-```
-
-**问题**:
-- 需要修改所有测试代码
-- 改动量大
-
-**用户确认**: ✅ **方案 A - 保留 close() 方法**
-
-**更新后的文档**:
-```python
-def close(self) -> None:
-    """
-    Close resources.
-
-    This method is idempotent - can be called multiple times safely.
-
-    资源管理策略:
-    - 单元测试: 手动创建 DataHub 实例，需要调用此方法清理 sqlite_pool
-    - 生产环境: dishka 容器管理生命周期，Provider 负责调用 sqlite_pool.close()
-    - 兼容性: 在容器环境中调用此方法无害（幂等设计）
-
-    注意: 单元测试不使用容器，遵循项目测试规范。
-    """
-```
+**用户确认**: ✅ **移除 close() 方法**
 
 ---
 
@@ -425,27 +415,60 @@ _paths = _PathsRegistry.instance
 
 ---
 
-### 3. dishka 迁移兼容性
+### 3. DataHub.close() 移除（符合 DI 原则）
 
-**结论**: ✅ **保留兼容代码，更新文档**
+**结论**: ✅ **移除 close() 方法及相关代码**
 
 **发现**:
-- 应用层已 100% 容器化（CLI、Jobs、Server 都使用容器）
-- Provider 完整注册所有依赖，生命周期管理统一
-- 单元测试仍需要 `close()` 方法（手动 fixture）
+- `DataHub.close()` 违反了依赖注入原则（谁创建，谁销毁）
+- `sqlite_pool` 是外部注入的，不应由 `DataHub` 负责销毁
+- 单元测试可以使用独立的 `sqlite_pool` fixture 管理生命周期
 
-**调用位置分析**:
-| 位置 | 场景 | 是否在容器内 |
-|------|------|------------|
-| `test_hub_unit.py` | 单元测试 | ❌ 手动 fixture |
-| `test_repair_integration.py` | 集成测试 | ✅ Mock 验证 |
-| 应用层入口 | CLI/Jobs/Server | ✅ 容器管理 |
+**需要移除的代码**:
+```python
+# packages/datahub/src/ditto_datahub/hub.py
 
-**建议**:
-- 保留 `close()` 方法，更新文档说明其在容器化架构中的角色
-- 长期（可选）：将测试迁移到容器化 fixture
+# 移除：
+# - close() 方法（约 20 行）
+# - _closed 标志
+# - atexit.register(self._cleanup_on_exit)
+# - __exit__ 方法
+# - _cleanup_on_exit() 方法
+```
 
-**风险等级**: 🟢 低风险 - 现有代码继续工作
+**需要修改的测试**:
+```python
+# packages/datahub/tests/unit/test_hub_unit.py
+
+# 新增独立的 sqlite_pool fixture
+@pytest.fixture
+def sqlite_pool(tmp_path: Path) -> Generator[SQLitePool, None, None]:
+    """SQLite 连接池 fixture（单元测试专用）."""
+    db_path = tmp_path / "meta" / "hub.sqlite"
+    pool = SQLitePool(str(db_path), schema_path=_SCHEMA_PATH)
+    pool.init_schema()
+    yield pool
+    pool.close()
+
+# 修改 datahub_with_dependencies，依赖 sqlite_pool fixture
+@pytest.fixture
+def datahub_with_dependencies(
+    sqlite_pool: SQLitePool,  # 依赖注入
+    # ... 其他依赖
+) -> Generator[DataHub, None, None]:
+    hub = DataHub(..., sqlite_pool=sqlite_pool)
+    yield hub
+    # 移除 yield 后的手动 close()
+```
+
+**收益**:
+1. ✅ **职责清晰**: DataHub 只是 sqlite_pool 的使用者，不拥有其生命周期
+2. ✅ **符合 DI 原则**: 依赖注入对象的生命周期由注入方管理
+3. ✅ **符合 pytest 最佳实践**: 独立 fixture 管理资源，自动清理
+4. ✅ **可复用**: sqlite_pool fixture 可被其他测试复用
+5. ✅ **简化代码**: 移除约 30 行复杂性代码
+
+**风险等级**: 🟢 低风险 - 改动范围明确，测试覆盖完整
 
 ---
 
@@ -466,12 +489,11 @@ packages/foundation/src/ditto_foundation/config/paths.py
 packages/foundation/src/ditto_foundation/notification/channels/webhook.py
 ```
 
-### 第二批：文档更新（3 个文件）
+### 第二批：文档更新（2 个文件）
 
 ```bash
 # 更新文档说明
 packages/foundation/tests/integration/observability/conftest.py
-packages/datahub/src/ditto_datahub/hub.py  # 更新 close() 文档
 packages/foundation/src/ditto_foundation/notification/channels/webhook.py  # 更新文档
 packages/foundation/src/ditto_foundation/notification/channels/__init__.py  # 添加 TelegramSender
 ```
@@ -484,9 +506,13 @@ packages/foundation/src/ditto_foundation/notification/channels/telegram.py  # �
 packages/foundation/tests/unit/notification/test_telegram_sender_unit.py  # 新文件
 ```
 
-### 第四批：架构重构（2 个文件，需要 TDD）
+### 第四批：架构重构（4 个文件，需要 TDD）
 
 ```bash
+# 用户确认：移除 DataHub.close()，符合 DI 原则
+packages/datahub/src/ditto_datahub/hub.py  # 移除 close()、_closed、atexit、__exit__、_cleanup_on_exit
+packages/datahub/tests/unit/test_hub_unit.py  # 新增 sqlite_pool fixture，修改 datahub_with_dependencies
+
 # 用户确认：统一 TushareAdapter 架构
 packages/datahub/src/ditto_datahub/sources/tushare/adapters/base.py
 packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock_status.py
@@ -506,18 +532,21 @@ packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock_status.py
 
 ### 第二批：文档更新（低风险）
 7. 移除 `conftest.py` 的 TYPE_CHECKING
-8. **更新 `hub.py` 的 close() 文档** ⭐ 说明单元测试策略
-9. **更新 `webhook.py` 文档** ⭐ 说明与 TelegramSender 的区别
-10. **更新 `channels/__init__.py`** ⭐ 导出 TelegramSender
+8. **更新 `webhook.py` 文档** ⭐ 说明与 TelegramSender 的区别
+9. **更新 `channels/__init__.py`** ⭐ 导出 TelegramSender
 
 ### 第三批：新增功能（需要 TDD）
-11. **创建 TelegramSender 类** ⭐ 用户确认
+10. **创建 TelegramSender 类** ⭐ 用户确认
     - 使用 telegram_bot_token 和 telegram_chat_id 配置
     - 直接调用 Telegram Bot API
     - 创建单元测试
 
 ### 第四批：架构重构（需要 TDD）
-12. **统一 TushareAdapter 架构**（用户确认）
+11. **移除 DataHub.close() 方法** ⭐ 用户确认，符合 DI 原则
+    - 移除 `close()`、`_closed`、`atexit.register`、`__exit__`、`_cleanup_on_exit()`
+    - 新增独立的 `sqlite_pool` fixture
+    - 修改 `datahub_with_dependencies` 依赖 `sqlite_pool` fixture
+12. **统一 TushareAdapter 架构** ⭐ 用户确认
     - 修改 `BaseTushareAdapter` 支持 client 注入
     - 让 `StockStatusAdapter` 继承基类
     - 消除 TYPE_CHECKING
@@ -529,11 +558,12 @@ packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock_status.py
 | 类别 | 发现数量 | 可清理 | 新增功能 | 保持现状 | 需重构 |
 |------|----------|--------|----------|----------|--------|
 | TYPE_CHECKING | 4 | 2 | 0 | 1 | **1** ⭐ |
-| 向后兼容代码 | 7 | 5 | 0 | 1 | 1 |
+| 向后兼容代码 | 7 | 5 | 0 | 1 | **1** ⭐ |
+| DI 原则 | 1 | 0 | 0 | 0 | **1** ⭐ |
 | 通知功能 | 1 | 0 | **1** ⭐ | 0 | 0 |
 | TODO 注释 | 2 | 2 | 0 | 0 | 0 |
 | 空 `__all__` | 2 | 2 | 0 | 0 | 0 |
-| **总计** | **16** | **11** | **1** | **2** | **2** |
+| **总计** | **17** | **11** | **1** | **1** | **3** |
 
 **项目代码质量**: ⭐⭐⭐⭐⭐ 优秀
 
@@ -543,7 +573,7 @@ packages/datahub/src/ditto_datahub/sources/tushare/adapters/stock_status.py
 - ✅ 向后兼容代码清理后更清晰
 - ⭐ **新增：TelegramSender 直接集成 Telegram Bot API**
 - ⭐ **用户决策：统一 TushareAdapter 架构，消除 TYPE_CHECKING**
-- ⭐ **用户决策：保留 DataHub.close()，更新文档说明单元测试策略**
+- ⭐ **用户决策：移除 DataHub.close()，符合 DI 原则**
 
 ---
 

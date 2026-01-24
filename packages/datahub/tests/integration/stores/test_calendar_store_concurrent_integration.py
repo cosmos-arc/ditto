@@ -25,8 +25,17 @@ class TestCalendarStoreConcurrent:
         self.db_fd, self.db_path = tempfile.mkstemp(suffix=".db")
         os.close(self.db_fd)  # Close file descriptor
 
+        # Get schema path
+        schema_path = (
+            pathlib.Path(__file__).parent.parent.parent.parent
+            / "src"
+            / "ditto_datahub"
+            / "scripts"
+            / "schema.sql"
+        )
+
         # Initialize pool and schema
-        self.pool = SQLitePool(self.db_path)
+        self.pool = SQLitePool(self.db_path, schema_path=schema_path)
         self.pool.init_schema()
 
         # Create client and store

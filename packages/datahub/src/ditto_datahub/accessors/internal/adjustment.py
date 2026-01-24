@@ -7,47 +7,11 @@
 from datetime import date
 
 import polars as pl
-from ditto_foundation import logger
 
-
-def parse_asof_date(asof: date | str) -> date:
-    """
-    解析 asof 参数为 date 对象。
-
-    Args:
-        asof: date 对象或 ISO 格式字符串。
-
-    Returns:
-        解析后的 date 对象。
-
-    """
-    if isinstance(asof, str):
-        return date.fromisoformat(asof)
-    return asof
-
-
-def filter_baseline_by_asof(adj_df: pl.DataFrame, pit_dt: date) -> pl.DataFrame:
-    """
-    根据 asof 日期过滤调整因子数据（用于计算 baseline）。
-
-    优先使用 knowledge_date，如果不存在则使用 trade_date（会记录警告）。
-
-    Args:
-        adj_df: 调整因子数据。
-        pit_dt: Point-in-Time 日期。
-
-    Returns:
-        过滤后的调整因子数据。
-
-    """
-    if "knowledge_date" in adj_df.columns:
-        return adj_df.filter(pl.col("knowledge_date") <= pit_dt)
-    else:
-        logger.warning(
-            "Adj factors missing knowledge_date, using trade_date (not PIT-safe)",
-            event="bars_adj_missing_knowledge_date",
-        )
-        return adj_df.filter(pl.col("trade_date") <= pit_dt)
+from ditto_datahub.accessors.internal.pit import (
+    filter_by_knowledge_date,
+    parse_asof_date,
+)
 
 
 def apply_qfq_adj(
@@ -83,8 +47,10 @@ def apply_qfq_adj(
     else:
         # 转换为 date 对象
         pit_dt = parse_asof_date(asof)
-        # 过滤 baseline
-        baseline_df = filter_baseline_by_asof(adj_df, pit_dt)
+        # 过滤 baseline（使用 pit 模块的通用函数）
+        baseline_df = filter_by_knowledge_date(
+            adj_df, pit_dt, date_column="knowledge_date"
+        )
 
     # 获取每个 SID 的最新因子（基于 baseline）
     latest_factors = baseline_df.group_by("sid").agg(

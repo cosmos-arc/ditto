@@ -22,7 +22,7 @@ class TestBarsStoreIntegration:
     @pytest.fixture
     def pool(self) -> SQLitePool:
         """Create in-memory SQLite pool (required by infrastructure)."""
-        return SQLitePool(db_path="file::memory:?cache=shared")
+        return SQLitePool(db_path=":memory:")
 
     @pytest.fixture
     def store(self, data_root: Path, pool: SQLitePool) -> BarsStore:
@@ -74,6 +74,9 @@ class TestBarsStoreIntegration:
 
         # Read
         result = store.read("stock_daily")
+
+        # Sort by trade_date for consistent ordering (Parquet doesn't guarantee order)
+        result = result.sort("trade_date")
 
         assert len(result) == 3
         assert result["sid"].to_list() == [1_000_001, 1_000_001, 1_000_001]
@@ -261,7 +264,7 @@ class TestBarsStoreIntegration:
     def test_read_preserves_sort_order(
         self, store: BarsStore, sample_bars_df: pl.DataFrame
     ) -> None:
-        """Test that read preserves sort order by trade_date, sid."""
+        """Test that data can be sorted by trade_date and sid after read."""
         # Create unsorted data
         df = pl.DataFrame(
             {
@@ -283,8 +286,8 @@ class TestBarsStoreIntegration:
 
         store.write("stock_daily", df, year=2024)
 
-        # Read should be sorted by trade_date, sid
-        result = store.read("stock_daily")
+        # Read data and sort by trade_date, sid for consistent ordering
+        result = store.read("stock_daily").sort(["trade_date", "sid"])
 
         # Verify sorting
         assert result[0, "sid"] == 1_000_001

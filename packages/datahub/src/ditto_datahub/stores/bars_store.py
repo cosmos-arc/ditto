@@ -36,8 +36,13 @@ class BarsStore(ParquetStoreBase):
     """
 
     def _get_key_columns(self) -> list[str]:
-        """返回键列名."""
-        return ["sid", "trade_date"]
+        """
+        返回键列名.
+
+        多数据源支持：键列为 (sid, trade_date, source)
+        允许同一 sid 在不同 source 有不同的行情数据。
+        """
+        return ["sid", "trade_date", "source"]
 
     def _get_sort_columns(self) -> list[str]:
         """返回排序列名（BarsStore 使用 trade_date, sid 顺序）."""
@@ -104,6 +109,7 @@ class BarsStore(ParquetStoreBase):
         sids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
+        source: str | None = None,
     ) -> pl.LazyFrame:
         """
         Build filter conditions for LazyFrame.
@@ -113,6 +119,7 @@ class BarsStore(ParquetStoreBase):
             sids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
+            source: Filter by data source.
 
         Returns:
             Filtered LazyFrame.
@@ -120,6 +127,9 @@ class BarsStore(ParquetStoreBase):
         """
         if sids:
             lf = lf.filter(pl.col("sid").is_in(sids))
+
+        if source:
+            lf = lf.filter(pl.col("source") == source)
 
         if start_date:
             start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
@@ -138,6 +148,7 @@ class BarsStore(ParquetStoreBase):
         sids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
+        source: str | None = None,
     ) -> pl.DataFrame:
         """
         Read market bars data.
@@ -147,6 +158,7 @@ class BarsStore(ParquetStoreBase):
             sids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
+            source: Filter by data source (None = all sources).
 
         Returns:
             DataFrame with matching records.
@@ -174,8 +186,8 @@ class BarsStore(ParquetStoreBase):
 
         # Scan and apply filters
         lf = pl.scan_parquet([str(p) for p in paths])
-        lf = self._build_filter_conditions(lf, sids, start_date, end_date)
-        result = lf.unique(subset=["sid", "trade_date"], keep="last").collect()
+        lf = self._build_filter_conditions(lf, sids, start_date, end_date, source)
+        result = lf.unique(subset=self._get_key_columns(), keep="last").collect()
 
         duration_ms = (time.time() - start_time) * 1000
 

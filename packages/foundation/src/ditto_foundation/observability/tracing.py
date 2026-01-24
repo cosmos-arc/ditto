@@ -8,6 +8,7 @@ import functools
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
+from types import TracebackType
 from typing import Any, ParamSpec, TypeVar
 
 from opentelemetry import trace
@@ -73,13 +74,18 @@ class SpanContext:
             actual_span.set_attribute(key, str(value))
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """退出上下文，结束 span."""
         if self._span is None:
             return
 
         # 记录异常（如果发生）
-        if exc_type is not None:
+        if exc_type is not None and exc_val is not None:
             current = trace.get_current_span()
             if current.is_recording():
                 current.record_exception(exc_val)
@@ -188,7 +194,7 @@ def traced(operation: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> T:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             with span(operation, function=func.__name__):
                 return func(*args, **kwargs)
 

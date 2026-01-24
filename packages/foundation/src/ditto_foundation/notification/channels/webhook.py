@@ -1,26 +1,24 @@
 """Webhook notification channel (generic HTTP webhook)."""
 
-from typing import TYPE_CHECKING
-
+import httpx
 from loguru import logger
 
 from ditto_foundation.notification.config import NotificationSettings
 from ditto_foundation.notification.sender import NotificationSender
-
-if TYPE_CHECKING:
-    import httpx
-else:
-    try:
-        import httpx
-    except ImportError:
-        httpx = None  # type: ignore[assignment]
 
 
 class WebhookSender(NotificationSender):
     """
     Generic webhook notification sender via HTTP POST.
 
-    Supports Telegram, WeChat, DingTalk, Slack, and custom webhooks.
+    Supports custom webhooks for:
+    - WeChat (企业微信)
+    - DingTalk (钉钉)
+    - Slack
+    - Custom endpoints
+
+    Note: For Telegram, use TelegramSender for direct Bot API integration,
+    or use WebhookSender with a Telegram webhook URL if you have a proxy service.
     """
 
     def __init__(self, settings: NotificationSettings) -> None:
@@ -30,13 +28,7 @@ class WebhookSender(NotificationSender):
         Args:
             settings: Notification settings with webhook configuration.
 
-        Raises:
-            ImportError: If httpx is not available.
-
         """
-        if httpx is None:
-            raise ImportError("httpx is required for WebhookSender")
-
         self._settings = settings
 
     @property
@@ -66,8 +58,6 @@ class WebhookSender(NotificationSender):
             headers = {"Content-Type": "text/plain; charset=utf-8"}
             headers.update(self._settings.webhook_headers)
 
-            # Type narrowing: httpx is guaranteed to be available after __init__
-            assert httpx is not None  # noqa: S101
             with httpx.Client(timeout=30) as client:
                 response = client.post(
                     self._settings.webhook_url,
@@ -83,13 +73,38 @@ class WebhookSender(NotificationSender):
             )
             return True
 
-        except Exception as e:
-            logger.error(
-                "Webhook send failed",
-                event="webhook_error",
+        except httpx.TimeoutException as e:
+            logger.warning(
+                "Webhook timeout",
+                event="webhook_timeout",
                 error=str(e),
             )
             return False
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "Webhook HTTP error",
+                event="webhook_http_error",
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            return False
+        except httpx.NetworkError as e:
+            logger.error(
+                "Webhook network error",
+                event="webhook_network_error",
+                error=str(e),
+            )
+            return False
+        except Exception as e:
+            # 未预期的错误应该抛出，让调用方处理
+            logger.error(
+                "Webhook send failed with unexpected error",
+                event="webhook_unexpected_error",
+                error_type=type(e).__name__,
+                error=str(e),
+                exc_info=True,
+            )
+            raise
 
 
 __all__ = ["WebhookSender"]

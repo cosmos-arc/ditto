@@ -40,7 +40,7 @@ class FreezeManifest:
     description: str
     created_at: str
     version: str = "2.0"
-    checksum_type: str = "sha256"  # "md5" for legacy, "sha256" for new
+    checksum_type: str = "sha256"
     # Mapping: relative_path -> checksum
     files: dict[str, str] = field(default_factory=lambda: {})
 

@@ -30,8 +30,12 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
             item.add_marker(pytest.mark.unit)
 
 
-# Mock the @flow decorator to bypass Prefect flow wrapper in unit tests
+# ===================================================================
+# Mock Prefect 装饰器（仅在单元测试中）
+# ===================================================================
+# 原始装饰器保存（用于恢复）
 _original_flow_decorator = prefect.flows.flow
+_original_task_decorator = prefect.tasks.task
 
 
 def _mock_flow_decorator(*args, **kwargs):
@@ -46,10 +50,6 @@ def _mock_flow_decorator(*args, **kwargs):
     return decorator
 
 
-# Mock the @task decorator to bypass Prefect task engine in unit tests
-_original_task_decorator = prefect.tasks.task
-
-
 def _mock_task_decorator(*args, **kwargs):
     """Mock @task decorator that returns the function unchanged."""
 
@@ -62,24 +62,35 @@ def _mock_task_decorator(*args, **kwargs):
     return decorator
 
 
-# Apply the mocks globally
-prefect.flows.flow = _mock_flow_decorator
-prefect.tasks.task = _mock_task_decorator
-
-
 @pytest.fixture(autouse=True)
-def no_api_server() -> Generator[None, None, None]:
-    """禁用 API 服务器，加速单元测试.
+def apply_prefect_mocks_and_disable_api_server() -> Generator[None, None, None]:
+    """应用 Prefect mock 并禁用 API 服务器（仅限单元测试）.
 
-    通过设置 PREFECT_API_URL=None，避免每个测试都启动独立的 API 服务器。
-    这是 Prefect 官方推荐的单元测试优化方式。
+    通过 autouse fixture 确保只有单元测试使用 mock，
+    避免影响集成测试。
     """
+    # 应用 mock
+    import prefect
+
+    prefect.flows.flow = _mock_flow_decorator
+    prefect.tasks.task = _mock_task_decorator
+
+    # 禁用 API 服务器
     import prefect.settings
 
     with prefect.settings.temporary_settings(
         updates={prefect.settings.PREFECT_API_URL: None}
     ):
         yield
+
+    # 恢复原始装饰器
+    prefect.flows.flow = _original_flow_decorator
+    prefect.tasks.task = _original_task_decorator
+
+
+# 移除原来的全局 mock 应用，改为通过 fixture 应用
+# prefect.flows.flow = _mock_flow_decorator
+# prefect.tasks.task = _mock_task_decorator
 
 
 @pytest.fixture

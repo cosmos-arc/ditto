@@ -22,7 +22,7 @@ class TestAdjFactorStoreIntegration:
     @pytest.fixture
     def pool(self) -> SQLitePool:
         """Create in-memory SQLite pool (required by infrastructure)."""
-        return SQLitePool(connection_string="file::memory:?cache=shared", pool_size=1)
+        return SQLitePool(db_path=":memory:")
 
     @pytest.fixture
     def store(self, data_root: Path, pool: SQLitePool) -> AdjFactorStore:

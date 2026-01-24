@@ -44,23 +44,34 @@ def ensure_sqlite_cleanup() -> Generator[None, None, None]:
     gc.collect()
 
 
+# 集成测试串行执行，避免并发副作用
+pytestmark = pytest.mark.serial
+
+
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """为 integration 目录下的所有测试自动添加 integration marker.
+    """为 integration 目录下的所有测试自动添加 integration 和 serial marker.
 
     Args:
         items: pytest 收集到的所有测试项
     """
     for item in items:
-        # 检查测试文件是否在 integration 目录下且没有 integration marker
+        # 检查测试文件是否在 integration 目录下
         is_integration_path = "/integration/" in str(
             item.fspath
         ) or "\\integration\\" in str(item.fspath)
-        has_integration_marker = "integration" in [
-            mark.name for mark in item.iter_markers()
-        ]
 
-        if is_integration_path and not has_integration_marker:
-            item.add_marker(pytest.mark.integration)
+        if is_integration_path:
+            # 添加 integration marker（如果没有）
+            has_integration_marker = "integration" in [
+                mark.name for mark in item.iter_markers()
+            ]
+            if not has_integration_marker:
+                item.add_marker(pytest.mark.integration)
+
+            # 添加 serial marker（如果没有）
+            has_serial_marker = "serial" in [mark.name for mark in item.iter_markers()]
+            if not has_serial_marker:
+                item.add_marker(pytest.mark.serial)
 
 
 @pytest.fixture

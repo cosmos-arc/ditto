@@ -14,13 +14,14 @@ from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from ditto_datahub import DataHub
-from ditto_datahub.accessors.adj_factor import AdjFactorAccessor
-from ditto_datahub.accessors.bars import BarsAccessor
-from ditto_datahub.accessors.calendar import CalendarAccessor
-from ditto_datahub.accessors.index import IndexAccessor
-from ditto_datahub.accessors.ingestion_log import IngestionLogAccessor
-from ditto_datahub.accessors.security import SecuritiesAccessor
-from ditto_datahub.accessors.universe import UniverseAccessor
+from ditto_datahub.accessors.adj_factor_accessor import AdjFactorAccessor
+from ditto_datahub.accessors.bars_accessor import BarsAccessor
+from ditto_datahub.accessors.calendar_accessor import CalendarAccessor
+from ditto_datahub.accessors.index_accessor import IndexAccessor
+from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
+from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
+from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
+from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.config import DatabaseSettings
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
@@ -233,6 +234,14 @@ class DataHubProvider(Provider):
         """摄取日志访问器."""
         return IngestionLogAccessor(ingestion_log_store=ingestion_log_store)
 
+    @provide
+    def quarantine(
+        self,
+        quarantine_store: QuarantineStore,
+    ) -> QuarantineAccessor:
+        """隔离区访问器."""
+        return QuarantineAccessor(quarantine_store=quarantine_store)
+
     # ========================================================================
     # Sources Layer
     # ========================================================================
@@ -278,6 +287,7 @@ class DataHubProvider(Provider):
         file_lock: FileLockManager,
         sid_allocator: SidAllocator,
         freeze_manager: FreezeManager,
+        security_store: SecurityStore,
         securities: SecuritiesAccessor,
         calendar: CalendarAccessor,
         adj_factor: AdjFactorAccessor,
@@ -285,6 +295,7 @@ class DataHubProvider(Provider):
         universe: UniverseAccessor,
         index: IndexAccessor,
         ingestion_log: IngestionLogAccessor,
+        quarantine: QuarantineAccessor,
         sources: DataSources,
         sql_engine: SqlEngine,
     ) -> Iterator[DataHub]:
@@ -300,6 +311,7 @@ class DataHubProvider(Provider):
             file_lock=file_lock,
             sid_allocator=sid_allocator,
             freeze_manager=freeze_manager,
+            security_store=security_store,
             securities=securities,
             calendar=calendar,
             adj_factor=adj_factor,
@@ -307,6 +319,7 @@ class DataHubProvider(Provider):
             universe=universe,
             index=index,
             ingestion_log=ingestion_log,
+            quarantine=quarantine,
             sources=sources,
             sql_engine=sql_engine,
         )

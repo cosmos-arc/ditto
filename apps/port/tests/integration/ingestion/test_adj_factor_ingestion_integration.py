@@ -27,15 +27,25 @@ class TestAdjFactorIngestion:
         # Mock dependencies
         mock_hub.ingestion_log = mocker.MagicMock()
         mock_hub.adj_factor = mocker.MagicMock()
-        # Mock write to return WriteResult (not tuple)
+        # Mock write to return WriteResult
         mock_hub.adj_factor.write.return_value = WriteResult(
             file_path="/path/to/file",
             checksum="checksum123",
             rows_written=2,
             rows_total=2,
             blocked=False,
-            dq_result=None,
         )
+
+        # Mock securities.enrich_dataframe_with_sid to return DataFrame with sid column
+        mock_enriched_df = pl.DataFrame(
+            {
+                "sid": [1_000_001, 1_000_002],
+                "src_code": ["000001.SZ", "000002.SZ"],
+                "trade_date": ["2024-01-02", "2024-01-02"],
+                "adj_factor": [1.234, 1.567],
+            }
+        )
+        mock_hub.securities.enrich_dataframe_with_sid.return_value = mock_enriched_df
 
         # Mock security_store to return valid securities
         mock_hub.security_store = mocker.MagicMock()
@@ -94,15 +104,25 @@ class TestAdjFactorIngestion:
         # Mock dependencies
         mock_hub.ingestion_log = mocker.MagicMock()
         mock_hub.adj_factor = mocker.MagicMock()
-        # Mock write to return WriteResult (not tuple)
+        # Mock write to return WriteResult
         mock_hub.adj_factor.write.return_value = WriteResult(
             file_path="/path/to/file",
             checksum="checksum456",
             rows_written=2,
             rows_total=2,
             blocked=False,
-            dq_result=None,
         )
+
+        # Mock securities.enrich_dataframe_with_sid to return DataFrame with sid column
+        mock_enriched_df = pl.DataFrame(
+            {
+                "sid": [2_000_001, 2_000_002],
+                "src_code": ["510300.SH", "510500.SH"],
+                "trade_date": ["2024-01-02", "2024-01-02"],
+                "adj_factor": [1.123, 1.234],
+            }
+        )
+        mock_hub.securities.enrich_dataframe_with_sid.return_value = mock_enriched_df
 
         # Mock security_store to return valid securities
         mock_hub.security_store = mocker.MagicMock()

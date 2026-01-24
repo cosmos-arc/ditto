@@ -399,6 +399,34 @@ def process_data(data):
 - `packages/foo/src/foo/py.typed`
 - `apps/xxx/src/xxx/py.typed`（若该 app 也会作为库被引用）
 
+#### 实施检查清单
+
+创建新包时，必须包含 `py.typed` 文件：
+
+- [ ] 在包根目录（与 `__init__.py` 同级）创建空文件 `py.typed`
+- [ ] 确认打包配置自动包含该文件（setuptools-scm/hatchling 默认包含）
+- [ ] 运行类型检查验证生效
+
+#### 打包配置规范
+
+使用 `setuptools-scm` 时（Ditto 默认），`py.typed` 会自动被包含在 wheel 中。
+
+如需手动验证，检查生成的 wheel 包含 `*.py.typed`：
+
+```bash
+pixi run build
+tar -tzf dist/*.whl | grep py.typed
+```
+
+#### 当前项目状态
+
+| 包 | py.typed 状态 | 路径 |
+|---|--------------|------|
+| ditto_core | ✅ | `packages/core/src/ditto_core/py.typed` |
+| ditto_datahub | ✅ | `packages/datahub/src/ditto_datahub/py.typed` |
+| ditto_foundation | ✅ | `packages/foundation/src/ditto_foundation/py.typed` |
+| ditto_port | ✅ | `apps/port/src/ditto_port/py.typed` |
+
 ---
 
 ### 代码类型标注规则（AI 写码必须默认遵守）

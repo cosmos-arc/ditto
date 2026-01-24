@@ -19,13 +19,24 @@ from ditto_port.services.ingestion.quality import L3BatchService
     description="批量数据质量检查(L3 统计异常)",
     tags=["dq", "batch", "l3"],
 )
-async def dq_batch_check(  # noqa: C901
+async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一函数以维持可读性
     trade_date: str | None = None,
     datasets: list[str] | None = None,
     market_wide: bool = False,
 ) -> dict[str, Any]:
     """
     执行 L3 批量检查任务。
+
+    这是一个完整的端到端业务流程，包括：
+    1. 初始化服务和上下文
+    2. 遍历数据集执行检查
+    3. 汇总结果和指标
+    4. 发送告警通知
+
+    拆分为子函数会：
+    - 增加状态传递复杂性
+    - 降低流程可读性
+    - 分散相关逻辑
 
     Args:
         trade_date: 交易日期(YYYY-MM-DD)，默认为最后一个交易日

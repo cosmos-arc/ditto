@@ -15,7 +15,7 @@ class TestSecurityStoreIntegration:
     def pool(self) -> SQLitePool:
         """Create in-memory SQLite pool for testing."""
         # Use :memory: database for testing
-        return SQLitePool(connection_string="file::memory:?cache=shared", pool_size=1)
+        return SQLitePool(db_path=":memory:")
 
     @pytest.fixture
     def client(self, pool: SQLitePool) -> SQLiteClient:

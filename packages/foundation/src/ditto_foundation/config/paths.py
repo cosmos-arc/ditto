@@ -484,10 +484,6 @@ class XDGPaths:
         return f"XDGPaths(data={self.data_home})"
 
 
-# 全局单例
-_paths: XDGPaths | None = None
-
-
 class _PathsRegistry:
     """
     Registry for managing XDGPaths singleton.
@@ -544,7 +540,3 @@ def reset_paths_for_testing() -> None:
     This function allows tests to reset the global state between test runs.
     """
     _PathsRegistry.reset()
-
-
-# Module-level accessor for backward compatibility with tests
-_paths = _PathsRegistry.instance
