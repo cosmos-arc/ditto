@@ -863,3 +863,996 @@ resources:
 | **Style Factors** | 价值、动量、质量、波动率 | `factors/style/{factor_id}/{year}.parquet` |
 | **Industry Factors** | 行业分类、行业中性化 | `factors/industry/{factor_id}/{year}.parquet` |
 | **Risk Factors** | 规模、流动性 | `factors/risk/{factor_id}/{year}.parquet` |
+
+---
+
+## 十三、因子存储分区策略详解
+
+### 13.1 为什么不能把所有因子写在一个 Parquet 里
+
+基于业界最佳实践（DolphinDB、Feature Store）和 Parquet 性能特性，**禁止将所有因子存储在单个文件中**的原因：
+
+| 问题 | 原因 | 后果 |
+|------|------|------|
+| **文件过大** | 几百个因子 × 几千个标的 × 250交易日 = 数十亿行 | 查询必须扫描全表，无法利用分区剪裁 |
+| **写入冲突** | 所有因子计算任务竞争同一个文件锁 | 高并发写入失败，性能瓶颈 |
+| **版本管理困难** | 单个因子版本变更需要重写整个文件 | I/O 开销巨大，无法增量更新 |
+| **查询性能差** | 无法利用 Parquet 的列剪裁优化 | 读取单个因子也需要加载全量数据 |
+| **无法独立演进** | 因子无法独立生命周期管理 | 归档、退役因子影响整体 |
+
+### 13.2 推荐的分区策略
+
+#### 13.2.1 窄表分区设计（主存储）
+
+```
+factors/narrow/
+├── style/                          # 风格因子
+│   ├── value/{year}.parquet        # 价值因子（所有版本）
+│   ├── momentum/{year}.parquet     # 动量因子
+│   ├── quality/{year}.parquet      # 质量因子
+│   └── volatility/{year}.parquet   # 波动率因子
+├── industry/                       # 行业因子
+│   └── industry_neutral/{year}.parquet
+└── risk/                           # 风险因子
+    ├── size/{year}.parquet         # 规模因子
+    └── liquidity/{year}.parquet    # 流动性因子
+```
+
+**Schema（每个文件）**:
+```python
+schema = {
+    'sid': pl.Int32,                # 标的 ID
+    'trade_date': pl.Date,          # 交易日期
+    'factor_id': pl.String,         # 因子标识（如 "value_pe_pb"）
+    'version': pl.String,           # 版本号（如 "v1.0"）
+    'exposure': pl.Float64,         # 因子暴露度
+    'metadata': pl.String           # JSON 元数据（可选）
+}
+```
+
+**分区键**: `factor_category / factor_id / year`
+
+**查询优化示例**:
+```python
+# ✅ 高效查询：利用分区剪裁
+df = pl.read_parquet(
+    'factors/narrow/style/value/2024.parquet',
+    filters=[
+        (pl.col('version') == 'v1.0'),
+        (pl.col('trade_date') >= date(2024, 1, 1))
+    ]
+)
+
+# ❌ 低效查询：扫描所有文件
+# df = pl.read_parquet('factors/narrow/**/*.parquet')
+```
+
+#### 13.2.2 宽表分区设计（辅助存储）
+
+```
+factors/wide/
+├── style/
+│   ├── value_v1.0/
+│   │   ├── 2024.parquet           # 2024年价值因子宽表
+│   │   └── 2025.parquet
+│   └── momentum_v1.0/
+│       └── 2024.parquet
+└── snapshots/                     # 回测快照
+    └── backtest_20240101/         # 特定日期所有因子
+        └── all_factors.parquet
+```
+
+**Schema（宽表）**:
+```python
+schema = {
+    'sid': pl.Int32,
+    'trade_date': pl.Date,
+    'value_factor': pl.Float64,     # 每个因子一列
+    'momentum_factor': pl.Float64,
+    'quality_factor': pl.Float64,
+    # ...
+}
+```
+
+### 13.3 分区策略对比
+
+| 维度 | 窄表分区 | 宽表分区 |
+|------|---------|---------|
+| **文件数量** | 按因子类型分区（10-50个文件） | 按因子版本分区（100+个文件） |
+| **单文件大小** | 中等（100MB-1GB） | 小（10-100MB） |
+| **写入性能** | 高（追加写入） | 中（需要重写） |
+| **查询性能** | 中（需要 JOIN） | 高（直接列读取） |
+| **版本管理** | 简单（version 列） | 需要新目录 |
+| **使用场景** | 研究阶段、频繁变更 | 生产环境、ML 训练 |
+
+### 13.4 Parquet 分区最佳实践
+
+基于业界调研（Parquet Performance Best Practices）：
+
+```python
+# 推荐的分区策略
+partition_strategy = {
+    '第一级': 'factor_category',   # style/industry/risk
+    '第二级': 'factor_id',         # value/momentum/quality
+    '第三级': 'year',              # 2024/2025/2026
+    '第四级（可选）': 'month'      # 仅高频因子需要
+}
+
+# 分区大小目标
+target_partition_size = {
+    '最小': '256 MB',              # HDFS 块大小
+    '推荐': '512 MB - 1 GB',       # 平衡扫描和并行度
+    '最大': '2 GB'                 # 避免内存压力
+}
+
+# 行组大小（Row Group Size）
+row_group_size = {
+    '推荐': '64 MB - 128 MB',      # Parquet 默认
+    '原因': '允许谓词下推和列剪裁'
+}
+```
+
+---
+
+## 十四、特征元数据管理
+
+### 14.1 特征注册表
+
+与因子类似，特征也需要元数据管理，但更简单：
+
+```sql
+-- feature_registry 表结构
+CREATE TABLE feature_registry (
+    -- 基础信息
+    feature_id         VARCHAR(50) PRIMARY KEY,     -- 如 "rsi_14", "macd_standard"
+    feature_name       VARCHAR(100) NOT NULL,       -- 显示名称
+    feature_category   VARCHAR(50) NOT NULL,        -- technical/fundamental/alternative
+    feature_subcategory VARCHAR(50),                -- price/volume/momentum/valuation
+
+    -- 方法定义
+    description        TEXT,                        -- 特征描述
+    formula            TEXT,                        -- 计算公式或表达式
+    implementation_code TEXT,                       -- 代码路径
+
+    -- 参数配置
+    parameters         JSON,                        -- {"period": 14, "method": "sma"}
+
+    -- 数据依赖
+    data_sources       JSON,                        -- ["close", "volume"]
+
+    -- 统计信息（自动计算后更新）
+    mean               FLOAT,
+    std                FLOAT,
+    min                FLOAT,
+    max                FLOAT,
+    null_ratio         FLOAT,                       -- 缺失值比例
+
+    -- 质量指标
+    outlier_ratio      FLOAT,                       -- 异常值比例
+    stability_score    FLOAT,                       -- 稳定性得分（0-1）
+
+    -- 状态管理
+    status             VARCHAR(20) NOT NULL,        -- draft/active/deprecated
+    version            VARCHAR(20) NOT NULL,
+
+    -- 元数据
+    owner              VARCHAR(100) NOT NULL,
+    created_at         TIMESTAMP NOT NULL,
+    updated_at         TIMESTAMP NOT NULL
+);
+```
+
+### 14.2 特征血缘关系
+
+```sql
+-- feature_lineage 表（数据血缘）
+CREATE TABLE feature_lineage (
+    lineage_id         VARCHAR(50) PRIMARY KEY,
+    feature_id         VARCHAR(50) NOT NULL,
+    dependency_type    VARCHAR(20) NOT NULL,        -- data_source/feature
+    dependency_id      VARCHAR(100) NOT NULL,
+
+    -- 依赖详情
+    dependency_path    JSON,                        -- 依赖路径树
+
+    created_at         TIMESTAMP NOT NULL,
+
+    FOREIGN KEY (feature_id) REFERENCES feature_registry(feature_id)
+);
+```
+
+### 14.3 因子 vs 特征元数据对比
+
+| 元数据字段 | 特征 | 因子 |
+|-----------|------|------|
+| **经济学假设** | 无 | 必需 |
+| **后处理方法** | 无 | 去极值/标准化/中性化 |
+| **绩效指标** | 无 | IC/ICIR/夏普/换手率 |
+| **相关性分析** | 可选 | 必需 |
+| **审批流程** | 简单 | 严格 |
+| **状态** | draft/active/deprecated | draft/implemented/sandbox/production/archived |
+
+---
+
+## 十五、完整 ETL Pipeline 流程
+
+### 15.1 数据流程图
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         外部数据源                                  │
+│     Tushare / AkShare / 通达信 / 财报API / 新闻API                   │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Data Ingestion Layer                             │
+│   - Prefect 定时调度                                              │
+│   - API 调用、限流（tenacity）、重试                                │
+│   - 增量检测（游标管理）                                            │
+│   - 数据质量检查（DQ Engine L1: 技术校验）                           │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Raw Data Storage (基础数据)                       │
+│   Parquet: stock_daily, etf_daily, adj_factor                      │
+│   SQLite: securities, calendar, universe                            │
+│   键列: (sid, trade_date, source)                                   │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                    ┌───────────┴───────────┐
+                    ▼                       ▼
+┌──────────────────────────────┐  ┌──────────────────────────────────┐
+│    Feature Engine            │  │    Factor Engine                 │
+│   (特征计算引擎)               │  │   (因子计算引擎)                  │
+│                              │  │                                  │
+│  Input: Raw Data             │  │  Input: Features + Raw Data     │
+│  Output: Features            │  │  Output: Factors                 │
+│                              │  │                                  │
+│  - Expression Engine         │  │  - Expression Engine             │
+│  - UDF Library               │  │  - Standardization Pipeline      │
+│  - Incremental Compute       │  │  - Neutralization                │
+└──────────────────────────────┘  └──────────────────────────────────┘
+                    │                       │
+                    ▼                       ▼
+┌──────────────────────────────┐  ┌──────────────────────────────────┐
+│    Feature Storage           │  │    Factor Storage                │
+│   features/technical/         │  │   factors/narrow/                │
+│   features/fundamental/       │  │   factors/wide/                  │
+│                              │  │                                  │
+│  Schema:                     │  │  Schema:                         │
+│  (sid, trade_date,           │  │  (sid, trade_date,               │
+│   feature_id, value)          │  │   factor_id, exposure, version)  │
+└──────────────────────────────┘  └──────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Strategy Engine                                  │
+│   - 因子组合                                                        │
+│   - 信号生成                                                        │
+│   - 组合优化                                                        │
+│   - 回测模拟                                                        │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 15.2 阶段 1：数据摄入（已有实现）
+
+```python
+from prefect import flow, task
+from ditto_datahub.sources import TushareSource
+from ditto_datahub.domains.raw.market.bars_store import BarsStore
+from ditto_observability.dq import DQEngine
+
+@flow(name="daily_data_ingestion")
+async def ingest_daily_data(trade_date: date):
+    """每日数据摄入流程"""
+
+    # 1. 获取行情数据
+    source = TushareSource()
+    bars = await source.daily(trade_date=trade_date)
+
+    # 2. 数据质量检查（L1: 技术校验）
+    dq_engine = DQEngine()
+    issues = dq_engine.check(
+        bars,
+        rules=[
+            "no_nulls",              # 无空值
+            "positive_volume",        # 成交量 > 0
+            "valid_price",            # 价格合理性
+            "no_duplicates"           # 无重复记录
+        ]
+    )
+
+    # 3. 处理质量问题
+    if issues.has_failures:
+        # 进入隔离区
+        quarantine_store.save(bars, issues)
+        raise DataQualityError(f"数据质量检查失败: {issues.summary}")
+    else:
+        # 通过则存储
+        bars_store = BarsStore()
+        await bars_store.write(bars, source="tushare")
+        logger.info(f"成功摄入 {len(bars)} 条行情数据")
+```
+
+### 15.3 阶段 2：特征计算（新增）
+
+```python
+from ditto_datahub.domains.feature.technical import FeatureEngine
+from ditto_datahub.meta.feature_registry import FeatureRegistry
+
+@flow(name="daily_feature_computation")
+async def compute_features(trade_date: date):
+    """每日特征计算流程"""
+
+    # 1. 加载原始数据
+    bars_store = BarsStore()
+    bars = await bars_store.get(trade_date=trade_date)
+
+    # 2. 获取活跃特征列表
+    registry = FeatureRegistry()
+    active_features = registry.get_active_features()
+
+    # 3. 表达式引擎计算
+    feature_engine = FeatureEngine()
+
+    for feature_def in active_features:
+        try:
+            # 解析并计算特征
+            feature_df = await feature_engine.evaluate(
+                expression=feature_def['formula'],
+                data=bars,
+                context={
+                    "trade_date": trade_date,
+                    "parameters": feature_def['parameters']
+                }
+            )
+
+            # 存储特征
+            await feature_store.write(
+                feature_id=feature_def['feature_id'],
+                data=feature_df,
+                version=feature_def['version']
+            )
+
+            logger.info(f"特征 {feature_def['feature_id']} 计算完成")
+
+        except Exception as e:
+            logger.error(f"特征 {feature_def['feature_id']} 计算失败: {e}")
+            continue
+```
+
+### 15.4 阶段 3：因子计算（新增）
+
+```python
+from ditto_datahub.domains.factor.style import FactorEngine
+from ditto_datahub.meta.factor_registry import FactorRegistry
+
+@flow(name="daily_factor_computation")
+async def compute_factors(trade_date: date):
+    """每日因子计算流程"""
+
+    # 1. 加载特征和原始数据
+    feature_store = FeatureStore()
+    features = await feature_store.get(trade_date=trade_date)
+
+    raw_data = await bars_store.get(trade_date=trade_date)
+
+    # 2. 获取活跃因子列表
+    registry = FactorRegistry()
+    active_factors = registry.get_active_factors()
+
+    # 3. 因子计算引擎
+    factor_engine = FactorEngine()
+
+    for factor_def in active_factors:
+        try:
+            # 计算原始因子
+            raw_factor = await factor_engine.compute_raw(
+                factor_def=factor_def,
+                features=features,
+                raw_data=raw_data
+            )
+
+            # 后处理流程
+            processed_factor = await factor_engine.post_process(
+                raw_factor=raw_factor,
+                methods=factor_def['post_processing']  # 去极值/标准化/中性化
+            )
+
+            # 存储因子（窄表）
+            await factor_store.write_narrow(
+                factor_id=factor_def['factor_id'],
+                data=processed_factor,
+                version=factor_def['version'],
+                trade_date=trade_date
+            )
+
+            logger.info(f"因子 {factor_def['factor_id']} 计算完成")
+
+        except Exception as e:
+            logger.error(f"因子 {factor_def['factor_id']} 计算失败: {e}")
+            continue
+
+    # 4. 定期生成宽表（每周/每月）
+    if is_widetable_generation_day(trade_date):
+        await factor_store.generate_wide_table(trade_date)
+```
+
+### 15.5 因子后处理流程详解
+
+```python
+class FactorPostProcessor:
+    """因子后处理：去极值 → 标准化 → 中性化"""
+
+    async def process(
+        self,
+        raw_factor: pl.DataFrame,
+        config: dict
+    ) -> pl.DataFrame:
+        """
+        完整的后处理流程
+
+        Args:
+            raw_factor: 原始因子值，包含 (sid, trade_date, raw_value)
+            config: 后处理配置
+                {
+                    "winsorization": {"method": "mad", "n": 3},
+                    "standardization": {"method": "zscore"},
+                    "neutralization": {"factors": ["industry", "market_cap"]}
+                }
+        """
+
+        # 1. 去极值（Winsorization）
+        if config.get('winsorization'):
+            factor = self.winsorize(
+                raw_factor,
+                method=config['winsorization']['method'],
+                **config['winsorization'].get('params', {})
+            )
+        else:
+            factor = raw_factor
+
+        # 2. 标准化（Standardization）
+        if config.get('standardization'):
+            factor = self.standardize(
+                factor,
+                method=config['standardization']['method']
+            )
+
+        # 3. 行业中性化（Neutralization）
+        if config.get('neutralization'):
+            factor = self.neutralize(
+                factor,
+                risk_factors=config['neutralization']['factors'],
+                trade_date=factor['trade_date'][0]
+            )
+
+        return factor
+
+    def winsorize(
+        self,
+        data: pl.DataFrame,
+        method: str = 'mad',
+        n: int = 3
+    ) -> pl.DataFrame:
+        """去极值"""
+
+        if method == 'mad':
+            # MAD（中位数绝对偏差）方法
+            median = data['value'].median()
+            mad = (data['value'] - median).abs().median()
+            upper = median + n * mad
+            lower = median - n * mad
+
+        elif method == 'std':
+            # 标准差方法（3σ）
+            mean = data['value'].mean()
+            std = data['value'].std()
+            upper = mean + n * std
+            lower = mean - n * std
+
+        elif method == 'percentile':
+            # 百分位方法
+            lower = data['value'].quantile(n / 100)
+            upper = data['value'].quantile(1 - n / 100)
+
+        return data.with_columns(
+            pl.col('value').clip(lower, upper)
+        )
+
+    def standardize(
+        self,
+        data: pl.DataFrame,
+        method: str = 'zscore'
+    ) -> pl.DataFrame:
+        """标准化"""
+
+        if method == 'zscore':
+            # Z-score 标准化
+            mean = data['value'].mean()
+            std = data['value'].std()
+            return data.with_columns(
+                (pl.col('value') - mean) / std
+            )
+
+        elif method == 'minmax':
+            # Min-Max 标准化
+            min_val = data['value'].min()
+            max_val = data['value'].max()
+            return data.with_columns(
+                (pl.col('value') - min_val) / (max_val - min_val)
+            )
+
+        elif method == 'robust':
+            # 鲁棒标准化（基于中位数和四分位距）
+            median = data['value'].median()
+            q1 = data['value'].quantile(0.25)
+            q3 = data['value'].quantile(0.75)
+            iqr = q3 - q1
+            return data.with_columns(
+                (pl.col('value') - median) / iqr
+            )
+
+    def neutralize(
+        self,
+        data: pl.DataFrame,
+        risk_factors: list[str],
+        trade_date: date
+    ) -> pl.DataFrame:
+        """风险因子中性化（行业中性化/市值中性化）"""
+
+        # 1. 构建风险因子矩阵
+        X = self._build_risk_factor_matrix(
+            sids=data['sid'].to_list(),
+            risk_factors=risk_factors,
+            trade_date=trade_date
+        )
+
+        # 2. 线性回归取残差
+        from sklearn.linear_model import LinearRegression
+
+        model = LinearRegression(fit_intercept=False)
+        model.fit(X, data['value'].to_numpy())
+        predicted = model.predict(X)
+
+        # 3. 残差即中性化后的因子
+        neutralized = data.with_columns(
+            (pl.col('value') - predicted).alias('value')
+        )
+
+        return neutralized
+```
+
+### 15.6 每日 ETL 调度示例
+
+```python
+from prefect import flow
+from prefect.task_runners import ConcurrentTaskRunner
+
+@flow(name="daily_etl_pipeline", task_runner=ConcurrentTaskRunner())
+async def daily_etl_pipeline(trade_date: date):
+    """完整的每日 ETL 流程"""
+
+    # 阶段 1：数据摄入（串行，确保数据完整性）
+    await ingest_daily_data(trade_date)
+
+    # 阶段 2 & 3：特征和因子计算（并行）
+    await asyncio.gather(
+        compute_features(trade_date),
+        compute_factors(trade_date)
+    )
+
+    # 阶段 4：验证因子质量
+    await validate_factors(trade_date)
+
+    logger.info(f"ETL 流程完成: {trade_date}")
+
+# Prefect 调度配置
+from prefect.deployments import Deployment
+
+Deployment.build_from_flow(
+    flow=daily_etl_pipeline,
+    name="daily-etl-prod",
+    schedule=CronSchedule(cron="0 18 * * 1-5"),  # 每个工作日 18:00 执行
+    parameters={"trade_date": "{{ date }}"}
+)
+```
+
+---
+
+## 十六、关键设计决策更新
+
+| 问题 | 推荐方案 | 原因 |
+|------|---------|------|
+| **DataHub 拆分** | 逻辑分域，物理统一 | 降低复杂度，保持统一入口 |
+| **source 字段** | 多数据源数据必需，单数据源可选 | 支持质量校验和补充数据 |
+| **因子存储格式** | **窄表分区为主，宽表为辅** | 灵活性 vs 性能的平衡，禁止单文件 |
+| **因子分区策略** | **按 factor_category/factor_id/year 分区** | 支持分区剪裁，避免文件过大 |
+| **版本管理** | 因子定义 + 数据双版本锁 | 确保可复现性 |
+| **元数据存储** | SQLite（meta.sqlite） | 轻量级、事务支持、易于管理 |
+| **特征元数据** | **独立的 feature_registry** | 与因子区分，简化管理 |
+| **实时计算** | 日线策略不需要，可选风险监控 | 按需扩展 |
+| **表达式引擎** | 支持 WorldQuant 风格算子 | 研究友好、灵活性高 |
+| **ETL 流程** | **摄入 → 特征 → 因子 → 验证** | 清晰的数据血缘，易于调试 |
+
+---
+
+## 十七、参考资料更新
+
+### 17.1 业界最佳实践调研
+
+1. **WorldQuant 101 Alphas** - 表达式引擎设计
+2. **Quantopian/Alphalens** - 因子分析框架
+3. **DolphinDB** - 高频因子计算实践、窄表 vs 宽表
+4. **AWS Feature Store** - 元数据管理、因子生命周期
+5. **量化投顾高性能因子中间库设计与实践** - 完整的 Feature Store 架构
+6. **Parquet Performance Best Practices** - 分区策略、文件大小优化
+7. **Schema Registry Patterns** - 元数据版本管理
+
+### 17.2 相关文档
+
+- [02_data_design.md](./02_data_design.md) - 数据层设计文档
+- [2026-01-23-dataset-field-mapping.md](../plans/2026-01-23-dataset-field-mapping.md) - 数据集字段映射
+- [2026-01-23-datahub-storage-structure-analysis.md](../plans/2026-01-23-datahub-storage-structure-analysis.md) - 存储结构分析
+
+---
+
+## 十八、增强的数据质量验证架构（黄金数据集验证规范）
+
+> **基于**: 《Ditto 黄金数据集验证规范 v1.2》
+> **目的**: 设计工业级的数据质量保证体系，整合到现有 DataHub 架构中
+
+### 18.1 架构概述
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    数据质量验证架构分层                               │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Port 层（应用层）                                            │   │
+│  │                                                             │   │
+│  │  ┌───────────────────────────────────────────────────────┐  │   │
+│  │  │  QualityReconciliationService (质量对账服务)            │  │   │
+│  │  │                                                         │  │   │
+│  │  │  - 跨源对账协调                                         │  │   │
+│  │  │  - 业务级质量报告                                       │  │   │
+│  │  │  - 告警通知                                             │  │   │
+│  │  │  - 质量趋势分析                                         │  │   │
+│  │  └───────────────────────────────────────────────────────┘  │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                  │                                  │
+│                                  ▼                                  │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  DataHub 层（数据层）                                        │   │
+│  │                                                             │   │
+│  │  ┌──────────────┐  ┌──────────────────┐  ┌──────────────┐  │   │
+│  │  │ Primary      │  │ Comparison       │  │ Golden       │  │   │
+│  │  │ Source       │  │ Source           │  │ Dataset      │  │   │
+│  │  │ (Tushare)    │  │ (TDX)            │  │ Freezer      │  │   │
+│  │  │              │  │                  │  │              │  │   │
+│  │  │ - 数据摄入    │  │ - 隔离区存储      │  │ - 版本冻结   │  │   │
+│  │  │ - L1 质量检查 │  │ - 差异记录        │  │ - 指纹计算   │  │   │
+│  │  │ - 落地主存储  │  │ - 30天自动清理    │  │ - 幂等性保证 │  │   │
+│  │  └──────────────┘  └──────────────────┘  └──────────────┘  │   │
+│  │                                                             │   │
+│  │  ┌───────────────────────────────────────────────────────┐  │   │
+│  │  │  Quality Validation Engine (P0/P1/P2 分级)             │  │   │
+│  │  │                                                         │  │   │
+│  │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐             │  │   │
+│  │  │  │ P0 Rules │  │ P1 Rules │  │ P2 Rules │             │  │   │
+│  │  │  │          │  │          │  │          │             │  │   │
+│  │  │  │ 阻断级   │  │ 记录级   │  │ 仅记录   │             │  │   │
+│  │  │  └──────────┘  └──────────┘  └──────────┘             │  │   │
+│  │  │                                                         │  │   │
+│  │  │  ┌─────────────────────────────────────────────────┐  │  │   │
+│  │  │  │  Cross-Source Comparator (向量化比对引擎)         │  │  │   │
+│  │  │  │  - Polars 向量化实现                              │  │  │   │
+│  │  │  │  - 容差规则配置                                   │  │  │   │
+│  │  │  │  - 差异样本记录                                   │  │  │   │
+│  │  │  └─────────────────────────────────────────────────┘  │  │   │
+│  │  └───────────────────────────────────────────────────────┘  │   │
+│  │                                                             │   │
+│  │  ┌───────────────────────────────────────────────────────┐  │   │
+│  │  │  Metadata & Configuration                             │  │   │
+│  │  │                                                         │  │   │
+│  │  │  - InstrumentSpec (标的元数据)                        │  │   │
+│  │  │  - LimitRuleTable (涨跌幅规则表)                       │  │   │
+│  │  │  - UnitConverter (单位转换器)                          │  │   │
+│  │  │  - ToleranceRules (容差规则)                           │  │   │
+│  │  └───────────────────────────────────────────────────────┘  │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 18.2 P0/P1/P2 规则分级体系
+
+#### P0 规则（阻断级）
+
+任何一条失败都阻断发布：
+
+| 规则名称 | 说明 | 实现要点 |
+|---------|------|----------|
+| **主键唯一性** | (sid, trade_date) 唯一且非空 | 检测重复和空值 |
+| **OHLC 不变量** | low <= open/close <= high | 价格逻辑一致性 |
+| **正值约束** | vol >= 0, adj_factor > 0 | 物理约束 |
+| **VWAP 合理性** | low * 0.999 <= vwap <= high * 1.001 | 快速定位单位/错位问题 |
+| **pre_close 连续性** | 非事件日 pre_close == lag(close) | 按tick_size对齐 |
+
+#### P1 规则（需记录）
+
+记录并告警，但不阻断：
+
+| 规则名称 | 说明 | 实现要点 |
+|---------|------|----------|
+| **跨源价格对账** | Tushare vs TDX 价格对比 | 容差 0.1% |
+| **涨跌停准确性** | up_limit/down_limit 计算正确性 | 使用 Decimal 避免浮点误差 |
+| **pre_close 事件日** | 除权日跳变可被分红事件解释 | 与分红事件表关联 |
+
+#### P2 规则（仅记录）
+
+仅记录，不影响发布：
+
+| 字段 | 模式 | 原因 | 处理 |
+|------|------|------|------|
+| amount | Tushare vs TDX 差异 | float32 精度问题 | 不对账此字段 |
+| close | tick 舍入差异 <= 0.01 | 舍入方式差异 | 容差内忽略 |
+| adj_factor | AkShare vs Tushare 差异 | 前复权基准日不同 | 仅用 Tushare 验证 |
+
+### 18.3 目录结构设计
+
+```
+packages/
+├── datahub/
+│   └── src/ditto_datahub/
+│       ├── sources/
+│       │   ├── tushare/              # 主数据源
+│       │   └── tdx/                 # 对账数据源（新增）
+│       │       ├── source.py        # TDX 数据源
+│       │       ├── reader.py        # 通达信 .day 文件读取器
+│       │       └── quality.py       # 质量对比逻辑
+│       │
+│       ├── stores/
+│       │   ├── quality/             # 质量隔离区（新增）
+│       │   │   ├── comparison_store.py    # 差异记录存储
+│       │   │   ├── metrics_store.py       # 质量指标存储
+│       │   │   └── golden_dataset.py      # 黄金数据集冻结
+│       │   └── ...
+│       │
+│       ├── quality/                 # 质量验证模块（新增）
+│       │   ├── validators/          # 验证器
+│       │   │   ├── p0_rules.py     # P0 阻断级规则
+│       │   │   ├── p1_rules.py     # P1 记录级规则
+│       │   │   └── p2_rules.py     # P2 仅记录规则
+│       │   ├── comparator.py        # 向量化比对引擎
+│       │   ├── config/              # 配置
+│       │   │   ├── instrument_spec.py   # 标的元数据
+│       │   │   ├── limit_rules.py       # 涨跌幅规则表
+│       │   │   ├── tolerance_rules.py   # 容差规则
+│       │   │   └── golden_instruments.py # 黄金数据集标的配置
+│       │   └── unit_converter.py    # 单位转换器
+│       │
+│       └── runtime/
+│           └── dq_rules.py          # 现有 DQ 规则（保留兼容）
+│
+└── port/
+    └── src/ditto_port/
+        └── services/                # 业务服务层
+            └── quality/             # 质量对账服务（新增）
+                ├── reconciliation.py  # 对账协调器
+                ├── reporter.py        # 业务报告
+                └── alerts.py          # 告警通知
+```
+
+### 18.4 核心组件设计
+
+#### 18.4.1 标的元数据与涨跌幅规则表
+
+```python
+# 黄金数据集标的配置
+GOLDEN_INSTRUMENTS: dict[str, InstrumentSpec] = {
+    "510300.SH": InstrumentSpec(
+        ts_code="510300.SH",
+        name="沪深300ETF",
+        market=Market.SH,
+        board=Board.MAIN,
+        asset_type=AssetType.ETF,
+        tick_size=Decimal("0.001"),  # 上交所ETF是0.001
+        lot_size=100,
+        default_limit_ratio=Decimal("0.10"),
+    ),
+    # ... 其他标的配置
+}
+
+# 涨跌幅规则表
+LIMIT_RULE_TABLE: dict[tuple, list[LimitRule]] = {
+    ("main", False, None): [
+        LimitRule(Decimal("0.10"), date(1996, 12, 16), None, "主板10%涨跌幅"),
+    ],
+    ("main", True, None): [
+        LimitRule(Decimal("0.05"), date(1998, 4, 22), date(2025, 6, 26), "ST股票5%涨跌幅"),
+    ],
+    # ... 其他规则
+}
+```
+
+#### 18.4.2 单位转换与规范化
+
+```python
+CANONICAL_UNITS = {
+    # 价格类：元，保留到tick_size精度
+    "open": "元", "high": "元", "low": "元", "close": "元",
+    # 成交量：股（不是手）
+    "vol": "股",
+    # 成交额：元（不是千元）
+    "amount": "元",
+    # 比例类：小数（不是百分比）
+    "pct_chg": "小数",
+}
+
+class UnitConverter:
+    """数据源单位转换器"""
+
+    @staticmethod
+    def convert_tushare_to_canonical(df: pl.DataFrame) -> pl.DataFrame:
+        """Tushare -> Canonical 单位转换"""
+        return df.with_columns([
+            (pl.col("vol") * 100).alias("vol"),      # 手 -> 股
+            (pl.col("amount") * 1000).alias("amount"), # 千元 -> 元
+            (pl.col("pct_chg") / 100).alias("pct_chg"), # 百分比 -> 小数
+        ])
+```
+
+#### 18.4.3 向量化比对引擎
+
+```python
+class VectorizedComparator:
+    """
+    向量化比对器
+
+    使用 Polars Expression 实现，比 Python 循环快 100 倍
+    """
+
+    def compare(
+        self,
+        df1: pl.DataFrame,
+        df2: pl.DataFrame,
+        key_cols: list[str],
+        compare_cols: list[str],
+    ) -> pl.DataFrame:
+        """比对两个 DataFrame，返回差异记录"""
+        # 向量化实现...
+```
+
+#### 18.4.4 黄金数据集冻结机制
+
+```python
+class GoldenDatasetFreezer:
+    """黄金数据集冻结器"""
+
+    def freeze(
+        self,
+        df: pl.DataFrame,
+        ts_code: str,
+        start_date: str,
+        end_date: str,
+    ) -> FreezeMetadata:
+        """
+        冻结数据集
+
+        保存:
+        - 元数据 (JSON)
+        - 数据指纹 (SHA256)
+        - 统计摘要（不保存完整数据）
+        """
+
+    def verify(self, metadata: FreezeMetadata, current_df: pl.DataFrame) -> dict:
+        """验证当前数据与冻结版本的一致性"""
+```
+
+### 18.5 关键设计决策（更新）
+
+| 问题 | 推荐方案 | 原因 |
+|------|---------|------|
+| **TDX 数据是否落地** | **落地到隔离区（30天清理）** | 质量趋势、异常样本、审计合规 |
+| **验证规则分级** | **P0（阻断）/P1（记录）/P2（仅观察）** | 分层处理，平衡质量与可用性 |
+| **对账功能位置** | **DataHub 对比 + Port 协调** | 清晰分层，DataHub 负责技术，Port 负责业务 |
+| **TDX 是否走 DataHub** | **是，走隔离区** | 统一访问模式，避免 Port 直接依赖 |
+| **单位转换策略** | **Canonical 强制归一** | 避免单位混淆，提高可维护性 |
+| **比对引擎实现** | **Polars 向量化** | 性能优化，比循环快 100 倍 |
+| **黄金数据集冻结** | **指纹存储 + 定期验证** | 幂等性保证，版本追溯 |
+
+### 18.6 验证时间窗口规范
+
+#### 全量验证窗口
+
+```yaml
+full_validation_window:
+  start_date: "2020-01-01"
+  end_date: "2024-12-31"
+  trading_days: ~1215  # 约5年交易日
+  rationale:
+    - 覆盖完整牛熊周期
+    - 覆盖多次分红周期
+    - 覆盖疫情极端行情
+```
+
+#### 黄金数据集标的验证重点
+
+| 标的 | 关键事件窗口 | 验证重点 |
+|------|-------------|----------|
+| **510300.SH** | 2020-03（疫情恐慌）、每年5-6月/11-12月（分红） | 复权因子、pre_close跳变 |
+| **516010.SH** | 2021-07~08（游戏监管）、2023-12（版号政策） | 零成交、流动性枯竭 |
+| **513100.SH** | 2020-03（美股熔断）、2022-03（中概暴跌） | 折溢价极端值、不与美股强对账 |
+| **000300.SH** | 每年6月/12月（成分股调整） | 权重PIT正确性 |
+| **000407.SZ** | ST加帽/摘帽日、停复牌日 | 涨跌停5%切换、停牌处理 |
+
+### 18.7 跨境 ETF 特殊处理（513100）
+
+```python
+class CrossBorderETFValidator:
+    """
+    跨境 ETF 验证策略
+
+    核心原则:
+    - 不要用美股底层数据校验513100的走势（存在T+1错位和汇率影响）
+    - 只验证 A股交易时段内的数据自身连续性和逻辑一致性
+    """
+
+    def validate_self_consistency(self, df: pl.DataFrame) -> dict:
+        """自身一致性验证"""
+        # 1. OHLC 不变量
+        # 2. 价格连续性（跳变不应超过10%，极端行情除外）
+        # 3. 成交量连续性（零成交需要确认是否停牌）
+```
+
+---
+
+## 十九、参考资料更新（补充）
+
+### 19.1 业界最佳实践调研（更新）
+
+1. **WorldQuant 101 Alphas** - 表达式引擎设计
+2. **Quantopian/Alphalens** - 因子分析框架
+3. **DolphinDB** - 高频因子计算实践、窄表 vs 宽表
+4. **AWS Feature Store** - 元数据管理、因子生命周期
+5. **量化投顾高性能因子中间库设计与实践** - 完整的 Feature Store 架构
+6. **Parquet Performance Best Practices** - 分区策略、文件大小优化
+7. **Schema Registry Patterns** - 元数据版本管理
+8. **Ditto 黄金数据集验证规范 v1.2** - 数据质量保证体系
+
+### 19.2 相关文档（更新）
+
+- [02_data_design.md](./02_data_design.md) - 数据层设计文档
+- [2026-01-23-dataset-field-mapping.md](../plans/2026-01-23-dataset-field-mapping.md) - 数据集字段映射
+- [2026-01-23-datahub-storage-structure-analysis.md](../plans/2026-01-23-datahub-storage-structure-analysis.md) - 存储结构分析
+- **黄金数据集验证规范 v1.2** - 数据质量验证完整规范
+
+### 19.3 实施路线图（最终更新）
+
+| 阶段 | 任务 | 说明 | 优先级 |
+|------|------|------|--------|
+| **阶段 1** | 完善 source 字段支持 | 所有多数据源数据集的键列包含 source | P0 |
+| **阶段 1** | 实现域内分层 | raw/feature/factor 逻辑分离 | P0 |
+| **阶段 1** | P0 规则增强 | 主键、OHLC 不变量、VWAP 合理性 | P0 |
+| **阶段 2** | 因子元数据管理 | factor_registry, factor_versions, factor_lineage | P1 |
+| **阶段 2** | 窄表存储实现 | factors/narrow/{year}.parquet | P1 |
+| **阶段 2** | 通达信对账模块 | TDX 数据源、隔离区存储、比对引擎 | P1 |
+| **阶段 3** | 黄金数据集冻结 | 版本管理、指纹计算、幂等性验证 | P2 |
+| **阶段 3** | 表达式引擎 | 支持常见算子的解析和计算 | P2 |
+| **阶段 3** | 宽表生成 | 从窄表定期透视到宽表 | P2 |
+| **阶段 4** | Port 层协调服务 | 质量对账服务、告警通知 | P3 |
+
+---
+
+**文档版本**: v1.1 (增强质量验证架构)
+**最后更新**: 2026-01-24
+**主要变更**:
+- 新增第十八章：增强的数据质量验证架构（黄金数据集验证规范）
+- 整合 P0/P1/P2 规则分级体系
+- 新增多源对账模块设计
+- 新增黄金数据集冻结机制
+- 更新实施路线图
