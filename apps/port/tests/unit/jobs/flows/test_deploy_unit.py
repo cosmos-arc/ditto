@@ -1,5 +1,7 @@
 """部署脚本单元测试."""
 
+from unittest.mock import PropertyMock
+
 import pytest
 from ditto_port.jobs.flows.deploy import (
     FlowDeploymentConfig,
@@ -13,7 +15,7 @@ from pytest_mock import MockerFixture
 
 @pytest.mark.unit
 class TestGetFlow:
-    """测试 _get_flow 函数。"""
+    """测试 _get_flow 函数."""
 
     def test_get_flow_returns_known_flow(self):
         """测试获取已知的 flow。"""
@@ -30,7 +32,7 @@ class TestGetFlow:
 
 @pytest.mark.unit
 class TestGetFlowConfigs:
-    """测试 _get_flow_configs 函数。"""
+    """测试 _get_flow_configs 函数."""
 
     def test_get_flow_configs_returns_list(self):
         """测试返回配置列表。"""
@@ -78,7 +80,8 @@ class TestListFlows:
         )
         mock_flow = mocker.Mock()
         mock_flow.name = "test_flow"
-        mock_flow.__name__ = "test_flow"  # 同时设置 __name__ 以防万一
+        # 使用 PropertyMock 让 .name 属性返回字符串
+        type(mock_flow).name = PropertyMock(return_value="test_flow")
 
         mock_config = mocker.Mock()
         mock_config.flow.return_value = mock_flow
@@ -100,6 +103,8 @@ class TestListFlows:
         )
         mock_flow = mocker.Mock()
         mock_flow.name = "test_flow"
+        # 使用 PropertyMock 让 .name 属性返回字符串
+        type(mock_flow).name = PropertyMock(return_value="test_flow")
 
         mock_config = mocker.Mock()
         mock_config.flow.return_value = mock_flow
