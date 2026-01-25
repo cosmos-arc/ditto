@@ -24,16 +24,16 @@ class TestDatasetRules:
 
         assert config.dataset == "test_dataset"
         assert config.description == "Test dataset"
-        assert len(config.l1_technical) == 0
-        assert len(config.l2_business) == 0
-        assert len(config.l3_statistical) == 0
+        assert len(config.technical) == 0
+        assert len(config.business) == 0
+        assert len(config.statistical) == 0
 
     def test_create_with_rules(self) -> None:
         """Test creating dataset rules with rules."""
         config = DatasetRules(
             dataset="etf_daily",
             description="ETF daily data",
-            l1_technical=[
+            technical=[
                 {
                     "rule": "not_null",
                     "columns": ["sid", "trade_date"],
@@ -45,7 +45,7 @@ class TestDatasetRules:
                     "message": "Unique",
                 },
             ],
-            l2_business=[
+            business=[
                 {
                     "rule": "positive",
                     "columns": ["open", "high", "low", "close"],
@@ -55,8 +55,8 @@ class TestDatasetRules:
         )
 
         assert config.dataset == "etf_daily"
-        assert len(config.l1_technical) == 2
-        assert len(config.l2_business) == 1
+        assert len(config.technical) == 2
+        assert len(config.business) == 1
 
 
 class TestRuleModels:
