@@ -80,3 +80,32 @@ l3_statistical:
     column: close
     threshold_days: 3
     message: "价格连续 3 日无变化（停牌或异常）"
+
+  # 跨源对比：Tushare vs 通达信
+  - rule: cross_source_compare
+    key_columns: [src_code, trade_date]
+    fields: [open, high, low, close, vol, amount]
+    tolerance_rules:
+      # 价格类：Tick 对齐（A 股最小变动单位 0.01 元）
+      open:
+        method: tick_aligned
+        tick_size: 0.01
+      high:
+        method: tick_aligned
+        tick_size: 0.01
+      low:
+        method: tick_aligned
+        tick_size: 0.01
+      close:
+        method: tick_aligned
+        tick_size: 0.01
+      # 成交量：相对容差 0.1%（数量级差异大，用相对容差）
+      vol:
+        method: relative
+        relative_tol: 0.001
+      # 成交额：相对容差 0.1%
+      amount:
+        method: relative
+        relative_tol: 0.001
+    message: "与通达信数据对比发现差异"
+    enabled: true
