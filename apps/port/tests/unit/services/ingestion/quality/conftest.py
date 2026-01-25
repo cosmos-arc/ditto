@@ -1,0 +1,178 @@
+"""质量服务层测试共享 Fixtures."""
+
+from unittest.mock import MagicMock
+
+import polars as pl
+import pytest
+from ditto_core.quality.spec import DQIssue, DQLevel, DQResult
+from ditto_foundation import DQSeverity
+from pytest_mock import MockerFixture
+
+
+@pytest.fixture
+def mock_quality_engine(mocker: MockerFixture) -> MagicMock:
+    """Mock QualityEngine.
+
+    默认配置为返回通过（无问题），可在测试中覆盖。
+    """
+    engine = mocker.MagicMock()
+    engine.check.return_value = DQResult(
+        dataset="test_dataset",
+        passed=True,
+        issues=[],
+    )
+    return engine
+
+
+@pytest.fixture
+def mock_security_store(mocker: MockerFixture) -> MagicMock:
+    """Mock SecurityStore.
+
+    提供 enrich_with_symbol 方法，将 sid 转换为 symbol。
+    """
+    store = mocker.MagicMock()
+
+    def enrich_with_symbol_impl(df: pl.DataFrame) -> pl.DataFrame:
+        """模拟 enrich_with_symbol 实现."""
+        if df.is_empty():
+            return df
+        # 为每个 sid 分配一个 symbol
+        symbol_map = {
+            1000001: "000001",
+            1000002: "600000",
+            1000003: "510300",
+        }
+        symbols = [symbol_map.get(sid, "") for sid in df["sid"].to_list()]
+        return df.with_columns(pl.Series("symbol", symbols))
+
+    store.enrich_with_symbol.side_effect = enrich_with_symbol_impl
+    return store
+
+
+@pytest.fixture
+def mock_tdx_source(mocker: MockerFixture) -> MagicMock:
+    """Mock TdxSource.
+
+    默认返回空 DataFrame，可在测试中覆盖。
+    """
+    source = mocker.MagicMock()
+    source.fetch_stock_daily_bars.return_value = pl.DataFrame()
+    return source
+
+
+@pytest.fixture
+def mock_comparison_accessor(mocker: MockerFixture) -> MagicMock:
+    """Mock ComparisonAccessor.
+
+    提供 write_result 异步方法。
+    """
+    accessor = mocker.MagicMock()
+
+    async def write_result_impl(
+        trade_date: str, df: pl.DataFrame, dataset: str
+    ) -> None:
+        """模拟 write_result 实现."""
+        pass
+
+    accessor.write_result.side_effect = write_result_impl
+    return accessor
+
+
+@pytest.fixture
+def sample_primary_df() -> pl.DataFrame:
+    """示例主数据源 DataFrame.
+
+    包含 sid 列，需要通过 SecurityStore 补全 symbol。
+    """
+    return pl.DataFrame(
+        {
+            "sid": [1000001, 1000002, 1000003],
+            "src_code": ["000001.SZ", "600000.SH", "510300.SH"],
+            "trade_date": ["20240101", "20240101", "20240101"],
+            "open": [10.0, 20.0, 4.0],
+            "high": [10.5, 20.5, 4.1],
+            "low": [9.8, 19.8, 3.9],
+            "close": [10.2, 20.2, 4.05],
+            "volume": [1000000, 2000000, 500000],
+            "amount": [10200000, 20200000, 2025000],
+        }
+    )
+
+
+@pytest.fixture
+def sample_secondary_df() -> pl.DataFrame:
+    """示例辅助数据源 DataFrame (TDX).
+
+    包含 symbol 列（已转换格式）。
+    """
+    return pl.DataFrame(
+        {
+            "symbol": ["000001", "600000", "510300"],
+            "trade_date": ["20240101", "20240101", "20240101"],
+            "open": [10.0, 20.0, 4.0],
+            "high": [10.5, 20.5, 4.1],
+            "low": [9.8, 19.8, 3.9],
+            "close": [10.2, 20.2, 4.05],
+            "vol": [1000000, 2000000, 500000],
+            "amount": [10200000, 20200000, 2025000],
+        }
+    )
+
+
+@pytest.fixture
+def sample_dq_issue_error() -> DQIssue:
+    """示例 DQ Issue - ERROR 级别."""
+    return DQIssue(
+        level=DQLevel.TECHNICAL,
+        severity=DQSeverity.ERROR,
+        rule_name="not_null",
+        message="Column 'close' contains null values",
+        affected_rows=2,
+        sample_data=[
+            {"symbol": "000001", "trade_date": "20240101", "field": "close"},
+            {"symbol": "600000", "trade_date": "20240101", "field": "close"},
+        ],
+    )
+
+
+@pytest.fixture
+def sample_dq_issue_warning() -> DQIssue:
+    """示例 DQ Issue - WARNING 级别."""
+    return DQIssue(
+        level=DQLevel.BUSINESS,
+        severity=DQSeverity.WARNING,
+        rule_name="positive",
+        message="Column 'volume' contains non-positive values",
+        affected_rows=1,
+        sample_data=[
+            {
+                "symbol": "510300",
+                "trade_date": "20240101",
+                "field": "volume",
+                "value": 0,
+            },
+        ],
+    )
+
+
+@pytest.fixture
+def sample_dq_result_passed() -> DQResult:
+    """示例 DQ Result - 通过."""
+    return DQResult(
+        dataset="stock_daily",
+        passed=True,
+        issues=[],
+    )
+
+
+@pytest.fixture
+def sample_dq_result_with_issues(
+    sample_dq_issue_error: DQIssue,
+    sample_dq_issue_warning: DQIssue,
+) -> DQResult:
+    """示例 DQ Result - 包含问题."""
+    return DQResult(
+        dataset="stock_daily",
+        passed=False,
+        issues=[sample_dq_issue_error, sample_dq_issue_warning],
+    )
