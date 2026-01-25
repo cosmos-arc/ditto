@@ -84,7 +84,7 @@ class TestCrossSourceChecker:
         )
 
         assert len(issues) == 1
-        assert issues[0].level == DQLevel.L3_STATISTICAL
+        assert issues[0].level == DQLevel.STATISTICAL
         assert issues[0].severity == DQSeverity.ALERT
         assert issues[0].affected_rows == 1
 

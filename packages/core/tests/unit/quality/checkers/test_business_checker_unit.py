@@ -57,7 +57,7 @@ class TestBusinessChecker:
         assert len(issues) == 1
         assert issues[0].rule_name == "positive"
         assert issues[0].severity == DQSeverity.WARNING
-        assert issues[0].level == DQLevel.L2_BUSINESS
+        assert issues[0].level == DQLevel.BUSINESS
         assert issues[0].affected_rows == 1
 
     def test_check_ohlc_consistency_pass(self) -> None:

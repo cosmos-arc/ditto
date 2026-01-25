@@ -2,8 +2,8 @@
 dataset: stock_daily
 description: "股票日 K 线数据质量检查规则"
 
-# L1: 技术校验（写入时强制阻断）
-l1_technical:
+# 技术类: 技术校验（写入时强制阻断）
+technical:
   - rule: not_null
     columns: [sid, trade_date, open, high, low, close, volume, amount]
     message: "必填字段不能为空"
@@ -29,8 +29,8 @@ l1_technical:
       amount: float
     message: "字段类型不匹配"
 
-# L2: 业务规则（写入时警告但不阻断）
-l2_business:
+# 业务类: 业务规则（写入时警告但不阻断）
+business:
   - rule: positive
     columns: [open, high, low, close, volume, amount]
     message: "OHLC 价格、成交额必须为正数"
@@ -51,8 +51,8 @@ l2_business:
     max_ratio: 1.11  # 相对前一日涨跌幅不超过 11%
     message: "收盘价涨跌幅超出正常范围"
 
-# L3: 统计异常（定时批量检查）
-l3_statistical:
+# 统计类: 统计异常（定时批量检查）
+statistical:
   - rule: zscore
     name: volume_spike
     column: volume

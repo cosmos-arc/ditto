@@ -88,7 +88,7 @@ class TestZScoreChecker:
         )
 
         assert len(issues) == 1
-        assert issues[0].level == DQLevel.L3_STATISTICAL
+        assert issues[0].level == DQLevel.STATISTICAL
         assert issues[0].severity == DQSeverity.ALERT
         assert issues[0].rule_name == "zscore"  # rule_name is hardcoded as "zscore"
 
@@ -164,7 +164,7 @@ class TestZScoreChecker:
 
         # 新行为：列缺失时返回 ALERT 而不是静默失败
         assert len(issues) == 1
-        assert issues[0].level == DQLevel.L3_STATISTICAL
+        assert issues[0].level == DQLevel.STATISTICAL
         assert issues[0].severity == DQSeverity.ALERT
         assert "close" in issues[0].message.lower()
 
@@ -286,7 +286,7 @@ class TestCompletenessChecker:
         )
 
         assert len(issues) == 1
-        assert issues[0].level == DQLevel.L3_STATISTICAL
+        assert issues[0].level == DQLevel.STATISTICAL
         assert issues[0].severity == DQSeverity.ALERT
         assert "completeness" in issues[0].rule_name
 
@@ -412,7 +412,7 @@ class TestErrorHandling:
 
         # 应该返回 DQIssue 而非 None
         assert result is not None, "Exception should return ALERT issue, not None"
-        assert result.level == DQLevel.L3_STATISTICAL
+        assert result.level == DQLevel.STATISTICAL
         assert result.severity == DQSeverity.ALERT
         assert "error" in result.message.lower() or "failed" in result.message.lower()
 

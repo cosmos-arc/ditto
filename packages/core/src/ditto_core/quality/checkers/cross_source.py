@@ -154,7 +154,7 @@ class CrossSourceChecker:
                 diff_count=len(diff_samples),
             )
             return DQIssue(
-                level=DQLevel.L3_STATISTICAL,
+                level=DQLevel.STATISTICAL,
                 severity=DQSeverity.ALERT,
                 rule_name="cross_source_compare",
                 message=rule.get(

@@ -30,14 +30,14 @@ class TestDQReportGenerator:
         """Test generating markdown report with issues."""
         issues = [
             DQIssue(
-                level=DQLevel.L1_TECHNICAL,
+                level=DQLevel.TECHNICAL,
                 severity=DQSeverity.ERROR,
                 rule_name="not_null",
                 message="SID is null",
                 affected_rows=5,
             ),
             DQIssue(
-                level=DQLevel.L2_BUSINESS,
+                level=DQLevel.BUSINESS,
                 severity=DQSeverity.WARNING,
                 rule_name="positive",
                 message="Negative price",
@@ -63,7 +63,7 @@ class TestDQReportGenerator:
         """Test generating HTML report."""
         issues = [
             DQIssue(
-                level=DQLevel.L1_TECHNICAL,
+                level=DQLevel.TECHNICAL,
                 severity=DQSeverity.ERROR,
                 rule_name="unique",
                 message="Duplicate key",
@@ -93,7 +93,7 @@ class TestDQReportGenerator:
                 passed=False,
                 issues=[
                     DQIssue(
-                        level=DQLevel.L2_BUSINESS,
+                        level=DQLevel.BUSINESS,
                         severity=DQSeverity.WARNING,
                         rule_name="test_rule",
                         message="Test message",

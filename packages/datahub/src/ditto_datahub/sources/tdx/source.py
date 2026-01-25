@@ -11,6 +11,7 @@
 - 返回数据包含 symbol 列
 """
 
+from collections.abc import Sequence
 from pathlib import Path
 
 import polars as pl
@@ -98,12 +99,12 @@ class TdxSource:
 
         return df
 
-    def _get_exchange_mapping(self, symbols: list[str]) -> dict[str, str]:
+    def _get_exchange_mapping(self, symbols: Sequence[str | None]) -> dict[str, str]:
         """
         批量获取 symbol → exchange 映射.
 
         Args:
-            symbols: symbol 列表
+            symbols: symbol 列表（可能包含 None，对应未知 sid）
 
         Returns:
             {symbol: exchange} 映射字典
@@ -113,6 +114,9 @@ class TdxSource:
         # 目前使用默认的交易所映射规则
         mapping: dict[str, str] = {}
         for symbol in symbols:
+            # 跳过空值和非字符串类型（未知 sid 无 symbol 映射）
+            if not isinstance(symbol, str):
+                continue
             # 根据代码前缀判断交易所
             if symbol.startswith("6") or symbol.startswith("5"):
                 mapping[symbol] = "SSE"  # 上海证券交易所

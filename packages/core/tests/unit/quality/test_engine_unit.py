@@ -23,21 +23,21 @@ class TestQualityEngine:
                 "test_dataset": DatasetRules(
                     dataset="test_dataset",
                     description="Test dataset for DQ engine",
-                    l1_technical=[
+                    technical=[
                         {
                             "rule": "not_null",
                             "columns": ["sid"],
                             "message": "SID required",
                         }
                     ],
-                    l2_business=[
+                    business=[
                         {
                             "rule": "positive",
                             "columns": ["value"],
                             "message": "Value positive",
                         }
                     ],
-                    l3_statistical=[],
+                    statistical=[],
                 )
             }
         )
@@ -156,7 +156,7 @@ class TestQualityEngineStatistical:
                 "test_dataset": DatasetRules(
                     dataset="test_dataset",
                     description="Test dataset",
-                    l3_statistical=[
+                    statistical=[
                         {
                             "rule": "zscore",
                             "column": "close",
@@ -271,9 +271,9 @@ class TestQualityEngineEdgeCases:
                 "test_dataset": DatasetRules(
                     dataset="test_dataset",
                     description="Test dataset with empty rules",
-                    l1_technical=[],  # Empty list
-                    l2_business=[],  # Empty list
-                    l3_statistical=[],
+                    technical=[],  # Empty list
+                    business=[],  # Empty list
+                    statistical=[],
                 )
             }
         )
@@ -295,14 +295,14 @@ class TestQualityEngineEdgeCases:
                 "test_dataset": DatasetRules(
                     dataset="test_dataset",
                     description="Test dataset",
-                    l1_technical=[
+                    technical=[
                         {
                             "rule": "not_null",
                             "columns": ["sid"],
                             "message": "SID required",
                         }
                     ],
-                    l2_business=[],
+                    business=[],
                 )
             }
         )
@@ -323,14 +323,14 @@ class TestQualityEngineEdgeCases:
                 "test_dataset": DatasetRules(
                     dataset="test_dataset",
                     description="Test dataset",
-                    l1_technical=[
+                    technical=[
                         {
                             "rule": "not_null",
                             "columns": ["sid"],
                             "message": "SID required",
                         }
                     ],
-                    l2_business=[
+                    business=[
                         {
                             "rule": "positive",
                             "columns": ["value"],
@@ -358,14 +358,14 @@ class TestQualityEngineEdgeCases:
                 "test_dataset": DatasetRules(
                     dataset="test_dataset",
                     description="Test dataset",
-                    l1_technical=[
+                    technical=[
                         {
                             "rule": "not_null",
                             "columns": ["sid"],
                             "message": "SID required",
                         }
                     ],
-                    l2_business=[],
+                    business=[],
                 )
             }
         )

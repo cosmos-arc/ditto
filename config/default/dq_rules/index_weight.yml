@@ -2,8 +2,8 @@
 dataset: index_weight
 description: "指数成分股权重数据质量检查规则"
 
-# L1: 技术校验（写入时强制阻断）
-l1_technical:
+# 技术类: 技术校验（写入时强制阻断）
+technical:
   - rule: not_null
     columns: [index_sid, con_sid, trade_date, weight]
     message: "必填字段不能为空"
@@ -30,8 +30,8 @@ l1_technical:
       weight: float
     message: "字段类型不匹配"
 
-# L2: 业务规则（写入时警告但不阻断）
-l2_business:
+# 业务类: 业务规则（写入时警告但不阻断）
+business:
   - rule: range_check
     column: weight
     min: 0.0
@@ -45,8 +45,8 @@ l2_business:
     severity: warning
     message: "指数权重总和应接近 1.0（允许 5% 误差）"
 
-# L3: 统计异常（定时批量检查）
-l3_statistical:
+# 统计类: 统计异常（定时批量检查）
+statistical:
   - rule: completeness
     name: missing_index_weights
     expected_dates: "trade_calendar"

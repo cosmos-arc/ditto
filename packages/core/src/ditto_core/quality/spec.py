@@ -11,9 +11,9 @@ from pydantic import BaseModel, Field, field_validator
 class DQLevel(Enum):
     """DQ check level."""
 
-    L1_TECHNICAL = "l1_technical"
-    L2_BUSINESS = "l2_business"
-    L3_STATISTICAL = "l3_statistical"
+    TECHNICAL = "technical"  # 技术类 - 结构约束（非空、唯一、外键）
+    BUSINESS = "business"  # 业务类 - 业务规则（OHLC、涨跌幅）
+    STATISTICAL = "statistical"  # 统计类 - 异常检测（Z-score、完整性）
 
 
 class RuleType(str, Enum):
@@ -237,11 +237,17 @@ class DatasetRules(BaseModel):
 
     dataset: str
     description: str
-    l1_technical: list[dict[str, Any]] = Field(default_factory=lambda: [])
-    l2_business: list[dict[str, Any]] = Field(default_factory=lambda: [])
-    l3_statistical: list[dict[str, Any]] = Field(default_factory=lambda: [])
+    technical: list[dict[str, Any]] = Field(  # type: ignore[reportUnknownVariableType]
+        default_factory=list
+    )  # 技术类规则
+    business: list[dict[str, Any]] = Field(  # type: ignore[reportUnknownVariableType]
+        default_factory=list
+    )  # 业务类规则
+    statistical: list[dict[str, Any]] = Field(  # type: ignore[reportUnknownVariableType]
+        default_factory=list
+    )  # 统计类规则
 
-    @field_validator("l1_technical", "l2_business", "l3_statistical", mode="before")
+    @field_validator("technical", "business", "statistical", mode="before")
     @classmethod
     def parse_rules(cls, v: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Parse rule dicts into proper models."""

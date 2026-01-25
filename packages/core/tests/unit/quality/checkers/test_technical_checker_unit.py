@@ -68,7 +68,7 @@ class TestTechnicalChecker:
         if expected_issue_count > 0:
             assert issues[0].rule_name == "not_null"
             assert issues[0].severity == expected_severity
-            assert issues[0].level == DQLevel.L1_TECHNICAL
+            assert issues[0].level == DQLevel.TECHNICAL
             assert issues[0].affected_rows == expected_affected_rows
 
     @pytest.mark.parametrize(
@@ -132,7 +132,7 @@ class TestTechnicalChecker:
         if expected_issue_count > 0:
             assert issues[0].rule_name == "unique"
             assert issues[0].severity == expected_severity
-            assert issues[0].level == DQLevel.L1_TECHNICAL
+            assert issues[0].level == DQLevel.TECHNICAL
             assert issues[0].affected_rows == expected_affected_rows
 
     def test_check_multiple_issues(self) -> None:

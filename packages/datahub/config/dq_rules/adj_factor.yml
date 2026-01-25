@@ -2,8 +2,8 @@
 dataset: adj_factor
 description: "复权因子数据质量检查规则"
 
-# L1: 技术校验（写入时强制阻断）
-l1_technical:
+# 技术类: 技术校验（写入时强制阻断）
+technical:
   - rule: not_null
     columns: [sid, trade_date, adj_factor]
     message: "必填字段不能为空"
@@ -24,8 +24,8 @@ l1_technical:
       adj_factor: float
     message: "字段类型不匹配"
 
-# L2: 业务规则（写入时警告但不阻断）
-l2_business:
+# 业务类: 业务规则（写入时警告但不阻断）
+business:
   - rule: positive
     columns: [adj_factor]
     message: "复权因子必须为正数"
@@ -42,8 +42,8 @@ l2_business:
     severity: warning
     message: "复权因子超出合理范围 [0.1, 100.0]"
 
-# L3: 统计异常（定时批量检查）
-l3_statistical:
+# 统计类: 统计异常（定时批量检查）
+statistical:
   - rule: completeness
     name: missing_adj_factor
     expected_dates: "trade_calendar"

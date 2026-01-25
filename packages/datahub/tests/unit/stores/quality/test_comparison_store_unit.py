@@ -58,13 +58,14 @@ class TestComparisonStore:
 
         asyncio.run(self.store.write_comparison(self.recent_date, df, "stock_daily"))
 
-        # Verify file was created
+        # Verify file was created (路径包含 dataset)
         year = self.recent_date[:4]
         month = self.recent_date[4:6]
         expected_file = (
             self.store.base_path
             / f"year={year}"
             / f"month={month}"
+            / "stock_daily"
             / f"{self.recent_date}.parquet"
         )
         assert expected_file.exists()
@@ -90,6 +91,7 @@ class TestComparisonStore:
             self.store.base_path
             / f"year={year}"
             / f"month={month}"
+            / "stock_daily"
             / f"{self.recent_date}.parquet"
         )
         assert not expected_file.exists()
@@ -130,11 +132,20 @@ class TestComparisonStore:
         assert result is None
 
     def test_read_comparison_filters_by_dataset(self) -> None:
-        """Test reading filters by dataset."""
-        df = pl.DataFrame(
+        """Test reading filters by dataset (每个 dataset 独立文件)."""
+        stock_df = pl.DataFrame(
             {
-                "dataset": ["stock_daily", "index_daily"],
-                "src_code": ["000001.SZ", "000001.SH"],
+                "dataset": ["stock_daily", "stock_daily"],
+                "src_code": ["000001.SZ", "000002.SZ"],
+                "trade_date": [self.recent_date, self.recent_date],
+                "field": ["close", "close"],
+            }
+        )
+
+        index_df = pl.DataFrame(
+            {
+                "dataset": ["index_daily", "index_daily"],
+                "src_code": ["000001.SH", "000999.SH"],
                 "trade_date": [self.recent_date, self.recent_date],
                 "field": ["close", "close"],
             }
@@ -142,7 +153,13 @@ class TestComparisonStore:
 
         import asyncio
 
-        asyncio.run(self.store.write_comparison(self.recent_date, df, "stock_daily"))
+        # 写入两个不同 dataset（会写入不同文件）
+        asyncio.run(
+            self.store.write_comparison(self.recent_date, stock_df, "stock_daily")
+        )
+        asyncio.run(
+            self.store.write_comparison(self.recent_date, index_df, "index_daily")
+        )
 
         # Read only stock_daily
         result = asyncio.run(
@@ -150,8 +167,8 @@ class TestComparisonStore:
         )
 
         assert result is not None
-        assert len(result) == 1
-        assert result["dataset"][0] == "stock_daily"
+        assert len(result) == 2
+        assert result["dataset"].unique().to_list() == ["stock_daily"]
 
         # Read only index_daily
         result = asyncio.run(
@@ -159,8 +176,8 @@ class TestComparisonStore:
         )
 
         assert result is not None
-        assert len(result) == 1
-        assert result["dataset"][0] == "index_daily"
+        assert len(result) == 2
+        assert result["dataset"].unique().to_list() == ["index_daily"]
 
     def test_cleanup_old_data(self) -> None:
         """Test automatic cleanup of old data."""
@@ -202,6 +219,7 @@ class TestComparisonStore:
             self.store.base_path
             / f"year={old_year}"
             / f"month={old_month}"
+            / "stock_daily"
             / f"{old_date}.parquet"
         )
 
@@ -211,6 +229,7 @@ class TestComparisonStore:
             self.store.base_path
             / f"year={recent_year}"
             / f"month={recent_month}"
+            / "stock_daily"
             / f"{self.recent_date}.parquet"
         )
 

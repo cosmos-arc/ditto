@@ -154,7 +154,7 @@ class StatisticalChecker:
                     f"'{column}' (threshold: {threshold})"
                 )
                 return DQIssue(
-                    level=DQLevel.L3_STATISTICAL,
+                    level=DQLevel.STATISTICAL,
                     severity=DQSeverity.ALERT,
                     rule_name="zscore",
                     message=msg,
@@ -178,7 +178,7 @@ class StatisticalChecker:
             )
             exc_type = type(e).__name__
             return DQIssue(
-                level=DQLevel.L3_STATISTICAL,
+                level=DQLevel.STATISTICAL,
                 severity=DQSeverity.ALERT,
                 rule_name="zscore",
                 message=f"Z-score check failed for column '{column}': {exc_type}",
@@ -194,7 +194,7 @@ class StatisticalChecker:
                 rule_type="zscore",
             )
             return DQIssue(
-                level=DQLevel.L3_STATISTICAL,
+                level=DQLevel.STATISTICAL,
                 severity=DQSeverity.WARNING,
                 rule_name="zscore",
                 message=f"Invalid statistical value for '{column}': {e}",
@@ -230,7 +230,7 @@ class StatisticalChecker:
         if current.is_empty():
             msg = "No data found for completeness check"
             return DQIssue(
-                level=DQLevel.L3_STATISTICAL,
+                level=DQLevel.STATISTICAL,
                 severity=DQSeverity.ALERT,
                 rule_name="completeness",
                 message=msg,
@@ -262,7 +262,7 @@ class StatisticalChecker:
                     f"{sorted_missing}"
                 )
                 return DQIssue(
-                    level=DQLevel.L3_STATISTICAL,
+                    level=DQLevel.STATISTICAL,
                     severity=DQSeverity.ALERT,
                     rule_name="completeness",
                     message=msg,
@@ -281,7 +281,7 @@ class StatisticalChecker:
                 rule_type="completeness",
             )
             return DQIssue(
-                level=DQLevel.L3_STATISTICAL,
+                level=DQLevel.STATISTICAL,
                 severity=DQSeverity.ALERT,
                 rule_name="completeness",
                 message=f"Completeness check failed: {type(e).__name__}",
@@ -296,7 +296,7 @@ class StatisticalChecker:
                 rule_type="completeness",
             )
             return DQIssue(
-                level=DQLevel.L3_STATISTICAL,
+                level=DQLevel.STATISTICAL,
                 severity=DQSeverity.WARNING,
                 rule_name="completeness",
                 message=f"Invalid value in completeness check: {e}",

@@ -115,29 +115,7 @@ class ComparisonAccessor:
             event="comparison_stats_start",
         )
 
-        # 统计各日期的对比结果数量
-        stats: list[dict[str, Any]] = []
-        for file_path in self._comparison_store.base_path.rglob("*.parquet"):
-            try:
-                stem = file_path.stem
-                df = pl.read_parquet(file_path)
-                stats.append(
-                    {
-                        "trade_date": stem,
-                        "row_count": len(df),
-                        "file_path": str(
-                            file_path.relative_to(self._comparison_store.base_path)
-                        ),
-                    }
-                )
-            except Exception as e:
-                logger.warning(
-                    "Failed to read comparison file",
-                    event="comparison_stats_file_error",
-                    file_path=str(file_path),
-                    error=str(e),
-                )
-                continue
+        stats = self._comparison_store.get_stats()
 
         logger.debug(
             "Comparison statistics fetched",

@@ -8,9 +8,9 @@ class TestDQLevel:
 
     def test_level_values(self) -> None:
         """Test level enum values."""
-        assert DQLevel.L1_TECHNICAL.value == "l1_technical"
-        assert DQLevel.L2_BUSINESS.value == "l2_business"
-        assert DQLevel.L3_STATISTICAL.value == "l3_statistical"
+        assert DQLevel.TECHNICAL.value == "technical"
+        assert DQLevel.BUSINESS.value == "business"
+        assert DQLevel.STATISTICAL.value == "statistical"
 
 
 class TestDQSeverity:
@@ -29,7 +29,7 @@ class TestDQIssue:
     def test_create_issue(self) -> None:
         """Test creating a DQ issue."""
         issue = DQIssue(
-            level=DQLevel.L1_TECHNICAL,
+            level=DQLevel.TECHNICAL,
             severity=DQSeverity.ERROR,
             rule_name="primary_key_unique",
             message="Found 2 duplicate (sid, trade_date)",
@@ -37,7 +37,7 @@ class TestDQIssue:
             sample_data=[{"sid": 100001, "trade_date": "2024-01-01"}],
         )
 
-        assert issue.level == DQLevel.L1_TECHNICAL
+        assert issue.level == DQLevel.TECHNICAL
         assert issue.severity == DQSeverity.ERROR
         assert issue.rule_name == "primary_key_unique"
         assert issue.affected_rows == 2
@@ -46,7 +46,7 @@ class TestDQIssue:
     def test_create_issue_minimal(self) -> None:
         """Test creating issue with minimal required fields."""
         issue = DQIssue(
-            level=DQLevel.L2_BUSINESS,
+            level=DQLevel.BUSINESS,
             severity=DQSeverity.WARNING,
             rule_name="ohlc_consistency",
             message="OHLC relationship violated",
@@ -63,14 +63,14 @@ class TestDQResult:
         """Test creating a DQ result."""
         issues = [
             DQIssue(
-                level=DQLevel.L1_TECHNICAL,
+                level=DQLevel.TECHNICAL,
                 severity=DQSeverity.ERROR,
                 rule_name="primary_key_unique",
                 message="Duplicate key",
                 affected_rows=2,
             ),
             DQIssue(
-                level=DQLevel.L2_BUSINESS,
+                level=DQLevel.BUSINESS,
                 severity=DQSeverity.WARNING,
                 rule_name="ohlc_consistency",
                 message="OHLC violated",
@@ -96,7 +96,7 @@ class TestDQResult:
             passed=False,
             issues=[
                 DQIssue(
-                    level=DQLevel.L1_TECHNICAL,
+                    level=DQLevel.TECHNICAL,
                     severity=DQSeverity.ERROR,
                     rule_name="test",
                     message="Test",
@@ -112,7 +112,7 @@ class TestDQResult:
             passed=True,
             issues=[
                 DQIssue(
-                    level=DQLevel.L2_BUSINESS,
+                    level=DQLevel.BUSINESS,
                     severity=DQSeverity.WARNING,
                     rule_name="test",
                     message="Test",
@@ -129,7 +129,7 @@ class TestDQResult:
             passed=False,
             issues=[
                 DQIssue(
-                    level=DQLevel.L2_BUSINESS,
+                    level=DQLevel.BUSINESS,
                     severity=DQSeverity.WARNING,
                     rule_name="test",
                     message="Test",
@@ -146,13 +146,13 @@ class TestDQResult:
             passed=False,
             issues=[
                 DQIssue(
-                    level=DQLevel.L3_STATISTICAL,
+                    level=DQLevel.STATISTICAL,
                     severity=DQSeverity.ALERT,
                     rule_name="test",
                     message="Test",
                 ),
                 DQIssue(
-                    level=DQLevel.L3_STATISTICAL,
+                    level=DQLevel.STATISTICAL,
                     severity=DQSeverity.ALERT,
                     rule_name="test2",
                     message="Test2",

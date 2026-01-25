@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import polars as pl
+from ditto_foundation import logger
 
 
 class ComparisonStore:
@@ -52,12 +53,11 @@ class ComparisonStore:
         if df.height == 0:
             return  # 无数据，不存储
 
-        # 按日期分区存储
+        # 按日期和数据集分区存储（避免多数据集覆盖）
         year = trade_date[:4]
         month = trade_date[4:6]
-        file_path = (
-            self.base_path / f"year={year}" / f"month={month}" / f"{trade_date}.parquet"
-        )
+        dataset_path = self.base_path / f"year={year}" / f"month={month}" / dataset
+        file_path = dataset_path / f"{trade_date}.parquet"
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
         df.write_parquet(file_path)
@@ -83,15 +83,43 @@ class ComparisonStore:
         """
         year = trade_date[:4]
         month = trade_date[4:6]
-        file_path = (
-            self.base_path / f"year={year}" / f"month={month}" / f"{trade_date}.parquet"
-        )
+        dataset_path = self.base_path / f"year={year}" / f"month={month}" / dataset
+        file_path = dataset_path / f"{trade_date}.parquet"
 
         if not file_path.exists():
             return None
 
         df = pl.read_parquet(file_path)
-        return df.filter(pl.col("dataset") == dataset)
+        return df  # 路径已包含 dataset，无需过滤
+
+    def get_stats(self) -> list[dict[str, str | int]]:
+        """
+        获取对比结果统计信息.
+
+        Returns:
+            统计信息列表，每个元素包含 trade_date, row_count, file_path
+
+        """
+        stats: list[dict[str, str | int]] = []
+        for file_path in self.base_path.rglob("*.parquet"):
+            try:
+                stem = file_path.stem
+                df = pl.read_parquet(file_path)
+                stats.append(
+                    {
+                        "trade_date": stem,
+                        "row_count": len(df),
+                        "file_path": str(file_path.relative_to(self.base_path)),
+                    }
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to read comparison file for stats",
+                    file_path=str(file_path),
+                    error=str(e),
+                )
+                continue
+        return stats
 
     async def _cleanup_old_data(self) -> None:
         """清理过期数据."""

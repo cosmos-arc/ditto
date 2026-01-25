@@ -86,7 +86,7 @@ class BusinessChecker:
                     invalid_count=invalid_count,
                 )
                 return DQIssue(
-                    level=DQLevel.L2_BUSINESS,
+                    level=DQLevel.BUSINESS,
                     severity=DQSeverity.WARNING,
                     rule_name="positive",
                     message=rule.get("message", f"{col} has non-positive values"),
@@ -123,7 +123,7 @@ class BusinessChecker:
                     bad_count=bad_count,
                 )
                 return DQIssue(
-                    level=DQLevel.L2_BUSINESS,
+                    level=DQLevel.BUSINESS,
                     severity=DQSeverity.WARNING,
                     rule_name="ohlc_consistency",
                     message=rule.get("message", "OHLC relationship violated"),
@@ -166,7 +166,7 @@ class BusinessChecker:
                 bad_count=bad_count,
             )
             return DQIssue(
-                level=DQLevel.L2_BUSINESS,
+                level=DQLevel.BUSINESS,
                 severity=DQSeverity.WARNING,
                 rule_name="range_check",
                 message=rule.get("message", f"{column} out of range"),
@@ -194,7 +194,7 @@ class BusinessChecker:
                 zero_count=zero_count,
             )
             return DQIssue(
-                level=DQLevel.L2_BUSINESS,
+                level=DQLevel.BUSINESS,
                 severity=DQSeverity.WARNING,
                 rule_name="no_zero_volume",
                 message=rule.get("message", f"{column} has zero values"),

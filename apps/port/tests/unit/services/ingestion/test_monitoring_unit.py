@@ -60,14 +60,14 @@ class TestMonitorIngestionQuality:
             passed=False,
             issues=[
                 DQIssue(
-                    level=DQLevel.L1_TECHNICAL,
+                    level=DQLevel.TECHNICAL,
                     severity=DQSeverity.ERROR,
                     rule_name="null_check",
                     message="Null values found",
                     affected_rows=10,
                 ),
                 DQIssue(
-                    level=DQLevel.L2_BUSINESS,
+                    level=DQLevel.BUSINESS,
                     severity=DQSeverity.WARNING,
                     rule_name="price_range",
                     message="Price out of range",
