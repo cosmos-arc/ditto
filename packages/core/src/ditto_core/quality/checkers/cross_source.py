@@ -40,12 +40,12 @@ class CrossSourceChecker:
         self.tolerance_rules = tolerance_rules or self._default_rules()
 
     def _default_rules(self) -> dict[str, ToleranceRule]:
-        """默认容差规则."""
+        """默认容差规则（与配置文件保持一致）."""
         return {
-            "open": ToleranceRule(method=CompareMethod.TICK_ALIGNED, tick_size=0.01),
-            "high": ToleranceRule(method=CompareMethod.TICK_ALIGNED, tick_size=0.01),
-            "low": ToleranceRule(method=CompareMethod.TICK_ALIGNED, tick_size=0.01),
-            "close": ToleranceRule(method=CompareMethod.TICK_ALIGNED, tick_size=0.01),
+            "open": ToleranceRule(method=CompareMethod.TICK_ALIGNED, tick_size=0.001),
+            "high": ToleranceRule(method=CompareMethod.TICK_ALIGNED, tick_size=0.001),
+            "low": ToleranceRule(method=CompareMethod.TICK_ALIGNED, tick_size=0.001),
+            "close": ToleranceRule(method=CompareMethod.TICK_ALIGNED, tick_size=0.001),
             "vol": ToleranceRule(method=CompareMethod.RELATIVE, relative_tol=0.001),
             "amount": ToleranceRule(method=CompareMethod.RELATIVE, relative_tol=0.001),
         }
@@ -206,6 +206,22 @@ class CrossSourceChecker:
             return None
 
         if diff_rows.height > 0:
-            return diff_rows.select([field, f"{field}_secondary"]).head(5).to_dicts()
+            # 返回完整的差异样本，包含上下文信息
+            return (
+                diff_rows.select(
+                    [
+                        "src_code",
+                        "trade_date",
+                        pl.col(field).alias("primary_value"),
+                        pl.col(f"{field}_secondary").alias("secondary_value"),
+                        (pl.col(field) - pl.col(f"{field}_secondary"))
+                        .abs()
+                        .alias("diff"),
+                        pl.lit(field).alias("field"),
+                    ]
+                )
+                .head(10)
+                .to_dicts()
+            )
 
         return None

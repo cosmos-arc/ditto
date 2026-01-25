@@ -75,9 +75,7 @@ class QualityReconciliationService:
             ts_codes = primary_df["src_code"].unique().to_list()
 
             # 2. 获取辅助数据源（TDX）
-            secondary_df = self._tdx_source.reader.fetch_stock_daily_bars(
-                ts_codes, trade_date
-            )
+            secondary_df = self._tdx_source.fetch_stock_daily_bars(ts_codes, trade_date)
 
             if secondary_df.height == 0:
                 logger.warning(
