@@ -19,7 +19,7 @@ from typing import Any
 
 from prefect import flow, task
 
-from ditto_port.jobs.flows.helpers import create_ingestion_context
+from ditto_port.jobs.context import create_ingestion_context
 from ditto_port.jobs.tasks import (
     create_ingest_task_t0,
     create_ingest_task_t1_adj,
@@ -55,19 +55,18 @@ def _collect_results(futures: list[Any]) -> dict[str, dict[str, object]]:
 
 
 @task(name="check_trading_day")
-def check_trading_day(trade_date: str, data_root: str) -> bool:
+def check_trading_day(trade_date: str) -> bool:
     """
     检查指定日期是否为交易日。
 
     Args:
         trade_date: 交易日期 (YYYY-MM-DD)
-        data_root: DataHub 根目录
 
     Returns:
         是否为交易日
 
     """
-    with create_ingestion_context(data_root=data_root) as (hub, _):
+    with create_ingestion_context() as (hub, _):
         return hub.calendar.is_trading_day(trade_date)
 
 
@@ -75,7 +74,6 @@ def check_trading_day(trade_date: str, data_root: str) -> bool:
 def daily_ingestion_flow(
     trade_date: str,
     source: str = "tushare",
-    data_root: str = "data",
     force: bool = False,
 ) -> dict[str, object]:
     """
@@ -92,7 +90,6 @@ def daily_ingestion_flow(
     Args:
         trade_date: 交易日期 (YYYY-MM-DD)
         source: 数据源名称
-        data_root: DataHub 根目录
         force: 是否强制重新摄取
 
     Returns:
@@ -107,7 +104,7 @@ def daily_ingestion_flow(
 
     """
     # 1. 检查交易日
-    is_trading = check_trading_day(trade_date=trade_date, data_root=data_root)
+    is_trading = check_trading_day(trade_date=trade_date)
 
     # 如果非交易日，直接返回
     if not is_trading:
@@ -135,7 +132,6 @@ def daily_ingestion_flow(
         future = t0_task.submit(
             trade_date=trade_date,
             source=source,
-            data_root=data_root,
             force=force,
         )
         t0_futures.append(future)
@@ -167,7 +163,6 @@ def daily_ingestion_flow(
             future = task.submit(
                 trade_date=trade_date,
                 source=source,
-                data_root=data_root,
                 force=force,
                 wait_for=wait_for_futures,
             )

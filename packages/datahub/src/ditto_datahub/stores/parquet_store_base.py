@@ -121,6 +121,21 @@ class ParquetStoreBase(ABC):
         """
         ...
 
+    def _validate_data(self, dataset: str, df: pl.DataFrame) -> None:  # noqa: B027
+        """
+        验证数据（子类可重写）。
+
+        Args:
+            dataset: 数据集名称。
+            df: 要验证的数据。
+
+        Raises:
+            ValueError: 如果数据验证失败。
+
+        """
+        # 默认不做任何验证，子类可以重写
+        pass
+
     @abstractmethod
     def read(
         self,
@@ -290,6 +305,9 @@ class ParquetStoreBase(ABC):
                 skipped=0,
                 is_merge=False,
             )
+
+        # 验证数据（子类可重写）
+        self._validate_data(dataset, df)
 
         # 确保目录存在
         dataset_dir = self._data_root / dataset

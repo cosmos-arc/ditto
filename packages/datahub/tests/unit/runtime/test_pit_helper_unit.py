@@ -195,7 +195,7 @@ class TestPitHelper:
         query = "SELECT sid, close FROM stock_daily WHERE sid = 1"
         result = PitHelper.wrap_pit_cte(query, "pit_data", asof_date=None)
 
-        # 不应该添加额外的 WHERE
+        # [REVIEW] WHERE
         expected = (
             "WITH pit_data AS (SELECT sid, close FROM stock_daily WHERE sid = 1) "
             "SELECT * FROM pit_data"
@@ -204,15 +204,15 @@ class TestPitHelper:
 
     def test_combined_pit_query_workflow(self) -> None:
         """Test combined workflow of using multiple PitHelper methods."""
-        # 原始查询
+        # [REVIEW]
         query = "SELECT sid, close FROM stock_daily WHERE sid = 1"
 
-        # 先包装成 CTE
+        # [REVIEW] CTE
         cte_query = PitHelper.wrap_pit_cte(query, "filtered_data")
-        # 添加 PIT 过滤
+        # [REVIEW] PIT 过滤
         pit_query = PitHelper.add_pit_filter(cte_query, "2024-01-15")
 
-        # 结果应该同时包含 CTE 和 PIT 过滤
+        # [REVIEW] CTE 和 PIT 过滤
         assert "WITH filtered_data AS" in pit_query
         assert "knowledge_date <= '2024-01-15'" in pit_query
 

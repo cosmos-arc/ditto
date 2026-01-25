@@ -242,7 +242,7 @@ extraPaths = [
 # ===================================================================
 [tool.pytest.ini_options]
 minversion = "7.0"
-testpaths = ["packages/*/tests", "apps/*/tests", "tests"]
+testpaths = ["packages/*/tests", "apps/*/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -258,15 +258,9 @@ filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]
 markers = [
     "unit: Mark test as a unit test",
     "integration: Mark test as an integration test",
-    "e2e: Mark test as an end-to-end test",
     "slow: Mark test as slow running (skip with -m 'not slow')",
-    "smoke: Mark test as a smoke test",
-    "benchmark: Mark test as a performance benchmark test",
-    "pit: Mark test for Point-in-Time data validation",
-    "data: Mark test that requires data fixtures",
-    "external: Mark test that calls external APIs (Tushare, etc.)",
-    "observability: Mark test that requires observability stack",
-    "serial: Mark test that must run serially (not in parallel)",
+    "serial: Mark test that must run serially",
+    "snapshot: Mark test that uses inline-snapshot (must run serially)",
 ]
 
 log_cli = true
@@ -276,7 +270,8 @@ asyncio_mode = "strict"
 addopts = [
     "-ra",
     "-v",
-    # "-n", "auto",  # 移除全局并行配置，改为命令级别控制（支持分层并行策略）
+    "-n", "auto",           # 默认并行运行
+    "--dist", "loadfile",   # 同文件测试串行（避免 snapshot 冲突）
     "--strict-markers",
     "--strict-config",
     "--cov=packages",
@@ -286,7 +281,7 @@ addopts = [
     "--cov-report=xml",
     "--cov-branch",
     "--cov-fail-under=80",
-    "--durations=10",
+    "--durations=10",       # 报告最慢的 10 个测试
 ]
 
 # ===================================================================

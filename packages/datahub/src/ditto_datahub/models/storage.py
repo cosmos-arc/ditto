@@ -1,10 +1,6 @@
 """Storage models for DataHub."""
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ditto_datahub.models.quality import DQResult
 
 __all__ = [
     "FreezeManifest",
@@ -22,7 +18,6 @@ class WriteResult:
     rows_written: int
     rows_total: int
     blocked: bool
-    dq_result: "DQResult | None"
 
 
 @dataclass(frozen=True)
@@ -45,7 +40,7 @@ class FreezeManifest:
     description: str
     created_at: str
     version: str = "2.0"
-    checksum_type: str = "sha256"  # "md5" for legacy, "sha256" for new
+    checksum_type: str = "sha256"
     # Mapping: relative_path -> checksum
     files: dict[str, str] = field(default_factory=lambda: {})
 

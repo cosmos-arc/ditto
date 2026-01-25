@@ -17,7 +17,6 @@ Ditto 路径管理 - 遵循 XDG Base Directory 规范.
 import os
 import sys
 from dataclasses import dataclass
-from functools import cached_property
 from pathlib import Path
 
 
@@ -265,78 +264,97 @@ class XDGPaths:
         else:
             self._base_override = None
 
+        # 懒加载缓存（替代 @cached_property）
+        self._config_home: Path | None = None
+        self._data_home: Path | None = None
+        self._state_home: Path | None = None
+        self._cache_home: Path | None = None
+        self._runtime_dir: Path | None = None
+
     # ==================== 核心目录 ====================
 
-    @cached_property
+    @property
     def config_home(self) -> Path:
         """配置目录 - 用户配置文件."""
-        return self._get_path(
-            ditto_env="DITTO_CONFIG_DIR",
-            xdg_env="XDG_CONFIG_HOME",
-            subdir="config",
-            unix_default="~/.config",
-        )
+        if self._config_home is None:
+            self._config_home = self._get_path(
+                ditto_env="DITTO_CONFIG_DIR",
+                xdg_env="XDG_CONFIG_HOME",
+                subdir="config",
+                unix_default="~/.config",
+            )
+        return self._config_home
 
-    @cached_property
+    @property
     def data_home(self) -> Path:
         """数据目录 - 持久化数据."""
-        return self._get_path(
-            ditto_env="DITTO_DATA_DIR",
-            xdg_env="XDG_DATA_HOME",
-            subdir="data",
-            unix_default="~/.local/share",
-        )
+        if self._data_home is None:
+            self._data_home = self._get_path(
+                ditto_env="DITTO_DATA_DIR",
+                xdg_env="XDG_DATA_HOME",
+                subdir="data",
+                unix_default="~/.local/share",
+            )
+        return self._data_home
 
-    @cached_property
+    @property
     def state_home(self) -> Path:
         """状态目录 - 日志、历史记录."""
-        return self._get_path(
-            ditto_env="DITTO_STATE_DIR",
-            xdg_env="XDG_STATE_HOME",
-            subdir="state",
-            unix_default="~/.local/state",
-        )
+        if self._state_home is None:
+            self._state_home = self._get_path(
+                ditto_env="DITTO_STATE_DIR",
+                xdg_env="XDG_STATE_HOME",
+                subdir="state",
+                unix_default="~/.local/state",
+            )
+        return self._state_home
 
-    @cached_property
+    @property
     def cache_home(self) -> Path:
         """缓存目录 - 可删除的缓存."""
-        return self._get_path(
-            ditto_env="DITTO_CACHE_DIR",
-            xdg_env="XDG_CACHE_HOME",
-            subdir="cache",
-            unix_default="~/.cache",
-        )
+        if self._cache_home is None:
+            self._cache_home = self._get_path(
+                ditto_env="DITTO_CACHE_DIR",
+                xdg_env="XDG_CACHE_HOME",
+                subdir="cache",
+                unix_default="~/.cache",
+            )
+        return self._cache_home
 
-    @cached_property
+    @property
     def runtime_dir(self) -> Path:
         """运行时目录 - PID、Socket等."""
-        # 先检查 DITTO_RUNTIME_DIR
-        if override := os.environ.get("DITTO_RUNTIME_DIR"):
-            return Path(override).expanduser()
+        if self._runtime_dir is None:
+            # 先检查 DITTO_RUNTIME_DIR
+            if override := os.environ.get("DITTO_RUNTIME_DIR"):
+                self._runtime_dir = Path(override).expanduser()
+                return self._runtime_dir
 
-        # 检查 XDG_RUNTIME_DIR
-        if xdg_runtime := os.environ.get("XDG_RUNTIME_DIR"):
-            return Path(xdg_runtime) / self.APP_NAME
+            # 检查 XDG_RUNTIME_DIR
+            if xdg_runtime := os.environ.get("XDG_RUNTIME_DIR"):
+                self._runtime_dir = Path(xdg_runtime) / self.APP_NAME
+                return self._runtime_dir
 
-        # 降级方案
-        if self._platform == "win32":
-            # Windows: 使用 TEMP/ditto 或回退到用户目录
-            temp = os.environ.get("TEMP")
-            if not temp:
-                # 回退到用户目录下的应用子目录
-                temp = str(Path("~").expanduser() / self.APP_NAME / "temp")
-            return Path(temp) / self.APP_NAME
-        else:
-            # Unix: 使用 XDG_RUNTIME_DIR 或 /tmp 降级方案
-            xdg_runtime = os.environ.get("XDG_RUNTIME_DIR")
-            if xdg_runtime:
-                return Path(xdg_runtime) / self.APP_NAME
-
-            # 回退方案：使用 /tmp（符合测试期望）
-            uid = os.getuid() if hasattr(os, "getuid") else os.getpid()
-            runtime_dir = Path(f"/tmp/{self.APP_NAME}-{uid}").expanduser()  # noqa: S108
-            runtime_dir.mkdir(parents=True, exist_ok=True)
-            return runtime_dir
+            # 降级方案
+            if self._platform == "win32":
+                # Windows: 使用 TEMP/ditto 或回退到用户目录
+                temp = os.environ.get("TEMP")
+                if not temp:
+                    # 回退到用户目录下的应用子目录
+                    temp = str(Path("~").expanduser() / self.APP_NAME / "temp")
+                self._runtime_dir = Path(temp) / self.APP_NAME
+            else:
+                # Unix: 使用 XDG_RUNTIME_DIR 或 /tmp 降级方案
+                xdg_runtime = os.environ.get("XDG_RUNTIME_DIR")
+                if xdg_runtime:
+                    self._runtime_dir = Path(xdg_runtime) / self.APP_NAME
+                else:
+                    # 回退方案：使用 /tmp（符合测试期望）
+                    uid = os.getuid() if hasattr(os, "getuid") else os.getpid()
+                    runtime_dir = Path(f"/tmp/{self.APP_NAME}-{uid}").expanduser()  # noqa: S108
+                    runtime_dir.mkdir(parents=True, exist_ok=True)
+                    self._runtime_dir = runtime_dir
+        return self._runtime_dir
 
     # ==================== 子目录访问器 ====================
 
@@ -466,10 +484,6 @@ class XDGPaths:
         return f"XDGPaths(data={self.data_home})"
 
 
-# 全局单例
-_paths: XDGPaths | None = None
-
-
 class _PathsRegistry:
     """
     Registry for managing XDGPaths singleton.
@@ -526,7 +540,3 @@ def reset_paths_for_testing() -> None:
     This function allows tests to reset the global state between test runs.
     """
     _PathsRegistry.reset()
-
-
-# Module-level accessor for backward compatibility with tests
-_paths = _PathsRegistry.instance

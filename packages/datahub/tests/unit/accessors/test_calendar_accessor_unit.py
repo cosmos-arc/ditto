@@ -1,7 +1,7 @@
 """Tests for CalendarAccessor."""
 
 import pytest
-from ditto_datahub.accessors.calendar import CalendarAccessor
+from ditto_datahub.accessors.calendar_accessor import CalendarAccessor
 from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
@@ -11,7 +11,7 @@ class TestCalendarAccessor:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.client = sqlite_client
         self.calendar_store = CalendarStore(self.client)
         self.accessor = CalendarAccessor(self.calendar_store)

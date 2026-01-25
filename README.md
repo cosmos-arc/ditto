@@ -1,10 +1,14 @@
 # Ditto: 量化投资系统
 
-## 项目简介
+**版本**: v0.5.0
+**最后更新**: 2026-01-23
+**状态**: 🔄 开发中
+
+## 概要
 
 Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行业轮动策略，采用工业级标准开发，追求长期稳定 Alpha。
 
-### 核心特性
+## 核心功能
 
 - **行业轮动策略**: 基于 Regime 识别的 ETF 行业轮动
 - **多因子模型**: 相对强弱、估值、波动率、拥挤度等因子
@@ -13,14 +17,7 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
 - **数据质量**: 多源校验，PIT 安全，复权分离存储
 - **ML 增强**: 机器学习因子权重学习（Phase 3+）
 
-### 当前开发状态
-
-**Phase 0.5-1 进行中**：
-- ✅ Sprint 1: 数据层与验证（已规划，基于官方02_data_design.md）
-- 🔄 Sprint 2: 核心引擎实现（基于官方03_engine_design.md）
-- 📋 Sprint 3: 回测与风控（基于官方08_risk_constitution.md）
-
-### 系统架构
+## 架构
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -64,11 +61,31 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
    ```
 
 3. **配置环境变量**
+
+   系统采用双层环境架构，配置文件按环境分组在 `config/` 目录：
+
    ```bash
-   cp .env.example .env
-   # 编辑 .env 文件，配置必要的环境变量
-   # 注意：Tushare token 需要通过 keyring 或 ~/.ditto/secrets.toml 配置
-   # 参考 .env.example 中的说明
+   # 配置文件结构（按需修改）
+   config/
+   ├── development/    # 开发环境配置
+   ├── testing/        # 测试环境配置
+   └── production/     # 生产环境配置
+   ```
+
+   设置运行时环境（默认为 development）：
+   ```bash
+   export DITTO_ENV=development  # Linux/macOS
+   # 或
+   set DITTO_ENV=development     # Windows
+   ```
+
+   **注意**：Tushare token 需要通过 keyring 或 `~/.ditto/secrets.toml` 配置
+   ```bash
+   # 方式1: Keyring（推荐）
+   pixi run -e dev python -c "
+   import keyring
+   keyring.set_password('ditto', 'tushare', 'your_token_here')
+   "
    ```
 
 4. **初始化数据库**
@@ -116,7 +133,7 @@ pixi run server         # 启动生产服务器
 ```
 ditto/
 ├── apps/
-│   ├── server/                 # FastAPI 后端服务
+│   ├── port/                  # FastAPI 后端服务
 │   │   ├── src/
 │   │   │   ├── api/           # API 路由
 │   │   │   ├── services/      # 应用服务
@@ -195,250 +212,34 @@ ditto/
 - [ ] 可转债策略
 - [ ] 多策略组合
 
-## 核心设计文档
-
-本项目严格遵循官方设计文档：
-
-### 数据层设计
-- **《02_data_design.md》** - 数据层设计文档（v2.0 Final）
-  - DataHub统一入口设计
-  - SID标识体系（内部唯一ID）
-  - Repository模式（业务聚合）
-  - Point-in-Time语义
-
-### 引擎设计
-- **《03_engine_design.md》** - 引擎设计文档（v2.0 Final）
-  - RegimeEngine（自适应阈值）
-  - FactorEngine（健康度监控）
-  - 策略框架抽象
-  - 双回测引擎架构
-
-### 风险设计
-- **《08_risk_constitution.md》** - 风险宪法
-  - 三级Kill Switch（10%/18%/20%）
-  - 回撤速度检测
-  - 仓位控制规则
-
-## Sprint规划
-
-详细的Sprint计划请查看 `docs/sprints/` 目录：
-
-### Sprint 1: 数据层与验证
-- **时间**: Week 1-2
-- **目标**: 实现数据层基础
-- **文档**: [sprint-01-data-layer.md](docs/sprints/sprint-01-data-layer.md)
-
-### Sprint 2: 核心引擎实现
-- **时间**: Week 3-4
-- **目标**: 实现核心引擎和策略框架
-- **文档**: [sprint-02-core-engines.md](docs/sprints/sprint-02-core-engines.md)
-
-### Sprint 3: 回测与风控
-- **时间**: Week 5-6
-- **目标**: 完成回测系统和风控
-- **文档**: [sprint-03-backtest-risk.md](docs/sprints/sprint-03-backtest-risk.md)
-
-## 策略说明
-
-### ETF 行业轮动策略
-
-**核心思路**: 基于市场 Regime 状态，在不同行业/主题 ETF 之间进行轮动配置
-
-**因子体系**:
-- 相对强弱 (RS): 相对沪深300的超额收益
-- 估值 (Value): 行业指数PE/PB分位数
-- 波动率 (Vol): 价格波动率惩罚
-- 拥挤度 (Crowding): 成交额和溢价率指标
-
-**调仓规则**:
-- 月度调仓为主，触发型调仓为辅
-- Top N 选择，等权或 Score 加权
-- 最小调仓阈值，降低交易成本
-
-### 风险管理
-
-**三层 Kill Switch**（严格按风险宪法）：
-1. **Level 1** (≥10%回撤): 停止新开仓，回撤<8%自动恢复
-2. **Level 2** (≥18%回撤): 强制减仓50%，需人工确认
-3. **Level 3** (≥20%回撤): 强制清仓，需策略重构评审
-
-**仓位限制**（Regime驱动）：
-| Regime | 总仓位 | 单票上限 |
-|--------|--------|----------|
-| Bull   | 70-90% | 15% |
-| Osc    | 50-70% | 12% |
-| Bear   | 10-40% | 10% |
-
-## 测试
-
-### Monorepo 测试目录结构
-
-项目采用 Monorepo 最佳实践，测试文件位于各个模块内部：
-
-```
-ditto/
-├── apps/port/tests/           # 服务器应用测试
-├── packages/core/tests/         # 核心模块测试
-├── packages/datahub/tests/      # 数据层测试
-├── packages/foundation/tests/   # 基础模块测试
-└── tests/                       # E2E 测试和集成测试
-```
-
-### 运行测试
-
-```bash
-# 运行所有测试
-pixi run test
-
-# 运行特定模块测试
-pixi run test packages/core/tests/
-pixi run test apps/port/tests/
-
-# 运行单元测试（并行）
-pixi run test --unit
-
-# 运行集成测试（串行）
-pixi run test --integration
-
-# 生成覆盖率报告
-pixi run test --cov
-
-# 运行pre-commit检查
-pre-commit run --all-files
-```
-
-## CI/CD
-
-### 本地检查
-
-提交代码前必须运行:
-
-```bash
-# 安装 pre-commit 钩子
-pixi run pre-commit-install
-
-# 运行所有检查
-pre-commit run --all-files
-
-# 或使用 pixi 任务
-pixi run ci            # 完整 CI 检查
-pixi run check         # 快速验证（开发时）
-```
-
-### GitHub Actions
-
-项目配置了以下 GitHub Actions:
-
-- **CI**: 每次 PR 和 push 运行代码质量检查和测试
-- **Deploy**: 自动部署到 staging/production
-
-**CI 检查包括**:
-- Ruff (lint + format)
-- Pyright (type check)
-- Pytest (unit + integration tests)
-- **覆盖率要求: 80%** (通过 Codecov 精细化管理)
-
-### Codecov 覆盖率
-
-- PR 中自动显示覆盖率变化报告
-- 各模块差异化目标:
-  - core-strategy: 90%
-  - core-engine: 85%
-  - datahub: 85%
-  - foundation/server: 80%
-- 访问 https://codecov.io/gh/[username]/ditto 查看详细报告
-
-详见: [.github/workflows/README.md](.github/workflows/README.md)
-
-## 配置说明
-
-### 环境变量
-
-```bash
-# API 服务配置
-HOST=0.0.0.0
-PORT=8000
-SECRET_KEY=your_secret_key_here
-
-# 数据存储
-DITTO_DATA_DIR=data
-
-# 风险管理
-KILL_SWITCH_ENABLED=true
-```
-
-### Tushare Token 配置
-
-**注意**：Tushare token 不再支持通过环境变量配置。请使用以下方式之一：
-
-1. **Keyring（推荐）**:
-   ```bash
-   pixi run -e dev python -c "
-   import keyring
-   keyring.set_password('ditto', 'tushare', 'your_token_here')
-   "
-   ```
-
-2. **~/.ditto/secrets.toml**:
-   ```toml
-   [tushare]
-   token = "your_token_here"
-   ```
-
-## 文档
-
-详细文档请查看 `docs/design/` 目录：
-
-- `01_system_design.md` - 系统设计总览
-- `02_data_design.md` - 数据设计
-- `03_engine_design.md` - 引擎设计
-- `04_deployment_topology.md` - 部署拓扑设计
-- `05_observability.md` - 可观测性设计
-- `06_roadmap.md` - 开发路线图
-- `07_research_playground.md` - 研究环境使用说明
-- `08_risk_constitution.md` - 风险宪法
-- `09_data_quality_design.md` - 数据质量设计
-- `10_data_ingestion_scheduler_design.md` - 数据摄取任务设计
-
-
-
-## 贡献
-
-### 开发流程
-
-1. Fork 项目
-2. 创建功能分支
-3. 编写代码和测试（TDD）
-4. 运行质量检查
-5. 提交 Pull Request
-
-### 代码规范
-
-- 严格遵循官方设计文档
-- 使用 ruff 进行格式化和检查
-- 使用 pyright 进行类型检查
-- 所有新功能需要测试覆盖
-- 遵循 TDD 开发流程
-
-### Commit规范
-
-```
-<type>(<scope>): <task-id> <description>
-
-# 示例
-feat(data): P0-001 implement DataHub facade
-test(engine): P0-002 add RegimeEngine tests
-```
-
-## 许可证
-
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
-
-## 联系方式
-
-- 项目仓库: [GitHub](https://github.com/your-username/ditto)
-- 问题反馈: [Issues](https://github.com/your-username/ditto/issues)
-- 文档: [Wiki](https://github.com/your-username/ditto/wiki)
+## 相关文档
+
+- [设计文档](docs/design/README.md) - 系统架构设计
+- [Sprint 规划](docs/sprints/README.md) - 迭代计划
+- [ADR](docs/adr/README.md) - 架构决策记录
+
+## 变更记录
+
+### v0.5.0 (2026-01-23)
+**新增**
+- README 标准化，添加版本、日期、状态元数据
+- 添加变更记录部分
+
+**改进**
+- 完善文档结构说明
+- 更新开发命令说明
+
+### v0.4.0 (2025-12-27)
+**新增**
+- Sprint 1 P0 任务全部完成
+- DataHub Facade 实现
+- SqlEngine 实现
+
+### v0.1.0 (2025-12-08)
+**新增**
+- 初始项目结构
+- 基础依赖配置
+- 核心设计文档
 
 ## 免责声明
 

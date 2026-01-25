@@ -23,7 +23,16 @@ class TestSqlEngine:
         db_path = self.data_root / "meta" / "hub.sqlite"
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        self.pool = SQLitePool(str(db_path))
+        # Get schema path (from tests/integration/runtime/ to datahub/src)
+        schema_path = (
+            Path(__file__).parent.parent.parent.parent
+            / "src"
+            / "ditto_datahub"
+            / "scripts"
+            / "schema.sql"
+        )
+
+        self.pool = SQLitePool(str(db_path), schema_path=schema_path)
         self.pool.init_schema()
 
         # Create stores

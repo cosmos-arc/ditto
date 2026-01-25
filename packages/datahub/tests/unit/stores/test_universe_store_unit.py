@@ -5,7 +5,7 @@ from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.universe_store import UniverseStore
 
 
-@pytest.mark.pit
+@pytest.mark.integration
 class TestUniverseStore:
     """Tests for UniverseStore.
 
@@ -15,7 +15,7 @@ class TestUniverseStore:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.client = sqlite_client
         self.store = UniverseStore(self.client)
 
@@ -289,7 +289,7 @@ class TestUniverseStore:
         pass
 
 
-@pytest.mark.pit
+@pytest.mark.integration
 class TestUniverseStorePITSafety:
     """Tests for PIT safety in UniverseStore.
 
@@ -299,7 +299,7 @@ class TestUniverseStorePITSafety:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.client = sqlite_client
         self.store = UniverseStore(self.client)
 

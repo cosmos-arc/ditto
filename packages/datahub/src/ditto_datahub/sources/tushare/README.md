@@ -134,7 +134,7 @@ Tushare API 限流规则（普通用户）：
 本模块使用 `TushareRateLimiter` 实现限流控制：
 
 ```python
-from ditto_datahub.sources.tushare.rate_limiter import (
+from ditto_datahub.sources.tushare.utils.rate_limiter import (
     TushareRateLimiter,
     TushareRateLimitConfig,
 )

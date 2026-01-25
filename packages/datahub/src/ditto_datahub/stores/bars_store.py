@@ -175,7 +175,7 @@ class BarsStore(ParquetStoreBase):
         # Scan and apply filters
         lf = pl.scan_parquet([str(p) for p in paths])
         lf = self._build_filter_conditions(lf, sids, start_date, end_date)
-        result = lf.unique(subset=["sid", "trade_date"], keep="last").collect()
+        result = lf.unique(subset=self._get_key_columns(), keep="last").collect()
 
         duration_ms = (time.time() - start_time) * 1000
 

@@ -12,9 +12,6 @@ import pytest
 from ditto_datahub.models import OnDuplicate, WriteResultStore
 from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
 
-# Type alias for backward compatibility with test naming
-WriteResult = WriteResultStore
-
 # ============ Mock Implementation ============
 
 
@@ -466,15 +463,15 @@ class TestEdgeCases:
         assert len(final_files) == len(initial_files)
 
 
-# ============ WriteResult tests ============
+# ============ WriteResultStore tests ============
 
 
-class TestWriteResult:
-    """Tests for WriteResult dataclass."""
+class TestWriteResultStore:
+    """Tests for WriteResultStore dataclass."""
 
     def test_write_result_creation(self) -> None:
-        """Test WriteResult can be created with all fields."""
-        result = WriteResult(
+        """Test WriteResultStore can be created with all fields."""
+        result = WriteResultStore(
             file_path="/data/test/2024.parquet",
             checksum="abc123",
             added=100,
@@ -490,8 +487,8 @@ class TestWriteResult:
         assert result.is_merge is True
 
     def test_write_result_with_zero_values(self) -> None:
-        """Test WriteResult with zero values for new file."""
-        result = WriteResult(
+        """Test WriteResultStore with zero values for new file."""
+        result = WriteResultStore(
             file_path="/data/test/2024.parquet",
             checksum="def456",
             added=0,
@@ -505,8 +502,8 @@ class TestWriteResult:
         assert result.is_merge is False
 
     def test_write_result_is_frozen(self) -> None:
-        """Test WriteResult is frozen (immutable)."""
-        result = WriteResult(
+        """Test WriteResultStore is frozen (immutable)."""
+        result = WriteResultStore(
             file_path="/data/test/2024.parquet",
             checksum="abc123",
             added=100,

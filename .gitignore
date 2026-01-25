@@ -139,7 +139,6 @@ tmpclaude-*-cwd
 # 本地配置文件 (用于存储敏感信息，如 API 密钥)
 .env
 .env.*
-!.env.example
 !.env.template
 config.local.py
 local.settings.json

@@ -1,4 +1,5 @@
-"""Tests for repair flow.
+"""
+Tests for repair flow.
 
 This module tests the repair flow which handles retrying failed tasks
 and filling data holes.
@@ -34,7 +35,6 @@ class TestRetryFailedFlow:
             dataset="stock_daily",
             max_attempts=3,
             limit=10,
-            data_root="data",
         )
 
         # Should return retry result
@@ -55,7 +55,6 @@ class TestRetryFailedFlow:
             dataset="stock_daily",
             max_attempts=3,
             limit=2,  # Only retry 2
-            data_root="data",
         )
 
         # Should respect limit
@@ -71,7 +70,6 @@ class TestRetryFailedFlow:
             dataset="stock_daily",
             max_attempts=3,
             limit=10,
-            data_root="data",
         )
 
         # Should indicate no retries
@@ -88,27 +86,14 @@ class TestRetryFailedFlow:
             dataset="stock_daily",
             max_attempts=3,
             limit=10,
-            data_root="data",
         )
 
         # Should complete successfully
         assert "dataset" in result
 
-    def test_flow_closes_hub(self, patch_datahub):
-        """Test that flow properly closes DataHub."""
-        from ditto_port.jobs.flows.repair import retry_failed_flow
-
-        patch_datahub.ingestion_log.get_failed_dates.return_value = []
-
-        retry_failed_flow(
-            dataset="stock_daily",
-            max_attempts=3,
-            limit=10,
-            data_root="data",
-        )
-
-        # Verify hub.close() was called
-        patch_datahub.close.assert_called_once()
+    # Note: DataHub resource lifecycle is managed by the dependency injection container.
+    # The test_flow_closes_hub test is no longer applicable -
+    # DataHub does not have close() method.
 
 
 @pytest.mark.integration
@@ -131,7 +116,6 @@ class TestRepairHolesFlow:
 
         result = repair_holes_flow(
             dataset="stock_daily",
-            data_root="data",
         )
 
         # Should repair holes
@@ -149,7 +133,6 @@ class TestRepairHolesFlow:
 
         result = repair_holes_flow(
             dataset="stock_daily",
-            data_root="data",
         )
 
         # Should indicate no holes
@@ -171,7 +154,7 @@ class TestDailyRepairFlow:
         patch_datahub.calendar_store.get_range.return_value = ["2024-01-02"]
         patch_datahub.ingestion_log.get_ingested_dates.return_value = ["2024-01-02"]
 
-        result = daily_repair_flow(data_root="data")
+        result = daily_repair_flow()
 
         # Should run both operations
         assert "retry_result" in result
@@ -187,7 +170,7 @@ class TestDailyRepairFlow:
         patch_datahub.calendar_store.get_range.return_value = ["2024-01-02"]
         patch_datahub.ingestion_log.get_ingested_dates.return_value = ["2024-01-02"]
 
-        result = daily_repair_flow(data_root="data")
+        result = daily_repair_flow()
 
         # Should have summary
         assert "summary" in result or (

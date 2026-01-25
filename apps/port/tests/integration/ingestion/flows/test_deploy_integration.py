@@ -2,12 +2,39 @@
 
 # 测试文件允许函数内导入
 
+import importlib
+
 import pytest
+
+# 集成测试串行执行，避免并发副作用
+pytestmark = pytest.mark.serial
+
+
+@pytest.fixture(autouse=True)
+def ensure_flow_module_fresh() -> None:
+    """确保 flow 模块是最新加载的（防御性措施）."""
+    # 重新加载 flow 模块以确保获取最新的 flow 对象
+    try:
+        import ditto_port.jobs.flows
+
+        importlib.reload(ditto_port.jobs.flows)
+    except Exception:
+        pass  # 如果重新加载失败，忽略
 
 
 @pytest.mark.integration
 class TestDeployFunctions:
     """Tests for deploy module functions."""
+
+    @staticmethod
+    def _reload_flow_module() -> None:
+        """重新加载 flow 模块（静态方法供测试使用）."""
+        try:
+            import ditto_port.jobs.flows
+
+            importlib.reload(ditto_port.jobs.flows)
+        except Exception:
+            pass
 
     def test_list_flows(self):
         """Test that list_flows returns all available flows."""
@@ -35,8 +62,8 @@ class TestDeployFunctions:
         """Test that deploy creates Prefect deployments using Prefect 3.x API."""
         from ditto_port.jobs.flows.deploy import deploy_all_flows
 
-        # Mock prefect.deploy 函数 (在导入时)
-        mock_deploy = mocker.patch("prefect.deploy")
+        # Mock prefect.deploy 函数
+        mock_deploy = mocker.patch("ditto_port.jobs.flows.deploy.deploy")
         deploy_all_flows(
             work_pool_name="test-pool",
             image="test-image:latest",
@@ -48,7 +75,8 @@ class TestDeployFunctions:
 
     def test_get_flow_configs(self):
         """Test that _get_flow_configs returns correct configurations."""
-        from ditto_port.jobs.flows.deploy import _get_flow_configs
+        from ditto_port.jobs.flows.deploy import _get_flow_configs, _resolve_flow
+        from prefect import Flow
 
         configs = _get_flow_configs()
 
@@ -62,7 +90,11 @@ class TestDeployFunctions:
             assert hasattr(config, "description")
             assert hasattr(config, "parameters")
             assert hasattr(config, "tags")
-            assert callable(config.flow)
+            # flow 可能是 Flow 对象或返回 Flow 的函数
+            # 使用 _resolve_flow 来获取实际的 Flow 对象
+            flow = _resolve_flow(config.flow)
+            assert isinstance(flow, Flow)
+            assert hasattr(flow, "name")
             assert isinstance(config.deployment_name, str)
             assert isinstance(config.description, str)
             assert isinstance(config.parameters, dict)

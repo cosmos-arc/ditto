@@ -15,28 +15,34 @@ from tenacity import (
     wait_exponential,
 )
 
+from ditto_datahub.config import DataSourceSettings
+
 try:
     import keyring
+    import keyring.errors
 except ImportError:
     keyring = None
+    keyring_errors = None
+else:
+    keyring_errors = keyring.errors
 
 from ditto_datahub.sources.base import (
     SourceConfigurationError,
     SourceFetchError,
 )
-from ditto_datahub.sources.tushare.http_utils import (
+from ditto_datahub.sources.tushare.utils.http_utils import (
     map_http_error,
     response_to_dataframe,
     validate_tushare_response,
 )
-from ditto_datahub.sources.tushare.rate_limiter import (
+from ditto_datahub.sources.tushare.utils.rate_limiter import (
     TushareAPIGroup,
     TushareRateLimitConfig,
     TushareRateLimiter,
 )
 
 
-def _get_tushare_token(token: str | None = None) -> str:
+def _get_tushare_token(token: str | None = None) -> str:  # noqa: C901, PLR0912
     """
     Get Tushare token with graceful fallback.
 
@@ -79,7 +85,33 @@ def _get_tushare_token(token: str | None = None) -> str:
                 return keyring_token
         except Exception as e:
             # keyring may not be available or configured
-            logger.debug("Keyring not available, skipping", error=str(e))
+            if keyring_errors is not None:
+                # 已知 keyring 错误类型
+                if isinstance(
+                    e,
+                    (
+                        keyring_errors.KeyringError,
+                        keyring_errors.KeyringLocked,
+                        keyring_errors.PasswordSetError,
+                    ),
+                ):
+                    logger.debug(
+                        "Keyring not available, skipping",
+                        keyring_error=type(e).__name__,
+                    )
+                elif isinstance(e, OSError):
+                    logger.debug(
+                        "Keyring OS error, skipping",
+                        os_error=str(e),
+                    )
+                else:
+                    # 其他未知 keyring 错误
+                    logger.debug(
+                        "Keyring unknown error, skipping",
+                        error=str(e),
+                    )
+            else:
+                logger.debug("Keyring not available, skipping", error=str(e))
 
     # 3. Try ~/.ditto/secrets.toml (fallback)
     config_file = Path.home() / ".ditto" / "secrets.toml"
@@ -96,8 +128,18 @@ def _get_tushare_token(token: str | None = None) -> str:
                     source="secrets.toml",
                 )
                 return config_token
-        except Exception as e:
-            logger.debug("Failed to load secrets.toml", error=str(e))
+        except (OSError, tomllib.TOMLDecodeError) as e:
+            # 文件系统错误或 TOML 解析错误
+            logger.debug(
+                "Failed to load secrets.toml",
+                file_error=str(e),
+            )
+        except (AttributeError, TypeError) as e:
+            # 配置结构错误
+            logger.debug(
+                "Invalid secrets.toml structure",
+                error=str(e),
+            )
 
     # No token found
     raise SourceConfigurationError(
@@ -118,10 +160,12 @@ class TushareClient:
     - Multi-level rate limiting using limits library
     - Retry with exponential backoff (Tenacity)
     - Error handling and logging
+    - Configurable via DataSourceSettings
 
     Attributes:
         _token: Tushare API token.
         _limiter: Rate limiter instance.
+        _settings: Data source configuration.
 
     """
 
@@ -129,6 +173,7 @@ class TushareClient:
         self,
         token: str | None = None,
         rate_config: TushareRateLimitConfig | None = None,
+        settings: DataSourceSettings | None = None,
     ) -> None:
         """
         Initialize Tushare client.
@@ -136,28 +181,36 @@ class TushareClient:
         Args:
             token: API token (auto-detected if None).
             rate_config: 限流配置(默认免费账户).
+            settings: 数据源配置，包含 URL/timeout 等参数.
 
         Raises:
             SourceConfigurationError: If token not found.
 
         """
+        # 存储 settings
+        self._settings = settings or DataSourceSettings()
+
         # Get token with fallback chain
-        self._token = _get_tushare_token(token)
+        # 优先使用 settings 中的 token（如果设置）
+        token_to_use = token or self._settings.tushare_token or None
+        self._token = _get_tushare_token(token_to_use if token_to_use else None)
 
         # 配置限流器(默认免费账户)
         config = rate_config or TushareRateLimitConfig.free()
         self._limiter = TushareRateLimiter(config)
 
-        # Initialize HTTP client
+        # Initialize HTTP client with settings
         self._client = httpx.Client(
-            base_url="http://api.tushare.pro",
-            timeout=30.0,
+            base_url=self._settings.http_base_url,
+            timeout=self._settings.http_timeout,
             headers={"Content-Type": "application/json"},
         )
 
         logger.debug(
-            "TushareClient initialized with HTTP client",
+            "TushareClient initialized",
             event="tushare_client_init",
+            base_url=self._settings.http_base_url,
+            timeout=self._settings.http_timeout,
             rate_config=config,
         )
 

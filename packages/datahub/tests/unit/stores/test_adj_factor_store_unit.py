@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any
 
 import polars as pl
 import pytest
@@ -17,29 +16,9 @@ class TestAdjFactorStore:
     """Test suite for AdjFactorStore."""
 
     @pytest.fixture
-    def data_root(self, tmp_path: Path) -> Path:
-        """Create temporary data root directory."""
-        return tmp_path / "data"
-
-    @pytest.fixture
     def store(self, data_root: Path) -> AdjFactorStore:
         """Create AdjFactorStore instance."""
         return AdjFactorStore(data_root)
-
-    @pytest.fixture
-    def sample_df(self) -> pl.DataFrame:
-        """Create sample adjustment factor data."""
-        data: dict[str, list[Any]] = {
-            "sid": [1000001, 1000001, 1000001, 1000002],
-            "trade_date": [
-                date(2024, 1, 2),
-                date(2024, 1, 3),
-                date(2024, 1, 4),
-                date(2024, 1, 2),
-            ],
-            "adj_factor": [1.0, 1.0, 0.95, 1.0],
-        }
-        return pl.DataFrame(data)
 
     # ============ _get_path tests ============
 
@@ -80,10 +59,10 @@ class TestAdjFactorStore:
         assert len(df) == 0
 
     def test_read_no_filters(
-        self, store: AdjFactorStore, sample_df: pl.DataFrame
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test read without filters."""
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
         df = store.read("adj_factor")
         assert len(df) == 4
         assert "sid" in df.columns
@@ -91,35 +70,35 @@ class TestAdjFactorStore:
         assert "adj_factor" in df.columns
 
     def test_read_filter_by_sids(
-        self, store: AdjFactorStore, sample_df: pl.DataFrame
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test read filtered by security IDs."""
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
         df = store.read("adj_factor", sids=[1000001])
         assert len(df) == 3
         assert df["sid"].unique().to_list() == [1000001]
 
     def test_read_filter_by_date_range(
-        self, store: AdjFactorStore, sample_df: pl.DataFrame
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test read filtered by date range."""
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
         df = store.read("adj_factor", start_date="2024-01-02", end_date="2024-01-03")
         # 2024-01-02 has 2 records, 2024-01-03 has 1 record = 3 total
         assert len(df) == 3
 
     def test_read_multiple_years(
-        self, store: AdjFactorStore, sample_df: pl.DataFrame
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test read spanning multiple year partitions."""
         # Create data with 2023 dates for the 2023 partition
-        df_2023 = sample_df.with_columns(
+        df_2023 = sample_adj_factor_df.with_columns(
             pl.col("trade_date").map_elements(
                 lambda d: d.replace(year=2023), return_dtype=pl.Date
             )
         )
         store.write("adj_factor", df_2023, 2023)
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
 
         df = store.read("adj_factor", start_date="2023-01-01", end_date="2024-12-31")
         assert len(df) == 8  # 4 records per year
@@ -127,10 +106,10 @@ class TestAdjFactorStore:
     # ============ write tests ============
 
     def test_write_new_file(
-        self, store: AdjFactorStore, sample_df: pl.DataFrame, tmp_path: Path
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """Test write creates new file."""
-        result = store.write("adj_factor", sample_df, 2024)
+        result = store.write("adj_factor", sample_adj_factor_df, 2024)
 
         assert result.file_path == str(
             tmp_path / "data" / "adj_factor" / "2024.parquet"
@@ -139,11 +118,11 @@ class TestAdjFactorStore:
         assert len(result.checksum) == 32  # MD5 hex string
 
     def test_write_merge_with_existing(
-        self, store: AdjFactorStore, sample_df: pl.DataFrame
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test write merges with existing data."""
         # Write initial data
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
 
         # Write overlapping new data
         new_data = pl.DataFrame(
@@ -166,10 +145,10 @@ class TestAdjFactorStore:
         assert record["adj_factor"][0] == 0.92
 
     def test_write_overwrite_existing(
-        self, store: AdjFactorStore, sample_df: pl.DataFrame
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test write overwrites existing records with same key."""
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
 
         # Write same date/sid with different adj_factor
         updated = pl.DataFrame(
@@ -186,13 +165,13 @@ class TestAdjFactorStore:
         assert record["adj_factor"][0] == 0.85
 
     def test_write_creates_directory(
-        self, store: AdjFactorStore, sample_df: pl.DataFrame, tmp_path: Path
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """Test write creates dataset directory if not exists."""
         dataset_dir = tmp_path / "data" / "adj_factor"
         assert not dataset_dir.exists()
 
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
 
         assert dataset_dir.exists()
         assert (dataset_dir / "2024.parquet").exists()
@@ -204,11 +183,13 @@ class TestAdjFactorStore:
         years = store.get_years("adj_factor")
         assert years == []
 
-    def test_get_years(self, store: AdjFactorStore, sample_df: pl.DataFrame) -> None:
+    def test_get_years(
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
+    ) -> None:
         """Test get_years returns available years."""
-        store.write("adj_factor", sample_df, 2022)
-        store.write("adj_factor", sample_df, 2024)
-        store.write("adj_factor", sample_df, 2023)
+        store.write("adj_factor", sample_adj_factor_df, 2022)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2023)
 
         years = store.get_years("adj_factor")
         assert years == [2022, 2023, 2024]
@@ -231,10 +212,10 @@ class TestAdjFactorStore:
     # ============ delete tests ============
 
     def test_delete_year(
-        self, store: AdjFactorStore, sample_df: pl.DataFrame, tmp_path: Path
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """Test delete removes year partition."""
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
 
         result = store.delete("adj_factor", 2024)
         assert result is True
@@ -249,9 +230,11 @@ class TestAdjFactorStore:
 
     # ============ get_checksum tests ============
 
-    def test_get_checksum(self, store: AdjFactorStore, sample_df: pl.DataFrame) -> None:
+    def test_get_checksum(
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
+    ) -> None:
         """Test get_checksum returns MD5 hash."""
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
 
         checksum = store.get_checksum("adj_factor", 2024)
         assert len(checksum) == 32
@@ -270,17 +253,19 @@ class TestAdjFactorStore:
         count = store.count("adj_factor")
         assert count == 0
 
-    def test_count(self, store: AdjFactorStore, sample_df: pl.DataFrame) -> None:
+    def test_count(
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
+    ) -> None:
         """Test count returns total records."""
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
         count = store.count("adj_factor")
         assert count == 4
 
     def test_count_with_filters(
-        self, store: AdjFactorStore, sample_df: pl.DataFrame
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test count with filters applied."""
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
         count = store.count("adj_factor", sids=[1000001])
         assert count == 3
 
@@ -293,20 +278,20 @@ class TestAdjFactorStore:
         assert end is None
 
     def test_get_date_range(
-        self, store: AdjFactorStore, sample_df: pl.DataFrame
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test get_date_range returns min/max dates."""
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
         start, end = store.get_date_range("adj_factor")
         assert start == "2024-01-02"
         assert end == "2024-01-04"
 
     def test_get_date_range_multiple_years(
-        self, store: AdjFactorStore, sample_df: pl.DataFrame
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test get_date_range across multiple partitions."""
-        store.write("adj_factor", sample_df, 2023)
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2023)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
 
         start, end = store.get_date_range("adj_factor")
         assert start == "2024-01-02"
@@ -319,9 +304,11 @@ class TestAdjFactorStore:
         sids = store.list_sids("adj_factor")
         assert sids == []
 
-    def test_list_sids(self, store: AdjFactorStore, sample_df: pl.DataFrame) -> None:
+    def test_list_sids(
+        self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
+    ) -> None:
         """Test list_sids returns unique security IDs."""
-        store.write("adj_factor", sample_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, 2024)
         sids = store.list_sids("adj_factor")
         assert sids == [1000001, 1000002]
 
@@ -366,7 +353,7 @@ class TestAdjFactorStore:
 
 
 class TestSortingEnhanced:
-    """排序验证增强测试."""
+    """Tests for enhanced sorting validation."""
 
     @pytest.fixture
     def data_root(self, tmp_path: Path) -> Path:
@@ -379,7 +366,7 @@ class TestSortingEnhanced:
         return AdjFactorStore(data_root)
 
     def test_sorting_across_year_partitions(self, store: AdjFactorStore) -> None:
-        """跨年分区数据的排序正确性."""
+        """Tests sorting correctness across year partitions."""
         # Write 2023 data
         dates_2023 = [date(2023, 12, 31), date(2023, 12, 29), date(2023, 12, 30)]
         df_2023 = pl.DataFrame(
@@ -433,7 +420,7 @@ class TestSortingEnhanced:
             )
 
     def test_sorting_with_duplicate_keys_uses_last(self, store: AdjFactorStore) -> None:
-        """重复键的正确处理（keep="last"）。"""
+        """Tests correct handling of duplicate keys (keep='last')."""
         # Write initial data
         df1 = pl.DataFrame(
             {
@@ -472,7 +459,7 @@ class TestSortingEnhanced:
         assert record["adj_factor"][0] == 0.88
 
     def test_sorting_order_is_stable_after_merge(self, store: AdjFactorStore) -> None:
-        """合并后排序顺序的稳定性."""
+        """Tests sorting order stability after merge."""
         # Write first batch
         df1 = pl.DataFrame(
             {
@@ -517,7 +504,7 @@ class TestSortingEnhanced:
 
 
 class TestOnDuplicate:
-    """测试 OnDuplicate 语义。"""
+    """Tests for OnDuplicate semantics."""
 
     @pytest.fixture
     def data_root(self, tmp_path: Path) -> Path:
@@ -654,7 +641,7 @@ class TestOnDuplicate:
 
 
 class TestBatchInternalDeduplication:
-    """测试 batch 内部重复检测和去重。"""
+    """Tests for batch internal duplicate detection and deduplication."""
 
     @pytest.fixture
     def data_root(self, tmp_path: Path) -> Path:
@@ -667,51 +654,57 @@ class TestBatchInternalDeduplication:
         return AdjFactorStore(data_root)
 
     def test_write_with_batch_internal_duplicates(self, store: AdjFactorStore) -> None:
-        """测试 write 检测并去除 batch 内部重复（保留第一条）。"""
-        # 创建包含内部重复的数据
+        """Tests write detects and removes batch internal duplicates (keeps first)."""
+        # Create data with internal duplicates
         df_with_duplicates = pl.DataFrame(
             {
                 "sid": [1000001, 1000001, 1000002, 1000001, 1000002],
                 "trade_date": [
                     date(2024, 1, 2),
-                    date(2024, 1, 2),  # 重复 1000001/2024-01-02
+                    date(2024, 1, 2),  # duplicate 1000001/2024-01-02
                     date(2024, 1, 3),
                     date(2024, 1, 4),
-                    date(2024, 1, 3),  # 重复 1000002/2024-01-03
+                    date(2024, 1, 3),  # duplicate 1000002/2024-01-03
                 ],
-                "adj_factor": [1.0, 0.95, 1.0, 0.98, 0.92],  # 重复记录不同值
+                "adj_factor": [
+                    1.0,
+                    0.95,
+                    1.0,
+                    0.98,
+                    0.92,
+                ],  # duplicate records with different values
             }
         )
 
-        # 写入数据，应该自动去重（保留第一条）
+        # Write data, should auto-deduplicate (keep first)
         write_result = store.write("adj_factor", df_with_duplicates, 2024)
 
-        # 验证写入成功
+        # Verify write succeeded
         assert Path(write_result.file_path).exists()
         assert len(write_result.checksum) == 32
 
-        # 读取并验证去重结果（应该保留第一条）
+        # Read and verify deduplication result (should keep first)
         result = store.read("adj_factor")
-        assert len(result) == 3  # 3 条唯一记录
+        assert len(result) == 3  # 3 unique records
 
-        # 验证保留的是第一条记录的值
+        # Verify kept value is from first record
         record_1000001 = result.filter(
             (pl.col("sid") == 1000001) & (pl.col("trade_date") == date(2024, 1, 2))
         )
         assert len(record_1000001) == 1
-        assert record_1000001["adj_factor"][0] == 1.0  # 第一条记录的值
+        assert record_1000001["adj_factor"][0] == 1.0  # value of first record
 
         record_1000002 = result.filter(
             (pl.col("sid") == 1000002) & (pl.col("trade_date") == date(2024, 1, 3))
         )
         assert len(record_1000002) == 1
-        assert record_1000002["adj_factor"][0] == 1.0  # 第一条记录的值
+        assert record_1000002["adj_factor"][0] == 1.0  # value of first record
 
     def test_write_without_batch_internal_duplicates(
         self, store: AdjFactorStore
     ) -> None:
-        """测试不包含内部重复的 batch 正常写入。"""
-        # 创建不包含重复的数据
+        """Tests batch without internal duplicates writes normally."""
+        # Create data without duplicates
         df_no_duplicates = pl.DataFrame(
             {
                 "sid": [1000001, 1000001, 1000002],
@@ -720,17 +713,17 @@ class TestBatchInternalDeduplication:
             }
         )
 
-        # 写入数据
+        # Write data
         write_result = store.write("adj_factor", df_no_duplicates, 2024)
 
-        # 验证写入成功
+        # Verify write succeeded
         assert Path(write_result.file_path).exists()
         result = store.read("adj_factor")
-        assert len(result) == 3  # 没有重复，所有记录都保留
+        assert len(result) == 3  # no duplicates, all records kept
 
 
 class TestReadDeduplicationAndSorting:
-    """测试 read 的去重和排序逻辑。"""
+    """Tests for read deduplication and sorting logic."""
 
     @pytest.fixture
     def data_root(self, tmp_path: Path) -> Path:
@@ -743,8 +736,8 @@ class TestReadDeduplicationAndSorting:
         return AdjFactorStore(data_root)
 
     def test_read_deduplicates_with_keep_last(self, store: AdjFactorStore) -> None:
-        """测试 read 使用 unique(keep='last') 去重。"""
-        # 创建包含重复的数据（通过多次写入制造）
+        """Tests read uses unique(keep='last') for deduplication."""
+        # Create data with duplicates (via multiple writes)
         df1 = pl.DataFrame(
             {
                 "sid": [1000001, 1000001, 1000002, 1000002],
@@ -759,39 +752,39 @@ class TestReadDeduplicationAndSorting:
         )
         store.write("adj_factor", df1, 2024)
 
-        # 再次写入包含重复键的数据（更新现有记录）
+        # Write data with duplicate keys again (update existing records)
         df2 = pl.DataFrame(
             {
                 "sid": [1000001, 1000002],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 3)],
-                "adj_factor": [0.92, 0.88],  # 更新后的值
+                "adj_factor": [0.92, 0.88],  # updated value
             }
         )
         store.write("adj_factor", df2, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
 
-        # 读取数据，read 应该使用 unique(keep='last')
+        # Read data, read should use unique(keep='last')
         result = store.read("adj_factor")
 
-        # 验证去重后保留最后一条记录（4 条唯一键）
+        # Verify deduplication keeps last record(4 unique keys)
         assert len(result) == 4
 
-        # 验证 1000001/2024-01-02 使用的是最后写入的值
+        # Verify 1000001/2024-01-02 uses last written value
         record = result.filter(
             (pl.col("sid") == 1000001) & (pl.col("trade_date") == date(2024, 1, 2))
         )
         assert len(record) == 1
-        assert record["adj_factor"][0] == 0.92  # 最后写入的值
+        assert record["adj_factor"][0] == 0.92
 
-        # 验证 1000002/2024-01-03 使用的是最后写入的值
+        # Verify 1000002/2024-01-03 uses last written value
         record = result.filter(
             (pl.col("sid") == 1000002) & (pl.col("trade_date") == date(2024, 1, 3))
         )
         assert len(record) == 1
-        assert record["adj_factor"][0] == 0.88  # 最后写入的值
+        assert record["adj_factor"][0] == 0.88  # last written value
 
     def test_read_returns_sorted_results(self, store: AdjFactorStore) -> None:
-        """测试 read 返回按 (sid, trade_date) 排序的结果。"""
-        # 创建未排序的数据
+        """Tests read returns results sorted by (sid, trade_date)."""
+        # Create unsorted data
         unsorted_df = pl.DataFrame(
             {
                 "sid": [1000002, 1000001, 1000002, 1000001, 1000003],
@@ -808,10 +801,10 @@ class TestReadDeduplicationAndSorting:
 
         store.write("adj_factor", unsorted_df, 2024)
 
-        # 读取数据
+        # Read data
         result = store.read("adj_factor")
 
-        # 验证结果按 (sid, trade_date) 排序
+        # Verify results are sorted by (sid, trade_date)
         assert len(result) == 5
         for i in range(len(result) - 1):
             current_sid = result["sid"][i]
@@ -819,14 +812,14 @@ class TestReadDeduplicationAndSorting:
             current_date = result["trade_date"][i]
             next_date = result["trade_date"][i + 1]
 
-            # 验证排序：sid 升序，相同 sid 时 trade_date 升序
+            # Verify sorting: sid ascending, trade_date ascending for same sid
             assert current_sid < next_sid or (
                 current_sid == next_sid and current_date <= next_date
             )
 
 
 class TestDateNormalization:
-    """测试 trade_date 类型规范化的完整覆盖。"""
+    """Tests for complete trade_date type normalization coverage."""
 
     @pytest.fixture
     def data_root(self, tmp_path: Path) -> Path:
@@ -839,8 +832,8 @@ class TestDateNormalization:
         return AdjFactorStore(data_root)
 
     def test_write_with_string_trade_date(self, store: AdjFactorStore) -> None:
-        """测试 write 规范化 string 类型的 trade_date。"""
-        # 创建包含 string trade_date 的 DataFrame
+        """Tests write normalizes string type trade_date."""
+        # Create DataFrame with string trade_date
         df = pl.DataFrame(
             {
                 "sid": [1000001, 1000001],
@@ -849,17 +842,17 @@ class TestDateNormalization:
             }
         )
 
-        # 写入应该规范化为 Date 类型
+        # Write should normalize to Date type
         _result = store.write("adj_factor", df, 2024)
 
-        # 读取并验证
+        # Read and verify
         result = store.read("adj_factor")
         assert result["trade_date"].dtype == pl.Date
         assert len(result) == 2
 
     def test_write_with_date_trade_date(self, store: AdjFactorStore) -> None:
-        """测试 write 保持 Date 类型不变。"""
-        # 创建包含 Date 类型的 DataFrame
+        """Tests write preserves Date type."""
+        # Create DataFrame with Date type
         df = pl.DataFrame(
             {
                 "sid": [1000001, 1000001],
@@ -868,17 +861,17 @@ class TestDateNormalization:
             }
         )
 
-        # 写入
+        # Write
         _result = store.write("adj_factor", df, 2024)
 
-        # 读取并验证
+        # Read and verify
         result = store.read("adj_factor")
         assert result["trade_date"].dtype == pl.Date
         assert len(result) == 2
 
     def test_write_with_datetime_trade_date(self, store: AdjFactorStore) -> None:
-        """测试 write 规范化 datetime 类型的 trade_date。"""
-        # 创建包含 datetime 类型的 DataFrame
+        """Tests write normalizes datetime type trade_date."""
+        # Create DataFrame with datetime type
         df = pl.DataFrame(
             {
                 "sid": [1000001, 1000001],
@@ -890,10 +883,10 @@ class TestDateNormalization:
             }
         )
 
-        # 写入应该规范化为 Date 类型
+        # Write should normalize to Date type
         _result = store.write("adj_factor", df, 2024)
 
-        # 读取并验证
+        # Read and verify
         result = store.read("adj_factor")
         assert result["trade_date"].dtype == pl.Date
         assert len(result) == 2
@@ -901,8 +894,8 @@ class TestDateNormalization:
     def test_write_with_invalid_date_format_raises_error(
         self, store: AdjFactorStore
     ) -> None:
-        """测试 write 对无效日期格式抛出错误。"""
-        # 创建包含无效日期格式的 DataFrame
+        """Tests write raises error on invalid date format."""
+        # Create DataFrame with invalid date format
         df = pl.DataFrame(
             {
                 "sid": [1000001],
@@ -911,7 +904,7 @@ class TestDateNormalization:
             }
         )
 
-        # 应该抛出异常（polars 解析日期失败）
+        # Should raise exception (polars date parsing failed)
         with pytest.raises(
             pl.exceptions.InvalidOperationError,
             match="conversion from `str` to `date` failed",
@@ -920,7 +913,7 @@ class TestDateNormalization:
 
 
 class TestWriteReturnValues:
-    """测试 write 返回值的完整性。"""
+    """Tests for write return value completeness."""
 
     @pytest.fixture
     def data_root(self, tmp_path: Path) -> Path:
@@ -933,7 +926,7 @@ class TestWriteReturnValues:
         return AdjFactorStore(data_root)
 
     def test_write_returns_file_path_and_checksum(self, store: AdjFactorStore) -> None:
-        """测试 write 返回正确的文件路径和校验和。"""
+        """Tests write returns correct file path and checksum."""
         df = pl.DataFrame(
             {
                 "sid": [1000001, 1000001],
@@ -944,18 +937,18 @@ class TestWriteReturnValues:
 
         result = store.write("adj_factor", df, 2024)
 
-        # 验证返回值
+        # Verify return values
         assert isinstance(result.file_path, str)
         assert isinstance(result.checksum, str)
         assert len(result.checksum) == 32  # MD5 hex string
         assert Path(result.file_path).exists()
 
-        # 验证校验和与文件一致
+        # Verify checksum matches file
         actual_checksum = file_md5(Path(result.file_path))
         assert result.checksum == actual_checksum
 
     def test_write_merge_returns_updated_checksum(self, store: AdjFactorStore) -> None:
-        """测试合并写入后返回的校验和会更新。"""
+        """Tests returned checksum updates after merge write."""
         df1 = pl.DataFrame(
             {
                 "sid": [1000001],
@@ -964,10 +957,10 @@ class TestWriteReturnValues:
             }
         )
 
-        # 第一次写入
+        # First write
         result1 = store.write("adj_factor", df1, 2024)
 
-        # 追加写入
+        # Append write
         df2 = pl.DataFrame(
             {
                 "sid": [1000002],
@@ -979,13 +972,13 @@ class TestWriteReturnValues:
             "adj_factor", df2, 2024, on_duplicate=OnDuplicate.KEEP_LAST
         )
 
-        # 验证文件路径相同，但校验和不同（因为内容变了）
+        # Verify same file path but different checksum (content changed)
         assert result1.file_path == result2.file_path
         assert result1.checksum != result2.checksum
 
 
 class TestEdgeCases:
-    """边界条件测试。"""
+    """Tests for edge cases."""
 
     @pytest.fixture
     def data_root(self, tmp_path: Path) -> Path:
@@ -998,8 +991,8 @@ class TestEdgeCases:
         return AdjFactorStore(data_root)
 
     def test_read_with_all_filters(self, store: AdjFactorStore) -> None:
-        """测试 read 同时使用所有过滤条件。"""
-        # 准备测试数据
+        """Tests read with all filters applied simultaneously."""
+        # Prepare test data
         df = pl.DataFrame(
             {
                 "sid": [1000001, 1000001, 1000002, 1000002, 1000003],
@@ -1015,7 +1008,7 @@ class TestEdgeCases:
         )
         store.write("adj_factor", df, 2024)
 
-        # 使用所有过滤条件
+        # Use all filters
         result = store.read(
             "adj_factor",
             sids=[1000001, 1000002],
@@ -1023,8 +1016,8 @@ class TestEdgeCases:
             end_date="2024-01-05",
         )
 
-        # 验证结果
-        assert len(result) == 2  # 1000001/2024-01-05 和 1000002/2024-01-03
+        # Verify result
+        assert len(result) == 2  # 1000001/2024-01-05 and 1000002/2024-01-03
         assert result["sid"].to_list() == [1000001, 1000002]
         assert result["trade_date"].to_list() == [
             date(2024, 1, 5),
@@ -1032,8 +1025,8 @@ class TestEdgeCases:
         ]
 
     def test_read_with_default_year_range(self, store: AdjFactorStore) -> None:
-        """测试 read 在不指定日期时使用默认年份范围（1990-2099）。"""
-        # 写入 2024 年数据
+        """Tests read uses default year range (1990-2099) when dates not specified."""
+        # Write 2024 data
         df = pl.DataFrame(
             {
                 "sid": [1000001],
@@ -1043,12 +1036,12 @@ class TestEdgeCases:
         )
         store.write("adj_factor", df, 2024)
 
-        # 不指定日期范围，应该能读取到所有数据
+        # No date range specified, should read all data
         result = store.read("adj_factor")
         assert len(result) == 1
 
     def test_write_single_row(self, store: AdjFactorStore) -> None:
-        """测试写入单行数据。"""
+        """Tests writing single row data."""
         df = pl.DataFrame(
             {
                 "sid": [1000001],
@@ -1059,14 +1052,14 @@ class TestEdgeCases:
 
         write_result = store.write("adj_factor", df, 2024)
 
-        # 验证写入成功
+        # Verify write succeeded
         assert Path(write_result.file_path).exists()
         result = store.read("adj_factor")
         assert len(result) == 1
         assert result["sid"][0] == 1000001
 
     def test_write_empty_dataframe(self, store: AdjFactorStore) -> None:
-        """测试写入空 DataFrame。"""
+        """Tests writing empty DataFrame."""
         df = pl.DataFrame(
             {
                 "sid": [],
@@ -1075,19 +1068,19 @@ class TestEdgeCases:
             }
         )
 
-        # 应该能写入空 DataFrame
+        # Should be able to write empty DataFrame
         write_result = store.write("adj_factor", df, 2024)
 
-        # 验证文件被创建
+        # Verify file was created
         assert Path(write_result.file_path).exists()
 
-        # 读取应该返回空结果
+        # Read should return empty result
         result = store.read("adj_factor")
         assert len(result) == 0
 
 
 class TestMultipleYearPartitions:
-    """测试多年份分区的边界情况。"""
+    """Tests for multi-year partition edge cases."""
 
     @pytest.fixture
     def data_root(self, tmp_path: Path) -> Path:
@@ -1100,8 +1093,8 @@ class TestMultipleYearPartitions:
         return AdjFactorStore(data_root)
 
     def test_read_with_year_boundary_dates(self, store: AdjFactorStore) -> None:
-        """测试跨年边界日期的读取。"""
-        # 写入跨年数据
+        """Tests reading across year boundary dates."""
+        # Write cross-year data
         df_2023 = pl.DataFrame(
             {
                 "sid": [1000001, 1000001],
@@ -1119,18 +1112,18 @@ class TestMultipleYearPartitions:
         store.write("adj_factor", df_2023, 2023)
         store.write("adj_factor", df_2024, 2024)
 
-        # 查询跨年数据
+        # Query cross-year data
         result = store.read(
             "adj_factor",
             start_date="2023-12-30",
             end_date="2024-01-02",
         )
 
-        # 验证结果包含两个分区的数据
+        # Verify result contains data from both partitions
         assert len(result) == 4
 
     def test_write_nonexistent_year_partition(self, store: AdjFactorStore) -> None:
-        """测试写入到不存在的年份分区。"""
+        """Tests writing to non-existent year partition."""
         df = pl.DataFrame(
             {
                 "sid": [1000001],
@@ -1139,7 +1132,7 @@ class TestMultipleYearPartitions:
             }
         )
 
-        # 应该能创建新分区
+        # Should be able to create new partition
         write_result = store.write("adj_factor", df, 2099)
 
         assert Path(write_result.file_path).exists()

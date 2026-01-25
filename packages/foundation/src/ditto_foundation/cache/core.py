@@ -32,9 +32,12 @@ class CacheStats:
     evict_count: int
 
 
-class DataCache:
+class DataCache[T]:
     """
-    基于 cachebox 的通用缓存封装层.
+    基于 cachebox 的通用缓存封装层（泛型版本）.
+
+    类型参数:
+        T: 缓存值的类型
 
     特性：
     - TTL 过期和 LRU 淘汰（由 cachebox.VTTLCache 提供）
@@ -77,7 +80,7 @@ class DataCache:
         self._invalidation_count = 0
         self._evict_count = 0
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: str, default: T | None = None) -> T | None:
         """
         获取缓存值（记录指标）.
 
@@ -88,11 +91,11 @@ class DataCache:
 
         Returns:
         -------
-            缓存值或默认值
+            缓存值或默认值（类型为 T | None）
 
         """
         try:
-            value = self._cache[key]
+            value: T = self._cache[key]
             if self._enable_metrics:
                 M.cache_hit.add(1, {"type": "data_cache"})
             self._hit_count += 1  # 同步维护本地计数器
@@ -103,7 +106,7 @@ class DataCache:
             self._miss_count += 1  # 同步维护本地计数器
             return default
 
-    def set(self, key: str, value: Any, ttl: int | None = None) -> None:
+    def set(self, key: str, value: T, ttl: int | None = None) -> None:
         """
         设置缓存值.
 

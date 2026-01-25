@@ -29,8 +29,8 @@ from ditto_port.jobs.flows import (
 class FlowDeploymentConfig:
     """Flow 部署配置 (Prefect 3.x)。"""
 
-    flow: Callable[[], Flow[Any, Any]]
-    """Flow 函数(延迟导入)"""
+    flow: Flow[Any, Any] | Callable[[], Flow[Any, Any]]
+    """Flow 对象或返回 Flow 对象的函数"""
     deployment_name: str
     """部署名称"""
     description: str
@@ -42,7 +42,11 @@ class FlowDeploymentConfig:
 
 
 def _get_flow(name: str) -> Flow[Any, Any]:
-    """动态导入 flow。"""
+    """
+    动态导入 flow 对象.
+
+    注意: 在 Prefect 3.x 中，flow 装饰器直接返回 Flow 对象，无需调用.
+    """
     flow_map: dict[str, Flow[Any, Any]] = {
         "daily_ingestion_flow": daily_ingestion_flow,
         "daily_repair_flow": daily_repair_flow,
@@ -53,7 +57,36 @@ def _get_flow(name: str) -> Flow[Any, Any]:
 
     if name not in flow_map:
         raise ValueError(f"Unknown flow: {name}")
+    # Flow 对象已经由装饰器返回，直接返回即可
     return flow_map[name]
+
+
+def _resolve_flow(
+    flow: Flow[Any, Any] | Callable[[], Flow[Any, Any]],
+) -> Flow[Any, Any]:
+    """
+    解析 flow 对象（处理 Flow 对象或返回 Flow 的函数）.
+
+    Args:
+        flow: Flow 对象或返回 Flow 对象的函数
+
+    Returns:
+        Flow 对象
+
+    """
+    # 检查是否已经是 Flow 对象（通过检查 Flow 对象的特征属性）
+    # Flow 对象有 name, description, to_deployment 等属性
+    if hasattr(flow, "name") and hasattr(flow, "to_deployment"):
+        return flow  # type: ignore[return-value]
+
+    # 如果是可调用对象（lambda 或函数），调用它获取 Flow
+    if callable(flow):
+        result = flow()
+        if hasattr(result, "name") and hasattr(result, "to_deployment"):
+            return result  # type: ignore[return-value]
+
+    # 如果都不是，尝试直接返回（可能会失败，但至少抛出明确的错误）
+    return flow  # type: ignore[return-value]
 
 
 def _get_flow_configs() -> list[FlowDeploymentConfig]:
@@ -63,21 +96,21 @@ def _get_flow_configs() -> list[FlowDeploymentConfig]:
             flow=lambda: _get_flow("daily_ingestion_flow"),
             deployment_name="daily-ingestion-prod",
             description="每日增量数据摄取流程 (T0 → T1 → T3)",
-            parameters={"trade_date": "{{ date }}", "data_root": "data"},
+            parameters={"trade_date": "{{ date }}"},
             tags=["production", "daily", "ingestion"],
         ),
         FlowDeploymentConfig(
             flow=lambda: _get_flow("daily_repair_flow"),
             deployment_name="daily-repair-prod",
             description="每日修补流程 (重试 + 空洞扫描)",
-            parameters={"data_root": "data"},
+            parameters={},
             tags=["production", "daily", "repair"],
         ),
         FlowDeploymentConfig(
             flow=lambda: _get_flow("retry_failed_flow"),
             deployment_name="retry-failed-prod",
             description="重试失败的任务",
-            parameters={"dataset": "stock_daily", "data_root": "data"},
+            parameters={"dataset": "stock_daily"},
             tags=["production", "retry", "repair"],
         ),
         FlowDeploymentConfig(
@@ -89,7 +122,6 @@ def _get_flow_configs() -> list[FlowDeploymentConfig]:
                     "dataset": "stock_daily",
                     "start_date": "2020-01-01",
                     "end_date": "2024-12-31",
-                    "data_root": "data",
                 }
             },
             tags=["production", "backfill", "manual"],
@@ -98,7 +130,7 @@ def _get_flow_configs() -> list[FlowDeploymentConfig]:
             flow=lambda: _get_flow("repair_holes_flow"),
             deployment_name="repair-holes-prod",
             description="扫描并修补数据空洞",
-            parameters={"dataset": "stock_daily", "data_root": "data"},
+            parameters={"dataset": "stock_daily"},
             tags=["production", "repair", "manual"],
         ),
     ]
@@ -132,7 +164,7 @@ def deploy_all_flows(
     # 准备部署列表 (使用 to_deployment 方法)
     deployments: list[Any] = []
     for config in _get_flow_configs():
-        flow = config.flow()
+        flow = _resolve_flow(config.flow)
         deployment = flow.to_deployment(
             name=config.deployment_name,
             description=config.description,
@@ -164,7 +196,7 @@ def list_flows() -> dict[str, str]:
     flow_descriptions: dict[str, str] = {}
     for config in _get_flow_configs():
         # 从配置中提取 flow 名称
-        flow = config.flow()
+        flow = _resolve_flow(config.flow)
         flow_descriptions[flow.name] = config.description
     return flow_descriptions
 

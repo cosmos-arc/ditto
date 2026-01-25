@@ -4,10 +4,12 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.accessors.bars.adjustment import (
+from ditto_datahub.accessors.internal.adjustment import (
     apply_hfq_adj,
     apply_qfq_adj,
-    filter_baseline_by_asof,
+)
+from ditto_datahub.accessors.internal.pit import (
+    filter_by_knowledge_date,
     parse_asof_date,
 )
 
@@ -29,7 +31,7 @@ class TestParseAsofDate:
 
 
 class TestFilterBaselineByAsof:
-    """Tests for filter_baseline_by_asof function."""
+    """Tests for filter_by_knowledge_date function."""
 
     def test_filter_with_knowledge_date(self) -> None:
         """Test filtering with knowledge_date column."""
@@ -54,7 +56,7 @@ class TestFilterBaselineByAsof:
             }
         )
 
-        result = filter_baseline_by_asof(adj_df, date(2024, 1, 3))
+        result = filter_by_knowledge_date(adj_df, date(2024, 1, 3))
 
         # Should include rows with knowledge_date <= 2024-01-03
         assert len(result) == 4
@@ -89,7 +91,7 @@ class TestFilterBaselineByAsof:
             }
         )
 
-        result = filter_baseline_by_asof(adj_df, date(2024, 1, 2))
+        result = filter_by_knowledge_date(adj_df, date(2024, 1, 2))
 
         # Should include rows with trade_date <= 2024-01-02
         assert len(result) == 4
@@ -129,7 +131,7 @@ class TestApplyQfqAdj:
             }
         )
 
-        # 调整因子数据
+        # [REVIEW]
         adj_df = pl.DataFrame(
             {
                 "sid": [1, 1, 1],
@@ -183,7 +185,7 @@ class TestApplyQfqAdj:
             }
         )
 
-        # 调整因子数据 with knowledge_date
+        # [REVIEW] with knowledge_date
         adj_df = pl.DataFrame(
             {
                 "sid": [1, 1, 1, 1],

@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_datahub.accessors.index import IndexAccessor
+from ditto_datahub.accessors.index_accessor import IndexAccessor
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.security_store import SecurityStore
@@ -41,7 +41,7 @@ def index_accessor(
     )
 
 
-@pytest.mark.pit
+@pytest.mark.integration
 class TestIndexAccessorWithMocks:
     """
     Tests for IndexAccessor with mocked dependencies.
@@ -80,10 +80,8 @@ class TestIndexAccessorWithMocks:
         # Act
         result = index_accessor.get_bars(
             sids=[1, 2],
-            symbols=None,
             start="2024-01-01",
             end="2024-01-31",
-            asof=None,
         )
 
         # Assert
@@ -95,90 +93,16 @@ class TestIndexAccessorWithMocks:
             end_date="2024-01-31",
         )
 
-    def test_get_bars_by_symbols(
-        self,
-        index_accessor: IndexAccessor,
-        mock_bars_store: BarsStore,
-        mock_security_store: SecurityStore,
-    ) -> None:
-        """Test getting index bars by symbols (requires SID resolution)."""
-        # Arrange
-        mock_df = pl.DataFrame(
-            {
-                "sid": [1, 1],
-                "trade_date": ["2024-01-02", "2024-01-03"],
-                "close": [3020.0, 3120.0],
-            }
-        )
-        mock_bars_store.read.return_value = mock_df
-        mock_security_store.resolve_sid.return_value = 1
-
-        # Act
-        result = index_accessor.get_bars(
-            sids=None,
-            symbols=["000300.SH"],
-            start="2024-01-01",
-            end="2024-01-31",
-            asof=None,
-        )
-
-        # Assert
-        assert len(result) == 2
-        mock_security_store.resolve_sid.assert_called_once_with(
-            "000300.SH", "tushare", None
-        )
-        mock_bars_store.read.assert_called_once_with(
-            dataset="index_daily",
-            sids=[1],
-            start_date="2024-01-01",
-            end_date="2024-01-31",
-        )
-
-    def test_get_bars_with_asof(
-        self,
-        index_accessor: IndexAccessor,
-        mock_bars_store: BarsStore,
-        mock_security_store: SecurityStore,
-    ) -> None:
-        """Test getting index bars with asof parameter."""
-        # Arrange
-        mock_df = pl.DataFrame(
-            {
-                "sid": [1],
-                "trade_date": ["2024-01-02"],
-                "close": [3020.0],
-            }
-        )
-        mock_bars_store.read.return_value = mock_df
-        mock_security_store.resolve_sid.return_value = 1
-
-        # Act
-        result = index_accessor.get_bars(
-            sids=None,
-            symbols=["000300.SH"],
-            start="2024-01-01",
-            end="2024-01-31",
-            asof="2024-01-15",
-        )
-
-        # Assert
-        assert len(result) == 1
-        mock_security_store.resolve_sid.assert_called_once_with(
-            "000300.SH", "tushare", "2024-01-15"
-        )
-
     def test_get_bars_raises_error_when_no_sids_or_symbols(
         self, index_accessor: IndexAccessor
     ) -> None:
-        """Test that get_bars raises error when both sids and symbols are None."""
+        """Test that get_bars raises error when sids is None."""
         # Act & Assert
-        with pytest.raises(ValueError, match="Either sids or symbols"):
+        with pytest.raises(ValueError, match="sids must be provided"):
             index_accessor.get_bars(
                 sids=None,
-                symbols=None,
                 start="2024-01-01",
                 end="2024-01-31",
-                asof=None,
             )
 
     def test_get_constituents_basic(

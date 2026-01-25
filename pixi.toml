@@ -37,7 +37,7 @@ pydantic-settings = ">=2.6,<3"
 # 网络请求
 httpx = ">=0.28,<1"
 aiohttp = ">=3.11,<4"
-requests = ">=2.32.3,<2.32.4"  # multilspy 依赖
+requests = ">=2.32.3,<2.32.4" # multilspy 依赖
 
 # 配置与日志
 python-dotenv = ">=1.0,<2"
@@ -84,6 +84,9 @@ tenacity = ">=8.0,<9"
 limits = ">=3.15"
 keyring = ">=25.0,<26"
 typer = ">=0.12,<1"
+
+# 依赖注入
+dishka = ">=0.5,<1"
 
 # ==========================================================
 # 开发环境 Feature
@@ -134,6 +137,13 @@ default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
 
 # ==========================================================
+# 开发环境专属任务
+# ==========================================================
+[feature.dev.tasks]
+# 分析慢速测试
+analyze-slow-tests = "python scripts/analyze_slow_tests.py"
+
+# ==========================================================
 # 任务定义
 # ==========================================================
 [tasks]
@@ -146,8 +156,14 @@ lint = "ruff check ."
 # Format：代码格式化
 fmt = "ruff format ."
 
-# Type：类型检查（使用包装脚本）
+# Format check：只检查不修改（供 CI 使用）
+fmt-check = "ruff format --check ."
+
+# Type：类型检查（使用包装脚本，参数驱动）
 type = "python scripts/type.py"
+
+# Type all：完整类型检查（供 CI 使用）
+type-all = "python scripts/type.py --all"
 
 # ──────────────────────────────────────────────────────────
 # 测试（使用包装脚本，支持参数驱动）
@@ -155,17 +171,20 @@ type = "python scripts/type.py"
 # pixi run test              # 默认：单元测试（并行）
 # pixi run test --unit       # 只跑单元测试（并行）
 # pixi run test --integration # 只跑集成测试（串行）
-# pixi run test --fast       # 快速测试（跳过 slow/integration/e2e）
+# pixi run test --fast       # 快速测试（跳过 slow/integration）
 # pixi run test --cov        # 带覆盖率报告
 # pixi run test --cov-xml    # 覆盖率 XML（CI 用）
 # pixi run test --snapshot   # 支持 inline-snapshot（串行）
 test = "python scripts/test.py"
 
+# Test with coverage XML（供 CI 使用）
+test-cov-xml = "python scripts/test.py --cov-xml"
+
 # ──────────────────────────────────────────────────────────
 # 组合命令
 # ──────────────────────────────────────────────────────────
 # Check：快速验证（开发时用）
-check = { depends-on = ["lint", "fmt", "type", "test-fast"] }
+check = { depends-on = ["lint", "fmt", "type"] }
 
 # CI：完整检查（CI 用）
 ci = { depends-on = ["lint", "fmt-check", "type-all", "test-cov-xml"] }

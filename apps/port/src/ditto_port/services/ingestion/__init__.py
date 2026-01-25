@@ -1,7 +1,9 @@
 """
-Ingestion Service 模块。
+Ingestion Service 模块.
 
 本模块提供数据摄取相关的服务层组件。
-
-本文件的各个组件将在后续任务中实现。
 """
+
+from ditto_port.services.ingestion.factory import create_coordinator
+
+__all__ = ["create_coordinator"]

@@ -1,5 +1,11 @@
 # Ditto Observability Deployment Guide
 
+**版本**: v0.2.0
+**最后更新**: 2026-01-23
+**状态**: ✅ 稳定
+
+## 概要
+
 This directory contains the Docker Compose configuration for deploying Ditto observability stack.
 
 ## Services
@@ -220,3 +226,19 @@ For production deployment:
 - Configure TLS certificates
 - Restrict network access
 - Enable audit logging
+
+## 变更记录
+
+### v0.2.0 (2026-01-23)
+**新增**
+- README 标准化，添加版本、日期、状态元数据
+- 添加变更记录部分
+
+**改进**
+- 完善文档结构
+
+### v0.1.0 (2025-12-23)
+**新增**
+- 初始可观测性部署配置
+- Docker Compose 配置
+- Grafana 仪表盘配置

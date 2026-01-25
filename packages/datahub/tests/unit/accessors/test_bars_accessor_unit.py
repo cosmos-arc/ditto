@@ -10,16 +10,13 @@ from tempfile import TemporaryDirectory
 import polars as pl
 import pytest
 from ditto_datahub.accessors import AdjType, BarsQuery
-from ditto_datahub.accessors.bars.accessor import BarsAccessor, _ResolvedQuery
-from ditto_datahub.dq.engine import DQEngine
+from ditto_datahub.accessors.bars_accessor import BarsAccessor
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
 from ditto_foundation.concurrency import FileLockManager
-from pytest_mock import MockerFixture
 
 
 class TestBarsQuery:
@@ -32,8 +29,6 @@ class TestBarsQuery:
 
         # Assert
         assert query.sids is None
-        assert query.src_codes is None
-        assert query.symbols is None
         assert query.start is None
         assert query.end is None
         assert query.adj == AdjType.NONE
@@ -49,8 +44,6 @@ class TestBarsQuery:
         # Act
         query = BarsQuery(
             sids=[1, 2, 3],
-            src_codes=["600000.SH", "600001.SH"],
-            symbols=["600000", "600001"],
             start="2024-01-01",
             end="2024-01-31",
             adj=AdjType.QFQ,
@@ -64,8 +57,6 @@ class TestBarsQuery:
 
         # Assert
         assert query.sids == [1, 2, 3]
-        assert query.src_codes == ["600000.SH", "600001.SH"]
-        assert query.symbols == ["600000", "600001"]
         assert query.start == "2024-01-01"
         assert query.end == "2024-01-31"
         assert query.adj == AdjType.QFQ
@@ -136,150 +127,7 @@ class TestBarsQuery:
         assert query.with_symbol is False  # Default
 
 
-class TestResolvedQuery:
-    """Tests for _ResolvedQuery dataclass."""
-
-    def test_resolved_query_creation_with_all_fields(self) -> None:
-        """Test _ResolvedQuery can be created with all fields."""
-        # Act
-        resolved = _ResolvedQuery(
-            sids=[1, 2, 3],
-            start=date(2024, 1, 1),
-            end=date(2024, 1, 31),
-            asof=date(2024, 1, 15),
-            asset_class="stock",
-        )
-
-        # Assert
-        assert resolved.sids == [1, 2, 3]
-        assert resolved.start == date(2024, 1, 1)
-        assert resolved.end == date(2024, 1, 31)
-        assert resolved.asof == date(2024, 1, 15)
-        assert resolved.asset_class == "stock"
-
-    def test_resolved_query_with_none_dates(self) -> None:
-        """Test _ResolvedQuery with None date values."""
-        # Act
-        resolved = _ResolvedQuery(
-            sids=[1000001],
-            start=None,
-            end=None,
-            asof=None,
-            asset_class=None,
-        )
-
-        # Assert
-        assert resolved.sids == [1000001]
-        assert resolved.start is None
-        assert resolved.end is None
-        assert resolved.asof is None
-        assert resolved.asset_class is None
-
-    def test_resolved_query_with_etf_asset_class(self) -> None:
-        """Test _ResolvedQuery with ETF asset class."""
-        # Act
-        resolved = _ResolvedQuery(
-            sids=[2000001, 2000002],
-            start=date(2024, 1, 1),
-            end=date(2024, 1, 31),
-            asof=None,
-            asset_class="etf",
-        )
-
-        # Assert
-        assert resolved.sids == [2000001, 2000002]
-        assert resolved.asset_class == "etf"
-
-    def test_resolved_query_with_index_asset_class(self) -> None:
-        """Test _ResolvedQuery with index asset class."""
-        # Act
-        resolved = _ResolvedQuery(
-            sids=[3000001],
-            start=date(2024, 1, 1),
-            end=date(2024, 1, 31),
-            asof=None,
-            asset_class="index",
-        )
-
-        # Assert
-        assert resolved.sids == [3000001]
-        assert resolved.asset_class == "index"
-
-    def test_resolved_query_is_frozen(self) -> None:
-        """Test _ResolvedQuery is immutable (frozen=True)."""
-        # Arrange
-        resolved = _ResolvedQuery(
-            sids=[1, 2, 3],
-            start=date(2024, 1, 1),
-            end=date(2024, 1, 31),
-            asof=None,
-            asset_class="stock",
-        )
-
-        # Act & Assert: Frozen dataclass raises FrozenInstanceError
-        with pytest.raises(FrozenInstanceError):
-            resolved.sids = [4, 5, 6]
-
-    def test_resolved_query_has_slots(self) -> None:
-        """Test _ResolvedQuery uses __slots__ (slots=True)."""
-        # Arrange & Act
-        resolved = _ResolvedQuery(
-            sids=[1],
-            start=date(2024, 1, 1),
-            end=None,
-            asof=None,
-            asset_class=None,
-        )
-
-        # Assert: __slots__ prevents __dict__ creation
-        assert not hasattr(resolved, "__dict__")
-
-    def test_resolved_query_with_single_sid(self) -> None:
-        """Test _ResolvedQuery with single SID."""
-        # Act
-        resolved = _ResolvedQuery(
-            sids=[1000001],
-            start=date(2024, 1, 1),
-            end=date(2024, 1, 31),
-            asof=None,
-            asset_class="stock",
-        )
-
-        # Assert
-        assert resolved.sids == [1000001]
-        assert len(resolved.sids) == 1
-
-    def test_resolved_query_empty_sid_list(self) -> None:
-        """Test _ResolvedQuery with empty SID list."""
-        # Act
-        resolved = _ResolvedQuery(
-            sids=[],
-            start=date(2024, 1, 1),
-            end=date(2024, 1, 31),
-            asof=None,
-            asset_class="stock",
-        )
-
-        # Assert
-        assert resolved.sids == []
-        assert len(resolved.sids) == 0
-
-    def test_resolved_query_with_asof_date(self) -> None:
-        """Test _ResolvedQuery with asof date for PIT-safe queries."""
-        # Act
-        resolved = _ResolvedQuery(
-            sids=[1, 2, 3],
-            start=date(2024, 1, 1),
-            end=date(2024, 1, 31),
-            asof=date(2024, 1, 15),
-            asset_class="stock",
-        )
-
-        # Assert
-        assert resolved.asof == date(2024, 1, 15)
-
-
-@pytest.mark.pit
+@pytest.mark.integration
 class TestBarsAccessor:
     """
     Tests for BarsAccessor.
@@ -290,7 +138,7 @@ class TestBarsAccessor:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -300,18 +148,14 @@ class TestBarsAccessor:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
-        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
-        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,  # B.3
-            self.dq_engine,
             self.file_lock_manager,
-            self.quarantine_store,
         )
 
         # Insert test security
@@ -329,9 +173,6 @@ class TestBarsAccessor:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
-        # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, "quarantine_store"):
-            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_get_returns_empty_dataframe_for_no_data(self) -> None:
@@ -413,7 +254,7 @@ class TestPITSafeAdjustment:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -423,18 +264,14 @@ class TestPITSafeAdjustment:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
-        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
-        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,  # B.3
-            self.dq_engine,
             self.file_lock_manager,
-            self.quarantine_store,
         )
 
         # Insert test security
@@ -447,9 +284,6 @@ class TestPITSafeAdjustment:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
-        # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, "quarantine_store"):
-            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_qfq_uses_knowledge_date_not_trade_date(self) -> None:
@@ -612,7 +446,7 @@ class TestQFQAdjustment:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -622,18 +456,14 @@ class TestQFQAdjustment:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
-        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
-        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,  # B.3
-            self.dq_engine,
             self.file_lock_manager,
-            self.quarantine_store,
         )
 
         # Insert test security
@@ -646,9 +476,6 @@ class TestQFQAdjustment:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
-        # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, "quarantine_store"):
-            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_qfq_uses_latest_adj_factor(self) -> None:
@@ -878,7 +705,7 @@ class TestBarsAccessorSingle:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -888,18 +715,14 @@ class TestBarsAccessorSingle:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
-        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
-        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,  # B.3
-            self.dq_engine,
             self.file_lock_manager,
-            self.quarantine_store,
         )
 
         # Insert test security
@@ -917,121 +740,7 @@ class TestBarsAccessorSingle:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
-        # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, "quarantine_store"):
-            self.quarantine_store.close()
         self.temp_dir.cleanup()
-
-    def test_get_single_by_src_code(self) -> None:
-        """Test get_single resolves src_code."""
-        # Arrange
-        test_df = pl.DataFrame(
-            {
-                "sid": [1000001],
-                "trade_date": [date(2024, 1, 2)],
-                "open": [10.0],
-                "high": [12.0],
-                "low": [9.0],
-                "close": [11.0],
-                "volume": [1000],
-            }
-        )
-        self.bars_store.write("stock_daily", test_df, 2024)
-
-        # Act
-        result = self.accessor.get_single(
-            identifier="600000.SH",
-            start="2024-01-01",
-            end="2024-01-31",
-            source="tushare",
-        )
-
-        # Assert
-        assert len(result) == 1
-        assert result["sid"][0] == 1000001
-
-    def test_get_single_by_symbol(self) -> None:
-        """Test get_single resolves symbol."""
-        # Arrange
-        test_df = pl.DataFrame(
-            {
-                "sid": [1000001],
-                "trade_date": [date(2024, 1, 2)],
-                "open": [10.0],
-                "high": [12.0],
-                "low": [9.0],
-                "close": [11.0],
-                "volume": [1000],
-            }
-        )
-        self.bars_store.write("stock_daily", test_df, 2024)
-
-        # Act
-        result = self.accessor.get_single(
-            identifier="600000",
-            start="2024-01-01",
-            end="2024-01-31",
-            source="tushare",
-        )
-
-        # Assert
-        assert len(result) == 1
-
-    def test_get_single_warns_on_multiple_symbol_matches(
-        self, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Test get_single warns when symbol maps to multiple SIDs."""
-        # Arrange: Insert multiple securities with same symbol (unlikely but possible)
-        self.client.execute("""
-            INSERT INTO security
-            (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (1000002, '600000', 'Another Stock', 'SZSE', 'stock', '2000-01-01')
-        """)
-        self.client.execute("""
-            INSERT INTO security_mapping
-            (sid, source, src_code, effective_from)
-            VALUES (1000002, 'tushare', '600000.SZ', '2000-01-01')
-        """)
-        self.client.commit()
-
-        # Arrange: Write test data
-        test_df = pl.DataFrame(
-            {
-                "sid": [1000001],
-                "trade_date": [date(2024, 1, 2)],
-                "open": [10.0],
-                "high": [12.0],
-                "low": [9.0],
-                "close": [11.0],
-                "volume": [1000],
-            }
-        )
-        self.bars_store.write("stock_daily", test_df, 2024)
-
-        # Act: Mock logger and call get_single
-        mock_logger = mocker.patch("ditto_datahub.accessors.bars.accessor.logger")
-        result = self.accessor.get_single(
-            identifier="600000",
-            start="2024-01-01",
-            end="2024-01-31",
-            source="tushare",
-        )
-
-        # Assert: Should return first SID's data
-        assert len(result) == 1
-        assert result["sid"][0] == 1000001
-
-        # Assert: logger.warning should have been called with correct arguments
-        mock_logger.warning.assert_called_once()
-        call_args = mock_logger.warning.call_args
-        assert call_args is not None
-        # Extract the positional and keyword arguments
-        # logger.warning(message, event=..., symbol=..., etc.)
-        args, kwargs = call_args
-        assert "Multiple SIDs found for symbol" in args[0]
-        assert kwargs["event"] == "symbol_multiple_matches"
-        assert kwargs["symbol"] == "600000"
-        assert kwargs["match_count"] == 2
 
     def test_write_returns_write_result(self) -> None:
         """Test write returns WriteResult."""
@@ -1054,7 +763,6 @@ class TestBarsAccessorSingle:
             year=2024,
             dataset="stock_daily",
             source="tushare",
-            run_dq_check=False,
         )
 
         # Assert
@@ -1068,7 +776,7 @@ class TestMixedAssetClass:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -1078,18 +786,14 @@ class TestMixedAssetClass:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
-        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
-        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,  # B.3
-            self.dq_engine,
             self.file_lock_manager,
-            self.quarantine_store,
         )
 
         # Insert stock security (SID: 100,000,000 - 199,999,999)
@@ -1109,9 +813,6 @@ class TestMixedAssetClass:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
-        # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, "quarantine_store"):
-            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_get_with_mixed_sids_raises_error(self) -> None:
@@ -1208,7 +909,7 @@ class TestMixedAssetClass:
             )
 
     def test_mixed_asset_with_boundary_sids(self) -> None:
-        """测试 SID 范围边界值（使用已存在的 1000001 和 2000001）."""
+        """测试 SID 范围边界值(使用已存在的 1000001 和 2000001)."""
         # Write test data for existing SIDs from setup
         # setup already has: 1000001 (stock) and 2000001 (etf)
         stock_bars = pl.DataFrame(
@@ -1303,7 +1004,7 @@ class TestAdjFactorEdgeCases:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -1313,18 +1014,14 @@ class TestAdjFactorEdgeCases:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
-        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
-        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,  # B.3
-            self.dq_engine,
             self.file_lock_manager,
-            self.quarantine_store,
         )
 
         # Insert test security
@@ -1337,9 +1034,6 @@ class TestAdjFactorEdgeCases:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
-        # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, "quarantine_store"):
-            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_qfq_with_all_missing_factors_returns_original(self) -> None:
@@ -1467,7 +1161,7 @@ class TestAdjFactorEdgeCases:
         assert abs(result_sorted["close"][2] - 11.00) < 0.01
 
     def test_qfq_large_dataset_performance(self) -> None:
-        """QFQ 大数据集性能测试（365 个交易日）."""
+        """QFQ 大数据集性能测试(365 个交易日)."""
         # Arrange: Create dataset for full year (365 trading days)
         random.seed(42)
         # Generate dates for full year 2024
@@ -1598,7 +1292,7 @@ class TestMarketWideMode:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.temp_dir = TemporaryDirectory()
         data_root = Path(self.temp_dir.name)
 
@@ -1608,18 +1302,14 @@ class TestMarketWideMode:
         self.adj_factor_store = AdjFactorStore(data_root)
         self.security_store = SecurityStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)
-        self.dq_engine = DQEngine()
         self.file_lock_manager = FileLockManager(data_root / "locks")
-        self.quarantine_store = QuarantineStore(data_root / "quarantine.db")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
             self.security_store,
             self.stock_status_store,
-            self.dq_engine,
             self.file_lock_manager,
-            self.quarantine_store,
         )
 
         # Insert multiple active stocks
@@ -1635,9 +1325,6 @@ class TestMarketWideMode:
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
-        # Close SQLite connection before cleanup (Windows file lock)
-        if hasattr(self, "quarantine_store"):
-            self.quarantine_store.close()
         self.temp_dir.cleanup()
 
     def test_market_wide_returns_all_active_stocks(self) -> None:

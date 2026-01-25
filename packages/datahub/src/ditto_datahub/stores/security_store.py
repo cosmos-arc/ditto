@@ -16,6 +16,9 @@ import polars as pl
 from ditto_foundation import M, logger, traced
 from ditto_foundation.cache import DataCache
 
+from ditto_datahub.accessors.internal.enrichment import (
+    enrich_with_symbol as enrich_with_symbol_fn,
+)
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
@@ -94,7 +97,7 @@ class SecurityStore:
     def __init__(
         self,
         sqlite_client: SQLiteClient,
-        data_cache: DataCache | None = None,
+        data_cache: DataCache[Any] | None = None,
     ) -> None:
         """
         Initialize SecurityStore.
@@ -509,7 +512,8 @@ class SecurityStore:
             }
         )
 
-        return df.join(symbol_df, on="sid", how="left")
+        # 使用纯函数进行数据增强
+        return enrich_with_symbol_fn(df, symbol_df)
 
     def register(self, sid: int, registration: SecurityRegistration) -> int:
         """

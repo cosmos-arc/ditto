@@ -1,12 +1,13 @@
 """Domain Accessors for data access."""
 
-from ditto_datahub.accessors.adj_factor import AdjFactorAccessor
-from ditto_datahub.accessors.bars import AdjType, BarsAccessor, BarsQuery
-from ditto_datahub.accessors.calendar import CalendarAccessor
-from ditto_datahub.accessors.index import IndexAccessor
-from ditto_datahub.accessors.ingestion_log import IngestionLogAccessor
-from ditto_datahub.accessors.security import SecuritiesAccessor
-from ditto_datahub.accessors.universe import UniverseAccessor
+from ditto_datahub.accessors.adj_factor_accessor import AdjFactorAccessor
+from ditto_datahub.accessors.bars_accessor import AdjType, BarsAccessor, BarsQuery
+from ditto_datahub.accessors.calendar_accessor import CalendarAccessor
+from ditto_datahub.accessors.index_accessor import IndexAccessor
+from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
+from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
+from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
+from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 
 __all__ = [
     "AdjFactorAccessor",
@@ -16,6 +17,7 @@ __all__ = [
     "CalendarAccessor",
     "IndexAccessor",
     "IngestionLogAccessor",
+    "QuarantineAccessor",
     "SecuritiesAccessor",
     "UniverseAccessor",
 ]

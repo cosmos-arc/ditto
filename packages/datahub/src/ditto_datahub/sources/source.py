@@ -2,23 +2,32 @@
 
 from __future__ import annotations
 
-from functools import cached_property
-
 from ditto_foundation import logger
 
+from ditto_datahub.models.common import Source
 from ditto_datahub.sources.base import DataSource
-from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
 
 class DataSources:
     """
     Accessor for external data sources.
 
-    Provides convenient access to DataSource instances with caching.
+    所有数据源通过构造函数注入，支持依赖倒置和测试替换。
 
     """
 
-    @cached_property
+    def __init__(self, tushare: DataSource) -> None:
+        """
+        初始化 DataSources。
+
+        Args:
+            tushare: Tushare 数据源实例
+
+        """
+        self._tushare = tushare
+        logger.debug("DataSources initialized", event="sources_init")
+
+    @property
     def tushare(self) -> DataSource:
         """
         Get Tushare data source.
@@ -27,15 +36,14 @@ class DataSources:
             TushareSource instance.
 
         """
-        logger.debug("Creating TushareSource", event="sources_tushare_create")
-        return TushareSource()
+        return self._tushare
 
-    def get(self, name: str) -> DataSource:
+    def get(self, name: str | Source) -> DataSource:
         """
         Get data source by name.
 
         Args:
-            name: Source name (e.g., "tushare", "akshare").
+            name: Source name (enum or string, e.g., "tushare", Source.TUSHARE).
 
         Returns:
             DataSource instance.
@@ -44,9 +52,21 @@ class DataSources:
             ValueError: If source name is unknown.
 
         """
-        normalized_name = name.lower().strip()
+        # 支持 Source 枚举和字符串
+        if isinstance(name, Source):
+            source_key = name
+        else:
+            normalized_name = name.lower().strip()
+            try:
+                source_key = Source(normalized_name)
+            except ValueError as e:
+                supported = [s.value for s in Source]
+                raise ValueError(
+                    f"Unknown source: '{name}'. Supported sources: {supported}"
+                ) from e
 
-        if normalized_name == "tushare":
-            return TushareSource()
+        if source_key == Source.TUSHARE:
+            return self._tushare
 
-        raise ValueError(f"Unknown source: '{name}'. Supported sources: tushare")
+        supported = [s.value for s in Source]
+        raise ValueError(f"Unknown source: '{name}'. Supported sources: {supported}")

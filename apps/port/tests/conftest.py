@@ -54,12 +54,9 @@ def test_settings(tmp_path: Path) -> Settings:
     Returns:
         Settings: 测试配置对象
     """
-    from ditto_foundation.config.settings import DataSourceSettings, SystemSettings
+    from ditto_foundation.config.settings import SystemSettings
 
     settings = Settings(
-        duckdb_path=tmp_path / "test.duckdb",
-        sqlite_path=tmp_path / "test.sqlite",
-        data_source=DataSourceSettings(tushare_token="test_token"),
         system=SystemSettings(ditto_env="testing"),
     )
     return settings

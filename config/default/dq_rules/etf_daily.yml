@@ -1,0 +1,65 @@
+# ETF 日频数据 DQ 规则
+dataset: etf_daily
+description: "ETF 日 K 线数据质量检查规则"
+
+# L1: 技术校验（写入时强制阻断）
+l1_technical:
+  - rule: not_null
+    columns: [sid, trade_date, open, high, low, close]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [sid, trade_date]
+    message: "主键 (sid, trade_date) 重复"
+
+  - rule: foreign_key
+    column: sid
+    reference: security.sid
+    message: "SID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      sid: int
+      trade_date: date
+      open: float
+      high: float
+      low: float
+      close: float
+    message: "字段类型不匹配"
+
+# L2: 业务规则（写入时警告但不阻断）
+l2_business:
+  - rule: positive
+    columns: [open, high, low, close]
+    message: "OHLC 价格必须为正数"
+
+  - rule: expression
+    name: ohlc_consistency
+    expr: "high >= low AND high >= open AND high >= close AND low <= open AND low <= close"
+    message: "OHLC 关系不一致：high 应为最大值，low 应为最小值"
+
+  - rule: range_check
+    column: close
+    min_ratio: 0.01  # 相对前一日涨跌幅不超过 99%（允许跌停）
+    max_ratio: 1.11  # 相对前一日涨跌幅不超过 11%（允许涨停）
+    message: "收盘价涨跌幅超出正常范围"
+
+  - rule: no_zero_volume
+    column: volume
+    message: "成交量为 0 可能表示数据异常"
+
+# L3: 统计异常（定时批量检查）
+l3_statistical:
+  - rule: zscore
+    name: volume_spike
+    column: volume
+    window: 60
+    threshold: 5
+    group_by: sid
+    message: "成交量异常波动（Z-score > 5）"
+
+  - rule: completeness
+    name: missing_data_check
+    expected_dates: "trade_calendar"
+    lookback_days: 5
+    message: "最近 5 个交易日存在缺失数据"

@@ -15,7 +15,7 @@ from __future__ import annotations
 import bisect
 import threading
 from dataclasses import dataclass
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 import polars as pl
 from ditto_foundation import logger, span
@@ -53,7 +53,7 @@ class CalendarStore:
     def __init__(
         self,
         sqlite_client: SQLiteClient,
-        data_cache: DataCache | None = None,
+        data_cache: DataCache[list[str]] | None = None,
     ) -> None:
         """
         Initialize CalendarStore.
@@ -361,7 +361,7 @@ class CalendarStore:
             cached = self._data_cache.get(cache_key)
             if cached is not None:
                 # 返回副本以防止缓存污染
-                return cast(list[str], cached).copy()
+                return cached.copy()
 
         # 从内存缓存计算
         start_idx = bisect.bisect_left(self._trading_days, start)

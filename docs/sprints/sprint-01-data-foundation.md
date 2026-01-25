@@ -386,7 +386,6 @@
 - `packages/foundation/src/ditto_foundation/config/settings.py`
 - `packages/foundation/src/ditto_foundation/config/__init__.py`
 - `packages/foundation/src/ditto_foundation/observability/logging.py`
-- `.env.example`
 
 **验收**:
 - ✅ Windows 默认使用 `D:\data\ditto`

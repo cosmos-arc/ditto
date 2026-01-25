@@ -1,95 +1,64 @@
-"""CLI 上下文管理."""
+"""CLI 上下文管理（使用 dishka 同步容器）."""
 
-import threading
+from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
 
+from dishka import make_container
 from ditto_datahub import DataHub
+from ditto_datahub.models import Source
 
 from ditto_port.cli.executor import CLIExecutor
-
-
-class _HubRegistry:
-    """
-    Registry for managing DataHub singleton.
-
-    Uses class-level attributes to store singleton state, eliminating
-    the need for global statements while maintaining the same API.
-    Implements thread-safe double-checked locking pattern.
-    """
-
-    hub: DataHub | None = None
-    hub_lock = threading.Lock()
-
-    @classmethod
-    def get_hub(cls, data_root: str | None = None) -> DataHub:
-        """
-        Get or create the thread-safe singleton DataHub instance.
-
-        Uses double-checked locking pattern for thread safety.
-
-        Args:
-            data_root: Data root directory (set on first call)
-
-        Returns:
-            DataHub instance
-
-        """
-        if cls.hub is None:
-            with cls.hub_lock:
-                if cls.hub is None:
-                    cls.hub = DataHub(data_root=data_root)
-        return cls.hub
-
-    @classmethod
-    def reset(cls) -> None:
-        """Reset the singleton instance (for testing purposes)."""
-        with cls.hub_lock:
-            cls.hub = None
-
-
-def get_hub(data_root: str | None = None) -> DataHub:
-    """
-    获取应用级 DataHub 单例.
-
-    Args:
-        data_root: 数据根目录（首次调用时设置）
-
-    Returns:
-        DataHub 实例（同一进程内返回同一实例）
-
-    """
-    return _HubRegistry.get_hub(data_root)
+from ditto_port.registry import (
+    ConfigProvider,
+    CoreProvider,
+    DataHubProvider,
+    DataSourcesProvider,
+)
 
 
 @contextmanager
-def create_executor(data_root: str | None):
+def create_cli_host() -> Generator[Any, None, None]:
     """
-    创建 CLI 执行器上下文管理器.
+    CLI Host - 仿照 .NET Generic Host 模式（同步版本）.
 
-    自动管理 DataHub 生命周期，确保资源正确释放.
-
-    Args:
-        data_root: 数据根目录
+    管理整个 CLI 应用的生命周期：
+    - 创建容器
+    - 初始化所有组件
+    - 优雅关闭
 
     Yields:
-        CLIExecutor: 可用的执行器实例
+        dishka 同步容器实例
 
     """
-    hub = get_hub(data_root)
+    # 创建同步容器
+    container = make_container(
+        ConfigProvider(),
+        CoreProvider(),
+        DataHubProvider(),
+        DataSourcesProvider(),
+    )
     try:
-        app_ctx = _AppContext(hub=hub, source=hub.sources)
-        executor = CLIExecutor(app_ctx)
-        yield executor
+        yield container
     finally:
-        # hub 由 atexit 清理，这里不关闭
-        pass
+        # 优雅关闭
+        container.close()
 
 
-class _AppContext:
-    """CLI 应用上下文."""
+@contextmanager
+def create_executor():
+    """
+    创建 CLI 执行器（使用 DI 和工厂模式）.
 
-    def __init__(self, hub: DataHub, source: Any) -> None:
-        """初始化."""
-        self.hub = hub
-        self.source = source
+    通过 DI 容器获取 DataHub，然后使用 CLIExecutor.create() 工厂方法创建执行器。
+
+    Yields:
+        CLIExecutor: 已初始化的执行器实例
+
+    """
+    with create_cli_host() as container:
+        # 从容器获取 DataHub（同步）
+        hub = container.get(DataHub)
+        # 使用工厂方法创建 executor，自动处理 coordinator 和 backfill_manager 的初始化
+        with CLIExecutor.create(hub=hub, source_name=Source.TUSHARE) as executor:
+            yield executor

@@ -149,3 +149,19 @@ CREATE INDEX IF NOT EXISTS idx_index_weight_current
 -- PIT 查询优化
 CREATE INDEX IF NOT EXISTS idx_index_weight_pit
     ON index_weight(index_id, effective_from, effective_to);
+
+-- DQ 隔离区存储（失败数据）
+CREATE TABLE IF NOT EXISTS quarantine_failed_data (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dataset TEXT NOT NULL,
+    rule_id TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    failed_data TEXT,  -- JSON stored failed records
+    affected_rows INTEGER DEFAULT 0,
+    trade_date TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_quarantine_dataset
+    ON quarantine_failed_data(dataset);
+CREATE INDEX IF NOT EXISTS idx_quarantine_rule
+    ON quarantine_failed_data(rule_id);

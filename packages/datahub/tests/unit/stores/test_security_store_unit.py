@@ -5,9 +5,10 @@ import pytest
 from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation.cache import DataCache
+from pytest_mock import MockerFixture
 
 
-@pytest.mark.pit
+@pytest.mark.integration
 class TestSecurityStore:
     """
     Tests for SecurityStore.
@@ -18,7 +19,7 @@ class TestSecurityStore:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.client = sqlite_client
         self.store = SecurityStore(self.client)
 
@@ -395,33 +396,34 @@ class TestSecurityStore:
         assert 100999002 in map2
         assert map2[100999002] == "600998"
 
-    def test_register_logs_error_on_exception(self) -> None:
+    def test_register_logs_error_on_exception(self, mocker: MockerFixture) -> None:
         """Test register logs error with error_type and error_message on exception."""
-        from unittest.mock import patch
-
         # Mock client.commit to raise an exception
-        with patch.object(self.client, "commit", side_effect=RuntimeError("DB error")):
-            with patch("ditto_datahub.stores.security_store.logger") as mock_logger:
-                with pytest.raises(RuntimeError):
-                    self.store.register(
-                        sid=100000001,
-                        registration=SecurityRegistration(
-                            src_code="600000.SH",
-                            symbol="600000",
-                            name="Test Bank",
-                            exchange="SSE",
-                            asset_class="stock",
-                            list_date="1999-11-10",
-                        ),
-                    )
+        with mocker.patch.object(
+            self.client, "commit", side_effect=RuntimeError("DB error")
+        ):
+            mock_logger = mocker.patch("ditto_datahub.stores.security_store.logger")
 
-                # Verify logger.error was called with error_type and error_message
-                mock_logger.error.assert_called_once()
-                call_kwargs = mock_logger.error.call_args.kwargs
-                assert "error_type" in call_kwargs
-                assert "error_message" in call_kwargs
-                assert call_kwargs["event"] == "security_register_failed"
-                assert call_kwargs["error_type"] == "RuntimeError"
+            with pytest.raises(RuntimeError):
+                self.store.register(
+                    sid=100000001,
+                    registration=SecurityRegistration(
+                        src_code="600000.SH",
+                        symbol="600000",
+                        name="Test Bank",
+                        exchange="SSE",
+                        asset_class="stock",
+                        list_date="1999-11-10",
+                    ),
+                )
+
+            # Verify logger.error was called with error_type and error_message
+            mock_logger.error.assert_called_once()
+            call_kwargs = mock_logger.error.call_args.kwargs
+            assert "error_type" in call_kwargs
+            assert "error_message" in call_kwargs
+            assert call_kwargs["event"] == "security_register_failed"
+            assert call_kwargs["error_type"] == "RuntimeError"
 
     def teardown_method(self) -> None:
         """Clean up after test."""
@@ -429,7 +431,7 @@ class TestSecurityStore:
         pass
 
 
-@pytest.mark.pit
+@pytest.mark.integration
 class TestSqlInjectionProtection:
     """
     Tests for SQL injection protection in IN clause construction.
@@ -440,7 +442,7 @@ class TestSqlInjectionProtection:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端。"""
+        """使用 fixture 自动注入已初始化的数据库客户端."""
         self.client = sqlite_client
         self.store = SecurityStore(self.client)
 

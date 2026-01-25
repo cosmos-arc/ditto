@@ -10,7 +10,7 @@ from ditto_datahub.sources.base import (
     SourceConfigurationError,
 )
 from ditto_datahub.sources.tushare.client import TushareClient
-from ditto_datahub.sources.tushare.rate_limiter import (
+from ditto_datahub.sources.tushare.utils.rate_limiter import (
     TushareRateLimitConfig,
     TushareRateLimiter,
 )
@@ -70,7 +70,7 @@ class TestTushareClientInit:
         """Test custom rate limit configuration."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        # 使用新的 rate_config API
+        # [REVIEW] rate_config API
         config = TushareRateLimitConfig(
             global_rate=100,
             global_window=60,
@@ -85,7 +85,7 @@ class TestTushareClientInit:
         """Test custom retry configuration uses paid tier."""
         monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
-        # 使用付费账户配置
+        # [REVIEW]
         client = TushareClient(rate_config=TushareRateLimitConfig.paid())
         assert isinstance(client._limiter, TushareRateLimiter)
 
@@ -148,7 +148,7 @@ class TestTushareClientQuery:
         wait_spy.assert_called_once()
 
     def test_retry_on_network_error(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
+        self, respx_mock, fake_time, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """网络错误自动重试."""
         # Arrange
@@ -175,7 +175,7 @@ class TestTushareClientQuery:
         result = client.query("trade_cal", "cal_date", exchange="SSE")
 
         # Assert
-        assert call_count == 2  # 第一次失败,第二次成功
+        assert call_count == 2  # [REVIEW],第二次成功
         assert result.height == 1
 
     def test_no_retry_on_auth_error(self, respx_mock) -> None:
@@ -193,7 +193,7 @@ class TestTushareClientQuery:
         with pytest.raises(SourceAuthenticationError):
             client.query("trade_cal", "cal_date", exchange="SSE")
 
-    def test_retry_on_5xx_status(self, respx_mock) -> None:
+    def test_retry_on_5xx_status(self, respx_mock, fake_time) -> None:
         """5xx 状态码自动重试."""
         # Arrange
         call_count = 0

@@ -15,35 +15,9 @@ class TestStockStatusStore:
     """Test suite for StockStatusStore."""
 
     @pytest.fixture
-    def data_root(self, tmp_path: Path) -> Path:
-        """Create temporary data root directory."""
-        return tmp_path / "data"
-
-    @pytest.fixture
     def store(self, data_root: Path) -> StockStatusStore:
         """Create StockStatusStore instance."""
         return StockStatusStore(data_root)
-
-    @pytest.fixture
-    def sample_df(self) -> pl.DataFrame:
-        """Create sample stock status data."""
-        data: dict[str, list[Any]] = {
-            "sid": [100000001, 100000001, 100000001, 100000002],
-            "trade_date": [
-                date(2024, 1, 2),
-                date(2024, 1, 3),
-                date(2024, 1, 4),
-                date(2024, 1, 2),
-            ],
-            "is_suspended": [False, False, True, False],
-            "suspend_timing": [None, None, "09:30-10:00", None],
-            "is_st": [False, False, False, True],
-            "st_type": [None, None, None, "ST"],
-            "list_status": ["L", "L", "L", "L"],
-            "source": ["tushare", "tushare", "tushare", "tushare"],
-            "src_code": ["000001.SZ", "000001.SZ", "000001.SZ", "000002.SZ"],
-        }
-        return pl.DataFrame(data)
 
     # ============ _get_path tests ============
 
@@ -60,9 +34,9 @@ class TestStockStatusStore:
         df = store.read("stock_status")
         assert len(df) == 0
 
-    def test_read_no_filters(self, store, sample_df: pl.DataFrame) -> None:
+    def test_read_no_filters(self, store, sample_stock_status_df: pl.DataFrame) -> None:
         """Test read without filters."""
-        store.write("stock_status", sample_df, 2024)
+        store.write("stock_status", sample_stock_status_df, 2024)
         df = store.read("stock_status")
         assert len(df) == 4
         assert "sid" in df.columns
@@ -71,9 +45,11 @@ class TestStockStatusStore:
         assert "is_st" in df.columns
         assert "list_status" in df.columns
 
-    def test_read_filter_by_sids(self, store, sample_df: pl.DataFrame) -> None:
+    def test_read_filter_by_sids(
+        self, store, sample_stock_status_df: pl.DataFrame
+    ) -> None:
         """Test read filtered by security IDs."""
-        store.write("stock_status", sample_df, 2024)
+        store.write("stock_status", sample_stock_status_df, 2024)
         df = store.read("stock_status", sids=[100000001])
         assert len(df) == 3
         assert df["sid"].unique().to_list() == [100000001]
@@ -81,23 +57,23 @@ class TestStockStatusStore:
     # ============ write tests ============
 
     def test_write_new_file(
-        self, store, sample_df: pl.DataFrame, tmp_path: Path
+        self, store, sample_stock_status_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """Test write creates new file."""
-        file_path, checksum = store.write("stock_status", sample_df, 2024)
+        file_path, checksum = store.write("stock_status", sample_stock_status_df, 2024)
 
         assert file_path == str(tmp_path / "data" / "stock_status" / "2024.parquet")
         assert Path(file_path).exists()
         assert len(checksum) == 32  # MD5 hex string
 
     def test_write_creates_directory(
-        self, store, sample_df: pl.DataFrame, tmp_path: Path
+        self, store, sample_stock_status_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """Test write creates dataset directory if not exists."""
         dataset_dir = tmp_path / "data" / "stock_status"
         assert not dataset_dir.exists()
 
-        store.write("stock_status", sample_df, 2024)
+        store.write("stock_status", sample_stock_status_df, 2024)
 
         assert dataset_dir.exists()
         assert (dataset_dir / "2024.parquet").exists()
@@ -109,20 +85,22 @@ class TestStockStatusStore:
         years = store.get_years("stock_status")
         assert years == []
 
-    def test_get_years(self, store, sample_df: pl.DataFrame) -> None:
+    def test_get_years(self, store, sample_stock_status_df: pl.DataFrame) -> None:
         """Test get_years returns available years."""
-        store.write("stock_status", sample_df, 2022)
-        store.write("stock_status", sample_df, 2024)
-        store.write("stock_status", sample_df, 2023)
+        store.write("stock_status", sample_stock_status_df, 2022)
+        store.write("stock_status", sample_stock_status_df, 2024)
+        store.write("stock_status", sample_stock_status_df, 2023)
 
         years = store.get_years("stock_status")
         assert years == [2022, 2023, 2024]
 
     # ============ delete tests ============
 
-    def test_delete_year(self, store, sample_df: pl.DataFrame, tmp_path: Path) -> None:
+    def test_delete_year(
+        self, store, sample_stock_status_df: pl.DataFrame, tmp_path: Path
+    ) -> None:
         """Test delete removes year partition."""
-        store.write("stock_status", sample_df, 2024)
+        store.write("stock_status", sample_stock_status_df, 2024)
 
         result = store.delete("stock_status", 2024)
         assert result is True
@@ -137,9 +115,9 @@ class TestStockStatusStore:
         count = store.count("stock_status")
         assert count == 0
 
-    def test_count(self, store, sample_df: pl.DataFrame) -> None:
+    def test_count(self, store, sample_stock_status_df: pl.DataFrame) -> None:
         """Test count returns total records."""
-        store.write("stock_status", sample_df, 2024)
+        store.write("stock_status", sample_stock_status_df, 2024)
         count = store.count("stock_status")
         assert count == 4
 
@@ -151,9 +129,9 @@ class TestStockStatusStore:
         assert start is None
         assert end is None
 
-    def test_get_date_range(self, store, sample_df: pl.DataFrame) -> None:
+    def test_get_date_range(self, store, sample_stock_status_df: pl.DataFrame) -> None:
         """Test get_date_range returns min/max dates."""
-        store.write("stock_status", sample_df, 2024)
+        store.write("stock_status", sample_stock_status_df, 2024)
         start, end = store.get_date_range("stock_status")
         assert start == "2024-01-02"
         assert end == "2024-01-04"

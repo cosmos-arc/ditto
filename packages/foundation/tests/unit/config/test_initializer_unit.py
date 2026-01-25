@@ -46,7 +46,7 @@ class MockInitProvider(ConfigInitProvider):
         Args:
             name: 提供者名称
             scope: 初始化作用域
-            check_result: check() 方法返回值（True 表示需要初始化）
+            check_result: check() 方法返回值(True 表示需要初始化)
             init_result: initialize() 方法返回值
 
         """
@@ -364,7 +364,7 @@ class TestConfigInitCoordinator:
         provider = MockInitProvider(
             name="test",
             scope=InitScope.STARTUP,
-            check_result=False,  # check 返回 False（已存在）
+            check_result=False,  # check 返回 False(已存在)
         )
 
         coordinator.register(provider)
@@ -449,7 +449,7 @@ class TestConfigInitCoordinator:
         )
 
         # ALWAYS 作用域应该初始化所有提供者
-        # 但仍受 check() 结果控制
+        # [REVIEW] check() 结果控制
         assert len(results) == 2
         assert "startup_provider" in results
         assert "manual_provider" in results
@@ -536,7 +536,7 @@ class TestGetConfigCoordinator:
         for thread in threads:
             thread.join()
 
-        # 所有线程应该获得相同的实例
+        # [REVIEW]
         first = instances[0]
         for instance in instances[1:]:
             assert instance is first

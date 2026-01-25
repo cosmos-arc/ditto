@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_datahub.accessors.security import SecuritiesAccessor
+from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
@@ -14,7 +14,7 @@ class TestSecuritiesAccessor:
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient, sqlite_pool: SQLitePool) -> None:
-        """使用 fixture 自动注入已初始化的数据库客户端和连接池。"""
+        """使用 fixture 自动注入已初始化的数据库客户端和连接池."""
         self.pool = sqlite_pool
         self.client = sqlite_client
         self.security_store = SecurityStore(self.client)
@@ -46,84 +46,6 @@ class TestSecuritiesAccessor:
         assert len(result) == 1
         assert result["sid"][0] == 1000001
         assert result["symbol"][0] == "600000"
-
-    def test_resolve_identifier_with_src_code(self) -> None:
-        """Test resolve_identifier with src_code."""
-        # Arrange
-        self.client.execute("""
-            INSERT INTO security
-            (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (1000001, '600000', 'Bank', 'SSE', 'stock', '2000-01-01')
-        """)
-        self.client.execute("""
-            INSERT INTO security_mapping
-            (sid, source, src_code, effective_from)
-            VALUES (1000001, 'tushare', '600000.SH', '2000-01-01')
-        """)
-        self.client.commit()
-
-        # Act
-        sid = self.accessor.resolve_identifier("600000.SH", "tushare")
-
-        # Assert
-        assert sid == 1000001
-
-    def test_resolve_identifier_with_symbol(self) -> None:
-        """Test resolve_identifier with symbol."""
-        # Arrange
-        self.client.execute("""
-            INSERT INTO security
-            (sid, symbol, name, exchange, asset_class, list_date)
-            VALUES (1000001, '600000', 'Bank', 'SSE', 'stock', '2000-01-01')
-        """)
-        self.client.execute("""
-            INSERT INTO security_mapping
-            (sid, source, src_code, effective_from)
-            VALUES (1000001, 'tushare', '600000.SH', '2000-01-01')
-        """)
-        self.client.commit()
-
-        # Act
-        sid = self.accessor.resolve_identifier("600000", "tushare")
-
-        # Assert
-        assert sid == 1000001
-
-    def test_resolve_identifier_not_found(self) -> None:
-        """Test resolve_identifier returns None for unknown identifier."""
-        # Act
-        sid = self.accessor.resolve_identifier("999999.SH", "tushare")
-
-        # Assert
-        assert sid is None
-
-    def test_resolve_identifiers_batch(self) -> None:
-        """Test batch resolution of identifiers."""
-        # Arrange
-        for i in range(3):
-            sid = 1000001 + i
-            self.client.execute(
-                f"INSERT INTO security "
-                f"(sid, symbol, name, exchange, asset_class, list_date) "
-                f"VALUES ({sid}, '60{i:04d}', 'Stock{i}', 'SSE', 'stock', '2000-01-01')"
-            )
-            self.client.execute(
-                f"INSERT INTO security_mapping "
-                f"(sid, source, src_code, effective_from) "
-                f"VALUES ({sid}, 'tushare', '60000{i}.SH', '2000-01-01')"
-            )
-        self.client.commit()
-
-        # Act
-        result = self.accessor.resolve_identifiers_batch(
-            ["600000.SH", "600001.SH", "600003.SH"],  # 600003 doesn't exist
-            source="tushare",
-        )
-
-        # Assert
-        assert result["600000.SH"] == 1000001
-        assert result["600001.SH"] == 1000002
-        assert "600003.SH" not in result  # Not found
 
     def test_get_by_sid(self) -> None:
         """Test getting security by sid."""

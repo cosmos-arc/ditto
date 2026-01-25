@@ -6,9 +6,16 @@
 
 import os
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, TypeGuard, TypeVar
 
 from ditto_foundation.config.environment import Environment
+
+T = TypeVar("T", str, bool, float)
+
+
+def _is_not_none(value: T | None) -> TypeGuard[T]:  # noqa: UP047
+    """类型守卫：检查值是否不为 None."""
+    return value is not None
 
 
 @dataclass(frozen=True)
@@ -111,32 +118,41 @@ class ObservabilityConfig:
 
         # 辅助函数：合并可选值和预设值
         def _resolve(
-            value: str | bool | float | None,
-            preset_value: str | bool | float,
-        ) -> str | bool | float:
+            value: T | None,
+            preset_value: T,
+        ) -> T:
             """解析配置值：None 时使用预设值，否则使用显式设置的值."""
-            return value if value is not None else preset_value
+            if _is_not_none(value):
+                return value
+            return preset_value
+
+        # vm_endpoint 的优先级：用户设置 > 环境变量 > 预设值
+        vm_endpoint = (
+            self.vm_endpoint
+            or os.getenv("OBSERVABILITY_VM_ENDPOINT")
+            or preset.vm_endpoint
+        )
 
         return EffectiveConfig(
             log_level=self.log_level or preset.log_level,
-            tracing_enabled=_resolve(  # type: ignore[arg-type]
+            tracing_enabled=_resolve(
                 self.tracing_enabled,
                 preset.tracing_enabled,
             ),
-            tracing_sample_rate=_resolve(  # type: ignore[arg-type]
+            tracing_sample_rate=_resolve(
                 self.tracing_sample_rate,
                 preset.tracing_sample_rate,
             ),
-            metrics_enabled=_resolve(  # type: ignore[arg-type]
+            metrics_enabled=_resolve(
                 self.metrics_enabled,
                 preset.metrics_enabled,
             ),
-            vm_endpoint=self.vm_endpoint or preset.vm_endpoint,
-            assertions_enabled=_resolve(  # type: ignore[arg-type]
+            vm_endpoint=vm_endpoint,
+            assertions_enabled=_resolve(
                 self.assertions_enabled,
                 preset.assertions_enabled,
             ),
-            verbose_logging=_resolve(  # type: ignore[arg-type]
+            verbose_logging=_resolve(
                 self.verbose_logging,
                 preset.verbose_logging,
             ),

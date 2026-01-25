@@ -14,8 +14,7 @@ def update(
     force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
 ) -> None:
     """更新交易日历."""
-    data_root = ctx.obj.get("data_root")
-    with create_executor(data_root) as executor:
+    with create_executor() as executor:
         result = executor.ingest_daily("calendar", "", force)
         print_ingestion_result(result, ctx.obj["verbose"])
 

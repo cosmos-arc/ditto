@@ -4,16 +4,66 @@ paths: ./**/*.py
 
 # Python 核心规范
 
-## 代码规范
+## 代码规模规范
+
+| 指标 | 限制 | 检查方式 |
+|------|------|----------|
+| **单文件行数** | ≤ 800 行 | 自动检查脚本 |
+| **类 public 方法数** | ≤ 20 个 | 自动检查脚本 |
+| **函数长度** | ≤50 行 | Ruff (max-statements) |
+| **嵌套深度** | ≤3 层 | Ruff |
+| **参数个数** | ≤7 个 | Ruff (max-args) |
+| **复杂度** | ≤10 (C90) | Ruff (max-complexity) |
+| **行长度** | ≤88 | Ruff |
+
+**检查命令**：
+```bash
+# 代码规模检查
+pixi run -e dev python scripts/check_code_size.py
+
+# 完整检查
+pixi run -e dev ci
+```
+
+**依据**：业界最佳实践 + 项目实际需求
+
+---
+
+### 重构指导
+
+#### 文件 > 800 行
+
+| 情况 | 重构策略 |
+|------|----------|
+| 多个相关类 | 按职责拆分到多个文件 |
+| 单个类过大 | 按业务领域拆分职责 |
+| 大量辅助函数 | 提取 `utils.py` 或 `helpers.py` |
+
+#### public 方法数 > 20
+
+| 方法类型 | 处理方式 |
+|----------|----------|
+| 公共 API 多 | 考虑拆分为多个服务类 |
+| 私有方法多 | 提取为独立的辅助类 |
+| 多个相似方法 | 用模式/注册表简化 |
+
+#### 核心原则
+
+> **单一职责原则（SRP）> 固定行数**
+
+当判断是否需要拆分时，优先考虑：
+
+1. 这个类/文件是否只有一个改变的理由？
+2. 如果要修改这个类，是否总是因为同一个原因？
+3. 这个类的方法是否都在服务于同一个概念？
+
+---
+
+## 其他代码规范
 
 | 要求 | 值/规则 |
 |------|---------|
 | 类型注解 | 公开函数 100%，返回类型明确 |
-| 函数长度 | ≤50 行 (ruff check) |
-| 嵌套深度 | ≤3 层 |
-| 参数个数 | ≤5 个 |
-| 复杂度 | ≤10 (C90) |
-| 行长度 | ≤88 |
 
 **必须通过**: `pre-commit-run` 和 `ci-check` 所有检查
 
@@ -133,11 +183,102 @@ class DQSpec(BaseModel):
 
 ## 错误处理
 
+### 核心原则
+
 | ✅ 正确 | ❌ 错误 |
 |---------|---------|
 | `raise DataHubError("msg")` | `raise Exception("msg")` |
 | `except DataHubError as e` | `except Exception` |
 | `except SpecificError` | 捕获所有 Exception |
+
+### 异常处理策略
+
+#### 1. 分层处理原则
+
+| 层级 | 处理策略 | 示例 |
+|------|----------|------|
+| **Foundation/DataHub** | 直接抛出原生异常或领域异常 | `raise SourceFetchError(...)` |
+| **Application** | 统一捕获 + 日志 + 业务响应 | `except Exception: logger.exception(...); return IngestionResult.failed(...)` |
+| **Interface** | 统一异常处理器 + 用户友好响应 | FastAPI middleware |
+
+**核心原则**：Raise low, catch high（底层抛出，高层捕获）
+
+#### 2. 何时捕获 vs 抛出异常
+
+| 场景 | 操作 | 原因 |
+|------|------|------|
+| **调用外部库（polars, httpx）** | 根据处理需求决定 | 需要转换为业务问题则捕获，否则抛出 |
+| **数据质量检查** | 捕获并转换为 DQIssue | 技术异常 → 业务问题，有语义价值 |
+| **容错组件（隔离存储）** | 捕获并返回默认值 | 失败不应阻塞主流程 |
+| **应用层协调器** | 统一捕获所有异常 | 日志 + 业务响应，无需细分异常类型 |
+
+#### 3. 避免过度分类
+
+**❌ 避免以下过度设计**：
+
+```python
+# 过度：为每种处理方式相同的异常单独捕获
+except (pl.ComputeError, pl.SchemaError, ValueError) as e:
+    return handle_error("WRITE_ERROR", e)
+except Exception as e:
+    return handle_error("UNKNOWN_ERROR", e)
+
+# 正确：处理方式相同时统一捕获
+except Exception as e:
+    logger.exception("write_failed", error_type=type(e).__name__, ...)
+    return handle_unknown_error(e)
+```
+
+**判断标准**：
+- 如果不同异常的**最终处理逻辑相同**，无需单独捕获
+- 日志中的 `error_type` 字段已足够诊断
+- 遵循 DRY 原则
+
+#### 4. 异常转换场景
+
+**需要转换**（有业务价值）：
+- 技术异常 → 业务问题（`polars.ComputeError` → `DQIssue`）
+- 外部异常 → 领域异常（`httpx.HTTPStatusError` → `SourceFetchError`）
+- 通用异常 → 特定异常（`ValueError` → `ValidationError` with context）
+
+**无需转换**（处理逻辑相同）：
+- 多种异常类型执行相同的处理逻辑
+- 日志已记录足够信息供诊断
+- 上层不需要根据异常类型做不同决策
+
+#### 5. 日志记录规范
+
+| 异常类型 | 日志级别 | 日志方法 | 必需字段 |
+|----------|----------|----------|----------|
+| 未知/未预期异常 | ERROR | `logger.exception()` | `error_type`, 业务上下文 |
+| 已知业务异常 | ERROR | `logger.error()` | `event`, 业务上下文 |
+| 可恢复异常 | WARNING | `logger.warning()` | `error`, 业务上下文 |
+| 资源清理失败 | WARNING | `logger.warning()` | `error` |
+
+**关键点**：
+- 使用 `logger.exception()` 记录完整堆栈（未知异常）
+- 包含业务上下文（`dataset`, `trade_date` 等）
+- 避免在日志中暴露敏感信息
+
+#### 6. 自定义异常设计
+
+**异常层次结构**：
+```python
+# 基础异常
+class DataHubError(Exception):
+    def __init__(self, message: str, details: dict[str, object] | None = None):
+        self.details = details or {}
+
+# 领域异常
+class DataSourceError(DataHubError): ...
+class SourceFetchError(DataSourceError): ...
+class SourceAuthenticationError(DataSourceError): ...
+```
+
+**设计原则**：
+- 按捕获方式定义异常（而非按来源）
+- 携带详细上下文（`details` 字典）
+- 保留异常链（`raise ... from e`）
 
 ## 导入规范（汇总）
 
@@ -257,6 +398,34 @@ def process_data(data):
 #### 目录示例
 - `packages/foo/src/foo/py.typed`
 - `apps/xxx/src/xxx/py.typed`（若该 app 也会作为库被引用）
+
+#### 实施检查清单
+
+创建新包时，必须包含 `py.typed` 文件：
+
+- [ ] 在包根目录（与 `__init__.py` 同级）创建空文件 `py.typed`
+- [ ] 确认打包配置自动包含该文件（setuptools-scm/hatchling 默认包含）
+- [ ] 运行类型检查验证生效
+
+#### 打包配置规范
+
+使用 `setuptools-scm` 时（Ditto 默认），`py.typed` 会自动被包含在 wheel 中。
+
+如需手动验证，检查生成的 wheel 包含 `*.py.typed`：
+
+```bash
+pixi run build
+tar -tzf dist/*.whl | grep py.typed
+```
+
+#### 当前项目状态
+
+| 包 | py.typed 状态 | 路径 |
+|---|--------------|------|
+| ditto_core | ✅ | `packages/core/src/ditto_core/py.typed` |
+| ditto_datahub | ✅ | `packages/datahub/src/ditto_datahub/py.typed` |
+| ditto_foundation | ✅ | `packages/foundation/src/ditto_foundation/py.typed` |
+| ditto_port | ✅ | `apps/port/src/ditto_port/py.typed` |
 
 ---
 

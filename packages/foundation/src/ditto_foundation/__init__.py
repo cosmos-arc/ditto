@@ -7,10 +7,6 @@ Ditto 共享模块.
 __version__ = "0.1.0"
 __author__ = "Ditto Team"
 
-# Export app bootstrap
-from ditto_foundation.bootstrap import AppInitializer, initialize_app
-from ditto_foundation.bootstrap import reset_for_testing as reset_initializer
-
 # Export cache components
 from ditto_foundation.cache import CacheStats, DataCache
 
@@ -40,9 +36,12 @@ from ditto_foundation.observability import (
     traced,
 )
 
+# Export quality types
+from ditto_foundation.quality import DQSeverity
+
 __all__ = [
-    "AppInitializer",
     "CacheStats",
+    "DQSeverity",
     "DataCache",
     "EffectiveConfig",
     "FileLockManager",
@@ -56,10 +55,8 @@ __all__ = [
     "get_span_id",
     "get_trace_id",
     "init",
-    "initialize_app",
     "logger",
     "reset_for_testing",
-    "reset_initializer",
     "shutdown",
     "span",
     "traced",
