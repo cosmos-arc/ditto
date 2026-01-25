@@ -1,7 +1,5 @@
 """部署脚本单元测试."""
 
-from unittest.mock import PropertyMock
-
 import pytest
 from ditto_port.jobs.flows.deploy import (
     FlowDeploymentConfig,
@@ -78,10 +76,13 @@ class TestListFlows:
         mock_get_configs = mocker.patch(
             "ditto_port.jobs.flows.deploy._get_flow_configs"
         )
-        mock_flow = mocker.Mock()
-        mock_flow.name = "test_flow"
-        # 使用 PropertyMock 让 .name 属性返回字符串
-        type(mock_flow).name = PropertyMock(return_value="test_flow")
+
+        # 创建一个简单的对象来替代 Mock，让 name 属性正常工作
+        class SimpleFlow:
+            name = "test_flow"
+            __name__ = "test_flow"
+
+        mock_flow = SimpleFlow()
 
         mock_config = mocker.Mock()
         mock_config.flow.return_value = mock_flow
@@ -101,10 +102,13 @@ class TestListFlows:
         mock_get_configs = mocker.patch(
             "ditto_port.jobs.flows.deploy._get_flow_configs"
         )
-        mock_flow = mocker.Mock()
-        mock_flow.name = "test_flow"
-        # 使用 PropertyMock 让 .name 属性返回字符串
-        type(mock_flow).name = PropertyMock(return_value="test_flow")
+
+        # 创建一个简单的对象来替代 Mock，让 name 属性正常工作
+        class SimpleFlow:
+            name = "test_flow"
+            __name__ = "test_flow"
+
+        mock_flow = SimpleFlow()
 
         mock_config = mocker.Mock()
         mock_config.flow.return_value = mock_flow
