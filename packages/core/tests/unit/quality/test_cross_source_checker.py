@@ -25,14 +25,14 @@ class TestCrossSourceChecker:
         """测试无差异场景."""
         primary = pl.DataFrame(
             {
-                "src_code": ["000001.SZ", "000002.SZ"],
+                "symbol": ["000001", "000002"],
                 "trade_date": ["20240101", "20240101"],
                 "close": [10.0, 20.0],
             }
         )
         secondary = pl.DataFrame(
             {
-                "src_code": ["000001.SZ", "000002.SZ"],
+                "symbol": ["000001", "000002"],
                 "trade_date": ["20240101", "20240101"],
                 "close": [10.0, 20.0],
             }
@@ -46,7 +46,7 @@ class TestCrossSourceChecker:
                 {
                     "rule": "cross_source_compare",
                     "fields": ["close"],
-                    "key_columns": ["src_code", "trade_date"],
+                    "key_columns": ["symbol", "trade_date"],
                 }
             ],
         )
@@ -57,14 +57,14 @@ class TestCrossSourceChecker:
         """测试有差异场景."""
         primary = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "symbol": ["000001"],
                 "trade_date": ["20240101"],
                 "close": [10.05],  # 差异超过 0.01
             }
         )
         secondary = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "symbol": ["000001"],
                 "trade_date": ["20240101"],
                 "close": [10.0],
             }
@@ -78,7 +78,7 @@ class TestCrossSourceChecker:
                 {
                     "rule": "cross_source_compare",
                     "fields": ["close"],
-                    "key_columns": ["src_code", "trade_date"],
+                    "key_columns": ["symbol", "trade_date"],
                 }
             ],
         )
@@ -92,14 +92,14 @@ class TestCrossSourceChecker:
         """测试规则关闭场景."""
         primary = pl.DataFrame(
             {
-                "src_code": ["1"],
+                "symbol": ["1"],
                 "trade_date": ["20240101"],
                 "close": [10.0],
             }
         )
         secondary = pl.DataFrame(
             {
-                "src_code": ["1"],
+                "symbol": ["1"],
                 "trade_date": ["20240101"],
                 "close": [20.0],
             }
@@ -113,7 +113,7 @@ class TestCrossSourceChecker:
                 {
                     "rule": "cross_source_compare",
                     "fields": ["close"],
-                    "key_columns": ["src_code", "trade_date"],
+                    "key_columns": ["symbol", "trade_date"],
                     "enabled": False,  # 关闭
                 }
             ],
@@ -125,14 +125,14 @@ class TestCrossSourceChecker:
         """测试自定义容差规则."""
         primary = pl.DataFrame(
             {
-                "src_code": ["1"],
+                "symbol": ["1"],
                 "trade_date": ["20240101"],
                 "vol": [1000],
             }
         )
         secondary = pl.DataFrame(
             {
-                "src_code": ["1"],
+                "symbol": ["1"],
                 "trade_date": ["20240101"],
                 "vol": [1005],  # 0.5% 差异
             }
@@ -146,7 +146,7 @@ class TestCrossSourceChecker:
                 {
                     "rule": "cross_source_compare",
                     "fields": ["vol"],
-                    "key_columns": ["src_code", "trade_date"],
+                    "key_columns": ["symbol", "trade_date"],
                     "tolerance_rules": {
                         "vol": {
                             "method": "relative",

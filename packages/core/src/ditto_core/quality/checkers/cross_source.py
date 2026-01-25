@@ -104,7 +104,7 @@ class CrossSourceChecker:
             DQIssue if rule violated, None otherwise
 
         """
-        key_columns = rule.get("key_columns", ["src_code", "trade_date"])
+        key_columns = rule.get("key_columns", ["symbol", "trade_date"])
         fields = rule.get("fields", [])
         custom_tolerance = rule.get("tolerance_rules", {})
 
@@ -134,11 +134,15 @@ class CrossSourceChecker:
 
         # 检查每个字段
         diff_samples: list[dict[str, Any]] = []
+        # 使用 key_columns 的第一列作为标识符（通常是 symbol 或 sid）
+        identifier_column = key_columns[0]
         for field in fields:
             if field not in primary.columns or field not in secondary.columns:
                 continue
 
-            field_diff = self._check_field(merged, field, tolerance.get(field))
+            field_diff = self._check_field(
+                merged, field, tolerance.get(field), identifier_column
+            )
             if field_diff is not None:
                 diff_samples.extend(field_diff)
 
@@ -167,6 +171,7 @@ class CrossSourceChecker:
         merged: pl.DataFrame,
         field: str,
         tolerance: ToleranceRule | None,
+        identifier_column: str,
     ) -> list[dict[str, Any]] | None:
         """
         检查单个字段的差异.
@@ -175,6 +180,7 @@ class CrossSourceChecker:
             merged: 合并后的 DataFrame
             field: 字段名
             tolerance: 容差规则
+            identifier_column: 标识符列名（symbol 或 sid）
 
         Returns:
             差异样本列表，无差异返回 None
@@ -210,7 +216,7 @@ class CrossSourceChecker:
             return (
                 diff_rows.select(
                     [
-                        "src_code",
+                        identifier_column,
                         "trade_date",
                         pl.col(field).alias("primary_value"),
                         pl.col(f"{field}_secondary").alias("secondary_value"),

@@ -82,8 +82,9 @@ l3_statistical:
     message: "价格连续 3 日无变化（停牌或异常）"
 
   # 跨源对比：Tushare vs 通达信
+  # 使用 symbol 作为对比 key_column（统一格式，不依赖数据源）
   - rule: cross_source_compare
-    key_columns: [src_code, trade_date]
+    key_columns: [symbol, trade_date]
     fields: [open, high, low, close, vol, amount]
     tolerance_rules:
       # 价格类：严格 Tick 对齐（0.001 元）

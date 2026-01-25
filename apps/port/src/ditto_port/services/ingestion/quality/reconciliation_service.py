@@ -6,6 +6,7 @@ import polars as pl
 from ditto_core.quality.spec import DQResult
 from ditto_datahub.accessors.comparison_accessor import ComparisonAccessor
 from ditto_datahub.sources.tdx.source import TdxSource
+from ditto_datahub.stores.security_store import SecurityStore
 from loguru import logger
 
 
@@ -19,6 +20,11 @@ class QualityReconciliationService:
     - 转换 DQResult → DataFrame
     - 存储对比结果
     - 触发告警
+
+    标识符体系：
+    - 入口使用 sid（内部 ID）
+    - 对比使用 symbol（统一格式，如 000001）
+    - 数据源使用 src_code（数据源特定格式，如 000001.SZ）
     """
 
     def __init__(
@@ -26,6 +32,7 @@ class QualityReconciliationService:
         engine: Any,  # QualityEngine
         tdx_source: TdxSource,
         comparison_accessor: ComparisonAccessor,
+        security_store: SecurityStore,
     ) -> None:
         """
         初始化质量对账服务.
@@ -34,11 +41,13 @@ class QualityReconciliationService:
             engine: 质量引擎
             tdx_source: 通达信数据源
             comparison_accessor: 对比结果访问器
+            security_store: 证券存储（用于 sid → symbol 转换）
 
         """
         self._engine = engine
         self._tdx_source = tdx_source
         self._comparison_accessor = comparison_accessor
+        self._security_store = security_store
 
     async def daily_reconciliation(
         self,
@@ -51,8 +60,14 @@ class QualityReconciliationService:
 
         Port 层：编排流程
 
+        标识符转换流程：
+        1. 接收包含 sid 的 primary_df
+        2. 使用 SecurityStore 将 sid 转换为 symbol
+        3. 使用 symbol 作为对比的 key_column
+        4. 各数据源内部将 symbol 转换为各自的 src_code 格式
+
         Args:
-            primary_df: 主数据源（Tushare 已读取的数据）
+            primary_df: 主数据源（Tushare 已读取的数据，必须包含 sid 列）
             trade_date: 交易日期（YYYYMMDD）
             dataset: 数据集标识
 
@@ -68,14 +83,22 @@ class QualityReconciliationService:
         )
 
         try:
-            # 提取股票代码列表
-            if "src_code" not in primary_df.columns:
-                raise ValueError("primary_df must contain 'src_code' column")
+            # 1. 验证输入
+            if "sid" not in primary_df.columns:
+                raise ValueError("primary_df must contain 'sid' column")
 
-            ts_codes = primary_df["src_code"].unique().to_list()
+            # 2. 添加 symbol 列（sid → symbol 转换）
+            primary_df = self._security_store.enrich_with_symbol(primary_df)
 
-            # 2. 获取辅助数据源（TDX）
-            secondary_df = self._tdx_source.fetch_stock_daily_bars(ts_codes, trade_date)
+            if "symbol" not in primary_df.columns:
+                raise ValueError("Failed to enrich primary_df with symbol")
+
+            # 3. 提取 symbol 列表
+            symbols = primary_df["symbol"].unique().to_list()
+
+            # 4. 获取辅助数据源（TDX）
+            # TdxSource 内部将 symbol 转换为 TDX 格式的 src_code
+            secondary_df = self._tdx_source.fetch_stock_daily_bars(symbols, trade_date)
 
             if secondary_df.height == 0:
                 logger.warning(
@@ -91,23 +114,24 @@ class QualityReconciliationService:
                     "skipped": "no_secondary_data",
                 }
 
-            # 3. 调用 Core 层引擎进行对比
+            # 5. 调用 Core 层引擎进行对比
+            # 配置文件使用 key_columns: [symbol, trade_date]
             result = self._engine.check_cross_source(
                 primary=primary_df,
                 secondary=secondary_df,
                 dataset=dataset,
             )
 
-            # 4. 转换 DQResult → DataFrame（Port 层职责）
+            # 6. 转换 DQResult → DataFrame（Port 层职责）
             comparison_df = self._convert_result_to_df(result, dataset)
 
-            # 5. 存储对比结果
+            # 7. 存储对比结果
             if not comparison_df.is_empty():
                 await self._comparison_accessor.write_result(
                     trade_date, comparison_df, dataset
                 )
 
-            # 6. 判断是否需要告警
+            # 8. 判断是否需要告警
             if result.issues:
                 await self._send_alerts(result, trade_date, dataset)
 
@@ -165,7 +189,7 @@ class QualityReconciliationService:
             for sample in issue.sample_data:
                 row: dict[str, Any] = {
                     "dataset": dataset,
-                    "src_code": sample.get("src_code", ""),
+                    "symbol": sample.get("symbol", ""),
                     "trade_date": sample.get("trade_date", ""),
                     "field": sample.get("field", ""),
                     "primary_value": sample.get("primary_value", ""),
