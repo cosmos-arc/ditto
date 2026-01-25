@@ -86,19 +86,19 @@ l3_statistical:
     key_columns: [src_code, trade_date]
     fields: [open, high, low, close, vol, amount]
     tolerance_rules:
-      # 价格类：Tick 对齐（A 股最小变动单位 0.01 元）
+      # 价格类：严格 Tick 对齐（0.001 元）
       open:
         method: tick_aligned
-        tick_size: 0.01
+        tick_size: 0.001
       high:
         method: tick_aligned
-        tick_size: 0.01
+        tick_size: 0.001
       low:
         method: tick_aligned
-        tick_size: 0.01
+        tick_size: 0.001
       close:
         method: tick_aligned
-        tick_size: 0.01
+        tick_size: 0.001
       # 成交量：相对容差 0.1%（数量级差异大，用相对容差）
       vol:
         method: relative
