@@ -8,6 +8,7 @@ import polars as pl
 from ditto_foundation import DQSeverity
 
 from ditto_core.quality.checkers.business import BusinessChecker
+from ditto_core.quality.checkers.cross_source import CrossSourceChecker
 from ditto_core.quality.checkers.statistical import StatisticalChecker
 from ditto_core.quality.checkers.technical import TechnicalChecker
 from ditto_core.quality.config import DQSettings
@@ -43,6 +44,7 @@ class QualityEngine:
         self.technical_checker = TechnicalChecker()
         self.business_checker = BusinessChecker()
         self.statistical_checker = StatisticalChecker()
+        self.cross_source_checker = CrossSourceChecker()  # 新增
 
     def check(
         self,
@@ -152,5 +154,53 @@ class QualityEngine:
         return DQResult(
             dataset=dataset,
             passed=True,  # L3 doesn't block
+            issues=issues,
+        )
+
+    def check_cross_source(
+        self,
+        primary: pl.DataFrame,
+        secondary: pl.DataFrame,
+        dataset: str,
+        context: dict[str, Any] | None = None,
+    ) -> DQResult:
+        """
+        执行跨源对比检查（L3）.
+
+        Args:
+            primary: 主数据源 DataFrame（如 Tushare）
+            secondary: 辅助数据源 DataFrame（如 TDX）
+            dataset: 数据集标识
+            context: 额外上下文
+
+        Returns:
+            DQResult with cross-source comparison results
+
+        """
+        # 检查 L3 开关
+        if self._dq_settings and not self._dq_settings.l3_enabled:
+            return DQResult(dataset=dataset, passed=True, issues=[])
+
+        issues: list[DQIssue] = []
+
+        # 获取数据集规则
+        dataset_rules = self.config.get_rules(dataset)
+        if dataset_rules is None:
+            return DQResult(dataset=dataset, passed=True, issues=[])
+
+        # 执行跨源对比检查（在 L3 统计检查规则中）
+        if dataset_rules.l3_statistical:
+            cross_source_issues = self.cross_source_checker.check(
+                primary=primary,
+                secondary=secondary,
+                rules=dataset_rules.l3_statistical,
+                context=context,
+            )
+            issues.extend(cross_source_issues)
+
+        # L3 检查始终通过（仅告警）
+        return DQResult(
+            dataset=dataset,
+            passed=True,  # L3 不阻塞
             issues=issues,
         )
