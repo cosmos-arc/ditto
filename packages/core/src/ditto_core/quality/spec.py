@@ -33,6 +33,28 @@ class RuleType(str, Enum):
     CONSISTENCY = "consistency"
     MONOTONIC_DECREASE = "monotonic_decrease"
     OUTLIER = "outlier"
+    CROSS_SOURCE_COMPARE = "cross_source_compare"
+
+
+# Cross-Source Comparison Models
+
+
+class CompareMethod(str, Enum):
+    """跨源比对方法."""
+
+    TICK_ALIGNED = "tick_aligned"  # Tick 对齐（价格类）
+    RELATIVE = "relative"  # 相对容差（百分比）
+    ABSOLUTE = "absolute"  # 绝对容差（成交量类）
+
+
+@dataclass(frozen=True)
+class ToleranceRule:
+    """容差规则."""
+
+    method: CompareMethod
+    tick_size: float | None = None  # Tick 对齐时的 tick 大小
+    relative_tol: float | None = None  # 相对容差（如 0.001 = 0.1%）
+    absolute_tol: float | None = None  # 绝对容差
 
 
 # Base Rule Models
@@ -191,6 +213,16 @@ class OutlierRule(BaseRule):
     threshold_ratio: float
     group_by: str | list[str] | None = None
     reference_dataset: str | None = None
+
+
+class CrossSourceRule(BaseRule):
+    """跨源对比规则（L3 统计检查）."""
+
+    rule: RuleType = RuleType.CROSS_SOURCE_COMPARE
+    fields: list[str]  # 要对比的字段（如 [open, high, low, close, vol]）
+    key_columns: list[str]  # 对比键（如 [src_code, trade_date]）
+    tolerance_rules: dict[str, dict[str, Any]] | None = None  # 字段 → 容差配置
+    enabled: bool = True  # 开关控制
 
 
 # Dataset Configuration
