@@ -85,7 +85,7 @@ class TestListFlows:
         mock_flow = SimpleFlow()
 
         mock_config = mocker.Mock()
-        mock_config.flow.return_value = mock_flow
+        mock_config.flow = mock_flow
         mock_config.description = "Test description"
         mock_get_configs.return_value = [mock_config]
 
@@ -111,7 +111,7 @@ class TestListFlows:
         mock_flow = SimpleFlow()
 
         mock_config = mocker.Mock()
-        mock_config.flow.return_value = mock_flow
+        mock_config.flow = mock_flow
         mock_config.description = "Test description"
         mock_get_configs.return_value = [mock_config]
 
