@@ -143,6 +143,10 @@ class BarsAccessor:
         # 1. 解析 SID 列表和资产类别
         sids, asset_class = self._resolve_sids_and_asset_class(query)
 
+        # 空 SID 列表返回空 DataFrame（非 market_wide 模式）
+        if not query.market_wide and not sids:
+            return pl.DataFrame()
+
         # 2. 解析日期参数（字符串 -> date 对象）
         start_date, end_date, asof_date = self._parse_dates(query)
 
