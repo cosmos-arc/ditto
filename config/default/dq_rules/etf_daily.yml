@@ -2,8 +2,8 @@
 dataset: etf_daily
 description: "ETF 日 K 线数据质量检查规则"
 
-# L1: 技术校验（写入时强制阻断）
-l1_technical:
+# 技术类: 技术校验（写入时强制阻断）
+technical:
   - rule: not_null
     columns: [sid, trade_date, open, high, low, close]
     message: "必填字段不能为空"
@@ -27,8 +27,8 @@ l1_technical:
       close: float
     message: "字段类型不匹配"
 
-# L2: 业务规则（写入时警告但不阻断）
-l2_business:
+# 业务类: 业务规则（写入时警告但不阻断）
+business:
   - rule: positive
     columns: [open, high, low, close]
     message: "OHLC 价格必须为正数"
@@ -48,8 +48,8 @@ l2_business:
     column: volume
     message: "成交量为 0 可能表示数据异常"
 
-# L3: 统计异常（定时批量检查）
-l3_statistical:
+# 统计类: 统计异常（定时批量检查）
+statistical:
   - rule: zscore
     name: volume_spike
     column: volume

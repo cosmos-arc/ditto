@@ -86,7 +86,7 @@ class TechnicalChecker:
                     null_count=null_count,
                 )
                 return DQIssue(
-                    level=DQLevel.L1_TECHNICAL,
+                    level=DQLevel.TECHNICAL,
                     severity=DQSeverity.ERROR,
                     rule_name="not_null",
                     message=rule.get("message", f"{col} has null values"),
@@ -118,7 +118,7 @@ class TechnicalChecker:
                 duplicate_count=duplicate_count,
             )
             return DQIssue(
-                level=DQLevel.L1_TECHNICAL,
+                level=DQLevel.TECHNICAL,
                 severity=DQSeverity.ERROR,
                 rule_name="unique",
                 message=rule.get("message", f"Duplicate key: {columns}"),
@@ -189,7 +189,7 @@ class TechnicalChecker:
                     f"invalid references to {reference}"
                 )
                 issue = DQIssue(
-                    level=DQLevel.L1_TECHNICAL,
+                    level=DQLevel.TECHNICAL,
                     severity=DQSeverity.ERROR,
                     rule_name="foreign_key",
                     message=msg,
@@ -236,7 +236,7 @@ class TechnicalChecker:
                     f"Column '{col}' has type {actual_dtype}, expected {expected_type}"
                 )
                 return DQIssue(
-                    level=DQLevel.L1_TECHNICAL,
+                    level=DQLevel.TECHNICAL,
                     severity=DQSeverity.ERROR,
                     rule_name="type_check",
                     message=msg,

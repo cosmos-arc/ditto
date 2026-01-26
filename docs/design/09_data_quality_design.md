@@ -59,17 +59,17 @@ Phase 1 实现采用了**多文件 YAML + Pydantic 验证**的架构，而非单
 
 ### 3.3 规则类型说明
 
-| 规则类型 | 层级 | 参数 | 说明 |
+| 规则类型 | 类别 | 参数 | 说明 |
 |----------|------|------|------|
-| \ | L1 | columns | 指定列不能为空 |
-| \ | L1 | columns | 指定列组合唯一 |
-| \ | L1 | column, reference | 外键存在性检查 |
-| \ | L2 | columns | 值必须 > 0 |
-| \ | L2 | columns | 值必须 >= 0 |
-| \ | L2 | expr | 自定义 Polars 表达式 |
-| \ | L3 | column, window, threshold | 滚动 Z-score 异常检测 |
-| \ | L3 | universe, threshold | Universe 覆盖率检查 |
-| \ | L3 | max_gap_days | 时序连续性检查 |
+| \ | 技术类 | columns | 指定列不能为空 |
+| \ | 技术类 | columns | 指定列组合唯一 |
+| \ | 技术类 | column, reference | 外键存在性检查 |
+| \ | 业务类 | columns | 值必须 > 0 |
+| \ | 业务类 | columns | 值必须 >= 0 |
+| \ | 业务类 | expr | 自定义 Polars 表达式 |
+| \ | 统计类 | column, window, threshold | 滚动 Z-score 异常检测 |
+| \ | 统计类 | universe, threshold | Universe 覆盖率检查 |
+| \ | 统计类 | max_gap_days | 时序连续性检查 |
 
 ---
 
@@ -92,7 +92,7 @@ Phase 1 实现采用了**多文件 YAML + Pydantic 验证**的架构，而非单
 
 ## 6. Server 批量检查任务 ✅
 
-L3 批量 DQ 检查任务已实现：
+统计类批量 DQ 检查任务已实现：
 ---
 
 ## 7. 隔离区机制 ✅
@@ -114,12 +114,12 @@ DQ 报告生成器已实现：
 | 1.1 | YAML 规则配置文件 | ✅ | 5 个数据集规则文件 |
 | 1.2 | Pydantic 规则模型 | ✅ | models.py 完整实现 |
 | 1.3 | DQEngine 核心 | ✅ | 引擎 + 规则加载 |
-| 1.4 | TechnicalChecker（L1） | ✅ | not_null, unique, foreign_key |
-| 1.5 | BusinessChecker（L2） | ✅ | positive, expression 检查 |
-| 1.6 | StatisticalChecker（L3） | ✅ | 框架实现，Z-score/completeness 待完善 |
+| 1.4 | TechnicalChecker（技术类） | ✅ | not_null, unique, foreign_key |
+| 1.5 | BusinessChecker（业务类） | ✅ | positive, expression 检查 |
+| 1.6 | StatisticalChecker（统计类） | ✅ | Z-score/completeness + 跨源对比 |
 | 1.7 | 隔离区机制 | ✅ | QuarantineStore + SQLite 表 |
 | 1.8 | Repository 集成 | ⏸️ | **延后到 Phase 3** |
-| 1.9 | Server L3 任务 | ✅ | dq_batch_check Prefect task |
+| 1.9 | Server 统计类任务 | ✅ | dq_batch_check Prefect task |
 | 1.10 | DQ 报告生成 | ✅ | Markdown + HTML 报告 |
 
 ### 9.2 测试覆盖
@@ -142,23 +142,24 @@ DQ 报告生成器已实现：
 
 ### 三层规则
 
-| 层级 | 检测内容 | 执行时机 | 失败处理 | 状态 |
+| 类别 | 检测内容 | 执行时机 | 失败处理 | 状态 |
 |------|----------|----------|----------|------|
-| L1 | 非空、唯一、外键 | 写入时 | **阻断写入** | ✅ |
-| L2 | OHLC、涨跌幅 | 写入时 | **警告记录** | ✅ |
-| L3 | Z-score、完整性 | 定时批量 | **告警通知** | ✅ 框架 |
+| 技术类 | 非空、唯一、外键 | 写入时 | **阻断写入** | ✅ |
+| 业务类 | OHLC、涨跌幅 | 写入时 | **警告记录** | ✅ |
+| 统计类 | Z-score、完整性、跨源对比 | 定时批量 | **告警通知** | ✅ |
 
 ### Phase 3 待办
 
 1. **Task 1.8**：Repository 集成 DQEngine
-   - L1 失败阻断写入
-   - L2 警告记录日志
+   - 技术类失败阻断写入
+   - 业务类警告记录日志
    - 隔离区数据保存
 
-2. **L3 统计检测完善**：
+2. **统计类检测完善**：
    - Z-score 计算实现
    - 完整性检查实现
    - 时序连续性检查
+   - 跨源对比（Tushare vs TDX）
 
 3. **真实数据验证**：
    - 使用历史数据测试

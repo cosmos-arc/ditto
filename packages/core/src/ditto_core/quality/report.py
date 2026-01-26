@@ -29,9 +29,9 @@ class DQReportGenerator:
         buffer.write(f"**问题总数**: {result.total_count}\n\n")
 
         # 按级别分组
-        l1_issues = [i for i in result.issues if i.level == DQLevel.L1_TECHNICAL]
-        l2_issues = [i for i in result.issues if i.level == DQLevel.L2_BUSINESS]
-        l3_issues = [i for i in result.issues if i.level == DQLevel.L3_STATISTICAL]
+        l1_issues = [i for i in result.issues if i.level == DQLevel.TECHNICAL]
+        l2_issues = [i for i in result.issues if i.level == DQLevel.BUSINESS]
+        l3_issues = [i for i in result.issues if i.level == DQLevel.STATISTICAL]
 
         # L1 技术校验
         buffer.write("## L1 技术校验(阻断写入)\n\n")
@@ -132,21 +132,21 @@ class DQReportGenerator:
     <h2>L1 技术校验(阻断写入)</h2>
     {
             self._render_issues_html(
-                [i for i in result.issues if i.level == DQLevel.L1_TECHNICAL]
+                [i for i in result.issues if i.level == DQLevel.TECHNICAL]
             )
         }
 
     <h2>L2 业务规则(警告记录)</h2>
     {
             self._render_issues_html(
-                [i for i in result.issues if i.level == DQLevel.L2_BUSINESS]
+                [i for i in result.issues if i.level == DQLevel.BUSINESS]
             )
         }
 
     <h2>L3 统计异常(告警通知)</h2>
     {
             self._render_issues_html(
-                [i for i in result.issues if i.level == DQLevel.L3_STATISTICAL]
+                [i for i in result.issues if i.level == DQLevel.STATISTICAL]
             )
         }
 

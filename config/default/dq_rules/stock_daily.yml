@@ -2,8 +2,8 @@
 dataset: stock_daily
 description: "股票日 K 线数据质量检查规则"
 
-# L1: 技术校验（写入时强制阻断）
-l1_technical:
+# 技术类：结构约束（写入时强制阻断）
+technical:
   - rule: not_null
     columns: [sid, trade_date, open, high, low, close, volume, amount]
     message: "必填字段不能为空"
@@ -29,8 +29,8 @@ l1_technical:
       amount: float
     message: "字段类型不匹配"
 
-# L2: 业务规则（写入时警告但不阻断）
-l2_business:
+# 业务类：业务规则（写入时警告但不阻断）
+business:
   - rule: positive
     columns: [open, high, low, close, volume, amount]
     message: "OHLC 价格、成交额必须为正数"
@@ -51,8 +51,8 @@ l2_business:
     max_ratio: 1.11  # 相对前一日涨跌幅不超过 11%
     message: "收盘价涨跌幅超出正常范围"
 
-# L3: 统计异常（定时批量检查）
-l3_statistical:
+# 统计类：异常检测（定时批量检查）
+statistical:
   - rule: zscore
     name: volume_spike
     column: volume
@@ -80,3 +80,33 @@ l3_statistical:
     column: close
     threshold_days: 3
     message: "价格连续 3 日无变化（停牌或异常）"
+
+  # 跨源对比：Tushare vs 通达信
+  # 使用 symbol 作为对比 key_column（统一格式，不依赖数据源）
+  - rule: cross_source_compare
+    key_columns: [symbol, trade_date]
+    fields: [open, high, low, close, vol, amount]
+    tolerance_rules:
+      # 价格类：严格 Tick 对齐（0.001 元）
+      open:
+        method: tick_aligned
+        tick_size: 0.001
+      high:
+        method: tick_aligned
+        tick_size: 0.001
+      low:
+        method: tick_aligned
+        tick_size: 0.001
+      close:
+        method: tick_aligned
+        tick_size: 0.001
+      # 成交量：相对容差 0.1%（数量级差异大，用相对容差）
+      vol:
+        method: relative
+        relative_tol: 0.001
+      # 成交额：相对容差 0.1%
+      amount:
+        method: relative
+        relative_tol: 0.001
+    message: "与通达信数据对比发现差异"
+    enabled: true

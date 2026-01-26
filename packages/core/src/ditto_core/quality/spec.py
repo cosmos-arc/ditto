@@ -11,9 +11,9 @@ from pydantic import BaseModel, Field, field_validator
 class DQLevel(Enum):
     """DQ check level."""
 
-    L1_TECHNICAL = "l1_technical"
-    L2_BUSINESS = "l2_business"
-    L3_STATISTICAL = "l3_statistical"
+    TECHNICAL = "technical"  # 技术类 - 结构约束（非空、唯一、外键）
+    BUSINESS = "business"  # 业务类 - 业务规则（OHLC、涨跌幅）
+    STATISTICAL = "statistical"  # 统计类 - 异常检测（Z-score、完整性）
 
 
 class RuleType(str, Enum):
@@ -33,6 +33,28 @@ class RuleType(str, Enum):
     CONSISTENCY = "consistency"
     MONOTONIC_DECREASE = "monotonic_decrease"
     OUTLIER = "outlier"
+    CROSS_SOURCE_COMPARE = "cross_source_compare"
+
+
+# Cross-Source Comparison Models
+
+
+class CompareMethod(str, Enum):
+    """跨源比对方法."""
+
+    TICK_ALIGNED = "tick_aligned"  # Tick 对齐（价格类）
+    RELATIVE = "relative"  # 相对容差（百分比）
+    ABSOLUTE = "absolute"  # 绝对容差（成交量类）
+
+
+@dataclass(frozen=True)
+class ToleranceRule:
+    """容差规则."""
+
+    method: CompareMethod
+    tick_size: float | None = None  # Tick 对齐时的 tick 大小
+    relative_tol: float | None = None  # 相对容差（如 0.001 = 0.1%）
+    absolute_tol: float | None = None  # 绝对容差
 
 
 # Base Rule Models
@@ -193,6 +215,16 @@ class OutlierRule(BaseRule):
     reference_dataset: str | None = None
 
 
+class CrossSourceRule(BaseRule):
+    """跨源对比规则（L3 统计检查）."""
+
+    rule: RuleType = RuleType.CROSS_SOURCE_COMPARE
+    fields: list[str]  # 要对比的字段（如 [open, high, low, close, vol]）
+    key_columns: list[str]  # 对比键（如 [src_code, trade_date]）
+    tolerance_rules: dict[str, dict[str, Any]] | None = None  # 字段 → 容差配置
+    enabled: bool = True  # 开关控制
+
+
 # Dataset Configuration
 
 
@@ -205,11 +237,17 @@ class DatasetRules(BaseModel):
 
     dataset: str
     description: str
-    l1_technical: list[dict[str, Any]] = Field(default_factory=lambda: [])
-    l2_business: list[dict[str, Any]] = Field(default_factory=lambda: [])
-    l3_statistical: list[dict[str, Any]] = Field(default_factory=lambda: [])
+    technical: list[dict[str, Any]] = Field(  # type: ignore[reportUnknownVariableType]
+        default_factory=list
+    )  # 技术类规则
+    business: list[dict[str, Any]] = Field(  # type: ignore[reportUnknownVariableType]
+        default_factory=list
+    )  # 业务类规则
+    statistical: list[dict[str, Any]] = Field(  # type: ignore[reportUnknownVariableType]
+        default_factory=list
+    )  # 统计类规则
 
-    @field_validator("l1_technical", "l2_business", "l3_statistical", mode="before")
+    @field_validator("technical", "business", "statistical", mode="before")
     @classmethod
     def parse_rules(cls, v: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Parse rule dicts into proper models."""

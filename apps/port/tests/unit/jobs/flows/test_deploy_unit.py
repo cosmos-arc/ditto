@@ -13,7 +13,7 @@ from pytest_mock import MockerFixture
 
 @pytest.mark.unit
 class TestGetFlow:
-    """测试 _get_flow 函数。"""
+    """测试 _get_flow 函数."""
 
     def test_get_flow_returns_known_flow(self):
         """测试获取已知的 flow。"""
@@ -30,7 +30,7 @@ class TestGetFlow:
 
 @pytest.mark.unit
 class TestGetFlowConfigs:
-    """测试 _get_flow_configs 函数。"""
+    """测试 _get_flow_configs 函数."""
 
     def test_get_flow_configs_returns_list(self):
         """测试返回配置列表。"""
@@ -76,12 +76,16 @@ class TestListFlows:
         mock_get_configs = mocker.patch(
             "ditto_port.jobs.flows.deploy._get_flow_configs"
         )
-        mock_flow = mocker.Mock()
-        mock_flow.name = "test_flow"
-        mock_flow.__name__ = "test_flow"  # 同时设置 __name__ 以防万一
+
+        # 创建一个简单的对象来替代 Mock，让 name 属性正常工作
+        class SimpleFlow:
+            name = "test_flow"
+            __name__ = "test_flow"
+
+        mock_flow = SimpleFlow()
 
         mock_config = mocker.Mock()
-        mock_config.flow.return_value = mock_flow
+        mock_config.flow = mock_flow
         mock_config.description = "Test description"
         mock_get_configs.return_value = [mock_config]
 
@@ -98,11 +102,16 @@ class TestListFlows:
         mock_get_configs = mocker.patch(
             "ditto_port.jobs.flows.deploy._get_flow_configs"
         )
-        mock_flow = mocker.Mock()
-        mock_flow.name = "test_flow"
+
+        # 创建一个简单的对象来替代 Mock，让 name 属性正常工作
+        class SimpleFlow:
+            name = "test_flow"
+            __name__ = "test_flow"
+
+        mock_flow = SimpleFlow()
 
         mock_config = mocker.Mock()
-        mock_config.flow.return_value = mock_flow
+        mock_config.flow = mock_flow
         mock_config.description = "Test description"
         mock_get_configs.return_value = [mock_config]
 

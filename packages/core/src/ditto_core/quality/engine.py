@@ -8,6 +8,7 @@ import polars as pl
 from ditto_foundation import DQSeverity
 
 from ditto_core.quality.checkers.business import BusinessChecker
+from ditto_core.quality.checkers.cross_source import CrossSourceChecker
 from ditto_core.quality.checkers.statistical import StatisticalChecker
 from ditto_core.quality.checkers.technical import TechnicalChecker
 from ditto_core.quality.config import DQSettings
@@ -18,7 +19,7 @@ class QualityEngine:
     """
     Quality execution engine.
 
-    Orchestrates data quality checks across L1/L2/L3 levels.
+    Orchestrates data quality checks across technical/business/statistical categories.
     Core layer: Pure business logic, no data access dependencies.
     """
 
@@ -43,6 +44,7 @@ class QualityEngine:
         self.technical_checker = TechnicalChecker()
         self.business_checker = BusinessChecker()
         self.statistical_checker = StatisticalChecker()
+        self.cross_source_checker = CrossSourceChecker()  # 新增
 
     def check(
         self,
@@ -75,33 +77,33 @@ class QualityEngine:
             # No rules configured, return passing result
             return DQResult(dataset=dataset, passed=True, issues=[])
 
-        # Run L1 technical checks
-        if "l1" in levels and dataset_rules.l1_technical:
-            # ✅ 检查 L1 开关
+        # Run technical class checks (L1)
+        if "l1" in levels and dataset_rules.technical:
+            # ✅ 检查技术类开关
             if self._dq_settings and not self._dq_settings.l1_enabled:
-                pass  # 跳过 L1 检查
+                pass  # 跳过技术类检查
             else:
                 l1_issues = self.technical_checker.check(
                     df=df,
-                    rules=dataset_rules.l1_technical,
+                    rules=dataset_rules.technical,
                     context=context,
                 )
                 issues.extend(l1_issues)
 
-        # Run L2 business checks
-        if "l2" in levels and dataset_rules.l2_business:
-            # ✅ 检查 L2 开关
+        # Run business class checks (L2)
+        if "l2" in levels and dataset_rules.business:
+            # ✅ 检查业务类开关
             if self._dq_settings and not self._dq_settings.l2_enabled:
-                pass  # 跳过 L2 检查
+                pass  # 跳过业务类检查
             else:
                 l2_issues = self.business_checker.check(
                     df=df,
-                    rules=dataset_rules.l2_business,
+                    rules=dataset_rules.business,
                     context=context,
                 )
                 issues.extend(l2_issues)
 
-        # Determine if passed (L1 errors cause failure)
+        # Determine if passed (technical class errors cause failure)
         has_errors = any(i.severity == DQSeverity.ERROR for i in issues)
         passed = not has_errors
 
@@ -119,7 +121,7 @@ class QualityEngine:
         calendar: pl.DataFrame | None = None,
     ) -> DQResult:
         """
-        Execute L3 statistical anomaly checks (batch).
+        Execute statistical class anomaly checks (batch).
 
         Args:
             dataset: Dataset identifier
@@ -128,7 +130,7 @@ class QualityEngine:
             calendar: Trading calendar (for completeness check)
 
         Returns:
-            DQResult with L3 check results
+            DQResult with statistical class check results
 
         """
         issues: list[DQIssue] = []
@@ -138,19 +140,67 @@ class QualityEngine:
         if dataset_rules is None:
             return DQResult(dataset=dataset, passed=True, issues=[])
 
-        # Run L3 statistical checks
-        if dataset_rules.l3_statistical:
+        # Run statistical class checks
+        if dataset_rules.statistical:
             l3_issues = self.statistical_checker.check(
                 current=current,
                 historical=historical,
                 calendar=calendar,
-                rules=dataset_rules.l3_statistical,
+                rules=dataset_rules.statistical,
             )
             issues.extend(l3_issues)
 
-        # L3 checks always pass (alerts only)
+        # Statistical class checks always pass (alerts only)
         return DQResult(
             dataset=dataset,
-            passed=True,  # L3 doesn't block
+            passed=True,  # 统计类不阻塞
+            issues=issues,
+        )
+
+    def check_cross_source(
+        self,
+        primary: pl.DataFrame,
+        secondary: pl.DataFrame,
+        dataset: str,
+        context: dict[str, Any] | None = None,
+    ) -> DQResult:
+        """
+        执行跨源对比检查（统计类）.
+
+        Args:
+            primary: 主数据源 DataFrame（如 Tushare）
+            secondary: 辅助数据源 DataFrame（如 TDX）
+            dataset: 数据集标识
+            context: 额外上下文
+
+        Returns:
+            DQResult with cross-source comparison results
+
+        """
+        # 检查统计类开关
+        if self._dq_settings and not self._dq_settings.l3_enabled:
+            return DQResult(dataset=dataset, passed=True, issues=[])
+
+        issues: list[DQIssue] = []
+
+        # 获取数据集规则
+        dataset_rules = self.config.get_rules(dataset)
+        if dataset_rules is None:
+            return DQResult(dataset=dataset, passed=True, issues=[])
+
+        # 执行跨源对比检查（在统计类检查规则中）
+        if dataset_rules.statistical:
+            cross_source_issues = self.cross_source_checker.check(
+                primary=primary,
+                secondary=secondary,
+                rules=dataset_rules.statistical,
+                context=context,
+            )
+            issues.extend(cross_source_issues)
+
+        # 统计类检查始终通过（仅告警）
+        return DQResult(
+            dataset=dataset,
+            passed=True,  # 统计类不阻塞
             issues=issues,
         )

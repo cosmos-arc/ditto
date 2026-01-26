@@ -30,5 +30,8 @@ class DataSourceSettings(BaseSettings):
     # Token
     tushare_token: str = Field(default="")
 
+    # 通达信数据源配置（用于质量对账）
+    tdx_path: str = Field(default="D:\\new_tdx\\vipdoc")
+
 
 __all__ = ["DataSourceSettings"]
