@@ -140,29 +140,11 @@ class BarsAccessor:
             market_wide=query.market_wide,
         )
 
-        # 1. 解析 SID 列表
-        # 全市场模式：获取所有活跃 SID
-        if not query.market_wide and not query.sids:
-            return pl.DataFrame()
-        sids = sorted(set(query.sids or []))
+        # 1. 解析 SID 列表和资产类别
+        sids, asset_class = self._resolve_sids_and_asset_class(query)
 
         # 2. 解析日期参数（字符串 -> date 对象）
-        start_date: date | None = None
-        if query.start:
-            start_date = date.fromisoformat(query.start)
-
-        end_date: date | None = None
-        if query.end:
-            end_date = date.fromisoformat(query.end)
-
-        asof_date: date | None = None
-        if query.asof:
-            asof_date = date.fromisoformat(query.asof)
-
-        # 3. 确定资产类别
-        asset_class: Literal["stock", "etf", "index"] | None = query.asset_class
-        if not asset_class:
-            asset_class = self._detect_asset_class_from_sids(sids)
+        start_date, end_date, asof_date = self._parse_dates(query)
 
         # 4. 加载核心数据
         df = self._load_bars_core(
@@ -364,6 +346,66 @@ class BarsAccessor:
             return "stock"  # 默认
 
         return detected[0]
+
+    def _resolve_sids_and_asset_class(
+        self, query: BarsQuery
+    ) -> tuple[list[int], Literal["stock", "etf", "index"]]:
+        """
+        解析 SID 列表和资产类别。
+
+        Args:
+            query: BarsQuery 查询对象。
+
+        Returns:
+            (SID 列表, 资产类别)。
+
+        """
+        if query.market_wide:
+            # 全市场模式：获取所有活跃 SID
+            asset_class: Literal["stock", "etf", "index"] | None = query.asset_class
+            sids = sorted(self._security_store.list_sids(asset_class=asset_class))
+            # 如果没有指定资产类别，从 SID 检测
+            if not asset_class:
+                asset_class = (
+                    self._detect_asset_class_from_sids(sids) if sids else "stock"
+                )
+            return sids, asset_class
+        elif not query.sids:
+            return [], "stock"
+        else:
+            # 普通模式：使用指定的 SID
+            sids = sorted(set(query.sids))
+            asset_class = query.asset_class
+            if not asset_class:
+                asset_class = self._detect_asset_class_from_sids(sids)
+            return sids, asset_class
+
+    def _parse_dates(
+        self, query: BarsQuery
+    ) -> tuple[date | None, date | None, date | None]:
+        """
+        解析日期参数。
+
+        Args:
+            query: BarsQuery 查询对象。
+
+        Returns:
+            (start_date, end_date, asof_date)。
+
+        """
+        start_date: date | None = None
+        if query.start:
+            start_date = date.fromisoformat(query.start)
+
+        end_date: date | None = None
+        if query.end:
+            end_date = date.fromisoformat(query.end)
+
+        asof_date: date | None = None
+        if query.asof:
+            asof_date = date.fromisoformat(query.asof)
+
+        return start_date, end_date, asof_date
 
     def _apply_adjustment(
         self,
