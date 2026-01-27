@@ -1,7 +1,7 @@
 # ditto-datahub
 
-**版本**: v0.5.0
-**最后更新**: 2026-01-23
+**版本**: v0.7.0
+**最后更新**: 2026-01-27
 **状态**: ✅ 稳定
 
 ## 概要
@@ -94,6 +94,36 @@ store = BarsStore(config.data_root)
 | `IngestionLogStore` | 数据摄取事件日志 | SQLite |
 | `QuarantineStore` | 数据隔离区 | SQLite |
 
+### 域级组织
+
+DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
+
+#### Metadata 域
+
+- `domains/metadata/`: Metadata 域
+  - `security/`: 证券主数据
+    - `security_store.py`: SecurityStore（证券主数据存储）
+    - `identity_store.py`: IdentityStore（标识符映射存储，支持 PIT）
+  - `identity/`: 标识符映射（待迁移）
+  - `industry/`: 申万行业分类
+    - `industry_basic_store.py`: IndustryBasicStore（行业主数据）
+    - `industry_mapping_store.py`: IndustryMappingStore（股票-行业映射，支持 PIT）
+  - `calendar/`: 交易日历
+    - `calendar_store.py`: CalendarStore（交易日历存储）
+  - `universe/`: 标的池
+  - `metadata_query_service.py`: 域级统一查询服务
+
+#### Market 域
+
+- `domains/market/`: Market 域（待实现）
+
+#### 架构优势
+
+- **高内聚**: 相关业务逻辑聚合在同一域内
+- **低耦合**: 域之间通过明确的接口（QueryService）交互
+- **可扩展**: 新增域不影响现有域的实现
+- **易测试**: 每个域可独立测试
+
 ### Accessor 层
 
 业务逻辑封装层：
@@ -183,6 +213,58 @@ bars = hub.bars.get_bars(
     adjust="qfq"  # 前复权
 )
 ```
+
+### Metadata 查询（新 API）
+
+DataHub v0.7.0 引入了域级查询服务 `MetadataQueryService`，提供统一的 Metadata 域查询接口：
+
+```python
+from ditto_datahub import DataHub
+
+hub = DataHub()
+
+# 标识符解析（支持 PIT）
+sid = hub.metadata.resolve_sid("600000.SH", source="tushare")
+sid = hub.metadata.resolve_sid("600000.SH", source="tushare", asof="2024-06-30")
+
+# 查询证券信息
+df = hub.metadata.get_securities(sids=[1, 2, 3])
+df = hub.metadata.get_securities(sids=[1], asset_class="stock", exchange="SSE")
+
+# 查询交易日历
+trading_days = hub.metadata.get_trading_days("2024-01-01", "2024-01-31")
+trading_days = hub.metadata.get_trading_days("2024-01-01", "2024-01-31", only_open=True)
+
+# 交易日历便捷方法
+is_trading = hub.metadata.is_trading_day("2024-01-15")
+prev_day = hub.metadata.get_prev_trading_day("2024-01-15")
+next_day = hub.metadata.get_next_trading_day("2024-01-15")
+
+# 查询行业分类
+industries = hub.metadata.get_industries(level=1)  # 一级行业
+mappings = hub.metadata.get_industry_mappings(sids=[1, 2, 3], asof="2024-06-30")
+
+# 查询标的池
+universe = hub.metadata.get_universe(name="csi300")
+```
+
+#### 向后兼容
+
+为了平滑迁移，DataHub 保留了旧的 API 别名：
+
+```python
+# 旧 API（仍然支持）
+sid = hub.securities.resolve_sid("600000.SH", source="tushare")
+df = hub.securities.get(sids=[1, 2, 3])
+trading_days = hub.calendar.get("2024-01-01", "2024-01-31")
+
+# 新 API（推荐）
+sid = hub.metadata.resolve_sid("600000.SH", source="tushare")
+df = hub.metadata.get_securities(sids=[1, 2, 3])
+trading_days = hub.metadata.get_trading_days("2024-01-01", "2024-01-31")
+```
+
+**迁移建议**：新代码优先使用 `hub.metadata` 接口，旧代码可逐步迁移。
 
 ### PIT 安全查询
 
@@ -299,6 +381,33 @@ bars/
 - [数据设计文档](../../../../docs/design/02_data_design.md)
 
 ## 变更记录
+
+### v0.7.0 (2026-01-27)
+**新增**
+- Metadata 域架构：`domains/metadata/` 目录结构
+  - `security/`: 证券主数据域（SecurityStore、IdentityStore）
+  - `industry/`: 申万行业分类域（IndustryBasicStore、IndustryMappingStore）
+  - `calendar/`: 交易日历域（CalendarStore）
+  - `universe/`: 标的池域
+- MetadataQueryService：域级统一查询服务（`hub.metadata`）
+  - 标识符解析（支持 PIT）
+  - 证券信息查询
+  - 交易日历查询
+  - 行业分类查询
+  - 标的池查询
+
+**重构**
+- SecurityStore 迁移到 `domains/metadata/security/`
+- CalendarStore 迁移到 `domains/metadata/calendar/`
+- IndustryBasicStore、IndustryMappingStore 新增
+- IdentityStore 新增（支持 PIT 标识符映射）
+- DataHub 集成 MetadataQueryService，提供 `hub.metadata` 统一查询接口
+
+**改进**
+- 向后兼容性：保留 `hub.securities`、`hub.calendar` 别名
+- 所有 Store 继承 SQLiteStore 基类
+- 增强类型安全，完善文档注释
+- 域驱动设计（DDD）：高内聚、低耦合、易扩展
 
 ### v0.6.0 (2026-01-27)
 **新增**
