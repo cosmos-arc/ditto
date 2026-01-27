@@ -23,6 +23,7 @@ from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.config.data_root import DataRootConfig
+from ditto_datahub.domains.metadata.calendar import CalendarStore
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
@@ -30,7 +31,6 @@ from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_datahub.stores.quarantine_store import QuarantineStore

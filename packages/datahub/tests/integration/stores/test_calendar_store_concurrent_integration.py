@@ -10,7 +10,7 @@ import tempfile
 import threading
 import time
 
-from ditto_datahub.stores.calendar_store import CalendarStore
+from ditto_datahub.domains.metadata.calendar import CalendarStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 from ditto_foundation.cache import DataCache
