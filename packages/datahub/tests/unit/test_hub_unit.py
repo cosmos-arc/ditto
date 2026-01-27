@@ -11,9 +11,21 @@ from ditto_datahub.accessors.calendar_accessor import CalendarAccessor
 from ditto_datahub.accessors.index_accessor import IndexAccessor
 from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
 from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
-from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
-from ditto_datahub.domains.metadata.calendar import CalendarStore
+from ditto_datahub.domains.metadata import MetadataQueryService
+from ditto_datahub.domains.metadata.calendar.calendar_store import (
+    CalendarStore as MetadataCalendarStore,
+)
+from ditto_datahub.domains.metadata.identity.identity_store import IdentityStore
+from ditto_datahub.domains.metadata.industry.industry_basic_store import (
+    IndustryBasicStore,
+)
+from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
+    IndustryMappingStore,
+)
+from ditto_datahub.domains.metadata.security.security_store import (
+    SecurityStore as MetadataSecurityStore,
+)
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.hub import DataHub
 from ditto_datahub.runtime.freeze_manager import FreezeManager
@@ -90,7 +102,7 @@ def datahub_with_dependencies(
     # Store Layer
     sqlite_client = SQLiteClient(sqlite_pool)
     security_store = SecurityStore(sqlite_client)
-    calendar_store = CalendarStore(sqlite_client)
+    calendar_store = MetadataCalendarStore(sqlite_client)
     ingestion_log_store = IngestionLogStore(sqlite_client)
     quarantine_store = QuarantineStore(sqlite_client)
     universe_store = UniverseStore(sqlite_client)
@@ -98,7 +110,26 @@ def datahub_with_dependencies(
     adj_factor_store = AdjFactorStore(data_root=data_root)
     bars_store = BarsStore(data_root=data_root)
 
+    # Metadata Domain Stores
+    metadata_security_store = MetadataSecurityStore(data_root / "meta" / "hub.sqlite")
+    identity_store = IdentityStore(data_root / "meta" / "hub.sqlite")
+    industry_basic_store = IndustryBasicStore(data_root / "meta" / "hub.sqlite")
+    industry_mapping_store = IndustryMappingStore(data_root / "meta" / "hub.sqlite")
+
+    # Metadata Query Service
+    metadata_query_service = MetadataQueryService(
+        security_store=metadata_security_store,
+        identity_store=identity_store,
+        calendar_store=calendar_store,
+        industry_basic_store=industry_basic_store,
+        industry_mapping_store=industry_mapping_store,
+        universe_store=universe_store,
+        sid_allocator=sid_allocator,
+    )
+
     # Accessor Layer
+    from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
+
     securities = SecuritiesAccessor(security_store, sid_allocator)
     calendar = CalendarAccessor(calendar_store)
     ingestion_log = IngestionLogAccessor(ingestion_log_store)
@@ -129,6 +160,7 @@ def datahub_with_dependencies(
         freeze_manager=freeze_manager,
         security_store=security_store,
         securities=securities,
+        metadata_query_service=metadata_query_service,
         calendar=calendar,
         adj_factor=adj_factor,
         bars=bars,
