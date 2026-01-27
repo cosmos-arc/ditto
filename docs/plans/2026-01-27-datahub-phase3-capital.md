@@ -1,6 +1,6 @@
 # DataHub Capital 域重构实施计划
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 **目标:** 实现完整的 Capital 域，支持资金流向、融资融券、龙虎榜、打板、筹码分布等数据
 

@@ -23,6 +23,20 @@ from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.config.data_root import DataRootConfig
+from ditto_datahub.domains.metadata import MetadataQueryService
+from ditto_datahub.domains.metadata.calendar.calendar_store import (
+    CalendarStore as MetadataCalendarStore,
+)
+from ditto_datahub.domains.metadata.identity.identity_store import IdentityStore
+from ditto_datahub.domains.metadata.industry.industry_basic_store import (
+    IndustryBasicStore,
+)
+from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
+    IndustryMappingStore,
+)
+from ditto_datahub.domains.metadata.security.security_store import (
+    SecurityStore as MetadataSecurityStore,
+)
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
@@ -30,7 +44,6 @@ from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_datahub.stores.quarantine_store import QuarantineStore
@@ -112,9 +125,9 @@ class DataHubProvider(Provider):
         return SecurityStore(sqlite_client)
 
     @provide
-    def calendar_store(self, sqlite_client: SQLiteClient) -> CalendarStore:
+    def calendar_store(self, sqlite_client: SQLiteClient) -> MetadataCalendarStore:
         """交易日历存储."""
-        return CalendarStore(sqlite_client)
+        return MetadataCalendarStore(sqlite_client)
 
     @provide
     def bars_store(self, data_root: Path) -> BarsStore:
@@ -152,6 +165,31 @@ class DataHubProvider(Provider):
         return QuarantineStore(sqlite_client)
 
     # ========================================================================
+    # Metadata Domain Stores
+    # ========================================================================
+
+    @provide
+    def identity_store(self, config: DataRootConfig) -> IdentityStore:
+        """Identity 映射存储."""
+        return IdentityStore(config.metadata_db_path)
+
+    @provide
+    def industry_basic_store(
+        self,
+        config: DataRootConfig,
+    ) -> IndustryBasicStore:
+        """行业主数据存储."""
+        return IndustryBasicStore(config.metadata_db_path)
+
+    @provide
+    def industry_mapping_store(
+        self,
+        config: DataRootConfig,
+    ) -> IndustryMappingStore:
+        """行业映射存储."""
+        return IndustryMappingStore(config.metadata_db_path)
+
+    # ========================================================================
     # Accessor Layer
     # ========================================================================
 
@@ -161,14 +199,14 @@ class DataHubProvider(Provider):
         security_store: SecurityStore,
         sid_allocator: SidAllocator,
     ) -> SecuritiesAccessor:
-        """证券数据访问器."""
+        """证券数据访问器（带数据摄入辅助方法）."""
         return SecuritiesAccessor(
             security_store=security_store,
             sid_allocator=sid_allocator,
         )
 
     @provide
-    def calendar(self, calendar_store: CalendarStore) -> CalendarAccessor:
+    def calendar(self, calendar_store: MetadataCalendarStore) -> CalendarAccessor:
         """交易日历访问器."""
         return CalendarAccessor(calendar_store=calendar_store)
 
@@ -247,6 +285,32 @@ class DataHubProvider(Provider):
         return QuarantineAccessor(quarantine_store=quarantine_store)
 
     # ========================================================================
+    # Metadata Query Service
+    # ========================================================================
+
+    @provide
+    def metadata_query_service(
+        self,
+        security_store: MetadataSecurityStore,
+        identity_store: IdentityStore,
+        calendar_store: MetadataCalendarStore,
+        industry_basic_store: IndustryBasicStore,
+        industry_mapping_store: IndustryMappingStore,
+        universe_store: UniverseStore,
+        sid_allocator: SidAllocator,
+    ) -> MetadataQueryService:
+        """Metadata 查询服务."""
+        return MetadataQueryService(
+            security_store=security_store,
+            identity_store=identity_store,
+            calendar_store=calendar_store,
+            industry_basic_store=industry_basic_store,
+            industry_mapping_store=industry_mapping_store,
+            universe_store=universe_store,
+            sid_allocator=sid_allocator,
+        )
+
+    # ========================================================================
     # Sources Layer
     # ========================================================================
 
@@ -270,7 +334,7 @@ class DataHubProvider(Provider):
         self,
         data_root: Path,
         security_store: SecurityStore,
-        calendar_store: CalendarStore,
+        calendar_store: MetadataCalendarStore,
     ) -> SqlEngine:
         """DuckDB SQL 引擎."""
         return SqlEngine(
@@ -293,6 +357,7 @@ class DataHubProvider(Provider):
         freeze_manager: FreezeManager,
         security_store: SecurityStore,
         securities: SecuritiesAccessor,
+        metadata_query_service: MetadataQueryService,
         calendar: CalendarAccessor,
         adj_factor: AdjFactorAccessor,
         bars: BarsAccessor,
@@ -317,6 +382,7 @@ class DataHubProvider(Provider):
             freeze_manager=freeze_manager,
             security_store=security_store,
             securities=securities,
+            metadata_query_service=metadata_query_service,
             calendar=calendar,
             adj_factor=adj_factor,
             bars=bars,

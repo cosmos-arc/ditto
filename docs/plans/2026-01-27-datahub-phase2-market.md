@@ -1,6 +1,6 @@
 # DataHub Market 域重构实施计划
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 **目标:** 将现有的 Market 数据相关 Store 和 Accessor 重构为统一的 Market 域结构，实现 domains/market/ 目录组织
 

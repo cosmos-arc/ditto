@@ -18,6 +18,7 @@ from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
 from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
+from ditto_datahub.domains.metadata import MetadataQueryService
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
@@ -128,6 +129,7 @@ class DataHub:
         freeze_manager: FreezeManager,
         security_store: SecurityStore,
         securities: SecuritiesAccessor,
+        metadata_query_service: MetadataQueryService,
         calendar: CalendarAccessor,
         adj_factor: AdjFactorAccessor,
         bars: BarsAccessor,
@@ -151,7 +153,8 @@ class DataHub:
             sid_allocator: SID allocator for new securities.
             freeze_manager: Freeze manager for data version tracking.
             security_store: Security store for identifier resolution.
-            securities: Securities master data accessor.
+            securities: Securities accessor (with ingestion helpers).
+            metadata_query_service: Metadata query service (unified query API).
             calendar: Trading calendar accessor.
             adj_factor: Adjustment factor accessor.
             bars: OHLCV bars accessor.
@@ -170,6 +173,7 @@ class DataHub:
         self.freeze = freeze_manager
         self._security_store = security_store
         self.securities = securities
+        self.metadata = metadata_query_service
         self.calendar = calendar
         self.adj_factor = adj_factor
         self.bars = bars

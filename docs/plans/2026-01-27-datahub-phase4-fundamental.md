@@ -1,6 +1,6 @@
 # DataHub Fundamental 域重构实施计划
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 **目标:** 实现完整的 Fundamental 域，支持财务报表、财务指标、业绩预告、持仓数据等
 

@@ -12,8 +12,8 @@ import polars as pl
 import xxhash
 from ditto_foundation import M, logger
 
+from ditto_datahub.domains.metadata.calendar import CalendarStore
 from ditto_datahub.runtime.pit_helper import PitHelper
-from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.security_store import SecurityStore
 
 

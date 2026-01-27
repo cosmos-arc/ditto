@@ -13,9 +13,9 @@ from tempfile import TemporaryDirectory
 
 import polars as pl
 import pytest
+from ditto_datahub.domains.metadata.calendar import CalendarStore
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.calendar_store import CalendarStore
 from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import (

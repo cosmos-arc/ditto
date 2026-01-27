@@ -7,7 +7,7 @@ from typing import Any, Literal
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.stores.calendar_store import CalendarStore
+from ditto_datahub.domains.metadata.calendar import CalendarStore
 
 
 class CalendarAccessor:
