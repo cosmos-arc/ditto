@@ -36,9 +36,11 @@ description: 基于计划执行 TDD 开发
 ```
 
 ### 4. 验证完成
-```
-ci-check → 更新计划 → git commit
-```
+调用 `verification-before-completion`
+
+### 5. 文档更新
+-更新计划文档
+-更新README.md文档
 
 ## 禁止
 

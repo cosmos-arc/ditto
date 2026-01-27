@@ -202,7 +202,7 @@ class TestBarsAccessor:
                 "volume": [1000, 2000],
             }
         )
-        self.bars_store.write("stock_daily", test_df, 2024)
+        self.bars_store.write("stock_daily", test_df, year=2024)
 
         # Act
         result = self.accessor.get(
@@ -232,7 +232,7 @@ class TestBarsAccessor:
                 "volume": [1000],
             }
         )
-        self.bars_store.write("stock_daily", test_df, 2024)
+        self.bars_store.write("stock_daily", test_df, year=2024)
 
         # Act
         result = self.accessor.get(
@@ -316,7 +316,7 @@ class TestPITSafeAdjustment:
                 "volume": [1000, 2000, 3000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Write adj_factor data with knowledge_date (T+1 publication)
         # The factor on 2024-01-03 is published on 2024-01-04 (knowledge_date)
@@ -336,7 +336,7 @@ class TestPITSafeAdjustment:
                 ],
             }
         )
-        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+        self.adj_factor_store.write("adj_factor", adj_df, year=2024)
 
         # Act: Get QFQ adjusted data asof 2024-01-03
         # PIT-safe: Should only use adj factors with knowledge_date <= 2024-01-03
@@ -392,7 +392,7 @@ class TestPITSafeAdjustment:
                 "volume": [1000, 2000, 3000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Write adj_factor data with knowledge_date (T+1 publication)
         adj_df = pl.DataFrame(
@@ -411,7 +411,7 @@ class TestPITSafeAdjustment:
                 ],
             }
         )
-        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+        self.adj_factor_store.write("adj_factor", adj_df, year=2024)
 
         # Act: Get QFQ adjusted data asof 2024-01-05
         # All factors should be available (all knowledge_date <= 2024-01-05)
@@ -492,7 +492,7 @@ class TestQFQAdjustment:
                 "volume": [1000, 2000, 3000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Write adj_factor data: 0.95 on 2024-01-03 and later
         adj_df = pl.DataFrame(
@@ -502,7 +502,7 @@ class TestQFQAdjustment:
                 "adj_factor": [1.0, 0.95, 0.95],
             }
         )
-        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+        self.adj_factor_store.write("adj_factor", adj_df, year=2024)
 
         # Act: Get QFQ adjusted data
         result = self.accessor.get(
@@ -540,7 +540,7 @@ class TestQFQAdjustment:
                 "volume": [1000, 2000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Write adj_factor data only for 2024-01-03 (missing for 2024-01-02)
         adj_df = pl.DataFrame(
@@ -550,7 +550,7 @@ class TestQFQAdjustment:
                 "adj_factor": [0.95],
             }
         )
-        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+        self.adj_factor_store.write("adj_factor", adj_df, year=2024)
 
         # Act: Get QFQ adjusted data
         result = self.accessor.get(
@@ -585,7 +585,7 @@ class TestQFQAdjustment:
                 "volume": [1000, 2000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Act: Get QFQ adjusted data (no adj_factor available)
         result = self.accessor.get(
@@ -617,7 +617,7 @@ class TestQFQAdjustment:
                 "volume": [1000, 2000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Write adj_factor data only for 2024-01-02 (missing for 2024-01-03)
         adj_df = pl.DataFrame(
@@ -627,7 +627,7 @@ class TestQFQAdjustment:
                 "adj_factor": [0.95],
             }
         )
-        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+        self.adj_factor_store.write("adj_factor", adj_df, year=2024)
 
         # Act: Get HFQ adjusted data
         result = self.accessor.get(
@@ -663,7 +663,7 @@ class TestQFQAdjustment:
                 "volume": [1000, 2000, 3000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Write adj_factor: 1.0, 0.95, 0.90 over the 3 days
         adj_df = pl.DataFrame(
@@ -673,7 +673,7 @@ class TestQFQAdjustment:
                 "adj_factor": [1.0, 0.95, 0.90],
             }
         )
-        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+        self.adj_factor_store.write("adj_factor", adj_df, year=2024)
 
         # Act: Get QFQ adjusted data with asof="2024-01-03"
         # This means: use the latest adj_factor as of 2024-01-03 (which is 0.95)
@@ -873,7 +873,7 @@ class TestMixedAssetClass:
                 "volume": [1000000],
             }
         )
-        self.bars_store.write("index_daily", index_bars_df, 2024)
+        self.bars_store.write("index_daily", index_bars_df, year=2024)
 
         # Should route to index_daily and return data (NOT empty from stock_daily)
         result = self.accessor.get(
@@ -934,8 +934,8 @@ class TestMixedAssetClass:
                 "volume": [2000],
             }
         )
-        self.bars_store.write("stock_daily", stock_bars, 2024)
-        self.bars_store.write("etf_daily", etf_bars, 2024)
+        self.bars_store.write("stock_daily", stock_bars, year=2024)
+        self.bars_store.write("etf_daily", etf_bars, year=2024)
 
         # Act & Assert: Mixed SIDs (stock + etf) should raise error
         with pytest.raises(ValueError, match="检测到混合资产类别查询"):
@@ -969,7 +969,7 @@ class TestMixedAssetClass:
                 "volume": [1000000],
             }
         )
-        self.bars_store.write("index_daily", index_bars, 2024)
+        self.bars_store.write("index_daily", index_bars, year=2024)
 
         # Act & Assert: All three asset classes should raise error
         with pytest.raises(ValueError, match="检测到混合资产类别查询"):
@@ -1050,7 +1050,7 @@ class TestAdjFactorEdgeCases:
                 "volume": [1000, 2000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Act: Get QFQ adjusted data (no adj_factor data at all)
         result = self.accessor.get(
@@ -1082,7 +1082,7 @@ class TestAdjFactorEdgeCases:
                 "volume": [1000, 2000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Act: Get HFQ adjusted data (no adj_factor data at all)
         result = self.accessor.get(
@@ -1118,8 +1118,8 @@ class TestAdjFactorEdgeCases:
         # Split data by year
         bars_2023 = bars_df.filter(pl.col("trade_date") < date(2024, 1, 1))
         bars_2024 = bars_df.filter(pl.col("trade_date") >= date(2024, 1, 1))
-        self.bars_store.write("stock_daily", bars_2023, 2023)
-        self.bars_store.write("stock_daily", bars_2024, 2024)
+        self.bars_store.write("stock_daily", bars_2023, year=2023)
+        self.bars_store.write("stock_daily", bars_2024, year=2024)
 
         # Write adj_factor data: 0.95 starting from 2024-01-02
         adj_df_2023 = pl.DataFrame(
@@ -1136,8 +1136,8 @@ class TestAdjFactorEdgeCases:
                 "adj_factor": [0.95],
             }
         )
-        self.adj_factor_store.write("adj_factor", adj_df_2023, 2023)
-        self.adj_factor_store.write("adj_factor", adj_df_2024, 2024)
+        self.adj_factor_store.write("adj_factor", adj_df_2023, year=2023)
+        self.adj_factor_store.write("adj_factor", adj_df_2024, year=2024)
 
         # Act: Get QFQ adjusted data across year boundary
         result = self.accessor.get(
@@ -1185,7 +1185,7 @@ class TestAdjFactorEdgeCases:
                 "volume": volumes,
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Create adj_factor data for all dates
         half_len = len(dates) // 2
@@ -1197,7 +1197,7 @@ class TestAdjFactorEdgeCases:
                 "adj_factor": adj_factors,
             }
         )
-        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+        self.adj_factor_store.write("adj_factor", adj_df, year=2024)
 
         # Act: Get QFQ adjusted data for full year
         start_time = time.time()
@@ -1231,7 +1231,7 @@ class TestAdjFactorEdgeCases:
                 "volume": [1000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         adj_df = pl.DataFrame(
             {
@@ -1240,7 +1240,7 @@ class TestAdjFactorEdgeCases:
                 "adj_factor": [0.95],
             }
         )
-        self.adj_factor_store.write("adj_factor", adj_df, 2024)
+        self.adj_factor_store.write("adj_factor", adj_df, year=2024)
 
         # Act: Get QFQ adjusted data
         result = self.accessor.get(
@@ -1271,7 +1271,7 @@ class TestAdjFactorEdgeCases:
                 "volume": [1000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Act: Get data with empty SID list
         result = self.accessor.get(
@@ -1341,7 +1341,7 @@ class TestMarketWideMode:
                 "volume": [1000, 2000, 3000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Act: Query with market_wide=True
         result = self.accessor.get(
@@ -1381,7 +1381,7 @@ class TestMarketWideMode:
                 "volume": [1000],
             }
         )
-        self.bars_store.write("stock_daily", stock_bars, 2024)
+        self.bars_store.write("stock_daily", stock_bars, year=2024)
 
         # Write ETF data
         etf_bars = pl.DataFrame(
@@ -1395,7 +1395,7 @@ class TestMarketWideMode:
                 "volume": [2000],
             }
         )
-        self.bars_store.write("etf_daily", etf_bars, 2024)
+        self.bars_store.write("etf_daily", etf_bars, year=2024)
 
         # Act: Query with market_wide=True and asset_class="stock"
         result = self.accessor.get(
@@ -1427,7 +1427,7 @@ class TestMarketWideMode:
                 "volume": [1000, 2000],
             }
         )
-        self.bars_store.write("stock_daily", bars_df, 2024)
+        self.bars_store.write("stock_daily", bars_df, year=2024)
 
         # Act: Query with specific SIDs (sample set mode)
         result = self.accessor.get(

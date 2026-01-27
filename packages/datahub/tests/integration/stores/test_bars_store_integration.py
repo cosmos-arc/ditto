@@ -371,8 +371,8 @@ class TestBarsStoreIntegration:
 
         store.write("stock_daily", df, year=2024)
 
-        # Delete
-        deleted = store.delete("stock_daily", 2024)
+        # Delete year partition
+        deleted = store.delete_year("stock_daily", 2024)
         assert deleted is True
 
         # Verify file is gone
