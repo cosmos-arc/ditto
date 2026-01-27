@@ -11,6 +11,10 @@ from ditto_foundation.util.io import atomic_write, file_md5
 from ditto_datahub.models import OnDuplicate
 from ditto_datahub.models.storage import WriteResultStore
 from ditto_datahub.stores.base.base_store import BaseStore
+from ditto_datahub.stores.base.partition_strategy import (
+    PartitionStrategy,
+    YearlyPartition,
+)
 
 
 class ParquetStore(BaseStore):
@@ -27,83 +31,91 @@ class ParquetStore(BaseStore):
 
     Attributes:
         data_root: 数据根目录路径.
+        _partition: 分区策略.
 
     """
 
-    def __init__(self, data_root: Path) -> None:
+    def __init__(
+        self,
+        data_root: Path,
+        partition_strategy: PartitionStrategy = YearlyPartition(),
+    ) -> None:
         """
         初始化 ParquetStore.
 
         Args:
             data_root: 数据根目录路径.
+            partition_strategy: 分区策略，默认按年分区.
 
         """
         super().__init__(data_root)
+        self._partition = partition_strategy
 
     # ============ Path operations ============
 
-    def _get_path(self, dataset: str, year: int) -> Path:
+    def _get_path(self, dataset: str, partition_key: str) -> Path:
         """
-        获取年分区文件路径.
+        获取分区文件路径.
 
         Args:
             dataset: 数据集名称.
-            year: 年份.
+            partition_key: 分区键.
 
         Returns:
             Parquet 文件路径.
 
         """
-        return self._data_root / dataset / f"{year}.parquet"
+        return self._data_root / dataset / self._partition.get_filename(partition_key)
 
-    def _get_year_from_date(self, date_str: str) -> int:
+    def _get_partition_key(self, date_str: str) -> str:
         """
-        从日期字符串提取年份.
+        从日期字符串提取分区键.
 
         Args:
             date_str: 日期字符串 (YYYY-MM-DD).
 
         Returns:
-            年份.
+            分区键.
 
         """
-        return int(date_str[:4])
+        return self._partition.get_partition_key(date_str)
 
     def _collect_paths(
         self,
         dataset: str,
-        start_year: int | None = None,
-        end_year: int | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> list[Path]:
         """
-        收集年分区文件路径.
+        收集分区文件路径.
 
         Args:
             dataset: 数据集名称.
-            start_year: 起始年份（可选）.
-            end_year: 结束年份（可选）.
+            start_date: 起始日期 (YYYY-MM-DD)（可选）.
+            end_date: 结束日期 (YYYY-MM-DD)（可选）.
 
         Returns:
             文件路径列表.
 
         """
-        dataset_dir = self._data_root / dataset
-        if not dataset_dir.exists():
-            return []
+        # 获取需要读取的分区键
+        partition_keys = self._partition.get_partitions_from_filters(
+            start_date, end_date
+        )
 
+        if not partition_keys:
+            # 无过滤条件，扫描所有文件
+            dataset_dir = self._data_root / dataset
+            if not dataset_dir.exists():
+                return []
+            return sorted(dataset_dir.glob("*.parquet"))
+
+        # 只读取指定分区
         paths: list[Path] = []
-        for path in dataset_dir.glob("*.parquet"):
-            try:
-                year = int(path.stem)
-                if start_year is not None and year < start_year:
-                    continue
-                if end_year is not None and year > end_year:
-                    continue
+        for key in partition_keys:
+            path = self._get_path(dataset, key)
+            if path.exists():
                 paths.append(path)
-            except ValueError:
-                # 忽略不符合年分区命名规范的文件
-                continue
-
         return sorted(paths)
 
     # ============ Read operation ============
@@ -131,41 +143,33 @@ class ParquetStore(BaseStore):
             DataFrame 包含匹配的记录.
 
         """
-        # 确定年份范围
-        start_year = None
-        end_year = None
-
-        if start_date:
-            start_year = self._get_year_from_date(start_date)
-        if end_date:
-            end_year = self._get_year_from_date(end_date)
-
         # 收集所有相关分区文件
-        paths = self._collect_paths(dataset, start_year, end_year)
+        paths = self._collect_paths(dataset, start_date, end_date)
 
         if not paths:
             return pl.DataFrame()
 
-        # 读取所有分区
-        df = pl.read_parquet(paths)
+        # 使用 scan_parquet 实现谓词下推
+        lf = pl.scan_parquet(paths)
 
         # 应用过滤条件
         if sids:
-            df = df.filter(pl.col("sid").is_in(sids))
+            lf = lf.filter(pl.col("sid").is_in(sids))
 
         if start_date:
-            df = df.filter(
+            lf = lf.filter(
                 pl.col("trade_date")
                 >= pl.lit(start_date).str.strptime(pl.Date, "%Y-%m-%d")
             )
 
         if end_date:
-            df = df.filter(
+            lf = lf.filter(
                 pl.col("trade_date")
                 <= pl.lit(end_date).str.strptime(pl.Date, "%Y-%m-%d")
             )
 
-        return df
+        # 执行查询
+        return lf.collect()
 
     # ============ Write operation ============
 
@@ -223,7 +227,7 @@ class ParquetStore(BaseStore):
         dataset_dir = self._data_root / dataset
         dataset_dir.mkdir(parents=True, exist_ok=True)
 
-        file_path = self._get_path(dataset, year)
+        file_path = self._get_path(dataset, str(year))
         is_merge = file_path.exists()
 
         # 解析去重策略
@@ -394,17 +398,8 @@ class ParquetStore(BaseStore):
             删除的记录数.
 
         """
-        # 确定年份范围
-        start_year = None
-        end_year = None
-
-        if start_date:
-            start_year = self._get_year_from_date(start_date)
-        if end_date:
-            end_year = self._get_year_from_date(end_date)
-
         # 收集所有相关分区文件
-        paths = self._collect_paths(dataset, start_year, end_year)
+        paths = self._collect_paths(dataset, start_date, end_date)
 
         if not paths:
             return 0

@@ -157,11 +157,8 @@ class BarsStore(ParquetStore):
         """
         start_time = time.time()
 
-        # Determine year range from date filters
-        start_year = int(start_date[:4]) if start_date else DEFAULT_START_YEAR
-        end_year = int(end_date[:4]) if end_date else DEFAULT_END_YEAR
-
-        paths = self._collect_paths(dataset, start_year, end_year)
+        # Collect partition file paths using the base class method
+        paths = self._collect_paths(dataset, start_date, end_date)
 
         if not paths:
             logger.info(
@@ -239,7 +236,7 @@ class BarsStore(ParquetStore):
             如果删除成功返回 True，文件不存在返回 False.
 
         """
-        path = self._get_path(dataset, year)
+        path = self._get_path(dataset, str(year))
         if path.exists():
             path.unlink()
             return True
@@ -257,7 +254,7 @@ class BarsStore(ParquetStore):
             校验和十六进制字符串，文件不存在返回空字符串.
 
         """
-        path = self._get_path(dataset, year)
+        path = self._get_path(dataset, str(year))
         if path.exists():
             result: str = file_md5(path)
             return result
@@ -302,7 +299,7 @@ class BarsStore(ParquetStore):
             return None, None
 
         # 扫描所有分区并找到最小/最大日期
-        paths = self._collect_paths(dataset, min(years), max(years))
+        paths = self._collect_paths(dataset, None, None)
         if not paths:
             return None, None
 
@@ -334,7 +331,7 @@ class BarsStore(ParquetStore):
         if not years:
             return []
 
-        paths = self._collect_paths(dataset, min(years), max(years))
+        paths = self._collect_paths(dataset, None, None)
         if not paths:
             return []
 
