@@ -92,6 +92,10 @@ class SecurityStore:
     Core functionality:
     - resolve_sid: (source, src_code, asof) -> sid
     - Through security_mapping with effective_from/to for historical resolution
+
+    Note: SecurityStore does not inherit SQLiteStore as it uses SQLiteClient
+    for data access to maintain backward compatibility. Future versions may
+    refactor to directly inherit SQLiteStore.
     """
 
     def __init__(
