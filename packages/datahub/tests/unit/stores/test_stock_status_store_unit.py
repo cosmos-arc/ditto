@@ -36,7 +36,7 @@ class TestStockStatusStore:
 
     def test_read_no_filters(self, store, sample_stock_status_df: pl.DataFrame) -> None:
         """Test read without filters."""
-        store.write("stock_status", sample_stock_status_df, 2024)
+        store.write("stock_status", sample_stock_status_df, year=2024)
         df = store.read("stock_status")
         assert len(df) == 4
         assert "sid" in df.columns
@@ -49,7 +49,7 @@ class TestStockStatusStore:
         self, store, sample_stock_status_df: pl.DataFrame
     ) -> None:
         """Test read filtered by security IDs."""
-        store.write("stock_status", sample_stock_status_df, 2024)
+        store.write("stock_status", sample_stock_status_df, year=2024)
         df = store.read("stock_status", sids=[100000001])
         assert len(df) == 3
         assert df["sid"].unique().to_list() == [100000001]
@@ -60,7 +60,9 @@ class TestStockStatusStore:
         self, store, sample_stock_status_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """Test write creates new file."""
-        file_path, checksum = store.write("stock_status", sample_stock_status_df, 2024)
+        file_path, checksum = store.write(
+            "stock_status", sample_stock_status_df, year=2024
+        )
 
         assert file_path == str(tmp_path / "data" / "stock_status" / "2024.parquet")
         assert Path(file_path).exists()
@@ -73,7 +75,7 @@ class TestStockStatusStore:
         dataset_dir = tmp_path / "data" / "stock_status"
         assert not dataset_dir.exists()
 
-        store.write("stock_status", sample_stock_status_df, 2024)
+        store.write("stock_status", sample_stock_status_df, year=2024)
 
         assert dataset_dir.exists()
         assert (dataset_dir / "2024.parquet").exists()
@@ -87,9 +89,9 @@ class TestStockStatusStore:
 
     def test_get_years(self, store, sample_stock_status_df: pl.DataFrame) -> None:
         """Test get_years returns available years."""
-        store.write("stock_status", sample_stock_status_df, 2022)
-        store.write("stock_status", sample_stock_status_df, 2024)
-        store.write("stock_status", sample_stock_status_df, 2023)
+        store.write("stock_status", sample_stock_status_df, year=2022)
+        store.write("stock_status", sample_stock_status_df, year=2024)
+        store.write("stock_status", sample_stock_status_df, year=2023)
 
         years = store.get_years("stock_status")
         assert years == [2022, 2023, 2024]
@@ -100,7 +102,7 @@ class TestStockStatusStore:
         self, store, sample_stock_status_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """Test delete removes year partition."""
-        store.write("stock_status", sample_stock_status_df, 2024)
+        store.write("stock_status", sample_stock_status_df, year=2024)
 
         result = store.delete("stock_status", 2024)
         assert result is True
@@ -117,7 +119,7 @@ class TestStockStatusStore:
 
     def test_count(self, store, sample_stock_status_df: pl.DataFrame) -> None:
         """Test count returns total records."""
-        store.write("stock_status", sample_stock_status_df, 2024)
+        store.write("stock_status", sample_stock_status_df, year=2024)
         count = store.count("stock_status")
         assert count == 4
 
@@ -131,7 +133,7 @@ class TestStockStatusStore:
 
     def test_get_date_range(self, store, sample_stock_status_df: pl.DataFrame) -> None:
         """Test get_date_range returns min/max dates."""
-        store.write("stock_status", sample_stock_status_df, 2024)
+        store.write("stock_status", sample_stock_status_df, year=2024)
         start, end = store.get_date_range("stock_status")
         assert start == "2024-01-02"
         assert end == "2024-01-04"
@@ -172,7 +174,7 @@ class TestStockStatusRiskControlFields:
 
     def test_suspension_fields(self, store, suspension_df: pl.DataFrame) -> None:
         """Test suspension status fields are correctly stored and retrieved."""
-        store.write("stock_status", suspension_df, 2024)
+        store.write("stock_status", suspension_df, year=2024)
         result = store.read("stock_status", sids=[100000001])
 
         assert len(result) == 1
@@ -181,7 +183,7 @@ class TestStockStatusRiskControlFields:
 
     def test_st_status_fields(self, store, suspension_df: pl.DataFrame) -> None:
         """Test ST status fields are correctly stored and retrieved."""
-        store.write("stock_status", suspension_df, 2024)
+        store.write("stock_status", suspension_df, year=2024)
         result = store.read("stock_status", sids=[100000002])
 
         assert len(result) == 1
@@ -190,7 +192,7 @@ class TestStockStatusRiskControlFields:
 
     def test_list_status_field(self, store, suspension_df: pl.DataFrame) -> None:
         """Test list_status field is correctly stored and retrieved."""
-        store.write("stock_status", suspension_df, 2024)
+        store.write("stock_status", suspension_df, year=2024)
         result = store.read("stock_status", sids=[100000003])
 
         assert len(result) == 1
@@ -200,7 +202,7 @@ class TestStockStatusRiskControlFields:
         self, store, suspension_df: pl.DataFrame
     ) -> None:
         """Test filtering works correctly with risk control fields."""
-        store.write("stock_status", suspension_df, 2024)
+        store.write("stock_status", suspension_df, year=2024)
         result = store.read("stock_status", sids=[100000001, 100000002])
 
         assert len(result) == 2
@@ -236,7 +238,7 @@ class TestStockStatusRiskControlFields:
                 ],
             }
         )
-        store.write("stock_status", mixed_df, 2024)
+        store.write("stock_status", mixed_df, year=2024)
         result = store.read("stock_status", sids=[100000001, 100000002])
 
         assert len(result) == 4
