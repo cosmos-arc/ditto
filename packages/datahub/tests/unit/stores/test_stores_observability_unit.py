@@ -57,7 +57,7 @@ class TestObservabilityBarsStore:
                 "volume": [1000],
             }
         )
-        self.store.write("stock_daily", test_df, 2024)
+        self.store.write("stock_daily", test_df, year=2024)
 
         # Clear previous spans
         _ = get_recorded_spans()
@@ -89,7 +89,7 @@ class TestObservabilityBarsStore:
                 "volume": [1000],
             }
         )
-        self.store.write("stock_daily", test_df, 2024)
+        self.store.write("stock_daily", test_df, year=2024)
 
         # Verify span was created
         spans = get_recorded_spans()
@@ -112,7 +112,7 @@ class TestObservabilityBarsStore:
                 "volume": [1000, 2000],
             }
         )
-        self.store.write("stock_daily", test_df, 2024)
+        self.store.write("stock_daily", test_df, year=2024)
 
         # Clear previous metrics
         _ = get_recorded_metrics()
@@ -141,7 +141,7 @@ class TestObservabilityBarsStore:
                 "volume": [1000, 2000],
             }
         )
-        self.store.write("stock_daily", test_df, 2024)
+        self.store.write("stock_daily", test_df, year=2024)
 
         # Verify metrics were recorded
         metrics = get_recorded_metrics()
@@ -176,7 +176,7 @@ class TestObservabilityAdjFactorStore:
                 "adj_factor": [1.5],
             }
         )
-        self.store.write("adj_factor", test_df, 2024)
+        self.store.write("adj_factor", test_df, year=2024)
 
         # Clear previous spans
         _ = get_recorded_spans()
@@ -202,7 +202,7 @@ class TestObservabilityAdjFactorStore:
                 "adj_factor": [1.5],
             }
         )
-        self.store.write("adj_factor", test_df, 2024)
+        self.store.write("adj_factor", test_df, year=2024)
 
         # Verify span was created
         spans = get_recorded_spans()
@@ -425,7 +425,7 @@ class TestObservabilityIntegration:
                 "volume": [1000, 2000],
             }
         )
-        bars_store.write("stock_daily", test_df, 2024)
+        bars_store.write("stock_daily", test_df, year=2024)
 
         # Read bars data
         result = bars_store.read(

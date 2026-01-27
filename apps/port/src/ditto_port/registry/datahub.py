@@ -22,7 +22,7 @@ from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
 from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
-from ditto_datahub.config import DatabaseSettings
+from ditto_datahub.config.data_root import DataRootConfig
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
@@ -40,7 +40,6 @@ from ditto_datahub.stores.stock_status_store import StockStatusStore
 from ditto_datahub.stores.universe_store import UniverseStore
 from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager
-from ditto_foundation.config.paths import get_paths
 
 __all__ = ["DataHubProvider"]
 
@@ -51,9 +50,14 @@ class DataHubProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def data_root(self) -> Path:
+    def data_root_config(self) -> DataRootConfig:
+        """数据根配置（从环境变量读取）."""
+        return DataRootConfig()
+
+    @provide
+    def data_root(self, config: DataRootConfig) -> Path:
         """数据根目录."""
-        return get_paths().data_home
+        return config.data_root
 
     # ========================================================================
     # Runtime Layer
@@ -62,10 +66,10 @@ class DataHubProvider(Provider):
     @provide
     def sqlite_pool(
         self,
-        database_settings: DatabaseSettings,
+        config: DataRootConfig,
     ) -> Iterator[SQLitePool]:
         """SQLite 连接池（应用级单例）."""
-        db_path = database_settings.sqlite_path
+        db_path = config.metadata_db_path
         # 确保父目录存在
         db_path.parent.mkdir(parents=True, exist_ok=True)
         # 获取 schema.sql 路径

@@ -229,7 +229,10 @@ class BarsAccessor:
         with self._file_lock.acquire(lock_name, timeout=60.0):
             # Write data
             result = self._bars_store.write(
-                dataset, df, year, on_duplicate=on_duplicate
+                dataset,
+                df,
+                on_duplicate=on_duplicate.value,
+                year=year,
             )
             file_path = result.file_path
             checksum = result.checksum

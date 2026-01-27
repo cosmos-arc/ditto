@@ -62,7 +62,7 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test read without filters."""
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
         df = store.read("adj_factor")
         assert len(df) == 4
         assert "sid" in df.columns
@@ -73,7 +73,7 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test read filtered by security IDs."""
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
         df = store.read("adj_factor", sids=[1000001])
         assert len(df) == 3
         assert df["sid"].unique().to_list() == [1000001]
@@ -82,7 +82,7 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test read filtered by date range."""
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
         df = store.read("adj_factor", start_date="2024-01-02", end_date="2024-01-03")
         # 2024-01-02 has 2 records, 2024-01-03 has 1 record = 3 total
         assert len(df) == 3
@@ -97,8 +97,8 @@ class TestAdjFactorStore:
                 lambda d: d.replace(year=2023), return_dtype=pl.Date
             )
         )
-        store.write("adj_factor", df_2023, 2023)
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", df_2023, year=2023)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
 
         df = store.read("adj_factor", start_date="2023-01-01", end_date="2024-12-31")
         assert len(df) == 8  # 4 records per year
@@ -109,7 +109,7 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """Test write creates new file."""
-        result = store.write("adj_factor", sample_adj_factor_df, 2024)
+        result = store.write("adj_factor", sample_adj_factor_df, year=2024)
 
         assert result.file_path == str(
             tmp_path / "data" / "adj_factor" / "2024.parquet"
@@ -122,7 +122,7 @@ class TestAdjFactorStore:
     ) -> None:
         """Test write merges with existing data."""
         # Write initial data
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
 
         # Write overlapping new data
         new_data = pl.DataFrame(
@@ -148,7 +148,7 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test write overwrites existing records with same key."""
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
 
         # Write same date/sid with different adj_factor
         updated = pl.DataFrame(
@@ -171,7 +171,7 @@ class TestAdjFactorStore:
         dataset_dir = tmp_path / "data" / "adj_factor"
         assert not dataset_dir.exists()
 
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
 
         assert dataset_dir.exists()
         assert (dataset_dir / "2024.parquet").exists()
@@ -187,9 +187,9 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test get_years returns available years."""
-        store.write("adj_factor", sample_adj_factor_df, 2022)
-        store.write("adj_factor", sample_adj_factor_df, 2024)
-        store.write("adj_factor", sample_adj_factor_df, 2023)
+        store.write("adj_factor", sample_adj_factor_df, year=2022)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2023)
 
         years = store.get_years("adj_factor")
         assert years == [2022, 2023, 2024]
@@ -215,7 +215,7 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """Test delete removes year partition."""
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
 
         result = store.delete("adj_factor", 2024)
         assert result is True
@@ -234,7 +234,7 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test get_checksum returns MD5 hash."""
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
 
         checksum = store.get_checksum("adj_factor", 2024)
         assert len(checksum) == 32
@@ -257,7 +257,7 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test count returns total records."""
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
         count = store.count("adj_factor")
         assert count == 4
 
@@ -265,7 +265,7 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test count with filters applied."""
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
         count = store.count("adj_factor", sids=[1000001])
         assert count == 3
 
@@ -281,7 +281,7 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test get_date_range returns min/max dates."""
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
         start, end = store.get_date_range("adj_factor")
         assert start == "2024-01-02"
         assert end == "2024-01-04"
@@ -290,8 +290,8 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test get_date_range across multiple partitions."""
-        store.write("adj_factor", sample_adj_factor_df, 2023)
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2023)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
 
         start, end = store.get_date_range("adj_factor")
         assert start == "2024-01-02"
@@ -308,7 +308,7 @@ class TestAdjFactorStore:
         self, store: AdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test list_sids returns unique security IDs."""
-        store.write("adj_factor", sample_adj_factor_df, 2024)
+        store.write("adj_factor", sample_adj_factor_df, year=2024)
         sids = store.list_sids("adj_factor")
         assert sids == [1000001, 1000002]
 
@@ -331,7 +331,7 @@ class TestAdjFactorStore:
         )
 
         # Act: Write the data
-        store.write("adj_factor", unsorted_df, 2024)
+        store.write("adj_factor", unsorted_df, year=2024)
 
         # Assert: Read back and verify it's sorted by (sid, trade_date)
         result = store.read("adj_factor")
@@ -376,7 +376,7 @@ class TestSortingEnhanced:
                 "adj_factor": [1.0, 1.0, 0.98],
             }
         )
-        store.write("adj_factor", df_2023, 2023)
+        store.write("adj_factor", df_2023, year=2023)
 
         # Write 2024 data
         dates_2024 = [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 1)]
@@ -387,7 +387,7 @@ class TestSortingEnhanced:
                 "adj_factor": [0.95, 0.95, 1.0],
             }
         )
-        store.write("adj_factor", df_2024, 2024)
+        store.write("adj_factor", df_2024, year=2024)
 
         # Read across both years
         result = store.read(
@@ -429,7 +429,7 @@ class TestSortingEnhanced:
                 "adj_factor": [1.0, 0.95, 1.0],
             }
         )
-        store.write("adj_factor", df1, 2024)
+        store.write("adj_factor", df1, year=2024)
 
         # Write overlapping data with updated values
         df2 = pl.DataFrame(
@@ -468,7 +468,7 @@ class TestSortingEnhanced:
                 "adj_factor": [1.0, 1.0, 1.0],
             }
         )
-        store.write("adj_factor", df1, 2024)
+        store.write("adj_factor", df1, year=2024)
 
         # Write second batch (overlap and new)
         df2 = pl.DataFrame(
@@ -546,7 +546,7 @@ class TestOnDuplicate:
     ) -> None:
         """Test OnDuplicate.ERROR raises ValueError when duplicates detected."""
         # Write initial data
-        store.write("adj_factor", initial_df, 2024)
+        store.write("adj_factor", initial_df, year=2024)
 
         # Attempt to write overlapping data with ERROR strategy
         with pytest.raises(ValueError, match="Duplicate data"):
@@ -562,7 +562,7 @@ class TestOnDuplicate:
     ) -> None:
         """Test OnDuplicate.KEEP_FIRST preserves existing data."""
         # Write initial data
-        store.write("adj_factor", initial_df, 2024)
+        store.write("adj_factor", initial_df, year=2024)
 
         # Write overlapping data with KEEP_FIRST strategy
         store.write(
@@ -590,7 +590,7 @@ class TestOnDuplicate:
     ) -> None:
         """Test OnDuplicate.KEEP_LAST overwrites with new data."""
         # Write initial data
-        store.write("adj_factor", initial_df, 2024)
+        store.write("adj_factor", initial_df, year=2024)
 
         # Write overlapping data with KEEP_LAST strategy
         store.write(
@@ -618,19 +618,19 @@ class TestOnDuplicate:
     ) -> None:
         """Test default OnDuplicate behavior is ERROR."""
         # Write initial data
-        store.write("adj_factor", initial_df, 2024)
+        store.write("adj_factor", initial_df, year=2024)
 
         # Attempt to write overlapping data without specifying on_duplicate
         # Should default to ERROR and raise ValueError
         with pytest.raises(ValueError, match="Duplicate data"):
-            store.write("adj_factor", overlapping_df, 2024)
+            store.write("adj_factor", overlapping_df, year=2024)
 
     def test_on_duplicate_keep_last_allows_idempotent_writes(
         self, store: AdjFactorStore, initial_df: pl.DataFrame
     ) -> None:
         """Test OnDuplicate.KEEP_LAST allows writing same data multiple times."""
         # Write initial data
-        store.write("adj_factor", initial_df, 2024)
+        store.write("adj_factor", initial_df, year=2024)
 
         # Write same data again with KEEP_LAST (should succeed)
         store.write("adj_factor", initial_df, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
@@ -677,7 +677,7 @@ class TestBatchInternalDeduplication:
         )
 
         # Write data, should auto-deduplicate (keep first)
-        write_result = store.write("adj_factor", df_with_duplicates, 2024)
+        write_result = store.write("adj_factor", df_with_duplicates, year=2024)
 
         # Verify write succeeded
         assert Path(write_result.file_path).exists()
@@ -714,7 +714,7 @@ class TestBatchInternalDeduplication:
         )
 
         # Write data
-        write_result = store.write("adj_factor", df_no_duplicates, 2024)
+        write_result = store.write("adj_factor", df_no_duplicates, year=2024)
 
         # Verify write succeeded
         assert Path(write_result.file_path).exists()
@@ -750,7 +750,7 @@ class TestReadDeduplicationAndSorting:
                 "adj_factor": [1.0, 0.95, 1.0, 1.0],
             }
         )
-        store.write("adj_factor", df1, 2024)
+        store.write("adj_factor", df1, year=2024)
 
         # Write data with duplicate keys again (update existing records)
         df2 = pl.DataFrame(
@@ -799,7 +799,7 @@ class TestReadDeduplicationAndSorting:
             }
         )
 
-        store.write("adj_factor", unsorted_df, 2024)
+        store.write("adj_factor", unsorted_df, year=2024)
 
         # Read data
         result = store.read("adj_factor")
@@ -843,7 +843,7 @@ class TestDateNormalization:
         )
 
         # Write should normalize to Date type
-        _result = store.write("adj_factor", df, 2024)
+        _result = store.write("adj_factor", df, year=2024)
 
         # Read and verify
         result = store.read("adj_factor")
@@ -862,7 +862,7 @@ class TestDateNormalization:
         )
 
         # Write
-        _result = store.write("adj_factor", df, 2024)
+        _result = store.write("adj_factor", df, year=2024)
 
         # Read and verify
         result = store.read("adj_factor")
@@ -884,7 +884,7 @@ class TestDateNormalization:
         )
 
         # Write should normalize to Date type
-        _result = store.write("adj_factor", df, 2024)
+        _result = store.write("adj_factor", df, year=2024)
 
         # Read and verify
         result = store.read("adj_factor")
@@ -909,7 +909,7 @@ class TestDateNormalization:
             pl.exceptions.InvalidOperationError,
             match="conversion from `str` to `date` failed",
         ):
-            store.write("adj_factor", df, 2024)
+            store.write("adj_factor", df, year=2024)
 
 
 class TestWriteReturnValues:
@@ -935,7 +935,7 @@ class TestWriteReturnValues:
             }
         )
 
-        result = store.write("adj_factor", df, 2024)
+        result = store.write("adj_factor", df, year=2024)
 
         # Verify return values
         assert isinstance(result.file_path, str)
@@ -958,7 +958,7 @@ class TestWriteReturnValues:
         )
 
         # First write
-        result1 = store.write("adj_factor", df1, 2024)
+        result1 = store.write("adj_factor", df1, year=2024)
 
         # Append write
         df2 = pl.DataFrame(
@@ -1006,7 +1006,7 @@ class TestEdgeCases:
                 "adj_factor": [1.0, 1.0, 1.0, 1.0, 1.0],
             }
         )
-        store.write("adj_factor", df, 2024)
+        store.write("adj_factor", df, year=2024)
 
         # Use all filters
         result = store.read(
@@ -1034,7 +1034,7 @@ class TestEdgeCases:
                 "adj_factor": [1.0],
             }
         )
-        store.write("adj_factor", df, 2024)
+        store.write("adj_factor", df, year=2024)
 
         # No date range specified, should read all data
         result = store.read("adj_factor")
@@ -1050,7 +1050,7 @@ class TestEdgeCases:
             }
         )
 
-        write_result = store.write("adj_factor", df, 2024)
+        write_result = store.write("adj_factor", df, year=2024)
 
         # Verify write succeeded
         assert Path(write_result.file_path).exists()
@@ -1069,7 +1069,7 @@ class TestEdgeCases:
         )
 
         # Should be able to write empty DataFrame
-        write_result = store.write("adj_factor", df, 2024)
+        write_result = store.write("adj_factor", df, year=2024)
 
         # Verify file was created
         assert Path(write_result.file_path).exists()
@@ -1109,8 +1109,8 @@ class TestMultipleYearPartitions:
                 "adj_factor": [1.0, 1.0],
             }
         )
-        store.write("adj_factor", df_2023, 2023)
-        store.write("adj_factor", df_2024, 2024)
+        store.write("adj_factor", df_2023, year=2023)
+        store.write("adj_factor", df_2024, year=2024)
 
         # Query cross-year data
         result = store.read(
@@ -1133,7 +1133,7 @@ class TestMultipleYearPartitions:
         )
 
         # Should be able to create new partition
-        write_result = store.write("adj_factor", df, 2099)
+        write_result = store.write("adj_factor", df, year=2099)
 
         assert Path(write_result.file_path).exists()
         result = store.read(

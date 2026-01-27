@@ -115,8 +115,8 @@ def store_with_data(data_root: Path) -> MockStore:
     }  # pragma: no cover
     sample_df = pl.DataFrame(data)  # pragma: no cover
     # Write sample data for multiple years
-    store.write("test_dataset", sample_df, 2023)  # pragma: no cover
-    store.write("test_dataset", sample_df, 2024)  # pragma: no cover
+    store.write("test_dataset", sample_df, year=2023)  # pragma: no cover
+    store.write("test_dataset", sample_df, year=2024)  # pragma: no cover
     return store
 
 
@@ -229,7 +229,7 @@ class TestGetYears:
         self, store: MockStore, sample_df: pl.DataFrame
     ) -> None:
         """Test get_years with single year."""
-        store.write("test_dataset", sample_df, 2024)
+        store.write("test_dataset", sample_df, year=2024)
         years = store.get_years("test_dataset")
         assert years == [2024]
 
@@ -244,7 +244,7 @@ class TestDelete:
         self, store: MockStore, sample_df: pl.DataFrame, tmp_path: Path
     ) -> None:
         """Test delete removes existing year partition."""
-        store.write("test_dataset", sample_df, 2024)
+        store.write("test_dataset", sample_df, year=2024)
 
         file_path = tmp_path / "data" / "test_dataset" / "2024.parquet"
         assert file_path.exists()
@@ -293,7 +293,7 @@ class TestGetChecksum:
         self, store: MockStore, sample_df: pl.DataFrame
     ) -> None:
         """Test get_checksum returns MD5 hash."""
-        store.write("test_dataset", sample_df, 2024)
+        store.write("test_dataset", sample_df, year=2024)
 
         checksum = store.get_checksum("test_dataset", 2024)
         # Verify it's a valid MD5 hash (32 hex characters)
@@ -369,7 +369,7 @@ class TestGetDateRange:
         self, store: MockStore, sample_df: pl.DataFrame
     ) -> None:
         """Test get_date_range with single year."""
-        store.write("test_dataset", sample_df, 2024)
+        store.write("test_dataset", sample_df, year=2024)
         start, end = store.get_date_range("test_dataset")
         assert start == "2024-01-02"
         assert end == "2024-01-04"
@@ -417,7 +417,7 @@ class TestListSids:
     ) -> None:
         """Test list_sids with single security."""
         single_sid_df = sample_df.filter(pl.col("sid") == 1000001)
-        store.write("test_dataset", single_sid_df, 2024)
+        store.write("test_dataset", single_sid_df, year=2024)
         sids = store.list_sids("test_dataset")
         assert sids == [1000001]
 
@@ -531,7 +531,7 @@ class TestWrite:
         }
         df = pl.DataFrame(data)
 
-        result = store.write("test_dataset", df, 2024)
+        result = store.write("test_dataset", df, year=2024)
 
         assert result.is_merge is False
         assert result.added == 2
@@ -543,7 +543,7 @@ class TestWrite:
     ) -> None:
         """Test write with KEEP_FIRST, no overlapping keys."""
         # Initial write
-        store.write("test_dataset", sample_df, 2024)
+        store.write("test_dataset", sample_df, year=2024)
 
         # New data with different keys
         new_data: dict[str, list[Any]] = {
@@ -565,7 +565,7 @@ class TestWrite:
     ) -> None:
         """Test write with KEEP_FIRST, with overlapping keys."""
         # Initial write
-        store.write("test_dataset", sample_df, 2024)
+        store.write("test_dataset", sample_df, year=2024)
 
         # New data with overlapping keys
         new_data: dict[str, list[Any]] = {
@@ -587,7 +587,7 @@ class TestWrite:
     ) -> None:
         """Test write with KEEP_LAST, with overlapping keys."""
         # Initial write
-        store.write("test_dataset", sample_df, 2024)
+        store.write("test_dataset", sample_df, year=2024)
 
         # New data with overlapping keys
         new_data: dict[str, list[Any]] = {
@@ -609,7 +609,7 @@ class TestWrite:
     ) -> None:
         """Test write with KEEP_LAST, batch has internal duplicates."""
         # Initial write
-        store.write("test_dataset", sample_df, 2024)
+        store.write("test_dataset", sample_df, year=2024)
 
         # New data with internal duplicates
         new_data: dict[str, list[Any]] = {
@@ -636,7 +636,7 @@ class TestWrite:
             schema={"sid": pl.Int32, "trade_date": pl.Date, "close": pl.Float64}
         )
 
-        result = store.write("test_dataset", empty_df, 2024)
+        result = store.write("test_dataset", empty_df, year=2024)
 
         assert result.file_path == ""
         assert result.checksum == ""
