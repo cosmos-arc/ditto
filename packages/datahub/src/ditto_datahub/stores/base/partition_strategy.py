@@ -128,7 +128,7 @@ class YearlyPartition(PartitionStrategy):
             end_date: 结束日期 (YYYY-MM-DD)（可选）.
 
         Returns:
-            年份字符串列表.
+            年份字符串列表. 空列表表示扫描所有文件.
 
         """
         # 无过滤条件，返回空（扫描所有文件）
@@ -138,11 +138,10 @@ class YearlyPartition(PartitionStrategy):
         start_year = int(start_date[:4]) if start_date else None
         end_year = int(end_date[:4]) if end_date else None
 
+        # 同时提供 start_year 和 end_year：返回范围内的年份
         if start_year and end_year:
             return [str(y) for y in range(start_year, end_year + 1)]
-        if start_year:
-            return [str(start_year)]
-        if end_year:
-            return [str(end_year)]
 
+        # 只提供 start_year 或 end_year：返回空列表，扫描所有文件
+        # 依赖 Polars 谓词下推进行日期过滤，避免遗漏数据
         return []

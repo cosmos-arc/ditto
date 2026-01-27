@@ -239,9 +239,10 @@ class ParquetStore(BaseStore):
 
         # 处理数据
         if is_merge:
+            # 合并路径：先对新批次进行去重，保持与非合并路径一致
+            df = df.unique(subset=["sid", "trade_date"], keep="first")
             # 读取现有数据
             existing = pl.read_parquet(file_path)
-
             # 合并数据并获取统计信息
             df, added, updated = self._merge_data(df, existing, strategy)
         else:
@@ -324,6 +325,9 @@ class ParquetStore(BaseStore):
                 raise ValueError(msg)
             elif on_duplicate == OnDuplicate.KEEP_FIRST:
                 # 保留现有数据，过滤掉新数据中的重复部分
+                # 注意：new_df 在调用 _merge_data 前已去重（在 write 方法中）
+                new_keys = new_df.select(key_columns)
+                # 过滤掉与现有数据重叠的部分
                 non_overlapping = new_keys.join(
                     existing_keys, on=key_columns, how="anti"
                 )

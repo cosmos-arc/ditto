@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 import polars as pl
 from ditto_foundation import M, SQLitePool, logger, traced
@@ -13,9 +14,6 @@ from ditto_foundation.util.io import file_md5
 from ditto_datahub.models import OnDuplicate
 from ditto_datahub.models.storage import WriteResultStore
 from ditto_datahub.stores.base.base_store import BaseStore
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 
 class SQLiteStore(BaseStore):

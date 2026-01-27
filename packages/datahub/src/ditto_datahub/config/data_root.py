@@ -170,5 +170,27 @@ class DataRootConfig(BaseSettings):
         """宏观指标路径."""
         return self.data_root / "macro" / "indicators"
 
+    # ========== 通用路径 ==========
+
+    @property
+    def logs_path(self) -> Path:
+        """日志存储路径."""
+        return self.data_root / "logs"
+
+    @property
+    def backups_path(self) -> Path:
+        """备份存储路径."""
+        return self.data_root / "backups"
+
+    @property
+    def temp_path(self) -> Path:
+        """临时文件存储路径."""
+        return self.data_root / "temp"
+
+    @property
+    def db_path(self) -> Path:
+        """数据库存储路径."""
+        return self.data_root / "db"
+
 
 __all__ = ["DataRootConfig"]

@@ -2,13 +2,14 @@
 
 from pathlib import Path
 
-from ditto_foundation.config.paths import get_paths
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from ditto_datahub.config.data_root import DataRootConfig
+
 
 class FileStorageSettings(BaseSettings):
-    """文件存储配置（遵循 XDG Base Directory 规范）."""
+    """文件存储配置."""
 
     model_config = SettingsConfigDict(
         env_prefix="",
@@ -20,25 +21,25 @@ class FileStorageSettings(BaseSettings):
     @property
     def data_root(self) -> Path:
         """数据存储根目录."""
-        return get_paths().data_home
+        return DataRootConfig().data_root
 
     @computed_field
     @property
     def log_root(self) -> Path:
         """日志存储根目录."""
-        return get_paths().state_subdir("logs")
+        return DataRootConfig().logs_path
 
     @computed_field
     @property
     def backup_root(self) -> Path:
         """备份存储根目录."""
-        return get_paths().state_subdir("backups")
+        return DataRootConfig().backups_path
 
     @computed_field
     @property
     def temp_root(self) -> Path:
         """临时文件存储根目录."""
-        return get_paths().cache_subdir("temp")
+        return DataRootConfig().temp_path
 
 
 __all__ = ["FileStorageSettings"]

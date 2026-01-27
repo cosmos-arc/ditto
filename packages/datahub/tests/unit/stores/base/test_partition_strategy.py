@@ -42,18 +42,20 @@ class TestYearlyPartition:
         assert result == []
 
     def test_get_partitions_from_filters_start_only(self) -> None:
-        """测试只有起始日期."""
+        """测试只有起始日期 - 返回空列表让 _collect_paths 扫描所有文件."""
         strategy = YearlyPartition()
 
         result = strategy.get_partitions_from_filters("2024-01-01", None)
-        assert result == ["2024"]
+        # 开放式范围返回空列表，依赖 Polars 谓词下推进行日期过滤
+        assert result == []
 
     def test_get_partitions_from_filters_end_only(self) -> None:
-        """测试只有结束日期."""
+        """测试只有结束日期 - 返回空列表让 _collect_paths 扫描所有文件."""
         strategy = YearlyPartition()
 
         result = strategy.get_partitions_from_filters(None, "2024-12-31")
-        assert result == ["2024"]
+        # 开放式范围返回空列表，依赖 Polars 谓词下推进行日期过滤
+        assert result == []
 
     def test_get_partitions_from_filters_range_same_year(self) -> None:
         """测试同一年份的范围."""
