@@ -1,6 +1,6 @@
 # DataHub Macro、Features、Factors 域重构实施计划
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 本文档包含三个域的重构计划：
 - Phase 6: Macro 域

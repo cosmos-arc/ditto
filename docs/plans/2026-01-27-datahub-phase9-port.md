@@ -1,6 +1,6 @@
 # DataHub Port 层重构实施计划
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 **目标:** 重构 Port 层，实现 SourceService、IngestionService、DataService、Writer、ReconciliationService
 

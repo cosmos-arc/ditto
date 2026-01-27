@@ -1,6 +1,6 @@
 # DataHub 基础层重构实施计划
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 **目标:** 建立统一的数据存储接口（BaseStore）、简化配置系统（单 DATAROOT）、为后续域级重构打下基础
 
