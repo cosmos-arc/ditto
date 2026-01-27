@@ -40,6 +40,30 @@ DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
 └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
 ```
 
+### 基础层
+
+基础层提供统一的数据存储抽象接口：
+
+| 组件 | 说明 |
+|------|------|
+| `BaseStore` | 抽象基类，定义所有存储实现的统一接口 (read/write/delete) |
+| `ParquetStore` | Parquet 文件存储实现，支持按年分区、自动去重 |
+| `SQLiteStore` | SQLite 数据库存储实现，支持事务、PIT 查询 |
+
+**配置系统**：从多路径配置简化为单 `DATA_ROOT` 配置，所有路径自动生成：
+
+```python
+from ditto_datahub.config import DataRootConfig
+
+# 初始化配置（可通过 DATA_ROOT 环境变量设置）
+config = DataRootConfig()
+# 默认: /data/ditto
+# 自动生成: market/stock/bars/daily/, metadata/metadata.sqlite, 等
+
+# 使用配置
+store = BarsStore(config.data_root)
+```
+
 ### Runtime 层
 
 运行时基础设施组件：
@@ -93,6 +117,49 @@ DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
 | `DataSources` | 数据源统一访问入口 |
 
 ## 使用示例
+
+### 基础层使用
+
+直接使用基础层存储组件：
+
+```python
+from ditto_datahub.config import DataRootConfig
+from ditto_datahub.stores.base import ParquetStore, SQLiteStore
+import polars as pl
+
+# 初始化配置
+config = DataRootConfig()
+
+# ParquetStore：按年分区存储
+parquet_store = ParquetStore(config.market_stock_bars_path)
+
+# 写入数据
+df = pl.DataFrame({
+    "sid": [1, 1, 2],
+    "trade_date": ["2024-01-02", "2024-01-03", "2024-01-02"],
+    "close": [10.5, 10.8, 20.3],
+})
+result = parquet_store.write(
+    dataset="stock_daily",
+    data=df,
+    on_duplicate="keep_last",
+    year=2024,
+)
+
+# 读取数据
+df = parquet_store.read(
+    dataset="stock_daily",
+    sids=[1, 2],
+    start_date="2024-01-01",
+    end_date="2024-01-31",
+)
+
+# SQLiteStore：元数据存储
+sqlite_store = SQLiteStore(config.metadata_db_path)
+
+# 执行 SQL 查询
+rows = sqlite_store.fetchall("SELECT * FROM securities WHERE sid IN (1, 2)")
+```
 
 ### 基本用法
 
@@ -232,6 +299,18 @@ bars/
 - [数据设计文档](../../../../docs/design/02_data_design.md)
 
 ## 变更记录
+
+### v0.6.0 (2026-01-27)
+**新增**
+- 基础层架构：添加 `BaseStore` 抽象基类，定义统一存储接口
+- `ParquetStore`：Parquet 文件存储实现，支持按年分区、自动去重
+- `SQLiteStore`：SQLite 数据库存储实现，支持事务、PIT 查询
+- `DataRootConfig`：统一数据根路径配置，简化路径管理
+
+**改进**
+- 从多路径配置简化为单 `DATA_ROOT` 配置
+- 所有存储实现继承 `BaseStore`，保证接口一致性
+- 增强类型安全和代码可维护性
 
 ### v0.5.0 (2026-01-23)
 **新增**

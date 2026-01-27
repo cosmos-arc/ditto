@@ -10,6 +10,7 @@
 
 | 日期 | 变更内容 |
 |------|----------|
+| 2026-01-27 | **基础层重构**: 添加 `BaseStore` 抽象基类，定义统一存储接口 (read/write/delete)。实现 `ParquetStore`（按年分区、自动去重）和 `SQLiteStore`（事务支持、PIT 查询）。引入 `DataRootConfig` 统一数据根路径配置，从多路径配置简化为单 `DATA_ROOT` 配置，所有路径自动生成。 |
 | 2026-01-16 | **架构简化**: 移除 `PipelineStore`（pipeline_run + dq_issue 表），采用简化的 `IngestionLogStore` 统一摄取元数据管理。原设计中的 run_id 跟踪和 DQ 详情记录被简化为按交易日的 UPSERT 模式，避免游标倒退问题并降低复杂度。 |
 
 ---
@@ -100,13 +101,111 @@
 |-----|------|
 | **单一入口** | 上层只面对 `DataHub`，通过 Accessor 访问数据 |
 | **职责分离** | DataHub(Facade) → Accessor(业务) → Store(存取) → Runtime(支持) |
+| **基础层抽象** | 所有存储实现继承 `BaseStore`，保证接口一致性 |
 | **语义正确** | sid 是唯一身份；(source, src_code) 是映射通道；symbol 仅 UI 展示 |
 | **Point-in-Time** | 任何时点的回测只能看到该时点已公开的信息，包括标识符解析 |
 | **幂等可重跑** | 同一任务对同一日期重跑，产出结果完全一致 |
 | **年分区存储** | Parquet 按年分区，平衡读写性能与文件管理复杂度 |
 | **Freeze 校验** | 通过 checksum 清单实现轻量级可复现性验证 |
 
-### 1.3 核心标识符体系
+### 1.3 基础层架构
+
+基础层提供统一的数据存储抽象接口，确保所有存储实现的一致性：
+
+#### BaseStore 抽象基类
+
+定义所有数据存储的统一接口：
+
+```python
+class BaseStore(ABC):
+    """数据存储抽象基类."""
+
+    @abstractmethod
+    def read(
+        self,
+        dataset: str,
+        sids: list[int] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        **kwargs: object,
+    ) -> object:
+        """读取数据."""
+        ...
+
+    @abstractmethod
+    def write(
+        self,
+        dataset: str,
+        data: object,
+        on_duplicate: str = "error",
+        **kwargs: object,
+    ) -> WriteResultStore:
+        """写入数据."""
+        ...
+
+    @abstractmethod
+    def delete(
+        self,
+        dataset: str,
+        sids: list[int] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        **kwargs: object,
+    ) -> int:
+        """删除数据."""
+        ...
+```
+
+#### ParquetStore
+
+Parquet 文件存储实现：
+
+- **按年分区**：`data_root/dataset/YYYY.parquet`
+- **自动去重**：支持 `error/keep_first/keep_last` 策略
+- **日期范围查询**：自动扫描相关年份分区
+- **原子写入**：使用临时文件 + 重命名保证数据一致性
+
+#### SQLiteStore
+
+SQLite 数据库存储实现：
+
+- **单库多表**：一个 SQLite 文件存储多张表
+- **事务支持**：自动提交事务，保证数据一致性
+- **PIT 查询**：支持历史时点数据查询
+- **连接池**：使用 `SQLitePool` 复用连接
+
+#### 配置系统
+
+从多路径配置简化为单 `DATA_ROOT` 配置：
+
+```python
+class DataRootConfig(BaseSettings):
+    """数据根路径配置."""
+
+    data_root: Path = Field(default=Path("/data/ditto"))
+
+    # 所有路径自动生成
+    @property
+    def market_stock_bars_path(self) -> Path:
+        return self.data_root / "market" / "stock" / "bars" / "daily"
+
+    @property
+    def metadata_db_path(self) -> Path:
+        return self.data_root / "metadata" / "metadata.sqlite"
+```
+
+**环境变量配置**：
+
+```bash
+# 设置数据根目录
+export DATA_ROOT=/path/to/data
+
+# 所有路径自动生成
+# /path/to/data/market/stock/bars/daily/
+# /path/to/data/metadata/metadata.sqlite
+```
+
+### 1.4 核心标识符体系
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -152,7 +251,7 @@
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.4 存储引擎职责边界
+### 1.5 存储引擎职责边界
 
 | 引擎 | 职责 | 场景 |
 |-----|------|------|
@@ -160,7 +259,7 @@
 | **Parquet + Polars** | 事实数据存储（年分区）、批处理计算 | DataFrame 计算 |
 | **DuckDB** | OLAP 查询、多表聚合、PIT View | 复杂 SQL、研究探索 |
 
-### 1.5 Sources 与 Stores 的职责对比
+### 1.6 Sources 与 Stores 的职责对比
 
 | 层 | 职责 | 数据流向 |
 |---|---|---|
@@ -231,6 +330,13 @@ packages/
         stores/
           __init__.py
 
+          # 基础层
+          base/
+            __init__.py
+            base_store.py         # BaseStore 抽象基类
+            parquet_store.py      # ParquetStore 实现
+            sqlite_store.py       # SQLiteStore 实现
+
           # SQLite Stores
           sqlite_client.py        # sqlite_client 客户端
           security_store.py       # security + security_mapping（含 PIT）
@@ -241,6 +347,11 @@ packages/
           bars_store.py           # stock_daily / etf_daily 读写
           index_store.py          # index_daily / index_weight 读写
           adj_factor_store.py     # adj_factor 读写
+
+        # ============ 配置层 ============
+        config/
+          __init__.py
+          data_root.py            # DataRootConfig 统一数据根路径配置
 
         # ============ Runtime 层 ============
         runtime/
