@@ -402,7 +402,9 @@ class TestSecurityStore:
         with mocker.patch.object(
             self.client, "commit", side_effect=RuntimeError("DB error")
         ):
-            mock_logger = mocker.patch("ditto_datahub.stores.security_store.logger")
+            mock_logger = mocker.patch(
+                "ditto_datahub.domains.metadata.security.security_store.logger"
+            )
 
             with pytest.raises(RuntimeError):
                 self.store.register(
