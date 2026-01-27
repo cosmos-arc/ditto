@@ -1931,3 +1931,52 @@ git push origin datahub-phase0-base-layer-complete
 - 任务 7-9: 1 天（依赖注入、文档、验收）
 
 **总计: 约 6-7 个工作日**
+
+---
+
+## 实施记录
+
+### 完成状态
+
+**状态**: ✅ 已完成
+**完成日期**: 2026-01-27
+**分支**: feature/datahub-phase0-base-layer
+
+### 实施摘要
+
+所有 9 个任务已完成：
+
+1. ✅ BaseStore 抽象基类 - 定义统一的 read/write/delete 接口
+2. ✅ ParquetStore 基类 - Parquet 文件存储，支持按年分区、自动去重
+3. ✅ SQLiteStore 基类 - SQLite 数据库存储，支持事务、PIT 查询
+4. ✅ DataRootConfig - 单 DATA_ROOT 配置，自动生成所有路径
+5. ✅ BarsStore 迁移 - 继承 ParquetStore
+6. ✅ SecurityStore 更新 - 保持兼容性
+7. ✅ 依赖注入配置 - 更新 Provider 使用 DataRootConfig
+8. ✅ 清理和文档更新
+9. ✅ Git Tag 创建
+
+### Code Review 修复记录
+
+在 PR #41 审查过程中发现并修复了以下问题：
+
+| 问题 | 严重程度 | 修复内容 |
+|------|----------|----------|
+| TYPE_CHECKING 延迟导入 | P0 (100分) | 移除 `sqlite_store.py` 中对 `collections.abc.Sequence` 的 TYPE_CHECKING 延迟导入，改为直接导入 |
+| YearlyPartition 开放式范围数据丢失 | P1 (85分) | 修复开放式日期范围（只有 start 或 end）返回空列表，依赖 Polars 谓词下推过滤，避免遗漏数据 |
+| KEEP_FIRST 逻辑错误 | P1 (75分) | 在 `parquet_store.py` 合并路径添加批次去重，防止笛卡尔积 |
+| 合并路径批次去重缺失 | P2 (60分) | 同上，确保与非合并路径行为一致 |
+| 配置迁移不完整 | P2 (50分) | 将 `FileStorageSettings` 和 `DatabaseSettings` 迁移到 `DataRootConfig`，添加通用路径属性 |
+
+### 测试更新
+
+- 更新 `test_partition_strategy.py` 以匹配新的开放式范围行为
+- 所有测试通过（单元测试、集成测试）
+
+### 相关 Commit
+
+- `e6eaafa` feat(datahub): implement PartitionStrategy and predicate pushdown
+- `4a25a24` fix(datahub): 修复测试中的 write() 调用
+- `e620756` docs(datahub): update documentation for base layer refactoring
+- `5c2cc23` refactor(datahub): update providers to use DataRootConfig
+- `ae5ec81` refactor(datahub): update SecurityStore doc for future SQLiteStore migration
