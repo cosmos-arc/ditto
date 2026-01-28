@@ -31,9 +31,9 @@ def create_lsp_server(project_root: Path):
     # 配置使用 Pyright
     config_dict = {
         "code_language": "python",
-        # Pyright 配置
+        # BasedPyright 配置（Pyright fork，更严格的类型检查）
         "lsp_server": {
-            "command": "pyright-langserver",
+            "command": "basedpyright-langserver",
             "args": ["--stdio"],
             "initializationOptions": {},
         },

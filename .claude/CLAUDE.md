@@ -31,7 +31,7 @@
     - **Python核心规范**：详见 [core.md](.claude/rules/core.md)
     - **noqa/type:ignore 规范**：详见 [noqa-ignore.md](.claude/rules/noqa-ignore.md)
 - **测试**: 遵循测试依赖，分支覆盖率 >= 80%（详见 [python-test.md](.claude/rules/python-test.md)）
-- **质量**：必须通过 pyright、ruff检测
+- **质量**：必须通过 basedpyright、ruff检测
 - **重构**: 数据存储、API协议格式的兼容考量外，无需考虑向后兼容性，所有包均项目内使用，重构完成必须移除废弃代码和配置
 
 ## 工具使用规范
@@ -49,7 +49,7 @@
 
 > **GLM-4.7 无原生 LSP 能力，使用项目提供的 LSP 辅助脚本**
 >
-> 脚本位置: `.claude/scripts/lsp_pyright.py` (Pyright LSP，推荐)
+> 脚本位置: `.claude/scripts/lsp_pyright.py` (BasedPyright LSP，推荐)
 > 备用脚本: `.claude/scripts/lsp_helper.py` (Jedi，更快但功能有限)
 
 | 操作 | 命令 | 说明 |
@@ -59,7 +59,7 @@
 | 文档符号 | `pixi run -e dev python .claude/scripts/lsp_pyright.py symbols <file>` | 获取类/函数/方法列表 |
 | 类型信息 | `pixi run -e dev python .claude/scripts/lsp_pyright.py hover <file> <line> <col>` | 获取类型和文档 |
 | 代码补全 | `pixi run -e dev python .claude/scripts/lsp_pyright.py complete <file> <line> <col>` | 获取补全建议 |
-| 类型诊断 | `pixi run -e dev python .claude/scripts/lsp_pyright.py diagnose [file]` | Pyright 类型检查 |
+| 类型诊断 | `pixi run -e dev python .claude/scripts/lsp_pyright.py diagnose [file]` | BasedPyright 类型检查 |
 
 **⚠️ 列号定位注意事项**：
 
@@ -179,7 +179,7 @@ pixi run -e dev python .claude/scripts/lsp_pyright.py symbols "<Glob返回的路
 - 直接提交 main
 - 文件读写改操作使用 Bash 命令
 - SRC源码内大量使用#naqa、#type:ignore, 新增代码优先重构避免
-- 绕过或忽略 pyright、ruff、precommit 检测（例如修改相关配置，使用--no verify提交）
+- 绕过或忽略 basedpyright、ruff、precommit 检测（例如修改相关配置，使用--no verify提交）
 - 绝对禁止使用`TYPE_CHECKING`的延迟导入方式解决循环依赖（必须重构代码及架构解决），非必要`禁止延迟导入`
 
 ## 项目架构

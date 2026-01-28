@@ -344,10 +344,10 @@ def process_data(data):
                         ...
 ```
 
-## Type System (Pyright) 规范（必须遵循）
+## Type System (BasedPyright) 规范（必须遵循）
 
 ### 目标（Definition of Done）
-- **生产代码（src 下）必须做到：Pyright Errors = 0 且 Warnings = 0**。
+- **生产代码（src 下）必须做到：BasedPyright Errors = 0 且 Warnings = 0**。
 - **测试代码（tests）不要求清零**，但不应影响生产代码的类型洁净度。
 - 类型问题必须通过"补全类型 / 收敛 Any / 建 stub / 调整 API 形状"解决，而不是长期压制。
 
@@ -355,10 +355,10 @@ def process_data(data):
 
 ### 工具与运行方式（本仓库唯一认可）
 - 生产代码（强约束，CI 必须失败）：
-  - `pyright -p pyproject.toml --warnings`
-  - `--warnings` 会让 Pyright 在出现 warning 时也返回非 0 退出码，从而阻断 CI。 :contentReference[oaicite:0]{index=0}
+  - `pixi run -e dev type` (基于 basedpyright)
+  - `--warnings` 会让 BasedPyright 在出现 warning 时也返回非 0 退出码，从而阻断 CI。 :contentReference[oaicite:0]{index=0}
 - 测试代码（弱约束，可不清零）：
-  - `pyright -p pyright.tests.json`
+  - `pixi run -e dev type --tests` (基于 basedpyright)
 
 ---
 
@@ -373,8 +373,8 @@ def process_data(data):
 
 #### 决策顺序（必须按顺序做）
 1. **优先装官方/社区 stub 包**（如 `types-xxx`）。
-2. 若没有可用 stub：用 Pyright 生成"草稿 stub"，再人工收敛：
-   - `pyright --createstub <import-name>`
+2. 若没有可用 stub：用 BasedPyright 生成"草稿 stub"，再人工收敛：
+   - `basedpyright --createstub <import-name>`
    - 生成的 stub 是"起点"，通常需要把 `Any/Unknown` 收敛成更精确的类型。 :contentReference[oaicite:2]{index=2}
 3. 自建 stub 的范围必须 **"最小可用"**：
    - 只补齐本项目实际用到的 API 面；
@@ -453,9 +453,9 @@ tar -tzf dist/*.whl | grep py.typed
 
 ### 忽略/压制规则（必须极少使用）
 - **默认不允许** `# type: ignore`。
-- 如必须压制，优先使用 Pyright 的"可定位规则名"的 ignore：
-  - `x = foo()  # pyright: ignore[reportGeneralTypeIssues]`
-  - Pyright 支持在 `# pyright: ignore[...]` 中列出规则名，只压制指定类别。 :contentReference[oaicite:4]{index=4}
+- 如必须压制，优先使用 BasedPyright 的"可定位规则名"的 ignore：
+  - `x = foo()  # type: ignore[reportGeneralTypeIssues]`
+  - BasedPyright 支持在 `# type: ignore[...]` 中列出规则名，只压制指定类别。 :contentReference[oaicite:4]{index=4}
 - 每一个 ignore 必须附带原因（为什么无法用更好的类型表达解决），并尽量链接到 issue/任务编号。
 
 ---

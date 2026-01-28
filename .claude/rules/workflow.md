@@ -52,7 +52,7 @@ paths: **/*.py
 | 指标 | 目标 | 测量 |
 |------|------|------|
 | 测试覆盖率 | ≥ 80% | pytest-cov |
-| 类型检查 | 0 errors | pyright |
+| 类型检查 | 0 errors | basedpyright |
 | Lint 检查 | All checks passed | ruff |
 
 ## 快速参考

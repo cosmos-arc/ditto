@@ -27,7 +27,7 @@ pixi run -e dev test --integration
 
 - 读取 `.claude/CLAUDE.md` - 项目核心约束
 - 读取 `.claude/rules/*.md` - 具体规范
-- 读取 `pyproject.toml` - pyright、ruff、pytest 配置
+- 读取 `pyproject.toml` - basedpyright、ruff、pytest 配置
 - 读取 `.pre-commit-config.yaml` - 钩子规则
 - 读取 `.github/workflows/*.yml` - CI 检查项
 
