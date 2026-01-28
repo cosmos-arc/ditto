@@ -70,6 +70,12 @@ def mock_index_constituent_store() -> MagicMock:
 
 
 @pytest.fixture
+def mock_security_store() -> MagicMock:
+    """Create mock SecurityStore."""
+    return MagicMock()
+
+
+@pytest.fixture
 def market_query_service(
     mock_stock_bars_store: MagicMock,
     mock_stock_status_store: MagicMock,
@@ -77,6 +83,7 @@ def market_query_service(
     mock_etf_bars_store: MagicMock,
     mock_etf_status_store: MagicMock,
     mock_index_constituent_store: MagicMock,
+    mock_security_store: MagicMock,
 ) -> MarketQueryService:
     """Create MarketQueryService instance with mocked dependencies."""
     return MarketQueryService(
@@ -85,6 +92,7 @@ def market_query_service(
         stock_adj_store=mock_stock_adj_store,
         etf_bars_store=mock_etf_bars_store,
         etf_status_store=mock_etf_status_store,
+        security_store=mock_security_store,
         etf_nav_store=None,
         etf_adj_store=None,
         index_bars_store=None,
@@ -99,6 +107,7 @@ def market_query_service_without_optionals(
     mock_stock_adj_store: MagicMock,
     mock_etf_bars_store: MagicMock,
     mock_etf_status_store: MagicMock,
+    mock_security_store: MagicMock,
 ) -> MarketQueryService:
     """Create MarketQueryService instance without optional stores."""
     return MarketQueryService(
@@ -107,6 +116,7 @@ def market_query_service_without_optionals(
         stock_adj_store=mock_stock_adj_store,
         etf_bars_store=mock_etf_bars_store,
         etf_status_store=mock_etf_status_store,
+        security_store=mock_security_store,
         etf_nav_store=None,
         etf_adj_store=None,
         index_bars_store=None,
@@ -238,6 +248,7 @@ class TestMarketQueryServiceInit:
         mock_stock_adj_store: MagicMock,
         mock_etf_bars_store: MagicMock,
         mock_etf_status_store: MagicMock,
+        mock_security_store: MagicMock,
     ) -> None:
         """Test initialization with all required stores."""
         service = MarketQueryService(
@@ -246,12 +257,14 @@ class TestMarketQueryServiceInit:
             stock_adj_store=mock_stock_adj_store,
             etf_bars_store=mock_etf_bars_store,
             etf_status_store=mock_etf_status_store,
+            security_store=mock_security_store,
         )
         assert service._stock_bars_store is mock_stock_bars_store
         assert service._stock_status_store is mock_stock_status_store
         assert service._stock_adj_store is mock_stock_adj_store
         assert service._etf_bars_store is mock_etf_bars_store
         assert service._etf_status_store is mock_etf_status_store
+        assert service._security_store is mock_security_store
         assert service._etf_nav_store is None
         assert service._etf_adj_store is None
         assert service._index_bars_store is None
@@ -264,6 +277,7 @@ class TestMarketQueryServiceInit:
         mock_stock_adj_store: MagicMock,
         mock_etf_bars_store: MagicMock,
         mock_etf_status_store: MagicMock,
+        mock_security_store: MagicMock,
         mock_etf_nav_store: MagicMock,
         mock_etf_adj_store: MagicMock,
         mock_index_bars_store: MagicMock,
@@ -276,6 +290,7 @@ class TestMarketQueryServiceInit:
             stock_adj_store=mock_stock_adj_store,
             etf_bars_store=mock_etf_bars_store,
             etf_status_store=mock_etf_status_store,
+            security_store=mock_security_store,
             etf_nav_store=mock_etf_nav_store,
             etf_adj_store=mock_etf_adj_store,
             index_bars_store=mock_index_bars_store,
@@ -364,7 +379,12 @@ class TestMarketQueryServiceGetBars:
         """Test get_bars for ETF data."""
         mock_etf_bars_store.read.return_value = sample_stock_bars_df
 
-        query = MarketBarsQuery(sids=[1500001, 1500002], asset_class="etf")
+        # 使用 ETF SID 范围 (2M+)
+        etf_range = AssetSidRange.get_range("etf")
+        query = MarketBarsQuery(
+            sids=[etf_range.min_sid, etf_range.min_sid + 1],
+            asset_class="etf",
+        )
         result = market_query_service.get_bars(query)
 
         assert not result.is_empty()
@@ -374,7 +394,9 @@ class TestMarketQueryServiceGetBars:
         self, market_query_service: MarketQueryService
     ) -> None:
         """Test get_bars for index when index store is None."""
-        query = MarketBarsQuery(sids=[1], asset_class="index")
+        # 使用 Index SID 范围 (3M+)
+        index_range = AssetSidRange.get_range("index")
+        query = MarketBarsQuery(sids=[index_range.min_sid], asset_class="index")
         result = market_query_service.get_bars(query)
 
         # Should return empty DataFrame when store is None
@@ -430,18 +452,16 @@ class TestMarketQueryServiceAssetClassDetection:
         with pytest.raises(ValueError, match="检测到混合资产类别查询"):
             market_query_service._resolve_sids_and_asset_class(query)
 
-    def test_explicit_asset_class_overrides_detection(
+    def test_explicit_asset_class_mismatch_raises_error(
         self, market_query_service: MarketQueryService
     ) -> None:
-        """Test that explicit asset_class parameter overrides auto-detection."""
+        """Test that explicit asset_class mismatch with detected raises ValueError."""
         stock_range = AssetSidRange.get_range("stock")
+        # Stock SID with explicit ETF asset_class should raise error
         query = MarketBarsQuery(sids=[stock_range.min_sid], asset_class="etf")
 
-        # Even though SID is stock, explicit asset_class should be used
-        # (Note: this might fail in actual implementation, testing current behavior)
-        _, asset_class = market_query_service._resolve_sids_and_asset_class(query)
-
-        assert asset_class == "etf"
+        with pytest.raises(ValueError, match="显式指定的资产类别"):
+            market_query_service._resolve_sids_and_asset_class(query)
 
 
 class TestMarketQueryServiceDateParsing:

@@ -42,7 +42,7 @@ class StockBarsStore(MarketBarsStoreBase):
         super().__init__(data_root)
         self._dataset = "market/stock/bars"
 
-    def _get_dataset_name(self) -> str:
+    def _get_dataset(self) -> str:
         """Return dataset name for stock bars."""
         return "market/stock/bars"
 

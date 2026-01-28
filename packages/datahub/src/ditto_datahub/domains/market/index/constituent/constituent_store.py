@@ -134,26 +134,30 @@ class IndexConstituentStore(SQLiteStore):
                 overlap_count = len(overlap)
 
                 if overlap_count > 0:
-                    # Filter out overlapping records
+                    # Filter out overlapping records from new data
                     # (KEEP_FIRST strategy for constituents)
                     non_overlap = new_keys.join(existing_keys, on=key_cols, how="anti")
-                    df = df.join(non_overlap, on=key_cols, how="inner")
-                    added = len(df)
+                    df_to_add = df.join(non_overlap, on=key_cols, how="inner")
+                    # Merge existing data with new non-overlapping data
+                    df = pl.concat([existing_df, df_to_add], how="diagonal_relaxed")
+                    added = len(df_to_add)
                     updated = 0
                 else:
-                    added = len(df)
+                    # No overlap, merge all data
+                    df = pl.concat([existing_df, df], how="diagonal_relaxed")
+                    added = len(df) - len(existing_df)
                     updated = 0
             else:
+                # No existing data, just insert new data
                 added = len(df)
                 updated = 0
+
+            # Delete all existing data and reinsert (simplest for SQLite)
+            self.execute(f"DELETE FROM {self._table}")  # noqa: S608
         else:
             # New table
             added = len(df)
             updated = 0
-
-        # Delete all existing data and reinsert (simplest for SQLite)
-        if is_merge:
-            self.execute(f"DELETE FROM {self._table}")  # noqa: S608
 
         # Insert data
         columns = df.columns

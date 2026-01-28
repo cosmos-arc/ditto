@@ -145,7 +145,7 @@ class DataHubProvider(Provider):
 
     @provide
     def adj_factor_store(self, data_root: Path) -> AdjFactorStore:
-        """复权因子存储."""
+        """复权因子存储（已弃用，建议使用 stock_adj_store）."""
         return AdjFactorStore(data_root=data_root)
 
     @provide
@@ -379,6 +379,7 @@ class DataHubProvider(Provider):
         etf_adj_store: EtfAdjFactorStore,
         index_bars_store: IndexBarsStore,
         index_constituent_store: IndexConstituentStore,
+        security_store: MetadataSecurityStore,
     ) -> MarketQueryService:
         """Market 查询服务."""
         return MarketQueryService(
@@ -391,6 +392,7 @@ class DataHubProvider(Provider):
             etf_adj_store=etf_adj_store,
             index_bars_store=index_bars_store,
             index_constituent_store=index_constituent_store,
+            security_store=security_store,
         )
 
     # ========================================================================

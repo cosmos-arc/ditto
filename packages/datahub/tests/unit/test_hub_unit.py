@@ -154,6 +154,7 @@ def datahub_with_dependencies(
         stock_adj_store=stock_adj_store,
         etf_bars_store=etf_bars_store,
         etf_status_store=etf_status_store,
+        security_store=security_store,
         etf_nav_store=etf_nav_store,
         etf_adj_store=etf_adj_store,
         index_bars_store=index_bars_store,

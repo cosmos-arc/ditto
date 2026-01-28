@@ -28,6 +28,7 @@ from ditto_datahub.domains.market.index.constituent import IndexConstituentStore
 from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
 from ditto_datahub.domains.market.stock.bars import StockBarsStore
 from ditto_datahub.domains.market.stock.status import StockStatusStore
+from ditto_datahub.domains.metadata.security import SecurityStore
 from ditto_datahub.models import AssetSidRange
 
 
@@ -93,6 +94,7 @@ class MarketQueryService:
         stock_adj_store: StockAdjFactorStore,
         etf_bars_store: EtfBarsStore,
         etf_status_store: EtfStatusStore,
+        security_store: SecurityStore,
         etf_nav_store: EtfNavStore | None = None,
         etf_adj_store: EtfAdjFactorStore | None = None,
         index_bars_store: IndexBarsStore | None = None,
@@ -107,6 +109,7 @@ class MarketQueryService:
             stock_adj_store: 股票复权因子存储.
             etf_bars_store: ETF K线存储.
             etf_status_store: ETF 状态存储.
+            security_store: 证券元数据存储.
             etf_nav_store: ETF 净值存储（可选）.
             etf_adj_store: ETF 复权因子存储（可选）.
             index_bars_store: 指数 K线存储（可选）.
@@ -118,6 +121,7 @@ class MarketQueryService:
         self._stock_adj_store = stock_adj_store
         self._etf_bars_store = etf_bars_store
         self._etf_status_store = etf_status_store
+        self._security_store = security_store
         self._etf_nav_store = etf_nav_store
         self._etf_adj_store = etf_adj_store
         self._index_bars_store = index_bars_store
@@ -170,13 +174,17 @@ class MarketQueryService:
         if df.is_empty():
             return pl.DataFrame()
 
-        # 4. 应用复权（如果需要且不是 raw 模式）
+        # 4. 添加 symbol 列（如果需要）
+        if query.with_symbol and not query.raw:
+            df = self._security_store.enrich_with_symbol(df)
+
+        # 5. 应用复权（如果需要且不是 raw 模式）
         if not query.raw and query.adj != AdjType.NONE and asset_class == "stock":
             df = self._apply_adjustment(
                 df, query.adj, sids, start_date, end_date, asof_date
             )
 
-        # 5. 添加状态列（如果需要且不是 raw 模式）
+        # 6. 添加状态列（如果需要且不是 raw 模式）
         if query.with_status and not query.raw and asset_class == "stock":
             df = self._enrich_with_status(df, sids, start_date, end_date)
 
@@ -363,15 +371,29 @@ class MarketQueryService:
         Returns:
             (SID 列表, 资产类别).
 
+        Raises:
+            ValueError: 如果显式指定的 asset_class 与从 SID 检测出的不一致.
+
         """
         if not query.sids:
-            return [], "stock"
+            # 空 SID 列表时，使用显式 asset_class（如果有），否则默认为 "stock"
+            return [], query.asset_class or "stock"
 
         # 普通模式：使用指定的 SID
         sids = sorted(set(query.sids))
         asset_class = query.asset_class
-        if not asset_class:
+
+        if asset_class:
+            # 验证显式 asset_class 与从 SID 检测出的类别是否一致
+            detected = self._detect_asset_class_from_sids(sids)
+            if detected != asset_class:
+                raise ValueError(
+                    f"显式指定的资产类别 '{asset_class}' 与从 SID "
+                    f"检测出的类别 '{detected}' 不一致"
+                )
+        else:
             asset_class = self._detect_asset_class_from_sids(sids)
+
         return sids, asset_class
 
     def _parse_dates(
@@ -436,8 +458,9 @@ class MarketQueryService:
         )
 
         if adj_df.is_empty():
-            logger.warning(
-                "No adjustment factor data available",
+            # 对于 ETF 和 Index，没有复权因子是正常情况
+            logger.info(
+                "No adjustment factor data available (normal for ETF/Index)",
                 event="market_bars_adj_not_available",
                 adj_type=adj.value,
             )

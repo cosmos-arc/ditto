@@ -42,7 +42,7 @@ class EtfBarsStore(MarketBarsStoreBase):
         super().__init__(data_root)
         self._dataset = "market/etf/bars"
 
-    def _get_dataset_name(self) -> str:
+    def _get_dataset(self) -> str:
         """Return dataset name for ETF bars."""
         return "market/etf/bars"
 
