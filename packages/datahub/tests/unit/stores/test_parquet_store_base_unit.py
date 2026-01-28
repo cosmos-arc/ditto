@@ -18,13 +18,40 @@ from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
 class MockStore(ParquetStoreBase):
     """Mock implementation of ParquetStoreBase for testing."""
 
+    def _get_dataset(self) -> str:
+        """返回数据集名称."""
+        return "test_dataset"
+
     def _get_key_columns(self) -> list[str]:
         """返回键列名."""
         return ["sid", "trade_date"]
 
+    # Backward compatibility methods for testing old API
+
+    def _get_path(self, dataset_or_year: str | int, year: int | None = None) -> Path:
+        """Get path for year partition (supports both old and new API)."""
+        if year is None:
+            year = dataset_or_year  # type: ignore[assignment]
+        return super()._get_path(year)
+
+    def _collect_paths(
+        self,
+        dataset_or_start: str | int,
+        start_or_end_year: int | None = None,
+        end_year: int | None = None,
+    ) -> list[Path]:
+        """Collect paths for year range (supports both old and new API)."""
+        if end_year is None:
+            # New API: _collect_paths(start_year, end_year)
+            start_year = dataset_or_start  # type: ignore[assignment]
+            end_year = start_or_end_year  # type: ignore[assignment]
+        else:
+            # Old API: _collect_paths(dataset, start_year, end_year)
+            start_year = start_or_end_year  # type: ignore[assignment]
+        return super()._collect_paths(start_year, end_year)
+
     def read(
         self,
-        dataset: str,
         sids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
@@ -33,7 +60,6 @@ class MockStore(ParquetStoreBase):
         Mock read implementation - reads from actual parquet files.
 
         Args:
-            dataset: Dataset name.
             sids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
@@ -42,8 +68,8 @@ class MockStore(ParquetStoreBase):
             DataFrame with matching records.
 
         """
-        # Collect all paths for the dataset
-        paths = self._collect_paths(dataset, 1970, 2100)
+        # Collect all paths for the dataset (use compatible method)
+        paths = self._collect_paths(self._dataset, 1970, 2100)
         if not paths:
             # Return empty DataFrame with schema to avoid coverage recursion
             return pl.DataFrame(
@@ -64,6 +90,48 @@ class MockStore(ParquetStoreBase):
             df = df.filter(pl.col("trade_date") <= pl.lit(end_date).cast(pl.Date))
 
         return df
+
+    # Backward compatibility methods for testing old API
+
+    def write(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> WriteResultStore:
+        """Write method that supports old API (with dataset parameter)."""
+        return super().write(df, year, on_duplicate)
+
+    def get_years(self, dataset: str = "") -> list[int]:
+        """Get years method that supports old API (with dataset parameter)."""
+        return super().get_years()
+
+    def delete(self, dataset: str = "", year: int = 0) -> bool:
+        """Delete method that supports old API (with dataset parameter)."""
+        return super().delete(year)
+
+    def get_checksum(self, dataset: str = "", year: int = 0) -> str:
+        """Get checksum method that supports old API (with dataset parameter)."""
+        return super().get_checksum(year)
+
+    def count(
+        self,
+        dataset: str = "",
+        sids: list[int] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> int:
+        """Count method that supports old API (with dataset parameter)."""
+        return super().count(sids=sids, start_date=start_date, end_date=end_date)
+
+    def get_date_range(self, dataset: str = "") -> tuple[str | None, str | None]:
+        """Get date range method that supports old API (with dataset parameter)."""
+        return super().get_date_range()
+
+    def list_sids(self, dataset: str = "") -> list[int]:
+        """List SIDs method that supports old API (with dataset parameter)."""
+        return super().list_sids()
 
 
 # ============ Fixtures ============
@@ -127,23 +195,22 @@ class TestGetPath:
     """Tests for _get_path method."""
 
     @pytest.mark.parametrize(
-        ("dataset", "year", "expected_dataset", "expected_year"),
+        ("year", "expected_dataset", "expected_year"),
         [
-            ("test_dataset", 2024, "test_dataset", 2024),
-            ("stock_daily", 2023, "stock_daily", 2023),
-            ("adj_factor", 2024, "adj_factor", 2024),
+            (2024, "test_dataset", 2024),
+            (2023, "test_dataset", 2023),
+            (2025, "test_dataset", 2025),
         ],
     )
     def test_get_path_generates_correct_path(
         self,
         store: MockStore,
-        dataset: str,
         year: int,
         expected_dataset: str,
         expected_year: int,
     ) -> None:
-        """Test _get_path generates correct file path for various datasets and years."""
-        path = store._get_path(dataset, year)
+        """Test _get_path generates correct file path for various years."""
+        path = store._get_path(year)
         expected = store._data_root / expected_dataset / f"{expected_year}.parquet"
         assert path == expected
 

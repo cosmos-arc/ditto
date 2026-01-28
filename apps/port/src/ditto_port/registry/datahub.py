@@ -23,6 +23,16 @@ from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.config.data_root import DataRootConfig
+from ditto_datahub.domains.market import MarketQueryService
+from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
+from ditto_datahub.domains.market.etf.bars import EtfBarsStore
+from ditto_datahub.domains.market.etf.nav import EtfNavStore
+from ditto_datahub.domains.market.etf.status import EtfStatusStore
+from ditto_datahub.domains.market.index.bars import IndexBarsStore
+from ditto_datahub.domains.market.index.constituent import IndexConstituentStore
+from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
+from ditto_datahub.domains.market.stock.bars import StockBarsStore
+from ditto_datahub.domains.market.stock.status import StockStatusStore
 from ditto_datahub.domains.metadata import MetadataQueryService
 from ditto_datahub.domains.metadata.calendar.calendar_store import (
     CalendarStore as MetadataCalendarStore,
@@ -49,7 +59,6 @@ from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_datahub.stores.stock_status_store import StockStatusStore
 from ditto_datahub.stores.universe_store import UniverseStore
 from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager
@@ -136,13 +145,8 @@ class DataHubProvider(Provider):
 
     @provide
     def adj_factor_store(self, data_root: Path) -> AdjFactorStore:
-        """复权因子存储."""
+        """复权因子存储（已弃用，建议使用 stock_adj_store）."""
         return AdjFactorStore(data_root=data_root)
-
-    @provide
-    def stock_status_store(self, data_root: Path) -> StockStatusStore:
-        """股票状态存储."""
-        return StockStatusStore(data_root=data_root)
 
     @provide
     def universe_store(self, sqlite_client: SQLiteClient) -> UniverseStore:
@@ -188,6 +192,55 @@ class DataHubProvider(Provider):
     ) -> IndustryMappingStore:
         """行业映射存储."""
         return IndustryMappingStore(config.metadata_db_path)
+
+    # ========================================================================
+    # Market Domain Stores
+    # ========================================================================
+
+    @provide
+    def stock_bars_store(self, config: DataRootConfig) -> StockBarsStore:
+        """股票 K线存储."""
+        return StockBarsStore(config.data_root)
+
+    @provide
+    def stock_status_store(self, config: DataRootConfig) -> StockStatusStore:
+        """股票状态存储."""
+        return StockStatusStore(config.data_root)
+
+    @provide
+    def stock_adj_store(self, config: DataRootConfig) -> StockAdjFactorStore:
+        """股票复权因子存储."""
+        return StockAdjFactorStore(config.data_root)
+
+    @provide
+    def etf_bars_store(self, config: DataRootConfig) -> EtfBarsStore:
+        """ETF K线存储."""
+        return EtfBarsStore(config.data_root)
+
+    @provide
+    def etf_status_store(self, config: DataRootConfig) -> EtfStatusStore:
+        """ETF 状态存储."""
+        return EtfStatusStore(config.data_root)
+
+    @provide
+    def etf_nav_store(self, config: DataRootConfig) -> EtfNavStore:
+        """ETF 净值存储."""
+        return EtfNavStore(config.data_root)
+
+    @provide
+    def etf_adj_store(self, config: DataRootConfig) -> EtfAdjFactorStore:
+        """ETF 复权因子存储."""
+        return EtfAdjFactorStore(config.data_root)
+
+    @provide
+    def index_bars_store(self, config: DataRootConfig) -> IndexBarsStore:
+        """指数 K线存储."""
+        return IndexBarsStore(config.data_root)
+
+    @provide
+    def index_constituent_store(self, config: DataRootConfig) -> IndexConstituentStore:
+        """指数成分股存储."""
+        return IndexConstituentStore(config.data_root)
 
     # ========================================================================
     # Accessor Layer
@@ -311,6 +364,38 @@ class DataHubProvider(Provider):
         )
 
     # ========================================================================
+    # Market Query Service
+    # ========================================================================
+
+    @provide
+    def market_query_service(  # noqa: PLR0913
+        self,
+        stock_bars_store: StockBarsStore,
+        stock_status_store: StockStatusStore,
+        stock_adj_store: StockAdjFactorStore,
+        etf_bars_store: EtfBarsStore,
+        etf_status_store: EtfStatusStore,
+        etf_nav_store: EtfNavStore,
+        etf_adj_store: EtfAdjFactorStore,
+        index_bars_store: IndexBarsStore,
+        index_constituent_store: IndexConstituentStore,
+        security_store: MetadataSecurityStore,
+    ) -> MarketQueryService:
+        """Market 查询服务."""
+        return MarketQueryService(
+            stock_bars_store=stock_bars_store,
+            stock_status_store=stock_status_store,
+            stock_adj_store=stock_adj_store,
+            etf_bars_store=etf_bars_store,
+            etf_status_store=etf_status_store,
+            etf_nav_store=etf_nav_store,
+            etf_adj_store=etf_adj_store,
+            index_bars_store=index_bars_store,
+            index_constituent_store=index_constituent_store,
+            security_store=security_store,
+        )
+
+    # ========================================================================
     # Sources Layer
     # ========================================================================
 
@@ -358,6 +443,7 @@ class DataHubProvider(Provider):
         security_store: SecurityStore,
         securities: SecuritiesAccessor,
         metadata_query_service: MetadataQueryService,
+        market_query_service: MarketQueryService,
         calendar: CalendarAccessor,
         adj_factor: AdjFactorAccessor,
         bars: BarsAccessor,
@@ -383,6 +469,7 @@ class DataHubProvider(Provider):
             security_store=security_store,
             securities=securities,
             metadata_query_service=metadata_query_service,
+            market_query_service=market_query_service,
             calendar=calendar,
             adj_factor=adj_factor,
             bars=bars,

@@ -13,11 +13,11 @@ from ditto_foundation.concurrency import FileLockManager
 
 from ditto_datahub.accessors.internal.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.accessors.internal.enrichment import enrich_with_status
+from ditto_datahub.domains.market.stock.status import StockStatusStore
 from ditto_datahub.models import AssetSidRange, OnDuplicate, WriteResult
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.security_store import SecurityStore
-from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
 
 
 class AdjType(Enum):
@@ -514,7 +514,6 @@ class BarsAccessor:
 
         # 读取状态数据
         status_df = self._stock_status_store.read(
-            dataset="stock_status",
             sids=sids,
             start_date=start_str,
             end_date=end_str,

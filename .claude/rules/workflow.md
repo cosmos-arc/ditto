@@ -22,7 +22,8 @@ paths: **/*.py
 实现阶段（TDD）:
 ├─ RED: 写失败测试
 ├─ GREEN: 最小实现
-└─ REFACTOR: 优化代码
+├─ SIMPLIFIER: 简化代码
+└─ REFACTOR: 重构代码
 
 验证阶段:
 └─ verification-before-completion

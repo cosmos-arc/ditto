@@ -22,6 +22,7 @@ packages/datahub/src/ditto_datahub/domains/capital/
 ├── __init__.py
 ├── flow/
 │   ├── market_flow_store.py
+
 │   ├── industry_flow_store.py
 │   └── stock_flow_store.py
 ├── margin/

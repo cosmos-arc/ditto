@@ -9,7 +9,8 @@ from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_datahub.stores.parquet_store_base import ParquetStoreBase  # B.4
 from ditto_datahub.stores.quarantine_store import QuarantineStore
-from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
+
+# StockStatusStore migrated to domains/market/stock/status/
 from ditto_datahub.stores.universe_store import UniverseStore
 
 __all__ = [
@@ -20,6 +21,5 @@ __all__ = [
     "IngestionLogStore",
     "ParquetStoreBase",
     "QuarantineStore",
-    "StockStatusStore",
     "UniverseStore",
 ]

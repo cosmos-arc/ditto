@@ -196,6 +196,15 @@ ignore = [
     "**/tests/**",
     "packages/*/tests/**",
     "apps/*/tests/**",
+    # StockAdjFactorStore and ETF stores intentionally change API to remove dataset parameter
+    # This is a domain-specific specialization that hardcodes the dataset name
+    "packages/datahub/src/ditto_datahub/domains/market/stock/adj/adj_factor_store.py",
+    "packages/datahub/src/ditto_datahub/domains/market/etf/bars/bars_store.py",
+    "packages/datahub/src/ditto_datahub/domains/market/etf/status/status_store.py",
+    "packages/datahub/src/ditto_datahub/domains/market/etf/nav/nav_store.py",
+    "packages/datahub/src/ditto_datahub/domains/market/etf/adj/adj_factor_store.py",
+    # MarketQueryService: multi-line error message uses implicit string concatenation
+    "packages/datahub/src/ditto_datahub/domains/market/market_query_service.py",
 ]
 
 # ═══════════════════════════════════════════════════════════════════

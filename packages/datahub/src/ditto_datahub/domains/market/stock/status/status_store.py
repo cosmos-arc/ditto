@@ -1,5 +1,5 @@
 """
-Stock status storage with year partitioning (B.3).
+Stock status storage with year partitioning.
 
 Stores stock status information for risk control in Parquet files
 with year partitioning. This includes:
@@ -15,10 +15,9 @@ from __future__ import annotations
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import polars as pl
-from ditto_foundation import M, logger, span, traced
+from ditto_foundation import M, logger, traced
 from ditto_foundation.util.io import atomic_write, file_md5
 
 
@@ -28,7 +27,7 @@ class StockStatusStore:
 
     Storage structure:
         data_root/
-            stock_status/
+            market/stock/status/
                 2020.parquet
                 2021.parquet
                 ...
@@ -43,24 +42,23 @@ class StockStatusStore:
 
         """
         self._data_root = Path(data_root)
+        self._dataset = "market/stock/status"
 
-    def _get_path(self, dataset: str, year: int) -> Path:
+    def _get_path(self, year: int) -> Path:
         """
         Get year partition file path.
 
         Args:
-            dataset: Dataset name (e.g., "stock_status").
             year: Year partition.
 
         Returns:
             Path to the Parquet file.
 
         """
-        return self._data_root / dataset / f"{year}.parquet"
+        return self._data_root / self._dataset / f"{year}.parquet"
 
     def _collect_paths(
         self,
-        dataset: str,
         start_year: int,
         end_year: int,
     ) -> list[Path]:
@@ -68,7 +66,6 @@ class StockStatusStore:
         Collect year partition file paths.
 
         Args:
-            dataset: Dataset name.
             start_year: Start year (inclusive).
             end_year: End year (inclusive).
 
@@ -76,7 +73,7 @@ class StockStatusStore:
             List of existing file paths.
 
         """
-        dataset_dir = self._data_root / dataset
+        dataset_dir = self._data_root / self._dataset
         if not dataset_dir.exists():
             return []
 
@@ -93,7 +90,6 @@ class StockStatusStore:
     @traced("data.read")
     def read(
         self,
-        dataset: str,
         sids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
@@ -102,7 +98,6 @@ class StockStatusStore:
         Read stock status data.
 
         Args:
-            dataset: Dataset name (e.g., "stock_status").
             sids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
@@ -117,13 +112,13 @@ class StockStatusStore:
         start_year = int(start_date[:4]) if start_date else 1990
         end_year = int(end_date[:4]) if end_date else 2099
 
-        paths = self._collect_paths(dataset, start_year, end_year)
+        paths = self._collect_paths(start_year, end_year)
 
         if not paths:
             logger.info(
                 "No data found for query",
                 event="data_read_complete",
-                dataset=dataset,
+                dataset=self._dataset,
                 start_date=start_date,
                 end_date=end_date,
                 row_count=0,
@@ -159,7 +154,7 @@ class StockStatusStore:
         logger.info(
             "Data read completed",
             event="data_read_complete",
-            dataset=dataset,
+            dataset=self._dataset,
             start_date=start_date,
             end_date=end_date,
             sids_count=len(sids) if sids else None,
@@ -168,16 +163,16 @@ class StockStatusStore:
         )
 
         # Record metrics
-        M.data_records.add(len(result), {"dataset": dataset, "status": "success"})
-        M.data_update_duration.record(duration_ms / 1000, {"dataset": dataset})
+        M.data_records.add(len(result), {"dataset": self._dataset, "status": "success"})
+        M.data_update_duration.record(duration_ms / 1000, {"dataset": self._dataset})
 
         return result
 
     # ============ Write operations ============
 
+    @traced("data.write")
     def write(
         self,
-        dataset: str,
         df: pl.DataFrame,
         year: int,
     ) -> tuple[str, str]:
@@ -187,7 +182,6 @@ class StockStatusStore:
         Strategy: Read existing data → Merge deduplicate → Atomic write.
 
         Args:
-            dataset: Dataset name.
             df: Data to write.
             year: Year partition.
 
@@ -195,22 +189,12 @@ class StockStatusStore:
             Tuple of (file_path, checksum).
 
         """
-        with span("data.write", dataset=dataset, year=year) as s:
-            return self._write_impl(dataset, df, year, s)
-
-    def _write_impl(
-        self,
-        dataset: str,
-        df: pl.DataFrame,
-        year: int,
-        span_ctx: Any,
-    ) -> tuple[str, str]:
         start_time = time.time()
 
-        dataset_dir = self._data_root / dataset
+        dataset_dir = self._data_root / self._dataset
         dataset_dir.mkdir(parents=True, exist_ok=True)
 
-        file_path = self._get_path(dataset, year)
+        file_path = self._get_path(year)
         is_merge = file_path.exists()
 
         # Merge with existing data
@@ -243,16 +227,10 @@ class StockStatusStore:
 
         duration_ms = (time.time() - start_time) * 1000
 
-        # Set span attributes
-        if span_ctx:
-            span_ctx.set_attribute("row_count", len(df))
-            span_ctx.set_attribute("total_rows", len(combined))
-            span_ctx.set_attribute("is_merge", is_merge)
-
         logger.info(
             "Data write completed",
             event="data_write_complete",
-            dataset=dataset,
+            dataset=self._dataset,
             year=year,
             row_count=len(df),
             total_rows=len(combined),
@@ -263,25 +241,22 @@ class StockStatusStore:
         )
 
         # Record metrics
-        M.data_records.add(len(df), {"dataset": dataset, "status": "success"})
-        M.data_update_duration.record(duration_ms / 1000, {"dataset": dataset})
+        M.data_records.add(len(df), {"dataset": self._dataset, "status": "success"})
+        M.data_update_duration.record(duration_ms / 1000, {"dataset": self._dataset})
 
         return str(file_path), checksum
 
     # ============ Metadata operations ============
 
-    def get_years(self, dataset: str) -> list[int]:
+    def get_years(self) -> list[int]:
         """
-        Get available years for a dataset.
-
-        Args:
-            dataset: Dataset name.
+        Get available years for stock status data.
 
         Returns:
             Sorted list of available years.
 
         """
-        dataset_dir = self._data_root / dataset
+        dataset_dir = self._data_root / self._dataset
         if not dataset_dir.exists():
             return []
 
@@ -296,37 +271,35 @@ class StockStatusStore:
 
         return sorted(years)
 
-    def delete(self, dataset: str, year: int) -> bool:
+    def delete(self, year: int) -> bool:
         """
         Delete a year partition.
 
         Args:
-            dataset: Dataset name.
             year: Year partition to delete.
 
         Returns:
             True if deleted, False if file didn't exist.
 
         """
-        path = self._get_path(dataset, year)
+        path = self._get_path(year)
         if path.exists():
             path.unlink()
             return True
         return False
 
-    def get_checksum(self, dataset: str, year: int) -> str:
+    def get_checksum(self, year: int) -> str:
         """
         Get MD5 checksum of a year partition.
 
         Args:
-            dataset: Dataset name.
             year: Year partition.
 
         Returns:
             Checksum hex string, or empty string if file doesn't exist.
 
         """
-        path = self._get_path(dataset, year)
+        path = self._get_path(year)
         if path.exists():
             result: str = file_md5(path)
             return result
@@ -334,16 +307,14 @@ class StockStatusStore:
 
     def count(
         self,
-        dataset: str,
         sids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> int:
         """
-        Count records in a dataset.
+        Count records in stock status data.
 
         Args:
-            dataset: Dataset name.
             sids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
@@ -352,26 +323,23 @@ class StockStatusStore:
             Number of matching records.
 
         """
-        df = self.read(dataset, sids=sids, start_date=start_date, end_date=end_date)
+        df = self.read(sids=sids, start_date=start_date, end_date=end_date)
         return len(df)
 
-    def get_date_range(self, dataset: str) -> tuple[str | None, str | None]:
+    def get_date_range(self) -> tuple[str | None, str | None]:
         """
-        Get overall date range for a dataset.
-
-        Args:
-            dataset: Dataset name.
+        Get overall date range for stock status data.
 
         Returns:
             Tuple of (start_date, end_date) as strings, or (None, None) if empty.
 
         """
-        years = self.get_years(dataset)
+        years = self.get_years()
         if not years:
             return None, None
 
         # Scan all partitions and find min/max dates
-        paths = self._collect_paths(dataset, min(years), max(years))
+        paths = self._collect_paths(min(years), max(years))
         if not paths:
             return None, None
 
