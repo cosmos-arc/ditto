@@ -158,15 +158,16 @@ max-returns = 6
 max-complexity = 10
 
 # ===================================================================
-# Pyright (类型检查) - 2026 最佳实践配置
+# BasedPyright (类型检查) - Pyright fork，更严格的默认设置
 #
 # 策略：standard 打底 + 核心目录 strict
 # 优势：
 #   1. 避免全仓 strict 导致的噪音爆炸
 #   2. 核心业务逻辑获得最严格检查
 #   3. 边缘模块保持灵活性
+#   4. 更多诊断规则默认启用，更好的 AI coding 支持
 # ===================================================================
-[tool.pyright]
+[tool.basedpyright]
 pythonVersion = "3.12"
 pythonPlatform = "All"
 stubPath = "typings"

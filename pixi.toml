@@ -123,8 +123,8 @@ ipykernel = ">=6.29,<7"
 jupyter = ">=1.1,<2"
 
 [feature.dev.pypi-dependencies]
-# Pyright 类型检查（替代 mypy）
-pyright = ">=1.1.390,<2"
+# BasedPyright 类型检查（Pyright fork，更严格的默认设置）
+basedpyright = ">=1.15,<2"
 
 # LSP 客户端（Pyright LSP）
 multilspy = ">=0.0.15,<0.1"

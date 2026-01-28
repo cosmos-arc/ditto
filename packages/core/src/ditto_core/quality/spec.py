@@ -237,15 +237,9 @@ class DatasetRules(BaseModel):
 
     dataset: str
     description: str
-    technical: list[dict[str, Any]] = Field(  # type: ignore[reportUnknownVariableType]
-        default_factory=list
-    )  # 技术类规则
-    business: list[dict[str, Any]] = Field(  # type: ignore[reportUnknownVariableType]
-        default_factory=list
-    )  # 业务类规则
-    statistical: list[dict[str, Any]] = Field(  # type: ignore[reportUnknownVariableType]
-        default_factory=list
-    )  # 统计类规则
+    technical: list[dict[str, Any]] = Field(default_factory=list)  # 技术类规则
+    business: list[dict[str, Any]] = Field(default_factory=list)  # 业务类规则
+    statistical: list[dict[str, Any]] = Field(default_factory=list)  # 统计类规则
 
     @field_validator("technical", "business", "statistical", mode="before")
     @classmethod

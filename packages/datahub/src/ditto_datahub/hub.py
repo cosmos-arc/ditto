@@ -61,7 +61,7 @@ class BarsQuerySpec:
 
     """
 
-    identifiers: IdentifierList = field(default_factory=list)  # type: ignore[reportUnknownVariableType]
+    identifiers: IdentifierList = field(default_factory=list)
     start: str | None = None
     end: str | None = None
     adj: Literal["none", "qfq", "hfq"] = "none"
@@ -97,7 +97,7 @@ class SecuritiesQuerySpec:
 
     """
 
-    identifiers: IdentifierList = field(default_factory=list)  # type: ignore[reportUnknownVariableType]
+    identifiers: IdentifierList = field(default_factory=list)
     source: str = "tushare"
     asset_class: str | None = None
     exchange: str | None = None

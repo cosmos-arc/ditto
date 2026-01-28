@@ -231,6 +231,6 @@ git grep "^global " packages/*/src apps/*/src
 ## 参考资源
 
 - [core.md](.claude/rules/core.md) - Python 核心规范
-- [Pyright Type Guards](https://github.com/microsoft/pyright/blob/main/docs/typed-calls.md#type-guards)
+- [BasedPyright Type Guards](https://docs.basedpyright.com/)
 - [Ruff Rules](https://docs.astral.sh/ruff/rules/)
 - [2026-01-15-noqa-cleanup-plan.md](../../docs/plans/2026-01-15-noqa-cleanup-plan.md) - 清理执行计划

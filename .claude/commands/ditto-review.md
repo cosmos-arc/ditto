@@ -35,7 +35,7 @@ description: 并行代码审查
 | **PIT** | `closed="left"`、knowledge_date |
 | **规约** | 编码规范、.claude/rules |
 | **可维护** | 无废弃代码、保持简洁 |
-| **质量** | ruff、pyright、嵌套≤3 |
+| **质量** | ruff、basedpyright、嵌套≤3 |
 | **文档** | README、Sprint、API |
 
 ## 单维度

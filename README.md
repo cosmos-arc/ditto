@@ -105,7 +105,7 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
 pixi run lint          # 运行 ruff 检查
 pixi run lint --fix    # 自动修复问题
 pixi run fmt           # 格式化代码
-pixi run type          # 运行 pyright 类型检查
+pixi run type          # 运行 basedpyright 类型检查
 
 # 测试
 pixi run test              # 运行所有测试

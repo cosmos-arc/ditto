@@ -1246,10 +1246,10 @@ pixi run -e dev ci                # CI 完整（lint + fmt --check + type --all 
 
 ---
 
-## 类型检查（Pyright）
+## 类型检查（BasedPyright）
 
 **配置**：
-- 源码：`pyproject.toml` [tool.pyright] 段（standard + strict 模式）
+- 源码：`pyproject.toml` [tool.basedpyright] 段（standard + strict 模式）
 - 测试：`pyright.tests.json`（basic 模式，宽松）
 
 ```bash
