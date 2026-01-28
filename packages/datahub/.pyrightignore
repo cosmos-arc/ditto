@@ -1,0 +1,5 @@
+# Pyright ignore rules for DataHub package
+
+# StockAdjFactorStore intentionally changes API to remove dataset parameter
+# This is a domain-specific specialization that hardcodes the dataset name
+src/ditto_datahub/domains/market/stock/adj/adj_factor_store.py
