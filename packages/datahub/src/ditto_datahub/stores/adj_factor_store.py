@@ -69,6 +69,43 @@ class AdjFactorStore(ParquetStoreBase):
         """Return key column names for deduplication."""
         return ["sid", "trade_date"]
 
+    # ============ Backward compatibility helpers ============
+
+    def _get_path(self, dataset_or_year: str | int, year: int | None = None) -> Path:
+        """
+        Get path for year partition (deprecated API).
+
+        Args:
+            dataset_or_year: Dataset name (if year provided) or year (if only one arg).
+            year: Year partition (if dataset provided as first arg).
+
+        Returns:
+            Path to parquet file.
+
+        """
+        # Handle both old API (dataset, year) and new API (year)
+        if year is None:
+            # New API: single argument is the year
+            year = dataset_or_year  # type: ignore[assignment]
+        return super()._get_path(year)
+
+    def _collect_paths(
+        self, dataset: str, start_year: int, end_year: int
+    ) -> list[Path]:
+        """
+        Collect paths for year range (deprecated API).
+
+        Args:
+            dataset: Dataset name (ignored).
+            start_year: Start year.
+            end_year: End year.
+
+        Returns:
+            List of existing parquet file paths.
+
+        """
+        return super()._collect_paths(start_year, end_year)
+
     # ============ Read operations ============
 
     @traced("data.read")
@@ -174,7 +211,7 @@ class AdjFactorStore(ParquetStoreBase):
             Write result with file path, checksum, and statistics.
 
         """
-        return super().write(self._dataset, df, year, on_duplicate)
+        return super().write(df, year, on_duplicate)
 
     # ============ Metadata operations ============
 
@@ -189,7 +226,7 @@ class AdjFactorStore(ParquetStoreBase):
             Sorted list of available years.
 
         """
-        return super().get_years(self._dataset)
+        return super().get_years()
 
     def delete(self, dataset: str, year: int) -> bool:  # type: ignore[override]
         """
@@ -203,7 +240,7 @@ class AdjFactorStore(ParquetStoreBase):
             True if deleted, False if file didn't exist.
 
         """
-        return super().delete(self._dataset, year)
+        return super().delete(year)
 
     def get_checksum(self, dataset: str, year: int) -> str:  # type: ignore[override]
         """
@@ -217,7 +254,7 @@ class AdjFactorStore(ParquetStoreBase):
             Checksum hex string, or empty string if file doesn't exist.
 
         """
-        return super().get_checksum(self._dataset, year)
+        return super().get_checksum(year)
 
     def count(
         self,
@@ -239,9 +276,8 @@ class AdjFactorStore(ParquetStoreBase):
             Number of matching records.
 
         """
-        df = self.read(
-            self._dataset, sids=sids, start_date=start_date, end_date=end_date
-        )
+        # Call this class's read() method (old API with dataset parameter)
+        df = self.read(dataset, sids=sids, start_date=start_date, end_date=end_date)
         return len(df)
 
     def get_date_range(self, dataset: str) -> tuple[str | None, str | None]:  # type: ignore[override]

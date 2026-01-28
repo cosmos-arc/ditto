@@ -59,8 +59,8 @@ class ParquetStoreBase(ABC):
 
         """
         self._data_root = Path(data_root)
-        # Subclass must set this via _get_dataset()
-        self._dataset: str
+        # Get dataset name from subclass
+        self._dataset = self._get_dataset()
 
     # ============ Public properties ============
 
