@@ -12,10 +12,11 @@ from datetime import datetime
 from pathlib import Path
 
 import polars as pl
+from ditto_foundation import M, logger, traced
+
 from ditto_datahub.models import OnDuplicate
 from ditto_datahub.models.storage import WriteResultStore as WriteResult
 from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
-from ditto_foundation import M, logger, traced
 
 
 class EtfStatusStore(ParquetStoreBase):

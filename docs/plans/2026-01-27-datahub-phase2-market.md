@@ -808,19 +808,33 @@ class MarketQueryService:
     替代: BarsAccessor
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         stock_bars_store: StockBarsStore,
         stock_status_store: StockStatusStore,
         stock_adj_store: StockAdjFactorStore,
         etf_bars_store: EtfBarsStore,
         etf_status_store: EtfStatusStore,
-        etf_nav_store: EtfNavStore,
-        etf_adj_store: EtfAdjFactorStore,
-        index_bars_store: IndexBarsStore,
-        index_constituent_store: IndexConstituentStore,
+        etf_nav_store: EtfNavStore | None = None,
+        etf_adj_store: EtfAdjFactorStore | None = None,
+        index_bars_store: IndexBarsStore | None = None,
+        index_constituent_store: IndexConstituentStore | None = None,
     ) -> None:
-        """初始化 MarketQueryService."""
+        """
+        初始化 MarketQueryService.
+
+        Args:
+            stock_bars_store: 股票 K线存储.
+            stock_status_store: 股票状态存储.
+            stock_adj_store: 股票复权因子存储.
+            etf_bars_store: ETF K线存储.
+            etf_status_store: ETF 状态存储.
+            etf_nav_store: ETF 净值存储（可选）.
+            etf_adj_store: ETF 复权因子存储（可选）.
+            index_bars_store: 指数 K线存储（可选）.
+            index_constituent_store: 指数成分股存储（可选）.
+
+        """
         self._stock_bars_store = stock_bars_store
         self._stock_status_store = stock_status_store
         self._stock_adj_store = stock_adj_store

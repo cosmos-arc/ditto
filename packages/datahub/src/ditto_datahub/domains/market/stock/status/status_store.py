@@ -1,8 +1,13 @@
 """
-ETF adjustment factor storage with year partitioning.
+Stock status storage with year partitioning.
 
-Stores price adjustment factors for ETF dividend/split/bonus events in Parquet files
-with year partitioning. Following design document at docs/design/02_data_design.md.
+Stores stock status information for risk control in Parquet files
+with year partitioning. This includes:
+- Suspension status (停牌): is_suspended, suspend_timing
+- ST status: is_st, st_type
+- List status: list_status (L=正常, D=退市, P=暂停)
+
+Following design document at docs/design/02_data_design.md.
 """
 
 from __future__ import annotations
@@ -13,44 +18,74 @@ from pathlib import Path
 
 import polars as pl
 from ditto_foundation import M, logger, traced
-
-from ditto_datahub.models import OnDuplicate
-from ditto_datahub.models.storage import WriteResultStore as WriteResult
-from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
+from ditto_foundation.util.io import atomic_write, file_md5
 
 
-class EtfAdjFactorStore(ParquetStoreBase):
+class StockStatusStore:
     """
-    ETF adjustment factor data storage with year partitioning.
+    Stock status data storage with year partitioning.
 
     Storage structure:
         data_root/
-            market/etf/adj/
+            market/stock/status/
                 2020.parquet
                 2021.parquet
                 ...
-
-    This store is specialized for ETF adjustment factors and uses a fixed
-    dataset name "market/etf/adj". The read() method does not require a
-    dataset parameter.
     """
 
     def __init__(self, data_root: Path) -> None:
         """
-        Initialize EtfAdjFactorStore.
+        Initialize StockStatusStore.
 
         Args:
             data_root: Root directory for data storage.
 
         """
-        super().__init__(data_root)
-        self._dataset = "market/etf/adj"
+        self._data_root = Path(data_root)
+        self._dataset = "market/stock/status"
+
+    def _get_path(self, year: int) -> Path:
+        """
+        Get year partition file path.
+
+        Args:
+            year: Year partition.
+
+        Returns:
+            Path to the Parquet file.
+
+        """
+        return self._data_root / self._dataset / f"{year}.parquet"
+
+    def _collect_paths(
+        self,
+        start_year: int,
+        end_year: int,
+    ) -> list[Path]:
+        """
+        Collect year partition file paths.
+
+        Args:
+            start_year: Start year (inclusive).
+            end_year: End year (inclusive).
+
+        Returns:
+            List of existing file paths.
+
+        """
+        dataset_dir = self._data_root / self._dataset
+        if not dataset_dir.exists():
+            return []
+
+        paths: list[Path] = []
+        for year in range(start_year, end_year + 1):
+            path = dataset_dir / f"{year}.parquet"
+            if path.exists():
+                paths.append(path)
+
+        return paths
 
     # ============ Read operations ============
-
-    def _get_key_columns(self) -> list[str]:
-        """Return key column names."""
-        return ["sid", "trade_date"]
 
     @traced("data.read")
     def read(
@@ -60,7 +95,7 @@ class EtfAdjFactorStore(ParquetStoreBase):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """
-        Read adjustment factor data.
+        Read stock status data.
 
         Args:
             sids: Filter by security IDs.
@@ -77,7 +112,7 @@ class EtfAdjFactorStore(ParquetStoreBase):
         start_year = int(start_date[:4]) if start_date else 1990
         end_year = int(end_date[:4]) if end_date else 2099
 
-        paths = self._collect_paths(self._dataset, start_year, end_year)
+        paths = self._collect_paths(start_year, end_year)
 
         if not paths:
             logger.info(
@@ -133,38 +168,108 @@ class EtfAdjFactorStore(ParquetStoreBase):
 
         return result
 
+    # ============ Write operations ============
+
     @traced("data.write")
     def write(
         self,
         df: pl.DataFrame,
         year: int,
-        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
-    ) -> WriteResult:
+    ) -> tuple[str, str]:
         """
-        Write adjustment factor data.
+        Write year partition file.
+
+        Strategy: Read existing data → Merge deduplicate → Atomic write.
 
         Args:
             df: Data to write.
             year: Year partition.
-            on_duplicate: Strategy for handling duplicate data.
 
         Returns:
-            Write result with file path, checksum, and statistics.
+            Tuple of (file_path, checksum).
 
         """
-        return super().write(self._dataset, df, year, on_duplicate)
+        start_time = time.time()
+
+        dataset_dir = self._data_root / self._dataset
+        dataset_dir.mkdir(parents=True, exist_ok=True)
+
+        file_path = self._get_path(year)
+        is_merge = file_path.exists()
+
+        # Merge with existing data
+        if file_path.exists():
+            existing = pl.read_parquet(file_path)
+            combined = pl.concat([existing, df]).unique(
+                subset=["sid", "trade_date"],
+                keep="last",  # New data overwrites
+            )
+        else:
+            combined = df
+
+        # Normalize trade_date to Date type if needed
+        if "trade_date" in combined.columns:
+            if combined["trade_date"].dtype == pl.String:
+                combined = combined.with_columns(
+                    pl.col("trade_date").str.strptime(pl.Date, "%Y-%m-%d")
+                )
+            elif combined["trade_date"].dtype != pl.Date:
+                combined = combined.with_columns(pl.col("trade_date").cast(pl.Date))
+
+        # Sort for optimal read performance AND correct last() aggregation
+        combined = combined.sort(["sid", "trade_date"])
+
+        # Atomic write
+        atomic_write(combined, file_path)
+
+        # Calculate checksum
+        checksum: str = file_md5(file_path)
+
+        duration_ms = (time.time() - start_time) * 1000
+
+        logger.info(
+            "Data write completed",
+            event="data_write_complete",
+            dataset=self._dataset,
+            year=year,
+            row_count=len(df),
+            total_rows=len(combined),
+            is_merge=is_merge,
+            file_path=str(file_path),
+            checksum=checksum,
+            duration_ms=round(duration_ms, 2),
+        )
+
+        # Record metrics
+        M.data_records.add(len(df), {"dataset": self._dataset, "status": "success"})
+        M.data_update_duration.record(duration_ms / 1000, {"dataset": self._dataset})
+
+        return str(file_path), checksum
 
     # ============ Metadata operations ============
 
     def get_years(self) -> list[int]:
         """
-        Get available years for adjustment factor data.
+        Get available years for stock status data.
 
         Returns:
             Sorted list of available years.
 
         """
-        return super().get_years(self._dataset)
+        dataset_dir = self._data_root / self._dataset
+        if not dataset_dir.exists():
+            return []
+
+        years: list[int] = []
+        for f in dataset_dir.glob("*.parquet"):
+            try:
+                year = int(f.stem)
+                years.append(year)
+            except ValueError:
+                # Skip files that don't match year pattern
+                continue
+
+        return sorted(years)
 
     def delete(self, year: int) -> bool:
         """
@@ -177,7 +282,11 @@ class EtfAdjFactorStore(ParquetStoreBase):
             True if deleted, False if file didn't exist.
 
         """
-        return super().delete(self._dataset, year)
+        path = self._get_path(year)
+        if path.exists():
+            path.unlink()
+            return True
+        return False
 
     def get_checksum(self, year: int) -> str:
         """
@@ -190,7 +299,11 @@ class EtfAdjFactorStore(ParquetStoreBase):
             Checksum hex string, or empty string if file doesn't exist.
 
         """
-        return super().get_checksum(self._dataset, year)
+        path = self._get_path(year)
+        if path.exists():
+            result: str = file_md5(path)
+            return result
+        return ""
 
     def count(
         self,
@@ -199,7 +312,7 @@ class EtfAdjFactorStore(ParquetStoreBase):
         end_date: str | None = None,
     ) -> int:
         """
-        Count records matching filters.
+        Count records in stock status data.
 
         Args:
             sids: Filter by security IDs.
@@ -215,7 +328,7 @@ class EtfAdjFactorStore(ParquetStoreBase):
 
     def get_date_range(self) -> tuple[str | None, str | None]:
         """
-        Get overall date range for adjustment factor data.
+        Get overall date range for stock status data.
 
         Returns:
             Tuple of (start_date, end_date) as strings, or (None, None) if empty.
@@ -226,7 +339,7 @@ class EtfAdjFactorStore(ParquetStoreBase):
             return None, None
 
         # Scan all partitions and find min/max dates
-        paths = self._collect_paths(self._dataset, min(years), max(years))
+        paths = self._collect_paths(min(years), max(years))
         if not paths:
             return None, None
 
@@ -242,25 +355,3 @@ class EtfAdjFactorStore(ParquetStoreBase):
             return None, None
 
         return str(min_max["min"][0]), str(min_max["max"][0])
-
-    def list_sids(self) -> list[int]:
-        """
-        List unique security IDs in adjustment factor data.
-
-        Returns:
-            Sorted list of unique security IDs.
-
-        """
-        years = self.get_years()
-        if not years:
-            return []
-
-        paths = self._collect_paths(self._dataset, min(years), max(years))
-        if not paths:
-            return []
-
-        lf = pl.scan_parquet([str(p) for p in paths])
-        result = lf.select(pl.col("sid").unique()).collect()
-
-        sids: list[int] = result["sid"].to_list()
-        return sids

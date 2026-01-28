@@ -10,10 +10,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import polars as pl
-from ditto_datahub.models.storage import WriteResultStore
-from ditto_datahub.stores.base.sqlite_store import SQLiteStore
 from ditto_foundation import logger, traced
 from ditto_foundation.util.io import file_md5
+
+from ditto_datahub.models.storage import WriteResultStore
+from ditto_datahub.stores.base.sqlite_store import SQLiteStore
 
 
 class IndexConstituentStore(SQLiteStore):
@@ -116,7 +117,7 @@ class IndexConstituentStore(SQLiteStore):
         if is_merge:
             # Read existing data
             existing_rows = self.fetchall(
-                f"SELECT * FROM {self._table}"
+                f"SELECT * FROM {self._table}"  # noqa: S608 - self._table is controlled
             )
             existing_df = (
                 pl.DataFrame(existing_rows) if existing_rows else pl.DataFrame()
@@ -135,9 +136,7 @@ class IndexConstituentStore(SQLiteStore):
                 if overlap_count > 0:
                     # Filter out overlapping records
                     # (KEEP_FIRST strategy for constituents)
-                    non_overlap = new_keys.join(
-                        existing_keys, on=key_cols, how="anti"
-                    )
+                    non_overlap = new_keys.join(existing_keys, on=key_cols, how="anti")
                     df = df.join(non_overlap, on=key_cols, how="inner")
                     added = len(df)
                     updated = 0
@@ -162,7 +161,7 @@ class IndexConstituentStore(SQLiteStore):
         col_names = ",".join(f'"{col}"' for col in columns)
 
         sql = (
-            f'INSERT OR REPLACE INTO "{self._table}" ({col_names}) '
+            f'INSERT OR REPLACE INTO "{self._table}" ({col_names}) '  # noqa: S608
             f"VALUES ({placeholders})"
         )
 
@@ -363,14 +362,10 @@ class IndexConstituentStore(SQLiteStore):
             conditions.append("effective_date <= ?")
             params.append(end_date)
 
-        where_clause = (
-            f" WHERE {' AND '.join(conditions)}" if conditions else ""
-        )
+        where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
 
         # Count before deletion
-        count_sql = (
-            f"SELECT COUNT(*) as count FROM {self._table}{where_clause}"
-        )
+        count_sql = f"SELECT COUNT(*) as count FROM {self._table}{where_clause}"  # noqa: S608
         before_result = self.fetchone(count_sql, params)
         before_count = int(before_result["count"]) if before_result else 0
 

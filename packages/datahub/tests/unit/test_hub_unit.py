@@ -12,6 +12,16 @@ from ditto_datahub.accessors.index_accessor import IndexAccessor
 from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
 from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
+from ditto_datahub.domains.market import MarketQueryService
+from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
+from ditto_datahub.domains.market.etf.bars import EtfBarsStore
+from ditto_datahub.domains.market.etf.nav import EtfNavStore
+from ditto_datahub.domains.market.etf.status import EtfStatusStore
+from ditto_datahub.domains.market.index.bars import IndexBarsStore
+from ditto_datahub.domains.market.index.constituent import IndexConstituentStore
+from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
+from ditto_datahub.domains.market.stock.bars import StockBarsStore
+from ditto_datahub.domains.market.stock.status import StockStatusStore
 from ditto_datahub.domains.metadata import MetadataQueryService
 from ditto_datahub.domains.metadata.calendar.calendar_store import (
     CalendarStore as MetadataCalendarStore,
@@ -39,7 +49,6 @@ from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_datahub.stores.stock_status_store import StockStatusStore
 from ditto_datahub.stores.universe_store import UniverseStore
 from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager
@@ -127,6 +136,30 @@ def datahub_with_dependencies(
         sid_allocator=sid_allocator,
     )
 
+    # Market Domain Stores
+    stock_bars_store = StockBarsStore(data_root=data_root)
+    stock_status_store = StockStatusStore(data_root=data_root)
+    stock_adj_store = StockAdjFactorStore(data_root=data_root)
+    etf_bars_store = EtfBarsStore(data_root=data_root)
+    etf_status_store = EtfStatusStore(data_root=data_root)
+    etf_nav_store = EtfNavStore(data_root=data_root)
+    etf_adj_store = EtfAdjFactorStore(data_root=data_root)
+    index_bars_store = IndexBarsStore(data_root=data_root)
+    index_constituent_store = IndexConstituentStore(data_root=data_root)
+
+    # Market Query Service
+    market_query_service = MarketQueryService(
+        stock_bars_store=stock_bars_store,
+        stock_status_store=stock_status_store,
+        stock_adj_store=stock_adj_store,
+        etf_bars_store=etf_bars_store,
+        etf_status_store=etf_status_store,
+        etf_nav_store=etf_nav_store,
+        etf_adj_store=etf_adj_store,
+        index_bars_store=index_bars_store,
+        index_constituent_store=index_constituent_store,
+    )
+
     # Accessor Layer
     from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
 
@@ -161,6 +194,7 @@ def datahub_with_dependencies(
         security_store=security_store,
         securities=securities,
         metadata_query_service=metadata_query_service,
+        market_query_service=market_query_service,
         calendar=calendar,
         adj_factor=adj_factor,
         bars=bars,
@@ -863,3 +897,73 @@ class TestDataHub:
         # 验证 securities.get 被调用
         assert mock_securities_get.called
         assert isinstance(result, pl.DataFrame)
+
+    # ========================================================================
+    # Market Query Service Tests (Task 8)
+    # ========================================================================
+
+    def test_market_property_exists(
+        self,
+        datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
+    ) -> None:
+        """Test DataHub has market property."""
+        # mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
+        # 验证 market 属性存在且为 MarketQueryService 实例
+        assert hasattr(datahub_with_dependencies, "market")
+        assert isinstance(datahub_with_dependencies.market, MarketQueryService)
+
+    def test_market_get_bars_returns_dataframe(
+        self,
+        datahub_with_dependencies: DataHub,
+        mocker: MockerFixture,
+    ) -> None:
+        """Test market.get_bars returns DataFrame."""
+        # mock index 和 sources
+        index_store = mocker.Mock()
+        index = IndexAccessor(
+            index_store,
+            datahub_with_dependencies.calendar,
+            datahub_with_dependencies.bars,
+        )
+        datahub_with_dependencies._index = index
+
+        mock_tushare = mocker.Mock(spec=TushareSource)
+        sources = DataSources(tushare=mock_tushare)
+        datahub_with_dependencies._sources = sources
+
+        from ditto_datahub.domains.market import AdjType, MarketBarsQuery
+
+        # Mock market.get_bars 返回空 DataFrame
+        mock_get_bars = mocker.patch.object(
+            datahub_with_dependencies.market,
+            "get_bars",
+            return_value=pl.DataFrame(),
+        )
+
+        # 创建查询参数
+        query = MarketBarsQuery(
+            sids=[1, 2, 3],
+            start="2024-01-01",
+            end="2024-01-31",
+            adj=AdjType.NONE,
+        )
+
+        result = datahub_with_dependencies.market.get_bars(query)
+
+        # 验证返回类型
+        assert isinstance(result, pl.DataFrame)
+        # 验证 get_bars 被调用
+        mock_get_bars.assert_called_once()

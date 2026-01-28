@@ -1,7 +1,7 @@
 # ditto-datahub
 
-**版本**: v0.7.0
-**最后更新**: 2026-01-27
+**版本**: v0.8.0
+**最后更新**: 2026-01-28
 **状态**: ✅ 稳定
 
 ## 概要
@@ -115,7 +115,20 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 
 #### Market 域
 
-- `domains/market/`: Market 域（待实现）
+- `domains/market/`: Market 域
+  - `stock/`: 股票行情数据
+    - `bars.py`: StockBarsStore（股票 K线数据）
+    - `status.py`: StockStatusStore（股票状态数据）
+    - `adj.py`: StockAdjFactorStore（股票复权因子）
+  - `etf/`: ETF 行情数据
+    - `bars.py`: EtfBarsStore（ETF K线数据）
+    - `status.py`: EtfStatusStore（ETF 状态数据）
+    - `nav.py`: EtfNavStore（ETF 净值数据）
+    - `adj.py`: EtfAdjFactorStore（ETF 复权因子）
+  - `index/`: 指数行情数据
+    - `bars.py`: IndexBarsStore（指数 K线数据）
+    - `constituent.py`: IndexConstituentStore（指数成分股）
+  - `market_query_service.py`: MarketQueryService（域级统一查询服务）
 
 #### 架构优势
 
@@ -246,6 +259,62 @@ mappings = hub.metadata.get_industry_mappings(sids=[1, 2, 3], asof="2024-06-30")
 
 # 查询标的池
 universe = hub.metadata.get_universe(name="csi300")
+```
+
+### Market 查询（新 API）
+
+DataHub 引入了域级查询服务 `MarketQueryService`，提供统一的 Market 域查询接口：
+
+```python
+from ditto_datahub import DataHub
+from ditto_datahub.domains.market import AdjType, MarketBarsQuery
+
+hub = DataHub()
+
+# 查询股票 K线数据（支持复权）
+query = MarketBarsQuery(
+    sids=[1, 2, 3],
+    start="2024-01-01",
+    end="2024-01-31",
+    adj=AdjType.QFQ,  # 前复权
+)
+bars = hub.market.get_bars(query)
+
+# 查询带状态信息的 K线数据
+query = MarketBarsQuery(
+    sids=[1, 2, 3],
+    start="2024-01-01",
+    end="2024-01-31",
+    with_status=True,  # 添加停牌、ST 等状态信息
+)
+bars = hub.market.get_bars(query)
+
+# PIT 安全查询（只使用 asof 日期之前的数据）
+query = MarketBarsQuery(
+    sids=[1, 2, 3],
+    start="2024-01-01",
+    end="2024-01-31",
+    asof="2024-06-30",  # 只使用 2024-06-30 之前已知的数据
+)
+bars = hub.market.get_bars(query)
+
+# 查询 ETF K线数据
+query = MarketBarsQuery(
+    sids=[510010, 510050],  # ETF SID
+    start="2024-01-01",
+    end="2024-01-31",
+    asset_class="etf",
+)
+bars = hub.market.get_bars(query)
+
+# 查询指数 K线数据
+query = MarketBarsQuery(
+    sids=[1, 2],  # 指数 SID
+    start="2024-01-01",
+    end="2024-01-31",
+    asset_class="index",
+)
+bars = hub.market.get_bars(query)
 ```
 
 #### 向后兼容
@@ -381,6 +450,31 @@ bars/
 - [数据设计文档](../../../../docs/design/02_data_design.md)
 
 ## 变更记录
+
+### v0.8.0 (2026-01-28)
+**新增**
+- Market 域架构：`domains/market/` 目录结构
+  - `stock/`: 股票行情数据域（StockBarsStore、StockStatusStore、StockAdjFactorStore）
+  - `etf/`: ETF 行情数据域（EtfBarsStore、EtfStatusStore、EtfNavStore、EtfAdjFactorStore）
+  - `index/`: 指数行情数据域（IndexBarsStore、IndexConstituentStore）
+- MarketQueryService：域级统一查询服务（`hub.market`）
+  - 股票 K线查询（支持复权、状态增强）
+  - ETF K线查询
+  - 指数 K线查询
+  - PIT 安全查询（asof 参数）
+
+**重构**
+- StockBarsStore 迁移到 `domains/market/stock/bars/`
+- StockStatusStore 迁移到 `domains/market/stock/status/`
+- StockAdjFactorStore 迁移到 `domains/market/stock/adj/`
+- 新增 ETF 相关 Store（EtfBarsStore、EtfStatusStore、EtfNavStore、EtfAdjFactorStore）
+- 新增指数相关 Store（IndexBarsStore、IndexConstituentStore）
+- DataHub 集成 MarketQueryService，提供 `hub.market` 统一查询接口
+
+**改进**
+- 域驱动设计（DDD）：Market 域完整实现
+- 增强类型安全，完善文档注释
+- 向后兼容性：保留 `hub.bars` 接口
 
 ### v0.7.0 (2026-01-27)
 **新增**

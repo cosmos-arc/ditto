@@ -1,7 +1,7 @@
 """
-Index daily bars storage with year partitioning.
+Stock daily bars storage with year partitioning.
 
-Stores OHLCV daily bar data for indices in Parquet files with year
+Stores OHLCV daily bar data for stocks in Parquet files with year
 partitioning. Following design document at docs/design/02_data_design.md.
 """
 
@@ -12,39 +12,38 @@ from datetime import datetime
 from pathlib import Path
 
 import polars as pl
-from ditto_foundation import M, logger, traced
-
 from ditto_datahub.models import OnDuplicate
 from ditto_datahub.models.storage import WriteResultStore as WriteResult
 from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
+from ditto_foundation import M, logger, traced
 
 
-class IndexBarsStore(ParquetStoreBase):
+class StockBarsStore(ParquetStoreBase):
     """
-    Index daily bars data storage with year partitioning.
+    Stock daily bars data storage with year partitioning.
 
     Storage structure:
         data_root/
-            market/index/bars/
+            market/stock/bars/
                 2020.parquet
                 2021.parquet
                 ...
 
-    This store is specialized for index daily bars and uses a fixed
-    dataset name "market/index/bars". The read() method does not require a
+    This store is specialized for stock daily bars and uses a fixed
+    dataset name "market/stock/bars". The read() method does not require a
     dataset parameter.
     """
 
     def __init__(self, data_root: Path) -> None:
         """
-        Initialize IndexBarsStore.
+        Initialize StockBarsStore.
 
         Args:
             data_root: Root directory for data storage.
 
         """
         super().__init__(data_root)
-        self._dataset = "market/index/bars"
+        self._dataset = "market/stock/bars"
 
     # ============ Read operations ============
 
@@ -60,7 +59,7 @@ class IndexBarsStore(ParquetStoreBase):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """
-        Read index daily bars data.
+        Read stock daily bars data.
 
         Args:
             sids: Filter by security IDs.
@@ -141,7 +140,7 @@ class IndexBarsStore(ParquetStoreBase):
         on_duplicate: OnDuplicate = OnDuplicate.ERROR,
     ) -> WriteResult:
         """
-        Write index daily bars data.
+        Write stock daily bars data.
 
         Args:
             df: Data to write.
@@ -158,7 +157,7 @@ class IndexBarsStore(ParquetStoreBase):
 
     def get_years(self) -> list[int]:  # type: ignore[override]
         """
-        Get available years for index daily bars data.
+        Get available years for stock daily bars data.
 
         Returns:
             Sorted list of available years.
@@ -215,7 +214,7 @@ class IndexBarsStore(ParquetStoreBase):
 
     def get_date_range(self) -> tuple[str | None, str | None]:  # type: ignore[override]
         """
-        Get overall date range for index daily bars data.
+        Get overall date range for stock daily bars data.
 
         Returns:
             Tuple of (start_date, end_date) as strings, or (None, None) if empty.
@@ -245,7 +244,7 @@ class IndexBarsStore(ParquetStoreBase):
 
     def list_sids(self) -> list[int]:  # type: ignore[override]
         """
-        List unique security IDs in index daily bars data.
+        List unique security IDs in stock daily bars data.
 
         Returns:
             Sorted list of unique security IDs.
