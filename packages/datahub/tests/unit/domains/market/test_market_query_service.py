@@ -76,8 +76,31 @@ def market_query_service(
     mock_stock_adj_store: MagicMock,
     mock_etf_bars_store: MagicMock,
     mock_etf_status_store: MagicMock,
+    mock_index_constituent_store: MagicMock,
 ) -> MarketQueryService:
     """Create MarketQueryService instance with mocked dependencies."""
+    return MarketQueryService(
+        stock_bars_store=mock_stock_bars_store,
+        stock_status_store=mock_stock_status_store,
+        stock_adj_store=mock_stock_adj_store,
+        etf_bars_store=mock_etf_bars_store,
+        etf_status_store=mock_etf_status_store,
+        etf_nav_store=None,
+        etf_adj_store=None,
+        index_bars_store=None,
+        index_constituent_store=mock_index_constituent_store,
+    )
+
+
+@pytest.fixture
+def market_query_service_without_optionals(
+    mock_stock_bars_store: MagicMock,
+    mock_stock_status_store: MagicMock,
+    mock_stock_adj_store: MagicMock,
+    mock_etf_bars_store: MagicMock,
+    mock_etf_status_store: MagicMock,
+) -> MarketQueryService:
+    """Create MarketQueryService instance without optional stores."""
     return MarketQueryService(
         stock_bars_store=mock_stock_bars_store,
         stock_status_store=mock_stock_status_store,
@@ -603,3 +626,85 @@ class TestMarketQueryServiceEnrichWithStatus:
         mock_stock_status_store.read.assert_called_once()
         call_args = mock_stock_status_store.read.call_args
         assert call_args.kwargs["start_date"] == "2024-01-01"
+
+
+class TestMarketQueryServiceGetConstituents:
+    """Tests for MarketQueryService.get_constituents() method."""
+
+    def test_get_constituents_success(
+        self,
+        market_query_service: MarketQueryService,
+        mock_index_constituent_store: MagicMock,
+    ) -> None:
+        """Test successful constituents query."""
+        # Mock the store's get method
+        mock_index_constituent_store.get.return_value = pl.DataFrame(
+            {
+                "index_sid": [1, 1, 1],
+                "stock_sid": [100, 101, 102],
+                "effective_date": ["2024-01-01", "2024-01-01", "2024-01-01"],
+                "weight": [0.4, 0.35, 0.25],
+            }
+        )
+
+        result = market_query_service.get_constituents(index_sid=1, asof="2024-01-01")
+
+        # Should return the constituents
+        assert len(result) == 3
+        assert "index_sid" in result.columns
+        assert "stock_sid" in result.columns
+        assert "effective_date" in result.columns
+        assert "weight" in result.columns
+
+        # Store should be called with correct parameters
+        mock_index_constituent_store.get.assert_called_once_with(1, "2024-01-01")
+
+    def test_get_constituents_default_asof(
+        self,
+        market_query_service: MarketQueryService,
+        mock_index_constituent_store: MagicMock,
+    ) -> None:
+        """Test constituents query with default asof date (today)."""
+        mock_index_constituent_store.get.return_value = pl.DataFrame(
+            {
+                "index_sid": [1],
+                "stock_sid": [100],
+                "effective_date": ["2024-01-01"],
+                "weight": [1.0],
+            }
+        )
+
+        result = market_query_service.get_constituents(index_sid=1)
+
+        # Should return data with today's date
+        assert len(result) == 1
+        mock_index_constituent_store.get.assert_called_once()
+        call_args = mock_index_constituent_store.get.call_args
+        # The second argument should be today's date
+        asof_arg = call_args[0][1] if call_args[0] else call_args[1]["asof"]
+        assert asof_arg == date.today().isoformat()
+
+    def test_get_constituents_store_not_configured(
+        self,
+        market_query_service_without_optionals: MarketQueryService,
+    ) -> None:
+        """Test constituents query when IndexConstituentStore is not configured."""
+        with pytest.raises(
+            NotImplementedError,
+            match="IndexConstituentStore not configured",
+        ):
+            market_query_service_without_optionals.get_constituents(index_sid=1)
+
+    def test_get_constituents_empty_result(
+        self,
+        market_query_service: MarketQueryService,
+        mock_index_constituent_store: MagicMock,
+    ) -> None:
+        """Test constituents query returns empty DataFrame."""
+        mock_index_constituent_store.get.return_value = pl.DataFrame()
+
+        result = market_query_service.get_constituents(index_sid=999)
+
+        assert result.is_empty()
+        today = date.today().isoformat()
+        mock_index_constituent_store.get.assert_called_once_with(999, today)

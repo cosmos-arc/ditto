@@ -116,18 +116,20 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 #### Market 域
 
 - `domains/market/`: Market 域
+  - `base/`: 基础抽象类
+    - `bars_store_base.py`: MarketBarsStoreBase（行情数据基类）
   - `stock/`: 股票行情数据
-    - `bars.py`: StockBarsStore（股票 K线数据）
-    - `status.py`: StockStatusStore（股票状态数据）
-    - `adj.py`: StockAdjFactorStore（股票复权因子）
+    - `bars/bars_store.py`: StockBarsStore（股票 K线数据）
+    - `status/status_store.py`: StockStatusStore（股票状态数据）
+    - `adj/adj_factor_store.py`: StockAdjFactorStore（股票复权因子）
   - `etf/`: ETF 行情数据
-    - `bars.py`: EtfBarsStore（ETF K线数据）
-    - `status.py`: EtfStatusStore（ETF 状态数据）
-    - `nav.py`: EtfNavStore（ETF 净值数据）
-    - `adj.py`: EtfAdjFactorStore（ETF 复权因子）
+    - `bars/bars_store.py`: EtfBarsStore（ETF K线数据）
+    - `status/status_store.py`: EtfStatusStore（ETF 状态数据）
+    - `nav/nav_store.py`: EtfNavStore（ETF 净值数据）
+    - `adj/adj_factor_store.py`: EtfAdjFactorStore（ETF 复权因子）
   - `index/`: 指数行情数据
-    - `bars.py`: IndexBarsStore（指数 K线数据）
-    - `constituent.py`: IndexConstituentStore（指数成分股）
+    - `bars/bars_store.py`: IndexBarsStore（指数 K线数据）
+    - `constituent/constituent_store.py`: IndexConstituentStore（指数成分股）
   - `market_query_service.py`: MarketQueryService（域级统一查询服务）
 
 #### 架构优势

@@ -48,12 +48,16 @@ class MarketBarsQuery:
         sids: SID 列表.
         start: 开始日期 (YYYY-MM-DD).
         end: 结束日期 (YYYY-MM-DD).
-        adj: 复权类型.
+        adj: 复权类型（仅对 stock 数据有效，etf/index 数据不支持复权）.
         asof: 时间点查询日期 (PIT-safe).
         asset_class: 资产类别过滤.
         with_symbol: 是否在结果中添加 symbol 列.
         with_status: 是否添加股票状态信息（仅对股票数据有效）.
         raw: 是否跳过复权和状态增强.
+
+    Note:
+        - 复权功能 (adj) 仅支持股票数据，对 ETF 和 Index 数据无效
+        - 状态增强 (with_status) 仅支持股票数据
 
     Examples:
         >>> query = MarketBarsQuery(sids=[1, 2, 3], start="2024-01-01")
@@ -187,6 +191,64 @@ class MarketQueryService:
         M.data_records.add(
             len(df),
             {"dataset": "market_bars", "operation": "get", "adj": query.adj.value},
+        )
+
+        return df
+
+    @traced("market.get_constituents")
+    def get_constituents(
+        self,
+        index_sid: int,
+        asof: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取指数成分股（Point-in-Time）.
+
+        Args:
+            index_sid: 指数 SID.
+            asof: 时点查询日期 (YYYY-MM-DD)，默认为当前日期.
+
+        Returns:
+            成分股 DataFrame，包含列: index_sid, stock_sid, effective_date, weight.
+
+        Raises:
+            NotImplementedError: 如果 IndexConstituentStore 未配置.
+
+        Examples:
+            >>> service.get_constituents(1, "2024-01-01")
+            >>> service.get_constituents(1)  # 当前日期
+
+        """
+        if self._index_constituent_store is None:
+            raise NotImplementedError(
+                "IndexConstituentStore not configured. Please provide "
+                "index_constituent_store when initializing MarketQueryService."
+            )
+
+        # 使用当前日期（如果未指定 asof）
+        asof_date = asof or date.today().isoformat()
+
+        logger.debug(
+            "Fetching index constituents",
+            event="market_constituents_get_start",
+            index_sid=index_sid,
+            asof=asof_date,
+        )
+
+        df = self._index_constituent_store.get(index_sid, asof_date)
+
+        logger.debug(
+            "Index constituents fetched",
+            event="market_constituents_get_complete",
+            index_sid=index_sid,
+            asof=asof_date,
+            row_count=len(df),
+        )
+
+        # 记录指标
+        M.data_records.add(
+            len(df),
+            {"dataset": "market_constituents", "operation": "get"},
         )
 
         return df

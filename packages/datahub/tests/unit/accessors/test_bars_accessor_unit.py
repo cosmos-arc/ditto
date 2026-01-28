@@ -11,11 +11,11 @@ import polars as pl
 import pytest
 from ditto_datahub.accessors import AdjType, BarsQuery
 from ditto_datahub.accessors.bars_accessor import BarsAccessor
+from ditto_datahub.domains.market.stock.status import StockStatusStore
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_datahub.stores.stock_status_store import StockStatusStore  # B.3
 from ditto_foundation.concurrency import FileLockManager
 
 

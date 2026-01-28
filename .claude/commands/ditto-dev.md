@@ -32,7 +32,7 @@ description: 基于计划执行 TDD 开发
 ### 3. TDD 开发
 遵循 [`.claude/rules/workflow.md`](.claude/rules/workflow.md)：
 ```
-理解代码 → RED → GREEN → REFACTOR
+理解代码 → RED → GREEN → SIMPLIFIER -> REFACTOR
 ```
 
 ### 4. 验证完成

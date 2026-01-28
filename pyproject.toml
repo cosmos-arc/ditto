@@ -203,6 +203,8 @@ ignore = [
     "packages/datahub/src/ditto_datahub/domains/market/etf/status/status_store.py",
     "packages/datahub/src/ditto_datahub/domains/market/etf/nav/nav_store.py",
     "packages/datahub/src/ditto_datahub/domains/market/etf/adj/adj_factor_store.py",
+    # MarketQueryService: multi-line error message uses implicit string concatenation
+    "packages/datahub/src/ditto_datahub/domains/market/market_query_service.py",
 ]
 
 # ═══════════════════════════════════════════════════════════════════
