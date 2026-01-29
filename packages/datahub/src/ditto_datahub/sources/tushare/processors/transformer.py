@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import polars as pl
 from ditto_foundation import M, logger
+
+if TYPE_CHECKING:
+    from ditto_datahub.sources.normalization import NormalizationConfig
+    from ditto_datahub.sources.source_schema import SourceSchema
 
 __all__ = [
     "ADJ_FACTOR_MAPPING",
@@ -22,7 +27,21 @@ __all__ = [
 
 @dataclass(frozen=True)
 class ColumnMapping:
-    """列映射配置."""
+    """
+    列映射配置（扩展版）.
+
+    Attributes:
+        rename: 列重命名映射
+        date_columns: 日期列及格式映射（列名 -> 格式）
+        float_columns: 需要转换为 Float64 的列
+        int_columns: 需要转换为 Int64 的列
+        boolean_columns: 需要转换为 Boolean 的列
+        computed_columns: 计算列映射（列名 -> Polars 表达式）
+        output_columns: 需要保留的输出列，None 表示保留所有列
+        source_schema: 关联的数据源 Schema（用于验证输出数据）
+        normalization: 数据标准化配置
+
+    """
 
     rename: dict[str, str]
     date_columns: dict[str, str]  # 列名 -> 格式
@@ -33,6 +52,10 @@ class ColumnMapping:
     computed_columns: dict[str, pl.Expr] = field(default_factory=lambda: {})
     # 需要保留的输出列（重命名后），None 表示保留所有列
     output_columns: tuple[str, ...] | None = None
+    # 新增字段：关联的 Schema（用于验证）
+    source_schema: SourceSchema | None = None
+    # 新增字段：标准化配置
+    normalization: NormalizationConfig | None = None
 
 
 # OHLCV 数据的通用配置
@@ -143,6 +166,9 @@ class TushareDataTransformer:
         Returns:
             转换后的 DataFrame
 
+        Raises:
+            SchemaValidationError: 当关联了 SourceSchema 且验证失败时抛出
+
         """
         # 1. 空处理：直接使用 _build_schema_from_mapping 构建 schema
         if len(df) == 0:
@@ -157,16 +183,24 @@ class TushareDataTransformer:
         # 执行实际转换
         result = TushareDataTransformer._transform_impl(df, mapping)
 
+        # 验证 Schema（如果关联了 SourceSchema）
+        if mapping.source_schema:
+            mapping.source_schema.validate(result)
+
         # 记录日志和指标
         logger.info(
             f"Tushare {dataset_name} fetched",
             event=f"tushare_{dataset_name}_fetch_complete",
             row_count=len(result),
         )
-        M.data_records.add(
-            len(result),
-            {"source": "tushare", "dataset": dataset_name, "status": "success"},
-        )
+        try:
+            M.data_records.add(
+                len(result),
+                {"source": "tushare", "dataset": dataset_name, "status": "success"},
+            )
+        except (AttributeError, TypeError):
+            # Observability 未初始化，静默跳过
+            pass
 
         return result
 

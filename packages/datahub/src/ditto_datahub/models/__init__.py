@@ -1,7 +1,13 @@
 """DataHub models for data transfer objects."""
 
 # DataHub 层自己的 models
-from ditto_datahub.models.common import AssetSidRange, Dataset, OnDuplicate, Source
+from ditto_datahub.models.common import (
+    AssetSidRange,
+    Dataset,
+    Domain,
+    OnDuplicate,
+    Source,
+)
 from ditto_datahub.models.ingestion import (
     DataChangedError,
     IngestionCursor,
@@ -15,6 +21,7 @@ __all__ = [
     "AssetSidRange",
     "DataChangedError",
     "Dataset",
+    "Domain",
     "FreezeManifest",
     "IngestionCursor",
     "IngestionLog",

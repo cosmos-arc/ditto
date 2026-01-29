@@ -38,14 +38,14 @@ class TestQualityReconciliationServiceInit:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         # Assert
         assert service._engine is mock_quality_engine
         assert service._tdx_source is mock_tdx_source
         assert service._comparison_accessor is mock_comparison_accessor
-        assert service._security_store is mock_security_store
+        assert service._instrument_store is mock_security_store
 
 
 @pytest.mark.unit
@@ -69,7 +69,7 @@ class TestDailyReconciliationSuccess:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         # Mock enrich_with_symbol 返回包含 symbol 的 DataFrame
@@ -118,7 +118,7 @@ class TestDailyReconciliationSuccess:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         enriched_df = sample_primary_df.with_columns(
@@ -160,7 +160,7 @@ class TestDailyReconciliationSuccess:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         enriched_df = sample_primary_df.with_columns(
@@ -203,7 +203,7 @@ class TestDailyReconciliationWithIssues:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         enriched_df = sample_primary_df.with_columns(
@@ -245,7 +245,7 @@ class TestDailyReconciliationWithIssues:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         enriched_df = sample_primary_df.with_columns(
@@ -285,7 +285,7 @@ class TestDailyReconciliationEdgeCases:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         # 创建没有 sid 列的 DataFrame
@@ -323,7 +323,7 @@ class TestDailyReconciliationEdgeCases:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         # 重置 side_effect 并设置 return_value 返回没有 symbol 列的 DataFrame
@@ -363,7 +363,7 @@ class TestDailyReconciliationEdgeCases:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         enriched_df = sample_primary_df.with_columns(
@@ -409,7 +409,7 @@ class TestConvertResultToDf:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         # Act
@@ -434,7 +434,7 @@ class TestConvertResultToDf:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         # Act
@@ -462,7 +462,7 @@ class TestConvertResultToDf:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         # Act
@@ -505,7 +505,7 @@ class TestSendAlerts:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_security_store,
         )
 
         # Act - 调用 _send_alerts

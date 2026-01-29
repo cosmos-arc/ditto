@@ -1,18 +1,19 @@
 """Unit tests for Models - security."""
 
+from dataclasses import asdict
+
 import pytest
-from ditto_datahub.models.security import SecurityRegistration
-from pydantic import ValidationError
+from ditto_datahub.domains.metadata.instrument import InstrumentRegistration
 
 
 @pytest.mark.unit
-class TestSecurityRegistration:
-    """Tests for SecurityRegistration model."""
+class TestInstrumentRegistration:
+    """Tests for InstrumentRegistration model."""
 
     def test_create_registration_with_required_fields(self) -> None:
-        """Test creating SecurityRegistration with required fields."""
-        registration = SecurityRegistration(
-            src_code="600000.SH",
+        """Test creating InstrumentRegistration with required fields."""
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -20,7 +21,7 @@ class TestSecurityRegistration:
             list_date="1999-11-10",
         )
 
-        assert registration.src_code == "600000.SH"
+        assert registration.source_ticker == "600000.SH"
         assert registration.symbol == "600000"
         assert registration.name == "浦发银行"
         assert registration.exchange == "SSE"
@@ -30,9 +31,9 @@ class TestSecurityRegistration:
         assert registration.board is None
 
     def test_create_registration_with_optional_fields(self) -> None:
-        """Test creating SecurityRegistration with optional fields."""
-        registration = SecurityRegistration(
-            src_code="600000.SH",
+        """Test creating InstrumentRegistration with optional fields."""
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -46,9 +47,9 @@ class TestSecurityRegistration:
         assert registration.board == "主板"
 
     def test_model_serialization_to_dict(self) -> None:
-        """Test SecurityRegistration can be serialized to dict."""
-        registration = SecurityRegistration(
-            src_code="600000.SH",
+        """Test InstrumentRegistration can be serialized to dict."""
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -56,17 +57,17 @@ class TestSecurityRegistration:
             list_date="1999-11-10",
         )
 
-        data = registration.model_dump()
+        data = asdict(registration)
 
-        assert data["src_code"] == "600000.SH"
+        assert data["source_ticker"] == "600000.SH"
         assert data["symbol"] == "600000"
         assert data["name"] == "浦发银行"
         assert data["exchange"] == "SSE"
 
     def test_model_deserialization_from_dict(self) -> None:
-        """Test SecurityRegistration can be deserialized from dict."""
+        """Test InstrumentRegistration can be deserialized from dict."""
         data = {
-            "src_code": "600000.SH",
+            "source_ticker": "600000.SH",
             "symbol": "600000",
             "name": "浦发银行",
             "exchange": "SSE",
@@ -76,32 +77,30 @@ class TestSecurityRegistration:
             "board": "主板",
         }
 
-        registration = SecurityRegistration(**data)
+        registration = InstrumentRegistration(**data)
 
-        assert registration.src_code == "600000.SH"
+        assert registration.source_ticker == "600000.SH"
         assert registration.symbol == "600000"
         assert registration.board == "主板"
 
     def test_validation_fails_with_missing_required_field(self) -> None:
         """Test that validation fails when required field is missing."""
-        with pytest.raises(ValidationError) as exc_info:
-            SecurityRegistration(
+        with pytest.raises(TypeError) as exc_info:
+            InstrumentRegistration(
                 # Missing required fields
-                src_code="600000.SH",
+                source_ticker="600000.SH",
             )
 
-        errors = exc_info.value.errors()
-        error_fields = {error["loc"][0] for error in errors}
-        assert "symbol" in error_fields
-        assert "name" in error_fields
-        assert "exchange" in error_fields
-        assert "asset_class" in error_fields
-        assert "list_date" in error_fields
+        # dataclass 会抛出 TypeError，提示缺少必需参数
+        error_msg = str(exc_info.value).lower()
+        assert "missing" in error_msg or "required" in error_msg
 
     def test_json_serialization(self) -> None:
-        """Test SecurityRegistration can be serialized to JSON."""
-        registration = SecurityRegistration(
-            src_code="600000.SH",
+        """Test InstrumentRegistration can be serialized to JSON."""
+        import json
+
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -109,7 +108,8 @@ class TestSecurityRegistration:
             list_date="1999-11-10",
         )
 
-        json_str = registration.model_dump_json()
+        # 使用 asdict + json.dumps 代替 model_dump_json
+        json_str = json.dumps(asdict(registration), ensure_ascii=False)
 
         assert "600000.SH" in json_str
         assert "600000" in json_str

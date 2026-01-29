@@ -6,8 +6,8 @@ from ditto_datahub.accessors.calendar_accessor import CalendarAccessor
 from ditto_datahub.accessors.comparison_accessor import ComparisonAccessor
 from ditto_datahub.accessors.index_accessor import IndexAccessor
 from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
+from ditto_datahub.accessors.instrument_accessor import InstrumentsAccessor
 from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
-from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 
 __all__ = [
@@ -19,7 +19,7 @@ __all__ = [
     "ComparisonAccessor",
     "IndexAccessor",
     "IngestionLogAccessor",
+    "InstrumentsAccessor",
     "QuarantineAccessor",
-    "SecuritiesAccessor",
     "UniverseAccessor",
 ]

@@ -47,9 +47,9 @@ class TestAdjFactorIngestion:
         )
         mock_hub.securities.enrich_dataframe_with_sid.return_value = mock_enriched_df
 
-        # Mock security_store to return valid securities
-        mock_hub.security_store = mocker.MagicMock()
-        mock_hub.security_store.resolve_sid.side_effect = (
+        # Mock instrument_store to return valid securities
+        mock_hub.instrument_store = mocker.MagicMock()
+        mock_hub.instrument_store.resolve_sid.side_effect = (
             lambda src_code, source, asset_class: {
                 "000001.SZ": 1_000_001,
                 "000002.SZ": 1_000_002,
@@ -124,9 +124,9 @@ class TestAdjFactorIngestion:
         )
         mock_hub.securities.enrich_dataframe_with_sid.return_value = mock_enriched_df
 
-        # Mock security_store to return valid securities
-        mock_hub.security_store = mocker.MagicMock()
-        mock_hub.security_store.resolve_sid.side_effect = (
+        # Mock instrument_store to return valid securities
+        mock_hub.instrument_store = mocker.MagicMock()
+        mock_hub.instrument_store.resolve_sid.side_effect = (
             lambda src_code, source, asset_class: {
                 "510300.SH": 2_000_001,
                 "510500.SH": 2_000_002,

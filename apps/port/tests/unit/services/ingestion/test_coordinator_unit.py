@@ -79,17 +79,17 @@ def mock_hub(mocker):
     hub.sid_allocator = mock_sid_allocator
 
     # 添加 SecurityStore mock（SecurityMapper 需要）
-    hub.security_store = mocker.Mock()
-    hub.security_store.resolve_sid.return_value = None  # 默认返回 None（不存在）
-    hub.security_store.register.return_value = 1000001  # 返回注册的 SID
+    hub.instrument_store = mocker.Mock()
+    hub.instrument_store.resolve_sid.return_value = None  # 默认返回 None（不存在）
+    hub.instrument_store.register.return_value = 1000001  # 返回注册的 SID
 
-    # 添加 SecuritiesAccessor mock
+    # 添加 InstrumentsAccessor mock
     # (IngestionDataWriter 需要)
     hub.securities = mocker.Mock()
 
     def register_batch_side_effect(df, source, asset_class, **kwargs):
         """根据 asset_class 返回不同的 file_path。"""
-        file_path = f"security_store:{asset_class}_basic"
+        file_path = f"instrument_store:{asset_class}_basic"
         checksum = f"checksum_{asset_class}"
         return (file_path, checksum)
 
@@ -746,7 +746,7 @@ class TestWriteT0Data:
     def test_ingest_date_success_stock_basic(
         self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
-        """成功摄取 stock_basic 数据到 security_store。"""
+        """成功摄取 stock_basic 数据到 instrument_store。"""
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None
         mock_source.fetch_stock_basic.return_value = pl.DataFrame(
@@ -779,7 +779,7 @@ class TestWriteT0Data:
     def test_ingest_date_success_etf_basic(
         self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
-        """成功摄取 etf_basic 数据到 security_store。"""
+        """成功摄取 etf_basic 数据到 instrument_store。"""
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None
         mock_source.fetch_etf_basic.return_value = pl.DataFrame(

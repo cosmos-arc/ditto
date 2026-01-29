@@ -14,9 +14,12 @@ from tempfile import TemporaryDirectory
 import polars as pl
 import pytest
 from ditto_datahub.domains.metadata.calendar import CalendarStore
+from ditto_datahub.domains.metadata.instrument import (
+    InstrumentRegistration,
+    InstrumentStore,
+)
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import (
     get_recorded_metrics,
@@ -210,8 +213,8 @@ class TestObservabilityAdjFactorStore:
         assert len(write_spans) > 0
 
 
-class TestObservabilitySecurityStore:
-    """Test observability features in SecurityStore."""
+class TestObservabilityInstrumentStore:
+    """Test observability features in InstrumentStore."""
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
@@ -223,7 +226,7 @@ class TestObservabilitySecurityStore:
             force=True,
         )
         self.client = sqlite_client
-        self.store = SecurityStore(self.client)
+        self.store = InstrumentStore(self.client)
 
     def teardown_method(self) -> None:
         """Clean up after test."""
@@ -234,8 +237,8 @@ class TestObservabilitySecurityStore:
         # Register a security first
         self.store.register(
             sid=1000001,
-            registration=SecurityRegistration(
-                src_code="510300.SZ",
+            registration=InstrumentRegistration(
+                source_ticker="510300.SZ",
                 symbol="510300",
                 name="CSI 300 ETF",
                 exchange="SZSE",
@@ -260,8 +263,8 @@ class TestObservabilitySecurityStore:
         # Register a security first
         self.store.register(
             sid=1000001,
-            registration=SecurityRegistration(
-                src_code="510300.SZ",
+            registration=InstrumentRegistration(
+                source_ticker="510300.SZ",
                 symbol="510300",
                 name="CSI 300 ETF",
                 exchange="SZSE",
@@ -395,13 +398,13 @@ class TestObservabilityIntegration:
 
         # Create stores
         bars_store = BarsStore(Path(self.temp_dir.name))
-        security_store = SecurityStore(self.client)
+        security_store = InstrumentStore(self.client)
 
         # Register security
         security_store.register(
             sid=1000001,
-            registration=SecurityRegistration(
-                src_code="510300.SZ",
+            registration=InstrumentRegistration(
+                source_ticker="510300.SZ",
                 symbol="510300",
                 name="CSI 300 ETF",
                 exchange="SZSE",

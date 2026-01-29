@@ -137,3 +137,9 @@ class PartitionNotFoundError(DataHubError):
         if year:
             details["year"] = year
         super().__init__(message, details if details else None)
+
+
+class SchemaValidationError(ValidationError):
+    """SourceSchema validation failed."""
+
+    pass

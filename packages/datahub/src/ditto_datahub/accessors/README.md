@@ -132,14 +132,14 @@ mapping = accessor.resolve_identifiers_batch(
 # 返回: {"000001.SZ": 1000001, "000002.SZ": 1000002}
 
 # 注册新证券
-from ditto_datahub.models.security import SecurityRegistration
+from ditto_datahub.domains.metadata.instrument import InstrumentRegistration
 
 sid = accessor.register(
-    SecurityRegistration(
-        src_code="000001.SZ",
+    InstrumentRegistration(
+        source_ticker="000001.SZ",
         symbol="平安银行",
         name="平安银行股份有限公司",
-        exchange="SZ",
+        exchange="SZSE",
         asset_class="stock",
         list_date="1991-04-03",
     )

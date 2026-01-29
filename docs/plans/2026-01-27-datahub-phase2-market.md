@@ -1,5 +1,40 @@
 # DataHub Market 域重构实施计划
 
+> **状态:** ✅ 已完成
+> **完成日期:** 2026-01-27
+> **测试覆盖率:** 93.48%+
+> **相关 PR:** #43
+>
+> **注意:** Market 域已完成实现，无需修改。
+>
+> **最新实施计划:** 参见 [2026-01-29-datahub-three-domain-refactor-implementation.md](./2026-01-29-datahub-three-domain-refactor-implementation.md)
+>
+> **在三域重构中的角色:**
+> - Market 域是三域架构之一，与 Metadata、Capital 域并列
+> - Market 域已完全实现，不需要在本次重构中修改
+> - Market 域作为稳定模块，为 Metadata 和 Capital 域提供参考
+
+---
+
+## 完成摘要
+
+所有任务已完成：
+
+1. ✅ 创建 Market 域目录结构
+2. ✅ 迁移 Stock Bars 到 Market 域
+3. ✅ 迁移 Stock Status 到 Market 域
+4. ✅ 迁移 Stock AdjFactor 到 Market 域
+5. ✅ 实现 ETF 相关 Store (Bars, Status, Nav, AdjFactor)
+6. ✅ 实现 Index 相关 Store (Bars, Constituent)
+7. ✅ 实现 MarketQueryService
+8. ✅ 更新 DataHub 集成
+9. ✅ 清理和文档更新
+10. ✅ 创建 Git Tag (datahub-phase2-market-complete)
+
+---
+
+## 原始计划（保留用于参考）
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 **目标:** 将现有的 Market 数据相关 Store 和 Accessor 重构为统一的 Market 域结构，实现 domains/market/ 目录组织

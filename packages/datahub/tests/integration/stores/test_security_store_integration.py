@@ -1,15 +1,18 @@
-"""Integration tests for SecurityStore (SQLite seam)."""
+"""Integration tests for InstrumentStore (SQLite seam)."""
 
 import polars as pl
 import pytest
-from ditto_datahub.stores.security_store import SecurityStore
+from ditto_datahub.domains.metadata.instrument import (
+    InstrumentRegistration,
+    InstrumentStore,
+)
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
 
 @pytest.mark.integration
-class TestSecurityStoreIntegration:
-    """Tests for SecurityStore integration with SQLite."""
+class TestInstrumentStoreIntegration:
+    """Tests for InstrumentStore integration with SQLite."""
 
     @pytest.fixture
     def pool(self) -> SQLitePool:
@@ -53,16 +56,15 @@ class TestSecurityStoreIntegration:
         return client
 
     @pytest.fixture
-    def store(self, client: SQLiteClient) -> SecurityStore:
-        """Create SecurityStore instance."""
-        return SecurityStore(client)
+    def store(self, client: SQLiteClient) -> InstrumentStore:
+        """Create InstrumentStore instance."""
+        return InstrumentStore(client)
 
-    def test_register_new_security(self, store: SecurityStore) -> None:
+    def test_register_new_security(self, store: InstrumentStore) -> None:
         """Test registering a new security."""
-        from ditto_datahub.stores.security_store import SecurityRegistration
 
-        registration = SecurityRegistration(
-            src_code="600000.SH",
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -89,12 +91,11 @@ class TestSecurityStoreIntegration:
         assert mapping is not None
         assert mapping["source"] == "tushare"
 
-    def test_resolve_sid_current(self, store: SecurityStore) -> None:
+    def test_resolve_sid_current(self, store: InstrumentStore) -> None:
         """Test resolving src_code to sid (current)."""
-        from ditto_datahub.stores.security_store import SecurityRegistration
 
-        registration = SecurityRegistration(
-            src_code="600000.SH",
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -108,13 +109,12 @@ class TestSecurityStoreIntegration:
         sid = store.resolve_sid("600000.SH", "tushare", asof=None)
         assert sid == 1_000_001
 
-    def test_resolve_sid_pit(self, store: SecurityStore) -> None:
+    def test_resolve_sid_pit(self, store: InstrumentStore) -> None:
         """Test resolving src_code to sid with PIT."""
-        from ditto_datahub.stores.security_store import SecurityRegistration
 
         # Register first security
-        registration1 = SecurityRegistration(
-            src_code="600000.SH",
+        registration1 = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -148,19 +148,18 @@ class TestSecurityStoreIntegration:
         sid_after = store.resolve_sid("600001.SH", "tushare", asof="2024-01-02")
         assert sid_after == 1_000_001
 
-    def test_resolve_sid_not_found(self, store: SecurityStore) -> None:
+    def test_resolve_sid_not_found(self, store: InstrumentStore) -> None:
         """Test resolving non-existent src_code returns None."""
         sid = store.resolve_sid("INVALID.XYZ", "tushare", asof=None)
         assert sid is None
 
-    def test_resolve_sids_batch(self, store: SecurityStore) -> None:
+    def test_resolve_sids_batch(self, store: InstrumentStore) -> None:
         """Test batch resolving src_codes to sids."""
-        from ditto_datahub.stores.security_store import SecurityRegistration
 
         # Register multiple securities
         for i, src_code in enumerate(["600000.SH", "600001.SH", "600002.SH"]):
-            registration = SecurityRegistration(
-                src_code=src_code,
+            registration = InstrumentRegistration(
+                source_ticker=src_code,
                 symbol=f"60000{i}",
                 name=f"测试{i}",
                 exchange="SSE",
@@ -181,12 +180,11 @@ class TestSecurityStoreIntegration:
         assert result["600002.SH"] == 1_000_003
         assert "INVALID.SH" not in result
 
-    def test_resolve_by_symbol(self, store: SecurityStore) -> None:
+    def test_resolve_by_symbol(self, store: InstrumentStore) -> None:
         """Test resolving by symbol."""
-        from ditto_datahub.stores.security_store import SecurityRegistration
 
-        registration = SecurityRegistration(
-            src_code="600000.SH",
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -199,12 +197,11 @@ class TestSecurityStoreIntegration:
         assert len(sids) == 1
         assert sids[0] == 1_000_001
 
-    def test_get_src_code(self, store: SecurityStore) -> None:
+    def test_get_src_code(self, store: InstrumentStore) -> None:
         """Test reverse lookup: sid to src_code."""
-        from ditto_datahub.stores.security_store import SecurityRegistration
 
-        registration = SecurityRegistration(
-            src_code="600000.SH",
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -216,12 +213,11 @@ class TestSecurityStoreIntegration:
         src_code = store.get_src_code(1_000_001, "tushare")
         assert src_code == "600000.SH"
 
-    def test_get_by_sid(self, store: SecurityStore) -> None:
+    def test_get_by_sid(self, store: InstrumentStore) -> None:
         """Test getting security by sid."""
-        from ditto_datahub.stores.security_store import SecurityRegistration
 
-        registration = SecurityRegistration(
-            src_code="600000.SH",
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -237,13 +233,12 @@ class TestSecurityStoreIntegration:
         assert row["name"] == "浦发银行"
         assert row["asset_class"] == "stock"
 
-    def test_find_securities(self, store: SecurityStore) -> None:
+    def test_find_securities(self, store: InstrumentStore) -> None:
         """Test finding securities with filters."""
-        from ditto_datahub.stores.security_store import SecurityRegistration
 
         # Register multiple securities
-        registration1 = SecurityRegistration(
-            src_code="600000.SH",
+        registration1 = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -252,8 +247,8 @@ class TestSecurityStoreIntegration:
         )
         store.register(1_000_001, registration1)
 
-        registration2 = SecurityRegistration(
-            src_code="510300.SH",
+        registration2 = InstrumentRegistration(
+            source_ticker="510300.SH",
             symbol="510300",
             name="沪深300ETF",
             exchange="SSE",
@@ -271,12 +266,11 @@ class TestSecurityStoreIntegration:
         sse_securities = store.find_securities(exchange="SSE")
         assert len(sse_securities) == 2
 
-    def test_list_sids(self, store: SecurityStore) -> None:
+    def test_list_sids(self, store: InstrumentStore) -> None:
         """Test listing sids with filters."""
-        from ditto_datahub.stores.security_store import SecurityRegistration
 
-        registration1 = SecurityRegistration(
-            src_code="600000.SH",
+        registration1 = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -285,8 +279,8 @@ class TestSecurityStoreIntegration:
         )
         store.register(1_000_001, registration1)
 
-        registration2 = SecurityRegistration(
-            src_code="510300.SH",
+        registration2 = InstrumentRegistration(
+            source_ticker="510300.SH",
             symbol="510300",
             name="沪深300ETF",
             exchange="SSE",
@@ -304,12 +298,11 @@ class TestSecurityStoreIntegration:
         assert len(stock_sids) == 1
         assert stock_sids[0] == 1_000_001
 
-    def test_get_symbol(self, store: SecurityStore) -> None:
+    def test_get_symbol(self, store: InstrumentStore) -> None:
         """Test getting symbol by sid."""
-        from ditto_datahub.stores.security_store import SecurityRegistration
 
-        registration = SecurityRegistration(
-            src_code="600000.SH",
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -321,12 +314,11 @@ class TestSecurityStoreIntegration:
         symbol = store.get_symbol(1_000_001)
         assert symbol == "600000"
 
-    def test_get_sid_symbol_map(self, store: SecurityStore) -> None:
+    def test_get_sid_symbol_map(self, store: InstrumentStore) -> None:
         """Test getting sid to symbol mapping."""
-        from ditto_datahub.stores.security_store import SecurityRegistration
 
-        registration1 = SecurityRegistration(
-            src_code="600000.SH",
+        registration1 = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",
@@ -335,8 +327,8 @@ class TestSecurityStoreIntegration:
         )
         store.register(1_000_001, registration1)
 
-        registration2 = SecurityRegistration(
-            src_code="600001.SH",
+        registration2 = InstrumentRegistration(
+            source_ticker="600001.SH",
             symbol="600001",
             name="邯郸钢铁",
             exchange="SSE",
@@ -356,12 +348,11 @@ class TestSecurityStoreIntegration:
         assert len(partial_mapping) == 1
         assert partial_mapping[1_000_001] == "600000"
 
-    def test_enrich_with_symbol(self, store: SecurityStore) -> None:
+    def test_enrich_with_symbol(self, store: InstrumentStore) -> None:
         """Test enriching DataFrame with symbol column."""
-        from ditto_datahub.stores.security_store import SecurityRegistration
 
-        registration = SecurityRegistration(
-            src_code="600000.SH",
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
             symbol="600000",
             name="浦发银行",
             exchange="SSE",

@@ -1,25 +1,28 @@
-"""Tests for SecuritiesAccessor."""
+"""Tests for InstrumentsAccessor."""
 
 import polars as pl
 import pytest
-from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
+from ditto_datahub.accessors.instrument_accessor import InstrumentsAccessor
+from ditto_datahub.domains.metadata.instrument import (
+    InstrumentRegistration,
+    InstrumentStore,
+)
 from ditto_datahub.runtime.sid_allocator import SidAllocator
-from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
 
 class TestSecuritiesAccessor:
-    """Tests for SecuritiesAccessor."""
+    """Tests for InstrumentsAccessor."""
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient, sqlite_pool: SQLitePool) -> None:
         """使用 fixture 自动注入已初始化的数据库客户端和连接池."""
         self.pool = sqlite_pool
         self.client = sqlite_client
-        self.security_store = SecurityStore(self.client)
+        self.security_store = InstrumentStore(self.client)
         self.sid_allocator = SidAllocator(self.pool)
-        self.accessor = SecuritiesAccessor(
+        self.accessor = InstrumentsAccessor(
             self.security_store,
             self.sid_allocator,
         )
@@ -135,8 +138,8 @@ class TestSecuritiesAccessor:
     def test_register_allocates_sid(self) -> None:
         """Test register allocates new SID."""
         # Act
-        registration = SecurityRegistration(
-            src_code="600001.SH",
+        registration = InstrumentRegistration(
+            source_ticker="600001.SH",
             symbol="600001",
             name="Test Stock",
             exchange="SSE",
@@ -158,7 +161,7 @@ class TestSecuritiesAccessor:
         # Arrange
         df = pl.DataFrame(
             {
-                "src_code": ["600001.SH", "600002.SH", "600003.SH"],
+                "source_ticker": ["600001.SH", "600002.SH", "600003.SH"],
                 "symbol": ["600001", "600002", "600003"],
                 "name": ["Stock1", "Stock2", "Stock3"],
                 "exchange": ["SSE", "SSE", "SSE"],
@@ -171,7 +174,7 @@ class TestSecuritiesAccessor:
             df=df,
             source="tushare",
             asset_class="stock",
-            src_code_col="src_code",
+            src_code_col="source_ticker",
         )
 
         # Assert
@@ -190,7 +193,7 @@ class TestSecuritiesAccessor:
         # Register first security
         df1 = pl.DataFrame(
             {
-                "src_code": ["600001.SH"],
+                "source_ticker": ["600001.SH"],
                 "symbol": ["600001"],
                 "name": ["Stock1"],
                 "exchange": ["SSE"],
@@ -198,13 +201,13 @@ class TestSecuritiesAccessor:
             }
         )
         self.accessor.register_batch(
-            df=df1, source="tushare", asset_class="stock", src_code_col="src_code"
+            df=df1, source="tushare", asset_class="stock", src_code_col="source_ticker"
         )
 
         # Try to register again (should skip existing)
         df2 = pl.DataFrame(
             {
-                "src_code": ["600001.SH", "600002.SH"],
+                "source_ticker": ["600001.SH", "600002.SH"],
                 "symbol": ["600001", "600002"],
                 "name": ["Stock1", "Stock2"],
                 "exchange": ["SSE", "SSE"],
@@ -214,7 +217,7 @@ class TestSecuritiesAccessor:
 
         # Act
         _file_path, _checksum = self.accessor.register_batch(
-            df=df2, source="tushare", asset_class="stock", src_code_col="src_code"
+            df=df2, source="tushare", asset_class="stock", src_code_col="source_ticker"
         )
 
         # Assert - should only register the new one
@@ -253,7 +256,7 @@ class TestSecuritiesAccessor:
         # Register existing securities
         df_existing = pl.DataFrame(
             {
-                "src_code": ["600001.SH", "600002.SH"],
+                "source_ticker": ["600001.SH", "600002.SH"],
                 "symbol": ["600001", "600002"],
                 "name": ["Stock1", "Stock2"],
                 "exchange": ["SSE", "SSE"],
@@ -264,7 +267,7 @@ class TestSecuritiesAccessor:
             df=df_existing,
             source="tushare",
             asset_class="stock",
-            src_code_col="src_code",
+            src_code_col="source_ticker",
         )
 
         # Try to resolve same securities
@@ -329,7 +332,7 @@ class TestSecuritiesAccessor:
         # Register one existing security
         df_existing = pl.DataFrame(
             {
-                "src_code": ["600001.SH"],
+                "source_ticker": ["600001.SH"],
                 "symbol": ["600001"],
                 "name": ["Stock1"],
                 "exchange": ["SSE"],
@@ -340,7 +343,7 @@ class TestSecuritiesAccessor:
             df=df_existing,
             source="tushare",
             asset_class="stock",
-            src_code_col="src_code",
+            src_code_col="source_ticker",
         )
 
         # Mix existing and new
@@ -425,7 +428,7 @@ class TestSecuritiesAccessor:
         # Register existing securities
         df_existing = pl.DataFrame(
             {
-                "src_code": ["600001.SH"],
+                "source_ticker": ["600001.SH"],
                 "symbol": ["600001"],
                 "name": ["Stock1"],
                 "exchange": ["SSE"],
@@ -436,7 +439,7 @@ class TestSecuritiesAccessor:
             df=df_existing,
             source="tushare",
             asset_class="stock",
-            src_code_col="src_code",
+            src_code_col="source_ticker",
         )
 
         # Enrich DataFrame with existing and new

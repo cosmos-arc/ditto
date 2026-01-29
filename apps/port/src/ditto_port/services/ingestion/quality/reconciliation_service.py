@@ -5,8 +5,8 @@ from typing import Any
 import polars as pl
 from ditto_core.quality.spec import DQResult
 from ditto_datahub.accessors.comparison_accessor import ComparisonAccessor
+from ditto_datahub.domains.metadata.instrument.instrument_store import InstrumentStore
 from ditto_datahub.sources.tdx.source import TdxSource
-from ditto_datahub.stores.security_store import SecurityStore
 from loguru import logger
 
 
@@ -32,7 +32,7 @@ class QualityReconciliationService:
         engine: Any,  # QualityEngine
         tdx_source: TdxSource,
         comparison_accessor: ComparisonAccessor,
-        security_store: SecurityStore,
+        instrument_store: InstrumentStore,
     ) -> None:
         """
         初始化质量对账服务.
@@ -41,13 +41,13 @@ class QualityReconciliationService:
             engine: 质量引擎
             tdx_source: 通达信数据源
             comparison_accessor: 对比结果访问器
-            security_store: 证券存储（用于 sid → symbol 转换）
+            instrument_store: 证券存储（用于 sid → symbol 转换）
 
         """
         self._engine = engine
         self._tdx_source = tdx_source
         self._comparison_accessor = comparison_accessor
-        self._security_store = security_store
+        self._instrument_store = instrument_store
 
     async def daily_reconciliation(
         self,
@@ -62,7 +62,7 @@ class QualityReconciliationService:
 
         标识符转换流程：
         1. 接收包含 sid 的 primary_df
-        2. 使用 SecurityStore 将 sid 转换为 symbol
+        2. 使用 InstrumentStore 将 sid 转换为 symbol
         3. 使用 symbol 作为对比的 key_column
         4. 各数据源内部将 symbol 转换为各自的 src_code 格式
 
@@ -88,7 +88,7 @@ class QualityReconciliationService:
                 raise ValueError("primary_df must contain 'sid' column")
 
             # 2. 添加 symbol 列（sid → symbol 转换）
-            primary_df = self._security_store.enrich_with_symbol(primary_df)
+            primary_df = self._instrument_store.enrich_with_symbol(primary_df)
 
             if "symbol" not in primary_df.columns:
                 raise ValueError("Failed to enrich primary_df with symbol")

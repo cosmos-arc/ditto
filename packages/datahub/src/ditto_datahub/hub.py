@@ -15,17 +15,17 @@ from ditto_datahub.accessors.bars_accessor import AdjType, BarsAccessor, BarsQue
 from ditto_datahub.accessors.calendar_accessor import CalendarAccessor
 from ditto_datahub.accessors.index_accessor import IndexAccessor
 from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
+from ditto_datahub.accessors.instrument_accessor import InstrumentsAccessor
 from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
-from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.domains.market import MarketQueryService
 from ditto_datahub.domains.metadata import MetadataQueryService
+from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
-from ditto_datahub.stores.security_store import SecurityStore
 
 # 类型别名：标识符（支持 SID/src_code/symbol 混合）
 type Identifier = str | int
@@ -128,8 +128,8 @@ class DataHub:
         file_lock: FileLockManager,
         sid_allocator: SidAllocator,
         freeze_manager: FreezeManager,
-        security_store: SecurityStore,
-        securities: SecuritiesAccessor,
+        instrument_store: InstrumentStore,
+        securities: InstrumentsAccessor,
         metadata_query_service: MetadataQueryService,
         market_query_service: MarketQueryService,
         calendar: CalendarAccessor,
@@ -154,8 +154,8 @@ class DataHub:
             file_lock: File lock manager for concurrent write safety.
             sid_allocator: SID allocator for new securities.
             freeze_manager: Freeze manager for data version tracking.
-            security_store: Security store for identifier resolution.
-            securities: Securities accessor (with ingestion helpers).
+            instrument_store: Instrument store for identifier resolution.
+            securities: Instruments accessor (with ingestion helpers).
             metadata_query_service: Metadata query service (unified query API).
             market_query_service: Market query service (unified market data API).
             calendar: Trading calendar accessor.
@@ -174,7 +174,7 @@ class DataHub:
         self.file_lock = file_lock
         self.sid_allocator = sid_allocator
         self.freeze = freeze_manager
-        self._security_store = security_store
+        self._instrument_store = instrument_store
         self.securities = securities
         self.metadata = metadata_query_service
         self.market = market_query_service
@@ -251,7 +251,7 @@ class DataHub:
             SidNotFoundError: If identifier cannot be resolved.
 
         """
-        result = self._security_store.resolve_sid(identifier, source, asof)
+        result = self._instrument_store.resolve_sid(identifier, source, asof)
         if result is None:
             raise SidNotFoundError(
                 message=f"Identifier '{identifier}' not found in source '{source}'",
@@ -325,7 +325,7 @@ class DataHub:
             {identifier: sid} 映射字典（只包含找到的标识符）。
 
         """
-        return self._security_store.resolve_sids_batch(identifiers, source, asof)
+        return self._instrument_store.resolve_sids_batch(identifiers, source, asof)
 
     def resolve_sids_from_inputs(
         self,

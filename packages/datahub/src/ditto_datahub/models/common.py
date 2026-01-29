@@ -7,6 +7,7 @@ __all__ = [
     "AssetSidRange",
     "DQSeverity",
     "Dataset",
+    "Domain",
     "OnDuplicate",
     "Source",
 ]
@@ -57,6 +58,19 @@ class Dataset(str, Enum):
     def is_calendar_dataset(cls, dataset: str) -> bool:
         """判断是否为 calendar 数据集。"""
         return dataset == cls.CALENDAR.value
+
+
+# ============ Domain 枚举 ============
+class Domain(str, Enum):
+    """
+    支持的数据域类型。
+
+    数据域枚举，用于 IngestionCoordinator 路由。
+    """
+
+    METADATA = "metadata"
+    MARKET = "market"
+    CAPITAL = "capital"
 
 
 # ============ Source 枚举 ============

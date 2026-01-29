@@ -10,8 +10,8 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.runtime.sid_allocator import SidAllocator
-from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.universe_store import UniverseStore
 
 
@@ -33,7 +33,7 @@ class UniverseAccessor:
     def __init__(
         self,
         universe_store: UniverseStore,
-        security_store: SecurityStore,
+        instrument_store: InstrumentStore,
         sid_allocator: SidAllocator,
     ) -> None:
         """
@@ -41,12 +41,12 @@ class UniverseAccessor:
 
         Args:
             universe_store: Universe store for data access.
-            security_store: Security store for symbol enrichment.
+            instrument_store: Instrument store for symbol enrichment.
             sid_allocator: SID allocator (not currently used but kept for future).
 
         """
         self._universe_store = universe_store
-        self._security_store = security_store
+        self._instrument_store = instrument_store
         self._sid_allocator = sid_allocator
 
     @traced("accessor.universe.create")
@@ -133,7 +133,7 @@ class UniverseAccessor:
 
         # Add symbol if requested
         if with_symbol and not constituents.is_empty():
-            constituents = self._security_store.enrich_with_symbol(constituents)
+            constituents = self._instrument_store.enrich_with_symbol(constituents)
 
         logger.debug(
             "Constituents fetched",

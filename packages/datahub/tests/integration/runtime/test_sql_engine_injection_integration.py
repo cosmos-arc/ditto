@@ -7,8 +7,8 @@ from tempfile import TemporaryDirectory
 import duckdb
 import pytest
 from ditto_datahub.domains.metadata.calendar import CalendarStore
+from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.runtime.sql_engine import SqlEngine
-from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
@@ -39,13 +39,13 @@ class TestSqlEngineInjection:
 
         # Create stores
         sqlite_client = SQLiteClient(self.pool)
-        self.security_store = SecurityStore(sqlite_client)
+        self.instrument_store = InstrumentStore(sqlite_client)
         self.calendar_store = CalendarStore(sqlite_client)
 
         # Create SqlEngine
         self.engine = SqlEngine(
             data_root=self.data_root,
-            security_store=self.security_store,
+            instrument_store=self.instrument_store,
             calendar_store=self.calendar_store,
         )
 

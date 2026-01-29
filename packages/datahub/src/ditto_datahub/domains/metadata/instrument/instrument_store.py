@@ -1,12 +1,14 @@
 """
-SecurityStore for securities master data with PIT support.
+InstrumentStore for instruments master data with PIT support.
 
-This module provides storage and retrieval for securities master data
+This module provides storage and retrieval for instruments master data
 with Point-in-Time support for identifier resolution.
 
-Following design document at docs/design/02_data_design.md
+命名映射：
+- Python 代码使用 instrument/source_ticker
+- 数据库表/列保持 security/src_code（避免数据迁移）
 
-Migration: 迁移自 ditto_datahub.stores.security_store (2026-01-27)
+Migration: 重构自 SecurityStore (2026-01-29)
 """
 
 from __future__ import annotations
@@ -20,7 +22,7 @@ from ditto_foundation.cache import DataCache
 from ditto_datahub.accessors.internal.enrichment import (
     enrich_with_symbol as enrich_with_symbol_fn,
 )
-from ditto_datahub.domains.metadata.security.models import SecurityRegistration
+from ditto_datahub.domains.metadata.instrument.models import InstrumentRegistration
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
@@ -69,19 +71,23 @@ def _build_in_clause(
     return f"({' OR '.join(clauses)})", params
 
 
-class SecurityStore:
+class InstrumentStore:
     """
-    Securities master data storage with PIT support.
+    Instruments master data storage with PIT support.
 
     Core functionality:
-    - resolve_sid: (source, src_code, asof) -> sid
-    - Through security_mapping with effective_from/to for historical resolution
+    - resolve_instrument_id: (source, source_ticker, asof) -> instrument_id
+    - 通过 security_mapping 表（数据库保持原名）的 effective_from/to 实现 PIT 查询
 
-    Note: SecurityStore does not inherit SQLiteStore as it uses SQLiteClient
+    Note: InstrumentStore does not inherit SQLiteStore as it uses SQLiteClient
     for data access to maintain backward compatibility. Future versions may
     refactor to directly inherit SQLiteStore.
 
-    Migration: 迁移自 ditto_datahub.stores.security_store (2026-01-27)
+    命名映射：
+    - Python 代码使用 instrument/source_ticker
+    - 数据库表/列保持 security/src_code（避免数据迁移）
+
+    Migration: 重构自 SecurityStore (2026-01-29)
     """
 
     def __init__(
@@ -90,11 +96,11 @@ class SecurityStore:
         data_cache: DataCache[Any] | None = None,
     ) -> None:
         """
-        Initialize SecurityStore.
+        Initialize InstrumentStore.
 
         Args:
             sqlite_client: SQLite client for database operations.
-            data_cache: Optional DataCache for SID resolution caching.
+            data_cache: Optional DataCache for instrument_id resolution caching.
 
         """
         self._client = sqlite_client
@@ -505,24 +511,24 @@ class SecurityStore:
         # 使用纯函数进行数据增强
         return enrich_with_symbol_fn(df, symbol_df)
 
-    def register(self, sid: int, registration: SecurityRegistration) -> int:
+    def register(self, sid: int, registration: InstrumentRegistration) -> int:
         """
-        Register a new security.
+        Register a new instrument.
 
         Args:
-            sid: Security ID.
-            registration: Security registration configuration.
+            sid: Instrument ID.
+            registration: Instrument registration configuration.
 
         Returns:
             The registered sid.
 
         """
         logger.info(
-            "Starting security registration",
-            event="security_register_start",
+            "Starting instrument registration",
+            event="instrument_register_start",
             sid=sid,
             symbol=registration.symbol,
-            src_code=registration.src_code,
+            src_code=registration.source_ticker,
             source=registration.source,
             asset_class=registration.asset_class,
             exchange=registration.exchange,
@@ -553,15 +559,17 @@ class SecurityStore:
                 [
                     sid,
                     registration.source,
-                    registration.src_code,
+                    registration.source_ticker,
                     registration.list_date,
                 ],
             )
 
             # 失效相关缓存
             if self._data_cache:
-                # 失效特定 src_code 的负缓存（如果有）
-                cache_key = f"sid:{registration.src_code}:{registration.source}:current"
+                # 失效特定 source_ticker 的负缓存（如果有）
+                cache_key = (
+                    f"sid:{registration.source_ticker}:{registration.source}:current"
+                )
                 self._data_cache.invalidate(cache_key)
                 # 失效 sid_symbol_map 缓存
                 self._data_cache.invalidate_pattern("sid_symbol_map:*")
@@ -569,8 +577,8 @@ class SecurityStore:
             self._client.commit()
 
             logger.info(
-                "Security registered successfully",
-                event="security_register_complete",
+                "Instrument registered successfully",
+                event="instrument_register_complete",
                 sid=sid,
                 symbol=registration.symbol,
             )
@@ -580,8 +588,8 @@ class SecurityStore:
         except Exception as e:
             self._client.rollback()
             logger.error(
-                "Security registration failed",
-                event="security_register_failed",
+                "Instrument registration failed",
+                event="instrument_register_failed",
                 sid=sid,
                 symbol=registration.symbol,
                 error_type=type(e).__name__,
