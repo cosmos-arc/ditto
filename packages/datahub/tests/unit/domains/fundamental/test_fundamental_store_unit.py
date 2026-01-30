@@ -100,3 +100,69 @@ def test_get_balance_sheet_pit(
     result = store.get_balance_sheet("600000.SH", date(2024, 5, 1))
     assert len(result) == 1
     assert result["total_assets"][0] == 1000000.0
+
+
+@pytest.fixture
+def income_statement_table(in_memory_db: SQLiteClient) -> None:
+    """创建 income_statement 表."""
+    in_memory_db.execute("""
+        CREATE TABLE IF NOT EXISTS income_statement (
+            instrument_id TEXT NOT NULL,
+            report_date DATE NOT NULL,
+            knowledge_date DATE NOT NULL,
+            effective_from DATE NOT NULL,
+            effective_to DATE,
+            revenue REAL,
+            operating_profit REAL,
+            net_profit REAL,
+            eps REAL,
+            PRIMARY KEY (instrument_id, report_date, effective_from)
+        )
+    """)
+    in_memory_db.commit()
+
+
+def test_write_income_statement(
+    income_statement_table: None, store: FundamentalStore
+) -> None:
+    """测试写入利润表数据."""
+    df = pl.DataFrame(
+        {
+            "instrument_id": ["600000.SH"],
+            "report_date": [date(2024, 3, 31)],
+            "knowledge_date": [date(2024, 4, 25)],
+            "effective_from": [date(2024, 4, 26)],
+            "effective_to": [None],
+            "revenue": [500000.0],
+            "operating_profit": [100000.0],
+            "net_profit": [80000.0],
+            "eps": [0.5],
+        }
+    )
+
+    count = store.write_income_statement(df)
+    assert count == 1
+
+
+def test_get_income_statement_pit(
+    income_statement_table: None, store: FundamentalStore
+) -> None:
+    """测试 PIT 查询利润表."""
+    df = pl.DataFrame(
+        {
+            "instrument_id": ["600000.SH"],
+            "report_date": [date(2024, 3, 31)],
+            "knowledge_date": [date(2024, 4, 25)],
+            "effective_from": [date(2024, 4, 26)],
+            "effective_to": [None],
+            "revenue": [500000.0],
+            "operating_profit": [100000.0],
+            "net_profit": [80000.0],
+            "eps": [0.5],
+        }
+    )
+    store.write_income_statement(df)
+
+    result = store.get_income_statement("600000.SH", date(2024, 5, 1))
+    assert len(result) == 1
+    assert result["revenue"][0] == 500000.0
