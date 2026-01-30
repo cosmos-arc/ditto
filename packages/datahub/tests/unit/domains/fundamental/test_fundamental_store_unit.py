@@ -284,3 +284,64 @@ def test_get_dividend_pit(dividend_table: None, store: FundamentalStore) -> None
     result = store.get_dividend("600000.SH", date(2024, 5, 2))
     assert len(result) == 1
     assert result["dividend_per_share"][0] == 0.5
+
+
+@pytest.fixture
+def corporate_actions_table(in_memory_db: SQLiteClient) -> None:
+    """创建 corporate_actions 表."""
+    in_memory_db.execute("""
+        CREATE TABLE IF NOT EXISTS corporate_actions (
+            instrument_id TEXT NOT NULL,
+            action_type TEXT NOT NULL,
+            announcement_date DATE NOT NULL,
+            effective_date DATE,
+            description TEXT,
+            PRIMARY KEY (instrument_id, action_type, announcement_date)
+        )
+    """)
+    in_memory_db.commit()
+
+
+def test_write_corporate_actions(
+    corporate_actions_table: None, store: FundamentalStore
+) -> None:
+    """测试写入公司行为数据."""
+    df = pl.DataFrame(
+        {
+            "instrument_id": ["600000.SH"],
+            "action_type": ["分红"],
+            "announcement_date": [date(2024, 4, 25)],
+            "effective_date": [date(2024, 5, 1)],
+            "description": ["2023年度分红派息"],
+        }
+    )
+
+    count = store.write_corporate_actions(df)
+    assert count == 1
+
+
+def test_get_corporate_actions(
+    corporate_actions_table: None, store: FundamentalStore
+) -> None:
+    """测试查询公司行为数据（非 PIT）."""
+    df = pl.DataFrame(
+        {
+            "instrument_id": ["600000.SH"],
+            "action_type": ["分红"],
+            "announcement_date": [date(2024, 4, 25)],
+            "effective_date": [date(2024, 5, 1)],
+            "description": ["2023年度分红派息"],
+        }
+    )
+    store.write_corporate_actions(df)
+
+    # 查询全部
+    result = store.get_corporate_actions("600000.SH")
+    assert len(result) == 1
+    assert result["action_type"][0] == "分红"
+
+    # 按日期范围查询
+    result = store.get_corporate_actions(
+        "600000.SH", start_date=date(2024, 4, 1), end_date=date(2024, 4, 30)
+    )
+    assert len(result) == 1

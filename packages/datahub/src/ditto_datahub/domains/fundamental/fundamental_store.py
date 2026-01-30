@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 
 import polars as pl
 from ditto_foundation import M, logger, traced
@@ -424,6 +425,111 @@ class FundamentalStore:
                  AND (effective_to IS NULL OR effective_to > ?)
                ORDER BY ex_dividend_date DESC""",
             [instrument_id, as_of_date, as_of_date],
+        )
+
+        return pl.DataFrame(rows) if rows else pl.DataFrame()
+
+    @traced("data.fundamental_write")
+    def write_corporate_actions(self, df: pl.DataFrame) -> int:
+        """
+        Write corporate actions data to database (non-PIT).
+
+        Args:
+            df: DataFrame with corporate actions data (no PIT columns).
+
+        Returns:
+            Number of records written.
+
+        Raises:
+            Exception: If write operation fails.
+
+        """
+        logger.info("Starting corporate actions data write", record_count=len(df))
+
+        try:
+            records = df.to_dicts()
+            self._client.executemany(
+                """INSERT INTO corporate_actions
+                (instrument_id, action_type, announcement_date,
+                 effective_date, description)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT DO NOTHING""",
+                [
+                    (
+                        r["instrument_id"],
+                        r["action_type"],
+                        r["announcement_date"],
+                        r["effective_date"],
+                        r["description"],
+                    )
+                    for r in records
+                ],
+            )
+            self._client.commit()
+
+            logger.info(
+                "Corporate actions data written successfully",
+                record_count=len(records),
+            )
+            M.data_records.add(
+                len(records), {"dataset": "corporate_actions", "status": "success"}
+            )
+            return len(records)
+
+        except Exception as e:
+            self._client.rollback()
+            logger.error("Corporate actions write failed", error=str(e))
+            M.data_records.add(
+                len(df), {"dataset": "corporate_actions", "status": "failed"}
+            )
+            raise
+
+    @traced("data.fundamental_query")
+    def get_corporate_actions(
+        self,
+        instrument_id: str,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> pl.DataFrame:
+        """
+        Query corporate actions data (non-PIT query).
+
+        Args:
+            instrument_id: Instrument identifier.
+            start_date: Optional start date filter.
+            end_date: Optional end date filter.
+
+        Returns:
+            DataFrame with corporate actions data.
+
+        """
+        logger.debug(
+            "Querying corporate actions",
+            instrument_id=instrument_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        conditions = ["instrument_id = ?"]
+        params: list[Any] = [instrument_id]
+
+        if start_date:
+            conditions.append("announcement_date >= ?")
+            params.append(start_date)
+
+        if end_date:
+            conditions.append("announcement_date <= ?")
+            params.append(end_date)
+
+        where_clause = f" WHERE {' AND '.join(conditions)}"
+
+        rows = self._client.fetchall(
+            f"""SELECT instrument_id, action_type, announcement_date,
+                       effective_date, description
+                FROM corporate_actions
+                {where_clause}
+                ORDER BY announcement_date DESC""",  # noqa: S608
+            params,
         )
 
         return pl.DataFrame(rows) if rows else pl.DataFrame()
