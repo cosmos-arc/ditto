@@ -98,7 +98,7 @@ class AssetSidRange(NamedTuple):
     """
     Asset class SID range definition.
 
-    统一使用百万级范围，与 SecurityMapper 保持一致:
+    统一使用百万级范围，与 InstrumentsAccessor 保持一致:
     - stock: 1M (1,000,000 - 1,999,999)
     - etf: 2M (2,000,000 - 2,999,999)
     - index: 3M (3,000,000 - 3,999,999)

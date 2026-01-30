@@ -1,4 +1,4 @@
-"""SID allocator for managing unique security identifiers."""
+"""SID 分配器，用于管理唯一的证券标识符。"""
 
 from ditto_foundation import SQLitePool, logger, span
 
@@ -6,7 +6,7 @@ from ..models import AssetSidRange
 
 
 class SidAllocator:
-    """SID allocator for managing unique security identifiers."""
+    """SID 分配器，用于管理唯一的证券标识符。"""
 
     def __init__(self, sqlite_pool: SQLitePool) -> None:
         """Initialize SID allocator."""

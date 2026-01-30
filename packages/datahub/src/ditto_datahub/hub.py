@@ -161,7 +161,7 @@ class DataHub:
             calendar: Trading calendar accessor.
             adj_factor: Adjustment factor accessor.
             bars: OHLCV bars accessor.
-            universe: Security universe accessor.
+            universe: 证券域访问器。
             index: Index data accessor.
             ingestion_log: Ingestion log accessor.
             quarantine: Quarantine accessor for DQ failed data.

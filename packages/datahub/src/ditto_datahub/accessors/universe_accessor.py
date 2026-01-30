@@ -1,5 +1,5 @@
 """
-Universe Accessor for security universe management.
+Universe Accessor for 证券域管理。
 
 This module provides the domain-level interface for universe operations,
 coordinating UniverseStore and SidAllocator.
@@ -17,7 +17,7 @@ from ditto_datahub.stores.universe_store import UniverseStore
 
 class UniverseAccessor:
     """
-    Security universe accessor.
+    证券域（Universe）访问器。
 
     Provides domain-level interface for universe data operations,
     coordinating UniverseStore and SidAllocator.

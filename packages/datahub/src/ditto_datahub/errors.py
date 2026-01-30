@@ -34,7 +34,7 @@ class IdentifierError(DataHubError):
 
 
 class SidNotFoundError(IdentifierError):
-    """Security identifier (SID) not found."""
+    """证券标识符（SID）未找到。"""
 
     def __init__(
         self,

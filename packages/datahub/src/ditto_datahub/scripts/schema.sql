@@ -1,5 +1,5 @@
 -- SQLite Database Schema for Ditto DataHub
--- This schema supports SID allocation, security master, PIT queries,
+-- This schema supports SID allocation, 证券主数据, PIT queries,
 -- trading calendar, freeze points, and universe management.
 
 -- SID 序列 (百万级范围，与 SidRange 保持一致)

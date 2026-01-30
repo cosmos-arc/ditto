@@ -43,7 +43,7 @@ VALUATION_METRICS_MAPPING = ColumnMapping(
     },
     date_columns={"trade_date": "%Y%m%d"},
     float_columns=["pe_ratio", "pb_ratio", "ps_ratio", "dividend_yield", "market_cap"],
-    computed_columns={"knowledge_date": pl.col("trade_date")},
+    computed_columns={"knowledge_date": pl.col("trade_date") + pl.duration(days=1)},
     output_columns=(
         "instrument_id",
         "trade_date",
@@ -66,7 +66,9 @@ DIVIDEND_MAPPING = ColumnMapping(
     },
     date_columns={"ex_dividend_date": "%Y%m%d"},
     float_columns=["dividend_per_share", "dividend_yield"],
-    computed_columns={"knowledge_date": pl.col("ex_dividend_date")},
+    computed_columns={
+        "knowledge_date": pl.col("ex_dividend_date") + pl.duration(days=1)
+    },
     output_columns=(
         "instrument_id",
         "ex_dividend_date",
@@ -93,7 +95,7 @@ MARGIN_TRADING_MAPPING = ColumnMapping(
         "margin_buy_volume",
         "short_sell_volume",
     ],
-    computed_columns={"knowledge_date": pl.col("trade_date")},
+    computed_columns={"knowledge_date": pl.col("trade_date") + pl.duration(days=1)},
     output_columns=(
         "instrument_id",
         "trade_date",
@@ -138,7 +140,7 @@ FUTURES_MAPPING = ColumnMapping(
     },
     date_columns={"trade_date": "%Y%m%d"},
     float_columns=["open_interest", "settlement_price", "volume", "turnover"],
-    computed_columns={"knowledge_date": pl.col("trade_date")},
+    computed_columns={"knowledge_date": pl.col("trade_date") + pl.duration(days=1)},
     output_columns=(
         "instrument_id",
         "trade_date",

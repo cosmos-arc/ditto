@@ -78,7 +78,7 @@ def mock_hub(mocker):
     mock_sid_allocator.allocate.side_effect = allocate_side_effect
     hub.sid_allocator = mock_sid_allocator
 
-    # 添加 SecurityStore mock（SecurityMapper 需要）
+    # 添加 InstrumentStore mock（InstrumentMapper 需要）
     hub.instrument_store = mocker.Mock()
     hub.instrument_store.resolve_sid.return_value = None  # 默认返回 None（不存在）
     hub.instrument_store.register.return_value = 1000001  # 返回注册的 SID

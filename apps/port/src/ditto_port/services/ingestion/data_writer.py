@@ -4,7 +4,7 @@
 负责将摄取的数据写入到不同的 Store，包括：
 - 行情数据（stock_daily, etf_daily）→ BarsStore
 - 复权因子（adj_factor, fund_adj）→ AdjFactorStore
-- 基础信息（stock_basic, etf_basic）→ SecurityStore
+- 基础信息（stock_basic, etf_basic）→ InstrumentStore
 - 日历（calendar）→ CalendarStore
 """
 

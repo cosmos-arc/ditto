@@ -25,8 +25,8 @@ def mock_quality_engine(mocker: MockerFixture) -> MagicMock:
 
 
 @pytest.fixture
-def mock_security_store(mocker: MockerFixture) -> MagicMock:
-    """Mock SecurityStore.
+def mock_instrument_store(mocker: MockerFixture) -> MagicMock:
+    """Mock InstrumentStore.
 
     提供 enrich_with_symbol 方法，将 sid 转换为 symbol。
     """
@@ -82,7 +82,7 @@ def mock_comparison_accessor(mocker: MockerFixture) -> MagicMock:
 def sample_primary_df() -> pl.DataFrame:
     """示例主数据源 DataFrame.
 
-    包含 sid 列，需要通过 SecurityStore 补全 symbol。
+    包含 sid 列，需要通过 InstrumentStore 补全 symbol。
     """
     return pl.DataFrame(
         {

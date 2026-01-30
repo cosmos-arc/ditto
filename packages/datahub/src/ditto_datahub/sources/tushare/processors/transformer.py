@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 
 import polars as pl
 from ditto_foundation import M, logger
 
-if TYPE_CHECKING:
-    from ditto_datahub.sources.normalization import NormalizationConfig
-    from ditto_datahub.sources.source_schema import SourceSchema
+from ditto_datahub.sources.normalization import NormalizationConfig
+from ditto_datahub.sources.source_schema import SourceSchema
 
 __all__ = [
     "ADJ_FACTOR_MAPPING",
