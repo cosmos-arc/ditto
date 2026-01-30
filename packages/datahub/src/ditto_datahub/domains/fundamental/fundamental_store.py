@@ -237,3 +237,99 @@ class FundamentalStore:
         )
 
         return pl.DataFrame(rows) if rows else pl.DataFrame()
+
+    @traced("data.fundamental_write")
+    def write_cash_flow(self, df: pl.DataFrame) -> int:
+        """
+        Write cash flow data to database.
+
+        Args:
+            df: DataFrame with cash flow data including PIT columns.
+
+        Returns:
+            Number of records written.
+
+        Raises:
+            Exception: If write operation fails.
+
+        """
+        logger.info("Starting cash flow data write", record_count=len(df))
+
+        try:
+            records = df.to_dicts()
+            self._client.executemany(
+                """INSERT INTO cash_flow
+                (instrument_id, report_date, knowledge_date,
+                 effective_from, effective_to,
+                 operating_cash_flow, investing_cash_flow,
+                 financing_cash_flow, net_cash_flow)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT DO NOTHING""",
+                [
+                    (
+                        r["instrument_id"],
+                        r["report_date"],
+                        r["knowledge_date"],
+                        r["effective_from"],
+                        r.get("effective_to"),
+                        r["operating_cash_flow"],
+                        r["investing_cash_flow"],
+                        r["financing_cash_flow"],
+                        r["net_cash_flow"],
+                    )
+                    for r in records
+                ],
+            )
+            self._client.commit()
+
+            logger.info(
+                "Cash flow data written successfully", record_count=len(records)
+            )
+            M.data_records.add(
+                len(records), {"dataset": "cash_flow", "status": "success"}
+            )
+            return len(records)
+
+        except Exception as e:
+            self._client.rollback()
+            logger.error("Cash flow write failed", error=str(e))
+            M.data_records.add(len(df), {"dataset": "cash_flow", "status": "failed"})
+            raise
+
+    @traced("data.fundamental_query")
+    def get_cash_flow(
+        self,
+        instrument_id: str,
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """
+        Query cash flow data as of a specific date (PIT query).
+
+        Args:
+            instrument_id: Instrument identifier.
+            as_of_date: Point-in-time query date.
+
+        Returns:
+            DataFrame with cash flow data valid as of as_of_date.
+
+        """
+        logger.debug(
+            "Querying cash flow with PIT",
+            instrument_id=instrument_id,
+            as_of_date=as_of_date,
+        )
+
+        rows = self._client.fetchall(
+            """SELECT instrument_id, report_date, knowledge_date,
+                      effective_from, effective_to,
+                      operating_cash_flow, investing_cash_flow,
+                      financing_cash_flow, net_cash_flow
+               FROM cash_flow
+               WHERE instrument_id = ?
+                 AND effective_from <= ?
+                 AND (effective_to IS NULL OR effective_to > ?)
+               ORDER BY report_date DESC""",
+            [instrument_id, as_of_date, as_of_date],
+        )
+
+        return pl.DataFrame(rows) if rows else pl.DataFrame()

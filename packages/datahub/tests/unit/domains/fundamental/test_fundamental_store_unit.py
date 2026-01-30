@@ -166,3 +166,65 @@ def test_get_income_statement_pit(
     result = store.get_income_statement("600000.SH", date(2024, 5, 1))
     assert len(result) == 1
     assert result["revenue"][0] == 500000.0
+
+
+@pytest.fixture
+def cash_flow_table(in_memory_db: SQLiteClient) -> None:
+    """创建 cash_flow 表."""
+    in_memory_db.execute("""
+        CREATE TABLE IF NOT EXISTS cash_flow (
+            instrument_id TEXT NOT NULL,
+            report_date DATE NOT NULL,
+            knowledge_date DATE NOT NULL,
+            effective_from DATE NOT NULL,
+            effective_to DATE,
+            operating_cash_flow REAL,
+            investing_cash_flow REAL,
+            financing_cash_flow REAL,
+            net_cash_flow REAL,
+            PRIMARY KEY (instrument_id, report_date, effective_from)
+        )
+    """)
+    in_memory_db.commit()
+
+
+def test_write_cash_flow(cash_flow_table: None, store: FundamentalStore) -> None:
+    """测试写入现金流量表数据."""
+    df = pl.DataFrame(
+        {
+            "instrument_id": ["600000.SH"],
+            "report_date": [date(2024, 3, 31)],
+            "knowledge_date": [date(2024, 4, 25)],
+            "effective_from": [date(2024, 4, 26)],
+            "effective_to": [None],
+            "operating_cash_flow": [90000.0],
+            "investing_cash_flow": [-20000.0],
+            "financing_cash_flow": [-10000.0],
+            "net_cash_flow": [60000.0],
+        }
+    )
+
+    count = store.write_cash_flow(df)
+    assert count == 1
+
+
+def test_get_cash_flow_pit(cash_flow_table: None, store: FundamentalStore) -> None:
+    """测试 PIT 查询现金流量表."""
+    df = pl.DataFrame(
+        {
+            "instrument_id": ["600000.SH"],
+            "report_date": [date(2024, 3, 31)],
+            "knowledge_date": [date(2024, 4, 25)],
+            "effective_from": [date(2024, 4, 26)],
+            "effective_to": [None],
+            "operating_cash_flow": [90000.0],
+            "investing_cash_flow": [-20000.0],
+            "financing_cash_flow": [-10000.0],
+            "net_cash_flow": [60000.0],
+        }
+    )
+    store.write_cash_flow(df)
+
+    result = store.get_cash_flow("600000.SH", date(2024, 5, 1))
+    assert len(result) == 1
+    assert result["operating_cash_flow"][0] == 90000.0
