@@ -62,7 +62,7 @@ class TestSourceSchemaValidation:
         assert "name" in str(exc_info.value)
 
     def test_validate_type_mismatch(self) -> None:
-        """测试类型不匹配时抛出异常"""
+        """测试类型不兼容时抛出异常（String vs Float64）"""
         schema = SourceSchema(
             dataset="test_dataset",
             key_columns=("instrument_id",),
@@ -72,11 +72,11 @@ class TestSourceSchemaValidation:
             },
         )
 
-        # value 是 Int64 而不是 Float64
+        # value 是 String，与 Float64 完全不兼容
         df = pl.DataFrame(
             {
                 "instrument_id": ["001", "002"],
-                "value": [1, 2],
+                "value": ["1.0", "2.0"],  # String
             }
         )
 
@@ -187,8 +187,8 @@ class TestSourceSchemaValidation:
         # 空数据框不应该抛出异常
         schema.validate(df)
 
-    def test_validate_type_compatible_int_to_float(self) -> None:
-        """测试 Int64 可以兼容 Float64"""
+    def test_validate_type_compatible_int_to_float_no_cast(self) -> None:
+        """测试 Int64 列可以直接兼容 Float64 schema（无需手动 cast）"""
         schema = SourceSchema(
             dataset="test_dataset",
             key_columns=("instrument_id",),
@@ -198,13 +198,60 @@ class TestSourceSchemaValidation:
             },
         )
 
-        # Int64 可以向上兼容到 Float64
+        # Int64 列应该自动兼容 Float64 schema
         df = pl.DataFrame(
             {
                 "instrument_id": ["001", "002"],
-                "value": [1, 2],  # Int64
+                "value": [1, 2],  # Int64 (不 cast)
             }
-        ).with_columns(pl.col("value").cast(pl.Float64))
+        )
+
+        # 不应该抛出异常 - numeric widening should work
+        schema.validate(df)
+
+    def test_validate_type_compatible_int32_to_float64(self) -> None:
+        """测试 Int32 可以兼容 Float64"""
+        schema = SourceSchema(
+            dataset="test_dataset",
+            key_columns=("id",),
+            schema={
+                "id": pl.String,
+                "value": pl.Float64,
+            },
+        )
+
+        # Int32 应该可以向上兼容到 Float64
+        df = pl.DataFrame(
+            {
+                "id": ["001", "002"],
+                "value": pl.Series("value", [1, 2], dtype=pl.Int32),  # Int32
+            }
+        )
 
         # 不应该抛出异常
         schema.validate(df)
+
+    def test_validate_type_incompatible_float_to_int(self) -> None:
+        """测试 Float64 不能向下兼容到 Int64（方向错误）"""
+        schema = SourceSchema(
+            dataset="test_dataset",
+            key_columns=("id",),
+            schema={
+                "id": pl.String,
+                "value": pl.Int64,  # 期望 Int64
+            },
+        )
+
+        # Float64 不应该兼容 Int64（方向错误，会丢失精度）
+        df = pl.DataFrame(
+            {
+                "id": ["001", "002"],
+                "value": [1.5, 2.5],  # Float64
+            }
+        )
+
+        # 应该抛出异常
+        with pytest.raises(SchemaValidationError) as exc_info:
+            schema.validate(df)
+
+        assert "value" in str(exc_info.value)

@@ -92,13 +92,9 @@ class SourceSchema:
             pl.Float32: [pl.Float64],
         }
 
-        # 检查数值类型兼容性
+        # 检查数值类型兼容性（方向：base_type → compatible_types）
         for base_type, compatible_types in numeric_compatibility.items():
-            if (
-                isinstance(actual, base_type)
-                and any(isinstance(actual, t) for t in compatible_types)
-                and expected in compatible_types
-            ):
+            if isinstance(actual, base_type) and expected in compatible_types:
                 return True
 
         # 临时类型（Null）在验证时可以忽略
