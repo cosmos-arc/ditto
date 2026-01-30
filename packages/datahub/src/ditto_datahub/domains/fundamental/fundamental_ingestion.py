@@ -1,4 +1,3 @@
-# pyright: ignore, reportUnnecessaryTypeIgnoreComment
 """
 FundamentalIngestion service for Fundamental domain data ingestion.
 
@@ -22,12 +21,18 @@ Ingestion Flow:
 
 Note: Data transformation from SourceSchema to StoreSchema is handled
 by the Store layer, as the Store accepts SourceSchema format data.
+
+Batch Processing:
+The CapitalTushareAdapter methods (fetch_balance_sheet, etc.) accept
+a single ts_code parameter. This service implements batch processing
+by iterating over instrument_ids and concatenating the results.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+import polars as pl
 from ditto_foundation import M, logger, traced
 
 from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
@@ -60,6 +65,9 @@ class FundamentalIngestion:
     Orchestrates the complete data ingestion flow from Source to Store
     for Fundamental domain data types.
 
+    Implements batch processing by iterating over multiple instrument_ids
+    and calling the single-instrument CapitalTushareAdapter methods.
+
     Attributes:
         _fundamental_store: FundamentalStore instance for data persistence.
         _tushare_source: CapitalTushareAdapter instance for data fetching.
@@ -70,7 +78,7 @@ class FundamentalIngestion:
         ...     tushare_source=tushare_source,
         ... )
         >>> result = ingestion.ingest_balance_sheet(
-        ...     instrument_ids=["600000.SH"],
+        ...     instrument_ids=["600000.SH", "000001.SZ"],
         ...     start_date="20240101",
         ...     end_date="20240331",
         ... )
@@ -123,11 +131,18 @@ class FundamentalIngestion:
 
         """
         try:
-            df = self._tushare_source.fetch_balance_sheet(
-                instrument_ids=instrument_ids,
-                start_date=start_date,
-                end_date=end_date,
-            )
+            # Batch processing: iterate over instrument_ids and concatenate results
+            dfs: list[pl.DataFrame] = []
+            for ts_code in instrument_ids:
+                df = self._tushare_source.fetch_balance_sheet(
+                    ts_code=ts_code,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+                dfs.append(df)
+
+            # Concatenate all DataFrames
+            df = pl.concat(dfs, how="vertical") if dfs else pl.DataFrame()
 
             records_written = self._fundamental_store.write_balance_sheet(df)
 
@@ -184,11 +199,18 @@ class FundamentalIngestion:
 
         """
         try:
-            df = self._tushare_source.fetch_income_statement(
-                instrument_ids=instrument_ids,
-                start_date=start_date,
-                end_date=end_date,
-            )
+            # Batch processing: iterate over instrument_ids and concatenate results
+            dfs: list[pl.DataFrame] = []
+            for ts_code in instrument_ids:
+                df = self._tushare_source.fetch_income_statement(
+                    ts_code=ts_code,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+                dfs.append(df)
+
+            # Concatenate all DataFrames
+            df = pl.concat(dfs, how="vertical") if dfs else pl.DataFrame()
 
             records_written = self._fundamental_store.write_income_statement(df)
 
@@ -245,11 +267,18 @@ class FundamentalIngestion:
 
         """
         try:
-            df = self._tushare_source.fetch_cash_flow(
-                instrument_ids=instrument_ids,
-                start_date=start_date,
-                end_date=end_date,
-            )
+            # Batch processing: iterate over instrument_ids and concatenate results
+            dfs: list[pl.DataFrame] = []
+            for ts_code in instrument_ids:
+                df = self._tushare_source.fetch_cash_flow(
+                    ts_code=ts_code,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+                dfs.append(df)
+
+            # Concatenate all DataFrames
+            df = pl.concat(dfs, how="vertical") if dfs else pl.DataFrame()
 
             records_written = self._fundamental_store.write_cash_flow(df)
 
@@ -310,11 +339,18 @@ class FundamentalIngestion:
 
         """
         try:
-            df = self._tushare_source.fetch_dividend(
-                instrument_ids=instrument_ids,
-                start_date=start_date,
-                end_date=end_date,
-            )
+            # Batch processing: iterate over instrument_ids and concatenate results
+            dfs: list[pl.DataFrame] = []
+            for ts_code in instrument_ids:
+                df = self._tushare_source.fetch_dividend(
+                    ts_code=ts_code,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+                dfs.append(df)
+
+            # Concatenate all DataFrames
+            df = pl.concat(dfs, how="vertical") if dfs else pl.DataFrame()
 
             records_written = self._fundamental_store.write_dividend(df)
 
@@ -371,11 +407,18 @@ class FundamentalIngestion:
 
         """
         try:
-            df = self._tushare_source.fetch_corporate_actions(
-                instrument_ids=instrument_ids,
-                start_date=start_date,
-                end_date=end_date,
-            )
+            # Batch processing: iterate over instrument_ids and concatenate results
+            dfs: list[pl.DataFrame] = []
+            for ts_code in instrument_ids:
+                df = self._tushare_source.fetch_corporate_actions(
+                    ts_code=ts_code,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+                dfs.append(df)
+
+            # Concatenate all DataFrames
+            df = pl.concat(dfs, how="vertical") if dfs else pl.DataFrame()
 
             records_written = self._fundamental_store.write_corporate_actions(df)
 
