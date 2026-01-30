@@ -333,3 +333,97 @@ class FundamentalStore:
         )
 
         return pl.DataFrame(rows) if rows else pl.DataFrame()
+
+    # ============================================================================
+    # 2. 公司行为数据 (PIT)
+    # ============================================================================
+
+    @traced("data.fundamental_write")
+    def write_dividend(self, df: pl.DataFrame) -> int:
+        """
+        Write dividend data to database.
+
+        Args:
+            df: DataFrame with dividend data including PIT columns.
+
+        Returns:
+            Number of records written.
+
+        Raises:
+            Exception: If write operation fails.
+
+        """
+        logger.info("Starting dividend data write", record_count=len(df))
+
+        try:
+            records = df.to_dicts()
+            self._client.executemany(
+                """INSERT INTO dividend
+                (instrument_id, ex_dividend_date, knowledge_date,
+                 effective_from, effective_to,
+                 dividend_per_share, dividend_yield)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT DO NOTHING""",
+                [
+                    (
+                        r["instrument_id"],
+                        r["ex_dividend_date"],
+                        r["knowledge_date"],
+                        r["effective_from"],
+                        r.get("effective_to"),
+                        r["dividend_per_share"],
+                        r["dividend_yield"],
+                    )
+                    for r in records
+                ],
+            )
+            self._client.commit()
+
+            logger.info("Dividend data written successfully", record_count=len(records))
+            M.data_records.add(
+                len(records), {"dataset": "dividend", "status": "success"}
+            )
+            return len(records)
+
+        except Exception as e:
+            self._client.rollback()
+            logger.error("Dividend write failed", error=str(e))
+            M.data_records.add(len(df), {"dataset": "dividend", "status": "failed"})
+            raise
+
+    @traced("data.fundamental_query")
+    def get_dividend(
+        self,
+        instrument_id: str,
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """
+        Query dividend data as of a specific date (PIT query).
+
+        Args:
+            instrument_id: Instrument identifier.
+            as_of_date: Point-in-time query date.
+
+        Returns:
+            DataFrame with dividend data valid as of as_of_date.
+
+        """
+        logger.debug(
+            "Querying dividend with PIT",
+            instrument_id=instrument_id,
+            as_of_date=as_of_date,
+        )
+
+        rows = self._client.fetchall(
+            """SELECT instrument_id, ex_dividend_date, knowledge_date,
+                      effective_from, effective_to,
+                      dividend_per_share, dividend_yield
+               FROM dividend
+               WHERE instrument_id = ?
+                 AND effective_from <= ?
+                 AND (effective_to IS NULL OR effective_to > ?)
+               ORDER BY ex_dividend_date DESC""",
+            [instrument_id, as_of_date, as_of_date],
+        )
+
+        return pl.DataFrame(rows) if rows else pl.DataFrame()

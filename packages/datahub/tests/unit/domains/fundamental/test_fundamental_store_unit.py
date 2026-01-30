@@ -228,3 +228,59 @@ def test_get_cash_flow_pit(cash_flow_table: None, store: FundamentalStore) -> No
     result = store.get_cash_flow("600000.SH", date(2024, 5, 1))
     assert len(result) == 1
     assert result["operating_cash_flow"][0] == 90000.0
+
+
+@pytest.fixture
+def dividend_table(in_memory_db: SQLiteClient) -> None:
+    """创建 dividend 表."""
+    in_memory_db.execute("""
+        CREATE TABLE IF NOT EXISTS dividend (
+            instrument_id TEXT NOT NULL,
+            ex_dividend_date DATE NOT NULL,
+            knowledge_date DATE NOT NULL,
+            effective_from DATE NOT NULL,
+            effective_to DATE,
+            dividend_per_share REAL,
+            dividend_yield REAL,
+            PRIMARY KEY (instrument_id, ex_dividend_date, effective_from)
+        )
+    """)
+    in_memory_db.commit()
+
+
+def test_write_dividend(dividend_table: None, store: FundamentalStore) -> None:
+    """测试写入分红数据."""
+    df = pl.DataFrame(
+        {
+            "instrument_id": ["600000.SH"],
+            "ex_dividend_date": [date(2024, 5, 1)],
+            "knowledge_date": [date(2024, 4, 25)],
+            "effective_from": [date(2024, 4, 26)],
+            "effective_to": [None],
+            "dividend_per_share": [0.5],
+            "dividend_yield": [0.02],
+        }
+    )
+
+    count = store.write_dividend(df)
+    assert count == 1
+
+
+def test_get_dividend_pit(dividend_table: None, store: FundamentalStore) -> None:
+    """测试 PIT 查询分红数据."""
+    df = pl.DataFrame(
+        {
+            "instrument_id": ["600000.SH"],
+            "ex_dividend_date": [date(2024, 5, 1)],
+            "knowledge_date": [date(2024, 4, 25)],
+            "effective_from": [date(2024, 4, 26)],
+            "effective_to": [None],
+            "dividend_per_share": [0.5],
+            "dividend_yield": [0.02],
+        }
+    )
+    store.write_dividend(df)
+
+    result = store.get_dividend("600000.SH", date(2024, 5, 2))
+    assert len(result) == 1
+    assert result["dividend_per_share"][0] == 0.5
