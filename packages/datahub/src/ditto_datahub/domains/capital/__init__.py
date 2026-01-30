@@ -13,6 +13,12 @@ from ditto_datahub.domains.capital.capital_ingestion import (
     CapitalIngestion,
     IngestionResult,
 )
+from ditto_datahub.domains.capital.capital_service import CapitalService
 from ditto_datahub.domains.capital.capital_store import CapitalStore
 
-__all__ = ["CapitalIngestion", "CapitalStore", "IngestionResult"]
+__all__ = [
+    "CapitalIngestion",
+    "CapitalService",
+    "CapitalStore",
+    "IngestionResult",
+]

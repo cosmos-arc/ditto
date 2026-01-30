@@ -1,4 +1,4 @@
-"""Unit tests for FundamentalStore."""
+"""Unit tests for FundamentalService."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_datahub.domains.fundamental.fundamental_service import FundamentalService
 from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
@@ -25,10 +26,16 @@ def store(in_memory_db: SQLiteClient) -> FundamentalStore:
     return FundamentalStore(sqlite_client=in_memory_db)
 
 
-def test_fundamental_store_init(store: FundamentalStore) -> None:
-    """测试 FundamentalStore 初始化."""
-    assert store is not None
-    assert store._client is not None
+@pytest.fixture
+def service(store: FundamentalStore) -> FundamentalService:
+    """创建 FundamentalService 实例."""
+    return FundamentalService(store)
+
+
+def test_fundamental_service_init(service: FundamentalService) -> None:
+    """测试 FundamentalService 初始化."""
+    assert service is not None
+    assert service._store is not None
 
 
 @pytest.fixture
@@ -76,10 +83,10 @@ def test_write_balance_sheet(
 
 
 def test_get_balance_sheet_pit(
-    balance_sheet_table: None, store: FundamentalStore
+    balance_sheet_table: None, service: FundamentalService
 ) -> None:
     """测试 PIT 查询资产负债表."""
-    # 先写入数据
+    # 先写入数据（通过 Store）
     df = pl.DataFrame(
         {
             "instrument_id": ["600000.SH"],
@@ -94,10 +101,10 @@ def test_get_balance_sheet_pit(
             "current_liabilities": [200000.0],
         }
     )
-    store.write_balance_sheet(df)
+    service._store.write_balance_sheet(df)
 
-    # 查询
-    result = store.get_balance_sheet("600000.SH", date(2024, 5, 1))
+    # 通过 Service 查询
+    result = service.get_balance_sheet("600000.SH", date(2024, 5, 1))
     assert len(result) == 1
     assert result["total_assets"][0] == 1000000.0
 
@@ -145,7 +152,7 @@ def test_write_income_statement(
 
 
 def test_get_income_statement_pit(
-    income_statement_table: None, store: FundamentalStore
+    income_statement_table: None, service: FundamentalService
 ) -> None:
     """测试 PIT 查询利润表."""
     df = pl.DataFrame(
@@ -161,9 +168,10 @@ def test_get_income_statement_pit(
             "eps": [0.5],
         }
     )
-    store.write_income_statement(df)
+    service._store.write_income_statement(df)
 
-    result = store.get_income_statement("600000.SH", date(2024, 5, 1))
+    # 通过 Service 查询
+    result = service.get_income_statement("600000.SH", date(2024, 5, 1))
     assert len(result) == 1
     assert result["revenue"][0] == 500000.0
 
@@ -208,7 +216,7 @@ def test_write_cash_flow(cash_flow_table: None, store: FundamentalStore) -> None
     assert count == 1
 
 
-def test_get_cash_flow_pit(cash_flow_table: None, store: FundamentalStore) -> None:
+def test_get_cash_flow_pit(cash_flow_table: None, service: FundamentalService) -> None:
     """测试 PIT 查询现金流量表."""
     df = pl.DataFrame(
         {
@@ -223,9 +231,10 @@ def test_get_cash_flow_pit(cash_flow_table: None, store: FundamentalStore) -> No
             "net_cash_flow": [60000.0],
         }
     )
-    store.write_cash_flow(df)
+    service._store.write_cash_flow(df)
 
-    result = store.get_cash_flow("600000.SH", date(2024, 5, 1))
+    # 通过 Service 查询
+    result = service.get_cash_flow("600000.SH", date(2024, 5, 1))
     assert len(result) == 1
     assert result["operating_cash_flow"][0] == 90000.0
 
@@ -266,7 +275,7 @@ def test_write_dividend(dividend_table: None, store: FundamentalStore) -> None:
     assert count == 1
 
 
-def test_get_dividend_pit(dividend_table: None, store: FundamentalStore) -> None:
+def test_get_dividend_pit(dividend_table: None, service: FundamentalService) -> None:
     """测试 PIT 查询分红数据."""
     df = pl.DataFrame(
         {
@@ -279,9 +288,10 @@ def test_get_dividend_pit(dividend_table: None, store: FundamentalStore) -> None
             "dividend_yield": [0.02],
         }
     )
-    store.write_dividend(df)
+    service._store.write_dividend(df)
 
-    result = store.get_dividend("600000.SH", date(2024, 5, 2))
+    # 通过 Service 查询
+    result = service.get_dividend("600000.SH", date(2024, 5, 2))
     assert len(result) == 1
     assert result["dividend_per_share"][0] == 0.5
 
@@ -321,7 +331,7 @@ def test_write_corporate_actions(
 
 
 def test_get_corporate_actions(
-    corporate_actions_table: None, store: FundamentalStore
+    corporate_actions_table: None, service: FundamentalService
 ) -> None:
     """测试查询公司行为数据（非 PIT）."""
     df = pl.DataFrame(
@@ -333,15 +343,15 @@ def test_get_corporate_actions(
             "description": ["2023年度分红派息"],
         }
     )
-    store.write_corporate_actions(df)
+    service._store.write_corporate_actions(df)
 
-    # 查询全部
-    result = store.get_corporate_actions("600000.SH")
+    # 查询全部（通过 Service）
+    result = service.get_corporate_actions("600000.SH")
     assert len(result) == 1
     assert result["action_type"][0] == "分红"
 
     # 按日期范围查询
-    result = store.get_corporate_actions(
+    result = service.get_corporate_actions(
         "600000.SH", start_date=date(2024, 4, 1), end_date=date(2024, 4, 30)
     )
     assert len(result) == 1

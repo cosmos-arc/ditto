@@ -1,5 +1,5 @@
 """
-MetadataQueryService - Metadata 域统一查询服务.
+MetadataService - Metadata 域统一查询服务.
 
 整合 Metadata 域所有 Store 的查询功能，提供统一的访问入口.
 
@@ -27,7 +27,7 @@ from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.stores.universe_store import UniverseStore
 
 
-class MetadataQueryService:
+class MetadataService:
     """
     Metadata 域统一查询服务.
 
@@ -47,7 +47,7 @@ class MetadataQueryService:
         sid_allocator: SidAllocator,
     ) -> None:
         """
-        初始化 MetadataQueryService.
+        初始化 MetadataService.
 
         Args:
             instrument_store: 证券主数据存储.
@@ -68,7 +68,7 @@ class MetadataQueryService:
         self._sid_allocator = sid_allocator
 
         logger.debug(
-            "MetadataQueryService initialized",
+            "MetadataService initialized",
             event="metadata_query_service_init_complete",
         )
 
@@ -328,7 +328,7 @@ class MetadataQueryService:
         registered_sid = self._instrument_store.register(sid, registration)
 
         logger.info(
-            "Security registered via MetadataQueryService",
+            "Security registered via MetadataService",
             event="metadata_security_registered",
             sid=registered_sid,
             symbol=registration.symbol,

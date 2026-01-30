@@ -1,4 +1,4 @@
-"""FundamentalStore for fundamental data with PIT support."""
+"""FundamentalStore - Fundamental domain data storage with PIT support."""
 
 from __future__ import annotations
 
@@ -16,6 +16,9 @@ from ditto_datahub.stores.sqlite_client import SQLiteClient
 class FundamentalStore:
     """
     Fundamental domain data storage with PIT support.
+
+    Provides complete CRUD operations including write and query methods.
+    Service layer provides thin wrapper with dependency injection.
 
     Core functionality:
     - Financial statements (balance sheet, income statement, cash flow)
@@ -44,9 +47,7 @@ class FundamentalStore:
         """Close the underlying SQLite client."""
         self._client.close()
 
-    # ============================================================================
-    # 1. 财务报表数据 (PIT)
-    # ============================================================================
+    # ============ Financial statements (PIT) ============
 
     @traced("data.fundamental_write")
     def write_balance_sheet(self, df: pl.DataFrame) -> int:
@@ -109,44 +110,6 @@ class FundamentalStore:
             )
             raise
 
-    @traced("data.fundamental_query")
-    def get_balance_sheet(
-        self,
-        instrument_id: str,
-        as_of_date: date,
-    ) -> pl.DataFrame:
-        """
-        Query balance sheet data as of a specific date (PIT query).
-
-        Args:
-            instrument_id: Instrument identifier.
-            as_of_date: Point-in-time query date.
-
-        Returns:
-            DataFrame with balance sheet data valid as of as_of_date.
-
-        """
-        logger.debug(
-            "Querying balance sheet with PIT",
-            instrument_id=instrument_id,
-            as_of_date=as_of_date,
-        )
-
-        rows = self._client.fetchall(
-            """SELECT instrument_id, report_date, knowledge_date,
-                      effective_from, effective_to,
-                      total_assets, total_liabilities, net_assets,
-                      current_assets, current_liabilities
-               FROM balance_sheet
-               WHERE instrument_id = ?
-                 AND effective_from <= ?
-                 AND (effective_to IS NULL OR effective_to > ?)
-               ORDER BY report_date DESC""",
-            [instrument_id, as_of_date, as_of_date],
-        )
-
-        return pl.DataFrame(rows) if rows else pl.DataFrame()
-
     @traced("data.fundamental_write")
     def write_income_statement(self, df: pl.DataFrame) -> int:
         """
@@ -206,43 +169,6 @@ class FundamentalStore:
             )
             raise
 
-    @traced("data.fundamental_query")
-    def get_income_statement(
-        self,
-        instrument_id: str,
-        as_of_date: date,
-    ) -> pl.DataFrame:
-        """
-        Query income statement data as of a specific date (PIT query).
-
-        Args:
-            instrument_id: Instrument identifier.
-            as_of_date: Point-in-time query date.
-
-        Returns:
-            DataFrame with income statement data valid as of as_of_date.
-
-        """
-        logger.debug(
-            "Querying income statement with PIT",
-            instrument_id=instrument_id,
-            as_of_date=as_of_date,
-        )
-
-        rows = self._client.fetchall(
-            """SELECT instrument_id, report_date, knowledge_date,
-                      effective_from, effective_to,
-                      revenue, operating_profit, net_profit, eps
-               FROM income_statement
-               WHERE instrument_id = ?
-                 AND effective_from <= ?
-                 AND (effective_to IS NULL OR effective_to > ?)
-               ORDER BY report_date DESC""",
-            [instrument_id, as_of_date, as_of_date],
-        )
-
-        return pl.DataFrame(rows) if rows else pl.DataFrame()
-
     @traced("data.fundamental_write")
     def write_cash_flow(self, df: pl.DataFrame) -> int:
         """
@@ -301,47 +227,7 @@ class FundamentalStore:
             M.data_records.add(len(df), {"dataset": "cash_flow", "status": "failed"})
             raise
 
-    @traced("data.fundamental_query")
-    def get_cash_flow(
-        self,
-        instrument_id: str,
-        as_of_date: date,
-    ) -> pl.DataFrame:
-        """
-        Query cash flow data as of a specific date (PIT query).
-
-        Args:
-            instrument_id: Instrument identifier.
-            as_of_date: Point-in-time query date.
-
-        Returns:
-            DataFrame with cash flow data valid as of as_of_date.
-
-        """
-        logger.debug(
-            "Querying cash flow with PIT",
-            instrument_id=instrument_id,
-            as_of_date=as_of_date,
-        )
-
-        rows = self._client.fetchall(
-            """SELECT instrument_id, report_date, knowledge_date,
-                      effective_from, effective_to,
-                      operating_cash_flow, investing_cash_flow,
-                      financing_cash_flow, net_cash_flow
-               FROM cash_flow
-               WHERE instrument_id = ?
-                 AND effective_from <= ?
-                 AND (effective_to IS NULL OR effective_to > ?)
-               ORDER BY report_date DESC""",
-            [instrument_id, as_of_date, as_of_date],
-        )
-
-        return pl.DataFrame(rows) if rows else pl.DataFrame()
-
-    # ============================================================================
-    # 2. 公司行为数据 (PIT)
-    # ============================================================================
+    # ============ Corporate actions ============
 
     @traced("data.fundamental_write")
     def write_dividend(self, df: pl.DataFrame) -> int:
@@ -395,43 +281,6 @@ class FundamentalStore:
             logger.error("Dividend write failed", error=str(e))
             M.data_records.add(len(df), {"dataset": "dividend", "status": "failed"})
             raise
-
-    @traced("data.fundamental_query")
-    def get_dividend(
-        self,
-        instrument_id: str,
-        as_of_date: date,
-    ) -> pl.DataFrame:
-        """
-        Query dividend data as of a specific date (PIT query).
-
-        Args:
-            instrument_id: Instrument identifier.
-            as_of_date: Point-in-time query date.
-
-        Returns:
-            DataFrame with dividend data valid as of as_of_date.
-
-        """
-        logger.debug(
-            "Querying dividend with PIT",
-            instrument_id=instrument_id,
-            as_of_date=as_of_date,
-        )
-
-        rows = self._client.fetchall(
-            """SELECT instrument_id, ex_dividend_date, knowledge_date,
-                      effective_from, effective_to,
-                      dividend_per_share, dividend_yield
-               FROM dividend
-               WHERE instrument_id = ?
-                 AND effective_from <= ?
-                 AND (effective_to IS NULL OR effective_to > ?)
-               ORDER BY ex_dividend_date DESC""",
-            [instrument_id, as_of_date, as_of_date],
-        )
-
-        return pl.DataFrame(rows) if rows else pl.DataFrame()
 
     @traced("data.fundamental_write")
     def write_corporate_actions(self, df: pl.DataFrame) -> int:
@@ -488,6 +337,166 @@ class FundamentalStore:
             )
             raise
 
+    # ============ Performance forecast/express (PIT) ============
+
+    @traced("data.fundamental_write")
+    def write_forecast(self, df: pl.DataFrame) -> int:
+        """Write forecast data."""
+        return self._forecast_store.write(df)
+
+    @traced("data.fundamental_write")
+    def write_express(self, df: pl.DataFrame) -> int:
+        """Write express data."""
+        return self._express_store.write(df)
+
+    # ============ Query methods (PIT) ============
+
+    @traced("data.fundamental_query")
+    def get_balance_sheet(
+        self,
+        instrument_id: str,
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """
+        Query balance sheet data as of a specific date (PIT query).
+
+        Args:
+            instrument_id: Instrument identifier.
+            as_of_date: Point-in-time query date.
+
+        Returns:
+            DataFrame with balance sheet data valid as of as_of_date.
+
+        """
+        logger.debug(
+            "Querying balance sheet with PIT",
+            instrument_id=instrument_id,
+            as_of_date=as_of_date,
+        )
+
+        rows = self._client.fetchall(
+            """SELECT instrument_id, report_date, knowledge_date,
+                      effective_from, effective_to,
+                      total_assets, total_liabilities, net_assets,
+                      current_assets, current_liabilities
+               FROM balance_sheet
+               WHERE instrument_id = ?
+                 AND effective_from <= ?
+                 AND (effective_to IS NULL OR effective_to > ?)
+               ORDER BY report_date DESC""",
+            [instrument_id, as_of_date, as_of_date],
+        )
+        return pl.DataFrame(rows) if rows else pl.DataFrame()
+
+    @traced("data.fundamental_query")
+    def get_income_statement(
+        self,
+        instrument_id: str,
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """
+        Query income statement data as of a specific date (PIT query).
+
+        Args:
+            instrument_id: Instrument identifier.
+            as_of_date: Point-in-time query date.
+
+        Returns:
+            DataFrame with income statement data valid as of as_of_date.
+
+        """
+        logger.debug(
+            "Querying income statement with PIT",
+            instrument_id=instrument_id,
+            as_of_date=as_of_date,
+        )
+
+        rows = self._client.fetchall(
+            """SELECT instrument_id, report_date, knowledge_date,
+                      effective_from, effective_to,
+                      revenue, operating_profit, net_profit, eps
+               FROM income_statement
+               WHERE instrument_id = ?
+                 AND effective_from <= ?
+                 AND (effective_to IS NULL OR effective_to > ?)
+               ORDER BY report_date DESC""",
+            [instrument_id, as_of_date, as_of_date],
+        )
+        return pl.DataFrame(rows) if rows else pl.DataFrame()
+
+    @traced("data.fundamental_query")
+    def get_cash_flow(
+        self,
+        instrument_id: str,
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """
+        Query cash flow data as of a specific date (PIT query).
+
+        Args:
+            instrument_id: Instrument identifier.
+            as_of_date: Point-in-time query date.
+
+        Returns:
+            DataFrame with cash flow data valid as of as_of_date.
+
+        """
+        logger.debug(
+            "Querying cash flow with PIT",
+            instrument_id=instrument_id,
+            as_of_date=as_of_date,
+        )
+
+        rows = self._client.fetchall(
+            """SELECT instrument_id, report_date, knowledge_date,
+                      effective_from, effective_to,
+                      operating_cash_flow, investing_cash_flow,
+                      financing_cash_flow, net_cash_flow
+               FROM cash_flow
+               WHERE instrument_id = ?
+                 AND effective_from <= ?
+                 AND (effective_to IS NULL OR effective_to > ?)
+               ORDER BY report_date DESC""",
+            [instrument_id, as_of_date, as_of_date],
+        )
+        return pl.DataFrame(rows) if rows else pl.DataFrame()
+
+    @traced("data.fundamental_query")
+    def get_dividend(
+        self,
+        instrument_id: str,
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """
+        Query dividend data as of a specific date (PIT query).
+
+        Args:
+            instrument_id: Instrument identifier.
+            as_of_date: Point-in-time query date.
+
+        Returns:
+            DataFrame with dividend data valid as of as_of_date.
+
+        """
+        logger.debug(
+            "Querying dividend with PIT",
+            instrument_id=instrument_id,
+            as_of_date=as_of_date,
+        )
+
+        rows = self._client.fetchall(
+            """SELECT instrument_id, ex_dividend_date, knowledge_date,
+                      effective_from, effective_to,
+                      dividend_per_share, dividend_yield
+               FROM dividend
+               WHERE instrument_id = ?
+                 AND effective_from <= ?
+                 AND (effective_to IS NULL OR effective_to > ?)
+               ORDER BY ex_dividend_date DESC""",
+            [instrument_id, as_of_date, as_of_date],
+        )
+        return pl.DataFrame(rows) if rows else pl.DataFrame()
+
     @traced("data.fundamental_query")
     def get_corporate_actions(
         self,
@@ -496,7 +505,7 @@ class FundamentalStore:
         end_date: date | None = None,
     ) -> pl.DataFrame:
         """
-        Query corporate actions data (non-PIT query).
+        Query corporate actions data (non-PIT).
 
         Args:
             instrument_id: Instrument identifier.
@@ -535,29 +544,52 @@ class FundamentalStore:
                 ORDER BY announcement_date DESC""",  # noqa: S608
             params,
         )
-
         return pl.DataFrame(rows) if rows else pl.DataFrame()
 
-    # ============================================================================
-    # 3. 业绩预告/快报数据 (PIT)
-    # ============================================================================
-
-    @traced("data.fundamental_write")
-    def write_forecast(self, df: pl.DataFrame) -> int:
-        """Write forecast data."""
-        return self._forecast_store.write(df)
-
     @traced("data.fundamental_query")
-    def get_forecast(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
-        """Query forecast data with PIT."""
+    def get_forecast(
+        self,
+        instrument_id: str,
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """
+        Query forecast data as of a specific date (PIT query).
+
+        Args:
+            instrument_id: Instrument identifier.
+            as_of_date: Point-in-time query date.
+
+        Returns:
+            DataFrame with forecast data valid as of as_of_date.
+
+        """
+        logger.debug(
+            "Querying forecast with PIT",
+            instrument_id=instrument_id,
+            as_of_date=as_of_date,
+        )
         return self._forecast_store.get(instrument_id, as_of_date)
 
-    @traced("data.fundamental_write")
-    def write_express(self, df: pl.DataFrame) -> int:
-        """Write express data."""
-        return self._express_store.write(df)
-
     @traced("data.fundamental_query")
-    def get_express(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
-        """Query express data with PIT."""
+    def get_express(
+        self,
+        instrument_id: str,
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """
+        Query express data as of a specific date (PIT query).
+
+        Args:
+            instrument_id: Instrument identifier.
+            as_of_date: Point-in-time query date.
+
+        Returns:
+            DataFrame with express data valid as of as_of_date.
+
+        """
+        logger.debug(
+            "Querying express with PIT",
+            instrument_id=instrument_id,
+            as_of_date=as_of_date,
+        )
         return self._express_store.get(instrument_id, as_of_date)

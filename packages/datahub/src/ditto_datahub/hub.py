@@ -18,8 +18,8 @@ from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
 from ditto_datahub.accessors.instrument_accessor import InstrumentsAccessor
 from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
-from ditto_datahub.domains.market import MarketQueryService
-from ditto_datahub.domains.metadata import MetadataQueryService
+from ditto_datahub.domains.market import MarketService
+from ditto_datahub.domains.metadata import MetadataService
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.runtime.freeze_manager import FreezeManager
@@ -130,8 +130,8 @@ class DataHub:
         freeze_manager: FreezeManager,
         instrument_store: InstrumentStore,
         securities: InstrumentsAccessor,
-        metadata_query_service: MetadataQueryService,
-        market_query_service: MarketQueryService,
+        metadata_query_service: MetadataService,
+        market_query_service: MarketService,
         calendar: CalendarAccessor,
         adj_factor: AdjFactorAccessor,
         bars: BarsAccessor,
