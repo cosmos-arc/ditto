@@ -630,8 +630,12 @@ bars/
 ### v0.11.0 (2026-01-30)
 **重构**
 - 域重构：将 Capital 域拆分为 Fundamental 域和 Capital 域
+  - **原因**: 原 Capital 域混合了"企业基本面"（由公司公告驱动）和"资金面"（由交易行为驱动）两类不同驱动变量的数据，架构边界不清
   - Fundamental 域：企业基本面数据（财务报表、公司行为、业绩预告/快报）
   - Capital 域：资金与资本市场数据（估值指标、融资融券、股权质押、期货、指数成分股）
+- Service 命名统一：
+  - `MarketQueryService` → `MarketService`
+  - `MetadataQueryService` → `MetadataService`
 
 **新增**
 - Fundamental 域架构：`domains/fundamental/` 目录结构
@@ -660,14 +664,16 @@ bars/
 **改进**
 - 域职责更清晰：Fundamental 聚焦企业基本面，Capital 聚焦资金与资本市场
 - 子域模式：复杂域使用子域存储（如 Capital 的 margin/pledge，Fundamental 的 financial/corporate/forecast）
-- 测试覆盖：所有新域和子域的单元测试和集成测试
-- 文档更新：README 更新城架构说明
+- 错误处理统一：CapitalStore 的 write 方法添加完整的 try-except/rollback/logger/M.data_records
+- 测试覆盖：所有新域和子域的单元测试和集成测试，新增数据修正场景的 PIT 测试
+- 文档更新：README 更新城架构说明，设计文档标记版本差异
 
 **测试**
 - Fundamental 域单元测试：financial、corporate、forecast 子域的完整测试覆盖
 - Capital 域单元测试：margin、pledge 子域的完整测试覆盖
+- PIT 数据修正测试：为 forecast/express/valuation_metrics/margin_trading 添加数据修正场景测试
 - 集成测试更新：更新 Capital 域集成测试，移除已迁移到 Fundamental 的数据类型
-- 测试通过：所有单元测试和集成测试通过，类型检查通过
+- 测试通过：所有单元测试和集成测试通过（408 passed），类型检查通过（0 errors）
 
 ### v0.10.0 (2026-01-29)
 **新增**

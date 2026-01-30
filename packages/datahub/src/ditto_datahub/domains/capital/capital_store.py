@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import polars as pl
-from ditto_foundation import logger, traced
+from ditto_foundation import M, logger, traced
 
 from ditto_datahub.domains.capital.margin.margin_trading_store import MarginTradingStore
 from ditto_datahub.domains.capital.pledge.pledge_ratio_store import PledgeRatioStore
@@ -53,89 +53,175 @@ class CapitalStore:
 
     @traced("data.capital_write")
     def write_valuation_metrics(self, df: pl.DataFrame) -> int:
-        """Write valuation metrics data."""
-        records = df.to_dicts()
-        self._client.executemany(
-            """INSERT INTO valuation_metrics
-            (instrument_id, trade_date, knowledge_date,
-             effective_from, effective_to,
-             pe_ratio, pb_ratio, ps_ratio, dividend_yield, market_cap)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT DO NOTHING""",
-            [
-                (
-                    r["instrument_id"],
-                    r["trade_date"],
-                    r["knowledge_date"],
-                    r["effective_from"],
-                    r.get("effective_to"),
-                    r.get("pe_ratio"),
-                    r.get("pb_ratio"),
-                    r.get("ps_ratio"),
-                    r.get("dividend_yield"),
-                    r.get("market_cap"),
-                )
-                for r in records
-            ],
-        )
-        self._client.commit()
-        return len(records)
+        """
+        Write valuation metrics data.
+
+        Args:
+            df: DataFrame with valuation metrics data including PIT columns.
+
+        Returns:
+            Number of records written.
+
+        Raises:
+            Exception: If write operation fails.
+
+        """
+        logger.info("Starting valuation metrics data write", record_count=len(df))
+
+        try:
+            records = df.to_dicts()
+            self._client.executemany(
+                """INSERT INTO valuation_metrics
+                (instrument_id, trade_date, knowledge_date,
+                 effective_from, effective_to,
+                 pe_ratio, pb_ratio, ps_ratio, dividend_yield, market_cap)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT DO NOTHING""",
+                [
+                    (
+                        r["instrument_id"],
+                        r["trade_date"],
+                        r["knowledge_date"],
+                        r["effective_from"],
+                        r.get("effective_to"),
+                        r.get("pe_ratio"),
+                        r.get("pb_ratio"),
+                        r.get("ps_ratio"),
+                        r.get("dividend_yield"),
+                        r.get("market_cap"),
+                    )
+                    for r in records
+                ],
+            )
+            self._client.commit()
+
+            logger.info(
+                "Valuation metrics data written successfully", record_count=len(records)
+            )
+            M.data_records.add(
+                len(records), {"dataset": "valuation_metrics", "status": "success"}
+            )
+            return len(records)
+
+        except Exception as e:
+            self._client.rollback()
+            logger.error("Valuation metrics write failed", error=str(e))
+            M.data_records.add(
+                len(df), {"dataset": "valuation_metrics", "status": "failed"}
+            )
+            raise
 
     # ============ Futures (direct implementation) ============
 
     @traced("data.capital_write")
     def write_futures(self, df: pl.DataFrame) -> int:
-        """Write futures data."""
-        records = df.to_dicts()
-        self._client.executemany(
-            """INSERT INTO futures
-            (instrument_id, trade_date, knowledge_date,
-             effective_from, effective_to,
-             open_interest, settlement_price, volume, turnover)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT DO NOTHING""",
-            [
-                (
-                    r["instrument_id"],
-                    r["trade_date"],
-                    r["knowledge_date"],
-                    r["effective_from"],
-                    r.get("effective_to"),
-                    r.get("open_interest"),
-                    r.get("settlement_price"),
-                    r.get("volume"),
-                    r.get("turnover"),
-                )
-                for r in records
-            ],
-        )
-        self._client.commit()
-        return len(records)
+        """
+        Write futures data.
+
+        Args:
+            df: DataFrame with futures data including PIT columns.
+
+        Returns:
+            Number of records written.
+
+        Raises:
+            Exception: If write operation fails.
+
+        """
+        logger.info("Starting futures data write", record_count=len(df))
+
+        try:
+            records = df.to_dicts()
+            self._client.executemany(
+                """INSERT INTO futures
+                (instrument_id, trade_date, knowledge_date,
+                 effective_from, effective_to,
+                 open_interest, settlement_price, volume, turnover)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT DO NOTHING""",
+                [
+                    (
+                        r["instrument_id"],
+                        r["trade_date"],
+                        r["knowledge_date"],
+                        r["effective_from"],
+                        r.get("effective_to"),
+                        r.get("open_interest"),
+                        r.get("settlement_price"),
+                        r.get("volume"),
+                        r.get("turnover"),
+                    )
+                    for r in records
+                ],
+            )
+            self._client.commit()
+
+            logger.info("Futures data written successfully", record_count=len(records))
+            M.data_records.add(
+                len(records), {"dataset": "futures", "status": "success"}
+            )
+            return len(records)
+
+        except Exception as e:
+            self._client.rollback()
+            logger.error("Futures write failed", error=str(e))
+            M.data_records.add(len(df), {"dataset": "futures", "status": "failed"})
+            raise
 
     # ============ Index composition (direct implementation) ============
 
     @traced("data.capital_write")
     def write_index_composition(self, df: pl.DataFrame) -> int:
-        """Write index composition data."""
-        records = df.to_dicts()
-        self._client.executemany(
-            """INSERT INTO index_composition
-            (index_id, instrument_id, weight, effective_from, effective_to)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT DO NOTHING""",
-            [
-                (
-                    r["index_id"],
-                    r["instrument_id"],
-                    r.get("weight"),
-                    r["effective_from"],
-                    r.get("effective_to"),
-                )
-                for r in records
-            ],
-        )
-        self._client.commit()
-        return len(records)
+        """
+        Write index composition data.
+
+        Args:
+            df: DataFrame with index composition data including PIT columns.
+
+        Returns:
+            Number of records written.
+
+        Raises:
+            Exception: If write operation fails.
+
+        """
+        logger.info("Starting index composition data write", record_count=len(df))
+
+        try:
+            records = df.to_dicts()
+            self._client.executemany(
+                """INSERT INTO index_composition
+                (index_id, instrument_id, weight, effective_from, effective_to)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT DO NOTHING""",
+                [
+                    (
+                        r["index_id"],
+                        r["instrument_id"],
+                        r.get("weight"),
+                        r["effective_from"],
+                        r.get("effective_to"),
+                    )
+                    for r in records
+                ],
+            )
+            self._client.commit()
+
+            logger.info(
+                "Index composition data written successfully", record_count=len(records)
+            )
+            M.data_records.add(
+                len(records), {"dataset": "index_composition", "status": "success"}
+            )
+            return len(records)
+
+        except Exception as e:
+            self._client.rollback()
+            logger.error("Index composition write failed", error=str(e))
+            M.data_records.add(
+                len(df), {"dataset": "index_composition", "status": "failed"}
+            )
+            raise
 
     # ============ Query methods (PIT) ============
 

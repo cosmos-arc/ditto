@@ -23,6 +23,10 @@ from ditto_datahub.accessors.instrument_accessor import InstrumentsAccessor
 from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.config.data_root import DataRootConfig
+from ditto_datahub.domains.capital import CapitalService
+from ditto_datahub.domains.capital.capital_store import CapitalStore
+from ditto_datahub.domains.fundamental import FundamentalService
+from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
 from ditto_datahub.domains.market import MarketService
 from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
 from ditto_datahub.domains.market.etf.bars import EtfBarsStore
@@ -245,6 +249,46 @@ class DataHubProvider(Provider):
         return IndexConstituentStore(config.data_root)
 
     # ========================================================================
+    # Fundamental & Capital Domain Stores
+    # ========================================================================
+
+    @provide
+    def fundamental_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> FundamentalStore:
+        """Fundamental domain data storage."""
+        return FundamentalStore(sqlite_client)
+
+    @provide
+    def capital_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> CapitalStore:
+        """Capital domain data storage."""
+        return CapitalStore(sqlite_client)
+
+    # ========================================================================
+    # Fundamental & Capital Query Services
+    # ========================================================================
+
+    @provide
+    def fundamental_query_service(
+        self,
+        fundamental_store: FundamentalStore,
+    ) -> FundamentalService:
+        """Fundamental 查询服务."""
+        return FundamentalService(fundamental_store=fundamental_store)
+
+    @provide
+    def capital_query_service(
+        self,
+        capital_store: CapitalStore,
+    ) -> CapitalService:
+        """Capital 查询服务."""
+        return CapitalService(capital_store=capital_store)
+
+    # ========================================================================
     # Accessor Layer
     # ========================================================================
 
@@ -446,6 +490,8 @@ class DataHubProvider(Provider):
         securities: InstrumentsAccessor,
         metadata_query_service: MetadataService,
         market_query_service: MarketService,
+        fundamental_query_service: FundamentalService,
+        capital_query_service: CapitalService,
         calendar: CalendarAccessor,
         adj_factor: AdjFactorAccessor,
         bars: BarsAccessor,
@@ -472,6 +518,8 @@ class DataHubProvider(Provider):
             securities=securities,
             metadata_query_service=metadata_query_service,
             market_query_service=market_query_service,
+            fundamental_query_service=fundamental_query_service,
+            capital_query_service=capital_query_service,
             calendar=calendar,
             adj_factor=adj_factor,
             bars=bars,

@@ -9,9 +9,16 @@ Fundamental Domain - 企业基本面数据域。
 - PIT 时间: effective_from, effective_to
 """
 
+from ditto_datahub.domains.fundamental.fundamental_ingestion import (
+    FundamentalIngestion,
+)
 from ditto_datahub.domains.fundamental.fundamental_service import (
     FundamentalService,
 )
 from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
 
-__all__ = ["FundamentalService", "FundamentalStore"]
+__all__ = [
+    "FundamentalIngestion",
+    "FundamentalService",
+    "FundamentalStore",
+]

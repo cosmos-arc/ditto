@@ -71,6 +71,7 @@ class Domain(str, Enum):
     METADATA = "metadata"
     MARKET = "market"
     CAPITAL = "capital"
+    FUNDAMENTAL = "fundamental"
 
 
 # ============ Source 枚举 ============

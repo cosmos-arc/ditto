@@ -541,7 +541,7 @@ class FundamentalStore:
                        effective_date, description
                 FROM corporate_actions
                 {where_clause}
-                ORDER BY announcement_date DESC""",  # noqa: S608
+                ORDER BY announcement_date DESC""",  # noqa: S608 - where_clause 由白名单条件构建（仅包含 instrument_id/start_date/end_date）
             params,
         )
         return pl.DataFrame(rows) if rows else pl.DataFrame()

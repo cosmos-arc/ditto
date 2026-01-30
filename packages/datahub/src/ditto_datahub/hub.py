@@ -18,6 +18,8 @@ from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
 from ditto_datahub.accessors.instrument_accessor import InstrumentsAccessor
 from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
+from ditto_datahub.domains.capital import CapitalService
+from ditto_datahub.domains.fundamental import FundamentalService
 from ditto_datahub.domains.market import MarketService
 from ditto_datahub.domains.metadata import MetadataService
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
@@ -132,6 +134,8 @@ class DataHub:
         securities: InstrumentsAccessor,
         metadata_query_service: MetadataService,
         market_query_service: MarketService,
+        fundamental_query_service: FundamentalService,
+        capital_query_service: CapitalService,
         calendar: CalendarAccessor,
         adj_factor: AdjFactorAccessor,
         bars: BarsAccessor,
@@ -158,6 +162,8 @@ class DataHub:
             securities: Instruments accessor (with ingestion helpers).
             metadata_query_service: Metadata query service (unified query API).
             market_query_service: Market query service (unified market data API).
+            fundamental_query_service: Fundamental query service.
+            capital_query_service: Capital query service.
             calendar: Trading calendar accessor.
             adj_factor: Adjustment factor accessor.
             bars: OHLCV bars accessor.
@@ -178,6 +184,8 @@ class DataHub:
         self.securities = securities
         self.metadata = metadata_query_service
         self.market = market_query_service
+        self.fundamental = fundamental_query_service
+        self.capital = capital_query_service
         self.calendar = calendar
         self.adj_factor = adj_factor
         self.bars = bars

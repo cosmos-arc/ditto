@@ -1,10 +1,11 @@
 # DataHub 数据层完整重构设计
 
 > 创建日期: 2026-01-26
-> 版本: v3.4
+> 版本: v3.5
 > 状态: 设计草案
 >
 > **更新记录**:
+> - v3.5 (2026-01-30): **三域架构重构** - 将 Capital 域拆分为 Fundamental（企业基本面）和 Capital（资金与市场）两个独立域，明确职责边界
 > - v3.4 (2026-01-26): 数据集命名优化 - adj_factor→stock_adj_factor，universe_def→universe，board→top_board，删除 dividend 数据集
 > - v3.3 (2026-01-26): 修正 industry_flow 实现方式 - 改为从 stock_flow 按 industry_mapping 聚合生成，使用申万行业分类而非同花顺行业
 > - v3.2 (2026-01-26): 修正 limit_board 数据源接口 - Tushare 提供 `limit_list_d` (298) 和 `limit_step` (356) 接口，无需使用 AkShare
@@ -16,6 +17,14 @@
 > - v1.0 (2026-01-26): 初始版本，包含完整的数据层重构设计
 >
 > **目的**: 基于 ETF 行业轮动策略的需求，设计一套符合量化业界最佳实践的数据架构，支持基础数据、特征和因子的分层管理，彻底重构 DataHub 数据层。
+
+---
+
+> **重要说明 (v3.5)**: 本设计文档中的 Capital/Fundamental 域定义是基于 v3.4 版本的规划。实际实现（v3.5）已按以下职责重新划分：
+> - **Fundamental 域**: 企业基本面数据（财务报表、公司行为、业绩预告/快报）
+> - **Capital 域**: 资金与资本市场数据（融资融券、股权质押、估值指标、期货、指数成分股）
+>
+> 详见 ADR-0005: [域重构决策记录](../../adr/0005-domain-restructure-fundamental-capital.md)
 
 ---
 

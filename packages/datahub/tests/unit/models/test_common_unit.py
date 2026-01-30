@@ -1,7 +1,7 @@
 """Tests for DataHub common models."""
 
 import pytest
-from ditto_datahub.models import Dataset
+from ditto_datahub.models import Dataset, Domain
 from ditto_datahub.models.common import AssetSidRange, DQSeverity, OnDuplicate
 
 
@@ -45,6 +45,27 @@ class TestDataset:
                 assert Dataset.ETF_DAILY.value == "etf_daily"
             case _:
                 pytest.fail("应该匹配到 ETF_DAILY")
+
+
+@pytest.mark.unit
+class TestDomain:
+    """测试 Domain 枚举."""
+
+    def test_domain_values(self) -> None:
+        """验证所有域枚举值正确."""
+        assert Domain.METADATA.value == "metadata"
+        assert Domain.MARKET.value == "market"
+        assert Domain.CAPITAL.value == "capital"
+        assert Domain.FUNDAMENTAL.value == "fundamental"
+
+    def test_domain_is_string_enum(self) -> None:
+        """验证 Domain 是字符串枚举."""
+        assert Domain.METADATA == "metadata"
+        assert Domain.FUNDAMENTAL == "fundamental"
+
+    def test_should_have_four_members(self) -> None:
+        """应该有四个成员（四域架构）."""
+        assert len(Domain) == 4
 
 
 @pytest.mark.unit

@@ -12,6 +12,10 @@ from ditto_datahub.accessors.index_accessor import IndexAccessor
 from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
 from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
+from ditto_datahub.domains.capital import CapitalService
+from ditto_datahub.domains.capital.capital_store import CapitalStore
+from ditto_datahub.domains.fundamental import FundamentalService
+from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
 from ditto_datahub.domains.market import MarketService
 from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
 from ditto_datahub.domains.market.etf.bars import EtfBarsStore
@@ -161,6 +165,20 @@ def datahub_with_dependencies(
         index_constituent_store=index_constituent_store,
     )
 
+    # Fundamental & Capital Domain Stores
+    fundamental_store = FundamentalStore(sqlite_client)
+    capital_store = CapitalStore(sqlite_client)
+
+    # Fundamental Query Service
+    fundamental_query_service = FundamentalService(
+        fundamental_store=fundamental_store,
+    )
+
+    # Capital Query Service
+    capital_query_service = CapitalService(
+        capital_store=capital_store,
+    )
+
     # Accessor Layer
     from ditto_datahub.accessors.instrument_accessor import (
         InstrumentsAccessor as SecuritiesAccessor,
@@ -198,6 +216,8 @@ def datahub_with_dependencies(
         securities=securities,
         metadata_query_service=metadata_query_service,
         market_query_service=market_query_service,
+        fundamental_query_service=fundamental_query_service,
+        capital_query_service=capital_query_service,
         calendar=calendar,
         adj_factor=adj_factor,
         bars=bars,

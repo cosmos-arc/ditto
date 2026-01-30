@@ -63,6 +63,7 @@ class IngestionCoordinator:
         _metadata: Metadata domain ingestion service.
         _market: Market domain ingestion service (optional).
         _capital: Capital domain ingestion service (optional).
+            fundamental: Fundamental domain ingestion service (optional).
 
     Examples:
         >>> coordinator = IngestionCoordinator(
@@ -85,6 +86,7 @@ class IngestionCoordinator:
         metadata: object,  # MetadataIngestion (TODO: 定义后再类型注解)
         market: object | None = None,  # MarketIngestion | None
         capital: object | None = None,  # CapitalIngestion | None
+        fundamental: object | None = None,  # FundamentalIngestion | None
     ) -> None:
         """
         初始化 IngestionCoordinator.
@@ -93,11 +95,13 @@ class IngestionCoordinator:
             metadata: Metadata domain ingestion service.
             market: Market domain ingestion service (optional).
             capital: Capital domain ingestion service (optional).
+            fundamental: Fundamental domain ingestion service (optional).
 
         """
         self._metadata = metadata
         self._market = market
         self._capital = capital
+        self._fundamental = fundamental
 
     async def ingest(
         self,
@@ -112,7 +116,7 @@ class IngestionCoordinator:
         根据 domain 参数路由到对应的域 Ingestion 服务。
 
         Args:
-            domain: 数据域（METADATA, MARKET, CAPITAL）。
+            domain: 数据域（METADATA, MARKET, CAPITAL, FUNDAMENTAL）。
             data_type: 数据类型（如 "instruments", "daily_bars" 等）。
             source: 数据源（TUSHARE, AKSHARE 等）。
             trade_date: 交易日期。
@@ -140,6 +144,8 @@ class IngestionCoordinator:
             return await self._ingest_market(data_type, source, trade_date)
         elif domain == Domain.CAPITAL:
             return await self._ingest_capital(data_type, source, trade_date)
+        elif domain == Domain.FUNDAMENTAL:
+            return await self._ingest_fundamental(data_type, source, trade_date)
         else:
             raise ValueError(f"不支持的 domain: {domain}")
 
@@ -207,6 +213,36 @@ class IngestionCoordinator:
             data_type=data_type,
             domain="market",
             error="MarketIngestion 尚未实现",
+        )
+
+    async def _ingest_fundamental(
+        self,
+        data_type: str,
+        source: Source,
+        trade_date: date,
+    ) -> IngestionResult:
+        """
+        Fundamental 域摄入.
+
+        Args:
+            data_type: 数据类型.
+            source: 数据源.
+            trade_date: 交易日期.
+
+        Returns:
+            IngestionResult: 摄入结果.
+
+        Raises:
+            ValueError: 当 fundamental 未配置时.
+
+        """
+        if self._fundamental is None:
+            raise ValueError("Fundamental ingestion service not configured")
+
+        # Delegate to FundamentalIngestion (待实现)
+        # return await self._fundamental.ingest(data_type, source, trade_date)
+        raise NotImplementedError(
+            f"Fundamental ingestion not yet implemented: {data_type}"
         )
 
     async def _ingest_capital(
