@@ -8,6 +8,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.domains.fundamental.forecast.forecast_store import ForecastStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
@@ -35,6 +36,7 @@ class FundamentalStore:
 
         """
         self._client = sqlite_client
+        self._forecast_store = ForecastStore(sqlite_client)
 
     def close(self) -> None:
         """Close the underlying SQLite client."""
@@ -533,3 +535,17 @@ class FundamentalStore:
         )
 
         return pl.DataFrame(rows) if rows else pl.DataFrame()
+
+    # ============================================================================
+    # 3. 业绩预告/快报数据 (PIT)
+    # ============================================================================
+
+    @traced("data.fundamental_write")
+    def write_forecast(self, df: pl.DataFrame) -> int:
+        """Write forecast data."""
+        return self._forecast_store.write(df)
+
+    @traced("data.fundamental_query")
+    def get_forecast(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
+        """Query forecast data with PIT."""
+        return self._forecast_store.get(instrument_id, as_of_date)
