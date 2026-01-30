@@ -6,7 +6,7 @@
 
 标识符转换：
 - 接收 symbol（如 000001）
-- 查询 SecurityStore 获取 exchange
+- 查询 InstrumentStore 获取 exchange
 - 转换为 TDX 格式（如 000001.SZ）
 - 返回数据包含 symbol 列
 """
@@ -18,8 +18,8 @@ import polars as pl
 from loguru import logger
 
 from ditto_datahub.config import DataSourceSettings
+from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.sources.tdx.reader import TdxReader
-from ditto_datahub.stores.security_store import SecurityStore
 
 
 class TdxSource:
@@ -37,19 +37,19 @@ class TdxSource:
     def __init__(
         self,
         data_source_settings: DataSourceSettings,
-        security_store: SecurityStore,
+        instrument_store: InstrumentStore,
     ) -> None:
         """
         初始化通达信数据源.
 
         Args:
             data_source_settings: 数据源配置（包含 tdx_path）
-            security_store: 证券存储（用于 symbol → exchange 转换）
+            instrument_store: 证券存储（用于 symbol → exchange 转换）
 
         """
         self.tdx_path = Path(data_source_settings.tdx_path)
         self.reader = TdxReader(self.tdx_path)
-        self._security_store = security_store
+        self._instrument_store = instrument_store
 
     def fetch_stock_daily_bars(
         self,
@@ -110,7 +110,7 @@ class TdxSource:
             {symbol: exchange} 映射字典
 
         """
-        # TODO: 实现更高效的批量查询，从 SecurityStore 获取
+        # TODO: 实现更高效的批量查询，从 InstrumentStore 获取
         # 目前使用默认的交易所映射规则
         mapping: dict[str, str] = {}
         for symbol in symbols:

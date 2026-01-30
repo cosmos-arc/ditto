@@ -28,7 +28,7 @@ from ditto_datahub.domains.market.index.constituent import IndexConstituentStore
 from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
 from ditto_datahub.domains.market.stock.bars import StockBarsStore
 from ditto_datahub.domains.market.stock.status import StockStatusStore
-from ditto_datahub.domains.metadata.security import SecurityStore
+from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.models import AssetSidRange
 
 
@@ -94,7 +94,7 @@ class MarketQueryService:
         stock_adj_store: StockAdjFactorStore,
         etf_bars_store: EtfBarsStore,
         etf_status_store: EtfStatusStore,
-        security_store: SecurityStore,
+        instrument_store: InstrumentStore,
         etf_nav_store: EtfNavStore | None = None,
         etf_adj_store: EtfAdjFactorStore | None = None,
         index_bars_store: IndexBarsStore | None = None,
@@ -109,7 +109,7 @@ class MarketQueryService:
             stock_adj_store: 股票复权因子存储.
             etf_bars_store: ETF K线存储.
             etf_status_store: ETF 状态存储.
-            security_store: 证券元数据存储.
+            instrument_store: 证券元数据存储.
             etf_nav_store: ETF 净值存储（可选）.
             etf_adj_store: ETF 复权因子存储（可选）.
             index_bars_store: 指数 K线存储（可选）.
@@ -121,7 +121,7 @@ class MarketQueryService:
         self._stock_adj_store = stock_adj_store
         self._etf_bars_store = etf_bars_store
         self._etf_status_store = etf_status_store
-        self._security_store = security_store
+        self._instrument_store = instrument_store
         self._etf_nav_store = etf_nav_store
         self._etf_adj_store = etf_adj_store
         self._index_bars_store = index_bars_store
@@ -176,7 +176,7 @@ class MarketQueryService:
 
         # 4. 添加 symbol 列（如果需要）
         if query.with_symbol and not query.raw:
-            df = self._security_store.enrich_with_symbol(df)
+            df = self._instrument_store.enrich_with_symbol(df)
 
         # 5. 应用复权（如果需要且不是 raw 模式）
         if not query.raw and query.adj != AdjType.NONE and asset_class == "stock":

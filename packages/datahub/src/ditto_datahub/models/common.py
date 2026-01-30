@@ -7,6 +7,7 @@ __all__ = [
     "AssetSidRange",
     "DQSeverity",
     "Dataset",
+    "Domain",
     "OnDuplicate",
     "Source",
 ]
@@ -59,6 +60,19 @@ class Dataset(str, Enum):
         return dataset == cls.CALENDAR.value
 
 
+# ============ Domain 枚举 ============
+class Domain(str, Enum):
+    """
+    支持的数据域类型。
+
+    数据域枚举，用于 IngestionCoordinator 路由。
+    """
+
+    METADATA = "metadata"
+    MARKET = "market"
+    CAPITAL = "capital"
+
+
 # ============ Source 枚举 ============
 class Source(str, Enum):
     """
@@ -84,7 +98,7 @@ class AssetSidRange(NamedTuple):
     """
     Asset class SID range definition.
 
-    统一使用百万级范围，与 SecurityMapper 保持一致:
+    统一使用百万级范围，与 InstrumentsAccessor 保持一致:
     - stock: 1M (1,000,000 - 1,999,999)
     - etf: 2M (2,000,000 - 2,999,999)
     - index: 3M (3,000,000 - 3,999,999)

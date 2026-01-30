@@ -30,7 +30,7 @@ class TestQualityReconciliationServiceInit:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
     ) -> None:
         """正常初始化."""
         # Act
@@ -38,14 +38,14 @@ class TestQualityReconciliationServiceInit:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         # Assert
         assert service._engine is mock_quality_engine
         assert service._tdx_source is mock_tdx_source
         assert service._comparison_accessor is mock_comparison_accessor
-        assert service._security_store is mock_security_store
+        assert service._instrument_store is mock_instrument_store
 
 
 @pytest.mark.unit
@@ -58,7 +58,7 @@ class TestDailyReconciliationSuccess:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
         sample_primary_df,
         sample_secondary_df,
         sample_dq_result_passed,
@@ -69,14 +69,14 @@ class TestDailyReconciliationSuccess:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         # Mock enrich_with_symbol 返回包含 symbol 的 DataFrame
         enriched_df = sample_primary_df.with_columns(
             pl.Series("symbol", ["000001", "600000", "510300"])
         )
-        mock_security_store.enrich_with_symbol.return_value = enriched_df
+        mock_instrument_store.enrich_with_symbol.return_value = enriched_df
 
         # Mock TDX 数据源返回数据
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
@@ -98,7 +98,7 @@ class TestDailyReconciliationSuccess:
         assert result["dataset"] == "stock_daily"
 
         # 验证调用链
-        mock_security_store.enrich_with_symbol.assert_called_once_with(
+        mock_instrument_store.enrich_with_symbol.assert_called_once_with(
             sample_primary_df
         )
         mock_tdx_source.fetch_stock_daily_bars.assert_called_once()
@@ -109,7 +109,7 @@ class TestDailyReconciliationSuccess:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
         sample_primary_df,
     ) -> None:
         """无辅助数据时跳过."""
@@ -118,13 +118,13 @@ class TestDailyReconciliationSuccess:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         enriched_df = sample_primary_df.with_columns(
             pl.Series("symbol", ["000001", "600000", "510300"])
         )
-        mock_security_store.enrich_with_symbol.return_value = enriched_df
+        mock_instrument_store.enrich_with_symbol.return_value = enriched_df
 
         # TDX 返回空数据
         mock_tdx_source.fetch_stock_daily_bars.return_value = pl.DataFrame()
@@ -149,7 +149,7 @@ class TestDailyReconciliationSuccess:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
         sample_primary_df,
         sample_secondary_df,
         sample_dq_result_passed,
@@ -160,13 +160,13 @@ class TestDailyReconciliationSuccess:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         enriched_df = sample_primary_df.with_columns(
             pl.Series("symbol", ["000001", "600000", "510300"])
         )
-        mock_security_store.enrich_with_symbol.return_value = enriched_df
+        mock_instrument_store.enrich_with_symbol.return_value = enriched_df
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
@@ -192,7 +192,7 @@ class TestDailyReconciliationWithIssues:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
         sample_primary_df,
         sample_secondary_df,
         sample_dq_result_with_issues,
@@ -203,13 +203,13 @@ class TestDailyReconciliationWithIssues:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         enriched_df = sample_primary_df.with_columns(
             pl.Series("symbol", ["000001", "600000", "510300"])
         )
-        mock_security_store.enrich_with_symbol.return_value = enriched_df
+        mock_instrument_store.enrich_with_symbol.return_value = enriched_df
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
         mock_quality_engine.check_cross_source.return_value = (
             sample_dq_result_with_issues
@@ -234,7 +234,7 @@ class TestDailyReconciliationWithIssues:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
         sample_primary_df,
         sample_secondary_df,
         sample_dq_result_with_issues,
@@ -245,13 +245,13 @@ class TestDailyReconciliationWithIssues:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         enriched_df = sample_primary_df.with_columns(
             pl.Series("symbol", ["000001", "600000", "510300"])
         )
-        mock_security_store.enrich_with_symbol.return_value = enriched_df
+        mock_instrument_store.enrich_with_symbol.return_value = enriched_df
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
         mock_quality_engine.check_cross_source.return_value = (
             sample_dq_result_with_issues
@@ -277,7 +277,7 @@ class TestDailyReconciliationEdgeCases:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
     ) -> None:
         """缺少 sid 列时抛出异常."""
         # Arrange
@@ -285,7 +285,7 @@ class TestDailyReconciliationEdgeCases:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         # 创建没有 sid 列的 DataFrame
@@ -312,7 +312,7 @@ class TestDailyReconciliationEdgeCases:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
         sample_primary_df,
         sample_secondary_df,
         sample_dq_result_passed,
@@ -323,13 +323,13 @@ class TestDailyReconciliationEdgeCases:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         # 重置 side_effect 并设置 return_value 返回没有 symbol 列的 DataFrame
-        mock_security_store.enrich_with_symbol.side_effect = None
+        mock_instrument_store.enrich_with_symbol.side_effect = None
         df_without_symbol = sample_primary_df.select("sid")
-        mock_security_store.enrich_with_symbol.return_value = df_without_symbol
+        mock_instrument_store.enrich_with_symbol.return_value = df_without_symbol
 
         # Mock TDX 返回数据，以便代码能执行到 symbol 检查
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
@@ -353,7 +353,7 @@ class TestDailyReconciliationEdgeCases:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
         sample_primary_df,
         sample_secondary_df,
     ) -> None:
@@ -363,13 +363,13 @@ class TestDailyReconciliationEdgeCases:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         enriched_df = sample_primary_df.with_columns(
             pl.Series("symbol", ["000001", "600000", "510300"])
         )
-        mock_security_store.enrich_with_symbol.return_value = enriched_df
+        mock_instrument_store.enrich_with_symbol.return_value = enriched_df
 
         # Mock TDX 返回数据
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
@@ -400,7 +400,7 @@ class TestConvertResultToDf:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
         sample_dq_result_passed,
     ) -> None:
         """无问题时返回空 DataFrame."""
@@ -409,7 +409,7 @@ class TestConvertResultToDf:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         # Act
@@ -425,7 +425,7 @@ class TestConvertResultToDf:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
         sample_dq_result_with_issues,
     ) -> None:
         """单个问题多个样本转换为多行."""
@@ -434,7 +434,7 @@ class TestConvertResultToDf:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         # Act
@@ -453,7 +453,7 @@ class TestConvertResultToDf:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
         sample_dq_result_with_issues,
     ) -> None:
         """所有字段正确映射."""
@@ -462,7 +462,7 @@ class TestConvertResultToDf:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         # Act
@@ -496,7 +496,7 @@ class TestSendAlerts:
         mock_quality_engine,
         mock_tdx_source,
         mock_comparison_accessor,
-        mock_security_store,
+        mock_instrument_store,
         sample_dq_result_with_issues,
     ) -> None:
         """告警记录为 warning 级别."""
@@ -505,7 +505,7 @@ class TestSendAlerts:
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
             comparison_accessor=mock_comparison_accessor,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
 
         # Act - 调用 _send_alerts

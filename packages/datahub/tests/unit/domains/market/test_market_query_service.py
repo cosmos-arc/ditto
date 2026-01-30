@@ -70,8 +70,8 @@ def mock_index_constituent_store() -> MagicMock:
 
 
 @pytest.fixture
-def mock_security_store() -> MagicMock:
-    """Create mock SecurityStore."""
+def mock_instrument_store() -> MagicMock:
+    """Create mock InstrumentStore."""
     return MagicMock()
 
 
@@ -83,7 +83,7 @@ def market_query_service(
     mock_etf_bars_store: MagicMock,
     mock_etf_status_store: MagicMock,
     mock_index_constituent_store: MagicMock,
-    mock_security_store: MagicMock,
+    mock_instrument_store: MagicMock,
 ) -> MarketQueryService:
     """Create MarketQueryService instance with mocked dependencies."""
     return MarketQueryService(
@@ -92,7 +92,7 @@ def market_query_service(
         stock_adj_store=mock_stock_adj_store,
         etf_bars_store=mock_etf_bars_store,
         etf_status_store=mock_etf_status_store,
-        security_store=mock_security_store,
+        instrument_store=mock_instrument_store,
         etf_nav_store=None,
         etf_adj_store=None,
         index_bars_store=None,
@@ -107,7 +107,7 @@ def market_query_service_without_optionals(
     mock_stock_adj_store: MagicMock,
     mock_etf_bars_store: MagicMock,
     mock_etf_status_store: MagicMock,
-    mock_security_store: MagicMock,
+    mock_instrument_store: MagicMock,
 ) -> MarketQueryService:
     """Create MarketQueryService instance without optional stores."""
     return MarketQueryService(
@@ -116,7 +116,7 @@ def market_query_service_without_optionals(
         stock_adj_store=mock_stock_adj_store,
         etf_bars_store=mock_etf_bars_store,
         etf_status_store=mock_etf_status_store,
-        security_store=mock_security_store,
+        instrument_store=mock_instrument_store,
         etf_nav_store=None,
         etf_adj_store=None,
         index_bars_store=None,
@@ -248,7 +248,7 @@ class TestMarketQueryServiceInit:
         mock_stock_adj_store: MagicMock,
         mock_etf_bars_store: MagicMock,
         mock_etf_status_store: MagicMock,
-        mock_security_store: MagicMock,
+        mock_instrument_store: MagicMock,
     ) -> None:
         """Test initialization with all required stores."""
         service = MarketQueryService(
@@ -257,14 +257,14 @@ class TestMarketQueryServiceInit:
             stock_adj_store=mock_stock_adj_store,
             etf_bars_store=mock_etf_bars_store,
             etf_status_store=mock_etf_status_store,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
         )
         assert service._stock_bars_store is mock_stock_bars_store
         assert service._stock_status_store is mock_stock_status_store
         assert service._stock_adj_store is mock_stock_adj_store
         assert service._etf_bars_store is mock_etf_bars_store
         assert service._etf_status_store is mock_etf_status_store
-        assert service._security_store is mock_security_store
+        assert service._instrument_store is mock_instrument_store
         assert service._etf_nav_store is None
         assert service._etf_adj_store is None
         assert service._index_bars_store is None
@@ -277,7 +277,7 @@ class TestMarketQueryServiceInit:
         mock_stock_adj_store: MagicMock,
         mock_etf_bars_store: MagicMock,
         mock_etf_status_store: MagicMock,
-        mock_security_store: MagicMock,
+        mock_instrument_store: MagicMock,
         mock_etf_nav_store: MagicMock,
         mock_etf_adj_store: MagicMock,
         mock_index_bars_store: MagicMock,
@@ -290,7 +290,7 @@ class TestMarketQueryServiceInit:
             stock_adj_store=mock_stock_adj_store,
             etf_bars_store=mock_etf_bars_store,
             etf_status_store=mock_etf_status_store,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             etf_nav_store=mock_etf_nav_store,
             etf_adj_store=mock_etf_adj_store,
             index_bars_store=mock_index_bars_store,

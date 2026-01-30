@@ -3,9 +3,11 @@
 import polars as pl
 import pytest
 from ditto_datahub.accessors.index_accessor import IndexAccessor
+from ditto_datahub.domains.metadata.instrument import (
+    InstrumentStore,
+)
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
-from ditto_datahub.stores.security_store import SecurityStore
 from pytest_mock import MockerFixture
 
 
@@ -22,22 +24,22 @@ def mock_index_weight_store(mocker: MockerFixture) -> IndexWeightStore:
 
 
 @pytest.fixture
-def mock_security_store(mocker: MockerFixture) -> SecurityStore:
-    """Create a mock SecurityStore."""
-    return mocker.Mock(spec=SecurityStore)
+def mock_instrument_store(mocker: MockerFixture) -> InstrumentStore:
+    """Create a mock InstrumentStore."""
+    return mocker.Mock(spec=InstrumentStore)
 
 
 @pytest.fixture
 def index_accessor(
     mock_bars_store: BarsStore,
     mock_index_weight_store: IndexWeightStore,
-    mock_security_store: SecurityStore,
+    mock_instrument_store: InstrumentStore,
 ) -> IndexAccessor:
     """Create an IndexAccessor with mocked dependencies."""
     return IndexAccessor(
         mock_bars_store,
         mock_index_weight_store,
-        mock_security_store,
+        mock_instrument_store,
     )
 
 
@@ -54,7 +56,7 @@ class TestIndexAccessorWithMocks:
         """Test IndexAccessor initialization."""
         assert index_accessor._bars_store is not None
         assert index_accessor._index_weight_store is not None
-        assert index_accessor._security_store is not None
+        assert index_accessor._instrument_store is not None
 
     def test_get_bars_by_sids(
         self,
@@ -142,7 +144,7 @@ class TestIndexAccessorWithMocks:
         self,
         index_accessor: IndexAccessor,
         mock_index_weight_store: IndexWeightStore,
-        mock_security_store: SecurityStore,
+        mock_instrument_store: InstrumentStore,
     ) -> None:
         """Test getting index constituents with symbol join."""
         # Arrange
@@ -166,7 +168,7 @@ class TestIndexAccessorWithMocks:
                 "symbol": ["SID001", "SID002"],
             }
         )
-        mock_security_store.enrich_with_symbol.return_value = mock_enriched_df
+        mock_instrument_store.enrich_with_symbol.return_value = mock_enriched_df
 
         # Act
         result = index_accessor.get_constituents(
@@ -179,7 +181,7 @@ class TestIndexAccessorWithMocks:
         # Assert
         assert len(result) == 2
         assert "symbol" in result.columns
-        mock_security_store.enrich_with_symbol.assert_called_once()
+        mock_instrument_store.enrich_with_symbol.assert_called_once()
 
     def test_get_constituents_with_min_weight(
         self,
@@ -275,7 +277,7 @@ class TestIndexAccessorWithMocks:
         self,
         index_accessor: IndexAccessor,
         mock_bars_store: BarsStore,
-        mock_security_store: SecurityStore,
+        mock_instrument_store: InstrumentStore,
     ) -> None:
         """Test get_csi300_bars predefined shortcut."""
         # Arrange
@@ -287,7 +289,7 @@ class TestIndexAccessorWithMocks:
             }
         )
         mock_bars_store.read.return_value = mock_df
-        mock_security_store.resolve_sid.return_value = 300
+        mock_instrument_store.resolve_sid.return_value = 300
 
         # Act
         result = index_accessor.get_csi300_bars(
@@ -298,7 +300,7 @@ class TestIndexAccessorWithMocks:
 
         # Assert
         assert len(result) == 1
-        mock_security_store.resolve_sid.assert_called_once_with(
+        mock_instrument_store.resolve_sid.assert_called_once_with(
             "000300.SH", "tushare", None
         )
         mock_bars_store.read.assert_called_once()

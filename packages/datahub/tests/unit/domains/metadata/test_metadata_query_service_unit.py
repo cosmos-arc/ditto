@@ -6,15 +6,15 @@ from unittest.mock import Mock
 
 import polars as pl
 import pytest
+from ditto_datahub.domains.metadata.instrument.models import InstrumentRegistration
 from ditto_datahub.domains.metadata.metadata_query_service import MetadataQueryService
-from ditto_datahub.domains.metadata.security.models import SecurityRegistration
 
 
 @pytest.fixture
 def mock_stores_and_allocator() -> dict[str, Mock]:
     """创建所有必需的 Store 和 Allocator Mock 对象."""
     return {
-        "security_store": Mock(),
+        "instrument_store": Mock(),
         "identity_store": Mock(),
         "calendar_store": Mock(),
         "industry_basic_store": Mock(),
@@ -33,7 +33,7 @@ def service(
 
 
 def test_metadata_query_service_resolve_sid(service: MetadataQueryService) -> None:
-    """测试解析 src_code 到 sid."""
+    """测试解析 source_ticker 到 sid."""
     # 设置 mock
     service._identity_store.resolve_sid.return_value = 123
 
@@ -50,7 +50,7 @@ def test_metadata_query_service_resolve_sid(service: MetadataQueryService) -> No
 def test_metadata_query_service_resolve_sids_batch(
     service: MetadataQueryService,
 ) -> None:
-    """测试批量解析 src_codes 到 sids."""
+    """测试批量解析 source_tickers 到 sids."""
     # 设置 mock
     service._identity_store.resolve_sids_batch.return_value = {
         "600000.SH": 1,
@@ -81,7 +81,7 @@ def test_metadata_query_service_get_securities(service: MetadataQueryService) ->
     )
 
     # 设置 mock
-    service._security_store.find_securities.return_value = test_df
+    service._instrument_store.find_securities.return_value = test_df
 
     # 调用方法
     result = service.get_securities(sids=[1, 2])
@@ -89,28 +89,30 @@ def test_metadata_query_service_get_securities(service: MetadataQueryService) ->
     # 验证
     assert len(result) == 2
     assert result["sid"].to_list() == [1, 2]
-    service._security_store.find_securities.assert_called_once()
+    service._instrument_store.find_securities.assert_called_once()
 
 
 def test_metadata_query_service_get_symbol(service: MetadataQueryService) -> None:
     """测试根据 sid 获取 symbol."""
     # 设置 mock
-    service._security_store.get_symbol.return_value = "平安银行"
+    service._instrument_store.get_symbol.return_value = "平安银行"
 
     # 调用方法
     result = service.get_symbol(1)
 
     # 验证
     assert result == "平安银行"
-    service._security_store.get_symbol.assert_called_once_with(1)
+    service._instrument_store.get_symbol.assert_called_once_with(1)
 
 
-def test_metadata_query_service_get_src_code(service: MetadataQueryService) -> None:
-    """测试根据 sid 获取 src_code."""
+def test_metadata_query_service_get_source_ticker(
+    service: MetadataQueryService,
+) -> None:
+    """测试根据 sid 获取 source_ticker."""
     # 设置 mock
     service._identity_store.get_src_code.return_value = "000001.SZ"
 
-    # 调用方法
+    # 调用方法（注意：方法名仍然是 get_src_code，这是为了向后兼容）
     result = service.get_src_code(1, "tushare", None)
 
     # 验证
@@ -232,8 +234,8 @@ def test_metadata_query_service_register_security(
 ) -> None:
     """测试注册新证券."""
     # 准备测试数据
-    registration = SecurityRegistration(
-        src_code="600000.SH",
+    registration = InstrumentRegistration(
+        source_ticker="600000.SH",
         symbol="浦发银行",
         name="上海浦东发展银行股份有限公司",
         exchange="SH",
@@ -245,7 +247,7 @@ def test_metadata_query_service_register_security(
 
     # 设置 mock
     service._sid_allocator.allocate.return_value = 100
-    service._security_store.register.return_value = 100
+    service._instrument_store.register.return_value = 100
 
     # 调用方法
     result = service.register_security(registration)
@@ -253,4 +255,4 @@ def test_metadata_query_service_register_security(
     # 验证
     assert result == 100
     service._sid_allocator.allocate.assert_called_once_with("stock")
-    service._security_store.register.assert_called_once()
+    service._instrument_store.register.assert_called_once()

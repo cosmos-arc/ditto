@@ -4,7 +4,7 @@
 负责将摄取的数据写入到不同的 Store，包括：
 - 行情数据（stock_daily, etf_daily）→ BarsStore
 - 复权因子（adj_factor, fund_adj）→ AdjFactorStore
-- 基础信息（stock_basic, etf_basic）→ SecurityStore
+- 基础信息（stock_basic, etf_basic）→ InstrumentStore
 - 日历（calendar）→ CalendarStore
 """
 
@@ -63,7 +63,7 @@ class IngestionDataWriter:
             raise ValueError(f"不支持写入数据集: {dataset}") from e
 
         if dataset_enum in (Dataset.ETF_DAILY, Dataset.STOCK_DAILY):
-            # 补齐 sid/source 字段（使用 SecuritiesAccessor API）
+            # 补齐 sid/source 字段（使用 InstrumentsAccessor API）
             asset_class: Literal["stock", "etf"] = (
                 "etf" if dataset_enum == Dataset.ETF_DAILY else "stock"
             )
@@ -82,7 +82,7 @@ class IngestionDataWriter:
                 on_duplicate=on_duplicate,
             )
         elif dataset_enum in (Dataset.ADJ_FACTOR, Dataset.FUND_ADJ):
-            # 补齐 sid/source 字段（使用 SecuritiesAccessor API）
+            # 补齐 sid/source 字段（使用 InstrumentsAccessor API）
             adj_asset_class: Literal["stock", "etf"] = (
                 "etf" if dataset_enum == Dataset.FUND_ADJ else "stock"
             )
@@ -139,7 +139,7 @@ class IngestionDataWriter:
 
     def write_stock_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """
-        写入 stock_basic 数据到 security_store。
+        写入 stock_basic 数据到 instrument_store。
 
         Args:
             df: 股票基础信息数据
@@ -149,7 +149,7 @@ class IngestionDataWriter:
             tuple[str, str]: (file_path, checksum)
 
         """
-        # 使用 SecuritiesAccessor 批量注册（线程安全）
+        # 使用 InstrumentsAccessor 批量注册（线程安全）
         file_path, checksum = self._hub.securities.register_batch(
             df=df,
             source=self._source_name,
@@ -161,7 +161,7 @@ class IngestionDataWriter:
 
     def write_etf_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """
-        写入 etf_basic 数据到 security_store。
+        写入 etf_basic 数据到 instrument_store。
 
         Args:
             df: ETF 基础信息数据
@@ -171,7 +171,7 @@ class IngestionDataWriter:
             tuple[str, str]: (file_path, checksum)
 
         """
-        # 使用 SecuritiesAccessor 批量注册（线程安全）
+        # 使用 InstrumentsAccessor 批量注册（线程安全）
         file_path, checksum = self._hub.securities.register_batch(
             df=df,
             source=self._source_name,

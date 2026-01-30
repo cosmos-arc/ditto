@@ -5,9 +5,9 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.index_weight_store import IndexWeightStore
-from ditto_datahub.stores.security_store import SecurityStore
 
 
 class IndexAccessor:
@@ -15,7 +15,7 @@ class IndexAccessor:
     Index data accessor.
 
     Provides domain-level interface for index data operations,
-    coordinating BarsStore, IndexWeightStore, and SecurityStore.
+    coordinating BarsStore, IndexWeightStore, and InstrumentStore.
 
     Core functionality:
     - get_bars: Query index daily bars (delegates to BarsStore)
@@ -29,7 +29,7 @@ class IndexAccessor:
         self,
         bars_store: BarsStore,
         index_weight_store: IndexWeightStore,
-        security_store: SecurityStore,
+        instrument_store: InstrumentStore,
     ) -> None:
         """
         Initialize IndexAccessor.
@@ -37,12 +37,12 @@ class IndexAccessor:
         Args:
             bars_store: Bars store for index daily data.
             index_weight_store: Index weight store for constituents.
-            security_store: Security store for symbol resolution.
+            instrument_store: Instrument store for symbol resolution.
 
         """
         self._bars_store = bars_store
         self._index_weight_store = index_weight_store
-        self._security_store = security_store
+        self._instrument_store = instrument_store
 
     @traced("accessor.index.get_bars")
     def get_bars(
@@ -147,7 +147,7 @@ class IndexAccessor:
 
         # Add symbol if requested
         if with_symbol and not constituents.is_empty():
-            constituents = self._security_store.enrich_with_symbol(constituents)
+            constituents = self._instrument_store.enrich_with_symbol(constituents)
 
         logger.debug(
             "Constituents fetched",
@@ -230,7 +230,7 @@ class IndexAccessor:
         )
 
         # Resolve CSI 300 SID
-        sid = self._security_store.resolve_sid("000300.SH", "tushare", asof)
+        sid = self._instrument_store.resolve_sid("000300.SH", "tushare", asof)
         if not sid:
             logger.warning(
                 "CSI 300 index SID not found",

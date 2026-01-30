@@ -33,8 +33,9 @@ from ditto_datahub.domains.metadata.industry.industry_basic_store import (
 from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
     IndustryMappingStore,
 )
-from ditto_datahub.domains.metadata.security.security_store import (
-    SecurityStore as MetadataSecurityStore,
+from ditto_datahub.domains.metadata.instrument import InstrumentStore
+from ditto_datahub.domains.metadata.instrument.instrument_store import (
+    InstrumentStore as MetadataInstrumentStore,
 )
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.hub import DataHub
@@ -47,7 +48,6 @@ from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_datahub.stores.quarantine_store import QuarantineStore
-from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.universe_store import UniverseStore
 from ditto_foundation import SQLitePool
@@ -110,7 +110,7 @@ def datahub_with_dependencies(
 
     # Store Layer
     sqlite_client = SQLiteClient(sqlite_pool)
-    security_store = SecurityStore(sqlite_client)
+    security_store = InstrumentStore(sqlite_client)
     calendar_store = MetadataCalendarStore(sqlite_client)
     ingestion_log_store = IngestionLogStore(sqlite_client)
     quarantine_store = QuarantineStore(sqlite_client)
@@ -120,14 +120,14 @@ def datahub_with_dependencies(
     bars_store = BarsStore(data_root=data_root)
 
     # Metadata Domain Stores
-    metadata_security_store = MetadataSecurityStore(data_root / "meta" / "hub.sqlite")
+    metadata_security_store = MetadataInstrumentStore(data_root / "meta" / "hub.sqlite")
     identity_store = IdentityStore(data_root / "meta" / "hub.sqlite")
     industry_basic_store = IndustryBasicStore(data_root / "meta" / "hub.sqlite")
     industry_mapping_store = IndustryMappingStore(data_root / "meta" / "hub.sqlite")
 
     # Metadata Query Service
     metadata_query_service = MetadataQueryService(
-        security_store=metadata_security_store,
+        instrument_store=metadata_security_store,
         identity_store=identity_store,
         calendar_store=calendar_store,
         industry_basic_store=industry_basic_store,
@@ -154,7 +154,7 @@ def datahub_with_dependencies(
         stock_adj_store=stock_adj_store,
         etf_bars_store=etf_bars_store,
         etf_status_store=etf_status_store,
-        security_store=security_store,
+        instrument_store=security_store,
         etf_nav_store=etf_nav_store,
         etf_adj_store=etf_adj_store,
         index_bars_store=index_bars_store,
@@ -162,7 +162,9 @@ def datahub_with_dependencies(
     )
 
     # Accessor Layer
-    from ditto_datahub.accessors.security_accessor import SecuritiesAccessor
+    from ditto_datahub.accessors.instrument_accessor import (
+        InstrumentsAccessor as SecuritiesAccessor,
+    )
 
     securities = SecuritiesAccessor(security_store, sid_allocator)
     calendar = CalendarAccessor(calendar_store)
@@ -181,7 +183,7 @@ def datahub_with_dependencies(
     # SqlEngine
     sql_engine = SqlEngine(
         data_root=data_root,
-        security_store=security_store,
+        instrument_store=security_store,
         calendar_store=calendar_store,
     )
 
@@ -192,7 +194,7 @@ def datahub_with_dependencies(
         file_lock=file_lock,
         sid_allocator=sid_allocator,
         freeze_manager=freeze_manager,
-        security_store=security_store,
+        instrument_store=security_store,
         securities=securities,
         metadata_query_service=metadata_query_service,
         market_query_service=market_query_service,

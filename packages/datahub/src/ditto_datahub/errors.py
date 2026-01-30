@@ -34,7 +34,7 @@ class IdentifierError(DataHubError):
 
 
 class SidNotFoundError(IdentifierError):
-    """Security identifier (SID) not found."""
+    """证券标识符（SID）未找到。"""
 
     def __init__(
         self,
@@ -137,3 +137,9 @@ class PartitionNotFoundError(DataHubError):
         if year:
             details["year"] = year
         super().__init__(message, details if details else None)
+
+
+class SchemaValidationError(ValidationError):
+    """SourceSchema validation failed."""
+
+    pass

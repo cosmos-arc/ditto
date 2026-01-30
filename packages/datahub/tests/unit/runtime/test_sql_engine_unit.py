@@ -14,18 +14,18 @@ class TestSqlEngine:
 
     def test_initialization(self, mocker: MockerFixture) -> None:
         """Test that SqlEngine initializes with defaults."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         data_root = Path("/test/data")
 
         engine = SqlEngine(
             data_root=data_root,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
         assert engine.data_root == data_root
-        assert engine.security_store is mock_security_store
+        assert engine.instrument_store is mock_instrument_store
         assert engine.calendar_store is mock_calendar_store
         assert engine._sqlite_attached is False
         assert engine._enable_plan_cache is True
@@ -34,13 +34,13 @@ class TestSqlEngine:
 
     def test_initialization_with_custom_settings(self, mocker: MockerFixture) -> None:
         """Test initialization with custom settings."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         data_root = Path("/test/data")
 
         engine = SqlEngine(
             data_root=data_root,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
             enable_plan_cache=False,
             plan_cache_size=500,
@@ -53,11 +53,11 @@ class TestSqlEngine:
 
     def test_normalize_query_removes_comments(self, mocker: MockerFixture) -> None:
         """Test query normalization removes SQL comments."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -71,11 +71,11 @@ class TestSqlEngine:
         self, mocker: MockerFixture
     ) -> None:
         """Test query normalization removes block comments."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -86,11 +86,11 @@ class TestSqlEngine:
 
     def test_normalize_query_normalizes_whitespace(self, mocker: MockerFixture) -> None:
         """Test query normalization normalizes whitespace."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -101,11 +101,11 @@ class TestSqlEngine:
 
     def test_prepare_query_with_cache_disabled(self, mocker: MockerFixture) -> None:
         """Test query preparation with cache disabled."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
             enable_plan_cache=False,
         )
@@ -118,11 +118,11 @@ class TestSqlEngine:
 
     def test_prepare_query_with_cache_enabled_miss(self, mocker: MockerFixture) -> None:
         """Test query preparation with cache miss."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
             enable_plan_cache=True,
         )
@@ -134,11 +134,11 @@ class TestSqlEngine:
 
     def test_prepare_query_with_cache_enabled_hit(self, mocker: MockerFixture) -> None:
         """Test query preparation with cache hit."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
             enable_plan_cache=True,
         )
@@ -154,11 +154,11 @@ class TestSqlEngine:
 
     def test_needs_sqlite_detects_sqlite_tables(self, mocker: MockerFixture) -> None:
         """Test SQLite table detection."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -171,11 +171,11 @@ class TestSqlEngine:
 
     def test_execute_with_valid_asof_date(self, mocker: MockerFixture) -> None:
         """Test execute with valid asof date."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -199,11 +199,11 @@ class TestSqlEngine:
         self, mocker: MockerFixture
     ) -> None:
         """Test execute with invalid asof date raises ValueError."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -219,11 +219,11 @@ class TestSqlEngine:
         self, mocker: MockerFixture
     ) -> None:
         """Test execute with asof and dict params raises ValueError."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -238,11 +238,11 @@ class TestSqlEngine:
 
     def test_pit_query_adds_pit_filter(self, mocker: MockerFixture) -> None:
         """Test pit_query adds PIT filter."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -262,11 +262,11 @@ class TestSqlEngine:
 
     def test_pit_query_with_custom_date_column(self, mocker: MockerFixture) -> None:
         """Test pit_query with custom date column."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -283,11 +283,11 @@ class TestSqlEngine:
 
     def test_refresh_views_reregisters_views(self, mocker: MockerFixture) -> None:
         """Test refresh_views re-registers parquet views."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -299,11 +299,11 @@ class TestSqlEngine:
 
     def test_close_closes_duckdb_connection(self, mocker: MockerFixture) -> None:
         """Test close closes DuckDB connection."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         engine = SqlEngine(
             data_root=Path("/test"),
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -345,13 +345,13 @@ class TestSqlEngineExceptionPaths:
 
     def test_execute_with_invalid_sql_raises_error(self, mocker: MockerFixture) -> None:
         """Test execute raises error on invalid SQL syntax."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         data_root = Path("/test/data")
 
         engine = SqlEngine(
             data_root=data_root,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -366,13 +366,13 @@ class TestSqlEngineExceptionPaths:
         self, mocker: MockerFixture
     ) -> None:
         """Test execute raises error when database connection fails."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         data_root = Path("/test/data")
 
         engine = SqlEngine(
             data_root=data_root,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -385,13 +385,13 @@ class TestSqlEngineExceptionPaths:
 
     def test_pit_query_propagates_execute_errors(self, mocker: MockerFixture) -> None:
         """Test pit_query propagates execute errors."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         data_root = Path("/test/data")
 
         engine = SqlEngine(
             data_root=data_root,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 
@@ -408,13 +408,13 @@ class TestSqlEngineExceptionPaths:
 
     def test_refresh_views_with_registration_error(self, mocker: MockerFixture) -> None:
         """Test refresh_views handles registration errors gracefully."""
-        mock_security_store = mocker.Mock()
+        mock_instrument_store = mocker.Mock()
         mock_calendar_store = mocker.Mock()
         data_root = Path("/test/data")
 
         engine = SqlEngine(
             data_root=data_root,
-            security_store=mock_security_store,
+            instrument_store=mock_instrument_store,
             calendar_store=mock_calendar_store,
         )
 

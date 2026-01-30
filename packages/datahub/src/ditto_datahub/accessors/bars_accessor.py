@@ -14,10 +14,10 @@ from ditto_foundation.concurrency import FileLockManager
 from ditto_datahub.accessors.internal.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.accessors.internal.enrichment import enrich_with_status
 from ditto_datahub.domains.market.stock.status import StockStatusStore
+from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.models import AssetSidRange, OnDuplicate, WriteResult
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.security_store import SecurityStore
 
 
 class AdjType(Enum):
@@ -90,7 +90,7 @@ class BarsAccessor:
         self,
         bars_store: BarsStore,
         adj_factor_store: AdjFactorStore,
-        security_store: SecurityStore,
+        instrument_store: InstrumentStore,
         stock_status_store: StockStatusStore,  # B.3
         file_lock: FileLockManager,
     ) -> None:
@@ -100,14 +100,14 @@ class BarsAccessor:
         Args:
             bars_store: Bars data store.
             adj_factor_store: Adjustment factor store.
-            security_store: Security store for identifier resolution.
+            instrument_store: Instrument store for identifier resolution.
             stock_status_store: Stock status store (B.3).
             file_lock: File lock manager for concurrent writes.
 
         """
         self._bars_store = bars_store
         self._adj_factor_store = adj_factor_store
-        self._security_store = security_store
+        self._instrument_store = instrument_store
         self._stock_status_store = stock_status_store  # B.3
         self._file_lock = file_lock
 
@@ -170,7 +170,7 @@ class BarsAccessor:
         # 6. 增强 data
         # 6.1 添加 symbol 列（如果需要）
         if query.with_symbol:
-            df = self._security_store.enrich_with_symbol(df)
+            df = self._instrument_store.enrich_with_symbol(df)
 
         # 6.2 添加状态列（如果需要且不是 raw 模式）
         if query.with_status and not query.raw and asset_class == "stock":
@@ -370,7 +370,7 @@ class BarsAccessor:
         if query.market_wide:
             # 全市场模式：获取所有活跃 SID
             asset_class: Literal["stock", "etf", "index"] | None = query.asset_class
-            sids = sorted(self._security_store.list_sids(asset_class=asset_class))
+            sids = sorted(self._instrument_store.list_sids(asset_class=asset_class))
             # 如果没有指定资产类别，从 SID 检测
             if not asset_class:
                 asset_class = (

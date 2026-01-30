@@ -21,8 +21,8 @@ from ditto_datahub.domains.metadata.industry.industry_basic_store import (
 from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
     IndustryMappingStore,
 )
-from ditto_datahub.domains.metadata.security.models import SecurityRegistration
-from ditto_datahub.domains.metadata.security.security_store import SecurityStore
+from ditto_datahub.domains.metadata.instrument import InstrumentStore
+from ditto_datahub.domains.metadata.instrument.models import InstrumentRegistration
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.stores.universe_store import UniverseStore
 
@@ -38,7 +38,7 @@ class MetadataQueryService:
 
     def __init__(
         self,
-        security_store: SecurityStore,
+        instrument_store: InstrumentStore,
         identity_store: IdentityStore,
         calendar_store: CalendarStore,
         industry_basic_store: IndustryBasicStore,
@@ -50,7 +50,7 @@ class MetadataQueryService:
         初始化 MetadataQueryService.
 
         Args:
-            security_store: 证券主数据存储.
+            instrument_store: 证券主数据存储.
             identity_store: Identity 映射存储.
             calendar_store: 交易日历存储.
             industry_basic_store: 行业主数据存储.
@@ -59,7 +59,7 @@ class MetadataQueryService:
             sid_allocator: SID 分配器.
 
         """
-        self._security_store = security_store
+        self._instrument_store = instrument_store
         self._identity_store = identity_store
         self._calendar_store = calendar_store
         self._industry_basic_store = industry_basic_store
@@ -145,7 +145,7 @@ class MetadataQueryService:
             证券数据 DataFrame.
 
         """
-        return self._security_store.find_securities(
+        return self._instrument_store.find_securities(
             sids=sids,
             src_codes=src_codes,
             source=source,
@@ -167,7 +167,7 @@ class MetadataQueryService:
             交易代码 或 None.
 
         """
-        return self._security_store.get_symbol(sid)
+        return self._instrument_store.get_symbol(sid)
 
     @traced("metadata.security.get_src_code")
     def get_src_code(
@@ -310,7 +310,7 @@ class MetadataQueryService:
     # ============ 证券注册 ============
 
     @traced("metadata.security.register_security")
-    def register_security(self, registration: SecurityRegistration) -> int:
+    def register_security(self, registration: InstrumentRegistration) -> int:
         """
         注册新证券.
 
@@ -325,14 +325,14 @@ class MetadataQueryService:
         sid = self._sid_allocator.allocate(registration.asset_class)
 
         # 注册到 security_store
-        registered_sid = self._security_store.register(sid, registration)
+        registered_sid = self._instrument_store.register(sid, registration)
 
         logger.info(
             "Security registered via MetadataQueryService",
             event="metadata_security_registered",
             sid=registered_sid,
             symbol=registration.symbol,
-            src_code=registration.src_code,
+            src_code=registration.source_ticker,
         )
 
         return registered_sid

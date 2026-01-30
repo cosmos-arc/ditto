@@ -1,5 +1,17 @@
 # DataHub Fundamental 域重构实施计划
 
+> **注意:** 本阶段不在三域重构范围内。
+>
+> **三域重构范围:** Metadata、Market、Capital 三个域。
+>
+> **最新实施计划:** 参见 [2026-01-29-datahub-three-domain-refactor-implementation.md](./2026-01-29-datahub-three-domain-refactor-implementation.md)
+>
+> **说明:** Fundamental 域的财务报表、财务指标等功能已纳入新的 Capital 域。本计划文档保留用于参考，未来实施时需要根据最新架构调整。
+
+---
+
+## 原始计划（保留用于参考）
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 **目标:** 实现完整的 Fundamental 域，支持财务报表、财务指标、业绩预告、持仓数据等

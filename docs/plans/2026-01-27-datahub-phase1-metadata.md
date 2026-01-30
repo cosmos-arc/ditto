@@ -1,5 +1,18 @@
 # DataHub Metadata 域重构实施计划
 
+> **注意:** 本文档已更新，反映最新的三域架构设计。
+>
+> **最新实施计划:** 参见 [2026-01-29-datahub-three-domain-refactor-implementation.md](./2026-01-29-datahub-three-domain-refactor-implementation.md)
+>
+> **关键变更:**
+> - 命名统一: `security` → `instrument`, `sid` → `instrument_id`, `src_code` → `source_ticker`
+> - 新增 SourceSchema 层作为数据源输出标准协议
+> - 实现 Industry Source（申万行业分类）
+
+---
+
+## 原始计划（已废弃）
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 **目标:** 将现有的元数据相关 Store 和 Accessor 重构为统一的 Metadata 域结构，实现 domains/metadata/ 目录组织
@@ -7,7 +20,7 @@
 **架构:**
 - 创建 `domains/metadata/` 目录，按子域组织
 - 实现 MetadataQueryService 作为域级统一入口
-- 合并 security、industry、identity、calendar、universe 等子域
+- 合并 instrument、industry、identity、calendar、universe 等子域
 - 移除 Accessor 层，功能合并到 QueryService
 
 **技术栈:** Python 3.12+, Polars, Pydantic, Pyright Strict

@@ -29,17 +29,17 @@
 from pathlib import Path
 from ditto_datahub.stores import (
     SQLiteClient,
-    SecurityStore,
-    BarsStore,
-    AdjFactorStore,
 )
+from ditto_datahub.domains.metadata.instrument import InstrumentStore
+from ditto_datahub.stores.bars_store import BarsStore
+from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 
 # SQLite 客户端
 client = SQLiteClient(Path("data/ditto.db"))
 
 # 证券存储
-security_store = SecurityStore(client)
-sid = security_store.resolve_sid("510300.SH", source="tushare")
+instrument_store = InstrumentStore(client)
+sid = instrument_store.resolve_sid("510300.SH", source="tushare")
 
 # K线存储
 bars_store = BarsStore(Path("data"))

@@ -1,7 +1,7 @@
 """
-UniverseStore for security universe management with PIT support.
+UniverseStore for 证券域管理，支持 PIT。
 
-This module provides storage and retrieval for security universes
+This module provides storage and retrieval for 证券域数据
 with Point-in-Time support for constituent tracking.
 
 Following design document at docs/design/02_data_design.md
@@ -19,7 +19,7 @@ from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 class UniverseStore:
     """
-    Security universe storage with PIT support.
+    证券域存储，支持 PIT。
 
     Core functionality:
     - create_universe: Create a new universe definition

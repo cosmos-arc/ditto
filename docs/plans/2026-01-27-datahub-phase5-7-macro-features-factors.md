@@ -1,5 +1,17 @@
 # DataHub Macro、Features、Factors 域重构实施计划
 
+> **注意:** 本阶段不在三域重构范围内。
+>
+> **三域重构范围:** Metadata、Market、Capital 三个域。
+>
+> **最新实施计划:** 参见 [2026-01-29-datahub-three-domain-refactor-implementation.md](./2026-01-29-datahub-three-domain-refactor-implementation.md)
+>
+> **说明:** Macro、Features、Factors 域属于更高级的功能模块，不在本次三域重构范围内。本计划文档保留用于未来实施参考。
+
+---
+
+## 原始计划（保留用于参考）
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 本文档包含三个域的重构计划：

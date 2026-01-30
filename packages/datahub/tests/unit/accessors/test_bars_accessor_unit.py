@@ -12,9 +12,9 @@ import pytest
 from ditto_datahub.accessors import AdjType, BarsQuery
 from ditto_datahub.accessors.bars_accessor import BarsAccessor
 from ditto_datahub.domains.market.stock.status import StockStatusStore
+from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation.concurrency import FileLockManager
 
@@ -146,14 +146,14 @@ class TestBarsAccessor:
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
-        self.security_store = SecurityStore(self.client)
+        self.instrument_store = InstrumentStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
-            self.security_store,
+            self.instrument_store,
             self.stock_status_store,  # B.3
             self.file_lock_manager,
         )
@@ -262,14 +262,14 @@ class TestPITSafeAdjustment:
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
-        self.security_store = SecurityStore(self.client)
+        self.instrument_store = InstrumentStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
-            self.security_store,
+            self.instrument_store,
             self.stock_status_store,  # B.3
             self.file_lock_manager,
         )
@@ -454,14 +454,14 @@ class TestQFQAdjustment:
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
-        self.security_store = SecurityStore(self.client)
+        self.instrument_store = InstrumentStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
-            self.security_store,
+            self.instrument_store,
             self.stock_status_store,  # B.3
             self.file_lock_manager,
         )
@@ -713,14 +713,14 @@ class TestBarsAccessorSingle:
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
-        self.security_store = SecurityStore(self.client)
+        self.instrument_store = InstrumentStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
-            self.security_store,
+            self.instrument_store,
             self.stock_status_store,  # B.3
             self.file_lock_manager,
         )
@@ -784,14 +784,14 @@ class TestMixedAssetClass:
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
-        self.security_store = SecurityStore(self.client)
+        self.instrument_store = InstrumentStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
-            self.security_store,
+            self.instrument_store,
             self.stock_status_store,  # B.3
             self.file_lock_manager,
         )
@@ -1012,14 +1012,14 @@ class TestAdjFactorEdgeCases:
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
-        self.security_store = SecurityStore(self.client)
+        self.instrument_store = InstrumentStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)  # B.3
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
-            self.security_store,
+            self.instrument_store,
             self.stock_status_store,  # B.3
             self.file_lock_manager,
         )
@@ -1300,14 +1300,14 @@ class TestMarketWideMode:
 
         self.bars_store = BarsStore(data_root)
         self.adj_factor_store = AdjFactorStore(data_root)
-        self.security_store = SecurityStore(self.client)
+        self.instrument_store = InstrumentStore(self.client)
         self.stock_status_store = StockStatusStore(data_root)
         self.file_lock_manager = FileLockManager(data_root / "locks")
 
         self.accessor = BarsAccessor(
             self.bars_store,
             self.adj_factor_store,
-            self.security_store,
+            self.instrument_store,
             self.stock_status_store,
             self.file_lock_manager,
         )

@@ -1,4 +1,4 @@
-"""Security Accessor for securities master data access."""
+"""Instrument Accessor for instruments master data access."""
 
 from __future__ import annotations
 
@@ -9,35 +9,38 @@ from ditto_foundation import M, logger, traced
 from ditto_foundation.util.checksum import ChecksumCompute
 
 from ditto_datahub.accessors.internal.enrichment import enrich_with_sid
+from ditto_datahub.domains.metadata.instrument import (
+    InstrumentRegistration,
+    InstrumentStore,
+)
 from ditto_datahub.runtime.sid_allocator import SidAllocator
-from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
 
 
-class SecuritiesAccessor:
+class InstrumentsAccessor:
     """
-    Securities master data accessor.
+    Instruments master data accessor.
 
-    Provides domain-level interface for security data operations,
-    coordinating SecurityStore and SidAllocator.
+    Provides domain-level interface for instrument data operations,
+    coordinating InstrumentStore and SidAllocator.
     """
 
     def __init__(
         self,
-        security_store: SecurityStore,
+        instrument_store: InstrumentStore,
         sid_allocator: SidAllocator,
     ) -> None:
         """
-        Initialize SecuritiesAccessor.
+        Initialize InstrumentsAccessor.
 
         Args:
-            security_store: Security store for data access.
-            sid_allocator: SID allocator for new securities.
+            instrument_store: Instrument store for data access.
+            sid_allocator: SID allocator for new instruments.
 
         """
-        self._security_store = security_store
+        self._instrument_store = instrument_store
         self._sid_allocator = sid_allocator
 
-    @traced("accessor.security.get")
+    @traced("accessor.instrument.get")
     def get(
         self,
         sids: list[int] | None = None,
@@ -49,7 +52,7 @@ class SecuritiesAccessor:
         asof: str | None = None,
     ) -> pl.DataFrame:
         """
-        Query securities data.
+        Query instruments data.
 
         Args:
             sids: Filter by SIDs.
@@ -61,19 +64,19 @@ class SecuritiesAccessor:
             asof: Point-in-time query date.
 
         Returns:
-            Securities data DataFrame.
+            Instruments data DataFrame.
 
         """
         logger.debug(
-            "Fetching securities",
-            event="security_get_start",
+            "Fetching instruments",
+            event="instrument_get_start",
             sids_count=len(sids) if sids else None,
             src_codes_count=len(src_codes) if src_codes else None,
             source=source,
             asset_class=asset_class,
         )
 
-        result: pl.DataFrame = self._security_store.find_securities(
+        result: pl.DataFrame = self._instrument_store.find_securities(
             sids=sids,
             src_codes=src_codes,
             source=source,
@@ -84,28 +87,28 @@ class SecuritiesAccessor:
         )
 
         logger.debug(
-            "Securities fetched",
-            event="security_get_complete",
+            "Instruments fetched",
+            event="instrument_get_complete",
             row_count=len(result),
         )
 
         # Record metrics
-        M.data_records.add(len(result), {"dataset": "security", "operation": "get"})
+        M.data_records.add(len(result), {"dataset": "instrument", "operation": "get"})
 
         return result
 
     def get_by_sid(self, sid: int) -> dict[str, Any] | None:
         """
-        Get security by SID.
+        Get instrument by SID.
 
         Args:
-            sid: Security ID.
+            sid: Instrument ID.
 
         Returns:
-            Security data dict, or None if not found.
+            Instrument data dict, or None if not found.
 
         """
-        return self._security_store.get_by_sid(sid)
+        return self._instrument_store.get_by_sid(sid)
 
     def list_all(
         self,
@@ -114,7 +117,7 @@ class SecuritiesAccessor:
         is_active: bool = True,
     ) -> list[int]:
         """
-        List all security SIDs.
+        List all instrument SIDs.
 
         Args:
             asset_class: Filter by asset class.
@@ -125,20 +128,20 @@ class SecuritiesAccessor:
             List of SIDs.
 
         """
-        return self._security_store.list_sids(asset_class, exchange, is_active)
+        return self._instrument_store.list_sids(asset_class, exchange, is_active)
 
     def get_symbol(self, sid: int) -> str | None:
         """
         Get symbol by SID.
 
         Args:
-            sid: Security ID.
+            sid: Instrument ID.
 
         Returns:
             Symbol, or None if not found.
 
         """
-        return self._security_store.get_symbol(sid)
+        return self._instrument_store.get_symbol(sid)
 
     def get_src_code(
         self,
@@ -150,7 +153,7 @@ class SecuritiesAccessor:
         Get source code by SID.
 
         Args:
-            sid: Security ID.
+            sid: Instrument ID.
             source: Data source identifier.
             asof: Point-in-time query date.
 
@@ -158,45 +161,45 @@ class SecuritiesAccessor:
             Source code, or None if not found.
 
         """
-        return self._security_store.get_src_code(sid, source, asof)
+        return self._instrument_store.get_src_code(sid, source, asof)
 
-    @traced("accessor.security.register")
-    def register(self, registration: SecurityRegistration) -> int:
+    @traced("accessor.instrument.register")
+    def register(self, registration: InstrumentRegistration) -> int:
         """
-        Register a new security and allocate SID.
+        Register a new instrument and allocate SID.
 
         Args:
-            registration: Security registration configuration.
+            registration: Instrument registration configuration.
 
         Returns:
             Allocated SID.
 
         """
         logger.info(
-            "Registering new security",
-            event="security_register_start",
+            "Registering new instrument",
+            event="instrument_register_start",
             symbol=registration.symbol,
-            src_code=registration.src_code,
+            src_code=registration.source_ticker,
             asset_class=registration.asset_class,
         )
 
         # Allocate SID
         sid = self._sid_allocator.allocate(registration.asset_class)
 
-        # Register to security store
-        registered_sid = self._security_store.register(
+        # Register to instrument store
+        registered_sid = self._instrument_store.register(
             sid=sid, registration=registration
         )
 
         logger.info(
-            "Security registered successfully",
-            event="security_register_complete",
+            "Instrument registered successfully",
+            event="instrument_register_complete",
             sid=registered_sid,
             symbol=registration.symbol,
         )
 
         # Record metrics
-        M.data_records.add(1, {"dataset": "security", "operation": "register"})
+        M.data_records.add(1, {"dataset": "instrument", "operation": "register"})
 
         return registered_sid
 
@@ -208,15 +211,15 @@ class SecuritiesAccessor:
         src_code_col: str,
     ) -> tuple[str, str]:
         """
-        Batch register securities from DataFrame.
+        Batch register instruments from DataFrame.
 
-        Skips securities that already exist (based on src_code resolution).
+        Skips instruments that already exist (based on src_code resolution).
 
         Args:
-            df: DataFrame with securities data. Must contain columns:
+            df: DataFrame with instruments data. Must contain columns:
                 - src_code_col: Source code column name
                 - symbol: Display symbol
-                - name: Security name
+                - name: Instrument name
                 - exchange: Exchange code
                 - list_date: Listing date
             source: Data source identifier.
@@ -228,8 +231,8 @@ class SecuritiesAccessor:
 
         """
         logger.info(
-            "Starting batch security registration",
-            event="security_batch_register_start",
+            "Starting batch instrument registration",
+            event="instrument_batch_register_start",
             source=source,
             asset_class=asset_class,
             row_count=len(df),
@@ -242,15 +245,15 @@ class SecuritiesAccessor:
             src_code = row[src_code_col]
 
             # Check if already exists
-            existing_sid = self._security_store.resolve_sid(src_code, source, None)
+            existing_sid = self._instrument_store.resolve_sid(src_code, source, None)
             if existing_sid is not None:
                 skipped_count += 1
                 continue
 
-            # Register new security
+            # Register new instrument
             self.register(
-                SecurityRegistration(
-                    src_code=src_code,
+                InstrumentRegistration(
+                    source_ticker=src_code,
                     symbol=row["symbol"],
                     name=row["name"],
                     exchange=row["exchange"],
@@ -269,11 +272,11 @@ class SecuritiesAccessor:
         checksum = ChecksumCompute.from_dataframe(df_with_source, dataset_name)
 
         # File path for tracking (not a real file for SQLite storage)
-        file_path = f"security_store:{asset_class}_basic"
+        file_path = f"instrument_store:{asset_class}_basic"
 
         logger.info(
-            "Batch security registration completed",
-            event="security_batch_register_complete",
+            "Batch instrument registration completed",
+            event="instrument_batch_register_complete",
             registered=registered_count,
             skipped=skipped_count,
             checksum=checksum,
@@ -282,7 +285,7 @@ class SecuritiesAccessor:
         # Record metrics
         M.data_records.add(
             registered_count,
-            {"dataset": "security", "operation": "register_batch"},
+            {"dataset": "instrument", "operation": "register_batch"},
         )
 
         return file_path, checksum
@@ -313,8 +316,8 @@ class SecuritiesAccessor:
 
         """
         logger.debug(
-            "Resolving or creating securities in batch",
-            event="security_resolve_or_create_start",
+            "Resolving or creating instruments in batch",
+            event="instrument_resolve_or_create_start",
             source=source,
             asset_class=asset_class,
             row_count=len(df),
@@ -335,7 +338,7 @@ class SecuritiesAccessor:
 
         # 批量查询已存在的证券
         src_codes = df[src_code_col].to_list()
-        existing_mappings = self._security_store.resolve_sids_batch(
+        existing_mappings = self._instrument_store.resolve_sids_batch(
             src_codes, source, None
         )
 
@@ -350,8 +353,8 @@ class SecuritiesAccessor:
 
             # 不存在则创建新证券
             sid = self.register(
-                SecurityRegistration(
-                    src_code=src_code,
+                InstrumentRegistration(
+                    source_ticker=src_code,
                     symbol=row["symbol"],
                     name=row["name"],
                     exchange=row["exchange"],
@@ -373,7 +376,7 @@ class SecuritiesAccessor:
         # 记录指标
         M.data_records.add(
             created_count,
-            {"dataset": "security", "operation": "resolve_or_create_batch"},
+            {"dataset": "instrument", "operation": "resolve_or_create_batch"},
         )
 
         return result
@@ -402,7 +405,7 @@ class SecuritiesAccessor:
         """
         logger.debug(
             "Enriching DataFrame with SID",
-            event="security_enrich_start",
+            event="instrument_enrich_start",
             source=source,
             asset_class=asset_class,
             row_count=len(df),
@@ -428,7 +431,7 @@ class SecuritiesAccessor:
 
         logger.debug(
             "DataFrame enrichment completed",
-            event="security_enrich_complete",
+            event="instrument_enrich_complete",
             row_count=len(result),
         )
 

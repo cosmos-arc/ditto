@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_datahub.config import DataSourceSettings
+from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.sources.tdx.source import TdxSource
-from ditto_datahub.stores.security_store import SecurityStore
 from pytest_mock import MockerFixture
 
 
@@ -20,9 +20,9 @@ def mock_tdx_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def mock_security_store(mocker: MockerFixture) -> MagicMock:
-    """Mock SecurityStore."""
-    store = mocker.MagicMock(spec=SecurityStore)
+def mock_instrument_store(mocker: MockerFixture) -> MagicMock:
+    """Mock InstrumentStore."""
+    store = mocker.MagicMock(spec=InstrumentStore)
     return store
 
 
@@ -36,12 +36,12 @@ def data_source_settings(mock_tdx_path: Path) -> DataSourceSettings:
 
 @pytest.fixture
 def tdx_source(
-    data_source_settings: DataSourceSettings, mock_security_store: MagicMock
+    data_source_settings: DataSourceSettings, mock_instrument_store: MagicMock
 ) -> TdxSource:
     """创建 TdxSource 实例."""
     return TdxSource(
         data_source_settings=data_source_settings,
-        security_store=mock_security_store,
+        instrument_store=mock_instrument_store,
     )
 
 
@@ -117,12 +117,12 @@ class TestFetchStockDailyBars:
     def test_symbol_without_exchange_skips(
         self,
         tdx_source: TdxSource,
-        mock_security_store: MagicMock,
+        mock_instrument_store: MagicMock,
         mocker: MockerFixture,
     ) -> None:
         """无 exchange 的 symbol 跳过."""
         # Arrange
-        mock_security_store.enrich_with_symbol.return_value = pl.DataFrame(
+        mock_instrument_store.enrich_with_symbol.return_value = pl.DataFrame(
             {
                 "sid": [1000001, 1000002],
                 "symbol": ["000001", "999999"],
@@ -148,12 +148,12 @@ class TestFetchStockDailyBars:
     def test_symbol_to_src_code_conversion(
         self,
         tdx_source: TdxSource,
-        mock_security_store: MagicMock,
+        mock_instrument_store: MagicMock,
         mocker: MockerFixture,
     ) -> None:
         """Symbol 转换为 src_code 格式."""
         # Arrange
-        mock_security_store.enrich_with_symbol.return_value = pl.DataFrame(
+        mock_instrument_store.enrich_with_symbol.return_value = pl.DataFrame(
             {
                 "sid": [1000001, 1000002],
                 "symbol": ["000001", "600000"],
@@ -181,12 +181,12 @@ class TestFetchStockDailyBars:
     def test_multiple_symbols_batch(
         self,
         tdx_source: TdxSource,
-        mock_security_store: MagicMock,
+        mock_instrument_store: MagicMock,
         mocker: MockerFixture,
     ) -> None:
         """批量获取多个股票."""
         # Arrange
-        mock_security_store.enrich_with_symbol.return_value = pl.DataFrame(
+        mock_instrument_store.enrich_with_symbol.return_value = pl.DataFrame(
             {
                 "sid": [1000001, 1000002, 1000003],
                 "symbol": ["000001", "600000", "510300"],
@@ -206,12 +206,12 @@ class TestFetchStockDailyBars:
     def test_fetch_returns_data_with_expected_columns(
         self,
         tdx_source: TdxSource,
-        mock_security_store: MagicMock,
+        mock_instrument_store: MagicMock,
         mocker: MockerFixture,
     ) -> None:
         """验证返回数据包含预期列."""
         # Arrange
-        mock_security_store.enrich_with_symbol.return_value = pl.DataFrame(
+        mock_instrument_store.enrich_with_symbol.return_value = pl.DataFrame(
             {"sid": [1000001], "symbol": ["000001"]}
         )
 

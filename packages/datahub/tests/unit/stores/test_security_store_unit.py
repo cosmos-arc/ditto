@@ -1,17 +1,20 @@
-"""Tests for SecurityStore."""
+"""Tests for InstrumentStore."""
 
 import polars as pl
 import pytest
-from ditto_datahub.stores.security_store import SecurityRegistration, SecurityStore
+from ditto_datahub.domains.metadata.instrument import (
+    InstrumentRegistration,
+    InstrumentStore,
+)
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation.cache import DataCache
 from pytest_mock import MockerFixture
 
 
 @pytest.mark.integration
-class TestSecurityStore:
+class TestInstrumentStore:
     """
-    Tests for SecurityStore.
+    Tests for InstrumentStore.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
@@ -21,7 +24,7 @@ class TestSecurityStore:
     def setup(self, sqlite_client: SQLiteClient) -> None:
         """使用 fixture 自动注入已初始化的数据库客户端."""
         self.client = sqlite_client
-        self.store = SecurityStore(self.client)
+        self.store = InstrumentStore(self.client)
 
     def test_resolve_sid_current_mapping(self) -> None:
         """Test resolving sid for current mapping."""
@@ -68,7 +71,7 @@ class TestSecurityStore:
         """Test that resolve_sid uses DataCache for current queries."""
         # Create store with DataCache
         data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
-        store_with_cache = SecurityStore(self.client, data_cache=data_cache)
+        store_with_cache = InstrumentStore(self.client, data_cache=data_cache)
 
         self.client.execute("""
             INSERT INTO security (sid, symbol, name, exchange, asset_class, list_date)
@@ -312,8 +315,8 @@ class TestSecurityStore:
         """Test registering a new security."""
         sid = self.store.register(
             sid=100000001,
-            registration=SecurityRegistration(
-                src_code="600000.SH",
+            registration=InstrumentRegistration(
+                source_ticker="600000.SH",
                 symbol="600000",
                 name="Test Bank",
                 exchange="SSE",
@@ -338,7 +341,7 @@ class TestSecurityStore:
         """Test that register() invalidates negative cache for new security."""
         # Create store with DataCache
         data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
-        store_with_cache = SecurityStore(self.client, data_cache=data_cache)
+        store_with_cache = InstrumentStore(self.client, data_cache=data_cache)
 
         # First query: security doesn't exist, returns None (cached as -1)
         sid1 = store_with_cache.resolve_sid("600999.SH", "tushare", asof=None)
@@ -351,8 +354,8 @@ class TestSecurityStore:
         # Register the new security
         new_sid = store_with_cache.register(
             sid=100999001,
-            registration=SecurityRegistration(
-                src_code="600999.SH",
+            registration=InstrumentRegistration(
+                source_ticker="600999.SH",
                 symbol="600999",
                 name="New Stock",
                 exchange="SSE",
@@ -370,7 +373,7 @@ class TestSecurityStore:
         """Test that register() invalidates sid_symbol_map cache."""
         # Create store with DataCache
         data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
-        store_with_cache = SecurityStore(self.client, data_cache=data_cache)
+        store_with_cache = InstrumentStore(self.client, data_cache=data_cache)
 
         # Query sid_symbol_map (should be empty)
         map1 = store_with_cache.get_sid_symbol_map()
@@ -379,8 +382,8 @@ class TestSecurityStore:
         # Register a new security
         store_with_cache.register(
             sid=100999002,
-            registration=SecurityRegistration(
-                src_code="600998.SH",
+            registration=InstrumentRegistration(
+                source_ticker="600998.SH",
                 symbol="600998",
                 name="Another Stock",
                 exchange="SSE",
@@ -403,14 +406,14 @@ class TestSecurityStore:
             self.client, "commit", side_effect=RuntimeError("DB error")
         ):
             mock_logger = mocker.patch(
-                "ditto_datahub.domains.metadata.security.security_store.logger"
+                "ditto_datahub.domains.metadata.instrument.instrument_store.logger"
             )
 
             with pytest.raises(RuntimeError):
                 self.store.register(
                     sid=100000001,
-                    registration=SecurityRegistration(
-                        src_code="600000.SH",
+                    registration=InstrumentRegistration(
+                        source_ticker="600000.SH",
                         symbol="600000",
                         name="Test Bank",
                         exchange="SSE",
@@ -424,7 +427,7 @@ class TestSecurityStore:
             call_kwargs = mock_logger.error.call_args.kwargs
             assert "error_type" in call_kwargs
             assert "error_message" in call_kwargs
-            assert call_kwargs["event"] == "security_register_failed"
+            assert call_kwargs["event"] == "instrument_register_failed"
             assert call_kwargs["error_type"] == "RuntimeError"
 
     def teardown_method(self) -> None:
@@ -446,7 +449,7 @@ class TestSqlInjectionProtection:
     def setup(self, sqlite_client: SQLiteClient) -> None:
         """使用 fixture 自动注入已初始化的数据库客户端."""
         self.client = sqlite_client
-        self.store = SecurityStore(self.client)
+        self.store = InstrumentStore(self.client)
 
     def test_in_clause_with_many_sids(self) -> None:
         """Test IN clause handles large list of SIDs safely."""

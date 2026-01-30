@@ -1,5 +1,17 @@
 # DataHub Port 层重构实施计划
 
+> **注意:** 本阶段不在三域重构范围内。
+>
+> **三域重构范围:** Metadata、Market、Capital 三个域（DataHub 包内）。
+>
+> **最新实施计划:** 参见 [2026-01-29-datahub-three-domain-refactor-implementation.md](./2026-01-29-datahub-three-domain-refactor-implementation.md)
+>
+> **说明:** Port 层属于应用层（apps/port），不在 DataHub 三域重构范围内。本计划文档保留用于未来实施参考。
+
+---
+
+## 原始计划（保留用于参考）
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 **目标:** 重构 Port 层，实现 SourceService、IngestionService、DataService、Writer、ReconciliationService
