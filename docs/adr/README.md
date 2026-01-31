@@ -1,7 +1,7 @@
 # 架构决策记录 (Architecture Decision Records)
 
-**版本**: v0.1.0
-**最后更新**: 2026-01-23
+**版本**: v0.2.0
+**最后更新**: 2026-01-30
 **状态**: ✅ 稳定
 
 ## 概要
@@ -24,6 +24,8 @@ ADR 记录项目中的重要架构决策，每个 ADR 包含：
 | [0001](0001-project-stack-selection.md) | 项目技术栈选择 | Accepted | 2024-01-01 | 选择 Python 3.12+、Polars、FastAPI、Prefect 等技术栈 |
 | [0002](0002-monorepo-structure.md) | Monorepo 结构 | Accepted | 2024-01-01 | 采用 monorepo + packages 分离的代码组织结构 |
 | [0003](0003-data-storage-strategy.md) | 数据存储策略 | Accepted | 2024-01-01 | 混合存储：Parquet（时序数据）+ SQLite（元数据）+ DuckDB（分析查询） |
+| [0004](0004-domain-layer-subdomains.md) | Domain Layer 子领域分层定位 | Accepted | 2026-01-17 | 明确 dq/ml/factor 等 Domain Layer 的分层定位 |
+| [0005](0005-domain-restructure-fundamental-capital.md) | DataHub 域重构 - Fundamental 与 Capital 域拆分 | Accepted | 2026-01-30 | 将 Capital 域拆分为 Fundamental（企业基本面）和 Capital（资金与市场）两个独立域 |
 
 ## ADR 编号规则
 

@@ -12,7 +12,11 @@ from ditto_datahub.accessors.index_accessor import IndexAccessor
 from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
 from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
-from ditto_datahub.domains.market import MarketQueryService
+from ditto_datahub.domains.capital import CapitalService
+from ditto_datahub.domains.capital.capital_store import CapitalStore
+from ditto_datahub.domains.fundamental import FundamentalService
+from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
+from ditto_datahub.domains.market import MarketService
 from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
 from ditto_datahub.domains.market.etf.bars import EtfBarsStore
 from ditto_datahub.domains.market.etf.nav import EtfNavStore
@@ -22,7 +26,7 @@ from ditto_datahub.domains.market.index.constituent import IndexConstituentStore
 from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
 from ditto_datahub.domains.market.stock.bars import StockBarsStore
 from ditto_datahub.domains.market.stock.status import StockStatusStore
-from ditto_datahub.domains.metadata import MetadataQueryService
+from ditto_datahub.domains.metadata import MetadataService
 from ditto_datahub.domains.metadata.calendar.calendar_store import (
     CalendarStore as MetadataCalendarStore,
 )
@@ -126,7 +130,7 @@ def datahub_with_dependencies(
     industry_mapping_store = IndustryMappingStore(data_root / "meta" / "hub.sqlite")
 
     # Metadata Query Service
-    metadata_query_service = MetadataQueryService(
+    metadata_query_service = MetadataService(
         instrument_store=metadata_security_store,
         identity_store=identity_store,
         calendar_store=calendar_store,
@@ -148,7 +152,7 @@ def datahub_with_dependencies(
     index_constituent_store = IndexConstituentStore(data_root=data_root)
 
     # Market Query Service
-    market_query_service = MarketQueryService(
+    market_query_service = MarketService(
         stock_bars_store=stock_bars_store,
         stock_status_store=stock_status_store,
         stock_adj_store=stock_adj_store,
@@ -159,6 +163,20 @@ def datahub_with_dependencies(
         etf_adj_store=etf_adj_store,
         index_bars_store=index_bars_store,
         index_constituent_store=index_constituent_store,
+    )
+
+    # Fundamental & Capital Domain Stores
+    fundamental_store = FundamentalStore(sqlite_client)
+    capital_store = CapitalStore(sqlite_client)
+
+    # Fundamental Query Service
+    fundamental_query_service = FundamentalService(
+        fundamental_store=fundamental_store,
+    )
+
+    # Capital Query Service
+    capital_query_service = CapitalService(
+        capital_store=capital_store,
     )
 
     # Accessor Layer
@@ -198,6 +216,8 @@ def datahub_with_dependencies(
         securities=securities,
         metadata_query_service=metadata_query_service,
         market_query_service=market_query_service,
+        fundamental_query_service=fundamental_query_service,
+        capital_query_service=capital_query_service,
         calendar=calendar,
         adj_factor=adj_factor,
         bars=bars,
@@ -924,9 +944,9 @@ class TestDataHub:
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
 
-        # 验证 market 属性存在且为 MarketQueryService 实例
+        # 验证 market 属性存在且为 MarketService 实例
         assert hasattr(datahub_with_dependencies, "market")
-        assert isinstance(datahub_with_dependencies.market, MarketQueryService)
+        assert isinstance(datahub_with_dependencies.market, MarketService)
 
     def test_market_get_bars_returns_dataframe(
         self,

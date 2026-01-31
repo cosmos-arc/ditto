@@ -1,4 +1,4 @@
-"""Unit tests for MarketQueryService."""
+"""Unit tests for MarketService."""
 
 from __future__ import annotations
 
@@ -7,10 +7,10 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.market.market_query_service import (
+from ditto_datahub.domains.market.market_service import (
     AdjType,
     MarketBarsQuery,
-    MarketQueryService,
+    MarketService,
 )
 from ditto_datahub.models import AssetSidRange
 
@@ -76,7 +76,7 @@ def mock_instrument_store() -> MagicMock:
 
 
 @pytest.fixture
-def market_query_service(
+def market_service(
     mock_stock_bars_store: MagicMock,
     mock_stock_status_store: MagicMock,
     mock_stock_adj_store: MagicMock,
@@ -84,9 +84,9 @@ def market_query_service(
     mock_etf_status_store: MagicMock,
     mock_index_constituent_store: MagicMock,
     mock_instrument_store: MagicMock,
-) -> MarketQueryService:
-    """Create MarketQueryService instance with mocked dependencies."""
-    return MarketQueryService(
+) -> MarketService:
+    """Create MarketService instance with mocked dependencies."""
+    return MarketService(
         stock_bars_store=mock_stock_bars_store,
         stock_status_store=mock_stock_status_store,
         stock_adj_store=mock_stock_adj_store,
@@ -101,16 +101,16 @@ def market_query_service(
 
 
 @pytest.fixture
-def market_query_service_without_optionals(
+def market_service_without_optionals(
     mock_stock_bars_store: MagicMock,
     mock_stock_status_store: MagicMock,
     mock_stock_adj_store: MagicMock,
     mock_etf_bars_store: MagicMock,
     mock_etf_status_store: MagicMock,
     mock_instrument_store: MagicMock,
-) -> MarketQueryService:
-    """Create MarketQueryService instance without optional stores."""
-    return MarketQueryService(
+) -> MarketService:
+    """Create MarketService instance without optional stores."""
+    return MarketService(
         stock_bars_store=mock_stock_bars_store,
         stock_status_store=mock_stock_status_store,
         stock_adj_store=mock_stock_adj_store,
@@ -238,8 +238,8 @@ class TestMarketBarsQuery:
             query.sids = [3, 4]  # type: ignore
 
 
-class TestMarketQueryServiceInit:
-    """Test suite for MarketQueryService initialization."""
+class TestMarketServiceInit:
+    """Test suite for MarketService initialization."""
 
     def test_init_with_all_stores(
         self,
@@ -251,7 +251,7 @@ class TestMarketQueryServiceInit:
         mock_instrument_store: MagicMock,
     ) -> None:
         """Test initialization with all required stores."""
-        service = MarketQueryService(
+        service = MarketService(
             stock_bars_store=mock_stock_bars_store,
             stock_status_store=mock_stock_status_store,
             stock_adj_store=mock_stock_adj_store,
@@ -284,7 +284,7 @@ class TestMarketQueryServiceInit:
         mock_index_constituent_store: MagicMock,
     ) -> None:
         """Test initialization with optional stores."""
-        service = MarketQueryService(
+        service = MarketService(
             stock_bars_store=mock_stock_bars_store,
             stock_status_store=mock_stock_status_store,
             stock_adj_store=mock_stock_adj_store,
@@ -302,20 +302,18 @@ class TestMarketQueryServiceInit:
         assert service._index_constituent_store is mock_index_constituent_store
 
 
-class TestMarketQueryServiceGetBars:
-    """Test suite for MarketQueryService.get_bars()."""
+class TestMarketServiceGetBars:
+    """Test suite for MarketService.get_bars()."""
 
-    def test_get_bars_empty_sid_list(
-        self, market_query_service: MarketQueryService
-    ) -> None:
+    def test_get_bars_empty_sid_list(self, market_service: MarketService) -> None:
         """Test get_bars with empty SID list."""
         query = MarketBarsQuery(sids=[])
-        result = market_query_service.get_bars(query)
+        result = market_service.get_bars(query)
         assert result.is_empty()
 
     def test_get_bars_stock_basic(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_stock_bars_store: MagicMock,
         sample_stock_bars_df: pl.DataFrame,
     ) -> None:
@@ -323,7 +321,7 @@ class TestMarketQueryServiceGetBars:
         mock_stock_bars_store.read.return_value = sample_stock_bars_df
 
         query = MarketBarsQuery(sids=[1, 2], start="2024-01-01", end="2024-12-31")
-        result = market_query_service.get_bars(query)
+        result = market_service.get_bars(query)
 
         assert not result.is_empty()
         assert len(result) == 4
@@ -331,7 +329,7 @@ class TestMarketQueryServiceGetBars:
 
     def test_get_bars_stock_with_status(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_stock_bars_store: MagicMock,
         mock_stock_status_store: MagicMock,
         sample_stock_bars_df: pl.DataFrame,
@@ -344,14 +342,14 @@ class TestMarketQueryServiceGetBars:
         query = MarketBarsQuery(
             sids=[1, 2], with_status=True, start="2024-01-01", end="2024-12-31"
         )
-        result = market_query_service.get_bars(query)
+        result = market_service.get_bars(query)
 
         assert not result.is_empty()
         mock_stock_status_store.read.assert_called_once()
 
     def test_get_bars_raw_mode_skips_enrichment(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_stock_bars_store: MagicMock,
         mock_stock_status_store: MagicMock,
         mock_stock_adj_store: MagicMock,
@@ -363,7 +361,7 @@ class TestMarketQueryServiceGetBars:
         query = MarketBarsQuery(
             sids=[1, 2], with_status=True, adj=AdjType.QFQ, raw=True
         )
-        result = market_query_service.get_bars(query)
+        result = market_service.get_bars(query)
 
         assert not result.is_empty()
         # In raw mode, adj and status stores should not be called
@@ -372,7 +370,7 @@ class TestMarketQueryServiceGetBars:
 
     def test_get_bars_etf(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_etf_bars_store: MagicMock,
         sample_stock_bars_df: pl.DataFrame,
     ) -> None:
@@ -385,63 +383,63 @@ class TestMarketQueryServiceGetBars:
             sids=[etf_range.min_sid, etf_range.min_sid + 1],
             asset_class="etf",
         )
-        result = market_query_service.get_bars(query)
+        result = market_service.get_bars(query)
 
         assert not result.is_empty()
         mock_etf_bars_store.read.assert_called_once()
 
     def test_get_bars_index_when_store_is_none(
-        self, market_query_service: MarketQueryService
+        self, market_service: MarketService
     ) -> None:
         """Test get_bars for index when index store is None."""
         # 使用 Index SID 范围 (3M+)
         index_range = AssetSidRange.get_range("index")
         query = MarketBarsQuery(sids=[index_range.min_sid], asset_class="index")
-        result = market_query_service.get_bars(query)
+        result = market_service.get_bars(query)
 
         # Should return empty DataFrame when store is None
         assert result.is_empty()
 
 
-class TestMarketQueryServiceAssetClassDetection:
+class TestMarketServiceAssetClassDetection:
     """Test suite for asset class detection."""
 
     def test_detect_asset_class_from_stock_sids(
-        self, market_query_service: MarketQueryService
+        self, market_service: MarketService
     ) -> None:
         """Test detecting stock asset class from SIDs."""
         # Use valid stock SIDs (assuming range 1-999999)
         stock_range = AssetSidRange.get_range("stock")
         query = MarketBarsQuery(sids=[stock_range.min_sid, stock_range.max_sid])
-        sids, asset_class = market_query_service._resolve_sids_and_asset_class(query)
+        sids, asset_class = market_service._resolve_sids_and_asset_class(query)
 
         assert asset_class == "stock"
         assert len(sids) == 2
 
     def test_detect_asset_class_from_etf_sids(
-        self, market_query_service: MarketQueryService
+        self, market_service: MarketService
     ) -> None:
         """Test detecting ETF asset class from SIDs."""
         etf_range = AssetSidRange.get_range("etf")
         query = MarketBarsQuery(sids=[etf_range.min_sid, etf_range.max_sid])
-        sids, asset_class = market_query_service._resolve_sids_and_asset_class(query)
+        sids, asset_class = market_service._resolve_sids_and_asset_class(query)
 
         assert asset_class == "etf"
         assert len(sids) == 2
 
     def test_detect_asset_class_from_index_sids(
-        self, market_query_service: MarketQueryService
+        self, market_service: MarketService
     ) -> None:
         """Test detecting index asset class from SIDs."""
         index_range = AssetSidRange.get_range("index")
         query = MarketBarsQuery(sids=[index_range.min_sid, index_range.max_sid])
-        sids, asset_class = market_query_service._resolve_sids_and_asset_class(query)
+        sids, asset_class = market_service._resolve_sids_and_asset_class(query)
 
         assert asset_class == "index"
         assert len(sids) == 2
 
     def test_detect_mixed_asset_class_raises_error(
-        self, market_query_service: MarketQueryService
+        self, market_service: MarketService
     ) -> None:
         """Test that mixed asset class query raises ValueError."""
         stock_range = AssetSidRange.get_range("stock")
@@ -450,10 +448,10 @@ class TestMarketQueryServiceAssetClassDetection:
         query = MarketBarsQuery(sids=[stock_range.min_sid, etf_range.min_sid])
 
         with pytest.raises(ValueError, match="检测到混合资产类别查询"):
-            market_query_service._resolve_sids_and_asset_class(query)
+            market_service._resolve_sids_and_asset_class(query)
 
     def test_explicit_asset_class_mismatch_raises_error(
-        self, market_query_service: MarketQueryService
+        self, market_service: MarketService
     ) -> None:
         """Test that explicit asset_class mismatch with detected raises ValueError."""
         stock_range = AssetSidRange.get_range("stock")
@@ -461,15 +459,13 @@ class TestMarketQueryServiceAssetClassDetection:
         query = MarketBarsQuery(sids=[stock_range.min_sid], asset_class="etf")
 
         with pytest.raises(ValueError, match="显式指定的资产类别"):
-            market_query_service._resolve_sids_and_asset_class(query)
+            market_service._resolve_sids_and_asset_class(query)
 
 
-class TestMarketQueryServiceDateParsing:
+class TestMarketServiceDateParsing:
     """Test suite for date parsing."""
 
-    def test_parse_dates_with_all_params(
-        self, market_query_service: MarketQueryService
-    ) -> None:
+    def test_parse_dates_with_all_params(self, market_service: MarketService) -> None:
         """Test parsing dates with all parameters."""
         query = MarketBarsQuery(
             sids=[1, 2],
@@ -477,37 +473,35 @@ class TestMarketQueryServiceDateParsing:
             end="2024-12-31",
             asof="2024-06-30",
         )
-        start, end, asof = market_query_service._parse_dates(query)
+        start, end, asof = market_service._parse_dates(query)
 
         assert start == date(2024, 1, 1)
         assert end == date(2024, 12, 31)
         assert asof == date(2024, 6, 30)
 
-    def test_parse_dates_with_none_params(
-        self, market_query_service: MarketQueryService
-    ) -> None:
+    def test_parse_dates_with_none_params(self, market_service: MarketService) -> None:
         """Test parsing dates with None parameters."""
         query = MarketBarsQuery(sids=[1, 2])
-        start, end, asof = market_query_service._parse_dates(query)
+        start, end, asof = market_service._parse_dates(query)
 
         assert start is None
         assert end is None
         assert asof is None
 
 
-class TestMarketQueryServiceLoadBarsCore:
+class TestMarketServiceLoadBarsCore:
     """Test suite for _load_bars_core method."""
 
     def test_load_bars_core_stock(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_stock_bars_store: MagicMock,
         sample_stock_bars_df: pl.DataFrame,
     ) -> None:
         """Test loading stock bars."""
         mock_stock_bars_store.read.return_value = sample_stock_bars_df
 
-        result = market_query_service._load_bars_core(
+        result = market_service._load_bars_core(
             sids=[1, 2],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
@@ -519,14 +513,14 @@ class TestMarketQueryServiceLoadBarsCore:
 
     def test_load_bars_core_etf(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_etf_bars_store: MagicMock,
         sample_stock_bars_df: pl.DataFrame,
     ) -> None:
         """Test loading ETF bars."""
         mock_etf_bars_store.read.return_value = sample_stock_bars_df
 
-        result = market_query_service._load_bars_core(
+        result = market_service._load_bars_core(
             sids=[1500001],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
@@ -537,10 +531,10 @@ class TestMarketQueryServiceLoadBarsCore:
         mock_etf_bars_store.read.assert_called_once()
 
     def test_load_bars_core_index_when_none(
-        self, market_query_service: MarketQueryService
+        self, market_service: MarketService
     ) -> None:
         """Test loading index bars when store is None."""
-        result = market_query_service._load_bars_core(
+        result = market_service._load_bars_core(
             sids=[1],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
@@ -550,19 +544,19 @@ class TestMarketQueryServiceLoadBarsCore:
         assert result.is_empty()
 
 
-class TestMarketQueryServiceApplyAdjustment:
+class TestMarketServiceApplyAdjustment:
     """Test suite for _apply_adjustment method."""
 
     def test_apply_adjustment_no_adj_data(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_stock_adj_store: MagicMock,
         sample_stock_bars_df: pl.DataFrame,
     ) -> None:
         """Test adjustment when no adj factor data available."""
         mock_stock_adj_store.read.return_value = pl.DataFrame()
 
-        result = market_query_service._apply_adjustment(
+        result = market_service._apply_adjustment(
             df=sample_stock_bars_df,
             adj=AdjType.QFQ,
             sids=[1, 2],
@@ -576,7 +570,7 @@ class TestMarketQueryServiceApplyAdjustment:
 
     def test_apply_adjustment_with_adj_data(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_stock_adj_store: MagicMock,
         sample_stock_bars_df: pl.DataFrame,
         sample_adj_factor_df: pl.DataFrame,
@@ -584,7 +578,7 @@ class TestMarketQueryServiceApplyAdjustment:
         """Test adjustment with adj factor data."""
         mock_stock_adj_store.read.return_value = sample_adj_factor_df
 
-        result = market_query_service._apply_adjustment(
+        result = market_service._apply_adjustment(
             df=sample_stock_bars_df,
             adj=AdjType.QFQ,
             sids=[1, 2],
@@ -599,12 +593,12 @@ class TestMarketQueryServiceApplyAdjustment:
         mock_stock_adj_store.read.assert_called_once()
 
 
-class TestMarketQueryServiceEnrichWithStatus:
+class TestMarketServiceEnrichWithStatus:
     """Test suite for _enrich_with_status method."""
 
     def test_enrich_with_status(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_stock_status_store: MagicMock,
         sample_stock_bars_df: pl.DataFrame,
         sample_status_df: pl.DataFrame,
@@ -612,7 +606,7 @@ class TestMarketQueryServiceEnrichWithStatus:
         """Test status enrichment."""
         mock_stock_status_store.read.return_value = sample_status_df
 
-        result = market_query_service._enrich_with_status(
+        result = market_service._enrich_with_status(
             df=sample_stock_bars_df,
             sids=[1, 2],
             start="2024-01-01",
@@ -626,7 +620,7 @@ class TestMarketQueryServiceEnrichWithStatus:
 
     def test_enrich_with_status_date_objects(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_stock_status_store: MagicMock,
         sample_stock_bars_df: pl.DataFrame,
         sample_status_df: pl.DataFrame,
@@ -634,7 +628,7 @@ class TestMarketQueryServiceEnrichWithStatus:
         """Test status enrichment with date objects instead of strings."""
         mock_stock_status_store.read.return_value = sample_status_df
 
-        result = market_query_service._enrich_with_status(
+        result = market_service._enrich_with_status(
             df=sample_stock_bars_df,
             sids=[1, 2],
             start=date(2024, 1, 1),
@@ -648,12 +642,12 @@ class TestMarketQueryServiceEnrichWithStatus:
         assert call_args.kwargs["start_date"] == "2024-01-01"
 
 
-class TestMarketQueryServiceGetConstituents:
-    """Tests for MarketQueryService.get_constituents() method."""
+class TestMarketServiceGetConstituents:
+    """Tests for MarketService.get_constituents() method."""
 
     def test_get_constituents_success(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_index_constituent_store: MagicMock,
     ) -> None:
         """Test successful constituents query."""
@@ -667,7 +661,7 @@ class TestMarketQueryServiceGetConstituents:
             }
         )
 
-        result = market_query_service.get_constituents(index_sid=1, asof="2024-01-01")
+        result = market_service.get_constituents(index_sid=1, asof="2024-01-01")
 
         # Should return the constituents
         assert len(result) == 3
@@ -681,7 +675,7 @@ class TestMarketQueryServiceGetConstituents:
 
     def test_get_constituents_default_asof(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_index_constituent_store: MagicMock,
     ) -> None:
         """Test constituents query with default asof date (today)."""
@@ -694,7 +688,7 @@ class TestMarketQueryServiceGetConstituents:
             }
         )
 
-        result = market_query_service.get_constituents(index_sid=1)
+        result = market_service.get_constituents(index_sid=1)
 
         # Should return data with today's date
         assert len(result) == 1
@@ -706,24 +700,24 @@ class TestMarketQueryServiceGetConstituents:
 
     def test_get_constituents_store_not_configured(
         self,
-        market_query_service_without_optionals: MarketQueryService,
+        market_service_without_optionals: MarketService,
     ) -> None:
         """Test constituents query when IndexConstituentStore is not configured."""
         with pytest.raises(
             NotImplementedError,
             match="IndexConstituentStore not configured",
         ):
-            market_query_service_without_optionals.get_constituents(index_sid=1)
+            market_service_without_optionals.get_constituents(index_sid=1)
 
     def test_get_constituents_empty_result(
         self,
-        market_query_service: MarketQueryService,
+        market_service: MarketService,
         mock_index_constituent_store: MagicMock,
     ) -> None:
         """Test constituents query returns empty DataFrame."""
         mock_index_constituent_store.get.return_value = pl.DataFrame()
 
-        result = market_query_service.get_constituents(index_sid=999)
+        result = market_service.get_constituents(index_sid=999)
 
         assert result.is_empty()
         today = date.today().isoformat()

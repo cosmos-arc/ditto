@@ -1,5 +1,5 @@
 """
-MarketQueryService - Market 域统一查询入口。
+MarketService - Market 域统一查询入口。
 
 提供市场行情数据的统一查询接口，整合 Stock/ETF/Index 的 K线数据访问。
 支持复权处理、状态关联等高级功能。
@@ -77,7 +77,7 @@ class MarketBarsQuery:
     raw: bool = False
 
 
-class MarketQueryService:
+class MarketService:
     """
     Market 域统一查询服务.
 
@@ -101,7 +101,7 @@ class MarketQueryService:
         index_constituent_store: IndexConstituentStore | None = None,
     ) -> None:
         """
-        初始化 MarketQueryService.
+        初始化 MarketService.
 
         Args:
             stock_bars_store: 股票 K线存储.
@@ -229,8 +229,7 @@ class MarketQueryService:
         """
         if self._index_constituent_store is None:
             raise NotImplementedError(
-                "IndexConstituentStore not configured. Please provide "
-                "index_constituent_store when initializing MarketQueryService."
+                "IndexConstituentStore not configured. Please provide index_constituent_store when initializing MarketService.",  # noqa: E501
             )
 
         # 使用当前日期（如果未指定 asof）
@@ -350,8 +349,7 @@ class MarketQueryService:
             classes = [display_names[c] for c in detected]
             classes_str = ", ".join(classes)
             raise ValueError(
-                "检测到混合资产类别查询。SID 包含 "
-                + f"{classes_str}。请分别查询每个资产类别。"
+                f"检测到混合资产类别查询。SID 包含 {classes_str}。请分别查询每个资产类别。",  # noqa: E501
             )
 
         if not detected:
@@ -378,7 +376,6 @@ class MarketQueryService:
         if not query.sids:
             # 空 SID 列表时，使用显式 asset_class（如果有），否则默认为 "stock"
             return [], query.asset_class or "stock"
-
         # 普通模式：使用指定的 SID
         sids = sorted(set(query.sids))
         asset_class = query.asset_class
@@ -388,8 +385,7 @@ class MarketQueryService:
             detected = self._detect_asset_class_from_sids(sids)
             if detected != asset_class:
                 raise ValueError(
-                    f"显式指定的资产类别 '{asset_class}' 与从 SID "
-                    f"检测出的类别 '{detected}' 不一致"
+                    f"显式指定的资产类别 '{asset_class}' 与从 SID 检测出的类别 '{detected}' 不一致",  # noqa: E501
                 )
         else:
             asset_class = self._detect_asset_class_from_sids(sids)

@@ -1,7 +1,7 @@
 """
-Capital Domain - 财务与公司基本面数据域。
+Capital Domain - 资金与资本市场数据域。
 
-提供财务报表、估值指标、衍生品、成分股等数据的存储和查询，
+提供估值指标、融资融券、股权质押、期货、指数成分股等数据的存储和查询，
 支持完整的 PIT（Point-in-Time）能力。
 
 命名映射：
@@ -13,6 +13,12 @@ from ditto_datahub.domains.capital.capital_ingestion import (
     CapitalIngestion,
     IngestionResult,
 )
+from ditto_datahub.domains.capital.capital_service import CapitalService
 from ditto_datahub.domains.capital.capital_store import CapitalStore
 
-__all__ = ["CapitalIngestion", "CapitalStore", "IngestionResult"]
+__all__ = [
+    "CapitalIngestion",
+    "CapitalService",
+    "CapitalStore",
+    "IngestionResult",
+]

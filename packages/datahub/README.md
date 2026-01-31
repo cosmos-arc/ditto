@@ -1,7 +1,7 @@
 # ditto-datahub
 
-**版本**: v0.10.0
-**最后更新**: 2026-01-29
+**版本**: v0.11.0
+**最后更新**: 2026-01-30
 **状态**: ✅ 稳定
 
 ## 概要
@@ -212,46 +212,65 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
   - `index/`: 指数行情数据
     - `bars/bars_store.py`: IndexBarsStore（指数 K线数据）
     - `constituent/constituent_store.py`: IndexConstituentStore（指数成分股）
-  - `market_query_service.py`: MarketQueryService（域级统一查询服务）
+  - `market_query_service.py`: MarketService（域级统一查询服务）
 
-#### Capital 域
+#### Fundamental 域
 
-- `domains/capital/`: Capital 域（资金与财务数据）
-  - `capital_store.py`: CapitalStore（资金数据存储，支持 PIT 查询）
-  - `capital_ingestion.py`: CapitalIngestion（资金数据摄入服务）
+- `domains/fundamental/`: Fundamental 域（企业基本面数据）
+  - `financial/`: 财务报表数据子域
+  - `corporate/`: 公司行为数据子域
+  - `forecast/`: 业绩预告/快报数据子域
+  - `fundamental_store.py`: FundamentalStore（基本面数据存储，支持 PIT 查询）
 
-**数据类型**（10 种）：
+**数据类型**（9 种）：
 
 1. **财务报表数据**（PIT）
    - `balance_sheet`: 资产负债表
    - `income_statement`: 利润表
    - `cash_flow`: 现金流量表
 
-2. **估值指标数据**（PIT）
-   - `valuation_metrics`: 估值指标（PE/PB/PS/股息率/市值）
+2. **公司行为数据**
+   - `dividend`: 股息分红（PIT）
+   - `corporate_actions`: 公司行为（非 PIT）
 
-3. **衍生品数据**（PIT）
-   - `futures`: 期货数据（持仓量/结算价/成交量/成交额）
-
-4. **成分股数据**（PIT）
-   - `index_composition`: 指数成分股（指数ID/标的ID/权重）
-
-5. **股息分红**（PIT）
-   - `dividend`: 股息分红（除权日/每股股利/股息率）
-
-6. **融资融券**（PIT）
-   - `margin_trading`: 融资融券（融资余额/融券余额/融资买入额/融券卖出额）
-
-7. **股权质押**（PIT）
-   - `pledge_ratio`: 股权质押（质押比例/质押股数/总股本）
-
-8. **公司行为**（非 PIT）
-   - `corporate_actions`: 公司行为（行为类型/公告日/生效日/描述）
+3. **业绩预告/快报数据**（PIT）
+   - `forecast`: 业绩预告
+   - `express`: 业绩快报
 
 **PIT 查询支持**：
-- 9 种数据类型支持 PIT 查询（除 corporate_actions 外）
+- 8 种数据类型支持 PIT 查询（除 corporate_actions 外）
 - PIT 查询模式：`effective_from <= as_of_date AND (effective_to IS NULL OR effective_to > as_of_date)`
-- 数据缓存支持（DataCache）
+
+#### Capital 域
+
+- `domains/capital/`: Capital 域（资金与资本市场数据）
+  - `margin/`: 融资融券数据子域
+    - `margin_trading_store.py`: MarginTradingStore（融资融券存储）
+  - `pledge/`: 股权质押数据子域
+    - `pledge_ratio_store.py`: PledgeRatioStore（股权质押存储）
+  - `capital_store.py`: CapitalStore（资金数据存储，支持 PIT 查询）
+  - `capital_ingestion.py`: CapitalIngestion（资金数据摄入服务）
+
+**数据类型**（5 种）：
+
+1. **估值指标数据**（PIT）
+   - `valuation_metrics`: 估值指标（PE/PB/PS/股息率/市值）
+
+2. **融资融券数据**（PIT）
+   - `margin_trading`: 融资融券（融资余额/融券余额/融资买入额/融券卖出额）
+
+3. **股权质押数据**（PIT）
+   - `pledge_ratio`: 股权质押（质押比例/质押股数/总股本）
+
+4. **期货数据**（PIT）
+   - `futures`: 期货数据（持仓量/结算价/成交量/成交额）
+
+5. **成分股数据**（PIT）
+   - `index_composition`: 指数成分股（指数ID/标的ID/权重）
+
+**PIT 查询支持**：
+- 所有 5 种数据类型支持 PIT 查询
+- PIT 查询模式：`effective_from <= as_of_date AND (effective_to IS NULL OR effective_to > as_of_date)`
 
 **使用示例**：
 ```python
@@ -386,7 +405,7 @@ bars = hub.bars.get_bars(
 
 ### Metadata 查询（新 API）
 
-DataHub v0.7.0 引入了域级查询服务 `MetadataQueryService`，提供统一的 Metadata 域查询接口：
+DataHub v0.7.0 引入了域级查询服务 `MetadataService`，提供统一的 Metadata 域查询接口：
 
 ```python
 from ditto_datahub import DataHub
@@ -420,7 +439,7 @@ universe = hub.metadata.get_universe(name="csi300")
 
 ### Market 查询（新 API）
 
-DataHub 引入了域级查询服务 `MarketQueryService`，提供统一的 Market 域查询接口：
+DataHub 引入了域级查询服务 `MarketService`，提供统一的 Market 域查询接口：
 
 ```python
 from ditto_datahub import DataHub
@@ -608,6 +627,54 @@ bars/
 
 ## 变更记录
 
+### v0.11.0 (2026-01-30)
+**重构**
+- 域重构：将 Capital 域拆分为 Fundamental 域和 Capital 域
+  - **原因**: 原 Capital 域混合了"企业基本面"（由公司公告驱动）和"资金面"（由交易行为驱动）两类不同驱动变量的数据，架构边界不清
+  - Fundamental 域：企业基本面数据（财务报表、公司行为、业绩预告/快报）
+  - Capital 域：资金与资本市场数据（估值指标、融资融券、股权质押、期货、指数成分股）
+- Service 命名统一：
+  - `MarketQueryService` → `MarketService`
+  - `MetadataQueryService` → `MetadataService`
+
+**新增**
+- Fundamental 域架构：`domains/fundamental/` 目录结构
+  - `financial/`: 财务报表数据子域
+  - `corporate/`: 公司行为数据子域
+  - `forecast/`: 业绩预告/快报数据子域
+  - `fundamental_store.py`: FundamentalStore（基本面数据统一入口）
+- Capital 域子域结构：
+  - `margin/`: 融资融券数据子域
+    - `margin_trading_store.py`: MarginTradingStore
+  - `pledge/`: 股权质押数据子域
+    - `pledge_ratio_store.py`: PledgeRatioStore
+
+**迁移**
+- 从 Capital 域迁移到 Fundamental 域：
+  - 财务报表：balance_sheet, income_statement, cash_flow
+  - 公司行为：dividend, corporate_actions
+  - 业绩数据：forecast, express
+- Capital 域保留数据类型：
+  - 估值指标：valuation_metrics
+  - 融资融券：margin_trading
+  - 股权质押：pledge_ratio
+  - 期货：futures
+  - 指数成分股：index_composition
+
+**改进**
+- 域职责更清晰：Fundamental 聚焦企业基本面，Capital 聚焦资金与资本市场
+- 子域模式：复杂域使用子域存储（如 Capital 的 margin/pledge，Fundamental 的 financial/corporate/forecast）
+- 错误处理统一：CapitalStore 的 write 方法添加完整的 try-except/rollback/logger/M.data_records
+- 测试覆盖：所有新域和子域的单元测试和集成测试，新增数据修正场景的 PIT 测试
+- 文档更新：README 更新城架构说明，设计文档标记版本差异
+
+**测试**
+- Fundamental 域单元测试：financial、corporate、forecast 子域的完整测试覆盖
+- Capital 域单元测试：margin、pledge 子域的完整测试覆盖
+- PIT 数据修正测试：为 forecast/express/valuation_metrics/margin_trading 添加数据修正场景测试
+- 集成测试更新：更新 Capital 域集成测试，移除已迁移到 Fundamental 的数据类型
+- 测试通过：所有单元测试和集成测试通过（408 passed），类型检查通过（0 errors）
+
 ### v0.10.0 (2026-01-29)
 **新增**
 - Ingestion 层架构：`ingestion/` 目录
@@ -692,7 +759,7 @@ bars/
   - `stock/`: 股票行情数据域（StockBarsStore、StockStatusStore、StockAdjFactorStore）
   - `etf/`: ETF 行情数据域（EtfBarsStore、EtfStatusStore、EtfNavStore、EtfAdjFactorStore）
   - `index/`: 指数行情数据域（IndexBarsStore、IndexConstituentStore）
-- MarketQueryService：域级统一查询服务（`hub.market`）
+- MarketService：域级统一查询服务（`hub.market`）
   - 股票 K线查询（支持复权、状态增强）
   - ETF K线查询
   - 指数 K线查询
@@ -704,7 +771,7 @@ bars/
 - StockAdjFactorStore 迁移到 `domains/market/stock/adj/`
 - 新增 ETF 相关 Store（EtfBarsStore、EtfStatusStore、EtfNavStore、EtfAdjFactorStore）
 - 新增指数相关 Store（IndexBarsStore、IndexConstituentStore）
-- DataHub 集成 MarketQueryService，提供 `hub.market` 统一查询接口
+- DataHub 集成 MarketService，提供 `hub.market` 统一查询接口
 
 **改进**
 - 域驱动设计（DDD）：Market 域完整实现
@@ -718,7 +785,7 @@ bars/
   - `industry/`: 申万行业分类域（IndustryBasicStore、IndustryMappingStore）
   - `calendar/`: 交易日历域（CalendarStore）
   - `universe/`: 标的池域
-- MetadataQueryService：域级统一查询服务（`hub.metadata`）
+- MetadataService：域级统一查询服务（`hub.metadata`）
   - 标识符解析（支持 PIT）
   - 证券信息查询
   - 交易日历查询
@@ -730,7 +797,7 @@ bars/
 - CalendarStore 迁移到 `domains/metadata/calendar/`
 - IndustryBasicStore、IndustryMappingStore 新增
 - IdentityStore 新增（支持 PIT 标识符映射）
-- DataHub 集成 MetadataQueryService，提供 `hub.metadata` 统一查询接口
+- DataHub 集成 MetadataService，提供 `hub.metadata` 统一查询接口
 
 **改进**
 - 向后兼容性：保留 `hub.securities`、`hub.calendar` 别名
