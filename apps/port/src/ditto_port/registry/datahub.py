@@ -27,6 +27,13 @@ from ditto_datahub.domains.capital import CapitalService
 from ditto_datahub.domains.capital.capital_store import CapitalStore
 from ditto_datahub.domains.fundamental import FundamentalService
 from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
+from ditto_datahub.domains.macro import MacroService
+from ditto_datahub.domains.macro.indicator.indicator_store import (
+    IndicatorStore as MacroIndicatorStore,
+)
+from ditto_datahub.domains.macro.indicator.metadata_store import (
+    IndicatorMetadataStore,
+)
 from ditto_datahub.domains.market import MarketService
 from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
 from ditto_datahub.domains.market.etf.bars import EtfBarsStore
@@ -269,6 +276,26 @@ class DataHubProvider(Provider):
         return CapitalStore(sqlite_client)
 
     # ========================================================================
+    # Macro Domain Stores
+    # ========================================================================
+
+    @provide
+    def macro_indicator_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> MacroIndicatorStore:
+        """Macro indicator data storage."""
+        return MacroIndicatorStore(sqlite_client)
+
+    @provide
+    def macro_metadata_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> IndicatorMetadataStore:
+        """Macro indicator metadata storage."""
+        return IndicatorMetadataStore(sqlite_client)
+
+    # ========================================================================
     # Fundamental & Capital Query Services
     # ========================================================================
 
@@ -287,6 +314,22 @@ class DataHubProvider(Provider):
     ) -> CapitalService:
         """Capital 查询服务."""
         return CapitalService(capital_store=capital_store)
+
+    # ========================================================================
+    # Macro Query Service
+    # ========================================================================
+
+    @provide
+    def macro_query_service(
+        self,
+        macro_indicator_store: MacroIndicatorStore,
+        macro_metadata_store: IndicatorMetadataStore,
+    ) -> MacroService:
+        """Macro 查询服务."""
+        return MacroService(
+            indicator_store=macro_indicator_store,
+            metadata_store=macro_metadata_store,
+        )
 
     # ========================================================================
     # Accessor Layer
@@ -492,6 +535,7 @@ class DataHubProvider(Provider):
         market_query_service: MarketService,
         fundamental_query_service: FundamentalService,
         capital_query_service: CapitalService,
+        macro_query_service: MacroService,
         calendar: CalendarAccessor,
         adj_factor: AdjFactorAccessor,
         bars: BarsAccessor,
@@ -520,6 +564,7 @@ class DataHubProvider(Provider):
             market_query_service=market_query_service,
             fundamental_query_service=fundamental_query_service,
             capital_query_service=capital_query_service,
+            macro_query_service=macro_query_service,
             calendar=calendar,
             adj_factor=adj_factor,
             bars=bars,
