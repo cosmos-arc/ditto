@@ -16,6 +16,13 @@ from ditto_datahub.domains.capital import CapitalService
 from ditto_datahub.domains.capital.capital_store import CapitalStore
 from ditto_datahub.domains.fundamental import FundamentalService
 from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
+from ditto_datahub.domains.macro import MacroService
+from ditto_datahub.domains.macro.indicator.indicator_store import (
+    IndicatorStore as MacroIndicatorStore,
+)
+from ditto_datahub.domains.macro.indicator.metadata_store import (
+    IndicatorMetadataStore,
+)
 from ditto_datahub.domains.market import MarketService
 from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
 from ditto_datahub.domains.market.etf.bars import EtfBarsStore
@@ -179,6 +186,16 @@ def datahub_with_dependencies(
         capital_store=capital_store,
     )
 
+    # Macro Domain Stores
+    macro_indicator_store = MacroIndicatorStore(sqlite_client)
+    macro_metadata_store = IndicatorMetadataStore(sqlite_client)
+
+    # Macro Query Service
+    macro_query_service = MacroService(
+        indicator_store=macro_indicator_store,
+        metadata_store=macro_metadata_store,
+    )
+
     # Accessor Layer
     from ditto_datahub.accessors.instrument_accessor import (
         InstrumentsAccessor as SecuritiesAccessor,
@@ -218,6 +235,7 @@ def datahub_with_dependencies(
         market_query_service=market_query_service,
         fundamental_query_service=fundamental_query_service,
         capital_query_service=capital_query_service,
+        macro_query_service=macro_query_service,
         calendar=calendar,
         adj_factor=adj_factor,
         bars=bars,
