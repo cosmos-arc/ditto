@@ -25,6 +25,18 @@ from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.config.data_root import DataRootConfig
 from ditto_datahub.domains.capital import CapitalService
 from ditto_datahub.domains.capital.capital_store import CapitalStore
+from ditto_datahub.domains.factors import FactorService
+from ditto_datahub.domains.factors.factor_metadata_store import (
+    FactorMetadataStore,
+)
+from ditto_datahub.domains.factors.factor_store import FactorStore
+from ditto_datahub.domains.features import FeatureService
+from ditto_datahub.domains.features.technical import (
+    IndicatorMetadataStore as FeatureIndicatorMetadataStore,
+)
+from ditto_datahub.domains.features.technical import (
+    IndicatorStore as FeatureIndicatorStore,
+)
 from ditto_datahub.domains.fundamental import FundamentalService
 from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
 from ditto_datahub.domains.macro import MacroService
@@ -332,6 +344,72 @@ class DataHubProvider(Provider):
         )
 
     # ========================================================================
+    # Features Domain Stores & Services
+    # ========================================================================
+
+    @provide
+    def feature_indicator_store(
+        self,
+        data_root_config: DataRootConfig,
+    ) -> FeatureIndicatorStore:
+        """Feature technical indicator storage."""
+        return FeatureIndicatorStore(
+            data_root_config.features_technical_indicators_narrow_path
+        )
+
+    @provide
+    def feature_indicator_metadata_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> FeatureIndicatorMetadataStore:
+        """Feature indicator metadata storage."""
+        return FeatureIndicatorMetadataStore(sqlite_client)
+
+    @provide
+    def features_query_service(
+        self,
+        feature_indicator_store: FeatureIndicatorStore,
+        feature_indicator_metadata_store: FeatureIndicatorMetadataStore,
+    ) -> FeatureService:
+        """Features 查询服务."""
+        return FeatureService(
+            indicator_store=feature_indicator_store,
+            metadata_store=feature_indicator_metadata_store,
+        )
+
+    # ========================================================================
+    # Factors Domain Stores & Services
+    # ========================================================================
+
+    @provide
+    def factor_store(
+        self,
+        data_root_config: DataRootConfig,
+    ) -> FactorStore:
+        """Factor data storage."""
+        return FactorStore(data_root_config.factors_narrow_path)
+
+    @provide
+    def factor_metadata_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> FactorMetadataStore:
+        """Factor metadata storage."""
+        return FactorMetadataStore(sqlite_client)
+
+    @provide
+    def factors_query_service(
+        self,
+        factor_store: FactorStore,
+        factor_metadata_store: FactorMetadataStore,
+    ) -> FactorService:
+        """Factors 查询服务."""
+        return FactorService(
+            factor_store=factor_store,
+            metadata_store=factor_metadata_store,
+        )
+
+    # ========================================================================
     # Accessor Layer
     # ========================================================================
 
@@ -536,6 +614,8 @@ class DataHubProvider(Provider):
         fundamental_query_service: FundamentalService,
         capital_query_service: CapitalService,
         macro_query_service: MacroService,
+        features_query_service: FeatureService,
+        factors_query_service: FactorService,
         calendar: CalendarAccessor,
         adj_factor: AdjFactorAccessor,
         bars: BarsAccessor,
@@ -565,6 +645,8 @@ class DataHubProvider(Provider):
             fundamental_query_service=fundamental_query_service,
             capital_query_service=capital_query_service,
             macro_query_service=macro_query_service,
+            features_query_service=features_query_service,
+            factors_query_service=factors_query_service,
             calendar=calendar,
             adj_factor=adj_factor,
             bars=bars,

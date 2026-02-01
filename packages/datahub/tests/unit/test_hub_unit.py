@@ -14,6 +14,20 @@ from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.domains.capital import CapitalService
 from ditto_datahub.domains.capital.capital_store import CapitalStore
+
+# Features & Factors imports
+from ditto_datahub.domains.factors import FactorService
+from ditto_datahub.domains.factors.factor_metadata_store import (
+    FactorMetadataStore,
+)
+from ditto_datahub.domains.factors.factor_store import FactorStore
+from ditto_datahub.domains.features import FeatureService
+from ditto_datahub.domains.features.technical import (
+    IndicatorMetadataStore as FeatureIndicatorMetadataStore,
+)
+from ditto_datahub.domains.features.technical import (
+    IndicatorStore as FeatureIndicatorStore,
+)
 from ditto_datahub.domains.fundamental import FundamentalService
 from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
 from ditto_datahub.domains.macro import MacroService
@@ -97,7 +111,7 @@ def sqlite_pool(tmp_path: Path) -> Generator[SQLitePool, None, None]:
 
 
 @pytest.fixture
-def datahub_with_dependencies(
+def datahub_with_dependencies(  # noqa: PLR0915
     tmp_path: Path,
     sqlite_pool: SQLitePool,
 ) -> Generator[DataHub, None, None]:
@@ -196,6 +210,28 @@ def datahub_with_dependencies(
         metadata_store=macro_metadata_store,
     )
 
+    # Features Domain Stores
+    feature_indicator_store = FeatureIndicatorStore(
+        data_root=data_root / "features" / "technical" / "indicators_narrow"
+    )
+    feature_indicator_metadata_store = FeatureIndicatorMetadataStore(sqlite_client)
+
+    # Features Query Service
+    features_query_service = FeatureService(
+        indicator_store=feature_indicator_store,
+        metadata_store=feature_indicator_metadata_store,
+    )
+
+    # Factors Domain Stores
+    factor_store = FactorStore(data_root=data_root / "factors" / "factors_narrow")
+    factor_metadata_store = FactorMetadataStore(sqlite_client)
+
+    # Factors Query Service
+    factors_query_service = FactorService(
+        factor_store=factor_store,
+        metadata_store=factor_metadata_store,
+    )
+
     # Accessor Layer
     from ditto_datahub.accessors.instrument_accessor import (
         InstrumentsAccessor as SecuritiesAccessor,
@@ -236,6 +272,8 @@ def datahub_with_dependencies(
         fundamental_query_service=fundamental_query_service,
         capital_query_service=capital_query_service,
         macro_query_service=macro_query_service,
+        features_query_service=features_query_service,
+        factors_query_service=factors_query_service,
         calendar=calendar,
         adj_factor=adj_factor,
         bars=bars,

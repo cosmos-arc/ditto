@@ -151,7 +151,19 @@ class DataRootConfig(BaseSettings):
         """技术特征（价格）路径."""
         return self.data_root / "features" / "technical" / "price"
 
-    # ========== 因子路径 ==========
+    # ========== 特征路径 (扩展) ==========
+
+    @property
+    def features_technical_indicators_narrow_path(self) -> Path:
+        """技术指标窄表路径."""
+        return self.data_root / "features" / "technical" / "indicators_narrow"
+
+    @property
+    def features_technical_indicators_wide_path(self) -> Path:
+        """技术指标宽表路径."""
+        return self.data_root / "features" / "technical" / "indicators_wide"
+
+    # ========== 因子路径 (更新) ==========
 
     @property
     def factors_narrow_style_path(self) -> Path:
@@ -162,6 +174,16 @@ class DataRootConfig(BaseSettings):
     def factors_wide_style_path(self) -> Path:
         """宽风格因子路径."""
         return self.data_root / "factors" / "wide" / "style"
+
+    @property
+    def factors_narrow_path(self) -> Path:
+        """因子窄表路径."""
+        return self.data_root / "factors" / "factors_narrow"
+
+    @property
+    def factors_wide_path(self) -> Path:
+        """因子宽表路径."""
+        return self.data_root / "factors" / "factors_wide"
 
     # ========== 宏观路径 ==========
 
