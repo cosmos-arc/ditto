@@ -6,6 +6,7 @@ IndicatorStore for technical indicator data storage.
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 import polars as pl
@@ -117,6 +118,7 @@ class IndicatorStore(ParquetStoreBase):
         start_date: str | None = None,
         end_date: str | None = None,
         indicator_types: list[str] | None = None,
+        indicator_ids: list[str] | None = None,
     ) -> pl.DataFrame:
         """
         Query technical indicator data.
@@ -126,6 +128,7 @@ class IndicatorStore(ParquetStoreBase):
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
             indicator_types: Filter by indicator types (None = all).
+            indicator_ids: Filter by indicator IDs (None = all).
 
         Returns:
             DataFrame with indicator data.
@@ -137,10 +140,49 @@ class IndicatorStore(ParquetStoreBase):
             start_date=start_date,
             end_date=end_date,
             indicator_types=indicator_types,
+            indicator_ids=indicator_ids,
         )
 
-        # Use parent class read
-        df = super().read(sids=sids, start_date=start_date, end_date=end_date)
+        # Determine year range from date filters
+        start_year = int(start_date[:4]) if start_date else 1990
+        end_year = int(end_date[:4]) if end_date else 2099
+
+        paths = self._collect_paths(start_year, end_year)
+
+        if not paths:
+            logger.info(
+                "No data found for query",
+                event="data_read_complete",
+                dataset=self._dataset,
+                start_date=start_date,
+                end_date=end_date,
+                row_count=0,
+                duration_ms=0,
+            )
+            return pl.DataFrame()
+
+        # Scan and filter - NO deduplication on (sid, trade_date)
+        # because key is (sid, trade_date, indicator_id)
+        lf = pl.scan_parquet([str(p) for p in paths])
+
+        if sids:
+            lf = lf.filter(pl.col("sid").is_in(sids))
+
+        if start_date:
+            # Convert string to literal date
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+            lf = lf.filter(pl.col("trade_date") >= pl.lit(start_dt))
+
+        if end_date:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+            lf = lf.filter(pl.col("trade_date") <= pl.lit(end_dt))
+
+        # Collect without deduplication (same sid/date can have multiple indicators)
+        df = lf.sort(["sid", "trade_date", "indicator_id"]).collect()
+
+        # Apply indicator_id filter
+        if not df.is_empty() and indicator_ids:
+            df = df.filter(pl.col("indicator_id").is_in(indicator_ids))
 
         # Apply indicator_type filter
         if not df.is_empty() and indicator_types:

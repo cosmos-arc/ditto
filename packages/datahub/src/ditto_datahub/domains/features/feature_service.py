@@ -103,10 +103,15 @@ class FeatureService:
             if query.indicator_types is None
             else list(query.indicator_types)
         )
+        # Convert indicators to list[str] (accepts both int and str)
+        indicator_ids_str: list[str] | None = (
+            None if query.indicators is None else [str(i) for i in query.indicators]
+        )
         data_df = self._indicator_store.read(
             start_date=query.start,
             end_date=query.end,
             indicator_types=indicator_types_str,
+            indicator_ids=indicator_ids_str,
         )
 
         if data_df.is_empty():

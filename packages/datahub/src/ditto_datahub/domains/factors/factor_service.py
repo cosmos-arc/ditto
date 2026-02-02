@@ -92,10 +92,15 @@ class FactorService:
         )
 
         # Query factor data
+        # Convert factors to list[str] (accepts both int and str)
+        factor_ids_str: list[str] | None = (
+            None if query.factors is None else [str(f) for f in query.factors]
+        )
         data_df = self._factor_store.read(
             start_date=query.start,
             end_date=query.end,
             as_of_date=query.as_of,
+            factor_ids=factor_ids_str,
         )
 
         if data_df.is_empty():

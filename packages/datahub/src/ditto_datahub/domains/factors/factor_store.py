@@ -138,6 +138,7 @@ class FactorStore(ParquetStoreBase):
         start_date: str | None = None,
         end_date: str | None = None,
         as_of_date: str | None = None,
+        factor_ids: list[str] | None = None,
     ) -> pl.DataFrame:
         """
         Query factor data (PIT-safe).
@@ -147,6 +148,7 @@ class FactorStore(ParquetStoreBase):
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
             as_of_date: PIT query date - only return data effective as of this date.
+            factor_ids: Filter by factor IDs (None = all).
 
         Returns:
             DataFrame with factor data.
@@ -158,6 +160,7 @@ class FactorStore(ParquetStoreBase):
             start_date=start_date,
             end_date=end_date,
             as_of_date=as_of_date,
+            factor_ids=factor_ids,
         )
 
         # Determine year range from date filters
@@ -199,6 +202,10 @@ class FactorStore(ParquetStoreBase):
 
         if df.is_empty():
             return pl.DataFrame()
+
+        # Apply factor_id filter
+        if factor_ids:
+            df = df.filter(pl.col("factor_id").is_in(factor_ids))
 
         # Apply PIT filtering if as_of_date is specified
         if as_of_date:
