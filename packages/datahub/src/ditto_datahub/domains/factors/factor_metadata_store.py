@@ -209,6 +209,39 @@ class FactorMetadataStore:
         return pl.DataFrame(rows) if rows else pl.DataFrame()
 
     @traced("data.metadata_query")
+    def batch_get_by_codes(self, codes: list[str]) -> pl.DataFrame:
+        """
+        Query multiple factor metadata by codes.
+
+        Args:
+            codes: List of factor codes.
+
+        Returns:
+            DataFrame with factor metadata for all found codes.
+
+        """
+        if not codes:
+            return pl.DataFrame()
+
+        logger.debug(
+            "Batch querying factor metadata by codes",
+            codes_count=len(codes),
+        )
+
+        # Build placeholders for IN clause
+        placeholders = ",".join(["?" for _ in codes])
+        rows = self._client.fetchall(
+            f"""SELECT factor_id, code, name, class, family,
+                      description, formula, pit_enabled
+               FROM factors
+               WHERE code IN ({placeholders})
+               ORDER BY code""",
+            codes,
+        )
+
+        return pl.DataFrame(rows) if rows else pl.DataFrame()
+
+    @traced("data.metadata_query")
     def list_by_family(self, family: str | None = None) -> pl.DataFrame:
         """
         List factors by family.

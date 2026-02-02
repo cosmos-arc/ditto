@@ -1,7 +1,7 @@
 # ditto-datahub
 
-**版本**: v0.11.0
-**最后更新**: 2026-01-30
+**版本**: v0.12.0
+**最后更新**: 2026-02-02
 **状态**: ✅ 稳定
 
 ## 概要
@@ -272,7 +272,136 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 - 所有 5 种数据类型支持 PIT 查询
 - PIT 查询模式：`effective_from <= as_of_date AND (effective_to IS NULL OR effective_to > as_of_date)`
 
+#### Macro 域
+
+- `domains/macro/`: Macro 域（宏观经济指标数据）
+  - `indicator/`: 宏观指标子域
+    - `indicator_store.py`: IndicatorStore（宏观数据存储，支持 PIT 查询）
+    - `metadata_store.py`: IndicatorMetadataStore（宏观指标元数据）
+  - `macro_service.py`: MacroService（域级统一查询服务）
+
+**数据类型**（4 类）：
+- `economic`: 经济指标（GDP、CPI、PPI、PMI）
+- `interest_rate`: 利率指标（SHIBOR、LPR、国债收益率）
+- `exchange_rate`: 汇率指标
+- `money_supply`: 货币供应量（M0、M1、M2）
+
+**PIT 查询支持**：
+- 基于 SQLite 的 PIT 实现，使用 `effective_from/effective_to` 字段
+- 支持 `knowledge_date` 字段记录数据发布时间
+- PIT 查询模式：`effective_from <= as_of_date AND (effective_to IS NULL OR effective_to > as_of_date)`
+
+**存储路径**：
+- 数据：`data_root/macro/indicators_narrow/YYYY.parquet`
+
 **使用示例**：
+```python
+from ditto_datahub import DataHub
+from ditto_datahub.domains.macro import MacroQuery
+
+hub = DataHub()
+
+# 查询宏观经济指标（支持 PIT）
+query = MacroQuery(
+    indicators=["CPI_YOY", "SHIBOR_1M"],
+    start="2024-01-01",
+    end="2024-01-31",
+    asof="2024-06-30",  # 只使用截至该日期已知的数据
+    category="economic",
+)
+data = hub.macro.get_indicators(query)
+```
+
+#### Features 域
+
+- `domains/features/`: Features 域（技术指标与衍生特征域）
+  - `technical/`: 技术指标子域
+    - `indicator_store.py`: IndicatorStore（技术指标存储，Parquet 按年分区）
+    - `indicator_metadata_store.py`: IndicatorMetadataStore（技术指标元数据）
+    - `metadata.py`: 技术指标类型定义
+  - `feature_service.py`: FeatureService（域级统一查询服务）
+
+**指标类型**（4 类）：
+- `trend`: 趋势指标（SMA、EMA、MACD）
+- `momentum`: 动量指标（RSI、KDJ、CCI）
+- `volatility`: 波动率指标（ATR、布林带）
+- `volume`: 成交量指标（OBV、VWAP）
+
+**PIT 支持**：
+- 技术指标无需 PIT 支持（计算公式固定且可重现）
+- 任何时间点重新计算都会得到相同结果
+
+**存储路径**：
+- 数据：`data_root/features/technical/indicators_narrow/YYYY.parquet`
+- 元数据：`data_root/features/technical/metadata.sqlite`
+
+**使用示例**：
+```python
+from ditto_datahub import DataHub
+from ditto_datahub.domains.features import FeatureQuery
+
+hub = DataHub()
+
+# 查询技术指标
+query = FeatureQuery(
+    indicators=["indicator_rsi_14", "indicator_ma_20"],
+    start="2024-01-01",
+    end="2024-01-31",
+    indicator_types=["momentum", "trend"],
+)
+data = hub.features.get_indicators(query)
+```
+
+#### Factors 域
+
+- `domains/factors/`: Factors 域（因子信号域）
+  - `factor_store.py`: FactorStore（因子存储，支持 PIT 查询）
+  - `factor_metadata_store.py`: FactorMetadataStore（因子元数据）
+  - `metadata.py`: 因子分类定义
+  - `factor_service.py`: FactorService（域级统一查询服务）
+
+**因子分类**：
+
+**FactorClass**（4 类）：
+- `fundamental`: 基本面因子（PE、PB、ROE）
+- `technical`: 技术面因子（动量、反转）
+- `macro`: 宏观因子（利率、汇率）
+- `statistical`: 统计因子（波动率、偏度）
+
+**FactorFamily**（5 类）：
+- `value`: 价值因子
+- `momentum`: 动量因子
+- `quality`: 质量因子
+- `size`: 规模因子
+- `volatility`: 波动率因子
+
+**PIT 查询支持**：
+- 基于 Parquet 的轻量级 PIT 实现，使用 `effective_from/effective_to` 列
+- PIT 查询模式：`effective_from <= as_of_date AND (effective_to IS NULL OR effective_to > as_of_date)`
+
+**存储路径**：
+- 数据：`data_root/factors/factors_narrow/YYYY.parquet`
+- 元数据：`data_root/factors/metadata.sqlite`
+
+**使用示例**：
+```python
+from ditto_datahub import DataHub
+from ditto_datahub.domains.factors import FactorQuery
+
+hub = DataHub()
+
+# 查询因子信号（PIT 安全）
+query = FactorQuery(
+    factors=["factor_momentum_12m", "factor_value_pe"],
+    start="2024-01-01",
+    end="2024-01-31",
+    as_of="2024-06-30",  # 只使用截至该日期已知的数据
+    factor_classes=["fundamental", "technical"],
+)
+data = hub.factors.get_factors(query)
+```
+
+#### Capital 域使用示例：
 ```python
 from ditto_datahub.domains.capital import CapitalStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
@@ -626,6 +755,66 @@ bars/
 - [数据设计文档](../../../../docs/design/02_data_design.md)
 
 ## 变更记录
+
+### v0.12.0 (2026-02-02)
+**新增**
+- Macro 域架构：`domains/macro/` 目录结构
+  - **宏观经济指标**（4 类）：
+    - `economic`: 经济指标（GDP、CPI、PPI、PMI）
+    - `interest_rate`: 利率指标（SHIBOR、LPR、国债收益率）
+    - `exchange_rate`: 汇率指标
+    - `money_supply`: 货币供应量（M0、M1、M2）
+  - **PIT 支持**：基于 SQLite 的 PIT 实现，使用 `effective_from/effective_to` 字段
+  - **存储路径**：`data_root/macro/indicators_narrow/YYYY.parquet`
+
+- Features 域架构：`domains/features/` 目录结构
+  - **技术指标**（4 类）：
+    - `trend`: 趋势指标（SMA、EMA、MACD）
+    - `momentum`: 动量指标（RSI、KDJ、CCI）
+    - `volatility`: 波动率指标（ATR、布林带）
+    - `volume`: 成交量指标（OBV、VWAP）
+  - **PIT 支持**：无需 PIT（计算公式固定且可重现）
+  - **存储路径**：`data_root/features/technical/indicators_narrow/YYYY.parquet`
+
+- Factors 域架构：`domains/factors/` 目录结构
+  - **因子信号**（FactorClass × FactorFamily）：
+    - `FactorClass`: fundamental, technical, macro, statistical（4 类）
+    - `FactorFamily`: value, momentum, quality, size, volatility（5 类）
+  - **PIT 支持**：基于 Parquet 的轻量级 PIT 实现
+  - **存储路径**：`data_root/factors/factors_narrow/YYYY.parquet`
+
+**实现**
+- MacroService：统一查询接口，支持 `asof` PIT 查询
+- FeatureService：统一查询接口，支持类型过滤
+- FactorService：统一查询接口，支持 PIT 安全查询
+- MetadataStore：三个域各自的元数据管理（SQLite）
+- 数据存储：Macro（SQLite PIT），Features/Factors（Parquet 按年分区）
+
+**集成**
+- DataRootConfig：添加新域路径配置
+- DataHub：注册三个新域服务（`hub.macro`, `hub.features`, `hub.factors`）
+- 依赖注入：`apps/port/src/ditto_port/registry/datahub.py`
+
+**改进**
+- 架构一致性：三域统一使用 Service + Store + MetadataStore 模式
+- 类型安全：使用 `Literal` 类型限制枚举值
+- 测试覆盖：60 个单元测试全部通过
+- 代码质量：basedpyright 0 errors, ruff All checks passed
+
+**测试**
+- Macro 域测试：10 个测试
+- Features 域测试：14 个测试
+- Factors 域测试：17 个测试
+- Hub 单元测试：19 个测试
+- 总计：60 个测试，全部通过 ✅
+
+**文档**
+- `docs/design/2026-02-01-factor-library-taxonomy.md` - 因子库分类体系
+- `docs/design/2026-02-01-feature-factor-engines.md` - 特征和因子引擎架构
+- `docs/plans/2026-02-01-datahub-macro-domain-design.md` - Macro 域设计
+- `docs/plans/2026-02-01-features-factors-compute-storage-separation.md` - 计算存储分离
+- `docs/plans/2026-02-01-features-factors-domain-design.md` - 域设计规范
+- `docs/plans/2026-02-01-features-factors-implementation.md` - 实施计划
 
 ### v0.11.0 (2026-01-30)
 **重构**

@@ -2,6 +2,9 @@
 
 **创建日期**: 2026-02-01
 **状态**: 架构设计草案
+**实现状态**:
+- ✅ **Phase 1-2 (DataHub 层)**: 已实现 - Macro/Features/Factors 三域存储
+- ⏳ **Phase 3-4 (Core 层)**: 待实现 - 计算引擎和 Calculator Registry
 **相关**: `docs/plans/2026-02-01-features-factors-domain-design.md`
 
 ---

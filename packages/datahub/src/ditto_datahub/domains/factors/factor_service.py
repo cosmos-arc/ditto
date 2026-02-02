@@ -131,20 +131,16 @@ class FactorService:
             Enriched DataFrame with metadata columns.
 
         """
-        # Get unique factor IDs
+        # Get unique factor IDs (Note: factor_id in Parquet is a string code
+        # like "factor_momentum_12m", not an integer ID. It corresponds to
+        # the 'code' column in SQLite metadata store)
         factor_ids = df["factor_id"].unique().to_list()
 
-        # Fetch metadata for all factors
-        metadata_rows: list[pl.DataFrame] = []
-        for fid in factor_ids:
-            row = self._metadata_store.get_by_code(str(fid))
-            if not row.is_empty():
-                metadata_rows.append(row)
+        # Batch fetch metadata for all factors (优化：一次性查询所有元数据)
+        metadata_df = self._metadata_store.batch_get_by_codes(factor_ids)
 
-        if not metadata_rows:
+        if metadata_df.is_empty():
             return df
-
-        metadata_df: pl.DataFrame = pl.concat(metadata_rows)
 
         # Join metadata
         result = df.join(

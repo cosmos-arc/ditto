@@ -38,6 +38,10 @@ class FactorStore(ParquetStoreBase):
         effective_to: Date when this version stops being effective (NULL = current)
     """
 
+    # Year range defaults (中国股市成立年份 / 遥远的未来年份)
+    DEFAULT_START_YEAR = 1990
+    DEFAULT_END_YEAR = 2099
+
     def __init__(self, data_root: Path) -> None:
         """
         Initialize FactorStore.
@@ -157,8 +161,10 @@ class FactorStore(ParquetStoreBase):
         )
 
         # Determine year range from date filters
-        start_year = int(start_date[:4]) if start_date else 1990
-        end_year = int(end_date[:4]) if end_date else 2099
+        start_year = (
+            int(start_date[:4]) if start_date else FactorStore.DEFAULT_START_YEAR
+        )
+        end_year = int(end_date[:4]) if end_date else FactorStore.DEFAULT_END_YEAR
 
         paths = self._collect_paths(start_year, end_year)
 

@@ -182,17 +182,18 @@ class MacroService:
         # Get unique indicator IDs
         indicator_ids = df["indicator_id"].unique().to_list()
 
-        # Fetch metadata for all indicators
-        metadata_rows: list[pl.DataFrame] = []
+        # Batch fetch metadata for all indicators (优化：一次性查询所有元数据)
+        metadata_df = pl.DataFrame()
         for iid in indicator_ids:
             row = self._metadata_store.get_by_id(iid)
             if not row.is_empty():
-                metadata_rows.append(row)
+                if metadata_df.is_empty():
+                    metadata_df = row
+                else:
+                    metadata_df = pl.concat([metadata_df, row])
 
-        if not metadata_rows:
+        if metadata_df.is_empty():
             return df
-
-        metadata_df: pl.DataFrame = pl.concat(metadata_rows)
 
         # Join metadata
         result = df.join(

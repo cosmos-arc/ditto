@@ -47,6 +47,9 @@ class FeatureService:
 
     Features 域统一查询服务,提供技术指标数据的高级查询 API,
     集成 IndicatorStore 和 IndicatorMetadataStore.
+
+    **注意**：技术指标不需要 PIT 支持，因为计算公式固定且可重现。
+    与需要 PIT 的基本面特征不同，技术指标在任何时间点重新计算都会得到相同结果。
     """
 
     def __init__(
@@ -136,17 +139,12 @@ class FeatureService:
         # Get unique indicator IDs
         indicator_ids = df["indicator_id"].unique().to_list()
 
-        # Fetch metadata for all indicators
-        metadata_rows: list[pl.DataFrame] = []
-        for iid in indicator_ids:
-            row = self._metadata_store.get_by_code(str(iid))
-            if not row.is_empty():
-                metadata_rows.append(row)
+        # Batch fetch metadata for all indicators (优化：一次性查询所有元数据)
+        codes = [str(iid) for iid in indicator_ids]
+        metadata_df = self._metadata_store.batch_get_by_codes(codes)
 
-        if not metadata_rows:
+        if metadata_df.is_empty():
             return df
-
-        metadata_df: pl.DataFrame = pl.concat(metadata_rows)
 
         # Join metadata
         result = df.join(

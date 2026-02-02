@@ -92,6 +92,11 @@ ignore = [
 unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
+# MetadataStore batch_get_by_codes - 参数化查询，使用 ? 占位符
+"packages/datahub/src/ditto_datahub/domains/macro/indicator/metadata_store.py" = ["S608"]
+"packages/datahub/src/ditto_datahub/domains/features/technical/indicator_metadata_store.py" = ["S608"]
+"packages/datahub/src/ditto_datahub/domains/factors/factor_metadata_store.py" = ["S608"]
+
 # 测试文件 - 最宽松
 "tests/**/*.py" = [
     "PLR2004",

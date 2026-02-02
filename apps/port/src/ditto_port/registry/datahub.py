@@ -44,7 +44,7 @@ from ditto_datahub.domains.macro.indicator.indicator_store import (
     IndicatorStore as MacroIndicatorStore,
 )
 from ditto_datahub.domains.macro.indicator.metadata_store import (
-    IndicatorMetadataStore,
+    IndicatorMetadataStore as MacroIndicatorMetadataStore,
 )
 from ditto_datahub.domains.market import MarketService
 from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
@@ -303,9 +303,9 @@ class DataHubProvider(Provider):
     def macro_metadata_store(
         self,
         sqlite_client: SQLiteClient,
-    ) -> IndicatorMetadataStore:
+    ) -> MacroIndicatorMetadataStore:
         """Macro indicator metadata storage."""
-        return IndicatorMetadataStore(sqlite_client)
+        return MacroIndicatorMetadataStore(sqlite_client)
 
     # ========================================================================
     # Fundamental & Capital Query Services
@@ -335,7 +335,7 @@ class DataHubProvider(Provider):
     def macro_query_service(
         self,
         macro_indicator_store: MacroIndicatorStore,
-        macro_metadata_store: IndicatorMetadataStore,
+        macro_metadata_store: MacroIndicatorMetadataStore,
     ) -> MacroService:
         """Macro 查询服务."""
         return MacroService(

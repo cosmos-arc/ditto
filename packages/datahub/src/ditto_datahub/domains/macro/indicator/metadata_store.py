@@ -213,6 +213,39 @@ class IndicatorMetadataStore:
         return pl.DataFrame(rows) if rows else pl.DataFrame()
 
     @traced("data.metadata_query")
+    def batch_get_by_codes(self, codes: list[str]) -> pl.DataFrame:
+        """
+        Query multiple indicator metadata by codes.
+
+        Args:
+            codes: List of indicator codes.
+
+        Returns:
+            DataFrame with indicator metadata for all found codes.
+
+        """
+        if not codes:
+            return pl.DataFrame()
+
+        logger.debug(
+            "Batch querying indicator metadata by codes",
+            codes_count=len(codes),
+        )
+
+        # Build placeholders for IN clause
+        placeholders = ",".join(["?" for _ in codes])
+        rows = self._client.fetchall(
+            f"""SELECT indicator_id, code, name, category, frequency, need_pit,
+                      source, unit, description
+               FROM macro_indicators
+               WHERE code IN ({placeholders})
+               ORDER BY code""",
+            codes,
+        )
+
+        return pl.DataFrame(rows) if rows else pl.DataFrame()
+
+    @traced("data.metadata_query")
     def list_by_category(self, category: str | None = None) -> pl.DataFrame:
         """
         List indicators by category.
