@@ -19,7 +19,10 @@ from ditto_datahub.accessors.instrument_accessor import InstrumentsAccessor
 from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
 from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.domains.capital import CapitalService
+from ditto_datahub.domains.factors import FactorService
+from ditto_datahub.domains.features import FeatureService
 from ditto_datahub.domains.fundamental import FundamentalService
+from ditto_datahub.domains.macro import MacroService
 from ditto_datahub.domains.market import MarketService
 from ditto_datahub.domains.metadata import MetadataService
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
@@ -117,6 +120,7 @@ class DataHub:
     Attribute layers:
     - Runtime Layer: sqlite_pool, file_lock, sid_allocator, freeze
     - Accessor Layer: securities, bars, calendar, universe, index, ingestion_log
+    - Domain Services: metadata, market, fundamental, capital, macro, features, factors
     - Sources Layer: sources (external data sources: Tushare, Akshare)
     - SQL Engine: sql_engine
 
@@ -136,6 +140,9 @@ class DataHub:
         market_query_service: MarketService,
         fundamental_query_service: FundamentalService,
         capital_query_service: CapitalService,
+        macro_query_service: MacroService,
+        features_query_service: FeatureService,
+        factors_query_service: FactorService,
         calendar: CalendarAccessor,
         adj_factor: AdjFactorAccessor,
         bars: BarsAccessor,
@@ -164,6 +171,9 @@ class DataHub:
             market_query_service: Market query service (unified market data API).
             fundamental_query_service: Fundamental query service.
             capital_query_service: Capital query service.
+            macro_query_service: Macro query service.
+            features_query_service: Features query service.
+            factors_query_service: Factors query service.
             calendar: Trading calendar accessor.
             adj_factor: Adjustment factor accessor.
             bars: OHLCV bars accessor.
@@ -186,6 +196,9 @@ class DataHub:
         self.market = market_query_service
         self.fundamental = fundamental_query_service
         self.capital = capital_query_service
+        self.macro = macro_query_service
+        self.features = features_query_service
+        self.factors = factors_query_service
         self.calendar = calendar
         self.adj_factor = adj_factor
         self.bars = bars
