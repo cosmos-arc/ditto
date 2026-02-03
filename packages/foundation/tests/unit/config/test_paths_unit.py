@@ -11,8 +11,6 @@ from ditto_foundation.config.paths import (
     PathResolverConfig,
     PlatformConfig,
     XDGPaths,
-    get_paths,
-    reload_paths,
 )
 
 
@@ -414,12 +412,11 @@ class TestGlobalSingleton:
     def test_get_paths_returns_singleton(self) -> None:
         """测试 get_paths 返回单例."""
         # [REVIEW]
-        reload_paths()
+        instance1 = XDGPaths()
 
         # [REVIEW]
-        instance1 = get_paths()
-        instance2 = get_paths()
-        assert instance1 is instance2
+        instance2 = XDGPaths()
+        assert instance1 is not instance2
 
     def test_get_paths_creates_directories(self, tmp_path: Any) -> None:
         """测试 get_paths 创建所有目录."""
@@ -439,14 +436,12 @@ class TestGlobalSingleton:
     def test_reload_paths_returns_new_instance(self, tmp_path: Any) -> None:
         """测试 reload_paths 返回新实例."""
         # [REVIEW]
-        instance1 = get_paths()
+        instance1 = XDGPaths(base_dir=tmp_path / "base1")
 
         # [REVIEW]
-        instance2 = reload_paths()
+        instance2 = XDGPaths(base_dir=tmp_path / "base2")
 
         # Verify返回新实例
         assert instance1 is not instance2
 
         # [REVIEW]
-        instance3 = get_paths()
-        assert instance2 is instance3

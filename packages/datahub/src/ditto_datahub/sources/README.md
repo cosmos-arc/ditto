@@ -51,7 +51,7 @@
 ### 3.2 Tushare 适配器
 
 **TushareClient** - API 客户端
-- Token 安全管理（keyring → secrets.toml → env var）
+- Token 由 DataSourceSettings 注入（不读取环境或本地文件）
 - 限流：200 次/分钟
 - 重试：指数退避（1min, 5min, 15min）
 - 错误处理：认证错误、限流错误、网络错误
@@ -77,9 +77,11 @@ DataSourceError (基类)
 ### 5.1 直接调用 TushareSource
 
 ```python
+from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.tushare import TushareSource
 
-source = TushareSource()
+settings = DataSourceSettings(tushare_token="your_token_here")
+source = TushareSource(settings=settings)
 
 # 获取交易日历
 calendar = source.fetch_calendar("2024-01-01", "2024-01-31")
@@ -111,26 +113,16 @@ stock_daily = source.fetch_stock_daily("2024-01-02")
 
 ### 5.3 Token 配置
 
-**方式 1 - keyring（推荐）**:
-```bash
-python -c "import keyring; keyring.set_password('ditto', 'tushare', 'YOUR_TOKEN')"
-```
+推荐在 `config/{env}/data_source.env` 中配置，并由上层应用注入 `DataSourceSettings`。
 
-**方式 2 - secrets.toml（备选）**:
-```toml
-# ~/.ditto/secrets.toml
-[tushare]
-token = "YOUR_TOKEN"
-```
-
-**方式 3 - 环境变量（仅用于开发）**:
-```bash
-export TUSHARE_TOKEN="YOUR_TOKEN"
+```env
+# config/{env}/data_source.env
+TUSHARE_TOKEN=YOUR_TOKEN
 ```
 
 ## 六、注意事项
 
-1. **Token 安全**: 生产环境必须使用 keyring，禁止硬编码 token
+1. **Token 安全**: 仅通过 `DataSourceSettings` 注入，禁止硬编码或隐式读取环境
 2. **API 限流**: Tushare 免费账号 200 次/分钟，付费账号更高
 3. **数据格式**: 所有 fetch 方法返回 polars.DataFrame
 4. **字段命名**: 使用 Ditto 标准（`src_code`, `trade_date`, `volume`, `pct_change`）

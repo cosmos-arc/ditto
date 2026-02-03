@@ -1,38 +1,23 @@
-"""DataHub 数据库配置."""
+"""DataHub 数据库配置。"""
 
 from pathlib import Path
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from ditto_datahub.config.data_root import DataRootConfig
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class DatabaseSettings(BaseSettings):
-    """
-    数据库配置.
+class DatabaseSettings(BaseModel):
+    """数据库配置（仅模型，不读取环境/文件）。"""
 
-    支持通过环境变量覆盖路径：
-    - DB_SQLITE_PATH: SQLite 数据库文件路径
-    - DB_DUCKDB_PATH: DuckDB 数据库文件路径
+    model_config = ConfigDict(extra="ignore")
 
-    如果未设置环境变量，则使用 DATA_ROOT 下的默认路径。
-    """
-
-    model_config = SettingsConfigDict(
-        env_prefix="DB_",
-        extra="ignore",
+    sqlite_path: Path | None = Field(
+        default=None,
+        description="SQLite 数据库路径(未设置时由 data_root 计算)",
     )
-
-    # 使用 Field(default_factory=...) 而非 computed_field
-    # 这样既支持环境变量覆盖，又有合理的默认值
-    sqlite_path: Path = Field(default_factory=lambda: DataRootConfig().metadata_db_path)
-    """SQLite 数据库文件路径。可通过 DB_SQLITE_PATH 环境变量覆盖。"""
-
-    duckdb_path: Path = Field(
-        default_factory=lambda: DataRootConfig().db_path / "duckdb/ditto.duckdb"
+    duckdb_path: Path | None = Field(
+        default=None,
+        description="DuckDB 数据库路径(未设置时由 data_root 计算)",
     )
-    """DuckDB 数据库文件路径。可通过 DB_DUCKDB_PATH 环境变量覆盖。"""
 
 
 __all__ = ["DatabaseSettings"]

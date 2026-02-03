@@ -92,15 +92,15 @@ store.write(df, on_duplicate=OnDuplicate.KEEP_FIRST)
 | `ParquetStore` | Parquet 文件存储实现，支持按年分区、自动去重 |
 | `SQLiteStore` | SQLite 数据库存储实现，支持事务、PIT 查询 |
 
-**配置系统**：从多路径配置简化为单 `DATA_ROOT` 配置，所有路径自动生成：
+**配置系统**：从多路径配置简化为单 `data_root` 配置（`data_store.env`），所有路径自动生成：
 
 ```python
 from ditto_datahub.config import DataRootConfig
 
-# 初始化配置（可通过 DATA_ROOT 环境变量设置）
+# 初始化配置（来自 data_store.env）
 config = DataRootConfig()
-# 默认: /data/ditto
-# 自动生成: market/stock/bars/daily/, metadata/metadata.sqlite, 等
+# 默认: data
+# 自动生成: data/market/stock/bars/daily/, data/metadata/metadata.sqlite, 等
 
 # 使用配置
 store = BarsStore(config.data_root)
@@ -994,7 +994,7 @@ bars/
 - `DataRootConfig`：统一数据根路径配置，简化路径管理
 
 **改进**
-- 从多路径配置简化为单 `DATA_ROOT` 配置
+- 从多路径配置简化为单 `data_root` 配置（`data_store.env`）
 - 所有存储实现继承 `BaseStore`，保证接口一致性
 - 增强类型安全和代码可维护性
 

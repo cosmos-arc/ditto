@@ -2,7 +2,9 @@
 
 import pytest
 from ditto_datahub import DataHub
+from ditto_foundation.config.environment import Environment
 from ditto_foundation.observability import init, reset_for_testing
+from ditto_foundation.observability.config import ObservabilityConfig
 from ditto_port.models import IngestionResult
 from ditto_port.services.ingestion.retry import (
     RetryManager,
@@ -14,12 +16,16 @@ from ditto_port.services.ingestion.retry import (
 def setup_observability():
     """初始化可观测性。"""
     reset_for_testing()
-    init(
+    config = ObservabilityConfig(
+        environment=Environment.TESTING,
         pytest_running=True,
         assertions_enabled=True,
         verbose_logging=False,
-        force=True,
+        tracing_enabled=True,
+        tracing_sample_rate=1.0,
+        metrics_enabled=True,
     )
+    init(config, force=True)
     yield
     reset_for_testing()
 

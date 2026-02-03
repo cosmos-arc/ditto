@@ -97,8 +97,8 @@ def configure_observability_for_testing() -> Generator[None, None, None]:
     """
     import os
 
-    # 设置环境变量，让 ObservabilityConfig.detect_runtime_flags() 检测到 pytest 环境
-    # 这样 ConfigProvider.observability() 调用 init() 时会自动设置 pytest_running=True
+    # 设置环境变量，让 ConfigProvider 的运行时标志检测识别 pytest 环境
+    # 让 ObservabilityConfig 带 pytest_running=True
     os.environ["PYTEST_CURRENT_TEST"] = "test"
 
     return

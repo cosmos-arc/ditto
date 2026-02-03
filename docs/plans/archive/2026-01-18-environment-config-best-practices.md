@@ -1,5 +1,8 @@
 # 环境和配置架构最佳实践评估报告
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 **评估日期**: 2026-01-18
 **评估范围**: `docs/reviews/2026-01-18-architecture-audit.md` 中环境和配置相关部分
 **评估方法**: 业界标准对比 + 用户需求分析
@@ -17,7 +20,7 @@
 | 环境值命名 | `development/testing/production`（全称） | 符合 12-factor app、Django、FastAPI 规范 |
 | 配置目录结构 | `config/{env}/*.env`（按环境分组） | 清晰隔离，适合环境差异明显的场景 |
 | 配置加载时机 | 启动时自动加载 | 快速失败，符合 Python 习惯 |
-| 环境变量前缀 | `DITTO_OTEL_*`（复合前缀） | 避免冲突，保持关联性 |
+| 配置键命名 | `无前缀（直接字段名）` | 避免命名冲突，保持一致性 |
 | 配置复杂度 | 预设 + 独立开关覆盖 | 兼顾易用性和灵活性 |
 
 ---
@@ -50,16 +53,16 @@ class Environment(str, Enum):
 - 继续使用全称命名
 - 在代码中添加注释说明为何不用缩写（避免 `dev`/`test`/`prod` 的歧义）
 
-### 1.2 环境变量前缀
+### 1.2 配置键命名
 
-**推荐设计**: 复合前缀 `DITTO_OTEL_*`
+**推荐设计**: 无前缀，直接使用字段名（与配置模型一致）
 
 ```
-DITTO_OTEL_LOG_LEVEL=info
-DITTO_OTEL_TRACING_ENABLED=true
-DITTO_OTEL_TRACING_EXPORTER=otlp
-DITTO_DB_POOL_SIZE=20
-DITTO_API_HOST=0.0.0.0
+LOG_LEVEL=info
+TRACING_ENABLED=true
+TRACING_EXPORTER=otlp
+SQLITE_PATH=data/meta/hub.sqlite
+API_HOST=0.0.0.0
 ```
 
 **业界对比**:
@@ -70,12 +73,12 @@ DITTO_API_HOST=0.0.0.0
 | AWS Distro for OTEL | `AWS_*` + `OTEL_*` | 云服务商特化 |
 | Vector | `VECTOR_*` | 独立命名空间 |
 
-**评估**: ✅ **复合前缀符合命名空间最佳实践**
+**评估**: ✅ **无前缀在配置文件隔离下更清晰**
 
 **理由**:
-1. 避免与系统其他 OTEL 应用冲突
-2. 清晰标识配置来源
-3. 便于未来扩展 Ditto 特有配置
+1. 配置来源由文件隔离，无需前缀区分
+2. 与配置模型字段一一对应，减少映射
+3. 文档与实现更易保持一致
 
 ---
 
@@ -180,10 +183,10 @@ class ObservabilityConfig:
 
 | OTEL 环境变量 | Ditto 对应 | 对齐程度 |
 |---------------|-----------|---------|
-| `OTEL_LOG_LEVEL` | `DITTO_OTEL_LOG_LEVEL` | ✅ 完全对齐 |
-| `OTEL_TRACES_EXPORTER` | `DITTO_OTEL_TRACING_EXPORTER` | ✅ 完全对齐 |
-| `OTEL_TRACES_SAMPLER` | `DITTO_OTEL_TRACING_SAMPLE_RATE` | ✅ 语义对齐 |
-| `OTEL_METRICS_EXPORTER` | `DITTO_OTEL_METRICS_EXPORTER` | ✅ 完全对齐 |
+| `OTEL_LOG_LEVEL` | `LOG_LEVEL` | ✅ 完全对齐 |
+| `OTEL_TRACES_EXPORTER` | `TRACING_EXPORTER` | ✅ 完全对齐 |
+| `OTEL_TRACES_SAMPLER` | `TRACING_SAMPLE_RATE` | ✅ 语义对齐 |
+| `OTEL_METRICS_EXPORTER` | `METRICS_EXPORTER` | ✅ 完全对齐 |
 
 **评估**: ✅ **与 OTEL 规范高度对齐**
 
@@ -260,7 +263,7 @@ class ObservabilityConfig:
 
 | 问题 | 建议 | 优先级 |
 |------|------|--------|
-| 环境变量前缀 | 改用 `DITTO_OTEL_*` 复合前缀 | P1 |
+| 配置键命名 | 改为 `无前缀（直接字段名）` | P1 |
 | 配置文件结构 | 实现 `config/{env}/` 目录结构 | P1 |
 | 配置加载 | 实现启动时自动加载 | P1 |
 
@@ -279,7 +282,7 @@ class ObservabilityConfig:
 ### 7.1 命名规范验证
 
 - [x] 环境值使用全称 `development/testing/production`
-- [x] 环境变量前缀使用复合前缀 `DITTO_OTEL_*`、`DITTO_DB_*`
+- [x] 配置键命名统一为无前缀（直接字段名）
 - [x] 配置文件名使用小写下划线 `observability.env`
 - [x] Pixi 环境使用小写无连字符 `default`、`dev`
 
@@ -298,7 +301,7 @@ class ObservabilityConfig:
 ### 7.4 OTEL 对齐验证
 
 - [x] 独立功能开关设计
-- [x] 环境变量命名与 OTEL 规范对齐
+- [x] 字段语义与 OTEL 规范对齐
 - [x] 支持 `none` exporter 完全禁用功能
 
 ---
@@ -317,7 +320,7 @@ class ObservabilityConfig:
 ### 8.2 关键改进点
 
 1. **环境值命名**: 统一使用全称，避免缩写歧义
-2. **环境变量前缀**: 使用 `DITTO_OTEL_*` 复合前缀，避免命名冲突
+2. **配置键命名**: 使用无前缀（直接字段名），避免命名冲突
 3. **配置复杂度**: 采用预设 + 独立开关覆盖，兼顾易用性和灵活性
 4. **类型安全**: 创建 `Environment` 枚举，提供类型安全的环境值
 
@@ -328,7 +331,7 @@ class ObservabilityConfig:
 | P0 | 创建 `Environment` 枚举 | P0 | 0.5天 |
 | P0 | 移除 `Mode` 枚举，统一使用 `Environment` | P0 | 0.5天 |
 | P1 | 实现 `config/{env}/` 目录结构 | P1 | 0.5天 |
-| P1 | 更新环境变量前缀为 `DITTO_OTEL_*` | P1 | 1天 |
+| P1 | 更新配置键命名为 `无前缀（直接字段名）` | P1 | 1天 |
 | P1 | 实现启动时自动加载配置 | P1 | 1天 |
 | P2 | 实现预设 + 覆盖配置模式 | P2 | 1天 |
 

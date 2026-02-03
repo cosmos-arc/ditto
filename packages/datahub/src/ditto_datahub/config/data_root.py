@@ -4,48 +4,24 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class DataRootConfig(BaseSettings):
+class DataRootConfig(BaseModel):
     """
-    数据根路径配置.
+    数据根路径配置。
 
-    支持通过 DATA_ROOT 环境变量设置数据根目录，
-    所有其他路径都基于 data_root 派生。
-
-    环境变量:
-        DATA_ROOT: 数据根目录路径
-
-    路径结构:
-        data_root/
-        ├── market/               # 市场数据
-        │   ├── stock/bars/daily/
-        │   ├── etf/bars/daily/
-        │   └── ...
-        ├── metadata/             # 元数据
-        │   └── metadata.sqlite
-        ├── capital/              # 资金流数据
-        ├── fundamental/          # 基本面数据
-        ├── features/             # 特征数据
-        ├── factors/              # 因子数据
-        └── macro/                # 宏观数据
+    由应用层显式注入，不在此读取环境变量或配置文件。
+    所有路径基于 data_root 派生。
     """
 
-    model_config = SettingsConfigDict(
-        env_prefix="",
-        extra="ignore",
-    )
+    model_config = ConfigDict(extra="ignore")
 
-    # 使用 Field 默认值，支持从环境变量读取
-    # Pydantic Settings 会自动将 DATA_ROOT -> data_root
     data_root: Path = Field(
-        default=Path("/data/ditto"),
-        description="数据根目录(可通过 DATA_ROOT 环境变量设置)",
+        default=Path("data"),
+        description="数据根目录",
     )
-    """数据根目录。可通过 DATA_ROOT 环境变量覆盖。"""
-
+    """数据根目录。由应用层显式注入。"""
     # ========== 市场数据路径 ==========
 
     @property

@@ -5,13 +5,12 @@ Ditto FastAPI 主应用.
 """
 
 # Standard library imports
-import os
 import time
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, TypeVar, cast
 
 # Third-party imports
 import granian
@@ -21,8 +20,9 @@ import orjson
 from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
 from ditto_datahub import register_datahub_providers
-from ditto_foundation.config.initializer import InitScope, get_config_coordinator
-from ditto_foundation.config.paths import get_paths
+from ditto_datahub.config import DataRootConfig
+from ditto_foundation.config.initializer import ConfigInitCoordinator, InitScope
+from ditto_foundation.config.settings import Settings
 from ditto_foundation.observability import M, logger
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -46,6 +46,20 @@ from ditto_port.registry import (
 
 # Initialize project root
 project_root = Path(__file__).parent.parent.parent.parent
+
+T = TypeVar("T")
+
+
+class AsyncContainerProtocol(Protocol):
+    """简化版容器协议（屏蔽未标注的第三方类型）。"""
+
+    async def get(self, dependency_type: type[T]) -> T:
+        """获取依赖实例。"""
+        ...
+
+    async def close(self) -> None:
+        """关闭容器并释放资源。"""
+        ...
 
 
 class ORJSONResponse(JSONResponse):
@@ -93,6 +107,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         DataHubProvider(),
         DataSourcesProvider(),
     )
+    typed_container = cast(AsyncContainerProtocol, container)
 
     try:
         # 集成到 FastAPI
@@ -100,15 +115,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         # 初始化配置（静默自动初始化）
         logger.info("Initializing configuration", event="config_init_start")
-        register_datahub_providers()
-        coordinator = get_config_coordinator()
-        data_root = get_paths().data_home
-        coordinator.initialize(scope=InitScope.STARTUP, data_root=data_root)
+        coordinator: ConfigInitCoordinator = await typed_container.get(
+            ConfigInitCoordinator
+        )
+        data_root_config: DataRootConfig = await typed_container.get(DataRootConfig)
+        register_datahub_providers(coordinator)
+        coordinator.initialize(
+            scope=InitScope.STARTUP,
+            data_root=data_root_config.data_root,
+        )
         logger.info(
             "Configuration initialized",
             event="config_init_complete",
-            data_root=str(data_root),
+            data_root=str(data_root_config.data_root),
         )
+
+        app.state.settings = await typed_container.get(Settings)
 
         yield
     except Exception as e:
@@ -121,7 +143,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     finally:
         # 关闭容器（自动清理所有资源）
         logger.info("Shutting down Ditto API server", event="server_shutdown")
-        await container.close()
+        await typed_container.close()
 
 
 # 创建FastAPI应用实例
@@ -218,13 +240,13 @@ async def health_check() -> dict[str, Any]:
 
 
 @app.get("/api/v1/status")
-async def get_status() -> dict[str, Any]:
+async def get_status(request: Request) -> dict[str, Any]:
     """获取系统状态."""
     logger.info("Status endpoint accessed")
     return {
         "status": "running",
         "version": "0.1.0",
-        "environment": os.getenv("DITTO_ENV", "development"),
+        "environment": request.app.state.settings.system.environment.value,
         "features": {
             "data_collection": True,
             "data_validation": True,
@@ -232,11 +254,7 @@ async def get_status() -> dict[str, Any]:
             "trading": False,
         },
         "observability": {
-            "level": (
-                "DEBUG"
-                if os.getenv("DITTO_ENV", "development") == "development"
-                else "INFO"
-            ),
+            "level": request.app.state.settings.observability.log_level,
             "structured": True,
         },
     }

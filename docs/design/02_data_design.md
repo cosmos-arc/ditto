@@ -10,7 +10,7 @@
 
 | 日期 | 变更内容 |
 |------|----------|
-| 2026-01-27 | **基础层重构**: 添加 `BaseStore` 抽象基类，定义统一存储接口 (read/write/delete)。实现 `ParquetStore`（按年分区、自动去重）和 `SQLiteStore`（事务支持、PIT 查询）。引入 `DataRootConfig` 统一数据根路径配置，从多路径配置简化为单 `DATA_ROOT` 配置，所有路径自动生成。 |
+| 2026-01-27 | **基础层重构**: 添加 `BaseStore` 抽象基类，定义统一存储接口 (read/write/delete)。实现 `ParquetStore`（按年分区、自动去重）和 `SQLiteStore`（事务支持、PIT 查询）。引入 `DataRootConfig` 统一数据根路径配置，从多路径配置简化为单 `data_root` 配置（`data_store.env`），所有路径自动生成。 |
 | 2026-01-16 | **架构简化**: 移除 `PipelineStore`（pipeline_run + dq_issue 表），采用简化的 `IngestionLogStore` 统一摄取元数据管理。原设计中的 run_id 跟踪和 DQ 详情记录被简化为按交易日的 UPSERT 模式，避免游标倒退问题并降低复杂度。 |
 
 ---
@@ -176,13 +176,13 @@ SQLite 数据库存储实现：
 
 #### 配置系统
 
-从多路径配置简化为单 `DATA_ROOT` 配置：
+从多路径配置简化为单 `data_root` 配置（来自 `config/{env}/data_store.env`）：
 
 ```python
-class DataRootConfig(BaseSettings):
-    """数据根路径配置."""
+class DataRootConfig(BaseModel):
+    """数据根路径配置（纯模型）."""
 
-    data_root: Path = Field(default=Path("/data/ditto"))
+    data_root: Path = Field(default=Path("data"))
 
     # 所有路径自动生成
     @property
@@ -194,15 +194,15 @@ class DataRootConfig(BaseSettings):
         return self.data_root / "metadata" / "metadata.sqlite"
 ```
 
-**环境变量配置**：
+**配置文件示例**：
 
 ```bash
-# 设置数据根目录
-export DATA_ROOT=/path/to/data
+# config/development/data_store.env
+DATA_ROOT=data
 
-# 所有路径自动生成
-# /path/to/data/market/stock/bars/daily/
-# /path/to/data/metadata/metadata.sqlite
+# 将自动生成：
+# data/market/stock/bars/daily/
+# data/metadata/metadata.sqlite
 ```
 
 ### 1.4 核心标识符体系
@@ -387,7 +387,7 @@ packages/
 ## 三、数据目录结构
 
 ```
-$DITTO_DATA_DIR/
+$DATA_ROOT/
 │
 ├── meta/
 │   └── hub.sqlite                    # SQLite 元数据库

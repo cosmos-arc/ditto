@@ -9,13 +9,22 @@
     pytest packages/datahub/tests/integration/sources/tushare/... -m integration
 """
 
+import os
 import time
 from datetime import date
 
 import polars as pl
 import pytest
+from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.base import SourceAuthenticationError
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
+
+
+def _settings_from_env() -> DataSourceSettings:
+    token = os.environ.get("TUSHARE_TOKEN", "")
+    if not token:
+        pytest.skip("TUSHARE_TOKEN is required for integration tests")
+    return DataSourceSettings(tushare_token=token)
 
 
 @pytest.mark.integration
@@ -37,7 +46,7 @@ class TestTushareEndToEnd:
         - 网络连接正常
         """
         # 1. 初始化 Source(从环境变量读取 token)
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
 
         # 2. 测试 calendar 获取
         calendar = source.fetch_calendar("2024-01-01", "2024-01-05")
@@ -114,7 +123,7 @@ class TestTushareEndToEnd:
         - TUSHARE_TOKEN 环境变量已设置
         - 网络连接正常
         """
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
 
         # 1. 测试 etf_basic 获取
         etf_basic = source.fetch_etf_basic()
@@ -165,7 +174,7 @@ class TestTushareEndToEnd:
         - TUSHARE_TOKEN 环境变量已设置
         - 网络连接正常
         """
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
 
         # 1. 测试 stock adj_factor 获取
         adj_factor = source.fetch_adj_factor("2024-01-02")
@@ -206,7 +215,7 @@ class TestTushareEndToEnd:
         - TUSHARE_TOKEN 环境变量已设置
         - 网络连接正常
         """
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
 
         # 1. 测试 stock_limit 获取
         stock_limit = source.fetch_stock_limit("2024-01-02")
@@ -257,7 +266,7 @@ class TestTushareEndToEnd:
         - TUSHARE_TOKEN 环境变量已设置
         - 网络连接正常
         """
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
 
         # [REVIEW] calendar API
         start_time = time.time()
@@ -275,9 +284,7 @@ class TestTushareEndToEnd:
         # [REVIEW]
         assert elapsed_time > 0, "请求应该有耗时"
 
-    def test_error_handling_invalid_token(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_error_handling_invalid_token(self) -> None:
         """集成测试：验证无效 token 的错误处理.
 
         测试场景：
@@ -288,7 +295,9 @@ class TestTushareEndToEnd:
         - 网络连接正常
         """
         # [REVIEW] token(直接传递参数，绕过 keyring)
-        source = TushareSource(token="invalid_token_12345")
+        source = TushareSource(
+            settings=DataSourceSettings(tushare_token="invalid_token_12345")
+        )
 
         # [REVIEW]
         with pytest.raises(SourceAuthenticationError):
@@ -306,7 +315,7 @@ class TestTushareEndToEnd:
         - TUSHARE_TOKEN 环境变量已设置
         - 网络连接正常
         """
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
 
         # [REVIEW] stock_basic(静态数据)
         stocks1 = source.fetch_stock_basic()

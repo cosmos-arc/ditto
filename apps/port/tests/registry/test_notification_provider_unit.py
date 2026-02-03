@@ -2,29 +2,33 @@
 
 import ditto_foundation.notification
 import ditto_port.notifications
-import pytest
-from dishka import make_container
+from dishka import Provider, Scope, make_container, provide
 from ditto_port.registry.config import ConfigProvider
 from ditto_port.registry.notification import NotificationProvider
+
+
+def _settings_provider(
+    settings: ditto_foundation.notification.NotificationSettings,
+) -> Provider:
+    class SettingsProvider(Provider):
+        scope = Scope.APP
+
+        @provide
+        def notification_settings(
+            self,
+        ) -> ditto_foundation.notification.NotificationSettings:
+            return settings
+
+    return SettingsProvider()
 
 
 class TestNotificationProvider:
     """NotificationProvider unit tests."""
 
-    def test_provide_notification_settings(self) -> None:
-        """Test NotificationSettings provisioning."""
-        container = make_container(NotificationProvider())
-
-        settings = container.get(ditto_foundation.notification.NotificationSettings)
-
-        assert settings is not None
-        assert isinstance(settings, ditto_foundation.notification.NotificationSettings)
-
-        container.close()
-
     def test_provide_template_engine(self) -> None:
         """Test TemplateEngine provisioning."""
-        container = make_container(NotificationProvider())
+        settings = ditto_foundation.notification.NotificationSettings()
+        container = make_container(_settings_provider(settings), NotificationProvider())
 
         engine = container.get(ditto_foundation.notification.TemplateEngine)
 
@@ -35,29 +39,27 @@ class TestNotificationProvider:
 
     def test_provide_notification_senders_default(self) -> None:
         """Test notification_senders with default (empty) configuration."""
-        # 使用默认配置（没有 NOTIFICATION_* 环境变量）
-        container = make_container(NotificationProvider())
+        settings = ditto_foundation.notification.NotificationSettings()
+        container = make_container(_settings_provider(settings), NotificationProvider())
 
         senders = container.get(list[ditto_foundation.notification.NotificationSender])
 
         # 默认情况下应该返回空列表（因为没有配置）
         assert isinstance(senders, list)
-        # 可能会有 0 个或多个 sender，取决于环境变量
+        # 可能会有 0 个或多个 sender，取决于配置
 
         container.close()
 
-    def test_provide_notification_senders_with_email(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
+    def test_provide_notification_senders_with_email(self) -> None:
         """Test notification_senders with email configuration."""
         # 设置 email 配置
-        monkeypatch.setenv("NOTIFICATION_EMAIL_TO", "test@example.com")
-        monkeypatch.setenv("NOTIFICATION_EMAIL_FROM", "noreply@ditto.local")
-        monkeypatch.setenv("NOTIFICATION_EMAIL_SMTP_HOST", "localhost")
-        monkeypatch.setenv("NOTIFICATION_EMAIL_SMTP_PORT", "587")
-
-        container = make_container(NotificationProvider())
+        settings = ditto_foundation.notification.NotificationSettings(
+            email_to="test@example.com",
+            email_from="noreply@ditto.local",
+            email_smtp_host="localhost",
+            email_smtp_port=587,
+        )
+        container = make_container(_settings_provider(settings), NotificationProvider())
 
         senders = container.get(list[ditto_foundation.notification.NotificationSender])
 
@@ -68,15 +70,13 @@ class TestNotificationProvider:
 
         container.close()
 
-    def test_provide_notification_senders_with_webhook(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
+    def test_provide_notification_senders_with_webhook(self) -> None:
         """Test notification_senders with webhook configuration."""
         # 设置 webhook 配置
-        monkeypatch.setenv("NOTIFICATION_WEBHOOK_URL", "https://example.com/webhook")
-
-        container = make_container(NotificationProvider())
+        settings = ditto_foundation.notification.NotificationSettings(
+            webhook_url="https://example.com/webhook"
+        )
+        container = make_container(_settings_provider(settings), NotificationProvider())
 
         senders = container.get(list[ditto_foundation.notification.NotificationSender])
 
@@ -88,7 +88,8 @@ class TestNotificationProvider:
 
     def test_provide_alert_manager(self) -> None:
         """Test AlertManager provisioning."""
-        container = make_container(NotificationProvider())
+        settings = ditto_foundation.notification.NotificationSettings()
+        container = make_container(_settings_provider(settings), NotificationProvider())
 
         manager = container.get(ditto_port.notifications.AlertManager)
 
@@ -99,7 +100,8 @@ class TestNotificationProvider:
 
     def test_alert_manager_dependencies(self) -> None:
         """Test AlertManager has correct dependencies injected."""
-        container = make_container(NotificationProvider())
+        settings = ditto_foundation.notification.NotificationSettings()
+        container = make_container(_settings_provider(settings), NotificationProvider())
 
         manager = container.get(ditto_port.notifications.AlertManager)
         engine = container.get(ditto_foundation.notification.TemplateEngine)
@@ -113,7 +115,8 @@ class TestNotificationProvider:
 
     def test_template_engine_has_correct_paths(self) -> None:
         """Test TemplateEngine is initialized with correct template paths."""
-        container = make_container(NotificationProvider())
+        settings = ditto_foundation.notification.NotificationSettings()
+        container = make_container(_settings_provider(settings), NotificationProvider())
 
         engine = container.get(ditto_foundation.notification.TemplateEngine)
 
@@ -123,15 +126,8 @@ class TestNotificationProvider:
 
         container.close()
 
-    def test_integration_with_config_provider(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
+    def test_integration_with_config_provider(self) -> None:
         """Test NotificationProvider works with ConfigProvider."""
-        # 设置必要的环境变量
-        monkeypatch.setenv("DITTO_ENV", "testing")
-        monkeypatch.setenv("NOTIFICATION_EMAIL_TO", "test@example.com")
-
         container = make_container(ConfigProvider(), NotificationProvider())
 
         # 验证可以获取 NotificationSettings

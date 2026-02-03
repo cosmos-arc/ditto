@@ -1,7 +1,6 @@
 """Tests for IndustryTushareAdapter."""
 
 import polars as pl
-import pytest
 import pytest_mock
 from ditto_datahub.sources.schemas.metadata_schemas import INDUSTRY_SOURCE_SCHEMA
 from ditto_datahub.sources.tushare.adapters.industry import IndustryTushareAdapter
@@ -12,7 +11,6 @@ class TestIndustryTushareAdapterFetchSWIndustry:
 
     def test_fetch_sw_industry_level1_returns_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching SW level 1 industry classification returns valid DataFrame."""
@@ -29,8 +27,6 @@ class TestIndustryTushareAdapterFetchSWIndustry:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = IndustryTushareAdapter(_client=mock_client)
         result = adapter.fetch_sw_industry(level=1)
@@ -43,7 +39,6 @@ class TestIndustryTushareAdapterFetchSWIndustry:
 
     def test_fetch_sw_industry_level2_returns_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching SW level 2 industry classification returns valid DataFrame."""
@@ -60,8 +55,6 @@ class TestIndustryTushareAdapterFetchSWIndustry:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = IndustryTushareAdapter(_client=mock_client)
         result = adapter.fetch_sw_industry(level=2)
@@ -72,7 +65,6 @@ class TestIndustryTushareAdapterFetchSWIndustry:
 
     def test_fetch_sw_industry_validates_source_schema(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that fetch_sw_industry output conforms to INDUSTRY_SOURCE_SCHEMA."""
@@ -104,8 +96,6 @@ class TestIndustryTushareAdapterFetchSWIndustry:
         mock_client = mocker.Mock()
         mock_client.query.side_effect = mock_query_impl
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = IndustryTushareAdapter(_client=mock_client)
         result = adapter.fetch_sw_industry_concepts()
@@ -115,7 +105,6 @@ class TestIndustryTushareAdapterFetchSWIndustry:
 
     def test_fetch_sw_industry_empty_response_returns_empty_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching SW industry with empty response returns empty DataFrame."""
@@ -124,8 +113,6 @@ class TestIndustryTushareAdapterFetchSWIndustry:
 
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
-
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Act
         adapter = IndustryTushareAdapter(_client=mock_client)
@@ -141,7 +128,6 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
 
     def test_fetch_sw_industry_concepts_returns_mapping(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching SW industry concepts returns stock-to-industry mapping."""
@@ -171,8 +157,6 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
         mock_client = mocker.Mock()
         mock_client.query.side_effect = mock_query_impl
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = IndustryTushareAdapter(_client=mock_client)
         result = adapter.fetch_sw_industry_concepts()
@@ -184,7 +168,6 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
 
     def test_fetch_sw_industry_concepts_historical_filter(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching SW industry concepts with date filter."""
@@ -213,8 +196,6 @@ class TestIndustryTushareAdapterFetchSWIndustryConcepts:
 
         mock_client = mocker.Mock()
         mock_client.query.side_effect = mock_query_impl
-
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Act
         adapter = IndustryTushareAdapter(_client=mock_client)

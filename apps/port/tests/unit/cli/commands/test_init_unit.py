@@ -6,9 +6,6 @@ import pytest
 from ditto_port.cli.commands import init
 from pytest_mock import MockerFixture
 from typer import Context
-from typer.testing import CliRunner
-
-runner = CliRunner()
 
 
 @pytest.fixture
@@ -28,10 +25,10 @@ class TestInitConfigCommand:
     def test_init_config_uses_default_data_root(self, mocker: MockerFixture, mock_ctx):
         """测试使用默认数据根目录。"""
         # Arrange
-        mock_paths = mocker.patch("ditto_port.cli.commands.init.get_paths")
-        mock_paths.return_value.data_home = Path("/mock/data")
-
-        mocker.patch("ditto_port.cli.commands.init.register_datahub_providers")
+        mocker.patch(
+            "ditto_port.cli.commands.init._load_data_root",
+            return_value=Path("/mock/data"),
+        )
 
         mock_coordinator = mocker.Mock()
         mock_coordinator.initialize.return_value = {
@@ -43,7 +40,7 @@ class TestInitConfigCommand:
             ),
         }
         mocker.patch(
-            "ditto_port.cli.commands.init.get_config_coordinator",
+            "ditto_port.cli.commands.init._make_coordinator",
             return_value=mock_coordinator,
         )
 
@@ -52,13 +49,13 @@ class TestInitConfigCommand:
 
         # Assert
         assert mock_coordinator.initialize.call_count == 1
+        call_args = mock_coordinator.initialize.call_args
+        assert call_args.kwargs["data_root"] == Path("/mock/data")
 
     def test_init_config_with_custom_data_root(self, mocker: MockerFixture, mock_ctx):
         """测试指定自定义数据根目录。"""
         # Arrange
         custom_root = "/custom/path"
-        mocker.patch("ditto_port.cli.commands.init.register_datahub_providers")
-
         mock_coordinator = mocker.Mock()
         mock_coordinator.initialize.return_value = {
             "dq_config": mocker.Mock(
@@ -66,7 +63,7 @@ class TestInitConfigCommand:
             ),
         }
         mocker.patch(
-            "ditto_port.cli.commands.init.get_config_coordinator",
+            "ditto_port.cli.commands.init._make_coordinator",
             return_value=mock_coordinator,
         )
 
@@ -82,12 +79,10 @@ class TestInitConfigCommand:
         # Arrange
         from ditto_foundation.config.initializer import InitScope
 
-        mocker.patch("ditto_port.cli.commands.init.register_datahub_providers")
-
         mock_coordinator = mocker.Mock()
         mock_coordinator.initialize.return_value = {}
         mocker.patch(
-            "ditto_port.cli.commands.init.get_config_coordinator",
+            "ditto_port.cli.commands.init._make_coordinator",
             return_value=mock_coordinator,
         )
 
@@ -102,8 +97,6 @@ class TestInitConfigCommand:
     def test_init_config_handles_failure(self, mocker: MockerFixture, mock_ctx):
         """测试初始化失败时正确处理。"""
         # Arrange
-        mocker.patch("ditto_port.cli.commands.init.register_datahub_providers")
-
         mock_coordinator = mocker.Mock()
         mock_coordinator.initialize.return_value = {
             "dq_config": mocker.Mock(
@@ -111,7 +104,7 @@ class TestInitConfigCommand:
             ),
         }
         mocker.patch(
-            "ditto_port.cli.commands.init.get_config_coordinator",
+            "ditto_port.cli.commands.init._make_coordinator",
             return_value=mock_coordinator,
         )
 
@@ -130,8 +123,6 @@ class TestInitDQCommand:
     def test_init_dq_filters_results(self, mocker: MockerFixture, mock_ctx):
         """测试只显示 DQ 相关结果。"""
         # Arrange
-        mocker.patch("ditto_port.cli.commands.init.register_datahub_providers")
-
         mock_coordinator = mocker.Mock()
         mock_coordinator.initialize.return_value = {
             "dq_config": mocker.Mock(
@@ -142,7 +133,7 @@ class TestInitDQCommand:
             ),
         }
         mocker.patch(
-            "ditto_port.cli.commands.init.get_config_coordinator",
+            "ditto_port.cli.commands.init._make_coordinator",
             return_value=mock_coordinator,
         )
 
@@ -160,8 +151,6 @@ class TestInitDBCommand:
     def test_init_db_filters_results(self, mocker: MockerFixture, mock_ctx):
         """测试只显示数据库相关结果。"""
         # Arrange
-        mocker.patch("ditto_port.cli.commands.init.register_datahub_providers")
-
         mock_coordinator = mocker.Mock()
         mock_coordinator.initialize.return_value = {
             "dq_config": mocker.Mock(success=True, skipped=False, message="DQ配置"),
@@ -170,7 +159,7 @@ class TestInitDBCommand:
             ),
         }
         mocker.patch(
-            "ditto_port.cli.commands.init.get_config_coordinator",
+            "ditto_port.cli.commands.init._make_coordinator",
             return_value=mock_coordinator,
         )
 

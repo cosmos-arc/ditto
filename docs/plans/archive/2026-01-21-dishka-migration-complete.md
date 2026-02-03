@@ -1,5 +1,8 @@
 # DI 容器架构重构完整实施计划
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **目标:** 修复架构依赖方向错误，实现正确的分层依赖（core → datahub → foundation），并通过 DI 容器统一管理配置和组件。
@@ -934,7 +937,7 @@ class DataSourceSettings(BaseSettings):
     """数据源配置."""
 
     model_config = SettingsConfigDict(
-        env_prefix="DATASOURCE_",
+        env_prefix="",
         extra="ignore",
     )
 
@@ -1502,22 +1505,22 @@ Edit: `config/development/data_source.env`
 
 ```bash
 # HTTP 配置
-DATASOURCE_HTTP_BASE_URL=http://api.tushare.pro
-DATASOURCE_HTTP_TIMEOUT=30.0
+HTTP_BASE_URL=http://api.tushare.pro
+HTTP_TIMEOUT=30.0
 
 # 重试配置
-DATASOURCE_RETRY_MAX_ATTEMPTS=3
-DATASOURCE_RETRY_MULTIPLIER=1.0
-DATASOURCE_RETRY_MIN_WAIT=1.0
-DATASOURCE_RETRY_MAX_WAIT=10.0
+RETRY_MAX_ATTEMPTS=3
+RETRY_MULTIPLIER=1.0
+RETRY_MIN_WAIT=1.0
+RETRY_MAX_WAIT=10.0
 
 # 限流配置
-DATASOURCE_RATE_LIMIT_PROFILE=free
-# DATASOURCE_RATE_LIMIT_GLOBAL_RATE=200
-# DATASOURCE_RATE_LIMIT_DAILY_RATE=1000
+RATE_LIMIT_PROFILE=free
+# RATE_LIMIT_GLOBAL_RATE=200
+# RATE_LIMIT_DAILY_RATE=1000
 
 # Token（优先使用 keyring）
-# DATASOURCE_TUSHARE_TOKEN=your_token_here
+# TUSHARE_TOKEN=your_token_here
 ```
 
 **Step 2: 提交**

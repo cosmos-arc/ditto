@@ -1,5 +1,8 @@
 # 测试问题全面分析与修复计划
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 ## 执行摘要
 
 **当前状态：**
@@ -118,7 +121,7 @@ test-cov-xml = "pytest --cov --cov-report=xml --cov-report=term-missing --cov-fa
 
 | 环境变量 | 位置 | 用途 |
 |----------|------|------|
-| `DITTO_OBSERVABILITY_MODE` | foundation/observability/config.py | 控制可观测性运行模式 |
+| `DITTO_???MODE` | foundation/observability/config.py | 控制可观测性运行模式 |
 | `PYTEST_CURRENT_TEST` | pytest 自动设置 | 检测测试环境 |
 | `DITTO_ENV` | 全局 | 测试环境标识 |
 
@@ -129,13 +132,13 @@ test-cov-xml = "pytest --cov --cov-report=xml --cov-report=term-missing --cov-fa
 DITTO_TEST_OBSERVABILITY=enabled|disabled
 
 # 控制集成测试的服务连接模式
-DITTO_OBSERVABILITY_TEST_MODE=local|docker|none
+DITTO_???TEST_MODE=local|docker|none
 
 # 设置超时时间（秒）
-DITTO_OBSERVABILITY_TEST_TIMEOUT=30
+DITTO_???TEST_TIMEOUT=30
 
 # 跳过外部服务检查
-DITTO_OBSERVABILITY_SKIP_EXTERNAL_CHECKS=true
+DITTO_???SKIP_EXTERNAL_CHECKS=true
 ```
 
 ### 4.3 pytest conftest.py 集成
@@ -151,9 +154,9 @@ def observability_test_config() -> dict:
     """可观测性测试配置fixture"""
     return {
         "enabled": os.environ.get("DITTO_TEST_OBSERVABILITY", "disabled") == "enabled",
-        "test_mode": os.environ.get("DITTO_OBSERVABILITY_TEST_MODE", "local"),
-        "timeout": int(os.environ.get("DITTO_OBSERVABILITY_TEST_TIMEOUT", "30")),
-        "skip_external": os.environ.get("DITTO_OBSERVABILITY_SKIP_EXTERNAL_CHECKS", "false").lower() == "true",
+        "test_mode": os.environ.get("DITTO_???TEST_MODE", "local"),
+        "timeout": int(os.environ.get("DITTO_???TEST_TIMEOUT", "30")),
+        "skip_external": os.environ.get("DITTO_???SKIP_EXTERNAL_CHECKS", "false").lower() == "true",
     }
 
 @pytest.fixture(autouse=True)
@@ -172,11 +175,11 @@ pytest tests/
 
 # 启用本地模式测试
 export DITTO_TEST_OBSERVABILITY=enabled
-export DITTO_OBSERVABILITY_TEST_MODE=local
+export DITTO_???TEST_MODE=local
 pytest -m integration
 
 # 仅运行健康检查（快速测试）
-export DITTO_OBSERVABILITY_SKIP_EXTERNAL_CHECKS=true
+export DITTO_???SKIP_EXTERNAL_CHECKS=true
 pytest tests/integration/test_observability_e2e.py::TestObservabilityStack::test_services_all_healthy
 ```
 
@@ -314,7 +317,7 @@ class TestObservabilityStack:
 ```yaml
 env:
   DITTO_TEST_OBSERVABILITY: ${{ vars.DITTO_TEST_OBSERVABILITY || 'disabled' }}
-  DITTO_OBSERVABILITY_TEST_MODE: ${{ vars.DITTO_OBSERVABILITY_TEST_MODE || 'docker' }}
+  DITTO_???TEST_MODE: ${{ vars.DITTO_???TEST_MODE || 'docker' }}
 ```
 
 ### Phase 4: 修复失败的集成测试（**✅ 已完成**）

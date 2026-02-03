@@ -16,7 +16,6 @@ from ditto_foundation.notification.channels import EmailSender, WebhookSender
 from ditto_foundation.notification.sender import NotificationSender
 from ditto_foundation.notification.template import TemplateEngine
 from loguru import logger
-from pydantic import ValidationError
 
 from ditto_port.notifications.manager import AlertManager
 
@@ -28,10 +27,9 @@ class NotificationProvider(Provider):
     Notification 组件 Provider.
 
     职责：
-        1. 提供 NotificationSettings 配置
-        2. 提供 TemplateEngine（支持模板 fallback）
-        3. 提供配置的 NotificationSender 列表
-        4. 提供 AlertManager（组合以上组件）
+        1. 提供 TemplateEngine（支持模板 fallback）
+        2. 提供配置的 NotificationSender 列表
+        3. 提供 AlertManager（组合以上组件）
 
     模板路径优先级：
         1. Port 应用模板（ditto_port/notifications/templates）
@@ -40,28 +38,6 @@ class NotificationProvider(Provider):
     """
 
     scope = Scope.APP
-
-    @provide
-    def notification_settings(self) -> NotificationSettings:
-        """
-        Notification 配置（应用级单例）.
-
-        从环境变量加载，前缀为 NOTIFICATION_。
-        """
-        try:
-            return NotificationSettings()
-        except ValidationError as e:
-            logger.warning(
-                "notification_settings_validation_failed",
-                error_count=len(e.errors()),
-            )
-            return NotificationSettings()
-        except (AttributeError, TypeError) as e:
-            logger.warning(
-                "notification_settings_structure_error",
-                error=str(e),
-            )
-            return NotificationSettings()
 
     @provide
     def template_engine(self) -> TemplateEngine:

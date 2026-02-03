@@ -1,5 +1,8 @@
 # Ditto 统一 DI 配置注入架构设计
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 **日期**: 2026-01-21
 **目标**: 全部配置改为 DI 注入，同时保持 foundation 层统一框架
 
@@ -19,13 +22,13 @@
 ```
 config/
 ├── development/
-│   ├── api.env              # API_* 前缀
-│   ├── data_source.env      # 无前缀（tushare_token）
-│   ├── database.env         # DB_* 前缀
-│   ├── dq.env               # DITTO_DQ_* 前缀 ✅ 新增
-│   ├── observability.env    # DITTO_OTEL_* 前缀
+│   ├── api.env              # API_* 配置
+│   ├── data_source.env      # HTTP_/RETRY_/RATE_LIMIT_/TUSHARE_TOKEN
+│   ├── database.env         # SQLITE_PATH/DUCKDB_PATH
+│   ├── dq.env               # 无前缀（直接字段名）✅ 新增
+│   ├── observability.env    # 无前缀（直接字段名）
 │   ├── performance.env      # 性能相关配置
-│   └── system.env           # 无前缀（DITTO_ENV）
+│   └── system.env           # DITTO_ENV 等基础配置
 ├── testing/
 ├── production/
 ```
@@ -375,9 +378,9 @@ class DataHubProvider(Provider):
 | 层级 | 配置类 | 前缀规则 | Provider 位置 | 依赖 |
 |------|--------|----------|-------------|------|
 | **Foundation** | `Settings` | 混合 | `ConfigProvider` | 无 |
-| **Foundation** | `ObservabilitySettings` | `DITTO_OTEL_` | `ConfigProvider` | Settings |
+| **Foundation** | `ObservabilitySettings` | `???` | `ConfigProvider` | Settings |
 | **Foundation** | `DatabaseSettings` | `DB_` | `ConfigProvider` | Settings |
-| **DataHub** | `DQSettings` | `DITTO_DQ_` | `ConfigProvider` | Environment |
+| **DataHub** | `DQSettings` | `???` | `ConfigProvider` | Environment |
 | **Port** | `ApiSettings` | `API_` | `ConfigProvider` | Environment |
 | **Port** | `ServerSettings` | 无前缀 | `AppProvider` | Settings, Environment |
 

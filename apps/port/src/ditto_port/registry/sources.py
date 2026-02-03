@@ -28,8 +28,8 @@ class DataSourcesProvider(Provider):
         Token 和配置从 DataSourceSettings 注入.
         """
         return TushareSource(
-            token=data_source_settings.tushare_token,
             settings=data_source_settings,
+            token=data_source_settings.tushare_token,
         )
 
     @provide

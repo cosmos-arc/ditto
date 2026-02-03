@@ -125,12 +125,14 @@ pixi run dev
 config/
 ├── development/          # 开发环境
 │   ├── system.env        # 系统配置
-│   ├── api.env           # API 配置
+│   ├── observability.env # 可观测性配置
+│   ├── data_store.env    # 数据根路径配置
 │   ├── database.env      # 数据库配置
 │   ├── data_source.env   # 数据源配置
-│   ├── observability.env # 可观测性配置
-│   ├── performance.env   # 性能配置
-│   └── dq.env            # DQ 开关配置
+│   ├── dq.env            # 数据质量配置
+│   ├── notification.env  # 通知配置
+│   ├── api.env           # API 配置
+│   └── performance.env   # 性能配置
 ├── testing/              # 测试环境（同上）
 ├── production/           # 生产环境（同上）
 └── default/              # 默认配置（DQ 规则）
@@ -140,186 +142,100 @@ config/
 ### 3.2 配置加载流程
 
 1. 根据 `DITTO_ENV` 环境变量确定环境
-2. `ConfigLoader` 从 `config/{environment}/` 加载对应的 `.env` 文件
-3. 不同 `Settings` 类使用不同前缀自动读取对应配置
+2. `ConfigLoader` 仅读取 `config/{environment}/` 下的 `.env` 文件并统一 key
+3. `ConfigProvider` 通过 `model_validate` 构造配置模型（纯 BaseModel）
 4. 通过 DI 容器注入到各个模块
 
 ### 3.3 配置类与文件映射
 
-| 配置类 | 前缀 | 配置文件 | 定义位置 |
+| 配置类 | 来源 | 配置文件 | 定义位置 |
 |--------|------|----------|----------|
-| `SystemSettings` | 无 | `system.env` | [settings.py:22-34](../packages/foundation/src/ditto_foundation/config/settings.py) |
-| `APISettings` | `API_` | `api.env` | Port 层 |
-| `DatabaseSettings` | `DB_` | `database.env` | [database.py:10-31](../packages/datahub/src/ditto_datahub/config/database.py) |
-| `DataSourceSettings` | `DATASOURCE_` | `data_source.env` | [data_source.py:7-34](../packages/datahub/src/ditto_datahub/config/data_source.py) |
-| `FileStorageSettings` | 无 | `system.env` | [storage.py:10-44](../packages/datahub/src/ditto_datahub/config/storage.py) |
-| `ObservabilitySettings` | `DITTO_OTEL_` | `observability.env` | [settings.py:36-64](../packages/foundation/src/ditto_foundation/config/settings.py) |
-| `DQSettings` | `DITTO_DQ_` | `dq.env` | [config.py:9-100](../packages/core/src/ditto_core/quality/config.py) |
+| `SystemSettings` | 字段名（大小写不敏感） | `system.env` | [settings.py:12-33](../packages/foundation/src/ditto_foundation/config/settings.py) |
+| `ObservabilitySettings` | 字段名（大小写不敏感） | `observability.env` | [settings.py:36-76](../packages/foundation/src/ditto_foundation/config/settings.py) |
+| `DataRootConfig` | 字段名（大小写不敏感） | `data_store.env` | [data_root.py:10-170](../packages/datahub/src/ditto_datahub/config/data_root.py) |
+| `DatabaseSettings` | 字段名（大小写不敏感） | `database.env` | [database.py:10-31](../packages/datahub/src/ditto_datahub/config/database.py) |
+| `DataSourceSettings` | 字段名（大小写不敏感） | `data_source.env` | [data_source.py:7-34](../packages/datahub/src/ditto_datahub/config/data_source.py) |
+| `DQSettings` | 字段名（大小写不敏感） | `dq.env` | [config.py:9-100](../packages/core/src/ditto_core/quality/config.py) |
+| `NotificationSettings` | 字段名（大小写不敏感） | `notification.env` | [config.py:1-45](../packages/foundation/src/ditto_foundation/notification/config.py) |
+| `FileStorageSettings` | 由 `DataRootConfig` 派生 | `data_store.env` | [storage.py:1-26](../packages/datahub/src/ditto_datahub/config/storage.py) |
 
 ---
 
 ## 4. 环境变量优先级
 
-Ditto 项目采用多层级的环境变量优先级体系，确保配置的灵活性和可预测性。
+配置权威来源为 `config/{environment}/*.env`，环境变量仅用于选择环境（`DITTO_ENV`）。
 
-### 4.1 优先级总览
+优先级（从高到低）：
+1. `config/{environment}/*.env` 文件
+2. BaseModel 默认值（缺省字段）
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   环境变量优先级金字塔                        │
-├─────────────────────────────────────────────────────────────┤
-│                                                               │
-│    ┌─────────────────┐    1. Shell 环境变量（最高优先级）    │
-│    │ export XXX=yyy  │                                       │
-│    └─────────────────┘                                       │
-│           │                                                   │
-│    ┌─────────────────┐    2. config/{DITTO_ENV}/xxx.env     │
-│    │ 配置文件        │    （按运行时环境分组）               │
-│    └─────────────────┘                                       │
-│           │                                                   │
-│    ┌─────────────────┐    3. 代码默认值                     │
-│    │ Field(default)  │    （最低优先级）                     │
-│    └─────────────────┘                                       │
-│                                                               │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 4.2 路径配置优先级（XDG Base Directory 规范）
-
-文件存储路径遵循 XDG 规范，使用责任链模式解析：
-
-| 优先级 | 环境变量类型 | 示例 | 说明 |
-|--------|-------------|------|------|
-| **1（最高）** | `DITTO_*_DIR` 特定目录 | `DITTO_DATA_DIR=/custom/data` | 覆盖特定类型的目录 |
-| **2** | `XDG_*_HOME` 标准 | `XDG_DATA_HOME=~/.local/share` | 标准 XDG 变量 |
-| **3** | `DITTO_BASE_DIR` 统一基础 | `DITTO_BASE_DIR=D:\data\ditto` | 统一设置所有目录 |
-| **4** | 测试模式 `base_override` | - | 仅测试代码使用 |
-| **5（最低）** | 平台默认值 | Windows: `D:\data\ditto` | 降级到平台默认 |
-
-**支持的目录类型**：
-
-| 环境变量 | XDG 标准 | 用途 |
-|----------|----------|------|
-| `DITTO_CONFIG_DIR` | `XDG_CONFIG_HOME` | 配置文件 |
-| `DITTO_DATA_DIR` | `XDG_DATA_HOME` | 数据文件 |
-| `DITTO_STATE_DIR` | `XDG_STATE_HOME` | 日志/状态 |
-| `DITTO_CACHE_DIR` | `XDG_CACHE_HOME` | 缓存 |
-| `DITTO_RUNTIME_DIR` | `XDG_RUNTIME_DIR` | 运行时文件 |
-
-**路径解析示例**：
-
-```bash
-# 示例 1: 使用 DITTO_BASE_DIR 统一设置
-export DITTO_BASE_DIR=/opt/ditto
-# 结果: 所有目录都在 /opt/ditto 下
-
-# 示例 2: 覆盖特定目录
-export DITTO_DATA_DIR=/mnt/data/ditto
-# 结果: 数据目录使用 /mnt/data/ditto，其他目录遵循默认规则
-
-# 示例 3: 使用标准 XDG 变量
-export XDG_DATA_HOME=~/.local/share
-# 结果: 数据目录为 ~/.local/share/ditto/data
-```
-
-### 4.3 Token 配置优先级（Tushare）
-
-| 优先级 | 来源 | 说明 |
-|--------|------|------|
-| **1（最高）** | 函数参数 | 代码显式传入 |
-| **2** | Keyring | `keyring.get_password('ditto', 'tushare')`（推荐） |
-| **3** | `DATASOURCE_TUSHARE_TOKEN` | 环境变量 |
-| **4（最低）** | `~/.ditto/secrets.toml` | 配置文件 |
-
-### 4.4 DQ 规则文件优先级
-
-| 优先级 | 路径 | 说明 |
-|--------|------|------|
-| **1（最高）** | `config/{env}/dq_rules/{dataset}.yml` | 环境特定规则 |
-| **2** | `config/default/dq_rules/{dataset}.yml` | 默认规则 |
-| **3（最低）** | `packages/core/config/dq_rules/{dataset}.yml` | 包内回退 |
-
----
+不再支持 `DITTO_*_DIR` / `XDG_*_HOME` 等路径覆盖。
 
 ## 5. 配置项详细说明
 
 ### 5.1 系统配置 (system.env)
 
-| 环境变量 | 类型 | 默认值 | 说明 | 建议 |
+| 键名 | 类型 | 默认值 | 说明 | 建议 |
 |----------|------|--------|------|------|
-| `DITTO_ENV` | Enum | `development` | 运行环境 | 必须与目录名一致 |
+| `ENVIRONMENT` | Enum | `development` | 运行环境 | 必须与目录名一致 |
 | `TIMEZONE` | string | `Asia/Shanghai` | 系统时区 | 保持默认 |
 | `DEBUG` | boolean | `false` | 调试模式 | 开发环境 `true`，生产环境 `false` |
 
 **各环境建议值**：
 ```bash
 # development
-DITTO_ENV=development
+ENVIRONMENT=development
 DEBUG=true
 
 # testing
-DITTO_ENV=testing
+ENVIRONMENT=testing
 DEBUG=false
 
 # production
-DITTO_ENV=production
+ENVIRONMENT=production
 DEBUG=false
 ```
 
 ### 5.2 API 配置 (api.env)
 
-| 环境变量 | 类型 | 默认值 | 说明 | 建议 |
+| 键名 | 类型 | 默认值 | 说明 | 建议 |
 |----------|------|--------|------|------|
 | `API_HOST` | string | `0.0.0.0` | 监听地址 | 保持默认监听所有接口 |
 | `API_PORT` | int | `8000` | 监听端口 | 避免冲突即可 |
 | `API_WORKERS` | int | `1` (dev) / `4` (prod) | Worker 进程数 | CPU 核心数 |
 
-### 5.3 数据库路径配置（XDG Base Directory 规范）
+### 5.3 数据库路径配置（data_store.env + database.env）
 
-数据库路径由 `XDGPaths` 自动管理，遵循以下优先级：
+数据库路径由 `DataRootConfig` + `DatabaseSettings` 组合决定：
 
-| 优先级 | 环境变量 | 示例值 |
-|--------|----------|--------|
-| 1 | `DITTO_DATA_DIR` | `/custom/data` |
-| 2 | `XDG_DATA_HOME` | `~/.local/share` |
-| 3 | `DITTO_BASE_DIR` | `D:\data\ditto` |
-| 4 | 平台默认值 | 见下方 |
+- `data_store.env` 的 `DATA_ROOT` 提供默认根目录
+- `database.env` 可选覆盖 `SQLITE_PATH` / `DUCKDB_PATH`（未配置则由 data_root 派生）
 
-**各平台默认路径**：
+示例：
+```bash
+# data_store.env
+DATA_ROOT=data
 
-| 平台 | DuckDB | SQLite | 说明 |
-|------|--------|--------|------|
-| Windows | `D:\data\ditto\data\db\duckdb\ditto.duckdb` | `D:\data\ditto\data\db\sqlite\hub.sqlite` | D 盘优先，降级到 `%LOCALAPPDATA%` |
-| Linux | `~/.local/share/ditto/data/db/duckdb/ditto.duckdb` | `~/.local/share/ditto/data/db/sqlite/hub.sqlite` | 遵循 XDG 规范 |
-| macOS | `~/Library/Application Support/ditto/data/...` | 同左 | Mac 标准位置 |
+# database.env（可选覆盖）
+SQLITE_PATH=data/metadata/metadata.sqlite
+DUCKDB_PATH=data/db/duckdb/ditto.duckdb
+```
 
 ### 5.4 数据源配置 (data_source.env)
 
-| 环境变量 | 类型 | 默认值 | 说明 | 建议 |
+| 键名 | 类型 | 默认值 | 说明 | 建议 |
 |----------|------|--------|------|------|
-| `DATASOURCE_TUSHARE_TOKEN` | string | `""` | Tushare API Token | **推荐使用 keyring** |
-| `DATASOURCE_HTTP_BASE_URL` | string | `http://api.tushare.pro` | API 基础 URL | 保持默认 |
-| `DATASOURCE_HTTP_TIMEOUT` | float | `30.0` | 请求超时（秒） | 1.0-300.0 |
-| `DATASOURCE_RETRY_MAX_ATTEMPTS` | int | `3` | 最大重试次数 | 1-10 |
-| `DATASOURCE_RATE_LIMIT_PROFILE` | string | `free` | 限流配置档 | `free`/`pro` |
+| `TUSHARE_TOKEN` | string | `""` | Tushare API Token | 必填 |
+| `HTTP_BASE_URL` | string | `http://api.tushare.pro` | API 基础 URL | 保持默认 |
+| `HTTP_TIMEOUT` | float | `30.0` | 请求超时（秒） | 1.0-300.0 |
+| `RETRY_MAX_ATTEMPTS` | int | `3` | 最大重试次数 | 1-10 |
+| `RETRY_MULTIPLIER` | float | `1.0` | 重试倍数 | 0.1-10 |
+| `RETRY_MIN_WAIT` | float | `1.0` | 最小等待 | 0.1-10 |
+| `RETRY_MAX_WAIT` | float | `10.0` | 最大等待 | 1-60 |
+| `RATE_LIMIT_PROFILE` | string | `free` | 限流配置档 | `free`/`pro` |
+| `TDX_PATH` | string | `""` | 通达信路径 | 可选 |
 
-**Token 配置优先级**：
-
-1. **函数参数**（代码中显式传入）
-2. **Keyring**（推荐）：
-   ```bash
-   pixi run -e dev python -c "import keyring; keyring.set_password('ditto', 'tushare', 'your_token')"
-   ```
-3. **环境变量** `DATASOURCE_TUSHARE_TOKEN`
-4. **secrets.toml**：`~/.ditto/secrets.toml` 中的 `[tushare] token = "..."`
-
-**Keyring 存储位置**（各平台）：
-
-| 平台 | 存储后端 | 路径 |
-|------|----------|------|
-| Windows | Windows Credential Manager | 控制面板 → 凭据管理器 |
-| Linux | Secret Service (libsecret) | D-Bus 密钥存储 |
-| macOS | Keychain | ~/Library/Keys |
+Token 仅来自 `data_source.env`，由应用层注入，不读取环境变量/Keyring。
 
 ---
 
@@ -327,51 +243,43 @@ DEBUG=false
 
 ### 6.1 可观测性配置 (observability.env)
 
-前缀：`DITTO_OTEL_`
+键名：字段名（大小写不敏感）
 
-| 环境变量 | 类型 | 默认值 | 说明 | 建议值 |
+| 键名 | 类型 | 默认值 | 说明 | 建议值 |
 |----------|------|--------|------|--------|
 | **日志配置** ||||||
-| `DITTO_OTEL_LOG_LEVEL` | string | `INFO` | 日志级别 | dev: `DEBUG`, prod: `INFO` |
-| `DITTO_OTEL_LOG_FORMAT` | string | `console` | 日志格式 | `console`/`json` |
-| `DITTO_OTEL_LOG_TO_CONSOLE` | boolean | `true` | 控制台输出 | 保持默认 |
-| `DITTO_OTEL_LOG_TO_FILE` | boolean | `true` | 文件输出 | 生产环境 `true` |
+| `LOG_LEVEL` | string | `INFO` | 日志级别 | dev: `DEBUG`, prod: `INFO` |
+| `LOG_FORMAT` | string | `console` | 日志格式 | `console`/`json` |
+| `LOG_TO_CONSOLE` | boolean | `true` | 控制台输出 | 保持默认 |
+| `LOG_TO_FILE` | boolean | `true` | 文件输出 | 生产环境 `true` |
 | **追踪配置** ||||||
-| `DITTO_OTEL_TRACING_ENABLED` | boolean | `true` | 启用追踪 | dev: `true`, prod: `true` |
-| `DITTO_OTEL_TRACING_EXPORTER` | string | `otlp` | 导出器 | `otlp`/`none` |
-| `DITTO_OTEL_TRACING_SAMPLE_RATE` | float | `1.0` | 采样率 | dev: `1.0`, prod: `0.1` |
+| `TRACING_ENABLED` | boolean | `true` | 启用追踪 | dev: `true`, prod: `true` |
+| `TRACING_EXPORTER` | string | `otlp` | 导出器 | `otlp`/`none` |
+| `TRACING_SAMPLE_RATE` | float | `1.0` | 采样率 | dev: `1.0`, prod: `0.1` |
 | **指标配置** ||||||
-| `DITTO_OTEL_METRICS_ENABLED` | boolean | `true` | 启用指标 | dev: `true`, test: `false` |
-| `DITTO_OTEL_METRICS_EXPORTER` | string | `victoriametrics` | 导出器 | `victoriametrics`/`none` |
-| `DITTO_OTEL_VM_ENDPOINT` | string | `http://localhost:8428/opentelemetry/v1/metrics` | VM 端点 | 根据实际部署调整 |
+| `METRICS_ENABLED` | boolean | `true` | 启用指标 | dev: `true`, test: `false` |
+| `METRICS_EXPORTER` | string | `otlp` | 导出器 | `otlp`/`none` |
+| `VM_ENDPOINT` | string | `http://localhost:8428/opentelemetry/v1/metrics` | VM 端点 | 根据实际部署调整 |
 
-**各环境预设值**（通过 ObservabilityConfig.profile）：
-
-| 配置 | development | testing | production |
-|------|-------------|---------|------------|
-| `log_level` | `DEBUG` | `WARNING` | `INFO` |
-| `tracing_enabled` | `true` | `false` | `true` |
-| `tracing_sample_rate` | `1.0` | `0.0` | `0.1` |
-| `metrics_enabled` | `true` | `false` | `true` |
+未设置时按 environment 预设值生效（development/testing/production）。
 
 ### 6.2 DQ 数据质量配置 (dq.env)
 
-前缀：`DITTO_DQ_`
+键名：字段名（大小写不敏感）
 
-| 环境变量 | 类型 | 默认值 | 说明 | 建议 |
+| 键名 | 类型 | 默认值 | 说明 | 建议 |
 |----------|------|--------|------|------|
 | **开关配置** ||||||
-| `DITTO_DQ_L1_ENABLED` | boolean | `true` | L1 技术检查 | 保持开启 |
-| `DITTO_DQ_L2_ENABLED` | boolean | `true` | L2 业务检查 | 保持开启 |
-| `DITTO_DQ_L3_ENABLED` | boolean | `true` | L3 统计检查 | 保持开启 |
+| `L1_ENABLED` | boolean | `true` | L1 技术检查 | 保持开启 |
+| `L2_ENABLED` | boolean | `true` | L2 业务检查 | 保持开启 |
+| `L3_ENABLED` | boolean | `true` | L3 统计检查 | 保持开启 |
 | **规则目录** ||||||
-| `DITTO_DQ_RULES_DIR` | string | `config/default/dq_rules` | DQ 规则目录 | 环境特定可覆盖 |
+| `RULES_DIR` | string | `config/default/dq_rules` | DQ 规则目录 | 环境特定可覆盖 |
 | **隔离区配置** ||||||
-| `DITTO_DQ_QUARANTINE_ENABLED` | boolean | `true` | 启用隔离区 | 保持开启 |
-| `DITTO_DQ_QUARANTINE_PATH` | string | `data/quarantine` | 隔离数据路径 | 相对路径 |
+| `QUARANTINE_ENABLED` | boolean | `true` | 启用隔离区 | 保持开启 |
 | **报告配置** ||||||
-| `DITTO_DQ_REPORT_ENABLED` | boolean | `true` | 启用报告 | 保持开启 |
-| `DITTO_DQ_REPORT_PATH` | string | `data/reports/dq` | 报告输出路径 | 相对路径 |
+| `REPORT_ENABLED` | boolean | `true` | 启用报告 | 保持开启 |
+| `REPORT_PATH` | string | `data/reports/dq` | 报告输出路径 | 相对路径 |
 
 ### 6.3 性能配置 (performance.env)
 
@@ -425,14 +333,13 @@ DEBUG=false
 | **部署所有 Flows** | `python -m ditto_port.jobs.flows.deploy` |
 | **列出可用 Flows** | `python -m ditto_port.jobs.flows.deploy list` |
 
-### 7.5 Keyring 管理命令
+### 7.5 配置文件管理
 
 | 操作 | 命令 |
 |------|------|
-| **存储 Token** | `pixi run -e dev python -c "import keyring; keyring.set_password('ditto', 'tushare', 'your_token')"` |
-| **读取 Token** | `pixi run -e dev python -c "import keyring; print(keyring.get_password('ditto', 'tushare'))"` |
-| **删除 Token** | `pixi run -e dev python -c "import keyring; keyring.delete_password('ditto', 'tushare')"` |
-| **列出所有凭据** | `pixi run -e dev python -c "import keyring; print(keyring.get_credential())"` |
+| **查看环境配置** | `Get-Content config/{env}/*.env` |
+| **查看指定配置** | `Get-Content config/development/data_source.env` |
+| **修改配置** | 使用文本编辑器修改 `config/{env}/*.env` |
 
 ### 7.6 健康检查
 
@@ -451,7 +358,7 @@ DEBUG=false
 
 | 日志类型 | 路径（Windows） | 路径（Linux/macOS） |
 |----------|-----------------|---------------------|
-| 应用日志 | `D:\data\ditto\state\logs\` | `~/.local/state/ditto/logs/` |
+| 应用日志 | `DATA_ROOT/logs/` | `DATA_ROOT/logs/` |
 | Prefect 日志 | `~\.prefect\prefect.log` | `~/.prefect/prefect.log` |
 | 测试日志 | 控制台输出（带 `--log-cli`） | 同左 |
 
@@ -461,8 +368,8 @@ DEBUG=false
 |------|----------|
 | **API 无法访问** | 1. 检查端口占用 `netstat -ano \| findstr 8000`<br>2. 查看日志中的错误<br>3. 确认 `DITTO_ENV` 正确 |
 | **Prefect Flow 失败** | 1. 访问 http://localhost:4200 查看 Flow 详情<br>2. 检查 Task 级别错误<br>3. 验证 Tushare Token |
-| **Token 无效** | 1. 验证 keyring: `keyring.get_password('ditto', 'tushare')`<br>2. 检查环境变量<br>3. 确认 Tushare 积分余额 |
-| **数据库连接失败** | 1. 检查数据目录权限<br>2. 确认路径存在（XDG 自动创建）<br>3. 查看 SQLite WAL 模式是否启用 |
+| **Token 无效** | 1. 检查 `config/{env}/data_source.env` 中 `TUSHARE_TOKEN`<br>2. 确认 Tushare 积分余额<br>3. 重启服务后再试 |
+| **数据库连接失败** | 1. 检查数据目录权限<br>2. 确认 `data_store.env`/`database.env` 路径存在<br>3. 查看 SQLite WAL 模式是否启用 |
 
 ### 8.3 数据备份
 
@@ -482,7 +389,7 @@ DEBUG=false
 |------|------|------|
 | Pixi 环境 | 小写，无连字符 | `default`, `dev` |
 | 运行时环境 | 小写，全称 | `development`, `testing`, `production` |
-| 环境变量前缀 | 大写，下划线 | `DITTO_OTEL_`, `DB_`, `API_` |
+| 配置键名 | 大写下划线（大小写不敏感） | `LOG_LEVEL`, `DATA_ROOT` |
 | 配置文件 | 小写，下划线 | `observability.env`, `database.env` |
 
 ### B. 相关文档

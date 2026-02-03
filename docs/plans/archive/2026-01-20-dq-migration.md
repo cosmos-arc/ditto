@@ -1,5 +1,8 @@
 # DQ 模块重构计划：DataHub → Core 迁移
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 ## 执行摘要
 
 将 DQ（数据质量）模块从 `packages/datahub/dq/` **完整迁移**到 `packages/core/quality/`，严格按照 [architecture.md](d:\\code\\quant\\ditto\\.claude\\rules\\architecture.md) 的分层规范实现：
@@ -63,21 +66,21 @@ config/
 **dq.env** - 环境变量配置：
 ```bash
 # DQ 开关配置
-DITTO_DQ_L1_ENABLED=true
-DITTO_DQ_L2_ENABLED=true
-DITTO_DQ_L3_ENABLED=true
+L1_ENABLED=true
+L2_ENABLED=true
+L3_ENABLED=true
 
 # DQ 规则目录（可覆盖）
 # 优先级：环境特定 > 默认
-DITTO_DQ_RULES_DIR=config/default/dq_rules
+RULES_DIR=config/default/dq_rules
 
 # DQ 隔离区配置
-DITTO_DQ_QUARANTINE_ENABLED=true
-DITTO_DQ_QUARANTINE_PATH=data/quarantine
+QUARANTINE_ENABLED=true
+QUARANTINE_PATH=data/quarantine
 
 # DQ 报告配置
-DITTO_DQ_REPORT_ENABLED=true
-DITTO_DQ_REPORT_PATH=data/reports/dq
+REPORT_ENABLED=true
+REPORT_PATH=data/reports/dq
 ```
 
 ### 配置加载优先级
@@ -98,7 +101,7 @@ class DQSettings(BaseSettings):
     """DQ 配置"""
 
     model_config = SettingsConfigDict(
-        env_prefix="DITTO_DQ_",
+        env_prefix="",
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
@@ -340,7 +343,7 @@ mkdir -p apps/port/tests/unit/ingestion/quality
 
 **操作**：
 - 创建 `DQSettings` 类（使用 pydantic-settings）
-- 支持环境变量配置（`DITTO_DQ_*` 前缀）
+- 支持配置文件键名（无前缀，直接字段名）
 - 实现 `get_rules_paths()` 方法（支持覆盖机制）
 
 #### 2.7 迁移配置文件

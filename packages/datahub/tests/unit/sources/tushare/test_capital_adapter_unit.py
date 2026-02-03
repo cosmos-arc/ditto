@@ -1,7 +1,6 @@
 """Tests for CapitalTushareAdapter."""
 
 import polars as pl
-import pytest
 import pytest_mock
 from ditto_datahub.sources.schemas.capital_schemas import (
     BALANCE_SHEET_SOURCE_SCHEMA,
@@ -23,7 +22,6 @@ class TestCapitalTushareAdapterFetchValuationMetrics:
 
     def test_fetch_valuation_metrics_returns_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching valuation metrics returns valid DataFrame."""
@@ -43,8 +41,6 @@ class TestCapitalTushareAdapterFetchValuationMetrics:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_valuation_metrics(ts_code="000001.SZ")
@@ -59,7 +55,6 @@ class TestCapitalTushareAdapterFetchValuationMetrics:
 
     def test_fetch_valuation_metrics_validates_source_schema(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that fetch_valuation_metrics output conforms to SourceSchema."""
@@ -79,8 +74,6 @@ class TestCapitalTushareAdapterFetchValuationMetrics:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_valuation_metrics(ts_code="000001.SZ")
@@ -90,7 +83,6 @@ class TestCapitalTushareAdapterFetchValuationMetrics:
 
     def test_fetch_valuation_metrics_empty_response_returns_empty_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """
@@ -102,8 +94,6 @@ class TestCapitalTushareAdapterFetchValuationMetrics:
 
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
-
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
@@ -119,7 +109,6 @@ class TestCapitalTushareAdapterFetchDividend:
 
     def test_fetch_dividend_returns_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching dividend data returns valid DataFrame."""
@@ -136,8 +125,6 @@ class TestCapitalTushareAdapterFetchDividend:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_dividend(ts_code="000001.SZ")
@@ -150,7 +137,6 @@ class TestCapitalTushareAdapterFetchDividend:
 
     def test_fetch_dividend_validates_source_schema(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that fetch_dividend output conforms to SourceSchema."""
@@ -167,8 +153,6 @@ class TestCapitalTushareAdapterFetchDividend:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_dividend(ts_code="000001.SZ")
@@ -182,7 +166,6 @@ class TestCapitalTushareAdapterFetchMarginTrading:
 
     def test_fetch_margin_trading_returns_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching margin trading data returns valid DataFrame."""
@@ -201,8 +184,6 @@ class TestCapitalTushareAdapterFetchMarginTrading:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_margin_trading(ts_code="000001.SZ")
@@ -215,7 +196,6 @@ class TestCapitalTushareAdapterFetchMarginTrading:
 
     def test_fetch_margin_trading_validates_source_schema(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that fetch_margin_trading output conforms to SourceSchema."""
@@ -234,8 +214,6 @@ class TestCapitalTushareAdapterFetchMarginTrading:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_margin_trading(ts_code="000001.SZ")
@@ -249,7 +227,6 @@ class TestCapitalTushareAdapterFetchPledgeRatio:
 
     def test_fetch_pledge_ratio_returns_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching pledge ratio data returns valid DataFrame."""
@@ -266,8 +243,6 @@ class TestCapitalTushareAdapterFetchPledgeRatio:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_pledge_ratio(ts_code="000001.SZ")
@@ -280,7 +255,6 @@ class TestCapitalTushareAdapterFetchPledgeRatio:
 
     def test_fetch_pledge_ratio_validates_source_schema(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that fetch_pledge_ratio output conforms to SourceSchema."""
@@ -297,8 +271,6 @@ class TestCapitalTushareAdapterFetchPledgeRatio:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_pledge_ratio(ts_code="000001.SZ")
@@ -312,7 +284,6 @@ class TestCapitalTushareAdapterFetchFutures:
 
     def test_fetch_futures_returns_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching futures data returns valid DataFrame."""
@@ -331,8 +302,6 @@ class TestCapitalTushareAdapterFetchFutures:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_futures(ts_code="IF2401")
@@ -345,7 +314,6 @@ class TestCapitalTushareAdapterFetchFutures:
 
     def test_fetch_futures_validates_source_schema(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that fetch_futures output conforms to SourceSchema."""
@@ -364,8 +332,6 @@ class TestCapitalTushareAdapterFetchFutures:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_futures(ts_code="IF2401")
@@ -379,7 +345,6 @@ class TestCapitalTushareAdapterFetchIndexComposition:
 
     def test_fetch_index_composition_returns_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching index composition returns valid DataFrame."""
@@ -395,8 +360,6 @@ class TestCapitalTushareAdapterFetchIndexComposition:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_index_composition(index_code="000001.SH")
@@ -409,7 +372,6 @@ class TestCapitalTushareAdapterFetchIndexComposition:
 
     def test_fetch_index_composition_validates_source_schema(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that fetch_index_composition output conforms to SourceSchema."""
@@ -425,8 +387,6 @@ class TestCapitalTushareAdapterFetchIndexComposition:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_index_composition(index_code="000001.SH")
@@ -440,7 +400,6 @@ class TestCapitalTushareAdapterFetchCorporateActions:
 
     def test_fetch_corporate_actions_returns_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching corporate actions returns valid DataFrame."""
@@ -458,8 +417,6 @@ class TestCapitalTushareAdapterFetchCorporateActions:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_corporate_actions(ts_code="000001.SZ")
@@ -472,7 +429,6 @@ class TestCapitalTushareAdapterFetchCorporateActions:
 
     def test_fetch_corporate_actions_validates_source_schema(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that fetch_corporate_actions output conforms to SourceSchema."""
@@ -490,8 +446,6 @@ class TestCapitalTushareAdapterFetchCorporateActions:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_corporate_actions(ts_code="000001.SZ")
@@ -505,7 +459,6 @@ class TestCapitalTushareAdapterFetchBalanceSheet:
 
     def test_fetch_balance_sheet_returns_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching balance sheet returns valid DataFrame."""
@@ -526,8 +479,6 @@ class TestCapitalTushareAdapterFetchBalanceSheet:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_balance_sheet(ts_code="000001.SZ")
@@ -541,7 +492,6 @@ class TestCapitalTushareAdapterFetchBalanceSheet:
 
     def test_fetch_balance_sheet_validates_source_schema(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that fetch_balance_sheet output conforms to SourceSchema."""
@@ -562,8 +512,6 @@ class TestCapitalTushareAdapterFetchBalanceSheet:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_balance_sheet(ts_code="000001.SZ")
@@ -577,7 +525,6 @@ class TestCapitalTushareAdapterFetchIncomeStatement:
 
     def test_fetch_income_statement_returns_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching income statement returns valid DataFrame."""
@@ -597,8 +544,6 @@ class TestCapitalTushareAdapterFetchIncomeStatement:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_income_statement(ts_code="000001.SZ")
@@ -612,7 +557,6 @@ class TestCapitalTushareAdapterFetchIncomeStatement:
 
     def test_fetch_income_statement_validates_source_schema(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that fetch_income_statement output conforms to SourceSchema."""
@@ -632,8 +576,6 @@ class TestCapitalTushareAdapterFetchIncomeStatement:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_income_statement(ts_code="000001.SZ")
@@ -647,7 +589,6 @@ class TestCapitalTushareAdapterFetchCashFlow:
 
     def test_fetch_cash_flow_returns_dataframe(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching cash flow statement returns valid DataFrame."""
@@ -666,8 +607,6 @@ class TestCapitalTushareAdapterFetchCashFlow:
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
 
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
-
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)
         result = adapter.fetch_cash_flow(ts_code="000001.SZ")
@@ -681,7 +620,6 @@ class TestCapitalTushareAdapterFetchCashFlow:
 
     def test_fetch_cash_flow_validates_source_schema(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that fetch_cash_flow output conforms to SourceSchema."""
@@ -699,8 +637,6 @@ class TestCapitalTushareAdapterFetchCashFlow:
 
         mock_client = mocker.Mock()
         mock_client.query.return_value = mock_response
-
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Act
         adapter = CapitalTushareAdapter(_client=mock_client)

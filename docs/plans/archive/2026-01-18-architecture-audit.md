@@ -1,5 +1,8 @@
 # Ditto 项目架构审计报告
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 **审计日期**: 2026-01-18
 **审计范围**: packages/、apps/、tests/（269个Python文件，~57,952行代码）
 **审计方法**: LSP语义分析 + 静态代码扫描 + 人工审查
@@ -1014,11 +1017,11 @@ config/
 **配置示例**:
 ```bash
 # config/development/observability.env
-OBSERVABILITY_LOG_LEVEL=DEBUG
-OBSERVABILITY_LOG_FORMAT=console
-OBSERVABILITY_TRACING_ENABLED=true
-OBSERVABILITY_TRACING_EXPORTER=otlp
-OBSERVABILITY_METRICS_ENABLED=true
+LOG_LEVEL=DEBUG
+LOG_FORMAT=console
+TRACING_ENABLED=true
+TRACING_EXPORTER=otlp
+METRICS_ENABLED=true
 ```
 
 **参考文档**: [docs/plans/2026-01-17-environment-architecture-improvement.md](../plans/2026-01-17-environment-architecture-improvement.md)
@@ -1099,23 +1102,23 @@ OBSERVABILITY_METRICS_ENABLED=true
 **配置文件内容**:
 ```bash
 # config/development/observability.env
-OBSERVABILITY_LOG_LEVEL=DEBUG
-OBSERVABILITY_LOG_FORMAT=console
-OBSERVABILITY_TRACING_ENABLED=true
-OBSERVABILITY_TRACING_EXPORTER=otlp
-OBSERVABILITY_METRICS_ENABLED=true
+LOG_LEVEL=DEBUG
+LOG_FORMAT=console
+TRACING_ENABLED=true
+TRACING_EXPORTER=otlp
+METRICS_ENABLED=true
 
 # config/testing/observability.env
-OBSERVABILITY_LOG_LEVEL=WARNING
-OBSERVABILITY_LOG_TO_FILE=false
-OBSERVABILITY_TRACING_ENABLED=false
-OBSERVABILITY_TRACING_EXPORTER=none
-OBSERVABILITY_METRICS_ENABLED=false
+LOG_LEVEL=WARNING
+LOG_TO_FILE=false
+TRACING_ENABLED=false
+TRACING_EXPORTER=none
+METRICS_ENABLED=false
 
 # config/production/observability.env
-OBSERVABILITY_LOG_LEVEL=INFO
-OBSERVABILITY_LOG_FORMAT=json
-OBSERVABILITY_TRACING_SAMPLE_RATE=0.1
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+TRACING_SAMPLE_RATE=0.1
 ```
 
 **风险**: 低（仅新增配置文件）

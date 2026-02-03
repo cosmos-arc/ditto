@@ -1,7 +1,35 @@
 """Tests for FastAPI main application async endpoints."""
 
 import pytest
-from ditto_port.main import generate_test_logs, get_status, health_check, root
+from ditto_foundation.config.environment import Environment
+from ditto_foundation.config.settings import (
+    ObservabilitySettings,
+    Settings,
+    SystemSettings,
+)
+from ditto_port.main import (
+    app,
+    generate_test_logs,
+    get_status,
+    health_check,
+    root,
+)
+from starlette.requests import Request
+
+
+def _make_request() -> Request:
+    app.state.settings = Settings(
+        system=SystemSettings(environment=Environment.TESTING),
+        observability=ObservabilitySettings(),
+    )
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": "/api/v1/status",
+        "headers": [],
+        "app": app,
+    }
+    return Request(scope)
 
 
 @pytest.mark.unit
@@ -27,7 +55,7 @@ class TestFastAPIEndpoints:
     @pytest.mark.asyncio
     async def test_get_status_endpoint(self):
         """Test get status endpoint returns system status."""
-        response = await get_status()
+        response = await get_status(_make_request())
         assert response["status"] == "running"
         assert response["version"] == "0.1.0"
         assert "environment" in response

@@ -12,7 +12,20 @@ from ditto_foundation import (
     reset_for_testing,
     shutdown,
 )
+from ditto_foundation.config.environment import Environment
 from ditto_foundation.observability import _ObservabilityRegistry
+from ditto_foundation.observability.config import ObservabilityConfig
+
+
+def _test_config(**overrides: object) -> ObservabilityConfig:
+    values: dict[str, object] = {
+        "environment": Environment.TESTING,
+        "pytest_running": True,
+        "assertions_enabled": True,
+        "verbose_logging": False,
+    }
+    values.update(overrides)
+    return ObservabilityConfig(**values)
 
 
 @pytest.mark.integration
@@ -24,17 +37,17 @@ class TestInit:
         reset_for_testing()
         assert _ObservabilityRegistry.is_initialized() is False
 
-        init(force=True)
+        init(_test_config(), force=True)
         assert _ObservabilityRegistry.is_initialized() is True
 
     def test_init_idempotent_without_force(self) -> None:
         """测试无 force 参数时 init() 幂等."""
         reset_for_testing()
-        init(force=True)
+        init(_test_config(), force=True)
         first_registry_state = _ObservabilityRegistry.is_initialized()
 
         # [REVIEW] force，应该被忽略
-        init()
+        init(_test_config())
         second_registry_state = _ObservabilityRegistry.is_initialized()
 
         assert first_registry_state is True
@@ -43,31 +56,33 @@ class TestInit:
     def test_init_with_custom_parameters(self) -> None:
         """测试使用自定义参数初始化."""
         reset_for_testing()
-        init(
+        config = ObservabilityConfig(
             service_name="test_service",
-            environment="production",
+            environment=Environment.PRODUCTION,
             log_level="WARNING",
-            force=True,
         )
+        init(config, force=True)
 
         assert _ObservabilityRegistry.is_initialized() is True
 
     def test_init_environment_alias_dev(self) -> None:
         """测试环境简写 'dev' 映射到 'development'."""
         reset_for_testing()
-        init(environment="dev", force=True)
-        assert _ObservabilityRegistry.is_initialized() is True
+        init(_test_config(), force=True)
+        with pytest.raises(RuntimeError):
+            init(_test_config(service_name="other"))
 
     def test_init_environment_alias_test(self) -> None:
         """测试环境简写 'test' 映射到 'testing'."""
         reset_for_testing()
-        init(environment="test", force=True)
+        init(_test_config(), force=True)
+        init(_test_config(), force=True)
         assert _ObservabilityRegistry.is_initialized() is True
 
     def test_init_environment_alias_prod(self) -> None:
         """测试环境简写 'prod' 映射到 'production'."""
         reset_for_testing()
-        init(environment="prod", force=True)
+        init(_test_config(), force=True)
         assert _ObservabilityRegistry.is_initialized() is True
 
 
@@ -78,7 +93,7 @@ class TestShutdown:
     def test_shutdown_clears_registry_flag(self) -> None:
         """测试 shutdown() 清除注册表标志."""
         reset_for_testing()
-        init(force=True)
+        init(_test_config(), force=True)
         assert _ObservabilityRegistry.is_initialized() is True
 
         shutdown()
@@ -87,7 +102,7 @@ class TestShutdown:
     def test_shutdown_idempotent(self) -> None:
         """测试多次 shutdown() 幂等."""
         reset_for_testing()
-        init(force=True)
+        init(_test_config(), force=True)
 
         # [REVIEW] shutdown
         shutdown()
@@ -111,12 +126,7 @@ class TestShutdown:
     ) -> None:
         """测试 shutdown() 记录调试日志."""
         reset_for_testing()
-        init(
-            force=True,
-            verbose_logging=False,
-            pytest_running=True,
-            assertions_enabled=False,
-        )
+        init(_test_config(assertions_enabled=False), force=True)
 
         with caplog.at_level("DEBUG"):
             shutdown()

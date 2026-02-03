@@ -29,15 +29,15 @@ class TushareSource(DataSource):
 
     def __init__(
         self,
+        settings: DataSourceSettings,
         token: str | None = None,
-        settings: DataSourceSettings | None = None,
     ) -> None:
         """
         Initialize Tushare source.
 
         Args:
-            token: API token. Reads from keyring or ~/.ditto/secrets.toml if None.
             settings: 数据源配置（包含 URL/timeout 等参数）.
+            token: API token（可选，优先于 settings 中的 token）。
 
         """
         self._calendar = CalendarTushareAdapter(token=token, settings=settings)

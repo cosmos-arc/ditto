@@ -1,6 +1,7 @@
 """Pytest fixtures for tushare source tests."""
 
 import pytest
+from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.tushare.client import TushareClient
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 from ditto_datahub.sources.tushare.utils.http_utils import response_to_dataframe
@@ -35,20 +36,28 @@ class NoRetryTushareSource(TushareSource):
         from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
 
         # 为每个专门 Adapter 创建无重试的实例
-        self._calendar = CalendarTushareAdapter(token=token)
-        self._stock = StockTushareAdapter(token=token)
-        self._etf = ETFTushareAdapter(token=token)
+        settings = DataSourceSettings(tushare_token=token or "")
+        self._calendar = CalendarTushareAdapter(token=token, settings=settings)
+        self._stock = StockTushareAdapter(token=token, settings=settings)
+        self._etf = ETFTushareAdapter(token=token, settings=settings)
 
         # 替换它们的 client 为无重试版本（从现有 client 获取 token）
         self._calendar._client = NoRetryTushareClient(
-            token=self._calendar._client._token
+            token=self._calendar._client._token,
+            settings=settings,
         )
-        self._stock._client = NoRetryTushareClient(token=self._stock._client._token)
-        self._etf._client = NoRetryTushareClient(token=self._etf._client._token)
+        self._stock._client = NoRetryTushareClient(
+            token=self._stock._client._token,
+            settings=settings,
+        )
+        self._etf._client = NoRetryTushareClient(
+            token=self._etf._client._token,
+            settings=settings,
+        )
 
 
 @pytest.fixture
-def tushare_source(monkeypatch: pytest.MonkeyPatch) -> NoRetryTushareSource:
+def tushare_source() -> NoRetryTushareSource:
     """提供无重试延迟的 TushareSource 实例（测试加速）.
 
     使用方式:
@@ -60,5 +69,4 @@ def tushare_source(monkeypatch: pytest.MonkeyPatch) -> NoRetryTushareSource:
                 tushare_source.fetch_calendar("2024-01-01", "2024-01-03")
     """
     # 设置测试 token
-    monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
     return NoRetryTushareSource(token="test_token")

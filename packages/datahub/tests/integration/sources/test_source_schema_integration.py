@@ -10,10 +10,12 @@
     - 网络连接正常
 """
 
+import os
 from datetime import date
 
 import polars as pl
 import pytest
+from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.schemas import (
     ADJ_FACTOR_SOURCE_SCHEMA,
     ETF_DAILY_SOURCE_SCHEMA,
@@ -24,6 +26,13 @@ from ditto_datahub.sources.schemas import (
 )
 from ditto_datahub.sources.source_schema import SourceSchema
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
+
+
+def _settings_from_env() -> DataSourceSettings:
+    token = os.environ.get("TUSHARE_TOKEN", "")
+    if not token:
+        pytest.skip("TUSHARE_TOKEN is required for integration tests")
+    return DataSourceSettings(tushare_token=token)
 
 
 @pytest.mark.integration
@@ -43,7 +52,7 @@ class TestSourceSchemaWithRealAPI:
         )
 
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         calendar = source.fetch_calendar("2024-01-01", "2024-01-05")
 
         # 验证 Schema
@@ -70,7 +79,7 @@ class TestSourceSchemaWithRealAPI:
         )
 
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         stocks = source.fetch_stock_basic()
 
         # 验证 Schema
@@ -89,7 +98,7 @@ class TestSourceSchemaWithRealAPI:
     def test_stock_daily_schema_with_real_data(self) -> None:
         """测试日线行情数据的 SourceSchema 验证"""
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         daily = source.fetch_stock_daily("2024-01-02")
 
         # 使用正式定义的 Schema 验证
@@ -134,7 +143,7 @@ class TestSourceSchemaWithRealAPI:
         )
 
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         etf_basic = source.fetch_etf_basic()
 
         # 验证 Schema
@@ -153,7 +162,7 @@ class TestSourceSchemaWithRealAPI:
     def test_etf_daily_schema_with_real_data(self) -> None:
         """测试 ETF 日线行情的 SourceSchema 验证"""
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         etf_daily = source.fetch_etf_daily("2024-01-02")
 
         # 使用正式定义的 Schema 验证
@@ -165,7 +174,7 @@ class TestSourceSchemaWithRealAPI:
     def test_adj_factor_schema_with_real_data(self) -> None:
         """测试复权因子的 SourceSchema 验证"""
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         adj_factor = source.fetch_adj_factor("2024-01-02")
 
         # 使用正式定义的 Schema 验证
@@ -183,7 +192,7 @@ class TestSourceSchemaWithRealAPI:
     def test_stock_limit_schema_with_real_data(self) -> None:
         """测试涨跌停价的 SourceSchema 验证"""
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         stock_limit = source.fetch_stock_limit("2024-01-02")
 
         # 使用正式定义的 Schema 验证
@@ -205,7 +214,7 @@ class TestSourceSchemaWithRealAPI:
         这是 Tushare API 的实际行为。因此这里只验证列的存在性和类型，不验证主键唯一性。
         """
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         stock_status = source.fetch_stock_status("2024-01-02")
 
         # 使用正式定义的 Schema 验证（允许重复主键）
@@ -223,7 +232,7 @@ class TestSourceSchemaWithRealAPI:
     def test_fund_adj_schema_with_real_data(self) -> None:
         """测试基金复权因子的 SourceSchema 验证"""
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         fund_adj = source.fetch_fund_adj("2024-01-02")
 
         # 使用正式定义的 Schema 验证

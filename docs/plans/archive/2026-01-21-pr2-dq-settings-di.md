@@ -1,5 +1,8 @@
 # PR-2：通过 DI 容器注入 DQSettings（保持全局配置规范一致）
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 **日期**: 2026-01-21
 **目标**: 消除 core/quality 循环依赖，复用现有 DQSettings
 
@@ -14,7 +17,7 @@
 class DQSettings(BaseSettings):
     """DQ configuration settings."""
     model_config = SettingsConfigDict(
-        env_prefix="DITTO_DQ_",
+        env_prefix="",
         env_file=".env",
     )
     rules_dir: str = "config/default/dq_rules"
@@ -79,13 +82,13 @@ class DQSettings(BaseSettings):
     DQ configuration settings.
 
     Environment variables:
-        DITTO_DQ_L1_ENABLED: Enable L1 technical checks
-        DITTO_DQ_RULES_DIR: DQ rules directory path
+        L1_ENABLED: Enable L1 technical checks
+        RULES_DIR: DQ rules directory path
         ...
     """
 
     model_config = SettingsConfigDict(
-        env_prefix="DITTO_DQ_",
+        env_prefix="",
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
@@ -369,32 +372,32 @@ config/
 
 ```bash
 # DQ 开发环境配置
-DITTO_DQ_L1_ENABLED=true
-DITTO_DQ_L2_ENABLED=true
-DITTO_DQ_L3_ENABLED=false
-DITTO_DQ_RULES_DIR=config/development/dq_rules
-DITTO_DQ_QUARANTINE_ENABLED=true
+L1_ENABLED=true
+L2_ENABLED=true
+L3_ENABLED=false
+RULES_DIR=config/development/dq_rules
+QUARANTINE_ENABLED=true
 ```
 
 ### config/testing/dq.env
 
 ```bash
 # DQ 测试环境配置
-DITTO_DQ_L1_ENABLED=true
-DITTO_DQ_L2_ENABLED=true
-DITTO_DQ_L3_ENABLED=true
-DITTO_DQ_QUARANTINE_ENABLED=false
+L1_ENABLED=true
+L2_ENABLED=true
+L3_ENABLED=true
+QUARANTINE_ENABLED=false
 ```
 
 ### config/production/dq.env
 
 ```bash
 # DQ 生产环境配置
-DITTO_DQ_L1_ENABLED=true
-DITTO_DQ_L2_ENABLED=true
-DITTO_DQ_L3_ENABLED=true
-DITTO_DQ_RULES_DIR=config/production/dq_rules
-DITTO_DQ_QUARANTINE_ENABLED=true
+L1_ENABLED=true
+L2_ENABLED=true
+L3_ENABLED=true
+RULES_DIR=config/production/dq_rules
+QUARANTINE_ENABLED=true
 ```
 
 ---

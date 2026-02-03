@@ -5,6 +5,7 @@ from __future__ import annotations
 from ditto_foundation import logger
 
 from ditto_datahub.config import DataSourceSettings
+from ditto_datahub.sources.base import SourceConfigurationError
 from ditto_datahub.sources.tushare.client import TushareClient
 
 
@@ -30,7 +31,7 @@ class BaseTushareAdapter:
         Initialize Tushare adapter.
 
         Args:
-            token: API token. Reads from keyring or ~/.ditto/secrets.toml if None.
+            token: API token（可选，优先于 settings 中的 token）。
             settings: 数据源配置（包含 URL/timeout 等参数）.
             _client: 已存在的 client（用于依赖注入）.
 
@@ -38,6 +39,11 @@ class BaseTushareAdapter:
         if _client is not None:
             self._client = _client
         else:
+            if settings is None:
+                raise SourceConfigurationError(
+                    message="DataSourceSettings required for Tushare adapter",
+                    config_key="data_source",
+                )
             self._client = TushareClient(token=token, settings=settings)
         logger.debug(
             f"{self.__class__.__name__} initialized",

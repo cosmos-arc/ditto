@@ -16,7 +16,7 @@ class TestSettingsFixture:
 
     def test_settings_has_system_config(self, test_settings: Settings):
         """测试 test_settings 配置了系统配置."""
-        assert test_settings.system.ditto_env.value == "testing"
+        assert test_settings.system.environment.value == "testing"
         assert test_settings.system.timezone == "Asia/Shanghai"
 
 

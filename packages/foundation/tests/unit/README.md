@@ -146,19 +146,17 @@ pixi run -e dev pytest packages/foundation/tests/unit/util/test_dates_property.p
 
 ## Mock 使用
 
-### 环境变量 Mock
+### 配置对象 Mock
 
 ```python
-def test_mode_detection(monkeypatch):
-    """测试模式检测"""
-    # 设置环境变量
-    monkeypatch.setenv("DITTO_OBSERVABILITY_MODE", "production")
+from ditto_foundation.config import Environment
+from ditto_foundation.observability.config import ObservabilityConfig
 
-    config = ObservabilityConfig(environment="production")
-    assert config.detect_mode() == Mode.PRODUCTION
-
-    # 清理环境变量
-    monkeypatch.delenv("DITTO_OBSERVABILITY_MODE")
+def test_effective_config():
+    """测试生效配置"""
+    config = ObservabilityConfig(environment=Environment.PRODUCTION)
+    effective = config.get_effective_config()
+    assert effective.log_format == "json"
 ```
 
 ### 文件系统 Mock

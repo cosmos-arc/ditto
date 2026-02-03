@@ -97,11 +97,6 @@ class DataHubProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def data_root_config(self) -> DataRootConfig:
-        """数据根配置（从环境变量读取）."""
-        return DataRootConfig()
-
-    @provide
     def data_root(self, config: DataRootConfig) -> Path:
         """数据根目录."""
         return config.data_root

@@ -1,45 +1,19 @@
-"""DataHub 文件存储配置."""
+"""DataHub 文件存储配置。"""
 
 from pathlib import Path
 
-from pydantic import computed_field
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from ditto_datahub.config.data_root import DataRootConfig
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class FileStorageSettings(BaseSettings):
-    """文件存储配置."""
+class FileStorageSettings(BaseModel):
+    """文件存储配置（仅模型，不读取环境/文件）。"""
 
-    model_config = SettingsConfigDict(
-        env_prefix="",
-        extra="ignore",
-        populate_by_name=True,
-    )
+    model_config = ConfigDict(extra="ignore")
 
-    @computed_field
-    @property
-    def data_root(self) -> Path:
-        """数据存储根目录."""
-        return DataRootConfig().data_root
-
-    @computed_field
-    @property
-    def log_root(self) -> Path:
-        """日志存储根目录."""
-        return DataRootConfig().logs_path
-
-    @computed_field
-    @property
-    def backup_root(self) -> Path:
-        """备份存储根目录."""
-        return DataRootConfig().backups_path
-
-    @computed_field
-    @property
-    def temp_root(self) -> Path:
-        """临时文件存储根目录."""
-        return DataRootConfig().temp_path
+    data_root: Path = Field(description="数据根目录")
+    log_root: Path = Field(description="日志目录")
+    backup_root: Path = Field(description="备份目录")
+    temp_root: Path = Field(description="临时目录")
 
 
 __all__ = ["FileStorageSettings"]

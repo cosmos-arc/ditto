@@ -103,21 +103,18 @@ pixi run -e dev pytest packages/foundation/tests/unit/test_observability.py::tes
 所有测试遵循 Arrange-Act-Assert 模式：
 
 ```python
-def test_mode_detection():
+from ditto_foundation.config import Environment
+from ditto_foundation.observability.config import ObservabilityConfig
+
+def test_config_defaults():
     # Arrange - 准备测试数据
-    original_mode = os.environ.get("DITTO_OBSERVABILITY_MODE")
+    config = ObservabilityConfig(environment=Environment.PRODUCTION)
 
-    try:
-        # Act - 执行被测代码
-        os.environ["DITTO_OBSERVABILITY_MODE"] = "production"
-        config = ObservabilityConfig(environment="production")
+    # Act - 计算生效配置
+    effective = config.get_effective_config()
 
-        # Assert - 验证结果
-        assert config.detect_mode() == Mode.PRODUCTION
-    finally:
-        # Cleanup - 清理
-        if original_mode is None:
-            os.environ.pop("DITTO_OBSERVABILITY_MODE", None)
+    # Assert - 验证结果
+    assert effective.log_format == "json"
 ```
 
 ### Mock 选择
@@ -128,16 +125,24 @@ def test_mode_detection():
 | 验证调用 | `pytest-mock (mocker)` |
 | 环境变量 | `monkeypatch.setenv()` / `monkeypatch.delenv()` |
 
-### 环境变量测试
+### 显式配置测试
 
-使用 `monkeypatch` 修改环境变量：
+直接构造配置对象进行验证：
 
 ```python
-def test_with_env_var(monkeypatch):
-    """测试环境变量处理"""
-    monkeypatch.setenv("DITTO_ENV", "testing")
-    settings = Settings()
-    assert settings.mode == Mode.TESTING
+from ditto_foundation.config import Environment
+from ditto_foundation.config.settings import (
+    ObservabilitySettings,
+    Settings,
+    SystemSettings,
+)
+
+def test_with_explicit_settings():
+    settings = Settings(
+        system=SystemSettings(environment=Environment.TESTING),
+        observability=ObservabilitySettings(),
+    )
+    assert settings.is_testing is True
 ```
 
 ## 代码覆盖率要求

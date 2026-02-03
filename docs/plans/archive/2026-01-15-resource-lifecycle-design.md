@@ -1,5 +1,8 @@
 # 资源生命周期管理设计
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 **设计日期**: 2026-01-15
 **目标**: 解决 CLI 资源泄漏和 Observability 配置未生效问题
 
@@ -264,11 +267,11 @@ def test_observability_vm_endpoint():
 
 | 环境变量 | 默认值 | 说明 |
 |---------|--------|------|
-| `OBSERVABILITY_ENABLED` | `true` | 是否启用可观测性 |
-| `OBSERVABILITY_MODE` | `auto` | 运行模式：auto/production/development/testing |
-| `OBSERVABILITY_LOG_LEVEL` | `INFO` | 日志级别 |
-| `OBSERVABILITY_VM_ENDPOINT` | `http://localhost:8428/opentelemetry/v1/metrics` | VictoriaMetrics 端点 |
-| `OBSERVABILITY_METRICS_INTERVAL_MS` | `15000` | 指标导出间隔（毫秒） |
+| `ENABLED` | `true` | 是否启用可观测性 |
+| `MODE` | `auto` | 运行模式：auto/production/development/testing |
+| `LOG_LEVEL` | `INFO` | 日志级别 |
+| `VM_ENDPOINT` | `http://localhost:8428/opentelemetry/v1/metrics` | VictoriaMetrics 端点 |
+| `METRICS_INTERVAL_MS` | `15000` | 指标导出间隔（毫秒） |
 
 ---
 

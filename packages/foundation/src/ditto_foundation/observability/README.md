@@ -66,33 +66,30 @@ M.data_update_duration.record(1.5, {"source": "tushare"})
 
 ## 三、运行模式
 
-| 模式 | 说明 | 日志输出 | 指标导出 | 用途 |
-|------|------|----------|----------|------|
-| `PRODUCTION` | 生产模式 | 文件 (JSON) | VictoriaMetrics | 生产环境 |
-| `DEVELOPMENT` | 开发模式 | Console + 文件 | VictoriaMetrics | 开发环境 |
-| `TESTING` | 测试静默模式 | 无 | 无 | 单元测试 (最快) |
-| `TESTING_WITH_ASSERTIONS` | 测试断言模式 | 无 | 内存记录 | 单元测试 (可验证) |
+观测配置通过 `ObservabilityConfig.environment` 选择预设（development/testing/production），并允许字段级覆盖。
 
-### 模式检测
-
-自动检测顺序：
-1. `DITTO_OBSERVABILITY_MODE` 环境变量 (显式指定)
-2. `PYTEST_CURRENT_TEST` 环境变量 (pytest 测试)
-3. `environment` 配置参数 ("production" → PRODUCTION, 其他 → DEVELOPMENT)
+默认预设：
+- DEVELOPMENT：DEBUG、console+file、tracing/metrics 开启
+- TESTING：WARNING、console、tracing/metrics 关闭（测试中可显式开启）
+- PRODUCTION：INFO、json、tracing/metrics 开启、采样率默认 0.1
 
 ## 四、API 参考
 
 ### 初始化与关闭
 
 ```python
-from ditto_foundation import init, shutdown, Mode
+from ditto_foundation.config import Environment
+from ditto_foundation.observability import init, shutdown
+from ditto_foundation.observability.config import ObservabilityConfig
 
-# 自动检测模式
-init()
+config = ObservabilityConfig(
+    service_name="my_service",
+    environment=Environment.PRODUCTION,
+    log_dir="logs",
+)
 
-# 显式指定模式
-init(mode=Mode.TESTING)
-init(mode=Mode.PRODUCTION, service_name="my_service")
+# 初始化
+init(config)
 
 # 优雅关闭 (刷新缓冲数据)
 shutdown()
@@ -269,11 +266,19 @@ buckets = [0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0]
 
 ```python
 import pytest
-from ditto_foundation import init, reset_for_testing, Mode
+from ditto_foundation.config import Environment
+from ditto_foundation.observability import init, reset_for_testing
+from ditto_foundation.observability.config import ObservabilityConfig
 
 def test_my_function():
     reset_for_testing()
-    init(mode=Mode.TESTING)
+    config = ObservabilityConfig(
+        environment=Environment.TESTING,
+        tracing_enabled=False,
+        metrics_enabled=False,
+        pytest_running=True,
+    )
+    init(config, force=True)
 
     # 测试代码 (无日志输出)
     result = my_function()
@@ -283,11 +288,19 @@ def test_my_function():
 ### 带 Span 验证的测试
 
 ```python
-from ditto_foundation import init, span, Mode, get_recorded_spans, reset_for_testing
+from ditto_foundation.config import Environment
+from ditto_foundation.observability import init, span, get_recorded_spans, reset_for_testing
+from ditto_foundation.observability.config import ObservabilityConfig
 
 def test_span_creation():
     reset_for_testing()
-    init(mode=Mode.TESTING_WITH_ASSERTIONS)
+    config = ObservabilityConfig(
+        environment=Environment.TESTING,
+        tracing_enabled=True,
+        pytest_running=True,
+        assertions_enabled=True,
+    )
+    init(config, force=True)
 
     with span("test_operation", key="value"):
         pass
@@ -301,11 +314,19 @@ def test_span_creation():
 ### 带指标验证的测试
 
 ```python
-from ditto_foundation import init, M, Mode, get_recorded_metrics, reset_for_testing
+from ditto_foundation.config import Environment
+from ditto_foundation.observability import init, M, get_recorded_metrics, reset_for_testing
+from ditto_foundation.observability.config import ObservabilityConfig
 
 def test_metrics():
     reset_for_testing()
-    init(mode=Mode.TESTING_WITH_ASSERTIONS)
+    config = ObservabilityConfig(
+        environment=Environment.TESTING,
+        metrics_enabled=True,
+        pytest_running=True,
+        assertions_enabled=True,
+    )
+    init(config, force=True)
 
     M.data_records.add(100, {"source": "test"})
 
@@ -315,22 +336,19 @@ def test_metrics():
 
 ## 七、配置
 
-### 环境变量
+### 配置来源
 
-| 变量名 | 说明 | 默认值 |
-|--------|------|--------|
-| `DITTO_OBSERVABILITY_MODE` | 显式指定模式 (production/development/testing/testing_assertions) | 自动检测 |
-| `OBSERVABILITY_LOG_LEVEL` | 日志级别 | INFO |
-| `OBSERVABILITY_VM_ENDPOINT` | VictoriaMetrics OTLP 端点 | http://localhost:8428/opentelemetry/v1/metrics |
+`ObservabilityConfig` 由应用层（Port）从 `config/{env}/observability.env` 加载并注入。基础层不读取环境变量。
 
 ### 配置类
 
 ```python
-from ditto_foundation import ObservabilityConfig
+from ditto_foundation.config import Environment
+from ditto_foundation.observability.config import ObservabilityConfig
 
 config = ObservabilityConfig(
     service_name="my_service",
-    environment="production",
+    environment=Environment.PRODUCTION,
     log_level="INFO",
     log_dir="logs",
     vm_endpoint="http://localhost:8428/opentelemetry/v1/metrics",
@@ -398,10 +416,10 @@ App (OTel) → OTLP HTTP → VictoriaMetrics
 - **Metrics**: `http://localhost:8428/opentelemetry/v1/metrics`
 - **Logs**: 通过 Vector 采集 `logs/ditto.jsonl`
 
-如需修改端点，设置环境变量：
+如需修改端点，更新 `config/{env}/observability.env`：
 
-```powershell
-$env:OBSERVABILITY_VM_ENDPOINT="http://your-vm-endpoint:8428/opentelemetry/v1/metrics"
+```env
+VM_ENDPOINT=http://your-vm-endpoint:8428/opentelemetry/v1/metrics
 ```
 
 ## 九、内部实现

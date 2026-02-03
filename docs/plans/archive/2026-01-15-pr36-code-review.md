@@ -1,5 +1,8 @@
 # Code Review Report: PR #36 "refactor: Pyright 和 Ruff 清理 - 批次 0"
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 **审查范围**: 43f7b7f..f9d274a
 **变更规模**: 133 个文件，+5774/-2776 行
 **审查日期**: 2026-01-15
@@ -446,8 +449,8 @@ def _setup_observability(self, settings: Any) -> None:
 ```
 
 **问题**:
-- ❌ `OBSERVABILITY_ENABLED=false` 无法禁用
-- ❌ `OBSERVABILITY_MODE=testing` 不生效
+- ❌ `ENABLED=false` 无法禁用
+- ❌ `MODE=testing` 不生效
 - ❌ VictoriaMetrics 配置不传递
 
 #### 修复建议

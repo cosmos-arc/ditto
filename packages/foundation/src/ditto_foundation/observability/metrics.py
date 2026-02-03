@@ -1,13 +1,6 @@
-"""
-指标模块.
+"""Metrics module."""
 
-基于 OpenTelemetry 的指标收集，定义所有预定义业务指标.
-
-Histogram Buckets 配置 (秒):
-    [0.1, 0.5, 1, 5, 10, 30, 60, 300]
-
-适用于所有 duration 类型的 Histogram 指标.
-"""
+from __future__ import annotations
 
 from typing import Any, TypedDict
 
@@ -26,60 +19,42 @@ from .config import ObservabilityConfig
 
 
 class _MetricsRegistry:
-    """
-    Registry for managing metrics singleton.
-
-    Uses class-level attributes to store singleton state, eliminating
-    the need for global statements while maintaining the same API.
-    """
-
     meter: metrics.Meter | None = None
     in_memory_reader: InMemoryMetricReader | None = None
 
     @classmethod
     def get_meter(cls) -> metrics.Meter | None:
-        """Get the current meter instance."""
         return cls.meter
 
     @classmethod
     def get_in_memory_reader(cls) -> InMemoryMetricReader | None:
-        """Get the current in-memory reader instance."""
         return cls.in_memory_reader
 
     @classmethod
     def set_meter(cls, meter: metrics.Meter) -> None:
-        """Set the meter instance."""
         cls.meter = meter
 
     @classmethod
     def set_in_memory_reader(cls, reader: InMemoryMetricReader) -> None:
-        """Set the in-memory reader instance."""
         cls.in_memory_reader = reader
 
     @classmethod
     def reset(cls) -> None:
-        """Reset all metrics state (for testing purposes)."""
         cls.meter = None
         cls.in_memory_reader = None
 
 
-# Histogram buckets 配置 (秒)
 _HISTOGRAM_BUCKETS = (0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0)
 
 
 class MetricDefinition(TypedDict):
-    """指标定义配置."""
-
-    name: str  # 属性名
-    instrument_name: str  # OTel 指标名称
-    type: str  # "histogram" | "counter" | "gauge"
-    description: str  # 指标描述
+    name: str
+    instrument_name: str
+    type: str
+    description: str
 
 
-# 指标定义配置字典
-# 数据驱动的指标注册，避免重复代码
 METRIC_DEFINITIONS: list[MetricDefinition] = [
-    # 数据指标
     {
         "name": "data_update_duration",
         "instrument_name": "ditto.data.update.duration",
@@ -104,7 +79,6 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "counter",
         "description": "Total data processing errors",
     },
-    # 因子指标
     {
         "name": "factor_calc_duration",
         "instrument_name": "ditto.factor.calc.duration",
@@ -123,7 +97,6 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "gauge",
         "description": "Factor health score (0-100)",
     },
-    # 策略指标
     {
         "name": "signal_total",
         "instrument_name": "ditto.signal.total",
@@ -136,7 +109,6 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "counter",
         "description": "Total portfolio rebalances executed",
     },
-    # 组合指标
     {
         "name": "portfolio_value",
         "instrument_name": "ditto.portfolio.value",
@@ -155,7 +127,6 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "gauge",
         "description": "3-day rolling portfolio drawdown",
     },
-    # 风控指标
     {
         "name": "kill_switch_level",
         "instrument_name": "ditto.risk.kill_switch_level",
@@ -168,7 +139,6 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "counter",
         "description": "Total kill switch triggers",
     },
-    # 系统指标
     {
         "name": "scheduler_jobs",
         "instrument_name": "ditto.scheduler.jobs_total",
@@ -187,7 +157,6 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "histogram",
         "description": "API request duration in seconds",
     },
-    # 缓存指标
     {
         "name": "cache_hit",
         "instrument_name": "ditto.cache.hit_total",
@@ -224,7 +193,6 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "gauge",
         "description": "Current cache size (number of entries)",
     },
-    # SQL 指标
     {
         "name": "sql_query_duration",
         "instrument_name": "ditto.sql.query.duration",
@@ -249,7 +217,6 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "counter",
         "description": "Total query plan cache misses",
     },
-    # JSON 序列化指标
     {
         "name": "json_serialize_duration",
         "instrument_name": "ditto.json.serialize.duration",
@@ -268,7 +235,6 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "counter",
         "description": "Total JSON bytes processed",
     },
-    # DQ 批量检查指标
     {
         "name": "dq_batch_checks",
         "instrument_name": "ditto.dq.batch.checks_total",
@@ -291,28 +257,10 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
 
 
 class SimpleGauge:
-    """
-    简化的 Gauge 包装器.
-
-    使用实例变量存储状态，提供简单的 set/inc/dec 接口。
-    不支持 attributes 参数，简化了接口。
-    """
-
     def __init__(self, meter: metrics.Meter, name: str, description: str) -> None:
-        """
-        初始化 SimpleGauge.
-
-        Args:
-        ----
-            meter: OTel Meter 实例
-            name: 指标名称
-            description: 指标描述
-
-        """
         self._value = 0.0
 
         def callback(options: Any) -> list[metrics.Observation]:
-            """ObservableGauge 回调函数."""
             return [metrics.Observation(self._value, {})]
 
         self._gauge = meter.create_observable_gauge(
@@ -322,77 +270,41 @@ class SimpleGauge:
         )
 
     def set(self, value: float) -> None:
-        """
-        设置指标值.
-
-        Args:
-        ----
-            value: 指标值
-
-        """
         self._value = value
 
     def inc(self, delta: float = 1.0) -> None:
-        """
-        增加指标值.
-
-        注意: 允许传入负数来减少值，但不会低于 0.0。
-        如需减少值，建议使用 dec() 方法以获得更清晰的语义。
-
-        Args:
-        ----
-            delta: 增量，默认为 1.0。可为负数。
-
-        """
         self._value = max(0.0, self._value + delta)
 
     def dec(self, delta: float = 1.0) -> None:
-        """
-        减少指标值.
-
-        值不会低于 0.0。
-
-        Args:
-        ----
-            delta: 减量，默认为 1.0
-
-        """
         self._value = max(0.0, self._value - delta)
 
 
 class M:
-    """预定义业务指标集合."""
+    """指标入口（绑定全局 Meter 后可直接使用）。"""
 
-    # 数据指标
     data_update_duration: Histogram
     data_records: Counter
     data_freshness: SimpleGauge
     data_errors: Counter
 
-    # 因子指标
     factor_calc_duration: Histogram
     factor_ic: SimpleGauge
     factor_health: SimpleGauge
 
-    # 策略指标
     signal_total: Counter
     rebalance_total: Counter
 
-    # 组合指标
     portfolio_value: SimpleGauge
     portfolio_drawdown: SimpleGauge
     portfolio_drawdown_3d: SimpleGauge
 
-    # 风控指标
     kill_switch_level: SimpleGauge
     kill_switch_total: Counter
 
-    # 系统指标
     scheduler_jobs: Counter
     api_requests: Counter
     api_duration: Histogram
 
-    # 缓存指标
     cache_hit: Counter
     cache_miss: Counter
     cache_hit_rate: SimpleGauge
@@ -400,32 +312,22 @@ class M:
     cache_evictions: Counter
     cache_size: SimpleGauge
 
-    # SQL 指标
     sql_query_duration: Histogram
     sql_slow_query_total: Counter
     sql_query_plan_cache_hit: Counter
     sql_query_plan_cache_miss: Counter
 
-    # JSON 序列化指标
     json_serialize_duration: Histogram
     json_deserialize_duration: Histogram
     json_bytes_total: Counter
 
-    # DQ 批量检查指标
     dq_batch_checks: Counter
     dq_batch_issues: Counter
     dq_batch_alerts: Counter
 
     @classmethod
     def setup(cls, meter: metrics.Meter) -> None:
-        """
-        初始化所有指标（基于配置驱动）.
-
-        Args:
-        ----
-            meter: OTel Meter 实例
-
-        """
+        """基于 Meter 初始化指标对象。"""
         for metric_def in METRIC_DEFINITIONS:
             metric_type = metric_def["type"]
             name = metric_def["name"]
@@ -447,8 +349,7 @@ class M:
             elif metric_type == "gauge":
                 setattr(cls, name, _create_gauge(meter, instrument_name, description))
             else:
-                msg = f"Unknown metric type: {metric_type}"
-                raise ValueError(msg)
+                raise ValueError(f"Unknown metric type: {metric_type}")
 
 
 def _create_gauge(
@@ -456,55 +357,29 @@ def _create_gauge(
     name: str,
     description: str,
 ) -> SimpleGauge:
-    """
-    创建一个 ObservableGauge，提供简单的 set() 接口.
-
-    Args:
-    ----
-        meter: OTel Meter 实例
-        name: 指标名称
-        description: 指标描述
-
-    Returns:
-    -------
-        SimpleGauge: 包装了 ObservableGauge 的对象，提供 set() / inc() / dec() 方法
-
-    """
     return SimpleGauge(meter, name, description)
 
 
 def configure_metrics(config: ObservabilityConfig) -> metrics.Meter:
-    """
-    配置 OTel Metrics.
-
-    Args:
-    ----
-        config: 可观测性配置
-
-    Returns:
-    -------
-        metrics.Meter: 配置好的 Meter 实例
-
-    """
-    # 获取生效配置
+    """配置并返回 Metrics Meter。"""
     effective = config.get_effective_config()
 
-    # 资源定义
     resource = Resource.create({"service.name": config.service_name})
 
-    # 配置 Histogram buckets 视图 - 适用于所有 duration 类型指标
-    # 注意：当前 OpenTelemetry SDK 不支持 name_pattern 匹配
-    # 需要为每个 duration 指标单独创建 View
+    if not effective.metrics_enabled:
+        provider = MeterProvider(resource=resource)
+        metrics.set_meter_provider(provider)
+        meter = provider.get_meter(config.service_name)
+        _MetricsRegistry.set_meter(meter)
+        M.setup(meter)
+        return meter
+
     duration_histogram_aggregation = ExplicitBucketHistogramAggregation(
         boundaries=_HISTOGRAM_BUCKETS,
     )
-
-    # 从 METRIC_DEFINITIONS 中提取所有 histogram 类型的指标
     duration_histogram_names = [
         m["instrument_name"] for m in METRIC_DEFINITIONS if m["type"] == "histogram"
     ]
-
-    # 为每个 duration 指标创建视图
     duration_histogram_views = [
         View(
             instrument_type=Histogram,
@@ -514,23 +389,27 @@ def configure_metrics(config: ObservabilityConfig) -> metrics.Meter:
         for name in duration_histogram_names
     ]
 
-    # TESTING 或 TESTING_WITH_ASSERTIONS：使用 InMemory Reader
-    if config.environment.is_testing or config.pytest_running:
+    if config.environment.is_testing or effective.pytest_running:
         in_memory_reader = InMemoryMetricReader()
         provider = MeterProvider(
             metric_readers=[in_memory_reader],
             resource=resource,
             views=duration_histogram_views,
         )
-        # 直接从 provider 获取 meter，不设置全局 provider
         meter = provider.get_meter(__name__)
         _MetricsRegistry.set_meter(meter)
         _MetricsRegistry.set_in_memory_reader(in_memory_reader)
         M.setup(meter)
         return meter
 
-    # PRODUCTION / DEVELOPMENT：配置 OTLP Exporter
-    # 将指标推送到 VictoriaMetrics
+    if effective.metrics_exporter == "none":
+        provider = MeterProvider(resource=resource, views=duration_histogram_views)
+        metrics.set_meter_provider(provider)
+        meter = metrics.get_meter(config.service_name)
+        _MetricsRegistry.set_meter(meter)
+        M.setup(meter)
+        return meter
+
     otlp_exporter = OTLPMetricExporter(
         endpoint=effective.vm_endpoint,
         timeout=30,
@@ -553,17 +432,18 @@ def configure_metrics(config: ObservabilityConfig) -> metrics.Meter:
 
 
 def reset_metrics() -> None:
-    """重置 Metrics 状态（用于测试）."""
+    """重置 Metrics 注册表。"""
     _MetricsRegistry.reset()
 
 
 def get_in_memory_reader() -> InMemoryMetricReader | None:
-    """
-    获取 InMemory Metric Reader（测试用）.
-
-    Returns
-    -------
-        InMemoryMetricReader | None: 当前的 InMemory Metric Reader 实例
-
-    """
+    """获取内存 Metric reader（用于测试）。"""
     return _MetricsRegistry.get_in_memory_reader()
+
+
+__all__ = [
+    "M",
+    "configure_metrics",
+    "get_in_memory_reader",
+    "reset_metrics",
+]

@@ -5,6 +5,7 @@ from datetime import date
 import httpx
 import polars as pl
 import pytest
+from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.base import (
     SourceAuthenticationError,
     SourceFetchError,
@@ -16,14 +17,17 @@ from ditto_datahub.sources.tushare.processors.error_handler import (
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
 
+def _settings(token: str | None = None) -> DataSourceSettings:
+    if token is None:
+        token = "not_a_secret"
+    return DataSourceSettings(tushare_token=token)
+
+
 class TestTushareSourceCalendar:
     """Tests for TushareSource.fetch_calendar."""
 
-    def test_fetch_calendar_returns_dataframe(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_calendar_returns_dataframe(self, respx_mock) -> None:
         """Test fetch_calendar returns DataFrame with correct schema."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应
         respx_mock.post("http://api.tushare.pro").mock(
@@ -40,7 +44,7 @@ class TestTushareSourceCalendar:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_calendar("2024-01-01", "2024-01-03")
 
         # Verify schema
@@ -56,11 +60,8 @@ class TestTushareSourceCalendar:
             {"trade_date": date(2024, 1, 3), "is_open": True},
         ]
 
-    def test_fetch_calendar_empty_response(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_calendar_empty_response(self, respx_mock) -> None:
         """Test fetch_calendar handles empty response."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - 空数据
         respx_mock.post("http://api.tushare.pro").mock(
@@ -74,7 +75,7 @@ class TestTushareSourceCalendar:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_calendar("2024-01-01", "2024-01-03")
 
         assert result.is_empty()
@@ -93,11 +94,8 @@ class TestTushareSourceCalendar:
 class TestTushareSourceEtfBasic:
     """Tests for TushareSource.fetch_etf_basic."""
 
-    def test_fetch_etf_basic_returns_dataframe(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_etf_basic_returns_dataframe(self, respx_mock) -> None:
         """Test fetch_etf_basic returns DataFrame with correct schema."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - fund_basic API
         # [REVIEW]: fund_basic 返回 ts_code, name, exchange, list_date
@@ -118,7 +116,7 @@ class TestTushareSourceEtfBasic:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_etf_basic()
 
         # Verify schema
@@ -148,11 +146,8 @@ class TestTushareSourceEtfBasic:
             },
         ]
 
-    def test_fetch_etf_basic_empty_response(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_etf_basic_empty_response(self, respx_mock) -> None:
         """Test fetch_etf_basic handles empty response."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - 空数据
         respx_mock.post("http://api.tushare.pro").mock(
@@ -169,7 +164,7 @@ class TestTushareSourceEtfBasic:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_etf_basic()
 
         assert result.is_empty()
@@ -178,11 +173,8 @@ class TestTushareSourceEtfBasic:
 class TestTushareSourceEtfDaily:
     """Tests for TushareSource.fetch_etf_daily."""
 
-    def test_fetch_etf_daily_returns_dataframe(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_etf_daily_returns_dataframe(self, respx_mock) -> None:
         """Test fetch_etf_daily returns DataFrame with correct schema."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - fund_daily API
         # [REVIEW]: fund_daily 返回 vol, amount, pct_chg
@@ -226,7 +218,7 @@ class TestTushareSourceEtfDaily:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_etf_daily("2024-01-02")
 
         # Verify schema matches ETF_DAILY_SCHEMA
@@ -260,11 +252,8 @@ class TestTushareSourceEtfDaily:
             },
         ]
 
-    def test_fetch_etf_daily_empty_response(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_etf_daily_empty_response(self, respx_mock) -> None:
         """Test fetch_etf_daily handles empty response."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - 空数据
         respx_mock.post("http://api.tushare.pro").mock(
@@ -293,7 +282,7 @@ class TestTushareSourceEtfDaily:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_etf_daily("2024-01-02")
 
         assert result.is_empty()
@@ -302,11 +291,8 @@ class TestTushareSourceEtfDaily:
 class TestTushareSourceStockBasic:
     """Tests for TushareSource.fetch_stock_basic."""
 
-    def test_fetch_stock_basic_returns_dataframe(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_stock_basic_returns_dataframe(self, respx_mock) -> None:
         """Test fetch_stock_basic returns DataFrame with correct schema."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - stock_basic API
         # [REVIEW]: stock_basic API 返回 ts_code, symbol, name, exchange, list_date
@@ -333,7 +319,7 @@ class TestTushareSourceStockBasic:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_stock_basic()
 
         # Verify schema
@@ -363,11 +349,8 @@ class TestTushareSourceStockBasic:
             },
         ]
 
-    def test_fetch_stock_basic_empty_response(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_stock_basic_empty_response(self, respx_mock) -> None:
         """Test fetch_stock_basic handles empty response."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - 空数据
         respx_mock.post("http://api.tushare.pro").mock(
@@ -390,7 +373,7 @@ class TestTushareSourceStockBasic:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_stock_basic()
 
         assert result.is_empty()
@@ -411,11 +394,8 @@ class TestTushareSourceStockBasic:
 class TestTushareSourceStockDaily:
     """Tests for TushareSource.fetch_stock_daily."""
 
-    def test_fetch_stock_daily_returns_dataframe(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_stock_daily_returns_dataframe(self, respx_mock) -> None:
         """Test fetch_stock_daily returns DataFrame with correct schema."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - daily API
         # [REVIEW]: daily API 返回 vol, amount, pct_chg
@@ -459,7 +439,7 @@ class TestTushareSourceStockDaily:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_stock_daily("2024-01-02")
 
         # Verify schema matches STOCK_DAILY_SCHEMA
@@ -493,11 +473,8 @@ class TestTushareSourceStockDaily:
             },
         ]
 
-    def test_fetch_stock_daily_empty_response(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_stock_daily_empty_response(self, respx_mock) -> None:
         """Test fetch_stock_daily handles empty response."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - 空数据
         respx_mock.post("http://api.tushare.pro").mock(
@@ -526,7 +503,7 @@ class TestTushareSourceStockDaily:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_stock_daily("2024-01-02")
 
         assert result.is_empty()
@@ -547,11 +524,8 @@ class TestTushareSourceStockDaily:
 class TestTushareSourceAdjFactor:
     """Tests for TushareSource.fetch_adj_factor."""
 
-    def test_fetch_adj_factor_returns_dataframe(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_adj_factor_returns_dataframe(self, respx_mock) -> None:
         """Test fetch_adj_factor returns DataFrame with correct schema."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - adj_factor API
         respx_mock.post("http://api.tushare.pro").mock(
@@ -571,7 +545,7 @@ class TestTushareSourceAdjFactor:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_adj_factor("2024-01-02")
 
         # Verify schema
@@ -599,11 +573,8 @@ class TestTushareSourceAdjFactor:
             },
         ]
 
-    def test_fetch_adj_factor_empty_response(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_adj_factor_empty_response(self, respx_mock) -> None:
         """Test fetch_adj_factor handles empty response."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - 空数据
         respx_mock.post("http://api.tushare.pro").mock(
@@ -620,7 +591,7 @@ class TestTushareSourceAdjFactor:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_adj_factor("2024-01-02")
 
         assert result.is_empty()
@@ -641,11 +612,8 @@ class TestTushareSourceAdjFactor:
 class TestTushareSourceFundAdj:
     """Tests for TushareSource.fetch_fund_adj."""
 
-    def test_fetch_fund_adj_returns_dataframe(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_fund_adj_returns_dataframe(self, respx_mock) -> None:
         """Test fetch_fund_adj returns DataFrame with correct schema."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - fund_adj API
         respx_mock.post("http://api.tushare.pro").mock(
@@ -665,7 +633,7 @@ class TestTushareSourceFundAdj:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_fund_adj("2024-01-02")
 
         # Verify schema
@@ -693,11 +661,8 @@ class TestTushareSourceFundAdj:
             },
         ]
 
-    def test_fetch_fund_adj_empty_response(
-        self, respx_mock, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_fetch_fund_adj_empty_response(self, respx_mock) -> None:
         """Test fetch_fund_adj handles empty response."""
-        monkeypatch.setenv("TUSHARE_TOKEN", "test_token")
 
         # Mock HTTP 响应 - 空数据
         respx_mock.post("http://api.tushare.pro").mock(
@@ -714,7 +679,7 @@ class TestTushareSourceFundAdj:
             )
         )
 
-        source = TushareSource()
+        source = TushareSource(settings=_settings())
         result = source.fetch_fund_adj("2024-01-02")
 
         assert result.is_empty()

@@ -1,16 +1,12 @@
 """DataHub 数据源配置."""
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class DataSourceSettings(BaseSettings):
+class DataSourceSettings(BaseModel):
     """数据源配置."""
 
-    model_config = SettingsConfigDict(
-        env_prefix="DATASOURCE_",
-        extra="ignore",
-    )
+    model_config = ConfigDict(extra="ignore")
 
     # HTTP 配置
     http_base_url: str = Field(default="http://api.tushare.pro")

@@ -1,5 +1,8 @@
 # Ditto 项目环境架构完善计划
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 ## 一、当前环境架构分析
 
 ### 1.1 双层环境架构
@@ -189,7 +192,7 @@ class ObservabilitySettings(BaseSettings):
     """可观测性配置."""
 
     model_config = SettingsConfigDict(
-        env_prefix="OBSERVABILITY_",
+        env_prefix="",
         env_file="config/development/observability.env",  # 会自动切换
         env_file_encoding="utf-8",
     )
@@ -209,38 +212,38 @@ class DatabaseSettings(BaseSettings):
 `config/development/observability.env`:
 ```bash
 # 开发环境可观测性配置
-OBSERVABILITY_LOG_LEVEL=DEBUG
-OBSERVABILITY_LOG_FORMAT=console
-OBSERVABILITY_TRACING_ENABLED=true
-OBSERVABILITY_TRACING_EXPORTER=otlp
-OBSERVABILITY_TRACING_SAMPLE_RATE=1.0
-OBSERVABILITY_METRICS_ENABLED=true
-OBSERVABILITY_METRICS_EXPORTER=victoriametrics
-OBSERVABILITY_ASSERTIONS_ENABLED=true
+LOG_LEVEL=DEBUG
+LOG_FORMAT=console
+TRACING_ENABLED=true
+TRACING_EXPORTER=otlp
+TRACING_SAMPLE_RATE=1.0
+METRICS_ENABLED=true
+METRICS_EXPORTER=victoriametrics
+ASSERTIONS_ENABLED=true
 ```
 
 `config/testing/observability.env`:
 ```bash
 # 测试环境可观测性配置（最小化）
-OBSERVABILITY_LOG_LEVEL=WARNING
-OBSERVABILITY_LOG_TO_FILE=false
-OBSERVABILITY_TRACING_ENABLED=false
-OBSERVABILITY_TRACING_EXPORTER=none
-OBSERVABILITY_METRICS_ENABLED=false
-OBSERVABILITY_METRICS_EXPORTER=none
+LOG_LEVEL=WARNING
+LOG_TO_FILE=false
+TRACING_ENABLED=false
+TRACING_EXPORTER=none
+METRICS_ENABLED=false
+METRICS_EXPORTER=none
 ```
 
 `config/production/observability.env`:
 ```bash
 # 生产环境可观测性配置
-OBSERVABILITY_LOG_LEVEL=INFO
-OBSERVABILITY_LOG_FORMAT=json
-OBSERVABILITY_LOG_TO_CONSOLE=false
-OBSERVABILITY_TRACING_ENABLED=true
-OBSERVABILITY_TRACING_EXPORTER=otlp
-OBSERVABILITY_TRACING_SAMPLE_RATE=0.1
-OBSERVABILITY_METRICS_ENABLED=true
-OBSERVABILITY_METRICS_EXPORTER=victoriametrics
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+LOG_TO_CONSOLE=false
+TRACING_ENABLED=true
+TRACING_EXPORTER=otlp
+TRACING_SAMPLE_RATE=0.1
+METRICS_ENABLED=true
+METRICS_EXPORTER=victoriametrics
 ```
 
 ### 1.7 与原设计的对比
@@ -525,7 +528,7 @@ class ObservabilitySettings(BaseSettings):
     """可观测性配置（Pydantic Settings 版本）."""
 
     model_config = SettingsConfigDict(
-        env_prefix="OBSERVABILITY_",
+        env_prefix="",
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
@@ -744,54 +747,54 @@ config/
 **`config/development/observability.env`**:
 ```bash
 # 开发环境可观测性配置
-OBSERVABILITY_LOG_LEVEL=DEBUG
-OBSERVABILITY_LOG_FORMAT=console
-OBSERVABILITY_LOG_TO_CONSOLE=true
-OBSERVABILITY_LOG_TO_FILE=true
+LOG_LEVEL=DEBUG
+LOG_FORMAT=console
+LOG_TO_CONSOLE=true
+LOG_TO_FILE=true
 
-OBSERVABILITY_TRACING_ENABLED=true
-OBSERVABILITY_TRACING_EXPORTER=otlp
-OBSERVABILITY_TRACING_SAMPLE_RATE=1.0
+TRACING_ENABLED=true
+TRACING_EXPORTER=otlp
+TRACING_SAMPLE_RATE=1.0
 
-OBSERVABILITY_METRICS_ENABLED=true
-OBSERVABILITY_METRICS_EXPORTER=victoriametrics
+METRICS_ENABLED=true
+METRICS_EXPORTER=victoriametrics
 
-OBSERVABILITY_ASSERTIONS_ENABLED=true
+ASSERTIONS_ENABLED=true
 ```
 
 **`config/testing/observability.env`**:
 ```bash
 # 测试环境可观测性配置（最小化）
-OBSERVABILITY_LOG_LEVEL=WARNING
-OBSERVABILITY_LOG_FORMAT=console
-OBSERVABILITY_LOG_TO_CONSOLE=true
-OBSERVABILITY_LOG_TO_FILE=false
+LOG_LEVEL=WARNING
+LOG_FORMAT=console
+LOG_TO_CONSOLE=true
+LOG_TO_FILE=false
 
-OBSERVABILITY_TRACING_ENABLED=false
-OBSERVABILITY_TRACING_EXPORTER=none
+TRACING_ENABLED=false
+TRACING_EXPORTER=none
 
-OBSERVABILITY_METRICS_ENABLED=false
-OBSERVABILITY_METRICS_EXPORTER=none
+METRICS_ENABLED=false
+METRICS_EXPORTER=none
 
-OBSERVABILITY_ASSERTIONS_ENABLED=false
+ASSERTIONS_ENABLED=false
 ```
 
 **`config/production/observability.env`**:
 ```bash
 # 生产环境可观测性配置
-OBSERVABILITY_LOG_LEVEL=INFO
-OBSERVABILITY_LOG_FORMAT=json
-OBSERVABILITY_LOG_TO_CONSOLE=false
-OBSERVABILITY_LOG_TO_FILE=true
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+LOG_TO_CONSOLE=false
+LOG_TO_FILE=true
 
-OBSERVABILITY_TRACING_ENABLED=true
-OBSERVABILITY_TRACING_EXPORTER=otlp
-OBSERVABILITY_TRACING_SAMPLE_RATE=0.1
+TRACING_ENABLED=true
+TRACING_EXPORTER=otlp
+TRACING_SAMPLE_RATE=0.1
 
-OBSERVABILITY_METRICS_ENABLED=true
-OBSERVABILITY_METRICS_EXPORTER=victoriametrics
+METRICS_ENABLED=true
+METRICS_EXPORTER=victoriametrics
 
-OBSERVABILITY_ASSERTIONS_ENABLED=false
+ASSERTIONS_ENABLED=false
 ```
 
 **其他配置文件示例**：
