@@ -290,6 +290,10 @@ class TushareDataTransformer:
         if transforms:
             result = result.with_columns(transforms)
 
+        # 应用计算列（computed_columns）
+        if mapping.computed_columns:
+            result = result.with_columns(**mapping.computed_columns)
+
         # 选择指定的输出列
         if mapping.output_columns is not None:
             result = result.select(mapping.output_columns)

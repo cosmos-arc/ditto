@@ -225,6 +225,7 @@ class TestTushareSourceEtfDaily:
         expected_schema = {
             "src_code": pl.String,
             "trade_date": pl.Date,
+            "knowledge_date": pl.Date,
             "open": pl.Float64,
             "high": pl.Float64,
             "low": pl.Float64,
@@ -236,11 +237,14 @@ class TestTushareSourceEtfDaily:
         }
         assert result.schema == expected_schema
 
-        # Verify data transformation (vol->volume, pct_chg->pct_change)
+        # Verify data transformation:
+        # - vol->volume, pct_chg->pct_change
+        # - knowledge_date = trade_date + 1
         assert result.to_dicts() == [
             {
                 "src_code": "510300.SH",
                 "trade_date": date(2024, 1, 2),
+                "knowledge_date": date(2024, 1, 3),
                 "open": 3.5,
                 "high": 3.6,
                 "low": 3.4,
@@ -446,6 +450,7 @@ class TestTushareSourceStockDaily:
         expected_schema = {
             "src_code": pl.String,
             "trade_date": pl.Date,
+            "knowledge_date": pl.Date,
             "open": pl.Float64,
             "high": pl.Float64,
             "low": pl.Float64,
@@ -457,11 +462,14 @@ class TestTushareSourceStockDaily:
         }
         assert result.schema == expected_schema
 
-        # Verify data transformation (vol->volume, pct_chg->pct_change)
+        # Verify data transformation:
+        # - vol->volume, pct_chg->pct_change
+        # - knowledge_date = trade_date + 1
         assert result.to_dicts() == [
             {
                 "src_code": "000001.SZ",
                 "trade_date": date(2024, 1, 2),
+                "knowledge_date": date(2024, 1, 3),
                 "open": 11.5,
                 "high": 11.8,
                 "low": 11.3,
