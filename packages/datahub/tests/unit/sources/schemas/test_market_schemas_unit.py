@@ -27,6 +27,7 @@ class TestStockDailySourceSchema:
             {
                 "src_code": ["000001.SZ", "000002.SZ"],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],
+                "knowledge_date": [date(2024, 1, 3), date(2024, 1, 3)],
                 "open": [10.0, 20.0],
                 "high": [10.5, 20.5],
                 "low": [9.5, 19.5],
@@ -63,6 +64,7 @@ class TestStockDailySourceSchema:
             {
                 "src_code": ["000001.SZ", "000001.SZ"],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],
+                "knowledge_date": [date(2024, 1, 3), date(2024, 1, 3)],
                 "open": [10.0, 10.5],
                 "high": [10.5, 11.0],
                 "low": [9.5, 10.0],
@@ -162,6 +164,7 @@ class TestEtfDailySourceSchema:
             {
                 "src_code": ["510300.SH", "510500.SH"],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],
+                "knowledge_date": [date(2024, 1, 3), date(2024, 1, 3)],
                 "open": [4.5, 5.5],
                 "high": [4.6, 5.6],
                 "low": [4.4, 5.4],

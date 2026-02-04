@@ -57,6 +57,7 @@ class ColumnMapping:
 
 
 # OHLCV 数据的通用配置
+# knowledge_date = trade_date + 1（日行情数据 T+1 可知）
 DAILY_OHLCV_MAPPING = ColumnMapping(
     rename={"ts_code": "src_code", "vol": "volume", "pct_chg": "pct_change"},
     date_columns={"trade_date": "%Y%m%d"},
@@ -70,9 +71,13 @@ DAILY_OHLCV_MAPPING = ColumnMapping(
         "amount",
         "pct_change",
     ],
+    computed_columns={
+        "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
+    },
     output_columns=(
         "src_code",
         "trade_date",
+        "knowledge_date",
         "open",
         "high",
         "low",

@@ -59,7 +59,7 @@ class ConfigProvider(Provider):
     @provide
     def environment(self) -> Environment:
         """提供运行环境枚举。"""
-        env_str = os.getenv("DITTO_ENV", "development")
+        env_str = os.getenv("ENVIRONMENT", "development")
         return Environment.from_str(env_str)
 
     @provide

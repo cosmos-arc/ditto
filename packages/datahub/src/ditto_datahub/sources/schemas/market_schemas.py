@@ -27,6 +27,7 @@ __all__ = [
 
 # ============================================================================
 # 1. 股票日线行情 (带 knowledge_date)
+# knowledge_date = trade_date + 1（日行情数据 T+1 可知）
 # ============================================================================
 
 STOCK_DAILY_SOURCE_SCHEMA = SourceSchema(
@@ -35,6 +36,7 @@ STOCK_DAILY_SOURCE_SCHEMA = SourceSchema(
     schema={
         "src_code": pl.String,
         "trade_date": pl.Date,
+        "knowledge_date": pl.Date,
         "open": pl.Float64,
         "high": pl.Float64,
         "low": pl.Float64,
@@ -48,6 +50,7 @@ STOCK_DAILY_SOURCE_SCHEMA = SourceSchema(
 
 # ============================================================================
 # 2. ETF 日线行情 (带 knowledge_date)
+# knowledge_date = trade_date + 1（日行情数据 T+1 可知）
 # ============================================================================
 
 ETF_DAILY_SOURCE_SCHEMA = SourceSchema(
@@ -56,6 +59,7 @@ ETF_DAILY_SOURCE_SCHEMA = SourceSchema(
     schema={
         "src_code": pl.String,
         "trade_date": pl.Date,
+        "knowledge_date": pl.Date,
         "open": pl.Float64,
         "high": pl.Float64,
         "low": pl.Float64,
