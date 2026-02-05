@@ -64,17 +64,17 @@ def mock_tdx_source(mocker: MockerFixture) -> MagicMock:
 def mock_comparison_store(mocker: MockerFixture) -> MagicMock:
     """Mock ComparisonStore.
 
-    提供 write_result 异步方法。
+    提供 write_comparison 异步方法。
     """
     store = mocker.MagicMock()
 
-    async def write_result_impl(
+    async def write_comparison_impl(
         trade_date: str, df: pl.DataFrame, dataset: str
     ) -> None:
-        """模拟 write_result 实现."""
+        """模拟 write_comparison 实现."""
         pass
 
-    store.write_result.side_effect = write_result_impl
+    store.write_comparison.side_effect = write_comparison_impl
     return store
 
 

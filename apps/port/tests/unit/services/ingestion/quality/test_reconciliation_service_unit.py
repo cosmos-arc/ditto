@@ -9,15 +9,15 @@ from ditto_port.services.ingestion.quality.reconciliation_service import (
 
 @pytest.fixture
 def sync_comparison_store(mock_comparison_store):
-    """同步版本的 ComparisonAccessor mock."""
+    """同步版本的 ComparisonStore mock."""
 
     # 将异步方法包装为同步
-    async def write_result_impl(
+    async def write_comparison_impl(
         trade_date: str, df: pl.DataFrame, dataset: str
     ) -> None:
         pass
 
-    mock_comparison_store.write_result.side_effect = write_result_impl
+    mock_comparison_store.write_comparison.side_effect = write_comparison_impl
     return mock_comparison_store
 
 
@@ -178,7 +178,7 @@ class TestDailyReconciliationSuccess:
         )
 
         # Assert - 验证不存储结果
-        mock_comparison_store.write_result.assert_not_called()
+        mock_comparison_store.write_comparison.assert_not_called()
         assert result["passed"] is True
 
 
@@ -227,7 +227,7 @@ class TestDailyReconciliationWithIssues:
         assert result["issue_count"] == 2
 
         # 验证存储结果被调用
-        mock_comparison_store.write_result.assert_called_once()
+        mock_comparison_store.write_comparison.assert_called_once()
 
     async def test_with_issues_sends_alerts(
         self,
