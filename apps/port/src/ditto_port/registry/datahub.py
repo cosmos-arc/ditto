@@ -163,6 +163,11 @@ class DataHubProvider(Provider):
         """隔离区存储（使用主数据库）."""
         return QuarantineStore(sqlite_client)
 
+    @provide
+    def universe_store(self, sqlite_client: SQLiteClient) -> UniverseStore:
+        """证券池存储."""
+        return UniverseStore(sqlite_client)
+
     # ========================================================================
     # Metadata Domain Stores
     # ========================================================================
@@ -434,11 +439,11 @@ class DataHubProvider(Provider):
         etf_bars_store: EtfBarsStore,
         etf_status_store: EtfStatusStore,
         instrument_store: MetadataInstrumentStore,
-        file_lock_manager: FileLockManager,  # 新增：用于并发写入保护
-        etf_nav_store: EtfNavStore | None = None,
-        etf_adj_store: EtfAdjFactorStore | None = None,
-        index_bars_store: IndexBarsStore | None = None,
-        index_constituent_store: IndexConstituentStore | None = None,
+        file_lock_manager: FileLockManager,
+        etf_nav_store: EtfNavStore,
+        etf_adj_store: EtfAdjFactorStore,
+        index_bars_store: IndexBarsStore,
+        index_constituent_store: IndexConstituentStore,
     ) -> MarketService:
         """Market 查询服务（支持读写）。"""
         return MarketService(
@@ -448,7 +453,7 @@ class DataHubProvider(Provider):
             etf_bars_store=etf_bars_store,
             etf_status_store=etf_status_store,
             instrument_store=instrument_store,
-            file_lock=file_lock_manager,  # 新增：文件锁管理器
+            file_lock=file_lock_manager,
             etf_nav_store=etf_nav_store,
             etf_adj_store=etf_adj_store,
             index_bars_store=index_bars_store,
