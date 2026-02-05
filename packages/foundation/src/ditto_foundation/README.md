@@ -58,7 +58,7 @@ src/ditto_foundation/
 │   └── sqlite_pool.py      # SQLitePool
 ├── observability/          # 可观测性模块
 │   ├── __init__.py         # 主入口: init(), shutdown()
-│   ├── config.py           # Mode, ObservabilityConfig
+│   ├── config.py           # ObservabilityConfig
 │   ├── logging.py          # Loguru 日志配置
 │   ├── tracing.py          # OTel 追踪: span(), @traced, get_trace_id()
 │   ├── metrics.py          # M 类 (预定义指标)
@@ -75,20 +75,35 @@ src/ditto_foundation/
 ### 配置管理
 
 ```python
-from ditto_foundation.config.settings import get_settings
+from ditto_foundation.config.environment import Environment
+from ditto_foundation.config.settings import (
+    ObservabilitySettings,
+    Settings,
+    SystemSettings,
+)
 
-# 获取配置
-settings = get_settings()
-print(settings.data_source.tushare_token)
+settings = Settings(
+    system=SystemSettings(environment=Environment.DEVELOPMENT),
+    observability=ObservabilitySettings(),
+)
 ```
 
 ### 可观测性
 
 ```python
-from ditto_foundation import init, logger, span, M, Mode
+from ditto_foundation import logger, span, M
+from ditto_foundation.config import Environment
+from ditto_foundation.observability import init
+from ditto_foundation.observability.config import ObservabilityConfig
+
+config = ObservabilityConfig(
+    service_name="ditto",
+    environment=Environment.DEVELOPMENT,
+    log_dir="logs",
+)
 
 # 初始化
-init(mode=Mode.DEVELOPMENT)
+init(config)
 
 # 日志 + 追踪 + 指标
 @span("data.update")

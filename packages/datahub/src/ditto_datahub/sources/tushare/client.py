@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import tomllib
-from pathlib import Path
-
 import httpx
 import polars as pl
 from ditto_foundation import logger
@@ -16,16 +13,6 @@ from tenacity import (
 )
 
 from ditto_datahub.config import DataSourceSettings
-
-try:
-    import keyring
-    import keyring.errors
-except ImportError:
-    keyring = None
-    keyring_errors = None
-else:
-    keyring_errors = keyring.errors
-
 from ditto_datahub.sources.base import (
     SourceConfigurationError,
     SourceFetchError,
@@ -42,26 +29,8 @@ from ditto_datahub.sources.tushare.utils.rate_limiter import (
 )
 
 
-def _get_tushare_token(token: str | None = None) -> str:  # noqa: C901, PLR0912
-    """
-    Get Tushare token with graceful fallback.
-
-    Priority order:
-    1. Provided token parameter
-    2. keyring (recommended)
-    3. ~/.ditto/secrets.toml (fallback)
-
-    Args:
-        token: Explicitly provided token.
-
-    Returns:
-        str: The Tushare API token.
-
-    Raises:
-        SourceConfigurationError: If token not found in any source.
-
-    """
-    # 1. Explicit parameter
+def _get_tushare_token(token: str | None) -> str:
+    """Resolve Tushare token from explicit input/settings."""
     if token:
         logger.debug(
             "Token loaded from parameter",
@@ -70,83 +39,9 @@ def _get_tushare_token(token: str | None = None) -> str:  # noqa: C901, PLR0912
         )
         return token
 
-    # 2. Try keyring (recommended)
-    if keyring is not None:
-        try:
-            keyring_token = keyring.get_password("ditto", "tushare")
-            if keyring_token is not None:
-                # Type narrowing: keyring.get_password returns str | None,
-                # the None check above narrows keyring_token to str
-                logger.debug(
-                    "Token loaded from keyring",
-                    event="token_loaded",
-                    source="keyring",
-                )
-                return keyring_token
-        except Exception as e:
-            # keyring may not be available or configured
-            if keyring_errors is not None:
-                # 已知 keyring 错误类型
-                if isinstance(
-                    e,
-                    (
-                        keyring_errors.KeyringError,
-                        keyring_errors.KeyringLocked,
-                        keyring_errors.PasswordSetError,
-                    ),
-                ):
-                    logger.debug(
-                        "Keyring not available, skipping",
-                        keyring_error=type(e).__name__,
-                    )
-                elif isinstance(e, OSError):
-                    logger.debug(
-                        "Keyring OS error, skipping",
-                        os_error=str(e),
-                    )
-                else:
-                    # 其他未知 keyring 错误
-                    logger.debug(
-                        "Keyring unknown error, skipping",
-                        error=str(e),
-                    )
-            else:
-                logger.debug("Keyring not available, skipping", error=str(e))
-
-    # 3. Try ~/.ditto/secrets.toml (fallback)
-    config_file = Path.home() / ".ditto" / "secrets.toml"
-    if config_file.exists():
-        try:
-            config = tomllib.loads(config_file.read_text())
-            config_token = config.get("tushare", {}).get("token")
-            if config_token is not None and isinstance(config_token, str):
-                # Type narrowing: config.get() returns Any, so we need explicit
-                # isinstance check to narrow to str before using it
-                logger.debug(
-                    "Token loaded from secrets.toml",
-                    event="token_loaded",
-                    source="secrets.toml",
-                )
-                return config_token
-        except (OSError, tomllib.TOMLDecodeError) as e:
-            # 文件系统错误或 TOML 解析错误
-            logger.debug(
-                "Failed to load secrets.toml",
-                file_error=str(e),
-            )
-        except (AttributeError, TypeError) as e:
-            # 配置结构错误
-            logger.debug(
-                "Invalid secrets.toml structure",
-                error=str(e),
-            )
-
-    # No token found
     raise SourceConfigurationError(
         message=(
-            "Tushare token not configured. "
-            "Use keyring: keyring.set_password('ditto', 'tushare', 'YOUR_TOKEN') "
-            "or create ~/.ditto/secrets.toml with [tushare] token = 'YOUR_TOKEN'"
+            "Tushare token not configured. Provide token via settings or parameter."
         )
     )
 
@@ -156,7 +51,7 @@ class TushareClient:
     Tushare Pro API client.
 
     Features:
-    - Token authentication from keyring/secrets.toml/env
+    - Token authentication from settings or explicit parameter
     - Multi-level rate limiting using limits library
     - Retry with exponential backoff (Tenacity)
     - Error handling and logging
@@ -171,24 +66,24 @@ class TushareClient:
 
     def __init__(
         self,
+        settings: DataSourceSettings,
         token: str | None = None,
         rate_config: TushareRateLimitConfig | None = None,
-        settings: DataSourceSettings | None = None,
     ) -> None:
         """
         Initialize Tushare client.
 
         Args:
-            token: API token (auto-detected if None).
-            rate_config: 限流配置(默认免费账户).
             settings: 数据源配置，包含 URL/timeout 等参数.
+            token: API token（可选，优先于 settings 中的 token）。
+            rate_config: 限流配置(默认免费账户).
 
         Raises:
             SourceConfigurationError: If token not found.
 
         """
         # 存储 settings
-        self._settings = settings or DataSourceSettings()
+        self._settings = settings
 
         # Get token with fallback chain
         # 优先使用 settings 中的 token（如果设置）

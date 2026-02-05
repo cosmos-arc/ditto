@@ -1,6 +1,6 @@
 # ditto-datahub
 
-**版本**: v0.12.0
+**版本**: v0.13.0
 **最后更新**: 2026-02-02
 **状态**: ✅ 稳定
 
@@ -15,7 +15,8 @@ Ditto 量化系统的数据层，统一管理数据获取、存储、查询和 P
 - **高性能存储**: Parquet 文件存储 + SQLite 元数据
 - **数据质量检查**: 多维度 DQ 检查和报告
 - **多数据源支持**: Tushare、Akshare 等
-- **数据摄入**: 分层 Ingestion 架构，统一数据摄入流程
+- **SourceSchema**: 数据源输出格式标准协议，确保数据质量
+- **域驱动设计**: Metadata、Market、Capital、Fundamental、Macro、Features、Factors 七域
 
 ## 架构
 
@@ -41,85 +42,44 @@ DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
 └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
 ```
 
-### Ingestion 层
+### SourceSchema 层
 
-Ingestion 层负责数据摄入，采用三层架构：
+SourceSchema 定义数据源输出格式标准协议，作为 Source 和 Store 之间的契约：
 
-```
-┌─────────────────────────────────────────────────────────┐
-│              IngestionCoordinator (路由层)               │
-│         根据 Domain 枚举路由到对应的域 Ingestion          │
-└─────────────────────────────────────────────────────────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        ▼                  ▼                  ▼
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│MetadataInges.│ │ MarketIngest.│ │ CapitalIngest.│
-│ (待实现)      │ │  (待实现)     │ │  (已实现)     │
-└──────────────┘ └──────────────┘ └──────────────┘
-        │                  │                  │
-        ▼                  ▼                  ▼
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ MetadataStore│ │  MarketStore │ │ CapitalStore │
-└──────────────┘ └──────────────┘ └──────────────┘
-```
+**核心功能**：
 
-**核心组件**：
+| 功能 | 说明 |
+|------|------|
+| 列完整性验证 | 检查 DataFrame 是否包含所有必需的列 |
+| 类型兼容性验证 | 检查列类型是否符合预期（支持数值类型向上兼容） |
+| 主键唯一性验证 | 确保主键组合在数据集中唯一 |
+| PIT 支持 | 支持定义 PIT 列（effective_from, effective_to） |
 
-| 组件 | 说明 | 状态 |
-|------|------|------|
-| `IngestionCoordinator` | 路由协调器，根据 Domain 枚举路由到对应的域 Ingestion 服务 | ✅ 已实现 |
-| `IngestionDataWriter` | 数据写入工具，支持 Parquet 和 SQLite，提供重复数据处理策略 | ✅ 已实现 |
-| `CapitalIngestion` | Capital 域摄入服务，支持 10 种数据类型 | ✅ 已实现 |
-| `MetadataIngestion` | Metadata 域摄入服务（待实现） | ⏳ 待实现 |
-| `MarketIngestion` | Market 域摄入服务（待实现） | ⏳ 待实现 |
+**Market 域 SourceSchema**：
 
-**数据写入策略**：
-
-`IngestionDataWriter` 提供三种重复数据处理策略：
-
-| 策略 | 说明 | 使用场景 |
-|------|------|----------|
-| `OnDuplicate.ERROR` | 遇到重复数据时报错（默认，最安全） | 初始加载、数据验证 |
-| `OnDuplicate.KEEP_FIRST` | 保留现有数据，忽略新数据 | 增量更新、信任首次入库数据 |
-| `OnDuplicate.KEEP_LAST` | 使用新数据覆盖现有数据（Last-Write-Wins） | 数据修正、重新计算 |
+| Schema | 数据集 | 说明 |
+|--------|--------|------|
+| `STOCK_DAILY_SOURCE_SCHEMA` | 股票日线 | OHLCV 行情数据 |
+| `ETF_DAILY_SOURCE_SCHEMA` | ETF 日线 | OHLCV 行情数据 |
+| `ADJ_FACTOR_SOURCE_SCHEMA` | 复权因子 | 带 knowledge_date |
+| `STOCK_STATUS_SOURCE_SCHEMA` | 股票状态 | 允许重复主键 |
+| `STOCK_LIMIT_SOURCE_SCHEMA` | 涨跌停价 | 限价数据 |
+| `FUND_ADJ_SOURCE_SCHEMA` | 基金复权因子 | 带 knowledge_date |
 
 **使用示例**：
 
 ```python
-from ditto_datahub.ingestion.coordinator import IngestionCoordinator
-from ditto_datahub.ingestion.data_writer import IngestionDataWriter
-from ditto_datahub.models.common import OnDuplicate
-from ditto_datahub.models import Domain, Source
-from datetime import date
+from ditto_datahub.sources.schemas import STOCK_DAILY_SOURCE_SCHEMA
 import polars as pl
 
-# 1. 使用 IngestionDataWriter 写入数据
-result = IngestionDataWriter.write_parquet(
-    df=dataframe,
-    path=Path("data.parquet"),
-    on_duplicate=OnDuplicate.KEEP_FIRST,
-    key_columns=("instrument_id", "trade_date"),
-)
-print(f"写入 {result.rows_written} 行，总计 {result.rows_total} 行")
+# 获取数据源数据
+df = source.fetch_stock_daily("2024-01-02")
 
-# 2. 使用 IngestionCoordinator 路由到对应的域
-coordinator = IngestionCoordinator(
-    metadata=metadata_ingestion,
-    capital=capital_ingestion,
-)
+# 验证 Schema
+STOCK_DAILY_SOURCE_SCHEMA.validate(df)
 
-result = await coordinator.ingest(
-    domain=Domain.CAPITAL,
-    data_type="balance_sheet",
-    source=Source.TUSHARE,
-    trade_date=date(2024, 1, 2),
-)
-
-if result.success:
-    print(f"成功写入 {result.records_written} 条记录")
-else:
-    print(f"摄入失败: {result.error}")
+# 检查通过后写入 Store
+store.write(df, on_duplicate=OnDuplicate.KEEP_FIRST)
 ```
 
 ### 基础层
@@ -132,15 +92,15 @@ else:
 | `ParquetStore` | Parquet 文件存储实现，支持按年分区、自动去重 |
 | `SQLiteStore` | SQLite 数据库存储实现，支持事务、PIT 查询 |
 
-**配置系统**：从多路径配置简化为单 `DATA_ROOT` 配置，所有路径自动生成：
+**配置系统**：从多路径配置简化为单 `data_root` 配置（`data_store.env`），所有路径自动生成：
 
 ```python
 from ditto_datahub.config import DataRootConfig
 
-# 初始化配置（可通过 DATA_ROOT 环境变量设置）
+# 初始化配置（来自 data_store.env）
 config = DataRootConfig()
-# 默认: /data/ditto
-# 自动生成: market/stock/bars/daily/, metadata/metadata.sqlite, 等
+# 默认: data
+# 自动生成: data/market/stock/bars/daily/, data/metadata/metadata.sqlite, 等
 
 # 使用配置
 store = BarsStore(config.data_root)
@@ -753,8 +713,40 @@ bars/
 - [PIT 安全指南](../../../../.claude/skills/pit-guide/SKILL.md)
 - [Polars 使用指南](../../../../.claude/skills/polars-guide/SKILL.md)
 - [数据设计文档](../../../../docs/design/02_data_design.md)
+- [Port 层重构计划](../../../../docs/plans/2026-02-02-port-layer-refactor.md)
 
 ## 变更记录
+
+### v0.13.0 (2026-02-02)
+**重构**
+- 架构清理：移除 DataHub 层的业务编排组件
+  - 删除 `IngestionCoordinator`（业务编排应在 Port 层，而非 DataHub 层）
+  - 保留 `IngestionDataWriter` 作为通用写入工具类
+  - DataHub 职责明确：只负责底层读写，不负责业务编排
+
+**新增**
+- Market 域 SourceSchema 定义：`sources/schemas/market_schemas.py`
+  - `STOCK_DAILY_SOURCE_SCHEMA`：股票日线行情
+  - `ETF_DAILY_SOURCE_SCHEMA`：ETF 日线行情
+  - `ADJ_FACTOR_SOURCE_SCHEMA`：复权因子
+  - `STOCK_STATUS_SOURCE_SCHEMA`：股票状态（允许重复主键）
+  - `STOCK_LIMIT_SOURCE_SCHEMA`：涨跌停价
+  - `FUND_ADJ_SOURCE_SCHEMA`：基金复权因子
+
+**改进**
+- SourceSchema 集成测试更新：使用正式定义的 Schema，而非临时定义
+- Market 域 Schema 单元测试：10 个测试覆盖所有 Market 数据集
+- 更新 `sources/schemas/__init__.py`：按字母顺序排序所有 Schema 导出
+
+**测试**
+- 单元测试：1559 passed, 5 skipped
+- 集成测试：SourceSchema 验证通过
+- 测试覆盖率：92.81%（超过 80% 要求）
+- 类型检查：basedpyright 0 errors
+- 代码质量：ruff All checks passed
+
+**文档**
+- `docs/plans/2026-02-02-port-layer-refactor.md` - Port 层重构计划
 
 ### v0.12.0 (2026-02-02)
 **新增**
@@ -1002,7 +994,7 @@ bars/
 - `DataRootConfig`：统一数据根路径配置，简化路径管理
 
 **改进**
-- 从多路径配置简化为单 `DATA_ROOT` 配置
+- 从多路径配置简化为单 `data_root` 配置（`data_store.env`）
 - 所有存储实现继承 `BaseStore`，保证接口一致性
 - 增强类型安全和代码可维护性
 

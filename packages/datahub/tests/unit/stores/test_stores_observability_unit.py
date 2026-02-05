@@ -26,6 +26,20 @@ from ditto_foundation import (
     get_recorded_spans,
     init,
 )
+from ditto_foundation.config.environment import Environment
+from ditto_foundation.observability.config import ObservabilityConfig
+
+
+def _test_config() -> ObservabilityConfig:
+    return ObservabilityConfig(
+        environment=Environment.TESTING,
+        pytest_running=True,
+        assertions_enabled=True,
+        verbose_logging=False,
+        tracing_enabled=True,
+        tracing_sample_rate=1.0,
+        metrics_enabled=True,
+    )
 
 
 class TestObservabilityBarsStore:
@@ -33,12 +47,7 @@ class TestObservabilityBarsStore:
 
     def setup_method(self) -> None:
         """Set up test environment with assertions mode."""
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
         self.temp_dir = TemporaryDirectory()
         self.store = BarsStore(Path(self.temp_dir.name))
 
@@ -156,12 +165,7 @@ class TestObservabilityAdjFactorStore:
 
     def setup_method(self) -> None:
         """Set up test environment with assertions mode."""
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
         self.temp_dir = TemporaryDirectory()
         self.store = AdjFactorStore(Path(self.temp_dir.name))
 
@@ -219,12 +223,7 @@ class TestObservabilityInstrumentStore:
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
         """使用 fixture 自动注入已初始化的数据库客户端."""
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
         self.client = sqlite_client
         self.store = InstrumentStore(self.client)
 
@@ -302,12 +301,7 @@ class TestObservabilityCalendarStore:
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
         """使用 fixture 自动注入已初始化的数据库客户端."""
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
         self.client = sqlite_client
         self.store = CalendarStore(self.client)
 
@@ -377,12 +371,7 @@ class TestObservabilityIntegration:
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
         """使用 fixture 自动注入已初始化的数据库客户端."""
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
         self.temp_dir = TemporaryDirectory()
         self.client = sqlite_client
 

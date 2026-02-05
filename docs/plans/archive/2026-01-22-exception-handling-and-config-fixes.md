@@ -1,5 +1,8 @@
 # Architecture Fixes Implementation Plan
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** 修复 P0 异常吞噬问题、P1 配置未生效问题、以及 ARCH-001 领域层 I/O 问题，提升系统可观测性、可运维性和架构纯净性
@@ -712,9 +715,9 @@ from ditto_datahub.sources.tushare.client import TushareClient
 def test_tushare_client_uses_settings_config(monkeypatch):
     """Test that TushareClient reads config from DataSourceSettings."""
     # 设置环境变量
-    monkeypatch.setenv("DATASOURCE_HTTP_BASE_URL", "https://custom.api.com")
-    monkeypatch.setenv("DATASOURCE_HTTP_TIMEOUT", "60.0")
-    monkeypatch.setenv("DATASOURCE_TUSHARE_TOKEN", "test_token_123")
+    monkeypatch.setenv("HTTP_BASE_URL", "https://custom.api.com")
+    monkeypatch.setenv("HTTP_TIMEOUT", "60.0")
+    monkeypatch.setenv("TUSHARE_TOKEN", "test_token_123")
 
     # 从环境变量加载配置
     settings = DataSourceSettings()
@@ -906,14 +909,14 @@ git commit -m "feat(datahub): add DataSourceSettings to DI container"
 # Data Source Configuration
 
 # HTTP Configuration
-DATASOURCE_HTTP_BASE_URL=http://api.tushare.pro
-DATASOURCE_HTTP_TIMEOUT=30.0
+HTTP_BASE_URL=http://api.tushare.pro
+HTTP_TIMEOUT=30.0
 
 # Rate Limiting (free tier by default)
-DATASOURCE_RATE_LIMIT_PROFILE=free
+RATE_LIMIT_PROFILE=free
 
 # Token (optional - will use keyring if not set)
-# DATASOURCE_TUSHARE_TOKEN=your_token_here
+# TUSHARE_TOKEN=your_token_here
 ```
 
 **Step 2: 创建测试环境配置**
@@ -922,9 +925,9 @@ DATASOURCE_RATE_LIMIT_PROFILE=free
 # config/testing/data_source.env
 # Data Source Configuration (Testing)
 
-DATASOURCE_HTTP_BASE_URL=http://api.tushare.pro
-DATASOURCE_HTTP_TIMEOUT=10.0
-DATASOURCE_RATE_LIMIT_PROFILE=free
+HTTP_BASE_URL=http://api.tushare.pro
+HTTP_TIMEOUT=10.0
+RATE_LIMIT_PROFILE=free
 ```
 
 **Step 3: 创建生产环境配置**
@@ -934,16 +937,16 @@ DATASOURCE_RATE_LIMIT_PROFILE=free
 # Data Source Configuration (Production)
 
 # Use production endpoint if different
-DATASOURCE_HTTP_BASE_URL=http://api.tushare.pro
-DATASOURCE_HTTP_TIMEOUT=60.0
+HTTP_BASE_URL=http://api.tushare.pro
+HTTP_TIMEOUT=60.0
 
 # Production rate limit (adjust based on subscription)
-DATASOURCE_RATE_LIMIT_PROFILE=premium
-DATASOURCE_RATE_LIMIT_GLOBAL_RATE=1000
-DATASOURCE_RATE_LIMIT_DAILY_RATE=50000
+RATE_LIMIT_PROFILE=premium
+RATE_LIMIT_GLOBAL_RATE=1000
+RATE_LIMIT_DAILY_RATE=50000
 
 # Token MUST be set in production via secrets management
-# DATASOURCE_TUSHARE_TOKEN is loaded from keyring/secrets.toml
+# TUSHARE_TOKEN is loaded from keyring/secrets.toml
 ```
 
 **Step 4: 更新 README 文档**
@@ -955,14 +958,14 @@ DATASOURCE_RATE_LIMIT_DAILY_RATE=50000
 
 ### Data Source Configuration
 
-Data source behavior can be configured via environment variables with `DATASOURCE_` prefix:
+Data source behavior can be configured via environment variables with `???` prefix:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| DATASOURCE_HTTP_BASE_URL | API base URL | http://api.tushare.pro |
-| DATASOURCE_HTTP_TIMEOUT | Request timeout (seconds) | 30.0 |
-| DATASOURCE_TUSHARE_TOKEN | API token | (from keyring) |
-| DATASOURCE_RATE_LIMIT_PROFILE | Rate limit profile | free |
+| HTTP_BASE_URL | API base URL | http://api.tushare.pro |
+| HTTP_TIMEOUT | Request timeout (seconds) | 30.0 |
+| TUSHARE_TOKEN | API token | (from keyring) |
+| RATE_LIMIT_PROFILE | Rate limit profile | free |
 
 These settings are loaded from `config/{environment}/data_source.env`.
 ```
@@ -974,7 +977,7 @@ git add config/
 git commit -m "feat(config): add data_source environment configuration files
 
 - Add development/testing/production configs
-- Document DATASOURCE_ environment variables
+- Document ??? environment variables
 - Enable runtime configuration for data sources"
 ```
 

@@ -35,6 +35,9 @@ class TestConfigLoader:
             "config/development/observability.env"
         )
         assert loader.get_env_file("database") == "config/development/database.env"
+        assert loader.get_env_file("data_store") == (
+            "config/development/data_store.env"
+        )
         assert loader.get_env_file("data_source") == (
             "config/development/data_source.env"
         )
@@ -47,6 +50,7 @@ class TestConfigLoader:
         assert loader.get_env_file("observability") == (
             "config/testing/observability.env"
         )
+        assert loader.get_env_file("data_store") == "config/testing/data_store.env"
         assert loader.get_env_file("database") == "config/testing/database.env"
 
     def test_get_env_file_production(self) -> None:
@@ -56,6 +60,7 @@ class TestConfigLoader:
         assert loader.get_env_file("observability") == (
             "config/production/observability.env"
         )
+        assert loader.get_env_file("data_store") == "config/production/data_store.env"
         assert loader.get_env_file("database") == "config/production/database.env"
 
     def test_config_dir_is_path(self) -> None:

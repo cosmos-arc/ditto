@@ -6,8 +6,6 @@
 这是单元测试，使用 Mock 隔离环境变量等外部依赖.
 """
 
-from unittest.mock import patch
-
 import pytest
 from ditto_foundation.config.environment import Environment
 from ditto_foundation.observability.config import (
@@ -22,7 +20,7 @@ class TestObservabilityConfig:
 
     def test_get_effective_config_development_preset(self) -> None:
         """测试开发环境预设配置."""
-        config = ObservabilityConfig(profile="development")
+        config = ObservabilityConfig(environment=Environment.DEVELOPMENT)
         effective = config.get_effective_config()
 
         assert effective.log_level == "DEBUG"
@@ -34,19 +32,19 @@ class TestObservabilityConfig:
 
     def test_get_effective_config_testing_preset(self) -> None:
         """测试测试环境预设配置."""
-        config = ObservabilityConfig(profile="testing")
+        config = ObservabilityConfig(environment=Environment.TESTING)
         effective = config.get_effective_config()
 
         assert effective.log_level == "WARNING"
         assert effective.tracing_enabled is False
         assert effective.tracing_sample_rate == 0.0
         assert effective.metrics_enabled is False
-        assert effective.assertions_enabled is False
+        assert effective.assertions_enabled is True
         assert effective.verbose_logging is False
 
     def test_get_effective_config_production_preset(self) -> None:
         """测试生产环境预设配置."""
-        config = ObservabilityConfig(profile="production")
+        config = ObservabilityConfig(environment=Environment.PRODUCTION)
         effective = config.get_effective_config()
 
         assert effective.log_level == "INFO"
@@ -58,7 +56,10 @@ class TestObservabilityConfig:
 
     def test_get_effective_config_override_log_level(self) -> None:
         """测试覆盖日志级别."""
-        config = ObservabilityConfig(profile="development", log_level="ERROR")
+        config = ObservabilityConfig(
+            environment=Environment.DEVELOPMENT,
+            log_level="ERROR",
+        )
         effective = config.get_effective_config()
 
         assert effective.log_level == "ERROR"
@@ -69,7 +70,7 @@ class TestObservabilityConfig:
     def test_get_effective_config_override_tracing(self) -> None:
         """测试覆盖追踪配置."""
         config = ObservabilityConfig(
-            profile="development",
+            environment=Environment.DEVELOPMENT,
             tracing_enabled=False,
             tracing_sample_rate=0.5,
         )
@@ -84,7 +85,7 @@ class TestObservabilityConfig:
     def test_get_effective_config_override_multiple_fields(self) -> None:
         """测试覆盖多个字段."""
         config = ObservabilityConfig(
-            profile="production",
+            environment=Environment.PRODUCTION,
             log_level="DEBUG",
             tracing_sample_rate=1.0,
             assertions_enabled=True,
@@ -101,7 +102,7 @@ class TestObservabilityConfig:
     def test_get_effective_config_none_values_use_preset(self) -> None:
         """测试 None 值使用预设."""
         config = ObservabilityConfig(
-            profile="testing",
+            environment=Environment.TESTING,
             log_level=None,
             tracing_enabled=None,
             metrics_enabled=None,
@@ -114,7 +115,7 @@ class TestObservabilityConfig:
 
     def test_get_effective_config_returns_effective_config_type(self) -> None:
         """测试返回类型为 EffectiveConfig."""
-        config = ObservabilityConfig(profile="development")
+        config = ObservabilityConfig(environment=Environment.DEVELOPMENT)
         effective = config.get_effective_config()
 
         assert isinstance(effective, EffectiveConfig)
@@ -131,14 +132,17 @@ class TestObservabilityConfig:
     def test_get_effective_config_custom_vm_endpoint(self) -> None:
         """测试自定义 VictoriaMetrics 端点."""
         custom_endpoint = "http://custom:9090/metrics"
-        config = ObservabilityConfig(profile="production", vm_endpoint=custom_endpoint)
+        config = ObservabilityConfig(
+            environment=Environment.PRODUCTION,
+            vm_endpoint=custom_endpoint,
+        )
         effective = config.get_effective_config()
 
         assert effective.vm_endpoint == custom_endpoint
 
     def test_get_effective_config_default_vm_endpoint(self) -> None:
         """测试默认 VictoriaMetrics 端点."""
-        config = ObservabilityConfig(profile="development")
+        config = ObservabilityConfig(environment=Environment.DEVELOPMENT)
         effective = config.get_effective_config()
 
         assert effective.vm_endpoint == "http://localhost:8428/opentelemetry/v1/metrics"
@@ -148,38 +152,33 @@ class TestObservabilityConfig:
 class TestDetectRuntimeFlags:
     """测试运行时标志检测."""
 
-    @patch.dict("os.environ", {}, clear=True)
     def test_detect_runtime_flags_testing_no_pytest(self) -> None:
         """测试测试环境无 pytest."""
-        flags = ObservabilityConfig.detect_runtime_flags(Environment.TESTING)
+        config = ObservabilityConfig(environment=Environment.TESTING)
+        effective = config.get_effective_config()
 
-        assert flags["pytest_running"] is False
-        assert flags["assertions_enabled"] is True
-        assert flags["verbose_logging"] is False
+        assert effective.pytest_running is False
 
-    @patch.dict("os.environ", {"PYTEST_CURRENT_TEST": "test_file.py"}, clear=False)
     def test_detect_runtime_flags_testing_with_pytest(self) -> None:
         """测试测试环境有 pytest."""
-        flags = ObservabilityConfig.detect_runtime_flags(Environment.TESTING)
+        config = ObservabilityConfig(
+            environment=Environment.TESTING,
+            pytest_running=True,
+        )
+        effective = config.get_effective_config()
 
-        assert flags["pytest_running"] is True
-        assert flags["assertions_enabled"] is True
-        assert flags["verbose_logging"] is False
+        assert effective.pytest_running is True
 
-    @patch.dict("os.environ", {}, clear=True)
     def test_detect_runtime_flags_production(self) -> None:
         """测试生产环境标志."""
-        flags = ObservabilityConfig.detect_runtime_flags(Environment.PRODUCTION)
+        config = ObservabilityConfig(environment=Environment.PRODUCTION)
+        effective = config.get_effective_config()
 
-        assert flags["pytest_running"] is False
-        assert flags["assertions_enabled"] is False
-        assert flags["verbose_logging"] is False
+        assert effective.pytest_running is False
 
-    @patch.dict("os.environ", {}, clear=True)
     def test_detect_runtime_flags_development(self) -> None:
         """测试开发环境标志."""
-        flags = ObservabilityConfig.detect_runtime_flags(Environment.DEVELOPMENT)
+        config = ObservabilityConfig(environment=Environment.DEVELOPMENT)
+        effective = config.get_effective_config()
 
-        assert flags["pytest_running"] is False
-        assert flags["assertions_enabled"] is True
-        assert flags["verbose_logging"] is True
+        assert effective.pytest_running is False

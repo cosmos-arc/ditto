@@ -3,6 +3,19 @@
 import pytest
 from ditto_foundation import init, reset_for_testing
 from ditto_foundation.cache import DataCache
+from ditto_foundation.config.environment import Environment
+from ditto_foundation.observability.config import ObservabilityConfig
+
+
+def _test_config() -> ObservabilityConfig:
+    return ObservabilityConfig(
+        environment=Environment.TESTING,
+        pytest_running=True,
+        assertions_enabled=True,
+        verbose_logging=False,
+        metrics_enabled=True,
+        tracing_enabled=False,
+    )
 
 
 @pytest.mark.unit
@@ -103,7 +116,7 @@ class TestDataCache:
     def test_get_stats_returns_metrics(self) -> None:
         """Test that get_stats returns metrics when enabled."""
         # Initialize observability for metrics
-        init(pytest_running=True, force=True)
+        init(_test_config(), force=True)
 
         try:
             cache = DataCache(enable_metrics=True)
@@ -133,7 +146,7 @@ class TestDataCache:
     def test_metrics_are_tracked(self) -> None:
         """Test that metrics are tracked correctly."""
         # Initialize observability for metrics
-        init(pytest_running=True, force=True)
+        init(_test_config(), force=True)
 
         try:
             cache = DataCache(enable_metrics=True)

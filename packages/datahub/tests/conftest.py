@@ -9,6 +9,8 @@ import polars as pl
 import pytest
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool, init
+from ditto_foundation.config.environment import Environment
+from ditto_foundation.observability.config import ObservabilityConfig
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -38,11 +40,15 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 @pytest.fixture(autouse=True)
 def init_observability() -> None:
     """Initialize observability in testing mode for all tests."""
-    init(
+    config = ObservabilityConfig(
+        environment=Environment.TESTING,
         pytest_running=True,
         assertions_enabled=False,
         verbose_logging=False,
+        tracing_enabled=False,
+        metrics_enabled=False,
     )
+    init(config, force=True)
     # Cleanup is handled by reset_for_testing if needed
 
 

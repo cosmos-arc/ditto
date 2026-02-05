@@ -17,13 +17,13 @@ def test_config_default_values() -> None:
 
 
 @pytest.mark.unit
-def test_config_from_env(monkeypatch) -> None:
-    """Test loading configuration from environment variables."""
-    monkeypatch.setenv("DITTO_DATA_DIR", "/tmp/data")
-    monkeypatch.setenv("DITTO_DEFAULT_SOURCE", "akshare")
-    monkeypatch.setenv("DITTO_AUTO_REGISTER_SECURITIES", "false")
-
-    config = IngestionConfig()
+def test_config_explicit_values() -> None:
+    """Test configuration with explicit values."""
+    config = IngestionConfig(
+        data_root=Path("/tmp/data"),
+        default_source="akshare",
+        auto_register_securities=False,
+    )
 
     assert config.data_root == Path("/tmp/data")
     assert config.default_source == "akshare"

@@ -132,6 +132,8 @@ pixi run -e dev pytest packages/datahub/tests/unit/sources/tushare/test_rate_lim
 
 ```python
 import respx
+from ditto_datahub.config import DataSourceSettings
+from ditto_datahub.sources.tushare.client import TushareClient
 
 def test_tushare_client(respx_mock):
     """Mock Tushare API 响应"""
@@ -143,7 +145,8 @@ def test_tushare_client(respx_mock):
         })
     )
 
-    client = TushareClient(token="test_token")
+    settings = DataSourceSettings(tushare_token="test_token")
+    client = TushareClient(settings=settings)
     result = client.call_api("daily", params={...})
     assert result is not None
 ```
@@ -151,14 +154,19 @@ def test_tushare_client(respx_mock):
 ### Mock 限流器
 
 ```python
+from ditto_datahub.config import DataSourceSettings
+from ditto_datahub.sources.tushare import TushareSource
+
 def test_with_mock_rate_limiter(mocker):
     """Mock 限流器"""
     mock_limiter = mocker.Mock()
-    mock_limiter.acquire.return_value = True
+    mock_limiter.wait_if_needed.return_value = None
 
-    source = TushareSource(rate_limiter=mock_limiter)
-    source.fetch_daily(...)
-    mock_limiter.acquire.assert_called()
+    settings = DataSourceSettings(tushare_token="test_token")
+    source = TushareSource(settings=settings)
+    source._stock._client._limiter = mock_limiter
+    source.fetch_stock_daily(...)
+    mock_limiter.wait_if_needed.assert_called()
 ```
 
 ### Mock 时间（fake_time）

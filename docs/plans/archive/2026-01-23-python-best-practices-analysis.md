@@ -1,5 +1,8 @@
 # Ditto 项目 Python 代码最佳实践分析报告
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 ## 概述
 
 从 Python 业界专家角度分析 ditto 项目中不符合业界最佳实践的写法，并提出改进建议。
@@ -119,7 +122,7 @@ from pydantic import Field
 class ObservabilityConfig:
     vm_endpoint: str = Field(
         default_factory=lambda: os.getenv(
-            "OBSERVABILITY_VM_ENDPOINT",
+            "VM_ENDPOINT",
             "http://localhost:8428/opentelemetry/v1/metrics"
         ),
         description="VictoriaMetrics 指标推送端点"

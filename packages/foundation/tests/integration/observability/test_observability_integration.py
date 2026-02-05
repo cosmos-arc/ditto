@@ -23,6 +23,21 @@ from ditto_foundation import (
     span,
     traced,
 )
+from ditto_foundation.config.environment import Environment
+
+
+def _test_config(**overrides: object) -> ObservabilityConfig:
+    values: dict[str, object] = {
+        "environment": Environment.TESTING,
+        "pytest_running": True,
+        "assertions_enabled": True,
+        "verbose_logging": False,
+        "tracing_enabled": True,
+        "tracing_sample_rate": 1.0,
+        "metrics_enabled": True,
+    }
+    values.update(overrides)
+    return ObservabilityConfig(**values)
 
 
 class TestPresetConfig:
@@ -30,7 +45,7 @@ class TestPresetConfig:
 
     def test_development_preset_defaults(self) -> None:
         """测试开发环境预设默认值."""
-        config = ObservabilityConfig(profile="development")
+        config = ObservabilityConfig(environment=Environment.DEVELOPMENT)
         effective = config.get_effective_config()
 
         assert effective.log_level == "DEBUG"
@@ -43,20 +58,20 @@ class TestPresetConfig:
 
     def test_testing_preset_defaults(self) -> None:
         """测试测试环境预设默认值."""
-        config = ObservabilityConfig(profile="testing")
+        config = ObservabilityConfig(environment=Environment.TESTING)
         effective = config.get_effective_config()
 
         assert effective.log_level == "WARNING"
         assert effective.tracing_enabled is False
         assert effective.tracing_sample_rate == 0.0
         assert effective.metrics_enabled is False
-        assert effective.assertions_enabled is False
+        assert effective.assertions_enabled is True
         assert effective.verbose_logging is False
         assert effective.pytest_running is False
 
     def test_production_preset_defaults(self) -> None:
         """测试生产环境预设默认值."""
-        config = ObservabilityConfig(profile="production")
+        config = ObservabilityConfig(environment=Environment.PRODUCTION)
         effective = config.get_effective_config()
 
         assert effective.log_level == "INFO"
@@ -69,7 +84,10 @@ class TestPresetConfig:
 
     def test_override_log_level(self) -> None:
         """测试覆盖日志级别."""
-        config = ObservabilityConfig(profile="development", log_level="ERROR")
+        config = ObservabilityConfig(
+            environment=Environment.DEVELOPMENT,
+            log_level="ERROR",
+        )
         effective = config.get_effective_config()
 
         assert effective.log_level == "ERROR"
@@ -80,7 +98,7 @@ class TestPresetConfig:
     def test_override_tracing(self) -> None:
         """测试覆盖追踪配置."""
         config = ObservabilityConfig(
-            profile="development",
+            environment=Environment.DEVELOPMENT,
             tracing_enabled=False,
             tracing_sample_rate=0.5,
         )
@@ -95,7 +113,7 @@ class TestPresetConfig:
     def test_override_multiple_fields(self) -> None:
         """测试覆盖多个字段."""
         config = ObservabilityConfig(
-            profile="production",
+            environment=Environment.PRODUCTION,
             log_level="DEBUG",
             tracing_sample_rate=1.0,
             assertions_enabled=True,
@@ -111,7 +129,10 @@ class TestPresetConfig:
 
     def test_pytest_running_flag(self) -> None:
         """测试 pytest_running 标志."""
-        config = ObservabilityConfig(profile="development", pytest_running=True)
+        config = ObservabilityConfig(
+            environment=Environment.DEVELOPMENT,
+            pytest_running=True,
+        )
         effective = config.get_effective_config()
 
         assert effective.pytest_running is True
@@ -122,7 +143,7 @@ class TestPresetConfig:
     def test_none_values_use_preset(self) -> None:
         """测试 None 值使用预设."""
         config = ObservabilityConfig(
-            profile="testing",
+            environment=Environment.TESTING,
             log_level=None,
             tracing_enabled=None,
             metrics_enabled=None,
@@ -135,7 +156,7 @@ class TestPresetConfig:
 
     def test_effective_config_type(self) -> None:
         """测试 EffectiveConfig 类型."""
-        config = ObservabilityConfig(profile="development")
+        config = ObservabilityConfig(environment=Environment.DEVELOPMENT)
         effective = config.get_effective_config()
 
         assert isinstance(effective, EffectiveConfig)
@@ -155,33 +176,27 @@ class TestRuntimeFlags:
 
     def test_detect_runtime_flags_testing(self) -> None:
         """测试测试环境的运行时标志检测."""
-        from ditto_foundation.config.environment import Environment
+        config = ObservabilityConfig(
+            environment=Environment.TESTING,
+            pytest_running=True,
+        )
+        effective = config.get_effective_config()
 
-        flags = ObservabilityConfig.detect_runtime_flags(Environment.TESTING)
-        # [REVIEW] pytest 环境中运行，pytest_running 应该是 True
-        assert flags["pytest_running"] is True  # [REVIEW] pytest 中运行
-        assert flags["assertions_enabled"] is True
-        assert flags["verbose_logging"] is False  # [REVIEW]
+        assert effective.pytest_running is True
 
     def test_detect_runtime_flags_production(self) -> None:
         """测试生产环境的运行时标志检测."""
-        from ditto_foundation.config.environment import Environment
+        config = ObservabilityConfig(environment=Environment.PRODUCTION)
+        effective = config.get_effective_config()
 
-        flags = ObservabilityConfig.detect_runtime_flags(Environment.PRODUCTION)
-        # [REVIEW] pytest 环境中运行，pytest_running 应该是 True
-        assert flags["pytest_running"] is True  # [REVIEW] pytest 中运行
-        assert flags["assertions_enabled"] is False
-        assert flags["verbose_logging"] is False
+        assert effective.pytest_running is False
 
     def test_detect_runtime_flags_development(self) -> None:
         """测试开发环境的运行时标志检测."""
-        from ditto_foundation.config.environment import Environment
+        config = ObservabilityConfig(environment=Environment.DEVELOPMENT)
+        effective = config.get_effective_config()
 
-        flags = ObservabilityConfig.detect_runtime_flags(Environment.DEVELOPMENT)
-        # [REVIEW] pytest 环境中运行，pytest_running 应该是 True
-        assert flags["pytest_running"] is True  # [REVIEW] pytest 中运行
-        assert flags["assertions_enabled"] is True
-        assert flags["verbose_logging"] is True
+        assert effective.pytest_running is False
 
 
 class TestInit:
@@ -190,16 +205,14 @@ class TestInit:
     def test_init_default(self) -> None:
         """测试默认初始化."""
         reset_for_testing()
-        init(force=True)
+        init(_test_config(), force=True)
         # [REVIEW]
 
     def test_init_with_testing_flags(self) -> None:
         """测试使用测试标志初始化."""
         reset_for_testing()
         init(
-            pytest_running=True,
-            assertions_enabled=False,
-            verbose_logging=False,
+            _test_config(assertions_enabled=False),
             force=True,
         )
         # [REVIEW]
@@ -207,17 +220,8 @@ class TestInit:
     def test_init_idempotent(self) -> None:
         """测试多次初始化幂等性."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )  # [REVIEW](不报错)
+        init(_test_config(), force=True)
+        init(_test_config())  # [REVIEW](不报错)
 
 
 class TestSpan:
@@ -226,12 +230,7 @@ class TestSpan:
     def test_span_created(self) -> None:
         """测试 Span 创建."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         with span("test_operation", key="value") as s:
             assert s is not None
@@ -245,12 +244,7 @@ class TestSpan:
     def test_span_attributes(self) -> None:
         """测试 Span 属性设置."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         with span("test_op", source="tushare") as s:
             s.set_attribute("rows", 100)
@@ -262,12 +256,7 @@ class TestSpan:
     def test_nested_spans(self) -> None:
         """测试嵌套 Span."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         with span("parent") as parent:
             with span("child") as child:
@@ -282,12 +271,7 @@ class TestSpan:
     def test_span_records_exception(self) -> None:
         """测试 Span 记录异常."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         with pytest.raises(ValueError, match="test error"):
             with span("test_operation"):
@@ -300,12 +284,7 @@ class TestSpan:
     def test_traced_decorator(self) -> None:
         """测试 @traced 装饰器."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         @traced("my_operation")
         def my_func(x: int) -> int:
@@ -325,12 +304,7 @@ class TestTraceId:
     def test_trace_id_format(self) -> None:
         """测试 trace_id 格式 (UUID)."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         with span("test_op"):
             trace_id = get_trace_id()
@@ -346,12 +320,7 @@ class TestTraceId:
     def test_span_id_format(self) -> None:
         """测试 span_id 格式 (16位十六进制)."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         with span("test_op"):
             span_id = get_span_id()
@@ -364,12 +333,7 @@ class TestTraceId:
     def test_trace_id_consistency(self) -> None:
         """测试同一 trace 中 trace_id 一致."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         with span("parent"):
             trace_id_1 = get_trace_id()
@@ -385,12 +349,7 @@ class TestMetrics:
     def test_counter_incremented(self) -> None:
         """测试 Counter 递增."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         M.data_records.add(
             100, {"source": "test", "table": "test", "status": "success"}
@@ -403,12 +362,7 @@ class TestMetrics:
     def test_gauge_set(self) -> None:
         """测试 Gauge 设置."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         M.kill_switch_level.set(2.0)
 
@@ -418,12 +372,7 @@ class TestMetrics:
     def test_histogram_record(self) -> None:
         """测试 Histogram 记录."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         M.data_update_duration.record(1.5, {"source": "test", "table": "test"})
 
@@ -437,12 +386,7 @@ class TestLogging:
     def test_logger_with_event_field(self) -> None:
         """测试带 event 字段的日志."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         # [REVIEW]
         logger.info("Test message", event="test_event", key="value")
@@ -450,12 +394,7 @@ class TestLogging:
     def test_logger_with_trace_id_context(self) -> None:
         """测试带 trace_id 上下文的日志."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         with span("test_op"):
             trace_id = get_trace_id()
@@ -471,12 +410,7 @@ class TestReset:
     def test_reset_for_testing(self) -> None:
         """测试重置功能."""
         reset_for_testing()
-        init(
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-            force=True,
-        )
+        init(_test_config(), force=True)
 
         with span("test_op") as s:
             assert s is not None

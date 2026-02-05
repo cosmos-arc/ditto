@@ -9,6 +9,8 @@ from unittest.mock import MagicMock
 import duckdb
 import pytest
 from ditto_foundation.config import Settings
+from ditto_foundation.config.environment import Environment
+from ditto_foundation.observability.config import ObservabilityConfig
 from ditto_port.testing import DatabaseManager
 
 
@@ -54,10 +56,11 @@ def test_settings(tmp_path: Path) -> Settings:
     Returns:
         Settings: 测试配置对象
     """
-    from ditto_foundation.config.settings import SystemSettings
+    from ditto_foundation.config.settings import ObservabilitySettings, SystemSettings
 
     settings = Settings(
-        system=SystemSettings(ditto_env="testing"),
+        system=SystemSettings(environment=Environment.TESTING),
+        observability=ObservabilitySettings(),
     )
     return settings
 
@@ -184,11 +187,15 @@ def obs_noop() -> None:
     """静默模式 - 最快, 不输出日志."""
     from ditto_foundation import init
 
-    init(
+    config = ObservabilityConfig(
+        environment=Environment.TESTING,
         pytest_running=True,
         assertions_enabled=False,
         verbose_logging=False,
+        tracing_enabled=False,
+        metrics_enabled=False,
     )
+    init(config, force=True)
 
 
 @pytest.fixture
@@ -196,11 +203,16 @@ def obs_assertions() -> None:
     """断言模式 - 可验证, 内存记录."""
     from ditto_foundation import init
 
-    init(
+    config = ObservabilityConfig(
+        environment=Environment.TESTING,
         pytest_running=True,
         assertions_enabled=True,
         verbose_logging=False,
+        tracing_enabled=True,
+        tracing_sample_rate=1.0,
+        metrics_enabled=True,
     )
+    init(config, force=True)
 
 
 @pytest.fixture

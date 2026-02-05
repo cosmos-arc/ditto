@@ -631,7 +631,7 @@ Ditto 采用**双层环境架构**，将**依赖管理**与**行为控制**分�
 │  │  DITTO_ENV = development | testing | production         │    │
 │  │                                                          │    │
 │  │  控制内容: 日志级别、调试模式、功能开关、错误处理           │    │
-│  │  切换方式: 环境变量、.env 文件                             │    │
+│  │  切换方式: 环境变量（仅选择环境）                           │    │
 │  └─────────────────────────────────────────────────────────┘    │
 │                          ↓                                       │
 │  ┌─────────────────────────────────────────────────────────┐    │
@@ -682,15 +682,12 @@ class Environment(str, Enum):
 **环境切换方式**：
 
 ```bash
-# 方式 1: 环境变量
+# 方式 1: 环境变量（仅用于选择环境）
 export DITTO_ENV=production
 pixi run server
 
-# 方式 2: .env 文件
-echo "DITTO_ENV=production" >> .env
-
-# 方式 3: config/ 目录（推荐）
-# 自动加载 config/{environment}/ 下的所有配置文件
+# 方式 2: config/ 目录（推荐）
+# config/{environment}/ 下的 *.env 为权威配置来源
 ```
 
 ### 12.4 环境配置文件结构
@@ -700,114 +697,175 @@ echo "DITTO_ENV=production" >> .env
 ```
 config/
 ├── development/
+│   ├── system.env             # 系统配置
 │   ├── observability.env      # 可观测性配置
-│   ├── database.env            # 数据库配置
-│   ├── api.env                 # API 配置
-│   └── data_source.env         # 数据源配置
+│   ├── data_store.env         # 数据根路径配置
+│   ├── database.env           # 数据库配置
+│   ├── data_source.env        # 数据源配置
+│   ├── dq.env                 # 数据质量配置
+│   ├── notification.env       # 通知配置
+│   ├── api.env                # API 配置
+│   └── performance.env        # 性能配置
 ├── testing/
+│   ├── system.env
 │   ├── observability.env
+│   ├── data_store.env
 │   ├── database.env
+│   ├── data_source.env
+│   ├── dq.env
+│   ├── notification.env
 │   ├── api.env
-│   └── data_source.env
+│   └── performance.env
 └── production/
+    ├── system.env
     ├── observability.env
+    ├── data_store.env
     ├── database.env
+    ├── data_source.env
+    ├── dq.env
+    ├── notification.env
     ├── api.env
-    └── data_source.env
+    └── performance.env
 ```
 
 **配置加载流程**：
 
 1. 根据 `DITTO_ENV` 确定环境
-2. `ConfigCoordinator` 加载 `config/{environment}/` 下的所有 `.env` 文件
-3. Pydantic Settings 自动读取对应前缀的环境变量
-4. 应用启动时使用 `get_settings()` 获取配置
+2. `ConfigLoader` 仅读取 `config/{environment}/` 下的 `.env` 文件并统一 key（不读 OS env）
+3. `ConfigProvider` 通过 `model_validate` 构造配置模型
+4. 由 DI 容器注入配置对象到各层
 
 **配置示例**：
 
 `config/development/observability.env`:
 ```bash
-# 开发环境：详细日志、彩色输出、启用断言
-OBSERVABILITY_LOG_LEVEL=DEBUG
-OBSERVABILITY_LOG_FORMAT=console
-OBSERVABILITY_LOG_TO_CONSOLE=true
-OBSERVABILITY_LOG_TO_FILE=true
+# 开发环境：详细日志、彩色输出
+LOG_LEVEL=DEBUG
+LOG_FORMAT=console
+LOG_TO_CONSOLE=true
+LOG_TO_FILE=true
 
-OBSERVABILITY_TRACING_ENABLED=true
-OBSERVABILITY_TRACING_EXPORTER=otlp
-OBSERVABILITY_TRACING_SAMPLE_RATE=1.0
+TRACING_ENABLED=true
+TRACING_EXPORTER=otlp
+TRACING_SAMPLE_RATE=1.0
 
-OBSERVABILITY_METRICS_ENABLED=true
-OBSERVABILITY_METRICS_EXPORTER=victoriametrics
-
-OBSERVABILITY_ASSERTIONS_ENABLED=true
+METRICS_ENABLED=true
+METRICS_EXPORTER=otlp
+VM_ENDPOINT=http://localhost:8428/opentelemetry/v1/metrics
 ```
 
 `config/testing/observability.env`:
 ```bash
 # 测试环境：最小化配置、快速执行
-OBSERVABILITY_LOG_LEVEL=WARNING
-OBSERVABILITY_LOG_TO_FILE=false
+LOG_LEVEL=WARNING
+LOG_FORMAT=console
+LOG_TO_CONSOLE=true
+LOG_TO_FILE=false
 
-OBSERVABILITY_TRACING_ENABLED=false
-OBSERVABILITY_TRACING_EXPORTER=none
+TRACING_ENABLED=false
+TRACING_EXPORTER=otlp
+TRACING_SAMPLE_RATE=1.0
 
-OBSERVABILITY_METRICS_ENABLED=false
-OBSERVABILITY_METRICS_EXPORTER=none
-
-OBSERVABILITY_ASSERTIONS_ENABLED=false
+METRICS_ENABLED=false
+METRICS_EXPORTER=otlp
+VM_ENDPOINT=http://localhost:8428/opentelemetry/v1/metrics
 ```
 
 `config/production/observability.env`:
 ```bash
 # 生产环境：JSON 日志、降低采样率
-OBSERVABILITY_LOG_LEVEL=INFO
-OBSERVABILITY_LOG_FORMAT=json
-OBSERVABILITY_LOG_TO_CONSOLE=false
-OBSERVABILITY_LOG_TO_FILE=true
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+LOG_TO_CONSOLE=true
+LOG_TO_FILE=true
 
-OBSERVABILITY_TRACING_ENABLED=true
-OBSERVABILITY_TRACING_EXPORTER=otlp
-OBSERVABILITY_TRACING_SAMPLE_RATE=0.1
+TRACING_ENABLED=true
+TRACING_EXPORTER=otlp
+TRACING_SAMPLE_RATE=0.1
 
-OBSERVABILITY_METRICS_ENABLED=true
-OBSERVABILITY_METRICS_EXPORTER=victoriametrics
+METRICS_ENABLED=true
+METRICS_EXPORTER=otlp
+VM_ENDPOINT=http://victoriametrics:8428/opentelemetry/v1/metrics
 ```
 
-### 12.5 多 Pydantic Settings 模式
+### 12.5 配置加载模式
 
-不同 Settings 类使用不同的环境变量前缀，实现配置隔离：
+配置文件由 Port 层统一加载，并映射到 BaseModel（不使用 BaseSettings / env_prefix）：
 
 ```python
-class ObservabilitySettings(BaseSettings):
-    """可观测性配置."""
-    model_config = SettingsConfigDict(
-        env_prefix="OBSERVABILITY_",
-        env_file="config/development/observability.env",
-    )
-    log_level: str = "INFO"
-    log_format: str = "console"
-    # ...
+from ditto_foundation.config import ConfigLoader
+from ditto_foundation.config.settings import (
+    ObservabilitySettings,
+    Settings,
+    SystemSettings,
+)
+from ditto_port.config import load_env_file
 
-class DatabaseSettings(BaseSettings):
-    """数据库配置."""
-    model_config = SettingsConfigDict(
-        env_prefix="DB_",
-        env_file="config/development/database.env",
-    )
-    pool_size: int = 10
-    # ...
+loader = ConfigLoader(environment)
 
-class APISettings(BaseSettings):
-    """API 配置."""
-    model_config = SettingsConfigDict(
-        env_prefix="API_",
-        env_file="config/development/api.env",
-    )
-    host: str = "127.0.0.1"
-    port: int = 8000
-    # ...
+system = SystemSettings.model_validate(load_env_file(loader, "system"))
+observability = ObservabilitySettings.model_validate(
+    load_env_file(loader, "observability")
+)
+
+settings = Settings(system=system, observability=observability)
 ```
+
+#### 配置加载流程图
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Port 层 (应用入口)                            │
+│                                                                      │
+│  ┌────────────────────────────────────────────────────────────┐    │
+│  │  ConfigProvider (apps/port/src/ditto_port/registry/)       │    │
+│  │                                                             │    │
+│  │  1. 读取 config/{environment}/*.env                         │    │
+│  │  2. 构造各层配置对象 (SystemSettings, Observability...)     │    │
+│  │  3. 通过 @provide 装饰器注册到 DI 容器                       │    │
+│  └─────────────────────────┬───────────────────────────────────┘    │
+│                            │                                         │
+└────────────────────────────┼─────────────────────────────────────────┘
+                             │ DI 注入
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      DI 容器 (dishka)                                │
+│                                                                      │
+│  统一管理所有依赖，按需注入到各层                                    │
+└────────────────────────────┼─────────────────────────────────────────┘
+                             │
+         ┌───────────────────┼───────────────────┐
+         ▼                   ▼                   ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│   Port 层       │  │   Core 层       │  │ Foundation 层   │
+│                 │  │                 │  │                 │
+│ 接收注入的配置  │  │ 接收注入的配置  │  │ 提供配置模型    │
+│ (不再读取环境   │  │ (不再读取环境   │  │ (不再读取环境   │
+│  变量)          │  │  变量)          │  │  变量)          │
+│                 │  │                 │  │                 │
+│ 例如:           │  │ 例如:           │  │ 例如:           │
+│ - DataHub       │  │ - Engine        │  │ - Observability │
+│ - Services      │  │ - Strategies    │  │   Settings      │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
+         │                   │                   │
+         └───────────────────┼───────────────────┘
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      DataHub 层                                     │
+│                                                                      │
+│  接收注入的配置对象 (如 DatabaseSettings, DataRootSettings)          │
+│  不再负责加载配置，只使用配置                                         │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### 关键设计原则
+
+| 原则 | 说明 |
+|------|------|
+| **单一入口** | Port 层的 `ConfigProvider` 是唯一的配置加载入口 |
+| **单向依赖** | 低层（Foundation/DataHub/Core）不读取环境变量，只接收注入 |
+| **显式注入** | 所有配置通过 DI 容器显式注入，不使用隐式环境变量读取 |
+| **可测试性** | 测试时可直接构造配置对象，无需 mock 环境变量 |
 
 ### 12.6 环境配置最佳实践
 
@@ -817,7 +875,7 @@ class APISettings(BaseSettings):
 |------|------|------|
 | Pixi 环境 | 小写，无连字符 | `default`, `dev` |
 | 运行时环境 | 小写，全称 | `development`, `testing`, `production` |
-| 环境变量前缀 | 大写，下划线 | `OBSERVABILITY_`, `DB_`, `API_` |
+| 配置键名 | 大写，下划线 | `LOG_LEVEL`, `TRACING_ENABLED` |
 | 配置文件 | 小写，下划线 | `observability.env`, `database.env` |
 
 **切换规则**：
@@ -831,10 +889,8 @@ class APISettings(BaseSettings):
 
 **配置优先级**（从高到低）：
 
-1. 环境变量（显式设置）
-2. `config/{environment}/*.env` 文件
-3. `.env` 文件（基础配置）
-4. Pydantic Settings 默认值
+1. `config/{environment}/*.env` 文件
+2. BaseModel 默认值（缺省字段）
 
 ---
 

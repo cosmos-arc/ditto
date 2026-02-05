@@ -9,11 +9,13 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from ditto_foundation.config.environment import Environment
 from ditto_foundation.observability import (
     _ObservabilityRegistry,
     init,
     shutdown,
 )
+from ditto_foundation.observability.config import ObservabilityConfig
 
 
 @pytest.mark.unit
@@ -32,7 +34,7 @@ class TestInitFunction:
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
         """测试 init 调用所有 configure 函数."""
-        init(service_name="test_service", force=True)
+        init(ObservabilityConfig(service_name="test_service"), force=True)
 
         mock_config_logging.assert_called_once()
         mock_config_tracing.assert_called_once()
@@ -46,7 +48,7 @@ class TestInitFunction:
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
         """测试 init 设置 initialized 标志."""
-        init(force=True)
+        init(ObservabilityConfig(), force=True)
 
         assert _ObservabilityRegistry.is_initialized()
 
@@ -58,8 +60,9 @@ class TestInitFunction:
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
         """测试已初始化时跳过初始化."""
+        config = ObservabilityConfig()
         # 第一次初始化
-        init(force=True)
+        init(config, force=True)
 
         # 重置 mock 计数
         mock_config_logging.reset_mock()
@@ -67,7 +70,7 @@ class TestInitFunction:
         mock_config_metrics.reset_mock()
 
         # 第二次调用（不使用 force）
-        init()
+        init(config)
 
         # 验证没有再次调用 configure 函数
         mock_config_logging.assert_not_called()
@@ -82,8 +85,9 @@ class TestInitFunction:
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
         """测试 force 参数强制重新初始化."""
+        config = ObservabilityConfig()
         # 第一次初始化
-        init(force=True)
+        init(config, force=True)
 
         # 重置 mock 计数
         mock_config_logging.reset_mock()
@@ -91,7 +95,7 @@ class TestInitFunction:
         mock_config_metrics.reset_mock()
 
         # 第二次调用（使用 force=True）
-        init(force=True)
+        init(config, force=True)
 
         # 验证再次调用 configure 函数
         mock_config_logging.assert_called_once()
@@ -105,21 +109,17 @@ class TestInitFunction:
     def test_init_normalizes_environment_aliases(
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
-        """测试环境名称别名规范化."""
-        # 测试 dev -> development
-        init(environment="dev", force=True)
-        # 验证传递给 configure 函数的 config 包含正确的环境
+        """测试不同配置重复初始化会被拒绝."""
+        init(ObservabilityConfig(environment=Environment.DEVELOPMENT), force=True)
 
-        # 测试 prod -> production
-        init(environment="prod", force=True)
+        with pytest.raises(RuntimeError):
+            init(ObservabilityConfig(environment=Environment.PRODUCTION))
 
-        # 测试 test -> testing
-        init(environment="test", force=True)
+        init(ObservabilityConfig(environment=Environment.PRODUCTION), force=True)
 
-        # 验证每个都调用了 3 次 configure 函数（dev/prod/test 各一次）
-        assert mock_config_logging.call_count == 3
-        assert mock_config_tracing.call_count == 3
-        assert mock_config_metrics.call_count == 3
+        assert mock_config_logging.call_count == 2
+        assert mock_config_tracing.call_count == 2
+        assert mock_config_metrics.call_count == 2
 
     @patch("ditto_foundation.observability.configure_logging")
     @patch("ditto_foundation.observability.configure_tracing")
@@ -129,7 +129,13 @@ class TestInitFunction:
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
         """测试 init 记录初始化日志."""
-        init(service_name="my_service", environment="dev", force=True)
+        init(
+            ObservabilityConfig(
+                service_name="my_service",
+                environment=Environment.DEVELOPMENT,
+            ),
+            force=True,
+        )
 
         mock_logger.info.assert_called_once()
         call_args = mock_logger.info.call_args
@@ -143,7 +149,13 @@ class TestInitFunction:
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
         """测试 verbose_logging=False 时不记录 info 日志."""
-        init(verbose_logging=False, force=True)
+        init(
+            ObservabilityConfig(
+                environment=Environment.DEVELOPMENT,
+                verbose_logging=False,
+            ),
+            force=True,
+        )
 
         mock_logger.info.assert_not_called()
 
@@ -155,7 +167,7 @@ class TestInitFunction:
         self, mock_logger, mock_config_metrics, mock_config_tracing, mock_config_logging
     ) -> None:
         """测试 init 正确传递配置参数."""
-        init(
+        config = ObservabilityConfig(
             service_name="custom_service",
             log_level="DEBUG",
             log_dir="custom_logs",
@@ -163,8 +175,8 @@ class TestInitFunction:
             pytest_running=True,
             assertions_enabled=False,
             verbose_logging=False,
-            force=True,
         )
+        init(config, force=True)
 
         # 验证每个 configure 函数都被调用
         mock_config_logging.assert_called_once()
@@ -259,7 +271,7 @@ class TestShutdownFunction:
     def test_shutdown_skips_already_shutdown_providers(
         self, mock_logger, mock_get_meter, mock_get_tracer
     ) -> None:
-        """测试 shutdown 跳过已经关闭的 provider."""
+        """测试 shutdown 仍会调用 provider 的 shutdown."""
         mock_tracer_provider = MagicMock()
         mock_meter_provider = MagicMock()
         # 添加 _shutdown 属性表示已关闭
@@ -270,6 +282,5 @@ class TestShutdownFunction:
 
         shutdown()
 
-        # 不应该调用 shutdown（因为已有 _shutdown 属性）
-        mock_tracer_provider.shutdown.assert_not_called()
-        mock_meter_provider.shutdown.assert_not_called()
+        mock_tracer_provider.shutdown.assert_called_once()
+        mock_meter_provider.shutdown.assert_called_once()

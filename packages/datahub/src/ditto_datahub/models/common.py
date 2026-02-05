@@ -65,7 +65,7 @@ class Domain(str, Enum):
     """
     支持的数据域类型。
 
-    数据域枚举，用于 IngestionCoordinator 路由。
+    数据域枚举，用于 Port 层 IngestionCoordinator 路由和域级别数据管理。
     """
 
     METADATA = "metadata"

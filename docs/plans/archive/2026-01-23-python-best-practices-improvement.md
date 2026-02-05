@@ -1,5 +1,8 @@
 # Python 最佳实践改进计划
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 ## 概述
 
 基于 `docs/plans/2026-01-23-python-best-practices-analysis.md` 分析报告，修复 Ditto 项目中不符合 Python 业界最佳实践的代码问题。
@@ -160,7 +163,7 @@ except Exception as e:  # noqa: S110 - 优雅关闭失败不应中断主流程
 **文件**: `packages/foundation/src/ditto_foundation/observability/config.py:26`
 
 **验收标准**:
-- 支持环境变量 `OBSERVABILITY_VM_ENDPOINT` 覆盖
+- 支持环境变量 `VM_ENDPOINT` 覆盖
 - 默认值保持不变（`http://localhost:8428/opentelemetry/v1/metrics`）
 - 测试验证环境变量覆盖逻辑
 
@@ -168,7 +171,7 @@ except Exception as e:  # noqa: S110 - 优雅关闭失败不应中断主流程
 ```python
 vm_endpoint: str = Field(
     default_factory=lambda: os.getenv(
-        "OBSERVABILITY_VM_ENDPOINT",
+        "VM_ENDPOINT",
         "http://localhost:8428/opentelemetry/v1/metrics"
     ),
     description="VictoriaMetrics 指标推送端点"

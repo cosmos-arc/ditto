@@ -15,6 +15,22 @@ from ditto_foundation import (
     reset_for_testing,
     span,
 )
+from ditto_foundation.config.environment import Environment
+from ditto_foundation.observability.config import ObservabilityConfig
+
+
+def _test_config(**overrides: object) -> ObservabilityConfig:
+    values: dict[str, object] = {
+        "environment": Environment.TESTING,
+        "pytest_running": True,
+        "assertions_enabled": True,
+        "verbose_logging": False,
+        "tracing_enabled": True,
+        "tracing_sample_rate": 1.0,
+        "metrics_enabled": True,
+    }
+    values.update(overrides)
+    return ObservabilityConfig(**values)
 
 
 @pytest.mark.integration
@@ -23,12 +39,7 @@ class TestResetForTesting:
 
     def test_reset_for_testing_clears_spans(self) -> None:
         """测试 reset_for_testing 清除 spans."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         # [REVIEW] span
         with span("test_op1"):
@@ -48,12 +59,7 @@ class TestResetForTesting:
 
     def test_reset_for_testing_clears_metrics(self) -> None:
         """测试 reset_for_testing 清除 metrics."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         # [REVIEW]
         M.data_records.add(100, {"source": "test"})
@@ -72,12 +78,7 @@ class TestResetForTesting:
 
     def test_reset_for_testing_clears_both(self) -> None:
         """测试 reset_for_testing 同时清除 spans 和 metrics."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         # [REVIEW] spans 和 metrics
         with span("test_op"):
@@ -102,12 +103,7 @@ class TestResetForTesting:
     def test_reset_for_testing_allows_reinit(self) -> None:
         """测试 reset_for_testing 后可以重新初始化."""
         # [REVIEW]
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         with span("test_op1"):
             pass
@@ -119,12 +115,7 @@ class TestResetForTesting:
         reset_for_testing()
 
         # [REVIEW]
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         with span("test_op2"):
             pass
@@ -155,12 +146,7 @@ class TestGetRecordedSpans:
 
     def test_get_recorded_spans_returns_list(self) -> None:
         """测试返回列表类型."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         with span("test_op"):
             pass
@@ -170,12 +156,7 @@ class TestGetRecordedSpans:
 
     def test_get_recorded_spans_order(self) -> None:
         """测试 span 按完成顺序返回."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         with span("op1"):
             with span("op2"):
@@ -190,12 +171,7 @@ class TestGetRecordedSpans:
 
     def test_get_recorded_spans_attributes(self) -> None:
         """测试 span 属性被正确记录."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         with span("test_op", source="tushare", table="etf_daily") as s:
             s.set_attribute("rows", "100")
@@ -207,12 +183,7 @@ class TestGetRecordedSpans:
 
     def test_get_recorded_spans_with_exception(self) -> None:
         """测试异常 span 被记录."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         with pytest.raises(ValueError):
             with span("failing_op"):
@@ -236,12 +207,7 @@ class TestGetRecordedMetrics:
 
     def test_get_recorded_metrics_returns_dict(self) -> None:
         """测试返回字典类型."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         M.data_records.add(100, {"source": "test"})
 
@@ -250,12 +216,7 @@ class TestGetRecordedMetrics:
 
     def test_get_recorded_metrics_after_counter_add(self) -> None:
         """测试 counter 操作后获取指标."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         M.data_records.add(100, {"source": "test", "table": "test_table"})
         M.data_records.add(50, {"source": "test", "table": "test_table"})
@@ -266,12 +227,7 @@ class TestGetRecordedMetrics:
 
     def test_get_recorded_metrics_after_gauge_set(self) -> None:
         """测试 gauge 操作后获取指标."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         M.kill_switch_level.set(2.0)
         M.data_freshness.set(1.5)
@@ -281,12 +237,7 @@ class TestGetRecordedMetrics:
 
     def test_get_recorded_metrics_after_histogram_record(self) -> None:
         """测试 histogram 操作后获取指标."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         M.api_duration.record(1.5, {"endpoint": "/api/test"})
         M.api_duration.record(2.3, {"endpoint": "/api/test"})
@@ -296,12 +247,7 @@ class TestGetRecordedMetrics:
 
     def test_get_recorded_metrics_multiple_types(self) -> None:
         """测试多种类型指标."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         # Counter
         M.data_records.add(100, {"source": "test"})
@@ -323,12 +269,7 @@ class TestIntegrationScenarios:
     def test_full_observability_workflow(self) -> None:
         """测试完整可观测性工作流."""
         # 1. 初始化
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         # 2. 创建 span 和指标
         with span("data_update", source="tushare", table="etf_daily") as s:
@@ -351,12 +292,7 @@ class TestIntegrationScenarios:
 
     def test_multiple_operations(self) -> None:
         """测试多个操作."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         # [REVIEW] 1
         with span("operation1"):
@@ -378,12 +314,7 @@ class TestIntegrationScenarios:
 
     def test_nested_operations_with_metrics(self) -> None:
         """测试嵌套操作和指标."""
-        init(
-            force=True,
-            pytest_running=True,
-            assertions_enabled=True,
-            verbose_logging=False,
-        )
+        init(_test_config(), force=True)
 
         with span("parent_operation") as parent:
             parent.set_attribute("level", "parent")

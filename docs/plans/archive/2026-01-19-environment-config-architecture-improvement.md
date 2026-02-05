@@ -1,5 +1,8 @@
 # 环境配置架构全面改进计划
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 **日期**: 2026-01-19
 **范围**: P0 + P1 + P2 全部改进
 **工作量**: 约 3-4 天
@@ -12,7 +15,7 @@
 
 1. **Environment 枚举**（P0）：创建类型安全的环境枚举，替换字符串类型
 2. **移除 Mode 枚举**（P0）：统一使用 Environment + 独立布尔标志
-3. **环境变量前缀**（P1）：统一使用 `DITTO_OTEL_*` 等前缀
+3. **配置键命名**（P1）：统一使用无前缀（直接字段名）
 4. **配置文件结构**（P1）：实现 `config/{env}/` 目录结构
 5. **预设配置**（P2）：实现预设 + 独立开关覆盖模式
 
@@ -21,7 +24,7 @@
 | 决策点 | 选择 | 理由 |
 |--------|------|------|
 | 配置目录结构 | 两层覆盖（无共享目录） | 每个环境目录完整独立，清晰隔离 |
-| 环境变量前缀 | `DITTO_OTEL_*` | 避免冲突，符合 OTEL 规范 |
+| 配置键命名 | 无前缀（直接字段名） | 避免映射歧义，保持一致 |
 | 配置加载方式 | Pydantic Settings 自动加载 | 与框架深度集成 |
 | Mode 替代方案 | 独立布尔标志 | 更清晰、更灵活 |
 | 预设模式 | 预设 + 覆盖 | 兼顾易用性和灵活性 |
@@ -34,9 +37,9 @@
 config/
 ├── development/
 │   ├── system.env              # 系统基础（DITTO_ENV, TIMEZONE）
-│   ├── observability.env       # 可观测性（DITTO_OTEL_*）
-│   ├── database.env            # 数据库（DB_*）
-│   ├── data_source.env         # 数据源（无前缀）
+│   ├── observability.env       # 可观测性（无前缀（直接字段名））
+│   ├── database.env            # 数据库（SQLITE_PATH/DUCKDB_PATH）
+│   ├── data_source.env         # 数据源（HTTP_/RETRY_/RATE_LIMIT_/TUSHARE_TOKEN）
 │   ├── api.env                 # API 服务（API_*）
 │   └── performance.env         # 性能（PERF_*）
 │
@@ -47,15 +50,15 @@ config/
     └── ...（同上，值不同）
 ```
 
-**环境变量前缀规范**：
+**配置键命名示例**：
 
-| 前缀 | 功能域 | 示例 |
-|------|--------|------|
-| `DITTO_OTEL_` | 可观测性 | `DITTO_OTEL_LOG_LEVEL` |
-| `DB_` | 数据库 | `DB_POOL_SIZE` |
-| `API_` | API 服务 | `API_HOST` |
-| `PERF_` | 性能 | `PERF_CACHE_TTL` |
-| 无前缀 | 系统配置 | `DITTO_ENV`, `TIMEZONE` |
+| 配置域 | 示例键 |
+|--------|--------|
+| 可观测性 | `LOG_LEVEL`, `TRACING_ENABLED` |
+| 数据库 | `SQLITE_PATH`, `DUCKDB_PATH` |
+| 数据源 | `HTTP_BASE_URL`, `TUSHARE_TOKEN` |
+| API 服务 | `API_HOST` |
+| 系统配置 | `DITTO_ENV`, `TIMEZONE` |
 
 ---
 
@@ -156,7 +159,7 @@ class ObservabilityConfig:
 
 ---
 
-### P1-1: 更新环境变量前缀为 DITTO_OTEL_*
+### P1-1: 更新配置键命名为 无前缀（直接字段名）
 
 **文件**: `packages/foundation/src/ditto_foundation/config/settings.py`
 
@@ -164,7 +167,7 @@ class ObservabilityConfig:
 class ObservabilitySettings(BaseSettings):
     """可观测性配置"""
     model_config = SettingsConfigDict(
-        env_prefix="DITTO_OTEL_",  # 从 OBSERVABILITY_ 改为 DITTO_OTEL_
+        env_prefix="",  # 从 ??? 改为 ???
         env_file="config/development/observability.env",
         extra="ignore",
     )
@@ -208,12 +211,12 @@ DEBUG=true
 
 **config/development/observability.env**:
 ```bash
-DITTO_OTEL_LOG_LEVEL=DEBUG
-DITTO_OTEL_LOG_FORMAT=console
-DITTO_OTEL_TRACING_ENABLED=true
-DITTO_OTEL_TRACING_SAMPLE_RATE=1.0
-DITTO_OTEL_METRICS_ENABLED=true
-DITTO_OTEL_VM_ENDPOINT=http://localhost:8428/opentelemetry/v1/metrics
+LOG_LEVEL=DEBUG
+LOG_FORMAT=console
+TRACING_ENABLED=true
+TRACING_SAMPLE_RATE=1.0
+METRICS_ENABLED=true
+VM_ENDPOINT=http://localhost:8428/opentelemetry/v1/metrics
 ```
 
 ---
@@ -429,7 +432,7 @@ SystemSettings 使用 Environment
     ↓
 移除 Mode 枚举
     ↓
-更新环境变量前缀
+更新配置键命名
     ↓
 创建 config/{env}/ 目录
     ↓

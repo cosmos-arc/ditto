@@ -14,8 +14,6 @@ from ditto_foundation.config.initializer import (
     ConfigInitProvider,
     InitResult,
     InitScope,
-    get_config_coordinator,
-    reset_coordinator_for_testing,
 )
 
 # ==================== 测试辅助类 ====================
@@ -224,11 +222,11 @@ class TestConfigInitCoordinator:
 
     def setup_method(self) -> None:
         """每个测试前重置协调器状态."""
-        reset_coordinator_for_testing()
+        return None
 
     def teardown_method(self) -> None:
         """每个测试后清理协调器状态."""
-        reset_coordinator_for_testing()
+        return None
 
     def test_create_coordinator(self) -> None:
         """应该能创建协调器实例."""
@@ -482,34 +480,34 @@ class TestConfigInitCoordinator:
 # ==================== get_config_coordinator 测试 ====================
 
 
-class TestGetConfigCoordinator:
+class TestConfigCoordinatorNoSingleton:
     """get_config_coordinator() 单例测试."""
 
     def setup_method(self) -> None:
         """每个测试前重置单例状态."""
-        reset_coordinator_for_testing()
+        return None
 
     def teardown_method(self) -> None:
         """每个测试后清理单例状态."""
-        reset_coordinator_for_testing()
+        return None
 
     def test_returns_coordinator_instance(self) -> None:
         """get_config_coordinator() 应返回协调器实例."""
-        coordinator = get_config_coordinator()
+        coordinator = ConfigInitCoordinator()
 
         assert coordinator is not None
         assert isinstance(coordinator, ConfigInitCoordinator)
 
     def test_returns_singleton(self) -> None:
         """多次调用应返回同一实例."""
-        coordinator1 = get_config_coordinator()
-        coordinator2 = get_config_coordinator()
+        coordinator1 = ConfigInitCoordinator()
+        coordinator2 = ConfigInitCoordinator()
 
-        assert coordinator1 is coordinator2
+        assert coordinator1 is not coordinator2
 
     def test_singleton_persists_registrations(self) -> None:
         """在单例中注册的提供者应该持久化."""
-        coordinator1 = get_config_coordinator()
+        coordinator1 = ConfigInitCoordinator()
         provider = MockInitProvider(
             name="test",
             scope=InitScope.STARTUP,
@@ -517,16 +515,16 @@ class TestGetConfigCoordinator:
         )
         coordinator1.register(provider)
 
-        coordinator2 = get_config_coordinator()
+        coordinator2 = ConfigInitCoordinator()
 
-        assert len(coordinator2._providers) == 1
+        assert len(coordinator2._providers) == 0
 
     def test_thread_safety_of_singleton(self) -> None:
         """get_config_coordinator() 应该是线程安全的."""
         instances: list[ConfigInitCoordinator] = []
 
         def get_instance() -> None:
-            coordinator = get_config_coordinator()
+            coordinator = ConfigInitCoordinator()
             instances.append(coordinator)
 
         threads = [Thread(target=get_instance) for _ in range(10)]
@@ -536,7 +534,5 @@ class TestGetConfigCoordinator:
         for thread in threads:
             thread.join()
 
-        # [REVIEW]
-        first = instances[0]
-        for instance in instances[1:]:
-            assert instance is first
+        instance_ids = {id(instance) for instance in instances}
+        assert len(instance_ids) == len(instances)

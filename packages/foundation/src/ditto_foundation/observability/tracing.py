@@ -1,21 +1,24 @@
-"""
-追踪模块.
+"""Tracing module."""
 
-基于 OpenTelemetry 的分布式追踪实现, 支持 span 管理和 trace_id 生成.
-"""
+from __future__ import annotations
 
 import functools
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from types import TracebackType
-from typing import Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, Protocol, TypeVar, cast
 
 from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    SimpleSpanProcessor,
+)
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.sdk.trace.sampling import ParentBased, Sampler, TraceIdRatioBased
 
 from .config import ObservabilityConfig
 
@@ -23,53 +26,49 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
+class _SamplerCarrier(Protocol):
+    """承载 sampler 属性的最小协议。"""
+
+    sampler: Sampler
+
+
+def _attach_sampler(provider: TracerProvider, sampler: Sampler) -> TracerProvider:
+    carrier = cast(_SamplerCarrier, provider)
+    carrier.sampler = sampler
+    return provider
+
+
 @dataclass
 class TracingState:
-    """封装所有 tracing 全局状态."""
+    """封装 tracing 全局状态。"""
 
     tracer: trace.Tracer | None = None
     in_memory_exporter: InMemorySpanExporter | None = None
 
     def reset(self) -> None:
-        """重置所有状态."""
         self.tracer = None
         if self.in_memory_exporter:
             self.in_memory_exporter.clear()
         self.in_memory_exporter = None
 
 
-# 全局状态
 _state = TracingState()
 
 
 class SpanContext:
-    """Span 上下文管理器."""
+    """Span 上下文管理器。"""
 
     def __init__(self, name: str, **attributes: Any) -> None:
-        """
-        初始化 Span 上下文管理器.
-
-        Args:
-        ----
-            name: Span 名称
-            **attributes: Span 属性
-
-        """
         self.name = name
         self.attributes = attributes
-        self._span: Any = None  # ContextManager, 不是 Span 类型
+        self._span: Any = None
 
-    def __enter__(self) -> "SpanContext":
-        """进入上下文，启动 span."""
+    def __enter__(self) -> SpanContext:
         if _state.tracer is None:
             return self
 
-        # 使用 start_as_current_span 来正确传播 trace 上下文
-        # 返回的是 context manager
         self._span = _state.tracer.start_as_current_span(self.name)
-        # 进入 span 上下文，获取实际的 Span 对象
         actual_span = self._span.__enter__()
-        # 设置属性
         for key, value in self.attributes.items():
             actual_span.set_attribute(key, str(value))
         return self
@@ -80,81 +79,64 @@ class SpanContext:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        """退出上下文，结束 span."""
         if self._span is None:
             return
 
-        # 记录异常（如果发生）
         if exc_type is not None and exc_val is not None:
             current = trace.get_current_span()
             if current.is_recording():
                 current.record_exception(exc_val)
-        # 退出 context manager
         self._span.__exit__(exc_type, exc_val, exc_tb)
 
     def set_attribute(self, key: str, value: Any) -> None:
-        """
-        设置 Span 属性.
-
-        Args:
-        ----
-            key: 属性名
-            value: 属性值
-
-        """
         current = trace.get_current_span()
         if current.is_recording():
             current.set_attribute(key, str(value))
 
     def set_status(self, status: str) -> None:
-        """
-        设置 Span 状态.
-
-        Args:
-        ----
-            status: 状态描述
-
-        """
-        # 使用 get_current_span() 而不是 self._span
-        # 因为 self._span 是 context manager，不是 Span 对象
         current = trace.get_current_span()
         if current.is_recording():
             current.set_attribute("status", status)
 
 
 def configure_tracing(config: ObservabilityConfig) -> trace.Tracer:
-    """
-    配置 OTel Tracing.
+    """配置 OTel Tracing。"""
+    effective = config.get_effective_config()
+    resource = Resource.create({"service.name": config.service_name})
 
-    Args:
-    ----
-        config: 可观测性配置
+    if not effective.tracing_enabled:
+        provider = _attach_sampler(
+            TracerProvider(resource=resource),
+            ParentBased(TraceIdRatioBased(0.0)),
+        )
+        trace.set_tracer_provider(provider)
+        _state.tracer = trace.get_tracer(config.service_name)
+        return _state.tracer
 
-    Returns:
-    -------
-        trace.Tracer: 配置好的 Tracer 实例
-
-    """
-    # 静默模式（pytest_running 且不启用断言）：使用 NoOp Tracer
-    if config.pytest_running and not config.assertions_enabled:
+    if effective.pytest_running and not effective.assertions_enabled:
         _state.tracer = trace.get_tracer(__name__)
         return _state.tracer
 
-    # 资源定义
-    resource = Resource.create({"service.name": config.service_name})
-
-    # TESTING_WITH_ASSERTIONS：使用 InMemory Exporter
-    if config.pytest_running and config.assertions_enabled:
+    if effective.pytest_running and effective.assertions_enabled:
         _state.in_memory_exporter = InMemorySpanExporter()
-        provider = TracerProvider(resource=resource)
+        provider = _attach_sampler(
+            TracerProvider(resource=resource),
+            ParentBased(TraceIdRatioBased(effective.tracing_sample_rate)),
+        )
         provider.add_span_processor(SimpleSpanProcessor(_state.in_memory_exporter))
-        # 直接从 provider 获取 tracer，不设置全局 provider
         tracer = provider.get_tracer(__name__)
         _state.tracer = tracer
         return tracer
 
-    # PRODUCTION / DEVELOPMENT：标准 TracerProvider
-    provider = TracerProvider(resource=resource)
+    provider = _attach_sampler(
+        TracerProvider(resource=resource),
+        ParentBased(TraceIdRatioBased(effective.tracing_sample_rate)),
+    )
+
+    if effective.tracing_exporter == "otlp":
+        exporter = OTLPSpanExporter()
+        provider.add_span_processor(BatchSpanProcessor(exporter))
+
     trace.set_tracer_provider(provider)
     _state.tracer = trace.get_tracer(config.service_name)
 
@@ -162,35 +144,12 @@ def configure_tracing(config: ObservabilityConfig) -> trace.Tracer:
 
 
 def span(name: str, **attributes: Any) -> SpanContext:
-    """
-    创建 Span 上下文管理器.
-
-    Args:
-    ----
-        name: Span 名称
-        **attributes: Span 属性
-
-    Returns:
-    -------
-        SpanContext: Span 上下文管理器
-
-    """
+    """创建 Span 上下文管理器。"""
     return SpanContext(name, **attributes)
 
 
 def traced(operation: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    """
-    装饰器：自动创建 Span.
-
-    Args:
-    ----
-        operation: 操作名称（用作 Span 名称）
-
-    Returns:
-    -------
-        装饰器函数
-
-    """
+    """为函数添加 tracing 装饰器。"""
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @functools.wraps(func)
@@ -204,14 +163,7 @@ def traced(operation: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
 
 
 def get_trace_id() -> str:
-    """
-    获取当前 trace_id（UUID 格式字符串）.
-
-    Returns
-    -------
-        str: UUID 格式的 trace_id，如果无效则返回空字符串
-
-    """
+    """获取当前 Trace ID（无则返回空字符串）。"""
     if _state.tracer is None:
         return ""
 
@@ -223,14 +175,7 @@ def get_trace_id() -> str:
 
 
 def get_span_id() -> str:
-    """
-    获取当前 span_id（16位十六进制）.
-
-    Returns
-    -------
-        str: 16位十六进制 span_id，如果无效则返回空字符串
-
-    """
+    """获取当前 Span ID（无则返回空字符串）。"""
     if _state.tracer is None:
         return ""
 
@@ -242,17 +187,21 @@ def get_span_id() -> str:
 
 
 def reset_tracing() -> None:
-    """重置 Tracing 状态（用于测试）."""
+    """重置 tracing 状态。"""
     _state.reset()
 
 
 def get_in_memory_exporter() -> InMemorySpanExporter | None:
-    """
-    获取 InMemory Exporter（测试用）.
-
-    Returns
-    -------
-        InMemorySpanExporter | None: 当前的 InMemory Exporter 实例
-
-    """
+    """获取内存 span exporter（用于测试）。"""
     return _state.in_memory_exporter
+
+
+__all__ = [
+    "configure_tracing",
+    "get_in_memory_exporter",
+    "get_span_id",
+    "get_trace_id",
+    "reset_tracing",
+    "span",
+    "traced",
+]

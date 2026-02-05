@@ -1,5 +1,8 @@
 # Foundation 层配置代码清理 + 架构依赖修复计划
 
+> 注：本文档为历史归档，配置项已统一为无前缀键名 + config/{env}/*.env，仅在 apps/port 读取；文中提及的环境变量/前缀请视为配置键名示例。
+
+
 ## 一、分析总结（基于 LSP + 代码探索）
 
 ### 1.1 LSP 分析结果
@@ -238,7 +241,7 @@ class DataSourceSettings(BaseSettings):
     """数据源配置."""
 
     model_config = SettingsConfigDict(
-        env_prefix="DATASOURCE_",
+        env_prefix="",
         extra="ignore",
     )
 
@@ -494,22 +497,22 @@ def tushare_source(
 
 ```bash
 # HTTP 配置
-DATASOURCE_HTTP_BASE_URL=http://api.tushare.pro
-DATASOURCE_HTTP_TIMEOUT=30.0
+HTTP_BASE_URL=http://api.tushare.pro
+HTTP_TIMEOUT=30.0
 
 # 重试配置
-DATASOURCE_RETRY_MAX_ATTEMPTS=3
-DATASOURCE_RETRY_MULTIPLIER=1.0
-DATASOURCE_RETRY_MIN_WAIT=1.0
-DATASOURCE_RETRY_MAX_WAIT=10.0
+RETRY_MAX_ATTEMPTS=3
+RETRY_MULTIPLIER=1.0
+RETRY_MIN_WAIT=1.0
+RETRY_MAX_WAIT=10.0
 
 # 限流配置
-DATASOURCE_RATE_LIMIT_PROFILE=free
-# DATASOURCE_RATE_LIMIT_GLOBAL_RATE=200
-# DATASOURCE_RATE_LIMIT_DAILY_RATE=1000
+RATE_LIMIT_PROFILE=free
+# RATE_LIMIT_GLOBAL_RATE=200
+# RATE_LIMIT_DAILY_RATE=1000
 
 # Token（优先使用 keyring）
-# DATASOURCE_TUSHARE_TOKEN=your_token_here
+# TUSHARE_TOKEN=your_token_here
 ```
 
 ### 7.2 创建 config/development/file_storage.env
@@ -562,7 +565,7 @@ class SystemSettings(BaseSettings):
 class ObservabilitySettings(BaseSettings):
     """可观测性配置（Foundation 层）."""
 
-    model_config = SettingsConfigDict(env_prefix="DITTO_OTEL_")
+    model_config = SettingsConfigDict(env_prefix="")
 
     log_level: str = Field(default="INFO")
     vm_endpoint: str = Field(

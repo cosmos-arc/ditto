@@ -1,9 +1,4 @@
-"""
-配置 Provider（Composition Root）.
-
-所有配置通过 DI 容器注入，在应用层（port）统一管理配置加载。
-Foundation 层只提供基础设施（Environment、ConfigLoader、Settings 类）。
-"""
+"""配置 Provider（Composition Root）。"""
 
 from __future__ import annotations
 
@@ -15,85 +10,132 @@ from dishka import Provider, Scope, provide
 from ditto_core.quality.config import DQSettings
 from ditto_datahub.config import (
     DatabaseSettings,
+    DataRootConfig,
     DataSourceSettings,
     FileStorageSettings,
 )
-from ditto_foundation.config import (
-    ConfigLoader,
-    Environment,
-)
-from ditto_foundation.config.paths import get_paths
+from ditto_foundation.config import ConfigInitCoordinator, ConfigLoader, Environment
 from ditto_foundation.config.settings import (
+    ObservabilitySettings,
     Settings,
+    SystemSettings,
 )
+from ditto_foundation.notification import NotificationSettings
 from ditto_foundation.observability import init, shutdown
 from ditto_foundation.observability.config import ObservabilityConfig
-from dotenv import dotenv_values
+
+from ditto_port.config import load_env_file
 
 __all__ = ["ConfigProvider"]
 
 
+def _detect_runtime_flags(environment: Environment) -> dict[str, bool]:
+    pytest_running = "PYTEST_CURRENT_TEST" in os.environ
+
+    if environment == Environment.TESTING:
+        return {
+            "pytest_running": pytest_running,
+            "assertions_enabled": True,
+            "verbose_logging": False,
+        }
+    if environment == Environment.PRODUCTION:
+        return {
+            "pytest_running": pytest_running,
+            "assertions_enabled": False,
+            "verbose_logging": False,
+        }
+    return {
+        "pytest_running": pytest_running,
+        "assertions_enabled": True,
+        "verbose_logging": True,
+    }
+
+
 class ConfigProvider(Provider):
-    """
-    统一配置提供者（Composition Root）.
+    """统一配置提供者（仅在 Port 层加载配置）。"""
 
-    职责：
-        1. 根据环境创建 ConfigLoader
-        2. 从 config/{env}/*.env 加载所有配置
-        3. 提供统一的配置访问接口
-        4. 注入环境信息到各个配置
-
-    架构分层：
-        Foundation: Settings 类定义（不依赖 DI）
-        DataHub: 数据相关配置
-        Port (这里): ConfigProvider 组装所有配置
-    """
-
-    scope = Scope.APP  # 应用级单例
+    scope = Scope.APP
 
     @provide
     def environment(self) -> Environment:
-        """
-        运行时环境（应用级单例）.
-
-        从 DITTO_ENV 环境变量读取，默认为 development.
-        """
-        env_str = os.getenv("DITTO_ENV", "development")
+        """提供运行环境枚举。"""
+        env_str = os.getenv("ENVIRONMENT", "development")
         return Environment.from_str(env_str)
 
     @provide
     def config_loader(self, environment: Environment) -> ConfigLoader:
-        """配置加载器（应用级单例）."""
+        """提供配置文件加载器。"""
         return ConfigLoader(environment)
 
     @provide
-    def data_root(self) -> Path:
-        """数据根目录."""
-        return get_paths().data_home
+    def init_coordinator(self) -> ConfigInitCoordinator:
+        """提供配置初始化协调器。"""
+        return ConfigInitCoordinator()
 
     @provide
     def settings(
         self,
         config_loader: ConfigLoader,
+        environment: Environment,
     ) -> Settings:
-        """
-        主配置 Settings（应用级单例）.
+        """加载系统与观测配置。"""
+        system_values = load_env_file(config_loader, "system")
+        system = SystemSettings.model_validate(system_values)
+        system = system.model_copy(update={"environment": environment})
 
-        从 env 文件加载配置，保持配置加载逻辑统一。
-        注：database/data_source 已迁移到 DataHub 层，由独立 provider 加载。
-        """
-        # 只加载 Settings 类实际包含的配置
-        observability_values = dotenv_values(
-            config_loader.get_env_file("observability")
+        observability_values = load_env_file(config_loader, "observability")
+        observability = ObservabilitySettings.model_validate(observability_values)
+
+        return Settings(system=system, observability=observability)
+
+    @provide
+    def data_root_config(self, config_loader: ConfigLoader) -> DataRootConfig:
+        """加载数据根目录配置。"""
+        data_store_values = load_env_file(config_loader, "data_store")
+        return DataRootConfig.model_validate(data_store_values)
+
+    @provide
+    def data_root(self, data_root_config: DataRootConfig) -> Path:
+        """提供数据根目录路径。"""
+        return data_root_config.data_root
+
+    @provide
+    def database_settings(
+        self,
+        config_loader: ConfigLoader,
+        data_root_config: DataRootConfig,
+    ) -> DatabaseSettings:
+        """加载数据库配置并补齐默认路径。"""
+        database_values = load_env_file(config_loader, "database")
+        base = DatabaseSettings.model_validate(database_values)
+
+        sqlite_path = base.sqlite_path or data_root_config.metadata_db_path
+        duckdb_path = base.duckdb_path or (
+            data_root_config.db_path / "duckdb/ditto.duckdb"
         )
-        system_values = dotenv_values(config_loader.get_env_file("system"))
 
-        # 使用 model_validate 创建配置实例
-        return Settings.model_validate(
-            {
-                "observability": observability_values,
-                "system": system_values,
-            }
+        return DatabaseSettings(
+            sqlite_path=sqlite_path,
+            duckdb_path=duckdb_path,
+        )
+
+    @provide
+    def data_source_settings(self, config_loader: ConfigLoader) -> DataSourceSettings:
+        """加载数据源配置。"""
+        data_source_values = load_env_file(config_loader, "data_source")
+        return DataSourceSettings.model_validate(data_source_values)
+
+    @provide
+    def file_storage_settings(
+        self,
+        data_root_config: DataRootConfig,
+    ) -> FileStorageSettings:
+        """派生文件存储路径配置。"""
+        return FileStorageSettings(
+            data_root=data_root_config.data_root,
+            log_root=data_root_config.logs_path,
+            backup_root=data_root_config.backups_path,
+            temp_root=data_root_config.temp_path,
         )
 
     @provide
@@ -102,91 +144,53 @@ class ConfigProvider(Provider):
         config_loader: ConfigLoader,
         environment: Environment,
     ) -> DQSettings:
-        """
-        DQ 配置（应用级单例）.
-
-        ✅ 统一规则：从 config/{env}/dq.env 加载
-        ✅ 注入环境信息，DQSettings 无需内部读取 get_settings()
-        """
-        dq_values = dotenv_values(config_loader.get_env_file("dq"))
-        # 注入环境信息
-        return DQSettings.model_validate(
-            {
-                **dq_values,
-                "env": environment.value,  # 注入环境
-            }
-        )
+        """加载 DQ 配置并注入环境。"""
+        dq_values = load_env_file(config_loader, "dq")
+        settings = DQSettings.model_validate(dq_values)
+        return settings.model_copy(update={"environment": environment.value})
 
     @provide
-    def database_settings(
+    def notification_settings(
         self,
         config_loader: ConfigLoader,
-    ) -> DatabaseSettings:
-        """
-        Database 配置（应用级单例）.
-
-        ✅ 统一规则：从 config/{env}/database.env 加载
-        ✅ DataHub 层配置：通过 DI 容器注入，与 Foundation 解耦
-        """
-        database_values = dotenv_values(config_loader.get_env_file("database"))
-        return DatabaseSettings.model_validate(database_values)
+    ) -> NotificationSettings:
+        """加载通知配置。"""
+        values = load_env_file(config_loader, "notification")
+        return NotificationSettings.model_validate(values)
 
     @provide
-    def data_source_settings(
-        self,
-        config_loader: ConfigLoader,
-    ) -> DataSourceSettings:
-        """
-        DataSource 配置（应用级单例）.
-
-        ✅ 统一规则：从 config/{env}/data_source.env 加载
-        ✅ DataHub 层配置：通过 DI 容器注入，与 Foundation 解耦
-        """
-        data_source_values = dotenv_values(config_loader.get_env_file("data_source"))
-        return DataSourceSettings.model_validate(data_source_values)
-
-    @provide
-    def file_storage_settings(
-        self,
-        config_loader: ConfigLoader,
-    ) -> FileStorageSettings:
-        """
-        FileStorage 配置（应用级单例）.
-
-        ✅ 统一规则：从 config/{env}/system.env 加载（共用 system.env）
-        ✅ DataHub 层配置：通过 DI 容器注入，与 Foundation 解耦
-        """
-        system_values = dotenv_values(config_loader.get_env_file("system"))
-        return FileStorageSettings.model_validate(system_values)
-
-    @provide
-    def observability(
+    def observability_config(
         self,
         settings: Settings,
-    ) -> Iterator[None]:
-        """
-        Observability 初始化（应用级单例）.
+        data_root_config: DataRootConfig,
+    ) -> ObservabilityConfig:
+        """构建观测配置对象。"""
+        obs = settings.observability
+        env = settings.system.environment
+        flags = _detect_runtime_flags(env)
 
-        生命周期：容器启动时初始化，容器关闭时调用 shutdown().
-        """
-        config = settings.observability
-        ditto_env = settings.system.ditto_env
-
-        # 动态检测运行时标志（pytest、assertions、verbose）
-        runtime_flags = ObservabilityConfig.detect_runtime_flags(ditto_env)
-
-        init(
+        return ObservabilityConfig(
             service_name="ditto-server",
-            environment=ditto_env.value,
-            log_level=config.log_level,
-            log_dir="logs",
-            vm_endpoint=config.vm_endpoint,
-            pytest_running=runtime_flags["pytest_running"],
-            assertions_enabled=runtime_flags["assertions_enabled"],
-            verbose_logging=runtime_flags["verbose_logging"],
+            environment=env,
+            log_dir=str(data_root_config.logs_path),
+            log_level=obs.log_level,
+            log_format=obs.log_format,
+            log_to_console=obs.log_to_console,
+            log_to_file=obs.log_to_file,
+            tracing_enabled=obs.tracing_enabled,
+            tracing_exporter=obs.tracing_exporter,
+            tracing_sample_rate=obs.tracing_sample_rate,
+            metrics_enabled=obs.metrics_enabled,
+            metrics_exporter=obs.metrics_exporter,
+            vm_endpoint=obs.vm_endpoint,
+            pytest_running=flags["pytest_running"],
+            assertions_enabled=flags["assertions_enabled"],
+            verbose_logging=flags["verbose_logging"],
         )
 
+    @provide
+    def observability(self, config: ObservabilityConfig) -> Iterator[None]:
+        """初始化并在生命周期结束时关闭观测系统。"""
+        init(config)
         yield
-
-        # 容器关闭时调用 shutdown
         shutdown()

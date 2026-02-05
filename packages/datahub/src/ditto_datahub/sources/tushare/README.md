@@ -10,26 +10,19 @@
 
 ### 1. Token 配置
 
-Tushare API 需要 Token 认证。支持三种配置方式（按优先级排序）：
+Tushare Token 通过上层配置注入，推荐在 `config/{env}/data_source.env` 中配置，并由 Port 层加载后构造 `DataSourceSettings`。
 
-#### 方式 1: Secrets.toml（推荐）
-
-```toml
-# ~/.ditto/secrets.toml
-TUSHARE_TOKEN = "your_token_here"
+```env
+# config/{env}/data_source.env
+TUSHARE_TOKEN=your_token_here
 ```
 
-#### 方式 2: Keyring
+如果在应用外部直接使用，可显式构造配置：
 
-```bash
-# 使用 keyring 存储
-keyring set ditto tushare_token
-```
+```python
+from ditto_datahub.config import DataSourceSettings
 
-#### 方式 3: 环境变量
-
-```bash
-export TUSHARE_TOKEN=your_token_here
+settings = DataSourceSettings(tushare_token="your_token_here")
 ```
 
 ### 2. 基本使用

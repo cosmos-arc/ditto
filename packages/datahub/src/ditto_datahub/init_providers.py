@@ -10,10 +10,10 @@ from pathlib import Path
 
 from ditto_foundation import SQLitePool, logger
 from ditto_foundation.config.initializer import (
+    ConfigInitCoordinator,
     ConfigInitProvider,
     InitResult,
     InitScope,
-    get_config_coordinator,
 )
 
 
@@ -109,7 +109,7 @@ class DatabaseSchemaProvider(ConfigInitProvider):
             )
 
 
-def register_datahub_providers() -> None:
+def register_datahub_providers(coordinator: ConfigInitCoordinator) -> None:
     """
     注册 DataHub 配置初始化提供者到全局协调器.
 
@@ -117,7 +117,6 @@ def register_datahub_providers() -> None:
 
     Note: DQ 配置初始化已移到 Core 包或应用层(Port)。
     """
-    coordinator = get_config_coordinator()
     coordinator.register(DatabaseSchemaProvider())
 
     logger.debug(

@@ -10,12 +10,29 @@
     - 网络连接正常
 """
 
+import os
 from datetime import date
 
 import polars as pl
 import pytest
+from ditto_datahub.config import DataSourceSettings
+from ditto_datahub.sources.schemas import (
+    ADJ_FACTOR_SOURCE_SCHEMA,
+    ETF_DAILY_SOURCE_SCHEMA,
+    FUND_ADJ_SOURCE_SCHEMA,
+    STOCK_DAILY_SOURCE_SCHEMA,
+    STOCK_LIMIT_SOURCE_SCHEMA,
+    STOCK_STATUS_SOURCE_SCHEMA,
+)
 from ditto_datahub.sources.source_schema import SourceSchema
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
+
+
+def _settings_from_env() -> DataSourceSettings:
+    token = os.environ.get("TUSHARE_TOKEN", "")
+    if not token:
+        pytest.skip("TUSHARE_TOKEN is required for integration tests")
+    return DataSourceSettings(tushare_token=token)
 
 
 @pytest.mark.integration
@@ -35,7 +52,7 @@ class TestSourceSchemaWithRealAPI:
         )
 
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         calendar = source.fetch_calendar("2024-01-01", "2024-01-05")
 
         # 验证 Schema
@@ -62,7 +79,7 @@ class TestSourceSchemaWithRealAPI:
         )
 
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         stocks = source.fetch_stock_basic()
 
         # 验证 Schema
@@ -80,30 +97,12 @@ class TestSourceSchemaWithRealAPI:
 
     def test_stock_daily_schema_with_real_data(self) -> None:
         """测试日线行情数据的 SourceSchema 验证"""
-        # 定义日线行情的 SourceSchema
-        daily_schema = SourceSchema(
-            dataset="stock_daily",
-            key_columns=("src_code", "trade_date"),
-            schema={
-                "src_code": pl.String,
-                "trade_date": pl.Date,
-                "open": pl.Float64,
-                "high": pl.Float64,
-                "low": pl.Float64,
-                "close": pl.Float64,
-                "pre_close": pl.Float64,
-                "volume": pl.Float64,
-                "amount": pl.Float64,
-                "pct_change": pl.Float64,
-            },
-        )
-
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         daily = source.fetch_stock_daily("2024-01-02")
 
-        # 验证 Schema
-        daily_schema.validate(daily)
+        # 使用正式定义的 Schema 验证
+        STOCK_DAILY_SOURCE_SCHEMA.validate(daily)
 
         # 额外验证
         assert daily.height > 0, "Daily 数据不应为空"
@@ -144,7 +143,7 @@ class TestSourceSchemaWithRealAPI:
         )
 
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         etf_basic = source.fetch_etf_basic()
 
         # 验证 Schema
@@ -162,54 +161,24 @@ class TestSourceSchemaWithRealAPI:
 
     def test_etf_daily_schema_with_real_data(self) -> None:
         """测试 ETF 日线行情的 SourceSchema 验证"""
-        # 定义 ETF 日线行情的 SourceSchema
-        etf_daily_schema = SourceSchema(
-            dataset="etf_daily",
-            key_columns=("src_code", "trade_date"),
-            schema={
-                "src_code": pl.String,
-                "trade_date": pl.Date,
-                "open": pl.Float64,
-                "high": pl.Float64,
-                "low": pl.Float64,
-                "close": pl.Float64,
-                "pre_close": pl.Float64,
-                "volume": pl.Float64,
-                "amount": pl.Float64,
-                "pct_change": pl.Float64,
-            },
-        )
-
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         etf_daily = source.fetch_etf_daily("2024-01-02")
 
-        # 验证 Schema
-        etf_daily_schema.validate(etf_daily)
+        # 使用正式定义的 Schema 验证
+        ETF_DAILY_SOURCE_SCHEMA.validate(etf_daily)
 
         # 额外验证
         assert etf_daily.height > 0, "ETF daily 数据不应为空"
 
     def test_adj_factor_schema_with_real_data(self) -> None:
         """测试复权因子的 SourceSchema 验证"""
-        # 定义复权因子的 SourceSchema（带 knowledge_date）
-        adj_factor_schema = SourceSchema(
-            dataset="adj_factor",
-            key_columns=("src_code", "trade_date"),
-            schema={
-                "src_code": pl.String,
-                "trade_date": pl.Date,
-                "knowledge_date": pl.Date,
-                "adj_factor": pl.Float64,
-            },
-        )
-
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         adj_factor = source.fetch_adj_factor("2024-01-02")
 
-        # 验证 Schema
-        adj_factor_schema.validate(adj_factor)
+        # 使用正式定义的 Schema 验证
+        ADJ_FACTOR_SOURCE_SCHEMA.validate(adj_factor)
 
         # 额外验证
         assert adj_factor.height > 0, "Adj factor 数据不应为空"
@@ -222,24 +191,12 @@ class TestSourceSchemaWithRealAPI:
 
     def test_stock_limit_schema_with_real_data(self) -> None:
         """测试涨跌停价的 SourceSchema 验证"""
-        # 定义涨跌停价的 SourceSchema
-        stock_limit_schema = SourceSchema(
-            dataset="stock_limit",
-            key_columns=("src_code", "trade_date"),
-            schema={
-                "src_code": pl.String,
-                "trade_date": pl.Date,
-                "up_limit": pl.Float64,
-                "down_limit": pl.Float64,
-            },
-        )
-
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         stock_limit = source.fetch_stock_limit("2024-01-02")
 
-        # 验证 Schema
-        stock_limit_schema.validate(stock_limit)
+        # 使用正式定义的 Schema 验证
+        STOCK_LIMIT_SOURCE_SCHEMA.validate(stock_limit)
 
         # 额外验证
         assert stock_limit.height > 0, "Stock limit 数据不应为空"
@@ -256,27 +213,12 @@ class TestSourceSchemaWithRealAPI:
         注意：stock_status 数据源可能包含重复的主键（同一股票同一天多条状态记录），
         这是 Tushare API 的实际行为。因此这里只验证列的存在性和类型，不验证主键唯一性。
         """
-        # 定义股票状态的 SourceSchema（不设置主键，允许重复）
-        stock_status_schema = SourceSchema(
-            dataset="stock_status",
-            key_columns=(),  # 空主键，不验证唯一性
-            schema={
-                "src_code": pl.String,
-                "trade_date": pl.Date,
-                "is_suspended": pl.Boolean,
-                "suspend_timing": pl.String,
-                "is_st": pl.Boolean,
-                "st_type": pl.String,
-                "list_status": pl.String,
-            },
-        )
-
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         stock_status = source.fetch_stock_status("2024-01-02")
 
-        # 验证 Schema
-        stock_status_schema.validate(stock_status)
+        # 使用正式定义的 Schema 验证（允许重复主键）
+        STOCK_STATUS_SOURCE_SCHEMA.validate(stock_status)
 
         # 额外验证
         assert stock_status.height > 0, "Stock status 数据不应为空"
@@ -289,24 +231,12 @@ class TestSourceSchemaWithRealAPI:
 
     def test_fund_adj_schema_with_real_data(self) -> None:
         """测试基金复权因子的 SourceSchema 验证"""
-        # 定义基金复权因子的 SourceSchema
-        fund_adj_schema = SourceSchema(
-            dataset="fund_adj",
-            key_columns=("src_code", "trade_date"),
-            schema={
-                "src_code": pl.String,
-                "trade_date": pl.Date,
-                "knowledge_date": pl.Date,
-                "adj_factor": pl.Float64,
-            },
-        )
-
         # 获取真实数据
-        source = TushareSource()
+        source = TushareSource(settings=_settings_from_env())
         fund_adj = source.fetch_fund_adj("2024-01-02")
 
-        # 验证 Schema
-        fund_adj_schema.validate(fund_adj)
+        # 使用正式定义的 Schema 验证
+        FUND_ADJ_SOURCE_SCHEMA.validate(fund_adj)
 
         # 额外验证
         assert fund_adj.height > 0, "Fund adj 数据不应为空"

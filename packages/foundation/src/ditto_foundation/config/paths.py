@@ -484,30 +484,6 @@ class XDGPaths:
         return f"XDGPaths(data={self.data_home})"
 
 
-class _PathsRegistry:
-    """
-    Registry for managing XDGPaths singleton.
-
-    Uses class-level attributes to store singleton state, eliminating
-    the need for global statements while maintaining the same API.
-    """
-
-    instance: XDGPaths | None = None
-
-    @classmethod
-    def get_instance(cls) -> XDGPaths:
-        """Get or create the singleton XDGPaths instance."""
-        if cls.instance is None:
-            cls.instance = XDGPaths()
-            cls.instance.ensure_all()
-        return cls.instance
-
-    @classmethod
-    def reset(cls) -> None:
-        """Reset the singleton instance (for testing purposes)."""
-        cls.instance = None
-
-
 def get_paths() -> XDGPaths:
     """
     获取全局路径管理器实例.
@@ -518,7 +494,8 @@ def get_paths() -> XDGPaths:
         XDGPaths: 路径管理器实例.
 
     """
-    return _PathsRegistry.get_instance()
+    msg = "get_paths() 已移除, 全局单例不再支持, 请通过 DI 注入 XDGPaths."
+    raise RuntimeError(msg)
 
 
 def reload_paths() -> XDGPaths:
@@ -529,8 +506,8 @@ def reload_paths() -> XDGPaths:
         XDGPaths: 新的路径管理器实例.
 
     """
-    _PathsRegistry.reset()
-    return get_paths()
+    msg = "reload_paths() 已移除, 全局单例不再支持, 请通过 DI 注入 XDGPaths."
+    raise RuntimeError(msg)
 
 
 def reset_paths_for_testing() -> None:
@@ -539,4 +516,5 @@ def reset_paths_for_testing() -> None:
 
     This function allows tests to reset the global state between test runs.
     """
-    _PathsRegistry.reset()
+    msg = "reset_paths_for_testing() 已移除, 全局单例不再支持, 请通过 DI 注入 XDGPaths."
+    raise RuntimeError(msg)

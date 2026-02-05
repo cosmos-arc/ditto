@@ -2,7 +2,9 @@
 
 import pytest
 from ditto_core.quality.spec import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_foundation.config.environment import Environment
 from ditto_foundation.observability import init, reset_for_testing
+from ditto_foundation.observability.config import ObservabilityConfig
 from ditto_port.jobs.tasks.monitoring import monitor_ingestion_quality
 
 
@@ -10,12 +12,16 @@ from ditto_port.jobs.tasks.monitoring import monitor_ingestion_quality
 def setup_observability():
     """Initialize observability for metrics testing."""
     reset_for_testing()
-    init(
+    config = ObservabilityConfig(
+        environment=Environment.TESTING,
         pytest_running=True,
         assertions_enabled=True,
         verbose_logging=False,
-        force=True,
+        tracing_enabled=True,
+        tracing_sample_rate=1.0,
+        metrics_enabled=True,
     )
+    init(config, force=True)
     yield
     reset_for_testing()
 
