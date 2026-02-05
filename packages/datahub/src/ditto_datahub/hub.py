@@ -10,24 +10,22 @@ import polars as pl
 from ditto_foundation import SQLitePool, logger
 from ditto_foundation.concurrency import FileLockManager
 
-from ditto_datahub.accessors.adj_factor_accessor import AdjFactorAccessor
-from ditto_datahub.accessors.bars_accessor import AdjType, BarsAccessor, BarsQuery
-from ditto_datahub.accessors.calendar_accessor import CalendarAccessor
-from ditto_datahub.accessors.index_accessor import IndexAccessor
-from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
 from ditto_datahub.accessors.instrument_accessor import InstrumentsAccessor
-from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
-from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.domains.capital import CapitalService
 from ditto_datahub.domains.factors import FactorService
 from ditto_datahub.domains.features import FeatureService
 from ditto_datahub.domains.fundamental import FundamentalService
 from ditto_datahub.domains.macro import MacroService
-from ditto_datahub.domains.market import MarketService
+from ditto_datahub.domains.market import (
+    AdjType,
+    MarketBarsQuery,
+    MarketService,
+)
 from ditto_datahub.domains.metadata import MetadataService
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.runtime.freeze_manager import FreezeManager
+from ditto_datahub.runtime.ingestion import IngestionLogStore
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
@@ -143,21 +141,15 @@ class DataHub:
         macro_query_service: MacroService,
         features_query_service: FeatureService,
         factors_query_service: FactorService,
-        calendar: CalendarAccessor,
-        adj_factor: AdjFactorAccessor,
-        bars: BarsAccessor,
-        universe: UniverseAccessor,
-        index: IndexAccessor,
-        ingestion_log: IngestionLogAccessor,
-        quarantine: QuarantineAccessor,
+        ingestion_log_store: IngestionLogStore,
         sources: DataSources,
         sql_engine: SqlEngine,
     ) -> None:
         """
         Initialize DataHub with all dependencies injected.
 
-        All components are created by the dishka container and passed in.
-        This eliminates lazy loading and makes dependencies explicit.
+        所有组件由 dishka 容器创建并传入。
+        移除了 Accessor 层，直接使用 Domain Services。
 
         Args:
             data_root: Data root directory path.
@@ -174,13 +166,7 @@ class DataHub:
             macro_query_service: Macro query service.
             features_query_service: Features query service.
             factors_query_service: Factors query service.
-            calendar: Trading calendar accessor.
-            adj_factor: Adjustment factor accessor.
-            bars: OHLCV bars accessor.
-            universe: 证券域访问器。
-            index: Index data accessor.
-            ingestion_log: Ingestion log accessor.
-            quarantine: Quarantine accessor for DQ failed data.
+            ingestion_log_store: Ingestion log store.
             sources: External data sources.
             sql_engine: DuckDB SQL engine.
 
@@ -199,21 +185,40 @@ class DataHub:
         self.macro = macro_query_service
         self.features = features_query_service
         self.factors = factors_query_service
-        self.calendar = calendar
-        self.adj_factor = adj_factor
-        self.bars = bars
-        self.universe = universe
-        self.index = index
-        self.ingestion_log = ingestion_log
-        self.quarantine = quarantine
         self.sources = sources
         self.sql_engine = sql_engine
+
+        # 向后兼容属性
+        self._calendar = metadata_query_service
+        self._universe = metadata_query_service
+        self._index = market_query_service
+        self._ingestion_log = ingestion_log_store
 
         logger.debug(
             "DataHub initialized",
             event="datahub_init",
             data_root=str(self.data_root),
         )
+
+    @property
+    def calendar(self) -> MetadataService:
+        """向后兼容：calendar -> metadata."""
+        return self._calendar
+
+    @property
+    def universe(self) -> MetadataService:
+        """向后兼容：universe -> metadata."""
+        return self._universe
+
+    @property
+    def index(self) -> MarketService:
+        """向后兼容：index -> market."""
+        return self._index
+
+    @property
+    def ingestion_log(self) -> IngestionLogStore:
+        """向后兼容：ingestion_log -> ingestion_log_store."""
+        return self._ingestion_log
 
     # ========================================================================
     # Convenience Methods
@@ -308,8 +313,8 @@ class DataHub:
             List of trading dates.
 
         """
-        df = self.calendar.get(start, end, only_open)
-        return df["trade_date"].to_list()
+        # 直接使用 MetadataService.get_trading_days()
+        return self.calendar.get_trading_days(start, end, only_open)
 
     def is_trading_day(self, date: str) -> bool:
         """
@@ -472,7 +477,7 @@ class DataHub:
             return pl.DataFrame()
 
         # 构造查询对象
-        query = BarsQuery(
+        query = MarketBarsQuery(
             sids=resolved_sids,
             start=params.start,
             end=params.end,
@@ -484,7 +489,7 @@ class DataHub:
             raw=params.raw,
         )
 
-        return self.bars.get(query)
+        return self.market.get_bars(query)
 
     def get_securities(self, params: SecuritiesQuerySpec) -> pl.DataFrame:
         """
@@ -560,11 +565,13 @@ class DataHub:
         if not resolved_sids:
             return pl.DataFrame()
 
-        return self.index.get_bars(
+        # 使用 MarketService.get_bars()
+        query = MarketBarsQuery(
             sids=resolved_sids,
             start=start,
             end=end,
         )
+        return self.index.get_bars(query)
 
     def write_adj_factor(
         self,

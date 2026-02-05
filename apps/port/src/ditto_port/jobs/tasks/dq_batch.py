@@ -3,7 +3,7 @@
 from typing import Any, Literal
 
 from ditto_core.quality.spec import DQIssue
-from ditto_datahub.accessors import BarsQuery
+from ditto_datahub.domains.market import MarketBarsQuery
 from ditto_foundation import M, logger
 from prefect import task
 
@@ -223,12 +223,12 @@ def dq_completeness_check(
     """
     with create_datahub_context() as hub:
         # 读取实际数据
-        query = BarsQuery(
+        query = MarketBarsQuery(
             start=trade_date,
             end=trade_date,
             market_wide=market_wide,
         )
-        df = hub.bars.get(query=query)
+        df = hub.market.get_bars(query=query)
 
         actual_sids = df["sid"].unique().to_list() if not df.is_empty() else []
 

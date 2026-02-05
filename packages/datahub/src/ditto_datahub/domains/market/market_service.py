@@ -47,7 +47,7 @@ class MarketBarsQuery:
     Market K线查询参数.
 
     Attributes:
-        sids: SID 列表.
+        sids: SID 列表（为 None 时配合 market_wide=True 获取全市场数据）.
         start: 开始日期 (YYYY-MM-DD).
         end: 结束日期 (YYYY-MM-DD).
         adj: 复权类型（仅对 stock 数据有效，etf/index 数据不支持复权）.
@@ -56,6 +56,7 @@ class MarketBarsQuery:
         with_symbol: 是否在结果中添加 symbol 列.
         with_status: 是否添加股票状态信息（仅对股票数据有效）.
         raw: 是否跳过复权和状态增强.
+        market_wide: 全市场查询模式。为 True 且 sids 为空时获取所有活跃证券.
 
     Note:
         - 复权功能 (adj) 仅支持股票数据，对 ETF 和 Index 数据无效
@@ -64,10 +65,12 @@ class MarketBarsQuery:
     Examples:
         >>> query = MarketBarsQuery(sids=[1, 2, 3], start="2024-01-01")
         >>> service.get_bars(query)
+        >>> query = MarketBarsQuery(market_wide=True, asset_class="stock")
+        >>> service.get_bars(query)
 
     """
 
-    sids: list[int]
+    sids: list[int] | None = None
     start: str | None = None
     end: str | None = None
     adj: AdjType = AdjType.NONE
@@ -76,6 +79,7 @@ class MarketBarsQuery:
     with_symbol: bool = False
     with_status: bool = False
     raw: bool = False
+    market_wide: bool = False
 
 
 class MarketService:
@@ -160,8 +164,8 @@ class MarketService:
         # 1. 解析 SID 列表和资产类别
         sids, asset_class = self._resolve_sids_and_asset_class(query)
 
-        # 空 SID 列表返回空 DataFrame
-        if not sids:
+        # 空 SID 列表返回空 DataFrame（非 market_wide 模式）
+        if not query.market_wide and not sids:
             return pl.DataFrame()
 
         # 2. 解析日期参数（字符串 -> date 对象）
@@ -377,9 +381,19 @@ class MarketService:
             ValueError: 如果显式指定的 asset_class 与从 SID 检测出的不一致.
 
         """
-        if not query.sids:
+        if query.market_wide:
+            # 全市场模式：获取所有活跃 SID
+            asset_class = query.asset_class
+            sids = sorted(self._instrument_store.list_sids(asset_class=asset_class))
+            if not asset_class:
+                asset_class = (
+                    self._detect_asset_class_from_sids(sids) if sids else "stock"
+                )
+            return sids, asset_class
+        elif not query.sids:
             # 空 SID 列表时，使用显式 asset_class（如果有），否则默认为 "stock"
             return [], query.asset_class or "stock"
+
         # 普通模式：使用指定的 SID
         sids = sorted(set(query.sids))
         asset_class = query.asset_class

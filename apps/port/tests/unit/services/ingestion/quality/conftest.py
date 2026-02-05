@@ -61,12 +61,12 @@ def mock_tdx_source(mocker: MockerFixture) -> MagicMock:
 
 
 @pytest.fixture
-def mock_comparison_accessor(mocker: MockerFixture) -> MagicMock:
-    """Mock ComparisonAccessor.
+def mock_comparison_store(mocker: MockerFixture) -> MagicMock:
+    """Mock ComparisonStore.
 
     提供 write_result 异步方法。
     """
-    accessor = mocker.MagicMock()
+    store = mocker.MagicMock()
 
     async def write_result_impl(
         trade_date: str, df: pl.DataFrame, dataset: str
@@ -74,8 +74,8 @@ def mock_comparison_accessor(mocker: MockerFixture) -> MagicMock:
         """模拟 write_result 实现."""
         pass
 
-    accessor.write_result.side_effect = write_result_impl
-    return accessor
+    store.write_result.side_effect = write_result_impl
+    return store
 
 
 @pytest.fixture

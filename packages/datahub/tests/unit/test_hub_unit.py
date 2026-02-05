@@ -5,13 +5,6 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.accessors.adj_factor_accessor import AdjFactorAccessor
-from ditto_datahub.accessors.bars_accessor import BarsAccessor
-from ditto_datahub.accessors.calendar_accessor import CalendarAccessor
-from ditto_datahub.accessors.index_accessor import IndexAccessor
-from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
-from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
-from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.domains.capital import CapitalService
 from ditto_datahub.domains.capital.capital_store import CapitalStore
 
@@ -68,13 +61,10 @@ from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
-from ditto_datahub.runtime.quality.quarantine_store import QuarantineStore
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
-from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.universe_store import UniverseStore
 from ditto_foundation import SQLitePool
@@ -113,7 +103,7 @@ def sqlite_pool(tmp_path: Path) -> Generator[SQLitePool, None, None]:
 
 
 @pytest.fixture
-def datahub_with_dependencies(  # noqa: PLR0915
+def datahub_with_dependencies(
     tmp_path: Path,
     sqlite_pool: SQLitePool,
 ) -> Generator[DataHub, None, None]:
@@ -140,11 +130,7 @@ def datahub_with_dependencies(  # noqa: PLR0915
     security_store = InstrumentStore(sqlite_client)
     calendar_store = MetadataCalendarStore(sqlite_client)
     ingestion_log_store = IngestionLogStore(sqlite_client)
-    quarantine_store = QuarantineStore(sqlite_client)
     universe_store = UniverseStore(sqlite_client)
-    stock_status_store = StockStatusStore(data_root=data_root)
-    adj_factor_store = AdjFactorStore(data_root=data_root)
-    bars_store = BarsStore(data_root=data_root)
 
     # Metadata Domain Stores
     metadata_security_store = MetadataInstrumentStore(data_root / "meta" / "hub.sqlite")
@@ -182,6 +168,7 @@ def datahub_with_dependencies(  # noqa: PLR0915
         etf_bars_store=etf_bars_store,
         etf_status_store=etf_status_store,
         instrument_store=security_store,
+        file_lock=file_lock,
         etf_nav_store=etf_nav_store,
         etf_adj_store=etf_adj_store,
         index_bars_store=index_bars_store,
@@ -234,24 +221,12 @@ def datahub_with_dependencies(  # noqa: PLR0915
         metadata_store=factor_metadata_store,
     )
 
-    # Accessor Layer
+    # Accessor Layer - 只保留 InstrumentsAccessor
     from ditto_datahub.accessors.instrument_accessor import (
         InstrumentsAccessor as SecuritiesAccessor,
     )
 
     securities = SecuritiesAccessor(security_store, sid_allocator)
-    calendar = CalendarAccessor(calendar_store)
-    ingestion_log = IngestionLogAccessor(ingestion_log_store)
-    quarantine = QuarantineAccessor(quarantine_store)
-    universe = UniverseAccessor(universe_store, security_store, sid_allocator)
-    adj_factor = AdjFactorAccessor(adj_factor_store, file_lock)
-    bars = BarsAccessor(
-        bars_store,
-        adj_factor_store,
-        security_store,
-        stock_status_store,
-        file_lock,
-    )
 
     # SqlEngine
     sql_engine = SqlEngine(
@@ -276,13 +251,7 @@ def datahub_with_dependencies(  # noqa: PLR0915
         macro_query_service=macro_query_service,
         features_query_service=features_query_service,
         factors_query_service=factors_query_service,
-        calendar=calendar,
-        adj_factor=adj_factor,
-        bars=bars,
-        universe=universe,
-        index=None,
-        ingestion_log=ingestion_log,
-        quarantine=quarantine,
+        ingestion_log_store=ingestion_log_store,
         sources=None,
         sql_engine=sql_engine,
     )
@@ -411,15 +380,7 @@ class TestDataHub:
         self, datahub_with_dependencies: DataHub, mocker: MockerFixture
     ) -> None:
         """Test __init__ creates DataHub instance."""
-        # [REVIEW] mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -435,15 +396,7 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test sql method returns DataFrame."""
-        # [REVIEW] mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -459,15 +412,7 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test __repr__ shows initialized components."""
-        # mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -505,15 +450,7 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test get_trading_days returns list of dates."""
-        # mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -543,15 +480,7 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test get_trading_days with only_open=False."""
-        # mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -585,15 +514,7 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test is_trading_day returns boolean."""
-        # mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -622,15 +543,8 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test resolve_sid raises SidNotFoundError when identifier not found."""
-        # [REVIEW] mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # [REVIEW] 新架构中 index 已合并到 market
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -650,15 +564,8 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test resolve_sid with custom source parameter."""
-        # [REVIEW] mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # [REVIEW] 新架构中 index 已合并到 market
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -675,15 +582,8 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test resolve_sid with asof parameter for PIT queries."""
-        # [REVIEW] mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # [REVIEW] 新架构中 index 已合并到 market
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -708,15 +608,8 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test refresh_sql_views when sql_engine is not initialized."""
-        # [REVIEW] mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # [REVIEW] 新架构中 index 已合并到 market
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -731,15 +624,8 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test refresh_sql_views when sql_engine is initialized."""
-        # [REVIEW] mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # [REVIEW] 新架构中 index 已合并到 market
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -769,15 +655,8 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test __init__ with data_root=None uses default path."""
-        # [REVIEW] mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # [REVIEW] 新架构中 index 已合并到 market
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -800,15 +679,7 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test BarsQuerySpec dataclass creation and frozen property."""
-        # mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -840,15 +711,7 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test SecuritiesQuerySpec dataclass creation."""
-        # mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -872,15 +735,7 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test get_bars with BarsQuerySpec using SID identifiers."""
-        # mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -889,7 +744,7 @@ class TestDataHub:
 
         # Mock bars.get 返回空 DataFrame（因为没有真实数据）
         mock_bars_get = mocker.patch.object(
-            datahub_with_dependencies.bars, "get", return_value=pl.DataFrame()
+            datahub_with_dependencies.market, "get_bars", return_value=pl.DataFrame()
         )
 
         # 测试 SID 标识符
@@ -907,15 +762,7 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test get_bars with BarsQuerySpec using mixed identifiers."""
-        # mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -946,15 +793,7 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test get_securities with SecuritiesQuerySpec."""
-        # mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -989,15 +828,7 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test DataHub has market property."""
-        # mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
@@ -1012,15 +843,7 @@ class TestDataHub:
         mocker: MockerFixture,
     ) -> None:
         """Test market.get_bars returns DataFrame."""
-        # mock index 和 sources
-        index_store = mocker.Mock()
-        index = IndexAccessor(
-            index_store,
-            datahub_with_dependencies.calendar,
-            datahub_with_dependencies.bars,
-        )
-        datahub_with_dependencies._index = index
-
+        # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources

@@ -16,6 +16,56 @@ from ditto_datahub.models import Dataset, OnDuplicate, WriteResult
 from ditto_foundation.util.checksum import ChecksumCompute
 
 
+def _map_on_duplicate(on_duplicate: OnDuplicate) -> str:
+    """
+    将 OnDuplicate 枚举转换为 MarketService 期望的字符串值。
+
+    Args:
+        on_duplicate: OnDuplicate 枚举值
+
+    Returns:
+        MarketService 期望的字符串值
+
+    """
+    mapping = {
+        OnDuplicate.ERROR: "error",
+        OnDuplicate.KEEP_FIRST: "skip",
+        OnDuplicate.KEEP_LAST: "overwrite",
+    }
+    return mapping.get(on_duplicate, "error")
+
+
+def _to_write_result(
+    dataset: str,
+    year: int,
+    df: pl.DataFrame,
+    result: dict[str, int],
+) -> WriteResult:
+    """
+    将 MarketService 返回的 dict 转换为 WriteResult。
+
+    Args:
+        dataset: 数据集名称
+        year: 年份
+        df: 写入的 DataFrame（用于计算 checksum）
+        result: MarketService 返回的结果字典
+
+    Returns:
+        WriteResult 对象
+
+    """
+    rows = result.get("rows", 0)
+    files = result.get("files", 0)
+    checksum = ChecksumCompute.from_dataframe(df, dataset)
+    return WriteResult(
+        file_path=f"{dataset}/{year}",
+        checksum=checksum,
+        rows_written=rows,
+        rows_total=rows,
+        blocked=files == 0,  # 如果没有文件写入，则认为被阻塞
+    )
+
+
 class IngestionDataWriter:
     """统一数据写入器。"""
 
@@ -73,14 +123,17 @@ class IngestionDataWriter:
                 asset_class=asset_class,
                 src_code_col="src_code",
             )
-            # 使用 Accessor 层写入（不包含 DQ 检查）
-            return self._hub.bars.write(
+            # 转换 OnDuplicate 枚举为字符串
+            on_duplicate_str = _map_on_duplicate(on_duplicate)
+            # 使用 MarketService 写入（替代 BarsAccessor）
+            result = self._hub.market.write_bars(
                 df=df,
                 year=year,
                 dataset=dataset,
-                source=self._source_name,
-                on_duplicate=on_duplicate,
+                on_duplicate=on_duplicate_str,
             )
+            # 转换 dict[str, int] 为 WriteResult
+            return _to_write_result(dataset, year, df, result)
         elif dataset_enum in (Dataset.ADJ_FACTOR, Dataset.FUND_ADJ):
             # 补齐 sid/source 字段（使用 InstrumentsAccessor API）
             adj_asset_class: Literal["stock", "etf"] = (
@@ -96,13 +149,17 @@ class IngestionDataWriter:
                     src_code_col="src_code",
                 )
 
-            # 使用 AdjFactorAccessor 写入（带文件锁保护）
-            return self._hub.adj_factor.write(
+            # 使用 MarketService 写入（替代 AdjFactorAccessor）
+            # 转换 OnDuplicate 枚举为字符串
+            on_duplicate_str = _map_on_duplicate(on_duplicate)
+            result = self._hub.market.write_adj_factor(
                 dataset=dataset,
                 df=df,
                 year=year,
-                on_duplicate=on_duplicate,
+                on_duplicate=on_duplicate_str,
             )
+            # 转换 dict[str, int] 为 WriteResult
+            return _to_write_result(dataset, year, df, result)
         elif dataset_enum == Dataset.CALENDAR:
             records = df.to_dicts()
             self._hub.calendar.upsert(records)

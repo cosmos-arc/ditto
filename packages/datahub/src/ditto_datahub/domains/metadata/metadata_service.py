@@ -286,6 +286,58 @@ class MetadataService:
         """
         return self._calendar_store.is_trading_day(date)
 
+    @traced("metadata.calendar.upsert")
+    def upsert(self, records: list[dict[str, Any]]) -> int:
+        """
+        插入或更新日历记录.
+
+        Args:
+            records: 日历记录列表.
+
+        Returns:
+            插入的记录数.
+
+        """
+        self._calendar_store.upsert(records)
+        return len(records)
+
+    @traced("metadata.calendar.get_last_trading_day")
+    def get_last_trading_day(self) -> str | None:
+        """
+        获取最后一个交易日.
+
+        Returns:
+            最后一个交易日日期字符串，如果没有数据则返回 None.
+
+        """
+        return self._calendar_store.get_last_trading_day()
+
+    @traced("metadata.calendar.get_first_trading_day")
+    def get_first_trading_day(self) -> str | None:
+        """
+        获取第一个交易日.
+
+        Returns:
+            第一个交易日日期字符串，如果没有数据则返回 None.
+
+        """
+        return self._calendar_store.get_first_trading_day()
+
+    @traced("metadata.calendar.list_trading_days")
+    def list_trading_days(self, start: str, end: str) -> list[str]:
+        """
+        获取交易日列表（别名方法，与 get_trading_days 相同）.
+
+        Args:
+            start: 开始日期.
+            end: 结束日期.
+
+        Returns:
+            交易日列表.
+
+        """
+        return self.get_trading_days(start, end, only_open=True)
+
     # ============ 标的池查询 ============
 
     @traced("metadata.universe.get_universe")
