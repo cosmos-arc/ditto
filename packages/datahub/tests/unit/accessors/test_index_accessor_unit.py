@@ -3,11 +3,13 @@
 import polars as pl
 import pytest
 from ditto_datahub.accessors.index_accessor import IndexAccessor
+from ditto_datahub.domains.market.index.weight.weight_store import (
+    IndexWeightStore,
+)
 from ditto_datahub.domains.metadata.instrument import (
     InstrumentStore,
 )
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from pytest_mock import MockerFixture
 
 

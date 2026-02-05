@@ -53,6 +53,9 @@ from ditto_datahub.domains.market.etf.nav import EtfNavStore
 from ditto_datahub.domains.market.etf.status import EtfStatusStore
 from ditto_datahub.domains.market.index.bars import IndexBarsStore
 from ditto_datahub.domains.market.index.constituent import IndexConstituentStore
+from ditto_datahub.domains.market.index.weight.weight_store import (
+    IndexWeightStore,
+)
 from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
 from ditto_datahub.domains.market.stock.bars import StockBarsStore
 from ditto_datahub.domains.market.stock.status import StockStatusStore
@@ -80,7 +83,6 @@ from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient

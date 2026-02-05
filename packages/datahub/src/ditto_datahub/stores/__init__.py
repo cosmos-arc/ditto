@@ -5,7 +5,8 @@ from ditto_datahub.stores.bars_store import BarsStore
 
 # Base abstractions
 from ditto_datahub.stores.base import BaseStore
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
+
+# IndexWeightStore migrated to domains/market/index/weight/
 from ditto_datahub.stores.ingestion_log import IngestionLogStore
 from ditto_datahub.stores.parquet_store_base import ParquetStoreBase  # B.4
 from ditto_datahub.stores.quarantine_store import QuarantineStore
@@ -17,7 +18,7 @@ __all__ = [
     "AdjFactorStore",
     "BarsStore",
     "BaseStore",
-    "IndexWeightStore",
+    # "IndexWeightStore",  # Migrated to domains/market/index/weight/
     "IngestionLogStore",
     "ParquetStoreBase",
     "QuarantineStore",

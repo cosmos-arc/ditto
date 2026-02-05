@@ -5,9 +5,11 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import M, logger, traced
 
+from ditto_datahub.domains.market.index.weight.weight_store import (
+    IndexWeightStore,
+)
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
 
 
 class IndexAccessor:
