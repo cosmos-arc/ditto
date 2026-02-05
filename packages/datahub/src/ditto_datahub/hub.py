@@ -566,6 +566,50 @@ class DataHub:
             end=end,
         )
 
+    def write_adj_factor(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: str = "error",
+    ) -> dict[str, int]:
+        """
+        写入复权因子数据（转发到 MarketService）。
+
+        Args:
+            dataset: 数据集名称（"adj_factor" 或 "fund_adj"）.
+            df: 要写入的数据 DataFrame.
+            year: 年份.
+            on_duplicate: 重复数据处理策略（"error", "skip", "overwrite"）.
+
+        Returns:
+            写入结果统计（{"rows": 行数, "files": 文件数}）.
+
+        """
+        return self.market.write_adj_factor(dataset, df, year, on_duplicate)
+
+    def write_bars(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        dataset: str = "stock_daily",
+        on_duplicate: str = "error",
+    ) -> dict[str, int]:
+        """
+        写入 K线数据（转发到 MarketService）。
+
+        Args:
+            df: 要写入的数据 DataFrame.
+            year: 年份.
+            dataset: 数据集名称（"stock_daily", "etf_daily", "index_daily"）.
+            on_duplicate: 重复数据处理策略（"error", "skip", "overwrite"）.
+
+        Returns:
+            写入结果统计（{"rows": 行数, "files": 文件数}）.
+
+        """
+        return self.market.write_bars(df, year, dataset, on_duplicate)
+
     # ========================================================================
     # Resource Management
     # ========================================================================

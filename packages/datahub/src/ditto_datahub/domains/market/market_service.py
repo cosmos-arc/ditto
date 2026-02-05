@@ -16,6 +16,7 @@ from typing import Literal
 
 import polars as pl
 from ditto_foundation import M, logger, traced
+from ditto_foundation.concurrency import FileLockManager
 
 from ditto_datahub.accessors.internal.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.accessors.internal.enrichment import enrich_with_status
@@ -29,7 +30,7 @@ from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
 from ditto_datahub.domains.market.stock.bars import StockBarsStore
 from ditto_datahub.domains.market.stock.status import StockStatusStore
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
-from ditto_datahub.models import AssetSidRange
+from ditto_datahub.models import AssetSidRange, OnDuplicate
 
 
 class AdjType(Enum):
@@ -95,6 +96,7 @@ class MarketService:
         etf_bars_store: EtfBarsStore,
         etf_status_store: EtfStatusStore,
         instrument_store: InstrumentStore,
+        file_lock: FileLockManager,  # 新增：用于并发写入保护
         etf_nav_store: EtfNavStore | None = None,
         etf_adj_store: EtfAdjFactorStore | None = None,
         index_bars_store: IndexBarsStore | None = None,
@@ -110,6 +112,7 @@ class MarketService:
             etf_bars_store: ETF K线存储.
             etf_status_store: ETF 状态存储.
             instrument_store: 证券元数据存储.
+            file_lock: 文件锁管理器（用于并发写入保护）.
             etf_nav_store: ETF 净值存储（可选）.
             etf_adj_store: ETF 复权因子存储（可选）.
             index_bars_store: 指数 K线存储（可选）.
@@ -122,6 +125,7 @@ class MarketService:
         self._etf_bars_store = etf_bars_store
         self._etf_status_store = etf_status_store
         self._instrument_store = instrument_store
+        self._file_lock = file_lock  # 新增：文件锁管理器
         self._etf_nav_store = etf_nav_store
         self._etf_adj_store = etf_adj_store
         self._index_bars_store = index_bars_store
@@ -527,3 +531,155 @@ class MarketService:
 
         # 使用纯函数进行数据增强
         return enrich_with_status(df, status_df, on=["sid", "trade_date"])
+
+    @traced("market.write_adj_factor")
+    def write_adj_factor(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: str = "error",
+    ) -> dict[str, int]:
+        """
+        写入复权因子数据（替代 AdjFactorAccessor）。
+
+        内部使用 StockAdjFactorStore/EtfAdjFactorStore + FileLock 保护。
+
+        Args:
+            dataset: 数据集名称（"adj_factor" 或 "fund_adj"）.
+            df: 要写入的数据 DataFrame.
+            year: 年份.
+            on_duplicate: 重复数据处理策略（"error", "skip", "overwrite"）.
+
+        Returns:
+            写入结果统计（{"rows": 行数, "files": 文件数}）.
+
+        Raises:
+            ValueError: 如果 dataset 不支持.
+
+        """
+        logger.info(
+            "Writing adjustment factor data",
+            event="market_write_adj_factor_start",
+            dataset=dataset,
+            year=year,
+            row_count=len(df),
+        )
+
+        # 选择对应的 Store
+        if dataset == "adj_factor":
+            store = self._stock_adj_store
+        elif dataset == "fund_adj":
+            if self._etf_adj_store is None:
+                raise ValueError("EtfAdjFactorStore not configured")
+            store = self._etf_adj_store
+        else:
+            raise ValueError(f"Unsupported dataset: {dataset}")
+
+        # 转换 on_duplicate 字符串到 OnDuplicate 枚举
+        on_duplicate_map = {
+            "error": OnDuplicate.ERROR,
+            "skip": OnDuplicate.KEEP_FIRST,
+            "overwrite": OnDuplicate.KEEP_LAST,
+        }
+        on_duplicate_enum = on_duplicate_map.get(on_duplicate, OnDuplicate.ERROR)
+
+        # 使用文件锁保护并发写入
+        lock_name = f"adj_factor_write_{dataset}_{year}"
+        with self._file_lock.acquire(lock_name, timeout=60.0):
+            write_result = store.write(df, year, on_duplicate=on_duplicate_enum)
+
+        # 转换 WriteResult 为 dict[str, int]
+        result = {
+            "rows": write_result.added + write_result.updated,
+            "files": 1 if write_result.added > 0 or write_result.updated > 0 else 0,
+        }
+
+        logger.info(
+            "Adjustment factor data written",
+            event="market_write_adj_factor_complete",
+            dataset=dataset,
+            year=year,
+            rows_written=result["rows"],
+        )
+
+        # 记录指标
+        M.data_records.add(len(df), {"dataset": dataset, "operation": "write"})
+
+        return result
+
+    @traced("market.write_bars")
+    def write_bars(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        dataset: str = "stock_daily",
+        on_duplicate: str = "error",
+    ) -> dict[str, int]:
+        """
+        写入 K线数据（替代 BarsAccessor.write）。
+
+        内部使用 StockBarsStore/EtfBarsStore/IndexBarsStore + FileLock 保护。
+
+        Args:
+            df: 要写入的数据 DataFrame.
+            year: 年份.
+            dataset: 数据集名称（"stock_daily", "etf_daily", "index_daily"）.
+            on_duplicate: 重复数据处理策略（"error", "skip", "overwrite"）.
+
+        Returns:
+            写入结果统计（{"rows": 行数, "files": 文件数}）.
+
+        Raises:
+            ValueError: 如果 dataset 不支持.
+
+        """
+        logger.info(
+            "Writing bars data",
+            event="market_write_bars_start",
+            dataset=dataset,
+            year=year,
+            row_count=len(df),
+        )
+
+        # 选择对应的 Store
+        store_map = {
+            "stock_daily": self._stock_bars_store,
+            "etf_daily": self._etf_bars_store,
+            "index_daily": self._index_bars_store,
+        }
+        store = store_map.get(dataset)
+        if store is None:
+            raise ValueError(f"Unsupported dataset: {dataset}")
+
+        # 转换 on_duplicate 字符串到 OnDuplicate 枚举
+        on_duplicate_map = {
+            "error": OnDuplicate.ERROR,
+            "skip": OnDuplicate.KEEP_FIRST,
+            "overwrite": OnDuplicate.KEEP_LAST,
+        }
+        on_duplicate_enum = on_duplicate_map.get(on_duplicate, OnDuplicate.ERROR)
+
+        # 使用文件锁保护并发写入
+        lock_name = f"bars_write_{dataset}_{year}"
+        with self._file_lock.acquire(lock_name, timeout=60.0):
+            write_result = store.write(df, year, on_duplicate=on_duplicate_enum)
+
+        # 转换 WriteResult 为 dict[str, int]
+        result = {
+            "rows": write_result.added + write_result.updated,
+            "files": 1 if write_result.added > 0 or write_result.updated > 0 else 0,
+        }
+
+        logger.info(
+            "Bars data written",
+            event="market_write_bars_complete",
+            dataset=dataset,
+            year=year,
+            rows_written=result["rows"],
+        )
+
+        # 记录指标
+        M.data_records.add(len(df), {"dataset": dataset, "operation": "write"})
+
+        return result

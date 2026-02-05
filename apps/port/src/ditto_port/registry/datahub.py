@@ -544,24 +544,26 @@ class DataHubProvider(Provider):
         stock_adj_store: StockAdjFactorStore,
         etf_bars_store: EtfBarsStore,
         etf_status_store: EtfStatusStore,
-        etf_nav_store: EtfNavStore,
-        etf_adj_store: EtfAdjFactorStore,
-        index_bars_store: IndexBarsStore,
-        index_constituent_store: IndexConstituentStore,
         instrument_store: MetadataInstrumentStore,
+        file_lock_manager: FileLockManager,  # 新增：用于并发写入保护
+        etf_nav_store: EtfNavStore | None = None,
+        etf_adj_store: EtfAdjFactorStore | None = None,
+        index_bars_store: IndexBarsStore | None = None,
+        index_constituent_store: IndexConstituentStore | None = None,
     ) -> MarketService:
-        """Market 查询服务."""
+        """Market 查询服务（支持读写）。"""
         return MarketService(
             stock_bars_store=stock_bars_store,
             stock_status_store=stock_status_store,
             stock_adj_store=stock_adj_store,
             etf_bars_store=etf_bars_store,
             etf_status_store=etf_status_store,
+            instrument_store=instrument_store,
+            file_lock=file_lock_manager,  # 新增：文件锁管理器
             etf_nav_store=etf_nav_store,
             etf_adj_store=etf_adj_store,
             index_bars_store=index_bars_store,
             index_constituent_store=index_constituent_store,
-            instrument_store=instrument_store,
         )
 
     # ========================================================================
