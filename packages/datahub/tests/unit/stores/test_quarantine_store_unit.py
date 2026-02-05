@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_datahub.stores.quarantine_store import QuarantineStore
+from ditto_datahub.runtime.quality.quarantine_store import QuarantineStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 

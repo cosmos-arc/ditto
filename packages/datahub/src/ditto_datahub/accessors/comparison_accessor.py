@@ -5,7 +5,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.stores.quality.comparison_store import ComparisonStore
+from ditto_datahub.runtime.quality.comparison_store import ComparisonStore
 
 
 class ComparisonAccessor:

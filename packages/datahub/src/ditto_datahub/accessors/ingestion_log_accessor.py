@@ -4,7 +4,9 @@ from ditto_foundation.observability.tracing import traced
 from loguru import logger
 
 from ditto_datahub.models.ingestion import IngestionLog
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
+from ditto_datahub.runtime.ingestion.ingestion_log_store import (
+    IngestionLogStore,
+)
 
 
 class IngestionLogAccessor:

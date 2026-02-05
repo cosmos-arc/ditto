@@ -5,7 +5,7 @@ from datetime import datetime
 import polars as pl
 import pytest
 from ditto_datahub.accessors.comparison_accessor import ComparisonAccessor
-from ditto_datahub.stores.quality.comparison_store import ComparisonStore
+from ditto_datahub.runtime.quality.comparison_store import ComparisonStore
 
 
 @pytest.mark.unit

@@ -65,14 +65,16 @@ from ditto_datahub.domains.metadata.instrument.instrument_store import (
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.hub import DataHub
 from ditto_datahub.runtime.freeze_manager import FreezeManager
+from ditto_datahub.runtime.ingestion.ingestion_log_store import (
+    IngestionLogStore,
+)
+from ditto_datahub.runtime.quality.quarantine_store import QuarantineStore
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 from ditto_datahub.stores.adj_factor_store import AdjFactorStore
 from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
-from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub.stores.universe_store import UniverseStore
 from ditto_foundation import SQLitePool

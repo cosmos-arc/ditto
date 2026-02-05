@@ -7,9 +7,9 @@ from ditto_datahub.stores.bars_store import BarsStore
 from ditto_datahub.stores.base import BaseStore
 
 # IndexWeightStore migrated to domains/market/index/weight/
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
+# IngestionLogStore migrated to runtime/ingestion/
+# QuarantineStore migrated to runtime/quality/
 from ditto_datahub.stores.parquet_store_base import ParquetStoreBase  # B.4
-from ditto_datahub.stores.quarantine_store import QuarantineStore
 
 # StockStatusStore migrated to domains/market/stock/status/
 from ditto_datahub.stores.universe_store import UniverseStore
@@ -19,8 +19,8 @@ __all__ = [
     "BarsStore",
     "BaseStore",
     # "IndexWeightStore",  # Migrated to domains/market/index/weight/
-    "IngestionLogStore",
+    # "IngestionLogStore",  # Migrated to runtime/ingestion/
+    # "QuarantineStore",  # Migrated to runtime/quality/
     "ParquetStoreBase",
-    "QuarantineStore",
     "UniverseStore",
 ]

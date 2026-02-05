@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import polars as pl
 import pytest
-from ditto_datahub.stores.quality.comparison_store import ComparisonStore
+from ditto_datahub.runtime.quality.comparison_store import ComparisonStore
 
 
 @pytest.mark.unit

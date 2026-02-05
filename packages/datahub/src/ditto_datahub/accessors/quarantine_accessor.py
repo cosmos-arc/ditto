@@ -5,7 +5,7 @@ from typing import Any
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.stores.quarantine_store import QuarantineStore
+from ditto_datahub.runtime.quality.quarantine_store import QuarantineStore
 
 
 class QuarantineAccessor:
