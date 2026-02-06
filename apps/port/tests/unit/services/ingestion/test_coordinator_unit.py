@@ -45,7 +45,7 @@ def setup_observability():
 
 
 @pytest.fixture
-def mock_hub(mocker):
+def mock_hub(mocker):  # noqa: PLR0915
     """创建 Mock DataHub。"""
     hub = mocker.Mock()
     hub.ingestion_log = mocker.Mock(spec=IngestionLogStore)
@@ -75,22 +75,22 @@ def mock_hub(mocker):
     hub.instrument_store.resolve_sid.return_value = None  # 默认返回 None（不存在）
     hub.instrument_store.register.return_value = 1000001  # 返回注册的 SID
 
-    # 添加 InstrumentsAccessor mock
-    # (IngestionDataWriter 需要)
-    hub.securities = mocker.Mock()
+    # 添加 MetadataService mock（IngestionDataWriter 需要）
+    hub.metadata = mocker.Mock()
 
-    def register_batch_side_effect(df, source, asset_class, **kwargs):
+    def register_securities_batch_side_effect(df, source, asset_class, **kwargs):
         """根据 asset_class 返回不同的 file_path。"""
         file_path = f"instrument_store:{asset_class}_basic"
         checksum = f"checksum_{asset_class}"
         return (file_path, checksum)
 
-    hub.securities.register_batch.side_effect = register_batch_side_effect
+    hub.metadata.register_securities_batch.side_effect = (
+        register_securities_batch_side_effect
+    )
 
-    # 添加 enrich_dataframe_with_sid mock
-    # 方法签名: enrich_dataframe_with_sid(df, source, asset_class, src_code_col)
-    def enrich_dataframe_with_sid_side_effect(df, source, asset_class, src_code_col):
-        """根据 asset_class 返回不同的 sid。"""
+    # 添加 resolve_or_create_batch mock
+    def resolve_or_create_batch_side_effect(df, source, asset_class, **kwargs):
+        """根据 asset_class 返回不同的 sid 映射。"""
         if asset_class == "stock":
             sid = stock_counter[0]
             stock_counter[0] += 1
@@ -99,14 +99,19 @@ def mock_hub(mocker):
             etf_counter[0] += 1
         else:
             raise ValueError(f"Unknown asset class: {asset_class}")
-        return df.with_columns(
-            pl.lit(sid).alias("sid"),
-            pl.lit(source).alias("source"),
-        )
+        # 返回 src_code 到 sid 的映射
+        src_codes = df["src_code"].to_list()
+        return {src_codes[0]: sid}
 
-    hub.securities.enrich_dataframe_with_sid = mocker.Mock(
-        side_effect=enrich_dataframe_with_sid_side_effect
+    hub.metadata.resolve_or_create_batch.side_effect = (
+        resolve_or_create_batch_side_effect
     )
+
+    # 添加 get_securities mock（返回空 DataFrame）
+    hub.metadata.get_securities.return_value = pl.DataFrame()
+
+    # 向后兼容：保留 securities 属性指向 metadata
+    hub.securities = hub.metadata
 
     # 添加 MarketService mock（IngestionDataWriter 需要）
     hub.market = mocker.Mock()
