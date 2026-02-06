@@ -14,14 +14,6 @@ from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from ditto_datahub import DataHub
-from ditto_datahub.accessors.adj_factor_accessor import AdjFactorAccessor
-from ditto_datahub.accessors.bars_accessor import BarsAccessor
-from ditto_datahub.accessors.calendar_accessor import CalendarAccessor
-from ditto_datahub.accessors.index_accessor import IndexAccessor
-from ditto_datahub.accessors.ingestion_log_accessor import IngestionLogAccessor
-from ditto_datahub.accessors.instrument_accessor import InstrumentsAccessor
-from ditto_datahub.accessors.quarantine_accessor import QuarantineAccessor
-from ditto_datahub.accessors.universe_accessor import UniverseAccessor
 from ditto_datahub.config.data_root import DataRootConfig
 from ditto_datahub.domains.capital import CapitalService
 from ditto_datahub.domains.capital.capital_store import CapitalStore
@@ -73,18 +65,19 @@ from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.domains.metadata.instrument.instrument_store import (
     InstrumentStore as MetadataInstrumentStore,
 )
+
+# UniverseStore 已迁移到 domains/metadata/universe/
+from ditto_datahub.domains.metadata.universe import UniverseStore
 from ditto_datahub.runtime.freeze_manager import FreezeManager
+from ditto_datahub.runtime.ingestion.ingestion_log_store import (
+    IngestionLogStore,
+)
+from ditto_datahub.runtime.quality.quarantine_store import QuarantineStore
 from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
-from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
-from ditto_datahub.stores.quarantine_store import QuarantineStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_datahub.stores.universe_store import UniverseStore
 from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager
 
@@ -159,26 +152,6 @@ class DataHubProvider(Provider):
         return MetadataCalendarStore(sqlite_client)
 
     @provide
-    def bars_store(self, data_root: Path) -> BarsStore:
-        """OHLCV 数据存储."""
-        return BarsStore(data_root=data_root)
-
-    @provide
-    def adj_factor_store(self, data_root: Path) -> AdjFactorStore:
-        """复权因子存储（已弃用，建议使用 stock_adj_store）."""
-        return AdjFactorStore(data_root=data_root)
-
-    @provide
-    def universe_store(self, sqlite_client: SQLiteClient) -> UniverseStore:
-        """证券集合存储."""
-        return UniverseStore(sqlite_client)
-
-    @provide
-    def index_weight_store(self, sqlite_client: SQLiteClient) -> IndexWeightStore:
-        """指数权重存储."""
-        return IndexWeightStore(sqlite_client)
-
-    @provide
     def ingestion_log_store(self, sqlite_client: SQLiteClient) -> IngestionLogStore:
         """摄取日志存储."""
         return IngestionLogStore(sqlite_client)
@@ -187,6 +160,11 @@ class DataHubProvider(Provider):
     def quarantine_store(self, sqlite_client: SQLiteClient) -> QuarantineStore:
         """隔离区存储（使用主数据库）."""
         return QuarantineStore(sqlite_client)
+
+    @provide
+    def universe_store(self, sqlite_client: SQLiteClient) -> UniverseStore:
+        """证券池存储."""
+        return UniverseStore(sqlite_client)
 
     # ========================================================================
     # Metadata Domain Stores
@@ -405,101 +383,6 @@ class DataHubProvider(Provider):
         )
 
     # ========================================================================
-    # Accessor Layer
-    # ========================================================================
-
-    @provide
-    def securities(
-        self,
-        instrument_store: InstrumentStore,
-        sid_allocator: SidAllocator,
-    ) -> InstrumentsAccessor:
-        """证券数据访问器（带数据摄入辅助方法）."""
-        return InstrumentsAccessor(
-            instrument_store=instrument_store,
-            sid_allocator=sid_allocator,
-        )
-
-    @provide
-    def calendar(self, calendar_store: MetadataCalendarStore) -> CalendarAccessor:
-        """交易日历访问器."""
-        return CalendarAccessor(calendar_store=calendar_store)
-
-    @provide
-    def adj_factor(
-        self,
-        adj_factor_store: AdjFactorStore,
-        file_lock: FileLockManager,
-    ) -> AdjFactorAccessor:
-        """复权因子访问器."""
-        return AdjFactorAccessor(
-            adj_factor_store=adj_factor_store,
-            file_lock=file_lock,
-        )
-
-    @provide
-    def bars(
-        self,
-        bars_store: BarsStore,
-        instrument_store: InstrumentStore,
-        adj_factor_store: AdjFactorStore,
-        stock_status_store: StockStatusStore,
-        file_lock: FileLockManager,
-    ) -> BarsAccessor:
-        """OHLCV 数据访问器."""
-        return BarsAccessor(
-            bars_store=bars_store,
-            instrument_store=instrument_store,
-            adj_factor_store=adj_factor_store,
-            stock_status_store=stock_status_store,
-            file_lock=file_lock,
-        )
-
-    @provide
-    def universe(
-        self,
-        universe_store: UniverseStore,
-        instrument_store: InstrumentStore,
-        sid_allocator: SidAllocator,
-    ) -> UniverseAccessor:
-        """证券集合访问器."""
-        return UniverseAccessor(
-            universe_store=universe_store,
-            instrument_store=instrument_store,
-            sid_allocator=sid_allocator,
-        )
-
-    @provide
-    def index(
-        self,
-        bars_store: BarsStore,
-        index_weight_store: IndexWeightStore,
-        instrument_store: InstrumentStore,
-    ) -> IndexAccessor:
-        """指数数据访问器."""
-        return IndexAccessor(
-            bars_store=bars_store,
-            index_weight_store=index_weight_store,
-            instrument_store=instrument_store,
-        )
-
-    @provide
-    def ingestion_log(
-        self,
-        ingestion_log_store: IngestionLogStore,
-    ) -> IngestionLogAccessor:
-        """摄取日志访问器."""
-        return IngestionLogAccessor(ingestion_log_store=ingestion_log_store)
-
-    @provide
-    def quarantine(
-        self,
-        quarantine_store: QuarantineStore,
-    ) -> QuarantineAccessor:
-        """隔离区访问器."""
-        return QuarantineAccessor(quarantine_store=quarantine_store)
-
-    # ========================================================================
     # Metadata Query Service
     # ========================================================================
 
@@ -537,24 +420,26 @@ class DataHubProvider(Provider):
         stock_adj_store: StockAdjFactorStore,
         etf_bars_store: EtfBarsStore,
         etf_status_store: EtfStatusStore,
+        instrument_store: MetadataInstrumentStore,
+        file_lock_manager: FileLockManager,
         etf_nav_store: EtfNavStore,
         etf_adj_store: EtfAdjFactorStore,
         index_bars_store: IndexBarsStore,
         index_constituent_store: IndexConstituentStore,
-        instrument_store: MetadataInstrumentStore,
     ) -> MarketService:
-        """Market 查询服务."""
+        """Market 查询服务（支持读写）。"""
         return MarketService(
             stock_bars_store=stock_bars_store,
             stock_status_store=stock_status_store,
             stock_adj_store=stock_adj_store,
             etf_bars_store=etf_bars_store,
             etf_status_store=etf_status_store,
+            instrument_store=instrument_store,
+            file_lock=file_lock_manager,
             etf_nav_store=etf_nav_store,
             etf_adj_store=etf_adj_store,
             index_bars_store=index_bars_store,
             index_constituent_store=index_constituent_store,
-            instrument_store=instrument_store,
         )
 
     # ========================================================================
@@ -603,7 +488,6 @@ class DataHubProvider(Provider):
         sid_allocator: SidAllocator,
         freeze_manager: FreezeManager,
         instrument_store: InstrumentStore,
-        securities: InstrumentsAccessor,
         metadata_query_service: MetadataService,
         market_query_service: MarketService,
         fundamental_query_service: FundamentalService,
@@ -611,13 +495,7 @@ class DataHubProvider(Provider):
         macro_query_service: MacroService,
         features_query_service: FeatureService,
         factors_query_service: FactorService,
-        calendar: CalendarAccessor,
-        adj_factor: AdjFactorAccessor,
-        bars: BarsAccessor,
-        universe: UniverseAccessor,
-        index: IndexAccessor,
-        ingestion_log: IngestionLogAccessor,
-        quarantine: QuarantineAccessor,
+        ingestion_log_store: IngestionLogStore,
         sources: DataSources,
         sql_engine: SqlEngine,
     ) -> Iterator[DataHub]:
@@ -625,6 +503,7 @@ class DataHubProvider(Provider):
         DataHub 主入口（应用级单例）.
 
         所有依赖通过 Provider 注入，DataHub 不再使用 @cached_property.
+        移除了 Accessor 层，直接使用 Domain Services.
         """
         # 创建 DataHub 并注入所有依赖
         hub = DataHub(
@@ -634,7 +513,6 @@ class DataHubProvider(Provider):
             sid_allocator=sid_allocator,
             freeze_manager=freeze_manager,
             instrument_store=instrument_store,
-            securities=securities,
             metadata_query_service=metadata_query_service,
             market_query_service=market_query_service,
             fundamental_query_service=fundamental_query_service,
@@ -642,13 +520,7 @@ class DataHubProvider(Provider):
             macro_query_service=macro_query_service,
             features_query_service=features_query_service,
             factors_query_service=factors_query_service,
-            calendar=calendar,
-            adj_factor=adj_factor,
-            bars=bars,
-            universe=universe,
-            index=index,
-            ingestion_log=ingestion_log,
-            quarantine=quarantine,
+            ingestion_log_store=ingestion_log_store,
             sources=sources,
             sql_engine=sql_engine,
         )

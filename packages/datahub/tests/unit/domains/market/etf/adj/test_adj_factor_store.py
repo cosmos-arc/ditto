@@ -43,12 +43,6 @@ def sample_adj_factor_df() -> pl.DataFrame:
 class TestEtfAdjFactorStore:
     """Test suite for EtfAdjFactorStore."""
 
-    # ============ _get_key_columns tests ============
-
-    def test_get_key_columns(self, store: EtfAdjFactorStore) -> None:
-        """Test _get_key_columns returns correct key columns."""
-        assert store._get_key_columns() == ["sid", "trade_date"]
-
     # ============ read tests ============
 
     def test_read_empty(self, store: EtfAdjFactorStore) -> None:
@@ -209,7 +203,7 @@ class TestEtfAdjFactorStore:
         """Test delete removes year partition."""
         store.write(sample_adj_factor_df, year=2024)
 
-        result = store.delete(2024)
+        result = store.delete_partition("2024")
         assert result is True
 
         file_path = tmp_path / "data" / "market" / "etf" / "adj" / "2024.parquet"
@@ -217,7 +211,7 @@ class TestEtfAdjFactorStore:
 
     def test_delete_nonexistent_year(self, store: EtfAdjFactorStore) -> None:
         """Test delete with non-existent year."""
-        result = store.delete(2024)
+        result = store.delete_partition("2024")
         assert result is False
 
     # ============ get_checksum tests ============
@@ -292,9 +286,3 @@ class TestEtfAdjFactorStore:
         store.write(sample_adj_factor_df, year=2024)
         sids = store.list_sids()
         assert sids == [1500001, 1500002]
-
-    # ============ dataset name tests ============
-
-    def test_dataset_name(self, store: EtfAdjFactorStore) -> None:
-        """Test that dataset name is market/etf/adj."""
-        assert store._dataset == "market/etf/adj"

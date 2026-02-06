@@ -16,6 +16,95 @@ from ditto_datahub.models import Dataset, OnDuplicate, WriteResult
 from ditto_foundation.util.checksum import ChecksumCompute
 
 
+def _map_on_duplicate(on_duplicate: OnDuplicate) -> str:
+    """
+    将 OnDuplicate 枚举转换为 MarketService 期望的字符串值。
+
+    Args:
+        on_duplicate: OnDuplicate 枚举值
+
+    Returns:
+        MarketService 期望的字符串值
+
+    """
+    mapping = {
+        OnDuplicate.ERROR: "error",
+        OnDuplicate.KEEP_FIRST: "skip",
+        OnDuplicate.KEEP_LAST: "overwrite",
+    }
+    return mapping.get(on_duplicate, "error")
+
+
+def _enrich_with_sid(
+    df: pl.DataFrame,
+    sid_mapping: dict[str, int],
+    src_code_col: str,
+    source: str,
+) -> pl.DataFrame:
+    """
+    为 DataFrame 添加 sid 和 source 列。
+
+    Args:
+        df: 输入 DataFrame，必须包含 src_code_col 指定的列
+        sid_mapping: {src_code: sid} 映射字典
+        src_code_col: 源代码列名
+        source: 数据源标识符
+
+    Returns:
+        添加了 sid 和 source 列的 DataFrame
+
+    """
+    # 处理空 DataFrame
+    if len(df) == 0:
+        return df.with_columns(
+            pl.lit(None, dtype=pl.Int32).alias("sid"),
+            pl.lit(source).alias("source"),
+        )
+
+    # 将 sid 映射转换为 DataFrame 并 join
+    mapping_df = pl.DataFrame(
+        {
+            src_code_col: list(sid_mapping.keys()),
+            "sid": list(sid_mapping.values()),
+        }
+    )
+
+    return df.join(mapping_df, on=src_code_col, how="left").with_columns(
+        pl.lit(source).alias("source")
+    )
+
+
+def _to_write_result(
+    dataset: str,
+    year: int,
+    df: pl.DataFrame,
+    result: dict[str, int],
+) -> WriteResult:
+    """
+    将 MarketService 返回的 dict 转换为 WriteResult。
+
+    Args:
+        dataset: 数据集名称
+        year: 年份
+        df: 写入的 DataFrame（用于计算 checksum）
+        result: MarketService 返回的结果字典
+
+    Returns:
+        WriteResult 对象
+
+    """
+    rows = result.get("rows", 0)
+    files = result.get("files", 0)
+    checksum = ChecksumCompute.from_dataframe(df, dataset)
+    return WriteResult(
+        file_path=f"{dataset}/{year}",
+        checksum=checksum,
+        rows_written=rows,
+        rows_total=rows,
+        blocked=files == 0,  # 如果没有文件写入，则认为被阻塞
+    )
+
+
 class IngestionDataWriter:
     """统一数据写入器。"""
 
@@ -63,46 +152,59 @@ class IngestionDataWriter:
             raise ValueError(f"不支持写入数据集: {dataset}") from e
 
         if dataset_enum in (Dataset.ETF_DAILY, Dataset.STOCK_DAILY):
-            # 补齐 sid/source 字段（使用 InstrumentsAccessor API）
+            # 补齐 sid/source 字段（使用 MetadataService API）
             asset_class: Literal["stock", "etf"] = (
                 "etf" if dataset_enum == Dataset.ETF_DAILY else "stock"
             )
-            df = self._hub.securities.enrich_dataframe_with_sid(
-                df,
+            # 解析或创建证券，获取 sid 映射
+            sid_mapping = self._hub.metadata.resolve_or_create_batch(
+                df=df,
                 source=self._source_name,
                 asset_class=asset_class,
                 src_code_col="src_code",
             )
-            # 使用 Accessor 层写入（不包含 DQ 检查）
-            return self._hub.bars.write(
+            # 添加 sid 列
+            df = _enrich_with_sid(df, sid_mapping, "src_code", self._source_name)
+            # 转换 OnDuplicate 枚举为字符串
+            on_duplicate_str = _map_on_duplicate(on_duplicate)
+            # 使用 MarketService 写入（替代 BarsAccessor）
+            result = self._hub.market.write_bars(
                 df=df,
                 year=year,
                 dataset=dataset,
-                source=self._source_name,
-                on_duplicate=on_duplicate,
+                on_duplicate=on_duplicate_str,
             )
+            # 转换 dict[str, int] 为 WriteResult
+            return _to_write_result(dataset, year, df, result)
         elif dataset_enum in (Dataset.ADJ_FACTOR, Dataset.FUND_ADJ):
-            # 补齐 sid/source 字段（使用 InstrumentsAccessor API）
+            # 补齐 sid/source 字段（使用 MetadataService API）
             adj_asset_class: Literal["stock", "etf"] = (
                 "etf" if dataset_enum == Dataset.FUND_ADJ else "stock"
             )
 
             # 检查是否已有 sid 列（上游可能已处理）
             if "sid" not in df.columns:
-                df = self._hub.securities.enrich_dataframe_with_sid(
-                    df,
+                # 解析或创建证券，获取 sid 映射
+                sid_mapping = self._hub.metadata.resolve_or_create_batch(
+                    df=df,
                     source=self._source_name,
                     asset_class=adj_asset_class,
                     src_code_col="src_code",
                 )
+                # 添加 sid 列
+                df = _enrich_with_sid(df, sid_mapping, "src_code", self._source_name)
 
-            # 使用 AdjFactorAccessor 写入（带文件锁保护）
-            return self._hub.adj_factor.write(
+            # 使用 MarketService 写入（替代 AdjFactorAccessor）
+            # 转换 OnDuplicate 枚举为字符串
+            on_duplicate_str = _map_on_duplicate(on_duplicate)
+            result = self._hub.market.write_adj_factor(
                 dataset=dataset,
                 df=df,
                 year=year,
-                on_duplicate=on_duplicate,
+                on_duplicate=on_duplicate_str,
             )
+            # 转换 dict[str, int] 为 WriteResult
+            return _to_write_result(dataset, year, df, result)
         elif dataset_enum == Dataset.CALENDAR:
             records = df.to_dicts()
             self._hub.calendar.upsert(records)
@@ -149,8 +251,8 @@ class IngestionDataWriter:
             tuple[str, str]: (file_path, checksum)
 
         """
-        # 使用 InstrumentsAccessor 批量注册（线程安全）
-        file_path, checksum = self._hub.securities.register_batch(
+        # 使用 MetadataService 批量注册（线程安全）
+        file_path, checksum = self._hub.metadata.register_securities_batch(
             df=df,
             source=self._source_name,
             asset_class="stock",
@@ -171,8 +273,8 @@ class IngestionDataWriter:
             tuple[str, str]: (file_path, checksum)
 
         """
-        # 使用 InstrumentsAccessor 批量注册（线程安全）
-        file_path, checksum = self._hub.securities.register_batch(
+        # 使用 MetadataService 批量注册（线程安全）
+        file_path, checksum = self._hub.metadata.register_securities_batch(
             df=df,
             source=self._source_name,
             asset_class="etf",

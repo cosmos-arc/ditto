@@ -4,8 +4,8 @@ from typing import Any
 
 import polars as pl
 from ditto_core.quality.spec import DQResult
-from ditto_datahub.accessors.comparison_accessor import ComparisonAccessor
 from ditto_datahub.domains.metadata.instrument.instrument_store import InstrumentStore
+from ditto_datahub.runtime.quality import ComparisonStore
 from ditto_datahub.sources.tdx.source import TdxSource
 from loguru import logger
 
@@ -31,7 +31,7 @@ class QualityReconciliationService:
         self,
         engine: Any,  # QualityEngine
         tdx_source: TdxSource,
-        comparison_accessor: ComparisonAccessor,
+        comparison_store: ComparisonStore,
         instrument_store: InstrumentStore,
     ) -> None:
         """
@@ -40,13 +40,13 @@ class QualityReconciliationService:
         Args:
             engine: 质量引擎
             tdx_source: 通达信数据源
-            comparison_accessor: 对比结果访问器
+            comparison_store: 对比结果存储
             instrument_store: 证券存储（用于 sid → symbol 转换）
 
         """
         self._engine = engine
         self._tdx_source = tdx_source
-        self._comparison_accessor = comparison_accessor
+        self._comparison_store = comparison_store
         self._instrument_store = instrument_store
 
     async def daily_reconciliation(
@@ -127,7 +127,7 @@ class QualityReconciliationService:
 
             # 7. 存储对比结果
             if not comparison_df.is_empty():
-                await self._comparison_accessor.write_result(
+                await self._comparison_store.write_comparison(
                     trade_date, comparison_df, dataset
                 )
 
@@ -163,6 +163,7 @@ class QualityReconciliationService:
                 "trade_date": trade_date,
                 "dataset": dataset,
                 "passed": False,
+                "issue_count": 0,  # 错误情况下不进行 issue 计数
                 "error": f"{type(e).__name__}: {e!s}",
             }
 

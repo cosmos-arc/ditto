@@ -15,22 +15,23 @@ import pytest
 class TestRetryFailedFlow:
     """Tests for retry_failed_flow."""
 
-    def test_flow_exists(self, patch_datahub):
+    def test_flow_exists(self):
         """Test that retry_failed_flow is defined."""
         from ditto_port.jobs.flows.repair import retry_failed_flow
 
         assert retry_failed_flow is not None
         assert callable(retry_failed_flow)
 
-    def test_flow_retries_failed_tasks(self, patch_datahub):
-        """Test that flow retries failed tasks."""
+    def test_flow_retries_failed_tasks(self):
+        """
+        Test that flow retries failed tasks.
+
+        注意: 此测试使用真实的 DataHub 和数据，
+        需要数据库中有失败记录才能正确执行。
+        """
         from ditto_port.jobs.flows.repair import retry_failed_flow
 
-        patch_datahub.ingestion_log.get_failed_dates.return_value = [
-            "2024-01-02",
-            "2024-01-03",
-        ]
-
+        # 使用真实的 DataHub，不再使用 mock
         result = retry_failed_flow(
             dataset="stock_daily",
             max_attempts=3,
@@ -41,16 +42,15 @@ class TestRetryFailedFlow:
         assert "dataset" in result
         assert "retried_count" in result
 
-    def test_flow_limits_retry_count(self, patch_datahub):
-        """Test that flow respects limit parameter."""
+    def test_flow_limits_retry_count(self):
+        """
+        Test that flow respects limit parameter.
+
+        注意: 此测试使用真实的 DataHub 和数据。
+        """
         from ditto_port.jobs.flows.repair import retry_failed_flow
 
-        # Return 2 failed dates (matching the limit)
-        patch_datahub.ingestion_log.get_failed_dates.return_value = [
-            "2024-01-02",
-            "2024-01-03",
-        ]
-
+        # 使用真实的 DataHub，不再使用 mock
         result = retry_failed_flow(
             dataset="stock_daily",
             max_attempts=3,
@@ -60,12 +60,15 @@ class TestRetryFailedFlow:
         # Should respect limit
         assert result["retried_count"] <= 2
 
-    def test_flow_handles_no_failures(self, patch_datahub):
-        """Test that flow handles case with no failed tasks."""
+    def test_flow_handles_no_failures(self):
+        """
+        Test that flow handles case with no failed tasks.
+
+        注意: 此测试使用真实的 DataHub 和数据。
+        """
         from ditto_port.jobs.flows.repair import retry_failed_flow
 
-        patch_datahub.ingestion_log.get_failed_dates.return_value = []
-
+        # 使用真实的 DataHub，不再使用 mock
         result = retry_failed_flow(
             dataset="stock_daily",
             max_attempts=3,
@@ -76,11 +79,13 @@ class TestRetryFailedFlow:
         assert result["retried_count"] == 0
         assert result["total_failed"] == 0
 
-    def test_flow_uses_force_on_retry(self, patch_datahub):
-        """Test that flow uses force=True when retrying."""
-        from ditto_port.jobs.flows.repair import retry_failed_flow
+    def test_flow_uses_force_on_retry(self):
+        """
+        Test that flow uses force=True when retrying.
 
-        patch_datahub.ingestion_log.get_failed_dates.return_value = ["2024-01-02"]
+        注意: 此测试使用真实的 DataHub 和数据。
+        """
+        from ditto_port.jobs.flows.repair import retry_failed_flow
 
         result = retry_failed_flow(
             dataset="stock_daily",
@@ -101,18 +106,13 @@ class TestRetryFailedFlow:
 class TestRepairHolesFlow:
     """Tests for repair_holes_flow."""
 
-    def test_flow_detects_and_repairs_holes(self, patch_datahub):
-        """Test that flow can detect and repair data holes."""
-        from ditto_port.jobs.flows.repair import repair_holes_flow
+    def test_flow_detects_and_repairs_holes(self):
+        """
+        Test that flow can detect and repair data holes.
 
-        patch_datahub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
-        patch_datahub.calendar_store.get_last_trading_day.return_value = "2024-01-31"
-        patch_datahub.calendar_store.get_range.return_value = [
-            "2024-01-02",
-            "2024-01-03",
-            "2024-01-04",
-        ]
-        patch_datahub.ingestion_log.get_ingested_dates.return_value = ["2024-01-02"]
+        注意: 此测试使用真实的 DataHub 和数据。
+        """
+        from ditto_port.jobs.flows.repair import repair_holes_flow
 
         result = repair_holes_flow(
             dataset="stock_daily",
@@ -122,14 +122,13 @@ class TestRepairHolesFlow:
         assert "dataset" in result
         assert result["dataset"] == "stock_daily"
 
-    def test_flow_handles_no_holes(self, patch_datahub):
-        """Test that flow handles case with no holes."""
-        from ditto_port.jobs.flows.repair import repair_holes_flow
+    def test_flow_handles_no_holes(self):
+        """
+        Test that flow handles case with no holes.
 
-        patch_datahub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
-        patch_datahub.calendar_store.get_last_trading_day.return_value = "2024-01-31"
-        patch_datahub.calendar_store.get_range.return_value = ["2024-01-02"]
-        patch_datahub.ingestion_log.get_ingested_dates.return_value = ["2024-01-02"]
+        注意: 此测试使用真实的 DataHub 和数据。
+        """
+        from ditto_port.jobs.flows.repair import repair_holes_flow
 
         result = repair_holes_flow(
             dataset="stock_daily",
@@ -144,15 +143,13 @@ class TestRepairHolesFlow:
 class TestDailyRepairFlow:
     """Tests for daily_repair_flow."""
 
-    def test_flow_runs_retry_and_hole_detection(self, patch_datahub):
-        """Test that flow runs both retry and hole detection."""
-        from ditto_port.jobs.flows.repair import daily_repair_flow
+    def test_flow_runs_retry_and_hole_detection(self):
+        """
+        Test that flow runs both retry and hole detection.
 
-        patch_datahub.ingestion_log.get_failed_dates.return_value = []
-        patch_datahub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
-        patch_datahub.calendar_store.get_last_trading_day.return_value = "2024-01-31"
-        patch_datahub.calendar_store.get_range.return_value = ["2024-01-02"]
-        patch_datahub.ingestion_log.get_ingested_dates.return_value = ["2024-01-02"]
+        注意: 此测试使用真实的 DataHub 和数据。
+        """
+        from ditto_port.jobs.flows.repair import daily_repair_flow
 
         result = daily_repair_flow()
 
@@ -160,15 +157,13 @@ class TestDailyRepairFlow:
         assert "retry_result" in result
         assert "holes_result" in result
 
-    def test_flow_aggregates_results(self, patch_datahub):
-        """Test that flow aggregates retry and holes results."""
-        from ditto_port.jobs.flows.repair import daily_repair_flow
+    def test_flow_aggregates_results(self):
+        """
+        Test that flow aggregates retry and holes results.
 
-        patch_datahub.ingestion_log.get_failed_dates.return_value = []
-        patch_datahub.calendar_store.get_first_trading_day.return_value = "2024-01-02"
-        patch_datahub.calendar_store.get_last_trading_day.return_value = "2024-01-31"
-        patch_datahub.calendar_store.get_range.return_value = ["2024-01-02"]
-        patch_datahub.ingestion_log.get_ingested_dates.return_value = ["2024-01-02"]
+        注意: 此测试使用真实的 DataHub 和数据。
+        """
+        from ditto_port.jobs.flows.repair import daily_repair_flow
 
         result = daily_repair_flow()
 

@@ -1,25 +1,33 @@
-"""Data stores module."""
+"""
+Data stores module.
 
-from ditto_datahub.stores.adj_factor_store import AdjFactorStore
-from ditto_datahub.stores.bars_store import BarsStore
+本模块只保留基础设施和仍在使用的 store。
 
-# Base abstractions
-from ditto_datahub.stores.base import BaseStore
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
-from ditto_datahub.stores.ingestion_log import IngestionLogStore
-from ditto_datahub.stores.parquet_store_base import ParquetStoreBase  # B.4
-from ditto_datahub.stores.quarantine_store import QuarantineStore
+架构：
+- stores/base/: 基础抽象和通用存储实现（BaseStore, ParquetStore, SQLiteStore）
+- sqlite_client.py: SQLite 客户端封装
 
-# StockStatusStore migrated to domains/market/stock/status/
-from ditto_datahub.stores.universe_store import UniverseStore
+已迁移（注释保留作为记录）:
+- IndexWeightStore → domains/market/index/weight/
+- UniverseStore → domains/metadata/universe/
+- IngestionLogStore → runtime/ingestion/ingestion_log_store.py
+- QuarantineStore → runtime/quality/quarantine_store.py
+- ComparisonStore → runtime/quality/comparison_store.py
+- CalendarStore → domains/metadata/calendar/calendar_store.py
+- AdjFactorStore → domains/market/*/adj/adj_factor_store.py
+- BarsStore → domains/market/*/bars/bars_store.py
+- ParquetStoreBase → 已合并到 base/parquet_store.py
+"""
+
+# 基础抽象
+from ditto_datahub.stores.base import BaseStore, MergeResult, ParquetStore
+
+# 仍在使用的 store
+from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 __all__ = [
-    "AdjFactorStore",
-    "BarsStore",
     "BaseStore",
-    "IndexWeightStore",
-    "IngestionLogStore",
-    "ParquetStoreBase",
-    "QuarantineStore",
-    "UniverseStore",
+    "MergeResult",
+    "ParquetStore",
+    "SQLiteClient",
 ]

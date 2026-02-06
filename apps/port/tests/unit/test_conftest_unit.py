@@ -324,15 +324,26 @@ class TestPatchDatahubFixture:
         # 验证修改生效
         assert patch_datahub.calendar.is_trading_day() is False
 
-    def test_patch_datahub_patches_ditto_datahub(
+    def test_patch_datahub_returns_mock(
         self, patch_datahub: Mock, mock_datahub: Mock
     ) -> None:
-        """验证 patch_datahub 正确 patch 了 ditto_datahub.DataHub."""
-        # 在 patch 后导入 DataHub，确保使用被 patch 的版本
+        """
+        验证 patch_datahub 返回 mock 对象（不进行全局 patch）.
+
+        注意：此 fixture 不再全局 patch DataHub 类，
+        因为会与 dishka 依赖注入容器冲突。
+        它只返回一个 mock 对象供单元测试使用。
+        """
+        # patch_datahub 应该返回 mock_datahub
+        assert patch_datahub is mock_datahub
+
+        # patch_datahub 应该有默认的 mock 行为
+        assert patch_datahub.calendar.is_trading_day() is True
+        assert patch_datahub.ingestion_log.get_failed_dates() == []
+
+        # DataHub 类不受影响，不能直接调用（需要参数）
         from ditto_datahub import DataHub
 
-        # 调用 DataHub 应该返回 mock_datahub
-        # patch_datahub 就是 mock_datahub 的别名
-        result = DataHub()
-        assert result is mock_datahub
-        assert result is patch_datahub
+        # 尝试直接创建 DataHub 会失败，因为需要很多参数
+        with pytest.raises(TypeError):
+            DataHub()  # type: ignore[arg-type]

@@ -24,11 +24,9 @@ class EtfBarsStore(MarketBarsStoreBase):
                 ...
 
     This store is specialized for ETF daily bars and uses a fixed
-    dataset name "market/etf/bars". The read() method does not require a
-    dataset parameter.
+    dataset name "market/etf/bars". All read/write operations are
+    delegated to ParquetStore via MarketBarsStoreBase.
 
-    Inherits all common functionality from MarketBarsStoreBase, eliminating
-    ~250 lines of duplicated code.
     """
 
     def __init__(self, data_root: Path) -> None:
@@ -45,7 +43,3 @@ class EtfBarsStore(MarketBarsStoreBase):
     def _get_dataset(self) -> str:
         """Return dataset name for ETF bars."""
         return "market/etf/bars"
-
-    def _get_key_columns(self) -> list[str]:
-        """Return key column names for deduplication."""
-        return ["sid", "trade_date"]

@@ -1,7 +1,7 @@
 # ditto-datahub
 
-**版本**: v0.13.0
-**最后更新**: 2026-02-02
+**版本**: v0.14.0
+**最后更新**: 2026-02-06
 **状态**: ✅ 稳定
 
 ## 概要
@@ -31,13 +31,13 @@ DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
         ┌───────┴───────┬───────────────┬───────────────┐
         ▼               ▼               ▼               ▼
 ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ Runtime层    │ │  Store层     │ │ Accessor层   │ │  Sources层   │
+│ Runtime层    │ │  Store层     │ │  Helpers层   │ │  Sources层   │
 │              │ │              │ │              │ │              │
-│ SQLitePool   │ │ InstrumentStore│ │ Instruments │ │ Tushare      │
-│ FileLock     │ │ CalendarStore│ │ Bars         │ │ Akshare      │
-│ InstrumentIdAllocator│ │ BarsStore    │ │ Calendar     │ │              │
-│ DQChecker    │ │ AdjFactor... │ │ Universe     │ │              │
-│ FreezeMgr    │ │              │ │ Index        │ │              │
+│ SQLitePool   │ │ InstrumentStore│ │ adjustment   │ │ Tushare      │
+│ FileLock     │ │ CalendarStore│ │ pit          │ │ Akshare      │
+│ InstrumentIdAllocator│ │ BarsStore    │ │              │ │              │
+│ DQChecker    │ │ AdjFactor... │ │ (纯函数工具)  │ │              │
+│ FreezeMgr    │ │              │ │              │ │              │
 │ SqlEngine    │ │              │ │              │ │              │
 └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
 ```
@@ -131,7 +131,6 @@ store = BarsStore(config.data_root)
 | `CalendarStore` | 交易日历 | SQLite + 内存缓存 |
 | `BarsStore` | OHLCV 行情 | Parquet (分区: instrument_id/year) |
 | `AdjFactorStore` | 复权因子 | Parquet (分区: instrument_id/year) |
-| `UniverseStore` | 股票池 | SQLite |
 | `IndexWeightStore` | 指数权重 | SQLite |
 | `IngestionLogStore` | 数据摄取事件日志 | SQLite |
 | `QuarantineStore` | 数据隔离区 | SQLite |
@@ -402,17 +401,14 @@ result = store.get_balance_sheet(
 - **可扩展**: 新增域不影响现有域的实现
 - **易测试**: 每个域可独立测试
 
-### Accessor 层
+### Helpers 层
 
-业务逻辑封装层：
+纯函数工具模块（无状态、可测试、可组合）：
 
-| 组件 | 说明 |
+| 模块 | 说明 |
 |------|------|
-| `InstrumentsAccessor` | 标的查询、注册、标识符解析 |
-| `BarsAccessor` | 行情查询、复权计算 |
-| `CalendarAccessor` | 交易日历查询、日期偏移 |
-| `UniverseAccessor` | 股票池管理 |
-| `IndexAccessor` | 指数成分股管理 |
+| `adjustment.py` | 复权计算（QFQ/HFQ） |
+| `pit.py` | PIT 查询辅助函数 |
 
 ### Sources 层
 
@@ -716,6 +712,27 @@ bars/
 - [Port 层重构计划](../../../../docs/plans/2026-02-02-port-layer-refactor.md)
 
 ## 变更记录
+
+### v0.14.0 (2026-02-06)
+**重构**
+- 架构清理：移除 Accessor 层，引入 Helpers 层
+  - `accessors/` → `helpers/`：只保留纯函数工具（adjustment.py、pit.py）
+  - 移除 `enrichment.py`（已搬迁到 ditto-port）
+  - 移除 `instrument_accessor.py`（功能迁移到 MetadataService）
+  - 移除 `internal/` 子目录
+
+**新增**
+- `helpers/README.md`：纯函数工具模块文档
+- `helpers/adjustment.py`：复权计算纯函数（QFQ/HFQ）
+- `helpers/pit.py`：PIT 查询辅助函数
+
+**改进**
+- 更新 `stores/README.md`：明确 stores/ 作为基础设施的定位
+- 更新 `packages/datahub/README.md`：架构图和层级说明
+- 架构一致性：业务逻辑统一在 Domain Service 层
+
+**文档**
+- `docs/plans/2026-02-06-datahub-cleanup-refactor-design.md` - 重构设计文档
 
 ### v0.13.0 (2026-02-02)
 **重构**

@@ -123,6 +123,24 @@ def test_read_with_as_of_date_pit_query(factor_store: FactorStore) -> None:
     assert len(row_v2) == 1
     assert row_v2["exposure"][0] == 0.55
 
+    # Query as of exact boundary 2024-01-10 (should get version 2)
+    # PIT spec: effective_to > as_of_date (not >=)
+    # Version 1: effective_to = 2024-01-10, 2024-01-10 > 2024-01-10 is FALSE
+    #            → excluded
+    # Version 2: effective_from = 2024-01-10, 2024-01-10 <= 2024-01-10 is TRUE
+    #            → included
+    result_boundary = factor_store.read(
+        start_date="2024-01-01",
+        end_date="2024-01-31",
+        as_of_date="2024-01-10",  # Exact boundary date
+    )
+
+    assert len(result_boundary) == 2
+    row_boundary = result_boundary.filter(pl.col("trade_date") == pl.date(2024, 1, 2))
+    assert len(row_boundary) == 1
+    # Should return version 2 (effective_from = 2024-01-10)
+    assert row_boundary["exposure"][0] == 0.55
+
 
 def test_write_validates_required_columns(factor_store: FactorStore) -> None:
     """Test that write validates required columns."""
@@ -305,12 +323,12 @@ def test_delete_year_partition(factor_store: FactorStore) -> None:
     assert factor_store.get_years() == [2024]
 
     # Delete
-    deleted = factor_store.delete(2024)
+    deleted = factor_store.delete_partition("2024")
     assert deleted is True
 
     # Verify data is gone
     assert factor_store.get_years() == []
 
     # Delete again should return False
-    deleted_again = factor_store.delete(2024)
+    deleted_again = factor_store.delete_partition("2024")
     assert deleted_again is False

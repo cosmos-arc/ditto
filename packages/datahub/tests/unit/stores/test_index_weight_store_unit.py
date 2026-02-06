@@ -1,13 +1,16 @@
 """Tests for IndexWeightStore."""
 
 import pytest
-from ditto_datahub.stores.index_weight_store import IndexWeightStore
+from ditto_datahub.domains.market.index.weight.weight_store import (
+    IndexWeightStore,
+)
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
 @pytest.mark.integration
 class TestIndexWeightStore:
-    """Tests for IndexWeightStore.
+    """
+    Tests for IndexWeightStore.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
@@ -221,7 +224,8 @@ class TestIndexWeightStore:
 
 @pytest.mark.integration
 class TestIndexWeightStorePITSafety:
-    """Tests for PIT safety in IndexWeightStore.
+    """
+    Tests for PIT safety in IndexWeightStore.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.

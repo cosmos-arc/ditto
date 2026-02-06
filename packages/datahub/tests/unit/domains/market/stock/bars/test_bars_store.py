@@ -47,10 +47,6 @@ def sample_bars_df() -> pl.DataFrame:
 class TestStockBarsStore:
     """Test suite for StockBarsStore."""
 
-    def test_get_key_columns(self, store: StockBarsStore) -> None:
-        """Test _get_key_columns returns correct key columns."""
-        assert store._get_key_columns() == ["sid", "trade_date"]
-
     def test_read_empty(self, store: StockBarsStore) -> None:
         """Test read with no data."""
         df = store.read()
@@ -99,7 +95,3 @@ class TestStockBarsStore:
 
         years = store.get_years()
         assert years == [2022, 2023, 2024]
-
-    def test_dataset_name(self, store: StockBarsStore) -> None:
-        """Test that dataset name is market/stock/bars."""
-        assert store._dataset == "market/stock/bars"

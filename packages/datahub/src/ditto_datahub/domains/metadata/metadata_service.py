@@ -8,10 +8,11 @@ MetadataService - Metadata 域统一查询服务.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 import polars as pl
 from ditto_foundation import logger, traced
+from ditto_foundation.util.checksum import ChecksumCompute
 
 from ditto_datahub.domains.metadata.calendar.calendar_store import CalendarStore
 from ditto_datahub.domains.metadata.identity.identity_store import IdentityStore
@@ -23,8 +24,8 @@ from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
 )
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.domains.metadata.instrument.models import InstrumentRegistration
+from ditto_datahub.domains.metadata.universe.universe_store import UniverseStore
 from ditto_datahub.runtime.sid_allocator import SidAllocator
-from ditto_datahub.stores.universe_store import UniverseStore
 
 
 class MetadataService:
@@ -251,6 +252,27 @@ class MetadataService:
 
     # ============ 交易日历查询 ============
 
+    @traced("metadata.calendar.get_range_df")
+    def get_range_df(
+        self,
+        start: str,
+        end: str,
+        only_open: bool = True,
+    ) -> pl.DataFrame:
+        """
+        查询日历数据（DataFrame 格式）.
+
+        Args:
+            start: 开始日期.
+            end: 结束日期.
+            only_open: 是否只返回交易日.
+
+        Returns:
+            日历数据 DataFrame，包含 trade_date, is_open, prev_trade_date 等列.
+
+        """
+        return self._calendar_store.get_range_df(start, end, only_open)
+
     @traced("metadata.calendar.get_trading_days")
     def get_trading_days(
         self,
@@ -285,6 +307,58 @@ class MetadataService:
 
         """
         return self._calendar_store.is_trading_day(date)
+
+    @traced("metadata.calendar.upsert")
+    def upsert(self, records: list[dict[str, Any]]) -> int:
+        """
+        插入或更新日历记录.
+
+        Args:
+            records: 日历记录列表.
+
+        Returns:
+            插入的记录数.
+
+        """
+        self._calendar_store.upsert(records)
+        return len(records)
+
+    @traced("metadata.calendar.get_last_trading_day")
+    def get_last_trading_day(self) -> str | None:
+        """
+        获取最后一个交易日.
+
+        Returns:
+            最后一个交易日日期字符串，如果没有数据则返回 None.
+
+        """
+        return self._calendar_store.get_last_trading_day()
+
+    @traced("metadata.calendar.get_first_trading_day")
+    def get_first_trading_day(self) -> str | None:
+        """
+        获取第一个交易日.
+
+        Returns:
+            第一个交易日日期字符串，如果没有数据则返回 None.
+
+        """
+        return self._calendar_store.get_first_trading_day()
+
+    @traced("metadata.calendar.list_trading_days")
+    def list_trading_days(self, start: str, end: str) -> list[str]:
+        """
+        获取交易日列表（别名方法，与 get_trading_days 相同）.
+
+        Args:
+            start: 开始日期.
+            end: 结束日期.
+
+        Returns:
+            交易日列表.
+
+        """
+        return self.get_trading_days(start, end, only_open=True)
 
     # ============ 标的池查询 ============
 
@@ -336,3 +410,168 @@ class MetadataService:
         )
 
         return registered_sid
+
+    @traced("metadata.security.register_securities_batch")
+    def register_securities_batch(
+        self,
+        df: pl.DataFrame,
+        source: str,
+        asset_class: Literal["stock", "etf"],
+        src_code_col: str = "ts_code",
+    ) -> tuple[str, str]:
+        """
+        批量注册证券（跳过已存在的）。
+
+        Args:
+            df: 包含证券元数据的 DataFrame。必须包含以下列：
+                - src_code_col: 源代码列名
+                - symbol: 显示符号
+                - name: 证券名称
+                - exchange: 交易所代码
+                - list_date: 上市日期
+            source: 数据源标识符
+            asset_class: 资产类别
+            src_code_col: DataFrame 中源代码的列名
+
+        Returns:
+            (file_path, checksum) 元组
+
+        """
+        logger.info(
+            "Starting batch instrument registration",
+            event="instrument_batch_register_start",
+            source=source,
+            asset_class=asset_class,
+            row_count=len(df),
+        )
+
+        registered_count = 0
+        skipped_count = 0
+
+        for row in df.to_dicts():
+            src_code = row[src_code_col]
+
+            # 检查是否已存在
+            existing_sid = self._instrument_store.resolve_sid(src_code, source, None)
+            if existing_sid is not None:
+                skipped_count += 1
+                continue
+
+            # 注册新证券
+            self.register_security(
+                InstrumentRegistration(
+                    source_ticker=src_code,
+                    symbol=row["symbol"],
+                    name=row["name"],
+                    exchange=row["exchange"],
+                    asset_class=asset_class,
+                    list_date=row["list_date"],
+                    source=source,
+                    board=row.get("board"),
+                )
+            )
+            registered_count += 1
+
+        # 计算 checksum
+        dataset_name = f"{asset_class}_basic"
+        df_with_source = df.with_columns(pl.lit(source).alias("source"))
+        checksum = ChecksumCompute.from_dataframe(df_with_source, dataset_name)
+
+        file_path = f"instrument_store:{asset_class}_basic"
+
+        logger.info(
+            "Batch instrument registration completed",
+            event="instrument_batch_register_complete",
+            registered=registered_count,
+            skipped=skipped_count,
+            checksum=checksum,
+        )
+
+        return file_path, checksum
+
+    @traced("metadata.security.resolve_or_create_batch")
+    def resolve_or_create_batch(
+        self,
+        df: pl.DataFrame,
+        source: str,
+        asset_class: Literal["stock", "etf"],
+        src_code_col: str = "ts_code",
+    ) -> dict[str, int]:
+        """
+        批量解析 src_code，不存在则自动创建证券。
+
+        Args:
+            df: 包含证券元数据的 DataFrame。必须包含以下列：
+                - src_code_col: 源代码列名
+                - symbol: 显示符号
+                - name: 证券名称
+                - exchange: 交易所代码
+                - list_date: 上市日期
+            source: 数据源标识符
+            asset_class: 资产类别
+            src_code_col: DataFrame 中源代码的列名
+
+        Returns:
+            {src_code: sid} 映射字典
+
+        """
+        logger.debug(
+            "Resolving or creating instruments in batch",
+            event="instrument_resolve_or_create_start",
+            source=source,
+            asset_class=asset_class,
+            row_count=len(df),
+        )
+
+        result: dict[str, int] = {}
+        created_count = 0
+
+        # 处理空 DataFrame
+        if len(df) == 0:
+            return result
+
+        # 验证必需列
+        required_cols = [src_code_col, "symbol", "name", "exchange", "list_date"]
+        for col in required_cols:
+            if col not in df.columns:
+                msg = f"DataFrame 缺少必需列: {col}"
+                raise KeyError(msg)
+
+        # 批量查询已存在的证券
+        src_codes = df[src_code_col].to_list()
+        existing_mappings = self._instrument_store.resolve_sids_batch(
+            src_codes, source, None
+        )
+
+        # 处理每一行
+        for row in df.to_dicts():
+            src_code = row[src_code_col]
+
+            # 如果已存在，使用已有的 SID
+            if src_code in existing_mappings:
+                result[src_code] = existing_mappings[src_code]
+                continue
+
+            # 不存在则创建新证券
+            sid = self.register_security(
+                InstrumentRegistration(
+                    source_ticker=src_code,
+                    symbol=row["symbol"],
+                    name=row["name"],
+                    exchange=row["exchange"],
+                    asset_class=asset_class,
+                    list_date=row["list_date"],
+                    source=source,
+                )
+            )
+            result[src_code] = sid
+            created_count += 1
+
+        logger.debug(
+            "Batch resolve or create completed",
+            event="security_resolve_or_create_complete",
+            total_count=len(result),
+            created_count=created_count,
+        )
+
+        return result

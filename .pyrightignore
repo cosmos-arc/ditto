@@ -1,5 +1,0 @@
-# Pyright ignore rules for Ditto project
-
-# StockAdjFactorStore intentionally changes API to remove dataset parameter
-# This is a domain-specific specialization that hardcodes the dataset name
-packages/datahub/src/ditto_datahub/domains/market/stock/adj/adj_factor_store.py

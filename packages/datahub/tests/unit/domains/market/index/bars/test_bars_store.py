@@ -48,12 +48,6 @@ def sample_bars_df() -> pl.DataFrame:
 class TestIndexBarsStore:
     """Test suite for IndexBarsStore."""
 
-    # ============ _get_key_columns tests ============
-
-    def test_get_key_columns(self, store: IndexBarsStore) -> None:
-        """Test _get_key_columns returns correct key columns."""
-        assert store._get_key_columns() == ["sid", "trade_date"]
-
     # ============ read tests ============
 
     def test_read_empty(self, store: IndexBarsStore) -> None:
@@ -226,7 +220,7 @@ class TestIndexBarsStore:
         """Test delete removes year partition."""
         store.write(sample_bars_df, year=2024)
 
-        result = store.delete(2024)
+        result = store.delete_partition("2024")
         assert result is True
 
         file_path = tmp_path / "data" / "market" / "index" / "bars" / "2024.parquet"
@@ -234,7 +228,7 @@ class TestIndexBarsStore:
 
     def test_delete_nonexistent_year(self, store: IndexBarsStore) -> None:
         """Test delete with non-existent year."""
-        result = store.delete(2024)
+        result = store.delete_partition("2024")
         assert result is False
 
     # ============ get_checksum tests ============
@@ -307,9 +301,3 @@ class TestIndexBarsStore:
         store.write(sample_bars_df, year=2024)
         sids = store.list_sids()
         assert sids == [1600001, 1600002]
-
-    # ============ dataset name tests ============
-
-    def test_dataset_name(self, store: IndexBarsStore) -> None:
-        """Test that dataset name is market/index/bars."""
-        assert store._dataset == "market/index/bars"

@@ -12,10 +12,10 @@ from typing import Literal
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.domains.features.technical.indicator_metadata_store import (
+from ditto_datahub.domains.features.technical import (
     IndicatorMetadataStore,
+    IndicatorStore,
 )
-from ditto_datahub.domains.features.technical.indicator_store import IndicatorStore
 
 
 @dataclass(frozen=True)
