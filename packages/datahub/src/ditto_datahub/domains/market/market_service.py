@@ -600,7 +600,7 @@ class MarketService:
         # 使用文件锁保护并发写入
         lock_name = f"adj_factor_write_{dataset}_{year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = store.write(df, year, on_duplicate=on_duplicate_enum)
+            write_result = store.write(df, year, on_duplicate=on_duplicate_enum.value)
 
         # 转换 WriteResult 为 dict[str, int]
         result = {

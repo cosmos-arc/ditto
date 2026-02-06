@@ -305,12 +305,12 @@ def test_delete_year_partition(factor_store: FactorStore) -> None:
     assert factor_store.get_years() == [2024]
 
     # Delete
-    deleted = factor_store.delete(2024)
+    deleted = factor_store.delete_partition("2024")
     assert deleted is True
 
     # Verify data is gone
     assert factor_store.get_years() == []
 
     # Delete again should return False
-    deleted_again = factor_store.delete(2024)
+    deleted_again = factor_store.delete_partition("2024")
     assert deleted_again is False

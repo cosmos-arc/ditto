@@ -44,12 +44,6 @@ def sample_nav_df() -> pl.DataFrame:
 class TestEtfNavStore:
     """Test suite for EtfNavStore."""
 
-    # ============ _get_key_columns tests ============
-
-    def test_get_key_columns(self, store: EtfNavStore) -> None:
-        """Test _get_key_columns returns correct key columns."""
-        assert store._get_key_columns() == ["sid", "trade_date"]
-
     # ============ read tests ============
 
     def test_read_empty(self, store: EtfNavStore) -> None:
@@ -211,7 +205,7 @@ class TestEtfNavStore:
         """Test delete removes year partition."""
         store.write(sample_nav_df, year=2024)
 
-        result = store.delete(2024)
+        result = store.delete_partition("2024")
         assert result is True
 
         file_path = tmp_path / "data" / "market" / "etf" / "nav" / "2024.parquet"
@@ -219,7 +213,7 @@ class TestEtfNavStore:
 
     def test_delete_nonexistent_year(self, store: EtfNavStore) -> None:
         """Test delete with non-existent year."""
-        result = store.delete(2024)
+        result = store.delete_partition("2024")
         assert result is False
 
     # ============ get_checksum tests ============
@@ -290,9 +284,3 @@ class TestEtfNavStore:
         store.write(sample_nav_df, year=2024)
         sids = store.list_sids()
         assert sids == [1500001, 1500002]
-
-    # ============ dataset name tests ============
-
-    def test_dataset_name(self, store: EtfNavStore) -> None:
-        """Test that dataset name is market/etf/nav."""
-        assert store._dataset == "market/etf/nav"

@@ -43,12 +43,6 @@ def sample_adj_factor_df() -> pl.DataFrame:
 class TestStockAdjFactorStore:
     """Test suite for StockAdjFactorStore."""
 
-    # ============ _get_key_columns tests ============
-
-    def test_get_key_columns(self, store: StockAdjFactorStore) -> None:
-        """Test _get_key_columns returns correct key columns."""
-        assert store._get_key_columns() == ["sid", "trade_date"]
-
     # ============ read tests ============
 
     def test_read_empty(self, store: StockAdjFactorStore) -> None:
@@ -209,7 +203,7 @@ class TestStockAdjFactorStore:
         """Test delete removes year partition."""
         store.write(sample_adj_factor_df, year=2024)
 
-        result = store.delete(2024)
+        result = store.delete_partition("2024")
         assert result is True
 
         file_path = tmp_path / "data" / "market" / "stock" / "adj" / "2024.parquet"
@@ -217,7 +211,7 @@ class TestStockAdjFactorStore:
 
     def test_delete_nonexistent_year(self, store: StockAdjFactorStore) -> None:
         """Test delete with non-existent year."""
-        result = store.delete(2024)
+        result = store.delete_partition("2024")
         assert result is False
 
     # ============ get_checksum tests ============
@@ -228,14 +222,14 @@ class TestStockAdjFactorStore:
         """Test get_checksum returns MD5 hash."""
         store.write(sample_adj_factor_df, year=2024)
 
-        checksum = store.get_checksum(2024)
+        checksum = store.get_checksum("2024")
         assert len(checksum) == 32
         # Verify it's a valid hex string
         int(checksum, 16)
 
     def test_get_checksum_missing_file(self, store: StockAdjFactorStore) -> None:
         """Test get_checksum with missing file."""
-        checksum = store.get_checksum(2024)
+        checksum = store.get_checksum("2024")
         assert checksum == ""
 
     # ============ count tests ============
@@ -292,9 +286,3 @@ class TestStockAdjFactorStore:
         store.write(sample_adj_factor_df, year=2024)
         sids = store.list_sids()
         assert sids == [1000001, 1000002]
-
-    # ============ dataset name tests ============
-
-    def test_dataset_name(self, store: StockAdjFactorStore) -> None:
-        """Test that dataset name is stock_adj_factor."""
-        assert store._dataset == "market/stock/adj"

@@ -1,7 +1,7 @@
 # ditto-datahub 简化重构计划
 
 **创建日期**: 2026-02-06
-**状态**: ✅ 阶段 1-2 已完成，阶段 3 已延期
+**状态**: ✅ 全部完成
 **相关问题**: Accessors 和 Stores 遗留代码清理、Domains 层实现不一致问题
 
 ## 评估摘要
@@ -344,16 +344,54 @@ pixi run -e dev ci
 - Pyright 类型检查通过（0 errors）
 - 所有 pre-commit hooks 通过
 
-### ⏸️ 阶段 3：优化 Stores 层结构（已延期）
+### ✅ 阶段 3：优化 Stores 层结构（已完成）
 
-**原因**: 用户选择渐进式执行策略，阶段 3 推迟到后续版本处理
+**提交**: （待提交）
 
-**待处理任务**:
-- 合并 `parquet_store_base.py` 到 `base/parquet_store.py`
-- 更新所有继承 ParquetStoreBase 的 domains 层 stores
-- 重新组织 Stores 层结构
+**完成内容**:
+
+#### 3.1 合并 Parquet 存储实现
+- 将 `parquet_store_base.py` 的所有功能合并到 `base/parquet_store.py`
+- 添加 `MergeResult` dataclass 导出
+- 添加元数据操作方法：`get_years()`, `delete_partition()`, `get_checksum()`, `count()`, `get_date_range()`, `list_sids()`
+- 添加钩子方法支持：`_get_key_columns()`, `_get_sort_columns()`, `_get_date_column()`, `_validate_data()`
+
+#### 3.2 更新所有 Domains 层 Stores 为组合模式
+- **MarketBarsStoreBase**: 重构为组合 `ParquetStore` 的基类
+- **StockBarsStore, EtfBarsStore, IndexBarsStore**: 移除 `_get_key_columns()` 方法
+- **TechnicalIndicatorStore**: 使用自定义 `_TechnicalIndicatorParquetStore` 处理特殊键列
+- **FactorStore**: 使用 `_FactorParquetStore` 处理 PIT 数据和日期列
+- **StockAdjFactorStore, EtfAdjFactorStore**: 重构为组合模式
+- **EtfNavStore, EtfStatusStore**: 重构为组合模式
+
+#### 3.3 清理旧文件
+- 删除 `stores/parquet_store_base.py`
+- 删除 `tests/unit/stores/test_parquet_store_base_unit.py`
+- 更新 `stores/__init__.py` 导出
+
+#### 3.4 更新测试文件
+- 移除 `test_get_key_columns()` 测试（内部实现细节）
+- 将 `store.delete(year)` 更新为 `store.delete_partition(str(year))`
+- 移除 `test_dataset_name()` 测试（内部实现细节）
+
+**影响的测试文件**（10个）:
+- `tests/unit/domains/market/stock/bars/test_bars_store.py`
+- `tests/unit/domains/market/stock/adj/test_adj_factor_store.py`
+- `tests/unit/domains/market/etf/bars/test_bars_store.py`
+- `tests/unit/domains/market/etf/nav/test_nav_store.py`
+- `tests/unit/domains/market/etf/status/test_status_store.py`
+- `tests/unit/domains/market/etf/adj/test_adj_factor_store.py`
+- `tests/unit/domains/market/index/bars/test_bars_store.py`
+- `tests/unit/domains/factors/test_factor_store.py`
+- `tests/unit/domains/features/technical/test_technical_indicator_store.py`
+- `tests/unit/stores/base/test_parquet_store_unit.py`
+
+**验证结果**:
+- 所有测试通过（90+ tests）
+- ParquetStore 测试全部通过
+- 所有 domains 层 stores 测试通过
 
 ---
 
 **最后更新**: 2026-02-06
-**执行状态**: 阶段 1-2 完成，阶段 3 延期
+**执行状态**: 全部完成 ✅
