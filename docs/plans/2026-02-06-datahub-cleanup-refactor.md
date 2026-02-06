@@ -1,7 +1,7 @@
 # ditto-datahub 简化重构计划
 
 **创建日期**: 2026-02-06
-**状态**: 待审批
+**状态**: ✅ 阶段 1-2 已完成，阶段 3 已延期
 **相关问题**: Accessors 和 Stores 遗留代码清理、Domains 层实现不一致问题
 
 ## 评估摘要
@@ -284,3 +284,76 @@ pixi run -e dev ci
 - [之前的 stores 清理计划](./2026-02-05-stores-cleanup-refactor-plan.md)
 - [DataHub 架构设计](../design/02_data_design.md)
 - [PIT 查询设计](../design/07_pit_query_design.md)
+
+---
+
+## 执行记录
+
+### ✅ 阶段 1：文档清理（已完成）
+
+**提交**: `dd46d45 refactor(datahub): 阶段 1-2 完成 - helpers 层重构和 domains 层统一`
+
+**完成内容**:
+- 创建 `helpers/README.md` 文档，说明纯函数工具模块
+- 更新 `stores/README.md`，明确基础设施层定位
+- 更新 `packages/datahub/README.md`，说明架构变更并版本号提升至 v0.14.0
+
+### ✅ 阶段 2：统一 Domains 层实现（已完成）
+
+**提交**:
+- `4f14685 refactor(datahub): 阶段 2.6 - 测试文件迁移与重命名`
+- `3c819d9 fix(datahub): 修复测试导入路径以适配重构后的模块结构`
+
+**完成内容**:
+
+#### 2.1 helpers 层创建（原 accessors/ 精简版）
+- 创建 `helpers/` 目录
+- 迁移 `adjustment.py` 和 `pit.py` 纯函数工具
+- 移除 `internal/` 子目录
+- 删除 `enrichment.py`（已迁移至 ditto-port）
+- 删除 `instrument_accessor.py`（功能合并至 MetadataService）
+
+#### 2.2 TechnicalIndicator 重命名
+- `indicator_store.py` → `technical_indicator_store.py`
+- `indicator_metadata_store.py` → `technical_indicator_metadata_store.py`
+- 添加向后兼容的别名导出
+
+#### 2.3 UniverseStore 迁移
+- 从 `stores/` 迁移到 `domains/metadata/universe/`
+- 更新 Provider 配置导入路径
+
+#### 2.4 MetadataService 扩展
+- 添加 `register_securities_batch()` 方法
+- 添加 `resolve_or_create_batch()` 方法
+
+#### 2.5 依赖注入更新
+- `hub.py`: 移除 `InstrumentsAccessor` 参数
+- Provider 配置: 移除 `securities` provider
+- `data_writer.py`: 使用 `metadata.resolve_or_create_batch()`
+
+#### 2.6 测试文件迁移
+- `accessors/bars/test_adjustment_unit.py` → `helpers/test_helpers_unit.py`
+- 删除 `accessors/` 相关测试
+- Technical indicator 测试文件重命名
+- `stores/test_universe_store_unit.py` → `domains/metadata/universe/`
+- 更新 `test_hub_unit.py` 导入和 mock 路径
+
+**验证结果**:
+- 1195 个单元测试全部通过
+- Ruff lint 检查通过
+- Pyright 类型检查通过（0 errors）
+- 所有 pre-commit hooks 通过
+
+### ⏸️ 阶段 3：优化 Stores 层结构（已延期）
+
+**原因**: 用户选择渐进式执行策略，阶段 3 推迟到后续版本处理
+
+**待处理任务**:
+- 合并 `parquet_store_base.py` 到 `base/parquet_store.py`
+- 更新所有继承 ParquetStoreBase 的 domains 层 stores
+- 重新组织 Stores 层结构
+
+---
+
+**最后更新**: 2026-02-06
+**执行状态**: 阶段 1-2 完成，阶段 3 延期
