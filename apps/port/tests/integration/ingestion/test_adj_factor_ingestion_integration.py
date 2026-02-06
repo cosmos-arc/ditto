@@ -17,7 +17,6 @@ class TestAdjFactorIngestion:
 
     def test_ingest_adj_factor_uses_src_code_column(self, mocker):
         """Test that adj_factor ingestion uses src_code column for SID mapping."""
-        from ditto_datahub.models.storage import WriteResult
         from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
         # Mock DataHub
@@ -26,15 +25,12 @@ class TestAdjFactorIngestion:
 
         # Mock dependencies
         mock_hub.ingestion_log = mocker.MagicMock()
-        mock_hub.adj_factor = mocker.MagicMock()
-        # Mock write to return WriteResult
-        mock_hub.adj_factor.write.return_value = WriteResult(
-            file_path="/path/to/file",
-            checksum="checksum123",
-            rows_written=2,
-            rows_total=2,
-            blocked=False,
-        )
+        mock_hub.market = mocker.MagicMock()
+        # Mock write_adj_factor to return dict[str, int]
+        mock_hub.market.write_adj_factor.return_value = {
+            "rows": 2,
+            "files": 1,
+        }
 
         # Mock securities.enrich_dataframe_with_sid to return DataFrame with sid column
         mock_enriched_df = pl.DataFrame(
@@ -82,8 +78,8 @@ class TestAdjFactorIngestion:
         # Verify result status is success
         assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-        # Verify adj_factor.write was called with dataframe containing sid
-        call_args = mock_hub.adj_factor.write.call_args
+        # Verify market.write_adj_factor was called with dataframe containing sid
+        call_args = mock_hub.market.write_adj_factor.call_args
         df_written = call_args.kwargs["df"]
 
         # Verify sid column exists in the written dataframe
@@ -159,8 +155,8 @@ class TestAdjFactorIngestion:
         # Verify result status is success
         assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-        # Verify adj_factor.write was called with dataframe containing sid
-        call_args = mock_hub.adj_factor.write.call_args
+        # Verify market.write_adj_factor was called with dataframe containing sid
+        call_args = mock_hub.market.write_adj_factor.call_args
         df_written = call_args.kwargs["df"]
 
         # Verify sid column exists in the written dataframe

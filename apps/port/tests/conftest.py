@@ -240,23 +240,24 @@ def mock_datahub() -> MagicMock:
 
 
 @pytest.fixture
-def patch_datahub(mock_datahub: MagicMock, mocker: Any) -> MagicMock:
-    """将 DataHub 替换为 Mock 对象.
+def patch_datahub(mock_datahub: MagicMock) -> MagicMock:
+    """返回 Mock DataHub 对象（不进行全局 patch）.
 
-    使用方式：
+    注意：此 fixture 不再全局 patch DataHub 类，
+    因为会与 dishka 依赖注入容器冲突。
+
+    集成测试应使用真实的 DataHub（通过 create_ingestion_context），
+    单元测试可自行 mock 需要的组件。
+
+    使用方式（单元测试）：
         def test_something(patch_datahub):
-            patch_datahub.calendar.is_trading_day.return_value = False
-            # ... 测试逻辑
+            # 使用 mock 对象进行测试
+            assert patch_datahub.calendar.is_trading_day() is True
 
     Args:
         mock_datahub: 独立的 Mock DataHub 对象
-        mocker: pytest-mock fixture
 
     Returns:
-        MagicMock: mock_datahub 对象，可以直接用于配置 mock 行为
-
-    Note:
-        使用 function 作用域的 mock_datahub，确保测试隔离，支持并行测试。
+        MagicMock: mock_datahub 对象
     """
-    mocker.patch("ditto_datahub.DataHub", return_value=mock_datahub)
     return mock_datahub
