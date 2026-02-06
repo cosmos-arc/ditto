@@ -1,7 +1,7 @@
 # stores
 
 **版本**: v0.5.0
-**最后更新**: 2026-01-23
+**最后更新**: 2026-02-06
 **状态**: ✅ 稳定
 
 ## 概要
@@ -12,40 +12,65 @@
 
 提供 SQLite (事务型) 和 Parquet (年分区分析型) 两种存储的统一访问接口。
 
-## 二、包含文件
+## 包含文件
 
 | 文件 | 功能 |
 |------|------|
 | `sqlite_client.py` | SQLite 客户端封装，提供统一的 CRUD 接口 |
-| `security_store.py` | 证券主数据 + PIT 映射存储 |
-| `calendar_store.py` | 交易日历存储 (内存缓存优化) |
-| `pipeline_store.py` | Pipeline 运行状态 + DQ 异常记录 |
-| `bars_store.py` | K线数据 Parquet 年分区存储 |
-| `adj_factor_store.py` | 复权因子 Parquet 年分区存储 |
+| `base/` | 存储抽象基类 |
+| `parquet_store_base.py` | Parquet 年分区存储基类 |
 
-## 三、使用示例
+## 架构定位
+
+`stores/` 层作为基础设施，提供底层存储能力：
+
+```
+┌─────────────────┐
+│   Application   │
+├─────────────────┤
+│   Domains       │  ← 业务域层 (Service + Store)
+├─────────────────┤
+│  Foundation     │  ← 基础设施 (SQLite, Parquet)
+└─────────────────┘
+```
+
+### 层级职责
+
+| 层级 | 职责 | 示例 |
+|------|------|------|
+| Domains | 业务逻辑、领域模型 | MarketService, MetadataService |
+| Stores | 基础设施、通用存储 | SQLiteClient, ParquetStoreBase |
+
+## 迁移说明
+
+以下组件已从 `stores/` 迁移到 `domains/` 层：
+
+| 组件 | 迁移目标 | 原因 |
+|------|----------|------|
+| `UniverseStore` | `domains/metadata/universe/` | 业务域组件 |
+| `BarsStore` | `domains/market/bars/` | 业务域组件 |
+| `AdjFactorStore` | `domains/market/adj_factor/` | 业务域组件 |
+
+## 使用示例
 
 ```python
 from pathlib import Path
-from ditto_datahub.stores import (
-    SQLiteClient,
-)
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
-from ditto_datahub.stores.bars_store import BarsStore
-from ditto_datahub.stores.adj_factor_store import AdjFactorStore
+from ditto_datahub.stores import SQLiteClient
 
-# SQLite 客户端
+# SQLite 客户端（基础设施）
 client = SQLiteClient(Path("data/ditto.db"))
 
-# 证券存储
-instrument_store = InstrumentStore(client)
-sid = instrument_store.resolve_sid("510300.SH", source="tushare")
+# Domains 层使用示例
+from ditto_datahub.domains.metadata import MetadataService
+from ditto_datahub.domains.market import MarketService
 
-# K线存储
-bars_store = BarsStore(Path("data"))
-df = bars_store.read("etf_daily", sids=[sid], start_date="2024-01-01")
-
-# 复权因子存储
-adj_store = AdjFactorStore(Path("data"))
-adj_df = adj_store.read("adj_factor", sids=[sid])
+# 业务操作通过 Domain Service
+securities = metadata_service.get_securities(asset_class="stock")
+bars = market_service.get_bars(sids=[1000001], start="2024-01-01")
 ```
+
+## 相关文档
+
+- [Helpers 纯函数工具](../helpers/README.md)
+- [Metadata 域文档](../domains/metadata/README.md)
+- [Market 域文档](../domains/market/README.md)

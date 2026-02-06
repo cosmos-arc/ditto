@@ -11,10 +11,10 @@ from ditto_datahub.stores.base import BaseStore
 # 仍在使用的 store
 from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_datahub.stores.universe_store import UniverseStore
 
-# 已迁移（注释保留作为记录）:
+# 已迁移（注释保留作为记录):
 # IndexWeightStore → domains/market/index/weight/
+# UniverseStore → domains/metadata/universe/
 # IngestionLogStore → runtime/ingestion/ingestion_log_store.py
 # QuarantineStore → runtime/quality/quarantine_store.py
 # ComparisonStore → runtime/quality/comparison_store.py
@@ -26,5 +26,4 @@ __all__ = [
     "BaseStore",
     "ParquetStoreBase",
     "SQLiteClient",
-    "UniverseStore",
 ]

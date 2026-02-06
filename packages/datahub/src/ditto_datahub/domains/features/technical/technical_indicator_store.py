@@ -1,5 +1,5 @@
 """
-IndicatorStore for technical indicator data storage.
+TechnicalIndicatorStore for technical indicator data storage.
 
 技术指标数据存储，使用 Parquet 格式按年份分区存储.
 """
@@ -17,7 +17,7 @@ from ditto_datahub.models.storage import WriteResultStore as WriteResult
 from ditto_datahub.stores.parquet_store_base import ParquetStoreBase
 
 
-class IndicatorStore(ParquetStoreBase):
+class TechnicalIndicatorStore(ParquetStoreBase):
     """
     Technical indicator data storage with year partitioning.
 
@@ -41,7 +41,7 @@ class IndicatorStore(ParquetStoreBase):
 
     def __init__(self, data_root: Path) -> None:
         """
-        Initialize IndicatorStore.
+        Initialize TechnicalIndicatorStore.
 
         Args:
             data_root: Root directory for data storage.

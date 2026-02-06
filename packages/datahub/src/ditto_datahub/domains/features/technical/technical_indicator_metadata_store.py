@@ -1,5 +1,5 @@
 """
-IndicatorMetadataStore for technical indicator metadata management.
+TechnicalIndicatorMetadataStore for technical indicator metadata management.
 
 技术指标元数据存储，使用 SQLite 管理指标的元数据信息.
 """
@@ -14,7 +14,7 @@ from ditto_foundation import logger, traced
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 
-class IndicatorMetadataStore:
+class TechnicalIndicatorMetadataStore:
     """
     Technical indicator metadata storage.
 
@@ -30,7 +30,7 @@ class IndicatorMetadataStore:
 
     def __init__(self, sqlite_client: SQLiteClient) -> None:
         """
-        Initialize IndicatorMetadataStore.
+        Initialize TechnicalIndicatorMetadataStore.
 
         Args:
             sqlite_client: SQLite client for database operations.
@@ -216,7 +216,7 @@ class IndicatorMetadataStore:
             f"""SELECT indicator_id, code, name, type, description, formula, parameters
                FROM technical_indicators
                WHERE code IN ({placeholders})
-               ORDER BY code""",
+               ORDER BY code""",  # noqa: S608
             codes,
         )
 

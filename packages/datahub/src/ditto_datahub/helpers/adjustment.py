@@ -8,7 +8,7 @@ from datetime import date
 
 import polars as pl
 
-from ditto_datahub.accessors.internal.pit import (
+from ditto_datahub.helpers.pit import (
     filter_by_knowledge_date,
     parse_asof_date,
 )

@@ -18,8 +18,6 @@ import polars as pl
 from ditto_foundation import M, logger, traced
 from ditto_foundation.concurrency import FileLockManager
 
-from ditto_datahub.accessors.internal.adjustment import apply_hfq_adj, apply_qfq_adj
-from ditto_datahub.accessors.internal.enrichment import enrich_with_status
 from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
 from ditto_datahub.domains.market.etf.bars import EtfBarsStore
 from ditto_datahub.domains.market.etf.nav import EtfNavStore
@@ -30,6 +28,7 @@ from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
 from ditto_datahub.domains.market.stock.bars import StockBarsStore
 from ditto_datahub.domains.market.stock.status import StockStatusStore
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
+from ditto_datahub.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.models import AssetSidRange, OnDuplicate
 
 
@@ -543,8 +542,8 @@ class MarketService:
             end_date=end_str,
         )
 
-        # 使用纯函数进行数据增强
-        return enrich_with_status(df, status_df, on=["sid", "trade_date"])
+        # 内联数据增强：join 状态数据
+        return df.join(status_df, on=["sid", "trade_date"], how="left")
 
     @traced("market.write_adj_factor")
     def write_adj_factor(

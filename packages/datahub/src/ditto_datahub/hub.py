@@ -10,7 +10,6 @@ import polars as pl
 from ditto_foundation import SQLitePool, logger
 from ditto_foundation.concurrency import FileLockManager
 
-from ditto_datahub.accessors.instrument_accessor import InstrumentsAccessor
 from ditto_datahub.domains.capital import CapitalService
 from ditto_datahub.domains.factors import FactorService
 from ditto_datahub.domains.features import FeatureService
@@ -133,7 +132,6 @@ class DataHub:
         sid_allocator: SidAllocator,
         freeze_manager: FreezeManager,
         instrument_store: InstrumentStore,
-        securities: InstrumentsAccessor,
         metadata_query_service: MetadataService,
         market_query_service: MarketService,
         fundamental_query_service: FundamentalService,
@@ -177,7 +175,7 @@ class DataHub:
         self.sid_allocator = sid_allocator
         self.freeze = freeze_manager
         self._instrument_store = instrument_store
-        self.securities = securities
+        self.securities = metadata_query_service  # 向后兼容：securities -> metadata
         self.metadata = metadata_query_service
         self.market = market_query_service
         self.fundamental = fundamental_query_service
@@ -543,7 +541,7 @@ class DataHub:
             asof=params.asof,
         )
 
-        return self.securities.get(
+        return self.metadata.get_securities(
             sids=resolved_sids if resolved_sids else None,
             source=params.source,
             asset_class=params.asset_class,

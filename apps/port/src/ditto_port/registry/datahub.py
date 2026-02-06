@@ -14,7 +14,6 @@ from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from ditto_datahub import DataHub
-from ditto_datahub.accessors.instrument_accessor import InstrumentsAccessor
 from ditto_datahub.config.data_root import DataRootConfig
 from ditto_datahub.domains.capital import CapitalService
 from ditto_datahub.domains.capital.capital_store import CapitalStore
@@ -66,6 +65,9 @@ from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.domains.metadata.instrument.instrument_store import (
     InstrumentStore as MetadataInstrumentStore,
 )
+
+# UniverseStore 已迁移到 domains/metadata/universe/
+from ditto_datahub.domains.metadata.universe import UniverseStore
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion.ingestion_log_store import (
     IngestionLogStore,
@@ -75,11 +77,7 @@ from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
-
-# AdjFactorStore, BarsStore no longer used (replaced by MarketService)
-# UniverseStore still used by InstrumentsAccessor
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_datahub.stores.universe_store import UniverseStore
 from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager
 
@@ -385,22 +383,6 @@ class DataHubProvider(Provider):
         )
 
     # ========================================================================
-    # Accessor Layer
-    # ========================================================================
-
-    @provide
-    def securities(
-        self,
-        instrument_store: InstrumentStore,
-        sid_allocator: SidAllocator,
-    ) -> InstrumentsAccessor:
-        """证券数据访问器（带数据摄入辅助方法，保留用于数据摄入）."""
-        return InstrumentsAccessor(
-            instrument_store=instrument_store,
-            sid_allocator=sid_allocator,
-        )
-
-    # ========================================================================
     # Metadata Query Service
     # ========================================================================
 
@@ -506,7 +488,6 @@ class DataHubProvider(Provider):
         sid_allocator: SidAllocator,
         freeze_manager: FreezeManager,
         instrument_store: InstrumentStore,
-        securities: InstrumentsAccessor,
         metadata_query_service: MetadataService,
         market_query_service: MarketService,
         fundamental_query_service: FundamentalService,
@@ -532,7 +513,6 @@ class DataHubProvider(Provider):
             sid_allocator=sid_allocator,
             freeze_manager=freeze_manager,
             instrument_store=instrument_store,
-            securities=securities,
             metadata_query_service=metadata_query_service,
             market_query_service=market_query_service,
             fundamental_query_service=fundamental_query_service,
