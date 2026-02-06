@@ -8,10 +8,10 @@ from ditto_datahub.domains.features.feature_service import (
     FeatureQuery,
     FeatureService,
 )
-from ditto_datahub.domains.features.technical.indicator_metadata_store import (
+from ditto_datahub.domains.features.technical import (
     IndicatorMetadataStore,
+    IndicatorStore,
 )
-from ditto_datahub.domains.features.technical.indicator_store import IndicatorStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 

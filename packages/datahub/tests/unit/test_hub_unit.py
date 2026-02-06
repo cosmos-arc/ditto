@@ -792,10 +792,10 @@ class TestDataHub:
 
         from ditto_datahub.hub import SecuritiesQuerySpec
 
-        # Mock securities.get 返回空 DataFrame
-        mock_securities_get = mocker.patch.object(
-            datahub_with_dependencies.securities,
-            "get",
+        # Mock metadata.get_securities 返回空 DataFrame
+        mock_metadata_get_securities = mocker.patch.object(
+            datahub_with_dependencies.metadata,
+            "get_securities",
             return_value=pl.DataFrame(),
         )
 
@@ -806,8 +806,8 @@ class TestDataHub:
         )
         result = datahub_with_dependencies.get_securities(params)
 
-        # 验证 securities.get 被调用
-        assert mock_securities_get.called
+        # 验证 metadata.get_securities 被调用
+        assert mock_metadata_get_securities.called
         assert isinstance(result, pl.DataFrame)
 
     # ========================================================================
