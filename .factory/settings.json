@@ -1,0 +1,9 @@
+{
+  "enabledPlugins": {
+    "superpowers@superpowers": true,
+    "code-review@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "unit-testing@agents": true,
+    "python-development@agents": true
+  }
+}

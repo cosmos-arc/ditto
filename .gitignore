@@ -73,6 +73,7 @@ ipython_config.py
 # 这里默认忽略常见的数据格式，请根据您的项目情况调整
 *.csv
 *.json
+!.factory/settings.json
 *.parquet
 *.h5
 *.hdf5
