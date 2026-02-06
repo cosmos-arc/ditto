@@ -252,6 +252,27 @@ class MetadataService:
 
     # ============ 交易日历查询 ============
 
+    @traced("metadata.calendar.get_range_df")
+    def get_range_df(
+        self,
+        start: str,
+        end: str,
+        only_open: bool = True,
+    ) -> pl.DataFrame:
+        """
+        查询日历数据（DataFrame 格式）.
+
+        Args:
+            start: 开始日期.
+            end: 结束日期.
+            only_open: 是否只返回交易日.
+
+        Returns:
+            日历数据 DataFrame，包含 trade_date, is_open, prev_trade_date 等列.
+
+        """
+        return self._calendar_store.get_range_df(start, end, only_open)
+
     @traced("metadata.calendar.get_trading_days")
     def get_trading_days(
         self,

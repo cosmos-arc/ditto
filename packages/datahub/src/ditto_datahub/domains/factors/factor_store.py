@@ -301,6 +301,9 @@ class FactorStore:
         # Apply PIT filtering if as_of_date is specified
         if as_of_date:
             as_of_dt = datetime.strptime(as_of_date, "%Y-%m-%d").date()
+            # PIT spec: effective_to 表示"失效日期(不含)"
+            # 使用 > 而非 >= : effective_to > as_of_date 表示版本在该日期前有效
+            # 详见 .claude/rules/pit.md
             df = df.filter(
                 (pl.col("effective_from") <= pl.lit(as_of_dt))
                 & (
