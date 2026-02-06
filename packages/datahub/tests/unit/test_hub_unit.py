@@ -55,6 +55,7 @@ from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.domains.metadata.instrument.instrument_store import (
     InstrumentStore as MetadataInstrumentStore,
 )
+from ditto_datahub.domains.metadata.universe import UniverseStore
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.hub import DataHub
 from ditto_datahub.runtime.freeze_manager import FreezeManager
@@ -66,7 +67,6 @@ from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_datahub.stores.universe_store import UniverseStore
 from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager
 from pytest_mock import MockerFixture
@@ -221,13 +221,6 @@ def datahub_with_dependencies(
         metadata_store=factor_metadata_store,
     )
 
-    # Accessor Layer - 只保留 InstrumentsAccessor
-    from ditto_datahub.accessors.instrument_accessor import (
-        InstrumentsAccessor as SecuritiesAccessor,
-    )
-
-    securities = SecuritiesAccessor(security_store, sid_allocator)
-
     # SqlEngine
     sql_engine = SqlEngine(
         data_root=data_root,
@@ -243,7 +236,6 @@ def datahub_with_dependencies(
         sid_allocator=sid_allocator,
         freeze_manager=freeze_manager,
         instrument_store=security_store,
-        securities=securities,
         metadata_query_service=metadata_query_service,
         market_query_service=market_query_service,
         fundamental_query_service=fundamental_query_service,

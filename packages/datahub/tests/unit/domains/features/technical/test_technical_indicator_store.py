@@ -1,10 +1,10 @@
-"""Tests for IndicatorStore."""
+"""Tests for TechnicalIndicatorStore."""
 
 from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.features.technical.indicator_store import IndicatorStore
+from ditto_datahub.domains.features.technical import IndicatorStore
 
 
 @pytest.fixture

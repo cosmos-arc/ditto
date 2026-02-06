@@ -1,17 +1,11 @@
-"""Tests for adjustment module (pure functions)."""
+"""Tests for helpers module (pure functions)."""
 
 from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.accessors.internal.adjustment import (
-    apply_hfq_adj,
-    apply_qfq_adj,
-)
-from ditto_datahub.accessors.internal.pit import (
-    filter_by_knowledge_date,
-    parse_asof_date,
-)
+from ditto_datahub.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
+from ditto_datahub.helpers.pit import filter_by_knowledge_date, parse_asof_date
 
 
 class TestParseAsofDate:
@@ -104,10 +98,6 @@ class TestFilterBaselineByAsof:
         ]
         assert result["adj_factor"].to_list() == [1.0, 1.1, 1.0, 1.05]
 
-        # Note: Warning is logged but we don't test it here to avoid
-        # caplog complexity. The warning functionality is tested in the
-        # existing test_bars_qfq_helpers_unit.py
-
 
 class TestApplyQfqAdj:
     """Tests for apply_qfq_adj function."""
@@ -131,7 +121,7 @@ class TestApplyQfqAdj:
             }
         )
 
-        # [REVIEW]
+        # 复权因子
         adj_df = pl.DataFrame(
             {
                 "sid": [1, 1, 1],
@@ -185,7 +175,7 @@ class TestApplyQfqAdj:
             }
         )
 
-        # [REVIEW] with knowledge_date
+        # 复权因子（带 knowledge_date）
         adj_df = pl.DataFrame(
             {
                 "sid": [1, 1, 1, 1],

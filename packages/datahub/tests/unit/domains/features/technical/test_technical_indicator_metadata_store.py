@@ -1,9 +1,7 @@
-"""Tests for IndicatorMetadataStore."""
+"""Tests for TechnicalIndicatorMetadataStore."""
 
 import pytest
-from ditto_datahub.domains.features.technical.indicator_metadata_store import (
-    IndicatorMetadataStore,
-)
+from ditto_datahub.domains.features.technical import IndicatorMetadataStore
 from ditto_foundation import SQLitePool
 
 

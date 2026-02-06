@@ -1,13 +1,14 @@
 """Tests for UniverseStore."""
 
 import pytest
+from ditto_datahub.domains.metadata.universe import UniverseStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_datahub.stores.universe_store import UniverseStore
 
 
 @pytest.mark.integration
 class TestUniverseStore:
-    """Tests for UniverseStore.
+    """
+    Tests for UniverseStore.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
@@ -291,7 +292,8 @@ class TestUniverseStore:
 
 @pytest.mark.integration
 class TestUniverseStorePITSafety:
-    """Tests for PIT safety in UniverseStore.
+    """
+    Tests for PIT safety in UniverseStore.
 
     PIT (Pipeline Integration Tests) - tests complete data ingestion flow.
     These tests require more resources and time than unit tests.
