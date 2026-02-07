@@ -12,7 +12,7 @@ from ditto_datahub.domains.market.market_service import (
     MarketBarsQuery,
     MarketService,
 )
-from ditto_datahub.models import AssetSidRange
+from ditto_datahub.models import InstrumentIdRange
 
 
 @pytest.fixture
@@ -393,9 +393,9 @@ class TestMarketServiceGetBars:
         mock_etf_bars_store.read.return_value = sample_stock_bars_df
 
         # 使用 ETF SID 范围 (2M+)
-        etf_range = AssetSidRange.get_range("etf")
+        etf_range = InstrumentIdRange.get_range("etf")
         query = MarketBarsQuery(
-            sids=[etf_range.min_sid, etf_range.min_sid + 1],
+            sids=[etf_range.min_id, etf_range.min_id + 1],
             asset_class="etf",
         )
         result = market_service.get_bars(query)
@@ -408,8 +408,8 @@ class TestMarketServiceGetBars:
     ) -> None:
         """Test get_bars for index when index store is None."""
         # 使用 Index SID 范围 (3M+)
-        index_range = AssetSidRange.get_range("index")
-        query = MarketBarsQuery(sids=[index_range.min_sid], asset_class="index")
+        index_range = InstrumentIdRange.get_range("index")
+        query = MarketBarsQuery(sids=[index_range.min_id], asset_class="index")
         result = market_service.get_bars(query)
 
         # Should return empty DataFrame when store is None
@@ -424,8 +424,8 @@ class TestMarketServiceAssetClassDetection:
     ) -> None:
         """Test detecting stock asset class from SIDs."""
         # Use valid stock SIDs (assuming range 1-999999)
-        stock_range = AssetSidRange.get_range("stock")
-        query = MarketBarsQuery(sids=[stock_range.min_sid, stock_range.max_sid])
+        stock_range = InstrumentIdRange.get_range("stock")
+        query = MarketBarsQuery(sids=[stock_range.min_id, stock_range.max_id])
         sids, asset_class = market_service._resolve_sids_and_asset_class(query)
 
         assert asset_class == "stock"
@@ -435,8 +435,8 @@ class TestMarketServiceAssetClassDetection:
         self, market_service: MarketService
     ) -> None:
         """Test detecting ETF asset class from SIDs."""
-        etf_range = AssetSidRange.get_range("etf")
-        query = MarketBarsQuery(sids=[etf_range.min_sid, etf_range.max_sid])
+        etf_range = InstrumentIdRange.get_range("etf")
+        query = MarketBarsQuery(sids=[etf_range.min_id, etf_range.max_id])
         sids, asset_class = market_service._resolve_sids_and_asset_class(query)
 
         assert asset_class == "etf"
@@ -446,8 +446,8 @@ class TestMarketServiceAssetClassDetection:
         self, market_service: MarketService
     ) -> None:
         """Test detecting index asset class from SIDs."""
-        index_range = AssetSidRange.get_range("index")
-        query = MarketBarsQuery(sids=[index_range.min_sid, index_range.max_sid])
+        index_range = InstrumentIdRange.get_range("index")
+        query = MarketBarsQuery(sids=[index_range.min_id, index_range.max_id])
         sids, asset_class = market_service._resolve_sids_and_asset_class(query)
 
         assert asset_class == "index"
@@ -457,10 +457,10 @@ class TestMarketServiceAssetClassDetection:
         self, market_service: MarketService
     ) -> None:
         """Test that mixed asset class query raises ValueError."""
-        stock_range = AssetSidRange.get_range("stock")
-        etf_range = AssetSidRange.get_range("etf")
+        stock_range = InstrumentIdRange.get_range("stock")
+        etf_range = InstrumentIdRange.get_range("etf")
 
-        query = MarketBarsQuery(sids=[stock_range.min_sid, etf_range.min_sid])
+        query = MarketBarsQuery(sids=[stock_range.min_id, etf_range.min_id])
 
         with pytest.raises(ValueError, match="检测到混合资产类别查询"):
             market_service._resolve_sids_and_asset_class(query)
@@ -469,9 +469,9 @@ class TestMarketServiceAssetClassDetection:
         self, market_service: MarketService
     ) -> None:
         """Test that explicit asset_class mismatch with detected raises ValueError."""
-        stock_range = AssetSidRange.get_range("stock")
+        stock_range = InstrumentIdRange.get_range("stock")
         # Stock SID with explicit ETF asset_class should raise error
-        query = MarketBarsQuery(sids=[stock_range.min_sid], asset_class="etf")
+        query = MarketBarsQuery(sids=[stock_range.min_id], asset_class="etf")
 
         with pytest.raises(ValueError, match="显式指定的资产类别"):
             market_service._resolve_sids_and_asset_class(query)

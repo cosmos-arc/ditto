@@ -4,10 +4,10 @@ from enum import Enum
 from typing import Literal, NamedTuple
 
 __all__ = [
-    "AssetSidRange",
     "DQSeverity",
     "Dataset",
     "Domain",
+    "InstrumentIdRange",
     "OnDuplicate",
     "Source",
 ]
@@ -95,28 +95,28 @@ class OnDuplicate(Enum):
     KEEP_LAST = "keep_last"  # 使用新数据覆盖现有数据（Last-Write-Wins）
 
 
-class AssetSidRange(NamedTuple):
+class InstrumentIdRange(NamedTuple):
     """
-    Asset class SID range definition.
+    Instrument ID range definition.
 
-    统一使用百万级范围，与 InstrumentsAccessor 保持一致:
+    统一使用百万级范围:
     - stock: 1M (1,000,000 - 1,999,999)
     - etf: 2M (2,000,000 - 2,999,999)
     - index: 3M (3,000,000 - 3,999,999)
 
-    避免未来 SID 冲突，并保持范围一致性。
+    避免未来 instrument_id 冲突，并保持范围一致性。
 
-    Provides bidirectional mapping between asset classes and SID ranges:
-    - get_range(asset_class): asset_class → (min_sid, max_sid)
-    - detect_asset_class(sids): sids → asset_class
+    Provides bidirectional mapping between asset classes and ID ranges:
+    - get_range(asset_class): asset_class → (min_id, max_id)
+    - detect_asset_class(ids): ids → asset_class
     """
 
-    min_sid: int
-    max_sid: int
+    min_id: int
+    max_id: int
 
     @classmethod
-    def get_range(cls, asset_class: str) -> "AssetSidRange":
-        """Get SID range for asset class."""
+    def get_range(cls, asset_class: str) -> "InstrumentIdRange":
+        """Get ID range for asset class."""
         ranges = {
             "stock": cls(1_000_000, 1_999_999),
             "etf": cls(2_000_000, 2_999_999),
@@ -129,12 +129,12 @@ class AssetSidRange(NamedTuple):
         return ranges[asset_class]
 
     @classmethod
-    def detect_asset_class(cls, sids: list[int]) -> Literal["stock", "etf", "index"]:
+    def detect_asset_class(cls, ids: list[int]) -> Literal["stock", "etf", "index"]:
         """
-        Detect asset class from a list of SIDs.
+        Detect asset class from a list of IDs.
 
         Args:
-            sids: List of security IDs.
+            ids: List of instrument IDs.
 
         Returns:
             Asset class string ("stock", "etf", "index").
@@ -143,9 +143,9 @@ class AssetSidRange(NamedTuple):
             ValueError: If mixed asset classes detected or unrecognized.
 
         Examples:
-            >>> AssetSidRange.detect_asset_class([1_000_001, 1_000_002])
+            >>> InstrumentIdRange.detect_asset_class([1_000_001, 1_000_002])
             'stock'
-            >>> AssetSidRange.detect_asset_class([2_500_000])
+            >>> InstrumentIdRange.detect_asset_class([2_500_000])
             'etf'
 
         """
@@ -154,11 +154,16 @@ class AssetSidRange(NamedTuple):
         index_range = cls.get_range("index")
 
         has_stock = any(
-            stock_range.min_sid <= sid <= stock_range.max_sid for sid in sids
+            stock_range.min_id <= instrument_id <= stock_range.max_id
+            for instrument_id in ids
         )
-        has_etf = any(etf_range.min_sid <= sid <= etf_range.max_sid for sid in sids)
+        has_etf = any(
+            etf_range.min_id <= instrument_id <= etf_range.max_id
+            for instrument_id in ids
+        )
         has_index = any(
-            index_range.min_sid <= sid <= index_range.max_sid for sid in sids
+            index_range.min_id <= instrument_id <= index_range.max_id
+            for instrument_id in ids
         )
 
         detected: list[Literal["stock", "etf", "index"]] = []
@@ -174,7 +179,7 @@ class AssetSidRange(NamedTuple):
             classes = [display_names[c] for c in detected]
             classes_str = ", ".join(classes)
             raise ValueError(
-                "检测到混合资产类别查询。SID 包含 "
+                "检测到混合资产类别查询。ID 包含 "
                 + f"{classes_str}。请分别查询每个资产类别。"
             )
 

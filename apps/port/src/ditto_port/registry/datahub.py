@@ -63,7 +63,7 @@ if TYPE_CHECKING:
     )
     from ditto_datahub.domains.metadata.universe import UniverseStore
     from ditto_datahub.runtime.freeze_manager import FreezeManager
-    from ditto_datahub.runtime.sid_allocator import SidAllocator
+    from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
     from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub import DataHub
 from ditto_datahub.config.data_root import DataRootConfig
@@ -253,7 +253,7 @@ class DataHubProvider(Provider):
         industry_basic_store: IndustryBasicStore,
         industry_mapping_store: IndustryMappingStore,
         universe_store: UniverseStore,
-        sid_allocator: SidAllocator,
+        instrument_id_allocator: InstrumentIdAllocator,
     ) -> MetadataService:
         """Metadata 查询服务."""
         return MetadataService(
@@ -263,7 +263,7 @@ class DataHubProvider(Provider):
             industry_basic_store=industry_basic_store,
             industry_mapping_store=industry_mapping_store,
             universe_store=universe_store,
-            sid_allocator=sid_allocator,
+            instrument_id_allocator=instrument_id_allocator,
         )
 
     # ========================================================================
@@ -343,7 +343,7 @@ class DataHubProvider(Provider):
         data_root: Path,
         sqlite_pool: SQLitePool,
         file_lock: FileLockManager,
-        sid_allocator: SidAllocator,
+        instrument_id_allocator: InstrumentIdAllocator,
         freeze_manager: FreezeManager,
         instrument_store: InstrumentStore,
         metadata_query_service: MetadataService,
@@ -368,7 +368,7 @@ class DataHubProvider(Provider):
             data_root=data_root,
             sqlite_pool=sqlite_pool,
             file_lock=file_lock,
-            sid_allocator=sid_allocator,
+            instrument_id_allocator=instrument_id_allocator,
             freeze_manager=freeze_manager,
             instrument_store=instrument_store,
             metadata_query_service=metadata_query_service,

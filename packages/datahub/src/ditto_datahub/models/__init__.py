@@ -2,9 +2,9 @@
 
 # DataHub 层自己的 models
 from ditto_datahub.models.common import (
-    AssetSidRange,
     Dataset,
     Domain,
+    InstrumentIdRange,
     OnDuplicate,
     Source,
 )
@@ -18,7 +18,6 @@ from ditto_datahub.models.ingestion import (
 from ditto_datahub.models.storage import FreezeManifest, WriteResult, WriteResultStore
 
 __all__ = [
-    "AssetSidRange",
     "DataChangedError",
     "Dataset",
     "Domain",
@@ -26,6 +25,7 @@ __all__ = [
     "IngestionCursor",
     "IngestionLog",
     "IngestionStatus",
+    "InstrumentIdRange",
     "NotTradingDayError",
     "OnDuplicate",
     "Source",

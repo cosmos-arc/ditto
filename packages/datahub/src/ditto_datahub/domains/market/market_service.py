@@ -29,7 +29,7 @@ from ditto_datahub.domains.market.stock.bars import StockBarsStore
 from ditto_datahub.domains.market.stock.status import StockStatusStore
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
-from ditto_datahub.models import AssetSidRange, OnDuplicate
+from ditto_datahub.models import InstrumentIdRange, OnDuplicate
 
 
 class AdjType(Enum):
@@ -317,10 +317,10 @@ class MarketService:
         self, sids: list[int]
     ) -> Literal["stock", "etf", "index"]:
         """
-        从 SID 列表检测资产类别.
+        从 instrument_id 列表检测资产类别.
 
         Args:
-            sids: SID 列表.
+            sids: instrument_id 列表.
 
         Returns:
             资产类别字符串（"stock", "etf", "index"）.
@@ -329,18 +329,14 @@ class MarketService:
             ValueError: 如果检测到混合资产类别或无法识别.
 
         """
-        stock_range = AssetSidRange.get_range("stock")
-        etf_range = AssetSidRange.get_range("etf")
-        index_range = AssetSidRange.get_range("index")
+        stock_range = InstrumentIdRange.get_range("stock")
+        etf_range = InstrumentIdRange.get_range("etf")
+        index_range = InstrumentIdRange.get_range("index")
 
         # 检测每个资产类别
-        has_stock = any(
-            stock_range.min_sid <= sid <= stock_range.max_sid for sid in sids
-        )
-        has_etf = any(etf_range.min_sid <= sid <= etf_range.max_sid for sid in sids)
-        has_index = any(
-            index_range.min_sid <= sid <= index_range.max_sid for sid in sids
-        )
+        has_stock = any(stock_range.min_id <= sid <= stock_range.max_id for sid in sids)
+        has_etf = any(etf_range.min_id <= sid <= etf_range.max_id for sid in sids)
+        has_index = any(index_range.min_id <= sid <= index_range.max_id for sid in sids)
 
         # 检测混合资产类别
         detected: list[Literal["stock", "etf", "index"]] = []
@@ -356,7 +352,7 @@ class MarketService:
             classes = [display_names[c] for c in detected]
             classes_str = ", ".join(classes)
             raise ValueError(
-                f"检测到混合资产类别查询。SID 包含 {classes_str}。请分别查询每个资产类别。",  # noqa: E501
+                f"检测到混合资产类别查询。instrument_id 包含 {classes_str}。请分别查询每个资产类别。",  # noqa: E501
             )
 
         if not detected:
