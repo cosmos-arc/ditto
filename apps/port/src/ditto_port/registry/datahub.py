@@ -3,6 +3,11 @@ DataHub 组件注册.
 
 Root 注入模式：在 Provider 中集中注册所有 DataHub 组件。
 所有依赖通过 Provider 管理，DataHub 不再使用 @cached_property.
+
+架构说明：
+- Store 的导入和创建已移至 DomainServiceProvider
+- DataHubProvider 只负责组合 Domain Services
+- Port 层不再直接依赖 Store 类
 """
 
 # 延迟类型注解评估，避免前向引用问题
@@ -11,73 +16,77 @@ from __future__ import annotations
 from collections.abc import Iterator
 from importlib.resources import files
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dishka import Provider, Scope, provide
+
+if TYPE_CHECKING:
+    from ditto_datahub.domains.capital.capital_store import CapitalStore
+    from ditto_datahub.domains.factors.factor_metadata_store import (
+        FactorMetadataStore,
+    )
+    from ditto_datahub.domains.factors.factor_store import FactorStore
+    from ditto_datahub.domains.features.technical import (
+        IndicatorMetadataStore as FeatureIndicatorMetadataStore,
+    )
+    from ditto_datahub.domains.features.technical import (
+        IndicatorStore as FeatureIndicatorStore,
+    )
+    from ditto_datahub.domains.fundamental.fundamental_store import (
+        FundamentalStore,
+    )
+    from ditto_datahub.domains.macro.indicator.indicator_store import (
+        IndicatorStore as MacroIndicatorStore,
+    )
+    from ditto_datahub.domains.macro.indicator.metadata_store import (
+        IndicatorMetadataStore as MacroIndicatorMetadataStore,
+    )
+    from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
+    from ditto_datahub.domains.market.etf.bars import EtfBarsStore
+    from ditto_datahub.domains.market.etf.nav import EtfNavStore
+    from ditto_datahub.domains.market.etf.status import EtfStatusStore
+    from ditto_datahub.domains.market.index.bars import IndexBarsStore
+    from ditto_datahub.domains.market.index.constituent import (
+        IndexConstituentStore,
+    )
+    from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
+    from ditto_datahub.domains.market.stock.bars import StockBarsStore
+    from ditto_datahub.domains.market.stock.status import StockStatusStore
+    from ditto_datahub.domains.metadata.identity.identity_store import (
+        IdentityStore,
+    )
+    from ditto_datahub.domains.metadata.industry.industry_basic_store import (
+        IndustryBasicStore,
+    )
+    from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
+        IndustryMappingStore,
+    )
+    from ditto_datahub.domains.metadata.universe import UniverseStore
+    from ditto_datahub.runtime.freeze_manager import FreezeManager
+    from ditto_datahub.runtime.sid_allocator import SidAllocator
+    from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_datahub import DataHub
 from ditto_datahub.config.data_root import DataRootConfig
 from ditto_datahub.domains.capital import CapitalService
-from ditto_datahub.domains.capital.capital_store import CapitalStore
 from ditto_datahub.domains.factors import FactorService
-from ditto_datahub.domains.factors.factor_metadata_store import (
-    FactorMetadataStore,
-)
-from ditto_datahub.domains.factors.factor_store import FactorStore
 from ditto_datahub.domains.features import FeatureService
-from ditto_datahub.domains.features.technical import (
-    IndicatorMetadataStore as FeatureIndicatorMetadataStore,
-)
-from ditto_datahub.domains.features.technical import (
-    IndicatorStore as FeatureIndicatorStore,
-)
 from ditto_datahub.domains.fundamental import FundamentalService
-from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
 from ditto_datahub.domains.macro import MacroService
-from ditto_datahub.domains.macro.indicator.indicator_store import (
-    IndicatorStore as MacroIndicatorStore,
-)
-from ditto_datahub.domains.macro.indicator.metadata_store import (
-    IndicatorMetadataStore as MacroIndicatorMetadataStore,
-)
 from ditto_datahub.domains.market import MarketService
-from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
-from ditto_datahub.domains.market.etf.bars import EtfBarsStore
-from ditto_datahub.domains.market.etf.nav import EtfNavStore
-from ditto_datahub.domains.market.etf.status import EtfStatusStore
-from ditto_datahub.domains.market.index.bars import IndexBarsStore
-from ditto_datahub.domains.market.index.constituent import IndexConstituentStore
-from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
-from ditto_datahub.domains.market.stock.bars import StockBarsStore
-from ditto_datahub.domains.market.stock.status import StockStatusStore
 from ditto_datahub.domains.metadata import MetadataService
 from ditto_datahub.domains.metadata.calendar.calendar_store import (
     CalendarStore as MetadataCalendarStore,
 )
-from ditto_datahub.domains.metadata.identity.identity_store import IdentityStore
-from ditto_datahub.domains.metadata.industry.industry_basic_store import (
-    IndustryBasicStore,
-)
-from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
-    IndustryMappingStore,
-)
-
-# Type aliases for backward compatibility
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.domains.metadata.instrument.instrument_store import (
     InstrumentStore as MetadataInstrumentStore,
 )
-
-# UniverseStore 已迁移到 domains/metadata/universe/
-from ditto_datahub.domains.metadata.universe import UniverseStore
-from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
-from ditto_datahub.runtime.quality.quarantine_store import QuarantineStore
-from ditto_datahub.runtime.sid_allocator import SidAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
-from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager
 
@@ -85,7 +94,14 @@ __all__ = ["DataHubProvider"]
 
 
 class DataHubProvider(Provider):
-    """DataHub 组件 Provider."""
+    """
+    DataHub 组件 Provider.
+
+    架构说明：
+    - Store 的创建由 DomainServiceProvider 负责
+    - 此 Provider 只负责组合 Domain Services
+    - Store 依赖通过 dishka 容器自动注入
+    """
 
     scope = Scope.APP
 
@@ -121,164 +137,6 @@ class DataHubProvider(Provider):
         """文件锁管理器."""
         lock_dir = data_root / "locks"
         return FileLockManager(lock_dir)
-
-    @provide
-    def sid_allocator(self, sqlite_pool: SQLitePool) -> SidAllocator:
-        """SID 分配器."""
-        return SidAllocator(sqlite_pool)
-
-    @provide
-    def freeze_manager(self, data_root: Path) -> FreezeManager:
-        """数据版本管理."""
-        return FreezeManager(data_root=str(data_root))
-
-    # ========================================================================
-    # Store Layer
-    # ========================================================================
-
-    @provide
-    def sqlite_client(self, sqlite_pool: SQLitePool) -> SQLiteClient:
-        """SQLite 客户端."""
-        return SQLiteClient(sqlite_pool)
-
-    @provide
-    def instrument_store(self, sqlite_client: SQLiteClient) -> InstrumentStore:
-        """证券数据存储."""
-        return InstrumentStore(sqlite_client)
-
-    @provide
-    def calendar_store(self, sqlite_client: SQLiteClient) -> MetadataCalendarStore:
-        """交易日历存储."""
-        return MetadataCalendarStore(sqlite_client)
-
-    @provide
-    def ingestion_log_store(self, sqlite_client: SQLiteClient) -> IngestionLogStore:
-        """摄取日志存储."""
-        return IngestionLogStore(sqlite_client)
-
-    @provide
-    def quarantine_store(self, sqlite_client: SQLiteClient) -> QuarantineStore:
-        """隔离区存储（使用主数据库）."""
-        return QuarantineStore(sqlite_client)
-
-    @provide
-    def universe_store(self, sqlite_client: SQLiteClient) -> UniverseStore:
-        """证券池存储."""
-        return UniverseStore(sqlite_client)
-
-    # ========================================================================
-    # Metadata Domain Stores
-    # ========================================================================
-
-    @provide
-    def identity_store(self, config: DataRootConfig) -> IdentityStore:
-        """Identity 映射存储."""
-        return IdentityStore(config.metadata_db_path)
-
-    @provide
-    def industry_basic_store(
-        self,
-        config: DataRootConfig,
-    ) -> IndustryBasicStore:
-        """行业主数据存储."""
-        return IndustryBasicStore(config.metadata_db_path)
-
-    @provide
-    def industry_mapping_store(
-        self,
-        config: DataRootConfig,
-    ) -> IndustryMappingStore:
-        """行业映射存储."""
-        return IndustryMappingStore(config.metadata_db_path)
-
-    # ========================================================================
-    # Market Domain Stores
-    # ========================================================================
-
-    @provide
-    def stock_bars_store(self, config: DataRootConfig) -> StockBarsStore:
-        """股票 K线存储."""
-        return StockBarsStore(config.data_root)
-
-    @provide
-    def stock_status_store(self, config: DataRootConfig) -> StockStatusStore:
-        """股票状态存储."""
-        return StockStatusStore(config.data_root)
-
-    @provide
-    def stock_adj_store(self, config: DataRootConfig) -> StockAdjFactorStore:
-        """股票复权因子存储."""
-        return StockAdjFactorStore(config.data_root)
-
-    @provide
-    def etf_bars_store(self, config: DataRootConfig) -> EtfBarsStore:
-        """ETF K线存储."""
-        return EtfBarsStore(config.data_root)
-
-    @provide
-    def etf_status_store(self, config: DataRootConfig) -> EtfStatusStore:
-        """ETF 状态存储."""
-        return EtfStatusStore(config.data_root)
-
-    @provide
-    def etf_nav_store(self, config: DataRootConfig) -> EtfNavStore:
-        """ETF 净值存储."""
-        return EtfNavStore(config.data_root)
-
-    @provide
-    def etf_adj_store(self, config: DataRootConfig) -> EtfAdjFactorStore:
-        """ETF 复权因子存储."""
-        return EtfAdjFactorStore(config.data_root)
-
-    @provide
-    def index_bars_store(self, config: DataRootConfig) -> IndexBarsStore:
-        """指数 K线存储."""
-        return IndexBarsStore(config.data_root)
-
-    @provide
-    def index_constituent_store(self, config: DataRootConfig) -> IndexConstituentStore:
-        """指数成分股存储."""
-        return IndexConstituentStore(config.data_root)
-
-    # ========================================================================
-    # Fundamental & Capital Domain Stores
-    # ========================================================================
-
-    @provide
-    def fundamental_store(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> FundamentalStore:
-        """Fundamental domain data storage."""
-        return FundamentalStore(sqlite_client)
-
-    @provide
-    def capital_store(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> CapitalStore:
-        """Capital domain data storage."""
-        return CapitalStore(sqlite_client)
-
-    # ========================================================================
-    # Macro Domain Stores
-    # ========================================================================
-
-    @provide
-    def macro_indicator_store(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> MacroIndicatorStore:
-        """Macro indicator data storage."""
-        return MacroIndicatorStore(sqlite_client)
-
-    @provide
-    def macro_metadata_store(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> MacroIndicatorMetadataStore:
-        """Macro indicator metadata storage."""
-        return MacroIndicatorMetadataStore(sqlite_client)
 
     # ========================================================================
     # Fundamental & Capital Query Services

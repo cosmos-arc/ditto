@@ -9,6 +9,7 @@ from ditto_port.registry.app import AppProvider
 from ditto_port.registry.config import ConfigProvider
 from ditto_port.registry.core import CoreProvider
 from ditto_port.registry.datahub import DataHubProvider
+from ditto_port.registry.domain import DomainServiceProvider
 from ditto_port.registry.notification import NotificationProvider
 from ditto_port.registry.sources import DataSourcesProvider
 
@@ -18,5 +19,6 @@ __all__ = [
     "CoreProvider",
     "DataHubProvider",
     "DataSourcesProvider",
+    "DomainServiceProvider",
     "NotificationProvider",
 ]
