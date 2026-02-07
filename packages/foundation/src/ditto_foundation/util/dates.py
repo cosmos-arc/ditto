@@ -48,10 +48,12 @@ def normalize_date(value: DateInput) -> str | None:
 
     if isinstance(value, datetime):
         # 将 datetime 转换为日期字符串
-        return value.strftime("%Y-%m-%d")
+        # 使用 f-string 确保4位年份（strftime %Y 对1-999年不补零）
+        return f"{value.year:04d}-{value.month:02d}-{value.day:02d}"
 
     # 类型收窄：使用 TypeGuard 确保这是纯 date 类型（不是 datetime）
     if _is_pure_date(value):
-        return value.strftime("%Y-%m-%d")
+        # 使用 f-string 确保4位年份（strftime %Y 对1-999年不补零）
+        return f"{value.year:04d}-{value.month:02d}-{value.day:02d}"
 
     raise TypeError(f"Unsupported date type: {type(value).__name__}")

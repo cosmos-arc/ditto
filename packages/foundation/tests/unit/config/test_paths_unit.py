@@ -12,6 +12,7 @@ from ditto_foundation.config.paths import (
     PlatformConfig,
     XDGPaths,
 )
+from pytest_mock import MockerFixture
 
 
 class TestPathResolver:
@@ -167,11 +168,22 @@ class TestPathResolver:
         assert result == d_drive / "config"
 
     def test_windows_platform_default_fallback_to_localappdata(
-        self, monkeypatch: Any
+        self, monkeypatch: Any, mocker: MockerFixture
     ) -> None:
         """测试 Windows 降级到 LOCALAPPDATA."""
         # [REVIEW] D 盘不存在
         non_existent_d = Path("Z:\\non_existent_d_drive")
+
+        # Mock Path.mkdir to raise OSError for non_existent path
+        original_mkdir = Path.mkdir
+
+        def mock_mkdir(path_obj, *args, **kwargs):
+            if "non_existent" in str(path_obj):
+                raise OSError("[Errno 13] Permission denied")
+            return original_mkdir(path_obj, *args, **kwargs)
+
+        # Apply mock before creating resolver
+        mocker.patch("pathlib.Path.mkdir", mock_mkdir)
 
         # [REVIEW] LOCALAPPDATA
         localappdata = Path("C:\\Users\\test\\AppData\\Local")
