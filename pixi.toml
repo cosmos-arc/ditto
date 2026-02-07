@@ -85,6 +85,9 @@ limits = ">=3.15"
 keyring = ">=25.0,<26"
 typer = ">=0.12,<1"
 
+# 网络代理支持（httpx SOCKS代理需要）
+socksio = ">=1.0,<2"
+
 # 依赖注入
 dishka = ">=0.5,<1"
 

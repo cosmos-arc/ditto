@@ -11,26 +11,31 @@ from filelock import Timeout
 from pytest_mock import MockerFixture
 
 
+@pytest.fixture
+def lock_dir(tmp_path: Path) -> Path:
+    """Create a temporary lock directory for testing."""
+    return tmp_path / "locks"
+
+
 @pytest.mark.unit
 class TestFileLockManager:
     """Tests for FileLockManager."""
 
-    def test_initialization_requires_lock_dir(self) -> None:
+    def test_initialization_requires_lock_dir(self, lock_dir: Path) -> None:
         """Test that FileLockManager requires lock_dir parameter."""
         # FileLockManager requires lock_dir parameter
-        lock_dir = Path("/test/locks")
         manager = FileLockManager(lock_dir=lock_dir)
         assert manager.lock_dir == lock_dir
 
-    def test_initialization_with_custom_lock_dir(self) -> None:
+    def test_initialization_with_custom_lock_dir(self, lock_dir: Path) -> None:
         """Test initialization with custom lock directory."""
-        lock_dir = Path("/custom/lock/dir")
         manager = FileLockManager(lock_dir=lock_dir)
         assert manager.lock_dir == lock_dir
 
-    def test_acquire_creates_lock_file(self, mocker: MockerFixture) -> None:
+    def test_acquire_creates_lock_file(
+        self, lock_dir: Path, mocker: MockerFixture
+    ) -> None:
         """Test that acquire creates lock file."""
-        lock_dir = Path("/test/locks")
         manager = FileLockManager(lock_dir=lock_dir)
 
         mock_lock = mocker.Mock()
@@ -51,10 +56,9 @@ class TestFileLockManager:
         assert call_args[0][0] == lock_dir / "test_lock.lock"
 
     def test_acquire_creates_lock_dir_if_not_exists(
-        self, mocker: MockerFixture
+        self, lock_dir: Path, mocker: MockerFixture
     ) -> None:
         """Test that acquire creates lock directory if not exists."""
-        lock_dir = Path("/test/locks")
         manager = FileLockManager(lock_dir=lock_dir)
 
         mock_lock = mocker.Mock()
@@ -72,9 +76,11 @@ class TestFileLockManager:
         # Verify FileLock was called
         mock_filelock_class.assert_called_once()
 
-    def test_acquire_with_default_timeout(self, mocker: MockerFixture) -> None:
+    def test_acquire_with_default_timeout(
+        self, lock_dir: Path, mocker: MockerFixture
+    ) -> None:
         """Test acquire with default timeout."""
-        manager = FileLockManager(lock_dir=Path("/test/locks"))
+        manager = FileLockManager(lock_dir=lock_dir)
 
         mock_lock = mocker.Mock()
         mock_lock.__enter__ = mocker.Mock(return_value=None)
@@ -92,9 +98,11 @@ class TestFileLockManager:
         call_args = mock_filelock_class.call_args
         assert call_args[1]["timeout"] == 30.0
 
-    def test_acquire_with_custom_timeout(self, mocker: MockerFixture) -> None:
+    def test_acquire_with_custom_timeout(
+        self, lock_dir: Path, mocker: MockerFixture
+    ) -> None:
         """Test acquire with custom timeout."""
-        manager = FileLockManager(lock_dir=Path("/test/locks"))
+        manager = FileLockManager(lock_dir=lock_dir)
 
         mock_lock = mocker.Mock()
         mock_lock.__enter__ = mocker.Mock(return_value=None)
@@ -112,9 +120,11 @@ class TestFileLockManager:
         call_args = mock_filelock_class.call_args
         assert call_args[1]["timeout"] == 60.0
 
-    def test_acquire_raises_error_on_timeout(self, mocker: MockerFixture) -> None:
+    def test_acquire_raises_error_on_timeout(
+        self, lock_dir: Path, mocker: MockerFixture
+    ) -> None:
         """Test that acquire raises LockAcquisitionError on timeout."""
-        manager = FileLockManager(lock_dir=Path("/test/locks"))
+        manager = FileLockManager(lock_dir=lock_dir)
 
         # Mock FileLock to raise Timeout
         mock_lock = mocker.MagicMock()
@@ -133,9 +143,11 @@ class TestFileLockManager:
         # Error message says "within" not "timeout"
         assert "within" in str(exc_info.value).lower()
 
-    def test_acquire_releases_lock_after_context(self, mocker: MockerFixture) -> None:
+    def test_acquire_releases_lock_after_context(
+        self, lock_dir: Path, mocker: MockerFixture
+    ) -> None:
         """Test that acquire releases lock after context."""
-        manager = FileLockManager(lock_dir=Path("/test/locks"))
+        manager = FileLockManager(lock_dir=lock_dir)
 
         mock_lock = mocker.Mock()
         mock_lock.__enter__ = mocker.Mock(return_value=None)
@@ -153,9 +165,11 @@ class TestFileLockManager:
         # After context, lock is released
         mock_lock.__exit__.assert_called_once()
 
-    def test_acquire_with_multiple_locks(self, mocker: MockerFixture) -> None:
+    def test_acquire_with_multiple_locks(
+        self, lock_dir: Path, mocker: MockerFixture
+    ) -> None:
         """Test acquiring multiple different locks."""
-        manager = FileLockManager(lock_dir=Path("/test/locks"))
+        manager = FileLockManager(lock_dir=lock_dir)
 
         mock_lock = mocker.Mock()
         mock_lock.__enter__ = mocker.Mock(return_value=None)
@@ -173,9 +187,11 @@ class TestFileLockManager:
         # Verify FileLock was called twice with different paths
         assert mock_filelock_class.call_count == 2
 
-    def test_acquire_normalizes_lock_name(self, mocker: MockerFixture) -> None:
+    def test_acquire_normalizes_lock_name(
+        self, lock_dir: Path, mocker: MockerFixture
+    ) -> None:
         """Test that lock names are normalized correctly."""
-        manager = FileLockManager(lock_dir=Path("/test/locks"))
+        manager = FileLockManager(lock_dir=lock_dir)
 
         mock_lock = mocker.Mock()
         mock_lock.__enter__ = mocker.Mock(return_value=None)
@@ -194,10 +210,10 @@ class TestFileLockManager:
         assert call_args[0][0].name == "test_lock.lock"
 
     def test_acquire_with_special_characters_in_name(
-        self, mocker: MockerFixture
+        self, lock_dir: Path, mocker: MockerFixture
     ) -> None:
         """Test acquire with special characters in lock name."""
-        manager = FileLockManager(lock_dir=Path("/test/locks"))
+        manager = FileLockManager(lock_dir=lock_dir)
 
         mock_lock = mocker.Mock()
         mock_lock.__enter__ = mocker.Mock(return_value=None)
