@@ -25,7 +25,7 @@ from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.domains.metadata.instrument.models import InstrumentRegistration
 from ditto_datahub.domains.metadata.universe.universe_store import UniverseStore
-from ditto_datahub.runtime.sid_allocator import SidAllocator
+from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
 
 
 class MetadataService:
@@ -45,7 +45,7 @@ class MetadataService:
         industry_basic_store: IndustryBasicStore,
         industry_mapping_store: IndustryMappingStore,
         universe_store: UniverseStore,
-        sid_allocator: SidAllocator,
+        instrument_id_allocator: InstrumentIdAllocator,
     ) -> None:
         """
         初始化 MetadataService.
@@ -57,7 +57,7 @@ class MetadataService:
             industry_basic_store: 行业主数据存储.
             industry_mapping_store: 行业映射存储.
             universe_store: 标的池存储.
-            sid_allocator: SID 分配器.
+            instrument_id_allocator: SID 分配器.
 
         """
         self._instrument_store = instrument_store
@@ -66,7 +66,7 @@ class MetadataService:
         self._industry_basic_store = industry_basic_store
         self._industry_mapping_store = industry_mapping_store
         self._universe_store = universe_store
-        self._sid_allocator = sid_allocator
+        self._instrument_id_allocator = instrument_id_allocator
 
         logger.debug(
             "MetadataService initialized",
@@ -392,24 +392,24 @@ class MetadataService:
             registration: 证券注册信息.
 
         Returns:
-            分配的 SID.
+            分配的 instrument_id.
 
         """
-        # 分配 SID
-        sid = self._sid_allocator.allocate(registration.asset_class)
+        # 分配 instrument_id
+        instrument_id = self._instrument_id_allocator.allocate(registration.asset_class)
 
         # 注册到 security_store
-        registered_sid = self._instrument_store.register(sid, registration)
+        registered_id = self._instrument_store.register(instrument_id, registration)
 
         logger.info(
             "Security registered via MetadataService",
             event="metadata_security_registered",
-            sid=registered_sid,
+            instrument_id=registered_id,
             symbol=registration.symbol,
-            src_code=registration.source_ticker,
+            source_ticker=registration.source_ticker,
         )
 
-        return registered_sid
+        return registered_id
 
     @traced("metadata.security.register_securities_batch")
     def register_securities_batch(

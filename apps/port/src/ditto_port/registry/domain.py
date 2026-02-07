@@ -58,7 +58,7 @@ from ditto_datahub.runtime.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
 from ditto_datahub.runtime.quality.quarantine_store import QuarantineStore
-from ditto_datahub.runtime.sid_allocator import SidAllocator
+from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
@@ -82,9 +82,9 @@ class DomainServiceProvider(Provider):
     # ========================================================================
 
     @provide
-    def sid_allocator(self, sqlite_pool: SQLitePool) -> SidAllocator:
-        """SID 分配器."""
-        return SidAllocator(sqlite_pool)
+    def instrument_id_allocator(self, sqlite_pool: SQLitePool) -> InstrumentIdAllocator:
+        """Instrument ID 分配器."""
+        return InstrumentIdAllocator(sqlite_pool)
 
     @provide
     def freeze_manager(self, data_root: Path) -> FreezeManager:

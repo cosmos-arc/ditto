@@ -25,7 +25,7 @@ from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion import IngestionLogStore
-from ditto_datahub.runtime.sid_allocator import SidAllocator
+from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
 
@@ -115,7 +115,7 @@ class DataHub:
     Component lifecycle is managed by the dishka container.
 
     Attribute layers:
-    - Runtime Layer: sqlite_pool, file_lock, sid_allocator, freeze
+    - Runtime Layer: sqlite_pool, file_lock, instrument_id_allocator, freeze
     - Accessor Layer: securities, bars, calendar, universe, index, ingestion_log
     - Domain Services: metadata, market, fundamental, capital, macro, features, factors
     - Sources Layer: sources (external data sources: Tushare, Akshare)
@@ -129,7 +129,7 @@ class DataHub:
         data_root: Path,
         sqlite_pool: SQLitePool,
         file_lock: FileLockManager,
-        sid_allocator: SidAllocator,
+        instrument_id_allocator: InstrumentIdAllocator,
         freeze_manager: FreezeManager,
         instrument_store: InstrumentStore,
         metadata_query_service: MetadataService,
@@ -153,7 +153,7 @@ class DataHub:
             data_root: Data root directory path.
             sqlite_pool: SQLite connection pool.
             file_lock: File lock manager for concurrent write safety.
-            sid_allocator: SID allocator for new securities.
+            instrument_id_allocator: Instrument ID allocator for new securities.
             freeze_manager: Freeze manager for data version tracking.
             instrument_store: Instrument store for identifier resolution.
             securities: Instruments accessor (with ingestion helpers).
@@ -172,7 +172,7 @@ class DataHub:
         self.data_root = data_root
         self.sqlite_pool = sqlite_pool
         self.file_lock = file_lock
-        self.sid_allocator = sid_allocator
+        self.instrument_id_allocator = instrument_id_allocator
         self.freeze = freeze_manager
         self._instrument_store = instrument_store
         self.securities = metadata_query_service  # 向后兼容：securities -> metadata

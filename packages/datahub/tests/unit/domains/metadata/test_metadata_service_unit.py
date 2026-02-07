@@ -20,7 +20,7 @@ def mock_stores_and_allocator() -> dict[str, Mock]:
         "industry_basic_store": Mock(),
         "industry_mapping_store": Mock(),
         "universe_store": Mock(),
-        "sid_allocator": Mock(),
+        "instrument_id_allocator": Mock(),
     }
 
 
@@ -246,7 +246,7 @@ def test_metadata_service_register_security(
     )
 
     # 设置 mock
-    service._sid_allocator.allocate.return_value = 100
+    service._instrument_id_allocator.allocate.return_value = 100
     service._instrument_store.register.return_value = 100
 
     # 调用方法
@@ -254,5 +254,5 @@ def test_metadata_service_register_security(
 
     # 验证
     assert result == 100
-    service._sid_allocator.allocate.assert_called_once_with("stock")
+    service._instrument_id_allocator.allocate.assert_called_once_with("stock")
     service._instrument_store.register.assert_called_once()
