@@ -541,6 +541,20 @@ class MarketService:
         # 内联数据增强：join 状态数据
         return df.join(status_df, on=["sid", "trade_date"], how="left")
 
+    @staticmethod
+    def _to_storage_columns(df: pl.DataFrame) -> pl.DataFrame:
+        """
+        归一化列名到当前存储层约定。
+
+        存储层仍使用 sid/src_code，Service 层接收 instrument_id/source_ticker。
+        """
+        rename_map: dict[str, str] = {}
+        if "instrument_id" in df.columns and "sid" not in df.columns:
+            rename_map["instrument_id"] = "sid"
+        if "source_ticker" in df.columns and "src_code" not in df.columns:
+            rename_map["source_ticker"] = "src_code"
+        return df.rename(rename_map) if rename_map else df
+
     @traced("market.write_adj_factor")
     def write_adj_factor(
         self,
@@ -592,11 +606,14 @@ class MarketService:
             "overwrite": OnDuplicate.KEEP_LAST,
         }
         on_duplicate_enum = on_duplicate_map.get(on_duplicate, OnDuplicate.ERROR)
+        storage_df = self._to_storage_columns(df)
 
         # 使用文件锁保护并发写入
         lock_name = f"adj_factor_write_{dataset}_{year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = store.write(df, year, on_duplicate=on_duplicate_enum.value)
+            write_result = store.write(
+                storage_df, year, on_duplicate=on_duplicate_enum.value
+            )
 
         # 转换 WriteResult 为 dict[str, int]
         result = {
@@ -613,7 +630,7 @@ class MarketService:
         )
 
         # 记录指标
-        M.data_records.add(len(df), {"dataset": dataset, "operation": "write"})
+        M.data_records.add(len(storage_df), {"dataset": dataset, "operation": "write"})
 
         return result
 
@@ -668,11 +685,12 @@ class MarketService:
             "overwrite": OnDuplicate.KEEP_LAST,
         }
         on_duplicate_enum = on_duplicate_map.get(on_duplicate, OnDuplicate.ERROR)
+        storage_df = self._to_storage_columns(df)
 
         # 使用文件锁保护并发写入
         lock_name = f"bars_write_{dataset}_{year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = store.write(df, year, on_duplicate=on_duplicate_enum)
+            write_result = store.write(storage_df, year, on_duplicate=on_duplicate_enum)
 
         # 转换 WriteResult 为 dict[str, int]
         result = {
@@ -689,6 +707,6 @@ class MarketService:
         )
 
         # 记录指标
-        M.data_records.add(len(df), {"dataset": dataset, "operation": "write"})
+        M.data_records.add(len(storage_df), {"dataset": dataset, "operation": "write"})
 
         return result

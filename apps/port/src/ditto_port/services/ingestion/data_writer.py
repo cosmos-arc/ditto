@@ -35,43 +35,49 @@ def _map_on_duplicate(on_duplicate: OnDuplicate) -> str:
     return mapping.get(on_duplicate, "error")
 
 
-def _enrich_with_sid(
+def _enrich_with_instrument_id(
     df: pl.DataFrame,
-    sid_mapping: dict[str, int],
-    src_code_col: str,
+    instrument_id_mapping: dict[str, int],
+    source_ticker_col: str,
     source: str,
 ) -> pl.DataFrame:
     """
-    为 DataFrame 添加 sid 和 source 列。
+    为 DataFrame 添加 instrument_id/source_ticker/source 列。
 
     Args:
-        df: 输入 DataFrame，必须包含 src_code_col 指定的列
-        sid_mapping: {src_code: sid} 映射字典
-        src_code_col: 源代码列名
+        df: 输入 DataFrame，必须包含 source_ticker_col 指定的列
+        instrument_id_mapping: {source_ticker: instrument_id} 映射字典
+        source_ticker_col: 源代码列名
         source: 数据源标识符
 
     Returns:
-        添加了 sid 和 source 列的 DataFrame
+        添加了 instrument_id、source_ticker 和 source 列的 DataFrame
 
     """
+    standardized_df = (
+        df.rename({source_ticker_col: "source_ticker"})
+        if source_ticker_col != "source_ticker"
+        else df
+    )
+
     # 处理空 DataFrame
-    if len(df) == 0:
-        return df.with_columns(
-            pl.lit(None, dtype=pl.Int32).alias("sid"),
+    if len(standardized_df) == 0:
+        return standardized_df.with_columns(
+            pl.lit(None, dtype=pl.Int64).alias("instrument_id"),
             pl.lit(source).alias("source"),
         )
 
-    # 将 sid 映射转换为 DataFrame 并 join
+    # 将 instrument_id 映射转换为 DataFrame 并 join
     mapping_df = pl.DataFrame(
         {
-            src_code_col: list(sid_mapping.keys()),
-            "sid": list(sid_mapping.values()),
+            "source_ticker": list(instrument_id_mapping.keys()),
+            "instrument_id": list(instrument_id_mapping.values()),
         }
     )
 
-    return df.join(mapping_df, on=src_code_col, how="left").with_columns(
-        pl.lit(source).alias("source")
-    )
+    return standardized_df.join(
+        mapping_df, on="source_ticker", how="left"
+    ).with_columns(pl.lit(source).alias("source"))
 
 
 def _to_write_result(
@@ -151,20 +157,33 @@ class IngestionDataWriter:
         except ValueError as e:
             raise ValueError(f"不支持写入数据集: {dataset}") from e
 
+        source_ticker_col = (
+            "source_ticker"
+            if "source_ticker" in df.columns
+            else "src_code"
+            if "src_code" in df.columns
+            else "source_ticker"
+        )
+
         if dataset_enum in (Dataset.ETF_DAILY, Dataset.STOCK_DAILY):
-            # 补齐 sid/source 字段（使用 MetadataService API）
+            # 补齐 instrument_id/source_ticker/source 字段（使用 MetadataService API）
             asset_class: Literal["stock", "etf"] = (
                 "etf" if dataset_enum == Dataset.ETF_DAILY else "stock"
             )
-            # 解析或创建证券，获取 sid 映射
-            sid_mapping = self._hub.metadata.resolve_or_create_batch(
+            # 解析或创建证券，获取 instrument_id 映射
+            instrument_id_mapping = self._hub.metadata.resolve_or_create_batch(
                 df=df,
                 source=self._source_name,
                 asset_class=asset_class,
-                src_code_col="src_code",
+                source_ticker_col=source_ticker_col,
             )
-            # 添加 sid 列
-            df = _enrich_with_sid(df, sid_mapping, "src_code", self._source_name)
+            # 添加 instrument_id/source_ticker 列
+            df = _enrich_with_instrument_id(
+                df,
+                instrument_id_mapping,
+                source_ticker_col,
+                self._source_name,
+            )
             # 转换 OnDuplicate 枚举为字符串
             on_duplicate_str = _map_on_duplicate(on_duplicate)
             # 使用 MarketService 写入（替代 BarsAccessor）
@@ -177,22 +196,27 @@ class IngestionDataWriter:
             # 转换 dict[str, int] 为 WriteResult
             return _to_write_result(dataset, year, df, result)
         elif dataset_enum in (Dataset.ADJ_FACTOR, Dataset.FUND_ADJ):
-            # 补齐 sid/source 字段（使用 MetadataService API）
+            # 补齐 instrument_id/source_ticker/source 字段（使用 MetadataService API）
             adj_asset_class: Literal["stock", "etf"] = (
                 "etf" if dataset_enum == Dataset.FUND_ADJ else "stock"
             )
 
-            # 检查是否已有 sid 列（上游可能已处理）
-            if "sid" not in df.columns:
-                # 解析或创建证券，获取 sid 映射
-                sid_mapping = self._hub.metadata.resolve_or_create_batch(
+            # 检查是否已有 instrument_id 列（上游可能已处理）
+            if "instrument_id" not in df.columns:
+                # 解析或创建证券，获取 instrument_id 映射
+                instrument_id_mapping = self._hub.metadata.resolve_or_create_batch(
                     df=df,
                     source=self._source_name,
                     asset_class=adj_asset_class,
-                    src_code_col="src_code",
+                    source_ticker_col=source_ticker_col,
                 )
-                # 添加 sid 列
-                df = _enrich_with_sid(df, sid_mapping, "src_code", self._source_name)
+                # 添加 instrument_id/source_ticker 列
+                df = _enrich_with_instrument_id(
+                    df,
+                    instrument_id_mapping,
+                    source_ticker_col,
+                    self._source_name,
+                )
 
             # 使用 MarketService 写入（替代 AdjFactorAccessor）
             # 转换 OnDuplicate 枚举为字符串
@@ -256,7 +280,9 @@ class IngestionDataWriter:
             df=df,
             source=self._source_name,
             asset_class="stock",
-            src_code_col="src_code",
+            source_ticker_col=(
+                "source_ticker" if "source_ticker" in df.columns else "src_code"
+            ),
         )
 
         return file_path, checksum
@@ -278,7 +304,9 @@ class IngestionDataWriter:
             df=df,
             source=self._source_name,
             asset_class="etf",
-            src_code_col="src_code",
+            source_ticker_col=(
+                "source_ticker" if "source_ticker" in df.columns else "src_code"
+            ),
         )
 
         return file_path, checksum

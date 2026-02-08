@@ -23,12 +23,12 @@ class TestColumnMapping:
     def test_column_mapping_creation(self) -> None:
         """Test creating a ColumnMapping instance."""
         mapping = ColumnMapping(
-            rename={"ts_code": "src_code", "vol": "volume"},
+            rename={"ts_code": "source_ticker", "vol": "volume"},
             date_columns={"trade_date": "%Y%m%d"},
             float_columns=["open", "high", "low", "close"],
         )
 
-        assert mapping.rename == {"ts_code": "src_code", "vol": "volume"}
+        assert mapping.rename == {"ts_code": "source_ticker", "vol": "volume"}
         assert mapping.date_columns == {"trade_date": "%Y%m%d"}
         assert mapping.float_columns == ["open", "high", "low", "close"]
         assert mapping.int_columns == ()
@@ -51,12 +51,12 @@ class TestColumnMapping:
         """Test ColumnMapping with computed_columns field."""
         # [REVIEW] computed_columns 的映射配置
         mapping = ColumnMapping(
-            rename={"ts_code": "src_code"},
+            rename={"ts_code": "source_ticker"},
             date_columns={},
             float_columns=[],
             computed_columns={
-                "symbol": pl.col("src_code").str.split(".").list.get(0),
-                "exchange": pl.col("src_code").str.split(".").list.get(1),
+                "symbol": pl.col("source_ticker").str.split(".").list.get(0),
+                "exchange": pl.col("source_ticker").str.split(".").list.get(1),
             },
         )
 
@@ -87,16 +87,16 @@ class TestColumnMapping:
         # 创建一个简单的 SourceSchema
         schema = SourceSchema(
             dataset="test_dataset",
-            key_columns=("src_code", "trade_date"),
+            key_columns=("source_ticker", "trade_date"),
             schema={
-                "src_code": pl.String,
+                "source_ticker": pl.String,
                 "trade_date": pl.Date,
                 "close": pl.Float64,
             },
         )
 
         mapping = ColumnMapping(
-            rename={"ts_code": "src_code"},
+            rename={"ts_code": "source_ticker"},
             date_columns={"trade_date": "%Y%m%d"},
             float_columns=["close"],
             source_schema=schema,
@@ -129,8 +129,8 @@ class TestColumnMapping:
         """Test ColumnMapping with both source_schema and normalization."""
         schema = SourceSchema(
             dataset="test_dataset",
-            key_columns=("src_code",),
-            schema={"src_code": pl.String, "name": pl.String},
+            key_columns=("source_ticker",),
+            schema={"source_ticker": pl.String, "name": pl.String},
         )
 
         config = NormalizationConfig(
@@ -169,16 +169,16 @@ class TestTushareDataTransformerWithValidation:
         # 创建符合 schema 的测试数据
         schema = SourceSchema(
             dataset="test_dataset",
-            key_columns=("src_code", "trade_date"),
+            key_columns=("source_ticker", "trade_date"),
             schema={
-                "src_code": pl.String,
+                "source_ticker": pl.String,
                 "trade_date": pl.Date,
                 "close": pl.Float64,
             },
         )
 
         mapping = ColumnMapping(
-            rename={"ts_code": "src_code"},
+            rename={"ts_code": "source_ticker"},
             date_columns={"trade_date": "%Y%m%d"},
             float_columns=["close"],
             source_schema=schema,
@@ -197,19 +197,19 @@ class TestTushareDataTransformerWithValidation:
 
         assert len(result) == 2
         assert dict(result.schema) == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "close": pl.Float64,
         }
 
     def test_transform_with_invalid_schema_fails(self) -> None:
         """Test transform() with invalid data fails SourceSchema validation."""
-        # 创建一个要求 src_code 和 close 的 schema
+        # 创建一个要求 source_ticker 和 close 的 schema
         schema = SourceSchema(
             dataset="test_dataset",
-            key_columns=("src_code", "trade_date"),
+            key_columns=("source_ticker", "trade_date"),
             schema={
-                "src_code": pl.String,
+                "source_ticker": pl.String,
                 "trade_date": pl.Date,
                 "close": pl.Float64,
                 "volume": pl.Float64,  # 这个列在数据中不存在
@@ -217,7 +217,7 @@ class TestTushareDataTransformerWithValidation:
         )
 
         mapping = ColumnMapping(
-            rename={"ts_code": "src_code"},
+            rename={"ts_code": "source_ticker"},
             date_columns={"trade_date": "%Y%m%d"},
             float_columns=["close"],
             source_schema=schema,
@@ -241,7 +241,7 @@ class TestTushareDataTransformerWithValidation:
         """Test transform() without source_schema skips validation."""
         # 不设置 source_schema，应该跳过验证
         mapping = ColumnMapping(
-            rename={"ts_code": "src_code"},
+            rename={"ts_code": "source_ticker"},
             date_columns={"trade_date": "%Y%m%d"},
             float_columns=["close"],
             # source_schema=None (默认)
@@ -264,16 +264,16 @@ class TestTushareDataTransformerWithValidation:
         """Test transform() with empty DataFrame and SourceSchema."""
         schema = SourceSchema(
             dataset="test_dataset",
-            key_columns=("src_code", "trade_date"),
+            key_columns=("source_ticker", "trade_date"),
             schema={
-                "src_code": pl.String,
+                "source_ticker": pl.String,
                 "trade_date": pl.Date,
                 "close": pl.Float64,
             },
         )
 
         mapping = ColumnMapping(
-            rename={"ts_code": "src_code"},
+            rename={"ts_code": "source_ticker"},
             date_columns={"trade_date": "%Y%m%d"},
             float_columns=["close"],
             source_schema=schema,
@@ -293,7 +293,7 @@ class TestTushareDataTransformerWithValidation:
 
         assert len(result) == 0
         assert dict(result.schema) == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "close": pl.Float64,
         }
@@ -327,7 +327,7 @@ class TestTushareDataTransformer:
 
         # Verify schema
         assert dict(result.schema) == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "knowledge_date": pl.Date,
             "open": pl.Float64,
@@ -343,7 +343,7 @@ class TestTushareDataTransformer:
         # Verify数据
         assert result.to_dicts() == [
             {
-                "src_code": "000001.SZ",
+                "source_ticker": "000001.SZ",
                 "trade_date": date(2024, 1, 2),
                 "knowledge_date": date(2024, 1, 3),
                 "open": 11.5,
@@ -356,7 +356,7 @@ class TestTushareDataTransformer:
                 "pct_change": 0.87,
             },
             {
-                "src_code": "600000.SH",
+                "source_ticker": "600000.SH",
                 "trade_date": date(2024, 1, 2),
                 "knowledge_date": date(2024, 1, 3),
                 "open": 10.2,
@@ -394,7 +394,7 @@ class TestTushareDataTransformer:
         # Verify返回正确 schema 的空 DataFrame
         assert len(result) == 0
         assert dict(result.schema) == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "knowledge_date": pl.Date,
             "open": pl.Float64,
@@ -457,7 +457,7 @@ class TestTushareDataTransformer:
 
         # Verify schema
         assert dict(result.schema) == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "symbol": pl.String,
             "name": pl.String,
             "exchange": pl.String,
@@ -467,21 +467,21 @@ class TestTushareDataTransformer:
         # Verify数据转换正确
         assert result.to_dicts() == [
             {
-                "src_code": "510300.SH",
+                "source_ticker": "510300.SH",
                 "symbol": "510300",
                 "name": "沪深300ETF",
                 "exchange": "SSE",
                 "list_date": date(2012, 7, 6),
             },
             {
-                "src_code": "159919.SZ",
+                "source_ticker": "159919.SZ",
                 "symbol": "159919",
                 "name": "沪深300ETF",
                 "exchange": "SZSE",
                 "list_date": date(2019, 6, 24),
             },
             {
-                "src_code": "512100.SH",
+                "source_ticker": "512100.SH",
                 "symbol": "512100",
                 "name": "科创板50ETF",
                 "exchange": "SSE",
@@ -525,7 +525,7 @@ class TestTushareDataTransformer:
         # Verify返回正确 schema 的空 DataFrame
         assert result.is_empty()
         assert dict(result.schema) == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "knowledge_date": pl.Date,
             "adj_factor": pl.Float64,
@@ -554,7 +554,7 @@ class TestTushareDataTransformer:
         # [REVIEW]: symbol 和 exchange 是 computed_columns,类型应该是 pl.String
         assert result.is_empty()
         assert dict(result.schema) == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "symbol": pl.String,
             "name": pl.String,
             "exchange": pl.String,

@@ -47,9 +47,9 @@ class QualityReconciliationService:
     - 触发告警
 
     标识符体系：
-    - 入口使用 sid（内部 ID）
+    - 入口使用 instrument_id（内部 ID）
     - 对比使用 symbol（统一格式，如 000001）
-    - 数据源使用 src_code（数据源特定格式，如 000001.SZ）
+    - 数据源使用 source_ticker（数据源特定格式，如 000001.SZ）
     """
 
     def __init__(
@@ -66,7 +66,7 @@ class QualityReconciliationService:
             engine: 质量引擎
             tdx_source: 通达信数据源
             comparison_store: 对比结果存储
-            instrument_store: 证券存储（用于 sid → symbol 转换）
+            instrument_store: 证券存储（用于 instrument_id → symbol 转换）
 
         """
         self._engine = engine
@@ -86,13 +86,13 @@ class QualityReconciliationService:
         Port 层：编排流程
 
         标识符转换流程：
-        1. 接收包含 sid 的 primary_df
-        2. 使用 InstrumentStore 将 sid 转换为 symbol
+        1. 接收包含 instrument_id 的 primary_df
+        2. 使用 InstrumentStore 将 instrument_id 转换为 symbol
         3. 使用 symbol 作为对比的 key_column
-        4. 各数据源内部将 symbol 转换为各自的 src_code 格式
+        4. 各数据源内部将 symbol 转换为各自的 source_ticker 格式
 
         Args:
-            primary_df: 主数据源（Tushare 已读取的数据，必须包含 sid 列）
+            primary_df: 主数据源（Tushare 已读取的数据，必须包含 instrument_id 列）
             trade_date: 交易日期（YYYYMMDD）
             dataset: 数据集标识
 
@@ -109,10 +109,13 @@ class QualityReconciliationService:
 
         try:
             # 1. 验证输入
-            if "sid" not in primary_df.columns:
-                raise ValueError("primary_df must contain 'sid' column")
+            if (
+                "instrument_id" not in primary_df.columns
+                and "sid" not in primary_df.columns
+            ):
+                raise ValueError("primary_df must contain 'instrument_id' column")
 
-            # 2. 添加 symbol 列（sid → symbol 转换）
+            # 2. 添加 symbol 列（instrument_id → symbol 转换）
             primary_df = self._instrument_store.enrich_with_symbol(primary_df)
 
             if "symbol" not in primary_df.columns:
@@ -122,7 +125,7 @@ class QualityReconciliationService:
             symbols = primary_df["symbol"].unique().to_list()
 
             # 4. 获取辅助数据源（TDX）
-            # TdxSource 内部将 symbol 转换为 TDX 格式的 src_code
+            # TdxSource 内部将 symbol 转换为 TDX 格式的 source_ticker
             secondary_df = self._tdx_source.fetch_stock_daily_bars(symbols, trade_date)
 
             if secondary_df.height == 0:

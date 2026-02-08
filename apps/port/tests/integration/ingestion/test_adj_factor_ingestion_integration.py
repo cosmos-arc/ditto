@@ -8,10 +8,10 @@ import pytest
 
 @pytest.mark.integration
 class TestAdjFactorIngestion:
-    """Tests for adj_factor ingestion with SID mapping."""
+    """Tests for adj_factor ingestion with instrument_id mapping."""
 
-    def test_ingest_adj_factor_uses_src_code_column(self, mocker):
-        """Test that adj_factor ingestion uses src_code column for SID mapping."""
+    def test_ingest_adj_factor_uses_source_ticker_column(self, mocker):
+        """Test that adj_factor ingestion uses source_ticker column for ID mapping."""
         from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
         # Mock DataHub
@@ -39,13 +39,13 @@ class TestAdjFactorIngestion:
             source_name="tushare",
         )
 
-        # Mock _fetch_data to return data with src_code column (not ts_code)
+        # Mock _fetch_data to return data with source_ticker column
         mocker.patch.object(
             coordinator,
             "_fetch_data",
             return_value=pl.DataFrame(
                 {
-                    "src_code": ["000001.SZ", "000002.SZ"],
+                    "source_ticker": ["000001.SZ", "000002.SZ"],
                     "trade_date": ["2024-01-02", "2024-01-02"],
                     "adj_factor": [1.234, 1.567],
                 }
@@ -58,24 +58,27 @@ class TestAdjFactorIngestion:
         # Verify result status is success
         assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-        # Verify market.write_adj_factor was called with dataframe containing sid
+        # Verify market.write_adj_factor was called with dataframe containing
+        # instrument_id
         call_args = mock_hub.market.write_adj_factor.call_args
         df_written = call_args.kwargs["df"]
 
-        # Verify sid column exists in the written dataframe
-        assert "sid" in df_written.columns, "sid column missing in written dataframe"
-        assert "src_code" in df_written.columns, (
-            "src_code column missing in written dataframe"
+        # Verify instrument_id/source_ticker columns exist in the written dataframe
+        assert "instrument_id" in df_written.columns, (
+            "instrument_id column missing in written dataframe"
+        )
+        assert "source_ticker" in df_written.columns, (
+            "source_ticker column missing in written dataframe"
         )
         mock_hub.metadata.resolve_or_create_batch.assert_called_once_with(
             df=mocker.ANY,
             source="tushare",
             asset_class="stock",
-            src_code_col="src_code",
+            source_ticker_col="source_ticker",
         )
 
-    def test_ingest_fund_adj_uses_src_code_column(self, mocker):
-        """Test that fund_adj ingestion uses src_code column for SID mapping."""
+    def test_ingest_fund_adj_uses_source_ticker_column(self, mocker):
+        """Test that fund_adj ingestion uses source_ticker column for ID mapping."""
         from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
         # Mock DataHub
@@ -102,13 +105,13 @@ class TestAdjFactorIngestion:
             source_name="tushare",
         )
 
-        # Mock _fetch_data to return data with src_code column (not ts_code)
+        # Mock _fetch_data to return data with source_ticker column
         mocker.patch.object(
             coordinator,
             "_fetch_data",
             return_value=pl.DataFrame(
                 {
-                    "src_code": ["510300.SH", "510500.SH"],
+                    "source_ticker": ["510300.SH", "510500.SH"],
                     "trade_date": ["2024-01-02", "2024-01-02"],
                     "adj_factor": [1.123, 1.234],
                 }
@@ -121,18 +124,21 @@ class TestAdjFactorIngestion:
         # Verify result status is success
         assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-        # Verify market.write_adj_factor was called with dataframe containing sid
+        # Verify market.write_adj_factor was called with dataframe containing
+        # instrument_id
         call_args = mock_hub.market.write_adj_factor.call_args
         df_written = call_args.kwargs["df"]
 
-        # Verify sid column exists in the written dataframe
-        assert "sid" in df_written.columns, "sid column missing in written dataframe"
-        assert "src_code" in df_written.columns, (
-            "src_code column missing in written dataframe"
+        # Verify instrument_id/source_ticker columns exist in the written dataframe
+        assert "instrument_id" in df_written.columns, (
+            "instrument_id column missing in written dataframe"
+        )
+        assert "source_ticker" in df_written.columns, (
+            "source_ticker column missing in written dataframe"
         )
         mock_hub.metadata.resolve_or_create_batch.assert_called_once_with(
             df=mocker.ANY,
             source="tushare",
             asset_class="etf",
-            src_code_col="src_code",
+            source_ticker_col="source_ticker",
         )

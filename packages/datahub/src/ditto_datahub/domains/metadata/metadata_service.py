@@ -57,7 +57,7 @@ class MetadataService:
             industry_basic_store: 行业主数据存储.
             industry_mapping_store: 行业映射存储.
             universe_store: 标的池存储.
-            instrument_id_allocator: SID 分配器.
+            instrument_id_allocator: instrument_id 分配器.
 
         """
         self._instrument_store = instrument_store
@@ -83,7 +83,7 @@ class MetadataService:
         asof: str | None,
     ) -> int | None:
         """
-        解析标识符到 SID.
+        解析标识符到 instrument_id.
 
         Args:
             identifier: 数据源代码 (src_code).
@@ -91,7 +91,7 @@ class MetadataService:
             asof: 时间点日期.
 
         Returns:
-            SID 或 None.
+            instrument_id 或 None.
 
         """
         return self._identity_store.resolve_sid(identifier, source, asof)
@@ -104,7 +104,7 @@ class MetadataService:
         asof: str | None,
     ) -> dict[str, int]:
         """
-        批量解析标识符到 SID.
+        批量解析标识符到 instrument_id.
 
         Args:
             identifiers: 数据源代码列表.
@@ -112,7 +112,7 @@ class MetadataService:
             asof: 时间点日期.
 
         Returns:
-            {identifier: sid} 映射字典.
+            {identifier: instrument_id} 映射字典.
 
         """
         return self._identity_store.resolve_sids_batch(identifiers, source, asof)
@@ -123,7 +123,7 @@ class MetadataService:
     def get_securities(
         self,
         sids: list[int] | None = None,
-        src_codes: list[str] | None = None,
+        source_tickers: list[str] | None = None,
         source: str = "tushare",
         asset_class: str | None = None,
         exchange: str | None = None,
@@ -134,8 +134,8 @@ class MetadataService:
         查询证券数据.
 
         Args:
-            sids: 过滤 SID 列表.
-            src_codes: 过滤源代码列表.
+            sids: 过滤 instrument_id 列表.
+            source_tickers: 过滤源代码列表.
             source: 数据源标识.
             asset_class: 过滤资产类别.
             exchange: 过滤交易所.
@@ -148,7 +148,7 @@ class MetadataService:
         """
         return self._instrument_store.find_securities(
             sids=sids,
-            src_codes=src_codes,
+            src_codes=source_tickers,
             source=source,
             asset_class=asset_class,
             exchange=exchange,
@@ -159,10 +159,10 @@ class MetadataService:
     @traced("metadata.security.get_symbol")
     def get_symbol(self, sid: int) -> str | None:
         """
-        根据 SID 获取交易代码.
+        根据 instrument_id 获取交易代码.
 
         Args:
-            sid: 证券 ID.
+            sid: instrument_id.
 
         Returns:
             交易代码 或 None.
@@ -178,10 +178,10 @@ class MetadataService:
         asof: str | None = None,
     ) -> str | None:
         """
-        根据 SID 获取源代码.
+        根据 instrument_id 获取源代码.
 
         Args:
-            sid: 证券 ID.
+            sid: instrument_id.
             source: 数据源标识.
             asof: 时间点日期.
 
@@ -417,21 +417,21 @@ class MetadataService:
         df: pl.DataFrame,
         source: str,
         asset_class: Literal["stock", "etf"],
-        src_code_col: str = "ts_code",
+        source_ticker_col: str = "source_ticker",
     ) -> tuple[str, str]:
         """
         批量注册证券（跳过已存在的）。
 
         Args:
             df: 包含证券元数据的 DataFrame。必须包含以下列：
-                - src_code_col: 源代码列名
+                - source_ticker_col: 源代码列名
                 - symbol: 显示符号
                 - name: 证券名称
                 - exchange: 交易所代码
                 - list_date: 上市日期
             source: 数据源标识符
             asset_class: 资产类别
-            src_code_col: DataFrame 中源代码的列名
+            source_ticker_col: DataFrame 中源代码的列名
 
         Returns:
             (file_path, checksum) 元组
@@ -449,18 +449,20 @@ class MetadataService:
         skipped_count = 0
 
         for row in df.to_dicts():
-            src_code = row[src_code_col]
+            source_ticker = row[source_ticker_col]
 
             # 检查是否已存在
-            existing_sid = self._instrument_store.resolve_sid(src_code, source, None)
-            if existing_sid is not None:
+            existing_instrument_id = self._instrument_store.resolve_sid(
+                source_ticker, source, None
+            )
+            if existing_instrument_id is not None:
                 skipped_count += 1
                 continue
 
             # 注册新证券
             self.register_security(
                 InstrumentRegistration(
-                    source_ticker=src_code,
+                    source_ticker=source_ticker,
                     symbol=row["symbol"],
                     name=row["name"],
                     exchange=row["exchange"],
@@ -495,24 +497,24 @@ class MetadataService:
         df: pl.DataFrame,
         source: str,
         asset_class: Literal["stock", "etf"],
-        src_code_col: str = "ts_code",
+        source_ticker_col: str = "source_ticker",
     ) -> dict[str, int]:
         """
-        批量解析 src_code，不存在则自动创建证券。
+        批量解析 source_ticker，不存在则自动创建证券。
 
         Args:
             df: 包含证券元数据的 DataFrame。必须包含以下列：
-                - src_code_col: 源代码列名
+                - source_ticker_col: 源代码列名
                 - symbol: 显示符号
                 - name: 证券名称
                 - exchange: 交易所代码
                 - list_date: 上市日期
             source: 数据源标识符
             asset_class: 资产类别
-            src_code_col: DataFrame 中源代码的列名
+            source_ticker_col: DataFrame 中源代码的列名
 
         Returns:
-            {src_code: sid} 映射字典
+            {source_ticker: instrument_id} 映射字典
 
         """
         logger.debug(
@@ -531,31 +533,37 @@ class MetadataService:
             return result
 
         # 验证必需列
-        required_cols = [src_code_col, "symbol", "name", "exchange", "list_date"]
+        required_cols = [
+            source_ticker_col,
+            "symbol",
+            "name",
+            "exchange",
+            "list_date",
+        ]
         for col in required_cols:
             if col not in df.columns:
                 msg = f"DataFrame 缺少必需列: {col}"
                 raise KeyError(msg)
 
         # 批量查询已存在的证券
-        src_codes = df[src_code_col].to_list()
+        source_tickers = df[source_ticker_col].to_list()
         existing_mappings = self._instrument_store.resolve_sids_batch(
-            src_codes, source, None
+            source_tickers, source, None
         )
 
         # 处理每一行
         for row in df.to_dicts():
-            src_code = row[src_code_col]
+            source_ticker = row[source_ticker_col]
 
-            # 如果已存在，使用已有的 SID
-            if src_code in existing_mappings:
-                result[src_code] = existing_mappings[src_code]
+            # 如果已存在，使用已有的 instrument_id
+            if source_ticker in existing_mappings:
+                result[source_ticker] = existing_mappings[source_ticker]
                 continue
 
             # 不存在则创建新证券
-            sid = self.register_security(
+            instrument_id = self.register_security(
                 InstrumentRegistration(
-                    source_ticker=src_code,
+                    source_ticker=source_ticker,
                     symbol=row["symbol"],
                     name=row["name"],
                     exchange=row["exchange"],
@@ -564,7 +572,7 @@ class MetadataService:
                     source=source,
                 )
             )
-            result[src_code] = sid
+            result[source_ticker] = instrument_id
             created_count += 1
 
         logger.debug(

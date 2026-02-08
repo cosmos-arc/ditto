@@ -32,9 +32,9 @@ __all__ = [
 
 STOCK_DAILY_SOURCE_SCHEMA = SourceSchema(
     dataset="stock_daily",
-    key_columns=("src_code", "trade_date"),
+    key_columns=("source_ticker", "trade_date"),
     schema={
-        "src_code": pl.String,
+        "source_ticker": pl.String,
         "trade_date": pl.Date,
         "knowledge_date": pl.Date,
         "open": pl.Float64,
@@ -55,9 +55,9 @@ STOCK_DAILY_SOURCE_SCHEMA = SourceSchema(
 
 ETF_DAILY_SOURCE_SCHEMA = SourceSchema(
     dataset="etf_daily",
-    key_columns=("src_code", "trade_date"),
+    key_columns=("source_ticker", "trade_date"),
     schema={
-        "src_code": pl.String,
+        "source_ticker": pl.String,
         "trade_date": pl.Date,
         "knowledge_date": pl.Date,
         "open": pl.Float64,
@@ -77,9 +77,9 @@ ETF_DAILY_SOURCE_SCHEMA = SourceSchema(
 
 ADJ_FACTOR_SOURCE_SCHEMA = SourceSchema(
     dataset="adj_factor",
-    key_columns=("src_code", "trade_date"),
+    key_columns=("source_ticker", "trade_date"),
     schema={
-        "src_code": pl.String,
+        "source_ticker": pl.String,
         "trade_date": pl.Date,
         "knowledge_date": pl.Date,
         "adj_factor": pl.Float64,
@@ -94,7 +94,7 @@ STOCK_STATUS_SOURCE_SCHEMA = SourceSchema(
     dataset="stock_status",
     key_columns=(),  # 空主键，不验证唯一性
     schema={
-        "src_code": pl.String,
+        "source_ticker": pl.String,
         "trade_date": pl.Date,
         "is_suspended": pl.Boolean,
         "suspend_timing": pl.String,
@@ -110,9 +110,9 @@ STOCK_STATUS_SOURCE_SCHEMA = SourceSchema(
 
 STOCK_LIMIT_SOURCE_SCHEMA = SourceSchema(
     dataset="stock_limit",
-    key_columns=("src_code", "trade_date"),
+    key_columns=("source_ticker", "trade_date"),
     schema={
-        "src_code": pl.String,
+        "source_ticker": pl.String,
         "trade_date": pl.Date,
         "up_limit": pl.Float64,
         "down_limit": pl.Float64,
@@ -125,9 +125,9 @@ STOCK_LIMIT_SOURCE_SCHEMA = SourceSchema(
 
 FUND_ADJ_SOURCE_SCHEMA = SourceSchema(
     dataset="fund_adj",
-    key_columns=("src_code", "trade_date"),
+    key_columns=("source_ticker", "trade_date"),
     schema={
-        "src_code": pl.String,
+        "source_ticker": pl.String,
         "trade_date": pl.Date,
         "knowledge_date": pl.Date,
         "adj_factor": pl.Float64,

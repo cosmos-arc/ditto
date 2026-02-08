@@ -68,9 +68,9 @@ class TestSourceSchemaWithRealAPI:
         # 定义股票基本信息的 SourceSchema
         stock_basic_schema = SourceSchema(
             dataset="stock_basic",
-            key_columns=("src_code",),
+            key_columns=("source_ticker",),
             schema={
-                "src_code": pl.String,
+                "source_ticker": pl.String,
                 "symbol": pl.String,
                 "name": pl.String,
                 "exchange": pl.String,
@@ -88,7 +88,7 @@ class TestSourceSchemaWithRealAPI:
         # 额外验证
         assert stocks.height > 0, "Stock basic 数据不应为空"
         assert set(stocks.columns) == {
-            "src_code",
+            "source_ticker",
             "symbol",
             "name",
             "exchange",
@@ -107,7 +107,7 @@ class TestSourceSchemaWithRealAPI:
         # 额外验证
         assert daily.height > 0, "Daily 数据不应为空"
         assert set(daily.columns) == {
-            "src_code",
+            "source_ticker",
             "trade_date",
             "open",
             "high",
@@ -132,9 +132,9 @@ class TestSourceSchemaWithRealAPI:
         # 定义 ETF 基本信息的 SourceSchema
         etf_basic_schema = SourceSchema(
             dataset="etf_basic",
-            key_columns=("src_code",),
+            key_columns=("source_ticker",),
             schema={
-                "src_code": pl.String,
+                "source_ticker": pl.String,
                 "symbol": pl.String,
                 "name": pl.String,
                 "exchange": pl.String,
@@ -152,7 +152,7 @@ class TestSourceSchemaWithRealAPI:
         # 额外验证
         assert etf_basic.height > 0, "ETF basic 数据不应为空"
         assert set(etf_basic.columns) == {
-            "src_code",
+            "source_ticker",
             "symbol",
             "name",
             "exchange",
@@ -274,9 +274,9 @@ class TestSourceSchemaEdgeCases:
         # 定义 Schema
         test_schema = SourceSchema(
             dataset="test_duplicate",
-            key_columns=("src_code", "trade_date"),
+            key_columns=("source_ticker", "trade_date"),
             schema={
-                "src_code": pl.String,
+                "source_ticker": pl.String,
                 "trade_date": pl.Date,
                 "value": pl.Float64,
             },
@@ -285,7 +285,7 @@ class TestSourceSchemaEdgeCases:
         # 创建包含重复主键的 DataFrame
         duplicate_df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ", "000001.SZ"],
+                "source_ticker": ["000001.SZ", "000001.SZ"],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],
                 "value": [1.0, 2.0],
             }

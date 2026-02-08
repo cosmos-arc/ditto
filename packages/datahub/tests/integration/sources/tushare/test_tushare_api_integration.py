@@ -66,7 +66,7 @@ class TestTushareEndToEnd:
         stocks = source.fetch_stock_basic()
         assert stocks.height > 0, "Stock basic 数据不应为空"
         assert stocks.schema == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "symbol": pl.String,
             "name": pl.String,
             "exchange": pl.String,
@@ -76,7 +76,7 @@ class TestTushareEndToEnd:
         # Verify数据转换正确性
         stocks_dict = stocks.to_dicts()
         assert isinstance(stocks_dict, list)
-        assert all("." in d["src_code"] for d in stocks_dict)
+        assert all("." in d["source_ticker"] for d in stocks_dict)
         # exchange 可能包含 SSE, SZSE, BSE 等多种交易所
         assert all(
             d["exchange"] in stocks["exchange"].unique().to_list() for d in stocks_dict
@@ -86,7 +86,7 @@ class TestTushareEndToEnd:
         daily = source.fetch_stock_daily("2024-01-02")
         assert daily.height > 0, "Stock daily 数据不应为空"
         assert daily.schema == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "open": pl.Float64,
             "high": pl.Float64,
@@ -129,7 +129,7 @@ class TestTushareEndToEnd:
         etf_basic = source.fetch_etf_basic()
         assert etf_basic.height > 0, "ETF basic 数据不应为空"
         assert etf_basic.schema == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "symbol": pl.String,
             "name": pl.String,
             "exchange": pl.String,
@@ -139,13 +139,13 @@ class TestTushareEndToEnd:
         # Verify数据转换正确性
         etf_dict = etf_basic.to_dicts()
         assert isinstance(etf_dict, list)
-        assert all("." in d["src_code"] for d in etf_dict)
+        assert all("." in d["source_ticker"] for d in etf_dict)
 
         # 2. 测试 etf_daily 获取
         etf_daily = source.fetch_etf_daily("2024-01-02")
         assert etf_daily.height > 0, "ETF daily 数据不应为空"
         assert etf_daily.schema == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "open": pl.Float64,
             "high": pl.Float64,
@@ -180,7 +180,7 @@ class TestTushareEndToEnd:
         adj_factor = source.fetch_adj_factor("2024-01-02")
         assert adj_factor.height > 0, "Adj factor 数据不应为空"
         assert adj_factor.schema == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "knowledge_date": pl.Date,
             "adj_factor": pl.Float64,
@@ -197,7 +197,7 @@ class TestTushareEndToEnd:
         fund_adj = source.fetch_fund_adj("2024-01-02")
         assert fund_adj.height > 0, "Fund adj 数据不应为空"
         assert fund_adj.schema == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "knowledge_date": pl.Date,
             "adj_factor": pl.Float64,
@@ -221,7 +221,7 @@ class TestTushareEndToEnd:
         stock_limit = source.fetch_stock_limit("2024-01-02")
         assert stock_limit.height > 0, "Stock limit 数据不应为空"
         assert stock_limit.schema == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "up_limit": pl.Float64,
             "down_limit": pl.Float64,
@@ -238,7 +238,7 @@ class TestTushareEndToEnd:
         stock_status = source.fetch_stock_status("2024-01-02")
         assert stock_status.height > 0, "Stock status 数据不应为空"
         assert stock_status.schema == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "is_suspended": pl.Boolean,
             "suspend_timing": pl.String,
@@ -327,7 +327,7 @@ class TestTushareEndToEnd:
         # Verify schema 一致
         assert stocks1.schema == stocks2.schema, "多次调用返回 schema 应一致"
 
-        # Verify内容一致(按 src_code 排序后比较)
-        sorted1 = stocks1.sort("src_code")
-        sorted2 = stocks2.sort("src_code")
+        # Verify内容一致(按 source_ticker 排序后比较)
+        sorted1 = stocks1.sort("source_ticker")
+        sorted2 = stocks2.sort("source_ticker")
         assert sorted1.equals(sorted2), "多次调用返回内容应一致"

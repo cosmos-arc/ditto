@@ -486,27 +486,28 @@ class InstrumentStore:
         Add symbol column to DataFrame.
 
         Args:
-            df: DataFrame with sid column.
+            df: DataFrame with instrument_id column (also supports sid).
 
         Returns:
             DataFrame with symbol column added.
 
         """
-        if "sid" not in df.columns or df.is_empty():
+        id_col = "instrument_id" if "instrument_id" in df.columns else "sid"
+        if id_col not in df.columns or df.is_empty():
             return df
 
-        sids = df["sid"].unique().to_list()
-        symbol_map = self.get_sid_symbol_map(sids)
+        instrument_ids = df[id_col].unique().to_list()
+        symbol_map = self.get_sid_symbol_map(instrument_ids)
 
         symbol_df = pl.DataFrame(
             {
-                "sid": list(symbol_map.keys()),
+                id_col: list(symbol_map.keys()),
                 "symbol": list(symbol_map.values()),
             }
         )
 
         # 内联数据增强：join symbol 数据
-        return df.join(symbol_df, on="sid", how="left")
+        return df.join(symbol_df, on=id_col, how="left")
 
     def register(self, sid: int, registration: InstrumentRegistration) -> int:
         """
