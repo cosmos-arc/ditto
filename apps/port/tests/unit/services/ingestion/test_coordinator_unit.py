@@ -1,6 +1,7 @@
 """Tests for IngestionCoordinator."""
 
 from datetime import date
+from typing import Any
 
 import polars as pl
 import pytest
@@ -51,50 +52,55 @@ def mock_hub(mocker):
     """创建 Mock DataHub。"""
     hub = mocker.Mock()
     hub.ingestion_log = mocker.Mock(spec=IngestionLogStore)
-
-    # 添加 SidAllocator mock
-    mock_instrument_id_allocator = mocker.Mock()
     stock_counter = [1_000_000]
     etf_counter = [2_000_000]
+
+    _attach_allocator(hub, mocker, stock_counter, etf_counter)
+    _attach_metadata(hub, mocker, stock_counter, etf_counter)
+    _attach_market(hub, mocker)
+    _attach_domain_services(hub, mocker)
+    _attach_calendar(hub, mocker)
+
+    return hub
+
+
+def _attach_allocator(
+    hub: Any, mocker: Any, stock_counter: list[int], etf_counter: list[int]
+) -> None:
+    mock_instrument_id_allocator = mocker.Mock()
 
     def allocate_side_effect(asset_class: str) -> int:
         if asset_class == "stock":
             instrument_id = stock_counter[0]
             stock_counter[0] += 1
             return instrument_id
-        elif asset_class == "etf":
+        if asset_class == "etf":
             instrument_id = etf_counter[0]
             etf_counter[0] += 1
             return instrument_id
-        else:
-            raise ValueError(f"Unknown asset class: {asset_class}")
+        raise ValueError(f"Unknown asset class: {asset_class}")
 
     mock_instrument_id_allocator.allocate.side_effect = allocate_side_effect
     hub.instrument_id_allocator = mock_instrument_id_allocator
 
-    # 添加 InstrumentStore mock（InstrumentMapper 需要）
     hub.instrument_store = mocker.Mock()
-    hub.instrument_store.resolve_instrument_id.return_value = (
-        None  # 默认返回 None（不存在）
-    )
-    hub.instrument_store.register.return_value = 1000001  # 返回注册的 Instrument ID
+    hub.instrument_store.resolve_instrument_id.return_value = None
+    hub.instrument_store.register.return_value = 1000001
 
-    # 添加 MetadataService mock（IngestionDataWriter 需要）
+
+def _attach_metadata(
+    hub: Any, mocker: Any, stock_counter: list[int], etf_counter: list[int]
+) -> None:
     hub.metadata = mocker.Mock()
 
     def register_securities_batch_side_effect(df, source, asset_class, **kwargs):
-        """根据 asset_class 返回不同的 file_path。"""
+        _ = df, source, kwargs
         file_path = f"instrument_store:{asset_class}_basic"
         checksum = f"checksum_{asset_class}"
         return (file_path, checksum)
 
-    hub.metadata.register_securities_batch.side_effect = (
-        register_securities_batch_side_effect
-    )
-
-    # 添加 resolve_or_create_batch mock
     def resolve_or_create_batch_side_effect(df, source, asset_class, **kwargs):
-        """根据 asset_class 返回不同的 instrument_id 映射。"""
+        _ = source, kwargs
         if asset_class == "stock":
             instrument_id = stock_counter[0]
             stock_counter[0] += 1
@@ -103,25 +109,23 @@ def mock_hub(mocker):
             etf_counter[0] += 1
         else:
             raise ValueError(f"Unknown asset class: {asset_class}")
-        # 返回 source_ticker 到 instrument_id 的映射
         source_tickers = df["source_ticker"].to_list()
         return {source_tickers[0]: instrument_id}
 
+    hub.metadata.register_securities_batch.side_effect = (
+        register_securities_batch_side_effect
+    )
     hub.metadata.resolve_or_create_batch.side_effect = (
         resolve_or_create_batch_side_effect
     )
-
-    # 添加 get_securities mock（返回空 DataFrame）
     hub.metadata.get_securities.return_value = pl.DataFrame()
-
-    # 向后兼容：保留 securities 属性指向 metadata
     hub.securities = hub.metadata
 
-    # 添加 MarketService mock（IngestionDataWriter 需要）
+
+def _attach_market(hub: Any, mocker: Any) -> None:
     hub.market = mocker.Mock()
 
     def write_side_effect(command) -> MarketWriteResult:
-        """Mock write 返回 MarketWriteResult。"""
         return MarketWriteResult(
             dataset=command.dataset,
             rows=len(command.df),
@@ -130,13 +134,20 @@ def mock_hub(mocker):
 
     hub.market.write = mocker.Mock(side_effect=write_side_effect)
 
-    # 添加 MetadataService/Calendar mock
+
+def _attach_domain_services(hub: Any, mocker: Any) -> None:
+    hub.fundamental = mocker.Mock()
+    hub.fundamental.write.return_value = mocker.Mock(records_written=1)
+
+    hub.capital = mocker.Mock()
+    hub.capital.write.return_value = mocker.Mock(records_written=1)
+
+
+def _attach_calendar(hub: Any, mocker: Any) -> None:
     hub.calendar = mocker.Mock()
     hub.calendar.is_trading_day.return_value = True
     hub.calendar.upsert.return_value = len
     hub.calendar.list_trading_days.return_value = []
-
-    return hub
 
 
 @pytest.fixture
@@ -396,6 +407,82 @@ class TestIngestDate:
         assert result.status == "success"
         mock_source.fetch_stock_status.assert_called_once_with("2024-12-27")
         mock_hub.market.write.assert_called_once()
+
+    def test_ingest_date_success_balance_sheet(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
+        """成功摄取 balance_sheet 数据。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_source.fetch_balance_sheet.return_value = pl.DataFrame(
+            {
+                "instrument_id": ["000001.SZ"],
+                "report_date": [date(2024, 12, 31)],
+                "knowledge_date": [date(2025, 1, 1)],
+                "effective_from": [date(2025, 1, 1)],
+                "effective_to": [None],
+                "total_assets": [100.0],
+                "total_liabilities": [60.0],
+                "net_assets": [40.0],
+                "current_assets": [30.0],
+                "current_liabilities": [20.0],
+            }
+        )
+        mock_hub.fundamental.write.return_value = mocker.Mock(records_written=1)
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="balance_sheet",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum_balance_sheet",
+            rows=1,
+        )
+
+        # Act
+        result = coordinator.ingest_date("balance_sheet", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        mock_source.fetch_balance_sheet.assert_called_once_with("2024-12-27")
+        mock_hub.fundamental.write.assert_called_once()
+
+    def test_ingest_date_success_valuation_metrics(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
+        """成功摄取 valuation_metrics 数据。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_source.fetch_valuation_metrics.return_value = pl.DataFrame(
+            {
+                "instrument_id": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "knowledge_date": [date(2024, 12, 28)],
+                "effective_from": [date(2024, 12, 28)],
+                "effective_to": [None],
+                "pe_ratio": [12.5],
+                "pb_ratio": [1.8],
+                "ps_ratio": [2.1],
+                "dividend_yield": [0.03],
+                "market_cap": [1000000000.0],
+            }
+        )
+        mock_hub.capital.write.return_value = mocker.Mock(records_written=1)
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="valuation_metrics",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum_valuation_metrics",
+            rows=1,
+        )
+
+        # Act
+        result = coordinator.ingest_date("valuation_metrics", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        mock_source.fetch_valuation_metrics.assert_called_once_with("2024-12-27")
+        mock_hub.capital.write.assert_called_once()
 
     def test_ingest_date_success_calendar(
         self, coordinator, mock_hub, mock_source, mocker
@@ -1114,43 +1201,22 @@ class TestTradingDayCheck:
         # 验证调用了 source
         mock_source.fetch_stock_daily.assert_called_once_with("2024-12-27")
 
-    def test_adj_factor_does_not_check_trading_day(
+    def test_adj_factor_skips_on_non_trading_day(
         self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
-        """adj_factor 不检查交易日（参考类数据集）。"""
+        """adj_factor 在非交易日静默跳过。"""
         # Arrange
         mock_hub.ingestion_log.get_log.return_value = None
         mock_hub.calendar = mocker.Mock()
-        # 即使 calendar 返回非交易日，adj_factor 也不应该检查
         mock_hub.calendar.is_trading_day.return_value = False
-
-        mock_source.fetch_adj_factor.return_value = pl.DataFrame(
-            {
-                "source_ticker": ["000001.SZ"],
-                "trade_date": [date(2024, 12, 27)],
-                "adj_factor": [1.2345],
-            }
-        )
-
-        mock_hub.market.write.return_value = mock_hub_market_write_adj_factor()
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
-            dataset="adj_factor",
-            source="tushare",
-            trade_date="2024-12-27",
-            status=IngestionStatus.SUCCESS,
-            checksum="checksum789",
-            rows=1,
-        )
 
         # Act
         result = coordinator.ingest_date("adj_factor", "2024-12-27")
 
         # Assert
-        assert result.status == "success"
-        # 验证调用了 source（没有因为非交易日而跳过）
-        mock_source.fetch_adj_factor.assert_called_once()
-        # 验证没有调用 is_trading_day
-        mock_hub.calendar.is_trading_day.assert_not_called()
+        assert result.status == "skipped"
+        mock_source.fetch_adj_factor.assert_not_called()
+        mock_hub.calendar.is_trading_day.assert_called_once_with("2024-12-27")
 
     def test_calendar_does_not_check_trading_day(
         self, coordinator, mock_hub, mock_source, mocker

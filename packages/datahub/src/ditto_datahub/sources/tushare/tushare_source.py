@@ -7,6 +7,7 @@ import polars as pl
 from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.base import DataSource
 from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareAdapter
+from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
 from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
 
@@ -43,6 +44,12 @@ class TushareSource(DataSource):
         self._calendar = CalendarTushareAdapter(token=token, settings=settings)
         self._stock = StockTushareAdapter(token=token, settings=settings)
         self._etf = ETFTushareAdapter(token=token, settings=settings)
+        self._capital = CapitalTushareAdapter(token=token, settings=settings)
+
+    @staticmethod
+    def _to_compact_date(trade_date: str) -> str:
+        """Convert YYYY-MM-DD to YYYYMMDD for Tushare APIs."""
+        return trade_date.replace("-", "")
 
     # Calendar 相关方法 - 委托给 CalendarTushareAdapter
     def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
@@ -233,3 +240,51 @@ class TushareSource(DataSource):
 
         """
         return self._etf.fetch_fund_adj(trade_date)
+
+    # Capital/Fundamental 相关方法 - 委托给 CapitalTushareAdapter
+    def fetch_balance_sheet(self, trade_date: str) -> pl.DataFrame:
+        """Fetch balance sheet data for a trade date window."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_balance_sheet(
+            ts_code=None,
+            start_date=compact_date,
+            end_date=compact_date,
+        )
+
+    def fetch_income_statement(self, trade_date: str) -> pl.DataFrame:
+        """Fetch income statement data for a trade date window."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_income_statement(
+            ts_code=None,
+            start_date=compact_date,
+            end_date=compact_date,
+        )
+
+    def fetch_cash_flow(self, trade_date: str) -> pl.DataFrame:
+        """Fetch cash flow data for a trade date window."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_cash_flow(
+            ts_code=None,
+            start_date=compact_date,
+            end_date=compact_date,
+        )
+
+    def fetch_dividend(self, trade_date: str) -> pl.DataFrame:
+        """Fetch dividend data."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_dividend(ex_date=compact_date)
+
+    def fetch_valuation_metrics(self, trade_date: str) -> pl.DataFrame:
+        """Fetch valuation metrics data."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_valuation_metrics(trade_date=compact_date)
+
+    def fetch_margin_trading(self, trade_date: str) -> pl.DataFrame:
+        """Fetch margin trading data."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_margin_trading(trade_date=compact_date)
+
+    def fetch_pledge_ratio(self, trade_date: str) -> pl.DataFrame:
+        """Fetch pledge ratio data."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_pledge_ratio(report_date=compact_date)

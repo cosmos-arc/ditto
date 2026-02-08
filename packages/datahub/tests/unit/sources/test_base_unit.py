@@ -192,6 +192,27 @@ class TestDataSourceABC:
             def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
+            def fetch_balance_sheet(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_income_statement(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_cash_flow(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_dividend(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_valuation_metrics(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_margin_trading(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_pledge_ratio(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
         # Should not raise
         source = CompleteSourcer()
         assert isinstance(source, DataSource)

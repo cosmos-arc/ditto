@@ -8,6 +8,7 @@
 - 日历（calendar）→ CalendarStore
 """
 
+from collections.abc import Callable
 from typing import Literal, cast
 
 import polars as pl
@@ -155,155 +156,299 @@ class IngestionDataWriter:
         """
         year = int(trade_date[:4])
 
-        # 转换为枚举进行比较
         try:
-            dataset_enum = Dataset(dataset)
+            dataset_enum = Dataset(dataset)  # 转换为枚举进行比较
         except ValueError as e:
             raise ValueError(f"不支持写入数据集: {dataset}") from e
 
         source_ticker_col = "source_ticker"
+        handlers: dict[Dataset, Callable[[], WriteResult]] = {
+            Dataset.ETF_DAILY: lambda: self._write_market_bars(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+                on_duplicate,
+                source_ticker_col,
+            ),
+            Dataset.STOCK_DAILY: lambda: self._write_market_bars(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+                on_duplicate,
+                source_ticker_col,
+            ),
+            Dataset.STOCK_STATUS: lambda: self._write_stock_status(
+                dataset,
+                df,
+                year,
+                on_duplicate,
+                source_ticker_col,
+            ),
+            Dataset.ADJ_FACTOR: lambda: self._write_adj_factor(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+                on_duplicate,
+                source_ticker_col,
+            ),
+            Dataset.FUND_ADJ: lambda: self._write_adj_factor(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+                on_duplicate,
+                source_ticker_col,
+            ),
+            Dataset.BALANCE_SHEET: lambda: self._write_fundamental(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+            ),
+            Dataset.INCOME_STATEMENT: lambda: self._write_fundamental(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+            ),
+            Dataset.CASH_FLOW: lambda: self._write_fundamental(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+            ),
+            Dataset.DIVIDEND: lambda: self._write_fundamental(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+            ),
+            Dataset.VALUATION_METRICS: lambda: self._write_capital(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+            ),
+            Dataset.MARGIN_TRADING: lambda: self._write_capital(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+            ),
+            Dataset.PLEDGE_RATIO: lambda: self._write_capital(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+            ),
+            Dataset.CALENDAR: lambda: self._write_calendar(df, trade_date),
+            Dataset.STOCK_BASIC: lambda: self._write_basic(df, trade_date, "stock"),
+            Dataset.ETF_BASIC: lambda: self._write_basic(df, trade_date, "etf"),
+        }
 
-        if dataset_enum in (Dataset.ETF_DAILY, Dataset.STOCK_DAILY):
-            # 补齐 instrument_id/source_ticker/source 字段（使用 MetadataService API）
-            asset_class: Literal["stock", "etf"] = (
-                "etf" if dataset_enum == Dataset.ETF_DAILY else "stock"
+        if dataset_enum not in handlers:
+            raise ValueError(f"不支持写入数据集: {dataset}")
+
+        return handlers[dataset_enum]()
+
+    def _write_market_bars(
+        self,
+        dataset: str,
+        dataset_enum: Dataset,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        asset_class: Literal["stock", "etf"] = (
+            "etf" if dataset_enum == Dataset.ETF_DAILY else "stock"
+        )
+        instrument_id_mapping = self._hub.metadata.resolve_or_create_batch(
+            df=df,
+            source=self._source_name,
+            asset_class=asset_class,
+            source_ticker_col=source_ticker_col,
+        )
+        enriched_df = _enrich_with_instrument_id(
+            df,
+            instrument_id_mapping,
+            source_ticker_col,
+            self._source_name,
+        )
+        bars_dataset = cast(Literal["stock_daily", "etf_daily"], dataset_enum.value)
+        write_result = self._hub.market.write(
+            MarketWriteCommand(
+                dataset=bars_dataset,
+                df=enriched_df,
+                year=year,
+                on_duplicate=_map_on_duplicate(on_duplicate),
             )
-            # 解析或创建证券，获取 instrument_id 映射
-            instrument_id_mapping = self._hub.metadata.resolve_or_create_batch(
-                df=df,
-                source=self._source_name,
-                asset_class=asset_class,
-                source_ticker_col=source_ticker_col,
+        )
+        return _to_write_result(
+            dataset,
+            year,
+            enriched_df,
+            write_result.rows,
+            write_result.files,
+        )
+
+    def _write_stock_status(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        instrument_id_mapping = self._hub.metadata.resolve_or_create_batch(
+            df=df,
+            source=self._source_name,
+            asset_class="stock",
+            source_ticker_col=source_ticker_col,
+        )
+        enriched_df = _enrich_with_instrument_id(
+            df,
+            instrument_id_mapping,
+            source_ticker_col,
+            self._source_name,
+        )
+        write_result = self._hub.market.write(
+            MarketWriteCommand(
+                dataset="stock_status",
+                df=enriched_df,
+                year=year,
+                on_duplicate=_map_on_duplicate(on_duplicate),
             )
-            # 添加 instrument_id/source_ticker 列
-            df = _enrich_with_instrument_id(
-                df,
-                instrument_id_mapping,
-                source_ticker_col,
-                self._source_name,
-            )
-            # 转换 OnDuplicate 枚举为字符串
-            on_duplicate_str = _map_on_duplicate(on_duplicate)
-            bars_dataset: Literal["stock_daily", "etf_daily"] = dataset_enum.value
-            write_result = self._hub.market.write(
-                MarketWriteCommand(
-                    dataset=bars_dataset,
-                    df=df,
-                    year=year,
-                    on_duplicate=on_duplicate_str,
-                )
-            )
-            return _to_write_result(
-                dataset,
-                year,
-                df,
-                write_result.rows,
-                write_result.files,
-            )
-        elif dataset_enum == Dataset.STOCK_STATUS:
-            instrument_id_mapping = self._hub.metadata.resolve_or_create_batch(
-                df=df,
-                source=self._source_name,
-                asset_class="stock",
-                source_ticker_col=source_ticker_col,
-            )
-            df = _enrich_with_instrument_id(
-                df,
-                instrument_id_mapping,
-                source_ticker_col,
-                self._source_name,
-            )
-            on_duplicate_str = _map_on_duplicate(on_duplicate)
-            write_result = self._hub.market.write(
-                MarketWriteCommand(
-                    dataset="stock_status",
-                    df=df,
-                    year=year,
-                    on_duplicate=on_duplicate_str,
-                )
-            )
-            return _to_write_result(
-                dataset,
-                year,
-                df,
-                write_result.rows,
-                write_result.files,
-            )
-        elif dataset_enum in (Dataset.ADJ_FACTOR, Dataset.FUND_ADJ):
-            # 补齐 instrument_id/source_ticker/source 字段（使用 MetadataService API）
+        )
+        return _to_write_result(
+            dataset,
+            year,
+            enriched_df,
+            write_result.rows,
+            write_result.files,
+        )
+
+    def _write_adj_factor(
+        self,
+        dataset: str,
+        dataset_enum: Dataset,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        enriched_df = df
+        if "instrument_id" not in df.columns:
             adj_asset_class: Literal["stock", "etf"] = (
                 "etf" if dataset_enum == Dataset.FUND_ADJ else "stock"
             )
-
-            # 检查是否已有 instrument_id 列（上游可能已处理）
-            if "instrument_id" not in df.columns:
-                # 解析或创建证券，获取 instrument_id 映射
-                instrument_id_mapping = self._hub.metadata.resolve_or_create_batch(
-                    df=df,
-                    source=self._source_name,
-                    asset_class=adj_asset_class,
-                    source_ticker_col=source_ticker_col,
-                )
-                # 添加 instrument_id/source_ticker 列
-                df = _enrich_with_instrument_id(
-                    df,
-                    instrument_id_mapping,
-                    source_ticker_col,
-                    self._source_name,
-                )
-
-            on_duplicate_str = _map_on_duplicate(on_duplicate)
-            adj_dataset = cast(Literal["adj_factor", "fund_adj"], dataset_enum.value)
-            write_result = self._hub.market.write(
-                MarketWriteCommand(
-                    dataset=adj_dataset,
-                    df=df,
-                    year=year,
-                    on_duplicate=on_duplicate_str,
-                )
+            instrument_id_mapping = self._hub.metadata.resolve_or_create_batch(
+                df=df,
+                source=self._source_name,
+                asset_class=adj_asset_class,
+                source_ticker_col=source_ticker_col,
             )
-            return _to_write_result(
-                dataset,
-                year,
+            enriched_df = _enrich_with_instrument_id(
                 df,
-                write_result.rows,
-                write_result.files,
+                instrument_id_mapping,
+                source_ticker_col,
+                self._source_name,
             )
-        elif dataset_enum == Dataset.CALENDAR:
-            records = df.to_dicts()
-            self._hub.metadata.write(
-                MetadataWriteCommand(dataset="calendar", records=records)
+
+        adj_dataset = cast(Literal["adj_factor", "fund_adj"], dataset_enum.value)
+        write_result = self._hub.market.write(
+            MarketWriteCommand(
+                dataset=adj_dataset,
+                df=enriched_df,
+                year=year,
+                on_duplicate=_map_on_duplicate(on_duplicate),
             )
-            file_path = f"calendar_store:{trade_date}"
-            # 修复：使用统一的 ChecksumCompute（MD5 算法，确定性排序）
-            checksum = ChecksumCompute.from_dataframe(df, "calendar")
-            return WriteResult(
-                file_path=file_path,
-                checksum=checksum,
-                rows_written=len(df),
-                rows_total=len(df),
-                blocked=False,
-            )
-        elif dataset_enum == Dataset.STOCK_BASIC:
+        )
+        return _to_write_result(
+            dataset,
+            year,
+            enriched_df,
+            write_result.rows,
+            write_result.files,
+        )
+
+    def _write_fundamental(
+        self,
+        dataset: str,
+        dataset_enum: Dataset,
+        df: pl.DataFrame,
+        year: int,
+    ) -> WriteResult:
+        fundamental_dataset = cast(
+            Literal["balance_sheet", "income_statement", "cash_flow", "dividend"],
+            dataset_enum.value,
+        )
+        write_result = self._hub.fundamental.write(fundamental_dataset, df)
+        files = 1 if write_result.records_written > 0 else 0
+        return _to_write_result(
+            dataset,
+            year,
+            df,
+            write_result.records_written,
+            files,
+        )
+
+    def _write_capital(
+        self,
+        dataset: str,
+        dataset_enum: Dataset,
+        df: pl.DataFrame,
+        year: int,
+    ) -> WriteResult:
+        capital_dataset = cast(
+            Literal["valuation_metrics", "margin_trading", "pledge_ratio"],
+            dataset_enum.value,
+        )
+        write_result = self._hub.capital.write(capital_dataset, df)
+        files = 1 if write_result.records_written > 0 else 0
+        return _to_write_result(
+            dataset,
+            year,
+            df,
+            write_result.records_written,
+            files,
+        )
+
+    def _write_calendar(self, df: pl.DataFrame, trade_date: str) -> WriteResult:
+        records = df.to_dicts()
+        self._hub.metadata.write(
+            MetadataWriteCommand(dataset="calendar", records=records)
+        )
+        file_path = f"calendar_store:{trade_date}"
+        checksum = ChecksumCompute.from_dataframe(df, "calendar")
+        return WriteResult(
+            file_path=file_path,
+            checksum=checksum,
+            rows_written=len(df),
+            rows_total=len(df),
+            blocked=False,
+        )
+
+    def _write_basic(
+        self,
+        df: pl.DataFrame,
+        trade_date: str,
+        asset_class: Literal["stock", "etf"],
+    ) -> WriteResult:
+        if asset_class == "stock":
             file_path, checksum = self.write_stock_basic(df, trade_date)
-            return WriteResult(
-                file_path=file_path,
-                checksum=checksum,
-                rows_written=len(df),
-                rows_total=len(df),
-                blocked=False,
-            )
-        elif dataset_enum == Dataset.ETF_BASIC:
-            file_path, checksum = self.write_etf_basic(df, trade_date)
-            return WriteResult(
-                file_path=file_path,
-                checksum=checksum,
-                rows_written=len(df),
-                rows_total=len(df),
-                blocked=False,
-            )
         else:
-            raise ValueError(f"不支持写入数据集: {dataset}")
+            file_path, checksum = self.write_etf_basic(df, trade_date)
+        return WriteResult(
+            file_path=file_path,
+            checksum=checksum,
+            rows_written=len(df),
+            rows_total=len(df),
+            blocked=False,
+        )
 
     def write_stock_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
         """

@@ -41,3 +41,31 @@ class IngestionDataSource(Protocol):
     def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
         """Fetch stock status data."""
         ...
+
+    def fetch_balance_sheet(self, trade_date: str) -> pl.DataFrame:
+        """Fetch balance sheet data."""
+        ...
+
+    def fetch_income_statement(self, trade_date: str) -> pl.DataFrame:
+        """Fetch income statement data."""
+        ...
+
+    def fetch_cash_flow(self, trade_date: str) -> pl.DataFrame:
+        """Fetch cash flow data."""
+        ...
+
+    def fetch_dividend(self, trade_date: str) -> pl.DataFrame:
+        """Fetch dividend data."""
+        ...
+
+    def fetch_valuation_metrics(self, trade_date: str) -> pl.DataFrame:
+        """Fetch valuation metrics data."""
+        ...
+
+    def fetch_margin_trading(self, trade_date: str) -> pl.DataFrame:
+        """Fetch margin trading data."""
+        ...
+
+    def fetch_pledge_ratio(self, trade_date: str) -> pl.DataFrame:
+        """Fetch pledge ratio data."""
+        ...

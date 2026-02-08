@@ -19,6 +19,13 @@ class TestDataset:
         assert Dataset.STOCK_STATUS.value == "stock_status"
         assert Dataset.ADJ_FACTOR.value == "adj_factor"
         assert Dataset.FUND_ADJ.value == "fund_adj"
+        assert Dataset.BALANCE_SHEET.value == "balance_sheet"
+        assert Dataset.INCOME_STATEMENT.value == "income_statement"
+        assert Dataset.CASH_FLOW.value == "cash_flow"
+        assert Dataset.DIVIDEND.value == "dividend"
+        assert Dataset.VALUATION_METRICS.value == "valuation_metrics"
+        assert Dataset.MARGIN_TRADING.value == "margin_trading"
+        assert Dataset.PLEDGE_RATIO.value == "pledge_ratio"
 
     def test_is_basic_dataset(self) -> None:
         """测试 is_basic_dataset 方法."""
@@ -30,6 +37,8 @@ class TestDataset:
         assert Dataset.is_basic_dataset("calendar") is False
         assert Dataset.is_basic_dataset("adj_factor") is False
         assert Dataset.is_basic_dataset("fund_adj") is False
+        assert Dataset.is_basic_dataset("balance_sheet") is False
+        assert Dataset.is_basic_dataset("valuation_metrics") is False
 
     def test_is_calendar_dataset(self) -> None:
         """测试 is_calendar_dataset 方法."""

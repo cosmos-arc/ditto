@@ -50,6 +50,17 @@ class Dataset(str, Enum):
     ADJ_FACTOR = "adj_factor"
     FUND_ADJ = "fund_adj"
 
+    # Fundamental 域（财务/公司行为）
+    BALANCE_SHEET = "balance_sheet"
+    INCOME_STATEMENT = "income_statement"
+    CASH_FLOW = "cash_flow"
+    DIVIDEND = "dividend"
+
+    # Capital 域（估值/融资融券/质押）
+    VALUATION_METRICS = "valuation_metrics"
+    MARGIN_TRADING = "margin_trading"
+    PLEDGE_RATIO = "pledge_ratio"
+
     @classmethod
     def is_basic_dataset(cls, dataset: str) -> bool:
         """判断是否为 basic 类数据集（不需要 trade_date）。"""

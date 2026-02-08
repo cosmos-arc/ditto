@@ -348,3 +348,122 @@ class DataSource(ABC):
 
         """
         pass
+
+    @abstractmethod
+    def fetch_balance_sheet(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch balance sheet data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with balance_sheet SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_income_statement(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch income statement data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with income_statement SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_cash_flow(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch cash flow data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with cash_flow SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_dividend(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch dividend data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with dividend SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_valuation_metrics(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch valuation metrics data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with valuation_metrics SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_margin_trading(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch margin trading data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with margin_trading SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_pledge_ratio(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch pledge ratio data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with pledge_ratio SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass

@@ -117,7 +117,7 @@ class IngestionCoordinator:
         """
         检查数据集是否需要交易日验证。
 
-        对于行情类数据集（stock_daily, etf_daily, stock_status），非交易日返回 False。
+        对于交易日驱动数据集（market + 部分 capital），非交易日返回 False。
         其他数据集不需要交易日验证，返回 True。
 
         Args:
@@ -138,6 +138,10 @@ class IngestionCoordinator:
             Dataset.STOCK_DAILY,
             Dataset.ETF_DAILY,
             Dataset.STOCK_STATUS,
+            Dataset.ADJ_FACTOR,
+            Dataset.FUND_ADJ,
+            Dataset.VALUATION_METRICS,
+            Dataset.MARGIN_TRADING,
         ):
             return self._hub.calendar.is_trading_day(trade_date)
         return True
@@ -263,6 +267,19 @@ class IngestionCoordinator:
             Dataset.STOCK_STATUS: lambda: self._source.fetch_stock_status(trade_date),
             Dataset.ADJ_FACTOR: lambda: self._source.fetch_adj_factor(trade_date),
             Dataset.FUND_ADJ: lambda: self._source.fetch_fund_adj(trade_date),
+            Dataset.BALANCE_SHEET: lambda: self._source.fetch_balance_sheet(trade_date),
+            Dataset.INCOME_STATEMENT: lambda: self._source.fetch_income_statement(
+                trade_date
+            ),
+            Dataset.CASH_FLOW: lambda: self._source.fetch_cash_flow(trade_date),
+            Dataset.DIVIDEND: lambda: self._source.fetch_dividend(trade_date),
+            Dataset.VALUATION_METRICS: lambda: self._source.fetch_valuation_metrics(
+                trade_date
+            ),
+            Dataset.MARGIN_TRADING: lambda: self._source.fetch_margin_trading(
+                trade_date
+            ),
+            Dataset.PLEDGE_RATIO: lambda: self._source.fetch_pledge_ratio(trade_date),
         }
 
         if dataset_enum not in handlers:

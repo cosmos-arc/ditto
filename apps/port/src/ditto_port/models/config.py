@@ -39,6 +39,13 @@ class Dataset(str, Enum):
     STOCK_STATUS = "stock_status"
     ADJ_FACTOR = "adj_factor"
     FUND_ADJ = "fund_adj"
+    BALANCE_SHEET = "balance_sheet"
+    INCOME_STATEMENT = "income_statement"
+    CASH_FLOW = "cash_flow"
+    DIVIDEND = "dividend"
+    VALUATION_METRICS = "valuation_metrics"
+    MARGIN_TRADING = "margin_trading"
+    PLEDGE_RATIO = "pledge_ratio"
 
 
 class TaskTier(str, Enum):
@@ -489,6 +496,72 @@ DATASET_REGISTRY: dict[Dataset, DatasetSpec] = {
         critical_fields=["trade_date", "ts_code", "adj_factor"],
         task_name="ingest_fund_adj",
         priority=30,
+    ),
+    Dataset.BALANCE_SHEET: create_t1_config(
+        dataset=Dataset.BALANCE_SHEET,
+        description="资产负债表",
+        typical_available_time=time(20, 30),
+        depends_on=[Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "report_date", "knowledge_date"],
+        task_name="ingest_balance_sheet",
+        priority=35,
+        timeout_seconds=900,
+    ),
+    Dataset.INCOME_STATEMENT: create_t1_config(
+        dataset=Dataset.INCOME_STATEMENT,
+        description="利润表",
+        typical_available_time=time(20, 30),
+        depends_on=[Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "report_date", "knowledge_date"],
+        task_name="ingest_income_statement",
+        priority=35,
+        timeout_seconds=900,
+    ),
+    Dataset.CASH_FLOW: create_t1_config(
+        dataset=Dataset.CASH_FLOW,
+        description="现金流量表",
+        typical_available_time=time(20, 30),
+        depends_on=[Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "report_date", "knowledge_date"],
+        task_name="ingest_cash_flow",
+        priority=35,
+        timeout_seconds=900,
+    ),
+    Dataset.DIVIDEND: create_t1_config(
+        dataset=Dataset.DIVIDEND,
+        description="分红送配数据",
+        typical_available_time=time(20, 0),
+        depends_on=[Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "ex_dividend_date", "knowledge_date"],
+        task_name="ingest_dividend",
+        priority=40,
+    ),
+    Dataset.VALUATION_METRICS: create_t1_config(
+        dataset=Dataset.VALUATION_METRICS,
+        description="估值指标",
+        typical_available_time=time(19, 30),
+        depends_on=[Dataset.STOCK_DAILY],
+        critical_fields=["instrument_id", "trade_date", "knowledge_date"],
+        task_name="ingest_valuation_metrics",
+        priority=45,
+    ),
+    Dataset.MARGIN_TRADING: create_t1_config(
+        dataset=Dataset.MARGIN_TRADING,
+        description="融资融券",
+        typical_available_time=time(19, 30),
+        depends_on=[Dataset.STOCK_DAILY],
+        critical_fields=["instrument_id", "trade_date", "knowledge_date"],
+        task_name="ingest_margin_trading",
+        priority=45,
+    ),
+    Dataset.PLEDGE_RATIO: create_t1_config(
+        dataset=Dataset.PLEDGE_RATIO,
+        description="股权质押",
+        typical_available_time=time(21, 0),
+        depends_on=[Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "report_date", "knowledge_date"],
+        task_name="ingest_pledge_ratio",
+        priority=50,
     ),
 }
 

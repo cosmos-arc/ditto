@@ -883,7 +883,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
     @traced("source.tushare.fetch_balance_sheet")
     def fetch_balance_sheet(
         self,
-        ts_code: str,
+        ts_code: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> pl.DataFrame:
@@ -923,12 +923,13 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         with tushare_fetch_error_handler("balance_sheet", "balancesheet"):
             params: dict[str, str] = {
                 "api_name": "balancesheet",
-                "ts_code": ts_code,
                 "fields": (
                     "ts_code,end_date,ann_date,total_assets,total_liab,"
                     "total_hldr_eqy_exc_min_int,total_cur_assets,total_cur_liab"
                 ),
             }
+            if ts_code:
+                params["ts_code"] = ts_code
 
             if start_date:
                 params["start_date"] = start_date
@@ -960,7 +961,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
     @traced("source.tushare.fetch_income_statement")
     def fetch_income_statement(
         self,
-        ts_code: str,
+        ts_code: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> pl.DataFrame:
@@ -999,12 +1000,13 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         with tushare_fetch_error_handler("income_statement", "income"):
             params: dict[str, str] = {
                 "api_name": "income",
-                "ts_code": ts_code,
                 "fields": (
                     "ts_code,end_date,ann_date,total_operating_revenue,"
                     "operating_profit,net_profit,basic_eps"
                 ),
             }
+            if ts_code:
+                params["ts_code"] = ts_code
 
             if start_date:
                 params["start_date"] = start_date
@@ -1036,7 +1038,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
     @traced("source.tushare.fetch_cash_flow")
     def fetch_cash_flow(
         self,
-        ts_code: str,
+        ts_code: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> pl.DataFrame:
@@ -1075,12 +1077,13 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         with tushare_fetch_error_handler("cash_flow", "cashflow"):
             params: dict[str, str] = {
                 "api_name": "cashflow",
-                "ts_code": ts_code,
                 "fields": (
                     "ts_code,end_date,ann_date,n_cashflow_act,"
                     "n_cash_flows_inv_act,n_cash_flows_fnc_act"
                 ),
             }
+            if ts_code:
+                params["ts_code"] = ts_code
 
             if start_date:
                 params["start_date"] = start_date
