@@ -19,8 +19,12 @@ from ditto_datahub.domains.market import (
     AdjType,
     MarketBarsQuery,
     MarketService,
+    MarketWriteCommand,
 )
-from ditto_datahub.domains.metadata import MetadataService
+from ditto_datahub.domains.metadata import (
+    MetadataQuery,
+    MetadataService,
+)
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.errors import InstrumentIdNotFoundError
 from ditto_datahub.runtime.freeze_manager import FreezeManager
@@ -491,7 +495,7 @@ class DataHub:
             raw=params.raw,
         )
 
-        return self.market.get_bars(query)
+        return self.market.query(query)
 
     def get_securities(self, params: SecuritiesQuerySpec) -> pl.DataFrame:
         """
@@ -545,13 +549,16 @@ class DataHub:
             asof=params.asof,
         )
 
-        return self.metadata.get_securities(
-            instrument_ids=resolved_sids if resolved_sids else None,
-            source=params.source,
-            asset_class=params.asset_class,
-            exchange=params.exchange,
-            is_active=params.is_active,
-            asof=params.asof,
+        return self.metadata.query(
+            MetadataQuery(
+                dataset="securities",
+                instrument_ids=resolved_sids if resolved_sids else None,
+                source=params.source,
+                asset_class=params.asset_class,
+                exchange=params.exchange,
+                is_active=params.is_active,
+                asof=params.asof,
+            )
         )
 
     def get_index_bars(
@@ -575,11 +582,11 @@ class DataHub:
             start=start,
             end=end,
         )
-        return self.index.get_bars(query)
+        return self.index.query(query)
 
     def write_adj_factor(
         self,
-        dataset: str,
+        dataset: Literal["adj_factor", "fund_adj"],
         df: pl.DataFrame,
         year: int,
         on_duplicate: str = "error",
@@ -597,13 +604,21 @@ class DataHub:
             写入结果统计（{"rows": 行数, "files": 文件数}）.
 
         """
-        return self.market.write_adj_factor(dataset, df, year, on_duplicate)
+        result = self.market.write(
+            MarketWriteCommand(
+                dataset=dataset,
+                df=df,
+                year=year,
+                on_duplicate=on_duplicate,
+            )
+        )
+        return {"rows": result.rows, "files": result.files}
 
     def write_bars(
         self,
         df: pl.DataFrame,
         year: int,
-        dataset: str = "stock_daily",
+        dataset: Literal["stock_daily", "etf_daily", "index_daily"] = "stock_daily",
         on_duplicate: str = "error",
     ) -> dict[str, int]:
         """
@@ -619,7 +634,15 @@ class DataHub:
             写入结果统计（{"rows": 行数, "files": 文件数}）.
 
         """
-        return self.market.write_bars(df, year, dataset, on_duplicate)
+        result = self.market.write(
+            MarketWriteCommand(
+                dataset=dataset,
+                df=df,
+                year=year,
+                on_duplicate=on_duplicate,
+            )
+        )
+        return {"rows": result.rows, "files": result.files}
 
     # ========================================================================
     # Resource Management

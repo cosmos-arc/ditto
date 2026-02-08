@@ -50,10 +50,10 @@ pixi run -e dev ci
 | 编号 | 任务 | 产物 | 状态 |
 |---|---|---|---|
 | A1 | 按 v5 建立差异清单并分域拆解 | Market/Metadata/Fundamental/Capital/Macro/Feature/Factor 改造路径 | ✅ |
-| A2 | 统一查询契约（Query/Result）优先于实现改造 | 统一服务入口模式 | 🟡 |
+| A2 | 统一查询契约（Query/Result）优先于实现改造 | 统一服务入口模式 | ✅ |
 | A3 | 全仓命名迁移：`sid/src_code` → `instrument_id/source_ticker` | 代码、Schema、SQL、DQ 配置、测试同步替换 | ✅ |
 | A4 | DataHub 入口与域服务重建，去除旧漂移模式 | `hub.py`、域服务聚合、依赖注入修复 | 🟡 |
-| A5 | Source-Adapter-Service 链路标准化 | SourceSchema 输出 + Adapter 映射 + Service 收口 | 🟡 |
+| A5 | Source-Adapter-Service 链路标准化 | SourceSchema 输出 + Adapter 映射 + Service 收口 | ✅ |
 | A6 | DI 装配稳定化（运行时类型/注入问题） | `apps/port/registry` 与运行时注入修复 | ✅ |
 
 ### 阶段 B：v5 能力补齐与 Port 收敛
@@ -121,27 +121,22 @@ pixi run -e dev ci
 3. `CapitalService`、`FundamentalService` 已切换为统一 `query()/write()` 契约，并补齐契约单测。
 4. CI 链路中 `arch-check` 已成为强制依赖（`check` 与 `ci` 均包含）。
 5. 核心规则文档已同步 v5 约束，避免“代码做了、规范没收口”。
+6. `MarketService`、`MetadataService` 已补齐统一 `query()/write()` 主入口，DataHub 与 DQ 主链路已迁移到统一契约调用。
+7. `capital_ingestion`、`fundamental_ingestion` 写入链路已从直连 Store 切换为 Service `write()`，并完成对应测试。
 
 ---
 
 ## 6. 剩余差距与后续执行顺序
-
-### P0（下一优先级，必须完成）
-
-1. **Metadata/Market 服务契约统一收口**
-当前 `MetadataService`、`MarketService` 仍以多方法签名为主，尚未完全统一为 `Query/Result` 模式。
-输出：统一 Query/Result 类型 + `query()/write()` 主入口 + 调用方迁移。
-
-2. **ingestion 写入路径统一走 Service**
-`capital_ingestion.py`、`fundamental_ingestion.py` 仍有 `_capital_store/_fundamental_store.write_*` 直接调用。
-输出：改为 Service 写入接口，保持链路一致性与可审计性。
 
 ### P1（随后完成）
 
 1. **Port 数据集矩阵补齐**
 `apps/port/src/ditto_port/models/config.py` 当前 registry 主要覆盖 T0/T1 核心集，需对齐 v5 数据集矩阵。
 
-2. **文档清理最终收口**
+2. **DataHub 入口与旧调用面最终收口**
+`hub.py` 与 Port ingest 仍存在部分旧方法兼容入口（`write_bars/write_adj_factor` 等），需继续收敛至统一 `query()/write()` 调用形态并清理冗余别名。
+
+3. **文档清理最终收口**
 继续修订 DataHub/Port 相关 README 中历史叙述，确保与 v5 最终实现一致。
 
 ---

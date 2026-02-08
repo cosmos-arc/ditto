@@ -739,16 +739,16 @@ class TestDataHub:
 
         from ditto_datahub.hub import BarsQuerySpec
 
-        # Mock bars.get 返回空 DataFrame（因为没有真实数据）
+        # Mock market.query 返回空 DataFrame（因为没有真实数据）
         mock_bars_get = mocker.patch.object(
-            datahub_with_dependencies.market, "get_bars", return_value=pl.DataFrame()
+            datahub_with_dependencies.market, "query", return_value=pl.DataFrame()
         )
 
         # 测试 Instrument ID 标识符
         params = BarsQuerySpec(identifiers=[1, 2, 3])
         result = datahub_with_dependencies.get_bars(params)
 
-        # 验证 bars.get 被调用
+        # 验证 market.query 被调用
         assert mock_bars_get.called
         # 验证返回类型
         assert isinstance(result, pl.DataFrame)
@@ -797,10 +797,10 @@ class TestDataHub:
 
         from ditto_datahub.hub import SecuritiesQuerySpec
 
-        # Mock metadata.get_securities 返回空 DataFrame
+        # Mock metadata.query 返回空 DataFrame
         mock_metadata_get_securities = mocker.patch.object(
             datahub_with_dependencies.metadata,
-            "get_securities",
+            "query",
             return_value=pl.DataFrame(),
         )
 
@@ -811,7 +811,7 @@ class TestDataHub:
         )
         result = datahub_with_dependencies.get_securities(params)
 
-        # 验证 metadata.get_securities 被调用
+        # 验证 metadata.query 被调用
         assert mock_metadata_get_securities.called
         assert isinstance(result, pl.DataFrame)
 

@@ -7,6 +7,7 @@ import polars as pl
 import polars.exceptions as pl_exceptions
 from ditto_core.quality import QualityEngine
 from ditto_datahub.domains.market import MarketBarsQuery
+from ditto_datahub.domains.metadata import MetadataQuery
 from loguru import logger
 
 
@@ -172,7 +173,7 @@ class L3BatchService:
             asset_class=asset_class,
             market_wide=market_wide,
         )
-        historical = self._hub.market.get_bars(historical_query)
+        historical = self._hub.market.query(historical_query)
 
         # Fetch current data using MarketService
         current_query = MarketBarsQuery(
@@ -182,7 +183,7 @@ class L3BatchService:
             asset_class=asset_class,
             market_wide=market_wide,
         )
-        current = self._hub.market.get_bars(current_query)
+        current = self._hub.market.query(current_query)
 
         return historical, current
 
@@ -203,11 +204,13 @@ class L3BatchService:
         start_dt = trade_dt - timedelta(days=lookback_days * 2)
         start_date = start_dt.strftime("%Y-%m-%d")
 
-        # 使用 MetadataService.get_range_df() 获取日历数据
-        return self._hub.calendar.get_range_df(
-            start=start_date,
-            end=trade_date,
-            only_open=True,
+        return self._hub.metadata.query(
+            MetadataQuery(
+                dataset="calendar_range",
+                start=start_date,
+                end=trade_date,
+                only_open=True,
+            )
         )
 
     def _send_alert(

@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
-from typing import Literal
+from typing import Literal, cast
 
 import polars as pl
 from ditto_foundation import M, logger, traced
@@ -82,6 +82,44 @@ class MarketBarsQuery:
     market_wide: bool = False
 
 
+@dataclass(frozen=True)
+class MarketConstituentsQuery:
+    """指数成分股查询参数."""
+
+    index_instrument_id: int
+    asof: str | None = None
+
+
+type MarketQuery = MarketBarsQuery | MarketConstituentsQuery
+
+MarketWriteDataset = Literal[
+    "stock_daily",
+    "etf_daily",
+    "index_daily",
+    "adj_factor",
+    "fund_adj",
+]
+
+
+@dataclass(frozen=True)
+class MarketWriteCommand:
+    """Market 域统一写入命令."""
+
+    dataset: MarketWriteDataset
+    df: pl.DataFrame
+    year: int
+    on_duplicate: str = "error"
+
+
+@dataclass(frozen=True)
+class MarketWriteResult:
+    """Market 域统一写入结果."""
+
+    dataset: MarketWriteDataset
+    rows: int
+    files: int
+
+
 class MarketService:
     """
     Market 域统一查询服务.
@@ -135,23 +173,20 @@ class MarketService:
         self._index_bars_store = index_bars_store
         self._index_constituent_store = index_constituent_store
 
+    @traced("market.query")
+    def query(self, query: MarketQuery) -> pl.DataFrame:
+        """统一查询入口."""
+        if isinstance(query, MarketBarsQuery):
+            return self._query_bars(query)
+        return self._query_constituents(query)
+
     @traced("market.get_bars")
     def get_bars(self, query: MarketBarsQuery) -> pl.DataFrame:
-        """
-        获取 K线数据.
+        """兼容入口：K线查询转发到 query()."""
+        return self.query(query)
 
-        替代 BarsAccessor.get()
-
-        Args:
-            query: MarketBarsQuery 查询对象.
-
-        Returns:
-            K线数据 DataFrame.
-
-        Raises:
-            ValueError: 如果检测到混合资产类别查询.
-
-        """
+    def _query_bars(self, query: MarketBarsQuery) -> pl.DataFrame:
+        """执行 K线查询."""
         logger.debug(
             "Fetching market bars data",
             event="market_bars_get_start",
@@ -219,47 +254,34 @@ class MarketService:
         index_instrument_id: int,
         asof: str | None = None,
     ) -> pl.DataFrame:
-        """
-        获取指数成分股（Point-in-Time）.
+        """兼容入口：指数成分查询转发到 query()."""
+        return self.query(
+            MarketConstituentsQuery(index_instrument_id=index_instrument_id, asof=asof)
+        )
 
-        Args:
-            index_instrument_id: 指数 Instrument ID.
-            asof: 时点查询日期 (YYYY-MM-DD)，默认为当前日期.
-
-        Returns:
-            成分股 DataFrame，包含列:
-            index_instrument_id, constituent_instrument_id,
-            effective_date, weight.
-
-        Raises:
-            NotImplementedError: 如果 IndexConstituentStore 未配置.
-
-        Examples:
-            >>> service.get_constituents(1, "2024-01-01")
-            >>> service.get_constituents(1)  # 当前日期
-
-        """
+    def _query_constituents(self, query: MarketConstituentsQuery) -> pl.DataFrame:
+        """执行指数成分股查询."""
         if self._index_constituent_store is None:
             raise NotImplementedError(
                 "IndexConstituentStore not configured. Please provide index_constituent_store when initializing MarketService.",  # noqa: E501
             )
 
         # 使用当前日期（如果未指定 asof）
-        asof_date = asof or date.today().isoformat()
+        asof_date = query.asof or date.today().isoformat()
 
         logger.debug(
             "Fetching index constituents",
             event="market_constituents_get_start",
-            index_instrument_id=index_instrument_id,
+            index_instrument_id=query.index_instrument_id,
             asof=asof_date,
         )
 
-        df = self._index_constituent_store.get(index_instrument_id, asof_date)
+        df = self._index_constituent_store.get(query.index_instrument_id, asof_date)
 
         logger.debug(
             "Index constituents fetched",
             event="market_constituents_get_complete",
-            index_instrument_id=index_instrument_id,
+            index_instrument_id=query.index_instrument_id,
             asof=asof_date,
             row_count=len(df),
         )
@@ -565,6 +587,22 @@ class MarketService:
         """归一化列名到存储层约定。"""
         return df
 
+    @staticmethod
+    def _map_on_duplicate(on_duplicate: str) -> OnDuplicate:
+        mapping = {
+            "error": OnDuplicate.ERROR,
+            "skip": OnDuplicate.KEEP_FIRST,
+            "overwrite": OnDuplicate.KEEP_LAST,
+        }
+        return mapping.get(on_duplicate, OnDuplicate.ERROR)
+
+    @traced("market.write")
+    def write(self, command: MarketWriteCommand) -> MarketWriteResult:
+        """统一写入入口."""
+        if command.dataset in {"adj_factor", "fund_adj"}:
+            return self._write_adj_factor(command)
+        return self._write_bars(command)
+
     @traced("market.write_adj_factor")
     def write_adj_factor(
         self,
@@ -573,76 +611,74 @@ class MarketService:
         year: int,
         on_duplicate: str = "error",
     ) -> dict[str, int]:
-        """
-        写入复权因子数据（替代 AdjFactorAccessor）。
+        """兼容入口：复权因子写入转发到 write()."""
+        if dataset not in {"adj_factor", "fund_adj"}:
+            raise ValueError(f"Unsupported dataset: {dataset}")
 
-        内部使用 StockAdjFactorStore/EtfAdjFactorStore + FileLock 保护。
+        result = self.write(
+            MarketWriteCommand(
+                dataset=cast(Literal["adj_factor", "fund_adj"], dataset),
+                df=df,
+                year=year,
+                on_duplicate=on_duplicate,
+            )
+        )
+        return {"rows": result.rows, "files": result.files}
 
-        Args:
-            dataset: 数据集名称（"adj_factor" 或 "fund_adj"）.
-            df: 要写入的数据 DataFrame.
-            year: 年份.
-            on_duplicate: 重复数据处理策略（"error", "skip", "overwrite"）.
-
-        Returns:
-            写入结果统计（{"rows": 行数, "files": 文件数}）.
-
-        Raises:
-            ValueError: 如果 dataset 不支持.
-
-        """
+    def _write_adj_factor(self, command: MarketWriteCommand) -> MarketWriteResult:
+        """执行复权因子写入."""
         logger.info(
             "Writing adjustment factor data",
             event="market_write_adj_factor_start",
-            dataset=dataset,
-            year=year,
-            row_count=len(df),
+            dataset=command.dataset,
+            year=command.year,
+            row_count=len(command.df),
         )
 
         # 选择对应的 Store
-        if dataset == "adj_factor":
+        if command.dataset == "adj_factor":
             store = self._stock_adj_store
-        elif dataset == "fund_adj":
+        elif command.dataset == "fund_adj":
             if self._etf_adj_store is None:
                 raise ValueError("EtfAdjFactorStore not configured")
             store = self._etf_adj_store
         else:
-            raise ValueError(f"Unsupported dataset: {dataset}")
+            raise ValueError(f"Unsupported dataset: {command.dataset}")
 
-        # 转换 on_duplicate 字符串到 OnDuplicate 枚举
-        on_duplicate_map = {
-            "error": OnDuplicate.ERROR,
-            "skip": OnDuplicate.KEEP_FIRST,
-            "overwrite": OnDuplicate.KEEP_LAST,
-        }
-        on_duplicate_enum = on_duplicate_map.get(on_duplicate, OnDuplicate.ERROR)
-        storage_df = self._to_storage_columns(df)
+        on_duplicate_enum = self._map_on_duplicate(command.on_duplicate)
+        storage_df = self._to_storage_columns(command.df)
 
         # 使用文件锁保护并发写入
-        lock_name = f"adj_factor_write_{dataset}_{year}"
+        lock_name = f"adj_factor_write_{command.dataset}_{command.year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
             write_result = store.write(
-                storage_df, year, on_duplicate=on_duplicate_enum.value
+                storage_df,
+                command.year,
+                on_duplicate=on_duplicate_enum.value,
             )
 
-        # 转换 WriteResult 为 dict[str, int]
-        result = {
-            "rows": write_result.added + write_result.updated,
-            "files": 1 if write_result.added > 0 or write_result.updated > 0 else 0,
-        }
+        rows_written = write_result.added + write_result.updated
+        files_written = 1 if rows_written > 0 else 0
 
         logger.info(
             "Adjustment factor data written",
             event="market_write_adj_factor_complete",
-            dataset=dataset,
-            year=year,
-            rows_written=result["rows"],
+            dataset=command.dataset,
+            year=command.year,
+            rows_written=rows_written,
         )
 
         # 记录指标
-        M.data_records.add(len(storage_df), {"dataset": dataset, "operation": "write"})
+        M.data_records.add(
+            len(storage_df),
+            {"dataset": command.dataset, "operation": "write"},
+        )
 
-        return result
+        return MarketWriteResult(
+            dataset=command.dataset,
+            rows=rows_written,
+            files=files_written,
+        )
 
     @traced("market.write_bars")
     def write_bars(
@@ -652,30 +688,31 @@ class MarketService:
         dataset: str = "stock_daily",
         on_duplicate: str = "error",
     ) -> dict[str, int]:
-        """
-        写入 K线数据（替代 BarsAccessor.write）。
+        """兼容入口：K线写入转发到 write()."""
+        if dataset not in {"stock_daily", "etf_daily", "index_daily"}:
+            raise ValueError(f"Unsupported dataset: {dataset}")
 
-        内部使用 StockBarsStore/EtfBarsStore/IndexBarsStore + FileLock 保护。
+        result = self.write(
+            MarketWriteCommand(
+                dataset=cast(
+                    Literal["stock_daily", "etf_daily", "index_daily"],
+                    dataset,
+                ),
+                df=df,
+                year=year,
+                on_duplicate=on_duplicate,
+            )
+        )
+        return {"rows": result.rows, "files": result.files}
 
-        Args:
-            df: 要写入的数据 DataFrame.
-            year: 年份.
-            dataset: 数据集名称（"stock_daily", "etf_daily", "index_daily"）.
-            on_duplicate: 重复数据处理策略（"error", "skip", "overwrite"）.
-
-        Returns:
-            写入结果统计（{"rows": 行数, "files": 文件数}）.
-
-        Raises:
-            ValueError: 如果 dataset 不支持.
-
-        """
+    def _write_bars(self, command: MarketWriteCommand) -> MarketWriteResult:
+        """执行 K线写入."""
         logger.info(
             "Writing bars data",
             event="market_write_bars_start",
-            dataset=dataset,
-            year=year,
-            row_count=len(df),
+            dataset=command.dataset,
+            year=command.year,
+            row_count=len(command.df),
         )
 
         # 选择对应的 Store
@@ -684,39 +721,41 @@ class MarketService:
             "etf_daily": self._etf_bars_store,
             "index_daily": self._index_bars_store,
         }
-        store = store_map.get(dataset)
+        store = store_map.get(command.dataset)
         if store is None:
-            raise ValueError(f"Unsupported dataset: {dataset}")
+            raise ValueError(f"Unsupported dataset: {command.dataset}")
 
-        # 转换 on_duplicate 字符串到 OnDuplicate 枚举
-        on_duplicate_map = {
-            "error": OnDuplicate.ERROR,
-            "skip": OnDuplicate.KEEP_FIRST,
-            "overwrite": OnDuplicate.KEEP_LAST,
-        }
-        on_duplicate_enum = on_duplicate_map.get(on_duplicate, OnDuplicate.ERROR)
-        storage_df = self._to_storage_columns(df)
+        on_duplicate_enum = self._map_on_duplicate(command.on_duplicate)
+        storage_df = self._to_storage_columns(command.df)
 
         # 使用文件锁保护并发写入
-        lock_name = f"bars_write_{dataset}_{year}"
+        lock_name = f"bars_write_{command.dataset}_{command.year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = store.write(storage_df, year, on_duplicate=on_duplicate_enum)
+            write_result = store.write(
+                storage_df,
+                command.year,
+                on_duplicate=on_duplicate_enum,
+            )
 
-        # 转换 WriteResult 为 dict[str, int]
-        result = {
-            "rows": write_result.added + write_result.updated,
-            "files": 1 if write_result.added > 0 or write_result.updated > 0 else 0,
-        }
+        rows_written = write_result.added + write_result.updated
+        files_written = 1 if rows_written > 0 else 0
 
         logger.info(
             "Bars data written",
             event="market_write_bars_complete",
-            dataset=dataset,
-            year=year,
-            rows_written=result["rows"],
+            dataset=command.dataset,
+            year=command.year,
+            rows_written=rows_written,
         )
 
         # 记录指标
-        M.data_records.add(len(storage_df), {"dataset": dataset, "operation": "write"})
+        M.data_records.add(
+            len(storage_df),
+            {"dataset": command.dataset, "operation": "write"},
+        )
 
-        return result
+        return MarketWriteResult(
+            dataset=command.dataset,
+            rows=rows_written,
+            files=files_written,
+        )

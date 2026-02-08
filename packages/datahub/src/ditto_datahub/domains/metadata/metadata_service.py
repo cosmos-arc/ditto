@@ -8,6 +8,7 @@ MetadataService - Metadata 域统一查询服务.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Literal
 
 import polars as pl
@@ -26,6 +27,43 @@ from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.domains.metadata.instrument.models import InstrumentRegistration
 from ditto_datahub.domains.metadata.universe.universe_store import UniverseStore
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
+
+MetadataQueryDataset = Literal["securities", "industries", "calendar_range"]
+MetadataWriteDataset = Literal["calendar"]
+
+
+@dataclass(frozen=True)
+class MetadataQuery:
+    """Metadata 域统一查询参数."""
+
+    dataset: MetadataQueryDataset
+    instrument_ids: list[int] | None = None
+    source_tickers: list[str] | None = None
+    source: str = "tushare"
+    asset_class: str | None = None
+    exchange: str | None = None
+    is_active: bool | None = True
+    asof: str | None = None
+    industry_level: str | None = None
+    start: str | None = None
+    end: str | None = None
+    only_open: bool = True
+
+
+@dataclass(frozen=True)
+class MetadataWriteCommand:
+    """Metadata 域统一写入命令."""
+
+    dataset: MetadataWriteDataset
+    records: list[dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class MetadataWriteResult:
+    """Metadata 域统一写入结果."""
+
+    dataset: MetadataWriteDataset
+    records_written: int
 
 
 class MetadataService:
@@ -71,6 +109,41 @@ class MetadataService:
         logger.debug(
             "MetadataService initialized",
             event="metadata_query_service_init_complete",
+        )
+
+    @traced("metadata.query")
+    def query(self, query: MetadataQuery) -> pl.DataFrame:
+        """统一查询入口."""
+        if query.dataset == "securities":
+            return self._instrument_store.find_securities(
+                instrument_ids=query.instrument_ids,
+                source_tickers=query.source_tickers,
+                source=query.source,
+                asset_class=query.asset_class,
+                exchange=query.exchange,
+                is_active=query.is_active,
+                asof=query.asof,
+            )
+
+        if query.dataset == "industries":
+            is_active = True if query.is_active is None else query.is_active
+            return self._industry_basic_store.get_all(is_active, query.industry_level)
+
+        if query.start is None or query.end is None:
+            raise ValueError("calendar_range 查询必须提供 start 和 end")
+        return self._calendar_store.get_range_df(
+            query.start,
+            query.end,
+            query.only_open,
+        )
+
+    @traced("metadata.write")
+    def write(self, command: MetadataWriteCommand) -> MetadataWriteResult:
+        """统一写入入口."""
+        self._calendar_store.upsert(command.records)
+        return MetadataWriteResult(
+            dataset=command.dataset,
+            records_written=len(command.records),
         )
 
     # ============ Identity 解析 ============
@@ -148,14 +221,17 @@ class MetadataService:
             证券数据 DataFrame.
 
         """
-        return self._instrument_store.find_securities(
-            instrument_ids=instrument_ids,
-            source_tickers=source_tickers,
-            source=source,
-            asset_class=asset_class,
-            exchange=exchange,
-            is_active=is_active,
-            asof=asof,
+        return self.query(
+            MetadataQuery(
+                dataset="securities",
+                instrument_ids=instrument_ids,
+                source_tickers=source_tickers,
+                source=source,
+                asset_class=asset_class,
+                exchange=exchange,
+                is_active=is_active,
+                asof=asof,
+            )
         )
 
     @traced("metadata.security.get_symbol")
@@ -212,7 +288,13 @@ class MetadataService:
             行业数据 DataFrame.
 
         """
-        return self._industry_basic_store.get_all(is_active, industry_level)
+        return self.query(
+            MetadataQuery(
+                dataset="industries",
+                is_active=is_active,
+                industry_level=industry_level,
+            )
+        )
 
     @traced("metadata.industry.get_stock_industry")
     def get_stock_industry(
@@ -273,7 +355,14 @@ class MetadataService:
             日历数据 DataFrame，包含 trade_date, is_open, prev_trade_date 等列.
 
         """
-        return self._calendar_store.get_range_df(start, end, only_open)
+        return self.query(
+            MetadataQuery(
+                dataset="calendar_range",
+                start=start,
+                end=end,
+                only_open=only_open,
+            )
+        )
 
     @traced("metadata.calendar.get_trading_days")
     def get_trading_days(
@@ -322,8 +411,8 @@ class MetadataService:
             插入的记录数.
 
         """
-        self._calendar_store.upsert(records)
-        return len(records)
+        result = self.write(MetadataWriteCommand(dataset="calendar", records=records))
+        return result.records_written
 
     @traced("metadata.calendar.get_last_trading_day")
     def get_last_trading_day(self) -> str | None:

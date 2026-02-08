@@ -10,7 +10,9 @@ import pytest
 from ditto_datahub.domains.market.market_service import (
     AdjType,
     MarketBarsQuery,
+    MarketConstituentsQuery,
     MarketService,
+    MarketWriteCommand,
 )
 from ditto_datahub.models import InstrumentIdRange
 
@@ -752,3 +754,68 @@ class TestMarketServiceGetConstituents:
         assert result.is_empty()
         today = date.today().isoformat()
         mock_index_constituent_store.get.assert_called_once_with(999, today)
+
+
+class TestMarketServiceUnifiedContract:
+    """Tests for unified query()/write() contract."""
+
+    def test_query_dispatches_to_constituents(
+        self,
+        market_service: MarketService,
+        mock_index_constituent_store: MagicMock,
+    ) -> None:
+        """query() should route MarketConstituentsQuery correctly."""
+        mock_index_constituent_store.get.return_value = pl.DataFrame(
+            {
+                "index_instrument_id": [1],
+                "constituent_instrument_id": [100],
+                "effective_date": ["2024-01-01"],
+                "weight": [1.0],
+            }
+        )
+        query = MarketConstituentsQuery(index_instrument_id=1, asof="2024-01-01")
+
+        result = market_service.query(query)
+
+        assert len(result) == 1
+        mock_index_constituent_store.get.assert_called_once_with(1, "2024-01-01")
+
+    def test_write_stock_daily(self, market_service: MarketService) -> None:
+        """write() should route stock_daily to bars store."""
+        market_service._file_lock.acquire.return_value.__enter__.return_value = None
+        market_service._stock_bars_store.write.return_value = MagicMock(
+            added=2,
+            updated=1,
+        )
+        command = MarketWriteCommand(
+            dataset="stock_daily",
+            df=pl.DataFrame({"instrument_id": [1], "trade_date": [date(2024, 1, 2)]}),
+            year=2024,
+        )
+
+        result = market_service.write(command)
+
+        assert result.dataset == "stock_daily"
+        assert result.rows == 3
+        assert result.files == 1
+        market_service._stock_bars_store.write.assert_called_once()
+
+    def test_write_adj_factor(self, market_service: MarketService) -> None:
+        """write() should route adj_factor to adj store."""
+        market_service._file_lock.acquire.return_value.__enter__.return_value = None
+        market_service._stock_adj_store.write.return_value = MagicMock(
+            added=1,
+            updated=0,
+        )
+        command = MarketWriteCommand(
+            dataset="adj_factor",
+            df=pl.DataFrame({"instrument_id": [1], "trade_date": [date(2024, 1, 2)]}),
+            year=2024,
+        )
+
+        result = market_service.write(command)
+
+        assert result.dataset == "adj_factor"
+        assert result.rows == 1
+        assert result.files == 1
+        market_service._stock_adj_store.write.assert_called_once()

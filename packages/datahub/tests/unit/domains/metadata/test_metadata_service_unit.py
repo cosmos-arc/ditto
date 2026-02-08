@@ -7,7 +7,11 @@ from unittest.mock import Mock
 import polars as pl
 import pytest
 from ditto_datahub.domains.metadata.instrument.models import InstrumentRegistration
-from ditto_datahub.domains.metadata.metadata_service import MetadataService
+from ditto_datahub.domains.metadata.metadata_service import (
+    MetadataQuery,
+    MetadataService,
+    MetadataWriteCommand,
+)
 
 
 @pytest.fixture
@@ -266,3 +270,38 @@ def test_metadata_service_register_security(
     assert result == 100
     service._instrument_id_allocator.allocate.assert_called_once_with("stock")
     service._instrument_store.register.assert_called_once()
+
+
+def test_metadata_service_query_securities(service: MetadataService) -> None:
+    """测试统一 query() 查询证券."""
+    test_df = pl.DataFrame({"instrument_id": [1], "symbol": ["平安银行"]})
+    service._instrument_store.find_securities.return_value = test_df
+
+    result = service.query(
+        MetadataQuery(
+            dataset="securities",
+            instrument_ids=[1],
+            source="tushare",
+        )
+    )
+
+    assert len(result) == 1
+    service._instrument_store.find_securities.assert_called_once()
+
+
+def test_metadata_service_query_calendar_requires_dates(
+    service: MetadataService,
+) -> None:
+    """测试 calendar_range 缺失日期参数会报错."""
+    with pytest.raises(ValueError, match="start 和 end"):
+        service.query(MetadataQuery(dataset="calendar_range"))
+
+
+def test_metadata_service_write_calendar(service: MetadataService) -> None:
+    """测试统一 write() 写入日历."""
+    records = [{"trade_date": "2024-01-02", "is_open": 1}]
+    result = service.write(MetadataWriteCommand(dataset="calendar", records=records))
+
+    assert result.dataset == "calendar"
+    assert result.records_written == 1
+    service._calendar_store.upsert.assert_called_once_with(records)

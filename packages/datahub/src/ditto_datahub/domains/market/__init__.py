@@ -3,7 +3,19 @@
 from ditto_datahub.domains.market.market_service import (
     AdjType,
     MarketBarsQuery,
+    MarketConstituentsQuery,
+    MarketQuery,
     MarketService,
+    MarketWriteCommand,
+    MarketWriteResult,
 )
 
-__all__ = ["AdjType", "MarketBarsQuery", "MarketService"]
+__all__ = [
+    "AdjType",
+    "MarketBarsQuery",
+    "MarketConstituentsQuery",
+    "MarketQuery",
+    "MarketService",
+    "MarketWriteCommand",
+    "MarketWriteResult",
+]

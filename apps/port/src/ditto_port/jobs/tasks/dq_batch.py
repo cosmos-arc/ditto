@@ -228,7 +228,7 @@ def dq_completeness_check(
             end=trade_date,
             market_wide=market_wide,
         )
-        df = hub.market.get_bars(query=query)
+        df = hub.market.query(query)
 
         actual_sids = (
             df["instrument_id"].unique().to_list() if not df.is_empty() else []
