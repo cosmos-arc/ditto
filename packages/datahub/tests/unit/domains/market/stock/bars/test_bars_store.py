@@ -7,7 +7,7 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.market.stock.bars import StockBarsStore
+from ditto_datahub.stores.market.stock.bars import StockBarsStore
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def sample_bars_df() -> pl.DataFrame:
     """Create sample stock daily bars DataFrame."""
     return pl.DataFrame(
         {
-            "sid": [1, 1, 1, 2],
+            "instrument_id": [1, 1, 1, 2],
             "trade_date": [
                 date(2024, 1, 2),
                 date(2024, 1, 3),
@@ -59,7 +59,7 @@ class TestStockBarsStore:
         store.write(sample_bars_df, year=2024)
         df = store.read()
         assert len(df) == 4
-        assert "sid" in df.columns
+        assert "instrument_id" in df.columns
         assert "trade_date" in df.columns
         assert "open" in df.columns
         assert "close" in df.columns

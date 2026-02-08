@@ -1,1 +1,1 @@
-"""Port application notification templates."""
+"""Port 应用通知模板."""

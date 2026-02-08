@@ -7,7 +7,10 @@ import polars as pl
 from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.base import DataSource
 from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareAdapter
+from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
+from ditto_datahub.sources.tushare.adapters.fundamental import FundamentalTushareAdapter
+from ditto_datahub.sources.tushare.adapters.macro import MacroTushareAdapter
 from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
 
 
@@ -43,6 +46,14 @@ class TushareSource(DataSource):
         self._calendar = CalendarTushareAdapter(token=token, settings=settings)
         self._stock = StockTushareAdapter(token=token, settings=settings)
         self._etf = ETFTushareAdapter(token=token, settings=settings)
+        self._capital = CapitalTushareAdapter(token=token, settings=settings)
+        self._fundamental = FundamentalTushareAdapter(token=token, settings=settings)
+        self._macro = MacroTushareAdapter(token=token, settings=settings)
+
+    @staticmethod
+    def _to_compact_date(trade_date: str) -> str:
+        """Convert YYYY-MM-DD to YYYYMMDD for Tushare APIs."""
+        return trade_date.replace("-", "")
 
     # Calendar 相关方法 - 委托给 CalendarTushareAdapter
     def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
@@ -71,7 +82,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "000001.SZ")
+            - source_ticker: Source code (e.g., "000001.SZ")
             - symbol: Display symbol (e.g., "000001")
             - name: Stock name
             - exchange: Exchange code
@@ -92,7 +103,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns (same as ETF daily schema):
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - open, high, low, close, pre_close: Float64
             - volume, amount: Float64
@@ -114,7 +125,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - knowledge_date: Date (PIT safety: when this data became known)
             - adj_factor: Float64
@@ -134,7 +145,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "000001.SZ")
+            - source_ticker: Source code (e.g., "000001.SZ")
             - trade_date: Date
             - up_limit: Float64 (涨停价)
             - down_limit: Float64 (跌停价)
@@ -159,7 +170,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "000001.SZ")
+            - source_ticker: Source code (e.g., "000001.SZ")
             - trade_date: Date
             - is_suspended: Boolean
             - suspend_timing: Utf8 (e.g., "09:30-10:00" or null)
@@ -180,7 +191,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "510300.SH")
+            - source_ticker: Source code (e.g., "510300.SH")
             - symbol: Display symbol (e.g., "510300")
             - name: ETF name
             - exchange: Exchange code
@@ -201,7 +212,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns (matching ETF_DAILY_SCHEMA):
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - open, high, low, close, pre_close: Float64
             - volume, amount: Float64
@@ -223,7 +234,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - knowledge_date: Date (PIT safety: when this data became known)
             - adj_factor: Float64
@@ -233,3 +244,73 @@ class TushareSource(DataSource):
 
         """
         return self._etf.fetch_fund_adj(trade_date)
+
+    # Capital/Fundamental 相关方法 - 委托给 CapitalTushareAdapter
+    def fetch_balance_sheet(self, trade_date: str) -> pl.DataFrame:
+        """Fetch balance sheet data for a trade date window."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._fundamental.fetch_balance_sheet(
+            ts_code=None,
+            start_date=compact_date,
+            end_date=compact_date,
+        )
+
+    def fetch_income_statement(self, trade_date: str) -> pl.DataFrame:
+        """Fetch income statement data for a trade date window."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._fundamental.fetch_income_statement(
+            ts_code=None,
+            start_date=compact_date,
+            end_date=compact_date,
+        )
+
+    def fetch_cash_flow(self, trade_date: str) -> pl.DataFrame:
+        """Fetch cash flow data for a trade date window."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._fundamental.fetch_cash_flow(
+            ts_code=None,
+            start_date=compact_date,
+            end_date=compact_date,
+        )
+
+    def fetch_dividend(self, trade_date: str) -> pl.DataFrame:
+        """Fetch dividend data."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._fundamental.fetch_dividend(ex_date=compact_date)
+
+    def fetch_valuation_metrics(self, trade_date: str) -> pl.DataFrame:
+        """Fetch valuation metrics data."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_valuation_metrics(trade_date=compact_date)
+
+    def fetch_margin_trading(self, trade_date: str) -> pl.DataFrame:
+        """Fetch margin trading data."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_margin_trading(trade_date=compact_date)
+
+    def fetch_pledge_ratio(self, trade_date: str) -> pl.DataFrame:
+        """Fetch pledge ratio data."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_pledge_ratio(report_date=compact_date)
+
+    def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
+        """Fetch macro indicators data."""
+        return self._macro.fetch_macro_indicators(trade_date)
+
+    def fetch_futures(self, trade_date: str) -> pl.DataFrame:
+        """Fetch futures data."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_futures(
+            ts_code=None,
+            start_date=compact_date,
+            end_date=compact_date,
+        )
+
+    def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
+        """Fetch corporate actions data."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._fundamental.fetch_corporate_actions(
+            ts_code=None,
+            start_date=compact_date,
+            end_date=compact_date,
+        )

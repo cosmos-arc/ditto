@@ -5,10 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from ditto_datahub.domains.metadata.industry.industry_basic_store import (
+from ditto_datahub.stores.metadata.industry.industry_basic_store import (
     IndustryBasicStore,
 )
-from ditto_datahub.domains.metadata.industry.models import IndustryBasic
+from ditto_datahub.stores.metadata.industry.models import IndustryBasic
 
 
 @pytest.fixture

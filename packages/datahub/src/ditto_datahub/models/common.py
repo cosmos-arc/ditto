@@ -30,7 +30,7 @@ class Dataset(str, Enum):
     数据集分类：
     - 基础类（basic）：不需要 trade_date 参数（stock_basic, etf_basic）
     - 日历类（calendar）：需要日期范围参数（calendar）
-    - 行情类（daily）：需要 trade_date 参数（stock_daily, etf_daily）
+    - 行情类（daily）：需要 trade_date 参数（stock_daily, etf_daily, stock_status）
     - 参考类（reference）：需要 trade_date 参数（adj_factor, fund_adj）
     """
 
@@ -44,10 +44,29 @@ class Dataset(str, Enum):
     # 行情类数据集（T1 数据，需要 trade_date）
     STOCK_DAILY = "stock_daily"
     ETF_DAILY = "etf_daily"
+    STOCK_STATUS = "stock_status"
 
     # 参考类数据集（需要 trade_date）
     ADJ_FACTOR = "adj_factor"
     FUND_ADJ = "fund_adj"
+
+    # Fundamental 域（财务/公司行为）
+    BALANCE_SHEET = "balance_sheet"
+    INCOME_STATEMENT = "income_statement"
+    CASH_FLOW = "cash_flow"
+    DIVIDEND = "dividend"
+
+    # Capital 域（估值/融资融券/质押）
+    VALUATION_METRICS = "valuation_metrics"
+    MARGIN_TRADING = "margin_trading"
+    PLEDGE_RATIO = "pledge_ratio"
+
+    # Macro 域（宏观指标）
+    MACRO_INDICATORS = "macro_indicators"
+
+    # Capital 域扩展
+    FUTURES = "futures"
+    CORPORATE_ACTIONS = "corporate_actions"
 
     @classmethod
     def is_basic_dataset(cls, dataset: str) -> bool:
@@ -72,6 +91,7 @@ class Domain(str, Enum):
     MARKET = "market"
     CAPITAL = "capital"
     FUNDAMENTAL = "fundamental"
+    MACRO = "macro"
 
 
 # ============ Source 枚举 ============

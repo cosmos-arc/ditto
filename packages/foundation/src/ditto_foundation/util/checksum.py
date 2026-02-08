@@ -26,7 +26,7 @@ class ChecksumCompute:
     特性:
     - 算法统一: XXH3_128 (超快哈希，非安全场景)
     - 排序统一: 按数据集类型确定性行排序
-    - 字段统一: 包含 DataFrame 的所有字段（包括 sid、source）
+    - 字段统一: 包含 DataFrame 的所有字段（包括 instrument_id、source）
     """
 
     # 数据集排序键配置
@@ -34,11 +34,11 @@ class ChecksumCompute:
     # 值: 排序字段列表（按优先级排序）
     SORT_KEYS: ClassVar[dict[str, Sequence[str]]] = {
         # 日线数据: 按日期 + 证券ID 排序
-        "stock_daily": ("trade_date", "sid"),
-        "etf_daily": ("trade_date", "sid"),
+        "stock_daily": ("trade_date", "instrument_id"),
+        "etf_daily": ("trade_date", "instrument_id"),
         # 复权因子: 按日期 + 证券ID 排序
-        "adj_factor": ("trade_date", "sid"),
-        "fund_adj": ("trade_date", "sid"),
+        "adj_factor": ("trade_date", "instrument_id"),
+        "fund_adj": ("trade_date", "instrument_id"),
         # 日历: 按日期排序
         "calendar": ("trade_date",),
         # 基础信息: 按源代码排序

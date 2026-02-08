@@ -16,18 +16,30 @@ class TestDataset:
         assert Dataset.ETF_DAILY.value == "etf_daily"
         assert Dataset.STOCK_BASIC.value == "stock_basic"
         assert Dataset.STOCK_DAILY.value == "stock_daily"
+        assert Dataset.STOCK_STATUS.value == "stock_status"
         assert Dataset.ADJ_FACTOR.value == "adj_factor"
         assert Dataset.FUND_ADJ.value == "fund_adj"
+        assert Dataset.BALANCE_SHEET.value == "balance_sheet"
+        assert Dataset.INCOME_STATEMENT.value == "income_statement"
+        assert Dataset.CASH_FLOW.value == "cash_flow"
+        assert Dataset.DIVIDEND.value == "dividend"
+        assert Dataset.VALUATION_METRICS.value == "valuation_metrics"
+        assert Dataset.MARGIN_TRADING.value == "margin_trading"
+        assert Dataset.PLEDGE_RATIO.value == "pledge_ratio"
+        assert Dataset.MACRO_INDICATORS.value == "macro_indicators"
 
     def test_is_basic_dataset(self) -> None:
         """测试 is_basic_dataset 方法."""
         assert Dataset.is_basic_dataset("stock_basic") is True
         assert Dataset.is_basic_dataset("etf_basic") is True
         assert Dataset.is_basic_dataset("stock_daily") is False
+        assert Dataset.is_basic_dataset("stock_status") is False
         assert Dataset.is_basic_dataset("etf_daily") is False
         assert Dataset.is_basic_dataset("calendar") is False
         assert Dataset.is_basic_dataset("adj_factor") is False
         assert Dataset.is_basic_dataset("fund_adj") is False
+        assert Dataset.is_basic_dataset("balance_sheet") is False
+        assert Dataset.is_basic_dataset("valuation_metrics") is False
 
     def test_is_calendar_dataset(self) -> None:
         """测试 is_calendar_dataset 方法."""
@@ -57,15 +69,16 @@ class TestDomain:
         assert Domain.MARKET.value == "market"
         assert Domain.CAPITAL.value == "capital"
         assert Domain.FUNDAMENTAL.value == "fundamental"
+        assert Domain.MACRO.value == "macro"
 
     def test_domain_is_string_enum(self) -> None:
         """验证 Domain 是字符串枚举."""
         assert Domain.METADATA == "metadata"
         assert Domain.FUNDAMENTAL == "fundamental"
 
-    def test_should_have_four_members(self) -> None:
-        """应该有四个成员（四域架构）."""
-        assert len(Domain) == 4
+    def test_should_have_five_members(self) -> None:
+        """应该有五个成员（五域架构）."""
+        assert len(Domain) == 5
 
 
 @pytest.mark.unit

@@ -36,8 +36,19 @@ class Dataset(str, Enum):
     # T1: Incremental datasets
     ETF_DAILY = "etf_daily"
     STOCK_DAILY = "stock_daily"
+    STOCK_STATUS = "stock_status"
     ADJ_FACTOR = "adj_factor"
     FUND_ADJ = "fund_adj"
+    BALANCE_SHEET = "balance_sheet"
+    INCOME_STATEMENT = "income_statement"
+    CASH_FLOW = "cash_flow"
+    DIVIDEND = "dividend"
+    VALUATION_METRICS = "valuation_metrics"
+    MARGIN_TRADING = "margin_trading"
+    PLEDGE_RATIO = "pledge_ratio"
+    MACRO_INDICATORS = "macro_indicators"
+    FUTURES = "futures"
+    CORPORATE_ACTIONS = "corporate_actions"
 
 
 class TaskTier(str, Enum):
@@ -456,6 +467,21 @@ DATASET_REGISTRY: dict[Dataset, DatasetSpec] = {
         task_name="ingest_stock_daily",
         timeout_seconds=600,
     ),
+    Dataset.STOCK_STATUS: create_t1_config(
+        dataset=Dataset.STOCK_STATUS,
+        description="股票状态数据",
+        typical_available_time=time(17, 30),
+        depends_on=[Dataset.STOCK_DAILY],
+        critical_fields=[
+            "trade_date",
+            "source_ticker",
+            "is_suspended",
+            "is_st",
+            "list_status",
+        ],
+        task_name="ingest_stock_status",
+        priority=25,
+    ),
     Dataset.ADJ_FACTOR: create_t1_config(
         dataset=Dataset.ADJ_FACTOR,
         description="复权因子",
@@ -473,6 +499,99 @@ DATASET_REGISTRY: dict[Dataset, DatasetSpec] = {
         critical_fields=["trade_date", "ts_code", "adj_factor"],
         task_name="ingest_fund_adj",
         priority=30,
+    ),
+    Dataset.BALANCE_SHEET: create_t1_config(
+        dataset=Dataset.BALANCE_SHEET,
+        description="资产负债表",
+        typical_available_time=time(20, 30),
+        depends_on=[Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "report_date", "knowledge_date"],
+        task_name="ingest_balance_sheet",
+        priority=35,
+        timeout_seconds=900,
+    ),
+    Dataset.INCOME_STATEMENT: create_t1_config(
+        dataset=Dataset.INCOME_STATEMENT,
+        description="利润表",
+        typical_available_time=time(20, 30),
+        depends_on=[Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "report_date", "knowledge_date"],
+        task_name="ingest_income_statement",
+        priority=35,
+        timeout_seconds=900,
+    ),
+    Dataset.CASH_FLOW: create_t1_config(
+        dataset=Dataset.CASH_FLOW,
+        description="现金流量表",
+        typical_available_time=time(20, 30),
+        depends_on=[Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "report_date", "knowledge_date"],
+        task_name="ingest_cash_flow",
+        priority=35,
+        timeout_seconds=900,
+    ),
+    Dataset.DIVIDEND: create_t1_config(
+        dataset=Dataset.DIVIDEND,
+        description="分红送配数据",
+        typical_available_time=time(20, 0),
+        depends_on=[Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "ex_dividend_date", "knowledge_date"],
+        task_name="ingest_dividend",
+        priority=40,
+    ),
+    Dataset.VALUATION_METRICS: create_t1_config(
+        dataset=Dataset.VALUATION_METRICS,
+        description="估值指标",
+        typical_available_time=time(19, 30),
+        depends_on=[Dataset.STOCK_DAILY],
+        critical_fields=["instrument_id", "trade_date", "knowledge_date"],
+        task_name="ingest_valuation_metrics",
+        priority=45,
+    ),
+    Dataset.MARGIN_TRADING: create_t1_config(
+        dataset=Dataset.MARGIN_TRADING,
+        description="融资融券",
+        typical_available_time=time(19, 30),
+        depends_on=[Dataset.STOCK_DAILY],
+        critical_fields=["instrument_id", "trade_date", "knowledge_date"],
+        task_name="ingest_margin_trading",
+        priority=45,
+    ),
+    Dataset.PLEDGE_RATIO: create_t1_config(
+        dataset=Dataset.PLEDGE_RATIO,
+        description="股权质押",
+        typical_available_time=time(21, 0),
+        depends_on=[Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "report_date", "knowledge_date"],
+        task_name="ingest_pledge_ratio",
+        priority=50,
+    ),
+    Dataset.MACRO_INDICATORS: create_t1_config(
+        dataset=Dataset.MACRO_INDICATORS,
+        description="宏观指标",
+        typical_available_time=time(21, 30),
+        depends_on=[Dataset.CALENDAR],
+        critical_fields=["indicator_code", "date", "value"],
+        task_name="ingest_macro_indicators",
+        priority=55,
+    ),
+    Dataset.FUTURES: create_t1_config(
+        dataset=Dataset.FUTURES,
+        description="期货数据",
+        typical_available_time=time(21, 0),
+        depends_on=[Dataset.CALENDAR],
+        critical_fields=["instrument_id", "trade_date", "knowledge_date"],
+        task_name="ingest_futures",
+        priority=60,
+    ),
+    Dataset.CORPORATE_ACTIONS: create_t1_config(
+        dataset=Dataset.CORPORATE_ACTIONS,
+        description="公司行为",
+        typical_available_time=time(20, 0),
+        depends_on=[Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "action_type", "effective_date"],
+        task_name="ingest_corporate_actions",
+        priority=65,
     ),
 }
 
@@ -571,9 +690,9 @@ def get_parallel_datasets(tier: TaskTier) -> list[list[Dataset]]:
         List of levels, where each level is a list of datasets that can run in parallel
 
     Examples:
-        >>> # T1 datasets all depend on T0 datasets, so they are all level 0
+        >>> # T1 datasets按依赖分层并行执行
         >>> levels = get_parallel_datasets(TaskTier.T1_INCREMENTAL)
-        >>> assert len(levels[0]) == 4  # etf_daily, stock_daily, adj_factor, fund_adj
+        >>> assert len(levels) >= 1
 
     """
     datasets = get_datasets_by_tier(tier)

@@ -1,4 +1,4 @@
-"""Email notification channel."""
+"""邮件通知渠道."""
 
 import smtplib
 from email.message import EmailMessage

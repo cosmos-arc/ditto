@@ -1,7 +1,6 @@
 """Tests for RetryManager."""
 
 import pytest
-from ditto_datahub import DataHub
 from ditto_foundation.config.environment import Environment
 from ditto_foundation.observability import init, reset_for_testing
 from ditto_foundation.observability.config import ObservabilityConfig
@@ -41,9 +40,8 @@ def mock_coordinator(mocker):
 @pytest.fixture
 def mock_hub(mocker):
     """创建 Mock DataHub。"""
-    hub = mocker.Mock(spec=DataHub)
-    hub.ingestion_log = mocker.Mock()
-    hub.ingestion_log.get_failed_dates = mocker.Mock()
+    hub = mocker.Mock()
+    hub.ingestion_log_store.get_failed_dates = mocker.Mock()
     return hub
 
 
@@ -111,7 +109,7 @@ class TestGetFailedDates:
     ) -> None:
         """返回失败的交易日列表。"""
         # Arrange
-        mock_hub.ingestion_log.get_failed_dates.return_value = [
+        mock_hub.ingestion_log_store.get_failed_dates.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
@@ -125,14 +123,14 @@ class TestGetFailedDates:
 
         # Assert
         assert dates == ["2024-12-25", "2024-12-26", "2024-12-27"]
-        mock_hub.ingestion_log.get_failed_dates.assert_called_once_with(
+        mock_hub.ingestion_log_store.get_failed_dates.assert_called_once_with(
             dataset="stock_daily", source="tushare", limit=10, max_attempts=3
         )
 
     def test_get_failed_dates_with_custom_limit(self, retry_manager, mock_hub) -> None:
         """使用自定义限制获取失败日期。"""
         # Arrange
-        mock_hub.ingestion_log.get_failed_dates.return_value = [
+        mock_hub.ingestion_log_store.get_failed_dates.return_value = [
             "2024-12-25",
             "2024-12-26",
         ]
@@ -146,14 +144,14 @@ class TestGetFailedDates:
 
         # Assert
         assert dates == ["2024-12-25", "2024-12-26"]
-        mock_hub.ingestion_log.get_failed_dates.assert_called_once_with(
+        mock_hub.ingestion_log_store.get_failed_dates.assert_called_once_with(
             dataset="stock_daily", source="tushare", limit=2, max_attempts=3
         )
 
     def test_get_failed_dates_empty(self, retry_manager, mock_hub) -> None:
         """没有失败日期时返回空列表。"""
         # Arrange
-        mock_hub.ingestion_log.get_failed_dates.return_value = []
+        mock_hub.ingestion_log_store.get_failed_dates.return_value = []
 
         # Act
         dates = retry_manager.get_failed_dates(dataset="stock_daily")
@@ -166,7 +164,7 @@ class TestGetFailedDates:
     ) -> None:
         """按最大尝试次数筛选失败日期。"""
         # Arrange
-        mock_hub.ingestion_log.get_failed_dates.return_value = [
+        mock_hub.ingestion_log_store.get_failed_dates.return_value = [
             "2024-12-25",
         ]
 
@@ -178,7 +176,7 @@ class TestGetFailedDates:
 
         # Assert
         assert dates == ["2024-12-25"]
-        mock_hub.ingestion_log.get_failed_dates.assert_called_once_with(
+        mock_hub.ingestion_log_store.get_failed_dates.assert_called_once_with(
             dataset="stock_daily", source="tushare", limit=10, max_attempts=2
         )
 
@@ -192,7 +190,7 @@ class TestRetryFailed:
     ) -> None:
         """重试失败任务，全部成功。"""
         # Arrange
-        mock_hub.ingestion_log.get_failed_dates.return_value = [
+        mock_hub.ingestion_log_store.get_failed_dates.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
@@ -236,7 +234,7 @@ class TestRetryFailed:
     ) -> None:
         """重试失败任务，部分成功。"""
         # Arrange
-        mock_hub.ingestion_log.get_failed_dates.return_value = [
+        mock_hub.ingestion_log_store.get_failed_dates.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
@@ -278,7 +276,7 @@ class TestRetryFailed:
     ) -> None:
         """使用限制参数重试部分失败任务。"""
         # Arrange
-        mock_hub.ingestion_log.get_failed_dates.return_value = [
+        mock_hub.ingestion_log_store.get_failed_dates.return_value = [
             "2024-12-25",
             "2024-12-26",
         ]
@@ -312,7 +310,7 @@ class TestRetryFailed:
     def test_retry_failed_no_failed_dates(self, retry_manager, mock_hub) -> None:
         """没有失败日期时返回空结果。"""
         # Arrange
-        mock_hub.ingestion_log.get_failed_dates.return_value = []
+        mock_hub.ingestion_log_store.get_failed_dates.return_value = []
 
         # Act
         result = retry_manager.retry_failed(dataset="stock_daily")
@@ -330,7 +328,7 @@ class TestRetryFailed:
     ) -> None:
         """重试时使用 force=True 强制重新摄取。"""
         # Arrange
-        mock_hub.ingestion_log.get_failed_dates.return_value = [
+        mock_hub.ingestion_log_store.get_failed_dates.return_value = [
             "2024-12-25",
         ]
 
@@ -354,7 +352,7 @@ class TestRetryFailed:
     ) -> None:
         """按最大尝试次数筛选失败任务。"""
         # Arrange
-        mock_hub.ingestion_log.get_failed_dates.return_value = [
+        mock_hub.ingestion_log_store.get_failed_dates.return_value = [
             "2024-12-25",
         ]
 
@@ -372,7 +370,7 @@ class TestRetryFailed:
         )
 
         # Assert
-        mock_hub.ingestion_log.get_failed_dates.assert_called_once_with(
+        mock_hub.ingestion_log_store.get_failed_dates.assert_called_once_with(
             dataset="stock_daily", source="tushare", limit=10, max_attempts=2
         )
 
@@ -381,7 +379,7 @@ class TestRetryFailed:
     ) -> None:
         """重试全部仍然失败。"""
         # Arrange
-        mock_hub.ingestion_log.get_failed_dates.return_value = [
+        mock_hub.ingestion_log_store.get_failed_dates.return_value = [
             "2024-12-25",
             "2024-12-26",
         ]

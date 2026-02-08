@@ -123,10 +123,14 @@ class TestSourceTransformationError:
             message="Schema validation failed",
             source="tushare",
             dataset="etf_daily",
-            expected_columns=["src_code", "trade_date", "close"],
+            expected_columns=["source_ticker", "trade_date", "close"],
             actual_columns=["code", "date", "price"],
         )
-        assert error.details["expected_columns"] == ["src_code", "trade_date", "close"]
+        assert error.details["expected_columns"] == [
+            "source_ticker",
+            "trade_date",
+            "close",
+        ]
         assert error.details["actual_columns"] == ["code", "date", "price"]
 
     def test_transformation_error_minimal(self) -> None:
@@ -183,6 +187,39 @@ class TestDataSourceABC:
                 return pl.DataFrame()
 
             def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_balance_sheet(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_income_statement(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_cash_flow(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_dividend(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_valuation_metrics(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_margin_trading(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_pledge_ratio(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_futures(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
         # Should not raise

@@ -18,8 +18,8 @@ import polars as pl
 from loguru import logger
 
 from ditto_datahub.config import DataSourceSettings
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.sources.tdx.reader import TdxReader
+from ditto_datahub.stores.metadata.instrument import InstrumentStore
 
 
 class TdxSource:
@@ -30,7 +30,7 @@ class TdxSource:
 
     标识符体系：
     - 接收 symbol（统一格式）
-    - 内部转换为 TDX 格式的 src_code
+    - 内部转换为 TDX 格式的 source_ticker
     - 返回包含 symbol 列的数据
     """
 
@@ -91,11 +91,11 @@ class TdxSource:
         # 3. 调用 reader 获取数据
         df = self.reader.fetch_stock_daily_bars(tdx_codes, trade_date)
 
-        # 4. 将 src_code 列转换为 symbol 列
-        if not df.is_empty() and "src_code" in df.columns:
+        # 4. 将 source_ticker 列转换为 symbol 列
+        if not df.is_empty() and "source_ticker" in df.columns:
             df = df.with_columns(
-                symbol=pl.col("src_code").str.split(".").list.get(0)
-            ).drop("src_code")
+                symbol=pl.col("source_ticker").str.split(".").list.get(0)
+            ).drop("source_ticker")
 
         return df
 
@@ -104,7 +104,7 @@ class TdxSource:
         批量获取 symbol → exchange 映射.
 
         Args:
-            symbols: symbol 列表（可能包含 None，对应未知 sid）
+            symbols: symbol 列表（可能包含 None，对应未知 instrument_id）
 
         Returns:
             {symbol: exchange} 映射字典
@@ -114,7 +114,7 @@ class TdxSource:
         # 目前使用默认的交易所映射规则
         mapping: dict[str, str] = {}
         for symbol in symbols:
-            # 跳过空值和非字符串类型（未知 sid 无 symbol 映射）
+            # 跳过空值和非字符串类型（未知 instrument_id 无 symbol 映射）
             if not isinstance(symbol, str):
                 continue
             # 根据代码前缀判断交易所

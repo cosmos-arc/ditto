@@ -1,4 +1,4 @@
-"""Backfill manager for historical data backfill operations."""
+"""历史数据回填管理器."""
 
 from collections import defaultdict
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
@@ -60,7 +60,7 @@ class BackfillManager:
         )
 
         # 获取日期范围内的所有交易日
-        trade_dates = self._hub.calendar.list_trading_days(start_date, end_date)
+        trade_dates = self._hub.metadata.list_trading_days(start_date, end_date)
 
         if not trade_dates:
             return BackfillResult(
@@ -154,8 +154,8 @@ class BackfillManager:
         )
 
         # 获取日历的完整日期范围
-        first_date = self._hub.calendar.get_first_trading_day()
-        last_date = self._hub.calendar.get_last_trading_day()
+        first_date = self._hub.metadata.get_first_trading_day()
+        last_date = self._hub.metadata.get_last_trading_day()
 
         if not first_date or not last_date:
             return BackfillResult(
@@ -168,7 +168,7 @@ class BackfillManager:
             )
 
         # 获取所有交易日
-        all_trade_dates = self._hub.calendar.list_trading_days(first_date, last_date)
+        all_trade_dates = self._hub.metadata.list_trading_days(first_date, last_date)
 
         if not all_trade_dates:
             return BackfillResult(
@@ -181,7 +181,9 @@ class BackfillManager:
             )
 
         # 获取已摄取的日期
-        ingested_dates = self._hub.ingestion_log.get_ingested_dates(dataset, source)
+        ingested_dates = self._hub.ingestion_log_store.get_ingested_dates(
+            dataset, source
+        )
 
         # 计算缺失的日期
         missing_dates = set(all_trade_dates) - set(ingested_dates)

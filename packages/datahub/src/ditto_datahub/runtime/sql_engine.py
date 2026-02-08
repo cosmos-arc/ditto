@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 import re
+import sqlite3
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import duckdb
 import polars as pl
 import xxhash
 from ditto_foundation import M, logger
 
-from ditto_datahub.domains.metadata.calendar import CalendarStore
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.runtime.pit_helper import PitHelper
+from ditto_datahub.stores.metadata.calendar import CalendarStore
+from ditto_datahub.stores.metadata.instrument import InstrumentStore
 
 
 class SqlEngine:
@@ -34,8 +35,8 @@ class SqlEngine:
     # SQLite table names for auto-detection
     SQLITE_TABLES = frozenset(
         [
-            "security",
-            "security_mapping",
+            "instrument",
+            "instrument_mapping",
             "trading_calendar",
             "universe",
             "universe_constituent",
@@ -44,7 +45,7 @@ class SqlEngine:
         ]
     )
 
-    # Allowed dataset names for view registration (security whitelist)
+    # Allowed dataset names for view registration (instrument whitelist)
     ALLOWED_DATASETS = frozenset(
         [
             "stock_daily",
@@ -109,23 +110,26 @@ class SqlEngine:
     def _setup(self) -> None:
         """Initialize DuckDB configuration."""
         self.con.execute("SET enable_progress_bar = false")
+        self.con.execute("SET autoinstall_known_extensions = false")
+        self.con.execute("SET autoload_known_extensions = false")
         self._register_views()
         self._register_macros()
 
     def _register_views(self) -> None:
         """Register Parquet datasets as DuckDB views."""
-        # Use class-level whitelist for security validation
+        # Use class-level whitelist for instrument validation
         for dataset in self.ALLOWED_DATASETS:
             parquet_path = self.data_root / dataset
             # Check if directory exists before creating view
-            if parquet_path.exists():
-                # Create view with glob pattern for year partitions
-                # dataset is validated against ALLOWED_DATASETS whitelist
-                view_sql = (
-                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "  # noqa: S608 - dataset 已通过 ALLOWED_DATASETS 白名单
-                    f'"{parquet_path}/*.parquet"'
-                )
-                self.con.execute(view_sql)
+            if not parquet_path.exists():
+                continue
+
+            parquet_files = sorted(parquet_path.glob("*.parquet"))
+            if not parquet_files:
+                continue
+
+            parquet_glob = str(parquet_path / "*.parquet")
+            self.con.from_parquet(parquet_glob).create_view(dataset, replace=True)
 
     def _register_macros(self) -> None:
         """Register adjustment macros."""
@@ -138,7 +142,7 @@ class SqlEngine:
             self.con.execute("""
                 CREATE OR REPLACE VIEW market_hfq AS
                 SELECT
-                    m.sid, m.trade_date,
+                    m.instrument_id, m.trade_date,
                     m.open * COALESCE(f.adj_factor, 1.0) AS open,
                     m.high * COALESCE(f.adj_factor, 1.0) AS high,
                     m.low * COALESCE(f.adj_factor, 1.0) AS low,
@@ -146,7 +150,7 @@ class SqlEngine:
                     m.volume, m.amount
                 FROM stock_daily m
                 LEFT JOIN adj_factor f
-                    ON m.sid = f.sid AND m.trade_date = f.trade_date
+                    ON m.instrument_id = f.instrument_id AND m.trade_date = f.trade_date
             """)
 
             # QFQ macro (前复权 + PIT)
@@ -154,14 +158,14 @@ class SqlEngine:
                 CREATE OR REPLACE MACRO qfq(scan_date) AS TABLE
                 WITH baseline AS (
                     SELECT
-                        sid,
+                        instrument_id,
                         last(adj_factor ORDER BY trade_date) as base_factor
                     FROM adj_factor
                     WHERE trade_date <= cast(scan_date as DATE)
-                    GROUP BY sid
+                    GROUP BY instrument_id
                 )
                 SELECT
-                    m.sid, m.trade_date,
+                    m.instrument_id, m.trade_date,
                     m.open * COALESCE(f.adj_factor, 1.0) /
                         COALESCE(b.base_factor, 1.0) AS open,
                     m.high * COALESCE(f.adj_factor, 1.0) /
@@ -173,8 +177,8 @@ class SqlEngine:
                     m.volume, m.amount
                 FROM stock_daily m
                 LEFT JOIN adj_factor f
-                    ON m.sid = f.sid AND m.trade_date = f.trade_date
-                LEFT JOIN baseline b ON m.sid = b.sid
+                    ON m.instrument_id = f.instrument_id AND m.trade_date = f.trade_date
+                LEFT JOIN baseline b ON m.instrument_id = b.instrument_id
                 WHERE m.trade_date <= cast(scan_date as DATE)
             """)
 
@@ -193,14 +197,57 @@ class SqlEngine:
         if not sqlite_path.exists():
             return
 
-        self.con.execute(f"ATTACH '{sqlite_path}' AS meta")
+        if self._load_sqlite_scanner_extension():
+            self.con.execute(f"ATTACH '{sqlite_path}' AS meta")
+            attach_mode = "duckdb_attach"
+        else:
+            self._attach_sqlite_fallback(sqlite_path)
+            attach_mode = "sqlite_fallback"
         self._sqlite_attached = True
 
         logger.debug(
             "SQLite database attached",
             event="sql_engine_sqlite_attached",
             path=str(sqlite_path),
+            mode=attach_mode,
         )
+
+    def _load_sqlite_scanner_extension(self) -> bool:
+        """Try loading local sqlite_scanner extension without network fallback."""
+        try:
+            self.con.execute("LOAD sqlite_scanner")
+            return True
+        except duckdb.Error:
+            return False
+
+    def _attach_sqlite_fallback(self, sqlite_path: Path) -> None:
+        """
+        Fallback attach mode for offline environments.
+
+        When DuckDB cannot install/load sqlite_scanner extension (e.g. no network),
+        load SQLite tables into DuckDB `meta` schema using sqlite3 + polars.
+        """
+        self.con.execute("CREATE SCHEMA IF NOT EXISTS meta")
+        with sqlite3.connect(sqlite_path) as sqlite_conn:
+            table_rows = sqlite_conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+            table_names = {row[0] for row in table_rows}
+
+            for table in sorted(self.SQLITE_TABLES.intersection(table_names)):
+                table_df: pl.DataFrame = pl.read_database(
+                    f"SELECT * FROM {table}",  # noqa: S608 - table 来自白名单交集
+                    sqlite_conn,
+                )
+                relation_name = f"_sqlite_{table}"
+                arrow_table = cast(Any, table_df.to_arrow())
+                self.con.register(relation_name, arrow_table)
+                create_table_sql = (
+                    f"CREATE OR REPLACE TABLE meta.{table} AS "  # noqa: S608 - table 来自白名单交集
+                    f"SELECT * FROM {relation_name}"
+                )
+                self.con.execute(create_table_sql)
+                self.con.unregister(relation_name)
 
     def _normalize_query(self, query: str) -> str:
         """
@@ -290,8 +337,8 @@ class SqlEngine:
         Detect if query requires SQLite tables.
 
         Supports both:
-        - SELECT * FROM security
-        - SELECT * FROM meta.security
+        - SELECT * FROM instrument
+        - SELECT * FROM meta.instrument
 
         Args:
             query: SQL query string.
@@ -403,7 +450,7 @@ class SqlEngine:
 
         Examples:
             >>> engine.pit_query(
-            ...     "SELECT * FROM stock_daily WHERE sid = 1",
+            ...     "SELECT * FROM stock_daily WHERE instrument_id = 1",
             ...     "2024-01-15"
             ... )
             # 自动添加: AND trade_date <= '2024-01-15'

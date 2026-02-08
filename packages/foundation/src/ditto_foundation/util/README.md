@@ -135,7 +135,7 @@ result4 = normalize_date(None)              # None
 **特性**：
 - **算法统一**：MD5（性能优于 SHA-256）
 - **排序统一**：按数据集类型确定性行排序
-- **字段统一**：包含所有字段（包括 sid、source）
+- **字段统一**：包含所有字段（包括 instrument_id、source）
 
 ```python
 from ditto_foundation.util import ChecksumCompute
@@ -143,12 +143,12 @@ import polars as pl
 
 df = pl.DataFrame({
     "trade_date": ["2024-01-01", "2024-01-02"],
-    "sid": [1, 2],
+    "instrument_id": [1, 2],
     "close": [10.0, 11.0],
     "source": ["tushare", "tushare"]
 })
 
-# 计算 checksum（自动按 trade_date, sid 排序）
+# 计算 checksum（自动按 trade_date, instrument_id 排序）
 checksum = ChecksumCompute.from_dataframe(df, "stock_daily")
 print(checksum)  # "3a7bd3e2360a..."
 ```
@@ -157,10 +157,10 @@ print(checksum)  # "3a7bd3e2360a..."
 
 | 数据集 | 排序键 |
 |--------|--------|
-| `stock_daily` | `trade_date`, `sid` |
-| `etf_daily` | `trade_date`, `sid` |
-| `adj_factor` | `trade_date`, `sid` |
-| `fund_adj` | `trade_date`, `sid` |
+| `stock_daily` | `trade_date`, `instrument_id` |
+| `etf_daily` | `trade_date`, `instrument_id` |
+| `adj_factor` | `trade_date`, `instrument_id` |
+| `fund_adj` | `trade_date`, `instrument_id` |
 | `calendar` | `trade_date` |
 | `stock_basic` | `ts_code` |
 | `etf_basic` | `ts_code` |

@@ -31,7 +31,7 @@ class StatusMerger:
 
         Returns:
             DataFrame with columns:
-            - src_code: 股票代码
+            - source_ticker: 股票代码
             - trade_date: 交易日期
             - is_suspended: 是否停牌 (Boolean)
             - suspend_timing: 停牌时间段 (String, e.g. "09:30-10:00" or "")
@@ -41,7 +41,7 @@ class StatusMerger:
 
         """
         # Start with all stock codes from list_status (as reference)
-        result = list_status_df.rename({"ts_code": "src_code"})
+        result = list_status_df.rename({"ts_code": "source_ticker"})
 
         # Add suspension info
         if not suspend_df.is_empty():
@@ -49,8 +49,8 @@ class StatusMerger:
                 pl.lit(True).alias("is_suspended")
             )
             result = result.join(
-                suspend_expanded.rename({"ts_code": "src_code"}),
-                on="src_code",
+                suspend_expanded.rename({"ts_code": "source_ticker"}),
+                on="source_ticker",
                 how="left",
             )
         else:
@@ -64,8 +64,8 @@ class StatusMerger:
                 pl.col("name").alias("st_type"),
             )
             result = result.join(
-                st_expanded.rename({"ts_code": "src_code"}),
-                on="src_code",
+                st_expanded.rename({"ts_code": "source_ticker"}),
+                on="source_ticker",
                 how="left",
             )
         else:
@@ -88,7 +88,7 @@ class StatusMerger:
 
         # Select and reorder columns
         result = result.select(
-            "src_code",
+            "source_ticker",
             "trade_date",
             "is_suspended",
             "suspend_timing",

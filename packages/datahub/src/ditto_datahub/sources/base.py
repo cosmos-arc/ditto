@@ -208,7 +208,7 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "510300.SH")
+            - source_ticker: Source code (e.g., "510300.SH")
             - symbol: Display symbol (e.g., "510300")
             - name: ETF name
             - exchange: Exchange code
@@ -230,7 +230,7 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with columns (matching ETF_DAILY_SCHEMA):
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - open, high, low, close, pre_close: Float64
             - volume, amount: Float64
@@ -250,7 +250,7 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "000001.SZ")
+            - source_ticker: Source code (e.g., "000001.SZ")
             - symbol: Display symbol (e.g., "000001")
             - name: Stock name
             - exchange: Exchange code (SSE/SZSE/BSE)
@@ -272,7 +272,7 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with columns (same as ETF daily schema):
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - open, high, low, close, pre_close: Float64
             - volume, amount: Float64
@@ -295,7 +295,7 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - adj_factor: Float64
 
@@ -315,9 +315,203 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - adj_factor: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch stock status information.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: Source code
+            - trade_date: Date
+            - is_suspended: Boolean
+            - suspend_timing: Utf8
+            - is_st: Boolean
+            - st_type: Utf8
+            - list_status: Utf8
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_balance_sheet(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch balance sheet data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with balance_sheet SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_income_statement(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch income statement data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with income_statement SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_cash_flow(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch cash flow data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with cash_flow SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_dividend(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch dividend data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with dividend SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_valuation_metrics(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch valuation metrics data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with valuation_metrics SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_margin_trading(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch margin trading data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with margin_trading SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_pledge_ratio(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch pledge ratio data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with pledge_ratio SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch macro indicators data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with macro_indicators SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_futures(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch futures data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with futures SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch corporate actions data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with corporate_actions SourceSchema fields.
 
         Raises:
             SourceFetchError: If fetch fails.

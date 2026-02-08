@@ -24,7 +24,7 @@ class TestCheckTradingDay:
     def test_returns_true_for_trading_day(self, mocker: MockerFixture):
         """Test that task returns True for valid trading day."""
         mock_hub = mocker.MagicMock()
-        mock_hub.calendar.is_trading_day.return_value = True
+        mock_hub.metadata.is_trading_day.return_value = True
 
         mock_context_mgr = mocker.MagicMock()
         mock_context_mgr.__enter__.return_value = (mock_hub, mocker.MagicMock())
@@ -37,12 +37,12 @@ class TestCheckTradingDay:
         result = check_trading_day(trade_date="2024-01-02")
 
         assert result is True
-        mock_hub.calendar.is_trading_day.assert_called_once_with("2024-01-02")
+        mock_hub.metadata.is_trading_day.assert_called_once_with("2024-01-02")
 
     def test_returns_false_for_non_trading_day(self, mocker: MockerFixture):
         """Test that task returns False for non-trading day."""
         mock_hub = mocker.MagicMock()
-        mock_hub.calendar.is_trading_day.return_value = False
+        mock_hub.metadata.is_trading_day.return_value = False
 
         mock_context_mgr = mocker.MagicMock()
         mock_context_mgr.__enter__.return_value = (mock_hub, mocker.MagicMock())
@@ -59,7 +59,7 @@ class TestCheckTradingDay:
     def test_propagates_exception(self, mocker: MockerFixture):
         """Test that exceptions are propagated."""
         mock_hub = mocker.MagicMock()
-        mock_hub.calendar.is_trading_day.side_effect = ValueError("Test error")
+        mock_hub.metadata.is_trading_day.side_effect = ValueError("Test error")
 
         mock_context_mgr = mocker.MagicMock()
         mock_context_mgr.__enter__.return_value = (mock_hub, mocker.MagicMock())

@@ -173,8 +173,8 @@ class TestBackfillFlow:
         """Test that flow uses create_ingestion_context."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -214,8 +214,8 @@ class TestBackfillFlow:
         """Test that flow gets coordinator from context."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -255,8 +255,8 @@ class TestBackfillFlow:
         """Test that flow creates BackfillManager."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -302,8 +302,8 @@ class TestBackfillFlow:
         """Test that flow overrides start_date when resume_from is provided."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -343,8 +343,8 @@ class TestBackfillFlow:
         """Test that flow passes parallel parameter to backfill_range."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -381,8 +381,8 @@ class TestBackfillFlow:
         """Test that flow returns dict with all required keys."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -432,8 +432,8 @@ class TestBackfillFlow:
         """Test that hub.close() is called on successful completion."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -469,8 +469,8 @@ class TestBackfillFlow:
         """Test that context manager cleanup happens even when exception occurs."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -519,8 +519,8 @@ class TestBackfillMissingFlow:
         """Test that flow uses create_ingestion_context."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -554,8 +554,8 @@ class TestBackfillMissingFlow:
         """Test that flow gets coordinator from context."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -592,8 +592,8 @@ class TestBackfillMissingFlow:
         """Test that flow creates BackfillManager."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -634,8 +634,8 @@ class TestBackfillMissingFlow:
         """Test that flow passes parallel parameter to backfill_missing."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -669,8 +669,8 @@ class TestBackfillMissingFlow:
         """Test that flow returns correct result when there are missing dates."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -713,8 +713,8 @@ class TestBackfillMissingFlow:
         """Test that flow returns correct result when there are no missing dates."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -747,8 +747,8 @@ class TestBackfillMissingFlow:
         """Test that hub.close() is called on successful completion."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 
@@ -781,8 +781,8 @@ class TestBackfillMissingFlow:
         """Test that context manager cleanup happens even when exception occurs."""
         mock_hub = mocker.MagicMock()
         mock_hub.sources.get.return_value = mocker.MagicMock()
-        mock_hub.calendar = mocker.MagicMock()
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
 
         mock_coordinator = mocker.MagicMock()
 

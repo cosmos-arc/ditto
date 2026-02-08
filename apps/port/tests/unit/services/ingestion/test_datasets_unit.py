@@ -32,8 +32,17 @@ class TestDatasetEnum:
             # T1 incremental datasets
             Dataset.ETF_DAILY,
             Dataset.STOCK_DAILY,
+            Dataset.STOCK_STATUS,
             Dataset.ADJ_FACTOR,
             Dataset.FUND_ADJ,
+            Dataset.BALANCE_SHEET,
+            Dataset.INCOME_STATEMENT,
+            Dataset.CASH_FLOW,
+            Dataset.DIVIDEND,
+            Dataset.VALUATION_METRICS,
+            Dataset.MARGIN_TRADING,
+            Dataset.PLEDGE_RATIO,
+            Dataset.MACRO_INDICATORS,
         ],
     )
     def test_dataset_enum_contains(self, dataset: Dataset) -> None:
@@ -47,8 +56,17 @@ class TestDatasetEnum:
         assert Dataset.ETF_BASIC.value == "etf_basic"
         assert Dataset.ETF_DAILY.value == "etf_daily"
         assert Dataset.STOCK_DAILY.value == "stock_daily"
+        assert Dataset.STOCK_STATUS.value == "stock_status"
         assert Dataset.ADJ_FACTOR.value == "adj_factor"
         assert Dataset.FUND_ADJ.value == "fund_adj"
+        assert Dataset.BALANCE_SHEET.value == "balance_sheet"
+        assert Dataset.INCOME_STATEMENT.value == "income_statement"
+        assert Dataset.CASH_FLOW.value == "cash_flow"
+        assert Dataset.DIVIDEND.value == "dividend"
+        assert Dataset.VALUATION_METRICS.value == "valuation_metrics"
+        assert Dataset.MARGIN_TRADING.value == "margin_trading"
+        assert Dataset.PLEDGE_RATIO.value == "pledge_ratio"
+        assert Dataset.MACRO_INDICATORS.value == "macro_indicators"
 
 
 @pytest.mark.unit
@@ -216,6 +234,12 @@ class TestDatasetRegistry:
         assert stock_daily.requires_trade_date is True
         assert stock_daily.task_name == "ingest_stock_daily"
 
+        # Stock status should be T1
+        stock_status = DATASET_REGISTRY[Dataset.STOCK_STATUS]
+        assert stock_status.tier == TaskTier.T1_INCREMENTAL
+        assert stock_status.requires_trade_date is True
+        assert stock_status.task_name == "ingest_stock_status"
+
         # Adj factor should be T1
         adj_factor = DATASET_REGISTRY[Dataset.ADJ_FACTOR]
         assert adj_factor.tier == TaskTier.T1_INCREMENTAL
@@ -227,6 +251,40 @@ class TestDatasetRegistry:
         assert fund_adj.tier == TaskTier.T1_INCREMENTAL
         assert fund_adj.requires_trade_date is True
         assert fund_adj.task_name == "ingest_fund_adj"
+
+        # Fundamental datasets should be T1
+        balance_sheet = DATASET_REGISTRY[Dataset.BALANCE_SHEET]
+        assert balance_sheet.tier == TaskTier.T1_INCREMENTAL
+        assert balance_sheet.task_name == "ingest_balance_sheet"
+
+        income_statement = DATASET_REGISTRY[Dataset.INCOME_STATEMENT]
+        assert income_statement.tier == TaskTier.T1_INCREMENTAL
+        assert income_statement.task_name == "ingest_income_statement"
+
+        cash_flow = DATASET_REGISTRY[Dataset.CASH_FLOW]
+        assert cash_flow.tier == TaskTier.T1_INCREMENTAL
+        assert cash_flow.task_name == "ingest_cash_flow"
+
+        dividend = DATASET_REGISTRY[Dataset.DIVIDEND]
+        assert dividend.tier == TaskTier.T1_INCREMENTAL
+        assert dividend.task_name == "ingest_dividend"
+
+        # Capital datasets should be T1
+        valuation_metrics = DATASET_REGISTRY[Dataset.VALUATION_METRICS]
+        assert valuation_metrics.tier == TaskTier.T1_INCREMENTAL
+        assert valuation_metrics.task_name == "ingest_valuation_metrics"
+
+        margin_trading = DATASET_REGISTRY[Dataset.MARGIN_TRADING]
+        assert margin_trading.tier == TaskTier.T1_INCREMENTAL
+        assert margin_trading.task_name == "ingest_margin_trading"
+
+        pledge_ratio = DATASET_REGISTRY[Dataset.PLEDGE_RATIO]
+        assert pledge_ratio.tier == TaskTier.T1_INCREMENTAL
+        assert pledge_ratio.task_name == "ingest_pledge_ratio"
+
+        macro_indicators = DATASET_REGISTRY[Dataset.MACRO_INDICATORS]
+        assert macro_indicators.tier == TaskTier.T1_INCREMENTAL
+        assert macro_indicators.task_name == "ingest_macro_indicators"
 
     def test_required_fields_exist(self) -> None:
         """Test all datasets have required spec fields."""
@@ -278,8 +336,17 @@ class TestHelperFunctions:
 
         assert Dataset.ETF_DAILY in t1_datasets
         assert Dataset.STOCK_DAILY in t1_datasets
+        assert Dataset.STOCK_STATUS in t1_datasets
         assert Dataset.ADJ_FACTOR in t1_datasets
         assert Dataset.FUND_ADJ in t1_datasets
+        assert Dataset.BALANCE_SHEET in t1_datasets
+        assert Dataset.INCOME_STATEMENT in t1_datasets
+        assert Dataset.CASH_FLOW in t1_datasets
+        assert Dataset.DIVIDEND in t1_datasets
+        assert Dataset.VALUATION_METRICS in t1_datasets
+        assert Dataset.MARGIN_TRADING in t1_datasets
+        assert Dataset.PLEDGE_RATIO in t1_datasets
+        assert Dataset.MACRO_INDICATORS in t1_datasets
         assert Dataset.CALENDAR not in t1_datasets
         assert Dataset.STOCK_BASIC not in t1_datasets
 
@@ -332,6 +399,16 @@ class TestDatasetDependencies:
         config = get_dataset_config(Dataset.ADJ_FACTOR)
         assert Dataset.STOCK_DAILY in config.depends_on
 
+    def test_t1_stock_status_depends_on_stock_daily(self) -> None:
+        """Test STOCK_STATUS depends on STOCK_DAILY."""
+        config = get_dataset_config(Dataset.STOCK_STATUS)
+        assert Dataset.STOCK_DAILY in config.depends_on
+
+    def test_t1_valuation_metrics_depends_on_stock_daily(self) -> None:
+        """Test VALUATION_METRICS depends on STOCK_DAILY."""
+        config = get_dataset_config(Dataset.VALUATION_METRICS)
+        assert Dataset.STOCK_DAILY in config.depends_on
+
     def test_no_circular_dependencies(self) -> None:
         """Test there are no circular dependencies in the registry."""
         # Build dependency graph
@@ -380,19 +457,27 @@ class TestExtendedHelperFunctions:
         Test get_parallel_datasets for T1 tier.
 
         T1 datasets have a dependency chain:
-        - Level 0: ETF_DAILY, STOCK_DAILY (depend only on T0)
-        - Level 1: ADJ_FACTOR (depends on STOCK_DAILY), FUND_ADJ (depends on ETF_DAILY)
+        - Level 0: Datasets with no intra-T1 dependencies
+        - Level 1: Datasets depending on STOCK_DAILY/ETF_DAILY
         """
         levels = get_parallel_datasets(TaskTier.T1_INCREMENTAL)
 
         # T1 should have 2 levels due to T1->T1 dependencies
         assert len(levels) == 2
 
-        # Level 0 should have ETF_DAILY and STOCK_DAILY
-        assert set(levels[0]) == {Dataset.ETF_DAILY, Dataset.STOCK_DAILY}
+        # Level 0 should include bars datasets
+        assert Dataset.ETF_DAILY in levels[0]
+        assert Dataset.STOCK_DAILY in levels[0]
 
-        # Level 1 should have ADJ_FACTOR and FUND_ADJ
-        assert set(levels[1]) == {Dataset.ADJ_FACTOR, Dataset.FUND_ADJ}
+        # Level 1 should include datasets depending on bars datasets
+        level1_set = set(levels[1])
+        assert {
+            Dataset.ADJ_FACTOR,
+            Dataset.FUND_ADJ,
+            Dataset.STOCK_STATUS,
+            Dataset.VALUATION_METRICS,
+            Dataset.MARGIN_TRADING,
+        }.issubset(level1_set)
 
     def test_get_parallel_datasets_t0(self) -> None:
         """Test get_parallel_datasets for T0 tier."""

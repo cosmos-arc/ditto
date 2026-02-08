@@ -61,12 +61,19 @@ from ditto_datahub.stores import SQLiteClient
 client = SQLiteClient(Path("data/ditto.db"))
 
 # Domains 层使用示例
-from ditto_datahub.domains.metadata import MetadataService
-from ditto_datahub.domains.market import MarketService
+from ditto_datahub.stores.market import MarketBarsQuery, MarketService
+from ditto_datahub.stores.metadata import MetadataQuery, MetadataService
+
+metadata_service: MetadataService = ...
+market_service: MarketService = ...
 
 # 业务操作通过 Domain Service
-securities = metadata_service.get_securities(asset_class="stock")
-bars = market_service.get_bars(sids=[1000001], start="2024-01-01")
+securities = metadata_service.query(
+    MetadataQuery(dataset="instrument", asset_class="stock")
+)
+bars = market_service.query(
+    MarketBarsQuery(instrument_ids=[1000001], start="2024-01-01")
+)
 ```
 
 ## 相关文档

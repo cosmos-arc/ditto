@@ -5,21 +5,21 @@ description: "复权因子数据质量检查规则"
 # 技术类: 技术校验（写入时强制阻断）
 technical:
   - rule: not_null
-    columns: [sid, trade_date, adj_factor]
+    columns: [instrument_id, trade_date, adj_factor]
     message: "必填字段不能为空"
 
   - rule: unique
-    columns: [sid, trade_date]
-    message: "主键 (sid, trade_date) 重复"
+    columns: [instrument_id, trade_date]
+    message: "主键 (instrument_id, trade_date) 重复"
 
   - rule: foreign_key
-    column: sid
-    reference: security.sid
-    message: "SID 不存在于证券主表"
+    column: instrument_id
+    reference: instrument.instrument_id
+    message: "Instrument ID 不存在于证券主表"
 
   - rule: type_check
     columns:
-      sid: int
+      instrument_id: int
       trade_date: date
       adj_factor: float
     message: "字段类型不匹配"
@@ -32,7 +32,7 @@ business:
 
   - rule: monotonic_decrease
     column: adj_factor
-    group_by: sid
+    group_by: instrument_id
     severity: warning
     message: "复权因子应单调递减（除权除息时会跳跃）"
 
@@ -55,7 +55,7 @@ statistical:
     column: adj_factor
     window: 20
     threshold_ratio: 0.5  # 变化超过 50% 标记为异常
-    group_by: sid
+    group_by: instrument_id
     message: "复权因子异常变化（可能除权除息）"
 
   - rule: consistency

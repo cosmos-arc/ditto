@@ -1,4 +1,4 @@
-"""Tracing module."""
+"""链路追踪模块."""
 
 from __future__ import annotations
 

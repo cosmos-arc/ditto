@@ -6,12 +6,12 @@
 
 ## 概要
 
-数据摄取调度服务，基于 Prefect 的任务编排与数据摄取流程，支持从 Tushare 等数据源自动摄取 ETF、股票行情和复权因子数据。
+数据摄取调度服务，基于 Prefect 的任务编排与数据摄取流程，支持从 Tushare 等数据源自动摄取 T0/T1 全矩阵数据集（行情、元数据、财务、资金面、宏观）。
 
 ## 核心功能
 
 - **任务编排**: 基于 Prefect 3 的本地 Server 模式
-- **数据摄取**: 支持 ETF、股票行情、复权因子数据
+- **数据摄取**: 支持 T0/T1 全矩阵（market/metadata/fundamental/capital/macro）
 - **自动注册**: 识别未解析证券代码，自动获取基本信息并注册
 - **容错机制**: 部分失败容错、指数退避重试
 - **数据质量**: 自动执行 L1+L2 数据质量检查
@@ -30,9 +30,9 @@
 │                  Prefect Flows (编排层)                      │
 │                                                              │
 │  daily_ingest_flow                                          │
-│    ├─ ingest_stock_basic (可选)                             │
-│    ├─ ingest_etf_bars + ingest_stock_daily (并行)           │
-│    └─ ingest_adj_factor + ingest_fund_adj (并行)           │
+│    ├─ T0 元数据层（calendar/stock_basic/etf_basic）          │
+│    ├─ T1 第 0 层（stock_daily/etf_daily/macro_indicators）  │
+│    └─ T1 后续层（adj/status/fundamental/capital 等）         │
 └─────────────────────────────────────────────────────────────┘
                           △
 ┌─────────────────────────────────────────────────────────────┐
@@ -78,20 +78,24 @@ apps/port/src/ditto_port/
     └── ingestion/             # 数据摄取服务
         ├── coordinator.py     # 统一摄取协调器
         ├── backfill.py        # 回补管理器
+        ├── data_writer.py     # 数据写入器
+        ├── metadata.py        # 元数据服务
         ├── result_utils.py    # 结果统计工具
+        ├── result_handler.py  # 结果处理器
         ├── retry.py           # 重试管理器
-        └── security_mapper.py # 证券映射器
+        ├── quality/           # 数据质量服务
+        │   └── service.py     # DQ 检查与隔离
+        └── protocols.py       # 服务接口协议
 ```
 
 ## 摄取任务
 
-| 任务 | 说明 | 数据集 |
+| 层级 | 说明 | 数据集 |
 |------|------|--------|
-| `ingest_stock_basic` | 股票基本信息（可选） | - |
-| `ingest_etf_bars` | ETF 日线行情 | `etf_daily` |
-| `ingest_stock_daily` | 股票日线行情 | `stock_daily` |
-| `ingest_adj_factor` | 股票复权因子 | `adj_factor` |
-| `ingest_fund_adj` | ETF/基金复权因子 | `fund_adj` |
+| `T0_META` | 元数据基础层 | `calendar`, `stock_basic`, `etf_basic` |
+| `T1_INCREMENTAL` | 日增量层 | `stock_daily`, `etf_daily`, `stock_status`, `adj_factor`, `fund_adj`, `balance_sheet`, `income_statement`, `cash_flow`, `dividend`, `valuation_metrics`, `margin_trading`, `pledge_ratio`, `macro_indicators` |
+
+说明：实际执行由 `DATASET_REGISTRY` 动态生成任务，README 仅列出当前默认矩阵。
 
 ### 任务特性
 

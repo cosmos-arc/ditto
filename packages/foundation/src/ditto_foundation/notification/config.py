@@ -1,4 +1,4 @@
-"""Notification configuration settings."""
+"""通知配置设置."""
 
 from pydantic import BaseModel, ConfigDict, Field
 

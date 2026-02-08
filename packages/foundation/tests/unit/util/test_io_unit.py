@@ -32,7 +32,7 @@ class TestAtomicWrite:
         """Test atomic_write preserves DataFrame data."""
         original_df = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 "date": ["2024-01-01", "2024-01-02", "2024-01-03"],
                 "value": [10.0, 20.0, 30.0],
             }

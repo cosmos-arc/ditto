@@ -25,7 +25,7 @@ class TestStockDailySourceSchema:
         """测试验证有效数据"""
         df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ", "000002.SZ"],
+                "source_ticker": ["000001.SZ", "000002.SZ"],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],
                 "knowledge_date": [date(2024, 1, 3), date(2024, 1, 3)],
                 "open": [10.0, 20.0],
@@ -46,7 +46,7 @@ class TestStockDailySourceSchema:
         """测试缺少列的情况"""
         df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 1, 2)],
                 # 缺少 open, high, low 等列
             }
@@ -62,7 +62,7 @@ class TestStockDailySourceSchema:
         """测试重复主键的情况"""
         df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ", "000001.SZ"],
+                "source_ticker": ["000001.SZ", "000001.SZ"],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],
                 "knowledge_date": [date(2024, 1, 3), date(2024, 1, 3)],
                 "open": [10.0, 10.5],
@@ -90,7 +90,7 @@ class TestAdjFactorSourceSchema:
         """测试验证有效数据"""
         df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ", "000002.SZ"],
+                "source_ticker": ["000001.SZ", "000002.SZ"],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],
                 "knowledge_date": [date(2024, 1, 2), date(2024, 1, 2)],
                 "adj_factor": [1.2345, 1.1234],
@@ -104,7 +104,7 @@ class TestAdjFactorSourceSchema:
         """测试缺少 knowledge_date 列"""
         df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 1, 2)],
                 "adj_factor": [1.2345],
             }
@@ -124,7 +124,7 @@ class TestStockStatusSourceSchema:
         """测试验证有效数据"""
         df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ", "000001.SZ"],
+                "source_ticker": ["000001.SZ", "000001.SZ"],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],
                 "is_suspended": [False, True],
                 "suspend_timing": ["", "停牌"],
@@ -141,7 +141,7 @@ class TestStockStatusSourceSchema:
         """测试允许重复主键"""
         df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ", "000001.SZ"],
+                "source_ticker": ["000001.SZ", "000001.SZ"],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],
                 "is_suspended": [False, True],
                 "suspend_timing": ["", "停牌"],
@@ -162,7 +162,7 @@ class TestEtfDailySourceSchema:
         """测试验证有效数据"""
         df = pl.DataFrame(
             {
-                "src_code": ["510300.SH", "510500.SH"],
+                "source_ticker": ["510300.SH", "510500.SH"],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],
                 "knowledge_date": [date(2024, 1, 3), date(2024, 1, 3)],
                 "open": [4.5, 5.5],
@@ -187,7 +187,7 @@ class TestStockLimitSourceSchema:
         """测试验证有效数据"""
         df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ", "000002.SZ"],
+                "source_ticker": ["000001.SZ", "000002.SZ"],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],
                 "up_limit": [11.0, 22.0],
                 "down_limit": [9.0, 18.0],
@@ -205,7 +205,7 @@ class TestFundAdjSourceSchema:
         """测试验证有效数据"""
         df = pl.DataFrame(
             {
-                "src_code": ["000001.OF", "000002.OF"],
+                "source_ticker": ["000001.OF", "000002.OF"],
                 "trade_date": [date(2024, 1, 2), date(2024, 1, 2)],
                 "knowledge_date": [date(2024, 1, 2), date(2024, 1, 2)],
                 "adj_factor": [1.1, 1.2],

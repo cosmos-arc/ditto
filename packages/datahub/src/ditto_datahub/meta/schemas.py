@@ -16,10 +16,10 @@ import polars as pl
 # Note: Renamed from MARKET_DAILY to STOCK_DAILY per user request
 # to clarify this table only contains stock data.
 STOCK_DAILY_SCHEMA: dict[str, type[pl.DataType]] = {
-    "sid": pl.Int64,
+    "instrument_id": pl.Int64,
     "trade_date": pl.Date,
     "source": pl.Utf8,
-    "src_code": pl.Utf8,
+    "source_ticker": pl.Utf8,
     "open": pl.Float64,
     "high": pl.Float64,
     "low": pl.Float64,
@@ -42,10 +42,10 @@ STOCK_DAILY_SCHEMA: dict[str, type[pl.DataType]] = {
 # ETF Daily Schema
 # ============================================================
 ETF_DAILY_SCHEMA: dict[str, type[pl.DataType]] = {
-    "sid": pl.Int64,
+    "instrument_id": pl.Int64,
     "trade_date": pl.Date,
     "source": pl.Utf8,
-    "src_code": pl.Utf8,
+    "source_ticker": pl.Utf8,
     "open": pl.Float64,
     "high": pl.Float64,
     "low": pl.Float64,
@@ -61,10 +61,10 @@ ETF_DAILY_SCHEMA: dict[str, type[pl.DataType]] = {
 # Index Daily Schema
 # ============================================================
 INDEX_DAILY_SCHEMA: dict[str, type[pl.DataType]] = {
-    "sid": pl.Int64,
+    "instrument_id": pl.Int64,
     "trade_date": pl.Date,
     "source": pl.Utf8,
-    "src_code": pl.Utf8,
+    "source_ticker": pl.Utf8,
     "open": pl.Float64,
     "high": pl.Float64,
     "low": pl.Float64,
@@ -81,10 +81,10 @@ INDEX_DAILY_SCHEMA: dict[str, type[pl.DataType]] = {
 # Adjustment Factor Schema
 # ============================================================
 ADJ_FACTOR_SCHEMA: dict[str, type[pl.DataType]] = {
-    "sid": pl.Int64,
+    "instrument_id": pl.Int64,
     "trade_date": pl.Date,
     "source": pl.Utf8,
-    "src_code": pl.Utf8,
+    "source_ticker": pl.Utf8,
     "adj_factor": pl.Float64,
     # PIT safety: knowledge_date = when this factor became known
     # For Tushare, this is typically trade_date + 1 day (T+1 publication)
@@ -96,8 +96,8 @@ ADJ_FACTOR_SCHEMA: dict[str, type[pl.DataType]] = {
 # Index Weight Schema
 # ============================================================
 INDEX_WEIGHT_SCHEMA: dict[str, type[pl.DataType]] = {
-    "index_sid": pl.Int64,
-    "con_sid": pl.Int64,
+    "index_instrument_id": pl.Int64,
+    "constituent_instrument_id": pl.Int64,
     "trade_date": pl.Date,
     "weight": pl.Float64,
     "source": pl.Utf8,
@@ -111,9 +111,9 @@ INDEX_WEIGHT_SCHEMA: dict[str, type[pl.DataType]] = {
 # ============================================================
 UNIVERSE_CONSTITUENT_SCHEMA: dict[str, type[pl.DataType]] = {
     "universe_id": pl.Utf8,
-    "sid": pl.Int64,
+    "instrument_id": pl.Int64,
     "source": pl.Utf8,
-    "src_code": pl.Utf8,
+    "source_ticker": pl.Utf8,
     "effective_from": pl.Date,
     "effective_to": pl.Date,
     "weight": pl.Float64,
@@ -128,7 +128,7 @@ UNIVERSE_CONSTITUENT_SCHEMA: dict[str, type[pl.DataType]] = {
 # - ST status: is_st, st_type
 # - List status: list_status (L=正常, D=退市, P=暂停)
 STOCK_STATUS_SCHEMA: dict[str, type[pl.DataType]] = {
-    "sid": pl.Int64,
+    "instrument_id": pl.Int64,
     "trade_date": pl.Date,
     "is_suspended": pl.Boolean,  # 是否停牌
     "suspend_timing": pl.Utf8,  # 停牌时间段 "09:30-10:00" or None
@@ -136,7 +136,7 @@ STOCK_STATUS_SCHEMA: dict[str, type[pl.DataType]] = {
     "st_type": pl.Utf8,  # ST/*ST 类型名称
     "list_status": pl.Utf8,  # L正常/D退市/P暂停
     "source": pl.Utf8,
-    "src_code": pl.Utf8,
+    "source_ticker": pl.Utf8,
 }
 
 

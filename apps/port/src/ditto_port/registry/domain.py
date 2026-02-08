@@ -14,51 +14,51 @@ from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from ditto_datahub.config.data_root import DataRootConfig
-from ditto_datahub.domains.capital.capital_store import CapitalStore
-from ditto_datahub.domains.factors.factor_metadata_store import (
-    FactorMetadataStore,
-)
-from ditto_datahub.domains.factors.factor_store import FactorStore
-from ditto_datahub.domains.features.technical import (
-    IndicatorMetadataStore as FeatureIndicatorMetadataStore,
-)
-from ditto_datahub.domains.features.technical import (
-    IndicatorStore as FeatureIndicatorStore,
-)
-from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
-from ditto_datahub.domains.macro.indicator.indicator_store import (
-    IndicatorStore as MacroIndicatorStore,
-)
-from ditto_datahub.domains.macro.indicator.metadata_store import (
-    IndicatorMetadataStore as MacroIndicatorMetadataStore,
-)
-from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
-from ditto_datahub.domains.market.etf.bars import EtfBarsStore
-from ditto_datahub.domains.market.etf.nav import EtfNavStore
-from ditto_datahub.domains.market.etf.status import EtfStatusStore
-from ditto_datahub.domains.market.index.bars import IndexBarsStore
-from ditto_datahub.domains.market.index.constituent import IndexConstituentStore
-from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
-from ditto_datahub.domains.market.stock.bars import StockBarsStore
-from ditto_datahub.domains.market.stock.status import StockStatusStore
-from ditto_datahub.domains.metadata.calendar.calendar_store import (
-    CalendarStore as MetadataCalendarStore,
-)
-from ditto_datahub.domains.metadata.identity.identity_store import IdentityStore
-from ditto_datahub.domains.metadata.industry.industry_basic_store import (
-    IndustryBasicStore,
-)
-from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
-    IndustryMappingStore,
-)
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
-from ditto_datahub.domains.metadata.universe import UniverseStore
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
+from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.quality.quarantine_store import QuarantineStore
-from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
+from ditto_datahub.stores.capital.capital_store import CapitalStore
+from ditto_datahub.stores.factors.factor_metadata_store import (
+    FactorMetadataStore,
+)
+from ditto_datahub.stores.factors.factor_store import FactorStore
+from ditto_datahub.stores.features.technical import (
+    IndicatorMetadataStore as FeatureIndicatorMetadataStore,
+)
+from ditto_datahub.stores.features.technical import (
+    IndicatorStore as FeatureIndicatorStore,
+)
+from ditto_datahub.stores.fundamental.fundamental_store import FundamentalStore
+from ditto_datahub.stores.macro.indicator.indicator_store import (
+    IndicatorStore as MacroIndicatorStore,
+)
+from ditto_datahub.stores.macro.indicator.metadata_store import (
+    IndicatorMetadataStore as MacroIndicatorMetadataStore,
+)
+from ditto_datahub.stores.market.etf.adj import EtfAdjFactorStore
+from ditto_datahub.stores.market.etf.bars import EtfBarsStore
+from ditto_datahub.stores.market.etf.nav import EtfNavStore
+from ditto_datahub.stores.market.etf.status import EtfStatusStore
+from ditto_datahub.stores.market.index.bars import IndexBarsStore
+from ditto_datahub.stores.market.index.constituent import IndexConstituentStore
+from ditto_datahub.stores.market.stock.adj import StockAdjFactorStore
+from ditto_datahub.stores.market.stock.bars import StockBarsStore
+from ditto_datahub.stores.market.stock.status import StockStatusStore
+from ditto_datahub.stores.metadata.calendar.calendar_store import (
+    CalendarStore as MetadataCalendarStore,
+)
+from ditto_datahub.stores.metadata.identity.identity_store import IdentityStore
+from ditto_datahub.stores.metadata.industry.industry_basic_store import (
+    IndustryBasicStore,
+)
+from ditto_datahub.stores.metadata.industry.industry_mapping_store import (
+    IndustryMappingStore,
+)
+from ditto_datahub.stores.metadata.instrument import InstrumentStore
+from ditto_datahub.stores.metadata.universe import UniverseStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
@@ -80,6 +80,11 @@ class DomainServiceProvider(Provider):
     # ========================================================================
     # Runtime Layer
     # ========================================================================
+
+    @provide
+    def sqlite_client(self, sqlite_pool: SQLitePool) -> SQLiteClient:
+        """SQLite 客户端（基于全局连接池）."""
+        return SQLiteClient(sqlite_pool)
 
     @provide
     def instrument_id_allocator(self, sqlite_pool: SQLitePool) -> InstrumentIdAllocator:

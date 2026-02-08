@@ -171,6 +171,8 @@ class SQLitePool:
             return
 
         conn = self.get_connection()
+        if self._needs_schema_rebuild(conn):
+            self._reset_all_user_tables(conn)
         conn.executescript(schema)
         conn.commit()
 
@@ -179,6 +181,75 @@ class SQLitePool:
             event="schema_init_complete",
             status="success",
         )
+
+    @staticmethod
+    def _needs_schema_rebuild(conn: sqlite3.Connection) -> bool:
+        """
+        Detect schema shape mismatch and rebuild from canonical schema.
+
+        v5 does not keep compatibility layers. If existing tables do not satisfy
+        required identifier columns, reset all user tables and re-initialize.
+        """
+        table_names_query = (
+            "SELECT name FROM sqlite_master "
+            "WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+        )
+        table_rows = conn.execute(table_names_query).fetchall()
+        table_names = {cast(str, row[0]) for row in table_rows}
+        if not table_names:
+            return False
+
+        required_tables = {"instrument", "instrument_mapping"}
+        if not required_tables.issubset(table_names):
+            return True
+
+        instrument_columns = {
+            cast(str, item[1])
+            for item in conn.execute("PRAGMA table_info(instrument)").fetchall()
+        }
+        required_instrument_columns = {
+            "instrument_id",
+            "symbol",
+            "asset_class",
+            "exchange",
+        }
+        if not required_instrument_columns.issubset(instrument_columns):
+            return True
+
+        mapping_columns = {
+            cast(str, item[1])
+            for item in conn.execute("PRAGMA table_info(instrument_mapping)").fetchall()
+        }
+        required_mapping_columns = {"instrument_id", "source", "source_ticker"}
+        return not required_mapping_columns.issubset(mapping_columns)
+
+    def _reset_all_user_tables(self, conn: sqlite3.Connection) -> None:
+        """
+        Drop all user tables when legacy schema is detected.
+
+        v5 does not require backward compatibility. Rebuilding the schema is
+        safer than running mixed legacy/new structures.
+        """
+        logger.warning(
+            "Legacy schema detected, rebuilding all tables",
+            event="schema_legacy_rebuild",
+            db_path=str(self._db_path),
+        )
+
+        conn.execute("PRAGMA foreign_keys = OFF")
+        table_query = """
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name NOT LIKE 'sqlite_%'
+        """
+        table_rows = conn.execute(table_query).fetchall()
+        table_names = [cast(str, row[0]) for row in table_rows]
+
+        for table_name in table_names:
+            # table_name comes from sqlite_master (database metadata).
+            conn.execute(f'DROP TABLE IF EXISTS "{table_name}"')
+
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.commit()
 
     def _get_schema(self) -> str:
         """

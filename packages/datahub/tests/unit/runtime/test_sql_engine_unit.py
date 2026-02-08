@@ -163,9 +163,9 @@ class TestSqlEngine:
         )
 
         # SQLite table
-        assert engine._needs_sqlite("SELECT * FROM security") is True
+        assert engine._needs_sqlite("SELECT * FROM instrument") is True
         # With meta prefix
-        assert engine._needs_sqlite("SELECT * FROM meta.security") is True
+        assert engine._needs_sqlite("SELECT * FROM meta.instrument") is True
         # Non-SQLite table
         assert engine._needs_sqlite("SELECT * FROM stock_daily") is False
 
@@ -317,7 +317,7 @@ class TestSqlEngine:
 
     def test_allowed_datasets_whitelist(self) -> None:
         """Test that ALLOWED_DATASETS is a frozenset."""
-        # Verify security whitelist
+        # Verify instrument whitelist
         assert "stock_daily" in SqlEngine.ALLOWED_DATASETS
         assert "etf_daily" in SqlEngine.ALLOWED_DATASETS
         assert "index_daily" in SqlEngine.ALLOWED_DATASETS
@@ -328,8 +328,8 @@ class TestSqlEngine:
     def test_sqlite_tables_const(self) -> None:
         """Test that SQLITE_TABLES is a frozenset."""
         # Verify SQLite tables
-        assert "security" in SqlEngine.SQLITE_TABLES
-        assert "security_mapping" in SqlEngine.SQLITE_TABLES
+        assert "instrument" in SqlEngine.SQLITE_TABLES
+        assert "instrument_mapping" in SqlEngine.SQLITE_TABLES
         assert "trading_calendar" in SqlEngine.SQLITE_TABLES
         assert "universe" in SqlEngine.SQLITE_TABLES
         assert "dq_issue" in SqlEngine.SQLITE_TABLES

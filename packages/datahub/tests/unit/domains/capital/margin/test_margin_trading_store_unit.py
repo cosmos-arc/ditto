@@ -6,7 +6,7 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.capital.margin.margin_trading_store import (
+from ditto_datahub.stores.capital.margin.margin_trading_store import (
     MarginTradingStore,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient

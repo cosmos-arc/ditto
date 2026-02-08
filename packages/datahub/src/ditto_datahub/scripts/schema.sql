@@ -1,27 +1,27 @@
 -- SQLite Database Schema for Ditto DataHub
--- This schema supports SID allocation, 证券主数据, PIT queries,
+-- This schema supports Instrument ID allocation, 证券主数据, PIT queries,
 -- trading calendar, freeze points, and universe management.
 
--- SID 序列 (百万级范围，与 SidRange 保持一致)
-CREATE TABLE IF NOT EXISTS sid_sequence (
+-- Instrument ID 序列 (百万级范围，与 SidRange 保持一致)
+CREATE TABLE IF NOT EXISTS instrument_id_sequence (
     asset_class TEXT PRIMARY KEY,
     current_max INTEGER NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-INSERT OR IGNORE INTO sid_sequence (asset_class, current_max)
+INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
 VALUES ('stock', 1000000);
-INSERT OR IGNORE INTO sid_sequence (asset_class, current_max)
+INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
 VALUES ('etf', 2000000);
-INSERT OR IGNORE INTO sid_sequence (asset_class, current_max)
+INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
 VALUES ('index', 3000000);
-INSERT OR IGNORE INTO sid_sequence (asset_class, current_max)
+INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
 VALUES ('bond', 4000000);
-INSERT OR IGNORE INTO sid_sequence (asset_class, current_max)
+INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
 VALUES ('future', 5000000);
 
 -- 证券主表
-CREATE TABLE IF NOT EXISTS security (
-    sid INTEGER PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS instrument (
+    instrument_id INTEGER PRIMARY KEY,
     symbol TEXT NOT NULL,
     name TEXT,
     display_name TEXT,
@@ -35,24 +35,24 @@ CREATE TABLE IF NOT EXISTS security (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_security_symbol ON security(symbol);
-CREATE INDEX IF NOT EXISTS idx_security_asset_class ON security(asset_class);
+CREATE INDEX IF NOT EXISTS idx_instrument_symbol ON instrument(symbol);
+CREATE INDEX IF NOT EXISTS idx_instrument_asset_class ON instrument(asset_class);
 
 -- 证券映射 (PIT support)
-CREATE TABLE IF NOT EXISTS security_mapping (
-    sid INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS instrument_mapping (
+    instrument_id INTEGER NOT NULL,
     source TEXT NOT NULL,
-    src_code TEXT NOT NULL,
+    source_ticker TEXT NOT NULL,
     effective_from DATE NOT NULL DEFAULT '1990-01-01',
     effective_to DATE,
     is_primary BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (source, src_code, effective_from),
-    FOREIGN KEY (sid) REFERENCES security(sid)
+    PRIMARY KEY (source, source_ticker, effective_from),
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );
 CREATE INDEX IF NOT EXISTS idx_mapping_current
-    ON security_mapping(source, src_code) WHERE effective_to IS NULL;
-CREATE INDEX IF NOT EXISTS idx_mapping_sid ON security_mapping(sid);
+    ON instrument_mapping(source, source_ticker) WHERE effective_to IS NULL;
+CREATE INDEX IF NOT EXISTS idx_mapping_instrument_id ON instrument_mapping(instrument_id);
 
 -- 交易日历
 CREATE TABLE IF NOT EXISTS trading_calendar (
@@ -112,21 +112,21 @@ CREATE TABLE IF NOT EXISTS universe (
 -- 标的池成分 (PIT support)
 CREATE TABLE IF NOT EXISTS universe_constituent (
     universe_id     TEXT NOT NULL,
-    sid             INTEGER NOT NULL,
+    instrument_id             INTEGER NOT NULL,
     effective_from  DATE NOT NULL,
     effective_to    DATE,
     weight          REAL DEFAULT 1.0,
     source          TEXT,
-    src_code        TEXT,
+    source_ticker        TEXT,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (universe_id, sid, effective_from),
+    PRIMARY KEY (universe_id, instrument_id, effective_from),
     FOREIGN KEY (universe_id) REFERENCES universe(universe_id),
-    FOREIGN KEY (sid) REFERENCES security(sid)
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );
 
 -- 当前有效成分快速查询
 CREATE INDEX IF NOT EXISTS idx_constituent_current
-    ON universe_constituent(universe_id, sid) WHERE effective_to IS NULL;
+    ON universe_constituent(universe_id, instrument_id) WHERE effective_to IS NULL;
 
 -- PIT 查询优化
 CREATE INDEX IF NOT EXISTS idx_constituent_pit
@@ -135,16 +135,16 @@ CREATE INDEX IF NOT EXISTS idx_constituent_pit
 -- 指数成分股权重（PIT support）
 CREATE TABLE IF NOT EXISTS index_weight (
     index_id       TEXT NOT NULL,
-    sid            INTEGER NOT NULL,
+    instrument_id            INTEGER NOT NULL,
     effective_from DATE NOT NULL,
     effective_to   DATE,
     weight         REAL,
-    PRIMARY KEY (index_id, sid, effective_from)
+    PRIMARY KEY (index_id, instrument_id, effective_from)
 );
 
 -- 当前有效成分快速查询
 CREATE INDEX IF NOT EXISTS idx_index_weight_current
-    ON index_weight(index_id, sid) WHERE effective_to IS NULL;
+    ON index_weight(index_id, instrument_id) WHERE effective_to IS NULL;
 
 -- PIT 查询优化
 CREATE INDEX IF NOT EXISTS idx_index_weight_pit

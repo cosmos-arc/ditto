@@ -279,7 +279,7 @@ class TestDailyReconciliationEdgeCases:
         mock_comparison_store,
         mock_instrument_store,
     ) -> None:
-        """缺少 sid 列时抛出异常."""
+        """缺少 instrument_id 列时抛出异常."""
         # Arrange
         service = QualityReconciliationService(
             engine=mock_quality_engine,
@@ -288,10 +288,10 @@ class TestDailyReconciliationEdgeCases:
             instrument_store=mock_instrument_store,
         )
 
-        # 创建没有 sid 列的 DataFrame
+        # 创建没有 instrument_id 列的 DataFrame
         df_without_sid = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": ["20240101"],
                 "close": [10.0],
             }
@@ -328,7 +328,7 @@ class TestDailyReconciliationEdgeCases:
 
         # 重置 side_effect 并设置 return_value 返回没有 symbol 列的 DataFrame
         mock_instrument_store.enrich_with_symbol.side_effect = None
-        df_without_symbol = sample_primary_df.select("sid")
+        df_without_symbol = sample_primary_df.select("instrument_id")
         mock_instrument_store.enrich_with_symbol.return_value = df_without_symbol
 
         # Mock TDX 返回数据，以便代码能执行到 symbol 检查

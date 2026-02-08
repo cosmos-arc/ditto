@@ -18,10 +18,10 @@ def test_sqlite_store_write_and_read(tmp_path: Path) -> None:
     store.execute(
         """
         CREATE TABLE IF NOT EXISTS test_table (
-            sid INTEGER,
+            instrument_id INTEGER,
             trade_date TEXT,
             close REAL,
-            PRIMARY KEY (sid, trade_date)
+            PRIMARY KEY (instrument_id, trade_date)
         )
     """
     )
@@ -29,7 +29,7 @@ def test_sqlite_store_write_and_read(tmp_path: Path) -> None:
     # 写入测试数据
     test_df = pl.DataFrame(
         {
-            "sid": [1, 1, 2],
+            "instrument_id": [1, 1, 2],
             "trade_date": [
                 date(2024, 1, 1),
                 date(2024, 1, 2),
@@ -48,13 +48,13 @@ def test_sqlite_store_write_and_read(tmp_path: Path) -> None:
     # 读取数据
     read_df = store.read(
         dataset="test_table",
-        sids=[1],
+        instrument_ids=[1],
         start_date="2024-01-01",
         end_date="2024-01-02",
     )
 
     assert len(read_df) == 2
-    assert read_df["sid"].to_list() == [1, 1]
+    assert read_df["instrument_id"].to_list() == [1, 1]
 
 
 def test_sqlite_store_write_dataframe_with_keep_last(tmp_path: Path) -> None:
@@ -66,10 +66,10 @@ def test_sqlite_store_write_dataframe_with_keep_last(tmp_path: Path) -> None:
     store.execute(
         """
         CREATE TABLE IF NOT EXISTS test_table (
-            sid INTEGER,
+            instrument_id INTEGER,
             trade_date TEXT,
             close REAL,
-            PRIMARY KEY (sid, trade_date)
+            PRIMARY KEY (instrument_id, trade_date)
         )
     """
     )
@@ -77,7 +77,7 @@ def test_sqlite_store_write_dataframe_with_keep_last(tmp_path: Path) -> None:
     # 第一次写入
     df1 = pl.DataFrame(
         {
-            "sid": [1, 2],
+            "instrument_id": [1, 2],
             "trade_date": [
                 date(2024, 1, 1),
                 date(2024, 1, 1),
@@ -97,12 +97,12 @@ def test_sqlite_store_write_dataframe_with_keep_last(tmp_path: Path) -> None:
     # 第二次写入（有重复）
     df2 = pl.DataFrame(
         {
-            "sid": [1, 3],
+            "instrument_id": [1, 3],
             "trade_date": [
                 date(2024, 1, 1),
                 date(2024, 1, 1),
             ],
-            "close": [15.0, 30.0],  # sid=1 的值更新为 15.0
+            "close": [15.0, 30.0],  # instrument_id=1 的值更新为 15.0
         }
     )
 
@@ -111,13 +111,13 @@ def test_sqlite_store_write_dataframe_with_keep_last(tmp_path: Path) -> None:
         df=df2,
         on_duplicate="keep_last",
     )
-    assert result2.added == 1  # 只有 sid=3 是新增
-    assert result2.updated == 1  # sid=1 被更新
+    assert result2.added == 1  # 只有 instrument_id=3 是新增
+    assert result2.updated == 1  # instrument_id=1 被更新
 
-    # 验证 sid=1 的值被更新
+    # 验证 instrument_id=1 的值被更新
     read_df = store.read(
         dataset="test_table",
-        sids=[1],
+        instrument_ids=[1],
         start_date="2024-01-01",
         end_date="2024-01-01",
     )
@@ -135,10 +135,10 @@ def test_sqlite_store_write_dataframe_with_keep_first(tmp_path: Path) -> None:
     store.execute(
         """
         CREATE TABLE IF NOT EXISTS test_table (
-            sid INTEGER,
+            instrument_id INTEGER,
             trade_date TEXT,
             close REAL,
-            PRIMARY KEY (sid, trade_date)
+            PRIMARY KEY (instrument_id, trade_date)
         )
     """
     )
@@ -146,7 +146,7 @@ def test_sqlite_store_write_dataframe_with_keep_first(tmp_path: Path) -> None:
     # 第一次写入
     df1 = pl.DataFrame(
         {
-            "sid": [1, 2],
+            "instrument_id": [1, 2],
             "trade_date": [
                 date(2024, 1, 1),
                 date(2024, 1, 1),
@@ -164,7 +164,7 @@ def test_sqlite_store_write_dataframe_with_keep_first(tmp_path: Path) -> None:
     # 第二次写入（有重复，应该被忽略）
     df2 = pl.DataFrame(
         {
-            "sid": [1, 3],
+            "instrument_id": [1, 3],
             "trade_date": [
                 date(2024, 1, 1),
                 date(2024, 1, 1),
@@ -178,14 +178,14 @@ def test_sqlite_store_write_dataframe_with_keep_first(tmp_path: Path) -> None:
         df=df2,
         on_duplicate="keep_first",
     )
-    # sid=1 是重复的，只有 sid=3 被写入
+    # instrument_id=1 是重复的，只有 instrument_id=3 被写入
     assert result2.added == 1
     assert result2.updated == 0
 
-    # 验证 sid=1 的值保持不变
+    # 验证 instrument_id=1 的值保持不变
     read_df = store.read(
         dataset="test_table",
-        sids=[1],
+        instrument_ids=[1],
         start_date="2024-01-01",
         end_date="2024-01-01",
     )
@@ -195,7 +195,7 @@ def test_sqlite_store_write_dataframe_with_keep_first(tmp_path: Path) -> None:
 
 
 def test_sqlite_store_delete_by_sid(tmp_path: Path) -> None:
-    """测试 SQLiteStore 按 sid 删除数据."""
+    """测试 SQLiteStore 按 instrument_id 删除数据."""
     db_path = tmp_path / "test.sqlite"
     store = SQLiteStore(db_path)
 
@@ -203,10 +203,10 @@ def test_sqlite_store_delete_by_sid(tmp_path: Path) -> None:
     store.execute(
         """
         CREATE TABLE IF NOT EXISTS test_table (
-            sid INTEGER,
+            instrument_id INTEGER,
             trade_date TEXT,
             close REAL,
-            PRIMARY KEY (sid, trade_date)
+            PRIMARY KEY (instrument_id, trade_date)
         )
     """
     )
@@ -214,7 +214,7 @@ def test_sqlite_store_delete_by_sid(tmp_path: Path) -> None:
     # 写入测试数据
     df = pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": [
                 date(2024, 1, 1),
                 date(2024, 1, 2),
@@ -231,10 +231,10 @@ def test_sqlite_store_delete_by_sid(tmp_path: Path) -> None:
         on_duplicate="keep_last",
     )
 
-    # 删除 sid=1 的数据
+    # 删除 instrument_id=1 的数据
     deleted_count = store.delete(
         dataset="test_table",
-        sids=[1],
+        instrument_ids=[1],
     )
 
     assert deleted_count == 2
@@ -243,7 +243,7 @@ def test_sqlite_store_delete_by_sid(tmp_path: Path) -> None:
     read_df = store.read(dataset="test_table")
 
     assert len(read_df) == 2
-    assert read_df["sid"].to_list() == [2, 2]
+    assert read_df["instrument_id"].to_list() == [2, 2]
 
 
 def test_sqlite_store_delete_by_date_range(tmp_path: Path) -> None:
@@ -255,10 +255,10 @@ def test_sqlite_store_delete_by_date_range(tmp_path: Path) -> None:
     store.execute(
         """
         CREATE TABLE IF NOT EXISTS test_table (
-            sid INTEGER,
+            instrument_id INTEGER,
             trade_date TEXT,
             close REAL,
-            PRIMARY KEY (sid, trade_date)
+            PRIMARY KEY (instrument_id, trade_date)
         )
     """
     )
@@ -266,7 +266,7 @@ def test_sqlite_store_delete_by_date_range(tmp_path: Path) -> None:
     # 写入测试数据
     df = pl.DataFrame(
         {
-            "sid": [1, 1, 1],
+            "instrument_id": [1, 1, 1],
             "trade_date": [
                 date(2024, 1, 1),
                 date(2024, 1, 2),
@@ -307,10 +307,10 @@ def test_sqlite_store_read_filters(tmp_path: Path) -> None:
     store.execute(
         """
         CREATE TABLE IF NOT EXISTS test_table (
-            sid INTEGER,
+            instrument_id INTEGER,
             trade_date TEXT,
             close REAL,
-            PRIMARY KEY (sid, trade_date)
+            PRIMARY KEY (instrument_id, trade_date)
         )
     """
     )
@@ -318,7 +318,7 @@ def test_sqlite_store_read_filters(tmp_path: Path) -> None:
     # 写入测试数据
     df = pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2, 3],
+            "instrument_id": [1, 1, 2, 2, 3],
             "trade_date": [
                 date(2024, 1, 1),
                 date(2024, 1, 2),
@@ -336,13 +336,13 @@ def test_sqlite_store_read_filters(tmp_path: Path) -> None:
         on_duplicate="keep_last",
     )
 
-    # 测试按 sid 过滤
+    # 测试按 instrument_id 过滤
     result = store.read(
         dataset="test_table",
-        sids=[1, 2],
+        instrument_ids=[1, 2],
     )
     assert len(result) == 4
-    assert set(result["sid"].to_list()) == {1, 2}
+    assert set(result["instrument_id"].to_list()) == {1, 2}
 
     # 测试按日期范围过滤
     result = store.read(
@@ -356,12 +356,12 @@ def test_sqlite_store_read_filters(tmp_path: Path) -> None:
     # 测试组合过滤
     result = store.read(
         dataset="test_table",
-        sids=[1],
+        instrument_ids=[1],
         start_date="2024-01-02",
         end_date="2024-01-02",
     )
     assert len(result) == 1
-    assert result["sid"][0] == 1
+    assert result["instrument_id"][0] == 1
     assert result["trade_date"][0] == date(2024, 1, 2)
 
 
@@ -374,10 +374,10 @@ def test_sqlite_store_execute_and_fetch(tmp_path: Path) -> None:
     store.execute(
         """
         CREATE TABLE IF NOT EXISTS test_table (
-            sid INTEGER,
+            instrument_id INTEGER,
             trade_date TEXT,
             close REAL,
-            PRIMARY KEY (sid, trade_date)
+            PRIMARY KEY (instrument_id, trade_date)
         )
     """
     )
@@ -385,7 +385,7 @@ def test_sqlite_store_execute_and_fetch(tmp_path: Path) -> None:
     # 写入测试数据
     df = pl.DataFrame(
         {
-            "sid": [1, 2],
+            "instrument_id": [1, 2],
             "trade_date": [
                 date(2024, 1, 1),
                 date(2024, 1, 1),
@@ -401,16 +401,16 @@ def test_sqlite_store_execute_and_fetch(tmp_path: Path) -> None:
     )
 
     # 测试 fetchone
-    row = store.fetchone("SELECT * FROM test_table WHERE sid = ?", [1])
+    row = store.fetchone("SELECT * FROM test_table WHERE instrument_id = ?", [1])
     assert row is not None
-    assert row["sid"] == 1
+    assert row["instrument_id"] == 1
     assert row["close"] == 10.0
 
     # 测试 fetchall
-    rows = store.fetchall("SELECT * FROM test_table ORDER BY sid")
+    rows = store.fetchall("SELECT * FROM test_table ORDER BY instrument_id")
     assert len(rows) == 2
-    assert rows[0]["sid"] == 1
-    assert rows[1]["sid"] == 2
+    assert rows[0]["instrument_id"] == 1
+    assert rows[1]["instrument_id"] == 2
 
 
 def test_sqlite_store_count_rows(tmp_path: Path) -> None:
@@ -422,10 +422,10 @@ def test_sqlite_store_count_rows(tmp_path: Path) -> None:
     store.execute(
         """
         CREATE TABLE IF NOT EXISTS test_table (
-            sid INTEGER,
+            instrument_id INTEGER,
             trade_date TEXT,
             close REAL,
-            PRIMARY KEY (sid, trade_date)
+            PRIMARY KEY (instrument_id, trade_date)
         )
     """
     )
@@ -433,7 +433,7 @@ def test_sqlite_store_count_rows(tmp_path: Path) -> None:
     # 写入测试数据
     df = pl.DataFrame(
         {
-            "sid": [1, 2, 3],
+            "instrument_id": [1, 2, 3],
             "trade_date": [
                 date(2024, 1, 1),
                 date(2024, 1, 1),

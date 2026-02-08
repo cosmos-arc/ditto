@@ -34,7 +34,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "510300.SH")
+            - source_ticker: Source code (e.g., "510300.SH")
             - symbol: Display symbol (e.g., "510300")
             - name: ETF name
             - exchange: Exchange code
@@ -69,7 +69,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
 
         Returns:
             DataFrame with columns (matching ETF_DAILY_SCHEMA):
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - open, high, low, close, pre_close: Float64
             - volume, amount: Float64
@@ -110,7 +110,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - knowledge_date: Date (PIT safety: when this data became known)
             - adj_factor: Float64

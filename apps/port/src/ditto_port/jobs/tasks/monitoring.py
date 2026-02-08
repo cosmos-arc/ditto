@@ -1,4 +1,4 @@
-"""Ingestion quality monitoring task."""
+"""数据摄取质量监控任务."""
 
 from __future__ import annotations
 

@@ -30,6 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from ditto_port.api.routes import ingestion, market, metadata, portfolio
 from ditto_port.exceptions import DittoException
 from ditto_port.middleware import (
     ditto_exception_handler,
@@ -42,6 +43,7 @@ from ditto_port.registry import (
     CoreProvider,
     DataHubProvider,
     DataSourcesProvider,
+    DomainServiceProvider,
 )
 
 # Initialize project root
@@ -104,6 +106,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     container = make_async_container(
         ConfigProvider(),
         CoreProvider(),
+        DomainServiceProvider(),
         DataHubProvider(),
         DataSourcesProvider(),
     )
@@ -165,6 +168,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 挂载业务路由
+app.include_router(market.router, prefix="/api/v1")
+app.include_router(metadata.router, prefix="/api/v1")
+app.include_router(ingestion.router, prefix="/api/v1")
+app.include_router(portfolio.router, prefix="/api/v1")
 
 
 # Request logging middleware

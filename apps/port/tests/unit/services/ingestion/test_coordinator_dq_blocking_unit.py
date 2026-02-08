@@ -28,8 +28,8 @@ class TestDQBlockingBehavior:
         mock_source = mocker.MagicMock()
 
         # Mock metadata manager to not skip
-        mock_hub.ingestion_log = mocker.MagicMock()
-        mock_hub.bars = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
+        mock_hub.market = mocker.MagicMock()
 
         # Create coordinator
         coordinator = IngestionCoordinator(
@@ -42,7 +42,9 @@ class TestDQBlockingBehavior:
         mocker.patch.object(
             coordinator,
             "_fetch_data",
-            return_value=pl.DataFrame({"src_code": ["000001.SZ"], "close": [None]}),
+            return_value=pl.DataFrame(
+                {"source_ticker": ["000001.SZ"], "close": [None]}
+            ),
         )
 
         # Mock _data_writer.write_data to return blocked result
@@ -84,8 +86,8 @@ class TestDQBlockingBehavior:
         mock_source = mocker.MagicMock()
 
         # Mock metadata manager to not skip
-        mock_hub.ingestion_log = mocker.MagicMock()
-        mock_hub.bars = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
+        mock_hub.market = mocker.MagicMock()
 
         # Create coordinator
         coordinator = IngestionCoordinator(
@@ -98,7 +100,9 @@ class TestDQBlockingBehavior:
         mocker.patch.object(
             coordinator,
             "_fetch_data",
-            return_value=pl.DataFrame({"src_code": ["000001.SZ"], "close": [None]}),
+            return_value=pl.DataFrame(
+                {"source_ticker": ["000001.SZ"], "close": [None]}
+            ),
         )
 
         # Mock _data_writer.write_data to return blocked result
@@ -122,9 +126,9 @@ class TestDQBlockingBehavior:
         coordinator.ingest_date("stock_daily", "2024-01-02")
 
         # Verify log was saved with FAIL status
-        mock_hub.ingestion_log.save_log.assert_called_once()
+        mock_hub.ingestion_log_store.save_log.assert_called_once()
         # 获取位置参数中的 IngestionLog 对象
-        call_args = mock_hub.ingestion_log.save_log.call_args.args
+        call_args = mock_hub.ingestion_log_store.save_log.call_args.args
         log_entry = call_args[0]
 
         assert isinstance(log_entry, IngestionLog)

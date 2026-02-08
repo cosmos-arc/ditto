@@ -17,13 +17,13 @@ class SQLiteClient:
     Store classes use this client through composition.
     """
 
-    # Allowed table names for count() method (security whitelist)
+    # Allowed table names for count() method (instrument whitelist)
     ALLOWED_TABLES = frozenset(
         [
-            "sid_sequence",
+            "instrument_id_sequence",
             "price_limit_config",
-            "security",
-            "security_mapping",
+            "instrument",
+            "instrument_mapping",
             "trading_calendar",
             "freeze_point",
             "universe",

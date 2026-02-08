@@ -120,7 +120,7 @@ class TestPitHelperProperties:
         - Result should contain ON clause
         - Result should contain <= comparison with asof_date
         """
-        join_keys = ["t1.sid = t2.sid"]
+        join_keys = ["t1.instrument_id = t2.instrument_id"]
         result = PitHelper.add_pit_join(left_table, right_table, join_keys, asof_date)
 
         assert "LEFT JOIN" in result, "Result should contain LEFT JOIN"
@@ -140,7 +140,7 @@ class TestPitHelperProperties:
         """Property: Custom date column should appear in JOIN condition."""
         left_table = "table1 t1"
         right_table = f"table2 {right_alias}"
-        join_keys = ["t1.sid = t2.sid"]
+        join_keys = ["t1.instrument_id = t2.instrument_id"]
         result = PitHelper.add_pit_join(
             left_table, right_table, join_keys, asof_date, date_column
         )
@@ -159,7 +159,7 @@ class TestPitHelperProperties:
         - Result should contain AS (CTE definition)
         - Result should contain SELECT * FROM cte_name
         """
-        query = "SELECT sid, close FROM stock_daily"
+        query = "SELECT instrument_id, close FROM stock_daily"
         result = PitHelper.wrap_pit_cte(query, cte_name, asof_date)
 
         assert result.startswith("WITH"), "CTE should start with WITH"

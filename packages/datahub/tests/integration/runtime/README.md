@@ -8,7 +8,7 @@ Runtime 集成测试验证运行时基础设施的多组件协作。
 |----------|----------|------|
 | `test_freeze_manager.py` | 冻结管理器创建、恢复、校验和 | `integration` |
 | `test_freeze_manager_checksum.py` | 冻结数据校验和验证（MD5/SHA256） | `integration` |
-| `test_sid_allocator.py` | SID 分配器并发分配和回收 | `integration` |
+| `test_instrument_id_allocator.py` | Instrument ID 分配器并发分配和回收 | `integration` |
 | `test_sqlite_pool.py` | SQLite 连接池并发访问 | `integration` |
 | `test_sql_engine.py` | SQL 引擎查询执行 | `integration` |
 | `test_sql_engine_injection.py` | SQL 注入防护 | `integration` |
@@ -28,16 +28,16 @@ Runtime 集成测试验证运行时基础设施的多组件协作。
 - `test_freeze_manager.py` - 基础功能测试
 - `test_freeze_manager_checksum.py` - 校验和验证
 
-### SID 分配器（SidAllocator）
+### Instrument ID 分配器（InstrumentIdAllocator）
 
 **测试内容**：
-- 并发 SID 分配
-- SID 回收和重用
+- 并发 Instrument ID 分配
+- Instrument ID 回收和重用
 - 分配器状态管理
 - 线程安全性
 
 **测试文件**：
-- `test_sid_allocator.py`
+- `test_instrument_id_allocator.py`
 
 ### SQLite 连接池（SQLitePool）
 
@@ -76,8 +76,8 @@ pixi run -e dev pytest packages/datahub/tests/integration/runtime -v
 # 冻结管理器
 pixi run -e dev pytest packages/datahub/tests/integration/runtime/test_freeze_manager.py -v
 
-# SID 分配器
-pixi run -e dev pytest packages/datahub/tests/integration/runtime/test_sid_allocator.py -v
+# Instrument ID 分配器
+pixi run -e dev pytest packages/datahub/tests/integration/runtime/test_instrument_id_allocator.py -v
 
 # SQLite 连接池
 pixi run -e dev pytest packages/datahub/tests/integration/runtime/test_sqlite_pool.py -v

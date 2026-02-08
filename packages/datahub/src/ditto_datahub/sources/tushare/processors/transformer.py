@@ -59,7 +59,7 @@ class ColumnMapping:
 # OHLCV 数据的通用配置
 # knowledge_date = trade_date + 1（日行情数据 T+1 可知）
 DAILY_OHLCV_MAPPING = ColumnMapping(
-    rename={"ts_code": "src_code", "vol": "volume", "pct_chg": "pct_change"},
+    rename={"ts_code": "source_ticker", "vol": "volume", "pct_chg": "pct_change"},
     date_columns={"trade_date": "%Y%m%d"},
     float_columns=[
         "open",
@@ -75,7 +75,7 @@ DAILY_OHLCV_MAPPING = ColumnMapping(
         "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
     },
     output_columns=(
-        "src_code",
+        "source_ticker",
         "trade_date",
         "knowledge_date",
         "open",
@@ -101,51 +101,51 @@ CALENDAR_MAPPING = ColumnMapping(
 # 复权因子配置（股票）
 # knowledge_date = trade_date（数据即日可用，直接复制已转换的 Date 列）
 ADJ_FACTOR_MAPPING = ColumnMapping(
-    rename={"ts_code": "src_code"},
+    rename={"ts_code": "source_ticker"},
     date_columns={"trade_date": "%Y%m%d"},
     float_columns=["adj_factor"],
     computed_columns={"knowledge_date": pl.col("trade_date")},
-    output_columns=("src_code", "trade_date", "knowledge_date", "adj_factor"),
+    output_columns=("source_ticker", "trade_date", "knowledge_date", "adj_factor"),
 )
 
 # 复权因子配置（ETF/基金）- 与股票复权因子结构相同
 FUND_ADJ_MAPPING = ColumnMapping(
-    rename={"ts_code": "src_code"},
+    rename={"ts_code": "source_ticker"},
     date_columns={"trade_date": "%Y%m%d"},
     float_columns=["adj_factor"],
     computed_columns={"knowledge_date": pl.col("trade_date")},
-    output_columns=("src_code", "trade_date", "knowledge_date", "adj_factor"),
+    output_columns=("source_ticker", "trade_date", "knowledge_date", "adj_factor"),
 )
 
 # ETF 基本信息配置
 ETF_BASIC_MAPPING = ColumnMapping(
-    rename={"ts_code": "src_code"},
+    rename={"ts_code": "source_ticker"},
     date_columns={"list_date": "%Y%m%d"},
     float_columns=[],
     computed_columns={
-        "symbol": pl.col("src_code").str.split(".").list.get(0),
-        "exchange": pl.col("src_code")
+        "symbol": pl.col("source_ticker").str.split(".").list.get(0),
+        "exchange": pl.col("source_ticker")
         .str.split(".")
         .list.get(1)
         .replace({"SH": "SSE", "SZ": "SZSE"}),
     },
-    output_columns=("src_code", "symbol", "name", "exchange", "list_date"),
+    output_columns=("source_ticker", "symbol", "name", "exchange", "list_date"),
 )
 
 # 股票基本信息配置
 STOCK_BASIC_MAPPING = ColumnMapping(
-    rename={"ts_code": "src_code"},
+    rename={"ts_code": "source_ticker"},
     date_columns={"list_date": "%Y%m%d"},
     float_columns=[],
-    output_columns=("src_code", "symbol", "name", "exchange", "list_date"),
+    output_columns=("source_ticker", "symbol", "name", "exchange", "list_date"),
 )
 
 # 涨跌停价格配置
 STOCK_LIMIT_MAPPING = ColumnMapping(
-    rename={"ts_code": "src_code"},
+    rename={"ts_code": "source_ticker"},
     date_columns={"trade_date": "%Y%m%d"},
     float_columns=["up_limit", "down_limit"],
-    output_columns=("src_code", "trade_date", "up_limit", "down_limit"),
+    output_columns=("source_ticker", "trade_date", "up_limit", "down_limit"),
 )
 
 

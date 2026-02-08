@@ -1,4 +1,4 @@
-"""Observability configuration models."""
+"""可观测性配置模型."""
 
 from __future__ import annotations
 

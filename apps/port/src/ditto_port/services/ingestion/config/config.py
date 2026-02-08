@@ -1,4 +1,4 @@
-"""Ingestion configuration."""
+"""数据摄取配置."""
 
 from __future__ import annotations
 

@@ -85,6 +85,7 @@ ipython_config.py
 /data
 datasets/
 assets/
+/.temp
 
 # 模型文件
 # 模型文件通常较大，不建议直接存入 Git

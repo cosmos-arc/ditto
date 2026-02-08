@@ -18,7 +18,7 @@
 |----------|----------|
 | `test_freeze_manager.py` | 冻结管理器创建、恢复、校验和 |
 | `test_freeze_manager_checksum.py` | 冻结数据校验和验证 |
-| `test_sid_allocator.py` | SID 分配器并发分配和回收 |
+| `test_instrument_id_allocator.py` | Instrument ID 分配器并发分配和回收 |
 | `test_sqlite_pool.py` | SQLite 连接池并发访问 |
 | `test_sql_engine.py` | SQL 引擎查询执行 |
 | `test_sql_engine_injection.py` | SQL 注入防护 |

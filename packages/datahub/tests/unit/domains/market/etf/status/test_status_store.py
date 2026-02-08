@@ -8,7 +8,7 @@ from typing import Any
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.market.etf.status import EtfStatusStore
+from ditto_datahub.stores.market.etf.status import EtfStatusStore
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def sample_status_df() -> pl.DataFrame:
     """Create sample ETF status DataFrame."""
     return pl.DataFrame(
         {
-            "sid": [1500001, 1500001, 1500001, 1500002],
+            "instrument_id": [1500001, 1500001, 1500001, 1500002],
             "trade_date": [
                 date(2024, 1, 2),
                 date(2024, 1, 3),
@@ -59,7 +59,7 @@ class TestEtfStatusStore:
         store.write(sample_status_df, year=2024)
         df = store.read()
         assert len(df) == 4
-        assert "sid" in df.columns
+        assert "instrument_id" in df.columns
         assert "trade_date" in df.columns
         assert "list_status" in df.columns
         assert "is_suspended" in df.columns
@@ -68,11 +68,11 @@ class TestEtfStatusStore:
     def test_read_filter_by_sids(
         self, store: EtfStatusStore, sample_status_df: pl.DataFrame
     ) -> None:
-        """Test read filtered by security IDs."""
+        """Test read filtered by instrument IDs."""
         store.write(sample_status_df, year=2024)
-        df = store.read(sids=[1500001])
+        df = store.read(instrument_ids=[1500001])
         assert len(df) == 3
-        assert df["sid"].unique().to_list() == [1500001]
+        assert df["instrument_id"].unique().to_list() == [1500001]
 
     def test_read_filter_by_date_range(
         self, store: EtfStatusStore, sample_status_df: pl.DataFrame
@@ -191,7 +191,7 @@ class TestEtfStatusStore:
     ) -> None:
         """Test count with filters applied."""
         store.write(sample_status_df, year=2024)
-        count = store.count(sids=[1500001])
+        count = store.count(instrument_ids=[1500001])
         assert count == 3
 
     # ============ get_date_range tests ============
@@ -211,20 +211,20 @@ class TestEtfStatusStore:
         assert start == "2024-01-02"
         assert end == "2024-01-04"
 
-    # ============ list_sids tests ============
+    # ============ list_instrument_ids tests ============
 
     def test_list_sids_empty(self, store: EtfStatusStore) -> None:
-        """Test list_sids with no data."""
-        sids = store.list_sids()
-        assert sids == []
+        """Test list_instrument_ids with no data."""
+        instrument_ids = store.list_instrument_ids()
+        assert instrument_ids == []
 
     def test_list_sids(
         self, store: EtfStatusStore, sample_status_df: pl.DataFrame
     ) -> None:
-        """Test list_sids returns unique security IDs."""
+        """Test list_instrument_ids returns unique instrument IDs."""
         store.write(sample_status_df, year=2024)
-        sids = store.list_sids()
-        assert sids == [1500001, 1500002]
+        instrument_ids = store.list_instrument_ids()
+        assert instrument_ids == [1500001, 1500002]
 
 
 class TestEtfStatusRiskControlFields:
@@ -244,7 +244,7 @@ class TestEtfStatusRiskControlFields:
     def status_df(self) -> pl.DataFrame:
         """Create test data with status information."""
         data: dict[str, list[Any]] = {
-            "sid": [1500001, 1500002, 1500003],
+            "instrument_id": [1500001, 1500002, 1500003],
             "trade_date": [
                 date(2024, 1, 5),
                 date(2024, 1, 5),
@@ -261,7 +261,7 @@ class TestEtfStatusRiskControlFields:
     ) -> None:
         """Test suspension status fields are correctly stored and retrieved."""
         store.write(status_df, year=2024)
-        result = store.read(sids=[1500002])
+        result = store.read(instrument_ids=[1500002])
 
         assert len(result) == 1
         assert result["is_suspended"][0] is True
@@ -271,7 +271,7 @@ class TestEtfStatusRiskControlFields:
     ) -> None:
         """Test list_status field is correctly stored and retrieved."""
         store.write(status_df, year=2024)
-        result = store.read(sids=[1500003])
+        result = store.read(instrument_ids=[1500003])
 
         assert len(result) == 1
         assert result["list_status"][0] == "D"  # Delisted
@@ -281,7 +281,7 @@ class TestEtfStatusRiskControlFields:
     ) -> None:
         """Test filtering works correctly with status fields."""
         store.write(status_df, year=2024)
-        result = store.read(sids=[1500001, 1500002])
+        result = store.read(instrument_ids=[1500001, 1500002])
 
         assert len(result) == 2
         # Verify all status fields are present

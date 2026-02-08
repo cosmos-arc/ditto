@@ -277,7 +277,7 @@ import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
 interface Position {
-  sid: string;
+  instrumentId: string;
   symbol: string;
   shares: number;
   marketValue: number;
@@ -306,7 +306,7 @@ interface PortfolioStore {
   // 操作
   setCurrentPortfolio: (portfolio: PortfolioStore['currentPortfolio']) => void;
   setRebalancePlan: (plan: RebalancePlan | null) => void;
-  togglePositionSelection: (sid: string) => void;
+  togglePositionSelection: (instrumentId: string) => void;
   clearSelection: () => void;
   setView: (view: 'table' | 'chart') => void;
   setSorting: (sortBy: string, sortOrder: 'asc' | 'desc') => void;

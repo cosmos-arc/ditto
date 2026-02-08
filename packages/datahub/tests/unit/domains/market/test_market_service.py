@@ -7,12 +7,14 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.market.market_service import (
+from ditto_datahub.models import InstrumentIdRange
+from ditto_datahub.services.market.market_service import (
     AdjType,
     MarketBarsQuery,
+    MarketConstituentsQuery,
     MarketService,
+    MarketWriteCommand,
 )
-from ditto_datahub.models import InstrumentIdRange
 
 
 @pytest.fixture
@@ -139,7 +141,7 @@ def sample_stock_bars_df() -> pl.DataFrame:
     """Create sample stock bars DataFrame."""
     return pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": [
                 date(2024, 1, 2),
                 date(2024, 1, 3),
@@ -161,7 +163,7 @@ def sample_adj_factor_df() -> pl.DataFrame:
     """Create sample adjustment factor DataFrame."""
     return pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": [
                 date(2024, 1, 2),
                 date(2024, 1, 3),
@@ -184,7 +186,7 @@ def sample_status_df() -> pl.DataFrame:
     """Create sample stock status DataFrame."""
     return pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": [
                 date(2024, 1, 2),
                 date(2024, 1, 3),
@@ -205,8 +207,8 @@ class TestMarketBarsQuery:
 
     def test_query_creation_with_default_values(self) -> None:
         """Test query creation with default values."""
-        query = MarketBarsQuery(sids=[1, 2, 3])
-        assert query.sids == [1, 2, 3]
+        query = MarketBarsQuery(instrument_ids=[1, 2, 3])
+        assert query.instrument_ids == [1, 2, 3]
         assert query.start is None
         assert query.end is None
         assert query.adj == AdjType.NONE
@@ -219,7 +221,7 @@ class TestMarketBarsQuery:
     def test_query_creation_with_values(self) -> None:
         """Test query creation with specified values."""
         query = MarketBarsQuery(
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start="2024-01-01",
             end="2024-12-31",
             adj=AdjType.QFQ,
@@ -229,7 +231,7 @@ class TestMarketBarsQuery:
             with_status=True,
             raw=True,
         )
-        assert query.sids == [1, 2]
+        assert query.instrument_ids == [1, 2]
         assert query.start == "2024-01-01"
         assert query.end == "2024-12-31"
         assert query.adj == AdjType.QFQ
@@ -243,9 +245,9 @@ class TestMarketBarsQuery:
         """Test that query is frozen (immutable)."""
         from dataclasses import FrozenInstanceError
 
-        query = MarketBarsQuery(sids=[1, 2])
+        query = MarketBarsQuery(instrument_ids=[1, 2])
         with pytest.raises(FrozenInstanceError):
-            query.sids = [3, 4]  # type: ignore
+            query.instrument_ids = [3, 4]  # type: ignore
 
 
 class TestMarketServiceInit:
@@ -321,8 +323,8 @@ class TestMarketServiceGetBars:
     """Test suite for MarketService.get_bars()."""
 
     def test_get_bars_empty_sid_list(self, market_service: MarketService) -> None:
-        """Test get_bars with empty SID list."""
-        query = MarketBarsQuery(sids=[])
+        """Test get_bars with empty Instrument ID list."""
+        query = MarketBarsQuery(instrument_ids=[])
         result = market_service.get_bars(query)
         assert result.is_empty()
 
@@ -335,7 +337,9 @@ class TestMarketServiceGetBars:
         """Test get_bars for stock data."""
         mock_stock_bars_store.read.return_value = sample_stock_bars_df
 
-        query = MarketBarsQuery(sids=[1, 2], start="2024-01-01", end="2024-12-31")
+        query = MarketBarsQuery(
+            instrument_ids=[1, 2], start="2024-01-01", end="2024-12-31"
+        )
         result = market_service.get_bars(query)
 
         assert not result.is_empty()
@@ -355,7 +359,10 @@ class TestMarketServiceGetBars:
         mock_stock_status_store.read.return_value = sample_status_df
 
         query = MarketBarsQuery(
-            sids=[1, 2], with_status=True, start="2024-01-01", end="2024-12-31"
+            instrument_ids=[1, 2],
+            with_status=True,
+            start="2024-01-01",
+            end="2024-12-31",
         )
         result = market_service.get_bars(query)
 
@@ -374,7 +381,7 @@ class TestMarketServiceGetBars:
         mock_stock_bars_store.read.return_value = sample_stock_bars_df
 
         query = MarketBarsQuery(
-            sids=[1, 2], with_status=True, adj=AdjType.QFQ, raw=True
+            instrument_ids=[1, 2], with_status=True, adj=AdjType.QFQ, raw=True
         )
         result = market_service.get_bars(query)
 
@@ -392,10 +399,10 @@ class TestMarketServiceGetBars:
         """Test get_bars for ETF data."""
         mock_etf_bars_store.read.return_value = sample_stock_bars_df
 
-        # 使用 ETF SID 范围 (2M+)
+        # 使用 ETF Instrument ID 范围 (2M+)
         etf_range = InstrumentIdRange.get_range("etf")
         query = MarketBarsQuery(
-            sids=[etf_range.min_id, etf_range.min_id + 1],
+            instrument_ids=[etf_range.min_id, etf_range.min_id + 1],
             asset_class="etf",
         )
         result = market_service.get_bars(query)
@@ -407,9 +414,11 @@ class TestMarketServiceGetBars:
         self, market_service: MarketService
     ) -> None:
         """Test get_bars for index when index store is None."""
-        # 使用 Index SID 范围 (3M+)
+        # 使用 Index Instrument ID 范围 (3M+)
         index_range = InstrumentIdRange.get_range("index")
-        query = MarketBarsQuery(sids=[index_range.min_id], asset_class="index")
+        query = MarketBarsQuery(
+            instrument_ids=[index_range.min_id], asset_class="index"
+        )
         result = market_service.get_bars(query)
 
         # Should return empty DataFrame when store is None
@@ -425,33 +434,39 @@ class TestMarketServiceAssetClassDetection:
         """Test detecting stock asset class from SIDs."""
         # Use valid stock SIDs (assuming range 1-999999)
         stock_range = InstrumentIdRange.get_range("stock")
-        query = MarketBarsQuery(sids=[stock_range.min_id, stock_range.max_id])
-        sids, asset_class = market_service._resolve_sids_and_asset_class(query)
+        query = MarketBarsQuery(instrument_ids=[stock_range.min_id, stock_range.max_id])
+        instrument_ids, asset_class = (
+            market_service._resolve_instrument_ids_and_asset_class(query)
+        )
 
         assert asset_class == "stock"
-        assert len(sids) == 2
+        assert len(instrument_ids) == 2
 
     def test_detect_asset_class_from_etf_sids(
         self, market_service: MarketService
     ) -> None:
         """Test detecting ETF asset class from SIDs."""
         etf_range = InstrumentIdRange.get_range("etf")
-        query = MarketBarsQuery(sids=[etf_range.min_id, etf_range.max_id])
-        sids, asset_class = market_service._resolve_sids_and_asset_class(query)
+        query = MarketBarsQuery(instrument_ids=[etf_range.min_id, etf_range.max_id])
+        instrument_ids, asset_class = (
+            market_service._resolve_instrument_ids_and_asset_class(query)
+        )
 
         assert asset_class == "etf"
-        assert len(sids) == 2
+        assert len(instrument_ids) == 2
 
     def test_detect_asset_class_from_index_sids(
         self, market_service: MarketService
     ) -> None:
         """Test detecting index asset class from SIDs."""
         index_range = InstrumentIdRange.get_range("index")
-        query = MarketBarsQuery(sids=[index_range.min_id, index_range.max_id])
-        sids, asset_class = market_service._resolve_sids_and_asset_class(query)
+        query = MarketBarsQuery(instrument_ids=[index_range.min_id, index_range.max_id])
+        instrument_ids, asset_class = (
+            market_service._resolve_instrument_ids_and_asset_class(query)
+        )
 
         assert asset_class == "index"
-        assert len(sids) == 2
+        assert len(instrument_ids) == 2
 
     def test_detect_mixed_asset_class_raises_error(
         self, market_service: MarketService
@@ -460,21 +475,21 @@ class TestMarketServiceAssetClassDetection:
         stock_range = InstrumentIdRange.get_range("stock")
         etf_range = InstrumentIdRange.get_range("etf")
 
-        query = MarketBarsQuery(sids=[stock_range.min_id, etf_range.min_id])
+        query = MarketBarsQuery(instrument_ids=[stock_range.min_id, etf_range.min_id])
 
         with pytest.raises(ValueError, match="检测到混合资产类别查询"):
-            market_service._resolve_sids_and_asset_class(query)
+            market_service._resolve_instrument_ids_and_asset_class(query)
 
     def test_explicit_asset_class_mismatch_raises_error(
         self, market_service: MarketService
     ) -> None:
         """Test that explicit asset_class mismatch with detected raises ValueError."""
         stock_range = InstrumentIdRange.get_range("stock")
-        # Stock SID with explicit ETF asset_class should raise error
-        query = MarketBarsQuery(sids=[stock_range.min_id], asset_class="etf")
+        # Stock Instrument ID with explicit ETF asset_class should raise error
+        query = MarketBarsQuery(instrument_ids=[stock_range.min_id], asset_class="etf")
 
         with pytest.raises(ValueError, match="显式指定的资产类别"):
-            market_service._resolve_sids_and_asset_class(query)
+            market_service._resolve_instrument_ids_and_asset_class(query)
 
 
 class TestMarketServiceDateParsing:
@@ -483,7 +498,7 @@ class TestMarketServiceDateParsing:
     def test_parse_dates_with_all_params(self, market_service: MarketService) -> None:
         """Test parsing dates with all parameters."""
         query = MarketBarsQuery(
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start="2024-01-01",
             end="2024-12-31",
             asof="2024-06-30",
@@ -496,7 +511,7 @@ class TestMarketServiceDateParsing:
 
     def test_parse_dates_with_none_params(self, market_service: MarketService) -> None:
         """Test parsing dates with None parameters."""
-        query = MarketBarsQuery(sids=[1, 2])
+        query = MarketBarsQuery(instrument_ids=[1, 2])
         start, end, asof = market_service._parse_dates(query)
 
         assert start is None
@@ -517,7 +532,7 @@ class TestMarketServiceLoadBarsCore:
         mock_stock_bars_store.read.return_value = sample_stock_bars_df
 
         result = market_service._load_bars_core(
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
             asset_class="stock",
@@ -536,7 +551,7 @@ class TestMarketServiceLoadBarsCore:
         mock_etf_bars_store.read.return_value = sample_stock_bars_df
 
         result = market_service._load_bars_core(
-            sids=[1500001],
+            instrument_ids=[1500001],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
             asset_class="etf",
@@ -550,7 +565,7 @@ class TestMarketServiceLoadBarsCore:
     ) -> None:
         """Test loading index bars when store is None."""
         result = market_service._load_bars_core(
-            sids=[1],
+            instrument_ids=[1],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
             asset_class="index",
@@ -574,7 +589,7 @@ class TestMarketServiceApplyAdjustment:
         result = market_service._apply_adjustment(
             df=sample_stock_bars_df,
             adj=AdjType.QFQ,
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
             asof=None,
@@ -596,7 +611,7 @@ class TestMarketServiceApplyAdjustment:
         result = market_service._apply_adjustment(
             df=sample_stock_bars_df,
             adj=AdjType.QFQ,
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
             asof=None,
@@ -623,7 +638,7 @@ class TestMarketServiceEnrichWithStatus:
 
         result = market_service._enrich_with_status(
             df=sample_stock_bars_df,
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start="2024-01-01",
             end="2024-12-31",
         )
@@ -645,7 +660,7 @@ class TestMarketServiceEnrichWithStatus:
 
         result = market_service._enrich_with_status(
             df=sample_stock_bars_df,
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
         )
@@ -669,19 +684,21 @@ class TestMarketServiceGetConstituents:
         # Mock the store's get method
         mock_index_constituent_store.get.return_value = pl.DataFrame(
             {
-                "index_sid": [1, 1, 1],
-                "stock_sid": [100, 101, 102],
+                "index_instrument_id": [1, 1, 1],
+                "constituent_instrument_id": [100, 101, 102],
                 "effective_date": ["2024-01-01", "2024-01-01", "2024-01-01"],
                 "weight": [0.4, 0.35, 0.25],
             }
         )
 
-        result = market_service.get_constituents(index_sid=1, asof="2024-01-01")
+        result = market_service.get_constituents(
+            index_instrument_id=1, asof="2024-01-01"
+        )
 
         # Should return the constituents
         assert len(result) == 3
-        assert "index_sid" in result.columns
-        assert "stock_sid" in result.columns
+        assert "index_instrument_id" in result.columns
+        assert "constituent_instrument_id" in result.columns
         assert "effective_date" in result.columns
         assert "weight" in result.columns
 
@@ -696,14 +713,14 @@ class TestMarketServiceGetConstituents:
         """Test constituents query with default asof date (today)."""
         mock_index_constituent_store.get.return_value = pl.DataFrame(
             {
-                "index_sid": [1],
-                "stock_sid": [100],
+                "index_instrument_id": [1],
+                "constituent_instrument_id": [100],
                 "effective_date": ["2024-01-01"],
                 "weight": [1.0],
             }
         )
 
-        result = market_service.get_constituents(index_sid=1)
+        result = market_service.get_constituents(index_instrument_id=1)
 
         # Should return data with today's date
         assert len(result) == 1
@@ -722,7 +739,7 @@ class TestMarketServiceGetConstituents:
             NotImplementedError,
             match="IndexConstituentStore not configured",
         ):
-            market_service_without_optionals.get_constituents(index_sid=1)
+            market_service_without_optionals.get_constituents(index_instrument_id=1)
 
     def test_get_constituents_empty_result(
         self,
@@ -732,8 +749,101 @@ class TestMarketServiceGetConstituents:
         """Test constituents query returns empty DataFrame."""
         mock_index_constituent_store.get.return_value = pl.DataFrame()
 
-        result = market_service.get_constituents(index_sid=999)
+        result = market_service.get_constituents(index_instrument_id=999)
 
         assert result.is_empty()
         today = date.today().isoformat()
         mock_index_constituent_store.get.assert_called_once_with(999, today)
+
+
+class TestMarketServiceUnifiedContract:
+    """Tests for unified query()/write() contract."""
+
+    def test_query_dispatches_to_constituents(
+        self,
+        market_service: MarketService,
+        mock_index_constituent_store: MagicMock,
+    ) -> None:
+        """query() should route MarketConstituentsQuery correctly."""
+        mock_index_constituent_store.get.return_value = pl.DataFrame(
+            {
+                "index_instrument_id": [1],
+                "constituent_instrument_id": [100],
+                "effective_date": ["2024-01-01"],
+                "weight": [1.0],
+            }
+        )
+        query = MarketConstituentsQuery(index_instrument_id=1, asof="2024-01-01")
+
+        result = market_service.query(query)
+
+        assert len(result) == 1
+        mock_index_constituent_store.get.assert_called_once_with(1, "2024-01-01")
+
+    def test_write_stock_daily(self, market_service: MarketService) -> None:
+        """write() should route stock_daily to bars store."""
+        market_service._file_lock.acquire.return_value.__enter__.return_value = None
+        market_service._stock_bars_store.write.return_value = MagicMock(
+            added=2,
+            updated=1,
+        )
+        command = MarketWriteCommand(
+            dataset="stock_daily",
+            df=pl.DataFrame({"instrument_id": [1], "trade_date": [date(2024, 1, 2)]}),
+            year=2024,
+        )
+
+        result = market_service.write(command)
+
+        assert result.dataset == "stock_daily"
+        assert result.rows == 3
+        assert result.files == 1
+        market_service._stock_bars_store.write.assert_called_once()
+
+    def test_write_adj_factor(self, market_service: MarketService) -> None:
+        """write() should route adj_factor to adj store."""
+        market_service._file_lock.acquire.return_value.__enter__.return_value = None
+        market_service._stock_adj_store.write.return_value = MagicMock(
+            added=1,
+            updated=0,
+        )
+        command = MarketWriteCommand(
+            dataset="adj_factor",
+            df=pl.DataFrame({"instrument_id": [1], "trade_date": [date(2024, 1, 2)]}),
+            year=2024,
+        )
+
+        result = market_service.write(command)
+
+        assert result.dataset == "adj_factor"
+        assert result.rows == 1
+        assert result.files == 1
+        market_service._stock_adj_store.write.assert_called_once()
+
+    def test_write_stock_status(self, market_service: MarketService) -> None:
+        """write() should route stock_status to status store."""
+        market_service._file_lock.acquire.return_value.__enter__.return_value = None
+        market_service._stock_status_store.write.return_value = (
+            "market/stock/status/2024.parquet",
+            "checksum",
+        )
+        command = MarketWriteCommand(
+            dataset="stock_status",
+            df=pl.DataFrame(
+                {
+                    "instrument_id": [1],
+                    "trade_date": [date(2024, 1, 2)],
+                    "is_suspended": [False],
+                    "is_st": [False],
+                    "list_status": ["L"],
+                }
+            ),
+            year=2024,
+        )
+
+        result = market_service.write(command)
+
+        assert result.dataset == "stock_status"
+        assert result.rows == 1
+        assert result.files == 1
+        market_service._stock_status_store.write.assert_called_once()

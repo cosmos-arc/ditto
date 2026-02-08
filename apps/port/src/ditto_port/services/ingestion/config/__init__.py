@@ -1,4 +1,4 @@
-"""Ingestion configuration package."""
+"""数据摄取配置包."""
 
 from ditto_port.models import (
     DATASET_REGISTRY,

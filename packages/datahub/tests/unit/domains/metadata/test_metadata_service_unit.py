@@ -6,8 +6,12 @@ from unittest.mock import Mock
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.metadata.instrument.models import InstrumentRegistration
-from ditto_datahub.domains.metadata.metadata_service import MetadataService
+from ditto_datahub.services.metadata.metadata_service import (
+    MetadataQuery,
+    MetadataService,
+    MetadataWriteCommand,
+)
+from ditto_datahub.stores.metadata.instrument.models import InstrumentRegistration
 
 
 @pytest.fixture
@@ -32,47 +36,47 @@ def service(
     return MetadataService(**mock_stores_and_allocator)
 
 
-def test_metadata_service_resolve_sid(service: MetadataService) -> None:
-    """测试解析 source_ticker 到 sid."""
+def test_metadata_service_resolve_instrument_id(service: MetadataService) -> None:
+    """测试解析 source_ticker 到 instrument_id."""
     # 设置 mock
-    service._identity_store.resolve_sid.return_value = 123
+    service._identity_store.resolve_instrument_id.return_value = 123
 
     # 调用方法
-    result = service.resolve_sid("600000.SH", "tushare", None)
+    result = service.resolve_instrument_id("600000.SH", "tushare", None)
 
     # 验证
     assert result == 123
-    service._identity_store.resolve_sid.assert_called_once_with(
+    service._identity_store.resolve_instrument_id.assert_called_once_with(
         "600000.SH", "tushare", None
     )
 
 
-def test_metadata_service_resolve_sids_batch(
+def test_metadata_service_resolve_instrument_ids_batch(
     service: MetadataService,
 ) -> None:
-    """测试批量解析 source_tickers 到 sids."""
+    """测试批量解析 source_tickers 到 instrument_ids."""
     # 设置 mock
-    service._identity_store.resolve_sids_batch.return_value = {
+    service._identity_store.resolve_instrument_ids_batch.return_value = {
         "600000.SH": 1,
         "600001.SH": 2,
     }
 
     # 调用方法
-    result = service.resolve_sids_batch(
+    result = service.resolve_instrument_ids_batch(
         ["600000.SH", "600001.SH", "999999.SH"], "tushare", None
     )
 
     # 验证
     assert result == {"600000.SH": 1, "600001.SH": 2}
-    service._identity_store.resolve_sids_batch.assert_called_once()
+    service._identity_store.resolve_instrument_ids_batch.assert_called_once()
 
 
-def test_metadata_service_get_securities(service: MetadataService) -> None:
+def test_metadata_service_get_instruments(service: MetadataService) -> None:
     """测试查询证券数据."""
     # 准备测试数据
     test_df = pl.DataFrame(
         {
-            "sid": [1, 2],
+            "instrument_id": [1, 2],
             "symbol": ["平安银行", "万科A"],
             "name": ["平安银行股份有限公司", "万科企业股份有限公司"],
             "exchange": ["SZ", "SZ"],
@@ -84,16 +88,16 @@ def test_metadata_service_get_securities(service: MetadataService) -> None:
     service._instrument_store.find_securities.return_value = test_df
 
     # 调用方法
-    result = service.get_securities(sids=[1, 2])
+    result = service.get_instruments(instrument_ids=[1, 2])
 
     # 验证
     assert len(result) == 2
-    assert result["sid"].to_list() == [1, 2]
+    assert result["instrument_id"].to_list() == [1, 2]
     service._instrument_store.find_securities.assert_called_once()
 
 
 def test_metadata_service_get_symbol(service: MetadataService) -> None:
-    """测试根据 sid 获取 symbol."""
+    """测试根据 instrument_id 获取 symbol."""
     # 设置 mock
     service._instrument_store.get_symbol.return_value = "平安银行"
 
@@ -108,16 +112,18 @@ def test_metadata_service_get_symbol(service: MetadataService) -> None:
 def test_metadata_service_get_source_ticker(
     service: MetadataService,
 ) -> None:
-    """测试根据 sid 获取 source_ticker."""
+    """测试根据 instrument_id 获取 source_ticker."""
     # 设置 mock
-    service._identity_store.get_src_code.return_value = "000001.SZ"
+    service._identity_store.get_source_ticker.return_value = "000001.SZ"
 
-    # 调用方法（注意：方法名仍然是 get_src_code，这是为了向后兼容）
-    result = service.get_src_code(1, "tushare", None)
+    # 调用方法（注意：方法名仍然是 get_source_ticker，这是为了向后兼容）
+    result = service.get_source_ticker(1, "tushare", None)
 
     # 验证
     assert result == "000001.SZ"
-    service._identity_store.get_src_code.assert_called_once_with(1, "tushare", None)
+    service._identity_store.get_source_ticker.assert_called_once_with(
+        1, "tushare", None
+    )
 
 
 def test_metadata_service_get_industries(service: MetadataService) -> None:
@@ -149,7 +155,7 @@ def test_metadata_service_get_stock_industry(
     """测试查询股票所属行业."""
     # 准备测试数据
     test_data = {
-        "sid": 1,
+        "instrument_id": 1,
         "industry_id": "sw_l1_01",
         "industry_name": "银行",
         "effective_from": "2020-01-01",
@@ -219,14 +225,22 @@ def test_metadata_service_is_trading_day(service: MetadataService) -> None:
 def test_metadata_service_get_universe(service: MetadataService) -> None:
     """测试查询标的池成分股."""
     # 设置 mock
-    service._universe_store.get_constituents_sids.return_value = [1, 2, 3, 4, 5]
+    service._universe_store.get_constituent_instrument_ids.return_value = [
+        1,
+        2,
+        3,
+        4,
+        5,
+    ]
 
     # 调用方法
     result = service.get_universe("hs300", None)
 
     # 验证
     assert result == [1, 2, 3, 4, 5]
-    service._universe_store.get_constituents_sids.assert_called_once_with("hs300", None)
+    service._universe_store.get_constituent_instrument_ids.assert_called_once_with(
+        "hs300", None
+    )
 
 
 def test_metadata_service_register_security(
@@ -250,9 +264,44 @@ def test_metadata_service_register_security(
     service._instrument_store.register.return_value = 100
 
     # 调用方法
-    result = service.register_security(registration)
+    result = service.register_instrument(registration)
 
     # 验证
     assert result == 100
     service._instrument_id_allocator.allocate.assert_called_once_with("stock")
     service._instrument_store.register.assert_called_once()
+
+
+def test_metadata_service_query_instrument(service: MetadataService) -> None:
+    """测试统一 query() 查询 instrument."""
+    test_df = pl.DataFrame({"instrument_id": [1], "symbol": ["平安银行"]})
+    service._instrument_store.find_securities.return_value = test_df
+
+    result = service.query(
+        MetadataQuery(
+            dataset="instrument",
+            instrument_ids=[1],
+            source="tushare",
+        )
+    )
+
+    assert len(result) == 1
+    service._instrument_store.find_securities.assert_called_once()
+
+
+def test_metadata_service_query_calendar_requires_dates(
+    service: MetadataService,
+) -> None:
+    """测试 calendar_range 缺失日期参数会报错."""
+    with pytest.raises(ValueError, match="start 和 end"):
+        service.query(MetadataQuery(dataset="calendar_range"))
+
+
+def test_metadata_service_write_calendar(service: MetadataService) -> None:
+    """测试统一 write() 写入日历."""
+    records = [{"trade_date": "2024-01-02", "is_open": 1}]
+    result = service.write(MetadataWriteCommand(dataset="calendar", records=records))
+
+    assert result.dataset == "calendar"
+    assert result.records_written == 1
+    service._calendar_store.upsert.assert_called_once_with(records)

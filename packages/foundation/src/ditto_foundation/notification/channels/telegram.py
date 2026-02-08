@@ -1,4 +1,4 @@
-"""Telegram notification channel."""
+"""Telegram 通知渠道."""
 
 import httpx
 from loguru import logger

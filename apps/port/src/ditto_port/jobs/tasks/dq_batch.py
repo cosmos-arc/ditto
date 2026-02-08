@@ -1,9 +1,9 @@
-"""DQ batch check tasks for L3 statistical anomaly detection."""
+"""L3 统计异常检测的 DQ 批量检查任务."""
 
 from typing import Any, Literal
 
 from ditto_core.quality.spec import DQIssue
-from ditto_datahub.domains.market import MarketBarsQuery
+from ditto_datahub.services.market import MarketBarsQuery
 from ditto_foundation import M, logger
 from prefect import task
 
@@ -58,7 +58,7 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
     with create_dq_and_datahub_context() as (engine, hub):
         # 获取最后一个交易日
         if trade_date is None:
-            trade_date = hub.calendar.get_last_trading_day()
+            trade_date = hub.metadata.get_last_trading_day()
             logger.info(
                 "Using last trading day",
                 event="dq_batch_date_resolved",
@@ -214,7 +214,7 @@ def dq_completeness_check(
     Args:
         trade_date: 交易日期
         dataset: 数据集名称
-        expected_sids: 预期的 SID 列表
+        expected_sids: 预期的 Instrument ID 列表
         market_wide: 是否使用全市场查询模式
 
     Returns:
@@ -228,9 +228,11 @@ def dq_completeness_check(
             end=trade_date,
             market_wide=market_wide,
         )
-        df = hub.market.get_bars(query=query)
+        df = hub.market.query(query)
 
-        actual_sids = df["sid"].unique().to_list() if not df.is_empty() else []
+        actual_sids = (
+            df["instrument_id"].unique().to_list() if not df.is_empty() else []
+        )
 
         # 计算缺失
         missing_sids: set[int]

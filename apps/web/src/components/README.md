@@ -459,7 +459,7 @@ export function HoldingsTable({ holdings, onRebalance }: HoldingsTableProps) {
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => onRebalance?.(row.original.sid)}
+          onClick={() => onRebalance?.(row.original.instrumentId)}
         >
           调仓
         </Button>

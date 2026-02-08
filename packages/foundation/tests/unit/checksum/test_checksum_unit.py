@@ -21,7 +21,7 @@ class TestChecksumCompute:
         df1 = pl.DataFrame(
             {
                 "trade_date": ["2024-01-02", "2024-01-01"],
-                "sid": [2, 1],
+                "instrument_id": [2, 1],
                 "close": [10.0, 11.0],
                 "source": ["tushare", "tushare"],
             }
@@ -30,7 +30,7 @@ class TestChecksumCompute:
         df2 = pl.DataFrame(
             {
                 "trade_date": ["2024-01-01", "2024-01-02"],
-                "sid": [1, 2],
+                "instrument_id": [1, 2],
                 "close": [11.0, 10.0],
                 "source": ["tushare", "tushare"],
             }
@@ -42,11 +42,11 @@ class TestChecksumCompute:
         assert checksum1 == checksum2, "相同数据不同行顺序应产生相同 checksum"
 
     def test_checksum_includes_all_fields_including_sid_and_source(self) -> None:
-        """验证 checksum 包含所有字段(包括 sid、source)."""
+        """验证 checksum 包含所有字段(包括 instrument_id、source)."""
         df_with_sid = pl.DataFrame(
             {
                 "trade_date": ["2024-01-01"],
-                "sid": [1],
+                "instrument_id": [1],
                 "close": [10.0],
                 "source": ["tushare"],
             }
@@ -62,13 +62,13 @@ class TestChecksumCompute:
         checksum1 = ChecksumCompute.from_dataframe(df_with_sid, "stock_daily")
         checksum2 = ChecksumCompute.from_dataframe(df_without_sid, "stock_daily")
 
-        assert checksum1 != checksum2, "sid/source 字段应影响 checksum"
+        assert checksum1 != checksum2, "instrument_id/source 字段应影响 checksum"
 
     def test_different_source_produces_different_checksum(self) -> None:
         """验证不同 source 产生不同 checksum."""
         base_data = {
             "trade_date": ["2024-01-01"],
-            "sid": [1],
+            "instrument_id": [1],
             "close": [10.0],
         }
 
@@ -85,7 +85,7 @@ class TestChecksumCompute:
         df = pl.DataFrame(
             {
                 "trade_date": ["2024-01-01"],
-                "sid": [1],
+                "instrument_id": [1],
             }
         )
 
@@ -97,11 +97,11 @@ class TestChecksumCompute:
 
     def test_dataset_specific_sort_keys(self) -> None:
         """验证不同数据集使用不同的排序键."""
-        # stock_daily: 按 trade_date, sid 排序
+        # stock_daily: 按 trade_date, instrument_id 排序
         df_stock = pl.DataFrame(
             {
                 "trade_date": ["2024-01-02", "2024-01-01"],
-                "sid": [2, 1],
+                "instrument_id": [2, 1],
                 "close": [10.0, 11.0],
             }
         )
@@ -152,7 +152,7 @@ class TestChecksumCompute:
     def test_get_sort_keys_returns_sequence(self) -> None:
         """验证 get_sort_keys 返回正确的排序键."""
         keys = ChecksumCompute.get_sort_keys("stock_daily")
-        assert list(keys) == ["trade_date", "sid"]
+        assert list(keys) == ["trade_date", "instrument_id"]
 
         keys_calendar = ChecksumCompute.get_sort_keys("calendar")
         assert list(keys_calendar) == ["trade_date"]
@@ -219,7 +219,7 @@ class TestChecksumCompute:
         df = pl.DataFrame(
             {
                 "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 "close": [10.0, 11.0, 12.0],
             }
         )
@@ -235,7 +235,7 @@ class TestChecksumCompute:
         df = pl.DataFrame(
             {
                 "trade_date": ["2024-01-02", "2024-01-01"],
-                "sid": [2, 1],
+                "instrument_id": [2, 1],
                 "adj_factor": [1.0, 0.95],
             }
         )
@@ -243,7 +243,7 @@ class TestChecksumCompute:
         checksum1 = ChecksumCompute.from_dataframe(df, "adj_factor")
         checksum2 = ChecksumCompute.from_dataframe(df.reverse(), "adj_factor")
 
-        # 应该相同（按 trade_date, sid 排序）
+        # 应该相同（按 trade_date, instrument_id 排序）
         assert checksum1 == checksum2
 
     def test_empty_string_vs_none(self) -> None:

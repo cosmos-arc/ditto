@@ -15,9 +15,20 @@ from ditto_datahub.models.ingestion import (
     IngestionStatus,
     NotTradingDayError,
 )
+from ditto_datahub.models.market import (
+    BAR_ENRICHED_SCHEMA,
+    BAR_SCHEMA,
+    QUOTE_SCHEMA,
+)
+from ditto_datahub.models.portfolio import Portfolio, Position
 from ditto_datahub.models.storage import FreezeManifest, WriteResult, WriteResultStore
+from ditto_datahub.models.strategy import MarketState, Signal, SignalType
+from ditto_datahub.models.trading import Order, OrderSide, OrderStatus, Trade
 
 __all__ = [
+    "BAR_ENRICHED_SCHEMA",
+    "BAR_SCHEMA",
+    "QUOTE_SCHEMA",
     "DataChangedError",
     "Dataset",
     "Domain",
@@ -26,9 +37,18 @@ __all__ = [
     "IngestionLog",
     "IngestionStatus",
     "InstrumentIdRange",
+    "MarketState",
     "NotTradingDayError",
     "OnDuplicate",
+    "Order",
+    "OrderSide",
+    "OrderStatus",
+    "Portfolio",
+    "Position",
+    "Signal",
+    "SignalType",
     "Source",
+    "Trade",
     "WriteResult",
     "WriteResultStore",
 ]

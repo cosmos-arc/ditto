@@ -4,11 +4,11 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.features.feature_service import (
+from ditto_datahub.services.features.feature_service import (
     FeatureQuery,
     FeatureService,
 )
-from ditto_datahub.domains.features.technical import (
+from ditto_datahub.stores.features.technical import (
     IndicatorMetadataStore,
     IndicatorStore,
 )
@@ -51,7 +51,7 @@ def test_get_indicators_enriches_with_metadata(feature_service: FeatureService) 
     # Setup: Write indicator data
     df = pl.DataFrame(
         {
-            "sid": [1, 1],
+            "instrument_id": [1, 1],
             "trade_date": ["2024-01-02", "2024-01-03"],
             "indicator_id": ["indicator_rsi_14", "indicator_rsi_14"],
             "indicator_type": ["momentum", "momentum"],
@@ -67,7 +67,7 @@ def test_get_indicators_enriches_with_metadata(feature_service: FeatureService) 
         start="2024-01-01",
         end="2024-01-31",
     )
-    result = feature_service.get_indicators(query)
+    result = feature_service.query(query)
 
     # Verify: Result includes metadata columns
     assert not result.is_empty()
@@ -100,7 +100,7 @@ def test_get_indicators_filters_by_type(feature_service: FeatureService) -> None
     # Write mixed data
     df = pl.DataFrame(
         {
-            "sid": [1, 1],
+            "instrument_id": [1, 1],
             "trade_date": ["2024-01-02", "2024-01-02"],
             "indicator_id": ["indicator_rsi_14", "indicator_ma_20"],
             "indicator_type": ["momentum", "trend"],
@@ -116,7 +116,7 @@ def test_get_indicators_filters_by_type(feature_service: FeatureService) -> None
         start="2024-01-01",
         end="2024-01-31",
     )
-    result = feature_service.get_indicators(query)
+    result = feature_service.query(query)
 
     assert len(result) == 1
     assert result["indicator_id"][0] == "indicator_rsi_14"

@@ -314,11 +314,15 @@ if not compliance.is_compliant:
 
 ```python
 # ✅ 正确：使用 PIT 过滤
-df = hub.bars.get(
-    sids=[1, 2],
-    start="2024-01-01",
-    end="2024-01-31",
-    asof="2024-01-15"  # 只使用该时点之前的数据
+from ditto_datahub.stores.market import MarketBarsQuery
+
+df = hub.market.query(
+    MarketBarsQuery(
+        instrument_ids=[1, 2],
+        start="2024-01-01",
+        end="2024-01-31",
+        asof="2024-01-15",  # 只使用该时点之前的数据
+    )
 )
 ```
 

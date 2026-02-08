@@ -26,8 +26,8 @@ class TestQualityEngine:
                     technical=[
                         {
                             "rule": "not_null",
-                            "columns": ["sid"],
-                            "message": "SID required",
+                            "columns": ["instrument_id"],
+                            "message": "Instrument ID required",
                         }
                     ],
                     business=[
@@ -48,7 +48,7 @@ class TestQualityEngine:
 
         df = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
                 "value": [10.0, 20.0, 30.0],
             }
@@ -59,22 +59,22 @@ class TestQualityEngine:
         # Should pass since data is valid
         assert isinstance(result, DQResult)
         assert result.dataset == "test_dataset"
-        assert result.passed is True  # No nulls in sid, all values positive
+        assert result.passed is True  # No nulls in instrument_id, all values positive
 
     def test_check_with_null_sid(self) -> None:
-        """Test checking data with null SID fails L1."""
+        """Test checking data with null Instrument ID fails L1."""
         engine = QualityEngine(config=self.config)
 
         df = pl.DataFrame(
             {
-                "sid": [1, None, 3],  # One null SID
+                "instrument_id": [1, None, 3],  # One null Instrument ID
                 "value": [10.0, 20.0, 30.0],
             }
         )
 
         result = engine.check(df, "test_dataset")
 
-        # Should fail due to null SID (L1 ERROR)
+        # Should fail due to null Instrument ID (L1 ERROR)
         assert result.passed is False
         assert result.has_errors is True
         assert result.error_count >= 1
@@ -85,7 +85,7 @@ class TestQualityEngine:
 
         df = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 "value": [10.0, -5.0, 30.0],  # One negative value
             }
         )
@@ -125,7 +125,7 @@ class TestQualityEngine:
         """Test checking with specific rule levels."""
         engine = QualityEngine(config=self.config)
 
-        df = pl.DataFrame({"sid": [1, 2], "value": [-10.0, 20.0]})
+        df = pl.DataFrame({"instrument_id": [1, 2], "value": [-10.0, 20.0]})
 
         result = engine.check(df, "test_dataset", levels=levels)
 
@@ -137,7 +137,7 @@ class TestQualityEngine:
         """Test checking with additional context."""
         engine = QualityEngine(config=self.config)
 
-        df = pl.DataFrame({"sid": [1, 2], "value": [10.0, 20.0]})
+        df = pl.DataFrame({"instrument_id": [1, 2], "value": [10.0, 20.0]})
 
         context = {"source": "test"}
 
@@ -176,8 +176,8 @@ class TestQualityEngineStatistical:
         for d in dates:
             rows.extend(
                 [
-                    {"sid": 1, "trade_date": d, "close": 100.0},
-                    {"sid": 2, "trade_date": d, "close": 200.0},
+                    {"instrument_id": 1, "trade_date": d, "close": 100.0},
+                    {"instrument_id": 2, "trade_date": d, "close": 200.0},
                 ]
             )
         return pl.DataFrame(rows)
@@ -188,7 +188,7 @@ class TestQualityEngineStatistical:
 
         current_data = pl.DataFrame(
             {
-                "sid": [1, 2],
+                "instrument_id": [1, 2],
                 "trade_date": [date.today(), date.today()],
                 "close": [105.0, 210.0],
             }
@@ -211,7 +211,7 @@ class TestQualityEngineStatistical:
 
         current_data = pl.DataFrame(
             {
-                "sid": [1],
+                "instrument_id": [1],
                 "trade_date": [date.today()],
                 "close": [105.0],
             }
@@ -235,7 +235,7 @@ class TestQualityEngineStatistical:
         # Current data with anomaly
         current_data = pl.DataFrame(
             {
-                "sid": [1, 2],
+                "instrument_id": [1, 2],
                 "trade_date": [date.today(), date.today()],
                 "close": [500.0, 210.0],  # 500 is way outside normal range
             }
@@ -280,7 +280,7 @@ class TestQualityEngineEdgeCases:
 
         engine = QualityEngine(config=config)
 
-        df = pl.DataFrame({"sid": [1, 2, 3], "value": [10.0, 20.0, 30.0]})
+        df = pl.DataFrame({"instrument_id": [1, 2, 3], "value": [10.0, 20.0, 30.0]})
 
         result = engine.check(df, "test_dataset")
 
@@ -298,8 +298,8 @@ class TestQualityEngineEdgeCases:
                     technical=[
                         {
                             "rule": "not_null",
-                            "columns": ["sid"],
-                            "message": "SID required",
+                            "columns": ["instrument_id"],
+                            "message": "Instrument ID required",
                         }
                     ],
                     business=[],
@@ -309,7 +309,7 @@ class TestQualityEngineEdgeCases:
 
         engine = QualityEngine(config=config)
 
-        df = pl.DataFrame({"sid": [1, 2, 3]})
+        df = pl.DataFrame({"instrument_id": [1, 2, 3]})
 
         # levels=None should default to ["l1", "l2"]
         result = engine.check(df, "test_dataset", levels=None)
@@ -326,8 +326,8 @@ class TestQualityEngineEdgeCases:
                     technical=[
                         {
                             "rule": "not_null",
-                            "columns": ["sid"],
-                            "message": "SID required",
+                            "columns": ["instrument_id"],
+                            "message": "Instrument ID required",
                         }
                     ],
                     business=[
@@ -343,7 +343,7 @@ class TestQualityEngineEdgeCases:
 
         engine = QualityEngine(config=config)
 
-        df = pl.DataFrame({"sid": [1, 2, 3], "value": [-5.0, 10.0, 20.0]})
+        df = pl.DataFrame({"instrument_id": [1, 2, 3], "value": [-5.0, 10.0, 20.0]})
 
         result = engine.check(df, "test_dataset", levels=["l1", "l2"])
 
@@ -361,8 +361,8 @@ class TestQualityEngineEdgeCases:
                     technical=[
                         {
                             "rule": "not_null",
-                            "columns": ["sid"],
-                            "message": "SID required",
+                            "columns": ["instrument_id"],
+                            "message": "Instrument ID required",
                         }
                     ],
                     business=[],
@@ -372,7 +372,7 @@ class TestQualityEngineEdgeCases:
 
         engine = QualityEngine(config=config)
 
-        df = pl.DataFrame({"sid": [], "value": []})
+        df = pl.DataFrame({"instrument_id": [], "value": []})
 
         result = engine.check(df, "test_dataset")
 

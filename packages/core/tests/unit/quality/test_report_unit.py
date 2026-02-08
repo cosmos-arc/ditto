@@ -33,7 +33,7 @@ class TestDQReportGenerator:
                 level=DQLevel.TECHNICAL,
                 severity=DQSeverity.ERROR,
                 rule_name="not_null",
-                message="SID is null",
+                message="Instrument ID is null",
                 affected_rows=5,
             ),
             DQIssue(

@@ -32,9 +32,9 @@ class TestDQIssue:
             level=DQLevel.TECHNICAL,
             severity=DQSeverity.ERROR,
             rule_name="primary_key_unique",
-            message="Found 2 duplicate (sid, trade_date)",
+            message="Found 2 duplicate (instrument_id, trade_date)",
             affected_rows=2,
-            sample_data=[{"sid": 100001, "trade_date": "2024-01-01"}],
+            sample_data=[{"instrument_id": 100001, "trade_date": "2024-01-01"}],
         )
 
         assert issue.level == DQLevel.TECHNICAL

@@ -5,27 +5,27 @@ description: "指数成分股权重数据质量检查规则"
 # 技术类: 技术校验（写入时强制阻断）
 technical:
   - rule: not_null
-    columns: [index_sid, con_sid, trade_date, weight]
+    columns: [index_instrument_id, constituent_instrument_id, trade_date, weight]
     message: "必填字段不能为空"
 
   - rule: unique
-    columns: [index_sid, con_sid, trade_date]
-    message: "主键 (index_sid, con_sid, trade_date) 重复"
+    columns: [index_instrument_id, constituent_instrument_id, trade_date]
+    message: "主键 (index_instrument_id, constituent_instrument_id, trade_date) 重复"
 
   - rule: foreign_key
-    column: index_sid
-    reference: security.sid
-    message: "指数 SID 不存在于证券主表"
+    column: index_instrument_id
+    reference: instrument.instrument_id
+    message: "指数 Instrument ID 不存在于证券主表"
 
   - rule: foreign_key
-    column: con_sid
-    reference: security.sid
-    message: "成分股 SID 不存在于证券主表"
+    column: constituent_instrument_id
+    reference: instrument.instrument_id
+    message: "成分股 Instrument ID 不存在于证券主表"
 
   - rule: type_check
     columns:
-      index_sid: int
-      con_sid: int
+      index_instrument_id: int
+      constituent_instrument_id: int
       trade_date: date
       weight: float
     message: "字段类型不匹配"
@@ -41,7 +41,7 @@ business:
 
   - rule: expression
     name: sum_weight_by_index
-    expr: "SUM(weight) OVER (PARTITION BY index_sid, trade_date) BETWEEN 0.95 AND 1.05"
+    expr: "SUM(weight) OVER (PARTITION BY index_instrument_id, trade_date) BETWEEN 0.95 AND 1.05"
     severity: warning
     message: "指数权重总和应接近 1.0（允许 5% 误差）"
 

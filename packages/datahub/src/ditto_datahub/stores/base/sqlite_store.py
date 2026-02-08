@@ -74,7 +74,7 @@ class SQLiteStore(BaseStore):
     def read(
         self,
         dataset: str,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
         **kwargs: object,
@@ -84,7 +84,7 @@ class SQLiteStore(BaseStore):
 
         Args:
             dataset: 数据集名称（表名）.
-            sids: 证券 ID 列表（可选）.
+            instrument_ids: 证券 ID 列表（可选）.
             start_date: 起始日期 (YYYY-MM-DD)（可选）.
             end_date: 结束日期 (YYYY-MM-DD)（可选）.
             **kwargs: 其他参数（忽略）.
@@ -97,10 +97,10 @@ class SQLiteStore(BaseStore):
         conditions: list[str] = []
         params: list[Any] = []
 
-        if sids:
-            placeholders = ",".join("?" * len(sids))
-            conditions.append(f"sid IN ({placeholders})")
-            params.extend(sids)
+        if instrument_ids:
+            placeholders = ",".join("?" * len(instrument_ids))
+            conditions.append(f"instrument_id IN ({placeholders})")
+            params.extend(instrument_ids)
 
         if start_date:
             conditions.append("trade_date >= ?")
@@ -232,7 +232,7 @@ class SQLiteStore(BaseStore):
             df, added, updated = self._merge_data(df, existing_df, strategy)
         else:
             # 新表，只需去重 batch 内部重复
-            df = df.unique(subset=["sid", "trade_date"], keep="first")
+            df = df.unique(subset=["instrument_id", "trade_date"], keep="first")
             added = len(df)
             updated = 0
 
@@ -356,7 +356,7 @@ class SQLiteStore(BaseStore):
             ValueError: 如果 on_duplicate=ERROR 且存在重复数据.
 
         """
-        key_columns = ["sid", "trade_date"]
+        key_columns = ["instrument_id", "trade_date"]
 
         # 检测重复数据
         existing_keys = existing_df.select(key_columns)
@@ -428,7 +428,7 @@ class SQLiteStore(BaseStore):
                 df = df.with_columns(pl.col("trade_date").cast(pl.String))
 
         # 排序
-        return df.sort(["sid", "trade_date"])
+        return df.sort(["instrument_id", "trade_date"])
 
     # ============ Delete operation ============
 
@@ -436,7 +436,7 @@ class SQLiteStore(BaseStore):
     def delete(
         self,
         dataset: str,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
         **kwargs: object,
@@ -446,7 +446,7 @@ class SQLiteStore(BaseStore):
 
         Args:
             dataset: 数据集名称（表名）.
-            sids: 证券 ID 列表（可选）.
+            instrument_ids: 证券 ID 列表（可选）.
             start_date: 起始日期 (YYYY-MM-DD)（可选）.
             end_date: 结束日期 (YYYY-MM-DD)（可选）.
             **kwargs: 其他参数（忽略）.
@@ -459,10 +459,10 @@ class SQLiteStore(BaseStore):
         conditions: list[str] = []
         params: list[Any] = []
 
-        if sids:
-            placeholders = ",".join("?" * len(sids))
-            conditions.append(f"sid IN ({placeholders})")
-            params.extend(sids)
+        if instrument_ids:
+            placeholders = ",".join("?" * len(instrument_ids))
+            conditions.append(f"instrument_id IN ({placeholders})")
+            params.extend(instrument_ids)
 
         if start_date and end_date:
             conditions.append("trade_date >= ? AND trade_date <= ?")

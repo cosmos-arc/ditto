@@ -160,8 +160,8 @@ class TdxReader:
             trade_date: 交易日期（YYYYMMDD）
 
         Returns:
-            DataFrame with columns: src_code, trade_date, open, high, low, close, vol,
-            amount
+            DataFrame with columns:
+            source_ticker, trade_date, open, high, low, close, vol, amount
 
         """
         all_data: list[pl.DataFrame] = []
@@ -170,14 +170,14 @@ class TdxReader:
             df = self.read_daily(ts_code, start_date=trade_date, end_date=trade_date)
             if df.height > 0:
                 df = df.with_columns(
-                    src_code=pl.lit(ts_code),
+                    source_ticker=pl.lit(ts_code),
                 )
                 all_data.append(df)
 
         if not all_data:
             return pl.DataFrame(
                 schema={
-                    "src_code": pl.String,
+                    "source_ticker": pl.String,
                     "trade_date": pl.String,
                     "open": pl.Float64,
                     "high": pl.Float64,

@@ -141,20 +141,20 @@ class PitHelper:
             >>> PitHelper.add_pit_join(
             ...     "stock_daily s",
             ...     "adj_factor a",
-            ...     ["s.sid = a.sid"],
+            ...     ["s.instrument_id = a.instrument_id"],
             ...     "2024-01-15"
             ... )
-            "stock_daily s LEFT JOIN adj_factor a ON s.sid = a.sid "
+            "stock_daily s LEFT JOIN adj_factor a ON s.instrument_id = a.instrument_id "
             "AND a.trade_date <= '2024-01-15'"
 
             >>> PitHelper.add_pit_join(
             ...     "stock_daily s",
             ...     "adj_factor a",
-            ...     ["s.sid = a.sid"],
+            ...     ["s.instrument_id = a.instrument_id"],
             ...     "2024-01-15",
             ...     date_column="effective_from"
             ... )
-            "stock_daily s LEFT JOIN adj_factor a ON s.sid = a.sid "
+            "stock_daily s LEFT JOIN adj_factor a ON s.instrument_id = a.instrument_id "
             "AND a.effective_from <= '2024-01-15'"
 
         """
@@ -201,9 +201,9 @@ class PitHelper:
 
         Examples:
         --------
-            >>> query = "SELECT sid, close FROM stock_daily"
+            >>> query = "SELECT instrument_id, close FROM stock_daily"
             >>> PitHelper.wrap_pit_cte(query, "pit_data", "2024-01-15")
-            "WITH pit_data AS (SELECT sid, close FROM stock_daily) "
+            "WITH pit_data AS (SELECT instrument_id, close FROM stock_daily) "
             "SELECT * FROM pit_data WHERE trade_date <= '2024-01-15'"
 
         """

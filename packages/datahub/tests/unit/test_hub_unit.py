@@ -2,70 +2,84 @@
 
 from collections.abc import Generator
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.capital import CapitalService
-from ditto_datahub.domains.capital.capital_store import CapitalStore
-
-# Features & Factors imports
-from ditto_datahub.domains.factors import FactorService
-from ditto_datahub.domains.factors.factor_metadata_store import (
-    FactorMetadataStore,
-)
-from ditto_datahub.domains.factors.factor_store import FactorStore
-from ditto_datahub.domains.features import FeatureService
-from ditto_datahub.domains.features.technical import (
-    IndicatorMetadataStore as FeatureIndicatorMetadataStore,
-)
-from ditto_datahub.domains.features.technical import (
-    IndicatorStore as FeatureIndicatorStore,
-)
-from ditto_datahub.domains.fundamental import FundamentalService
-from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
-from ditto_datahub.domains.macro import MacroService
-from ditto_datahub.domains.macro.indicator.indicator_store import (
-    IndicatorStore as MacroIndicatorStore,
-)
-from ditto_datahub.domains.macro.indicator.metadata_store import (
-    IndicatorMetadataStore,
-)
-from ditto_datahub.domains.market import MarketService
-from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
-from ditto_datahub.domains.market.etf.bars import EtfBarsStore
-from ditto_datahub.domains.market.etf.nav import EtfNavStore
-from ditto_datahub.domains.market.etf.status import EtfStatusStore
-from ditto_datahub.domains.market.index.bars import IndexBarsStore
-from ditto_datahub.domains.market.index.constituent import IndexConstituentStore
-from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
-from ditto_datahub.domains.market.stock.bars import StockBarsStore
-from ditto_datahub.domains.market.stock.status import StockStatusStore
-from ditto_datahub.domains.metadata import MetadataService
-from ditto_datahub.domains.metadata.calendar.calendar_store import (
-    CalendarStore as MetadataCalendarStore,
-)
-from ditto_datahub.domains.metadata.identity.identity_store import IdentityStore
-from ditto_datahub.domains.metadata.industry.industry_basic_store import (
-    IndustryBasicStore,
-)
-from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
-    IndustryMappingStore,
-)
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
-from ditto_datahub.domains.metadata.instrument.instrument_store import (
-    InstrumentStore as MetadataInstrumentStore,
-)
-from ditto_datahub.domains.metadata.universe import UniverseStore
-from ditto_datahub.errors import SidNotFoundError
+from ditto_datahub.errors import InstrumentIdNotFoundError
 from ditto_datahub.hub import DataHub
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
-from ditto_datahub.runtime.sid_allocator import SidAllocator
+from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
+
+# Service moved to services.capital
+from ditto_datahub.services.capital import CapitalService
+
+# Features & Factors imports
+# Service moved to services.factors
+from ditto_datahub.services.factors import FactorService
+
+# Service moved to services.features
+from ditto_datahub.services.features import FeatureService
+
+# Service moved to services.fundamental
+from ditto_datahub.services.fundamental import FundamentalService
+
+# Service moved to services.macro
+from ditto_datahub.services.macro import MacroService
+
+# Service moved to services.market
+from ditto_datahub.services.market import MarketService
+
+# Service moved to services.metadata
+from ditto_datahub.services.metadata import MetadataService
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
+from ditto_datahub.stores.capital.capital_store import CapitalStore
+from ditto_datahub.stores.factors.factor_metadata_store import (
+    FactorMetadataStore,
+)
+from ditto_datahub.stores.factors.factor_store import FactorStore
+from ditto_datahub.stores.features.technical import (
+    IndicatorMetadataStore as FeatureIndicatorMetadataStore,
+)
+from ditto_datahub.stores.features.technical import (
+    IndicatorStore as FeatureIndicatorStore,
+)
+from ditto_datahub.stores.fundamental.fundamental_store import FundamentalStore
+from ditto_datahub.stores.macro.indicator.indicator_store import (
+    IndicatorStore as MacroIndicatorStore,
+)
+from ditto_datahub.stores.macro.indicator.metadata_store import (
+    IndicatorMetadataStore,
+)
+from ditto_datahub.stores.market.etf.adj import EtfAdjFactorStore
+from ditto_datahub.stores.market.etf.bars import EtfBarsStore
+from ditto_datahub.stores.market.etf.nav import EtfNavStore
+from ditto_datahub.stores.market.etf.status import EtfStatusStore
+from ditto_datahub.stores.market.index.bars import IndexBarsStore
+from ditto_datahub.stores.market.index.constituent import IndexConstituentStore
+from ditto_datahub.stores.market.stock.adj import StockAdjFactorStore
+from ditto_datahub.stores.market.stock.bars import StockBarsStore
+from ditto_datahub.stores.market.stock.status import StockStatusStore
+from ditto_datahub.stores.metadata.calendar.calendar_store import (
+    CalendarStore as MetadataCalendarStore,
+)
+from ditto_datahub.stores.metadata.identity.identity_store import IdentityStore
+from ditto_datahub.stores.metadata.industry.industry_basic_store import (
+    IndustryBasicStore,
+)
+from ditto_datahub.stores.metadata.industry.industry_mapping_store import (
+    IndustryMappingStore,
+)
+from ditto_datahub.stores.metadata.instrument import InstrumentStore
+from ditto_datahub.stores.metadata.instrument.instrument_store import (
+    InstrumentStore as MetadataInstrumentStore,
+)
+from ditto_datahub.stores.metadata.universe import UniverseStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager
@@ -122,7 +136,7 @@ def datahub_with_dependencies(
 
     # Runtime Layer
     file_lock = FileLockManager(data_root / "locks")
-    sid_allocator = SidAllocator(sqlite_pool)
+    instrument_id_allocator = InstrumentIdAllocator(sqlite_pool)
     freeze_manager = FreezeManager(data_root=str(data_root))
 
     # Store Layer
@@ -146,7 +160,7 @@ def datahub_with_dependencies(
         industry_basic_store=industry_basic_store,
         industry_mapping_store=industry_mapping_store,
         universe_store=universe_store,
-        sid_allocator=sid_allocator,
+        instrument_id_allocator=instrument_id_allocator,
     )
 
     # Market Domain Stores
@@ -233,7 +247,7 @@ def datahub_with_dependencies(
         data_root=data_root,
         sqlite_pool=sqlite_pool,
         file_lock=file_lock,
-        sid_allocator=sid_allocator,
+        instrument_id_allocator=instrument_id_allocator,
         freeze_manager=freeze_manager,
         instrument_store=security_store,
         metadata_query_service=metadata_query_service,
@@ -244,7 +258,7 @@ def datahub_with_dependencies(
         features_query_service=features_query_service,
         factors_query_service=factors_query_service,
         ingestion_log_store=ingestion_log_store,
-        sources=None,
+        sources=DataSources(tushare=MagicMock()),
         sql_engine=sql_engine,
     )
 
@@ -380,6 +394,18 @@ class TestDataHub:
         hub = datahub_with_dependencies
         assert hub.data_root == datahub_with_dependencies.data_root
 
+    def test_init_exposes_only_v5_service_entrypoints(
+        self, datahub_with_dependencies: DataHub
+    ) -> None:
+        """DataHub should not expose removed legacy alias entrypoints."""
+        hub = datahub_with_dependencies
+        assert hasattr(hub, "metadata")
+        assert hasattr(hub, "market")
+        assert hasattr(hub, "ingestion_log_store")
+
+        for alias in ("calendar", "universe", "index", "securities", "ingestion_log"):
+            assert not hasattr(hub, alias)
+
     # [REVIEW] - 新架构使用依赖注入，无懒加载
 
     def test_sql_execute_returns_dataframe(
@@ -453,7 +479,7 @@ class TestDataHub:
         )
 
         # Reload calendar cache to pick up the inserted data
-        datahub_with_dependencies.calendar._calendar_store.reload()  # type: ignore[attr-defined]
+        datahub_with_dependencies.metadata._calendar_store.reload()  # type: ignore[attr-defined]
 
         trading_days = datahub_with_dependencies.get_trading_days(
             "2024-01-01",
@@ -486,7 +512,7 @@ class TestDataHub:
         )
 
         # Reload calendar cache to pick up the inserted data
-        datahub_with_dependencies.calendar._calendar_store.reload()  # type: ignore[attr-defined]
+        datahub_with_dependencies.metadata._calendar_store.reload()  # type: ignore[attr-defined]
 
         # When only_open=False, should return all days (closed + open)
         all_days = datahub_with_dependencies.get_trading_days(
@@ -520,21 +546,21 @@ class TestDataHub:
         )
 
         # Reload calendar cache to pick up the inserted data
-        datahub_with_dependencies.calendar._calendar_store.reload()  # type: ignore[attr-defined]
+        datahub_with_dependencies.metadata._calendar_store.reload()  # type: ignore[attr-defined]
 
         assert datahub_with_dependencies.is_trading_day("2024-01-02") is True
         assert datahub_with_dependencies.is_trading_day("2024-01-06") is False
 
     # ========================================================================
-    # resolve_sid Tests
+    # resolve_instrument_id Tests
     # ========================================================================
 
-    def test_resolve_sid_raises_sid_not_found_error(
+    def test_resolve_instrument_id_raises_sid_not_found_error(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test resolve_sid raises SidNotFoundError when identifier not found."""
+        """Test resolve_instrument_id raises when identifier is not found."""
         # [REVIEW] 新架构中 index 已合并到 market
         # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
@@ -542,20 +568,22 @@ class TestDataHub:
         datahub_with_dependencies._sources = sources
 
         # Try to resolve a non-existent identifier
-        with pytest.raises(SidNotFoundError) as exc_info:
-            datahub_with_dependencies.resolve_sid("999999.SH", source="tushare")
+        with pytest.raises(InstrumentIdNotFoundError) as exc_info:
+            datahub_with_dependencies.resolve_instrument_id(
+                "999999.SH", source="tushare"
+            )
 
         # Verify exception contains the identifier and source
         assert exc_info.value.details["identifier"] == "999999.SH"
         assert exc_info.value.details["source"] == "tushare"
         assert "999999.SH" in str(exc_info.value)
 
-    def test_resolve_sid_with_custom_source(
+    def test_resolve_instrument_id_with_custom_source(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test resolve_sid with custom source parameter."""
+        """Test resolve_instrument_id with custom source parameter."""
         # [REVIEW] 新架构中 index 已合并到 market
         # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
@@ -563,17 +591,19 @@ class TestDataHub:
         datahub_with_dependencies._sources = sources
 
         # Try to resolve with custom source
-        with pytest.raises(SidNotFoundError) as exc_info:
-            datahub_with_dependencies.resolve_sid("000001.SZ", source="akshare")
+        with pytest.raises(InstrumentIdNotFoundError) as exc_info:
+            datahub_with_dependencies.resolve_instrument_id(
+                "000001.SZ", source="akshare"
+            )
 
         assert exc_info.value.details["source"] == "akshare"
 
-    def test_resolve_sid_with_asof_parameter(
+    def test_resolve_instrument_id_with_asof_parameter(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test resolve_sid with asof parameter for PIT queries."""
+        """Test resolve_instrument_id with asof parameter for PIT queries."""
         # [REVIEW] 新架构中 index 已合并到 market
         # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
@@ -581,8 +611,8 @@ class TestDataHub:
         datahub_with_dependencies._sources = sources
 
         # Try to resolve with asof parameter
-        with pytest.raises(SidNotFoundError) as exc_info:
-            datahub_with_dependencies.resolve_sid(
+        with pytest.raises(InstrumentIdNotFoundError) as exc_info:
+            datahub_with_dependencies.resolve_instrument_id(
                 "600000.SH",
                 source="tushare",
                 asof="2023-01-01",
@@ -697,21 +727,21 @@ class TestDataHub:
         with pytest.raises(FrozenInstanceError):
             params.identifiers = ["000002.SZ"]  # type: ignore
 
-    def test_securities_params_creation(
+    def test_instruments_params_creation(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test SecuritiesQuerySpec dataclass creation."""
+        """Test InstrumentsQuerySpec dataclass creation."""
         # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
 
-        from ditto_datahub.hub import SecuritiesQuerySpec
+        from ditto_datahub.hub import InstrumentsQuerySpec
 
         # 测试创建参数对象
-        params = SecuritiesQuerySpec(
+        params = InstrumentsQuerySpec(
             identifiers=["000001.SZ"],
             asset_class="stock",
             is_active=True,
@@ -721,12 +751,12 @@ class TestDataHub:
         assert params.asset_class == "stock"
         assert params.is_active is True
 
-    def test_get_bars_with_params_sid_only(
+    def test_get_bars_with_params_instrument_id_only(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test get_bars with BarsQuerySpec using SID identifiers."""
+        """Test get_bars with BarsQuerySpec using Instrument ID identifiers."""
         # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
@@ -734,16 +764,16 @@ class TestDataHub:
 
         from ditto_datahub.hub import BarsQuerySpec
 
-        # Mock bars.get 返回空 DataFrame（因为没有真实数据）
+        # Mock market.query 返回空 DataFrame（因为没有真实数据）
         mock_bars_get = mocker.patch.object(
-            datahub_with_dependencies.market, "get_bars", return_value=pl.DataFrame()
+            datahub_with_dependencies.market, "query", return_value=pl.DataFrame()
         )
 
-        # 测试 SID 标识符
+        # 测试 Instrument ID 标识符
         params = BarsQuerySpec(identifiers=[1, 2, 3])
         result = datahub_with_dependencies.get_bars(params)
 
-        # 验证 bars.get 被调用
+        # 验证 market.query 被调用
         assert mock_bars_get.called
         # 验证返回类型
         assert isinstance(result, pl.DataFrame)
@@ -761,10 +791,10 @@ class TestDataHub:
 
         from ditto_datahub.hub import BarsQuerySpec
 
-        # Mock resolve_sids_from_inputs 返回空列表
+        # Mock resolve_instrument_ids_from_inputs 返回空列表
         mocker.patch.object(
             datahub_with_dependencies,
-            "resolve_sids_from_inputs",
+            "resolve_instrument_ids_from_inputs",
             return_value=[],
         )
 
@@ -775,39 +805,39 @@ class TestDataHub:
         )
         result = datahub_with_dependencies.get_bars(params)
 
-        # 验证返回空 DataFrame（因为没有解析到 SID）
+        # 验证返回空 DataFrame（因为没有解析到 Instrument ID）
         assert isinstance(result, pl.DataFrame)
         assert len(result) == 0
 
-    def test_get_securities_with_params(
+    def test_get_instruments_with_params(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test get_securities with SecuritiesQuerySpec."""
+        """Test get_instruments with InstrumentsQuerySpec."""
         # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
 
-        from ditto_datahub.hub import SecuritiesQuerySpec
+        from ditto_datahub.hub import InstrumentsQuerySpec
 
-        # Mock metadata.get_securities 返回空 DataFrame
-        mock_metadata_get_securities = mocker.patch.object(
+        # Mock metadata.query 返回空 DataFrame
+        mock_metadata_get_instruments = mocker.patch.object(
             datahub_with_dependencies.metadata,
-            "get_securities",
+            "query",
             return_value=pl.DataFrame(),
         )
 
         # 测试参数对象
-        params = SecuritiesQuerySpec(
+        params = InstrumentsQuerySpec(
             identifiers=["000001.SZ"],
             asset_class="stock",
         )
-        result = datahub_with_dependencies.get_securities(params)
+        result = datahub_with_dependencies.get_instruments(params)
 
-        # 验证 metadata.get_securities 被调用
-        assert mock_metadata_get_securities.called
+        # 验证 metadata.query 被调用
+        assert mock_metadata_get_instruments.called
         assert isinstance(result, pl.DataFrame)
 
     # ========================================================================
@@ -840,7 +870,7 @@ class TestDataHub:
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
 
-        from ditto_datahub.domains.market import AdjType, MarketBarsQuery
+        from ditto_datahub.services.market import AdjType, MarketBarsQuery
 
         # Mock market.get_bars 返回空 DataFrame
         mock_get_bars = mocker.patch.object(
@@ -851,7 +881,7 @@ class TestDataHub:
 
         # 创建查询参数
         query = MarketBarsQuery(
-            sids=[1, 2, 3],
+            instrument_ids=[1, 2, 3],
             start="2024-01-01",
             end="2024-01-31",
             adj=AdjType.NONE,

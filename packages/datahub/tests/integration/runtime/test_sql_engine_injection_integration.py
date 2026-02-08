@@ -6,9 +6,9 @@ from tempfile import TemporaryDirectory
 
 import duckdb
 import pytest
-from ditto_datahub.domains.metadata.calendar import CalendarStore
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.runtime.sql_engine import SqlEngine
+from ditto_datahub.stores.metadata.calendar import CalendarStore
+from ditto_datahub.stores.metadata.instrument import InstrumentStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
@@ -78,11 +78,11 @@ class TestSqlEngineInjection:
         malicious_inputs = [
             "2024-01-01'; DROP TABLE stock_daily; --",
             "2024-01-01' OR '1'='1",
-            "' UNION SELECT * FROM security --",
+            "' UNION SELECT * FROM instrument --",
             "2024-01-01'; INSERT INTO users VALUES ('hacker', 'admin') --",
-            "'; EXECUTE IMMEDIATE 'DROP TABLE security'; --",
-            "2024-01-01' UNION SELECT * FROM security --",
-            "2024-01-01'; SELECT * FROM security WHERE '1'='1' --",
+            "'; EXECUTE IMMEDIATE 'DROP TABLE instrument'; --",
+            "2024-01-01' UNION SELECT * FROM instrument --",
+            "2024-01-01'; SELECT * FROM instrument WHERE '1'='1' --",
         ]
 
         for malicious in malicious_inputs:

@@ -6,8 +6,11 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.fundamental.fundamental_service import FundamentalService
-from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
+from ditto_datahub.services.fundamental.fundamental_service import (
+    FundamentalQuery,
+    FundamentalService,
+)
+from ditto_datahub.stores.fundamental.fundamental_store import FundamentalStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
@@ -36,6 +39,19 @@ def test_fundamental_service_init(service: FundamentalService) -> None:
     """测试 FundamentalService 初始化."""
     assert service is not None
     assert service._store is not None
+
+
+def test_query_requires_as_of_date_for_pit_dataset(
+    service: FundamentalService,
+) -> None:
+    """PIT 数据集必须提供 as_of_date."""
+    with pytest.raises(ValueError, match="as_of_date"):
+        service.query(
+            FundamentalQuery(
+                dataset="balance_sheet",
+                instrument_id="600000.SH",
+            )
+        )
 
 
 @pytest.fixture
@@ -82,6 +98,29 @@ def test_write_balance_sheet(
     assert count == 1
 
 
+def test_service_write_returns_result(
+    balance_sheet_table: None, service: FundamentalService
+) -> None:
+    """write() 返回统一结果对象."""
+    df = pl.DataFrame(
+        {
+            "instrument_id": ["600000.SH"],
+            "report_date": [date(2024, 3, 31)],
+            "knowledge_date": [date(2024, 4, 25)],
+            "effective_from": [date(2024, 4, 26)],
+            "effective_to": [None],
+            "total_assets": [1000000.0],
+            "total_liabilities": [500000.0],
+            "net_assets": [500000.0],
+            "current_assets": [300000.0],
+            "current_liabilities": [200000.0],
+        }
+    )
+    result = service.write(dataset="balance_sheet", df=df)
+    assert result.dataset == "balance_sheet"
+    assert result.records_written == 1
+
+
 def test_get_balance_sheet_pit(
     balance_sheet_table: None, service: FundamentalService
 ) -> None:
@@ -104,7 +143,13 @@ def test_get_balance_sheet_pit(
     service._store.write_balance_sheet(df)
 
     # 通过 Service 查询
-    result = service.get_balance_sheet("600000.SH", date(2024, 5, 1))
+    result = service.query(
+        FundamentalQuery(
+            dataset="balance_sheet",
+            instrument_id="600000.SH",
+            as_of_date=date(2024, 5, 1),
+        )
+    )
     assert len(result) == 1
     assert result["total_assets"][0] == 1000000.0
 
@@ -171,7 +216,13 @@ def test_get_income_statement_pit(
     service._store.write_income_statement(df)
 
     # 通过 Service 查询
-    result = service.get_income_statement("600000.SH", date(2024, 5, 1))
+    result = service.query(
+        FundamentalQuery(
+            dataset="income_statement",
+            instrument_id="600000.SH",
+            as_of_date=date(2024, 5, 1),
+        )
+    )
     assert len(result) == 1
     assert result["revenue"][0] == 500000.0
 
@@ -234,7 +285,13 @@ def test_get_cash_flow_pit(cash_flow_table: None, service: FundamentalService) -
     service._store.write_cash_flow(df)
 
     # 通过 Service 查询
-    result = service.get_cash_flow("600000.SH", date(2024, 5, 1))
+    result = service.query(
+        FundamentalQuery(
+            dataset="cash_flow",
+            instrument_id="600000.SH",
+            as_of_date=date(2024, 5, 1),
+        )
+    )
     assert len(result) == 1
     assert result["operating_cash_flow"][0] == 90000.0
 
@@ -291,7 +348,13 @@ def test_get_dividend_pit(dividend_table: None, service: FundamentalService) -> 
     service._store.write_dividend(df)
 
     # 通过 Service 查询
-    result = service.get_dividend("600000.SH", date(2024, 5, 2))
+    result = service.query(
+        FundamentalQuery(
+            dataset="dividend",
+            instrument_id="600000.SH",
+            as_of_date=date(2024, 5, 2),
+        )
+    )
     assert len(result) == 1
     assert result["dividend_per_share"][0] == 0.5
 
@@ -346,12 +409,22 @@ def test_get_corporate_actions(
     service._store.write_corporate_actions(df)
 
     # 查询全部（通过 Service）
-    result = service.get_corporate_actions("600000.SH")
+    result = service.query(
+        FundamentalQuery(
+            dataset="corporate_actions",
+            instrument_id="600000.SH",
+        )
+    )
     assert len(result) == 1
     assert result["action_type"][0] == "分红"
 
     # 按日期范围查询
-    result = service.get_corporate_actions(
-        "600000.SH", start_date=date(2024, 4, 1), end_date=date(2024, 4, 30)
+    result = service.query(
+        FundamentalQuery(
+            dataset="corporate_actions",
+            instrument_id="600000.SH",
+            start_date=date(2024, 4, 1),
+            end_date=date(2024, 4, 30),
+        )
     )
     assert len(result) == 1

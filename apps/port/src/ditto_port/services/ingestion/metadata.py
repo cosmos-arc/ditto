@@ -71,7 +71,7 @@ class MetadataManager:
             return False, None
 
         # 检查是否有历史记录
-        existing = self._hub.ingestion_log.get_log(
+        existing = self._hub.ingestion_log_store.get_log(
             dataset=dataset,
             source=source,
             trade_date=trade_date,

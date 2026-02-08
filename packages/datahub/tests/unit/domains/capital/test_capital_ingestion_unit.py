@@ -7,9 +7,12 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.capital.capital_ingestion import CapitalIngestion
-from ditto_datahub.domains.capital.capital_store import CapitalStore
+from ditto_datahub.services.capital.capital_service import (
+    CapitalService,
+    CapitalWriteResult,
+)
 from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
+from ditto_datahub.stores.capital.capital_ingestion import CapitalIngestion
 
 
 @pytest.fixture
@@ -20,20 +23,20 @@ def mock_source() -> MagicMock:
 
 
 @pytest.fixture
-def mock_store() -> MagicMock:
-    """创建 Mock Store."""
-    store = MagicMock(spec=CapitalStore)
-    return store
+def mock_service() -> MagicMock:
+    """创建 Mock Service."""
+    service = MagicMock(spec=CapitalService)
+    return service
 
 
 @pytest.fixture
 def capital_ingestion(
     mock_source: MagicMock,
-    mock_store: MagicMock,
+    mock_service: MagicMock,
 ) -> CapitalIngestion:
     """创建 CapitalIngestion 实例."""
     return CapitalIngestion(
-        capital_store=mock_store,
+        capital_service=mock_service,
         tushare_source=mock_source,
     )
 
@@ -46,7 +49,7 @@ def capital_ingestion(
 def test_ingest_valuation_metrics_success(
     capital_ingestion: CapitalIngestion,
     mock_source: MagicMock,
-    mock_store: MagicMock,
+    mock_service: MagicMock,
 ) -> None:
     """测试成功摄入估值指标数据."""
     # 准备测试数据
@@ -68,8 +71,11 @@ def test_ingest_valuation_metrics_success(
     # Mock Source 返回数据
     mock_source.fetch_valuation_metrics.return_value = source_df
 
-    # Mock Store 写入成功
-    mock_store.write_valuation_metrics.return_value = 1
+    # Mock Service 写入成功
+    mock_service.write.return_value = CapitalWriteResult(
+        dataset="valuation_metrics",
+        records_written=1,
+    )
 
     # 执行摄入
     result = capital_ingestion.ingest_valuation_metrics(
@@ -86,7 +92,7 @@ def test_ingest_valuation_metrics_success(
 def test_ingest_valuation_metrics_empty(
     capital_ingestion: CapitalIngestion,
     mock_source: MagicMock,
-    mock_store: MagicMock,
+    mock_service: MagicMock,
 ) -> None:
     """测试摄入空估值指标数据."""
     # Mock Source 返回空数据
@@ -104,7 +110,7 @@ def test_ingest_valuation_metrics_empty(
     assert result.dataset == "valuation_metrics"
 
     # 验证未调用写入
-    mock_store.write_valuation_metrics.assert_not_called()
+    mock_service.write.assert_not_called()
 
 
 # ============================================================================
@@ -115,7 +121,7 @@ def test_ingest_valuation_metrics_empty(
 def test_ingest_margin_trading_success(
     capital_ingestion: CapitalIngestion,
     mock_source: MagicMock,
-    mock_store: MagicMock,
+    mock_service: MagicMock,
 ) -> None:
     """测试成功摄入融资融券数据."""
     # 准备测试数据
@@ -136,8 +142,11 @@ def test_ingest_margin_trading_success(
     # Mock Source 返回数据
     mock_source.fetch_margin_trading.return_value = source_df
 
-    # Mock Store 写入成功
-    mock_store.write_margin_trading.return_value = 1
+    # Mock Service 写入成功
+    mock_service.write.return_value = CapitalWriteResult(
+        dataset="margin_trading",
+        records_written=1,
+    )
 
     # 执行摄入
     result = capital_ingestion.ingest_margin_trading(
@@ -154,7 +163,7 @@ def test_ingest_margin_trading_success(
 def test_ingest_margin_trading_empty(
     capital_ingestion: CapitalIngestion,
     mock_source: MagicMock,
-    mock_store: MagicMock,
+    mock_service: MagicMock,
 ) -> None:
     """测试摄入空融资融券数据."""
     # Mock Source 返回空数据
@@ -172,7 +181,7 @@ def test_ingest_margin_trading_empty(
     assert result.dataset == "margin_trading"
 
     # 验证未调用写入
-    mock_store.write_margin_trading.assert_not_called()
+    mock_service.write.assert_not_called()
 
 
 # ============================================================================
@@ -183,7 +192,7 @@ def test_ingest_margin_trading_empty(
 def test_ingest_pledge_ratio_success(
     capital_ingestion: CapitalIngestion,
     mock_source: MagicMock,
-    mock_store: MagicMock,
+    mock_service: MagicMock,
 ) -> None:
     """测试成功摄入股权质押数据."""
     # 准备测试数据
@@ -203,8 +212,11 @@ def test_ingest_pledge_ratio_success(
     # Mock Source 返回数据
     mock_source.fetch_pledge_ratio.return_value = source_df
 
-    # Mock Store 写入成功
-    mock_store.write_pledge_ratio.return_value = 1
+    # Mock Service 写入成功
+    mock_service.write.return_value = CapitalWriteResult(
+        dataset="pledge_ratio",
+        records_written=1,
+    )
 
     # 执行摄入
     result = capital_ingestion.ingest_pledge_ratio(
@@ -221,7 +233,7 @@ def test_ingest_pledge_ratio_success(
 def test_ingest_pledge_ratio_empty(
     capital_ingestion: CapitalIngestion,
     mock_source: MagicMock,
-    mock_store: MagicMock,
+    mock_service: MagicMock,
 ) -> None:
     """测试摄入空股权质押数据."""
     # Mock Source 返回空数据
@@ -239,7 +251,7 @@ def test_ingest_pledge_ratio_empty(
     assert result.dataset == "pledge_ratio"
 
     # 验证未调用写入
-    mock_store.write_pledge_ratio.assert_not_called()
+    mock_service.write.assert_not_called()
 
 
 # ============================================================================
@@ -250,7 +262,7 @@ def test_ingest_pledge_ratio_empty(
 def test_ingest_futures_success(
     capital_ingestion: CapitalIngestion,
     mock_source: MagicMock,
-    mock_store: MagicMock,
+    mock_service: MagicMock,
 ) -> None:
     """测试成功摄入期货数据."""
     # 准备测试数据
@@ -271,8 +283,11 @@ def test_ingest_futures_success(
     # Mock Source 返回数据
     mock_source.fetch_futures.return_value = source_df
 
-    # Mock Store 写入成功
-    mock_store.write_futures.return_value = 1
+    # Mock Service 写入成功
+    mock_service.write.return_value = CapitalWriteResult(
+        dataset="futures",
+        records_written=1,
+    )
 
     # 执行摄入
     result = capital_ingestion.ingest_futures(
@@ -289,7 +304,7 @@ def test_ingest_futures_success(
 def test_ingest_futures_empty(
     capital_ingestion: CapitalIngestion,
     mock_source: MagicMock,
-    mock_store: MagicMock,
+    mock_service: MagicMock,
 ) -> None:
     """测试摄入空期货数据."""
     # Mock Source 返回空数据
@@ -307,7 +322,7 @@ def test_ingest_futures_empty(
     assert result.dataset == "futures"
 
     # 验证未调用写入
-    mock_store.write_futures.assert_not_called()
+    mock_service.write.assert_not_called()
 
 
 # ============================================================================
@@ -318,7 +333,7 @@ def test_ingest_futures_empty(
 def test_ingest_index_composition_success(
     capital_ingestion: CapitalIngestion,
     mock_source: MagicMock,
-    mock_store: MagicMock,
+    mock_service: MagicMock,
 ) -> None:
     """测试成功摄入指数成分股数据."""
     # 准备测试数据
@@ -335,8 +350,11 @@ def test_ingest_index_composition_success(
     # Mock Source 返回数据
     mock_source.fetch_index_composition.return_value = source_df
 
-    # Mock Store 写入成功
-    mock_store.write_index_composition.return_value = 2
+    # Mock Service 写入成功
+    mock_service.write.return_value = CapitalWriteResult(
+        dataset="index_composition",
+        records_written=2,
+    )
 
     # 执行摄入
     result = capital_ingestion.ingest_index_composition(
@@ -352,7 +370,7 @@ def test_ingest_index_composition_success(
 def test_ingest_index_composition_empty(
     capital_ingestion: CapitalIngestion,
     mock_source: MagicMock,
-    mock_store: MagicMock,
+    mock_service: MagicMock,
 ) -> None:
     """测试摄入空指数成分股数据."""
     # Mock Source 返回空数据
@@ -369,4 +387,4 @@ def test_ingest_index_composition_empty(
     assert result.dataset == "index_composition"
 
     # 验证未调用写入
-    mock_store.write_index_composition.assert_not_called()
+    mock_service.write.assert_not_called()

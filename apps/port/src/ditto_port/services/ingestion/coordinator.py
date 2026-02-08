@@ -14,12 +14,13 @@ import httpx
 import polars as pl
 from ditto_datahub.hub import DataHub
 from ditto_datahub.models import Dataset, OnDuplicate
-from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_foundation import logger
 
 from ditto_port.models import IngestionResult
 from ditto_port.services.ingestion.data_writer import IngestionDataWriter
+from ditto_port.services.ingestion.errors import SourceFetchError
 from ditto_port.services.ingestion.metadata import MetadataManager
+from ditto_port.services.ingestion.protocols import IngestionDataSource
 from ditto_port.services.ingestion.result_handler import IngestionResultHandler
 
 
@@ -29,7 +30,7 @@ class IngestionCoordinator:
     def __init__(
         self,
         hub: DataHub,
-        source: DataSource,
+        source: IngestionDataSource,
         source_name: str = "tushare",
     ) -> None:
         """初始化 IngestionCoordinator。"""
@@ -39,6 +40,19 @@ class IngestionCoordinator:
         self._metadata_manager = MetadataManager(hub)
         self._result_handler = IngestionResultHandler(hub, source_name)
         self._data_writer = IngestionDataWriter(hub, source_name)
+
+    @staticmethod
+    def _is_source_fetch_error(error: Exception) -> bool:
+        """Check whether exception should be treated as source fetch failure."""
+        return isinstance(error, SourceFetchError) or (
+            error.__class__.__name__ == "SourceFetchError"
+        )
+
+    @staticmethod
+    def _normalize_source_fetch_error(error: Exception) -> SourceFetchError:
+        """Normalize external fetch error into port-level SourceFetchError."""
+        source_name = getattr(error, "source", type(error).__name__)
+        return SourceFetchError(message=str(error), source=str(source_name))
 
     def ingest_date(
         self,
@@ -103,7 +117,7 @@ class IngestionCoordinator:
         """
         检查数据集是否需要交易日验证。
 
-        对于行情类数据集（stock_daily, etf_daily），非交易日返回 False。
+        对于交易日驱动数据集（market + 部分 capital），非交易日返回 False。
         其他数据集不需要交易日验证，返回 True。
 
         Args:
@@ -120,8 +134,16 @@ class IngestionCoordinator:
         except ValueError:
             return True
 
-        if dataset_enum in (Dataset.STOCK_DAILY, Dataset.ETF_DAILY):
-            return self._hub.calendar.is_trading_day(trade_date)
+        if dataset_enum in (
+            Dataset.STOCK_DAILY,
+            Dataset.ETF_DAILY,
+            Dataset.STOCK_STATUS,
+            Dataset.ADJ_FACTOR,
+            Dataset.FUND_ADJ,
+            Dataset.VALUATION_METRICS,
+            Dataset.MARGIN_TRADING,
+        ):
+            return self._hub.metadata.is_trading_day(trade_date)
         return True
 
     def _create_skipped_result(
@@ -141,9 +163,6 @@ class IngestionCoordinator:
         """获取数据并执行摄取（统一错误处理）。"""
         try:
             df = self._fetch_data(dataset, trade_date)
-        except SourceFetchError as e:
-            # 已知的业务异常，直接处理
-            return self._result_handler.handle_fetch_error(dataset, trade_date, e)
         except (httpx.NetworkError, httpx.TimeoutException) as e:
             # 网络相关异常，记录后转换为业务异常
             logger.exception(
@@ -160,6 +179,11 @@ class IngestionCoordinator:
                 dataset, trade_date, fetch_error
             )
         except Exception as e:
+            if self._is_source_fetch_error(e):
+                fetch_error = self._normalize_source_fetch_error(e)
+                return self._result_handler.handle_fetch_error(
+                    dataset, trade_date, fetch_error
+                )
             # 未知异常，记录完整堆栈
             logger.exception(
                 "unexpected_error_during_fetch",
@@ -207,7 +231,7 @@ class IngestionCoordinator:
         force: bool = False,
     ) -> list[IngestionResult]:
         """摄取日期范围数据。"""
-        trade_dates = self._hub.calendar.list_trading_days(start_date, end_date)
+        trade_dates = self._hub.metadata.list_trading_days(start_date, end_date)
 
         if not trade_dates:
             return []
@@ -240,8 +264,29 @@ class IngestionCoordinator:
             Dataset.ETF_BASIC: lambda: self._source.fetch_etf_basic(),
             Dataset.STOCK_DAILY: lambda: self._source.fetch_stock_daily(trade_date),
             Dataset.ETF_DAILY: lambda: self._source.fetch_etf_daily(trade_date),
+            Dataset.STOCK_STATUS: lambda: self._source.fetch_stock_status(trade_date),
             Dataset.ADJ_FACTOR: lambda: self._source.fetch_adj_factor(trade_date),
             Dataset.FUND_ADJ: lambda: self._source.fetch_fund_adj(trade_date),
+            Dataset.BALANCE_SHEET: lambda: self._source.fetch_balance_sheet(trade_date),
+            Dataset.INCOME_STATEMENT: lambda: self._source.fetch_income_statement(
+                trade_date
+            ),
+            Dataset.CASH_FLOW: lambda: self._source.fetch_cash_flow(trade_date),
+            Dataset.DIVIDEND: lambda: self._source.fetch_dividend(trade_date),
+            Dataset.VALUATION_METRICS: lambda: self._source.fetch_valuation_metrics(
+                trade_date
+            ),
+            Dataset.MARGIN_TRADING: lambda: self._source.fetch_margin_trading(
+                trade_date
+            ),
+            Dataset.PLEDGE_RATIO: lambda: self._source.fetch_pledge_ratio(trade_date),
+            Dataset.MACRO_INDICATORS: lambda: self._source.fetch_macro_indicators(
+                trade_date
+            ),
+            Dataset.FUTURES: lambda: self._source.fetch_futures(trade_date),
+            Dataset.CORPORATE_ACTIONS: lambda: self._source.fetch_corporate_actions(
+                trade_date
+            ),
         }
 
         if dataset_enum not in handlers:

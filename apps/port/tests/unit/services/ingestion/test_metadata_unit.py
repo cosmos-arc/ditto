@@ -52,7 +52,7 @@ class TestShouldSkip:
 
         mock_hub = mocker.Mock()
         # Mock get_log 返回 None（无历史记录）
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         manager = MetadataManager(mock_hub)
 
         should_skip, reason = manager.should_skip(
@@ -63,14 +63,14 @@ class TestShouldSkip:
 
         assert should_skip is False
         assert reason is None
-        mock_hub.ingestion_log.get_log.assert_called_once()
+        mock_hub.ingestion_log_store.get_log.assert_called_once()
 
     def test_should_skip_when_previous_success(self, mocker) -> None:
         """历史成功时跳过。"""
 
         mock_hub = mocker.Mock()
         # Mock get_log 返回成功的历史记录
-        mock_hub.ingestion_log.get_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -95,7 +95,7 @@ class TestShouldSkip:
 
         mock_hub = mocker.Mock()
         # Mock get_log 返回失败的历史记录
-        mock_hub.ingestion_log.get_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -126,7 +126,7 @@ class TestShouldSkip:
             force=False,
         )
 
-        # hub.ingestion_log.get_log 默认返回 None（无历史记录）
+        # hub.ingestion_log_store.get_log 默认返回 None（无历史记录）
         assert should_skip is False
         assert reason is None
 
@@ -135,7 +135,7 @@ class TestShouldSkip:
         mock_hub = mocker.Mock()
 
         # Mock get_log 返回成功的历史记录
-        mock_hub.ingestion_log.get_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="akshare",  # 不同的数据源
             trade_date="2024-12-27",
@@ -154,7 +154,7 @@ class TestShouldSkip:
         )
 
         # 验证 get_log 被调用时使用了正确的 source
-        mock_hub.ingestion_log.get_log.assert_called_once_with(
+        mock_hub.ingestion_log_store.get_log.assert_called_once_with(
             dataset="stock_daily",
             source="akshare",  # 应该是 akshare 而不是硬编码的 tushare
             trade_date="2024-12-27",
@@ -319,7 +319,7 @@ class TestShouldSkipEdgeCases:
         mock_hub = mocker.Mock()
 
         # Mock get_log 返回成功的历史记录
-        mock_hub.ingestion_log.get_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -346,7 +346,7 @@ class TestShouldSkipEdgeCases:
         mock_hub = mocker.Mock()
 
         # Mock get_log 返回成功但无 checksum 的历史记录
-        mock_hub.ingestion_log.get_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",

@@ -4,9 +4,9 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.factors.factor_metadata_store import FactorMetadataStore
-from ditto_datahub.domains.factors.factor_service import FactorQuery, FactorService
-from ditto_datahub.domains.factors.factor_store import FactorStore
+from ditto_datahub.services.factors.factor_service import FactorQuery, FactorService
+from ditto_datahub.stores.factors.factor_metadata_store import FactorMetadataStore
+from ditto_datahub.stores.factors.factor_store import FactorStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
@@ -54,7 +54,7 @@ def test_get_factors_enriches_with_metadata(factor_service: FactorService) -> No
     # Setup: Write factor data
     df = pl.DataFrame(
         {
-            "sid": [1, 1],
+            "instrument_id": [1, 1],
             "trade_date": ["2024-01-02", "2024-01-03"],
             "factor_id": ["factor_momentum_12m"] * 2,
             "factor_class": ["technical"] * 2,
@@ -73,7 +73,7 @@ def test_get_factors_enriches_with_metadata(factor_service: FactorService) -> No
         start="2024-01-01",
         end="2024-01-31",
     )
-    result = factor_service.get_factors(query)
+    result = factor_service.query(query)
 
     # Verify: Result includes metadata columns
     assert not result.is_empty()
@@ -99,7 +99,7 @@ def test_get_factors_with_pit_query(factor_service: FactorService) -> None:
     # Write version 1
     df_v1 = pl.DataFrame(
         {
-            "sid": [1],
+            "instrument_id": [1],
             "trade_date": ["2024-01-02"],
             "factor_id": ["factor_momentum_12m"],
             "factor_class": ["technical"],
@@ -114,7 +114,7 @@ def test_get_factors_with_pit_query(factor_service: FactorService) -> None:
     # Write version 2 (revised)
     df_v2 = pl.DataFrame(
         {
-            "sid": [1],
+            "instrument_id": [1],
             "trade_date": ["2024-01-02"],
             "factor_id": ["factor_momentum_12m"],
             "factor_class": ["technical"],
@@ -134,7 +134,7 @@ def test_get_factors_with_pit_query(factor_service: FactorService) -> None:
         end="2024-01-31",
         as_of="2024-01-05",
     )
-    result_v1 = factor_service.get_factors(query_v1)
+    result_v1 = factor_service.query(query_v1)
 
     assert len(result_v1) == 1
     assert result_v1["exposure"][0] == 0.5
@@ -145,7 +145,7 @@ def test_get_factors_with_pit_query(factor_service: FactorService) -> None:
         end="2024-01-31",
         as_of="2024-01-15",
     )
-    result_v2 = factor_service.get_factors(query_v2)
+    result_v2 = factor_service.query(query_v2)
 
     assert len(result_v2) == 1
     assert result_v2["exposure"][0] == 0.55
@@ -176,7 +176,7 @@ def test_get_factors_with_class_filter(factor_service: FactorService) -> None:
     # Write mixed data
     df = pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": ["2024-01-02"] * 4,
             "factor_id": [
                 "factor_momentum_12m",
@@ -200,7 +200,7 @@ def test_get_factors_with_class_filter(factor_service: FactorService) -> None:
         end="2024-01-31",
         factor_classes=["technical"],
     )
-    result = factor_service.get_factors(query)
+    result = factor_service.query(query)
 
     assert len(result) == 2
     assert result["factor_class"].to_list() == ["technical", "technical"]
@@ -231,7 +231,7 @@ def test_get_factors_with_family_filter(factor_service: FactorService) -> None:
     # Write mixed data
     df = pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": ["2024-01-02"] * 4,
             "factor_id": [
                 "factor_momentum_12m",
@@ -255,7 +255,7 @@ def test_get_factors_with_family_filter(factor_service: FactorService) -> None:
         end="2024-01-31",
         factor_families=["momentum"],
     )
-    result = factor_service.get_factors(query)
+    result = factor_service.query(query)
 
     assert len(result) == 2
     assert result["factor_family"].to_list() == ["momentum", "momentum"]
@@ -267,7 +267,7 @@ def test_get_factors_empty_store(factor_service: FactorService) -> None:
         start="2024-01-01",
         end="2024-01-31",
     )
-    result = factor_service.get_factors(query)
+    result = factor_service.query(query)
 
     assert result.is_empty()
 
@@ -277,7 +277,7 @@ def test_get_factors_no_metadata(factor_service: FactorService) -> None:
     # Write factor data without registering metadata
     df = pl.DataFrame(
         {
-            "sid": [1],
+            "instrument_id": [1],
             "trade_date": ["2024-01-02"],
             "factor_id": ["factor_momentum_12m"],
             "factor_class": ["technical"],
@@ -295,11 +295,11 @@ def test_get_factors_no_metadata(factor_service: FactorService) -> None:
         start="2024-01-01",
         end="2024-01-31",
     )
-    result = factor_service.get_factors(query)
+    result = factor_service.query(query)
 
     assert not result.is_empty()
     # Data columns should be present
-    assert "sid" in result.columns
+    assert "instrument_id" in result.columns
     assert "factor_id" in result.columns
     assert "exposure" in result.columns
 

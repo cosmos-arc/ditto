@@ -121,7 +121,7 @@ class TestTushareSourceEtfBasic:
 
         # Verify schema
         assert dict(result.schema) == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "symbol": pl.String,
             "name": pl.String,
             "exchange": pl.String,
@@ -131,14 +131,14 @@ class TestTushareSourceEtfBasic:
         # Verify data transformation
         assert result.to_dicts() == [
             {
-                "src_code": "510300.SH",
+                "source_ticker": "510300.SH",
                 "symbol": "510300",
                 "name": "沪深300ETF",
                 "exchange": "SSE",
                 "list_date": date(2012, 7, 6),
             },
             {
-                "src_code": "159919.SZ",
+                "source_ticker": "159919.SZ",
                 "symbol": "159919",
                 "name": "沪深300ETF",
                 "exchange": "SZSE",
@@ -223,7 +223,7 @@ class TestTushareSourceEtfDaily:
 
         # Verify schema matches ETF_DAILY_SCHEMA
         expected_schema = {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "knowledge_date": pl.Date,
             "open": pl.Float64,
@@ -242,7 +242,7 @@ class TestTushareSourceEtfDaily:
         # - knowledge_date = trade_date + 1
         assert result.to_dicts() == [
             {
-                "src_code": "510300.SH",
+                "source_ticker": "510300.SH",
                 "trade_date": date(2024, 1, 2),
                 "knowledge_date": date(2024, 1, 3),
                 "open": 3.5,
@@ -328,7 +328,7 @@ class TestTushareSourceStockBasic:
 
         # Verify schema
         assert dict(result.schema) == {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "symbol": pl.String,
             "name": pl.String,
             "exchange": pl.String,
@@ -338,14 +338,14 @@ class TestTushareSourceStockBasic:
         # Verify data transformation
         assert result.to_dicts() == [
             {
-                "src_code": "000001.SZ",
+                "source_ticker": "000001.SZ",
                 "symbol": "000001",
                 "name": "平安银行",
                 "exchange": "SZSE",
                 "list_date": date(1991, 4, 3),
             },
             {
-                "src_code": "600000.SH",
+                "source_ticker": "600000.SH",
                 "symbol": "600000",
                 "name": "浦发银行",
                 "exchange": "SSE",
@@ -448,7 +448,7 @@ class TestTushareSourceStockDaily:
 
         # Verify schema matches STOCK_DAILY_SCHEMA
         expected_schema = {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "knowledge_date": pl.Date,
             "open": pl.Float64,
@@ -467,7 +467,7 @@ class TestTushareSourceStockDaily:
         # - knowledge_date = trade_date + 1
         assert result.to_dicts() == [
             {
-                "src_code": "000001.SZ",
+                "source_ticker": "000001.SZ",
                 "trade_date": date(2024, 1, 2),
                 "knowledge_date": date(2024, 1, 3),
                 "open": 11.5,
@@ -558,7 +558,7 @@ class TestTushareSourceAdjFactor:
 
         # Verify schema
         expected_schema = {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "knowledge_date": pl.Date,
             "adj_factor": pl.Float64,
@@ -568,13 +568,13 @@ class TestTushareSourceAdjFactor:
         # Verify data transformation (knowledge_date = trade_date)
         assert result.to_dicts() == [
             {
-                "src_code": "000001.SZ",
+                "source_ticker": "000001.SZ",
                 "trade_date": date(2024, 1, 2),
                 "knowledge_date": date(2024, 1, 2),
                 "adj_factor": 1.2345,
             },
             {
-                "src_code": "600000.SH",
+                "source_ticker": "600000.SH",
                 "trade_date": date(2024, 1, 2),
                 "knowledge_date": date(2024, 1, 2),
                 "adj_factor": 1.5678,
@@ -646,7 +646,7 @@ class TestTushareSourceFundAdj:
 
         # Verify schema
         expected_schema = {
-            "src_code": pl.String,
+            "source_ticker": pl.String,
             "trade_date": pl.Date,
             "knowledge_date": pl.Date,
             "adj_factor": pl.Float64,
@@ -656,13 +656,13 @@ class TestTushareSourceFundAdj:
         # Verify data transformation (knowledge_date = trade_date)
         assert result.to_dicts() == [
             {
-                "src_code": "510300.SH",
+                "source_ticker": "510300.SH",
                 "trade_date": date(2024, 1, 2),
                 "knowledge_date": date(2024, 1, 2),
                 "adj_factor": 1.0123,
             },
             {
-                "src_code": "159919.SZ",
+                "source_ticker": "159919.SZ",
                 "trade_date": date(2024, 1, 2),
                 "knowledge_date": date(2024, 1, 2),
                 "adj_factor": 1.0456,
@@ -727,3 +727,31 @@ class TestTushareErrorHandler:
         # Verify错误信息包含原始错误
         assert "test_dataset" in str(exc_info.value)
         assert "Generic error" in exc_info.value.details.get("original_error", "")
+
+
+class TestTushareSourceMacroIndicators:
+    """Tests for TushareSource.fetch_macro_indicators."""
+
+    def test_fetch_macro_indicators_delegates_to_macro_adapter(self, mocker) -> None:
+        """fetch_macro_indicators 应委托给 macro adapter."""
+        source = TushareSource(settings=_settings())
+        expected = pl.DataFrame(
+            {
+                "indicator_code": ["SHIBOR_ON"],
+                "indicator_name": ["隔夜Shibor"],
+                "category": ["interest_rate"],
+                "frequency": ["daily"],
+                "need_pit": [False],
+                "date": [date(2024, 1, 2)],
+                "value": [1.91],
+                "knowledge_date": [date(2024, 1, 3)],
+            }
+        )
+        mocker.patch.object(
+            source._macro,  # pyright: ignore[reportPrivateUsage]
+            "fetch_macro_indicators",
+            return_value=expected,
+        )
+
+        result = source.fetch_macro_indicators("2024-01-02")
+        assert result.equals(expected)

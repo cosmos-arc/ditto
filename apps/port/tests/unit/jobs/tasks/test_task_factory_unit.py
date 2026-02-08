@@ -193,8 +193,17 @@ class TestT1IncrementalTasks:
         [
             Dataset.ETF_DAILY,
             Dataset.STOCK_DAILY,
+            Dataset.STOCK_STATUS,
             Dataset.ADJ_FACTOR,
             Dataset.FUND_ADJ,
+            Dataset.BALANCE_SHEET,
+            Dataset.INCOME_STATEMENT,
+            Dataset.CASH_FLOW,
+            Dataset.DIVIDEND,
+            Dataset.VALUATION_METRICS,
+            Dataset.MARGIN_TRADING,
+            Dataset.PLEDGE_RATIO,
+            Dataset.MACRO_INDICATORS,
         ],
     )
     def test_t1_datasets_in_registry(self, dataset):

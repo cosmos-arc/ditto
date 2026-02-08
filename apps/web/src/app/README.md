@@ -229,7 +229,7 @@ interface Portfolio {
 }
 
 interface Position {
-  sid: string;
+  instrumentId: string;
   symbol: string;
   name: string;
   shares: number;

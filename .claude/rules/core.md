@@ -471,9 +471,9 @@ tar -tzf dist/*.whl | grep py.typed
 | 层级 | 职责 | 典型组件 | 禁止 |
 |------|------|----------|------|
 | **DataHub Store** | 数据持久化、基础查询 | SecurityStore, BarsStore | 包含业务逻辑 |
-| **DataHub Accessor** | 业务封装、领域接口 | SecurityAccessor, BarsAccessor | 直接访问文件系统 |
-| **DataHub Runtime** | 基础设施（连接池、锁、分配器） | SQLitePool, FileLockManager, SidAllocator | 包含业务逻辑 |
-| **DataHub Source** | 外部数据源适配 | TushareSource, AkshareSource | 包含业务逻辑 |
+| **DataHub Service** | 领域封装、查询/写入契约 | MarketService, MetadataService | 直接暴露存储实现细节 |
+| **DataHub Runtime** | 基础设施（连接池、锁、分配器） | SQLitePool, FileLockManager, InstrumentIdAllocator | 包含业务逻辑 |
+| **DataHub Source/Adapter** | 外部数据源适配与字段规范化 | TushareSource, CapitalAdapter | 包含业务编排逻辑 |
 | **Server Service** | 流程编排、任务协调 | IngestionCoordinator, RetryManager | 直接数据访问 |
 | **Server Flow** | 应用层用例组合 | DailyFlow, BackfillFlow | - |
 
@@ -481,12 +481,13 @@ tar -tzf dist/*.whl | grep py.typed
 
 **允许的单向依赖：**
 ```
-Server Flow → Server Service → DataHub Accessor → DataHub Store/Runtime → Foundation
+Server Flow → Server Service → DataHub Service → DataHub Store/Runtime → Foundation
 ```
 
 **禁止的依赖模式：**
 - ❌ Server → DataHub Store (跨层访问)
 - ❌ Server → DataHub Runtime (跨层访问)
+- ❌ Server 非 registry 模块 → DataHub Source (跨层访问)
 - ❌ DataHub → Server (反向依赖)
 - ❌ 同层组件间的循环依赖
 
@@ -500,12 +501,17 @@ from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.bars_store import BarsStore
 
 # ❌ Server 层禁止直接导入 Runtime
-from ditto_datahub.runtime.sid_allocator import SidAllocator
+from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 
-# ✅ Server 层应该使用 Accessor
+# ✅ Server 层应该使用 Service
 from ditto_datahub import DataHub
-from ditto_datahub.accessors.security import SecurityAccessor
+from ditto_datahub.domains.market.market_service import MarketService
+from ditto_datahub.domains.metadata.metadata_service import MetadataService
+
+# ✅ 仅 registry 模块允许导入 Store/Source 做 DI 装配
+from ditto_datahub.sources.tushare import TushareSource
+from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 # ✅ DataHub 内部可以导入下层
 # packages/datahub 内的 Store 可以导入 Runtime
@@ -517,23 +523,23 @@ from ditto_datahub.accessors.security import SecurityAccessor
 
 | 问题 | 回答 Yes → 归属 | 回答 No → 归属 |
 |------|-----------------|----------------|
-| 是否直接访问存储文件/数据库？ | DataHub Store | 使用 Accessor |
-| 是否需要分配/管理唯一标识符（如 SID）？ | DataHub Accessor | 不应在此层 |
-| 是否包含数据映射/转换逻辑（如 src_code → sid）？ | DataHub Accessor | 不应在此层 |
-| 是否依赖外部数据源（API/爬虫）？ | DataHub Source | 不应在此层 |
+| 是否直接访问存储文件/数据库？ | DataHub Store | 使用 DataHub Service |
+| 是否需要分配/管理唯一标识符（如 instrument_id）？ | DataHub Service | 不应在此层 |
+| 是否包含数据映射/转换逻辑（如 source_ticker → instrument_id）？ | DataHub Service | 不应在此层 |
+| 是否依赖外部数据源（API/爬虫）？ | DataHub Source/Adapter | 不应在此层 |
 | 是否是流程编排/任务协调？ | Server Service | 不应在此层 |
 | 是否是应用层用例组合？ | Server Flow | 不应在此层 |
 
 ### 代码重复检测
 
-在实现新功能前，必须检查 DataHub Accessor 是否已有类似实现：
+在实现新功能前，必须检查 DataHub Service 是否已有类似实现：
 
 ```bash
-# 检查 SecurityAccessor 是否已有相关方法
-grep -r "def.*register" packages/datahub/accessors/
-grep -r "def.*resolve" packages/datahub/accessors/
+# 检查 MetadataService 是否已有相关方法
+grep -r "def.*register" packages/datahub/src/ditto_datahub/domains/metadata/
+grep -r "def.*resolve" packages/datahub/src/ditto_datahub/domains/metadata/
 ```
 
 **禁止重复实现：**
-- ❌ Server 层重复实现 Accessor 已有的数据访问逻辑
+- ❌ Server 层重复实现 Service 已有的数据访问逻辑
 - ❌ 多个地方重复实现相同的映射/转换规则

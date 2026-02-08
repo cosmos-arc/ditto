@@ -157,3 +157,26 @@ class TestQuarantineData:
         # Assert - 验证 quarantine 被调用
         # （通过验证日志记录来间接验证）
         mock_quality_engine.check.assert_called_once()
+
+    def test_quarantine_saves_failed_data(
+        self,
+        mock_quality_engine,
+        sample_primary_df,
+        sample_dq_result_with_issues,
+        mock_quarantine_store,
+    ) -> None:
+        """测试 quarantine_store.save_failed_data 被调用."""
+        # Arrange
+        service = QualityService(
+            engine=mock_quality_engine, quarantine_store=mock_quarantine_store
+        )
+        mock_quality_engine.check.return_value = sample_dq_result_with_issues
+
+        # Act
+        service.check_and_quarantine(df=sample_primary_df, dataset="stock_daily")
+
+        # Assert - 验证 quarantine store 被调用
+        # 每个 issue 应该调用一次 save_failed_data
+        assert mock_quarantine_store.save_failed_data.call_count == len(
+            sample_dq_result_with_issues.issues
+        )

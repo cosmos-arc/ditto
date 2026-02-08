@@ -39,7 +39,7 @@ class BaseStore(ABC):
     def read(
         self,
         dataset: str,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
         **kwargs: object,
@@ -49,7 +49,7 @@ class BaseStore(ABC):
 
         Args:
             dataset: 数据集名称.
-            sids: 证券 ID 列表（可选）.
+            instrument_ids: 证券 ID 列表（可选）.
             start_date: 起始日期 (YYYY-MM-DD)（可选）.
             end_date: 结束日期 (YYYY-MM-DD)（可选）.
             **kwargs: 其他实现特定的参数.
@@ -87,7 +87,7 @@ class BaseStore(ABC):
     def delete(
         self,
         dataset: str,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
         **kwargs: object,
@@ -97,7 +97,7 @@ class BaseStore(ABC):
 
         Args:
             dataset: 数据集名称.
-            sids: 证券 ID 列表（可选）.
+            instrument_ids: 证券 ID 列表（可选）.
             start_date: 起始日期 (YYYY-MM-DD)（可选）.
             end_date: 结束日期 (YYYY-MM-DD)（可选）.
             **kwargs: 其他实现特定的参数.

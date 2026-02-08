@@ -1,7 +1,7 @@
 """Tests for CalendarStore."""
 
 import pytest
-from ditto_datahub.domains.metadata.calendar import CalendarStore
+from ditto_datahub.stores.metadata.calendar import CalendarStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from pytest_mock import MockerFixture
 
@@ -343,7 +343,7 @@ class TestCalendarStore:
             self.client, "execute", side_effect=RuntimeError("DB error")
         ):
             mock_logger = mocker.patch(
-                "ditto_datahub.domains.metadata.calendar.calendar_store.logger"
+                "ditto_datahub.stores.metadata.calendar.calendar_store.logger"
             )
 
             with pytest.raises(RuntimeError):

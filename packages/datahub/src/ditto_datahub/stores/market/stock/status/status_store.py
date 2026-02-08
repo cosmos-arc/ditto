@@ -1,0 +1,359 @@
+"""
+Stock status storage with year partitioning.
+
+Stores stock status information for risk control in Parquet files
+with year partitioning. This includes:
+- Suspension status (停牌): is_suspended, suspend_timing
+- ST status: is_st, st_type
+- List status: list_status (L=正常, D=退市, P=暂停)
+
+Following design document at docs/design/02_data_design.md.
+"""
+
+from __future__ import annotations
+
+import time
+from datetime import datetime
+from pathlib import Path
+
+import polars as pl
+from ditto_foundation import M, logger, traced
+from ditto_foundation.util.io import atomic_write, file_md5
+
+
+class StockStatusStore:
+    """
+    Stock status data storage with year partitioning.
+
+    Storage structure:
+        data_root/
+            market/stock/status/
+                2020.parquet
+                2021.parquet
+                ...
+    """
+
+    def __init__(self, data_root: Path) -> None:
+        """
+        Initialize StockStatusStore.
+
+        Args:
+            data_root: Root directory for data storage.
+
+        """
+        self._data_root = Path(data_root)
+        self._dataset = "market/stock/status"
+
+    def _get_path(self, year: int) -> Path:
+        """
+        Get year partition file path.
+
+        Args:
+            year: Year partition.
+
+        Returns:
+            Path to the Parquet file.
+
+        """
+        return self._data_root / self._dataset / f"{year}.parquet"
+
+    def _collect_paths(
+        self,
+        start_year: int,
+        end_year: int,
+    ) -> list[Path]:
+        """
+        Collect year partition file paths.
+
+        Args:
+            start_year: Start year (inclusive).
+            end_year: End year (inclusive).
+
+        Returns:
+            List of existing file paths.
+
+        """
+        dataset_dir = self._data_root / self._dataset
+        if not dataset_dir.exists():
+            return []
+
+        paths: list[Path] = []
+        for year in range(start_year, end_year + 1):
+            path = dataset_dir / f"{year}.parquet"
+            if path.exists():
+                paths.append(path)
+
+        return paths
+
+    # ============ Read operations ============
+
+    @traced("data.read")
+    def read(
+        self,
+        instrument_ids: list[int] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        Read stock status data.
+
+        Args:
+            instrument_ids: Filter by instrument IDs.
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with matching records.
+
+        """
+        start_time = time.time()
+
+        # Determine year range from date filters
+        start_year = int(start_date[:4]) if start_date else 1990
+        end_year = int(end_date[:4]) if end_date else 2099
+
+        paths = self._collect_paths(start_year, end_year)
+
+        if not paths:
+            logger.info(
+                "No data found for query",
+                event="data_read_complete",
+                dataset=self._dataset,
+                start_date=start_date,
+                end_date=end_date,
+                row_count=0,
+                duration_ms=0,
+            )
+            return pl.DataFrame()
+
+        # Scan and filter
+        lf = pl.scan_parquet([str(p) for p in paths])
+
+        if instrument_ids:
+            lf = lf.filter(pl.col("instrument_id").is_in(instrument_ids))
+
+        if start_date:
+            # Convert string to literal date
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+            lf = lf.filter(pl.col("trade_date") >= pl.lit(start_dt))
+
+        if end_date:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+            lf = lf.filter(pl.col("trade_date") <= pl.lit(end_dt))
+
+        # Ensure sorting for correct unique(keep="last") and result order
+        result = (
+            lf.sort(["instrument_id", "trade_date"])
+            .unique(subset=["instrument_id", "trade_date"], keep="last")
+            .sort(["instrument_id", "trade_date"])  # Ensure result is sorted
+            .collect()
+        )
+
+        duration_ms = (time.time() - start_time) * 1000
+
+        logger.info(
+            "Data read completed",
+            event="data_read_complete",
+            dataset=self._dataset,
+            start_date=start_date,
+            end_date=end_date,
+            sids_count=len(instrument_ids) if instrument_ids else None,
+            row_count=len(result),
+            duration_ms=round(duration_ms, 2),
+        )
+
+        # Record metrics
+        M.data_records.add(len(result), {"dataset": self._dataset, "status": "success"})
+        M.data_update_duration.record(duration_ms / 1000, {"dataset": self._dataset})
+
+        return result
+
+    # ============ Write operations ============
+
+    @traced("data.write")
+    def write(
+        self,
+        df: pl.DataFrame,
+        year: int,
+    ) -> tuple[str, str]:
+        """
+        Write year partition file.
+
+        Strategy: Read existing data → Merge deduplicate → Atomic write.
+
+        Args:
+            df: Data to write.
+            year: Year partition.
+
+        Returns:
+            Tuple of (file_path, checksum).
+
+        """
+        start_time = time.time()
+
+        dataset_dir = self._data_root / self._dataset
+        dataset_dir.mkdir(parents=True, exist_ok=True)
+
+        file_path = self._get_path(year)
+        is_merge = file_path.exists()
+
+        # Merge with existing data
+        if file_path.exists():
+            existing = pl.read_parquet(file_path)
+            combined = pl.concat([existing, df]).unique(
+                subset=["instrument_id", "trade_date"],
+                keep="last",  # New data overwrites
+            )
+        else:
+            combined = df
+
+        # Normalize trade_date to Date type if needed
+        if "trade_date" in combined.columns:
+            if combined["trade_date"].dtype == pl.String:
+                combined = combined.with_columns(
+                    pl.col("trade_date").str.strptime(pl.Date, "%Y-%m-%d")
+                )
+            elif combined["trade_date"].dtype != pl.Date:
+                combined = combined.with_columns(pl.col("trade_date").cast(pl.Date))
+
+        # Sort for optimal read performance AND correct last() aggregation
+        combined = combined.sort(["instrument_id", "trade_date"])
+
+        # Atomic write
+        atomic_write(combined, file_path)
+
+        # Calculate checksum
+        checksum: str = file_md5(file_path)
+
+        duration_ms = (time.time() - start_time) * 1000
+
+        logger.info(
+            "Data write completed",
+            event="data_write_complete",
+            dataset=self._dataset,
+            year=year,
+            row_count=len(df),
+            total_rows=len(combined),
+            is_merge=is_merge,
+            file_path=str(file_path),
+            checksum=checksum,
+            duration_ms=round(duration_ms, 2),
+        )
+
+        # Record metrics
+        M.data_records.add(len(df), {"dataset": self._dataset, "status": "success"})
+        M.data_update_duration.record(duration_ms / 1000, {"dataset": self._dataset})
+
+        return str(file_path), checksum
+
+    # ============ Metadata operations ============
+
+    def get_years(self) -> list[int]:
+        """
+        Get available years for stock status data.
+
+        Returns:
+            Sorted list of available years.
+
+        """
+        dataset_dir = self._data_root / self._dataset
+        if not dataset_dir.exists():
+            return []
+
+        years: list[int] = []
+        for f in dataset_dir.glob("*.parquet"):
+            try:
+                year = int(f.stem)
+                years.append(year)
+            except ValueError:
+                # Skip files that don't match year pattern
+                continue
+
+        return sorted(years)
+
+    def delete(self, year: int) -> bool:
+        """
+        Delete a year partition.
+
+        Args:
+            year: Year partition to delete.
+
+        Returns:
+            True if deleted, False if file didn't exist.
+
+        """
+        path = self._get_path(year)
+        if path.exists():
+            path.unlink()
+            return True
+        return False
+
+    def get_checksum(self, year: int) -> str:
+        """
+        Get MD5 checksum of a year partition.
+
+        Args:
+            year: Year partition.
+
+        Returns:
+            Checksum hex string, or empty string if file doesn't exist.
+
+        """
+        path = self._get_path(year)
+        if path.exists():
+            result: str = file_md5(path)
+            return result
+        return ""
+
+    def count(
+        self,
+        instrument_ids: list[int] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> int:
+        """
+        Count records in stock status data.
+
+        Args:
+            instrument_ids: Filter by instrument IDs.
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            Number of matching records.
+
+        """
+        df = self.read(
+            instrument_ids=instrument_ids, start_date=start_date, end_date=end_date
+        )
+        return len(df)
+
+    def get_date_range(self) -> tuple[str | None, str | None]:
+        """
+        Get overall date range for stock status data.
+
+        Returns:
+            Tuple of (start_date, end_date) as strings, or (None, None) if empty.
+
+        """
+        years = self.get_years()
+        if not years:
+            return None, None
+
+        # Scan all partitions and find min/max dates
+        paths = self._collect_paths(min(years), max(years))
+        if not paths:
+            return None, None
+
+        lf = pl.scan_parquet([str(p) for p in paths])
+        min_max = lf.select(
+            [
+                pl.col("trade_date").min().alias("min"),
+                pl.col("trade_date").max().alias("max"),
+            ]
+        ).collect()
+
+        if len(min_max) == 0 or min_max["min"][0] is None:
+            return None, None
+
+        return str(min_max["min"][0]), str(min_max["max"][0])

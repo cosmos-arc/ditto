@@ -83,9 +83,9 @@ class TestSQLitePool:
         table_names = [row["name"] for row in tables]
 
         # Verify core tables exist
-        assert "sid_sequence" in table_names
-        assert "security" in table_names
-        assert "security_mapping" in table_names
+        assert "instrument_id_sequence" in table_names
+        assert "instrument" in table_names
+        assert "instrument_mapping" in table_names
         assert "trading_calendar" in table_names
         assert "freeze_point" in table_names
         assert "price_limit_config" in table_names
@@ -105,14 +105,14 @@ class TestSQLitePool:
         ).fetchall()
         assert len(tables) > 0
 
-    def test_init_schema_initializes_sid_sequence(self) -> None:
-        """Test init_schema initializes SID sequence values."""
+    def test_init_schema_initializes_instrument_id_sequence(self) -> None:
+        """Test init_schema initializes Instrument ID sequence values."""
         self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
-        # Check initial SID sequence values
+        # Check initial Instrument ID sequence values
         rows = self.pool.execute(
-            "SELECT * FROM sid_sequence ORDER BY asset_class"
+            "SELECT * FROM instrument_id_sequence ORDER BY asset_class"
         ).fetchall()
 
         asset_classes = {row["asset_class"]: row["current_max"] for row in rows}
@@ -128,8 +128,8 @@ class TestSQLitePool:
         self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
-        # Query sid_sequence table
-        rows = self.pool.execute("SELECT * FROM sid_sequence").fetchall()
+        # Query instrument_id_sequence table
+        rows = self.pool.execute("SELECT * FROM instrument_id_sequence").fetchall()
         assert len(rows) == 5  # stock, etf, index, bond, future
 
     def test_commit_method_works(self) -> None:
@@ -139,8 +139,8 @@ class TestSQLitePool:
 
         # Insert a test record
         sql = (
-            "INSERT INTO security "
-            "(sid, symbol, name, exchange, asset_class, list_date) "
+            "INSERT INTO instrument "
+            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
         params = [99999999, "TEST", "Test Security", "TEST", "stock", "2024-01-01"]
@@ -149,7 +149,7 @@ class TestSQLitePool:
 
         # Verify it was committed
         row = self.pool.execute(
-            "SELECT * FROM security WHERE sid = ?", [99999999]
+            "SELECT * FROM instrument WHERE instrument_id = ?", [99999999]
         ).fetchone()
         assert row is not None
         assert row["symbol"] == "TEST"
@@ -162,8 +162,8 @@ class TestSQLitePool:
         # Begin transaction, insert, rollback
         self.pool.execute("BEGIN")
         sql = (
-            "INSERT INTO security "
-            "(sid, symbol, name, exchange, asset_class, list_date) "
+            "INSERT INTO instrument "
+            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
         params = [99999999, "TEST", "Test Security", "TEST", "stock", "2024-01-01"]
@@ -172,7 +172,7 @@ class TestSQLitePool:
 
         # Verify record was not saved
         row = self.pool.execute(
-            "SELECT * FROM security WHERE sid = ?", [99999999]
+            "SELECT * FROM instrument WHERE instrument_id = ?", [99999999]
         ).fetchone()
         assert row is None
 
@@ -197,19 +197,20 @@ class TestSQLitePool:
         self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
-        # Insert a valid security first
+        # Insert a valid instrument first
         self.pool.execute(
-            "INSERT INTO security "
-            "(sid, symbol, name, exchange, asset_class, list_date) "
+            "INSERT INTO instrument "
+            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             [1000001, "600000", "Test", "SSE", "stock", "2000-01-01"],
         )
         self.pool.commit()
 
-        # Try to insert a mapping with invalid SID (should fail)
+        # Try to insert a mapping with invalid Instrument ID (should fail)
         with pytest.raises(sqlite3.IntegrityError):
             self.pool.execute(
-                "INSERT INTO security_mapping (sid, source, src_code, effective_from) "
+                "INSERT INTO instrument_mapping "
+                "(instrument_id, source, source_ticker, effective_from) "
                 "VALUES (?, ?, ?, ?)",
                 [999999, "tushare", "INVALID", "2000-01-01"],
             )
@@ -219,10 +220,10 @@ class TestSQLitePool:
         self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
-        # Insert a valid security
+        # Insert a valid instrument
         self.pool.execute(
-            "INSERT INTO security "
-            "(sid, symbol, name, exchange, asset_class, list_date) "
+            "INSERT INTO instrument "
+            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             [1000001, "600000", "Test", "SSE", "stock", "2000-01-01"],
         )
@@ -230,7 +231,8 @@ class TestSQLitePool:
 
         # Should allow valid mapping
         self.pool.execute(
-            "INSERT INTO security_mapping (sid, source, src_code, effective_from) "
+            "INSERT INTO instrument_mapping "
+            "(instrument_id, source, source_ticker, effective_from) "
             "VALUES (?, ?, ?, ?)",
             [1000001, "tushare", "600000.SH", "2000-01-01"],
         )
@@ -238,7 +240,7 @@ class TestSQLitePool:
 
         # Verify it was inserted
         rows = self.pool.execute(
-            "SELECT COUNT(*) as count FROM security_mapping WHERE sid = ?",
+            "SELECT COUNT(*) as count FROM instrument_mapping WHERE instrument_id = ?",
             [1000001],
         ).fetchall()
         count = rows[0]["count"]

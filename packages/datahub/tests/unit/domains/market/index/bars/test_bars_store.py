@@ -7,8 +7,8 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.market.index.bars import IndexBarsStore
 from ditto_datahub.models import OnDuplicate
+from ditto_datahub.stores.market.index.bars import IndexBarsStore
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def sample_bars_df() -> pl.DataFrame:
     """Create sample Index daily bars DataFrame."""
     return pl.DataFrame(
         {
-            "sid": [1600001, 1600001, 1600001, 1600002],
+            "instrument_id": [1600001, 1600001, 1600001, 1600002],
             "trade_date": [
                 date(2024, 1, 2),
                 date(2024, 1, 3),
@@ -62,7 +62,7 @@ class TestIndexBarsStore:
         store.write(sample_bars_df, year=2024)
         df = store.read()
         assert len(df) == 4
-        assert "sid" in df.columns
+        assert "instrument_id" in df.columns
         assert "trade_date" in df.columns
         assert "open" in df.columns
         assert "close" in df.columns
@@ -71,11 +71,11 @@ class TestIndexBarsStore:
     def test_read_filter_by_sids(
         self, store: IndexBarsStore, sample_bars_df: pl.DataFrame
     ) -> None:
-        """Test read filtered by security IDs."""
+        """Test read filtered by instrument IDs."""
         store.write(sample_bars_df, year=2024)
-        df = store.read(sids=[1600001])
+        df = store.read(instrument_ids=[1600001])
         assert len(df) == 3
-        assert df["sid"].unique().to_list() == [1600001]
+        assert df["instrument_id"].unique().to_list() == [1600001]
 
     def test_read_filter_by_date_range(
         self, store: IndexBarsStore, sample_bars_df: pl.DataFrame
@@ -129,7 +129,7 @@ class TestIndexBarsStore:
         # Write overlapping new data
         new_data = pl.DataFrame(
             {
-                "sid": [1600001, 1600003],
+                "instrument_id": [1600001, 1600003],
                 "trade_date": [date(2024, 1, 4), date(2024, 1, 5)],
                 "open": [3560.0, 2900.0],
                 "high": [3620.0, 2950.0],
@@ -147,7 +147,8 @@ class TestIndexBarsStore:
 
         # Verify new value was applied
         record = df.filter(
-            (pl.col("sid") == 1600001) & (pl.col("trade_date") == date(2024, 1, 4))
+            (pl.col("instrument_id") == 1600001)
+            & (pl.col("trade_date") == date(2024, 1, 4))
         )
         assert record["close"][0] == 3600.0
 
@@ -157,10 +158,10 @@ class TestIndexBarsStore:
         """Test write overwrites existing records with same key."""
         store.write(sample_bars_df, year=2024)
 
-        # Write same date/sid with different close price
+        # Write same date/instrument_id with different close price
         updated = pl.DataFrame(
             {
-                "sid": [1600001],
+                "instrument_id": [1600001],
                 "trade_date": [date(2024, 1, 3)],
                 "open": [3530.0],
                 "high": [3590.0],
@@ -172,7 +173,7 @@ class TestIndexBarsStore:
         )
         store.write(updated, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
 
-        df = store.read(sids=[1600001])
+        df = store.read(instrument_ids=[1600001])
         record = df.filter(pl.col("trade_date") == date(2024, 1, 3))
         assert record["close"][0] == 3570.0
 
@@ -267,7 +268,7 @@ class TestIndexBarsStore:
     ) -> None:
         """Test count with filters applied."""
         store.write(sample_bars_df, year=2024)
-        count = store.count(sids=[1600001])
+        count = store.count(instrument_ids=[1600001])
         assert count == 3
 
     # ============ get_date_range tests ============
@@ -287,17 +288,17 @@ class TestIndexBarsStore:
         assert start == "2024-01-02"
         assert end == "2024-01-04"
 
-    # ============ list_sids tests ============
+    # ============ list_instrument_ids tests ============
 
     def test_list_sids_empty(self, store: IndexBarsStore) -> None:
-        """Test list_sids with no data."""
-        sids = store.list_sids()
-        assert sids == []
+        """Test list_instrument_ids with no data."""
+        instrument_ids = store.list_instrument_ids()
+        assert instrument_ids == []
 
     def test_list_sids(
         self, store: IndexBarsStore, sample_bars_df: pl.DataFrame
     ) -> None:
-        """Test list_sids returns unique security IDs."""
+        """Test list_instrument_ids returns unique instrument IDs."""
         store.write(sample_bars_df, year=2024)
-        sids = store.list_sids()
-        assert sids == [1600001, 1600002]
+        instrument_ids = store.list_instrument_ids()
+        assert instrument_ids == [1600001, 1600002]
