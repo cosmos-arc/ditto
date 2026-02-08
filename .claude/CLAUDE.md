@@ -212,6 +212,7 @@ ditto/
 - Core 仅允许依赖 `ditto_datahub.models`
 - Port 非 `registry` 模块禁止直接导入 `ditto_datahub.stores/sources/runtime`
 - Port `registry` 允许导入 stores/sources 做 DI 装配，但禁止直接调用其业务方法
+- 代码与配置禁止残留 `sid/src_code` 字段命名（统一为 `instrument_id/source_ticker`）
 
 ### 环境配置规范
 

@@ -107,7 +107,7 @@ export interface PortfolioOverview {
  * 持仓明细
  */
 export interface Position {
-  sid: string;
+  instrumentId: string;
   symbol: string;
   name: string;
   shares: number;
@@ -143,7 +143,7 @@ export interface RebalancePlan {
  */
 export interface Order {
   orderId: string;
-  sid: string;
+  instrumentId: string;
   symbol: string;
   name: string;
   action: 'buy' | 'sell';
@@ -267,7 +267,7 @@ export interface PerformanceMetrics {
  */
 export interface Trade {
   tradeId: string;
-  sid: string;
+  instrumentId: string;
   symbol: string;
   name: string;
   action: 'buy' | 'sell';
@@ -442,7 +442,7 @@ export interface MarketOverview {
     changePct: number;
   }>;
   etfPerformance: Array<{
-    sid: string;
+    instrumentId: string;
     symbol: string;
     name: string;
     value: number;
@@ -488,8 +488,8 @@ export interface SystemHealth {
  * 证券标识
  */
 export interface SecurityIdentifier {
-  sid: string;           // 内部唯一 ID
-  srcCode: string;       // 源系统代码
+  instrumentId: string;  // 内部唯一 ID
+  sourceTicker: string;  // 源系统代码
   source: string;        // 数据源（tushare/akshare）
   type: 'stock' | 'etf' | 'index' | 'futures';
 }
@@ -498,7 +498,7 @@ export interface SecurityIdentifier {
  * 证券基本信息
  */
 export interface Security {
-  sid: string;
+  instrumentId: string;
   symbol: string;
   name: string;
   type: SecurityIdentifier['type'];
@@ -783,7 +783,7 @@ export interface RebalanceFormData {
 
   // 手动调仓配置
   customOrders?: Array<{
-    sid: string;
+    instrumentId: string;
     action: 'buy' | 'sell';
     shares: number;
     reason: string;

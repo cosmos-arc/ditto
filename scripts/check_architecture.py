@@ -4,12 +4,25 @@
 from __future__ import annotations
 
 import ast
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 PROJECT_IMPORT_ROOTS = ("ditto_foundation", "ditto_datahub", "ditto_core", "ditto_port")
 REGISTRY_MIN_PARTS = 6
+LEGACY_FIELD_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
+    (
+        re.compile(r"\bsid\b"),
+        "ARCH500",
+        "禁止使用 legacy 字段 sid, 请统一为 instrument_id",
+    ),
+    (
+        re.compile(r"\bsrc_code\b"),
+        "ARCH510",
+        "禁止使用 legacy 字段 src_code, 请统一为 source_ticker",
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -124,11 +137,31 @@ class ArchitectureChecker:
             files.extend(self.root.glob(pattern))
         return sorted({p for p in files if p.is_file()})
 
+    def _iter_legacy_term_scan_files(self) -> list[Path]:
+        patterns = [
+            "packages/foundation/src/**/*.py",
+            "packages/datahub/src/**/*.py",
+            "packages/core/src/**/*.py",
+            "apps/port/src/**/*.py",
+            "config/**/*.yml",
+            "config/**/*.yaml",
+            "packages/datahub/config/**/*.yml",
+            "packages/datahub/config/**/*.yaml",
+            "packages/datahub/src/**/*.sql",
+        ]
+        files: list[Path] = []
+        for pattern in patterns:
+            files.extend(self.root.glob(pattern))
+        return sorted({p for p in files if p.is_file()})
+
     def run(self) -> list[Violation]:
         violations: list[Violation] = []
         for file_path in self._iter_target_files():
             rel_path = file_path.relative_to(self.root)
             violations.extend(self._check_file(file_path, rel_path))
+        for file_path in self._iter_legacy_term_scan_files():
+            rel_path = file_path.relative_to(self.root)
+            violations.extend(self._check_legacy_terms(file_path, rel_path))
         return sorted(violations, key=lambda v: (str(v.file), v.line, v.code))
 
     def _check_file(self, abs_path: Path, rel_path: Path) -> list[Violation]:
@@ -161,6 +194,22 @@ class ArchitectureChecker:
                 self._check_registry_direct_usage(tree, rel_path, imports)
             )
 
+        return violations
+
+    def _check_legacy_terms(self, abs_path: Path, rel_path: Path) -> list[Violation]:
+        text = abs_path.read_text(encoding="utf-8")
+        violations: list[Violation] = []
+        for line_no, line in enumerate(text.splitlines(), start=1):
+            for pattern, code, message in LEGACY_FIELD_PATTERNS:
+                if pattern.search(line):
+                    violations.append(
+                        Violation(
+                            code=code,
+                            file=rel_path,
+                            line=line_no,
+                            message=message,
+                        )
+                    )
         return violations
 
     def _check_foundation_import(

@@ -28,7 +28,7 @@ import polars as pl
 
 # 验证 DataFrame 符合 Schema
 df = pl.DataFrame({
-    "sid": [200000001],
+    "instrument_id": [200000001],
     "trade_date": [date(2024, 1, 2)],
     "open": [4.0],
     "high": [4.1],

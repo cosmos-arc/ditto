@@ -99,3 +99,29 @@ def test_port_registry_forbids_direct_store_usage(tmp_path: Path) -> None:
     violations = ArchitectureChecker(tmp_path).run()
     codes = {item.code for item in violations}
     assert "ARCH430" in codes
+
+
+def test_forbid_legacy_sid_identifier_in_python_source(tmp_path: Path) -> None:
+    """Legacy sid identifier should fail architecture check."""
+    _write_file(
+        tmp_path,
+        "packages/datahub/src/ditto_datahub/domains/market/bad.py",
+        "def bad() -> int:\n    sid = 1\n    return sid\n",
+    )
+
+    violations = ArchitectureChecker(tmp_path).run()
+    codes = {item.code for item in violations}
+    assert "ARCH500" in codes
+
+
+def test_forbid_legacy_src_code_identifier_in_yaml(tmp_path: Path) -> None:
+    """Legacy src_code field should fail architecture check."""
+    _write_file(
+        tmp_path,
+        "config/default/dq_rules/bad.yml",
+        "checks:\n  - name: not_null\n    columns: [src_code]\n",
+    )
+
+    violations = ArchitectureChecker(tmp_path).run()
+    codes = {item.code for item in violations}
+    assert "ARCH510" in codes
