@@ -25,6 +25,28 @@ def mock_quality_engine(mocker: MockerFixture) -> MagicMock:
 
 
 @pytest.fixture
+def mock_quarantine_store(mocker: MockerFixture) -> MagicMock:
+    """Mock QuarantineStore.
+
+    提供 save_failed_data 方法。
+    """
+    store = mocker.MagicMock()
+
+    def save_failed_data_impl(
+        dataset: str,
+        rule_id: str,
+        severity: str,
+        failed_data: pl.DataFrame,
+        trade_date: str | None = None,
+    ) -> int:
+        """模拟 save_failed_data 实现."""
+        return 1
+
+    store.save_failed_data.side_effect = save_failed_data_impl
+    return store
+
+
+@pytest.fixture
 def mock_instrument_store(mocker: MockerFixture) -> MagicMock:
     """Mock InstrumentStore.
 
