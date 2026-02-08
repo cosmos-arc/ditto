@@ -99,18 +99,19 @@ pixi run -e dev ci
 6. `46094e3` docs(plan): 更新 v5 重构进度与门禁快照
 7. `86730de` refactor(architecture): 收口 v5 架构约束并修复关键链路
 8. `9260d15` test(architecture): 增强 legacy 别名门禁并收口 DataHub 文档
+9. `20d49e0` docs(readme): 收口核心示例到 v5 查询接口
 
 统计（`main..HEAD`）：
 
-- 变更文件：`192`
-- 代码变更：`+6468 / -3358`
+- 变更文件：`197`
+- 代码变更：`+6552 / -3382`
 
 ### 4.2 门禁结果
 
 最近一次 `pixi run -e dev ci`：
 
 - `2239 passed, 20 skipped`
-- coverage `92.61%`
+- coverage `92.63%`
 - `Architecture check passed`
 
 ---
@@ -136,7 +137,8 @@ pixi run -e dev ci
 17. 架构门禁新增 `ARCH520`：禁止 DataHub/Port 源码使用 `hub.calendar/hub.universe/hub.index/hub.securities/hub.ingestion_log` legacy 别名。
 18. DataHub 单测新增 Facade 暴露约束验证：仅允许 `metadata/market/ingestion_log_store` 等 v5 正式入口，禁止 legacy alias 回归。
 19. DataHub README 示例继续去兼容收口：统一展示容器注入 DataHub/QualityEngine 的用法，移除过时 `hub = DataHub()` 与 `hub.dq_checker` 路径。
-20. 本轮全量门禁已通过：`pixi run -e dev ci` => `2239 passed, 20 skipped`, coverage `92.61%`。
+20. Core/DataHub README 示例进一步收口：移除 `hub.bars.*` / `sids` 旧写法，统一为 `MarketBarsQuery + hub.market.query(...)`。
+21. 本轮全量门禁已通过：`pixi run -e dev ci` => `2239 passed, 20 skipped`, coverage `92.63%`。
 
 ---
 
