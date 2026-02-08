@@ -71,7 +71,7 @@ def test_metadata_service_resolve_instrument_ids_batch(
     service._identity_store.resolve_instrument_ids_batch.assert_called_once()
 
 
-def test_metadata_service_get_securities(service: MetadataService) -> None:
+def test_metadata_service_get_instruments(service: MetadataService) -> None:
     """测试查询证券数据."""
     # 准备测试数据
     test_df = pl.DataFrame(
@@ -88,7 +88,7 @@ def test_metadata_service_get_securities(service: MetadataService) -> None:
     service._instrument_store.find_securities.return_value = test_df
 
     # 调用方法
-    result = service.get_securities(instrument_ids=[1, 2])
+    result = service.get_instruments(instrument_ids=[1, 2])
 
     # 验证
     assert len(result) == 2
@@ -272,14 +272,14 @@ def test_metadata_service_register_security(
     service._instrument_store.register.assert_called_once()
 
 
-def test_metadata_service_query_securities(service: MetadataService) -> None:
-    """测试统一 query() 查询证券."""
+def test_metadata_service_query_instrument(service: MetadataService) -> None:
+    """测试统一 query() 查询 instrument."""
     test_df = pl.DataFrame({"instrument_id": [1], "symbol": ["平安银行"]})
     service._instrument_store.find_securities.return_value = test_df
 
     result = service.query(
         MetadataQuery(
-            dataset="securities",
+            dataset="instrument",
             instrument_ids=[1],
             source="tushare",
         )

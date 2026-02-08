@@ -141,3 +141,33 @@ def test_forbid_legacy_datahub_alias_usage_in_port_source(tmp_path: Path) -> Non
     violations = ArchitectureChecker(tmp_path).run()
     codes = {item.code for item in violations}
     assert "ARCH520" in codes
+
+
+def test_forbid_legacy_metadata_dataset_name_securities(tmp_path: Path) -> None:
+    """Legacy metadata dataset name 'securities' should fail architecture check."""
+    _write_file(
+        tmp_path,
+        "packages/datahub/src/ditto_datahub/domains/metadata/bad.py",
+        (
+            "from ditto_datahub.domains.metadata import MetadataQuery\n"
+            "def bad() -> MetadataQuery:\n"
+            "    return MetadataQuery(dataset='securities')\n"
+        ),
+    )
+
+    violations = ArchitectureChecker(tmp_path).run()
+    codes = {item.code for item in violations}
+    assert "ARCH530" in codes
+
+
+def test_forbid_legacy_datahub_get_securities_api(tmp_path: Path) -> None:
+    """Legacy get_securities API usage should fail architecture check."""
+    _write_file(
+        tmp_path,
+        "apps/port/src/ditto_port/services/bad.py",
+        ("def bad(hub: object) -> object:\n    return hub.get_securities(object())\n"),
+    )
+
+    violations = ArchitectureChecker(tmp_path).run()
+    codes = {item.code for item in violations}
+    assert "ARCH533" in codes

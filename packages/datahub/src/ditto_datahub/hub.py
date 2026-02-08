@@ -79,7 +79,7 @@ class BarsQuerySpec:
 
 
 @dataclass(frozen=True)
-class SecuritiesQuerySpec:
+class InstrumentsQuerySpec:
     """
     证券查询参数（DataHub 便捷 API）。
 
@@ -94,11 +94,11 @@ class SecuritiesQuerySpec:
         asof: Point-in-time 查询日期。
 
     Examples:
-        >>> params = SecuritiesQuerySpec(
+        >>> params = InstrumentsQuerySpec(
         ...     identifiers=["000001.SZ", "万科A"],
         ...     asset_class="stock",
         ... )
-        >>> hub.get_securities(params)
+        >>> hub.get_instruments(params)
 
     """
 
@@ -468,11 +468,11 @@ class DataHub:
 
         return self.market.query(query)
 
-    def get_securities(self, params: SecuritiesQuerySpec) -> pl.DataFrame:
+    def get_instruments(self, params: InstrumentsQuerySpec) -> pl.DataFrame:
         """
         获取证券数据（便捷 API）。
 
-        使用 SecuritiesQuerySpec 对象封装查询参数，自动将标识符转换为 Instrument ID。
+        使用 InstrumentsQuerySpec 对象封装查询参数，自动将标识符转换为 Instrument ID。
 
         Args:
             params: 证券查询参数对象。
@@ -482,18 +482,18 @@ class DataHub:
 
         Examples:
             >>> # 使用参数对象
-            >>> params = SecuritiesQuerySpec(
+            >>> params = InstrumentsQuerySpec(
             ...     identifiers=["000001.SZ", "万科A"],
             ...     asset_class="stock",
             ... )
-            >>> df = hub.get_securities(params)
+            >>> df = hub.get_instruments(params)
 
             >>> # 查询全部（包括非活跃）
-            >>> params = SecuritiesQuerySpec(
+            >>> params = InstrumentsQuerySpec(
             ...     identifiers=["000001.SZ"],
             ...     is_active=None,
             ... )
-            >>> df = hub.get_securities(params)
+            >>> df = hub.get_instruments(params)
 
         """
         # 分类标识符
@@ -522,7 +522,7 @@ class DataHub:
 
         return self.metadata.query(
             MetadataQuery(
-                dataset="securities",
+                dataset="instrument",
                 instrument_ids=(
                     resolved_instrument_ids if resolved_instrument_ids else None
                 ),

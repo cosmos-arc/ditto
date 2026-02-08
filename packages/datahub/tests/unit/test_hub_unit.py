@@ -714,21 +714,21 @@ class TestDataHub:
         with pytest.raises(FrozenInstanceError):
             params.identifiers = ["000002.SZ"]  # type: ignore
 
-    def test_securities_params_creation(
+    def test_instruments_params_creation(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test SecuritiesQuerySpec dataclass creation."""
+        """Test InstrumentsQuerySpec dataclass creation."""
         # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
 
-        from ditto_datahub.hub import SecuritiesQuerySpec
+        from ditto_datahub.hub import InstrumentsQuerySpec
 
         # 测试创建参数对象
-        params = SecuritiesQuerySpec(
+        params = InstrumentsQuerySpec(
             identifiers=["000001.SZ"],
             asset_class="stock",
             is_active=True,
@@ -738,7 +738,7 @@ class TestDataHub:
         assert params.asset_class == "stock"
         assert params.is_active is True
 
-    def test_get_bars_with_params_sid_only(
+    def test_get_bars_with_params_instrument_id_only(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
@@ -796,35 +796,35 @@ class TestDataHub:
         assert isinstance(result, pl.DataFrame)
         assert len(result) == 0
 
-    def test_get_securities_with_params(
+    def test_get_instruments_with_params(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test get_securities with SecuritiesQuerySpec."""
+        """Test get_instruments with InstrumentsQuerySpec."""
         # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
 
-        from ditto_datahub.hub import SecuritiesQuerySpec
+        from ditto_datahub.hub import InstrumentsQuerySpec
 
         # Mock metadata.query 返回空 DataFrame
-        mock_metadata_get_securities = mocker.patch.object(
+        mock_metadata_get_instruments = mocker.patch.object(
             datahub_with_dependencies.metadata,
             "query",
             return_value=pl.DataFrame(),
         )
 
         # 测试参数对象
-        params = SecuritiesQuerySpec(
+        params = InstrumentsQuerySpec(
             identifiers=["000001.SZ"],
             asset_class="stock",
         )
-        result = datahub_with_dependencies.get_securities(params)
+        result = datahub_with_dependencies.get_instruments(params)
 
         # 验证 metadata.query 被调用
-        assert mock_metadata_get_securities.called
+        assert mock_metadata_get_instruments.called
         assert isinstance(result, pl.DataFrame)
 
     # ========================================================================

@@ -28,7 +28,7 @@ from ditto_datahub.domains.metadata.instrument.models import InstrumentRegistrat
 from ditto_datahub.domains.metadata.universe.universe_store import UniverseStore
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 
-MetadataQueryDataset = Literal["securities", "industries", "calendar_range"]
+MetadataQueryDataset = Literal["instrument", "industry", "calendar_range"]
 MetadataWriteDataset = Literal["calendar"]
 
 
@@ -114,7 +114,7 @@ class MetadataService:
     @traced("metadata.query")
     def query(self, query: MetadataQuery) -> pl.DataFrame:
         """统一查询入口."""
-        if query.dataset == "securities":
+        if query.dataset == "instrument":
             return self._instrument_store.find_securities(
                 instrument_ids=query.instrument_ids,
                 source_tickers=query.source_tickers,
@@ -125,7 +125,7 @@ class MetadataService:
                 asof=query.asof,
             )
 
-        if query.dataset == "industries":
+        if query.dataset == "industry":
             is_active = True if query.is_active is None else query.is_active
             return self._industry_basic_store.get_all(is_active, query.industry_level)
 
@@ -194,8 +194,8 @@ class MetadataService:
 
     # ============ 证券查询 ============
 
-    @traced("metadata.security.get_securities")
-    def get_securities(
+    @traced("metadata.instrument.get_instruments")
+    def get_instruments(
         self,
         instrument_ids: list[int] | None = None,
         source_tickers: list[str] | None = None,
@@ -223,7 +223,7 @@ class MetadataService:
         """
         return self.query(
             MetadataQuery(
-                dataset="securities",
+                dataset="instrument",
                 instrument_ids=instrument_ids,
                 source_tickers=source_tickers,
                 source=source,
@@ -290,7 +290,7 @@ class MetadataService:
         """
         return self.query(
             MetadataQuery(
-                dataset="industries",
+                dataset="industry",
                 is_active=is_active,
                 industry_level=industry_level,
             )

@@ -69,7 +69,7 @@ market_service: MarketService = ...
 
 # 业务操作通过 Domain Service
 securities = metadata_service.query(
-    MetadataQuery(dataset="securities", asset_class="stock")
+    MetadataQuery(dataset="instrument", asset_class="stock")
 )
 bars = market_service.query(
     MarketBarsQuery(instrument_ids=[1000001], start="2024-01-01")

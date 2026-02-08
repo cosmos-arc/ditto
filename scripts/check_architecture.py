@@ -27,6 +27,26 @@ LEGACY_FIELD_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "ARCH510",
         "禁止使用 legacy 字段 src_code, 请统一为 source_ticker",
     ),
+    (
+        re.compile(r"\bdataset\s*=\s*[\"']securities[\"']"),
+        "ARCH530",
+        "MetadataQuery 禁止使用 legacy 数据集名 'securities', 请改为 'instrument'",
+    ),
+    (
+        re.compile(r"\bdataset\s*=\s*[\"']industries[\"']"),
+        "ARCH531",
+        "MetadataQuery 禁止使用 legacy 数据集名 'industries', 请改为 'industry'",
+    ),
+    (
+        re.compile(r"\bSecuritiesQuerySpec\b"),
+        "ARCH532",
+        "禁止使用 legacy 查询类型 SecuritiesQuerySpec, 请改为 InstrumentsQuerySpec",
+    ),
+    (
+        re.compile(r"\bget_securities\s*\("),
+        "ARCH533",
+        "禁止使用 legacy API get_securities(), 请改为 get_instruments()",
+    ),
 )
 
 
