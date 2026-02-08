@@ -4,6 +4,7 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_datahub.domains.market import MarketWriteResult
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_datahub.runtime.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_datahub.sources.base import DataSource, SourceFetchError
@@ -16,14 +17,15 @@ from ditto_port.services.ingestion.coordinator import (
 )
 
 
-def mock_hub_market_write_bars(file_path: str, checksum: str) -> dict[str, int]:
-    """创建 Mock hub.market.write_bars() 的返回值。"""
-    return {"rows": 2, "files": 1}
+def mock_hub_market_write_bars(file_path: str, checksum: str) -> MarketWriteResult:
+    """创建 Mock hub.market.write() 的返回值（行情数据）。"""
+    _ = file_path, checksum
+    return MarketWriteResult(dataset="stock_daily", rows=2, files=1)
 
 
-def mock_hub_market_write_adj_factor() -> dict[str, int]:
-    """创建 Mock hub.market.write_adj_factor() 的返回值。"""
-    return {"rows": 1, "files": 1}
+def mock_hub_market_write_adj_factor() -> MarketWriteResult:
+    """创建 Mock hub.market.write() 的返回值（复权因子）。"""
+    return MarketWriteResult(dataset="adj_factor", rows=1, files=1)
 
 
 @pytest.fixture(autouse=True)
@@ -45,7 +47,7 @@ def setup_observability():
 
 
 @pytest.fixture
-def mock_hub(mocker):  # noqa: PLR0915
+def mock_hub(mocker):
     """创建 Mock DataHub。"""
     hub = mocker.Mock()
     hub.ingestion_log = mocker.Mock(spec=IngestionLogStore)
@@ -118,16 +120,15 @@ def mock_hub(mocker):  # noqa: PLR0915
     # 添加 MarketService mock（IngestionDataWriter 需要）
     hub.market = mocker.Mock()
 
-    def write_bars_side_effect(df, year, dataset, on_duplicate="error"):
-        """Mock write_bars 返回 dict[str, int]。"""
-        return {"rows": len(df), "files": 1}
+    def write_side_effect(command) -> MarketWriteResult:
+        """Mock write 返回 MarketWriteResult。"""
+        return MarketWriteResult(
+            dataset=command.dataset,
+            rows=len(command.df),
+            files=1,
+        )
 
-    def write_adj_factor_side_effect(dataset, df, year, on_duplicate="error"):
-        """Mock write_adj_factor 返回 dict[str, int]。"""
-        return {"rows": len(df), "files": 1}
-
-    hub.market.write_bars = mocker.Mock(side_effect=write_bars_side_effect)
-    hub.market.write_adj_factor = mocker.Mock(side_effect=write_adj_factor_side_effect)
+    hub.market.write = mocker.Mock(side_effect=write_side_effect)
 
     # 添加 MetadataService/Calendar mock
     hub.calendar = mocker.Mock()
@@ -255,7 +256,7 @@ class TestIngestDate:
         )
         mock_source.fetch_etf_daily.return_value = source_df
 
-        mock_hub.market.write_bars.return_value = mock_hub_market_write_bars(
+        mock_hub.market.write.return_value = mock_hub_market_write_bars(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -278,7 +279,7 @@ class TestIngestDate:
         assert result.checksum is not None
         assert len(result.checksum) > 0
         mock_source.fetch_etf_daily.assert_called_once_with("2024-12-27")
-        mock_hub.market.write_bars.assert_called_once()
+        mock_hub.market.write.assert_called_once()
         mock_hub.ingestion_log.save_log.assert_called_once()
 
     def test_ingest_date_success_stock_daily(
@@ -304,7 +305,7 @@ class TestIngestDate:
         mock_source.fetch_stock_daily.return_value = source_df
 
         mock_hub.bars = mocker.Mock()
-        mock_hub.market.write_bars.return_value = mock_hub_market_write_bars(
+        mock_hub.market.write.return_value = mock_hub_market_write_bars(
             "/path/to/file.parquet",
             "checksum456",
         )
@@ -338,9 +339,7 @@ class TestIngestDate:
             }
         )
 
-        mock_hub.market.write_adj_factor.return_value = (
-            mock_hub_market_write_adj_factor()
-        )
+        mock_hub.market.write.return_value = mock_hub_market_write_adj_factor()
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="adj_factor",
             source="tushare",
@@ -356,7 +355,47 @@ class TestIngestDate:
         # Assert
         assert result.status == "success"
         mock_source.fetch_adj_factor.assert_called_once_with("2024-12-27")
-        mock_hub.market.write_adj_factor.assert_called_once()
+        mock_hub.market.write.assert_called_once()
+
+    def test_ingest_date_success_stock_status(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
+        """成功摄取 stock_status 数据。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_source.fetch_stock_status.return_value = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "is_suspended": [False],
+                "suspend_timing": [None],
+                "is_st": [False],
+                "st_type": [None],
+                "list_status": ["L"],
+            }
+        )
+
+        mock_hub.market.write.return_value = MarketWriteResult(
+            dataset="stock_status",
+            rows=1,
+            files=1,
+        )
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="stock_status",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum_status",
+            rows=1,
+        )
+
+        # Act
+        result = coordinator.ingest_date("stock_status", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        mock_source.fetch_stock_status.assert_called_once_with("2024-12-27")
+        mock_hub.market.write.assert_called_once()
 
     def test_ingest_date_success_calendar(
         self, coordinator, mock_hub, mock_source, mocker
@@ -469,7 +508,7 @@ class TestIngestDate:
         mock_source.fetch_stock_daily.return_value = source_df
 
         mock_hub.bars = mocker.Mock()
-        mock_hub.market.write_bars.return_value = mock_hub_market_write_bars(
+        mock_hub.market.write.return_value = mock_hub_market_write_bars(
             "/path/to/file.parquet",
             "new_checksum",
         )
@@ -534,8 +573,12 @@ class TestIngestDate:
 
         # 模拟 DQ 阻断：files=0 表示没有文件写入，被阻塞
         # 需要重置 side_effect 并设置 return_value
-        mock_hub.market.write_bars.side_effect = None
-        mock_hub.market.write_bars.return_value = {"rows": 0, "files": 0}
+        mock_hub.market.write.side_effect = None
+        mock_hub.market.write.return_value = MarketWriteResult(
+            dataset="stock_daily",
+            rows=0,
+            files=0,
+        )
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
@@ -599,7 +642,7 @@ class TestIngestRange:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.market.write_bars.return_value = mock_hub_market_write_bars(
+        mock_hub.market.write.return_value = mock_hub_market_write_bars(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -667,7 +710,7 @@ class TestIngestRange:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.market.write_bars.return_value = mock_hub_market_write_bars(
+        mock_hub.market.write.return_value = mock_hub_market_write_bars(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -727,7 +770,7 @@ class TestIngestRange:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.market.write_bars.return_value = mock_hub_market_write_bars(
+        mock_hub.market.write.return_value = mock_hub_market_write_bars(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -848,7 +891,7 @@ class TestForceParameter:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.market.write_bars.return_value = mock_hub_market_write_bars(
+        mock_hub.market.write.return_value = mock_hub_market_write_bars(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -865,10 +908,9 @@ class TestForceParameter:
         coordinator.ingest_date("stock_daily", "2024-12-27", force=False)
 
         # Assert
-        mock_hub.market.write_bars.assert_called_once()
-        call_kwargs = mock_hub.market.write_bars.call_args.kwargs
-        assert "on_duplicate" in call_kwargs
-        assert call_kwargs["on_duplicate"] == "error"
+        mock_hub.market.write.assert_called_once()
+        command = mock_hub.market.write.call_args.args[0]
+        assert command.on_duplicate == "error"
 
     def test_force_true_maps_to_keep_last_on_duplicate(
         self, coordinator, mock_hub, mock_source, mocker
@@ -892,7 +934,7 @@ class TestForceParameter:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.market.write_bars.return_value = mock_hub_market_write_bars(
+        mock_hub.market.write.return_value = mock_hub_market_write_bars(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -909,10 +951,9 @@ class TestForceParameter:
         coordinator.ingest_date("stock_daily", "2024-12-27", force=True)
 
         # Assert
-        mock_hub.market.write_bars.assert_called_once()
-        call_kwargs = mock_hub.market.write_bars.call_args.kwargs
-        assert "on_duplicate" in call_kwargs
-        assert call_kwargs["on_duplicate"] == "overwrite"
+        mock_hub.market.write.assert_called_once()
+        command = mock_hub.market.write.call_args.args[0]
+        assert command.on_duplicate == "overwrite"
 
     def test_force_true_for_adj_factor_uses_keep_last(
         self, coordinator, mock_hub, mock_source, mocker
@@ -928,9 +969,7 @@ class TestForceParameter:
             }
         )
 
-        mock_hub.market.write_adj_factor.return_value = (
-            mock_hub_market_write_adj_factor()
-        )
+        mock_hub.market.write.return_value = mock_hub_market_write_adj_factor()
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="adj_factor",
             source="tushare",
@@ -944,10 +983,9 @@ class TestForceParameter:
         coordinator.ingest_date("adj_factor", "2024-12-27", force=True)
 
         # Assert
-        mock_hub.market.write_adj_factor.assert_called_once()
-        call_kwargs = mock_hub.market.write_adj_factor.call_args.kwargs
-        assert "on_duplicate" in call_kwargs
-        assert call_kwargs["on_duplicate"] == "overwrite"
+        mock_hub.market.write.assert_called_once()
+        command = mock_hub.market.write.call_args.args[0]
+        assert command.on_duplicate == "overwrite"
 
 
 @pytest.mark.unit
@@ -1013,6 +1051,23 @@ class TestTradingDayCheck:
         # 不应该调用 source
         mock_source.fetch_etf_daily.assert_not_called()
 
+    def test_stock_status_skips_on_non_trading_day(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
+        """stock_status 在非交易日静默跳过。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.calendar = mocker.Mock()
+        mock_hub.calendar.is_trading_day.return_value = False
+
+        # Act
+        result = coordinator.ingest_date("stock_status", "2024-12-28")
+
+        # Assert
+        assert result.status == "skipped"
+        assert "非交易日" in result.message or "跳过" in result.message
+        mock_source.fetch_stock_status.assert_not_called()
+
     def test_stock_daily_proceeds_on_trading_day(
         self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
@@ -1038,7 +1093,7 @@ class TestTradingDayCheck:
         )
         mock_source.fetch_stock_daily.return_value = source_df
 
-        mock_hub.market.write_bars.return_value = mock_hub_market_write_bars(
+        mock_hub.market.write.return_value = mock_hub_market_write_bars(
             "/path/to/file.parquet",
             "checksum123",
         )
@@ -1077,9 +1132,7 @@ class TestTradingDayCheck:
             }
         )
 
-        mock_hub.market.write_adj_factor.return_value = (
-            mock_hub_market_write_adj_factor()
-        )
+        mock_hub.market.write.return_value = mock_hub_market_write_adj_factor()
         mock_hub.ingestion_log.save_log.return_value = IngestionLog(
             dataset="adj_factor",
             source="tushare",

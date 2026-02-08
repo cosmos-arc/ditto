@@ -32,6 +32,7 @@ class TestDatasetEnum:
             # T1 incremental datasets
             Dataset.ETF_DAILY,
             Dataset.STOCK_DAILY,
+            Dataset.STOCK_STATUS,
             Dataset.ADJ_FACTOR,
             Dataset.FUND_ADJ,
         ],
@@ -47,6 +48,7 @@ class TestDatasetEnum:
         assert Dataset.ETF_BASIC.value == "etf_basic"
         assert Dataset.ETF_DAILY.value == "etf_daily"
         assert Dataset.STOCK_DAILY.value == "stock_daily"
+        assert Dataset.STOCK_STATUS.value == "stock_status"
         assert Dataset.ADJ_FACTOR.value == "adj_factor"
         assert Dataset.FUND_ADJ.value == "fund_adj"
 
@@ -216,6 +218,12 @@ class TestDatasetRegistry:
         assert stock_daily.requires_trade_date is True
         assert stock_daily.task_name == "ingest_stock_daily"
 
+        # Stock status should be T1
+        stock_status = DATASET_REGISTRY[Dataset.STOCK_STATUS]
+        assert stock_status.tier == TaskTier.T1_INCREMENTAL
+        assert stock_status.requires_trade_date is True
+        assert stock_status.task_name == "ingest_stock_status"
+
         # Adj factor should be T1
         adj_factor = DATASET_REGISTRY[Dataset.ADJ_FACTOR]
         assert adj_factor.tier == TaskTier.T1_INCREMENTAL
@@ -278,6 +286,7 @@ class TestHelperFunctions:
 
         assert Dataset.ETF_DAILY in t1_datasets
         assert Dataset.STOCK_DAILY in t1_datasets
+        assert Dataset.STOCK_STATUS in t1_datasets
         assert Dataset.ADJ_FACTOR in t1_datasets
         assert Dataset.FUND_ADJ in t1_datasets
         assert Dataset.CALENDAR not in t1_datasets
@@ -332,6 +341,11 @@ class TestDatasetDependencies:
         config = get_dataset_config(Dataset.ADJ_FACTOR)
         assert Dataset.STOCK_DAILY in config.depends_on
 
+    def test_t1_stock_status_depends_on_stock_daily(self) -> None:
+        """Test STOCK_STATUS depends on STOCK_DAILY."""
+        config = get_dataset_config(Dataset.STOCK_STATUS)
+        assert Dataset.STOCK_DAILY in config.depends_on
+
     def test_no_circular_dependencies(self) -> None:
         """Test there are no circular dependencies in the registry."""
         # Build dependency graph
@@ -381,7 +395,7 @@ class TestExtendedHelperFunctions:
 
         T1 datasets have a dependency chain:
         - Level 0: ETF_DAILY, STOCK_DAILY (depend only on T0)
-        - Level 1: ADJ_FACTOR (depends on STOCK_DAILY), FUND_ADJ (depends on ETF_DAILY)
+        - Level 1: ADJ_FACTOR/FUND_ADJ/STOCK_STATUS (depends on bars datasets)
         """
         levels = get_parallel_datasets(TaskTier.T1_INCREMENTAL)
 
@@ -391,8 +405,12 @@ class TestExtendedHelperFunctions:
         # Level 0 should have ETF_DAILY and STOCK_DAILY
         assert set(levels[0]) == {Dataset.ETF_DAILY, Dataset.STOCK_DAILY}
 
-        # Level 1 should have ADJ_FACTOR and FUND_ADJ
-        assert set(levels[1]) == {Dataset.ADJ_FACTOR, Dataset.FUND_ADJ}
+        # Level 1 should have ADJ_FACTOR, FUND_ADJ, and STOCK_STATUS
+        assert set(levels[1]) == {
+            Dataset.ADJ_FACTOR,
+            Dataset.FUND_ADJ,
+            Dataset.STOCK_STATUS,
+        }
 
     def test_get_parallel_datasets_t0(self) -> None:
         """Test get_parallel_datasets for T0 tier."""

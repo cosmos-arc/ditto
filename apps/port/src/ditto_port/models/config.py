@@ -36,6 +36,7 @@ class Dataset(str, Enum):
     # T1: Incremental datasets
     ETF_DAILY = "etf_daily"
     STOCK_DAILY = "stock_daily"
+    STOCK_STATUS = "stock_status"
     ADJ_FACTOR = "adj_factor"
     FUND_ADJ = "fund_adj"
 
@@ -456,6 +457,21 @@ DATASET_REGISTRY: dict[Dataset, DatasetSpec] = {
         task_name="ingest_stock_daily",
         timeout_seconds=600,
     ),
+    Dataset.STOCK_STATUS: create_t1_config(
+        dataset=Dataset.STOCK_STATUS,
+        description="股票状态数据",
+        typical_available_time=time(17, 30),
+        depends_on=[Dataset.STOCK_DAILY],
+        critical_fields=[
+            "trade_date",
+            "source_ticker",
+            "is_suspended",
+            "is_st",
+            "list_status",
+        ],
+        task_name="ingest_stock_status",
+        priority=25,
+    ),
     Dataset.ADJ_FACTOR: create_t1_config(
         dataset=Dataset.ADJ_FACTOR,
         description="复权因子",
@@ -571,9 +587,9 @@ def get_parallel_datasets(tier: TaskTier) -> list[list[Dataset]]:
         List of levels, where each level is a list of datasets that can run in parallel
 
     Examples:
-        >>> # T1 datasets all depend on T0 datasets, so they are all level 0
+        >>> # T1 datasets按依赖分层并行执行
         >>> levels = get_parallel_datasets(TaskTier.T1_INCREMENTAL)
-        >>> assert len(levels[0]) == 4  # etf_daily, stock_daily, adj_factor, fund_adj
+        >>> assert len(levels) >= 1
 
     """
     datasets = get_datasets_by_tier(tier)

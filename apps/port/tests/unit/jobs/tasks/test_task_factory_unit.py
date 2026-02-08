@@ -193,6 +193,7 @@ class TestT1IncrementalTasks:
         [
             Dataset.ETF_DAILY,
             Dataset.STOCK_DAILY,
+            Dataset.STOCK_STATUS,
             Dataset.ADJ_FACTOR,
             Dataset.FUND_ADJ,
         ],

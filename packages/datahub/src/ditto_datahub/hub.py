@@ -19,7 +19,6 @@ from ditto_datahub.domains.market import (
     AdjType,
     MarketBarsQuery,
     MarketService,
-    MarketWriteCommand,
 )
 from ditto_datahub.domains.metadata import (
     MetadataQuery,
@@ -583,66 +582,6 @@ class DataHub:
             end=end,
         )
         return self.index.query(query)
-
-    def write_adj_factor(
-        self,
-        dataset: Literal["adj_factor", "fund_adj"],
-        df: pl.DataFrame,
-        year: int,
-        on_duplicate: str = "error",
-    ) -> dict[str, int]:
-        """
-        写入复权因子数据（转发到 MarketService）。
-
-        Args:
-            dataset: 数据集名称（"adj_factor" 或 "fund_adj"）.
-            df: 要写入的数据 DataFrame.
-            year: 年份.
-            on_duplicate: 重复数据处理策略（"error", "skip", "overwrite"）.
-
-        Returns:
-            写入结果统计（{"rows": 行数, "files": 文件数}）.
-
-        """
-        result = self.market.write(
-            MarketWriteCommand(
-                dataset=dataset,
-                df=df,
-                year=year,
-                on_duplicate=on_duplicate,
-            )
-        )
-        return {"rows": result.rows, "files": result.files}
-
-    def write_bars(
-        self,
-        df: pl.DataFrame,
-        year: int,
-        dataset: Literal["stock_daily", "etf_daily", "index_daily"] = "stock_daily",
-        on_duplicate: str = "error",
-    ) -> dict[str, int]:
-        """
-        写入 K线数据（转发到 MarketService）。
-
-        Args:
-            df: 要写入的数据 DataFrame.
-            year: 年份.
-            dataset: 数据集名称（"stock_daily", "etf_daily", "index_daily"）.
-            on_duplicate: 重复数据处理策略（"error", "skip", "overwrite"）.
-
-        Returns:
-            写入结果统计（{"rows": 行数, "files": 文件数}）.
-
-        """
-        result = self.market.write(
-            MarketWriteCommand(
-                dataset=dataset,
-                df=df,
-                year=year,
-                on_duplicate=on_duplicate,
-            )
-        )
-        return {"rows": result.rows, "files": result.files}
 
     # ========================================================================
     # Resource Management

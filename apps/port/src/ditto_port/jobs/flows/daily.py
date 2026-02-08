@@ -3,7 +3,7 @@
 
 该模块实现 T0 → T1 → T3 的依赖编排：
 - T0: 元数据任务（calendar, stock_basic, etf_basic）
-- T1: 增量任务（etf_daily, stock_daily, adj_factor, fund_adj）
+- T1: 增量任务（etf_daily, stock_daily, stock_status, adj_factor, fund_adj）
 - T3: 数据质量检查
 
 Flow 功能：
@@ -139,7 +139,7 @@ def daily_ingestion_flow(
     # 3. 提交 T1 任务（按依赖层级并行执行）
     # T1 数据集按依赖关系分层：
     # - Level 0: etf_daily, stock_daily (只依赖 T0)
-    # - Level 1: adj_factor (依赖 stock_daily), fund_adj (依赖 etf_daily)
+    # - Level 1: stock_status/adj_factor/fund_adj (依赖日行情数据)
     t1_levels = get_parallel_datasets(TaskTier.T1_INCREMENTAL)
     t1_futures: list[Any] = []
     level_futures: list[list[Any]] = []

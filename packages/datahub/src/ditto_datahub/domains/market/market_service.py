@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
-from typing import Literal, cast
+from typing import Literal
 
 import polars as pl
 from ditto_foundation import M, logger, traced
@@ -96,6 +96,7 @@ MarketWriteDataset = Literal[
     "stock_daily",
     "etf_daily",
     "index_daily",
+    "stock_status",
     "adj_factor",
     "fund_adj",
 ]
@@ -601,29 +602,9 @@ class MarketService:
         """统一写入入口."""
         if command.dataset in {"adj_factor", "fund_adj"}:
             return self._write_adj_factor(command)
+        if command.dataset == "stock_status":
+            return self._write_stock_status(command)
         return self._write_bars(command)
-
-    @traced("market.write_adj_factor")
-    def write_adj_factor(
-        self,
-        dataset: str,
-        df: pl.DataFrame,
-        year: int,
-        on_duplicate: str = "error",
-    ) -> dict[str, int]:
-        """兼容入口：复权因子写入转发到 write()."""
-        if dataset not in {"adj_factor", "fund_adj"}:
-            raise ValueError(f"Unsupported dataset: {dataset}")
-
-        result = self.write(
-            MarketWriteCommand(
-                dataset=cast(Literal["adj_factor", "fund_adj"], dataset),
-                df=df,
-                year=year,
-                on_duplicate=on_duplicate,
-            )
-        )
-        return {"rows": result.rows, "files": result.files}
 
     def _write_adj_factor(self, command: MarketWriteCommand) -> MarketWriteResult:
         """执行复权因子写入."""
@@ -680,30 +661,42 @@ class MarketService:
             files=files_written,
         )
 
-    @traced("market.write_bars")
-    def write_bars(
-        self,
-        df: pl.DataFrame,
-        year: int,
-        dataset: str = "stock_daily",
-        on_duplicate: str = "error",
-    ) -> dict[str, int]:
-        """兼容入口：K线写入转发到 write()."""
-        if dataset not in {"stock_daily", "etf_daily", "index_daily"}:
-            raise ValueError(f"Unsupported dataset: {dataset}")
-
-        result = self.write(
-            MarketWriteCommand(
-                dataset=cast(
-                    Literal["stock_daily", "etf_daily", "index_daily"],
-                    dataset,
-                ),
-                df=df,
-                year=year,
-                on_duplicate=on_duplicate,
-            )
+    def _write_stock_status(self, command: MarketWriteCommand) -> MarketWriteResult:
+        """执行股票状态写入."""
+        logger.info(
+            "Writing stock status data",
+            event="market_write_stock_status_start",
+            dataset=command.dataset,
+            year=command.year,
+            row_count=len(command.df),
         )
-        return {"rows": result.rows, "files": result.files}
+
+        lock_name = f"stock_status_write_{command.year}"
+        storage_df = self._to_storage_columns(command.df)
+
+        with self._file_lock.acquire(lock_name, timeout=60.0):
+            self._stock_status_store.write(storage_df, command.year)
+
+        rows_written = len(storage_df)
+        files_written = 1 if rows_written > 0 else 0
+
+        logger.info(
+            "Stock status data written",
+            event="market_write_stock_status_complete",
+            year=command.year,
+            rows_written=rows_written,
+        )
+
+        M.data_records.add(
+            rows_written,
+            {"dataset": command.dataset, "operation": "write"},
+        )
+
+        return MarketWriteResult(
+            dataset=command.dataset,
+            rows=rows_written,
+            files=files_written,
+        )
 
     def _write_bars(self, command: MarketWriteCommand) -> MarketWriteResult:
         """执行 K线写入."""

@@ -819,3 +819,31 @@ class TestMarketServiceUnifiedContract:
         assert result.rows == 1
         assert result.files == 1
         market_service._stock_adj_store.write.assert_called_once()
+
+    def test_write_stock_status(self, market_service: MarketService) -> None:
+        """write() should route stock_status to status store."""
+        market_service._file_lock.acquire.return_value.__enter__.return_value = None
+        market_service._stock_status_store.write.return_value = (
+            "market/stock/status/2024.parquet",
+            "checksum",
+        )
+        command = MarketWriteCommand(
+            dataset="stock_status",
+            df=pl.DataFrame(
+                {
+                    "instrument_id": [1],
+                    "trade_date": [date(2024, 1, 2)],
+                    "is_suspended": [False],
+                    "is_st": [False],
+                    "list_status": ["L"],
+                }
+            ),
+            year=2024,
+        )
+
+        result = market_service.write(command)
+
+        assert result.dataset == "stock_status"
+        assert result.rows == 1
+        assert result.files == 1
+        market_service._stock_status_store.write.assert_called_once()

@@ -117,7 +117,7 @@ class IngestionCoordinator:
         """
         检查数据集是否需要交易日验证。
 
-        对于行情类数据集（stock_daily, etf_daily），非交易日返回 False。
+        对于行情类数据集（stock_daily, etf_daily, stock_status），非交易日返回 False。
         其他数据集不需要交易日验证，返回 True。
 
         Args:
@@ -134,7 +134,11 @@ class IngestionCoordinator:
         except ValueError:
             return True
 
-        if dataset_enum in (Dataset.STOCK_DAILY, Dataset.ETF_DAILY):
+        if dataset_enum in (
+            Dataset.STOCK_DAILY,
+            Dataset.ETF_DAILY,
+            Dataset.STOCK_STATUS,
+        ):
             return self._hub.calendar.is_trading_day(trade_date)
         return True
 
@@ -256,6 +260,7 @@ class IngestionCoordinator:
             Dataset.ETF_BASIC: lambda: self._source.fetch_etf_basic(),
             Dataset.STOCK_DAILY: lambda: self._source.fetch_stock_daily(trade_date),
             Dataset.ETF_DAILY: lambda: self._source.fetch_etf_daily(trade_date),
+            Dataset.STOCK_STATUS: lambda: self._source.fetch_stock_status(trade_date),
             Dataset.ADJ_FACTOR: lambda: self._source.fetch_adj_factor(trade_date),
             Dataset.FUND_ADJ: lambda: self._source.fetch_fund_adj(trade_date),
         }

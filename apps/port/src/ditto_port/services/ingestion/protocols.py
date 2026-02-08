@@ -37,3 +37,7 @@ class IngestionDataSource(Protocol):
     def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
         """Fetch fund adjustment factors."""
         ...
+
+    def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
+        """Fetch stock status data."""
+        ...

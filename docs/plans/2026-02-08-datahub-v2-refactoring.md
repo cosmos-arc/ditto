@@ -101,6 +101,8 @@ pixi run -e dev ci
 8. `6a42de1` refactor(datahub): 按v5架构收口instrument_id/source_ticker标识体系
 9. `538c222` refactor(datahub): 统一source_ticker与instrument_id摄取契约
 10. `86730de` refactor(architecture): 收口v5架构约束并修复关键链路
+11. `working tree` refactor(ingestion): Port ingest 全链路统一 market.write，并移除 DataHub/MarketService 旧写入兼容入口
+12. `working tree` feat(ingestion): 补齐 stock_status 到 T1 数据集矩阵与写入闭环
 
 统计（`main..HEAD`）：
 
@@ -126,6 +128,8 @@ pixi run -e dev ci
 5. 核心规则文档已同步 v5 约束，避免“代码做了、规范没收口”。
 6. `MarketService`、`MetadataService` 已补齐统一 `query()/write()` 主入口，DataHub 与 DQ 主链路已迁移到统一契约调用。
 7. `capital_ingestion`、`fundamental_ingestion` 写入链路已从直连 Store 切换为 Service `write()`，并完成对应测试。
+8. Port 摄取写入入口已统一为 `market.write` / `metadata.write`，`write_bars/write_adj_factor` 兼容入口已从 `DataHub` 与 `MarketService` 删除。
+9. `stock_status` 已纳入 T1 数据集矩阵（enum/registry/coordinator/source-protocol/market-write），并通过单测回归。
 
 ---
 
@@ -134,12 +138,9 @@ pixi run -e dev ci
 ### P1（随后完成）
 
 1. **Port 数据集矩阵补齐**
-`apps/port/src/ditto_port/models/config.py` 当前 registry 主要覆盖 T0/T1 核心集，需对齐 v5 数据集矩阵。
+`apps/port/src/ditto_port/models/config.py` 已补齐 `stock_status`，仍需继续扩展 Fundamental/Capital/Macro 等跨域数据集的 registry 与作业入口。
 
-2. **DataHub 入口与旧调用面最终收口**
-`hub.py` 与 Port ingest 仍存在部分旧方法兼容入口（`write_bars/write_adj_factor` 等），需继续收敛至统一 `query()/write()` 调用形态并清理冗余别名。
-
-3. **文档清理最终收口**
+2. **文档清理最终收口**
 继续修订 DataHub/Port 相关 README 中历史叙述，确保与 v5 最终实现一致。
 
 ---

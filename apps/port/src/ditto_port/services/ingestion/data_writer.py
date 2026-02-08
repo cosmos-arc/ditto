@@ -2,15 +2,19 @@
 数据写入器。
 
 负责将摄取的数据写入到不同的 Store，包括：
-- 行情数据（stock_daily, etf_daily）→ BarsStore
+- 行情数据（stock_daily, etf_daily, stock_status）→ MarketService
 - 复权因子（adj_factor, fund_adj）→ AdjFactorStore
 - 基础信息（stock_basic, etf_basic）→ InstrumentStore
 - 日历（calendar）→ CalendarStore
 """
 
-from typing import Literal
+from typing import Literal, cast
 
 import polars as pl
+from ditto_datahub.domains.market import (
+    MarketWriteCommand,
+)
+from ditto_datahub.domains.metadata import MetadataWriteCommand
 from ditto_datahub.hub import DataHub
 from ditto_datahub.models import Dataset, OnDuplicate, WriteResult
 from ditto_foundation.util.checksum import ChecksumCompute
@@ -84,7 +88,8 @@ def _to_write_result(
     dataset: str,
     year: int,
     df: pl.DataFrame,
-    result: dict[str, int],
+    rows: int,
+    files: int,
 ) -> WriteResult:
     """
     将 MarketService 返回的 dict 转换为 WriteResult。
@@ -93,14 +98,13 @@ def _to_write_result(
         dataset: 数据集名称
         year: 年份
         df: 写入的 DataFrame（用于计算 checksum）
-        result: MarketService 返回的结果字典
+        rows: 写入行数
+        files: 写入文件数
 
     Returns:
         WriteResult 对象
 
     """
-    rows = result.get("rows", 0)
-    files = result.get("files", 0)
     checksum = ChecksumCompute.from_dataframe(df, dataset)
     return WriteResult(
         file_path=f"{dataset}/{year}",
@@ -180,15 +184,51 @@ class IngestionDataWriter:
             )
             # 转换 OnDuplicate 枚举为字符串
             on_duplicate_str = _map_on_duplicate(on_duplicate)
-            # 使用 MarketService 写入（替代 BarsAccessor）
-            result = self._hub.market.write_bars(
-                df=df,
-                year=year,
-                dataset=dataset,
-                on_duplicate=on_duplicate_str,
+            bars_dataset: Literal["stock_daily", "etf_daily"] = dataset_enum.value
+            write_result = self._hub.market.write(
+                MarketWriteCommand(
+                    dataset=bars_dataset,
+                    df=df,
+                    year=year,
+                    on_duplicate=on_duplicate_str,
+                )
             )
-            # 转换 dict[str, int] 为 WriteResult
-            return _to_write_result(dataset, year, df, result)
+            return _to_write_result(
+                dataset,
+                year,
+                df,
+                write_result.rows,
+                write_result.files,
+            )
+        elif dataset_enum == Dataset.STOCK_STATUS:
+            instrument_id_mapping = self._hub.metadata.resolve_or_create_batch(
+                df=df,
+                source=self._source_name,
+                asset_class="stock",
+                source_ticker_col=source_ticker_col,
+            )
+            df = _enrich_with_instrument_id(
+                df,
+                instrument_id_mapping,
+                source_ticker_col,
+                self._source_name,
+            )
+            on_duplicate_str = _map_on_duplicate(on_duplicate)
+            write_result = self._hub.market.write(
+                MarketWriteCommand(
+                    dataset="stock_status",
+                    df=df,
+                    year=year,
+                    on_duplicate=on_duplicate_str,
+                )
+            )
+            return _to_write_result(
+                dataset,
+                year,
+                df,
+                write_result.rows,
+                write_result.files,
+            )
         elif dataset_enum in (Dataset.ADJ_FACTOR, Dataset.FUND_ADJ):
             # 补齐 instrument_id/source_ticker/source 字段（使用 MetadataService API）
             adj_asset_class: Literal["stock", "etf"] = (
@@ -212,20 +252,28 @@ class IngestionDataWriter:
                     self._source_name,
                 )
 
-            # 使用 MarketService 写入（替代 AdjFactorAccessor）
-            # 转换 OnDuplicate 枚举为字符串
             on_duplicate_str = _map_on_duplicate(on_duplicate)
-            result = self._hub.market.write_adj_factor(
-                dataset=dataset,
-                df=df,
-                year=year,
-                on_duplicate=on_duplicate_str,
+            adj_dataset = cast(Literal["adj_factor", "fund_adj"], dataset_enum.value)
+            write_result = self._hub.market.write(
+                MarketWriteCommand(
+                    dataset=adj_dataset,
+                    df=df,
+                    year=year,
+                    on_duplicate=on_duplicate_str,
+                )
             )
-            # 转换 dict[str, int] 为 WriteResult
-            return _to_write_result(dataset, year, df, result)
+            return _to_write_result(
+                dataset,
+                year,
+                df,
+                write_result.rows,
+                write_result.files,
+            )
         elif dataset_enum == Dataset.CALENDAR:
             records = df.to_dicts()
-            self._hub.calendar.upsert(records)
+            self._hub.metadata.write(
+                MetadataWriteCommand(dataset="calendar", records=records)
+            )
             file_path = f"calendar_store:{trade_date}"
             # 修复：使用统一的 ChecksumCompute（MD5 算法，确定性排序）
             checksum = ChecksumCompute.from_dataframe(df, "calendar")

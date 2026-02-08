@@ -22,11 +22,7 @@ class TestAdjFactorIngestion:
         mock_hub.ingestion_log = mocker.MagicMock()
         mock_hub.market = mocker.MagicMock()
         mock_hub.metadata = mocker.MagicMock()
-        # Mock write_adj_factor to return dict[str, int]
-        mock_hub.market.write_adj_factor.return_value = {
-            "rows": 2,
-            "files": 1,
-        }
+        mock_hub.market.write.return_value = mocker.Mock(rows=2, files=1)
         mock_hub.metadata.resolve_or_create_batch.return_value = {
             "000001.SZ": 1_000_001,
             "000002.SZ": 1_000_002,
@@ -58,10 +54,10 @@ class TestAdjFactorIngestion:
         # Verify result status is success
         assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-        # Verify market.write_adj_factor was called with dataframe containing
-        # instrument_id
-        call_args = mock_hub.market.write_adj_factor.call_args
-        df_written = call_args.kwargs["df"]
+        call_args = mock_hub.market.write.call_args
+        command = call_args.args[0]
+        df_written = command.df
+        assert command.dataset == "adj_factor"
 
         # Verify instrument_id/source_ticker columns exist in the written dataframe
         assert "instrument_id" in df_written.columns, (
@@ -89,10 +85,7 @@ class TestAdjFactorIngestion:
         mock_hub.ingestion_log = mocker.MagicMock()
         mock_hub.market = mocker.MagicMock()
         mock_hub.metadata = mocker.MagicMock()
-        mock_hub.market.write_adj_factor.return_value = {
-            "rows": 2,
-            "files": 1,
-        }
+        mock_hub.market.write.return_value = mocker.Mock(rows=2, files=1)
         mock_hub.metadata.resolve_or_create_batch.return_value = {
             "510300.SH": 2_000_001,
             "510500.SH": 2_000_002,
@@ -124,10 +117,10 @@ class TestAdjFactorIngestion:
         # Verify result status is success
         assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-        # Verify market.write_adj_factor was called with dataframe containing
-        # instrument_id
-        call_args = mock_hub.market.write_adj_factor.call_args
-        df_written = call_args.kwargs["df"]
+        call_args = mock_hub.market.write.call_args
+        command = call_args.args[0]
+        df_written = command.df
+        assert command.dataset == "fund_adj"
 
         # Verify instrument_id/source_ticker columns exist in the written dataframe
         assert "instrument_id" in df_written.columns, (

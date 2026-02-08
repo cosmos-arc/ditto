@@ -16,6 +16,7 @@ class TestDataset:
         assert Dataset.ETF_DAILY.value == "etf_daily"
         assert Dataset.STOCK_BASIC.value == "stock_basic"
         assert Dataset.STOCK_DAILY.value == "stock_daily"
+        assert Dataset.STOCK_STATUS.value == "stock_status"
         assert Dataset.ADJ_FACTOR.value == "adj_factor"
         assert Dataset.FUND_ADJ.value == "fund_adj"
 
@@ -24,6 +25,7 @@ class TestDataset:
         assert Dataset.is_basic_dataset("stock_basic") is True
         assert Dataset.is_basic_dataset("etf_basic") is True
         assert Dataset.is_basic_dataset("stock_daily") is False
+        assert Dataset.is_basic_dataset("stock_status") is False
         assert Dataset.is_basic_dataset("etf_daily") is False
         assert Dataset.is_basic_dataset("calendar") is False
         assert Dataset.is_basic_dataset("adj_factor") is False

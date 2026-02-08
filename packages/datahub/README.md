@@ -578,23 +578,15 @@ query = MarketBarsQuery(
 bars = hub.market.get_bars(query)
 ```
 
-#### 向后兼容
+#### 统一接口约定
 
-为了平滑迁移，DataHub 保留了旧的 API 别名：
+DataHub 对外统一通过域服务接口访问，不再建议依赖历史别名。
 
 ```python
-# 旧 API（仍然支持）
-instrument_id = hub.securities.resolve_instrument_id("600000.SH", source="tushare")
-df = hub.securities.get(instrument_ids=[1, 2, 3])
-trading_days = hub.calendar.get("2024-01-01", "2024-01-31")
-
-# 新 API（推荐）
 instrument_id = hub.metadata.resolve_instrument_id("600000.SH", source="tushare")
 df = hub.metadata.get_instruments(instrument_ids=[1, 2, 3])
 trading_days = hub.metadata.get_trading_days("2024-01-01", "2024-01-31")
 ```
-
-**迁移建议**：新代码优先使用 `hub.metadata` 接口，旧代码可逐步迁移。
 
 ### PIT 安全查询
 
@@ -974,7 +966,7 @@ bars/
 **改进**
 - 域驱动设计（DDD）：Market 域完整实现
 - 增强类型安全，完善文档注释
-- 向后兼容性：保留 `hub.bars` 接口
+- 接口收敛：统一由 `MarketService` 提供行情查询能力
 
 ### v0.7.0 (2026-01-27)
 **新增**
@@ -998,7 +990,7 @@ bars/
 - DataHub 集成 MetadataService，提供 `hub.metadata` 统一查询接口
 
 **改进**
-- 向后兼容性：保留 `hub.securities`、`hub.calendar` 别名
+- 接口收敛：统一由 `MetadataService` 提供元数据查询能力
 - 所有 Store 继承 SQLiteStore 基类
 - 增强类型安全，完善文档注释
 - 域驱动设计（DDD）：高内聚、低耦合、易扩展

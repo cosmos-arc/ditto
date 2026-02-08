@@ -324,3 +324,27 @@ class DataSource(ABC):
 
         """
         pass
+
+    @abstractmethod
+    def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch stock status information.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: Source code
+            - trade_date: Date
+            - is_suspended: Boolean
+            - suspend_timing: Utf8
+            - is_st: Boolean
+            - st_type: Utf8
+            - list_status: Utf8
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
