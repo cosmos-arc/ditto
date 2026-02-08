@@ -4,7 +4,7 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.factors.factor_store import FactorStore
+from ditto_datahub.stores.factors.factor_store import FactorStore
 
 
 @pytest.fixture

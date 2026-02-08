@@ -38,7 +38,7 @@ def test_core_only_allows_datahub_models(tmp_path: Path) -> None:
     _write_file(
         tmp_path,
         "packages/core/src/ditto_core/bad.py",
-        "from ditto_datahub.domains.market import MarketService\n",
+        "from ditto_datahub.stores.market import MarketService\n",
     )
 
     violations = ArchitectureChecker(tmp_path).run()
@@ -149,7 +149,7 @@ def test_forbid_legacy_metadata_dataset_name_securities(tmp_path: Path) -> None:
         tmp_path,
         "packages/datahub/src/ditto_datahub/domains/metadata/bad.py",
         (
-            "from ditto_datahub.domains.metadata import MetadataQuery\n"
+            "from ditto_datahub.stores.metadata import MetadataQuery\n"
             "def bad() -> MetadataQuery:\n"
             "    return MetadataQuery(dataset='securities')\n"
         ),

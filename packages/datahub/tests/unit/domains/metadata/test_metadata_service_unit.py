@@ -6,12 +6,12 @@ from unittest.mock import Mock
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.metadata.instrument.models import InstrumentRegistration
-from ditto_datahub.domains.metadata.metadata_service import (
+from ditto_datahub.services.metadata.metadata_service import (
     MetadataQuery,
     MetadataService,
     MetadataWriteCommand,
 )
+from ditto_datahub.stores.metadata.instrument.models import InstrumentRegistration
 
 
 @pytest.fixture

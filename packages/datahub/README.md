@@ -260,7 +260,7 @@ from datetime import date
 
 import polars as pl
 from ditto_datahub import DataHub
-from ditto_datahub.domains.macro import MacroQuery
+from ditto_datahub.stores.macro import MacroQuery
 
 # DataHub 由 dishka 容器注入（示例）
 hub: DataHub = container.get(DataHub)
@@ -318,7 +318,7 @@ data = hub.macro.query(query)
 **使用示例**：
 ```python
 from ditto_datahub import DataHub
-from ditto_datahub.domains.features import FeatureQuery
+from ditto_datahub.stores.features import FeatureQuery
 
 # DataHub 由 dishka 容器注入（示例）
 hub: DataHub = container.get(DataHub)
@@ -367,7 +367,7 @@ data = hub.features.query(query)
 **使用示例**：
 ```python
 from ditto_datahub import DataHub
-from ditto_datahub.domains.factors import FactorQuery
+from ditto_datahub.stores.factors import FactorQuery
 
 # DataHub 由 dishka 容器注入（示例）
 hub: DataHub = container.get(DataHub)
@@ -385,7 +385,7 @@ data = hub.factors.query(query)
 
 #### Capital 域使用示例：
 ```python
-from ditto_datahub.domains.capital import CapitalStore
+from ditto_datahub.stores.capital import CapitalStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
@@ -492,7 +492,7 @@ rows = sqlite_store.fetchall("SELECT * FROM instruments WHERE instrument_id IN (
 
 ```python
 from ditto_datahub import DataHub
-from ditto_datahub.domains.market import AdjType, MarketBarsQuery
+from ditto_datahub.stores.market import AdjType, MarketBarsQuery
 
 # DataHub 由 dishka 容器注入（示例）
 hub: DataHub = container.get(DataHub)
@@ -552,7 +552,7 @@ DataHub 引入了域级查询服务 `MarketService`，提供统一的 Market 域
 
 ```python
 from ditto_datahub import DataHub
-from ditto_datahub.domains.market import AdjType, MarketBarsQuery
+from ditto_datahub.stores.market import AdjType, MarketBarsQuery
 
 # DataHub 由 dishka 容器注入（示例）
 hub: DataHub = container.get(DataHub)
@@ -617,7 +617,7 @@ trading_days = hub.metadata.get_trading_days("2024-01-01", "2024-01-31")
 
 ```python
 from ditto_datahub import DataHub
-from ditto_datahub.domains.market import MarketBarsQuery
+from ditto_datahub.stores.market import MarketBarsQuery
 
 # DataHub 由 dishka 容器注入（示例）
 hub: DataHub = container.get(DataHub)

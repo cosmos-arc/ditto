@@ -4,11 +4,11 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.features.feature_service import (
+from ditto_datahub.services.features.feature_service import (
     FeatureQuery,
     FeatureService,
 )
-from ditto_datahub.domains.features.technical import (
+from ditto_datahub.stores.features.technical import (
     IndicatorMetadataStore,
     IndicatorStore,
 )

@@ -4,9 +4,9 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.macro.indicator.indicator_store import IndicatorStore
-from ditto_datahub.domains.macro.indicator.metadata_store import IndicatorMetadataStore
-from ditto_datahub.domains.macro.macro_service import MacroQuery, MacroService
+from ditto_datahub.services.macro.macro_service import MacroQuery, MacroService
+from ditto_datahub.stores.macro.indicator.indicator_store import IndicatorStore
+from ditto_datahub.stores.macro.indicator.metadata_store import IndicatorMetadataStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 

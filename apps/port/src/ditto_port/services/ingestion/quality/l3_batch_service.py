@@ -6,8 +6,8 @@ from typing import Any, Literal
 import polars as pl
 import polars.exceptions as pl_exceptions
 from ditto_core.quality import QualityEngine
-from ditto_datahub.domains.market import MarketBarsQuery
-from ditto_datahub.domains.metadata import MetadataQuery
+from ditto_datahub.services.market import MarketBarsQuery
+from ditto_datahub.services.metadata import MetadataQuery
 from loguru import logger
 
 

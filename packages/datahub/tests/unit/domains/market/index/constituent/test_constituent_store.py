@@ -7,7 +7,7 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.market.index.constituent import IndexConstituentStore
+from ditto_datahub.stores.market.index.constituent import IndexConstituentStore
 
 
 @pytest.fixture

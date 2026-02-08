@@ -18,8 +18,8 @@ import polars as pl
 from loguru import logger
 
 from ditto_datahub.config import DataSourceSettings
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.sources.tdx.reader import TdxReader
+from ditto_datahub.stores.metadata.instrument import InstrumentStore
 
 
 class TdxSource:

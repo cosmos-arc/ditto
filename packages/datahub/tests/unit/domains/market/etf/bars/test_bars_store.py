@@ -7,8 +7,8 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.market.etf.bars import EtfBarsStore
 from ditto_datahub.models import OnDuplicate
+from ditto_datahub.stores.market.etf.bars import EtfBarsStore
 
 
 @pytest.fixture

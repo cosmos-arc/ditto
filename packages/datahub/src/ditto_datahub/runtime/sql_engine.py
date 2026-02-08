@@ -13,9 +13,9 @@ import polars as pl
 import xxhash
 from ditto_foundation import M, logger
 
-from ditto_datahub.domains.metadata.calendar import CalendarStore
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.runtime.pit_helper import PitHelper
+from ditto_datahub.stores.metadata.calendar import CalendarStore
+from ditto_datahub.stores.metadata.instrument import InstrumentStore
 
 
 class SqlEngine:

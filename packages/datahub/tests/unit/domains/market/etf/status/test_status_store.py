@@ -8,7 +8,7 @@ from typing import Any
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.market.etf.status import EtfStatusStore
+from ditto_datahub.stores.market.etf.status import EtfStatusStore
 
 
 @pytest.fixture

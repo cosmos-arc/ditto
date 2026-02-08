@@ -7,8 +7,8 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.market.index.bars import IndexBarsStore
 from ditto_datahub.models import OnDuplicate
+from ditto_datahub.stores.market.index.bars import IndexBarsStore
 
 
 @pytest.fixture

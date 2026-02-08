@@ -150,7 +150,7 @@ print(f"夏普比率: {result.sharpe_ratio:.2f}")
 
 ```python
 # ✅ 正确：使用 PIT 过滤
-from ditto_datahub.domains.market import MarketBarsQuery
+from ditto_datahub.stores.market import MarketBarsQuery
 
 df = hub.market.query(
     MarketBarsQuery(

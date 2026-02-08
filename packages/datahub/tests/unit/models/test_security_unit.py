@@ -3,7 +3,7 @@
 from dataclasses import asdict
 
 import pytest
-from ditto_datahub.domains.metadata.instrument import InstrumentRegistration
+from ditto_datahub.stores.metadata.instrument import InstrumentRegistration
 
 
 @pytest.mark.unit

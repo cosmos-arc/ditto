@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from ditto_datahub.domains.metadata.identity.identity_store import IdentityStore
+from ditto_datahub.stores.metadata.identity.identity_store import IdentityStore
 
 
 @pytest.fixture

@@ -6,57 +6,6 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.capital import CapitalService
-from ditto_datahub.domains.capital.capital_store import CapitalStore
-
-# Features & Factors imports
-from ditto_datahub.domains.factors import FactorService
-from ditto_datahub.domains.factors.factor_metadata_store import (
-    FactorMetadataStore,
-)
-from ditto_datahub.domains.factors.factor_store import FactorStore
-from ditto_datahub.domains.features import FeatureService
-from ditto_datahub.domains.features.technical import (
-    IndicatorMetadataStore as FeatureIndicatorMetadataStore,
-)
-from ditto_datahub.domains.features.technical import (
-    IndicatorStore as FeatureIndicatorStore,
-)
-from ditto_datahub.domains.fundamental import FundamentalService
-from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
-from ditto_datahub.domains.macro import MacroService
-from ditto_datahub.domains.macro.indicator.indicator_store import (
-    IndicatorStore as MacroIndicatorStore,
-)
-from ditto_datahub.domains.macro.indicator.metadata_store import (
-    IndicatorMetadataStore,
-)
-from ditto_datahub.domains.market import MarketService
-from ditto_datahub.domains.market.etf.adj import EtfAdjFactorStore
-from ditto_datahub.domains.market.etf.bars import EtfBarsStore
-from ditto_datahub.domains.market.etf.nav import EtfNavStore
-from ditto_datahub.domains.market.etf.status import EtfStatusStore
-from ditto_datahub.domains.market.index.bars import IndexBarsStore
-from ditto_datahub.domains.market.index.constituent import IndexConstituentStore
-from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
-from ditto_datahub.domains.market.stock.bars import StockBarsStore
-from ditto_datahub.domains.market.stock.status import StockStatusStore
-from ditto_datahub.domains.metadata import MetadataService
-from ditto_datahub.domains.metadata.calendar.calendar_store import (
-    CalendarStore as MetadataCalendarStore,
-)
-from ditto_datahub.domains.metadata.identity.identity_store import IdentityStore
-from ditto_datahub.domains.metadata.industry.industry_basic_store import (
-    IndustryBasicStore,
-)
-from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
-    IndustryMappingStore,
-)
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
-from ditto_datahub.domains.metadata.instrument.instrument_store import (
-    InstrumentStore as MetadataInstrumentStore,
-)
-from ditto_datahub.domains.metadata.universe import UniverseStore
 from ditto_datahub.errors import InstrumentIdNotFoundError
 from ditto_datahub.hub import DataHub
 from ditto_datahub.runtime.freeze_manager import FreezeManager
@@ -65,8 +14,72 @@ from ditto_datahub.runtime.ingestion.ingestion_log_store import (
 )
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
+
+# Service moved to services.capital
+from ditto_datahub.services.capital import CapitalService
+
+# Features & Factors imports
+# Service moved to services.factors
+from ditto_datahub.services.factors import FactorService
+
+# Service moved to services.features
+from ditto_datahub.services.features import FeatureService
+
+# Service moved to services.fundamental
+from ditto_datahub.services.fundamental import FundamentalService
+
+# Service moved to services.macro
+from ditto_datahub.services.macro import MacroService
+
+# Service moved to services.market
+from ditto_datahub.services.market import MarketService
+
+# Service moved to services.metadata
+from ditto_datahub.services.metadata import MetadataService
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
+from ditto_datahub.stores.capital.capital_store import CapitalStore
+from ditto_datahub.stores.factors.factor_metadata_store import (
+    FactorMetadataStore,
+)
+from ditto_datahub.stores.factors.factor_store import FactorStore
+from ditto_datahub.stores.features.technical import (
+    IndicatorMetadataStore as FeatureIndicatorMetadataStore,
+)
+from ditto_datahub.stores.features.technical import (
+    IndicatorStore as FeatureIndicatorStore,
+)
+from ditto_datahub.stores.fundamental.fundamental_store import FundamentalStore
+from ditto_datahub.stores.macro.indicator.indicator_store import (
+    IndicatorStore as MacroIndicatorStore,
+)
+from ditto_datahub.stores.macro.indicator.metadata_store import (
+    IndicatorMetadataStore,
+)
+from ditto_datahub.stores.market.etf.adj import EtfAdjFactorStore
+from ditto_datahub.stores.market.etf.bars import EtfBarsStore
+from ditto_datahub.stores.market.etf.nav import EtfNavStore
+from ditto_datahub.stores.market.etf.status import EtfStatusStore
+from ditto_datahub.stores.market.index.bars import IndexBarsStore
+from ditto_datahub.stores.market.index.constituent import IndexConstituentStore
+from ditto_datahub.stores.market.stock.adj import StockAdjFactorStore
+from ditto_datahub.stores.market.stock.bars import StockBarsStore
+from ditto_datahub.stores.market.stock.status import StockStatusStore
+from ditto_datahub.stores.metadata.calendar.calendar_store import (
+    CalendarStore as MetadataCalendarStore,
+)
+from ditto_datahub.stores.metadata.identity.identity_store import IdentityStore
+from ditto_datahub.stores.metadata.industry.industry_basic_store import (
+    IndustryBasicStore,
+)
+from ditto_datahub.stores.metadata.industry.industry_mapping_store import (
+    IndustryMappingStore,
+)
+from ditto_datahub.stores.metadata.instrument import InstrumentStore
+from ditto_datahub.stores.metadata.instrument.instrument_store import (
+    InstrumentStore as MetadataInstrumentStore,
+)
+from ditto_datahub.stores.metadata.universe import UniverseStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager
@@ -857,7 +870,7 @@ class TestDataHub:
         sources = DataSources(tushare=mock_tushare)
         datahub_with_dependencies._sources = sources
 
-        from ditto_datahub.domains.market import AdjType, MarketBarsQuery
+        from ditto_datahub.services.market import AdjType, MarketBarsQuery
 
         # Mock market.get_bars 返回空 DataFrame
         mock_get_bars = mocker.patch.object(

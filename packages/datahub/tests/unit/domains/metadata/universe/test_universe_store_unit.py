@@ -1,7 +1,7 @@
 """Tests for UniverseStore."""
 
 import pytest
-from ditto_datahub.domains.metadata.universe import UniverseStore
+from ditto_datahub.stores.metadata.universe import UniverseStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 

@@ -7,8 +7,8 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.market.stock.adj import StockAdjFactorStore
 from ditto_datahub.models import OnDuplicate
+from ditto_datahub.stores.market.stock.adj import StockAdjFactorStore
 
 
 @pytest.fixture

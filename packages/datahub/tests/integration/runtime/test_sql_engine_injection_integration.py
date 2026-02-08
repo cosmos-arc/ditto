@@ -6,9 +6,9 @@ from tempfile import TemporaryDirectory
 
 import duckdb
 import pytest
-from ditto_datahub.domains.metadata.calendar import CalendarStore
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.runtime.sql_engine import SqlEngine
+from ditto_datahub.stores.metadata.calendar import CalendarStore
+from ditto_datahub.stores.metadata.instrument import InstrumentStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 

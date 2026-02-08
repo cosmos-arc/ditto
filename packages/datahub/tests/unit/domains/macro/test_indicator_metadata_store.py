@@ -1,7 +1,7 @@
 """Tests for IndicatorMetadataStore."""
 
 import pytest
-from ditto_datahub.domains.macro.indicator.metadata_store import IndicatorMetadataStore
+from ditto_datahub.stores.macro.indicator.metadata_store import IndicatorMetadataStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 

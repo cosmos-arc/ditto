@@ -7,14 +7,14 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.market.market_service import (
+from ditto_datahub.models import InstrumentIdRange
+from ditto_datahub.services.market.market_service import (
     AdjType,
     MarketBarsQuery,
     MarketConstituentsQuery,
     MarketService,
     MarketWriteCommand,
 )
-from ditto_datahub.models import InstrumentIdRange
 
 
 @pytest.fixture

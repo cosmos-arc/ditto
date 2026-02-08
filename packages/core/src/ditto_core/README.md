@@ -154,7 +154,7 @@ from ditto_core.quality import QualityEngine
 from ditto_core.engine import RegimeEngine, FactorEngine
 from ditto_core.portfolio import PortfolioManager
 from ditto_datahub import DataHub
-from ditto_datahub.domains.market import MarketBarsQuery
+from ditto_datahub.stores.market import MarketBarsQuery
 import polars as pl
 
 # 初始化

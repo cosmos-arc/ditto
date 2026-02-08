@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_datahub.config import DataSourceSettings
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.sources.tdx.source import TdxSource
+from ditto_datahub.stores.metadata.instrument import InstrumentStore
 from pytest_mock import MockerFixture
 
 

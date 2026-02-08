@@ -4,7 +4,7 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.features.technical import IndicatorStore
+from ditto_datahub.stores.features.technical import IndicatorStore
 
 
 @pytest.fixture

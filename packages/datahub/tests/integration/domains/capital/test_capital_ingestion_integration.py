@@ -11,12 +11,12 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.capital.capital_ingestion import (
+from ditto_datahub.services.capital.capital_service import CapitalService
+from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
+from ditto_datahub.stores.capital.capital_ingestion import (
     CapitalIngestion,
 )
-from ditto_datahub.domains.capital.capital_service import CapitalService
-from ditto_datahub.domains.capital.capital_store import CapitalStore
-from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
+from ditto_datahub.stores.capital.capital_store import CapitalStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 

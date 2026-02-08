@@ -12,12 +12,12 @@ from collections.abc import Callable
 from typing import Literal, cast
 
 import polars as pl
-from ditto_datahub.domains.market import (
-    MarketWriteCommand,
-)
-from ditto_datahub.domains.metadata import MetadataWriteCommand
 from ditto_datahub.hub import DataHub
 from ditto_datahub.models import Dataset, OnDuplicate, WriteResult
+from ditto_datahub.services.market import (
+    MarketWriteCommand,
+)
+from ditto_datahub.services.metadata import MetadataWriteCommand
 from ditto_foundation.util.checksum import ChecksumCompute
 
 

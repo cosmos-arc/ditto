@@ -10,27 +10,27 @@ import polars as pl
 from ditto_foundation import SQLitePool, logger
 from ditto_foundation.concurrency import FileLockManager
 
-from ditto_datahub.domains.capital import CapitalService
-from ditto_datahub.domains.factors import FactorService
-from ditto_datahub.domains.features import FeatureService
-from ditto_datahub.domains.fundamental import FundamentalService
-from ditto_datahub.domains.macro import MacroService
-from ditto_datahub.domains.market import (
-    AdjType,
-    MarketBarsQuery,
-    MarketService,
-)
-from ditto_datahub.domains.metadata import (
-    MetadataQuery,
-    MetadataService,
-)
-from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.errors import InstrumentIdNotFoundError
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion import IngestionLogStore
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
+from ditto_datahub.services.capital import CapitalService
+from ditto_datahub.services.factors import FactorService
+from ditto_datahub.services.features import FeatureService
+from ditto_datahub.services.fundamental import FundamentalService
+from ditto_datahub.services.macro import MacroService
+from ditto_datahub.services.market import (
+    AdjType,
+    MarketBarsQuery,
+    MarketService,
+)
+from ditto_datahub.services.metadata import (
+    MetadataQuery,
+    MetadataService,
+)
 from ditto_datahub.sources.source import DataSources
+from ditto_datahub.stores.metadata.instrument import InstrumentStore
 
 # 类型别名：标识符（支持 Instrument ID/source_ticker/symbol 混合）
 type Identifier = str | int

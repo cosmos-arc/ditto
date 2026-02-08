@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.metadata.instrument import (
+from ditto_datahub.stores.metadata.instrument import (
     InstrumentRegistration,
     InstrumentStore,
 )

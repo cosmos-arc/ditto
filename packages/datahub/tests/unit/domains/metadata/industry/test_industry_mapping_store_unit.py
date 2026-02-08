@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
+from ditto_datahub.stores.metadata.industry.industry_mapping_store import (
     IndustryMappingStore,
 )
 

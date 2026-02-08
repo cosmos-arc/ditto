@@ -1,7 +1,7 @@
 """Tests for IndexWeightStore."""
 
 import pytest
-from ditto_datahub.domains.market.index.weight.weight_store import (
+from ditto_datahub.stores.market.index.weight.weight_store import (
     IndexWeightStore,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient

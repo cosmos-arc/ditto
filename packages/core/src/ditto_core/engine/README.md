@@ -314,7 +314,7 @@ if not compliance.is_compliant:
 
 ```python
 # ✅ 正确：使用 PIT 过滤
-from ditto_datahub.domains.market import MarketBarsQuery
+from ditto_datahub.stores.market import MarketBarsQuery
 
 df = hub.market.query(
     MarketBarsQuery(

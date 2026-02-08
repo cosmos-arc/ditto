@@ -6,11 +6,11 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.fundamental.fundamental_service import (
+from ditto_datahub.services.fundamental.fundamental_service import (
     FundamentalQuery,
     FundamentalService,
 )
-from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
+from ditto_datahub.stores.fundamental.fundamental_store import FundamentalStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 

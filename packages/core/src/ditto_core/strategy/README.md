@@ -311,7 +311,7 @@ class Order:
 
 ```python
 from ditto_core.strategy import OrderExecutor
-from ditto_datahub.domains.market import MarketBarsQuery
+from ditto_datahub.stores.market import MarketBarsQuery
 
 class SimpleOrderExecutor(OrderExecutor):
     """简单订单执行器"""

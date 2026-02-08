@@ -7,12 +7,12 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.capital.capital_ingestion import CapitalIngestion
-from ditto_datahub.domains.capital.capital_service import (
+from ditto_datahub.services.capital.capital_service import (
     CapitalService,
     CapitalWriteResult,
 )
 from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
+from ditto_datahub.stores.capital.capital_ingestion import CapitalIngestion
 
 
 @pytest.fixture

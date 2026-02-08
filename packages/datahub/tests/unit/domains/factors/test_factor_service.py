@@ -4,9 +4,9 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.factors.factor_metadata_store import FactorMetadataStore
-from ditto_datahub.domains.factors.factor_service import FactorQuery, FactorService
-from ditto_datahub.domains.factors.factor_store import FactorStore
+from ditto_datahub.services.factors.factor_service import FactorQuery, FactorService
+from ditto_datahub.stores.factors.factor_metadata_store import FactorMetadataStore
+from ditto_datahub.stores.factors.factor_store import FactorStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 

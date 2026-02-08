@@ -61,8 +61,8 @@ from ditto_datahub.stores import SQLiteClient
 client = SQLiteClient(Path("data/ditto.db"))
 
 # Domains 层使用示例
-from ditto_datahub.domains.market import MarketBarsQuery, MarketService
-from ditto_datahub.domains.metadata import MetadataQuery, MetadataService
+from ditto_datahub.stores.market import MarketBarsQuery, MarketService
+from ditto_datahub.stores.metadata import MetadataQuery, MetadataService
 
 metadata_service: MetadataService = ...
 market_service: MarketService = ...
