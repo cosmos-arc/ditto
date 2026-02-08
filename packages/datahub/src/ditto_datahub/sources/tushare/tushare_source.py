@@ -9,6 +9,7 @@ from ditto_datahub.sources.base import DataSource
 from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareAdapter
 from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
+from ditto_datahub.sources.tushare.adapters.macro import MacroTushareAdapter
 from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
 
 
@@ -45,6 +46,7 @@ class TushareSource(DataSource):
         self._stock = StockTushareAdapter(token=token, settings=settings)
         self._etf = ETFTushareAdapter(token=token, settings=settings)
         self._capital = CapitalTushareAdapter(token=token, settings=settings)
+        self._macro = MacroTushareAdapter(token=token, settings=settings)
 
     @staticmethod
     def _to_compact_date(trade_date: str) -> str:
@@ -288,3 +290,7 @@ class TushareSource(DataSource):
         """Fetch pledge ratio data."""
         compact_date = self._to_compact_date(trade_date)
         return self._capital.fetch_pledge_ratio(report_date=compact_date)
+
+    def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
+        """Fetch macro indicators data."""
+        return self._macro.fetch_macro_indicators(trade_date)

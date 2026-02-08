@@ -244,6 +244,11 @@ class IngestionDataWriter:
                 df,
                 year,
             ),
+            Dataset.MACRO_INDICATORS: lambda: self._write_macro(
+                dataset,
+                df,
+                year,
+            ),
             Dataset.CALENDAR: lambda: self._write_calendar(df, trade_date),
             Dataset.STOCK_BASIC: lambda: self._write_basic(df, trade_date, "stock"),
             Dataset.ETF_BASIC: lambda: self._write_basic(df, trade_date, "etf"),
@@ -408,6 +413,22 @@ class IngestionDataWriter:
             dataset_enum.value,
         )
         write_result = self._hub.capital.write(capital_dataset, df)
+        files = 1 if write_result.records_written > 0 else 0
+        return _to_write_result(
+            dataset,
+            year,
+            df,
+            write_result.records_written,
+            files,
+        )
+
+    def _write_macro(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+    ) -> WriteResult:
+        write_result = self._hub.macro.write(df)
         files = 1 if write_result.records_written > 0 else 0
         return _to_write_result(
             dataset,

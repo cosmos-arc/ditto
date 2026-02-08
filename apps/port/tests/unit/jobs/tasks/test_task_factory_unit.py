@@ -203,6 +203,7 @@ class TestT1IncrementalTasks:
             Dataset.VALUATION_METRICS,
             Dataset.MARGIN_TRADING,
             Dataset.PLEDGE_RATIO,
+            Dataset.MACRO_INDICATORS,
         ],
     )
     def test_t1_datasets_in_registry(self, dataset):

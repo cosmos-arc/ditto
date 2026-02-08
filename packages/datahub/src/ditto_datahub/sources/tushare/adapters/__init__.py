@@ -7,6 +7,7 @@ from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareAdapt
 from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
 from ditto_datahub.sources.tushare.adapters.industry import IndustryTushareAdapter
+from ditto_datahub.sources.tushare.adapters.macro import MacroTushareAdapter
 from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
 from ditto_datahub.sources.tushare.adapters.stock_status import StockStatusAdapter
 
@@ -16,6 +17,7 @@ __all__ = [
     "CapitalTushareAdapter",
     "ETFTushareAdapter",
     "IndustryTushareAdapter",
+    "MacroTushareAdapter",
     "StockStatusAdapter",
     "StockTushareAdapter",
 ]

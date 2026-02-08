@@ -26,6 +26,7 @@ class TestDataset:
         assert Dataset.VALUATION_METRICS.value == "valuation_metrics"
         assert Dataset.MARGIN_TRADING.value == "margin_trading"
         assert Dataset.PLEDGE_RATIO.value == "pledge_ratio"
+        assert Dataset.MACRO_INDICATORS.value == "macro_indicators"
 
     def test_is_basic_dataset(self) -> None:
         """测试 is_basic_dataset 方法."""
@@ -68,15 +69,16 @@ class TestDomain:
         assert Domain.MARKET.value == "market"
         assert Domain.CAPITAL.value == "capital"
         assert Domain.FUNDAMENTAL.value == "fundamental"
+        assert Domain.MACRO.value == "macro"
 
     def test_domain_is_string_enum(self) -> None:
         """验证 Domain 是字符串枚举."""
         assert Domain.METADATA == "metadata"
         assert Domain.FUNDAMENTAL == "fundamental"
 
-    def test_should_have_four_members(self) -> None:
-        """应该有四个成员（四域架构）."""
-        assert len(Domain) == 4
+    def test_should_have_five_members(self) -> None:
+        """应该有五个成员（五域架构）."""
+        assert len(Domain) == 5
 
 
 @pytest.mark.unit

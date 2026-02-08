@@ -467,3 +467,20 @@ class DataSource(ABC):
 
         """
         pass
+
+    @abstractmethod
+    def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch macro indicators data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with macro_indicators SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass

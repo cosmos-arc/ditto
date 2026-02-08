@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from datetime import date
+from typing import Any, ClassVar, Literal, cast
 
 import polars as pl
 from ditto_foundation import logger, traced
 
 from ditto_datahub.domains.macro.indicator.indicator_store import IndicatorStore
 from ditto_datahub.domains.macro.indicator.metadata_store import IndicatorMetadataStore
+
+type MacroCategory = Literal[
+    "economic", "interest_rate", "exchange_rate", "money_supply"
+]
+type MacroFrequency = Literal["daily", "monthly", "quarterly"]
 
 
 @dataclass(frozen=True)
@@ -37,6 +43,14 @@ class MacroQuery:
     frequency: Literal["daily", "monthly", "quarterly"] | None = None
 
 
+@dataclass(frozen=True)
+class MacroWriteResult:
+    """Write result for Macro domain service."""
+
+    dataset: Literal["macro_indicators"]
+    records_written: int
+
+
 class MacroService:
     """
     Macro domain unified query service.
@@ -44,6 +58,16 @@ class MacroService:
     Provides high-level query API for macro indicator data,
     integrating IndicatorStore and IndicatorMetadataStore.
     """
+
+    _WRITE_REQUIRED_COLUMNS: ClassVar[set[str]] = {
+        "indicator_code",
+        "indicator_name",
+        "category",
+        "frequency",
+        "need_pit",
+        "date",
+        "value",
+    }
 
     def __init__(
         self,
@@ -66,10 +90,30 @@ class MacroService:
             event="macro_service_init_complete",
         )
 
-    @traced("macro.get_indicators")
-    def get_indicators(self, query: MacroQuery) -> pl.DataFrame:
+    @traced("macro.write")
+    def write(self, df: pl.DataFrame) -> MacroWriteResult:
+        """Write macro indicator records via unified service contract."""
+        missing = self._WRITE_REQUIRED_COLUMNS - set(df.columns)
+        if missing:
+            msg = f"macro_indicators 写入缺少必要列: {sorted(missing)}"
+            raise ValueError(msg)
+
+        if df.is_empty():
+            return MacroWriteResult(dataset="macro_indicators", records_written=0)
+
+        indicator_mapping = self._upsert_indicator_metadata(df)
+        write_df = self._prepare_indicator_records(df, indicator_mapping)
+        records_written = self._indicator_store.write(write_df)
+
+        return MacroWriteResult(
+            dataset="macro_indicators",
+            records_written=records_written,
+        )
+
+    @traced("macro.query")
+    def query(self, query: MacroQuery) -> pl.DataFrame:
         """
-        Query macro indicator data.
+        Query macro indicator data via unified service contract.
 
         Args:
             query: MacroQuery object with query parameters.
@@ -119,6 +163,10 @@ class MacroService:
 
         return result
 
+    def get_indicators(self, query: MacroQuery) -> pl.DataFrame:
+        """Backward-compatible alias for macro indicator query."""
+        return self.query(query)
+
     def _resolve_indicator_ids(
         self,
         indicators: list[int] | list[str] | None,
@@ -167,6 +215,69 @@ class MacroService:
             return [iid for iid in ids if iid in valid_ids]
 
         return ids
+
+    def _upsert_indicator_metadata(self, df: pl.DataFrame) -> dict[str, int]:
+        metadata_by_code: dict[str, dict[str, Any]] = {}
+        for row in df.to_dicts():
+            code = str(row["indicator_code"])
+            if code not in metadata_by_code:
+                metadata_by_code[code] = row
+
+        mapping: dict[str, int] = {}
+        for code, row in metadata_by_code.items():
+            mapping[code] = self._metadata_store.upsert(
+                code=code,
+                name=str(row["indicator_name"]),
+                category=cast(MacroCategory, str(row["category"])),
+                frequency=cast(MacroFrequency, str(row["frequency"])),
+                need_pit=bool(row["need_pit"]),
+                source=self._as_optional_text(row.get("source")),
+                unit=self._as_optional_text(row.get("unit")),
+                description=self._as_optional_text(row.get("description")),
+            )
+        return mapping
+
+    def _prepare_indicator_records(
+        self, df: pl.DataFrame, mapping: dict[str, int]
+    ) -> pl.DataFrame:
+        records: list[dict[str, Any]] = []
+        for row in df.to_dicts():
+            code = str(row["indicator_code"])
+            indicator_id = mapping.get(code)
+            if indicator_id is None:
+                msg = f"未找到指标代码映射: {code}"
+                raise ValueError(msg)
+            records.append(
+                {
+                    "indicator_id": indicator_id,
+                    "date": row["date"],
+                    "value": row["value"],
+                    "knowledge_date": row.get("knowledge_date"),
+                }
+            )
+
+        write_df = pl.DataFrame(records)
+        if "knowledge_date" not in write_df.columns:
+            write_df = write_df.with_columns(
+                pl.lit(None, dtype=pl.Date).alias("knowledge_date")
+            )
+
+        return write_df.with_columns(
+            pl.col("indicator_id").cast(pl.Int64),
+            pl.col("date").cast(pl.Date),
+            pl.col("value").cast(pl.Float64),
+            pl.col("knowledge_date").cast(pl.Date),
+        )
+
+    @staticmethod
+    def _as_optional_text(value: object) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return value
+        if isinstance(value, date):
+            return value.isoformat()
+        return str(value)
 
     def _enrich_with_metadata(self, df: pl.DataFrame) -> pl.DataFrame:
         """

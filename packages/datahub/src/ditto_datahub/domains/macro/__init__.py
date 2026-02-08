@@ -4,11 +4,16 @@ from ditto_datahub.domains.macro.indicator import (
     IndicatorMetadataStore,
     IndicatorStore,
 )
-from ditto_datahub.domains.macro.macro_service import MacroQuery, MacroService
+from ditto_datahub.domains.macro.macro_service import (
+    MacroQuery,
+    MacroService,
+    MacroWriteResult,
+)
 
 __all__ = [
     "IndicatorMetadataStore",
     "IndicatorStore",
     "MacroQuery",
     "MacroService",
+    "MacroWriteResult",
 ]

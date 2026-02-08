@@ -12,6 +12,9 @@ from ditto_datahub.sources.schemas.capital_schemas import (
     PLEDGE_RATIO_SOURCE_SCHEMA,
     VALUATION_METRICS_SOURCE_SCHEMA,
 )
+from ditto_datahub.sources.schemas.macro_schemas import (
+    MACRO_INDICATOR_SOURCE_SCHEMA,
+)
 from ditto_datahub.sources.schemas.market_schemas import (
     ADJ_FACTOR_SOURCE_SCHEMA,
     ETF_DAILY_SOURCE_SCHEMA,
@@ -40,6 +43,7 @@ __all__ = [
     "INDEX_MEMBER_SOURCE_SCHEMA",
     "INDUSTRY_SOURCE_SCHEMA",
     "INSTRUMENT_SOURCE_SCHEMA",
+    "MACRO_INDICATOR_SOURCE_SCHEMA",
     "MARGIN_TRADING_SOURCE_SCHEMA",
     "PLEDGE_RATIO_SOURCE_SCHEMA",
     "STOCK_DAILY_SOURCE_SCHEMA",

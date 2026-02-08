@@ -280,6 +280,9 @@ class IngestionCoordinator:
                 trade_date
             ),
             Dataset.PLEDGE_RATIO: lambda: self._source.fetch_pledge_ratio(trade_date),
+            Dataset.MACRO_INDICATORS: lambda: self._source.fetch_macro_indicators(
+                trade_date
+            ),
         }
 
         if dataset_enum not in handlers:

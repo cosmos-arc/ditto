@@ -46,6 +46,7 @@ class Dataset(str, Enum):
     VALUATION_METRICS = "valuation_metrics"
     MARGIN_TRADING = "margin_trading"
     PLEDGE_RATIO = "pledge_ratio"
+    MACRO_INDICATORS = "macro_indicators"
 
 
 class TaskTier(str, Enum):
@@ -562,6 +563,15 @@ DATASET_REGISTRY: dict[Dataset, DatasetSpec] = {
         critical_fields=["instrument_id", "report_date", "knowledge_date"],
         task_name="ingest_pledge_ratio",
         priority=50,
+    ),
+    Dataset.MACRO_INDICATORS: create_t1_config(
+        dataset=Dataset.MACRO_INDICATORS,
+        description="宏观指标",
+        typical_available_time=time(21, 30),
+        depends_on=[Dataset.CALENDAR],
+        critical_fields=["indicator_code", "date", "value"],
+        task_name="ingest_macro_indicators",
+        priority=55,
     ),
 }
 

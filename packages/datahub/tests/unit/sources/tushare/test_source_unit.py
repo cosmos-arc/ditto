@@ -727,3 +727,31 @@ class TestTushareErrorHandler:
         # Verify错误信息包含原始错误
         assert "test_dataset" in str(exc_info.value)
         assert "Generic error" in exc_info.value.details.get("original_error", "")
+
+
+class TestTushareSourceMacroIndicators:
+    """Tests for TushareSource.fetch_macro_indicators."""
+
+    def test_fetch_macro_indicators_delegates_to_macro_adapter(self, mocker) -> None:
+        """fetch_macro_indicators 应委托给 macro adapter."""
+        source = TushareSource(settings=_settings())
+        expected = pl.DataFrame(
+            {
+                "indicator_code": ["SHIBOR_ON"],
+                "indicator_name": ["隔夜Shibor"],
+                "category": ["interest_rate"],
+                "frequency": ["daily"],
+                "need_pit": [False],
+                "date": [date(2024, 1, 2)],
+                "value": [1.91],
+                "knowledge_date": [date(2024, 1, 3)],
+            }
+        )
+        mocker.patch.object(
+            source._macro,  # pyright: ignore[reportPrivateUsage]
+            "fetch_macro_indicators",
+            return_value=expected,
+        )
+
+        result = source.fetch_macro_indicators("2024-01-02")
+        assert result.equals(expected)

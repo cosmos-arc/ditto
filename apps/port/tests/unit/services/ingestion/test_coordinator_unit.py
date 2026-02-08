@@ -142,6 +142,9 @@ def _attach_domain_services(hub: Any, mocker: Any) -> None:
     hub.capital = mocker.Mock()
     hub.capital.write.return_value = mocker.Mock(records_written=1)
 
+    hub.macro = mocker.Mock()
+    hub.macro.write.return_value = mocker.Mock(records_written=1)
+
 
 def _attach_calendar(hub: Any, mocker: Any) -> None:
     hub.calendar = mocker.Mock()
@@ -483,6 +486,42 @@ class TestIngestDate:
         assert result.status == "success"
         mock_source.fetch_valuation_metrics.assert_called_once_with("2024-12-27")
         mock_hub.capital.write.assert_called_once()
+
+    def test_ingest_date_success_macro_indicators(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
+        """成功摄取 macro_indicators 数据。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_source.fetch_macro_indicators.return_value = pl.DataFrame(
+            {
+                "indicator_code": ["SHIBOR_ON"],
+                "indicator_name": ["隔夜Shibor"],
+                "category": ["interest_rate"],
+                "frequency": ["daily"],
+                "need_pit": [False],
+                "date": [date(2024, 12, 27)],
+                "value": [1.92],
+                "knowledge_date": [date(2024, 12, 28)],
+            }
+        )
+        mock_hub.macro.write.return_value = mocker.Mock(records_written=1)
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="macro_indicators",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum_macro_indicators",
+            rows=1,
+        )
+
+        # Act
+        result = coordinator.ingest_date("macro_indicators", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        mock_source.fetch_macro_indicators.assert_called_once_with("2024-12-27")
+        mock_hub.macro.write.assert_called_once()
 
     def test_ingest_date_success_calendar(
         self, coordinator, mock_hub, mock_source, mocker
@@ -1253,4 +1292,44 @@ class TestTradingDayCheck:
         # 验证调用了 source（没有因为非交易日而跳过）
         mock_source.fetch_calendar.assert_called_once()
         # 验证没有调用 is_trading_day
+        mock_hub.calendar.is_trading_day.assert_not_called()
+
+    def test_macro_indicators_does_not_check_trading_day(
+        self, coordinator, mock_hub, mock_source, mocker
+    ) -> None:
+        """macro_indicators 不检查交易日（非交易日也允许摄取）。"""
+        # Arrange
+        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.calendar = mocker.Mock()
+        mock_hub.calendar.is_trading_day.return_value = False
+
+        mock_source.fetch_macro_indicators.return_value = pl.DataFrame(
+            {
+                "indicator_code": ["SHIBOR_ON"],
+                "indicator_name": ["隔夜Shibor"],
+                "category": ["interest_rate"],
+                "frequency": ["daily"],
+                "need_pit": [False],
+                "date": [date(2024, 12, 28)],
+                "value": [1.91],
+                "knowledge_date": [date(2024, 12, 29)],
+            }
+        )
+
+        mock_hub.macro.write.return_value = mocker.Mock(records_written=1)
+        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+            dataset="macro_indicators",
+            source="tushare",
+            trade_date="2024-12-28",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum_macro_indicators",
+            rows=1,
+        )
+
+        # Act
+        result = coordinator.ingest_date("macro_indicators", "2024-12-28")
+
+        # Assert
+        assert result.status == "success"
+        mock_source.fetch_macro_indicators.assert_called_once_with("2024-12-28")
         mock_hub.calendar.is_trading_day.assert_not_called()

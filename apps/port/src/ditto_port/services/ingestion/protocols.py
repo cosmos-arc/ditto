@@ -69,3 +69,7 @@ class IngestionDataSource(Protocol):
     def fetch_pledge_ratio(self, trade_date: str) -> pl.DataFrame:
         """Fetch pledge ratio data."""
         ...
+
+    def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
+        """Fetch macro indicators data."""
+        ...

@@ -42,6 +42,7 @@ class TestDatasetEnum:
             Dataset.VALUATION_METRICS,
             Dataset.MARGIN_TRADING,
             Dataset.PLEDGE_RATIO,
+            Dataset.MACRO_INDICATORS,
         ],
     )
     def test_dataset_enum_contains(self, dataset: Dataset) -> None:
@@ -65,6 +66,7 @@ class TestDatasetEnum:
         assert Dataset.VALUATION_METRICS.value == "valuation_metrics"
         assert Dataset.MARGIN_TRADING.value == "margin_trading"
         assert Dataset.PLEDGE_RATIO.value == "pledge_ratio"
+        assert Dataset.MACRO_INDICATORS.value == "macro_indicators"
 
 
 @pytest.mark.unit
@@ -280,6 +282,10 @@ class TestDatasetRegistry:
         assert pledge_ratio.tier == TaskTier.T1_INCREMENTAL
         assert pledge_ratio.task_name == "ingest_pledge_ratio"
 
+        macro_indicators = DATASET_REGISTRY[Dataset.MACRO_INDICATORS]
+        assert macro_indicators.tier == TaskTier.T1_INCREMENTAL
+        assert macro_indicators.task_name == "ingest_macro_indicators"
+
     def test_required_fields_exist(self) -> None:
         """Test all datasets have required spec fields."""
         for _dataset, config in DATASET_REGISTRY.items():
@@ -340,6 +346,7 @@ class TestHelperFunctions:
         assert Dataset.VALUATION_METRICS in t1_datasets
         assert Dataset.MARGIN_TRADING in t1_datasets
         assert Dataset.PLEDGE_RATIO in t1_datasets
+        assert Dataset.MACRO_INDICATORS in t1_datasets
         assert Dataset.CALENDAR not in t1_datasets
         assert Dataset.STOCK_BASIC not in t1_datasets
 

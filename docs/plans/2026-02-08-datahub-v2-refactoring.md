@@ -60,7 +60,7 @@ pixi run -e dev ci
 
 | 编号 | 任务 | 产物 | 状态 |
 |---|---|---|---|
-| B1 | 数据集矩阵补齐（registry/enum/任务流/入口） | ingestion registry 与任务映射覆盖 v5 目标矩阵 | 🟡 |
+| B1 | 数据集矩阵补齐（registry/enum/任务流/入口） | ingestion registry 与任务映射覆盖 v5 目标矩阵 | ✅ |
 | B2 | Port 轻量 API 分层收敛（router/DTO/service） | DTO 边界明确，错误映射标准化 | 🟡 |
 | B3 | 清理 Port 业务路径直连 Store/Source | 业务路径统一走 DataHub Service | ✅ |
 | B4 | README/设计文档同步与过时叙述清理 | 文档与实现对齐 | 🟡 |
@@ -105,6 +105,7 @@ pixi run -e dev ci
 12. `working tree` feat(ingestion): 补齐 stock_status 到 T1 数据集矩阵与写入闭环
 13. `working tree` feat(ingestion): 补齐 Fundamental/Capital 数据集矩阵并打通 Port ingest 链路
 14. `working tree` test(runtime): 收口 cache TTL 抖动导致的 CI 偶发失败
+15. `working tree` feat(ingestion): 补齐 macro_indicators 在 Source-Service-Port 的摄取闭环
 
 统计（`main..HEAD`）：
 
@@ -115,8 +116,8 @@ pixi run -e dev ci
 
 最近一次 `pixi run -e dev ci`：
 
-- `2230 passed, 20 skipped`
-- coverage `92.73%`
+- `2237 passed, 20 skipped`
+- coverage `92.62%`
 - `Architecture check passed`
 
 ---
@@ -135,6 +136,7 @@ pixi run -e dev ci
 10. Fundamental/Capital 数据集已纳入 Port ingestion 矩阵：`balance_sheet` / `income_statement` / `cash_flow` / `dividend` / `valuation_metrics` / `margin_trading` / `pledge_ratio`（含 enum/registry/protocol/coordinator/writer/task 回归）。
 11. `DataSource` 抽象与 `TushareSource` 委托已补齐跨域抓取入口，`CapitalTushareAdapter` 的财报抓取签名已支持全市场模式（`ts_code` 可选）。
 12. `cachebox` TTL 在并发 CI 环境下的抖动导致的偶发红灯已通过测试稳态策略收口，不影响主链路门禁通过。
+13. `macro_indicators` 已纳入 Port ingestion 矩阵：`Dataset enum / DATASET_REGISTRY / Coordinator fetch / DataWriter write / DataSource Protocol / TushareSource` 全链路完成；`MacroService` 已补齐统一 `query()/write()` 契约并通过回归。
 
 ---
 
@@ -142,10 +144,7 @@ pixi run -e dev ci
 
 ### P1（随后完成）
 
-1. **Macro ingestion 统一契约补齐**
-当前 `MacroService` 仍为查询服务，尚未提供统一 `write()` 契约；`macro_indicators` 尚未纳入 Port ingestion 矩阵。
-
-2. **文档清理最终收口（B4）**
+1. **文档清理最终收口（B4）**
 继续修订 DataHub/Port 相关 README 中历史叙述，确保与 v5 最终实现一致。
 
 ---

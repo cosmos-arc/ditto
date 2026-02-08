@@ -172,6 +172,45 @@ def test_empty_result_returns_empty_dataframe(service: MacroService) -> None:
     assert isinstance(result, pl.DataFrame)
 
 
+def test_write_macro_indicators_via_service(service: MacroService) -> None:
+    """测试通过 write() 统一入口写入宏观指标."""
+    df = pl.DataFrame(
+        {
+            "indicator_code": ["CPI_YOY"],
+            "indicator_name": ["CPI同比"],
+            "category": ["economic"],
+            "frequency": ["monthly"],
+            "need_pit": [True],
+            "date": [date(2024, 1, 1)],
+            "value": [2.5],
+            "knowledge_date": [date(2024, 1, 2)],
+        }
+    )
+
+    write_result = service.write(df)
+    assert write_result.dataset == "macro_indicators"
+    assert write_result.records_written == 1
+
+    result = service.query(MacroQuery(indicators=["CPI_YOY"]))
+    assert len(result) == 1
+    assert result["value"][0] == 2.5
+    assert result["code"][0] == "CPI_YOY"
+
+
+def test_write_raises_on_missing_required_columns(service: MacroService) -> None:
+    """缺失必要列时 write() 抛出 ValueError."""
+    invalid_df = pl.DataFrame(
+        {
+            "indicator_code": ["CPI_YOY"],
+            # 缺少 indicator_name/category/frequency/need_pit/date/value
+            "knowledge_date": [date(2024, 1, 2)],
+        }
+    )
+
+    with pytest.raises(ValueError, match="缺少必要列"):
+        service.write(invalid_df)
+
+
 def test_invalid_code_raises_error(service: MacroService) -> None:
     """测试查询不存在的 code 应该返回空结果而非报错."""
     # 不注册任何指标，直接查询

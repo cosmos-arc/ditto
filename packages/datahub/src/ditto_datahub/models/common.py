@@ -61,6 +61,9 @@ class Dataset(str, Enum):
     MARGIN_TRADING = "margin_trading"
     PLEDGE_RATIO = "pledge_ratio"
 
+    # Macro 域（宏观指标）
+    MACRO_INDICATORS = "macro_indicators"
+
     @classmethod
     def is_basic_dataset(cls, dataset: str) -> bool:
         """判断是否为 basic 类数据集（不需要 trade_date）。"""
@@ -84,6 +87,7 @@ class Domain(str, Enum):
     MARKET = "market"
     CAPITAL = "capital"
     FUNDAMENTAL = "fundamental"
+    MACRO = "macro"
 
 
 # ============ Source 枚举 ============

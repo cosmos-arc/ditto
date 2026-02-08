@@ -213,6 +213,9 @@ class TestDataSourceABC:
             def fetch_pledge_ratio(self, trade_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
+            def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
         # Should not raise
         source = CompleteSourcer()
         assert isinstance(source, DataSource)
