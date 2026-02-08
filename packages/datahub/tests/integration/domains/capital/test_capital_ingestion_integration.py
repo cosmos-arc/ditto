@@ -14,6 +14,7 @@ import pytest
 from ditto_datahub.domains.capital.capital_ingestion import (
     CapitalIngestion,
 )
+from ditto_datahub.domains.capital.capital_service import CapitalService
 from ditto_datahub.domains.capital.capital_store import CapitalStore
 from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_datahub.stores.sqlite_client import SQLiteClient
@@ -180,13 +181,19 @@ def capital_store(in_memory_db: SQLiteClient) -> CapitalStore:
 
 
 @pytest.fixture
+def capital_service(capital_store: CapitalStore) -> CapitalService:
+    """创建 CapitalService 实例."""
+    return CapitalService(capital_store)
+
+
+@pytest.fixture
 def capital_ingestion(
-    capital_store: CapitalStore,
+    capital_service: CapitalService,
     mock_tushare_source: CapitalTushareAdapter,
 ) -> CapitalIngestion:
     """创建 CapitalIngestion 实例."""
     return CapitalIngestion(
-        capital_store=capital_store,
+        capital_service=capital_service,
         tushare_source=mock_tushare_source,
     )
 

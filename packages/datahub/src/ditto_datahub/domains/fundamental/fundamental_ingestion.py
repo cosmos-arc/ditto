@@ -35,7 +35,7 @@ from dataclasses import dataclass
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
+from ditto_datahub.domains.fundamental.fundamental_service import FundamentalService
 from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
 
 
@@ -69,12 +69,12 @@ class FundamentalIngestion:
     and calling the single-instrument CapitalTushareAdapter methods.
 
     Attributes:
-        _fundamental_store: FundamentalStore instance for data persistence.
+        _fundamental_service: FundamentalService instance for data persistence.
         _tushare_source: CapitalTushareAdapter instance for data fetching.
 
     Examples:
         >>> ingestion = FundamentalIngestion(
-        ...     fundamental_store=fundamental_store,
+        ...     fundamental_service=fundamental_service,
         ...     tushare_source=tushare_source,
         ... )
         >>> result = ingestion.ingest_balance_sheet(
@@ -88,18 +88,18 @@ class FundamentalIngestion:
 
     def __init__(
         self,
-        fundamental_store: FundamentalStore,
+        fundamental_service: FundamentalService,
         tushare_source: CapitalTushareAdapter,
     ) -> None:
         """
         Initialize FundamentalIngestion.
 
         Args:
-            fundamental_store: FundamentalStore instance for data persistence.
+            fundamental_service: FundamentalService instance for data persistence.
             tushare_source: CapitalTushareAdapter instance for data fetching.
 
         """
-        self._fundamental_store = fundamental_store
+        self._fundamental_service = fundamental_service
         self._tushare_source = tushare_source
 
         logger.debug(
@@ -144,7 +144,8 @@ class FundamentalIngestion:
             # Concatenate all DataFrames
             df = pl.concat(dfs, how="vertical") if dfs else pl.DataFrame()
 
-            records_written = self._fundamental_store.write_balance_sheet(df)
+            write_result = self._fundamental_service.write("balance_sheet", df)
+            records_written = write_result.records_written
 
             M.data_records.add(
                 records_written,
@@ -212,7 +213,8 @@ class FundamentalIngestion:
             # Concatenate all DataFrames
             df = pl.concat(dfs, how="vertical") if dfs else pl.DataFrame()
 
-            records_written = self._fundamental_store.write_income_statement(df)
+            write_result = self._fundamental_service.write("income_statement", df)
+            records_written = write_result.records_written
 
             M.data_records.add(
                 records_written,
@@ -280,7 +282,8 @@ class FundamentalIngestion:
             # Concatenate all DataFrames
             df = pl.concat(dfs, how="vertical") if dfs else pl.DataFrame()
 
-            records_written = self._fundamental_store.write_cash_flow(df)
+            write_result = self._fundamental_service.write("cash_flow", df)
+            records_written = write_result.records_written
 
             M.data_records.add(
                 records_written,
@@ -352,7 +355,8 @@ class FundamentalIngestion:
             # Concatenate all DataFrames
             df = pl.concat(dfs, how="vertical") if dfs else pl.DataFrame()
 
-            records_written = self._fundamental_store.write_dividend(df)
+            write_result = self._fundamental_service.write("dividend", df)
+            records_written = write_result.records_written
 
             M.data_records.add(
                 records_written,
@@ -420,7 +424,8 @@ class FundamentalIngestion:
             # Concatenate all DataFrames
             df = pl.concat(dfs, how="vertical") if dfs else pl.DataFrame()
 
-            records_written = self._fundamental_store.write_corporate_actions(df)
+            write_result = self._fundamental_service.write("corporate_actions", df)
+            records_written = write_result.records_written
 
             M.data_records.add(
                 records_written,

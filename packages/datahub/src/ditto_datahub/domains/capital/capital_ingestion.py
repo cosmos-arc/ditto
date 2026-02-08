@@ -27,7 +27,7 @@ from dataclasses import dataclass
 
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.domains.capital.capital_store import CapitalStore
+from ditto_datahub.domains.capital.capital_service import CapitalService
 from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
 
 
@@ -58,12 +58,12 @@ class CapitalIngestion:
     for Capital domain data types.
 
     Attributes:
-        _capital_store: CapitalStore instance for data persistence.
+        _capital_service: CapitalService instance for data persistence.
         _tushare_source: CapitalTushareAdapter instance for data fetching.
 
     Examples:
         >>> ingestion = CapitalIngestion(
-        ...     capital_store=capital_store,
+        ...     capital_service=capital_service,
         ...     tushare_source=tushare_source,
         ... )
         >>> result = ingestion.ingest_margin_trading(
@@ -77,18 +77,18 @@ class CapitalIngestion:
 
     def __init__(
         self,
-        capital_store: CapitalStore,
+        capital_service: CapitalService,
         tushare_source: CapitalTushareAdapter,
     ) -> None:
         """
         Initialize CapitalIngestion.
 
         Args:
-            capital_store: CapitalStore instance for data persistence.
+            capital_service: CapitalService instance for data persistence.
             tushare_source: CapitalTushareAdapter instance for data fetching.
 
         """
-        self._capital_store = capital_store
+        self._capital_service = capital_service
         self._tushare_source = tushare_source
 
     # ========================================================================
@@ -146,8 +146,9 @@ class CapitalIngestion:
                     dataset="valuation_metrics",
                 )
 
-            # Write to Store
-            total_records = self._capital_store.write_valuation_metrics(df)
+            # Write via Service
+            write_result = self._capital_service.write("valuation_metrics", df)
+            total_records = write_result.records_written
 
             logger.info(
                 "Valuation metrics ingestion completed successfully",
@@ -239,8 +240,9 @@ class CapitalIngestion:
                     dataset="margin_trading",
                 )
 
-            # Write to Store
-            total_records = self._capital_store.write_margin_trading(df)
+            # Write via Service
+            write_result = self._capital_service.write("margin_trading", df)
+            total_records = write_result.records_written
 
             logger.info(
                 "Margin trading ingestion completed successfully",
@@ -332,8 +334,9 @@ class CapitalIngestion:
                     dataset="pledge_ratio",
                 )
 
-            # Write to Store
-            total_records = self._capital_store.write_pledge_ratio(df)
+            # Write via Service
+            write_result = self._capital_service.write("pledge_ratio", df)
+            total_records = write_result.records_written
 
             logger.info(
                 "Pledge ratio ingestion completed successfully",
@@ -425,8 +428,9 @@ class CapitalIngestion:
                     dataset="futures",
                 )
 
-            # Write to Store
-            total_records = self._capital_store.write_futures(df)
+            # Write via Service
+            write_result = self._capital_service.write("futures", df)
+            total_records = write_result.records_written
 
             logger.info(
                 "Futures ingestion completed successfully",
@@ -513,8 +517,9 @@ class CapitalIngestion:
                     dataset="index_composition",
                 )
 
-            # Write to Store
-            total_records = self._capital_store.write_index_composition(df)
+            # Write via Service
+            write_result = self._capital_service.write("index_composition", df)
+            total_records = write_result.records_written
 
             logger.info(
                 "Index composition ingestion completed successfully",
