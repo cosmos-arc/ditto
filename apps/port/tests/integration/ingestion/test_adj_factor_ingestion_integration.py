@@ -19,7 +19,7 @@ class TestAdjFactorIngestion:
         mock_source = mocker.MagicMock()
 
         # Mock dependencies
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
         mock_hub.market = mocker.MagicMock()
         mock_hub.metadata = mocker.MagicMock()
         mock_hub.market.write.return_value = mocker.Mock(rows=2, files=1)
@@ -82,7 +82,7 @@ class TestAdjFactorIngestion:
         mock_source = mocker.MagicMock()
 
         # Mock dependencies
-        mock_hub.ingestion_log = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
         mock_hub.market = mocker.MagicMock()
         mock_hub.metadata = mocker.MagicMock()
         mock_hub.market.write.return_value = mocker.Mock(rows=2, files=1)

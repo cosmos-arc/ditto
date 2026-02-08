@@ -125,3 +125,19 @@ def test_forbid_legacy_src_code_identifier_in_yaml(tmp_path: Path) -> None:
     violations = ArchitectureChecker(tmp_path).run()
     codes = {item.code for item in violations}
     assert "ARCH510" in codes
+
+
+def test_forbid_legacy_datahub_alias_usage_in_port_source(tmp_path: Path) -> None:
+    """Port source using hub.calendar legacy alias should fail architecture check."""
+    _write_file(
+        tmp_path,
+        "apps/port/src/ditto_port/services/bad.py",
+        (
+            "def bad(hub: object) -> bool:\n"
+            "    return hub.calendar.is_trading_day('2024-01-01')\n"
+        ),
+    )
+
+    violations = ArchitectureChecker(tmp_path).run()
+    codes = {item.code for item in violations}
+    assert "ARCH520" in codes

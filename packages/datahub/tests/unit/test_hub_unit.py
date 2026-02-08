@@ -381,6 +381,18 @@ class TestDataHub:
         hub = datahub_with_dependencies
         assert hub.data_root == datahub_with_dependencies.data_root
 
+    def test_init_exposes_only_v5_service_entrypoints(
+        self, datahub_with_dependencies: DataHub
+    ) -> None:
+        """DataHub should not expose removed legacy alias entrypoints."""
+        hub = datahub_with_dependencies
+        assert hasattr(hub, "metadata")
+        assert hasattr(hub, "market")
+        assert hasattr(hub, "ingestion_log_store")
+
+        for alias in ("calendar", "universe", "index", "securities", "ingestion_log"):
+            assert not hasattr(hub, alias)
+
     # [REVIEW] - 新架构使用依赖注入，无懒加载
 
     def test_sql_execute_returns_dataframe(

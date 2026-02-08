@@ -262,7 +262,8 @@ import polars as pl
 from ditto_datahub import DataHub
 from ditto_datahub.domains.macro import MacroQuery
 
-hub = DataHub()
+# DataHub 由 dishka 容器注入（示例）
+hub: DataHub = container.get(DataHub)
 
 # 写入宏观指标（统一 write 契约）
 hub.macro.write(
@@ -319,7 +320,8 @@ data = hub.macro.query(query)
 from ditto_datahub import DataHub
 from ditto_datahub.domains.features import FeatureQuery
 
-hub = DataHub()
+# DataHub 由 dishka 容器注入（示例）
+hub: DataHub = container.get(DataHub)
 
 # 查询技术指标
 query = FeatureQuery(
@@ -367,7 +369,8 @@ data = hub.features.query(query)
 from ditto_datahub import DataHub
 from ditto_datahub.domains.factors import FactorQuery
 
-hub = DataHub()
+# DataHub 由 dishka 容器注入（示例）
+hub: DataHub = container.get(DataHub)
 
 # 查询因子信号（PIT 安全）
 query = FactorQuery(
@@ -640,14 +643,16 @@ DataHub 提供三级数据质量检查机制：
 **L3 统计检查**: Z-score 异常检测、完整性检查
 
 ```python
-from ditto_datahub import DataHub
+from ditto_core.quality import QualityEngine
 
-hub = DataHub()
+# QualityEngine 由容器注入（DataHub 本身不持有 dq_checker）
+engine: QualityEngine = container.get(QualityEngine)
 
 # 运行 DQ 检查
-result = hub.dq_checker.check(
-    data=bars_df,
-    checkers=["business", "statistical", "technical"]
+result = engine.check(
+    df=bars_df,
+    dataset="stock_daily",
+    levels=["l1", "l2"],
 )
 ```
 

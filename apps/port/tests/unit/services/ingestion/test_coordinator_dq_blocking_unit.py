@@ -28,8 +28,8 @@ class TestDQBlockingBehavior:
         mock_source = mocker.MagicMock()
 
         # Mock metadata manager to not skip
-        mock_hub.ingestion_log = mocker.MagicMock()
-        mock_hub.bars = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
+        mock_hub.market = mocker.MagicMock()
 
         # Create coordinator
         coordinator = IngestionCoordinator(
@@ -86,8 +86,8 @@ class TestDQBlockingBehavior:
         mock_source = mocker.MagicMock()
 
         # Mock metadata manager to not skip
-        mock_hub.ingestion_log = mocker.MagicMock()
-        mock_hub.bars = mocker.MagicMock()
+        mock_hub.ingestion_log_store = mocker.MagicMock()
+        mock_hub.market = mocker.MagicMock()
 
         # Create coordinator
         coordinator = IngestionCoordinator(

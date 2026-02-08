@@ -11,6 +11,11 @@ from pathlib import Path
 
 PROJECT_IMPORT_ROOTS = ("ditto_foundation", "ditto_datahub", "ditto_core", "ditto_port")
 REGISTRY_MIN_PARTS = 6
+MIN_ATTR_CHAIN_LENGTH = 2
+LEGACY_DATAHUB_ALIAS_ATTRS = frozenset(
+    {"calendar", "universe", "index", "securities", "ingestion_log"}
+)
+HUB_REFERENCE_NAMES = frozenset({"hub", "_hub", "datahub"})
 LEGACY_FIELD_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (
         re.compile(r"\bsid\b"),
@@ -193,6 +198,7 @@ class ArchitectureChecker:
             violations.extend(
                 self._check_registry_direct_usage(tree, rel_path, imports)
             )
+        violations.extend(self._check_legacy_datahub_alias_usage(tree, rel_path))
 
         return violations
 
@@ -380,6 +386,51 @@ class ArchitectureChecker:
                     )
                 )
 
+        return violations
+
+    @staticmethod
+    def _attribute_chain(node: ast.Attribute) -> list[str]:
+        parts: list[str] = []
+        current: ast.AST = node
+        while isinstance(current, ast.Attribute):
+            parts.append(current.attr)
+            current = current.value
+        if isinstance(current, ast.Name):
+            parts.append(current.id)
+        return list(reversed(parts))
+
+    def _check_legacy_datahub_alias_usage(
+        self,
+        tree: ast.AST,
+        rel_path: Path,
+    ) -> list[Violation]:
+        if not (_is_datahub_file(rel_path) or _is_port_file(rel_path)):
+            return []
+
+        violations: list[Violation] = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Attribute):
+                continue
+            if node.attr not in LEGACY_DATAHUB_ALIAS_ATTRS:
+                continue
+
+            chain = self._attribute_chain(node)
+            if len(chain) < MIN_ATTR_CHAIN_LENGTH:
+                continue
+            if chain[-2] not in HUB_REFERENCE_NAMES:
+                continue
+
+            violations.append(
+                Violation(
+                    code="ARCH520",
+                    file=rel_path,
+                    line=node.lineno,
+                    message=(
+                        f"禁止使用 DataHub legacy 别名 '{node.attr}', "
+                        "请使用 metadata/market/ingestion_log_store 等正式入口"
+                    ),
+                )
+            )
         return violations
 
 
