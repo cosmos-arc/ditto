@@ -96,14 +96,14 @@ class TestPitHelper:
         """Test add_pit_join with knowledge_date column."""
         result = PitHelper.add_pit_join(
             "stock_daily s",
-            "security_mapping m",
+            "instrument_mapping m",
             ["s.instrument_id = m.instrument_id"],
             "2024-01-15",
             date_column="knowledge_date",
         )
 
         expected = (
-            "stock_daily s LEFT JOIN security_mapping m "
+            "stock_daily s LEFT JOIN instrument_mapping m "
             "ON s.instrument_id = m.instrument_id AND m.knowledge_date <= '2024-01-15'"
         )
         assert result == expected

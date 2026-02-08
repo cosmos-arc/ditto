@@ -21,10 +21,10 @@ class TestUniverseStore:
         self.store = UniverseStore(self.client)
 
     def _create_securities(self, instrument_ids: list[int]) -> None:
-        """Helper to create security records for testing."""
+        """Helper to create instrument records for testing."""
         for instrument_id in instrument_ids:
             self.client.execute(
-                """INSERT INTO security
+                """INSERT INTO instrument
                 (instrument_id, symbol, name, exchange, asset_class, list_date)
                 VALUES (?, ?, ?, ?, ?, ?)""",
                 [
@@ -114,7 +114,7 @@ class TestUniverseStore:
         # Create universe
         self.store.create_universe("test_u", "Test", universe_type="custom")
 
-        # Create security records first (foreign key constraint)
+        # Create instrument records first (foreign key constraint)
         self._create_securities([100000001, 100000002, 100000003])
 
         # Add constituents
@@ -321,10 +321,10 @@ class TestUniverseStorePITSafety:
         self.store = UniverseStore(self.client)
 
     def _create_securities(self, instrument_ids: list[int]) -> None:
-        """Helper to create security records for testing."""
+        """Helper to create instrument records for testing."""
         for instrument_id in instrument_ids:
             self.client.execute(
-                """INSERT INTO security
+                """INSERT INTO instrument
                 (instrument_id, symbol, name, exchange, asset_class, list_date)
                 VALUES (?, ?, ?, ?, ?, ?)""",
                 [

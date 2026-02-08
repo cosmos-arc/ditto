@@ -64,7 +64,7 @@ class TestStockAdjFactorStore:
     def test_read_filter_by_sids(
         self, store: StockAdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
-        """Test read filtered by security IDs."""
+        """Test read filtered by instrument IDs."""
         store.write(sample_adj_factor_df, year=2024)
         df = store.read(instrument_ids=[1000001])
         assert len(df) == 3
@@ -283,7 +283,7 @@ class TestStockAdjFactorStore:
     def test_list_sids(
         self, store: StockAdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
-        """Test list_instrument_ids returns unique security IDs."""
+        """Test list_instrument_ids returns unique instrument IDs."""
         store.write(sample_adj_factor_df, year=2024)
         instrument_ids = store.list_instrument_ids()
         assert instrument_ids == [1000001, 1000002]

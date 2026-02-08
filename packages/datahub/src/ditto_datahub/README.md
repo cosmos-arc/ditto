@@ -36,7 +36,7 @@
 src/ditto_datahub/
 ├── stores/            # 数据存储访问
 │   ├── calendar_store.py    # 交易日历
-│   ├── security_store.py    # 证券信息
+│   ├── instrument_store.py  # 证券信息
 │   ├── bars_store.py        # K线数据
 │   ├── adj_factor_store.py  # 复权因子
 │   ├── quarantine_store.py  # 隔离区存储
@@ -44,7 +44,7 @@ src/ditto_datahub/
 ├── accessors/        # 数据访问器
 │   ├── bars/               # K线数据访问
 │   ├── calendar.py         # 交易日历访问
-│   ├── security.py         # 证券信息访问
+│   ├── instrument.py       # 证券信息访问
 │   └── ...
 ├── runtime/           # 运行时支持
 │   ├── instrument_id_allocator.py  # Instrument ID 分配器
@@ -67,14 +67,14 @@ src/ditto_datahub/
 - `BarsStore`: K线数据 Parquet 年分区存储
 - `AdjFactorStore`: 复权因子 Parquet 年分区存储
 - `CalendarStore`: 交易日历 SQLite 存储
-- `SecurityStore`: 证券元数据 PIT 映射存储
+- `InstrumentStore`: 证券元数据 PIT 映射存储
 - `QuarantineStore`: DQ 隔离区存储
 - `sqlite_client`: SQLite 连接管理与 SQL 路由
 
 ### accessors/ - 数据访问层
 - `BarsAccessor`: K线数据访问（含复权、PIT 语义）
 - `CalendarAccessor`: 交易日历访问
-- `SecuritiesAccessor`: 证券信息访问（instrument_id 解析）
+- `InstrumentsAccessor`: 证券信息访问（instrument_id 解析）
 - `IngestionLogAccessor`: 摄取日志访问
 
 ### runtime/ - 运行时支持

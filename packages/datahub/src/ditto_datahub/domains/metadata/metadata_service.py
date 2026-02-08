@@ -234,7 +234,7 @@ class MetadataService:
             )
         )
 
-    @traced("metadata.security.get_symbol")
+    @traced("metadata.instrument.get_symbol")
     def get_symbol(self, instrument_id: int) -> str | None:
         """
         根据 instrument_id 获取交易代码.
@@ -248,7 +248,7 @@ class MetadataService:
         """
         return self._instrument_store.get_symbol(instrument_id)
 
-    @traced("metadata.security.get_source_ticker")
+    @traced("metadata.instrument.get_source_ticker")
     def get_source_ticker(
         self,
         instrument_id: int,
@@ -474,8 +474,8 @@ class MetadataService:
 
     # ============ 证券注册 ============
 
-    @traced("metadata.security.register_security")
-    def register_security(self, registration: InstrumentRegistration) -> int:
+    @traced("metadata.instrument.register_instrument")
+    def register_instrument(self, registration: InstrumentRegistration) -> int:
         """
         注册新证券.
 
@@ -489,12 +489,12 @@ class MetadataService:
         # 分配 instrument_id
         instrument_id = self._instrument_id_allocator.allocate(registration.asset_class)
 
-        # 注册到 security_store
+        # 注册到 instrument_store
         registered_id = self._instrument_store.register(instrument_id, registration)
 
         logger.info(
-            "Security registered via MetadataService",
-            event="metadata_security_registered",
+            "Instrument registered via MetadataService",
+            event="metadata_instrument_registered",
             instrument_id=registered_id,
             symbol=registration.symbol,
             source_ticker=registration.source_ticker,
@@ -502,8 +502,8 @@ class MetadataService:
 
         return registered_id
 
-    @traced("metadata.security.register_securities_batch")
-    def register_securities_batch(
+    @traced("metadata.instrument.register_instruments_batch")
+    def register_instruments_batch(
         self,
         df: pl.DataFrame,
         source: str,
@@ -551,7 +551,7 @@ class MetadataService:
                 continue
 
             # 注册新证券
-            self.register_security(
+            self.register_instrument(
                 InstrumentRegistration(
                     source_ticker=source_ticker,
                     symbol=row["symbol"],
@@ -582,8 +582,8 @@ class MetadataService:
 
         return file_path, checksum
 
-    @traced("metadata.security.resolve_or_create_batch")
-    def resolve_or_create_batch(
+    @traced("metadata.instrument.resolve_or_create_instruments_batch")
+    def resolve_or_create_instruments_batch(
         self,
         df: pl.DataFrame,
         source: str,
@@ -652,7 +652,7 @@ class MetadataService:
                 continue
 
             # 不存在则创建新证券
-            instrument_id = self.register_security(
+            instrument_id = self.register_instrument(
                 InstrumentRegistration(
                     source_ticker=source_ticker,
                     symbol=row["symbol"],
@@ -668,7 +668,7 @@ class MetadataService:
 
         logger.debug(
             "Batch resolve or create completed",
-            event="security_resolve_or_create_complete",
+            event="instrument_resolve_or_create_complete",
             total_count=len(result),
             created_count=created_count,
         )

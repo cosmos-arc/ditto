@@ -14,12 +14,12 @@ technical:
 
   - rule: foreign_key
     column: index_instrument_id
-    reference: security.instrument_id
+    reference: instrument.instrument_id
     message: "指数 Instrument ID 不存在于证券主表"
 
   - rule: foreign_key
     column: constituent_instrument_id
-    reference: security.instrument_id
+    reference: instrument.instrument_id
     message: "成分股 Instrument ID 不存在于证券主表"
 
   - rule: type_check

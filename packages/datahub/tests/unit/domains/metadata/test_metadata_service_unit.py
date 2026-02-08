@@ -264,7 +264,7 @@ def test_metadata_service_register_security(
     service._instrument_store.register.return_value = 100
 
     # 调用方法
-    result = service.register_security(registration)
+    result = service.register_instrument(registration)
 
     # 验证
     assert result == 100

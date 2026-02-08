@@ -171,3 +171,29 @@ def test_forbid_legacy_datahub_get_securities_api(tmp_path: Path) -> None:
     violations = ArchitectureChecker(tmp_path).run()
     codes = {item.code for item in violations}
     assert "ARCH533" in codes
+
+
+def test_forbid_legacy_security_mapping_table_name(tmp_path: Path) -> None:
+    """Legacy table name security_mapping should fail architecture check."""
+    _write_file(
+        tmp_path,
+        "packages/datahub/src/ditto_datahub/domains/metadata/bad.py",
+        ('def bad() -> str:\n    return "SELECT * FROM security_mapping"\n'),
+    )
+
+    violations = ArchitectureChecker(tmp_path).run()
+    codes = {item.code for item in violations}
+    assert "ARCH540" in codes
+
+
+def test_forbid_legacy_security_table_name(tmp_path: Path) -> None:
+    """Legacy table name security should fail architecture check."""
+    _write_file(
+        tmp_path,
+        "packages/datahub/src/ditto_datahub/domains/metadata/bad.py",
+        ('def bad() -> str:\n    return "SELECT * FROM security"\n'),
+    )
+
+    violations = ArchitectureChecker(tmp_path).run()
+    codes = {item.code for item in violations}
+    assert "ARCH541" in codes

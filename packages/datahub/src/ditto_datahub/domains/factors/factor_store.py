@@ -267,7 +267,7 @@ class FactorStore:
         Query factor data (PIT-safe).
 
         Args:
-            instrument_ids: Filter by security IDs (None = all).
+            instrument_ids: Filter by instrument IDs (None = all).
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
             as_of_date: PIT query date - only return data effective as of this date.
@@ -369,7 +369,7 @@ class FactorStore:
         Count records in the dataset.
 
         Args:
-            instrument_ids: Filter by security IDs.
+            instrument_ids: Filter by instrument IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -396,10 +396,10 @@ class FactorStore:
 
     def list_instrument_ids(self) -> list[int]:
         """
-        List unique security IDs in the dataset.
+        List unique instrument IDs in the dataset.
 
         Returns:
-            Sorted list of unique security IDs.
+            Sorted list of unique instrument IDs.
 
         """
         return self._store.list_instrument_ids(self._dataset)

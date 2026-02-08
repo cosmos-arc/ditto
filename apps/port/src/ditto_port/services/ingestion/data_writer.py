@@ -271,7 +271,7 @@ class IngestionDataWriter:
         asset_class: Literal["stock", "etf"] = (
             "etf" if dataset_enum == Dataset.ETF_DAILY else "stock"
         )
-        instrument_id_mapping = self._hub.metadata.resolve_or_create_batch(
+        instrument_id_mapping = self._hub.metadata.resolve_or_create_instruments_batch(
             df=df,
             source=self._source_name,
             asset_class=asset_class,
@@ -308,7 +308,7 @@ class IngestionDataWriter:
         on_duplicate: OnDuplicate,
         source_ticker_col: str,
     ) -> WriteResult:
-        instrument_id_mapping = self._hub.metadata.resolve_or_create_batch(
+        instrument_id_mapping = self._hub.metadata.resolve_or_create_instruments_batch(
             df=df,
             source=self._source_name,
             asset_class="stock",
@@ -350,11 +350,13 @@ class IngestionDataWriter:
             adj_asset_class: Literal["stock", "etf"] = (
                 "etf" if dataset_enum == Dataset.FUND_ADJ else "stock"
             )
-            instrument_id_mapping = self._hub.metadata.resolve_or_create_batch(
-                df=df,
-                source=self._source_name,
-                asset_class=adj_asset_class,
-                source_ticker_col=source_ticker_col,
+            instrument_id_mapping = (
+                self._hub.metadata.resolve_or_create_instruments_batch(
+                    df=df,
+                    source=self._source_name,
+                    asset_class=adj_asset_class,
+                    source_ticker_col=source_ticker_col,
+                )
             )
             enriched_df = _enrich_with_instrument_id(
                 df,
@@ -484,7 +486,7 @@ class IngestionDataWriter:
 
         """
         # 使用 MetadataService 批量注册（线程安全）
-        file_path, checksum = self._hub.metadata.register_securities_batch(
+        file_path, checksum = self._hub.metadata.register_instruments_batch(
             df=df,
             source=self._source_name,
             asset_class="stock",
@@ -506,7 +508,7 @@ class IngestionDataWriter:
 
         """
         # 使用 MetadataService 批量注册（线程安全）
-        file_path, checksum = self._hub.metadata.register_securities_batch(
+        file_path, checksum = self._hub.metadata.register_instruments_batch(
             df=df,
             source=self._source_name,
             asset_class="etf",

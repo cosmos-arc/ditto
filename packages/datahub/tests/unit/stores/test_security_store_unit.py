@@ -30,13 +30,13 @@ class TestInstrumentStore:
         """Test resolving instrument_id for current mapping."""
         # Insert test data
         self.client.execute("""
-            INSERT INTO security (
+            INSERT INTO instrument (
                 instrument_id, symbol, name, exchange, asset_class, list_date
             )
             VALUES (100000001, '600000', '浦发银行', 'SSE', 'stock', '1999-11-10')
         """)
         self.client.execute("""
-            INSERT INTO security_mapping
+            INSERT INTO instrument_mapping
             (instrument_id, source, source_ticker, effective_from)
             VALUES (100000001, 'tushare', '600000.SH', '1999-11-10')
         """)
@@ -52,14 +52,14 @@ class TestInstrumentStore:
         """Test resolving instrument_id with PIT (asof parameter)."""
         # Insert test data with historical mapping
         self.client.execute("""
-            INSERT INTO security (
+            INSERT INTO instrument (
                 instrument_id, symbol, name, exchange, asset_class, list_date
             )
             VALUES (100000001, '000022', '深赤湾A', 'SZSE', 'stock', '1990-01-01')
         """)
         # Mapping valid until 2018-12-25
         self.client.execute("""
-            INSERT INTO security_mapping
+            INSERT INTO instrument_mapping
             (instrument_id, source, source_ticker, effective_from, effective_to)
             VALUES (100000001, 'tushare', '000022.SZ', '1990-01-01', '2018-12-25')
         """)
@@ -84,13 +84,13 @@ class TestInstrumentStore:
         store_with_cache = InstrumentStore(self.client, data_cache=data_cache)
 
         self.client.execute("""
-            INSERT INTO security (
+            INSERT INTO instrument (
                 instrument_id, symbol, name, exchange, asset_class, list_date
             )
             VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
         """)
         self.client.execute("""
-            INSERT INTO security_mapping
+            INSERT INTO instrument_mapping
             (instrument_id, source, source_ticker, effective_from)
             VALUES (100000001, 'tushare', '600000.SH', '1999-11-10')
         """)
@@ -116,7 +116,7 @@ class TestInstrumentStore:
         for i, code in enumerate(["600000.SH", "600001.SH", "600002.SH"]):
             instrument_id = 100000001 + i
             sql = (
-                "INSERT INTO security "
+                "INSERT INTO instrument "
                 "(instrument_id, symbol, name, exchange, asset_class, list_date) "
                 f"VALUES ({instrument_id}, '60000{i}', 'Stock{i}', "
                 "'SSE', 'stock', '2000-01-01')"
@@ -124,7 +124,7 @@ class TestInstrumentStore:
             self.client.execute(sql)
 
             sql = (
-                "INSERT INTO security_mapping "
+                "INSERT INTO instrument_mapping "
                 "(instrument_id, source, source_ticker, effective_from) "
                 f"VALUES ({instrument_id}, 'tushare', '{code}', '2000-01-01')"
             )
@@ -144,9 +144,9 @@ class TestInstrumentStore:
         assert "600003.SH" not in result  # Not found
 
     def test_get_by_sid(self) -> None:
-        """Test getting security by instrument_id."""
+        """Test getting instrument by instrument_id."""
         sql = (
-            "INSERT INTO security "
+            "INSERT INTO instrument "
             "(instrument_id, symbol, name, exchange, "
             "asset_class, list_date, is_active) "
             "VALUES (100000001, '600000', 'Test Bank', 'SSE', 'stock', "
@@ -169,13 +169,13 @@ class TestInstrumentStore:
     def test_get_source_ticker(self) -> None:
         """Test reverse lookup: instrument_id to source_ticker."""
         self.client.execute("""
-            INSERT INTO security (
+            INSERT INTO instrument (
                 instrument_id, symbol, name, exchange, asset_class, list_date
             )
             VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
         """)
         self.client.execute("""
-            INSERT INTO security_mapping
+            INSERT INTO instrument_mapping
             (instrument_id, source, source_ticker, effective_from)
             VALUES (100000001, 'tushare', '600000.SH', '1999-11-10')
         """)
@@ -191,7 +191,7 @@ class TestInstrumentStore:
             instrument_id = 100000001 + i
             exchange = "SSE" if i < 2 else "SZSE"
             sql = (
-                "INSERT INTO security "
+                "INSERT INTO instrument "
                 "(instrument_id, symbol, name, exchange, "
                 "asset_class, list_date, is_active) "
                 f"VALUES ({instrument_id}, '60{i:04d}', 'Stock{i}', '{exchange}', "
@@ -219,7 +219,7 @@ class TestInstrumentStore:
             instrument_id = 100000001 + i
             is_active = "TRUE" if i < 2 else "FALSE"
             sql = (
-                "INSERT INTO security "
+                "INSERT INTO instrument "
                 "(instrument_id, symbol, name, exchange, "
                 "asset_class, list_date, is_active) "
                 f"VALUES ({instrument_id}, '60{i:04d}', 'Stock{i}', 'SSE', 'stock', "
@@ -251,7 +251,7 @@ class TestInstrumentStore:
     def test_get_symbol(self) -> None:
         """Test getting symbol by instrument_id."""
         self.client.execute("""
-            INSERT INTO security (
+            INSERT INTO instrument (
                 instrument_id, symbol, name, exchange, asset_class, list_date
             )
             VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
@@ -267,7 +267,7 @@ class TestInstrumentStore:
         for i in range(3):
             instrument_id = 100000001 + i
             sql = (
-                "INSERT INTO security "
+                "INSERT INTO instrument "
                 "(instrument_id, symbol, name, exchange, "
                 "asset_class, list_date, is_active) "
                 f"VALUES ({instrument_id}, '60{i:04d}', 'Stock{i}', 'SSE', 'stock', "
@@ -286,7 +286,7 @@ class TestInstrumentStore:
         """Test enriching DataFrame with symbol column."""
         # Insert test data
         self.client.execute("""
-            INSERT INTO security (
+            INSERT INTO instrument (
                 instrument_id, symbol, name, exchange, asset_class, list_date
             )
             VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
@@ -317,12 +317,12 @@ class TestInstrumentStore:
         """Test finding securities with various filters."""
         # Insert test data
         self.client.execute("""
-            INSERT INTO security
+            INSERT INTO instrument
             (instrument_id, symbol, name, exchange, asset_class, list_date, is_active)
             VALUES (100000001, '600000', 'Bank', 'SSE', 'stock', '1999-11-10', TRUE)
         """)
         self.client.execute("""
-            INSERT INTO security_mapping
+            INSERT INTO instrument_mapping
             (instrument_id, source, source_ticker, effective_from)
             VALUES (100000001, 'tushare', '600000.SH', '1999-11-10')
         """)
@@ -340,7 +340,7 @@ class TestInstrumentStore:
         assert len(result) == 1
 
     def test_register_new_security(self) -> None:
-        """Test registering a new security."""
+        """Test registering a new instrument."""
         instrument_id = self.store.register(
             instrument_id=100000001,
             registration=InstrumentRegistration(
@@ -355,11 +355,11 @@ class TestInstrumentStore:
 
         assert instrument_id == 100000001
 
-        # Verify security was inserted
-        security = self.store.get_by_instrument_id(instrument_id)
-        assert security is not None
-        assert security["symbol"] == "600000"
-        assert security["name"] == "Test Bank"
+        # Verify instrument was inserted
+        instrument = self.store.get_by_instrument_id(instrument_id)
+        assert instrument is not None
+        assert instrument["symbol"] == "600000"
+        assert instrument["name"] == "Test Bank"
 
         # Verify mapping was inserted
         resolved_sid = self.store.resolve_instrument_id(
@@ -368,12 +368,12 @@ class TestInstrumentStore:
         assert resolved_sid == instrument_id
 
     def test_register_invalidates_negative_cache(self) -> None:
-        """Test that register() invalidates negative cache for new security."""
+        """Test that register() invalidates negative cache for new instrument."""
         # Create store with DataCache
         data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
         store_with_cache = InstrumentStore(self.client, data_cache=data_cache)
 
-        # First query: security doesn't exist, returns None (cached as -1)
+        # First query: instrument doesn't exist, returns None (cached as -1)
         sid1 = store_with_cache.resolve_instrument_id("600999.SH", "tushare", asof=None)
         assert sid1 is None
 
@@ -381,7 +381,7 @@ class TestInstrumentStore:
         sid2 = store_with_cache.resolve_instrument_id("600999.SH", "tushare", asof=None)
         assert sid2 is None
 
-        # Register the new security
+        # Register the new instrument
         new_sid = store_with_cache.register(
             instrument_id=100999001,
             registration=InstrumentRegistration(
@@ -409,7 +409,7 @@ class TestInstrumentStore:
         map1 = store_with_cache.get_instrument_id_symbol_map()
         assert len(map1) == 0
 
-        # Register a new security
+        # Register a new instrument
         store_with_cache.register(
             instrument_id=100999002,
             registration=InstrumentRegistration(
@@ -423,7 +423,7 @@ class TestInstrumentStore:
         )
 
         # After registration, instrument_id_symbol_map cache should be invalidated
-        # This should now return the newly registered security
+        # This should now return the newly registered instrument
         map2 = store_with_cache.get_instrument_id_symbol_map()
         assert len(map2) == 1
         assert 100999002 in map2
@@ -487,7 +487,7 @@ class TestSqlInjectionProtection:
         for i in range(100):
             instrument_id = 100000001 + i
             self.client.execute(
-                """INSERT INTO security
+                """INSERT INTO instrument
                 (
                     instrument_id, symbol, name, exchange, asset_class,
                     list_date, is_active
@@ -514,7 +514,7 @@ class TestSqlInjectionProtection:
     def test_in_clause_with_single_sid(self) -> None:
         """Test IN clause works with single Instrument ID."""
         self.client.execute(
-            """INSERT INTO security
+            """INSERT INTO instrument
             (instrument_id, symbol, name, exchange, asset_class, list_date, is_active)
             VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '2000-01-01', TRUE)"""
         )
@@ -530,7 +530,7 @@ class TestSqlInjectionProtection:
         for i in range(50):
             instrument_id = 100000001 + i
             self.client.execute(
-                """INSERT INTO security
+                """INSERT INTO instrument
                 (
                     instrument_id, symbol, name, exchange, asset_class,
                     list_date, is_active
@@ -559,24 +559,25 @@ class TestSqlInjectionProtection:
     def test_special_characters_in_source_ticker(self) -> None:
         """Test special characters in source_ticker are handled safely."""
         self.client.execute(
-            """INSERT INTO security
+            """INSERT INTO instrument
             (instrument_id, symbol, name, exchange, asset_class, list_date)
             VALUES (100000001, 'TEST', 'Test', 'SSE', 'stock', '2000-01-01')"""
         )
         # Use source_ticker with special characters that could be SQL injection attempts
         self.client.execute(
-            """INSERT INTO security_mapping
+            """INSERT INTO instrument_mapping
             (instrument_id, source, source_ticker, effective_from)
-            VALUES (100000001, 'tushare', 'test;DROP TABLE security--', '2000-01-01')"""
+            VALUES (100000001, 'tushare', 'test;DROP TABLE instrument--', '2000-01-01')
+            """
         )
         self.client.commit()
 
         # Should safely query without executing the injection
         instrument_id = self.store.resolve_instrument_id(
-            "test;DROP TABLE security--", "tushare", asof=None
+            "test;DROP TABLE instrument--", "tushare", asof=None
         )
         assert instrument_id == 100000001
 
-        # Verify the security table still exists
-        result = self.client.fetchall("SELECT COUNT(*) as count FROM security")
+        # Verify the instrument table still exists
+        result = self.client.fetchall("SELECT COUNT(*) as count FROM instrument")
         assert result[0]["count"] >= 1

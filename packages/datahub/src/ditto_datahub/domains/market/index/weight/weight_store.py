@@ -159,7 +159,7 @@ class IndexWeightStore:
             asof: Point-in-time date. If None, returns current SIDs.
 
         Returns:
-            List of security IDs.
+            List of instrument IDs.
 
         """
         if asof:

@@ -23,7 +23,7 @@ class TestAdjFactorIngestion:
         mock_hub.market = mocker.MagicMock()
         mock_hub.metadata = mocker.MagicMock()
         mock_hub.market.write.return_value = mocker.Mock(rows=2, files=1)
-        mock_hub.metadata.resolve_or_create_batch.return_value = {
+        mock_hub.metadata.resolve_or_create_instruments_batch.return_value = {
             "000001.SZ": 1_000_001,
             "000002.SZ": 1_000_002,
         }
@@ -66,7 +66,7 @@ class TestAdjFactorIngestion:
         assert "source_ticker" in df_written.columns, (
             "source_ticker column missing in written dataframe"
         )
-        mock_hub.metadata.resolve_or_create_batch.assert_called_once_with(
+        mock_hub.metadata.resolve_or_create_instruments_batch.assert_called_once_with(
             df=mocker.ANY,
             source="tushare",
             asset_class="stock",
@@ -86,7 +86,7 @@ class TestAdjFactorIngestion:
         mock_hub.market = mocker.MagicMock()
         mock_hub.metadata = mocker.MagicMock()
         mock_hub.market.write.return_value = mocker.Mock(rows=2, files=1)
-        mock_hub.metadata.resolve_or_create_batch.return_value = {
+        mock_hub.metadata.resolve_or_create_instruments_batch.return_value = {
             "510300.SH": 2_000_001,
             "510500.SH": 2_000_002,
         }
@@ -129,7 +129,7 @@ class TestAdjFactorIngestion:
         assert "source_ticker" in df_written.columns, (
             "source_ticker column missing in written dataframe"
         )
-        mock_hub.metadata.resolve_or_create_batch.assert_called_once_with(
+        mock_hub.metadata.resolve_or_create_instruments_batch.assert_called_once_with(
             df=mocker.ANY,
             source="tushare",
             asset_class="etf",

@@ -98,7 +98,7 @@ class StockStatusStore:
         Read stock status data.
 
         Args:
-            instrument_ids: Filter by security IDs.
+            instrument_ids: Filter by instrument IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -315,7 +315,7 @@ class StockStatusStore:
         Count records in stock status data.
 
         Args:
-            instrument_ids: Filter by security IDs.
+            instrument_ids: Filter by instrument IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 

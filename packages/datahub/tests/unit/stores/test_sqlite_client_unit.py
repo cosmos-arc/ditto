@@ -135,7 +135,7 @@ class TestSQLiteClient:
     def test_commit_commits_transaction(self, sqlite_client: SQLiteClient) -> None:
         """Test commit method commits transaction."""
         sql = (
-            "INSERT INTO security "
+            "INSERT INTO instrument "
             "(instrument_id, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
@@ -145,7 +145,7 @@ class TestSQLiteClient:
 
         # New connection should see the data
         row = sqlite_client.fetchone(
-            "SELECT * FROM security WHERE instrument_id = ?", [99999999]
+            "SELECT * FROM instrument WHERE instrument_id = ?", [99999999]
         )
         assert row is not None
 
@@ -153,7 +153,7 @@ class TestSQLiteClient:
         """Test rollback method undoes transaction."""
         sqlite_client.execute("BEGIN")
         sql = (
-            "INSERT INTO security "
+            "INSERT INTO instrument "
             "(instrument_id, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
@@ -162,14 +162,14 @@ class TestSQLiteClient:
         sqlite_client.rollback()
 
         row = sqlite_client.fetchone(
-            "SELECT * FROM security WHERE instrument_id = ?", [99999999]
+            "SELECT * FROM instrument WHERE instrument_id = ?", [99999999]
         )
         assert row is None
 
     def test_insert_returning_id(self, sqlite_client: SQLiteClient) -> None:
         """Test insert_returning_id returns lastrowid."""
         sql = (
-            "INSERT INTO security "
+            "INSERT INTO instrument "
             "(instrument_id, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
@@ -222,15 +222,15 @@ class TestSQLiteClient:
         """Test count method rejects SQL injection in table name."""
         # SQL injection attempt: DROP TABLE statement
         with pytest.raises(ValueError, match="Invalid table"):
-            sqlite_client.count("security; DROP TABLE security")
+            sqlite_client.count("instrument; DROP TABLE instrument")
 
         # SQL injection attempt: UNION injection
         with pytest.raises(ValueError, match="Invalid table"):
-            sqlite_client.count("security UNION SELECT * FROM users")
+            sqlite_client.count("instrument UNION SELECT * FROM users")
 
         # SQL injection attempt: Comment injection
         with pytest.raises(ValueError, match="Invalid table"):
-            sqlite_client.count("security--")
+            sqlite_client.count("instrument--")
 
     def test_count_accepts_all_whitelisted_tables(
         self, sqlite_client: SQLiteClient
@@ -240,8 +240,8 @@ class TestSQLiteClient:
         whitelisted_tables = [
             "instrument_id_sequence",
             "price_limit_config",
-            "security",
-            "security_mapping",
+            "instrument",
+            "instrument_mapping",
             "trading_calendar",
             "freeze_point",
             "universe",
@@ -334,7 +334,7 @@ class TestSQLiteClient:
         # because lastrowid is typically non-zero for successful inserts
         # We test that insert_returning_id works correctly
         sql = (
-            "INSERT INTO security "
+            "INSERT INTO instrument "
             "(instrument_id, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )

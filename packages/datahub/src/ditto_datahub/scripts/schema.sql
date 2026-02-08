@@ -20,7 +20,7 @@ INSERT OR IGNORE INTO instrument_id_sequence (asset_class, current_max)
 VALUES ('future', 5000000);
 
 -- 证券主表
-CREATE TABLE IF NOT EXISTS security (
+CREATE TABLE IF NOT EXISTS instrument (
     instrument_id INTEGER PRIMARY KEY,
     symbol TEXT NOT NULL,
     name TEXT,
@@ -35,11 +35,11 @@ CREATE TABLE IF NOT EXISTS security (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_security_symbol ON security(symbol);
-CREATE INDEX IF NOT EXISTS idx_security_asset_class ON security(asset_class);
+CREATE INDEX IF NOT EXISTS idx_instrument_symbol ON instrument(symbol);
+CREATE INDEX IF NOT EXISTS idx_instrument_asset_class ON instrument(asset_class);
 
 -- 证券映射 (PIT support)
-CREATE TABLE IF NOT EXISTS security_mapping (
+CREATE TABLE IF NOT EXISTS instrument_mapping (
     instrument_id INTEGER NOT NULL,
     source TEXT NOT NULL,
     source_ticker TEXT NOT NULL,
@@ -48,11 +48,11 @@ CREATE TABLE IF NOT EXISTS security_mapping (
     is_primary BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (source, source_ticker, effective_from),
-    FOREIGN KEY (instrument_id) REFERENCES security(instrument_id)
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );
 CREATE INDEX IF NOT EXISTS idx_mapping_current
-    ON security_mapping(source, source_ticker) WHERE effective_to IS NULL;
-CREATE INDEX IF NOT EXISTS idx_mapping_sid ON security_mapping(instrument_id);
+    ON instrument_mapping(source, source_ticker) WHERE effective_to IS NULL;
+CREATE INDEX IF NOT EXISTS idx_mapping_instrument_id ON instrument_mapping(instrument_id);
 
 -- 交易日历
 CREATE TABLE IF NOT EXISTS trading_calendar (
@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS universe_constituent (
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (universe_id, instrument_id, effective_from),
     FOREIGN KEY (universe_id) REFERENCES universe(universe_id),
-    FOREIGN KEY (instrument_id) REFERENCES security(instrument_id)
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );
 
 -- 当前有效成分快速查询

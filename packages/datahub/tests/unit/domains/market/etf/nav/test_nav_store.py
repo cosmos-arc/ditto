@@ -66,7 +66,7 @@ class TestEtfNavStore:
     def test_read_filter_by_sids(
         self, store: EtfNavStore, sample_nav_df: pl.DataFrame
     ) -> None:
-        """Test read filtered by security IDs."""
+        """Test read filtered by instrument IDs."""
         store.write(sample_nav_df, year=2024)
         df = store.read(instrument_ids=[1500001])
         assert len(df) == 3
@@ -281,7 +281,7 @@ class TestEtfNavStore:
         assert instrument_ids == []
 
     def test_list_sids(self, store: EtfNavStore, sample_nav_df: pl.DataFrame) -> None:
-        """Test list_instrument_ids returns unique security IDs."""
+        """Test list_instrument_ids returns unique instrument IDs."""
         store.write(sample_nav_df, year=2024)
         instrument_ids = store.list_instrument_ids()
         assert instrument_ids == [1500001, 1500002]

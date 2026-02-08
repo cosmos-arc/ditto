@@ -76,8 +76,8 @@ class IndexConstituentStore(SQLiteStore):
 
         Args:
             df: Data to write with columns:
-                - index_instrument_id: Index security ID
-                - constituent_instrument_id: Stock security ID
+                - index_instrument_id: Index instrument ID
+                - constituent_instrument_id: Stock instrument ID
                 - effective_date: Effective date (YYYY-MM-DD)
                 - weight: Constituent weight
 
@@ -216,7 +216,7 @@ class IndexConstituentStore(SQLiteStore):
         Read index constituent data.
 
         Args:
-            index_instrument_ids: Filter by index security IDs.
+            index_instrument_ids: Filter by index instrument IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -271,7 +271,7 @@ class IndexConstituentStore(SQLiteStore):
         record with the latest effective_date <= asof date.
 
         Args:
-            index_instrument_id: Index security ID.
+            index_instrument_id: Index instrument ID.
             asof: As-of date (YYYY-MM-DD).
 
         Returns:
@@ -347,7 +347,7 @@ class IndexConstituentStore(SQLiteStore):
         Delete index constituent data.
 
         Args:
-            index_instrument_ids: Filter by index security IDs.
+            index_instrument_ids: Filter by index instrument IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -408,7 +408,7 @@ class IndexConstituentStore(SQLiteStore):
         Count index constituent records.
 
         Args:
-            index_instrument_ids: Filter by index security IDs.
+            index_instrument_ids: Filter by index instrument IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 

@@ -190,36 +190,35 @@ class SQLitePool:
         v5 does not keep compatibility layers. If existing tables do not satisfy
         required identifier columns, reset all user tables and re-initialize.
         """
-        security_row = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='security'"
-        ).fetchone()
-        if security_row is None:
+        table_names_query = (
+            "SELECT name FROM sqlite_master "
+            "WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+        )
+        table_rows = conn.execute(table_names_query).fetchall()
+        table_names = {cast(str, row[0]) for row in table_rows}
+        if not table_names:
             return False
 
-        security_columns = {
+        required_tables = {"instrument", "instrument_mapping"}
+        if not required_tables.issubset(table_names):
+            return True
+
+        instrument_columns = {
             cast(str, item[1])
-            for item in conn.execute("PRAGMA table_info(security)").fetchall()
+            for item in conn.execute("PRAGMA table_info(instrument)").fetchall()
         }
-        required_security_columns = {
+        required_instrument_columns = {
             "instrument_id",
             "symbol",
             "asset_class",
             "exchange",
         }
-        if not required_security_columns.issubset(security_columns):
+        if not required_instrument_columns.issubset(instrument_columns):
             return True
-
-        mapping_table_query = """
-        SELECT name FROM sqlite_master
-        WHERE type='table' AND name='security_mapping'
-        """
-        mapping_row = conn.execute(mapping_table_query).fetchone()
-        if mapping_row is None:
-            return False
 
         mapping_columns = {
             cast(str, item[1])
-            for item in conn.execute("PRAGMA table_info(security_mapping)").fetchall()
+            for item in conn.execute("PRAGMA table_info(instrument_mapping)").fetchall()
         }
         required_mapping_columns = {"instrument_id", "source", "source_ticker"}
         return not required_mapping_columns.issubset(mapping_columns)

@@ -6,7 +6,7 @@ with Point-in-Time support for identifier resolution.
 
 命名映射：
 - Python 代码使用 instrument/source_ticker
-- 数据库表/列保持 security/source_ticker（避免数据迁移）
+- 数据库表/列保持 instrument/source_ticker（避免数据迁移）
 
 Migration: 重构自 SecurityStore (2026-01-29)
 """
@@ -74,7 +74,7 @@ class InstrumentStore:
 
     Core functionality:
     - resolve_instrument_id: (source, source_ticker, asof) -> instrument_id
-    - 通过 security_mapping 表（数据库保持原名）的 effective_from/to 实现 PIT 查询
+    - 通过 instrument_mapping 表（数据库保持原名）的 effective_from/to 实现 PIT 查询
 
     Note: InstrumentStore does not inherit SQLiteStore as it uses SQLiteClient
     for data access to maintain backward compatibility. Future versions may
@@ -82,7 +82,7 @@ class InstrumentStore:
 
     命名映射：
     - Python 代码使用 instrument/source_ticker
-    - 数据库表/列保持 security/source_ticker（避免数据迁移）
+    - 数据库表/列保持 instrument/source_ticker（避免数据迁移）
 
     Migration: 重构自 SecurityStore (2026-01-29)
     """
@@ -186,7 +186,7 @@ class InstrumentStore:
         if asof:
             # PIT mode: query historical mapping
             row = self._client.fetchone(
-                """SELECT instrument_id FROM security_mapping
+                """SELECT instrument_id FROM instrument_mapping
                 WHERE source = ? AND source_ticker = ?
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to > ?)
@@ -197,7 +197,7 @@ class InstrumentStore:
         else:
             # Current mode: only query active mapping (faster)
             row = self._client.fetchone(
-                """SELECT instrument_id FROM security_mapping
+                """SELECT instrument_id FROM instrument_mapping
                 WHERE source = ? AND source_ticker = ?
                   AND effective_to IS NULL""",
                 [source, source_ticker],
@@ -265,8 +265,8 @@ class InstrumentStore:
         """
         rows = self._client.fetchall(
             """SELECT DISTINCT s.instrument_id
-            FROM security s
-            JOIN security_mapping m ON s.instrument_id = m.instrument_id
+            FROM instrument s
+            JOIN instrument_mapping m ON s.instrument_id = m.instrument_id
             WHERE s.symbol = ? AND m.source = ? AND m.effective_to IS NULL""",
             [symbol, source],
         )
@@ -292,7 +292,7 @@ class InstrumentStore:
         """
         if asof:
             row = self._client.fetchone(
-                """SELECT source_ticker FROM security_mapping
+                """SELECT source_ticker FROM instrument_mapping
                 WHERE instrument_id = ? AND source = ?
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to > ?)
@@ -302,7 +302,7 @@ class InstrumentStore:
             )
         else:
             row = self._client.fetchone(
-                """SELECT source_ticker FROM security_mapping
+                """SELECT source_ticker FROM instrument_mapping
                 WHERE instrument_id = ? AND source = ?
                   AND effective_to IS NULL""",
                 [instrument_id, source],
@@ -312,17 +312,17 @@ class InstrumentStore:
 
     def get_by_instrument_id(self, instrument_id: int) -> dict[str, Any] | None:
         """
-        Get security by instrument_id.
+        Get instrument by instrument_id.
 
         Args:
             instrument_id: Security ID.
 
         Returns:
-            Dictionary with security data or None.
+            Dictionary with instrument data or None.
 
         """
         row = self._client.fetchone(
-            "SELECT * FROM security WHERE instrument_id = ?", [instrument_id]
+            "SELECT * FROM instrument WHERE instrument_id = ?", [instrument_id]
         )
         return row
 
@@ -354,8 +354,8 @@ class InstrumentStore:
         """
         sql = """
             SELECT s.*, m.source, m.source_ticker
-            FROM security s
-            LEFT JOIN security_mapping m ON s.instrument_id = m.instrument_id
+            FROM instrument s
+            LEFT JOIN instrument_mapping m ON s.instrument_id = m.instrument_id
             WHERE 1=1
         """
         params: list[Any] = []
@@ -419,7 +419,7 @@ class InstrumentStore:
             List of instrument_ids.
 
         """
-        sql = "SELECT instrument_id FROM security WHERE 1=1"
+        sql = "SELECT instrument_id FROM instrument WHERE 1=1"
         params: list[Any] = []
 
         if asset_class:
@@ -449,7 +449,7 @@ class InstrumentStore:
 
         """
         row = self._client.fetchone(
-            "SELECT symbol FROM security WHERE instrument_id = ?", [instrument_id]
+            "SELECT symbol FROM instrument WHERE instrument_id = ?", [instrument_id]
         )
         return cast(str, row["symbol"]) if row else None
 
@@ -480,12 +480,12 @@ class InstrumentStore:
         if instrument_ids:
             in_clause, sids_list = _build_in_clause("instrument_id", instrument_ids)
             rows = self._client.fetchall(
-                f"SELECT instrument_id, symbol FROM security WHERE {in_clause}",  # noqa: S608 - in_clause 通过 _build_in_clause 安全构建
+                f"SELECT instrument_id, symbol FROM instrument WHERE {in_clause}",  # noqa: S608 - in_clause 通过 _build_in_clause 安全构建
                 sids_list,
             )
         else:
             rows = self._client.fetchall(
-                "SELECT instrument_id, symbol FROM security WHERE is_active = TRUE"
+                "SELECT instrument_id, symbol FROM instrument WHERE is_active = TRUE"
             )
 
         result = {cast(int, r["instrument_id"]): cast(str, r["symbol"]) for r in rows}
@@ -551,9 +551,9 @@ class InstrumentStore:
         )
 
         try:
-            # Insert into security table
+            # Insert into instrument table
             self._client.execute(
-                """INSERT INTO security
+                """INSERT INTO instrument
                 (
                     instrument_id, symbol, name, exchange, board, asset_class,
                     list_date, is_active
@@ -572,7 +572,7 @@ class InstrumentStore:
 
             # Insert into mapping table
             self._client.execute(
-                """INSERT INTO security_mapping
+                """INSERT INTO instrument_mapping
                 (instrument_id, source, source_ticker, effective_from, is_primary)
                 VALUES (?, ?, ?, ?, TRUE)""",
                 [

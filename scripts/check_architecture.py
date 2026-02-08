@@ -47,6 +47,16 @@ LEGACY_FIELD_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "ARCH533",
         "禁止使用 legacy API get_securities(), 请改为 get_instruments()",
     ),
+    (
+        re.compile(r"\bsecurity_mapping\b"),
+        "ARCH540",
+        "禁止使用 legacy 表名 security_mapping, 请改为 instrument_mapping",
+    ),
+    (
+        re.compile(r"\bsecurity\b"),
+        "ARCH541",
+        "禁止使用 legacy 表名/语义 security, 请改为 instrument",
+    ),
 )
 
 

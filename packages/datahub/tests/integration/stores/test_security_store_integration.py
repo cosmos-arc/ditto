@@ -27,7 +27,7 @@ class TestInstrumentStoreIntegration:
 
         # Create test schema
         schema_sql = """
-            CREATE TABLE security (
+            CREATE TABLE instrument (
                 instrument_id INTEGER PRIMARY KEY,
                 symbol TEXT NOT NULL,
                 name TEXT NOT NULL,
@@ -38,21 +38,21 @@ class TestInstrumentStoreIntegration:
                 is_active BOOLEAN DEFAULT TRUE
             );
 
-            CREATE TABLE security_mapping (
+            CREATE TABLE instrument_mapping (
                 instrument_id INTEGER NOT NULL,
                 source TEXT NOT NULL,
                 source_ticker TEXT NOT NULL,
                 effective_from TEXT NOT NULL,
                 effective_to TEXT,
                 is_primary BOOLEAN DEFAULT TRUE,
-                FOREIGN KEY (instrument_id) REFERENCES security(instrument_id)
+                FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
             );
 
-            CREATE INDEX idx_security_symbol ON security(symbol);
+            CREATE INDEX idx_security_symbol ON instrument(symbol);
             CREATE INDEX idx_security_mapping_source_ticker
-            ON security_mapping(source_ticker);
+            ON instrument_mapping(source_ticker);
             CREATE INDEX idx_security_mapping_instrument_id
-            ON security_mapping(instrument_id);
+            ON instrument_mapping(instrument_id);
         """
         client.executescript(schema_sql)
         return client
@@ -63,7 +63,7 @@ class TestInstrumentStoreIntegration:
         return InstrumentStore(client)
 
     def test_register_new_security(self, store: InstrumentStore) -> None:
-        """Test registering a new security."""
+        """Test registering a new instrument."""
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
@@ -78,9 +78,9 @@ class TestInstrumentStoreIntegration:
 
         assert instrument_id == 1_000_001
 
-        # Verify security table
+        # Verify instrument table
         row = store._client.fetchone(
-            "SELECT * FROM security WHERE instrument_id = ?", [instrument_id]
+            "SELECT * FROM instrument WHERE instrument_id = ?", [instrument_id]
         )
         assert row is not None
         assert row["symbol"] == "600000"
@@ -88,7 +88,7 @@ class TestInstrumentStoreIntegration:
 
         # Verify mapping table
         mapping = store._client.fetchone(
-            """SELECT * FROM security_mapping
+            """SELECT * FROM instrument_mapping
             WHERE instrument_id = ? AND source_ticker = ?""",
             [instrument_id, "600000.SH"],
         )
@@ -116,7 +116,7 @@ class TestInstrumentStoreIntegration:
     def test_resolve_instrument_id_pit(self, store: InstrumentStore) -> None:
         """Test resolving source_ticker to instrument_id with PIT."""
 
-        # Register first security
+        # Register first instrument
         registration1 = InstrumentRegistration(
             source_ticker="600000.SH",
             symbol="600000",
@@ -129,7 +129,7 @@ class TestInstrumentStoreIntegration:
 
         # Simulate code change by updating effective_to
         store._client.execute(
-            """UPDATE security_mapping
+            """UPDATE instrument_mapping
             SET effective_to = '2024-01-01'
             WHERE instrument_id = ? AND source_ticker = ?""",
             [1_000_001, "600000.SH"],
@@ -138,7 +138,7 @@ class TestInstrumentStoreIntegration:
 
         # Register new mapping for same Instrument ID
         store._client.execute(
-            """INSERT INTO security_mapping
+            """INSERT INTO instrument_mapping
             (instrument_id, source, source_ticker, effective_from, is_primary)
             VALUES (?, ?, ?, ?, TRUE)""",
             [1_000_001, "tushare", "600001.SH", "2024-01-01"],
@@ -222,7 +222,7 @@ class TestInstrumentStoreIntegration:
         assert source_ticker == "600000.SH"
 
     def test_get_by_sid(self, store: InstrumentStore) -> None:
-        """Test getting security by instrument_id."""
+        """Test getting instrument by instrument_id."""
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",

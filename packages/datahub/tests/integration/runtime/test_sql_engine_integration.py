@@ -87,8 +87,8 @@ class TestSqlEngine:
         assert result["doubled"][0] == 10
 
     def test_needs_sqlite_detects_security_table(self) -> None:
-        """Test _needs_sqlite detects security table."""
-        query = "SELECT * FROM security WHERE instrument_id = 1"
+        """Test _needs_sqlite detects instrument table."""
+        query = "SELECT * FROM instrument WHERE instrument_id = 1"
         assert self.engine._needs_sqlite(query) is True
 
     def test_needs_sqlite_detects_calendar_table(self) -> None:
@@ -125,17 +125,20 @@ class TestSqlEngine:
 
     def test_execute_cross_database_attaches_sqlite(self) -> None:
         """Test execute attaches SQLite when needed."""
-        # Insert test security
+        # Insert test instrument
         self.pool.execute(
-            "INSERT INTO security (instrument_id, symbol, name, exchange, asset_class, "
-            "list_date) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                "INSERT INTO instrument "
+                "(instrument_id, symbol, name, exchange, asset_class, list_date) "
+                "VALUES (?, ?, ?, ?, ?, ?)"
+            ),
             [1_000_001, "TEST", "Test Security", "SH", "stock", "2024-01-01"],
         )
         self.pool.commit()
 
         # Query that needs SQLite
         result = self.engine.execute(
-            "SELECT s.symbol FROM security s WHERE s.instrument_id = 1000001"
+            "SELECT s.symbol FROM instrument s WHERE s.instrument_id = 1000001"
         )
 
         assert len(result) == 1

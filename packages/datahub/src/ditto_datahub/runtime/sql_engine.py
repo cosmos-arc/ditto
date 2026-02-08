@@ -35,8 +35,8 @@ class SqlEngine:
     # SQLite table names for auto-detection
     SQLITE_TABLES = frozenset(
         [
-            "security",
-            "security_mapping",
+            "instrument",
+            "instrument_mapping",
             "trading_calendar",
             "universe",
             "universe_constituent",
@@ -45,7 +45,7 @@ class SqlEngine:
         ]
     )
 
-    # Allowed dataset names for view registration (security whitelist)
+    # Allowed dataset names for view registration (instrument whitelist)
     ALLOWED_DATASETS = frozenset(
         [
             "stock_daily",
@@ -117,7 +117,7 @@ class SqlEngine:
 
     def _register_views(self) -> None:
         """Register Parquet datasets as DuckDB views."""
-        # Use class-level whitelist for security validation
+        # Use class-level whitelist for instrument validation
         for dataset in self.ALLOWED_DATASETS:
             parquet_path = self.data_root / dataset
             # Check if directory exists before creating view
@@ -337,8 +337,8 @@ class SqlEngine:
         Detect if query requires SQLite tables.
 
         Supports both:
-        - SELECT * FROM security
-        - SELECT * FROM meta.security
+        - SELECT * FROM instrument
+        - SELECT * FROM meta.instrument
 
         Args:
             query: SQL query string.

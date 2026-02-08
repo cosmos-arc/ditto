@@ -112,10 +112,10 @@ def _attach_metadata(
         source_tickers = df["source_ticker"].to_list()
         return {source_tickers[0]: instrument_id}
 
-    hub.metadata.register_securities_batch.side_effect = (
+    hub.metadata.register_instruments_batch.side_effect = (
         register_securities_batch_side_effect
     )
-    hub.metadata.resolve_or_create_batch.side_effect = (
+    hub.metadata.resolve_or_create_instruments_batch.side_effect = (
         resolve_or_create_batch_side_effect
     )
     hub.metadata.get_securities.return_value = pl.DataFrame()

@@ -1,4 +1,4 @@
-"""Unit tests for Models - security."""
+"""Unit tests for Models - instrument."""
 
 from dataclasses import asdict
 

@@ -91,7 +91,7 @@ class ForeignKeyRule(BaseRule):
 
     rule: RuleType = RuleType.FOREIGN_KEY
     column: str
-    reference: str  # e.g., "security.instrument_id"
+    reference: str  # e.g., "instrument.instrument_id"
 
 
 class TypeCheckRule(BaseRule):

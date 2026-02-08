@@ -652,7 +652,7 @@ class ParquetStore(BaseStore):
 
         Args:
             dataset: 数据集名称.
-            instrument_ids: Filter by security IDs.
+            instrument_ids: Filter by instrument IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -704,13 +704,13 @@ class ParquetStore(BaseStore):
 
     def list_instrument_ids(self, dataset: str) -> list[int]:
         """
-        List unique security IDs in a dataset.
+        List unique instrument IDs in a dataset.
 
         Args:
             dataset: 数据集名称.
 
         Returns:
-            Sorted list of unique security IDs.
+            Sorted list of unique instrument IDs.
 
         """
         years = self.get_years(dataset)

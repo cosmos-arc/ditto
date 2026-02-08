@@ -53,7 +53,7 @@ class StockAdjFactorStore:
         Read adjustment factors from the store.
 
         Args:
-            instrument_ids: Filter by security IDs.
+            instrument_ids: Filter by instrument IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -98,7 +98,7 @@ class StockAdjFactorStore:
         Delete adjustment factors from the store.
 
         Args:
-            instrument_ids: Filter by security IDs.
+            instrument_ids: Filter by instrument IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -155,7 +155,7 @@ class StockAdjFactorStore:
         Count records in the dataset.
 
         Args:
-            instrument_ids: Filter by security IDs.
+            instrument_ids: Filter by instrument IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -182,10 +182,10 @@ class StockAdjFactorStore:
 
     def list_instrument_ids(self) -> list[int]:
         """
-        List unique security IDs in the dataset.
+        List unique instrument IDs in the dataset.
 
         Returns:
-            Sorted list of unique security IDs.
+            Sorted list of unique instrument IDs.
 
         """
         return self._store.list_instrument_ids(self._dataset)

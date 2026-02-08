@@ -78,11 +78,11 @@ class TestSqlEngineInjection:
         malicious_inputs = [
             "2024-01-01'; DROP TABLE stock_daily; --",
             "2024-01-01' OR '1'='1",
-            "' UNION SELECT * FROM security --",
+            "' UNION SELECT * FROM instrument --",
             "2024-01-01'; INSERT INTO users VALUES ('hacker', 'admin') --",
-            "'; EXECUTE IMMEDIATE 'DROP TABLE security'; --",
-            "2024-01-01' UNION SELECT * FROM security --",
-            "2024-01-01'; SELECT * FROM security WHERE '1'='1' --",
+            "'; EXECUTE IMMEDIATE 'DROP TABLE instrument'; --",
+            "2024-01-01' UNION SELECT * FROM instrument --",
+            "2024-01-01'; SELECT * FROM instrument WHERE '1'='1' --",
         ]
 
         for malicious in malicious_inputs:

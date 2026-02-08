@@ -14,7 +14,7 @@ technical:
 
   - rule: foreign_key
     column: instrument_id
-    reference: security.instrument_id
+    reference: instrument.instrument_id
     message: "Instrument ID 不存在于证券主表"
 
   - rule: type_check

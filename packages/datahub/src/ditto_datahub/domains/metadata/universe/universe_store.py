@@ -249,7 +249,7 @@ class UniverseStore:
             asof: Point-in-time date. If None, returns current SIDs.
 
         Returns:
-            List of security IDs.
+            List of instrument IDs.
 
         """
         df = self.get_constituents(universe_id, asof)
