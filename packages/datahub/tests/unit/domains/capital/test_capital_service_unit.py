@@ -6,7 +6,7 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_datahub.domains.capital.capital_service import CapitalService
+from ditto_datahub.domains.capital.capital_service import CapitalQuery, CapitalService
 from ditto_datahub.domains.capital.capital_store import CapitalStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
@@ -111,6 +111,32 @@ def capital_service(capital_store: CapitalStore) -> CapitalService:
     return CapitalService(capital_store)
 
 
+def test_query_requires_instrument_id_for_security_dataset(
+    capital_service: CapitalService,
+) -> None:
+    """非指数查询必须提供 instrument_id."""
+    with pytest.raises(ValueError, match="instrument_id"):
+        capital_service.query(
+            CapitalQuery(
+                dataset="valuation_metrics",
+                as_of_date=date(2024, 5, 20),
+            )
+        )
+
+
+def test_query_requires_index_id_for_index_composition(
+    capital_service: CapitalService,
+) -> None:
+    """指数成分查询必须提供 index_id."""
+    with pytest.raises(ValueError, match="index_id"):
+        capital_service.query(
+            CapitalQuery(
+                dataset="index_composition",
+                as_of_date=date(2024, 5, 20),
+            )
+        )
+
+
 # ============================================================================
 # 1. Valuation Metrics 测试
 # ============================================================================
@@ -138,9 +164,12 @@ def test_get_valuation_metrics_pit_query(capital_service: CapitalService) -> Non
     capital_service._store.write_valuation_metrics(test_data)
 
     # 通过 Service 查询
-    result = capital_service.get_valuation_metrics(
-        instrument_id="600000.SH",
-        as_of_date=date(2024, 5, 20),
+    result = capital_service.query(
+        CapitalQuery(
+            dataset="valuation_metrics",
+            instrument_id="600000.SH",
+            as_of_date=date(2024, 5, 20),
+        )
     )
 
     assert len(result) == 1
@@ -149,11 +178,37 @@ def test_get_valuation_metrics_pit_query(capital_service: CapitalService) -> Non
     assert result["pb_ratio"][0] == 2.3
 
 
+def test_write_returns_result(capital_service: CapitalService) -> None:
+    """write() 返回统一结果对象."""
+    test_data = pl.DataFrame(
+        {
+            "instrument_id": ["600000.SH"],
+            "trade_date": [date(2024, 5, 15)],
+            "knowledge_date": [date(2024, 5, 15)],
+            "effective_from": [date(2024, 5, 16)],
+            "effective_to": [None],
+            "pe_ratio": [15.5],
+            "pb_ratio": [2.3],
+            "ps_ratio": [1.8],
+            "dividend_yield": [0.03],
+            "market_cap": [1000000000.0],
+        }
+    )
+
+    result = capital_service.write(dataset="valuation_metrics", df=test_data)
+
+    assert result.dataset == "valuation_metrics"
+    assert result.records_written == 1
+
+
 def test_get_valuation_metrics_no_data(capital_service: CapitalService) -> None:
     """测试查询不存在的标的."""
-    result = capital_service.get_valuation_metrics(
-        instrument_id="999999.SH",
-        as_of_date=date(2024, 5, 15),
+    result = capital_service.query(
+        CapitalQuery(
+            dataset="valuation_metrics",
+            instrument_id="999999.SH",
+            as_of_date=date(2024, 5, 15),
+        )
     )
 
     assert len(result) == 0
@@ -162,9 +217,12 @@ def test_get_valuation_metrics_no_data(capital_service: CapitalService) -> None:
 
 def test_get_valuation_metrics_empty_table(capital_service: CapitalService) -> None:
     """测试空表查询."""
-    result = capital_service.get_valuation_metrics(
-        instrument_id="600000.SH",
-        as_of_date=date(2024, 5, 15),
+    result = capital_service.query(
+        CapitalQuery(
+            dataset="valuation_metrics",
+            instrument_id="600000.SH",
+            as_of_date=date(2024, 5, 15),
+        )
     )
 
     assert len(result) == 0
@@ -196,9 +254,12 @@ def test_get_futures_pit_query(capital_service: CapitalService) -> None:
     capital_service._store.write_futures(test_data)
 
     # 通过 Service 查询
-    result = capital_service.get_futures(
-        instrument_id="IF2405",
-        as_of_date=date(2024, 5, 20),
+    result = capital_service.query(
+        CapitalQuery(
+            dataset="futures",
+            instrument_id="IF2405",
+            as_of_date=date(2024, 5, 20),
+        )
     )
 
     assert len(result) == 1
@@ -209,9 +270,12 @@ def test_get_futures_pit_query(capital_service: CapitalService) -> None:
 
 def test_get_futures_no_data(capital_service: CapitalService) -> None:
     """测试查询不存在的期货."""
-    result = capital_service.get_futures(
-        instrument_id="IF9999",
-        as_of_date=date(2024, 5, 15),
+    result = capital_service.query(
+        CapitalQuery(
+            dataset="futures",
+            instrument_id="IF9999",
+            as_of_date=date(2024, 5, 15),
+        )
     )
 
     assert len(result) == 0
@@ -239,9 +303,12 @@ def test_get_index_composition_pit_query(capital_service: CapitalService) -> Non
     capital_service._store.write_index_composition(test_data)
 
     # 通过 Service 查询
-    result = capital_service.get_index_composition(
-        index_id="000001.SH",
-        as_of_date=date(2024, 5, 15),
+    result = capital_service.query(
+        CapitalQuery(
+            dataset="index_composition",
+            index_id="000001.SH",
+            as_of_date=date(2024, 5, 15),
+        )
     )
 
     assert len(result) == 2
@@ -252,9 +319,12 @@ def test_get_index_composition_pit_query(capital_service: CapitalService) -> Non
 
 def test_get_index_composition_no_data(capital_service: CapitalService) -> None:
     """测试查询不存在的指数."""
-    result = capital_service.get_index_composition(
-        index_id="999999.SH",
-        as_of_date=date(2024, 5, 15),
+    result = capital_service.query(
+        CapitalQuery(
+            dataset="index_composition",
+            index_id="999999.SH",
+            as_of_date=date(2024, 5, 15),
+        )
     )
 
     assert len(result) == 0
@@ -286,9 +356,12 @@ def test_get_margin_trading_pit_query(capital_service: CapitalService) -> None:
     capital_service._store.write_margin_trading(test_data)
 
     # 通过 Service 查询
-    result = capital_service.get_margin_trading(
-        instrument_id="600000.SH",
-        as_of_date=date(2024, 5, 20),
+    result = capital_service.query(
+        CapitalQuery(
+            dataset="margin_trading",
+            instrument_id="600000.SH",
+            as_of_date=date(2024, 5, 20),
+        )
     )
 
     assert len(result) == 1
@@ -299,9 +372,12 @@ def test_get_margin_trading_pit_query(capital_service: CapitalService) -> None:
 
 def test_get_margin_trading_no_data(capital_service: CapitalService) -> None:
     """测试查询不存在的标的."""
-    result = capital_service.get_margin_trading(
-        instrument_id="999999.SH",
-        as_of_date=date(2024, 5, 15),
+    result = capital_service.query(
+        CapitalQuery(
+            dataset="margin_trading",
+            instrument_id="999999.SH",
+            as_of_date=date(2024, 5, 15),
+        )
     )
 
     assert len(result) == 0
@@ -332,9 +408,12 @@ def test_get_pledge_ratio_pit_query(capital_service: CapitalService) -> None:
     capital_service._store.write_pledge_ratio(test_data)
 
     # 通过 Service 查询
-    result = capital_service.get_pledge_ratio(
-        instrument_id="600000.SH",
-        as_of_date=date(2024, 5, 15),
+    result = capital_service.query(
+        CapitalQuery(
+            dataset="pledge_ratio",
+            instrument_id="600000.SH",
+            as_of_date=date(2024, 5, 15),
+        )
     )
 
     assert len(result) == 1
@@ -345,9 +424,12 @@ def test_get_pledge_ratio_pit_query(capital_service: CapitalService) -> None:
 
 def test_get_pledge_ratio_no_data(capital_service: CapitalService) -> None:
     """测试查询不存在的标的."""
-    result = capital_service.get_pledge_ratio(
-        instrument_id="999999.SH",
-        as_of_date=date(2024, 5, 15),
+    result = capital_service.query(
+        CapitalQuery(
+            dataset="pledge_ratio",
+            instrument_id="999999.SH",
+            as_of_date=date(2024, 5, 15),
+        )
     )
 
     assert len(result) == 0

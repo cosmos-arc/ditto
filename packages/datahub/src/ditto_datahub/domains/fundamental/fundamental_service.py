@@ -1,13 +1,44 @@
-"""FundamentalService - Fundamental domain unified service (thin wrapper)."""
+"""Fundamental domain service with unified query/write contract."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
+from typing import Literal
 
 import polars as pl
 from ditto_foundation import logger
 
 from ditto_datahub.domains.fundamental.fundamental_store import FundamentalStore
+
+FundamentalDataset = Literal[
+    "balance_sheet",
+    "income_statement",
+    "cash_flow",
+    "dividend",
+    "corporate_actions",
+    "forecast",
+    "express",
+]
+
+
+@dataclass(frozen=True)
+class FundamentalQuery:
+    """Unified query contract for Fundamental domain."""
+
+    dataset: FundamentalDataset
+    instrument_id: str
+    as_of_date: date | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+
+
+@dataclass(frozen=True)
+class FundamentalWriteResult:
+    """Write result for Fundamental domain service."""
+
+    dataset: FundamentalDataset
+    records_written: int
 
 
 class FundamentalService:
@@ -33,91 +64,47 @@ class FundamentalService:
             event="fundamental_service_init_complete",
         )
 
-    # ============ Write methods (delegation) ============
+    @staticmethod
+    def _require_as_of_date(query: FundamentalQuery) -> date:
+        if query.as_of_date is None:
+            msg = f"{query.dataset} 查询必须提供 as_of_date"
+            raise ValueError(msg)
+        return query.as_of_date
 
-    def write_balance_sheet(self, df: pl.DataFrame) -> int:
-        """Write balance sheet data."""
-        return self._store.write_balance_sheet(df)
-
-    def write_income_statement(self, df: pl.DataFrame) -> int:
-        """Write income statement data."""
-        return self._store.write_income_statement(df)
-
-    def write_cash_flow(self, df: pl.DataFrame) -> int:
-        """Write cash flow data."""
-        return self._store.write_cash_flow(df)
-
-    def write_dividend(self, df: pl.DataFrame) -> int:
-        """Write dividend data."""
-        return self._store.write_dividend(df)
-
-    def write_corporate_actions(self, df: pl.DataFrame) -> int:
-        """Write corporate actions data."""
-        return self._store.write_corporate_actions(df)
-
-    def write_forecast(self, df: pl.DataFrame) -> int:
-        """Write forecast data."""
-        return self._store.write_forecast(df)
-
-    def write_express(self, df: pl.DataFrame) -> int:
-        """Write express data."""
-        return self._store.write_express(df)
-
-    # ============ Query methods (delegation) ============
-
-    def get_balance_sheet(
+    def write(
         self,
-        instrument_id: str,
-        as_of_date: date,
-    ) -> pl.DataFrame:
-        """Query balance sheet data (PIT)."""
-        return self._store.get_balance_sheet(instrument_id, as_of_date)
+        dataset: FundamentalDataset,
+        df: pl.DataFrame,
+    ) -> FundamentalWriteResult:
+        """Write dataset via unified contract."""
+        writers = {
+            "balance_sheet": self._store.write_balance_sheet,
+            "income_statement": self._store.write_income_statement,
+            "cash_flow": self._store.write_cash_flow,
+            "dividend": self._store.write_dividend,
+            "corporate_actions": self._store.write_corporate_actions,
+            "forecast": self._store.write_forecast,
+            "express": self._store.write_express,
+        }
+        records_written = writers[dataset](df)
+        return FundamentalWriteResult(dataset=dataset, records_written=records_written)
 
-    def get_income_statement(
-        self,
-        instrument_id: str,
-        as_of_date: date,
-    ) -> pl.DataFrame:
-        """Query income statement data (PIT)."""
-        return self._store.get_income_statement(instrument_id, as_of_date)
+    def query(self, query: FundamentalQuery) -> pl.DataFrame:
+        """Query dataset via unified contract."""
+        if query.dataset == "corporate_actions":
+            return self._store.get_corporate_actions(
+                query.instrument_id,
+                query.start_date,
+                query.end_date,
+            )
 
-    def get_cash_flow(
-        self,
-        instrument_id: str,
-        as_of_date: date,
-    ) -> pl.DataFrame:
-        """Query cash flow data (PIT)."""
-        return self._store.get_cash_flow(instrument_id, as_of_date)
-
-    def get_dividend(
-        self,
-        instrument_id: str,
-        as_of_date: date,
-    ) -> pl.DataFrame:
-        """Query dividend data (PIT)."""
-        return self._store.get_dividend(instrument_id, as_of_date)
-
-    def get_corporate_actions(
-        self,
-        instrument_id: str,
-        start_date: date | None = None,
-        end_date: date | None = None,
-    ) -> pl.DataFrame:
-        """Query corporate actions data (non-PIT)."""
-        return self._store.get_corporate_actions(instrument_id, start_date, end_date)
-
-    def get_forecast(
-        self,
-        instrument_id: str,
-        as_of_date: date,
-    ) -> pl.DataFrame:
-        """Query forecast data (PIT)."""
-        return self._store.get_forecast(instrument_id, as_of_date)
-
-    def get_express(
-        self,
-        instrument_id: str,
-        as_of_date: date,
-    ) -> pl.DataFrame:
-        """Query express data (PIT)."""
-        return self._store.get_express(instrument_id, as_of_date)
+        readers = {
+            "balance_sheet": self._store.get_balance_sheet,
+            "income_statement": self._store.get_income_statement,
+            "cash_flow": self._store.get_cash_flow,
+            "dividend": self._store.get_dividend,
+            "forecast": self._store.get_forecast,
+            "express": self._store.get_express,
+        }
+        as_of_date = self._require_as_of_date(query)
+        return readers[query.dataset](query.instrument_id, as_of_date)
