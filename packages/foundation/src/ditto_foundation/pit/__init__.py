@@ -145,11 +145,13 @@ class PitConfig:
             >>> unsafe_config.validate_for_safety()  # Raises ValueError
 
         """
-        if self.window_closed != WindowClosed.LEFT:
+        # LEFT: [T-window, T-1] - 包含左端点，不包含当前点
+        # NONE: [T-window+1, T-1] - 不包含两个端点，最保守策略
+        if self.window_closed not in (WindowClosed.LEFT, WindowClosed.NONE):
             raise ValueError(
                 "Unsafe PIT configuration: "
                 + f"window_closed={self.window_closed.value}. "
-                + "Use WindowClosed.LEFT to prevent data leakage."
+                + "Use WindowClosed.LEFT or WindowClosed.NONE to prevent data leakage."
             )
 
         if self.strategy == PitStrategy.LATEST:
