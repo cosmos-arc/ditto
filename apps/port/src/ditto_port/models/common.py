@@ -1,4 +1,4 @@
-"""Common models for API responses."""
+"""API 响应通用模型."""
 
 from pydantic import BaseModel, ConfigDict
 

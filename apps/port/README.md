@@ -78,9 +78,14 @@ apps/port/src/ditto_port/
     └── ingestion/             # 数据摄取服务
         ├── coordinator.py     # 统一摄取协调器
         ├── backfill.py        # 回补管理器
+        ├── data_writer.py     # 数据写入器
+        ├── metadata.py        # 元数据服务
         ├── result_utils.py    # 结果统计工具
+        ├── result_handler.py  # 结果处理器
         ├── retry.py           # 重试管理器
-        └── security_mapper.py # 证券映射器
+        ├── quality/           # 数据质量服务
+        │   └── service.py     # DQ 检查与隔离
+        └── protocols.py       # 服务接口协议
 ```
 
 ## 摄取任务

@@ -1,4 +1,6 @@
-"""Quality Service - Write-time DQ orchestration (Application Layer)."""
+"""质量服务 - 写入时 DQ 编排（应用层）."""
+
+from __future__ import annotations
 
 from typing import Any
 

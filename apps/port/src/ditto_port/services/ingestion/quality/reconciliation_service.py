@@ -109,10 +109,7 @@ class QualityReconciliationService:
 
         try:
             # 1. 验证输入
-            if (
-                "instrument_id" not in primary_df.columns
-                and "instrument_id" not in primary_df.columns
-            ):
+            if "instrument_id" not in primary_df.columns:
                 raise ValueError("primary_df must contain 'instrument_id' column")
 
             # 2. 添加 symbol 列（instrument_id → symbol 转换）

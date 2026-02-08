@@ -1,4 +1,4 @@
-"""L3 Batch Service - Statistical check orchestration (Application Layer)."""
+"""L3 批量服务 - 统计检查编排（应用层）."""
 
 from datetime import datetime, timedelta
 from typing import Any, Literal

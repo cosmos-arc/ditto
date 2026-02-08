@@ -1,4 +1,4 @@
-"""PIT (Point-in-Time) strategy configuration."""
+"""PIT（Point-in-Time）策略配置."""
 
 from __future__ import annotations
 

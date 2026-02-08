@@ -46,7 +46,7 @@ class TechnicalIndicatorStore:
             ...
 
     Schema:
-        instrument_id: Security ID
+        instrument_id: Instrument ID
         trade_date: Trading date
         indicator_id: Indicator identifier (e.g., 'indicator_rsi_14')
         indicator_type: Type category (trend/momentum/volatility/volume)

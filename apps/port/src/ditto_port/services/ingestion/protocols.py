@@ -1,4 +1,4 @@
-"""Protocols for ingestion service dependencies."""
+"""摄取服务依赖协议."""
 
 from __future__ import annotations
 

@@ -167,7 +167,7 @@ class FactorStore:
             ...
 
     Schema:
-        instrument_id: Security ID
+        instrument_id: Instrument ID
         trade_date: Trading date
         factor_id: Factor identifier (e.g., 'factor_momentum_12m')
         factor_class: Class category (fundamental/technical/macro/statistical)

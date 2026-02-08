@@ -1,4 +1,4 @@
-"""AlertManager for business-level notification management."""
+"""业务级通知管理器."""
 
 from datetime import datetime
 from typing import Any

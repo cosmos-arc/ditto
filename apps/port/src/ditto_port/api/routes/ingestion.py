@@ -1,4 +1,4 @@
-"""Ingestion API routes."""
+"""数据摄取 API 路由."""
 
 from fastapi import APIRouter
 

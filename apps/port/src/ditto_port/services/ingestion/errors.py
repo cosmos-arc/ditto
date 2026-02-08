@@ -1,4 +1,4 @@
-"""Ingestion-specific error types."""
+"""摄取专用错误类型."""
 
 from __future__ import annotations
 

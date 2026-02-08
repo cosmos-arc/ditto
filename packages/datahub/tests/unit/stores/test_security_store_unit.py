@@ -436,7 +436,7 @@ class TestInstrumentStore:
             self.client, "commit", side_effect=RuntimeError("DB error")
         ):
             mock_logger = mocker.patch(
-                "ditto_datahub.domains.metadata.instrument.instrument_store.logger"
+                "ditto_datahub.stores.metadata.instrument.instrument_store.logger"
             )
 
             with pytest.raises(RuntimeError):

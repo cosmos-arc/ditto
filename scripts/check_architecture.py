@@ -12,6 +12,13 @@ from pathlib import Path
 PROJECT_IMPORT_ROOTS = ("ditto_foundation", "ditto_datahub", "ditto_core", "ditto_port")
 REGISTRY_MIN_PARTS = 6
 MIN_ATTR_CHAIN_LENGTH = 2
+
+# Port 层允许直接依赖的 DataHub runtime 模块（质量隔离等跨层基础设施）
+PORT_ALLOWED_RUNTIME_IMPORTS = frozenset(
+    {
+        "ditto_datahub.runtime.quality.quarantine_store.QuarantineStore",
+    }
+)
 LEGACY_DATAHUB_ALIAS_ATTRS = frozenset(
     {"calendar", "universe", "index", "securities", "ingestion_log"}
 )
@@ -53,7 +60,8 @@ LEGACY_FIELD_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
         "禁止使用 legacy 表名 security_mapping, 请改为 instrument_mapping",
     ),
     (
-        re.compile(r"\bsecurity\b"),
+        # 排除 usedforsecurity=False (Python 标准库参数)
+        re.compile(r"\bsecurity\b(?!.*usedforsecurity)"),
         "ARCH541",
         "禁止使用 legacy 表名/语义 security, 请改为 instrument",
     ),
@@ -322,6 +330,11 @@ class ArchitectureChecker:
                 "ditto_datahub.runtime",
             )
         ):
+            return []
+        # 检查是否在允许列表中（如 QuarantineStore）
+        # 注意：ImportFrom 的 module 已是完整路径，如
+        # ditto_datahub.runtime.quality.quarantine_store.QuarantineStore
+        if ref.module in PORT_ALLOWED_RUNTIME_IMPORTS:
             return []
         return [
             Violation(

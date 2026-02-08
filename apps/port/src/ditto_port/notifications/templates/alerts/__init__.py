@@ -1,1 +1,1 @@
-"""Alert notification templates (业务特定模板)."""
+"""告警通知模板（业务特定模板）."""

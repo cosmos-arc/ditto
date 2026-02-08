@@ -1,4 +1,4 @@
-"""Notification channel senders."""
+"""通知渠道发送器."""
 
 from abc import ABC, abstractmethod
 

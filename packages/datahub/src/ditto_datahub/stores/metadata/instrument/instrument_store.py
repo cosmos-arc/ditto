@@ -8,7 +8,7 @@ with Point-in-Time support for identifier resolution.
 - Python 代码使用 instrument/source_ticker
 - 数据库表/列保持 instrument/source_ticker（避免数据迁移）
 
-Migration: 重构自 SecurityStore (2026-01-29)
+Migration: 重构自 SecurityStore → InstrumentStore (2026-01-29)
 """
 
 from __future__ import annotations
@@ -84,7 +84,7 @@ class InstrumentStore:
     - Python 代码使用 instrument/source_ticker
     - 数据库表/列保持 instrument/source_ticker（避免数据迁移）
 
-    Migration: 重构自 SecurityStore (2026-01-29)
+    Migration: 重构自 SecurityStore → InstrumentStore (2026-01-29)
     """
 
     def __init__(
@@ -214,6 +214,8 @@ class InstrumentStore:
         """
         Batch resolve source_tickers to instrument_ids.
 
+        Uses single SQL query for better performance (O(1) instead of O(n)).
+
         Args:
             source_tickers: List of source codes.
             source: Data source identifier.
@@ -231,11 +233,31 @@ class InstrumentStore:
             input_count=len(source_tickers),
         )
 
-        result: dict[str, int] = {}
-        for code in source_tickers:
-            instrument_id = self.resolve_instrument_id(code, source, asof)
-            if instrument_id:
-                result[code] = instrument_id
+        if not source_tickers:
+            return {}
+
+        # 构建参数化 IN 子句
+        in_clause, params = _build_in_clause("source_ticker", source_tickers)
+        sql = f"""
+            SELECT source_ticker, instrument_id
+            FROM instrument_mapping
+            WHERE source = ? AND {in_clause}
+        """  # noqa: S608 - in_clause 通过 _build_in_clause 安全构建
+        query_params = [source, *params]
+
+        if asof:
+            sql += (
+                " AND effective_from <= ? "
+                "AND (effective_to IS NULL OR effective_to > ?)"
+            )
+            query_params.extend([asof, asof])
+        else:
+            sql += " AND effective_to IS NULL"
+
+        rows = self._client.fetchall(sql, query_params)
+        result = {
+            cast(str, r["source_ticker"]): cast(int, r["instrument_id"]) for r in rows
+        }
 
         logger.info(
             "Batch Instrument ID resolution completed",
@@ -282,7 +304,7 @@ class InstrumentStore:
         Reverse lookup: instrument_id to source_ticker.
 
         Args:
-            instrument_id: Security ID.
+            instrument_id: Instrument ID.
             source: Data source identifier.
             asof: Point-in-time date.
 
@@ -315,7 +337,7 @@ class InstrumentStore:
         Get instrument by instrument_id.
 
         Args:
-            instrument_id: Security ID.
+            instrument_id: Instrument ID.
 
         Returns:
             Dictionary with instrument data or None.
@@ -442,7 +464,7 @@ class InstrumentStore:
         Get symbol by instrument_id.
 
         Args:
-            instrument_id: Security ID.
+            instrument_id: Instrument ID.
 
         Returns:
             Symbol or None if not found.

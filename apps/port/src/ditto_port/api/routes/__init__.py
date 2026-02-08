@@ -1,4 +1,4 @@
-"""API routes package."""
+"""API 路由包."""
 
 from ditto_port.api.routes import ingestion, market, metadata, portfolio
 

@@ -1,4 +1,4 @@
-"""Metadata API routes."""
+"""元数据 API 路由."""
 
 from fastapi import APIRouter
 

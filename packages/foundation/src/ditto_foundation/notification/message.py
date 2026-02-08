@@ -1,4 +1,4 @@
-"""Notification message types."""
+"""通知消息类型."""
 
 from dataclasses import dataclass
 from datetime import datetime

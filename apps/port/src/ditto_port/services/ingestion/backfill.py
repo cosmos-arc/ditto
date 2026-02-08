@@ -1,4 +1,4 @@
-"""Backfill manager for historical data backfill operations."""
+"""历史数据回填管理器."""
 
 from collections import defaultdict
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed

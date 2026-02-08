@@ -1,4 +1,4 @@
-"""Notification channel senders."""
+"""通知渠道发送器."""
 
 from ditto_foundation.notification.channels.email import EmailSender
 from ditto_foundation.notification.channels.telegram import TelegramSender

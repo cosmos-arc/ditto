@@ -1,4 +1,4 @@
-"""DQ batch check tasks for L3 statistical anomaly detection."""
+"""L3 统计异常检测的 DQ 批量检查任务."""
 
 from typing import Any, Literal
 

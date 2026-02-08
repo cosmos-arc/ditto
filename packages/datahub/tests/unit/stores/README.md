@@ -10,7 +10,7 @@ Stores 单元测试覆盖存储抽象层的核心功能。
 | `test_bars_store.py` | 行情 Store |
 | `test_calendar_store.py` | 交易日历 Store |
 | `test_index_weight_store.py` | 指数权重 Store |
-| `test_security_store.py` | 证券 Store |
+| `test_security_store_unit.py` | Instrument Store |
 | `test_sqlite_client.py` | SQLite 客户端 |
 | `test_stock_status_store.py` | 股票状态 Store |
 | `test_universe_store.py` | 股票池 Store |
@@ -73,19 +73,19 @@ Stores 单元测试覆盖存储抽象层的核心功能。
 3. 查询历史权重
 4. 查询特定日期权重
 
-### 证券 Store（test_security_store.py）
+### Instrument Store（test_security_store_unit.py）
 
 **测试内容**：
-- 证券信息写入
-- 证券信息读取
-- 证券信息更新
-- 证券信息查询
+- Instrument 信息写入
+- Instrument 信息读取
+- Instrument 信息更新
+- Instrument 信息查询
 
 **测试场景**：
-1. 写入证券信息
-2. 读取证券信息
-3. 更新证券信息
-4. 按类型查询证券
+1. 写入 Instrument 信息
+2. 读取 Instrument 信息
+3. 更新 Instrument 信息
+4. 按类型查询 Instrument
 
 ### SQLite 客户端（test_sqlite_client.py）
 
@@ -152,8 +152,8 @@ pixi run -e dev pytest packages/datahub/tests/unit/stores/test_calendar_store.py
 # 指数权重
 pixi run -e dev pytest packages/datahub/tests/unit/stores/test_index_weight_store.py -v
 
-# 证券
-pixi run -e dev pytest packages/datahub/tests/unit/stores/test_security_store.py -v
+# Instrument
+pixi run -e dev pytest packages/datahub/tests/unit/stores/test_security_store_unit.py -v
 
 # SQLite 客户端
 pixi run -e dev pytest packages/datahub/tests/unit/stores/test_sqlite_client.py -v

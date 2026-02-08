@@ -1,4 +1,4 @@
-"""Metrics module."""
+"""指标模块."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Market data API routes."""
+"""行情数据 API 路由."""
 
 from fastapi import APIRouter
 

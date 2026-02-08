@@ -1,4 +1,4 @@
-"""Template engine for notification rendering."""
+"""通知渲染模板引擎."""
 
 from pathlib import Path
 from typing import Any
