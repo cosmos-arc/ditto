@@ -171,7 +171,7 @@ class SQLitePool:
             return
 
         conn = self.get_connection()
-        if self._has_legacy_identifier_schema(conn):
+        if self._needs_schema_rebuild(conn):
             self._reset_all_user_tables(conn)
         conn.executescript(schema)
         conn.commit()
@@ -183,25 +183,46 @@ class SQLitePool:
         )
 
     @staticmethod
-    def _has_legacy_identifier_schema(conn: sqlite3.Connection) -> bool:
+    def _needs_schema_rebuild(conn: sqlite3.Connection) -> bool:
         """
-        Detect legacy schema that still uses sid/src_code identifiers.
+        Detect schema shape mismatch and rebuild from canonical schema.
 
-        Legacy marker:
-        - `security` table has `sid` column
-        - and does not have `instrument_id` column
+        v5 does not keep compatibility layers. If existing tables do not satisfy
+        required identifier columns, reset all user tables and re-initialize.
         """
-        row = conn.execute(
+        security_row = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='security'"
         ).fetchone()
-        if row is None:
+        if security_row is None:
             return False
 
-        columns = {
+        security_columns = {
             cast(str, item[1])
             for item in conn.execute("PRAGMA table_info(security)").fetchall()
         }
-        return "sid" in columns and "instrument_id" not in columns
+        required_security_columns = {
+            "instrument_id",
+            "symbol",
+            "asset_class",
+            "exchange",
+        }
+        if not required_security_columns.issubset(security_columns):
+            return True
+
+        mapping_table_query = """
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name='security_mapping'
+        """
+        mapping_row = conn.execute(mapping_table_query).fetchone()
+        if mapping_row is None:
+            return False
+
+        mapping_columns = {
+            cast(str, item[1])
+            for item in conn.execute("PRAGMA table_info(security_mapping)").fetchall()
+        }
+        required_mapping_columns = {"instrument_id", "source", "source_ticker"}
+        return not required_mapping_columns.issubset(mapping_columns)
 
     def _reset_all_user_tables(self, conn: sqlite3.Connection) -> None:
         """

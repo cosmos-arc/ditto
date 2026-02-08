@@ -128,24 +128,8 @@ class SqlEngine:
             if not parquet_files:
                 continue
 
-            view_relation = self._build_view_relation(parquet_path)
-            view_relation.create_view(dataset, replace=True)
-
-    def _build_view_relation(self, parquet_path: Path) -> duckdb.DuckDBPyRelation:
-        """Build normalized DuckDB relation for one parquet dataset path."""
-        parquet_glob = str(parquet_path / "*.parquet")
-        relation = self.con.from_parquet(parquet_glob)
-        columns = set(relation.columns)
-
-        projections: list[str] = ["*"]
-        if "instrument_id" not in columns and "sid" in columns:
-            projections.append("sid AS instrument_id")
-        if "source_ticker" not in columns and "src_code" in columns:
-            projections.append("src_code AS source_ticker")
-
-        if len(projections) > 1:
-            return relation.project(", ".join(projections))
-        return relation
+            parquet_glob = str(parquet_path / "*.parquet")
+            self.con.from_parquet(parquet_glob).create_view(dataset, replace=True)
 
     def _register_macros(self) -> None:
         """Register adjustment macros."""

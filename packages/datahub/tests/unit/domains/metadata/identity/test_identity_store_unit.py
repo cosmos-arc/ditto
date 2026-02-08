@@ -147,8 +147,8 @@ def test_identity_store_get_source_ticker_historical(store: IdentityStore) -> No
     )
 
     # 查询 2021 年的 source_ticker
-    src_code_2021 = store.get_source_ticker(1, "tushare", "2021-06-01")
-    assert src_code_2021 == "000001.SZ"
+    source_ticker_2021 = store.get_source_ticker(1, "tushare", "2021-06-01")
+    assert source_ticker_2021 == "000001.SZ"
 
 
 def test_identity_store_get_source_ticker_not_found(store: IdentityStore) -> None:
@@ -205,16 +205,20 @@ def test_identity_store_pit_query_with_effective_to(store: IdentityStore) -> Non
     )
 
     # 查询 2021 年（第一条记录有效）
-    sid_2021 = store.resolve_instrument_id("000002.SZ", "tushare", "2021-06-01")
-    assert sid_2021 == 1
+    instrument_id_2021 = store.resolve_instrument_id(
+        "000002.SZ", "tushare", "2021-06-01"
+    )
+    assert instrument_id_2021 == 1
 
     # 查询 2023 年（第二条记录有效）
-    sid_2023 = store.resolve_instrument_id("000002.SZ", "tushare", "2023-06-01")
-    assert sid_2023 == 2
+    instrument_id_2023 = store.resolve_instrument_id(
+        "000002.SZ", "tushare", "2023-06-01"
+    )
+    assert instrument_id_2023 == 2
 
     # 查询当前（应该是第二条记录）
-    sid_current = store.resolve_instrument_id("000002.SZ", "tushare", None)
-    assert sid_current == 2
+    instrument_id_current = store.resolve_instrument_id("000002.SZ", "tushare", None)
+    assert instrument_id_current == 2
 
 
 def test_identity_store_different_sources(store: IdentityStore) -> None:

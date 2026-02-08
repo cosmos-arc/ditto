@@ -10,7 +10,7 @@
 
 ## 核心功能
 
-提供统一的数据访问入口，支持 DuckDB (分析型) 和 SQLite (事务型) 双存储，实现 SID 标识体系和 PIT 语义保障。
+提供统一的数据访问入口，支持 DuckDB (分析型) 和 SQLite (事务型) 双存储，实现 instrument_id 标识体系和 PIT 语义保障。
 
 ## 二、架构定位
 
@@ -47,7 +47,7 @@ src/ditto_datahub/
 │   ├── security.py         # 证券信息访问
 │   └── ...
 ├── runtime/           # 运行时支持
-│   ├── sid_allocator.py     # SID分配器
+│   ├── instrument_id_allocator.py  # Instrument ID 分配器
 │   ├── freeze_manager.py    # 数据版本管理
 │   └── sql_engine.py        # SQL分析引擎
 ├── sources/          # 外部数据源
@@ -74,11 +74,11 @@ src/ditto_datahub/
 ### accessors/ - 数据访问层
 - `BarsAccessor`: K线数据访问（含复权、PIT 语义）
 - `CalendarAccessor`: 交易日历访问
-- `SecuritiesAccessor`: 证券信息访问（SID 解析）
+- `SecuritiesAccessor`: 证券信息访问（instrument_id 解析）
 - `IngestionLogAccessor`: 摄取日志访问
 
 ### runtime/ - 运行时支持
-- `SidAllocator`: 内部唯一 ID 分配
+- `InstrumentIdAllocator`: 内部唯一 ID 分配
 - `FileLockManager`: 跨进程文件锁
 - `FreezeManager`: 轻量级数据版本管理 (SHA-256 checksum)
 - `SqlEngine`: DuckDB SQL 分析引擎
@@ -92,7 +92,7 @@ src/ditto_datahub/
 ## 五、注意事项
 
 1. **Point-in-Time 安全**: 所有因子数据必须包含 `knowledge_date`
-2. **SID 标识**: 使用内部 SID 而非外部代码
+2. **Instrument ID 标识**: 使用内部 instrument_id 而非外部代码
 3. **双存储职责**: DuckDB 用于分析/因子，SQLite 用于事务/配置
 4. **原子写入**: 使用 `atomic_write()` 确保写入完整性
 5. **DQ 检查**: 数据质量检查由应用层（Port）调用 `ditto-core.quality` 模块完成
@@ -105,7 +105,7 @@ src/ditto_datahub/
 ### 日志级别
 - **DEBUG**: 函数入参、中间结果、连接创建等详细信息
 - **INFO**: 正常业务流程（操作开始/完成、数据更新成功）
-- **WARNING**: 可恢复异常（SID 解析失败、数据源降级、DQ 规则失败）
+- **WARNING**: 可恢复异常（instrument_id 解析失败、数据源降级、DQ 规则失败）
 - **ERROR**: 错误但系统可继续（单个数据写入失败、事务回滚）
 
 ### 结构化日志字段
@@ -132,15 +132,17 @@ logger.info(
 from pathlib import Path
 from ditto_datahub import DataHub
 from ditto_datahub.stores import BarsStore, CalendarStore
-from ditto_datahub.runtime import SidAllocator
+from ditto_datahub.runtime import InstrumentIdAllocator
 
-# SID 分配
-allocator = SidAllocator(sqlite_pool)
-etf_sid = allocator.get_or_allocate_sid("510300.SH", "etf")
+# Instrument ID 分配
+allocator = InstrumentIdAllocator(sqlite_pool)
+etf_instrument_id = allocator.allocate("etf")
 
 # K线数据读取
 bars_store = BarsStore(data_root=Path("data"))
-df = bars_store.read("etf_daily", sids=[etf_sid], start_date="2024-01-01")
+df = bars_store.read(
+    "etf_daily", instrument_ids=[etf_instrument_id], start_date="2024-01-01"
+)
 
 # 数据质量检查（需使用 ditto-core.quality 模块）
 from ditto_core.quality import QualityEngine

@@ -18,9 +18,14 @@ def set_test_database_path(tmp_path: Path) -> Generator[None, None, None]:
 
     使用 DB_SQLITE_PATH 环境变量覆盖默认路径，使每个测试使用独立的临时数据库文件.
     """
+    original_environment = os.environ.get("ENVIRONMENT")
+
     # 确保 pytest 环境变量已设置（用于观察性系统）
     if "PYTEST_CURRENT_TEST" not in os.environ:
         os.environ["PYTEST_CURRENT_TEST"] = "test"
+
+    # 强制使用 testing 配置，避免读取开发目录中的历史数据
+    os.environ["ENVIRONMENT"] = "testing"
 
     # 设置测试专用的 SQLite 路径
     test_db_path = tmp_path / "meta" / "hub.sqlite"
@@ -33,6 +38,10 @@ def set_test_database_path(tmp_path: Path) -> Generator[None, None, None]:
 
     # 清理环境变量
     os.environ.pop("DB_SQLITE_PATH", None)
+    if original_environment is None:
+        os.environ.pop("ENVIRONMENT", None)
+    else:
+        os.environ["ENVIRONMENT"] = original_environment
 
 
 @pytest.fixture

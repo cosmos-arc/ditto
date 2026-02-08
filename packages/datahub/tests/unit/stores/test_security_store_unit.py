@@ -524,7 +524,7 @@ class TestSqlInjectionProtection:
         assert len(result) == 1
         assert result["instrument_id"][0] == 100000001
 
-    def test_get_instrument_id_symbol_map_with_many_sids(self) -> None:
+    def test_get_instrument_id_symbol_map_with_many_instrument_ids(self) -> None:
         """Test get_instrument_id_symbol_map with large list."""
         # Insert test data for 50 securities
         for i in range(50):
@@ -547,7 +547,7 @@ class TestSqlInjectionProtection:
             )
         self.client.commit()
 
-        # Query with 50 SIDs
+        # Query with 50 instrument_ids
         instrument_ids = list(range(100000001, 100000051))
         mapping = self.store.get_instrument_id_symbol_map(instrument_ids)
 
@@ -556,7 +556,7 @@ class TestSqlInjectionProtection:
         assert mapping[100000001] == "600000"
         assert mapping[100000050] == "600049"  # i=49 produces "600049"
 
-    def test_special_characters_in_src_code(self) -> None:
+    def test_special_characters_in_source_ticker(self) -> None:
         """Test special characters in source_ticker are handled safely."""
         self.client.execute(
             """INSERT INTO security

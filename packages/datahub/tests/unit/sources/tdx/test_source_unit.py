@@ -145,7 +145,7 @@ class TestFetchStockDailyBars:
         result = tdx_source.fetch_stock_daily_bars([], "20240101")
         assert result.is_empty()
 
-    def test_symbol_to_src_code_conversion(
+    def test_symbol_to_source_ticker_conversion(
         self,
         tdx_source: TdxSource,
         mock_instrument_store: MagicMock,
