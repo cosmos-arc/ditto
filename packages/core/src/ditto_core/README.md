@@ -154,10 +154,11 @@ from ditto_core.quality import QualityEngine
 from ditto_core.engine import RegimeEngine, FactorEngine
 from ditto_core.portfolio import PortfolioManager
 from ditto_datahub import DataHub
+from ditto_datahub.domains.market import MarketBarsQuery
 import polars as pl
 
 # 初始化
-hub = DataHub()
+hub: DataHub = container.get(DataHub)
 
 # === 数据质量检查 ===
 # L1/L2 检查（写入时）
@@ -167,8 +168,22 @@ if result.has_errors:
     print(f"DQ 检查失败: {result.error_count} 个错误")
 
 # L3 统计检查（批量监控）
-historical = hub.bars.get(start="2024-01-01", end="2024-01-31")
-current = hub.bars.get(start="2024-02-01", end="2024-02-01")
+historical = hub.market.query(
+    MarketBarsQuery(
+        market_wide=True,
+        asset_class="stock",
+        start="2024-01-01",
+        end="2024-01-31",
+    )
+)
+current = hub.market.query(
+    MarketBarsQuery(
+        market_wide=True,
+        asset_class="stock",
+        start="2024-02-01",
+        end="2024-02-01",
+    )
+)
 result = dq_engine.check_statistical(
     dataset="stock_daily",
     current=current,      # 注入当前数据

@@ -311,6 +311,7 @@ class Order:
 
 ```python
 from ditto_core.strategy import OrderExecutor
+from ditto_datahub.domains.market import MarketBarsQuery
 
 class SimpleOrderExecutor(OrderExecutor):
     """简单订单执行器"""
@@ -355,16 +356,25 @@ class SimpleOrderExecutor(OrderExecutor):
         trade_date: date
     ) -> float:
         """获取成交价格"""
-        bar = self.hub.bars.get_bar(order.symbol, trade_date)
+        instrument_id = self.hub.resolve_instrument_id(order.symbol)
+        bar_df = self.hub.market.query(
+            MarketBarsQuery(
+                instrument_ids=[instrument_id],
+                start=trade_date.isoformat(),
+                end=trade_date.isoformat(),
+            )
+        )
+        bar = bar_df.row(0, named=True)
+        close_price = float(bar["close"])
 
         if order.order_type == OrderType.MARKET:
             # 市价单：使用收盘价
-            return bar.close
+            return close_price
         elif order.order_type == OrderType.LIMIT:
             # 限价单：使用限价或收盘价
-            return min(order.price, bar.close) if order.action == OrderAction.BUY else max(order.price, bar.close)
+            return min(order.price, close_price) if order.action == OrderAction.BUY else max(order.price, close_price)
         else:
-            return bar.close
+            return close_price
 
     def _is_limit_price(
         self,
@@ -373,8 +383,16 @@ class SimpleOrderExecutor(OrderExecutor):
         trade_date: date
     ) -> bool:
         """检查是否涨跌停"""
-        bar = self.hub.bars.get_bar(symbol, trade_date)
-        return price == bar.high or price == bar.low
+        instrument_id = self.hub.resolve_instrument_id(symbol)
+        bar_df = self.hub.market.query(
+            MarketBarsQuery(
+                instrument_ids=[instrument_id],
+                start=trade_date.isoformat(),
+                end=trade_date.isoformat(),
+            )
+        )
+        bar = bar_df.row(0, named=True)
+        return price == float(bar["high"]) or price == float(bar["low"])
 
     def _calc_commission(self, fill: Fill) -> float:
         """计算佣金"""
@@ -413,7 +431,15 @@ class StrategyContext:
     def get_weight(self, symbol: str) -> float:
         """获取持仓权重"""
         quantity = self.get_position(symbol)
-        price = self.hub.bars.get_close(symbol, self.trade_date)
+        instrument_id = self.hub.resolve_instrument_id(symbol)
+        bar_df = self.hub.market.query(
+            MarketBarsQuery(
+                instrument_ids=[instrument_id],
+                start=self.trade_date.isoformat(),
+                end=self.trade_date.isoformat(),
+            )
+        )
+        price = float(bar_df["close"][0])
         position_value = quantity * price
         return position_value / self.portfolio_value
 ```
