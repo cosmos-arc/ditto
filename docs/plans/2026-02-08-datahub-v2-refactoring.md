@@ -91,29 +91,18 @@ pixi run -e dev ci
 
 `main..feature/v5-architecture-refactor` 关键提交：
 
-1. `73b83ac` refactor(datahub): 收口 market/metadata 统一 query-write 契约
-2. `a38cbd3` refactor(datahub): ingestion 写入链路统一走 Service
-3. `4539062` docs(plan): 梳理v5重构执行计划与当前进度
-4. `921da53` refactor(datahub): 统一 capital/fundamental Service 的 Query 契约
-5. `ebc5726` chore(architecture): 强化 v5 门禁并收口术语文档
-6. `7abaa6d` refactor(datahub): 全量收口 sid 命名到 instrument_id 语义
-7. `6ac323a` refactor(runtime): 去除sid字段兼容投影并统一instrument_id命名
-8. `6a42de1` refactor(datahub): 按v5架构收口instrument_id/source_ticker标识体系
-9. `538c222` refactor(datahub): 统一source_ticker与instrument_id摄取契约
-10. `86730de` refactor(architecture): 收口v5架构约束并修复关键链路
-11. `working tree` refactor(ingestion): Port ingest 全链路统一 market.write，并移除 DataHub/MarketService 旧写入兼容入口
-12. `working tree` feat(ingestion): 补齐 stock_status 到 T1 数据集矩阵与写入闭环
-13. `working tree` feat(ingestion): 补齐 Fundamental/Capital 数据集矩阵并打通 Port ingest 链路
-14. `working tree` test(runtime): 收口 cache TTL 抖动导致的 CI 偶发失败
-15. `working tree` feat(ingestion): 补齐 macro_indicators 在 Source-Service-Port 的摄取闭环
-16. `working tree` refactor(datahub): 去除 DataHub 历史兼容别名并统一 Port 访问入口（`metadata` / `ingestion_log_store`）
-17. `working tree` refactor(datahub): 统一 Features/Factors/Macro 查询契约为 `query()`
-18. `working tree` docs(readme): 同步 DataHub README 的 v5 示例接口（移除旧 accessor 写法）
+1. `03a5e74` refactor(datahub): 收口 DataHub 别名并统一 Port 与域服务查询契约
+2. `5c8f271` docs(readme): 同步 macro 摄取能力与重构进度
+3. `12e3134` feat(ingestion): 补齐 macro 指标摄取闭环并统一宏观服务契约
+4. `57fc6d3` feat(ingestion): 补齐 fundamental/capital 数据集矩阵与写入链路
+5. `81f4343` refactor(ingestion): 统一 write 入口并补齐 stock_status 矩阵
+6. `46094e3` docs(plan): 更新 v5 重构进度与门禁快照
+7. `86730de` refactor(architecture): 收口 v5 架构约束并修复关键链路
 
 统计（`main..HEAD`）：
 
-- 变更文件：`163`
-- 代码变更：`+4580 / -2748`
+- 变更文件：`191`
+- 代码变更：`+6338 / -3299`
 
 ### 4.2 门禁结果
 
