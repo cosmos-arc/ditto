@@ -283,6 +283,10 @@ class IngestionCoordinator:
             Dataset.MACRO_INDICATORS: lambda: self._source.fetch_macro_indicators(
                 trade_date
             ),
+            Dataset.FUTURES: lambda: self._source.fetch_futures(trade_date),
+            Dataset.CORPORATE_ACTIONS: lambda: self._source.fetch_corporate_actions(
+                trade_date
+            ),
         }
 
         if dataset_enum not in handlers:

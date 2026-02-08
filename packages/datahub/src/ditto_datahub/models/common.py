@@ -64,6 +64,10 @@ class Dataset(str, Enum):
     # Macro 域（宏观指标）
     MACRO_INDICATORS = "macro_indicators"
 
+    # Capital 域扩展
+    FUTURES = "futures"
+    CORPORATE_ACTIONS = "corporate_actions"
+
     @classmethod
     def is_basic_dataset(cls, dataset: str) -> bool:
         """判断是否为 basic 类数据集（不需要 trade_date）。"""

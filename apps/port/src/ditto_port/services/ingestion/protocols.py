@@ -73,3 +73,11 @@ class IngestionDataSource(Protocol):
     def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
         """Fetch macro indicators data."""
         ...
+
+    def fetch_futures(self, trade_date: str) -> pl.DataFrame:
+        """Fetch futures data."""
+        ...
+
+    def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
+        """Fetch corporate actions data."""
+        ...

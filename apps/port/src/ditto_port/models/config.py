@@ -47,6 +47,8 @@ class Dataset(str, Enum):
     MARGIN_TRADING = "margin_trading"
     PLEDGE_RATIO = "pledge_ratio"
     MACRO_INDICATORS = "macro_indicators"
+    FUTURES = "futures"
+    CORPORATE_ACTIONS = "corporate_actions"
 
 
 class TaskTier(str, Enum):
@@ -572,6 +574,24 @@ DATASET_REGISTRY: dict[Dataset, DatasetSpec] = {
         critical_fields=["indicator_code", "date", "value"],
         task_name="ingest_macro_indicators",
         priority=55,
+    ),
+    Dataset.FUTURES: create_t1_config(
+        dataset=Dataset.FUTURES,
+        description="期货数据",
+        typical_available_time=time(21, 0),
+        depends_on=[Dataset.CALENDAR],
+        critical_fields=["instrument_id", "trade_date", "knowledge_date"],
+        task_name="ingest_futures",
+        priority=60,
+    ),
+    Dataset.CORPORATE_ACTIONS: create_t1_config(
+        dataset=Dataset.CORPORATE_ACTIONS,
+        description="公司行为",
+        typical_available_time=time(20, 0),
+        depends_on=[Dataset.STOCK_BASIC],
+        critical_fields=["instrument_id", "action_type", "effective_date"],
+        task_name="ingest_corporate_actions",
+        priority=65,
     ),
 }
 

@@ -484,3 +484,37 @@ class DataSource(ABC):
 
         """
         pass
+
+    @abstractmethod
+    def fetch_futures(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch futures data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with futures SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch corporate actions data.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with corporate_actions SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass

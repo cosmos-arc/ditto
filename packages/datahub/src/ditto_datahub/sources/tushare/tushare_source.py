@@ -294,3 +294,21 @@ class TushareSource(DataSource):
     def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
         """Fetch macro indicators data."""
         return self._macro.fetch_macro_indicators(trade_date)
+
+    def fetch_futures(self, trade_date: str) -> pl.DataFrame:
+        """Fetch futures data."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_futures(
+            ts_code=None,
+            start_date=compact_date,
+            end_date=compact_date,
+        )
+
+    def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
+        """Fetch corporate actions data."""
+        compact_date = self._to_compact_date(trade_date)
+        return self._capital.fetch_corporate_actions(
+            ts_code=None,
+            start_date=compact_date,
+            end_date=compact_date,
+        )

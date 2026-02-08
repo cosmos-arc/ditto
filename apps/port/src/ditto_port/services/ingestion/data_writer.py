@@ -249,6 +249,18 @@ class IngestionDataWriter:
                 df,
                 year,
             ),
+            Dataset.FUTURES: lambda: self._write_capital(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+            ),
+            Dataset.CORPORATE_ACTIONS: lambda: self._write_fundamental(
+                dataset,
+                dataset_enum,
+                df,
+                year,
+            ),
             Dataset.CALENDAR: lambda: self._write_calendar(df, trade_date),
             Dataset.STOCK_BASIC: lambda: self._write_basic(df, trade_date, "stock"),
             Dataset.ETF_BASIC: lambda: self._write_basic(df, trade_date, "etf"),

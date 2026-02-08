@@ -91,30 +91,31 @@ pixi run -e dev ci
 
 `main..feature/v5-architecture-refactor` 关键提交：
 
-1. `03a5e74` refactor(datahub): 收口 DataHub 别名并统一 Port 与域服务查询契约
-2. `5c8f271` docs(readme): 同步 macro 摄取能力与重构进度
-3. `12e3134` feat(ingestion): 补齐 macro 指标摄取闭环并统一宏观服务契约
-4. `57fc6d3` feat(ingestion): 补齐 fundamental/capital 数据集矩阵与写入链路
-5. `81f4343` refactor(ingestion): 统一 write 入口并补齐 stock_status 矩阵
-6. `46094e3` docs(plan): 更新 v5 重构进度与门禁快照
+1. `eda06be` docs(plan): 更新 instrument 表命名收口与门禁快照
+2. `d3e262d` refactor(metadata): 收口 instrument 表命名并清理 legacy 语义
+3. `18a9f0b` docs(plan): 同步 metadata 命名收口与门禁进度
+4. `8ab106d` refactor(metadata): 统一 instrument 查询命名并增强门禁
+5. `20d49e0` docs(readme): 收口核心示例到 v5 查询接口
+6. `9260d15` test(architecture): 增强 legacy 别名门禁并收口 DataHub 文档
 7. `86730de` refactor(architecture): 收口 v5 架构约束并修复关键链路
-8. `9260d15` test(architecture): 增强 legacy 别名门禁并收口 DataHub 文档
-9. `20d49e0` docs(readme): 收口核心示例到 v5 查询接口
-10. `8ab106d` refactor(metadata): 统一 instrument 查询命名并增强门禁
-11. `18a9f0b` docs(plan): 同步 metadata 命名收口与门禁进度
-12. `d3e262d` refactor(metadata): 收口 instrument 表命名并清理 legacy 语义
+8. `46094e3` docs(plan): 更新 v5 重构进度与门禁快照
+9. `81f4343` refactor(ingestion): 统一 write 入口并补齐 stock_status 矩阵
+10. `57fc6d3` feat(ingestion): 补齐 fundamental/capital 数据集矩阵与写入链路
+11. `12e3134` feat(ingestion): 补齐 macro 指标摄取闭环并统一宏观服务契约
+12. `5c8f271` docs(readme): 同步 macro 摄取能力与重构进度
+13. `03a5e74` refactor(datahub): 收口 DataHub 别名并统一 Port 与域服务查询契约
 
 统计（`main..HEAD`）：
 
 - 变更文件：`200`
-- 代码变更：`+6807 / -3541`
+- 代码变更：`+6812 / -3541`
 
 ### 4.2 门禁结果
 
 最近一次 `pixi run -e dev ci`：
 
 - `2243 passed, 20 skipped`
-- coverage `92.62%`
+- coverage `92.63%`
 - `Architecture check passed`
 
 ---
@@ -146,19 +147,37 @@ pixi run -e dev ci
 23. Metadata 注册/解析接口进一步统一为 instrument 语义：`register_instrument`、`register_instruments_batch`、`resolve_or_create_instruments_batch`，Port ingestion 与测试调用已同步。
 24. 底层 SQLite 命名与约束完成收口：`security/security_mapping` 全量迁移为 `instrument/instrument_mapping`（schema、store、sql engine、dq 配置、测试全部同步）。
 25. 架构门禁新增 `ARCH540~ARCH541`：禁止旧表名/语义 `security_mapping`、`security` 回归。
-26. 本轮全量门禁已通过：`pixi run -e dev ci` => `2243 passed, 20 skipped`, coverage `92.62%`。
+26. 本轮全量门禁已通过：`pixi run -e dev ci` => `2243 passed, 20 skipped`, coverage `92.63%`。
 
 ---
 
 ## 6. 剩余差距与后续执行顺序
 
-当前执行清单已全部收口（A/B/C/D 全部 `✅`）。后续如进入下一轮迭代，可直接从新需求或新 ADR 开始，不再存在本计划范围内的遗留技术项。
+### 6.1 本计划范围内
+
+当前执行清单已全部收口（A/B/C/D 全部 `✅`）。
+
+### 6.2 全量架构落地（计划外）待收口项
+
+以下差距不属于本次 `datahub-v2-refactoring` 计划的原始范围，但属于 v5 全量架构目标的剩余工作：
+
+1. Core 目录结构仍为骨架状态：`engine/strategy/portfolio` 仅保留 `__init__.py` 与 README，尚未落地 `backtest/factor/risk/regime` 与策略/组合实现模块。
+2. Port API 分层未按 v5 目录示例落地：当前无 `apps/port/src/ditto_port/api/routes`，路由仍集中在 `main.py`。
+3. DataHub 模型层尚未拆分为 `models/market|trading|portfolio|strategy` 子结构，当前仍是 `models/common.py|ingestion.py|storage.py`。
+4. `futures`、`corporate_actions` 在 DataHub 域服务存在实现，但尚未进入统一 `Dataset enum + Port ingestion coordinator/data_writer` 主链路。
+5. 摄取质量与告警链路仍有待办（告警发送、quarantine 落库等）注释项，未形成闭环实现。
+
+### 6.3 建议执行顺序
+
+1. 先完成 Core/Port/DataHub 的目录与边界收口（结构性改造）。
+2. 再打通 `futures/corporate_actions` 到统一 ingestion 主链路（功能闭环）。
+3. 最后收口 DQ 告警与 quarantine（运维闭环），并补齐对应架构门禁。
 
 ---
 
 ## 7. 风险与注意事项
 
-1. 本地存在与任务无关修改：`.factory/settings.json`（提交时需持续排除）。
+1. 本地存在与任务无关修改：`.factory/settings.json`、`.tmp/`（提交时需持续排除）。
 2. `ci` 中 Prefect 停服日志有已知输出噪声（`ValueError: I/O operation on closed file`），当前不影响门禁结果。
 
 ---
