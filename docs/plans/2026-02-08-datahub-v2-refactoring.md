@@ -98,18 +98,19 @@ pixi run -e dev ci
 5. `81f4343` refactor(ingestion): 统一 write 入口并补齐 stock_status 矩阵
 6. `46094e3` docs(plan): 更新 v5 重构进度与门禁快照
 7. `86730de` refactor(architecture): 收口 v5 架构约束并修复关键链路
+8. `9260d15` test(architecture): 增强 legacy 别名门禁并收口 DataHub 文档
 
 统计（`main..HEAD`）：
 
-- 变更文件：`191`
-- 代码变更：`+6338 / -3299`
+- 变更文件：`192`
+- 代码变更：`+6468 / -3358`
 
 ### 4.2 门禁结果
 
 最近一次 `pixi run -e dev ci`：
 
-- `2237 passed, 20 skipped`
-- coverage `92.62%`
+- `2239 passed, 20 skipped`
+- coverage `92.61%`
 - `Architecture check passed`
 
 ---
@@ -132,7 +133,10 @@ pixi run -e dev ci
 14. DataHub/Port README 已完成与 Macro 迁移相关的关键信息同步（macro 存储结构、`query()/write()` 契约、Port 摄取矩阵）。
 15. DataHub Facade 已移除 `securities/calendar/universe/index/ingestion_log` 兼容别名，Port 业务代码统一改为 `hub.metadata` 与 `hub.ingestion_log_store` 正式入口。
 16. Features/Factors/Macro 服务契约已统一为 `query()`（去除 `get_indicators()/get_factors()` 旧命名），相关单测与调用示例同步更新。
-17. 本轮全量门禁已通过：`pixi run -e dev ci` => `2237 passed, 20 skipped`, coverage `92.62%`。
+17. 架构门禁新增 `ARCH520`：禁止 DataHub/Port 源码使用 `hub.calendar/hub.universe/hub.index/hub.securities/hub.ingestion_log` legacy 别名。
+18. DataHub 单测新增 Facade 暴露约束验证：仅允许 `metadata/market/ingestion_log_store` 等 v5 正式入口，禁止 legacy alias 回归。
+19. DataHub README 示例继续去兼容收口：统一展示容器注入 DataHub/QualityEngine 的用法，移除过时 `hub = DataHub()` 与 `hub.dq_checker` 路径。
+20. 本轮全量门禁已通过：`pixi run -e dev ci` => `2239 passed, 20 skipped`, coverage `92.61%`。
 
 ---
 
