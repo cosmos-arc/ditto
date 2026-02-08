@@ -137,6 +137,7 @@ pixi run -e dev ci
 11. `DataSource` 抽象与 `TushareSource` 委托已补齐跨域抓取入口，`CapitalTushareAdapter` 的财报抓取签名已支持全市场模式（`ts_code` 可选）。
 12. `cachebox` TTL 在并发 CI 环境下的抖动导致的偶发红灯已通过测试稳态策略收口，不影响主链路门禁通过。
 13. `macro_indicators` 已纳入 Port ingestion 矩阵：`Dataset enum / DATASET_REGISTRY / Coordinator fetch / DataWriter write / DataSource Protocol / TushareSource` 全链路完成；`MacroService` 已补齐统一 `query()/write()` 契约并通过回归。
+14. DataHub/Port README 已完成与 Macro 迁移相关的关键信息同步（macro 存储结构、`query()/write()` 契约、Port 摄取矩阵）。
 
 ---
 
@@ -144,8 +145,11 @@ pixi run -e dev ci
 
 ### P1（随后完成）
 
-1. **文档清理最终收口（B4）**
-继续修订 DataHub/Port 相关 README 中历史叙述，确保与 v5 最终实现一致。
+1. **Port API 分层最终收口（B2）**
+继续将 Port API 路径中的历史调用模式清理为统一服务入口，并完成对应契约回归用例补齐。
+
+2. **文档清理最终收口（B4）**
+在已更新 Macro 相关内容基础上，继续修订 DataHub/Port 其余历史叙述，确保 README 与 v5 最终实现一致。
 
 ---
 

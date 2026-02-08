@@ -237,7 +237,7 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
   - `indicator/`: 宏观指标子域
     - `indicator_store.py`: IndicatorStore（宏观数据存储，支持 PIT 查询）
     - `metadata_store.py`: IndicatorMetadataStore（宏观指标元数据）
-  - `macro_service.py`: MacroService（域级统一查询服务）
+  - `macro_service.py`: MacroService（域级统一 `query()/write()` 服务）
 
 **数据类型**（4 类）：
 - `economic`: 经济指标（GDP、CPI、PPI、PMI）
@@ -250,17 +250,37 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 - 支持 `knowledge_date` 字段记录数据发布时间
 - PIT 查询模式：`effective_from <= as_of_date AND (effective_to IS NULL OR effective_to > as_of_date)`
 
-**存储路径**：
-- 数据：`data_root/macro/indicators_narrow/YYYY.parquet`
+**存储结构**：
+- 指标值：SQLite 表 `macro_indicator_data`
+- 指标元数据：SQLite 表 `macro_indicators`
 
 **使用示例**：
 ```python
+from datetime import date
+
+import polars as pl
 from ditto_datahub import DataHub
 from ditto_datahub.domains.macro import MacroQuery
 
 hub = DataHub()
 
-# 查询宏观经济指标（支持 PIT）
+# 写入宏观指标（统一 write 契约）
+hub.macro.write(
+    pl.DataFrame(
+        {
+            "indicator_code": ["CPI_YOY"],
+            "indicator_name": ["CPI同比"],
+            "category": ["economic"],
+            "frequency": ["monthly"],
+            "need_pit": [True],
+            "date": [date(2024, 1, 1)],
+            "value": [2.5],
+            "knowledge_date": [date(2024, 1, 2)],
+        }
+    )
+)
+
+# 查询宏观经济指标（统一 query 契约，支持 PIT）
 query = MacroQuery(
     indicators=["CPI_YOY", "SHIBOR_1M"],
     start="2024-01-01",
@@ -268,7 +288,7 @@ query = MacroQuery(
     asof="2024-06-30",  # 只使用截至该日期已知的数据
     category="economic",
 )
-data = hub.macro.get_indicators(query)
+data = hub.macro.query(query)
 ```
 
 #### Features 域
