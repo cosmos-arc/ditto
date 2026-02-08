@@ -100,17 +100,18 @@ pixi run -e dev ci
 7. `86730de` refactor(architecture): 收口 v5 架构约束并修复关键链路
 8. `9260d15` test(architecture): 增强 legacy 别名门禁并收口 DataHub 文档
 9. `20d49e0` docs(readme): 收口核心示例到 v5 查询接口
+10. `8ab106d` refactor(metadata): 统一 instrument 查询命名并增强门禁
 
 统计（`main..HEAD`）：
 
 - 变更文件：`197`
-- 代码变更：`+6552 / -3382`
+- 代码变更：`+6627 / -3405`
 
 ### 4.2 门禁结果
 
 最近一次 `pixi run -e dev ci`：
 
-- `2239 passed, 20 skipped`
+- `2241 passed, 20 skipped`
 - coverage `92.63%`
 - `Architecture check passed`
 
@@ -138,7 +139,9 @@ pixi run -e dev ci
 18. DataHub 单测新增 Facade 暴露约束验证：仅允许 `metadata/market/ingestion_log_store` 等 v5 正式入口，禁止 legacy alias 回归。
 19. DataHub README 示例继续去兼容收口：统一展示容器注入 DataHub/QualityEngine 的用法，移除过时 `hub = DataHub()` 与 `hub.dq_checker` 路径。
 20. Core/DataHub README 示例进一步收口：移除 `hub.bars.*` / `sids` 旧写法，统一为 `MarketBarsQuery + hub.market.query(...)`。
-21. 本轮全量门禁已通过：`pixi run -e dev ci` => `2239 passed, 20 skipped`, coverage `92.63%`。
+21. Metadata 命名语义进一步收口：`MetadataQuery.dataset` 统一为 `instrument/industry`，便捷 API 统一为 `get_instruments`，移除 `securities/industries/get_securities` 旧命名。
+22. 架构门禁新增 `ARCH530~ARCH533`：禁止 `dataset='securities'`、`dataset='industries'`、`SecuritiesQuerySpec`、`get_securities()` 回归。
+23. 本轮全量门禁已通过：`pixi run -e dev ci` => `2241 passed, 20 skipped`, coverage `92.63%`。
 
 ---
 
