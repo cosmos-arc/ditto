@@ -31,11 +31,11 @@ class _FactorParquetStore(ParquetStore):
         For PIT data, the key includes effective_from to allow
         multiple versions of the same factor value.
         """
-        return ["sid", "trade_date", "factor_id", "effective_from"]
+        return ["instrument_id", "trade_date", "factor_id", "effective_from"]
 
     def _get_sort_columns(self) -> list[str]:
         """Return sort columns."""
-        return ["sid", "trade_date", "factor_id", "effective_from"]
+        return ["instrument_id", "trade_date", "factor_id", "effective_from"]
 
     def _get_date_column(self) -> str:
         """Return the date column name (default trade_date)."""
@@ -167,7 +167,7 @@ class FactorStore:
             ...
 
     Schema:
-        sid: Security ID
+        instrument_id: Security ID
         trade_date: Trading date
         factor_id: Factor identifier (e.g., 'factor_momentum_12m')
         factor_class: Class category (fundamental/technical/macro/statistical)
@@ -201,7 +201,7 @@ class FactorStore:
 
         Args:
             df: DataFrame with columns:
-                - sid (int)
+                - instrument_id (int)
                 - trade_date (date or str YYYY-MM-DD)
                 - factor_id (str)
                 - factor_class (str)
@@ -228,7 +228,7 @@ class FactorStore:
 
         # Validate required columns
         required = [
-            "sid",
+            "instrument_id",
             "trade_date",
             "factor_id",
             "factor_class",
@@ -257,7 +257,7 @@ class FactorStore:
     @traced("data.factor_query")
     def read(
         self,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
         as_of_date: str | None = None,
@@ -267,7 +267,7 @@ class FactorStore:
         Query factor data (PIT-safe).
 
         Args:
-            sids: Filter by security IDs (None = all).
+            instrument_ids: Filter by security IDs (None = all).
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
             as_of_date: PIT query date - only return data effective as of this date.
@@ -279,7 +279,7 @@ class FactorStore:
         """
         logger.debug(
             "Querying factor data",
-            sids=sids,
+            instrument_ids=instrument_ids,
             start_date=start_date,
             end_date=end_date,
             as_of_date=as_of_date,
@@ -288,7 +288,10 @@ class FactorStore:
 
         # Use custom ParquetStore to get raw data
         df = self._store.read(
-            self._dataset, sids=sids, start_date=start_date, end_date=end_date
+            self._dataset,
+            instrument_ids=instrument_ids,
+            start_date=start_date,
+            end_date=end_date,
         )
 
         if df.is_empty():
@@ -311,16 +314,16 @@ class FactorStore:
                     | (pl.col("effective_to") > pl.lit(as_of_dt))
                 )
             )
-            # For each (sid, trade_date, factor_id), keep only the latest version
-            # (the one with the most recent effective_from)
+            # Keep only the latest version for each
+            # (instrument_id, trade_date, factor_id).
             df = df.sort(
-                ["sid", "trade_date", "factor_id", "effective_from"],
+                ["instrument_id", "trade_date", "factor_id", "effective_from"],
                 descending=[False, False, False, True],
             ).unique(
-                subset=["sid", "trade_date", "factor_id"],
+                subset=["instrument_id", "trade_date", "factor_id"],
                 keep="first",
             )
-            df = df.sort(["sid", "trade_date", "factor_id"])
+            df = df.sort(["instrument_id", "trade_date", "factor_id"])
 
         return df
 
@@ -358,7 +361,7 @@ class FactorStore:
 
     def count(
         self,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> int:
@@ -366,7 +369,7 @@ class FactorStore:
         Count records in the dataset.
 
         Args:
-            sids: Filter by security IDs.
+            instrument_ids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -375,7 +378,10 @@ class FactorStore:
 
         """
         return self._store.count(
-            self._dataset, sids=sids, start_date=start_date, end_date=end_date
+            self._dataset,
+            instrument_ids=instrument_ids,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     def get_date_range(self) -> tuple[str | None, str | None]:

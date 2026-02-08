@@ -160,7 +160,7 @@ class DataCache[T]:
 
         Args:
         ----
-            pattern: fnmatch 风格模式（如 "sid:*" 或 "trading_days:*"）
+            pattern: fnmatch 风格模式（如 "instrument_id:*" 或 "trading_days:*"）
 
         Returns:
         -------

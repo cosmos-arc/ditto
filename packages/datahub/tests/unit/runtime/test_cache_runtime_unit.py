@@ -65,17 +65,17 @@ class TestDataCache:
 
     def test_invalidate_pattern(self) -> None:
         """Test invalidate_pattern removes matching keys."""
-        self.cache.set("sid:600000.SH", "value1")
-        self.cache.set("sid:600000.SH:2024-01", "value2")
+        self.cache.set("instrument_id:600000.SH", "value1")
+        self.cache.set("instrument_id:600000.SH:2024-01", "value2")
         self.cache.set("trading_days:2024-01", "value3")
         self.cache.set("other:key", "value4")
 
-        # [REVIEW] sid: 开头的键
-        count = self.cache.invalidate_pattern("sid:*")
+        # [REVIEW] instrument_id: 开头的键
+        count = self.cache.invalidate_pattern("instrument_id:*")
 
         assert count == 2
-        assert self.cache.get("sid:600000.SH") is None
-        assert self.cache.get("sid:600000.SH:2024-01") is None
+        assert self.cache.get("instrument_id:600000.SH") is None
+        assert self.cache.get("instrument_id:600000.SH:2024-01") is None
         assert self.cache.get("trading_days:2024-01") == "value3"
         assert self.cache.get("other:key") == "value4"
 
@@ -188,12 +188,12 @@ class TestDataCache:
         """Test cache follows recommended naming convention."""
         # [REVIEW]
         self.cache.set("trading_days:2024-01", ["2024-01-01", "2024-01-02"])
-        self.cache.set("sid:current:tushare:600000.SH", "600000.SH")
-        self.cache.set("sid:pit:tushare:600000.SH:2024-06", "600000.SH")
+        self.cache.set("instrument_id:current:tushare:600000.SH", "600000.SH")
+        self.cache.set("instrument_id:pit:tushare:600000.SH:2024-06", "600000.SH")
 
         assert self.cache.get("trading_days:2024-01") is not None
-        assert self.cache.get("sid:current:tushare:600000.SH") is not None
-        assert self.cache.get("sid:pit:tushare:600000.SH:2024-06") is not None
+        assert self.cache.get("instrument_id:current:tushare:600000.SH") is not None
+        assert self.cache.get("instrument_id:pit:tushare:600000.SH:2024-06") is not None
 
     def test_set_with_ttl_none_uses_default_ttl(self) -> None:
         """Test set with ttl=None uses default TTL."""
@@ -312,11 +312,12 @@ class TestDataCacheWithMetrics:
 
     def test_invalidate_pattern_with_metrics(self) -> None:
         """Test invalidate_pattern with metrics enabled records metrics."""
-        self.cache.set("sid:600000.SH", "value1")
-        self.cache.set("sid:600000.SH:2024-01", "value2")
+        self.cache.set("instrument_id:600000.SH", "value1")
+        self.cache.set("instrument_id:600000.SH:2024-01", "value2")
 
-        # [REVIEW] sid: 开头的键 - 这会触发 line 168 的 M.cache_invalidations.add(1)
-        count = self.cache.invalidate_pattern("sid:*")
+        # [REVIEW] instrument_id: 开头的键会触发
+        # line 168 的 M.cache_invalidations.add(1)
+        count = self.cache.invalidate_pattern("instrument_id:*")
 
         assert count == 2
         stats = self.cache.get_stats()

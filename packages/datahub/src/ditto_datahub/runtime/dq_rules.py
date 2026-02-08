@@ -29,7 +29,7 @@ class DQRule:
 # ============ 检查函数 ============
 def check_pk_unique(df: pl.DataFrame, params: dict[str, Any]) -> tuple[bool, int, str]:
     """Check primary key uniqueness."""
-    keys = params.get("keys", ["sid", "trade_date"])
+    keys = params.get("keys", ["instrument_id", "trade_date"])
     total_rows = len(df)
     unique_rows = df.select(keys).n_unique()
 
@@ -53,24 +53,26 @@ def check_pk_unique(df: pl.DataFrame, params: dict[str, Any]) -> tuple[bool, int
     )
 
 
-def check_sid_not_null(
+def check_instrument_id_not_null(
     df: pl.DataFrame, params: dict[str, Any]
 ) -> tuple[bool, int, str]:
-    """Check sid is not null."""
-    null_count = df.filter(pl.col("sid").is_null()).height
+    """Check instrument_id is not null."""
+    null_count = df.filter(pl.col("instrument_id").is_null()).height
 
     if null_count > 0:
         logger.warning(
             "dq_rule_null_sid",
             event="dq_check",
-            rule="sid_not_null",
+            rule="instrument_id_not_null",
             null_count=null_count,
         )
 
     return (
         null_count == 0,
         null_count,
-        f"Found {null_count} null sid" if null_count > 0 else "All sid not null",
+        f"Found {null_count} null instrument_id"
+        if null_count > 0
+        else "All instrument_id not null",
     )
 
 
@@ -204,9 +206,11 @@ DQ_RULES: dict[str, list[DQRule]] = {
             "primary_key_unique",
             DQSeverity.ERROR,
             check_pk_unique,
-            {"keys": ["sid", "trade_date"]},
+            {"keys": ["instrument_id", "trade_date"]},
         ),
-        DQRule("sid_not_null", DQSeverity.ERROR, check_sid_not_null),
+        DQRule(
+            "instrument_id_not_null", DQSeverity.ERROR, check_instrument_id_not_null
+        ),
         DQRule("ohlc_positive", DQSeverity.ERROR, check_ohlc_positive),
         DQRule("ohlc_relationship", DQSeverity.ERROR, check_ohlc_relationship),
         DQRule(
@@ -220,9 +224,11 @@ DQ_RULES: dict[str, list[DQRule]] = {
             "primary_key_unique",
             DQSeverity.ERROR,
             check_pk_unique,
-            {"keys": ["sid", "trade_date"]},
+            {"keys": ["instrument_id", "trade_date"]},
         ),
-        DQRule("sid_not_null", DQSeverity.ERROR, check_sid_not_null),
+        DQRule(
+            "instrument_id_not_null", DQSeverity.ERROR, check_instrument_id_not_null
+        ),
         DQRule("ohlc_positive", DQSeverity.ERROR, check_ohlc_positive),
     ],
     "index_daily": [
@@ -230,9 +236,11 @@ DQ_RULES: dict[str, list[DQRule]] = {
             "primary_key_unique",
             DQSeverity.ERROR,
             check_pk_unique,
-            {"keys": ["sid", "trade_date"]},
+            {"keys": ["instrument_id", "trade_date"]},
         ),
-        DQRule("sid_not_null", DQSeverity.ERROR, check_sid_not_null),
+        DQRule(
+            "instrument_id_not_null", DQSeverity.ERROR, check_instrument_id_not_null
+        ),
     ],
     "index_weight": [
         DQRule(
@@ -248,7 +256,7 @@ DQ_RULES: dict[str, list[DQRule]] = {
             "primary_key_unique",
             DQSeverity.ERROR,
             check_pk_unique,
-            {"keys": ["sid", "trade_date"]},
+            {"keys": ["instrument_id", "trade_date"]},
         ),
         DQRule(
             "has_knowledge_date",

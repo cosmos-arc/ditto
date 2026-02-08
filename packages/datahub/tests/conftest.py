@@ -135,10 +135,10 @@ def sample_adj_factor_df() -> pl.DataFrame:
     Create sample adjustment factor data for testing.
 
     Returns:
-        DataFrame with sid, trade_date, and adj_factor columns.
+        DataFrame with instrument_id, trade_date, and adj_factor columns.
     """
     data: dict[str, list[Any]] = {
-        "sid": [1000001, 1000001, 1000001, 1000002],
+        "instrument_id": [1000001, 1000001, 1000001, 1000002],
         "trade_date": [
             date(2024, 1, 2),
             date(2024, 1, 3),
@@ -159,7 +159,7 @@ def sample_stock_status_df() -> pl.DataFrame:
         DataFrame with stock status columns including is_suspended, is_st, etc.
     """
     data: dict[str, list[Any]] = {
-        "sid": [100000001, 100000001, 100000001, 100000002],
+        "instrument_id": [100000001, 100000001, 100000001, 100000002],
         "trade_date": [
             date(2024, 1, 2),
             date(2024, 1, 3),
@@ -172,7 +172,7 @@ def sample_stock_status_df() -> pl.DataFrame:
         "st_type": [None, None, None, "ST"],
         "list_status": ["L", "L", "L", "L"],
         "source": ["tushare", "tushare", "tushare", "tushare"],
-        "src_code": ["000001.SZ", "000001.SZ", "000001.SZ", "000002.SZ"],
+        "source_ticker": ["000001.SZ", "000001.SZ", "000001.SZ", "000002.SZ"],
     }
     return pl.DataFrame(data)
 
@@ -183,10 +183,11 @@ def sample_stock_daily_df() -> pl.DataFrame:
     Create sample stock daily OHLC data for testing.
 
     Returns:
-        DataFrame with sid, trade_date, open, high, low, close, volume, amount.
+        DataFrame with instrument_id, trade_date, open, high, low, close,
+        volume, amount.
     """
     data: dict[str, list[Any]] = {
-        "sid": [1_000_001, 1_000_001, 1_000_001, 1_000_002],
+        "instrument_id": [1_000_001, 1_000_001, 1_000_001, 1_000_002],
         "trade_date": [
             date(2024, 1, 1),
             date(2024, 1, 2),
@@ -230,10 +231,11 @@ def sample_etf_daily_df() -> pl.DataFrame:
     Create sample ETF daily OHLC data for testing.
 
     Returns:
-        DataFrame with sid, trade_date, open, high, low, close, volume, amount.
+        DataFrame with instrument_id, trade_date, open, high, low, close,
+        volume, amount.
     """
     data: dict[str, list[Any]] = {
-        "sid": [2_000_001, 2_000_001, 2_000_001],
+        "instrument_id": [2_000_001, 2_000_001, 2_000_001],
         "trade_date": [
             date(2024, 1, 1),
             date(2024, 1, 2),

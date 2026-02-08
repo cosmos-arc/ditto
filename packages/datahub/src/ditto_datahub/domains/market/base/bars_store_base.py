@@ -76,7 +76,7 @@ class MarketBarsStoreBase:
 
     def read(
         self,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> pl.DataFrame:
@@ -84,7 +84,7 @@ class MarketBarsStoreBase:
         Read bars data from the store.
 
         Args:
-            sids: Filter by security IDs.
+            instrument_ids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -93,7 +93,10 @@ class MarketBarsStoreBase:
 
         """
         return self._store.read(
-            self._dataset, sids=sids, start_date=start_date, end_date=end_date
+            self._dataset,
+            instrument_ids=instrument_ids,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     def write(
@@ -118,7 +121,7 @@ class MarketBarsStoreBase:
 
     def delete(
         self,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> int:
@@ -126,7 +129,7 @@ class MarketBarsStoreBase:
         Delete bars data from the store.
 
         Args:
-            sids: Filter by security IDs.
+            instrument_ids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -135,7 +138,10 @@ class MarketBarsStoreBase:
 
         """
         return self._store.delete(
-            self._dataset, sids=sids, start_date=start_date, end_date=end_date
+            self._dataset,
+            instrument_ids=instrument_ids,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     # ============ Metadata operations ============
@@ -172,7 +178,7 @@ class MarketBarsStoreBase:
 
     def count(
         self,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> int:
@@ -180,7 +186,7 @@ class MarketBarsStoreBase:
         Count records in the dataset.
 
         Args:
-            sids: Filter by security IDs.
+            instrument_ids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -189,7 +195,10 @@ class MarketBarsStoreBase:
 
         """
         return self._store.count(
-            self._dataset, sids=sids, start_date=start_date, end_date=end_date
+            self._dataset,
+            instrument_ids=instrument_ids,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     def get_date_range(self) -> tuple[str | None, str | None]:

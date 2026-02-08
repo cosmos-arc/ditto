@@ -16,8 +16,8 @@ def historical_data():
     for d in dates:
         rows.extend(
             [
-                {"sid": 1, "trade_date": d, "close": 100.0, "volume": 1000},
-                {"sid": 2, "trade_date": d, "close": 200.0, "volume": 2000},
+                {"instrument_id": 1, "trade_date": d, "close": 100.0, "volume": 1000},
+                {"instrument_id": 2, "trade_date": d, "close": 200.0, "volume": 2000},
             ]
         )
     return pl.DataFrame(rows)
@@ -28,7 +28,7 @@ def current_data():
     """Create current data for testing."""
     return pl.DataFrame(
         {
-            "sid": [1, 2],
+            "instrument_id": [1, 2],
             "trade_date": [date.today(), date.today()],
             "close": [105.0, 210.0],
             "volume": [1100, 2100],
@@ -64,7 +64,7 @@ class TestZScoreChecker:
         # Current data with anomaly
         current_data = pl.DataFrame(
             {
-                "sid": [1, 2],
+                "instrument_id": [1, 2],
                 "trade_date": [date.today(), date.today()],
                 "close": [500.0, 210.0],  # 500 is way outside normal range
                 "volume": [1100, 2100],
@@ -100,7 +100,7 @@ class TestZScoreChecker:
             "column": "close",
             "window": 60,
             "threshold": 3.0,
-            "group_by": "sid",
+            "group_by": "instrument_id",
         }
 
         checker = StatisticalChecker()
@@ -111,7 +111,7 @@ class TestZScoreChecker:
             rules=[rule],
         )
 
-        # Each sid has its own mean/std, so 105 and 210 are normal
+        # Each instrument_id has its own mean/std, so 105 and 210 are normal
         assert len(issues) == 0
 
     def test_zscore_empty_historical_data(self, current_data):
@@ -139,7 +139,7 @@ class TestZScoreChecker:
         """Test Z-score check with missing column."""
         historical_data = pl.DataFrame(
             {
-                "sid": [1, 2],
+                "instrument_id": [1, 2],
                 "trade_date": [date.today(), date.today()],
                 # 'close' column missing
                 "volume": [1000, 2000],
@@ -194,7 +194,7 @@ class TestZScoreChecker:
         dates = [date.today() - timedelta(days=i) for i in range(5, 0, -1)]
         historical_data = pl.DataFrame(
             {
-                "sid": [1] * 5,
+                "instrument_id": [1] * 5,
                 "trade_date": dates,
                 "close": [100.0] * 5,
             }
@@ -240,7 +240,7 @@ class TestCompletenessChecker:
         current_data = pl.DataFrame(
             {
                 "trade_date": calendar_data["trade_date"].to_list(),
-                "sid": [1] * len(calendar_data),
+                "instrument_id": [1] * len(calendar_data),
                 "close": [100.0] * len(calendar_data),
             }
         )
@@ -267,7 +267,7 @@ class TestCompletenessChecker:
         current_data = pl.DataFrame(
             {
                 "trade_date": dates[:-1],  # Missing last day
-                "sid": [1] * len(dates[:-1]),
+                "instrument_id": [1] * len(dates[:-1]),
                 "close": [100.0] * len(dates[:-1]),
             }
         )
@@ -319,7 +319,7 @@ class TestCompletenessChecker:
         current_data = pl.DataFrame(
             {
                 "trade_date": dates[:-1],  # Missing last trading day
-                "sid": [1] * len(dates[:-1]),
+                "instrument_id": [1] * len(dates[:-1]),
                 "close": [100.0] * len(dates[:-1]),
             }
         )
@@ -388,7 +388,7 @@ class TestErrorHandling:
         # current 有 price 列，但 historical 没有（会在计算统计量时触发异常）
         current = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
                 "price": [10.0, 20.0, 30.0],
             }
@@ -396,7 +396,7 @@ class TestErrorHandling:
         # 历史数据没有 price 列（会触发异常）
         historical = pl.DataFrame(
             {
-                "sid": [1, 2],
+                "instrument_id": [1, 2],
                 "other_column": [100.0, 200.0],
             }
         )
@@ -421,7 +421,7 @@ class TestErrorHandling:
         # 创建无效的日历数据（缺少必需列）
         current = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
             }
         )

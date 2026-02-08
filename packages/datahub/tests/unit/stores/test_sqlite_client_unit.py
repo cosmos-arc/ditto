@@ -95,27 +95,30 @@ class TestSQLiteClient:
         """Test fetchone method returns single row or None."""
         # Test with data
         row = sqlite_client.fetchone(
-            "SELECT * FROM sid_sequence WHERE asset_class = ?", ["stock"]
+            "SELECT * FROM instrument_id_sequence WHERE asset_class = ?", ["stock"]
         )
         assert row is not None
         assert row["asset_class"] == "stock"
 
         # Test without data
         row = sqlite_client.fetchone(
-            "SELECT * FROM sid_sequence WHERE asset_class = ?", ["invalid"]
+            "SELECT * FROM instrument_id_sequence WHERE asset_class = ?", ["invalid"]
         )
         assert row is None
 
     def test_fetchall_returns_all_rows(self, sqlite_client: SQLiteClient) -> None:
         """Test fetchall method returns all rows."""
-        rows = sqlite_client.fetchall("SELECT * FROM sid_sequence ORDER BY asset_class")
+        rows = sqlite_client.fetchall(
+            "SELECT * FROM instrument_id_sequence ORDER BY asset_class"
+        )
         assert len(rows) == 5  # stock, etf, index, bond, future
         assert rows[0]["asset_class"] == "bond"
 
     def test_fetchval_returns_single_value(self, sqlite_client: SQLiteClient) -> None:
         """Test fetchval method returns first column value."""
         val = sqlite_client.fetchval(
-            "SELECT current_max FROM sid_sequence WHERE asset_class = ?", ["stock"]
+            "SELECT current_max FROM instrument_id_sequence WHERE asset_class = ?",
+            ["stock"],
         )
         assert val == 1_000_000
 
@@ -124,7 +127,8 @@ class TestSQLiteClient:
     ) -> None:
         """Test fetchval method returns None when no data."""
         val = sqlite_client.fetchval(
-            "SELECT current_max FROM sid_sequence WHERE asset_class = ?", ["invalid"]
+            "SELECT current_max FROM instrument_id_sequence WHERE asset_class = ?",
+            ["invalid"],
         )
         assert val is None
 
@@ -132,7 +136,7 @@ class TestSQLiteClient:
         """Test commit method commits transaction."""
         sql = (
             "INSERT INTO security "
-            "(sid, symbol, name, exchange, asset_class, list_date) "
+            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
         params = [99999999, "TEST", "Test", "TEST", "stock", "2024-01-01"]
@@ -140,7 +144,9 @@ class TestSQLiteClient:
         sqlite_client.commit()
 
         # New connection should see the data
-        row = sqlite_client.fetchone("SELECT * FROM security WHERE sid = ?", [99999999])
+        row = sqlite_client.fetchone(
+            "SELECT * FROM security WHERE instrument_id = ?", [99999999]
+        )
         assert row is not None
 
     def test_rollback_undoes_transaction(self, sqlite_client: SQLiteClient) -> None:
@@ -148,21 +154,23 @@ class TestSQLiteClient:
         sqlite_client.execute("BEGIN")
         sql = (
             "INSERT INTO security "
-            "(sid, symbol, name, exchange, asset_class, list_date) "
+            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
         params = [99999999, "TEST", "Test", "TEST", "stock", "2024-01-01"]
         sqlite_client.execute(sql, params)
         sqlite_client.rollback()
 
-        row = sqlite_client.fetchone("SELECT * FROM security WHERE sid = ?", [99999999])
+        row = sqlite_client.fetchone(
+            "SELECT * FROM security WHERE instrument_id = ?", [99999999]
+        )
         assert row is None
 
     def test_insert_returning_id(self, sqlite_client: SQLiteClient) -> None:
         """Test insert_returning_id returns lastrowid."""
         sql = (
             "INSERT INTO security "
-            "(sid, symbol, name, exchange, asset_class, list_date) "
+            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
         params = [99999999, "TEST", "Test", "TEST", "stock", "2024-01-01"]
@@ -176,7 +184,7 @@ class TestSQLiteClient:
     ) -> None:
         """Test exists method returns True when data exists."""
         result = sqlite_client.exists(
-            "SELECT 1 FROM sid_sequence WHERE asset_class = ?", ["stock"]
+            "SELECT 1 FROM instrument_id_sequence WHERE asset_class = ?", ["stock"]
         )
         assert result is True
 
@@ -185,18 +193,20 @@ class TestSQLiteClient:
     ) -> None:
         """Test exists method returns False when no data."""
         result = sqlite_client.exists(
-            "SELECT 1 FROM sid_sequence WHERE asset_class = ?", ["invalid"]
+            "SELECT 1 FROM instrument_id_sequence WHERE asset_class = ?", ["invalid"]
         )
         assert result is False
 
     def test_count_returns_row_count(self, sqlite_client: SQLiteClient) -> None:
         """Test count method returns correct row count."""
-        count = sqlite_client.count("sid_sequence")
+        count = sqlite_client.count("instrument_id_sequence")
         assert count == 5
 
     def test_count_with_where_clause(self, sqlite_client: SQLiteClient) -> None:
         """Test count method with WHERE clause."""
-        count = sqlite_client.count("sid_sequence", "asset_class = ?", ["stock"])
+        count = sqlite_client.count(
+            "instrument_id_sequence", "asset_class = ?", ["stock"]
+        )
         assert count == 1
 
     # ============ Security/Whitelist tests ============
@@ -228,7 +238,7 @@ class TestSQLiteClient:
         """Test count method accepts all tables in ALLOWED_TABLES."""
         # Verify all whitelisted tables can be counted
         whitelisted_tables = [
-            "sid_sequence",
+            "instrument_id_sequence",
             "price_limit_config",
             "security",
             "security_mapping",
@@ -255,7 +265,7 @@ class TestSQLiteClient:
         long_sql = (
             "SELECT "
             + " + ".join(["asset_class" for _ in range(30)])
-            + " FROM sid_sequence WHERE 1=0"
+            + " FROM instrument_id_sequence WHERE 1=0"
         )
         assert len(long_sql) > 100
 
@@ -280,7 +290,7 @@ class TestSQLiteClient:
     def test_fetchall_with_params(self, sqlite_client: SQLiteClient) -> None:
         """Test fetchall method with parameters."""
         rows = sqlite_client.fetchall(
-            "SELECT * FROM sid_sequence WHERE asset_class = ?", ["stock"]
+            "SELECT * FROM instrument_id_sequence WHERE asset_class = ?", ["stock"]
         )
         assert len(rows) == 1
         assert rows[0]["asset_class"] == "stock"
@@ -325,7 +335,7 @@ class TestSQLiteClient:
         # We test that insert_returning_id works correctly
         sql = (
             "INSERT INTO security "
-            "(sid, symbol, name, exchange, asset_class, list_date) "
+            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
         params = [99999997, "TEST0", "Test0", "TEST", "stock", "2024-01-01"]
@@ -343,7 +353,7 @@ class TestSQLiteClient:
         long_sql = (
             "SELECT "
             + " + ".join(["asset_class" for _ in range(30)])
-            + " FROM sid_sequence WHERE asset_class = 'nonexistent'"
+            + " FROM instrument_id_sequence WHERE asset_class = 'nonexistent'"
         )
         assert len(long_sql) > 100
 

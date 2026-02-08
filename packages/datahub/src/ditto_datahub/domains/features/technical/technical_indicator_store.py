@@ -25,11 +25,11 @@ class _TechnicalIndicatorParquetStore(ParquetStore):
 
     def _get_key_columns(self) -> list[str]:
         """Return key column names for deduplication."""
-        return ["sid", "trade_date", "indicator_id"]
+        return ["instrument_id", "trade_date", "indicator_id"]
 
     def _get_sort_columns(self) -> list[str]:
         """Return sort columns."""
-        return ["sid", "trade_date", "indicator_id"]
+        return ["instrument_id", "trade_date", "indicator_id"]
 
 
 class TechnicalIndicatorStore:
@@ -46,7 +46,7 @@ class TechnicalIndicatorStore:
             ...
 
     Schema:
-        sid: Security ID
+        instrument_id: Security ID
         trade_date: Trading date
         indicator_id: Indicator identifier (e.g., 'indicator_rsi_14')
         indicator_type: Type category (trend/momentum/volatility/volume)
@@ -79,7 +79,7 @@ class TechnicalIndicatorStore:
 
         Args:
             df: DataFrame with columns:
-                - sid (int)
+                - instrument_id (int)
                 - trade_date (date or str YYYY-MM-DD)
                 - indicator_id (str)
                 - indicator_type (str)
@@ -102,7 +102,13 @@ class TechnicalIndicatorStore:
         )
 
         # Validate required columns
-        required = ["sid", "trade_date", "indicator_id", "indicator_type", "value"]
+        required = [
+            "instrument_id",
+            "trade_date",
+            "indicator_id",
+            "indicator_type",
+            "value",
+        ]
         missing = [col for col in required if col not in df.columns]
         if missing:
             msg = f"Missing required columns: {missing}"
@@ -124,7 +130,7 @@ class TechnicalIndicatorStore:
     @traced("data.indicator_query")
     def read(
         self,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
         indicator_types: list[str] | None = None,
@@ -134,7 +140,7 @@ class TechnicalIndicatorStore:
         Query technical indicator data.
 
         Args:
-            sids: Filter by security IDs (None = all).
+            instrument_ids: Filter by security IDs (None = all).
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
             indicator_types: Filter by indicator types (None = all).
@@ -146,7 +152,7 @@ class TechnicalIndicatorStore:
         """
         logger.debug(
             "Querying technical indicator data",
-            sids=sids,
+            instrument_ids=instrument_ids,
             start_date=start_date,
             end_date=end_date,
             indicator_types=indicator_types,
@@ -155,7 +161,10 @@ class TechnicalIndicatorStore:
 
         # Use ParquetStore to get raw data
         df = self._store.read(
-            self._dataset, sids=sids, start_date=start_date, end_date=end_date
+            self._dataset,
+            instrument_ids=instrument_ids,
+            start_date=start_date,
+            end_date=end_date,
         )
 
         # Apply indicator_id filter
@@ -202,7 +211,7 @@ class TechnicalIndicatorStore:
 
     def count(
         self,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> int:
@@ -210,7 +219,7 @@ class TechnicalIndicatorStore:
         Count records in the dataset.
 
         Args:
-            sids: Filter by security IDs.
+            instrument_ids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -219,7 +228,10 @@ class TechnicalIndicatorStore:
 
         """
         return self._store.count(
-            self._dataset, sids=sids, start_date=start_date, end_date=end_date
+            self._dataset,
+            instrument_ids=instrument_ids,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     def get_date_range(self) -> tuple[str | None, str | None]:

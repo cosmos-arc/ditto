@@ -25,7 +25,7 @@ from ditto_datahub.domains.metadata.industry.industry_mapping_store import (
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.domains.metadata.instrument.models import InstrumentRegistration
 from ditto_datahub.domains.metadata.universe.universe_store import UniverseStore
-from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
+from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 
 
 class MetadataService:
@@ -75,8 +75,8 @@ class MetadataService:
 
     # ============ Identity 解析 ============
 
-    @traced("metadata.identity.resolve_sid")
-    def resolve_sid(
+    @traced("metadata.identity.resolve_instrument_id")
+    def resolve_instrument_id(
         self,
         identifier: str,
         source: str,
@@ -86,7 +86,7 @@ class MetadataService:
         解析标识符到 instrument_id.
 
         Args:
-            identifier: 数据源代码 (src_code).
+            identifier: 数据源代码 (source_ticker).
             source: 数据源标识.
             asof: 时间点日期.
 
@@ -94,10 +94,10 @@ class MetadataService:
             instrument_id 或 None.
 
         """
-        return self._identity_store.resolve_sid(identifier, source, asof)
+        return self._identity_store.resolve_instrument_id(identifier, source, asof)
 
-    @traced("metadata.identity.resolve_sids_batch")
-    def resolve_sids_batch(
+    @traced("metadata.identity.resolve_instrument_ids_batch")
+    def resolve_instrument_ids_batch(
         self,
         identifiers: list[str],
         source: str,
@@ -115,14 +115,16 @@ class MetadataService:
             {identifier: instrument_id} 映射字典.
 
         """
-        return self._identity_store.resolve_sids_batch(identifiers, source, asof)
+        return self._identity_store.resolve_instrument_ids_batch(
+            identifiers, source, asof
+        )
 
     # ============ 证券查询 ============
 
     @traced("metadata.security.get_securities")
     def get_securities(
         self,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         source_tickers: list[str] | None = None,
         source: str = "tushare",
         asset_class: str | None = None,
@@ -134,7 +136,7 @@ class MetadataService:
         查询证券数据.
 
         Args:
-            sids: 过滤 instrument_id 列表.
+            instrument_ids: 过滤 instrument_id 列表.
             source_tickers: 过滤源代码列表.
             source: 数据源标识.
             asset_class: 过滤资产类别.
@@ -147,8 +149,8 @@ class MetadataService:
 
         """
         return self._instrument_store.find_securities(
-            sids=sids,
-            src_codes=source_tickers,
+            instrument_ids=instrument_ids,
+            source_tickers=source_tickers,
             source=source,
             asset_class=asset_class,
             exchange=exchange,
@@ -157,23 +159,23 @@ class MetadataService:
         )
 
     @traced("metadata.security.get_symbol")
-    def get_symbol(self, sid: int) -> str | None:
+    def get_symbol(self, instrument_id: int) -> str | None:
         """
         根据 instrument_id 获取交易代码.
 
         Args:
-            sid: instrument_id.
+            instrument_id: instrument_id.
 
         Returns:
             交易代码 或 None.
 
         """
-        return self._instrument_store.get_symbol(sid)
+        return self._instrument_store.get_symbol(instrument_id)
 
-    @traced("metadata.security.get_src_code")
-    def get_src_code(
+    @traced("metadata.security.get_source_ticker")
+    def get_source_ticker(
         self,
-        sid: int,
+        instrument_id: int,
         source: str = "tushare",
         asof: str | None = None,
     ) -> str | None:
@@ -181,7 +183,7 @@ class MetadataService:
         根据 instrument_id 获取源代码.
 
         Args:
-            sid: instrument_id.
+            instrument_id: instrument_id.
             source: 数据源标识.
             asof: 时间点日期.
 
@@ -189,7 +191,7 @@ class MetadataService:
             源代码 或 None.
 
         """
-        return self._identity_store.get_src_code(sid, source, asof)
+        return self._identity_store.get_source_ticker(instrument_id, source, asof)
 
     # ============ 行业查询 ============
 
@@ -215,21 +217,21 @@ class MetadataService:
     @traced("metadata.industry.get_stock_industry")
     def get_stock_industry(
         self,
-        sid: int,
+        instrument_id: int,
         asof: str | None = None,
     ) -> dict[str, Any] | None:
         """
         查询股票所属行业.
 
         Args:
-            sid: 证券 ID.
+            instrument_id: 证券 ID.
             asof: 时间点日期.
 
         Returns:
             行业映射信息 或 None.
 
         """
-        return self._industry_mapping_store.get_stock_industry(sid, asof)
+        return self._industry_mapping_store.get_stock_industry(instrument_id, asof)
 
     @traced("metadata.industry.get_industry_stocks")
     def get_industry_stocks(
@@ -452,7 +454,7 @@ class MetadataService:
             source_ticker = row[source_ticker_col]
 
             # 检查是否已存在
-            existing_instrument_id = self._instrument_store.resolve_sid(
+            existing_instrument_id = self._instrument_store.resolve_instrument_id(
                 source_ticker, source, None
             )
             if existing_instrument_id is not None:
@@ -547,7 +549,7 @@ class MetadataService:
 
         # 批量查询已存在的证券
         source_tickers = df[source_ticker_col].to_list()
-        existing_mappings = self._instrument_store.resolve_sids_batch(
+        existing_mappings = self._instrument_store.resolve_instrument_ids_batch(
             source_tickers, source, None
         )
 

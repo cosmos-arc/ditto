@@ -52,7 +52,7 @@ class TestQuarantineStore:
         # Create a DataFrame with failed data
         failed_df = pl.DataFrame(
             {
-                "sid": [1000001, 1000002],
+                "instrument_id": [1000001, 1000002],
                 "trade_date": ["2024-01-01", "2024-01-02"],
                 "close": [100.0, 101.0],
             }
@@ -72,7 +72,7 @@ class TestQuarantineStore:
     def test_save_failed_data_with_trade_date(self) -> None:
         """Test saving failed data with trade date."""
         failed_df = pl.DataFrame(
-            {"sid": [1000001], "trade_date": ["2024-01-01"], "close": [100.0]}
+            {"instrument_id": [1000001], "trade_date": ["2024-01-01"], "close": [100.0]}
         )
 
         row_id = self.store.save_failed_data(
@@ -87,7 +87,7 @@ class TestQuarantineStore:
 
     def test_save_failed_data_different_severities(self) -> None:
         """Test saving failed data with different severity levels."""
-        failed_df = pl.DataFrame({"sid": [1000001], "close": [100.0]})
+        failed_df = pl.DataFrame({"instrument_id": [1000001], "close": [100.0]})
 
         # Test error severity
         row_id1 = self.store.save_failed_data(
@@ -119,7 +119,7 @@ class TestQuarantineStore:
     def test_get_quarantined_data_all(self) -> None:
         """Test getting all quarantined data."""
         # Insert some failed data
-        failed_df = pl.DataFrame({"sid": [1000001], "close": [100.0]})
+        failed_df = pl.DataFrame({"instrument_id": [1000001], "close": [100.0]})
         self.store.save_failed_data(
             "dataset_a", "rule1", "error", failed_df, trade_date="2024-01-01"
         )
@@ -133,7 +133,7 @@ class TestQuarantineStore:
 
     def test_get_quarantined_data_with_dataset_filter(self) -> None:
         """Test getting quarantined data filtered by dataset."""
-        failed_df = pl.DataFrame({"sid": [1000001], "close": [100.0]})
+        failed_df = pl.DataFrame({"instrument_id": [1000001], "close": [100.0]})
 
         self.store.save_failed_data("dataset_a", "rule1", "error", failed_df)
         self.store.save_failed_data("dataset_b", "rule2", "error", failed_df)
@@ -146,7 +146,7 @@ class TestQuarantineStore:
 
     def test_get_quarantined_data_with_rule_filter(self) -> None:
         """Test getting quarantined data filtered by rule_id."""
-        failed_df = pl.DataFrame({"sid": [1000001], "close": [100.0]})
+        failed_df = pl.DataFrame({"instrument_id": [1000001], "close": [100.0]})
 
         self.store.save_failed_data("dataset_a", "rule1", "error", failed_df)
         self.store.save_failed_data("dataset_b", "rule2", "error", failed_df)
@@ -158,7 +158,7 @@ class TestQuarantineStore:
 
     def test_get_quarantined_data_with_limit(self) -> None:
         """Test getting quarantined data with limit."""
-        failed_df = pl.DataFrame({"sid": [1000001], "close": [100.0]})
+        failed_df = pl.DataFrame({"instrument_id": [1000001], "close": [100.0]})
 
         # Insert 5 records
         for i in range(5):
@@ -170,7 +170,7 @@ class TestQuarantineStore:
 
     def test_get_quarantined_data_ordering(self) -> None:
         """Test that quarantined data includes created_at and is ordered."""
-        failed_df = pl.DataFrame({"sid": [1000001], "close": [100.0]})
+        failed_df = pl.DataFrame({"instrument_id": [1000001], "close": [100.0]})
 
         # Insert multiple records
         for i in range(3):
@@ -194,7 +194,7 @@ class TestQuarantineStore:
         # Create and save failed data
         failed_df = pl.DataFrame(
             {
-                "sid": [1000001, 1000002],
+                "instrument_id": [1000001, 1000002],
                 "trade_date": ["2024-01-01", "2024-01-02"],
                 "close": [100.0, 101.0],
             }
@@ -211,7 +211,7 @@ class TestQuarantineStore:
         retrieved_df = self.store.get_failed_data_df(row_id)
         assert not retrieved_df.is_empty()
         assert len(retrieved_df) == 2
-        assert list(retrieved_df["sid"]) == [1000001, 1000002]
+        assert list(retrieved_df["instrument_id"]) == [1000001, 1000002]
 
     def test_get_failed_data_df_not_found(self) -> None:
         """Test getting failed data with non-existent row ID."""
@@ -258,7 +258,7 @@ class TestQuarantineStore:
 
     def test_clear_old_records(self) -> None:
         """Test clearing old quarantine records."""
-        failed_df = pl.DataFrame({"sid": [1000001], "close": [100.0]})
+        failed_df = pl.DataFrame({"instrument_id": [1000001], "close": [100.0]})
 
         # Insert some records
         self.store.save_failed_data("dataset_a", "rule1", "error", failed_df)
@@ -277,7 +277,7 @@ class TestQuarantineStore:
 
     def test_clear_old_records_with_zero_days(self) -> None:
         """Test clearing all records with zero days threshold."""
-        failed_df = pl.DataFrame({"sid": [1000001], "close": [100.0]})
+        failed_df = pl.DataFrame({"instrument_id": [1000001], "close": [100.0]})
 
         # Insert some records
         self.store.save_failed_data("dataset_a", "rule1", "error", failed_df)
@@ -292,8 +292,10 @@ class TestQuarantineStore:
     def test_get_stats(self) -> None:
         """Test getting quarantine statistics."""
         # Create different types of failed data
-        failed_df1 = pl.DataFrame({"sid": [1000001, 1000002], "close": [100.0, 101.0]})
-        failed_df2 = pl.DataFrame({"sid": [1000003], "close": [102.0]})
+        failed_df1 = pl.DataFrame(
+            {"instrument_id": [1000001, 1000002], "close": [100.0, 101.0]}
+        )
+        failed_df2 = pl.DataFrame({"instrument_id": [1000003], "close": [102.0]})
 
         self.store.save_failed_data("dataset_a", "rule1", "error", failed_df1)
         self.store.save_failed_data("dataset_a", "rule1", "error", failed_df2)
@@ -317,7 +319,7 @@ class TestQuarantineStore:
 
     def test_get_stats_ordering(self) -> None:
         """Test that stats are ordered by count DESC."""
-        failed_df = pl.DataFrame({"sid": [1000001], "close": [100.0]})
+        failed_df = pl.DataFrame({"instrument_id": [1000001], "close": [100.0]})
 
         # Insert different number of records for each rule
         for _i in range(5):
@@ -340,7 +342,7 @@ class TestQuarantineStore:
 
     def test_context_manager(self) -> None:
         """Test using QuarantineStore as a context manager."""
-        failed_df = pl.DataFrame({"sid": [1000001], "close": [100.0]})
+        failed_df = pl.DataFrame({"instrument_id": [1000001], "close": [100.0]})
 
         # Create pool and client for context manager test
         pool = SQLitePool(":memory:")
@@ -380,7 +382,7 @@ class TestQuarantineStore:
         # Create a DataFrame with various data types
         failed_df = pl.DataFrame(
             {
-                "sid": [1000001, 1000002],
+                "instrument_id": [1000001, 1000002],
                 "trade_date": ["2024-01-01", "2024-01-02"],
                 "close": [100.5, 101.3],
                 "volume": [1000000, 2000000],
@@ -401,14 +403,14 @@ class TestQuarantineStore:
         assert len(retrieved_df) == 2
 
         # Check data types and values
-        assert retrieved_df["sid"].to_list() == [1000001, 1000002]
+        assert retrieved_df["instrument_id"].to_list() == [1000001, 1000002]
         assert retrieved_df["trade_date"].to_list() == ["2024-01-01", "2024-01-02"]
         # Float comparison with tolerance
         assert abs(retrieved_df["close"][0] - 100.5) < 0.01
 
     def test_multiple_severities_same_rule(self) -> None:
         """Test saving multiple records with same rule but different severities."""
-        failed_df = pl.DataFrame({"sid": [1000001], "close": [100.0]})
+        failed_df = pl.DataFrame({"instrument_id": [1000001], "close": [100.0]})
 
         self.store.save_failed_data("dataset_a", "rule1", "error", failed_df)
         self.store.save_failed_data("dataset_a", "rule1", "warning", failed_df)

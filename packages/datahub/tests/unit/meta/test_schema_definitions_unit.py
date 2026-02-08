@@ -25,10 +25,10 @@ class TestStockDailySchema:
     def test_schema_has_all_required_fields(self) -> None:
         """Schema should have all required fields."""
         required_fields = {
-            "sid",
+            "instrument_id",
             "trade_date",
             "source",
-            "src_code",
+            "source_ticker",
             "open",
             "high",
             "low",
@@ -56,7 +56,7 @@ class TestStockDailySchema:
 
     def test_sid_is_int64(self) -> None:
         """Sid field should be Int64."""
-        assert STOCK_DAILY_SCHEMA["sid"] == pl.Int64
+        assert STOCK_DAILY_SCHEMA["instrument_id"] == pl.Int64
 
     def test_trade_date_is_date(self) -> None:
         """trade_date field should be Date."""
@@ -85,10 +85,10 @@ class TestEtfDailySchema:
     def test_schema_has_all_required_fields(self) -> None:
         """Schema should have all required fields."""
         required_fields = {
-            "sid",
+            "instrument_id",
             "trade_date",
             "source",
-            "src_code",
+            "source_ticker",
             "open",
             "high",
             "low",
@@ -108,7 +108,7 @@ class TestEtfDailySchema:
 
     def test_sid_is_int64(self) -> None:
         """Sid field should be Int64."""
-        assert ETF_DAILY_SCHEMA["sid"] == pl.Int64
+        assert ETF_DAILY_SCHEMA["instrument_id"] == pl.Int64
 
     def test_trade_date_is_date(self) -> None:
         """trade_date field should be Date."""
@@ -125,10 +125,10 @@ class TestIndexDailySchema:
     def test_schema_has_all_required_fields(self) -> None:
         """Schema should have all required fields."""
         required_fields = {
-            "sid",
+            "instrument_id",
             "trade_date",
             "source",
-            "src_code",
+            "source_ticker",
             "open",
             "high",
             "low",
@@ -163,10 +163,10 @@ class TestAdjFactorSchema:
     def test_schema_has_all_required_fields(self) -> None:
         """Schema should have all required fields."""
         required_fields = {
-            "sid",
+            "instrument_id",
             "trade_date",
             "source",
-            "src_code",
+            "source_ticker",
             "adj_factor",
             "knowledge_date",  # B.1: PIT safety for adjustment factors
         }
@@ -213,9 +213,9 @@ class TestUniverseConstituentSchema:
         """Schema should have all required fields."""
         required_fields = {
             "universe_id",
-            "sid",
+            "instrument_id",
             "source",
-            "src_code",
+            "source_ticker",
             "effective_from",
             "effective_to",
             "weight",
@@ -260,7 +260,7 @@ class TestStockStatusSchema:
     def test_schema_has_all_required_fields(self) -> None:
         """Schema should have all required fields."""
         required_fields = {
-            "sid",
+            "instrument_id",
             "trade_date",
             "is_suspended",
             "suspend_timing",
@@ -268,7 +268,7 @@ class TestStockStatusSchema:
             "st_type",
             "list_status",
             "source",
-            "src_code",
+            "source_ticker",
         }
         assert set(STOCK_STATUS_SCHEMA.keys()) == required_fields
 
@@ -280,7 +280,7 @@ class TestStockStatusSchema:
 
     def test_sid_is_int64(self) -> None:
         """Sid field should be Int64."""
-        assert STOCK_STATUS_SCHEMA["sid"] == pl.Int64
+        assert STOCK_STATUS_SCHEMA["instrument_id"] == pl.Int64
 
     def test_trade_date_is_date(self) -> None:
         """trade_date field should be Date."""
@@ -297,7 +297,7 @@ class TestStockStatusSchema:
         assert STOCK_STATUS_SCHEMA["st_type"] == pl.Utf8
         assert STOCK_STATUS_SCHEMA["list_status"] == pl.Utf8
         assert STOCK_STATUS_SCHEMA["source"] == pl.Utf8
-        assert STOCK_STATUS_SCHEMA["src_code"] == pl.Utf8
+        assert STOCK_STATUS_SCHEMA["source_ticker"] == pl.Utf8
 
 
 class TestTushareSTSchema:

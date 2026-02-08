@@ -91,7 +91,7 @@ class ForeignKeyRule(BaseRule):
 
     rule: RuleType = RuleType.FOREIGN_KEY
     column: str
-    reference: str  # e.g., "security.sid"
+    reference: str  # e.g., "security.instrument_id"
 
 
 class TypeCheckRule(BaseRule):
@@ -220,7 +220,7 @@ class CrossSourceRule(BaseRule):
 
     rule: RuleType = RuleType.CROSS_SOURCE_COMPARE
     fields: list[str]  # 要对比的字段（如 [open, high, low, close, vol]）
-    key_columns: list[str]  # 对比键（如 [src_code, trade_date]）
+    key_columns: list[str]  # 对比键（如 [source_ticker, trade_date]）
     tolerance_rules: dict[str, dict[str, Any]] | None = None  # 字段 → 容差配置
     enabled: bool = True  # 开关控制
 

@@ -46,7 +46,7 @@ class MarketBarsQuery:
     Market K线查询参数.
 
     Attributes:
-        sids: SID 列表（为 None 时配合 market_wide=True 获取全市场数据）.
+        instrument_ids: SID 列表（为 None 时配合 market_wide=True 获取全市场数据）.
         start: 开始日期 (YYYY-MM-DD).
         end: 结束日期 (YYYY-MM-DD).
         adj: 复权类型（仅对 stock 数据有效，etf/index 数据不支持复权）.
@@ -55,21 +55,21 @@ class MarketBarsQuery:
         with_symbol: 是否在结果中添加 symbol 列.
         with_status: 是否添加股票状态信息（仅对股票数据有效）.
         raw: 是否跳过复权和状态增强.
-        market_wide: 全市场查询模式。为 True 且 sids 为空时获取所有活跃证券.
+        market_wide: 全市场查询模式。为 True 且 instrument_ids 为空时获取所有活跃证券.
 
     Note:
         - 复权功能 (adj) 仅支持股票数据，对 ETF 和 Index 数据无效
         - 状态增强 (with_status) 仅支持股票数据
 
     Examples:
-        >>> query = MarketBarsQuery(sids=[1, 2, 3], start="2024-01-01")
+        >>> query = MarketBarsQuery(instrument_ids=[1, 2, 3], start="2024-01-01")
         >>> service.get_bars(query)
         >>> query = MarketBarsQuery(market_wide=True, asset_class="stock")
         >>> service.get_bars(query)
 
     """
 
-    sids: list[int] | None = None
+    instrument_ids: list[int] | None = None
     start: str | None = None
     end: str | None = None
     adj: AdjType = AdjType.NONE
@@ -161,10 +161,12 @@ class MarketService:
         )
 
         # 1. 解析 SID 列表和资产类别
-        sids, asset_class = self._resolve_sids_and_asset_class(query)
+        instrument_ids, asset_class = self._resolve_instrument_ids_and_asset_class(
+            query
+        )
 
         # 空 SID 列表返回空 DataFrame（非 market_wide 模式）
-        if not query.market_wide and not sids:
+        if not query.market_wide and not instrument_ids:
             return pl.DataFrame()
 
         # 2. 解析日期参数（字符串 -> date 对象）
@@ -172,7 +174,7 @@ class MarketService:
 
         # 3. 加载核心数据
         df = self._load_bars_core(
-            sids=sids,
+            instrument_ids=instrument_ids,
             start=start_date,
             end=end_date,
             asset_class=asset_class,
@@ -188,12 +190,12 @@ class MarketService:
         # 5. 应用复权（如果需要且不是 raw 模式）
         if not query.raw and query.adj != AdjType.NONE and asset_class == "stock":
             df = self._apply_adjustment(
-                df, query.adj, sids, start_date, end_date, asof_date
+                df, query.adj, instrument_ids, start_date, end_date, asof_date
             )
 
         # 6. 添加状态列（如果需要且不是 raw 模式）
         if query.with_status and not query.raw and asset_class == "stock":
-            df = self._enrich_with_status(df, sids, start_date, end_date)
+            df = self._enrich_with_status(df, instrument_ids, start_date, end_date)
 
         logger.debug(
             "Market bars data fetched",
@@ -269,7 +271,7 @@ class MarketService:
 
     def _load_bars_core(
         self,
-        sids: list[int],
+        instrument_ids: list[int],
         start: date | None,
         end: date | None,
         asset_class: Literal["stock", "etf", "index"],
@@ -278,7 +280,7 @@ class MarketService:
         加载核心行情数据（不含复权和增强）.
 
         Args:
-            sids: SID 列表.
+            instrument_ids: SID 列表.
             start: 开始日期.
             end: 结束日期.
             asset_class: 资产类别.
@@ -292,13 +294,13 @@ class MarketService:
 
         if asset_class == "stock":
             return self._stock_bars_store.read(
-                sids=sids,
+                instrument_ids=instrument_ids,
                 start_date=start_str,
                 end_date=end_str,
             )
         elif asset_class == "etf":
             return self._etf_bars_store.read(
-                sids=sids,
+                instrument_ids=instrument_ids,
                 start_date=start_str,
                 end_date=end_str,
             )
@@ -306,7 +308,7 @@ class MarketService:
             if self._index_bars_store is None:
                 return pl.DataFrame()
             return self._index_bars_store.read(
-                sids=sids,
+                instrument_ids=instrument_ids,
                 start_date=start_str,
                 end_date=end_str,
             )
@@ -314,13 +316,13 @@ class MarketService:
             return pl.DataFrame()
 
     def _detect_asset_class_from_sids(
-        self, sids: list[int]
+        self, instrument_ids: list[int]
     ) -> Literal["stock", "etf", "index"]:
         """
         从 instrument_id 列表检测资产类别.
 
         Args:
-            sids: instrument_id 列表.
+            instrument_ids: instrument_id 列表.
 
         Returns:
             资产类别字符串（"stock", "etf", "index"）.
@@ -334,9 +336,18 @@ class MarketService:
         index_range = InstrumentIdRange.get_range("index")
 
         # 检测每个资产类别
-        has_stock = any(stock_range.min_id <= sid <= stock_range.max_id for sid in sids)
-        has_etf = any(etf_range.min_id <= sid <= etf_range.max_id for sid in sids)
-        has_index = any(index_range.min_id <= sid <= index_range.max_id for sid in sids)
+        has_stock = any(
+            stock_range.min_id <= instrument_id <= stock_range.max_id
+            for instrument_id in instrument_ids
+        )
+        has_etf = any(
+            etf_range.min_id <= instrument_id <= etf_range.max_id
+            for instrument_id in instrument_ids
+        )
+        has_index = any(
+            index_range.min_id <= instrument_id <= index_range.max_id
+            for instrument_id in instrument_ids
+        )
 
         # 检测混合资产类别
         detected: list[Literal["stock", "etf", "index"]] = []
@@ -360,7 +371,7 @@ class MarketService:
 
         return detected[0]
 
-    def _resolve_sids_and_asset_class(
+    def _resolve_instrument_ids_and_asset_class(
         self, query: MarketBarsQuery
     ) -> tuple[list[int], Literal["stock", "etf", "index"]]:
         """
@@ -379,31 +390,35 @@ class MarketService:
         if query.market_wide:
             # 全市场模式：获取所有活跃 SID
             asset_class = query.asset_class
-            sids = sorted(self._instrument_store.list_sids(asset_class=asset_class))
+            instrument_ids = sorted(
+                self._instrument_store.list_sids(asset_class=asset_class)
+            )
             if not asset_class:
                 asset_class = (
-                    self._detect_asset_class_from_sids(sids) if sids else "stock"
+                    self._detect_asset_class_from_sids(instrument_ids)
+                    if instrument_ids
+                    else "stock"
                 )
-            return sids, asset_class
-        elif not query.sids:
+            return instrument_ids, asset_class
+        elif not query.instrument_ids:
             # 空 SID 列表时，使用显式 asset_class（如果有），否则默认为 "stock"
             return [], query.asset_class or "stock"
 
         # 普通模式：使用指定的 SID
-        sids = sorted(set(query.sids))
+        instrument_ids = sorted(set(query.instrument_ids))
         asset_class = query.asset_class
 
         if asset_class:
             # 验证显式 asset_class 与从 SID 检测出的类别是否一致
-            detected = self._detect_asset_class_from_sids(sids)
+            detected = self._detect_asset_class_from_sids(instrument_ids)
             if detected != asset_class:
                 raise ValueError(
                     f"显式指定的资产类别 '{asset_class}' 与从 SID 检测出的类别 '{detected}' 不一致",  # noqa: E501
                 )
         else:
-            asset_class = self._detect_asset_class_from_sids(sids)
+            asset_class = self._detect_asset_class_from_sids(instrument_ids)
 
-        return sids, asset_class
+        return instrument_ids, asset_class
 
     def _parse_dates(
         self, query: MarketBarsQuery
@@ -436,7 +451,7 @@ class MarketService:
         self,
         df: pl.DataFrame,
         adj: AdjType,
-        sids: list[int],
+        instrument_ids: list[int],
         start: date | None,
         end: date | None,
         asof: date | None,
@@ -447,7 +462,7 @@ class MarketService:
         Args:
             df: K线数据 DataFrame.
             adj: 调整类型.
-            sids: SID 列表.
+            instrument_ids: SID 列表.
             start: 开始日期.
             end: 结束日期.
             asof: Point-in-Time 查询日期.
@@ -461,7 +476,7 @@ class MarketService:
         end_str = end.isoformat() if end else None
 
         adj_df = self._stock_adj_store.read(
-            sids=sids,
+            instrument_ids=instrument_ids,
             start_date=start_str,
             end_date=end_str,
         )
@@ -476,7 +491,7 @@ class MarketService:
             return df
 
         # 确保排序以正确处理 last() 聚合
-        adj_df = adj_df.sort(["sid", "trade_date"])
+        adj_df = adj_df.sort(["instrument_id", "trade_date"])
 
         # PIT 安全：如果提供了 asof，可能需要过滤
         join_adj_df = adj_df
@@ -485,12 +500,12 @@ class MarketService:
             join_adj_df = adj_df.filter(pl.col("knowledge_date") <= asof)
 
         # 关联调整因子
-        cols = ["sid", "trade_date", "adj_factor"]
+        cols = ["instrument_id", "trade_date", "adj_factor"]
         if "knowledge_date" in adj_df.columns:
             cols.append("knowledge_date")
         df = df.join(
             join_adj_df.select(cols),
-            on=["sid", "trade_date"],
+            on=["instrument_id", "trade_date"],
             how="left",
         )
 
@@ -503,7 +518,7 @@ class MarketService:
     def _enrich_with_status(
         self,
         df: pl.DataFrame,
-        sids: list[int],
+        instrument_ids: list[int],
         start: date | str | None = None,
         end: date | str | None = None,
     ) -> pl.DataFrame:
@@ -519,7 +534,7 @@ class MarketService:
 
         Args:
             df: 行情数据 DataFrame.
-            sids: 要获取状态的证券 ID 列表.
+            instrument_ids: 要获取状态的证券 ID 列表.
             start: 状态数据的起始日期（date 对象或字符串）.
             end: 状态数据的结束日期（date 对象或字符串）.
 
@@ -533,27 +548,18 @@ class MarketService:
 
         # 读取状态数据
         status_df = self._stock_status_store.read(
-            sids=sids,
+            instrument_ids=instrument_ids,
             start_date=start_str,
             end_date=end_str,
         )
 
         # 内联数据增强：join 状态数据
-        return df.join(status_df, on=["sid", "trade_date"], how="left")
+        return df.join(status_df, on=["instrument_id", "trade_date"], how="left")
 
     @staticmethod
     def _to_storage_columns(df: pl.DataFrame) -> pl.DataFrame:
-        """
-        归一化列名到当前存储层约定。
-
-        存储层仍使用 sid/src_code，Service 层接收 instrument_id/source_ticker。
-        """
-        rename_map: dict[str, str] = {}
-        if "instrument_id" in df.columns and "sid" not in df.columns:
-            rename_map["instrument_id"] = "sid"
-        if "source_ticker" in df.columns and "src_code" not in df.columns:
-            rename_map["source_ticker"] = "src_code"
-        return df.rename(rename_map) if rename_map else df
+        """归一化列名到存储层约定。"""
+        return df
 
     @traced("market.write_adj_factor")
     def write_adj_factor(

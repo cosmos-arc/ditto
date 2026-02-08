@@ -230,7 +230,9 @@ def dq_completeness_check(
         )
         df = hub.market.get_bars(query=query)
 
-        actual_sids = df["sid"].unique().to_list() if not df.is_empty() else []
+        actual_sids = (
+            df["instrument_id"].unique().to_list() if not df.is_empty() else []
+        )
 
         # 计算缺失
         missing_sids: set[int]

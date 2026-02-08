@@ -90,7 +90,7 @@ class StockStatusStore:
     @traced("data.read")
     def read(
         self,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> pl.DataFrame:
@@ -98,7 +98,7 @@ class StockStatusStore:
         Read stock status data.
 
         Args:
-            sids: Filter by security IDs.
+            instrument_ids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -129,8 +129,8 @@ class StockStatusStore:
         # Scan and filter
         lf = pl.scan_parquet([str(p) for p in paths])
 
-        if sids:
-            lf = lf.filter(pl.col("sid").is_in(sids))
+        if instrument_ids:
+            lf = lf.filter(pl.col("instrument_id").is_in(instrument_ids))
 
         if start_date:
             # Convert string to literal date
@@ -143,9 +143,9 @@ class StockStatusStore:
 
         # Ensure sorting for correct unique(keep="last") and result order
         result = (
-            lf.sort(["sid", "trade_date"])
-            .unique(subset=["sid", "trade_date"], keep="last")
-            .sort(["sid", "trade_date"])  # Ensure result is sorted
+            lf.sort(["instrument_id", "trade_date"])
+            .unique(subset=["instrument_id", "trade_date"], keep="last")
+            .sort(["instrument_id", "trade_date"])  # Ensure result is sorted
             .collect()
         )
 
@@ -157,7 +157,7 @@ class StockStatusStore:
             dataset=self._dataset,
             start_date=start_date,
             end_date=end_date,
-            sids_count=len(sids) if sids else None,
+            sids_count=len(instrument_ids) if instrument_ids else None,
             row_count=len(result),
             duration_ms=round(duration_ms, 2),
         )
@@ -201,7 +201,7 @@ class StockStatusStore:
         if file_path.exists():
             existing = pl.read_parquet(file_path)
             combined = pl.concat([existing, df]).unique(
-                subset=["sid", "trade_date"],
+                subset=["instrument_id", "trade_date"],
                 keep="last",  # New data overwrites
             )
         else:
@@ -217,7 +217,7 @@ class StockStatusStore:
                 combined = combined.with_columns(pl.col("trade_date").cast(pl.Date))
 
         # Sort for optimal read performance AND correct last() aggregation
-        combined = combined.sort(["sid", "trade_date"])
+        combined = combined.sort(["instrument_id", "trade_date"])
 
         # Atomic write
         atomic_write(combined, file_path)
@@ -307,7 +307,7 @@ class StockStatusStore:
 
     def count(
         self,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> int:
@@ -315,7 +315,7 @@ class StockStatusStore:
         Count records in stock status data.
 
         Args:
-            sids: Filter by security IDs.
+            instrument_ids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -323,7 +323,9 @@ class StockStatusStore:
             Number of matching records.
 
         """
-        df = self.read(sids=sids, start_date=start_date, end_date=end_date)
+        df = self.read(
+            instrument_ids=instrument_ids, start_date=start_date, end_date=end_date
+        )
         return len(df)
 
     def get_date_range(self) -> tuple[str | None, str | None]:

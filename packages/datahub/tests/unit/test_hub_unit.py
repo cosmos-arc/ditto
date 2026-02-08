@@ -63,7 +63,7 @@ from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
-from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
+from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
@@ -527,15 +527,15 @@ class TestDataHub:
         assert datahub_with_dependencies.is_trading_day("2024-01-06") is False
 
     # ========================================================================
-    # resolve_sid Tests
+    # resolve_instrument_id Tests
     # ========================================================================
 
-    def test_resolve_sid_raises_sid_not_found_error(
+    def test_resolve_instrument_id_raises_sid_not_found_error(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test resolve_sid raises SidNotFoundError when identifier not found."""
+        """Test resolve_instrument_id raises when identifier is not found."""
         # [REVIEW] 新架构中 index 已合并到 market
         # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
@@ -544,19 +544,21 @@ class TestDataHub:
 
         # Try to resolve a non-existent identifier
         with pytest.raises(SidNotFoundError) as exc_info:
-            datahub_with_dependencies.resolve_sid("999999.SH", source="tushare")
+            datahub_with_dependencies.resolve_instrument_id(
+                "999999.SH", source="tushare"
+            )
 
         # Verify exception contains the identifier and source
         assert exc_info.value.details["identifier"] == "999999.SH"
         assert exc_info.value.details["source"] == "tushare"
         assert "999999.SH" in str(exc_info.value)
 
-    def test_resolve_sid_with_custom_source(
+    def test_resolve_instrument_id_with_custom_source(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test resolve_sid with custom source parameter."""
+        """Test resolve_instrument_id with custom source parameter."""
         # [REVIEW] 新架构中 index 已合并到 market
         # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
@@ -565,16 +567,18 @@ class TestDataHub:
 
         # Try to resolve with custom source
         with pytest.raises(SidNotFoundError) as exc_info:
-            datahub_with_dependencies.resolve_sid("000001.SZ", source="akshare")
+            datahub_with_dependencies.resolve_instrument_id(
+                "000001.SZ", source="akshare"
+            )
 
         assert exc_info.value.details["source"] == "akshare"
 
-    def test_resolve_sid_with_asof_parameter(
+    def test_resolve_instrument_id_with_asof_parameter(
         self,
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test resolve_sid with asof parameter for PIT queries."""
+        """Test resolve_instrument_id with asof parameter for PIT queries."""
         # [REVIEW] 新架构中 index 已合并到 market
         # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
@@ -583,7 +587,7 @@ class TestDataHub:
 
         # Try to resolve with asof parameter
         with pytest.raises(SidNotFoundError) as exc_info:
-            datahub_with_dependencies.resolve_sid(
+            datahub_with_dependencies.resolve_instrument_id(
                 "600000.SH",
                 source="tushare",
                 asof="2023-01-01",
@@ -762,10 +766,10 @@ class TestDataHub:
 
         from ditto_datahub.hub import BarsQuerySpec
 
-        # Mock resolve_sids_from_inputs 返回空列表
+        # Mock resolve_instrument_ids_from_inputs 返回空列表
         mocker.patch.object(
             datahub_with_dependencies,
-            "resolve_sids_from_inputs",
+            "resolve_instrument_ids_from_inputs",
             return_value=[],
         )
 
@@ -852,7 +856,7 @@ class TestDataHub:
 
         # 创建查询参数
         query = MarketBarsQuery(
-            sids=[1, 2, 3],
+            instrument_ids=[1, 2, 3],
             start="2024-01-01",
             end="2024-01-31",
             adj=AdjType.NONE,

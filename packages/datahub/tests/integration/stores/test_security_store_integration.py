@@ -28,7 +28,7 @@ class TestInstrumentStoreIntegration:
         # Create test schema
         schema_sql = """
             CREATE TABLE security (
-                sid INTEGER PRIMARY KEY,
+                instrument_id INTEGER PRIMARY KEY,
                 symbol TEXT NOT NULL,
                 name TEXT NOT NULL,
                 exchange TEXT NOT NULL,
@@ -39,18 +39,20 @@ class TestInstrumentStoreIntegration:
             );
 
             CREATE TABLE security_mapping (
-                sid INTEGER NOT NULL,
+                instrument_id INTEGER NOT NULL,
                 source TEXT NOT NULL,
-                src_code TEXT NOT NULL,
+                source_ticker TEXT NOT NULL,
                 effective_from TEXT NOT NULL,
                 effective_to TEXT,
                 is_primary BOOLEAN DEFAULT TRUE,
-                FOREIGN KEY (sid) REFERENCES security(sid)
+                FOREIGN KEY (instrument_id) REFERENCES security(instrument_id)
             );
 
             CREATE INDEX idx_security_symbol ON security(symbol);
-            CREATE INDEX idx_security_mapping_src_code ON security_mapping(src_code);
-            CREATE INDEX idx_security_mapping_sid ON security_mapping(sid);
+            CREATE INDEX idx_security_mapping_source_ticker
+            ON security_mapping(source_ticker);
+            CREATE INDEX idx_security_mapping_instrument_id
+            ON security_mapping(instrument_id);
         """
         client.executescript(schema_sql)
         return client
@@ -72,12 +74,14 @@ class TestInstrumentStoreIntegration:
             list_date="1999-11-10",
         )
 
-        sid = store.register(1_000_001, registration)
+        instrument_id = store.register(1_000_001, registration)
 
-        assert sid == 1_000_001
+        assert instrument_id == 1_000_001
 
         # Verify security table
-        row = store._client.fetchone("SELECT * FROM security WHERE sid = ?", [sid])
+        row = store._client.fetchone(
+            "SELECT * FROM security WHERE instrument_id = ?", [instrument_id]
+        )
         assert row is not None
         assert row["symbol"] == "600000"
         assert row["name"] == "浦发银行"
@@ -85,14 +89,14 @@ class TestInstrumentStoreIntegration:
         # Verify mapping table
         mapping = store._client.fetchone(
             """SELECT * FROM security_mapping
-            WHERE sid = ? AND src_code = ?""",
-            [sid, "600000.SH"],
+            WHERE instrument_id = ? AND source_ticker = ?""",
+            [instrument_id, "600000.SH"],
         )
         assert mapping is not None
         assert mapping["source"] == "tushare"
 
-    def test_resolve_sid_current(self, store: InstrumentStore) -> None:
-        """Test resolving src_code to sid (current)."""
+    def test_resolve_instrument_id_current(self, store: InstrumentStore) -> None:
+        """Test resolving source_ticker to instrument_id (current)."""
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
@@ -106,11 +110,11 @@ class TestInstrumentStoreIntegration:
         store.register(1_000_001, registration)
 
         # Resolve current
-        sid = store.resolve_sid("600000.SH", "tushare", asof=None)
-        assert sid == 1_000_001
+        instrument_id = store.resolve_instrument_id("600000.SH", "tushare", asof=None)
+        assert instrument_id == 1_000_001
 
-    def test_resolve_sid_pit(self, store: InstrumentStore) -> None:
-        """Test resolving src_code to sid with PIT."""
+    def test_resolve_instrument_id_pit(self, store: InstrumentStore) -> None:
+        """Test resolving source_ticker to instrument_id with PIT."""
 
         # Register first security
         registration1 = InstrumentRegistration(
@@ -127,7 +131,7 @@ class TestInstrumentStoreIntegration:
         store._client.execute(
             """UPDATE security_mapping
             SET effective_to = '2024-01-01'
-            WHERE sid = ? AND src_code = ?""",
+            WHERE instrument_id = ? AND source_ticker = ?""",
             [1_000_001, "600000.SH"],
         )
         store._client.commit()
@@ -135,31 +139,35 @@ class TestInstrumentStoreIntegration:
         # Register new mapping for same SID
         store._client.execute(
             """INSERT INTO security_mapping
-            (sid, source, src_code, effective_from, is_primary)
+            (instrument_id, source, source_ticker, effective_from, is_primary)
             VALUES (?, ?, ?, ?, TRUE)""",
             [1_000_001, "tushare", "600001.SH", "2024-01-01"],
         )
         store._client.commit()
 
         # Resolve with PIT date
-        sid_before = store.resolve_sid("600000.SH", "tushare", asof="2023-12-31")
+        sid_before = store.resolve_instrument_id(
+            "600000.SH", "tushare", asof="2023-12-31"
+        )
         assert sid_before == 1_000_001
 
-        sid_after = store.resolve_sid("600001.SH", "tushare", asof="2024-01-02")
+        sid_after = store.resolve_instrument_id(
+            "600001.SH", "tushare", asof="2024-01-02"
+        )
         assert sid_after == 1_000_001
 
-    def test_resolve_sid_not_found(self, store: InstrumentStore) -> None:
-        """Test resolving non-existent src_code returns None."""
-        sid = store.resolve_sid("INVALID.XYZ", "tushare", asof=None)
-        assert sid is None
+    def test_resolve_instrument_id_not_found(self, store: InstrumentStore) -> None:
+        """Test resolving non-existent source_ticker returns None."""
+        instrument_id = store.resolve_instrument_id("INVALID.XYZ", "tushare", asof=None)
+        assert instrument_id is None
 
-    def test_resolve_sids_batch(self, store: InstrumentStore) -> None:
-        """Test batch resolving src_codes to sids."""
+    def test_resolve_instrument_ids_batch(self, store: InstrumentStore) -> None:
+        """Test batch resolving source_tickers to instrument_ids."""
 
         # Register multiple securities
-        for i, src_code in enumerate(["600000.SH", "600001.SH", "600002.SH"]):
+        for i, source_ticker in enumerate(["600000.SH", "600001.SH", "600002.SH"]):
             registration = InstrumentRegistration(
-                source_ticker=src_code,
+                source_ticker=source_ticker,
                 symbol=f"60000{i}",
                 name=f"测试{i}",
                 exchange="SSE",
@@ -169,7 +177,7 @@ class TestInstrumentStoreIntegration:
             store.register(1_000_001 + i, registration)
 
         # Batch resolve
-        result = store.resolve_sids_batch(
+        result = store.resolve_instrument_ids_batch(
             ["600000.SH", "600001.SH", "600002.SH", "INVALID.SH"],
             source="tushare",
         )
@@ -193,12 +201,12 @@ class TestInstrumentStoreIntegration:
         )
         store.register(1_000_001, registration)
 
-        sids = store.resolve_by_symbol("600000", "tushare")
-        assert len(sids) == 1
-        assert sids[0] == 1_000_001
+        instrument_ids = store.resolve_by_symbol("600000", "tushare")
+        assert len(instrument_ids) == 1
+        assert instrument_ids[0] == 1_000_001
 
-    def test_get_src_code(self, store: InstrumentStore) -> None:
-        """Test reverse lookup: sid to src_code."""
+    def test_get_source_ticker(self, store: InstrumentStore) -> None:
+        """Test reverse lookup: instrument_id to source_ticker."""
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
@@ -210,11 +218,11 @@ class TestInstrumentStoreIntegration:
         )
         store.register(1_000_001, registration)
 
-        src_code = store.get_src_code(1_000_001, "tushare")
-        assert src_code == "600000.SH"
+        source_ticker = store.get_source_ticker(1_000_001, "tushare")
+        assert source_ticker == "600000.SH"
 
     def test_get_by_sid(self, store: InstrumentStore) -> None:
-        """Test getting security by sid."""
+        """Test getting security by instrument_id."""
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
@@ -228,7 +236,7 @@ class TestInstrumentStoreIntegration:
 
         row = store.get_by_sid(1_000_001)
         assert row is not None
-        assert row["sid"] == 1_000_001
+        assert row["instrument_id"] == 1_000_001
         assert row["symbol"] == "600000"
         assert row["name"] == "浦发银行"
         assert row["asset_class"] == "stock"
@@ -267,7 +275,7 @@ class TestInstrumentStoreIntegration:
         assert len(sse_securities) == 2
 
     def test_list_sids(self, store: InstrumentStore) -> None:
-        """Test listing sids with filters."""
+        """Test listing instrument_ids with filters."""
 
         registration1 = InstrumentRegistration(
             source_ticker="600000.SH",
@@ -289,7 +297,7 @@ class TestInstrumentStoreIntegration:
         )
         store.register(2_000_001, registration2)
 
-        # List all sids
+        # List all instrument_ids
         all_sids = store.list_sids()
         assert len(all_sids) == 2
 
@@ -299,7 +307,7 @@ class TestInstrumentStoreIntegration:
         assert stock_sids[0] == 1_000_001
 
     def test_get_symbol(self, store: InstrumentStore) -> None:
-        """Test getting symbol by sid."""
+        """Test getting symbol by instrument_id."""
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
@@ -314,8 +322,8 @@ class TestInstrumentStoreIntegration:
         symbol = store.get_symbol(1_000_001)
         assert symbol == "600000"
 
-    def test_get_sid_symbol_map(self, store: InstrumentStore) -> None:
-        """Test getting sid to symbol mapping."""
+    def test_get_instrument_id_symbol_map(self, store: InstrumentStore) -> None:
+        """Test getting instrument_id to symbol mapping."""
 
         registration1 = InstrumentRegistration(
             source_ticker="600000.SH",
@@ -338,13 +346,13 @@ class TestInstrumentStoreIntegration:
         store.register(1_000_002, registration2)
 
         # Get all mapping
-        mapping = store.get_sid_symbol_map()
+        mapping = store.get_instrument_id_symbol_map()
         assert len(mapping) == 2
         assert mapping[1_000_001] == "600000"
         assert mapping[1_000_002] == "600001"
 
-        # Get specific sids
-        partial_mapping = store.get_sid_symbol_map([1_000_001])
+        # Get specific instrument_ids
+        partial_mapping = store.get_instrument_id_symbol_map([1_000_001])
         assert len(partial_mapping) == 1
         assert partial_mapping[1_000_001] == "600000"
 
@@ -362,7 +370,7 @@ class TestInstrumentStoreIntegration:
         store.register(1_000_001, registration)
 
         # Create test DataFrame
-        df = pl.DataFrame({"sid": [1_000_001], "value": [100]})
+        df = pl.DataFrame({"instrument_id": [1_000_001], "value": [100]})
 
         # Enrich with symbol
         enriched = store.enrich_with_symbol(df)

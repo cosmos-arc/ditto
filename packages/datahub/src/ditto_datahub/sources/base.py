@@ -208,7 +208,7 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "510300.SH")
+            - source_ticker: Source code (e.g., "510300.SH")
             - symbol: Display symbol (e.g., "510300")
             - name: ETF name
             - exchange: Exchange code
@@ -230,7 +230,7 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with columns (matching ETF_DAILY_SCHEMA):
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - open, high, low, close, pre_close: Float64
             - volume, amount: Float64
@@ -250,7 +250,7 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "000001.SZ")
+            - source_ticker: Source code (e.g., "000001.SZ")
             - symbol: Display symbol (e.g., "000001")
             - name: Stock name
             - exchange: Exchange code (SSE/SZSE/BSE)
@@ -272,7 +272,7 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with columns (same as ETF daily schema):
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - open, high, low, close, pre_close: Float64
             - volume, amount: Float64
@@ -295,7 +295,7 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - adj_factor: Float64
 
@@ -315,7 +315,7 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - adj_factor: Float64
 

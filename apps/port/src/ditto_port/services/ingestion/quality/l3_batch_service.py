@@ -166,7 +166,7 @@ class L3BatchService:
         # Fetch historical data using MarketService
 
         historical_query = MarketBarsQuery(
-            sids=None,
+            instrument_ids=None,
             start=start_date,
             end=trade_date,
             asset_class=asset_class,
@@ -176,7 +176,7 @@ class L3BatchService:
 
         # Fetch current data using MarketService
         current_query = MarketBarsQuery(
-            sids=None,
+            instrument_ids=None,
             start=trade_date,
             end=trade_date,
             asset_class=asset_class,

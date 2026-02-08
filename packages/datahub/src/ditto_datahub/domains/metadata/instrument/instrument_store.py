@@ -6,7 +6,7 @@ with Point-in-Time support for identifier resolution.
 
 命名映射：
 - Python 代码使用 instrument/source_ticker
-- 数据库表/列保持 security/src_code（避免数据迁移）
+- 数据库表/列保持 security/source_ticker（避免数据迁移）
 
 Migration: 重构自 SecurityStore (2026-01-29)
 """
@@ -35,7 +35,7 @@ def _build_in_clause(
     当列表超过 chunk_size 时，自动分块并用 OR 连接。
 
     Args:
-        column: 列名（如 "s.sid", "m.src_code"）。
+        column: 列名（如 "s.instrument_id", "m.source_ticker"）。
         items: 值列表。
         chunk_size: 每块的最大参数数量（默认 200，SQLite 限制）。
 
@@ -43,10 +43,10 @@ def _build_in_clause(
         (SQL 片段, 参数列表) 元组。
 
     Examples:
-        >>> _build_in_clause("s.sid", [1, 2, 3])
-        ('s.sid IN (?,?,?)', [1, 2, 3])
-        >>> _build_in_clause("s.sid", list(range(500)), chunk_size=200)
-        ('(s.sid IN (...)) OR (s.sid IN (...))', [...])
+        >>> _build_in_clause("s.instrument_id", [1, 2, 3])
+        ('s.instrument_id IN (?,?,?)', [1, 2, 3])
+        >>> _build_in_clause("s.instrument_id", list(range(500)), chunk_size=200)
+        ('(s.instrument_id IN (...)) OR (s.instrument_id IN (...))', [...])
 
     """
     if not items:
@@ -82,7 +82,7 @@ class InstrumentStore:
 
     命名映射：
     - Python 代码使用 instrument/source_ticker
-    - 数据库表/列保持 security/src_code（避免数据迁移）
+    - 数据库表/列保持 security/source_ticker（避免数据迁移）
 
     Migration: 重构自 SecurityStore (2026-01-29)
     """
@@ -103,76 +103,82 @@ class InstrumentStore:
         self._client = sqlite_client
         self._data_cache = data_cache
 
-    @traced("data.sid_resolve")
-    def resolve_sid(self, src_code: str, source: str, asof: str | None) -> int | None:
+    @traced("data.instrument_id_resolve")
+    def resolve_instrument_id(
+        self, source_ticker: str, source: str, asof: str | None
+    ) -> int | None:
         """
-        Resolve src_code to sid (with PIT support).
+        Resolve source_ticker to instrument_id (with PIT support).
 
         Args:
-            src_code: Source code like "600000.SH".
+            source_ticker: Source code like "600000.SH".
             source: Data source identifier.
             asof: Point-in-time date, None for current.
 
         Returns:
-            sid or None if not found.
+            instrument_id or None if not found.
 
         """
         logger.debug(
             "Starting SID resolution",
-            event="sid_resolve_start",
-            src_code=src_code,
+            event="instrument_id_resolve_start",
+            source_ticker=source_ticker,
             source=source,
             asof=asof,
         )
 
         # 尝试从 DataCache 获取
         if self._data_cache:
-            cache_key = f"sid:{src_code}:{source}:{asof or 'current'}"
+            cache_key = f"instrument_id:{source_ticker}:{source}:{asof or 'current'}"
             cached = self._data_cache.get(cache_key)
             if cached is not None:
                 return cached if cached != -1 else None
 
         # 从数据库查询
-        result = self._resolve_sid_from_db(src_code, source, asof)
+        result = self._resolve_instrument_id_from_db(source_ticker, source, asof)
 
         # 缓存结果（使用 -1 表示 None）
         if self._data_cache:
-            cache_key = f"sid:{src_code}:{source}:{asof or 'current'}"
+            cache_key = f"instrument_id:{source_ticker}:{source}:{asof or 'current'}"
             self._data_cache.set(cache_key, result if result is not None else -1)
 
         if result:
             logger.debug(
                 "SID resolved successfully",
-                event="sid_resolve_complete",
-                src_code=src_code,
-                sid=result,
+                event="instrument_id_resolve_complete",
+                source_ticker=source_ticker,
+                instrument_id=result,
             )
             # Record metrics
-            M.data_records.add(1, {"dataset": "sid_resolution", "status": "success"})
+            M.data_records.add(
+                1, {"dataset": "instrument_id_resolution", "status": "success"}
+            )
         else:
             logger.warning(
                 "SID not found",
-                event="sid_resolve_not_found",
-                src_code=src_code,
+                event="instrument_id_resolve_not_found",
+                source_ticker=source_ticker,
                 source=source,
                 asof=asof,
             )
             # Record metrics
-            M.data_records.add(1, {"dataset": "sid_resolution", "status": "not_found"})
+            M.data_records.add(
+                1, {"dataset": "instrument_id_resolution", "status": "not_found"}
+            )
 
         return result
 
-    def _resolve_sid_from_db(
+    def _resolve_instrument_id_from_db(
         self,
-        src_code: str,
+        source_ticker: str,
         source: str = "tushare",
         asof: str | None = None,
     ) -> int | None:
         """
-        Resolve src_code to sid (with PIT support).
+        Resolve source_ticker to instrument_id (with PIT support).
 
         Args:
-            src_code: Source code like "600000.SH".
+            source_ticker: Source code like "600000.SH".
             source: Data source identifier.
             asof: Point-in-time date, None for current.
 
@@ -180,63 +186,63 @@ class InstrumentStore:
         if asof:
             # PIT mode: query historical mapping
             row = self._client.fetchone(
-                """SELECT sid FROM security_mapping
-                WHERE source = ? AND src_code = ?
+                """SELECT instrument_id FROM security_mapping
+                WHERE source = ? AND source_ticker = ?
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to > ?)
                 ORDER BY effective_from DESC
                 LIMIT 1""",
-                [source, src_code, asof, asof],
+                [source, source_ticker, asof, asof],
             )
         else:
             # Current mode: only query active mapping (faster)
             row = self._client.fetchone(
-                """SELECT sid FROM security_mapping
-                WHERE source = ? AND src_code = ?
+                """SELECT instrument_id FROM security_mapping
+                WHERE source = ? AND source_ticker = ?
                   AND effective_to IS NULL""",
-                [source, src_code],
+                [source, source_ticker],
             )
 
-        return cast(int, row["sid"]) if row else None
+        return cast(int, row["instrument_id"]) if row else None
 
-    def resolve_sids_batch(
+    def resolve_instrument_ids_batch(
         self,
-        src_codes: list[str],
+        source_tickers: list[str],
         source: str = "tushare",
         asof: str | None = None,
     ) -> dict[str, int]:
         """
-        Batch resolve src_codes to sids.
+        Batch resolve source_tickers to instrument_ids.
 
         Args:
-            src_codes: List of source codes.
+            source_tickers: List of source codes.
             source: Data source identifier.
             asof: Point-in-time date.
 
         Returns:
-            Dictionary mapping src_code to sid (only for found codes).
+            Dictionary mapping source_ticker to instrument_id (only for found codes).
 
         """
         logger.info(
             "Starting batch SID resolution",
-            event="sid_batch_resolve_start",
+            event="instrument_id_batch_resolve_start",
             source=source,
             asof=asof,
-            input_count=len(src_codes),
+            input_count=len(source_tickers),
         )
 
         result: dict[str, int] = {}
-        for code in src_codes:
-            sid = self.resolve_sid(code, source, asof)
-            if sid:
-                result[code] = sid
+        for code in source_tickers:
+            instrument_id = self.resolve_instrument_id(code, source, asof)
+            if instrument_id:
+                result[code] = instrument_id
 
         logger.info(
             "Batch SID resolution completed",
-            event="sid_batch_resolve_complete",
-            requested=len(src_codes),
+            event="instrument_id_batch_resolve_complete",
+            requested=len(source_tickers),
             found=len(result),
-            not_found=len(src_codes) - len(result),
+            not_found=len(source_tickers) - len(result),
         )
 
         return result
@@ -247,81 +253,83 @@ class InstrumentStore:
         source: str = "tushare",
     ) -> list[int]:
         """
-        Query sids by symbol (may have multiple results).
+        Query instrument_ids by symbol (may have multiple results).
 
         Args:
             symbol: Display symbol.
             source: Data source identifier.
 
         Returns:
-            List of sids.
+            List of instrument_ids.
 
         """
         rows = self._client.fetchall(
-            """SELECT DISTINCT s.sid
+            """SELECT DISTINCT s.instrument_id
             FROM security s
-            JOIN security_mapping m ON s.sid = m.sid
+            JOIN security_mapping m ON s.instrument_id = m.instrument_id
             WHERE s.symbol = ? AND m.source = ? AND m.effective_to IS NULL""",
             [symbol, source],
         )
-        return [cast(int, r["sid"]) for r in rows]
+        return [cast(int, r["instrument_id"]) for r in rows]
 
-    def get_src_code(
+    def get_source_ticker(
         self,
-        sid: int,
+        instrument_id: int,
         source: str = "tushare",
         asof: str | None = None,
     ) -> str | None:
         """
-        Reverse lookup: sid to src_code.
+        Reverse lookup: instrument_id to source_ticker.
 
         Args:
-            sid: Security ID.
+            instrument_id: Security ID.
             source: Data source identifier.
             asof: Point-in-time date.
 
         Returns:
-            src_code or None if not found.
+            source_ticker or None if not found.
 
         """
         if asof:
             row = self._client.fetchone(
-                """SELECT src_code FROM security_mapping
-                WHERE sid = ? AND source = ?
+                """SELECT source_ticker FROM security_mapping
+                WHERE instrument_id = ? AND source = ?
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to > ?)
                 ORDER BY effective_from DESC
                 LIMIT 1""",
-                [sid, source, asof, asof],
+                [instrument_id, source, asof, asof],
             )
         else:
             row = self._client.fetchone(
-                """SELECT src_code FROM security_mapping
-                WHERE sid = ? AND source = ?
+                """SELECT source_ticker FROM security_mapping
+                WHERE instrument_id = ? AND source = ?
                   AND effective_to IS NULL""",
-                [sid, source],
+                [instrument_id, source],
             )
 
-        return cast(str, row["src_code"]) if row else None
+        return cast(str, row["source_ticker"]) if row else None
 
-    def get_by_sid(self, sid: int) -> dict[str, Any] | None:
+    def get_by_sid(self, instrument_id: int) -> dict[str, Any] | None:
         """
-        Get security by sid.
+        Get security by instrument_id.
 
         Args:
-            sid: Security ID.
+            instrument_id: Security ID.
 
         Returns:
             Dictionary with security data or None.
 
         """
-        row = self._client.fetchone("SELECT * FROM security WHERE sid = ?", [sid])
+        row = self._client.fetchone(
+            "SELECT * FROM security WHERE instrument_id = ?", [instrument_id]
+        )
         return row
 
     def find_securities(
         self,
-        sids: list[int] | None = None,
-        src_codes: list[str] | None = None,
+        instrument_ids: list[int] | None = None,
+        source_tickers: list[str] | None = None,
         source: str = "tushare",
         asset_class: str | None = None,
         exchange: str | None = None,
@@ -332,8 +340,8 @@ class InstrumentStore:
         Query securities with filters.
 
         Args:
-            sids: Filter by sids.
-            src_codes: Filter by source codes.
+            instrument_ids: Filter by instrument_ids.
+            source_tickers: Filter by source codes.
             source: Data source identifier.
             asset_class: Filter by asset class.
             exchange: Filter by exchange.
@@ -345,22 +353,24 @@ class InstrumentStore:
 
         """
         sql = """
-            SELECT s.*, m.source, m.src_code
+            SELECT s.*, m.source, m.source_ticker
             FROM security s
-            LEFT JOIN security_mapping m ON s.sid = m.sid
+            LEFT JOIN security_mapping m ON s.instrument_id = m.instrument_id
             WHERE 1=1
         """
         params: list[Any] = []
 
-        if sids:
-            in_clause, sids_list = _build_in_clause("s.sid", sids)
+        if instrument_ids:
+            in_clause, sids_list = _build_in_clause("s.instrument_id", instrument_ids)
             sql += f" AND {in_clause}"
             params.extend(sids_list)
 
-        if src_codes:
-            in_clause, src_codes_list = _build_in_clause("m.src_code", src_codes)
+        if source_tickers:
+            in_clause, source_tickers_list = _build_in_clause(
+                "m.source_ticker", source_tickers
+            )
             sql += f" AND {in_clause} AND m.source = ?"
-            params.extend(src_codes_list)
+            params.extend(source_tickers_list)
             params.append(source)
 
             if asof:
@@ -398,7 +408,7 @@ class InstrumentStore:
         is_active: bool | None = True,
     ) -> list[int]:
         """
-        List all sids with optional filters.
+        List all instrument_ids with optional filters.
 
         Args:
             asset_class: Filter by asset class.
@@ -406,10 +416,10 @@ class InstrumentStore:
             is_active: Filter by active status.
 
         Returns:
-            List of sids.
+            List of instrument_ids.
 
         """
-        sql = "SELECT sid FROM security WHERE 1=1"
+        sql = "SELECT instrument_id FROM security WHERE 1=1"
         params: list[Any] = []
 
         if asset_class:
@@ -425,58 +435,66 @@ class InstrumentStore:
             params.append(is_active)
 
         rows = self._client.fetchall(sql, params)
-        return [cast(int, r["sid"]) for r in rows]
+        return [cast(int, r["instrument_id"]) for r in rows]
 
-    def get_symbol(self, sid: int) -> str | None:
+    def get_symbol(self, instrument_id: int) -> str | None:
         """
-        Get symbol by sid.
+        Get symbol by instrument_id.
 
         Args:
-            sid: Security ID.
+            instrument_id: Security ID.
 
         Returns:
             Symbol or None if not found.
 
         """
-        row = self._client.fetchone("SELECT symbol FROM security WHERE sid = ?", [sid])
+        row = self._client.fetchone(
+            "SELECT symbol FROM security WHERE instrument_id = ?", [instrument_id]
+        )
         return cast(str, row["symbol"]) if row else None
 
-    def get_sid_symbol_map(self, sids: list[int] | None = None) -> dict[int, str]:
+    def get_instrument_id_symbol_map(
+        self, instrument_ids: list[int] | None = None
+    ) -> dict[int, str]:
         """
-        Get batch sid to symbol mapping.
+        Get batch instrument_id to symbol mapping.
 
         Args:
-            sids: List of sids to query, None for all active.
+            instrument_ids: List of instrument_ids to query, None for all active.
 
         Returns:
-            Dictionary mapping sid to symbol.
+            Dictionary mapping instrument_id to symbol.
 
         """
         # 尝试从 DataCache 获取
-        if self._data_cache and sids:
+        if self._data_cache and instrument_ids:
             # 使用排序后的 tuple 作为缓存键
-            cache_key = f"sid_symbol_map:{','.join(map(str, sorted(sids)))}"
+            cache_key = (
+                f"instrument_id_symbol_map:{','.join(map(str, sorted(instrument_ids)))}"
+            )
             cached = self._data_cache.get(cache_key)
             if cached is not None:
                 return cast(dict[int, str], cached)
 
         # 从数据库查询
-        if sids:
-            in_clause, sids_list = _build_in_clause("sid", sids)
+        if instrument_ids:
+            in_clause, sids_list = _build_in_clause("instrument_id", instrument_ids)
             rows = self._client.fetchall(
-                f"SELECT sid, symbol FROM security WHERE {in_clause}",  # noqa: S608 - in_clause 通过 _build_in_clause 安全构建
+                f"SELECT instrument_id, symbol FROM security WHERE {in_clause}",  # noqa: S608 - in_clause 通过 _build_in_clause 安全构建
                 sids_list,
             )
         else:
             rows = self._client.fetchall(
-                "SELECT sid, symbol FROM security WHERE is_active = TRUE"
+                "SELECT instrument_id, symbol FROM security WHERE is_active = TRUE"
             )
 
-        result = {cast(int, r["sid"]): cast(str, r["symbol"]) for r in rows}
+        result = {cast(int, r["instrument_id"]): cast(str, r["symbol"]) for r in rows}
 
         # 缓存结果
-        if self._data_cache and sids:
-            cache_key = f"sid_symbol_map:{','.join(map(str, sorted(sids)))}"
+        if self._data_cache and instrument_ids:
+            cache_key = (
+                f"instrument_id_symbol_map:{','.join(map(str, sorted(instrument_ids)))}"
+            )
             self._data_cache.set(cache_key, result)
 
         return result
@@ -486,18 +504,18 @@ class InstrumentStore:
         Add symbol column to DataFrame.
 
         Args:
-            df: DataFrame with instrument_id column (also supports sid).
+            df: DataFrame with instrument_id column (also supports instrument_id).
 
         Returns:
             DataFrame with symbol column added.
 
         """
-        id_col = "instrument_id" if "instrument_id" in df.columns else "sid"
+        id_col = "instrument_id"
         if id_col not in df.columns or df.is_empty():
             return df
 
         instrument_ids = df[id_col].unique().to_list()
-        symbol_map = self.get_sid_symbol_map(instrument_ids)
+        symbol_map = self.get_instrument_id_symbol_map(instrument_ids)
 
         symbol_df = pl.DataFrame(
             {
@@ -509,24 +527,24 @@ class InstrumentStore:
         # 内联数据增强：join symbol 数据
         return df.join(symbol_df, on=id_col, how="left")
 
-    def register(self, sid: int, registration: InstrumentRegistration) -> int:
+    def register(self, instrument_id: int, registration: InstrumentRegistration) -> int:
         """
         Register a new instrument.
 
         Args:
-            sid: Instrument ID.
+            instrument_id: Instrument ID.
             registration: Instrument registration configuration.
 
         Returns:
-            The registered sid.
+            The registered instrument_id.
 
         """
         logger.info(
             "Starting instrument registration",
             event="instrument_register_start",
-            sid=sid,
+            instrument_id=instrument_id,
             symbol=registration.symbol,
-            src_code=registration.source_ticker,
+            source_ticker=registration.source_ticker,
             source=registration.source,
             asset_class=registration.asset_class,
             exchange=registration.exchange,
@@ -536,10 +554,13 @@ class InstrumentStore:
             # Insert into security table
             self._client.execute(
                 """INSERT INTO security
-                (sid, symbol, name, exchange, board, asset_class, list_date, is_active)
+                (
+                    instrument_id, symbol, name, exchange, board, asset_class,
+                    list_date, is_active
+                )
                 VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)""",
                 [
-                    sid,
+                    instrument_id,
                     registration.symbol,
                     registration.name,
                     registration.exchange,
@@ -552,10 +573,10 @@ class InstrumentStore:
             # Insert into mapping table
             self._client.execute(
                 """INSERT INTO security_mapping
-                (sid, source, src_code, effective_from, is_primary)
+                (instrument_id, source, source_ticker, effective_from, is_primary)
                 VALUES (?, ?, ?, ?, TRUE)""",
                 [
-                    sid,
+                    instrument_id,
                     registration.source,
                     registration.source_ticker,
                     registration.list_date,
@@ -566,29 +587,30 @@ class InstrumentStore:
             if self._data_cache:
                 # 失效特定 source_ticker 的负缓存（如果有）
                 cache_key = (
-                    f"sid:{registration.source_ticker}:{registration.source}:current"
+                    f"instrument_id:{registration.source_ticker}:"
+                    f"{registration.source}:current"
                 )
                 self._data_cache.invalidate(cache_key)
-                # 失效 sid_symbol_map 缓存
-                self._data_cache.invalidate_pattern("sid_symbol_map:*")
+                # 失效 instrument_id_symbol_map 缓存
+                self._data_cache.invalidate_pattern("instrument_id_symbol_map:*")
 
             self._client.commit()
 
             logger.info(
                 "Instrument registered successfully",
                 event="instrument_register_complete",
-                sid=sid,
+                instrument_id=instrument_id,
                 symbol=registration.symbol,
             )
 
-            return sid
+            return instrument_id
 
         except Exception as e:
             self._client.rollback()
             logger.error(
                 "Instrument registration failed",
                 event="instrument_register_failed",
-                sid=sid,
+                instrument_id=instrument_id,
                 symbol=registration.symbol,
                 error_type=type(e).__name__,
                 error_message=str(e),

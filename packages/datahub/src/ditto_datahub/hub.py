@@ -25,11 +25,11 @@ from ditto_datahub.domains.metadata.instrument import InstrumentStore
 from ditto_datahub.errors import SidNotFoundError
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion import IngestionLogStore
-from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
+from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
 
-# 类型别名：标识符（支持 SID/src_code/symbol 混合）
+# 类型别名：标识符（支持 SID/source_ticker/symbol 混合）
 type Identifier = str | int
 type IdentifierList = list[Identifier]
 
@@ -42,7 +42,7 @@ class BarsQuerySpec:
     封装所有 K 线查询参数，支持混合标识符输入。
 
     Attributes:
-        identifiers: 标识符列表（支持 SID/src_code/symbol 混合）。
+        identifiers: 标识符列表（支持 SID/source_ticker/symbol 混合）。
         start: 开始日期 (YYYY-MM-DD)。
         end: 结束日期 (YYYY-MM-DD)。
         adj: 复权类型 (none/qfq/hfq)。
@@ -83,7 +83,7 @@ class SecuritiesQuerySpec:
     封装所有证券查询参数，支持混合标识符输入。
 
     Attributes:
-        identifiers: 标识符列表（支持 SID/src_code/symbol 混合）。
+        identifiers: 标识符列表（支持 SID/source_ticker/symbol 混合）。
         source: 数据源标识符。
         asset_class: 资产类别过滤。
         exchange: 交易所过滤。
@@ -235,7 +235,7 @@ class DataHub:
 
         Examples:
             # Basic query
-            hub.sql("SELECT * FROM stock_daily WHERE sid = 10001")
+            hub.sql("SELECT * FROM stock_daily WHERE instrument_id = 10001")
 
             # PIT query
             hub.sql(
@@ -254,7 +254,7 @@ class DataHub:
         """
         return self.sql_engine.execute(query, asof=asof, params=params)
 
-    def resolve_sid(
+    def resolve_instrument_id(
         self,
         identifier: str,
         source: str = "tushare",
@@ -275,7 +275,7 @@ class DataHub:
             SidNotFoundError: If identifier cannot be resolved.
 
         """
-        result = self._instrument_store.resolve_sid(identifier, source, asof)
+        result = self._instrument_store.resolve_instrument_id(identifier, source, asof)
         if result is None:
             raise SidNotFoundError(
                 message=f"Identifier '{identifier}' not found in source '{source}'",
@@ -341,20 +341,22 @@ class DataHub:
         批量解析标识符为 SID。
 
         Args:
-            identifiers: 标识符列表（src_code 或 symbol）。
+            identifiers: 标识符列表（source_ticker 或 symbol）。
             source: 数据源标识符。
             asof: Point-in-time 查询日期。
 
         Returns:
-            {identifier: sid} 映射字典（只包含找到的标识符）。
+            {identifier: instrument_id} 映射字典（只包含找到的标识符）。
 
         """
-        return self._instrument_store.resolve_sids_batch(identifiers, source, asof)
+        return self._instrument_store.resolve_instrument_ids_batch(
+            identifiers, source, asof
+        )
 
-    def resolve_sids_from_inputs(
+    def resolve_instrument_ids_from_inputs(
         self,
-        sids: list[int] | None = None,
-        src_codes: list[str] | None = None,
+        instrument_ids: list[int] | None = None,
+        source_tickers: list[str] | None = None,
         symbols: list[str] | None = None,
         source: str = "tushare",
         asof: str | None = None,
@@ -363,8 +365,8 @@ class DataHub:
         从多种输入类型解析 SID 列表。
 
         Args:
-            sids: SID 列表（已知的 SID，无需转换）。
-            src_codes: src_code 列表（需要转换）。
+            instrument_ids: SID 列表（已知的 SID，无需转换）。
+            source_tickers: source_ticker 列表（需要转换）。
             symbols: symbol 列表（需要转换）。
             source: 数据源标识符。
             asof: Point-in-time 查询日期。
@@ -375,41 +377,43 @@ class DataHub:
         """
         resolved: set[int] = set()
 
-        if sids:
-            resolved.update(sids)
+        if instrument_ids:
+            resolved.update(instrument_ids)
 
-        if src_codes:
-            mapping = self.resolve_identifiers(src_codes, source, asof)
+        if source_tickers:
+            mapping = self.resolve_identifiers(source_tickers, source, asof)
             resolved.update(mapping.values())
 
         if symbols:
             for symbol in symbols:
-                sid = self.resolve_sid(symbol, source, asof)
-                if sid:
-                    resolved.add(sid)
+                instrument_id = self.resolve_instrument_id(symbol, source, asof)
+                if instrument_id:
+                    resolved.add(instrument_id)
 
         return sorted(resolved)
 
-    def get_symbol(self, sid: int) -> str | None:
+    def get_symbol(self, instrument_id: int) -> str | None:
         """获取 SID 对应的 symbol。"""
-        return self.securities.get_symbol(sid)
+        return self.securities.get_symbol(instrument_id)
 
-    def get_src_code(
+    def get_source_ticker(
         self,
-        sid: int,
+        instrument_id: int,
         source: str = "tushare",
         asof: str | None = None,
     ) -> str | None:
-        """获取 SID 对应的 src_code。"""
-        return self.securities.get_src_code(sid, source, asof)
+        """获取 SID 对应的 source_ticker。"""
+        return self.securities.get_source_ticker(instrument_id, source, asof)
 
-    def get_sid_symbol_mapping(self, sids: list[int]) -> dict[int, str]:
+    def get_instrument_id_symbol_mapping(
+        self, instrument_ids: list[int]
+    ) -> dict[int, str]:
         """批量获取 SID 到 symbol 的映射。"""
         result: dict[int, str] = {}
-        for sid in sids:
-            symbol = self.get_symbol(sid)
+        for instrument_id in instrument_ids:
+            symbol = self.get_symbol(instrument_id)
             if symbol:
-                result[sid] = symbol
+                result[instrument_id] = symbol
         return result
 
     # ========================================================================
@@ -447,25 +451,25 @@ class DataHub:
             >>> bars = hub.get_bars(params)
 
         """
-        # 分类标识符：SID、src_code、symbol
-        sids: list[int] = []
-        src_codes: list[str] = []
+        # 分类标识符：SID、source_ticker、symbol
+        instrument_ids: list[int] = []
+        source_tickers: list[str] = []
         symbols: list[str] = []
 
         for item in params.identifiers:
             if isinstance(item, int):
-                sids.append(item)
+                instrument_ids.append(item)
             elif "." in str(item):
-                # 字符串包含 '.'：判断为 src_code
-                src_codes.append(str(item))
+                # 字符串包含 '.'：判断为 source_ticker
+                source_tickers.append(str(item))
             else:
                 # 字符串不包含 '.'：判断为 symbol
                 symbols.append(str(item))
 
         # 解析 SID
-        resolved_sids = self.resolve_sids_from_inputs(
-            sids=sids if sids else None,
-            src_codes=src_codes if src_codes else None,
+        resolved_sids = self.resolve_instrument_ids_from_inputs(
+            instrument_ids=instrument_ids if instrument_ids else None,
+            source_tickers=source_tickers if source_tickers else None,
             symbols=symbols if symbols else None,
             source=params.source,
             asof=params.asof,
@@ -476,7 +480,7 @@ class DataHub:
 
         # 构造查询对象
         query = MarketBarsQuery(
-            sids=resolved_sids,
+            instrument_ids=resolved_sids,
             start=params.start,
             end=params.end,
             adj=AdjType(params.adj),
@@ -518,31 +522,31 @@ class DataHub:
 
         """
         # 分类标识符
-        sids: list[int] = []
-        src_codes: list[str] = []
+        instrument_ids: list[int] = []
+        source_tickers: list[str] = []
         symbols: list[str] = []
 
         for item in params.identifiers:
             if isinstance(item, int):
-                sids.append(item)
+                instrument_ids.append(item)
             elif "." in str(item):
-                # 字符串包含 '.'：判断为 src_code
-                src_codes.append(str(item))
+                # 字符串包含 '.'：判断为 source_ticker
+                source_tickers.append(str(item))
             else:
                 # 字符串不包含 '.'：判断为 symbol
                 symbols.append(str(item))
 
         # 解析 SID
-        resolved_sids = self.resolve_sids_from_inputs(
-            sids=sids if sids else None,
-            src_codes=src_codes if src_codes else None,
+        resolved_sids = self.resolve_instrument_ids_from_inputs(
+            instrument_ids=instrument_ids if instrument_ids else None,
+            source_tickers=source_tickers if source_tickers else None,
             symbols=symbols if symbols else None,
             source=params.source,
             asof=params.asof,
         )
 
         return self.metadata.get_securities(
-            sids=resolved_sids if resolved_sids else None,
+            instrument_ids=resolved_sids if resolved_sids else None,
             source=params.source,
             asset_class=params.asset_class,
             exchange=params.exchange,
@@ -552,20 +556,22 @@ class DataHub:
 
     def get_index_bars(
         self,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         symbols: list[str] | None = None,
         start: str | None = None,
         end: str | None = None,
     ) -> pl.DataFrame:
         """获取指数 K 线（便捷 API）。"""
-        resolved_sids = self.resolve_sids_from_inputs(sids=sids, symbols=symbols)
+        resolved_sids = self.resolve_instrument_ids_from_inputs(
+            instrument_ids=instrument_ids, symbols=symbols
+        )
 
         if not resolved_sids:
             return pl.DataFrame()
 
         # 使用 MarketService.get_bars()
         query = MarketBarsQuery(
-            sids=resolved_sids,
+            instrument_ids=resolved_sids,
             start=start,
             end=end,
         )

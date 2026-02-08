@@ -71,7 +71,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "000001.SZ")
+            - source_ticker: Source code (e.g., "000001.SZ")
             - symbol: Display symbol (e.g., "000001")
             - name: Stock name
             - exchange: Exchange code
@@ -92,7 +92,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns (same as ETF daily schema):
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - open, high, low, close, pre_close: Float64
             - volume, amount: Float64
@@ -114,7 +114,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - knowledge_date: Date (PIT safety: when this data became known)
             - adj_factor: Float64
@@ -134,7 +134,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "000001.SZ")
+            - source_ticker: Source code (e.g., "000001.SZ")
             - trade_date: Date
             - up_limit: Float64 (涨停价)
             - down_limit: Float64 (跌停价)
@@ -159,7 +159,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "000001.SZ")
+            - source_ticker: Source code (e.g., "000001.SZ")
             - trade_date: Date
             - is_suspended: Boolean
             - suspend_timing: Utf8 (e.g., "09:30-10:00" or null)
@@ -180,7 +180,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code (e.g., "510300.SH")
+            - source_ticker: Source code (e.g., "510300.SH")
             - symbol: Display symbol (e.g., "510300")
             - name: ETF name
             - exchange: Exchange code
@@ -201,7 +201,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns (matching ETF_DAILY_SCHEMA):
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - open, high, low, close, pre_close: Float64
             - volume, amount: Float64
@@ -223,7 +223,7 @@ class TushareSource(DataSource):
 
         Returns:
             DataFrame with columns:
-            - src_code: Source code
+            - source_ticker: Source code
             - trade_date: Date
             - knowledge_date: Date (PIT safety: when this data became known)
             - adj_factor: Float64

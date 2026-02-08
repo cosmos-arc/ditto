@@ -157,13 +157,7 @@ class IngestionDataWriter:
         except ValueError as e:
             raise ValueError(f"不支持写入数据集: {dataset}") from e
 
-        source_ticker_col = (
-            "source_ticker"
-            if "source_ticker" in df.columns
-            else "src_code"
-            if "src_code" in df.columns
-            else "source_ticker"
-        )
+        source_ticker_col = "source_ticker"
 
         if dataset_enum in (Dataset.ETF_DAILY, Dataset.STOCK_DAILY):
             # 补齐 instrument_id/source_ticker/source 字段（使用 MetadataService API）
@@ -280,9 +274,7 @@ class IngestionDataWriter:
             df=df,
             source=self._source_name,
             asset_class="stock",
-            source_ticker_col=(
-                "source_ticker" if "source_ticker" in df.columns else "src_code"
-            ),
+            source_ticker_col="source_ticker",
         )
 
         return file_path, checksum
@@ -304,9 +296,7 @@ class IngestionDataWriter:
             df=df,
             source=self._source_name,
             asset_class="etf",
-            source_ticker_col=(
-                "source_ticker" if "source_ticker" in df.columns else "src_code"
-            ),
+            source_ticker_col="source_ticker",
         )
 
         return file_path, checksum

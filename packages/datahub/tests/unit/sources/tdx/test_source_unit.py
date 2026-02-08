@@ -124,7 +124,7 @@ class TestFetchStockDailyBars:
         # Arrange
         mock_instrument_store.enrich_with_symbol.return_value = pl.DataFrame(
             {
-                "sid": [1000001, 1000002],
+                "instrument_id": [1000001, 1000002],
                 "symbol": ["000001", "999999"],
                 "exchange": ["SZSE", None],
             }
@@ -151,11 +151,11 @@ class TestFetchStockDailyBars:
         mock_instrument_store: MagicMock,
         mocker: MockerFixture,
     ) -> None:
-        """Symbol 转换为 src_code 格式."""
+        """Symbol 转换为 source_ticker 格式."""
         # Arrange
         mock_instrument_store.enrich_with_symbol.return_value = pl.DataFrame(
             {
-                "sid": [1000001, 1000002],
+                "instrument_id": [1000001, 1000002],
                 "symbol": ["000001", "600000"],
             }
         )
@@ -163,7 +163,7 @@ class TestFetchStockDailyBars:
         mock_reader = mocker.MagicMock()
         mock_reader.fetch_stock_daily_bars.return_value = pl.DataFrame(
             {
-                "src_code": ["000001.SZ", "600000.SH"],
+                "source_ticker": ["000001.SZ", "600000.SH"],
                 "trade_date": ["20240101", "20240101"],
                 "close": [10.0, 20.0],
             }
@@ -175,7 +175,7 @@ class TestFetchStockDailyBars:
 
         # Assert - 验证返回 DataFrame 包含 symbol 列
         assert "symbol" in result.columns
-        assert "src_code" not in result.columns
+        assert "source_ticker" not in result.columns
         assert set(result["symbol"].to_list()) == {"000001", "600000"}
 
     def test_multiple_symbols_batch(
@@ -188,7 +188,7 @@ class TestFetchStockDailyBars:
         # Arrange
         mock_instrument_store.enrich_with_symbol.return_value = pl.DataFrame(
             {
-                "sid": [1000001, 1000002, 1000003],
+                "instrument_id": [1000001, 1000002, 1000003],
                 "symbol": ["000001", "600000", "510300"],
             }
         )
@@ -212,13 +212,13 @@ class TestFetchStockDailyBars:
         """验证返回数据包含预期列."""
         # Arrange
         mock_instrument_store.enrich_with_symbol.return_value = pl.DataFrame(
-            {"sid": [1000001], "symbol": ["000001"]}
+            {"instrument_id": [1000001], "symbol": ["000001"]}
         )
 
         mock_reader = mocker.MagicMock()
         mock_reader.fetch_stock_daily_bars.return_value = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": ["20240101"],
                 "open": [10.0],
                 "high": [10.5],

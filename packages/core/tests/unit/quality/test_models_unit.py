@@ -36,12 +36,12 @@ class TestDatasetRules:
             technical=[
                 {
                     "rule": "not_null",
-                    "columns": ["sid", "trade_date"],
+                    "columns": ["instrument_id", "trade_date"],
                     "message": "Required",
                 },
                 {
                     "rule": "unique",
-                    "columns": ["sid", "trade_date"],
+                    "columns": ["instrument_id", "trade_date"],
                     "message": "Unique",
                 },
             ],
@@ -66,23 +66,23 @@ class TestRuleModels:
         """Test NotNullRule validation."""
         rule = NotNullRule(
             rule="not_null",
-            columns=["sid", "trade_date"],
+            columns=["instrument_id", "trade_date"],
             message="Fields required",
         )
 
         assert rule.rule == "not_null"
-        assert rule.columns == ["sid", "trade_date"]
+        assert rule.columns == ["instrument_id", "trade_date"]
 
     def test_unique_rule(self) -> None:
         """Test UniqueRule validation."""
         rule = UniqueRule(
             rule="unique",
-            columns=["sid", "trade_date"],
+            columns=["instrument_id", "trade_date"],
             message="Primary key unique",
         )
 
         assert rule.rule == "unique"
-        assert rule.columns == ["sid", "trade_date"]
+        assert rule.columns == ["instrument_id", "trade_date"]
 
     def test_zscore_rule_validation(self) -> None:
         """Test ZScoreRule validation."""
@@ -93,13 +93,13 @@ class TestRuleModels:
             column="volume",
             window=60,
             threshold=5.0,
-            group_by="sid",
+            group_by="instrument_id",
             message="Volume spike",
         )
 
         assert rule.window == 60
         assert rule.threshold == 5.0
-        assert rule.group_by == "sid"
+        assert rule.group_by == "instrument_id"
 
         # Invalid threshold
         with pytest.raises(ValidationError):

@@ -16,7 +16,7 @@ class TestBusinessChecker:
         """Test positive check with valid data."""
         df = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 "open": [10.0, 20.0, 30.0],
                 "close": [10.5, 20.5, 30.5],
             }
@@ -38,7 +38,7 @@ class TestBusinessChecker:
         """Test positive check with negative values."""
         df = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 "open": [10.0, -5.0, 30.0],  # One negative
                 "close": [10.5, 20.5, 30.5],
             }
@@ -64,7 +64,7 @@ class TestBusinessChecker:
         """Test OHLC consistency check with valid data."""
         df = pl.DataFrame(
             {
-                "sid": [1, 2],
+                "instrument_id": [1, 2],
                 "open": [10.0, 20.0],
                 "high": [10.5, 20.8],
                 "low": [9.8, 19.5],
@@ -89,7 +89,7 @@ class TestBusinessChecker:
         """Test OHLC consistency check with invalid data."""
         df = pl.DataFrame(
             {
-                "sid": [1, 2],
+                "instrument_id": [1, 2],
                 "open": [10.5, 20.0],
                 "high": [10.0, 14.0],  # high < open
                 "low": [10.8, 16.0],  # low > open
@@ -117,7 +117,7 @@ class TestBusinessChecker:
         """Test range check with valid data."""
         df = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 "weight": [0.3, 0.4, 0.3],  # All in [0, 1]
             }
         )
@@ -140,7 +140,7 @@ class TestBusinessChecker:
         """Test range check with invalid data."""
         df = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 "weight": [0.3, -0.1, 1.5],  # Two out of range
             }
         )
@@ -165,7 +165,7 @@ class TestBusinessChecker:
         """Test no zero volume check with valid data."""
         df = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 "volume": [1000, 2000, 3000],
             }
         )
@@ -182,7 +182,7 @@ class TestBusinessChecker:
         """Test no zero volume check with zero values."""
         df = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 "volume": [1000, 0, 3000],  # One zero
             }
         )
@@ -201,7 +201,7 @@ class TestBusinessChecker:
         """Test positive check with missing column."""
         df = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 # open column missing
                 "close": [10.5, 20.5, 30.5],
             }

@@ -171,6 +171,8 @@ class SQLitePool:
             return
 
         conn = self.get_connection()
+        if self._has_legacy_identifier_schema(conn):
+            self._reset_all_user_tables(conn)
         conn.executescript(schema)
         conn.commit()
 
@@ -179,6 +181,55 @@ class SQLitePool:
             event="schema_init_complete",
             status="success",
         )
+
+    @staticmethod
+    def _has_legacy_identifier_schema(conn: sqlite3.Connection) -> bool:
+        """
+        Detect legacy schema that still uses sid/src_code identifiers.
+
+        Legacy marker:
+        - `security` table has `sid` column
+        - and does not have `instrument_id` column
+        """
+        row = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='security'"
+        ).fetchone()
+        if row is None:
+            return False
+
+        columns = {
+            cast(str, item[1])
+            for item in conn.execute("PRAGMA table_info(security)").fetchall()
+        }
+        return "sid" in columns and "instrument_id" not in columns
+
+    def _reset_all_user_tables(self, conn: sqlite3.Connection) -> None:
+        """
+        Drop all user tables when legacy schema is detected.
+
+        v5 does not require backward compatibility. Rebuilding the schema is
+        safer than running mixed legacy/new structures.
+        """
+        logger.warning(
+            "Legacy schema detected, rebuilding all tables",
+            event="schema_legacy_rebuild",
+            db_path=str(self._db_path),
+        )
+
+        conn.execute("PRAGMA foreign_keys = OFF")
+        table_query = """
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name NOT LIKE 'sqlite_%'
+        """
+        table_rows = conn.execute(table_query).fetchall()
+        table_names = [cast(str, row[0]) for row in table_rows]
+
+        for table_name in table_names:
+            # table_name comes from sqlite_master (database metadata).
+            conn.execute(f'DROP TABLE IF EXISTS "{table_name}"')
+
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.commit()
 
     def _get_schema(self) -> str:
         """

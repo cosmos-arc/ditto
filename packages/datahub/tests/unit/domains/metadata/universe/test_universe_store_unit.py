@@ -20,14 +20,21 @@ class TestUniverseStore:
         self.client = sqlite_client
         self.store = UniverseStore(self.client)
 
-    def _create_securities(self, sids: list[int]) -> None:
+    def _create_securities(self, instrument_ids: list[int]) -> None:
         """Helper to create security records for testing."""
-        for sid in sids:
+        for instrument_id in instrument_ids:
             self.client.execute(
                 """INSERT INTO security
-                (sid, symbol, name, exchange, asset_class, list_date)
+                (instrument_id, symbol, name, exchange, asset_class, list_date)
                 VALUES (?, ?, ?, ?, ?, ?)""",
-                [sid, f"TEST{sid}", "Test", "SSE", "stock", "2020-01-01"],
+                [
+                    instrument_id,
+                    f"TEST{instrument_id}",
+                    "Test",
+                    "SSE",
+                    "stock",
+                    "2020-01-01",
+                ],
             )
         self.client.commit()
 
@@ -112,9 +119,9 @@ class TestUniverseStore:
 
         # Add constituents
         records = [
-            {"sid": 100000001, "effective_from": "2020-01-01", "weight": 1.0},
-            {"sid": 100000002, "effective_from": "2020-01-01", "weight": 1.0},
-            {"sid": 100000003, "effective_from": "2020-01-01", "weight": 0.5},
+            {"instrument_id": 100000001, "effective_from": "2020-01-01", "weight": 1.0},
+            {"instrument_id": 100000002, "effective_from": "2020-01-01", "weight": 1.0},
+            {"instrument_id": 100000003, "effective_from": "2020-01-01", "weight": 0.5},
         ]
         count = self.store.add_constituents("test_u", records)
         assert count == 3
@@ -127,16 +134,16 @@ class TestUniverseStore:
         self._create_securities([100000001, 100000002])
 
         records = [
-            {"sid": 100000001, "effective_from": "2020-01-01", "weight": 1.0},
-            {"sid": 100000002, "effective_from": "2020-01-01", "weight": 1.0},
+            {"instrument_id": 100000001, "effective_from": "2020-01-01", "weight": 1.0},
+            {"instrument_id": 100000002, "effective_from": "2020-01-01", "weight": 1.0},
         ]
         self.store.add_constituents("test_u", records)
 
         # Get current constituents
         constituents = self.store.get_constituents("test_u")
         assert len(constituents) == 2
-        assert 100000001 in constituents["sid"].to_list()
-        assert 100000002 in constituents["sid"].to_list()
+        assert 100000001 in constituents["instrument_id"].to_list()
+        assert 100000002 in constituents["instrument_id"].to_list()
         assert all(constituents["effective_to"].is_null())
 
     def test_get_constituents_with_asof(self) -> None:
@@ -149,19 +156,19 @@ class TestUniverseStore:
         # Add constituents with different effective dates
         records = [
             {
-                "sid": 100000001,
+                "instrument_id": 100000001,
                 "effective_from": "2020-01-01",
                 "effective_to": "2021-06-30",
                 "weight": 1.0,
             },
             {
-                "sid": 100000002,
+                "instrument_id": 100000002,
                 "effective_from": "2020-01-01",
                 "effective_to": None,
                 "weight": 1.0,
             },
             {
-                "sid": 100000003,
+                "instrument_id": 100000003,
                 "effective_from": "2021-07-01",
                 "effective_to": None,
                 "weight": 1.0,
@@ -172,38 +179,40 @@ class TestUniverseStore:
         # Query as of 2021-01-01 (before first change)
         constituents_2021 = self.store.get_constituents("test_u", asof="2021-01-01")
         assert len(constituents_2021) == 2
-        assert 100000001 in constituents_2021["sid"].to_list()
-        assert 100000002 in constituents_2021["sid"].to_list()
-        assert 100000003 not in constituents_2021["sid"].to_list()
+        assert 100000001 in constituents_2021["instrument_id"].to_list()
+        assert 100000002 in constituents_2021["instrument_id"].to_list()
+        assert 100000003 not in constituents_2021["instrument_id"].to_list()
 
         # Query as of 2021-07-15 (after change)
         constituents_2021_07 = self.store.get_constituents("test_u", asof="2021-07-15")
         assert len(constituents_2021_07) == 2
-        assert 100000001 not in constituents_2021_07["sid"].to_list()  # expired
-        assert 100000002 in constituents_2021_07["sid"].to_list()
-        assert 100000003 in constituents_2021_07["sid"].to_list()
+        assert (
+            100000001 not in constituents_2021_07["instrument_id"].to_list()
+        )  # expired
+        assert 100000002 in constituents_2021_07["instrument_id"].to_list()
+        assert 100000003 in constituents_2021_07["instrument_id"].to_list()
 
     def test_get_constituents_sids(self) -> None:
-        """Test getting constituent sids as list."""
+        """Test getting constituent instrument_ids as list."""
         # Create universe and add constituents
         self.store.create_universe("test_u", "Test", universe_type="custom")
 
         self._create_securities([100000001, 100000002])
 
         records = [
-            {"sid": 100000001, "effective_from": "2020-01-01", "weight": 1.0},
-            {"sid": 100000002, "effective_from": "2020-01-01", "weight": 1.0},
+            {"instrument_id": 100000001, "effective_from": "2020-01-01", "weight": 1.0},
+            {"instrument_id": 100000002, "effective_from": "2020-01-01", "weight": 1.0},
         ]
         self.store.add_constituents("test_u", records)
 
-        # Get sids
-        sids = self.store.get_constituents_sids("test_u")
-        assert len(sids) == 2
-        assert 100000001 in sids
-        assert 100000002 in sids
+        # Get instrument_ids
+        instrument_ids = self.store.get_constituents_sids("test_u")
+        assert len(instrument_ids) == 2
+        assert 100000001 in instrument_ids
+        assert 100000002 in instrument_ids
 
     def test_get_constituents_sids_with_asof(self) -> None:
-        """Test getting constituent sids with PIT query."""
+        """Test getting constituent instrument_ids with PIT query."""
         # Create universe
         self.store.create_universe("test_u", "Test", universe_type="custom")
 
@@ -212,24 +221,24 @@ class TestUniverseStore:
         # Add constituents with different dates
         records = [
             {
-                "sid": 100000001,
+                "instrument_id": 100000001,
                 "effective_from": "2020-01-01",
                 "effective_to": "2021-06-30",
                 "weight": 1.0,
             },
             {
-                "sid": 100000002,
+                "instrument_id": 100000002,
                 "effective_from": "2020-01-01",
                 "weight": 1.0,
             },
         ]
         self.store.add_constituents("test_u", records)
 
-        # Get sids as of 2020-06-01
+        # Get instrument_ids as of 2020-06-01
         sids_2020 = self.store.get_constituents_sids("test_u", asof="2020-06-01")
         assert len(sids_2020) == 2
 
-        # Get sids as of 2021-07-01
+        # Get instrument_ids as of 2021-07-01
         sids_2021 = self.store.get_constituents_sids("test_u", asof="2021-07-01")
         assert len(sids_2021) == 1
         assert 100000002 in sids_2021
@@ -242,8 +251,8 @@ class TestUniverseStore:
         self._create_securities([100000001, 100000002])
 
         records = [
-            {"sid": 100000001, "effective_from": "2020-01-01", "weight": 1.0},
-            {"sid": 100000002, "effective_from": "2020-01-01", "weight": 1.0},
+            {"instrument_id": 100000001, "effective_from": "2020-01-01", "weight": 1.0},
+            {"instrument_id": 100000002, "effective_from": "2020-01-01", "weight": 1.0},
         ]
         self.store.add_constituents("test_u", records)
 
@@ -269,11 +278,11 @@ class TestUniverseStore:
         # Add constituents with source info
         records = [
             {
-                "sid": 100000001,
+                "instrument_id": 100000001,
                 "effective_from": "2020-01-01",
                 "weight": 1.0,
                 "source": "tushare",
-                "src_code": "600000.SH",
+                "source_ticker": "600000.SH",
             },
         ]
         self.store.add_constituents("test_u", records)
@@ -282,7 +291,7 @@ class TestUniverseStore:
         constituents = self.store.get_constituents("test_u")
         assert len(constituents) == 1
         assert constituents["source"][0] == "tushare"
-        assert constituents["src_code"][0] == "600000.SH"
+        assert constituents["source_ticker"][0] == "600000.SH"
 
     def teardown_method(self) -> None:
         """Clean up after test."""
@@ -305,14 +314,21 @@ class TestUniverseStorePITSafety:
         self.client = sqlite_client
         self.store = UniverseStore(self.client)
 
-    def _create_securities(self, sids: list[int]) -> None:
+    def _create_securities(self, instrument_ids: list[int]) -> None:
         """Helper to create security records for testing."""
-        for sid in sids:
+        for instrument_id in instrument_ids:
             self.client.execute(
                 """INSERT INTO security
-                (sid, symbol, name, exchange, asset_class, list_date)
+                (instrument_id, symbol, name, exchange, asset_class, list_date)
                 VALUES (?, ?, ?, ?, ?, ?)""",
-                [sid, f"TEST{sid}", "Test", "SSE", "stock", "2020-01-01"],
+                [
+                    instrument_id,
+                    f"TEST{instrument_id}",
+                    "Test",
+                    "SSE",
+                    "stock",
+                    "2020-01-01",
+                ],
             )
         self.client.commit()
 
@@ -326,7 +342,7 @@ class TestUniverseStorePITSafety:
         # Add constituent with exact effective dates
         records = [
             {
-                "sid": 100000001,
+                "instrument_id": 100000001,
                 "effective_from": "2020-01-01",
                 "effective_to": "2020-12-31",
                 "weight": 1.0,
@@ -335,13 +351,13 @@ class TestUniverseStorePITSafety:
         self.store.add_constituents("test_u", records)
 
         # Query on exact effective_from - should be included
-        sids = self.store.get_constituents_sids("test_u", asof="2020-01-01")
-        assert 100000001 in sids
+        instrument_ids = self.store.get_constituents_sids("test_u", asof="2020-01-01")
+        assert 100000001 in instrument_ids
 
         # Query on exact effective_to - should NOT be included
         # (effective_to is exclusive)
-        sids = self.store.get_constituents_sids("test_u", asof="2020-12-31")
-        assert 100000001 not in sids
+        instrument_ids = self.store.get_constituents_sids("test_u", asof="2020-12-31")
+        assert 100000001 not in instrument_ids
 
     def test_pit_query_future_date(self) -> None:
         """Test PIT query with future date returns current."""
@@ -352,13 +368,13 @@ class TestUniverseStorePITSafety:
 
         # Add constituent
         records = [
-            {"sid": 100000001, "effective_from": "2020-01-01", "weight": 1.0},
+            {"instrument_id": 100000001, "effective_from": "2020-01-01", "weight": 1.0},
         ]
         self.store.add_constituents("test_u", records)
 
         # Query with future date
-        sids = self.store.get_constituents_sids("test_u", asof="2099-12-31")
-        assert 100000001 in sids
+        instrument_ids = self.store.get_constituents_sids("test_u", asof="2099-12-31")
+        assert 100000001 in instrument_ids
 
     def test_pit_query_before_effective_from(self) -> None:
         """Test PIT query before effective_from returns empty."""
@@ -369,10 +385,10 @@ class TestUniverseStorePITSafety:
 
         # Add constituent
         records = [
-            {"sid": 100000001, "effective_from": "2020-01-01", "weight": 1.0},
+            {"instrument_id": 100000001, "effective_from": "2020-01-01", "weight": 1.0},
         ]
         self.store.add_constituents("test_u", records)
 
         # Query before effective date
-        sids = self.store.get_constituents_sids("test_u", asof="2019-12-31")
-        assert len(sids) == 0
+        instrument_ids = self.store.get_constituents_sids("test_u", asof="2019-12-31")
+        assert len(instrument_ids) == 0

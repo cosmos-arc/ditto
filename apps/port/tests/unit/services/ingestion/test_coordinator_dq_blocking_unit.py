@@ -42,7 +42,9 @@ class TestDQBlockingBehavior:
         mocker.patch.object(
             coordinator,
             "_fetch_data",
-            return_value=pl.DataFrame({"src_code": ["000001.SZ"], "close": [None]}),
+            return_value=pl.DataFrame(
+                {"source_ticker": ["000001.SZ"], "close": [None]}
+            ),
         )
 
         # Mock _data_writer.write_data to return blocked result
@@ -98,7 +100,9 @@ class TestDQBlockingBehavior:
         mocker.patch.object(
             coordinator,
             "_fetch_data",
-            return_value=pl.DataFrame({"src_code": ["000001.SZ"], "close": [None]}),
+            return_value=pl.DataFrame(
+                {"source_ticker": ["000001.SZ"], "close": [None]}
+            ),
         )
 
         # Mock _data_writer.write_data to return blocked result

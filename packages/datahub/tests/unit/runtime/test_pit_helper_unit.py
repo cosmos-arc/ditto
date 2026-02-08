@@ -17,11 +17,12 @@ class TestPitHelper:
 
     def test_add_pit_filter_with_where(self) -> None:
         """Test add_pit_filter adds AND clause when WHERE exists."""
-        query = "SELECT * FROM stock_daily WHERE sid = 1"
+        query = "SELECT * FROM stock_daily WHERE instrument_id = 1"
         result = PitHelper.add_pit_filter(query, "2024-01-15")
 
         expected = (
-            "SELECT * FROM stock_daily WHERE sid = 1 AND knowledge_date <= '2024-01-15'"
+            "SELECT * FROM stock_daily "
+            "WHERE instrument_id = 1 AND knowledge_date <= '2024-01-15'"
         )
         assert result == expected
 
@@ -35,11 +36,11 @@ class TestPitHelper:
 
     def test_add_pit_filter_preserves_existing_conditions(self) -> None:
         """Test add_pit_filter preserves existing WHERE conditions."""
-        query = "SELECT * FROM stock_daily WHERE sid = 1 AND volume > 1000"
+        query = "SELECT * FROM stock_daily WHERE instrument_id = 1 AND volume > 1000"
         result = PitHelper.add_pit_filter(query, "2024-01-15")
 
         expected = (
-            "SELECT * FROM stock_daily WHERE sid = 1 AND volume > 1000 "
+            "SELECT * FROM stock_daily WHERE instrument_id = 1 AND volume > 1000 "
             "AND knowledge_date <= '2024-01-15'"
         )
         assert result == expected
@@ -49,13 +50,13 @@ class TestPitHelper:
         result = PitHelper.add_pit_join(
             "stock_daily s",
             "adj_factor a",
-            ["s.sid = a.sid"],
+            ["s.instrument_id = a.instrument_id"],
             "2024-01-15",
         )
 
         expected = (
             "stock_daily s LEFT JOIN adj_factor a "
-            "ON s.sid = a.sid AND a.trade_date <= '2024-01-15'"
+            "ON s.instrument_id = a.instrument_id AND a.trade_date <= '2024-01-15'"
         )
         assert result == expected
 
@@ -64,13 +65,13 @@ class TestPitHelper:
         result = PitHelper.add_pit_join(
             "stock_daily s",
             "adj_factor a",
-            ["s.sid = a.sid", "s.source = a.source"],
+            ["s.instrument_id = a.instrument_id", "s.source = a.source"],
             "2024-01-15",
         )
 
         expected = (
             "stock_daily s LEFT JOIN adj_factor a "
-            "ON s.sid = a.sid AND s.source = a.source "
+            "ON s.instrument_id = a.instrument_id AND s.source = a.source "
             "AND a.trade_date <= '2024-01-15'"
         )
         assert result == expected
@@ -80,14 +81,14 @@ class TestPitHelper:
         result = PitHelper.add_pit_join(
             "stock_daily s",
             "adj_factor a",
-            ["s.sid = a.sid"],
+            ["s.instrument_id = a.instrument_id"],
             "2024-01-15",
             date_column="effective_from",
         )
 
         expected = (
             "stock_daily s LEFT JOIN adj_factor a "
-            "ON s.sid = a.sid AND a.effective_from <= '2024-01-15'"
+            "ON s.instrument_id = a.instrument_id AND a.effective_from <= '2024-01-15'"
         )
         assert result == expected
 
@@ -96,14 +97,14 @@ class TestPitHelper:
         result = PitHelper.add_pit_join(
             "stock_daily s",
             "security_mapping m",
-            ["s.sid = m.sid"],
+            ["s.instrument_id = m.instrument_id"],
             "2024-01-15",
             date_column="knowledge_date",
         )
 
         expected = (
             "stock_daily s LEFT JOIN security_mapping m "
-            "ON s.sid = m.sid AND m.knowledge_date <= '2024-01-15'"
+            "ON s.instrument_id = m.instrument_id AND m.knowledge_date <= '2024-01-15'"
         )
         assert result == expected
 
@@ -113,45 +114,46 @@ class TestPitHelper:
         result = PitHelper.add_pit_join(
             "stock_daily s",
             "adj_factor a",
-            ["s.sid = a.sid"],
+            ["s.instrument_id = a.instrument_id"],
             "2024-01-15",
         )
 
         expected = (
             "stock_daily s LEFT JOIN adj_factor a "
-            "ON s.sid = a.sid AND a.trade_date <= '2024-01-15'"
+            "ON s.instrument_id = a.instrument_id AND a.trade_date <= '2024-01-15'"
         )
         assert result == expected
 
     def test_wrap_pit_cte_basic(self) -> None:
         """Test wrap_pit_cte wraps query in CTE."""
-        query = "SELECT sid, close FROM stock_daily"
+        query = "SELECT instrument_id, close FROM stock_daily"
         result = PitHelper.wrap_pit_cte(query, "pit_data")
 
         expected = (
-            "WITH pit_data AS (SELECT sid, close FROM stock_daily) "
+            "WITH pit_data AS (SELECT instrument_id, close FROM stock_daily) "
             "SELECT * FROM pit_data"
         )
         assert result == expected
 
     def test_wrap_pit_cte_with_asof_date(self) -> None:
         """Test wrap_pit_cte adds WHERE clause when asof_date provided."""
-        query = "SELECT sid, close FROM stock_daily"
+        query = "SELECT instrument_id, close FROM stock_daily"
         result = PitHelper.wrap_pit_cte(query, "pit_data", asof_date="2024-01-15")
 
         expected = (
-            "WITH pit_data AS (SELECT sid, close FROM stock_daily) "
+            "WITH pit_data AS (SELECT instrument_id, close FROM stock_daily) "
             "SELECT * FROM pit_data WHERE trade_date <= '2024-01-15'"
         )
         assert result == expected
 
     def test_wrap_pit_cte_custom_name(self) -> None:
         """Test wrap_pit_cte with custom CTE name."""
-        query = "SELECT sid, close FROM stock_daily"
+        query = "SELECT instrument_id, close FROM stock_daily"
         result = PitHelper.wrap_pit_cte(query, "my_cte")
 
         expected = (
-            "WITH my_cte AS (SELECT sid, close FROM stock_daily) SELECT * FROM my_cte"
+            "WITH my_cte AS (SELECT instrument_id, close FROM stock_daily) "
+            "SELECT * FROM my_cte"
         )
         assert result == expected
 
@@ -183,21 +185,24 @@ class TestPitHelper:
 
     def test_add_pit_filter_case_insensitive(self) -> None:
         """Test add_pit_filter handles WHERE case insensitively."""
-        query = "SELECT * FROM stock_daily where sid = 1"
+        query = "SELECT * FROM stock_daily where instrument_id = 1"
         result = PitHelper.add_pit_filter(query, "2024-01-15")
 
         assert result == (
-            "SELECT * FROM stock_daily where sid = 1 AND knowledge_date <= '2024-01-15'"
+            "SELECT * FROM stock_daily "
+            "where instrument_id = 1 AND knowledge_date <= '2024-01-15'"
         )
 
     def test_wrap_pit_cte_no_asof_date(self) -> None:
         """Test wrap_pit_cte without asof_date doesn't add WHERE."""
-        query = "SELECT sid, close FROM stock_daily WHERE sid = 1"
+        query = "SELECT instrument_id, close FROM stock_daily WHERE instrument_id = 1"
         result = PitHelper.wrap_pit_cte(query, "pit_data", asof_date=None)
 
         # [REVIEW] WHERE
         expected = (
-            "WITH pit_data AS (SELECT sid, close FROM stock_daily WHERE sid = 1) "
+            "WITH pit_data AS ("
+            "SELECT instrument_id, close FROM stock_daily WHERE instrument_id = 1"
+            ") "
             "SELECT * FROM pit_data"
         )
         assert result == expected
@@ -205,7 +210,7 @@ class TestPitHelper:
     def test_combined_pit_query_workflow(self) -> None:
         """Test combined workflow of using multiple PitHelper methods."""
         # [REVIEW]
-        query = "SELECT sid, close FROM stock_daily WHERE sid = 1"
+        query = "SELECT instrument_id, close FROM stock_daily WHERE instrument_id = 1"
 
         # [REVIEW] CTE
         cte_query = PitHelper.wrap_pit_cte(query, "filtered_data")
@@ -242,19 +247,21 @@ class TestSQLSyntaxHandling:
 
     def test_add_pit_filter_with_group_by(self) -> None:
         """Test add_pit_filter handles GROUP BY clause correctly."""
-        query = "SELECT sid, AVG(close) FROM stock_daily GROUP BY sid"
+        query = (
+            "SELECT instrument_id, AVG(close) FROM stock_daily GROUP BY instrument_id"
+        )
         result = PitHelper.add_pit_filter(query, "2024-01-15")
 
         # Should use CTE wrapper to avoid breaking GROUP BY
         assert "WITH _pit_original AS" in result
         assert "knowledge_date <= '2024-01-15'" in result
-        assert "GROUP BY sid" in result
+        assert "GROUP BY instrument_id" in result
 
     def test_add_pit_filter_with_having(self) -> None:
         """Test add_pit_filter handles HAVING clause correctly."""
         query = (
-            "SELECT sid, AVG(close) as avg_close FROM stock_daily "
-            "GROUP BY sid HAVING avg_close > 10"
+            "SELECT instrument_id, AVG(close) as avg_close FROM stock_daily "
+            "GROUP BY instrument_id HAVING avg_close > 10"
         )
         result = PitHelper.add_pit_filter(query, "2024-01-15")
 
@@ -265,7 +272,9 @@ class TestSQLSyntaxHandling:
 
     def test_add_pit_filter_with_where_and_order_by(self) -> None:
         """Test add_pit_filter handles WHERE + ORDER BY correctly."""
-        query = "SELECT * FROM stock_daily WHERE sid = 1 ORDER BY trade_date DESC"
+        query = (
+            "SELECT * FROM stock_daily WHERE instrument_id = 1 ORDER BY trade_date DESC"
+        )
         result = PitHelper.add_pit_filter(query, "2024-01-15")
 
         # Should use CTE wrapper because ORDER BY is present
@@ -315,7 +324,10 @@ class TestSQLInjectionProtection:
         """Test that add_pit_join rejects invalid date format."""
         with pytest.raises(ValueError, match="Invalid date format"):
             PitHelper.add_pit_join(
-                "stock_daily s", "adj_factor a", ["s.sid = a.sid"], "2024/01/15"
+                "stock_daily s",
+                "adj_factor a",
+                ["s.instrument_id = a.instrument_id"],
+                "2024/01/15",
             )
 
     def test_add_pit_join_rejects_sql_injection(self) -> None:
@@ -324,7 +336,7 @@ class TestSQLInjectionProtection:
             PitHelper.add_pit_join(
                 "stock_daily s",
                 "adj_factor a",
-                ["s.sid = a.sid"],
+                ["s.instrument_id = a.instrument_id"],
                 "2024-01-15' OR '1'='1",
             )
 
@@ -332,14 +344,14 @@ class TestSQLInjectionProtection:
         """Test that wrap_pit_cte rejects invalid date format."""
         with pytest.raises(ValueError, match="Invalid date format"):
             PitHelper.wrap_pit_cte(
-                "SELECT sid, close FROM stock_daily", "pit_data", "2024/01/15"
+                "SELECT instrument_id, close FROM stock_daily", "pit_data", "2024/01/15"
             )
 
     def test_wrap_pit_cte_rejects_sql_injection(self) -> None:
         """Test that wrap_pit_cte rejects SQL injection."""
         with pytest.raises(ValueError, match="Invalid date format"):
             PitHelper.wrap_pit_cte(
-                "SELECT sid, close FROM stock_daily",
+                "SELECT instrument_id, close FROM stock_daily",
                 "pit_data",
                 "2024-01-15'; DROP TABLE users--",
             )
@@ -409,14 +421,15 @@ class TestSQLInjectionProtection:
         result = PitHelper.add_pit_join(
             "stock_daily s",
             "adj_factor",
-            ["s.sid = adj_factor.sid"],
+            ["s.instrument_id = adj_factor.instrument_id"],
             "2024-01-15",
         )
 
         # When right_table has no space, entire string is used as alias
         expected = (
             "stock_daily s LEFT JOIN adj_factor "
-            "ON s.sid = adj_factor.sid AND adj_factor.trade_date <= '2024-01-15'"
+            "ON s.instrument_id = adj_factor.instrument_id "
+            "AND adj_factor.trade_date <= '2024-01-15'"
         )
         assert result == expected
 
@@ -425,14 +438,14 @@ class TestSQLInjectionProtection:
         result = PitHelper.add_pit_join(
             "stock_daily s",
             "adj_factor   a",
-            ["s.sid = a.sid"],
+            ["s.instrument_id = a.instrument_id"],
             "2024-01-15",
         )
 
         # Should handle multiple spaces correctly
         expected = (
             "stock_daily s LEFT JOIN adj_factor   a "
-            "ON s.sid = a.sid AND a.trade_date <= '2024-01-15'"
+            "ON s.instrument_id = a.instrument_id AND a.trade_date <= '2024-01-15'"
         )
         assert result == expected
 

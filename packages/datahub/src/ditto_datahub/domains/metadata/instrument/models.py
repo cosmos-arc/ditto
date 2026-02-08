@@ -3,7 +3,7 @@ Instrument 相关数据模型.
 
 命名映射：
 - Python 代码使用 instrument/source_ticker
-- 数据库表/列保持 security/src_code（避免数据迁移）
+- 数据库表/列保持 security/source_ticker（避免数据迁移）
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ class InstrumentRegistration:
     用于封装证券注册所需的所有参数，避免函数参数过多。
 
     Attributes:
-        source_ticker: 源代码（如 "600000.SH"），数据库中存储为 src_code
+        source_ticker: 源代码（如 "600000.SH"），数据库中存储为 source_ticker
         symbol: 显示符号（如 "600000"）
         name: 证券名称
         exchange: 交易所代码（如 "SSE", "SZSE"）

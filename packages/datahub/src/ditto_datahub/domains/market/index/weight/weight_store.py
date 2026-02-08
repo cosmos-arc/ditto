@@ -54,7 +54,7 @@ class IndexWeightStore:
         Args:
             index_id: Index identifier (e.g., '000300.SH')
             records: List of constituent records. Each record should contain:
-                - sid: Security ID (required)
+                - instrument_id: Security ID (required)
                 - effective_from: Effective start date (required)
                 - effective_to: Effective end date (optional)
                 - weight: Constituent weight (optional)
@@ -75,7 +75,7 @@ class IndexWeightStore:
         for record in records:
             params = (
                 index_id,
-                record.get("sid"),
+                record.get("instrument_id"),
                 record.get("effective_from"),
                 record.get("effective_to"),
                 record.get("weight"),
@@ -84,9 +84,9 @@ class IndexWeightStore:
 
         self._client.executemany(
             """INSERT INTO index_weight
-            (index_id, sid, effective_from, effective_to, weight)
+            (index_id, instrument_id, effective_from, effective_to, weight)
             VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(index_id, sid, effective_from) DO UPDATE SET
+            ON CONFLICT(index_id, instrument_id, effective_from) DO UPDATE SET
                 weight = excluded.weight,
                 effective_to = excluded.effective_to
             """,
@@ -127,7 +127,7 @@ class IndexWeightStore:
                 WHERE index_id = ?
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to > ?)
-                ORDER BY sid
+                ORDER BY instrument_id
                 """,
                 [index_id, asof, asof],
             )
@@ -136,7 +136,7 @@ class IndexWeightStore:
             rows = self._client.fetchall(
                 """SELECT * FROM index_weight
                 WHERE index_id = ? AND effective_to IS NULL
-                ORDER BY sid
+                ORDER BY instrument_id
                 """,
                 [index_id],
             )
@@ -164,30 +164,30 @@ class IndexWeightStore:
         """
         if asof:
             rows = self._client.fetchall(
-                """SELECT sid FROM index_weight
+                """SELECT instrument_id FROM index_weight
                 WHERE index_id = ?
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to > ?)
-                ORDER BY sid
+                ORDER BY instrument_id
                 """,
                 [index_id, asof, asof],
             )
         else:
             rows = self._client.fetchall(
-                """SELECT sid FROM index_weight
+                """SELECT instrument_id FROM index_weight
                 WHERE index_id = ? AND effective_to IS NULL
-                ORDER BY sid
+                ORDER BY instrument_id
                 """,
                 [index_id],
             )
 
-        return [int(r["sid"]) for r in rows]
+        return [int(r["instrument_id"]) for r in rows]
 
     @traced("store.index_weight.remove_constituent")
     def remove_constituent(
         self,
         index_id: str,
-        sid: int,
+        instrument_id: int,
         effective_date: str,
     ) -> None:
         """
@@ -195,7 +195,7 @@ class IndexWeightStore:
 
         Args:
             index_id: Index identifier.
-            sid: Security ID to remove.
+            instrument_id: Security ID to remove.
             effective_date: Date when constituent becomes ineffective.
 
         """
@@ -203,7 +203,7 @@ class IndexWeightStore:
             "Removing constituent from index",
             event="index_weight_remove_constituent_start",
             index_id=index_id,
-            sid=sid,
+            instrument_id=instrument_id,
             effective_date=effective_date,
         )
 
@@ -211,9 +211,9 @@ class IndexWeightStore:
         self._client.execute(
             """UPDATE index_weight
             SET effective_to = ?
-            WHERE index_id = ? AND sid = ? AND effective_to IS NULL
+            WHERE index_id = ? AND instrument_id = ? AND effective_to IS NULL
             """,
-            [effective_date, index_id, sid],
+            [effective_date, index_id, instrument_id],
         )
         self._client.commit()
 
@@ -221,7 +221,7 @@ class IndexWeightStore:
             "Constituent removed successfully",
             event="index_weight_remove_constituent_complete",
             index_id=index_id,
-            sid=sid,
+            instrument_id=instrument_id,
         )
 
     def close(self) -> None:

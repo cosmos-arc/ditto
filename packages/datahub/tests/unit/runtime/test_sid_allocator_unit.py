@@ -2,7 +2,7 @@
 
 import pytest
 from ditto_datahub.models.common import InstrumentIdRange
-from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
+from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from pytest_mock import MockerFixture
 
 

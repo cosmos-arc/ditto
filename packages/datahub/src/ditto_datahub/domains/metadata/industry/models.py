@@ -20,7 +20,7 @@ class IndustryBasic:
 class IndustryMapping:
     """股票-行业映射."""
 
-    sid: int
+    instrument_id: int
     industry_id: str
     source: str = "sw"  # 申万
     effective_from: str | None = None

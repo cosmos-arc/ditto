@@ -146,8 +146,8 @@ class TestTdxReader:
         df = self.reader.fetch_stock_daily_bars(["000001.SZ"], "20240101")
 
         assert df.height == 1
-        assert "src_code" in df.columns
-        assert df["src_code"][0] == "000001.SZ"
+        assert "source_ticker" in df.columns
+        assert df["source_ticker"][0] == "000001.SZ"
 
     def test_fetch_stock_daily_bars_multiple(self) -> None:
         """Test fetching multiple stocks daily bars."""
@@ -160,11 +160,11 @@ class TestTdxReader:
         df = self.reader.fetch_stock_daily_bars(["000001.SZ", "000002.SZ"], "20240101")
 
         assert df.height == 2
-        assert df["src_code"].to_list() == ["000001.SZ", "000002.SZ"]
+        assert df["source_ticker"].to_list() == ["000001.SZ", "000002.SZ"]
 
     def test_fetch_stock_daily_bars_empty(self) -> None:
         """Test fetching with no matching data."""
         df = self.reader.fetch_stock_daily_bars(["999999.SZ"], "20240101")
 
         assert df.is_empty()
-        assert "src_code" in df.columns
+        assert "source_ticker" in df.columns

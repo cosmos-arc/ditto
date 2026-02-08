@@ -51,28 +51,30 @@ def mock_hub(mocker):  # noqa: PLR0915
     hub.ingestion_log = mocker.Mock(spec=IngestionLogStore)
 
     # 添加 SidAllocator mock
-    mock_sid_allocator = mocker.Mock()
+    mock_instrument_id_allocator = mocker.Mock()
     stock_counter = [1_000_000]
     etf_counter = [2_000_000]
 
     def allocate_side_effect(asset_class: str) -> int:
         if asset_class == "stock":
-            sid = stock_counter[0]
+            instrument_id = stock_counter[0]
             stock_counter[0] += 1
-            return sid
+            return instrument_id
         elif asset_class == "etf":
-            sid = etf_counter[0]
+            instrument_id = etf_counter[0]
             etf_counter[0] += 1
-            return sid
+            return instrument_id
         else:
             raise ValueError(f"Unknown asset class: {asset_class}")
 
-    mock_sid_allocator.allocate.side_effect = allocate_side_effect
-    hub.sid_allocator = mock_sid_allocator
+    mock_instrument_id_allocator.allocate.side_effect = allocate_side_effect
+    hub.instrument_id_allocator = mock_instrument_id_allocator
 
     # 添加 InstrumentStore mock（InstrumentMapper 需要）
     hub.instrument_store = mocker.Mock()
-    hub.instrument_store.resolve_sid.return_value = None  # 默认返回 None（不存在）
+    hub.instrument_store.resolve_instrument_id.return_value = (
+        None  # 默认返回 None（不存在）
+    )
     hub.instrument_store.register.return_value = 1000001  # 返回注册的 SID
 
     # 添加 MetadataService mock（IngestionDataWriter 需要）
@@ -90,18 +92,18 @@ def mock_hub(mocker):  # noqa: PLR0915
 
     # 添加 resolve_or_create_batch mock
     def resolve_or_create_batch_side_effect(df, source, asset_class, **kwargs):
-        """根据 asset_class 返回不同的 sid 映射。"""
+        """根据 asset_class 返回不同的 instrument_id 映射。"""
         if asset_class == "stock":
-            sid = stock_counter[0]
+            instrument_id = stock_counter[0]
             stock_counter[0] += 1
         elif asset_class == "etf":
-            sid = etf_counter[0]
+            instrument_id = etf_counter[0]
             etf_counter[0] += 1
         else:
             raise ValueError(f"Unknown asset class: {asset_class}")
-        # 返回 src_code 到 sid 的映射
-        src_codes = df["src_code"].to_list()
-        return {src_codes[0]: sid}
+        # 返回 source_ticker 到 instrument_id 的映射
+        source_tickers = df["source_ticker"].to_list()
+        return {source_tickers[0]: instrument_id}
 
     hub.metadata.resolve_or_create_batch.side_effect = (
         resolve_or_create_batch_side_effect
@@ -239,7 +241,7 @@ class TestIngestDate:
         mock_hub.ingestion_log.get_log.return_value = None  # 无历史记录
         source_df = pl.DataFrame(
             {
-                "src_code": ["510300.SH", "510500.SH"],
+                "source_ticker": ["510300.SH", "510500.SH"],
                 "trade_date": [date(2024, 12, 27), date(2024, 12, 27)],
                 "open": [4.0, 3.5],
                 "high": [4.1, 3.6],
@@ -287,7 +289,7 @@ class TestIngestDate:
         mock_hub.ingestion_log.get_log.return_value = None
         source_df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
                 "open": [10.0],
                 "high": [10.5],
@@ -330,7 +332,7 @@ class TestIngestDate:
         mock_hub.ingestion_log.get_log.return_value = None
         mock_source.fetch_adj_factor.return_value = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
                 "adj_factor": [1.2345],
             }
@@ -452,7 +454,7 @@ class TestIngestDate:
 
         source_df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
                 "open": [10.0],
                 "high": [10.5],
@@ -522,7 +524,7 @@ class TestIngestDate:
         mock_hub.ingestion_log.get_log.return_value = None
         source_df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
                 "open": [10.0],
                 "close": [10.2],
@@ -583,7 +585,7 @@ class TestIngestRange:
 
         source_df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
                 "open": [10.0],
                 "close": [10.2],
@@ -651,7 +653,7 @@ class TestIngestRange:
 
         source_df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
                 "open": [10.0],
                 "close": [10.2],
@@ -711,7 +713,7 @@ class TestIngestRange:
 
         source_df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
                 "open": [10.0],
                 "close": [10.2],
@@ -761,7 +763,7 @@ class TestWriteT0Data:
         mock_hub.ingestion_log.get_log.return_value = None
         mock_source.fetch_stock_basic.return_value = pl.DataFrame(
             {
-                "src_code": ["000001.SZ", "600000.SH"],
+                "source_ticker": ["000001.SZ", "600000.SH"],
                 "symbol": ["000001", "600000"],
                 "name": ["平安银行", "浦发银行"],
                 "exchange": ["SZSE", "SSE"],
@@ -794,7 +796,7 @@ class TestWriteT0Data:
         mock_hub.ingestion_log.get_log.return_value = None
         mock_source.fetch_etf_basic.return_value = pl.DataFrame(
             {
-                "src_code": ["510300.SH", "159919.SZ"],
+                "source_ticker": ["510300.SH", "159919.SZ"],
                 "symbol": ["510300", "159919"],
                 "name": ["沪深300ETF", "沪深300ETF"],
                 "exchange": ["SSE", "SZSE"],
@@ -832,7 +834,7 @@ class TestForceParameter:
         mock_hub.ingestion_log.get_log.return_value = None
         source_df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
                 "open": [10.0],
                 "high": [10.5],
@@ -876,7 +878,7 @@ class TestForceParameter:
         mock_hub.ingestion_log.get_log.return_value = None
         source_df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
                 "open": [10.0],
                 "high": [10.5],
@@ -920,7 +922,7 @@ class TestForceParameter:
         mock_hub.ingestion_log.get_log.return_value = None
         mock_source.fetch_adj_factor.return_value = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
                 "adj_factor": [1.2345],
             }
@@ -1022,7 +1024,7 @@ class TestTradingDayCheck:
 
         source_df = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
                 "open": [10.0],
                 "close": [10.2],
@@ -1069,7 +1071,7 @@ class TestTradingDayCheck:
 
         mock_source.fetch_adj_factor.return_value = pl.DataFrame(
             {
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [date(2024, 12, 27)],
                 "adj_factor": [1.2345],
             }

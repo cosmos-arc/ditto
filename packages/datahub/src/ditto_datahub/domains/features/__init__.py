@@ -5,7 +5,7 @@ Features Domain - 技术指标与衍生特征域.
 支持灵活的特征工程和因子计算.
 
 命名映射:
-- sid: Security ID
+- instrument_id: Security ID
 - indicator_id: 指标唯一标识符 (如 'indicator_rsi_14')
 - indicator_type: 指标类型 (trend/momentum/volatility/volume)
 - value: 指标值

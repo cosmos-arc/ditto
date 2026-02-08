@@ -25,13 +25,13 @@ class TestTechnicalChecker:
             # Pass case: all values are not null
             (
                 {
-                    "sid": [1, 2, 3],
+                    "instrument_id": [1, 2, 3],
                     "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
                 },
                 [
                     {
                         "rule": "not_null",
-                        "columns": ["sid", "trade_date"],
+                        "columns": ["instrument_id", "trade_date"],
                         "message": "Required fields",
                     }
                 ],
@@ -42,10 +42,16 @@ class TestTechnicalChecker:
             # Fail case: null values present
             (
                 {
-                    "sid": [1, None, 3],
+                    "instrument_id": [1, None, 3],
                     "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
                 },
-                [{"rule": "not_null", "columns": ["sid"], "message": "SID required"}],
+                [
+                    {
+                        "rule": "not_null",
+                        "columns": ["instrument_id"],
+                        "message": "SID required",
+                    }
+                ],
                 1,
                 DQSeverity.ERROR,
                 1,
@@ -83,13 +89,13 @@ class TestTechnicalChecker:
             # Pass case: unique combinations
             (
                 {
-                    "sid": [1, 1, 2],
+                    "instrument_id": [1, 1, 2],
                     "trade_date": ["2024-01-01", "2024-01-02", "2024-01-01"],
                 },
                 [
                     {
                         "rule": "unique",
-                        "columns": ["sid", "trade_date"],
+                        "columns": ["instrument_id", "trade_date"],
                         "message": "Primary key unique",
                     }
                 ],
@@ -100,13 +106,13 @@ class TestTechnicalChecker:
             # Fail case: duplicate (1, 2024-01-01)
             (
                 {
-                    "sid": [1, 1, 1],
+                    "instrument_id": [1, 1, 1],
                     "trade_date": ["2024-01-01", "2024-01-02", "2024-01-01"],
                 },
                 [
                     {
                         "rule": "unique",
-                        "columns": ["sid", "trade_date"],
+                        "columns": ["instrument_id", "trade_date"],
                         "message": "Primary key unique",
                     }
                 ],
@@ -139,7 +145,7 @@ class TestTechnicalChecker:
         """Test checking with multiple rule violations."""
         df = pl.DataFrame(
             {
-                "sid": [1, None, 1],
+                "instrument_id": [1, None, 1],
                 "trade_date": [
                     "2024-01-01",
                     "2024-01-02",
@@ -149,10 +155,14 @@ class TestTechnicalChecker:
         )
 
         rules = [
-            {"rule": "not_null", "columns": ["sid"], "message": "SID required"},
+            {
+                "rule": "not_null",
+                "columns": ["instrument_id"],
+                "message": "SID required",
+            },
             {
                 "rule": "unique",
-                "columns": ["sid", "trade_date"],
+                "columns": ["instrument_id", "trade_date"],
                 "message": "Primary key unique",
             },
         ]
@@ -169,7 +179,7 @@ class TestTechnicalChecker:
         """Test checking with missing column."""
         df = pl.DataFrame(
             {
-                "sid": [1, 2, 3],
+                "instrument_id": [1, 2, 3],
                 # trade_date column missing
             }
         )
@@ -177,30 +187,34 @@ class TestTechnicalChecker:
         rules = [
             {
                 "rule": "not_null",
-                "columns": ["sid", "trade_date"],
+                "columns": ["instrument_id", "trade_date"],
                 "message": "Required",
             }
         ]
 
         issues = self.checker.check(df, rules)
 
-        # Should only check sid column, skip missing trade_date
-        assert len(issues) == 0  # All sid values are not null
+        # Should only check instrument_id column, skip missing trade_date
+        assert len(issues) == 0  # All instrument_id values are not null
 
     def test_check_empty_dataframe(self) -> None:
         """Test checking with empty dataframe."""
         df = pl.DataFrame(
             {
-                "sid": [],
+                "instrument_id": [],
                 "trade_date": [],
             }
         )
 
         rules = [
-            {"rule": "not_null", "columns": ["sid"], "message": "SID required"},
+            {
+                "rule": "not_null",
+                "columns": ["instrument_id"],
+                "message": "SID required",
+            },
             {
                 "rule": "unique",
-                "columns": ["sid", "trade_date"],
+                "columns": ["instrument_id", "trade_date"],
                 "message": "Primary key unique",
             },
         ]

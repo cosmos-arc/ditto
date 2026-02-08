@@ -111,7 +111,7 @@ class QualityReconciliationService:
             # 1. 验证输入
             if (
                 "instrument_id" not in primary_df.columns
-                and "sid" not in primary_df.columns
+                and "instrument_id" not in primary_df.columns
             ):
                 raise ValueError("primary_df must contain 'instrument_id' column")
 

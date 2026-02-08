@@ -24,7 +24,7 @@ def test_write_and_read_factor_data(factor_store: FactorStore) -> None:
     # Prepare test data with PIT columns
     df = pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": [
                 "2024-01-02",
                 "2024-01-03",
@@ -52,7 +52,7 @@ def test_write_and_read_factor_data(factor_store: FactorStore) -> None:
     )
 
     assert len(result_df) == 4
-    assert "sid" in result_df.columns
+    assert "instrument_id" in result_df.columns
     assert "trade_date" in result_df.columns
     assert "factor_id" in result_df.columns
     assert "exposure" in result_df.columns
@@ -65,7 +65,7 @@ def test_read_with_as_of_date_pit_query(factor_store: FactorStore) -> None:
     # Write initial data
     df_v1 = pl.DataFrame(
         {
-            "sid": [1, 1],
+            "instrument_id": [1, 1],
             "trade_date": ["2024-01-02", "2024-01-03"],
             "factor_id": ["factor_momentum_12m"] * 2,
             "factor_class": ["technical"] * 2,
@@ -80,7 +80,7 @@ def test_read_with_as_of_date_pit_query(factor_store: FactorStore) -> None:
     # Write revised data
     df_v2 = pl.DataFrame(
         {
-            "sid": [1, 1],
+            "instrument_id": [1, 1],
             "trade_date": ["2024-01-02", "2024-01-03"],
             "factor_id": ["factor_momentum_12m"] * 2,
             "factor_class": ["technical"] * 2,
@@ -147,7 +147,7 @@ def test_write_validates_required_columns(factor_store: FactorStore) -> None:
     # Missing 'exposure' column
     df_invalid = pl.DataFrame(
         {
-            "sid": [1],
+            "instrument_id": [1],
             "trade_date": ["2024-01-02"],
             "factor_id": ["factor_momentum_12m"],
             "factor_class": ["technical"],
@@ -163,11 +163,11 @@ def test_write_validates_required_columns(factor_store: FactorStore) -> None:
 
 
 def test_read_with_sid_filter(factor_store: FactorStore) -> None:
-    """Test reading with sid filter."""
+    """Test reading with instrument_id filter."""
     # Write data for multiple securities
     df = pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2, 3, 3],
+            "instrument_id": [1, 1, 2, 2, 3, 3],
             "trade_date": [
                 "2024-01-02",
                 "2024-01-03",
@@ -188,15 +188,15 @@ def test_read_with_sid_filter(factor_store: FactorStore) -> None:
 
     factor_store.write(df, year=2024)
 
-    # Read only sid 1 and 2
+    # Read only instrument_id 1 and 2
     result = factor_store.read(
-        sids=[1, 2],
+        instrument_ids=[1, 2],
         start_date="2024-01-01",
         end_date="2024-01-31",
     )
 
     assert len(result) == 4
-    assert set(result["sid"].to_list()) == {1, 2}
+    assert set(result["instrument_id"].to_list()) == {1, 2}
 
 
 def test_write_with_duplicate_handling(factor_store: FactorStore) -> None:
@@ -206,7 +206,7 @@ def test_write_with_duplicate_handling(factor_store: FactorStore) -> None:
     # Write initial data
     df_v1 = pl.DataFrame(
         {
-            "sid": [1, 1],
+            "instrument_id": [1, 1],
             "trade_date": ["2024-01-02", "2024-01-03"],
             "factor_id": ["factor_momentum_12m"] * 2,
             "factor_class": ["technical"] * 2,
@@ -224,7 +224,7 @@ def test_write_with_duplicate_handling(factor_store: FactorStore) -> None:
     # Try to write overlapping data with ERROR strategy (should fail)
     df_overlap = pl.DataFrame(
         {
-            "sid": [1],
+            "instrument_id": [1],
             "trade_date": ["2024-01-02"],
             "factor_id": ["factor_momentum_12m"],
             "factor_class": ["technical"],
@@ -265,7 +265,7 @@ def test_get_metadata_methods(factor_store: FactorStore) -> None:
     # Write data
     df = pl.DataFrame(
         {
-            "sid": [1],
+            "instrument_id": [1],
             "trade_date": ["2024-01-02"],
             "factor_id": ["factor_momentum_12m"],
             "factor_class": ["technical"],
@@ -291,9 +291,9 @@ def test_get_metadata_methods(factor_store: FactorStore) -> None:
     assert start == "2024-01-02"
     assert end == "2024-01-02"
 
-    # Check sids
-    sids = factor_store.list_sids()
-    assert sids == [1]
+    # Check instrument_ids
+    instrument_ids = factor_store.list_sids()
+    assert instrument_ids == [1]
 
     # Check count
     count = factor_store.count()
@@ -305,7 +305,7 @@ def test_delete_year_partition(factor_store: FactorStore) -> None:
     # Write data
     df = pl.DataFrame(
         {
-            "sid": [1],
+            "instrument_id": [1],
             "trade_date": ["2024-01-02"],
             "factor_id": ["factor_momentum_12m"],
             "factor_class": ["technical"],

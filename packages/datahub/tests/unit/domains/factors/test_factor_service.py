@@ -54,7 +54,7 @@ def test_get_factors_enriches_with_metadata(factor_service: FactorService) -> No
     # Setup: Write factor data
     df = pl.DataFrame(
         {
-            "sid": [1, 1],
+            "instrument_id": [1, 1],
             "trade_date": ["2024-01-02", "2024-01-03"],
             "factor_id": ["factor_momentum_12m"] * 2,
             "factor_class": ["technical"] * 2,
@@ -99,7 +99,7 @@ def test_get_factors_with_pit_query(factor_service: FactorService) -> None:
     # Write version 1
     df_v1 = pl.DataFrame(
         {
-            "sid": [1],
+            "instrument_id": [1],
             "trade_date": ["2024-01-02"],
             "factor_id": ["factor_momentum_12m"],
             "factor_class": ["technical"],
@@ -114,7 +114,7 @@ def test_get_factors_with_pit_query(factor_service: FactorService) -> None:
     # Write version 2 (revised)
     df_v2 = pl.DataFrame(
         {
-            "sid": [1],
+            "instrument_id": [1],
             "trade_date": ["2024-01-02"],
             "factor_id": ["factor_momentum_12m"],
             "factor_class": ["technical"],
@@ -176,7 +176,7 @@ def test_get_factors_with_class_filter(factor_service: FactorService) -> None:
     # Write mixed data
     df = pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": ["2024-01-02"] * 4,
             "factor_id": [
                 "factor_momentum_12m",
@@ -231,7 +231,7 @@ def test_get_factors_with_family_filter(factor_service: FactorService) -> None:
     # Write mixed data
     df = pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": ["2024-01-02"] * 4,
             "factor_id": [
                 "factor_momentum_12m",
@@ -277,7 +277,7 @@ def test_get_factors_no_metadata(factor_service: FactorService) -> None:
     # Write factor data without registering metadata
     df = pl.DataFrame(
         {
-            "sid": [1],
+            "instrument_id": [1],
             "trade_date": ["2024-01-02"],
             "factor_id": ["factor_momentum_12m"],
             "factor_class": ["technical"],
@@ -299,7 +299,7 @@ def test_get_factors_no_metadata(factor_service: FactorService) -> None:
 
     assert not result.is_empty()
     # Data columns should be present
-    assert "sid" in result.columns
+    assert "instrument_id" in result.columns
     assert "factor_id" in result.columns
     assert "exposure" in result.columns
 

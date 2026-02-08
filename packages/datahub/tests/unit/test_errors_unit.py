@@ -25,9 +25,9 @@ class TestValidationError:
         """Test ValidationError can store details."""
         error = ValidationError(
             "Schema validation failed",
-            details={"column": "sid", "expected": "Int64"},
+            details={"column": "instrument_id", "expected": "Int64"},
         )
-        assert error.details == {"column": "sid", "expected": "Int64"}
+        assert error.details == {"column": "instrument_id", "expected": "Int64"}
 
 
 class TestDatasetNotFoundError:

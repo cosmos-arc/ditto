@@ -79,7 +79,7 @@ from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
-from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
+from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource

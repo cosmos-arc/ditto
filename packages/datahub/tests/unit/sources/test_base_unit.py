@@ -123,10 +123,14 @@ class TestSourceTransformationError:
             message="Schema validation failed",
             source="tushare",
             dataset="etf_daily",
-            expected_columns=["src_code", "trade_date", "close"],
+            expected_columns=["source_ticker", "trade_date", "close"],
             actual_columns=["code", "date", "price"],
         )
-        assert error.details["expected_columns"] == ["src_code", "trade_date", "close"]
+        assert error.details["expected_columns"] == [
+            "source_ticker",
+            "trade_date",
+            "close",
+        ]
         assert error.details["actual_columns"] == ["code", "date", "price"]
 
     def test_transformation_error_minimal(self) -> None:

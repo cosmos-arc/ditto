@@ -14,12 +14,12 @@ technical:
 
   - rule: foreign_key
     column: index_sid
-    reference: security.sid
+    reference: security.instrument_id
     message: "指数 SID 不存在于证券主表"
 
   - rule: foreign_key
     column: con_sid
-    reference: security.sid
+    reference: security.instrument_id
     message: "成分股 SID 不存在于证券主表"
 
   - rule: type_check

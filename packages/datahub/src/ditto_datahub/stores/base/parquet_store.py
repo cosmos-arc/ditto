@@ -152,7 +152,7 @@ class ParquetStore(BaseStore):
             键列名列表.
 
         """
-        return ["sid", "trade_date"]
+        return ["instrument_id", "trade_date"]
 
     def _get_sort_columns(self) -> list[str]:
         """
@@ -194,7 +194,7 @@ class ParquetStore(BaseStore):
     def read(
         self,
         dataset: str,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
         **kwargs: object,
@@ -204,7 +204,7 @@ class ParquetStore(BaseStore):
 
         Args:
             dataset: 数据集名称.
-            sids: 证券 ID 列表（可选）.
+            instrument_ids: 证券 ID 列表（可选）.
             start_date: 起始日期 (YYYY-MM-DD)（可选）.
             end_date: 结束日期 (YYYY-MM-DD)（可选）.
             **kwargs: 其他参数（忽略）.
@@ -234,8 +234,8 @@ class ParquetStore(BaseStore):
         lf = pl.scan_parquet([str(p) for p in paths])
 
         # 应用过滤条件
-        if sids:
-            lf = lf.filter(pl.col("sid").is_in(sids))
+        if instrument_ids:
+            lf = lf.filter(pl.col("instrument_id").is_in(instrument_ids))
 
         date_col = self._get_date_column()
         if start_date:
@@ -264,7 +264,7 @@ class ParquetStore(BaseStore):
             dataset=dataset,
             start_date=start_date,
             end_date=end_date,
-            sids_count=len(sids) if sids else None,
+            sids_count=len(instrument_ids) if instrument_ids else None,
             row_count=len(result),
             duration_ms=round(duration_ms, 2),
         )
@@ -494,7 +494,7 @@ class ParquetStore(BaseStore):
     def delete(
         self,
         dataset: str,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
         **kwargs: object,
@@ -504,7 +504,7 @@ class ParquetStore(BaseStore):
 
         Args:
             dataset: 数据集名称.
-            sids: 证券 ID 列表（可选）.
+            instrument_ids: 证券 ID 列表（可选）.
             start_date: 起始日期 (YYYY-MM-DD)（可选）.
             end_date: 结束日期 (YYYY-MM-DD)（可选）.
             **kwargs: 其他参数（忽略）.
@@ -532,9 +532,9 @@ class ParquetStore(BaseStore):
             # 构建删除条件：保留不在删除范围内的数据
             keep_mask = pl.lit(True)
 
-            if sids:
-                # 删除指定 sid：保留不在 sids 中的数据
-                keep_mask = keep_mask & ~pl.col("sid").is_in(sids)
+            if instrument_ids:
+                # 删除指定 instrument_id：保留不在 instrument_ids 中的数据
+                keep_mask = keep_mask & ~pl.col("instrument_id").is_in(instrument_ids)
 
             if start_date and end_date:
                 # 删除日期范围内的数据：保留不在范围内的数据
@@ -642,7 +642,7 @@ class ParquetStore(BaseStore):
     def count(
         self,
         dataset: str,
-        sids: list[int] | None = None,
+        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> int:
@@ -651,7 +651,7 @@ class ParquetStore(BaseStore):
 
         Args:
             dataset: 数据集名称.
-            sids: Filter by security IDs.
+            instrument_ids: Filter by security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -659,7 +659,12 @@ class ParquetStore(BaseStore):
             Number of matching records.
 
         """
-        df = self.read(dataset, sids=sids, start_date=start_date, end_date=end_date)
+        df = self.read(
+            dataset,
+            instrument_ids=instrument_ids,
+            start_date=start_date,
+            end_date=end_date,
+        )
         return len(df)
 
     def get_date_range(self, dataset: str) -> tuple[str | None, str | None]:
@@ -716,7 +721,7 @@ class ParquetStore(BaseStore):
             return []
 
         lf = pl.scan_parquet([str(p) for p in paths])
-        result = lf.select(pl.col("sid").unique()).collect()
+        result = lf.select(pl.col("instrument_id").unique()).collect()
 
-        sids: list[int] = result["sid"].to_list()
-        return sids
+        instrument_ids: list[int] = result["instrument_id"].to_list()
+        return instrument_ids

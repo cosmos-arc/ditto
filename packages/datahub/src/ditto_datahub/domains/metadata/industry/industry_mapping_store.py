@@ -46,34 +46,34 @@ class IndustryMappingStore(SQLiteStore):
         """
         if asof:
             rows = self.fetchall(
-                """SELECT sid FROM industry_mapping
+                """SELECT instrument_id FROM industry_mapping
                 WHERE industry_id = ?
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to > ?)
-                ORDER BY sid""",
+                ORDER BY instrument_id""",
                 [industry_id, asof, asof],
             )
         else:
             rows = self.fetchall(
-                """SELECT sid FROM industry_mapping
+                """SELECT instrument_id FROM industry_mapping
                 WHERE industry_id = ? AND effective_to IS NULL
-                ORDER BY sid""",
+                ORDER BY instrument_id""",
                 [industry_id],
             )
 
-        return [int(r["sid"]) for r in rows]
+        return [int(r["instrument_id"]) for r in rows]
 
     @traced("data.industry.get_stock_industry")
     def get_stock_industry(
         self,
-        sid: int,
+        instrument_id: int,
         asof: str | None = None,
     ) -> dict[str, Any] | None:
         """
         获取股票所属行业.
 
         Args:
-            sid: 证券 ID
+            instrument_id: 证券 ID
             asof: Point-in-time 查询日期
 
         Returns:
@@ -83,24 +83,24 @@ class IndustryMappingStore(SQLiteStore):
         if asof:
             return self.fetchone(
                 """SELECT * FROM industry_mapping
-                WHERE sid = ?
+                WHERE instrument_id = ?
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to > ?)
                 ORDER BY effective_from DESC
                 LIMIT 1""",
-                [sid, asof, asof],
+                [instrument_id, asof, asof],
             )
         else:
             return self.fetchone(
                 """SELECT * FROM industry_mapping
-                WHERE sid = ? AND effective_to IS NULL""",
-                [sid],
+                WHERE instrument_id = ? AND effective_to IS NULL""",
+                [instrument_id],
             )
 
     @traced("data.industry.update_mapping")
     def update_mapping(
         self,
-        sid: int,
+        instrument_id: int,
         industry_id: str,
         effective_from: str,
         entry_reason: str | None = None,
@@ -109,7 +109,7 @@ class IndustryMappingStore(SQLiteStore):
         更新股票的行业映射.
 
         Args:
-            sid: 证券 ID
+            instrument_id: 证券 ID
             industry_id: 行业 ID
             effective_from: 生效日期
             entry_reason: 入选原因
@@ -119,15 +119,15 @@ class IndustryMappingStore(SQLiteStore):
         self.execute(
             """UPDATE industry_mapping
             SET effective_to = ?
-            WHERE sid = ? AND effective_to IS NULL""",
-            [effective_from, sid],
+            WHERE instrument_id = ? AND effective_to IS NULL""",
+            [effective_from, instrument_id],
         )
 
         # 插入新映射
         self.execute(
             """INSERT INTO industry_mapping
-            (sid, industry_id, source, effective_from, entry_reason)
+            (instrument_id, industry_id, source, effective_from, entry_reason)
             VALUES (?, ?, 'sw', ?, ?)""",
-            [sid, industry_id, effective_from, entry_reason],
+            [instrument_id, industry_id, effective_from, entry_reason],
         )
         self.commit()

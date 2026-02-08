@@ -28,7 +28,7 @@ def sample_adj_factor_df() -> pl.DataFrame:
     """Create sample adjustment factor DataFrame."""
     return pl.DataFrame(
         {
-            "sid": [1500001, 1500001, 1500001, 1500002],
+            "instrument_id": [1500001, 1500001, 1500001, 1500002],
             "trade_date": [
                 date(2024, 1, 2),
                 date(2024, 1, 3),
@@ -57,7 +57,7 @@ class TestEtfAdjFactorStore:
         store.write(sample_adj_factor_df, year=2024)
         df = store.read()
         assert len(df) == 4
-        assert "sid" in df.columns
+        assert "instrument_id" in df.columns
         assert "trade_date" in df.columns
         assert "adj_factor" in df.columns
 
@@ -66,9 +66,9 @@ class TestEtfAdjFactorStore:
     ) -> None:
         """Test read filtered by security IDs."""
         store.write(sample_adj_factor_df, year=2024)
-        df = store.read(sids=[1500001])
+        df = store.read(instrument_ids=[1500001])
         assert len(df) == 3
-        assert df["sid"].unique().to_list() == [1500001]
+        assert df["instrument_id"].unique().to_list() == [1500001]
 
     def test_read_filter_by_date_range(
         self, store: EtfAdjFactorStore, sample_adj_factor_df: pl.DataFrame
@@ -122,7 +122,7 @@ class TestEtfAdjFactorStore:
         # Write overlapping new data
         new_data = pl.DataFrame(
             {
-                "sid": [1500001, 1500003],
+                "instrument_id": [1500001, 1500003],
                 "trade_date": [date(2024, 1, 4), date(2024, 1, 5)],
                 "adj_factor": [0.92, 1.0],
             }
@@ -135,7 +135,8 @@ class TestEtfAdjFactorStore:
 
         # Verify new value was applied
         record = df.filter(
-            (pl.col("sid") == 1500001) & (pl.col("trade_date") == date(2024, 1, 4))
+            (pl.col("instrument_id") == 1500001)
+            & (pl.col("trade_date") == date(2024, 1, 4))
         )
         assert record["adj_factor"][0] == 0.92
 
@@ -145,17 +146,17 @@ class TestEtfAdjFactorStore:
         """Test write overwrites existing records with same key."""
         store.write(sample_adj_factor_df, year=2024)
 
-        # Write same date/sid with different adj_factor
+        # Write same date/instrument_id with different adj_factor
         updated = pl.DataFrame(
             {
-                "sid": [1500001],
+                "instrument_id": [1500001],
                 "trade_date": [date(2024, 1, 3)],
                 "adj_factor": [0.85],
             }
         )
         store.write(updated, 2024, on_duplicate=OnDuplicate.KEEP_LAST)
 
-        df = store.read(sids=[1500001])
+        df = store.read(instrument_ids=[1500001])
         record = df.filter(pl.col("trade_date") == date(2024, 1, 3))
         assert record["adj_factor"][0] == 0.85
 
@@ -252,7 +253,7 @@ class TestEtfAdjFactorStore:
     ) -> None:
         """Test count with filters applied."""
         store.write(sample_adj_factor_df, year=2024)
-        count = store.count(sids=[1500001])
+        count = store.count(instrument_ids=[1500001])
         assert count == 3
 
     # ============ get_date_range tests ============
@@ -276,13 +277,13 @@ class TestEtfAdjFactorStore:
 
     def test_list_sids_empty(self, store: EtfAdjFactorStore) -> None:
         """Test list_sids with no data."""
-        sids = store.list_sids()
-        assert sids == []
+        instrument_ids = store.list_sids()
+        assert instrument_ids == []
 
     def test_list_sids(
         self, store: EtfAdjFactorStore, sample_adj_factor_df: pl.DataFrame
     ) -> None:
         """Test list_sids returns unique security IDs."""
         store.write(sample_adj_factor_df, year=2024)
-        sids = store.list_sids()
-        assert sids == [1500001, 1500002]
+        instrument_ids = store.list_sids()
+        assert instrument_ids == [1500001, 1500002]

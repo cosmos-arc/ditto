@@ -159,7 +159,7 @@ class StatisticalChecker:
                     rule_name="zscore",
                     message=msg,
                     affected_rows=anomalies.height,
-                    sample_data=anomalies.select(["sid", column, "zscore"])
+                    sample_data=anomalies.select(["instrument_id", column, "zscore"])
                     .head(10)
                     .to_dicts(),
                 )

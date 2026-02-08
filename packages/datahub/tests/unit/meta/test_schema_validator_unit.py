@@ -17,10 +17,10 @@ class TestValidateDataFrameSchema:
         """Test validation passes for valid stock_daily DataFrame."""
         df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "instrument_id": [100000001],
                 "trade_date": [date(2024, 1, 1)],
                 "source": ["tushare"],
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "open": [10.0],
                 "high": [11.0],
                 "low": [9.0],
@@ -46,10 +46,10 @@ class TestValidateDataFrameSchema:
         """Test validation passes for valid adj_factor DataFrame."""
         df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "instrument_id": [100000001],
                 "trade_date": [date(2024, 1, 1)],
                 "source": ["tushare"],
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "adj_factor": [1.0],
                 "knowledge_date": [date(2024, 1, 2)],
             }
@@ -62,10 +62,10 @@ class TestValidateDataFrameSchema:
         """Test validation raises ValidationError for missing column."""
         df = pl.DataFrame(
             {
-                "sid": [100000001],
+                "instrument_id": [100000001],
                 # Missing "trade_date" column
                 "source": ["tushare"],
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
             }
         )
 
@@ -76,10 +76,10 @@ class TestValidateDataFrameSchema:
         """Test validation raises ValidationError for wrong column type."""
         df = pl.DataFrame(
             {
-                "sid": ["not_an_int"],  # Should be Int64
+                "instrument_id": ["not_an_int"],  # Should be Int64
                 "trade_date": [date(2024, 1, 1)],
                 "source": ["tushare"],
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "open": [10.0],
                 "high": [11.0],
                 "low": [9.0],
@@ -98,7 +98,9 @@ class TestValidateDataFrameSchema:
             }
         )
 
-        with pytest.raises(ValidationError, match="Column 'sid' has wrong type"):
+        with pytest.raises(
+            ValidationError, match="Column 'instrument_id' has wrong type"
+        ):
             validate_dataframe_schema(df, "stock_daily")
 
     def test_validate_skips_unknown_dataset(self) -> None:

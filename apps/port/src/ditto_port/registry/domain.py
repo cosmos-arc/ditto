@@ -57,8 +57,8 @@ from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
+from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.quality.quarantine_store import QuarantineStore
-from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 

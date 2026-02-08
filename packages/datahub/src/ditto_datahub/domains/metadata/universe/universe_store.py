@@ -143,12 +143,12 @@ class UniverseStore:
         Args:
             universe_id: Universe identifier.
             records: List of constituent records. Each record should contain:
-                - sid: Security ID (required)
+                - instrument_id: Security ID (required)
                 - effective_from: Effective start date (required)
                 - effective_to: Effective end date (optional)
                 - weight: Constituent weight (optional, default 1.0)
                 - source: Data source (optional)
-                - src_code: Source code (optional)
+                - source_ticker: Source code (optional)
 
         Returns:
             Number of records added.
@@ -166,18 +166,21 @@ class UniverseStore:
         for record in records:
             params = (
                 universe_id,
-                record.get("sid"),
+                record.get("instrument_id"),
                 record.get("effective_from"),
                 record.get("effective_to"),
                 record.get("weight", 1.0),
                 record.get("source"),
-                record.get("src_code"),
+                record.get("source_ticker"),
             )
             params_list.append(params)
 
         self._client.executemany(
             """INSERT INTO universe_constituent
-            (universe_id, sid, effective_from, effective_to, weight, source, src_code)
+            (
+                universe_id, instrument_id, effective_from, effective_to,
+                weight, source, source_ticker
+            )
             VALUES (?, ?, ?, ?, ?, ?, ?)""",
             params_list,
         )
@@ -216,7 +219,7 @@ class UniverseStore:
                 WHERE universe_id = ?
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to > ?)
-                ORDER BY sid""",
+                ORDER BY instrument_id""",
                 [universe_id, asof, asof],
             )
         else:
@@ -224,7 +227,7 @@ class UniverseStore:
             rows = self._client.fetchall(
                 """SELECT * FROM universe_constituent
                 WHERE universe_id = ? AND effective_to IS NULL
-                ORDER BY sid""",
+                ORDER BY instrument_id""",
                 [universe_id],
             )
 
@@ -250,13 +253,13 @@ class UniverseStore:
 
         """
         df = self.get_constituents(universe_id, asof)
-        return df["sid"].to_list() if not df.is_empty() else []
+        return df["instrument_id"].to_list() if not df.is_empty() else []
 
     @traced("data.universe_remove_constituent")
     def remove_constituent(
         self,
         universe_id: str,
-        sid: int,
+        instrument_id: int,
         effective_date: str,
     ) -> None:
         """
@@ -264,7 +267,7 @@ class UniverseStore:
 
         Args:
             universe_id: Universe identifier.
-            sid: Security ID to remove.
+            instrument_id: Security ID to remove.
             effective_date: Date when constituent becomes ineffective.
 
         """
@@ -272,7 +275,7 @@ class UniverseStore:
             "Removing constituent from universe",
             event="universe_remove_constituent_start",
             universe_id=universe_id,
-            sid=sid,
+            instrument_id=instrument_id,
             effective_date=effective_date,
         )
 
@@ -280,8 +283,8 @@ class UniverseStore:
         self._client.execute(
             """UPDATE universe_constituent
             SET effective_to = ?
-            WHERE universe_id = ? AND sid = ? AND effective_to IS NULL""",
-            [effective_date, universe_id, sid],
+            WHERE universe_id = ? AND instrument_id = ? AND effective_to IS NULL""",
+            [effective_date, universe_id, instrument_id],
         )
         self._client.commit()
 
@@ -289,7 +292,7 @@ class UniverseStore:
             "Constituent removed successfully",
             event="universe_remove_constituent_complete",
             universe_id=universe_id,
-            sid=sid,
+            instrument_id=instrument_id,
         )
 
     def close(self) -> None:

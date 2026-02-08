@@ -121,14 +121,31 @@ class SqlEngine:
         for dataset in self.ALLOWED_DATASETS:
             parquet_path = self.data_root / dataset
             # Check if directory exists before creating view
-            if parquet_path.exists():
-                # Create view with glob pattern for year partitions
-                # dataset is validated against ALLOWED_DATASETS whitelist
-                view_sql = (
-                    f"CREATE OR REPLACE VIEW {dataset} AS SELECT * FROM "  # noqa: S608 - dataset 已通过 ALLOWED_DATASETS 白名单
-                    f'"{parquet_path}/*.parquet"'
-                )
-                self.con.execute(view_sql)
+            if not parquet_path.exists():
+                continue
+
+            parquet_files = sorted(parquet_path.glob("*.parquet"))
+            if not parquet_files:
+                continue
+
+            view_relation = self._build_view_relation(parquet_path)
+            view_relation.create_view(dataset, replace=True)
+
+    def _build_view_relation(self, parquet_path: Path) -> duckdb.DuckDBPyRelation:
+        """Build normalized DuckDB relation for one parquet dataset path."""
+        parquet_glob = str(parquet_path / "*.parquet")
+        relation = self.con.from_parquet(parquet_glob)
+        columns = set(relation.columns)
+
+        projections: list[str] = ["*"]
+        if "instrument_id" not in columns and "sid" in columns:
+            projections.append("sid AS instrument_id")
+        if "source_ticker" not in columns and "src_code" in columns:
+            projections.append("src_code AS source_ticker")
+
+        if len(projections) > 1:
+            return relation.project(", ".join(projections))
+        return relation
 
     def _register_macros(self) -> None:
         """Register adjustment macros."""
@@ -141,7 +158,7 @@ class SqlEngine:
             self.con.execute("""
                 CREATE OR REPLACE VIEW market_hfq AS
                 SELECT
-                    m.sid, m.trade_date,
+                    m.instrument_id, m.trade_date,
                     m.open * COALESCE(f.adj_factor, 1.0) AS open,
                     m.high * COALESCE(f.adj_factor, 1.0) AS high,
                     m.low * COALESCE(f.adj_factor, 1.0) AS low,
@@ -149,7 +166,7 @@ class SqlEngine:
                     m.volume, m.amount
                 FROM stock_daily m
                 LEFT JOIN adj_factor f
-                    ON m.sid = f.sid AND m.trade_date = f.trade_date
+                    ON m.instrument_id = f.instrument_id AND m.trade_date = f.trade_date
             """)
 
             # QFQ macro (前复权 + PIT)
@@ -157,14 +174,14 @@ class SqlEngine:
                 CREATE OR REPLACE MACRO qfq(scan_date) AS TABLE
                 WITH baseline AS (
                     SELECT
-                        sid,
+                        instrument_id,
                         last(adj_factor ORDER BY trade_date) as base_factor
                     FROM adj_factor
                     WHERE trade_date <= cast(scan_date as DATE)
-                    GROUP BY sid
+                    GROUP BY instrument_id
                 )
                 SELECT
-                    m.sid, m.trade_date,
+                    m.instrument_id, m.trade_date,
                     m.open * COALESCE(f.adj_factor, 1.0) /
                         COALESCE(b.base_factor, 1.0) AS open,
                     m.high * COALESCE(f.adj_factor, 1.0) /
@@ -176,8 +193,8 @@ class SqlEngine:
                     m.volume, m.amount
                 FROM stock_daily m
                 LEFT JOIN adj_factor f
-                    ON m.sid = f.sid AND m.trade_date = f.trade_date
-                LEFT JOIN baseline b ON m.sid = b.sid
+                    ON m.instrument_id = f.instrument_id AND m.trade_date = f.trade_date
+                LEFT JOIN baseline b ON m.instrument_id = b.instrument_id
                 WHERE m.trade_date <= cast(scan_date as DATE)
             """)
 
@@ -449,7 +466,7 @@ class SqlEngine:
 
         Examples:
             >>> engine.pit_query(
-            ...     "SELECT * FROM stock_daily WHERE sid = 1",
+            ...     "SELECT * FROM stock_daily WHERE instrument_id = 1",
             ...     "2024-01-15"
             ... )
             # 自动添加: AND trade_date <= '2024-01-15'

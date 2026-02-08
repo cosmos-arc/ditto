@@ -53,10 +53,10 @@ def apply_qfq_adj(
         )
 
     # 获取每个 SID 的最新因子（基于 baseline）
-    latest_factors = baseline_df.group_by("sid").agg(
+    latest_factors = baseline_df.group_by("instrument_id").agg(
         pl.col("adj_factor").last().alias("latest_factor")
     )
-    df = df.join(latest_factors, on="sid", how="left")
+    df = df.join(latest_factors, on="instrument_id", how="left")
 
     # 应用 QFQ 公式，缺失值使用 1.0（返回原始价格）
     df = df.with_columns(

@@ -139,7 +139,7 @@ def sample_stock_bars_df() -> pl.DataFrame:
     """Create sample stock bars DataFrame."""
     return pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": [
                 date(2024, 1, 2),
                 date(2024, 1, 3),
@@ -161,7 +161,7 @@ def sample_adj_factor_df() -> pl.DataFrame:
     """Create sample adjustment factor DataFrame."""
     return pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": [
                 date(2024, 1, 2),
                 date(2024, 1, 3),
@@ -184,7 +184,7 @@ def sample_status_df() -> pl.DataFrame:
     """Create sample stock status DataFrame."""
     return pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": [
                 date(2024, 1, 2),
                 date(2024, 1, 3),
@@ -205,8 +205,8 @@ class TestMarketBarsQuery:
 
     def test_query_creation_with_default_values(self) -> None:
         """Test query creation with default values."""
-        query = MarketBarsQuery(sids=[1, 2, 3])
-        assert query.sids == [1, 2, 3]
+        query = MarketBarsQuery(instrument_ids=[1, 2, 3])
+        assert query.instrument_ids == [1, 2, 3]
         assert query.start is None
         assert query.end is None
         assert query.adj == AdjType.NONE
@@ -219,7 +219,7 @@ class TestMarketBarsQuery:
     def test_query_creation_with_values(self) -> None:
         """Test query creation with specified values."""
         query = MarketBarsQuery(
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start="2024-01-01",
             end="2024-12-31",
             adj=AdjType.QFQ,
@@ -229,7 +229,7 @@ class TestMarketBarsQuery:
             with_status=True,
             raw=True,
         )
-        assert query.sids == [1, 2]
+        assert query.instrument_ids == [1, 2]
         assert query.start == "2024-01-01"
         assert query.end == "2024-12-31"
         assert query.adj == AdjType.QFQ
@@ -243,9 +243,9 @@ class TestMarketBarsQuery:
         """Test that query is frozen (immutable)."""
         from dataclasses import FrozenInstanceError
 
-        query = MarketBarsQuery(sids=[1, 2])
+        query = MarketBarsQuery(instrument_ids=[1, 2])
         with pytest.raises(FrozenInstanceError):
-            query.sids = [3, 4]  # type: ignore
+            query.instrument_ids = [3, 4]  # type: ignore
 
 
 class TestMarketServiceInit:
@@ -322,7 +322,7 @@ class TestMarketServiceGetBars:
 
     def test_get_bars_empty_sid_list(self, market_service: MarketService) -> None:
         """Test get_bars with empty SID list."""
-        query = MarketBarsQuery(sids=[])
+        query = MarketBarsQuery(instrument_ids=[])
         result = market_service.get_bars(query)
         assert result.is_empty()
 
@@ -335,7 +335,9 @@ class TestMarketServiceGetBars:
         """Test get_bars for stock data."""
         mock_stock_bars_store.read.return_value = sample_stock_bars_df
 
-        query = MarketBarsQuery(sids=[1, 2], start="2024-01-01", end="2024-12-31")
+        query = MarketBarsQuery(
+            instrument_ids=[1, 2], start="2024-01-01", end="2024-12-31"
+        )
         result = market_service.get_bars(query)
 
         assert not result.is_empty()
@@ -355,7 +357,10 @@ class TestMarketServiceGetBars:
         mock_stock_status_store.read.return_value = sample_status_df
 
         query = MarketBarsQuery(
-            sids=[1, 2], with_status=True, start="2024-01-01", end="2024-12-31"
+            instrument_ids=[1, 2],
+            with_status=True,
+            start="2024-01-01",
+            end="2024-12-31",
         )
         result = market_service.get_bars(query)
 
@@ -374,7 +379,7 @@ class TestMarketServiceGetBars:
         mock_stock_bars_store.read.return_value = sample_stock_bars_df
 
         query = MarketBarsQuery(
-            sids=[1, 2], with_status=True, adj=AdjType.QFQ, raw=True
+            instrument_ids=[1, 2], with_status=True, adj=AdjType.QFQ, raw=True
         )
         result = market_service.get_bars(query)
 
@@ -395,7 +400,7 @@ class TestMarketServiceGetBars:
         # 使用 ETF SID 范围 (2M+)
         etf_range = InstrumentIdRange.get_range("etf")
         query = MarketBarsQuery(
-            sids=[etf_range.min_id, etf_range.min_id + 1],
+            instrument_ids=[etf_range.min_id, etf_range.min_id + 1],
             asset_class="etf",
         )
         result = market_service.get_bars(query)
@@ -409,7 +414,9 @@ class TestMarketServiceGetBars:
         """Test get_bars for index when index store is None."""
         # 使用 Index SID 范围 (3M+)
         index_range = InstrumentIdRange.get_range("index")
-        query = MarketBarsQuery(sids=[index_range.min_id], asset_class="index")
+        query = MarketBarsQuery(
+            instrument_ids=[index_range.min_id], asset_class="index"
+        )
         result = market_service.get_bars(query)
 
         # Should return empty DataFrame when store is None
@@ -425,33 +432,39 @@ class TestMarketServiceAssetClassDetection:
         """Test detecting stock asset class from SIDs."""
         # Use valid stock SIDs (assuming range 1-999999)
         stock_range = InstrumentIdRange.get_range("stock")
-        query = MarketBarsQuery(sids=[stock_range.min_id, stock_range.max_id])
-        sids, asset_class = market_service._resolve_sids_and_asset_class(query)
+        query = MarketBarsQuery(instrument_ids=[stock_range.min_id, stock_range.max_id])
+        instrument_ids, asset_class = (
+            market_service._resolve_instrument_ids_and_asset_class(query)
+        )
 
         assert asset_class == "stock"
-        assert len(sids) == 2
+        assert len(instrument_ids) == 2
 
     def test_detect_asset_class_from_etf_sids(
         self, market_service: MarketService
     ) -> None:
         """Test detecting ETF asset class from SIDs."""
         etf_range = InstrumentIdRange.get_range("etf")
-        query = MarketBarsQuery(sids=[etf_range.min_id, etf_range.max_id])
-        sids, asset_class = market_service._resolve_sids_and_asset_class(query)
+        query = MarketBarsQuery(instrument_ids=[etf_range.min_id, etf_range.max_id])
+        instrument_ids, asset_class = (
+            market_service._resolve_instrument_ids_and_asset_class(query)
+        )
 
         assert asset_class == "etf"
-        assert len(sids) == 2
+        assert len(instrument_ids) == 2
 
     def test_detect_asset_class_from_index_sids(
         self, market_service: MarketService
     ) -> None:
         """Test detecting index asset class from SIDs."""
         index_range = InstrumentIdRange.get_range("index")
-        query = MarketBarsQuery(sids=[index_range.min_id, index_range.max_id])
-        sids, asset_class = market_service._resolve_sids_and_asset_class(query)
+        query = MarketBarsQuery(instrument_ids=[index_range.min_id, index_range.max_id])
+        instrument_ids, asset_class = (
+            market_service._resolve_instrument_ids_and_asset_class(query)
+        )
 
         assert asset_class == "index"
-        assert len(sids) == 2
+        assert len(instrument_ids) == 2
 
     def test_detect_mixed_asset_class_raises_error(
         self, market_service: MarketService
@@ -460,10 +473,10 @@ class TestMarketServiceAssetClassDetection:
         stock_range = InstrumentIdRange.get_range("stock")
         etf_range = InstrumentIdRange.get_range("etf")
 
-        query = MarketBarsQuery(sids=[stock_range.min_id, etf_range.min_id])
+        query = MarketBarsQuery(instrument_ids=[stock_range.min_id, etf_range.min_id])
 
         with pytest.raises(ValueError, match="检测到混合资产类别查询"):
-            market_service._resolve_sids_and_asset_class(query)
+            market_service._resolve_instrument_ids_and_asset_class(query)
 
     def test_explicit_asset_class_mismatch_raises_error(
         self, market_service: MarketService
@@ -471,10 +484,10 @@ class TestMarketServiceAssetClassDetection:
         """Test that explicit asset_class mismatch with detected raises ValueError."""
         stock_range = InstrumentIdRange.get_range("stock")
         # Stock SID with explicit ETF asset_class should raise error
-        query = MarketBarsQuery(sids=[stock_range.min_id], asset_class="etf")
+        query = MarketBarsQuery(instrument_ids=[stock_range.min_id], asset_class="etf")
 
         with pytest.raises(ValueError, match="显式指定的资产类别"):
-            market_service._resolve_sids_and_asset_class(query)
+            market_service._resolve_instrument_ids_and_asset_class(query)
 
 
 class TestMarketServiceDateParsing:
@@ -483,7 +496,7 @@ class TestMarketServiceDateParsing:
     def test_parse_dates_with_all_params(self, market_service: MarketService) -> None:
         """Test parsing dates with all parameters."""
         query = MarketBarsQuery(
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start="2024-01-01",
             end="2024-12-31",
             asof="2024-06-30",
@@ -496,7 +509,7 @@ class TestMarketServiceDateParsing:
 
     def test_parse_dates_with_none_params(self, market_service: MarketService) -> None:
         """Test parsing dates with None parameters."""
-        query = MarketBarsQuery(sids=[1, 2])
+        query = MarketBarsQuery(instrument_ids=[1, 2])
         start, end, asof = market_service._parse_dates(query)
 
         assert start is None
@@ -517,7 +530,7 @@ class TestMarketServiceLoadBarsCore:
         mock_stock_bars_store.read.return_value = sample_stock_bars_df
 
         result = market_service._load_bars_core(
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
             asset_class="stock",
@@ -536,7 +549,7 @@ class TestMarketServiceLoadBarsCore:
         mock_etf_bars_store.read.return_value = sample_stock_bars_df
 
         result = market_service._load_bars_core(
-            sids=[1500001],
+            instrument_ids=[1500001],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
             asset_class="etf",
@@ -550,7 +563,7 @@ class TestMarketServiceLoadBarsCore:
     ) -> None:
         """Test loading index bars when store is None."""
         result = market_service._load_bars_core(
-            sids=[1],
+            instrument_ids=[1],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
             asset_class="index",
@@ -574,7 +587,7 @@ class TestMarketServiceApplyAdjustment:
         result = market_service._apply_adjustment(
             df=sample_stock_bars_df,
             adj=AdjType.QFQ,
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
             asof=None,
@@ -596,7 +609,7 @@ class TestMarketServiceApplyAdjustment:
         result = market_service._apply_adjustment(
             df=sample_stock_bars_df,
             adj=AdjType.QFQ,
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
             asof=None,
@@ -623,7 +636,7 @@ class TestMarketServiceEnrichWithStatus:
 
         result = market_service._enrich_with_status(
             df=sample_stock_bars_df,
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start="2024-01-01",
             end="2024-12-31",
         )
@@ -645,7 +658,7 @@ class TestMarketServiceEnrichWithStatus:
 
         result = market_service._enrich_with_status(
             df=sample_stock_bars_df,
-            sids=[1, 2],
+            instrument_ids=[1, 2],
             start=date(2024, 1, 1),
             end=date(2024, 12, 31),
         )

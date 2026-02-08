@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
-from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
+from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_foundation import SQLitePool
 from pytest_mock import MockerFixture
 
@@ -97,7 +97,9 @@ class TestInstrumentIdAllocator:
         mocker.patch.object(
             self.pool, "execute", side_effect=RuntimeError("Connection lost")
         )
-        mock_logger = mocker.patch("ditto_datahub.runtime.sid_allocator.logger")
+        mock_logger = mocker.patch(
+            "ditto_datahub.runtime.instrument_id_allocator.logger"
+        )
 
         with pytest.raises(RuntimeError):
             self.allocator.allocate("stock")

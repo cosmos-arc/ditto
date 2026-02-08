@@ -23,9 +23,9 @@ class IdentityStore(SQLiteStore):
     管理 identity_mapping 表，支持 PIT 查询。
 
     表结构:
-        - sid: 证券内部标识符
+        - instrument_id: 证券内部标识符
         - source: 数据源标识
-        - src_code: 数据源原始代码
+        - source_ticker: 数据源原始代码
         - effective_from: 生效开始日期
         - effective_to: 生效结束日期 (NULL 表示当前有效)
         - is_primary: 是否主标识符
@@ -41,24 +41,26 @@ class IdentityStore(SQLiteStore):
         """
         super().__init__(db_path)
 
-    @traced("data.identity.resolve_sid")
-    def resolve_sid(self, src_code: str, source: str, asof: str | None) -> int | None:
+    @traced("data.identity.resolve_instrument_id")
+    def resolve_instrument_id(
+        self, source_ticker: str, source: str, asof: str | None
+    ) -> int | None:
         """
-        解析 src_code 到 sid（支持 PIT）.
+        解析 source_ticker 到 instrument_id（支持 PIT）.
 
         Args:
-            src_code: 数据源原始代码.
+            source_ticker: 数据源原始代码.
             source: 数据源标识.
             asof: 时间点日期，None 表示当前.
 
         Returns:
-            sid 或 None（如果未找到）.
+            instrument_id 或 None（如果未找到）.
 
         """
         logger.debug(
             "Starting identity SID resolution",
-            event="identity_sid_resolve_start",
-            src_code=src_code,
+            event="identity_instrument_id_resolve_start",
+            source_ticker=source_ticker,
             source=source,
             asof=asof,
         )
@@ -66,125 +68,127 @@ class IdentityStore(SQLiteStore):
         if asof:
             # PIT mode: 查询历史映射
             row = self.fetchone(
-                """SELECT sid FROM identity_mapping
-                WHERE source = ? AND src_code = ?
+                """SELECT instrument_id FROM identity_mapping
+                WHERE source = ? AND source_ticker = ?
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to > ?)
                 ORDER BY effective_from DESC
                 LIMIT 1""",
-                [source, src_code, asof, asof],
+                [source, source_ticker, asof, asof],
             )
         else:
             # Current mode: 只查询当前有效映射（更快）
             row = self.fetchone(
-                """SELECT sid FROM identity_mapping
-                WHERE source = ? AND src_code = ?
+                """SELECT instrument_id FROM identity_mapping
+                WHERE source = ? AND source_ticker = ?
                   AND effective_to IS NULL""",
-                [source, src_code],
+                [source, source_ticker],
             )
 
-        sid = int(row["sid"]) if row else None
+        instrument_id = int(row["instrument_id"]) if row else None
 
-        if sid:
+        if instrument_id:
             logger.debug(
                 "Identity SID resolved successfully",
-                event="identity_sid_resolve_complete",
-                src_code=src_code,
-                sid=sid,
+                event="identity_instrument_id_resolve_complete",
+                source_ticker=source_ticker,
+                instrument_id=instrument_id,
             )
         else:
             logger.warning(
                 "Identity SID not found",
-                event="identity_sid_resolve_not_found",
-                src_code=src_code,
+                event="identity_instrument_id_resolve_not_found",
+                source_ticker=source_ticker,
                 source=source,
                 asof=asof,
             )
 
-        return sid
+        return instrument_id
 
-    @traced("data.identity.resolve_sids_batch")
-    def resolve_sids_batch(
+    @traced("data.identity.resolve_instrument_ids_batch")
+    def resolve_instrument_ids_batch(
         self,
-        src_codes: list[str],
+        source_tickers: list[str],
         source: str,
         asof: str | None,
     ) -> dict[str, int]:
         """
-        批量解析 src_codes 到 sids.
+        批量解析 source_tickers 到 instrument_ids.
 
         Args:
-            src_codes: 数据源原始代码列表.
+            source_tickers: 数据源原始代码列表.
             source: 数据源标识.
             asof: 时间点日期.
 
         Returns:
-            字典，映射 src_code 到 sid（仅包含找到的代码）.
+            字典，映射 source_ticker 到 instrument_id（仅包含找到的代码）.
 
         """
         logger.info(
             "Starting batch identity SID resolution",
-            event="identity_sid_batch_resolve_start",
+            event="identity_instrument_id_batch_resolve_start",
             source=source,
             asof=asof,
-            input_count=len(src_codes),
+            input_count=len(source_tickers),
         )
 
         result: dict[str, int] = {}
-        for code in src_codes:
-            sid = self.resolve_sid(code, source, asof)
-            if sid:
-                result[code] = sid
+        for code in source_tickers:
+            instrument_id = self.resolve_instrument_id(code, source, asof)
+            if instrument_id:
+                result[code] = instrument_id
 
         logger.info(
             "Batch identity SID resolution completed",
-            event="identity_sid_batch_resolve_complete",
-            requested=len(src_codes),
+            event="identity_instrument_id_batch_resolve_complete",
+            requested=len(source_tickers),
             found=len(result),
-            not_found=len(src_codes) - len(result),
+            not_found=len(source_tickers) - len(result),
         )
 
         return result
 
-    @traced("data.identity.get_src_code")
-    def get_src_code(self, sid: int, source: str, asof: str | None) -> str | None:
+    @traced("data.identity.get_source_ticker")
+    def get_source_ticker(
+        self, instrument_id: int, source: str, asof: str | None
+    ) -> str | None:
         """
-        反向查询：sid 到 src_code.
+        反向查询：instrument_id 到 source_ticker.
 
         Args:
-            sid: 证券内部标识符.
+            instrument_id: 证券内部标识符.
             source: 数据源标识.
             asof: 时间点日期.
 
         Returns:
-            src_code 或 None（如果未找到）.
+            source_ticker 或 None（如果未找到）.
 
         """
         if asof:
             row = self.fetchone(
-                """SELECT src_code FROM identity_mapping
-                WHERE sid = ? AND source = ?
+                """SELECT source_ticker FROM identity_mapping
+                WHERE instrument_id = ? AND source = ?
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to > ?)
                 ORDER BY effective_from DESC
                 LIMIT 1""",
-                [sid, source, asof, asof],
+                [instrument_id, source, asof, asof],
             )
         else:
             row = self.fetchone(
-                """SELECT src_code FROM identity_mapping
-                WHERE sid = ? AND source = ?
+                """SELECT source_ticker FROM identity_mapping
+                WHERE instrument_id = ? AND source = ?
                   AND effective_to IS NULL""",
-                [sid, source],
+                [instrument_id, source],
             )
 
-        return str(row["src_code"]) if row else None
+        return str(row["source_ticker"]) if row else None
 
     @traced("data.identity.register")
     def register(
         self,
-        sid: int,
-        src_code: str,
+        instrument_id: int,
+        source_ticker: str,
         source: str,
         effective_from: str,
         is_primary: bool = True,
@@ -193,8 +197,8 @@ class IdentityStore(SQLiteStore):
         注册 identity_mapping 记录.
 
         Args:
-            sid: 证券内部标识符.
-            src_code: 数据源原始代码.
+            instrument_id: 证券内部标识符.
+            source_ticker: 数据源原始代码.
             source: 数据源标识.
             effective_from: 生效开始日期.
             is_primary: 是否主标识符.
@@ -203,8 +207,8 @@ class IdentityStore(SQLiteStore):
         logger.info(
             "Starting identity registration",
             event="identity_register_start",
-            sid=sid,
-            src_code=src_code,
+            instrument_id=instrument_id,
+            source_ticker=source_ticker,
             source=source,
             effective_from=effective_from,
             is_primary=is_primary,
@@ -213,12 +217,12 @@ class IdentityStore(SQLiteStore):
         try:
             self.execute(
                 """INSERT INTO identity_mapping
-                (sid, source, src_code, effective_from, is_primary)
+                (instrument_id, source, source_ticker, effective_from, is_primary)
                 VALUES (?, ?, ?, ?, ?)""",
                 [
-                    sid,
+                    instrument_id,
                     source,
-                    src_code,
+                    source_ticker,
                     effective_from,
                     1 if is_primary else 0,
                 ],
@@ -229,8 +233,8 @@ class IdentityStore(SQLiteStore):
             logger.info(
                 "Identity registered successfully",
                 event="identity_register_complete",
-                sid=sid,
-                src_code=src_code,
+                instrument_id=instrument_id,
+                source_ticker=source_ticker,
                 source=source,
             )
 
@@ -238,8 +242,8 @@ class IdentityStore(SQLiteStore):
             logger.error(
                 "Identity registration failed",
                 event="identity_register_failed",
-                sid=sid,
-                src_code=src_code,
+                instrument_id=instrument_id,
+                source_ticker=source_ticker,
                 error_type=type(e).__name__,
                 error_message=str(e),
             )

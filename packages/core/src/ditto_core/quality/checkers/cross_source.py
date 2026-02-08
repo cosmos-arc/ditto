@@ -134,7 +134,7 @@ class CrossSourceChecker:
 
         # 检查每个字段
         diff_samples: list[dict[str, Any]] = []
-        # 使用 key_columns 的第一列作为标识符（通常是 symbol 或 sid）
+        # 使用 key_columns 的第一列作为标识符（通常是 symbol 或 instrument_id）
         identifier_column = key_columns[0]
         for field in fields:
             if field not in primary.columns or field not in secondary.columns:
@@ -180,7 +180,7 @@ class CrossSourceChecker:
             merged: 合并后的 DataFrame
             field: 字段名
             tolerance: 容差规则
-            identifier_column: 标识符列名（symbol 或 sid）
+            identifier_column: 标识符列名（symbol 或 instrument_id）
 
         Returns:
             差异样本列表，无差异返回 None

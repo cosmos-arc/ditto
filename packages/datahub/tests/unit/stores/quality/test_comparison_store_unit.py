@@ -44,7 +44,7 @@ class TestComparisonStore:
         df = pl.DataFrame(
             {
                 "dataset": ["stock_daily", "stock_daily"],
-                "src_code": ["000001.SZ", "000002.SZ"],
+                "source_ticker": ["000001.SZ", "000002.SZ"],
                 "trade_date": [self.recent_date, self.recent_date],
                 "field": ["close", "close"],
                 "primary_value": [10.5, 20.3],
@@ -74,7 +74,7 @@ class TestComparisonStore:
         """Test writing empty DataFrame does nothing."""
         df = pl.DataFrame(
             schema={
-                "src_code": pl.String(),
+                "source_ticker": pl.String(),
                 "trade_date": pl.String(),
                 "field": pl.String(),
             }
@@ -101,7 +101,7 @@ class TestComparisonStore:
         df = pl.DataFrame(
             {
                 "dataset": ["stock_daily", "stock_daily"],
-                "src_code": ["000001.SZ", "000002.SZ"],
+                "source_ticker": ["000001.SZ", "000002.SZ"],
                 "trade_date": [self.recent_date, self.recent_date],
                 "field": ["close", "close"],
             }
@@ -136,7 +136,7 @@ class TestComparisonStore:
         stock_df = pl.DataFrame(
             {
                 "dataset": ["stock_daily", "stock_daily"],
-                "src_code": ["000001.SZ", "000002.SZ"],
+                "source_ticker": ["000001.SZ", "000002.SZ"],
                 "trade_date": [self.recent_date, self.recent_date],
                 "field": ["close", "close"],
             }
@@ -145,7 +145,7 @@ class TestComparisonStore:
         index_df = pl.DataFrame(
             {
                 "dataset": ["index_daily", "index_daily"],
-                "src_code": ["000001.SH", "000999.SH"],
+                "source_ticker": ["000001.SH", "000999.SH"],
                 "trade_date": [self.recent_date, self.recent_date],
                 "field": ["close", "close"],
             }
@@ -186,7 +186,7 @@ class TestComparisonStore:
         old_df = pl.DataFrame(
             {
                 "dataset": ["stock_daily"],
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [old_date],
             }
         )
@@ -195,7 +195,7 @@ class TestComparisonStore:
         recent_df = pl.DataFrame(
             {
                 "dataset": ["stock_daily"],
-                "src_code": ["000001.SZ"],
+                "source_ticker": ["000001.SZ"],
                 "trade_date": [self.recent_date],
             }
         )

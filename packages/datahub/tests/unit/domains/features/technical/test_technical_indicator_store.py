@@ -24,7 +24,7 @@ def test_write_and_read_indicator_data(indicator_store: IndicatorStore) -> None:
     # Prepare test data
     df = pl.DataFrame(
         {
-            "sid": [1, 1, 2, 2],
+            "instrument_id": [1, 1, 2, 2],
             "trade_date": [
                 "2024-01-02",
                 "2024-01-03",
@@ -60,22 +60,22 @@ def test_write_and_read_indicator_data(indicator_store: IndicatorStore) -> None:
     )
 
     assert len(result_df) == 4
-    assert "sid" in result_df.columns
+    assert "instrument_id" in result_df.columns
     assert "trade_date" in result_df.columns
     assert "indicator_id" in result_df.columns
     assert "value" in result_df.columns
 
     # Verify specific values
-    result_df_sorted = result_df.sort(["sid", "trade_date"])
+    result_df_sorted = result_df.sort(["instrument_id", "trade_date"])
     assert result_df_sorted["value"].to_list() == [65.5, 68.2, 72.1, 71.5]
 
 
 def test_read_filter_by_sid(indicator_store: IndicatorStore) -> None:
-    """Test reading with sid filter."""
+    """Test reading with instrument_id filter."""
     # Prepare test data for multiple securities
     df = pl.DataFrame(
         {
-            "sid": [1, 2, 3],
+            "instrument_id": [1, 2, 3],
             "trade_date": ["2024-01-02", "2024-01-02", "2024-01-02"],
             "indicator_id": ["indicator_ma_20"] * 3,
             "indicator_type": ["trend"] * 3,
@@ -86,15 +86,15 @@ def test_read_filter_by_sid(indicator_store: IndicatorStore) -> None:
 
     indicator_store.write(df, year=2024)
 
-    # Read only sid 1 and 2
+    # Read only instrument_id 1 and 2
     result = indicator_store.read(
-        sids=[1, 2],
+        instrument_ids=[1, 2],
         start_date="2024-01-01",
         end_date="2024-01-31",
     )
 
     assert len(result) == 2
-    assert set(result["sid"].to_list()) == {1, 2}
+    assert set(result["instrument_id"].to_list()) == {1, 2}
 
 
 def test_read_filter_by_indicator_type(indicator_store: IndicatorStore) -> None:
@@ -102,7 +102,7 @@ def test_read_filter_by_indicator_type(indicator_store: IndicatorStore) -> None:
     # Prepare test data with different types
     df = pl.DataFrame(
         {
-            "sid": [1, 1, 1],
+            "instrument_id": [1, 1, 1],
             "trade_date": ["2024-01-02", "2024-01-02", "2024-01-02"],
             "indicator_id": ["indicator_rsi_14", "indicator_ma_20", "indicator_atr_14"],
             "indicator_type": ["momentum", "trend", "volatility"],
@@ -128,16 +128,16 @@ def test_read_preserves_multiple_indicators_per_date(
     indicator_store: IndicatorStore,
 ) -> None:
     """
-    Test that reading preserves all indicators for the same sid/date.
+    Test that reading preserves all indicators for the same instrument_id/date.
 
     This is a regression test for the P1 issue where ParquetStoreBase.read()
-    deduplicated on ['sid', 'trade_date'], causing data loss when multiple
-    indicators exist for the same sid/date combination.
+    deduplicated on ['instrument_id', 'trade_date'], causing data loss when multiple
+    indicators exist for the same instrument_id/date combination.
     """
-    # Prepare test data: same sid/date, different indicators
+    # Prepare test data: same instrument_id/date, different indicators
     df = pl.DataFrame(
         {
-            "sid": [1, 1, 1],
+            "instrument_id": [1, 1, 1],
             "trade_date": ["2024-01-02"] * 3,
             "indicator_id": ["indicator_rsi_14", "indicator_ma_20", "indicator_atr_14"],
             "indicator_type": ["momentum", "trend", "volatility"],

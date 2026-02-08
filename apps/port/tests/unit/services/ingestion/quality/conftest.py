@@ -28,7 +28,7 @@ def mock_quality_engine(mocker: MockerFixture) -> MagicMock:
 def mock_instrument_store(mocker: MockerFixture) -> MagicMock:
     """Mock InstrumentStore.
 
-    提供 enrich_with_symbol 方法，将 sid 转换为 symbol。
+    提供 enrich_with_symbol 方法，将 instrument_id 转换为 symbol。
     """
     store = mocker.MagicMock()
 
@@ -36,13 +36,16 @@ def mock_instrument_store(mocker: MockerFixture) -> MagicMock:
         """模拟 enrich_with_symbol 实现."""
         if df.is_empty():
             return df
-        # 为每个 sid 分配一个 symbol
+        # 为每个 instrument_id 分配一个 symbol
         symbol_map = {
             1000001: "000001",
             1000002: "600000",
             1000003: "510300",
         }
-        symbols = [symbol_map.get(sid, "") for sid in df["sid"].to_list()]
+        symbols = [
+            symbol_map.get(instrument_id, "")
+            for instrument_id in df["instrument_id"].to_list()
+        ]
         return df.with_columns(pl.Series("symbol", symbols))
 
     store.enrich_with_symbol.side_effect = enrich_with_symbol_impl
@@ -82,12 +85,12 @@ def mock_comparison_store(mocker: MockerFixture) -> MagicMock:
 def sample_primary_df() -> pl.DataFrame:
     """示例主数据源 DataFrame.
 
-    包含 sid 列，需要通过 InstrumentStore 补全 symbol。
+    包含 instrument_id 列，需要通过 InstrumentStore 补全 symbol。
     """
     return pl.DataFrame(
         {
-            "sid": [1000001, 1000002, 1000003],
-            "src_code": ["000001.SZ", "600000.SH", "510300.SH"],
+            "instrument_id": [1000001, 1000002, 1000003],
+            "source_ticker": ["000001.SZ", "600000.SH", "510300.SH"],
             "trade_date": ["20240101", "20240101", "20240101"],
             "open": [10.0, 20.0, 4.0],
             "high": [10.5, 20.5, 4.1],

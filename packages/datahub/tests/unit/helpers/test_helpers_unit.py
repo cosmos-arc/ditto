@@ -31,7 +31,7 @@ class TestFilterBaselineByAsof:
         """Test filtering with knowledge_date column."""
         adj_df = pl.DataFrame(
             {
-                "sid": [1, 1, 1, 2, 2],
+                "instrument_id": [1, 1, 1, 2, 2],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -54,7 +54,7 @@ class TestFilterBaselineByAsof:
 
         # Should include rows with knowledge_date <= 2024-01-03
         assert len(result) == 4
-        assert result["sid"].to_list() == [1, 1, 2, 2]
+        assert result["instrument_id"].to_list() == [1, 1, 2, 2]
         assert result["trade_date"].to_list() == [
             date(2024, 1, 1),
             date(2024, 1, 2),
@@ -73,7 +73,7 @@ class TestFilterBaselineByAsof:
         """Test filtering without knowledge_date column (fallback to trade_date)."""
         adj_df = pl.DataFrame(
             {
-                "sid": [1, 1, 1, 2, 2],
+                "instrument_id": [1, 1, 1, 2, 2],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -89,7 +89,7 @@ class TestFilterBaselineByAsof:
 
         # Should include rows with trade_date <= 2024-01-02
         assert len(result) == 4
-        assert result["sid"].to_list() == [1, 1, 2, 2]
+        assert result["instrument_id"].to_list() == [1, 1, 2, 2]
         assert result["trade_date"].to_list() == [
             date(2024, 1, 1),
             date(2024, 1, 2),
@@ -107,7 +107,7 @@ class TestApplyQfqAdj:
         # K线数据
         df = pl.DataFrame(
             {
-                "sid": [1, 1, 1],
+                "instrument_id": [1, 1, 1],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -124,7 +124,7 @@ class TestApplyQfqAdj:
         # 复权因子
         adj_df = pl.DataFrame(
             {
-                "sid": [1, 1, 1],
+                "instrument_id": [1, 1, 1],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -160,7 +160,7 @@ class TestApplyQfqAdj:
         """Test QFQ adjustment with asof parameter."""
         df = pl.DataFrame(
             {
-                "sid": [1, 1, 1, 1],
+                "instrument_id": [1, 1, 1, 1],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -178,7 +178,7 @@ class TestApplyQfqAdj:
         # 复权因子（带 knowledge_date）
         adj_df = pl.DataFrame(
             {
-                "sid": [1, 1, 1, 1],
+                "instrument_id": [1, 1, 1, 1],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -219,7 +219,7 @@ class TestApplyQfqAdj:
         """Test QFQ adjustment with missing adj_factor."""
         df = pl.DataFrame(
             {
-                "sid": [1, 1, 2],
+                "instrument_id": [1, 1, 2],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -235,7 +235,7 @@ class TestApplyQfqAdj:
 
         adj_df = pl.DataFrame(
             {
-                "sid": [1, 1],
+                "instrument_id": [1, 1],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -262,7 +262,7 @@ class TestApplyQfqAdj:
         """Test QFQ adjustment with asof as string."""
         df = pl.DataFrame(
             {
-                "sid": [1, 1],
+                "instrument_id": [1, 1],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -277,7 +277,7 @@ class TestApplyQfqAdj:
 
         adj_df = pl.DataFrame(
             {
-                "sid": [1, 1],
+                "instrument_id": [1, 1],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -307,7 +307,7 @@ class TestApplyHfqAdj:
         """Test basic HFQ adjustment."""
         df = pl.DataFrame(
             {
-                "sid": [1, 1, 1],
+                "instrument_id": [1, 1, 1],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -323,7 +323,7 @@ class TestApplyHfqAdj:
 
         adj_df = pl.DataFrame(
             {
-                "sid": [1, 1, 1],
+                "instrument_id": [1, 1, 1],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -345,7 +345,7 @@ class TestApplyHfqAdj:
         """Test HFQ adjustment with missing adj_factor."""
         df = pl.DataFrame(
             {
-                "sid": [1, 1, 2],
+                "instrument_id": [1, 1, 2],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
@@ -361,7 +361,7 @@ class TestApplyHfqAdj:
 
         adj_df = pl.DataFrame(
             {
-                "sid": [1, 1],
+                "instrument_id": [1, 1],
                 "trade_date": [
                     date(2024, 1, 1),
                     date(2024, 1, 2),
