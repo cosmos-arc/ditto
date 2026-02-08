@@ -1,11 +1,6 @@
 # 测试文件允许函数内导入
 
-"""
-Tests for adj_factor and fund_adj ingestion with correct SID mapping.
-
-This module tests that adj_factor and fund_adj datasets correctly map
-source codes to internal SIDs using the correct column name (src_code).
-"""
+"""Adj factor 摄取流程集成测试。"""
 
 import polars as pl
 import pytest
@@ -26,31 +21,16 @@ class TestAdjFactorIngestion:
         # Mock dependencies
         mock_hub.ingestion_log = mocker.MagicMock()
         mock_hub.market = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
         # Mock write_adj_factor to return dict[str, int]
         mock_hub.market.write_adj_factor.return_value = {
             "rows": 2,
             "files": 1,
         }
-
-        # Mock securities.enrich_dataframe_with_sid to return DataFrame with sid column
-        mock_enriched_df = pl.DataFrame(
-            {
-                "sid": [1_000_001, 1_000_002],
-                "src_code": ["000001.SZ", "000002.SZ"],
-                "trade_date": ["2024-01-02", "2024-01-02"],
-                "adj_factor": [1.234, 1.567],
-            }
-        )
-        mock_hub.securities.enrich_dataframe_with_sid.return_value = mock_enriched_df
-
-        # Mock instrument_store to return valid securities
-        mock_hub.instrument_store = mocker.MagicMock()
-        mock_hub.instrument_store.resolve_sid.side_effect = (
-            lambda src_code, source, asset_class: {
-                "000001.SZ": 1_000_001,
-                "000002.SZ": 1_000_002,
-            }.get(src_code)
-        )
+        mock_hub.metadata.resolve_or_create_batch.return_value = {
+            "000001.SZ": 1_000_001,
+            "000002.SZ": 1_000_002,
+        }
 
         # Create coordinator
         coordinator = IngestionCoordinator(
@@ -87,10 +67,15 @@ class TestAdjFactorIngestion:
         assert "src_code" in df_written.columns, (
             "src_code column missing in written dataframe"
         )
+        mock_hub.metadata.resolve_or_create_batch.assert_called_once_with(
+            df=mocker.ANY,
+            source="tushare",
+            asset_class="stock",
+            src_code_col="src_code",
+        )
 
     def test_ingest_fund_adj_uses_src_code_column(self, mocker):
         """Test that fund_adj ingestion uses src_code column for SID mapping."""
-        from ditto_datahub.models.storage import WriteResult
         from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
         # Mock DataHub
@@ -99,35 +84,16 @@ class TestAdjFactorIngestion:
 
         # Mock dependencies
         mock_hub.ingestion_log = mocker.MagicMock()
-        mock_hub.adj_factor = mocker.MagicMock()
-        # Mock write to return WriteResult
-        mock_hub.adj_factor.write.return_value = WriteResult(
-            file_path="/path/to/file",
-            checksum="checksum456",
-            rows_written=2,
-            rows_total=2,
-            blocked=False,
-        )
-
-        # Mock securities.enrich_dataframe_with_sid to return DataFrame with sid column
-        mock_enriched_df = pl.DataFrame(
-            {
-                "sid": [2_000_001, 2_000_002],
-                "src_code": ["510300.SH", "510500.SH"],
-                "trade_date": ["2024-01-02", "2024-01-02"],
-                "adj_factor": [1.123, 1.234],
-            }
-        )
-        mock_hub.securities.enrich_dataframe_with_sid.return_value = mock_enriched_df
-
-        # Mock instrument_store to return valid securities
-        mock_hub.instrument_store = mocker.MagicMock()
-        mock_hub.instrument_store.resolve_sid.side_effect = (
-            lambda src_code, source, asset_class: {
-                "510300.SH": 2_000_001,
-                "510500.SH": 2_000_002,
-            }.get(src_code)
-        )
+        mock_hub.market = mocker.MagicMock()
+        mock_hub.metadata = mocker.MagicMock()
+        mock_hub.market.write_adj_factor.return_value = {
+            "rows": 2,
+            "files": 1,
+        }
+        mock_hub.metadata.resolve_or_create_batch.return_value = {
+            "510300.SH": 2_000_001,
+            "510500.SH": 2_000_002,
+        }
 
         # Create coordinator
         coordinator = IngestionCoordinator(
@@ -163,4 +129,10 @@ class TestAdjFactorIngestion:
         assert "sid" in df_written.columns, "sid column missing in written dataframe"
         assert "src_code" in df_written.columns, (
             "src_code column missing in written dataframe"
+        )
+        mock_hub.metadata.resolve_or_create_batch.assert_called_once_with(
+            df=mocker.ANY,
+            source="tushare",
+            asset_class="etf",
+            src_code_col="src_code",
         )

@@ -1,13 +1,38 @@
 """质量对账服务 - Port 层编排."""
 
-from typing import Any
+from typing import Any, Protocol
 
 import polars as pl
 from ditto_core.quality.spec import DQResult
-from ditto_datahub.domains.metadata.instrument.instrument_store import InstrumentStore
-from ditto_datahub.runtime.quality import ComparisonStore
-from ditto_datahub.sources.tdx.source import TdxSource
 from loguru import logger
+
+
+class InstrumentStoreProtocol(Protocol):
+    """Protocol for instrument enrichment dependency."""
+
+    def enrich_with_symbol(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Add symbol column from instrument id."""
+        ...
+
+
+class TdxSourceProtocol(Protocol):
+    """Protocol for TDX source dependency."""
+
+    def fetch_stock_daily_bars(
+        self, symbols: list[str], trade_date: str
+    ) -> pl.DataFrame:
+        """Fetch TDX stock daily bars."""
+        ...
+
+
+class ComparisonStoreProtocol(Protocol):
+    """Protocol for reconciliation result persistence."""
+
+    async def write_comparison(
+        self, trade_date: str, comparison_df: pl.DataFrame, dataset: str
+    ) -> None:
+        """Persist comparison dataframe."""
+        ...
 
 
 class QualityReconciliationService:
@@ -30,9 +55,9 @@ class QualityReconciliationService:
     def __init__(
         self,
         engine: Any,  # QualityEngine
-        tdx_source: TdxSource,
-        comparison_store: ComparisonStore,
-        instrument_store: InstrumentStore,
+        tdx_source: TdxSourceProtocol,
+        comparison_store: ComparisonStoreProtocol,
+        instrument_store: InstrumentStoreProtocol,
     ) -> None:
         """
         初始化质量对账服务.

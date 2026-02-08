@@ -18,6 +18,7 @@ from ditto_port.registry import (
     CoreProvider,
     DataHubProvider,
     DataSourcesProvider,
+    DomainServiceProvider,
 )
 from ditto_port.services.ingestion import create_coordinator
 
@@ -39,6 +40,7 @@ def create_prefect_host() -> Iterator[Any]:
     container = make_container(
         ConfigProvider(),
         CoreProvider(),
+        DomainServiceProvider(),
         DataHubProvider(),
         DataSourcesProvider(),
     )

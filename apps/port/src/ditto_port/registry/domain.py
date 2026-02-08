@@ -82,6 +82,11 @@ class DomainServiceProvider(Provider):
     # ========================================================================
 
     @provide
+    def sqlite_client(self, sqlite_pool: SQLitePool) -> SQLiteClient:
+        """SQLite 客户端（基于全局连接池）."""
+        return SQLiteClient(sqlite_pool)
+
+    @provide
     def instrument_id_allocator(self, sqlite_pool: SQLitePool) -> InstrumentIdAllocator:
         """Instrument ID 分配器."""
         return InstrumentIdAllocator(sqlite_pool)

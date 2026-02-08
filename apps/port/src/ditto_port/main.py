@@ -42,6 +42,7 @@ from ditto_port.registry import (
     CoreProvider,
     DataHubProvider,
     DataSourcesProvider,
+    DomainServiceProvider,
 )
 
 # Initialize project root
@@ -104,6 +105,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     container = make_async_container(
         ConfigProvider(),
         CoreProvider(),
+        DomainServiceProvider(),
         DataHubProvider(),
         DataSourcesProvider(),
     )

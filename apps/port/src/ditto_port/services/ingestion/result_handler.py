@@ -14,9 +14,9 @@ import polars as pl
 from ditto_datahub.hub import DataHub
 from ditto_datahub.models import WriteResult
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
-from ditto_datahub.sources.base import SourceFetchError
 
 from ditto_port.models import IngestionResult
+from ditto_port.services.ingestion.errors import SourceFetchError
 
 
 class IngestionResultHandler:

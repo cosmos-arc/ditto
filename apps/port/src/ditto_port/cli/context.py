@@ -14,6 +14,7 @@ from ditto_port.registry import (
     CoreProvider,
     DataHubProvider,
     DataSourcesProvider,
+    DomainServiceProvider,
 )
 
 
@@ -35,6 +36,7 @@ def create_cli_host() -> Generator[Any, None, None]:
     container = make_container(
         ConfigProvider(),
         CoreProvider(),
+        DomainServiceProvider(),
         DataHubProvider(),
         DataSourcesProvider(),
     )

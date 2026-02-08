@@ -203,6 +203,16 @@ ditto/
           apps/port → datahub → foundation
 ```
 
+### 架构边界 CI 门禁（v5）
+
+必须通过：`pixi run -e dev arch-check`
+
+- Foundation 禁止依赖 DataHub/Core/Port
+- DataHub 禁止依赖 Core/Port
+- Core 仅允许依赖 `ditto_datahub.models`
+- Port 非 `registry` 模块禁止直接导入 `ditto_datahub.stores/sources/runtime`
+- Port `registry` 允许导入 stores/sources 做 DI 装配，但禁止直接调用其业务方法
+
 ### 环境配置规范
 
 Ditto 采用**双层环境架构**（详见 [04_deployment_topology.md](../docs/design/04_deployment_topology.md#12-环境架构)）：

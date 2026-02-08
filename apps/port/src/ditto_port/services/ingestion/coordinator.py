@@ -14,12 +14,13 @@ import httpx
 import polars as pl
 from ditto_datahub.hub import DataHub
 from ditto_datahub.models import Dataset, OnDuplicate
-from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_foundation import logger
 
 from ditto_port.models import IngestionResult
 from ditto_port.services.ingestion.data_writer import IngestionDataWriter
+from ditto_port.services.ingestion.errors import SourceFetchError
 from ditto_port.services.ingestion.metadata import MetadataManager
+from ditto_port.services.ingestion.protocols import IngestionDataSource
 from ditto_port.services.ingestion.result_handler import IngestionResultHandler
 
 
@@ -29,7 +30,7 @@ class IngestionCoordinator:
     def __init__(
         self,
         hub: DataHub,
-        source: DataSource,
+        source: IngestionDataSource,
         source_name: str = "tushare",
     ) -> None:
         """初始化 IngestionCoordinator。"""
@@ -39,6 +40,19 @@ class IngestionCoordinator:
         self._metadata_manager = MetadataManager(hub)
         self._result_handler = IngestionResultHandler(hub, source_name)
         self._data_writer = IngestionDataWriter(hub, source_name)
+
+    @staticmethod
+    def _is_source_fetch_error(error: Exception) -> bool:
+        """Check whether exception should be treated as source fetch failure."""
+        return isinstance(error, SourceFetchError) or (
+            error.__class__.__name__ == "SourceFetchError"
+        )
+
+    @staticmethod
+    def _normalize_source_fetch_error(error: Exception) -> SourceFetchError:
+        """Normalize external fetch error into port-level SourceFetchError."""
+        source_name = getattr(error, "source", type(error).__name__)
+        return SourceFetchError(message=str(error), source=str(source_name))
 
     def ingest_date(
         self,
@@ -141,9 +155,6 @@ class IngestionCoordinator:
         """获取数据并执行摄取（统一错误处理）。"""
         try:
             df = self._fetch_data(dataset, trade_date)
-        except SourceFetchError as e:
-            # 已知的业务异常，直接处理
-            return self._result_handler.handle_fetch_error(dataset, trade_date, e)
         except (httpx.NetworkError, httpx.TimeoutException) as e:
             # 网络相关异常，记录后转换为业务异常
             logger.exception(
@@ -160,6 +171,11 @@ class IngestionCoordinator:
                 dataset, trade_date, fetch_error
             )
         except Exception as e:
+            if self._is_source_fetch_error(e):
+                fetch_error = self._normalize_source_fetch_error(e)
+                return self._result_handler.handle_fetch_error(
+                    dataset, trade_date, fetch_error
+                )
             # 未知异常，记录完整堆栈
             logger.exception(
                 "unexpected_error_during_fetch",

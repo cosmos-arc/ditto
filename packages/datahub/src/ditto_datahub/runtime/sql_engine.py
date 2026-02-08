@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import re
+import sqlite3
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import duckdb
 import polars as pl
@@ -109,6 +110,8 @@ class SqlEngine:
     def _setup(self) -> None:
         """Initialize DuckDB configuration."""
         self.con.execute("SET enable_progress_bar = false")
+        self.con.execute("SET autoinstall_known_extensions = false")
+        self.con.execute("SET autoload_known_extensions = false")
         self._register_views()
         self._register_macros()
 
@@ -193,14 +196,57 @@ class SqlEngine:
         if not sqlite_path.exists():
             return
 
-        self.con.execute(f"ATTACH '{sqlite_path}' AS meta")
+        if self._load_sqlite_scanner_extension():
+            self.con.execute(f"ATTACH '{sqlite_path}' AS meta")
+            attach_mode = "duckdb_attach"
+        else:
+            self._attach_sqlite_fallback(sqlite_path)
+            attach_mode = "sqlite_fallback"
         self._sqlite_attached = True
 
         logger.debug(
             "SQLite database attached",
             event="sql_engine_sqlite_attached",
             path=str(sqlite_path),
+            mode=attach_mode,
         )
+
+    def _load_sqlite_scanner_extension(self) -> bool:
+        """Try loading local sqlite_scanner extension without network fallback."""
+        try:
+            self.con.execute("LOAD sqlite_scanner")
+            return True
+        except duckdb.Error:
+            return False
+
+    def _attach_sqlite_fallback(self, sqlite_path: Path) -> None:
+        """
+        Fallback attach mode for offline environments.
+
+        When DuckDB cannot install/load sqlite_scanner extension (e.g. no network),
+        load SQLite tables into DuckDB `meta` schema using sqlite3 + polars.
+        """
+        self.con.execute("CREATE SCHEMA IF NOT EXISTS meta")
+        with sqlite3.connect(sqlite_path) as sqlite_conn:
+            table_rows = sqlite_conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+            table_names = {row[0] for row in table_rows}
+
+            for table in sorted(self.SQLITE_TABLES.intersection(table_names)):
+                table_df: pl.DataFrame = pl.read_database(
+                    f"SELECT * FROM {table}",  # noqa: S608 - table 来自白名单交集
+                    sqlite_conn,
+                )
+                relation_name = f"_sqlite_{table}"
+                arrow_table = cast(Any, table_df.to_arrow())
+                self.con.register(relation_name, arrow_table)
+                create_table_sql = (
+                    f"CREATE OR REPLACE TABLE meta.{table} AS "  # noqa: S608 - table 来自白名单交集
+                    f"SELECT * FROM {relation_name}"
+                )
+                self.con.execute(create_table_sql)
+                self.con.unregister(relation_name)
 
     def _normalize_query(self, query: str) -> str:
         """

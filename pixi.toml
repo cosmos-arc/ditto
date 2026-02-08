@@ -168,6 +168,9 @@ type = "python scripts/type.py"
 # Type all：完整类型检查（供 CI 使用）
 type-all = "python scripts/type.py --all"
 
+# Architecture check：架构边界检查
+arch-check = "python scripts/check_architecture.py"
+
 # ──────────────────────────────────────────────────────────
 # 测试（使用包装脚本，支持参数驱动）
 # ──────────────────────────────────────────────────────────
@@ -187,10 +190,10 @@ test-cov-xml = "python scripts/test.py --cov-xml"
 # 组合命令
 # ──────────────────────────────────────────────────────────
 # Check：快速验证（开发时用）
-check = { depends-on = ["lint", "fmt", "type"] }
+check = { depends-on = ["lint", "fmt", "type", "arch-check"] }
 
 # CI：完整检查（CI 用）
-ci = { depends-on = ["lint", "fmt-check", "type-all", "test-cov-xml"] }
+ci = { depends-on = ["lint", "fmt-check", "type-all", "test-cov-xml", "arch-check"] }
 
 # ──────────────────────────────────────────────────────────
 # 辅助命令

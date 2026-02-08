@@ -2,6 +2,7 @@
 
 from collections.abc import Generator
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
@@ -62,7 +63,7 @@ from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
-from ditto_datahub.runtime.sid_allocator import SidAllocator
+from ditto_datahub.runtime.sid_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
@@ -122,7 +123,7 @@ def datahub_with_dependencies(
 
     # Runtime Layer
     file_lock = FileLockManager(data_root / "locks")
-    sid_allocator = SidAllocator(sqlite_pool)
+    instrument_id_allocator = InstrumentIdAllocator(sqlite_pool)
     freeze_manager = FreezeManager(data_root=str(data_root))
 
     # Store Layer
@@ -146,7 +147,7 @@ def datahub_with_dependencies(
         industry_basic_store=industry_basic_store,
         industry_mapping_store=industry_mapping_store,
         universe_store=universe_store,
-        sid_allocator=sid_allocator,
+        instrument_id_allocator=instrument_id_allocator,
     )
 
     # Market Domain Stores
@@ -233,7 +234,7 @@ def datahub_with_dependencies(
         data_root=data_root,
         sqlite_pool=sqlite_pool,
         file_lock=file_lock,
-        sid_allocator=sid_allocator,
+        instrument_id_allocator=instrument_id_allocator,
         freeze_manager=freeze_manager,
         instrument_store=security_store,
         metadata_query_service=metadata_query_service,
@@ -244,7 +245,7 @@ def datahub_with_dependencies(
         features_query_service=features_query_service,
         factors_query_service=factors_query_service,
         ingestion_log_store=ingestion_log_store,
-        sources=None,
+        sources=DataSources(tushare=MagicMock()),
         sql_engine=sql_engine,
     )
 

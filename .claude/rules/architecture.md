@@ -31,6 +31,20 @@ paths: ./**/*.py
 - **数据层** (datahub) → 应用层 (port) ❌ 反向依赖
 - **横切层** (foundation) → 其他层 ❌ 零依赖
 
+### v5 强制边界（CI 门禁）
+
+以下规则由 `pixi run -e dev arch-check` 强制执行，违反即 CI 失败：
+
+1. `packages/foundation/src/**` 禁止依赖 `ditto_core` / `ditto_datahub` / `ditto_port`
+2. `packages/datahub/src/**` 禁止依赖 `ditto_core` / `ditto_port`
+3. `packages/core/src/**` 仅允许依赖 `ditto_datahub.models`，禁止依赖 DataHub 实现模块
+4. `apps/port/src/ditto_port/**`（非 `registry`）禁止直接导入：
+   - `ditto_datahub.stores.*`
+   - `ditto_datahub.sources.*`
+   - `ditto_datahub.runtime.*`
+5. `apps/port/src/ditto_port/registry/**` 可以导入 stores/sources 进行 DI 装配，但禁止在
+   Provider 中直接调用它们的业务方法（只允许注入与构造）
+
 ### 横切层 (Foundation)
 
 **定义**：提供跨所有层的基础设施服务，可被任何层访问
