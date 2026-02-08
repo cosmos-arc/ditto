@@ -101,18 +101,20 @@ pixi run -e dev ci
 8. `9260d15` test(architecture): 增强 legacy 别名门禁并收口 DataHub 文档
 9. `20d49e0` docs(readme): 收口核心示例到 v5 查询接口
 10. `8ab106d` refactor(metadata): 统一 instrument 查询命名并增强门禁
+11. `18a9f0b` docs(plan): 同步 metadata 命名收口与门禁进度
+12. `d3e262d` refactor(metadata): 收口 instrument 表命名并清理 legacy 语义
 
 统计（`main..HEAD`）：
 
-- 变更文件：`197`
-- 代码变更：`+6627 / -3405`
+- 变更文件：`200`
+- 代码变更：`+6807 / -3541`
 
 ### 4.2 门禁结果
 
 最近一次 `pixi run -e dev ci`：
 
-- `2241 passed, 20 skipped`
-- coverage `92.63%`
+- `2243 passed, 20 skipped`
+- coverage `92.62%`
 - `Architecture check passed`
 
 ---
@@ -141,7 +143,10 @@ pixi run -e dev ci
 20. Core/DataHub README 示例进一步收口：移除 `hub.bars.*` / `sids` 旧写法，统一为 `MarketBarsQuery + hub.market.query(...)`。
 21. Metadata 命名语义进一步收口：`MetadataQuery.dataset` 统一为 `instrument/industry`，便捷 API 统一为 `get_instruments`，移除 `securities/industries/get_securities` 旧命名。
 22. 架构门禁新增 `ARCH530~ARCH533`：禁止 `dataset='securities'`、`dataset='industries'`、`SecuritiesQuerySpec`、`get_securities()` 回归。
-23. 本轮全量门禁已通过：`pixi run -e dev ci` => `2241 passed, 20 skipped`, coverage `92.63%`。
+23. Metadata 注册/解析接口进一步统一为 instrument 语义：`register_instrument`、`register_instruments_batch`、`resolve_or_create_instruments_batch`，Port ingestion 与测试调用已同步。
+24. 底层 SQLite 命名与约束完成收口：`security/security_mapping` 全量迁移为 `instrument/instrument_mapping`（schema、store、sql engine、dq 配置、测试全部同步）。
+25. 架构门禁新增 `ARCH540~ARCH541`：禁止旧表名/语义 `security_mapping`、`security` 回归。
+26. 本轮全量门禁已通过：`pixi run -e dev ci` => `2243 passed, 20 skipped`, coverage `92.62%`。
 
 ---
 
