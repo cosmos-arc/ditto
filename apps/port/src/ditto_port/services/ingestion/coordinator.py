@@ -143,7 +143,7 @@ class IngestionCoordinator:
             Dataset.VALUATION_METRICS,
             Dataset.MARGIN_TRADING,
         ):
-            return self._hub.calendar.is_trading_day(trade_date)
+            return self._hub.metadata.is_trading_day(trade_date)
         return True
 
     def _create_skipped_result(
@@ -231,7 +231,7 @@ class IngestionCoordinator:
         force: bool = False,
     ) -> list[IngestionResult]:
         """摄取日期范围数据。"""
-        trade_dates = self._hub.calendar.list_trading_days(start_date, end_date)
+        trade_dates = self._hub.metadata.list_trading_days(start_date, end_date)
 
         if not trade_dates:
             return []

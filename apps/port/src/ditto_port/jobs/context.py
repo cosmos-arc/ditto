@@ -92,7 +92,7 @@ def create_datahub_context() -> Iterator[DataHub]:
 
     Example:
         with create_datahub_context() as hub:
-            result = hub.calendar.is_trading_day(date)
+            result = hub.metadata.is_trading_day(date)
 
     """
     with create_prefect_host() as container:

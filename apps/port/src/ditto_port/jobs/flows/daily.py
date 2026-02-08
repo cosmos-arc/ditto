@@ -67,7 +67,7 @@ def check_trading_day(trade_date: str) -> bool:
 
     """
     with create_ingestion_context() as (hub, _):
-        return hub.calendar.is_trading_day(trade_date)
+        return hub.metadata.is_trading_day(trade_date)
 
 
 @flow(name="daily-ingestion", description="每日增量数据摄取流程")

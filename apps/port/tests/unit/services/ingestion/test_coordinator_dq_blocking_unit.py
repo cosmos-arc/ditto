@@ -126,9 +126,9 @@ class TestDQBlockingBehavior:
         coordinator.ingest_date("stock_daily", "2024-01-02")
 
         # Verify log was saved with FAIL status
-        mock_hub.ingestion_log.save_log.assert_called_once()
+        mock_hub.ingestion_log_store.save_log.assert_called_once()
         # 获取位置参数中的 IngestionLog 对象
-        call_args = mock_hub.ingestion_log.save_log.call_args.args
+        call_args = mock_hub.ingestion_log_store.save_log.call_args.args
         log_entry = call_args[0]
 
         assert isinstance(log_entry, IngestionLog)

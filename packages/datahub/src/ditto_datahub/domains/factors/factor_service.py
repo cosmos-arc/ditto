@@ -68,10 +68,10 @@ class FactorService:
             event="factor_service_init_complete",
         )
 
-    @traced("factors.get_factors")
-    def get_factors(self, query: FactorQuery) -> pl.DataFrame:
+    @traced("factors.query")
+    def query(self, query: FactorQuery) -> pl.DataFrame:
         """
-        Query factor data (PIT-safe).
+        Query factor data via unified service contract (PIT-safe).
 
         Args:
             query: FactorQuery object with query parameters.

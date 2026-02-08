@@ -163,10 +163,6 @@ class MacroService:
 
         return result
 
-    def get_indicators(self, query: MacroQuery) -> pl.DataFrame:
-        """Backward-compatible alias for macro indicator query."""
-        return self.query(query)
-
     def _resolve_indicator_ids(
         self,
         indicators: list[int] | list[str] | None,

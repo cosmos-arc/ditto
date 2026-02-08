@@ -53,7 +53,7 @@ class IngestionResultHandler:
             IngestionResult: 失败结果
 
         """
-        self._hub.ingestion_log.save_log(
+        self._hub.ingestion_log_store.save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
@@ -86,7 +86,7 @@ class IngestionResultHandler:
             IngestionResult: 失败结果
 
         """
-        self._hub.ingestion_log.save_log(
+        self._hub.ingestion_log_store.save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
@@ -116,7 +116,7 @@ class IngestionResultHandler:
             IngestionResult: 失败结果
 
         """
-        self._hub.ingestion_log.save_log(
+        self._hub.ingestion_log_store.save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
@@ -149,7 +149,7 @@ class IngestionResultHandler:
             IngestionResult: 失败结果
 
         """
-        self._hub.ingestion_log.save_log(
+        self._hub.ingestion_log_store.save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
@@ -184,7 +184,7 @@ class IngestionResultHandler:
         """
         # DQ 检查已移到 Port 层，这里使用默认错误计数
         error_count = 1
-        self._hub.ingestion_log.save_log(
+        self._hub.ingestion_log_store.save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
@@ -225,7 +225,7 @@ class IngestionResultHandler:
             IngestionResult: 成功结果
 
         """
-        self._hub.ingestion_log.save_log(
+        self._hub.ingestion_log_store.save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,

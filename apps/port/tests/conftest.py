@@ -227,14 +227,14 @@ def mock_datahub() -> MagicMock:
     mock = MagicMock()
 
     # Calendar mock
-    mock.calendar.is_trading_day.return_value = True
+    mock.metadata.is_trading_day.return_value = True
     mock.calendar_store.get_first_trading_day.return_value = "2024-01-02"
     mock.calendar_store.get_last_trading_day.return_value = "2024-01-31"
     mock.calendar_store.get_range.return_value = ["2024-01-02", "2024-01-03"]
 
     # Ingestion log mock
-    mock.ingestion_log.get_failed_dates.return_value = []
-    mock.ingestion_log.get_ingested_dates.return_value = []
+    mock.ingestion_log_store.get_failed_dates.return_value = []
+    mock.ingestion_log_store.get_ingested_dates.return_value = []
 
     return mock
 
@@ -252,7 +252,7 @@ def patch_datahub(mock_datahub: MagicMock) -> MagicMock:
     使用方式（单元测试）：
         def test_something(patch_datahub):
             # 使用 mock 对象进行测试
-            assert patch_datahub.calendar.is_trading_day() is True
+            assert patch_datahub.metadata.is_trading_day() is True
 
     Args:
         mock_datahub: 独立的 Mock DataHub 对象

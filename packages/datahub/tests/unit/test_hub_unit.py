@@ -454,7 +454,7 @@ class TestDataHub:
         )
 
         # Reload calendar cache to pick up the inserted data
-        datahub_with_dependencies.calendar._calendar_store.reload()  # type: ignore[attr-defined]
+        datahub_with_dependencies.metadata._calendar_store.reload()  # type: ignore[attr-defined]
 
         trading_days = datahub_with_dependencies.get_trading_days(
             "2024-01-01",
@@ -487,7 +487,7 @@ class TestDataHub:
         )
 
         # Reload calendar cache to pick up the inserted data
-        datahub_with_dependencies.calendar._calendar_store.reload()  # type: ignore[attr-defined]
+        datahub_with_dependencies.metadata._calendar_store.reload()  # type: ignore[attr-defined]
 
         # When only_open=False, should return all days (closed + open)
         all_days = datahub_with_dependencies.get_trading_days(
@@ -521,7 +521,7 @@ class TestDataHub:
         )
 
         # Reload calendar cache to pick up the inserted data
-        datahub_with_dependencies.calendar._calendar_store.reload()  # type: ignore[attr-defined]
+        datahub_with_dependencies.metadata._calendar_store.reload()  # type: ignore[attr-defined]
 
         assert datahub_with_dependencies.is_trading_day("2024-01-02") is True
         assert datahub_with_dependencies.is_trading_day("2024-01-06") is False

@@ -67,7 +67,7 @@ def test_get_indicators_enriches_with_metadata(feature_service: FeatureService) 
         start="2024-01-01",
         end="2024-01-31",
     )
-    result = feature_service.get_indicators(query)
+    result = feature_service.query(query)
 
     # Verify: Result includes metadata columns
     assert not result.is_empty()
@@ -116,7 +116,7 @@ def test_get_indicators_filters_by_type(feature_service: FeatureService) -> None
         start="2024-01-01",
         end="2024-01-31",
     )
-    result = feature_service.get_indicators(query)
+    result = feature_service.query(query)
 
     assert len(result) == 1
     assert result["indicator_id"][0] == "indicator_rsi_14"

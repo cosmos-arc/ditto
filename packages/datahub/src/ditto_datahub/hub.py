@@ -118,8 +118,8 @@ class DataHub:
     Component lifecycle is managed by the dishka container.
 
     Attribute layers:
-    - Runtime Layer: sqlite_pool, file_lock, instrument_id_allocator, freeze
-    - Accessor Layer: securities, bars, calendar, universe, index, ingestion_log
+    - Runtime Layer: sqlite_pool, file_lock, instrument_id_allocator, freeze,
+      ingestion_log_store
     - Domain Services: metadata, market, fundamental, capital, macro, features, factors
     - Sources Layer: sources (external data sources: Tushare, Akshare)
     - SQL Engine: sql_engine
@@ -159,7 +159,6 @@ class DataHub:
             instrument_id_allocator: Instrument ID allocator for new securities.
             freeze_manager: Freeze manager for data version tracking.
             instrument_store: Instrument store for identifier resolution.
-            securities: Instruments accessor (with ingestion helpers).
             metadata_query_service: Metadata query service (unified query API).
             market_query_service: Market query service (unified market data API).
             fundamental_query_service: Fundamental query service.
@@ -177,8 +176,8 @@ class DataHub:
         self.file_lock = file_lock
         self.instrument_id_allocator = instrument_id_allocator
         self.freeze = freeze_manager
+        self.ingestion_log_store = ingestion_log_store
         self._instrument_store = instrument_store
-        self.securities = metadata_query_service  # 向后兼容：securities -> metadata
         self.metadata = metadata_query_service
         self.market = market_query_service
         self.fundamental = fundamental_query_service
@@ -189,37 +188,11 @@ class DataHub:
         self.sources = sources
         self.sql_engine = sql_engine
 
-        # 向后兼容属性
-        self._calendar = metadata_query_service
-        self._universe = metadata_query_service
-        self._index = market_query_service
-        self._ingestion_log = ingestion_log_store
-
         logger.debug(
             "DataHub initialized",
             event="datahub_init",
             data_root=str(self.data_root),
         )
-
-    @property
-    def calendar(self) -> MetadataService:
-        """向后兼容：calendar -> metadata."""
-        return self._calendar
-
-    @property
-    def universe(self) -> MetadataService:
-        """向后兼容：universe -> metadata."""
-        return self._universe
-
-    @property
-    def index(self) -> MarketService:
-        """向后兼容：index -> market."""
-        return self._index
-
-    @property
-    def ingestion_log(self) -> IngestionLogStore:
-        """向后兼容：ingestion_log -> ingestion_log_store."""
-        return self._ingestion_log
 
     # ========================================================================
     # Convenience Methods
@@ -314,8 +287,7 @@ class DataHub:
             List of trading dates.
 
         """
-        # 直接使用 MetadataService.get_trading_days()
-        return self.calendar.get_trading_days(start, end, only_open)
+        return self.metadata.get_trading_days(start, end, only_open)
 
     def is_trading_day(self, date: str) -> bool:
         """
@@ -328,7 +300,7 @@ class DataHub:
             True if trading day.
 
         """
-        return self.calendar.is_trading_day(date)
+        return self.metadata.is_trading_day(date)
 
     # ========================================================================
     # Identifier Resolution Facade (Task 2.3)
@@ -397,7 +369,7 @@ class DataHub:
 
     def get_symbol(self, instrument_id: int) -> str | None:
         """获取 Instrument ID 对应的 symbol。"""
-        return self.securities.get_symbol(instrument_id)
+        return self.metadata.get_symbol(instrument_id)
 
     def get_source_ticker(
         self,
@@ -406,7 +378,7 @@ class DataHub:
         asof: str | None = None,
     ) -> str | None:
         """获取 Instrument ID 对应的 source_ticker。"""
-        return self.securities.get_source_ticker(instrument_id, source, asof)
+        return self.metadata.get_source_ticker(instrument_id, source, asof)
 
     def get_instrument_id_symbol_mapping(
         self, instrument_ids: list[int]
@@ -470,7 +442,7 @@ class DataHub:
                 symbols.append(str(item))
 
         # 解析 Instrument ID
-        resolved_sids = self.resolve_instrument_ids_from_inputs(
+        resolved_instrument_ids = self.resolve_instrument_ids_from_inputs(
             instrument_ids=instrument_ids if instrument_ids else None,
             source_tickers=source_tickers if source_tickers else None,
             symbols=symbols if symbols else None,
@@ -478,12 +450,12 @@ class DataHub:
             asof=params.asof,
         )
 
-        if not resolved_sids:
+        if not resolved_instrument_ids:
             return pl.DataFrame()
 
         # 构造查询对象
         query = MarketBarsQuery(
-            instrument_ids=resolved_sids,
+            instrument_ids=resolved_instrument_ids,
             start=params.start,
             end=params.end,
             adj=AdjType(params.adj),
@@ -540,7 +512,7 @@ class DataHub:
                 symbols.append(str(item))
 
         # 解析 Instrument ID
-        resolved_sids = self.resolve_instrument_ids_from_inputs(
+        resolved_instrument_ids = self.resolve_instrument_ids_from_inputs(
             instrument_ids=instrument_ids if instrument_ids else None,
             source_tickers=source_tickers if source_tickers else None,
             symbols=symbols if symbols else None,
@@ -551,7 +523,9 @@ class DataHub:
         return self.metadata.query(
             MetadataQuery(
                 dataset="securities",
-                instrument_ids=resolved_sids if resolved_sids else None,
+                instrument_ids=(
+                    resolved_instrument_ids if resolved_instrument_ids else None
+                ),
                 source=params.source,
                 asset_class=params.asset_class,
                 exchange=params.exchange,
@@ -568,20 +542,20 @@ class DataHub:
         end: str | None = None,
     ) -> pl.DataFrame:
         """获取指数 K 线（便捷 API）。"""
-        resolved_sids = self.resolve_instrument_ids_from_inputs(
+        resolved_instrument_ids = self.resolve_instrument_ids_from_inputs(
             instrument_ids=instrument_ids, symbols=symbols
         )
 
-        if not resolved_sids:
+        if not resolved_instrument_ids:
             return pl.DataFrame()
 
         # 使用 MarketService.get_bars()
         query = MarketBarsQuery(
-            instrument_ids=resolved_sids,
+            instrument_ids=resolved_instrument_ids,
             start=start,
             end=end,
         )
-        return self.index.query(query)
+        return self.market.query(query)
 
     # ========================================================================
     # Resource Management

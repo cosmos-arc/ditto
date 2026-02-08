@@ -58,7 +58,7 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
     with create_dq_and_datahub_context() as (engine, hub):
         # 获取最后一个交易日
         if trade_date is None:
-            trade_date = hub.calendar.get_last_trading_day()
+            trade_date = hub.metadata.get_last_trading_day()
             logger.info(
                 "Using last trading day",
                 event="dq_batch_date_resolved",

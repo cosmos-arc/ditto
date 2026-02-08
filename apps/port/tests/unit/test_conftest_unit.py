@@ -256,7 +256,7 @@ class TestMockDatahubFixture:
     def test_mock_datahub_calendar_mock(self, mock_datahub: Mock):
         """测试 calendar mock 配置."""
         # 验证 calendar.is_trading_day 返回 True
-        assert mock_datahub.calendar.is_trading_day() is True
+        assert mock_datahub.metadata.is_trading_day() is True
 
         # 验证 calendar_store.get_first_trading_day 返回正确日期
         assert mock_datahub.calendar_store.get_first_trading_day() == "2024-01-02"
@@ -273,16 +273,16 @@ class TestMockDatahubFixture:
     def test_mock_datahub_ingestion_log_mock(self, mock_datahub: Mock):
         """测试 ingestion_log mock 配置."""
         # 验证 ingestion_log.get_failed_dates 返回空列表
-        assert mock_datahub.ingestion_log.get_failed_dates() == []
+        assert mock_datahub.ingestion_log_store.get_failed_dates() == []
 
         # 验证 ingestion_log.get_ingested_dates 返回空列表
-        assert mock_datahub.ingestion_log.get_ingested_dates() == []
+        assert mock_datahub.ingestion_log_store.get_ingested_dates() == []
 
     def test_mock_datahub_is_function_scoped(self, mock_datahub: Mock):
         """测试 fixture 是 function 级别的（通过验证可以多次调用）."""
         # 多次调用同一个 mock 方法，应该返回相同的结果
-        result1 = mock_datahub.calendar.is_trading_day()
-        result2 = mock_datahub.calendar.is_trading_day()
+        result1 = mock_datahub.metadata.is_trading_day()
+        result2 = mock_datahub.metadata.is_trading_day()
         assert result1 is result2 is True
 
 
@@ -302,7 +302,7 @@ class TestPatchDatahubFixture:
         """验证 patch_datahub 具有默认的 mock 行为."""
         # patch_datahub 返回的是 mock_datahub
         # 所以行为应该一致
-        assert patch_datahub.calendar.is_trading_day() is True
+        assert patch_datahub.metadata.is_trading_day() is True
 
         # 验证 calendar_store 的默认返回值
         assert patch_datahub.calendar_store.get_first_trading_day() == "2024-01-02"
@@ -313,16 +313,16 @@ class TestPatchDatahubFixture:
         ]
 
         # 验证 ingestion_log 的默认返回值
-        assert patch_datahub.ingestion_log.get_failed_dates() == []
-        assert patch_datahub.ingestion_log.get_ingested_dates() == []
+        assert patch_datahub.ingestion_log_store.get_failed_dates() == []
+        assert patch_datahub.ingestion_log_store.get_ingested_dates() == []
 
     def test_patch_datahub_can_modify_mock_behavior(self, patch_datahub: Mock) -> None:
         """验证可以通过 patch_datahub 修改 mock 行为."""
         # 修改 calendar.is_trading_day 的返回值
-        patch_datahub.calendar.is_trading_day.return_value = False
+        patch_datahub.metadata.is_trading_day.return_value = False
 
         # 验证修改生效
-        assert patch_datahub.calendar.is_trading_day() is False
+        assert patch_datahub.metadata.is_trading_day() is False
 
     def test_patch_datahub_returns_mock(
         self, patch_datahub: Mock, mock_datahub: Mock
@@ -338,8 +338,8 @@ class TestPatchDatahubFixture:
         assert patch_datahub is mock_datahub
 
         # patch_datahub 应该有默认的 mock 行为
-        assert patch_datahub.calendar.is_trading_day() is True
-        assert patch_datahub.ingestion_log.get_failed_dates() == []
+        assert patch_datahub.metadata.is_trading_day() is True
+        assert patch_datahub.ingestion_log_store.get_failed_dates() == []
 
         # DataHub 类不受影响，不能直接调用（需要参数）
         from ditto_datahub import DataHub

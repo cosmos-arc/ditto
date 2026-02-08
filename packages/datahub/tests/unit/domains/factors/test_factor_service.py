@@ -73,7 +73,7 @@ def test_get_factors_enriches_with_metadata(factor_service: FactorService) -> No
         start="2024-01-01",
         end="2024-01-31",
     )
-    result = factor_service.get_factors(query)
+    result = factor_service.query(query)
 
     # Verify: Result includes metadata columns
     assert not result.is_empty()
@@ -134,7 +134,7 @@ def test_get_factors_with_pit_query(factor_service: FactorService) -> None:
         end="2024-01-31",
         as_of="2024-01-05",
     )
-    result_v1 = factor_service.get_factors(query_v1)
+    result_v1 = factor_service.query(query_v1)
 
     assert len(result_v1) == 1
     assert result_v1["exposure"][0] == 0.5
@@ -145,7 +145,7 @@ def test_get_factors_with_pit_query(factor_service: FactorService) -> None:
         end="2024-01-31",
         as_of="2024-01-15",
     )
-    result_v2 = factor_service.get_factors(query_v2)
+    result_v2 = factor_service.query(query_v2)
 
     assert len(result_v2) == 1
     assert result_v2["exposure"][0] == 0.55
@@ -200,7 +200,7 @@ def test_get_factors_with_class_filter(factor_service: FactorService) -> None:
         end="2024-01-31",
         factor_classes=["technical"],
     )
-    result = factor_service.get_factors(query)
+    result = factor_service.query(query)
 
     assert len(result) == 2
     assert result["factor_class"].to_list() == ["technical", "technical"]
@@ -255,7 +255,7 @@ def test_get_factors_with_family_filter(factor_service: FactorService) -> None:
         end="2024-01-31",
         factor_families=["momentum"],
     )
-    result = factor_service.get_factors(query)
+    result = factor_service.query(query)
 
     assert len(result) == 2
     assert result["factor_family"].to_list() == ["momentum", "momentum"]
@@ -267,7 +267,7 @@ def test_get_factors_empty_store(factor_service: FactorService) -> None:
         start="2024-01-01",
         end="2024-01-31",
     )
-    result = factor_service.get_factors(query)
+    result = factor_service.query(query)
 
     assert result.is_empty()
 
@@ -295,7 +295,7 @@ def test_get_factors_no_metadata(factor_service: FactorService) -> None:
         start="2024-01-01",
         end="2024-01-31",
     )
-    result = factor_service.get_factors(query)
+    result = factor_service.query(query)
 
     assert not result.is_empty()
     # Data columns should be present

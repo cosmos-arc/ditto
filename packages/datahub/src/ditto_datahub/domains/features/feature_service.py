@@ -73,10 +73,10 @@ class FeatureService:
             event="feature_service_init_complete",
         )
 
-    @traced("features.get_indicators")
-    def get_indicators(self, query: FeatureQuery) -> pl.DataFrame:
+    @traced("features.query")
+    def query(self, query: FeatureQuery) -> pl.DataFrame:
         """
-        Query technical indicator data.
+        Query technical indicator data via unified service contract.
 
         查询技术指标数据.
 

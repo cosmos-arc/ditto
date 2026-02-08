@@ -148,9 +148,9 @@ def _attach_domain_services(hub: Any, mocker: Any) -> None:
 
 def _attach_calendar(hub: Any, mocker: Any) -> None:
     hub.calendar = mocker.Mock()
-    hub.calendar.is_trading_day.return_value = True
-    hub.calendar.upsert.return_value = len
-    hub.calendar.list_trading_days.return_value = []
+    hub.metadata.is_trading_day.return_value = True
+    hub.metadata.upsert.return_value = len
+    hub.metadata.list_trading_days.return_value = []
 
 
 @pytest.fixture
@@ -226,7 +226,7 @@ class TestIngestDate:
     ) -> None:
         """历史成功时跳过摄取。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -253,7 +253,7 @@ class TestIngestDate:
     ) -> None:
         """成功摄取 etf_daily 数据。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None  # 无历史记录
+        mock_hub.ingestion_log_store.get_log.return_value = None  # 无历史记录
         source_df = pl.DataFrame(
             {
                 "source_ticker": ["510300.SH", "510500.SH"],
@@ -274,7 +274,7 @@ class TestIngestDate:
             "/path/to/file.parquet",
             "checksum123",
         )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="etf_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -294,14 +294,14 @@ class TestIngestDate:
         assert len(result.checksum) > 0
         mock_source.fetch_etf_daily.assert_called_once_with("2024-12-27")
         mock_hub.market.write.assert_called_once()
-        mock_hub.ingestion_log.save_log.assert_called_once()
+        mock_hub.ingestion_log_store.save_log.assert_called_once()
 
     def test_ingest_date_success_stock_daily(
         self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """成功摄取 stock_daily 数据。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         source_df = pl.DataFrame(
             {
                 "source_ticker": ["000001.SZ"],
@@ -323,7 +323,7 @@ class TestIngestDate:
             "/path/to/file.parquet",
             "checksum456",
         )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -344,7 +344,7 @@ class TestIngestDate:
     ) -> None:
         """成功摄取 adj_factor 数据。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_source.fetch_adj_factor.return_value = pl.DataFrame(
             {
                 "source_ticker": ["000001.SZ"],
@@ -354,7 +354,7 @@ class TestIngestDate:
         )
 
         mock_hub.market.write.return_value = mock_hub_market_write_adj_factor()
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="adj_factor",
             source="tushare",
             trade_date="2024-12-27",
@@ -376,7 +376,7 @@ class TestIngestDate:
     ) -> None:
         """成功摄取 stock_status 数据。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_source.fetch_stock_status.return_value = pl.DataFrame(
             {
                 "source_ticker": ["000001.SZ"],
@@ -394,7 +394,7 @@ class TestIngestDate:
             rows=1,
             files=1,
         )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_status",
             source="tushare",
             trade_date="2024-12-27",
@@ -416,7 +416,7 @@ class TestIngestDate:
     ) -> None:
         """成功摄取 balance_sheet 数据。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_source.fetch_balance_sheet.return_value = pl.DataFrame(
             {
                 "instrument_id": ["000001.SZ"],
@@ -432,7 +432,7 @@ class TestIngestDate:
             }
         )
         mock_hub.fundamental.write.return_value = mocker.Mock(records_written=1)
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="balance_sheet",
             source="tushare",
             trade_date="2024-12-27",
@@ -454,7 +454,7 @@ class TestIngestDate:
     ) -> None:
         """成功摄取 valuation_metrics 数据。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_source.fetch_valuation_metrics.return_value = pl.DataFrame(
             {
                 "instrument_id": ["000001.SZ"],
@@ -470,7 +470,7 @@ class TestIngestDate:
             }
         )
         mock_hub.capital.write.return_value = mocker.Mock(records_written=1)
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="valuation_metrics",
             source="tushare",
             trade_date="2024-12-27",
@@ -492,7 +492,7 @@ class TestIngestDate:
     ) -> None:
         """成功摄取 macro_indicators 数据。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_source.fetch_macro_indicators.return_value = pl.DataFrame(
             {
                 "indicator_code": ["SHIBOR_ON"],
@@ -506,7 +506,7 @@ class TestIngestDate:
             }
         )
         mock_hub.macro.write.return_value = mocker.Mock(records_written=1)
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="macro_indicators",
             source="tushare",
             trade_date="2024-12-27",
@@ -528,7 +528,7 @@ class TestIngestDate:
     ) -> None:
         """成功摄取 calendar 数据（范围数据）。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_source.fetch_calendar.return_value = pl.DataFrame(
             {
                 "trade_date": [date(2024, 12, 27), date(2024, 12, 30)],
@@ -537,8 +537,8 @@ class TestIngestDate:
         )
 
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.upsert.return_value = 2
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.metadata.upsert.return_value = 2
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="calendar",
             source="tushare",
             trade_date="2024-12-27",  # 对于 calendar，这是范围起始日期
@@ -557,12 +557,12 @@ class TestIngestDate:
     def test_ingest_date_fetch_error(self, coordinator, mock_hub, mock_source) -> None:
         """获取数据失败时返回失败结果。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
 
         mock_source.fetch_stock_daily.side_effect = SourceFetchError(
             "Network error", source="tushare", dataset="stock_daily"
         )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -584,9 +584,9 @@ class TestIngestDate:
     ) -> None:
         """获取到空数据时返回失败结果。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_source.fetch_stock_daily.return_value = pl.DataFrame()
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -608,7 +608,7 @@ class TestIngestDate:
     ) -> None:
         """force=True 时覆盖历史成功记录。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -638,7 +638,7 @@ class TestIngestDate:
             "/path/to/file.parquet",
             "new_checksum",
         )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -662,9 +662,9 @@ class TestIngestDate:
     ) -> None:
         """测试非 SourceFetchError 异常的处理。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_source.fetch_stock_daily.side_effect = RuntimeError("Unexpected error")
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -686,7 +686,7 @@ class TestIngestDate:
     ) -> None:
         """测试 DQ 阻断时的处理。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         source_df = pl.DataFrame(
             {
                 "source_ticker": ["000001.SZ"],
@@ -705,7 +705,7 @@ class TestIngestDate:
             rows=0,
             files=0,
         )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -727,7 +727,7 @@ class TestIngestDate:
     ) -> None:
         """不支持的 dataset 抛出 ValueError。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
 
         # Act & Assert
         with pytest.raises(ValueError, match="不支持的数据集"):
@@ -744,13 +744,13 @@ class TestIngestRange:
         """成功摄取日期范围内的多个交易日。"""
         # Arrange
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.list_trading_days.return_value = [
+        mock_hub.metadata.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
         ]
 
-        mock_hub.ingestion_log.get_log.return_value = None  # 无历史记录
+        mock_hub.ingestion_log_store.get_log.return_value = None  # 无历史记录
 
         source_df = pl.DataFrame(
             {
@@ -773,7 +773,7 @@ class TestIngestRange:
             "checksum123",
         )
 
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -788,7 +788,7 @@ class TestIngestRange:
         # Assert
         assert len(results) == 3
         assert all(r.status == "success" for r in results)
-        mock_hub.calendar.list_trading_days.assert_called_once_with(
+        mock_hub.metadata.list_trading_days.assert_called_once_with(
             "2024-12-25", "2024-12-27"
         )
         assert mock_source.fetch_stock_daily.call_count == 3
@@ -799,7 +799,7 @@ class TestIngestRange:
         """日期范围内有跳过的日期。"""
         # Arrange
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.list_trading_days.return_value = [
+        mock_hub.metadata.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
@@ -818,7 +818,7 @@ class TestIngestRange:
                 )
             return None
 
-        mock_hub.ingestion_log.get_log.side_effect = get_log_side_effect
+        mock_hub.ingestion_log_store.get_log.side_effect = get_log_side_effect
 
         source_df = pl.DataFrame(
             {
@@ -841,7 +841,7 @@ class TestIngestRange:
             "checksum123",
         )
 
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -864,7 +864,7 @@ class TestIngestRange:
         """日期范围为空时返回空列表。"""
         # Arrange
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.list_trading_days.return_value = []
+        mock_hub.metadata.list_trading_days.return_value = []
 
         # Act
         results = coordinator.ingest_range("stock_daily", "2024-12-25", "2024-12-27")
@@ -878,7 +878,7 @@ class TestIngestRange:
         """force=True 时跳过所有历史检查。"""
         # Arrange
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.list_trading_days.return_value = ["2024-12-27"]
+        mock_hub.metadata.list_trading_days.return_value = ["2024-12-27"]
 
         source_df = pl.DataFrame(
             {
@@ -901,7 +901,7 @@ class TestIngestRange:
             "checksum123",
         )
 
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -929,7 +929,7 @@ class TestWriteT0Data:
     ) -> None:
         """成功摄取 stock_basic 数据到 instrument_store。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_source.fetch_stock_basic.return_value = pl.DataFrame(
             {
                 "source_ticker": ["000001.SZ", "600000.SH"],
@@ -940,7 +940,7 @@ class TestWriteT0Data:
             }
         )
 
-        mock_hub.ingestion_log.save_log.return_value = mocker.Mock(
+        mock_hub.ingestion_log_store.save_log.return_value = mocker.Mock(
             dataset="stock_basic",
             source="tushare",
             trade_date="2024-01-03",
@@ -962,7 +962,7 @@ class TestWriteT0Data:
     ) -> None:
         """成功摄取 etf_basic 数据到 instrument_store。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_source.fetch_etf_basic.return_value = pl.DataFrame(
             {
                 "source_ticker": ["510300.SH", "159919.SZ"],
@@ -973,7 +973,7 @@ class TestWriteT0Data:
             }
         )
 
-        mock_hub.ingestion_log.save_log.return_value = mocker.Mock(
+        mock_hub.ingestion_log_store.save_log.return_value = mocker.Mock(
             dataset="etf_basic",
             source="tushare",
             trade_date="2024-01-03",
@@ -1000,7 +1000,7 @@ class TestForceParameter:
     ) -> None:
         """验证 force=False 映射到 OnDuplicate.ERROR。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         source_df = pl.DataFrame(
             {
                 "source_ticker": ["000001.SZ"],
@@ -1021,7 +1021,7 @@ class TestForceParameter:
             "/path/to/file.parquet",
             "checksum123",
         )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -1043,7 +1043,7 @@ class TestForceParameter:
     ) -> None:
         """验证 force=True 映射到 OnDuplicate.KEEP_LAST。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         source_df = pl.DataFrame(
             {
                 "source_ticker": ["000001.SZ"],
@@ -1064,7 +1064,7 @@ class TestForceParameter:
             "/path/to/file.parquet",
             "checksum123",
         )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -1086,7 +1086,7 @@ class TestForceParameter:
     ) -> None:
         """验证 force=True 对 adj_factor 数据集也传递正确的 on_duplicate。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_source.fetch_adj_factor.return_value = pl.DataFrame(
             {
                 "source_ticker": ["000001.SZ"],
@@ -1096,7 +1096,7 @@ class TestForceParameter:
         )
 
         mock_hub.market.write.return_value = mock_hub_market_write_adj_factor()
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="adj_factor",
             source="tushare",
             trade_date="2024-12-27",
@@ -1144,9 +1144,9 @@ class TestTradingDayCheck:
     ) -> None:
         """stock_daily 在非交易日静默跳过。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None  # 无历史记录
+        mock_hub.ingestion_log_store.get_log.return_value = None  # 无历史记录
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.is_trading_day.return_value = False
+        mock_hub.metadata.is_trading_day.return_value = False
 
         # Act
         result = coordinator.ingest_date("stock_daily", "2024-12-28")
@@ -1157,16 +1157,16 @@ class TestTradingDayCheck:
         # 不应该调用 source
         mock_source.fetch_stock_daily.assert_not_called()
         # 不应该记录 ingestion_log（静默跳过）
-        mock_hub.ingestion_log.save_log.assert_not_called()
+        mock_hub.ingestion_log_store.save_log.assert_not_called()
 
     def test_etf_daily_skips_on_non_trading_day(
         self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """etf_daily 在非交易日静默跳过。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.is_trading_day.return_value = False
+        mock_hub.metadata.is_trading_day.return_value = False
 
         # Act
         result = coordinator.ingest_date("etf_daily", "2024-12-28")
@@ -1182,9 +1182,9 @@ class TestTradingDayCheck:
     ) -> None:
         """stock_status 在非交易日静默跳过。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.is_trading_day.return_value = False
+        mock_hub.metadata.is_trading_day.return_value = False
 
         # Act
         result = coordinator.ingest_date("stock_status", "2024-12-28")
@@ -1199,9 +1199,9 @@ class TestTradingDayCheck:
     ) -> None:
         """stock_daily 在交易日继续处理。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.is_trading_day.return_value = True
+        mock_hub.metadata.is_trading_day.return_value = True
 
         source_df = pl.DataFrame(
             {
@@ -1223,7 +1223,7 @@ class TestTradingDayCheck:
             "/path/to/file.parquet",
             "checksum123",
         )
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -1245,9 +1245,9 @@ class TestTradingDayCheck:
     ) -> None:
         """adj_factor 在非交易日静默跳过。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.is_trading_day.return_value = False
+        mock_hub.metadata.is_trading_day.return_value = False
 
         # Act
         result = coordinator.ingest_date("adj_factor", "2024-12-27")
@@ -1255,16 +1255,16 @@ class TestTradingDayCheck:
         # Assert
         assert result.status == "skipped"
         mock_source.fetch_adj_factor.assert_not_called()
-        mock_hub.calendar.is_trading_day.assert_called_once_with("2024-12-27")
+        mock_hub.metadata.is_trading_day.assert_called_once_with("2024-12-27")
 
     def test_calendar_does_not_check_trading_day(
         self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """calendar 不检查交易日（基础类数据集）。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.is_trading_day.return_value = False
+        mock_hub.metadata.is_trading_day.return_value = False
 
         mock_source.fetch_calendar.return_value = pl.DataFrame(
             {
@@ -1274,8 +1274,8 @@ class TestTradingDayCheck:
         )
 
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.upsert.return_value = 1
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.metadata.upsert.return_value = 1
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="calendar",
             source="tushare",
             trade_date="2024-12-27",
@@ -1292,16 +1292,16 @@ class TestTradingDayCheck:
         # 验证调用了 source（没有因为非交易日而跳过）
         mock_source.fetch_calendar.assert_called_once()
         # 验证没有调用 is_trading_day
-        mock_hub.calendar.is_trading_day.assert_not_called()
+        mock_hub.metadata.is_trading_day.assert_not_called()
 
     def test_macro_indicators_does_not_check_trading_day(
         self, coordinator, mock_hub, mock_source, mocker
     ) -> None:
         """macro_indicators 不检查交易日（非交易日也允许摄取）。"""
         # Arrange
-        mock_hub.ingestion_log.get_log.return_value = None
+        mock_hub.ingestion_log_store.get_log.return_value = None
         mock_hub.calendar = mocker.Mock()
-        mock_hub.calendar.is_trading_day.return_value = False
+        mock_hub.metadata.is_trading_day.return_value = False
 
         mock_source.fetch_macro_indicators.return_value = pl.DataFrame(
             {
@@ -1317,7 +1317,7 @@ class TestTradingDayCheck:
         )
 
         mock_hub.macro.write.return_value = mocker.Mock(records_written=1)
-        mock_hub.ingestion_log.save_log.return_value = IngestionLog(
+        mock_hub.ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="macro_indicators",
             source="tushare",
             trade_date="2024-12-28",
@@ -1332,4 +1332,4 @@ class TestTradingDayCheck:
         # Assert
         assert result.status == "success"
         mock_source.fetch_macro_indicators.assert_called_once_with("2024-12-28")
-        mock_hub.calendar.is_trading_day.assert_not_called()
+        mock_hub.metadata.is_trading_day.assert_not_called()

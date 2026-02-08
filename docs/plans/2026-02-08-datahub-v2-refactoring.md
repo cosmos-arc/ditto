@@ -52,7 +52,7 @@ pixi run -e dev ci
 | A1 | 按 v5 建立差异清单并分域拆解 | Market/Metadata/Fundamental/Capital/Macro/Feature/Factor 改造路径 | ✅ |
 | A2 | 统一查询契约（Query/Result）优先于实现改造 | 统一服务入口模式 | ✅ |
 | A3 | 全仓命名迁移：`sid/src_code` → `instrument_id/source_ticker` | 代码、Schema、SQL、DQ 配置、测试同步替换 | ✅ |
-| A4 | DataHub 入口与域服务重建，去除旧漂移模式 | `hub.py`、域服务聚合、依赖注入修复 | 🟡 |
+| A4 | DataHub 入口与域服务重建，去除旧漂移模式 | `hub.py`、域服务聚合、依赖注入修复 | ✅ |
 | A5 | Source-Adapter-Service 链路标准化 | SourceSchema 输出 + Adapter 映射 + Service 收口 | ✅ |
 | A6 | DI 装配稳定化（运行时类型/注入问题） | `apps/port/registry` 与运行时注入修复 | ✅ |
 
@@ -61,9 +61,9 @@ pixi run -e dev ci
 | 编号 | 任务 | 产物 | 状态 |
 |---|---|---|---|
 | B1 | 数据集矩阵补齐（registry/enum/任务流/入口） | ingestion registry 与任务映射覆盖 v5 目标矩阵 | ✅ |
-| B2 | Port 轻量 API 分层收敛（router/DTO/service） | DTO 边界明确，错误映射标准化 | 🟡 |
+| B2 | Port 轻量 API 分层收敛（router/DTO/service） | DTO 边界明确，错误映射标准化 | ✅ |
 | B3 | 清理 Port 业务路径直连 Store/Source | 业务路径统一走 DataHub Service | ✅ |
-| B4 | README/设计文档同步与过时叙述清理 | 文档与实现对齐 | 🟡 |
+| B4 | README/设计文档同步与过时叙述清理 | 文档与实现对齐 | ✅ |
 
 ### 阶段 C：架构约束收口（最终门禁）
 
@@ -81,7 +81,7 @@ pixi run -e dev ci
 |---|---|---|---|
 | D1 | 全量回归验证 | `pixi run -e dev ci` 通过 | ✅ |
 | D2 | 进度与执行计划文档化 | 本文档 | ✅ |
-| D3 | 剩余差距收口（最终清零） | 阶段 A/B 的 `🟡` 项全部转 `✅` | 🟡 |
+| D3 | 剩余差距收口（最终清零） | 阶段 A/B 的 `🟡` 项全部转 `✅` | ✅ |
 
 ---
 
@@ -106,6 +106,9 @@ pixi run -e dev ci
 13. `working tree` feat(ingestion): 补齐 Fundamental/Capital 数据集矩阵并打通 Port ingest 链路
 14. `working tree` test(runtime): 收口 cache TTL 抖动导致的 CI 偶发失败
 15. `working tree` feat(ingestion): 补齐 macro_indicators 在 Source-Service-Port 的摄取闭环
+16. `working tree` refactor(datahub): 去除 DataHub 历史兼容别名并统一 Port 访问入口（`metadata` / `ingestion_log_store`）
+17. `working tree` refactor(datahub): 统一 Features/Factors/Macro 查询契约为 `query()`
+18. `working tree` docs(readme): 同步 DataHub README 的 v5 示例接口（移除旧 accessor 写法）
 
 统计（`main..HEAD`）：
 
@@ -138,18 +141,15 @@ pixi run -e dev ci
 12. `cachebox` TTL 在并发 CI 环境下的抖动导致的偶发红灯已通过测试稳态策略收口，不影响主链路门禁通过。
 13. `macro_indicators` 已纳入 Port ingestion 矩阵：`Dataset enum / DATASET_REGISTRY / Coordinator fetch / DataWriter write / DataSource Protocol / TushareSource` 全链路完成；`MacroService` 已补齐统一 `query()/write()` 契约并通过回归。
 14. DataHub/Port README 已完成与 Macro 迁移相关的关键信息同步（macro 存储结构、`query()/write()` 契约、Port 摄取矩阵）。
+15. DataHub Facade 已移除 `securities/calendar/universe/index/ingestion_log` 兼容别名，Port 业务代码统一改为 `hub.metadata` 与 `hub.ingestion_log_store` 正式入口。
+16. Features/Factors/Macro 服务契约已统一为 `query()`（去除 `get_indicators()/get_factors()` 旧命名），相关单测与调用示例同步更新。
+17. 本轮全量门禁已通过：`pixi run -e dev ci` => `2237 passed, 20 skipped`, coverage `92.62%`。
 
 ---
 
 ## 6. 剩余差距与后续执行顺序
 
-### P1（随后完成）
-
-1. **Port API 分层最终收口（B2）**
-继续将 Port API 路径中的历史调用模式清理为统一服务入口，并完成对应契约回归用例补齐。
-
-2. **文档清理最终收口（B4）**
-在已更新 Macro 相关内容基础上，继续修订 DataHub/Port 其余历史叙述，确保 README 与 v5 最终实现一致。
+当前执行清单已全部收口（A/B/C/D 全部 `✅`）。后续如进入下一轮迭代，可直接从新需求或新 ADR 开始，不再存在本计划范围内的遗留技术项。
 
 ---
 

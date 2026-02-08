@@ -48,7 +48,7 @@ def test_get_indicators_by_code(service: MacroService) -> None:
 
     # 查询
     query = MacroQuery(indicators=["CPI_YOY"])
-    result = service.get_indicators(query)
+    result = service.query(query)
 
     # 验证
     assert len(result) == 1
@@ -75,7 +75,7 @@ def test_get_indicators_by_id(service: MacroService) -> None:
 
     # 查询
     query = MacroQuery(indicators=[indicator_id])
-    result = service.get_indicators(query)
+    result = service.query(query)
 
     # 验证
     assert len(result) == 1
@@ -102,7 +102,7 @@ def test_get_indicators_with_category_filter(service: MacroService) -> None:
 
     # 查询 economic 类别
     query = MacroQuery(category="economic")
-    result = service.get_indicators(query)
+    result = service.query(query)
 
     # 验证
     assert len(result) == 1
@@ -129,7 +129,7 @@ def test_get_indicators_with_pit_query(service: MacroService) -> None:
 
     # 查询 1月5日时的数据
     query = MacroQuery(indicators=["CPI_YOY"], asof="2024-01-05")
-    result = service.get_indicators(query)
+    result = service.query(query)
 
     # 验证 - 应该返回首次发布的版本
     assert len(result) == 1
@@ -156,7 +156,7 @@ def test_mixed_frequency_query(service: MacroService) -> None:
 
     # 同时查询日度和月度指标
     query = MacroQuery(indicators=["SHIBOR_1M", "CPI_YOY"])
-    result = service.get_indicators(query)
+    result = service.query(query)
 
     # 验证 - 返回所有结果
     assert len(result) == 2
@@ -165,7 +165,7 @@ def test_mixed_frequency_query(service: MacroService) -> None:
 def test_empty_result_returns_empty_dataframe(service: MacroService) -> None:
     """测试查询不存在的指标返回空 DataFrame."""
     query = MacroQuery(indicators=["NONEXISTENT"])
-    result = service.get_indicators(query)
+    result = service.query(query)
 
     # 验证
     assert len(result) == 0
@@ -215,7 +215,7 @@ def test_invalid_code_raises_error(service: MacroService) -> None:
     """测试查询不存在的 code 应该返回空结果而非报错."""
     # 不注册任何指标，直接查询
     query = MacroQuery(indicators=["NONEXISTENT_CODE"])
-    result = service.get_indicators(query)
+    result = service.query(query)
 
     # 验证 - 返回空 DataFrame
     assert len(result) == 0

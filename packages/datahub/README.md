@@ -328,7 +328,7 @@ query = FeatureQuery(
     end="2024-01-31",
     indicator_types=["momentum", "trend"],
 )
-data = hub.features.get_indicators(query)
+data = hub.features.query(query)
 ```
 
 #### Factors 域
@@ -377,7 +377,7 @@ query = FactorQuery(
     as_of="2024-06-30",  # 只使用截至该日期已知的数据
     factor_classes=["fundamental", "technical"],
 )
-data = hub.factors.get_factors(query)
+data = hub.factors.query(query)
 ```
 
 #### Capital 域使用示例：
@@ -489,22 +489,22 @@ rows = sqlite_store.fetchall("SELECT * FROM instruments WHERE instrument_id IN (
 
 ```python
 from ditto_datahub import DataHub
+from ditto_datahub.domains.market import AdjType, MarketBarsQuery
 
-# 初始化 DataHub（使用默认数据目录）
-hub = DataHub()
-
-# 查询标的情報
-instrument = hub.instruments.get_by_instrument_id(1)
+# DataHub 由 dishka 容器注入（示例）
+hub: DataHub = container.get(DataHub)
 
 # 查询交易日历
-trading_days = hub.calendar.get_range("2024-01-01", "2024-01-31")
+trading_days = hub.metadata.get_trading_days("2024-01-01", "2024-01-31")
 
 # 查询行情数据（带复权）
-bars = hub.bars.get_bars(
+bars = hub.market.query(
+    MarketBarsQuery(
     instrument_ids=[1, 2],
     start="2024-01-01",
     end="2024-01-31",
-    adjust="qfq"  # 前复权
+    adj=AdjType.QFQ,  # 前复权
+    )
 )
 ```
 
@@ -515,7 +515,8 @@ DataHub v0.7.0 引入了域级查询服务 `MetadataService`，提供统一的 M
 ```python
 from ditto_datahub import DataHub
 
-hub = DataHub()
+# DataHub 由 dishka 容器注入（示例）
+hub: DataHub = container.get(DataHub)
 
 # 标识符解析（支持 PIT）
 instrument_id = hub.metadata.resolve_instrument_id("600000.SH", source="tushare")
@@ -550,7 +551,8 @@ DataHub 引入了域级查询服务 `MarketService`，提供统一的 Market 域
 from ditto_datahub import DataHub
 from ditto_datahub.domains.market import AdjType, MarketBarsQuery
 
-hub = DataHub()
+# DataHub 由 dishka 容器注入（示例）
+hub: DataHub = container.get(DataHub)
 
 # 查询股票 K线数据（支持复权）
 query = MarketBarsQuery(
@@ -559,7 +561,7 @@ query = MarketBarsQuery(
     end="2024-01-31",
     adj=AdjType.QFQ,  # 前复权
 )
-bars = hub.market.get_bars(query)
+bars = hub.market.query(query)
 
 # 查询带状态信息的 K线数据
 query = MarketBarsQuery(
@@ -568,7 +570,7 @@ query = MarketBarsQuery(
     end="2024-01-31",
     with_status=True,  # 添加停牌、ST 等状态信息
 )
-bars = hub.market.get_bars(query)
+bars = hub.market.query(query)
 
 # PIT 安全查询（只使用 asof 日期之前的数据）
 query = MarketBarsQuery(
@@ -577,7 +579,7 @@ query = MarketBarsQuery(
     end="2024-01-31",
     asof="2024-06-30",  # 只使用 2024-06-30 之前已知的数据
 )
-bars = hub.market.get_bars(query)
+bars = hub.market.query(query)
 
 # 查询 ETF K线数据
 query = MarketBarsQuery(
@@ -586,7 +588,7 @@ query = MarketBarsQuery(
     end="2024-01-31",
     asset_class="etf",
 )
-bars = hub.market.get_bars(query)
+bars = hub.market.query(query)
 
 # 查询指数 K线数据
 query = MarketBarsQuery(
@@ -595,7 +597,7 @@ query = MarketBarsQuery(
     end="2024-01-31",
     asset_class="index",
 )
-bars = hub.market.get_bars(query)
+bars = hub.market.query(query)
 ```
 
 #### 统一接口约定
@@ -612,16 +614,20 @@ trading_days = hub.metadata.get_trading_days("2024-01-01", "2024-01-31")
 
 ```python
 from ditto_datahub import DataHub
+from ditto_datahub.domains.market import MarketBarsQuery
 
-hub = DataHub()
+# DataHub 由 dishka 容器注入（示例）
+hub: DataHub = container.get(DataHub)
 decision_date = "2024-01-15"
 
-# 使用 Accessor 层的 PIT 安全方法
-bars = hub.bars.get(
-    instrument_ids=[1],
-    start="2024-01-01",
-    end=decision_date,
-    asof=decision_date,  # PIT 查询：只使用 decision_date 之前的数据
+# 使用统一 query 入口执行 PIT 查询
+bars = hub.market.query(
+    MarketBarsQuery(
+        instrument_ids=[1],
+        start="2024-01-01",
+        end=decision_date,
+        asof=decision_date,  # PIT 查询：只使用 decision_date 之前的数据
+    )
 )
 ```
 
