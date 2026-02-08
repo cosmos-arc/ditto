@@ -91,25 +91,28 @@ pixi run -e dev ci
 
 `main..feature/v5-architecture-refactor` 关键提交：
 
-1. `86730de` refactor(architecture): 收口v5架构约束并修复关键链路
-2. `538c222` refactor(datahub): 统一source_ticker与instrument_id摄取契约
-3. `6a42de1` refactor(datahub): 按v5架构收口instrument_id/source_ticker标识体系
-4. `6ac323a` refactor(runtime): 去除sid字段兼容投影并统一instrument_id命名
-5. `7abaa6d` refactor(datahub): 全量收口 sid 命名到 instrument_id 语义
-6. `ebc5726` chore(architecture): 强化 v5 门禁并收口术语文档
-7. `921da53` refactor(datahub): 统一 capital/fundamental Service 的 Query 契约
+1. `73b83ac` refactor(datahub): 收口 market/metadata 统一 query-write 契约
+2. `a38cbd3` refactor(datahub): ingestion 写入链路统一走 Service
+3. `4539062` docs(plan): 梳理v5重构执行计划与当前进度
+4. `921da53` refactor(datahub): 统一 capital/fundamental Service 的 Query 契约
+5. `ebc5726` chore(architecture): 强化 v5 门禁并收口术语文档
+6. `7abaa6d` refactor(datahub): 全量收口 sid 命名到 instrument_id 语义
+7. `6ac323a` refactor(runtime): 去除sid字段兼容投影并统一instrument_id命名
+8. `6a42de1` refactor(datahub): 按v5架构收口instrument_id/source_ticker标识体系
+9. `538c222` refactor(datahub): 统一source_ticker与instrument_id摄取契约
+10. `86730de` refactor(architecture): 收口v5架构约束并修复关键链路
 
 统计（`main..HEAD`）：
 
-- 变更文件：`156`
-- 代码变更：`+3899 / -2539`
+- 变更文件：`163`
+- 代码变更：`+4580 / -2748`
 
 ### 4.2 门禁结果
 
 最近一次 `pixi run -e dev ci`：
 
-- `2201 passed, 20 skipped`
-- coverage `92.71%`
+- `2207 passed, 20 skipped`
+- coverage `92.77%`
 - `Architecture check passed`
 
 ---
