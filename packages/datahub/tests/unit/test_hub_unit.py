@@ -57,7 +57,7 @@ from ditto_datahub.domains.metadata.instrument.instrument_store import (
     InstrumentStore as MetadataInstrumentStore,
 )
 from ditto_datahub.domains.metadata.universe import UniverseStore
-from ditto_datahub.errors import SidNotFoundError
+from ditto_datahub.errors import InstrumentIdNotFoundError
 from ditto_datahub.hub import DataHub
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion.ingestion_log_store import (
@@ -543,7 +543,7 @@ class TestDataHub:
         datahub_with_dependencies._sources = sources
 
         # Try to resolve a non-existent identifier
-        with pytest.raises(SidNotFoundError) as exc_info:
+        with pytest.raises(InstrumentIdNotFoundError) as exc_info:
             datahub_with_dependencies.resolve_instrument_id(
                 "999999.SH", source="tushare"
             )
@@ -566,7 +566,7 @@ class TestDataHub:
         datahub_with_dependencies._sources = sources
 
         # Try to resolve with custom source
-        with pytest.raises(SidNotFoundError) as exc_info:
+        with pytest.raises(InstrumentIdNotFoundError) as exc_info:
             datahub_with_dependencies.resolve_instrument_id(
                 "000001.SZ", source="akshare"
             )
@@ -586,7 +586,7 @@ class TestDataHub:
         datahub_with_dependencies._sources = sources
 
         # Try to resolve with asof parameter
-        with pytest.raises(SidNotFoundError) as exc_info:
+        with pytest.raises(InstrumentIdNotFoundError) as exc_info:
             datahub_with_dependencies.resolve_instrument_id(
                 "600000.SH",
                 source="tushare",
@@ -731,7 +731,7 @@ class TestDataHub:
         datahub_with_dependencies: DataHub,
         mocker: MockerFixture,
     ) -> None:
-        """Test get_bars with BarsQuerySpec using SID identifiers."""
+        """Test get_bars with BarsQuerySpec using Instrument ID identifiers."""
         # Mock sources
         mock_tushare = mocker.Mock(spec=TushareSource)
         sources = DataSources(tushare=mock_tushare)
@@ -744,7 +744,7 @@ class TestDataHub:
             datahub_with_dependencies.market, "get_bars", return_value=pl.DataFrame()
         )
 
-        # 测试 SID 标识符
+        # 测试 Instrument ID 标识符
         params = BarsQuerySpec(identifiers=[1, 2, 3])
         result = datahub_with_dependencies.get_bars(params)
 
@@ -780,7 +780,7 @@ class TestDataHub:
         )
         result = datahub_with_dependencies.get_bars(params)
 
-        # 验证返回空 DataFrame（因为没有解析到 SID）
+        # 验证返回空 DataFrame（因为没有解析到 Instrument ID）
         assert isinstance(result, pl.DataFrame)
         assert len(result) == 0
 

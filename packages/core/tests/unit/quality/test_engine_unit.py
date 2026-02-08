@@ -27,7 +27,7 @@ class TestQualityEngine:
                         {
                             "rule": "not_null",
                             "columns": ["instrument_id"],
-                            "message": "SID required",
+                            "message": "Instrument ID required",
                         }
                     ],
                     business=[
@@ -62,19 +62,19 @@ class TestQualityEngine:
         assert result.passed is True  # No nulls in instrument_id, all values positive
 
     def test_check_with_null_sid(self) -> None:
-        """Test checking data with null SID fails L1."""
+        """Test checking data with null Instrument ID fails L1."""
         engine = QualityEngine(config=self.config)
 
         df = pl.DataFrame(
             {
-                "instrument_id": [1, None, 3],  # One null SID
+                "instrument_id": [1, None, 3],  # One null Instrument ID
                 "value": [10.0, 20.0, 30.0],
             }
         )
 
         result = engine.check(df, "test_dataset")
 
-        # Should fail due to null SID (L1 ERROR)
+        # Should fail due to null Instrument ID (L1 ERROR)
         assert result.passed is False
         assert result.has_errors is True
         assert result.error_count >= 1
@@ -299,7 +299,7 @@ class TestQualityEngineEdgeCases:
                         {
                             "rule": "not_null",
                             "columns": ["instrument_id"],
-                            "message": "SID required",
+                            "message": "Instrument ID required",
                         }
                     ],
                     business=[],
@@ -327,7 +327,7 @@ class TestQualityEngineEdgeCases:
                         {
                             "rule": "not_null",
                             "columns": ["instrument_id"],
-                            "message": "SID required",
+                            "message": "Instrument ID required",
                         }
                     ],
                     business=[
@@ -362,7 +362,7 @@ class TestQualityEngineEdgeCases:
                         {
                             "rule": "not_null",
                             "columns": ["instrument_id"],
-                            "message": "SID required",
+                            "message": "Instrument ID required",
                         }
                     ],
                     business=[],

@@ -41,7 +41,7 @@ class IndustryMappingStore(SQLiteStore):
             asof: Point-in-time 查询日期
 
         Returns:
-            SID 列表
+            Instrument ID 列表
 
         """
         if asof:

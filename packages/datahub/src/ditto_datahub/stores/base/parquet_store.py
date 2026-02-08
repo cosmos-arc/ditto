@@ -6,7 +6,8 @@ This module provides a unified Parquet store implementation that supports:
 - Configurable partition strategies via PartitionStrategy
 - Duplicate data handling (error/keep_first/keep_last)
 - Automatic deduplication (batch internal duplicates)
-- Metadata operations (get_years, get_checksum, count, get_date_range, list_sids)
+- Metadata operations:
+  get_years, get_checksum, count, get_date_range, list_instrument_ids
 
 Following design document at docs/design/02_data_design.md.
 """
@@ -51,7 +52,7 @@ class ParquetStore(BaseStore):
     - 日期范围查询
     - 重复数据处理（error/keep_first/keep_last）
     - 自动去重（batch 内部重复）
-    - 元数据操作（get_years, get_checksum, count, get_date_range, list_sids）
+    - 元数据操作（get_years, get_checksum, count, get_date_range, list_instrument_ids）
 
     Attributes:
         data_root: 数据根目录路径.
@@ -701,7 +702,7 @@ class ParquetStore(BaseStore):
 
         return str(min_max["min"][0]), str(min_max["max"][0])
 
-    def list_sids(self, dataset: str) -> list[int]:
+    def list_instrument_ids(self, dataset: str) -> list[int]:
         """
         List unique security IDs in a dataset.
 

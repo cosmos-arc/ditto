@@ -187,8 +187,8 @@ class TestIndexWeightSchema:
     def test_schema_has_all_required_fields(self) -> None:
         """Schema should have all required fields."""
         required_fields = {
-            "index_sid",
-            "con_sid",
+            "index_instrument_id",
+            "constituent_instrument_id",
             "trade_date",
             "weight",
             "source",

@@ -246,7 +246,7 @@ class TestApplyQfqAdj:
 
         result = apply_qfq_adj(df, adj_df)
 
-        # SID 2 should have unchanged prices (coalesce to 1.0)
+        # Instrument ID 2 should have unchanged prices (coalesce to 1.0)
         assert result["open"].to_list() == [
             10.0 * 1.0 / 1.1,
             11.0 * 1.1 / 1.1,
@@ -372,6 +372,6 @@ class TestApplyHfqAdj:
 
         result = apply_hfq_adj(df, adj_df)
 
-        # SID 2 should have unchanged prices (coalesce to 1.0)
+        # Instrument ID 2 should have unchanged prices (coalesce to 1.0)
         assert result["open"].to_list() == pytest.approx([10.0, 12.1, 20.0])
         assert result["close"].to_list() == pytest.approx([10.0, 12.1, 20.0])

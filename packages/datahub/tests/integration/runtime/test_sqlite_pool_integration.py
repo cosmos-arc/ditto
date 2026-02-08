@@ -106,11 +106,11 @@ class TestSQLitePool:
         assert len(tables) > 0
 
     def test_init_schema_initializes_instrument_id_sequence(self) -> None:
-        """Test init_schema initializes SID sequence values."""
+        """Test init_schema initializes Instrument ID sequence values."""
         self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
         self.pool.init_schema()
 
-        # Check initial SID sequence values
+        # Check initial Instrument ID sequence values
         rows = self.pool.execute(
             "SELECT * FROM instrument_id_sequence ORDER BY asset_class"
         ).fetchall()
@@ -206,7 +206,7 @@ class TestSQLitePool:
         )
         self.pool.commit()
 
-        # Try to insert a mapping with invalid SID (should fail)
+        # Try to insert a mapping with invalid Instrument ID (should fail)
         with pytest.raises(sqlite3.IntegrityError):
             self.pool.execute(
                 "INSERT INTO security_mapping "

@@ -321,7 +321,7 @@ class TestMarketServiceGetBars:
     """Test suite for MarketService.get_bars()."""
 
     def test_get_bars_empty_sid_list(self, market_service: MarketService) -> None:
-        """Test get_bars with empty SID list."""
+        """Test get_bars with empty Instrument ID list."""
         query = MarketBarsQuery(instrument_ids=[])
         result = market_service.get_bars(query)
         assert result.is_empty()
@@ -397,7 +397,7 @@ class TestMarketServiceGetBars:
         """Test get_bars for ETF data."""
         mock_etf_bars_store.read.return_value = sample_stock_bars_df
 
-        # 使用 ETF SID 范围 (2M+)
+        # 使用 ETF Instrument ID 范围 (2M+)
         etf_range = InstrumentIdRange.get_range("etf")
         query = MarketBarsQuery(
             instrument_ids=[etf_range.min_id, etf_range.min_id + 1],
@@ -412,7 +412,7 @@ class TestMarketServiceGetBars:
         self, market_service: MarketService
     ) -> None:
         """Test get_bars for index when index store is None."""
-        # 使用 Index SID 范围 (3M+)
+        # 使用 Index Instrument ID 范围 (3M+)
         index_range = InstrumentIdRange.get_range("index")
         query = MarketBarsQuery(
             instrument_ids=[index_range.min_id], asset_class="index"
@@ -483,7 +483,7 @@ class TestMarketServiceAssetClassDetection:
     ) -> None:
         """Test that explicit asset_class mismatch with detected raises ValueError."""
         stock_range = InstrumentIdRange.get_range("stock")
-        # Stock SID with explicit ETF asset_class should raise error
+        # Stock Instrument ID with explicit ETF asset_class should raise error
         query = MarketBarsQuery(instrument_ids=[stock_range.min_id], asset_class="etf")
 
         with pytest.raises(ValueError, match="显式指定的资产类别"):
@@ -682,19 +682,21 @@ class TestMarketServiceGetConstituents:
         # Mock the store's get method
         mock_index_constituent_store.get.return_value = pl.DataFrame(
             {
-                "index_sid": [1, 1, 1],
-                "stock_sid": [100, 101, 102],
+                "index_instrument_id": [1, 1, 1],
+                "constituent_instrument_id": [100, 101, 102],
                 "effective_date": ["2024-01-01", "2024-01-01", "2024-01-01"],
                 "weight": [0.4, 0.35, 0.25],
             }
         )
 
-        result = market_service.get_constituents(index_sid=1, asof="2024-01-01")
+        result = market_service.get_constituents(
+            index_instrument_id=1, asof="2024-01-01"
+        )
 
         # Should return the constituents
         assert len(result) == 3
-        assert "index_sid" in result.columns
-        assert "stock_sid" in result.columns
+        assert "index_instrument_id" in result.columns
+        assert "constituent_instrument_id" in result.columns
         assert "effective_date" in result.columns
         assert "weight" in result.columns
 
@@ -709,14 +711,14 @@ class TestMarketServiceGetConstituents:
         """Test constituents query with default asof date (today)."""
         mock_index_constituent_store.get.return_value = pl.DataFrame(
             {
-                "index_sid": [1],
-                "stock_sid": [100],
+                "index_instrument_id": [1],
+                "constituent_instrument_id": [100],
                 "effective_date": ["2024-01-01"],
                 "weight": [1.0],
             }
         )
 
-        result = market_service.get_constituents(index_sid=1)
+        result = market_service.get_constituents(index_instrument_id=1)
 
         # Should return data with today's date
         assert len(result) == 1
@@ -735,7 +737,7 @@ class TestMarketServiceGetConstituents:
             NotImplementedError,
             match="IndexConstituentStore not configured",
         ):
-            market_service_without_optionals.get_constituents(index_sid=1)
+            market_service_without_optionals.get_constituents(index_instrument_id=1)
 
     def test_get_constituents_empty_result(
         self,
@@ -745,7 +747,7 @@ class TestMarketServiceGetConstituents:
         """Test constituents query returns empty DataFrame."""
         mock_index_constituent_store.get.return_value = pl.DataFrame()
 
-        result = market_service.get_constituents(index_sid=999)
+        result = market_service.get_constituents(index_instrument_id=999)
 
         assert result.is_empty()
         today = date.today().isoformat()

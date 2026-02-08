@@ -27,11 +27,11 @@ class IndexConstituentStore(SQLiteStore):
 
     Table schema:
         CREATE TABLE index_constituent (
-            index_sid INTEGER NOT NULL,
-            stock_sid INTEGER NOT NULL,
+            index_instrument_id INTEGER NOT NULL,
+            constituent_instrument_id INTEGER NOT NULL,
             effective_date TEXT NOT NULL,
             weight REAL NOT NULL,
-            PRIMARY KEY (index_sid, stock_sid, effective_date)
+            PRIMARY KEY (index_instrument_id, constituent_instrument_id, effective_date)
         )
 
     This store provides Point-in-Time queries to get constituents
@@ -57,11 +57,11 @@ class IndexConstituentStore(SQLiteStore):
         """Create table if not exists."""
         create_sql = """
         CREATE TABLE IF NOT EXISTS index_constituent (
-            index_sid INTEGER NOT NULL,
-            stock_sid INTEGER NOT NULL,
+            index_instrument_id INTEGER NOT NULL,
+            constituent_instrument_id INTEGER NOT NULL,
             effective_date TEXT NOT NULL,
             weight REAL NOT NULL,
-            PRIMARY KEY (index_sid, stock_sid, effective_date)
+            PRIMARY KEY (index_instrument_id, constituent_instrument_id, effective_date)
         )
         """
         self.execute(create_sql)
@@ -76,8 +76,8 @@ class IndexConstituentStore(SQLiteStore):
 
         Args:
             df: Data to write with columns:
-                - index_sid: Index security ID
-                - stock_sid: Stock security ID
+                - index_instrument_id: Index security ID
+                - constituent_instrument_id: Stock security ID
                 - effective_date: Effective date (YYYY-MM-DD)
                 - weight: Constituent weight
 
@@ -103,7 +103,9 @@ class IndexConstituentStore(SQLiteStore):
             )
 
         # Sort by key columns
-        df = df.sort(["index_sid", "stock_sid", "effective_date"])
+        df = df.sort(
+            ["index_instrument_id", "constituent_instrument_id", "effective_date"]
+        )
 
         # Check if table has existing data
         existing_count_sql = f"SELECT COUNT(*) as count FROM {self._table}"  # noqa: S608
@@ -125,7 +127,11 @@ class IndexConstituentStore(SQLiteStore):
 
             # Check for duplicates
             if not existing_df.is_empty():
-                key_cols = ["index_sid", "stock_sid", "effective_date"]
+                key_cols = [
+                    "index_instrument_id",
+                    "constituent_instrument_id",
+                    "effective_date",
+                ]
                 existing_keys = existing_df.select(key_cols)
                 new_keys = df.select(key_cols)
 
@@ -202,7 +208,7 @@ class IndexConstituentStore(SQLiteStore):
     @traced("data.read")
     def read(  # type: ignore[override]
         self,
-        index_sids: list[int] | None = None,
+        index_instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> pl.DataFrame:
@@ -210,7 +216,7 @@ class IndexConstituentStore(SQLiteStore):
         Read index constituent data.
 
         Args:
-            index_sids: Filter by index security IDs.
+            index_instrument_ids: Filter by index security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -222,10 +228,10 @@ class IndexConstituentStore(SQLiteStore):
         conditions: list[str] = []
         params: list[str | int] = []
 
-        if index_sids:
-            placeholders = ",".join("?" * len(index_sids))
-            conditions.append(f"index_sid IN ({placeholders})")
-            params.extend(index_sids)
+        if index_instrument_ids:
+            placeholders = ",".join("?" * len(index_instrument_ids))
+            conditions.append(f"index_instrument_id IN ({placeholders})")
+            params.extend(index_instrument_ids)
 
         if start_date:
             conditions.append("effective_date >= ?")
@@ -256,52 +262,55 @@ class IndexConstituentStore(SQLiteStore):
         return df
 
     @traced("data.read")
-    def get(self, index_sid: int, asof: str) -> pl.DataFrame:
+    def get(self, index_instrument_id: int, asof: str) -> pl.DataFrame:
         """
         Get index constituents as of a specific date (Point-in-Time).
 
-        This implements PIT logic: for each (index_sid, stock_sid) pair,
-        select the record with the latest effective_date <= asof date.
+        This implements PIT logic: for each
+        (index_instrument_id, constituent_instrument_id) pair, select the
+        record with the latest effective_date <= asof date.
 
         Args:
-            index_sid: Index security ID.
+            index_instrument_id: Index security ID.
             asof: As-of date (YYYY-MM-DD).
 
         Returns:
             DataFrame with constituent stocks as of the specified date.
-            Columns: index_sid, stock_sid, effective_date, weight
+            Columns:
+                index_instrument_id, constituent_instrument_id,
+                effective_date, weight
 
         """
         # Build SQL query with PIT logic
         sql = """
         SELECT
-            ic.index_sid,
-            ic.stock_sid,
+            ic.index_instrument_id,
+            ic.constituent_instrument_id,
             ic.effective_date,
             ic.weight
         FROM index_constituent ic
         INNER JOIN (
             SELECT
-                stock_sid,
+                constituent_instrument_id,
                 MAX(effective_date) as max_effective_date
             FROM index_constituent
-            WHERE index_sid = ?
+            WHERE index_instrument_id = ?
               AND effective_date <= ?
-            GROUP BY stock_sid
+            GROUP BY constituent_instrument_id
         ) latest
-        ON ic.stock_sid = latest.stock_sid
+        ON ic.constituent_instrument_id = latest.constituent_instrument_id
         AND ic.effective_date = latest.max_effective_date
-        WHERE ic.index_sid = ?
-        ORDER BY ic.stock_sid
+        WHERE ic.index_instrument_id = ?
+        ORDER BY ic.constituent_instrument_id
         """
 
-        rows = self.fetchall(sql, [index_sid, asof, index_sid])
+        rows = self.fetchall(sql, [index_instrument_id, asof, index_instrument_id])
 
         if not rows:
             return pl.DataFrame(
                 schema={
-                    "index_sid": pl.Int64,
-                    "stock_sid": pl.Int64,
+                    "index_instrument_id": pl.Int64,
+                    "constituent_instrument_id": pl.Int64,
                     "effective_date": pl.String,
                     "weight": pl.Float64,
                 }
@@ -318,7 +327,7 @@ class IndexConstituentStore(SQLiteStore):
         logger.info(
             "Index constituents retrieved",
             event="pit_query_complete",
-            index_sid=index_sid,
+            index_instrument_id=index_instrument_id,
             asof=asof,
             constituent_count=len(df),
         )
@@ -330,7 +339,7 @@ class IndexConstituentStore(SQLiteStore):
     @traced("data.delete")
     def delete(  # type: ignore[override]
         self,
-        index_sids: list[int] | None = None,
+        index_instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> int:
@@ -338,7 +347,7 @@ class IndexConstituentStore(SQLiteStore):
         Delete index constituent data.
 
         Args:
-            index_sids: Filter by index security IDs.
+            index_instrument_ids: Filter by index security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -350,10 +359,10 @@ class IndexConstituentStore(SQLiteStore):
         conditions: list[str] = []
         params: list[str | int] = []
 
-        if index_sids:
-            placeholders = ",".join("?" * len(index_sids))
-            conditions.append(f"index_sid IN ({placeholders})")
-            params.extend(index_sids)
+        if index_instrument_ids:
+            placeholders = ",".join("?" * len(index_instrument_ids))
+            conditions.append(f"index_instrument_id IN ({placeholders})")
+            params.extend(index_instrument_ids)
 
         if start_date and end_date:
             conditions.append("effective_date >= ? AND effective_date <= ?")
@@ -391,7 +400,7 @@ class IndexConstituentStore(SQLiteStore):
 
     def count(
         self,
-        index_sids: list[int] | None = None,
+        index_instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> int:
@@ -399,7 +408,7 @@ class IndexConstituentStore(SQLiteStore):
         Count index constituent records.
 
         Args:
-            index_sids: Filter by index security IDs.
+            index_instrument_ids: Filter by index security IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
 
@@ -407,5 +416,9 @@ class IndexConstituentStore(SQLiteStore):
             Number of matching records.
 
         """
-        df = self.read(index_sids=index_sids, start_date=start_date, end_date=end_date)
+        df = self.read(
+            index_instrument_ids=index_instrument_ids,
+            start_date=start_date,
+            end_date=end_date,
+        )
         return len(df)

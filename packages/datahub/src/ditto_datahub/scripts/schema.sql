@@ -1,8 +1,8 @@
 -- SQLite Database Schema for Ditto DataHub
--- This schema supports SID allocation, 证券主数据, PIT queries,
+-- This schema supports Instrument ID allocation, 证券主数据, PIT queries,
 -- trading calendar, freeze points, and universe management.
 
--- SID 序列 (百万级范围，与 SidRange 保持一致)
+-- Instrument ID 序列 (百万级范围，与 SidRange 保持一致)
 CREATE TABLE IF NOT EXISTS instrument_id_sequence (
     asset_class TEXT PRIMARY KEY,
     current_max INTEGER NOT NULL,

@@ -58,7 +58,7 @@ class IdentityStore(SQLiteStore):
 
         """
         logger.debug(
-            "Starting identity SID resolution",
+            "Starting identity Instrument ID resolution",
             event="identity_instrument_id_resolve_start",
             source_ticker=source_ticker,
             source=source,
@@ -89,14 +89,14 @@ class IdentityStore(SQLiteStore):
 
         if instrument_id:
             logger.debug(
-                "Identity SID resolved successfully",
+                "Identity Instrument ID resolved successfully",
                 event="identity_instrument_id_resolve_complete",
                 source_ticker=source_ticker,
                 instrument_id=instrument_id,
             )
         else:
             logger.warning(
-                "Identity SID not found",
+                "Identity Instrument ID not found",
                 event="identity_instrument_id_resolve_not_found",
                 source_ticker=source_ticker,
                 source=source,
@@ -125,7 +125,7 @@ class IdentityStore(SQLiteStore):
 
         """
         logger.info(
-            "Starting batch identity SID resolution",
+            "Starting batch identity Instrument ID resolution",
             event="identity_instrument_id_batch_resolve_start",
             source=source,
             asof=asof,
@@ -139,7 +139,7 @@ class IdentityStore(SQLiteStore):
                 result[code] = instrument_id
 
         logger.info(
-            "Batch identity SID resolution completed",
+            "Batch identity Instrument ID resolution completed",
             event="identity_instrument_id_batch_resolve_complete",
             requested=len(source_tickers),
             found=len(result),

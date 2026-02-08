@@ -247,7 +247,7 @@ class MetadataService:
             asof: 时间点日期.
 
         Returns:
-            SID 列表.
+            Instrument ID 列表.
 
         """
         return self._industry_mapping_store.get_stocks(industry_id, asof)
@@ -378,10 +378,10 @@ class MetadataService:
             asof: 时间点日期.
 
         Returns:
-            SID 列表.
+            Instrument ID 列表.
 
         """
-        return self._universe_store.get_constituents_sids(universe_id, asof)
+        return self._universe_store.get_constituent_instrument_ids(universe_id, asof)
 
     # ============ 证券注册 ============
 

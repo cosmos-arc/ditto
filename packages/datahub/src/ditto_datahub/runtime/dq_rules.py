@@ -61,7 +61,7 @@ def check_instrument_id_not_null(
 
     if null_count > 0:
         logger.warning(
-            "dq_rule_null_sid",
+            "dq_rule_null_instrument_id",
             event="dq_check",
             rule="instrument_id_not_null",
             null_count=null_count,
@@ -247,7 +247,13 @@ DQ_RULES: dict[str, list[DQRule]] = {
             "primary_key_unique",
             DQSeverity.ERROR,
             check_pk_unique,
-            {"keys": ["index_sid", "con_sid", "trade_date"]},
+            {
+                "keys": [
+                    "index_instrument_id",
+                    "constituent_instrument_id",
+                    "trade_date",
+                ]
+            },
         ),
         DQRule("weight_positive", DQSeverity.WARNING, check_weight_positive),
     ],

@@ -236,7 +236,7 @@ class UniverseStore:
 
         return pl.DataFrame([dict(r) for r in rows])
 
-    def get_constituents_sids(
+    def get_constituent_instrument_ids(
         self,
         universe_id: str,
         asof: str | None = None,

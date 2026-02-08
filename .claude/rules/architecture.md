@@ -386,6 +386,6 @@ Foundation Layer (packages/foundation/)
 |------|-----------|---------|---------|
 | 缓存实现需要知道"证券"吗？ | ✅ DataCache | ❌ | ❌ |
 | 文件锁需要知道"交易日"吗？ | ✅ FileLockManager | ❌ | ❌ |
-| SID 分配需要知道"股票/ETF"吗？ | ❌ | ✅ SidAllocator | ❌ |
+| Instrument ID 分配需要知道"股票/ETF"吗？ | ❌ | ✅ InstrumentIdAllocator | ❌ |
 | SQL 引擎需要知道"复权"吗？ | ❌ | ✅ SqlEngine | ❌ |
 | 这是 Python 代码还是 SQL 脚本？ | ❌ | ❌ | ✅ schema.sql |

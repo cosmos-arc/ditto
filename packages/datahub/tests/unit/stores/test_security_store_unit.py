@@ -155,7 +155,7 @@ class TestInstrumentStore:
         self.client.execute(sql)
         self.client.commit()
 
-        result = self.store.get_by_sid(100000001)
+        result = self.store.get_by_instrument_id(100000001)
         assert result is not None
         assert result["instrument_id"] == 100000001
         assert result["symbol"] == "600000"
@@ -163,7 +163,7 @@ class TestInstrumentStore:
 
     def test_get_by_sid_not_found(self) -> None:
         """Test getting non-existent instrument_id returns None."""
-        result = self.store.get_by_sid(999999999)
+        result = self.store.get_by_instrument_id(999999999)
         assert result is None
 
     def test_get_source_ticker(self) -> None:
@@ -203,11 +203,11 @@ class TestInstrumentStore:
         self.client.commit()
 
         # List all
-        all_sids = self.store.list_sids()
+        all_sids = self.store.list_instrument_ids()
         assert len(all_sids) == 3
 
         # Filter by exchange
-        sse_sids = self.store.list_sids(exchange="SSE")
+        sse_sids = self.store.list_instrument_ids(exchange="SSE")
         assert len(sse_sids) == 2
         assert 100000001 in sse_sids
         assert 100000002 in sse_sids
@@ -230,19 +230,19 @@ class TestInstrumentStore:
         self.client.commit()
 
         # Default (is_active=True) should return only active
-        active_sids = self.store.list_sids()
+        active_sids = self.store.list_instrument_ids()
         assert len(active_sids) == 2
         assert 100000001 in active_sids
         assert 100000002 in active_sids
         assert 100000003 not in active_sids
 
         # is_active=False should return only inactive
-        inactive_sids = self.store.list_sids(is_active=False)
+        inactive_sids = self.store.list_instrument_ids(is_active=False)
         assert len(inactive_sids) == 1
         assert 100000003 in inactive_sids
 
         # is_active=None should return ALL (both active and inactive)
-        all_sids = self.store.list_sids(is_active=None)
+        all_sids = self.store.list_instrument_ids(is_active=None)
         assert len(all_sids) == 3
         assert 100000001 in all_sids
         assert 100000002 in all_sids
@@ -356,7 +356,7 @@ class TestInstrumentStore:
         assert instrument_id == 100000001
 
         # Verify security was inserted
-        security = self.store.get_by_sid(instrument_id)
+        security = self.store.get_by_instrument_id(instrument_id)
         assert security is not None
         assert security["symbol"] == "600000"
         assert security["name"] == "Test Bank"
@@ -512,7 +512,7 @@ class TestSqlInjectionProtection:
         assert len(result) == 100
 
     def test_in_clause_with_single_sid(self) -> None:
-        """Test IN clause works with single SID."""
+        """Test IN clause works with single Instrument ID."""
         self.client.execute(
             """INSERT INTO security
             (instrument_id, symbol, name, exchange, asset_class, list_date, is_active)

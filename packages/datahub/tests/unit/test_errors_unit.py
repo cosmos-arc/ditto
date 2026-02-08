@@ -5,8 +5,8 @@ from ditto_datahub.errors import (
     DataHubError,
     DatasetNotFoundError,
     IdentifierError,
+    InstrumentIdNotFoundError,
     PartitionNotFoundError,
-    SidNotFoundError,
     TradingDateNotFoundError,
     ValidationError,
 )
@@ -100,58 +100,58 @@ class TestIdentifierError:
 
 
 class TestSidNotFoundError:
-    """Tests for SidNotFoundError."""
+    """Tests for InstrumentIdNotFoundError."""
 
     def test_sid_not_found_error_is_identifier_error(self) -> None:
-        """Test SidNotFoundError inherits from IdentifierError."""
-        error = SidNotFoundError()
+        """Test InstrumentIdNotFoundError inherits from IdentifierError."""
+        error = InstrumentIdNotFoundError()
         assert isinstance(error, IdentifierError)
         assert isinstance(error, DataHubError)
 
     def test_sid_not_found_error_default_message(self) -> None:
-        """Test SidNotFoundError has default message."""
-        error = SidNotFoundError()
-        assert str(error) == "SID not found"
+        """Test InstrumentIdNotFoundError has default message."""
+        error = InstrumentIdNotFoundError()
+        assert str(error) == "Instrument ID not found"
         assert error.details == {}
 
     def test_sid_not_found_error_custom_message(self) -> None:
-        """Test SidNotFoundError with custom message."""
-        error = SidNotFoundError(message="Custom SID not found")
-        assert str(error) == "Custom SID not found"
+        """Test InstrumentIdNotFoundError with custom message."""
+        error = InstrumentIdNotFoundError(message="Custom Instrument ID not found")
+        assert str(error) == "Custom Instrument ID not found"
         assert error.details == {}
 
     def test_sid_not_found_error_with_identifier(self) -> None:
-        """Test SidNotFoundError stores identifier."""
-        error = SidNotFoundError(identifier="000001.SZ")
+        """Test InstrumentIdNotFoundError stores identifier."""
+        error = InstrumentIdNotFoundError(identifier="000001.SZ")
         assert error.details == {"identifier": "000001.SZ"}
 
     def test_sid_not_found_error_with_source(self) -> None:
-        """Test SidNotFoundError stores source."""
-        error = SidNotFoundError(source="tushare")
+        """Test InstrumentIdNotFoundError stores source."""
+        error = InstrumentIdNotFoundError(source="tushare")
         assert error.details == {"source": "tushare"}
 
     def test_sid_not_found_error_with_identifier_and_source(self) -> None:
-        """Test SidNotFoundError stores both identifier and source."""
-        error = SidNotFoundError(
-            message="SID not found in source",
+        """Test InstrumentIdNotFoundError stores both identifier and source."""
+        error = InstrumentIdNotFoundError(
+            message="Instrument ID not found in source",
             identifier="000001.SZ",
             source="tushare",
         )
-        assert str(error) == "SID not found in source"
+        assert str(error) == "Instrument ID not found in source"
         assert error.details == {"identifier": "000001.SZ", "source": "tushare"}
 
     def test_sid_not_found_error_all_combinations(self) -> None:
-        """Test SidNotFoundError with all parameters."""
+        """Test InstrumentIdNotFoundError with all parameters."""
         # Custom message + identifier only
-        e1 = SidNotFoundError(message="Custom", identifier="000001.SZ")
+        e1 = InstrumentIdNotFoundError(message="Custom", identifier="000001.SZ")
         assert e1.details == {"identifier": "000001.SZ"}
 
         # Custom message + source only
-        e2 = SidNotFoundError(message="Custom", source="tushare")
+        e2 = InstrumentIdNotFoundError(message="Custom", source="tushare")
         assert e2.details == {"source": "tushare"}
 
         # Default message + both params
-        e3 = SidNotFoundError(identifier="000001.SZ", source="tushare")
+        e3 = InstrumentIdNotFoundError(identifier="000001.SZ", source="tushare")
         assert e3.details == {"identifier": "000001.SZ", "source": "tushare"}
 
 

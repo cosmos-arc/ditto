@@ -52,7 +52,7 @@ def apply_qfq_adj(
             adj_df, pit_dt, date_column="knowledge_date"
         )
 
-    # 获取每个 SID 的最新因子（基于 baseline）
+    # 获取每个 Instrument ID 的最新因子（基于 baseline）
     latest_factors = baseline_df.group_by("instrument_id").agg(
         pl.col("adj_factor").last().alias("latest_factor")
     )

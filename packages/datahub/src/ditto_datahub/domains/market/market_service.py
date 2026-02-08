@@ -46,7 +46,8 @@ class MarketBarsQuery:
     Market K线查询参数.
 
     Attributes:
-        instrument_ids: SID 列表（为 None 时配合 market_wide=True 获取全市场数据）.
+        instrument_ids: Instrument ID 列表（为 None 时配合 market_wide=True
+            获取全市场数据）.
         start: 开始日期 (YYYY-MM-DD).
         end: 结束日期 (YYYY-MM-DD).
         adj: 复权类型（仅对 stock 数据有效，etf/index 数据不支持复权）.
@@ -160,12 +161,12 @@ class MarketService:
             with_status=query.with_status,
         )
 
-        # 1. 解析 SID 列表和资产类别
+        # 1. 解析 Instrument ID 列表和资产类别
         instrument_ids, asset_class = self._resolve_instrument_ids_and_asset_class(
             query
         )
 
-        # 空 SID 列表返回空 DataFrame（非 market_wide 模式）
+        # 空 Instrument ID 列表返回空 DataFrame（非 market_wide 模式）
         if not query.market_wide and not instrument_ids:
             return pl.DataFrame()
 
@@ -215,18 +216,20 @@ class MarketService:
     @traced("market.get_constituents")
     def get_constituents(
         self,
-        index_sid: int,
+        index_instrument_id: int,
         asof: str | None = None,
     ) -> pl.DataFrame:
         """
         获取指数成分股（Point-in-Time）.
 
         Args:
-            index_sid: 指数 SID.
+            index_instrument_id: 指数 Instrument ID.
             asof: 时点查询日期 (YYYY-MM-DD)，默认为当前日期.
 
         Returns:
-            成分股 DataFrame，包含列: index_sid, stock_sid, effective_date, weight.
+            成分股 DataFrame，包含列:
+            index_instrument_id, constituent_instrument_id,
+            effective_date, weight.
 
         Raises:
             NotImplementedError: 如果 IndexConstituentStore 未配置.
@@ -247,16 +250,16 @@ class MarketService:
         logger.debug(
             "Fetching index constituents",
             event="market_constituents_get_start",
-            index_sid=index_sid,
+            index_instrument_id=index_instrument_id,
             asof=asof_date,
         )
 
-        df = self._index_constituent_store.get(index_sid, asof_date)
+        df = self._index_constituent_store.get(index_instrument_id, asof_date)
 
         logger.debug(
             "Index constituents fetched",
             event="market_constituents_get_complete",
-            index_sid=index_sid,
+            index_instrument_id=index_instrument_id,
             asof=asof_date,
             row_count=len(df),
         )
@@ -280,7 +283,7 @@ class MarketService:
         加载核心行情数据（不含复权和增强）.
 
         Args:
-            instrument_ids: SID 列表.
+            instrument_ids: Instrument ID 列表.
             start: 开始日期.
             end: 结束日期.
             asset_class: 资产类别.
@@ -315,7 +318,7 @@ class MarketService:
         else:
             return pl.DataFrame()
 
-    def _detect_asset_class_from_sids(
+    def _detect_asset_class_from_instrument_ids(
         self, instrument_ids: list[int]
     ) -> Literal["stock", "etf", "index"]:
         """
@@ -375,48 +378,49 @@ class MarketService:
         self, query: MarketBarsQuery
     ) -> tuple[list[int], Literal["stock", "etf", "index"]]:
         """
-        解析 SID 列表和资产类别.
+        解析 Instrument ID 列表和资产类别.
 
         Args:
             query: MarketBarsQuery 查询对象.
 
         Returns:
-            (SID 列表, 资产类别).
+            (Instrument ID 列表, 资产类别).
 
         Raises:
-            ValueError: 如果显式指定的 asset_class 与从 SID 检测出的不一致.
+            ValueError: 如果显式指定的 asset_class 与从 Instrument ID 检测出的不一致.
 
         """
         if query.market_wide:
-            # 全市场模式：获取所有活跃 SID
+            # 全市场模式：获取所有活跃 Instrument ID
             asset_class = query.asset_class
             instrument_ids = sorted(
-                self._instrument_store.list_sids(asset_class=asset_class)
+                self._instrument_store.list_instrument_ids(asset_class=asset_class)
             )
             if not asset_class:
                 asset_class = (
-                    self._detect_asset_class_from_sids(instrument_ids)
+                    self._detect_asset_class_from_instrument_ids(instrument_ids)
                     if instrument_ids
                     else "stock"
                 )
             return instrument_ids, asset_class
         elif not query.instrument_ids:
-            # 空 SID 列表时，使用显式 asset_class（如果有），否则默认为 "stock"
+            # 空 Instrument ID 列表时，使用显式 asset_class（如果有）
+            # 否则默认为 "stock"
             return [], query.asset_class or "stock"
 
-        # 普通模式：使用指定的 SID
+        # 普通模式：使用指定的 Instrument ID
         instrument_ids = sorted(set(query.instrument_ids))
         asset_class = query.asset_class
 
         if asset_class:
-            # 验证显式 asset_class 与从 SID 检测出的类别是否一致
-            detected = self._detect_asset_class_from_sids(instrument_ids)
+            # 验证显式 asset_class 与从 Instrument ID 检测出的类别是否一致
+            detected = self._detect_asset_class_from_instrument_ids(instrument_ids)
             if detected != asset_class:
                 raise ValueError(
-                    f"显式指定的资产类别 '{asset_class}' 与从 SID 检测出的类别 '{detected}' 不一致",  # noqa: E501
+                    f"显式指定的资产类别 '{asset_class}' 与从 Instrument ID 检测出的类别 '{detected}' 不一致",  # noqa: E501
                 )
         else:
-            asset_class = self._detect_asset_class_from_sids(instrument_ids)
+            asset_class = self._detect_asset_class_from_instrument_ids(instrument_ids)
 
         return instrument_ids, asset_class
 
@@ -462,7 +466,7 @@ class MarketService:
         Args:
             df: K线数据 DataFrame.
             adj: 调整类型.
-            instrument_ids: SID 列表.
+            instrument_ids: Instrument ID 列表.
             start: 开始日期.
             end: 结束日期.
             asof: Point-in-Time 查询日期.

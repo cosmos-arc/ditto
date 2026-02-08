@@ -120,7 +120,7 @@ class InstrumentStore:
 
         """
         logger.debug(
-            "Starting SID resolution",
+            "Starting Instrument ID resolution",
             event="instrument_id_resolve_start",
             source_ticker=source_ticker,
             source=source,
@@ -144,7 +144,7 @@ class InstrumentStore:
 
         if result:
             logger.debug(
-                "SID resolved successfully",
+                "Instrument ID resolved successfully",
                 event="instrument_id_resolve_complete",
                 source_ticker=source_ticker,
                 instrument_id=result,
@@ -155,7 +155,7 @@ class InstrumentStore:
             )
         else:
             logger.warning(
-                "SID not found",
+                "Instrument ID not found",
                 event="instrument_id_resolve_not_found",
                 source_ticker=source_ticker,
                 source=source,
@@ -224,7 +224,7 @@ class InstrumentStore:
 
         """
         logger.info(
-            "Starting batch SID resolution",
+            "Starting batch Instrument ID resolution",
             event="instrument_id_batch_resolve_start",
             source=source,
             asof=asof,
@@ -238,7 +238,7 @@ class InstrumentStore:
                 result[code] = instrument_id
 
         logger.info(
-            "Batch SID resolution completed",
+            "Batch Instrument ID resolution completed",
             event="instrument_id_batch_resolve_complete",
             requested=len(source_tickers),
             found=len(result),
@@ -310,7 +310,7 @@ class InstrumentStore:
 
         return cast(str, row["source_ticker"]) if row else None
 
-    def get_by_sid(self, instrument_id: int) -> dict[str, Any] | None:
+    def get_by_instrument_id(self, instrument_id: int) -> dict[str, Any] | None:
         """
         Get security by instrument_id.
 
@@ -401,7 +401,7 @@ class InstrumentStore:
 
         return pl.DataFrame([dict(r) for r in rows])
 
-    def list_sids(
+    def list_instrument_ids(
         self,
         asset_class: str | None = None,
         exchange: str | None = None,

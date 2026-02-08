@@ -206,7 +206,7 @@ class TestUniverseStore:
         self.store.add_constituents("test_u", records)
 
         # Get instrument_ids
-        instrument_ids = self.store.get_constituents_sids("test_u")
+        instrument_ids = self.store.get_constituent_instrument_ids("test_u")
         assert len(instrument_ids) == 2
         assert 100000001 in instrument_ids
         assert 100000002 in instrument_ids
@@ -235,11 +235,15 @@ class TestUniverseStore:
         self.store.add_constituents("test_u", records)
 
         # Get instrument_ids as of 2020-06-01
-        sids_2020 = self.store.get_constituents_sids("test_u", asof="2020-06-01")
+        sids_2020 = self.store.get_constituent_instrument_ids(
+            "test_u", asof="2020-06-01"
+        )
         assert len(sids_2020) == 2
 
         # Get instrument_ids as of 2021-07-01
-        sids_2021 = self.store.get_constituents_sids("test_u", asof="2021-07-01")
+        sids_2021 = self.store.get_constituent_instrument_ids(
+            "test_u", asof="2021-07-01"
+        )
         assert len(sids_2021) == 1
         assert 100000002 in sids_2021
 
@@ -260,12 +264,14 @@ class TestUniverseStore:
         self.store.remove_constituent("test_u", 100000001, "2021-06-30")
 
         # Verify it's no longer in current constituents
-        current_sids = self.store.get_constituents_sids("test_u")
+        current_sids = self.store.get_constituent_instrument_ids("test_u")
         assert 100000001 not in current_sids
         assert 100000002 in current_sids
 
         # But it should be in historical query before removal date
-        historical_sids = self.store.get_constituents_sids("test_u", asof="2021-01-01")
+        historical_sids = self.store.get_constituent_instrument_ids(
+            "test_u", asof="2021-01-01"
+        )
         assert 100000001 in historical_sids
 
     def test_add_constituents_with_source_info(self) -> None:
@@ -351,12 +357,16 @@ class TestUniverseStorePITSafety:
         self.store.add_constituents("test_u", records)
 
         # Query on exact effective_from - should be included
-        instrument_ids = self.store.get_constituents_sids("test_u", asof="2020-01-01")
+        instrument_ids = self.store.get_constituent_instrument_ids(
+            "test_u", asof="2020-01-01"
+        )
         assert 100000001 in instrument_ids
 
         # Query on exact effective_to - should NOT be included
         # (effective_to is exclusive)
-        instrument_ids = self.store.get_constituents_sids("test_u", asof="2020-12-31")
+        instrument_ids = self.store.get_constituent_instrument_ids(
+            "test_u", asof="2020-12-31"
+        )
         assert 100000001 not in instrument_ids
 
     def test_pit_query_future_date(self) -> None:
@@ -373,7 +383,9 @@ class TestUniverseStorePITSafety:
         self.store.add_constituents("test_u", records)
 
         # Query with future date
-        instrument_ids = self.store.get_constituents_sids("test_u", asof="2099-12-31")
+        instrument_ids = self.store.get_constituent_instrument_ids(
+            "test_u", asof="2099-12-31"
+        )
         assert 100000001 in instrument_ids
 
     def test_pit_query_before_effective_from(self) -> None:
@@ -390,5 +402,7 @@ class TestUniverseStorePITSafety:
         self.store.add_constituents("test_u", records)
 
         # Query before effective date
-        instrument_ids = self.store.get_constituents_sids("test_u", asof="2019-12-31")
+        instrument_ids = self.store.get_constituent_instrument_ids(
+            "test_u", asof="2019-12-31"
+        )
         assert len(instrument_ids) == 0

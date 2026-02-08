@@ -75,7 +75,7 @@ def mock_hub(mocker):  # noqa: PLR0915
     hub.instrument_store.resolve_instrument_id.return_value = (
         None  # 默认返回 None（不存在）
     )
-    hub.instrument_store.register.return_value = 1000001  # 返回注册的 SID
+    hub.instrument_store.register.return_value = 1000001  # 返回注册的 Instrument ID
 
     # 添加 MetadataService mock（IngestionDataWriter 需要）
     hub.metadata = mocker.Mock()

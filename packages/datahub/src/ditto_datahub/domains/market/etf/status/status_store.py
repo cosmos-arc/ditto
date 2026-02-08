@@ -181,7 +181,7 @@ class EtfStatusStore:
         """
         return self._store.get_date_range(self._dataset)
 
-    def list_sids(self) -> list[int]:
+    def list_instrument_ids(self) -> list[int]:
         """
         List unique security IDs in the dataset.
 
@@ -189,7 +189,7 @@ class EtfStatusStore:
             Sorted list of unique security IDs.
 
         """
-        return self._store.list_sids(self._dataset)
+        return self._store.list_instrument_ids(self._dataset)
 
     @property
     def data_root(self):

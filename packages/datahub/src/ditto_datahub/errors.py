@@ -33,17 +33,17 @@ class IdentifierError(DataHubError):
     pass
 
 
-class SidNotFoundError(IdentifierError):
-    """证券标识符（SID）未找到。"""
+class InstrumentIdNotFoundError(IdentifierError):
+    """证券标识符（Instrument ID）未找到。"""
 
     def __init__(
         self,
-        message: str = "SID not found",
+        message: str = "Instrument ID not found",
         identifier: str | None = None,
         source: str | None = None,
     ) -> None:
         """
-        Initialize SidNotFoundError.
+        Initialize InstrumentIdNotFoundError.
 
         Args:
             message: Error message.

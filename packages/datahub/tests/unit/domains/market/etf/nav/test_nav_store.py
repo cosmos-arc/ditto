@@ -273,15 +273,15 @@ class TestEtfNavStore:
         assert start == "2024-01-02"
         assert end == "2024-01-04"
 
-    # ============ list_sids tests ============
+    # ============ list_instrument_ids tests ============
 
     def test_list_sids_empty(self, store: EtfNavStore) -> None:
-        """Test list_sids with no data."""
-        instrument_ids = store.list_sids()
+        """Test list_instrument_ids with no data."""
+        instrument_ids = store.list_instrument_ids()
         assert instrument_ids == []
 
     def test_list_sids(self, store: EtfNavStore, sample_nav_df: pl.DataFrame) -> None:
-        """Test list_sids returns unique security IDs."""
+        """Test list_instrument_ids returns unique security IDs."""
         store.write(sample_nav_df, year=2024)
-        instrument_ids = store.list_sids()
+        instrument_ids = store.list_instrument_ids()
         assert instrument_ids == [1500001, 1500002]

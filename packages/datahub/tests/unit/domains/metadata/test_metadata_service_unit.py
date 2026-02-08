@@ -221,14 +221,22 @@ def test_metadata_service_is_trading_day(service: MetadataService) -> None:
 def test_metadata_service_get_universe(service: MetadataService) -> None:
     """测试查询标的池成分股."""
     # 设置 mock
-    service._universe_store.get_constituents_sids.return_value = [1, 2, 3, 4, 5]
+    service._universe_store.get_constituent_instrument_ids.return_value = [
+        1,
+        2,
+        3,
+        4,
+        5,
+    ]
 
     # 调用方法
     result = service.get_universe("hs300", None)
 
     # 验证
     assert result == [1, 2, 3, 4, 5]
-    service._universe_store.get_constituents_sids.assert_called_once_with("hs300", None)
+    service._universe_store.get_constituent_instrument_ids.assert_called_once_with(
+        "hs300", None
+    )
 
 
 def test_metadata_service_register_security(

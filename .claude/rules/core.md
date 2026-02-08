@@ -472,7 +472,7 @@ tar -tzf dist/*.whl | grep py.typed
 |------|------|----------|------|
 | **DataHub Store** | 数据持久化、基础查询 | SecurityStore, BarsStore | 包含业务逻辑 |
 | **DataHub Accessor** | 业务封装、领域接口 | SecurityAccessor, BarsAccessor | 直接访问文件系统 |
-| **DataHub Runtime** | 基础设施（连接池、锁、分配器） | SQLitePool, FileLockManager, SidAllocator | 包含业务逻辑 |
+| **DataHub Runtime** | 基础设施（连接池、锁、分配器） | SQLitePool, FileLockManager, InstrumentIdAllocator | 包含业务逻辑 |
 | **DataHub Source** | 外部数据源适配 | TushareSource, AkshareSource | 包含业务逻辑 |
 | **Server Service** | 流程编排、任务协调 | IngestionCoordinator, RetryManager | 直接数据访问 |
 | **Server Flow** | 应用层用例组合 | DailyFlow, BackfillFlow | - |
@@ -500,7 +500,7 @@ from ditto_datahub.stores.security_store import SecurityStore
 from ditto_datahub.stores.bars_store import BarsStore
 
 # ❌ Server 层禁止直接导入 Runtime
-from ditto_datahub.runtime.sid_allocator import SidAllocator
+from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sqlite_pool import SQLitePool
 
 # ✅ Server 层应该使用 Accessor
@@ -518,8 +518,8 @@ from ditto_datahub.accessors.security import SecurityAccessor
 | 问题 | 回答 Yes → 归属 | 回答 No → 归属 |
 |------|-----------------|----------------|
 | 是否直接访问存储文件/数据库？ | DataHub Store | 使用 Accessor |
-| 是否需要分配/管理唯一标识符（如 SID）？ | DataHub Accessor | 不应在此层 |
-| 是否包含数据映射/转换逻辑（如 src_code → sid）？ | DataHub Accessor | 不应在此层 |
+| 是否需要分配/管理唯一标识符（如 instrument_id）？ | DataHub Accessor | 不应在此层 |
+| 是否包含数据映射/转换逻辑（如 source_ticker → instrument_id）？ | DataHub Accessor | 不应在此层 |
 | 是否依赖外部数据源（API/爬虫）？ | DataHub Source | 不应在此层 |
 | 是否是流程编排/任务协调？ | Server Service | 不应在此层 |
 | 是否是应用层用例组合？ | Server Flow | 不应在此层 |

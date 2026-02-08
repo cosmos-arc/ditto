@@ -22,14 +22,14 @@ from ditto_datahub.domains.market import (
 )
 from ditto_datahub.domains.metadata import MetadataService
 from ditto_datahub.domains.metadata.instrument import InstrumentStore
-from ditto_datahub.errors import SidNotFoundError
+from ditto_datahub.errors import InstrumentIdNotFoundError
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.ingestion import IngestionLogStore
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.sources.source import DataSources
 
-# 类型别名：标识符（支持 SID/source_ticker/symbol 混合）
+# 类型别名：标识符（支持 Instrument ID/source_ticker/symbol 混合）
 type Identifier = str | int
 type IdentifierList = list[Identifier]
 
@@ -42,7 +42,7 @@ class BarsQuerySpec:
     封装所有 K 线查询参数，支持混合标识符输入。
 
     Attributes:
-        identifiers: 标识符列表（支持 SID/source_ticker/symbol 混合）。
+        identifiers: 标识符列表（支持 Instrument ID/source_ticker/symbol 混合）。
         start: 开始日期 (YYYY-MM-DD)。
         end: 结束日期 (YYYY-MM-DD)。
         adj: 复权类型 (none/qfq/hfq)。
@@ -83,7 +83,7 @@ class SecuritiesQuerySpec:
     封装所有证券查询参数，支持混合标识符输入。
 
     Attributes:
-        identifiers: 标识符列表（支持 SID/source_ticker/symbol 混合）。
+        identifiers: 标识符列表（支持 Instrument ID/source_ticker/symbol 混合）。
         source: 数据源标识符。
         asset_class: 资产类别过滤。
         exchange: 交易所过滤。
@@ -261,7 +261,7 @@ class DataHub:
         asof: str | None = None,
     ) -> int:
         """
-        Resolve identifier to SID (supports PIT).
+        Resolve identifier to Instrument ID (supports PIT).
 
         Args:
             identifier: Source code or symbol.
@@ -269,15 +269,15 @@ class DataHub:
             asof: Point-in-time query date.
 
         Returns:
-            SID.
+            Instrument ID.
 
         Raises:
-            SidNotFoundError: If identifier cannot be resolved.
+            InstrumentIdNotFoundError: If identifier cannot be resolved.
 
         """
         result = self._instrument_store.resolve_instrument_id(identifier, source, asof)
         if result is None:
-            raise SidNotFoundError(
+            raise InstrumentIdNotFoundError(
                 message=f"Identifier '{identifier}' not found in source '{source}'",
                 identifier=identifier,
                 source=source,
@@ -338,7 +338,7 @@ class DataHub:
         asof: str | None = None,
     ) -> dict[str, int]:
         """
-        批量解析标识符为 SID。
+        批量解析标识符为 Instrument ID。
 
         Args:
             identifiers: 标识符列表（source_ticker 或 symbol）。
@@ -362,17 +362,17 @@ class DataHub:
         asof: str | None = None,
     ) -> list[int]:
         """
-        从多种输入类型解析 SID 列表。
+        从多种输入类型解析 Instrument ID 列表。
 
         Args:
-            instrument_ids: SID 列表（已知的 SID，无需转换）。
+            instrument_ids: Instrument ID 列表（已知的 Instrument ID，无需转换）。
             source_tickers: source_ticker 列表（需要转换）。
             symbols: symbol 列表（需要转换）。
             source: 数据源标识符。
             asof: Point-in-time 查询日期。
 
         Returns:
-            去重后的 SID 列表（排序）。
+            去重后的 Instrument ID 列表（排序）。
 
         """
         resolved: set[int] = set()
@@ -393,7 +393,7 @@ class DataHub:
         return sorted(resolved)
 
     def get_symbol(self, instrument_id: int) -> str | None:
-        """获取 SID 对应的 symbol。"""
+        """获取 Instrument ID 对应的 symbol。"""
         return self.securities.get_symbol(instrument_id)
 
     def get_source_ticker(
@@ -402,13 +402,13 @@ class DataHub:
         source: str = "tushare",
         asof: str | None = None,
     ) -> str | None:
-        """获取 SID 对应的 source_ticker。"""
+        """获取 Instrument ID 对应的 source_ticker。"""
         return self.securities.get_source_ticker(instrument_id, source, asof)
 
     def get_instrument_id_symbol_mapping(
         self, instrument_ids: list[int]
     ) -> dict[int, str]:
-        """批量获取 SID 到 symbol 的映射。"""
+        """批量获取 Instrument ID 到 symbol 的映射。"""
         result: dict[int, str] = {}
         for instrument_id in instrument_ids:
             symbol = self.get_symbol(instrument_id)
@@ -424,7 +424,7 @@ class DataHub:
         """
         获取 K 线数据（便捷 API，支持混合标识符）。
 
-        使用 BarsQuerySpec 对象封装查询参数，自动将标识符转换为 SID。
+        使用 BarsQuerySpec 对象封装查询参数，自动将标识符转换为 Instrument ID。
 
         Args:
             params: K 线查询参数对象。
@@ -451,7 +451,7 @@ class DataHub:
             >>> bars = hub.get_bars(params)
 
         """
-        # 分类标识符：SID、source_ticker、symbol
+        # 分类标识符：Instrument ID、source_ticker、symbol
         instrument_ids: list[int] = []
         source_tickers: list[str] = []
         symbols: list[str] = []
@@ -466,7 +466,7 @@ class DataHub:
                 # 字符串不包含 '.'：判断为 symbol
                 symbols.append(str(item))
 
-        # 解析 SID
+        # 解析 Instrument ID
         resolved_sids = self.resolve_instrument_ids_from_inputs(
             instrument_ids=instrument_ids if instrument_ids else None,
             source_tickers=source_tickers if source_tickers else None,
@@ -497,7 +497,7 @@ class DataHub:
         """
         获取证券数据（便捷 API）。
 
-        使用 SecuritiesQuerySpec 对象封装查询参数，自动将标识符转换为 SID。
+        使用 SecuritiesQuerySpec 对象封装查询参数，自动将标识符转换为 Instrument ID。
 
         Args:
             params: 证券查询参数对象。
@@ -536,7 +536,7 @@ class DataHub:
                 # 字符串不包含 '.'：判断为 symbol
                 symbols.append(str(item))
 
-        # 解析 SID
+        # 解析 Instrument ID
         resolved_sids = self.resolve_instrument_ids_from_inputs(
             instrument_ids=instrument_ids if instrument_ids else None,
             source_tickers=source_tickers if source_tickers else None,

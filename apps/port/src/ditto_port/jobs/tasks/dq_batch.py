@@ -214,7 +214,7 @@ def dq_completeness_check(
     Args:
         trade_date: 交易日期
         dataset: 数据集名称
-        expected_sids: 预期的 SID 列表
+        expected_sids: 预期的 Instrument ID 列表
         market_wide: 是否使用全市场查询模式
 
     Returns:

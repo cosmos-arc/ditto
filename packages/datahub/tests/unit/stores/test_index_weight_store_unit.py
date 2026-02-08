@@ -135,7 +135,7 @@ class TestIndexWeightStore:
         ]
         self.store.upsert_weights("000300.SH", records)
 
-        instrument_ids = self.store.get_constituents_sids("000300.SH")
+        instrument_ids = self.store.get_constituent_instrument_ids("000300.SH")
         assert len(instrument_ids) == 2
         assert 1000001 in instrument_ids
         assert 1000002 in instrument_ids
@@ -154,11 +154,15 @@ class TestIndexWeightStore:
         self.store.upsert_weights("000300.SH", records)
 
         # Get instrument_ids as of 2024-01-15
-        sids_jan = self.store.get_constituents_sids("000300.SH", asof="2024-01-15")
+        sids_jan = self.store.get_constituent_instrument_ids(
+            "000300.SH", asof="2024-01-15"
+        )
         assert len(sids_jan) == 2
 
         # Get instrument_ids as of 2024-07-01
-        sids_jul = self.store.get_constituents_sids("000300.SH", asof="2024-07-01")
+        sids_jul = self.store.get_constituent_instrument_ids(
+            "000300.SH", asof="2024-07-01"
+        )
         assert len(sids_jul) == 1
         assert 1000002 in sids_jul
 
@@ -174,12 +178,12 @@ class TestIndexWeightStore:
         self.store.remove_constituent("000300.SH", 1000001, "2024-06-30")
 
         # Verify it's no longer in current constituents
-        current_sids = self.store.get_constituents_sids("000300.SH")
+        current_sids = self.store.get_constituent_instrument_ids("000300.SH")
         assert 1000001 not in current_sids
         assert 1000002 in current_sids
 
         # But it should be in historical query before removal date
-        historical_sids = self.store.get_constituents_sids(
+        historical_sids = self.store.get_constituent_instrument_ids(
             "000300.SH", asof="2024-01-15"
         )
         assert 1000001 in historical_sids
@@ -215,8 +219,8 @@ class TestIndexWeightStore:
         self.store.upsert_weights("000905.SH", records_500)
 
         # Verify both indices have correct constituents
-        sids_300 = self.store.get_constituents_sids("000300.SH")
-        sids_500 = self.store.get_constituents_sids("000905.SH")
+        sids_300 = self.store.get_constituent_instrument_ids("000300.SH")
+        sids_500 = self.store.get_constituent_instrument_ids("000905.SH")
 
         assert sids_300 == [1000001]
         assert sids_500 == [1000002]
@@ -250,14 +254,14 @@ class TestIndexWeightStorePITSafety:
         self.store.upsert_weights("000300.SH", records)
 
         # Query on exact effective_from - should be included
-        instrument_ids = self.store.get_constituents_sids(
+        instrument_ids = self.store.get_constituent_instrument_ids(
             "000300.SH", asof="2024-01-01"
         )
         assert 1000001 in instrument_ids
 
         # Query on exact effective_to - should NOT be included
         # (effective_to is exclusive)
-        instrument_ids = self.store.get_constituents_sids(
+        instrument_ids = self.store.get_constituent_instrument_ids(
             "000300.SH", asof="2024-12-31"
         )
         assert 1000001 not in instrument_ids
@@ -270,7 +274,7 @@ class TestIndexWeightStorePITSafety:
         self.store.upsert_weights("000300.SH", records)
 
         # Query with future date
-        instrument_ids = self.store.get_constituents_sids(
+        instrument_ids = self.store.get_constituent_instrument_ids(
             "000300.SH", asof="2099-12-31"
         )
         assert 1000001 in instrument_ids
@@ -283,7 +287,7 @@ class TestIndexWeightStorePITSafety:
         self.store.upsert_weights("000300.SH", records)
 
         # Query before effective date
-        instrument_ids = self.store.get_constituents_sids(
+        instrument_ids = self.store.get_constituent_instrument_ids(
             "000300.SH", asof="2023-12-31"
         )
         assert len(instrument_ids) == 0
@@ -296,7 +300,7 @@ class TestIndexWeightStorePITSafety:
         self.store.upsert_weights("000300.SH", records)
 
         # Query after effective date - should be included (no effective_to)
-        instrument_ids = self.store.get_constituents_sids(
+        instrument_ids = self.store.get_constituent_instrument_ids(
             "000300.SH", asof="2024-06-01"
         )
         assert 1000001 in instrument_ids

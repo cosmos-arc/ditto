@@ -292,7 +292,7 @@ def test_get_metadata_methods(factor_store: FactorStore) -> None:
     assert end == "2024-01-02"
 
     # Check instrument_ids
-    instrument_ids = factor_store.list_sids()
+    instrument_ids = factor_store.list_instrument_ids()
     assert instrument_ids == [1]
 
     # Check count

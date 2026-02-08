@@ -136,7 +136,7 @@ class TestInstrumentStoreIntegration:
         )
         store._client.commit()
 
-        # Register new mapping for same SID
+        # Register new mapping for same Instrument ID
         store._client.execute(
             """INSERT INTO security_mapping
             (instrument_id, source, source_ticker, effective_from, is_primary)
@@ -234,7 +234,7 @@ class TestInstrumentStoreIntegration:
         )
         store.register(1_000_001, registration)
 
-        row = store.get_by_sid(1_000_001)
+        row = store.get_by_instrument_id(1_000_001)
         assert row is not None
         assert row["instrument_id"] == 1_000_001
         assert row["symbol"] == "600000"
@@ -298,11 +298,11 @@ class TestInstrumentStoreIntegration:
         store.register(2_000_001, registration2)
 
         # List all instrument_ids
-        all_sids = store.list_sids()
+        all_sids = store.list_instrument_ids()
         assert len(all_sids) == 2
 
         # List only stocks
-        stock_sids = store.list_sids(asset_class="stock")
+        stock_sids = store.list_instrument_ids(asset_class="stock")
         assert len(stock_sids) == 1
         assert stock_sids[0] == 1_000_001
 

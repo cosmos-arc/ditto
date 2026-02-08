@@ -24,7 +24,7 @@ class IndexWeightStore:
     Core functionality:
     - upsert_weights: Insert/update weight records for an index
     - get_constituents: Query constituents with PIT support
-    - get_constituents_sids: Get constituent SIDs as list
+    - get_constituent_instrument_ids: Get constituent SIDs as list
     - remove_constituent: Remove constituent (sets effective_to)
     """
 
@@ -146,7 +146,7 @@ class IndexWeightStore:
 
         return pl.DataFrame([dict(r) for r in rows])
 
-    def get_constituents_sids(
+    def get_constituent_instrument_ids(
         self,
         index_id: str,
         asof: str | None = None,

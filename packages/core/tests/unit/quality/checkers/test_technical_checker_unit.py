@@ -49,7 +49,7 @@ class TestTechnicalChecker:
                     {
                         "rule": "not_null",
                         "columns": ["instrument_id"],
-                        "message": "SID required",
+                        "message": "Instrument ID required",
                     }
                 ],
                 1,
@@ -158,7 +158,7 @@ class TestTechnicalChecker:
             {
                 "rule": "not_null",
                 "columns": ["instrument_id"],
-                "message": "SID required",
+                "message": "Instrument ID required",
             },
             {
                 "rule": "unique",
@@ -210,7 +210,7 @@ class TestTechnicalChecker:
             {
                 "rule": "not_null",
                 "columns": ["instrument_id"],
-                "message": "SID required",
+                "message": "Instrument ID required",
             },
             {
                 "rule": "unique",

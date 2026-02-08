@@ -96,8 +96,8 @@ ADJ_FACTOR_SCHEMA: dict[str, type[pl.DataType]] = {
 # Index Weight Schema
 # ============================================================
 INDEX_WEIGHT_SCHEMA: dict[str, type[pl.DataType]] = {
-    "index_sid": pl.Int64,
-    "con_sid": pl.Int64,
+    "index_instrument_id": pl.Int64,
+    "constituent_instrument_id": pl.Int64,
     "trade_date": pl.Date,
     "weight": pl.Float64,
     "source": pl.Utf8,
