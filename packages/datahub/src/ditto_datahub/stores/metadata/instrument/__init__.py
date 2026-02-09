@@ -4,9 +4,25 @@ Instrument 子域 - 证券主数据（重构后命名）.
 命名映射：
 - Python 代码使用 instrument/source_ticker
 - 数据库表/列保持 instrument/source_ticker（避免数据迁移）
+
+CQRS 模式：
+- InstrumentReader - 查询接口（支持 PIT + DataCache）
+- InstrumentWriter - 写入接口（自动缓存失效）
+- InstrumentStore - 保留向后兼容
 """
 
+from ditto_datahub.stores.metadata.instrument.instrument_reader import (
+    InstrumentReader,
+)
 from ditto_datahub.stores.metadata.instrument.instrument_store import InstrumentStore
+from ditto_datahub.stores.metadata.instrument.instrument_writer import (
+    InstrumentWriter,
+)
 from ditto_datahub.stores.metadata.instrument.models import InstrumentRegistration
 
-__all__ = ["InstrumentRegistration", "InstrumentStore"]
+__all__ = [
+    "InstrumentReader",
+    "InstrumentRegistration",
+    "InstrumentStore",
+    "InstrumentWriter",
+]

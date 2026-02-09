@@ -8,16 +8,13 @@ Following design document at docs/design/02_data_design.md.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import polars as pl
 from ditto_foundation import logger, traced
 from ditto_foundation.util.io import file_md5
 
+from ditto_datahub.models.storage import WriteStoreResult
 from ditto_datahub.stores.base.sqlite_store import SQLiteStore
-
-if TYPE_CHECKING:
-    from ditto_datahub.models.storage import WriteStoreResult
 
 
 class IndexConstituentStore(SQLiteStore):
