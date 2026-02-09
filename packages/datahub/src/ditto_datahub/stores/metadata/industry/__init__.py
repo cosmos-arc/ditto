@@ -6,6 +6,8 @@ from ditto_datahub.stores.metadata.industry.industry_basic_store import (
 from ditto_datahub.stores.metadata.industry.industry_mapping_store import (
     IndustryMappingStore,
 )
+from ditto_datahub.stores.metadata.industry.industry_reader import IndustryReader
+from ditto_datahub.stores.metadata.industry.industry_writer import IndustryWriter
 from ditto_datahub.stores.metadata.industry.models import (
     IndustryBasic,
     IndustryMapping,
@@ -16,4 +18,6 @@ __all__ = [
     "IndustryBasicStore",
     "IndustryMapping",
     "IndustryMappingStore",
+    "IndustryReader",
+    "IndustryWriter",
 ]
