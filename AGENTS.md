@@ -1,184 +1,194 @@
 # AGENTS.md
 
-## Project Overview
+## 北极星原则
 
-Ditto 是一个量化交易系统，采用严格的代码质量和架构标准。
+> 以**卓越代码质量**为底线、以**艺术般的可读性与一致风格**为追求，持续产出**清晰、整洁、可演进的架构**与**可长期维护的工程实现**。
 
-**北极星原则**：以卓越代码质量为底线、以艺术般的可读性与一致风格为追求，持续产出清晰、整洁、可演进的架构与可长期维护的工程实现。
+**不可妥协：**
+- **质量**：正确性、可测试、可维护
+- **风格**：一致、克制、易读
+- **架构**：清晰边界、低耦合、高内聚、可演进
 
-**不可妥协**：质量（正确性、可测试、可维护）| 风格（一致、克制、易读）| 架构（清晰边界、低耦合、高内聚、可演进）
+**遇事不决调研业界最佳实践！！！**
+**胆敢偷工减料我就换掉当前模型！！！**
 
 ---
 
-## Setup Commands
+## 🎯 三条铁律（5 秒必读）
+
+1. **先探索后编码** - 涉及 2+ 文件或架构变更 → Plan Mode
+2. **理解优先于修改** - Read 文件 → Grep 模式 → Edit
+3. **验证后完成** - 声明完成前 → `pixi run -e dev check`
+
+---
+
+## 🔄 执行决策流程
+
+```
+用户请求
+  │
+  ├─ 涉及代码修改？
+  │   ├─ 是 → 检查 Skill
+  │   │   ├─ 创意/新功能 → brainstorming
+  │   │   ├─ Bug/失败 → systematic-debugging
+  │   │   ├─ 有实施计划 → executing-plans
+  │   │   └─ 多步骤任务 → writing-plans
+  │   │
+  │   ├─ 涉及 2+ 文件或架构变更？
+  │   │   └─ 是 → Plan Mode（先探索后编码）
+  │   │
+  │   └─ Python 代码修改？
+  │       └─ 是 → Read 文件 → Grep 模式 → Edit
+  │
+  └─ 完成前？
+      └─ 运行验证 → 声明完成
+```
+
+---
+
+## 📋 项目规范
+
+### 代码风格
+- **语言**：中文回复/文档，UTF-8 编码
+- **Python**：详见 [core.md](.claude/rules/core.md)
+- **类型**：禁止滥用 `# type: ignore`（详见 [noqa-ignore.md](.claude/rules/noqa-ignore.md)）
+- **TDD**：RED → GREEN → REFACTOR
+- **分支**：从 main 拉开发分支，PR 合并
+
+### 测试标准
+- **覆盖率**：分支覆盖率 ≥ 80%（详见 [python-test.md](.claude/rules/python-test.md)）
+- **新功能**：必须有单元测试
+- **API 变更**：必须有集成测试
+- **测试命令**：`pixi run -e dev test`
+
+### 架构原则
+```
+依赖方向: core → datahub → foundation
+          apps/port → datahub → foundation
+```
+
+- **边界检查**：`pixi run -e dev arch-check`
+- **重构**：完成后移除废弃代码，无需向后兼容
+- **禁止循环依赖**：必须重构架构，禁止 `TYPE_CHECKING` 延迟导入
+
+详细分层规范：
+- Foundation → [foundation.md](.claude/rules/foundation.md)
+- DataHub → [datahub.md](.claude/rules/datahub.md) | [pit.md](.claude/rules/pit.md)
+- Core → [core.md](.claude/rules/core.md)
+- Server → [server.md](.claude/rules/server.md)
+
+### 允许的依赖（严格限制）
+
+| 功能 | ✅ 允许 | ❌ 禁止 |
+|------|--------|---------|
+| 存储 | parquet / duckdb / sqlite | - |
+| 数据处理 | **polars** | pandas |
+| API | fastapi | - |
+| 任务 | prefect | - |
+| 日志 | loguru / opentelemetry | - |
+| 限流重试 | tenacity / limits | - |
+| 缓存 | cachebox | - |
+| JSON | **orjson** | json |
+| ASGI | granian | - |
+| 网络 | httpx | - |
+| 包管理 | **pixi** | pip/poetry/conda |
+
+### 常用命令
 
 ```bash
-# 安装依赖
-pixi install
-
-# 开发环境（自动设置 DITTO_ENV=development）
-pixi run -e dev pytest
-
-# 完整检查（format + lint + type + test）
-pixi run -e dev ci
-
 # 快速验证（开发时）
-pixi run -e dev check
+pixi run -e dev check          # lint + fmt + type + test --fast
 
 # 提交前检查
-pixi run -e dev pre-commit-run
+pixi run -e dev pre-commit-run # pre-commit hooks
+pixi run -e dev ci             # CI 完整检查
+
+# 测试
+pixi run -e dev test              # 默认：单元测试（并行）
+pixi run -e dev test --unit       # 只运行单元测试
+pixi run -e dev test --integration # 只运行集成测试
+pixi run -e dev test --fast       # 快速测试（跳过慢速）
+pixi run -e dev test --snapshot   # 支持 inline-snapshot
+
+# 类型检查
+pixi run -e dev type          # 源码（strict）
+pixi run -e dev type --tests  # 测试（basic）
+pixi run -e dev type --all    # 完整检查
+
+# 代码质量
+pixi run -e dev lint          # 检查
+pixi run -e dev lint --fix    # 自动修复
+pixi run -e dev fmt           # 格式化
 ```
 
-**注意**：代码格式（ruff format）和风格（ruff lint）通过 pre-commit hooks 和 CI 自动 enforce，Agent 生成的代码会自动被修正。
+### 禁止事项
+
+| ❌ 禁止 | 原因/替代 |
+|---------|-----------|
+| `import pandas` | 使用 polars |
+| `rolling_mean(20)` 无 `closed="left"` | 数据泄漏（详见 pit.md） |
+| 直接提交 main | 必须通过 PR |
+| 绕过 pre-commit/pyright/ruff | 必须通过检测 |
+| 文件操作用 Bash cat/sed/echo | 必须用 Read/Edit/Write |
+| SRC 内大量 `# noqa`/`# type:ignore` | 优先重构代码 |
+| `TYPE_CHECKING` 延迟导入 | 重构架构解决循环依赖 |
 
 ---
 
-## Tech Stack & Constraints
+## 🚀 执行优先级
 
-### 包管理
-**只用 pixi**（禁止 pip/poetry/conda）
+### 1. Skills 第一（处理前必查）
 
-### 依赖限制（无法自动检测，需严格遵守）
+**历史数据警告**：2,978 个会话分析，不调用 Skills → 失败率 40-50%，返工时间 3-5 倍
 
-| 类别 | ✅ 允许 | 🚫 禁止 |
-|------|---------|---------|
-| **存储** | parquet, duckdb, sqlite | - |
-| **数据处理** | **polars** | pandas |
-| **API** | fastapi | - |
-| **任务处理** | prefect | - |
-| **日志监控** | loguru, opentelemetry | - |
-| **限流重试** | tenacity, limits | - |
-| **本地缓存** | cachebox | - |
-| **Json序列化** | **orjson** | json |
-| **ASGI** | granian | - |
-| **网络请求** | httpx | - |
+| 场景 | 必须调用 | 后果 |
+|------|---------|------|
+| 创意/新功能 | `brainstorming` | 设计不完整，频繁重构 |
+| Bug/测试失败 | `systematic-debugging` | 盲目重试，80% 失败率 |
+| 实现功能 | `test-driven-development` | 引入 bug，破坏功能 |
+| 多步骤任务 | `writing-plans` | 遗漏边界情况 |
+| 完成任务 | `verification-before-completion` | 提交未验证代码 |
 
-**原因**：技术栈一致性直接影响可维护性，混用会导致依赖膨胀、行为不一致、性能问题。
+**流程**：用户请求 → 检查 Skill → 立即调用 → 再开始工作
+
+### 2. Read ≥ 2x Edit
+
+| 任务类型 | 最低 Read/Edit 比 |
+|---------|-------------------|
+| 简单修改 | 2.0 |
+| 中等修改 | 3.0 |
+| 重构任务 | 5.0 |
+
+**标准流程**：
+```bash
+Read <file>        # 理解当前实现
+Read <test_file>   # 理解预期行为
+Grep "<pattern>"   # 查找相关代码
+Edit <file>        # 现在才修改
+```
+
+**禁止模式**：
+| ❌ 禁止 | ✅ 正确 |
+|---------|---------|
+| 连续 Edit | Read → Edit |
+| Edit 失败后直接重试 | 调用 systematic-debugging |
+| 不读代码直接改 | 先理解再修改 |
 
 ---
 
-## Architecture
+## ✅ 完成前验证
 
-### 项目结构
-
-```
-ditto/
-├── packages/           # 核心包
-│   ├── foundation/    # 基础设施（最底层）
-│   ├── datahub/       # 数据访问层（依赖 foundation）
-│   └── core/          # 核心引擎（依赖 datahub）
-├── apps/              # 应用
-│   ├── port/          # Server 应用
-│   └── web/           # Web 应用
-└── config/            # 环境配置（按环境分组）
-    ├── development/
-    ├── testing/
-    └── production/
-```
-
-### 依赖方向
-
-```
-core → datahub → foundation
-apps/port → datahub → foundation
-```
-
-**规则**：
-- 禁止循环依赖
-- 禁止跨层导入（如 core 直接导入 foundation）
-- 详细规范：[.claude/rules/architecture.md](.claude/rules/architecture.md)
-
----
-
-## Testing
-
-### 覆盖率要求
-- **分支覆盖率**：≥80%（通过 pytest-cov enforce）
-- **类型检查**：0 errors（通过 basedpyright enforce）
-
-### 运行测试
+声明任务完成前，**必须**运行：
 
 ```bash
-# 默认：单元测试（并行）
-pixi run -e dev test
-
-# 只运行单元测试
-pixi run -e dev test --unit
-
-# 只运行集成测试（串行）
-pixi run -e dev test --integration
-
-# 快速测试（跳过慢速）
-pixi run -e dev test --fast
-
-# 支持 inline-snapshot（串行）
-pixi run -e dev test --snapshot
+pixi run -e dev check    # lint + fmt + type + test --fast
 ```
 
-### TDD 流程
-**强制流程**：RED（写失败测试）→ GREEN（最小实现）→ REFACTOR（重构代码）
-
-详细测试规范：[.claude/rules/python-test.md](.claude/rules/python-test.md)
-
----
-
-## Workflow
-
-### 强制流程
-
-**每次代码修改前**：
-1. 理解阶段：Read 实现文件 → Read 测试文件 → Grep 相关模式 → LSP refs（重构必须）
-2. 实现阶段：RED → GREEN → REFACTOR
-3. 验证阶段：verification-before-completion
-
-**调试时**：遇到错误必须调用 systematic-debugging Skill，禁止盲目重试
-
-**完成前**：必须调用 verification-before-completion Skill，运行 `pixi run -e dev ci` 确认通过
-
-详细工作流：[.claude/rules/workflow.md](.claude/rules/workflow.md)
-
----
-
-## Python Development Standards
-
-### 代码规模限制（自动 enforce）
-
-| 指标 | 限制 | enforce 方式 |
-|------|------|-------------|
-| 单文件行数 | ≤ 800 | `scripts/check_code_size.py` |
-| 函数长度 | ≤50 行 | ruff (max-statements) |
-| 参数个数 | ≤7 个 | ruff (max-args) |
-| 复杂度 | ≤10 (C90) | ruff (max-complexity) |
-| 行长度 | ≤88 | ruff |
-
-### LSP 辅助工具（强制：重构时必须使用）
-
-> GLM-4.7 无原生 LSP 能力，必须使用项目提供的 LSP 辅助脚本
-
-```bash
-# 查找定义
-pixi run -e dev python .claude/scripts/lsp_pyright.py goto <file> <line> <col>
-
-# 查找引用（重构必须）
-pixi run -e dev python .claude/scripts/lsp_pyright.py refs <file> <line> <col>
-
-# 列出符号
-pixi run -e dev python .claude/scripts/lsp_pyright.py symbols <file>
-
-# 类型信息
-pixi run -e dev python .claude/scripts/lsp_pyright.py hover <file> <line> <col>
-
-# 类型诊断
-pixi run -e dev python .claude/scripts/lsp_pyright.py diagnose [file]
-```
-
-**列号定位注意事项**：`<col>` 必须指向符号名称内部，不能指向行首
-
-### noqa/type:ignore 规范
-- 新增代码优先重构避免使用
-- 详见：[.claude/rules/noqa-ignore.md](.claude/rules/noqa-ignore.md)
-
-详细 Python 规范：[.claude/rules/core.md](.claude/rules/core.md)
+**分支门禁**：
+- [ ] basedpyright 类型检查通过
+- [ ] ruff 检查通过
+- [ ] 测试通过
+- [ ] 分支覆盖率 ≥ 80%
 
 ---
 
@@ -188,9 +198,8 @@ pixi run -e dev python .claude/scripts/lsp_pyright.py diagnose [file]
 - 使用 `Read` 工具读文件（禁止 cat）
 - 使用 `Edit` 工具编辑（禁止 sed）
 - 使用 `Write` 工具写文件（禁止 echo/cat >）
-- 重构前使用 LSP 查找引用
+- 重构前使用 Grep 查找引用
 - 遵循 TDD 流程（RED → GREEN → REFACTOR）
-- Python 源码处理优先使用 LSP 而非 Grep/Glob
 
 ### ⚠️ Ask first（需要人工批准）
 - 数据库 schema 变更
@@ -212,42 +221,42 @@ pixi run -e dev python .claude/scripts/lsp_pyright.py diagnose [file]
 
 ---
 
-## Language & Encoding
+## 附录：详细参考
 
-- **回复语言**：中文（文档、Commit、PR）
-- **文件编码**：UTF-8
-- **Commit 消息**：中文，遵循约定式提交格式
+### 项目架构
 
----
-
-## Documentation
-
-**文档驱动开发**：及时更新 README/Sprint/Plan/ADR
-
-详细文档规范：[.claude/rules/doc.md](.claude/rules/doc.md)
-
----
-
-## Quick Reference
-
-```bash
-# 开发前
-git status
-git branch --show-current
-
-# 修改前（强制）
-Read <file>
-Read <test_file>
-Grep "<pattern>"
-# LSP refs（重构）
-
-# 调试
-# 调用 systematic-debugging Skill
-
-# 完成前
-# 调用 verification-before-completion Skill
-pixi run -e dev ci
 ```
+ditto/
+├── packages/           # 核心包
+│   ├── foundation/    # 基础设施
+│   ├── datahub/       # 数据访问层
+│   └── core/          # 核心引擎
+├── apps/              # 应用
+│   ├── port/          # Server 应用
+│   └── web/           # Web 应用
+├── config/            # 环境配置（按环境分组）
+│   ├── development/
+│   ├── testing/
+│   └── production/
+└── docs/              # 文档
+```
+
+### 环境配置规范
+
+**双层环境架构**：
+
+| 层级 | 变量 | 有效值 | 说明 |
+|------|------|--------|------|
+| Pixi 环境 | 选择环境 | `default`, `dev` | 依赖管理层 |
+| 运行时环境 | `DITTO_ENV` | `development`, `testing`, `production` | 行为控制层 |
+
+**使用场景**：
+
+| 场景 | Pixi 环境 | DITTO_ENV | 命令 |
+|------|-----------|-----------|------|
+| 本地开发 | `dev` | `development` | `pixi run -e dev pytest` |
+| 测试执行 | `dev` | `testing` | `pixi run -e dev pytest` |
+| 生产部署 | `default` | `production` | `pixi run server` |
 
 ---
 
@@ -258,11 +267,9 @@ pixi run -e dev ci
 | 主配置 | [.claude/CLAUDE.md](.claude/CLAUDE.md) |
 | Python 核心规范 | [.claude/rules/core.md](.claude/rules/core.md) |
 | 测试规范 | [.claude/rules/python-test.md](.claude/rules/python-test.md) |
-| 架构规范 | [.claude/rules/architecture.md](.claude/rules/architecture.md) |
 | 工作流 | [.claude/rules/workflow.md](.claude/rules/workflow.md) |
 | Foundation 层规范 | [.claude/rules/foundation.md](.claude/rules/foundation.md) |
 | DataHub 层规范 | [.claude/rules/datahub.md](.claude/rules/datahub.md) |
-| Core 层规范 | [.claude/rules/core.md](.claude/rules/core.md) |
 | Server 层规范 | [.claude/rules/server.md](.claude/rules/server.md) |
 | Pitfalls 避坑指南 | [.claude/rules/pit.md](.claude/rules/pit.md) |
 | noqa/type:ignore 规范 | [.claude/rules/noqa-ignore.md](.claude/rules/noqa-ignore.md) |

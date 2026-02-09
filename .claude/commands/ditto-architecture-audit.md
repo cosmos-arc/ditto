@@ -1,6 +1,6 @@
 ---
 name: ditto-architecture-audit
-description: "全库架构审计 - 检查分层、依赖、工程质量、测试覆盖（LSP优先）"
+description: "全库架构审计 - 检查分层、依赖、工程质量、测试覆盖"
 implementation: .claude/commands/architecture-audit.py
 ---
 
@@ -31,23 +31,12 @@ pixi run -e dev test --integration
 - 读取 `.pre-commit-config.yaml` - 钩子规则
 - 读取 `.github/workflows/*.yml` - CI 检查项
 
-### 3. LSP 语义分析（优先）
-
-> 使用 `.claude/scripts/lsp_pyright.py` 进行 LSP 分析
+### 3. 传统模式匹配
 
 **架构约束检查**：
-- 使用 `refs` 检测死代码和未引用导出
-  ```bash
-  pixi run -e dev python .claude/scripts/lsp_pyright.py refs <file> <line> <col>
-  ```
-- 使用 `goto` 追踪依赖链，检测循环依赖
-  ```bash
-  pixi run -e dev python .claude/scripts/lsp_pyright.py goto <file> <line> <col>
-  ```
-- 使用 `symbols` 分析类/函数规模和结构
-  ```bash
-  pixi run -e dev python .claude/scripts/lsp_pyright.py symbols <file>
-  ```
+- 使用 `Grep` 检测死代码和未引用导出
+- 使用 `Grep` 追踪依赖链，检测循环依赖
+- 使用 `Read` 分析类/函数规模和结构
 - 从 port 层出发，检查是否存在**真正的层级穿透**：
 
 **层级穿透定义**（注意：Foundation 是横切层，可跨层访问）：
@@ -57,25 +46,18 @@ pixi run -e dev test --integration
 - ✅ port → datahub → foundation（正常依赖链）
 
 **工程实践检查**：
-- 使用 `symbols` 识别类规模（>300行）、方法数量（>15个）
-- 使用 `hover` 获取类型信息，检测 Any 类型滥用
-  ```bash
-  pixi run -e dev python .claude/scripts/lsp_pyright.py hover <file> <line> <col>
-  ```
-- 使用 `diagnose` 收集实时错误和警告
-  ```bash
-  pixi run -e dev python .claude/scripts/lsp_pyright.py diagnose <file>
-  ```
+- 使用 `Grep` 识别类规模（>300行）、方法数量（>15个）
+- 使用 `basedpyright` 检测 Any 类型滥用
+- 使用 `basedpyright` 收集实时错误和警告
 
 **命名与概念检查**：
-- 使用 `symbols` 获取类/函数的符号列表，提取命名
-- 使用 `refs` 追踪命名使用情况，检测孤立命名
-- 使用 `hover` 获取类型信息，分析命名与类型的语义匹配度
+- 使用 `Grep` 搜索命名模式
+- 使用 `Grep` 追踪命名使用情况，检测孤立命名
 - 对比类名与其方法/属性命名，检测职责一致性
 - 分析 Port 层命名是否混用技术术语（如 `SQLBarLoader`）
 - 检测同一概念的不同表述（如 `Bar`/`Kline`/`Candlestick`）
 
-### 4. 传统模式匹配（补充）
+### 4. 代码质量工具
 
 ```bash
 # 命名风格一致性检查
@@ -199,14 +181,14 @@ architecture_diagram = render_ascii(dependency_graph)
 
 ### 自动化检测
 
-通过规则模式匹配和 LSP 语义分析相结合，快速识别候选问题。
+通过规则模式匹配和代码分析相结合，快速识别候选问题。
 
 #### 规则模式匹配（快速检测）
 - **命名风格一致性检查**：检测驼峰、下划线、全大写风格混用
 - **缩写使用规范检查**：检测非标准缩写和领域术语不一致
 - **术语一致性检查**：检测业务术语与技术术语混用
 
-#### LSP 语义分析（深度检测）
+#### 代码分析（深度检测）
 - **概念边界分析**：对比类/模块职责与命名的匹配度
 - **抽象层次验证**：分析业务术语与技术术语的混用情况
 - **依赖链命名追踪**：检测命名在依赖链中的语义一致性

@@ -1,7 +1,7 @@
 """
 Architecture Audit - 全库架构审计脚本
 
-LSP 优先的架构和工程质量审计，生成完整报告。
+架构和工程质量审计，生成完整报告。
 """
 
 import ast
@@ -35,10 +35,10 @@ class ArchitectureAuditor:
         # 2. 构建导入图
         self._build_import_graph()
 
-        # 3. LSP 语义分析
-        self._run_lsp_analysis()
+        # 3. 代码分析
+        self._run_code_analysis()
 
-        # 4. 传统模式匹配
+        # 4. 模式匹配
         self._run_pattern_matching()
 
         # 5. 生成报告
@@ -245,9 +245,9 @@ class ArchitectureAuditor:
                     }
                 )
 
-    def _run_lsp_analysis(self) -> None:
-        """LSP 语义分析"""
-        print("🔎 运行 LSP 语义分析...")
+    def _run_code_analysis(self) -> None:
+        """代码分析"""
+        print("🔎 运行代码分析...")
 
         # 检查层级穿透（port 层依赖 infra 细节）
         self._check_layer_violation()

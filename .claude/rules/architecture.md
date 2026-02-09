@@ -35,15 +35,26 @@ paths: ./**/*.py
 
 以下规则由 `pixi run -e dev arch-check` 强制执行，违反即 CI 失败：
 
-1. `packages/foundation/src/**` 禁止依赖 `ditto_core` / `ditto_datahub` / `ditto_port`
-2. `packages/datahub/src/**` 禁止依赖 `ditto_core` / `ditto_port`
-3. `packages/core/src/**` 仅允许依赖 `ditto_datahub.models`，禁止依赖 DataHub 实现模块
-4. `apps/port/src/ditto_port/**`（非 `registry`）禁止直接导入：
-   - `ditto_datahub.stores.*`
-   - `ditto_datahub.sources.*`
-   - `ditto_datahub.runtime.*`
-5. `apps/port/src/ditto_port/registry/**` 可以导入 stores/sources 进行 DI 装配，但禁止在
-   Provider 中直接调用它们的业务方法（只允许注入与构造）
+使用 **Import Linter** 进行架构约束检查，配置位于 [pyproject.toml](pyproject.toml)。
+
+**检查类型：**
+1. **分层架构** (`layers`): Port → Core → DataHub → Foundation
+2. **Foundation 隔离** (`forbidden`): Foundation 禁止依赖其他层
+3. **DataHub 边界** (`forbidden`): DataHub 禁止依赖 Core/Port
+4. **Core 边界** (`forbidden`): Core 仅可依赖 DataHub models
+5. **Port 边界** (`protected`): Port 非 registry 禁止依赖 stores/sources/runtime
+6. **循环依赖** (`acyclic_siblings`): 检测包之间的循环依赖
+
+**运行检查：**
+```bash
+pixi run -e dev arch-check      # 完整检查
+lint-imports --contract layered-architecture  # 单独检查分层
+lint-imports --contract acyclic-packages       # 单独检查循环依赖
+```
+
+**注意：** 以下检查已废弃（不再执行）：
+- Legacy 术语检查（sid、src_code 等）- 由代码审查负责
+- Registry 方法调用检测 - 由代码审查负责
 
 ### 横切层 (Foundation)
 

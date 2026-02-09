@@ -10,8 +10,7 @@ description: 基于计划执行 TDD 开发
 ## 规范参考
 
 - **流程规范**: [`.claude/rules/workflow.md`](.claude/rules/workflow.md)
-- **检查清单**: [`.claude/checklists/code-change.md`](.claude/checklists/code-change.md)
-- **SKILLS**: [`.claude/CLAUDE.md`](.claude/CLAUDE.md#⚠️-skills-执行规则)
+- **架构规范**: [`.claude/rules/architecture.md`](.claude/rules/architecture.md)
 
 ## 输入
 
@@ -24,21 +23,29 @@ description: 基于计划执行 TDD 开发
 读取计划 → 确认任务 → 环境检查 → 询问疑问
 ```
 
-### 2. 执行决策
-调用 `superpowers:brainstorming` 决定：
-- 单任务 → `subagent-driven-development`
-- 多独立任务 → `dispatching-parallel-agents`（谨慎）
+### 2. TDD 开发
+- 1.使用`/brainstorming`理解和深入思考
+- 2.并行多个任务探索相关代码、测试、架构设计
+- 3.分析为Python开发时加载以下Skills：
+    - `/python-code-style`
+    - `/python-type-safety`
+    - `/python-design-patterns`
+    - `/python-configuration`
+    - `/python-anti-patterns`
+    - `/python-testing-patterns`
+    - `/python-error-handling`
+- 4.使用`/subagent-driven-development`进行执行
+- 5.使用`code-simplifier:code-simplifier`进行代码简化
 
-### 3. TDD 开发
 遵循 [`.claude/rules/workflow.md`](.claude/rules/workflow.md)：
 ```
 理解代码 → RED → GREEN → SIMPLIFIER -> REFACTOR
 ```
 
-### 4. 验证完成
+### 3. 验证完成
 调用 `verification-before-completion`
 
-### 5. 文档更新
+### 4. 文档更新
 -更新计划文档
 -更新README.md文档
 

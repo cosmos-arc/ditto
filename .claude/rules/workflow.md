@@ -16,8 +16,7 @@ paths: **/*.py
 理解阶段（强制）:
 ├─ Read 实现文件
 ├─ Read 测试文件
-├─ Grep 相关模式
-└─ LSP refs（重构必须）
+└─ Grep 相关模式
 
 实现阶段（TDD）:
 ├─ RED: 写失败测试
@@ -43,7 +42,7 @@ paths: **/*.py
 **每次修改前确认**：
 - [ ] 是否理解了现有代码？
 - [ ] 是否找到了相关测试？
-- [ ] 是否检查了依赖影响？（LSP refs）
+- [ ] 是否检查了依赖影响？（Grep 引用）
 - [ ] 是否调用了正确的 Skill？
 - [ ] 是否遵循了 TDD 流程？
 
@@ -66,7 +65,6 @@ git branch --show-current
 Read <file>
 Read <test_file>
 Grep "<pattern>"
-# LSP refs（重构）
 
 # 调试
 # 调用 systematic-debugging Skill

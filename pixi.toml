@@ -37,7 +37,7 @@ pydantic-settings = ">=2.6,<3"
 # 网络请求
 httpx = ">=0.28,<1"
 aiohttp = ">=3.11,<4"
-requests = ">=2.32.3,<2.32.4" # multilspy 依赖
+requests = ">=2.32.3,<2.32.4"
 
 # 配置与日志
 python-dotenv = ">=1.0,<2"
@@ -91,6 +91,9 @@ socksio = ">=1.0,<2"
 # 依赖注入
 dishka = ">=0.5,<1"
 
+# 架构约束检查
+import-linter = ">=2.6,<3"
+
 # ==========================================================
 # 开发环境 Feature
 # ==========================================================
@@ -129,9 +132,6 @@ jupyter = ">=1.1,<2"
 # BasedPyright 类型检查（Pyright fork，更严格的默认设置）
 basedpyright = ">=1.15,<2"
 
-# LSP 客户端（Pyright LSP）
-multilspy = ">=0.0.15,<0.1"
-
 # ==========================================================
 # 环境定义
 # ==========================================================
@@ -168,8 +168,8 @@ type = "python scripts/type.py"
 # Type all：完整类型检查（供 CI 使用）
 type-all = "python scripts/type.py --all"
 
-# Architecture check：架构边界检查
-arch-check = "python scripts/check_architecture.py"
+# Architecture check：架构边界检查（使用 Import Linter）
+arch-check = "lint-imports"
 
 # ──────────────────────────────────────────────────────────
 # 测试（使用包装脚本，支持参数驱动）

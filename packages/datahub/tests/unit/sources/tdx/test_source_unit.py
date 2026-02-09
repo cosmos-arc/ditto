@@ -1,13 +1,11 @@
 """Tests for TdxSource."""
 
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
 from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.tdx.source import TdxSource
-from ditto_datahub.stores.metadata.instrument import InstrumentStore
 from pytest_mock import MockerFixture
 
 
@@ -20,13 +18,6 @@ def mock_tdx_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def mock_instrument_store(mocker: MockerFixture) -> MagicMock:
-    """Mock InstrumentStore."""
-    store = mocker.MagicMock(spec=InstrumentStore)
-    return store
-
-
-@pytest.fixture
 def data_source_settings(mock_tdx_path: Path) -> DataSourceSettings:
     """创建 DataSourceSettings."""
     return DataSourceSettings(
@@ -35,13 +26,10 @@ def data_source_settings(mock_tdx_path: Path) -> DataSourceSettings:
 
 
 @pytest.fixture
-def tdx_source(
-    data_source_settings: DataSourceSettings, mock_instrument_store: MagicMock
-) -> TdxSource:
+def tdx_source(data_source_settings: DataSourceSettings) -> TdxSource:
     """创建 TdxSource 实例."""
     return TdxSource(
         data_source_settings=data_source_settings,
-        instrument_store=mock_instrument_store,
     )
 
 
@@ -114,32 +102,6 @@ class TestConvertToTdxExchange:
 class TestFetchStockDailyBars:
     """测试 fetch_stock_daily_bars 方法."""
 
-    def test_symbol_without_exchange_skips(
-        self,
-        tdx_source: TdxSource,
-        mock_instrument_store: MagicMock,
-        mocker: MockerFixture,
-    ) -> None:
-        """无 exchange 的 symbol 跳过."""
-        # Arrange
-        mock_instrument_store.enrich_with_symbol.return_value = pl.DataFrame(
-            {
-                "instrument_id": [1000001, 1000002],
-                "symbol": ["000001", "999999"],
-                "exchange": ["SZSE", None],
-            }
-        )
-
-        mock_reader = mocker.MagicMock()
-        mock_reader.fetch_stock_daily_bars.return_value = pl.DataFrame()
-        tdx_source.reader = mock_reader
-
-        # Act
-        tdx_source.fetch_stock_daily_bars(["000001", "999999"], "20240101")
-
-        # Assert - reader 应该只被调用一次（999999 被跳过）
-        assert mock_reader.fetch_stock_daily_bars.call_count == 1
-
     def test_empty_symbols_list(self, tdx_source: TdxSource) -> None:
         """空股票列表."""
         result = tdx_source.fetch_stock_daily_bars([], "20240101")
@@ -148,18 +110,10 @@ class TestFetchStockDailyBars:
     def test_symbol_to_source_ticker_conversion(
         self,
         tdx_source: TdxSource,
-        mock_instrument_store: MagicMock,
         mocker: MockerFixture,
     ) -> None:
         """Symbol 转换为 source_ticker 格式."""
         # Arrange
-        mock_instrument_store.enrich_with_symbol.return_value = pl.DataFrame(
-            {
-                "instrument_id": [1000001, 1000002],
-                "symbol": ["000001", "600000"],
-            }
-        )
-
         mock_reader = mocker.MagicMock()
         mock_reader.fetch_stock_daily_bars.return_value = pl.DataFrame(
             {
@@ -173,6 +127,13 @@ class TestFetchStockDailyBars:
         # Act
         result = tdx_source.fetch_stock_daily_bars(["000001", "600000"], "20240101")
 
+        # Assert - 验证 reader 被调用时使用 TDX 格式代码
+        mock_reader.fetch_stock_daily_bars.assert_called_once()
+        call_args = mock_reader.fetch_stock_daily_bars.call_args
+        tdx_codes = call_args[0][0]  # 第一个参数是 tdx_codes
+        assert "000001.SZ" in tdx_codes
+        assert "600000.SH" in tdx_codes
+
         # Assert - 验证返回 DataFrame 包含 symbol 列
         assert "symbol" in result.columns
         assert "source_ticker" not in result.columns
@@ -181,18 +142,10 @@ class TestFetchStockDailyBars:
     def test_multiple_symbols_batch(
         self,
         tdx_source: TdxSource,
-        mock_instrument_store: MagicMock,
         mocker: MockerFixture,
     ) -> None:
         """批量获取多个股票."""
         # Arrange
-        mock_instrument_store.enrich_with_symbol.return_value = pl.DataFrame(
-            {
-                "instrument_id": [1000001, 1000002, 1000003],
-                "symbol": ["000001", "600000", "510300"],
-            }
-        )
-
         mock_reader = mocker.MagicMock()
         mock_reader.fetch_stock_daily_bars.return_value = pl.DataFrame()
         tdx_source.reader = mock_reader
@@ -206,15 +159,10 @@ class TestFetchStockDailyBars:
     def test_fetch_returns_data_with_expected_columns(
         self,
         tdx_source: TdxSource,
-        mock_instrument_store: MagicMock,
         mocker: MockerFixture,
     ) -> None:
         """验证返回数据包含预期列."""
         # Arrange
-        mock_instrument_store.enrich_with_symbol.return_value = pl.DataFrame(
-            {"instrument_id": [1000001], "symbol": ["000001"]}
-        )
-
         mock_reader = mocker.MagicMock()
         mock_reader.fetch_stock_daily_bars.return_value = pl.DataFrame(
             {

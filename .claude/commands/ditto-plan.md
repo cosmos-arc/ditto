@@ -5,13 +5,12 @@ description: 生成结构化开发任务规划
 
 # /ditto-plan 命令
 
-使用 `superpowers:brainstorming` + `superpowers:writing-plans` 生成开发计划。
+基于输入需求分析并生成开发计划。
 
 ## 规范参考
 
 - **流程规范**: [`.claude/rules/workflow.md`](.claude/rules/workflow.md)
 - **架构规范**: [`.claude/rules/architecture.md`](.claude/rules/architecture.md)
-- **SKILLS**: [`.claude/CLAUDE.md`](.claude/CLAUDE.md#⚠️-skills-执行规则)
 
 ## 输入
 
@@ -20,9 +19,7 @@ description: 生成结构化开发任务规划
 ## 执行流程
 
 ### 1. 需求理解
-```
-docs/sprints/ → docs/design/ → 询问疑问
-```
+使用`/brainstorming`理解和深入思考 → 询问疑问并要求用户澄清
 
 ### 2. 任务拆解
 - 原子任务（单一职责）
@@ -30,8 +27,19 @@ docs/sprints/ → docs/design/ → 询问疑问
 - 依赖关系 + 执行顺序
 - 明确验收标准
 
+#### 2.1 复杂度速查
+
+| 等级 | 文件 | 代码行 | 特征 |
+|------|------|--------|------|
+| S | 1 | <50 | 单文件 |
+| M | 2-3 | 50-150 | 有模式 |
+| L | 4-6 | 150-400 | 跨模块 |
+| XL | >6 | >400 | **必须拆** |
+
+**风险加权 +1 级**：PIT、Kill Switch、Schema 变更、外部 API
+
 ### 3. 生成计划
-输出到 `docs/plans/{date}-{feature}.md`
+使用`/writing-plans`输出到 `docs/plans/{date}-{feature}.md`
 
 ```markdown
 # {feature}

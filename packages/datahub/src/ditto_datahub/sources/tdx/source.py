@@ -19,7 +19,6 @@ from loguru import logger
 
 from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.tdx.reader import TdxReader
-from ditto_datahub.stores.metadata.instrument import InstrumentStore
 
 
 class TdxSource:
@@ -37,19 +36,16 @@ class TdxSource:
     def __init__(
         self,
         data_source_settings: DataSourceSettings,
-        instrument_store: InstrumentStore,
     ) -> None:
         """
         初始化通达信数据源.
 
         Args:
             data_source_settings: 数据源配置（包含 tdx_path）
-            instrument_store: 证券存储（用于 symbol → exchange 转换）
 
         """
         self.tdx_path = Path(data_source_settings.tdx_path)
         self.reader = TdxReader(self.tdx_path)
-        self._instrument_store = instrument_store
 
     def fetch_stock_daily_bars(
         self,
