@@ -21,7 +21,7 @@ from ditto_datahub.models.market import (
     QUOTE_SCHEMA,
 )
 from ditto_datahub.models.portfolio import Portfolio, Position
-from ditto_datahub.models.storage import FreezeManifest, WriteResult, WriteResultStore
+from ditto_datahub.models.storage import FreezeManifest, WriteResult, WriteStoreResult
 from ditto_datahub.models.strategy import MarketState, Signal, SignalType
 from ditto_datahub.models.trading import Order, OrderSide, OrderStatus, Trade
 
@@ -50,5 +50,5 @@ __all__ = [
     "Source",
     "Trade",
     "WriteResult",
-    "WriteResultStore",
+    "WriteStoreResult",
 ]

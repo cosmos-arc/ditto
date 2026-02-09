@@ -11,7 +11,7 @@ from pathlib import Path
 
 import polars as pl
 
-from ditto_datahub.models.storage import WriteResultStore as WriteResult
+from ditto_datahub.models.storage import WriteStoreResult as WriteResult
 from ditto_datahub.stores.base import ParquetStore, YearlyPartition
 
 

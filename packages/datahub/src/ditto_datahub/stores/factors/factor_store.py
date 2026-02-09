@@ -9,7 +9,7 @@ import polars as pl
 from ditto_foundation import logger, traced
 
 from ditto_datahub.models import OnDuplicate
-from ditto_datahub.models.storage import WriteResultStore as WriteResult
+from ditto_datahub.models.storage import WriteStoreResult as WriteResult
 from ditto_datahub.stores.base import MergeResult, ParquetStore, YearlyPartition
 
 # Year range defaults (中国股市成立年份 / 遥远的未来年份)

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from ditto_datahub.models.storage import WriteResultStore
+if TYPE_CHECKING:
+    from ditto_datahub.models.storage import WriteStoreResult
 
 
 class BaseStore(ABC):
@@ -67,7 +69,7 @@ class BaseStore(ABC):
         data: object,
         on_duplicate: str = "error",
         **kwargs: object,
-    ) -> WriteResultStore:
+    ) -> WriteStoreResult:
         """
         写入数据.
 

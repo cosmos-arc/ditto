@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 __all__ = [
     "FreezeManifest",
     "WriteResult",
-    "WriteResultStore",
+    "WriteStoreResult",
 ]
 
 
@@ -21,8 +21,8 @@ class WriteResult:
 
 
 @dataclass(frozen=True)
-class WriteResultStore:
-    """存储层写入结果统计"""
+class WriteStoreResult:
+    """存储层写入结果统计."""
 
     file_path: str
     checksum: str

@@ -8,13 +8,16 @@ Following design document at docs/design/02_data_design.md.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import polars as pl
 from ditto_foundation import logger, traced
 from ditto_foundation.util.io import file_md5
 
-from ditto_datahub.models.storage import WriteResultStore
 from ditto_datahub.stores.base.sqlite_store import SQLiteStore
+
+if TYPE_CHECKING:
+    from ditto_datahub.models.storage import WriteStoreResult
 
 
 class IndexConstituentStore(SQLiteStore):
@@ -70,7 +73,7 @@ class IndexConstituentStore(SQLiteStore):
     # ============ Write operations ============
 
     @traced("data.write")
-    def write(self, df: pl.DataFrame) -> WriteResultStore:  # type: ignore[override]
+    def write(self, df: pl.DataFrame) -> WriteStoreResult:  # type: ignore[override]
         """
         Write index constituent data.
 
@@ -87,7 +90,7 @@ class IndexConstituentStore(SQLiteStore):
         """
         # Empty data check
         if len(df) == 0:
-            return WriteResultStore(
+            return WriteStoreResult(
                 file_path=str(self._db_path),
                 checksum="",
                 added=0,
@@ -194,7 +197,7 @@ class IndexConstituentStore(SQLiteStore):
             checksum=checksum,
         )
 
-        return WriteResultStore(
+        return WriteStoreResult(
             file_path=str(self._db_path),
             checksum=checksum,
             added=added,
