@@ -26,15 +26,15 @@ description: 基于计划执行 TDD 开发
 ### 2. TDD 开发
 - 1.使用`/brainstorming`理解和深入思考
 - 2.并行多个任务探索相关代码、测试、架构设计
-- 3.分析为Python开发时加载以下Skills：
-    - `/python-code-style`
-    - `/python-type-safety`
-    - `/python-design-patterns`
-    - `/python-configuration`
-    - `/python-anti-patterns`
-    - `/python-testing-patterns`
-    - `/python-error-handling`
-- 4.使用`/subagent-driven-development`进行执行
+- 3.【强制】使用 Skill tool 逐个调用以下 Python 开发 Skills（获取最佳实践）：
+    - Skill: `python-development:python-code-style`
+    - Skill: `python-development:python-type-safety`
+    - Skill: `python-development:python-design-patterns`
+    - Skill: `python-development:python-configuration`
+    - Skill: `python-development:python-anti-patterns`
+    - Skill: `python-development:python-testing-patterns`
+    - Skill: `python-development:python-error-handling`
+- 4.使用`/subagent-driven-development`进行执行（在子代理提示词中包含上述最佳实践）
 - 5.使用`code-simplifier:code-simplifier`进行代码简化
 
 遵循 [`.claude/rules/workflow.md`](.claude/rules/workflow.md)：

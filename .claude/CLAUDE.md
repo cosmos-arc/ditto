@@ -173,6 +173,7 @@ Edit <file>        # 现在才修改
 | 连续 Edit | Read → Edit |
 | Edit 失败后直接重试 | 调用 systematic-debugging |
 | 不读代码直接改 | 先理解再修改 |
+| TYPE_CHECKING解决循环引用 | 重构解决 |
 
 ---
 
