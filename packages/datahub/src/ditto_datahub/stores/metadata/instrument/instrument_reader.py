@@ -445,3 +445,43 @@ class InstrumentReader:
             self._cache.set(cache_key, result)
 
         return result
+
+    def get_by_instrument_id(self, instrument_id: int) -> dict[str, Any] | None:
+        """
+        根据 instrument_id 获取证券信息。
+
+        Args:
+            instrument_id: 证券 ID
+
+        Returns:
+            证券信息字典，未找到时返回 None
+
+        """
+        row = self._client.fetchone(
+            "SELECT * FROM instrument WHERE instrument_id = ?", [instrument_id]
+        )
+        return dict(row) if row else None
+
+    def enrich_with_symbol(self, df: pl.DataFrame) -> pl.DataFrame:
+        """
+        向 DataFrame 添加 symbol 列。
+
+        Args:
+            df: 包含 instrument_id 列的 DataFrame
+
+        Returns:
+            添加了 symbol 列的 DataFrame
+
+        """
+        if df.is_empty():
+            return df
+
+        instrument_ids = df["instrument_id"].unique().to_list()
+        mapping = self.get_instrument_id_symbol_map(instrument_ids)
+
+        # 使用 map_elements 替代 map_dict
+        return df.with_columns(
+            pl.col("instrument_id")
+            .map_elements(lambda x: mapping.get(x, None), return_dtype=pl.String)
+            .alias("symbol")
+        )

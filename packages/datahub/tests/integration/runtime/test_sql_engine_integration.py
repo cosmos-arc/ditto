@@ -5,9 +5,6 @@ from tempfile import TemporaryDirectory
 
 import polars as pl
 from ditto_datahub.runtime.sql_engine import SqlEngine
-from ditto_datahub.stores.metadata.calendar import CalendarStore
-from ditto_datahub.stores.metadata.instrument import InstrumentStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
 
@@ -35,17 +32,8 @@ class TestSqlEngine:
         self.pool = SQLitePool(str(db_path), schema_path=schema_path)
         self.pool.init_schema()
 
-        # Create stores
-        sqlite_client = SQLiteClient(self.pool)
-        self.instrument_store = InstrumentStore(sqlite_client)
-        self.calendar_store = CalendarStore(sqlite_client)
-
-        # Create SqlEngine
-        self.engine = SqlEngine(
-            data_root=self.data_root,
-            instrument_store=self.instrument_store,
-            calendar_store=self.calendar_store,
-        )
+        # Create SqlEngine (no longer requires instrument_store or calendar_store)
+        self.engine = SqlEngine(data_root=self.data_root)
 
     def teardown_method(self) -> None:
         """Clean up test environment."""

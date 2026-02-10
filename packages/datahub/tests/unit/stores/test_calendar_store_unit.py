@@ -1,19 +1,19 @@
-"""Tests for CalendarStore."""
+"""Tests for CalendarReader and CalendarWriter (CQRS pattern)."""
 
 import pytest
-from ditto_datahub.stores.metadata.calendar import CalendarStore
+from ditto_datahub.stores.metadata.calendar import CalendarReader, CalendarWriter
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from pytest_mock import MockerFixture
 
 
-class TestCalendarStore:
-    """Tests for CalendarStore."""
+class TestCalendarReader:
+    """Tests for CalendarReader."""
 
     @pytest.fixture(autouse=True)
     def setup(self, sqlite_client: SQLiteClient) -> None:
         """使用 fixture 自动注入已初始化的数据库客户端."""
         self.client = sqlite_client
-        self.store = CalendarStore(self.client)
+        self.reader = CalendarReader(self.client)
 
         # Insert test calendar data
         self._insert_test_data()
@@ -176,17 +176,17 @@ class TestCalendarStore:
         self.client.commit()
 
         # Reload cache
-        self.store._load_cache()
+        self.reader.reload()
 
     def test_is_trading_day(self) -> None:
         """Test checking if a date is a trading day."""
-        assert self.store.is_trading_day("2024-01-02") is True
-        assert self.store.is_trading_day("2024-01-01") is False
-        assert self.store.is_trading_day("2024-01-06") is False  # Saturday
+        assert self.reader.is_trading_day("2024-01-02") is True
+        assert self.reader.is_trading_day("2024-01-01") is False
+        assert self.reader.is_trading_day("2024-01-06") is False  # Saturday
 
     def test_get_calendar_day(self) -> None:
         """Test getting calendar day data."""
-        day = self.store.get("2024-01-02")
+        day = self.reader.get("2024-01-02")
         assert day is not None
         assert day.trade_date == "2024-01-02"
         assert day.is_open is True
@@ -195,13 +195,13 @@ class TestCalendarStore:
 
     def test_get_prev_trading_day(self) -> None:
         """Test getting previous trading day."""
-        assert self.store.get_prev("2024-01-03") == "2024-01-02"
-        assert self.store.get_prev("2024-01-08") == "2024-01-05"  # After weekend
+        assert self.reader.get_prev("2024-01-03") == "2024-01-02"
+        assert self.reader.get_prev("2024-01-08") == "2024-01-05"  # After weekend
 
     def test_get_next_trading_day(self) -> None:
         """Test getting next trading day."""
-        assert self.store.get_next("2024-01-02") == "2024-01-03"
-        assert self.store.get_next("2024-01-05") == "2024-01-08"  # Friday to Monday
+        assert self.reader.get_next("2024-01-02") == "2024-01-03"
+        assert self.reader.get_next("2024-01-05") == "2024-01-08"  # Friday to Monday
 
     @pytest.mark.parametrize(
         ("date", "offset", "expected"),
@@ -219,24 +219,24 @@ class TestCalendarStore:
     )
     def test_offset(self, date: str, offset: int, expected: str) -> None:
         """Test offset with positive and negative values."""
-        assert self.store.offset(date, offset) == expected
+        assert self.reader.offset(date, offset) == expected
 
     def test_offset_out_of_range(self) -> None:
         """Test offset beyond available data."""
         # Before first trading day
-        assert self.store.offset("2024-01-02", -10) is None
+        assert self.reader.offset("2024-01-02", -10) is None
         # After last trading day
-        assert self.store.offset("2024-01-10", 10) is None
+        assert self.reader.offset("2024-01-10", 10) is None
 
     def test_get_range(self) -> None:
         """Test getting trading days in a range."""
-        result = self.store.get_range("2024-01-02", "2024-01-05")
+        result = self.reader.get_range("2024-01-02", "2024-01-05")
         assert len(result) == 4
         assert result == ["2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"]
 
     def test_get_range_with_holidays(self) -> None:
         """Test getting range that includes holidays."""
-        result = self.store.get_range("2024-01-01", "2024-01-10")
+        result = self.reader.get_range("2024-01-01", "2024-01-10")
         # Should exclude weekends and holidays
         assert len(result) == 7
         assert "2024-01-01" not in result  # Holiday
@@ -245,7 +245,7 @@ class TestCalendarStore:
 
     def test_get_range_df(self) -> None:
         """Test getting range as DataFrame."""
-        df = self.store.get_range_df("2024-01-02", "2024-01-04", only_open=True)
+        df = self.reader.get_range_df("2024-01-02", "2024-01-04", only_open=True)
         assert len(df) == 3
         assert "trade_date" in df.columns
         assert "is_open" in df.columns
@@ -253,13 +253,13 @@ class TestCalendarStore:
 
     def test_get_range_df_all_days(self) -> None:
         """Test getting range as DataFrame including non-trading days."""
-        df = self.store.get_range_df("2024-01-01", "2024-01-03", only_open=False)
+        df = self.reader.get_range_df("2024-01-01", "2024-01-03", only_open=False)
         assert len(df) == 3
         assert df["trade_date"].to_list() == ["2024-01-01", "2024-01-02", "2024-01-03"]
 
     def test_count_trading_days(self) -> None:
         """Test counting trading days in range."""
-        count = self.store.count_trading_days("2024-01-01", "2024-01-10")
+        count = self.reader.count_trading_days("2024-01-01", "2024-01-10")
         assert count == 7
 
     def test_get_month_ends(self) -> None:
@@ -274,44 +274,135 @@ class TestCalendarStore:
                     5, 1, 1, 2024, TRUE, TRUE, FALSE)"""
         )
         self.client.commit()
-        self.store._load_cache()
+        self.reader.reload()
 
-        result = self.store.get_month_ends("2024-01-01", "2024-01-31")
+        result = self.reader.get_month_ends("2024-01-01", "2024-01-31")
         assert len(result) == 1
         assert result[0] == "2024-01-31"
 
     def test_get_first_trading_day(self) -> None:
         """Test getting first trading day."""
-        first = self.store.get_first_trading_day()
+        first = self.reader.get_first_trading_day()
         assert first == "2024-01-02"
 
     def test_get_last_trading_day(self) -> None:
         """Test getting last trading day."""
-        last = self.store.get_last_trading_day()
+        last = self.reader.get_last_trading_day()
         assert last == "2024-01-10"
 
     def test_get_latest_before(self) -> None:
         """Test getting latest trading day on or before a date."""
         # If date is a trading day, should return that day (on or before)
-        assert self.store.get_latest_before("2024-01-05") == "2024-01-05"
+        assert self.reader.get_latest_before("2024-01-05") == "2024-01-05"
         # Monday, should get Monday itself since it's a trading day
-        assert self.store.get_latest_before("2024-01-08") == "2024-01-08"
+        assert self.reader.get_latest_before("2024-01-08") == "2024-01-08"
         # Sunday, should get Friday (on or before Sunday)
-        assert self.store.get_latest_before("2024-01-07") == "2024-01-05"
+        assert self.reader.get_latest_before("2024-01-07") == "2024-01-05"
         # Before first day
-        assert self.store.get_latest_before("2024-01-01") is None
+        assert self.reader.get_latest_before("2024-01-01") is None
 
     def test_get_earliest_after(self) -> None:
         """Test getting earliest trading day after a date."""
         # On or after includes the day itself if it's a trading day
-        assert self.store.get_earliest_after("2024-01-03") == "2024-01-03"
+        assert self.reader.get_earliest_after("2024-01-03") == "2024-01-03"
         # Sunday, should get Monday
-        assert self.store.get_earliest_after("2024-01-06") == "2024-01-08"
+        assert self.reader.get_earliest_after("2024-01-06") == "2024-01-08"
         # After last trading day (2024-01-10 is last trading day, so after that is None)
         # Actually 2024-01-10 is a trading day, so it should return itself
-        assert self.store.get_earliest_after("2024-01-10") == "2024-01-10"
+        assert self.reader.get_earliest_after("2024-01-10") == "2024-01-10"
         # Strictly after last day
-        assert self.store.get_earliest_after("2024-01-11") is None
+        assert self.reader.get_earliest_after("2024-01-11") is None
+
+    def test_get_range_returns_immutable_copy(self) -> None:
+        """Test that get_range returns a copy to prevent cache pollution."""
+        from ditto_foundation.cache import DataCache
+
+        # Create reader with DataCache
+        data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
+        reader_with_cache = CalendarReader(self.client, data_cache=data_cache)
+
+        # Call get_range twice
+        result1 = reader_with_cache.get_range("2024-01-02", "2024-01-05")
+        result2 = reader_with_cache.get_range("2024-01-02", "2024-01-05")
+
+        # Each call returns a copy (different objects)
+        assert result1 is not result2, "Each call should return a new copy"
+
+        # But content should be the same
+        assert result1 == result2
+
+        # Modify result1
+        result1.append("2024-01-15")
+        result1.remove("2024-01-02")
+
+        # result2 should not be affected
+        assert len(result2) == 4
+        assert "2024-01-02" in result2
+        assert "2024-01-15" not in result2
+
+        # Third call should return correct data
+        result3 = reader_with_cache.get_range("2024-01-02", "2024-01-05")
+        assert len(result3) == 4
+        assert "2024-01-02" in result3
+        assert "2024-01-15" not in result3
+
+
+class TestCalendarWriter:
+    """Tests for CalendarWriter."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端."""
+        self.client = sqlite_client
+        self.reader = CalendarReader(self.client)
+        self.writer = CalendarWriter(self.client, None, self.reader)
+
+        # Insert test calendar data
+        self._insert_test_data()
+
+    def _insert_test_data(self) -> None:
+        """Insert test trading calendar data."""
+        test_data = [
+            (
+                "2024-01-02",
+                True,
+                None,
+                "2024-01-03",
+                1,
+                1,
+                1,
+                2024,
+                False,
+                False,
+                False,
+            ),
+            (
+                "2024-01-03",
+                True,
+                "2024-01-02",
+                None,
+                1,
+                1,
+                1,
+                2024,
+                False,
+                False,
+                False,
+            ),
+        ]
+
+        for row in test_data:
+            self.client.execute(
+                """INSERT INTO trading_calendar
+                (trade_date, is_open, prev_trade_date, next_trade_date,
+                 week_of_year, month, quarter, year,
+                 is_week_end, is_month_end, is_quarter_end)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                row,
+            )
+
+        self.client.commit()
+        self.reader.reload()
 
     def test_upsert(self) -> None:
         """Test upserting calendar records."""
@@ -319,15 +410,18 @@ class TestCalendarStore:
             {
                 "trade_date": "2024-01-15",
                 "is_open": True,
-                "prev_trade_date": "2024-01-10",
+                "prev_trade_date": "2024-01-03",
                 "next_trade_date": None,
             }
         ]
 
-        count = self.store.upsert(records)
+        count = self.writer.upsert(records)
         assert count == 1
 
-        # Verify the record was inserted
+        # Verify the record was inserted via reader
+        day = self.reader.get("2024-01-15")
+        assert day is not None
+        assert day.trade_date == "2024-01-15"
 
     def test_upsert_logs_error_on_exception(self, mocker: MockerFixture) -> None:
         """Test upsert logs error with error_type and error_message on exception."""
@@ -348,7 +442,7 @@ class TestCalendarStore:
             )
 
             with pytest.raises(RuntimeError):
-                self.store.upsert(records)
+                self.writer.upsert(records)
 
             # Verify logger.error was called with error_type and error_message
             mock_logger.error.assert_called_once()
@@ -357,41 +451,3 @@ class TestCalendarStore:
             assert "error_message" in call_kwargs
             assert call_kwargs["event"] == "calendar_upsert_failed"
             assert call_kwargs["error_type"] == "RuntimeError"
-
-    def test_get_range_returns_immutable_copy(self) -> None:
-        """Test that get_range returns a copy to prevent cache pollution."""
-        # [REVIEW]
-        from ditto_foundation.cache import DataCache
-
-        # Create store with DataCache
-        data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
-        store_with_cache = CalendarStore(self.client, data_cache=data_cache)
-
-        # Call get_range twice
-        result1 = store_with_cache.get_range("2024-01-02", "2024-01-05")
-        result2 = store_with_cache.get_range("2024-01-02", "2024-01-05")
-
-        # Each call returns a copy (different objects)
-        assert result1 is not result2, "Each call should return a new copy"
-
-        # But content should be the same
-        assert result1 == result2
-
-        # Modify result1
-        result1.append("2024-01-15")
-        result1.remove("2024-01-02")
-
-        # result2 should not be affected
-        assert len(result2) == 4
-        assert "2024-01-02" in result2
-        assert "2024-01-15" not in result2
-
-        # Third call should return correct data
-        result3 = store_with_cache.get_range("2024-01-02", "2024-01-05")
-        assert len(result3) == 4
-        assert "2024-01-02" in result3
-        assert "2024-01-15" not in result3
-
-    def teardown_method(self) -> None:
-        """Clean up after test."""
-        pass
