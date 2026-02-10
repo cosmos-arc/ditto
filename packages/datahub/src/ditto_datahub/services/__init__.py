@@ -16,6 +16,8 @@ Services module - 域服务统一入口.
 - MacroService: 宏观经济指标（经济、利率、汇率、货币供应）
 - FeatureService: 技术指标数据（趋势、动量、波动率、成交量）
 - FactorService: 因子信号数据（基本面、技术面、宏观、统计）
+- SourceService: 外部数据源访问（Tushare 等）
+- IngestionLogService: 数据摄入日志管理（追踪摄入状态、失败重试）
 """
 
 # Market 域服务
@@ -45,6 +47,12 @@ from ditto_datahub.services.metadata import (
     MetadataService,
 )
 
+# Runtime 服务
+from ditto_datahub.services.runtime import IngestionLogService
+
+# Source 服务
+from ditto_datahub.services.source_service import SourceService
+
 __all__ = [
     "AdjType",
     "CapitalService",
@@ -53,6 +61,7 @@ __all__ = [
     "FeatureQuery",
     "FeatureService",
     "FundamentalService",
+    "IngestionLogService",
     "MacroQuery",
     "MacroService",
     "MarketBarsQuery",
@@ -60,4 +69,5 @@ __all__ = [
     "MarketService",
     "MetadataQuery",
     "MetadataService",
+    "SourceService",
 ]

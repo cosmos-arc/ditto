@@ -1,5 +1,6 @@
 """Index bars data store."""
 
-from ditto_datahub.stores.market.index.bars.bars_store import IndexBarsStore
+from ditto_datahub.stores.market.index.bars.bars_reader import IndexBarsReader
+from ditto_datahub.stores.market.index.bars.bars_writer import IndexBarsWriter
 
-__all__ = ["IndexBarsStore"]
+__all__ = ["IndexBarsReader", "IndexBarsWriter"]

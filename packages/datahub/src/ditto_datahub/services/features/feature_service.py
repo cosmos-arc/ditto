@@ -12,9 +12,17 @@ from typing import Literal
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.stores.features.technical import (
-    IndicatorMetadataStore,
-    IndicatorStore,
+from ditto_datahub.stores.features.technical.technical_indicator_metadata_reader import (  # noqa: E501
+    TechnicalIndicatorMetadataReader,
+)
+from ditto_datahub.stores.features.technical.technical_indicator_metadata_writer import (  # noqa: E501
+    TechnicalIndicatorMetadataWriter,
+)
+from ditto_datahub.stores.features.technical.technical_indicator_reader import (
+    TechnicalIndicatorReader,
+)
+from ditto_datahub.stores.features.technical.technical_indicator_writer import (
+    TechnicalIndicatorWriter,
 )
 
 
@@ -46,7 +54,9 @@ class FeatureService:
     Features domain unified service.
 
     Features 域统一查询服务,提供技术指标数据的高级查询 API,
-    集成 IndicatorStore 和 IndicatorMetadataStore.
+    集成 TechnicalIndicatorReader/Writer 和 IndicatorMetadataReader/Writer.
+
+    Follows CQRS pattern with separate Reader and Writer components.
 
     **注意**：技术指标不需要 PIT 支持，因为计算公式固定且可重现。
     与需要 PIT 的基本面特征不同，技术指标在任何时间点重新计算都会得到相同结果。
@@ -54,22 +64,28 @@ class FeatureService:
 
     def __init__(
         self,
-        indicator_store: IndicatorStore,
-        metadata_store: IndicatorMetadataStore,
+        indicator_reader: TechnicalIndicatorReader,
+        indicator_writer: TechnicalIndicatorWriter,
+        metadata_reader: TechnicalIndicatorMetadataReader,
+        metadata_writer: TechnicalIndicatorMetadataWriter,
     ) -> None:
         """
-        Initialize FeatureService.
+        Initialize FeatureService with CQRS Readers and Writers.
 
         Args:
-            indicator_store: Indicator data storage.
-            metadata_store: Indicator metadata storage.
+            indicator_reader: Technical indicator data reader.
+            indicator_writer: Technical indicator data writer.
+            metadata_reader: Indicator metadata reader.
+            metadata_writer: Indicator metadata writer.
 
         """
-        self._indicator_store = indicator_store
-        self._metadata_store = metadata_store
+        self._indicator_reader = indicator_reader
+        self._indicator_writer = indicator_writer
+        self._metadata_reader = metadata_reader
+        self._metadata_writer = metadata_writer
 
         logger.debug(
-            "FeatureService initialized",
+            "FeatureService initialized with CQRS Readers and Writers",
             event="feature_service_init_complete",
         )
 
@@ -107,7 +123,7 @@ class FeatureService:
         indicator_ids_str: list[str] | None = (
             None if query.indicators is None else [str(i) for i in query.indicators]
         )
-        data_df = self._indicator_store.read(
+        data_df = self._indicator_reader.read(
             start_date=query.start,
             end_date=query.end,
             indicator_types=indicator_types_str,
@@ -146,7 +162,7 @@ class FeatureService:
 
         # Batch fetch metadata for all indicators (优化：一次性查询所有元数据)
         codes = [str(iid) for iid in indicator_ids]
-        metadata_df = self._metadata_store.batch_get_by_codes(codes)
+        metadata_df = self._metadata_reader.batch_get_by_codes(codes)
 
         if metadata_df.is_empty():
             return df
@@ -162,7 +178,11 @@ class FeatureService:
         return result
 
     def close(self) -> None:
-        """Close the underlying stores."""
-        # IndicatorStore uses Parquet, no close needed
-        # MetadataStore uses SQLite, close it
-        self._metadata_store.close()
+        """
+        Close the underlying stores.
+
+        Note: TechnicalIndicatorReader/Writer use Parquet, no close needed.
+        The SQLite client from MetadataReader should be closed by the owner.
+        """
+        # Readers/Writers don't own resources, no action needed
+        pass

@@ -9,8 +9,14 @@ from typing import Any, ClassVar, Literal, cast
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.stores.macro.indicator.indicator_store import IndicatorStore
-from ditto_datahub.stores.macro.indicator.metadata_store import IndicatorMetadataStore
+from ditto_datahub.stores.macro.indicator.indicator_reader import IndicatorReader
+from ditto_datahub.stores.macro.indicator.indicator_writer import IndicatorWriter
+from ditto_datahub.stores.macro.indicator.metadata_reader import (
+    IndicatorMetadataReader,
+)
+from ditto_datahub.stores.macro.indicator.metadata_writer import (
+    IndicatorMetadataWriter,
+)
 
 type MacroCategory = Literal[
     "economic", "interest_rate", "exchange_rate", "money_supply"
@@ -56,7 +62,9 @@ class MacroService:
     Macro domain unified query service.
 
     Provides high-level query API for macro indicator data,
-    integrating IndicatorStore and IndicatorMetadataStore.
+    integrating IndicatorReader/Writer and IndicatorMetadataReader/Writer.
+
+    Follows CQRS pattern with separate Reader and Writer components.
     """
 
     _WRITE_REQUIRED_COLUMNS: ClassVar[set[str]] = {
@@ -71,22 +79,28 @@ class MacroService:
 
     def __init__(
         self,
-        indicator_store: IndicatorStore,
-        metadata_store: IndicatorMetadataStore,
+        indicator_reader: IndicatorReader,
+        indicator_writer: IndicatorWriter,
+        metadata_reader: IndicatorMetadataReader,
+        metadata_writer: IndicatorMetadataWriter,
     ) -> None:
         """
-        Initialize MacroService.
+        Initialize MacroService with CQRS Readers and Writers.
 
         Args:
-            indicator_store: Indicator data storage.
-            metadata_store: Indicator metadata storage.
+            indicator_reader: Indicator data reader.
+            indicator_writer: Indicator data writer.
+            metadata_reader: Indicator metadata reader.
+            metadata_writer: Indicator metadata writer.
 
         """
-        self._indicator_store = indicator_store
-        self._metadata_store = metadata_store
+        self._indicator_reader = indicator_reader
+        self._indicator_writer = indicator_writer
+        self._metadata_reader = metadata_reader
+        self._metadata_writer = metadata_writer
 
         logger.debug(
-            "MacroService initialized",
+            "MacroService initialized with CQRS Readers and Writers",
             event="macro_service_init_complete",
         )
 
@@ -103,7 +117,7 @@ class MacroService:
 
         indicator_mapping = self._upsert_indicator_metadata(df)
         write_df = self._prepare_indicator_records(df, indicator_mapping)
-        records_written = self._indicator_store.write(write_df)
+        records_written = self._indicator_writer.write(write_df)
 
         return MacroWriteResult(
             dataset="macro_indicators",
@@ -142,7 +156,7 @@ class MacroService:
             return pl.DataFrame()
 
         # Step 2: Query indicator data
-        data_df = self._indicator_store.get(
+        data_df = self._indicator_reader.get(
             indicator_ids=indicator_ids,
             start_date=query.start,
             end_date=query.end,
@@ -183,7 +197,7 @@ class MacroService:
         """
         # If indicators is None, get all indicators (filtered by category/frequency)
         if indicators is None:
-            metadata = self._metadata_store.list_by_category(category)
+            metadata = self._metadata_reader.list_by_category(category)
             if frequency:
                 metadata = metadata.filter(pl.col("frequency") == frequency)
             return metadata["indicator_id"].to_list()
@@ -194,7 +208,7 @@ class MacroService:
             ids: list[int] = []
             for code in codes:
                 # Ensure code is string type
-                row = self._metadata_store.get_by_code(str(code))
+                row = self._metadata_reader.get_by_code(str(code))
                 if not row.is_empty():
                     ids.append(int(row["indicator_id"][0]))
             return ids
@@ -204,7 +218,7 @@ class MacroService:
         ids = [int(iid) for iid in set(indicators)]  # Deduplicate and ensure int
         if category or frequency:
             # Get all metadata and filter
-            all_metadata = self._metadata_store.list_by_category(category)
+            all_metadata = self._metadata_reader.list_by_category(category)
             if frequency:
                 all_metadata = all_metadata.filter(pl.col("frequency") == frequency)
             valid_ids = set(all_metadata["indicator_id"].to_list())
@@ -221,7 +235,7 @@ class MacroService:
 
         mapping: dict[str, int] = {}
         for code, row in metadata_by_code.items():
-            mapping[code] = self._metadata_store.upsert(
+            mapping[code] = self._metadata_writer.upsert(
                 code=code,
                 name=str(row["indicator_name"]),
                 category=cast(MacroCategory, str(row["category"])),
@@ -292,7 +306,7 @@ class MacroService:
         # Batch fetch metadata for all indicators (优化：一次性查询所有元数据)
         metadata_df = pl.DataFrame()
         for iid in indicator_ids:
-            row = self._metadata_store.get_by_id(iid)
+            row = self._metadata_reader.get_by_id(iid)
             if not row.is_empty():
                 if metadata_df.is_empty():
                     metadata_df = row
@@ -314,6 +328,10 @@ class MacroService:
         return result
 
     def close(self) -> None:
-        """Close the underlying stores."""
-        self._indicator_store.close()
-        self._metadata_store.close()
+        """
+        Close the underlying stores.
+
+        Note: Readers/Writers share SQLite client which should be closed by the owner.
+        """
+        # Readers/Writers don't own resources, no action needed
+        pass

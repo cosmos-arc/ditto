@@ -11,9 +11,9 @@
 """
 
 import polars as pl
-from ditto_datahub.hub import DataHub
 from ditto_datahub.models import WriteResult
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
+from ditto_datahub.services.runtime import IngestionLogService
 
 from ditto_port.models import IngestionResult
 from ditto_port.services.ingestion.errors import SourceFetchError
@@ -26,17 +26,24 @@ class IngestionResultHandler:
     负责将摄取操作的各种结果转换为 IngestionResult 并记录日志。
     """
 
-    def __init__(self, hub: DataHub, source_name: str) -> None:
+    def __init__(
+        self, ingestion_log_service: IngestionLogService | None, source_name: str
+    ) -> None:
         """
         初始化 IngestionResultHandler。
 
         Args:
-            hub: DataHub 实例，用于访问 ingestion_log
+            ingestion_log_service: IngestionLogService 实例，用于访问 ingestion_log
             source_name: 数据源名称
 
         """
-        self._hub = hub
+        self._ingestion_log_service = ingestion_log_service
         self._source_name = source_name
+
+    def _save_log(self, log: IngestionLog) -> None:
+        """保存日志（如果提供了 ingestion_log_service）。"""
+        if self._ingestion_log_service:
+            self._ingestion_log_service.save_log(log)
 
     def handle_fetch_error(
         self, dataset: str, trade_date: str, error: SourceFetchError
@@ -53,7 +60,7 @@ class IngestionResultHandler:
             IngestionResult: 失败结果
 
         """
-        self._hub.ingestion_log_store.save_log(
+        self._save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
@@ -86,7 +93,7 @@ class IngestionResultHandler:
             IngestionResult: 失败结果
 
         """
-        self._hub.ingestion_log_store.save_log(
+        self._save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
@@ -116,7 +123,7 @@ class IngestionResultHandler:
             IngestionResult: 失败结果
 
         """
-        self._hub.ingestion_log_store.save_log(
+        self._save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
@@ -149,7 +156,7 @@ class IngestionResultHandler:
             IngestionResult: 失败结果
 
         """
-        self._hub.ingestion_log_store.save_log(
+        self._save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
@@ -184,7 +191,7 @@ class IngestionResultHandler:
         """
         # DQ 检查已移到 Port 层，这里使用默认错误计数
         error_count = 1
-        self._hub.ingestion_log_store.save_log(
+        self._save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,
@@ -225,7 +232,7 @@ class IngestionResultHandler:
             IngestionResult: 成功结果
 
         """
-        self._hub.ingestion_log_store.save_log(
+        self._save_log(
             IngestionLog(
                 dataset=dataset,
                 source=self._source_name,

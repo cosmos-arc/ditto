@@ -8,8 +8,10 @@ from typing import Literal
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.stores.factors.factor_metadata_store import FactorMetadataStore
-from ditto_datahub.stores.factors.factor_store import FactorStore
+from ditto_datahub.stores.factors.factor_metadata_reader import FactorMetadataReader
+from ditto_datahub.stores.factors.factor_metadata_writer import FactorMetadataWriter
+from ditto_datahub.stores.factors.factor_reader import FactorReader
+from ditto_datahub.stores.factors.factor_writer import FactorWriter
 
 
 @dataclass(frozen=True)
@@ -44,27 +46,35 @@ class FactorService:
     Factors domain unified query service.
 
     Provides high-level query API for factor data with PIT support,
-    integrating FactorStore and FactorMetadataStore.
+    integrating FactorReader/FactorWriter and FactorMetadataReader/FactorMetadataWriter.
+
+    Follows CQRS pattern with separate Reader and Writer components.
     """
 
     def __init__(
         self,
-        factor_store: FactorStore,
-        metadata_store: FactorMetadataStore,
+        factor_reader: FactorReader,
+        factor_writer: FactorWriter,
+        metadata_reader: FactorMetadataReader,
+        metadata_writer: FactorMetadataWriter,
     ) -> None:
         """
-        Initialize FactorService.
+        Initialize FactorService with CQRS Readers and Writers.
 
         Args:
-            factor_store: Factor data storage.
-            metadata_store: Factor metadata storage.
+            factor_reader: Factor data reader.
+            factor_writer: Factor data writer.
+            metadata_reader: Factor metadata reader.
+            metadata_writer: Factor metadata writer.
 
         """
-        self._factor_store = factor_store
-        self._metadata_store = metadata_store
+        self._factor_reader = factor_reader
+        self._factor_writer = factor_writer
+        self._metadata_reader = metadata_reader
+        self._metadata_writer = metadata_writer
 
         logger.debug(
-            "FactorService initialized",
+            "FactorService initialized with CQRS Readers and Writers",
             event="factor_service_init_complete",
         )
 
@@ -96,7 +106,7 @@ class FactorService:
         factor_ids_str: list[str] | None = (
             None if query.factors is None else [str(f) for f in query.factors]
         )
-        data_df = self._factor_store.read(
+        data_df = self._factor_reader.read(
             start_date=query.start,
             end_date=query.end,
             as_of_date=query.as_of,
@@ -142,7 +152,7 @@ class FactorService:
         factor_ids = df["factor_id"].unique().to_list()
 
         # Batch fetch metadata for all factors (优化：一次性查询所有元数据)
-        metadata_df = self._metadata_store.batch_get_by_codes(factor_ids)
+        metadata_df = self._metadata_reader.batch_get_by_codes(factor_ids)
 
         if metadata_df.is_empty():
             return df
@@ -158,7 +168,11 @@ class FactorService:
         return result
 
     def close(self) -> None:
-        """Close the underlying stores."""
-        # FactorStore uses Parquet, no close needed
-        # MetadataStore uses SQLite, close it
-        self._metadata_store.close()
+        """
+        Close the underlying stores.
+
+        Note: FactorReader/FactorWriter use Parquet, no close needed.
+        The SQLite client from MetadataReader should be closed by the owner.
+        """
+        # Readers/Writers don't own resources, no action needed
+        pass

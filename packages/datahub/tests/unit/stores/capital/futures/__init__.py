@@ -1,0 +1,1 @@
+"""Futures data tests."""

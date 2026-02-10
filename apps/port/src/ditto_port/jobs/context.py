@@ -11,7 +11,13 @@ from typing import Any
 
 from dishka import make_container
 from ditto_core.quality import QualityEngine
-from ditto_datahub import DataHub
+from ditto_datahub.services.capital import CapitalService
+from ditto_datahub.services.fundamental import FundamentalService
+from ditto_datahub.services.macro import MacroService
+from ditto_datahub.services.market import MarketService
+from ditto_datahub.services.metadata import MetadataService
+from ditto_datahub.services.runtime import IngestionLogService
+from ditto_datahub.services.source_service import SourceService
 
 from ditto_port.registry import (
     ConfigProvider,
@@ -53,13 +59,13 @@ def create_prefect_host() -> Iterator[Any]:
 @contextmanager
 def create_ingestion_context(
     source: str = "tushare",
-) -> Iterator[tuple[DataHub, Any]]:
+) -> Iterator[tuple[Any, Any]]:
     """
     创建摄取上下文，使用 dishka 容器管理依赖.
 
     该上下文管理器自动处理：
     1. 创建 dishka 容器
-    2. 获取 DataHub 实例
+    2. 获取所需的 Services
     3. 使用工厂创建 IngestionCoordinator
     4. 确保容器在退出时关闭
 
@@ -67,36 +73,54 @@ def create_ingestion_context(
         source: 数据源名称，默认为 "tushare"
 
     Yields:
-        tuple: (hub, coordinator) - DataHub 实例和 IngestionCoordinator 实例
+        tuple: (metadata_service, coordinator) - MetadataService 实例和  # noqa: E501
+            IngestionCoordinator 实例
 
     Example:
-        with create_ingestion_context(source="tushare") as (hub, coordinator):
+        with create_ingestion_context(source="tushare") as (  # noqa: E501
+            metadata_service, coordinator
+        ):
             result = coordinator.ingest(...)
 
     """
     with create_prefect_host() as container:
-        hub = container.get(DataHub)
-        with create_coordinator(hub=hub, source_name=source) as coordinator:
-            yield hub, coordinator
+        metadata_service = container.get(MetadataService)
+        market_service = container.get(MarketService)
+        fundamental_service = container.get(FundamentalService)
+        capital_service = container.get(CapitalService)
+        macro_service = container.get(MacroService)
+        source_service = container.get(SourceService)
+        ingestion_log_service = container.get(IngestionLogService)
+        with create_coordinator(
+            metadata_service=metadata_service,
+            market_service=market_service,
+            fundamental_service=fundamental_service,
+            capital_service=capital_service,
+            macro_service=macro_service,
+            source_service=source_service,
+            ingestion_log_service=ingestion_log_service,
+            source_name=source,
+        ) as coordinator:
+            yield metadata_service, coordinator
 
 
 @contextmanager
-def create_datahub_context() -> Iterator[DataHub]:
+def create_metadata_context() -> Iterator[MetadataService]:
     """
-    创建 DataHub 上下文，使用 dishka 容器管理依赖.
+    创建 MetadataService 上下文，使用 dishka 容器管理依赖.
 
-    用于只需要 DataHub 的场景（如 DQ 检查、监控等）。
+    用于只需要 MetadataService 的场景（如检查交易日等）。
 
     Yields:
-        DataHub: 容器管理的 DataHub 实例
+        MetadataService: 容器管理的 MetadataService 实例
 
     Example:
-        with create_datahub_context() as hub:
-            result = hub.metadata.is_trading_day(date)
+        with create_metadata_context() as metadata_service:
+            result = metadata_service.is_trading_day(date)
 
     """
     with create_prefect_host() as container:
-        yield container.get(DataHub)
+        yield container.get(MetadataService)
 
 
 @contextmanager
@@ -119,19 +143,47 @@ def create_dq_context() -> Iterator[QualityEngine]:
 
 
 @contextmanager
-def create_dq_and_datahub_context() -> Iterator[tuple[QualityEngine, DataHub]]:
+def create_dq_and_metadata_context() -> Iterator[
+    tuple[QualityEngine, MetadataService, MarketService]
+]:
     """
-    创建 DQ 和 DataHub 上下文，使用 dishka 容器管理依赖.
+    创建 DQ、MetadataService 和 MarketService 上下文，使用 dishka 容器管理依赖.
 
-    用于同时需要 QualityEngine 和 DataHub 的场景。
+    用于同时需要 QualityEngine、MetadataService 和 MarketService 的场景。
 
     Yields:
-        tuple: (QualityEngine, DataHub) - 容器管理的实例
+        tuple: (QualityEngine, MetadataService, MarketService) - 容器管理的实例
 
     Example:
-        with create_dq_and_datahub_context() as (engine, hub):
+        with create_dq_and_metadata_context() as (  # noqa: E501
+            engine, metadata_service, market_service
+        ):
             result = engine.check(...)
 
     """
     with create_prefect_host() as container:
-        yield container.get(QualityEngine), container.get(DataHub)
+        yield (
+            container.get(QualityEngine),
+            container.get(MetadataService),
+            container.get(MarketService),
+        )
+
+
+@contextmanager
+def create_ingestion_log_context() -> Iterator[
+    tuple[MetadataService, IngestionLogService]
+]:
+    """
+    创建 MetadataService 和 IngestionLogService 上下文.
+
+    用于需要 MetadataService 和 IngestionLogService 的场景（如回补管理器）。
+
+    Yields:
+        tuple: (MetadataService, IngestionLogService) - 容器管理的实例
+
+    """
+    with create_prefect_host() as container:
+        yield (
+            container.get(MetadataService),
+            container.get(IngestionLogService),
+        )

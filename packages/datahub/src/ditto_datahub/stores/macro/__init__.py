@@ -1,11 +1,15 @@
 """Macro domain - macro economic indicator data storage."""
 
 from ditto_datahub.stores.macro.indicator import (
-    IndicatorMetadataStore,
-    IndicatorStore,
+    IndicatorMetadataReader,
+    IndicatorMetadataWriter,
+    IndicatorReader,
+    IndicatorWriter,
 )
 
 __all__ = [
-    "IndicatorMetadataStore",
-    "IndicatorStore",
+    "IndicatorMetadataReader",
+    "IndicatorMetadataWriter",
+    "IndicatorReader",
+    "IndicatorWriter",
 ]

@@ -1,9 +1,9 @@
 """
 MetadataService - Metadata 域统一查询服务.
 
-整合 Metadata 域所有 Store 的查询功能，提供统一的访问入口.
+整合 Metadata 域所有 Reader/Writer 的功能，提供统一的访问入口.
 
-替代: SecuritiesAccessor + CalendarAccessor 的部分功能
+CQRS 架构：使用 Reader 处理查询，Writer 处理写入。
 """
 
 from __future__ import annotations
@@ -16,17 +16,19 @@ from ditto_foundation import logger, traced
 from ditto_foundation.util.checksum import ChecksumCompute
 
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_datahub.stores.metadata.calendar.calendar_store import CalendarStore
-from ditto_datahub.stores.metadata.identity.identity_store import IdentityStore
-from ditto_datahub.stores.metadata.industry.industry_basic_store import (
-    IndustryBasicStore,
+from ditto_datahub.stores.metadata.calendar import CalendarReader, CalendarWriter
+from ditto_datahub.stores.metadata.industry import (
+    IndustryMappingReader,
+    IndustryMappingWriter,
+    IndustryReader,
+    IndustryWriter,
 )
-from ditto_datahub.stores.metadata.industry.industry_mapping_store import (
-    IndustryMappingStore,
+from ditto_datahub.stores.metadata.instrument import (
+    InstrumentReader,
+    InstrumentWriter,
 )
-from ditto_datahub.stores.metadata.instrument import InstrumentStore
 from ditto_datahub.stores.metadata.instrument.models import InstrumentRegistration
-from ditto_datahub.stores.metadata.universe.universe_store import UniverseStore
+from ditto_datahub.stores.metadata.universe import UniverseReader, UniverseWriter
 
 MetadataQueryDataset = Literal["instrument", "industry", "calendar_range"]
 MetadataWriteDataset = Literal["calendar"]
@@ -70,40 +72,52 @@ class MetadataService:
     """
     Metadata 域统一查询服务.
 
-    整合 Metadata 域所有 Store 的查询功能，提供统一的访问入口.
+    整合 Metadata 域所有 Reader/Writer 的功能，提供统一的访问入口.
 
-    替代: SecuritiesAccessor + CalendarAccessor 的部分功能
+    CQRS 架构：使用 Reader 处理查询，Writer 处理写入。
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
-        instrument_store: InstrumentStore,
-        identity_store: IdentityStore,
-        calendar_store: CalendarStore,
-        industry_basic_store: IndustryBasicStore,
-        industry_mapping_store: IndustryMappingStore,
-        universe_store: UniverseStore,
+        instrument_reader: InstrumentReader,
+        instrument_writer: InstrumentWriter,
+        calendar_reader: CalendarReader,
+        calendar_writer: CalendarWriter,
+        industry_reader: IndustryReader,
+        industry_writer: IndustryWriter,
+        industry_mapping_reader: IndustryMappingReader,
+        industry_mapping_writer: IndustryMappingWriter,
+        universe_reader: UniverseReader,
+        universe_writer: UniverseWriter,
         instrument_id_allocator: InstrumentIdAllocator,
     ) -> None:
         """
         初始化 MetadataService.
 
         Args:
-            instrument_store: 证券主数据存储.
-            identity_store: Identity 映射存储.
-            calendar_store: 交易日历存储.
-            industry_basic_store: 行业主数据存储.
-            industry_mapping_store: 行业映射存储.
-            universe_store: 标的池存储.
+            instrument_reader: 证券主数据读取器.
+            instrument_writer: 证券主数据写入器.
+            calendar_reader: 交易日历读取器.
+            calendar_writer: 交易日历写入器.
+            industry_reader: 行业主数据读取器.
+            industry_writer: 行业主数据写入器.
+            industry_mapping_reader: 行业映射读取器.
+            industry_mapping_writer: 行业映射写入器.
+            universe_reader: 标的池读取器.
+            universe_writer: 标的池写入器.
             instrument_id_allocator: instrument_id 分配器.
 
         """
-        self._instrument_store = instrument_store
-        self._identity_store = identity_store
-        self._calendar_store = calendar_store
-        self._industry_basic_store = industry_basic_store
-        self._industry_mapping_store = industry_mapping_store
-        self._universe_store = universe_store
+        self._instrument_reader = instrument_reader
+        self._instrument_writer = instrument_writer
+        self._calendar_reader = calendar_reader
+        self._calendar_writer = calendar_writer
+        self._industry_reader = industry_reader
+        self._industry_writer = industry_writer
+        self._industry_mapping_reader = industry_mapping_reader
+        self._industry_mapping_writer = industry_mapping_writer
+        self._universe_reader = universe_reader
+        self._universe_writer = universe_writer
         self._instrument_id_allocator = instrument_id_allocator
 
         logger.debug(
@@ -115,7 +129,7 @@ class MetadataService:
     def query(self, query: MetadataQuery) -> pl.DataFrame:
         """统一查询入口."""
         if query.dataset == "instrument":
-            return self._instrument_store.find_securities(
+            return self._instrument_reader.find_securities(
                 instrument_ids=query.instrument_ids,
                 source_tickers=query.source_tickers,
                 source=query.source,
@@ -127,11 +141,11 @@ class MetadataService:
 
         if query.dataset == "industry":
             is_active = True if query.is_active is None else query.is_active
-            return self._industry_basic_store.get_all(is_active, query.industry_level)
+            return self._industry_reader.get_all(is_active, query.industry_level)
 
         if query.start is None or query.end is None:
             raise ValueError("calendar_range 查询必须提供 start 和 end")
-        return self._calendar_store.get_range_df(
+        return self._calendar_reader.get_range_df(
             query.start,
             query.end,
             query.only_open,
@@ -140,7 +154,7 @@ class MetadataService:
     @traced("metadata.write")
     def write(self, command: MetadataWriteCommand) -> MetadataWriteResult:
         """统一写入入口."""
-        self._calendar_store.upsert(command.records)
+        self._calendar_writer.upsert(command.records)
         return MetadataWriteResult(
             dataset=command.dataset,
             records_written=len(command.records),
@@ -167,7 +181,7 @@ class MetadataService:
             instrument_id 或 None.
 
         """
-        return self._identity_store.resolve_instrument_id(identifier, source, asof)
+        return self._instrument_reader.resolve_instrument_id(identifier, source, asof)
 
     @traced("metadata.identity.resolve_instrument_ids_batch")
     def resolve_instrument_ids_batch(
@@ -188,7 +202,7 @@ class MetadataService:
             {identifier: instrument_id} 映射字典.
 
         """
-        return self._identity_store.resolve_instrument_ids_batch(
+        return self._instrument_reader.resolve_instrument_ids_batch(
             identifiers, source, asof
         )
 
@@ -246,7 +260,7 @@ class MetadataService:
             交易代码 或 None.
 
         """
-        return self._instrument_store.get_symbol(instrument_id)
+        return self._instrument_reader.get_symbol(instrument_id)
 
     @traced("metadata.instrument.get_source_ticker")
     def get_source_ticker(
@@ -267,7 +281,7 @@ class MetadataService:
             源代码 或 None.
 
         """
-        return self._identity_store.get_source_ticker(instrument_id, source, asof)
+        return self._instrument_reader.get_source_ticker(instrument_id, source, asof)
 
     # ============ 行业查询 ============
 
@@ -313,7 +327,7 @@ class MetadataService:
             行业映射信息 或 None.
 
         """
-        return self._industry_mapping_store.get_stock_industry(instrument_id, asof)
+        return self._industry_mapping_reader.get_stock_industry(instrument_id, asof)
 
     @traced("metadata.industry.get_industry_stocks")
     def get_industry_stocks(
@@ -332,7 +346,7 @@ class MetadataService:
             Instrument ID 列表.
 
         """
-        return self._industry_mapping_store.get_stocks(industry_id, asof)
+        return self._industry_mapping_reader.get_stocks(industry_id, asof)
 
     # ============ 交易日历查询 ============
 
@@ -383,7 +397,7 @@ class MetadataService:
             交易日列表.
 
         """
-        return self._calendar_store.get_range(start, end)
+        return self._calendar_reader.get_range(start, end)
 
     @traced("metadata.calendar.is_trading_day")
     def is_trading_day(self, date: str) -> bool:
@@ -397,7 +411,7 @@ class MetadataService:
             是否为交易日.
 
         """
-        return self._calendar_store.is_trading_day(date)
+        return self._calendar_reader.is_trading_day(date)
 
     @traced("metadata.calendar.upsert")
     def upsert(self, records: list[dict[str, Any]]) -> int:
@@ -423,7 +437,7 @@ class MetadataService:
             最后一个交易日日期字符串，如果没有数据则返回 None.
 
         """
-        return self._calendar_store.get_last_trading_day()
+        return self._calendar_reader.get_last_trading_day()
 
     @traced("metadata.calendar.get_first_trading_day")
     def get_first_trading_day(self) -> str | None:
@@ -434,7 +448,7 @@ class MetadataService:
             第一个交易日日期字符串，如果没有数据则返回 None.
 
         """
-        return self._calendar_store.get_first_trading_day()
+        return self._calendar_reader.get_first_trading_day()
 
     @traced("metadata.calendar.list_trading_days")
     def list_trading_days(self, start: str, end: str) -> list[str]:
@@ -470,7 +484,7 @@ class MetadataService:
             Instrument ID 列表.
 
         """
-        return self._universe_store.get_constituent_instrument_ids(universe_id, asof)
+        return self._universe_reader.get_constituent_instrument_ids(universe_id, asof)
 
     # ============ 证券注册 ============
 
@@ -489,8 +503,8 @@ class MetadataService:
         # 分配 instrument_id
         instrument_id = self._instrument_id_allocator.allocate(registration.asset_class)
 
-        # 注册到 instrument_store
-        registered_id = self._instrument_store.register(instrument_id, registration)
+        # 注册到 instrument_writer
+        registered_id = self._instrument_writer.register(instrument_id, registration)
 
         logger.info(
             "Instrument registered via MetadataService",
@@ -543,7 +557,7 @@ class MetadataService:
             source_ticker = row[source_ticker_col]
 
             # 检查是否已存在
-            existing_instrument_id = self._instrument_store.resolve_instrument_id(
+            existing_instrument_id = self._instrument_reader.resolve_instrument_id(
                 source_ticker, source, None
             )
             if existing_instrument_id is not None:
@@ -570,7 +584,7 @@ class MetadataService:
         df_with_source = df.with_columns(pl.lit(source).alias("source"))
         checksum = ChecksumCompute.from_dataframe(df_with_source, dataset_name)
 
-        file_path = f"instrument_store:{asset_class}_basic"
+        file_path = f"instrument_reader:{asset_class}_basic"
 
         logger.info(
             "Batch instrument registration completed",
@@ -638,7 +652,7 @@ class MetadataService:
 
         # 批量查询已存在的证券
         source_tickers = df[source_ticker_col].to_list()
-        existing_mappings = self._instrument_store.resolve_instrument_ids_batch(
+        existing_mappings = self._instrument_reader.resolve_instrument_ids_batch(
             source_tickers, source, None
         )
 

@@ -12,12 +12,15 @@ from collections.abc import Callable
 from typing import Literal, cast
 
 import polars as pl
-from ditto_datahub.hub import DataHub
 from ditto_datahub.models import Dataset, OnDuplicate, WriteResult
+from ditto_datahub.services.capital import CapitalService
+from ditto_datahub.services.fundamental import FundamentalService
+from ditto_datahub.services.macro import MacroService
 from ditto_datahub.services.market import (
+    MarketService,
     MarketWriteCommand,
 )
-from ditto_datahub.services.metadata import MetadataWriteCommand
+from ditto_datahub.services.metadata import MetadataService, MetadataWriteCommand
 from ditto_foundation.util.checksum import ChecksumCompute
 
 
@@ -119,16 +122,32 @@ def _to_write_result(
 class IngestionDataWriter:
     """统一数据写入器。"""
 
-    def __init__(self, hub: DataHub, source_name: str) -> None:
+    def __init__(
+        self,
+        metadata_service: MetadataService,
+        market_service: MarketService,
+        fundamental_service: FundamentalService,
+        capital_service: CapitalService,
+        macro_service: MacroService,
+        source_name: str,
+    ) -> None:
         """
         初始化 IngestionDataWriter。
 
         Args:
-            hub: DataHub 实例
+            metadata_service: MetadataService 实例
+            market_service: MarketService 实例
+            fundamental_service: FundamentalService 实例
+            capital_service: CapitalService 实例
+            macro_service: MacroService 实例
             source_name: 数据源名称
 
         """
-        self._hub = hub
+        self._metadata_service = metadata_service
+        self._market_service = market_service
+        self._fundamental_service = fundamental_service
+        self._capital_service = capital_service
+        self._macro_service = macro_service
         self._source_name = source_name
 
     def write_data(
@@ -283,11 +302,13 @@ class IngestionDataWriter:
         asset_class: Literal["stock", "etf"] = (
             "etf" if dataset_enum == Dataset.ETF_DAILY else "stock"
         )
-        instrument_id_mapping = self._hub.metadata.resolve_or_create_instruments_batch(
-            df=df,
-            source=self._source_name,
-            asset_class=asset_class,
-            source_ticker_col=source_ticker_col,
+        instrument_id_mapping = (
+            self._metadata_service.resolve_or_create_instruments_batch(
+                df=df,
+                source=self._source_name,
+                asset_class=asset_class,
+                source_ticker_col=source_ticker_col,
+            )
         )
         enriched_df = _enrich_with_instrument_id(
             df,
@@ -296,7 +317,7 @@ class IngestionDataWriter:
             self._source_name,
         )
         bars_dataset = cast(Literal["stock_daily", "etf_daily"], dataset_enum.value)
-        write_result = self._hub.market.write(
+        write_result = self._market_service.write(
             MarketWriteCommand(
                 dataset=bars_dataset,
                 df=enriched_df,
@@ -320,11 +341,13 @@ class IngestionDataWriter:
         on_duplicate: OnDuplicate,
         source_ticker_col: str,
     ) -> WriteResult:
-        instrument_id_mapping = self._hub.metadata.resolve_or_create_instruments_batch(
-            df=df,
-            source=self._source_name,
-            asset_class="stock",
-            source_ticker_col=source_ticker_col,
+        instrument_id_mapping = (
+            self._metadata_service.resolve_or_create_instruments_batch(
+                df=df,
+                source=self._source_name,
+                asset_class="stock",
+                source_ticker_col=source_ticker_col,
+            )
         )
         enriched_df = _enrich_with_instrument_id(
             df,
@@ -332,7 +355,7 @@ class IngestionDataWriter:
             source_ticker_col,
             self._source_name,
         )
-        write_result = self._hub.market.write(
+        write_result = self._market_service.write(
             MarketWriteCommand(
                 dataset="stock_status",
                 df=enriched_df,
@@ -363,7 +386,7 @@ class IngestionDataWriter:
                 "etf" if dataset_enum == Dataset.FUND_ADJ else "stock"
             )
             instrument_id_mapping = (
-                self._hub.metadata.resolve_or_create_instruments_batch(
+                self._metadata_service.resolve_or_create_instruments_batch(
                     df=df,
                     source=self._source_name,
                     asset_class=adj_asset_class,
@@ -378,7 +401,7 @@ class IngestionDataWriter:
             )
 
         adj_dataset = cast(Literal["adj_factor", "fund_adj"], dataset_enum.value)
-        write_result = self._hub.market.write(
+        write_result = self._market_service.write(
             MarketWriteCommand(
                 dataset=adj_dataset,
                 df=enriched_df,
@@ -405,7 +428,7 @@ class IngestionDataWriter:
             Literal["balance_sheet", "income_statement", "cash_flow", "dividend"],
             dataset_enum.value,
         )
-        write_result = self._hub.fundamental.write(fundamental_dataset, df)
+        write_result = self._fundamental_service.write(fundamental_dataset, df)
         files = 1 if write_result.records_written > 0 else 0
         return _to_write_result(
             dataset,
@@ -426,7 +449,7 @@ class IngestionDataWriter:
             Literal["valuation_metrics", "margin_trading", "pledge_ratio"],
             dataset_enum.value,
         )
-        write_result = self._hub.capital.write(capital_dataset, df)
+        write_result = self._capital_service.write(capital_dataset, df)
         files = 1 if write_result.records_written > 0 else 0
         return _to_write_result(
             dataset,
@@ -442,7 +465,7 @@ class IngestionDataWriter:
         df: pl.DataFrame,
         year: int,
     ) -> WriteResult:
-        write_result = self._hub.macro.write(df)
+        write_result = self._macro_service.write(df)
         files = 1 if write_result.records_written > 0 else 0
         return _to_write_result(
             dataset,
@@ -454,7 +477,7 @@ class IngestionDataWriter:
 
     def _write_calendar(self, df: pl.DataFrame, trade_date: str) -> WriteResult:
         records = df.to_dicts()
-        self._hub.metadata.write(
+        self._metadata_service.write(
             MetadataWriteCommand(dataset="calendar", records=records)
         )
         file_path = f"calendar_store:{trade_date}"
@@ -498,7 +521,7 @@ class IngestionDataWriter:
 
         """
         # 使用 MetadataService 批量注册（线程安全）
-        file_path, checksum = self._hub.metadata.register_instruments_batch(
+        file_path, checksum = self._metadata_service.register_instruments_batch(
             df=df,
             source=self._source_name,
             asset_class="stock",
@@ -520,7 +543,7 @@ class IngestionDataWriter:
 
         """
         # 使用 MetadataService 批量注册（线程安全）
-        file_path, checksum = self._hub.metadata.register_instruments_batch(
+        file_path, checksum = self._metadata_service.register_instruments_batch(
             df=df,
             source=self._source_name,
             asset_class="etf",

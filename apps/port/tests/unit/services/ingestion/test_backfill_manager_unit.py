@@ -38,22 +38,32 @@ def mock_coordinator(mocker):
 
 
 @pytest.fixture
-def mock_hub(mocker):
-    """创建 Mock DataHub。"""
-    hub = mocker.Mock()
-    hub.metadata.list_trading_days = mocker.Mock()
-    hub.metadata.get_first_trading_day = mocker.Mock(return_value="2020-01-02")
-    hub.metadata.get_last_trading_day = mocker.Mock(return_value="2024-12-31")
-    hub.ingestion_log_store.get_ingested_dates = mocker.Mock()
-    return hub
+def mock_metadata_service(mocker):
+    """创建 Mock MetadataService。"""
+    service = mocker.Mock()
+    service.list_trading_days = mocker.Mock(return_value=[])
+    service.get_first_trading_day = mocker.Mock(return_value="2020-01-02")
+    service.get_last_trading_day = mocker.Mock(return_value="2024-12-31")
+    return service
 
 
 @pytest.fixture
-def backfill_manager(mock_coordinator, mock_hub):
+def mock_ingestion_log_service(mocker):
+    """创建 Mock IngestionLogService。"""
+    service = mocker.Mock()
+    service.get_ingested_dates = mocker.Mock(return_value=[])
+    return service
+
+
+@pytest.fixture
+def backfill_manager(
+    mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+):
     """创建 BackfillManager 实例。"""
     return BackfillManager(
         coordinator=mock_coordinator,
-        hub=mock_hub,
+        metadata_service=mock_metadata_service,
+        ingestion_log_service=mock_ingestion_log_service,
     )
 
 
@@ -107,11 +117,14 @@ class TestBackfillRange:
     """测试 backfill_range 方法。"""
 
     def test_backfill_range_success_all_dates(
-        self, backfill_manager, mock_coordinator, mock_hub
+        self,
+        backfill_manager,
+        mock_coordinator,
+        mock_metadata_service,
     ) -> None:
         """成功回补日期范围内的所有交易日。"""
         # Arrange
-        mock_hub.metadata.list_trading_days.return_value = [
+        mock_metadata_service.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
@@ -155,11 +168,14 @@ class TestBackfillRange:
         mock_coordinator.ingest_date.assert_called()
 
     def test_backfill_range_with_skipped_dates(
-        self, backfill_manager, mock_coordinator, mock_hub
+        self,
+        backfill_manager,
+        mock_coordinator,
+        mock_metadata_service,
     ) -> None:
         """日期范围内有跳过的日期。"""
         # Arrange
-        mock_hub.metadata.list_trading_days.return_value = [
+        mock_metadata_service.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
@@ -200,11 +216,14 @@ class TestBackfillRange:
         assert result.failed_count == 0
 
     def test_backfill_range_with_failed_dates(
-        self, backfill_manager, mock_coordinator, mock_hub
+        self,
+        backfill_manager,
+        mock_coordinator,
+        mock_metadata_service,
     ) -> None:
         """日期范围内有失败的日期。"""
         # Arrange
-        mock_hub.metadata.list_trading_days.return_value = [
+        mock_metadata_service.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
@@ -245,10 +264,12 @@ class TestBackfillRange:
         assert result.skipped_count == 0
         assert result.failed_count == 1
 
-    def test_backfill_range_empty_range(self, backfill_manager, mock_hub) -> None:
+    def test_backfill_range_empty_range(
+        self, backfill_manager, mock_metadata_service
+    ) -> None:
         """日期范围为空时返回空结果。"""
         # Arrange
-        mock_hub.metadata.list_trading_days.return_value = []
+        mock_metadata_service.list_trading_days.return_value = []
 
         # Act
         result = backfill_manager.backfill_range(
@@ -265,11 +286,14 @@ class TestBackfillRange:
         assert len(result.results) == 0
 
     def test_backfill_range_parallel_execution(
-        self, backfill_manager, mock_coordinator, mock_hub
+        self,
+        backfill_manager,
+        mock_coordinator,
+        mock_metadata_service,
     ) -> None:
         """并行执行回补任务。"""
         # Arrange
-        mock_hub.metadata.list_trading_days.return_value = [
+        mock_metadata_service.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
@@ -307,12 +331,13 @@ class TestBackfillMissing:
         self,
         backfill_manager,
         mock_coordinator,
-        mock_hub,
+        mock_metadata_service,
+        mock_ingestion_log_service,
     ) -> None:
         """查找并回补缺失的日期。"""
         # Arrange
         # 交易日历有5个交易日
-        mock_hub.metadata.list_trading_days.return_value = [
+        mock_metadata_service.list_trading_days.return_value = [
             "2024-12-23",
             "2024-12-24",
             "2024-12-25",
@@ -321,7 +346,7 @@ class TestBackfillMissing:
         ]
 
         # 已摄取3个日期
-        mock_hub.ingestion_log_store.get_ingested_dates.return_value = [
+        mock_ingestion_log_service.get_ingested_dates.return_value = [
             "2024-12-23",
             "2024-12-25",
             "2024-12-27",
@@ -352,19 +377,17 @@ class TestBackfillMissing:
         assert mock_coordinator.ingest_date.call_count == 2
 
     def test_backfill_missing_no_missing_dates(
-        self,
-        backfill_manager,
-        mock_hub,
+        self, backfill_manager, mock_metadata_service, mock_ingestion_log_service
     ) -> None:
         """没有缺失日期时返回空结果。"""
         # Arrange
-        mock_hub.metadata.list_trading_days.return_value = [
+        mock_metadata_service.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
         ]
 
-        mock_hub.ingestion_log_store.get_ingested_dates.return_value = [
+        mock_ingestion_log_service.get_ingested_dates.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
@@ -383,12 +406,13 @@ class TestBackfillMissing:
         self,
         backfill_manager,
         mock_coordinator,
-        mock_hub,
+        mock_metadata_service,
+        mock_ingestion_log_service,
     ) -> None:
         """使用日历的完整日期范围查找缺失。"""
         # Arrange
-        mock_hub.metadata.get_first_trading_day.return_value = "2024-12-01"
-        mock_hub.metadata.get_last_trading_day.return_value = "2024-12-31"
+        mock_metadata_service.get_first_trading_day.return_value = "2024-12-01"
+        mock_metadata_service.get_last_trading_day.return_value = "2024-12-31"
 
         # 模拟 get_range 调用
         def get_range_side_effect(start, end):
@@ -396,9 +420,9 @@ class TestBackfillMissing:
                 return ["2024-12-25", "2024-12-26", "2024-12-27"]
             return []
 
-        mock_hub.metadata.list_trading_days.side_effect = get_range_side_effect
+        mock_metadata_service.list_trading_days.side_effect = get_range_side_effect
 
-        mock_hub.ingestion_log_store.get_ingested_dates.return_value = ["2024-12-25"]
+        mock_ingestion_log_service.get_ingested_dates.return_value = ["2024-12-25"]
 
         mock_coordinator.ingest_date.side_effect = [
             IngestionResult(
@@ -420,7 +444,7 @@ class TestBackfillMissing:
 
         # Assert
         assert result.total_dates == 2
-        mock_hub.metadata.list_trading_days.assert_called_once_with(
+        mock_metadata_service.list_trading_days.assert_called_once_with(
             "2024-12-01", "2024-12-31"
         )
 
@@ -428,18 +452,19 @@ class TestBackfillMissing:
         self,
         backfill_manager,
         mock_coordinator,
-        mock_hub,
+        mock_metadata_service,
+        mock_ingestion_log_service,
     ) -> None:
         """测试 backfill_missing 支持 source 参数。"""
         # Arrange
-        mock_hub.metadata.list_trading_days.return_value = [
+        mock_metadata_service.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
         ]
 
         # 验证 source 参数被正确传递
-        mock_hub.ingestion_log_store.get_ingested_dates.return_value = ["2024-12-25"]
+        mock_ingestion_log_service.get_ingested_dates.return_value = ["2024-12-25"]
 
         mock_coordinator.ingest_date.side_effect = [
             IngestionResult(
@@ -465,16 +490,16 @@ class TestBackfillMissing:
         # Assert
         assert result.total_dates >= 0
         # 验证 source 参数被正确传递给 get_ingested_dates
-        mock_hub.ingestion_log_store.get_ingested_dates.assert_called_once_with(
+        mock_ingestion_log_service.get_ingested_dates.assert_called_once_with(
             "stock_daily", "tushare"
         )
 
     def test_backfill_range_year_level_parallel(
-        self, backfill_manager, mock_coordinator, mock_hub
+        self, backfill_manager, mock_coordinator, mock_metadata_service
     ) -> None:
         """测试年份级并行策略。"""
         # Arrange - 准备跨年数据
-        mock_hub.metadata.list_trading_days.return_value = [
+        mock_metadata_service.list_trading_days.return_value = [
             "2023-12-29",
             "2023-12-30",
             "2024-01-02",
@@ -508,11 +533,12 @@ class TestBackfillMissing:
         self,
         backfill_manager,
         mock_coordinator,
-        mock_hub,
+        mock_metadata_service,
+        mock_ingestion_log_service,
     ) -> None:
         """测试 backfill_missing 并行执行。"""
         # Arrange
-        mock_hub.metadata.list_trading_days.return_value = [
+        mock_metadata_service.list_trading_days.return_value = [
             "2024-12-23",
             "2024-12-24",
             "2024-12-25",
@@ -521,7 +547,7 @@ class TestBackfillMissing:
         ]
 
         # 已摄取2个日期，缺失3个
-        mock_hub.ingestion_log_store.get_ingested_dates.return_value = [
+        mock_ingestion_log_service.get_ingested_dates.return_value = [
             "2024-12-23",
             "2024-12-27",
         ]
@@ -550,12 +576,12 @@ class TestBackfillMissing:
     def test_backfill_missing_empty_calendar(
         self,
         backfill_manager,
-        mock_hub,
+        mock_metadata_service,
     ) -> None:
         """测试当日历没有数据时的处理。"""
         # Arrange - 日历为空
-        mock_hub.metadata.get_first_trading_day.return_value = None
-        mock_hub.metadata.get_last_trading_day.return_value = None
+        mock_metadata_service.get_first_trading_day.return_value = None
+        mock_metadata_service.get_last_trading_day.return_value = None
 
         # Act
         result = backfill_manager.backfill_missing(dataset="stock_daily")
@@ -569,13 +595,13 @@ class TestBackfillMissing:
     def test_backfill_missing_calendar_has_no_trading_days(
         self,
         backfill_manager,
-        mock_hub,
+        mock_metadata_service,
     ) -> None:
         """测试当日历有首尾日期但没有交易日时的处理。"""
         # Arrange - 有首尾日期，但没有交易日
-        mock_hub.metadata.get_first_trading_day.return_value = "2024-12-01"
-        mock_hub.metadata.get_last_trading_day.return_value = "2024-12-31"
-        mock_hub.metadata.list_trading_days.return_value = []
+        mock_metadata_service.get_first_trading_day.return_value = "2024-12-01"
+        mock_metadata_service.get_last_trading_day.return_value = "2024-12-31"
+        mock_metadata_service.list_trading_days.return_value = []
 
         # Act
         result = backfill_manager.backfill_missing(dataset="stock_daily")
@@ -590,11 +616,11 @@ class TestBackfillMissing:
         self,
         backfill_manager,
         mock_coordinator,
-        mock_hub,
+        mock_metadata_service,
     ) -> None:
         """测试 coordinator 错误传播。"""
         # Arrange
-        mock_hub.metadata.list_trading_days.return_value = [
+        mock_metadata_service.list_trading_days.return_value = [
             "2024-12-25",
             "2024-12-26",
         ]

@@ -7,6 +7,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import duckdb
+import polars as pl
 import pytest
 from ditto_foundation.config import Settings
 from ditto_foundation.config.environment import Environment
@@ -217,22 +218,23 @@ def obs_assertions() -> None:
 
 @pytest.fixture
 def mock_datahub() -> MagicMock:
-    """每个测试独立的 Mock DataHub.
+    """每个测试独立的 Mock Services (替代旧的 DataHub).
 
     使用 function 作用域确保测试隔离，支持并行测试。
 
     Returns:
-        MagicMock: Mock DataHub 对象
+        MagicMock: 包含所有 Domain Services 的 Mock 对象
     """
     mock = MagicMock()
 
-    # Calendar mock
-    mock.metadata.is_trading_day.return_value = True
-    mock.calendar_store.get_first_trading_day.return_value = "2024-01-02"
-    mock.calendar_store.get_last_trading_day.return_value = "2024-01-31"
-    mock.calendar_store.get_range.return_value = ["2024-01-02", "2024-01-03"]
+    # MetadataService mock
+    mock.metadata_service.is_trading_day.return_value = True
+    mock.metadata_service.resolve_instrument_id.return_value = 1
 
-    # Ingestion log mock
+    # MarketService mock
+    mock.market_service.query.return_value = pl.DataFrame()
+
+    # IngestionLogStore mock (通过 MetadataService 访问)
     mock.ingestion_log_store.get_failed_dates.return_value = []
     mock.ingestion_log_store.get_ingested_dates.return_value = []
 
@@ -241,21 +243,21 @@ def mock_datahub() -> MagicMock:
 
 @pytest.fixture
 def patch_datahub(mock_datahub: MagicMock) -> MagicMock:
-    """返回 Mock DataHub 对象（不进行全局 patch）.
+    """返回 Mock Services 对象（不进行全局 patch）.
 
     注意：此 fixture 不再全局 patch DataHub 类，
     因为会与 dishka 依赖注入容器冲突。
 
-    集成测试应使用真实的 DataHub（通过 create_ingestion_context），
+    集成测试应使用真实的 Services（通过 create_ingestion_context），
     单元测试可自行 mock 需要的组件。
 
     使用方式（单元测试）：
         def test_something(patch_datahub):
             # 使用 mock 对象进行测试
-            assert patch_datahub.metadata.is_trading_day() is True
+            assert patch_datahub.metadata_service.is_trading_day() is True
 
     Args:
-        mock_datahub: 独立的 Mock DataHub 对象
+        mock_datahub: 独立的 Mock Services 对象
 
     Returns:
         MagicMock: mock_datahub 对象

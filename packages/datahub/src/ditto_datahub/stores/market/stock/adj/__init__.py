@@ -1,11 +1,13 @@
-"""
-Stock adjustment factor (复权因子) domain.
+"""Stock adjustment factor (复权因子) domain."""
 
-包含股票复权因子的存储和访问功能。
-"""
-
-from ditto_datahub.stores.market.stock.adj.adj_factor_store import (
-    StockAdjFactorStore,
+from ditto_datahub.stores.market.stock.adj.adj_factor_reader import (
+    StockAdjFactorReader,
+)
+from ditto_datahub.stores.market.stock.adj.adj_factor_writer import (
+    StockAdjFactorWriter,
 )
 
-__all__ = ["StockAdjFactorStore"]
+__all__ = [
+    "StockAdjFactorReader",
+    "StockAdjFactorWriter",
+]

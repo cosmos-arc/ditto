@@ -1,5 +1,6 @@
 """ETF daily bars storage."""
 
-from ditto_datahub.stores.market.etf.bars.bars_store import EtfBarsStore
+from ditto_datahub.stores.market.etf.bars.bars_reader import EtfBarsReader
+from ditto_datahub.stores.market.etf.bars.bars_writer import EtfBarsWriter
 
-__all__ = ["EtfBarsStore"]
+__all__ = ["EtfBarsReader", "EtfBarsWriter"]

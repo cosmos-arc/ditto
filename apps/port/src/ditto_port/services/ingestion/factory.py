@@ -8,21 +8,40 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from ditto_datahub import DataHub
 from ditto_datahub.models import Source
+from ditto_datahub.services.capital import CapitalService
+from ditto_datahub.services.fundamental import FundamentalService
+from ditto_datahub.services.macro import MacroService
+from ditto_datahub.services.market import MarketService
+from ditto_datahub.services.metadata import MetadataService
+from ditto_datahub.services.runtime import IngestionLogService
+from ditto_datahub.services.source_service import SourceService
 
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
 
 @contextmanager
-def create_coordinator(
-    hub: DataHub, source_name: str | Source
+def create_coordinator(  # noqa: PLR0913
+    metadata_service: MetadataService,
+    market_service: MarketService,
+    fundamental_service: FundamentalService,
+    capital_service: CapitalService,
+    macro_service: MacroService,
+    source_service: SourceService,
+    ingestion_log_service: IngestionLogService,
+    source_name: str | Source,
 ) -> Iterator[IngestionCoordinator]:
     """
     创建 IngestionCoordinator 实例.
 
     Args:
-        hub: DataHub 实例
+        metadata_service: MetadataService 实例
+        market_service: MarketService 实例
+        fundamental_service: FundamentalService 实例
+        capital_service: CapitalService 实例
+        macro_service: MacroService 实例
+        source_service: SourceService 实例
+        ingestion_log_service: IngestionLogService 实例
         source_name: 数据源名称
 
     Yields:
@@ -42,13 +61,18 @@ def create_coordinator(
             ) from e
 
     # 获取数据源
-    data_source = hub.sources.get(source_key)
+    data_source = source_service.get(source_key)
 
     # 创建协调器
     coordinator = IngestionCoordinator(
-        hub=hub,
+        metadata_service=metadata_service,
+        market_service=market_service,
+        fundamental_service=fundamental_service,
+        capital_service=capital_service,
+        macro_service=macro_service,
         source=data_source,
         source_name=source_key.value,
+        ingestion_log_service=ingestion_log_service,
     )
 
     yield coordinator

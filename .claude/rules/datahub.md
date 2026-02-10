@@ -8,41 +8,69 @@ paths: packages/datahub/**/*.py
 
 | 层级 | 职责 | 禁止 | 必须 |
 |------|------|------|------|
-| Store | 数据持久化 | 包含业务逻辑 | @traced 装饰器 |
-| Accessor | 业务封装 | 直接访问文件系统 | 通过 Store 访问 |
+| Reader | 数据查询操作 | 包含业务逻辑 | 类型注解 |
+| Writer | 数据写入/删除操作 | 包含业务逻辑 | 类型注解 |
+| Service | 业务逻辑封装 | 直接访问文件系统 | 通过 Reader/Writer |
 | Runtime | 基础设施 | 包含业务逻辑 | - |
-| Provider | 外部数据源 | 包含业务逻辑 | 重试、限流、监控埋点 |
+| Source | 外部数据源 | 包含业务逻辑 | 重试、限流、监控埋点 |
 
-## 层级访问规则（2026-01-19 更新）
+## CQRS 模式（Command Query Responsibility Segregation）
 
-### Apps 层访问规则
+DataHub Store 层采用 CQRS 模式，将读写操作分离：
+
+### Reader 组件
+- **职责**：数据查询（read/count/get_*）
+- **特点**：无副作用，可并发执行
+- **方法**：`read()`, `count()`, `get_*()`
+
+### Writer 组件
+- **职责**：数据写入/删除（write/delete）
+- **特点**：有副作用，需要并发控制
+- **方法**：`write()`, `delete()`
+
+### 命名约定
+- 查询类：`*_reader.py`（如 `instrument_reader.py`）
+- 写入类：`*_writer.py`（如 `instrument_writer.py`）
+- 服务类：`*_service.py`（如 `metadata_service.py`）
+
+## 层级访问规则（2026-02-10 更新）
+
+### Port 层访问规则
 
 | 访问类型 | ✅ 允许 | ❌ 禁止 | 说明 |
 |---------|--------|--------|------|
-| **通过 DataHub** | `hub.sources` | - | **官方接口**，推荐使用 |
-| **直接导入** | `from ditto_datahub.sources.*` | `from ditto_datahub.stores.*` | Providers 可直接访问，Stores 禁止 |
-| **Accessor** | `hub.bars`, `hub.calendar` 等 | - | **数据查询**的推荐方式 |
-| **Store** | - | `直接实例化 Store 类` | **禁止**直接访问 Store 层 |
+| **通过 Domain Service** | `MetadataService`, `MarketService` 等 | - | **推荐方式**，通过 DI 容器注入 |
+| **直接导入** | `from ditto_datahub.sources.*` | `from ditto_datahub.stores.*` | Sources 可直接访问，Stores 禁止 |
+| **Reader/Writer** | - | 直接实例化 | **禁止**直接访问 Reader/Writer 层 |
 
 ### 正确示例
 
 ```python
-# ✅ 推荐：通过 DataHub providers 获取数据
-provider = hub.sources.get("tushare")
+# ✅ 推荐：通过 DI 容器注入 Domain Service
+from dishka import Container
+from ditto_datahub.services.metadata import MetadataService
+from ditto_datahub.services.market import MarketService
+
+container = Container()
+metadata_service: MetadataService = container.get(MetadataService)
+market_service: MarketService = container.get(MarketService)
+
+# 使用 Service
+trading_days = metadata_service.get_trading_days("2024-01-01", "2024-01-31")
+bars = market_service.query(query)
+
+# ✅ 推荐：通过 Service 获取数据
+provider = sources.get("tushare")
 df = provider.fetch_stock_daily("2024-01-02")
 
-# ✅ 推荐：通过 Accessor 查询数据
-bars = hub.bars.get(...)
-df = bars.query(...)
-
-# ❌ 禁止：直接访问 Store（即使技术上可行）
-from ditto_datahub.stores.bars_store import BarsStore  # ❌
-store = BarsStore(...)  # ❌
+# ❌ 禁止：直接访问 Reader/Writer（即使技术上可行）
+from ditto_datahub.stores.metadata import InstrumentReader  # ❌
+reader = InstrumentReader(...)  # ❌
 ```
 
 **原则**：
-- Providers 层（数据获取）可由 Apps 层直接访问
-- Stores 层（数据存储）必须通过 Accessor 间接访问
+- Sources 层（数据获取）可由 Port 层直接访问
+- Reader/Writer 层（数据存储）必须通过 Service 间接访问
 
 ## 数据质量（DQ）规范
 
@@ -76,8 +104,9 @@ store = BarsStore(...)  # ❌
 
 | 禁止 | 替代 |
 |------|------|
-| Accessor 直接写 Parquet | 通过对应的 Store |
-| 绕过 DQ 检查写入 | hub.xxx.write() 自动触发 |
+| Reader/Writer 直接写 Parquet | 通过对应的 Service |
+| 绕过 DQ 检查写入 | Service.write() 自动触发 |
 | 硬编码数据路径 | 使用 get_paths() |
 | Parquet 写入不加锁 | FileLock (超时 30s) |
 | 冻结数据无保护 | FreezeManager.acquirefreeze() |
+| Port 层直接访问 Reader/Writer | 通过 Service 间接访问 |

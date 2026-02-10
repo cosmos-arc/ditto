@@ -8,13 +8,11 @@ Instrument 子域 - 证券主数据（重构后命名）.
 CQRS 模式：
 - InstrumentReader - 查询接口（支持 PIT + DataCache）
 - InstrumentWriter - 写入接口（自动缓存失效）
-- InstrumentStore - 保留向后兼容
 """
 
 from ditto_datahub.stores.metadata.instrument.instrument_reader import (
     InstrumentReader,
 )
-from ditto_datahub.stores.metadata.instrument.instrument_store import InstrumentStore
 from ditto_datahub.stores.metadata.instrument.instrument_writer import (
     InstrumentWriter,
 )
@@ -23,6 +21,5 @@ from ditto_datahub.stores.metadata.instrument.models import InstrumentRegistrati
 __all__ = [
     "InstrumentReader",
     "InstrumentRegistration",
-    "InstrumentStore",
     "InstrumentWriter",
 ]

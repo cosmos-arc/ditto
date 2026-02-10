@@ -8,8 +8,7 @@ from ditto_foundation import M, logger
 from prefect import task
 
 from ditto_port.jobs.context import (
-    create_datahub_context,
-    create_dq_and_datahub_context,
+    create_dq_and_metadata_context,
 )
 from ditto_port.services.ingestion.quality import L3BatchService
 
@@ -55,10 +54,10 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
         market_wide=market_wide,
     )
 
-    with create_dq_and_datahub_context() as (engine, hub):
+    with create_dq_and_metadata_context() as (engine, metadata_service, market_service):
         # 获取最后一个交易日
         if trade_date is None:
-            trade_date = hub.metadata.get_last_trading_day()
+            trade_date = metadata_service.get_last_trading_day()
             logger.info(
                 "Using last trading day",
                 event="dq_batch_date_resolved",
@@ -74,7 +73,11 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
             datasets = ["etf_daily", "index_daily", "stock_daily", "adj_factor"]
 
         # 初始化 L3 Batch Service
-        l3_service = L3BatchService(engine=engine, hub=hub)
+        l3_service = L3BatchService(
+            engine=engine,
+            market_service=market_service,
+            metadata_service=metadata_service,
+        )
 
         all_issues: list[DQIssue] = []
         results_by_dataset: dict[str, dict[str, Any]] = {}
@@ -221,14 +224,18 @@ def dq_completeness_check(
         完整性检查结果
 
     """
-    with create_datahub_context() as hub:
+    with create_dq_and_metadata_context() as (
+        _engine,
+        _metadata_service,
+        market_service,
+    ):
         # 读取实际数据
         query = MarketBarsQuery(
             start=trade_date,
             end=trade_date,
             market_wide=market_wide,
         )
-        df = hub.market.query(query)
+        df = market_service.query(query)
 
         actual_sids = (
             df["instrument_id"].unique().to_list() if not df.is_empty() else []

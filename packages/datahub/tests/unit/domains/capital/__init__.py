@@ -1,1 +1,0 @@
-"""Capital domain unit tests."""

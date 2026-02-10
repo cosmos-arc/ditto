@@ -220,30 +220,66 @@ class StockBarsWriter:
 
 ---
 
-## 阶段 4: Ingestion 逻辑清理 (P0)
+## 阶段 4: Ingestion 逻辑清理 (P0) ✅ 已完成
 
 ### Task 32: 删除 fundamental_ingestion.py
 
+**状态**: ✅ 完成 (2026-02-10)
+
+**分析结果**:
+- Port 层已有完整的 `IngestionCoordinator`
+- datahub 层的 `*Ingestion` 类是废弃代码，不应被使用
+- 无代码引用（仅文档提及）
+
 **操作**:
-1. 检查引用: `grep -r "fundamental_ingestion" packages/datahub/src`
-2. 删除文件
-3. 更新 `__init__.py`
+1. 检查引用: 无实际代码引用
+2. 删除文件: ✅
+3. 更新 `__init__.py`: 无需更新（未导出）
 
 ### Task 33: 删除 capital_ingestion.py
 
-**同 Task 32**
+**状态**: ✅ 完成 (2026-02-10)
+
+**分析结果**:
+- Port 层使用独立的 `IngestionCoordinator`
+- datahub 层的 `CapitalIngestion` 类未在 port 层使用
+
+**操作**:
+1. 删除文件: ✅ `capital_ingestion.py`
+2. 更新 `__init__.py`: ✅ 移除 `CapitalIngestion` 和 `IngestionResult` 导出
+3. 删除测试文件: ✅
+   - `test_capital_ingestion_unit.py`
+   - `test_capital_ingestion_integration.py`
+4. 更新 README.md: ✅ 移除相关引用
+
+**验证结果**:
+- ✅ 类型检查通过 (0 errors, 0 warnings)
+- ✅ 代码风格检查通过
+- ✅ 快速测试通过 (1954 passed)
 
 ---
 
-## 阶段 5: Domains 别名清理 (P1)
+## 阶段 5: Domains 别名清理 (P1) ✅ 已完成
 
 ### Task 34: 删除 domains 别名
 
+**状态**: ✅ 完成 (2026-02-10)
+
+**分析结果**:
+- 代码中无 `from ditto_datahub.domains` 引用
+- `domains` 是 `stores` 的废弃别名（已标记 DeprecationWarning）
+- 所有测试已迁移到 `tests/unit/stores/`
+
 **操作**:
-1. 查找引用: `grep -r "from ditto_datahub.domains" packages/datahub/tests`
-2. 批量替换: `s/from ditto_datahub\.domains/from ditto_datahub.stores/g`
-3. 删除目录: `rm -rf packages/datahub/src/ditto_datahub/domains`
-4. 删除测试目录: `rm -rf packages/datahub/tests/unit/domains`
+1. 验证引用: ✅ 无代码引用
+2. 删除源码目录: ✅ `packages/datahub/src/ditto_datahub/domains/`
+3. 删除测试目录: ✅ `packages/datahub/tests/unit/domains/`
+
+**验证结果**:
+- ✅ 代码风格检查通过 (ruff)
+- ✅ 类型检查通过 (0 errors, 0 warnings)
+- ✅ 架构检查通过 (6 contracts kept)
+- ✅ 快速测试通过
 
 ---
 

@@ -120,7 +120,7 @@ def app_ctx() -> MagicMock:
 
 @pytest.fixture
 def mock_hub() -> MagicMock:
-    """DataHub mock 用于 CLIExecutor 测试."""
+    """DataHub mock 用于 CLIExecutor 测试 (已废弃 - 使用 mock_services 替代)."""
     from unittest.mock import MagicMock
 
     mock = MagicMock()
@@ -130,3 +130,61 @@ def mock_hub() -> MagicMock:
     mock.ingestion_log_store.save_log.return_value = None
 
     return mock
+
+
+@pytest.fixture
+def mock_services() -> dict[str, MagicMock]:
+    """Service mocks 用于 CLIExecutor 测试."""
+    from unittest.mock import MagicMock
+
+    return {
+        "metadata_service": MagicMock(),
+        "market_service": MagicMock(),
+        "fundamental_service": MagicMock(),
+        "capital_service": MagicMock(),
+        "macro_service": MagicMock(),
+        "source_service": MagicMock(),
+        "ingestion_log_service": MagicMock(),
+    }
+
+
+@pytest.fixture
+def mock_metadata_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """MetadataService mock."""
+    return mock_services["metadata_service"]
+
+
+@pytest.fixture
+def mock_market_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """MarketService mock."""
+    return mock_services["market_service"]
+
+
+@pytest.fixture
+def mock_fundamental_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """FundamentalService mock."""
+    return mock_services["fundamental_service"]
+
+
+@pytest.fixture
+def mock_capital_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """CapitalService mock."""
+    return mock_services["capital_service"]
+
+
+@pytest.fixture
+def mock_macro_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """MacroService mock."""
+    return mock_services["macro_service"]
+
+
+@pytest.fixture
+def mock_source_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """SourceService mock."""
+    return mock_services["source_service"]
+
+
+@pytest.fixture
+def mock_ingestion_log_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """IngestionLogService mock."""
+    return mock_services["ingestion_log_service"]

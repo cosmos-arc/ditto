@@ -9,8 +9,14 @@ CLI 本地执行器.
 from contextlib import contextmanager
 from typing import Any
 
-from ditto_datahub import DataHub
 from ditto_datahub.models import Source
+from ditto_datahub.services.capital import CapitalService
+from ditto_datahub.services.fundamental import FundamentalService
+from ditto_datahub.services.macro import MacroService
+from ditto_datahub.services.market import MarketService
+from ditto_datahub.services.metadata import MetadataService
+from ditto_datahub.services.runtime import IngestionLogService
+from ditto_datahub.services.source_service import SourceService
 
 from ditto_port.services.ingestion import create_coordinator
 from ditto_port.services.ingestion.backfill import BackfillManager
@@ -20,20 +26,38 @@ from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 class CLIExecutor:
     """CLI 本地执行器，封装 IngestionCoordinator 和 BackfillManager."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
-        hub: DataHub,
+        metadata_service: MetadataService,
+        market_service: MarketService,
+        fundamental_service: FundamentalService,
+        capital_service: CapitalService,
+        macro_service: MacroService,
+        source_service: SourceService,
+        ingestion_log_service: IngestionLogService,
         source_name: str | Source = Source.TUSHARE,
     ) -> None:
         """
         初始化 CLIExecutor.
 
         Args:
-            hub: DataHub 实例
+            metadata_service: MetadataService 实例
+            market_service: MarketService 实例
+            fundamental_service: FundamentalService 实例
+            capital_service: CapitalService 实例
+            macro_service: MacroService 实例
+            source_service: SourceService 实例
+            ingestion_log_service: IngestionLogService 实例
             source_name: 数据源名称，默认为 tushare
 
         """
-        self._hub = hub
+        self._metadata_service = metadata_service
+        self._market_service = market_service
+        self._fundamental_service = fundamental_service
+        self._capital_service = capital_service
+        self._macro_service = macro_service
+        self._source_service = source_service
+        self._ingestion_log_service = ingestion_log_service
         self._source_name = (
             source_name if isinstance(source_name, Source) else Source(source_name)
         )
@@ -63,24 +87,59 @@ class CLIExecutor:
 
     @classmethod
     @contextmanager
-    def create(cls, hub: DataHub, source_name: str | Source = Source.TUSHARE):
+    def create(  # noqa: PLR0913
+        cls,
+        metadata_service: MetadataService,
+        market_service: MarketService,
+        fundamental_service: FundamentalService,
+        capital_service: CapitalService,
+        macro_service: MacroService,
+        source_service: SourceService,
+        ingestion_log_service: IngestionLogService,
+        source_name: str | Source = Source.TUSHARE,
+    ):
         """
         创建 CLIExecutor 实例并初始化依赖.
 
         Args:
-            hub: DataHub 实例
+            metadata_service: MetadataService 实例
+            market_service: MarketService 实例
+            fundamental_service: FundamentalService 实例
+            capital_service: CapitalService 实例
+            macro_service: MacroService 实例
+            source_service: SourceService 实例
+            ingestion_log_service: IngestionLogService 实例
             source_name: 数据源名称
 
         Yields:
             CLIExecutor: 已初始化的执行器实例
 
         """
-        executor = cls(hub=hub, source_name=source_name)
-        with create_coordinator(hub=hub, source_name=source_name) as coordinator:
+        executor = cls(
+            metadata_service=metadata_service,
+            market_service=market_service,
+            fundamental_service=fundamental_service,
+            capital_service=capital_service,
+            macro_service=macro_service,
+            source_service=source_service,
+            ingestion_log_service=ingestion_log_service,
+            source_name=source_name,
+        )
+        with create_coordinator(
+            metadata_service=metadata_service,
+            market_service=market_service,
+            fundamental_service=fundamental_service,
+            capital_service=capital_service,
+            macro_service=macro_service,
+            source_service=source_service,
+            ingestion_log_service=ingestion_log_service,
+            source_name=source_name,
+        ) as coordinator:
             executor._coordinator = coordinator
             backfill_manager = BackfillManager(
                 coordinator=coordinator,
-                hub=hub,
+                metadata_service=metadata_service,
+                ingestion_log_service=ingestion_log_service,
             )
             executor._backfill_manager = backfill_manager
             yield executor

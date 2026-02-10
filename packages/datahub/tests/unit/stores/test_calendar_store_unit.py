@@ -342,8 +342,9 @@ class TestCalendarStore:
         with mocker.patch.object(
             self.client, "execute", side_effect=RuntimeError("DB error")
         ):
+            # Patch the logger in calendar_writer (where the actual logging happens)
             mock_logger = mocker.patch(
-                "ditto_datahub.stores.metadata.calendar.calendar_store.logger"
+                "ditto_datahub.stores.metadata.calendar.calendar_writer.logger"
             )
 
             with pytest.raises(RuntimeError):

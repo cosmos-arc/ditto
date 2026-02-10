@@ -8,9 +8,58 @@ from typing import Any, cast
 import polars as pl
 from ditto_foundation import logger
 
-from ditto_datahub.stores.metadata.instrument.instrument_store import (
-    _build_in_clause,
-)
+
+def _build_in_clause(
+    column: str,
+    items: list[Any],
+    chunk_size: int = 200,
+) -> tuple[str, list[Any]]:
+    """
+    构建参数化 IN 子句（自动分块）。
+
+    确保 SQL 注入安全，使用参数化查询。
+    当列表超过 chunk_size 时，自动分块并用 OR 连接。
+
+    Args:
+        column: 列名（如 "s.instrument_id", "m.source_ticker"）。
+        items: 值列表。
+        chunk_size: 每块的最大参数数量（默认 200，SQLite 限制）。
+
+    Returns:
+        (sql_clause, params) 元组：
+        - sql_clause: IN 子句 SQL 片段
+        - params: 参数列表
+
+    Examples:
+        >>> _build_in_clause("s.instrument_id", [1, 2, 3])
+        ("s.instrument_id IN (?,?,?)", [1, 2, 3])
+        >>> _build_in_clause("s.instrument_id", [], 200)
+        ("1=0", [])
+        >>> # 分块处理（超过 chunk_size）  # noqa: E501
+        >>> _build_in_clause("s.instrument_id", list(range(500)), 200)
+        ("(...)", [...])
+
+    """
+    if not items:
+        return ("1=0", [])  # 空 IN 返回 False 条件
+
+    if len(items) <= chunk_size:
+        placeholders = ",".join("?" * len(items))
+        in_clause = column + " IN (" + placeholders + ")"
+        return (in_clause, items)
+
+    # 分块处理：用 OR 连接多个 IN 子句
+    chunks = [items[i : i + chunk_size] for i in range(0, len(items), chunk_size)]
+    clauses: list[str] = []
+    params: list[Any] = []
+    for chunk in chunks:
+        placeholders = ",".join("?" * len(chunk))
+        in_clause = column + " IN (" + placeholders + ")"
+        clauses.append(in_clause)
+        params.extend(chunk)
+
+    clause = "(" + " OR ".join(clauses) + ")"
+    return (clause, params)
 
 
 class InstrumentReader:

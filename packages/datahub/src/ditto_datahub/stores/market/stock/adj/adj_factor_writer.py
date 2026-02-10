@@ -1,0 +1,138 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import polars as pl
+from ditto_datahub.models.common import OnDuplicate
+from ditto_datahub.models.storage import WriteStoreResult
+from ditto_datahub.stores.base import ParquetStore, YearlyPartition
+
+"""Stock adjustment factor writer.
+
+Provides write access to stock adjustment factors for dividend/split/bonus events
+stored in Parquet files with year partitioning. Following design document at
+docs/design/02_data_design.md.
+"""
+
+
+class StockAdjFactorWriter:
+    """
+    Stock adjustment factor data writer.
+
+    Provides write access to stock adjustment factors with year partitioning.
+    Uses composition pattern with ParquetStore for all data operations.
+
+    Storage structure:
+        data_root/
+            market/stock/adj/
+                2020.parquet
+                2021.parquet
+                ...
+
+    Attributes:
+        DATASET: Dataset name for stock adjustment factors.
+
+    """
+
+    DATASET: str = "market/stock/adj"
+
+    def __init__(self, data_root: Path) -> None:
+        """
+        Initialize StockAdjFactorWriter.
+
+        Args:
+            data_root: Root directory for data storage.
+
+        """
+        self._store = ParquetStore(data_root, YearlyPartition())
+
+    # ============ Write operations ============
+
+    def write(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate = OnDuplicate.ERROR,
+    ) -> WriteStoreResult:
+        """
+        Write adjustment factors to the store.
+
+        Args:
+            df: DataFrame to write.
+            year: Year partition.
+            on_duplicate: Duplicate data handling strategy.
+
+        Returns:
+            Write result statistics.
+
+        """
+        return self._store.write(
+            self.DATASET,
+            df,
+            on_duplicate.value,
+            year=year,
+        )
+
+    def delete(
+        self,
+        instrument_ids: list[int] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> int:
+        """
+        Delete adjustment factors from the store.
+
+        Args:
+            instrument_ids: Filter by instrument IDs.
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            Number of deleted records.
+
+        """
+        return self._store.delete(
+            self.DATASET,
+            instrument_ids=instrument_ids,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def delete_partition(self, partition_key: str) -> bool:
+        """
+        Delete a partition by key.
+
+        Args:
+            partition_key: Partition key (e.g., "2024").
+
+        Returns:
+            True if deleted, False if file didn't exist.
+
+        """
+        return self._store.delete_partition(self.DATASET, partition_key)
+
+    # ============ Metadata operations ============
+
+    def get_checksum(self, partition_key: str) -> str:
+        """
+        Get MD5 checksum of a partition.
+
+        Args:
+            partition_key: Partition key (e.g., "2024").
+
+        Returns:
+            Checksum hex string, or empty string if file doesn't exist.
+
+        """
+        return self._store.get_checksum(self.DATASET, partition_key)
+
+    @property
+    def data_root(self) -> Path:
+        """
+        Get the data root directory.
+
+        Returns:
+            Data root directory path.
+
+        """
+        return self._store.data_root

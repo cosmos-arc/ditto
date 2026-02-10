@@ -7,7 +7,7 @@
 - 限制重试数量以防资源耗尽
 """
 
-from ditto_datahub import DataHub
+from ditto_datahub.services.runtime import IngestionLogService
 from ditto_foundation import logger
 
 from ditto_port.models import IngestionResult, RetryResult
@@ -21,7 +21,7 @@ class RetryManager:
     def __init__(
         self,
         coordinator: IngestionCoordinator,
-        hub: DataHub,
+        ingestion_log_service: IngestionLogService,
         source: str = "tushare",
     ) -> None:
         """
@@ -29,12 +29,12 @@ class RetryManager:
 
         Args:
             coordinator: 摄取协调器
-            hub: 数据访问中心
+            ingestion_log_service: 摄取日志服务
             source: 数据源标识符
 
         """
         self._coordinator = coordinator
-        self._hub = hub
+        self._ingestion_log_service = ingestion_log_service
         self._source = source
 
     def get_failed_dates(
@@ -55,7 +55,7 @@ class RetryManager:
             失败的交易日期列表（YYYY-MM-DD）
 
         """
-        failed_dates = self._hub.ingestion_log_store.get_failed_dates(
+        failed_dates = self._ingestion_log_service.get_failed_dates(
             dataset=dataset,
             source=self._source,
             limit=limit,

@@ -1,0 +1,1 @@
+"""Margin trading data tests."""

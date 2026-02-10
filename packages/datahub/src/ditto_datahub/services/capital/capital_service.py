@@ -9,7 +9,32 @@ from typing import Literal
 import polars as pl
 from ditto_foundation import logger
 
-from ditto_datahub.stores.capital.capital_store import CapitalStore
+from ditto_datahub.stores.capital.futures.futures_reader import FuturesReader
+from ditto_datahub.stores.capital.futures.futures_writer import FuturesWriter
+from ditto_datahub.stores.capital.index_composition.index_composition_reader import (
+    IndexCompositionReader,
+)
+from ditto_datahub.stores.capital.index_composition.index_composition_writer import (
+    IndexCompositionWriter,
+)
+from ditto_datahub.stores.capital.margin.margin_trading_reader import (
+    MarginTradingReader,
+)
+from ditto_datahub.stores.capital.margin.margin_trading_writer import (
+    MarginTradingWriter,
+)
+from ditto_datahub.stores.capital.pledge.pledge_ratio_reader import (
+    PledgeRatioReader,
+)
+from ditto_datahub.stores.capital.pledge.pledge_ratio_writer import (
+    PledgeRatioWriter,
+)
+from ditto_datahub.stores.capital.valuation.valuation_metrics_reader import (
+    ValuationMetricsReader,
+)
+from ditto_datahub.stores.capital.valuation.valuation_metrics_writer import (
+    ValuationMetricsWriter,
+)
 
 CapitalDataset = Literal[
     "margin_trading",
@@ -42,19 +67,49 @@ class CapitalService:
     """
     Capital domain unified service.
 
-    Thin wrapper around CapitalStore with dependency injection.
-    Delegates all operations to the underlying store.
+    Thin wrapper around Reader/Writer components with dependency injection.
+    Delegates all operations to the underlying readers and writers.
     """
 
-    def __init__(self, capital_store: CapitalStore) -> None:
+    def __init__(  # noqa: PLR0913
+        self,
+        margin_trading_reader: MarginTradingReader,
+        margin_trading_writer: MarginTradingWriter,
+        pledge_ratio_reader: PledgeRatioReader,
+        pledge_ratio_writer: PledgeRatioWriter,
+        valuation_metrics_reader: ValuationMetricsReader,
+        valuation_metrics_writer: ValuationMetricsWriter,
+        futures_reader: FuturesReader,
+        futures_writer: FuturesWriter,
+        index_composition_reader: IndexCompositionReader,
+        index_composition_writer: IndexCompositionWriter,
+    ) -> None:
         """
         Initialize CapitalService.
 
         Args:
-            capital_store: Capital domain data storage.
+            margin_trading_reader: Margin trading data reader.
+            margin_trading_writer: Margin trading data writer.
+            pledge_ratio_reader: Pledge ratio data reader.
+            pledge_ratio_writer: Pledge ratio data writer.
+            valuation_metrics_reader: Valuation metrics data reader.
+            valuation_metrics_writer: Valuation metrics data writer.
+            futures_reader: Futures data reader.
+            futures_writer: Futures data writer.
+            index_composition_reader: Index composition data reader.
+            index_composition_writer: Index composition data writer.
 
         """
-        self._store = capital_store
+        self._margin_trading_reader = margin_trading_reader
+        self._margin_trading_writer = margin_trading_writer
+        self._pledge_ratio_reader = pledge_ratio_reader
+        self._pledge_ratio_writer = pledge_ratio_writer
+        self._valuation_metrics_reader = valuation_metrics_reader
+        self._valuation_metrics_writer = valuation_metrics_writer
+        self._futures_reader = futures_reader
+        self._futures_writer = futures_writer
+        self._index_composition_reader = index_composition_reader
+        self._index_composition_writer = index_composition_writer
 
         logger.debug(
             "CapitalService initialized",
@@ -78,11 +133,11 @@ class CapitalService:
     def write(self, dataset: CapitalDataset, df: pl.DataFrame) -> CapitalWriteResult:
         """Write dataset via unified contract."""
         writers = {
-            "margin_trading": self._store.write_margin_trading,
-            "pledge_ratio": self._store.write_pledge_ratio,
-            "valuation_metrics": self._store.write_valuation_metrics,
-            "futures": self._store.write_futures,
-            "index_composition": self._store.write_index_composition,
+            "margin_trading": self._margin_trading_writer.write,
+            "pledge_ratio": self._pledge_ratio_writer.write,
+            "valuation_metrics": self._valuation_metrics_writer.write,
+            "futures": self._futures_writer.write,
+            "index_composition": self._index_composition_writer.write,
         }
         records_written = writers[dataset](df)
         return CapitalWriteResult(dataset=dataset, records_written=records_written)
@@ -90,15 +145,15 @@ class CapitalService:
     def query(self, query: CapitalQuery) -> pl.DataFrame:
         """Query dataset via unified contract."""
         if query.dataset == "index_composition":
-            return self._store.get_index_composition(
+            return self._index_composition_reader.get(
                 self._require_index_id(query), query.as_of_date
             )
 
         readers = {
-            "margin_trading": self._store.get_margin_trading,
-            "pledge_ratio": self._store.get_pledge_ratio,
-            "valuation_metrics": self._store.get_valuation_metrics,
-            "futures": self._store.get_futures,
+            "margin_trading": self._margin_trading_reader.get,
+            "pledge_ratio": self._pledge_ratio_reader.get,
+            "valuation_metrics": self._valuation_metrics_reader.get,
+            "futures": self._futures_reader.get,
         }
         instrument_id = self._require_instrument_id(query)
         return readers[query.dataset](instrument_id, query.as_of_date)

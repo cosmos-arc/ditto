@@ -10,6 +10,14 @@ from ditto_foundation.util.checksum import ChecksumCompute
 from ditto_port.services.ingestion.metadata import MetadataManager
 
 
+@pytest.fixture
+def mock_ingestion_log_service(mocker):
+    """创建 Mock IngestionLogService。"""
+    service = mocker.Mock()
+    service.get_log = mocker.Mock(return_value=None)
+    return service
+
+
 @pytest.fixture(autouse=True)
 def setup_observability():
     """初始化可观测性。"""
@@ -32,11 +40,11 @@ def setup_observability():
 class TestShouldSkip:
     """测试 should_skip 方法。"""
 
-    def test_should_not_skip_when_force_is_true(self, mocker) -> None:
+    def test_should_not_skip_when_force_is_true(
+        self, mock_ingestion_log_service
+    ) -> None:
         """force=True 时不跳过。"""
-
-        mock_hub = mocker.Mock()
-        manager = MetadataManager(mock_hub)
+        manager = MetadataManager(mock_ingestion_log_service)
 
         should_skip, reason = manager.should_skip(
             dataset="stock_daily",
@@ -47,13 +55,11 @@ class TestShouldSkip:
         assert should_skip is False
         assert reason is None
 
-    def test_should_not_skip_when_no_history(self, mocker) -> None:
+    def test_should_not_skip_when_no_history(self, mock_ingestion_log_service) -> None:
         """无历史记录时不跳过。"""
-
-        mock_hub = mocker.Mock()
         # Mock get_log 返回 None（无历史记录）
-        mock_hub.ingestion_log_store.get_log.return_value = None
-        manager = MetadataManager(mock_hub)
+        mock_ingestion_log_service.get_log.return_value = None
+        manager = MetadataManager(mock_ingestion_log_service)
 
         should_skip, reason = manager.should_skip(
             dataset="stock_daily",
@@ -63,14 +69,14 @@ class TestShouldSkip:
 
         assert should_skip is False
         assert reason is None
-        mock_hub.ingestion_log_store.get_log.assert_called_once()
+        mock_ingestion_log_service.get_log.assert_called_once()
 
-    def test_should_skip_when_previous_success(self, mocker) -> None:
+    def test_should_skip_when_previous_success(
+        self, mock_ingestion_log_service
+    ) -> None:
         """历史成功时跳过。"""
-
-        mock_hub = mocker.Mock()
         # Mock get_log 返回成功的历史记录
-        mock_hub.ingestion_log_store.get_log.return_value = IngestionLog(
+        mock_ingestion_log_service.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -78,7 +84,7 @@ class TestShouldSkip:
             checksum="abc123",
             rows=1000,
         )
-        manager = MetadataManager(mock_hub)
+        manager = MetadataManager(mock_ingestion_log_service)
 
         should_skip, reason = manager.should_skip(
             dataset="stock_daily",
@@ -90,12 +96,12 @@ class TestShouldSkip:
         assert reason is not None
         assert "成功" in reason or "SUCCESS" in reason
 
-    def test_should_not_skip_when_previous_failed(self, mocker) -> None:
+    def test_should_not_skip_when_previous_failed(
+        self, mock_ingestion_log_service
+    ) -> None:
         """历史失败时不跳过。"""
-
-        mock_hub = mocker.Mock()
         # Mock get_log 返回失败的历史记录
-        mock_hub.ingestion_log_store.get_log.return_value = IngestionLog(
+        mock_ingestion_log_service.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -103,7 +109,7 @@ class TestShouldSkip:
             error_code="FETCH_ERROR",
             error_message="Network error",
         )
-        manager = MetadataManager(mock_hub)
+        manager = MetadataManager(mock_ingestion_log_service)
 
         should_skip, reason = manager.should_skip(
             dataset="stock_daily",
@@ -114,11 +120,9 @@ class TestShouldSkip:
         assert should_skip is False
         assert reason is None
 
-    def test_should_not_skip_when_log_store_not_set(self, mocker) -> None:
-        """hub 始终需要提供，不再支持 log_store=None 的情况。"""
-
-        mock_hub = mocker.Mock()
-        manager = MetadataManager(mock_hub)
+    def test_should_not_skip_when_log_store_not_set(self) -> None:
+        """log_store=None 时不跳过。"""
+        manager = MetadataManager(None)
 
         should_skip, reason = manager.should_skip(
             dataset="stock_daily",
@@ -126,16 +130,16 @@ class TestShouldSkip:
             force=False,
         )
 
-        # hub.ingestion_log_store.get_log 默认返回 None（无历史记录）
+        # 没有 ingestion_log_service，不跳过
         assert should_skip is False
         assert reason is None
 
-    def test_should_skip_uses_source_parameter(self, mocker) -> None:
+    def test_should_skip_uses_source_parameter(
+        self, mock_ingestion_log_service
+    ) -> None:
         """should_skip 应使用传入的 source 参数，而非硬编码。"""
-        mock_hub = mocker.Mock()
-
         # Mock get_log 返回成功的历史记录
-        mock_hub.ingestion_log_store.get_log.return_value = IngestionLog(
+        mock_ingestion_log_service.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="akshare",  # 不同的数据源
             trade_date="2024-12-27",
@@ -143,7 +147,7 @@ class TestShouldSkip:
             checksum="abc123",
             rows=1000,
         )
-        manager = MetadataManager(mock_hub)
+        manager = MetadataManager(mock_ingestion_log_service)
 
         # 使用 akshare 数据源
         should_skip, reason = manager.should_skip(
@@ -154,7 +158,7 @@ class TestShouldSkip:
         )
 
         # 验证 get_log 被调用时使用了正确的 source
-        mock_hub.ingestion_log_store.get_log.assert_called_once_with(
+        mock_ingestion_log_service.get_log.assert_called_once_with(
             dataset="stock_daily",
             source="akshare",  # 应该是 akshare 而不是硬编码的 tushare
             trade_date="2024-12-27",
@@ -168,11 +172,11 @@ class TestShouldSkip:
 class TestCompareData:
     """测试 compare_data 方法。"""
 
-    def test_compare_returns_true_when_data_same(self, mocker) -> None:
+    def test_compare_returns_true_when_data_same(
+        self, mock_ingestion_log_service
+    ) -> None:
         """相同数据返回 True。"""
-
-        mock_hub = mocker.Mock()
-        manager = MetadataManager(mock_hub)
+        manager = MetadataManager(mock_ingestion_log_service)
 
         df = pl.DataFrame(
             {
@@ -196,11 +200,11 @@ class TestCompareData:
 
         assert result is True
 
-    def test_compare_returns_false_when_data_different(self, mocker) -> None:
+    def test_compare_returns_false_when_data_different(
+        self, mock_ingestion_log_service
+    ) -> None:
         """不同数据返回 False。"""
-
-        mock_hub = mocker.Mock()
-        manager = MetadataManager(mock_hub)
+        manager = MetadataManager(mock_ingestion_log_service)
 
         df = pl.DataFrame(
             {
@@ -223,11 +227,11 @@ class TestCompareData:
 
         assert result is False
 
-    def test_compare_returns_false_when_row_count_different(self, mocker) -> None:
+    def test_compare_returns_false_when_row_count_different(
+        self, mock_ingestion_log_service
+    ) -> None:
         """行数不同返回 False。"""
-
-        mock_hub = mocker.Mock()
-        manager = MetadataManager(mock_hub)
+        manager = MetadataManager(mock_ingestion_log_service)
 
         df = pl.DataFrame(
             {
@@ -252,11 +256,11 @@ class TestCompareData:
 
         assert result is False
 
-    def test_compare_handles_null_checksum_in_log(self, mocker) -> None:
+    def test_compare_handles_null_checksum_in_log(
+        self, mock_ingestion_log_service
+    ) -> None:
         """处理 log 中 checksum 为 None 的情况。"""
-
-        mock_hub = mocker.Mock()
-        manager = MetadataManager(mock_hub)
+        manager = MetadataManager(mock_ingestion_log_service)
 
         df = pl.DataFrame(
             {
@@ -280,10 +284,11 @@ class TestCompareData:
 
         assert result is False
 
-    def test_compare_returns_true_when_rows_is_none(self, mocker) -> None:
+    def test_compare_returns_true_when_rows_is_none(
+        self, mock_ingestion_log_service
+    ) -> None:
         """当 existing_log.rows 为 None 时，仅比较 checksum。"""
-        mock_hub = mocker.Mock()
-        manager = MetadataManager(mock_hub)
+        manager = MetadataManager(mock_ingestion_log_service)
 
         df = pl.DataFrame(
             {
@@ -314,12 +319,12 @@ class TestCompareData:
 class TestShouldSkipEdgeCases:
     """测试 should_skip 方法的边界情况。"""
 
-    def test_skip_reason_contains_checksum_and_rows(self, mocker) -> None:
+    def test_skip_reason_contains_checksum_and_rows(
+        self, mock_ingestion_log_service
+    ) -> None:
         """跳过原因应包含 checksum 和 rows 信息。"""
-        mock_hub = mocker.Mock()
-
         # Mock get_log 返回成功的历史记录
-        mock_hub.ingestion_log_store.get_log.return_value = IngestionLog(
+        mock_ingestion_log_service.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -327,7 +332,7 @@ class TestShouldSkipEdgeCases:
             checksum="abcdef1234567890",
             rows=1000,
         )
-        manager = MetadataManager(mock_hub)
+        manager = MetadataManager(mock_ingestion_log_service)
 
         should_skip, reason = manager.should_skip(
             dataset="stock_daily",
@@ -341,12 +346,12 @@ class TestShouldSkipEdgeCases:
         assert "abcdef12" in reason  # checksum 前 8 个字符
         assert "1000" in reason  # 行数
 
-    def test_skip_reason_handles_missing_checksum(self, mocker) -> None:
+    def test_skip_reason_handles_missing_checksum(
+        self, mock_ingestion_log_service
+    ) -> None:
         """跳过原因应处理 checksum 为 None 的情况。"""
-        mock_hub = mocker.Mock()
-
         # Mock get_log 返回成功但无 checksum 的历史记录
-        mock_hub.ingestion_log_store.get_log.return_value = IngestionLog(
+        mock_ingestion_log_service.get_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-12-27",
@@ -354,7 +359,7 @@ class TestShouldSkipEdgeCases:
             checksum=None,
             rows=1000,
         )
-        manager = MetadataManager(mock_hub)
+        manager = MetadataManager(mock_ingestion_log_service)
 
         should_skip, reason = manager.should_skip(
             dataset="stock_daily",

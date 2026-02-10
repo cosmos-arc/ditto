@@ -5,8 +5,14 @@ from contextlib import contextmanager
 from typing import Any
 
 from dishka import make_container
-from ditto_datahub import DataHub
 from ditto_datahub.models import Source
+from ditto_datahub.services.capital import CapitalService
+from ditto_datahub.services.fundamental import FundamentalService
+from ditto_datahub.services.macro import MacroService
+from ditto_datahub.services.market import MarketService
+from ditto_datahub.services.metadata import MetadataService
+from ditto_datahub.services.runtime import IngestionLogService
+from ditto_datahub.services.source_service import SourceService
 
 from ditto_port.cli.executor import CLIExecutor
 from ditto_port.registry import (
@@ -52,15 +58,30 @@ def create_executor():
     """
     创建 CLI 执行器（使用 DI 和工厂模式）.
 
-    通过 DI 容器获取 DataHub，然后使用 CLIExecutor.create() 工厂方法创建执行器。
+    通过 DI 容器获取所需的 Services，然后使用 CLIExecutor.create() 工厂方法创建执行器。
 
     Yields:
         CLIExecutor: 已初始化的执行器实例
 
     """
     with create_cli_host() as container:
-        # 从容器获取 DataHub（同步）
-        hub = container.get(DataHub)
+        # 从容器获取所需的 Services
+        metadata_service = container.get(MetadataService)
+        market_service = container.get(MarketService)
+        fundamental_service = container.get(FundamentalService)
+        capital_service = container.get(CapitalService)
+        macro_service = container.get(MacroService)
+        source_service = container.get(SourceService)
+        ingestion_log_service = container.get(IngestionLogService)
         # 使用工厂方法创建 executor，自动处理 coordinator 和 backfill_manager 的初始化
-        with CLIExecutor.create(hub=hub, source_name=Source.TUSHARE) as executor:
+        with CLIExecutor.create(
+            metadata_service=metadata_service,
+            market_service=market_service,
+            fundamental_service=fundamental_service,
+            capital_service=capital_service,
+            macro_service=macro_service,
+            source_service=source_service,
+            ingestion_log_service=ingestion_log_service,
+            source_name=Source.TUSHARE,
+        ) as executor:
             yield executor

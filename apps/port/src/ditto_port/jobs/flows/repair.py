@@ -11,7 +11,10 @@ from typing import cast
 
 from prefect import flow
 
-from ditto_port.jobs.context import create_ingestion_context
+from ditto_port.jobs.context import (
+    create_ingestion_context,
+    create_ingestion_log_context,
+)
 from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.retry import RetryManager
 
@@ -37,31 +40,37 @@ def retry_failed_flow(
 
     """
     with create_ingestion_context(source=source) as (
-        hub,
+        _metadata_service,
         coordinator,
     ):
-        # 创建重试管理器
-        retry_manager = RetryManager(
-            coordinator=coordinator,
-            hub=hub,
-            source=source,
-        )
+        with create_ingestion_log_context() as (
+            __metadata_service,
+            ingestion_log_service,
+        ):
+            # 创建重试管理器
+            retry_manager = RetryManager(
+                coordinator=coordinator,
+                ingestion_log_service=ingestion_log_service,
+                source=source,
+            )
 
-        # 执行重试
-        result = retry_manager.retry_failed(
-            dataset=dataset,
-            max_attempts=max_attempts,
-            limit=limit,
-        )
+            # 执行重试
+            result = retry_manager.retry_failed(
+                dataset=dataset,
+                max_attempts=max_attempts,
+                limit=limit,
+            )
 
-        return {
-            "dataset": result.dataset,
-            "total_failed": result.total_failed,
-            "retried_count": result.retried_count,
-            "success_count": result.success_count,
-            "still_failed_count": result.still_failed_count,
-            "message": f"重试完成: {result.success_count}/{result.retried_count} 成功",
-        }
+            return {
+                "dataset": result.dataset,
+                "total_failed": result.total_failed,
+                "retried_count": result.retried_count,
+                "success_count": result.success_count,
+                "still_failed_count": result.still_failed_count,
+                "message": (
+                    f"重试完成: {result.success_count}/{result.retried_count} 成功"
+                ),
+            }
 
 
 @flow(name="repair-holes", description="扫描并修补数据空洞")
@@ -88,32 +97,37 @@ def repair_holes_flow(
 
     """
     with create_ingestion_context(source=source) as (
-        hub,
+        metadata_service,
         coordinator,
     ):
-        # 创建回补管理器
-        backfill_manager = BackfillManager(
-            coordinator=coordinator,
-            hub=hub,
-        )
+        with create_ingestion_log_context() as (
+            _metadata_service,
+            ingestion_log_service,
+        ):
+            # 创建回补管理器
+            backfill_manager = BackfillManager(
+                coordinator=coordinator,
+                metadata_service=metadata_service,
+                ingestion_log_service=ingestion_log_service,
+            )
 
-        # 回补缺失数据
-        result = backfill_manager.backfill_missing(
-            dataset=dataset,
-            parallel=parallel,
-        )
+            # 回补缺失数据
+            result = backfill_manager.backfill_missing(
+                dataset=dataset,
+                parallel=parallel,
+            )
 
-        return {
-            "dataset": result.dataset,
-            "holes_count": result.total_dates,
-            "repaired_count": result.success_count,
-            "failed_count": result.failed_count,
-            "message": (
-                f"修补完成: {result.success_count}/{result.total_dates} 个空洞已修补"
-                if result.total_dates > 0
-                else "没有发现空洞"
-            ),
-        }
+            return {
+                "dataset": result.dataset,
+                "holes_count": result.total_dates,
+                "repaired_count": result.success_count,
+                "failed_count": result.failed_count,
+                "message": (
+                    f"修补完成: {result.success_count} 个空洞已修补"
+                    if result.total_dates > 0
+                    else "没有发现空洞"
+                ),
+            }
 
 
 @flow(name="daily-repair", description="每日修补流程")

@@ -19,7 +19,6 @@ import orjson
 # Local imports - using editable packages
 from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
-from ditto_datahub import register_datahub_providers
 from ditto_datahub.config import DataRootConfig
 from ditto_foundation.config.initializer import ConfigInitCoordinator, InitScope
 from ditto_foundation.config.settings import Settings
@@ -122,7 +121,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             ConfigInitCoordinator
         )
         data_root_config: DataRootConfig = await typed_container.get(DataRootConfig)
-        register_datahub_providers(coordinator)
+        # Providers 已经在容器中注册，无需手动注册
         coordinator.initialize(
             scope=InitScope.STARTUP,
             data_root=data_root_config.data_root,

@@ -1,0 +1,1 @@
+"""Index composition data tests."""
