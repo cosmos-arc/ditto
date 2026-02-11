@@ -78,10 +78,10 @@ class FactorService:
             event="factor_service_init_complete",
         )
 
-    @traced("factors.query")
-    def query(self, query: FactorQuery) -> pl.DataFrame:
+    @traced("factors.find")
+    def find_factors(self, query: FactorQuery) -> pl.DataFrame:
         """
-        Query factor data via unified service contract (PIT-safe).
+        Find factor data via unified service contract (PIT-safe).
 
         Args:
             query: FactorQuery object with query parameters.
@@ -134,6 +134,40 @@ class FactorService:
         )
 
         return result
+
+    @traced("factors.list")
+    def list_factors(
+        self,
+        start: str,
+        end: str,
+        factor_ids: list[str] | None = None,
+    ) -> pl.DataFrame:
+        """
+        List factors by date range (convenience method).
+
+        Convenience wrapper around find_factors() for common use cases.
+
+        Args:
+            start: Start date (YYYY-MM-DD).
+            end: End date (YYYY-MM-DD).
+            factor_ids: Factor IDs to filter (None = all factors).
+
+        Returns:
+            DataFrame with factor data including metadata.
+
+        Examples:
+            >>> service.list_factors("2024-01-01", "2024-01-31")
+            >>> service.list_factors(
+            ...     "2024-01-01", "2024-01-31", ["factor_momentum_12m"]
+            ... )
+
+        """
+        query = FactorQuery(
+            start=start,
+            end=end,
+            factors=factor_ids,
+        )
+        return self.find_factors(query)
 
     def _enrich_with_metadata(self, df: pl.DataFrame) -> pl.DataFrame:
         """

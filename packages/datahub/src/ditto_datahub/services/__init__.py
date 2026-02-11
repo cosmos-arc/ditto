@@ -37,7 +37,7 @@ from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.ingestion_log_service import IngestionLogService
 
 # Macro 域服务
-from ditto_datahub.services.macro_service import MacroQuery, MacroService
+from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import (
     AdjType,
     MarketBarsQuery,
@@ -64,7 +64,6 @@ __all__ = [
     "FeatureService",
     "FundamentalService",
     "IngestionLogService",
-    "MacroQuery",
     "MacroService",
     "MarketBarsQuery",
     "MarketConstituentsQuery",

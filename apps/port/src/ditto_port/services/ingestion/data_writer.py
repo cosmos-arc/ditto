@@ -468,7 +468,7 @@ class IngestionDataWriter:
         df: pl.DataFrame,
         year: int,
     ) -> WriteResult:
-        write_result = self._macro_service.write(df)
+        write_result = self._macro_service.save_indicators(df)
         files = 1 if write_result.records_written > 0 else 0
         return _to_write_result(
             dataset,

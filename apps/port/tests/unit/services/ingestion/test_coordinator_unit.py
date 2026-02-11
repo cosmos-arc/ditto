@@ -131,7 +131,7 @@ def mock_ingestion_log_service(mocker):
     service = mocker.Mock()
     service.get_log = mocker.Mock(return_value=None)
     service.save_log = mocker.Mock(return_value=None)
-    service.get_ingested_dates = mocker.Mock(return_value=[])
+    service.list_ingested_dates = mocker.Mock(return_value=[])
     return service
 
 
@@ -518,7 +518,7 @@ class TestIngestDate:
                 "knowledge_date": [date(2024, 12, 28)],
             }
         )
-        mock_macro_service.write.return_value = mocker.Mock(records_written=1)
+        mock_macro_service.save_indicators.return_value = mocker.Mock(records_written=1)
         mock_ingestion_log_service.save_log.return_value = IngestionLog(
             dataset="macro_indicators",
             source="tushare",
@@ -534,7 +534,7 @@ class TestIngestDate:
         # Assert
         assert result.status == "success"
         mock_source.fetch_macro_indicators.assert_called_once_with("2024-12-27")
-        mock_macro_service.write.assert_called_once()
+        mock_macro_service.save_indicators.assert_called_once()
 
     def test_ingest_date_success_calendar(
         self,
@@ -1380,7 +1380,7 @@ class TestTradingDayCheck:
             }
         )
 
-        mock_macro_service.write.return_value = mocker.Mock(records_written=1)
+        mock_macro_service.save_indicators.return_value = mocker.Mock(records_written=1)
         mock_ingestion_log_service.save_log.return_value = IngestionLog(
             dataset="macro_indicators",
             source="tushare",

@@ -89,12 +89,12 @@ class FeatureService:
             event="feature_service_init_complete",
         )
 
-    @traced("features.query")
-    def query(self, query: FeatureQuery) -> pl.DataFrame:
+    @traced("features.find_indicators")
+    def find_indicators(self, query: FeatureQuery) -> pl.DataFrame:
         """
-        Query technical indicator data via unified service contract.
+        Find technical indicator data via unified service contract.
 
-        查询技术指标数据.
+        查询技术指标数据（多维条件查询）.
 
         Args:
             query: FeatureQuery object with query parameters.
@@ -105,7 +105,7 @@ class FeatureService:
         """
         logger.debug(
             "Fetching technical indicators",
-            event="features_indicators_get_start",
+            event="features_indicators_find_start",
             indicators=query.indicators,
             start=query.start,
             end=query.end,
@@ -138,11 +138,40 @@ class FeatureService:
 
         logger.debug(
             "Technical indicators fetched",
-            event="features_indicators_get_complete",
+            event="features_indicators_find_complete",
             row_count=len(result),
         )
 
         return result
+
+    def list_indicators(
+        self,
+        start: str,
+        end: str,
+        indicator_types: list[Literal["trend", "momentum", "volatility", "volume"]]
+        | None = None,
+    ) -> pl.DataFrame:
+        """
+        List indicators by date range (convenience method).
+
+        按日期范围列出技术指标（便利方法）.
+
+        Args:
+            start: Start date (YYYY-MM-DD).
+            end: End date (YYYY-MM-DD).
+            indicator_types: Filter by indicator type (trend/momentum/volatility/
+                volume).
+
+        Returns:
+            DataFrame with indicator data including metadata.
+
+        """
+        query = FeatureQuery(
+            start=start,
+            end=end,
+            indicator_types=indicator_types,
+        )
+        return self.find_indicators(query)
 
     def _enrich_with_metadata(self, df: pl.DataFrame) -> pl.DataFrame:
         """

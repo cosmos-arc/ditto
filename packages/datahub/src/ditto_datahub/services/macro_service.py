@@ -25,6 +25,13 @@ type MacroFrequency = Literal["daily", "monthly", "quarterly"]
 
 
 @dataclass(frozen=True)
+class _MacroWriteResult:
+    """Internal write result for Macro domain service."""
+
+    records_written: int
+
+
+@dataclass(frozen=True)
 class MacroQuery:
     """
     Macro indicator query parameters.
@@ -47,14 +54,6 @@ class MacroQuery:
         Literal["economic", "interest_rate", "exchange_rate", "money_supply"] | None
     ) = None
     frequency: Literal["daily", "monthly", "quarterly"] | None = None
-
-
-@dataclass(frozen=True)
-class MacroWriteResult:
-    """Write result for Macro domain service."""
-
-    dataset: Literal["macro_indicators"]
-    records_written: int
 
 
 class MacroService:
@@ -104,30 +103,29 @@ class MacroService:
             event="macro_service_init_complete",
         )
 
-    @traced("macro.write")
-    def write(self, df: pl.DataFrame) -> MacroWriteResult:
-        """Write macro indicator records via unified service contract."""
+    @traced("macro.save")
+    def save_indicators(self, df: pl.DataFrame) -> _MacroWriteResult:
+        """Save macro indicator records via unified service contract."""
         missing = self._WRITE_REQUIRED_COLUMNS - set(df.columns)
         if missing:
             msg = f"macro_indicators 写入缺少必要列: {sorted(missing)}"
             raise ValueError(msg)
 
         if df.is_empty():
-            return MacroWriteResult(dataset="macro_indicators", records_written=0)
+            return _MacroWriteResult(records_written=0)
 
         indicator_mapping = self._upsert_indicator_metadata(df)
         write_df = self._prepare_indicator_records(df, indicator_mapping)
         records_written = self._indicator_writer.write(write_df)
 
-        return MacroWriteResult(
-            dataset="macro_indicators",
+        return _MacroWriteResult(
             records_written=records_written,
         )
 
-    @traced("macro.query")
-    def query(self, query: MacroQuery) -> pl.DataFrame:
+    @traced("macro.find")
+    def find_indicators(self, query: MacroQuery) -> pl.DataFrame:
         """
-        Query macro indicator data via unified service contract.
+        Find macro indicator data via unified service contract.
 
         Args:
             query: MacroQuery object with query parameters.
@@ -176,6 +174,33 @@ class MacroService:
         )
 
         return result
+
+    def list_indicators(
+        self,
+        start: str,
+        end: str,
+        category: (
+            Literal["economic", "interest_rate", "exchange_rate", "money_supply"] | None
+        ) = None,
+    ) -> pl.DataFrame:
+        """
+        List indicators by date range (convenience method).
+
+        Args:
+            start: Start date (YYYY-MM-DD).
+            end: End date (YYYY-MM-DD).
+            category: Filter by category.
+
+        Returns:
+            DataFrame with indicator data including metadata.
+
+        """
+        query = MacroQuery(
+            start=start,
+            end=end,
+            category=category,
+        )
+        return self.find_indicators(query)
 
     def _resolve_indicator_ids(
         self,
