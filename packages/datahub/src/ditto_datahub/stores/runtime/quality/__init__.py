@@ -1,10 +1,21 @@
 """Runtime quality stores."""
 
-from ditto_datahub.stores.runtime.quality.comparison_store import (
-    ComparisonStore,
+from ditto_datahub.stores.runtime.quality.comparison_reader import (
+    ComparisonReader,
 )
-from ditto_datahub.stores.runtime.quality.quarantine_store import (
-    QuarantineStore,
+from ditto_datahub.stores.runtime.quality.comparison_writer import (
+    ComparisonWriter,
+)
+from ditto_datahub.stores.runtime.quality.quarantine_reader import (
+    QuarantineReader,
+)
+from ditto_datahub.stores.runtime.quality.quarantine_writer import (
+    QuarantineWriter,
 )
 
-__all__ = ["ComparisonStore", "QuarantineStore"]
+__all__ = [
+    "ComparisonReader",
+    "ComparisonWriter",
+    "QuarantineReader",
+    "QuarantineWriter",
+]

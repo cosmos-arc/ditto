@@ -91,8 +91,18 @@ from ditto_datahub.stores.metadata.instrument import (
     InstrumentWriter,
 )
 from ditto_datahub.stores.metadata.universe import UniverseReader, UniverseWriter
-from ditto_datahub.stores.runtime.ingestion import IngestionLogStore
-from ditto_datahub.stores.runtime.quality import QuarantineStore
+
+# Runtime domain CQRS Readers and Writers
+from ditto_datahub.stores.runtime.ingestion import (
+    IngestionLogReader,
+    IngestionLogWriter,
+)
+from ditto_datahub.stores.runtime.quality import (
+    ComparisonReader,
+    ComparisonWriter,
+    QuarantineReader,
+    QuarantineWriter,
+)
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 from ditto_foundation.cache import DataCache
@@ -225,15 +235,39 @@ class DomainServiceProvider(Provider):
         """标的池写入器."""
         return UniverseWriter(client=sqlite_client, cache=data_cache)
 
-    @provide
-    def ingestion_log_store(self, sqlite_client: SQLiteClient) -> IngestionLogStore:
-        """摄取日志存储."""
-        return IngestionLogStore(sqlite_client)
+    # ========================================================================
+    # Runtime Domain CQRS Readers and Writers
+    # ========================================================================
 
     @provide
-    def quarantine_store(self, sqlite_client: SQLiteClient) -> QuarantineStore:
-        """隔离区存储（使用主数据库）."""
-        return QuarantineStore(sqlite_client)
+    def ingestion_log_reader(self, sqlite_client: SQLiteClient) -> IngestionLogReader:
+        """摄取日志读取器."""
+        return IngestionLogReader(sqlite_client)
+
+    @provide
+    def ingestion_log_writer(self, sqlite_client: SQLiteClient) -> IngestionLogWriter:
+        """摄取日志写入器."""
+        return IngestionLogWriter(sqlite_client)
+
+    @provide
+    def comparison_reader(self, config: DataRootConfig) -> ComparisonReader:
+        """质量对比数据读取器."""
+        return ComparisonReader(base_path=config.data_root)
+
+    @provide
+    def comparison_writer(self, config: DataRootConfig) -> ComparisonWriter:
+        """质量对比数据写入器."""
+        return ComparisonWriter(base_path=config.data_root)
+
+    @provide
+    def quarantine_reader(self, sqlite_client: SQLiteClient) -> QuarantineReader:
+        """隔离区数据读取器."""
+        return QuarantineReader(sqlite_client)
+
+    @provide
+    def quarantine_writer(self, sqlite_client: SQLiteClient) -> QuarantineWriter:
+        """隔离区数据写入器."""
+        return QuarantineWriter(sqlite_client)
 
     # ========================================================================
     # Market Domain Stores

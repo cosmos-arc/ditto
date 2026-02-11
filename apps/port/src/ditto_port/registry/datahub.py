@@ -21,7 +21,7 @@ from dishka import Provider, Scope, provide
 from ditto_datahub.config.data_root import DataRootConfig
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
-from ditto_datahub.services import IngestionLogService
+from ditto_datahub.services import IngestionLogService, QualityRecordService
 from ditto_datahub.services.capital_service import CapitalService
 from ditto_datahub.services.factor_service import FactorService
 from ditto_datahub.services.feature_service import FeatureService
@@ -202,7 +202,16 @@ from ditto_datahub.stores.metadata.instrument import (
     InstrumentWriter,
 )
 from ditto_datahub.stores.metadata.universe import UniverseReader, UniverseWriter
-from ditto_datahub.stores.runtime.ingestion import IngestionLogStore
+from ditto_datahub.stores.runtime.ingestion import (
+    IngestionLogReader,
+    IngestionLogWriter,
+)
+from ditto_datahub.stores.runtime.quality import (
+    ComparisonReader,
+    ComparisonWriter,
+    QuarantineReader,
+    QuarantineWriter,
+)
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager
@@ -543,10 +552,27 @@ class DataHubProvider(Provider):
     @provide
     def ingestion_log_service(
         self,
-        ingestion_log_store: IngestionLogStore,
+        ingestion_log_reader: IngestionLogReader,
+        ingestion_log_writer: IngestionLogWriter,
     ) -> IngestionLogService:
         """数据摄入日志服务."""
-        return IngestionLogService(ingestion_log_store)
+        return IngestionLogService(ingestion_log_reader, ingestion_log_writer)
+
+    @provide
+    def quality_record_service(
+        self,
+        comparison_reader: ComparisonReader,
+        comparison_writer: ComparisonWriter,
+        quarantine_reader: QuarantineReader,
+        quarantine_writer: QuarantineWriter,
+    ) -> QualityRecordService:
+        """质量记录服务."""
+        return QualityRecordService(
+            comparison_reader,
+            comparison_writer,
+            quarantine_reader,
+            quarantine_writer,
+        )
 
     @provide
     def source_service(self, sources: DataSources) -> SourceService:

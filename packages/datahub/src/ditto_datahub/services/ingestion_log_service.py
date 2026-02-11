@@ -1,20 +1,23 @@
 """
 IngestionLogService - 数据摄入日志服务.
 
-封装 IngestionLogStore，为 Port 层提供统一的数据摄入日志管理接口.
+封装 IngestionLogReader 和 IngestionLogWriter，为 Port 层提供统一的数据摄入日志管理接口.
 """
 
 from __future__ import annotations
 
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
-from ditto_datahub.stores.runtime.ingestion import IngestionLogStore
+from ditto_datahub.stores.runtime.ingestion import (
+    IngestionLogReader,
+    IngestionLogWriter,
+)
 
 
 class IngestionLogService:
     """
     数据摄入日志服务.
 
-    封装 IngestionLogStore，提供统一的摄入日志管理接口。
+    封装 IngestionLogReader 和 IngestionLogWriter，提供统一的摄入日志管理接口。
 
     职责：
     - 追踪每个交易日期的数据摄入状态
@@ -22,15 +25,21 @@ class IngestionLogService:
     - 提供摄入统计信息
     """
 
-    def __init__(self, ingestion_log_store: IngestionLogStore) -> None:
+    def __init__(
+        self,
+        ingestion_log_reader: IngestionLogReader,
+        ingestion_log_writer: IngestionLogWriter,
+    ) -> None:
         """
         初始化 IngestionLogService.
 
         Args:
-            ingestion_log_store: 摄入日志存储实例
+            ingestion_log_reader: 摄入日志读取器实例
+            ingestion_log_writer: 摄入日志写入器实例
 
         """
-        self._store = ingestion_log_store
+        self._reader = ingestion_log_reader
+        self._writer = ingestion_log_writer
 
     def save_log(self, log: IngestionLog) -> IngestionLog:
         """
@@ -43,7 +52,7 @@ class IngestionLogService:
             保存后的摄入日志对象（包含更新的时间戳和尝试次数）
 
         """
-        return self._store.save_log(log)
+        return self._writer.save_log(log)
 
     def get_log(
         self,
@@ -63,7 +72,7 @@ class IngestionLogService:
             摄入日志对象，不存在时返回 None
 
         """
-        return self._store.get_log(dataset, source, trade_date)
+        return self._reader.get_log(dataset, source, trade_date)
 
     def get_failed_dates(
         self,
@@ -85,7 +94,7 @@ class IngestionLogService:
             需要重试的交易日期列表（YYYY-MM-DD）
 
         """
-        return self._store.get_failed_dates(dataset, source, limit, max_attempts)
+        return self._reader.get_failed_dates(dataset, source, limit, max_attempts)
 
     def get_failed_logs(
         self,
@@ -107,7 +116,7 @@ class IngestionLogService:
             需要重试的摄入日志列表
 
         """
-        return self._store.get_failed_logs(dataset, source, limit, max_attempts)
+        return self._reader.get_failed_logs(dataset, source, limit, max_attempts)
 
     def get_success_rate(
         self,
@@ -127,7 +136,7 @@ class IngestionLogService:
             成功率（0.0 到 1.0）
 
         """
-        return self._store.get_success_rate(dataset, source, start_date)
+        return self._reader.get_success_rate(dataset, source, start_date)
 
     def get_stats(
         self,
@@ -145,7 +154,7 @@ class IngestionLogService:
             统计信息字典，包含 success_count, fail_count, total_count
 
         """
-        return self._store.get_stats(dataset, source)
+        return self._reader.get_stats(dataset, source)
 
     def get_ingested_dates(
         self,
@@ -166,7 +175,7 @@ class IngestionLogService:
             已摄入的交易日期列表（YYYY-MM-DD）
 
         """
-        return self._store.get_ingested_dates(dataset, source, status)
+        return self._reader.get_ingested_dates(dataset, source, status)
 
     def get_last_success_date(
         self,
@@ -184,4 +193,4 @@ class IngestionLogService:
             最后成功的交易日期（YYYY-MM-DD），不存在时返回 None
 
         """
-        return self._store.get_last_success_date(dataset, source)
+        return self._reader.get_last_success_date(dataset, source)

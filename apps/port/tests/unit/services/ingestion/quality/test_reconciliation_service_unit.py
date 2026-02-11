@@ -8,8 +8,8 @@ from ditto_port.services.ingestion.quality.reconciliation_service import (
 
 
 @pytest.fixture
-def sync_comparison_store(mock_comparison_store):
-    """同步版本的 ComparisonStore mock."""
+def sync_comparison_writer(mock_comparison_writer):
+    """同步版本的 ComparisonWriter mock."""
 
     # 将异步方法包装为同步
     async def write_comparison_impl(
@@ -17,8 +17,8 @@ def sync_comparison_store(mock_comparison_store):
     ) -> None:
         pass
 
-    mock_comparison_store.write_comparison.side_effect = write_comparison_impl
-    return mock_comparison_store
+    mock_comparison_writer.write_comparison.side_effect = write_comparison_impl
+    return mock_comparison_writer
 
 
 @pytest.mark.unit
@@ -29,7 +29,7 @@ class TestQualityReconciliationServiceInit:
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
     ) -> None:
         """正常初始化."""
@@ -37,14 +37,14 @@ class TestQualityReconciliationServiceInit:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
         # Assert
         assert service._engine is mock_quality_engine
         assert service._tdx_source is mock_tdx_source
-        assert service._comparison_store is mock_comparison_store
+        assert service._comparison_store is mock_comparison_writer
         assert service._instrument_store is mock_instrument_store
 
 
@@ -57,7 +57,7 @@ class TestDailyReconciliationSuccess:
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
         sample_primary_df,
         sample_secondary_df,
@@ -68,7 +68,7 @@ class TestDailyReconciliationSuccess:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
@@ -108,7 +108,7 @@ class TestDailyReconciliationSuccess:
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
         sample_primary_df,
     ) -> None:
@@ -117,7 +117,7 @@ class TestDailyReconciliationSuccess:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
@@ -148,7 +148,7 @@ class TestDailyReconciliationSuccess:
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
         sample_primary_df,
         sample_secondary_df,
@@ -159,7 +159,7 @@ class TestDailyReconciliationSuccess:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
@@ -178,7 +178,7 @@ class TestDailyReconciliationSuccess:
         )
 
         # Assert - 验证不存储结果
-        mock_comparison_store.write_comparison.assert_not_called()
+        mock_comparison_writer.write_comparison.assert_not_called()
         assert result["passed"] is True
 
 
@@ -191,7 +191,7 @@ class TestDailyReconciliationWithIssues:
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
         sample_primary_df,
         sample_secondary_df,
@@ -202,7 +202,7 @@ class TestDailyReconciliationWithIssues:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
@@ -227,13 +227,13 @@ class TestDailyReconciliationWithIssues:
         assert result["issue_count"] == 2
 
         # 验证存储结果被调用
-        mock_comparison_store.write_comparison.assert_called_once()
+        mock_comparison_writer.write_comparison.assert_called_once()
 
     async def test_with_issues_sends_alerts(
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
         sample_primary_df,
         sample_secondary_df,
@@ -244,7 +244,7 @@ class TestDailyReconciliationWithIssues:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
@@ -276,7 +276,7 @@ class TestDailyReconciliationEdgeCases:
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
     ) -> None:
         """缺少 instrument_id 列时抛出异常."""
@@ -284,7 +284,7 @@ class TestDailyReconciliationEdgeCases:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
@@ -311,7 +311,7 @@ class TestDailyReconciliationEdgeCases:
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
         sample_primary_df,
         sample_secondary_df,
@@ -322,7 +322,7 @@ class TestDailyReconciliationEdgeCases:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
@@ -352,7 +352,7 @@ class TestDailyReconciliationEdgeCases:
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
         sample_primary_df,
         sample_secondary_df,
@@ -362,7 +362,7 @@ class TestDailyReconciliationEdgeCases:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
@@ -399,7 +399,7 @@ class TestConvertResultToDf:
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
         sample_dq_result_passed,
     ) -> None:
@@ -408,7 +408,7 @@ class TestConvertResultToDf:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
@@ -424,7 +424,7 @@ class TestConvertResultToDf:
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
         sample_dq_result_with_issues,
     ) -> None:
@@ -433,7 +433,7 @@ class TestConvertResultToDf:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
@@ -452,7 +452,7 @@ class TestConvertResultToDf:
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
         sample_dq_result_with_issues,
     ) -> None:
@@ -461,7 +461,7 @@ class TestConvertResultToDf:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 
@@ -495,7 +495,7 @@ class TestSendAlerts:
         self,
         mock_quality_engine,
         mock_tdx_source,
-        mock_comparison_store,
+        mock_comparison_writer,
         mock_instrument_store,
         sample_dq_result_with_issues,
     ) -> None:
@@ -504,7 +504,7 @@ class TestSendAlerts:
         service = QualityReconciliationService(
             engine=mock_quality_engine,
             tdx_source=mock_tdx_source,
-            comparison_store=mock_comparison_store,
+            comparison_store=mock_comparison_writer,
             instrument_store=mock_instrument_store,
         )
 

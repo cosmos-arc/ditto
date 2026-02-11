@@ -6,7 +6,7 @@ from typing import Any
 
 import polars as pl
 from ditto_core.quality import QualityEngine
-from ditto_datahub.stores.runtime.quality import QuarantineStore
+from ditto_datahub.stores.runtime.quality import QuarantineWriter
 from loguru import logger
 
 
@@ -19,18 +19,18 @@ class QualityService:
     """
 
     def __init__(
-        self, engine: QualityEngine, quarantine_store: QuarantineStore | None = None
+        self, engine: QualityEngine, quarantine_writer: QuarantineWriter | None = None
     ) -> None:
         """
         Initialize quality service.
 
         Args:
             engine: Quality engine instance
-            quarantine_store: Optional quarantine store for failed data
+            quarantine_writer: Optional quarantine writer for failed data
 
         """
         self._engine = engine
-        self._quarantine_store = quarantine_store
+        self._quarantine_writer = quarantine_writer
 
     def check_and_quarantine(
         self,
@@ -104,7 +104,7 @@ class QualityService:
             dataset: Dataset identifier
 
         """
-        if self._quarantine_store is None:
+        if self._quarantine_writer is None:
             logger.info(
                 "Quarantine store not configured, skipping quarantine",
                 event="dq_quarantine_skipped",
@@ -124,7 +124,7 @@ class QualityService:
 
             try:
                 failed_df = pl.DataFrame(issue.sample_data)
-                self._quarantine_store.save_failed_data(
+                self._quarantine_writer.save_failed_data(
                     dataset=dataset,
                     rule_id=issue.rule_name,
                     severity=issue.severity.value,

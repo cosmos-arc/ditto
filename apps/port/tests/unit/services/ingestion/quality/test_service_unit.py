@@ -163,12 +163,12 @@ class TestQuarantineData:
         mock_quality_engine,
         sample_primary_df,
         sample_dq_result_with_issues,
-        mock_quarantine_store,
+        mock_quarantine_writer,
     ) -> None:
-        """测试 quarantine_store.save_failed_data 被调用."""
+        """测试 quarantine_writer.save_failed_data 被调用."""
         # Arrange
         service = QualityService(
-            engine=mock_quality_engine, quarantine_store=mock_quarantine_store
+            engine=mock_quality_engine, quarantine_writer=mock_quarantine_writer
         )
         mock_quality_engine.check.return_value = sample_dq_result_with_issues
 
@@ -177,6 +177,6 @@ class TestQuarantineData:
 
         # Assert - 验证 quarantine store 被调用
         # 每个 issue 应该调用一次 save_failed_data
-        assert mock_quarantine_store.save_failed_data.call_count == len(
+        assert mock_quarantine_writer.save_failed_data.call_count == len(
             sample_dq_result_with_issues.issues
         )
