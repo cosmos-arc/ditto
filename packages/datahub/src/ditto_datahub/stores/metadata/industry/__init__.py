@@ -1,6 +1,6 @@
 """Industry 子域 - 申万行业分类."""
 
-from ditto_datahub.models.metadata.industry import (
+from ditto_datahub.models.metadata import (
     IndustryBasic,
     IndustryMapping,
 )

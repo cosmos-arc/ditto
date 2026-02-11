@@ -11,7 +11,7 @@ from typing import Any
 
 from ditto_foundation import logger, traced
 
-from ditto_datahub.models.metadata.industry import IndustryMapping
+from ditto_datahub.models.metadata import IndustryMapping
 
 
 class IndustryMappingWriter:

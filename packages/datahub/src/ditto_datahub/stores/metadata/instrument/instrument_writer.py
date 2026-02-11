@@ -6,7 +6,7 @@ from typing import Any
 
 from ditto_foundation import logger
 
-from ditto_datahub.models.metadata.instrument import InstrumentRegistration
+from ditto_datahub.models.metadata import InstrumentRegistration
 
 
 class InstrumentWriter:
