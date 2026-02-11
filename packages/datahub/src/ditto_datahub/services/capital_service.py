@@ -1,10 +1,8 @@
-"""Capital domain service with unified query/write contract."""
+"""Capital domain service with dedicated query/write methods."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date
-from typing import Literal
 
 import polars as pl
 from ditto_foundation import logger
@@ -35,32 +33,6 @@ from ditto_datahub.stores.capital.valuation.valuation_metrics_reader import (
 from ditto_datahub.stores.capital.valuation.valuation_metrics_writer import (
     ValuationMetricsWriter,
 )
-
-CapitalDataset = Literal[
-    "margin_trading",
-    "pledge_ratio",
-    "valuation_metrics",
-    "futures",
-    "index_composition",
-]
-
-
-@dataclass(frozen=True)
-class CapitalQuery:
-    """Unified query contract for Capital domain."""
-
-    dataset: CapitalDataset
-    as_of_date: date
-    instrument_id: str | None = None
-    index_id: str | None = None
-
-
-@dataclass(frozen=True)
-class CapitalWriteResult:
-    """Write result for Capital domain service."""
-
-    dataset: CapitalDataset
-    records_written: int
 
 
 class CapitalService:
@@ -116,44 +88,143 @@ class CapitalService:
             event="capital_service_init_complete",
         )
 
-    @staticmethod
-    def _require_instrument_id(query: CapitalQuery) -> str:
-        if query.instrument_id is None:
-            msg = f"{query.dataset} 查询必须提供 instrument_id"
-            raise ValueError(msg)
-        return query.instrument_id
+    # Query methods (get_*)
 
-    @staticmethod
-    def _require_index_id(query: CapitalQuery) -> str:
-        if query.index_id is None:
-            msg = "index_composition 查询必须提供 index_id"
-            raise ValueError(msg)
-        return query.index_id
+    def get_margin_trading(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
+        """
+        Query margin trading data for an instrument.
 
-    def write(self, dataset: CapitalDataset, df: pl.DataFrame) -> CapitalWriteResult:
-        """Write dataset via unified contract."""
-        writers = {
-            "margin_trading": self._margin_trading_writer.write,
-            "pledge_ratio": self._pledge_ratio_writer.write,
-            "valuation_metrics": self._valuation_metrics_writer.write,
-            "futures": self._futures_writer.write,
-            "index_composition": self._index_composition_writer.write,
-        }
-        records_written = writers[dataset](df)
-        return CapitalWriteResult(dataset=dataset, records_written=records_written)
+        Args:
+            instrument_id: The instrument ID to query.
+            as_of_date: The point-in-time query date.
 
-    def query(self, query: CapitalQuery) -> pl.DataFrame:
-        """Query dataset via unified contract."""
-        if query.dataset == "index_composition":
-            return self._index_composition_reader.get(
-                self._require_index_id(query), query.as_of_date
-            )
+        Returns:
+            DataFrame with margin trading data.
 
-        readers = {
-            "margin_trading": self._margin_trading_reader.get,
-            "pledge_ratio": self._pledge_ratio_reader.get,
-            "valuation_metrics": self._valuation_metrics_reader.get,
-            "futures": self._futures_reader.get,
-        }
-        instrument_id = self._require_instrument_id(query)
-        return readers[query.dataset](instrument_id, query.as_of_date)
+        """
+        return self._margin_trading_reader.get(instrument_id, as_of_date)
+
+    def get_pledge_ratio(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
+        """
+        Query pledge ratio data for an instrument.
+
+        Args:
+            instrument_id: The instrument ID to query.
+            as_of_date: The point-in-time query date.
+
+        Returns:
+            DataFrame with pledge ratio data.
+
+        """
+        return self._pledge_ratio_reader.get(instrument_id, as_of_date)
+
+    def get_valuation_metrics(
+        self, instrument_id: str, as_of_date: date
+    ) -> pl.DataFrame:
+        """
+        Query valuation metrics data for an instrument.
+
+        Args:
+            instrument_id: The instrument ID to query.
+            as_of_date: The point-in-time query date.
+
+        Returns:
+            DataFrame with valuation metrics data.
+
+        """
+        return self._valuation_metrics_reader.get(instrument_id, as_of_date)
+
+    def get_futures(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
+        """
+        Query futures data for an instrument.
+
+        Args:
+            instrument_id: The instrument ID to query.
+            as_of_date: The point-in-time query date.
+
+        Returns:
+            DataFrame with futures data.
+
+        """
+        return self._futures_reader.get(instrument_id, as_of_date)
+
+    def get_index_composition(self, index_id: str, as_of_date: date) -> pl.DataFrame:
+        """
+        Query index composition data for an index.
+
+        Args:
+            index_id: The index ID to query.
+            as_of_date: The point-in-time query date.
+
+        Returns:
+            DataFrame with index composition data.
+
+        """
+        return self._index_composition_reader.get(index_id, as_of_date)
+
+    # Write methods (save_*)
+
+    def save_margin_trading(self, df: pl.DataFrame) -> int:
+        """
+        Save margin trading data.
+
+        Args:
+            df: DataFrame with margin trading data to save.
+
+        Returns:
+            Number of records written.
+
+        """
+        return self._margin_trading_writer.write(df)
+
+    def save_pledge_ratio(self, df: pl.DataFrame) -> int:
+        """
+        Save pledge ratio data.
+
+        Args:
+            df: DataFrame with pledge ratio data to save.
+
+        Returns:
+            Number of records written.
+
+        """
+        return self._pledge_ratio_writer.write(df)
+
+    def save_valuation_metrics(self, df: pl.DataFrame) -> int:
+        """
+        Save valuation metrics data.
+
+        Args:
+            df: DataFrame with valuation metrics data to save.
+
+        Returns:
+            Number of records written.
+
+        """
+        return self._valuation_metrics_writer.write(df)
+
+    def save_futures(self, df: pl.DataFrame) -> int:
+        """
+        Save futures data.
+
+        Args:
+            df: DataFrame with futures data to save.
+
+        Returns:
+            Number of records written.
+
+        """
+        return self._futures_writer.write(df)
+
+    def save_index_composition(self, df: pl.DataFrame) -> int:
+        """
+        Save index composition data.
+
+        Args:
+            df: DataFrame with index composition data to save.
+
+        Returns:
+            Number of records written.
+
+        """
+        return self._index_composition_writer.write(df)

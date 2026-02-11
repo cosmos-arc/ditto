@@ -427,17 +427,21 @@ class IngestionDataWriter:
         df: pl.DataFrame,
         year: int,
     ) -> WriteResult:
-        fundamental_dataset = cast(
-            Literal["balance_sheet", "income_statement", "cash_flow", "dividend"],
-            dataset_enum.value,
-        )
-        write_result = self._fundamental_service.write(fundamental_dataset, df)
-        files = 1 if write_result.records_written > 0 else 0
+        # Map dataset enum to the appropriate save method
+        save_methods = {
+            Dataset.BALANCE_SHEET: self._fundamental_service.save_balance_sheet,
+            Dataset.INCOME_STATEMENT: self._fundamental_service.save_income_statement,
+            Dataset.CASH_FLOW: self._fundamental_service.save_cash_flow,
+            Dataset.DIVIDEND: self._fundamental_service.save_dividend,
+        }
+        save_method = save_methods[dataset_enum]
+        records_written = save_method(df)
+        files = 1 if records_written > 0 else 0
         return _to_write_result(
             dataset,
             year,
             df,
-            write_result.records_written,
+            records_written,
             files,
         )
 
@@ -452,13 +456,21 @@ class IngestionDataWriter:
             Literal["valuation_metrics", "margin_trading", "pledge_ratio"],
             dataset_enum.value,
         )
-        write_result = self._capital_service.write(capital_dataset, df)
-        files = 1 if write_result.records_written > 0 else 0
+        # 使用特定的 save_* 方法替代已删除的 write() 方法
+        if capital_dataset == "valuation_metrics":
+            records_written = self._capital_service.save_valuation_metrics(df)
+        elif capital_dataset == "margin_trading":
+            records_written = self._capital_service.save_margin_trading(df)
+        elif capital_dataset == "pledge_ratio":
+            records_written = self._capital_service.save_pledge_ratio(df)
+        else:
+            records_written = 0
+        files = 1 if records_written > 0 else 0
         return _to_write_result(
             dataset,
             year,
             df,
-            write_result.records_written,
+            records_written,
             files,
         )
 
