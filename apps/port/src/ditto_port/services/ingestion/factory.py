@@ -61,7 +61,7 @@ def create_coordinator(  # noqa: PLR0913
             ) from e
 
     # 获取数据源
-    data_source = source_service.get(source_key)
+    data_source = source_service.get_source(source_key)
 
     # 创建协调器
     coordinator = IngestionCoordinator(

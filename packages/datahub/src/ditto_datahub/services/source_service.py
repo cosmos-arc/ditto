@@ -31,7 +31,7 @@ class SourceService:
         """
         self._sources = sources
 
-    def get(self, name: str | Source) -> DataSource:
+    def get_source(self, name: str | Source) -> DataSource:
         """
         获取数据源实例.
 
