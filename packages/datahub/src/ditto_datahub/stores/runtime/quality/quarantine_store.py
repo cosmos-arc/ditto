@@ -8,9 +8,8 @@ from typing import Any
 
 import orjson
 import polars as pl
-from ditto_foundation import logger
-
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_foundation import logger
 
 
 class QuarantineStore:

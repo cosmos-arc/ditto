@@ -16,11 +16,7 @@ from typing import Any
 from dishka import Provider, Scope, provide
 from ditto_datahub.config.data_root import DataRootConfig
 from ditto_datahub.runtime.freeze_manager import FreezeManager
-from ditto_datahub.runtime.ingestion.ingestion_log_store import (
-    IngestionLogStore,
-)
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_datahub.runtime.quality.quarantine_store import QuarantineStore
 from ditto_datahub.services.fundamental.fundamental_service import (
     FundamentalService,
 )
@@ -95,8 +91,11 @@ from ditto_datahub.stores.metadata.instrument import (
     InstrumentWriter,
 )
 from ditto_datahub.stores.metadata.universe import UniverseReader, UniverseWriter
+from ditto_datahub.stores.runtime.ingestion import IngestionLogStore
+from ditto_datahub.stores.runtime.quality import QuarantineStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
+from ditto_foundation.cache import DataCache
 
 __all__ = ["DomainServiceProvider"]
 
@@ -153,7 +152,7 @@ class DomainServiceProvider(Provider):
     def calendar_writer(
         self,
         sqlite_client: SQLiteClient,
-        data_cache: Any,
+        data_cache: DataCache[Any],
         calendar_reader: CalendarReader,
     ) -> CalendarWriter:
         """交易日历写入器."""
@@ -167,7 +166,7 @@ class DomainServiceProvider(Provider):
     def instrument_writer(
         self,
         sqlite_client: SQLiteClient,
-        data_cache: Any,
+        data_cache: DataCache[Any],
     ) -> InstrumentWriter:
         """证券主数据写入器."""
         return InstrumentWriter(client=sqlite_client, cache=data_cache)
@@ -176,7 +175,7 @@ class DomainServiceProvider(Provider):
     def industry_reader(
         self,
         sqlite_client: SQLiteClient,
-        data_cache: Any,
+        data_cache: DataCache[Any],
     ) -> IndustryReader:
         """行业主数据读取器."""
         return IndustryReader(client=sqlite_client, cache=data_cache)
@@ -185,7 +184,7 @@ class DomainServiceProvider(Provider):
     def industry_writer(
         self,
         sqlite_client: SQLiteClient,
-        data_cache: Any,
+        data_cache: DataCache[Any],
     ) -> IndustryWriter:
         """行业主数据写入器."""
         return IndustryWriter(client=sqlite_client, cache=data_cache)
@@ -194,7 +193,7 @@ class DomainServiceProvider(Provider):
     def industry_mapping_reader(
         self,
         sqlite_client: SQLiteClient,
-        data_cache: Any,
+        data_cache: DataCache[Any],
     ) -> IndustryMappingReader:
         """行业映射读取器."""
         return IndustryMappingReader(client=sqlite_client, cache=data_cache)
@@ -203,7 +202,7 @@ class DomainServiceProvider(Provider):
     def industry_mapping_writer(
         self,
         sqlite_client: SQLiteClient,
-        data_cache: Any,
+        data_cache: DataCache[Any],
     ) -> IndustryMappingWriter:
         """行业映射写入器."""
         return IndustryMappingWriter(client=sqlite_client, cache=data_cache)
@@ -212,7 +211,7 @@ class DomainServiceProvider(Provider):
     def universe_reader(
         self,
         sqlite_client: SQLiteClient,
-        data_cache: Any,
+        data_cache: DataCache[Any],
     ) -> UniverseReader:
         """标的池读取器."""
         return UniverseReader(client=sqlite_client, cache=data_cache)
@@ -221,7 +220,7 @@ class DomainServiceProvider(Provider):
     def universe_writer(
         self,
         sqlite_client: SQLiteClient,
-        data_cache: Any,
+        data_cache: DataCache[Any],
     ) -> UniverseWriter:
         """标的池写入器."""
         return UniverseWriter(client=sqlite_client, cache=data_cache)

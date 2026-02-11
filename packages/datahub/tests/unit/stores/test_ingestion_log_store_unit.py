@@ -2,7 +2,7 @@
 
 import pytest
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
-from ditto_datahub.runtime.ingestion.ingestion_log_store import (
+from ditto_datahub.stores.runtime.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient

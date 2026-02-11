@@ -19,7 +19,6 @@ from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from ditto_datahub.config.data_root import DataRootConfig
-from ditto_datahub.runtime.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.services.capital import CapitalService
@@ -203,6 +202,7 @@ from ditto_datahub.stores.metadata.instrument import (
     InstrumentWriter,
 )
 from ditto_datahub.stores.metadata.universe import UniverseReader, UniverseWriter
+from ditto_datahub.stores.runtime.ingestion import IngestionLogStore
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 from ditto_foundation.concurrency import FileLockManager

@@ -7,10 +7,9 @@ Migrated from stores/ingestion_log.py to runtime/ingestion/
 from datetime import datetime
 from typing import Any
 
-from ditto_foundation import logger
-
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_foundation import logger
 
 
 class IngestionLogStore:

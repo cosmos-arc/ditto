@@ -7,7 +7,7 @@ IngestionLogService - 数据摄入日志服务.
 from __future__ import annotations
 
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
-from ditto_datahub.runtime.ingestion.ingestion_log_store import IngestionLogStore
+from ditto_datahub.stores.runtime.ingestion import IngestionLogStore
 
 
 class IngestionLogService:
