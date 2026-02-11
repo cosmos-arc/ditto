@@ -55,7 +55,7 @@ class RetryManager:
             失败的交易日期列表（YYYY-MM-DD）
 
         """
-        failed_dates = self._ingestion_log_service.get_failed_dates(
+        failed_dates = self._ingestion_log_service.list_failed_dates(
             dataset=dataset,
             source=self._source,
             limit=limit,

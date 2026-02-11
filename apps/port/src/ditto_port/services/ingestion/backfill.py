@@ -187,7 +187,9 @@ class BackfillManager:
             )
 
         # 获取已摄取的日期
-        ingested_dates = self._ingestion_log_service.get_ingested_dates(dataset, source)
+        ingested_dates = self._ingestion_log_service.list_ingested_dates(
+            dataset, source
+        )
 
         # 计算缺失的日期
         missing_dates = set(all_trade_dates) - set(ingested_dates)

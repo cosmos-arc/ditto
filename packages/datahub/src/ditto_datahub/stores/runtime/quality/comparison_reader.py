@@ -36,7 +36,7 @@ class ComparisonReader:
         self.base_path = Path(base_path) / "quarantine" / "quality_comparison"
         self.retention_days = retention_days
 
-    async def read_comparison(
+    def read_comparison(
         self,
         trade_date: str,
         dataset: str = "stock_daily",

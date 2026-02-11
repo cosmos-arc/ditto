@@ -85,7 +85,7 @@ class IngestionLogReader:
 
         return self._row_to_log(row)
 
-    def get_failed_dates(
+    def list_failed_dates(
         self,
         dataset: str,
         source: str = "tushare",
@@ -117,7 +117,7 @@ class IngestionLogReader:
         rows = self._client.fetchall(sql, [dataset, source, max_attempts, limit])
         return [row["trade_date"] for row in rows]
 
-    def get_success_rate(
+    def count_success_rate(
         self,
         dataset: str,
         source: str = "tushare",
@@ -189,7 +189,7 @@ class IngestionLogReader:
             "total_count": row["total_count"] if row else 0,
         }
 
-    def get_ingested_dates(
+    def list_ingested_dates(
         self,
         dataset: str,
         source: str = "tushare",
@@ -227,7 +227,7 @@ class IngestionLogReader:
 
         return [row["trade_date"] for row in rows]
 
-    def get_failed_logs(
+    def list_failed_logs(
         self,
         dataset: str,
         source: str = "tushare",

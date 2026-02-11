@@ -74,7 +74,7 @@ class IngestionLogService:
         """
         return self._reader.get_log(dataset, source, trade_date)
 
-    def get_failed_dates(
+    def list_failed_dates(
         self,
         dataset: str,
         source: str = "tushare",
@@ -94,9 +94,9 @@ class IngestionLogService:
             需要重试的交易日期列表（YYYY-MM-DD）
 
         """
-        return self._reader.get_failed_dates(dataset, source, limit, max_attempts)
+        return self._reader.list_failed_dates(dataset, source, limit, max_attempts)
 
-    def get_failed_logs(
+    def list_failed_logs(
         self,
         dataset: str,
         source: str = "tushare",
@@ -116,9 +116,9 @@ class IngestionLogService:
             需要重试的摄入日志列表
 
         """
-        return self._reader.get_failed_logs(dataset, source, limit, max_attempts)
+        return self._reader.list_failed_logs(dataset, source, limit, max_attempts)
 
-    def get_success_rate(
+    def count_success_rate(
         self,
         dataset: str,
         source: str = "tushare",
@@ -136,7 +136,7 @@ class IngestionLogService:
             成功率（0.0 到 1.0）
 
         """
-        return self._reader.get_success_rate(dataset, source, start_date)
+        return self._reader.count_success_rate(dataset, source, start_date)
 
     def get_stats(
         self,
@@ -156,7 +156,7 @@ class IngestionLogService:
         """
         return self._reader.get_stats(dataset, source)
 
-    def get_ingested_dates(
+    def list_ingested_dates(
         self,
         dataset: str,
         source: str = "tushare",
@@ -175,7 +175,7 @@ class IngestionLogService:
             已摄入的交易日期列表（YYYY-MM-DD）
 
         """
-        return self._reader.get_ingested_dates(dataset, source, status)
+        return self._reader.list_ingested_dates(dataset, source, status)
 
     def get_last_success_date(
         self,

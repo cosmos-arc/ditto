@@ -38,7 +38,7 @@ class ComparisonWriter:
         self.retention_days = retention_days
         self.base_path.mkdir(parents=True, exist_ok=True)
 
-    async def write_comparison(
+    def write_comparison(
         self,
         trade_date: str,
         df: pl.DataFrame,
@@ -65,10 +65,10 @@ class ComparisonWriter:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         df.write_parquet(file_path)
 
-        # 异步清理过期数据
-        await self._cleanup_old_data()
+        # 清理过期数据
+        self._cleanup_old_data()
 
-    async def _cleanup_old_data(self) -> None:
+    def _cleanup_old_data(self) -> None:
         """清理过期数据."""
         cutoff_date = datetime.now() - timedelta(days=self.retention_days)
 

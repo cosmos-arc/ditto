@@ -60,7 +60,7 @@ class QualityRecordService:
     # 对比结果相关 (ComparisonStore)
     # ========================================================================
 
-    async def save_comparison(
+    def save_comparison(
         self,
         trade_date: str,
         df: pl.DataFrame,
@@ -75,9 +75,9 @@ class QualityRecordService:
             dataset: 数据集标识
 
         """
-        await self._comparison_writer.write_comparison(trade_date, df, dataset)
+        self._comparison_writer.write_comparison(trade_date, df, dataset)
 
-    async def get_comparison(
+    def get_comparison(
         self,
         trade_date: str,
         dataset: str = "stock_daily",
@@ -93,7 +93,7 @@ class QualityRecordService:
             对比结果 DataFrame，不存在时返回 None
 
         """
-        return await self._comparison_reader.read_comparison(trade_date, dataset)
+        return self._comparison_reader.read_comparison(trade_date, dataset)
 
     def get_comparison_stats(self) -> list[dict[str, str | int]]:
         """
@@ -135,14 +135,14 @@ class QualityRecordService:
             dataset, rule_id, severity, failed_data, trade_date
         )
 
-    def get_quarantined_data(
+    def list_quarantined_data(
         self,
         dataset: str | None = None,
         rule_id: str | None = None,
         limit: int = 1000,
     ) -> pl.DataFrame:
         """
-        获取隔离区数据.
+        列出隔离区数据.
 
         Args:
             dataset: 按数据集过滤（可选）
@@ -155,9 +155,9 @@ class QualityRecordService:
         """
         return self._quarantine_reader.get_quarantined_data(dataset, rule_id, limit)
 
-    def get_failed_data_df(self, row_id: int) -> pl.DataFrame:
+    def get_failed_data(self, row_id: int) -> pl.DataFrame:
         """
-        根据 row ID 获取失败数据 DataFrame.
+        根据 row ID 获取失败数据.
 
         Args:
             row_id: 隔离记录 ID
