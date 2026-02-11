@@ -13,12 +13,12 @@ from collections.abc import Callable
 import httpx
 import polars as pl
 from ditto_datahub.models import Dataset, OnDuplicate
-from ditto_datahub.services.capital import CapitalService
-from ditto_datahub.services.fundamental import FundamentalService
-from ditto_datahub.services.macro import MacroService
-from ditto_datahub.services.market import MarketService
-from ditto_datahub.services.metadata import MetadataService
-from ditto_datahub.services.runtime import IngestionLogService
+from ditto_datahub.services import IngestionLogService
+from ditto_datahub.services.capital_service import CapitalService
+from ditto_datahub.services.fundamental_service import FundamentalService
+from ditto_datahub.services.macro_service import MacroService
+from ditto_datahub.services.market_service import MarketService
+from ditto_datahub.services.metadata_service import MetadataService
 from ditto_foundation import logger
 
 from ditto_port.models import IngestionResult

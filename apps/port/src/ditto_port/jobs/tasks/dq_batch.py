@@ -3,7 +3,7 @@
 from typing import Any, Literal
 
 from ditto_core.quality.spec import DQIssue
-from ditto_datahub.services.market import MarketBarsQuery
+from ditto_datahub.services.market_service import MarketBarsQuery
 from ditto_foundation import M, logger
 from prefect import task
 

@@ -18,23 +18,27 @@ Services module - 域服务统一入口.
 - FactorService: 因子信号数据（基本面、技术面、宏观、统计）
 - SourceService: 外部数据源访问（Tushare 等）
 - IngestionLogService: 数据摄入日志管理（追踪摄入状态、失败重试）
+- QualityRecordService: 质量记录服务（对比结果、隔离数据）
 """
 
 # Market 域服务
-from ditto_datahub.services.capital import CapitalService
+from ditto_datahub.services.capital_service import CapitalService
 
 # Factors 域服务
-from ditto_datahub.services.factors import FactorQuery, FactorService
+from ditto_datahub.services.factor_service import FactorQuery, FactorService
 
 # Features 域服务
-from ditto_datahub.services.features import FeatureQuery, FeatureService
+from ditto_datahub.services.feature_service import FeatureQuery, FeatureService
 
 # Fundamental 域服务
-from ditto_datahub.services.fundamental import FundamentalService
+from ditto_datahub.services.fundamental_service import FundamentalService
+
+# Runtime 服务
+from ditto_datahub.services.ingestion_log_service import IngestionLogService
 
 # Macro 域服务
-from ditto_datahub.services.macro import MacroQuery, MacroService
-from ditto_datahub.services.market import (
+from ditto_datahub.services.macro_service import MacroQuery, MacroService
+from ditto_datahub.services.market_service import (
     AdjType,
     MarketBarsQuery,
     MarketConstituentsQuery,
@@ -42,13 +46,11 @@ from ditto_datahub.services.market import (
 )
 
 # Metadata 域服务
-from ditto_datahub.services.metadata import (
+from ditto_datahub.services.metadata_service import (
     MetadataQuery,
     MetadataService,
 )
-
-# Runtime 服务
-from ditto_datahub.services.runtime import IngestionLogService
+from ditto_datahub.services.quality_record_service import QualityRecordService
 
 # Source 服务
 from ditto_datahub.services.source_service import SourceService
@@ -69,5 +71,6 @@ __all__ = [
     "MarketService",
     "MetadataQuery",
     "MetadataService",
+    "QualityRecordService",
     "SourceService",
 ]

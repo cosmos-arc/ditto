@@ -3,8 +3,8 @@
 from collections import defaultdict
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
-from ditto_datahub.services.metadata import MetadataService
-from ditto_datahub.services.runtime import IngestionLogService
+from ditto_datahub.services import IngestionLogService
+from ditto_datahub.services.metadata_service import MetadataService
 from ditto_foundation import logger
 
 from ditto_port.models import BackfillResult, IngestionResult

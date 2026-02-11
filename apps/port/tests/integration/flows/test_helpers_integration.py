@@ -5,7 +5,7 @@ Tests for create_ingestion_context context manager.
 """
 
 import pytest
-from ditto_datahub.services.metadata import MetadataService
+from ditto_datahub.services.metadata_service import MetadataService
 
 # 标记为串行执行，避免并行测试时数据库文件冲突
 pytestmark = pytest.mark.serial

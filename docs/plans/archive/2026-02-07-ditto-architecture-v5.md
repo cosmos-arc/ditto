@@ -1604,7 +1604,7 @@ Port 层直接注入 DataHub 的 Service，使用 Query 对象：
 ```python
 # apps/port/api/routes/market.py
 
-from ditto_datahub.services.market import MarketService, BarsQuery
+from ditto_datahub.services.market_service import MarketService, BarsQuery
 
 router = APIRouter(prefix="/api/v1/market")
 
@@ -1771,7 +1771,7 @@ async def export_bars(
 # apps/port/api/routes/market.py
 
 from fastapi import APIRouter, Depends
-from ditto_datahub.services.market import MarketService, MarketBarsQuery
+from ditto_datahub.services.market_service import MarketService, MarketBarsQuery
 from ditto_port.registry import get_market_service
 
 router = APIRouter(prefix="/api/v1/market")
@@ -2722,8 +2722,8 @@ from typing import TYPE_CHECKING
 from dishka import Provider, Scope, provide
 
 if TYPE_CHECKING:
-    from ditto_datahub.services.market import MarketService
-    from ditto_datahub.services.metadata import MetadataService
+    from ditto_datahub.services.market_service import MarketService
+    from ditto_datahub.services.metadata_service import MetadataService
     from ditto_datahub import DataHub
 
 __all__ = ["DataHubProvider"]
@@ -2800,7 +2800,7 @@ class DataHubProvider(Provider):
 from fastapi import APIRouter, Depends
 from dishka import AsyncContainer
 
-from ditto_datahub.services.market import MarketService, BarsQuery
+from ditto_datahub.services.market_service import MarketService, BarsQuery
 
 router = APIRouter(prefix="/api/v1/market")
 

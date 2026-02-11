@@ -5,7 +5,7 @@ from datetime import date
 import polars as pl
 import pytest
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
-from ditto_datahub.services.market import MarketWriteResult
+from ditto_datahub.services.market_service import MarketWriteResult
 from ditto_datahub.sources.base import DataSource, SourceFetchError
 from ditto_foundation.config.environment import Environment
 from ditto_foundation.observability import init, reset_for_testing

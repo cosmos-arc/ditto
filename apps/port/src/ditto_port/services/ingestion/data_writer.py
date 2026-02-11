@@ -13,14 +13,17 @@ from typing import Literal, cast
 
 import polars as pl
 from ditto_datahub.models import Dataset, OnDuplicate, WriteResult
-from ditto_datahub.services.capital import CapitalService
-from ditto_datahub.services.fundamental import FundamentalService
-from ditto_datahub.services.macro import MacroService
-from ditto_datahub.services.market import (
+from ditto_datahub.services.capital_service import CapitalService
+from ditto_datahub.services.fundamental_service import FundamentalService
+from ditto_datahub.services.macro_service import MacroService
+from ditto_datahub.services.market_service import (
     MarketService,
     MarketWriteCommand,
 )
-from ditto_datahub.services.metadata import MetadataService, MetadataWriteCommand
+from ditto_datahub.services.metadata_service import (
+    MetadataService,
+    MetadataWriteCommand,
+)
 from ditto_foundation.util.checksum import ChecksumCompute
 
 

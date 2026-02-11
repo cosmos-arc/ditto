@@ -323,7 +323,7 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 from datetime import date
 
 import polars as pl
-from ditto_datahub.services.macro import MacroService
+from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.models.macro import MacroQuery
 
 # MacroService 由 dishka 容器注入
@@ -383,7 +383,7 @@ data = service.query(query)
 
 **使用示例**：
 ```python
-from ditto_datahub.services.features import FeatureService
+from ditto_datahub.services.feature_service import FeatureService
 from ditto_datahub.models.features import FeatureQuery
 
 # FeatureService 由 dishka 容器注入
@@ -434,7 +434,7 @@ data = service.query(query)
 
 **使用示例**：
 ```python
-from ditto_datahub.services.factors import FactorService
+from ditto_datahub.services.factor_service import FactorService
 from ditto_datahub.models.factors import FactorQuery
 
 # FactorService 由 dishka 容器注入
@@ -455,7 +455,7 @@ data = service.query(query)
 ```python
 from datetime import date
 import polars as pl
-from ditto_datahub.services.capital import CapitalService
+from ditto_datahub.services.capital_service import CapitalService
 
 # CapitalService 由 dishka 容器注入
 service: CapitalService = container.get(CapitalService)
@@ -556,8 +556,8 @@ rows = sqlite_store.fetchall("SELECT * FROM instruments WHERE instrument_id IN (
 ### 基本用法
 
 ```python
-from ditto_datahub.services.metadata import MetadataService
-from ditto_datahub.services.market import MarketService
+from ditto_datahub.services.metadata_service import MetadataService
+from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.models.market import AdjType, MarketBarsQuery
 
 # Domain Services 由 dishka 容器注入
@@ -582,7 +582,7 @@ bars = market_service.query(query)
 MetadataService 提供统一的 Metadata 域查询接口：
 
 ```python
-from ditto_datahub.services.metadata import MetadataService
+from ditto_datahub.services.metadata_service import MetadataService
 
 # MetadataService 由 dishka 容器注入
 metadata_service: MetadataService = container.get(MetadataService)
@@ -617,7 +617,7 @@ universe = metadata_service.get_universe(name="csi300")
 MarketService 提供统一的 Market 域查询接口：
 
 ```python
-from ditto_datahub.services.market import MarketService
+from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.models.market import AdjType, MarketBarsQuery
 
 # MarketService 由 dishka 容器注入
@@ -675,8 +675,8 @@ Port 层通过 Domain Services 访问 DataHub 数据，所有 Services 都通过
 
 ```python
 from dishka import Container
-from ditto_datahub.services.metadata import MetadataService
-from ditto_datahub.services.market import MarketService
+from ditto_datahub.services.metadata_service import MetadataService
+from ditto_datahub.services.market_service import MarketService
 
 # 通过 DI 容器注入 Services
 metadata_service: MetadataService = container.get(MetadataService)
@@ -691,7 +691,7 @@ trading_days = metadata_service.get_trading_days("2024-01-01", "2024-01-31")
 ### PIT 安全查询
 
 ```python
-from ditto_datahub.services.market import MarketService
+from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.models.market import MarketBarsQuery
 
 # MarketService 由 dishka 容器注入

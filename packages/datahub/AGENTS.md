@@ -44,8 +44,8 @@ DataHub Store 层采用 CQRS 模式，将读写操作分离：
 ```python
 # ✅ 推荐：通过 DI 容器注入 Domain Service
 from dishka import Container
-from ditto_datahub.services.metadata import MetadataService
-from ditto_datahub.services.market import MarketService
+from ditto_datahub.services.metadata_service import MetadataService
+from ditto_datahub.services.market_service import MarketService
 
 container = Container()
 metadata_service: MetadataService = container.get(MetadataService)

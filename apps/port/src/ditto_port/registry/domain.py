@@ -17,7 +17,7 @@ from dishka import Provider, Scope, provide
 from ditto_datahub.config.data_root import DataRootConfig
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_datahub.services.fundamental.fundamental_service import (
+from ditto_datahub.services.fundamental_service import (
     FundamentalService,
 )
 

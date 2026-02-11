@@ -7,7 +7,7 @@
 - 限制重试数量以防资源耗尽
 """
 
-from ditto_datahub.services.runtime import IngestionLogService
+from ditto_datahub.services import IngestionLogService
 from ditto_foundation import logger
 
 from ditto_port.models import IngestionResult, RetryResult

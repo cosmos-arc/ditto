@@ -8,7 +8,7 @@
 
 import polars as pl
 from ditto_datahub.models.ingestion import IngestionLog
-from ditto_datahub.services.runtime import IngestionLogService
+from ditto_datahub.services import IngestionLogService
 from ditto_foundation import logger
 from ditto_foundation.util.checksum import ChecksumCompute
 
