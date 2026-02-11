@@ -15,6 +15,7 @@ import polars as pl
 from ditto_foundation import logger, traced
 from ditto_foundation.util.checksum import ChecksumCompute
 
+from ditto_datahub.models.metadata.instrument import InstrumentRegistration
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.stores.metadata.calendar import CalendarReader, CalendarWriter
 from ditto_datahub.stores.metadata.industry import (
@@ -27,7 +28,6 @@ from ditto_datahub.stores.metadata.instrument import (
     InstrumentReader,
     InstrumentWriter,
 )
-from ditto_datahub.stores.metadata.instrument.models import InstrumentRegistration
 from ditto_datahub.stores.metadata.universe import UniverseReader, UniverseWriter
 
 MetadataQueryDataset = Literal["instrument", "industry", "calendar_range"]

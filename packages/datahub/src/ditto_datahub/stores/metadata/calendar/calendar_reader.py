@@ -16,7 +16,7 @@ from ditto_foundation import logger, span, traced
 from ditto_foundation.cache import DataCache
 
 from ditto_datahub.errors import TradingDateNotFoundError
-from ditto_datahub.stores.metadata.calendar.models import CalendarDay
+from ditto_datahub.models.metadata.calendar import CalendarDay
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 

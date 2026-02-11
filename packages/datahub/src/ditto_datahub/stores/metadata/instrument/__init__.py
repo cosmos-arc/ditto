@@ -10,13 +10,13 @@ CQRS 模式：
 - InstrumentWriter - 写入接口（自动缓存失效）
 """
 
+from ditto_datahub.models.metadata.instrument import InstrumentRegistration
 from ditto_datahub.stores.metadata.instrument.instrument_reader import (
     InstrumentReader,
 )
 from ditto_datahub.stores.metadata.instrument.instrument_writer import (
     InstrumentWriter,
 )
-from ditto_datahub.stores.metadata.instrument.models import InstrumentRegistration
 
 __all__ = [
     "InstrumentReader",
