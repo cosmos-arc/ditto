@@ -14,8 +14,6 @@ import xxhash
 from ditto_foundation import M, logger
 
 from ditto_datahub.runtime.pit_helper import PitHelper
-from ditto_datahub.stores.metadata.calendar import CalendarStore
-from ditto_datahub.stores.metadata.instrument import InstrumentStore
 
 
 class SqlEngine:
@@ -61,8 +59,6 @@ class SqlEngine:
     def __init__(
         self,
         data_root: Path,
-        instrument_store: InstrumentStore,
-        calendar_store: CalendarStore,
         enable_plan_cache: bool = True,
         plan_cache_size: int = 1000,
         slow_query_threshold: float = 1.0,
@@ -72,16 +68,12 @@ class SqlEngine:
 
         Args:
             data_root: Data root directory path.
-            instrument_store: Instrument store for metadata access.
-            calendar_store: Calendar store for metadata access.
             enable_plan_cache: Enable query plan caching.
             plan_cache_size: Max size of query plan cache.
             slow_query_threshold: Slow query threshold in seconds.
 
         """
         self.data_root = data_root
-        self.instrument_store = instrument_store
-        self.calendar_store = calendar_store
         self.con = duckdb.connect(":memory:")
         self._sqlite_attached = False
 

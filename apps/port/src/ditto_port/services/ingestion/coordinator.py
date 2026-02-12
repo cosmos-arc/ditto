@@ -12,8 +12,13 @@ from collections.abc import Callable
 
 import httpx
 import polars as pl
-from ditto_datahub.hub import DataHub
 from ditto_datahub.models import Dataset, OnDuplicate
+from ditto_datahub.services import IngestionLogService
+from ditto_datahub.services.capital_service import CapitalService
+from ditto_datahub.services.fundamental_service import FundamentalService
+from ditto_datahub.services.macro_service import MacroService
+from ditto_datahub.services.market_service import MarketService
+from ditto_datahub.services.metadata_service import MetadataService
 from ditto_foundation import logger
 
 from ditto_port.models import IngestionResult
@@ -27,19 +32,38 @@ from ditto_port.services.ingestion.result_handler import IngestionResultHandler
 class IngestionCoordinator:
     """统一摄取协调器。"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
-        hub: DataHub,
+        metadata_service: MetadataService,
+        market_service: MarketService,
+        fundamental_service: FundamentalService,
+        capital_service: CapitalService,
+        macro_service: MacroService,
         source: IngestionDataSource,
         source_name: str = "tushare",
+        ingestion_log_service: IngestionLogService | None = None,
     ) -> None:
         """初始化 IngestionCoordinator。"""
-        self._hub = hub
+        self._metadata_service = metadata_service
+        self._market_service = market_service
+        self._fundamental_service = fundamental_service
+        self._capital_service = capital_service
+        self._macro_service = macro_service
         self._source = source
         self._source_name = source_name
-        self._metadata_manager = MetadataManager(hub)
-        self._result_handler = IngestionResultHandler(hub, source_name)
-        self._data_writer = IngestionDataWriter(hub, source_name)
+        self._ingestion_log_service = ingestion_log_service
+        self._metadata_manager = MetadataManager(ingestion_log_service)
+        self._result_handler = IngestionResultHandler(
+            ingestion_log_service, source_name
+        )
+        self._data_writer = IngestionDataWriter(
+            metadata_service=metadata_service,
+            market_service=market_service,
+            fundamental_service=fundamental_service,
+            capital_service=capital_service,
+            macro_service=macro_service,
+            source_name=source_name,
+        )
 
     @staticmethod
     def _is_source_fetch_error(error: Exception) -> bool:
@@ -143,7 +167,7 @@ class IngestionCoordinator:
             Dataset.VALUATION_METRICS,
             Dataset.MARGIN_TRADING,
         ):
-            return self._hub.metadata.is_trading_day(trade_date)
+            return self._metadata_service.is_trading_day(trade_date)
         return True
 
     def _create_skipped_result(
@@ -231,7 +255,7 @@ class IngestionCoordinator:
         force: bool = False,
     ) -> list[IngestionResult]:
         """摄取日期范围数据。"""
-        trade_dates = self._hub.metadata.list_trading_days(start_date, end_date)
+        trade_dates = self._metadata_service.list_trading_days(start_date, end_date)
 
         if not trade_dates:
             return []

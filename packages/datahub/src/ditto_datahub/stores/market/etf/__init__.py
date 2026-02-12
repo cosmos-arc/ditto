@@ -1,13 +1,11 @@
 """ETF domain stores."""
 
-from ditto_datahub.stores.market.etf.adj import EtfAdjFactorStore
-from ditto_datahub.stores.market.etf.bars import EtfBarsStore
-from ditto_datahub.stores.market.etf.nav import EtfNavStore
-from ditto_datahub.stores.market.etf.status import EtfStatusStore
+from ditto_datahub.stores.market.etf.bars import EtfBarsReader, EtfBarsWriter
+from ditto_datahub.stores.market.etf.status import EtfStatusReader, EtfStatusWriter
 
 __all__ = [
-    "EtfAdjFactorStore",
-    "EtfBarsStore",
-    "EtfNavStore",
-    "EtfStatusStore",
+    "EtfBarsReader",
+    "EtfBarsWriter",
+    "EtfStatusReader",
+    "EtfStatusWriter",
 ]

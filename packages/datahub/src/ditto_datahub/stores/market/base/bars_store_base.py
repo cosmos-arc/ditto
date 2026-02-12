@@ -15,7 +15,7 @@ from pathlib import Path
 import polars as pl
 
 from ditto_datahub.models import OnDuplicate
-from ditto_datahub.models.storage import WriteResultStore
+from ditto_datahub.models.storage import WriteStoreResult
 from ditto_datahub.stores.base import ParquetStore, YearlyPartition
 
 
@@ -104,7 +104,7 @@ class MarketBarsStoreBase:
         df: pl.DataFrame,
         year: int,
         on_duplicate: OnDuplicate = OnDuplicate.ERROR,
-    ) -> WriteResultStore:
+    ) -> WriteStoreResult:
         """
         Write bars data to the store.
 

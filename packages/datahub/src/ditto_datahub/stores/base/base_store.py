@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from ditto_datahub.models.storage import WriteResultStore
+from ditto_datahub.models.storage import WriteStoreResult
 
 
 class BaseStore(ABC):
@@ -67,7 +67,7 @@ class BaseStore(ABC):
         data: object,
         on_duplicate: str = "error",
         **kwargs: object,
-    ) -> WriteResultStore:
+    ) -> WriteStoreResult:
         """
         写入数据.
 

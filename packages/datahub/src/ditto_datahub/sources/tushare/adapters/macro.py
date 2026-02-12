@@ -5,9 +5,6 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import logger, traced
 
-from ditto_datahub.sources.schemas.macro_schemas import (
-    MACRO_INDICATOR_SOURCE_SCHEMA,
-)
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
@@ -90,7 +87,6 @@ class MacroTushareAdapter(BaseTushareAdapter):
                 ),
             )
 
-            MACRO_INDICATOR_SOURCE_SCHEMA.validate(result)
             logger.info(
                 "Tushare macro indicators fetched",
                 event="tushare_macro_indicators_fetch_complete",

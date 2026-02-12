@@ -28,7 +28,7 @@ class TdxSourceProtocol(Protocol):
 class ComparisonStoreProtocol(Protocol):
     """Protocol for reconciliation result persistence."""
 
-    async def write_comparison(
+    def write_comparison(
         self, trade_date: str, comparison_df: pl.DataFrame, dataset: str
     ) -> None:
         """Persist comparison dataframe."""
@@ -152,7 +152,7 @@ class QualityReconciliationService:
 
             # 7. 存储对比结果
             if not comparison_df.is_empty():
-                await self._comparison_store.write_comparison(
+                self._comparison_store.write_comparison(
                     trade_date, comparison_df, dataset
                 )
 

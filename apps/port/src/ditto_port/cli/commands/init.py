@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 
 import typer
-from ditto_datahub import register_datahub_providers
 from ditto_datahub.config import DataRootConfig
 from ditto_foundation.config import ConfigInitCoordinator, ConfigLoader, Environment
 from ditto_foundation.config.initializer import InitScope
@@ -33,7 +32,8 @@ def _resolve_data_root(ctx: typer.Context, data_root: str | None) -> Path:
 
 def _make_coordinator() -> ConfigInitCoordinator:
     coordinator = ConfigInitCoordinator()
-    register_datahub_providers(coordinator)
+    # DataHub 和 Domain Service Providers 已经在容器中注册
+    # ConfigInitCoordinator 会从容器中获取它们
     return coordinator
 
 

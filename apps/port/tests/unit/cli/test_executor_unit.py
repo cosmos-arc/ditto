@@ -7,17 +7,42 @@ from pytest_mock import MockerFixture
 
 
 @pytest.mark.unit
-def test_executor_init_with_hub(mock_hub):
+def test_executor_init_with_services(
+    mock_metadata_service,
+    mock_market_service,
+    mock_fundamental_service,
+    mock_capital_service,
+    mock_macro_service,
+    mock_source_service,
+    mock_ingestion_log_service,
+):
     """测试 CLIExecutor 初始化"""
     # 测试初始化不抛出异常
-    executor = CLIExecutor(hub=mock_hub, source_name=Source.TUSHARE)
-    assert executor is not None
-    assert executor._hub is mock_hub
-    assert executor._source_name == Source.TUSHARE
+    with CLIExecutor.create(
+        metadata_service=mock_metadata_service,
+        market_service=mock_market_service,
+        fundamental_service=mock_fundamental_service,
+        capital_service=mock_capital_service,
+        macro_service=mock_macro_service,
+        source_service=mock_source_service,
+        ingestion_log_service=mock_ingestion_log_service,
+        source_name=Source.TUSHARE,
+    ) as executor:
+        assert executor is not None
+        assert executor._source_name == Source.TUSHARE
 
 
 @pytest.mark.unit
-def test_ingest_daily_success(mock_hub, mocker: MockerFixture):
+def test_ingest_daily_success(
+    mock_metadata_service,
+    mock_market_service,
+    mock_fundamental_service,
+    mock_capital_service,
+    mock_macro_service,
+    mock_source_service,
+    mock_ingestion_log_service,
+    mocker: MockerFixture,
+):
     """测试 ingest_daily 成功场景"""
     # Mock IngestionCoordinator.ingest_date 返回成功结果
     mock_result = mocker.Mock()
@@ -41,7 +66,16 @@ def test_ingest_daily_success(mock_hub, mocker: MockerFixture):
         "ditto_port.cli.executor.BackfillManager", return_value=mock_backfill_mgr
     )
 
-    with CLIExecutor.create(hub=mock_hub, source_name=Source.TUSHARE) as executor:
+    with CLIExecutor.create(
+        metadata_service=mock_metadata_service,
+        market_service=mock_market_service,
+        fundamental_service=mock_fundamental_service,
+        capital_service=mock_capital_service,
+        macro_service=mock_macro_service,
+        source_service=mock_source_service,
+        ingestion_log_service=mock_ingestion_log_service,
+        source_name=Source.TUSHARE,
+    ) as executor:
         result = executor.ingest_daily("stock_daily", "2024-01-02", force=False)
 
         assert result["dataset"] == "stock_daily"
@@ -53,7 +87,16 @@ def test_ingest_daily_success(mock_hub, mocker: MockerFixture):
 
 
 @pytest.mark.unit
-def test_ingest_daily_skipped(mock_hub, mocker: MockerFixture):
+def test_ingest_daily_skipped(
+    mock_metadata_service,
+    mock_market_service,
+    mock_fundamental_service,
+    mock_capital_service,
+    mock_macro_service,
+    mock_source_service,
+    mock_ingestion_log_service,
+    mocker: MockerFixture,
+):
     """测试 ingest_daily 跳过场景"""
     mock_result = mocker.Mock()
     mock_result.status = "skipped"
@@ -73,7 +116,16 @@ def test_ingest_daily_skipped(mock_hub, mocker: MockerFixture):
         "ditto_port.cli.executor.BackfillManager", return_value=mock_backfill_mgr
     )
 
-    with CLIExecutor.create(hub=mock_hub, source_name=Source.TUSHARE) as executor:
+    with CLIExecutor.create(
+        metadata_service=mock_metadata_service,
+        market_service=mock_market_service,
+        fundamental_service=mock_fundamental_service,
+        capital_service=mock_capital_service,
+        macro_service=mock_macro_service,
+        source_service=mock_source_service,
+        ingestion_log_service=mock_ingestion_log_service,
+        source_name=Source.TUSHARE,
+    ) as executor:
         result = executor.ingest_daily("stock_daily", "2024-01-02", force=False)
 
         assert result["status"] == "skipped"
@@ -82,7 +134,16 @@ def test_ingest_daily_skipped(mock_hub, mocker: MockerFixture):
 
 
 @pytest.mark.unit
-def test_ingest_daily_failed(mock_hub, mocker: MockerFixture):
+def test_ingest_daily_failed(
+    mock_metadata_service,
+    mock_market_service,
+    mock_fundamental_service,
+    mock_capital_service,
+    mock_macro_service,
+    mock_source_service,
+    mock_ingestion_log_service,
+    mocker: MockerFixture,
+):
     """测试 ingest_daily 失败场景"""
     mock_result = mocker.Mock()
     mock_result.status = "failed"
@@ -102,7 +163,16 @@ def test_ingest_daily_failed(mock_hub, mocker: MockerFixture):
         "ditto_port.cli.executor.BackfillManager", return_value=mock_backfill_mgr
     )
 
-    with CLIExecutor.create(hub=mock_hub, source_name=Source.TUSHARE) as executor:
+    with CLIExecutor.create(
+        metadata_service=mock_metadata_service,
+        market_service=mock_market_service,
+        fundamental_service=mock_fundamental_service,
+        capital_service=mock_capital_service,
+        macro_service=mock_macro_service,
+        source_service=mock_source_service,
+        ingestion_log_service=mock_ingestion_log_service,
+        source_name=Source.TUSHARE,
+    ) as executor:
         result = executor.ingest_daily("stock_daily", "2024-01-02", force=False)
 
         assert result["status"] == "failed"
@@ -111,16 +181,17 @@ def test_ingest_daily_failed(mock_hub, mocker: MockerFixture):
 
 
 @pytest.mark.unit
-def test_backfill_range_success(mock_hub, mocker: MockerFixture):
+def test_backfill_range_success(
+    mock_metadata_service,
+    mock_market_service,
+    mock_fundamental_service,
+    mock_capital_service,
+    mock_macro_service,
+    mock_source_service,
+    mock_ingestion_log_service,
+    mocker: MockerFixture,
+):
     """测试 backfill_range 成功场景"""
-    # Mock coordinator
-    mock_coordinator = mocker.Mock()
-
-    mock_context = mocker.Mock()
-    mock_context.__enter__ = mocker.Mock(return_value=mock_coordinator)
-    mock_context.__exit__ = mocker.Mock(return_value=None)
-    # Context manager set up, patch handled by factory method
-
     # Mock backfill manager
     mock_backfill_mgr = mocker.Mock()
     mock_backfill_result = mocker.Mock()
@@ -134,7 +205,16 @@ def test_backfill_range_success(mock_hub, mocker: MockerFixture):
         "ditto_port.cli.executor.BackfillManager", return_value=mock_backfill_mgr
     )
 
-    with CLIExecutor.create(hub=mock_hub, source_name=Source.TUSHARE) as executor:
+    with CLIExecutor.create(
+        metadata_service=mock_metadata_service,
+        market_service=mock_market_service,
+        fundamental_service=mock_fundamental_service,
+        capital_service=mock_capital_service,
+        macro_service=mock_macro_service,
+        source_service=mock_source_service,
+        ingestion_log_service=mock_ingestion_log_service,
+        source_name=Source.TUSHARE,
+    ) as executor:
         result = executor.backfill_range(
             "stock_daily", "2024-01-01", "2024-01-05", parallel=2
         )
@@ -154,15 +234,17 @@ def test_backfill_range_success(mock_hub, mocker: MockerFixture):
 
 
 @pytest.mark.unit
-def test_backfill_range_with_failures(mock_hub, mocker: MockerFixture):
+def test_backfill_range_with_failures(
+    mock_metadata_service,
+    mock_market_service,
+    mock_fundamental_service,
+    mock_capital_service,
+    mock_macro_service,
+    mock_source_service,
+    mock_ingestion_log_service,
+    mocker: MockerFixture,
+):
     """测试 backfill_range 带失败的场景"""
-    mock_coordinator = mocker.Mock()
-
-    mock_context = mocker.Mock()
-    mock_context.__enter__ = mocker.Mock(return_value=mock_coordinator)
-    mock_context.__exit__ = mocker.Mock(return_value=None)
-    # Context manager set up, patch handled by factory method
-
     mock_backfill_mgr = mocker.Mock()
     mock_backfill_result = mocker.Mock()
     mock_backfill_result.dataset = "stock_daily"
@@ -176,7 +258,16 @@ def test_backfill_range_with_failures(mock_hub, mocker: MockerFixture):
         "ditto_port.cli.executor.BackfillManager", return_value=mock_backfill_mgr
     )
 
-    with CLIExecutor.create(hub=mock_hub, source_name=Source.TUSHARE) as executor:
+    with CLIExecutor.create(
+        metadata_service=mock_metadata_service,
+        market_service=mock_market_service,
+        fundamental_service=mock_fundamental_service,
+        capital_service=mock_capital_service,
+        macro_service=mock_macro_service,
+        source_service=mock_source_service,
+        ingestion_log_service=mock_ingestion_log_service,
+        source_name=Source.TUSHARE,
+    ) as executor:
         result = executor.backfill_range(
             "stock_daily", "2024-01-01", "2024-01-05", parallel=1
         )

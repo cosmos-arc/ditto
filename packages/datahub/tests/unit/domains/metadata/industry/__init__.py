@@ -1,1 +1,0 @@
-"""Industry domain tests."""

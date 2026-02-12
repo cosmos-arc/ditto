@@ -12,7 +12,7 @@ from ditto_foundation import M, SQLitePool, logger, traced
 from ditto_foundation.util.io import file_md5
 
 from ditto_datahub.models import OnDuplicate
-from ditto_datahub.models.storage import WriteResultStore
+from ditto_datahub.models.storage import WriteStoreResult
 from ditto_datahub.stores.base.base_store import BaseStore
 
 
@@ -141,7 +141,7 @@ class SQLiteStore(BaseStore):
         data: object,
         on_duplicate: str = "error",
         **kwargs: object,
-    ) -> WriteResultStore:
+    ) -> WriteStoreResult:
         """
         写入数据.
 
@@ -166,7 +166,7 @@ class SQLiteStore(BaseStore):
 
         # 空数据直接返回
         if len(df) == 0:
-            return WriteResultStore(
+            return WriteStoreResult(
                 file_path=str(self._db_path),
                 checksum="",
                 added=0,
@@ -183,7 +183,7 @@ class SQLiteStore(BaseStore):
         table: str,
         df: pl.DataFrame,
         on_duplicate: str = "error",
-    ) -> WriteResultStore:
+    ) -> WriteStoreResult:
         """
         写入 DataFrame 到表.
 
@@ -201,7 +201,7 @@ class SQLiteStore(BaseStore):
         """
         # 空数据直接返回
         if len(df) == 0:
-            return WriteResultStore(
+            return WriteStoreResult(
                 file_path=str(self._db_path),
                 checksum="",
                 added=0,
@@ -254,7 +254,7 @@ class SQLiteStore(BaseStore):
             checksum=checksum,
         )
 
-        return WriteResultStore(
+        return WriteStoreResult(
             file_path=str(self._db_path),
             checksum=checksum,
             added=added,

@@ -1,7 +1,7 @@
 # ditto-datahub
 
-**版本**: v0.14.0
-**最后更新**: 2026-02-06
+**版本**: v0.15.0
+**最后更新**: 2026-02-10
 **状态**: ✅ 稳定
 
 ## 概要
@@ -10,7 +10,7 @@ Ditto 量化系统的数据层，统一管理数据获取、存储、查询和 P
 
 ## 核心功能
 
-- **统一数据入口**: DataHub 门面类，封装所有数据访问
+- **CQRS 架构**: Store 层采用 Reader/Writer 模式，读写分离
 - **PIT 安全**: 时点安全的数据查询，避免未来函数
 - **高性能存储**: Parquet 文件存储 + SQLite 元数据
 - **数据质量检查**: 多维度 DQ 检查和报告
@@ -20,26 +20,27 @@ Ditto 量化系统的数据层，统一管理数据获取、存储、查询和 P
 
 ## 架构
 
-DataHub 采用分层架构，使用 `@cached_property` 实现延迟加载：
+DataHub 采用分层架构，Store 层实现 CQRS 模式（Reader/Writer 分离）：
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                       DataHub                          │
-│                   (统一入口/Facade)                      │
+│                    Port Layer (apps/port)                │
+│                  通过 DI 容器注入 Domain Services        │
 └─────────────────────────────────────────────────────────┘
-                │
-        ┌───────┴───────┬───────────────┬───────────────┐
-        ▼               ▼               ▼               ▼
+                    │
+        ┌───────────┼───────────┬───────────────┐
+        ▼           ▼           ▼               ▼
 ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ Runtime层    │ │  Store层     │ │  Helpers层   │ │  Sources层   │
-│              │ │              │ │              │ │              │
-│ SQLitePool   │ │ InstrumentStore│ │ adjustment   │ │ Tushare      │
-│ FileLock     │ │ CalendarStore│ │ pit          │ │ Akshare      │
-│ InstrumentIdAllocator│ │ BarsStore    │ │              │ │              │
-│ DQChecker    │ │ AdjFactor... │ │ (纯函数工具)  │ │              │
-│ FreezeMgr    │ │              │ │              │ │              │
-│ SqlEngine    │ │              │ │              │ │              │
-└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
+│ Runtime层    │ │  Store层     │ │  Service层   │ │  Sources层   │
+│              │ │  (CQRS)      │ │              │ │              │
+│ SQLitePool   │ │ Reader/      │ │ MetadataSvc  │ │ Tushare      │
+│ FileLock     │ │ Writer       │ │ MarketSvc    │ │ Akshare      │
+│ Allocator    │ │              │ │ Fundamental  │ │              │
+│ FreezeMgr    │ │ ParquetStore │ │ CapitalSvc   │ │              │
+│ SqlEngine    │ │ SQLiteStore  │ │ MacroSvc     │ │              │
+│              │ │              │ │ FeaturesSvc  │ │              │
+└──────────────┘ └──────────────┘ │ FactorsSvc   │ └──────────────┘
+                                  └──────────────┘
 ```
 
 ### SourceSchema 层
@@ -88,7 +89,8 @@ store.write(df, on_duplicate=OnDuplicate.KEEP_FIRST)
 
 | 组件 | 说明 |
 |------|------|
-| `BaseStore` | 抽象基类，定义所有存储实现的统一接口 (read/write/delete) |
+| `BaseReader` | 抽象基类，定义查询接口 (read/count/get_*) |
+| `BaseWriter` | 抽象基类，定义写入接口 (write/delete) |
 | `ParquetStore` | Parquet 文件存储实现，支持按年分区、自动去重 |
 | `SQLiteStore` | SQLite 数据库存储实现，支持事务、PIT 查询 |
 
@@ -123,17 +125,39 @@ store = BarsStore(config.data_root)
 
 ### Store 层
 
-数据存储组件（Parquet 文件 + SQLite 元数据）：
+数据存储组件采用 CQRS 模式，每个 Store 拆分为 Reader 和 Writer：
 
-| 组件 | 说明 | 存储格式 |
-|------|------|----------|
-| `InstrumentStore` | 标的主数据 | SQLite |
-| `CalendarStore` | 交易日历 | SQLite + 内存缓存 |
-| `BarsStore` | OHLCV 行情 | Parquet (分区: instrument_id/year) |
-| `AdjFactorStore` | 复权因子 | Parquet (分区: instrument_id/year) |
-| `IndexWeightStore` | 指数权重 | SQLite |
-| `IngestionLogStore` | 数据摄取事件日志 | SQLite |
-| `QuarantineStore` | 数据隔离区 | SQLite |
+**CQRS 模式说明**：
+- `*_reader.py`：负责查询操作（read/count/get_*）
+- `*_writer.py`：负责写入/删除操作（write/delete）
+- 读写分离，便于独立优化和测试
+
+| Reader 组件 | Writer 组件 | 说明 | 存储格式 |
+|------------|-------------|------|----------|
+| `InstrumentReader` | `InstrumentWriter` | 标的主数据 | SQLite |
+| `IdentityReader` | `IdentityWriter` | 标识符映射 | SQLite (PIT) |
+| `CalendarReader` | `CalendarWriter` | 交易日历 | SQLite + 内存缓存 |
+| `IndustryBasicReader` | `IndustryBasicWriter` | 行业主数据 | SQLite |
+| `IndustryMappingReader` | `IndustryMappingWriter` | 行业映射 | SQLite (PIT) |
+| `UniverseReader` | `UniverseWriter` | 标的池 | SQLite |
+| `BarsReader` | `BarsWriter` | OHLCV 行情 | Parquet (分区: instrument_id/year) |
+| `AdjFactorReader` | `AdjFactorWriter` | 复权因子 | Parquet (分区: instrument_id/year) |
+| `IndexConstituentReader` | `IndexConstituentWriter` | 指数成分股 | SQLite (PIT) |
+| `BalanceSheetReader` | `BalanceSheetWriter` | 资产负债表 | SQLite (PIT) |
+| `IncomeStatementReader` | `IncomeStatementWriter` | 利润表 | SQLite (PIT) |
+| `CashFlowReader` | `CashFlowWriter` | 现金流量表 | SQLite (PIT) |
+| `DividendReader` | `DividendWriter` | 股息分红 | SQLite (PIT) |
+| `CorporateActionsReader` | `CorporateActionsWriter` | 公司行为 | SQLite |
+| `ForecastReader` | `ForecastWriter` | 业绩预告 | SQLite (PIT) |
+| `ExpressReader` | `ExpressWriter` | 业绩快报 | SQLite (PIT) |
+| `MarginTradingReader` | `MarginTradingWriter` | 融资融券 | SQLite (PIT) |
+| `PledgeRatioReader` | `PledgeRatioWriter` | 股权质押 | SQLite (PIT) |
+| `IndicatorReader` | `IndicatorWriter` | 宏观指标 | SQLite (PIT) |
+| `IndicatorMetadataReader` | `IndicatorMetadataWriter` | 宏观元数据 | SQLite |
+| `TechnicalIndicatorReader` | `TechnicalIndicatorWriter` | 技术指标 | Parquet (按年分区) |
+| `TechnicalIndicatorMetadataReader` | `TechnicalIndicatorMetadataWriter` | 技术指标元数据 | SQLite |
+| `FactorReader` | `FactorWriter` | 因子信号 | Parquet (按年分区) |
+| `FactorMetadataReader` | `FactorMetadataWriter` | 因子元数据 | SQLite |
 
 ### 域级组织
 
@@ -141,45 +165,73 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 
 #### Metadata 域
 
-- `domains/metadata/`: Metadata 域
+- `stores/metadata/`: Metadata 域
   - `instrument/`: 标的主数据
-    - `instrument_store.py`: InstrumentStore（标的存储）
-    - `identity_store.py`: IdentityStore（标识符映射存储，支持 PIT）
-  - `identity/`: 标识符映射（待迁移）
+    - `instrument_reader.py`: InstrumentReader（标的查询）
+    - `instrument_writer.py`: InstrumentWriter（标的写入）
+  - `identity/`: 标识符映射
+    - `identity_reader.py`: IdentityReader（标识符查询，支持 PIT）
+    - `identity_writer.py`: IdentityWriter（标识符写入，支持 PIT）
   - `industry/`: 申万行业分类
-    - `industry_basic_store.py`: IndustryBasicStore（行业主数据）
-    - `industry_mapping_store.py`: IndustryMappingStore（标的-行业映射，支持 PIT）
+    - `industry_basic_reader.py`: IndustryBasicReader（行业主数据查询）
+    - `industry_basic_writer.py`: IndustryBasicWriter（行业主数据写入）
+    - `industry_mapping_reader.py`: IndustryMappingReader（行业映射查询，支持 PIT）
+    - `industry_mapping_writer.py`: IndustryMappingWriter（行业映射写入，支持 PIT）
   - `calendar/`: 交易日历
-    - `calendar_store.py`: CalendarStore（交易日历存储）
+    - `calendar_reader.py`: CalendarReader（交易日历查询）
+    - `calendar_writer.py`: CalendarWriter（交易日历写入）
   - `universe/`: 标的池
-  - `metadata_query_service.py`: 域级统一查询服务
+    - `universe_reader.py`: UniverseReader（标的池查询）
+    - `universe_writer.py`: UniverseWriter（标的池写入）
+  - `services/metadata_service.py`: MetadataService（域级统一服务）
 
 #### Market 域
 
-- `domains/market/`: Market 域
-  - `base/`: 基础抽象类
-    - `bars_store_base.py`: MarketBarsStoreBase（行情数据基类）
+- `stores/market/`: Market 域
   - `stock/`: 股票行情数据
-    - `bars/bars_store.py`: StockBarsStore（股票 K线数据）
-    - `status/status_store.py`: StockStatusStore（股票状态数据）
-    - `adj/adj_factor_store.py`: StockAdjFactorStore（股票复权因子）
+    - `bars/bars_reader.py`: StockBarsReader（股票 K线查询）
+    - `bars/bars_writer.py`: StockBarsWriter（股票 K线写入）
+    - `status/status_reader.py`: StockStatusReader（股票状态查询）
+    - `status/status_writer.py`: StockStatusWriter（股票状态写入）
+    - `adj/adj_factor_reader.py`: StockAdjFactorReader（股票复权因子查询）
+    - `adj/adj_factor_writer.py`: StockAdjFactorWriter（股票复权因子写入）
   - `etf/`: ETF 行情数据
-    - `bars/bars_store.py`: EtfBarsStore（ETF K线数据）
-    - `status/status_store.py`: EtfStatusStore（ETF 状态数据）
-    - `nav/nav_store.py`: EtfNavStore（ETF 净值数据）
-    - `adj/adj_factor_store.py`: EtfAdjFactorStore（ETF 复权因子）
+    - `bars/bars_reader.py`: EtfBarsReader（ETF K线查询）
+    - `bars/bars_writer.py`: EtfBarsWriter（ETF K线写入）
+    - `status/status_reader.py`: EtfStatusReader（ETF 状态查询）
+    - `status/status_writer.py`: EtfStatusWriter（ETF 状态写入）
+    - `nav/nav_reader.py`: EtfNavReader（ETF 净值查询）
+    - `nav/nav_writer.py`: EtfNavWriter（ETF 净值写入）
+    - `adj/adj_factor_reader.py`: EtfAdjFactorReader（ETF 复权因子查询）
+    - `adj/adj_factor_writer.py`: EtfAdjFactorWriter（ETF 复权因子写入）
   - `index/`: 指数行情数据
-    - `bars/bars_store.py`: IndexBarsStore（指数 K线数据）
-    - `constituent/constituent_store.py`: IndexConstituentStore（指数成分股）
-  - `market_query_service.py`: MarketService（域级统一查询服务）
+    - `bars/bars_reader.py`: IndexBarsReader（指数 K线查询）
+    - `bars/bars_writer.py`: IndexBarsWriter（指数 K线写入）
+    - `constituent/constituent_reader.py`: IndexConstituentReader（指数成分股查询）
+    - `constituent/constituent_writer.py`: IndexConstituentWriter（指数成分股写入）
+  - `services/market_service.py`: MarketService（域级统一服务）
 
 #### Fundamental 域
 
-- `domains/fundamental/`: Fundamental 域（企业基本面数据）
+- `stores/fundamental/`: Fundamental 域（企业基本面数据）
   - `financial/`: 财务报表数据子域
+    - `balance_sheet_reader.py`: BalanceSheetReader（资产负债表查询，支持 PIT）
+    - `balance_sheet_writer.py`: BalanceSheetWriter（资产负债表写入）
+    - `income_statement_reader.py`: IncomeStatementReader（利润表查询，支持 PIT）
+    - `income_statement_writer.py`: IncomeStatementWriter（利润表写入）
+    - `cash_flow_reader.py`: CashFlowReader（现金流量表查询，支持 PIT）
+    - `cash_flow_writer.py`: CashFlowWriter（现金流量表写入）
   - `corporate/`: 公司行为数据子域
+    - `dividend_reader.py`: DividendReader（股息分红查询，支持 PIT）
+    - `dividend_writer.py`: DividendWriter（股息分红写入）
+    - `corporate_actions_reader.py`: CorporateActionsReader（公司行为查询）
+    - `corporate_actions_writer.py`: CorporateActionsWriter（公司行为写入）
   - `forecast/`: 业绩预告/快报数据子域
-  - `fundamental_store.py`: FundamentalStore（基本面数据存储，支持 PIT 查询）
+    - `forecast_reader.py`: ForecastReader（业绩预告查询，支持 PIT）
+    - `forecast_writer.py`: ForecastWriter（业绩预告写入）
+    - `express_reader.py`: ExpressReader（业绩快报查询，支持 PIT）
+    - `express_writer.py`: ExpressWriter（业绩快报写入）
+  - `services/fundamental_service.py`: FundamentalService（域级统一服务）
 
 **数据类型**（9 种）：
 
@@ -202,13 +254,23 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 
 #### Capital 域
 
-- `domains/capital/`: Capital 域（资金与资本市场数据）
+- `stores/capital/`: Capital 域（资金与资本市场数据）
   - `margin/`: 融资融券数据子域
-    - `margin_trading_store.py`: MarginTradingStore（融资融券存储）
+    - `margin_trading_reader.py`: MarginTradingReader（融资融券查询，支持 PIT）
+    - `margin_trading_writer.py`: MarginTradingWriter（融资融券写入）
   - `pledge/`: 股权质押数据子域
-    - `pledge_ratio_store.py`: PledgeRatioStore（股权质押存储）
-  - `capital_store.py`: CapitalStore（资金数据存储，支持 PIT 查询）
-  - `capital_ingestion.py`: CapitalIngestion（资金数据摄入服务）
+    - `pledge_ratio_reader.py`: PledgeRatioReader（股权质押查询，支持 PIT）
+    - `pledge_ratio_writer.py`: PledgeRatioWriter（股权质押写入）
+  - `valuation/`: 估值指标子域
+    - `valuation_metrics_reader.py`: ValuationMetricsReader（估值指标查询，支持 PIT）
+    - `valuation_metrics_writer.py`: ValuationMetricsWriter（估值指标写入）
+  - `futures/`: 期货数据子域
+    - `futures_reader.py`: FuturesReader（期货数据查询，支持 PIT）
+    - `futures_writer.py`: FuturesWriter（期货数据写入）
+  - `index_composition/`: 指数成分股子域
+    - `index_composition_reader.py`: IndexCompositionReader（指数成分股查询，支持 PIT）
+    - `index_composition_writer.py`: IndexCompositionWriter（指数成分股写入）
+  - `services/capital_service.py`: CapitalService（域级统一服务）
 
 **数据类型**（5 种）：
 
@@ -233,11 +295,13 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 
 #### Macro 域
 
-- `domains/macro/`: Macro 域（宏观经济指标数据）
+- `stores/macro/`: Macro 域（宏观经济指标数据）
   - `indicator/`: 宏观指标子域
-    - `indicator_store.py`: IndicatorStore（宏观数据存储，支持 PIT 查询）
-    - `metadata_store.py`: IndicatorMetadataStore（宏观指标元数据）
-  - `macro_service.py`: MacroService（域级统一 `query()/write()` 服务）
+    - `indicator_reader.py`: IndicatorReader（宏观指标查询，支持 PIT）
+    - `indicator_writer.py`: IndicatorWriter（宏观指标写入）
+    - `metadata_reader.py`: IndicatorMetadataReader（宏观指标元数据查询）
+    - `metadata_writer.py`: IndicatorMetadataWriter（宏观指标元数据写入）
+  - `services/macro_service.py`: MacroService（域级统一服务）
 
 **数据类型**（4 类）：
 - `economic`: 经济指标（GDP、CPI、PPI、PMI）
@@ -259,14 +323,14 @@ DataHub 采用域驱动设计（DDD），按业务域组织代码结构：
 from datetime import date
 
 import polars as pl
-from ditto_datahub import DataHub
-from ditto_datahub.stores.macro import MacroQuery
+from ditto_datahub.services.macro_service import MacroService
+from ditto_datahub.models.macro import MacroQuery
 
-# DataHub 由 dishka 容器注入（示例）
-hub: DataHub = container.get(DataHub)
+# MacroService 由 dishka 容器注入
+service: MacroService = container.get(MacroService)
 
 # 写入宏观指标（统一 write 契约）
-hub.macro.write(
+service.write(
     pl.DataFrame(
         {
             "indicator_code": ["CPI_YOY"],
@@ -289,17 +353,19 @@ query = MacroQuery(
     asof="2024-06-30",  # 只使用截至该日期已知的数据
     category="economic",
 )
-data = hub.macro.query(query)
+data = service.query(query)
 ```
 
 #### Features 域
 
-- `domains/features/`: Features 域（技术指标与衍生特征域）
+- `stores/features/`: Features 域（技术指标与衍生特征域）
   - `technical/`: 技术指标子域
-    - `indicator_store.py`: IndicatorStore（技术指标存储，Parquet 按年分区）
-    - `indicator_metadata_store.py`: IndicatorMetadataStore（技术指标元数据）
+    - `technical_indicator_reader.py`: TechnicalIndicatorReader（技术指标查询）
+    - `technical_indicator_writer.py`: TechnicalIndicatorWriter（技术指标写入）
+    - `technical_indicator_metadata_reader.py`: TechnicalIndicatorMetadataReader（技术指标元数据查询）
+    - `technical_indicator_metadata_writer.py`: TechnicalIndicatorMetadataWriter（技术指标元数据写入）
     - `metadata.py`: 技术指标类型定义
-  - `feature_service.py`: FeatureService（域级统一查询服务）
+  - `services/feature_service.py`: FeatureService（域级统一服务）
 
 **指标类型**（4 类）：
 - `trend`: 趋势指标（SMA、EMA、MACD）
@@ -317,11 +383,11 @@ data = hub.macro.query(query)
 
 **使用示例**：
 ```python
-from ditto_datahub import DataHub
-from ditto_datahub.stores.features import FeatureQuery
+from ditto_datahub.services.feature_service import FeatureService
+from ditto_datahub.models.features import FeatureQuery
 
-# DataHub 由 dishka 容器注入（示例）
-hub: DataHub = container.get(DataHub)
+# FeatureService 由 dishka 容器注入
+service: FeatureService = container.get(FeatureService)
 
 # 查询技术指标
 query = FeatureQuery(
@@ -330,16 +396,18 @@ query = FeatureQuery(
     end="2024-01-31",
     indicator_types=["momentum", "trend"],
 )
-data = hub.features.query(query)
+data = service.query(query)
 ```
 
 #### Factors 域
 
-- `domains/factors/`: Factors 域（因子信号域）
-  - `factor_store.py`: FactorStore（因子存储，支持 PIT 查询）
-  - `factor_metadata_store.py`: FactorMetadataStore（因子元数据）
+- `stores/factors/`: Factors 域（因子信号域）
+  - `factor_reader.py`: FactorReader（因子信号查询，支持 PIT）
+  - `factor_writer.py`: FactorWriter（因子信号写入）
+  - `factor_metadata_reader.py`: FactorMetadataReader（因子元数据查询）
+  - `factor_metadata_writer.py`: FactorMetadataWriter（因子元数据写入）
   - `metadata.py`: 因子分类定义
-  - `factor_service.py`: FactorService（域级统一查询服务）
+  - `services/factor_service.py`: FactorService（域级统一服务）
 
 **因子分类**：
 
@@ -366,11 +434,11 @@ data = hub.features.query(query)
 
 **使用示例**：
 ```python
-from ditto_datahub import DataHub
-from ditto_datahub.stores.factors import FactorQuery
+from ditto_datahub.services.factor_service import FactorService
+from ditto_datahub.models.factors import FactorQuery
 
-# DataHub 由 dishka 容器注入（示例）
-hub: DataHub = container.get(DataHub)
+# FactorService 由 dishka 容器注入
+service: FactorService = container.get(FactorService)
 
 # 查询因子信号（PIT 安全）
 query = FactorQuery(
@@ -380,38 +448,35 @@ query = FactorQuery(
     as_of="2024-06-30",  # 只使用截至该日期已知的数据
     factor_classes=["fundamental", "technical"],
 )
-data = hub.factors.query(query)
+data = service.query(query)
 ```
 
 #### Capital 域使用示例：
 ```python
-from ditto_datahub.stores.capital import CapitalStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import SQLitePool
-
-# 初始化
-pool = SQLitePool("path/to/capital.db")
-client = SQLiteClient(pool)
-store = CapitalStore(client)
-
-# 写入资产负债表数据
+from datetime import date
 import polars as pl
+from ditto_datahub.services.capital_service import CapitalService
+
+# CapitalService 由 dishka 容器注入
+service: CapitalService = container.get(CapitalService)
+
+# 写入估值指标数据
 df = pl.DataFrame({
     "instrument_id": ["600000.SH"],
     "report_date": [date(2024, 3, 31)],
     "knowledge_date": [date(2024, 4, 30)],
     "effective_from": [date(2024, 5, 1)],
     "effective_to": [None],
-    "total_assets": [1000000.0],
-    "total_liabilities": [600000.0],
-    "net_assets": [400000.0],
-    "current_assets": [300000.0],
-    "current_liabilities": [200000.0],
+    "pe_ratio": [15.5],
+    "pb_ratio": [1.8],
+    "ps_ratio": [2.3],
+    "dividend_yield": [3.2],
+    "market_cap": [1000000000.0],
 })
-store.write_balance_sheet(df)
+service.write_valuation_metrics(df)
 
-# PIT 查询：查询 2024-05-15 时点的资产负债表
-result = store.get_balance_sheet(
+# PIT 查询：查询 2024-05-15 时点的估值指标
+result = service.get_valuation_metrics(
     instrument_id="600000.SH",
     as_of_date=date(2024, 5, 15),
 )
@@ -491,71 +556,72 @@ rows = sqlite_store.fetchall("SELECT * FROM instruments WHERE instrument_id IN (
 ### 基本用法
 
 ```python
-from ditto_datahub import DataHub
-from ditto_datahub.stores.market import AdjType, MarketBarsQuery
+from ditto_datahub.services.metadata_service import MetadataService
+from ditto_datahub.services.market_service import MarketService
+from ditto_datahub.models.market import AdjType, MarketBarsQuery
 
-# DataHub 由 dishka 容器注入（示例）
-hub: DataHub = container.get(DataHub)
+# Domain Services 由 dishka 容器注入
+metadata_service: MetadataService = container.get(MetadataService)
+market_service: MarketService = container.get(MarketService)
 
 # 查询交易日历
-trading_days = hub.metadata.get_trading_days("2024-01-01", "2024-01-31")
+trading_days = metadata_service.get_trading_days("2024-01-01", "2024-01-31")
 
 # 查询行情数据（带复权）
-bars = hub.market.query(
-    MarketBarsQuery(
+query = MarketBarsQuery(
     instrument_ids=[1, 2],
     start="2024-01-01",
     end="2024-01-31",
     adj=AdjType.QFQ,  # 前复权
-    )
 )
+bars = market_service.query(query)
 ```
 
-### Metadata 查询（新 API）
+### Metadata 查询
 
-DataHub v0.7.0 引入了域级查询服务 `MetadataService`，提供统一的 Metadata 域查询接口：
+MetadataService 提供统一的 Metadata 域查询接口：
 
 ```python
-from ditto_datahub import DataHub
+from ditto_datahub.services.metadata_service import MetadataService
 
-# DataHub 由 dishka 容器注入（示例）
-hub: DataHub = container.get(DataHub)
+# MetadataService 由 dishka 容器注入
+metadata_service: MetadataService = container.get(MetadataService)
 
 # 标识符解析（支持 PIT）
-instrument_id = hub.metadata.resolve_instrument_id("600000.SH", source="tushare")
-instrument_id = hub.metadata.resolve_instrument_id("600000.SH", source="tushare", asof="2024-06-30")
+instrument_id = metadata_service.resolve_instrument_id("600000.SH", source="tushare")
+instrument_id = metadata_service.resolve_instrument_id("600000.SH", source="tushare", asof="2024-06-30")
 
 # 查询标的情報
-df = hub.metadata.get_instruments(instrument_ids=[1, 2, 3])
-df = hub.metadata.get_instruments(instrument_ids=[1], asset_class="stock", exchange="SSE")
+df = metadata_service.get_instruments(instrument_ids=[1, 2, 3])
+df = metadata_service.get_instruments(instrument_ids=[1], asset_class="stock", exchange="SSE")
 
 # 查询交易日历
-trading_days = hub.metadata.get_trading_days("2024-01-01", "2024-01-31")
-trading_days = hub.metadata.get_trading_days("2024-01-01", "2024-01-31", only_open=True)
+trading_days = metadata_service.get_trading_days("2024-01-01", "2024-01-31")
+trading_days = metadata_service.get_trading_days("2024-01-01", "2024-01-31", only_open=True)
 
 # 交易日历便捷方法
-is_trading = hub.metadata.is_trading_day("2024-01-15")
-prev_day = hub.metadata.get_prev_trading_day("2024-01-15")
-next_day = hub.metadata.get_next_trading_day("2024-01-15")
+is_trading = metadata_service.is_trading_day("2024-01-15")
+prev_day = metadata_service.get_prev_trading_day("2024-01-15")
+next_day = metadata_service.get_next_trading_day("2024-01-15")
 
 # 查询行业分类
-industries = hub.metadata.get_industries(level=1)  # 一级行业
-mappings = hub.metadata.get_industry_mappings(instrument_ids=[1, 2, 3], asof="2024-06-30")
+industries = metadata_service.get_industries(level=1)  # 一级行业
+mappings = metadata_service.get_industry_mappings(instrument_ids=[1, 2, 3], asof="2024-06-30")
 
 # 查询标的池
-universe = hub.metadata.get_universe(name="csi300")
+universe = metadata_service.get_universe(name="csi300")
 ```
 
-### Market 查询（新 API）
+### Market 查询
 
-DataHub 引入了域级查询服务 `MarketService`，提供统一的 Market 域查询接口：
+MarketService 提供统一的 Market 域查询接口：
 
 ```python
-from ditto_datahub import DataHub
-from ditto_datahub.stores.market import AdjType, MarketBarsQuery
+from ditto_datahub.services.market_service import MarketService
+from ditto_datahub.models.market import AdjType, MarketBarsQuery
 
-# DataHub 由 dishka 容器注入（示例）
-hub: DataHub = container.get(DataHub)
+# MarketService 由 dishka 容器注入
+market_service: MarketService = container.get(MarketService)
 
 # 查询股票 K线数据（支持复权）
 query = MarketBarsQuery(
@@ -564,7 +630,7 @@ query = MarketBarsQuery(
     end="2024-01-31",
     adj=AdjType.QFQ,  # 前复权
 )
-bars = hub.market.query(query)
+bars = market_service.query(query)
 
 # 查询带状态信息的 K线数据
 query = MarketBarsQuery(
@@ -573,7 +639,7 @@ query = MarketBarsQuery(
     end="2024-01-31",
     with_status=True,  # 添加停牌、ST 等状态信息
 )
-bars = hub.market.query(query)
+bars = market_service.query(query)
 
 # PIT 安全查询（只使用 asof 日期之前的数据）
 query = MarketBarsQuery(
@@ -582,7 +648,7 @@ query = MarketBarsQuery(
     end="2024-01-31",
     asof="2024-06-30",  # 只使用 2024-06-30 之前已知的数据
 )
-bars = hub.market.query(query)
+bars = market_service.query(query)
 
 # 查询 ETF K线数据
 query = MarketBarsQuery(
@@ -591,7 +657,7 @@ query = MarketBarsQuery(
     end="2024-01-31",
     asset_class="etf",
 )
-bars = hub.market.query(query)
+bars = market_service.query(query)
 
 # 查询指数 K线数据
 query = MarketBarsQuery(
@@ -600,31 +666,40 @@ query = MarketBarsQuery(
     end="2024-01-31",
     asset_class="index",
 )
-bars = hub.market.query(query)
+bars = market_service.query(query)
 ```
 
 #### 统一接口约定
 
-DataHub 对外统一通过域服务接口访问，不再建议依赖历史别名。
+Port 层通过 Domain Services 访问 DataHub 数据，所有 Services 都通过 DI 容器注入：
 
 ```python
-instrument_id = hub.metadata.resolve_instrument_id("600000.SH", source="tushare")
-df = hub.metadata.get_instruments(instrument_ids=[1, 2, 3])
-trading_days = hub.metadata.get_trading_days("2024-01-01", "2024-01-31")
+from dishka import Container
+from ditto_datahub.services.metadata_service import MetadataService
+from ditto_datahub.services.market_service import MarketService
+
+# 通过 DI 容器注入 Services
+metadata_service: MetadataService = container.get(MetadataService)
+market_service: MarketService = container.get(MarketService)
+
+# 使用 Services
+instrument_id = metadata_service.resolve_instrument_id("600000.SH", source="tushare")
+df = metadata_service.get_instruments(instrument_ids=[1, 2, 3])
+trading_days = metadata_service.get_trading_days("2024-01-01", "2024-01-31")
 ```
 
 ### PIT 安全查询
 
 ```python
-from ditto_datahub import DataHub
-from ditto_datahub.stores.market import MarketBarsQuery
+from ditto_datahub.services.market_service import MarketService
+from ditto_datahub.models.market import MarketBarsQuery
 
-# DataHub 由 dishka 容器注入（示例）
-hub: DataHub = container.get(DataHub)
+# MarketService 由 dishka 容器注入
+market_service: MarketService = container.get(MarketService)
 decision_date = "2024-01-15"
 
 # 使用统一 query 入口执行 PIT 查询
-bars = hub.market.query(
+bars = market_service.query(
     MarketBarsQuery(
         instrument_ids=[1],
         start="2024-01-01",
@@ -735,6 +810,38 @@ bars/
 - [Port 层重构计划](../../../../docs/plans/2026-02-02-port-layer-refactor.md)
 
 ## 变更记录
+
+### v0.15.0 (2026-02-10)
+**破坏性重构**
+- 移除 DataHub Facade：Port 层直接注入 Domain Services
+  - 不再通过 `DataHub` 门面类访问数据
+  - Port 层通过 DI 容器直接注入 `MetadataService`、`MarketService` 等 Domain Services
+  - Service 层保持不变，继续提供统一的域级 API
+- CQRS 架构实现：Store 层拆分为 Reader/Writer 模式
+  - 所有 `*_store.py` 拆分为 `*_reader.py` + `*_writer.py`
+  - Reader 负责查询操作（read/count/get_*）
+  - Writer 负责写入/删除操作（write/delete）
+  - 读写分离，便于独立优化和测试
+- 新增基础抽象类：`BaseReader` 和 `BaseWriter`
+  - `BaseReader` 定义查询接口
+  - `BaseWriter` 定义写入接口
+  - 替代原有的 `BaseStore` 统一接口
+
+**改进**
+- 架构更简洁：移除 Facade 层，减少间接层级
+- 职责更清晰：读写分离，便于独立优化和测试
+- 类型安全：所有 Service 方法都有完整类型注解
+- 测试覆盖：所有 Reader/Writer 都有对应的单元测试
+
+**文档**
+- 更新 README.md 反映 CQRS 架构
+- 更新架构图，移除 DataHub Facade
+- 更新所有使用示例为 Service 直接访问模式
+
+**测试**
+- 单元测试：所有新增 Reader/Writer 的单元测试
+- 集成测试：验证 CQRS 模式的端到端功能
+- 测试覆盖率：保持 ≥ 80%
 
 ### v0.14.0 (2026-02-06)
 **重构**
@@ -909,7 +1016,6 @@ bars/
 **实现**
 - IngestionCoordinator：根据 Domain 枚举路由到对应的域 Ingestion 服务
 - IngestionDataWriter：支持 Parquet 和 SQLite 写入，提供重复数据处理策略
-- IngestionResult：数据摄入结果数据类（success、records_written、error）
 - 异步支持：所有 Ingestion 服务支持异步操作
 
 **测试**
@@ -926,7 +1032,6 @@ bars/
 **新增**
 - Capital 域架构：`domains/capital/` 目录结构
   - `capital_store.py`: CapitalStore（资金数据存储，支持 PIT 查询）
-  - `capital_ingestion.py`: CapitalIngestion（资金数据摄入服务）
 - Capital 域支持 10 种数据类型：
   - 财务报表：balance_sheet, income_statement, cash_flow（PIT）
   - 估值指标：valuation_metrics（PIT）
@@ -939,7 +1044,6 @@ bars/
 
 **实现**
 - CapitalStore：10 种数据类型的 write/get 方法（支持 PIT 查询）
-- CapitalIngestion：10 种数据类型的摄入方法（Source → Store）
 - PIT 查询支持：9 种数据类型支持 PIT 查询
 - 数据缓存支持：DataCache 集成
 - 测试覆盖：所有 10 种数据类型的单元测试和集成测试

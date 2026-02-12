@@ -219,3 +219,71 @@ class TestBusinessChecker:
 
         # Should only check close column, skip missing open
         assert len(issues) == 0  # All close values are positive
+
+    def test_check_volume_amount_consistency_pass(self) -> None:
+        """Test volume/amount consistency check with valid data."""
+        df = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "volume": [1000, 2000, 3000],
+                "amount": [10000.0, 20000.0, 30000.0],  # All positive
+            }
+        )
+
+        rules = [
+            {
+                "rule": "volume_amount_consistency",
+                "message": "Volume/amount inconsistency",
+            }
+        ]
+
+        issues = self.checker.check(df, rules)
+
+        assert len(issues) == 0
+
+    def test_check_volume_amount_consistency_fail(self) -> None:
+        """Test volume/amount consistency check with inconsistent data."""
+        df = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "volume": [1000, 2000, 3000],
+                "amount": [10000.0, 0.0, -100.0],  # Zero/negative amount
+            }
+        )
+
+        rules = [
+            {
+                "rule": "volume_amount_consistency",
+                "message": "Volume/amount inconsistency",
+            }
+        ]
+
+        issues = self.checker.check(df, rules)
+
+        assert len(issues) == 1
+        assert issues[0].rule_name == "volume_amount_consistency"
+        assert issues[0].severity == DQSeverity.WARNING
+        assert issues[0].level == DQLevel.BUSINESS
+        assert issues[0].affected_rows == 2  # Two rows with inconsistency
+
+    def test_check_volume_amount_consistency_missing_columns(self) -> None:
+        """Test volume/amount consistency check with missing columns."""
+        df = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "volume": [1000, 2000, 3000],
+                # amount column missing
+            }
+        )
+
+        rules = [
+            {
+                "rule": "volume_amount_consistency",
+                "message": "Volume/amount inconsistency",
+            }
+        ]
+
+        issues = self.checker.check(df, rules)
+
+        # Should skip check when columns are missing
+        assert len(issues) == 0

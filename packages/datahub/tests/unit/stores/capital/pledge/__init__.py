@@ -1,0 +1,1 @@
+"""Pledge ratio data tests."""

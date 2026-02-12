@@ -1,7 +1,7 @@
 """
-Concurrency tests for CalendarStore.
+Concurrency tests for CalendarReader.
 
-Tests thread-safety of reload() method using concurrent readers and writers.
+Tests thread-safety of reload() method using concurrent readers.
 """
 
 import os
@@ -10,14 +10,14 @@ import tempfile
 import threading
 import time
 
-from ditto_datahub.stores.metadata.calendar import CalendarStore
+from ditto_datahub.stores.metadata.calendar import CalendarReader
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 from ditto_foundation.cache import DataCache
 
 
-class TestCalendarStoreConcurrent:
-    """Tests for CalendarStore concurrent access."""
+class TestCalendarReaderConcurrent:
+    """Tests for CalendarReader concurrent access."""
 
     def setup_method(self) -> None:
         """Set up test database."""
@@ -38,9 +38,9 @@ class TestCalendarStoreConcurrent:
         self.pool = SQLitePool(self.db_path, schema_path=schema_path)
         self.pool.init_schema()
 
-        # Create client and store
+        # Create client and reader
         self.client = SQLiteClient(self.pool)
-        self.store = CalendarStore(self.client)
+        self.reader = CalendarReader(self.client)
 
         # Insert test calendar data
         self._insert_test_data()
@@ -201,7 +201,7 @@ class TestCalendarStoreConcurrent:
         )
 
         self.client.commit()
-        self.store._load_cache()
+        self.reader.reload()
 
     def test_reload_thread_safety(self) -> None:
         """
@@ -221,12 +221,12 @@ class TestCalendarStoreConcurrent:
             try:
                 for i in range(100):
                     # Perform various read operations
-                    is_trading = self.store.is_trading_day("2024-01-02")
-                    day = self.store.get("2024-01-03")
-                    self.store.get_prev("2024-01-05")
-                    self.store.get_next("2024-01-05")
-                    self.store.offset("2024-01-02", 2)
-                    range_days = self.store.get_range("2024-01-02", "2024-01-10")
+                    is_trading = self.reader.is_trading_day("2024-01-02")
+                    day = self.reader.get("2024-01-03")
+                    self.reader.get_prev("2024-01-05")
+                    self.reader.get_next("2024-01-05")
+                    self.reader.offset("2024-01-02", 2)
+                    range_days = self.reader.get_range("2024-01-02", "2024-01-10")
 
                     # Record results for validation
                     if i % 10 == 0:  # Sample 10% of results
@@ -249,7 +249,7 @@ class TestCalendarStoreConcurrent:
             """Simulate concurrent reload operations."""
             try:
                 for _ in range(20):
-                    self.store.reload()
+                    self.reader.reload()
                     time.sleep(0.001)  # Small delay between reloads
 
             except Exception as e:
@@ -287,10 +287,10 @@ class TestCalendarStoreConcurrent:
     def test_reload_with_data_cache_thread_safety(self) -> None:
         """Test concurrent reload with DataCache enabled."""
         data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
-        store_with_cache = CalendarStore(self.client, data_cache=data_cache)
+        reader_with_cache = CalendarReader(self.client, data_cache=data_cache)
 
         # Load initial data
-        store_with_cache._load_cache()
+        reader_with_cache.reload()
 
         errors: list[Exception] = []
 
@@ -299,11 +299,11 @@ class TestCalendarStoreConcurrent:
             try:
                 for _ in range(100):
                     # Range queries use DataCache
-                    range_days = store_with_cache.get_range("2024-01-01", "2024-01-10")
+                    range_days = reader_with_cache.get_range("2024-01-01", "2024-01-10")
                     assert len(range_days) == 7, "Should have 7 trading days"
 
                     # Single day queries
-                    is_trading = store_with_cache.is_trading_day("2024-01-05")
+                    is_trading = reader_with_cache.is_trading_day("2024-01-05")
                     assert is_trading is True
 
                     time.sleep(0.0001)
@@ -317,7 +317,7 @@ class TestCalendarStoreConcurrent:
             """Reloader that invalidates cache."""
             try:
                 for _ in range(20):
-                    store_with_cache.reload()
+                    reader_with_cache.reload()
                     time.sleep(0.001)
 
             except Exception as e:
@@ -350,7 +350,7 @@ class TestCalendarStoreConcurrent:
             """Multiple threads reloading simultaneously."""
             try:
                 for _ in range(10):
-                    self.store.reload()
+                    self.reader.reload()
 
                     with lock:
                         reload_count[0] += 1
@@ -367,9 +367,9 @@ class TestCalendarStoreConcurrent:
             try:
                 for _ in range(100):
                     # Validate critical invariants
-                    first = self.store.get_first_trading_day()
-                    last = self.store.get_last_trading_day()
-                    count = self.store.count_trading_days("2024-01-01", "2024-01-10")
+                    first = self.reader.get_first_trading_day()
+                    last = self.reader.get_last_trading_day()
+                    count = self.reader.count_trading_days("2024-01-01", "2024-01-10")
 
                     # These should never be None or empty if cache is valid
                     assert first is not None, "First trading day should not be None"

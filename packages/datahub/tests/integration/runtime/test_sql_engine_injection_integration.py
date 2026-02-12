@@ -7,9 +7,6 @@ from tempfile import TemporaryDirectory
 import duckdb
 import pytest
 from ditto_datahub.runtime.sql_engine import SqlEngine
-from ditto_datahub.stores.metadata.calendar import CalendarStore
-from ditto_datahub.stores.metadata.instrument import InstrumentStore
-from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
 
 
@@ -37,17 +34,8 @@ class TestSqlEngineInjection:
         self.pool = SQLitePool(str(db_path), schema_path=schema_path)
         self.pool.init_schema()
 
-        # Create stores
-        sqlite_client = SQLiteClient(self.pool)
-        self.instrument_store = InstrumentStore(sqlite_client)
-        self.calendar_store = CalendarStore(sqlite_client)
-
-        # Create SqlEngine
-        self.engine = SqlEngine(
-            data_root=self.data_root,
-            instrument_store=self.instrument_store,
-            calendar_store=self.calendar_store,
-        )
+        # Create SqlEngine (no longer requires instrument_store or calendar_store)
+        self.engine = SqlEngine(data_root=self.data_root)
 
     def teardown_method(self) -> None:
         """Clean up test environment."""
@@ -65,7 +53,6 @@ class TestSqlEngineInjection:
 
     def test_asof_normal_input_works(self) -> None:
         """测试正常 asof 输入应该工作."""
-        # [REVIEW] $asof 替换
         result = self.engine.execute(
             "SELECT CAST($asof AS DATE) AS asof_date", asof="2024-01-01"
         )
@@ -94,16 +81,16 @@ class TestSqlEngineInjection:
     def test_asof_invalid_format_rejected(self) -> None:
         """测试无效格式的 asof 被拒绝."""
         invalid_formats = [
-            "2024/01/01",  # [REVIEW]
-            "01-01-2024",  # [REVIEW]
-            "2024-1-1",  # [REVIEW]
-            "24-01-01",  # [REVIEW]
-            "2024-01",  # [REVIEW]
-            "2024",  # [REVIEW]
-            "not-a-date",  # [REVIEW]
-            "",  # [REVIEW]
-            "2024-01-01   ",  # [REVIEW]
-            "  2024-01-01",  # [REVIEW]
+            "2024/01/01",
+            "01-01-2024",
+            "2024-1-1",
+            "24-01-01",
+            "2024-01",
+            "2024",
+            "not-a-date",
+            "",
+            "2024-01-01   ",
+            "  2024-01-01",
         ]
 
         for invalid in invalid_formats:
@@ -115,9 +102,9 @@ class TestSqlEngineInjection:
     def test_asof_invalid_date_rejected_by_duckdb(self) -> None:
         """测试语义无效的日期被 DuckDB 拒绝."""
         invalid_dates = [
-            "2024-13-01",  # [REVIEW]
-            "2024-01-32",  # [REVIEW]
-            "2024-02-30",  # [REVIEW](2月没有30号)
+            "2024-13-01",
+            "2024-01-32",
+            "2024-02-30",  # 2月没有30号
         ]
 
         for invalid in invalid_dates:
@@ -129,7 +116,6 @@ class TestSqlEngineInjection:
 
     def test_asof_parameterized_query(self) -> None:
         """测试使用参数化查询."""
-        # [REVIEW] $asof 与其他参数的组合使用
         result = self.engine.execute(
             "SELECT CAST($asof AS DATE) AS asof_date, $1 AS num",
             asof="2024-01-02",
@@ -151,7 +137,6 @@ class TestSqlEngineInjection:
 
     def test_asof_none_does_not_modify_query(self) -> None:
         """测试 asof=None 时不修改查询."""
-        # [REVIEW] asof 参数，查询应该保持不变
         result = self.engine.execute("SELECT 1 AS num")
 
         assert len(result) == 1

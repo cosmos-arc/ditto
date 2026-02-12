@@ -12,32 +12,13 @@ from collections.abc import Callable
 from typing import Literal, cast
 
 import polars as pl
-from ditto_datahub.hub import DataHub
 from ditto_datahub.models import Dataset, OnDuplicate, WriteResult
-from ditto_datahub.services.market import (
-    MarketWriteCommand,
-)
-from ditto_datahub.services.metadata import MetadataWriteCommand
+from ditto_datahub.services.capital_service import CapitalService
+from ditto_datahub.services.fundamental_service import FundamentalService
+from ditto_datahub.services.macro_service import MacroService
+from ditto_datahub.services.market_service import MarketService
+from ditto_datahub.services.metadata_service import MetadataService
 from ditto_foundation.util.checksum import ChecksumCompute
-
-
-def _map_on_duplicate(on_duplicate: OnDuplicate) -> str:
-    """
-    将 OnDuplicate 枚举转换为 MarketService 期望的字符串值。
-
-    Args:
-        on_duplicate: OnDuplicate 枚举值
-
-    Returns:
-        MarketService 期望的字符串值
-
-    """
-    mapping = {
-        OnDuplicate.ERROR: "error",
-        OnDuplicate.KEEP_FIRST: "skip",
-        OnDuplicate.KEEP_LAST: "overwrite",
-    }
-    return mapping.get(on_duplicate, "error")
 
 
 def _enrich_with_instrument_id(
@@ -89,18 +70,16 @@ def _to_write_result(
     dataset: str,
     year: int,
     df: pl.DataFrame,
-    rows: int,
-    files: int,
+    rows_written: int,
 ) -> WriteResult:
     """
-    将 MarketService 返回的 dict 转换为 WriteResult。
+    将写入结果转换为 WriteResult。
 
     Args:
         dataset: 数据集名称
         year: 年份
         df: 写入的 DataFrame（用于计算 checksum）
-        rows: 写入行数
-        files: 写入文件数
+        rows_written: 写入行数
 
     Returns:
         WriteResult 对象
@@ -110,25 +89,41 @@ def _to_write_result(
     return WriteResult(
         file_path=f"{dataset}/{year}",
         checksum=checksum,
-        rows_written=rows,
-        rows_total=rows,
-        blocked=files == 0,  # 如果没有文件写入，则认为被阻塞
+        rows_written=rows_written,
+        rows_total=rows_written,
+        blocked=rows_written == 0,  # 如果没有行写入，则认为被阻塞
     )
 
 
 class IngestionDataWriter:
     """统一数据写入器。"""
 
-    def __init__(self, hub: DataHub, source_name: str) -> None:
+    def __init__(
+        self,
+        metadata_service: MetadataService,
+        market_service: MarketService,
+        fundamental_service: FundamentalService,
+        capital_service: CapitalService,
+        macro_service: MacroService,
+        source_name: str,
+    ) -> None:
         """
         初始化 IngestionDataWriter。
 
         Args:
-            hub: DataHub 实例
+            metadata_service: MetadataService 实例
+            market_service: MarketService 实例
+            fundamental_service: FundamentalService 实例
+            capital_service: CapitalService 实例
+            macro_service: MacroService 实例
             source_name: 数据源名称
 
         """
-        self._hub = hub
+        self._metadata_service = metadata_service
+        self._market_service = market_service
+        self._fundamental_service = fundamental_service
+        self._capital_service = capital_service
+        self._macro_service = macro_service
         self._source_name = source_name
 
     def write_data(
@@ -283,11 +278,13 @@ class IngestionDataWriter:
         asset_class: Literal["stock", "etf"] = (
             "etf" if dataset_enum == Dataset.ETF_DAILY else "stock"
         )
-        instrument_id_mapping = self._hub.metadata.resolve_or_create_instruments_batch(
-            df=df,
-            source=self._source_name,
-            asset_class=asset_class,
-            source_ticker_col=source_ticker_col,
+        instrument_id_mapping = (
+            self._metadata_service.resolve_or_create_instruments_batch(
+                df=df,
+                source=self._source_name,
+                asset_class=asset_class,
+                source_ticker_col=source_ticker_col,
+            )
         )
         enriched_df = _enrich_with_instrument_id(
             df,
@@ -296,20 +293,17 @@ class IngestionDataWriter:
             self._source_name,
         )
         bars_dataset = cast(Literal["stock_daily", "etf_daily"], dataset_enum.value)
-        write_result = self._hub.market.write(
-            MarketWriteCommand(
-                dataset=bars_dataset,
-                df=enriched_df,
-                year=year,
-                on_duplicate=_map_on_duplicate(on_duplicate),
-            )
+        rows_written = self._market_service.save_bars(
+            dataset=bars_dataset,
+            df=enriched_df,
+            year=year,
+            on_duplicate=on_duplicate,
         )
         return _to_write_result(
             dataset,
             year,
             enriched_df,
-            write_result.rows,
-            write_result.files,
+            rows_written,
         )
 
     def _write_stock_status(
@@ -320,11 +314,13 @@ class IngestionDataWriter:
         on_duplicate: OnDuplicate,
         source_ticker_col: str,
     ) -> WriteResult:
-        instrument_id_mapping = self._hub.metadata.resolve_or_create_instruments_batch(
-            df=df,
-            source=self._source_name,
-            asset_class="stock",
-            source_ticker_col=source_ticker_col,
+        instrument_id_mapping = (
+            self._metadata_service.resolve_or_create_instruments_batch(
+                df=df,
+                source=self._source_name,
+                asset_class="stock",
+                source_ticker_col=source_ticker_col,
+            )
         )
         enriched_df = _enrich_with_instrument_id(
             df,
@@ -332,20 +328,15 @@ class IngestionDataWriter:
             source_ticker_col,
             self._source_name,
         )
-        write_result = self._hub.market.write(
-            MarketWriteCommand(
-                dataset="stock_status",
-                df=enriched_df,
-                year=year,
-                on_duplicate=_map_on_duplicate(on_duplicate),
-            )
+        rows_written = self._market_service.save_stock_status(
+            df=enriched_df,
+            year=year,
         )
         return _to_write_result(
             dataset,
             year,
             enriched_df,
-            write_result.rows,
-            write_result.files,
+            rows_written,
         )
 
     def _write_adj_factor(
@@ -363,7 +354,7 @@ class IngestionDataWriter:
                 "etf" if dataset_enum == Dataset.FUND_ADJ else "stock"
             )
             instrument_id_mapping = (
-                self._hub.metadata.resolve_or_create_instruments_batch(
+                self._metadata_service.resolve_or_create_instruments_batch(
                     df=df,
                     source=self._source_name,
                     asset_class=adj_asset_class,
@@ -377,21 +368,16 @@ class IngestionDataWriter:
                 self._source_name,
             )
 
-        adj_dataset = cast(Literal["adj_factor", "fund_adj"], dataset_enum.value)
-        write_result = self._hub.market.write(
-            MarketWriteCommand(
-                dataset=adj_dataset,
-                df=enriched_df,
-                year=year,
-                on_duplicate=_map_on_duplicate(on_duplicate),
-            )
+        rows_written = self._market_service.save_adj_factor(
+            df=enriched_df,
+            year=year,
+            on_duplicate=on_duplicate,
         )
         return _to_write_result(
             dataset,
             year,
             enriched_df,
-            write_result.rows,
-            write_result.files,
+            rows_written,
         )
 
     def _write_fundamental(
@@ -401,18 +387,20 @@ class IngestionDataWriter:
         df: pl.DataFrame,
         year: int,
     ) -> WriteResult:
-        fundamental_dataset = cast(
-            Literal["balance_sheet", "income_statement", "cash_flow", "dividend"],
-            dataset_enum.value,
-        )
-        write_result = self._hub.fundamental.write(fundamental_dataset, df)
-        files = 1 if write_result.records_written > 0 else 0
+        # Map dataset enum to the appropriate save method
+        save_methods = {
+            Dataset.BALANCE_SHEET: self._fundamental_service.save_balance_sheet,
+            Dataset.INCOME_STATEMENT: self._fundamental_service.save_income_statement,
+            Dataset.CASH_FLOW: self._fundamental_service.save_cash_flow,
+            Dataset.DIVIDEND: self._fundamental_service.save_dividend,
+        }
+        save_method = save_methods[dataset_enum]
+        records_written = save_method(df)
         return _to_write_result(
             dataset,
             year,
             df,
-            write_result.records_written,
-            files,
+            records_written,
         )
 
     def _write_capital(
@@ -426,14 +414,20 @@ class IngestionDataWriter:
             Literal["valuation_metrics", "margin_trading", "pledge_ratio"],
             dataset_enum.value,
         )
-        write_result = self._hub.capital.write(capital_dataset, df)
-        files = 1 if write_result.records_written > 0 else 0
+        # 使用特定的 save_* 方法替代已删除的 write() 方法
+        if capital_dataset == "valuation_metrics":
+            records_written = self._capital_service.save_valuation_metrics(df)
+        elif capital_dataset == "margin_trading":
+            records_written = self._capital_service.save_margin_trading(df)
+        elif capital_dataset == "pledge_ratio":
+            records_written = self._capital_service.save_pledge_ratio(df)
+        else:
+            records_written = 0
         return _to_write_result(
             dataset,
             year,
             df,
-            write_result.records_written,
-            files,
+            records_written,
         )
 
     def _write_macro(
@@ -442,21 +436,17 @@ class IngestionDataWriter:
         df: pl.DataFrame,
         year: int,
     ) -> WriteResult:
-        write_result = self._hub.macro.write(df)
-        files = 1 if write_result.records_written > 0 else 0
+        write_result = self._macro_service.save_indicators(df)
         return _to_write_result(
             dataset,
             year,
             df,
             write_result.records_written,
-            files,
         )
 
     def _write_calendar(self, df: pl.DataFrame, trade_date: str) -> WriteResult:
         records = df.to_dicts()
-        self._hub.metadata.write(
-            MetadataWriteCommand(dataset="calendar", records=records)
-        )
+        self._metadata_service.save_calendar(records=records)
         file_path = f"calendar_store:{trade_date}"
         checksum = ChecksumCompute.from_dataframe(df, "calendar")
         return WriteResult(
@@ -498,7 +488,7 @@ class IngestionDataWriter:
 
         """
         # 使用 MetadataService 批量注册（线程安全）
-        file_path, checksum = self._hub.metadata.register_instruments_batch(
+        file_path, checksum = self._metadata_service.register_instruments_batch(
             df=df,
             source=self._source_name,
             asset_class="stock",
@@ -520,7 +510,7 @@ class IngestionDataWriter:
 
         """
         # 使用 MetadataService 批量注册（线程安全）
-        file_path, checksum = self._hub.metadata.register_instruments_batch(
+        file_path, checksum = self._metadata_service.register_instruments_batch(
             df=df,
             source=self._source_name,
             asset_class="etf",

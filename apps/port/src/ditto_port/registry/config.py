@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 from dishka import Provider, Scope, provide
 from ditto_core.quality.config import DQSettings
@@ -14,6 +15,7 @@ from ditto_datahub.config import (
     DataSourceSettings,
     FileStorageSettings,
 )
+from ditto_foundation.cache import DataCache
 from ditto_foundation.config import ConfigInitCoordinator, ConfigLoader, Environment
 from ditto_foundation.config.settings import (
     ObservabilitySettings,
@@ -194,3 +196,8 @@ class ConfigProvider(Provider):
         init(config)
         yield
         shutdown()
+
+    @provide
+    def data_cache(self) -> DataCache[Any]:
+        """提供数据缓存实例（应用级单例）。"""
+        return DataCache[Any](ttl_seconds=300, max_size=10000)

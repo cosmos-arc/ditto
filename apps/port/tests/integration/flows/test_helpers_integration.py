@@ -5,7 +5,7 @@ Tests for create_ingestion_context context manager.
 """
 
 import pytest
-from ditto_datahub import DataHub
+from ditto_datahub.services.metadata_service import MetadataService
 
 # 标记为串行执行，避免并行测试时数据库文件冲突
 pytestmark = pytest.mark.serial
@@ -23,20 +23,26 @@ class TestCreateIngestionContext:
         assert create_ingestion_context is not None
         assert callable(create_ingestion_context)
 
-    def test_context_creates_datahub(self):
-        """Test that context creates DataHub instance."""
+    def test_context_creates_metadata_service(self):
+        """Test that context creates MetadataService instance."""
         from ditto_port.jobs.context import create_ingestion_context
 
-        with create_ingestion_context(source="tushare") as (hub, coordinator):
-            assert hub is not None
-            assert isinstance(hub, DataHub)
+        with create_ingestion_context(source="tushare") as (
+            metadata_service,
+            coordinator,
+        ):
+            assert metadata_service is not None
+            assert isinstance(metadata_service, MetadataService)
             assert coordinator is not None
 
     def test_context_provides_coordinator(self):
         """Test that context provides IngestionCoordinator instance."""
         from ditto_port.jobs.context import create_ingestion_context
 
-        with create_ingestion_context(source="tushare") as (_hub, coordinator):
+        with create_ingestion_context(source="tushare") as (
+            _metadata_service,
+            coordinator,
+        ):
             assert coordinator is not None
             assert hasattr(coordinator, "ingest_date")
 
@@ -45,14 +51,17 @@ class TestCreateIngestionContext:
         from ditto_port.jobs.context import create_ingestion_context
 
         # 不传 source 参数，应该使用默认值 "tushare"
-        with create_ingestion_context() as (_hub, coordinator):
+        with create_ingestion_context() as (_metadata_service, coordinator):
             assert coordinator is not None
 
     def test_context_supports_coordinator_usage(self):
         """Test that coordinator can be used within context."""
         from ditto_port.jobs.context import create_ingestion_context
 
-        with create_ingestion_context(source="tushare") as (_hub, coordinator):
+        with create_ingestion_context(source="tushare") as (
+            _metadata_service,
+            coordinator,
+        ):
             # Verify coordinator has the expected methods
             assert hasattr(coordinator, "ingest_date")
             assert hasattr(coordinator, "ingest_range")
@@ -61,14 +70,14 @@ class TestCreateIngestionContext:
         """Test that multiple context instances are independent."""
         from ditto_port.jobs.context import create_ingestion_context
 
-        with create_ingestion_context(source="tushare") as (hub1, _coord1):
-            assert hub1 is not None
-            hub1_id = id(hub1)
+        with create_ingestion_context(source="tushare") as (metadata_service1, _coord1):
+            assert metadata_service1 is not None
+            metadata_service1_id = id(metadata_service1)
 
         # 第二个上下文应该创建新的容器
-        with create_ingestion_context(source="tushare") as (hub2, _coord2):
-            assert hub2 is not None
-            hub2_id = id(hub2)
+        with create_ingestion_context(source="tushare") as (metadata_service2, _coord2):
+            assert metadata_service2 is not None
+            metadata_service2_id = id(metadata_service2)
 
-        # 两个 hub 应该是不同的实例（不同的容器）
-        assert hub1_id != hub2_id
+        # 两个 metadata_service 应该是不同的实例（不同的容器）
+        assert metadata_service1_id != metadata_service2_id

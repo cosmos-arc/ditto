@@ -1,1 +1,0 @@
-"""DQ initialization scripts."""

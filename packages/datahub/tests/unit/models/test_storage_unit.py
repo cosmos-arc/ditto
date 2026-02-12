@@ -6,7 +6,7 @@ import pytest
 from ditto_datahub.models.storage import (
     FreezeManifest,
     WriteResult,
-    WriteResultStore,
+    WriteStoreResult,
 )
 
 
@@ -57,12 +57,12 @@ class TestWriteResult:
 
 
 @pytest.mark.unit
-class TestWriteResultStore:
-    """Tests for WriteResultStore model."""
+class TestWriteStoreResult:
+    """Tests for WriteStoreResult model."""
 
     def test_create_write_result_store_added(self) -> None:
-        """Test creating WriteResultStore for added rows."""
-        result = WriteResultStore(
+        """Test creating WriteStoreResult for added rows."""
+        result = WriteStoreResult(
             file_path="/data/stock_daily/2024-01-02.parquet",
             checksum="abc123",
             added=1000,
@@ -79,8 +79,8 @@ class TestWriteResultStore:
         assert result.is_merge is False
 
     def test_create_write_result_store_updated(self) -> None:
-        """Test creating WriteResultStore for updated rows."""
-        result = WriteResultStore(
+        """Test creating WriteStoreResult for updated rows."""
+        result = WriteStoreResult(
             file_path="/data/stock_daily/2024-01-02.parquet",
             checksum="abc123",
             added=0,
@@ -94,8 +94,8 @@ class TestWriteResultStore:
         assert result.is_merge is True
 
     def test_create_write_result_store_skipped(self) -> None:
-        """Test creating WriteResultStore with skipped rows."""
-        result = WriteResultStore(
+        """Test creating WriteStoreResult with skipped rows."""
+        result = WriteStoreResult(
             file_path="/data/stock_daily/2024-01-02.parquet",
             checksum="abc123",
             added=0,
@@ -109,8 +109,8 @@ class TestWriteResultStore:
         assert result.updated == 0
 
     def test_write_result_store_is_frozen(self) -> None:
-        """Test that WriteResultStore is frozen (immutable)."""
-        result = WriteResultStore(
+        """Test that WriteStoreResult is frozen (immutable)."""
+        result = WriteStoreResult(
             file_path="/data/test.parquet",
             checksum="xyz",
             added=100,

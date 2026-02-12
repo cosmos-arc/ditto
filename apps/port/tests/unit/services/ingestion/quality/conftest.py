@@ -25,12 +25,12 @@ def mock_quality_engine(mocker: MockerFixture) -> MagicMock:
 
 
 @pytest.fixture
-def mock_quarantine_store(mocker: MockerFixture) -> MagicMock:
-    """Mock QuarantineStore.
+def mock_quarantine_writer(mocker: MockerFixture) -> MagicMock:
+    """Mock QuarantineWriter.
 
     提供 save_failed_data 方法。
     """
-    store = mocker.MagicMock()
+    writer = mocker.MagicMock()
 
     def save_failed_data_impl(
         dataset: str,
@@ -42,8 +42,8 @@ def mock_quarantine_store(mocker: MockerFixture) -> MagicMock:
         """模拟 save_failed_data 实现."""
         return 1
 
-    store.save_failed_data.side_effect = save_failed_data_impl
-    return store
+    writer.save_failed_data.side_effect = save_failed_data_impl
+    return writer
 
 
 @pytest.fixture
@@ -86,12 +86,12 @@ def mock_tdx_source(mocker: MockerFixture) -> MagicMock:
 
 
 @pytest.fixture
-def mock_comparison_store(mocker: MockerFixture) -> MagicMock:
-    """Mock ComparisonStore.
+def mock_comparison_writer(mocker: MockerFixture) -> MagicMock:
+    """Mock ComparisonWriter.
 
     提供 write_comparison 异步方法。
     """
-    store = mocker.MagicMock()
+    writer = mocker.MagicMock()
 
     async def write_comparison_impl(
         trade_date: str, df: pl.DataFrame, dataset: str
@@ -99,8 +99,8 @@ def mock_comparison_store(mocker: MockerFixture) -> MagicMock:
         """模拟 write_comparison 实现."""
         pass
 
-    store.write_comparison.side_effect = write_comparison_impl
-    return store
+    writer.write_comparison.side_effect = write_comparison_impl
+    return writer
 
 
 @pytest.fixture

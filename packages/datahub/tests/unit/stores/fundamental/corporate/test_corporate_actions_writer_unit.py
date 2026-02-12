@@ -1,0 +1,298 @@
+"""Unit tests for CorporateActionsWriter."""
+
+from __future__ import annotations
+
+from datetime import date
+from pathlib import Path
+from unittest.mock import Mock
+
+import polars as pl
+import pytest
+from ditto_datahub.stores.fundamental.corporate.corporate_actions_writer import (
+    CorporateActionsWriter,
+)
+from ditto_datahub.stores.sqlite_client import SQLiteClient
+from ditto_foundation import M, SQLitePool
+
+
+@pytest.fixture
+def in_memory_db(tmp_path: Path) -> SQLitePool:
+    """Provide in-memory SQLite database with corporate_actions table."""
+    db_path = tmp_path / "test.db"
+
+    pool = SQLitePool(str(db_path))
+    pool.get_connection().execute(
+        """CREATE TABLE IF NOT EXISTS corporate_actions (
+        instrument_id TEXT NOT NULL,
+        action_type TEXT NOT NULL,
+        announcement_date DATE NOT NULL,
+        effective_date DATE,
+        description TEXT,
+        PRIMARY KEY (instrument_id, action_type, announcement_date)
+    )"""
+    )
+    return pool
+
+
+@pytest.fixture
+def corporate_actions_writer(in_memory_db: SQLitePool) -> CorporateActionsWriter:
+    """Provide CorporateActionsWriter with in-memory database."""
+    return CorporateActionsWriter(SQLiteClient(in_memory_db))
+
+
+@pytest.mark.unit
+class TestCorporateActionsWriter:
+    """Test cases for CorporateActionsWriter."""
+
+    def test_write_success(
+        self,
+        corporate_actions_writer: CorporateActionsWriter,
+        in_memory_db: SQLitePool,
+        mocker: Mock,
+    ) -> None:
+        """Test that write successfully inserts data."""
+        # Arrange
+        test_df = pl.DataFrame(
+            {
+                "instrument_id": ["600000"],
+                "action_type": ["DIVIDEND"],
+                "announcement_date": [date(2024, 5, 1)],
+                "effective_date": [date(2024, 6, 1)],
+                "description": ["Cash dividend 0.5 per share"],
+            }
+        )
+
+        # Mock M.data_records.add to avoid metric recording issues
+        mock_metrics_add = mocker.patch.object(M.data_records, "add")
+
+        # Act
+        count = corporate_actions_writer.write(test_df)
+
+        # Assert
+        assert count == 1
+        mock_metrics_add.assert_called_once_with(
+            1, {"dataset": "corporate_actions", "status": "success"}
+        )
+
+        # Verify data in database
+        client = SQLiteClient(in_memory_db)
+        rows = client.fetchall("SELECT * FROM corporate_actions")
+        assert len(rows) == 1
+        assert rows[0]["instrument_id"] == "600000"
+        assert rows[0]["action_type"] == "DIVIDEND"
+
+    def test_write_returns_count(
+        self,
+        corporate_actions_writer: CorporateActionsWriter,
+        in_memory_db: SQLitePool,
+        mocker: Mock,
+    ) -> None:
+        """Test that write returns correct record count."""
+        # Arrange
+        test_df = pl.DataFrame(
+            {
+                "instrument_id": ["600000", "600001", "600002"],
+                "action_type": ["DIVIDEND", "SPLIT", "BUYBACK"],
+                "announcement_date": [
+                    date(2024, 5, 1),
+                    date(2024, 6, 15),
+                    date(2024, 7, 1),
+                ],
+                "effective_date": [
+                    date(2024, 6, 1),
+                    date(2024, 7, 1),
+                    date(2024, 8, 1),
+                ],
+                "description": [
+                    "Cash dividend",
+                    "Stock split 2:1",
+                    "Share buyback",
+                ],
+            }
+        )
+
+        mocker.patch.object(M.data_records, "add")
+
+        # Act
+        count = corporate_actions_writer.write(test_df)
+
+        # Assert
+        assert count == 3
+
+    def test_write_empty_dataframe(
+        self,
+        corporate_actions_writer: CorporateActionsWriter,
+        in_memory_db: SQLitePool,
+        mocker: Mock,
+    ) -> None:
+        """Test that write handles empty DataFrame."""
+        # Arrange
+        test_df = pl.DataFrame(
+            {
+                "instrument_id": [],
+                "action_type": [],
+                "announcement_date": [],
+                "effective_date": [],
+                "description": [],
+            }
+        )
+
+        mocker.patch.object(M.data_records, "add")
+
+        # Act
+        count = corporate_actions_writer.write(test_df)
+
+        # Assert
+        assert count == 0
+
+        # Verify no data in database
+        client = SQLiteClient(in_memory_db)
+        rows = client.fetchall("SELECT * FROM corporate_actions")
+        assert len(rows) == 0
+
+    def test_write_failure_rollback(
+        self,
+        corporate_actions_writer: CorporateActionsWriter,
+        in_memory_db: SQLitePool,
+        mocker: Mock,
+    ) -> None:
+        """Test that write rolls back on failure."""
+        # Arrange
+        test_df = pl.DataFrame(
+            {
+                "instrument_id": ["600000"],
+                "action_type": ["DIVIDEND"],
+                "announcement_date": [date(2024, 5, 1)],
+                "effective_date": [date(2024, 6, 1)],
+                "description": ["Cash dividend 0.5 per share"],
+            }
+        )
+
+        mocker.patch.object(M.data_records, "add")
+
+        # Force an error by using invalid data type
+        # Create a mock client that raises RuntimeError
+        mock_client = Mock(spec=SQLiteClient)
+        mock_client.executemany.side_effect = RuntimeError("Database error")
+
+        # Create writer with mock client
+        mock_writer = CorporateActionsWriter(mock_client)
+
+        # Act & Assert
+        with pytest.raises(RuntimeError, match="Database error"):
+            mock_writer.write(test_df)
+
+    def test_write_with_nullable_effective_date(
+        self,
+        corporate_actions_writer: CorporateActionsWriter,
+        in_memory_db: SQLitePool,
+        mocker: Mock,
+    ) -> None:
+        """Test that write correctly handles nullable effective_date."""
+        # Arrange
+        test_df = pl.DataFrame(
+            {
+                "instrument_id": ["600000"],
+                "action_type": ["DIVIDEND"],
+                "announcement_date": [date(2024, 5, 1)],
+                "effective_date": [None],
+                "description": ["Cash dividend (no effective date)"],
+            }
+        )
+
+        mocker.patch.object(M.data_records, "add")
+
+        # Act
+        count = corporate_actions_writer.write(test_df)
+
+        # Assert
+        assert count == 1
+
+        # Verify effective_date was written as NULL
+        client = SQLiteClient(in_memory_db)
+        rows = client.fetchall("SELECT * FROM corporate_actions")
+        assert len(rows) == 1
+        assert rows[0]["effective_date"] is None
+
+    def test_write_multiple_actions_same_instrument(
+        self,
+        corporate_actions_writer: CorporateActionsWriter,
+        in_memory_db: SQLitePool,
+        mocker: Mock,
+    ) -> None:
+        """Test that write handles multiple actions for same instrument."""
+        # Arrange
+        test_df = pl.DataFrame(
+            {
+                "instrument_id": ["600000", "600000", "600000"],
+                "action_type": ["DIVIDEND", "SPLIT", "BUYBACK"],
+                "announcement_date": [
+                    date(2024, 5, 1),
+                    date(2024, 6, 15),
+                    date(2024, 7, 1),
+                ],
+                "effective_date": [
+                    date(2024, 6, 1),
+                    date(2024, 7, 1),
+                    date(2024, 8, 1),
+                ],
+                "description": [
+                    "Cash dividend",
+                    "Stock split 2:1",
+                    "Share buyback",
+                ],
+            }
+        )
+
+        mocker.patch.object(M.data_records, "add")
+
+        # Act
+        count = corporate_actions_writer.write(test_df)
+
+        # Assert
+        assert count == 3
+
+        # Verify all three actions were written
+        client = SQLiteClient(in_memory_db)
+        rows = client.fetchall(
+            "SELECT * FROM corporate_actions WHERE instrument_id = ? "
+            "ORDER BY announcement_date",
+            ["600000"],
+        )
+        assert len(rows) == 3
+        assert rows[0]["action_type"] == "DIVIDEND"
+        assert rows[1]["action_type"] == "SPLIT"
+        assert rows[2]["action_type"] == "BUYBACK"
+
+    def test_write_on_conflict_do_nothing(
+        self,
+        corporate_actions_writer: CorporateActionsWriter,
+        in_memory_db: SQLitePool,
+        mocker: Mock,
+    ) -> None:
+        """Test that write uses ON CONFLICT DO NOTHING correctly."""
+        # Arrange
+        test_df = pl.DataFrame(
+            {
+                "instrument_id": ["600000"],
+                "action_type": ["DIVIDEND"],
+                "announcement_date": [date(2024, 5, 1)],
+                "effective_date": [date(2024, 6, 1)],
+                "description": ["Cash dividend 0.5 per share"],
+            }
+        )
+
+        mocker.patch.object(M.data_records, "add")
+
+        # Act - First write
+        count1 = corporate_actions_writer.write(test_df)
+        assert count1 == 1
+
+        # Act - Second write with same data (should do nothing)
+        count2 = corporate_actions_writer.write(test_df)
+        assert count2 == 1  # SQLite reports 1 row inserted even with ON CONFLICT
+
+        # Verify only one record exists
+        client = SQLiteClient(in_memory_db)
+        rows = client.fetchall("SELECT * FROM corporate_actions")
+        assert len(rows) == 1

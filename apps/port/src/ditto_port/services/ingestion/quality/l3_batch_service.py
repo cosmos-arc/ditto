@@ -6,8 +6,8 @@ from typing import Any, Literal
 import polars as pl
 import polars.exceptions as pl_exceptions
 from ditto_core.quality import QualityEngine
-from ditto_datahub.services.market import MarketBarsQuery
-from ditto_datahub.services.metadata import MetadataQuery
+from ditto_datahub.services.market_service import MarketBarsQuery, MarketService
+from ditto_datahub.services.metadata_service import MetadataService
 from loguru import logger
 
 
@@ -22,18 +22,21 @@ class L3BatchService:
     def __init__(
         self,
         engine: QualityEngine,
-        hub: Any,  # DataHub instance
+        market_service: MarketService,
+        metadata_service: MetadataService,
     ) -> None:
         """
         Initialize L3 batch service.
 
         Args:
             engine: Quality engine instance
-            hub: DataHub instance for data access
+            market_service: MarketService instance for data access
+            metadata_service: MetadataService instance for data access
 
         """
         self._engine = engine
-        self._hub = hub
+        self._market_service = market_service
+        self._metadata_service = metadata_service
 
     def check_dataset(
         self,
@@ -165,7 +168,6 @@ class L3BatchService:
         start_date = start_dt.strftime("%Y-%m-%d")
 
         # Fetch historical data using MarketService
-
         historical_query = MarketBarsQuery(
             instrument_ids=None,
             start=start_date,
@@ -173,7 +175,7 @@ class L3BatchService:
             asset_class=asset_class,
             market_wide=market_wide,
         )
-        historical = self._hub.market.query(historical_query)
+        historical = self._market_service.find_bars(historical_query)
 
         # Fetch current data using MarketService
         current_query = MarketBarsQuery(
@@ -183,7 +185,7 @@ class L3BatchService:
             asset_class=asset_class,
             market_wide=market_wide,
         )
-        current = self._hub.market.query(current_query)
+        current = self._market_service.find_bars(current_query)
 
         return historical, current
 
@@ -204,13 +206,10 @@ class L3BatchService:
         start_dt = trade_dt - timedelta(days=lookback_days * 2)
         start_date = start_dt.strftime("%Y-%m-%d")
 
-        return self._hub.metadata.query(
-            MetadataQuery(
-                dataset="calendar_range",
-                start=start_date,
-                end=trade_date,
-                only_open=True,
-            )
+        return self._metadata_service.list_calendar_range(
+            start=start_date,
+            end=trade_date,
+            only_open=True,
         )
 
     def _send_alert(

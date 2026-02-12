@@ -23,19 +23,28 @@ class TestDQBlockingBehavior:
         from ditto_datahub.models.storage import WriteResult
         from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
-        # Mock DataHub
-        mock_hub = mocker.MagicMock()
+        # Mock services
+        mock_metadata_service = mocker.MagicMock()
+        mock_market_service = mocker.MagicMock()
+        mock_fundamental_service = mocker.MagicMock()
+        mock_capital_service = mocker.MagicMock()
+        mock_macro_service = mocker.MagicMock()
         mock_source = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
 
         # Mock metadata manager to not skip
-        mock_hub.ingestion_log_store = mocker.MagicMock()
-        mock_hub.market = mocker.MagicMock()
+        mock_ingestion_log_service.get_log.return_value = None
 
         # Create coordinator
         coordinator = IngestionCoordinator(
-            hub=mock_hub,
+            metadata_service=mock_metadata_service,
+            market_service=mock_market_service,
+            fundamental_service=mock_fundamental_service,
+            capital_service=mock_capital_service,
+            macro_service=mock_macro_service,
             source=mock_source,
             source_name="tushare",
+            ingestion_log_service=mock_ingestion_log_service,
         )
 
         # Mock _fetch_data to return valid data
@@ -81,19 +90,28 @@ class TestDQBlockingBehavior:
         from ditto_datahub.models.storage import WriteResult
         from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
-        # Mock DataHub
-        mock_hub = mocker.MagicMock()
+        # Mock services
+        mock_metadata_service = mocker.MagicMock()
+        mock_market_service = mocker.MagicMock()
+        mock_fundamental_service = mocker.MagicMock()
+        mock_capital_service = mocker.MagicMock()
+        mock_macro_service = mocker.MagicMock()
         mock_source = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
 
         # Mock metadata manager to not skip
-        mock_hub.ingestion_log_store = mocker.MagicMock()
-        mock_hub.market = mocker.MagicMock()
+        mock_ingestion_log_service.get_log.return_value = None
 
         # Create coordinator
         coordinator = IngestionCoordinator(
-            hub=mock_hub,
+            metadata_service=mock_metadata_service,
+            market_service=mock_market_service,
+            fundamental_service=mock_fundamental_service,
+            capital_service=mock_capital_service,
+            macro_service=mock_macro_service,
             source=mock_source,
             source_name="tushare",
+            ingestion_log_service=mock_ingestion_log_service,
         )
 
         # Mock _fetch_data to return valid data
@@ -126,9 +144,9 @@ class TestDQBlockingBehavior:
         coordinator.ingest_date("stock_daily", "2024-01-02")
 
         # Verify log was saved with FAIL status
-        mock_hub.ingestion_log_store.save_log.assert_called_once()
+        mock_ingestion_log_service.save_log.assert_called_once()
         # 获取位置参数中的 IngestionLog 对象
-        call_args = mock_hub.ingestion_log_store.save_log.call_args.args
+        call_args = mock_ingestion_log_service.save_log.call_args.args
         log_entry = call_args[0]
 
         assert isinstance(log_entry, IngestionLog)

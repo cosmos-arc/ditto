@@ -11,56 +11,101 @@ Domain Store Provider - 封装所有 Store 的导入和创建.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from dishka import Provider, Scope, provide
 from ditto_datahub.config.data_root import DataRootConfig
 from ditto_datahub.runtime.freeze_manager import FreezeManager
-from ditto_datahub.runtime.ingestion.ingestion_log_store import (
-    IngestionLogStore,
-)
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_datahub.runtime.quality.quarantine_store import QuarantineStore
-from ditto_datahub.stores.capital.capital_store import CapitalStore
-from ditto_datahub.stores.factors.factor_metadata_store import (
-    FactorMetadataStore,
+from ditto_datahub.services.fundamental_service import (
+    FundamentalService,
 )
-from ditto_datahub.stores.factors.factor_store import FactorStore
-from ditto_datahub.stores.features.technical import (
-    IndicatorMetadataStore as FeatureIndicatorMetadataStore,
+
+# Fundamental domain CQRS Readers and Writers
+from ditto_datahub.stores.fundamental.corporate.corporate_actions_reader import (
+    CorporateActionsReader,
 )
-from ditto_datahub.stores.features.technical import (
-    IndicatorStore as FeatureIndicatorStore,
+from ditto_datahub.stores.fundamental.corporate.corporate_actions_writer import (
+    CorporateActionsWriter,
 )
-from ditto_datahub.stores.fundamental.fundamental_store import FundamentalStore
-from ditto_datahub.stores.macro.indicator.indicator_store import (
-    IndicatorStore as MacroIndicatorStore,
+from ditto_datahub.stores.fundamental.corporate.dividend_reader import (
+    DividendReader,
 )
-from ditto_datahub.stores.macro.indicator.metadata_store import (
-    IndicatorMetadataStore as MacroIndicatorMetadataStore,
+from ditto_datahub.stores.fundamental.corporate.dividend_writer import (
+    DividendWriter,
 )
-from ditto_datahub.stores.market.etf.adj import EtfAdjFactorStore
-from ditto_datahub.stores.market.etf.bars import EtfBarsStore
-from ditto_datahub.stores.market.etf.nav import EtfNavStore
-from ditto_datahub.stores.market.etf.status import EtfStatusStore
-from ditto_datahub.stores.market.index.bars import IndexBarsStore
-from ditto_datahub.stores.market.index.constituent import IndexConstituentStore
-from ditto_datahub.stores.market.stock.adj import StockAdjFactorStore
-from ditto_datahub.stores.market.stock.bars import StockBarsStore
-from ditto_datahub.stores.market.stock.status import StockStatusStore
-from ditto_datahub.stores.metadata.calendar.calendar_store import (
-    CalendarStore as MetadataCalendarStore,
+from ditto_datahub.stores.fundamental.financial.balance_sheet_reader import (
+    BalanceSheetReader,
 )
-from ditto_datahub.stores.metadata.identity.identity_store import IdentityStore
-from ditto_datahub.stores.metadata.industry.industry_basic_store import (
-    IndustryBasicStore,
+from ditto_datahub.stores.fundamental.financial.balance_sheet_writer import (
+    BalanceSheetWriter,
 )
-from ditto_datahub.stores.metadata.industry.industry_mapping_store import (
-    IndustryMappingStore,
+from ditto_datahub.stores.fundamental.financial.cash_flow_reader import (
+    CashFlowReader,
 )
-from ditto_datahub.stores.metadata.instrument import InstrumentStore
-from ditto_datahub.stores.metadata.universe import UniverseStore
+from ditto_datahub.stores.fundamental.financial.cash_flow_writer import (
+    CashFlowWriter,
+)
+from ditto_datahub.stores.fundamental.financial.income_statement_reader import (
+    IncomeStatementReader,
+)
+from ditto_datahub.stores.fundamental.financial.income_statement_writer import (
+    IncomeStatementWriter,
+)
+from ditto_datahub.stores.fundamental.forecast.express_reader import (
+    ExpressReader,
+)
+from ditto_datahub.stores.fundamental.forecast.express_writer import (
+    ExpressWriter,
+)
+from ditto_datahub.stores.fundamental.forecast.forecast_reader import (
+    ForecastReader,
+)
+from ditto_datahub.stores.fundamental.forecast.forecast_writer import (
+    ForecastWriter,
+)
+
+# Market domain CQRS Readers and Writers
+from ditto_datahub.stores.market.etf.bars import EtfBarsReader, EtfBarsWriter
+from ditto_datahub.stores.market.etf.status import EtfStatusReader, EtfStatusWriter
+from ditto_datahub.stores.market.stock.adj import (
+    StockAdjFactorReader,
+    StockAdjFactorWriter,
+)
+from ditto_datahub.stores.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_datahub.stores.market.stock.status import (
+    StockStatusReader,
+    StockStatusWriter,
+)
+
+# Metadata domain CQRS Readers and Writers
+from ditto_datahub.stores.metadata.calendar import CalendarReader, CalendarWriter
+from ditto_datahub.stores.metadata.industry import (
+    IndustryMappingReader,
+    IndustryMappingWriter,
+    IndustryReader,
+    IndustryWriter,
+)
+from ditto_datahub.stores.metadata.instrument import (
+    InstrumentReader,
+    InstrumentWriter,
+)
+from ditto_datahub.stores.metadata.universe import UniverseReader, UniverseWriter
+
+# Runtime domain CQRS Readers and Writers
+from ditto_datahub.stores.runtime.ingestion import (
+    IngestionLogReader,
+    IngestionLogWriter,
+)
+from ditto_datahub.stores.runtime.quality import (
+    ComparisonReader,
+    ComparisonWriter,
+    QuarantineReader,
+    QuarantineWriter,
+)
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_foundation import SQLitePool
+from ditto_foundation.cache import DataCache
 
 __all__ = ["DomainServiceProvider"]
 
@@ -101,178 +146,348 @@ class DomainServiceProvider(Provider):
     # ========================================================================
 
     @provide
-    def instrument_store(self, sqlite_client: SQLiteClient) -> InstrumentStore:
-        """证券数据存储."""
-        return InstrumentStore(sqlite_client)
-
-    @provide
-    def calendar_store(self, sqlite_client: SQLiteClient) -> MetadataCalendarStore:
-        """交易日历存储."""
-        return MetadataCalendarStore(sqlite_client)
-
-    @provide
-    def identity_store(self, config: DataRootConfig) -> IdentityStore:
-        """Identity 映射存储."""
-        return IdentityStore(config.metadata_db_path)
-
-    @provide
-    def industry_basic_store(
+    def instrument_reader(
         self,
-        config: DataRootConfig,
-    ) -> IndustryBasicStore:
-        """行业主数据存储."""
-        return IndustryBasicStore(config.metadata_db_path)
+        sqlite_client: SQLiteClient,
+    ) -> InstrumentReader:
+        """证券数据读取器."""
+        return InstrumentReader(sqlite_client)
 
     @provide
-    def industry_mapping_store(
+    def calendar_reader(self, sqlite_client: SQLiteClient) -> CalendarReader:
+        """交易日历读取器."""
+        return CalendarReader(sqlite_client)
+
+    @provide
+    def calendar_writer(
         self,
-        config: DataRootConfig,
-    ) -> IndustryMappingStore:
-        """行业映射存储."""
-        return IndustryMappingStore(config.metadata_db_path)
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+        calendar_reader: CalendarReader,
+    ) -> CalendarWriter:
+        """交易日历写入器."""
+        return CalendarWriter(
+            sqlite_client=sqlite_client,
+            data_cache=data_cache,
+            reader=calendar_reader,
+        )
 
     @provide
-    def universe_store(self, sqlite_client: SQLiteClient) -> UniverseStore:
-        """证券池存储."""
-        return UniverseStore(sqlite_client)
+    def instrument_writer(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> InstrumentWriter:
+        """证券主数据写入器."""
+        return InstrumentWriter(client=sqlite_client, cache=data_cache)
 
     @provide
-    def ingestion_log_store(self, sqlite_client: SQLiteClient) -> IngestionLogStore:
-        """摄取日志存储."""
-        return IngestionLogStore(sqlite_client)
+    def industry_reader(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> IndustryReader:
+        """行业主数据读取器."""
+        return IndustryReader(client=sqlite_client, cache=data_cache)
 
     @provide
-    def quarantine_store(self, sqlite_client: SQLiteClient) -> QuarantineStore:
-        """隔离区存储（使用主数据库）."""
-        return QuarantineStore(sqlite_client)
+    def industry_writer(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> IndustryWriter:
+        """行业主数据写入器."""
+        return IndustryWriter(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def industry_mapping_reader(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> IndustryMappingReader:
+        """行业映射读取器."""
+        return IndustryMappingReader(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def industry_mapping_writer(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> IndustryMappingWriter:
+        """行业映射写入器."""
+        return IndustryMappingWriter(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def universe_reader(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> UniverseReader:
+        """标的池读取器."""
+        return UniverseReader(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def universe_writer(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> UniverseWriter:
+        """标的池写入器."""
+        return UniverseWriter(client=sqlite_client, cache=data_cache)
+
+    # ========================================================================
+    # Runtime Domain CQRS Readers and Writers
+    # ========================================================================
+
+    @provide
+    def ingestion_log_reader(self, sqlite_client: SQLiteClient) -> IngestionLogReader:
+        """摄取日志读取器."""
+        return IngestionLogReader(sqlite_client)
+
+    @provide
+    def ingestion_log_writer(self, sqlite_client: SQLiteClient) -> IngestionLogWriter:
+        """摄取日志写入器."""
+        return IngestionLogWriter(sqlite_client)
+
+    @provide
+    def comparison_reader(self, config: DataRootConfig) -> ComparisonReader:
+        """质量对比数据读取器."""
+        return ComparisonReader(base_path=config.data_root)
+
+    @provide
+    def comparison_writer(self, config: DataRootConfig) -> ComparisonWriter:
+        """质量对比数据写入器."""
+        return ComparisonWriter(base_path=config.data_root)
+
+    @provide
+    def quarantine_reader(self, sqlite_client: SQLiteClient) -> QuarantineReader:
+        """隔离区数据读取器."""
+        return QuarantineReader(sqlite_client)
+
+    @provide
+    def quarantine_writer(self, sqlite_client: SQLiteClient) -> QuarantineWriter:
+        """隔离区数据写入器."""
+        return QuarantineWriter(sqlite_client)
 
     # ========================================================================
     # Market Domain Stores
     # ========================================================================
 
-    @provide
-    def stock_bars_store(self, config: DataRootConfig) -> StockBarsStore:
-        """股票 K线存储."""
-        return StockBarsStore(config.data_root)
+    # ========================================================================
+    # Market Domain CQRS Readers and Writers
+    # ========================================================================
 
     @provide
-    def stock_status_store(self, config: DataRootConfig) -> StockStatusStore:
-        """股票状态存储."""
-        return StockStatusStore(config.data_root)
+    def stock_bars_reader(self, config: DataRootConfig) -> StockBarsReader:
+        """股票 K线读取器."""
+        return StockBarsReader(config.data_root)
 
     @provide
-    def stock_adj_store(self, config: DataRootConfig) -> StockAdjFactorStore:
-        """股票复权因子存储."""
-        return StockAdjFactorStore(config.data_root)
+    def stock_bars_writer(self, config: DataRootConfig) -> StockBarsWriter:
+        """股票 K线写入器."""
+        return StockBarsWriter(config.data_root)
 
     @provide
-    def etf_bars_store(self, config: DataRootConfig) -> EtfBarsStore:
-        """ETF K线存储."""
-        return EtfBarsStore(config.data_root)
+    def stock_status_reader(self, config: DataRootConfig) -> StockStatusReader:
+        """股票状态读取器."""
+        return StockStatusReader(config.data_root)
 
     @provide
-    def etf_status_store(self, config: DataRootConfig) -> EtfStatusStore:
-        """ETF 状态存储."""
-        return EtfStatusStore(config.data_root)
+    def stock_status_writer(self, config: DataRootConfig) -> StockStatusWriter:
+        """股票状态写入器."""
+        return StockStatusWriter(config.data_root)
 
     @provide
-    def etf_nav_store(self, config: DataRootConfig) -> EtfNavStore:
-        """ETF 净值存储."""
-        return EtfNavStore(config.data_root)
+    def stock_adj_reader(self, config: DataRootConfig) -> StockAdjFactorReader:
+        """股票复权因子读取器."""
+        return StockAdjFactorReader(config.data_root)
 
     @provide
-    def etf_adj_store(self, config: DataRootConfig) -> EtfAdjFactorStore:
-        """ETF 复权因子存储."""
-        return EtfAdjFactorStore(config.data_root)
+    def stock_adj_writer(self, config: DataRootConfig) -> StockAdjFactorWriter:
+        """股票复权因子写入器."""
+        return StockAdjFactorWriter(config.data_root)
 
     @provide
-    def index_bars_store(self, config: DataRootConfig) -> IndexBarsStore:
-        """指数 K线存储."""
-        return IndexBarsStore(config.data_root)
+    def etf_bars_reader(self, config: DataRootConfig) -> EtfBarsReader:
+        """ETF K线读取器."""
+        return EtfBarsReader(config.data_root)
 
     @provide
-    def index_constituent_store(self, config: DataRootConfig) -> IndexConstituentStore:
-        """指数成分股存储."""
-        return IndexConstituentStore(config.data_root)
+    def etf_bars_writer(self, config: DataRootConfig) -> EtfBarsWriter:
+        """ETF K线写入器."""
+        return EtfBarsWriter(config.data_root)
+
+    @provide
+    def etf_status_reader(self, config: DataRootConfig) -> EtfStatusReader:
+        """ETF 状态读取器."""
+        return EtfStatusReader(config.data_root)
+
+    @provide
+    def etf_status_writer(self, config: DataRootConfig) -> EtfStatusWriter:
+        """ETF 状态写入器."""
+        return EtfStatusWriter(config.data_root)
 
     # ========================================================================
     # Fundamental & Capital Domain Stores
     # ========================================================================
 
+    # Fundamental domain Readers
     @provide
-    def fundamental_store(
+    def balance_sheet_reader(
         self,
         sqlite_client: SQLiteClient,
-    ) -> FundamentalStore:
-        """Fundamental domain data storage."""
-        return FundamentalStore(sqlite_client)
+    ) -> BalanceSheetReader:
+        """BalanceSheet reader."""
+        return BalanceSheetReader(sqlite_client)
 
     @provide
-    def capital_store(
+    def balance_sheet_writer(
         self,
         sqlite_client: SQLiteClient,
-    ) -> CapitalStore:
-        """Capital domain data storage."""
-        return CapitalStore(sqlite_client)
+    ) -> BalanceSheetWriter:
+        """BalanceSheet writer."""
+        return BalanceSheetWriter(sqlite_client)
+
+    @provide
+    def income_statement_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> IncomeStatementReader:
+        """IncomeStatement reader."""
+        return IncomeStatementReader(sqlite_client)
+
+    @provide
+    def income_statement_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> IncomeStatementWriter:
+        """IncomeStatement writer."""
+        return IncomeStatementWriter(sqlite_client)
+
+    @provide
+    def cash_flow_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> CashFlowReader:
+        """CashFlow reader."""
+        return CashFlowReader(sqlite_client)
+
+    @provide
+    def cash_flow_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> CashFlowWriter:
+        """CashFlow writer."""
+        return CashFlowWriter(sqlite_client)
+
+    @provide
+    def dividend_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> DividendReader:
+        """Dividend reader."""
+        return DividendReader(sqlite_client)
+
+    @provide
+    def dividend_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> DividendWriter:
+        """Dividend writer."""
+        return DividendWriter(sqlite_client)
+
+    @provide
+    def corporate_actions_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> CorporateActionsReader:
+        """CorporateActions reader."""
+        return CorporateActionsReader(sqlite_client)
+
+    @provide
+    def corporate_actions_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> CorporateActionsWriter:
+        """CorporateActions writer."""
+        return CorporateActionsWriter(sqlite_client)
+
+    @provide
+    def forecast_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> ForecastReader:
+        """Forecast reader."""
+        return ForecastReader(sqlite_client)
+
+    @provide
+    def forecast_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> ForecastWriter:
+        """Forecast writer."""
+        return ForecastWriter(sqlite_client)
+
+    @provide
+    def express_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> ExpressReader:
+        """Express reader."""
+        return ExpressReader(sqlite_client)
+
+    @provide
+    def express_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> ExpressWriter:
+        """Express writer."""
+        return ExpressWriter(sqlite_client)
+
+    @provide
+    def fundamental_service(  # noqa: PLR0913
+        self,
+        balance_sheet_reader: BalanceSheetReader,
+        balance_sheet_writer: BalanceSheetWriter,
+        income_statement_reader: IncomeStatementReader,
+        income_statement_writer: IncomeStatementWriter,
+        cash_flow_reader: CashFlowReader,
+        cash_flow_writer: CashFlowWriter,
+        dividend_reader: DividendReader,
+        dividend_writer: DividendWriter,
+        corporate_actions_reader: CorporateActionsReader,
+        corporate_actions_writer: CorporateActionsWriter,
+        forecast_reader: ForecastReader,
+        forecast_writer: ForecastWriter,
+        express_reader: ExpressReader,
+        express_writer: ExpressWriter,
+    ) -> FundamentalService:
+        """Fundamental domain unified service."""
+        return FundamentalService(
+            balance_sheet_reader=balance_sheet_reader,
+            balance_sheet_writer=balance_sheet_writer,
+            income_statement_reader=income_statement_reader,
+            income_statement_writer=income_statement_writer,
+            cash_flow_reader=cash_flow_reader,
+            cash_flow_writer=cash_flow_writer,
+            dividend_reader=dividend_reader,
+            dividend_writer=dividend_writer,
+            corporate_actions_reader=corporate_actions_reader,
+            corporate_actions_writer=corporate_actions_writer,
+            forecast_reader=forecast_reader,
+            forecast_writer=forecast_writer,
+            express_reader=express_reader,
+            express_writer=express_writer,
+        )
 
     # ========================================================================
     # Macro Domain Stores
     # ========================================================================
 
-    @provide
-    def macro_indicator_store(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> MacroIndicatorStore:
-        """Macro indicator data storage."""
-        return MacroIndicatorStore(sqlite_client)
-
-    @provide
-    def macro_metadata_store(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> MacroIndicatorMetadataStore:
-        """Macro indicator metadata storage."""
-        return MacroIndicatorMetadataStore(sqlite_client)
-
     # ========================================================================
     # Features Domain Stores
     # ========================================================================
 
-    @provide
-    def feature_indicator_store(
-        self,
-        data_root_config: DataRootConfig,
-    ) -> FeatureIndicatorStore:
-        """Feature technical indicator storage."""
-        return FeatureIndicatorStore(
-            data_root_config.features_technical_indicators_narrow_path
-        )
-
-    @provide
-    def feature_indicator_metadata_store(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> FeatureIndicatorMetadataStore:
-        """Feature indicator metadata storage."""
-        return FeatureIndicatorMetadataStore(sqlite_client)
-
     # ========================================================================
     # Factors Domain Stores
     # ========================================================================
-
-    @provide
-    def factor_store(
-        self,
-        data_root_config: DataRootConfig,
-    ) -> FactorStore:
-        """Factor data storage."""
-        return FactorStore(data_root_config.factors_narrow_path)
-
-    @provide
-    def factor_metadata_store(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> FactorMetadataStore:
-        """Factor metadata storage."""
-        return FactorMetadataStore(sqlite_client)

@@ -75,6 +75,64 @@ def calculate_momentum(): ... # snake_case
 MAX_DRAWDOWN = 0.20          # UPPER_SNAKE
 ```
 
+### Service 层查询方法命名规范
+
+> **适用范围**：本规范仅适用于 `packages/datahub/src/ditto_datahub/services/` 下的存储服务类。
+
+| 前缀/方法 | 语义 | 返回 | 参数 | 数据不存在时 | 示例 |
+|-----------|------|------|------|-------------|------|
+| **`get_`** | 按唯一条件查单条 | 单条或 `None` | 明确参数 | 返回 `None` | `get_by_id(id)` |
+| **`find_`** | 多维条件查询 | 多条 | Query 对象或可选参数 | 返回空 DataFrame | `find_bars(query)` |
+| **`list_`** | 按条件列多条 | 多条 | 明确参数 | 返回空 DataFrame/列表 | `list_by_exchange(exchange)` |
+| **`first()`** | 获取第一条 | 单条或 `None` | 无参 | 返回 `None` | `first()` |
+| **`all()`** | 获取所有 | 多条 | 无参 | 返回空 DataFrame/列表 | `all()` |
+| **`save_`** | 保存/写入 | 结果对象 | 数据 + 参数 | - | `save_bars(df)` |
+| **`count_`** | 计数 | `int` | - | 返回 `0` | `count()` |
+| **`is_`** | 布尔判断 | `bool` | - | 返回 `False` | `is_trading_day(date)` |
+| **`resolve_`** | 解析转换 | 值或 `None` | - | 返回 `None` | `resolve_instrument_id()` |
+| **`exists_`** | 存在性 | `bool` | - | 返回 `False` | `exists()` |
+
+#### 核心区别
+
+```python
+# get_ - 返回单条，参数明确（唯一条件）
+service.get_instrument(instrument_id)      # → 单条或 None
+service.get_symbol(instrument_id)          # → str 或 None
+
+# list_ - 返回多条，参数明确
+service.list_by_exchange("SH")             # → 多条 DataFrame
+service.list_trading_days(start, end)      # → list[str]
+
+# find_ - 返回多条，Query/可选参数（多维查询）
+service.find_securities(SecuritiesQuery(asset_class="stock", exchange="SH"))
+service.find_bars(BarsQuery(start="...", end="...", adj=QFQ))
+
+# first() / all() - 无参
+service.first()    # → 第一条或 None
+service.all()      # → 所有
+```
+
+#### 示例
+
+```python
+class MetadataService:
+    # get_ - 单条
+    def get_instrument(self, instrument_id: int) -> dict | None: ...
+    def get_symbol(self, instrument_id: int) -> str | None: ...
+
+    # list_ - 多条，参数明确
+    def list_by_exchange(self, exchange: str) -> pl.DataFrame: ...
+    def list_trading_days(self, start: str, end: str) -> list[str]: ...
+
+    # find_ - 多条，Query/可选参数
+    def find_securities(self, query: SecuritiesQuery) -> pl.DataFrame: ...
+
+    # is_ / resolve_ / exists_
+    def is_trading_day(self, date: str) -> bool: ...
+    def resolve_instrument_id(self, ticker: str, source: str) -> int | None: ...
+    def exists_instrument(self, instrument_id: int) -> bool: ...
+```
+
 ## 模型类与 DTO 规范
 
 ### 核心原则

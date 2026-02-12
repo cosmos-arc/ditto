@@ -6,11 +6,16 @@
 
 **Architecture:**
 - **Store 层拆分**: `*_store.py` → `*_reader.py` + `*_writer.py`
-- **统一接口**: 定义 `IReader` 和 `IWriter` 基础协议
+- **组合模式**: Reader/Writer 通过组合 ParquetStore 实现，不使用 Protocol（Store 差异太大）
 - **Service 层保持不变**: Service 继续同时提供读写方法，内部调用 Reader/Writer
-- **向后兼容**: 通过 `__init__.py` 保持向后兼容导出
+- **破坏性重构**: 直接替换，无向后兼容层
 
-**Tech Stack:** Python 3.12+, Polars, ABC, Pydantic
+**Tech Stack:** Python 3.12+, Polars, Pydantic
+
+**Brainstorming 结论 (2026-02-09):**
+- ❌ 不使用 Protocol：InstrumentStore/CalendarStore 等与传统 CRUD 差异太大
+- ✅ 破坏性重构：直接创建 Reader/Writer，删除旧 Store
+- ✅ 类型重命名：`WriteResultStore` → `WriteStoreResult`
 
 ---
 
@@ -30,62 +35,45 @@
 
 ---
 
-## 阶段 0: 基础接口定义 (P0)
+## 阶段 0: 类型命名修正 (P0) ✅ 已完成
 
-### Task 1: 定义 Reader/Writer 统一接口协议
+### Task 0: 重命名 WriteResultStore → WriteStoreResult
+
+**状态**: ✅ 完成 (2026-02-09)
+**提交**: `e999aa0`
+**分支**: `refactor/datahub-cqrs-stage0-type-rename`
 
 **Files:**
-- Create: `packages/datahub/src/ditto_datahub/stores/base/protocols.py`
-- Modify: `packages/datahub/src/ditto_datahub/stores/base/__init__.py`
-- Test: `packages/datahub/tests/unit/stores/base/test_protocols.py`
+- Modify: `packages/datahub/src/ditto_datahub/models/storage.py`
+- Update: 所有引用 `WriteResultStore` 的文件（15 个文件）
 
-**复杂度**: M
+**复杂度**: S
 
-**接口定义:**
+**原因**: 遵循命名规范 `ScopePurposeResult`，而非 `PurposeScopeResult`
 
-```python
-# protocols.py
-from typing import Protocol
-import polars as pl
+**变更内容**:
+- 重命名 `WriteResultStore` 类为 `WriteStoreResult`
+- 更新 15 个引用文件
+- 为使用 `from __future__ import annotations` 的文件添加 `TYPE_CHECKING` 导入
+- 更新测试文件中的类名和导入
 
-class IReader(Protocol):
-    """数据读取接口协议."""
-    data_root: Path
-
-    @abstractmethod
-    def read(self, dataset: str, instrument_ids: list[int] | None = None,
-             start_date: str | None = None, end_date: str | None = None,
-             **kwargs: object) -> pl.DataFrame: ...
-
-    @abstractmethod
-    def count(self, dataset: str, instrument_ids: list[int] | None = None,
-              start_date: str | None = None, end_date: str | None = None) -> int: ...
-
-
-class IWriter(Protocol):
-    """数据写入接口协议."""
-    data_root: Path
-
-    @abstractmethod
-    def write(self, dataset: str, data: object, on_duplicate: str = "error",
-              **kwargs: object) -> WriteResultStore: ...
-
-    @abstractmethod
-    def delete(self, dataset: str, instrument_ids: list[int] | None = None,
-               start_date: str | None = None, end_date: str | None = None,
-               **kwargs: object) -> int: ...
-```
+**验证结果**:
+- ✅ 单元测试通过 (12 passed)
+- ✅ 类型检查通过 (0 errors, 0 warnings)
+- ✅ 代码风格检查通过
+- ✅ Pre-commit hooks 通过
 
 ---
 
 ## 阶段 1: Market 域 Store 拆分 (P0)
 
-### Task 2: StockBarsStore → StockBarsReader + StockBarsWriter
+### Task 1: StockBarsStore → StockBarsReader + StockBarsWriter
 
 **Files:**
 - Create: `stores/market/stock/bars/bars_reader.py`
 - Create: `stores/market/stock/bars/bars_writer.py`
-- Modify: `stores/market/stock/bars/__init__.py` (向后兼容 facade)
+- Delete: `stores/market/stock/bars/bars_store.py`
+- Update: `stores/market/stock/bars/__init__.py`
 
 **复杂度**: M
 
@@ -93,49 +81,77 @@ class IWriter(Protocol):
 
 ```python
 # bars_reader.py
-class StockBarsReader(IBarsReader):
-    def __init__(self, data_root: Path):
+class StockBarsReader:
+    """Stock daily bars 数据读取器."""
+
+    def __init__(self, data_root: Path) -> None:
         self._store = ParquetStore(data_root, YearlyPartition())
         self._dataset = "market/stock/bars"
 
-    def read(self, dataset: str, instrument_ids: list[int] | None = None,
-             start_date: str | None = None, end_date: str | None = None,
-             **kwargs: object) -> pl.DataFrame:
+    def read(
+        self,
+        instrument_ids: list[int] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         return self._store.read(self._dataset, instrument_ids, start_date, end_date)
 
-    # ... 其他方法
+    def count(
+        self,
+        instrument_ids: list[int] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> int:
+        return self._store.count(self._dataset, instrument_ids, start_date, end_date)
+
+    # 元数据方法
+    def get_years(self) -> list[int]:
+        return self._store.get_years(self._dataset)
+
+    def get_date_range(self) -> tuple[str | None, str | None]:
+        return self._store.get_date_range(self._dataset)
+
+    def list_instrument_ids(self) -> list[int]:
+        return self._store.list_instrument_ids(self._dataset)
+
+    @property
+    def data_root(self) -> Path:
+        return self._store.data_root
 ```
 
 **Writer 实现:**
 
 ```python
 # bars_writer.py
-class StockBarsWriter(IBarsWriter):
-    def __init__(self, data_root: Path):
+class StockBarsWriter:
+    """Stock daily bars 数据写入器."""
+
+    def __init__(self, data_root: Path) -> None:
         self._store = ParquetStore(data_root, YearlyPartition())
         self._dataset = "market/stock/bars"
 
-    def write(self, dataset: str, data: object, on_duplicate: str = "error",
-              **kwargs: object) -> WriteResultStore:
-        df = pl.DataFrame(data)
-        year = kwargs.get("year")
+    def write(
+        self,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: str = "error",
+    ) -> WriteStoreResult:
         return self._store.write(self._dataset, df, on_duplicate, year=year)
 
-    # ... 其他方法
-```
+    def delete(
+        self,
+        instrument_ids: list[int] | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> int:
+        return self._store.delete(self._dataset, instrument_ids, start_date, end_date)
 
-**向后兼容 Facade:**
+    def delete_partition(self, partition_key: str) -> bool:
+        return self._store.delete_partition(self._dataset, partition_key)
 
-```python
-# __init__.py
-class StockBarsStore:
-    """DEPRECATED: Use StockBarsReader and StockBarsWriter directly."""
-    def __init__(self, data_root: Path):
-        self._reader = StockBarsReader(data_root)
-        self._writer = StockBarsWriter(data_root)
-
-    def read(self, ...): return self._reader.read(...)
-    def write(self, ...): return self._writer.write(...)
+    @property
+    def data_root(self) -> Path:
+        return self._store.data_root
 ```
 
 ### Task 3-9: 其他 Market Store 拆分
@@ -204,30 +220,66 @@ class StockBarsStore:
 
 ---
 
-## 阶段 4: Ingestion 逻辑清理 (P0)
+## 阶段 4: Ingestion 逻辑清理 (P0) ✅ 已完成
 
 ### Task 32: 删除 fundamental_ingestion.py
 
+**状态**: ✅ 完成 (2026-02-10)
+
+**分析结果**:
+- Port 层已有完整的 `IngestionCoordinator`
+- datahub 层的 `*Ingestion` 类是废弃代码，不应被使用
+- 无代码引用（仅文档提及）
+
 **操作**:
-1. 检查引用: `grep -r "fundamental_ingestion" packages/datahub/src`
-2. 删除文件
-3. 更新 `__init__.py`
+1. 检查引用: 无实际代码引用
+2. 删除文件: ✅
+3. 更新 `__init__.py`: 无需更新（未导出）
 
 ### Task 33: 删除 capital_ingestion.py
 
-**同 Task 32**
+**状态**: ✅ 完成 (2026-02-10)
+
+**分析结果**:
+- Port 层使用独立的 `IngestionCoordinator`
+- datahub 层的 `CapitalIngestion` 类未在 port 层使用
+
+**操作**:
+1. 删除文件: ✅ `capital_ingestion.py`
+2. 更新 `__init__.py`: ✅ 移除 `CapitalIngestion` 和 `IngestionResult` 导出
+3. 删除测试文件: ✅
+   - `test_capital_ingestion_unit.py`
+   - `test_capital_ingestion_integration.py`
+4. 更新 README.md: ✅ 移除相关引用
+
+**验证结果**:
+- ✅ 类型检查通过 (0 errors, 0 warnings)
+- ✅ 代码风格检查通过
+- ✅ 快速测试通过 (1954 passed)
 
 ---
 
-## 阶段 5: Domains 别名清理 (P1)
+## 阶段 5: Domains 别名清理 (P1) ✅ 已完成
 
 ### Task 34: 删除 domains 别名
 
+**状态**: ✅ 完成 (2026-02-10)
+
+**分析结果**:
+- 代码中无 `from ditto_datahub.domains` 引用
+- `domains` 是 `stores` 的废弃别名（已标记 DeprecationWarning）
+- 所有测试已迁移到 `tests/unit/stores/`
+
 **操作**:
-1. 查找引用: `grep -r "from ditto_datahub.domains" packages/datahub/tests`
-2. 批量替换: `s/from ditto_datahub\.domains/from ditto_datahub.stores/g`
-3. 删除目录: `rm -rf packages/datahub/src/ditto_datahub/domains`
-4. 删除测试目录: `rm -rf packages/datahub/tests/unit/domains`
+1. 验证引用: ✅ 无代码引用
+2. 删除源码目录: ✅ `packages/datahub/src/ditto_datahub/domains/`
+3. 删除测试目录: ✅ `packages/datahub/tests/unit/domains/`
+
+**验证结果**:
+- ✅ 代码风格检查通过 (ruff)
+- ✅ 类型检查通过 (0 errors, 0 warnings)
+- ✅ 架构检查通过 (6 contracts kept)
+- ✅ 快速测试通过
 
 ---
 

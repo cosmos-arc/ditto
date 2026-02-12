@@ -3,10 +3,7 @@
 from datetime import date
 
 import polars as pl
-import pytest
-from ditto_datahub.errors import SchemaValidationError
 from ditto_datahub.sources.normalization import NormalizationConfig
-from ditto_datahub.sources.source_schema import SourceSchema
 from ditto_datahub.sources.tushare.processors.transformer import (
     ADJ_FACTOR_MAPPING,
     CALENDAR_MAPPING,
@@ -82,29 +79,6 @@ class TestColumnMapping:
         # mapping1 应该有自己的 computed_columns
         assert "a" in mapping1.computed_columns
 
-    def test_column_mapping_with_source_schema(self) -> None:
-        """Test ColumnMapping with source_schema field."""
-        # 创建一个简单的 SourceSchema
-        schema = SourceSchema(
-            dataset="test_dataset",
-            key_columns=("source_ticker", "trade_date"),
-            schema={
-                "source_ticker": pl.String,
-                "trade_date": pl.Date,
-                "close": pl.Float64,
-            },
-        )
-
-        mapping = ColumnMapping(
-            rename={"ts_code": "source_ticker"},
-            date_columns={"trade_date": "%Y%m%d"},
-            float_columns=["close"],
-            source_schema=schema,
-        )
-
-        assert mapping.source_schema == schema
-        assert mapping.source_schema is not None
-
     def test_column_mapping_with_normalization(self) -> None:
         """Test ColumnMapping with normalization field."""
         config = NormalizationConfig(
@@ -125,14 +99,8 @@ class TestColumnMapping:
         assert mapping.normalization.amount_multiplier == 10000.0
         assert mapping.normalization.volume_multiplier == 100.0
 
-    def test_column_mapping_with_both_fields(self) -> None:
-        """Test ColumnMapping with both source_schema and normalization."""
-        schema = SourceSchema(
-            dataset="test_dataset",
-            key_columns=("source_ticker",),
-            schema={"source_ticker": pl.String, "name": pl.String},
-        )
-
+    def test_column_mapping_normalization_attribute(self) -> None:
+        """Test ColumnMapping normalization attribute access."""
         config = NormalizationConfig(
             amount_multiplier=1.0,
             volume_multiplier=1.0,
@@ -142,161 +110,11 @@ class TestColumnMapping:
             rename={},
             date_columns={},
             float_columns=[],
-            source_schema=schema,
             normalization=config,
         )
 
-        assert mapping.source_schema == schema
         assert mapping.normalization == config
-
-    def test_column_mapping_defaults_for_new_fields(self) -> None:
-        """Test that new fields default to None for backward compatibility."""
-        mapping = ColumnMapping(
-            rename={},
-            date_columns={},
-            float_columns=[],
-        )
-
-        assert mapping.source_schema is None
-        assert mapping.normalization is None
-
-
-class TestTushareDataTransformerWithValidation:
-    """Tests for TushareDataTransformer with SourceSchema validation."""
-
-    def test_transform_with_valid_schema_passes(self) -> None:
-        """Test transform() with valid data passes SourceSchema validation."""
-        # 创建符合 schema 的测试数据
-        schema = SourceSchema(
-            dataset="test_dataset",
-            key_columns=("source_ticker", "trade_date"),
-            schema={
-                "source_ticker": pl.String,
-                "trade_date": pl.Date,
-                "close": pl.Float64,
-            },
-        )
-
-        mapping = ColumnMapping(
-            rename={"ts_code": "source_ticker"},
-            date_columns={"trade_date": "%Y%m%d"},
-            float_columns=["close"],
-            source_schema=schema,
-        )
-
-        input_df = pl.DataFrame(
-            {
-                "ts_code": ["000001.SZ", "600000.SH"],
-                "trade_date": ["20240102", "20240102"],
-                "close": ["11.6", "10.4"],
-            }
-        )
-
-        # 应该通过验证，不抛出异常
-        result = TushareDataTransformer.transform(input_df, "test_dataset", mapping)
-
-        assert len(result) == 2
-        assert dict(result.schema) == {
-            "source_ticker": pl.String,
-            "trade_date": pl.Date,
-            "close": pl.Float64,
-        }
-
-    def test_transform_with_invalid_schema_fails(self) -> None:
-        """Test transform() with invalid data fails SourceSchema validation."""
-        # 创建一个要求 source_ticker 和 close 的 schema
-        schema = SourceSchema(
-            dataset="test_dataset",
-            key_columns=("source_ticker", "trade_date"),
-            schema={
-                "source_ticker": pl.String,
-                "trade_date": pl.Date,
-                "close": pl.Float64,
-                "volume": pl.Float64,  # 这个列在数据中不存在
-            },
-        )
-
-        mapping = ColumnMapping(
-            rename={"ts_code": "source_ticker"},
-            date_columns={"trade_date": "%Y%m%d"},
-            float_columns=["close"],
-            source_schema=schema,
-        )
-
-        input_df = pl.DataFrame(
-            {
-                "ts_code": ["000001.SZ"],
-                "trade_date": ["20240102"],
-                "close": ["11.6"],
-            }
-        )
-
-        # 应该抛出 SchemaValidationError，因为缺少 volume 列
-        with pytest.raises(SchemaValidationError) as exc_info:
-            TushareDataTransformer.transform(input_df, "test_dataset", mapping)
-
-        assert "Missing columns" in str(exc_info.value)
-
-    def test_transform_without_schema_skips_validation(self) -> None:
-        """Test transform() without source_schema skips validation."""
-        # 不设置 source_schema，应该跳过验证
-        mapping = ColumnMapping(
-            rename={"ts_code": "source_ticker"},
-            date_columns={"trade_date": "%Y%m%d"},
-            float_columns=["close"],
-            # source_schema=None (默认)
-        )
-
-        input_df = pl.DataFrame(
-            {
-                "ts_code": ["000001.SZ"],
-                "trade_date": ["20240102"],
-                "close": ["11.6"],
-            }
-        )
-
-        # 应该正常工作，不进行验证
-        result = TushareDataTransformer.transform(input_df, "test_dataset", mapping)
-
-        assert len(result) == 1
-
-    def test_transform_with_empty_dataframe_and_schema(self) -> None:
-        """Test transform() with empty DataFrame and SourceSchema."""
-        schema = SourceSchema(
-            dataset="test_dataset",
-            key_columns=("source_ticker", "trade_date"),
-            schema={
-                "source_ticker": pl.String,
-                "trade_date": pl.Date,
-                "close": pl.Float64,
-            },
-        )
-
-        mapping = ColumnMapping(
-            rename={"ts_code": "source_ticker"},
-            date_columns={"trade_date": "%Y%m%d"},
-            float_columns=["close"],
-            source_schema=schema,
-        )
-
-        # 创建空 DataFrame
-        input_df = pl.DataFrame(
-            schema={
-                "ts_code": pl.String,
-                "trade_date": pl.String,
-                "close": pl.String,
-            }
-        )
-
-        # 空数据应该正常返回，不触发验证（因为没有数据需要验证）
-        result = TushareDataTransformer.transform(input_df, "test_dataset", mapping)
-
-        assert len(result) == 0
-        assert dict(result.schema) == {
-            "source_ticker": pl.String,
-            "trade_date": pl.Date,
-            "close": pl.Float64,
-        }
+        assert mapping.normalization is not None
 
 
 class TestTushareDataTransformer:

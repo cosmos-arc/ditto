@@ -12,25 +12,38 @@ class TestAdjFactorIngestion:
 
     def test_ingest_adj_factor_uses_source_ticker_column(self, mocker):
         """Test that adj_factor ingestion uses source_ticker column for ID mapping."""
+        from ditto_datahub.services import IngestionLogService
+        from ditto_datahub.services.capital_service import CapitalService
+        from ditto_datahub.services.fundamental_service import FundamentalService
+        from ditto_datahub.services.macro_service import MacroService
+        from ditto_datahub.services.market_service import MarketService
+        from ditto_datahub.services.metadata_service import MetadataService
         from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
-        # Mock DataHub
-        mock_hub = mocker.MagicMock()
+        # Mock services
+        mock_metadata_service = mocker.MagicMock(spec=MetadataService)
+        mock_market_service = mocker.MagicMock(spec=MarketService)
+        mock_fundamental_service = mocker.MagicMock(spec=FundamentalService)
+        mock_capital_service = mocker.MagicMock(spec=CapitalService)
+        mock_macro_service = mocker.MagicMock(spec=MacroService)
+        mock_ingestion_log_service = mocker.MagicMock(spec=IngestionLogService)
         mock_source = mocker.MagicMock()
 
-        # Mock dependencies
-        mock_hub.ingestion_log_store = mocker.MagicMock()
-        mock_hub.market = mocker.MagicMock()
-        mock_hub.metadata = mocker.MagicMock()
-        mock_hub.market.write.return_value = mocker.Mock(rows=2, files=1)
-        mock_hub.metadata.resolve_or_create_instruments_batch.return_value = {
+        # Mock return values
+        mock_market_service.write.return_value = mocker.Mock(rows=2, files=1)
+        mock_metadata_service.resolve_or_create_instruments_batch.return_value = {
             "000001.SZ": 1_000_001,
             "000002.SZ": 1_000_002,
         }
 
         # Create coordinator
         coordinator = IngestionCoordinator(
-            hub=mock_hub,
+            metadata_service=mock_metadata_service,
+            market_service=mock_market_service,
+            fundamental_service=mock_fundamental_service,
+            capital_service=mock_capital_service,
+            macro_service=mock_macro_service,
+            ingestion_log_service=mock_ingestion_log_service,
             source=mock_source,
             source_name="tushare",
         )
@@ -54,7 +67,7 @@ class TestAdjFactorIngestion:
         # Verify result status is success
         assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-        call_args = mock_hub.market.write.call_args
+        call_args = mock_market_service.write.call_args
         command = call_args.args[0]
         df_written = command.df
         assert command.dataset == "adj_factor"
@@ -66,7 +79,7 @@ class TestAdjFactorIngestion:
         assert "source_ticker" in df_written.columns, (
             "source_ticker column missing in written dataframe"
         )
-        mock_hub.metadata.resolve_or_create_instruments_batch.assert_called_once_with(
+        mock_metadata_service.resolve_or_create_instruments_batch.assert_called_once_with(
             df=mocker.ANY,
             source="tushare",
             asset_class="stock",
@@ -75,25 +88,38 @@ class TestAdjFactorIngestion:
 
     def test_ingest_fund_adj_uses_source_ticker_column(self, mocker):
         """Test that fund_adj ingestion uses source_ticker column for ID mapping."""
+        from ditto_datahub.services import IngestionLogService
+        from ditto_datahub.services.capital_service import CapitalService
+        from ditto_datahub.services.fundamental_service import FundamentalService
+        from ditto_datahub.services.macro_service import MacroService
+        from ditto_datahub.services.market_service import MarketService
+        from ditto_datahub.services.metadata_service import MetadataService
         from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
-        # Mock DataHub
-        mock_hub = mocker.MagicMock()
+        # Mock services
+        mock_metadata_service = mocker.MagicMock(spec=MetadataService)
+        mock_market_service = mocker.MagicMock(spec=MarketService)
+        mock_fundamental_service = mocker.MagicMock(spec=FundamentalService)
+        mock_capital_service = mocker.MagicMock(spec=CapitalService)
+        mock_macro_service = mocker.MagicMock(spec=MacroService)
+        mock_ingestion_log_service = mocker.MagicMock(spec=IngestionLogService)
         mock_source = mocker.MagicMock()
 
-        # Mock dependencies
-        mock_hub.ingestion_log_store = mocker.MagicMock()
-        mock_hub.market = mocker.MagicMock()
-        mock_hub.metadata = mocker.MagicMock()
-        mock_hub.market.write.return_value = mocker.Mock(rows=2, files=1)
-        mock_hub.metadata.resolve_or_create_instruments_batch.return_value = {
+        # Mock return values
+        mock_market_service.write.return_value = mocker.Mock(rows=2, files=1)
+        mock_metadata_service.resolve_or_create_instruments_batch.return_value = {
             "510300.SH": 2_000_001,
             "510500.SH": 2_000_002,
         }
 
         # Create coordinator
         coordinator = IngestionCoordinator(
-            hub=mock_hub,
+            metadata_service=mock_metadata_service,
+            market_service=mock_market_service,
+            fundamental_service=mock_fundamental_service,
+            capital_service=mock_capital_service,
+            macro_service=mock_macro_service,
+            ingestion_log_service=mock_ingestion_log_service,
             source=mock_source,
             source_name="tushare",
         )
@@ -117,7 +143,7 @@ class TestAdjFactorIngestion:
         # Verify result status is success
         assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-        call_args = mock_hub.market.write.call_args
+        call_args = mock_market_service.write.call_args
         command = call_args.args[0]
         df_written = command.df
         assert command.dataset == "fund_adj"
@@ -129,7 +155,7 @@ class TestAdjFactorIngestion:
         assert "source_ticker" in df_written.columns, (
             "source_ticker column missing in written dataframe"
         )
-        mock_hub.metadata.resolve_or_create_instruments_batch.assert_called_once_with(
+        mock_metadata_service.resolve_or_create_instruments_batch.assert_called_once_with(
             df=mocker.ANY,
             source="tushare",
             asset_class="etf",

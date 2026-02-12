@@ -1,0 +1,1 @@
+"""Corporate domain tests."""

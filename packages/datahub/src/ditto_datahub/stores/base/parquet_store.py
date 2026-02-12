@@ -24,7 +24,7 @@ from ditto_foundation import M, logger, traced
 from ditto_foundation.util.io import atomic_write, file_md5
 
 from ditto_datahub.models import OnDuplicate
-from ditto_datahub.models.storage import WriteResultStore as WriteResult
+from ditto_datahub.models.storage import WriteStoreResult as WriteResult
 from ditto_datahub.stores.base.base_store import BaseStore
 from ditto_datahub.stores.base.partition_strategy import (
     PartitionStrategy,

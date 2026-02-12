@@ -103,7 +103,7 @@ def app_ctx() -> MagicMock:
     # DataHub mock
     mock.hub.calendar_store.is_trading_day.return_value = True
     mock.hub.calendar_store.get_range.return_value = ["2024-01-02", "2024-01-03"]
-    mock.hub.ingestion_log_store.get_ingested_dates.return_value = []
+    mock.hub.ingestion_log_store.list_ingested_dates.return_value = []
     mock.hub.ingestion_log_store.save_log.return_value = None
 
     # DataSource mock (已废弃 - 仅用于向后兼容)
@@ -120,13 +120,71 @@ def app_ctx() -> MagicMock:
 
 @pytest.fixture
 def mock_hub() -> MagicMock:
-    """DataHub mock 用于 CLIExecutor 测试."""
+    """DataHub mock 用于 CLIExecutor 测试 (已废弃 - 使用 mock_services 替代)."""
     from unittest.mock import MagicMock
 
     mock = MagicMock()
     mock.calendar_store.is_trading_day.return_value = True
     mock.calendar_store.get_range.return_value = ["2024-01-02", "2024-01-03"]
-    mock.ingestion_log_store.get_ingested_dates.return_value = []
+    mock.ingestion_log_store.list_ingested_dates.return_value = []
     mock.ingestion_log_store.save_log.return_value = None
 
     return mock
+
+
+@pytest.fixture
+def mock_services() -> dict[str, MagicMock]:
+    """Service mocks 用于 CLIExecutor 测试."""
+    from unittest.mock import MagicMock
+
+    return {
+        "metadata_service": MagicMock(),
+        "market_service": MagicMock(),
+        "fundamental_service": MagicMock(),
+        "capital_service": MagicMock(),
+        "macro_service": MagicMock(),
+        "source_service": MagicMock(),
+        "ingestion_log_service": MagicMock(),
+    }
+
+
+@pytest.fixture
+def mock_metadata_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """MetadataService mock."""
+    return mock_services["metadata_service"]
+
+
+@pytest.fixture
+def mock_market_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """MarketService mock."""
+    return mock_services["market_service"]
+
+
+@pytest.fixture
+def mock_fundamental_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """FundamentalService mock."""
+    return mock_services["fundamental_service"]
+
+
+@pytest.fixture
+def mock_capital_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """CapitalService mock."""
+    return mock_services["capital_service"]
+
+
+@pytest.fixture
+def mock_macro_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """MacroService mock."""
+    return mock_services["macro_service"]
+
+
+@pytest.fixture
+def mock_source_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """SourceService mock."""
+    return mock_services["source_service"]
+
+
+@pytest.fixture
+def mock_ingestion_log_service(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """IngestionLogService mock."""
+    return mock_services["ingestion_log_service"]
