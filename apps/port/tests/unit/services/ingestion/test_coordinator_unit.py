@@ -1056,7 +1056,10 @@ class TestForceParameter:
         mock_market_service.save_bars.assert_called_once()
         # 验证 on_duplicate 参数传递正确（位置参数：dataset, df, year, on_duplicate）
         call_kwargs = mock_market_service.save_bars.call_args.kwargs
-        assert call_kwargs.get("on_duplicate") == "error" or call_kwargs.get("on_duplicate") == OnDuplicate.ERROR
+        assert (
+            call_kwargs.get("on_duplicate") == "error"
+            or call_kwargs.get("on_duplicate") == OnDuplicate.ERROR
+        )
 
     def test_force_true_maps_to_keep_last_on_duplicate(
         self, coordinator, mock_ingestion_log_service, mock_source, mock_market_service
@@ -1097,7 +1100,10 @@ class TestForceParameter:
         mock_market_service.save_bars.assert_called_once()
         # 验证 on_duplicate 参数传递正确（force=True 对应 KEEP_LAST）
         call_kwargs = mock_market_service.save_bars.call_args.kwargs
-        assert call_kwargs.get("on_duplicate") == "keep_last" or call_kwargs.get("on_duplicate") == OnDuplicate.KEEP_LAST
+        assert (
+            call_kwargs.get("on_duplicate") == "keep_last"
+            or call_kwargs.get("on_duplicate") == OnDuplicate.KEEP_LAST
+        )
 
     def test_force_true_for_adj_factor_uses_keep_last(
         self, coordinator, mock_ingestion_log_service, mock_source, mock_market_service
@@ -1130,7 +1136,10 @@ class TestForceParameter:
         mock_market_service.save_adj_factor.assert_called_once()
         # 验证 on_duplicate 参数传递正确（force=True 对应 KEEP_LAST）
         call_kwargs = mock_market_service.save_adj_factor.call_args.kwargs
-        assert call_kwargs.get("on_duplicate") == "keep_last" or call_kwargs.get("on_duplicate") == OnDuplicate.KEEP_LAST
+        assert (
+            call_kwargs.get("on_duplicate") == "keep_last"
+            or call_kwargs.get("on_duplicate") == OnDuplicate.KEEP_LAST
+        )
 
 
 @pytest.mark.unit

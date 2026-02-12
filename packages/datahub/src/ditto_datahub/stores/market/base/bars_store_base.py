@@ -11,15 +11,12 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import polars as pl
 
 from ditto_datahub.models import OnDuplicate
+from ditto_datahub.models.storage import WriteStoreResult
 from ditto_datahub.stores.base import ParquetStore, YearlyPartition
-
-if TYPE_CHECKING:
-    from ditto_datahub.models.storage import WriteStoreResult
 
 
 class MarketBarsStoreBase:

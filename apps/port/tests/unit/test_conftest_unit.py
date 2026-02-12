@@ -272,11 +272,11 @@ class TestMockDatahubFixture:
 
     def test_mock_datahub_ingestion_log_mock(self, mock_datahub: Mock):
         """测试 ingestion_log mock 配置."""
-        # 验证 ingestion_log.get_failed_dates 返回空列表
-        assert mock_datahub.ingestion_log_store.get_failed_dates() == []
+        # 验证 ingestion_log.list_failed_dates 返回空列表
+        assert mock_datahub.ingestion_log_store.list_failed_dates() == []
 
-        # 验证 ingestion_log.get_ingested_dates 返回空列表
-        assert mock_datahub.ingestion_log_store.get_ingested_dates() == []
+        # 验证 ingestion_log.list_ingested_dates 返回空列表
+        assert mock_datahub.ingestion_log_store.list_ingested_dates() == []
 
     def test_mock_datahub_is_function_scoped(self, mock_datahub: Mock):
         """测试 fixture 是 function 级别的（通过验证可以多次调用）."""
@@ -308,8 +308,8 @@ class TestPatchDatahubFixture:
         assert patch_datahub.metadata_service.resolve_instrument_id() == 1
 
         # 验证 ingestion_log 的默认返回值
-        assert patch_datahub.ingestion_log_store.get_failed_dates() == []
-        assert patch_datahub.ingestion_log_store.get_ingested_dates() == []
+        assert patch_datahub.ingestion_log_store.list_failed_dates() == []
+        assert patch_datahub.ingestion_log_store.list_ingested_dates() == []
 
     def test_patch_datahub_can_modify_mock_behavior(self, patch_datahub: Mock) -> None:
         """验证可以通过 patch_datahub 修改 mock 行为."""
@@ -334,7 +334,7 @@ class TestPatchDatahubFixture:
 
         # patch_datahub 应该有默认的 mock 行为
         assert patch_datahub.metadata_service.is_trading_day() is True
-        assert patch_datahub.ingestion_log_store.get_failed_dates() == []
+        assert patch_datahub.ingestion_log_store.list_failed_dates() == []
 
         # DataHub 类不存在（已被删除），所以不需要测试创建 DataHub
         # 如果尝试导入会失败

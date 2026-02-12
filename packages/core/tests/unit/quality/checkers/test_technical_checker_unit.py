@@ -223,3 +223,53 @@ class TestTechnicalChecker:
 
         # Empty dataframe should pass
         assert len(issues) == 0
+
+    def test_check_required_columns_pass(self) -> None:
+        """Test required columns check with all columns present."""
+        df = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                "open": [10.0, 20.0, 30.0],
+            }
+        )
+
+        rules = [
+            {
+                "rule": "required_columns",
+                "columns": ["instrument_id", "trade_date", "open"],
+                "message": "Missing required columns",
+            }
+        ]
+
+        issues = self.checker.check(df, rules)
+
+        assert len(issues) == 0
+
+    def test_check_required_columns_fail(self) -> None:
+        """Test required columns check with missing columns."""
+        df = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "trade_date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                # open column missing
+            }
+        )
+
+        rules = [
+            {
+                "rule": "required_columns",
+                "columns": ["instrument_id", "trade_date", "open", "close"],
+                "message": "Missing required columns",
+            }
+        ]
+
+        issues = self.checker.check(df, rules)
+
+        assert len(issues) == 1
+        assert issues[0].rule_name == "required_columns"
+        assert issues[0].severity == DQSeverity.ERROR
+        assert issues[0].level == DQLevel.TECHNICAL
+        assert issues[0].affected_rows == 2  # open and close are missing
+        assert "open" in issues[0].message
+        assert "close" in issues[0].message

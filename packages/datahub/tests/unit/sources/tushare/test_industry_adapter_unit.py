@@ -2,7 +2,6 @@
 
 import polars as pl
 import pytest_mock
-from ditto_datahub.sources.schemas.metadata_schemas import INDUSTRY_SOURCE_SCHEMA
 from ditto_datahub.sources.tushare.adapters.industry import IndustryTushareAdapter
 
 
@@ -62,46 +61,6 @@ class TestIndustryTushareAdapterFetchSWIndustry:
         # Assert
         assert len(result) > 0
         assert result["industry_level"].unique().to_list() == [2]
-
-    def test_fetch_sw_industry_validates_source_schema(
-        self,
-        mocker: pytest_mock.MockFixture,
-    ) -> None:
-        """Test that fetch_sw_industry output conforms to INDUSTRY_SOURCE_SCHEMA."""
-        # Arrange - Mock industry list query
-        mock_industries = pl.DataFrame(
-            {
-                "index_code": ["801010.SI"],
-                "index_name": ["农林牧渔"],
-            }
-        )
-
-        # Mock index_member API 返回的原始数据（不包含 index_code 等列）
-        # 这些列会在实现中通过 with_columns 添加
-        def mock_query_impl(**kwargs):
-            if kwargs.get("api_name") == "index_classify":
-                return mock_industries
-            elif kwargs.get("api_name") == "index_member":
-                return pl.DataFrame(
-                    {
-                        "ts_code": ["000001.SZ"],
-                        "name": ["平安银行"],
-                        "in_date": ["20100101"],
-                        "out_date": [None],
-                        "is_new": [1],
-                    }
-                )
-            return pl.DataFrame()
-
-        mock_client = mocker.Mock()
-        mock_client.query.side_effect = mock_query_impl
-
-        # Act
-        adapter = IndustryTushareAdapter(_client=mock_client)
-        result = adapter.fetch_sw_industry_concepts()
-
-        # Assert - Should not raise SchemaValidationError
-        INDUSTRY_SOURCE_SCHEMA.validate(result)
 
     def test_fetch_sw_industry_empty_response_returns_empty_dataframe(
         self,

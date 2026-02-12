@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal, Protocol
 
 # ========================================================================
 # Calendar
@@ -55,7 +56,53 @@ class IndustryMapping:
 
 
 # ========================================================================
-# Instrument
+# Instrument Extension (Protocol)
+# ========================================================================
+
+
+class InstrumentExtension(Protocol):
+    """
+    资产扩展信息协议。
+
+    所有资产类型扩展的统一接口，使用 Protocol 而非继承，
+    符合"组合优于继承"原则。
+    """
+
+    instrument_id: int
+
+
+@dataclass(frozen=True)
+class StockExtension(InstrumentExtension):
+    """股票扩展信息"""
+
+    instrument_id: int
+    list_status: Literal["L", "D", "P"] | None  # L=正常, D=退市, P=暂停
+    industry_id: int | None
+
+
+@dataclass(frozen=True)
+class ETFExtension(InstrumentExtension):
+    """ETF 扩展信息"""
+
+    instrument_id: int
+    fund_type: str | None  # 股票型/债券型/货币型/混合型等
+    fund_manager: str | None
+    establish_date: str | None
+    tracking_index: str | None
+
+
+@dataclass(frozen=True)
+class IndexExtension(InstrumentExtension):
+    """指数扩展信息"""
+
+    instrument_id: int
+    base_date: str | None  # 基日
+    base_point: float | None  # 基点
+    num_constituents: int | None  # 成分股数量
+
+
+# ========================================================================
+# Instrument Registration
 # ========================================================================
 
 
@@ -75,6 +122,7 @@ class InstrumentRegistration:
         list_date: 上市日期（YYYY-MM-DD 格式）
         source: 数据源标识符（默认 "tushare"）
         board: 板块代码（可选）
+        extension: 可选的资产类型扩展信息
 
     """
 
@@ -86,11 +134,16 @@ class InstrumentRegistration:
     list_date: str
     source: str = "tushare"
     board: str | None = None
+    extension: InstrumentExtension | None = None
 
 
 __all__ = [
     "CalendarDay",
+    "ETFExtension",
+    "IndexExtension",
     "IndustryBasic",
     "IndustryMapping",
+    "InstrumentExtension",
     "InstrumentRegistration",
+    "StockExtension",
 ]

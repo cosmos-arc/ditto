@@ -66,6 +66,8 @@ class BusinessChecker:
             return self._check_range(df, rule)
         elif rule_type == "no_zero_volume":
             return self._check_no_zero_volume(df, rule)
+        elif rule_type == "volume_amount_consistency":
+            return self._check_volume_amount_consistency(df, rule)
 
         return None
 
@@ -199,6 +201,46 @@ class BusinessChecker:
                 rule_name="no_zero_volume",
                 message=rule.get("message", f"{column} has zero values"),
                 affected_rows=zero_count,
+            )
+
+        return None
+
+    def _check_volume_amount_consistency(
+        self, df: pl.DataFrame, rule: dict[str, Any]
+    ) -> DQIssue | None:
+        """
+        Check volume and amount consistency (amount positive when volume is positive).
+
+        Args:
+            df: Data to check
+            rule: Rule config (optional, may contain custom message)
+
+        Returns:
+            DQIssue if inconsistency found, None otherwise
+
+        """
+        if "volume" not in df.columns or "amount" not in df.columns:
+            return None
+
+        inconsistent = df.filter(
+            (pl.col("volume") > 0) & (pl.col("amount") <= 0)
+        ).height
+
+        if inconsistent > 0:
+            logger.warning(
+                "dq_rule_volume_amount_inconsistent",
+                event="dq_check",
+                rule="volume_amount_consistency",
+                inconsistent_count=inconsistent,
+            )
+            return DQIssue(
+                level=DQLevel.BUSINESS,
+                severity=DQSeverity.WARNING,
+                rule_name="volume_amount_consistency",
+                message=rule.get(
+                    "message", f"Found {inconsistent} volume/amount inconsistencies"
+                ),
+                affected_rows=inconsistent,
             )
 
         return None

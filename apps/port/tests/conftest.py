@@ -235,8 +235,8 @@ def mock_datahub() -> MagicMock:
     mock.market_service.query.return_value = pl.DataFrame()
 
     # IngestionLogStore mock (通过 MetadataService 访问)
-    mock.ingestion_log_store.get_failed_dates.return_value = []
-    mock.ingestion_log_store.get_ingested_dates.return_value = []
+    mock.ingestion_log_store.list_failed_dates.return_value = []
+    mock.ingestion_log_store.list_ingested_dates.return_value = []
 
     return mock
 

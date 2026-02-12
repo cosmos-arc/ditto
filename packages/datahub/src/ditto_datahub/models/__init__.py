@@ -44,9 +44,13 @@ from ditto_datahub.models.market import (
 )
 from ditto_datahub.models.metadata import (
     CalendarDay,
+    ETFExtension,
+    IndexExtension,
     IndustryBasic,
     IndustryMapping,
+    InstrumentExtension,
     InstrumentRegistration,
+    StockExtension,
 )
 from ditto_datahub.models.portfolio import Portfolio, Position
 from ditto_datahub.models.storage import FreezeManifest, WriteResult, WriteStoreResult
@@ -74,10 +78,12 @@ __all__ = [
     "DataChangedError",
     "Dataset",
     "Domain",
+    "ETFExtension",
     "FactorClass",
     "FactorFamily",
     "FactorMetadata",
     "FreezeManifest",
+    "IndexExtension",
     "IndicatorMetadata",
     "IndicatorType",
     "IndustryBasic",
@@ -85,6 +91,7 @@ __all__ = [
     "IngestionCursor",
     "IngestionLog",
     "IngestionStatus",
+    "InstrumentExtension",
     "InstrumentIdRange",
     "InstrumentRegistration",
     "MarketState",
@@ -98,6 +105,7 @@ __all__ = [
     "Signal",
     "SignalType",
     "Source",
+    "StockExtension",
     "Trade",
     "WriteResult",
     "WriteStoreResult",

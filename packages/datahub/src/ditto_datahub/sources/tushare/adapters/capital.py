@@ -7,18 +7,6 @@ from datetime import date
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.sources.schemas.capital_schemas import (
-    BALANCE_SHEET_SOURCE_SCHEMA,
-    CASH_FLOW_SOURCE_SCHEMA,
-    CORPORATE_ACTIONS_SOURCE_SCHEMA,
-    DIVIDEND_SOURCE_SCHEMA,
-    FUTURES_SOURCE_SCHEMA,
-    INCOME_STATEMENT_SOURCE_SCHEMA,
-    INDEX_COMPOSITION_SOURCE_SCHEMA,
-    MARGIN_TRADING_SOURCE_SCHEMA,
-    PLEDGE_RATIO_SOURCE_SCHEMA,
-    VALUATION_METRICS_SOURCE_SCHEMA,
-)
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
@@ -54,7 +42,6 @@ VALUATION_METRICS_MAPPING = ColumnMapping(
         "dividend_yield",
         "market_cap",
     ),
-    source_schema=None,  # Will add effective_from/effective_to in method
 )
 
 # Dividend - PIT data
@@ -76,7 +63,6 @@ DIVIDEND_MAPPING = ColumnMapping(
         "dividend_per_share",
         "dividend_yield",
     ),
-    source_schema=None,  # Will add effective_from/effective_to in method
 )
 
 # Margin Trading - PIT data
@@ -105,7 +91,6 @@ MARGIN_TRADING_MAPPING = ColumnMapping(
         "margin_buy_volume",
         "short_sell_volume",
     ),
-    source_schema=None,  # Will add effective_from/effective_to in method
 )
 
 # Pledge Ratio - PIT data
@@ -125,8 +110,6 @@ PLEDGE_RATIO_MAPPING = ColumnMapping(
         "pledge_shares",
         "total_shares",
     ),
-    # Will add report_date, knowledge_date, effective_from/effective_to in method
-    source_schema=None,
 )
 
 # Futures - PIT data
@@ -150,7 +133,6 @@ FUTURES_MAPPING = ColumnMapping(
         "volume",
         "turnover",
     ),
-    source_schema=None,  # Will add effective_from/effective_to in method
 )
 
 # Index Composition - PIT data
@@ -166,7 +148,6 @@ INDEX_COMPOSITION_MAPPING = ColumnMapping(
         "weight",
         "effective_from",
     ),
-    source_schema=None,  # Will add effective_to in method
 )
 
 # Corporate Actions - Non-PIT data
@@ -187,7 +168,6 @@ CORPORATE_ACTIONS_MAPPING = ColumnMapping(
         "effective_date",
         "description",
     ),
-    source_schema=CORPORATE_ACTIONS_SOURCE_SCHEMA,
 )
 
 # Balance Sheet - PIT data (simplified fields)
@@ -221,7 +201,6 @@ BALANCE_SHEET_MAPPING = ColumnMapping(
         "current_assets",
         "current_liabilities",
     ),
-    source_schema=None,  # Will add effective_from/effective_to in method
 )
 
 # Income Statement - PIT data (simplified fields)
@@ -249,7 +228,6 @@ INCOME_STATEMENT_MAPPING = ColumnMapping(
         "net_profit",
         "eps",
     ),
-    source_schema=None,  # Will add effective_from/effective_to in method
 )
 
 # Cash Flow - PIT data (simplified fields)
@@ -280,7 +258,6 @@ CASH_FLOW_MAPPING = ColumnMapping(
         "financing_cash_flow",
         "net_cash_flow",
     ),
-    source_schema=None,  # Will add effective_from/effective_to in method
 )
 
 
@@ -411,9 +388,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             # 添加 PIT 列
             result = _add_pit_columns(result)
 
-            # 验证 SourceSchema
-            VALUATION_METRICS_SOURCE_SCHEMA.validate(result)
-
             row_count = len(result)
             logger.info(
                 "Tushare valuation metrics fetched",
@@ -485,9 +459,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
             # 添加 PIT 列
             result = _add_pit_columns(result)
-
-            # 验证 SourceSchema
-            DIVIDEND_SOURCE_SCHEMA.validate(result)
 
             row_count = len(result)
             logger.info(
@@ -562,9 +533,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
             # 添加 PIT 列
             result = _add_pit_columns(result)
-
-            # 验证 SourceSchema
-            MARGIN_TRADING_SOURCE_SCHEMA.validate(result)
 
             row_count = len(result)
             logger.info(
@@ -653,9 +621,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
                 "total_shares",
             )
 
-            # 验证 SourceSchema
-            PLEDGE_RATIO_SOURCE_SCHEMA.validate(result)
-
             row_count = len(result)
             logger.info(
                 "Tushare pledge ratio data fetched",
@@ -730,9 +695,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             # 添加 PIT 列
             result = _add_pit_columns(result)
 
-            # 验证 SourceSchema
-            FUTURES_SOURCE_SCHEMA.validate(result)
-
             row_count = len(result)
             logger.info(
                 "Tushare futures data fetched",
@@ -802,9 +764,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             result = result.with_columns(
                 pl.lit(None, dtype=pl.Date).alias("effective_to")
             )
-
-            # 验证 SourceSchema
-            INDEX_COMPOSITION_SOURCE_SCHEMA.validate(result)
 
             row_count = len(result)
             logger.info(
@@ -945,9 +904,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             # 添加 PIT 列
             result = _add_pit_columns(result)
 
-            # 验证 SourceSchema
-            BALANCE_SHEET_SOURCE_SCHEMA.validate(result)
-
             row_count = len(result)
             logger.info(
                 "Tushare balance sheet fetched",
@@ -1022,9 +978,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             # 添加 PIT 列
             result = _add_pit_columns(result)
 
-            # 验证 SourceSchema
-            INCOME_STATEMENT_SOURCE_SCHEMA.validate(result)
-
             row_count = len(result)
             logger.info(
                 "Tushare income statement fetched",
@@ -1098,9 +1051,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
             # 添加 PIT 列
             result = _add_pit_columns(result)
-
-            # 验证 SourceSchema
-            CASH_FLOW_SOURCE_SCHEMA.validate(result)
 
             row_count = len(result)
             logger.info(

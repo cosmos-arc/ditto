@@ -66,6 +66,8 @@ class TechnicalChecker:
             return self._check_foreign_key(df, rule, context)
         elif rule_type == "type_check":
             return self._check_type(df, rule)
+        elif rule_type == "required_columns":
+            return self._check_required_columns(df, rule)
 
         return None
 
@@ -242,5 +244,39 @@ class TechnicalChecker:
                     message=msg,
                     affected_rows=df.height,
                 )
+
+        return None
+
+    def _check_required_columns(
+        self, df: pl.DataFrame, rule: dict[str, Any]
+    ) -> DQIssue | None:
+        """
+        Check required columns exist.
+
+        Args:
+            df: Data to check
+            rule: Rule config with "columns" key containing required column names
+
+        Returns:
+            DQIssue if columns missing, None otherwise
+
+        """
+        columns = rule.get("columns", [])
+        missing = [col for col in columns if col not in df.columns]
+
+        if missing:
+            logger.warning(
+                "dq_rule_missing_columns",
+                event="dq_check",
+                rule="required_columns",
+                missing_columns=missing,
+            )
+            return DQIssue(
+                level=DQLevel.TECHNICAL,
+                severity=DQSeverity.ERROR,
+                rule_name="required_columns",
+                message=f"Missing required columns: {missing}",
+                affected_rows=len(missing),
+            )
 
         return None

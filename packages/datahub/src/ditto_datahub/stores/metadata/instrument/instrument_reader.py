@@ -485,3 +485,164 @@ class InstrumentReader:
             .map_elements(lambda x: mapping.get(x, None), return_dtype=pl.String)
             .alias("symbol")
         )
+
+    # ============ 扩展信息查询方法 ============
+
+    def get_stock_extension(self, instrument_id: int) -> dict[str, Any] | None:
+        """
+        获取股票扩展信息。
+
+        Args:
+            instrument_id: 证券 ID
+
+        Returns:
+            股票扩展信息字典，未找到时返回 None
+
+        """
+        row = self._client.fetchone(
+            """SELECT instrument_id, list_status, industry_id
+            FROM instrument_stock WHERE instrument_id = ?""",
+            [instrument_id],
+        )
+        return dict(row) if row else None
+
+    def get_etf_extension(self, instrument_id: int) -> dict[str, Any] | None:
+        """
+        获取 ETF 扩展信息。
+
+        Args:
+            instrument_id: 证券 ID
+
+        Returns:
+            ETF 扩展信息字典，未找到时返回 None
+
+        """
+        row = self._client.fetchone(
+            """SELECT instrument_id, fund_type, fund_manager,
+            establish_date, tracking_index
+            FROM instrument_etf WHERE instrument_id = ?""",
+            [instrument_id],
+        )
+        return dict(row) if row else None
+
+    def get_index_extension(self, instrument_id: int) -> dict[str, Any] | None:
+        """
+        获取指数扩展信息。
+
+        Args:
+            instrument_id: 证券 ID
+
+        Returns:
+            指数扩展信息字典，未找到时返回 None
+
+        """
+        row = self._client.fetchone(
+            """SELECT instrument_id, base_date, base_point, num_constituents
+            FROM instrument_index WHERE instrument_id = ?""",
+            [instrument_id],
+        )
+        return dict(row) if row else None
+
+    def get_with_extension(self, instrument_id: int) -> dict[str, Any] | None:
+        """
+        获取证券完整信息（主表 + 扩展表）。
+
+        根据 asset_class 自动 JOIN 对应的扩展表。
+
+        Args:
+            instrument_id: 证券 ID
+
+        Returns:
+            合并后的证券信息字典，未找到时返回 None
+
+        """
+        # 先获取主表信息
+        main_row = self._client.fetchone(
+            "SELECT * FROM instrument WHERE instrument_id = ?", [instrument_id]
+        )
+        if not main_row:
+            return None
+
+        result = dict(main_row)
+        asset_class = result["asset_class"]
+
+        # 根据 asset_class 查询对应扩展表
+        extension_map = {
+            "stock": self.get_stock_extension,
+            "etf": self.get_etf_extension,
+            "index": self.get_index_extension,
+        }
+
+        get_extension = extension_map.get(asset_class)
+        if get_extension:
+            extension = get_extension(instrument_id)
+            if extension:
+                # 移除重复的 instrument_id
+                extension.pop("instrument_id", None)
+                result.update(extension)
+
+        return result
+
+    def find_securities_with_extensions(
+        self,
+        asset_class: str | None = None,
+        exchange: str | None = None,
+        is_active: bool | None = True,
+    ) -> pl.DataFrame:
+        """
+        查询证券及其扩展信息（自动 LEFT JOIN 对应扩展表）。
+
+        Args:
+            asset_class: 按资产类别过滤
+            exchange: 按交易所过滤
+            is_active: 按活跃状态过滤
+
+        Returns:
+            包含主表和扩展表数据的 DataFrame
+
+        """
+        # 构建动态 SQL（根据 asset_class 决定 JOIN 哪个扩展表）
+        extension_join = ""
+        if asset_class == "stock":
+            extension_join = """
+                LEFT JOIN instrument_stock ext ON s.instrument_id = ext.instrument_id
+            """
+        elif asset_class == "etf":
+            extension_join = """
+                LEFT JOIN instrument_etf ext ON s.instrument_id = ext.instrument_id
+            """
+        elif asset_class == "index":
+            extension_join = """
+                LEFT JOIN instrument_index ext ON s.instrument_id = ext.instrument_id
+            """
+        else:
+            # 未指定 asset_class 时不 JOIN 扩展表
+            extension_join = ""
+
+        sql = f"""
+            SELECT s.*, m.source, m.source_ticker
+            FROM instrument s
+            LEFT JOIN instrument_mapping m ON s.instrument_id = m.instrument_id
+            {extension_join}
+            WHERE 1=1
+        """  # noqa: S608 - extension_join 是基于静态字符串值构造的，不是用户输入
+        params: list[Any] = []
+
+        if asset_class:
+            sql += " AND s.asset_class = ?"
+            params.append(asset_class)
+
+        if exchange:
+            sql += " AND s.exchange = ?"
+            params.append(exchange)
+
+        if is_active is not None:
+            sql += " AND s.is_active = ?"
+            params.append(is_active)
+
+        rows = self._client.fetchall(sql, params)
+
+        if not rows:
+            return pl.DataFrame()
+
+        return pl.DataFrame([dict(r) for r in rows])

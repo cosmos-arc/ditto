@@ -51,7 +51,7 @@ def mock_metadata_service(mocker):
 def mock_ingestion_log_service(mocker):
     """创建 Mock IngestionLogService。"""
     service = mocker.Mock()
-    service.get_ingested_dates = mocker.Mock(return_value=[])
+    service.list_ingested_dates = mocker.Mock(return_value=[])
     return service
 
 
@@ -346,7 +346,7 @@ class TestBackfillMissing:
         ]
 
         # 已摄取3个日期
-        mock_ingestion_log_service.get_ingested_dates.return_value = [
+        mock_ingestion_log_service.list_ingested_dates.return_value = [
             "2024-12-23",
             "2024-12-25",
             "2024-12-27",
@@ -387,7 +387,7 @@ class TestBackfillMissing:
             "2024-12-27",
         ]
 
-        mock_ingestion_log_service.get_ingested_dates.return_value = [
+        mock_ingestion_log_service.list_ingested_dates.return_value = [
             "2024-12-25",
             "2024-12-26",
             "2024-12-27",
@@ -422,7 +422,7 @@ class TestBackfillMissing:
 
         mock_metadata_service.list_trading_days.side_effect = get_range_side_effect
 
-        mock_ingestion_log_service.get_ingested_dates.return_value = ["2024-12-25"]
+        mock_ingestion_log_service.list_ingested_dates.return_value = ["2024-12-25"]
 
         mock_coordinator.ingest_date.side_effect = [
             IngestionResult(
@@ -464,7 +464,7 @@ class TestBackfillMissing:
         ]
 
         # 验证 source 参数被正确传递
-        mock_ingestion_log_service.get_ingested_dates.return_value = ["2024-12-25"]
+        mock_ingestion_log_service.list_ingested_dates.return_value = ["2024-12-25"]
 
         mock_coordinator.ingest_date.side_effect = [
             IngestionResult(
@@ -489,8 +489,8 @@ class TestBackfillMissing:
 
         # Assert
         assert result.total_dates >= 0
-        # 验证 source 参数被正确传递给 get_ingested_dates
-        mock_ingestion_log_service.get_ingested_dates.assert_called_once_with(
+        # 验证 source 参数被正确传递给 list_ingested_dates
+        mock_ingestion_log_service.list_ingested_dates.assert_called_once_with(
             "stock_daily", "tushare"
         )
 
@@ -547,7 +547,7 @@ class TestBackfillMissing:
         ]
 
         # 已摄取2个日期，缺失3个
-        mock_ingestion_log_service.get_ingested_dates.return_value = [
+        mock_ingestion_log_service.list_ingested_dates.return_value = [
             "2024-12-23",
             "2024-12-27",
         ]

@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from ditto_foundation import logger
 
-from ditto_datahub.models.metadata import InstrumentRegistration
+from ditto_datahub.models.metadata import (
+    ETFExtension,
+    IndexExtension,
+    InstrumentExtension,
+    InstrumentRegistration,
+    StockExtension,
+)
 
 
 class InstrumentWriter:
@@ -14,13 +20,20 @@ class InstrumentWriter:
     证券主数据写入接口。
 
     提供：
-    - register() - 注册新证券（事务性操作 + 缓存失效）
+    - register() - 注册新证券（事务性操作 + 缓存失效 + 扩展信息自动路由）
 
     Attributes:
         _client: SQLite 客户端，用于数据库访问
         _cache: DataCache 缓存管理器（可选）
 
     """
+
+    # 类型路由表：根据扩展类型分发到对应的注册方法
+    _EXTENSION_ROUTES: ClassVar[dict[Any, str]] = {
+        StockExtension: "_register_stock",
+        ETFExtension: "_register_etf",
+        IndexExtension: "_register_index",
+    }
 
     def __init__(self, client: Any, cache: Any | None = None) -> None:
         """
@@ -45,9 +58,11 @@ class InstrumentWriter:
         事务性操作：插入 instrument 和 instrument_mapping 表，
         失败时自动回滚，成功时提交。
 
+        扩展信息自动路由到对应的扩展表（使用 Protocol + 类型路由）。
+
         Args:
             instrument_id: 证券 ID
-            registration: 证券注册配置
+            registration: 证券注册配置（可选扩展信息）
 
         Returns:
             注册的 instrument_id
@@ -100,6 +115,10 @@ class InstrumentWriter:
                 ],
             )
 
+            # 路由扩展信息到对应表（新增）
+            if registration.extension:
+                self._register_extension(instrument_id, registration.extension)
+
             # 失效相关缓存
             if self._cache:
                 # 失效特定 source_ticker 的缓存
@@ -133,3 +152,74 @@ class InstrumentWriter:
                 error_message=str(e),
             )
             raise
+
+    def _register_extension(
+        self, instrument_id: int, extension: InstrumentExtension
+    ) -> None:
+        """
+        内部方法：根据扩展类型路由到对应表。
+
+        使用类型路由表避免 if-elif 链，符合开闭原则。
+
+        Args:
+            instrument_id: 证券 ID
+            extension: 扩展信息对象
+
+        """
+        extension_type = type(extension)
+        method_name = self._EXTENSION_ROUTES.get(extension_type)
+
+        if method_name:
+            method = getattr(self, method_name)
+            method(instrument_id, extension)
+            logger.info(
+                "Instrument extension registered",
+                event="instrument_extension_registered",
+                instrument_id=instrument_id,
+                extension_type=extension_type.__name__,
+            )
+        else:
+            logger.warning(
+                "Unknown extension type, skipping",
+                event="instrument_extension_unknown",
+                instrument_id=instrument_id,
+                extension_type=extension_type.__name__,
+            )
+
+    def _register_stock(self, instrument_id: int, extension: StockExtension) -> None:
+        """注册股票扩展信息"""
+        self._client.execute(
+            """INSERT OR REPLACE INTO instrument_stock
+            (instrument_id, list_status, industry_id)
+            VALUES (?, ?, ?)""",
+            [instrument_id, extension.list_status, extension.industry_id],
+        )
+
+    def _register_etf(self, instrument_id: int, extension: ETFExtension) -> None:
+        """注册 ETF 扩展信息"""
+        self._client.execute(
+            """INSERT OR REPLACE INTO instrument_etf
+            (instrument_id, fund_type, fund_manager, establish_date, tracking_index)
+            VALUES (?, ?, ?, ?, ?)""",
+            [
+                instrument_id,
+                extension.fund_type,
+                extension.fund_manager,
+                extension.establish_date,
+                extension.tracking_index,
+            ],
+        )
+
+    def _register_index(self, instrument_id: int, extension: IndexExtension) -> None:
+        """注册指数扩展信息"""
+        self._client.execute(
+            """INSERT OR REPLACE INTO instrument_index
+            (instrument_id, base_date, base_point, num_constituents)
+            VALUES (?, ?, ?, ?)""",
+            [
+                instrument_id,
+                extension.base_date,
+                extension.base_point,
+                extension.num_constituents,
+            ],
+        )

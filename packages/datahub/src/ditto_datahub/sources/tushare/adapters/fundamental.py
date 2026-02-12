@@ -5,12 +5,6 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.sources.schemas.capital_schemas import (
-    BALANCE_SHEET_SOURCE_SCHEMA,
-    CASH_FLOW_SOURCE_SCHEMA,
-    DIVIDEND_SOURCE_SCHEMA,
-    INCOME_STATEMENT_SOURCE_SCHEMA,
-)
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.adapters.capital import (
     BALANCE_SHEET_MAPPING,
@@ -115,7 +109,6 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             )
 
             result = _add_pit_columns(result)
-            DIVIDEND_SOURCE_SCHEMA.validate(result)
 
             row_count = len(result)
             logger.info(
@@ -210,7 +203,6 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             )
 
             result = _add_pit_columns(result)
-            BALANCE_SHEET_SOURCE_SCHEMA.validate(result)
 
             row_count = len(result)
             logger.info(
@@ -260,7 +252,6 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             )
 
             result = _add_pit_columns(result)
-            INCOME_STATEMENT_SOURCE_SCHEMA.validate(result)
 
             row_count = len(result)
             logger.info(
@@ -310,7 +301,6 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             )
 
             result = _add_pit_columns(result)
-            CASH_FLOW_SOURCE_SCHEMA.validate(result)
 
             row_count = len(result)
             logger.info(

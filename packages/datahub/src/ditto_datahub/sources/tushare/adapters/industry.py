@@ -5,7 +5,6 @@ from __future__ import annotations
 import polars as pl
 from ditto_foundation import M, logger, traced
 
-from ditto_datahub.sources.schemas.metadata_schemas import INDUSTRY_SOURCE_SCHEMA
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
@@ -43,8 +42,6 @@ SW_INDUSTRY_CONCEPTS_MAPPING = ColumnMapping(
         # 保留 in_date 列，后面会重命名为 industry_date
         "in_date",
     ),
-    # 不在这里验证，稍后手动验证
-    source_schema=None,
 )
 
 
@@ -238,9 +235,6 @@ class IndustryTushareAdapter(BaseTushareAdapter):
                 "industry_date",
                 "knowledge_date",
             )
-
-            # 7. 手动验证输出符合 INDUSTRY_SOURCE_SCHEMA
-            INDUSTRY_SOURCE_SCHEMA.validate(result)
 
             row_count = len(result)
             logger.info(

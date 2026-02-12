@@ -54,6 +54,36 @@ CREATE INDEX IF NOT EXISTS idx_mapping_current
     ON instrument_mapping(source, source_ticker) WHERE effective_to IS NULL;
 CREATE INDEX IF NOT EXISTS idx_mapping_instrument_id ON instrument_mapping(instrument_id);
 
+-- ============ 资产类型扩展表 ============
+-- 使用扩展表模式（而非宽表）以保持类型安全和可扩展性
+
+-- 股票扩展表
+CREATE TABLE IF NOT EXISTS instrument_stock (
+    instrument_id INTEGER PRIMARY KEY,
+    list_status TEXT,  -- L=正常, D=退市, P=暂停
+    industry_id INTEGER,
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+
+-- ETF 扩展表
+CREATE TABLE IF NOT EXISTS instrument_etf (
+    instrument_id INTEGER PRIMARY KEY,
+    fund_type TEXT,  -- 股票型/债券型/货币型/混合型等
+    fund_manager TEXT,
+    establish_date DATE,
+    tracking_index TEXT,
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+
+-- 指数扩展表
+CREATE TABLE IF NOT EXISTS instrument_index (
+    instrument_id INTEGER PRIMARY KEY,
+    base_date DATE,  -- 基日
+    base_point REAL,  -- 基点
+    num_constituents INTEGER,  -- 成分股数量
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+
 -- 交易日历
 CREATE TABLE IF NOT EXISTS trading_calendar (
     trade_date DATE PRIMARY KEY,
