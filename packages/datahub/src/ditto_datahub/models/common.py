@@ -37,6 +37,7 @@ class Dataset(str, Enum):
     # 基础类数据集（T0 数据，不需要 trade_date）
     STOCK_BASIC = "stock_basic"
     ETF_BASIC = "etf_basic"
+    INDEX_BASIC = "index_basic"
 
     # 日历类数据集（需要日期范围）
     CALENDAR = "calendar"
@@ -44,6 +45,7 @@ class Dataset(str, Enum):
     # 行情类数据集（T1 数据，需要 trade_date）
     STOCK_DAILY = "stock_daily"
     ETF_DAILY = "etf_daily"
+    INDEX_DAILY = "index_daily"
     STOCK_STATUS = "stock_status"
 
     # 参考类数据集（需要 trade_date）
@@ -65,13 +67,17 @@ class Dataset(str, Enum):
     MACRO_INDICATORS = "macro_indicators"
 
     # Capital 域扩展
-    FUTURES = "futures"
+    FUTURES_POSITION = "futures_position"
     CORPORATE_ACTIONS = "corporate_actions"
 
     @classmethod
     def is_basic_dataset(cls, dataset: str) -> bool:
         """判断是否为 basic 类数据集（不需要 trade_date）。"""
-        return dataset in (cls.STOCK_BASIC.value, cls.ETF_BASIC.value)
+        return dataset in (
+            cls.STOCK_BASIC.value,
+            cls.ETF_BASIC.value,
+            cls.INDEX_BASIC.value,
+        )
 
     @classmethod
     def is_calendar_dataset(cls, dataset: str) -> bool:

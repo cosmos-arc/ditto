@@ -7,8 +7,12 @@ from datetime import date
 import polars as pl
 from ditto_foundation import logger
 
-from ditto_datahub.stores.capital.futures.futures_reader import FuturesReader
-from ditto_datahub.stores.capital.futures.futures_writer import FuturesWriter
+from ditto_datahub.stores.capital.futures_position.futures_reader import (
+    FuturesReader,
+)
+from ditto_datahub.stores.capital.futures_position.futures_writer import (
+    FuturesWriter,
+)
 from ditto_datahub.stores.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )

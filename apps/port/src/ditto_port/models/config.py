@@ -32,10 +32,12 @@ class Dataset(str, Enum):
     CALENDAR = "calendar"
     STOCK_BASIC = "stock_basic"
     ETF_BASIC = "etf_basic"
+    INDEX_BASIC = "index_basic"
 
     # T1: Incremental datasets
     ETF_DAILY = "etf_daily"
     STOCK_DAILY = "stock_daily"
+    INDEX_DAILY = "index_daily"
     STOCK_STATUS = "stock_status"
     ADJ_FACTOR = "adj_factor"
     FUND_ADJ = "fund_adj"
@@ -47,7 +49,7 @@ class Dataset(str, Enum):
     MARGIN_TRADING = "margin_trading"
     PLEDGE_RATIO = "pledge_ratio"
     MACRO_INDICATORS = "macro_indicators"
-    FUTURES = "futures"
+    FUTURES_POSITION = "futures_position"
     CORPORATE_ACTIONS = "corporate_actions"
 
 
@@ -407,9 +409,9 @@ def create_t1_config(
     )
 
 
-# ============ Dataset Registry ============
+# ============ Ingestion Specs ============
 
-DATASET_REGISTRY: dict[Dataset, DatasetSpec] = {
+INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
     # T0: Meta datasets
     Dataset.CALENDAR: create_t0_config(
         dataset=Dataset.CALENDAR,
@@ -433,6 +435,13 @@ DATASET_REGISTRY: dict[Dataset, DatasetSpec] = {
         critical_fields=["ts_code", "symbol", "name", "list_date"],
         task_name="ingest_etf_basic",
     ),
+    Dataset.INDEX_BASIC: create_t0_config(
+        dataset=Dataset.INDEX_BASIC,
+        description="指数基础信息",
+        typical_available_time=time(8, 30),
+        critical_fields=["ts_code", "name", "market"],
+        task_name="ingest_index_basic",
+    ),
     # T1: Incremental datasets
     Dataset.ETF_DAILY: create_t1_config(
         dataset=Dataset.ETF_DAILY,
@@ -449,6 +458,23 @@ DATASET_REGISTRY: dict[Dataset, DatasetSpec] = {
             "vol",
         ],
         task_name="ingest_etf_bars",
+    ),
+    Dataset.INDEX_DAILY: create_t1_config(
+        dataset=Dataset.INDEX_DAILY,
+        description="指数日行情数据",
+        typical_available_time=time(18, 0),
+        depends_on=[Dataset.INDEX_BASIC],
+        critical_fields=[
+            "trade_date",
+            "ts_code",
+            "open",
+            "high",
+            "low",
+            "close",
+            "vol",
+        ],
+        task_name="ingest_index_daily",
+        priority=15,
     ),
     Dataset.STOCK_DAILY: create_t1_config(
         dataset=Dataset.STOCK_DAILY,
@@ -575,13 +601,13 @@ DATASET_REGISTRY: dict[Dataset, DatasetSpec] = {
         task_name="ingest_macro_indicators",
         priority=55,
     ),
-    Dataset.FUTURES: create_t1_config(
-        dataset=Dataset.FUTURES,
-        description="期货数据",
+    Dataset.FUTURES_POSITION: create_t1_config(
+        dataset=Dataset.FUTURES_POSITION,
+        description="期货持仓数据",
         typical_available_time=time(21, 0),
         depends_on=[Dataset.CALENDAR],
         critical_fields=["instrument_id", "trade_date", "knowledge_date"],
-        task_name="ingest_futures",
+        task_name="ingest_futures_position",
         priority=60,
     ),
     Dataset.CORPORATE_ACTIONS: create_t1_config(
@@ -615,7 +641,7 @@ def get_datasets_by_tier(tier: TaskTier) -> list[Dataset]:
 
     """
     return [
-        dataset for dataset, config in DATASET_REGISTRY.items() if config.tier == tier
+        dataset for dataset, config in INGESTION_SPECS.items() if config.tier == tier
     ]
 
 
@@ -637,9 +663,9 @@ def get_dataset_config(dataset: Dataset) -> DatasetSpec:
         >>> assert config.tier == TaskTier.T1_INCREMENTAL
 
     """
-    if dataset not in DATASET_REGISTRY:
+    if dataset not in INGESTION_SPECS:
         raise KeyError(f"Dataset {dataset} not found in registry")
-    return DATASET_REGISTRY[dataset]
+    return INGESTION_SPECS[dataset]
 
 
 def iter_tier_datasets(tier: TaskTier) -> Iterator[tuple[Dataset, DatasetSpec]]:
@@ -658,7 +684,7 @@ def iter_tier_datasets(tier: TaskTier) -> Iterator[tuple[Dataset, DatasetSpec]]:
 
     """
     for dataset in get_datasets_by_tier(tier):
-        yield dataset, DATASET_REGISTRY[dataset]
+        yield dataset, INGESTION_SPECS[dataset]
 
 
 def get_all_datasets() -> list[Dataset]:
@@ -673,7 +699,7 @@ def get_all_datasets() -> list[Dataset]:
         >>> assert Dataset.CALENDAR in all_datasets
 
     """
-    return list(DATASET_REGISTRY.keys())
+    return list(INGESTION_SPECS.keys())
 
 
 def get_parallel_datasets(tier: TaskTier) -> list[list[Dataset]]:

@@ -671,7 +671,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             trade_date=trade_date,
         )
 
-        with tushare_fetch_error_handler("futures", "fut"):
+        with tushare_fetch_error_handler("futures_position", "fut"):
             params: dict[str, str] = {
                 "api_name": "fut",
                 "fields": "ts_code,trade_date,oi,settlement,vol,amount",
@@ -689,7 +689,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             response = self._client.query(**params)
 
             result = TushareDataTransformer.transform(
-                response, "futures", FUTURES_MAPPING
+                response, "futures_position", FUTURES_MAPPING
             )
 
             # 添加 PIT 列
@@ -701,7 +701,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
                 event="tushare_futures_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "futures")
+            _record_metrics(row_count, "futures_position")
 
             return result
 

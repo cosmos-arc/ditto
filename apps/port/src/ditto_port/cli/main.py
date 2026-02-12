@@ -1,12 +1,12 @@
 """Ditto CLI 主入口."""
 
+import os
+
 import typer
 
-from ditto_port.cli.commands.adj import app as adj_app
-from ditto_port.cli.commands.calendar import app as calendar_app
-from ditto_port.cli.commands.etf import app as etf_app
+from ditto_port.cli.commands.backfill import app as backfill_app
+from ditto_port.cli.commands.ingest import app as ingest_app
 from ditto_port.cli.commands.init import app as init_app
-from ditto_port.cli.commands.stock import app as stock_app
 
 app = typer.Typer(
     name="ditto",
@@ -17,10 +17,8 @@ app = typer.Typer(
 
 # 注册命令组
 app.add_typer(init_app, name="init")
-app.add_typer(stock_app, name="stock")
-app.add_typer(etf_app, name="etf")
-app.add_typer(calendar_app, name="calendar")
-app.add_typer(adj_app, name="adj")
+app.add_typer(ingest_app, name="ingest")
+app.add_typer(backfill_app, name="backfill")
 
 
 @app.callback()
@@ -31,6 +29,10 @@ def main(
 ) -> None:
     """初始化 CLI 上下文."""
     ctx.ensure_object(dict)
+
+    # 透传 data_root 到环境变量，供 ConfigProvider 使用
+    if data_root:
+        os.environ["DITTO_DATA_ROOT"] = data_root
 
     # 延迟初始化 DataHub，存储配置供后续使用
     ctx.obj["data_root"] = data_root

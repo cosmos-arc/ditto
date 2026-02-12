@@ -116,7 +116,7 @@ VALUATION_METRICS_SOURCE_SCHEMA = SourceSchema(
 # ============================================================================
 
 FUTURES_SOURCE_SCHEMA = SourceSchema(
-    dataset="futures",
+    dataset="futures_position",
     key_columns=("instrument_id", "trade_date", "effective_from"),
     schema={
         "instrument_id": pl.String,
