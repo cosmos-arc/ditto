@@ -46,10 +46,7 @@ from ditto_datahub.services.market_service import (
 )
 
 # Metadata 域服务
-from ditto_datahub.services.metadata_service import (
-    MetadataQuery,
-    MetadataService,
-)
+from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.quality_record_service import QualityRecordService
 
 # Source 服务
@@ -68,7 +65,6 @@ __all__ = [
     "MarketBarsQuery",
     "MarketConstituentsQuery",
     "MarketService",
-    "MetadataQuery",
     "MetadataService",
     "QualityRecordService",
     "SourceService",

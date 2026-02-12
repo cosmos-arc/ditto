@@ -235,7 +235,7 @@ def dq_completeness_check(
             end=trade_date,
             market_wide=market_wide,
         )
-        df = market_service.query(query)
+        df = market_service.find_bars(query)
 
         actual_sids = (
             df["instrument_id"].unique().to_list() if not df.is_empty() else []

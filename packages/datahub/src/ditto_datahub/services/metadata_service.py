@@ -8,7 +8,6 @@ CQRS 架构：使用 Reader 处理查询，Writer 处理写入。
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any, Literal
 
 import polars as pl
@@ -29,43 +28,6 @@ from ditto_datahub.stores.metadata.instrument import (
     InstrumentWriter,
 )
 from ditto_datahub.stores.metadata.universe import UniverseReader, UniverseWriter
-
-MetadataQueryDataset = Literal["instrument", "industry", "calendar_range"]
-MetadataWriteDataset = Literal["calendar"]
-
-
-@dataclass(frozen=True)
-class MetadataQuery:
-    """Metadata 域统一查询参数."""
-
-    dataset: MetadataQueryDataset
-    instrument_ids: list[int] | None = None
-    source_tickers: list[str] | None = None
-    source: str = "tushare"
-    asset_class: str | None = None
-    exchange: str | None = None
-    is_active: bool | None = True
-    asof: str | None = None
-    industry_level: str | None = None
-    start: str | None = None
-    end: str | None = None
-    only_open: bool = True
-
-
-@dataclass(frozen=True)
-class MetadataWriteCommand:
-    """Metadata 域统一写入命令."""
-
-    dataset: MetadataWriteDataset
-    records: list[dict[str, Any]]
-
-
-@dataclass(frozen=True)
-class MetadataWriteResult:
-    """Metadata 域统一写入结果."""
-
-    dataset: MetadataWriteDataset
-    records_written: int
 
 
 class MetadataService:
@@ -125,40 +87,100 @@ class MetadataService:
             event="metadata_query_service_init_complete",
         )
 
-    @traced("metadata.query")
-    def query(self, query: MetadataQuery) -> pl.DataFrame:
-        """统一查询入口."""
-        if query.dataset == "instrument":
-            return self._instrument_reader.find_securities(
-                instrument_ids=query.instrument_ids,
-                source_tickers=query.source_tickers,
-                source=query.source,
-                asset_class=query.asset_class,
-                exchange=query.exchange,
-                is_active=query.is_active,
-                asof=query.asof,
-            )
+    # ============ 交易日历查询 ============
 
-        if query.dataset == "industry":
-            is_active = True if query.is_active is None else query.is_active
-            return self._industry_reader.get_all(is_active, query.industry_level)
+    @traced("metadata.calendar.list_trading_days")
+    def list_trading_days(
+        self,
+        start: str,
+        end: str,
+        only_open: bool = True,
+    ) -> list[str]:
+        """
+        查询交易日列表.
 
-        if query.start is None or query.end is None:
-            raise ValueError("calendar_range 查询必须提供 start 和 end")
-        return self._calendar_reader.get_range_df(
-            query.start,
-            query.end,
-            query.only_open,
-        )
+        Args:
+            start: 开始日期.
+            end: 结束日期.
+            only_open: 是否只返回交易日.
 
-    @traced("metadata.write")
-    def write(self, command: MetadataWriteCommand) -> MetadataWriteResult:
-        """统一写入入口."""
-        self._calendar_writer.upsert(command.records)
-        return MetadataWriteResult(
-            dataset=command.dataset,
-            records_written=len(command.records),
-        )
+        Returns:
+            交易日列表.
+
+        """
+        return self._calendar_reader.get_range(start, end)
+
+    @traced("metadata.calendar.list_calendar_range")
+    def list_calendar_range(
+        self,
+        start: str,
+        end: str,
+        only_open: bool = True,
+    ) -> pl.DataFrame:
+        """
+        查询日历数据（DataFrame 格式）.
+
+        Args:
+            start: 开始日期.
+            end: 结束日期.
+            only_open: 是否只返回交易日.
+
+        Returns:
+            日历数据 DataFrame，包含 trade_date, is_open, prev_trade_date 等列.
+
+        """
+        return self._calendar_reader.get_range_df(start, end, only_open)
+
+    @traced("metadata.calendar.save_calendar")
+    def save_calendar(self, records: list[dict[str, Any]]) -> int:
+        """
+        插入或更新日历记录.
+
+        Args:
+            records: 日历记录列表.
+
+        Returns:
+            插入的记录数.
+
+        """
+        self._calendar_writer.upsert(records)
+        return len(records)
+
+    @traced("metadata.calendar.is_trading_day")
+    def is_trading_day(self, date: str) -> bool:
+        """
+        判断是否为交易日.
+
+        Args:
+            date: 日期字符串.
+
+        Returns:
+            是否为交易日.
+
+        """
+        return self._calendar_reader.is_trading_day(date)
+
+    @traced("metadata.calendar.get_last_trading_day")
+    def get_last_trading_day(self) -> str | None:
+        """
+        获取最后一个交易日.
+
+        Returns:
+            最后一个交易日日期字符串，如果没有数据则返回 None.
+
+        """
+        return self._calendar_reader.get_last_trading_day()
+
+    @traced("metadata.calendar.get_first_trading_day")
+    def get_first_trading_day(self) -> str | None:
+        """
+        获取第一个交易日.
+
+        Returns:
+            第一个交易日日期字符串，如果没有数据则返回 None.
+
+        """
+        return self._calendar_reader.get_first_trading_day()
 
     # ============ Identity 解析 ============
 
@@ -208,8 +230,22 @@ class MetadataService:
 
     # ============ 证券查询 ============
 
-    @traced("metadata.instrument.get_instruments")
-    def get_instruments(
+    @traced("metadata.instrument.get_instrument")
+    def get_instrument(self, instrument_id: int) -> dict[str, Any] | None:
+        """
+        获取单个证券信息.
+
+        Args:
+            instrument_id: 证券 ID.
+
+        Returns:
+            证券信息字典，未找到时返回 None.
+
+        """
+        return self._instrument_reader.get_by_instrument_id(instrument_id)
+
+    @traced("metadata.instrument.find_securities")
+    def find_securities(
         self,
         instrument_ids: list[int] | None = None,
         source_tickers: list[str] | None = None,
@@ -220,7 +256,7 @@ class MetadataService:
         asof: str | None = None,
     ) -> pl.DataFrame:
         """
-        查询证券数据.
+        多维查询证券数据.
 
         Args:
             instrument_ids: 过滤 instrument_id 列表.
@@ -235,17 +271,39 @@ class MetadataService:
             证券数据 DataFrame.
 
         """
-        return self.query(
-            MetadataQuery(
-                dataset="instrument",
-                instrument_ids=instrument_ids,
-                source_tickers=source_tickers,
-                source=source,
-                asset_class=asset_class,
-                exchange=exchange,
-                is_active=is_active,
-                asof=asof,
-            )
+        return self._instrument_reader.find_securities(
+            instrument_ids=instrument_ids,
+            source_tickers=source_tickers,
+            source=source,
+            asset_class=asset_class,
+            exchange=exchange,
+            is_active=is_active,
+            asof=asof,
+        )
+
+    @traced("metadata.instrument.list_instrument_ids")
+    def list_instrument_ids(
+        self,
+        asset_class: str | None = None,
+        exchange: str | None = None,
+        is_active: bool | None = True,
+    ) -> list[int]:
+        """
+        列出所有 instrument_id（可选过滤）.
+
+        Args:
+            asset_class: 按资产类别过滤.
+            exchange: 按交易所过滤.
+            is_active: 按活跃状态过滤.
+
+        Returns:
+            instrument_id 列表.
+
+        """
+        return self._instrument_reader.list_instrument_ids(
+            asset_class=asset_class,
+            exchange=exchange,
+            is_active=is_active,
         )
 
     @traced("metadata.instrument.get_symbol")
@@ -285,14 +343,14 @@ class MetadataService:
 
     # ============ 行业查询 ============
 
-    @traced("metadata.industry.get_industries")
-    def get_industries(
+    @traced("metadata.industry.find_industries")
+    def find_industries(
         self,
         is_active: bool = True,
         industry_level: str | None = None,
     ) -> pl.DataFrame:
         """
-        查询行业数据.
+        多维查询行业数据.
 
         Args:
             is_active: 是否只返回活跃行业.
@@ -302,13 +360,26 @@ class MetadataService:
             行业数据 DataFrame.
 
         """
-        return self.query(
-            MetadataQuery(
-                dataset="industry",
-                is_active=is_active,
-                industry_level=industry_level,
-            )
-        )
+        return self._industry_reader.get_all(is_active, industry_level)
+
+    @traced("metadata.industry.list_industry_stocks")
+    def list_industry_stocks(
+        self,
+        industry_id: str,
+        asof: str | None = None,
+    ) -> list[int]:
+        """
+        查询行业成分股.
+
+        Args:
+            industry_id: 行业 ID.
+            asof: 时间点日期.
+
+        Returns:
+            Instrument ID 列表.
+
+        """
+        return self._industry_mapping_reader.get_stocks(industry_id, asof)
 
     @traced("metadata.industry.get_stock_industry")
     def get_stock_industry(
@@ -328,142 +399,6 @@ class MetadataService:
 
         """
         return self._industry_mapping_reader.get_stock_industry(instrument_id, asof)
-
-    @traced("metadata.industry.get_industry_stocks")
-    def get_industry_stocks(
-        self,
-        industry_id: str,
-        asof: str | None = None,
-    ) -> list[int]:
-        """
-        查询行业成分股.
-
-        Args:
-            industry_id: 行业 ID.
-            asof: 时间点日期.
-
-        Returns:
-            Instrument ID 列表.
-
-        """
-        return self._industry_mapping_reader.get_stocks(industry_id, asof)
-
-    # ============ 交易日历查询 ============
-
-    @traced("metadata.calendar.get_range_df")
-    def get_range_df(
-        self,
-        start: str,
-        end: str,
-        only_open: bool = True,
-    ) -> pl.DataFrame:
-        """
-        查询日历数据（DataFrame 格式）.
-
-        Args:
-            start: 开始日期.
-            end: 结束日期.
-            only_open: 是否只返回交易日.
-
-        Returns:
-            日历数据 DataFrame，包含 trade_date, is_open, prev_trade_date 等列.
-
-        """
-        return self.query(
-            MetadataQuery(
-                dataset="calendar_range",
-                start=start,
-                end=end,
-                only_open=only_open,
-            )
-        )
-
-    @traced("metadata.calendar.get_trading_days")
-    def get_trading_days(
-        self,
-        start: str,
-        end: str,
-        only_open: bool = True,
-    ) -> list[str]:
-        """
-        查询交易日列表.
-
-        Args:
-            start: 开始日期.
-            end: 结束日期.
-            only_open: 是否只返回交易日.
-
-        Returns:
-            交易日列表.
-
-        """
-        return self._calendar_reader.get_range(start, end)
-
-    @traced("metadata.calendar.is_trading_day")
-    def is_trading_day(self, date: str) -> bool:
-        """
-        判断是否为交易日.
-
-        Args:
-            date: 日期字符串.
-
-        Returns:
-            是否为交易日.
-
-        """
-        return self._calendar_reader.is_trading_day(date)
-
-    @traced("metadata.calendar.upsert")
-    def upsert(self, records: list[dict[str, Any]]) -> int:
-        """
-        插入或更新日历记录.
-
-        Args:
-            records: 日历记录列表.
-
-        Returns:
-            插入的记录数.
-
-        """
-        result = self.write(MetadataWriteCommand(dataset="calendar", records=records))
-        return result.records_written
-
-    @traced("metadata.calendar.get_last_trading_day")
-    def get_last_trading_day(self) -> str | None:
-        """
-        获取最后一个交易日.
-
-        Returns:
-            最后一个交易日日期字符串，如果没有数据则返回 None.
-
-        """
-        return self._calendar_reader.get_last_trading_day()
-
-    @traced("metadata.calendar.get_first_trading_day")
-    def get_first_trading_day(self) -> str | None:
-        """
-        获取第一个交易日.
-
-        Returns:
-            第一个交易日日期字符串，如果没有数据则返回 None.
-
-        """
-        return self._calendar_reader.get_first_trading_day()
-
-    @traced("metadata.calendar.list_trading_days")
-    def list_trading_days(self, start: str, end: str) -> list[str]:
-        """
-        获取交易日列表（别名方法，与 get_trading_days 相同）.
-
-        Args:
-            start: 开始日期.
-            end: 结束日期.
-
-        Returns:
-            交易日列表.
-
-        """
-        return self.get_trading_days(start, end, only_open=True)
 
     # ============ 标的池查询 ============
 
