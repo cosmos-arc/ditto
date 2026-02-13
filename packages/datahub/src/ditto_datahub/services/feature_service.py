@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 import polars as pl
-from ditto_foundation import logger, traced
+from ditto_infra.foundation import logger, traced
 
 from ditto_datahub.stores.features.technical.technical_indicator_metadata_reader import (  # noqa: E501
     TechnicalIndicatorMetadataReader,

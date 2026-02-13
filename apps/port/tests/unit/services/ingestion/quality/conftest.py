@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_core.quality.spec import DQIssue, DQLevel, DQResult
-from ditto_foundation import DQSeverity
+from ditto_infra.foundation import DQSeverity
 from pytest_mock import MockerFixture
 
 
@@ -50,27 +50,27 @@ def mock_quarantine_writer(mocker: MockerFixture) -> MagicMock:
 def mock_instrument_store(mocker: MockerFixture) -> MagicMock:
     """Mock InstrumentStore.
 
-    提供 enrich_with_symbol 方法，将 instrument_id 转换为 symbol。
+    提供 enrich_with_ticker 方法，将 instrument_id 转换为 ticker。
     """
     store = mocker.MagicMock()
 
-    def enrich_with_symbol_impl(df: pl.DataFrame) -> pl.DataFrame:
-        """模拟 enrich_with_symbol 实现."""
+    def enrich_with_ticker_impl(df: pl.DataFrame) -> pl.DataFrame:
+        """模拟 enrich_with_ticker 实现."""
         if df.is_empty():
             return df
-        # 为每个 instrument_id 分配一个 symbol
-        symbol_map = {
+        # 为每个 instrument_id 分配一个 ticker
+        ticker_map = {
             1000001: "000001",
             1000002: "600000",
             1000003: "510300",
         }
-        symbols = [
-            symbol_map.get(instrument_id, "")
+        tickers = [
+            ticker_map.get(instrument_id, "")
             for instrument_id in df["instrument_id"].to_list()
         ]
-        return df.with_columns(pl.Series("symbol", symbols))
+        return df.with_columns(pl.Series("ticker", tickers))
 
-    store.enrich_with_symbol.side_effect = enrich_with_symbol_impl
+    store.enrich_with_ticker.side_effect = enrich_with_ticker_impl
     return store
 
 
@@ -107,7 +107,7 @@ def mock_comparison_writer(mocker: MockerFixture) -> MagicMock:
 def sample_primary_df() -> pl.DataFrame:
     """示例主数据源 DataFrame.
 
-    包含 instrument_id 列，需要通过 InstrumentStore 补全 symbol。
+    包含 instrument_id 列，需要通过 InstrumentStore 补全 ticker。
     """
     return pl.DataFrame(
         {
@@ -128,11 +128,11 @@ def sample_primary_df() -> pl.DataFrame:
 def sample_secondary_df() -> pl.DataFrame:
     """示例辅助数据源 DataFrame (TDX).
 
-    包含 symbol 列（已转换格式）。
+    包含 ticker 列（已转换格式）。
     """
     return pl.DataFrame(
         {
-            "symbol": ["000001", "600000", "510300"],
+            "ticker": ["000001", "600000", "510300"],
             "trade_date": ["20240101", "20240101", "20240101"],
             "open": [10.0, 20.0, 4.0],
             "high": [10.5, 20.5, 4.1],
@@ -154,8 +154,8 @@ def sample_dq_issue_error() -> DQIssue:
         message="Column 'close' contains null values",
         affected_rows=2,
         sample_data=[
-            {"symbol": "000001", "trade_date": "20240101", "field": "close"},
-            {"symbol": "600000", "trade_date": "20240101", "field": "close"},
+            {"ticker": "000001", "trade_date": "20240101", "field": "close"},
+            {"ticker": "600000", "trade_date": "20240101", "field": "close"},
         ],
     )
 
@@ -171,7 +171,7 @@ def sample_dq_issue_warning() -> DQIssue:
         affected_rows=1,
         sample_data=[
             {
-                "symbol": "510300",
+                "ticker": "510300",
                 "trade_date": "20240101",
                 "field": "volume",
                 "value": 0,

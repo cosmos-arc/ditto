@@ -10,7 +10,7 @@ from ditto_datahub.stores.capital.index_composition.index_composition_reader imp
     IndexCompositionReader,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import SQLitePool
+from ditto_infra.foundation import SQLitePool
 
 
 @pytest.fixture

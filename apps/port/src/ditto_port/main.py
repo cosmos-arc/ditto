@@ -20,9 +20,9 @@ import orjson
 from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
 from ditto_datahub.config import DataRootConfig
-from ditto_foundation.config.initializer import ConfigInitCoordinator, InitScope
-from ditto_foundation.config.settings import Settings
-from ditto_foundation.observability import M, logger
+from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, InitScope
+from ditto_infra.foundation.config.settings import Settings
+from ditto_infra.foundation.observability import M, logger
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,7 +42,6 @@ from ditto_port.registry import (
     CoreProvider,
     DataHubProvider,
     DataSourcesProvider,
-    DomainServiceProvider,
 )
 
 # Initialize project root
@@ -105,7 +104,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     container = make_async_container(
         ConfigProvider(),
         CoreProvider(),
-        DomainServiceProvider(),
         DataHubProvider(),
         DataSourcesProvider(),
     )
@@ -184,6 +182,9 @@ async def log_requests(
     """Log incoming requests and outgoing responses."""
     # Generate unique request ID
     request_id = str(uuid.uuid4())
+
+    # 存储到 request.state，供异常处理器使用
+    request.state.request_id = request_id
 
     # Get start time
     start_time = time.time()

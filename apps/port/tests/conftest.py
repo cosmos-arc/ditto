@@ -9,9 +9,9 @@ from unittest.mock import MagicMock
 import duckdb
 import polars as pl
 import pytest
-from ditto_foundation.config import Settings
-from ditto_foundation.config.environment import Environment
-from ditto_foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.config import Settings
+from ditto_infra.foundation.config.environment import Environment
+from ditto_infra.foundation.observability.config import ObservabilityConfig
 from ditto_port.testing import DatabaseManager
 
 
@@ -57,7 +57,10 @@ def test_settings(tmp_path: Path) -> Settings:
     Returns:
         Settings: 测试配置对象
     """
-    from ditto_foundation.config.settings import ObservabilitySettings, SystemSettings
+    from ditto_infra.foundation.config.settings import (
+        ObservabilitySettings,
+        SystemSettings,
+    )
 
     settings = Settings(
         system=SystemSettings(environment=Environment.TESTING),
@@ -176,7 +179,7 @@ def sample_daily_data() -> list[dict[str, Any]]:
 @pytest.fixture(autouse=True)
 def reset_observability() -> Generator[None, None, None]:
     """每个测试自动重置可观测性状态."""
-    from ditto_foundation import reset_for_testing
+    from ditto_infra.foundation import reset_for_testing
 
     reset_for_testing()
     yield
@@ -186,7 +189,7 @@ def reset_observability() -> Generator[None, None, None]:
 @pytest.fixture
 def obs_noop() -> None:
     """静默模式 - 最快, 不输出日志."""
-    from ditto_foundation import init
+    from ditto_infra.foundation import init
 
     config = ObservabilityConfig(
         environment=Environment.TESTING,
@@ -202,7 +205,7 @@ def obs_noop() -> None:
 @pytest.fixture
 def obs_assertions() -> None:
     """断言模式 - 可验证, 内存记录."""
-    from ditto_foundation import init
+    from ditto_infra.foundation import init
 
     config = ObservabilityConfig(
         environment=Environment.TESTING,

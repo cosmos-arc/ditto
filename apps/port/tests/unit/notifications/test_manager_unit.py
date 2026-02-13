@@ -3,11 +3,11 @@
 from datetime import datetime
 from pathlib import Path
 
-from ditto_foundation.notification.message import (
+from ditto_infra.services.notification.message import (
     NotificationLevel,
 )
-from ditto_foundation.notification.sender import NotificationSender
-from ditto_foundation.notification.template import TemplateEngine
+from ditto_infra.services.notification.sender import NotificationSender
+from ditto_infra.services.notification.template import TemplateEngine
 
 
 class MockNotificationSender(NotificationSender):
@@ -34,7 +34,7 @@ class TestAlertManager:
 
     def test_init_with_dependencies(self, tmp_path: Path) -> None:
         """Test initialization with TemplateEngine and senders."""
-        from ditto_port.notifications.manager import AlertManager
+        from ditto_infra.services.notification.manager import AlertManager
 
         # Create template engine with temp path
         template_engine = TemplateEngine([tmp_path])
@@ -58,7 +58,7 @@ class TestAlertManager:
         tmp_path: Path,
     ) -> None:
         """Test successful alert sending."""
-        from ditto_port.notifications.manager import AlertManager
+        from ditto_infra.services.notification.manager import AlertManager
 
         # Create test template
         template_file = tmp_path / "test_alert_telegram.j2"
@@ -86,7 +86,7 @@ class TestAlertManager:
 
     def test_send_alert_multiple_senders(self, tmp_path: Path) -> None:
         """Test alert sending to multiple channels."""
-        from ditto_port.notifications.manager import AlertManager
+        from ditto_infra.services.notification.manager import AlertManager
 
         # Create templates for each channel
         (tmp_path / "multi_telegram.j2").write_text("Telegram: {{ msg }}")
@@ -115,7 +115,7 @@ class TestAlertManager:
 
     def test_send_alert_partial_failure(self, tmp_path: Path) -> None:
         """Test alert sending when one sender fails."""
-        from ditto_port.notifications.manager import AlertManager
+        from ditto_infra.services.notification.manager import AlertManager
 
         # Create templates for both channels
         (tmp_path / "partial_telegram.j2").write_text("Telegram: {{ msg }}")
@@ -141,7 +141,7 @@ class TestAlertManager:
 
     def test_send_alert_with_timestamp(self, tmp_path: Path) -> None:
         """Test alert sending with timestamp."""
-        from ditto_port.notifications.manager import AlertManager
+        from ditto_infra.services.notification.manager import AlertManager
 
         (tmp_path / "ts_telegram.j2").write_text("{{ timestamp }}: {{ msg }}")
 
@@ -166,7 +166,7 @@ class TestAlertManager:
 
     def test_send_alert_empty_senders(self, tmp_path: Path) -> None:
         """Test alert sending with no senders configured."""
-        from ditto_port.notifications.manager import AlertManager
+        from ditto_infra.services.notification.manager import AlertManager
 
         template_engine = TemplateEngine([tmp_path])
 
@@ -185,7 +185,7 @@ class TestAlertManager:
 
     def test_template_fallback_to_foundation(self, tmp_path: Path) -> None:
         """Test template fallback to foundation templates."""
-        from ditto_port.notifications.manager import AlertManager
+        from ditto_infra.services.notification.manager import AlertManager
 
         # Primary (port) templates - empty
         port_templates = tmp_path / "port_templates"
@@ -218,7 +218,7 @@ class TestAlertManager:
 
     def test_send_alert_different_levels(self, tmp_path: Path) -> None:
         """Test sending alerts with different severity levels."""
-        from ditto_port.notifications.manager import AlertManager
+        from ditto_infra.services.notification.manager import AlertManager
 
         (tmp_path / "level_email.j2").write_text(
             "Severity: {{ level }}, Message: {{ msg }}"
@@ -253,7 +253,7 @@ class TestAlertManager:
 
     def test_send_alert_with_complex_context(self, tmp_path: Path) -> None:
         """Test alert sending with complex context data."""
-        from ditto_port.notifications.manager import AlertManager
+        from ditto_infra.services.notification.manager import AlertManager
 
         (tmp_path / "complex_telegram.j2").write_text(
             "Dataset: {{ dataset }}\n"

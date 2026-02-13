@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write(**)",
+      "Edit(**)",
+      "LSP(**)",
+      "Skill(**)",
+      "Glob(**)",
+      "Grep(**)",
+      "Task(**)",
+      "TodoWrite(**)",
+      "AskUserQuestion(**)",
+      "Bash(pixi *)",
+      "Bash(git *)",
+      "Bash(gh *)"
+    ]
+  },
+  "enabledPlugins": {
+    "superpowers@superpowers-marketplace": true,
+    "python-development@claude-code-workflows": true,
+    "unit-testing@claude-code-workflows": true,
+    "code-simplifier@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "quantitative-trading@claude-code-workflows": true
+  }
+}

@@ -8,9 +8,9 @@ from typing import Any
 import polars as pl
 import pytest
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import SQLitePool, init
-from ditto_foundation.config.environment import Environment
-from ditto_foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation import SQLitePool, init
+from ditto_infra.foundation.config.environment import Environment
+from ditto_infra.foundation.observability.config import ObservabilityConfig
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:

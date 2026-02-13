@@ -7,7 +7,7 @@ Provides write access to corporate actions data with error handling.
 from __future__ import annotations
 
 import polars as pl
-from ditto_foundation import M, logger, traced
+from ditto_infra.foundation import M, logger, traced
 
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 

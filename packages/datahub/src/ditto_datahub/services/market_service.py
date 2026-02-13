@@ -15,8 +15,8 @@ from enum import Enum
 from typing import Literal
 
 import polars as pl
-from ditto_foundation import M, logger, traced
-from ditto_foundation.concurrency import FileLockManager
+from ditto_infra.foundation import M, logger, traced
+from ditto_infra.foundation.concurrency import FileLockManager
 
 from ditto_datahub.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.models import InstrumentIdRange, OnDuplicate
@@ -61,7 +61,7 @@ class MarketBarsQuery:
         adj: 复权类型（仅对 stock 数据有效，etf/index 数据不支持复权）.
         asof: 时间点查询日期 (PIT-safe).
         asset_class: 资产类别过滤.
-        with_symbol: 是否在结果中添加 symbol 列.
+        with_ticker: 是否在结果中添加 ticker 列.
         with_status: 是否添加股票状态信息（仅对股票数据有效）.
         raw: 是否跳过复权和状态增强.
         market_wide: 全市场查询模式。为 True 且 instrument_ids 为空时获取所有活跃证券.
@@ -84,7 +84,7 @@ class MarketBarsQuery:
     adj: AdjType = AdjType.NONE
     asof: str | None = None
     asset_class: Literal["stock", "etf", "index"] | None = None
-    with_symbol: bool = False
+    with_ticker: bool = False
     with_status: bool = False
     raw: bool = False
     market_wide: bool = False
@@ -187,7 +187,7 @@ class MarketService:
         start: str | None = None,
         end: str | None = None,
         adj: AdjType = AdjType.NONE,
-        with_symbol: bool = False,
+        with_ticker: bool = False,
         with_status: bool = False,
     ) -> pl.DataFrame:
         """
@@ -198,7 +198,7 @@ class MarketService:
             start: 开始日期 (YYYY-MM-DD).
             end: 结束日期 (YYYY-MM-DD).
             adj: 复权类型（仅对 stock 数据有效）.
-            with_symbol: 是否在结果中添加 symbol 列.
+            with_ticker: 是否在结果中添加 ticker 列.
             with_status: 是否添加股票状态信息（仅对股票数据有效）.
 
         Returns:
@@ -210,7 +210,7 @@ class MarketService:
             start=start,
             end=end,
             adj=adj,
-            with_symbol=with_symbol,
+            with_ticker=with_ticker,
             with_status=with_status,
         )
         return self._query_bars(query)
@@ -249,9 +249,9 @@ class MarketService:
         if df.is_empty():
             return pl.DataFrame()
 
-        # 4. 添加 symbol 列（如果需要）
-        if query.with_symbol and not query.raw:
-            df = self._enrich_with_symbol(df)
+        # 4. 添加 ticker 列（如果需要）
+        if query.with_ticker and not query.raw:
+            df = self._enrich_with_ticker(df)
 
         # 5. 应用复权（如果需要且不是 raw 模式）
         if not query.raw and query.adj != AdjType.NONE and asset_class == "stock":
@@ -612,15 +612,15 @@ class MarketService:
         # 内联数据增强：join 状态数据
         return df.join(status_df, on=["instrument_id", "trade_date"], how="left")
 
-    def _enrich_with_symbol(self, df: pl.DataFrame) -> pl.DataFrame:
+    def _enrich_with_ticker(self, df: pl.DataFrame) -> pl.DataFrame:
         """
-        使用 symbol 信息增强 DataFrame.
+        使用 ticker 信息增强 DataFrame.
 
         Args:
             df: 包含 instrument_id 列的 DataFrame.
 
         Returns:
-            添加了 symbol 列的 DataFrame.
+            添加了 ticker 列的 DataFrame.
 
         """
         id_col = "instrument_id"
@@ -628,24 +628,24 @@ class MarketService:
             return df
 
         instrument_ids = df[id_col].unique().to_list()
-        symbol_map = self._instrument_reader.get_instrument_id_symbol_map(
+        ticker_map = self._instrument_reader.get_instrument_id_ticker_map(
             instrument_ids
         )
 
-        # 空 symbol_map 时的防护：直接添加全 null 的 symbol 列
-        if not symbol_map:
-            return df.with_columns(pl.lit(None, dtype=pl.String).alias("symbol"))
+        # 空 ticker_map 时的防护：直接添加全 null 的 ticker 列
+        if not ticker_map:
+            return df.with_columns(pl.lit(None, dtype=pl.String).alias("ticker"))
 
-        symbol_df = pl.DataFrame(
+        ticker_df = pl.DataFrame(
             {
-                id_col: list(symbol_map.keys()),
-                "symbol": list(symbol_map.values()),
+                id_col: list(ticker_map.keys()),
+                "ticker": list(ticker_map.values()),
             },
-            schema_overrides={id_col: pl.Int64, "symbol": pl.String},
+            schema_overrides={id_col: pl.Int64, "ticker": pl.String},
         )
 
-        # 内联数据增强：join symbol 数据
-        return df.join(symbol_df, on=id_col, how="left")
+        # 内联数据增强：join ticker 数据
+        return df.join(ticker_df, on=id_col, how="left")
 
     @staticmethod
     def _to_storage_columns(df: pl.DataFrame) -> pl.DataFrame:

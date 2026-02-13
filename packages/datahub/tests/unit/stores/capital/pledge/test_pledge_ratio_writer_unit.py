@@ -11,7 +11,7 @@ from ditto_datahub.stores.capital.pledge.pledge_ratio_writer import (
     PledgeRatioWriter,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import SQLitePool
+from ditto_infra.foundation import SQLitePool
 
 
 @pytest.fixture

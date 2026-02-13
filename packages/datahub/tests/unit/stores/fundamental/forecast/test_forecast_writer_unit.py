@@ -12,7 +12,7 @@ from ditto_datahub.stores.fundamental.forecast.forecast_writer import (
     ForecastWriter,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import M, SQLitePool
+from ditto_infra.foundation import M, SQLitePool
 
 
 @pytest.fixture

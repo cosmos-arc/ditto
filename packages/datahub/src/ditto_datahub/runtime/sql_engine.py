@@ -11,9 +11,9 @@ from typing import Any, cast
 import duckdb
 import polars as pl
 import xxhash
-from ditto_foundation import M, logger
+from ditto_infra.foundation import M, logger
 
-from ditto_datahub.runtime.pit_helper import PitHelper
+from ditto_datahub.helpers.pit import PitHelper
 
 
 class SqlEngine:

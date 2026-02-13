@@ -77,7 +77,7 @@ class TestInitConfigCommand:
     def test_init_config_with_force_flag(self, mocker: MockerFixture, mock_ctx):
         """测试强制重新初始化。"""
         # Arrange
-        from ditto_foundation.config.initializer import InitScope
+        from ditto_infra.foundation.config.initializer import InitScope
 
         mock_coordinator = mocker.Mock()
         mock_coordinator.initialize.return_value = {}

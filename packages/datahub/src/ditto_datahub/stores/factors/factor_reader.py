@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 import polars as pl
-from ditto_foundation import logger, traced
+from ditto_infra.foundation import logger, traced
 
 from ditto_datahub.stores.base import ParquetStore, YearlyPartition
 

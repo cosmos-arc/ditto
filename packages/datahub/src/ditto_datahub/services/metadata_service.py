@@ -11,8 +11,8 @@ from __future__ import annotations
 from typing import Any, Literal
 
 import polars as pl
-from ditto_foundation import logger, traced
-from ditto_foundation.util.checksum import ChecksumCompute
+from ditto_infra.foundation import logger, traced
+from ditto_infra.foundation.util.checksum import ChecksumCompute
 
 from ditto_datahub.models.metadata import InstrumentRegistration
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
@@ -306,19 +306,19 @@ class MetadataService:
             is_active=is_active,
         )
 
-    @traced("metadata.instrument.get_symbol")
-    def get_symbol(self, instrument_id: int) -> str | None:
+    @traced("metadata.instrument.get_ticker")
+    def get_ticker(self, instrument_id: int) -> str | None:
         """
-        根据 instrument_id 获取交易代码.
+        根据 instrument_id 获取裸代码.
 
         Args:
             instrument_id: instrument_id.
 
         Returns:
-            交易代码 或 None.
+            裸代码 或 None.
 
         """
-        return self._instrument_reader.get_symbol(instrument_id)
+        return self._instrument_reader.get_ticker(instrument_id)
 
     @traced("metadata.instrument.get_source_ticker")
     def get_source_ticker(
@@ -445,7 +445,7 @@ class MetadataService:
             "Instrument registered via MetadataService",
             event="metadata_instrument_registered",
             instrument_id=registered_id,
-            symbol=registration.symbol,
+            ticker=registration.ticker,
             source_ticker=registration.source_ticker,
         )
 
@@ -456,7 +456,7 @@ class MetadataService:
         self,
         df: pl.DataFrame,
         source: str,
-        asset_class: Literal["stock", "etf"],
+        asset_class: Literal["stock", "etf", "index"],
         source_ticker_col: str = "source_ticker",
     ) -> tuple[str, str]:
         """
@@ -465,7 +465,7 @@ class MetadataService:
         Args:
             df: 包含证券元数据的 DataFrame。必须包含以下列：
                 - source_ticker_col: 源代码列名
-                - symbol: 显示符号
+                - ticker: 裸代码
                 - name: 证券名称
                 - exchange: 交易所代码
                 - list_date: 上市日期
@@ -503,7 +503,7 @@ class MetadataService:
             self.register_instrument(
                 InstrumentRegistration(
                     source_ticker=source_ticker,
-                    symbol=row["symbol"],
+                    ticker=row["ticker"],
                     name=row["name"],
                     exchange=row["exchange"],
                     asset_class=asset_class,
@@ -536,7 +536,7 @@ class MetadataService:
         self,
         df: pl.DataFrame,
         source: str,
-        asset_class: Literal["stock", "etf"],
+        asset_class: Literal["stock", "etf", "index"],
         source_ticker_col: str = "source_ticker",
     ) -> dict[str, int]:
         """
@@ -545,7 +545,7 @@ class MetadataService:
         Args:
             df: 包含证券元数据的 DataFrame。必须包含以下列：
                 - source_ticker_col: 源代码列名
-                - symbol: 显示符号
+                - ticker: 裸代码
                 - name: 证券名称
                 - exchange: 交易所代码
                 - list_date: 上市日期
@@ -575,7 +575,7 @@ class MetadataService:
         # 验证必需列
         required_cols = [
             source_ticker_col,
-            "symbol",
+            "ticker",
             "name",
             "exchange",
             "list_date",
@@ -604,7 +604,7 @@ class MetadataService:
             instrument_id = self.register_instrument(
                 InstrumentRegistration(
                     source_ticker=source_ticker,
-                    symbol=row["symbol"],
+                    ticker=row["ticker"],
                     name=row["name"],
                     exchange=row["exchange"],
                     asset_class=asset_class,

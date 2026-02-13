@@ -109,6 +109,7 @@ class L3BatchService:
                 "passed": result.passed,
                 "issue_count": len(result.issues),
                 "alert_count": result.alert_count,
+                "issues": result.issues,
             }
 
         except (pl_exceptions.ComputeError, pl_exceptions.SchemaError, ValueError) as e:
@@ -227,7 +228,6 @@ class L3BatchService:
             issues: List of DQ issues
 
         """
-        # TODO: Implement alert sending (email, DingTalk, WeChat, etc.)
         logger.warning(
             "DQ alert notification",
             event="dq_alert",

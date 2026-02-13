@@ -10,7 +10,7 @@ from typing import Any
 from prefect import task
 
 from ditto_port.jobs.context import create_ingestion_context
-from ditto_port.models import DATASET_REGISTRY, Dataset
+from ditto_port.models import INGESTION_SPECS, Dataset
 
 
 # Prefect Task 返回类型是复杂的泛型，使用 Any 简化类型注解
@@ -19,7 +19,7 @@ def create_ingest_task(dataset: Dataset) -> Any:
     创建摄取任务的工厂函数。
 
     根据给定的数据集创建一个 Prefect Task，该任务：
-    1. 从 DATASET_REGISTRY 读取配置（重试次数、超时等）
+    1. 从 INGESTION_SPECS 读取配置（重试次数、超时等）
     2. 创建 DataHub 实例
     3. 调用 IngestionCoordinator 执行摄取
     4. 确保 DataHub 正确关闭
@@ -40,7 +40,7 @@ def create_ingest_task(dataset: Dataset) -> Any:
         ... )
 
     """
-    config = DATASET_REGISTRY[dataset]
+    config = INGESTION_SPECS[dataset]
 
     @task(
         name=f"ingest_{dataset.value}",

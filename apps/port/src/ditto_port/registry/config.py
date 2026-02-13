@@ -15,16 +15,21 @@ from ditto_datahub.config import (
     DataSourceSettings,
     FileStorageSettings,
 )
-from ditto_foundation.cache import DataCache
-from ditto_foundation.config import ConfigInitCoordinator, ConfigLoader, Environment
-from ditto_foundation.config.settings import (
+from ditto_infra.foundation.cache import DataCache
+from ditto_infra.foundation.config import (
+    ConfigInitCoordinator,
+    ConfigLoader,
+    Environment,
+    get_environment,
+)
+from ditto_infra.foundation.config.settings import (
     ObservabilitySettings,
     Settings,
     SystemSettings,
 )
-from ditto_foundation.notification import NotificationSettings
-from ditto_foundation.observability import init, shutdown
-from ditto_foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.observability import init, shutdown
+from ditto_infra.foundation.observability.config import ObservabilityConfig
+from ditto_infra.services.notification import NotificationSettings
 
 from ditto_port.config import load_env_file
 
@@ -61,8 +66,7 @@ class ConfigProvider(Provider):
     @provide
     def environment(self) -> Environment:
         """提供运行环境枚举。"""
-        env_str = os.getenv("ENVIRONMENT", "development")
-        return Environment.from_str(env_str)
+        return get_environment()
 
     @provide
     def config_loader(self, environment: Environment) -> ConfigLoader:
@@ -94,6 +98,11 @@ class ConfigProvider(Provider):
     def data_root_config(self, config_loader: ConfigLoader) -> DataRootConfig:
         """加载数据根目录配置。"""
         data_store_values = load_env_file(config_loader, "data_store")
+
+        # 支持 CLI 透传的环境变量覆盖
+        if override := os.getenv("DITTO_DATA_ROOT"):
+            data_store_values["data_root"] = override
+
         return DataRootConfig.model_validate(data_store_values)
 
     @provide

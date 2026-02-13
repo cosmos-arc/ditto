@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 import polars as pl
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 
 def _build_in_clause(
@@ -71,11 +71,11 @@ class InstrumentReader:
       （支持 PIT + DataCache）
     - resolve_instrument_ids_batch() - 批量解析（优化的单次查询）
     - get_source_ticker() - 反向查询（支持 PIT）
-    - get_instrument_id_symbol_map() - 批量获取 symbol 映射
+    - get_instrument_id_ticker_map() - 批量获取 ticker 映射
       （支持 DataCache）
     - find_securities() - 带过滤条件的查询
     - list_instrument_ids() - 列出所有 instrument_id
-    - get_symbol() - 获取单个 symbol
+    - get_ticker() - 获取单个 ticker
 
     Attributes:
         _client: SQLite 客户端，用于数据库访问
@@ -384,40 +384,40 @@ class InstrumentReader:
         rows = self._client.fetchall(sql, params)
         return [cast(int, r["instrument_id"]) for r in rows]
 
-    def get_symbol(self, instrument_id: int) -> str | None:
+    def get_ticker(self, instrument_id: int) -> str | None:
         """
-        获取 symbol。
+        获取 ticker（裸代码）。
 
         Args:
             instrument_id: 证券 ID
 
         Returns:
-            symbol 或 None（未找到时）
+            ticker 或 None（未找到时）
 
         """
         row = self._client.fetchone(
-            "SELECT symbol FROM instrument WHERE instrument_id = ?", [instrument_id]
+            "SELECT ticker FROM instrument WHERE instrument_id = ?", [instrument_id]
         )
-        return cast(str, row["symbol"]) if row else None
+        return cast(str, row["ticker"]) if row else None
 
-    def get_instrument_id_symbol_map(
+    def get_instrument_id_ticker_map(
         self, instrument_ids: list[int] | None = None
     ) -> dict[int, str]:
         """
-        批量获取 instrument_id 到 symbol 的映射。
+        批量获取 instrument_id 到 ticker 的映射。
 
         Args:
             instrument_ids: 要查询的 instrument_id 列表，None 表示所有活跃的
 
         Returns:
-            instrument_id 到 symbol 的映射字典
+            instrument_id 到 ticker 的映射字典
 
         """
         # 尝试从 DataCache 获取
         if self._cache and instrument_ids:
             # 使用排序后的 tuple 作为缓存键
             cache_key = (
-                f"instrument_id_symbol_map:{','.join(map(str, sorted(instrument_ids)))}"
+                f"instrument_id_ticker_map:{','.join(map(str, sorted(instrument_ids)))}"
             )
             cached = self._cache.get(cache_key)
             if cached is not None:
@@ -427,20 +427,20 @@ class InstrumentReader:
         if instrument_ids:
             in_clause, sids_list = _build_in_clause("instrument_id", instrument_ids)
             rows = self._client.fetchall(
-                f"SELECT instrument_id, symbol FROM instrument WHERE {in_clause}",  # noqa: S608 - in_clause 通过 _build_in_clause 安全构建
+                f"SELECT instrument_id, ticker FROM instrument WHERE {in_clause}",  # noqa: S608 - in_clause 通过 _build_in_clause 安全构建
                 sids_list,
             )
         else:
             rows = self._client.fetchall(
-                "SELECT instrument_id, symbol FROM instrument WHERE is_active = TRUE"
+                "SELECT instrument_id, ticker FROM instrument WHERE is_active = TRUE"
             )
 
-        result = {cast(int, r["instrument_id"]): cast(str, r["symbol"]) for r in rows}
+        result = {cast(int, r["instrument_id"]): cast(str, r["ticker"]) for r in rows}
 
         # 缓存结果
         if self._cache and instrument_ids:
             cache_key = (
-                f"instrument_id_symbol_map:{','.join(map(str, sorted(instrument_ids)))}"
+                f"instrument_id_ticker_map:{','.join(map(str, sorted(instrument_ids)))}"
             )
             self._cache.set(cache_key, result)
 
@@ -462,28 +462,28 @@ class InstrumentReader:
         )
         return dict(row) if row else None
 
-    def enrich_with_symbol(self, df: pl.DataFrame) -> pl.DataFrame:
+    def enrich_with_ticker(self, df: pl.DataFrame) -> pl.DataFrame:
         """
-        向 DataFrame 添加 symbol 列。
+        向 DataFrame 添加 ticker 列。
 
         Args:
             df: 包含 instrument_id 列的 DataFrame
 
         Returns:
-            添加了 symbol 列的 DataFrame
+            添加了 ticker 列的 DataFrame
 
         """
         if df.is_empty():
             return df
 
         instrument_ids = df["instrument_id"].unique().to_list()
-        mapping = self.get_instrument_id_symbol_map(instrument_ids)
+        mapping = self.get_instrument_id_ticker_map(instrument_ids)
 
         # 使用 map_elements 替代 map_dict
         return df.with_columns(
             pl.col("instrument_id")
             .map_elements(lambda x: mapping.get(x, None), return_dtype=pl.String)
-            .alias("symbol")
+            .alias("ticker")
         )
 
     # ============ 扩展信息查询方法 ============

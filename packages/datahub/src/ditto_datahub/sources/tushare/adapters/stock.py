@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import polars as pl
-from ditto_foundation import M, logger, traced
+from ditto_infra.foundation import M, logger, traced
 
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.adapters.stock_status import StockStatusAdapter
@@ -61,7 +61,7 @@ class StockTushareAdapter(BaseTushareAdapter):
         Returns:
             DataFrame with columns:
             - source_ticker: Source code (e.g., "000001.SZ")
-            - symbol: Display symbol (e.g., "000001")
+            - ticker: Display ticker (e.g., "000001")
             - name: Stock name
             - exchange: Exchange code
             - list_date: Listing date

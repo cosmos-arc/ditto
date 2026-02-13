@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ditto_foundation import traced
+from ditto_infra.foundation import traced
 
 
 class IndustryMappingReader:

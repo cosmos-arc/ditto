@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 import polars as pl
-from ditto_foundation import DQSeverity
+from ditto_infra.foundation import DQSeverity
 
 from ditto_core.quality.checkers.business import BusinessChecker
 from ditto_core.quality.checkers.cross_source import CrossSourceChecker

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import polars as pl
-from ditto_foundation import logger, traced
+from ditto_infra.foundation import logger, traced
 
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.processors.error_handler import (
@@ -35,7 +35,7 @@ class ETFTushareAdapter(BaseTushareAdapter):
         Returns:
             DataFrame with columns:
             - source_ticker: Source code (e.g., "510300.SH")
-            - symbol: Display symbol (e.g., "510300")
+            - ticker: Display ticker (e.g., "510300")
             - name: ETF name
             - exchange: Exchange code
             - list_date: Listing date

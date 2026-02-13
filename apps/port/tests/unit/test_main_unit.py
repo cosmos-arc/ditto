@@ -1,8 +1,8 @@
 """Tests for FastAPI main application async endpoints."""
 
 import pytest
-from ditto_foundation.config.environment import Environment
-from ditto_foundation.config.settings import (
+from ditto_infra.foundation.config.environment import Environment
+from ditto_infra.foundation.config.settings import (
     ObservabilitySettings,
     Settings,
     SystemSettings,

@@ -11,13 +11,12 @@ from importlib.resources import files
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_foundation.notification import NotificationSettings
-from ditto_foundation.notification.channels import EmailSender, WebhookSender
-from ditto_foundation.notification.sender import NotificationSender
-from ditto_foundation.notification.template import TemplateEngine
+from ditto_infra.services.notification import NotificationSettings
+from ditto_infra.services.notification.channels import EmailSender, WebhookSender
+from ditto_infra.services.notification.manager import AlertManager
+from ditto_infra.services.notification.sender import NotificationSender
+from ditto_infra.services.notification.template import TemplateEngine
 from loguru import logger
-
-from ditto_port.notifications.manager import AlertManager
 
 __all__ = ["NotificationProvider"]
 
@@ -27,13 +26,12 @@ class NotificationProvider(Provider):
     Notification 组件 Provider.
 
     职责：
-        1. 提供 TemplateEngine（支持模板 fallback）
+        1. 提供 TemplateEngine
         2. 提供配置的 NotificationSender 列表
         3. 提供 AlertManager（组合以上组件）
 
-    模板路径优先级：
-        1. Port 应用模板（ditto_port/notifications/templates）
-        2. Foundation 基础模板（ditto_foundation/notification/templates）
+    模板路径：
+        ditto_infra.services.notification.templates（合并后的统一模板）
 
     """
 
@@ -44,29 +42,20 @@ class NotificationProvider(Provider):
         """
         模板引擎（应用级单例）.
 
-        支持模板 fallback：Port 应用模板优先，Foundation 模板作为后备。
-
         Returns:
             TemplateEngine: 配置好的模板引擎实例
 
         """
-        # Port 应用模板路径（优先）
-        port_templates = files("ditto_port.notifications.templates")
-        port_template_path = Path(str(port_templates))
-
-        # Foundation 基础模板路径（后备）
-        foundation_templates = files("ditto_foundation.notification.templates")
-        foundation_template_path = Path(str(foundation_templates))
-
-        # 构建 template paths 列表（优先级从高到低）
-        template_paths = [port_template_path, foundation_template_path]
+        # 模板路径（已合并到 infra）
+        templates = files("ditto_infra.services.notification.templates")
+        template_path = Path(str(templates))
 
         logger.debug(
             "Template engine initialized",
-            paths=[str(p) for p in template_paths],
+            path=str(template_path),
         )
 
-        return TemplateEngine(template_paths)
+        return TemplateEngine([template_path])
 
     @provide
     def notification_senders(

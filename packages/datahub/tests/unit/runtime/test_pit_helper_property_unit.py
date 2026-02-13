@@ -7,7 +7,7 @@ Uses Hypothesis to verify PIT query generation invariants.
 import re
 
 import pytest
-from ditto_datahub.runtime.pit_helper import PitHelper
+from ditto_datahub.helpers.pit import PitHelper
 from hypothesis import HealthCheck, given, settings
 from hypothesis.strategies import (
     from_regex,

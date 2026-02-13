@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from ditto_foundation import DQSeverity
+from ditto_infra.foundation import DQSeverity
 from pydantic import BaseModel, Field, field_validator
 
 

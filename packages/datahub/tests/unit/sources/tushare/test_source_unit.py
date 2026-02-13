@@ -122,7 +122,7 @@ class TestTushareSourceEtfBasic:
         # Verify schema
         assert dict(result.schema) == {
             "source_ticker": pl.String,
-            "symbol": pl.String,
+            "ticker": pl.String,
             "name": pl.String,
             "exchange": pl.String,
             "list_date": pl.Date,
@@ -132,14 +132,14 @@ class TestTushareSourceEtfBasic:
         assert result.to_dicts() == [
             {
                 "source_ticker": "510300.SH",
-                "symbol": "510300",
+                "ticker": "510300",
                 "name": "沪深300ETF",
                 "exchange": "SSE",
                 "list_date": date(2012, 7, 6),
             },
             {
                 "source_ticker": "159919.SZ",
-                "symbol": "159919",
+                "ticker": "159919",
                 "name": "沪深300ETF",
                 "exchange": "SZSE",
                 "list_date": date(2019, 6, 24),
@@ -329,7 +329,7 @@ class TestTushareSourceStockBasic:
         # Verify schema
         assert dict(result.schema) == {
             "source_ticker": pl.String,
-            "symbol": pl.String,
+            "ticker": pl.String,
             "name": pl.String,
             "exchange": pl.String,
             "list_date": pl.Date,
@@ -339,14 +339,14 @@ class TestTushareSourceStockBasic:
         assert result.to_dicts() == [
             {
                 "source_ticker": "000001.SZ",
-                "symbol": "000001",
+                "ticker": "000001",
                 "name": "平安银行",
                 "exchange": "SZSE",
                 "list_date": date(1991, 4, 3),
             },
             {
                 "source_ticker": "600000.SH",
-                "symbol": "600000",
+                "ticker": "600000",
                 "name": "浦发银行",
                 "exchange": "SSE",
                 "list_date": date(1999, 11, 10),

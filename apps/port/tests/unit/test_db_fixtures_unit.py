@@ -2,7 +2,7 @@
 
 import duckdb
 import pytest
-from ditto_foundation.config import Settings
+from ditto_infra.foundation.config import Settings
 
 
 @pytest.mark.unit

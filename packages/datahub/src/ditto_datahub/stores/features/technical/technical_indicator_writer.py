@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import polars as pl
-from ditto_foundation import logger, traced
+from ditto_infra.foundation import logger, traced
 
 from ditto_datahub.models import OnDuplicate
 from ditto_datahub.models.storage import WriteStoreResult as WriteResult

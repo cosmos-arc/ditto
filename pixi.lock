@@ -421,7 +421,7 @@ environments:
       - pypi: ./apps/port
       - pypi: ./packages/core
       - pypi: ./packages/datahub
-      - pypi: ./packages/foundation
+      - pypi: ./packages/infra
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-2_gnu.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -769,7 +769,7 @@ environments:
       - pypi: ./apps/port
       - pypi: ./packages/core
       - pypi: ./packages/datahub
-      - pypi: ./packages/foundation
+      - pypi: ./packages/infra
   dev:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -1294,7 +1294,7 @@ environments:
       - pypi: ./apps/port
       - pypi: ./packages/core
       - pypi: ./packages/datahub
-      - pypi: ./packages/foundation
+      - pypi: ./packages/infra
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-2_gnu.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -1745,7 +1745,7 @@ environments:
       - pypi: ./apps/port
       - pypi: ./packages/core
       - pypi: ./packages/datahub
-      - pypi: ./packages/foundation
+      - pypi: ./packages/infra
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_libgcc_mutex-0.1-conda_forge.tar.bz2
   sha256: fe51de6107f9edc7aa4f786a70f4a883943bc9d39b3bb7307c04c41410990726
@@ -3562,10 +3562,10 @@ packages:
   version: 0.1.0
   sha256: afb3998299f5c92cd42b7a56f82e381a6df80ef47340d090320df2466aac16d5
   requires_python: '>=3.12'
-- pypi: ./packages/foundation
-  name: ditto-foundation
+- pypi: ./packages/infra
+  name: ditto-infra
   version: 0.1.0
-  sha256: 7218f756642b3947f14a006b44107cb0a2c51bbf7eda50c67705716add3c74c9
+  sha256: b99c0672fa966d26d04e24964284e8f45b30441d73ed957cc2a2ccdce5b2910b
   requires_python: '>=3.12'
 - pypi: ./apps/port
   name: ditto-port

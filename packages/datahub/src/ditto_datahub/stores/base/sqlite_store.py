@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any, cast
 
 import polars as pl
-from ditto_foundation import M, SQLitePool, logger, traced
-from ditto_foundation.util.io import file_md5
+from ditto_infra.foundation import M, SQLitePool, logger, traced
+from ditto_infra.foundation.util.io import file_md5
 
 from ditto_datahub.models import OnDuplicate
 from ditto_datahub.models.storage import WriteStoreResult

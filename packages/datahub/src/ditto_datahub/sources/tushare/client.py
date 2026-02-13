@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import httpx
 import polars as pl
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 from tenacity import (
     retry,
     retry_if_exception_type,

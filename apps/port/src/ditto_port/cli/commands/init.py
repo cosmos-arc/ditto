@@ -7,8 +7,12 @@ from pathlib import Path
 
 import typer
 from ditto_datahub.config import DataRootConfig
-from ditto_foundation.config import ConfigInitCoordinator, ConfigLoader, Environment
-from ditto_foundation.config.initializer import InitScope
+from ditto_infra.foundation.config import (
+    ConfigInitCoordinator,
+    ConfigLoader,
+    Environment,
+)
+from ditto_infra.foundation.config.initializer import InitScope
 
 from ditto_port.config import load_env_file
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import polars as pl
-from ditto_foundation import M, logger
+from ditto_infra.foundation import M, logger
 
 from ditto_datahub.sources.normalization import NormalizationConfig
 
@@ -15,6 +15,7 @@ __all__ = [
     "DAILY_OHLCV_MAPPING",
     "ETF_BASIC_MAPPING",
     "FUND_ADJ_MAPPING",
+    "INDEX_BASIC_MAPPING",
     "STOCK_BASIC_MAPPING",
     "STOCK_LIMIT_MAPPING",
     "ColumnMapping",
@@ -44,7 +45,7 @@ class ColumnMapping:
     float_columns: list[str]
     int_columns: tuple[str, ...] = ()
     boolean_columns: tuple[str, ...] = ()
-    # 计算列：列名 -> Polars 表达式（用于动态计算，如从 ts_code 提取 symbol/exchange）
+    # 计算列：列名 -> Polars 表达式（用于动态计算，如从 ts_code 提取 ticker/exchange）
     computed_columns: dict[str, pl.Expr] = field(default_factory=lambda: {})
     # 需要保留的输出列（重命名后），None 表示保留所有列
     output_columns: tuple[str, ...] | None = None
@@ -119,13 +120,28 @@ ETF_BASIC_MAPPING = ColumnMapping(
     date_columns={"list_date": "%Y%m%d"},
     float_columns=[],
     computed_columns={
-        "symbol": pl.col("source_ticker").str.split(".").list.get(0),
+        "ticker": pl.col("source_ticker").str.split(".").list.get(0),
         "exchange": pl.col("source_ticker")
         .str.split(".")
         .list.get(1)
         .replace({"SH": "SSE", "SZ": "SZSE"}),
     },
-    output_columns=("source_ticker", "symbol", "name", "exchange", "list_date"),
+    output_columns=("source_ticker", "ticker", "name", "exchange", "list_date"),
+)
+
+# 指数基本信息配置
+INDEX_BASIC_MAPPING = ColumnMapping(
+    rename={"ts_code": "source_ticker"},
+    date_columns={"list_date": "%Y%m%d"},
+    float_columns=[],
+    computed_columns={
+        "ticker": pl.col("source_ticker").str.split(".").list.get(0),
+        "exchange": pl.col("source_ticker")
+        .str.split(".")
+        .list.get(1)
+        .replace({"SH": "SSE", "SZ": "SZSE"}),
+    },
+    output_columns=("source_ticker", "ticker", "name", "exchange", "list_date"),
 )
 
 # 股票基本信息配置
@@ -133,7 +149,10 @@ STOCK_BASIC_MAPPING = ColumnMapping(
     rename={"ts_code": "source_ticker"},
     date_columns={"list_date": "%Y%m%d"},
     float_columns=[],
-    output_columns=("source_ticker", "symbol", "name", "exchange", "list_date"),
+    computed_columns={
+        "ticker": pl.col("source_ticker").str.split(".").list.get(0),
+    },
+    output_columns=("source_ticker", "ticker", "name", "exchange", "list_date"),
 )
 
 # 涨跌停价格配置

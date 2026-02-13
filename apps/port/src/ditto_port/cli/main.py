@@ -7,6 +7,7 @@ import typer
 from ditto_port.cli.commands.backfill import app as backfill_app
 from ditto_port.cli.commands.ingest import app as ingest_app
 from ditto_port.cli.commands.init import app as init_app
+from ditto_port.cli.commands.query import app as query_app
 
 app = typer.Typer(
     name="ditto",
@@ -19,6 +20,7 @@ app = typer.Typer(
 app.add_typer(init_app, name="init")
 app.add_typer(ingest_app, name="ingest")
 app.add_typer(backfill_app, name="backfill")
+app.add_typer(query_app, name="query")
 
 
 @app.callback()

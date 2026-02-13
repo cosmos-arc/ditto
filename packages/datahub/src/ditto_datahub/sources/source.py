@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 from ditto_datahub.models.common import Source
 from ditto_datahub.sources.base import DataSource

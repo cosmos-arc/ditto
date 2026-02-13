@@ -7,7 +7,7 @@ from datetime import date
 from typing import Any, ClassVar, Literal, cast
 
 import polars as pl
-from ditto_foundation import logger, traced
+from ditto_infra.foundation import logger, traced
 
 from ditto_datahub.stores.macro.indicator.indicator_reader import IndicatorReader
 from ditto_datahub.stores.macro.indicator.indicator_writer import IndicatorWriter

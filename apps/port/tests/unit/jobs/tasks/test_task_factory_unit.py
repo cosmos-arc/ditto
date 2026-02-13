@@ -13,7 +13,7 @@ from ditto_port.jobs.tasks import (
 )
 from ditto_port.jobs.tasks.t0_meta import create_ingest_task
 from ditto_port.models import (
-    DATASET_REGISTRY,
+    INGESTION_SPECS,
     Dataset,
     TaskTier,
 )
@@ -169,9 +169,9 @@ class TestT0MetaTasks:
         ],
     )
     def test_t0_datasets_in_registry(self, dataset):
-        """Test that all T0 datasets are in DATASET_REGISTRY."""
-        assert dataset in DATASET_REGISTRY
-        assert DATASET_REGISTRY[dataset].tier == TaskTier.T0_META
+        """Test that all T0 datasets are in INGESTION_SPECS."""
+        assert dataset in INGESTION_SPECS
+        assert INGESTION_SPECS[dataset].tier == TaskTier.T0_META
 
 
 @pytest.mark.unit
@@ -207,9 +207,9 @@ class TestT1IncrementalTasks:
         ],
     )
     def test_t1_datasets_in_registry(self, dataset):
-        """Test that all T1 datasets are in DATASET_REGISTRY."""
-        assert dataset in DATASET_REGISTRY
-        assert DATASET_REGISTRY[dataset].tier == TaskTier.T1_INCREMENTAL
+        """Test that all T1 datasets are in INGESTION_SPECS."""
+        assert dataset in INGESTION_SPECS
+        assert INGESTION_SPECS[dataset].tier == TaskTier.T1_INCREMENTAL
 
 
 @pytest.mark.unit
@@ -219,7 +219,7 @@ class TestTaskIntegration:
     def test_all_registered_datasets_have_tasks(self):
         """Test that all datasets in registry can create tasks."""
         # Try creating tasks for all datasets
-        for dataset in DATASET_REGISTRY:
+        for dataset in INGESTION_SPECS:
             task_func = create_ingest_task(dataset)
             assert callable(task_func)
 

@@ -22,12 +22,20 @@ class IngestionDataSource(Protocol):
         """Fetch ETF basic data."""
         ...
 
+    def fetch_index_basic(self) -> pl.DataFrame:
+        """Fetch index basic data."""
+        ...
+
     def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
         """Fetch stock daily data."""
         ...
 
     def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
         """Fetch ETF daily data."""
+        ...
+
+    def fetch_index_daily(self, trade_date: str) -> pl.DataFrame:
+        """Fetch index daily data."""
         ...
 
     def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:

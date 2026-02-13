@@ -8,7 +8,7 @@
 """
 
 from ditto_datahub.services import IngestionLogService
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 from ditto_port.models import IngestionResult, RetryResult
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator

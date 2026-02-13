@@ -28,13 +28,25 @@ class TestDataset:
         assert Dataset.PLEDGE_RATIO.value == "pledge_ratio"
         assert Dataset.MACRO_INDICATORS.value == "macro_indicators"
 
+    def test_index_basic_exists(self) -> None:
+        """验证 INDEX_BASIC 枚举存在且值正确."""
+        assert hasattr(Dataset, "INDEX_BASIC")
+        assert Dataset.INDEX_BASIC.value == "index_basic"
+
+    def test_index_daily_exists(self) -> None:
+        """验证 INDEX_DAILY 枚举存在且值正确."""
+        assert hasattr(Dataset, "INDEX_DAILY")
+        assert Dataset.INDEX_DAILY.value == "index_daily"
+
     def test_is_basic_dataset(self) -> None:
         """测试 is_basic_dataset 方法."""
         assert Dataset.is_basic_dataset("stock_basic") is True
         assert Dataset.is_basic_dataset("etf_basic") is True
+        assert Dataset.is_basic_dataset("index_basic") is True
         assert Dataset.is_basic_dataset("stock_daily") is False
         assert Dataset.is_basic_dataset("stock_status") is False
         assert Dataset.is_basic_dataset("etf_daily") is False
+        assert Dataset.is_basic_dataset("index_daily") is False
         assert Dataset.is_basic_dataset("calendar") is False
         assert Dataset.is_basic_dataset("adj_factor") is False
         assert Dataset.is_basic_dataset("fund_adj") is False

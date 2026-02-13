@@ -222,6 +222,12 @@ class TestDataSourceABC:
             def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
+            def fetch_index_basic(self) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_index_daily(self, trade_date: str) -> pl.DataFrame:
+                return pl.DataFrame()
+
         # Should not raise
         source = CompleteSourcer()
         assert isinstance(source, DataSource)

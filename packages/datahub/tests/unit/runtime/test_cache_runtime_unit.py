@@ -3,7 +3,7 @@
 import time
 
 import pytest
-from ditto_foundation.cache import CacheStats, DataCache
+from ditto_infra.foundation.cache import CacheStats, DataCache
 
 
 class TestDataCache:

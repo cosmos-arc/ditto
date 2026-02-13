@@ -1,12 +1,12 @@
 """
-DataHub 组件注册.
+DataHub 组件注册。
 
 Root 注入模式：在 Provider 中集中注册所有 DataHub 组件。
 所有依赖通过 Provider 管理，DataHub 不再使用 @cached_property.
 
 架构说明：
-- Store 的导入和创建已移至 DomainServiceProvider
-- DataHubProvider 只负责组合 Domain Services
+- DataHubProvider 负责提供所有 Store 和 Service
+- Store 的创建采用依赖注入模式
 - Port 层不再直接依赖 Store 类
 """
 
@@ -16,9 +16,11 @@ from __future__ import annotations
 from collections.abc import Iterator
 from importlib.resources import files
 from pathlib import Path
+from typing import Any
 
 from dishka import Provider, Scope, provide
 from ditto_datahub.config.data_root import DataRootConfig
+from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.services import IngestionLogService, QualityRecordService
@@ -32,10 +34,12 @@ from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.source_service import SourceService
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
-from ditto_datahub.stores.capital.futures.futures_reader import (
+
+# Capital Stores (CQRS Reader/Writer)
+from ditto_datahub.stores.capital.futures_position.futures_reader import (
     FuturesReader,
 )
-from ditto_datahub.stores.capital.futures.futures_writer import (
+from ditto_datahub.stores.capital.futures_position.futures_writer import (
     FuturesWriter,
 )
 from ditto_datahub.stores.capital.index_composition.index_composition_reader import (
@@ -86,6 +90,8 @@ from ditto_datahub.stores.features.technical.technical_indicator_reader import (
 from ditto_datahub.stores.features.technical.technical_indicator_writer import (
     TechnicalIndicatorWriter,
 )
+
+# Fundamental domain CQRS Readers and Writers
 from ditto_datahub.stores.fundamental.corporate.corporate_actions_reader import (
     CorporateActionsReader,
 )
@@ -143,33 +149,19 @@ from ditto_datahub.stores.macro.indicator.metadata_writer import (
     IndicatorMetadataWriter as MacroIndicatorMetadataWriter,
 )
 
-# Market Stores (CQRS Reader/Writer)
+# Market domain CQRS Readers and Writers
 from ditto_datahub.stores.market.etf.adj.adj_factor_reader import (
     EtfAdjFactorReader,
 )
 from ditto_datahub.stores.market.etf.adj.adj_factor_writer import (
     EtfAdjFactorWriter,
 )
-from ditto_datahub.stores.market.etf.bars import (
-    EtfBarsReader,
-    EtfBarsWriter,
-)
-from ditto_datahub.stores.market.etf.nav.nav_reader import (
-    EtfNavReader,
-)
-from ditto_datahub.stores.market.etf.nav.nav_writer import (
-    EtfNavWriter,
-)
-from ditto_datahub.stores.market.etf.status import (
-    EtfStatusReader,
-    EtfStatusWriter,
-)
-from ditto_datahub.stores.market.index.bars.bars_reader import (
-    IndexBarsReader,
-)
-from ditto_datahub.stores.market.index.bars.bars_writer import (
-    IndexBarsWriter,
-)
+from ditto_datahub.stores.market.etf.bars import EtfBarsReader, EtfBarsWriter
+from ditto_datahub.stores.market.etf.nav.nav_reader import EtfNavReader
+from ditto_datahub.stores.market.etf.nav.nav_writer import EtfNavWriter
+from ditto_datahub.stores.market.etf.status import EtfStatusReader, EtfStatusWriter
+from ditto_datahub.stores.market.index.bars.bars_reader import IndexBarsReader
+from ditto_datahub.stores.market.index.bars.bars_writer import IndexBarsWriter
 from ditto_datahub.stores.market.index.constituent.constituent_reader import (
     IndexConstituentReader,
 )
@@ -180,16 +172,13 @@ from ditto_datahub.stores.market.stock.adj import (
     StockAdjFactorReader,
     StockAdjFactorWriter,
 )
-from ditto_datahub.stores.market.stock.bars import (
-    StockBarsReader,
-    StockBarsWriter,
-)
+from ditto_datahub.stores.market.stock.bars import StockBarsReader, StockBarsWriter
 from ditto_datahub.stores.market.stock.status import (
     StockStatusReader,
     StockStatusWriter,
 )
 
-# Metadata Stores (CQRS Reader/Writer)
+# Metadata domain CQRS Readers and Writers
 from ditto_datahub.stores.metadata.calendar import CalendarReader, CalendarWriter
 from ditto_datahub.stores.metadata.industry import (
     IndustryMappingReader,
@@ -202,6 +191,8 @@ from ditto_datahub.stores.metadata.instrument import (
     InstrumentWriter,
 )
 from ditto_datahub.stores.metadata.universe import UniverseReader, UniverseWriter
+
+# Runtime domain CQRS Readers and Writers
 from ditto_datahub.stores.runtime.ingestion import (
     IngestionLogReader,
     IngestionLogWriter,
@@ -213,8 +204,9 @@ from ditto_datahub.stores.runtime.quality import (
     QuarantineWriter,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import SQLitePool
-from ditto_foundation.concurrency import FileLockManager
+from ditto_infra.foundation import SQLitePool
+from ditto_infra.foundation.cache import DataCache
+from ditto_infra.foundation.concurrency import FileLockManager
 
 __all__ = ["DataHubProvider"]
 
@@ -224,8 +216,7 @@ class DataHubProvider(Provider):
     DataHub 组件 Provider.
 
     架构说明：
-    - Store 的创建由 DomainServiceProvider 负责
-    - 此 Provider 只负责组合 Domain Services
+    - 此 Provider 负责提供所有 Store 和 Service
     - Store 依赖通过 dishka 容器自动注入
     - DataHub Facade 已被移除，Port 层不再依赖 DataHub 类
     """
@@ -260,187 +251,207 @@ class DataHubProvider(Provider):
         pool.close()
 
     @provide
+    def sqlite_client(self, sqlite_pool: SQLitePool) -> SQLiteClient:
+        """SQLite 客户端（基于全局连接池）."""
+        return SQLiteClient(sqlite_pool)
+
+    @provide
+    def instrument_id_allocator(self, sqlite_pool: SQLitePool) -> InstrumentIdAllocator:
+        """Instrument ID 分配器."""
+        return InstrumentIdAllocator(sqlite_pool)
+
+    @provide
+    def freeze_manager(self, data_root: Path) -> FreezeManager:
+        """数据版本管理."""
+        return FreezeManager(data_root=str(data_root))
+
+    @provide
     def file_lock(self, data_root: Path) -> FileLockManager:
         """文件锁管理器."""
         lock_dir = data_root / "locks"
         return FileLockManager(lock_dir)
 
     # ========================================================================
-    # Fundamental & Capital Query Services
+    # Metadata Domain Stores
     # ========================================================================
 
     @provide
-    def fundamental_query_service(
+    def instrument_reader(
         self,
         sqlite_client: SQLiteClient,
-    ) -> FundamentalService:
-        """Fundamental 查询服务."""
-        balance_sheet_reader = BalanceSheetReader(client=sqlite_client)
-        balance_sheet_writer = BalanceSheetWriter(client=sqlite_client)
-        income_statement_reader = IncomeStatementReader(client=sqlite_client)
-        income_statement_writer = IncomeStatementWriter(client=sqlite_client)
-        cash_flow_reader = CashFlowReader(client=sqlite_client)
-        cash_flow_writer = CashFlowWriter(client=sqlite_client)
-        dividend_reader = DividendReader(client=sqlite_client)
-        dividend_writer = DividendWriter(client=sqlite_client)
-        corporate_actions_reader = CorporateActionsReader(client=sqlite_client)
-        corporate_actions_writer = CorporateActionsWriter(client=sqlite_client)
-        forecast_reader = ForecastReader(client=sqlite_client)
-        forecast_writer = ForecastWriter(client=sqlite_client)
-        express_reader = ExpressReader(client=sqlite_client)
-        express_writer = ExpressWriter(client=sqlite_client)
-        return FundamentalService(
-            balance_sheet_reader=balance_sheet_reader,
-            balance_sheet_writer=balance_sheet_writer,
-            income_statement_reader=income_statement_reader,
-            income_statement_writer=income_statement_writer,
-            cash_flow_reader=cash_flow_reader,
-            cash_flow_writer=cash_flow_writer,
-            dividend_reader=dividend_reader,
-            dividend_writer=dividend_writer,
-            corporate_actions_reader=corporate_actions_reader,
-            corporate_actions_writer=corporate_actions_writer,
-            forecast_reader=forecast_reader,
-            forecast_writer=forecast_writer,
-            express_reader=express_reader,
-            express_writer=express_writer,
-        )
+    ) -> InstrumentReader:
+        """证券数据读取器."""
+        return InstrumentReader(sqlite_client)
 
     @provide
-    def capital_query_service(
+    def calendar_reader(self, sqlite_client: SQLiteClient) -> CalendarReader:
+        """交易日历读取器."""
+        return CalendarReader(sqlite_client)
+
+    @provide
+    def calendar_writer(
         self,
         sqlite_client: SQLiteClient,
-    ) -> CapitalService:
-        """Capital 查询服务."""
-        margin_trading_reader = MarginTradingReader(client=sqlite_client)
-        margin_trading_writer = MarginTradingWriter(client=sqlite_client)
-        pledge_ratio_reader = PledgeRatioReader(client=sqlite_client)
-        pledge_ratio_writer = PledgeRatioWriter(client=sqlite_client)
-        valuation_metrics_reader = ValuationMetricsReader(client=sqlite_client)
-        valuation_metrics_writer = ValuationMetricsWriter(client=sqlite_client)
-        futures_reader = FuturesReader(client=sqlite_client)
-        futures_writer = FuturesWriter(client=sqlite_client)
-        index_composition_reader = IndexCompositionReader(client=sqlite_client)
-        index_composition_writer = IndexCompositionWriter(client=sqlite_client)
-        return CapitalService(
-            margin_trading_reader=margin_trading_reader,
-            margin_trading_writer=margin_trading_writer,
-            pledge_ratio_reader=pledge_ratio_reader,
-            pledge_ratio_writer=pledge_ratio_writer,
-            valuation_metrics_reader=valuation_metrics_reader,
-            valuation_metrics_writer=valuation_metrics_writer,
-            futures_reader=futures_reader,
-            futures_writer=futures_writer,
-            index_composition_reader=index_composition_reader,
-            index_composition_writer=index_composition_writer,
-        )
-
-    # ========================================================================
-    # Macro Query Service
-    # ========================================================================
-
-    @provide
-    def macro_query_service(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> MacroService:
-        """Macro 查询服务（CQRS Reader/Writer）."""
-        indicator_reader = MacroIndicatorReader(client=sqlite_client)
-        indicator_writer = MacroIndicatorWriter(client=sqlite_client)
-        metadata_reader = MacroIndicatorMetadataReader(client=sqlite_client)
-        metadata_writer = MacroIndicatorMetadataWriter(client=sqlite_client)
-        return MacroService(
-            indicator_reader=indicator_reader,
-            indicator_writer=indicator_writer,
-            metadata_reader=metadata_reader,
-            metadata_writer=metadata_writer,
-        )
-
-    # ========================================================================
-    # Features Domain Stores & Services
-    # ========================================================================
-
-    @provide
-    def features_query_service(
-        self,
-        data_root_config: DataRootConfig,
-        sqlite_client: SQLiteClient,
-    ) -> FeatureService:
-        """Features 查询服务（CQRS Reader/Writer）."""
-        indicator_reader = TechnicalIndicatorReader(
-            data_root_config.features_technical_indicators_narrow_path
-        )
-        indicator_writer = TechnicalIndicatorWriter(
-            data_root_config.features_technical_indicators_narrow_path
-        )
-        metadata_reader = TechnicalIndicatorMetadataReader(client=sqlite_client)
-        metadata_writer = TechnicalIndicatorMetadataWriter(client=sqlite_client)
-        return FeatureService(
-            indicator_reader=indicator_reader,
-            indicator_writer=indicator_writer,
-            metadata_reader=metadata_reader,
-            metadata_writer=metadata_writer,
-        )
-
-    # ========================================================================
-    # Factors Domain Stores & Services
-    # ========================================================================
-
-    @provide
-    def factors_query_service(
-        self,
-        data_root_config: DataRootConfig,
-        sqlite_client: SQLiteClient,
-    ) -> FactorService:
-        """Factors 查询服务（CQRS Reader/Writer）."""
-        factor_reader = FactorReader(data_root_config.factors_narrow_path)
-        factor_writer = FactorWriter(data_root_config.factors_narrow_path)
-        metadata_reader = FactorMetadataReader(client=sqlite_client)
-        metadata_writer = FactorMetadataWriter(client=sqlite_client)
-        return FactorService(
-            factor_reader=factor_reader,
-            factor_writer=factor_writer,
-            metadata_reader=metadata_reader,
-            metadata_writer=metadata_writer,
-        )
-
-    # ========================================================================
-    # Metadata Query Service
-    # ========================================================================
-
-    @provide
-    def metadata_query_service(  # noqa: PLR0913
-        self,
-        instrument_reader: InstrumentReader,
-        instrument_writer: InstrumentWriter,
+        data_cache: DataCache[Any],
         calendar_reader: CalendarReader,
-        calendar_writer: CalendarWriter,
-        industry_reader: IndustryReader,
-        industry_writer: IndustryWriter,
-        industry_mapping_reader: IndustryMappingReader,
-        industry_mapping_writer: IndustryMappingWriter,
-        universe_reader: UniverseReader,
-        universe_writer: UniverseWriter,
-        instrument_id_allocator: InstrumentIdAllocator,
-    ) -> MetadataService:
-        """Metadata 查询服务（CQRS Reader/Writer）。"""
-        return MetadataService(
-            instrument_reader=instrument_reader,
-            instrument_writer=instrument_writer,
-            calendar_reader=calendar_reader,
-            calendar_writer=calendar_writer,
-            industry_reader=industry_reader,
-            industry_writer=industry_writer,
-            industry_mapping_reader=industry_mapping_reader,
-            industry_mapping_writer=industry_mapping_writer,
-            universe_reader=universe_reader,
-            universe_writer=universe_writer,
-            instrument_id_allocator=instrument_id_allocator,
+    ) -> CalendarWriter:
+        """交易日历写入器."""
+        return CalendarWriter(
+            sqlite_client=sqlite_client,
+            data_cache=data_cache,
+            reader=calendar_reader,
         )
 
+    @provide
+    def instrument_writer(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> InstrumentWriter:
+        """证券主数据写入器."""
+        return InstrumentWriter(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def industry_reader(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> IndustryReader:
+        """行业主数据读取器."""
+        return IndustryReader(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def industry_writer(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> IndustryWriter:
+        """行业主数据写入器."""
+        return IndustryWriter(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def industry_mapping_reader(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> IndustryMappingReader:
+        """行业映射读取器."""
+        return IndustryMappingReader(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def industry_mapping_writer(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> IndustryMappingWriter:
+        """行业映射写入器."""
+        return IndustryMappingWriter(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def universe_reader(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> UniverseReader:
+        """标的池读取器."""
+        return UniverseReader(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def universe_writer(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> UniverseWriter:
+        """标的池写入器."""
+        return UniverseWriter(client=sqlite_client, cache=data_cache)
+
     # ========================================================================
-    # Market Domain Stores (CQRS Reader/Writer)
+    # Runtime Domain CQRS Readers and Writers
     # ========================================================================
+
+    @provide
+    def ingestion_log_reader(self, sqlite_client: SQLiteClient) -> IngestionLogReader:
+        """摄取日志读取器."""
+        return IngestionLogReader(sqlite_client)
+
+    @provide
+    def ingestion_log_writer(self, sqlite_client: SQLiteClient) -> IngestionLogWriter:
+        """摄取日志写入器."""
+        return IngestionLogWriter(sqlite_client)
+
+    @provide
+    def comparison_reader(self, config: DataRootConfig) -> ComparisonReader:
+        """质量对比数据读取器."""
+        return ComparisonReader(base_path=config.data_root)
+
+    @provide
+    def comparison_writer(self, config: DataRootConfig) -> ComparisonWriter:
+        """质量对比数据写入器."""
+        return ComparisonWriter(base_path=config.data_root)
+
+    @provide
+    def quarantine_reader(self, sqlite_client: SQLiteClient) -> QuarantineReader:
+        """隔离区数据读取器."""
+        return QuarantineReader(sqlite_client)
+
+    @provide
+    def quarantine_writer(self, sqlite_client: SQLiteClient) -> QuarantineWriter:
+        """隔离区数据写入器."""
+        return QuarantineWriter(sqlite_client)
+
+    # ========================================================================
+    # Market Domain CQRS Readers and Writers
+    # ========================================================================
+
+    @provide
+    def stock_bars_reader(self, config: DataRootConfig) -> StockBarsReader:
+        """股票 K线读取器."""
+        return StockBarsReader(config.data_root)
+
+    @provide
+    def stock_bars_writer(self, config: DataRootConfig) -> StockBarsWriter:
+        """股票 K线写入器."""
+        return StockBarsWriter(config.data_root)
+
+    @provide
+    def stock_status_reader(self, config: DataRootConfig) -> StockStatusReader:
+        """股票状态读取器."""
+        return StockStatusReader(config.data_root)
+
+    @provide
+    def stock_status_writer(self, config: DataRootConfig) -> StockStatusWriter:
+        """股票状态写入器."""
+        return StockStatusWriter(config.data_root)
+
+    @provide
+    def stock_adj_reader(self, config: DataRootConfig) -> StockAdjFactorReader:
+        """股票复权因子读取器."""
+        return StockAdjFactorReader(config.data_root)
+
+    @provide
+    def stock_adj_writer(self, config: DataRootConfig) -> StockAdjFactorWriter:
+        """股票复权因子写入器."""
+        return StockAdjFactorWriter(config.data_root)
+
+    @provide
+    def etf_bars_reader(self, config: DataRootConfig) -> EtfBarsReader:
+        """ETF K线读取器."""
+        return EtfBarsReader(config.data_root)
+
+    @provide
+    def etf_bars_writer(self, config: DataRootConfig) -> EtfBarsWriter:
+        """ETF K线写入器."""
+        return EtfBarsWriter(config.data_root)
+
+    @provide
+    def etf_status_reader(self, config: DataRootConfig) -> EtfStatusReader:
+        """ETF 状态读取器."""
+        return EtfStatusReader(config.data_root)
+
+    @provide
+    def etf_status_writer(self, config: DataRootConfig) -> EtfStatusWriter:
+        """ETF 状态写入器."""
+        return EtfStatusWriter(config.data_root)
 
     @provide
     def etf_nav_reader(self, data_root: Path) -> EtfNavReader:
@@ -483,11 +494,465 @@ class DataHubProvider(Provider):
         return IndexConstituentWriter(data_root=data_root)
 
     # ========================================================================
-    # Market Query Service
+    # Fundamental Domain CQRS Readers and Writers
     # ========================================================================
 
     @provide
-    def market_query_service(  # noqa: PLR0913
+    def balance_sheet_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> BalanceSheetReader:
+        """BalanceSheet reader."""
+        return BalanceSheetReader(sqlite_client)
+
+    @provide
+    def balance_sheet_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> BalanceSheetWriter:
+        """BalanceSheet writer."""
+        return BalanceSheetWriter(sqlite_client)
+
+    @provide
+    def income_statement_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> IncomeStatementReader:
+        """IncomeStatement reader."""
+        return IncomeStatementReader(sqlite_client)
+
+    @provide
+    def income_statement_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> IncomeStatementWriter:
+        """IncomeStatement writer."""
+        return IncomeStatementWriter(sqlite_client)
+
+    @provide
+    def cash_flow_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> CashFlowReader:
+        """CashFlow reader."""
+        return CashFlowReader(sqlite_client)
+
+    @provide
+    def cash_flow_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> CashFlowWriter:
+        """CashFlow writer."""
+        return CashFlowWriter(sqlite_client)
+
+    @provide
+    def dividend_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> DividendReader:
+        """Dividend reader."""
+        return DividendReader(sqlite_client)
+
+    @provide
+    def dividend_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> DividendWriter:
+        """Dividend writer."""
+        return DividendWriter(sqlite_client)
+
+    @provide
+    def corporate_actions_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> CorporateActionsReader:
+        """CorporateActions reader."""
+        return CorporateActionsReader(sqlite_client)
+
+    @provide
+    def corporate_actions_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> CorporateActionsWriter:
+        """CorporateActions writer."""
+        return CorporateActionsWriter(sqlite_client)
+
+    @provide
+    def forecast_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> ForecastReader:
+        """Forecast reader."""
+        return ForecastReader(sqlite_client)
+
+    @provide
+    def forecast_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> ForecastWriter:
+        """Forecast writer."""
+        return ForecastWriter(sqlite_client)
+
+    @provide
+    def express_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> ExpressReader:
+        """Express reader."""
+        return ExpressReader(sqlite_client)
+
+    @provide
+    def express_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> ExpressWriter:
+        """Express writer."""
+        return ExpressWriter(sqlite_client)
+
+    # ========================================================================
+    # Capital Domain CQRS Readers and Writers
+    # ========================================================================
+
+    @provide
+    def margin_trading_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> MarginTradingReader:
+        """MarginTrading reader."""
+        return MarginTradingReader(client=sqlite_client)
+
+    @provide
+    def margin_trading_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> MarginTradingWriter:
+        """MarginTrading writer."""
+        return MarginTradingWriter(client=sqlite_client)
+
+    @provide
+    def pledge_ratio_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> PledgeRatioReader:
+        """PledgeRatio reader."""
+        return PledgeRatioReader(client=sqlite_client)
+
+    @provide
+    def pledge_ratio_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> PledgeRatioWriter:
+        """PledgeRatio writer."""
+        return PledgeRatioWriter(client=sqlite_client)
+
+    @provide
+    def valuation_metrics_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> ValuationMetricsReader:
+        """ValuationMetrics reader."""
+        return ValuationMetricsReader(client=sqlite_client)
+
+    @provide
+    def valuation_metrics_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> ValuationMetricsWriter:
+        """ValuationMetrics writer."""
+        return ValuationMetricsWriter(client=sqlite_client)
+
+    @provide
+    def futures_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> FuturesReader:
+        """Futures reader."""
+        return FuturesReader(client=sqlite_client)
+
+    @provide
+    def futures_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> FuturesWriter:
+        """Futures writer."""
+        return FuturesWriter(client=sqlite_client)
+
+    @provide
+    def index_composition_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> IndexCompositionReader:
+        """IndexComposition reader."""
+        return IndexCompositionReader(client=sqlite_client)
+
+    @provide
+    def index_composition_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> IndexCompositionWriter:
+        """IndexComposition writer."""
+        return IndexCompositionWriter(client=sqlite_client)
+
+    # ========================================================================
+    # Macro Domain CQRS Readers and Writers
+    # ========================================================================
+
+    @provide
+    def macro_indicator_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> MacroIndicatorReader:
+        """Macro indicator reader."""
+        return MacroIndicatorReader(client=sqlite_client)
+
+    @provide
+    def macro_indicator_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> MacroIndicatorWriter:
+        """Macro indicator writer."""
+        return MacroIndicatorWriter(client=sqlite_client)
+
+    @provide
+    def macro_indicator_metadata_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> MacroIndicatorMetadataReader:
+        """Macro indicator metadata reader."""
+        return MacroIndicatorMetadataReader(client=sqlite_client)
+
+    @provide
+    def macro_indicator_metadata_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> MacroIndicatorMetadataWriter:
+        """Macro indicator metadata writer."""
+        return MacroIndicatorMetadataWriter(client=sqlite_client)
+
+    # ========================================================================
+    # Features Domain CQRS Readers and Writers
+    # ========================================================================
+
+    @provide
+    def technical_indicator_reader(
+        self,
+        data_root_config: DataRootConfig,
+    ) -> TechnicalIndicatorReader:
+        """TechnicalIndicator reader."""
+        return TechnicalIndicatorReader(
+            data_root_config.features_technical_indicators_narrow_path
+        )
+
+    @provide
+    def technical_indicator_writer(
+        self,
+        data_root_config: DataRootConfig,
+    ) -> TechnicalIndicatorWriter:
+        """TechnicalIndicator writer."""
+        return TechnicalIndicatorWriter(
+            data_root_config.features_technical_indicators_narrow_path
+        )
+
+    @provide
+    def technical_indicator_metadata_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> TechnicalIndicatorMetadataReader:
+        """TechnicalIndicator metadata reader."""
+        return TechnicalIndicatorMetadataReader(client=sqlite_client)
+
+    @provide
+    def technical_indicator_metadata_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> TechnicalIndicatorMetadataWriter:
+        """TechnicalIndicator metadata writer."""
+        return TechnicalIndicatorMetadataWriter(client=sqlite_client)
+
+    # ========================================================================
+    # Factors Domain CQRS Readers and Writers
+    # ========================================================================
+
+    @provide
+    def factor_reader(
+        self,
+        data_root_config: DataRootConfig,
+    ) -> FactorReader:
+        """Factor reader."""
+        return FactorReader(data_root_config.factors_narrow_path)
+
+    @provide
+    def factor_writer(
+        self,
+        data_root_config: DataRootConfig,
+    ) -> FactorWriter:
+        """Factor writer."""
+        return FactorWriter(data_root_config.factors_narrow_path)
+
+    @provide
+    def factor_metadata_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> FactorMetadataReader:
+        """Factor metadata reader."""
+        return FactorMetadataReader(client=sqlite_client)
+
+    @provide
+    def factor_metadata_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> FactorMetadataWriter:
+        """Factor metadata writer."""
+        return FactorMetadataWriter(client=sqlite_client)
+
+    # ========================================================================
+    # Domain Services (依赖注入模式)
+    # ========================================================================
+
+    @provide
+    def fundamental_service(  # noqa: PLR0913
+        self,
+        balance_sheet_reader: BalanceSheetReader,
+        balance_sheet_writer: BalanceSheetWriter,
+        income_statement_reader: IncomeStatementReader,
+        income_statement_writer: IncomeStatementWriter,
+        cash_flow_reader: CashFlowReader,
+        cash_flow_writer: CashFlowWriter,
+        dividend_reader: DividendReader,
+        dividend_writer: DividendWriter,
+        corporate_actions_reader: CorporateActionsReader,
+        corporate_actions_writer: CorporateActionsWriter,
+        forecast_reader: ForecastReader,
+        forecast_writer: ForecastWriter,
+        express_reader: ExpressReader,
+        express_writer: ExpressWriter,
+    ) -> FundamentalService:
+        """Fundamental domain unified service."""
+        return FundamentalService(
+            balance_sheet_reader=balance_sheet_reader,
+            balance_sheet_writer=balance_sheet_writer,
+            income_statement_reader=income_statement_reader,
+            income_statement_writer=income_statement_writer,
+            cash_flow_reader=cash_flow_reader,
+            cash_flow_writer=cash_flow_writer,
+            dividend_reader=dividend_reader,
+            dividend_writer=dividend_writer,
+            corporate_actions_reader=corporate_actions_reader,
+            corporate_actions_writer=corporate_actions_writer,
+            forecast_reader=forecast_reader,
+            forecast_writer=forecast_writer,
+            express_reader=express_reader,
+            express_writer=express_writer,
+        )
+
+    @provide
+    def capital_service(  # noqa: PLR0913
+        self,
+        margin_trading_reader: MarginTradingReader,
+        margin_trading_writer: MarginTradingWriter,
+        pledge_ratio_reader: PledgeRatioReader,
+        pledge_ratio_writer: PledgeRatioWriter,
+        valuation_metrics_reader: ValuationMetricsReader,
+        valuation_metrics_writer: ValuationMetricsWriter,
+        futures_reader: FuturesReader,
+        futures_writer: FuturesWriter,
+        index_composition_reader: IndexCompositionReader,
+        index_composition_writer: IndexCompositionWriter,
+    ) -> CapitalService:
+        """Capital domain unified service."""
+        return CapitalService(
+            margin_trading_reader=margin_trading_reader,
+            margin_trading_writer=margin_trading_writer,
+            pledge_ratio_reader=pledge_ratio_reader,
+            pledge_ratio_writer=pledge_ratio_writer,
+            valuation_metrics_reader=valuation_metrics_reader,
+            valuation_metrics_writer=valuation_metrics_writer,
+            futures_reader=futures_reader,
+            futures_writer=futures_writer,
+            index_composition_reader=index_composition_reader,
+            index_composition_writer=index_composition_writer,
+        )
+
+    @provide
+    def macro_service(
+        self,
+        indicator_reader: MacroIndicatorReader,
+        indicator_writer: MacroIndicatorWriter,
+        metadata_reader: MacroIndicatorMetadataReader,
+        metadata_writer: MacroIndicatorMetadataWriter,
+    ) -> MacroService:
+        """Macro domain unified service."""
+        return MacroService(
+            indicator_reader=indicator_reader,
+            indicator_writer=indicator_writer,
+            metadata_reader=metadata_reader,
+            metadata_writer=metadata_writer,
+        )
+
+    @provide
+    def feature_service(
+        self,
+        indicator_reader: TechnicalIndicatorReader,
+        indicator_writer: TechnicalIndicatorWriter,
+        metadata_reader: TechnicalIndicatorMetadataReader,
+        metadata_writer: TechnicalIndicatorMetadataWriter,
+    ) -> FeatureService:
+        """Features domain unified service."""
+        return FeatureService(
+            indicator_reader=indicator_reader,
+            indicator_writer=indicator_writer,
+            metadata_reader=metadata_reader,
+            metadata_writer=metadata_writer,
+        )
+
+    @provide
+    def factor_service(
+        self,
+        factor_reader: FactorReader,
+        factor_writer: FactorWriter,
+        metadata_reader: FactorMetadataReader,
+        metadata_writer: FactorMetadataWriter,
+    ) -> FactorService:
+        """Factors domain unified service."""
+        return FactorService(
+            factor_reader=factor_reader,
+            factor_writer=factor_writer,
+            metadata_reader=metadata_reader,
+            metadata_writer=metadata_writer,
+        )
+
+    @provide
+    def metadata_service(  # noqa: PLR0913
+        self,
+        instrument_reader: InstrumentReader,
+        instrument_writer: InstrumentWriter,
+        calendar_reader: CalendarReader,
+        calendar_writer: CalendarWriter,
+        industry_reader: IndustryReader,
+        industry_writer: IndustryWriter,
+        industry_mapping_reader: IndustryMappingReader,
+        industry_mapping_writer: IndustryMappingWriter,
+        universe_reader: UniverseReader,
+        universe_writer: UniverseWriter,
+        instrument_id_allocator: InstrumentIdAllocator,
+    ) -> MetadataService:
+        """Metadata 查询服务（CQRS Reader/Writer）。"""
+        return MetadataService(
+            instrument_reader=instrument_reader,
+            instrument_writer=instrument_writer,
+            calendar_reader=calendar_reader,
+            calendar_writer=calendar_writer,
+            industry_reader=industry_reader,
+            industry_writer=industry_writer,
+            industry_mapping_reader=industry_mapping_reader,
+            industry_mapping_writer=industry_mapping_writer,
+            universe_reader=universe_reader,
+            universe_writer=universe_writer,
+            instrument_id_allocator=instrument_id_allocator,
+        )
+
+    @provide
+    def market_service(  # noqa: PLR0913
         self,
         stock_bars_reader: StockBarsReader,
         stock_bars_writer: StockBarsWriter,

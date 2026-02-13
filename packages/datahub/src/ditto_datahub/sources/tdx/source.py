@@ -5,10 +5,10 @@
 仅用于质量对账，不参与主数据摄入.
 
 标识符转换：
-- 接收 symbol（如 000001）
+- 接收 ticker（如 000001）
 - 查询 InstrumentStore 获取 exchange
 - 转换为 TDX 格式（如 000001.SZ）
-- 返回数据包含 symbol 列
+- 返回数据包含 ticker 列
 """
 
 from collections.abc import Sequence
@@ -28,9 +28,9 @@ class TdxSource:
     仅用于质量对账，不参与主数据摄入.
 
     标识符体系：
-    - 接收 symbol（统一格式）
+    - 接收 ticker（统一格式）
     - 内部转换为 TDX 格式的 source_ticker
-    - 返回包含 symbol 列的数据
+    - 返回包含 ticker 列的数据
     """
 
     def __init__(
@@ -49,77 +49,77 @@ class TdxSource:
 
     def fetch_stock_daily_bars(
         self,
-        symbols: list[str],
+        tickers: list[str],
         trade_date: str,
     ) -> pl.DataFrame:
         """
         获取股票日线数据.
 
         Args:
-            symbols: 股票代码列表（symbol 格式，如 000001）
+            tickers: 股票代码列表（ticker 格式，如 000001）
             trade_date: 交易日期（YYYYMMDD）
 
         Returns:
-            DataFrame with columns: symbol, trade_date, open, high, low, close, vol,
+            DataFrame with columns: ticker, trade_date, open, high, low, close, vol,
             amount
 
         """
         # 1. 批量查询 exchange 信息
-        symbol_to_exchange = self._get_exchange_mapping(symbols)
+        ticker_to_exchange = self._get_exchange_mapping(tickers)
 
-        # 2. 转换为 TDX 格式（symbol.exchange）
+        # 2. 转换为 TDX 格式（ticker.exchange）
         tdx_codes: list[str] = []
-        for symbol in symbols:
-            exchange = symbol_to_exchange.get(symbol)
+        for ticker in tickers:
+            exchange = ticker_to_exchange.get(ticker)
             if exchange:
                 # 转换为 TDX 交易所代码
                 tdx_exchange = self._convert_to_tdx_exchange(exchange)
-                tdx_codes.append(f"{symbol}.{tdx_exchange}")
+                tdx_codes.append(f"{ticker}.{tdx_exchange}")
             else:
                 # 如果找不到 exchange，跳过
                 logger.warning(
-                    "Cannot find exchange for symbol",
+                    "Cannot find exchange for ticker",
                     event="tdx_source_no_exchange",
-                    symbol=symbol,
+                    ticker=ticker,
                 )
                 continue
 
         # 3. 调用 reader 获取数据
         df = self.reader.fetch_stock_daily_bars(tdx_codes, trade_date)
 
-        # 4. 将 source_ticker 列转换为 symbol 列
+        # 4. 将 source_ticker 列转换为 ticker 列
         if not df.is_empty() and "source_ticker" in df.columns:
             df = df.with_columns(
-                symbol=pl.col("source_ticker").str.split(".").list.get(0)
+                ticker=pl.col("source_ticker").str.split(".").list.get(0)
             ).drop("source_ticker")
 
         return df
 
-    def _get_exchange_mapping(self, symbols: Sequence[str | None]) -> dict[str, str]:
+    def _get_exchange_mapping(self, tickers: Sequence[str | None]) -> dict[str, str]:
         """
-        批量获取 symbol → exchange 映射.
+        批量获取 ticker → exchange 映射.
 
         Args:
-            symbols: symbol 列表（可能包含 None，对应未知 instrument_id）
+            tickers: ticker 列表（可能包含 None，对应未知 instrument_id）
 
         Returns:
-            {symbol: exchange} 映射字典
+            {ticker: exchange} 映射字典
 
         """
         # TODO: 实现更高效的批量查询，从 InstrumentStore 获取
         # 目前使用默认的交易所映射规则
         mapping: dict[str, str] = {}
-        for symbol in symbols:
-            # 跳过空值和非字符串类型（未知 instrument_id 无 symbol 映射）
-            if not isinstance(symbol, str):
+        for ticker in tickers:
+            # 跳过空值和非字符串类型（未知 instrument_id 无 ticker 映射）
+            if not isinstance(ticker, str):
                 continue
             # 根据代码前缀判断交易所
-            if symbol.startswith("6") or symbol.startswith("5"):
-                mapping[symbol] = "SSE"  # 上海证券交易所
-            elif symbol.startswith("0") or symbol.startswith("3"):
-                mapping[symbol] = "SZSE"  # 深圳证券交易所
-            elif symbol.startswith("8") or symbol.startswith("4"):
-                mapping[symbol] = "BSE"  # 北京证券交易所
+            if ticker.startswith("6") or ticker.startswith("5"):
+                mapping[ticker] = "SSE"  # 上海证券交易所
+            elif ticker.startswith("0") or ticker.startswith("3"):
+                mapping[ticker] = "SZSE"  # 深圳证券交易所
+            elif ticker.startswith("8") or ticker.startswith("4"):
+                mapping[ticker] = "BSE"  # 北京证券交易所
 
         return mapping
 

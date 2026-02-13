@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_foundation import SQLitePool
+from ditto_infra.foundation import SQLitePool
 from pytest_mock import MockerFixture
 
 

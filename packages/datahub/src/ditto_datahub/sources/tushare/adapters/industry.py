@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import polars as pl
-from ditto_foundation import M, logger, traced
+from ditto_infra.foundation import M, logger, traced
 
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.processors.error_handler import (

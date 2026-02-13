@@ -2,9 +2,9 @@
 
 import pytest
 from ditto_core.quality.spec import DQIssue, DQLevel, DQResult, DQSeverity
-from ditto_foundation.config.environment import Environment
-from ditto_foundation.observability import init, reset_for_testing
-from ditto_foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.config.environment import Environment
+from ditto_infra.foundation.observability import init, reset_for_testing
+from ditto_infra.foundation.observability.config import ObservabilityConfig
 from ditto_port.jobs.tasks.monitoring import monitor_ingestion_quality
 
 

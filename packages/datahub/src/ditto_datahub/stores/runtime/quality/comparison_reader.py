@@ -7,7 +7,7 @@ Provides read-only access to quality comparison data.
 from pathlib import Path
 
 import polars as pl
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 
 class ComparisonReader:

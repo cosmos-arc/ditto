@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 from ditto_core.quality.spec import DQIssue
 from ditto_datahub.services.market_service import MarketBarsQuery
-from ditto_foundation import M, logger
+from ditto_infra.foundation import M, logger
 from prefect import task
 
 from ditto_port.jobs.context import (
@@ -187,7 +187,6 @@ def _send_dq_alert(trade_date: str, issues: list[Any]) -> None:
         issues: 问题列表
 
     """
-    # TODO: 实现告警发送逻辑(邮件、钉钉、企业微信等)
     logger.warning(
         "DQ alert notification",
         event="dq_alert",

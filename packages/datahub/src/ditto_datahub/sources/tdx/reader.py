@@ -55,10 +55,10 @@ class TdxReader:
         """
         # 解析市场代码
         market = self._parse_market(ts_code)
-        symbol = ts_code.split(".")[0]
+        ticker = ts_code.split(".")[0]
 
         # 定位 .day 文件
-        day_file = self._locate_day_file(market, symbol)
+        day_file = self._locate_day_file(market, ticker)
         if not day_file.exists():
             return pl.DataFrame(schema=self._schema())
 
@@ -80,10 +80,10 @@ class TdxReader:
         }
         return market_map.get(suffix, "sz")
 
-    def _locate_day_file(self, market: str, symbol: str) -> Path:
+    def _locate_day_file(self, market: str, ticker: str) -> Path:
         """定位 .day 文件."""
         # 通达信目录结构：vipdoc/{市场}/lday/{代码}.day
-        return self.tdx_path / market / "lday" / f"{symbol}.day"
+        return self.tdx_path / market / "lday" / f"{ticker}.day"
 
     def _read_day_file(
         self,

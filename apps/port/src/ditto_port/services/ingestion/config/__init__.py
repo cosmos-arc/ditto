@@ -1,7 +1,7 @@
 """数据摄取配置包."""
 
 from ditto_port.models import (
-    DATASET_REGISTRY,
+    INGESTION_SPECS,
     Dataset,
     DatasetSpec,
     T1ConfigSpec,
@@ -17,7 +17,7 @@ from ditto_port.models import (
 from ditto_port.services.ingestion.config.config import IngestionConfig
 
 __all__ = [
-    "DATASET_REGISTRY",
+    "INGESTION_SPECS",
     "Dataset",
     "DatasetSpec",
     "IngestionConfig",

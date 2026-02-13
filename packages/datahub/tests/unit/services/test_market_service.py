@@ -15,7 +15,7 @@ from ditto_datahub.services.market_service import (
     MarketBarsQuery,
     MarketService,
 )
-from ditto_foundation.concurrency import FileLockManager
+from ditto_infra.foundation.concurrency import FileLockManager
 
 
 @pytest.fixture

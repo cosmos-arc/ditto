@@ -12,7 +12,7 @@ from ditto_datahub.stores.fundamental.corporate.corporate_actions_writer import 
     CorporateActionsWriter,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import M, SQLitePool
+from ditto_infra.foundation import M, SQLitePool
 
 
 @pytest.fixture

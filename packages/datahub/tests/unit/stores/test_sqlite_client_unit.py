@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import SQLitePool
+from ditto_infra.foundation import SQLitePool
 
 
 @pytest.fixture
@@ -136,7 +136,7 @@ class TestSQLiteClient:
         """Test commit method commits transaction."""
         sql = (
             "INSERT INTO instrument "
-            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
+            "(instrument_id, ticker, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
         params = [99999999, "TEST", "Test", "TEST", "stock", "2024-01-01"]
@@ -154,7 +154,7 @@ class TestSQLiteClient:
         sqlite_client.execute("BEGIN")
         sql = (
             "INSERT INTO instrument "
-            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
+            "(instrument_id, ticker, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
         params = [99999999, "TEST", "Test", "TEST", "stock", "2024-01-01"]
@@ -170,7 +170,7 @@ class TestSQLiteClient:
         """Test insert_returning_id returns lastrowid."""
         sql = (
             "INSERT INTO instrument "
-            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
+            "(instrument_id, ticker, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
         params = [99999999, "TEST", "Test", "TEST", "stock", "2024-01-01"]
@@ -335,7 +335,7 @@ class TestSQLiteClient:
         # We test that insert_returning_id works correctly
         sql = (
             "INSERT INTO instrument "
-            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
+            "(instrument_id, ticker, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
         params = [99999997, "TEST0", "Test0", "TEST", "stock", "2024-01-01"]

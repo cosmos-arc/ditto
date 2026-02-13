@@ -24,6 +24,7 @@ from ditto_port.jobs.tasks import (
     create_ingest_task_t0,
     create_ingest_task_t1_adj,
     create_ingest_task_t1_bars,
+    dq_batch_check,
 )
 from ditto_port.models import (
     Dataset,
@@ -176,12 +177,13 @@ def daily_ingestion_flow(
     t0_results = _collect_results(t0_futures)
     t1_results = _collect_results(t1_futures)
 
-    # 5. 触发 DQC（TODO: 待实现）
-    dqc_results = {
-        "trade_date": trade_date,
-        "status": "skipped",
-        "message": "DQC 检查待实现",
-    }
+    # 5. 触发 DQC（等待 T1 任务完成）
+    dqc_future: Any = dq_batch_check.submit(  # pyright: ignore[reportCallIssue, reportUnknownMemberType, reportUnknownVariableType]
+        trade_date=trade_date,
+        datasets=["etf_daily", "index_daily", "stock_daily", "adj_factor"],
+        wait_for=t1_futures,
+    )
+    dqc_results: Any = dqc_future.result()  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
 
     # 6. 汇总统计
     all_results = {**t0_results, **t1_results}

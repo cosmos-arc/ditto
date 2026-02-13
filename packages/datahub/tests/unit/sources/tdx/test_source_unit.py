@@ -58,20 +58,20 @@ class TestGetExchangeMapping:
         assert result["400001"] == "BSE"
         assert result["430001"] == "BSE"
 
-    def test_unknown_symbol_returns_empty(self, tdx_source: TdxSource) -> None:
-        """未知 symbol 返回空映射."""
+    def test_unknown_ticker_returns_empty(self, tdx_source: TdxSource) -> None:
+        """未知 ticker 返回空映射."""
         result = tdx_source._get_exchange_mapping(["999999"])
         assert "999999" not in result
 
-    def test_none_symbol_skipped(self, tdx_source: TdxSource) -> None:
-        """None symbol 被跳过."""
+    def test_none_ticker_skipped(self, tdx_source: TdxSource) -> None:
+        """None ticker 被跳过."""
         result = tdx_source._get_exchange_mapping([None, "600000", "000001"])
         assert None not in result
         assert "600000" in result
         assert "000001" in result
 
-    def test_non_string_symbol_skipped(self, tdx_source: TdxSource) -> None:
-        """非字符串 symbol 被跳过."""
+    def test_non_string_ticker_skipped(self, tdx_source: TdxSource) -> None:
+        """非字符串 ticker 被跳过."""
         result = tdx_source._get_exchange_mapping([123, "600000", None])
         assert 123 not in result
         assert "600000" in result
@@ -107,12 +107,12 @@ class TestFetchStockDailyBars:
         result = tdx_source.fetch_stock_daily_bars([], "20240101")
         assert result.is_empty()
 
-    def test_symbol_to_source_ticker_conversion(
+    def test_ticker_to_source_ticker_conversion(
         self,
         tdx_source: TdxSource,
         mocker: MockerFixture,
     ) -> None:
-        """Symbol 转换为 source_ticker 格式."""
+        """Ticker 转换为 source_ticker 格式."""
         # Arrange
         mock_reader = mocker.MagicMock()
         mock_reader.fetch_stock_daily_bars.return_value = pl.DataFrame(
@@ -134,10 +134,10 @@ class TestFetchStockDailyBars:
         assert "000001.SZ" in tdx_codes
         assert "600000.SH" in tdx_codes
 
-        # Assert - 验证返回 DataFrame 包含 symbol 列
-        assert "symbol" in result.columns
+        # Assert - 验证返回 DataFrame 包含 ticker 列
+        assert "ticker" in result.columns
         assert "source_ticker" not in result.columns
-        assert set(result["symbol"].to_list()) == {"000001", "600000"}
+        assert set(result["ticker"].to_list()) == {"000001", "600000"}
 
     def test_multiple_symbols_batch(
         self,
@@ -183,7 +183,7 @@ class TestFetchStockDailyBars:
 
         # Assert
         expected_columns = {
-            "symbol",
+            "ticker",
             "trade_date",
             "open",
             "high",
@@ -193,4 +193,4 @@ class TestFetchStockDailyBars:
             "amount",
         }
         assert set(result.columns) == expected_columns
-        assert result["symbol"][0] == "000001"
+        assert result["ticker"][0] == "000001"

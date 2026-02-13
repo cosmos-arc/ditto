@@ -537,7 +537,7 @@ class TestDailyIngestionFlowReturnValue:
         assert "skipped_count" in result["summary"]
 
     def test_dqc_results_placeholder(self, mocker: MockerFixture):
-        """Test that DQC results contain placeholder."""
+        """Test that DQC results contain expected structure."""
         mocker.patch("ditto_port.jobs.flows.daily.check_trading_day", return_value=True)
         mocker.patch(
             "ditto_port.jobs.flows.daily.get_datasets_by_tier",
@@ -547,14 +547,33 @@ class TestDailyIngestionFlowReturnValue:
             "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[],
         )
+        # Mock dq_batch_check to return expected structure
+        mock_dqc_future = mocker.Mock()
+        mock_dqc_future.result.return_value = {
+            "trade_date": "2024-01-02",
+            "datasets_checked": [
+                "etf_daily",
+                "index_daily",
+                "stock_daily",
+                "adj_factor",
+            ],
+            "total_issues": 0,
+            "alert_count": 0,
+            "results_by_dataset": {},
+        }
+        mock_dqc_task = mocker.patch("ditto_port.jobs.flows.daily.dq_batch_check")
+        mock_dqc_task.submit.return_value = mock_dqc_future
+
         result = daily_ingestion_flow(
             trade_date="2024-01-02",
             source="tushare",
         )
 
-        assert result["dqc_results"]["status"] == "skipped"
-        assert "DQC 检查待实现" in result["dqc_results"]["message"]
+        # Verify DQC results structure
         assert result["dqc_results"]["trade_date"] == "2024-01-02"
+        assert "datasets_checked" in result["dqc_results"]
+        assert "total_issues" in result["dqc_results"]
+        assert "alert_count" in result["dqc_results"]
 
 
 # Helper class for mocking datasets

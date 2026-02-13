@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import polars as pl
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 from ditto_datahub.sources.base import (
     SourceAuthenticationError,

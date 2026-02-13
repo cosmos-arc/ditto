@@ -30,7 +30,7 @@ class TestAdjFactorIngestion:
         mock_source = mocker.MagicMock()
 
         # Mock return values
-        mock_market_service.write.return_value = mocker.Mock(rows=2, files=1)
+        mock_market_service.save_adj_factor.return_value = 2
         mock_metadata_service.resolve_or_create_instruments_batch.return_value = {
             "000001.SZ": 1_000_001,
             "000002.SZ": 1_000_002,
@@ -67,10 +67,10 @@ class TestAdjFactorIngestion:
         # Verify result status is success
         assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-        call_args = mock_market_service.write.call_args
-        command = call_args.args[0]
-        df_written = command.df
-        assert command.dataset == "adj_factor"
+        # Verify save_adj_factor was called
+        mock_market_service.save_adj_factor.assert_called_once()
+        call_args = mock_market_service.save_adj_factor.call_args
+        df_written = call_args.kwargs["df"]
 
         # Verify instrument_id/source_ticker columns exist in the written dataframe
         assert "instrument_id" in df_written.columns, (
@@ -106,7 +106,7 @@ class TestAdjFactorIngestion:
         mock_source = mocker.MagicMock()
 
         # Mock return values
-        mock_market_service.write.return_value = mocker.Mock(rows=2, files=1)
+        mock_market_service.save_adj_factor.return_value = 2
         mock_metadata_service.resolve_or_create_instruments_batch.return_value = {
             "510300.SH": 2_000_001,
             "510500.SH": 2_000_002,
@@ -143,10 +143,10 @@ class TestAdjFactorIngestion:
         # Verify result status is success
         assert result.status == "success", f"Expected 'success', got '{result.status}'"
 
-        call_args = mock_market_service.write.call_args
-        command = call_args.args[0]
-        df_written = command.df
-        assert command.dataset == "fund_adj"
+        # Verify save_adj_factor was called
+        mock_market_service.save_adj_factor.assert_called_once()
+        call_args = mock_market_service.save_adj_factor.call_args
+        df_written = call_args.kwargs["df"]
 
         # Verify instrument_id/source_ticker columns exist in the written dataframe
         assert "instrument_id" in df_written.columns, (

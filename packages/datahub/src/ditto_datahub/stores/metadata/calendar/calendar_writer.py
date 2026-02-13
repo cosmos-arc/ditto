@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ditto_foundation import logger, traced
-from ditto_foundation.cache import DataCache
+from ditto_infra.foundation import logger, traced
+from ditto_infra.foundation.cache import DataCache
 
 from ditto_datahub.stores.metadata.calendar.calendar_reader import CalendarReader
 from ditto_datahub.stores.sqlite_client import SQLiteClient

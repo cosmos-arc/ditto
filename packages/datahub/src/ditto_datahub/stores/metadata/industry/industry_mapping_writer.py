@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ditto_foundation import logger, traced
+from ditto_infra.foundation import logger, traced
 
 from ditto_datahub.models.metadata import IndustryMapping
 

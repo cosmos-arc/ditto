@@ -4,7 +4,7 @@ from datetime import time
 
 import pytest
 from ditto_port.models import (
-    DATASET_REGISTRY,
+    INGESTION_SPECS,
     Dataset,
     DatasetSpec,
     T1ConfigSpec,
@@ -181,47 +181,47 @@ class TestDatasetSpec:
 
 @pytest.mark.unit
 class TestDatasetRegistry:
-    """Test DATASET_REGISTRY."""
+    """Test INGESTION_SPECS."""
 
     def test_registry_is_defined(self) -> None:
-        """Test DATASET_REGISTRY is defined."""
-        assert isinstance(DATASET_REGISTRY, dict)
-        assert len(DATASET_REGISTRY) > 0
+        """Test INGESTION_SPECS is defined."""
+        assert isinstance(INGESTION_SPECS, dict)
+        assert len(INGESTION_SPECS) > 0
 
     def test_registry_contains_all_datasets(self) -> None:
         """Test registry contains all Dataset enum values."""
         for dataset in Dataset:
-            assert dataset in DATASET_REGISTRY, f"{dataset} not in registry"
+            assert dataset in INGESTION_SPECS, f"{dataset} not in registry"
 
     def test_registry_configs_are_valid(self) -> None:
         """Test all registry configs are valid DatasetSpec instances."""
-        for dataset, config in DATASET_REGISTRY.items():
+        for dataset, config in INGESTION_SPECS.items():
             assert isinstance(config, DatasetSpec)
             assert config.dataset == dataset
 
     def test_t0_meta_datasets_config(self) -> None:
         """Test T0 meta datasets configuration."""
         # Calendar should be T0
-        calendar = DATASET_REGISTRY[Dataset.CALENDAR]
+        calendar = INGESTION_SPECS[Dataset.CALENDAR]
         assert calendar.tier == TaskTier.T0_META
         assert calendar.requires_trade_date is False
         assert calendar.priority == 10  # Highest priority
 
         # Stock basic should be T0
-        stock_basic = DATASET_REGISTRY[Dataset.STOCK_BASIC]
+        stock_basic = INGESTION_SPECS[Dataset.STOCK_BASIC]
         assert stock_basic.tier == TaskTier.T0_META
         assert stock_basic.requires_trade_date is False
         assert stock_basic.task_name == "ingest_stock_basic"
 
         # ETF basic should be T0
-        etf_basic = DATASET_REGISTRY[Dataset.ETF_BASIC]
+        etf_basic = INGESTION_SPECS[Dataset.ETF_BASIC]
         assert etf_basic.tier == TaskTier.T0_META
         assert etf_basic.requires_trade_date is False
 
     def test_t1_daily_datasets_config(self) -> None:
         """Test T1 daily datasets configuration."""
         # ETF daily should be T1
-        etf_daily = DATASET_REGISTRY[Dataset.ETF_DAILY]
+        etf_daily = INGESTION_SPECS[Dataset.ETF_DAILY]
         assert etf_daily.tier == TaskTier.T1_INCREMENTAL
         assert etf_daily.requires_trade_date is True
         assert etf_daily.task_name == "ingest_etf_bars"
@@ -229,66 +229,66 @@ class TestDatasetRegistry:
         assert isinstance(etf_daily.typical_available_time, time)
 
         # Stock daily should be T1
-        stock_daily = DATASET_REGISTRY[Dataset.STOCK_DAILY]
+        stock_daily = INGESTION_SPECS[Dataset.STOCK_DAILY]
         assert stock_daily.tier == TaskTier.T1_INCREMENTAL
         assert stock_daily.requires_trade_date is True
         assert stock_daily.task_name == "ingest_stock_daily"
 
         # Stock status should be T1
-        stock_status = DATASET_REGISTRY[Dataset.STOCK_STATUS]
+        stock_status = INGESTION_SPECS[Dataset.STOCK_STATUS]
         assert stock_status.tier == TaskTier.T1_INCREMENTAL
         assert stock_status.requires_trade_date is True
         assert stock_status.task_name == "ingest_stock_status"
 
         # Adj factor should be T1
-        adj_factor = DATASET_REGISTRY[Dataset.ADJ_FACTOR]
+        adj_factor = INGESTION_SPECS[Dataset.ADJ_FACTOR]
         assert adj_factor.tier == TaskTier.T1_INCREMENTAL
         assert adj_factor.requires_trade_date is True
         assert adj_factor.task_name == "ingest_adj_factor"
 
         # Fund adj should be T1
-        fund_adj = DATASET_REGISTRY[Dataset.FUND_ADJ]
+        fund_adj = INGESTION_SPECS[Dataset.FUND_ADJ]
         assert fund_adj.tier == TaskTier.T1_INCREMENTAL
         assert fund_adj.requires_trade_date is True
         assert fund_adj.task_name == "ingest_fund_adj"
 
         # Fundamental datasets should be T1
-        balance_sheet = DATASET_REGISTRY[Dataset.BALANCE_SHEET]
+        balance_sheet = INGESTION_SPECS[Dataset.BALANCE_SHEET]
         assert balance_sheet.tier == TaskTier.T1_INCREMENTAL
         assert balance_sheet.task_name == "ingest_balance_sheet"
 
-        income_statement = DATASET_REGISTRY[Dataset.INCOME_STATEMENT]
+        income_statement = INGESTION_SPECS[Dataset.INCOME_STATEMENT]
         assert income_statement.tier == TaskTier.T1_INCREMENTAL
         assert income_statement.task_name == "ingest_income_statement"
 
-        cash_flow = DATASET_REGISTRY[Dataset.CASH_FLOW]
+        cash_flow = INGESTION_SPECS[Dataset.CASH_FLOW]
         assert cash_flow.tier == TaskTier.T1_INCREMENTAL
         assert cash_flow.task_name == "ingest_cash_flow"
 
-        dividend = DATASET_REGISTRY[Dataset.DIVIDEND]
+        dividend = INGESTION_SPECS[Dataset.DIVIDEND]
         assert dividend.tier == TaskTier.T1_INCREMENTAL
         assert dividend.task_name == "ingest_dividend"
 
         # Capital datasets should be T1
-        valuation_metrics = DATASET_REGISTRY[Dataset.VALUATION_METRICS]
+        valuation_metrics = INGESTION_SPECS[Dataset.VALUATION_METRICS]
         assert valuation_metrics.tier == TaskTier.T1_INCREMENTAL
         assert valuation_metrics.task_name == "ingest_valuation_metrics"
 
-        margin_trading = DATASET_REGISTRY[Dataset.MARGIN_TRADING]
+        margin_trading = INGESTION_SPECS[Dataset.MARGIN_TRADING]
         assert margin_trading.tier == TaskTier.T1_INCREMENTAL
         assert margin_trading.task_name == "ingest_margin_trading"
 
-        pledge_ratio = DATASET_REGISTRY[Dataset.PLEDGE_RATIO]
+        pledge_ratio = INGESTION_SPECS[Dataset.PLEDGE_RATIO]
         assert pledge_ratio.tier == TaskTier.T1_INCREMENTAL
         assert pledge_ratio.task_name == "ingest_pledge_ratio"
 
-        macro_indicators = DATASET_REGISTRY[Dataset.MACRO_INDICATORS]
+        macro_indicators = INGESTION_SPECS[Dataset.MACRO_INDICATORS]
         assert macro_indicators.tier == TaskTier.T1_INCREMENTAL
         assert macro_indicators.task_name == "ingest_macro_indicators"
 
     def test_required_fields_exist(self) -> None:
         """Test all datasets have required spec fields."""
-        for _dataset, config in DATASET_REGISTRY.items():
+        for _dataset, config in INGESTION_SPECS.items():
             # Check all required fields are present
             assert hasattr(config, "dataset")
             assert hasattr(config, "tier")
@@ -413,7 +413,7 @@ class TestDatasetDependencies:
         """Test there are no circular dependencies in the registry."""
         # Build dependency graph
         dep_graph = {}
-        for dataset, config in DATASET_REGISTRY.items():
+        for dataset, config in INGESTION_SPECS.items():
             dep_graph[dataset] = set(config.depends_on)
 
         # Check for cycles using DFS
