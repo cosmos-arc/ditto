@@ -22,14 +22,22 @@ from dishka.integrations.fastapi import setup_dishka
 from ditto_datahub.config import DataRootConfig
 from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, InitScope
 from ditto_infra.foundation.config.settings import Settings
-from ditto_infra.foundation.observability import M, logger
+from ditto_infra.foundation.observability import Metrics, logger
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from ditto_port.api.routes import ingestion, market, metadata, portfolio
+from ditto_port.api.routes import (
+    capital,
+    fundamental,
+    ingestion,
+    macro,
+    market,
+    metadata,
+    portfolio,
+)
 from ditto_port.exceptions import DittoException
 from ditto_port.middleware import (
     ditto_exception_handler,
@@ -82,8 +90,8 @@ class ORJSONResponse(JSONResponse):
 
         # 记录序列化耗时
         duration = time.monotonic() - start_time
-        M.json_serialize_duration.record(duration)
-        M.json_bytes_total.add(len(result))
+        Metrics.json_serialize_duration.record(duration)
+        Metrics.json_bytes_total.add(len(result))
 
         return result
 
@@ -167,9 +175,12 @@ app.add_middleware(
 )
 
 # 挂载业务路由
+app.include_router(capital.router, prefix="/api/v1")
+app.include_router(fundamental.router, prefix="/api/v1")
+app.include_router(ingestion.router, prefix="/api/v1")
+app.include_router(macro.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")
 app.include_router(metadata.router, prefix="/api/v1")
-app.include_router(ingestion.router, prefix="/api/v1")
 app.include_router(portfolio.router, prefix="/api/v1")
 
 

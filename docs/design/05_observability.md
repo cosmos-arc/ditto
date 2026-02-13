@@ -682,15 +682,16 @@ groups:
 ### 9.1 目录结构
 
 ```
-packages/foundation/src/ditto_foundation/
-├── observability/
-│   ├── __init__.py          # 统一导出接口
-│   ├── config.py            # 运行模式枚举和配置类
-│   ├── logging.py           # Loguru 日志配置
-│   ├── tracing.py           # OTel Tracing 实现
-│   ├── metrics.py           # OTel Metrics 实现
-│   ├── testing.py           # 测试辅助函数
-│   └── README.md           # 模块使用文档
+packages/infra/src/ditto_infra/
+├── foundation/
+│   └── observability/
+│       ├── __init__.py          # 统一导出接口
+│       ├── config.py            # 运行模式枚举和配置类
+│       ├── logging.py           # Loguru 日志配置
+│       ├── tracing.py           # OTel Tracing 实现
+│       ├── metrics.py           # OTel Metrics 实现
+│       ├── testing.py           # 测试辅助函数
+│       └── README.md           # 模块使用文档
 ```
 
 ### 9.2 模块说明
@@ -707,8 +708,8 @@ packages/foundation/src/ditto_foundation/
 ### 9.3 使用方式
 
 ```python
-# 从 ditto_foundation 导入可观测性接口
-from ditto_foundation import init, logger, span, traced, M
+# 从 ditto_infra 导入可观测性接口
+from ditto_infra import init, logger, span, traced, M
 
 # 初始化
 init()
@@ -726,7 +727,7 @@ def my_function():
 M.data_records.add(100, {"source": "tushare", "table": "etf_daily", "status": "success"})
 ```
 
-> **注**: 完整的代码实现请参考 `packages/foundation/src/ditto_foundation/observability/README.md` 模块文档。
+> **注**: 完整的代码实现请参考 `packages/infra/src/ditto_infra/foundation/observability/README.md` 模块文档。
 
 ---
 

@@ -9,7 +9,7 @@ from opentelemetry import trace as otel_trace
 
 from .config import EffectiveConfig, ObservabilityConfig
 from .logging import configure_logging, logger
-from .metrics import M, configure_metrics
+from .metrics import Metrics, configure_metrics
 from .testing import get_recorded_metrics, get_recorded_spans, reset_for_testing
 from .tracing import (
     configure_tracing,
@@ -21,7 +21,7 @@ from .tracing import (
 
 __all__ = [
     "EffectiveConfig",
-    "M",
+    "Metrics",
     "ObservabilityConfig",
     "get_recorded_metrics",
     "get_recorded_spans",

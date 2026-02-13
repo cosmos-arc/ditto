@@ -10,7 +10,7 @@ import polars as pl
 import pytest
 from ditto_datahub.stores.fundamental.forecast.express_writer import ExpressWriter
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_infra.foundation import M, SQLitePool
+from ditto_infra.foundation import Metrics, SQLitePool
 
 
 @pytest.fixture
@@ -66,8 +66,8 @@ class TestExpressWriter:
             }
         )
 
-        # Mock M.data_records.add to avoid metric recording issues
-        mock_metrics_add = mocker.patch.object(M.data_records, "add")
+        # Mock Metrics.data_records.add to avoid metric recording issues
+        mock_metrics_add = mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = express_writer.write(test_df)
@@ -118,7 +118,7 @@ class TestExpressWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = express_writer.write(test_df)
@@ -147,7 +147,7 @@ class TestExpressWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = express_writer.write(test_df)
@@ -181,7 +181,7 @@ class TestExpressWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Force an error by using invalid data type
         # Create a mock client that raises RuntimeError
@@ -216,7 +216,7 @@ class TestExpressWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = express_writer.write(test_df)

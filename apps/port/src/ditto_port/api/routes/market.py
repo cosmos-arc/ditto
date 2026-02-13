@@ -1,5 +1,6 @@
 """行情数据 API 路由."""
 
+import asyncio
 from typing import Annotated
 
 from dishka import FromComponent
@@ -65,8 +66,8 @@ async def post_bars(
         adj=_map_adjustment(query.adjustment),
     )
 
-    # 调用 service
-    df = service.find_bars(service_query)
+    # 调用 service（在线程池中执行，避免阻塞事件循环）
+    df = await asyncio.to_thread(service.find_bars, service_query)
 
     # 转换为模型列表
     bars = to_bar_list(df)

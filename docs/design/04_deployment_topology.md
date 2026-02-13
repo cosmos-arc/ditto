@@ -793,8 +793,8 @@ VM_ENDPOINT=http://victoriametrics:8428/opentelemetry/v1/metrics
 配置文件由 Port 层统一加载，并映射到 BaseModel（不使用 BaseSettings / env_prefix）：
 
 ```python
-from ditto_foundation.config import ConfigLoader
-from ditto_foundation.config.settings import (
+from ditto_infra.foundation.config import ConfigLoader
+from ditto_infra.foundation.config.settings import (
     ObservabilitySettings,
     Settings,
     SystemSettings,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import polars as pl
-from ditto_infra.foundation import M, logger, traced
+from ditto_infra.foundation import Metrics, logger, traced
 
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
@@ -66,7 +66,7 @@ class PledgeRatioWriter:
             logger.info(
                 "Pledge ratio data written successfully", record_count=len(records)
             )
-            M.data_records.add(
+            Metrics.data_records.add(
                 len(records), {"dataset": "pledge_ratio", "status": "success"}
             )
             return len(records)
@@ -74,5 +74,7 @@ class PledgeRatioWriter:
         except Exception as e:
             self._client.rollback()
             logger.error("Pledge ratio write failed", error=str(e))
-            M.data_records.add(len(df), {"dataset": "pledge_ratio", "status": "failed"})
+            Metrics.data_records.add(
+                len(df), {"dataset": "pledge_ratio", "status": "failed"}
+            )
             raise

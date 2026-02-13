@@ -1,6 +1,7 @@
 """Macro 域 API 路由."""
 
-from typing import Annotated
+import asyncio
+from typing import Annotated, Literal
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
@@ -19,15 +20,20 @@ from ditto_port.models.macro import (
 router = APIRouter(prefix="/macro", tags=["macro"])
 
 
-def _map_category(category: MacroCategory | None) -> str | None:
-    """将 API 层的 MacroCategory 映射到 Service 层的字符串."""
+# Service 层接受的 Literal 类型
+CategoryLiteral = Literal["economic", "interest_rate", "exchange_rate", "money_supply"]
+FrequencyLiteral = Literal["daily", "monthly", "quarterly"]
+
+
+def _map_category(category: MacroCategory | None) -> CategoryLiteral | None:
+    """将 API 层的 MacroCategory 映射到 Service 层的 Literal 类型."""
     if category is None:
         return None
     return category.value
 
 
-def _map_frequency(frequency: MacroFrequency | None) -> str | None:
-    """将 API 层的 MacroFrequency 映射到 Service 层的字符串."""
+def _map_frequency(frequency: MacroFrequency | None) -> FrequencyLiteral | None:
+    """将 API 层的 MacroFrequency 映射到 Service 层的 Literal 类型."""
     if frequency is None:
         return None
     return frequency.value
@@ -63,12 +69,12 @@ async def post_indicators(
         indicators=query.indicators,
         start=start_str,
         end=end_str,
-        category=_map_category(query.category),  # type: ignore[arg-type]
-        frequency=_map_frequency(query.frequency),  # type: ignore[arg-type]
+        category=_map_category(query.category),
+        frequency=_map_frequency(query.frequency),
     )
 
-    # 调用 service
-    df = service.find_indicators(service_query)
+    # 调用 service（在线程池中执行，避免阻塞事件循环）
+    df = await asyncio.to_thread(service.find_indicators, service_query)
 
     # 转换为模型列表
     indicators = to_indicator_list(df)
@@ -82,7 +88,7 @@ async def get_indicators_metadata(
     service: Annotated[MacroService, FromComponent()],
     start: Annotated[str, Query(description="开始日期 (YYYY-MM-DD)")],
     end: Annotated[str, Query(description="结束日期 (YYYY-MM-DD)")],
-    category: Annotated[str | None, Query(description="类别过滤")] = None,
+    category: Annotated[MacroCategory | None, Query(description="类别过滤")] = None,
 ) -> APIResponse[list[Indicator]]:
     """
     获取指标元数据列表.
@@ -97,11 +103,12 @@ async def get_indicators_metadata(
         APIResponse 包含宏观指标数据列表
 
     """
-    # 调用 service
-    df = service.list_indicators(
+    # 调用 service（在线程池中执行，避免阻塞事件循环）
+    df = await asyncio.to_thread(
+        service.list_indicators,
         start=start,
         end=end,
-        category=category,  # type: ignore[arg-type]
+        category=_map_category(category),
     )
 
     # 转换为模型列表

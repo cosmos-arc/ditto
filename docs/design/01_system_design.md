@@ -110,7 +110,7 @@
 | └── execution | 执行编排 | `services/execution/` |
 | **Port Layer** | 统一入口层（API/CLI/Jobs） | `apps/port/api\|cli\|jobs/` |
 | **Web UI Layer** | 前端展示与交互 | `apps/web/` |
-| **Foundation Layer** | 基础设施横切层 | `packages/foundation/` |
+| **Foundation Layer** | 基础设施横切层 | `packages/infra/src/ditto_infra/foundation/` |
 | ├── config | 配置管理 | `foundation/config/` |
 | ├── observability | 可观测性 | `foundation/observability/` |
 | ├── util | 通用工具 | `foundation/util/` |
@@ -234,17 +234,19 @@ packages/
           pit_helper.py      # PIT 辅助函数
           dq_rules.py        # 数据质量规则
 
-  foundation/               # 横切层（基础设施）
+  infra/                    # 横切层（基础设施，含 Foundation 和 Runtime）
     src/
-      ditto_foundation/
-        config/           # 配置管理
-        observability/    # 可观测性
-        util/             # 通用工具
-        cache.py          # 通用缓存
-        concurrency.py    # 并发控制
-        db/               # 数据库连接
-          sqlite_pool.py
-        version.py        # 版本管理
+      ditto_infra/
+        foundation/       # 纯技术组件（无领域概念）
+          config/         # 配置管理
+          observability/  # 可观测性
+          util/           # 通用工具
+          cache.py        # 通用缓存
+          concurrency.py  # 并发控制
+          db/             # 数据库连接
+            sqlite_pool.py
+          version.py      # 版本管理
+        runtime/          # 领域相关技术组件
 ```
 
 ### 3.3 依赖关系
@@ -285,9 +287,9 @@ packages/
          │
          ↓ 依赖
 ┌─────────────────────────────────────────────────┐
-│ Foundation Layer (packages/foundation/)         │
+│ Infra Layer (packages/infra/)                   │
 │                                                  │
-│  config/  observability/  util/                  │
+│  foundation/  runtime/                           │
 │  （基础设施服务）                                 │
 └─────────────────────────────────────────────────┘
 ```
@@ -296,22 +298,20 @@ packages/
 - ✅ Application → Domain
 - ✅ Application → Infrastructure
 - ✅ Domain → Infrastructure
-- ✅ Infrastructure → Foundation
+- ✅ Infrastructure → Infra
 - ❌ Infrastructure → Domain（禁止反向依赖）
-- ❌ Foundation → 其他层（零依赖）
+- ❌ Infra → 其他层（零依赖）
 
-**Foundation Layer** 包含：
-- **config**：配置管理（Settings、路径管理）
-- **observability**：可观测性（日志、追踪、指标）
-- **util**：通用工具（校验和、日期处理）
-- **cache**：通用缓存（DataCache）
-- **concurrency**：并发控制（FileLockManager）
-- **db**：数据库连接管理（SQLitePool）
-- **version**：版本管理（Checksum、版本标识）
-
-与 Runtime 的区别：
-- **Foundation**：纯技术组件，无领域概念，可独立复用
-- **Runtime**：领域相关技术组件，依赖 datahub 模型
+**Infra Layer** 包含：
+- **foundation**：纯技术组件（无领域概念）
+  - **config**：配置管理（Settings、路径管理）
+  - **observability**：可观测性（日志、追踪、指标）
+  - **util**：通用工具（校验和、日期处理）
+  - **cache**：通用缓存（DataCache）
+  - **concurrency**：并发控制（FileLockManager）
+  - **db**：数据库连接管理（SQLitePool）
+  - **version**：版本管理（Checksum、版本标识）
+- **runtime**：领域相关技术组件，依赖 datahub 模型
 
 Scripts 目录：
 - **scripts**：项目脚本文件（SQL、Shell 等），与代码模块分离

@@ -44,10 +44,10 @@
 
 ```
 ditto/
-├── packages/foundation/    # 基础设施层（配置、日志、路径）
+├── packages/infra/         # 基础设施层（配置、日志、路径、Runtime）
 ├── packages/datahub/       # 数据访问层（存储、数据源）
 ├── packages/core/          # 核心引擎层（DQ、业务逻辑）
-└── apps/port/             # 应用层（API、CLI、Flows）
+└── apps/port/              # 应用层（API、CLI、Flows）
 ```
 
 ### 1.4 双层环境架构
@@ -150,13 +150,13 @@ config/
 
 | 配置类 | 来源 | 配置文件 | 定义位置 |
 |--------|------|----------|----------|
-| `SystemSettings` | 字段名（大小写不敏感） | `system.env` | [settings.py:12-33](../packages/foundation/src/ditto_foundation/config/settings.py) |
-| `ObservabilitySettings` | 字段名（大小写不敏感） | `observability.env` | [settings.py:36-76](../packages/foundation/src/ditto_foundation/config/settings.py) |
+| `SystemSettings` | 字段名（大小写不敏感） | `system.env` | [settings.py:12-33](../packages/infra/src/ditto_infra/foundation/config/settings.py) |
+| `ObservabilitySettings` | 字段名（大小写不敏感） | `observability.env` | [settings.py:36-76](../packages/infra/src/ditto_infra/foundation/config/settings.py) |
 | `DataRootConfig` | 字段名（大小写不敏感） | `data_store.env` | [data_root.py:10-170](../packages/datahub/src/ditto_datahub/config/data_root.py) |
 | `DatabaseSettings` | 字段名（大小写不敏感） | `database.env` | [database.py:10-31](../packages/datahub/src/ditto_datahub/config/database.py) |
 | `DataSourceSettings` | 字段名（大小写不敏感） | `data_source.env` | [data_source.py:7-34](../packages/datahub/src/ditto_datahub/config/data_source.py) |
 | `DQSettings` | 字段名（大小写不敏感） | `dq.env` | [config.py:9-100](../packages/core/src/ditto_core/quality/config.py) |
-| `NotificationSettings` | 字段名（大小写不敏感） | `notification.env` | [config.py:1-45](../packages/foundation/src/ditto_foundation/notification/config.py) |
+| `NotificationSettings` | 字段名（大小写不敏感） | `notification.env` | [config.py:1-45](../packages/infra/src/ditto_infra/foundation/notification/config.py) |
 | `FileStorageSettings` | 由 `DataRootConfig` 派生 | `data_store.env` | [storage.py:1-26](../packages/datahub/src/ditto_datahub/config/storage.py) |
 
 ---

@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import pytest
-from ditto_infra.foundation import M, ObservabilityConfig, reset_for_testing
+from ditto_infra.foundation import Metrics, ObservabilityConfig, reset_for_testing
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability.metrics import configure_metrics
 from opentelemetry.sdk.metrics import Counter as SDKCounter
@@ -812,52 +812,52 @@ class TestMetricDefinitions:
         configure_metrics(config)
 
         # Verify所有数据指标存在
-        assert hasattr(M, "data_update_duration")
-        assert hasattr(M, "data_records")
-        assert hasattr(M, "data_freshness")
-        assert hasattr(M, "data_errors")
+        assert hasattr(Metrics, "data_update_duration")
+        assert hasattr(Metrics, "data_records")
+        assert hasattr(Metrics, "data_freshness")
+        assert hasattr(Metrics, "data_errors")
 
         # Verify所有因子指标存在
-        assert hasattr(M, "factor_calc_duration")
-        assert hasattr(M, "factor_ic")
-        assert hasattr(M, "factor_health")
+        assert hasattr(Metrics, "factor_calc_duration")
+        assert hasattr(Metrics, "factor_ic")
+        assert hasattr(Metrics, "factor_health")
 
         # Verify所有策略指标存在
-        assert hasattr(M, "signal_total")
-        assert hasattr(M, "rebalance_total")
+        assert hasattr(Metrics, "signal_total")
+        assert hasattr(Metrics, "rebalance_total")
 
         # Verify所有组合指标存在
-        assert hasattr(M, "portfolio_value")
-        assert hasattr(M, "portfolio_drawdown")
-        assert hasattr(M, "portfolio_drawdown_3d")
+        assert hasattr(Metrics, "portfolio_value")
+        assert hasattr(Metrics, "portfolio_drawdown")
+        assert hasattr(Metrics, "portfolio_drawdown_3d")
 
         # Verify所有风控指标存在
-        assert hasattr(M, "kill_switch_level")
-        assert hasattr(M, "kill_switch_total")
+        assert hasattr(Metrics, "kill_switch_level")
+        assert hasattr(Metrics, "kill_switch_total")
 
         # Verify所有系统指标存在
-        assert hasattr(M, "scheduler_jobs")
-        assert hasattr(M, "api_requests")
-        assert hasattr(M, "api_duration")
+        assert hasattr(Metrics, "scheduler_jobs")
+        assert hasattr(Metrics, "api_requests")
+        assert hasattr(Metrics, "api_duration")
 
         # Verify所有缓存指标存在
-        assert hasattr(M, "cache_hit")
-        assert hasattr(M, "cache_miss")
-        assert hasattr(M, "cache_hit_rate")
-        assert hasattr(M, "cache_invalidations")
-        assert hasattr(M, "cache_evictions")
-        assert hasattr(M, "cache_size")
+        assert hasattr(Metrics, "cache_hit")
+        assert hasattr(Metrics, "cache_miss")
+        assert hasattr(Metrics, "cache_hit_rate")
+        assert hasattr(Metrics, "cache_invalidations")
+        assert hasattr(Metrics, "cache_evictions")
+        assert hasattr(Metrics, "cache_size")
 
         # Verify所有 SQL 指标存在
-        assert hasattr(M, "sql_query_duration")
-        assert hasattr(M, "sql_slow_query_total")
-        assert hasattr(M, "sql_query_plan_cache_hit")
-        assert hasattr(M, "sql_query_plan_cache_miss")
+        assert hasattr(Metrics, "sql_query_duration")
+        assert hasattr(Metrics, "sql_slow_query_total")
+        assert hasattr(Metrics, "sql_query_plan_cache_hit")
+        assert hasattr(Metrics, "sql_query_plan_cache_miss")
 
         # Verify所有 JSON 指标存在
-        assert hasattr(M, "json_serialize_duration")
-        assert hasattr(M, "json_deserialize_duration")
-        assert hasattr(M, "json_bytes_total")
+        assert hasattr(Metrics, "json_serialize_duration")
+        assert hasattr(Metrics, "json_deserialize_duration")
+        assert hasattr(Metrics, "json_bytes_total")
 
     def test_histogram_metrics_have_record_method(self) -> None:
         """测试 Histogram 类型的指标有 record 方法."""
@@ -867,12 +867,12 @@ class TestMetricDefinitions:
         configure_metrics(config)
 
         # Verify Histogram 类型指标有 record 方法
-        assert hasattr(M.data_update_duration, "record")
-        assert hasattr(M.factor_calc_duration, "record")
-        assert hasattr(M.api_duration, "record")
-        assert hasattr(M.sql_query_duration, "record")
-        assert hasattr(M.json_serialize_duration, "record")
-        assert hasattr(M.json_deserialize_duration, "record")
+        assert hasattr(Metrics.data_update_duration, "record")
+        assert hasattr(Metrics.factor_calc_duration, "record")
+        assert hasattr(Metrics.api_duration, "record")
+        assert hasattr(Metrics.sql_query_duration, "record")
+        assert hasattr(Metrics.json_serialize_duration, "record")
+        assert hasattr(Metrics.json_deserialize_duration, "record")
 
     def test_counter_metrics_have_add_method(self) -> None:
         """测试 Counter 类型的指标有 add 方法."""
@@ -882,21 +882,21 @@ class TestMetricDefinitions:
         configure_metrics(config)
 
         # Verify Counter 类型指标有 add 方法
-        assert hasattr(M.data_records, "add")
-        assert hasattr(M.data_errors, "add")
-        assert hasattr(M.signal_total, "add")
-        assert hasattr(M.rebalance_total, "add")
-        assert hasattr(M.kill_switch_total, "add")
-        assert hasattr(M.scheduler_jobs, "add")
-        assert hasattr(M.api_requests, "add")
-        assert hasattr(M.cache_hit, "add")
-        assert hasattr(M.cache_miss, "add")
-        assert hasattr(M.cache_invalidations, "add")
-        assert hasattr(M.cache_evictions, "add")
-        assert hasattr(M.sql_slow_query_total, "add")
-        assert hasattr(M.sql_query_plan_cache_hit, "add")
-        assert hasattr(M.sql_query_plan_cache_miss, "add")
-        assert hasattr(M.json_bytes_total, "add")
+        assert hasattr(Metrics.data_records, "add")
+        assert hasattr(Metrics.data_errors, "add")
+        assert hasattr(Metrics.signal_total, "add")
+        assert hasattr(Metrics.rebalance_total, "add")
+        assert hasattr(Metrics.kill_switch_total, "add")
+        assert hasattr(Metrics.scheduler_jobs, "add")
+        assert hasattr(Metrics.api_requests, "add")
+        assert hasattr(Metrics.cache_hit, "add")
+        assert hasattr(Metrics.cache_miss, "add")
+        assert hasattr(Metrics.cache_invalidations, "add")
+        assert hasattr(Metrics.cache_evictions, "add")
+        assert hasattr(Metrics.sql_slow_query_total, "add")
+        assert hasattr(Metrics.sql_query_plan_cache_hit, "add")
+        assert hasattr(Metrics.sql_query_plan_cache_miss, "add")
+        assert hasattr(Metrics.json_bytes_total, "add")
 
     def test_gauge_metrics_have_set_inc_dec_methods(self) -> None:
         """测试 Gauge 类型的指标有 set/inc/dec 方法."""
@@ -917,7 +917,7 @@ class TestMetricDefinitions:
             "cache_hit_rate",
             "cache_size",
         ]:
-            metric = getattr(M, metric_name)
+            metric = getattr(Metrics, metric_name)
             assert hasattr(metric, "set"), f"{metric_name} should have set method"
             assert hasattr(metric, "inc"), f"{metric_name} should have inc method"
             assert hasattr(metric, "dec"), f"{metric_name} should have dec method"
@@ -933,11 +933,11 @@ class TestMetricDefinitions:
         # [REVIEW]
 
         # data_update_duration 应该是 Histogram
-        assert isinstance(M.data_update_duration, SDKHistogram)
+        assert isinstance(Metrics.data_update_duration, SDKHistogram)
         # data_records 应该是 Counter
-        assert isinstance(M.data_records, SDKCounter)
+        assert isinstance(Metrics.data_records, SDKCounter)
         # data_freshness 应该是 SimpleGauge (有 set 方法)
-        assert hasattr(M.data_freshness, "set")
+        assert hasattr(Metrics.data_freshness, "set")
 
     def test_metric_count_matches_definitions(self) -> None:
         """测试创建的指标数量与 METRIC_DEFINITIONS 中的定义一致."""
@@ -948,9 +948,9 @@ class TestMetricDefinitions:
 
         # [REVIEW] M 类中定义的指标数量
         metric_count = 0
-        for attr_name in dir(M):
+        for attr_name in dir(Metrics):
             if not attr_name.startswith("_"):
-                attr = getattr(M, attr_name)
+                attr = getattr(Metrics, attr_name)
                 # [REVIEW](有特定的方法)
                 if (
                     hasattr(attr, "record")
@@ -980,12 +980,12 @@ class TestMetricDefinitions:
         configure_metrics(config)
 
         # [REVIEW] Counter
-        M.data_records.add(100, {"source": "test"})
+        Metrics.data_records.add(100, {"source": "test"})
 
         # [REVIEW] Histogram
-        M.data_update_duration.record(1.5, {"source": "test"})
+        Metrics.data_update_duration.record(1.5, {"source": "test"})
 
         # [REVIEW] Gauge
-        M.kill_switch_level.set(2.0)
-        M.kill_switch_level.inc(1.0)
-        M.kill_switch_level.dec(0.5)
+        Metrics.kill_switch_level.set(2.0)
+        Metrics.kill_switch_level.inc(1.0)
+        Metrics.kill_switch_level.dec(0.5)

@@ -71,10 +71,10 @@ lint-imports --contract acyclic-packages       # 单独检查循环依赖
 
 **正确使用**：
 ```python
-# ✅ 所有层都可以直接使用 foundation
-from ditto_foundation.observability import get_logger
-from ditto_foundation.config import get_settings
-from ditto_foundation.util.checksum import file_checksum
+# ✅ 所有层都可以直接使用 infra（原 foundation）
+from ditto_infra.observability import get_logger
+from ditto_infra.config import get_settings
+from ditto_infra.util.checksum import file_checksum
 ```
 
 ### 层级穿透（禁止）

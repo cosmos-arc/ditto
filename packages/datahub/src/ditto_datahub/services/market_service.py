@@ -15,7 +15,7 @@ from enum import Enum
 from typing import Literal
 
 import polars as pl
-from ditto_infra.foundation import M, logger, traced
+from ditto_infra.foundation import Metrics, logger, traced
 from ditto_infra.foundation.concurrency import FileLockManager
 
 from ditto_datahub.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
@@ -46,6 +46,22 @@ class AdjType(Enum):
     NONE = "none"  # 不复权
     QFQ = "qfq"  # 前复权
     HFQ = "hfq"  # 后复权
+
+    @classmethod
+    def from_string(cls, value: str) -> AdjType:
+        """
+        从字符串解析复权类型.
+
+        Args:
+            value: 字符串值 ("none", "qfq", "hfq")
+
+        Returns:
+            对应的 AdjType 枚举值，默认返回 NONE
+
+        """
+        return {"none": cls.NONE, "qfq": cls.QFQ, "hfq": cls.HFQ}.get(
+            value.lower(), cls.NONE
+        )
 
 
 @dataclass(frozen=True)
@@ -271,7 +287,7 @@ class MarketService:
         )
 
         # 记录指标
-        M.data_records.add(
+        Metrics.data_records.add(
             len(df),
             {"dataset": "market_bars", "operation": "get", "adj": query.adj.value},
         )
@@ -317,7 +333,7 @@ class MarketService:
         )
 
         # 记录指标
-        M.data_records.add(
+        Metrics.data_records.add(
             len(df),
             {"dataset": "market_constituents", "operation": "get"},
         )
@@ -726,7 +742,7 @@ class MarketService:
         )
 
         # 记录指标
-        M.data_records.add(
+        Metrics.data_records.add(
             len(storage_df),
             {"dataset": dataset, "operation": "write"},
         )
@@ -783,7 +799,7 @@ class MarketService:
         )
 
         # 记录指标
-        M.data_records.add(
+        Metrics.data_records.add(
             len(storage_df),
             {"dataset": "adj_factor", "operation": "write"},
         )
@@ -830,7 +846,7 @@ class MarketService:
             rows_written=rows_written,
         )
 
-        M.data_records.add(
+        Metrics.data_records.add(
             rows_written,
             {"dataset": "stock_status", "operation": "write"},
         )

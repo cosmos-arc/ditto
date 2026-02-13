@@ -17,7 +17,7 @@ from typing import Any
 
 import cachebox
 
-from ditto_infra.foundation.observability import M
+from ditto_infra.foundation.observability import Metrics
 
 
 @dataclass(frozen=True)
@@ -97,12 +97,12 @@ class DataCache[T]:
         try:
             value: T = self._cache[key]
             if self._enable_metrics:
-                M.cache_hit.add(1, {"type": "data_cache"})
+                Metrics.cache_hit.add(1, {"type": "data_cache"})
             self._hit_count += 1  # 同步维护本地计数器
             return value
         except KeyError:
             if self._enable_metrics:
-                M.cache_miss.add(1, {"type": "data_cache"})
+                Metrics.cache_miss.add(1, {"type": "data_cache"})
             self._miss_count += 1  # 同步维护本地计数器
             return default
 
@@ -148,7 +148,7 @@ class DataCache[T]:
         try:
             del self._cache[key]
             if self._enable_metrics:
-                M.cache_invalidations.add(1)
+                Metrics.cache_invalidations.add(1)
             self._invalidation_count += 1  # 同步维护本地计数器
             return True
         except KeyError:
@@ -171,7 +171,7 @@ class DataCache[T]:
         for key in keys_to_delete:
             del self._cache[key]
             if self._enable_metrics:
-                M.cache_invalidations.add(1)
+                Metrics.cache_invalidations.add(1)
             self._invalidation_count += 1  # 同步维护本地计数器
         return len(keys_to_delete)
 

@@ -12,7 +12,7 @@ from ditto_datahub.stores.fundamental.corporate.corporate_actions_writer import 
     CorporateActionsWriter,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_infra.foundation import M, SQLitePool
+from ditto_infra.foundation import Metrics, SQLitePool
 
 
 @pytest.fixture
@@ -62,8 +62,8 @@ class TestCorporateActionsWriter:
             }
         )
 
-        # Mock M.data_records.add to avoid metric recording issues
-        mock_metrics_add = mocker.patch.object(M.data_records, "add")
+        # Mock Metrics.data_records.add to avoid metric recording issues
+        mock_metrics_add = mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = corporate_actions_writer.write(test_df)
@@ -111,7 +111,7 @@ class TestCorporateActionsWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = corporate_actions_writer.write(test_df)
@@ -137,7 +137,7 @@ class TestCorporateActionsWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = corporate_actions_writer.write(test_df)
@@ -168,7 +168,7 @@ class TestCorporateActionsWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Force an error by using invalid data type
         # Create a mock client that raises RuntimeError
@@ -200,7 +200,7 @@ class TestCorporateActionsWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = corporate_actions_writer.write(test_df)
@@ -244,7 +244,7 @@ class TestCorporateActionsWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = corporate_actions_writer.write(test_df)
@@ -282,7 +282,7 @@ class TestCorporateActionsWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Act - First write
         count1 = corporate_actions_writer.write(test_df)

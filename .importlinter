@@ -88,12 +88,11 @@ forbidden_modules =
     ditto_datahub.stores.**
     ditto_datahub.sources.**
     ditto_datahub.runtime.**
-# 忽略 registry 模块的导入，以及 QuarantineStore（跨层基础设施）
+# 忽略 registry 模块的导入
 ignore_imports =
     ditto_port.registry.** -> ditto_datahub.stores.**
     ditto_port.registry.** -> ditto_datahub.sources.**
     ditto_port.registry.** -> ditto_datahub.runtime.**
-    ditto_port.services.ingestion.quality.service -> ditto_datahub.runtime.quality.quarantine_store
 # 只检查直接导入，允许通过 hub 的间接使用
 allow_indirect_imports = true
 unmatched_ignore_imports_alerting = none

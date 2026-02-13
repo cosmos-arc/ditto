@@ -11,7 +11,7 @@ import re
 import pytest
 from ditto_infra.foundation import (
     EffectiveConfig,
-    M,
+    Metrics,
     ObservabilityConfig,
     get_recorded_metrics,
     get_recorded_spans,
@@ -351,7 +351,7 @@ class TestMetrics:
         reset_for_testing()
         init(_test_config(), force=True)
 
-        M.data_records.add(
+        Metrics.data_records.add(
             100, {"source": "test", "table": "test", "status": "success"}
         )
 
@@ -364,7 +364,7 @@ class TestMetrics:
         reset_for_testing()
         init(_test_config(), force=True)
 
-        M.kill_switch_level.set(2.0)
+        Metrics.kill_switch_level.set(2.0)
 
         metrics_data = get_recorded_metrics()
         assert metrics_data is not None
@@ -374,7 +374,7 @@ class TestMetrics:
         reset_for_testing()
         init(_test_config(), force=True)
 
-        M.data_update_duration.record(1.5, {"source": "test", "table": "test"})
+        Metrics.data_update_duration.record(1.5, {"source": "test", "table": "test"})
 
         metrics_data = get_recorded_metrics()
         assert metrics_data is not None

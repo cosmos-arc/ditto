@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 from ditto_core.quality.spec import DQIssue
 from ditto_datahub.services.market_service import MarketBarsQuery
-from ditto_infra.foundation import M, logger
+from ditto_infra.foundation import Metrics, logger
 from prefect import task
 
 from ditto_port.jobs.context import (
@@ -171,9 +171,9 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
             _send_dq_alert(trade_date, all_issues)
 
         # 记录指标
-        M.dq_batch_checks.add(1.0, {"trade_date": trade_date})
-        M.dq_batch_issues.add(float(total_issues), {"trade_date": trade_date})
-        M.dq_batch_alerts.add(float(alert_count), {"trade_date": trade_date})
+        Metrics.dq_batch_checks.add(1.0, {"trade_date": trade_date})
+        Metrics.dq_batch_issues.add(float(total_issues), {"trade_date": trade_date})
+        Metrics.dq_batch_alerts.add(float(alert_count), {"trade_date": trade_date})
 
         return summary
 

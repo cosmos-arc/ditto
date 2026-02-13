@@ -3,62 +3,20 @@
 from __future__ import annotations
 
 import polars as pl
-from ditto_infra.foundation import M, logger, traced
+from ditto_infra.foundation import Metrics, logger, traced
 
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
-from ditto_datahub.sources.tushare.adapters.capital import (
+from ditto_datahub.sources.tushare.processors.error_handler import (
+    tushare_fetch_error_handler,
+)
+from ditto_datahub.sources.tushare.processors.mappings import (
     BALANCE_SHEET_MAPPING,
     CASH_FLOW_MAPPING,
     CORPORATE_ACTIONS_MAPPING,
     DIVIDEND_MAPPING,
     INCOME_STATEMENT_MAPPING,
 )
-from ditto_datahub.sources.tushare.processors.error_handler import (
-    tushare_fetch_error_handler,
-)
 from ditto_datahub.sources.tushare.processors.transformer import TushareDataTransformer
-
-
-def _record_metrics(row_count: int, dataset: str) -> None:
-    """
-    安全地记录数据指标.
-
-    如果 observability 未初始化，静默跳过.
-
-    Args:
-        row_count: 数据行数
-        dataset: 数据集名称
-
-    """
-    try:
-        M.data_records.add(
-            row_count,
-            {"source": "tushare", "dataset": dataset, "status": "success"},
-        )
-    except (AttributeError, TypeError):
-        # Observability 未初始化，静默跳过
-        pass
-
-
-def _add_pit_columns(
-    df: pl.DataFrame,
-    date_col: str = "knowledge_date",
-) -> pl.DataFrame:
-    """
-    为 PIT 数据添加 effective_from 和 effective_to 列.
-
-    Args:
-        df: 输入 DataFrame
-        date_col: 用作 effective_from 的日期列名
-
-    Returns:
-        添加了 PIT 列的 DataFrame
-
-    """
-    return df.with_columns(
-        pl.col(date_col).alias("effective_from"),
-        pl.lit(None, dtype=pl.Date).alias("effective_to"),
-    )
 
 
 class FundamentalTushareAdapter(BaseTushareAdapter):
@@ -108,7 +66,11 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 response, "dividend", DIVIDEND_MAPPING
             )
 
-            result = _add_pit_columns(result)
+            # 添加 PIT 列
+            result = result.with_columns(
+                pl.col("knowledge_date").alias("effective_from"),
+                pl.lit(None, dtype=pl.Date).alias("effective_to"),
+            )
 
             row_count = len(result)
             logger.info(
@@ -116,7 +78,10 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 event="tushare_dividend_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "dividend")
+            Metrics.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "dividend", "status": "success"},
+            )
 
             return result
 
@@ -161,7 +126,14 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 event="tushare_corporate_actions_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "corporate_actions")
+            Metrics.data_records.add(
+                row_count,
+                {
+                    "source": "tushare",
+                    "dataset": "corporate_actions",
+                    "status": "success",
+                },
+            )
 
             return result
 
@@ -202,7 +174,11 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 response, "balance_sheet", BALANCE_SHEET_MAPPING
             )
 
-            result = _add_pit_columns(result)
+            # 添加 PIT 列
+            result = result.with_columns(
+                pl.col("knowledge_date").alias("effective_from"),
+                pl.lit(None, dtype=pl.Date).alias("effective_to"),
+            )
 
             row_count = len(result)
             logger.info(
@@ -210,7 +186,10 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 event="tushare_balance_sheet_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "balance_sheet")
+            Metrics.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "balance_sheet", "status": "success"},
+            )
 
             return result
 
@@ -251,7 +230,11 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 response, "income_statement", INCOME_STATEMENT_MAPPING
             )
 
-            result = _add_pit_columns(result)
+            # 添加 PIT 列
+            result = result.with_columns(
+                pl.col("knowledge_date").alias("effective_from"),
+                pl.lit(None, dtype=pl.Date).alias("effective_to"),
+            )
 
             row_count = len(result)
             logger.info(
@@ -259,7 +242,14 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 event="tushare_income_statement_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "income_statement")
+            Metrics.data_records.add(
+                row_count,
+                {
+                    "source": "tushare",
+                    "dataset": "income_statement",
+                    "status": "success",
+                },
+            )
 
             return result
 
@@ -300,7 +290,11 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 response, "cash_flow", CASH_FLOW_MAPPING
             )
 
-            result = _add_pit_columns(result)
+            # 添加 PIT 列
+            result = result.with_columns(
+                pl.col("knowledge_date").alias("effective_from"),
+                pl.lit(None, dtype=pl.Date).alias("effective_to"),
+            )
 
             row_count = len(result)
             logger.info(
@@ -308,6 +302,9 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
                 event="tushare_cash_flow_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "cash_flow")
+            Metrics.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "cash_flow", "status": "success"},
+            )
 
             return result

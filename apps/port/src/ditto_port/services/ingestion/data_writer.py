@@ -462,7 +462,12 @@ class IngestionDataWriter:
         year: int,
     ) -> WriteResult:
         capital_dataset = cast(
-            Literal["valuation_metrics", "margin_trading", "pledge_ratio"],
+            Literal[
+                "valuation_metrics",
+                "margin_trading",
+                "pledge_ratio",
+                "futures_position",
+            ],
             dataset_enum.value,
         )
         # 使用特定的 save_* 方法替代已删除的 write() 方法
@@ -472,6 +477,8 @@ class IngestionDataWriter:
             records_written = self._capital_service.save_margin_trading(df)
         elif capital_dataset == "pledge_ratio":
             records_written = self._capital_service.save_pledge_ratio(df)
+        elif capital_dataset == "futures_position":
+            records_written = self._capital_service.save_futures(df)
         else:
             records_written = 0
         return _to_write_result(

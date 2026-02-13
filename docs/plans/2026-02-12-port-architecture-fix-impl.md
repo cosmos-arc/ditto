@@ -40,8 +40,8 @@
 **复杂度:** S（单文件 + 测试）
 
 **Files:**
-- Modify: `packages/foundation/src/ditto_foundation/config/environment.py`
-- Modify: `packages/foundation/src/ditto_foundation/config/__init__.py`
+- Modify: `packages/infra/src/ditto_infra/foundation/config/environment.py`
+- Modify: `packages/infra/src/ditto_infra/foundation/config/__init__.py`
 - Create: `packages/foundation/tests/unit/test_environment.py`
 
 **Step 1: 编写单元测试**
@@ -56,7 +56,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ditto_foundation.config.environment import Environment, get_environment
+from ditto_infra.foundation.config.environment import Environment, get_environment
 
 
 class TestGetEnvironment:
@@ -98,7 +98,7 @@ Expected: FAIL - `ImportError: cannot import name 'get_environment'`
 
 **Step 3: 实现 get_environment()**
 
-Modify: `packages/foundation/src/ditto_foundation/config/environment.py`
+Modify: `packages/infra/src/ditto_infra/foundation/config/environment.py`
 
 在 `Environment` 类后添加：
 
@@ -127,7 +127,7 @@ def get_environment() -> Environment:
 
 **Step 4: 更新 __init__.py 导出**
 
-Modify: `packages/foundation/src/ditto_foundation/config/__init__.py`
+Modify: `packages/infra/src/ditto_infra/foundation/config/__init__.py`
 
 添加 `get_environment` 到导出。
 
@@ -145,7 +145,7 @@ Modify: `apps/port/src/ditto_port/registry/config.py`
 
 ```python
 # 修改导入
-from ditto_foundation.config import ConfigInitCoordinator, ConfigLoader, Environment, get_environment
+from ditto_infra.foundation.config import ConfigInitCoordinator, ConfigLoader, Environment, get_environment
 
 # 修改方法
 @provide
@@ -157,8 +157,8 @@ def environment(self) -> Environment:
 **Step 7: Commit**
 
 ```bash
-git add packages/foundation/src/ditto_foundation/config/environment.py \
-        packages/foundation/src/ditto_foundation/config/__init__.py \
+git add packages/infra/src/ditto_infra/foundation/config/environment.py \
+        packages/infra/src/ditto_infra/foundation/config/__init__.py \
         packages/foundation/tests/unit/test_environment.py \
         apps/port/src/ditto_port/registry/config.py
 git commit -m "feat(foundation): 新增 get_environment() 统一环境变量读取"

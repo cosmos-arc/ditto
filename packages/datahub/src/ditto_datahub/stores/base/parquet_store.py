@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path
 
 import polars as pl
-from ditto_infra.foundation import M, logger, traced
+from ditto_infra.foundation import Metrics, logger, traced
 from ditto_infra.foundation.util.io import atomic_write, file_md5
 
 from ditto_datahub.models import OnDuplicate
@@ -271,8 +271,8 @@ class ParquetStore(BaseStore):
         )
 
         # Record metrics
-        M.data_records.add(len(result), {"dataset": dataset, "status": "success"})
-        M.data_update_duration.record(duration_ms / 1000, {"dataset": dataset})
+        Metrics.data_records.add(len(result), {"dataset": dataset, "status": "success"})
+        Metrics.data_update_duration.record(duration_ms / 1000, {"dataset": dataset})
 
         return result
 

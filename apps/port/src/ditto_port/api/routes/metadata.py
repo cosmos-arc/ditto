@@ -1,5 +1,6 @@
 """元数据 API 路由."""
 
+import asyncio
 from typing import Annotated
 
 from dishka import FromComponent
@@ -38,7 +39,8 @@ async def get_instrument(
         HTTPException: 404 如果标的不存在
 
     """
-    row = service.get_instrument(instrument_id)
+    # 调用 service（在线程池中执行，避免阻塞事件循环）
+    row = await asyncio.to_thread(service.get_instrument, instrument_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Instrument not found")
     return to_instrument(row)
@@ -70,8 +72,9 @@ async def list_instruments(
     # 构建查询参数
     asset_class_str = asset_class.value if asset_class else None
 
-    # 调用 service
-    df = service.find_securities(
+    # 调用 service（在线程池中执行，避免阻塞事件循环）
+    df = await asyncio.to_thread(
+        service.find_securities,
         asset_class=asset_class_str,
         exchange=exchange,
         is_active=is_active,

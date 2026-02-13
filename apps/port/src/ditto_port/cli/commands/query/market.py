@@ -7,7 +7,11 @@ from typing import Any
 
 import orjson
 import typer
-from ditto_datahub.services.market_service import MarketBarsQuery, MarketService
+from ditto_datahub.services.market_service import (
+    AdjType,
+    MarketBarsQuery,
+    MarketService,
+)
 from rich.console import Console
 from rich.table import Table
 
@@ -81,15 +85,11 @@ def query_bars(
     _validate_date_range(start_date, end_date)
 
     with _get_market_service() as service:
-        adj_value = adjustment.lower()
-        if adj_value not in ("none", "qfq", "hfq"):
-            adj_value = "none"
-
         query = MarketBarsQuery(
             instrument_ids=[instrument_id],
             start=str(start_date),
             end=str(end_date),
-            adj=adj_value,  # type: ignore[arg-type]
+            adj=AdjType.from_string(adjustment),
         )
 
         df = service.find_bars(query)

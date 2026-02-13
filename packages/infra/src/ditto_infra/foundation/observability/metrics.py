@@ -256,7 +256,77 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
 ]
 
 
+class SafeCounter:
+    """防御式 Counter，未初始化时静默跳过。"""
+
+    def __init__(self, counter: Counter | None = None) -> None:
+        self._counter = counter
+
+    def add(
+        self, amount: int | float, attributes: dict[str, Any] | None = None
+    ) -> None:
+        """记录计数，未初始化时静默跳过。"""
+        if self._counter is not None:
+            self._counter.add(amount, attributes or {})
+
+    def set_counter(self, counter: Counter) -> None:
+        """设置实际的 Counter（setup 时调用）。"""
+        self._counter = counter
+
+
+class SafeHistogram:
+    """防御式 Histogram，未初始化时静默跳过。"""
+
+    def __init__(self, histogram: Histogram | None = None) -> None:
+        self._histogram = histogram
+
+    def record(
+        self, amount: int | float, attributes: dict[str, Any] | None = None
+    ) -> None:
+        """记录直方图值，未初始化时静默跳过。"""
+        if self._histogram is not None:
+            self._histogram.record(amount, attributes or {})
+
+    def set_histogram(self, histogram: Histogram) -> None:
+        """设置实际的 Histogram（setup 时调用）。"""
+        self._histogram = histogram
+
+
+class SafeGauge:
+    """防御式 Gauge，未初始化时静默跳过。"""
+
+    def __init__(self) -> None:
+        self._value = 0.0
+        self._gauge: Any = None
+
+    def set(self, value: float) -> None:
+        """设置 Gauge 值。"""
+        self._value = value
+
+    def inc(self, delta: float = 1.0) -> None:
+        """增加 Gauge 值。"""
+        self._value = max(0.0, self._value + delta)
+
+    def dec(self, delta: float = 1.0) -> None:
+        """减少 Gauge 值。"""
+        self._value = max(0.0, self._value - delta)
+
+    def _callback(self, options: Any) -> list[metrics.Observation]:
+        """ObservableGauge 回调函数。"""
+        return [metrics.Observation(self._value, {})]
+
+    def set_gauge(self, meter: metrics.Meter, name: str, description: str) -> None:
+        """设置实际的 Gauge（setup 时调用）。"""
+        self._gauge = meter.create_observable_gauge(
+            name,
+            [self._callback],
+            description=description,
+        )
+
+
 class SimpleGauge:
+    """简单 Gauge 实现（已废弃，保留向后兼容）。"""
+
     def __init__(self, meter: metrics.Meter, name: str, description: str) -> None:
         self._value = 0.0
 
@@ -270,60 +340,67 @@ class SimpleGauge:
         )
 
     def set(self, value: float) -> None:
+        """设置 Gauge 值。"""
         self._value = value
 
     def inc(self, delta: float = 1.0) -> None:
+        """增加 Gauge 值。"""
         self._value = max(0.0, self._value + delta)
 
     def dec(self, delta: float = 1.0) -> None:
+        """减少 Gauge 值。"""
         self._value = max(0.0, self._value - delta)
 
 
-class M:
-    """指标入口（绑定全局 Meter 后可直接使用）。"""
+class Metrics:
+    """
+    指标入口（绑定全局 Meter 后可直接使用）。
 
-    data_update_duration: Histogram
-    data_records: Counter
-    data_freshness: SimpleGauge
-    data_errors: Counter
+    使用防御式包装器，未初始化时静默跳过。
+    """
 
-    factor_calc_duration: Histogram
-    factor_ic: SimpleGauge
-    factor_health: SimpleGauge
+    data_update_duration: SafeHistogram = SafeHistogram()
+    data_records: SafeCounter = SafeCounter()
+    data_freshness: SafeGauge = SafeGauge()
+    data_errors: SafeCounter = SafeCounter()
 
-    signal_total: Counter
-    rebalance_total: Counter
+    factor_calc_duration: SafeHistogram = SafeHistogram()
+    factor_ic: SafeGauge = SafeGauge()
+    factor_health: SafeGauge = SafeGauge()
 
-    portfolio_value: SimpleGauge
-    portfolio_drawdown: SimpleGauge
-    portfolio_drawdown_3d: SimpleGauge
+    signal_total: SafeCounter = SafeCounter()
+    rebalance_total: SafeCounter = SafeCounter()
 
-    kill_switch_level: SimpleGauge
-    kill_switch_total: Counter
+    portfolio_value: SafeGauge = SafeGauge()
+    portfolio_drawdown: SafeGauge = SafeGauge()
+    portfolio_drawdown_3d: SafeGauge = SafeGauge()
 
-    scheduler_jobs: Counter
-    api_requests: Counter
-    api_duration: Histogram
+    kill_switch_level: SafeGauge = SafeGauge()
+    kill_switch_total: SafeCounter = SafeCounter()
 
-    cache_hit: Counter
-    cache_miss: Counter
-    cache_hit_rate: SimpleGauge
-    cache_invalidations: Counter
-    cache_evictions: Counter
-    cache_size: SimpleGauge
+    scheduler_jobs: SafeCounter = SafeCounter()
+    api_requests: SafeCounter = SafeCounter()
+    api_duration: SafeHistogram = SafeHistogram()
 
-    sql_query_duration: Histogram
-    sql_slow_query_total: Counter
-    sql_query_plan_cache_hit: Counter
-    sql_query_plan_cache_miss: Counter
+    cache_hit: SafeCounter = SafeCounter()
+    cache_miss: SafeCounter = SafeCounter()
+    cache_hit_rate: SafeGauge = SafeGauge()
+    cache_invalidations: SafeCounter = SafeCounter()
+    cache_evictions: SafeCounter = SafeCounter()
+    cache_size: SafeGauge = SafeGauge()
 
-    json_serialize_duration: Histogram
-    json_deserialize_duration: Histogram
-    json_bytes_total: Counter
+    sql_query_duration: SafeHistogram = SafeHistogram()
+    sql_slow_query_total: SafeCounter = SafeCounter()
+    sql_query_plan_cache_hit: SafeCounter = SafeCounter()
+    sql_query_plan_cache_miss: SafeCounter = SafeCounter()
 
-    dq_batch_checks: Counter
-    dq_batch_issues: Counter
-    dq_batch_alerts: Counter
+    json_serialize_duration: SafeHistogram = SafeHistogram()
+    json_deserialize_duration: SafeHistogram = SafeHistogram()
+    json_bytes_total: SafeCounter = SafeCounter()
+
+    dq_batch_checks: SafeCounter = SafeCounter()
+    dq_batch_issues: SafeCounter = SafeCounter()
+    dq_batch_alerts: SafeCounter = SafeCounter()
 
     @classmethod
     def setup(cls, meter: metrics.Meter) -> None:
@@ -335,29 +412,17 @@ class M:
             description = metric_def["description"]
 
             if metric_type == "histogram":
-                setattr(
-                    cls,
-                    name,
-                    meter.create_histogram(instrument_name, description=description),
+                histogram = meter.create_histogram(
+                    instrument_name, description=description
                 )
+                getattr(cls, name).set_histogram(histogram)
             elif metric_type == "counter":
-                setattr(
-                    cls,
-                    name,
-                    meter.create_counter(instrument_name, description=description),
-                )
+                counter = meter.create_counter(instrument_name, description=description)
+                getattr(cls, name).set_counter(counter)
             elif metric_type == "gauge":
-                setattr(cls, name, _create_gauge(meter, instrument_name, description))
+                getattr(cls, name).set_gauge(meter, instrument_name, description)
             else:
                 raise ValueError(f"Unknown metric type: {metric_type}")
-
-
-def _create_gauge(
-    meter: metrics.Meter,
-    name: str,
-    description: str,
-) -> SimpleGauge:
-    return SimpleGauge(meter, name, description)
 
 
 def configure_metrics(config: ObservabilityConfig) -> metrics.Meter:
@@ -371,7 +436,7 @@ def configure_metrics(config: ObservabilityConfig) -> metrics.Meter:
         metrics.set_meter_provider(provider)
         meter = provider.get_meter(config.service_name)
         _MetricsRegistry.set_meter(meter)
-        M.setup(meter)
+        Metrics.setup(meter)
         return meter
 
     duration_histogram_aggregation = ExplicitBucketHistogramAggregation(
@@ -399,7 +464,7 @@ def configure_metrics(config: ObservabilityConfig) -> metrics.Meter:
         meter = provider.get_meter(__name__)
         _MetricsRegistry.set_meter(meter)
         _MetricsRegistry.set_in_memory_reader(in_memory_reader)
-        M.setup(meter)
+        Metrics.setup(meter)
         return meter
 
     if effective.metrics_exporter == "none":
@@ -407,7 +472,7 @@ def configure_metrics(config: ObservabilityConfig) -> metrics.Meter:
         metrics.set_meter_provider(provider)
         meter = metrics.get_meter(config.service_name)
         _MetricsRegistry.set_meter(meter)
-        M.setup(meter)
+        Metrics.setup(meter)
         return meter
 
     otlp_exporter = OTLPMetricExporter(
@@ -426,7 +491,7 @@ def configure_metrics(config: ObservabilityConfig) -> metrics.Meter:
     metrics.set_meter_provider(provider)
     meter = metrics.get_meter(config.service_name)
     _MetricsRegistry.set_meter(meter)
-    M.setup(meter)
+    Metrics.setup(meter)
 
     return meter
 
@@ -442,7 +507,11 @@ def get_in_memory_reader() -> InMemoryMetricReader | None:
 
 
 __all__ = [
-    "M",
+    "Metrics",
+    "SafeCounter",
+    "SafeGauge",
+    "SafeHistogram",
+    "SimpleGauge",
     "configure_metrics",
     "get_in_memory_reader",
     "reset_metrics",

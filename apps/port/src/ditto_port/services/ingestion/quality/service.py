@@ -6,7 +6,7 @@ from typing import Any
 
 import polars as pl
 from ditto_core.quality import QualityEngine
-from ditto_datahub.stores.runtime.quality import QuarantineWriter
+from ditto_datahub.services.quality_record_service import QualityRecordService
 from loguru import logger
 
 
@@ -19,7 +19,9 @@ class QualityService:
     """
 
     def __init__(
-        self, engine: QualityEngine, quarantine_writer: QuarantineWriter | None = None
+        self,
+        engine: QualityEngine,
+        quarantine_writer: QualityRecordService | None = None,
     ) -> None:
         """
         Initialize quality service.

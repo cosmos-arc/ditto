@@ -11,7 +11,7 @@ from typing import Any, cast
 import duckdb
 import polars as pl
 import xxhash
-from ditto_infra.foundation import M, logger
+from ditto_infra.foundation import Metrics, logger
 
 from ditto_datahub.helpers.pit import PitHelper
 
@@ -288,10 +288,10 @@ class SqlEngine:
         cache_key = xxhash.xxh3_64_hexdigest(normalized.encode())
 
         if cache_key in self._plan_cache:
-            M.sql_query_plan_cache_hit.add(1)
+            Metrics.sql_query_plan_cache_hit.add(1)
             return self._plan_cache[cache_key], True
 
-        M.sql_query_plan_cache_miss.add(1)
+        Metrics.sql_query_plan_cache_miss.add(1)
 
         # FIFO 淘汰：如果缓存已满，删除最旧的条目
         if len(self._plan_cache) >= self._plan_cache_size:
@@ -313,7 +313,7 @@ class SqlEngine:
             duration: Query execution duration in seconds.
 
         """
-        M.sql_slow_query_total.add(1)
+        Metrics.sql_slow_query_total.add(1)
 
         limit = self.QUERY_PREVIEW_LENGTH
         preview = query[:limit] if len(query) > limit else query
@@ -411,7 +411,7 @@ class SqlEngine:
 
         # 记录执行时间
         duration = time.monotonic() - start_time
-        M.sql_query_duration.record(duration)
+        Metrics.sql_query_duration.record(duration)
 
         # 慢查询检测
         if duration > self._slow_query_threshold:

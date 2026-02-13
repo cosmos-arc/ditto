@@ -8,7 +8,7 @@
 
 import pytest
 from ditto_infra.foundation import (
-    M,
+    Metrics,
     get_recorded_metrics,
     get_recorded_spans,
     init,
@@ -62,8 +62,8 @@ class TestResetForTesting:
         init(_test_config(), force=True)
 
         # [REVIEW]
-        M.data_records.add(100, {"source": "test"})
-        M.kill_switch_level.set(2.0)
+        Metrics.data_records.add(100, {"source": "test"})
+        Metrics.kill_switch_level.set(2.0)
 
         metrics_data = get_recorded_metrics()
         assert metrics_data is not None
@@ -82,7 +82,7 @@ class TestResetForTesting:
 
         # [REVIEW] spans 和 metrics
         with span("test_op"):
-            M.data_records.add(50, {"source": "test"})
+            Metrics.data_records.add(50, {"source": "test"})
 
         spans = get_recorded_spans()
         metrics_data = get_recorded_metrics()
@@ -209,7 +209,7 @@ class TestGetRecordedMetrics:
         """测试返回字典类型."""
         init(_test_config(), force=True)
 
-        M.data_records.add(100, {"source": "test"})
+        Metrics.data_records.add(100, {"source": "test"})
 
         metrics_data = get_recorded_metrics()
         assert isinstance(metrics_data, dict)
@@ -218,8 +218,8 @@ class TestGetRecordedMetrics:
         """测试 counter 操作后获取指标."""
         init(_test_config(), force=True)
 
-        M.data_records.add(100, {"source": "test", "table": "test_table"})
-        M.data_records.add(50, {"source": "test", "table": "test_table"})
+        Metrics.data_records.add(100, {"source": "test", "table": "test_table"})
+        Metrics.data_records.add(50, {"source": "test", "table": "test_table"})
 
         metrics_data = get_recorded_metrics()
         # [REVIEW]
@@ -229,8 +229,8 @@ class TestGetRecordedMetrics:
         """测试 gauge 操作后获取指标."""
         init(_test_config(), force=True)
 
-        M.kill_switch_level.set(2.0)
-        M.data_freshness.set(1.5)
+        Metrics.kill_switch_level.set(2.0)
+        Metrics.data_freshness.set(1.5)
 
         metrics_data = get_recorded_metrics()
         assert metrics_data is not None
@@ -239,8 +239,8 @@ class TestGetRecordedMetrics:
         """测试 histogram 操作后获取指标."""
         init(_test_config(), force=True)
 
-        M.api_duration.record(1.5, {"endpoint": "/api/test"})
-        M.api_duration.record(2.3, {"endpoint": "/api/test"})
+        Metrics.api_duration.record(1.5, {"endpoint": "/api/test"})
+        Metrics.api_duration.record(2.3, {"endpoint": "/api/test"})
 
         metrics_data = get_recorded_metrics()
         assert metrics_data is not None
@@ -250,13 +250,13 @@ class TestGetRecordedMetrics:
         init(_test_config(), force=True)
 
         # Counter
-        M.data_records.add(100, {"source": "test"})
+        Metrics.data_records.add(100, {"source": "test"})
 
         # Gauge
-        M.kill_switch_level.set(1.0)
+        Metrics.kill_switch_level.set(1.0)
 
         # Histogram
-        M.api_duration.record(0.5, {"endpoint": "/api/test"})
+        Metrics.api_duration.record(0.5, {"endpoint": "/api/test"})
 
         metrics_data = get_recorded_metrics()
         assert metrics_data is not None
@@ -274,8 +274,8 @@ class TestIntegrationScenarios:
         # 2. 创建 span 和指标
         with span("data_update", source="tushare", table="etf_daily") as s:
             s.set_attribute("rows_processed", "1000")
-            M.data_records.add(1000, {"source": "tushare", "table": "etf_daily"})
-            M.data_update_duration.record(2.5, {"source": "tushare"})
+            Metrics.data_records.add(1000, {"source": "tushare", "table": "etf_daily"})
+            Metrics.data_update_duration.record(2.5, {"source": "tushare"})
 
         # 3. 验证数据
         spans = get_recorded_spans()
@@ -296,15 +296,15 @@ class TestIntegrationScenarios:
 
         # [REVIEW] 1
         with span("operation1"):
-            M.api_requests.add(1, {"endpoint": "/api/v1"})
+            Metrics.api_requests.add(1, {"endpoint": "/api/v1"})
 
         # [REVIEW] 2
         with span("operation2"):
-            M.api_requests.add(1, {"endpoint": "/api/v2"})
+            Metrics.api_requests.add(1, {"endpoint": "/api/v2"})
 
         # [REVIEW] 3
         with span("operation3"):
-            M.cache_miss.add(1, {"cache": "data_cache"})
+            Metrics.cache_miss.add(1, {"cache": "data_cache"})
 
         spans = get_recorded_spans()
         metrics_data = get_recorded_metrics()
@@ -321,11 +321,11 @@ class TestIntegrationScenarios:
 
             with span("child_operation1") as child1:
                 child1.set_attribute("level", "child1")
-                M.data_records.add(100, {"operation": "child1"})
+                Metrics.data_records.add(100, {"operation": "child1"})
 
             with span("child_operation2") as child2:
                 child2.set_attribute("level", "child2")
-                M.data_records.add(200, {"operation": "child2"})
+                Metrics.data_records.add(200, {"operation": "child2"})
 
         spans = get_recorded_spans()
         metrics_data = get_recorded_metrics()

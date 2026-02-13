@@ -22,7 +22,7 @@ from ditto_infra.foundation.db import SQLitePool
 # Export observability
 from ditto_infra.foundation.observability import (
     EffectiveConfig,
-    M,
+    Metrics,
     ObservabilityConfig,
     get_recorded_metrics,
     get_recorded_spans,
@@ -46,7 +46,7 @@ __all__ = [
     "EffectiveConfig",
     "FileLockManager",
     "LockAcquisitionError",
-    "M",
+    "Metrics",
     "ObservabilityConfig",
     "SQLitePool",
     "compute_checksum",

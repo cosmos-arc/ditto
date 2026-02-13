@@ -1,5 +1,6 @@
 """Capital 域 API 路由."""
 
+import asyncio
 from datetime import date
 from typing import Annotated
 
@@ -26,7 +27,7 @@ router = APIRouter(prefix="/capital", tags=["capital"])
 async def get_margin(
     instrument_id: str = Query(..., description="标的 ID"),
     as_of_date: date = Query(..., description="时间点查询日期"),
-    service: Annotated[CapitalService, FromComponent()] = None,  # type: ignore[assignment]
+    service: Annotated[CapitalService | None, FromComponent()] = None,
 ) -> APIResponse[list[Margin]]:
     """
     获取融资融券数据.
@@ -40,8 +41,11 @@ async def get_margin(
         APIResponse 包含融资融券数据列表
 
     """
-    # 调用 service
-    df = service.get_margin_trading(instrument_id, as_of_date)
+    if service is None:
+        msg = "CapitalService injection failed"
+        raise RuntimeError(msg)
+    # 调用 service（在线程池中执行，避免阻塞事件循环）
+    df = await asyncio.to_thread(service.get_margin_trading, instrument_id, as_of_date)
 
     # 转换为模型列表
     margins = to_margin_list(df)
@@ -54,7 +58,7 @@ async def get_margin(
 async def get_valuation(
     instrument_id: str = Query(..., description="标的 ID"),
     as_of_date: date = Query(..., description="时间点查询日期"),
-    service: Annotated[CapitalService, FromComponent()] = None,  # type: ignore[assignment]
+    service: Annotated[CapitalService | None, FromComponent()] = None,
 ) -> APIResponse[list[Valuation]]:
     """
     获取估值指标数据.
@@ -68,8 +72,15 @@ async def get_valuation(
         APIResponse 包含估值指标数据列表
 
     """
-    # 调用 service
-    df = service.get_valuation_metrics(instrument_id, as_of_date)
+    if service is None:
+        msg = "CapitalService injection failed"
+        raise RuntimeError(msg)
+    # 调用 service（在线程池中执行，避免阻塞事件循环）
+    df = await asyncio.to_thread(
+        service.get_valuation_metrics,
+        instrument_id,
+        as_of_date,
+    )
 
     # 转换为模型列表
     valuations = to_valuation_list(df)
@@ -82,7 +93,7 @@ async def get_valuation(
 async def get_futures(
     instrument_id: str = Query(..., description="标的 ID"),
     as_of_date: date = Query(..., description="时间点查询日期"),
-    service: Annotated[CapitalService, FromComponent()] = None,  # type: ignore[assignment]
+    service: Annotated[CapitalService | None, FromComponent()] = None,
 ) -> APIResponse[list[Futures]]:
     """
     获取期货数据.
@@ -96,8 +107,11 @@ async def get_futures(
         APIResponse 包含期货数据列表
 
     """
-    # 调用 service
-    df = service.get_futures(instrument_id, as_of_date)
+    if service is None:
+        msg = "CapitalService injection failed"
+        raise RuntimeError(msg)
+    # 调用 service（在线程池中执行，避免阻塞事件循环）
+    df = await asyncio.to_thread(service.get_futures, instrument_id, as_of_date)
 
     # 转换为模型列表
     futures = to_futures_list(df)

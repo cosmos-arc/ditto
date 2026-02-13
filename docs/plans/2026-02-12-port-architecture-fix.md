@@ -79,7 +79,7 @@
 
 #### 3.1.1 Foundation 层新增统一方法
 
-文件：`packages/foundation/src/ditto_foundation/config/environment.py`
+文件：`packages/infra/src/ditto_infra/foundation/config/environment.py`
 
 ```python
 import os
@@ -112,7 +112,7 @@ def environment(self) -> Environment:
     return Environment.from_str(env_str)
 
 # 修改后
-from ditto_foundation.config import get_environment
+from ditto_infra.foundation.config import get_environment
 
 @provide
 def environment(self) -> Environment:
@@ -406,7 +406,7 @@ CLAUDE.md 环境配置规范章节修订：
 
 **统一获取方法**：
 ```python
-from ditto_foundation.config import get_environment
+from ditto_infra.foundation.config import get_environment
 
 env = get_environment()  # 从 ENVIRONMENT 环境变量读取
 ```
