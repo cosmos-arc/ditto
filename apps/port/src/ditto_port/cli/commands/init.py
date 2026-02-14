@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import typer
@@ -10,7 +9,7 @@ from ditto_datahub.config import DataRootConfig
 from ditto_infra.foundation.config import (
     ConfigInitCoordinator,
     ConfigLoader,
-    Environment,
+    get_environment,
 )
 from ditto_infra.foundation.config.initializer import InitScope
 
@@ -20,8 +19,7 @@ app = typer.Typer(help="配置初始化命令")
 
 
 def _load_data_root() -> Path:
-    env_str = os.getenv("DITTO_ENV", "development")
-    environment = Environment.from_str(env_str)
+    environment = get_environment()
     loader = ConfigLoader(environment)
     values = load_env_file(loader, "data_store")
     config = DataRootConfig.model_validate(values)
