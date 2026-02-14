@@ -15,7 +15,7 @@ class TestConfigProviderDataHub:
     def test_database_settings_provider(self, monkeypatch):
         """测试 database_settings provider."""
         # 设置环境
-        monkeypatch.setenv("DITTO_ENV", "testing")
+        monkeypatch.setenv("ENVIRONMENT", "testing")
 
         # 创建容器
         container = make_container(ConfigProvider())
@@ -34,7 +34,7 @@ class TestConfigProviderDataHub:
     def test_data_source_settings_provider(self, monkeypatch):
         """测试 data_source_settings provider."""
         # 设置环境
-        monkeypatch.setenv("DITTO_ENV", "testing")
+        monkeypatch.setenv("ENVIRONMENT", "testing")
 
         # 创建容器
         container = make_container(ConfigProvider())
@@ -54,7 +54,7 @@ class TestConfigProviderDataHub:
     def test_file_storage_settings_provider(self, monkeypatch):
         """测试 file_storage_settings provider."""
         # 设置环境
-        monkeypatch.setenv("DITTO_ENV", "testing")
+        monkeypatch.setenv("ENVIRONMENT", "testing")
 
         # 创建容器
         container = make_container(ConfigProvider())
@@ -75,7 +75,7 @@ class TestConfigProviderDataHub:
     def test_all_datahub_settings_together(self, monkeypatch):
         """测试所有 DataHub 配置一起获取."""
         # 设置环境
-        monkeypatch.setenv("DITTO_ENV", "testing")
+        monkeypatch.setenv("ENVIRONMENT", "testing")
 
         # 创建容器
         container = make_container(ConfigProvider())

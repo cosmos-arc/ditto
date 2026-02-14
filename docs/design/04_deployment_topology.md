@@ -628,7 +628,7 @@ Ditto 采用**双层环境架构**，将**依赖管理**与**行为控制**分�
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │  Layer 2: 运行时环境 (行为控制层)                          │    │
 │  │                                                          │    │
-│  │  DITTO_ENV = development | testing | production         │    │
+│  │  ENVIRONMENT = development | testing | production       │    │
 │  │                                                          │    │
 │  │  控制内容: 日志级别、调试模式、功能开关、错误处理           │    │
 │  │  切换方式: 环境变量（仅选择环境）                           │    │
@@ -683,12 +683,14 @@ class Environment(str, Enum):
 
 ```bash
 # 方式 1: 环境变量（仅用于选择环境）
-export DITTO_ENV=production
+export ENVIRONMENT=production
 pixi run server
 
 # 方式 2: config/ 目录（推荐）
 # config/{environment}/ 下的 *.env 为权威配置来源
 ```
+
+> **注意**：`DITTO_ENV` 已弃用，请使用 `ENVIRONMENT`。
 
 ### 12.4 环境配置文件结构
 
@@ -730,7 +732,7 @@ config/
 
 **配置加载流程**：
 
-1. 根据 `DITTO_ENV` 确定环境
+1. 根据 `ENVIRONMENT` 确定环境（通过 `get_environment()` 统一入口）
 2. `ConfigLoader` 仅读取 `config/{environment}/` 下的 `.env` 文件并统一 key（不读 OS env）
 3. `ConfigProvider` 通过 `model_validate` 构造配置模型
 4. 由 DI 容器注入配置对象到各层
@@ -880,8 +882,8 @@ settings = Settings(system=system, observability=observability)
 
 **切换规则**：
 
-| 场景 | Pixi 环境 | DITTO_ENV | 说明 |
-|------|-----------|-----------|------|
+| 场景 | Pixi 环境 | ENVIRONMENT | 说明 |
+|------|-----------|-------------|------|
 | 本地开发 | `dev` | `development` | 运行测试、检查代码 |
 | 本地运行服务 | `dev` | `development` | 开发模式启动服务 |
 | 测试执行 | `dev` | `testing` | pytest 自动设置 |

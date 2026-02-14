@@ -55,7 +55,9 @@ ditto/
 | 层级 | 变量 | 有效值 | 说明 |
 |------|------|--------|------|
 | **Pixi 环境** | 选择环境 | `default`, `dev` | 依赖管理层 |
-| **运行时环境** | `DITTO_ENV` | `development`, `testing`, `production` | 行为控制层 |
+| **运行时环境** | `ENVIRONMENT` | `development`, `testing`, `production` | 行为控制层 |
+
+> **注意**：`DITTO_ENV` 已弃用，请使用 `ENVIRONMENT`。代码中应使用 `get_environment()` 统一入口。
 
 ---
 
@@ -141,7 +143,7 @@ config/
 
 ### 3.2 配置加载流程
 
-1. 根据 `DITTO_ENV` 环境变量确定环境
+1. 根据 `ENVIRONMENT` 环境变量确定环境（通过 `get_environment()` 统一入口）
 2. `ConfigLoader` 仅读取 `config/{environment}/` 下的 `.env` 文件并统一 key
 3. `ConfigProvider` 通过 `model_validate` 构造配置模型（纯 BaseModel）
 4. 通过 DI 容器注入到各个模块
@@ -163,7 +165,7 @@ config/
 
 ## 4. 环境变量优先级
 
-配置权威来源为 `config/{environment}/*.env`，环境变量仅用于选择环境（`DITTO_ENV`）。
+配置权威来源为 `config/{environment}/*.env`，环境变量仅用于选择环境（`ENVIRONMENT`）。
 
 优先级（从高到低）：
 1. `config/{environment}/*.env` 文件
@@ -366,7 +368,7 @@ Token 仅来自 `data_source.env`，由应用层注入，不读取环境变量/K
 
 | 问题 | 排查步骤 |
 |------|----------|
-| **API 无法访问** | 1. 检查端口占用 `netstat -ano \| findstr 8000`<br>2. 查看日志中的错误<br>3. 确认 `DITTO_ENV` 正确 |
+| **API 无法访问** | 1. 检查端口占用 `netstat -ano \| findstr 8000`<br>2. 查看日志中的错误<br>3. 确认 `ENVIRONMENT` 正确 |
 | **Prefect Flow 失败** | 1. 访问 http://localhost:4200 查看 Flow 详情<br>2. 检查 Task 级别错误<br>3. 验证 Tushare Token |
 | **Token 无效** | 1. 检查 `config/{env}/data_source.env` 中 `TUSHARE_TOKEN`<br>2. 确认 Tushare 积分余额<br>3. 重启服务后再试 |
 | **数据库连接失败** | 1. 检查数据目录权限<br>2. 确认 `data_store.env`/`database.env` 路径存在<br>3. 查看 SQLite WAL 模式是否启用 |

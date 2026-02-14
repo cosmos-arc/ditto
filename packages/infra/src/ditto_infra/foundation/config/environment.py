@@ -1,6 +1,7 @@
 """系统运行环境枚举."""
 
 import os
+import warnings
 from enum import Enum
 
 
@@ -56,7 +57,8 @@ def get_environment() -> Environment:
 
     读取顺序：
     1. 环境变量 ENVIRONMENT
-    2. 默认值 development
+    2. 环境变量 DITTO_ENV（已弃用，显示 DeprecationWarning）
+    3. 默认值 development
 
     Returns:
         Environment 枚举值
@@ -65,5 +67,17 @@ def get_environment() -> Environment:
         ValueError: 环境变量值无效时
 
     """
-    env_str = os.getenv("ENVIRONMENT", "development")
+    env_str: str | None
+    ditto_env = os.getenv("DITTO_ENV")
+
+    if ditto_env is not None:
+        msg = (
+            "DITTO_ENV is deprecated, use ENVIRONMENT instead. "
+            "DITTO_ENV will be removed in a future version."
+        )
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        env_str = ditto_env
+    else:
+        env_str = os.getenv("ENVIRONMENT", "development")
+
     return Environment.from_str(env_str)

@@ -248,15 +248,17 @@ ditto/
 | 层级 | 变量 | 有效值 | 说明 |
 |------|------|--------|------|
 | Pixi 环境 | 选择环境 | `default`, `dev` | 依赖管理层 |
-| 运行时环境 | `DITTO_ENV` | `development`, `testing`, `production` | 行为控制层 |
+| 运行时环境 | `ENVIRONMENT` | `development`, `testing`, `production` | 行为控制层 |
 
 **使用场景**：
 
-| 场景 | Pixi 环境 | DITTO_ENV | 命令 |
-|------|-----------|-----------|------|
+| 场景 | Pixi 环境 | ENVIRONMENT | 命令 |
+|------|-----------|-------------|------|
 | 本地开发 | `dev` | `development` | `pixi run -e dev pytest` |
 | 测试执行 | `dev` | `testing` | `pixi run -e dev pytest` |
 | 生产部署 | `default` | `production` | `pixi run server` |
+
+> **注意**：`DITTO_ENV` 已弃用，请使用 `ENVIRONMENT`。
 
 ---
 

@@ -74,9 +74,9 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
 
    设置运行时环境（默认为 development）：
    ```bash
-   export DITTO_ENV=development  # Linux/macOS
+   export ENVIRONMENT=development  # Linux/macOS
    # 或
-   set DITTO_ENV=development     # Windows
+   set ENVIRONMENT=development     # Windows
    ```
 
    **注意**：Tushare token 需要通过 keyring 或 `~/.ditto/secrets.toml` 配置
