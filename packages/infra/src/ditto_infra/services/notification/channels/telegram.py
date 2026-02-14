@@ -62,11 +62,7 @@ class TelegramSender(NotificationSender):
                 )
                 response.raise_for_status()
 
-            logger.info(
-                "Telegram message sent successfully",
-                event="telegram_sent",
-                chat_id=self._settings.telegram_chat_id,
-            )
+            logger.info("Telegram message sent successfully", event="telegram_sent")
             return True
 
         except httpx.TimeoutException as e:

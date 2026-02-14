@@ -66,11 +66,7 @@ class WebhookSender(NotificationSender):
                 )
                 response.raise_for_status()
 
-            logger.info(
-                "Webhook sent successfully",
-                event="webhook_sent",
-                url=self._settings.webhook_url,
-            )
+            logger.info("Webhook sent successfully", event="webhook_sent")
             return True
 
         except httpx.TimeoutException as e:

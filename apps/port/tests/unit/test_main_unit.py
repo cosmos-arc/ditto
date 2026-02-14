@@ -1,5 +1,7 @@
 """Tests for FastAPI main application async endpoints."""
 
+from unittest.mock import patch
+
 import pytest
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.config.settings import (
@@ -14,6 +16,7 @@ from ditto_port.main import (
     health_check,
     root,
 )
+from fastapi import HTTPException
 from starlette.requests import Request
 
 
@@ -62,8 +65,39 @@ class TestFastAPIEndpoints:
         assert response["features"]["data_collection"] is True
         assert response["features"]["data_validation"] is True
 
+
+@pytest.mark.unit
+class TestTestLogsEndpoint:
+    """Tests for test logs endpoint environment check."""
+
     @pytest.mark.asyncio
-    async def test_test_logging_endpoint(self):
-        """Test test logging endpoint generates logs."""
-        response = await generate_test_logs()
-        assert response == {"message": "Test logs generated"}
+    async def test_test_logs_endpoint_in_development_environment(self):
+        """Test test logs endpoint works in development environment."""
+        with patch(
+            "ditto_port.main.get_environment",
+            return_value=Environment.DEVELOPMENT,
+        ):
+            response = await generate_test_logs()
+            assert response == {"message": "Test logs generated"}
+
+    @pytest.mark.asyncio
+    async def test_test_logs_endpoint_in_testing_environment(self):
+        """Test test logs endpoint works in testing environment."""
+        with patch(
+            "ditto_port.main.get_environment",
+            return_value=Environment.TESTING,
+        ):
+            response = await generate_test_logs()
+            assert response == {"message": "Test logs generated"}
+
+    @pytest.mark.asyncio
+    async def test_test_logs_endpoint_in_production_environment(self):
+        """Test test logs endpoint returns 404 in production environment."""
+        with patch(
+            "ditto_port.main.get_environment",
+            return_value=Environment.PRODUCTION,
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+                await generate_test_logs()
+            assert exc_info.value.status_code == 404
+            assert exc_info.value.detail == "Not found"

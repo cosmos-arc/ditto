@@ -20,10 +20,11 @@ import orjson
 from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
 from ditto_datahub.config import DataRootConfig
+from ditto_infra.foundation.config.environment import get_environment
 from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, InitScope
 from ditto_infra.foundation.config.settings import Settings
 from ditto_infra.foundation.observability import Metrics, logger
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -282,7 +283,11 @@ async def get_status(request: Request) -> dict[str, Any]:
 
 @app.get("/api/v1/logs/test")
 async def generate_test_logs() -> dict[str, str]:
-    """测试日志记录功能."""
+    """测试日志记录功能（仅开发/测试环境可用）."""
+    env = get_environment()
+    if env.is_production:
+        raise HTTPException(status_code=404, detail="Not found")
+
     logger.info("Test info log", test_data="example")
     logger.warning("Test warning log", test_data="example")
     logger.error("Test error log", test_data="example")
@@ -300,5 +305,4 @@ if __name__ == "__main__":
     granian.Granian(
         "main:app",
         address="0.0.0.0:8000",
-        reload=True,
     ).serve()
