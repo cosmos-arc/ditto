@@ -17,7 +17,6 @@ import granian
 import orjson
 
 # Local imports - using editable packages
-from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
 from ditto_datahub.config import DataRootConfig
 from ditto_infra.foundation.config.environment import get_environment
@@ -46,12 +45,7 @@ from ditto_port.middleware import (
     http_exception_handler,
     validation_exception_handler,
 )
-from ditto_port.registry import (
-    ConfigProvider,
-    CoreProvider,
-    DataHubProvider,
-    DataSourcesProvider,
-)
+from ditto_port.registry.container import make_async_app_container
 
 # Initialize project root
 project_root = Path(__file__).parent.parent.parent.parent
@@ -109,13 +103,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     logger.info("Starting Ditto API server", event="server_start")
 
-    # 创建容器（在 try 块之前，避免未绑定问题）
-    container = make_async_container(
-        ConfigProvider(),
-        CoreProvider(),
-        DataHubProvider(),
-        DataSourcesProvider(),
-    )
+    container = make_async_app_container()
     typed_container = cast(AsyncContainerProtocol, container)
 
     try:

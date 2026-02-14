@@ -4,7 +4,6 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
 
-from dishka import make_container
 from ditto_datahub.models import Source
 from ditto_datahub.services import IngestionLogService
 from ditto_datahub.services.capital_service import CapitalService
@@ -15,12 +14,7 @@ from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.source_service import SourceService
 
 from ditto_port.cli.executor import CLIExecutor
-from ditto_port.registry import (
-    ConfigProvider,
-    CoreProvider,
-    DataHubProvider,
-    DataSourcesProvider,
-)
+from ditto_port.registry.container import make_app_container
 
 
 @contextmanager
@@ -38,12 +32,7 @@ def create_cli_host() -> Generator[Any, None, None]:
 
     """
     # 创建同步容器
-    container = make_container(
-        ConfigProvider(),
-        CoreProvider(),
-        DataHubProvider(),
-        DataSourcesProvider(),
-    )
+    container = make_app_container()
     try:
         yield container
     finally:

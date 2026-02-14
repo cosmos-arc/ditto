@@ -9,7 +9,6 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
-from dishka import make_container
 from ditto_core.quality import QualityEngine
 from ditto_datahub.services import IngestionLogService
 from ditto_datahub.services.capital_service import CapitalService
@@ -19,12 +18,7 @@ from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.source_service import SourceService
 
-from ditto_port.registry import (
-    ConfigProvider,
-    CoreProvider,
-    DataHubProvider,
-    DataSourcesProvider,
-)
+from ditto_port.registry.container import make_app_container
 from ditto_port.services.ingestion import create_coordinator
 
 
@@ -42,12 +36,7 @@ def create_prefect_host() -> Iterator[Any]:
         dishka 同步容器实例
 
     """
-    container = make_container(
-        ConfigProvider(),
-        CoreProvider(),
-        DataHubProvider(),
-        DataSourcesProvider(),
-    )
+    container = make_app_container()
     try:
         yield container
     finally:

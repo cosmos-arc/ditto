@@ -6,6 +6,8 @@ import polars as pl
 from ditto_core.quality.spec import DQResult
 from loguru import logger
 
+from .models import ReconciliationResult
+
 
 class InstrumentStoreProtocol(Protocol):
     """Protocol for instrument enrichment dependency."""
@@ -79,7 +81,7 @@ class QualityReconciliationService:
         primary_df: pl.DataFrame,
         trade_date: str,
         dataset: str = "stock_daily",
-    ) -> dict[str, Any]:
+    ) -> "ReconciliationResult":
         """
         每日质量对账.
 
@@ -131,13 +133,14 @@ class QualityReconciliationService:
                     event="reconciliation_no_secondary",
                     trade_date=trade_date,
                 )
-                return {
-                    "trade_date": trade_date,
-                    "dataset": dataset,
-                    "passed": True,
-                    "issue_count": 0,
-                    "skipped": "no_secondary_data",
-                }
+                return ReconciliationResult(
+                    trade_date=trade_date,
+                    dataset=dataset,
+                    passed=True,
+                    issue_count=0,
+                    skipped=True,
+                    skip_reason="no_secondary_data",
+                )
 
             # 5. 调用 Core 层引擎进行对比
             # 配置文件使用 key_columns: [ticker, trade_date]
@@ -169,12 +172,12 @@ class QualityReconciliationService:
                 issue_count=len(result.issues),
             )
 
-            return {
-                "trade_date": trade_date,
-                "dataset": dataset,
-                "passed": result.passed,
-                "issue_count": len(result.issues),
-            }
+            return ReconciliationResult(
+                trade_date=trade_date,
+                dataset=dataset,
+                passed=result.passed,
+                issue_count=len(result.issues),
+            )
 
         except Exception as e:
             logger.exception(
@@ -184,13 +187,13 @@ class QualityReconciliationService:
                 dataset=dataset,
                 error_type=type(e).__name__,
             )
-            return {
-                "trade_date": trade_date,
-                "dataset": dataset,
-                "passed": False,
-                "issue_count": 0,  # 错误情况下不进行 issue 计数
-                "error": f"{type(e).__name__}: {e!s}",
-            }
+            return ReconciliationResult(
+                trade_date=trade_date,
+                dataset=dataset,
+                passed=False,
+                issue_count=0,
+                error=f"{type(e).__name__}: {e!s}",
+            )
 
     def _convert_result_to_df(self, result: DQResult, dataset: str) -> pl.DataFrame:
         """
