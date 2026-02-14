@@ -363,3 +363,12 @@ class TushareSource(DataSource):
             start_date=compact_date,
             end_date=compact_date,
         )
+
+    def close(self) -> None:
+        """
+        释放 HTTP 连接资源.
+
+        调用内部 TushareClient 的 close 方法释放网络资源。
+        """
+        if hasattr(self, "_client") and self._client:
+            self._client.close()

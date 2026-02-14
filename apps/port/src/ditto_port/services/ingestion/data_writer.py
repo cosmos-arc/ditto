@@ -480,7 +480,10 @@ class IngestionDataWriter:
         elif capital_dataset == "futures_position":
             records_written = self._capital_service.save_futures(df)
         else:
-            records_written = 0
+            valid = "valuation_metrics, margin_trading, pledge_ratio, futures_position"
+            raise ValueError(
+                f"Unknown capital_dataset: {capital_dataset}. Expected: {valid}"
+            )
         return _to_write_result(
             dataset,
             year,

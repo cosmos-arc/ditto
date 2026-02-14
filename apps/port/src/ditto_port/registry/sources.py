@@ -4,6 +4,8 @@
 注册 TushareSource 等外部数据源组件。
 """
 
+from collections.abc import Iterator
+
 from dishka import Provider, Scope, provide
 from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.source import DataSources
@@ -21,16 +23,19 @@ class DataSourcesProvider(Provider):
     def tushare_source(
         self,
         data_source_settings: DataSourceSettings,
-    ) -> TushareSource:
+    ) -> Iterator[TushareSource]:
         """
         Tushare 数据源（应用级单例）.
 
         Token 和配置从 DataSourceSettings 注入.
+        使用 yield 语法确保资源正确释放。
         """
-        return TushareSource(
+        source = TushareSource(
             settings=data_source_settings,
             token=data_source_settings.tushare_token,
         )
+        yield source
+        source.close()
 
     @provide
     def data_sources(self, tushare_source: TushareSource) -> DataSources:
