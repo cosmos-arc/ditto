@@ -727,7 +727,26 @@ Week 3:
 
 每个 PR 完成后必须通过：
 
-- [ ] `pixi run -e dev check`（lint + fmt + type + test --fast）
-- [ ] `pixi run -e dev arch-check`（架构约束检查）
-- [ ] 相关单元测试通过
-- [ ] 分支覆盖率 ≥ 80%
+- [x] `pixi run -e dev check`（lint + fmt + type + test --fast）
+- [x] `pixi run -e dev arch-check`（架构约束检查）
+- [x] 相关单元测试通过
+- [x] 分支覆盖率 ≥ 80%
+
+---
+
+## 实施状态
+
+| PR | 问题 ID | 状态 | 提交 |
+|----|---------|------|------|
+| PR-1 | SEC-002 + SEC-004 | ✅ 完成 | 525dbb3 |
+| PR-2 | ARCH-003 | ✅ 完成 | 7f74d81, 867719b, 728db17 |
+| PR-3 | ARCH-005 | ✅ 完成 | cdb9d23 |
+| PR-4 | ARCH-001 | ✅ 完成 | 80e5333 |
+| PR-5 | ENG-007 | ✅ 完成 | 7fcdd9a |
+| PR-6 | ENG-006 | ✅ 完成 | 7fcdd9a |
+| PR-7 | ENG-008 | ✅ 完成 | 9191eee |
+| PR-8 | ENG-009 | ✅ 完成 | 9191eee |
+
+**实施日期**：2026-02-14
+**实际工作量**：约 2 小时
+**验证结果**：All checks passed!
