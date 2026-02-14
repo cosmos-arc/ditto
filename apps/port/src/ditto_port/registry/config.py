@@ -22,6 +22,7 @@ from ditto_infra.foundation.config import (
     Environment,
     get_environment,
 )
+from ditto_infra.foundation.config.providers import DataRootInitProvider
 from ditto_infra.foundation.config.settings import (
     ObservabilitySettings,
     Settings,
@@ -32,6 +33,7 @@ from ditto_infra.foundation.observability.config import ObservabilityConfig
 from ditto_infra.services.notification import NotificationSettings
 
 from ditto_port.config import load_env_file
+from ditto_port.registry.init_providers import MetadataDbInitProvider
 
 __all__ = ["ConfigProvider"]
 
@@ -75,8 +77,11 @@ class ConfigProvider(Provider):
 
     @provide
     def init_coordinator(self) -> ConfigInitCoordinator:
-        """提供配置初始化协调器。"""
-        return ConfigInitCoordinator()
+        """配置初始化协调器（注册所有 providers）."""
+        coordinator = ConfigInitCoordinator()
+        coordinator.register(DataRootInitProvider())
+        coordinator.register(MetadataDbInitProvider())
+        return coordinator
 
     @provide
     def settings(
