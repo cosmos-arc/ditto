@@ -33,7 +33,6 @@ from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.source_service import SourceService
 from ditto_datahub.sources.source import DataSources
-from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
 # Capital Stores (CQRS Reader/Writer)
 from ditto_datahub.stores.capital.futures_position.futures_reader import (
@@ -994,21 +993,6 @@ class DataHubProvider(Provider):
             index_constituent_reader=index_constituent_reader,
             index_constituent_writer=index_constituent_writer,
         )
-
-    # ========================================================================
-    # Sources Layer
-    # ========================================================================
-
-    @provide
-    def sources(self, tushare_source: TushareSource) -> DataSources:
-        """
-        外部数据源组合器.
-
-        Args:
-            tushare_source: Tushare 数据源实例
-
-        """
-        return DataSources(tushare=tushare_source)
 
     # ========================================================================
     # Runtime Services
