@@ -1,8 +1,5 @@
 """Tests for DataCache."""
 
-import time
-
-import pytest
 from ditto_infra.foundation.cache import CacheStats, DataCache
 
 
@@ -120,19 +117,31 @@ class TestDataCache:
         assert "key2" not in self.cache
 
     def test_ttl_expiration(self) -> None:
-        """Test entries expire after TTL."""
-        # 使用短 TTL 加速测试（cachebox C 扩展不受 time_machine 控制）
-        self.cache._cache.insert("key1", "value1", ttl=0.05)  # 50ms TTL
+        """Test entries expire after TTL (deterministic with custom time source)."""
+        # 使用自定义时间源实现确定性 TTL 测试
+        fake_time = [0.0]
 
-        # [REVIEW]
-        assert self.cache.get("key1") == "value1"
+        cache = DataCache(
+            ttl_seconds=10,
+            max_size=5,
+            enable_metrics=False,
+            time_source=lambda: fake_time[0],
+        )
 
-        # CI 并发环境下存在调度抖动，使用更宽松缓冲避免偶发失败
-        time.sleep(0.2)
-        value = self.cache.get("key1")
-        if value is not None:
-            pytest.xfail("cachebox TTL 过期在 CI 并发环境下存在抖动")
-        assert value is None
+        cache.set("key1", "value1")
+
+        # t=0: 条目存在
+        assert cache.get("key1") == "value1"
+        assert "key1" in cache
+
+        # t=5: 条目仍然存在（未过期）
+        fake_time[0] = 5.0
+        assert cache.get("key1") == "value1"
+
+        # t=11: 条目已过期
+        fake_time[0] = 11.0
+        assert cache.get("key1") is None
+        assert "key1" not in cache
 
     def test_lru_eviction(self) -> None:
         """Test LRU eviction when max_size is exceeded."""
@@ -198,53 +207,86 @@ class TestDataCache:
         assert self.cache.get("instrument_id:pit:tushare:600000.SH:2024-06") is not None
 
     def test_set_with_ttl_none_uses_default_ttl(self) -> None:
-        """Test set with ttl=None uses default TTL."""
-        # 创建一个短 TTL 的缓存用于测试（cachebox C 扩展不受 time_machine 控制）
-        test_cache = DataCache(ttl_seconds=1, max_size=5, enable_metrics=False)
-        # 覆盖为短 TTL
-        test_cache._default_ttl = 0.05  # 50ms TTL
+        """Test set with ttl=None uses default TTL (deterministic)."""
+        # 使用自定义时间源实现确定性 TTL 测试
+        fake_time = [0.0]
 
-        # ttl=None 应该使用默认 TTL (50ms)
-        test_cache.set("key1", "value1", ttl=None)
+        cache = DataCache(
+            ttl_seconds=10,
+            max_size=5,
+            enable_metrics=False,
+            time_source=lambda: fake_time[0],
+        )
 
-        # [REVIEW]
-        assert test_cache.get("key1") == "value1"
+        # ttl=None 应该使用默认 TTL (10 秒)
+        cache.set("key1", "value1", ttl=None)
 
-        time.sleep(0.2)
-        value = test_cache.get("key1")
-        if value is not None:
-            pytest.xfail("cachebox TTL 过期在 CI 并发环境下存在抖动")
-        assert value is None
+        # t=0: 条目存在
+        assert cache.get("key1") == "value1"
+
+        # t=5: 条目仍然存在
+        fake_time[0] = 5.0
+        assert cache.get("key1") == "value1"
+
+        # t=11: 条目已过期（超过默认 TTL 10 秒）
+        fake_time[0] = 11.0
+        assert cache.get("key1") is None
 
     def test_set_with_ttl_zero_no_expiration(self) -> None:
-        """Test set with ttl=0 means no expiration."""
+        """Test set with ttl=0 means no expiration (deterministic)."""
+        # 使用自定义时间源实现确定性测试
+        fake_time = [0.0]
+
+        cache = DataCache(
+            ttl_seconds=10,
+            max_size=5,
+            enable_metrics=False,
+            time_source=lambda: fake_time[0],
+        )
+
         # ttl=0 表示永不过期
-        self.cache.set("key1", "value1", ttl=0)
+        cache.set("key1", "value1", ttl=0)
 
-        # [REVIEW] TTL - 等待一小段时间验证确实不会过期
-        time.sleep(0.06)
+        # t=0: 条目存在
+        assert cache.get("key1") == "value1"
 
-        # [REVIEW](因为设置了 ttl=0，永不过期)
-        assert self.cache.get("key1") == "value1"
+        # t=1000: 条目仍然存在（永不过期）
+        fake_time[0] = 1000.0
+        assert cache.get("key1") == "value1"
+
+        # t=1000000: 条目仍然存在（永不过期）
+        fake_time[0] = 1000000.0
+        assert cache.get("key1") == "value1"
 
     def test_set_with_custom_ttl(self) -> None:
-        """Test set with custom TTL value."""
-        # 使用短 TTL 加速测试（cachebox C 扩展不受 time_machine 控制）
-        # [REVIEW] TTL 为 100ms
-        self.cache.set("key1", "value1", ttl=0.1)
+        """Test set with custom TTL value (deterministic with custom time source)."""
+        # 使用自定义时间源实现确定性 TTL 测试
+        fake_time = [0.0]
 
-        # [REVIEW]
-        assert self.cache.get("key1") == "value1"
+        cache = DataCache(
+            ttl_seconds=100,  # 默认 TTL 100 秒（不会被使用）
+            max_size=5,
+            enable_metrics=False,
+            time_source=lambda: fake_time[0],
+        )
 
-        # [REVIEW] 50ms，应该还在
-        time.sleep(0.05)
-        assert self.cache.get("key1") == "value1"
+        # 使用自定义 TTL = 20 秒
+        cache.set("key1", "value1", ttl=20)
 
-        time.sleep(0.2)
-        value = self.cache.get("key1")
-        if value is not None:
-            pytest.xfail("cachebox TTL 过期在 CI 并发环境下存在抖动")
-        assert value is None
+        # t=0: 条目存在
+        assert cache.get("key1") == "value1"
+
+        # t=10: 条目仍然存在（未超过自定义 TTL 20 秒）
+        fake_time[0] = 10.0
+        assert cache.get("key1") == "value1"
+
+        # t=19: 条目仍然存在
+        fake_time[0] = 19.0
+        assert cache.get("key1") == "value1"
+
+        # t=21: 条目已过期（超过自定义 TTL 20 秒）
+        fake_time[0] = 21.0
+        assert cache.get("key1") is None
 
 
 class TestCacheStats:
