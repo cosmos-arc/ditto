@@ -4,6 +4,8 @@
 避免与 CliRunner 的 I/O 捕获机制冲突。
 """
 
+from collections.abc import Generator
+
 import pytest
 
 
@@ -14,15 +16,46 @@ def reset_observability() -> None:
 
 
 @pytest.fixture(autouse=True)
-def disable_stdout_logging():
-    """在每个 CLI 测试前禁用 stdout 日志输出.
+def isolate_loguru_for_cli() -> Generator[None, None, None]:
+    """在 CLI 测试中完全隔离 loguru。
 
-    解决 CliRunner I/O 错误：
-    - loguru 的 stdout handler 可能在测试结束时导致 I/O 错误
-    - 在测试开始前移除所有 handler
+    根因：loguru 的 stdout handler 与 CliRunner 的 I/O 捕获冲突，
+          在测试结束时会触发 "I/O operation on closed file"。
+
+    策略：
+    1. 测试开始前：保存原始 handlers，然后移除所有 handler
+    2. 添加静默 handler（level="CRITICAL"）
+    3. 测试结束后：恢复原始 handlers
     """
     from loguru import logger as _logger
 
-    # 移除默认 handler（包括 stdout）
+    # 保存原始 handlers
+    original_handlers = _logger._core.handlers.copy()  # type: ignore[attr-defined]
+
+    # 移除所有现有 handlers
     _logger.remove()
-    # 测试结束后不恢复，让下一个测试重新配置
+
+    # 添加静默 handler（仅记录 CRITICAL 级别，几乎不输出）
+    _logger.add(
+        lambda _: None,  # 静默 sink
+        level="CRITICAL",
+        format="{message}",
+    )
+
+    yield
+
+    # 恢复原始配置
+    _logger.remove()
+    for _handler_id, handler in original_handlers.items():
+        _logger.add(
+            handler._sink,  # type: ignore[attr-defined]
+            level=handler.level,
+            format=handler.format,
+            filter=handler.filter,
+            colorize=handler.colorize,
+            serialize=handler.serialize,
+            backtrace=handler.backtrace,
+            diagnose=handler.diagnose,
+            enqueue=handler.enqueue,
+            catch=handler.catch,
+        )

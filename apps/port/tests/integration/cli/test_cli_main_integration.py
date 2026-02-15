@@ -10,7 +10,8 @@ from typer.testing import CliRunner
 runner = CliRunner()
 
 # 集成测试串行执行，避免并发副作用
-pytestmark = [pytest.mark.integration, pytest.mark.serial]
+# cli_test: 禁用 observability 自动重置，避免 I/O 冲突
+pytestmark = [pytest.mark.integration, pytest.mark.serial, pytest.mark.cli_test]
 
 
 def test_main_help() -> None:
