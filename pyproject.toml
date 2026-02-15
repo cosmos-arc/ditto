@@ -162,6 +162,10 @@ max-returns = 6
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
+# flake8-tidy-imports: 禁止特定 API 导入
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"pandas".msg = "Use polars instead"
+
 # ===================================================================
 # BasedPyright (类型检查) - Pyright fork，更严格的默认设置
 #
