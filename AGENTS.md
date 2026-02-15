@@ -63,8 +63,15 @@
 
 ### 架构原则
 ```
-依赖方向: core → datahub → foundation
-          apps/port → datahub → foundation
+依赖层级（从高到低）:
+  ditto_port → ditto_core → ditto_datahub → ditto_infra
+
+允许的跨层依赖:
+  - port 可以直接依赖 datahub.models/services
+  - port 可以直接依赖 infra.foundation
+  - port 禁止直接依赖 datahub.stores/sources/runtime（仅 registry 例外）
+
+详细约束见 .importlinter 配置
 ```
 
 - **边界检查**：`pixi run -e dev arch-check`

@@ -14,6 +14,8 @@ import pytest
 from ditto_port.cli.main import app
 from typer.testing import CliRunner
 
+from .helpers import assert_cli_result
+
 runner = CliRunner()
 
 # 集成测试串行执行，避免并发副作用
@@ -93,11 +95,10 @@ class TestQueryMetadataInstruments:
             ["--data-root", str(tmp_path), "query", "metadata", "instruments"],
         )
         # 查询命令需要数据库支持，可能因数据库问题失败
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or "未找到" in result.stdout
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "未找到"),
         )
 
     def test_query_metadata_instruments_with_ticker(self, tmp_path: Path) -> None:
@@ -114,11 +115,10 @@ class TestQueryMetadataInstruments:
                 "600000",
             ],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or "未找到" in result.stdout
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "未找到"),
         )
 
     def test_query_metadata_instruments_with_asset_class(self, tmp_path: Path) -> None:
@@ -135,11 +135,10 @@ class TestQueryMetadataInstruments:
                 "stock",
             ],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or "未找到" in result.stdout
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "未找到"),
         )
 
     def test_query_metadata_instruments_with_json(self, tmp_path: Path) -> None:
@@ -155,11 +154,10 @@ class TestQueryMetadataInstruments:
                 "--json",
             ],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or "未找到" in result.stdout
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "未找到"),
         )
 
 
@@ -172,10 +170,9 @@ class TestQueryMetadataInstrument:
             app,
             ["--data-root", str(tmp_path), "query", "metadata", "instrument", "1"],
         )
-        # 查询命令需要数据库支持，可能因数据库问题失败
-        assert (
-            result.exit_code in {0, 1}  # 可能因找不到标的而退出
-            or "unable to open database file" in str(result.exception)
-            or "未找到" in result.stdout
-            or result.exception is not None
+        # 查询命令需要数据库支持，可能因数据库问题或找不到标的而失败
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "未找到"),
         )

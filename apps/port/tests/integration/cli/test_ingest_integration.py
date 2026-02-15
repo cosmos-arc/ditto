@@ -11,6 +11,8 @@ import pytest
 from ditto_port.cli.main import app
 from typer.testing import CliRunner
 
+from .helpers import assert_cli_result
+
 runner = CliRunner()
 
 # 集成测试串行执行，避免并发副作用
@@ -106,12 +108,11 @@ class TestIngestMarketDaily:
             app,
             ["--data-root", str(tmp_path), "ingest", "market", "stock", "2024-01-02"],
         )
-        # 命令应该尝试执行（可能因数据源问题失败，这是预期的）
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or "Tushare" in str(result.exception)
-            or result.exception is not None
+        # 命令可能因数据源问题失败（无 Tushare token），这是预期的
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
         )
 
     def test_ingest_market_stock_with_force(self, tmp_path: Path) -> None:
@@ -128,10 +129,10 @@ class TestIngestMarketDaily:
                 "--force",
             ],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
         )
 
     def test_ingest_market_etf_with_data_root(self, tmp_path: Path) -> None:
@@ -140,10 +141,10 @@ class TestIngestMarketDaily:
             app,
             ["--data-root", str(tmp_path), "ingest", "market", "etf", "2024-01-02"],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
         )
 
     def test_ingest_market_adj_with_data_root(self, tmp_path: Path) -> None:
@@ -152,10 +153,10 @@ class TestIngestMarketDaily:
             app,
             ["--data-root", str(tmp_path), "ingest", "market", "adj", "2024-01-02"],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
         )
 
     def test_ingest_market_adj_fund_with_data_root(self, tmp_path: Path) -> None:
@@ -172,10 +173,10 @@ class TestIngestMarketDaily:
                 "--fund",
             ],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
         )
 
 
@@ -184,50 +185,42 @@ class TestIngestMetadataCalendar:
 
     def test_ingest_metadata_calendar_with_data_root(self, tmp_path: Path) -> None:
         """测试 ingest metadata calendar 使用自定义数据根目录."""
-        try:
-            result = runner.invoke(
-                app,
-                [
-                    "--data-root",
-                    str(tmp_path),
-                    "ingest",
-                    "metadata",
-                    "calendar",
-                    "2024-01-02",
-                ],
-            )
-            assert (
-                result.exit_code == 0
-                or "unable to open database file" in str(result.exception)
-                or result.exception is not None
-            )
-        except ValueError as e:
-            if "I/O operation on closed file" not in str(e):
-                raise
+        result = runner.invoke(
+            app,
+            [
+                "--data-root",
+                str(tmp_path),
+                "ingest",
+                "metadata",
+                "calendar",
+                "2024-01-02",
+            ],
+        )
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
+        )
 
     def test_ingest_metadata_calendar_with_force(self, tmp_path: Path) -> None:
         """测试 ingest metadata calendar --force."""
-        try:
-            result = runner.invoke(
-                app,
-                [
-                    "--data-root",
-                    str(tmp_path),
-                    "ingest",
-                    "metadata",
-                    "calendar",
-                    "2024-01-02",
-                    "--force",
-                ],
-            )
-            assert (
-                result.exit_code == 0
-                or "unable to open database file" in str(result.exception)
-                or result.exception is not None
-            )
-        except ValueError as e:
-            if "I/O operation on closed file" not in str(e):
-                raise
+        result = runner.invoke(
+            app,
+            [
+                "--data-root",
+                str(tmp_path),
+                "ingest",
+                "metadata",
+                "calendar",
+                "2024-01-02",
+                "--force",
+            ],
+        )
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
+        )
 
 
 class TestIngestMetadataBasic:
@@ -235,51 +228,39 @@ class TestIngestMetadataBasic:
 
     def test_ingest_metadata_basic_stock(self, tmp_path: Path) -> None:
         """测试 ingest metadata basic stock."""
-        try:
-            result = runner.invoke(
-                app,
-                ["--data-root", str(tmp_path), "ingest", "metadata", "basic", "stock"],
-            )
-            assert (
-                result.exit_code == 0
-                or "unable to open database file" in str(result.exception)
-                or result.exception is not None
-            )
-        except ValueError as e:
-            if "I/O operation on closed file" not in str(e):
-                raise
+        result = runner.invoke(
+            app,
+            ["--data-root", str(tmp_path), "ingest", "metadata", "basic", "stock"],
+        )
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
+        )
 
     def test_ingest_metadata_basic_etf(self, tmp_path: Path) -> None:
         """测试 ingest metadata basic etf."""
-        try:
-            result = runner.invoke(
-                app,
-                ["--data-root", str(tmp_path), "ingest", "metadata", "basic", "etf"],
-            )
-            assert (
-                result.exit_code == 0
-                or "unable to open database file" in str(result.exception)
-                or result.exception is not None
-            )
-        except ValueError as e:
-            if "I/O operation on closed file" not in str(e):
-                raise
+        result = runner.invoke(
+            app,
+            ["--data-root", str(tmp_path), "ingest", "metadata", "basic", "etf"],
+        )
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
+        )
 
     def test_ingest_metadata_basic_index(self, tmp_path: Path) -> None:
         """测试 ingest metadata basic index."""
-        try:
-            result = runner.invoke(
-                app,
-                ["--data-root", str(tmp_path), "ingest", "metadata", "basic", "index"],
-            )
-            assert (
-                result.exit_code == 0
-                or "unable to open database file" in str(result.exception)
-                or result.exception is not None
-            )
-        except ValueError as e:
-            if "I/O operation on closed file" not in str(e):
-                raise
+        result = runner.invoke(
+            app,
+            ["--data-root", str(tmp_path), "ingest", "metadata", "basic", "index"],
+        )
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
+        )
 
     def test_ingest_metadata_basic_invalid_asset(self, tmp_path: Path) -> None:
         """测试 ingest metadata basic 无效资产类型."""

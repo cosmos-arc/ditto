@@ -11,6 +11,8 @@ import pytest
 from ditto_port.cli.main import app
 from typer.testing import CliRunner
 
+from .helpers import assert_cli_result
+
 runner = CliRunner()
 
 # 集成测试串行执行，避免并发副作用
@@ -112,10 +114,10 @@ class TestBackfillMarketStock:
                 "2024-01-03",
             ],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
         )
 
     def test_backfill_market_stock_with_parallel(self, tmp_path: Path) -> None:
@@ -136,10 +138,10 @@ class TestBackfillMarketStock:
                 "2",
             ],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
         )
 
 
@@ -162,10 +164,10 @@ class TestBackfillMarketETF:
                 "2024-01-03",
             ],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
         )
 
     def test_backfill_market_etf_with_parallel(self, tmp_path: Path) -> None:
@@ -186,10 +188,10 @@ class TestBackfillMarketETF:
                 "2",
             ],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
         )
 
 
@@ -212,10 +214,10 @@ class TestBackfillMarketAdj:
                 "2024-01-03",
             ],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
         )
 
     def test_backfill_market_adj_fund_with_data_root(self, tmp_path: Path) -> None:
@@ -235,8 +237,8 @@ class TestBackfillMarketAdj:
                 "--fund",
             ],
         )
-        assert (
-            result.exit_code == 0
-            or "unable to open database file" in str(result.exception)
-            or result.exception is not None
+        assert_cli_result(
+            result,
+            allowed_exit_codes=(0, 1),
+            allowed_error_patterns=("unable to open database file", "Tushare"),
         )
