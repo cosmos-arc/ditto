@@ -7,8 +7,7 @@ from ditto_infra.services.notification import (
     NotificationSettings,
     TemplateEngine,
 )
-from ditto_port.registry.config import ConfigProvider
-from ditto_port.registry.notification import NotificationProvider
+from ditto_port.registry.infra import ConfigProvider, NotificationProvider
 
 
 def _settings_provider(settings: NotificationSettings) -> Provider:

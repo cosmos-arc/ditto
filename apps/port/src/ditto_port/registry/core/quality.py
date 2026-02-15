@@ -1,4 +1,4 @@
-"""Core 层组件注册."""
+"""Core 层组件注册 - DQ 质量引擎。"""
 
 from collections.abc import Iterator
 from pathlib import Path
@@ -7,14 +7,15 @@ import yaml
 from dishka import Provider, Scope, provide
 from ditto_core.quality import QualityEngine
 from ditto_core.quality.spec import DatasetRules, DQSpec
+from ditto_infra.foundation.config import get_default_dq_rules_dir
 from loguru import logger
 from pydantic import ValidationError
 
-__all__ = ["CoreProvider"]
+__all__ = ["QualityProvider"]
 
 
-class CoreProvider(Provider):
-    """Core 层组件 Provider."""
+class QualityProvider(Provider):
+    """Core 层 DQ 组件 Provider."""
 
     scope = Scope.APP
 
@@ -67,7 +68,7 @@ class CoreProvider(Provider):
         加载 DQ 配置规范.
 
         支持用户配置覆盖默认配置：
-        1. 默认配置: {package_dir}/config/dq_rules/*.yml
+        1. 默认配置: config/default/dq_rules/*.yml
         2. 用户配置: {data_root}/config/dq/*.yml (覆盖)
 
         Args:
@@ -77,16 +78,8 @@ class CoreProvider(Provider):
             DQSpec: DQ 配置实例
 
         """
-        # 1. 加载包内默认配置
-        default_config_dir = (
-            Path(__file__).parent.parent.parent.parent.parent
-            / "packages"
-            / "core"
-            / "src"
-            / "ditto_core"
-            / "config"
-            / "dq_rules"
-        )
+        # 1. 加载默认配置（使用标准路径发现）
+        default_config_dir = get_default_dq_rules_dir()
         default_config = self._load_dq_spec(default_config_dir)
 
         # 2. 加载用户自定义配置（覆盖默认配置）

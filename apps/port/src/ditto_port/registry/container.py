@@ -8,21 +8,19 @@ from dishka import (
     make_container,
 )
 
-from .config import ConfigProvider
-from .core import CoreProvider
-from .datahub import DataHubProvider
-from .sources import DataSourcesProvider
+from .core import get_core_providers
+from .datahub import get_datahub_providers
+from .infra import get_infra_providers
 
 __all__ = ["make_app_container", "make_async_app_container"]
 
 
 def _get_base_providers() -> tuple[Provider, ...]:
-    """获取基础 Provider 列表."""
+    """获取所有 Provider（按层级组装）."""
     return (
-        ConfigProvider(),
-        CoreProvider(),
-        DataHubProvider(),
-        DataSourcesProvider(),
+        *get_infra_providers(),  # Infrastructure 层
+        *get_core_providers(),  # Core 层
+        *get_datahub_providers(),  # DataHub 层
     )
 
 

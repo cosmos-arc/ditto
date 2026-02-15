@@ -92,10 +92,10 @@ class TestDailyReconciliationSuccess:
         )
 
         # Assert
-        assert result["passed"] is True
-        assert result["issue_count"] == 0
-        assert result["trade_date"] == "20240101"
-        assert result["dataset"] == "stock_daily"
+        assert result.passed is True
+        assert result.issue_count == 0
+        assert result.trade_date == "20240101"
+        assert result.dataset == "stock_daily"
 
         # 验证调用链
         mock_instrument_store.enrich_with_ticker.assert_called_once_with(
@@ -137,9 +137,9 @@ class TestDailyReconciliationSuccess:
         )
 
         # Assert
-        assert result["passed"] is True
-        assert result["issue_count"] == 0
-        assert result["skipped"] == "no_secondary_data"
+        assert result.passed is True
+        assert result.issue_count == 0
+        assert result.skip_reason == "no_secondary_data"
 
         # 验证不会调用引擎检查
         mock_quality_engine.check_cross_source.assert_not_called()
@@ -179,7 +179,7 @@ class TestDailyReconciliationSuccess:
 
         # Assert - 验证不存储结果
         mock_comparison_writer.write_comparison.assert_not_called()
-        assert result["passed"] is True
+        assert result.passed is True
 
 
 @pytest.mark.unit
@@ -223,8 +223,8 @@ class TestDailyReconciliationWithIssues:
         )
 
         # Assert
-        assert result["passed"] is False
-        assert result["issue_count"] == 2
+        assert result.passed is False
+        assert result.issue_count == 2
 
         # 验证存储结果被调用
         mock_comparison_writer.write_comparison.assert_called_once()
@@ -304,8 +304,8 @@ class TestDailyReconciliationEdgeCases:
             dataset="stock_daily",
         )
 
-        assert result["passed"] is False
-        assert "ValueError" in result["error"]
+        assert result.passed is False
+        assert "ValueError" in result.error
 
     async def test_enrich_with_ticker_fails(
         self,
@@ -345,8 +345,8 @@ class TestDailyReconciliationEdgeCases:
         )
 
         # Assert
-        assert result["passed"] is False
-        assert "ValueError" in result["error"]
+        assert result.passed is False
+        assert "ValueError" in result.error
 
     async def test_unexpected_error_returns_error_dict(
         self,
@@ -387,8 +387,8 @@ class TestDailyReconciliationEdgeCases:
         )
 
         # Assert
-        assert result["passed"] is False
-        assert "RuntimeError" in result["error"]
+        assert result.passed is False
+        assert "RuntimeError" in result.error
 
 
 @pytest.mark.unit

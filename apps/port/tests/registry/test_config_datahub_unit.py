@@ -6,7 +6,7 @@ from ditto_datahub.config import (
     DataSourceSettings,
     FileStorageSettings,
 )
-from ditto_port.registry.config import ConfigProvider
+from ditto_port.registry.infra import ConfigProvider
 
 
 class TestConfigProviderDataHub:

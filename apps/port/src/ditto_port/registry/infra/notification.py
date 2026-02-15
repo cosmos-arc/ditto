@@ -9,6 +9,7 @@ from __future__ import annotations
 import smtplib
 from importlib.resources import files
 from pathlib import Path
+from urllib.parse import urlparse
 
 from dishka import Provider, Scope, provide
 from ditto_infra.services.notification import NotificationSettings
@@ -19,6 +20,15 @@ from ditto_infra.services.notification.template import TemplateEngine
 from loguru import logger
 
 __all__ = ["NotificationProvider"]
+
+
+def _mask_webhook_url(url: str) -> str:
+    """安全地记录 webhook URL，只保留 host 部分。"""
+    try:
+        parsed = urlparse(url)
+        return f"{parsed.scheme}://{parsed.netloc}/***"
+    except Exception:
+        return "***"
 
 
 class NotificationProvider(Provider):
@@ -96,7 +106,7 @@ class NotificationProvider(Provider):
                 senders.append(WebhookSender(notification_settings))
                 logger.info(
                     "Webhook sender initialized",
-                    url=notification_settings.webhook_url,
+                    url=_mask_webhook_url(notification_settings.webhook_url),
                 )
             except (ConnectionError, TimeoutError, ValueError) as e:
                 logger.warning(

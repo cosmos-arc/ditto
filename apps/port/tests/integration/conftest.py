@@ -101,19 +101,22 @@ def configure_observability_for_testing() -> Generator[None, None, None]:
     """配置观察性系统用于测试环境（禁用日志输出到 stdout）.
 
     解决 CliRunner I/O 错误：
-    - pytest 运行时禁用观察性系统的 stdout 日志处理器
-    - 避免测试结束时 stdout 被关闭导致的 I/O 错误
-    """
-    import os
+    - 设置 pytest_running=True 跳过日志 handler 配置
+    - 避免后台线程写入已关闭的 stdout
 
-    # 设置环境变量，让 ConfigProvider 的运行时标志检测识别 pytest 环境
-    # 让 ObservabilityConfig 带 pytest_running=True
-    os.environ["PYTEST_CURRENT_TEST"] = "test"
+    参考: https://github.com/pallets/click/issues/2156
+    """
+    from ditto_infra.foundation.config.environment import Environment
+    from ditto_infra.foundation.observability import init
+    from ditto_infra.foundation.observability.config import ObservabilityConfig
+
+    config = ObservabilityConfig(
+        environment=Environment.TESTING,
+        pytest_running=True,  # 关键：跳过 stdout handler 配置
+    )
+    init(config, force=True)
 
     return
-
-    # 不清理环境变量，让它在整个测试 session 中保持设置
-    # os.environ.pop("PYTEST_CURRENT_TEST", None)
 
 
 # 集成测试串行执行，避免并发副作用

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -28,36 +28,43 @@ from ditto_infra.foundation.config.settings import (
     Settings,
     SystemSettings,
 )
-from ditto_infra.foundation.observability import init, shutdown
-from ditto_infra.foundation.observability.config import ObservabilityConfig
 from ditto_infra.services.notification import NotificationSettings
 
 from ditto_port.config import load_env_file
 from ditto_port.registry.init_providers import MetadataDbInitProvider
 
-__all__ = ["ConfigProvider"]
+__all__ = ["ConfigProvider", "RuntimeFlags"]
 
 
-def _detect_runtime_flags(environment: Environment) -> dict[str, bool]:
+@dataclass(frozen=True)
+class RuntimeFlags:
+    """运行时标志。"""
+
+    pytest_running: bool
+    assertions_enabled: bool
+    verbose_logging: bool
+
+
+def _detect_runtime_flags(environment: Environment) -> RuntimeFlags:
     pytest_running = "PYTEST_CURRENT_TEST" in os.environ
 
     if environment == Environment.TESTING:
-        return {
-            "pytest_running": pytest_running,
-            "assertions_enabled": True,
-            "verbose_logging": False,
-        }
+        return RuntimeFlags(
+            pytest_running=pytest_running,
+            assertions_enabled=True,
+            verbose_logging=False,
+        )
     if environment == Environment.PRODUCTION:
-        return {
-            "pytest_running": pytest_running,
-            "assertions_enabled": False,
-            "verbose_logging": False,
-        }
-    return {
-        "pytest_running": pytest_running,
-        "assertions_enabled": True,
-        "verbose_logging": True,
-    }
+        return RuntimeFlags(
+            pytest_running=pytest_running,
+            assertions_enabled=False,
+            verbose_logging=False,
+        )
+    return RuntimeFlags(
+        pytest_running=pytest_running,
+        assertions_enabled=True,
+        verbose_logging=True,
+    )
 
 
 class ConfigProvider(Provider):
@@ -175,41 +182,9 @@ class ConfigProvider(Provider):
         return NotificationSettings.model_validate(values)
 
     @provide
-    def observability_config(
-        self,
-        settings: Settings,
-        data_root_config: DataRootConfig,
-    ) -> ObservabilityConfig:
-        """构建观测配置对象。"""
-        obs = settings.observability
-        env = settings.system.environment
-        flags = _detect_runtime_flags(env)
-
-        return ObservabilityConfig(
-            service_name="ditto-server",
-            environment=env,
-            log_dir=str(data_root_config.logs_path),
-            log_level=obs.log_level,
-            log_format=obs.log_format,
-            log_to_console=obs.log_to_console,
-            log_to_file=obs.log_to_file,
-            tracing_enabled=obs.tracing_enabled,
-            tracing_exporter=obs.tracing_exporter,
-            tracing_sample_rate=obs.tracing_sample_rate,
-            metrics_enabled=obs.metrics_enabled,
-            metrics_exporter=obs.metrics_exporter,
-            vm_endpoint=obs.vm_endpoint,
-            pytest_running=flags["pytest_running"],
-            assertions_enabled=flags["assertions_enabled"],
-            verbose_logging=flags["verbose_logging"],
-        )
-
-    @provide
-    def observability(self, config: ObservabilityConfig) -> Iterator[None]:
-        """初始化并在生命周期结束时关闭观测系统。"""
-        init(config)
-        yield
-        shutdown()
+    def runtime_flags(self, environment: Environment) -> RuntimeFlags:
+        """提供运行时标志。"""
+        return _detect_runtime_flags(environment)
 
     @provide
     def data_cache(self) -> DataCache[Any]:

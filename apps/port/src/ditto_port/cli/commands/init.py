@@ -12,8 +12,10 @@ from ditto_infra.foundation.config import (
     get_environment,
 )
 from ditto_infra.foundation.config.initializer import InitScope
+from ditto_infra.foundation.config.providers import DataRootInitProvider
 
 from ditto_port.config import load_env_file
+from ditto_port.registry.init_providers import MetadataDbInitProvider
 
 app = typer.Typer(help="配置初始化命令")
 
@@ -33,9 +35,10 @@ def _resolve_data_root(ctx: typer.Context, data_root: str | None) -> Path:
 
 
 def _make_coordinator() -> ConfigInitCoordinator:
+    """创建并注册所有初始化提供者的协调器。"""
     coordinator = ConfigInitCoordinator()
-    # DataHub 和 Domain Service Providers 已经在容器中注册
-    # ConfigInitCoordinator 会从容器中获取它们
+    coordinator.register(DataRootInitProvider())
+    coordinator.register(MetadataDbInitProvider())
     return coordinator
 
 

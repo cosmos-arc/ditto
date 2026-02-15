@@ -9,6 +9,10 @@ from ditto_infra.foundation.config.initializer import (
 )
 from ditto_infra.foundation.config.loader import ConfigLoader
 from ditto_infra.foundation.config.paths import PathResolver, XDGPaths
+from ditto_infra.foundation.config.project_root import (
+    find_project_root,
+    get_default_dq_rules_dir,
+)
 from ditto_infra.foundation.config.settings import (
     ObservabilitySettings,
     Settings,
@@ -27,5 +31,7 @@ __all__ = [
     "Settings",
     "SystemSettings",
     "XDGPaths",
+    "find_project_root",
+    "get_default_dq_rules_dir",
     "get_environment",
 ]

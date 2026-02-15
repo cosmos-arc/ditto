@@ -1,8 +1,4 @@
-"""
-外部数据源组件注册.
-
-注册 TushareSource 等外部数据源组件。
-"""
+"""DataHub 层 - 数据源 Provider。"""
 
 from collections.abc import Iterator
 
@@ -11,10 +7,10 @@ from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
-__all__ = ["DataSourcesProvider"]
+__all__ = ["SourcesProvider"]
 
 
-class DataSourcesProvider(Provider):
+class SourcesProvider(Provider):
     """外部数据源组件 Provider."""
 
     scope = Scope.APP
