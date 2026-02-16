@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import polars as pl
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 
 class UniverseReader:

@@ -2,15 +2,11 @@
 #      通用 Python & 包管理 (Generic Python & Package Management)
 # ===================================================================
 
-# 字节码或编译文件
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C 语言扩展
 *.so
 
-# 发行版/打包
 build/
 develop-eggs/
 dist/
@@ -29,12 +25,10 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# 安装日志
 pip-log.txt
 pip-delete-this-directory.txt
 
 # 虚拟环境
-# 常见的虚拟环境目录名，如果您的环境目录名不同，请自行修改
 venv/
 .venv/
 env/
@@ -42,38 +36,41 @@ env/
 ENV/
 .direnv/
 
-# Poetry, Pipenv 和其他工具
-poetry.lock
-.pnp.js
-.pnp.loader.mjs
-
 # ===================================================================
-#                Pixi 包管理 (Pixi Package Manager)
+#                    Pixi 包管理 (Pixi Package Manager)
 # ===================================================================
-# Pixi 在初始化时通常会自动创建或更新 .gitignore
-# 以下是为确保 Pixi 环境目录被忽略的核心规则
 .pixi/
 
 # ===================================================================
-#       AI & 数据科学 (AI & Data Science)
+#                    缓存目录 (Cache Directories)
 # ===================================================================
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.mypy_cache/
+.grimp_cache/
+.import_linter_cache/
+.benchmarks/
 
-# Jupyter Notebook 检查点
-.ipynb_checkpoints
+# ===================================================================
+#                    测试报告 (Test Reports)
+# ===================================================================
+htmlcov/
+.coverage
+.coverage.*
+*.lcov
+report.xml
+coverage.xml
 
-# IPython Profile
-profile_default/
-ipython_config.py
-
-# scikit-learn / aiohttp 等库的缓存
-*.joblib
+# ===================================================================
+#                    数据文件（混合策略）
+# ===================================================================
+/data
+/datasets/
+/models/
+/.tmp/
 
 # 大型数据文件
-# 建议使用 Git LFS (Large File Storage) 来管理大型数据文件
-# 这里默认忽略常见的数据格式，请根据您的项目情况调整
-*.csv
-*.json
-!.factory/settings.json
 *.parquet
 *.h5
 *.hdf5
@@ -81,71 +78,51 @@ ipython_config.py
 *.pickle
 *.dat
 
-# 只忽略根目录下的 data 目录
-/data
-datasets/
-assets/
-/.temp
-
-# 模型文件
-# 模型文件通常较大，不建议直接存入 Git
-# 注意: 不要忽略 packages/ 下的 models/ 目录（那是代码模型）
-/models/
-*.model
-*.pt
-*.pth
-*.pb
-*.onnx
-
-# 缓存文件
-.pytest_cache/
-.ruff_cache/
-.hypothesis/
+# CSV/JSON 精确忽略
+/*.csv
+/*.json
+config/**/*.json
+!config/**/*.example.json
+!.factory/settings.json
 
 # ===================================================================
-#                 Web 框架 (Web Frameworks)
+#                    Jupyter & IPython
 # ===================================================================
+.ipynb_checkpoints
+profile_default/
+ipython_config.py
 
-# 日志目录
+# ===================================================================
+#                    Web 框架 (Web Frameworks)
+# ===================================================================
 logs/
 *.log
+instance/
+.webassets-cache
 
 # Django
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
-# Flask & FastAPI
-instance/
-.webassets-cache
-
-# 静态文件和媒体文件 (通常由构建流程生成)
-staticfiles/
-media/
-
 # ===================================================================
-#              开发工具 & 编辑器 (Dev Tools & Editors)
+#                    开发工具 (Dev Tools & Editors)
 # ===================================================================
-
-# PyCharm
 .idea/
-*.iml
-
-# Visual Studio Code
 .vscode/
 *.code-workspace
-
-# Claude Code 扩展临时文件
 tmpclaude-*-cwd
 
-# 本地配置文件 (用于存储敏感信息，如 API 密钥)
+# 本地配置
 .env
 .env.*
 !.env.template
 config.local.py
 local.settings.json
 
-# 操作系统/桌面文件
+# ===================================================================
+#                    操作系统 (Operating Systems)
+# ===================================================================
 .DS_Store
 .DS_Store?
 ._*
@@ -154,16 +131,3 @@ local.settings.json
 ehthumbs.db
 Thumbs.db
 desktop.ini
-
-# ===================================================================
-#                         测试报告 (Test Reports)
-# ===================================================================
-htmlcov/
-.coverage
-.coverage.*
-nosetests.xml
-coverage.xml
-*,cover
-*.lcov
-report.xml
-*.html

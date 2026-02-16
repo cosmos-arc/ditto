@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import polars as pl
-from ditto_foundation import M, logger, traced
+from ditto_infra.foundation import Metrics, logger, traced
 
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.processors.error_handler import (
@@ -57,7 +57,7 @@ def _record_metrics(row_count: int, dataset: str) -> None:
 
     """
     try:
-        M.data_records.add(
+        Metrics.data_records.add(
             row_count,
             {"source": "tushare", "dataset": dataset, "status": "success"},
         )

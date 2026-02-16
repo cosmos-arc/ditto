@@ -9,7 +9,7 @@ from typing import Any
 import orjson
 import polars as pl
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 
 class QuarantineReader:

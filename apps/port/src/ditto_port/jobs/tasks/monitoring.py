@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ditto_core.quality.spec import DQResult
-from ditto_foundation import M, logger
+from ditto_infra.foundation import Metrics, logger
 from prefect import task
 
 
@@ -92,7 +92,7 @@ def monitor_ingestion_quality(
         total_duration_sec += duration_sec
 
         # Record OpenTelemetry metrics
-        M.data_records.add(
+        Metrics.data_records.add(
             rows_written,
             {
                 "dataset": dataset,
@@ -100,7 +100,7 @@ def monitor_ingestion_quality(
             },
         )
 
-        M.data_update_duration.record(
+        Metrics.data_update_duration.record(
             duration_sec,
             {"dataset": dataset},
         )
@@ -135,7 +135,7 @@ def monitor_ingestion_quality(
                 total_dq_errors += dq_result.error_count
 
                 # Record error metrics using data_errors counter
-                M.data_errors.add(
+                Metrics.data_errors.add(
                     dq_result.error_count,
                     {
                         "dataset": dataset,

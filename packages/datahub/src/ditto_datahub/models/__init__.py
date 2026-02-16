@@ -37,6 +37,7 @@ from ditto_datahub.models.ingestion import (
     IngestionStatus,
     NotTradingDayError,
 )
+from ditto_datahub.models.macro import MacroCategory, MacroFrequency
 from ditto_datahub.models.market import (
     BAR_ENRICHED_SCHEMA,
     BAR_SCHEMA,
@@ -94,6 +95,8 @@ __all__ = [
     "InstrumentExtension",
     "InstrumentIdRange",
     "InstrumentRegistration",
+    "MacroCategory",
+    "MacroFrequency",
     "MarketState",
     "NotTradingDayError",
     "OnDuplicate",

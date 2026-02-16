@@ -3,7 +3,7 @@
 import time
 from typing import Any
 
-from ditto_foundation.observability import logger
+from ditto_infra.foundation.observability import logger
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse

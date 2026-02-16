@@ -8,7 +8,7 @@ from ditto_datahub.stores.metadata.instrument import (
     InstrumentWriter,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation.cache import DataCache
+from ditto_infra.foundation.cache import DataCache
 from pytest_mock import MockerFixture
 
 
@@ -32,7 +32,7 @@ class TestInstrumentReader:
         # Insert test data
         self.client.execute("""
             INSERT INTO instrument (
-                instrument_id, symbol, name, exchange, asset_class, list_date
+                instrument_id, ticker, name, exchange, asset_class, list_date
             )
             VALUES (100000001, '600000', '浦发银行', 'SSE', 'stock', '1999-11-10')
         """)
@@ -54,7 +54,7 @@ class TestInstrumentReader:
         # Insert test data with historical mapping
         self.client.execute("""
             INSERT INTO instrument (
-                instrument_id, symbol, name, exchange, asset_class, list_date
+                instrument_id, ticker, name, exchange, asset_class, list_date
             )
             VALUES (100000001, '000022', '深赤湾A', 'SZSE', 'stock', '1990-01-01')
         """)
@@ -86,7 +86,7 @@ class TestInstrumentReader:
 
         self.client.execute("""
             INSERT INTO instrument (
-                instrument_id, symbol, name, exchange, asset_class, list_date
+                instrument_id, ticker, name, exchange, asset_class, list_date
             )
             VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
         """)
@@ -122,7 +122,7 @@ class TestInstrumentReader:
             instrument_id = 100000001 + i
             sql = (
                 "INSERT INTO instrument "
-                "(instrument_id, symbol, name, exchange, asset_class, list_date) "
+                "(instrument_id, ticker, name, exchange, asset_class, list_date) "
                 f"VALUES ({instrument_id}, '60000{i}', 'Stock{i}', "
                 "'SSE', 'stock', '2000-01-01')"
             )
@@ -152,7 +152,7 @@ class TestInstrumentReader:
         """Test getting instrument by instrument_id."""
         sql = (
             "INSERT INTO instrument "
-            "(instrument_id, symbol, name, exchange, "
+            "(instrument_id, ticker, name, exchange, "
             "asset_class, list_date, is_active) "
             "VALUES (100000001, '600000', 'Test Bank', 'SSE', 'stock', "
             "'1999-11-10', TRUE)"
@@ -163,7 +163,7 @@ class TestInstrumentReader:
         result = self.reader.get_by_instrument_id(100000001)
         assert result is not None
         assert result["instrument_id"] == 100000001
-        assert result["symbol"] == "600000"
+        assert result["ticker"] == "600000"
         assert result["name"] == "Test Bank"
 
     def test_get_by_instrument_id_not_found(self) -> None:
@@ -175,7 +175,7 @@ class TestInstrumentReader:
         """Test reverse lookup: instrument_id to source_ticker."""
         self.client.execute("""
             INSERT INTO instrument (
-                instrument_id, symbol, name, exchange, asset_class, list_date
+                instrument_id, ticker, name, exchange, asset_class, list_date
             )
             VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
         """)
@@ -197,7 +197,7 @@ class TestInstrumentReader:
             exchange = "SSE" if i < 2 else "SZSE"
             sql = (
                 "INSERT INTO instrument "
-                "(instrument_id, symbol, name, exchange, "
+                "(instrument_id, ticker, name, exchange, "
                 "asset_class, list_date, is_active) "
                 f"VALUES ({instrument_id}, '60{i:04d}', 'Stock{i}', '{exchange}', "
                 "'stock', "
@@ -225,7 +225,7 @@ class TestInstrumentReader:
             is_active = "TRUE" if i < 2 else "FALSE"
             sql = (
                 "INSERT INTO instrument "
-                "(instrument_id, symbol, name, exchange, "
+                "(instrument_id, ticker, name, exchange, "
                 "asset_class, list_date, is_active) "
                 f"VALUES ({instrument_id}, '60{i:04d}', 'Stock{i}', 'SSE', 'stock', "
                 f"'2000-01-01', {is_active})"
@@ -253,27 +253,27 @@ class TestInstrumentReader:
         assert 100000002 in all_sids
         assert 100000003 in all_sids
 
-    def test_get_symbol(self) -> None:
+    def test_get_ticker(self) -> None:
         """Test getting symbol by instrument_id."""
         self.client.execute("""
             INSERT INTO instrument (
-                instrument_id, symbol, name, exchange, asset_class, list_date
+                instrument_id, ticker, name, exchange, asset_class, list_date
             )
             VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
         """)
         self.client.commit()
 
-        symbol = self.reader.get_symbol(100000001)
+        symbol = self.reader.get_ticker(100000001)
         assert symbol == "600000"
 
-    def test_get_instrument_id_symbol_map(self) -> None:
+    def test_get_instrument_id_ticker_map(self) -> None:
         """Test getting batch instrument_id to symbol mapping."""
         # Insert test data
         for i in range(3):
             instrument_id = 100000001 + i
             sql = (
                 "INSERT INTO instrument "
-                "(instrument_id, symbol, name, exchange, "
+                "(instrument_id, ticker, name, exchange, "
                 "asset_class, list_date, is_active) "
                 f"VALUES ({instrument_id}, '60{i:04d}', 'Stock{i}', 'SSE', 'stock', "
                 "'2000-01-01', TRUE)"
@@ -282,17 +282,17 @@ class TestInstrumentReader:
 
         self.client.commit()
 
-        mapping = self.reader.get_instrument_id_symbol_map()
+        mapping = self.reader.get_instrument_id_ticker_map()
         assert len(mapping) == 3
         assert mapping[100000001] == "600000"
         assert mapping[100000002] == "600001"
 
-    def test_enrich_with_symbol(self) -> None:
+    def test_enrich_with_ticker(self) -> None:
         """Test enriching DataFrame with symbol column."""
         # Insert test data
         self.client.execute("""
             INSERT INTO instrument (
-                instrument_id, symbol, name, exchange, asset_class, list_date
+                instrument_id, ticker, name, exchange, asset_class, list_date
             )
             VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
         """)
@@ -307,15 +307,15 @@ class TestInstrumentReader:
         )
 
         # Enrich
-        result = self.reader.enrich_with_symbol(df)
+        result = self.reader.enrich_with_ticker(df)
 
-        assert "symbol" in result.columns
-        assert result["symbol"].to_list() == ["600000", "600000"]
+        assert "ticker" in result.columns
+        assert result["ticker"].to_list() == ["600000", "600000"]
 
-    def test_enrich_with_symbol_empty_df(self) -> None:
+    def test_enrich_with_ticker_empty_df(self) -> None:
         """Test enriching empty DataFrame returns empty."""
         df = pl.DataFrame(schema={"instrument_id": pl.Int64, "close": pl.Float64})
-        result = self.reader.enrich_with_symbol(df)
+        result = self.reader.enrich_with_ticker(df)
         assert result.is_empty()
 
     def test_find_securities(self) -> None:
@@ -323,7 +323,7 @@ class TestInstrumentReader:
         # Insert test data
         self.client.execute("""
             INSERT INTO instrument
-            (instrument_id, symbol, name, exchange, asset_class, list_date, is_active)
+            (instrument_id, ticker, name, exchange, asset_class, list_date, is_active)
             VALUES (100000001, '600000', 'Bank', 'SSE', 'stock', '1999-11-10', TRUE)
         """)
         self.client.execute("""
@@ -372,7 +372,7 @@ class TestInstrumentWriter:
             instrument_id=100000001,
             registration=InstrumentRegistration(
                 source_ticker="600000.SH",
-                symbol="600000",
+                ticker="600000",
                 name="Test Bank",
                 exchange="SSE",
                 asset_class="stock",
@@ -385,7 +385,7 @@ class TestInstrumentWriter:
         # Verify instrument was inserted
         instrument = self.reader.get_by_instrument_id(instrument_id)
         assert instrument is not None
-        assert instrument["symbol"] == "600000"
+        assert instrument["ticker"] == "600000"
         assert instrument["name"] == "Test Bank"
 
         # Verify mapping was inserted
@@ -418,7 +418,7 @@ class TestInstrumentWriter:
             instrument_id=100999001,
             registration=InstrumentRegistration(
                 source_ticker="600999.SH",
-                symbol="600999",
+                ticker="600999",
                 name="New Stock",
                 exchange="SSE",
                 asset_class="stock",
@@ -433,15 +433,15 @@ class TestInstrumentWriter:
         )
         assert sid3 == new_sid
 
-    def test_register_invalidates_instrument_id_symbol_map_cache(self) -> None:
-        """Test that register() invalidates instrument_id_symbol_map cache."""
+    def test_register_invalidates_instrument_id_ticker_map_cache(self) -> None:
+        """Test that register() invalidates instrument_id_ticker_map cache."""
         # Create writer with DataCache
         data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
         reader_with_cache = InstrumentReader(self.client, cache=data_cache)
         writer_with_cache = InstrumentWriter(self.client, cache=data_cache)
 
-        # Query instrument_id_symbol_map (should be empty)
-        map1 = reader_with_cache.get_instrument_id_symbol_map()
+        # Query instrument_id_ticker_map (should be empty)
+        map1 = reader_with_cache.get_instrument_id_ticker_map()
         assert len(map1) == 0
 
         # Register a new instrument
@@ -449,7 +449,7 @@ class TestInstrumentWriter:
             instrument_id=100999002,
             registration=InstrumentRegistration(
                 source_ticker="600998.SH",
-                symbol="600998",
+                ticker="600998",
                 name="Another Stock",
                 exchange="SSE",
                 asset_class="stock",
@@ -457,9 +457,9 @@ class TestInstrumentWriter:
             ),
         )
 
-        # After registration, instrument_id_symbol_map cache should be invalidated
+        # After registration, instrument_id_ticker_map cache should be invalidated
         # This should now return the newly registered instrument
-        map2 = reader_with_cache.get_instrument_id_symbol_map()
+        map2 = reader_with_cache.get_instrument_id_ticker_map()
         assert len(map2) == 1
         assert 100999002 in map2
         assert map2[100999002] == "600998"
@@ -479,7 +479,7 @@ class TestInstrumentWriter:
                     instrument_id=100000001,
                     registration=InstrumentRegistration(
                         source_ticker="600000.SH",
-                        symbol="600000",
+                        ticker="600000",
                         name="Test Bank",
                         exchange="SSE",
                         asset_class="stock",
@@ -519,7 +519,7 @@ class TestSqlInjectionProtection:
             self.client.execute(
                 """INSERT INTO instrument
                 (
-                    instrument_id, symbol, name, exchange, asset_class,
+                    instrument_id, ticker, name, exchange, asset_class,
                     list_date, is_active
                 )
                 VALUES (?, ?, ?, ?, ?, ?, TRUE)""",
@@ -545,7 +545,7 @@ class TestSqlInjectionProtection:
         """Test IN clause works with single Instrument ID."""
         self.client.execute(
             """INSERT INTO instrument
-            (instrument_id, symbol, name, exchange, asset_class, list_date, is_active)
+            (instrument_id, ticker, name, exchange, asset_class, list_date, is_active)
             VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '2000-01-01', TRUE)"""
         )
         self.client.commit()
@@ -554,15 +554,15 @@ class TestSqlInjectionProtection:
         assert len(result) == 1
         assert result["instrument_id"][0] == 100000001
 
-    def test_get_instrument_id_symbol_map_with_many_instrument_ids(self) -> None:
-        """Test get_instrument_id_symbol_map with large list."""
+    def test_get_instrument_id_ticker_map_with_many_instrument_ids(self) -> None:
+        """Test get_instrument_id_ticker_map with large list."""
         # Insert test data for 50 securities
         for i in range(50):
             instrument_id = 100000001 + i
             self.client.execute(
                 """INSERT INTO instrument
                 (
-                    instrument_id, symbol, name, exchange, asset_class,
+                    instrument_id, ticker, name, exchange, asset_class,
                     list_date, is_active
                 )
                 VALUES (?, ?, ?, ?, ?, ?, TRUE)""",
@@ -579,7 +579,7 @@ class TestSqlInjectionProtection:
 
         # Query with 50 instrument_ids
         instrument_ids = list(range(100000001, 100000051))
-        mapping = self.reader.get_instrument_id_symbol_map(instrument_ids)
+        mapping = self.reader.get_instrument_id_ticker_map(instrument_ids)
 
         # Should return all 50 mappings
         assert len(mapping) == 50
@@ -590,7 +590,7 @@ class TestSqlInjectionProtection:
         """Test special characters in source_ticker are handled safely."""
         self.client.execute(
             """INSERT INTO instrument
-            (instrument_id, symbol, name, exchange, asset_class, list_date)
+            (instrument_id, ticker, name, exchange, asset_class, list_date)
             VALUES (100000001, 'TEST', 'Test', 'SSE', 'stock', '2000-01-01')"""
         )
         # Use source_ticker with special characters that could be SQL injection attempts

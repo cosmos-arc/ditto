@@ -9,7 +9,7 @@ import polars as pl
 import pytest
 from ditto_datahub.stores.fundamental.forecast.express_reader import ExpressReader
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import SQLitePool
+from ditto_infra.foundation import SQLitePool
 
 
 @pytest.fixture

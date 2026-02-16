@@ -8,7 +8,7 @@ from ditto_datahub.stores.metadata.instrument import (
     InstrumentWriter,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import SQLitePool
+from ditto_infra.foundation import SQLitePool
 
 
 @pytest.mark.integration
@@ -30,7 +30,7 @@ class TestInstrumentReaderWriterIntegration:
         schema_sql = """
             CREATE TABLE instrument (
                 instrument_id INTEGER PRIMARY KEY,
-                symbol TEXT NOT NULL,
+                ticker TEXT NOT NULL,
                 name TEXT NOT NULL,
                 exchange TEXT NOT NULL,
                 board TEXT,
@@ -49,7 +49,7 @@ class TestInstrumentReaderWriterIntegration:
                 FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
             );
 
-            CREATE INDEX idx_security_symbol ON instrument(symbol);
+            CREATE INDEX idx_security_ticker ON instrument(ticker);
             CREATE INDEX idx_security_mapping_source_ticker
             ON instrument_mapping(source_ticker);
             CREATE INDEX idx_security_mapping_instrument_id
@@ -75,7 +75,7 @@ class TestInstrumentReaderWriterIntegration:
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -91,7 +91,7 @@ class TestInstrumentReaderWriterIntegration:
             "SELECT * FROM instrument WHERE instrument_id = ?", [instrument_id]
         )
         assert row is not None
-        assert row["symbol"] == "600000"
+        assert row["ticker"] == "600000"
         assert row["name"] == "浦发银行"
 
         # Verify mapping table
@@ -110,7 +110,7 @@ class TestInstrumentReaderWriterIntegration:
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -131,7 +131,7 @@ class TestInstrumentReaderWriterIntegration:
         # Register first instrument
         registration1 = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -184,7 +184,7 @@ class TestInstrumentReaderWriterIntegration:
         for i, source_ticker in enumerate(["600000.SH", "600001.SH", "600002.SH"]):
             registration = InstrumentRegistration(
                 source_ticker=source_ticker,
-                symbol=f"60000{i}",
+                ticker=f"60000{i}",
                 name=f"测试{i}",
                 exchange="SSE",
                 asset_class="stock",
@@ -211,7 +211,7 @@ class TestInstrumentReaderWriterIntegration:
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -229,7 +229,7 @@ class TestInstrumentReaderWriterIntegration:
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -247,7 +247,7 @@ class TestInstrumentReaderWriterIntegration:
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -258,7 +258,7 @@ class TestInstrumentReaderWriterIntegration:
         row = reader.get_by_instrument_id(1_000_001)
         assert row is not None
         assert row["instrument_id"] == 1_000_001
-        assert row["symbol"] == "600000"
+        assert row["ticker"] == "600000"
         assert row["name"] == "浦发银行"
         assert row["asset_class"] == "stock"
 
@@ -270,7 +270,7 @@ class TestInstrumentReaderWriterIntegration:
         # Register multiple securities
         registration1 = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -280,7 +280,7 @@ class TestInstrumentReaderWriterIntegration:
 
         registration2 = InstrumentRegistration(
             source_ticker="510300.SH",
-            symbol="510300",
+            ticker="510300",
             name="沪深300ETF",
             exchange="SSE",
             asset_class="etf",
@@ -304,7 +304,7 @@ class TestInstrumentReaderWriterIntegration:
 
         registration1 = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -314,7 +314,7 @@ class TestInstrumentReaderWriterIntegration:
 
         registration2 = InstrumentRegistration(
             source_ticker="510300.SH",
-            symbol="510300",
+            ticker="510300",
             name="沪深300ETF",
             exchange="SSE",
             asset_class="etf",
@@ -331,14 +331,14 @@ class TestInstrumentReaderWriterIntegration:
         assert len(stock_sids) == 1
         assert stock_sids[0] == 1_000_001
 
-    def test_get_symbol(
+    def test_get_ticker(
         self, writer: InstrumentWriter, reader: InstrumentReader
     ) -> None:
-        """Test getting symbol by instrument_id."""
+        """Test getting ticker by instrument_id."""
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -346,17 +346,17 @@ class TestInstrumentReaderWriterIntegration:
         )
         writer.register(1_000_001, registration)
 
-        symbol = reader.get_symbol(1_000_001)
-        assert symbol == "600000"
+        ticker = reader.get_ticker(1_000_001)
+        assert ticker == "600000"
 
-    def test_get_instrument_id_symbol_map(
+    def test_get_instrument_id_ticker_map(
         self, writer: InstrumentWriter, reader: InstrumentReader
     ) -> None:
-        """Test getting instrument_id to symbol mapping."""
+        """Test getting instrument_id to ticker mapping."""
 
         registration1 = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -366,7 +366,7 @@ class TestInstrumentReaderWriterIntegration:
 
         registration2 = InstrumentRegistration(
             source_ticker="600001.SH",
-            symbol="600001",
+            ticker="600001",
             name="邯郸钢铁",
             exchange="SSE",
             asset_class="stock",
@@ -375,24 +375,24 @@ class TestInstrumentReaderWriterIntegration:
         writer.register(1_000_002, registration2)
 
         # Get all mapping
-        mapping = reader.get_instrument_id_symbol_map()
+        mapping = reader.get_instrument_id_ticker_map()
         assert len(mapping) == 2
         assert mapping[1_000_001] == "600000"
         assert mapping[1_000_002] == "600001"
 
         # Get specific instrument_ids
-        partial_mapping = reader.get_instrument_id_symbol_map([1_000_001])
+        partial_mapping = reader.get_instrument_id_ticker_map([1_000_001])
         assert len(partial_mapping) == 1
         assert partial_mapping[1_000_001] == "600000"
 
-    def test_enrich_with_symbol(
+    def test_enrich_with_ticker(
         self, writer: InstrumentWriter, reader: InstrumentReader
     ) -> None:
-        """Test enriching DataFrame with symbol column."""
+        """Test enriching DataFrame with ticker column."""
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -404,7 +404,7 @@ class TestInstrumentReaderWriterIntegration:
         df = pl.DataFrame({"instrument_id": [1_000_001], "value": [100]})
 
         # Enrich with symbol
-        enriched = reader.enrich_with_symbol(df)
+        enriched = reader.enrich_with_ticker(df)
 
-        assert "symbol" in enriched.columns
-        assert enriched["symbol"][0] == "600000"
+        assert "ticker" in enriched.columns
+        assert enriched["ticker"][0] == "600000"

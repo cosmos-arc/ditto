@@ -247,3 +247,22 @@ class TestMain:
 
         # Assert
         mock_deploy.assert_called_once()
+
+
+@pytest.mark.unit
+class TestFlowDeploymentContracts:
+    """Flow 部署参数契约测试."""
+
+    def test_backfill_uses_config_not_backfill_config(self) -> None:
+        """backfill_flow 参数名应为 config，而非 backfill_config."""
+        configs = _get_flow_configs()
+
+        backfill_config = next(
+            (c for c in configs if c.deployment_name == "backfill-prod"),
+            None,
+        )
+        assert backfill_config is not None
+
+        # 参数名必须是 "config"，匹配 backfill_flow 签名
+        assert "config" in backfill_config.parameters
+        assert "backfill_config" not in backfill_config.parameters

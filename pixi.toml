@@ -22,7 +22,6 @@ python = "3.12.*"
 
 # 数据科学与处理
 polars = ">=1.8,<2"
-pandas = ">=2.2,<3"
 numpy = ">=2.1,<3"
 pyarrow = ">=18,<23"
 
@@ -57,7 +56,7 @@ matplotlib = ">=3.9,<4"
 [pypi-dependencies]
 # 本地包（editable 安装）
 ditto-core = { path = "packages/core", editable = true }
-ditto-foundation = { path = "packages/foundation", editable = true }
+ditto-infra = { path = "packages/infra", editable = true }
 ditto-datahub = { path = "packages/datahub", editable = true }
 ditto-port = { path = "apps/port", editable = true }
 
@@ -186,11 +185,14 @@ test = "python scripts/test.py"
 # Test with coverage XML（供 CI 使用）
 test-cov-xml = "python scripts/test.py --cov-xml"
 
+# Test fast（快速测试，用于 check 命令）
+test-fast = "python scripts/test.py --fast"
+
 # ──────────────────────────────────────────────────────────
 # 组合命令
 # ──────────────────────────────────────────────────────────
-# Check：快速验证（开发时用）
-check = { depends-on = ["lint", "fmt", "type", "arch-check"] }
+# Check：快速验证（开发时用，包含快速测试）
+check = { depends-on = ["lint", "fmt", "type", "test-fast", "arch-check"] }
 
 # CI：完整检查（CI 用）
 ci = { depends-on = ["lint", "fmt-check", "type-all", "test-cov-xml", "arch-check"] }

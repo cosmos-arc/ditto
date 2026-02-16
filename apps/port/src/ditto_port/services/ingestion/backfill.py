@@ -5,7 +5,7 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
 from ditto_datahub.services import IngestionLogService
 from ditto_datahub.services.metadata_service import MetadataService
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 from ditto_port.models import BackfillResult, IngestionResult
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
@@ -79,7 +79,8 @@ class BackfillManager:
         results: list[IngestionResult] = []
 
         if parallel > 1:
-            # 年份级并行，年内串行（避免文件锁冲突）
+            # 按年份分组，并发度上限为 min(parallel, 年份数)
+            # 注意：同一年内的日期仍会并行执行，依赖 FileLockManager 避免冲突
             dates_by_year: defaultdict[str, list[str]] = defaultdict(list)
             for trade_date in trade_dates:
                 year = trade_date[:4]  # 提取年份
@@ -90,7 +91,6 @@ class BackfillManager:
             ) as executor:
                 futures: dict[Future[IngestionResult], str] = {}
                 for _year, year_dates in dates_by_year.items():
-                    # 每个年份串行处理
                     for date in year_dates:
                         future = executor.submit(
                             self._coordinator.ingest_date,

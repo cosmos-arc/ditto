@@ -7,7 +7,7 @@ Provides write access to express data with error handling.
 from __future__ import annotations
 
 import polars as pl
-from ditto_foundation import M, logger, traced
+from ditto_infra.foundation import Metrics, logger, traced
 
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
@@ -77,7 +77,7 @@ class ExpressWriter:
             self._client.commit()
 
             logger.info("Express data written successfully", record_count=len(records))
-            M.data_records.add(
+            Metrics.data_records.add(
                 len(records), {"dataset": "express", "status": "success"}
             )
             return len(records)
@@ -85,5 +85,7 @@ class ExpressWriter:
         except Exception as e:
             self._client.rollback()
             logger.error("Express write failed", error=str(e))
-            M.data_records.add(len(df), {"dataset": "express", "status": "failed"})
+            Metrics.data_records.add(
+                len(df), {"dataset": "express", "status": "failed"}
+            )
             raise

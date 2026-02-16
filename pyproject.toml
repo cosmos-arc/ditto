@@ -162,6 +162,10 @@ max-returns = 6
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
+# flake8-tidy-imports: 禁止特定 API 导入
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"pandas".msg = "Use polars instead"
+
 # ===================================================================
 # BasedPyright (类型检查) - Pyright fork，更严格的默认设置
 #
@@ -247,7 +251,7 @@ reportImplicitStringConcatenation = "error"
 # 告诉 Pyright 源码根目录（解决 import 路径问题）
 extraPaths = [
     "packages/core/src",
-    "packages/foundation/src",
+    "packages/infra/src",
     "packages/datahub/src",
     "apps/port/src",
 ]
@@ -263,7 +267,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 pythonpath = [
     "packages/core/src",
-    "packages/foundation/src",
+    "packages/infra/src",
     "packages/datahub/src",
     "apps/port/src",
 ]
@@ -339,7 +343,7 @@ version = "0.1.0"
 tag_format = "v$version"
 version_files = [
     "packages/core/src/ditto_core/__init__.py:__version__",
-    "packages/foundation/src/ditto_foundation/__init__.py:__version__",
+    "packages/infra/src/ditto_infra/__init__.py:__version__",
     "packages/datahub/src/ditto_datahub/__init__.py:__version__",
 ]
 update_changelog_on_bump = true

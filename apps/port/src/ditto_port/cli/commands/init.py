@@ -2,26 +2,30 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import typer
-from ditto_datahub.config import DataRootConfig
-from ditto_foundation.config import ConfigInitCoordinator, ConfigLoader, Environment
-from ditto_foundation.config.initializer import InitScope
+from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_infra.foundation.config import (
+    ConfigInitCoordinator,
+    ConfigLoader,
+    get_environment,
+)
+from ditto_infra.foundation.config.initializer import InitScope
+from ditto_infra.foundation.config.providers import DataRootInitProvider
 
 from ditto_port.config import load_env_file
+from ditto_port.registry.init_providers import MetadataDbInitProvider
 
 app = typer.Typer(help="配置初始化命令")
 
 
 def _load_data_root() -> Path:
-    env_str = os.getenv("DITTO_ENV", "development")
-    environment = Environment.from_str(env_str)
+    environment = get_environment()
     loader = ConfigLoader(environment)
     values = load_env_file(loader, "data_store")
-    config = DataRootConfig.model_validate(values)
-    return config.data_root
+    settings = DataStoreSettings.model_validate(values)
+    return settings.data_root
 
 
 def _resolve_data_root(ctx: typer.Context, data_root: str | None) -> Path:
@@ -31,9 +35,10 @@ def _resolve_data_root(ctx: typer.Context, data_root: str | None) -> Path:
 
 
 def _make_coordinator() -> ConfigInitCoordinator:
+    """创建并注册所有初始化提供者的协调器。"""
     coordinator = ConfigInitCoordinator()
-    # DataHub 和 Domain Service Providers 已经在容器中注册
-    # ConfigInitCoordinator 会从容器中获取它们
+    coordinator.register(DataRootInitProvider())
+    coordinator.register(MetadataDbInitProvider())
     return coordinator
 
 

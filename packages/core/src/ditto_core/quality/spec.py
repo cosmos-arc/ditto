@@ -4,8 +4,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from ditto_foundation import DQSeverity
 from pydantic import BaseModel, Field, field_validator
+
+from ditto_core.quality.severity import DQSeverity
 
 
 class DQLevel(Enum):

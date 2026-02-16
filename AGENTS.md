@@ -63,8 +63,15 @@
 
 ### 架构原则
 ```
-依赖方向: core → datahub → foundation
-          apps/port → datahub → foundation
+依赖层级（从高到低）:
+  ditto_port → ditto_core → ditto_datahub → ditto_infra
+
+允许的跨层依赖:
+  - port 可以直接依赖 datahub.models/services
+  - port 可以直接依赖 infra.foundation
+  - port 禁止直接依赖 datahub.stores/sources/runtime（仅 registry 例外）
+
+详细约束见 .importlinter 配置
 ```
 
 - **边界检查**：`pixi run -e dev arch-check`
@@ -248,15 +255,17 @@ ditto/
 | 层级 | 变量 | 有效值 | 说明 |
 |------|------|--------|------|
 | Pixi 环境 | 选择环境 | `default`, `dev` | 依赖管理层 |
-| 运行时环境 | `DITTO_ENV` | `development`, `testing`, `production` | 行为控制层 |
+| 运行时环境 | `ENVIRONMENT` | `development`, `testing`, `production` | 行为控制层 |
 
 **使用场景**：
 
-| 场景 | Pixi 环境 | DITTO_ENV | 命令 |
-|------|-----------|-----------|------|
+| 场景 | Pixi 环境 | ENVIRONMENT | 命令 |
+|------|-----------|-------------|------|
 | 本地开发 | `dev` | `development` | `pixi run -e dev pytest` |
 | 测试执行 | `dev` | `testing` | `pixi run -e dev pytest` |
 | 生产部署 | `default` | `production` | `pixi run server` |
+
+> **注意**：`DITTO_ENV` 已弃用，请使用 `ENVIRONMENT`。
 
 ---
 

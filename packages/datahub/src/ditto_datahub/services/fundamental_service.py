@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import polars as pl
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 from ditto_datahub.stores.fundamental.corporate.corporate_actions_reader import (
     CorporateActionsReader,

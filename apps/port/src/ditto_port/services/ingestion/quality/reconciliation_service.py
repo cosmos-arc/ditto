@@ -6,12 +6,14 @@ import polars as pl
 from ditto_core.quality.spec import DQResult
 from loguru import logger
 
+from .models import ReconciliationResult
+
 
 class InstrumentStoreProtocol(Protocol):
     """Protocol for instrument enrichment dependency."""
 
-    def enrich_with_symbol(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Add symbol column from instrument id."""
+    def enrich_with_ticker(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Add ticker column from instrument id."""
         ...
 
 
@@ -19,7 +21,7 @@ class TdxSourceProtocol(Protocol):
     """Protocol for TDX source dependency."""
 
     def fetch_stock_daily_bars(
-        self, symbols: list[str], trade_date: str
+        self, tickers: list[str], trade_date: str
     ) -> pl.DataFrame:
         """Fetch TDX stock daily bars."""
         ...
@@ -48,7 +50,7 @@ class QualityReconciliationService:
 
     标识符体系：
     - 入口使用 instrument_id（内部 ID）
-    - 对比使用 symbol（统一格式，如 000001）
+    - 对比使用 ticker（统一格式，如 000001）
     - 数据源使用 source_ticker（数据源特定格式，如 000001.SZ）
     """
 
@@ -66,7 +68,7 @@ class QualityReconciliationService:
             engine: 质量引擎
             tdx_source: 通达信数据源
             comparison_store: 对比结果存储
-            instrument_store: 证券存储（用于 instrument_id → symbol 转换）
+            instrument_store: 证券存储（用于 instrument_id → ticker 转换）
 
         """
         self._engine = engine
@@ -79,7 +81,7 @@ class QualityReconciliationService:
         primary_df: pl.DataFrame,
         trade_date: str,
         dataset: str = "stock_daily",
-    ) -> dict[str, Any]:
+    ) -> "ReconciliationResult":
         """
         每日质量对账.
 
@@ -87,9 +89,9 @@ class QualityReconciliationService:
 
         标识符转换流程：
         1. 接收包含 instrument_id 的 primary_df
-        2. 使用 InstrumentStore 将 instrument_id 转换为 symbol
-        3. 使用 symbol 作为对比的 key_column
-        4. 各数据源内部将 symbol 转换为各自的 source_ticker 格式
+        2. 使用 InstrumentStore 将 instrument_id 转换为 ticker
+        3. 使用 ticker 作为对比的 key_column
+        4. 各数据源内部将 ticker 转换为各自的 source_ticker 格式
 
         Args:
             primary_df: 主数据源（Tushare 已读取的数据，必须包含 instrument_id 列）
@@ -112,18 +114,18 @@ class QualityReconciliationService:
             if "instrument_id" not in primary_df.columns:
                 raise ValueError("primary_df must contain 'instrument_id' column")
 
-            # 2. 添加 symbol 列（instrument_id → symbol 转换）
-            primary_df = self._instrument_store.enrich_with_symbol(primary_df)
+            # 2. 添加 ticker 列（instrument_id → ticker 转换）
+            primary_df = self._instrument_store.enrich_with_ticker(primary_df)
 
-            if "symbol" not in primary_df.columns:
-                raise ValueError("Failed to enrich primary_df with symbol")
+            if "ticker" not in primary_df.columns:
+                raise ValueError("Failed to enrich primary_df with ticker")
 
-            # 3. 提取 symbol 列表
-            symbols = primary_df["symbol"].unique().to_list()
+            # 3. 提取 ticker 列表
+            tickers = primary_df["ticker"].unique().to_list()
 
             # 4. 获取辅助数据源（TDX）
-            # TdxSource 内部将 symbol 转换为 TDX 格式的 source_ticker
-            secondary_df = self._tdx_source.fetch_stock_daily_bars(symbols, trade_date)
+            # TdxSource 内部将 ticker 转换为 TDX 格式的 source_ticker
+            secondary_df = self._tdx_source.fetch_stock_daily_bars(tickers, trade_date)
 
             if secondary_df.height == 0:
                 logger.warning(
@@ -131,16 +133,17 @@ class QualityReconciliationService:
                     event="reconciliation_no_secondary",
                     trade_date=trade_date,
                 )
-                return {
-                    "trade_date": trade_date,
-                    "dataset": dataset,
-                    "passed": True,
-                    "issue_count": 0,
-                    "skipped": "no_secondary_data",
-                }
+                return ReconciliationResult(
+                    trade_date=trade_date,
+                    dataset=dataset,
+                    passed=True,
+                    issue_count=0,
+                    skipped=True,
+                    skip_reason="no_secondary_data",
+                )
 
             # 5. 调用 Core 层引擎进行对比
-            # 配置文件使用 key_columns: [symbol, trade_date]
+            # 配置文件使用 key_columns: [ticker, trade_date]
             result = self._engine.check_cross_source(
                 primary=primary_df,
                 secondary=secondary_df,
@@ -169,12 +172,12 @@ class QualityReconciliationService:
                 issue_count=len(result.issues),
             )
 
-            return {
-                "trade_date": trade_date,
-                "dataset": dataset,
-                "passed": result.passed,
-                "issue_count": len(result.issues),
-            }
+            return ReconciliationResult(
+                trade_date=trade_date,
+                dataset=dataset,
+                passed=result.passed,
+                issue_count=len(result.issues),
+            )
 
         except Exception as e:
             logger.exception(
@@ -184,13 +187,13 @@ class QualityReconciliationService:
                 dataset=dataset,
                 error_type=type(e).__name__,
             )
-            return {
-                "trade_date": trade_date,
-                "dataset": dataset,
-                "passed": False,
-                "issue_count": 0,  # 错误情况下不进行 issue 计数
-                "error": f"{type(e).__name__}: {e!s}",
-            }
+            return ReconciliationResult(
+                trade_date=trade_date,
+                dataset=dataset,
+                passed=False,
+                issue_count=0,
+                error=f"{type(e).__name__}: {e!s}",
+            )
 
     def _convert_result_to_df(self, result: DQResult, dataset: str) -> pl.DataFrame:
         """
@@ -215,7 +218,7 @@ class QualityReconciliationService:
             for sample in issue.sample_data:
                 row: dict[str, Any] = {
                     "dataset": dataset,
-                    "symbol": sample.get("symbol", ""),
+                    "ticker": sample.get("ticker", ""),
                     "trade_date": sample.get("trade_date", ""),
                     "field": sample.get("field", ""),
                     "primary_value": sample.get("primary_value", ""),

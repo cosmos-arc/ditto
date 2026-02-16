@@ -1,10 +1,11 @@
 """L3 统计异常检测的 DQ 批量检查任务."""
 
-from typing import Any, Literal
+from typing import Any
 
 from ditto_core.quality.spec import DQIssue
+from ditto_datahub.models import Dataset
 from ditto_datahub.services.market_service import MarketBarsQuery
-from ditto_foundation import M, logger
+from ditto_infra.foundation import Metrics, logger
 from prefect import task
 
 from ditto_port.jobs.context import (
@@ -82,21 +83,12 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
         all_issues: list[DQIssue] = []
         results_by_dataset: dict[str, dict[str, Any]] = {}
 
-        # 定义 dataset 到 asset_class 的映射
-        dataset_asset_class: dict[str, Literal["stock", "etf", "index"]] = {
-            "stock_daily": "stock",
-            "etf_daily": "etf",
-            "index_daily": "index",
-            "adj_factor": "stock",
-            "fund_adj": "etf",
-        }
-
         # 执行 L3 检查
         for dataset in datasets:
             try:
-                # 推断 asset_class
-                asset_class = dataset_asset_class.get(dataset)
-                if asset_class is None:
+                # 使用 Dataset.get_asset_class() 获取资产类别
+                asset_class = Dataset.get_asset_class(dataset)
+                if asset_class == "other":
                     raise ValueError(f"Unknown dataset: {dataset}")
 
                 result = l3_service.check_dataset(
@@ -133,6 +125,13 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
                     error_type=type(e).__name__,
                     error=str(e),
                 )
+                # 记录失败结果，避免"假通过/漏报"
+                results_by_dataset[dataset] = {
+                    "passed": False,
+                    "issue_count": 0,
+                    "alert_count": 0,
+                    "error": f"{type(e).__name__}: {e}",
+                }
             except Exception as e:
                 # 未知异常
                 logger.exception(
@@ -145,7 +144,7 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
                     "passed": False,
                     "issue_count": 0,
                     "alert_count": 0,
-                    "error": str(e),
+                    "error": f"{type(e).__name__}: {e}",
                 }
 
         # 汇总结果
@@ -171,9 +170,9 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
             _send_dq_alert(trade_date, all_issues)
 
         # 记录指标
-        M.dq_batch_checks.add(1.0, {"trade_date": trade_date})
-        M.dq_batch_issues.add(float(total_issues), {"trade_date": trade_date})
-        M.dq_batch_alerts.add(float(alert_count), {"trade_date": trade_date})
+        Metrics.dq_batch_checks.add(1.0, {"trade_date": trade_date})
+        Metrics.dq_batch_issues.add(float(total_issues), {"trade_date": trade_date})
+        Metrics.dq_batch_alerts.add(float(alert_count), {"trade_date": trade_date})
 
         return summary
 
@@ -187,7 +186,6 @@ def _send_dq_alert(trade_date: str, issues: list[Any]) -> None:
         issues: 问题列表
 
     """
-    # TODO: 实现告警发送逻辑(邮件、钉钉、企业微信等)
     logger.warning(
         "DQ alert notification",
         event="dq_alert",

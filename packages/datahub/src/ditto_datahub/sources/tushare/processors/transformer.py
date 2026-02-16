@@ -2,147 +2,55 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-
 import polars as pl
-from ditto_foundation import M, logger
+from ditto_infra.foundation import Metrics, logger
 
-from ditto_datahub.sources.normalization import NormalizationConfig
+from ditto_datahub.sources.tushare.processors.column_mapping import ColumnMapping
+
+# 重新导出所有 Mapping（保持向后兼容）
+from .mappings import (
+    ADJ_FACTOR_MAPPING,
+    BALANCE_SHEET_MAPPING,
+    CALENDAR_MAPPING,
+    CASH_FLOW_MAPPING,
+    CORPORATE_ACTIONS_MAPPING,
+    DAILY_OHLCV_MAPPING,
+    DIVIDEND_MAPPING,
+    ETF_BASIC_MAPPING,
+    FUND_ADJ_MAPPING,
+    FUTURES_MAPPING,
+    INCOME_STATEMENT_MAPPING,
+    INDEX_BASIC_MAPPING,
+    INDEX_COMPOSITION_MAPPING,
+    MARGIN_TRADING_MAPPING,
+    PLEDGE_RATIO_MAPPING,
+    STOCK_BASIC_MAPPING,
+    STOCK_LIMIT_MAPPING,
+    VALUATION_METRICS_MAPPING,
+)
 
 __all__ = [
     "ADJ_FACTOR_MAPPING",
+    "BALANCE_SHEET_MAPPING",
     "CALENDAR_MAPPING",
+    "CASH_FLOW_MAPPING",
+    "CORPORATE_ACTIONS_MAPPING",
     "DAILY_OHLCV_MAPPING",
+    "DIVIDEND_MAPPING",
     "ETF_BASIC_MAPPING",
     "FUND_ADJ_MAPPING",
+    "FUTURES_MAPPING",
+    "INCOME_STATEMENT_MAPPING",
+    "INDEX_BASIC_MAPPING",
+    "INDEX_COMPOSITION_MAPPING",
+    "MARGIN_TRADING_MAPPING",
+    "PLEDGE_RATIO_MAPPING",
     "STOCK_BASIC_MAPPING",
     "STOCK_LIMIT_MAPPING",
+    "VALUATION_METRICS_MAPPING",
     "ColumnMapping",
     "TushareDataTransformer",
 ]
-
-
-@dataclass(frozen=True)
-class ColumnMapping:
-    """
-    列映射配置（扩展版）.
-
-    Attributes:
-        rename: 列重命名映射
-        date_columns: 日期列及格式映射（列名 -> 格式）
-        float_columns: 需要转换为 Float64 的列
-        int_columns: 需要转换为 Int64 的列
-        boolean_columns: 需要转换为 Boolean 的列
-        computed_columns: 计算列映射（列名 -> Polars 表达式）
-        output_columns: 需要保留的输出列，None 表示保留所有列
-        normalization: 数据标准化配置
-
-    """
-
-    rename: dict[str, str]
-    date_columns: dict[str, str]  # 列名 -> 格式
-    float_columns: list[str]
-    int_columns: tuple[str, ...] = ()
-    boolean_columns: tuple[str, ...] = ()
-    # 计算列：列名 -> Polars 表达式（用于动态计算，如从 ts_code 提取 symbol/exchange）
-    computed_columns: dict[str, pl.Expr] = field(default_factory=lambda: {})
-    # 需要保留的输出列（重命名后），None 表示保留所有列
-    output_columns: tuple[str, ...] | None = None
-    # 标准化配置
-    normalization: NormalizationConfig | None = None
-
-
-# OHLCV 数据的通用配置
-# knowledge_date = trade_date + 1（日行情数据 T+1 可知）
-DAILY_OHLCV_MAPPING = ColumnMapping(
-    rename={"ts_code": "source_ticker", "vol": "volume", "pct_chg": "pct_change"},
-    date_columns={"trade_date": "%Y%m%d"},
-    float_columns=[
-        "open",
-        "high",
-        "low",
-        "close",
-        "pre_close",
-        "volume",
-        "amount",
-        "pct_change",
-    ],
-    computed_columns={
-        "knowledge_date": pl.col("trade_date") + pl.duration(days=1),
-    },
-    output_columns=(
-        "source_ticker",
-        "trade_date",
-        "knowledge_date",
-        "open",
-        "high",
-        "low",
-        "close",
-        "pre_close",
-        "volume",
-        "amount",
-        "pct_change",
-    ),
-)
-
-# 交易日历配置
-CALENDAR_MAPPING = ColumnMapping(
-    rename={"cal_date": "trade_date"},
-    date_columns={"trade_date": "%Y%m%d"},
-    float_columns=[],
-    boolean_columns=("is_open",),
-    output_columns=("trade_date", "is_open"),
-)
-
-# 复权因子配置（股票）
-# knowledge_date = trade_date（数据即日可用，直接复制已转换的 Date 列）
-ADJ_FACTOR_MAPPING = ColumnMapping(
-    rename={"ts_code": "source_ticker"},
-    date_columns={"trade_date": "%Y%m%d"},
-    float_columns=["adj_factor"],
-    computed_columns={"knowledge_date": pl.col("trade_date")},
-    output_columns=("source_ticker", "trade_date", "knowledge_date", "adj_factor"),
-)
-
-# 复权因子配置（ETF/基金）- 与股票复权因子结构相同
-FUND_ADJ_MAPPING = ColumnMapping(
-    rename={"ts_code": "source_ticker"},
-    date_columns={"trade_date": "%Y%m%d"},
-    float_columns=["adj_factor"],
-    computed_columns={"knowledge_date": pl.col("trade_date")},
-    output_columns=("source_ticker", "trade_date", "knowledge_date", "adj_factor"),
-)
-
-# ETF 基本信息配置
-ETF_BASIC_MAPPING = ColumnMapping(
-    rename={"ts_code": "source_ticker"},
-    date_columns={"list_date": "%Y%m%d"},
-    float_columns=[],
-    computed_columns={
-        "symbol": pl.col("source_ticker").str.split(".").list.get(0),
-        "exchange": pl.col("source_ticker")
-        .str.split(".")
-        .list.get(1)
-        .replace({"SH": "SSE", "SZ": "SZSE"}),
-    },
-    output_columns=("source_ticker", "symbol", "name", "exchange", "list_date"),
-)
-
-# 股票基本信息配置
-STOCK_BASIC_MAPPING = ColumnMapping(
-    rename={"ts_code": "source_ticker"},
-    date_columns={"list_date": "%Y%m%d"},
-    float_columns=[],
-    output_columns=("source_ticker", "symbol", "name", "exchange", "list_date"),
-)
-
-# 涨跌停价格配置
-STOCK_LIMIT_MAPPING = ColumnMapping(
-    rename={"ts_code": "source_ticker"},
-    date_columns={"trade_date": "%Y%m%d"},
-    float_columns=["up_limit", "down_limit"],
-    output_columns=("source_ticker", "trade_date", "up_limit", "down_limit"),
-)
 
 
 class TushareDataTransformer:
@@ -185,14 +93,10 @@ class TushareDataTransformer:
             event=f"tushare_{dataset_name}_fetch_complete",
             row_count=len(result),
         )
-        try:
-            M.data_records.add(
-                len(result),
-                {"source": "tushare", "dataset": dataset_name, "status": "success"},
-            )
-        except (AttributeError, TypeError):
-            # Observability 未初始化，静默跳过
-            pass
+        Metrics.data_records.add(
+            len(result),
+            {"source": "tushare", "dataset": dataset_name, "status": "success"},
+        )
 
         return result
 
@@ -292,7 +196,7 @@ class TushareDataTransformer:
             event=f"tushare_{dataset_name}_fetch_complete",
             row_count=len(result),
         )
-        M.data_records.add(
+        Metrics.data_records.add(
             len(result),
             {"source": "tushare", "dataset": dataset_name, "status": "success"},
         )

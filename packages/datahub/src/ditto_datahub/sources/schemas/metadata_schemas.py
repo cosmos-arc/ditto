@@ -21,7 +21,6 @@ INSTRUMENT_SOURCE_SCHEMA = SourceSchema(
     schema={
         "instrument_id": pl.String,
         "source_ticker": pl.String,
-        "ticker": pl.String,
         "name": pl.String,
         "exchange": pl.String,  # Exchange enum value
         "list_date": pl.Date,

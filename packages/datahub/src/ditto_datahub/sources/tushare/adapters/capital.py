@@ -5,302 +5,22 @@ from __future__ import annotations
 from datetime import date
 
 import polars as pl
-from ditto_foundation import M, logger, traced
+from ditto_infra.foundation import Metrics, logger, traced
 
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
 )
-from ditto_datahub.sources.tushare.processors.transformer import (
-    ColumnMapping,
-    TushareDataTransformer,
+from ditto_datahub.sources.tushare.processors.mappings import (
+    CORPORATE_ACTIONS_MAPPING,
+    DIVIDEND_MAPPING,
+    FUTURES_MAPPING,
+    INDEX_COMPOSITION_MAPPING,
+    MARGIN_TRADING_MAPPING,
+    PLEDGE_RATIO_MAPPING,
+    VALUATION_METRICS_MAPPING,
 )
-
-# ============================================================================
-# Column Mappings
-# ============================================================================
-
-# Valuation Metrics (PE/PB) - PIT data
-VALUATION_METRICS_MAPPING = ColumnMapping(
-    rename={
-        "ts_code": "instrument_id",
-        "pe": "pe_ratio",
-        "pb": "pb_ratio",
-        "ps": "ps_ratio",
-        "total_mv": "market_cap",
-    },
-    date_columns={"trade_date": "%Y%m%d"},
-    float_columns=["pe_ratio", "pb_ratio", "ps_ratio", "dividend_yield", "market_cap"],
-    computed_columns={"knowledge_date": pl.col("trade_date") + pl.duration(days=1)},
-    output_columns=(
-        "instrument_id",
-        "trade_date",
-        "knowledge_date",
-        "pe_ratio",
-        "pb_ratio",
-        "ps_ratio",
-        "dividend_yield",
-        "market_cap",
-    ),
-)
-
-# Dividend - PIT data
-DIVIDEND_MAPPING = ColumnMapping(
-    rename={
-        "ts_code": "instrument_id",
-        "ex_date": "ex_dividend_date",
-        "dividend": "dividend_per_share",
-    },
-    date_columns={"ex_dividend_date": "%Y%m%d"},
-    float_columns=["dividend_per_share", "dividend_yield"],
-    computed_columns={
-        "knowledge_date": pl.col("ex_dividend_date") + pl.duration(days=1)
-    },
-    output_columns=(
-        "instrument_id",
-        "ex_dividend_date",
-        "knowledge_date",
-        "dividend_per_share",
-        "dividend_yield",
-    ),
-)
-
-# Margin Trading - PIT data
-MARGIN_TRADING_MAPPING = ColumnMapping(
-    rename={
-        "ts_code": "instrument_id",
-        "rz_balance": "margin_buy_balance",
-        "rz_vol": "margin_buy_volume",
-        "rq_balance": "short_sell_balance",
-        "rq_vol": "short_sell_volume",
-    },
-    date_columns={"trade_date": "%Y%m%d"},
-    float_columns=[
-        "margin_buy_balance",
-        "short_sell_balance",
-        "margin_buy_volume",
-        "short_sell_volume",
-    ],
-    computed_columns={"knowledge_date": pl.col("trade_date") + pl.duration(days=1)},
-    output_columns=(
-        "instrument_id",
-        "trade_date",
-        "knowledge_date",
-        "margin_buy_balance",
-        "short_sell_balance",
-        "margin_buy_volume",
-        "short_sell_volume",
-    ),
-)
-
-# Pledge Ratio - PIT data
-# Note: Tushare pledge API does not return report_date, we'll add it in the method
-PLEDGE_RATIO_MAPPING = ColumnMapping(
-    rename={
-        "ts_code": "instrument_id",
-        "pledge_count": "pledge_shares",
-        "total_share": "total_shares",
-    },
-    date_columns={},
-    float_columns=["pledge_ratio", "pledge_shares", "total_shares"],
-    computed_columns={},
-    output_columns=(
-        "instrument_id",
-        "pledge_ratio",
-        "pledge_shares",
-        "total_shares",
-    ),
-)
-
-# Futures - PIT data
-FUTURES_MAPPING = ColumnMapping(
-    rename={
-        "ts_code": "instrument_id",
-        "oi": "open_interest",
-        "settlement": "settlement_price",
-        "vol": "volume",
-        "amount": "turnover",
-    },
-    date_columns={"trade_date": "%Y%m%d"},
-    float_columns=["open_interest", "settlement_price", "volume", "turnover"],
-    computed_columns={"knowledge_date": pl.col("trade_date") + pl.duration(days=1)},
-    output_columns=(
-        "instrument_id",
-        "trade_date",
-        "knowledge_date",
-        "open_interest",
-        "settlement_price",
-        "volume",
-        "turnover",
-    ),
-)
-
-# Index Composition - PIT data
-INDEX_COMPOSITION_MAPPING = ColumnMapping(
-    rename={"ts_code": "instrument_id", "index_code": "index_id"},
-    date_columns={"in_date": "%Y%m%d"},
-    float_columns=["weight"],
-    int_columns=("is_new",),
-    computed_columns={"effective_from": pl.col("in_date")},
-    output_columns=(
-        "index_id",
-        "instrument_id",
-        "weight",
-        "effective_from",
-    ),
-)
-
-# Corporate Actions - Non-PIT data
-CORPORATE_ACTIONS_MAPPING = ColumnMapping(
-    rename={
-        "ts_code": "instrument_id",
-        "ba_type": "action_type",
-        "ann_date": "announcement_date",
-        "act_date": "effective_date",
-        "name": "description",
-    },
-    date_columns={"announcement_date": "%Y%m%d", "effective_date": "%Y%m%d"},
-    float_columns=[],
-    output_columns=(
-        "instrument_id",
-        "action_type",
-        "announcement_date",
-        "effective_date",
-        "description",
-    ),
-)
-
-# Balance Sheet - PIT data (simplified fields)
-BALANCE_SHEET_MAPPING = ColumnMapping(
-    rename={
-        "ts_code": "instrument_id",
-        "total_liab": "total_liabilities",
-    },
-    date_columns={"end_date": "%Y%m%d", "ann_date": "%Y%m%d"},
-    float_columns=[
-        "total_assets",
-        "total_liabilities",  # After rename
-        "total_hldr_eqy_exc_min_int",
-        "total_cur_assets",
-        "total_cur_liab",
-    ],
-    computed_columns={
-        "report_date": pl.col("end_date"),
-        "knowledge_date": pl.col("ann_date"),
-        "net_assets": pl.col("total_hldr_eqy_exc_min_int"),
-        "current_assets": pl.col("total_cur_assets"),
-        "current_liabilities": pl.col("total_cur_liab"),
-    },
-    output_columns=(
-        "instrument_id",
-        "report_date",
-        "knowledge_date",
-        "total_assets",
-        "total_liabilities",
-        "net_assets",
-        "current_assets",
-        "current_liabilities",
-    ),
-)
-
-# Income Statement - PIT data (simplified fields)
-INCOME_STATEMENT_MAPPING = ColumnMapping(
-    rename={"ts_code": "instrument_id"},
-    date_columns={"end_date": "%Y%m%d", "ann_date": "%Y%m%d"},
-    float_columns=[
-        "total_operating_revenue",
-        "operating_profit",
-        "net_profit",
-        "basic_eps",
-    ],
-    computed_columns={
-        "report_date": pl.col("end_date"),
-        "knowledge_date": pl.col("ann_date"),
-        "revenue": pl.col("total_operating_revenue"),
-        "eps": pl.col("basic_eps"),
-    },
-    output_columns=(
-        "instrument_id",
-        "report_date",
-        "knowledge_date",
-        "revenue",
-        "operating_profit",
-        "net_profit",
-        "eps",
-    ),
-)
-
-# Cash Flow - PIT data (simplified fields)
-CASH_FLOW_MAPPING = ColumnMapping(
-    rename={"ts_code": "instrument_id"},
-    date_columns={"end_date": "%Y%m%d", "ann_date": "%Y%m%d"},
-    float_columns=[
-        "n_cashflow_act",
-        "n_cash_flows_inv_act",
-        "n_cash_flows_fnc_act",
-    ],
-    computed_columns={
-        "report_date": pl.col("end_date"),
-        "knowledge_date": pl.col("ann_date"),
-        "operating_cash_flow": pl.col("n_cashflow_act"),
-        "investing_cash_flow": pl.col("n_cash_flows_inv_act"),
-        "financing_cash_flow": pl.col("n_cash_flows_fnc_act"),
-        "net_cash_flow": pl.col("n_cashflow_act")
-        + pl.col("n_cash_flows_inv_act")
-        + pl.col("n_cash_flows_fnc_act"),
-    },
-    output_columns=(
-        "instrument_id",
-        "report_date",
-        "knowledge_date",
-        "operating_cash_flow",
-        "investing_cash_flow",
-        "financing_cash_flow",
-        "net_cash_flow",
-    ),
-)
-
-
-def _record_metrics(row_count: int, dataset: str) -> None:
-    """
-    安全地记录数据指标.
-
-    如果 observability 未初始化，静默跳过.
-
-    Args:
-        row_count: 数据行数
-        dataset: 数据集名称
-
-    """
-    try:
-        M.data_records.add(
-            row_count,
-            {"source": "tushare", "dataset": dataset, "status": "success"},
-        )
-    except (AttributeError, TypeError):
-        # Observability 未初始化，静默跳过
-        pass
-
-
-def _add_pit_columns(
-    df: pl.DataFrame,
-    date_col: str = "knowledge_date",
-) -> pl.DataFrame:
-    """
-    为 PIT 数据添加 effective_from 和 effective_to 列.
-
-    Args:
-        df: 输入 DataFrame
-        date_col: 用作 effective_from 的日期列名
-
-    Returns:
-        添加了 PIT 列的 DataFrame
-
-    """
-    return df.with_columns(
-        pl.col(date_col).alias("effective_from"),
-        pl.lit(None, dtype=pl.Date).alias("effective_to"),
-    )
+from ditto_datahub.sources.tushare.processors.transformer import TushareDataTransformer
 
 
 class CapitalTushareAdapter(BaseTushareAdapter):
@@ -361,10 +81,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         )
 
         with tushare_fetch_error_handler("valuation_metrics", "pe_daily"):
-            # Tushare API: pe_daily 获取每日市盈率
-            # 类似地可以使用 pb_daily 获取市净率
-            # 这里先实现 pe_daily，后续可以合并 pb_daily 的数据
-
             params: dict[str, str] = {
                 "api_name": "pe_daily",
                 "fields": "ts_code,trade_date,pe,pb,ps,dividend_yield,total_mv",
@@ -385,8 +101,11 @@ class CapitalTushareAdapter(BaseTushareAdapter):
                 response, "valuation_metrics", VALUATION_METRICS_MAPPING
             )
 
-            # 添加 PIT 列
-            result = _add_pit_columns(result)
+            # 添加 PIT 列（内联 _add_pit_columns）
+            result = result.with_columns(
+                pl.col("knowledge_date").alias("effective_from"),
+                pl.lit(None, dtype=pl.Date).alias("effective_to"),
+            )
 
             row_count = len(result)
             logger.info(
@@ -394,7 +113,14 @@ class CapitalTushareAdapter(BaseTushareAdapter):
                 event="tushare_valuation_metrics_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "valuation_metrics")
+            Metrics.data_records.add(
+                row_count,
+                {
+                    "source": "tushare",
+                    "dataset": "valuation_metrics",
+                    "status": "success",
+                },
+            )
 
             return result
 
@@ -458,7 +184,10 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             )
 
             # 添加 PIT 列
-            result = _add_pit_columns(result)
+            result = result.with_columns(
+                pl.col("knowledge_date").alias("effective_from"),
+                pl.lit(None, dtype=pl.Date).alias("effective_to"),
+            )
 
             row_count = len(result)
             logger.info(
@@ -466,7 +195,10 @@ class CapitalTushareAdapter(BaseTushareAdapter):
                 event="tushare_dividend_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "dividend")
+            Metrics.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "dividend", "status": "success"},
+            )
 
             return result
 
@@ -532,7 +264,10 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             )
 
             # 添加 PIT 列
-            result = _add_pit_columns(result)
+            result = result.with_columns(
+                pl.col("knowledge_date").alias("effective_from"),
+                pl.lit(None, dtype=pl.Date).alias("effective_to"),
+            )
 
             row_count = len(result)
             logger.info(
@@ -540,7 +275,10 @@ class CapitalTushareAdapter(BaseTushareAdapter):
                 event="tushare_margin_trading_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "margin_trading")
+            Metrics.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "margin_trading", "status": "success"},
+            )
 
             return result
 
@@ -606,8 +344,11 @@ class CapitalTushareAdapter(BaseTushareAdapter):
                 pl.lit(today).alias("knowledge_date"),
             )
 
-            # 添加 PIT 列
-            result = _add_pit_columns(result, date_col="report_date")
+            # 添加 PIT 列（使用 report_date 作为 effective_from）
+            result = result.with_columns(
+                pl.col("report_date").alias("effective_from"),
+                pl.lit(None, dtype=pl.Date).alias("effective_to"),
+            )
 
             # 重新排列列顺序以符合 SourceSchema
             result = result.select(
@@ -627,7 +368,10 @@ class CapitalTushareAdapter(BaseTushareAdapter):
                 event="tushare_pledge_ratio_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "pledge_ratio")
+            Metrics.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "pledge_ratio", "status": "success"},
+            )
 
             return result
 
@@ -671,7 +415,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             trade_date=trade_date,
         )
 
-        with tushare_fetch_error_handler("futures", "fut"):
+        with tushare_fetch_error_handler("futures_position", "fut"):
             params: dict[str, str] = {
                 "api_name": "fut",
                 "fields": "ts_code,trade_date,oi,settlement,vol,amount",
@@ -689,11 +433,14 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             response = self._client.query(**params)
 
             result = TushareDataTransformer.transform(
-                response, "futures", FUTURES_MAPPING
+                response, "futures_position", FUTURES_MAPPING
             )
 
             # 添加 PIT 列
-            result = _add_pit_columns(result)
+            result = result.with_columns(
+                pl.col("knowledge_date").alias("effective_from"),
+                pl.lit(None, dtype=pl.Date).alias("effective_to"),
+            )
 
             row_count = len(result)
             logger.info(
@@ -701,7 +448,14 @@ class CapitalTushareAdapter(BaseTushareAdapter):
                 event="tushare_futures_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "futures")
+            Metrics.data_records.add(
+                row_count,
+                {
+                    "source": "tushare",
+                    "dataset": "futures_position",
+                    "status": "success",
+                },
+            )
 
             return result
 
@@ -745,16 +499,15 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             }
 
             if asof_date:
-                # 历史查询：指定查询日期
                 params["date"] = asof_date.replace("-", "")
 
             response = self._client.query(**params)
 
-            # 添加 index_code 列（后续会被重命名为 index_id）
-            response = response.with_columns(pl.lit(index_code).alias("index_code"))
-
-            # 添加默认权重（Tushare 不提供权重信息，设为 1.0）
-            response = response.with_columns(pl.lit(1.0).alias("weight"))
+            # 添加 index_code 列和默认权重
+            response = response.with_columns(
+                pl.lit(index_code).alias("index_code"),
+                pl.lit(1.0).alias("weight"),
+            )
 
             result = TushareDataTransformer.transform(
                 response, "index_composition", INDEX_COMPOSITION_MAPPING
@@ -762,7 +515,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
             # 添加 effective_to 列
             result = result.with_columns(
-                pl.lit(None, dtype=pl.Date).alias("effective_to")
+                pl.lit(None, dtype=pl.Date).alias("effective_to"),
             )
 
             row_count = len(result)
@@ -771,7 +524,14 @@ class CapitalTushareAdapter(BaseTushareAdapter):
                 event="tushare_index_composition_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "index_composition")
+            Metrics.data_records.add(
+                row_count,
+                {
+                    "source": "tushare",
+                    "dataset": "index_composition",
+                    "status": "success",
+                },
+            )
 
             return result
 
@@ -835,229 +595,13 @@ class CapitalTushareAdapter(BaseTushareAdapter):
                 event="tushare_corporate_actions_fetch_complete",
                 row_count=row_count,
             )
-            _record_metrics(row_count, "corporate_actions")
-
-            return result
-
-    @traced("source.tushare.fetch_balance_sheet")
-    def fetch_balance_sheet(
-        self,
-        ts_code: str | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
-    ) -> pl.DataFrame:
-        """
-        获取资产负债表数据.
-
-        Args:
-            ts_code: 股票代码 (e.g., "000001.SZ")
-            start_date: 开始日期 (YYYYMMDD)
-            end_date: 结束日期 (YYYYMMDD)
-
-        Returns:
-            DataFrame with columns:
-            - instrument_id: 股票代码
-            - report_date: 报告期
-            - knowledge_date: 知识日期
-            - effective_from: 生效开始日期
-            - effective_to: 生效结束日期
-            - total_assets: 总资产
-            - total_liabilities: 总负债
-            - net_assets: 净资产
-            - current_assets: 流动资产
-            - current_liabilities: 流动负债
-
-        Raises:
-            SourceFetchError: If fetch fails.
-
-        """
-        logger.info(
-            "Fetching Tushare balance sheet",
-            event="tushare_balance_sheet_fetch_start",
-            ts_code=ts_code,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        with tushare_fetch_error_handler("balance_sheet", "balancesheet"):
-            params: dict[str, str] = {
-                "api_name": "balancesheet",
-                "fields": (
-                    "ts_code,end_date,ann_date,total_assets,total_liab,"
-                    "total_hldr_eqy_exc_min_int,total_cur_assets,total_cur_liab"
-                ),
-            }
-            if ts_code:
-                params["ts_code"] = ts_code
-
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
-
-            response = self._client.query(**params)
-
-            result = TushareDataTransformer.transform(
-                response, "balance_sheet", BALANCE_SHEET_MAPPING
+            Metrics.data_records.add(
+                row_count,
+                {
+                    "source": "tushare",
+                    "dataset": "corporate_actions",
+                    "status": "success",
+                },
             )
-
-            # 添加 PIT 列
-            result = _add_pit_columns(result)
-
-            row_count = len(result)
-            logger.info(
-                "Tushare balance sheet fetched",
-                event="tushare_balance_sheet_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "balance_sheet")
-
-            return result
-
-    @traced("source.tushare.fetch_income_statement")
-    def fetch_income_statement(
-        self,
-        ts_code: str | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
-    ) -> pl.DataFrame:
-        """
-        获取利润表数据.
-
-        Args:
-            ts_code: 股票代码 (e.g., "000001.SZ")
-            start_date: 开始日期 (YYYYMMDD)
-            end_date: 结束日期 (YYYYMMDD)
-
-        Returns:
-            DataFrame with columns:
-            - instrument_id: 股票代码
-            - report_date: 报告期
-            - knowledge_date: 知识日期
-            - effective_from: 生效开始日期
-            - effective_to: 生效结束日期
-            - revenue: 营业收入
-            - operating_profit: 营业利润
-            - net_profit: 净利润
-            - eps: 每股收益
-
-        Raises:
-            SourceFetchError: If fetch fails.
-
-        """
-        logger.info(
-            "Fetching Tushare income statement",
-            event="tushare_income_statement_fetch_start",
-            ts_code=ts_code,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        with tushare_fetch_error_handler("income_statement", "income"):
-            params: dict[str, str] = {
-                "api_name": "income",
-                "fields": (
-                    "ts_code,end_date,ann_date,total_operating_revenue,"
-                    "operating_profit,net_profit,basic_eps"
-                ),
-            }
-            if ts_code:
-                params["ts_code"] = ts_code
-
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
-
-            response = self._client.query(**params)
-
-            result = TushareDataTransformer.transform(
-                response, "income_statement", INCOME_STATEMENT_MAPPING
-            )
-
-            # 添加 PIT 列
-            result = _add_pit_columns(result)
-
-            row_count = len(result)
-            logger.info(
-                "Tushare income statement fetched",
-                event="tushare_income_statement_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "income_statement")
-
-            return result
-
-    @traced("source.tushare.fetch_cash_flow")
-    def fetch_cash_flow(
-        self,
-        ts_code: str | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
-    ) -> pl.DataFrame:
-        """
-        获取现金流量表数据.
-
-        Args:
-            ts_code: 股票代码 (e.g., "000001.SZ")
-            start_date: 开始日期 (YYYYMMDD)
-            end_date: 结束日期 (YYYYMMDD)
-
-        Returns:
-            DataFrame with columns:
-            - instrument_id: 股票代码
-            - report_date: 报告期
-            - knowledge_date: 知识日期
-            - effective_from: 生效开始日期
-            - effective_to: 生效结束日期
-            - operating_cash_flow: 经营活动现金流
-            - investing_cash_flow: 投资活动现金流
-            - financing_cash_flow: 筹资活动现金流
-            - net_cash_flow: 现金净增加额
-
-        Raises:
-            SourceFetchError: If fetch fails.
-
-        """
-        logger.info(
-            "Fetching Tushare cash flow",
-            event="tushare_cash_flow_fetch_start",
-            ts_code=ts_code,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        with tushare_fetch_error_handler("cash_flow", "cashflow"):
-            params: dict[str, str] = {
-                "api_name": "cashflow",
-                "fields": (
-                    "ts_code,end_date,ann_date,n_cashflow_act,"
-                    "n_cash_flows_inv_act,n_cash_flows_fnc_act"
-                ),
-            }
-            if ts_code:
-                params["ts_code"] = ts_code
-
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
-
-            response = self._client.query(**params)
-
-            result = TushareDataTransformer.transform(
-                response, "cash_flow", CASH_FLOW_MAPPING
-            )
-
-            # 添加 PIT 列
-            result = _add_pit_columns(result)
-
-            row_count = len(result)
-            logger.info(
-                "Tushare cash flow fetched",
-                event="tushare_cash_flow_fetch_complete",
-                row_count=row_count,
-            )
-            _record_metrics(row_count, "cash_flow")
 
             return result

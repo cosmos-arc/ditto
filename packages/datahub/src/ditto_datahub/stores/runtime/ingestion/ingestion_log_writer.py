@@ -9,7 +9,7 @@ from typing import Any
 
 from ditto_datahub.models.ingestion import IngestionLog
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 
 class IngestionLogWriter:

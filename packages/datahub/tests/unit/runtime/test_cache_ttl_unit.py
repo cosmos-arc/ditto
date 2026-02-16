@@ -3,7 +3,7 @@
 import time
 
 import pytest
-from ditto_foundation.cache import DataCache
+from ditto_infra.foundation.cache import DataCache
 
 
 def test_individual_ttl(frozen_time) -> None:

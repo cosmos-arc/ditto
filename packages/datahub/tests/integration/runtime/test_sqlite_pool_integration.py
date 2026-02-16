@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
-from ditto_foundation import SQLitePool
+from ditto_infra.foundation import SQLitePool
 
 
 class TestSQLitePool:
@@ -140,7 +140,7 @@ class TestSQLitePool:
         # Insert a test record
         sql = (
             "INSERT INTO instrument "
-            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
+            "(instrument_id, ticker, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
         params = [99999999, "TEST", "Test Security", "TEST", "stock", "2024-01-01"]
@@ -152,7 +152,7 @@ class TestSQLitePool:
             "SELECT * FROM instrument WHERE instrument_id = ?", [99999999]
         ).fetchone()
         assert row is not None
-        assert row["symbol"] == "TEST"
+        assert row["ticker"] == "TEST"
 
     def test_rollback_method_works(self) -> None:
         """Test rollback method works."""
@@ -163,7 +163,7 @@ class TestSQLitePool:
         self.pool.execute("BEGIN")
         sql = (
             "INSERT INTO instrument "
-            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
+            "(instrument_id, ticker, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)"
         )
         params = [99999999, "TEST", "Test Security", "TEST", "stock", "2024-01-01"]
@@ -200,7 +200,7 @@ class TestSQLitePool:
         # Insert a valid instrument first
         self.pool.execute(
             "INSERT INTO instrument "
-            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
+            "(instrument_id, ticker, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             [1000001, "600000", "Test", "SSE", "stock", "2000-01-01"],
         )
@@ -223,7 +223,7 @@ class TestSQLitePool:
         # Insert a valid instrument
         self.pool.execute(
             "INSERT INTO instrument "
-            "(instrument_id, symbol, name, exchange, asset_class, list_date) "
+            "(instrument_id, ticker, name, exchange, asset_class, list_date) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             [1000001, "600000", "Test", "SSE", "stock", "2000-01-01"],
         )

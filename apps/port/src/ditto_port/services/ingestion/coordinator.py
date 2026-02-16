@@ -19,7 +19,7 @@ from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 from ditto_port.models import IngestionResult
 from ditto_port.services.ingestion.data_writer import IngestionDataWriter
@@ -161,6 +161,7 @@ class IngestionCoordinator:
         if dataset_enum in (
             Dataset.STOCK_DAILY,
             Dataset.ETF_DAILY,
+            Dataset.INDEX_DAILY,
             Dataset.STOCK_STATUS,
             Dataset.ADJ_FACTOR,
             Dataset.FUND_ADJ,
@@ -307,10 +308,12 @@ class IngestionCoordinator:
             Dataset.MACRO_INDICATORS: lambda: self._source.fetch_macro_indicators(
                 trade_date
             ),
-            Dataset.FUTURES: lambda: self._source.fetch_futures(trade_date),
+            Dataset.FUTURES_POSITION: lambda: self._source.fetch_futures(trade_date),
             Dataset.CORPORATE_ACTIONS: lambda: self._source.fetch_corporate_actions(
                 trade_date
             ),
+            Dataset.INDEX_BASIC: lambda: self._source.fetch_index_basic(),
+            Dataset.INDEX_DAILY: lambda: self._source.fetch_index_daily(trade_date),
         }
 
         if dataset_enum not in handlers:

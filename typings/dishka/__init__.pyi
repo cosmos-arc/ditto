@@ -5,7 +5,7 @@ Dishka 类型存根文件.
 """
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from dishka.entities.scope import BaseScope
 
@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
 __all__ = [
+    "FromComponent",
     "Provider",
     "Scope",
     "make_async_container",
@@ -21,15 +22,18 @@ __all__ = [
     "setup_dishka",
 ]
 
+_T = TypeVar("_T")
+
 class Container:
     """同步容器接口."""
 
-    def get(self, type_: type[Any]) -> Any: ...
+    def get(self, type_: type[_T]) -> _T: ...
     def close(self) -> None: ...
 
 class AsyncContainer:
     """异步容器接口."""
 
+    async def get(self, dependency_type: type[_T]) -> _T: ...
     async def close(self) -> None: ...
 
 class Provider:
@@ -44,6 +48,12 @@ class Scope:
     REQUEST: BaseScope
     ACTION: BaseScope
     STEP: BaseScope
+
+class FromComponent:
+    """组件标记，用于依赖注入."""
+
+    component: Any
+    def __init__(self, component: Any = ...) -> None: ...
 
 @overload
 def provide(

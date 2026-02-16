@@ -34,9 +34,9 @@ coverage:
         - packages/datahub/src/
       target: 85%
 
-    foundation:
+    infra:
       paths:
-        - packages/foundation/src/
+        - packages/infra/src/
       target: 80%
 
     server:

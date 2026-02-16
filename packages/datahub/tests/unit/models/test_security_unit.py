@@ -14,7 +14,7 @@ class TestInstrumentRegistration:
         """Test creating InstrumentRegistration with required fields."""
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -22,7 +22,7 @@ class TestInstrumentRegistration:
         )
 
         assert registration.source_ticker == "600000.SH"
-        assert registration.symbol == "600000"
+        assert registration.ticker == "600000"
         assert registration.name == "浦发银行"
         assert registration.exchange == "SSE"
         assert registration.asset_class == "stock"
@@ -34,7 +34,7 @@ class TestInstrumentRegistration:
         """Test creating InstrumentRegistration with optional fields."""
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -50,7 +50,7 @@ class TestInstrumentRegistration:
         """Test InstrumentRegistration can be serialized to dict."""
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",
@@ -60,7 +60,7 @@ class TestInstrumentRegistration:
         data = asdict(registration)
 
         assert data["source_ticker"] == "600000.SH"
-        assert data["symbol"] == "600000"
+        assert data["ticker"] == "600000"
         assert data["name"] == "浦发银行"
         assert data["exchange"] == "SSE"
 
@@ -68,7 +68,7 @@ class TestInstrumentRegistration:
         """Test InstrumentRegistration can be deserialized from dict."""
         data = {
             "source_ticker": "600000.SH",
-            "symbol": "600000",
+            "ticker": "600000",
             "name": "浦发银行",
             "exchange": "SSE",
             "asset_class": "stock",
@@ -80,7 +80,7 @@ class TestInstrumentRegistration:
         registration = InstrumentRegistration(**data)
 
         assert registration.source_ticker == "600000.SH"
-        assert registration.symbol == "600000"
+        assert registration.ticker == "600000"
         assert registration.board == "主板"
 
     def test_validation_fails_with_missing_required_field(self) -> None:
@@ -101,7 +101,7 @@ class TestInstrumentRegistration:
 
         registration = InstrumentRegistration(
             source_ticker="600000.SH",
-            symbol="600000",
+            ticker="600000",
             name="浦发银行",
             exchange="SSE",
             asset_class="stock",

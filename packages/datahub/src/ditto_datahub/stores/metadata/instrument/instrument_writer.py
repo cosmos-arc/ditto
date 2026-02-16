@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 from ditto_datahub.models.metadata import (
     ETFExtension,
@@ -75,7 +75,7 @@ class InstrumentWriter:
             "Starting instrument registration",
             event="instrument_register_start",
             instrument_id=instrument_id,
-            symbol=registration.symbol,
+            ticker=registration.ticker,
             source_ticker=registration.source_ticker,
             source=registration.source,
             asset_class=registration.asset_class,
@@ -87,13 +87,13 @@ class InstrumentWriter:
             self._client.execute(
                 """INSERT INTO instrument
                 (
-                    instrument_id, symbol, name, exchange, board, asset_class,
+                    instrument_id, ticker, name, exchange, board, asset_class,
                     list_date, is_active
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)""",
                 [
                     instrument_id,
-                    registration.symbol,
+                    registration.ticker,
                     registration.name,
                     registration.exchange,
                     registration.board,
@@ -127,8 +127,8 @@ class InstrumentWriter:
                     f"{registration.source}:current"
                 )
                 self._cache.invalidate(cache_key)
-                # 失效 instrument_id_symbol_map 缓存
-                self._cache.invalidate_pattern("instrument_id_symbol_map:*")
+                # 失效 instrument_id_ticker_map 缓存
+                self._cache.invalidate_pattern("instrument_id_ticker_map:*")
 
             self._client.commit()
 
@@ -136,7 +136,7 @@ class InstrumentWriter:
                 "Instrument registered successfully",
                 event="instrument_register_complete",
                 instrument_id=instrument_id,
-                symbol=registration.symbol,
+                ticker=registration.ticker,
             )
 
             return instrument_id
@@ -147,7 +147,7 @@ class InstrumentWriter:
                 "Instrument registration failed",
                 event="instrument_register_failed",
                 instrument_id=instrument_id,
-                symbol=registration.symbol,
+                ticker=registration.ticker,
                 error_type=type(e).__name__,
                 error_message=str(e),
             )

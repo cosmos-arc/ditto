@@ -7,9 +7,11 @@ Following design document at docs/plans/2026-02-09-datahub-cqrs-refactor.md
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
-from ditto_foundation import logger, traced
+from ditto_infra.foundation import logger, traced
+
+from ditto_datahub.models.macro import MacroCategory, MacroFrequency
 
 
 class IndicatorMetadataWriter:
@@ -39,8 +41,8 @@ class IndicatorMetadataWriter:
         self,
         code: str,
         name: str,
-        category: Literal["economic", "interest_rate", "exchange_rate", "money_supply"],
-        frequency: Literal["daily", "monthly", "quarterly"],
+        category: MacroCategory,
+        frequency: MacroFrequency,
         need_pit: bool,
         source: str | None = None,
         unit: str | None = None,

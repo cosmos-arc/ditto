@@ -4,22 +4,12 @@ from enum import Enum
 from typing import Literal, NamedTuple
 
 __all__ = [
-    "DQSeverity",
     "Dataset",
     "Domain",
     "InstrumentIdRange",
     "OnDuplicate",
     "Source",
 ]
-
-
-# ============ DQ 枚举 ============
-class DQSeverity(str, Enum):
-    """DQ severity levels (B.5: 统一三级定义)."""
-
-    ERROR = "error"
-    WARNING = "warning"
-    ALERT = "alert"
 
 
 # ============ Dataset 枚举 ============
@@ -37,6 +27,7 @@ class Dataset(str, Enum):
     # 基础类数据集（T0 数据，不需要 trade_date）
     STOCK_BASIC = "stock_basic"
     ETF_BASIC = "etf_basic"
+    INDEX_BASIC = "index_basic"
 
     # 日历类数据集（需要日期范围）
     CALENDAR = "calendar"
@@ -44,6 +35,7 @@ class Dataset(str, Enum):
     # 行情类数据集（T1 数据，需要 trade_date）
     STOCK_DAILY = "stock_daily"
     ETF_DAILY = "etf_daily"
+    INDEX_DAILY = "index_daily"
     STOCK_STATUS = "stock_status"
 
     # 参考类数据集（需要 trade_date）
@@ -65,18 +57,47 @@ class Dataset(str, Enum):
     MACRO_INDICATORS = "macro_indicators"
 
     # Capital 域扩展
-    FUTURES = "futures"
+    FUTURES_POSITION = "futures_position"
     CORPORATE_ACTIONS = "corporate_actions"
 
     @classmethod
     def is_basic_dataset(cls, dataset: str) -> bool:
         """判断是否为 basic 类数据集（不需要 trade_date）。"""
-        return dataset in (cls.STOCK_BASIC.value, cls.ETF_BASIC.value)
+        return dataset in (
+            cls.STOCK_BASIC.value,
+            cls.ETF_BASIC.value,
+            cls.INDEX_BASIC.value,
+        )
 
     @classmethod
     def is_calendar_dataset(cls, dataset: str) -> bool:
         """判断是否为 calendar 数据集。"""
         return dataset == cls.CALENDAR.value
+
+    @classmethod
+    def get_asset_class(
+        cls, dataset: "Dataset | str"
+    ) -> Literal["stock", "etf", "index", "other"]:
+        """
+        获取数据集对应的资产类别。
+
+        Args:
+            dataset: 数据集枚举或字符串
+
+        Returns:
+            资产类别: "stock" | "etf" | "index" | "other"
+
+        """
+        dataset_value = dataset.value if isinstance(dataset, Dataset) else dataset
+        mapping: dict[str, Literal["stock", "etf", "index"]] = {
+            cls.STOCK_DAILY.value: "stock",
+            cls.STOCK_STATUS.value: "stock",
+            cls.ADJ_FACTOR.value: "stock",
+            cls.FUND_ADJ.value: "etf",
+            cls.ETF_DAILY.value: "etf",
+            cls.INDEX_DAILY.value: "index",
+        }
+        return mapping.get(dataset_value, "other")
 
 
 # ============ Domain 枚举 ============

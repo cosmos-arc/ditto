@@ -13,7 +13,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 from prefect import Flow, deploy
 
 from ditto_port.jobs.flows import (
@@ -121,7 +121,7 @@ def _get_flow_configs() -> list[FlowDeploymentConfig]:
             deployment_name="backfill-prod",
             description="全量数据回补流程",
             parameters={
-                "backfill_config": {
+                "config": {
                     "dataset": "stock_daily",
                     "start_date": "2020-01-01",
                     "end_date": "2024-12-31",

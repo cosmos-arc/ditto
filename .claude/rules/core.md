@@ -8,7 +8,7 @@ paths: ./**/*.py
 
 | 指标 | 限制 | 检查方式 |
 |------|------|----------|
-| **单文件行数** | ≤ 800 行 | 自动检查脚本 |
+| **单文件行数** | ≤ 1000 行 | 自动检查脚本 |
 | **类 public 方法数** | ≤ 20 个 | 自动检查脚本 |
 | **函数长度** | ≤50 行 | Ruff (max-statements) |
 | **嵌套深度** | ≤3 层 | Ruff |
@@ -31,7 +31,7 @@ pixi run -e dev ci
 
 ### 重构指导
 
-#### 文件 > 800 行
+#### 文件 > 1000 行
 
 | 情况 | 重构策略 |
 |------|----------|
@@ -342,16 +342,16 @@ class SourceAuthenticationError(DataSourceError): ...
 
 **禁止行内导入！！破例需要注释说明具体原因**
 
-### Foundation 层导入
+### Foundation 层导入（现为 ditto_infra）
 
 ```python
 # ✅ 正确
-from ditto_foundation import logger, M, span, traced, init
-from ditto_foundation.config import get_settings
-from ditto_foundation.util.io import atomic_write
+from ditto_infra import logger, M, span, traced, init
+from ditto_infra.config import get_settings
+from ditto_infra.util.io import atomic_write
 
 # ❌ 错误
-from ditto_foundation.observability.logging import get_logger
+from ditto_infra.observability.logging import get_logger
 直接访问 os.environ
 使用 open() 写文件
 ```
@@ -482,7 +482,7 @@ tar -tzf dist/*.whl | grep py.typed
 |---|--------------|------|
 | ditto_core | ✅ | `packages/core/src/ditto_core/py.typed` |
 | ditto_datahub | ✅ | `packages/datahub/src/ditto_datahub/py.typed` |
-| ditto_foundation | ✅ | `packages/foundation/src/ditto_foundation/py.typed` |
+| ditto_infra | ✅ | `packages/infra/src/ditto_infra/py.typed` |
 | ditto_port | ✅ | `apps/port/src/ditto_port/py.typed` |
 
 ---

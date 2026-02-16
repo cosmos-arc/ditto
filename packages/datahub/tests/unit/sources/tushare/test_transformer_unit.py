@@ -52,14 +52,14 @@ class TestColumnMapping:
             date_columns={},
             float_columns=[],
             computed_columns={
-                "symbol": pl.col("source_ticker").str.split(".").list.get(0),
+                "ticker": pl.col("source_ticker").str.split(".").list.get(0),
                 "exchange": pl.col("source_ticker").str.split(".").list.get(1),
             },
         )
 
         # Verify computed_columns 的键(因为 Expr 对象不能直接用 == 比较)
-        assert set(mapping.computed_columns.keys()) == {"symbol", "exchange"}
-        assert isinstance(mapping.computed_columns["symbol"], pl.Expr)
+        assert set(mapping.computed_columns.keys()) == {"ticker", "exchange"}
+        assert isinstance(mapping.computed_columns["ticker"], pl.Expr)
         assert isinstance(mapping.computed_columns["exchange"], pl.Expr)
 
         # Verify默认值为空字典
@@ -257,7 +257,7 @@ class TestTushareDataTransformer:
         ]
 
     def test_transform_with_computed_columns(self) -> None:
-        """Test transform with computed columns (symbol/exchange extraction)."""
+        """Test transform with computed columns (ticker/exchange extraction)."""
         # [REVIEW] Tushare API 返回的 ETF 基本信息数据
         input_df = pl.DataFrame(
             {
@@ -276,7 +276,7 @@ class TestTushareDataTransformer:
         # Verify schema
         assert dict(result.schema) == {
             "source_ticker": pl.String,
-            "symbol": pl.String,
+            "ticker": pl.String,
             "name": pl.String,
             "exchange": pl.String,
             "list_date": pl.Date,
@@ -286,21 +286,21 @@ class TestTushareDataTransformer:
         assert result.to_dicts() == [
             {
                 "source_ticker": "510300.SH",
-                "symbol": "510300",
+                "ticker": "510300",
                 "name": "沪深300ETF",
                 "exchange": "SSE",
                 "list_date": date(2012, 7, 6),
             },
             {
                 "source_ticker": "159919.SZ",
-                "symbol": "159919",
+                "ticker": "159919",
                 "name": "沪深300ETF",
                 "exchange": "SZSE",
                 "list_date": date(2019, 6, 24),
             },
             {
                 "source_ticker": "512100.SH",
-                "symbol": "512100",
+                "ticker": "512100",
                 "name": "科创板50ETF",
                 "exchange": "SSE",
                 "list_date": date(2020, 11, 16),
@@ -369,11 +369,11 @@ class TestTushareDataTransformer:
         )
 
         # Verify返回正确 schema 的空 DataFrame
-        # [REVIEW]: symbol 和 exchange 是 computed_columns,类型应该是 pl.String
+        # [REVIEW]: ticker 和 exchange 是 computed_columns,类型应该是 pl.String
         assert result.is_empty()
         assert dict(result.schema) == {
             "source_ticker": pl.String,
-            "symbol": pl.String,
+            "ticker": pl.String,
             "name": pl.String,
             "exchange": pl.String,
             "list_date": pl.Date,

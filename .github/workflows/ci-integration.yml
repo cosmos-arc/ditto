@@ -25,9 +25,7 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      DITTO_TEST_OBSERVABILITY: ${{ vars.DITTO_TEST_OBSERVABILITY || 'enabled' }}
-      DITTO_OBSERVABILITY_TEST_MODE: ${{ vars.DITTO_OBSERVABILITY_TEST_MODE || 'docker' }}
+    # 集成测试通过 pytest marker @pytest.mark.integration 控制
 
     services:
       # VictoriaMetrics

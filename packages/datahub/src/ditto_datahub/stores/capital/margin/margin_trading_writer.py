@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import polars as pl
-from ditto_foundation import M, logger, traced
+from ditto_infra.foundation import Metrics, logger, traced
 
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
@@ -68,7 +68,7 @@ class MarginTradingWriter:
             logger.info(
                 "Margin trading data written successfully", record_count=len(records)
             )
-            M.data_records.add(
+            Metrics.data_records.add(
                 len(records), {"dataset": "margin_trading", "status": "success"}
             )
             return len(records)
@@ -76,7 +76,7 @@ class MarginTradingWriter:
         except Exception as e:
             self._client.rollback()
             logger.error("Margin trading write failed", error=str(e))
-            M.data_records.add(
+            Metrics.data_records.add(
                 len(df), {"dataset": "margin_trading", "status": "failed"}
             )
             raise

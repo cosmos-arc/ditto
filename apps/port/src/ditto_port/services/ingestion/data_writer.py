@@ -18,7 +18,7 @@ from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
-from ditto_foundation.util.checksum import ChecksumCompute
+from ditto_infra.foundation.util.checksum import ChecksumCompute
 
 
 def _enrich_with_instrument_id(
@@ -244,7 +244,7 @@ class IngestionDataWriter:
                 df,
                 year,
             ),
-            Dataset.FUTURES: lambda: self._write_capital(
+            Dataset.FUTURES_POSITION: lambda: self._write_capital(
                 dataset,
                 dataset_enum,
                 df,
@@ -259,6 +259,10 @@ class IngestionDataWriter:
             Dataset.CALENDAR: lambda: self._write_calendar(df, trade_date),
             Dataset.STOCK_BASIC: lambda: self._write_basic(df, trade_date, "stock"),
             Dataset.ETF_BASIC: lambda: self._write_basic(df, trade_date, "etf"),
+            Dataset.INDEX_BASIC: lambda: self._write_basic(df, trade_date, "index"),
+            Dataset.INDEX_DAILY: lambda: self._write_index_bars(
+                dataset, df, year, on_duplicate, source_ticker_col
+            ),
         }
 
         if dataset_enum not in handlers:
@@ -305,6 +309,53 @@ class IngestionDataWriter:
             enriched_df,
             rows_written,
         )
+
+    def _write_index_bars(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+        source_ticker_col: str,
+    ) -> WriteResult:
+        """
+        写入指数 K 线数据.
+
+        Args:
+            dataset: 数据集名称
+            df: K 线数据
+            year: 年份
+            on_duplicate: 重复数据处理策略
+            source_ticker_col: 源代码列名
+
+        Returns:
+            WriteResult: 写入结果
+
+        """
+        # 解析或创建 instrument_id
+        instrument_id_mapping = (
+            self._metadata_service.resolve_or_create_instruments_batch(
+                df=df,
+                source=self._source_name,
+                asset_class="index",
+                source_ticker_col=source_ticker_col,
+            )
+        )
+
+        # 添加 instrument_id 列
+        enriched_df = _enrich_with_instrument_id(
+            df, instrument_id_mapping, source_ticker_col, self._source_name
+        )
+
+        # 写入到 MarketService
+        rows_written = self._market_service.save_bars(
+            dataset="index_daily",
+            df=enriched_df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+
+        return _to_write_result(dataset, year, enriched_df, rows_written)
 
     def _write_stock_status(
         self,
@@ -411,7 +462,12 @@ class IngestionDataWriter:
         year: int,
     ) -> WriteResult:
         capital_dataset = cast(
-            Literal["valuation_metrics", "margin_trading", "pledge_ratio"],
+            Literal[
+                "valuation_metrics",
+                "margin_trading",
+                "pledge_ratio",
+                "futures_position",
+            ],
             dataset_enum.value,
         )
         # 使用特定的 save_* 方法替代已删除的 write() 方法
@@ -421,8 +477,13 @@ class IngestionDataWriter:
             records_written = self._capital_service.save_margin_trading(df)
         elif capital_dataset == "pledge_ratio":
             records_written = self._capital_service.save_pledge_ratio(df)
+        elif capital_dataset == "futures_position":
+            records_written = self._capital_service.save_futures(df)
         else:
-            records_written = 0
+            valid = "valuation_metrics, margin_trading, pledge_ratio, futures_position"
+            raise ValueError(
+                f"Unknown capital_dataset: {capital_dataset}. Expected: {valid}"
+            )
         return _to_write_result(
             dataset,
             year,
@@ -461,12 +522,14 @@ class IngestionDataWriter:
         self,
         df: pl.DataFrame,
         trade_date: str,
-        asset_class: Literal["stock", "etf"],
+        asset_class: Literal["stock", "etf", "index"],
     ) -> WriteResult:
         if asset_class == "stock":
             file_path, checksum = self.write_stock_basic(df, trade_date)
-        else:
+        elif asset_class == "etf":
             file_path, checksum = self.write_etf_basic(df, trade_date)
+        else:  # index
+            file_path, checksum = self.write_index_basic(df, trade_date)
         return WriteResult(
             file_path=file_path,
             checksum=checksum,
@@ -514,6 +577,28 @@ class IngestionDataWriter:
             df=df,
             source=self._source_name,
             asset_class="etf",
+            source_ticker_col="source_ticker",
+        )
+
+        return file_path, checksum
+
+    def write_index_basic(self, df: pl.DataFrame, trade_date: str) -> tuple[str, str]:
+        """
+        写入 index_basic 数据到 instrument_store。
+
+        Args:
+            df: 指数基础信息数据
+            trade_date: 交易日期
+
+        Returns:
+            tuple[str, str]: (file_path, checksum)
+
+        """
+        # 使用 MetadataService 批量注册（线程安全）
+        file_path, checksum = self._metadata_service.register_instruments_batch(
+            df=df,
+            source=self._source_name,
+            asset_class="index",
             source_ticker_col="source_ticker",
         )
 

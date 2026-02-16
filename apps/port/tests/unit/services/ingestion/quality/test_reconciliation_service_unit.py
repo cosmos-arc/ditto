@@ -72,11 +72,11 @@ class TestDailyReconciliationSuccess:
             instrument_store=mock_instrument_store,
         )
 
-        # Mock enrich_with_symbol 返回包含 symbol 的 DataFrame
+        # Mock enrich_with_ticker 返回包含 symbol 的 DataFrame
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("symbol", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"])
         )
-        mock_instrument_store.enrich_with_symbol.return_value = enriched_df
+        mock_instrument_store.enrich_with_ticker.return_value = enriched_df
 
         # Mock TDX 数据源返回数据
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
@@ -92,13 +92,13 @@ class TestDailyReconciliationSuccess:
         )
 
         # Assert
-        assert result["passed"] is True
-        assert result["issue_count"] == 0
-        assert result["trade_date"] == "20240101"
-        assert result["dataset"] == "stock_daily"
+        assert result.passed is True
+        assert result.issue_count == 0
+        assert result.trade_date == "20240101"
+        assert result.dataset == "stock_daily"
 
         # 验证调用链
-        mock_instrument_store.enrich_with_symbol.assert_called_once_with(
+        mock_instrument_store.enrich_with_ticker.assert_called_once_with(
             sample_primary_df
         )
         mock_tdx_source.fetch_stock_daily_bars.assert_called_once()
@@ -122,9 +122,9 @@ class TestDailyReconciliationSuccess:
         )
 
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("symbol", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"])
         )
-        mock_instrument_store.enrich_with_symbol.return_value = enriched_df
+        mock_instrument_store.enrich_with_ticker.return_value = enriched_df
 
         # TDX 返回空数据
         mock_tdx_source.fetch_stock_daily_bars.return_value = pl.DataFrame()
@@ -137,9 +137,9 @@ class TestDailyReconciliationSuccess:
         )
 
         # Assert
-        assert result["passed"] is True
-        assert result["issue_count"] == 0
-        assert result["skipped"] == "no_secondary_data"
+        assert result.passed is True
+        assert result.issue_count == 0
+        assert result.skip_reason == "no_secondary_data"
 
         # 验证不会调用引擎检查
         mock_quality_engine.check_cross_source.assert_not_called()
@@ -164,9 +164,9 @@ class TestDailyReconciliationSuccess:
         )
 
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("symbol", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"])
         )
-        mock_instrument_store.enrich_with_symbol.return_value = enriched_df
+        mock_instrument_store.enrich_with_ticker.return_value = enriched_df
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
@@ -179,7 +179,7 @@ class TestDailyReconciliationSuccess:
 
         # Assert - 验证不存储结果
         mock_comparison_writer.write_comparison.assert_not_called()
-        assert result["passed"] is True
+        assert result.passed is True
 
 
 @pytest.mark.unit
@@ -207,9 +207,9 @@ class TestDailyReconciliationWithIssues:
         )
 
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("symbol", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"])
         )
-        mock_instrument_store.enrich_with_symbol.return_value = enriched_df
+        mock_instrument_store.enrich_with_ticker.return_value = enriched_df
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
         mock_quality_engine.check_cross_source.return_value = (
             sample_dq_result_with_issues
@@ -223,8 +223,8 @@ class TestDailyReconciliationWithIssues:
         )
 
         # Assert
-        assert result["passed"] is False
-        assert result["issue_count"] == 2
+        assert result.passed is False
+        assert result.issue_count == 2
 
         # 验证存储结果被调用
         mock_comparison_writer.write_comparison.assert_called_once()
@@ -249,9 +249,9 @@ class TestDailyReconciliationWithIssues:
         )
 
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("symbol", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"])
         )
-        mock_instrument_store.enrich_with_symbol.return_value = enriched_df
+        mock_instrument_store.enrich_with_ticker.return_value = enriched_df
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
         mock_quality_engine.check_cross_source.return_value = (
             sample_dq_result_with_issues
@@ -304,10 +304,10 @@ class TestDailyReconciliationEdgeCases:
             dataset="stock_daily",
         )
 
-        assert result["passed"] is False
-        assert "ValueError" in result["error"]
+        assert result.passed is False
+        assert "ValueError" in result.error
 
-    async def test_enrich_with_symbol_fails(
+    async def test_enrich_with_ticker_fails(
         self,
         mock_quality_engine,
         mock_tdx_source,
@@ -327,9 +327,9 @@ class TestDailyReconciliationEdgeCases:
         )
 
         # 重置 side_effect 并设置 return_value 返回没有 symbol 列的 DataFrame
-        mock_instrument_store.enrich_with_symbol.side_effect = None
-        df_without_symbol = sample_primary_df.select("instrument_id")
-        mock_instrument_store.enrich_with_symbol.return_value = df_without_symbol
+        mock_instrument_store.enrich_with_ticker.side_effect = None
+        df_without_ticker = sample_primary_df.select("instrument_id")
+        mock_instrument_store.enrich_with_ticker.return_value = df_without_ticker
 
         # Mock TDX 返回数据，以便代码能执行到 symbol 检查
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
@@ -345,8 +345,8 @@ class TestDailyReconciliationEdgeCases:
         )
 
         # Assert
-        assert result["passed"] is False
-        assert "ValueError" in result["error"]
+        assert result.passed is False
+        assert "ValueError" in result.error
 
     async def test_unexpected_error_returns_error_dict(
         self,
@@ -367,9 +367,9 @@ class TestDailyReconciliationEdgeCases:
         )
 
         enriched_df = sample_primary_df.with_columns(
-            pl.Series("symbol", ["000001", "600000", "510300"])
+            pl.Series("ticker", ["000001", "600000", "510300"])
         )
-        mock_instrument_store.enrich_with_symbol.return_value = enriched_df
+        mock_instrument_store.enrich_with_ticker.return_value = enriched_df
 
         # Mock TDX 返回数据
         mock_tdx_source.fetch_stock_daily_bars.return_value = sample_secondary_df
@@ -387,8 +387,8 @@ class TestDailyReconciliationEdgeCases:
         )
 
         # Assert
-        assert result["passed"] is False
-        assert "RuntimeError" in result["error"]
+        assert result.passed is False
+        assert "RuntimeError" in result.error
 
 
 @pytest.mark.unit
@@ -473,7 +473,7 @@ class TestConvertResultToDf:
         # Assert - 验证必需列存在
         expected_columns = {
             "dataset",
-            "symbol",
+            "ticker",
             "trade_date",
             "field",
             "primary_value",

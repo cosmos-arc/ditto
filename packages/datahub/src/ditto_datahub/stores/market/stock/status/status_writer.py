@@ -4,8 +4,8 @@ from pathlib import Path
 
 import polars as pl
 from ditto_datahub.models.storage import WriteStoreResult
-from ditto_foundation import logger
-from ditto_foundation.util.io import atomic_write, file_md5
+from ditto_infra.foundation import logger
+from ditto_infra.foundation.util.io import atomic_write, file_md5
 
 """Stock status writer.
 

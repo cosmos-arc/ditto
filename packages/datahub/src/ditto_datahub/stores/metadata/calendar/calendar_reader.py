@@ -12,8 +12,8 @@ import threading
 from typing import Any, Literal
 
 import polars as pl
-from ditto_foundation import logger, span, traced
-from ditto_foundation.cache import DataCache
+from ditto_infra.foundation import logger, span, traced
+from ditto_infra.foundation.cache import DataCache
 
 from ditto_datahub.errors import TradingDateNotFoundError
 from ditto_datahub.models.metadata import CalendarDay

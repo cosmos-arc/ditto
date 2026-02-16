@@ -11,14 +11,15 @@ from typing import Any, cast
 import duckdb
 import polars as pl
 import xxhash
-from ditto_foundation import M, logger
+from ditto_infra.foundation import Metrics, logger
 
-from ditto_datahub.runtime.pit_helper import PitHelper
+from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_datahub.helpers.pit import PitHelper
 
 
 class SqlEngine:
     """
-    DuckDB SQL engine.
+    DuckDB SQL engine - 统一配置注入。
 
     Supports:
     - Parquet data views (stock_daily, etf_daily, index_daily, adj_factor)
@@ -58,32 +59,27 @@ class SqlEngine:
 
     def __init__(
         self,
-        data_root: Path,
-        enable_plan_cache: bool = True,
-        plan_cache_size: int = 1000,
-        slow_query_threshold: float = 1.0,
+        settings: DataStoreSettings,
     ) -> None:
         """
-        Initialize SqlEngine.
+        初始化 SqlEngine。
 
         Args:
-            data_root: Data root directory path.
-            enable_plan_cache: Enable query plan caching.
-            plan_cache_size: Max size of query plan cache.
-            slow_query_threshold: Slow query threshold in seconds.
+            settings: 数据存储配置（统一配置源）
 
         """
-        self.data_root = data_root
+        self._settings = settings
+        self.data_root = settings.data_root
+        self._sqlite_path = settings.resolved_sqlite_path  # 唯一真源
+
         self.con = duckdb.connect(":memory:")
         self._sqlite_attached = False
 
-        # 查询计划缓存
-        self._enable_plan_cache = enable_plan_cache
+        # 从配置读取性能参数
+        self._enable_plan_cache = settings.sql_engine.enable_plan_cache
         self._plan_cache: dict[str, Any] = {}
-        self._plan_cache_size = plan_cache_size
-
-        # 慢查询配置
-        self._slow_query_threshold = slow_query_threshold
+        self._plan_cache_size = settings.sql_engine.plan_cache_size
+        self._slow_query_threshold = settings.sql_engine.slow_query_threshold
 
         self._setup()
 
@@ -93,10 +89,10 @@ class SqlEngine:
         logger.debug(
             "SqlEngine initialized",
             event="sql_engine_init",
-            data_root=str(data_root),
-            enable_plan_cache=enable_plan_cache,
-            plan_cache_size=plan_cache_size,
-            slow_query_threshold=slow_query_threshold,
+            data_root=str(settings.data_root),
+            enable_plan_cache=settings.sql_engine.enable_plan_cache,
+            plan_cache_size=settings.sql_engine.plan_cache_size,
+            slow_query_threshold=settings.sql_engine.slow_query_threshold,
         )
 
     def _setup(self) -> None:
@@ -185,7 +181,7 @@ class SqlEngine:
         if self._sqlite_attached:
             return
 
-        sqlite_path = self.data_root / "meta" / "hub.sqlite"
+        sqlite_path = self._sqlite_path  # 使用注入的路径
         if not sqlite_path.exists():
             return
 
@@ -288,10 +284,10 @@ class SqlEngine:
         cache_key = xxhash.xxh3_64_hexdigest(normalized.encode())
 
         if cache_key in self._plan_cache:
-            M.sql_query_plan_cache_hit.add(1)
+            Metrics.sql_query_plan_cache_hit.add(1)
             return self._plan_cache[cache_key], True
 
-        M.sql_query_plan_cache_miss.add(1)
+        Metrics.sql_query_plan_cache_miss.add(1)
 
         # FIFO 淘汰：如果缓存已满，删除最旧的条目
         if len(self._plan_cache) >= self._plan_cache_size:
@@ -313,7 +309,7 @@ class SqlEngine:
             duration: Query execution duration in seconds.
 
         """
-        M.sql_slow_query_total.add(1)
+        Metrics.sql_slow_query_total.add(1)
 
         limit = self.QUERY_PREVIEW_LENGTH
         preview = query[:limit] if len(query) > limit else query
@@ -411,7 +407,7 @@ class SqlEngine:
 
         # 记录执行时间
         duration = time.monotonic() - start_time
-        M.sql_query_duration.record(duration)
+        Metrics.sql_query_duration.record(duration)
 
         # 慢查询检测
         if duration > self._slow_query_threshold:

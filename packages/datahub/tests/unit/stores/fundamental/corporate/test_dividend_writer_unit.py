@@ -12,7 +12,7 @@ from ditto_datahub.stores.fundamental.corporate.dividend_writer import (
     DividendWriter,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
-from ditto_foundation import M, SQLitePool
+from ditto_infra.foundation import Metrics, SQLitePool
 
 
 @pytest.fixture
@@ -66,8 +66,8 @@ class TestDividendWriter:
             }
         )
 
-        # Mock M.data_records.add to avoid metric recording issues
-        mock_metrics_add = mocker.patch.object(M.data_records, "add")
+        # Mock Metrics.data_records.add to avoid metric recording issues
+        mock_metrics_add = mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = dividend_writer.write(test_df)
@@ -117,7 +117,7 @@ class TestDividendWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = dividend_writer.write(test_df)
@@ -145,7 +145,7 @@ class TestDividendWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = dividend_writer.write(test_df)
@@ -178,7 +178,7 @@ class TestDividendWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Force an error by using invalid data type
         # Create a mock client that raises RuntimeError
@@ -212,7 +212,7 @@ class TestDividendWriter:
             }
         )
 
-        mocker.patch.object(M.data_records, "add")
+        mocker.patch.object(Metrics.data_records, "add")
 
         # Act
         count = dividend_writer.write(test_df)

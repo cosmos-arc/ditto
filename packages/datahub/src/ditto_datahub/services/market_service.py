@@ -15,8 +15,8 @@ from enum import Enum
 from typing import Literal
 
 import polars as pl
-from ditto_foundation import M, logger, traced
-from ditto_foundation.concurrency import FileLockManager
+from ditto_infra.foundation import Metrics, logger, traced
+from ditto_infra.foundation.concurrency import FileLockManager
 
 from ditto_datahub.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.models import InstrumentIdRange, OnDuplicate
@@ -47,6 +47,22 @@ class AdjType(Enum):
     QFQ = "qfq"  # 前复权
     HFQ = "hfq"  # 后复权
 
+    @classmethod
+    def from_string(cls, value: str) -> AdjType:
+        """
+        从字符串解析复权类型.
+
+        Args:
+            value: 字符串值 ("none", "qfq", "hfq")
+
+        Returns:
+            对应的 AdjType 枚举值，默认返回 NONE
+
+        """
+        return {"none": cls.NONE, "qfq": cls.QFQ, "hfq": cls.HFQ}.get(
+            value.lower(), cls.NONE
+        )
+
 
 @dataclass(frozen=True)
 class MarketBarsQuery:
@@ -61,7 +77,7 @@ class MarketBarsQuery:
         adj: 复权类型（仅对 stock 数据有效，etf/index 数据不支持复权）.
         asof: 时间点查询日期 (PIT-safe).
         asset_class: 资产类别过滤.
-        with_symbol: 是否在结果中添加 symbol 列.
+        with_ticker: 是否在结果中添加 ticker 列.
         with_status: 是否添加股票状态信息（仅对股票数据有效）.
         raw: 是否跳过复权和状态增强.
         market_wide: 全市场查询模式。为 True 且 instrument_ids 为空时获取所有活跃证券.
@@ -84,7 +100,7 @@ class MarketBarsQuery:
     adj: AdjType = AdjType.NONE
     asof: str | None = None
     asset_class: Literal["stock", "etf", "index"] | None = None
-    with_symbol: bool = False
+    with_ticker: bool = False
     with_status: bool = False
     raw: bool = False
     market_wide: bool = False
@@ -187,7 +203,7 @@ class MarketService:
         start: str | None = None,
         end: str | None = None,
         adj: AdjType = AdjType.NONE,
-        with_symbol: bool = False,
+        with_ticker: bool = False,
         with_status: bool = False,
     ) -> pl.DataFrame:
         """
@@ -198,7 +214,7 @@ class MarketService:
             start: 开始日期 (YYYY-MM-DD).
             end: 结束日期 (YYYY-MM-DD).
             adj: 复权类型（仅对 stock 数据有效）.
-            with_symbol: 是否在结果中添加 symbol 列.
+            with_ticker: 是否在结果中添加 ticker 列.
             with_status: 是否添加股票状态信息（仅对股票数据有效）.
 
         Returns:
@@ -210,7 +226,7 @@ class MarketService:
             start=start,
             end=end,
             adj=adj,
-            with_symbol=with_symbol,
+            with_ticker=with_ticker,
             with_status=with_status,
         )
         return self._query_bars(query)
@@ -249,9 +265,9 @@ class MarketService:
         if df.is_empty():
             return pl.DataFrame()
 
-        # 4. 添加 symbol 列（如果需要）
-        if query.with_symbol and not query.raw:
-            df = self._enrich_with_symbol(df)
+        # 4. 添加 ticker 列（如果需要）
+        if query.with_ticker and not query.raw:
+            df = self._enrich_with_ticker(df)
 
         # 5. 应用复权（如果需要且不是 raw 模式）
         if not query.raw and query.adj != AdjType.NONE and asset_class == "stock":
@@ -271,7 +287,7 @@ class MarketService:
         )
 
         # 记录指标
-        M.data_records.add(
+        Metrics.data_records.add(
             len(df),
             {"dataset": "market_bars", "operation": "get", "adj": query.adj.value},
         )
@@ -317,7 +333,7 @@ class MarketService:
         )
 
         # 记录指标
-        M.data_records.add(
+        Metrics.data_records.add(
             len(df),
             {"dataset": "market_constituents", "operation": "get"},
         )
@@ -370,62 +386,6 @@ class MarketService:
         else:
             return pl.DataFrame()
 
-    def _detect_asset_class_from_instrument_ids(
-        self, instrument_ids: list[int]
-    ) -> Literal["stock", "etf", "index"]:
-        """
-        从 instrument_id 列表检测资产类别.
-
-        Args:
-            instrument_ids: instrument_id 列表.
-
-        Returns:
-            资产类别字符串（"stock", "etf", "index"）.
-
-        Raises:
-            ValueError: 如果检测到混合资产类别或无法识别.
-
-        """
-        stock_range = InstrumentIdRange.get_range("stock")
-        etf_range = InstrumentIdRange.get_range("etf")
-        index_range = InstrumentIdRange.get_range("index")
-
-        # 检测每个资产类别
-        has_stock = any(
-            stock_range.min_id <= instrument_id <= stock_range.max_id
-            for instrument_id in instrument_ids
-        )
-        has_etf = any(
-            etf_range.min_id <= instrument_id <= etf_range.max_id
-            for instrument_id in instrument_ids
-        )
-        has_index = any(
-            index_range.min_id <= instrument_id <= index_range.max_id
-            for instrument_id in instrument_ids
-        )
-
-        # 检测混合资产类别
-        detected: list[Literal["stock", "etf", "index"]] = []
-        if has_stock:
-            detected.append("stock")
-        if has_etf:
-            detected.append("etf")
-        if has_index:
-            detected.append("index")
-
-        if len(detected) > 1:
-            display_names = {"stock": "stock", "etf": "ETF", "index": "index"}
-            classes = [display_names[c] for c in detected]
-            classes_str = ", ".join(classes)
-            raise ValueError(
-                f"检测到混合资产类别查询。instrument_id 包含 {classes_str}。请分别查询每个资产类别。",  # noqa: E501
-            )
-
-        if not detected:
-            return "stock"  # 默认
-
-        return detected[0]
-
     def _resolve_instrument_ids_and_asset_class(
         self, query: MarketBarsQuery
     ) -> tuple[list[int], Literal["stock", "etf", "index"]]:
@@ -450,7 +410,7 @@ class MarketService:
             )
             if not asset_class:
                 asset_class = (
-                    self._detect_asset_class_from_instrument_ids(instrument_ids)
+                    InstrumentIdRange.detect_asset_class(instrument_ids)
                     if instrument_ids
                     else "stock"
                 )
@@ -466,13 +426,13 @@ class MarketService:
 
         if asset_class:
             # 验证显式 asset_class 与从 Instrument ID 检测出的类别是否一致
-            detected = self._detect_asset_class_from_instrument_ids(instrument_ids)
+            detected = InstrumentIdRange.detect_asset_class(instrument_ids)
             if detected != asset_class:
                 raise ValueError(
                     f"显式指定的资产类别 '{asset_class}' 与从 Instrument ID 检测出的类别 '{detected}' 不一致",  # noqa: E501
                 )
         else:
-            asset_class = self._detect_asset_class_from_instrument_ids(instrument_ids)
+            asset_class = InstrumentIdRange.detect_asset_class(instrument_ids)
 
         return instrument_ids, asset_class
 
@@ -612,15 +572,15 @@ class MarketService:
         # 内联数据增强：join 状态数据
         return df.join(status_df, on=["instrument_id", "trade_date"], how="left")
 
-    def _enrich_with_symbol(self, df: pl.DataFrame) -> pl.DataFrame:
+    def _enrich_with_ticker(self, df: pl.DataFrame) -> pl.DataFrame:
         """
-        使用 symbol 信息增强 DataFrame.
+        使用 ticker 信息增强 DataFrame.
 
         Args:
             df: 包含 instrument_id 列的 DataFrame.
 
         Returns:
-            添加了 symbol 列的 DataFrame.
+            添加了 ticker 列的 DataFrame.
 
         """
         id_col = "instrument_id"
@@ -628,24 +588,24 @@ class MarketService:
             return df
 
         instrument_ids = df[id_col].unique().to_list()
-        symbol_map = self._instrument_reader.get_instrument_id_symbol_map(
+        ticker_map = self._instrument_reader.get_instrument_id_ticker_map(
             instrument_ids
         )
 
-        # 空 symbol_map 时的防护：直接添加全 null 的 symbol 列
-        if not symbol_map:
-            return df.with_columns(pl.lit(None, dtype=pl.String).alias("symbol"))
+        # 空 ticker_map 时的防护：直接添加全 null 的 ticker 列
+        if not ticker_map:
+            return df.with_columns(pl.lit(None, dtype=pl.String).alias("ticker"))
 
-        symbol_df = pl.DataFrame(
+        ticker_df = pl.DataFrame(
             {
-                id_col: list(symbol_map.keys()),
-                "symbol": list(symbol_map.values()),
+                id_col: list(ticker_map.keys()),
+                "ticker": list(ticker_map.values()),
             },
-            schema_overrides={id_col: pl.Int64, "symbol": pl.String},
+            schema_overrides={id_col: pl.Int64, "ticker": pl.String},
         )
 
-        # 内联数据增强：join symbol 数据
-        return df.join(symbol_df, on=id_col, how="left")
+        # 内联数据增强：join ticker 数据
+        return df.join(ticker_df, on=id_col, how="left")
 
     @staticmethod
     def _to_storage_columns(df: pl.DataFrame) -> pl.DataFrame:
@@ -726,7 +686,7 @@ class MarketService:
         )
 
         # 记录指标
-        M.data_records.add(
+        Metrics.data_records.add(
             len(storage_df),
             {"dataset": dataset, "operation": "write"},
         )
@@ -783,7 +743,7 @@ class MarketService:
         )
 
         # 记录指标
-        M.data_records.add(
+        Metrics.data_records.add(
             len(storage_df),
             {"dataset": "adj_factor", "operation": "write"},
         )
@@ -830,7 +790,7 @@ class MarketService:
             rows_written=rows_written,
         )
 
-        M.data_records.add(
+        Metrics.data_records.add(
             rows_written,
             {"dataset": "stock_status", "operation": "write"},
         )

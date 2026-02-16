@@ -115,7 +115,7 @@ class InstrumentRegistration:
 
     Attributes:
         source_ticker: 源代码（如 "600000.SH"），数据库中存储为 source_ticker
-        symbol: 显示符号（如 "600000"）
+        ticker: 裸代码（如 "600000"）
         name: 证券名称
         exchange: 交易所代码（如 "SSE", "SZSE"）
         asset_class: 资产类别（stock/etf/index）
@@ -127,7 +127,7 @@ class InstrumentRegistration:
     """
 
     source_ticker: str
-    symbol: str
+    ticker: str
     name: str
     exchange: str
     asset_class: str

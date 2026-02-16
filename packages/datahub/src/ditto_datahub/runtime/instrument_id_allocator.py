@@ -1,6 +1,6 @@
 """Instrument ID 分配器，用于管理唯一的证券标识符。"""
 
-from ditto_foundation import SQLitePool, logger, span
+from ditto_infra.foundation import SQLitePool, logger, span
 
 from ..models import InstrumentIdRange
 

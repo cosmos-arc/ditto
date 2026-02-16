@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from ditto_foundation.config import ConfigLoader
+from ditto_infra.foundation.config import ConfigLoader
 from dotenv import dotenv_values
 
 __all__ = ["load_env_file", "normalize_env_values"]

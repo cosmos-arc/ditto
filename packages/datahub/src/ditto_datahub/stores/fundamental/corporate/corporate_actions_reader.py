@@ -10,7 +10,7 @@ from datetime import date
 from typing import Any
 
 import polars as pl
-from ditto_foundation import logger, traced
+from ditto_infra.foundation import logger, traced
 
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 

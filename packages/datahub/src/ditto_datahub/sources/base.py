@@ -209,8 +209,27 @@ class DataSource(ABC):
         Returns:
             DataFrame with columns:
             - source_ticker: Source code (e.g., "510300.SH")
-            - symbol: Display symbol (e.g., "510300")
+            - ticker: Display ticker (e.g., "510300")
             - name: ETF name
+            - exchange: Exchange code
+            - list_date: Listing date
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_index_basic(self) -> pl.DataFrame:
+        """
+        Fetch index basic information.
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: Source code (e.g., "000001.SH")
+            - ticker: Display ticker (e.g., "000001")
+            - name: Index name
             - exchange: Exchange code
             - list_date: Listing date
 
@@ -244,6 +263,29 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
+    def fetch_index_daily(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch index daily OHLCV bars.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with columns (matching INDEX_DAILY_SCHEMA):
+            - source_ticker: Source code
+            - trade_date: Date
+            - open, high, low, close, pre_close: Float64
+            - volume, amount: Float64
+            - pct_change: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+            SourceTransformationError: If data transformation fails.
+
+        """
+        pass
+
+    @abstractmethod
     def fetch_stock_basic(self) -> pl.DataFrame:
         """
         Fetch stock basic information.
@@ -251,7 +293,7 @@ class DataSource(ABC):
         Returns:
             DataFrame with columns:
             - source_ticker: Source code (e.g., "000001.SZ")
-            - symbol: Display symbol (e.g., "000001")
+            - ticker: Display ticker (e.g., "000001")
             - name: Stock name
             - exchange: Exchange code (SSE/SZSE/BSE)
             - list_date: Listing date

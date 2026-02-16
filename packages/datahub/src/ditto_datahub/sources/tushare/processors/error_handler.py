@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from contextlib import contextmanager
 
-from ditto_foundation import logger
+from ditto_infra.foundation import logger
 
 from ditto_datahub.sources.base import (
     SourceAuthenticationError,

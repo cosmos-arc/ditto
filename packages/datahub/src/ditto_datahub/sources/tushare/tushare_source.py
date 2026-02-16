@@ -10,8 +10,10 @@ from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareAdapt
 from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
 from ditto_datahub.sources.tushare.adapters.fundamental import FundamentalTushareAdapter
+from ditto_datahub.sources.tushare.adapters.index import IndexTushareAdapter
 from ditto_datahub.sources.tushare.adapters.macro import MacroTushareAdapter
 from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
+from ditto_datahub.sources.tushare.client import TushareClient
 
 
 class TushareSource(DataSource):
@@ -27,6 +29,7 @@ class TushareSource(DataSource):
         _calendar: Calendar data adapter.
         _stock: Stock data adapter.
         _etf: ETF data adapter.
+        _client: 共享的 TushareClient 实例。
 
     """
 
@@ -43,12 +46,17 @@ class TushareSource(DataSource):
             token: API token（可选，优先于 settings 中的 token）。
 
         """
-        self._calendar = CalendarTushareAdapter(token=token, settings=settings)
-        self._stock = StockTushareAdapter(token=token, settings=settings)
-        self._etf = ETFTushareAdapter(token=token, settings=settings)
-        self._capital = CapitalTushareAdapter(token=token, settings=settings)
-        self._fundamental = FundamentalTushareAdapter(token=token, settings=settings)
-        self._macro = MacroTushareAdapter(token=token, settings=settings)
+        # 创建单例 client，所有 adapter 共享
+        self._client = TushareClient(token=token, settings=settings)
+
+        # 注入共享 client 到所有 adapter
+        self._calendar = CalendarTushareAdapter(_client=self._client)
+        self._stock = StockTushareAdapter(_client=self._client)
+        self._etf = ETFTushareAdapter(_client=self._client)
+        self._index = IndexTushareAdapter(_client=self._client)
+        self._capital = CapitalTushareAdapter(_client=self._client)
+        self._fundamental = FundamentalTushareAdapter(_client=self._client)
+        self._macro = MacroTushareAdapter(_client=self._client)
 
     @staticmethod
     def _to_compact_date(trade_date: str) -> str:
@@ -83,7 +91,7 @@ class TushareSource(DataSource):
         Returns:
             DataFrame with columns:
             - source_ticker: Source code (e.g., "000001.SZ")
-            - symbol: Display symbol (e.g., "000001")
+            - ticker: Display ticker (e.g., "000001")
             - name: Stock name
             - exchange: Exchange code
             - list_date: Listing date
@@ -192,7 +200,7 @@ class TushareSource(DataSource):
         Returns:
             DataFrame with columns:
             - source_ticker: Source code (e.g., "510300.SH")
-            - symbol: Display symbol (e.g., "510300")
+            - ticker: Display ticker (e.g., "510300")
             - name: ETF name
             - exchange: Exchange code
             - list_date: Listing date
@@ -244,6 +252,47 @@ class TushareSource(DataSource):
 
         """
         return self._etf.fetch_fund_adj(trade_date)
+
+    # Index 相关方法 - 委托给 IndexTushareAdapter
+    def fetch_index_basic(self) -> pl.DataFrame:
+        """
+        Fetch index basic information.
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: Source code (e.g., "000001.SH")
+            - ticker: Display ticker (e.g., "000001")
+            - name: Index name
+            - exchange: Exchange code
+            - list_date: Listing date
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        return self._index.fetch_basic()
+
+    def fetch_index_daily(self, trade_date: str) -> pl.DataFrame:
+        """
+        Fetch index daily OHLCV bars.
+
+        Args:
+            trade_date: Trade date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with columns (matching INDEX_DAILY_SCHEMA):
+            - source_ticker: Source code
+            - trade_date: Date
+            - open, high, low, close, pre_close: Float64
+            - volume, amount: Float64
+            - pct_change: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+            SourceTransformationError: If data transformation fails.
+
+        """
+        return self._index.fetch_daily(trade_date)
 
     # Capital/Fundamental 相关方法 - 委托给 CapitalTushareAdapter
     def fetch_balance_sheet(self, trade_date: str) -> pl.DataFrame:
@@ -314,3 +363,12 @@ class TushareSource(DataSource):
             start_date=compact_date,
             end_date=compact_date,
         )
+
+    def close(self) -> None:
+        """
+        释放 HTTP 连接资源.
+
+        调用内部 TushareClient 的 close 方法释放网络资源。
+        """
+        if hasattr(self, "_client") and self._client:
+            self._client.close()

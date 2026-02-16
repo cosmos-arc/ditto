@@ -5,8 +5,8 @@ from ditto_core.quality.checkers import (
     CompareMethod,
     CrossSourceChecker,
 )
+from ditto_core.quality.severity import DQSeverity
 from ditto_core.quality.spec import DQLevel
-from ditto_foundation import DQSeverity
 
 
 class TestCrossSourceChecker:

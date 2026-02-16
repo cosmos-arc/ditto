@@ -17,19 +17,28 @@ import granian
 import orjson
 
 # Local imports - using editable packages
-from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
-from ditto_datahub.config import DataRootConfig
-from ditto_foundation.config.initializer import ConfigInitCoordinator, InitScope
-from ditto_foundation.config.settings import Settings
-from ditto_foundation.observability import M, logger
-from fastapi import FastAPI, Request, Response
+from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_infra.foundation.config import ConfigInitError
+from ditto_infra.foundation.config.environment import get_environment
+from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, InitScope
+from ditto_infra.foundation.config.settings import Settings
+from ditto_infra.foundation.observability import Metrics, logger
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from ditto_port.api.routes import ingestion, market, metadata, portfolio
+from ditto_port.api.routes import (
+    capital,
+    fundamental,
+    ingestion,
+    macro,
+    market,
+    metadata,
+    portfolio,
+)
 from ditto_port.exceptions import DittoException
 from ditto_port.middleware import (
     ditto_exception_handler,
@@ -37,13 +46,7 @@ from ditto_port.middleware import (
     http_exception_handler,
     validation_exception_handler,
 )
-from ditto_port.registry import (
-    ConfigProvider,
-    CoreProvider,
-    DataHubProvider,
-    DataSourcesProvider,
-    DomainServiceProvider,
-)
+from ditto_port.registry.container import make_async_app_container
 
 # Initialize project root
 project_root = Path(__file__).parent.parent.parent.parent
@@ -83,8 +86,8 @@ class ORJSONResponse(JSONResponse):
 
         # 记录序列化耗时
         duration = time.monotonic() - start_time
-        M.json_serialize_duration.record(duration)
-        M.json_bytes_total.add(len(result))
+        Metrics.json_serialize_duration.record(duration)
+        Metrics.json_bytes_total.add(len(result))
 
         return result
 
@@ -101,40 +104,44 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     logger.info("Starting Ditto API server", event="server_start")
 
-    # 创建容器（在 try 块之前，避免未绑定问题）
-    container = make_async_container(
-        ConfigProvider(),
-        CoreProvider(),
-        DomainServiceProvider(),
-        DataHubProvider(),
-        DataSourcesProvider(),
-    )
+    container = make_async_app_container()
     typed_container = cast(AsyncContainerProtocol, container)
 
     try:
         # 集成到 FastAPI
         setup_dishka(container=container, app=app)
 
-        # 初始化配置（静默自动初始化）
+        # 初始化配置（fail-fast 模式）
         logger.info("Initializing configuration", event="config_init_start")
         coordinator: ConfigInitCoordinator = await typed_container.get(
             ConfigInitCoordinator
         )
-        data_root_config: DataRootConfig = await typed_container.get(DataRootConfig)
+        settings: DataStoreSettings = await typed_container.get(DataStoreSettings)
         # Providers 已经在容器中注册，无需手动注册
-        coordinator.initialize(
-            scope=InitScope.STARTUP,
-            data_root=data_root_config.data_root,
-        )
+        try:
+            coordinator.initialize(
+                scope=InitScope.STARTUP,
+                data_root=settings.data_root,
+            )
+        except ConfigInitError as e:
+            logger.error(
+                "Startup initialization failed",
+                event="config_init_failed",
+                failed_providers=e.failed_providers,
+                details=e.details,
+            )
+            raise SystemExit(1) from e
         logger.info(
             "Configuration initialized",
             event="config_init_complete",
-            data_root=str(data_root_config.data_root),
+            data_root=str(settings.data_root),
         )
 
         app.state.settings = await typed_container.get(Settings)
 
         yield
+    except SystemExit:
+        raise
     except Exception as e:
         logger.exception(
             "Failed to initialize application",
@@ -169,9 +176,12 @@ app.add_middleware(
 )
 
 # 挂载业务路由
+app.include_router(capital.router, prefix="/api/v1")
+app.include_router(fundamental.router, prefix="/api/v1")
+app.include_router(ingestion.router, prefix="/api/v1")
+app.include_router(macro.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")
 app.include_router(metadata.router, prefix="/api/v1")
-app.include_router(ingestion.router, prefix="/api/v1")
 app.include_router(portfolio.router, prefix="/api/v1")
 
 
@@ -184,6 +194,9 @@ async def log_requests(
     """Log incoming requests and outgoing responses."""
     # Generate unique request ID
     request_id = str(uuid.uuid4())
+
+    # 存储到 request.state，供异常处理器使用
+    request.state.request_id = request_id
 
     # Get start time
     start_time = time.time()
@@ -270,7 +283,11 @@ async def get_status(request: Request) -> dict[str, Any]:
 
 @app.get("/api/v1/logs/test")
 async def generate_test_logs() -> dict[str, str]:
-    """测试日志记录功能."""
+    """测试日志记录功能（仅开发/测试环境可用）."""
+    env = get_environment()
+    if env.is_production:
+        raise HTTPException(status_code=404, detail="Not found")
+
     logger.info("Test info log", test_data="example")
     logger.warning("Test warning log", test_data="example")
     logger.error("Test error log", test_data="example")
@@ -288,5 +305,4 @@ if __name__ == "__main__":
     granian.Granian(
         "main:app",
         address="0.0.0.0:8000",
-        reload=True,
     ).serve()

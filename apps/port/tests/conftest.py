@@ -1,5 +1,6 @@
 """pytest配置文件."""
 
+import logging
 import sqlite3
 from collections.abc import Generator
 from pathlib import Path
@@ -9,18 +10,22 @@ from unittest.mock import MagicMock
 import duckdb
 import polars as pl
 import pytest
-from ditto_foundation.config import Settings
-from ditto_foundation.config.environment import Environment
-from ditto_foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.config import Settings
+from ditto_infra.foundation.config.environment import Environment
+from ditto_infra.foundation.observability.config import ObservabilityConfig
 from ditto_port.testing import DatabaseManager
 
 
 def pytest_configure(config) -> None:
-    """在测试开始前预加载模块.
+    """在测试开始前预加载模块并注册自定义 markers.
 
     预加载 ingestion flows 模块,避免每个测试都重新导入相同模块,
     从而减少测试执行时间（目标: 减少 1-2秒/测试）.
     """
+    # 注册自定义 markers
+    config.addinivalue_line(
+        "markers", "cli_test: CLI tests that disable observability auto-reset"
+    )
     # 预加载 flows 模块,避免每个测试都重新导入
     # fmt: off
     # fmt: on
@@ -57,7 +62,10 @@ def test_settings(tmp_path: Path) -> Settings:
     Returns:
         Settings: 测试配置对象
     """
-    from ditto_foundation.config.settings import ObservabilitySettings, SystemSettings
+    from ditto_infra.foundation.config.settings import (
+        ObservabilitySettings,
+        SystemSettings,
+    )
 
     settings = Settings(
         system=SystemSettings(environment=Environment.TESTING),
@@ -173,10 +181,14 @@ def sample_daily_data() -> list[dict[str, Any]]:
 # =============================================================================
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture  # 移除 autouse=True，避免与 CliRunner I/O 冲突
 def reset_observability() -> Generator[None, None, None]:
-    """每个测试自动重置可观测性状态."""
-    from ditto_foundation import reset_for_testing
+    """仅在显式请求时重置可观测性状态.
+
+    注意：此 fixture 不再自动应用，需要显式请求。
+    CLI 测试目录有独立的空 override 以避免 I/O 冲突。
+    """
+    from ditto_infra.foundation import reset_for_testing
 
     reset_for_testing()
     yield
@@ -186,7 +198,7 @@ def reset_observability() -> Generator[None, None, None]:
 @pytest.fixture
 def obs_noop() -> None:
     """静默模式 - 最快, 不输出日志."""
-    from ditto_foundation import init
+    from ditto_infra.foundation import init
 
     config = ObservabilityConfig(
         environment=Environment.TESTING,
@@ -202,7 +214,7 @@ def obs_noop() -> None:
 @pytest.fixture
 def obs_assertions() -> None:
     """断言模式 - 可验证, 内存记录."""
-    from ditto_foundation import init
+    from ditto_infra.foundation import init
 
     config = ObservabilityConfig(
         environment=Environment.TESTING,
@@ -248,7 +260,7 @@ def patch_datahub(mock_datahub: MagicMock) -> MagicMock:
     注意：此 fixture 不再全局 patch DataHub 类，
     因为会与 dishka 依赖注入容器冲突。
 
-    集成测试应使用真实的 Services（通过 create_ingestion_context），
+    集成测试应使用真实的 Services（通过 create_ingestion_bundle），
     单元测试可自行 mock 需要的组件。
 
     使用方式（单元测试）：
@@ -263,3 +275,35 @@ def patch_datahub(mock_datahub: MagicMock) -> MagicMock:
         MagicMock: mock_datahub 对象
     """
     return mock_datahub
+
+
+# =============================================================================
+# Prefect 日志清理
+# =============================================================================
+
+
+@pytest.fixture(scope="session", autouse=True)
+def flush_prefect_logs():
+    """确保所有 Prefect 日志在 teardown 前刷新。
+
+    解决 pytest 关闭 stderr 后 Prefect 后台线程写入导致的 I/O 错误。
+
+    参考: https://linen.prefect.io/t/23466101
+    """
+    yield
+
+    # 清理所有 loggers 和 handlers
+    loggers_to_cleanup = [
+        logging.getLogger(),  # Root logger
+        logging.getLogger("prefect"),
+        logging.getLogger("prefect.client"),
+    ]
+
+    for lgr in loggers_to_cleanup:
+        for handler in lgr.handlers[:]:
+            try:
+                handler.flush()
+                handler.close()
+            except (ValueError, OSError):
+                pass  # 忽略已关闭的 handler
+            lgr.removeHandler(handler)

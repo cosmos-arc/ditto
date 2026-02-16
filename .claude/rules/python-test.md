@@ -42,12 +42,11 @@ tests/
 #### 目录映射规则
 
 ```
-src/ditto_foundation/                    tests/unit/
-├── cache/                    →          ├── cache/
-├── checksum/                 →          ├── checksum/
-├── config/                   →          ├── config/
-├── db/                       →          ├── db/
-└── observability/            →          └── observability/
+src/ditto_infra/                         tests/unit/
+├── foundation/               →          ├── foundation/
+│   ├── cache/                →          │   ├── cache/
+│   ├── config/               →          │   ├── config/
+│   └── observability/        →          │   └── observability/
 
 src/ditto_datahub/                       tests/unit/
 ├── alerts/                   →          ├── alerts/
@@ -122,10 +121,10 @@ if not missing and not extra:
 # 场景：重命名源码目录 cache/ → caching/
 
 # 1. 重命名源码目录
-git mv src/ditto_foundation/cache/ src/ditto_foundation/caching/
+git mv src/ditto_infra/foundation/cache/ src/ditto_infra/foundation/caching/
 
 # 2. 同步重命名测试目录（强制要求）
-git mv tests/unit/cache/ tests/unit/caching/
+git mv tests/unit/foundation/cache/ tests/unit/foundation/caching/
 
 # 3. 更新导入语句
 # （IDE 会自动处理）
@@ -933,38 +932,19 @@ def test_feature_a(store):
 
 ---
 
-## 可观测性测试控制
+## 可观测性测试
 
-### 环境变量
-
-```bash
-# 禁用可观测性测试（默认）
-export DITTO_TEST_OBSERVABILITY=disabled
-
-# 启用可观测性测试
-export DITTO_TEST_OBSERVABILITY=enabled
-export DITTO_OBSERVABILITY_TEST_MODE=docker
-```
-
-### Marker 组合使用
-
-```python
-# 可观测性 + 集成测试
-@pytest.mark.integration
-@pytest.mark.observability
-class TestObservabilityStack:
-    ...
-```
-
-### 运行命令
+可观测性测试统一使用 `@pytest.mark.integration` 标记，通过 pytest marker 选择性运行：
 
 ```bash
-# 跳过可观测性测试
-pytest -m "not observability"
+# 只运行集成测试（包含可观测性测试）
+pytest -m integration
 
-# 只运行可观测性测试
-pytest -m observability
+# 跳过集成测试
+pytest -m "not integration"
 ```
+
+测试中使用 `ObservabilityConfig` 和 `reset_for_testing()` 控制测试环境。
 
 ---
 
@@ -1034,7 +1014,7 @@ def check_structure(src_path, test_path, name):
     return True
 
 all_ok = True
-all_ok &= check_structure('packages/foundation/src', 'packages/foundation/tests/unit', 'Foundation')
+all_ok &= check_structure('packages/infra/src', 'packages/infra/tests/unit', 'Infra')
 all_ok &= check_structure('packages/datahub/src', 'packages/datahub/tests/unit', 'DataHub')
 all_ok &= check_structure('apps/port/src', 'apps/port/tests/unit', 'Port')
 

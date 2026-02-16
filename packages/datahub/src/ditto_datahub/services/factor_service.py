@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 import polars as pl
-from ditto_foundation import logger, traced
+from ditto_infra.foundation import logger, traced
 
 from ditto_datahub.stores.factors.factor_metadata_reader import FactorMetadataReader
 from ditto_datahub.stores.factors.factor_metadata_writer import FactorMetadataWriter

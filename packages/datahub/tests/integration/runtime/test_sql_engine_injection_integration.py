@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 import duckdb
 import pytest
 from ditto_datahub.runtime.sql_engine import SqlEngine
-from ditto_foundation import SQLitePool
+from ditto_infra.foundation import SQLitePool
 
 
 class TestSqlEngineInjection:

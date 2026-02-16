@@ -7,9 +7,9 @@ import pytest
 from ditto_datahub.models import OnDuplicate
 from ditto_datahub.models.ingestion import IngestionLog, IngestionStatus
 from ditto_datahub.sources.base import DataSource, SourceFetchError
-from ditto_foundation.config.environment import Environment
-from ditto_foundation.observability import init, reset_for_testing
-from ditto_foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.config.environment import Environment
+from ditto_infra.foundation.observability import init, reset_for_testing
+from ditto_infra.foundation.observability.config import ObservabilityConfig
 from ditto_port.services.ingestion.coordinator import (
     IngestionCoordinator,
     IngestionResult,
@@ -61,6 +61,7 @@ def mock_metadata_service(mocker):
     # 设置默认的 side_effect
     stock_counter = [1_000_000]
     etf_counter = [2_000_000]
+    index_counter = [3_000_000]
 
     def register_side_effect(df, source, asset_class, **kwargs):
         _ = df, source, kwargs
@@ -74,6 +75,9 @@ def mock_metadata_service(mocker):
         elif asset_class == "etf":
             instrument_id = etf_counter[0]
             etf_counter[0] += 1
+        elif asset_class == "index":
+            instrument_id = index_counter[0]
+            index_counter[0] += 1
         else:
             raise ValueError(f"Unknown asset class: {asset_class}")
         source_tickers = df["source_ticker"].to_list()
@@ -1392,3 +1396,150 @@ class TestTradingDayCheck:
         assert result.status == "success"
         mock_source.fetch_macro_indicators.assert_called_once_with("2024-12-28")
         mock_metadata_service.is_trading_day.assert_not_called()
+
+
+@pytest.mark.unit
+class TestIndexDatasetSupport:
+    """测试指数数据集支持（INDEX_BASIC, INDEX_DAILY）。"""
+
+    def test_fetch_data_supports_index_basic(self, coordinator, mock_source) -> None:
+        """验证 _fetch_data 支持 INDEX_BASIC。"""
+        # Arrange
+        mock_source.fetch_index_basic.return_value = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SH", "399001.SZ"],
+                "name": ["上证指数", "深证成指"],
+                "market": ["SSE", "SZSE"],
+            }
+        )
+
+        # Act
+        result = coordinator._fetch_data("index_basic", "")
+
+        # Assert
+        assert isinstance(result, pl.DataFrame)
+        assert len(result) == 2
+        mock_source.fetch_index_basic.assert_called_once()
+
+    def test_fetch_data_supports_index_daily(self, coordinator, mock_source) -> None:
+        """验证 _fetch_data 支持 INDEX_DAILY。"""
+        # Arrange
+        mock_source.fetch_index_daily.return_value = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SH"],
+                "trade_date": [date(2024, 1, 2)],
+                "open": [2990.0],
+                "close": [3000.0],
+                "high": [3010.0],
+                "low": [2980.0],
+                "volume": [1000000.0],
+            }
+        )
+
+        # Act
+        result = coordinator._fetch_data("index_daily", "2024-01-02")
+
+        # Assert
+        assert isinstance(result, pl.DataFrame)
+        assert len(result) == 1
+        mock_source.fetch_index_daily.assert_called_once_with("2024-01-02")
+
+    def test_index_daily_skips_on_non_trading_day(
+        self,
+        coordinator,
+        mock_ingestion_log_service,
+        mock_metadata_service,
+        mock_source,
+    ) -> None:
+        """index_daily 在非交易日静默跳过。"""
+        # Arrange
+        mock_ingestion_log_service.get_log.return_value = None
+        mock_metadata_service.reset_mock()
+        mock_metadata_service.is_trading_day.return_value = False
+
+        # Act
+        result = coordinator.ingest_date("index_daily", "2024-01-06")  # 周六
+
+        # Assert
+        assert result.status == "skipped"
+        assert "非交易日" in result.message or "跳过" in result.message
+        mock_source.fetch_index_daily.assert_not_called()
+
+    def test_index_daily_proceeds_on_trading_day(
+        self,
+        coordinator,
+        mock_ingestion_log_service,
+        mock_metadata_service,
+        mock_source,
+        mock_market_service,
+    ) -> None:
+        """index_daily 在交易日继续处理。"""
+        # Arrange
+        mock_ingestion_log_service.get_log.return_value = None
+        mock_metadata_service.reset_mock()
+        mock_metadata_service.is_trading_day.return_value = True
+
+        source_df = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SH"],
+                "trade_date": [date(2024, 1, 2)],
+                "open": [2990.0],
+                "close": [3000.0],
+                "high": [3010.0],
+                "low": [2980.0],
+                "volume": [1000000.0],
+                "amount": [3000000000.0],
+                "pct_change": [0.33],
+                "pre_close": [2990.0],
+            }
+        )
+        mock_source.fetch_index_daily.return_value = source_df
+
+        mock_market_service.save_bars.return_value = 1
+        mock_ingestion_log_service.save_log.return_value = IngestionLog(
+            dataset="index_daily",
+            source="tushare",
+            trade_date="2024-01-02",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum_index",
+            rows=1,
+        )
+
+        # Act
+        result = coordinator.ingest_date("index_daily", "2024-01-02")
+
+        # Assert
+        assert result.status == "success"
+        mock_source.fetch_index_daily.assert_called_once_with("2024-01-02")
+        mock_market_service.save_bars.assert_called_once()
+
+    def test_ingest_date_success_index_basic(
+        self, coordinator, mock_ingestion_log_service, mock_source, mocker
+    ) -> None:
+        """成功摄取 index_basic 数据到 instrument_store。"""
+        # Arrange
+        mock_ingestion_log_service.get_log.return_value = None
+        mock_source.fetch_index_basic.return_value = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SH", "399001.SZ"],
+                "name": ["上证指数", "深证成指"],
+                "market": ["SSE", "SZSE"],
+            }
+        )
+
+        mock_ingestion_log_service.save_log.return_value = mocker.Mock(
+            dataset="index_basic",
+            source="tushare",
+            trade_date="2024-01-02",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum_index_basic",
+            rows=2,
+        )
+
+        # Act
+        result = coordinator.ingest_date("index_basic", "2024-01-02")
+
+        # Assert
+        assert result.status == "success"
+        assert result.row_count == 2
+        mock_source.fetch_index_basic.assert_called_once()

@@ -13,7 +13,7 @@ from ditto_port.jobs.tasks import (
 )
 from ditto_port.jobs.tasks.t0_meta import create_ingest_task
 from ditto_port.models import (
-    DATASET_REGISTRY,
+    INGESTION_SPECS,
     Dataset,
     TaskTier,
 )
@@ -39,8 +39,7 @@ class TestCreateIngestTask:
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 
-        # Mock DataHub and Coordinator
-        mock_hub = mocker.Mock()
+        # Mock Coordinator
         mock_coordinator = mocker.Mock()
         # 使用真实的 IngestionResult 对象
         mock_result = IngestionResult(
@@ -51,16 +50,16 @@ class TestCreateIngestTask:
         )
         mock_coordinator.ingest_date.return_value = mock_result
 
-        # Mock the sources.get() to return a mock source
-        mock_source = mocker.Mock()
-        mock_hub.sources.get.return_value = mock_source
+        # Mock IngestionBundle
+        mock_bundle = mocker.Mock()
+        mock_bundle.coordinator = mock_coordinator
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.tasks.t0_meta.create_ingestion_context",
+            "ditto_port.jobs.tasks.t0_meta.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
 
@@ -85,8 +84,7 @@ class TestCreateIngestTask:
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 
-        # Mock DataHub
-        mock_hub = mocker.Mock()
+        # Mock
         mock_coordinator = mocker.Mock()
         mock_result = IngestionResult(
             dataset="calendar",
@@ -95,15 +93,16 @@ class TestCreateIngestTask:
         )
         mock_coordinator.ingest_date.return_value = mock_result
 
-        mock_source = mocker.Mock()
-        mock_hub.sources.get.return_value = mock_source
+        # Mock IngestionBundle
+        mock_bundle = mocker.Mock()
+        mock_bundle.coordinator = mock_coordinator
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.tasks.t0_meta.create_ingestion_context",
+            "ditto_port.jobs.tasks.t0_meta.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
 
@@ -122,21 +121,21 @@ class TestCreateIngestTask:
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 
-        # Mock DataHub
-        mock_hub = mocker.Mock()
+        # Mock
         mock_coordinator = mocker.Mock()
         # 让 ingest_date 方法抛出异常
         mock_coordinator.ingest_date.side_effect = Exception("Coordinator error")
 
-        mock_source = mocker.Mock()
-        mock_hub.sources.get.return_value = mock_source
+        # Mock IngestionBundle
+        mock_bundle = mocker.Mock()
+        mock_bundle.coordinator = mock_coordinator
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.tasks.t0_meta.create_ingestion_context",
+            "ditto_port.jobs.tasks.t0_meta.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
 
@@ -169,9 +168,9 @@ class TestT0MetaTasks:
         ],
     )
     def test_t0_datasets_in_registry(self, dataset):
-        """Test that all T0 datasets are in DATASET_REGISTRY."""
-        assert dataset in DATASET_REGISTRY
-        assert DATASET_REGISTRY[dataset].tier == TaskTier.T0_META
+        """Test that all T0 datasets are in INGESTION_SPECS."""
+        assert dataset in INGESTION_SPECS
+        assert INGESTION_SPECS[dataset].tier == TaskTier.T0_META
 
 
 @pytest.mark.unit
@@ -207,9 +206,9 @@ class TestT1IncrementalTasks:
         ],
     )
     def test_t1_datasets_in_registry(self, dataset):
-        """Test that all T1 datasets are in DATASET_REGISTRY."""
-        assert dataset in DATASET_REGISTRY
-        assert DATASET_REGISTRY[dataset].tier == TaskTier.T1_INCREMENTAL
+        """Test that all T1 datasets are in INGESTION_SPECS."""
+        assert dataset in INGESTION_SPECS
+        assert INGESTION_SPECS[dataset].tier == TaskTier.T1_INCREMENTAL
 
 
 @pytest.mark.unit
@@ -219,7 +218,7 @@ class TestTaskIntegration:
     def test_all_registered_datasets_have_tasks(self):
         """Test that all datasets in registry can create tasks."""
         # Try creating tasks for all datasets
-        for dataset in DATASET_REGISTRY:
+        for dataset in INGESTION_SPECS:
             task_func = create_ingest_task(dataset)
             assert callable(task_func)
 
@@ -228,7 +227,6 @@ class TestTaskIntegration:
         task_func = create_ingest_task(Dataset.STOCK_DAILY)
 
         # Mock
-        mock_hub = mocker.Mock()
         mock_coordinator = mocker.Mock()
         mock_result = IngestionResult(
             dataset="stock_daily",
@@ -237,15 +235,16 @@ class TestTaskIntegration:
         )
         mock_coordinator.ingest_date.return_value = mock_result
 
-        mock_source = mocker.Mock()
-        mock_hub.sources.get.return_value = mock_source
+        # Mock IngestionBundle
+        mock_bundle = mocker.Mock()
+        mock_bundle.coordinator = mock_coordinator
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.tasks.t0_meta.create_ingestion_context",
+            "ditto_port.jobs.tasks.t0_meta.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
 

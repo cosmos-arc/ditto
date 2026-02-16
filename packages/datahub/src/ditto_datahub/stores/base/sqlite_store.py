@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any, cast
 
 import polars as pl
-from ditto_foundation import M, SQLitePool, logger, traced
-from ditto_foundation.util.io import file_md5
+from ditto_infra.foundation import Metrics, SQLitePool, logger, traced
+from ditto_infra.foundation.util.io import file_md5
 
 from ditto_datahub.models import OnDuplicate
 from ditto_datahub.models.storage import WriteStoreResult
@@ -128,7 +128,7 @@ class SQLiteStore(BaseStore):
             df = df.with_columns(pl.col("trade_date").str.strptime(pl.Date, "%Y-%m-%d"))
 
         # 记录指标
-        M.data_records.add(len(df))
+        Metrics.data_records.add(len(df))
 
         return df
 

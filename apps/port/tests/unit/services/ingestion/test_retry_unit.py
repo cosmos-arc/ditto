@@ -1,9 +1,9 @@
 """Tests for RetryManager."""
 
 import pytest
-from ditto_foundation.config.environment import Environment
-from ditto_foundation.observability import init, reset_for_testing
-from ditto_foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.config.environment import Environment
+from ditto_infra.foundation.observability import init, reset_for_testing
+from ditto_infra.foundation.observability.config import ObservabilityConfig
 from ditto_port.models import IngestionResult
 from ditto_port.services.ingestion.retry import (
     RetryManager,

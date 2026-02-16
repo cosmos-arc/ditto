@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, ClassVar, Literal, cast
+from typing import Any, ClassVar
 
 import polars as pl
-from ditto_foundation import logger, traced
+from ditto_infra.foundation import logger, traced
 
+from ditto_datahub.models.macro import MacroCategory, MacroFrequency
 from ditto_datahub.stores.macro.indicator.indicator_reader import IndicatorReader
 from ditto_datahub.stores.macro.indicator.indicator_writer import IndicatorWriter
 from ditto_datahub.stores.macro.indicator.metadata_reader import (
@@ -17,11 +18,6 @@ from ditto_datahub.stores.macro.indicator.metadata_reader import (
 from ditto_datahub.stores.macro.indicator.metadata_writer import (
     IndicatorMetadataWriter,
 )
-
-type MacroCategory = Literal[
-    "economic", "interest_rate", "exchange_rate", "money_supply"
-]
-type MacroFrequency = Literal["daily", "monthly", "quarterly"]
 
 
 @dataclass(frozen=True)
@@ -50,10 +46,8 @@ class MacroQuery:
     start: str | None = None
     end: str | None = None
     asof: str | None = None
-    category: (
-        Literal["economic", "interest_rate", "exchange_rate", "money_supply"] | None
-    ) = None
-    frequency: Literal["daily", "monthly", "quarterly"] | None = None
+    category: MacroCategory | None = None
+    frequency: MacroFrequency | None = None
 
 
 class MacroService:
@@ -179,9 +173,7 @@ class MacroService:
         self,
         start: str,
         end: str,
-        category: (
-            Literal["economic", "interest_rate", "exchange_rate", "money_supply"] | None
-        ) = None,
+        category: MacroCategory | None = None,
     ) -> pl.DataFrame:
         """
         List indicators by date range (convenience method).
@@ -263,8 +255,8 @@ class MacroService:
             mapping[code] = self._metadata_writer.upsert(
                 code=code,
                 name=str(row["indicator_name"]),
-                category=cast(MacroCategory, str(row["category"])),
-                frequency=cast(MacroFrequency, str(row["frequency"])),
+                category=MacroCategory(str(row["category"])),
+                frequency=MacroFrequency(str(row["frequency"])),
                 need_pit=bool(row["need_pit"]),
                 source=self._as_optional_text(row.get("source")),
                 unit=self._as_optional_text(row.get("unit")),

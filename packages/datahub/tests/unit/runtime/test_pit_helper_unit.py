@@ -1,7 +1,7 @@
 """Tests for PitHelper."""
 
 import pytest
-from ditto_datahub.runtime.pit_helper import PitHelper
+from ditto_datahub.helpers.pit import PitHelper
 
 
 class TestPitHelper:

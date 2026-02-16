@@ -22,7 +22,7 @@ VALUES ('future', 5000000);
 -- 证券主表
 CREATE TABLE IF NOT EXISTS instrument (
     instrument_id INTEGER PRIMARY KEY,
-    symbol TEXT NOT NULL,
+    ticker TEXT NOT NULL,
     name TEXT,
     display_name TEXT,
     exchange TEXT NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS instrument (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_instrument_symbol ON instrument(symbol);
+CREATE INDEX IF NOT EXISTS idx_instrument_ticker ON instrument(ticker);
 CREATE INDEX IF NOT EXISTS idx_instrument_asset_class ON instrument(asset_class);
 
 -- 证券映射 (PIT support)
