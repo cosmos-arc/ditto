@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
-from ditto_datahub.config import DataRootConfig
+from ditto_datahub.config.data_store import DataStoreSettings
 from ditto_infra.foundation.config import (
     ConfigInitCoordinator,
     ConfigLoader,
@@ -24,8 +24,8 @@ def _load_data_root() -> Path:
     environment = get_environment()
     loader = ConfigLoader(environment)
     values = load_env_file(loader, "data_store")
-    config = DataRootConfig.model_validate(values)
-    return config.data_root
+    settings = DataStoreSettings.model_validate(values)
+    return settings.data_root
 
 
 def _resolve_data_root(ctx: typer.Context, data_root: str | None) -> Path:

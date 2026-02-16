@@ -1,7 +1,7 @@
 """DataHub 层 - Features & Factors Domain Provider。"""
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.config.data_root import DataRootConfig
+from ditto_datahub.config.data_store import DataStoreSettings
 from ditto_datahub.services.factor_service import FactorService
 from ditto_datahub.services.feature_service import FeatureService
 from ditto_datahub.stores.factors.factor_metadata_reader import (
@@ -43,21 +43,21 @@ class FeaturesProvider(Provider):
     @provide
     def technical_indicator_reader(
         self,
-        data_root_config: DataRootConfig,
+        settings: DataStoreSettings,
     ) -> TechnicalIndicatorReader:
         """TechnicalIndicator reader."""
         return TechnicalIndicatorReader(
-            data_root_config.features_technical_indicators_narrow_path
+            settings.features_technical_indicators_narrow_path
         )
 
     @provide
     def technical_indicator_writer(
         self,
-        data_root_config: DataRootConfig,
+        settings: DataStoreSettings,
     ) -> TechnicalIndicatorWriter:
         """TechnicalIndicator writer."""
         return TechnicalIndicatorWriter(
-            data_root_config.features_technical_indicators_narrow_path
+            settings.features_technical_indicators_narrow_path
         )
 
     @provide
@@ -83,18 +83,18 @@ class FeaturesProvider(Provider):
     @provide
     def factor_reader(
         self,
-        data_root_config: DataRootConfig,
+        settings: DataStoreSettings,
     ) -> FactorReader:
         """Factor reader."""
-        return FactorReader(data_root_config.factors_narrow_path)
+        return FactorReader(settings.factors_narrow_path)
 
     @provide
     def factor_writer(
         self,
-        data_root_config: DataRootConfig,
+        settings: DataStoreSettings,
     ) -> FactorWriter:
         """Factor writer."""
-        return FactorWriter(data_root_config.factors_narrow_path)
+        return FactorWriter(settings.factors_narrow_path)
 
     @provide
     def factor_metadata_reader(

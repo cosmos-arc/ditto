@@ -10,11 +10,10 @@ from typing import Any
 from dishka import Provider, Scope, provide
 from ditto_core.quality.config import DQSettings
 from ditto_datahub.config import (
-    DatabaseSettings,
-    DataRootConfig,
     DataSourceSettings,
     FileStorageSettings,
 )
+from ditto_datahub.config.data_store import DataStoreSettings
 from ditto_infra.foundation.cache import DataCache
 from ditto_infra.foundation.config import (
     ConfigInitCoordinator,
@@ -107,40 +106,24 @@ class ConfigProvider(Provider):
         return Settings(system=system, observability=observability)
 
     @provide
-    def data_root_config(self, config_loader: ConfigLoader) -> DataRootConfig:
-        """加载数据根目录配置。"""
-        data_store_values = load_env_file(config_loader, "data_store")
+    def data_store_settings(self, config_loader: ConfigLoader) -> DataStoreSettings:
+        """加载数据存储配置。"""
+        values: dict[str, Any] = load_env_file(config_loader, "data_store")
 
         # 支持 CLI 透传的环境变量覆盖
         if override := os.getenv("DITTO_DATA_ROOT"):
-            data_store_values["data_root"] = override
+            values["data_root"] = override
+        if override := os.getenv("SQLITE_PATH"):
+            values["sqlite_path"] = override
+        if override := os.getenv("DUCKDB_PATH"):
+            values["duckdb_path"] = override
 
-        return DataRootConfig.model_validate(data_store_values)
+        return DataStoreSettings.model_validate(values)
 
     @provide
-    def data_root(self, data_root_config: DataRootConfig) -> Path:
+    def data_root(self, settings: DataStoreSettings) -> Path:
         """提供数据根目录路径。"""
-        return data_root_config.data_root
-
-    @provide
-    def database_settings(
-        self,
-        config_loader: ConfigLoader,
-        data_root_config: DataRootConfig,
-    ) -> DatabaseSettings:
-        """加载数据库配置并补齐默认路径。"""
-        database_values = load_env_file(config_loader, "database")
-        base = DatabaseSettings.model_validate(database_values)
-
-        sqlite_path = base.sqlite_path or data_root_config.metadata_db_path
-        duckdb_path = base.duckdb_path or (
-            data_root_config.db_path / "duckdb/ditto.duckdb"
-        )
-
-        return DatabaseSettings(
-            sqlite_path=sqlite_path,
-            duckdb_path=duckdb_path,
-        )
+        return settings.data_root
 
     @provide
     def data_source_settings(self, config_loader: ConfigLoader) -> DataSourceSettings:
@@ -151,14 +134,14 @@ class ConfigProvider(Provider):
     @provide
     def file_storage_settings(
         self,
-        data_root_config: DataRootConfig,
+        settings: DataStoreSettings,
     ) -> FileStorageSettings:
         """派生文件存储路径配置。"""
         return FileStorageSettings(
-            data_root=data_root_config.data_root,
-            log_root=data_root_config.logs_path,
-            backup_root=data_root_config.backups_path,
-            temp_root=data_root_config.temp_path,
+            data_root=settings.data_root,
+            log_root=settings.logs_path,
+            backup_root=settings.backups_path,
+            temp_root=settings.temp_path,
         )
 
     @provide

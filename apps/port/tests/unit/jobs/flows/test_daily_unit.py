@@ -26,15 +26,16 @@ class TestCheckTradingDay:
         mock_metadata_service = mocker.MagicMock()
         mock_metadata_service.is_trading_day.return_value = True
 
+        # Mock IngestionBundle
+        mock_bundle = mocker.MagicMock()
+        mock_bundle.metadata_service = mock_metadata_service
+
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mocker.MagicMock(),
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.daily.create_ingestion_context",
+            "ditto_port.jobs.flows.daily.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
         result = check_trading_day(trade_date="2024-01-02")
@@ -47,15 +48,16 @@ class TestCheckTradingDay:
         mock_metadata_service = mocker.MagicMock()
         mock_metadata_service.is_trading_day.return_value = False
 
+        # Mock IngestionBundle
+        mock_bundle = mocker.MagicMock()
+        mock_bundle.metadata_service = mock_metadata_service
+
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mocker.MagicMock(),
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.daily.create_ingestion_context",
+            "ditto_port.jobs.flows.daily.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
         result = check_trading_day(trade_date="2024-01-06")
@@ -67,15 +69,16 @@ class TestCheckTradingDay:
         mock_metadata_service = mocker.MagicMock()
         mock_metadata_service.is_trading_day.side_effect = ValueError("Test error")
 
+        # Mock IngestionBundle
+        mock_bundle = mocker.MagicMock()
+        mock_bundle.metadata_service = mock_metadata_service
+
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mocker.MagicMock(),
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.daily.create_ingestion_context",
+            "ditto_port.jobs.flows.daily.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
         with pytest.raises(ValueError, match="Test error"):

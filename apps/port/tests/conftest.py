@@ -260,7 +260,7 @@ def patch_datahub(mock_datahub: MagicMock) -> MagicMock:
     注意：此 fixture 不再全局 patch DataHub 类，
     因为会与 dishka 依赖注入容器冲突。
 
-    集成测试应使用真实的 Services（通过 create_ingestion_context），
+    集成测试应使用真实的 Services（通过 create_ingestion_bundle），
     单元测试可自行 mock 需要的组件。
 
     使用方式（单元测试）：

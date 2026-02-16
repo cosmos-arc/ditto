@@ -9,8 +9,8 @@ from typing import Any
 
 from prefect import task
 
-from ditto_port.jobs.context import create_ingestion_context
 from ditto_port.models import INGESTION_SPECS, Dataset
+from ditto_port.registry import create_ingestion_bundle
 
 
 # Prefect Task 返回类型是复杂的泛型，使用 Any 简化类型注解
@@ -76,8 +76,8 @@ def create_ingest_task(dataset: Dataset) -> Any:
             Exception: 摄取失败时抛出异常
 
         """
-        with create_ingestion_context(source=source) as (_, coordinator):
-            result = coordinator.ingest_date(
+        with create_ingestion_bundle(source=source) as bundle:
+            result = bundle.coordinator.ingest_date(
                 dataset=dataset.value,
                 trade_date=trade_date,
                 force=force,

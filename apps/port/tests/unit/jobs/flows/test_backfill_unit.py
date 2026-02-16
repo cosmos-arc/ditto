@@ -23,6 +23,17 @@ from ditto_port.jobs.flows.backfill import (
 from pydantic import ValidationError
 
 
+def _create_mock_bundle(
+    mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+):
+    """Helper to create a mock IngestionBundle."""
+    mock_bundle = mocker.MagicMock()
+    mock_bundle.coordinator = mock_coordinator
+    mock_bundle.metadata_service = mock_metadata_service
+    mock_bundle.ingestion_log_service = mock_ingestion_log_service
+    return mock_bundle
+
+
 @pytest.mark.unit
 class TestBackfillFlowConfig:
     """Unit tests for BackfillFlowConfig model."""
@@ -169,35 +180,23 @@ class TestBackfillFlow:
         assert callable(backfill_flow)
         assert backfill_flow.__name__ == "backfill_flow"
 
-    def test_uses_ingestion_context(self, mocker):
-        """Test that flow uses create_ingestion_context."""
+    def test_uses_ingestion_bundle(self, mocker):
+        """Test that flow uses create_ingestion_bundle."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
 
-        # Create a mock context manager that returns (metadata_service, coordinator)
-        mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
         )
+
+        mock_context_mgr = mocker.MagicMock()
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mock_patch = mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -221,39 +220,28 @@ class TestBackfillFlow:
         )
         result = backfill_flow(config)
 
-        # Verify context was created with correct source
+        # Verify bundle was created with correct source
         mock_patch.assert_called_once_with(source="tushare")
         assert result["dataset"] == "stock_daily"
         assert result["total_dates"] == 20
 
     def test_creates_ingestion_coordinator(self, mocker):
-        """Test that flow gets coordinator from context."""
+        """Test that flow gets coordinator from bundle."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -277,7 +265,7 @@ class TestBackfillFlow:
         )
         backfill_flow(config)
 
-        # Verify BackfillManager was created with coordinator from context
+        # Verify BackfillManager was created with coordinator from bundle
         mock_manager_cls.assert_called_once()
         call_kwargs = mock_manager_cls.call_args.kwargs
         assert call_kwargs["coordinator"] is mock_coordinator
@@ -288,30 +276,19 @@ class TestBackfillFlow:
         """Test that flow creates BackfillManager."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         # Use autospec to properly mock the class
@@ -348,30 +325,19 @@ class TestBackfillFlow:
         """Test that flow overrides start_date when resume_from is provided."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -406,30 +372,19 @@ class TestBackfillFlow:
         """Test that flow passes parallel parameter to backfill_range."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -461,30 +416,19 @@ class TestBackfillFlow:
         """Test that flow returns dict with all required keys."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -529,30 +473,19 @@ class TestBackfillFlow:
         """Test that context manager cleanup happens on successful completion."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -583,30 +516,19 @@ class TestBackfillFlow:
         """Test that context manager cleanup happens even when exception occurs."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         # Mock BackfillManager to raise exception
@@ -641,34 +563,23 @@ class TestBackfillMissingFlow:
         assert callable(backfill_missing_flow)
         assert backfill_missing_flow.__name__ == "backfill_missing_flow"
 
-    def test_uses_ingestion_context(self, mocker):
-        """Test that flow uses create_ingestion_context."""
+    def test_uses_ingestion_bundle(self, mocker):
+        """Test that flow uses create_ingestion_bundle."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -689,38 +600,27 @@ class TestBackfillMissingFlow:
             source="tushare",
         )
 
-        # Verify context was created and result is correct
+        # Verify result is correct
         assert result["dataset"] == "stock_daily"
         assert result["total_dates"] == 5
 
     def test_creates_ingestion_coordinator(self, mocker):
-        """Test that flow gets coordinator from context."""
+        """Test that flow gets coordinator from bundle."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -741,7 +641,7 @@ class TestBackfillMissingFlow:
             source="tushare",
         )
 
-        # Verify BackfillManager was created with coordinator from context
+        # Verify BackfillManager was created with coordinator from bundle
         mock_manager_cls.assert_called_once()
         call_kwargs = mock_manager_cls.call_args.kwargs
         assert call_kwargs["coordinator"] is mock_coordinator
@@ -752,30 +652,19 @@ class TestBackfillMissingFlow:
         """Test that flow creates BackfillManager."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -807,30 +696,19 @@ class TestBackfillMissingFlow:
         """Test that flow passes parallel parameter to backfill_missing."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -859,30 +737,19 @@ class TestBackfillMissingFlow:
         """Test that flow returns correct result when there are missing dates."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -920,30 +787,19 @@ class TestBackfillMissingFlow:
         """Test that flow returns correct result when there are no missing dates."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -971,30 +827,19 @@ class TestBackfillMissingFlow:
         """Test that context manager cleanup happens on successful completion."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         mock_manager_cls = mocker.patch(
@@ -1022,30 +867,19 @@ class TestBackfillMissingFlow:
         """Test that context manager cleanup happens even when exception occurs."""
         mock_metadata_service = mocker.MagicMock()
         mock_coordinator = mocker.MagicMock()
+        mock_ingestion_log_service = mocker.MagicMock()
+
+        mock_bundle = _create_mock_bundle(
+            mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
+        )
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_coordinator,
-        )
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_context",
+            "ditto_port.jobs.flows.backfill.create_ingestion_bundle",
             return_value=mock_context_mgr,
-        )
-
-        mock_ingestion_log_service = mocker.MagicMock()
-        mock_log_context_mgr = mocker.MagicMock()
-        mock_log_context_mgr.__enter__.return_value = (
-            mock_metadata_service,
-            mock_ingestion_log_service,
-        )
-        mock_log_context_mgr.__exit__.return_value = None
-
-        mocker.patch(
-            "ditto_port.jobs.flows.backfill.create_ingestion_log_context",
-            return_value=mock_log_context_mgr,
         )
 
         # Mock BackfillManager to raise exception

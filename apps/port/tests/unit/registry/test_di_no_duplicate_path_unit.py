@@ -50,41 +50,41 @@ class TestDINoDuplicatePathProvider:
             "it's already provided by ConfigProvider"
         )
 
-    def test_freeze_manager_uses_config(self) -> None:
-        """freeze_manager 应该使用 DataRootConfig 而不是 Path。"""
+    def test_freeze_manager_uses_settings(self) -> None:
+        """freeze_manager 应该使用 DataStoreSettings 而不是 Path。"""
         source_file = self._get_source_file()
         source = source_file.read_text()
 
         params = self._get_method_params(source, "freeze_manager")
 
-        # 应该包含 config 参数（self 之外）
+        # 应该包含 settings 参数（self 之外）
         non_self_params = [p for p in params if p != "self"]
-        assert "config" in non_self_params, (
-            f"freeze_manager should have 'config' parameter, got: {non_self_params}"
+        assert "settings" in non_self_params, (
+            f"freeze_manager should have 'settings' parameter, got: {non_self_params}"
         )
 
-    def test_file_lock_uses_config(self) -> None:
-        """file_lock 应该使用 DataRootConfig 而不是 Path。"""
+    def test_file_lock_uses_settings(self) -> None:
+        """file_lock 应该使用 DataStoreSettings 而不是 Path。"""
         source_file = self._get_source_file()
         source = source_file.read_text()
 
         params = self._get_method_params(source, "file_lock")
 
-        # 应该包含 config 参数（self 之外）
+        # 应该包含 settings 参数（self 之外）
         non_self_params = [p for p in params if p != "self"]
-        assert "config" in non_self_params, (
-            f"file_lock should have 'config' parameter, got: {non_self_params}"
+        assert "settings" in non_self_params, (
+            f"file_lock should have 'settings' parameter, got: {non_self_params}"
         )
 
-    def test_sql_engine_uses_config(self) -> None:
-        """sql_engine 应该使用 DataRootConfig 而不是 Path。"""
+    def test_sql_engine_uses_settings(self) -> None:
+        """sql_engine 应该使用 DataStoreSettings 而不是 Path。"""
         source_file = self._get_source_file()
         source = source_file.read_text()
 
         params = self._get_method_params(source, "sql_engine")
 
-        # 应该包含 config 参数（self 之外）
+        # 应该包含 settings 参数（self 之外）
         non_self_params = [p for p in params if p != "self"]
-        assert "config" in non_self_params, (
-            f"sql_engine should have 'config' parameter, got: {non_self_params}"
+        assert "settings" in non_self_params, (
+            f"sql_engine should have 'settings' parameter, got: {non_self_params}"
         )

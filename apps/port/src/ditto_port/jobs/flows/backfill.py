@@ -11,10 +11,7 @@
 from prefect import flow
 from pydantic import BaseModel
 
-from ditto_port.jobs.context import (
-    create_ingestion_context,
-    create_ingestion_log_context,
-)
+from ditto_port.registry import create_ingestion_bundle
 from ditto_port.services.ingestion.backfill import BackfillManager
 
 
@@ -66,41 +63,32 @@ def backfill_flow(config: BackfillFlowConfig) -> dict[str, object]:
     # 处理 resume_from
     start_date = config.resume_from or config.start_date
 
-    with create_ingestion_context(source=config.source) as (
-        metadata_service,
-        coordinator,
-    ):
-        with create_ingestion_log_context() as (
-            _metadata_service,
-            ingestion_log_service,
-        ):
-            # 创建回补管理器
-            backfill_manager = BackfillManager(
-                coordinator=coordinator,
-                metadata_service=metadata_service,
-                ingestion_log_service=ingestion_log_service,
-            )
+    with create_ingestion_bundle(source=config.source) as bundle:
+        # 创建回补管理器
+        backfill_manager = BackfillManager(
+            coordinator=bundle.coordinator,
+            metadata_service=bundle.metadata_service,
+            ingestion_log_service=bundle.ingestion_log_service,
+        )
 
-            # 执行回补
-            result = backfill_manager.backfill_range(
-                dataset=config.dataset,
-                start_date=start_date,
-                end_date=config.end_date,
-                parallel=config.parallel,
-            )
+        # 执行回补
+        result = backfill_manager.backfill_range(
+            dataset=config.dataset,
+            start_date=start_date,
+            end_date=config.end_date,
+            parallel=config.parallel,
+        )
 
-            return {
-                "dataset": result.dataset,
-                "start_date": start_date,
-                "end_date": config.end_date,
-                "total_dates": result.total_dates,
-                "success_count": result.success_count,
-                "skipped_count": result.skipped_count,
-                "failed_count": result.failed_count,
-                "message": (
-                    f"回补完成: {result.success_count}/{result.total_dates} 成功"
-                ),
-            }
+        return {
+            "dataset": result.dataset,
+            "start_date": start_date,
+            "end_date": config.end_date,
+            "total_dates": result.total_dates,
+            "success_count": result.success_count,
+            "skipped_count": result.skipped_count,
+            "failed_count": result.failed_count,
+            "message": (f"回补完成: {result.success_count}/{result.total_dates} 成功"),
+        }
 
 
 @flow(name="backfill-missing", description="回补缺失数据")
@@ -123,36 +111,29 @@ def backfill_missing_flow(
         回补结果字典
 
     """
-    with create_ingestion_context(source=source) as (
-        metadata_service,
-        coordinator,
-    ):
-        with create_ingestion_log_context() as (
-            _metadata_service,
-            ingestion_log_service,
-        ):
-            # 创建回补管理器
-            backfill_manager = BackfillManager(
-                coordinator=coordinator,
-                metadata_service=metadata_service,
-                ingestion_log_service=ingestion_log_service,
-            )
+    with create_ingestion_bundle(source=source) as bundle:
+        # 创建回补管理器
+        backfill_manager = BackfillManager(
+            coordinator=bundle.coordinator,
+            metadata_service=bundle.metadata_service,
+            ingestion_log_service=bundle.ingestion_log_service,
+        )
 
-            # 执行回补
-            result = backfill_manager.backfill_missing(
-                dataset=dataset,
-                parallel=parallel,
-            )
+        # 执行回补
+        result = backfill_manager.backfill_missing(
+            dataset=dataset,
+            parallel=parallel,
+        )
 
-            return {
-                "dataset": result.dataset,
-                "total_dates": result.total_dates,
-                "success_count": result.success_count,
-                "skipped_count": result.skipped_count,
-                "failed_count": result.failed_count,
-                "message": (
-                    f"回补缺失完成: {result.success_count}/{result.total_dates} 成功"
-                    if result.total_dates > 0
-                    else "没有缺失数据"
-                ),
-            }
+        return {
+            "dataset": result.dataset,
+            "total_dates": result.total_dates,
+            "success_count": result.success_count,
+            "skipped_count": result.skipped_count,
+            "failed_count": result.failed_count,
+            "message": (
+                f"回补缺失完成: {result.success_count}/{result.total_dates} 成功"
+                if result.total_dates > 0
+                else "没有缺失数据"
+            ),
+        }

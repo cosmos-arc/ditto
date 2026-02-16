@@ -84,6 +84,31 @@ class Dataset(str, Enum):
         """判断是否为 calendar 数据集。"""
         return dataset == cls.CALENDAR.value
 
+    @classmethod
+    def get_asset_class(
+        cls, dataset: "Dataset | str"
+    ) -> Literal["stock", "etf", "index", "other"]:
+        """
+        获取数据集对应的资产类别。
+
+        Args:
+            dataset: 数据集枚举或字符串
+
+        Returns:
+            资产类别: "stock" | "etf" | "index" | "other"
+
+        """
+        dataset_value = dataset.value if isinstance(dataset, Dataset) else dataset
+        mapping: dict[str, Literal["stock", "etf", "index"]] = {
+            cls.STOCK_DAILY.value: "stock",
+            cls.STOCK_STATUS.value: "stock",
+            cls.ADJ_FACTOR.value: "stock",
+            cls.FUND_ADJ.value: "etf",
+            cls.ETF_DAILY.value: "etf",
+            cls.INDEX_DAILY.value: "index",
+        }
+        return mapping.get(dataset_value, "other")
+
 
 # ============ Domain 枚举 ============
 class Domain(str, Enum):

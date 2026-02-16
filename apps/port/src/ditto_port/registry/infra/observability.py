@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.config import DataRootConfig
+from ditto_datahub.config.data_store import DataStoreSettings
 from ditto_infra.foundation.config.settings import Settings
 from ditto_infra.foundation.observability import init, shutdown
 from ditto_infra.foundation.observability.config import ObservabilityConfig
@@ -24,7 +24,7 @@ class ObservabilityProvider(Provider):
     def observability_config(
         self,
         settings: Settings,
-        data_root_config: DataRootConfig,
+        data_store_settings: DataStoreSettings,
         runtime_flags: RuntimeFlags,
     ) -> ObservabilityConfig:
         """构建观测配置对象。"""
@@ -34,7 +34,7 @@ class ObservabilityProvider(Provider):
         return ObservabilityConfig(
             service_name="ditto-server",
             environment=env,
-            log_dir=str(data_root_config.logs_path),
+            log_dir=str(data_store_settings.logs_path),
             log_level=obs.log_level,
             log_format=obs.log_format,
             log_to_console=obs.log_to_console,

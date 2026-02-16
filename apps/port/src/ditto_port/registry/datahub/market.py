@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.config.data_root import DataRootConfig
+from ditto_datahub.config.data_store import DataStoreSettings
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.stores.market.etf.adj.adj_factor_reader import (
     EtfAdjFactorReader,
@@ -50,58 +50,58 @@ class MarketProvider(Provider):
     # ========================================================================
 
     @provide
-    def stock_bars_reader(self, config: DataRootConfig) -> StockBarsReader:
+    def stock_bars_reader(self, settings: DataStoreSettings) -> StockBarsReader:
         """股票 K线读取器."""
-        return StockBarsReader(config.data_root)
+        return StockBarsReader(settings.data_root)
 
     @provide
-    def stock_bars_writer(self, config: DataRootConfig) -> StockBarsWriter:
+    def stock_bars_writer(self, settings: DataStoreSettings) -> StockBarsWriter:
         """股票 K线写入器."""
-        return StockBarsWriter(config.data_root)
+        return StockBarsWriter(settings.data_root)
 
     @provide
-    def stock_status_reader(self, config: DataRootConfig) -> StockStatusReader:
+    def stock_status_reader(self, settings: DataStoreSettings) -> StockStatusReader:
         """股票状态读取器."""
-        return StockStatusReader(config.data_root)
+        return StockStatusReader(settings.data_root)
 
     @provide
-    def stock_status_writer(self, config: DataRootConfig) -> StockStatusWriter:
+    def stock_status_writer(self, settings: DataStoreSettings) -> StockStatusWriter:
         """股票状态写入器."""
-        return StockStatusWriter(config.data_root)
+        return StockStatusWriter(settings.data_root)
 
     @provide
-    def stock_adj_reader(self, config: DataRootConfig) -> StockAdjFactorReader:
+    def stock_adj_reader(self, settings: DataStoreSettings) -> StockAdjFactorReader:
         """股票复权因子读取器."""
-        return StockAdjFactorReader(config.data_root)
+        return StockAdjFactorReader(settings.data_root)
 
     @provide
-    def stock_adj_writer(self, config: DataRootConfig) -> StockAdjFactorWriter:
+    def stock_adj_writer(self, settings: DataStoreSettings) -> StockAdjFactorWriter:
         """股票复权因子写入器."""
-        return StockAdjFactorWriter(config.data_root)
+        return StockAdjFactorWriter(settings.data_root)
 
     # ========================================================================
     # ETF Stores
     # ========================================================================
 
     @provide
-    def etf_bars_reader(self, config: DataRootConfig) -> EtfBarsReader:
+    def etf_bars_reader(self, settings: DataStoreSettings) -> EtfBarsReader:
         """ETF K线读取器."""
-        return EtfBarsReader(config.data_root)
+        return EtfBarsReader(settings.data_root)
 
     @provide
-    def etf_bars_writer(self, config: DataRootConfig) -> EtfBarsWriter:
+    def etf_bars_writer(self, settings: DataStoreSettings) -> EtfBarsWriter:
         """ETF K线写入器."""
-        return EtfBarsWriter(config.data_root)
+        return EtfBarsWriter(settings.data_root)
 
     @provide
-    def etf_status_reader(self, config: DataRootConfig) -> EtfStatusReader:
+    def etf_status_reader(self, settings: DataStoreSettings) -> EtfStatusReader:
         """ETF 状态读取器."""
-        return EtfStatusReader(config.data_root)
+        return EtfStatusReader(settings.data_root)
 
     @provide
-    def etf_status_writer(self, config: DataRootConfig) -> EtfStatusWriter:
+    def etf_status_writer(self, settings: DataStoreSettings) -> EtfStatusWriter:
         """ETF 状态写入器."""
-        return EtfStatusWriter(config.data_root)
+        return EtfStatusWriter(settings.data_root)
 
     @provide
     def etf_nav_reader(self, data_root: Path) -> EtfNavReader:

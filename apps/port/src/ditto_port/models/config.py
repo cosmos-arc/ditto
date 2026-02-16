@@ -18,39 +18,8 @@ from datetime import time
 from enum import Enum
 from typing import Annotated, cast, overload
 
+from ditto_datahub.models import Dataset
 from pydantic import BaseModel, Field
-
-
-class Dataset(str, Enum):
-    """
-    Dataset enumeration for type-safe dataset references.
-
-    Values match the dataset names used in DataHub and ingestion tasks.
-    """
-
-    # T0: Meta datasets
-    CALENDAR = "calendar"
-    STOCK_BASIC = "stock_basic"
-    ETF_BASIC = "etf_basic"
-    INDEX_BASIC = "index_basic"
-
-    # T1: Incremental datasets
-    ETF_DAILY = "etf_daily"
-    STOCK_DAILY = "stock_daily"
-    INDEX_DAILY = "index_daily"
-    STOCK_STATUS = "stock_status"
-    ADJ_FACTOR = "adj_factor"
-    FUND_ADJ = "fund_adj"
-    BALANCE_SHEET = "balance_sheet"
-    INCOME_STATEMENT = "income_statement"
-    CASH_FLOW = "cash_flow"
-    DIVIDEND = "dividend"
-    VALUATION_METRICS = "valuation_metrics"
-    MARGIN_TRADING = "margin_trading"
-    PLEDGE_RATIO = "pledge_ratio"
-    MACRO_INDICATORS = "macro_indicators"
-    FUTURES_POSITION = "futures_position"
-    CORPORATE_ACTIONS = "corporate_actions"
 
 
 class TaskTier(str, Enum):

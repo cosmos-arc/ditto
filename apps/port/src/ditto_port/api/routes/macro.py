@@ -1,10 +1,11 @@
 """Macro 域 API 路由."""
 
 import asyncio
-from typing import Annotated, Literal
+from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_datahub.models import MacroCategory
 from ditto_datahub.services.macro_service import MacroQuery, MacroService
 from fastapi import APIRouter, Query
 
@@ -12,31 +13,10 @@ from ditto_port.models.common import APIResponse
 from ditto_port.models.macro import (
     Indicator,
     IndicatorQuery,
-    MacroCategory,
-    MacroFrequency,
     to_indicator_list,
 )
 
 router = APIRouter(prefix="/macro", tags=["macro"])
-
-
-# Service 层接受的 Literal 类型
-CategoryLiteral = Literal["economic", "interest_rate", "exchange_rate", "money_supply"]
-FrequencyLiteral = Literal["daily", "monthly", "quarterly"]
-
-
-def _map_category(category: MacroCategory | None) -> CategoryLiteral | None:
-    """将 API 层的 MacroCategory 映射到 Service 层的 Literal 类型."""
-    if category is None:
-        return None
-    return category.value
-
-
-def _map_frequency(frequency: MacroFrequency | None) -> FrequencyLiteral | None:
-    """将 API 层的 MacroFrequency 映射到 Service 层的 Literal 类型."""
-    if frequency is None:
-        return None
-    return frequency.value
 
 
 @router.post("/indicators", response_model=APIResponse[list[Indicator]])
@@ -69,8 +49,8 @@ async def post_indicators(
         indicators=query.indicators,
         start=start_str,
         end=end_str,
-        category=_map_category(query.category),
-        frequency=_map_frequency(query.frequency),
+        category=query.category,
+        frequency=query.frequency,
     )
 
     # 调用 service（在线程池中执行，避免阻塞事件循环）
@@ -108,7 +88,7 @@ async def get_indicators_metadata(
         service.list_indicators,
         start=start,
         end=end,
-        category=_map_category(category),
+        category=category,
     )
 
     # 转换为模型列表

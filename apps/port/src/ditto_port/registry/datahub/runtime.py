@@ -7,7 +7,7 @@ from importlib.resources import files
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_datahub.config.data_root import DataRootConfig
+from ditto_datahub.config.data_store import DataStoreSettings
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
@@ -43,13 +43,12 @@ class RuntimeProvider(Provider):
     @provide
     def sqlite_pool(
         self,
-        config: DataRootConfig,
+        settings: DataStoreSettings,
     ) -> Iterator[SQLitePool]:
         """SQLite 连接池（应用级单例）."""
-        db_path = config.metadata_db_path
-        # 确保父目录存在
+        db_path = settings.resolved_sqlite_path
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        # 获取 schema.sql 路径
+
         schema_traversable = files("ditto_datahub.scripts") / "schema.sql"
         schema_path = Path(str(schema_traversable))
         pool = SQLitePool(str(db_path), schema_path=schema_path)
@@ -68,14 +67,14 @@ class RuntimeProvider(Provider):
         return InstrumentIdAllocator(sqlite_pool)
 
     @provide
-    def freeze_manager(self, config: DataRootConfig) -> FreezeManager:
+    def freeze_manager(self, settings: DataStoreSettings) -> FreezeManager:
         """数据版本管理."""
-        return FreezeManager(data_root=str(config.data_root))
+        return FreezeManager(data_root=str(settings.data_root))
 
     @provide
-    def file_lock(self, config: DataRootConfig) -> FileLockManager:
+    def file_lock(self, settings: DataStoreSettings) -> FileLockManager:
         """文件锁管理器."""
-        lock_dir = config.data_root / "locks"
+        lock_dir = settings.data_root / "locks"
         return FileLockManager(lock_dir)
 
     # ========================================================================
@@ -93,14 +92,14 @@ class RuntimeProvider(Provider):
         return IngestionLogWriter(sqlite_client)
 
     @provide
-    def comparison_reader(self, config: DataRootConfig) -> ComparisonReader:
+    def comparison_reader(self, settings: DataStoreSettings) -> ComparisonReader:
         """质量对比数据读取器."""
-        return ComparisonReader(base_path=config.data_root)
+        return ComparisonReader(base_path=settings.data_root)
 
     @provide
-    def comparison_writer(self, config: DataRootConfig) -> ComparisonWriter:
+    def comparison_writer(self, settings: DataStoreSettings) -> ComparisonWriter:
         """质量对比数据写入器."""
-        return ComparisonWriter(base_path=config.data_root)
+        return ComparisonWriter(base_path=settings.data_root)
 
     @provide
     def quarantine_reader(self, sqlite_client: SQLiteClient) -> QuarantineReader:
@@ -153,7 +152,7 @@ class RuntimeProvider(Provider):
     @provide
     def sql_engine(
         self,
-        config: DataRootConfig,
+        settings: DataStoreSettings,
     ) -> SqlEngine:
         """DuckDB SQL 引擎."""
-        return SqlEngine(data_root=config.data_root)
+        return SqlEngine(settings=settings)

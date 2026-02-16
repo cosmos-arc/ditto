@@ -1,8 +1,9 @@
 """L3 统计异常检测的 DQ 批量检查任务."""
 
-from typing import Any, Literal
+from typing import Any
 
 from ditto_core.quality.spec import DQIssue
+from ditto_datahub.models import Dataset
 from ditto_datahub.services.market_service import MarketBarsQuery
 from ditto_infra.foundation import Metrics, logger
 from prefect import task
@@ -82,21 +83,12 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
         all_issues: list[DQIssue] = []
         results_by_dataset: dict[str, dict[str, Any]] = {}
 
-        # 定义 dataset 到 asset_class 的映射
-        dataset_asset_class: dict[str, Literal["stock", "etf", "index"]] = {
-            "stock_daily": "stock",
-            "etf_daily": "etf",
-            "index_daily": "index",
-            "adj_factor": "stock",
-            "fund_adj": "etf",
-        }
-
         # 执行 L3 检查
         for dataset in datasets:
             try:
-                # 推断 asset_class
-                asset_class = dataset_asset_class.get(dataset)
-                if asset_class is None:
+                # 使用 Dataset.get_asset_class() 获取资产类别
+                asset_class = Dataset.get_asset_class(dataset)
+                if asset_class == "other":
                     raise ValueError(f"Unknown dataset: {dataset}")
 
                 result = l3_service.check_dataset(

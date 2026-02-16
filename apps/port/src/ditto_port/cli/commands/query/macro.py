@@ -8,12 +8,13 @@ from typing import Any
 
 import orjson
 import typer
+from ditto_datahub.models import MacroCategory, MacroFrequency
 from ditto_datahub.services.macro_service import MacroQuery, MacroService
 from rich.console import Console
 from rich.table import Table
 
 from ditto_port.cli.context import create_cli_host
-from ditto_port.models.macro import MacroCategory, MacroFrequency, to_indicator_list
+from ditto_port.models.macro import to_indicator_list
 
 _TABLE_DISPLAY_LIMIT = 20
 
@@ -62,12 +63,12 @@ def _validate_date_range(start_date: str | None, end_date: str | None) -> None:
             raise typer.Exit(1)
 
 
-def _validate_enum(
+def _validate_enum[E: Enum](
     value: str | None,
-    enum_class: type[Enum],
+    enum_class: type[E],
     field_name: str,
-) -> str | None:
-    """验证枚举值."""
+) -> E | None:
+    """验证枚举值并返回枚举实例."""
     if value is None:
         return None
 
@@ -79,7 +80,7 @@ def _validate_enum(
         )
         raise typer.Exit(1)
 
-    return value
+    return enum_class(value)
 
 
 @app.command("indicators")
@@ -113,8 +114,8 @@ def query_indicators(
         query = MacroQuery(
             start=start_date,
             end=end_date,
-            category=cat_value,  # type: ignore[arg-type]
-            frequency=freq_value,  # type: ignore[arg-type]
+            category=cat_value,
+            frequency=freq_value,
         )
 
         df = service.find_indicators(query)
@@ -169,7 +170,7 @@ def list_metadata(
 
     with _get_macro_service() as service:
         query = MacroQuery(
-            category=cat_value,  # type: ignore[arg-type]
+            category=cat_value,
         )
 
         df = service.find_indicators(query)

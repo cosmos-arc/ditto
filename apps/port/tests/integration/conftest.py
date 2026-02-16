@@ -16,9 +16,12 @@ from prometheus_client import CollectorRegistry
 def set_test_database_path(tmp_path: Path) -> Generator[None, None, None]:
     """为每个测试设置独立的数据库路径，支持并行测试.
 
-    使用 DB_SQLITE_PATH 环境变量覆盖默认路径，使每个测试使用独立的临时数据库文件.
+    使用 SQLITE_PATH 和 DATA_ROOT 环境变量覆盖默认路径，
+    使每个测试使用独立的临时数据库文件。
     """
     original_environment = os.environ.get("ENVIRONMENT")
+    original_sqlite_path = os.environ.get("SQLITE_PATH")
+    original_data_root = os.environ.get("DATA_ROOT")
 
     # 确保 pytest 环境变量已设置（用于观察性系统）
     if "PYTEST_CURRENT_TEST" not in os.environ:
@@ -27,9 +30,10 @@ def set_test_database_path(tmp_path: Path) -> Generator[None, None, None]:
     # 强制使用 testing 配置，避免读取开发目录中的历史数据
     os.environ["ENVIRONMENT"] = "testing"
 
-    # 设置测试专用的 SQLite 路径
-    test_db_path = tmp_path / "meta" / "hub.sqlite"
-    os.environ["DB_SQLITE_PATH"] = str(test_db_path)
+    # 设置测试专用的数据根目录和 SQLite 路径
+    os.environ["DATA_ROOT"] = str(tmp_path)
+    test_db_path = tmp_path / "metadata" / "metadata.sqlite"
+    os.environ["SQLITE_PATH"] = str(test_db_path)
 
     # 确保目录存在
     test_db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -37,7 +41,16 @@ def set_test_database_path(tmp_path: Path) -> Generator[None, None, None]:
     yield
 
     # 清理环境变量
-    os.environ.pop("DB_SQLITE_PATH", None)
+    if original_sqlite_path is None:
+        os.environ.pop("SQLITE_PATH", None)
+    else:
+        os.environ["SQLITE_PATH"] = original_sqlite_path
+
+    if original_data_root is None:
+        os.environ.pop("DATA_ROOT", None)
+    else:
+        os.environ["DATA_ROOT"] = original_data_root
+
     if original_environment is None:
         os.environ.pop("ENVIRONMENT", None)
     else:

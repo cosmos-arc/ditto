@@ -2,8 +2,6 @@
 Macro 域 API 模型.
 
 包含:
-- MacroCategory: 宏观指标类别枚举
-- MacroFrequency: 宏观指标频率枚举
 - IndicatorQuery: 查询参数模型
 - Indicator: 响应模型
 - to_indicator: 转换函数
@@ -13,45 +11,11 @@ Macro 域 API 模型.
 from __future__ import annotations
 
 from datetime import date
-from enum import StrEnum
 from typing import Annotated, Any, Self
 
 import polars as pl
+from ditto_datahub.models import MacroCategory, MacroFrequency
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
-
-
-class MacroCategory(StrEnum):
-    """
-    宏观指标类别枚举.
-
-    Attributes:
-        ECONOMIC: 经济指标
-        INTEREST_RATE: 利率指标
-        EXCHANGE_RATE: 汇率指标
-        MONEY_SUPPLY: 货币供应量指标
-
-    """
-
-    ECONOMIC = "economic"
-    INTEREST_RATE = "interest_rate"
-    EXCHANGE_RATE = "exchange_rate"
-    MONEY_SUPPLY = "money_supply"
-
-
-class MacroFrequency(StrEnum):
-    """
-    宏观指标频率枚举.
-
-    Attributes:
-        DAILY: 日频
-        MONTHLY: 月频
-        QUARTERLY: 季频
-
-    """
-
-    DAILY = "daily"
-    MONTHLY = "monthly"
-    QUARTERLY = "quarterly"
 
 
 def _parse_date(v: Any) -> date | None:
@@ -233,8 +197,6 @@ def to_indicator_list(df: pl.DataFrame) -> list[Indicator]:
 __all__ = [
     "Indicator",
     "IndicatorQuery",
-    "MacroCategory",
-    "MacroFrequency",
     "to_indicator",
     "to_indicator_list",
 ]

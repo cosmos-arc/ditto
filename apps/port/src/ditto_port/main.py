@@ -18,7 +18,7 @@ import orjson
 
 # Local imports - using editable packages
 from dishka.integrations.fastapi import setup_dishka
-from ditto_datahub.config import DataRootConfig
+from ditto_datahub.config.data_store import DataStoreSettings
 from ditto_infra.foundation.config.environment import get_environment
 from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, InitScope
 from ditto_infra.foundation.config.settings import Settings
@@ -115,16 +115,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         coordinator: ConfigInitCoordinator = await typed_container.get(
             ConfigInitCoordinator
         )
-        data_root_config: DataRootConfig = await typed_container.get(DataRootConfig)
+        settings: DataStoreSettings = await typed_container.get(DataStoreSettings)
         # Providers 已经在容器中注册，无需手动注册
         coordinator.initialize(
             scope=InitScope.STARTUP,
-            data_root=data_root_config.data_root,
+            data_root=settings.data_root,
         )
         logger.info(
             "Configuration initialized",
             event="config_init_complete",
-            data_root=str(data_root_config.data_root),
+            data_root=str(settings.data_root),
         )
 
         app.state.settings = await typed_container.get(Settings)

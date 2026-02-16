@@ -39,8 +39,7 @@ class TestCreateIngestTask:
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 
-        # Mock DataHub and Coordinator
-        mock_hub = mocker.Mock()
+        # Mock Coordinator
         mock_coordinator = mocker.Mock()
         # 使用真实的 IngestionResult 对象
         mock_result = IngestionResult(
@@ -51,16 +50,16 @@ class TestCreateIngestTask:
         )
         mock_coordinator.ingest_date.return_value = mock_result
 
-        # Mock the sources.get() to return a mock source
-        mock_source = mocker.Mock()
-        mock_hub.sources.get.return_value = mock_source
+        # Mock IngestionBundle
+        mock_bundle = mocker.Mock()
+        mock_bundle.coordinator = mock_coordinator
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.tasks.t0_meta.create_ingestion_context",
+            "ditto_port.jobs.tasks.t0_meta.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
 
@@ -85,8 +84,7 @@ class TestCreateIngestTask:
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 
-        # Mock DataHub
-        mock_hub = mocker.Mock()
+        # Mock
         mock_coordinator = mocker.Mock()
         mock_result = IngestionResult(
             dataset="calendar",
@@ -95,15 +93,16 @@ class TestCreateIngestTask:
         )
         mock_coordinator.ingest_date.return_value = mock_result
 
-        mock_source = mocker.Mock()
-        mock_hub.sources.get.return_value = mock_source
+        # Mock IngestionBundle
+        mock_bundle = mocker.Mock()
+        mock_bundle.coordinator = mock_coordinator
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.tasks.t0_meta.create_ingestion_context",
+            "ditto_port.jobs.tasks.t0_meta.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
 
@@ -122,21 +121,21 @@ class TestCreateIngestTask:
         # Create task
         task_func = create_ingest_task(Dataset.CALENDAR)
 
-        # Mock DataHub
-        mock_hub = mocker.Mock()
+        # Mock
         mock_coordinator = mocker.Mock()
         # 让 ingest_date 方法抛出异常
         mock_coordinator.ingest_date.side_effect = Exception("Coordinator error")
 
-        mock_source = mocker.Mock()
-        mock_hub.sources.get.return_value = mock_source
+        # Mock IngestionBundle
+        mock_bundle = mocker.Mock()
+        mock_bundle.coordinator = mock_coordinator
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.tasks.t0_meta.create_ingestion_context",
+            "ditto_port.jobs.tasks.t0_meta.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
 
@@ -228,7 +227,6 @@ class TestTaskIntegration:
         task_func = create_ingest_task(Dataset.STOCK_DAILY)
 
         # Mock
-        mock_hub = mocker.Mock()
         mock_coordinator = mocker.Mock()
         mock_result = IngestionResult(
             dataset="stock_daily",
@@ -237,15 +235,16 @@ class TestTaskIntegration:
         )
         mock_coordinator.ingest_date.return_value = mock_result
 
-        mock_source = mocker.Mock()
-        mock_hub.sources.get.return_value = mock_source
+        # Mock IngestionBundle
+        mock_bundle = mocker.Mock()
+        mock_bundle.coordinator = mock_coordinator
 
         mock_context_mgr = mocker.MagicMock()
-        mock_context_mgr.__enter__.return_value = (mock_hub, mock_coordinator)
+        mock_context_mgr.__enter__.return_value = mock_bundle
         mock_context_mgr.__exit__.return_value = None
 
         mocker.patch(
-            "ditto_port.jobs.tasks.t0_meta.create_ingestion_context",
+            "ditto_port.jobs.tasks.t0_meta.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
 

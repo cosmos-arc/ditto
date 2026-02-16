@@ -17,7 +17,7 @@ class DataRootInitProvider(ConfigInitProvider):
     """
     数据根目录初始化.
 
-    职责：创建 DataRootConfig 中定义的所有目录结构。
+    职责：创建 DataStoreSettings 中定义的所有目录结构。
     """
 
     def __init__(self, directories: list[str] | None = None) -> None:
@@ -77,7 +77,7 @@ class DataRootInitProvider(ConfigInitProvider):
 
     @staticmethod
     def _default_directories() -> list[str]:
-        """默认目录列表（与 DataRootConfig 属性对应）."""
+        """默认目录列表（与 DataStoreSettings 属性对应）."""
         return [
             # 市场数据
             "market/stock/bars/daily",

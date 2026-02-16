@@ -19,7 +19,6 @@ from typing import Any
 
 from prefect import flow, task
 
-from ditto_port.jobs.context import create_ingestion_context
 from ditto_port.jobs.tasks import (
     create_ingest_task_t0,
     create_ingest_task_t1_adj,
@@ -32,6 +31,7 @@ from ditto_port.models import (
     get_datasets_by_tier,
     get_parallel_datasets,
 )
+from ditto_port.registry import create_ingestion_bundle
 from ditto_port.services.ingestion.result_utils import count_results
 
 
@@ -67,8 +67,8 @@ def check_trading_day(trade_date: str) -> bool:
         是否为交易日
 
     """
-    with create_ingestion_context() as (metadata_service, _):
-        return metadata_service.is_trading_day(trade_date)
+    with create_ingestion_bundle() as bundle:
+        return bundle.metadata_service.is_trading_day(trade_date)
 
 
 @flow(name="daily-ingestion", description="每日增量数据摄取流程")
