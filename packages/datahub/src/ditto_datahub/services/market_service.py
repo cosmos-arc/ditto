@@ -386,62 +386,6 @@ class MarketService:
         else:
             return pl.DataFrame()
 
-    def _detect_asset_class_from_instrument_ids(
-        self, instrument_ids: list[int]
-    ) -> Literal["stock", "etf", "index"]:
-        """
-        从 instrument_id 列表检测资产类别.
-
-        Args:
-            instrument_ids: instrument_id 列表.
-
-        Returns:
-            资产类别字符串（"stock", "etf", "index"）.
-
-        Raises:
-            ValueError: 如果检测到混合资产类别或无法识别.
-
-        """
-        stock_range = InstrumentIdRange.get_range("stock")
-        etf_range = InstrumentIdRange.get_range("etf")
-        index_range = InstrumentIdRange.get_range("index")
-
-        # 检测每个资产类别
-        has_stock = any(
-            stock_range.min_id <= instrument_id <= stock_range.max_id
-            for instrument_id in instrument_ids
-        )
-        has_etf = any(
-            etf_range.min_id <= instrument_id <= etf_range.max_id
-            for instrument_id in instrument_ids
-        )
-        has_index = any(
-            index_range.min_id <= instrument_id <= index_range.max_id
-            for instrument_id in instrument_ids
-        )
-
-        # 检测混合资产类别
-        detected: list[Literal["stock", "etf", "index"]] = []
-        if has_stock:
-            detected.append("stock")
-        if has_etf:
-            detected.append("etf")
-        if has_index:
-            detected.append("index")
-
-        if len(detected) > 1:
-            display_names = {"stock": "stock", "etf": "ETF", "index": "index"}
-            classes = [display_names[c] for c in detected]
-            classes_str = ", ".join(classes)
-            raise ValueError(
-                f"检测到混合资产类别查询。instrument_id 包含 {classes_str}。请分别查询每个资产类别。",  # noqa: E501
-            )
-
-        if not detected:
-            return "stock"  # 默认
-
-        return detected[0]
-
     def _resolve_instrument_ids_and_asset_class(
         self, query: MarketBarsQuery
     ) -> tuple[list[int], Literal["stock", "etf", "index"]]:
@@ -466,7 +410,7 @@ class MarketService:
             )
             if not asset_class:
                 asset_class = (
-                    self._detect_asset_class_from_instrument_ids(instrument_ids)
+                    InstrumentIdRange.detect_asset_class(instrument_ids)
                     if instrument_ids
                     else "stock"
                 )
@@ -482,13 +426,13 @@ class MarketService:
 
         if asset_class:
             # 验证显式 asset_class 与从 Instrument ID 检测出的类别是否一致
-            detected = self._detect_asset_class_from_instrument_ids(instrument_ids)
+            detected = InstrumentIdRange.detect_asset_class(instrument_ids)
             if detected != asset_class:
                 raise ValueError(
                     f"显式指定的资产类别 '{asset_class}' 与从 Instrument ID 检测出的类别 '{detected}' 不一致",  # noqa: E501
                 )
         else:
-            asset_class = self._detect_asset_class_from_instrument_ids(instrument_ids)
+            asset_class = InstrumentIdRange.detect_asset_class(instrument_ids)
 
         return instrument_ids, asset_class
 
