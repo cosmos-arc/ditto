@@ -56,6 +56,8 @@ class SQLitePool:
         self._local = threading.local()
         self._connection_count = 0  # 连接数计数器（仅用于告警）
         self._count_lock = threading.Lock()
+        self._all_connections: list[sqlite3.Connection] = []  # 追踪所有连接
+        self._all_connections_lock = threading.Lock()  # 保护 _all_connections
 
         logger.debug(
             "SQLite pool initialized",
@@ -75,7 +77,20 @@ class SQLitePool:
             SQLite 连接对象，row_factory 设置为 sqlite3.Row
 
         """
-        if not hasattr(self._local, "conn"):
+        need_new_conn = False
+
+        if not hasattr(self._local, "conn") or self._local.conn is None:
+            need_new_conn = True
+        else:
+            # 检查连接是否已被 close_all() 关闭
+            try:
+                # 使用轻量级检查判断连接是否有效
+                self._local.conn.execute("SELECT 1")
+            except sqlite3.ProgrammingError:
+                # 连接已关闭，需要创建新连接
+                need_new_conn = True
+
+        if need_new_conn:
             conn = sqlite3.connect(
                 str(self._db_path), check_same_thread=False, timeout=30.0
             )
@@ -83,6 +98,10 @@ class SQLitePool:
             # 启用外键约束
             conn.execute("PRAGMA foreign_keys = ON;")
             self._local.conn = conn
+
+            # 追踪所有连接（用于 close_all）
+            with self._all_connections_lock:
+                self._all_connections.append(conn)
 
             # 连接数计数（仅用于告警）
             with self._count_lock:
@@ -341,3 +360,45 @@ class SQLitePool:
                 thread_id=threading.get_ident(),
                 total_count=self._connection_count,
             )
+
+    def close_all(self) -> None:
+        """
+        关闭所有线程的连接（用于应用 shutdown）.
+
+        遍历所有追踪的连接并关闭它们，适用于应用关闭时清理资源。
+        此方法是线程安全的，可以安全地调用多次。
+
+        Note:
+            关闭后，当前线程调用 get_connection() 会创建新连接。
+            其他线程的 thread-local 连接引用会被设为 None，
+            下次调用 get_connection() 时会创建新连接。
+
+        """
+        with self._all_connections_lock:
+            closed_count = 0
+            for conn in self._all_connections:
+                try:
+                    conn.close()
+                    closed_count += 1
+                except Exception as e:
+                    logger.warning(
+                        "Failed to close connection",
+                        event="close_connection_failed",
+                        error=str(e),
+                    )
+            self._all_connections.clear()
+
+        # 重置连接计数
+        with self._count_lock:
+            self._connection_count = 0
+
+        # 清除当前线程的 thread-local 连接引用
+        # 注意：其他线程的引用无法直接清除，但 get_connection() 会检测到连接已关闭
+        if hasattr(self._local, "conn"):
+            self._local.conn = None
+
+        logger.info(
+            "All SQLite connections closed",
+            event="all_connections_closed",
+            closed_count=closed_count,
+        )
