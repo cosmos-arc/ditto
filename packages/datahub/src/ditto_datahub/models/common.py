@@ -4,22 +4,12 @@ from enum import Enum
 from typing import Literal, NamedTuple
 
 __all__ = [
-    "DQSeverity",
     "Dataset",
     "Domain",
     "InstrumentIdRange",
     "OnDuplicate",
     "Source",
 ]
-
-
-# ============ DQ 枚举 ============
-class DQSeverity(str, Enum):
-    """DQ severity levels (B.5: 统一三级定义)."""
-
-    ERROR = "error"
-    WARNING = "warning"
-    ALERT = "alert"
 
 
 # ============ Dataset 枚举 ============

@@ -1,8 +1,4 @@
-"""
-Quality specification types.
-
-Infrastructure-level type definitions for data quality.
-"""
+"""DQ severity level enumeration."""
 
 from enum import Enum
 

@@ -36,12 +36,8 @@ from ditto_infra.foundation.observability import (
     traced,
 )
 
-# Export quality types
-from ditto_infra.foundation.quality import DQSeverity
-
 __all__ = [
     "CacheStats",
-    "DQSeverity",
     "DataCache",
     "EffectiveConfig",
     "FileLockManager",

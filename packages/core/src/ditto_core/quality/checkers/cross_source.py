@@ -8,9 +8,9 @@ Core 层：纯业务逻辑，无数据访问依赖。
 from typing import Any
 
 import polars as pl
-from ditto_infra.foundation import DQSeverity
 from loguru import logger
 
+from ditto_core.quality.severity import DQSeverity
 from ditto_core.quality.spec import (
     CompareMethod,
     DQIssue,
