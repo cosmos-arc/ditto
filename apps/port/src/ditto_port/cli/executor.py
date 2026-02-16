@@ -3,22 +3,14 @@ CLI 本地执行器.
 
 封装 IngestionCoordinator 和 BackfillManager，为 CLI 命令提供统一执行接口。
 
-使用工厂模式创建依赖，支持运行时参数（如 source_name）。
+重构后（ARCH-004）：
+- CLIExecutor 不再直接依赖 DataHub 服务
+- 只接收已组装好的 coordinator + backfill_manager
+- 所有依赖组装由 create_cli_executor 上下文管理器处理
 """
 
-from contextlib import contextmanager
 from typing import Any
 
-from ditto_datahub.models import Source
-from ditto_datahub.services import IngestionLogService
-from ditto_datahub.services.capital_service import CapitalService
-from ditto_datahub.services.fundamental_service import FundamentalService
-from ditto_datahub.services.macro_service import MacroService
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.source_service import SourceService
-
-from ditto_port.services.ingestion import create_coordinator
 from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
@@ -26,123 +18,31 @@ from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 class CLIExecutor:
     """CLI 本地执行器，封装 IngestionCoordinator 和 BackfillManager."""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
-        metadata_service: MetadataService,
-        market_service: MarketService,
-        fundamental_service: FundamentalService,
-        capital_service: CapitalService,
-        macro_service: MacroService,
-        source_service: SourceService,
-        ingestion_log_service: IngestionLogService,
-        source_name: str | Source = Source.TUSHARE,
+        coordinator: IngestionCoordinator,
+        backfill_manager: BackfillManager,
     ) -> None:
         """
         初始化 CLIExecutor.
 
         Args:
-            metadata_service: MetadataService 实例
-            market_service: MarketService 实例
-            fundamental_service: FundamentalService 实例
-            capital_service: CapitalService 实例
-            macro_service: MacroService 实例
-            source_service: SourceService 实例
-            ingestion_log_service: IngestionLogService 实例
-            source_name: 数据源名称，默认为 tushare
+            coordinator: IngestionCoordinator 实例
+            backfill_manager: BackfillManager 实例
 
         """
-        self._metadata_service = metadata_service
-        self._market_service = market_service
-        self._fundamental_service = fundamental_service
-        self._capital_service = capital_service
-        self._macro_service = macro_service
-        self._source_service = source_service
-        self._ingestion_log_service = ingestion_log_service
-        self._source_name = (
-            source_name if isinstance(source_name, Source) else Source(source_name)
-        )
-        # 使用延迟初始化 - coordinator 和 backfill_manager 在需要时创建
-        self._coordinator: IngestionCoordinator | None = None
-        self._backfill_manager: BackfillManager | None = None
+        self._coordinator = coordinator
+        self._backfill_manager = backfill_manager
 
     @property
-    def coordinator(self):
-        """获取 coordinator（延迟初始化）."""
-        if self._coordinator is None:
-            raise RuntimeError(
-                "Coordinator not initialized. "
-                + "Use with CLIExecutor.create() context manager."
-            )
+    def coordinator(self) -> IngestionCoordinator:
+        """获取 coordinator."""
         return self._coordinator
 
     @property
-    def backfill_manager(self):
-        """获取 backfill_manager（延迟初始化）."""
-        if self._backfill_manager is None:
-            raise RuntimeError(
-                "BackfillManager not initialized. "
-                + "Use with CLIExecutor.create() context manager."
-            )
+    def backfill_manager(self) -> BackfillManager:
+        """获取 backfill_manager."""
         return self._backfill_manager
-
-    @classmethod
-    @contextmanager
-    def create(  # noqa: PLR0913
-        cls,
-        metadata_service: MetadataService,
-        market_service: MarketService,
-        fundamental_service: FundamentalService,
-        capital_service: CapitalService,
-        macro_service: MacroService,
-        source_service: SourceService,
-        ingestion_log_service: IngestionLogService,
-        source_name: str | Source = Source.TUSHARE,
-    ):
-        """
-        创建 CLIExecutor 实例并初始化依赖.
-
-        Args:
-            metadata_service: MetadataService 实例
-            market_service: MarketService 实例
-            fundamental_service: FundamentalService 实例
-            capital_service: CapitalService 实例
-            macro_service: MacroService 实例
-            source_service: SourceService 实例
-            ingestion_log_service: IngestionLogService 实例
-            source_name: 数据源名称
-
-        Yields:
-            CLIExecutor: 已初始化的执行器实例
-
-        """
-        executor = cls(
-            metadata_service=metadata_service,
-            market_service=market_service,
-            fundamental_service=fundamental_service,
-            capital_service=capital_service,
-            macro_service=macro_service,
-            source_service=source_service,
-            ingestion_log_service=ingestion_log_service,
-            source_name=source_name,
-        )
-        with create_coordinator(
-            metadata_service=metadata_service,
-            market_service=market_service,
-            fundamental_service=fundamental_service,
-            capital_service=capital_service,
-            macro_service=macro_service,
-            source_service=source_service,
-            ingestion_log_service=ingestion_log_service,
-            source_name=source_name,
-        ) as coordinator:
-            executor._coordinator = coordinator
-            backfill_manager = BackfillManager(
-                coordinator=coordinator,
-                metadata_service=metadata_service,
-                ingestion_log_service=ingestion_log_service,
-            )
-            executor._backfill_manager = backfill_manager
-            yield executor
 
     def ingest_daily(
         self, dataset: str, trade_date: str, force: bool = False

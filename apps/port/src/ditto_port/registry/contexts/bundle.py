@@ -1,4 +1,4 @@
-"""上下文组合包定义。"""
+"""上下文组合包定义."""
 
 from dataclasses import dataclass
 
@@ -10,13 +10,14 @@ from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.source_service import SourceService
 
+from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
 
 @dataclass(frozen=True)
 class IngestionBundle:
     """
-    摄入上下文组合包。
+    摄入上下文组合包.
 
     包含数据摄入所需的所有服务和协调器。
     解决 ARCH-003（组合逻辑分散）和 ARCH-004（重复容器）问题。
@@ -30,3 +31,4 @@ class IngestionBundle:
     source_service: SourceService
     ingestion_log_service: IngestionLogService
     coordinator: IngestionCoordinator
+    backfill_manager: BackfillManager

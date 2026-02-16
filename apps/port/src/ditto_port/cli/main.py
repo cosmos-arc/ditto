@@ -1,7 +1,5 @@
 """Ditto CLI 主入口."""
 
-import os
-
 import typer
 
 from ditto_port.cli.commands.backfill import app as backfill_app
@@ -32,11 +30,7 @@ def main(
     """初始化 CLI 上下文."""
     ctx.ensure_object(dict)
 
-    # 透传 data_root 到环境变量，供 ConfigProvider 使用
-    if data_root:
-        os.environ["DITTO_DATA_ROOT"] = data_root
-
-    # 延迟初始化 DataHub，存储配置供后续使用
+    # 存储配置供后续使用（显式传递，不再设置 os.environ）
     ctx.obj["data_root"] = data_root
     ctx.obj["verbose"] = verbose
 

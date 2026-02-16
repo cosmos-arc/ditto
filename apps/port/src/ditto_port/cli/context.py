@@ -1,74 +1,62 @@
-"""CLI 上下文管理（使用 dishka 同步容器）."""
+"""CLI 上下文管理（使用 IngestionBundle）."""
 
 from collections.abc import Generator
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any
 
-from ditto_datahub.models import Source
-from ditto_datahub.services import IngestionLogService
-from ditto_datahub.services.capital_service import CapitalService
-from ditto_datahub.services.fundamental_service import FundamentalService
-from ditto_datahub.services.macro_service import MacroService
-from ditto_datahub.services.market_service import MarketService
-from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.services.source_service import SourceService
-
 from ditto_port.cli.executor import CLIExecutor
-from ditto_port.registry.container import make_app_container
+from ditto_port.registry.contexts import create_ingestion_bundle
 
 
 @contextmanager
 def create_cli_host() -> Generator[Any, None, None]:
     """
-    CLI Host - 仿照 .NET Generic Host 模式（同步版本）.
+    CLI Host - 仿照 .NET Generic Host 模式.
 
     管理整个 CLI 应用的生命周期：
     - 创建容器
     - 初始化所有组件
     - 优雅关闭
 
+    Note: 此函数保留用于向后兼容。
+    推荐使用 create_executor() 获取完整的 CLIExecutor。
+
     Yields:
         dishka 同步容器实例
 
     """
-    # 创建同步容器
-    container = make_app_container()
-    try:
-        yield container
-    finally:
-        # 优雅关闭
-        container.close()
+    # 委托给 create_ingestion_bundle 以保持一致性
+    with create_ingestion_bundle() as bundle:
+        yield bundle
 
 
 @contextmanager
-def create_executor():
+def create_executor(
+    source_name: str = "tushare",
+    data_root: Path | None = None,
+) -> Generator[CLIExecutor, None, None]:
     """
     创建 CLI 执行器（使用 DI 和工厂模式）.
 
-    通过 DI 容器获取所需的 Services，然后使用 CLIExecutor.create() 工厂方法创建执行器。
+    通过 create_ingestion_bundle 获取完整的依赖包，
+    然后创建 CLIExecutor。
+
+    Args:
+        source_name: 数据源名称，默认为 "tushare"
+        data_root: 数据根目录（预留参数，未来用于显式传递）
 
     Yields:
         CLIExecutor: 已初始化的执行器实例
 
+    Note:
+        data_root 参数目前暂未使用，ConfigProvider 仍通过
+        环境变量 DITTO_DATA_ROOT 获取配置。后续重构可改为
+        显式参数传递。
+
     """
-    with create_cli_host() as container:
-        # 从容器获取所需的 Services
-        metadata_service = container.get(MetadataService)
-        market_service = container.get(MarketService)
-        fundamental_service = container.get(FundamentalService)
-        capital_service = container.get(CapitalService)
-        macro_service = container.get(MacroService)
-        source_service = container.get(SourceService)
-        ingestion_log_service = container.get(IngestionLogService)
-        # 使用工厂方法创建 executor，自动处理 coordinator 和 backfill_manager 的初始化
-        with CLIExecutor.create(
-            metadata_service=metadata_service,
-            market_service=market_service,
-            fundamental_service=fundamental_service,
-            capital_service=capital_service,
-            macro_service=macro_service,
-            source_service=source_service,
-            ingestion_log_service=ingestion_log_service,
-            source_name=Source.TUSHARE,
-        ) as executor:
-            yield executor
+    with create_ingestion_bundle(source=source_name) as bundle:
+        yield CLIExecutor(
+            coordinator=bundle.coordinator,
+            backfill_manager=bundle.backfill_manager,
+        )

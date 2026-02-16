@@ -14,12 +14,13 @@ from ditto_datahub.services.source_service import SourceService
 from ditto_port.registry.container import make_app_container
 from ditto_port.registry.contexts.bundle import IngestionBundle
 from ditto_port.services.ingestion import create_coordinator
+from ditto_port.services.ingestion.backfill import BackfillManager
 
 
 @contextmanager
 def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle]:
     """
-    创建摄入上下文组合包（单容器）。
+    创建摄入上下文组合包（单容器）.
 
     解决 ARCH-004：替代嵌套的 create_ingestion_context + create_ingestion_log_context，
     确保单个 flow 只创建一个容器实例。
@@ -28,7 +29,7 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
         source: 数据源名称
 
     Yields:
-        IngestionBundle: 包含所有摄入服务和协调器
+        IngestionBundle: 包含所有摄入服务、协调器和回补管理器
 
     Example:
         with create_ingestion_bundle() as bundle:
@@ -58,6 +59,12 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
             ingestion_log_service=ingestion_log_service,
             source_name=source,
         ) as coordinator:
+            # 创建回补管理器
+            backfill_manager = BackfillManager(
+                coordinator=coordinator,
+                metadata_service=metadata_service,
+                ingestion_log_service=ingestion_log_service,
+            )
             yield IngestionBundle(
                 metadata_service=metadata_service,
                 market_service=market_service,
@@ -67,6 +74,7 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
                 source_service=source_service,
                 ingestion_log_service=ingestion_log_service,
                 coordinator=coordinator,
+                backfill_manager=backfill_manager,
             )
     finally:
         container.close()
