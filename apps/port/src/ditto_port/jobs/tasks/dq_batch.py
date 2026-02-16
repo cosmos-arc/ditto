@@ -133,6 +133,13 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
                     error_type=type(e).__name__,
                     error=str(e),
                 )
+                # 记录失败结果，避免"假通过/漏报"
+                results_by_dataset[dataset] = {
+                    "passed": False,
+                    "issue_count": 0,
+                    "alert_count": 0,
+                    "error": f"{type(e).__name__}: {e}",
+                }
             except Exception as e:
                 # 未知异常
                 logger.exception(
@@ -145,7 +152,7 @@ async def dq_batch_check(  # noqa: C901 - 端到端业务流程，保持单一�
                     "passed": False,
                     "issue_count": 0,
                     "alert_count": 0,
-                    "error": str(e),
+                    "error": f"{type(e).__name__}: {e}",
                 }
 
         # 汇总结果

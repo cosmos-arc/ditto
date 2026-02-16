@@ -176,37 +176,55 @@ class TestMSetup:
 
 
 @pytest.mark.integration
-class TestCreateGauge:
-    """测试 _create_gauge 函数."""
+class TestSimpleGaugeCreation:
+    """测试 SimpleGauge 公开 API 创建 gauge."""
 
-    def test_create_gauge_returns_simple_gauge(self) -> None:
-        """测试 _create_gauge 返回 SimpleGauge 实例."""
+    def test_simple_gauge_creation(self) -> None:
+        """测试使用 SimpleGauge 创建 gauge 实例."""
         reset_for_testing()
         config = ObservabilityConfig(
             pytest_running=True, assertions_enabled=True, verbose_logging=False
         )
-        from ditto_infra.foundation.observability.metrics import _create_gauge
-
         meter = configure_metrics(config)
 
-        gauge = _create_gauge(meter, "test.gauge", "Test gauge description")
+        gauge = SimpleGauge(meter, "test.gauge", "Test gauge description")
         assert isinstance(gauge, SimpleGauge)
 
-    def test_create_gauge_with_different_names(self) -> None:
+    def test_simple_gauge_with_different_names(self) -> None:
         """测试创建不同名称的 gauge."""
         reset_for_testing()
         config = ObservabilityConfig(
             pytest_running=True, assertions_enabled=True, verbose_logging=False
         )
-        from ditto_infra.foundation.observability.metrics import _create_gauge
-
         meter = configure_metrics(config)
 
-        gauge1 = _create_gauge(meter, "gauge.one", "Description 1")
-        gauge2 = _create_gauge(meter, "gauge.two", "Description 2")
+        gauge1 = SimpleGauge(meter, "gauge.one", "Description 1")
+        gauge2 = SimpleGauge(meter, "gauge.two", "Description 2")
 
-        # [REVIEW]
+        # 验证两个 gauge 是不同的实例
         assert gauge1 is not gauge2
+
+    def test_simple_gauge_set_and_read(self) -> None:
+        """测试 SimpleGauge 的 set/inc/dec 操作."""
+        reset_for_testing()
+        config = ObservabilityConfig(
+            pytest_running=True, assertions_enabled=True, verbose_logging=False
+        )
+        meter = configure_metrics(config)
+
+        gauge = SimpleGauge(meter, "test.gauge.ops", "Test gauge operations")
+
+        # 测试 set 操作
+        gauge.set(10.0)
+        assert gauge._value == 10.0
+
+        # 测试 inc 操作
+        gauge.inc(5.0)
+        assert gauge._value == 15.0
+
+        # 测试 dec 操作
+        gauge.dec(3.0)
+        assert gauge._value == 12.0
 
 
 @pytest.mark.integration

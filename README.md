@@ -158,7 +158,7 @@ ditto/
 │   │   │   ├── stores/        # 数据存储
 │   │   │   └── runtime/       # 运行时支持
 │   │   └── tests/             # 数据层测试
-│   └── foundation/           # 共享模块
+│   └── infra/               # 基础设施层
 │       ├── src/
 │       │   ├── config/        # 配置管理
 │       │   ├── logging/       # 日志系统
