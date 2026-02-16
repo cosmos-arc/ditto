@@ -41,44 +41,6 @@ def create_prefect_host() -> Iterator[Any]:
 
 
 @contextmanager
-def create_metadata_context() -> Iterator[MetadataService]:
-    """
-    创建 MetadataService 上下文，使用 dishka 容器管理依赖.
-
-    用于只需要 MetadataService 的场景（如检查交易日等）。
-
-    Yields:
-        MetadataService: 容器管理的 MetadataService 实例
-
-    Example:
-        with create_metadata_context() as metadata_service:
-            result = metadata_service.is_trading_day(date)
-
-    """
-    with create_prefect_host() as container:
-        yield container.get(MetadataService)
-
-
-@contextmanager
-def create_dq_context() -> Iterator[QualityEngine]:
-    """
-    创建 DQ 上下文，使用 dishka 容器管理依赖.
-
-    用于需要 QualityEngine 的场景（如 DQ 批量检查）。
-
-    Yields:
-        QualityEngine: 容器管理的 QualityEngine 实例
-
-    Example:
-        with create_dq_context() as engine:
-            result = engine.check(...)
-
-    """
-    with create_prefect_host() as container:
-        yield container.get(QualityEngine)
-
-
-@contextmanager
 def create_dq_and_metadata_context() -> Iterator[
     tuple[QualityEngine, MetadataService, MarketService]
 ]:
