@@ -385,7 +385,7 @@ class TestConfigInitCoordinator:
         assert len(provider.init_calls) == 1
 
     def test_initialize_handles_exceptions(self) -> None:
-        """initialize() 应该捕获异常并返回失败结果."""
+        """initialize() 应该捕获异常并返回失败结果（fail_fast=False 时）."""
         coordinator = ConfigInitCoordinator()
         failing_provider = FailingMockProvider()
 
@@ -394,6 +394,7 @@ class TestConfigInitCoordinator:
         results = coordinator.initialize(
             scope=InitScope.STARTUP,
             data_root=Path("/tmp"),
+            fail_fast=False,  # 禁用 fail-fast 以验证异常捕获逻辑
         )
 
         assert "failing" in results

@@ -1,6 +1,7 @@
 """Ditto 配置管理模块。"""
 
 from ditto_infra.foundation.config.environment import Environment, get_environment
+from ditto_infra.foundation.config.errors import ConfigInitError
 from ditto_infra.foundation.config.initializer import (
     ConfigInitCoordinator,
     ConfigInitProvider,
@@ -21,6 +22,7 @@ from ditto_infra.foundation.config.settings import (
 
 __all__ = [
     "ConfigInitCoordinator",
+    "ConfigInitError",
     "ConfigInitProvider",
     "ConfigLoader",
     "Environment",

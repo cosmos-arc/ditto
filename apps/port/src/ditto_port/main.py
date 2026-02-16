@@ -19,6 +19,7 @@ import orjson
 # Local imports - using editable packages
 from dishka.integrations.fastapi import setup_dishka
 from ditto_datahub.config.data_store import DataStoreSettings
+from ditto_infra.foundation.config import ConfigInitError
 from ditto_infra.foundation.config.environment import get_environment
 from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, InitScope
 from ditto_infra.foundation.config.settings import Settings
@@ -110,17 +111,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # 集成到 FastAPI
         setup_dishka(container=container, app=app)
 
-        # 初始化配置（静默自动初始化）
+        # 初始化配置（fail-fast 模式）
         logger.info("Initializing configuration", event="config_init_start")
         coordinator: ConfigInitCoordinator = await typed_container.get(
             ConfigInitCoordinator
         )
         settings: DataStoreSettings = await typed_container.get(DataStoreSettings)
         # Providers 已经在容器中注册，无需手动注册
-        coordinator.initialize(
-            scope=InitScope.STARTUP,
-            data_root=settings.data_root,
-        )
+        try:
+            coordinator.initialize(
+                scope=InitScope.STARTUP,
+                data_root=settings.data_root,
+            )
+        except ConfigInitError as e:
+            logger.error(
+                "Startup initialization failed",
+                event="config_init_failed",
+                failed_providers=e.failed_providers,
+                details=e.details,
+            )
+            raise SystemExit(1) from e
         logger.info(
             "Configuration initialized",
             event="config_init_complete",
@@ -130,6 +140,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state.settings = await typed_container.get(Settings)
 
         yield
+    except SystemExit:
+        raise
     except Exception as e:
         logger.exception(
             "Failed to initialize application",

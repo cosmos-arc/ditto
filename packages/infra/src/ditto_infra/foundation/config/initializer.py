@@ -10,6 +10,8 @@ from pathlib import Path
 
 from loguru import logger
 
+from ditto_infra.foundation.config.errors import ConfigInitError
+
 
 class InitScope(str, Enum):
     """初始化作用域。"""
@@ -73,8 +75,24 @@ class ConfigInitCoordinator:
         scope: InitScope,
         data_root: Path,
         force: bool = False,
+        fail_fast: bool = True,
     ) -> dict[str, InitResult]:
-        """按作用域执行初始化。"""
+        """
+        按作用域执行初始化。
+
+        Args:
+            scope: 初始化作用域（STARTUP, MANUAL, ALWAYS）。
+            data_root: 数据根目录。
+            force: 是否强制初始化（忽略 check 结果）。
+            fail_fast: STARTUP 场景下是否在失败时立即抛出异常。
+
+        Returns:
+            初始化结果映射（provider name -> InitResult）。
+
+        Raises:
+            ConfigInitError: STARTUP 场景下有 provider 失败且 fail_fast=True。
+
+        """
         results: dict[str, InitResult] = {}
 
         with self._lock:
@@ -111,6 +129,12 @@ class ConfigInitCoordinator:
                     success=False,
                     message=f"{type(e).__name__}: {e}",
                 )
+
+        # STARTUP 场景 fail-fast 逻辑
+        if fail_fast and scope == InitScope.STARTUP:
+            failed = {name: r.message for name, r in results.items() if not r.success}
+            if failed:
+                raise ConfigInitError(list(failed.keys()), failed)
 
         return results
 
