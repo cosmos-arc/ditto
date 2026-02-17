@@ -6,6 +6,8 @@ Golden Dataset 用于数据质量对账的精选标的子集。
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from pydantic import BaseModel, Field, field_validator
 
 __all__ = ["GoldenDatasetOptions", "GoldenDatasetSpec"]
@@ -36,11 +38,19 @@ class GoldenDatasetSpec(BaseModel):
 
     @field_validator("tickers", mode="before")
     @classmethod
-    def validate_tickers(cls, v: list[str] | None) -> list[str]:
-        """去重并排序。"""
+    def validate_tickers(cls, v: Any) -> list[str]:
+        """
+        验证并处理 tickers 列表。
+
+        - 拒绝非列表类型（常见 YAML 误写如 tickers: "600519"）
+        - 去重并排序
+        """
         if not v:
             return []
-        return sorted({str(t).strip() for t in v if t and str(t).strip()})
+        if not isinstance(v, list):
+            raise ValueError(f"tickers must be a list, got {type(v).__name__}: {v!r}")
+        items = cast(list[Any], v)
+        return sorted({str(t).strip() for t in items if t and str(t).strip()})
 
     @property
     def is_enabled(self) -> bool:

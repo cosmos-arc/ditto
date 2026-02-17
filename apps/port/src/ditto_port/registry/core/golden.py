@@ -39,7 +39,9 @@ class GoldenDatasetProvider(Provider):
                 return None
 
             return GoldenDatasetSpec(**data)
-        except ValidationError as e:
+        except (ValidationError, TypeError) as e:
+            # TypeError: YAML 解析为非字典类型（如列表、标量）
+            # ValidationError: Pydantic 验证失败
             logger.warning(
                 "Invalid golden dataset config, using defaults",
                 event="golden_config_invalid",
