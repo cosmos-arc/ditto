@@ -72,10 +72,10 @@
 - **禁止循环依赖**：必须重构架构，禁止 `TYPE_CHECKING` 延迟导入
 
 详细分层规范：
-- Foundation → [foundation.md](.claude/rules/foundation.md)
-- DataHub → [datahub.md](.claude/rules/datahub.md) | [pit.md](.claude/rules/pit.md)
-- Core → [core.md](.claude/rules/core.md)
-- Server → [server.md](.claude/rules/server.md)
+- Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
+- DataHub → [packages/datahub/CLAUDE.md](packages/datahub/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
+- Core → [packages/core/CLAUDE.md](packages/core/CLAUDE.md)
+- Port → [apps/port/CLAUDE.md](apps/port/CLAUDE.md)
 
 ### 允许的依赖（严格限制）
 

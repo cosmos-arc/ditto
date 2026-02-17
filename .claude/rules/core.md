@@ -342,16 +342,15 @@ class SourceAuthenticationError(DataSourceError): ...
 
 **禁止行内导入！！破例需要注释说明具体原因**
 
-### Foundation 层导入（现为 ditto_infra）
+### Infra 层导入
 
 ```python
 # ✅ 正确
-from ditto_infra import logger, M, span, traced, init
-from ditto_infra.config import get_settings
-from ditto_infra.util.io import atomic_write
+from ditto_infra.foundation import logger, span, traced, init, SQLitePool
+from ditto_infra.foundation.config import get_environment, Settings
 
 # ❌ 错误
-from ditto_infra.observability.logging import get_logger
+from ditto_infra.config import get_settings  # 应为 ditto_infra.foundation.config
 直接访问 os.environ
 使用 open() 写文件
 ```
