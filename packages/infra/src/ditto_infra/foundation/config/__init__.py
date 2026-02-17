@@ -13,6 +13,7 @@ from ditto_infra.foundation.config.paths import PathResolver, XDGPaths
 from ditto_infra.foundation.config.project_root import (
     find_project_root,
     get_default_dq_rules_dir,
+    get_default_golden_dataset_path,
 )
 from ditto_infra.foundation.config.settings import (
     ObservabilitySettings,
@@ -35,5 +36,6 @@ __all__ = [
     "XDGPaths",
     "find_project_root",
     "get_default_dq_rules_dir",
+    "get_default_golden_dataset_path",
     "get_environment",
 ]
