@@ -1,7 +1,7 @@
 # Ditto 设计文档索引
 
 **版本**: v1.0.0
-**最后更新**: 2026-01-23
+**最后更新**: 2026-02-17
 **状态**: ✅ 稳定
 
 ## 概要
@@ -23,6 +23,9 @@
 | [08_risk_constitution.md](08_risk_constitution.md) | v1.0 | 2025-12-08 | 风险宪法 - Kill Switch、仓位控制、操作纪律 |
 | [09_data_quality_design.md](09_data_quality_design.md) | v1.1 | 2025-12-28 | 数据质量设计 - DQ 三层架构、YAML 配置、隔离区 |
 | [10_data_ingestion_scheduler_design.md](10_data_ingestion_scheduler_design.md) | v2.0 | 2025-12-30 | 数据摄取调度 - Prefect Flows/Tasks、T0/T1/T2/T3 分层 |
+| [11_port_architecture.md](11_port_architecture.md) | v1.0 | 2026-01-23 | Port 层架构 - FastAPI、Prefect、CLI、DI |
+| [12_quant_architecture_alignment.md](12_quant_architecture_alignment.md) | v1.0 | 2026-02-11 | 行业架构对标 - LEAN/Zipline/Qlib 参考设计 |
+| [13_golden_dataset_design.md](13_golden_dataset_design.md) | v1.0 | 2026-02-17 | 黄金数据集设计 - 标的选择标准、配置格式、架构设计 |
 
 ## 文档分类
 
@@ -52,6 +55,13 @@
   - L3 统计异常（Z-score、完整性）
   - YAML + Pydantic 配置架构
   - 隔离区机制
+
+**黄金数据集**：
+- [13_golden_dataset_design.md](13_golden_dataset_design.md) - 黄金数据集设计
+  - 标的选择标准（流动性分层、市场板块、资产类型、特殊场景）
+  - YAML 配置格式
+  - 分层架构设计（Core / Port）
+  - 对账服务集成
 
 **数据摄取**：
 - [10_data_ingestion_scheduler_design.md](10_data_ingestion_scheduler_design.md) - 数据摄取调度

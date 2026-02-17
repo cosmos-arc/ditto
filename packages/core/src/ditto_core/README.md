@@ -30,12 +30,12 @@
 │        ditto-datahub                │
 │     (数据访问层)                      │
 ├─────────────────────────────────────┤
-│      ditto-foundation               │
+│        ditto-infra                  │
 │     (基础设施层)                      │
 └─────────────────────────────────────┘
 ```
 
-**依赖方向**: 仅依赖 `ditto-datahub` 和 `ditto-foundation`
+**依赖方向**: 仅依赖 `ditto-datahub` 和 `ditto-infra`
 
 ## 三、目录结构
 

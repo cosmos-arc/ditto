@@ -100,8 +100,8 @@ from pathlib import Path
 def get_dirs(path):
     return {d.name for d in Path(path).rglob('*') if d.is_dir() and '__pycache__' not in str(d)}
 
-src_dirs = get_dirs('packages/foundation/src')
-test_dirs = get_dirs('packages/foundation/tests/unit')
+src_dirs = get_dirs('packages/infra/src')
+test_dirs = get_dirs('packages/infra/tests/unit')
 
 missing = src_dirs - test_dirs
 extra = test_dirs - src_dirs
@@ -398,7 +398,7 @@ packages/datahub/tests/unit/stores/test_pipeline_store.py
 packages/datahub/tests/integration/stores/test_pipeline_store.py
 
 # ❌ 错误：跨包同名也会冲突
-packages/foundation/tests/unit/observability/test_observability_unit.py
+packages/infra/tests/unit/observability/test_observability_unit.py
 packages/datahub/tests/unit/stores/test_observability_unit.py
 
 # ✅ 正确：添加层级后缀区分
@@ -406,7 +406,7 @@ packages/datahub/tests/unit/stores/test_pipeline_store_unit.py
 packages/datahub/tests/integration/stores/test_pipeline_store_integration.py
 
 # ✅ 正确：添加模块前缀避免跨包冲突
-packages/foundation/tests/unit/observability/test_observability_unit.py
+packages/infra/tests/unit/observability/test_observability_unit.py
 packages/datahub/tests/unit/stores/test_stores_observability_unit.py
 ```
 
@@ -781,7 +781,7 @@ def test_partitioned_write(store, sample_quotes):
 - 使用 `pytest_collection_modifyitems` hook 在测试收集时自动标记
 - 配置文件位置：
   - DataHub: `packages/datahub/tests/conftest.py`
-  - Foundation: `packages/foundation/tests/unit/conftest.py`
+  - Infra: `packages/infra/tests/unit/conftest.py`
 
 **手动标记需求**：
 - ✅ `@pytest.mark.slow` - 耗时测试（需要手动标记）

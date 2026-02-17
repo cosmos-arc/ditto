@@ -14,22 +14,28 @@ paths: ./**/*.py
 │                         │                                │
 │                         ├──→ packages/datahub (数据层)   │
 │                         │         │                      │
-│                         │         └──→ packages/foundation │
+│                         │         └──→ packages/infra    │
 │                         │                                │
 │                         └──→ packages/core (核心层)      │
 │                                   │                      │
-│                                   └──→ packages/foundation │
+│                                   └──→ packages/infra    │
 └─────────────────────────────────────────────────────────┘
 ```
+
+**详细分层规范**：
+- Infra → [/packages/infra/CLAUDE.md](/packages/infra/CLAUDE.md)
+- DataHub → [/packages/datahub/CLAUDE.md](/packages/datahub/CLAUDE.md)
+- Core → [/packages/core/CLAUDE.md](/packages/core/CLAUDE.md)
+- Port → [/apps/port/CLAUDE.md](/apps/port/CLAUDE.md)
 
 **依赖规则**：
 - **应用层** (port) → 数据层 (datahub) ✅
 - **应用层** (port) → 核心层 (core) ✅
-- **应用层** (port) → **横切层 (foundation)** ✅ **（允许）**
-- **数据层** (datahub) → 横切层 (foundation) ✅
-- **核心层** (core) → 横切层 (foundation) ✅
+- **应用层** (port) → **横切层 (infra)** ✅ **（允许）**
+- **数据层** (datahub) → 横切层 (infra) ✅
+- **核心层** (core) → 横切层 (infra) ✅
 - **数据层** (datahub) → 应用层 (port) ❌ 反向依赖
-- **横切层** (foundation) → 其他层 ❌ 零依赖
+- **横切层** (infra) → 其他层 ❌ 零依赖
 
 ### v5 强制边界（CI 门禁）
 
@@ -38,8 +44,8 @@ paths: ./**/*.py
 使用 **Import Linter** 进行架构约束检查，配置位于 [pyproject.toml](pyproject.toml)。
 
 **检查类型：**
-1. **分层架构** (`layers`): Port → Core → DataHub → Foundation
-2. **Foundation 隔离** (`forbidden`): Foundation 禁止依赖其他层
+1. **分层架构** (`layers`): Port → Core → DataHub → Infra
+2. **Infra 隔离** (`forbidden`): Infra 禁止依赖其他层
 3. **DataHub 边界** (`forbidden`): DataHub 禁止依赖 Core/Port
 4. **Core 边界** (`forbidden`): Core 仅可依赖 DataHub models
 5. **Port 边界** (`protected`): Port 非 registry 禁止依赖 stores/sources/runtime
@@ -56,25 +62,18 @@ lint-imports --contract acyclic-packages       # 单独检查循环依赖
 - Legacy 术语检查（sid、src_code 等）- 由代码审查负责
 - Registry 方法调用检测 - 由代码审查负责
 
-### 横切层 (Foundation)
+### 横切层 (Infra)
 
 **定义**：提供跨所有层的基础设施服务，可被任何层访问
 
-**包含模块**：
-- `config` - 配置管理（Settings、路径管理）
-- `observability` - 可观测性（日志、追踪、指标）
-- `util` - 通用工具（校验和、日期处理）
-- `cache` - 通用缓存（DataCache）
-- `concurrency` - 并发控制（FileLockManager）
-- `db` - 数据库连接管理（SQLitePool）
-- `version` - 版本管理（Checksum、版本标识）
+**详细规范**：详见 [/packages/infra/CLAUDE.md](/packages/infra/CLAUDE.md)
 
 **正确使用**：
 ```python
-# ✅ 所有层都可以直接使用 infra（原 foundation）
-from ditto_infra.observability import get_logger
-from ditto_infra.config import get_settings
-from ditto_infra.util.checksum import file_checksum
+# ✅ 所有层都可以直接使用 infra
+from ditto_infra.foundation import get_logger, SQLitePool, DataCache
+from ditto_infra.foundation.config import get_settings, get_environment
+from ditto_infra.foundation.concurrency import FileLockManager
 ```
 
 ### 层级穿透（禁止）
@@ -329,16 +328,16 @@ Domain Layer (packages/core/)
 Infrastructure Layer (packages/datahub/)
     │
     └── 依赖
-Foundation Layer (packages/foundation/)
+Infra Layer (packages/infra/)
 ```
 
 **依赖规则**：
 - ✅ Application → Domain
 - ✅ Application → Infrastructure
 - ✅ Domain → Infrastructure
-- ✅ Infrastructure → Foundation
+- ✅ Infrastructure → Infra
 - ❌ Infrastructure → Domain（禁止反向依赖）
-- ❌ Foundation → 其他层（零依赖）
+- ❌ Infra → 其他层（零依赖）
 
 ### 配置文件位置
 
@@ -366,38 +365,3 @@ Foundation Layer (packages/foundation/)
 - ❌ Application Layer 重复实现 Domain Layer 已有的业务逻辑
 - ❌ Domain Layer 直接访问存储（应通过 Infrastructure）
 - ❌ 多个地方重复实现相同的业务规则
-
-### Runtime 与 Foundation 边界
-
-**核心原则**：
-
-| 维度 | Foundation | Runtime |
-|------|-----------|---------|
-| **领域知识** | 零领域概念 | 可包含领域概念 |
-| **外部依赖** | 标准库 + 基础设施库 | 可依赖领域相关库 |
-| **复用性** | 可独立提取为包 | 与 datahub 耦合 |
-| **依赖内部模型** | 不依赖 datahub.models | 可依赖 datahub.models |
-
-**开发者决策树**：
-
-```
-这是技术组件还是业务逻辑？
-├── 技术组件 → 是否依赖领域模型？
-│   ├── 是 → runtime/
-│   └── 否 → foundation/
-└── 业务逻辑 → domains/** (services/stores/models)
-
-这是代码模块还是项目脚本？
-├── Python 代码模块 → runtime/ 或 foundation/
-└── SQL/Shell 脚本 → scripts/
-```
-
-**判断示例**：
-
-| 问题 | Foundation | Runtime | Scripts |
-|------|-----------|---------|---------|
-| 缓存实现需要知道"证券"吗？ | ✅ DataCache | ❌ | ❌ |
-| 文件锁需要知道"交易日"吗？ | ✅ FileLockManager | ❌ | ❌ |
-| Instrument ID 分配需要知道"股票/ETF"吗？ | ❌ | ✅ InstrumentIdAllocator | ❌ |
-| SQL 引擎需要知道"复权"吗？ | ❌ | ✅ SqlEngine | ❌ |
-| 这是 Python 代码还是 SQL 脚本？ | ❌ | ❌ | ✅ schema.sql |
