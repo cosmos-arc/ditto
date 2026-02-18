@@ -24,6 +24,7 @@ from ditto_infra.foundation import logger
 from ditto_port.models import IngestionResult
 from ditto_port.services.ingestion.data_writer import IngestionDataWriter
 from ditto_port.services.ingestion.errors import SourceFetchError
+from ditto_port.services.ingestion.index_config import get_all_index_codes
 from ditto_port.services.ingestion.metadata import MetadataManager
 from ditto_port.services.ingestion.protocols import IngestionDataSource
 from ditto_port.services.ingestion.result_handler import IngestionResultHandler
@@ -313,7 +314,10 @@ class IngestionCoordinator:
                 trade_date
             ),
             Dataset.INDEX_BASIC: lambda: self._source.fetch_index_basic(),
-            Dataset.INDEX_DAILY: lambda: self._source.fetch_index_daily(trade_date),
+            Dataset.INDEX_DAILY: lambda: self._source.fetch_index_daily(
+                trade_date,
+                ts_codes=get_all_index_codes(self._source, include_sw_levels=[1, 2]),
+            ),
         }
 
         if dataset_enum not in handlers:

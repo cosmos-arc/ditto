@@ -1,0 +1,89 @@
+name: E2E Validation
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 每日凌晨 2 点运行
+  workflow_dispatch:      # 手动触发
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'apps/port/**'
+      - 'tests/e2e/**'
+    types: [labeled]     # 带有 e2e 标签时触发
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # PR 来自 fork 时跳过（secrets 不可用）
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.9.3
+        with:
+          pixi-version: v0.39.5
+          cache: true
+          locked: true
+          environments: dev
+
+      - name: Prepare E2E Test Data
+        env:
+          TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
+        run: |
+          # 检查 Token 是否配置
+          if [ -z "$TUSHARE_TOKEN" ]; then
+            echo "::error::TUSHARE_TOKEN secret is not configured."
+            echo "Please add TUSHARE_TOKEN to your repository secrets."
+            echo "Go to: Settings > Secrets and variables > Actions > New repository secret"
+            exit 1
+          fi
+
+          # 创建目录结构
+          pixi run -e dev python tests/scripts/prepare_e2e_data.py --dirs-only
+
+          # 生成 PIT 快照数据
+          pixi run -e dev python tests/scripts/prepare_e2e_data.py --snapshots --date 2024-06-28
+
+          # 验证数据完整性
+          pixi run -e dev python tests/scripts/prepare_e2e_data.py --verify
+
+      - name: Run E2E Tests
+        env:
+          TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
+          ENVIRONMENT: testing
+        run: |
+          pixi run -e dev pytest tests/e2e/ \
+            --tb=short \
+            -m "e2e" \
+            --junit-xml=tests/reports/e2e-junit.xml
+
+      - name: Upload Reports
+        uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: e2e-reports
+          path: |
+            tests/reports/*.md
+            tests/reports/*.xml
+
+      - name: Comment PR
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const glob = require('glob');
+            const files = glob.sync('tests/reports/e2e_validation_*.md');
+            if (files.length > 0) {
+              const report = fs.readFileSync(files[0], 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '```\n' + report + '\n```'
+              });
+            }

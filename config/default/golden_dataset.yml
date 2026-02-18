@@ -2,47 +2,164 @@
 # 覆盖维度：流动性分层、市场板块、资产类型、特殊场景
 # 详见 docs/design/13_golden_dataset_design.md
 
-description: "黄金数据集 - A股多维度覆盖（25个标的）"
+description: "黄金数据集 - A股多维度覆盖（21个标的）"
+
+# 资产类别说明：
+# - stock: A股股票
+# - etf: ETF基金（宽基/行业/跨境）
+# - index_market: 市场指数（上证/深证/沪深300等）
+# - index_sw: 申万行业指数（801xxx）
+# - index_style: 风格指数（价值/成长/红利）
+#
+# 交易所代码说明（内部规范）：
+# - XSHG: 上海证券交易所
+# - XSHE: 深圳证券交易所
+# - SW: 申万指数
 
 tickers:
-  # === 流动性分层 - 股票 ===
-  # 高流动性-大盘
-  - "600519"  # 贵州茅台 - 白酒龙头
-  - "600036"  # 招商银行 - 银行龙头
-  - "000333"  # 美的集团 - 家电龙头
-  - "600941"  # 中国移动 - 通信龙头
+  # ========================================
+  # 股票 - 高流动性大盘
+  # ========================================
+  - ticker: "600519"
+    name: "贵州茅台"
+    asset_type: "stock"
+    exchange: "XSHG"
+    tags: ["大盘", "白酒", "高流动性", "主板"]
 
-  # 创业板/科创板代表
-  - "300750"  # 宁德时代 - 创业板龙头
-  - "688981"  # 中芯国际 - 科创板代表
+  - ticker: "600036"
+    name: "招商银行"
+    asset_type: "stock"
+    exchange: "XSHG"
+    tags: ["大盘", "银行", "高流动性", "主板"]
 
-  # 中低流动性
-  - "000710"  # 贝瑞基因 - 中流动性
-  - "300736"  # *ST左江 - ST股场景
+  - ticker: "000333"
+    name: "美的集团"
+    asset_type: "stock"
+    exchange: "XSHE"
+    tags: ["大盘", "家电", "高流动性", "主板"]
 
-  # === ETF - 宽基 ===
-  - "510300"  # 沪深300ETF - 基准
-  - "510500"  # 中证500ETF - 中盘
-  - "159915"  # 创业板ETF - 创业板
-  - "588000"  # 科创50ETF - 科创板
+  - ticker: "600941"
+    name: "中国移动"
+    asset_type: "stock"
+    exchange: "XSHG"
+    tags: ["大盘", "通信", "高流动性", "主板"]
 
-  # === ETF - 行业/跨境 ===
-  - "159928"  # 消费ETF - 行业
-  - "512010"  # 医药ETF - 行业
-  - "513100"  # 纳指ETF - 跨境QDII
-  - "513030"  # 德国ETF - 跨境
-  - "516010"  # 游戏ETF - 低流动性ETF
+  # ========================================
+  # 股票 - 创业板/科创板
+  # ========================================
+  - ticker: "300750"
+    name: "宁德时代"
+    asset_type: "stock"
+    exchange: "XSHE"
+    tags: ["大盘", "新能源", "高流动性", "创业板"]
 
-  # === 指数 ===
-  - "000001"  # 上证指数 - 市场基准
-  - "399001"  # 深证成指 - 深市基准
-  - "000300"  # 沪深300 - 宽基指数
-  - "000852"  # 中证1000 - 小盘指数
+  - ticker: "688981"
+    name: "中芯国际"
+    asset_type: "stock"
+    exchange: "XSHG"
+    tags: ["大盘", "半导体", "中流动性", "科创板"]
 
-  # === 特殊场景（示例）===
-  # - "动态选择"  # 长期停牌股
-  # - "动态选择"  # 次新股
-  # - "动态选择"  # 退市整理股
+  # ========================================
+  # 股票 - 特殊场景
+  # ========================================
+  - ticker: "000710"
+    name: "贝瑞基因"
+    asset_type: "stock"
+    exchange: "XSHE"
+    tags: ["中小盘", "医药", "中流动性", "主板"]
+
+  - ticker: "300736"
+    name: "*ST左江"
+    asset_type: "stock"
+    exchange: "XSHE"
+    tags: ["小盘", "ST", "低流动性", "创业板", "风险场景"]
+
+  # ========================================
+  # ETF - 宽基
+  # ========================================
+  - ticker: "510300"
+    name: "沪深300ETF"
+    asset_type: "etf"
+    exchange: "XSHG"
+    tags: ["宽基", "高流动性", "沪深300"]
+
+  - ticker: "510500"
+    name: "中证500ETF"
+    asset_type: "etf"
+    exchange: "XSHG"
+    tags: ["宽基", "高流动性", "中证500"]
+
+  - ticker: "159915"
+    name: "创业板ETF"
+    asset_type: "etf"
+    exchange: "XSHE"
+    tags: ["宽基", "高流动性", "创业板"]
+
+  - ticker: "588000"
+    name: "科创50ETF"
+    asset_type: "etf"
+    exchange: "XSHG"
+    tags: ["宽基", "高流动性", "科创板"]
+
+  # ========================================
+  # ETF - 行业/跨境
+  # ========================================
+  - ticker: "159928"
+    name: "消费ETF"
+    asset_type: "etf"
+    exchange: "XSHE"
+    tags: ["行业", "消费", "高流动性"]
+
+  - ticker: "512010"
+    name: "医药ETF"
+    asset_type: "etf"
+    exchange: "XSHG"
+    tags: ["行业", "医药", "高流动性"]
+
+  - ticker: "513100"
+    name: "纳指ETF"
+    asset_type: "etf"
+    exchange: "XSHG"
+    tags: ["跨境", "QDII", "纳斯达克", "中流动性"]
+
+  - ticker: "513030"
+    name: "德国ETF"
+    asset_type: "etf"
+    exchange: "XSHG"
+    tags: ["跨境", "QDII", "德国DAX", "低流动性"]
+
+  - ticker: "516010"
+    name: "游戏ETF"
+    asset_type: "etf"
+    exchange: "XSHG"
+    tags: ["行业", "传媒", "低流动性"]
+
+  # ========================================
+  # 指数 - 市场基准
+  # ========================================
+  - ticker: "000001"
+    name: "上证指数"
+    asset_type: "index_market"
+    exchange: "XSHG"
+    tags: ["市场基准", "上证"]
+
+  - ticker: "399001"
+    name: "深证成指"
+    asset_type: "index_market"
+    exchange: "XSHE"
+    tags: ["市场基准", "深证"]
+
+  - ticker: "000300"
+    name: "沪深300"
+    asset_type: "index_market"
+    exchange: "XSHG"
+    tags: ["宽基指数", "大盘"]
+
+  - ticker: "000852"
+    name: "中证1000"
+    asset_type: "index_market"
+    exchange: "XSHG"
+    tags: ["宽基指数", "小盘"]
 
 options:
   enabled: true

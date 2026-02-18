@@ -11,6 +11,7 @@ from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
 from ditto_datahub.sources.tushare.adapters.fundamental import FundamentalTushareAdapter
 from ditto_datahub.sources.tushare.adapters.index import IndexTushareAdapter
+from ditto_datahub.sources.tushare.adapters.industry import IndustryTushareAdapter
 from ditto_datahub.sources.tushare.adapters.macro import MacroTushareAdapter
 from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
 from ditto_datahub.sources.tushare.client import TushareClient
@@ -54,6 +55,7 @@ class TushareSource(DataSource):
         self._stock = StockTushareAdapter(_client=self._client)
         self._etf = ETFTushareAdapter(_client=self._client)
         self._index = IndexTushareAdapter(_client=self._client)
+        self._industry = IndustryTushareAdapter(_client=self._client)
         self._capital = CapitalTushareAdapter(_client=self._client)
         self._fundamental = FundamentalTushareAdapter(_client=self._client)
         self._macro = MacroTushareAdapter(_client=self._client)
@@ -272,12 +274,22 @@ class TushareSource(DataSource):
         """
         return self._index.fetch_basic()
 
-    def fetch_index_daily(self, trade_date: str) -> pl.DataFrame:
+    def fetch_index_daily(
+        self,
+        trade_date: str,
+        ts_codes: list[str] | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch index daily OHLCV bars.
 
+        注意：Tushare index_daily API 要求 ts_code 参数，
+        此方法逐个查询指定指数列表并合并结果。
+
         Args:
             trade_date: Trade date (YYYY-MM-DD).
+            ts_codes: List of ts_codes (e.g., ["000001.SH", "399001.SZ"]).
+                由编排层提供，不在 Source 层硬编码。
+                如果为 None，将抛出 ValueError。
 
         Returns:
             DataFrame with columns (matching INDEX_DAILY_SCHEMA):
@@ -288,39 +300,88 @@ class TushareSource(DataSource):
             - pct_change: Float64
 
         Raises:
+            ValueError: If ts_codes is None or empty.
             SourceFetchError: If fetch fails.
             SourceTransformationError: If data transformation fails.
 
         """
-        return self._index.fetch_daily(trade_date)
+        if not ts_codes:
+            raise ValueError(
+                "ts_codes is required - index codes should be provided by orchestration"
+            )
+        return self._index.fetch_daily(trade_date, ts_codes)
 
-    # Capital/Fundamental 相关方法 - 委托给 CapitalTushareAdapter
+    # Industry 相关方法 - 委托给 IndustryTushareAdapter
+    def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
+        """
+        获取申万行业分类.
+
+        Args:
+            level: 行业级别 (1=一级行业, 2=二级行业).
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: 行业代码 (e.g., "801010.SI")
+            - industry_name: 行业名称
+            - level: 行业级别 (1 or 2)
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        return self._industry.fetch_sw_industry(level)
+
+    # Financial 相关方法 - 使用 VIP API 批量获取（需要 5000+ 积分）
     def fetch_balance_sheet(self, trade_date: str) -> pl.DataFrame:
-        """Fetch balance sheet data for a trade date window."""
+        """
+        Fetch balance sheet data for a trade date.
+
+        使用 VIP API (balancesheet_vip) 按 ann_date 获取全部股票数据。
+        无需指定 ts_code，可批量获取当日公告的所有资产负债表。
+
+        Args:
+            trade_date: 公告日期 (YYYY-MM-DD)
+
+        Returns:
+            当日公告的全部股票资产负债表数据
+
+        """
         compact_date = self._to_compact_date(trade_date)
-        return self._fundamental.fetch_balance_sheet(
-            ts_code=None,
-            start_date=compact_date,
-            end_date=compact_date,
-        )
+        return self._fundamental.fetch_balance_sheet_vip(ann_date=compact_date)
 
     def fetch_income_statement(self, trade_date: str) -> pl.DataFrame:
-        """Fetch income statement data for a trade date window."""
+        """
+        Fetch income statement data for a trade date.
+
+        使用 VIP API (income_vip) 按 ann_date 获取全部股票数据。
+        无需指定 ts_code，可批量获取当日公告的所有利润表。
+
+        Args:
+            trade_date: 公告日期 (YYYY-MM-DD)
+
+        Returns:
+            当日公告的全部股票利润表数据
+
+        """
         compact_date = self._to_compact_date(trade_date)
-        return self._fundamental.fetch_income_statement(
-            ts_code=None,
-            start_date=compact_date,
-            end_date=compact_date,
-        )
+        return self._fundamental.fetch_income_statement_vip(ann_date=compact_date)
 
     def fetch_cash_flow(self, trade_date: str) -> pl.DataFrame:
-        """Fetch cash flow data for a trade date window."""
+        """
+        Fetch cash flow data for a trade date.
+
+        使用 VIP API (cashflow_vip) 按 ann_date 获取全部股票数据。
+        无需指定 ts_code，可批量获取当日公告的所有现金流量表。
+
+        Args:
+            trade_date: 公告日期 (YYYY-MM-DD)
+
+        Returns:
+            当日公告的全部股票现金流量表数据
+
+        """
         compact_date = self._to_compact_date(trade_date)
-        return self._fundamental.fetch_cash_flow(
-            ts_code=None,
-            start_date=compact_date,
-            end_date=compact_date,
-        )
+        return self._fundamental.fetch_cash_flow_vip(ann_date=compact_date)
 
     def fetch_dividend(self, trade_date: str) -> pl.DataFrame:
         """Fetch dividend data."""

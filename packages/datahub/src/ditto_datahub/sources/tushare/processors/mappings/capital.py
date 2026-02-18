@@ -13,6 +13,7 @@ VALUATION_METRICS_MAPPING = ColumnMapping(
         "pe": "pe_ratio",
         "pb": "pb_ratio",
         "ps": "ps_ratio",
+        "dv_ratio": "dividend_yield",
         "total_mv": "market_cap",
     },
     date_columns={"trade_date": "%Y%m%d"},
@@ -35,19 +36,17 @@ DIVIDEND_MAPPING = ColumnMapping(
     rename={
         "ts_code": "instrument_id",
         "ex_date": "ex_dividend_date",
-        "dividend": "dividend_per_share",
+        "cash_div": "dividend_per_share",
+        "ann_date": "knowledge_date",
     },
-    date_columns={"ex_dividend_date": "%Y%m%d"},
-    float_columns=["dividend_per_share", "dividend_yield"],
-    computed_columns={
-        "knowledge_date": pl.col("ex_dividend_date") + pl.duration(days=1)
-    },
+    date_columns={"ex_dividend_date": "%Y%m%d", "knowledge_date": "%Y%m%d"},
+    float_columns=["dividend_per_share"],
+    computed_columns={},
     output_columns=(
         "instrument_id",
         "ex_dividend_date",
         "knowledge_date",
         "dividend_per_share",
-        "dividend_yield",
     ),
 )
 
@@ -55,10 +54,10 @@ DIVIDEND_MAPPING = ColumnMapping(
 MARGIN_TRADING_MAPPING = ColumnMapping(
     rename={
         "ts_code": "instrument_id",
-        "rz_balance": "margin_buy_balance",
-        "rz_vol": "margin_buy_volume",
-        "rq_balance": "short_sell_balance",
-        "rq_vol": "short_sell_volume",
+        "rzye": "margin_buy_balance",
+        "rqye": "short_sell_balance",
+        "rzmre": "margin_buy_volume",
+        "rqmcl": "short_sell_volume",
     },
     date_columns={"trade_date": "%Y%m%d"},
     float_columns=[
@@ -80,20 +79,21 @@ MARGIN_TRADING_MAPPING = ColumnMapping(
 )
 
 # Pledge Ratio - PIT data
-# Note: Tushare pledge API does not return report_date, we'll add it in the method
+# Note: Tushare pledge_stat API returns end_date as report date
 PLEDGE_RATIO_MAPPING = ColumnMapping(
     rename={
         "ts_code": "instrument_id",
-        "pledge_count": "pledge_shares",
+        "end_date": "report_date",
         "total_share": "total_shares",
     },
-    date_columns={},
-    float_columns=["pledge_ratio", "pledge_shares", "total_shares"],
-    computed_columns={},
+    date_columns={"report_date": "%Y%m%d"},
+    float_columns=["pledge_ratio", "total_shares"],
+    computed_columns={"knowledge_date": pl.col("report_date")},
     output_columns=(
         "instrument_id",
+        "report_date",
+        "knowledge_date",
         "pledge_ratio",
-        "pledge_shares",
         "total_shares",
     ),
 )
@@ -190,19 +190,22 @@ BALANCE_SHEET_MAPPING = ColumnMapping(
 )
 
 # Income Statement - PIT data (simplified fields)
+# Note: Tushare API fields are: total_revenue, operate_profit, n_income, basic_eps
 INCOME_STATEMENT_MAPPING = ColumnMapping(
     rename={"ts_code": "instrument_id"},
     date_columns={"end_date": "%Y%m%d", "ann_date": "%Y%m%d"},
     float_columns=[
-        "total_operating_revenue",
-        "operating_profit",
-        "net_profit",
+        "total_revenue",
+        "operate_profit",
+        "n_income",
         "basic_eps",
     ],
     computed_columns={
         "report_date": pl.col("end_date"),
         "knowledge_date": pl.col("ann_date"),
-        "revenue": pl.col("total_operating_revenue"),
+        "revenue": pl.col("total_revenue"),
+        "operating_profit": pl.col("operate_profit"),
+        "net_profit": pl.col("n_income"),
         "eps": pl.col("basic_eps"),
     },
     output_columns=(

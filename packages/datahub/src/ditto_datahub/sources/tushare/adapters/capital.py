@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import date
-
 import polars as pl
 from ditto_infra.foundation import Metrics, logger, traced
 
@@ -80,10 +78,10 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             trade_date=trade_date,
         )
 
-        with tushare_fetch_error_handler("valuation_metrics", "pe_daily"):
+        with tushare_fetch_error_handler("valuation_metrics", "daily_basic"):
             params: dict[str, str] = {
-                "api_name": "pe_daily",
-                "fields": "ts_code,trade_date,pe,pb,ps,dividend_yield,total_mv",
+                "api_name": "daily_basic",
+                "fields": "ts_code,trade_date,pe,pb,ps,dv_ratio,total_mv",
             }
 
             if ts_code:
@@ -162,10 +160,10 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             ex_date=ex_date,
         )
 
-        with tushare_fetch_error_handler("dividend", "div_oper"):
+        with tushare_fetch_error_handler("dividend", "dividend"):
             params: dict[str, str] = {
-                "api_name": "div_oper",
-                "fields": "ts_code,ex_date,dividend,dividend_yield",
+                "api_name": "dividend",
+                "fields": "ts_code,ex_date,cash_div,record_date,ann_date",
             }
 
             if ts_code:
@@ -242,10 +240,10 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             trade_date=trade_date,
         )
 
-        with tushare_fetch_error_handler("margin_trading", "margin"):
+        with tushare_fetch_error_handler("margin_trading", "margin_detail"):
             params: dict[str, str] = {
-                "api_name": "margin",
-                "fields": "ts_code,trade_date,rz_balance,rz_vol,rq_balance,rq_vol",
+                "api_name": "margin_detail",
+                "fields": "ts_code,trade_date,rzye,rqye,rzmre,rqmcl",
             }
 
             if ts_code:
@@ -321,10 +319,10 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             report_date=report_date,
         )
 
-        with tushare_fetch_error_handler("pledge_ratio", "pledge"):
+        with tushare_fetch_error_handler("pledge_ratio", "pledge_stat"):
             params: dict[str, str] = {
-                "api_name": "pledge",
-                "fields": "ts_code,pledge_ratio,pledge_count,total_share",
+                "api_name": "pledge_stat",
+                "fields": "ts_code,end_date,pledge_ratio,total_share",
             }
 
             if ts_code:
@@ -334,14 +332,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
             result = TushareDataTransformer.transform(
                 response, "pledge_ratio", PLEDGE_RATIO_MAPPING
-            )
-
-            # 添加 report_date 和 knowledge_date（使用当前日期）
-            # TODO: 在实际使用中，应该从其他数据源获取正确的 report_date
-            today = date.today()
-            result = result.with_columns(
-                pl.lit(today).alias("report_date"),
-                pl.lit(today).alias("knowledge_date"),
             )
 
             # 添加 PIT 列（使用 report_date 作为 effective_from）
@@ -358,7 +348,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
                 "effective_from",
                 "effective_to",
                 "pledge_ratio",
-                "pledge_shares",
                 "total_shares",
             )
 

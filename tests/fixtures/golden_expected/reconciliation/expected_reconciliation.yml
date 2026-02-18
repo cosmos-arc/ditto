@@ -1,0 +1,158 @@
+# 跨源对账预期结果
+# 用于验证 Tushare 和 TDX 数据源之间的一致性
+# 日期: 2024-06-28
+
+metadata:
+  trade_date: "2024-06-28"
+  description: "黄金数据集跨源对账预期结果"
+  version: "1.0"
+  tolerance:
+    price: 0.0001      # 价格容差 0.01%
+    volume: 0.001      # 成交量容差 0.1%
+    amount: 0.001      # 成交额容差 0.1%
+
+# 股票对账预期
+stocks:
+  - instrument_id: "600519.XSHG"
+    source_ticker: "600519.SH"
+    name: "贵州茅台"
+    expected_close: 1500.00
+    expected_volume: 2500000
+
+  - instrument_id: "600036.XSHG"
+    source_ticker: "600036.SH"
+    name: "招商银行"
+    expected_close: 32.50
+    expected_volume: 85000000
+
+  - instrument_id: "000333.XSHE"
+    source_ticker: "000333.SZ"
+    name: "美的集团"
+    expected_close: 58.20
+    expected_volume: 45000000
+
+  - instrument_id: "600941.XSHG"
+    source_ticker: "600941.SH"
+    name: "中国移动"
+    expected_close: 105.00
+    expected_volume: 15000000
+
+  - instrument_id: "300750.XSHE"
+    source_ticker: "300750.SZ"
+    name: "宁德时代"
+    expected_close: 180.00
+    expected_volume: 25000000
+
+  - instrument_id: "688981.XSHG"
+    source_ticker: "688981.SH"
+    name: "中芯国际"
+    expected_close: 52.00
+    expected_volume: 20000000
+
+  - instrument_id: "000710.XSHE"
+    source_ticker: "000710.SZ"
+    name: "贝瑞基因"
+    expected_close: 8.50
+    expected_volume: 5000000
+
+  - instrument_id: "300736.XSHE"
+    source_ticker: "300736.SZ"
+    name: "*ST左江"
+    expected_close: 12.00
+    expected_volume: 1000000
+    note: "低流动性股票，成交量可能有较大偏差"
+
+# ETF 对账预期
+etfs:
+  - instrument_id: "510300.XSHG"
+    source_ticker: "510300.SH"
+    name: "沪深300ETF"
+    expected_close: 3.850
+    expected_volume: 120000000
+
+  - instrument_id: "510500.XSHG"
+    source_ticker: "510500.SH"
+    name: "中证500ETF"
+    expected_close: 5.200
+    expected_volume: 80000000
+
+  - instrument_id: "159915.XSHE"
+    source_ticker: "159915.SZ"
+    name: "创业板ETF"
+    expected_close: 2.150
+    expected_volume: 50000000
+
+  - instrument_id: "588000.XSHG"
+    source_ticker: "588000.SH"
+    name: "科创50ETF"
+    expected_close: 0.950
+    expected_volume: 60000000
+
+  - instrument_id: "159928.XSHE"
+    source_ticker: "159928.SZ"
+    name: "消费ETF"
+    expected_close: 3.200
+    expected_volume: 25000000
+
+  - instrument_id: "512010.XSHG"
+    source_ticker: "512010.SH"
+    name: "医药ETF"
+    expected_close: 2.800
+    expected_volume: 30000000
+
+  - instrument_id: "513100.XSHG"
+    source_ticker: "513100.SH"
+    name: "纳指ETF"
+    expected_close: 1.250
+    expected_volume: 15000000
+
+  - instrument_id: "513030.XSHG"
+    source_ticker: "513030.SH"
+    name: "德国ETF"
+    expected_close: 1.100
+    expected_volume: 5000000
+    note: "低流动性 ETF"
+
+  - instrument_id: "516010.XSHG"
+    source_ticker: "516010.SH"
+    name: "游戏ETF"
+    expected_close: 0.850
+    expected_volume: 10000000
+
+# 指数对账预期
+indices:
+  - instrument_id: "000001.XSHG"
+    source_ticker: "000001.SH"
+    name: "上证指数"
+    expected_close: 2967.40
+    note: "指数无成交量"
+
+  - instrument_id: "399001.XSHE"
+    source_ticker: "399001.SZ"
+    name: "深证成指"
+    expected_close: 8865.00
+    note: "指数无成交量"
+
+  - instrument_id: "000300.XSHG"
+    source_ticker: "000300.SH"
+    name: "沪深300"
+    expected_close: 3450.00
+    note: "指数无成交量"
+
+  - instrument_id: "000852.XSHG"
+    source_ticker: "000852.SH"
+    name: "中证1000"
+    expected_close: 5120.00
+    note: "指数无成交量"
+
+# 已知差异说明
+known_issues:
+  - ticker: "300736"
+    field: "volume"
+    reason: "ST股票流动性低，数据源可能存在差异"
+    max_deviation: 0.002
+
+  - ticker: "513030"
+    field: "volume"
+    reason: "跨境ETF交易量低，统计口径可能不同"
+    max_deviation: 0.002

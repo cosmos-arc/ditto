@@ -32,7 +32,11 @@ class TestIngestionDataSourceProtocol:
             def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
-            def fetch_index_daily(self, trade_date: str) -> pl.DataFrame:
+            def fetch_index_daily(
+                self,
+                trade_date: str,
+                ts_codes: list[str] | None = None,
+            ) -> pl.DataFrame:
                 return pl.DataFrame()
 
             def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:

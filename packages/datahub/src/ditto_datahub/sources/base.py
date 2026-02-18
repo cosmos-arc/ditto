@@ -263,12 +263,18 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
-    def fetch_index_daily(self, trade_date: str) -> pl.DataFrame:
+    def fetch_index_daily(
+        self,
+        trade_date: str,
+        ts_codes: list[str] | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch index daily OHLCV bars.
 
         Args:
             trade_date: Trade date (YYYY-MM-DD).
+            ts_codes: List of ts_codes (e.g., ["000001.SH", "399001.SZ"]).
+                由编排层提供。如果为 None，实现类应提供合理的默认值。
 
         Returns:
             DataFrame with columns (matching INDEX_DAILY_SCHEMA):
@@ -554,6 +560,26 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with corporate_actions SourceSchema fields.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
+        """
+        获取申万行业分类.
+
+        Args:
+            level: 行业级别 (1=一级行业, 2=二级行业).
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: 行业代码 (e.g., "801010.SI")
+            - industry_name: 行业名称
+            - level: 行业级别 (1 or 2)
 
         Raises:
             SourceFetchError: If fetch fails.
