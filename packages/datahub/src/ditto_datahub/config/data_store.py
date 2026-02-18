@@ -53,6 +53,11 @@ class DataStoreSettings(BaseModel):
     sqlite_path: Path | None = Field(default=None, description="SQLite 路径覆盖")
     duckdb_path: Path | None = Field(default=None, description="DuckDB 路径覆盖")
 
+    # ========== 其他路径覆盖 (Docker 部署用) ==========
+    logs_path_override: Path | None = Field(
+        default=None, description="日志路径覆盖 (Docker 部署用)"
+    )
+
     # ========== 引擎配置 ==========
     sql_engine: SqlEngineConfig = Field(
         default_factory=SqlEngineConfig,
@@ -219,8 +224,8 @@ class DataStoreSettings(BaseModel):
 
     @property
     def logs_path(self) -> Path:
-        """日志存储路径。"""
-        return self.data_root / "logs"
+        """日志存储路径（支持覆盖）。"""
+        return self.logs_path_override or self.data_root / "logs"
 
     @property
     def backups_path(self) -> Path:
