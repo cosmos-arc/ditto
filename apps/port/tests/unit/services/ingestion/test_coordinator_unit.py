@@ -1442,7 +1442,11 @@ class TestIndexDatasetSupport:
         # Assert
         assert isinstance(result, pl.DataFrame)
         assert len(result) == 1
-        mock_source.fetch_index_daily.assert_called_once_with("2024-01-02")
+        # 验证调用包含 trade_date 和 ts_codes 参数
+        mock_source.fetch_index_daily.assert_called_once()
+        call_args = mock_source.fetch_index_daily.call_args
+        assert call_args[0][0] == "2024-01-02"  # 第一个位置参数是 trade_date
+        assert "ts_codes" in call_args.kwargs  # ts_codes 作为关键字参数传递
 
     def test_index_daily_skips_on_non_trading_day(
         self,
@@ -1510,7 +1514,11 @@ class TestIndexDatasetSupport:
 
         # Assert
         assert result.status == "success"
-        mock_source.fetch_index_daily.assert_called_once_with("2024-01-02")
+        # 验证调用包含 trade_date 和 ts_codes 参数
+        mock_source.fetch_index_daily.assert_called_once()
+        call_args = mock_source.fetch_index_daily.call_args
+        assert call_args[0][0] == "2024-01-02"  # 第一个位置参数是 trade_date
+        assert "ts_codes" in call_args.kwargs  # ts_codes 作为关键字参数传递
         mock_market_service.save_bars.assert_called_once()
 
     def test_ingest_date_success_index_basic(

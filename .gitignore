@@ -120,6 +120,10 @@ tmpclaude-*-cwd
 config.local.py
 local.settings.json
 
+# Docker 部署环境变量(敏感信息)
+.env.local
+deploy/docker/.env.local
+
 # ===================================================================
 #                    操作系统 (Operating Systems)
 # ===================================================================

@@ -1,0 +1,89 @@
+# ═══════════════════════════════════════════════════════════════════════
+# Ditto Application Stack
+# ═══════════════════════════════════════════════════════════════════════
+#
+# 启动: docker compose up -d
+# 查看: docker compose logs -f
+# 停止: docker compose down
+
+services:
+  # ───────────────────────────────────────────────────────────────────
+  # API 服务
+  # ───────────────────────────────────────────────────────────────────
+  ditto-api:
+    image: ditto:${DITTO_VERSION:-latest}
+    container_name: ditto-api
+    restart: unless-stopped
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DITTO_DATA_DIR=/app/data
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - LOG_DIR=/app/logs
+      - TUSHARE_TOKEN=${TUSHARE_TOKEN}
+      - PREFECT_API_URL=http://ditto-job:4200/api
+    volumes:
+      - ${DITTO_DATA_PATH:-/opt/ditto/data}:/app/data
+      - ${DITTO_LOGS_PATH:-/opt/ditto/logs}/api:/app/logs
+    networks:
+      - ditto-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 服务 (Prefect Server + Worker)
+  # ───────────────────────────────────────────────────────────────────
+  ditto-job:
+    image: ditto:${DITTO_VERSION:-latest}
+    container_name: ditto-job
+    restart: unless-stopped
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    ports:
+      - "4200:4200"
+    environment:
+      - DITTO_DATA_DIR=/app/data
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - LOG_DIR=/app/logs
+      - TUSHARE_TOKEN=${TUSHARE_TOKEN}
+      - PREFECT_HOME=/app/prefect
+      - PREFECT_API_DATABASE_CONNECTION_URL=sqlite+aiosqlite:////app/prefect/prefect.db
+    volumes:
+      - ${DITTO_DATA_PATH:-/opt/ditto/data}:/app/data
+      - ${DITTO_LOGS_PATH:-/opt/ditto/logs}/job:/app/logs
+      - ${PREFECT_DATA_PATH:-/opt/ditto/prefect}:/app/prefect
+    networks:
+      - ditto-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    command: >
+      sh -c "pixi run prefect server start --host 0.0.0.0 &
+             for i in $(seq 1 30); do
+               python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health')\" 2>/dev/null && break
+               sleep 1
+             done &&
+             pixi run prefect worker start --pool default"
+
+networks:
+  ditto-network:
+    driver: bridge

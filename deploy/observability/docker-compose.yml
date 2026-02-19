@@ -50,7 +50,7 @@ services:
       - "/etc/vector/vector.toml"
     volumes:
       - ./vector.toml:/etc/vector/vector.toml:ro
-      - ../../logs:/logs:ro
+      - ${DITTO_LOGS_PATH:-/opt/ditto/logs}:/logs:ro
     depends_on:
       - victorialogs
     restart: unless-stopped

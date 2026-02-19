@@ -3,19 +3,49 @@
 
 # ============ 数据源 ============
 
-[sources.ditto_logs]
+# API 日志源
+[sources.api_logs]
+type = "file"
+include = ["/logs/api/*.jsonl", "/logs/api/*.json"]
+read_from = "end"
+
+# Job 日志源
+[sources.job_logs]
+type = "file"
+include = ["/logs/job/*.jsonl", "/logs/job/*.json"]
+read_from = "end"
+
+# 兼容旧格式(单一日志目录)
+[sources.legacy_logs]
 type = "file"
 include = ["/logs/ditto*.jsonl"]
 read_from = "end"
 
 # ============ 数据转换 ============
 
-# 日志文件已经是 JSON 格式，直接解析整行
-[transforms.parse_json]
+# API 日志转换
+[transforms.api_logs_transform]
 type = "remap"
-inputs = ["ditto_logs"]
+inputs = ["api_logs"]
 source = '''
-# 将整行作为 JSON 解析
+. = parse_json!(.message)
+.source = "ditto-api"
+'''
+
+# Job 日志转换
+[transforms.job_logs_transform]
+type = "remap"
+inputs = ["job_logs"]
+source = '''
+. = parse_json!(.message)
+.source = "ditto-job"
+'''
+
+# 兼容旧格式转换
+[transforms.legacy_logs_transform]
+type = "remap"
+inputs = ["legacy_logs"]
+source = '''
 . = parse_json!(.message)
 '''
 
@@ -23,8 +53,8 @@ source = '''
 
 [sinks.victorialogs]
 type = "http"
-inputs = ["parse_json"]
-uri = "http://victorialogs:9428/insert/jsonline?_stream_fields=service"
+inputs = ["api_logs_transform", "job_logs_transform", "legacy_logs_transform"]
+uri = "http://victorialogs:9428/insert/jsonline?_stream_fields=source"
 encoding.codec = "json"
 framing.method = "newline_delimited"
 batch.max_events = 100

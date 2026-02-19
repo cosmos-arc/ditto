@@ -126,6 +126,7 @@ types-python-dateutil = ">=2.9,<3"
 # 开发工具
 ipykernel = ">=6.29,<7"
 jupyter = ">=1.1,<2"
+"keyrings.alt" = ">=5.0.2,<6"
 
 [feature.dev.pypi-dependencies]
 # BasedPyright 类型检查（Pyright fork，更严格的默认设置）
@@ -195,7 +196,13 @@ test-fast = "python scripts/test.py --fast"
 check = { depends-on = ["lint", "fmt", "type", "test-fast", "arch-check"] }
 
 # CI：完整检查（CI 用）
-ci = { depends-on = ["lint", "fmt-check", "type-all", "test-cov-xml", "arch-check"] }
+ci = { depends-on = [
+    "lint",
+    "fmt-check",
+    "type-all",
+    "test-cov-xml",
+    "arch-check",
+] }
 
 # ──────────────────────────────────────────────────────────
 # 辅助命令

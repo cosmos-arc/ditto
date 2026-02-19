@@ -24,6 +24,7 @@ from ditto_infra.foundation import logger
 from ditto_port.models import IngestionResult
 from ditto_port.services.ingestion.data_writer import IngestionDataWriter
 from ditto_port.services.ingestion.errors import SourceFetchError
+from ditto_port.services.ingestion.index_config import get_all_index_codes
 from ditto_port.services.ingestion.metadata import MetadataManager
 from ditto_port.services.ingestion.protocols import IngestionDataSource
 from ditto_port.services.ingestion.result_handler import IngestionResultHandler
@@ -64,6 +65,8 @@ class IngestionCoordinator:
             macro_service=macro_service,
             source_name=source_name,
         )
+        # 缓存指数代码，避免每次摄取都调用 API
+        self._index_codes_cache: list[str] | None = None
 
     @staticmethod
     def _is_source_fetch_error(error: Exception) -> bool:
@@ -77,6 +80,25 @@ class IngestionCoordinator:
         """Normalize external fetch error into port-level SourceFetchError."""
         source_name = getattr(error, "source", type(error).__name__)
         return SourceFetchError(message=str(error), source=str(source_name))
+
+    def _get_cached_index_codes(self) -> list[str]:
+        """
+        获取缓存的指数代码列表.
+
+        首次调用时从 API 获取并缓存，后续调用直接返回缓存值。
+        SW 行业指数代码不常变化，缓存可以避免每次摄取都调用 API。
+
+        Returns:
+            指数代码列表（包含市场指数、风格指数和 SW 行业指数）
+
+        """
+        if self._index_codes_cache is None:
+            logger.debug("Caching index codes from API on first access")
+            self._index_codes_cache = get_all_index_codes(
+                self._source, include_sw_levels=[1, 2]
+            )
+            logger.debug(f"已缓存 {len(self._index_codes_cache)} 个指数代码")
+        return self._index_codes_cache
 
     def ingest_date(
         self,
@@ -313,7 +335,10 @@ class IngestionCoordinator:
                 trade_date
             ),
             Dataset.INDEX_BASIC: lambda: self._source.fetch_index_basic(),
-            Dataset.INDEX_DAILY: lambda: self._source.fetch_index_daily(trade_date),
+            Dataset.INDEX_DAILY: lambda: self._source.fetch_index_daily(
+                trade_date,
+                ts_codes=self._get_cached_index_codes(),
+            ),
         }
 
         if dataset_enum not in handlers:

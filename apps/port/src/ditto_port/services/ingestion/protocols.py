@@ -34,7 +34,11 @@ class IngestionDataSource(Protocol):
         """Fetch ETF daily data."""
         ...
 
-    def fetch_index_daily(self, trade_date: str) -> pl.DataFrame:
+    def fetch_index_daily(
+        self,
+        trade_date: str,
+        ts_codes: list[str] | None = None,
+    ) -> pl.DataFrame:
         """Fetch index daily data."""
         ...
 
@@ -88,4 +92,8 @@ class IngestionDataSource(Protocol):
 
     def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
         """Fetch corporate actions data."""
+        ...
+
+    def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
+        """Fetch SW industry classification."""
         ...

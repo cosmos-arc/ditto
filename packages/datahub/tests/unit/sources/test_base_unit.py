@@ -225,7 +225,14 @@ class TestDataSourceABC:
             def fetch_index_basic(self) -> pl.DataFrame:
                 return pl.DataFrame()
 
-            def fetch_index_daily(self, trade_date: str) -> pl.DataFrame:
+            def fetch_index_daily(
+                self,
+                trade_date: str,
+                ts_codes: list[str] | None = None,
+            ) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
                 return pl.DataFrame()
 
         # Should not raise

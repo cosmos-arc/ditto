@@ -13,7 +13,7 @@ class TestCapitalTushareAdapterFetchValuationMetrics:
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching valuation metrics returns valid DataFrame."""
-        # Arrange - Mock Tushare API response
+        # Arrange - Mock Tushare API response (using actual API field names)
         mock_response = pl.DataFrame(
             {
                 "ts_code": ["000001.SZ"],
@@ -21,7 +21,7 @@ class TestCapitalTushareAdapterFetchValuationMetrics:
                 "pe": [10.5],
                 "pb": [1.2],
                 "ps": [2.3],
-                "dividend_yield": [0.03],
+                "dv_ratio": [0.03],  # API returns dv_ratio, not dividend_yield
                 "total_mv": [1000000000.0],
             }
         )
@@ -72,13 +72,14 @@ class TestCapitalTushareAdapterFetchDividend:
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching dividend data returns valid DataFrame."""
-        # Arrange
+        # Arrange - Mock Tushare API response (using actual API field names)
         mock_response = pl.DataFrame(
             {
                 "ts_code": ["000001.SZ"],
                 "ex_date": ["20240101"],
-                "dividend": [0.5],
-                "dividend_yield": [0.03],
+                "cash_div": [0.5],  # API returns cash_div
+                "record_date": ["20240102"],
+                "ann_date": ["20240101"],
             }
         )
 
@@ -104,15 +105,15 @@ class TestCapitalTushareAdapterFetchMarginTrading:
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching margin trading data returns valid DataFrame."""
-        # Arrange
+        # Arrange - Mock Tushare API response (using actual API field names)
         mock_response = pl.DataFrame(
             {
                 "ts_code": ["000001.SZ"],
                 "trade_date": ["20240101"],
-                "rz_balance": [100000.0],
-                "rz_vol": [1000.0],
-                "rq_balance": [50000.0],
-                "rq_vol": [500.0],
+                "rzye": [100000.0],  # 融资余额
+                "rzmre": [1000.0],  # 融资买入量
+                "rqye": [50000.0],  # 融券余额
+                "rqmcl": [500.0],  # 融券卖出量
             }
         )
 
@@ -138,12 +139,12 @@ class TestCapitalTushareAdapterFetchPledgeRatio:
         mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test fetching pledge ratio data returns valid DataFrame."""
-        # Arrange
+        # Arrange - Mock Tushare API response (using actual API field names)
         mock_response = pl.DataFrame(
             {
                 "ts_code": ["000001.SZ"],
+                "end_date": ["20240101"],  # Required for date conversion
                 "pledge_ratio": [5.5],
-                "pledge_count": [1000000.0],
                 "total_share": [10000000.0],
             }
         )
@@ -159,7 +160,7 @@ class TestCapitalTushareAdapterFetchPledgeRatio:
         assert len(result) > 0
         assert "instrument_id" in result.columns
         assert "pledge_ratio" in result.columns
-        assert "pledge_shares" in result.columns
+        assert "total_shares" in result.columns
 
 
 class TestCapitalTushareAdapterFetchFutures:

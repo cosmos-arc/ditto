@@ -132,6 +132,7 @@ unfixable = []
 
 # 脚本文件
 "scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN"]
+"tests/scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN", "RUF001", "PLR0912", "PLR0915", "E501"]
 "**/cli.py" = ["T201"]
 "**/cli/*.py" = ["T201"]
 "**/main.py" = ["T201"]
@@ -141,6 +142,14 @@ unfixable = []
 
 # provider.py - 延迟导入避免循环依赖
 "**/sources/provider.py" = ["PLC0415"]
+
+# 中文 description 中使用全角标点
+"packages/core/src/ditto_core/quality/golden.py" = ["RUF001"]
+"packages/datahub/src/ditto_datahub/sources/tushare/adapters/index.py" = ["RUF001"]
+"packages/datahub/src/ditto_datahub/sources/tushare/adapters/fundamental.py" = ["RUF001"]
+
+# E2E 测试
+"tests/e2e/*.py" = ["S101", "PLR2004", "D", "ANN", "E501"]
 
 # --- Ruff Formatter (格式化器) 配置 ---
 [tool.ruff.format]
@@ -277,9 +286,11 @@ filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]
 markers = [
     "unit: Mark test as a unit test",
     "integration: Mark test as an integration test",
+    "e2e: Mark test as an end-to-end test",
     "slow: Mark test as slow running (skip with -m 'not slow')",
     "serial: Mark test that must run serially",
     "snapshot: Mark test that uses inline-snapshot (must run serially)",
+    "pit: Mark test as Point-in-Time validation (no future data leak)",
 ]
 
 log_cli = true

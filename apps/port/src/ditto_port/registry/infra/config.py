@@ -117,6 +117,9 @@ class ConfigProvider(Provider):
             values["sqlite_path"] = override
         if override := os.getenv("DUCKDB_PATH"):
             values["duckdb_path"] = override
+        # 支持 LOG_DIR 环境变量（Docker 部署用）
+        if override := os.getenv("LOG_DIR"):
+            values["logs_path_override"] = override
 
         return DataStoreSettings.model_validate(values)
 
