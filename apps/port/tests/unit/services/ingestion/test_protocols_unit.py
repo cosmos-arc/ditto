@@ -78,6 +78,9 @@ class TestIngestionDataSourceProtocol:
             def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
-        source: IngestionDataSource = MockSource()  # type: ignore
+            def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
+                return pl.DataFrame()
+
+        source: IngestionDataSource = MockSource()
         assert callable(source.fetch_index_basic)
         assert callable(source.fetch_index_daily)

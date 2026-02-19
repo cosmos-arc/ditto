@@ -11,7 +11,7 @@ from collections.abc import Mapping
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -95,61 +95,67 @@ class GoldenDatasetSpec(BaseModel):
     )
     options: GoldenDatasetOptions = Field(default_factory=GoldenDatasetOptions)
 
-    @field_validator("tickers", mode="before")
+    @staticmethod
+    def _parse_tickers_list(
+        items: list[Any],
+    ) -> tuple[set[str], list[TickerSpec]]:
+        """解析 tickers 列表，返回 (ticker_set, specs)。"""
+        tickers_set: set[str] = set()
+        specs: list[TickerSpec] = []
+
+        for item in items:
+            if isinstance(item, str):
+                ticker = item.strip()
+                if ticker:
+                    tickers_set.add(ticker)
+            elif isinstance(item, Mapping):
+                item_dict: dict[str, Any] = dict(item)  # type: ignore[arg-type]
+                ticker_val: Any = item_dict.get("ticker", "")
+                if ticker_val and isinstance(ticker_val, str):
+                    tickers_set.add(ticker_val.strip())
+                    try:
+                        specs.append(TickerSpec(**item_dict))
+                    except Exception:
+                        logger.debug("忽略无效的 TickerSpec: %s", repr(item))  # type: ignore[reportUnknownArgumentType]
+
+        return tickers_set, specs
+
+    @model_validator(mode="before")
     @classmethod
-    def validate_tickers(cls, v: Any) -> list[str]:
+    def parse_tickers_data(cls, data: Any) -> Any:
         """
-        验证并处理 tickers 列表。
+        从 tickers 字段同时解析 ticker 字符串和 TickerSpec 对象。
 
         支持两种格式：
         - 简单字符串：["600519", "300750"]
         - 完整对象：[{ticker: "600519", name: "贵州茅台", asset_type: "stock"}]
-
-        对于完整对象格式，仅提取 ticker 字段到 tickers 列表。
-        完整数据通过 ticker_specs 字段访问。
         """
-        if not v:
-            return []
-        if not isinstance(v, list):
-            raise ValueError(f"tickers must be a list, got {type(v).__name__}: {v!r}")
+        if not isinstance(data, dict):
+            return data
 
-        tickers: set[str] = set()
-        items: list[Any] = v  # type: ignore[assignment]
+        data_dict: dict[str, Any] = data  # type: ignore[assignment]
+        tickers_raw: Any = data_dict.get("tickers", [])
 
-        for item in items:
-            if isinstance(item, str):
-                # 简单字符串格式
-                ticker = item.strip()
-                if ticker:
-                    tickers.add(ticker)
-            elif isinstance(item, Mapping):
-                # 完整对象格式
-                item_dict: dict[str, Any] = dict(item)  # type: ignore[arg-type]
-                ticker_value: Any = item_dict.get("ticker", "")
-                if ticker_value and isinstance(ticker_value, str):
-                    tickers.add(ticker_value.strip())
+        # 处理 None：转换为空列表
+        if tickers_raw is None:
+            data_dict["tickers"] = []
+            return data_dict
 
-        return sorted(tickers)
+        # 处理非列表类型
+        if not isinstance(tickers_raw, list):
+            return data_dict
 
-    @field_validator("ticker_specs", mode="before")
-    @classmethod
-    def parse_ticker_specs(cls, v: Any) -> list[TickerSpec]:
-        """从 tickers 字段解析完整的 TickerSpec 列表。"""
-        if not isinstance(v, list):
-            return []
+        # 解析 tickers 列表
+        items_list: list[Any] = tickers_raw  # type: ignore[assignment]
+        tickers_set, specs = cls._parse_tickers_list(items_list)
 
-        specs: list[TickerSpec] = []
-        items: list[Any] = v  # type: ignore[assignment]
-        for item in items:
-            if isinstance(item, Mapping) and "ticker" in item:
-                try:
-                    # 转换为 dict 以兼容 Pydantic
-                    spec_dict: dict[str, Any] = dict(item)  # type: ignore[assignment]
-                    specs.append(TickerSpec(**spec_dict))
-                except Exception:
-                    logger.debug("忽略无效的 TickerSpec: %s", repr(item))  # type: ignore[reportUnknownArgumentType]
+        # 更新数据
+        data_dict["tickers"] = sorted(tickers_set)
+        # 如果没有已存在的 specs，则使用解析出的 specs
+        if specs and not data_dict.get("ticker_specs"):
+            data_dict["ticker_specs"] = specs
 
-        return specs
+        return data_dict
 
     @property
     def is_enabled(self) -> bool:

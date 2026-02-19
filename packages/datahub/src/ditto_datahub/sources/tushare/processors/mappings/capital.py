@@ -32,6 +32,9 @@ VALUATION_METRICS_MAPPING = ColumnMapping(
 )
 
 # Dividend - PIT data
+# Note: dividend_yield is not available from Tushare dividend API.
+# It's computed from valuation_metrics dv_ratio field separately.
+# We include it as null to satisfy the schema contract.
 DIVIDEND_MAPPING = ColumnMapping(
     rename={
         "ts_code": "instrument_id",
@@ -41,12 +44,15 @@ DIVIDEND_MAPPING = ColumnMapping(
     },
     date_columns={"ex_dividend_date": "%Y%m%d", "knowledge_date": "%Y%m%d"},
     float_columns=["dividend_per_share"],
-    computed_columns={},
+    computed_columns={
+        "dividend_yield": pl.lit(None, dtype=pl.Float64),
+    },
     output_columns=(
         "instrument_id",
         "ex_dividend_date",
         "knowledge_date",
         "dividend_per_share",
+        "dividend_yield",
     ),
 )
 

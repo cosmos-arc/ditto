@@ -29,8 +29,9 @@ ENV DITTO_DATA_DIR=/app/data \
     PYTHONUNBUFFERED=1
 
 # 健康检查（默认为 API）
+# Note: Use Python instead of curl since base image may not include curl
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/healthz || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')" || exit 1
 
 # 默认入口（API 服务）
 CMD ["pixi", "run", "server"]

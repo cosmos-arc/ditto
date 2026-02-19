@@ -31,7 +31,7 @@ services:
     networks:
       - ditto-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -67,7 +67,7 @@ services:
     networks:
       - ditto-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4200/api/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health')"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -78,7 +78,10 @@ services:
           memory: 2G
     command: >
       sh -c "pixi run prefect server start --host 0.0.0.0 &
-             sleep 5 &&
+             for i in $(seq 1 30); do
+               python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health')\" 2>/dev/null && break
+               sleep 1
+             done &&
              pixi run prefect worker start --pool default"
 
 networks:
