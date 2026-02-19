@@ -53,7 +53,41 @@ class InstrumentIngestParams:
     end_date: str = ""    # YYYY-MM-DD
 ```
 
-### 2.2 MetadataService 扩展
+### 2.2 数据集 → 资产类型映射
+
+```python
+# apps/port/src/ditto_port/services/ingestion/dataset_mapping.py
+DATASET_ASSET_CLASS_MAP: dict[str, str] = {
+    # Stock
+    "stock_daily": "stock",
+    "adj_factor": "stock",
+    "stock_status": "stock",
+    "stock_limit": "stock",
+    "valuation_metrics": "stock",
+    "balance_sheet": "stock",
+    "income_statement": "stock",
+    "cash_flow": "stock",
+    "dividend": "stock",
+    "margin_trading": "stock",
+    "pledge_ratio": "stock",
+
+    # ETF
+    "etf_daily": "etf",
+    "fund_adj": "etf",
+
+    # Index
+    "index_daily": "index",
+}
+
+
+def infer_asset_class(dataset: str) -> str:
+    """从数据集名称推断资产类型."""
+    if dataset not in DATASET_ASSET_CLASS_MAP:
+        raise ValueError(f"未知数据集: {dataset}")
+    return DATASET_ASSET_CLASS_MAP[dataset]
+```
+
+### 2.3 MetadataService 扩展
 
 ```python
 # packages/datahub/src/ditto_datahub/services/metadata_service.py
@@ -67,6 +101,7 @@ class MetadataService:
         ticker: str | None = None,
         standard_ticker: str | None = None,
         instrument_id: int | None = None,
+        asset_class: str = "stock",  # 资产类型: stock | etf | index
         source: str = "tushare",
     ) -> str:
         """
@@ -78,6 +113,7 @@ class MetadataService:
             ticker: 裸代码（如 "000001"）
             standard_ticker: Ditto 标准格式（如 "000001.XSHE"）
             instrument_id: 内部 ID（如 1000001）
+            asset_class: 资产类型（stock | etf | index）
             source: 数据源名称（如 "tushare"）
 
         Returns:
@@ -98,6 +134,8 @@ class MetadataService:
 
 ```python
 # apps/port/src/ditto_port/services/ingestion/coordinator.py
+from ditto_port.services.ingestion.dataset_mapping import infer_asset_class
+
 class IngestionCoordinator:
     def ingest_by_instrument(
         self,
@@ -113,22 +151,46 @@ class IngestionCoordinator:
             params: 摄取参数 (instrument_id/standard_ticker/ticker, start_date, end_date)
             force: 是否强制覆盖已有数据
         """
-        # 1. 解析标识符
+        # 1. 从数据集推断资产类型
+        asset_class = infer_asset_class(dataset)
+
+        # 2. 解析标识符
         source_ticker = self._metadata_service.resolve_source_ticker(
             ticker=params.ticker,
             standard_ticker=params.standard_ticker,
             instrument_id=params.instrument_id,
+            asset_class=asset_class,
             source=self._source_name,
         )
 
-        # 2. 获取数据（DataSource 层继续使用 source_ticker）
-        df = self._source.fetch_stock_daily(
-            source_ticker=source_ticker,
-            start_date=params.start_date,
-            end_date=params.end_date,
-        )
+        # 3. 根据数据集调用对应的 fetch 方法
+        df = self._fetch_by_dataset(dataset, source_ticker, params.start_date, params.end_date)
 
         # ... 后续处理
+
+    def _fetch_by_dataset(
+        self,
+        dataset: str,
+        source_ticker: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """根据数据集类型调用对应的 fetch 方法."""
+        if dataset == "stock_daily":
+            return self._source.fetch_stock_daily(
+                source_ticker=source_ticker,
+                start_date=start_date,
+                end_date=end_date,
+            )
+        elif dataset == "etf_daily":
+            return self._source.fetch_etf_daily_by_ticker(
+                source_ticker=source_ticker,
+                start_date=start_date,
+                end_date=end_date,
+            )
+        # ... 其他数据集
+        else:
+            raise ValueError(f"不支持按标的摄取的数据集: {dataset}")
 ```
 
 ---
@@ -247,8 +309,10 @@ async def get_source_data(
 ## 7. 验收标准
 
 - [ ] `InstrumentIngestParams` 支持 `ticker`/`standard_ticker`/`instrument_id`
-- [ ] `MetadataService.resolve_source_ticker()` 可用
-- [ ] `Coordinator.ingest_by_instrument()` 正确转换标识符
+- [ ] `DATASET_ASSET_CLASS_MAP` 映射表覆盖所有支持的数据集
+- [ ] `infer_asset_class()` 函数可用
+- [ ] `MetadataService.resolve_source_ticker()` 支持 `asset_class` 参数
+- [ ] `Coordinator.ingest_by_instrument()` 正确推断资产类型并转换标识符
 - [ ] REST API 路径为 `/api/source/{source}/{dataset}`
 - [ ] 所有测试通过
 - [ ] 类型检查通过
