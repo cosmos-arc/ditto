@@ -9,6 +9,7 @@ from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.source_service import SourceService
+from ditto_datahub.sources import ExchangeTransformers
 
 from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
@@ -30,5 +31,6 @@ class IngestionBundle:
     macro_service: MacroService
     source_service: SourceService
     ingestion_log_service: IngestionLogService
+    exchange_transformers: ExchangeTransformers
     coordinator: IngestionCoordinator
     backfill_manager: BackfillManager

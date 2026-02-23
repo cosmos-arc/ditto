@@ -7,6 +7,7 @@ from typing import Any
 from dishka import Provider, Scope, provide
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.services.metadata_service import MetadataService
+from ditto_datahub.sources import ExchangeTransformers
 from ditto_datahub.stores.metadata.calendar import CalendarReader, CalendarWriter
 from ditto_datahub.stores.metadata.industry import (
     IndustryMappingReader,
@@ -154,6 +155,7 @@ class MetadataProvider(Provider):
         universe_reader: UniverseReader,
         universe_writer: UniverseWriter,
         instrument_id_allocator: InstrumentIdAllocator,
+        exchange_transformers: ExchangeTransformers,
     ) -> MetadataService:
         """Metadata 查询服务（CQRS Reader/Writer）。"""
         return MetadataService(
@@ -168,4 +170,5 @@ class MetadataProvider(Provider):
             universe_reader=universe_reader,
             universe_writer=universe_writer,
             instrument_id_allocator=instrument_id_allocator,
+            exchange_transformers=exchange_transformers,
         )

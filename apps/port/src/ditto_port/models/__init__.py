@@ -52,6 +52,7 @@ from ditto_port.models.fundamental import (
 from ditto_port.models.ingestion import (
     BackfillResult,
     IngestionResult,
+    InstrumentIngestParams,
     ResultCounts,
     RetryResult,
 )
@@ -102,6 +103,7 @@ __all__ = [
     "IndicatorQuery",
     "IngestionResult",
     "Instrument",
+    "InstrumentIngestParams",
     "InstrumentQuery",
     "MacroCategory",
     "MacroFrequency",

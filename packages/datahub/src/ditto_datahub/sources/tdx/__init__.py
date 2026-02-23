@@ -2,5 +2,6 @@
 
 from ditto_datahub.sources.tdx.reader import TdxReader
 from ditto_datahub.sources.tdx.source import TdxSource
+from ditto_datahub.sources.tdx.transformer import TdxExchangeTransformer
 
-__all__ = ["TdxReader", "TdxSource"]
+__all__ = ["TdxExchangeTransformer", "TdxReader", "TdxSource"]

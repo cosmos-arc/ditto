@@ -59,6 +59,77 @@ class InstrumentIdNotFoundError(IdentifierError):
         super().__init__(message, details if details else None)
 
 
+class IdentifierNotFoundError(IdentifierError):
+    """
+    标识符未找到异常.
+
+    当 ticker、standard_ticker 或 instrument_id 在系统中不存在时抛出.
+    """
+
+    def __init__(
+        self,
+        identifier: str,
+        identifier_type: str,
+        message: str | None = None,
+    ) -> None:
+        """
+        初始化 IdentifierNotFoundError.
+
+        Args:
+            identifier: 标识符值
+            identifier_type: 标识符类型（ticker, standard_ticker, instrument_id）
+            message: 自定义错误消息
+
+        """
+        self.identifier = identifier
+        self.identifier_type = identifier_type
+        if message is None:
+            message = f"未找到 {identifier_type}: '{identifier}'"
+        details: dict[str, object] = {
+            "identifier": identifier,
+            "identifier_type": identifier_type,
+        }
+        super().__init__(message, details)
+
+
+class AmbiguousTickerError(IdentifierError):
+    """
+    Ticker 不唯一异常.
+
+    当裸代码（如 "000001"）匹配多个标的时抛出.
+    """
+
+    def __init__(
+        self,
+        ticker: str,
+        matches: list[dict[str, object]],
+    ) -> None:
+        """
+        初始化 AmbiguousTickerError.
+
+        Args:
+            ticker: 裸代码
+            matches: 匹配项列表，每项包含 source_ticker, instrument_id, name
+
+        """
+        self.ticker = ticker
+        self.matches = matches
+
+        def format_match(m: dict[str, object]) -> str:
+            return (
+                f"{m.get('source_ticker', '')} (ID: {m.get('instrument_id', '')}, "
+                f"名称: {m.get('name', '')})"
+            )
+
+        match_list = "\n  - ".join(format_match(m) for m in matches)
+        message = (
+            f"Ticker '{ticker}' 存在歧义, "
+            f"匹配到 {len(matches)} 个标的:\n  - {match_list}"
+        )
+        details: dict[str, object] = {"ticker": ticker, "matches": matches}
+        super().__init__(message, details)
+
+
 class TradingDateNotFoundError(CalendarError):
     """Trading date not found (outside calendar range)."""
 

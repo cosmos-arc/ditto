@@ -38,6 +38,7 @@ from ditto_port.api.routes import (
     market,
     metadata,
     portfolio,
+    source,
 )
 from ditto_port.exceptions import DittoException
 from ditto_port.middleware import (
@@ -183,6 +184,7 @@ app.include_router(macro.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")
 app.include_router(metadata.router, prefix="/api/v1")
 app.include_router(portfolio.router, prefix="/api/v1")
+app.include_router(source.router, prefix="/api/v1")
 
 
 # Request logging middleware

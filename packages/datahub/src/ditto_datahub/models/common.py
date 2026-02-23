@@ -1,7 +1,11 @@
 """Common enumerations and data structures for DataHub."""
 
+from __future__ import annotations
+
 from enum import Enum
 from typing import Literal, NamedTuple
+
+from ditto_datahub.models.enums import AssetClass
 
 __all__ = [
     "Dataset",
@@ -60,6 +64,47 @@ class Dataset(str, Enum):
     FUTURES_POSITION = "futures_position"
     CORPORATE_ACTIONS = "corporate_actions"
 
+    @property
+    def asset_class(self) -> AssetClass | None:
+        """
+        获取数据集对应的资产类型。
+
+        Returns:
+            资产类型枚举，如果数据集不关联特定资产类型则返回 None。
+
+        """
+        # Stock 数据集
+        if self in (
+            Dataset.STOCK_DAILY,
+            Dataset.ADJ_FACTOR,
+            Dataset.STOCK_STATUS,
+            Dataset.VALUATION_METRICS,
+            Dataset.BALANCE_SHEET,
+            Dataset.INCOME_STATEMENT,
+            Dataset.CASH_FLOW,
+            Dataset.DIVIDEND,
+            Dataset.MARGIN_TRADING,
+            Dataset.PLEDGE_RATIO,
+        ):
+            return AssetClass.STOCK
+        # ETF 数据集
+        if self in (Dataset.ETF_DAILY, Dataset.FUND_ADJ):
+            return AssetClass.ETF
+        # Index 数据集
+        if self == Dataset.INDEX_DAILY:
+            return AssetClass.INDEX
+        return None
+
+    def supports_instrument_ingestion(self) -> bool:
+        """
+        判断数据集是否支持按标的（instrument）进行数据摄取。
+
+        Returns:
+            如果支持按标的摄取返回 True，否则返回 False。
+
+        """
+        return self.asset_class is not None
+
     @classmethod
     def is_basic_dataset(cls, dataset: str) -> bool:
         """判断是否为 basic 类数据集（不需要 trade_date）。"""
@@ -76,7 +121,7 @@ class Dataset(str, Enum):
 
     @classmethod
     def get_asset_class(
-        cls, dataset: "Dataset | str"
+        cls, dataset: Dataset | str
     ) -> Literal["stock", "etf", "index", "other"]:
         """
         获取数据集对应的资产类别。
@@ -87,17 +132,25 @@ class Dataset(str, Enum):
         Returns:
             资产类别: "stock" | "etf" | "index" | "other"
 
+        Note:
+            此方法为兼容性方法，推荐使用 ``dataset.asset_class`` 属性。
+
         """
-        dataset_value = dataset.value if isinstance(dataset, Dataset) else dataset
-        mapping: dict[str, Literal["stock", "etf", "index"]] = {
-            cls.STOCK_DAILY.value: "stock",
-            cls.STOCK_STATUS.value: "stock",
-            cls.ADJ_FACTOR.value: "stock",
-            cls.FUND_ADJ.value: "etf",
-            cls.ETF_DAILY.value: "etf",
-            cls.INDEX_DAILY.value: "index",
-        }
-        return mapping.get(dataset_value, "other")
+        # 转换为 Dataset 枚举
+        dataset_enum = dataset if isinstance(dataset, Dataset) else cls(dataset)
+
+        # 使用 asset_class 属性获取类型
+        asset_class = dataset_enum.asset_class
+
+        # 转换为字符串字面量（保持向后兼容）
+        if asset_class is None:
+            return "other"
+        # asset_class 只会是 STOCK, ETF, INDEX 之一，因为 asset_class 属性只返回这些
+        if asset_class == AssetClass.STOCK:
+            return "stock"
+        if asset_class == AssetClass.ETF:
+            return "etf"
+        return "index"
 
 
 # ============ Domain 枚举 ============
@@ -156,7 +209,7 @@ class InstrumentIdRange(NamedTuple):
     max_id: int
 
     @classmethod
-    def get_range(cls, asset_class: str) -> "InstrumentIdRange":
+    def get_range(cls, asset_class: str) -> InstrumentIdRange:
         """Get ID range for asset class."""
         ranges = {
             "stock": cls(1_000_000, 1_999_999),

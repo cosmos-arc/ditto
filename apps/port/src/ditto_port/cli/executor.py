@@ -11,6 +11,7 @@ CLI 本地执行器.
 
 from typing import Any
 
+from ditto_port.models import InstrumentIngestParams
 from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
@@ -101,4 +102,53 @@ class CLIExecutor:
             "success_count": result.success_count,
             "skipped_count": result.skipped_count,
             "failed_count": result.failed_count,
+        }
+
+    def ingest_by_instrument(
+        self,
+        dataset: str,
+        ticker: str | None = None,
+        standard_ticker: str | None = None,
+        instrument_id: int | None = None,
+        start_date: str = "",
+        end_date: str = "",
+        force: bool = False,
+    ) -> dict[str, Any]:
+        """
+        执行按标的+时间范围摄取.
+
+        Args:
+            dataset: 数据集名称
+            ticker: 裸代码（如 "000001"）
+            standard_ticker: Ditto 标准格式（如 "000001.XSHE"）
+            instrument_id: 内部 ID（如 1000001）
+            start_date: 开始日期 (YYYY-MM-DD)
+            end_date: 结束日期 (YYYY-MM-DD)
+            force: 是否强制覆盖已有数据
+
+        Returns:
+            包含摄取结果的字典
+
+        """
+        params = InstrumentIngestParams(
+            ticker=ticker,
+            standard_ticker=standard_ticker,
+            instrument_id=instrument_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        result = self.coordinator.ingest_by_instrument(dataset, params, force)
+
+        # 构建标识符信息用于返回
+        identifier_info = ticker or standard_ticker or str(instrument_id)
+
+        return {
+            "dataset": dataset,
+            "identifier": identifier_info,
+            "start_date": start_date,
+            "end_date": end_date,
+            "status": result.status,
+            "row_count": result.row_count,
+            "message": result.message,
+            "error": result.error,
         }

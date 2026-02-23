@@ -64,19 +64,28 @@ class IndexTushareAdapter(BaseTushareAdapter):
     @traced("source.tushare.fetch_index_daily")
     def fetch_daily(
         self,
-        trade_date: str,
-        ts_codes: list[str],
+        trade_date: str | None = None,
+        ts_codes: list[str] | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> pl.DataFrame:
         """
         获取指数日线 OHLCV 数据.
 
-        注意：Tushare index_daily API 要求 ts_code 参数，
-        此方法逐个查询指定指数列表并合并结果。
+        支持两种查询模式：
+        - 按日期批量：指定 trade_date + ts_codes（由编排层提供指数列表）
+        - 按标的+时间段：指定 source_ticker + start_date + end_date
+
+        注意：Tushare index_daily API 必须指定 ts_code 参数，不支持仅用 trade_date。
 
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). 与 ts_codes 配合使用.
             ts_codes: List of ts_codes (e.g., ["000001.SH", "399001.SZ"]).
-                由编排层提供，不在 Adapter 层硬编码。
+                由编排层提供，不在 Adapter 层硬编码.
+            source_ticker: Source code (e.g., "000001.SH").
+            start_date: Start date (YYYY-MM-DD). 与 source_ticker 配合使用.
+            end_date: End date (YYYY-MM-DD). 与 source_ticker 配合使用.
 
         Returns:
             DataFrame with columns (matching INDEX_DAILY_SCHEMA):
@@ -87,13 +96,33 @@ class IndexTushareAdapter(BaseTushareAdapter):
             - pct_change: Float64
 
         Raises:
+            ValueError: 参数组合无效.
             SourceFetchError: If all fetches fail.
-            ValueError: If ts_codes is empty.
 
         """
-        if not ts_codes:
-            raise ValueError("ts_codes is required - provided by orchestration layer")
+        # 参数校验
+        if trade_date and source_ticker:
+            raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
 
+        if not trade_date and not source_ticker:
+            raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+
+        # 按日期批量查询
+        if trade_date:
+            if not ts_codes:
+                raise ValueError("按日期查询必须指定 ts_codes")
+            return self._fetch_daily_by_date(trade_date, ts_codes)
+
+        # 按标的+时间段查询（此时 source_ticker 必定不为 None）
+        if not source_ticker or not start_date or not end_date:
+            raise ValueError("按标的查询必须指定 source_ticker、start_date 和 end_date")
+
+        return self._fetch_daily_by_ticker(source_ticker, start_date, end_date)
+
+    def _fetch_daily_by_date(
+        self, trade_date: str, ts_codes: list[str]
+    ) -> pl.DataFrame:
+        """按日期获取指数日线数据."""
         logger.info(
             "Fetching Tushare index daily",
             event="tushare_index_daily_fetch_start",
@@ -146,3 +175,34 @@ class IndexTushareAdapter(BaseTushareAdapter):
             combined,
             "index_daily",
         )
+
+    def _fetch_daily_by_ticker(
+        self,
+        source_ticker: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """按标的+时间段获取指数日线数据（内部方法）."""
+        logger.info(
+            "Fetching Tushare index daily by ticker",
+            event="tushare_index_daily_ticker_fetch_start",
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        with tushare_fetch_error_handler("index_daily", f"index_daily:{source_ticker}"):
+            ts_start = start_date.replace("-", "")
+            ts_end = end_date.replace("-", "")
+            response = self._client.query(
+                api_name="index_daily",
+                ts_code=source_ticker,
+                start_date=ts_start,
+                end_date=ts_end,
+                fields="ts_code,trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
+            )
+
+            return TushareDataTransformer.transform_daily_ohlcv(
+                response,
+                "index_daily",
+            )

@@ -8,6 +8,7 @@ from ditto_port.api.routes import (
     market,
     metadata,
     portfolio,
+    source,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "market",
     "metadata",
     "portfolio",
+    "source",
 ]

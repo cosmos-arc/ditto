@@ -12,6 +12,7 @@ from collections.abc import Callable
 
 import httpx
 import polars as pl
+from ditto_datahub.errors import AmbiguousTickerError, IdentifierNotFoundError
 from ditto_datahub.models import Dataset, OnDuplicate
 from ditto_datahub.services import IngestionLogService
 from ditto_datahub.services.capital_service import CapitalService
@@ -19,15 +20,32 @@ from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
+from ditto_datahub.sources.base import DataSource
 from ditto_infra.foundation import logger
 
-from ditto_port.models import IngestionResult
+from ditto_port.models import IngestionResult, InstrumentIngestParams
 from ditto_port.services.ingestion.data_writer import IngestionDataWriter
 from ditto_port.services.ingestion.errors import SourceFetchError
 from ditto_port.services.ingestion.index_config import get_all_index_codes
 from ditto_port.services.ingestion.metadata import MetadataManager
-from ditto_port.services.ingestion.protocols import IngestionDataSource
 from ditto_port.services.ingestion.result_handler import IngestionResultHandler
+
+# 支持按标的摄取的数据集
+SUPPORTED_INSTRUMENT_DATASETS: set[Dataset] = {
+    Dataset.STOCK_DAILY,
+    Dataset.ETF_DAILY,
+    Dataset.INDEX_DAILY,
+    Dataset.ADJ_FACTOR,
+    Dataset.FUND_ADJ,
+    Dataset.STOCK_STATUS,
+    Dataset.VALUATION_METRICS,
+    Dataset.BALANCE_SHEET,
+    Dataset.INCOME_STATEMENT,
+    Dataset.CASH_FLOW,
+    Dataset.DIVIDEND,
+    Dataset.MARGIN_TRADING,
+    Dataset.PLEDGE_RATIO,
+}
 
 
 class IngestionCoordinator:
@@ -40,7 +58,7 @@ class IngestionCoordinator:
         fundamental_service: FundamentalService,
         capital_service: CapitalService,
         macro_service: MacroService,
-        source: IngestionDataSource,
+        source: DataSource,
         source_name: str = "tushare",
         ingestion_log_service: IngestionLogService | None = None,
     ) -> None:
@@ -289,6 +307,229 @@ class IngestionCoordinator:
             results.append(result)
 
         return results
+
+    def ingest_by_instrument(
+        self,
+        dataset: str,
+        params: InstrumentIngestParams,
+        force: bool = False,
+    ) -> IngestionResult:
+        """
+        按标的 + 日期范围摄取数据.
+
+        Args:
+            dataset: 数据集名称（如 stock_daily, etf_daily）
+            params: 摄取参数（含 instrument_id/standard_ticker/ticker,
+                start_date, end_date）
+            force: 是否强制覆盖已有数据
+
+        Returns:
+            IngestionResult: 摄取结果
+
+        Raises:
+            ValueError: 不支持的数据集
+
+        """
+        # 验证数据集是否支持按标的摄取
+        try:
+            dataset_enum = Dataset(dataset)
+        except ValueError as e:
+            raise ValueError(f"不支持的数据集: {dataset}") from e
+
+        # 从数据集推断资产类型
+        asset_class = dataset_enum.asset_class
+        if asset_class is None:
+            raise ValueError(f"数据集 {dataset} 不支持按标的摄取")
+
+        # 解析标识符为 source_ticker
+        try:
+            source_ticker = self._metadata_service.resolve_source_ticker(
+                ticker=params.ticker,
+                standard_ticker=params.standard_ticker,
+                instrument_id=params.instrument_id,
+                asset_class=asset_class,
+                source=self._source_name,
+            )
+        except (AmbiguousTickerError, IdentifierNotFoundError) as e:
+            logger.error(
+                "标识符解析失败",
+                event="identifier_resolution_failed",
+                dataset=dataset,
+                error=str(e),
+            )
+            raise
+
+        logger.info(
+            "开始按标的摄取数据",
+            event="ingestion_by_instrument_start",
+            dataset=dataset,
+            source_ticker=source_ticker,
+            asset_class=asset_class,
+            start_date=params.start_date,
+            end_date=params.end_date,
+            force=force,
+        )
+
+        return self._fetch_and_ingest_by_instrument(
+            dataset, dataset_enum, source_ticker, params, force
+        )
+
+    def _fetch_and_ingest_by_instrument(  # noqa: PLR0911
+        self,
+        dataset: str,
+        dataset_enum: Dataset,
+        source_ticker: str,
+        params: InstrumentIngestParams,
+        force: bool,
+    ) -> IngestionResult:
+        """按标的获取数据并执行摄取（统一错误处理）。"""
+        try:
+            df = self._fetch_by_dataset(dataset_enum, source_ticker, params)
+        except (httpx.NetworkError, httpx.TimeoutException) as e:
+            logger.exception(
+                "network_error_during_fetch_by_instrument",
+                dataset=dataset,
+                source_ticker=source_ticker,
+                error_type=type(e).__name__,
+            )
+            fetch_error = SourceFetchError(
+                message=f"Network error fetching {dataset} for {source_ticker}: {e}",
+                source=type(e).__name__,
+            )
+            return self._result_handler.handle_fetch_error(
+                dataset, params.start_date, fetch_error
+            )
+        except Exception as e:
+            if self._is_source_fetch_error(e):
+                fetch_error = self._normalize_source_fetch_error(e)
+                return self._result_handler.handle_fetch_error(
+                    dataset, params.start_date, fetch_error
+                )
+            logger.exception(
+                "unexpected_error_during_fetch_by_instrument",
+                dataset=dataset,
+                source_ticker=source_ticker,
+                error_type=type(e).__name__,
+            )
+            return self._result_handler.handle_unknown_error(
+                dataset, params.start_date, e
+            )
+
+        if df.is_empty():
+            return self._result_handler.handle_empty_data(dataset, params.start_date)
+
+        # 将 force 映射到 on_duplicate
+        on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
+
+        try:
+            write_result = self._data_writer.write_data(
+                dataset, df, params.start_date, on_duplicate
+            )
+        except Exception as e:
+            logger.exception(
+                "write_data_failed_by_instrument",
+                dataset=dataset,
+                source_ticker=source_ticker,
+                error_type=type(e).__name__,
+            )
+            return self._result_handler.handle_unknown_error(
+                dataset, params.start_date, e
+            )
+
+        # 检查 DQ 阻断
+        if write_result.blocked:
+            return self._result_handler.handle_dq_blocked(
+                dataset, params.start_date, write_result
+            )
+
+        # 成功写入
+        return self._result_handler.handle_success(
+            dataset, params.start_date, df, write_result
+        )
+
+    def _fetch_by_dataset(
+        self,
+        dataset_enum: Dataset,
+        source_ticker: str,
+        params: InstrumentIngestParams,
+    ) -> pl.DataFrame:
+        """
+        根据数据集类型调用对应的 fetch 方法.
+
+        Args:
+            dataset_enum: 数据集枚举
+            source_ticker: 数据源代码
+            params: 摄取参数
+
+        Returns:
+            数据 DataFrame
+
+        """
+        handlers: dict[Dataset, Callable[[], pl.DataFrame]] = {
+            # Market 域
+            Dataset.STOCK_DAILY: lambda: self._source.fetch_stock_daily(
+                source_ticker=source_ticker,
+                start_date=params.start_date,
+                end_date=params.end_date,
+            ),
+            Dataset.ETF_DAILY: lambda: self._source.fetch_etf_daily(
+                source_ticker=source_ticker,
+                start_date=params.start_date,
+                end_date=params.end_date,
+            ),
+            Dataset.INDEX_DAILY: lambda: self._source.fetch_index_daily(
+                source_ticker=source_ticker,
+                start_date=params.start_date,
+                end_date=params.end_date,
+            ),
+            Dataset.FUND_ADJ: lambda: self._source.fetch_fund_adj(
+                source_ticker=source_ticker,
+                start_date=params.start_date,
+                end_date=params.end_date,
+            ),
+            # Fundamental 域
+            Dataset.BALANCE_SHEET: lambda: self._source.fetch_balance_sheet(
+                source_ticker=source_ticker,
+                start_date=params.start_date,
+                end_date=params.end_date,
+            ),
+            Dataset.INCOME_STATEMENT: lambda: self._source.fetch_income_statement(
+                source_ticker=source_ticker,
+                start_date=params.start_date,
+                end_date=params.end_date,
+            ),
+            Dataset.CASH_FLOW: lambda: self._source.fetch_cash_flow(
+                source_ticker=source_ticker,
+                start_date=params.start_date,
+                end_date=params.end_date,
+            ),
+            Dataset.DIVIDEND: lambda: self._source.fetch_dividend(
+                source_ticker=source_ticker,
+                start_date=params.start_date,
+                end_date=params.end_date,
+            ),
+            # Capital 域
+            Dataset.VALUATION_METRICS: lambda: self._source.fetch_valuation_metrics(
+                source_ticker=source_ticker,
+                start_date=params.start_date,
+                end_date=params.end_date,
+            ),
+            Dataset.MARGIN_TRADING: lambda: self._source.fetch_margin_trading(
+                source_ticker=source_ticker,
+                start_date=params.start_date,
+                end_date=params.end_date,
+            ),
+            Dataset.PLEDGE_RATIO: lambda: self._source.fetch_pledge_ratio(
+                source_ticker=source_ticker,
+                start_date=params.start_date,
+                end_date=params.end_date,
+            ),
+        }
+
+        if dataset_enum not in handlers:
+            raise ValueError(f"不支持按标的摄取的数据集: {dataset_enum.value}")
+
+        return handlers[dataset_enum]()
 
     def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
         """

@@ -9,6 +9,10 @@ from ditto_datahub.sources.base import (
     SourceRateLimitError,
     SourceTransformationError,
 )
+from ditto_datahub.sources.exchange_transformers import (
+    ExchangeTransformer,
+    ExchangeTransformers,
+)
 from ditto_datahub.sources.normalization import (
     Currency,
     Exchange,
@@ -24,6 +28,8 @@ __all__ = [
     "DataSourceError",
     "DataSources",
     "Exchange",
+    "ExchangeTransformer",
+    "ExchangeTransformers",
     "InstrumentType",
     "NormalizationConfig",
     "SourceAuthenticationError",

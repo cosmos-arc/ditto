@@ -8,6 +8,7 @@ from ditto_datahub.models.common import (
     OnDuplicate,
     Source,
 )
+from ditto_datahub.models.enums import AssetClass, Exchange
 from ditto_datahub.models.factors import (
     FACTOR_CLASS_FUNDAMENTAL,
     FACTOR_CLASS_MACRO,
@@ -75,11 +76,13 @@ __all__ = [
     "INDICATOR_TYPE_VOLATILITY",
     "INDICATOR_TYPE_VOLUME",
     "QUOTE_SCHEMA",
+    "AssetClass",
     "CalendarDay",
     "DataChangedError",
     "Dataset",
     "Domain",
     "ETFExtension",
+    "Exchange",
     "FactorClass",
     "FactorFamily",
     "FactorMetadata",

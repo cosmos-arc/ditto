@@ -4,7 +4,10 @@ from collections.abc import Iterator
 
 from dishka import Provider, Scope, provide
 from ditto_datahub.config import DataSourceSettings
+from ditto_datahub.sources import ExchangeTransformers
 from ditto_datahub.sources.source import DataSources
+from ditto_datahub.sources.tdx.transformer import TdxExchangeTransformer
+from ditto_datahub.sources.tushare.transformer import TushareExchangeTransformer
 from ditto_datahub.sources.tushare.tushare_source import TushareSource
 
 __all__ = ["SourcesProvider"]
@@ -43,3 +46,32 @@ class SourcesProvider(Provider):
 
         """
         return DataSources(tushare=tushare_source)
+
+    @provide
+    def tushare_transformer(self) -> TushareExchangeTransformer:
+        """Tushare 交易所转换器."""
+        return TushareExchangeTransformer()
+
+    @provide
+    def tdx_transformer(self) -> TdxExchangeTransformer:
+        """TDX 交易所转换器."""
+        return TdxExchangeTransformer()
+
+    @provide
+    def exchange_transformers(
+        self,
+        tushare_transformer: TushareExchangeTransformer,
+        tdx_transformer: TdxExchangeTransformer,
+    ) -> ExchangeTransformers:
+        """
+        Exchange transformer 工厂.
+
+        Args:
+            tushare_transformer: Tushare 交易所转换器
+            tdx_transformer: TDX 交易所转换器
+
+        """
+        return ExchangeTransformers(
+            tushare=tushare_transformer,
+            tdx=tdx_transformer,
+        )

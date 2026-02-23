@@ -14,8 +14,10 @@ import polars as pl
 from ditto_infra.foundation import logger, traced
 from ditto_infra.foundation.util.checksum import ChecksumCompute
 
+from ditto_datahub.errors import AmbiguousTickerError, IdentifierNotFoundError
 from ditto_datahub.models.metadata import InstrumentRegistration
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
+from ditto_datahub.sources import ExchangeTransformers
 from ditto_datahub.stores.metadata.calendar import CalendarReader, CalendarWriter
 from ditto_datahub.stores.metadata.industry import (
     IndustryMappingReader,
@@ -52,6 +54,7 @@ class MetadataService:
         universe_reader: UniverseReader,
         universe_writer: UniverseWriter,
         instrument_id_allocator: InstrumentIdAllocator,
+        exchange_transformers: ExchangeTransformers,
     ) -> None:
         """
         初始化 MetadataService.
@@ -68,6 +71,7 @@ class MetadataService:
             universe_reader: 标的池读取器.
             universe_writer: 标的池写入器.
             instrument_id_allocator: instrument_id 分配器.
+            exchange_transformers: 交易所转换器工厂.
 
         """
         self._instrument_reader = instrument_reader
@@ -81,6 +85,7 @@ class MetadataService:
         self._universe_reader = universe_reader
         self._universe_writer = universe_writer
         self._instrument_id_allocator = instrument_id_allocator
+        self._exchange_transformers = exchange_transformers
 
         logger.debug(
             "MetadataService initialized",
@@ -623,3 +628,131 @@ class MetadataService:
         )
 
         return result
+
+    # ============ 标识符解析 ============
+
+    @traced("metadata.identity.resolve_source_ticker")
+    def resolve_source_ticker(
+        self,
+        ticker: str | None = None,
+        standard_ticker: str | None = None,
+        instrument_id: int | None = None,
+        asset_class: str = "stock",
+        source: str = "tushare",
+    ) -> str:
+        """
+        将任意标识符解析为 source_ticker.
+
+        优先级: instrument_id > standard_ticker > ticker
+
+        Args:
+            ticker: 裸代码（如 "000001"）
+            standard_ticker: Ditto 标准格式（如 "000001.XSHE"）
+            instrument_id: 内部 ID（如 1000001）
+            asset_class: 资产类型（stock | etf | index）
+            source: 数据源名称（如 "tushare"）
+
+        Returns:
+            source_ticker 字符串
+
+        Raises:
+            ValueError: 未提供任何标识符
+            AmbiguousTickerError: ticker 不唯一
+            IdentifierNotFoundError: 标识符无效
+
+        """
+        # 优先级 1: instrument_id
+        if instrument_id is not None:
+            result = self._instrument_reader.get_source_ticker(
+                instrument_id, source, None
+            )
+            if result is None:
+                raise IdentifierNotFoundError(
+                    identifier=str(instrument_id),
+                    identifier_type="instrument_id",
+                )
+            return result
+
+        # 优先级 2: standard_ticker
+        if standard_ticker is not None:
+            return self._resolve_from_standard_ticker(standard_ticker, source)
+
+        # 优先级 3: ticker
+        if ticker is not None:
+            return self._resolve_from_ticker(ticker, asset_class, source)
+
+        raise ValueError("必须指定 ticker / standard_ticker / instrument_id 之一")
+
+    def _resolve_from_standard_ticker(self, standard_ticker: str, source: str) -> str:
+        """
+        从 standard_ticker 解析 source_ticker.
+
+        Args:
+            standard_ticker: Ditto 标准格式（如 "000001.XSHE"）
+            source: 数据源名称
+
+        Returns:
+            source_ticker 字符串
+
+        """
+        # 使用 transformer 转换 standard_ticker 到 source_ticker
+        transformer = self._exchange_transformers.get(source)
+        return transformer.from_standard(standard_ticker)
+
+    def _resolve_from_ticker(self, ticker: str, asset_class: str, source: str) -> str:
+        """
+        从裸 ticker 解析 source_ticker.
+
+        Args:
+            ticker: 裸代码
+            asset_class: 资产类型
+            source: 数据源名称
+
+        Returns:
+            source_ticker 字符串
+
+        Raises:
+            AmbiguousTickerError: 多个匹配
+            IdentifierNotFoundError: 无匹配
+
+        """
+        df = self._instrument_reader.find_securities(
+            asset_class=asset_class,
+            is_active=True,
+            source=source,
+        )
+
+        if df.is_empty():
+            raise IdentifierNotFoundError(
+                identifier=ticker,
+                identifier_type="ticker",
+            )
+
+        # 过滤 ticker 匹配的记录
+        matches_df = df.filter(pl.col("ticker") == ticker)
+
+        if matches_df.is_empty():
+            raise IdentifierNotFoundError(
+                identifier=ticker,
+                identifier_type="ticker",
+            )
+
+        rows = matches_df.to_dicts()
+        if len(rows) > 1:
+            matches: list[dict[str, Any]] = [
+                {
+                    "source_ticker": row.get("source_ticker", ""),
+                    "instrument_id": row.get("instrument_id", 0),
+                    "name": row.get("name", ""),
+                }
+                for row in rows
+            ]
+            raise AmbiguousTickerError(ticker=ticker, matches=matches)
+
+        source_ticker = rows[0].get("source_ticker")
+        if source_ticker is None:
+            raise IdentifierNotFoundError(
+                identifier=ticker,
+                identifier_type="ticker",
+            )
+        return str(source_ticker)
