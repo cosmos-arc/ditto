@@ -336,10 +336,14 @@ class IngestionCoordinator:
         except ValueError as e:
             raise ValueError(f"不支持的数据集: {dataset}") from e
 
+        # 检查数据集是否在支持列表中（基于实际支持的 handler）
+        if dataset_enum not in SUPPORTED_INSTRUMENT_DATASETS:
+            raise ValueError(f"数据集 {dataset} 不支持按标的摄取")
+
         # 从数据集推断资产类型
         asset_class = dataset_enum.asset_class
         if asset_class is None:
-            raise ValueError(f"数据集 {dataset} 不支持按标的摄取")
+            raise ValueError(f"数据集 {dataset} 缺少 asset_class 定义")
 
         # 解析标识符为 source_ticker
         try:
