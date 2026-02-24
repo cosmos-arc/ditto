@@ -10,6 +10,7 @@ from dishka.integrations.fastapi import inject
 from ditto_datahub.models import Dataset
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.source_service import SourceService
+from ditto_infra.foundation import logger
 from fastapi import APIRouter, HTTPException, Path, Query
 
 from ditto_port.models.common import APIResponse
@@ -110,20 +111,32 @@ async def get_source_data(  # noqa: PLR0913
             source=source,
         )
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        # 业务异常返回友好消息，未预期异常返回通用错误
+        exc_name = type(exc).__name__
+        if exc_name in ("AmbiguousTickerError", "IdentifierNotFoundError"):
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        # 未预期异常，记录日志并返回通用错误
+        logger.exception("Unexpected error resolving ticker")
+        raise HTTPException(status_code=500, detail="Failed to resolve ticker") from exc
 
     # 获取数据源
-    data_source = _get_data_source(source_service, source)
+    try:
+        data_source = _get_data_source(source_service, source)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     # 调用 Source 获取数据
-    df = await asyncio.to_thread(
-        _fetch_source_data,
-        data_source,
-        dataset,
-        resolved_source_ticker,
-        start_date,
-        end_date,
-    )
+    try:
+        df = await asyncio.to_thread(
+            _fetch_source_data,
+            data_source,
+            dataset,
+            resolved_source_ticker,
+            start_date,
+            end_date,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     query_time_ms = (time.monotonic() - start_time) * 1000
 
@@ -150,6 +163,10 @@ def _get_data_source(source_service: SourceService, source: str) -> Any:
     raise ValueError(f"不支持的数据源: {source}")
 
 
+# 支持按标的查询的 Source 数据集
+SUPPORTED_SOURCE_DATASETS: set[str] = {"stock_daily"}
+
+
 def _fetch_source_data(
     source: Any,
     dataset: str,
@@ -164,5 +181,6 @@ def _fetch_source_data(
             start_date=start_date,
             end_date=end_date,
         )
-    # 其他数据集暂不支持
-    return pl.DataFrame()
+    # 未实现的数据集抛出异常, 避免静默返回空数据
+    supported = ", ".join(sorted(SUPPORTED_SOURCE_DATASETS))
+    raise ValueError(f"数据集 {dataset} 暂不支持 Source API 查询, 支持: {supported}")

@@ -75,6 +75,9 @@ def validate_instrument_params(
             validate_date_format(start)
         if end:
             validate_date_format(end)
+        # 验证日期范围
+        if start and end and start > end:
+            raise typer.BadParameter(f"start ({start}) 不能晚于 end ({end})")
 
 
 def check_instrument_mode(
