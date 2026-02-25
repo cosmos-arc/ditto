@@ -17,17 +17,33 @@
 | 中国 | Tushare | GDP、CPI、PPI、PMI、M2、社融 | 季度/月度 |
 | 美国 | FRED | GDP、CPI、PCE、失业率、M2 | 季度/月度 |
 
-### P0 首批指标
+### 完整指标列表
 
-| 地区 | 指标代码 | 指标名称 | 数据源 |
-|------|---------|---------|--------|
-| 中国 | CN_GDP_YOY | 中国GDP同比 | Tushare |
-| 中国 | CN_CPI_YOY | 中国CPI同比 | Tushare |
-| 中国 | CN_PPI_YOY | 中国PPI同比 | Tushare |
-| 中国 | CN_PMI_MFG | 中国制造业PMI | Tushare |
-| 美国 | US_GDP_QOQ | 美国GDP环比 | FRED |
-| 美国 | US_CPI_YOY | 美国CPI同比 | FRED |
-| 美国 | US_UNRATE | 美国失业率 | FRED |
+**中国宏观指标（Tushare）**
+
+| 指标代码 | 指标名称 | API | 频率 | 发布规律 |
+|---------|---------|-----|------|---------|
+| CN_GDP_YOY | 中国GDP同比 | cn_gdp | 季度 | 季后15日 |
+| CN_CPI_YOY | 中国CPI同比 | cn_cpi | 月度 | 次月9日 |
+| CN_PPI_YOY | 中国PPI同比 | cn_ppi | 月度 | 次月9日 |
+| CN_PMI_MFG | 中国制造业PMI | cn_pmi | 月度 | 次月1日 |
+| CN_M2_YOY | 中国M2同比 | cn_m | 月度 | 次月13日 |
+| CN_M1_YOY | 中国M1同比 | cn_m | 月度 | 次月13日 |
+| CN_M0_YOY | 中国M0同比 | cn_m | 月度 | 次月13日 |
+| CN_CREDIT_TS | 中国社会融资规模 | cn_shz | 月度 | 次月13日 |
+
+**美国宏观指标（FRED）**
+
+| 指标代码 | 指标名称 | Series ID | 频率 |
+|---------|---------|-----------|------|
+| US_GDP_QOQ | 美国GDP环比 | A191RL1Q225SBEA | 季度 |
+| US_CPI_YOY | 美国CPI同比 | CPIAUCSL | 月度 |
+| US_CPI_CORE_YOY | 美国核心CPI同比 | CPILFESL | 月度 |
+| US_PCE_YOY | 美国PCE同比 | PCEPI | 月度 |
+| US_PCE_CORE_YOY | 美国核心PCE同比 | PCEPILFE | 月度 |
+| US_UNRATE | 美国失业率 | UNRATE | 月度 |
+| US_PAYEMS | 美国非农就业 | PAYEMS | 月度 |
+| US_M2_YOY | 美国M2同比 | M2SL | 月度 |
 
 ---
 
@@ -66,7 +82,8 @@ MACRO_INDICATOR_SOURCE_SCHEMA = SourceSchema(
 | GDP（季度） | 季后15日（Q4为次年1月17日） |
 | CPI/PPI | 次月9日 |
 | PMI | 次月1日 |
-| M2/社融 | 次月13日 |
+| M0/M1/M2 | 次月13日 |
+| 社会融资规模 | 次月13日 |
 
 **FRED（美国）**：使用 API 提供的 `realtime_start` 字段
 
@@ -111,7 +128,7 @@ packages/datahub/src/ditto_datahub/sources/
 - [ ] **Task 1.3**: 实现 FRED 指标元数据 `[S]`
   - 验收:
     - FredIndicator dataclass 定义
-    - P0 指标注册表（US_GDP_QOQ, US_CPI_YOY, US_UNRATE）
+    - 完整指标注册表（US_GDP_QOQ, US_CPI_YOY, US_CPI_CORE_YOY, US_PCE_YOY, US_PCE_CORE_YOY, US_UNRATE, US_PAYEMS, US_M2_YOY）
   - 文件: `fred/indicators.py`
 
 - [ ] **Task 1.4**: 实现 MacroFredAdapter `[M]`
@@ -135,7 +152,7 @@ packages/datahub/src/ditto_datahub/sources/
 - [ ] **Task 2.2**: 实现 Tushare 宏观指标元数据 `[S]`
   - 验收:
     - TushareMacroIndicator dataclass 定义
-    - P0 指标注册表（CN_GDP_YOY, CN_CPI_YOY, CN_PPI_YOY, CN_PMI_MFG）
+    - 完整指标注册表（CN_GDP_YOY, CN_CPI_YOY, CN_PPI_YOY, CN_PMI_MFG, CN_M2_YOY, CN_M1_YOY, CN_M0_YOY, CN_CREDIT_TS）
     - 日期解析工具（季度/月度格式）
   - 文件: `tushare/indicators/tushare_indicators.py`
 
@@ -199,8 +216,8 @@ Phase 1 和 Phase 2 可并行执行。
 ## 验收标准
 
 1. **功能验收**
-   - [ ] FRED P0 指标可摄取并存储
-   - [ ] Tushare P0 指标可摄取并存储
+   - [ ] FRED 全部 8 个指标可摄取并存储
+   - [ ] Tushare 全部 8 个指标可摄取并存储
    - [ ] knowledge_date 估算符合设计文档
 
 2. **质量验收**
