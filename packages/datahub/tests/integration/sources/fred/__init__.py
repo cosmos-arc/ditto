@@ -1,0 +1,1 @@
+"""FRED integration tests package."""
