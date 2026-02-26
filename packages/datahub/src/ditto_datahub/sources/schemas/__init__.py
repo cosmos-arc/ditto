@@ -11,6 +11,7 @@ from ditto_datahub.sources.schemas.capital_schemas import (
     PLEDGE_RATIO_SOURCE_SCHEMA,
     VALUATION_METRICS_SOURCE_SCHEMA,
 )
+from ditto_datahub.sources.schemas.fx_schemas import FX_SOURCE_SCHEMA
 from ditto_datahub.sources.schemas.macro_schemas import (
     MACRO_INDICATOR_SOURCE_SCHEMA,
 )
@@ -36,6 +37,7 @@ __all__ = [
     "DIVIDEND_SOURCE_SCHEMA",
     "ETF_DAILY_SOURCE_SCHEMA",
     "FUND_ADJ_SOURCE_SCHEMA",
+    "FX_SOURCE_SCHEMA",
     "INCOME_STATEMENT_SOURCE_SCHEMA",
     "INDEX_COMPOSITION_SOURCE_SCHEMA",
     "INDEX_MEMBER_SOURCE_SCHEMA",
