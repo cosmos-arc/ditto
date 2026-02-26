@@ -83,7 +83,8 @@ class TestTushareMacroIndicatorMetadata:
     def test_list_tushare_macro_indicators_returns_all(self) -> None:
         """list_tushare_macro_indicators returns all indicators without filter."""
         result = list_tushare_macro_indicators()
-        assert len(result) == 8
+        # 8 个原有指标 + 12 个新增利率指标 = 20
+        assert len(result) == 20
 
     def test_list_tushare_macro_indicators_filters_by_api_name(self) -> None:
         """list_tushare_macro_indicators filters by API name."""
@@ -102,8 +103,8 @@ class TestTushareMacroIndicatorMetadata:
     def test_list_tushare_macro_indicators_filters_by_frequency(self) -> None:
         """list_tushare_macro_indicators filters by frequency."""
         result = list_tushare_macro_indicators(frequency="monthly")
-        # CPI, PPI, PMI, M0, M1, M2 are monthly = 6
-        assert len(result) == 6
+        # CPI, PPI, PMI, M0, M1, M2 是月度 (6) + LPR_1Y, LPR_5Y (2) = 8
+        assert len(result) == 8
         for indicator in result:
             assert indicator.frequency == "monthly"
 
