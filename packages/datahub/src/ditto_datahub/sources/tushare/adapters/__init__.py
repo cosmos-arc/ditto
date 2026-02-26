@@ -6,15 +6,21 @@ from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareAdapter
 from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
+from ditto_datahub.sources.tushare.adapters.fx import (
+    FX_CODE_TO_INSTRUMENT_ID,
+    FxTushareAdapter,
+)
 from ditto_datahub.sources.tushare.adapters.industry import IndustryTushareAdapter
 from ditto_datahub.sources.tushare.adapters.macro import MacroTushareAdapter
 from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
 
 __all__ = [
+    "FX_CODE_TO_INSTRUMENT_ID",
     "BaseTushareAdapter",
     "CalendarTushareAdapter",
     "CapitalTushareAdapter",
     "ETFTushareAdapter",
+    "FxTushareAdapter",
     "IndustryTushareAdapter",
     "MacroTushareAdapter",
     "StockTushareAdapter",
