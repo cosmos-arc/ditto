@@ -46,9 +46,10 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         )
 
         with tushare_fetch_error_handler("dividend", "dividend"):
+            # P015: 添加 div_proc 字段区分预案/实施
             params: dict[str, str] = {
                 "api_name": "dividend",
-                "fields": "ts_code,ex_date,cash_div,record_date,ann_date",
+                "fields": "ts_code,ex_date,cash_div,record_date,ann_date,div_proc",
             }
 
             if ts_code:

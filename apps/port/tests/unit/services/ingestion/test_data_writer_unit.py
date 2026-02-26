@@ -37,6 +37,7 @@ def mock_metadata_service(mocker):
     # Instrument 相关方法
     service.register_instruments_batch = mocker.Mock()
     service.resolve_or_create_instruments_batch = mocker.Mock()
+    service.resolve_instrument_ids_batch = mocker.Mock(return_value={})
 
     def register_side_effect(df, source, asset_class, **kwargs):
         _ = df, source, kwargs
@@ -81,7 +82,6 @@ def mock_capital_service(mocker):
     service.save_valuation_metrics.return_value = 1
     service.save_margin_trading.return_value = 1
     service.save_pledge_ratio.return_value = 1
-    service.save_futures.return_value = 1
     return service
 
 
@@ -210,77 +210,3 @@ class TestWriteCapital:
         assert result.rows_written == 1
         assert not result.blocked
         mock_capital_service.save_pledge_ratio.assert_called_once()
-
-    def test_write_capital_futures_position_writes_successfully(
-        self,
-        data_writer,
-        mock_capital_service,
-    ) -> None:
-        """验证 futures_position 数据写入成功（ENG-001 Bug 修复）。"""
-        # Arrange
-        df = pl.DataFrame(
-            {
-                "instrument_id": [1],
-                "trade_date": [date(2024, 12, 27)],
-                "knowledge_date": [date(2024, 12, 28)],
-                "effective_from": [date(2024, 12, 28)],
-                "effective_to": [None],
-                "broker": ["中信期货"],
-                "long_position": [10000],
-                "short_position": [5000],
-            }
-        )
-        mock_capital_service.save_futures.return_value = 1
-
-        # Act
-        result = data_writer.write_data(
-            dataset="futures_position",
-            df=df,
-            trade_date="2024-12-27",
-        )
-
-        # Assert
-        assert result.rows_written == 1, (
-            "futures_position data should be written, rows_written=0 means silent drop"
-        )
-        assert not result.blocked, "futures_position should not be marked as blocked"
-        mock_capital_service.save_futures.assert_called_once()
-        # 验证传入的 DataFrame 是原始数据
-        call_args = mock_capital_service.save_futures.call_args
-        assert call_args is not None
-        written_df = call_args[0][0]  # 第一个位置参数
-        assert isinstance(written_df, pl.DataFrame)
-        assert len(written_df) == 1
-
-    def test_write_capital_futures_position_with_multiple_records(
-        self,
-        data_writer,
-        mock_capital_service,
-    ) -> None:
-        """验证 futures_position 多条记录写入成功。"""
-        # Arrange
-        df = pl.DataFrame(
-            {
-                "instrument_id": [1, 2, 3],
-                "trade_date": [date(2024, 12, 27)] * 3,
-                "knowledge_date": [date(2024, 12, 28)] * 3,
-                "effective_from": [date(2024, 12, 28)] * 3,
-                "effective_to": [None] * 3,
-                "broker": ["中信期货", "国泰君安", "海通期货"],
-                "long_position": [10000, 8000, 6000],
-                "short_position": [5000, 4000, 3000],
-            }
-        )
-        mock_capital_service.save_futures.return_value = 3
-
-        # Act
-        result = data_writer.write_data(
-            dataset="futures_position",
-            df=df,
-            trade_date="2024-12-27",
-        )
-
-        # Assert
-        assert result.rows_written == 3
-        assert not result.blocked
-        mock_capital_service.save_futures.assert_called_once()

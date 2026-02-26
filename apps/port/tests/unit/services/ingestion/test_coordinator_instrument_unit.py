@@ -43,6 +43,7 @@ def mock_metadata_service():
     # Instrument 相关方法
     service.register_instruments_batch = MagicMock()
     service.resolve_or_create_instruments_batch = MagicMock()
+    service.resolve_instrument_ids_batch = MagicMock()
 
     # 设置 resolve_or_create_instruments_batch 的 side_effect
     stock_counter = [1_000_000]
@@ -57,7 +58,16 @@ def mock_metadata_service():
         source_tickers = df["source_ticker"].to_list()
         return {source_tickers[0]: instrument_id}
 
+    def resolve_ids_side_effect(identifiers, source, asof, **kwargs):
+        """为 resolve_instrument_ids_batch 模拟返回值."""
+        _ = source, asof, kwargs
+        result = {}
+        for i, ticker in enumerate(identifiers):
+            result[ticker] = 1_000_000 + i
+        return result
+
     service.resolve_or_create_instruments_batch.side_effect = resolve_side_effect
+    service.resolve_instrument_ids_batch.side_effect = resolve_ids_side_effect
 
     # resolve_source_ticker 默认返回测试值
     service.resolve_source_ticker.return_value = "000001.SZ"

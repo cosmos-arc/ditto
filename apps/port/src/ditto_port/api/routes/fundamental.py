@@ -29,7 +29,7 @@ async def get_financials(
     report_type: FinancialType,
     instrument_id: str = Query(..., description="标的 ID"),
     as_of_date: date = Query(..., description="PIT 查询日期"),
-    service: Annotated[FundamentalService | None, FromComponent()] = None,
+    service: Annotated[FundamentalService, FromComponent()] = None,  # type: ignore[assignment]
 ) -> APIResponse[list[Financial]]:
     """
     获取财务报表数据.
@@ -44,9 +44,6 @@ async def get_financials(
         APIResponse 包含财务报表数据列表
 
     """
-    if service is None:
-        msg = "FundamentalService injection failed"
-        raise RuntimeError(msg)
     # 根据报表类型调用对应的方法（在线程池中执行，避免阻塞事件循环）
     df = None
     if report_type == FinancialType.BALANCE_SHEET:
@@ -82,7 +79,7 @@ async def get_financials(
 async def get_dividend(
     instrument_id: str = Query(..., description="标的 ID"),
     as_of_date: date = Query(..., description="PIT 查询日期"),
-    service: Annotated[FundamentalService | None, FromComponent()] = None,
+    service: Annotated[FundamentalService, FromComponent()] = None,  # type: ignore[assignment]
 ) -> APIResponse[list[Dividend]]:
     """
     获取分红数据.
@@ -96,9 +93,6 @@ async def get_dividend(
         APIResponse 包含分红数据列表
 
     """
-    if service is None:
-        msg = "FundamentalService injection failed"
-        raise RuntimeError(msg)
     # 调用 service（在线程池中执行，避免阻塞事件循环）
     df = await asyncio.to_thread(service.get_dividend, instrument_id, as_of_date)
 
@@ -117,7 +111,7 @@ async def list_corporate_actions(
     instrument_id: str = Query(..., description="标的 ID"),
     start_date: date = Query(..., description="开始日期"),
     end_date: date = Query(..., description="结束日期"),
-    service: Annotated[FundamentalService | None, FromComponent()] = None,
+    service: Annotated[FundamentalService, FromComponent()] = None,  # type: ignore[assignment]
 ) -> APIResponse[list[CorporateAction]]:
     """
     查询公司行动列表.
@@ -135,9 +129,6 @@ async def list_corporate_actions(
         HTTPException: 400 如果 start_date > end_date
 
     """
-    if service is None:
-        msg = "FundamentalService injection failed"
-        raise RuntimeError(msg)
     # 验证日期范围
     if start_date > end_date:
         raise HTTPException(

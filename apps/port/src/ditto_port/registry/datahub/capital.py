@@ -4,12 +4,6 @@ from __future__ import annotations
 
 from dishka import Provider, Scope, provide
 from ditto_datahub.services.capital_service import CapitalService
-from ditto_datahub.stores.capital.futures_position.futures_reader import (
-    FuturesReader,
-)
-from ditto_datahub.stores.capital.futures_position.futures_writer import (
-    FuturesWriter,
-)
 from ditto_datahub.stores.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )
@@ -40,7 +34,7 @@ __all__ = ["CapitalProvider"]
 
 
 class CapitalProvider(Provider):
-    """Capital Domain Provider - 融资融券、质押、估值、期货、指数成分."""
+    """Capital Domain Provider - 融资融券、质押、估值、指数成分."""
 
     scope = Scope.APP
 
@@ -105,26 +99,6 @@ class CapitalProvider(Provider):
         return ValuationMetricsWriter(client=sqlite_client)
 
     # ========================================================================
-    # Futures Stores
-    # ========================================================================
-
-    @provide
-    def futures_reader(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> FuturesReader:
-        """Futures reader."""
-        return FuturesReader(client=sqlite_client)
-
-    @provide
-    def futures_writer(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> FuturesWriter:
-        """Futures writer."""
-        return FuturesWriter(client=sqlite_client)
-
-    # ========================================================================
     # Index Composition Stores
     # ========================================================================
 
@@ -157,8 +131,6 @@ class CapitalProvider(Provider):
         pledge_ratio_writer: PledgeRatioWriter,
         valuation_metrics_reader: ValuationMetricsReader,
         valuation_metrics_writer: ValuationMetricsWriter,
-        futures_reader: FuturesReader,
-        futures_writer: FuturesWriter,
         index_composition_reader: IndexCompositionReader,
         index_composition_writer: IndexCompositionWriter,
     ) -> CapitalService:
@@ -170,8 +142,6 @@ class CapitalProvider(Provider):
             pledge_ratio_writer=pledge_ratio_writer,
             valuation_metrics_reader=valuation_metrics_reader,
             valuation_metrics_writer=valuation_metrics_writer,
-            futures_reader=futures_reader,
-            futures_writer=futures_writer,
             index_composition_reader=index_composition_reader,
             index_composition_writer=index_composition_writer,
         )

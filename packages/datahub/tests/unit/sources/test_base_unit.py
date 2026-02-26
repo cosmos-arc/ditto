@@ -177,7 +177,9 @@ class TestDataSourceABC:
             def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
-            def fetch_stock_basic(self) -> pl.DataFrame:
+            def fetch_stock_basic(
+                self, source_ticker: str | None = None
+            ) -> pl.DataFrame:
                 return pl.DataFrame()
 
             def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:

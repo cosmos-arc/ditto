@@ -18,7 +18,6 @@ from .mappings import (
     DIVIDEND_MAPPING,
     ETF_BASIC_MAPPING,
     FUND_ADJ_MAPPING,
-    FUTURES_MAPPING,
     INCOME_STATEMENT_MAPPING,
     INDEX_BASIC_MAPPING,
     INDEX_COMPOSITION_MAPPING,
@@ -39,7 +38,6 @@ __all__ = [
     "DIVIDEND_MAPPING",
     "ETF_BASIC_MAPPING",
     "FUND_ADJ_MAPPING",
-    "FUTURES_MAPPING",
     "INCOME_STATEMENT_MAPPING",
     "INDEX_BASIC_MAPPING",
     "INDEX_COMPOSITION_MAPPING",
@@ -270,11 +268,9 @@ class TushareDataTransformer:
                 schema[col] = dtype
 
         # 处理计算列
-        for col_name, expr in mapping.computed_columns.items():
-            if columns_to_include is None or col_name in columns_to_include:
-                schema[col_name] = TushareDataTransformer._infer_computed_column_type(
-                    expr, column_types
-                )
+        TushareDataTransformer._add_computed_columns_schema(
+            schema, mapping, columns_to_include, column_types
+        )
 
         # 处理在 output_columns 中但尚未添加的列(如 name,这些列没有在类型配置中)
         # 这些列默认为 String 类型
@@ -284,3 +280,33 @@ class TushareDataTransformer:
                     schema[col] = pl.String
 
         return schema
+
+    @staticmethod
+    def _add_computed_columns_schema(
+        schema: dict[str, type[pl.DataType]],
+        mapping: ColumnMapping,
+        columns_to_include: tuple[str, ...] | None,
+        column_types: dict[str, type[pl.DataType]],
+    ) -> None:
+        """
+        将计算列的类型添加到 schema 中.
+
+        Args:
+            schema: 要更新的 schema 字典
+            mapping: 列映射配置
+            columns_to_include: 需要包含的列
+            column_types: 已知列的类型映射
+
+        """
+        for col_name, expr in mapping.computed_columns.items():
+            if columns_to_include is None or col_name in columns_to_include:
+                # 如果计算列覆盖 date_columns，直接使用 Date 类型
+                # 避免复杂表达式类型推断失败
+                if col_name in mapping.date_columns:
+                    schema[col_name] = pl.Date
+                else:
+                    schema[col_name] = (
+                        TushareDataTransformer._infer_computed_column_type(
+                            expr, column_types
+                        )
+                    )

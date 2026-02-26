@@ -26,8 +26,6 @@ class TestCapitalServiceGetMethods:
             pledge_ratio_writer=mocker.Mock(),
             valuation_metrics_reader=mocker.Mock(),
             valuation_metrics_writer=mocker.Mock(),
-            futures_reader=mocker.Mock(),
-            futures_writer=mocker.Mock(),
             index_composition_reader=mocker.Mock(),
             index_composition_writer=mocker.Mock(),
         )
@@ -55,8 +53,6 @@ class TestCapitalServiceGetMethods:
             pledge_ratio_writer=mocker.Mock(),
             valuation_metrics_reader=mocker.Mock(),
             valuation_metrics_writer=mocker.Mock(),
-            futures_reader=mocker.Mock(),
-            futures_writer=mocker.Mock(),
             index_composition_reader=mocker.Mock(),
             index_composition_writer=mocker.Mock(),
         )
@@ -86,8 +82,6 @@ class TestCapitalServiceGetMethods:
             pledge_ratio_writer=mocker.Mock(),
             valuation_metrics_reader=mock_reader,
             valuation_metrics_writer=mocker.Mock(),
-            futures_reader=mocker.Mock(),
-            futures_writer=mocker.Mock(),
             index_composition_reader=mocker.Mock(),
             index_composition_writer=mocker.Mock(),
         )
@@ -96,33 +90,6 @@ class TestCapitalServiceGetMethods:
         result = service.get_valuation_metrics(
             instrument_id="1", as_of_date=date(2024, 1, 1)
         )
-
-        # Assert
-        assert isinstance(result, pl.DataFrame)
-        mock_reader.get.assert_called_once_with("1", date(2024, 1, 1))
-
-    def test_get_futures_delegates_to_reader(self, mocker: MockerFixture) -> None:
-        """Test get_futures() delegates to FuturesReader."""
-        # Arrange
-        mock_reader = mocker.Mock()
-        expected_df = pl.DataFrame({"instrument_id": [1], "close": [100.5]})
-        mock_reader.get = mocker.Mock(return_value=expected_df)
-
-        service = CapitalService(
-            margin_trading_reader=mocker.Mock(),
-            margin_trading_writer=mocker.Mock(),
-            pledge_ratio_reader=mocker.Mock(),
-            pledge_ratio_writer=mocker.Mock(),
-            valuation_metrics_reader=mocker.Mock(),
-            valuation_metrics_writer=mocker.Mock(),
-            futures_reader=mock_reader,
-            futures_writer=mocker.Mock(),
-            index_composition_reader=mocker.Mock(),
-            index_composition_writer=mocker.Mock(),
-        )
-
-        # Act
-        result = service.get_futures(instrument_id="1", as_of_date=date(2024, 1, 1))
 
         # Assert
         assert isinstance(result, pl.DataFrame)
@@ -144,8 +111,6 @@ class TestCapitalServiceGetMethods:
             pledge_ratio_writer=mocker.Mock(),
             valuation_metrics_reader=mocker.Mock(),
             valuation_metrics_writer=mocker.Mock(),
-            futures_reader=mocker.Mock(),
-            futures_writer=mocker.Mock(),
             index_composition_reader=mock_reader,
             index_composition_writer=mocker.Mock(),
         )
@@ -179,8 +144,6 @@ class TestCapitalServiceSaveMethods:
             pledge_ratio_writer=mocker.Mock(),
             valuation_metrics_reader=mocker.Mock(),
             valuation_metrics_writer=mocker.Mock(),
-            futures_reader=mocker.Mock(),
-            futures_writer=mocker.Mock(),
             index_composition_reader=mocker.Mock(),
             index_composition_writer=mocker.Mock(),
         )
@@ -206,8 +169,6 @@ class TestCapitalServiceSaveMethods:
             pledge_ratio_writer=mock_writer,
             valuation_metrics_reader=mocker.Mock(),
             valuation_metrics_writer=mocker.Mock(),
-            futures_reader=mocker.Mock(),
-            futures_writer=mocker.Mock(),
             index_composition_reader=mocker.Mock(),
             index_composition_writer=mocker.Mock(),
         )
@@ -235,8 +196,6 @@ class TestCapitalServiceSaveMethods:
             pledge_ratio_writer=mocker.Mock(),
             valuation_metrics_reader=mocker.Mock(),
             valuation_metrics_writer=mock_writer,
-            futures_reader=mocker.Mock(),
-            futures_writer=mocker.Mock(),
             index_composition_reader=mocker.Mock(),
             index_composition_writer=mocker.Mock(),
         )
@@ -246,33 +205,6 @@ class TestCapitalServiceSaveMethods:
 
         # Assert
         assert result == 7
-        mock_writer.write.assert_called_once_with(test_df)
-
-    def test_save_futures_delegates_to_writer(self, mocker: MockerFixture) -> None:
-        """Test save_futures() delegates to FuturesWriter."""
-        # Arrange
-        mock_writer = mocker.Mock()
-        mock_writer.write = mocker.Mock(return_value=4)
-        test_df = pl.DataFrame({"col1": [1, 2]})
-
-        service = CapitalService(
-            margin_trading_reader=mocker.Mock(),
-            margin_trading_writer=mocker.Mock(),
-            pledge_ratio_reader=mocker.Mock(),
-            pledge_ratio_writer=mocker.Mock(),
-            valuation_metrics_reader=mocker.Mock(),
-            valuation_metrics_writer=mocker.Mock(),
-            futures_reader=mocker.Mock(),
-            futures_writer=mock_writer,
-            index_composition_reader=mocker.Mock(),
-            index_composition_writer=mocker.Mock(),
-        )
-
-        # Act
-        result = service.save_futures(test_df)
-
-        # Assert
-        assert result == 4
         mock_writer.write.assert_called_once_with(test_df)
 
     def test_save_index_composition_delegates_to_writer(
@@ -291,8 +223,6 @@ class TestCapitalServiceSaveMethods:
             pledge_ratio_writer=mocker.Mock(),
             valuation_metrics_reader=mocker.Mock(),
             valuation_metrics_writer=mocker.Mock(),
-            futures_reader=mocker.Mock(),
-            futures_writer=mocker.Mock(),
             index_composition_reader=mocker.Mock(),
             index_composition_writer=mock_writer,
         )

@@ -25,8 +25,8 @@ console = Console()
 @contextmanager
 def _get_macro_service() -> Generator[MacroService, None, None]:
     """获取 MacroService 实例."""
-    with create_cli_host() as container:
-        yield container.get(MacroService)
+    with create_cli_host() as bundle:
+        yield bundle.macro_service
 
 
 def _output_json(items: list[Any]) -> None:

@@ -9,6 +9,7 @@
 """
 
 from collections.abc import Callable
+from typing import Literal, cast
 
 import httpx
 import polars as pl
@@ -27,6 +28,9 @@ from ditto_port.models import IngestionResult, InstrumentIngestParams
 from ditto_port.services.ingestion.data_writer import IngestionDataWriter
 from ditto_port.services.ingestion.errors import SourceFetchError
 from ditto_port.services.ingestion.index_config import get_all_index_codes
+from ditto_port.services.ingestion.list_date_inference import (
+    ListDateInferenceService,
+)
 from ditto_port.services.ingestion.metadata import MetadataManager
 from ditto_port.services.ingestion.result_handler import IngestionResultHandler
 
@@ -83,6 +87,12 @@ class IngestionCoordinator:
             macro_service=macro_service,
             source_name=source_name,
         )
+        # list_date 推断服务（用于 basic 数据摄取后的补偿）
+        self._list_date_inference = ListDateInferenceService(
+            metadata_service=metadata_service,
+            source=source,
+            source_name=source_name,
+        )
         # 缓存指数代码，避免每次摄取都调用 API
         self._index_codes_cache: list[str] | None = None
 
@@ -98,6 +108,54 @@ class IngestionCoordinator:
         """Normalize external fetch error into port-level SourceFetchError."""
         source_name = getattr(error, "source", type(error).__name__)
         return SourceFetchError(message=str(error), source=str(source_name))
+
+    def _run_list_date_inference(self, dataset: str) -> None:
+        """
+        在 basic 数据摄取后执行 list_date 推断补偿。
+
+        针对 list_date 为 NULL 的证券，从历史行情数据推断上市日期。
+
+        Args:
+            dataset: 数据集名称
+
+        """
+        # 仅对 basic 数据集执行推断
+        asset_class_map = {
+            "stock_basic": "stock",
+            "etf_basic": "etf",
+            "index_basic": "index",
+        }
+
+        asset_class = asset_class_map.get(dataset)
+        if asset_class is None:
+            return
+
+        try:
+            logger.info(
+                "Running list_date inference after basic ingestion",
+                event="list_date_inference_start",
+                dataset=dataset,
+                asset_class=asset_class,
+            )
+            count = self._list_date_inference.infer_for_asset_class(
+                cast('Literal["stock", "etf", "index"]', asset_class)
+            )
+            logger.info(
+                "Completed list_date inference",
+                event="list_date_inference_complete",
+                dataset=dataset,
+                asset_class=asset_class,
+                inferred_count=count,
+            )
+        except Exception as e:
+            # 推断失败不影响主流程，仅记录警告
+            logger.warning(
+                f"list_date inference failed for {asset_class}",
+                event="list_date_inference_error",
+                dataset=dataset,
+                asset_class=asset_class,
+                error=str(e),
+            )
 
     def _get_cached_index_codes(self) -> list[str]:
         """
@@ -283,6 +341,9 @@ class IngestionCoordinator:
                 dataset, trade_date, write_result
             )
 
+        # basic 数据摄取成功后，执行 list_date 推断补偿
+        self._run_list_date_inference(dataset)
+
         # 成功写入
         return self._result_handler.handle_success(
             dataset, trade_date, df, write_result
@@ -346,22 +407,9 @@ class IngestionCoordinator:
             raise ValueError(f"数据集 {dataset} 缺少 asset_class 定义")
 
         # 解析标识符为 source_ticker
-        try:
-            source_ticker = self._metadata_service.resolve_source_ticker(
-                ticker=params.ticker,
-                standard_ticker=params.standard_ticker,
-                instrument_id=params.instrument_id,
-                asset_class=asset_class,
-                source=self._source_name,
-            )
-        except (AmbiguousTickerError, IdentifierNotFoundError) as e:
-            logger.error(
-                "标识符解析失败",
-                event="identifier_resolution_failed",
-                dataset=dataset,
-                error=str(e),
-            )
-            raise
+        source_ticker = self._resolve_identifier_with_auto_init(
+            params, asset_class, dataset
+        )
 
         logger.info(
             "开始按标的摄取数据",
@@ -377,6 +425,163 @@ class IngestionCoordinator:
         return self._fetch_and_ingest_by_instrument(
             dataset, dataset_enum, source_ticker, params, force
         )
+
+    def _resolve_identifier_with_auto_init(
+        self,
+        params: InstrumentIngestParams,
+        asset_class: str,
+        dataset: str,
+    ) -> str:
+        """
+        解析标识符，如果失败则尝试自动初始化证券信息.
+
+        对于股票类型，如果标识符未找到，会尝试从数据源获取
+        该股票的基本信息并注册，然后重试解析。
+
+        Args:
+            params: 摄取参数
+            asset_class: 资产类别
+            dataset: 数据集名称（用于日志）
+
+        Returns:
+            解析后的 source_ticker
+
+        Raises:
+            AmbiguousTickerError: 标识符模糊
+            IdentifierNotFoundError: 标识符未找到且无法自动初始化
+
+        """
+        try:
+            return self._metadata_service.resolve_source_ticker(
+                ticker=params.ticker,
+                standard_ticker=params.standard_ticker,
+                instrument_id=params.instrument_id,
+                asset_class=asset_class,
+                source=self._source_name,
+            )
+        except AmbiguousTickerError:
+            # 模糊标识符无法自动修复
+            raise
+        except IdentifierNotFoundError as e:
+            # 仅对股票类型尝试自动初始化
+            if asset_class != "stock":
+                logger.error(
+                    "标识符解析失败",
+                    event="identifier_resolution_failed",
+                    dataset=dataset,
+                    error=str(e),
+                )
+                raise
+
+            # 尝试自动初始化
+            return self._auto_init_stock_instrument(params, dataset, e)
+
+    def _auto_init_stock_instrument(
+        self,
+        params: InstrumentIngestParams,
+        dataset: str,
+        original_error: IdentifierNotFoundError,
+    ) -> str:
+        """
+        自动初始化股票证券信息.
+
+        从 Tushare 获取股票基本信息并注册，然后返回 source_ticker。
+
+        Args:
+            params: 摄取参数
+            dataset: 数据集名称
+            original_error: 原始的标识符未找到错误
+
+        Returns:
+            source_ticker
+
+        Raises:
+            IdentifierNotFoundError: 如果无法获取股票信息
+
+        """
+        # 构建可能的 source_ticker 格式
+        # 用户可能传入裸代码（如 "600519"）或标准格式（如 "600519.SH"）
+        ticker = params.ticker or (
+            params.standard_ticker.split(".")[0] if params.standard_ticker else None
+        )
+
+        if not ticker:
+            logger.error(
+                "无法确定股票代码",
+                event="auto_init_missing_ticker",
+                dataset=dataset,
+            )
+            raise original_error
+
+        # 尝试构建 source_ticker（需要判断交易所）
+        # 上交所：60xxxx, 68xxxx
+        # 深交所：00xxxx, 30xxxx
+        # 北交所：8xxxxx, 4xxxxx
+        if ticker.startswith(("60", "68")):
+            source_ticker = f"{ticker}.SH"
+        elif ticker.startswith(("00", "30")):
+            source_ticker = f"{ticker}.SZ"
+        elif ticker.startswith(("8", "4")):
+            source_ticker = f"{ticker}.BJ"
+        else:
+            logger.error(
+                "无法确定交易所",
+                event="auto_init_unknown_exchange",
+                ticker=ticker,
+            )
+            raise original_error
+
+        logger.info(
+            "尝试自动初始化股票信息",
+            event="auto_init_stock_start",
+            source_ticker=source_ticker,
+            dataset=dataset,
+        )
+
+        # 从 Tushare 获取股票基本信息
+        try:
+            basic_df = self._source.fetch_stock_basic(source_ticker)
+        except Exception as fetch_error:
+            logger.error(
+                "获取股票基本信息失败",
+                event="auto_init_fetch_failed",
+                source_ticker=source_ticker,
+                error=str(fetch_error),
+            )
+            raise original_error from None
+
+        if basic_df.is_empty():
+            logger.warning(
+                "股票在数据源中不存在",
+                event="auto_init_stock_not_found",
+                source_ticker=source_ticker,
+            )
+            raise original_error from None
+
+        # 注册证券
+        try:
+            self._metadata_service.register_instruments_batch(
+                df=basic_df,
+                source=self._source_name,
+                asset_class="stock",
+                source_ticker_col="source_ticker",
+            )
+        except Exception as register_error:
+            logger.error(
+                "注册证券失败",
+                event="auto_init_register_failed",
+                source_ticker=source_ticker,
+                error=str(register_error),
+            )
+            raise original_error from None
+
+        logger.info(
+            "自动初始化股票信息成功",
+            event="auto_init_stock_success",
+            source_ticker=source_ticker,
+        )
+
+        return source_ticker
 
     def _fetch_and_ingest_by_instrument(  # noqa: PLR0911
         self,
@@ -422,8 +627,9 @@ class IngestionCoordinator:
         if df.is_empty():
             return self._result_handler.handle_empty_data(dataset, params.start_date)
 
-        # 将 force 映射到 on_duplicate
-        on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
+        # 按标的摄取默认使用 KEEP_LAST，确保重复摄取幂等
+        # （按标的摄取没有摄取日志检查机制，因此需要依赖存储层覆盖）
+        on_duplicate = OnDuplicate.KEEP_LAST
 
         try:
             write_result = self._data_writer.write_data(
@@ -548,9 +754,11 @@ class IngestionCoordinator:
             raise ValueError(f"不支持的数据集: {dataset}") from e
 
         # 定义数据集获取函数映射（使用枚举作为键）
+        # 交易日历特殊处理：使用整年日期范围
+        _calendar_year = trade_date[:4]  # 从 trade_date 提取年份
         handlers: dict[Dataset, Callable[[], pl.DataFrame]] = {
-            Dataset.CALENDAR: lambda: self._source.fetch_calendar(
-                trade_date, trade_date
+            Dataset.CALENDAR: lambda y=_calendar_year: self._source.fetch_calendar(
+                f"{y}-01-01", f"{y}-12-31"
             ),
             Dataset.STOCK_BASIC: lambda: self._source.fetch_stock_basic(),
             Dataset.ETF_BASIC: lambda: self._source.fetch_etf_basic(),
@@ -575,7 +783,6 @@ class IngestionCoordinator:
             Dataset.MACRO_INDICATORS: lambda: self._source.fetch_macro_indicators(
                 trade_date
             ),
-            Dataset.FUTURES_POSITION: lambda: self._source.fetch_futures(trade_date),
             Dataset.CORPORATE_ACTIONS: lambda: self._source.fetch_corporate_actions(
                 trade_date
             ),

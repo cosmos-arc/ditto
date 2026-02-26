@@ -27,8 +27,8 @@ console = Console()
 @contextmanager
 def _get_market_service() -> Generator[MarketService, None, None]:
     """获取 MarketService 实例."""
-    with create_cli_host() as container:
-        yield container.get(MarketService)
+    with create_cli_host() as bundle:
+        yield bundle.market_service
 
 
 def _output_json(items: list[Any]) -> None:

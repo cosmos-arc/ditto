@@ -98,7 +98,7 @@ class TestTushareSourceEtfBasic:
         """Test fetch_etf_basic returns DataFrame with correct schema."""
 
         # Mock HTTP 响应 - fund_basic API
-        # [REVIEW]: fund_basic 返回 ts_code, name, exchange, list_date
+        # [REVIEW]: fund_basic 返回 ts_code, name, list_date
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(
                 200,
@@ -106,10 +106,14 @@ class TestTushareSourceEtfBasic:
                     "code": 0,
                     "msg": None,
                     "data": {
-                        "fields": ["ts_code", "name", "exchange", "list_date"],
+                        "fields": [
+                            "ts_code",
+                            "name",
+                            "list_date",
+                        ],
                         "items": [
-                            ["510300.SH", "沪深300ETF", "SSE", "20120706"],
-                            ["159919.SZ", "沪深300ETF", "SZSE", "20190624"],
+                            ["510300.SH", "沪深300ETF", "20120706"],
+                            ["159919.SZ", "沪深300ETF", "20190624"],
                         ],
                     },
                 },
@@ -157,7 +161,11 @@ class TestTushareSourceEtfBasic:
                     "code": 0,
                     "msg": None,
                     "data": {
-                        "fields": ["ts_code", "name", "exchange", "list_date"],
+                        "fields": [
+                            "ts_code",
+                            "name",
+                            "list_date",
+                        ],
                         "items": [],
                     },
                 },
@@ -299,40 +307,84 @@ class TestTushareSourceStockBasic:
         """Test fetch_stock_basic returns DataFrame with correct schema."""
 
         # Mock HTTP 响应 - stock_basic API
-        # [REVIEW]: stock_basic API 返回 ts_code, symbol, name, exchange, list_date
-        respx_mock.post("http://api.tushare.pro").mock(
-            return_value=httpx.Response(
-                200,
-                json={
-                    "code": 0,
-                    "msg": None,
-                    "data": {
-                        "fields": [
-                            "ts_code",
-                            "symbol",
-                            "name",
-                            "exchange",
-                            "list_date",
-                        ],
-                        "items": [
-                            ["000001.SZ", "000001", "平安银行", "SZSE", "19910403"],
-                            ["600000.SH", "600000", "浦发银行", "SSE", "19991110"],
-                        ],
+        # 现在 fetch_stock_basic 会分别查询 L、D、P 三种状态
+        # 使用 side_effect 模拟多次调用
+        call_count = 0
+
+        def mock_response(request):
+            nonlocal call_count
+            call_count += 1
+            # 第一次调用返回 L 状态，后续调用返回空数据
+            if call_count == 1:
+                return httpx.Response(
+                    200,
+                    json={
+                        "code": 0,
+                        "msg": None,
+                        "data": {
+                            "fields": [
+                                "ts_code",
+                                "symbol",
+                                "name",
+                                "exchange",
+                                "list_date",
+                                "list_status",
+                            ],
+                            "items": [
+                                [
+                                    "000001.SZ",
+                                    "000001",
+                                    "平安银行",
+                                    "SZSE",
+                                    "19910403",
+                                    "L",
+                                ],
+                                [
+                                    "600000.SH",
+                                    "600000",
+                                    "浦发银行",
+                                    "SSE",
+                                    "19991110",
+                                    "L",
+                                ],
+                            ],
+                        },
                     },
-                },
-            )
-        )
+                )
+            else:
+                # D 和 P 状态返回空数据
+                return httpx.Response(
+                    200,
+                    json={
+                        "code": 0,
+                        "msg": None,
+                        "data": {
+                            "fields": [
+                                "ts_code",
+                                "symbol",
+                                "name",
+                                "exchange",
+                                "list_date",
+                                "list_status",
+                            ],
+                            "items": [],
+                        },
+                    },
+                )
+
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=mock_response)
 
         source = TushareSource(settings=_settings())
         result = source.fetch_stock_basic()
 
-        # Verify schema
+        # Verify schema - 现在包含 list_status 字段
         assert dict(result.schema) == {
             "source_ticker": pl.String,
             "ticker": pl.String,
             "name": pl.String,
             "exchange": pl.String,
             "list_date": pl.Date,
+            "list_status": pl.String,
         }
 
         # Verify data transformation
@@ -343,6 +395,7 @@ class TestTushareSourceStockBasic:
                 "name": "平安银行",
                 "exchange": "SZSE",
                 "list_date": date(1991, 4, 3),
+                "list_status": "L",
             },
             {
                 "source_ticker": "600000.SH",
@@ -350,13 +403,14 @@ class TestTushareSourceStockBasic:
                 "name": "浦发银行",
                 "exchange": "SSE",
                 "list_date": date(1999, 11, 10),
+                "list_status": "L",
             },
         ]
 
     def test_fetch_stock_basic_empty_response(self, respx_mock) -> None:
         """Test fetch_stock_basic handles empty response."""
 
-        # Mock HTTP 响应 - 空数据
+        # Mock HTTP 响应 - 空数据（所有状态都返回空）
         respx_mock.post("http://api.tushare.pro").mock(
             return_value=httpx.Response(
                 200,
@@ -370,6 +424,7 @@ class TestTushareSourceStockBasic:
                             "name",
                             "exchange",
                             "list_date",
+                            "list_status",
                         ],
                         "items": [],
                     },

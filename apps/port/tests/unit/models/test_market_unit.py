@@ -253,7 +253,7 @@ class TestToBar:
             "close": 10.5,
             "volume": 1000000,
             "amount": 10500000.0,
-            "turnover_rate": 0.025,
+            "turnover_rate": 0.0256,
         }
 
         bar = to_bar(row)
@@ -266,7 +266,7 @@ class TestToBar:
         assert bar.close == 10.5
         assert bar.volume == 1000000
         assert bar.amount == 10500000.0
-        assert bar.turnover_rate == 0.025
+        assert bar.turnover_rate == 0.03  # 四舍五入到 2 位小数
 
     def test_convert_with_missing_optional_fields(self) -> None:
         """验证可选字段缺失时的转换."""

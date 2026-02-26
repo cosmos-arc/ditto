@@ -570,15 +570,6 @@ INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
         task_name="ingest_macro_indicators",
         priority=55,
     ),
-    Dataset.FUTURES_POSITION: create_t1_config(
-        dataset=Dataset.FUTURES_POSITION,
-        description="期货持仓数据",
-        typical_available_time=time(21, 0),
-        depends_on=[Dataset.CALENDAR],
-        critical_fields=["instrument_id", "trade_date", "knowledge_date"],
-        task_name="ingest_futures_position",
-        priority=60,
-    ),
     Dataset.CORPORATE_ACTIONS: create_t1_config(
         dataset=Dataset.CORPORATE_ACTIONS,
         description="公司行为",

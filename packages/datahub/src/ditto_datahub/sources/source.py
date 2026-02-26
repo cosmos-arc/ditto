@@ -16,15 +16,21 @@ class DataSources:
 
     """
 
-    def __init__(self, tushare: DataSource) -> None:
+    def __init__(
+        self,
+        tushare: DataSource,
+        fred: DataSource | None = None,
+    ) -> None:
         """
         初始化 DataSources。
 
         Args:
             tushare: Tushare 数据源实例
+            fred: FRED 数据源实例（可选）
 
         """
         self._tushare = tushare
+        self._fred = fred
         logger.debug("DataSources initialized", event="sources_init")
 
     @property
@@ -38,6 +44,17 @@ class DataSources:
         """
         return self._tushare
 
+    @property
+    def fred(self) -> DataSource | None:
+        """
+        Get FRED data source.
+
+        Returns:
+            FredSource instance or None if not configured.
+
+        """
+        return self._fred
+
     def get(self, name: str | Source) -> DataSource:
         """
         Get data source by name.
@@ -49,7 +66,7 @@ class DataSources:
             DataSource instance.
 
         Raises:
-            ValueError: If source name is unknown.
+            ValueError: If source name is unknown or not configured.
 
         """
         # 支持 Source 枚举和字符串
@@ -67,6 +84,14 @@ class DataSources:
 
         if source_key == Source.TUSHARE:
             return self._tushare
+
+        if source_key == Source.FRED:
+            if self._fred is None:
+                raise ValueError(
+                    "FRED data source not configured. Set FRED_API_KEY environment "
+                    + "variable or provide fred_api_key in configuration."
+                )
+            return self._fred
 
         supported = [s.value for s in Source]
         raise ValueError(f"Unknown source: '{name}'. Supported sources: {supported}")

@@ -15,7 +15,11 @@ from ditto_infra.foundation import logger, traced
 from ditto_infra.foundation.util.checksum import ChecksumCompute
 
 from ditto_datahub.errors import AmbiguousTickerError, IdentifierNotFoundError
-from ditto_datahub.models.metadata import InstrumentRegistration
+from ditto_datahub.models.metadata import (
+    InstrumentExtension,
+    InstrumentRegistration,
+    StockExtension,
+)
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.sources import ExchangeTransformers
 from ditto_datahub.stores.metadata.calendar import CalendarReader, CalendarWriter
@@ -456,6 +460,32 @@ class MetadataService:
 
         return registered_id
 
+    @staticmethod
+    def _build_extension(
+        row: dict[str, Any], asset_class: str
+    ) -> InstrumentExtension | None:
+        """
+        根据资产类型和行数据构建扩展信息.
+
+        Args:
+            row: 包含证券元数据的字典
+            asset_class: 资产类别
+
+        Returns:
+            对应类型的 InstrumentExtension，如果不需要扩展信息则返回 None
+
+        """
+        if asset_class == "stock":
+            # 股票扩展信息：list_status
+            list_status = row.get("list_status")
+            if list_status:
+                return StockExtension(
+                    instrument_id=0,  # 占位，实际值由 register_instrument 设置
+                    list_status=list_status,
+                    industry_id=None,
+                )
+        return None
+
     @traced("metadata.instrument.register_instruments_batch")
     def register_instruments_batch(
         self,
@@ -515,6 +545,7 @@ class MetadataService:
                     list_date=row["list_date"],
                     source=source,
                     board=row.get("board"),
+                    extension=self._build_extension(row, asset_class),
                 )
             )
             registered_count += 1
@@ -756,3 +787,39 @@ class MetadataService:
                 identifier_type="ticker",
             )
         return str(source_ticker)
+
+    # ============ list_date 更新 ============
+
+    @traced("metadata.instrument.update_list_date")
+    def update_list_date(self, instrument_id: int, list_date: Any) -> None:
+        """
+        更新证券的上市日期.
+
+        用于从行情数据推断上市日期的场景。
+
+        Args:
+            instrument_id: 证券 ID
+            list_date: 上市日期
+
+        """
+        self._instrument_writer.update_list_date(instrument_id, list_date)
+
+    @traced("metadata.instrument.find_instruments_without_list_date")
+    def find_instruments_without_list_date(
+        self,
+        asset_class: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        查找没有上市日期的证券.
+
+        Args:
+            asset_class: 资产类别过滤（可选）
+
+        Returns:
+            包含 instrument_id, source_ticker, asset_class 的 DataFrame
+
+        """
+        return self._instrument_reader.find_securities(
+            asset_class=asset_class,
+            is_active=True,
+        ).filter(pl.col("list_date").is_null())

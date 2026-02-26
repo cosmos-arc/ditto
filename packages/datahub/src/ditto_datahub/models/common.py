@@ -61,7 +61,6 @@ class Dataset(str, Enum):
     MACRO_INDICATORS = "macro_indicators"
 
     # Capital 域扩展
-    FUTURES_POSITION = "futures_position"
     CORPORATE_ACTIONS = "corporate_actions"
 
     @property
@@ -178,6 +177,7 @@ class Source(str, Enum):
 
     TUSHARE = "tushare"
     AKSHARE = "akshare"  # 预留，未来支持
+    FRED = "fred"  # Federal Reserve Economic Data (美国宏观数据)
 
 
 # ============ Store 枚举 ============

@@ -9,7 +9,7 @@ from ditto_datahub.sources.tushare.processors.column_mapping import ColumnMappin
 # Valuation Metrics (PE/PB) - PIT data
 VALUATION_METRICS_MAPPING = ColumnMapping(
     rename={
-        "ts_code": "instrument_id",
+        "ts_code": "source_ticker",
         "pe": "pe_ratio",
         "pb": "pb_ratio",
         "ps": "ps_ratio",
@@ -20,7 +20,7 @@ VALUATION_METRICS_MAPPING = ColumnMapping(
     float_columns=["pe_ratio", "pb_ratio", "ps_ratio", "dividend_yield", "market_cap"],
     computed_columns={"knowledge_date": pl.col("trade_date") + pl.duration(days=1)},
     output_columns=(
-        "instrument_id",
+        "source_ticker",
         "trade_date",
         "knowledge_date",
         "pe_ratio",
@@ -32,15 +32,17 @@ VALUATION_METRICS_MAPPING = ColumnMapping(
 )
 
 # Dividend - PIT data
+# P015 修复：添加 div_proc 字段区分预案/实施
 # Note: dividend_yield is not available from Tushare dividend API.
 # It's computed from valuation_metrics dv_ratio field separately.
 # We include it as null to satisfy the schema contract.
 DIVIDEND_MAPPING = ColumnMapping(
     rename={
-        "ts_code": "instrument_id",
+        "ts_code": "source_ticker",
         "ex_date": "ex_dividend_date",
         "cash_div": "dividend_per_share",
         "ann_date": "knowledge_date",
+        "div_proc": "div_proc",  # P015: 添加实施进度字段
     },
     date_columns={"ex_dividend_date": "%Y%m%d", "knowledge_date": "%Y%m%d"},
     float_columns=["dividend_per_share"],
@@ -48,18 +50,19 @@ DIVIDEND_MAPPING = ColumnMapping(
         "dividend_yield": pl.lit(None, dtype=pl.Float64),
     },
     output_columns=(
-        "instrument_id",
+        "source_ticker",
         "ex_dividend_date",
         "knowledge_date",
         "dividend_per_share",
         "dividend_yield",
+        "div_proc",  # P015: 输出包含实施进度
     ),
 )
 
 # Margin Trading - PIT data
 MARGIN_TRADING_MAPPING = ColumnMapping(
     rename={
-        "ts_code": "instrument_id",
+        "ts_code": "source_ticker",
         "rzye": "margin_buy_balance",
         "rqye": "short_sell_balance",
         "rzmre": "margin_buy_volume",
@@ -74,7 +77,7 @@ MARGIN_TRADING_MAPPING = ColumnMapping(
     ],
     computed_columns={"knowledge_date": pl.col("trade_date") + pl.duration(days=1)},
     output_columns=(
-        "instrument_id",
+        "source_ticker",
         "trade_date",
         "knowledge_date",
         "margin_buy_balance",
@@ -88,7 +91,7 @@ MARGIN_TRADING_MAPPING = ColumnMapping(
 # Note: Tushare pledge_stat API returns end_date as report date
 PLEDGE_RATIO_MAPPING = ColumnMapping(
     rename={
-        "ts_code": "instrument_id",
+        "ts_code": "source_ticker",
         "end_date": "report_date",
         "total_share": "total_shares",
     },
@@ -96,7 +99,7 @@ PLEDGE_RATIO_MAPPING = ColumnMapping(
     float_columns=["pledge_ratio", "total_shares"],
     computed_columns={"knowledge_date": pl.col("report_date")},
     output_columns=(
-        "instrument_id",
+        "source_ticker",
         "report_date",
         "knowledge_date",
         "pledge_ratio",
@@ -104,39 +107,16 @@ PLEDGE_RATIO_MAPPING = ColumnMapping(
     ),
 )
 
-# Futures - PIT data
-FUTURES_MAPPING = ColumnMapping(
-    rename={
-        "ts_code": "instrument_id",
-        "oi": "open_interest",
-        "settlement": "settlement_price",
-        "vol": "volume",
-        "amount": "turnover",
-    },
-    date_columns={"trade_date": "%Y%m%d"},
-    float_columns=["open_interest", "settlement_price", "volume", "turnover"],
-    computed_columns={"knowledge_date": pl.col("trade_date") + pl.duration(days=1)},
-    output_columns=(
-        "instrument_id",
-        "trade_date",
-        "knowledge_date",
-        "open_interest",
-        "settlement_price",
-        "volume",
-        "turnover",
-    ),
-)
-
 # Index Composition - PIT data
 INDEX_COMPOSITION_MAPPING = ColumnMapping(
-    rename={"ts_code": "instrument_id", "index_code": "index_id"},
+    rename={"ts_code": "source_ticker", "index_code": "index_id"},
     date_columns={"in_date": "%Y%m%d"},
     float_columns=["weight"],
     int_columns=("is_new",),
     computed_columns={"effective_from": pl.col("in_date")},
     output_columns=(
         "index_id",
-        "instrument_id",
+        "source_ticker",
         "weight",
         "effective_from",
     ),
@@ -145,7 +125,7 @@ INDEX_COMPOSITION_MAPPING = ColumnMapping(
 # Corporate Actions - Non-PIT data
 CORPORATE_ACTIONS_MAPPING = ColumnMapping(
     rename={
-        "ts_code": "instrument_id",
+        "ts_code": "source_ticker",
         "ba_type": "action_type",
         "ann_date": "announcement_date",
         "act_date": "effective_date",
@@ -154,7 +134,7 @@ CORPORATE_ACTIONS_MAPPING = ColumnMapping(
     date_columns={"announcement_date": "%Y%m%d", "effective_date": "%Y%m%d"},
     float_columns=[],
     output_columns=(
-        "instrument_id",
+        "source_ticker",
         "action_type",
         "announcement_date",
         "effective_date",
@@ -165,7 +145,7 @@ CORPORATE_ACTIONS_MAPPING = ColumnMapping(
 # Balance Sheet - PIT data (simplified fields)
 BALANCE_SHEET_MAPPING = ColumnMapping(
     rename={
-        "ts_code": "instrument_id",
+        "ts_code": "source_ticker",
         "total_liab": "total_liabilities",
     },
     date_columns={"end_date": "%Y%m%d", "ann_date": "%Y%m%d"},
@@ -184,7 +164,7 @@ BALANCE_SHEET_MAPPING = ColumnMapping(
         "current_liabilities": pl.col("total_cur_liab"),
     },
     output_columns=(
-        "instrument_id",
+        "source_ticker",
         "report_date",
         "knowledge_date",
         "total_assets",
@@ -198,7 +178,7 @@ BALANCE_SHEET_MAPPING = ColumnMapping(
 # Income Statement - PIT data (simplified fields)
 # Note: Tushare API fields are: total_revenue, operate_profit, n_income, basic_eps
 INCOME_STATEMENT_MAPPING = ColumnMapping(
-    rename={"ts_code": "instrument_id"},
+    rename={"ts_code": "source_ticker"},
     date_columns={"end_date": "%Y%m%d", "ann_date": "%Y%m%d"},
     float_columns=[
         "total_revenue",
@@ -215,7 +195,7 @@ INCOME_STATEMENT_MAPPING = ColumnMapping(
         "eps": pl.col("basic_eps"),
     },
     output_columns=(
-        "instrument_id",
+        "source_ticker",
         "report_date",
         "knowledge_date",
         "revenue",
@@ -227,7 +207,7 @@ INCOME_STATEMENT_MAPPING = ColumnMapping(
 
 # Cash Flow - PIT data (simplified fields)
 CASH_FLOW_MAPPING = ColumnMapping(
-    rename={"ts_code": "instrument_id"},
+    rename={"ts_code": "source_ticker"},
     date_columns={"end_date": "%Y%m%d", "ann_date": "%Y%m%d"},
     float_columns=[
         "n_cashflow_act",
@@ -245,7 +225,7 @@ CASH_FLOW_MAPPING = ColumnMapping(
         + pl.col("n_cash_flows_fnc_act"),
     },
     output_columns=(
-        "instrument_id",
+        "source_ticker",
         "report_date",
         "knowledge_date",
         "operating_cash_flow",
@@ -260,7 +240,6 @@ __all__ = [
     "CASH_FLOW_MAPPING",
     "CORPORATE_ACTIONS_MAPPING",
     "DIVIDEND_MAPPING",
-    "FUTURES_MAPPING",
     "INCOME_STATEMENT_MAPPING",
     "INDEX_COMPOSITION_MAPPING",
     "MARGIN_TRADING_MAPPING",

@@ -1,14 +1,10 @@
 """Models 包。"""
 
 from ditto_port.models.capital import (
-    Futures,
-    FuturesQuery,
     Margin,
     MarginQuery,
     Valuation,
     ValuationQuery,
-    to_futures,
-    to_futures_list,
     to_margin,
     to_margin_list,
     to_valuation,
@@ -97,8 +93,6 @@ __all__ = [
     "Financial",
     "FinancialQuery",
     "FinancialType",
-    "Futures",
-    "FuturesQuery",
     "Indicator",
     "IndicatorQuery",
     "IngestionResult",
@@ -132,8 +126,6 @@ __all__ = [
     "to_dividend_list",
     "to_financial",
     "to_financial_list",
-    "to_futures",
-    "to_futures_list",
     "to_indicator",
     "to_indicator_list",
     "to_instrument",

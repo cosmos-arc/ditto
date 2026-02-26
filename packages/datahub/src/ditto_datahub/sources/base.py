@@ -317,9 +317,17 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
-    def fetch_stock_basic(self) -> pl.DataFrame:
+    def fetch_stock_basic(self, source_ticker: str | None = None) -> pl.DataFrame:
         """
         Fetch stock basic information.
+
+        Supports two modes:
+        - Batch mode: No source_ticker, fetch all stocks (all listing statuses)
+        - Single mode: With source_ticker, fetch specific stock
+
+        Args:
+            source_ticker: Stock code (e.g., "600519.SH"). Optional.
+                If not provided, fetches all stocks.
 
         Returns:
             DataFrame with columns:
@@ -328,6 +336,8 @@ class DataSource(ABC):
             - name: Stock name
             - exchange: Exchange code (SSE/SZSE/BSE)
             - list_date: Listing date
+            - list_status: Listing status (L=Active, D=Delisted, P=Suspended)
+            Empty DataFrame if single stock not found.
 
         Raises:
             SourceFetchError: If fetch fails.
@@ -677,23 +687,6 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with macro_indicators SourceSchema fields.
-
-        Raises:
-            SourceFetchError: If fetch fails.
-
-        """
-        pass
-
-    @abstractmethod
-    def fetch_futures(self, trade_date: str) -> pl.DataFrame:
-        """
-        Fetch futures data.
-
-        Args:
-            trade_date: Trade date (YYYY-MM-DD).
-
-        Returns:
-            DataFrame with futures SourceSchema fields.
 
         Raises:
             SourceFetchError: If fetch fails.

@@ -52,7 +52,8 @@ class ETFTushareAdapter(BaseTushareAdapter):
         with tushare_fetch_error_handler("etf_basic", "fund_basic"):
             response = self._client.query(
                 api_name="fund_basic",  # ETF basic 使用 fund_basic API
-                fields="ts_code,name,list_date",  # fund_basic 可能没有 exchange 字段
+                market="E",  # 场内基金（ETF）
+                fields="ts_code,name,list_date",
             )
 
             return TushareDataTransformer.transform(

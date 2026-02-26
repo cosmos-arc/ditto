@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from dishka import Provider, Scope, provide
 from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources import ExchangeTransformers
+from ditto_datahub.sources.fred.fred_source import FredSource
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.sources.tdx.transformer import TdxExchangeTransformer
 from ditto_datahub.sources.tushare.transformer import TushareExchangeTransformer
@@ -37,15 +38,42 @@ class SourcesProvider(Provider):
         source.close()
 
     @provide
-    def data_sources(self, tushare_source: TushareSource) -> DataSources:
+    def fred_source(
+        self,
+        data_source_settings: DataSourceSettings,
+    ) -> FredSource | None:
+        """
+        FRED 数据源（应用级单例）.
+
+        仅在配置了 fred_api_key 时创建。
+
+        Args:
+            data_source_settings: 数据源配置
+
+        Returns:
+            FredSource 实例或 None（如果未配置 API key）
+
+        """
+        api_key = data_source_settings.fred_api_key
+        if not api_key:
+            return None
+        return FredSource(api_key=api_key)
+
+    @provide
+    def data_sources(
+        self,
+        tushare_source: TushareSource,
+        fred_source: FredSource | None,
+    ) -> DataSources:
         """
         DataSources 组合器（应用级单例）.
 
         Args:
             tushare_source: Tushare 数据源实例
+            fred_source: FRED 数据源实例（可选）
 
         """
-        return DataSources(tushare=tushare_source)
+        return DataSources(tushare=tushare_source, fred=fred_source)
 
     @provide
     def tushare_transformer(self) -> TushareExchangeTransformer:

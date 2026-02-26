@@ -7,12 +7,6 @@ from datetime import date
 import polars as pl
 from ditto_infra.foundation import logger
 
-from ditto_datahub.stores.capital.futures_position.futures_reader import (
-    FuturesReader,
-)
-from ditto_datahub.stores.capital.futures_position.futures_writer import (
-    FuturesWriter,
-)
 from ditto_datahub.stores.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )
@@ -55,8 +49,6 @@ class CapitalService:
         pledge_ratio_writer: PledgeRatioWriter,
         valuation_metrics_reader: ValuationMetricsReader,
         valuation_metrics_writer: ValuationMetricsWriter,
-        futures_reader: FuturesReader,
-        futures_writer: FuturesWriter,
         index_composition_reader: IndexCompositionReader,
         index_composition_writer: IndexCompositionWriter,
     ) -> None:
@@ -70,8 +62,6 @@ class CapitalService:
             pledge_ratio_writer: Pledge ratio data writer.
             valuation_metrics_reader: Valuation metrics data reader.
             valuation_metrics_writer: Valuation metrics data writer.
-            futures_reader: Futures data reader.
-            futures_writer: Futures data writer.
             index_composition_reader: Index composition data reader.
             index_composition_writer: Index composition data writer.
 
@@ -82,8 +72,6 @@ class CapitalService:
         self._pledge_ratio_writer = pledge_ratio_writer
         self._valuation_metrics_reader = valuation_metrics_reader
         self._valuation_metrics_writer = valuation_metrics_writer
-        self._futures_reader = futures_reader
-        self._futures_writer = futures_writer
         self._index_composition_reader = index_composition_reader
         self._index_composition_writer = index_composition_writer
 
@@ -137,20 +125,6 @@ class CapitalService:
 
         """
         return self._valuation_metrics_reader.get(instrument_id, as_of_date)
-
-    def get_futures(self, instrument_id: str, as_of_date: date) -> pl.DataFrame:
-        """
-        Query futures data for an instrument.
-
-        Args:
-            instrument_id: The instrument ID to query.
-            as_of_date: The point-in-time query date.
-
-        Returns:
-            DataFrame with futures data.
-
-        """
-        return self._futures_reader.get(instrument_id, as_of_date)
 
     def get_index_composition(self, index_id: str, as_of_date: date) -> pl.DataFrame:
         """
@@ -206,19 +180,6 @@ class CapitalService:
 
         """
         return self._valuation_metrics_writer.write(df)
-
-    def save_futures(self, df: pl.DataFrame) -> int:
-        """
-        Save futures data.
-
-        Args:
-            df: DataFrame with futures data to save.
-
-        Returns:
-            Number of records written.
-
-        """
-        return self._futures_writer.write(df)
 
     def save_index_composition(self, df: pl.DataFrame) -> int:
         """

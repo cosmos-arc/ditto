@@ -102,16 +102,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     - Observability 初始化/关闭
     - SQLitePool 创建/关闭
     - DataHub 创建
+
+    注意：dishka 中间件在应用创建后立即设置，而不是在 lifespan 中。
     """
     logger.info("Starting Ditto API server", event="server_start")
 
-    container = make_async_app_container()
+    # 从 app.state 获取容器（由 setup_dishka 设置）
+    container = app.state.dishka_container
     typed_container = cast(AsyncContainerProtocol, container)
 
     try:
-        # 集成到 FastAPI
-        setup_dishka(container=container, app=app)
-
         # 初始化配置（fail-fast 模式）
         logger.info("Initializing configuration", event="config_init_start")
         coordinator: ConfigInitCoordinator = await typed_container.get(
@@ -166,6 +166,11 @@ app = FastAPI(
     lifespan=lifespan,
     default_response_class=ORJSONResponse,  # 使用 orjson 提升性能
 )
+
+# 在应用启动前设置 dishka（必须在 lifespan 之外）
+# 这样中间件可以在应用启动前添加
+container = make_async_app_container()
+setup_dishka(container=container, app=app)
 
 # 配置CORS
 app.add_middleware(
@@ -304,7 +309,10 @@ app.add_exception_handler(Exception, general_exception_handler)
 
 
 if __name__ == "__main__":
+    from granian.constants import Interfaces
+
     granian.Granian(
-        "main:app",
+        "ditto_port.main:app",
         address="0.0.0.0:8000",
+        interface=Interfaces.ASGI,  # FastAPI 需要 ASGI 接口
     ).serve()

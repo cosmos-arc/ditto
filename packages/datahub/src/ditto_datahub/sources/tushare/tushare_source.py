@@ -86,23 +86,31 @@ class TushareSource(DataSource):
         return self._calendar.fetch_calendar(start_date, end_date)
 
     # Stock 相关方法 - 委托给 StockTushareAdapter
-    def fetch_stock_basic(self) -> pl.DataFrame:
+    def fetch_stock_basic(self, source_ticker: str | None = None) -> pl.DataFrame:
         """
         Fetch stock basic information.
 
+        Supports two modes:
+        - Batch mode: No source_ticker, fetch all stocks
+        - Single mode: With source_ticker, fetch specific stock
+
+        Args:
+            source_ticker: Stock code (e.g., "600519.SH"). Optional.
+
         Returns:
             DataFrame with columns:
-            - source_ticker: Source code (e.g., "000001.SZ")
-            - ticker: Display ticker (e.g., "000001")
+            - source_ticker: Source code
+            - ticker: Display ticker
             - name: Stock name
             - exchange: Exchange code
             - list_date: Listing date
+            - list_status: Listing status
 
         Raises:
             SourceFetchError: If fetch fails.
 
         """
-        return self._stock.fetch_stock_basic()
+        return self._stock.fetch_stock_basic(source_ticker)
 
     def fetch_stock_daily(
         self,
@@ -738,15 +746,6 @@ class TushareSource(DataSource):
     def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
         """Fetch macro indicators data."""
         return self._macro.fetch_macro_indicators(trade_date)
-
-    def fetch_futures(self, trade_date: str) -> pl.DataFrame:
-        """Fetch futures data."""
-        compact_date = self._to_compact_date(trade_date)
-        return self._capital.fetch_futures(
-            ts_code=None,
-            start_date=compact_date,
-            end_date=compact_date,
-        )
 
     def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
         """Fetch corporate actions data."""

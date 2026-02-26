@@ -25,7 +25,6 @@ __all__ = [
     "CASH_FLOW_SOURCE_SCHEMA",
     "CORPORATE_ACTIONS_SOURCE_SCHEMA",
     "DIVIDEND_SOURCE_SCHEMA",
-    "FUTURES_SOURCE_SCHEMA",
     "INCOME_STATEMENT_SOURCE_SCHEMA",
     "INDEX_COMPOSITION_SOURCE_SCHEMA",
     "MARGIN_TRADING_SOURCE_SCHEMA",
@@ -112,28 +111,7 @@ VALUATION_METRICS_SOURCE_SCHEMA = SourceSchema(
 )
 
 # ============================================================================
-# 3. 衍生品数据 (PIT)
-# ============================================================================
-
-FUTURES_SOURCE_SCHEMA = SourceSchema(
-    dataset="futures_position",
-    key_columns=("instrument_id", "trade_date", "effective_from"),
-    schema={
-        "instrument_id": pl.String,
-        "trade_date": pl.Date,
-        "knowledge_date": pl.Date,
-        "effective_from": pl.Date,
-        "effective_to": pl.Date,
-        "open_interest": pl.Float64,
-        "settlement_price": pl.Float64,
-        "volume": pl.Float64,
-        "turnover": pl.Float64,
-    },
-    pit_columns=("effective_from", "effective_to"),
-)
-
-# ============================================================================
-# 4. 成分股数据 (PIT)
+# 3. 成分股数据 (PIT)
 # ============================================================================
 
 INDEX_COMPOSITION_SOURCE_SCHEMA = SourceSchema(

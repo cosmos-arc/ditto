@@ -37,9 +37,17 @@ class StockTushareAdapter(BaseTushareAdapter):
     """
 
     @traced("source.tushare.fetch_stock_basic")
-    def fetch_stock_basic(self) -> pl.DataFrame:
+    def fetch_stock_basic(self, source_ticker: str | None = None) -> pl.DataFrame:
         """
         获取股票基本信息.
+
+        支持两种模式：
+        - 批量模式：不传 source_ticker，获取所有股票（包含正常上市/退市/暂停）
+        - 单只模式：传入 source_ticker，获取指定股票
+
+        Args:
+            source_ticker: 股票代码 (e.g., "600519.SH")，可选。
+                如果不传，则获取所有状态的股票。
 
         Returns:
             DataFrame with columns:
@@ -48,26 +56,79 @@ class StockTushareAdapter(BaseTushareAdapter):
             - name: Stock name
             - exchange: Exchange code
             - list_date: Listing date
+            - list_status: Listing status (L=正常, D=退市, P=暂停)
 
         Raises:
             SourceFetchError: If fetch fails.
 
         """
+        if source_ticker:
+            # 单只股票模式
+            logger.info(
+                "Fetching single stock basic info",
+                event="tushare_stock_basic_ticker_fetch_start",
+                source_ticker=source_ticker,
+            )
+            with tushare_fetch_error_handler("stock_basic", "stock_basic_by_ticker"):
+                response = self._client.query(
+                    api_name="stock_basic",
+                    ts_code=source_ticker,
+                    fields="ts_code,symbol,name,exchange,list_date,list_status",
+                )
+
+                if len(response) == 0:
+                    logger.warning(
+                        "Stock not found in Tushare",
+                        event="tushare_stock_basic_not_found",
+                        source_ticker=source_ticker,
+                    )
+                    return self._empty_stock_basic_schema()
+
+                return TushareDataTransformer.transform(
+                    response, "stock_basic", STOCK_BASIC_MAPPING
+                )
+
+        # 批量模式：获取所有状态的股票
         logger.info(
-            "Fetching Tushare stock basic info",
+            "Fetching Tushare stock basic info (all statuses)",
             event="tushare_stock_basic_fetch_start",
         )
 
-        with tushare_fetch_error_handler("stock_basic", "stock_basic"):
-            response = self._client.query(
-                api_name="stock_basic",
-                list_status="L",
-                fields="ts_code,symbol,name,exchange,list_date",
-            )
+        all_dfs: list[pl.DataFrame] = []
 
-            return TushareDataTransformer.transform(
-                response, "stock_basic", STOCK_BASIC_MAPPING
-            )
+        # 分别获取三种上市状态的股票，然后合并
+        for status in ("L", "D", "P"):
+            with tushare_fetch_error_handler("stock_basic", f"stock_basic_{status}"):
+                response = self._client.query(
+                    api_name="stock_basic",
+                    list_status=status,
+                    fields="ts_code,symbol,name,exchange,list_date,list_status",
+                )
+                if len(response) > 0:
+                    all_dfs.append(response)
+
+        if not all_dfs:
+            return self._empty_stock_basic_schema()
+
+        # 合并所有状态的股票
+        combined = pl.concat(all_dfs)
+        return TushareDataTransformer.transform(
+            combined, "stock_basic", STOCK_BASIC_MAPPING
+        )
+
+    @staticmethod
+    def _empty_stock_basic_schema() -> pl.DataFrame:
+        """返回空的 stock_basic schema."""
+        return pl.DataFrame(
+            schema={
+                "source_ticker": pl.String,
+                "ticker": pl.String,
+                "name": pl.String,
+                "exchange": pl.String,
+                "list_date": pl.Date,
+                "list_status": pl.String,
+            }
+        )
 
     @traced("source.tushare.fetch_stock_daily")
     def fetch_stock_daily(
