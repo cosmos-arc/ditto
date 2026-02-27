@@ -386,6 +386,58 @@ pixi run ingest market status 2025-01-02
 [记录问题...]
 ```
 
+#### 3.2.11 汇率数据 (FX Daily)
+
+> **数据源**: Tushare fx_daily API
+> **支持货币对**: USDCNH.FXCM, EURCNH.FXCM, GBPCNH.FXCM 等
+> **特性**: 支持 `trade_date_utc` UTC 午夜时间戳（上海时区转换）
+
+```bash
+# 按日期摄入汇率数据
+pixi run -e dev python -m ditto_port.cli.main ingest market fx 2025-01-02
+
+# 验证命令帮助
+pixi run -e dev python -m ditto_port.cli.main ingest market fx --help
+```
+
+**验证项**：
+- [ ] 命令执行成功
+- [ ] 数据包含 `trade_date_utc` 字段
+- [ ] UTC 时间戳正确（上海时区转换）
+
+**问题记录**：
+```
+[记录问题...]
+```
+
+#### 3.2.12 大宗商品数据 (Commodity Daily)
+
+> **数据源**: FRED API
+> **支持品种**: WTI原油、Brent原油、黄金、白银、VIX指数
+> **特性**:
+> - 输入日期为北京时间，自动转换为 FRED 查询日期（美东时间）
+> - 支持 `trade_date_utc` UTC 午夜时间戳（纽约时区转换）
+
+```bash
+# 按日期摄入商品数据（输入日期为北京时间）
+pixi run -e dev python -m ditto_port.cli.main ingest market commodity 2025-01-02
+
+# 验证命令帮助
+pixi run -e dev python -m ditto_port.cli.main ingest market commodity --help
+```
+
+**验证项**：
+- [ ] 命令执行成功
+- [ ] 北京时间日期正确转换为 FRED 查询日期
+- [ ] 数据包含 `trade_date_utc` 字段
+- [ ] UTC 时间戳正确（纽约时区转换）
+- [ ] FRED API Key 已配置（keyring）
+
+**问题记录**：
+```
+[记录问题...]
+```
+
 ---
 
 ### 3.3 基本面数据摄入 (Fundamental)
@@ -1012,7 +1064,65 @@ curl -X POST http://localhost:8000/api/v1/macro/indicators \
 
 ---
 
-### 4.8 数据源直查 API
+### 4.8 汇率数据 API (FX)
+
+> **端点**: POST /api/v1/fx/bars
+> **状态**: 占位实现（返回空列表）
+
+```bash
+# 查询汇率 K 线数据
+curl -X POST http://localhost:8000/api/v1/fx/bars \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pairs": ["USDCNY", "EURCNY"],
+    "start_date": "2025-01-01",
+    "end_date": "2025-12-31",
+    "limit": 1000
+  }'
+```
+
+**验证项**：
+- [ ] 端点响应 200
+- [ ] 返回格式符合 APIResponse[list[FxBar]]
+- [ ] FxBar 包含 trade_date_utc 字段
+
+**问题记录**：
+```
+[记录问题...]
+```
+
+---
+
+### 4.9 大宗商品数据 API (Commodity)
+
+> **端点**: POST /api/v1/commodity/bars
+> **状态**: 占位实现（返回空列表）
+
+```bash
+# 查询商品 K 线数据
+curl -X POST http://localhost:8000/api/v1/commodity/bars \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbols": ["AU", "AG", "CU"],
+    "start_date": "2025-01-01",
+    "end_date": "2025-12-31",
+    "limit": 1000
+  }'
+```
+
+**验证项**：
+- [ ] 端点响应 200
+- [ ] 返回格式符合 APIResponse[list[CommodityBar]]
+- [ ] CommodityBar 包含 trade_date_utc 字段
+
+**问题记录**：
+```
+[记录问题...]
+```
+
+---
+
+### 4.10 数据源直查 API
 
 ```bash
 # 使用 ticker 查询（全年）
@@ -1663,6 +1773,8 @@ print(f'可用 FRED 指标: {len(indicators)} 个')
 | GET /api/v1/status | ✅ 已验证 | uvicorn 运行正常 |
 | GET /api/v1/metadata/instruments | ✅ 已验证 | uvicorn 运行正常 |
 | POST /api/v1/market/bars | ✅ 已验证 | uvicorn 运行正常 |
+| POST /api/v1/fx/bars | ⚠️ 占位实现 | 返回空列表，待集成 FxService |
+| POST /api/v1/commodity/bars | ⚠️ 占位实现 | 返回空列表，待集成 CommodityService |
 | GET /api/v1/fundamental/financials/* | ✅ 已验证 | uvicorn 运行正常 |
 | GET /api/v1/fundamental/dividend | ✅ 已验证 | uvicorn 运行正常 |
 | GET /api/v1/capital/valuation | ✅ 已验证 | uvicorn 运行正常 |

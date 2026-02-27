@@ -16,6 +16,7 @@ from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.source_service import SourceService
+from ditto_infra.foundation import logger
 
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
@@ -60,8 +61,15 @@ def create_coordinator(  # noqa: PLR0913
                 f"Unknown source: '{source_name}'. Supported sources: {supported}"
             ) from e
 
-    # 获取数据源
+    # 获取主数据源
     data_source = source_service.get_source(source_key)
+
+    # 获取 FRED 数据源（用于大宗商品数据）
+    fred_source = None
+    try:
+        fred_source = source_service.get_source(Source.FRED)
+    except Exception as e:
+        logger.warning(f"FRED source not available: {e}")
 
     # 创建协调器
     coordinator = IngestionCoordinator(
@@ -73,6 +81,7 @@ def create_coordinator(  # noqa: PLR0913
         source=data_source,
         source_name=source_key.value,
         ingestion_log_service=ingestion_log_service,
+        fred_source=fred_source,
     )
 
     yield coordinator

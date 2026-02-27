@@ -69,6 +69,7 @@ class IngestionCoordinator:
         source: DataSource,
         source_name: str = "tushare",
         ingestion_log_service: IngestionLogService | None = None,
+        fred_source: DataSource | None = None,
     ) -> None:
         """初始化 IngestionCoordinator。"""
         self._metadata_service = metadata_service
@@ -78,6 +79,7 @@ class IngestionCoordinator:
         self._macro_service = macro_service
         self._source = source
         self._source_name = source_name
+        self._fred_source = fred_source
         self._ingestion_log_service = ingestion_log_service
         self._metadata_manager = MetadataManager(ingestion_log_service)
         self._result_handler = IngestionResultHandler(
@@ -801,10 +803,14 @@ class IngestionCoordinator:
                 start_date=trade_date,
                 end_date=trade_date,
             ),
-            Dataset.COMMODITY_DAILY: lambda: self._source.fetch_commodities(
-                codes=list(COMMODITY_CODE_TO_INSTRUMENT_ID.keys()),
-                start_date=trade_date,
-                end_date=trade_date,
+            Dataset.COMMODITY_DAILY: lambda: (
+                self._fred_source.fetch_commodities(
+                    codes=list(COMMODITY_CODE_TO_INSTRUMENT_ID.keys()),
+                    start_date=trade_date,
+                    end_date=trade_date,
+                )
+                if self._fred_source
+                else pl.DataFrame()
             ),
         }
 
