@@ -17,12 +17,16 @@ from ditto_datahub.sources.tushare.processors.error_handler import (
 # 汇率品种代码映射到 instrument_id
 # 使用 4M 范围 (4,000,000 - 4,999,999) 作为汇率
 FX_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
+    # 外汇货币对
     "USDCNH.FXCM": 4_000_001,
     "EURUSD.FXCM": 4_000_002,
     "GBPUSD.FXCM": 4_000_003,
     "USDJPY.FXCM": 4_000_004,
     "AUDUSD.FXCM": 4_000_005,
     "USDCAD.FXCM": 4_000_006,
+    # 贵金属现货 (METAL)
+    "XAUUSD.FXCM": 4_000_101,  # 伦敦金
+    "XAGUSD.FXCM": 4_000_102,  # 伦敦银
 }
 
 
@@ -31,6 +35,14 @@ class FxTushareAdapter:
     Tushare adapter for FX daily data.
 
     外汇日线行情数据适配器，从 Tushare fx_daily 接口获取数据。
+
+    支持的数据类型：
+    - FX: 外汇货币对 (USDCNH, EURUSD 等)
+    - METAL: 贵金属现货 (XAUUSD 伦敦金, XAGUSD 伦敦银)
+
+    注意：
+    - Tushare fx_daily 使用 bid 价格作为标准 OHLC
+    - 日期为 GMT 时区（格林尼治时间）
 
     Attributes:
         _client: TushareClient 实例.
@@ -85,7 +97,8 @@ class FxTushareAdapter:
             with tushare_fetch_error_handler("fx_daily", ts_code):
                 response = self._client.query(
                     api_name="fx_daily",
-                    fields="ts_code,trade_date,open,high,low,close",
+                    # Tushare fx_daily 返回 bid/ask 价格，使用 bid 价格作为 OHLC
+                    fields="ts_code,trade_date,bid_open,bid_high,bid_low,bid_close",
                     ts_code=ts_code,
                     start_date=compact_start,
                     end_date=compact_end,
@@ -100,28 +113,25 @@ class FxTushareAdapter:
                     continue
 
                 # 转换为 FX_SOURCE_SCHEMA
-                # Tushare 汇率数据使用上海时区 (Asia/Shanghai)
+                # Tushare fx_daily 日期为 GMT 时区（格林尼治时间）
                 df = response.with_columns(
                     pl.lit(instrument_id).alias("instrument_id"),
                     pl.col("trade_date")
                     .cast(pl.String)
                     .str.to_date(format="%Y%m%d", strict=False)
                     .alias("trade_date"),
-                    # 使用 Polars 原生表达式进行时区转换
-                    # 1. 将日期转换为 datetime（午夜时间）
-                    # 2. 设置为上海时区
-                    # 3. 转换为 UTC
+                    # Tushare fx_daily 日期为 GMT，直接转换为 UTC
                     pl.col("trade_date")
                     .cast(pl.String)
                     .str.to_date(format="%Y%m%d", strict=False)
                     .dt.combine(time=pl.time(0, 0, 0))
-                    .dt.replace_time_zone("Asia/Shanghai", ambiguous="earliest")
-                    .dt.convert_time_zone("UTC")
+                    .dt.replace_time_zone("UTC", ambiguous="earliest")
                     .alias("trade_date_utc"),
-                    pl.col("open").cast(pl.Float64),
-                    pl.col("high").cast(pl.Float64),
-                    pl.col("low").cast(pl.Float64),
-                    pl.col("close").cast(pl.Float64),
+                    # 使用 bid 价格作为标准 OHLC
+                    pl.col("bid_open").cast(pl.Float64).alias("open"),
+                    pl.col("bid_high").cast(pl.Float64).alias("high"),
+                    pl.col("bid_low").cast(pl.Float64).alias("low"),
+                    pl.col("bid_close").cast(pl.Float64).alias("close"),
                 ).select(
                     "instrument_id",
                     "trade_date",

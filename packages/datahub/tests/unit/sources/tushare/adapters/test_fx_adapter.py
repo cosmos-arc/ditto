@@ -17,22 +17,28 @@ class TestFxTushareAdapter:
 
     def test_fx_code_mapping_exists(self) -> None:
         """测试汇率代码映射存在."""
+        # 外汇货币对
         assert "USDCNH.FXCM" in FX_CODE_TO_INSTRUMENT_ID
         assert "EURUSD.FXCM" in FX_CODE_TO_INSTRUMENT_ID
         assert FX_CODE_TO_INSTRUMENT_ID["USDCNH.FXCM"] == 4_000_001
+        # 贵金属现货
+        assert "XAUUSD.FXCM" in FX_CODE_TO_INSTRUMENT_ID
+        assert "XAGUSD.FXCM" in FX_CODE_TO_INSTRUMENT_ID
+        assert FX_CODE_TO_INSTRUMENT_ID["XAUUSD.FXCM"] == 4_000_101
+        assert FX_CODE_TO_INSTRUMENT_ID["XAGUSD.FXCM"] == 4_000_102
 
     def test_fetch_fx_daily_basic(self) -> None:
         """测试基本汇率数据获取."""
-        # 设置模拟返回
+        # 设置模拟返回 - 使用 Tushare 实际返回的 bid_ 前缀字段
         mock_client = MagicMock()
         mock_client.query.return_value = pl.DataFrame(
             {
                 "ts_code": ["USDCNH.FXCM"],
                 "trade_date": ["20240115"],
-                "open": [7.1800],
-                "high": [7.1900],
-                "low": [7.1750],
-                "close": [7.1850],
+                "bid_open": [7.1800],
+                "bid_high": [7.1900],
+                "bid_low": [7.1750],
+                "bid_close": [7.1850],
             }
         )
 
@@ -60,15 +66,15 @@ class TestFxTushareAdapter:
     def test_fetch_fx_daily_trade_date_utc_conversion(self) -> None:
         """测试 trade_date_utc 字段的时区转换."""
         mock_client = MagicMock()
-        # 使用 2024-01-15 作为测试日期
+        # 使用 2024-01-15 作为测试日期 - 使用 bid_ 前缀字段
         mock_client.query.return_value = pl.DataFrame(
             {
                 "ts_code": ["USDCNH.FXCM"],
                 "trade_date": ["20240115"],
-                "open": [7.1800],
-                "high": [7.1900],
-                "low": [7.1750],
-                "close": [7.1850],
+                "bid_open": [7.1800],
+                "bid_high": [7.1900],
+                "bid_low": [7.1750],
+                "bid_close": [7.1850],
             }
         )
 
@@ -87,11 +93,11 @@ class TestFxTushareAdapter:
         trade_date_utc = df["trade_date_utc"][0]
         assert trade_date_utc is not None
 
-        # 上海时区 2024-01-15 00:00:00 转换为 UTC
-        # 上海时区是 UTC+8，所以 2024-01-15 00:00:00 CST = 2024-01-14 16:00:00 UTC
+        # Tushare fx_daily 日期为 GMT（格林尼治时间），直接转换为 UTC
+        # 所以 2024-01-15 GMT = 2024-01-15 00:00:00 UTC
         from datetime import datetime
 
-        expected_utc = datetime(2024, 1, 14, 16, 0, 0, tzinfo=UTC)
+        expected_utc = datetime(2024, 1, 15, 0, 0, 0, tzinfo=UTC)
         # Polars 返回的是带时区的 datetime
         assert trade_date_utc == expected_utc
 
@@ -118,10 +124,10 @@ class TestFxTushareAdapter:
             {
                 "ts_code": ["UNKNOWN.FXCM"],
                 "trade_date": ["20240115"],
-                "open": [1.0],
-                "high": [1.0],
-                "low": [1.0],
-                "close": [1.0],
+                "bid_open": [1.0],
+                "bid_high": [1.0],
+                "bid_low": [1.0],
+                "bid_close": [1.0],
             }
         )
 
