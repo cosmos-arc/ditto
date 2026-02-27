@@ -1,4 +1,4 @@
-"""Market 域摄取命令 (stock/etf/index/adj/status)."""
+"""Market 域摄取命令 (stock/etf/index/adj/status/fx/commodity)."""
 
 from typing import Annotated
 
@@ -25,6 +25,12 @@ _fund_adj_impl = create_daily_command("fund_adj", "摄取ETF/基金复权因子"
 
 # status (股票状态)
 _stock_status_impl = create_daily_command("stock_status", "摄取股票状态")
+
+# fx (汇率)
+_fx_daily_impl = create_daily_command("fx_daily", "摄取汇率日线数据")
+
+# commodity (商品)
+_commodity_daily_impl = create_daily_command("commodity_daily", "摄取商品价格数据")
 
 
 def _run_instrument_ingest(  # noqa: PLR0913
@@ -317,3 +323,23 @@ def status(
 ) -> None:
     """摄取股票状态."""
     return _stock_status_impl(ctx, date, force)
+
+
+@app.command("fx")
+def fx(
+    ctx: typer.Context,
+    date: str = typer.Argument(..., help="交易日期 (YYYY-MM-DD)"),
+    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
+) -> None:
+    """摄取汇率日线数据."""
+    return _fx_daily_impl(ctx, date, force)
+
+
+@app.command("commodity")
+def commodity(
+    ctx: typer.Context,
+    date: str = typer.Argument(..., help="交易日期 (YYYY-MM-DD)"),
+    force: bool = typer.Option(False, "--force", "-f", help="强制重新摄取"),
+) -> None:
+    """摄取商品价格数据."""
+    return _commodity_daily_impl(ctx, date, force)

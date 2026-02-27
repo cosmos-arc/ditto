@@ -60,6 +60,10 @@ class Dataset(str, Enum):
     # Macro 域（宏观指标）
     MACRO_INDICATORS = "macro_indicators"
 
+    # Market 域扩展（汇率/商品）
+    FX_DAILY = "fx_daily"
+    COMMODITY_DAILY = "commodity_daily"
+
     # Capital 域扩展
     CORPORATE_ACTIONS = "corporate_actions"
 
