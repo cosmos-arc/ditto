@@ -255,8 +255,12 @@ class TestCommodityFredAdapter:
             )
 
     def test_fetch_commodities_includes_vix(self, respx_mock) -> None:
-        """VIX indicators are also supported as they are market data."""
+        """VIX indicators are also supported as alternative data."""
         # Arrange
+        from ditto_datahub.sources.fred.adapters.commodity import (
+            VIX_CODE_TO_INSTRUMENT_ID,
+        )
+
         respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
             return_value=httpx.Response(
                 200,
@@ -286,7 +290,7 @@ class TestCommodityFredAdapter:
 
         # Assert
         assert result.height == 1
-        expected_id = COMMODITY_CODE_TO_INSTRUMENT_ID["VIX_30D"]
+        expected_id = VIX_CODE_TO_INSTRUMENT_ID["VIX_30D"]
         assert result["instrument_id"][0] == expected_id
 
     def test_fetch_commodities_converts_beijing_to_fred_date(self, respx_mock) -> None:

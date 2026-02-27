@@ -24,6 +24,7 @@ from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.sources.base import DataSource
 from ditto_datahub.sources.fred.adapters.commodity import (
     COMMODITY_CODE_TO_INSTRUMENT_ID,
+    VIX_CODE_TO_INSTRUMENT_ID,
 )
 from ditto_datahub.sources.tushare.adapters.fx import FX_CODE_TO_INSTRUMENT_ID
 from ditto_infra.foundation import logger
@@ -805,7 +806,9 @@ class IngestionCoordinator:
             ),
             Dataset.COMMODITY_DAILY: lambda: (
                 self._fred_source.fetch_commodities(
-                    codes=list(COMMODITY_CODE_TO_INSTRUMENT_ID.keys()),
+                    # 包含大宗商品和 VIX（另类数据）
+                    codes=list(COMMODITY_CODE_TO_INSTRUMENT_ID.keys())
+                    + list(VIX_CODE_TO_INSTRUMENT_ID.keys()),
                     start_date=trade_date,
                     end_date=trade_date,
                 )

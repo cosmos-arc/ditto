@@ -21,11 +21,9 @@ class TestFxTushareAdapter:
         assert "USDCNH.FXCM" in FX_CODE_TO_INSTRUMENT_ID
         assert "EURUSD.FXCM" in FX_CODE_TO_INSTRUMENT_ID
         assert FX_CODE_TO_INSTRUMENT_ID["USDCNH.FXCM"] == 4_000_001
-        # 贵金属现货
-        assert "XAUUSD.FXCM" in FX_CODE_TO_INSTRUMENT_ID
-        assert "XAGUSD.FXCM" in FX_CODE_TO_INSTRUMENT_ID
-        assert FX_CODE_TO_INSTRUMENT_ID["XAUUSD.FXCM"] == 4_000_101
-        assert FX_CODE_TO_INSTRUMENT_ID["XAGUSD.FXCM"] == 4_000_102
+        # 贵金属现货通过 FRED 获取，不在 Tushare 列表中
+        assert "XAUUSD.FXCM" not in FX_CODE_TO_INSTRUMENT_ID
+        assert "XAGUSD.FXCM" not in FX_CODE_TO_INSTRUMENT_ID
 
     def test_fetch_fx_daily_basic(self) -> None:
         """测试基本汇率数据获取."""

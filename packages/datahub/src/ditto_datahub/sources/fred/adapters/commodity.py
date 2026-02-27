@@ -12,14 +12,19 @@ from ditto_datahub.utils.timezone_utils import (
 )
 
 # Commodity code to instrument_id mapping
-# Using 5M range (5,000,000 - 5,999,999) for commodities
+# Using 5M range (5,000,000 - 5,099,999) for commodities
 COMMODITY_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
-    "COMMOD_WTI": 5_000_001,
-    "COMMOD_BRENT": 5_000_002,
-    "COMMOD_GOLD": 5_000_003,
-    "COMMOD_SILVER": 5_000_004,
-    "VIX_30D": 5_000_100,
-    "VIX_9D": 5_000_101,
+    "COMMOD_WTI": 5_000_001,  # WTI原油
+    "COMMOD_BRENT": 5_000_002,  # 布伦特原油
+    "COMMOD_GOLD": 5_000_003,  # 伦敦金
+    "COMMOD_SILVER": 5_000_004,  # 伦敦银
+}
+
+# VIX (另类数据) code to instrument_id mapping
+# Using 5M range (5,100,000 - 5,199,999) for alternative data
+VIX_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
+    "VIX_30D": 5_100_001,  # VIX波动率指数(30天)
+    "VIX_9D": 5_100_002,  # VIX波动率指数(9天)
 }
 
 
@@ -53,16 +58,17 @@ class CommodityFredAdapter:
         end_date: str,
     ) -> pl.DataFrame:
         """
-        Fetch commodity prices from FRED.
+        Fetch commodity prices and VIX from FRED.
 
         Args:
-            codes: Commodity codes (e.g., ["COMMOD_WTI", "COMMOD_GOLD"]).
+            codes: Codes to fetch (e.g., ["COMMOD_WTI", "VIX_30D"]).
+                   Supports both commodity codes and VIX codes.
             start_date: Start date in Beijing time (YYYY-MM-DD).
             end_date: End date in Beijing time (YYYY-MM-DD).
 
         Returns:
             DataFrame with COMMODITY_SOURCE_SCHEMA columns.
-            Unknown codes or non-commodity codes are skipped.
+            Unknown codes or non-commodity/vix codes are skipped.
 
         """
         # Convert Beijing time dates to FRED query dates (US Eastern time)
@@ -77,7 +83,10 @@ class CommodityFredAdapter:
                 # Skip unknown codes or non-commodity/vix indicators
                 continue
 
-            instrument_id = COMMODITY_CODE_TO_INSTRUMENT_ID.get(code)
+            # Look up instrument_id from either commodity or VIX mapping
+            instrument_id = COMMODITY_CODE_TO_INSTRUMENT_ID.get(
+                code
+            ) or VIX_CODE_TO_INSTRUMENT_ID.get(code)
             if instrument_id is None:
                 continue
 
@@ -141,4 +150,8 @@ class CommodityFredAdapter:
         self.close()
 
 
-__all__ = ["COMMODITY_CODE_TO_INSTRUMENT_ID", "CommodityFredAdapter"]
+__all__ = [
+    "COMMODITY_CODE_TO_INSTRUMENT_ID",
+    "VIX_CODE_TO_INSTRUMENT_ID",
+    "CommodityFredAdapter",
+]

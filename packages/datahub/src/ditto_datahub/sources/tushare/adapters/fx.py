@@ -16,6 +16,7 @@ from ditto_datahub.sources.tushare.processors.error_handler import (
 
 # 汇率品种代码映射到 instrument_id
 # 使用 4M 范围 (4,000,000 - 4,999,999) 作为汇率
+# 注意：贵金属现货（伦敦金/银）通过 FRED 获取，不在此列表
 FX_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
     # 外汇货币对
     "USDCNH.FXCM": 4_000_001,
@@ -24,9 +25,6 @@ FX_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
     "USDJPY.FXCM": 4_000_004,
     "AUDUSD.FXCM": 4_000_005,
     "USDCAD.FXCM": 4_000_006,
-    # 贵金属现货 (METAL)
-    "XAUUSD.FXCM": 4_000_101,  # 伦敦金
-    "XAGUSD.FXCM": 4_000_102,  # 伦敦银
 }
 
 
@@ -37,12 +35,12 @@ class FxTushareAdapter:
     外汇日线行情数据适配器，从 Tushare fx_daily 接口获取数据。
 
     支持的数据类型：
-    - FX: 外汇货币对 (USDCNH, EURUSD 等)
-    - METAL: 贵金属现货 (XAUUSD 伦敦金, XAGUSD 伦敦银)
+    - FX: 外汇货币对 (USDCNH, EURUSD, GBPUSD, USDJPY, AUDUSD, USDCAD)
 
     注意：
     - Tushare fx_daily 使用 bid 价格作为标准 OHLC
     - 日期为 GMT 时区（格林尼治时间）
+    - 贵金属现货（伦敦金/银）通过 FRED 获取
 
     Attributes:
         _client: TushareClient 实例.
