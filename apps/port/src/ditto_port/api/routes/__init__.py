@@ -2,7 +2,9 @@
 
 from ditto_port.api.routes import (
     capital,
+    commodity,
     fundamental,
+    fx,
     ingestion,
     macro,
     market,
@@ -13,7 +15,9 @@ from ditto_port.api.routes import (
 
 __all__ = [
     "capital",
+    "commodity",
     "fundamental",
+    "fx",
     "ingestion",
     "macro",
     "market",

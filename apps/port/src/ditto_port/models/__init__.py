@@ -10,6 +10,12 @@ from ditto_port.models.capital import (
     to_valuation,
     to_valuation_list,
 )
+from ditto_port.models.commodity import (
+    CommodityBar,
+    CommodityQuery,
+    to_commodity_bar,
+    to_commodity_bar_list,
+)
 from ditto_port.models.common import (
     APIResponse,
     ErrorResponse,
@@ -44,6 +50,12 @@ from ditto_port.models.fundamental import (
     to_dividend_list,
     to_financial,
     to_financial_list,
+)
+from ditto_port.models.fx import (
+    FxBar,
+    FxQuery,
+    to_fx_bar,
+    to_fx_bar_list,
 )
 from ditto_port.models.ingestion import (
     BackfillResult,
@@ -83,6 +95,8 @@ __all__ = [
     "BackfillResult",
     "Bar",
     "BarsQuery",
+    "CommodityBar",
+    "CommodityQuery",
     "CorporateAction",
     "CorporateActionsQuery",
     "Dataset",
@@ -93,6 +107,8 @@ __all__ = [
     "Financial",
     "FinancialQuery",
     "FinancialType",
+    "FxBar",
+    "FxQuery",
     "Indicator",
     "IndicatorQuery",
     "IngestionResult",
@@ -120,12 +136,16 @@ __all__ = [
     "iter_tier_datasets",
     "to_bar",
     "to_bar_list",
+    "to_commodity_bar",
+    "to_commodity_bar_list",
     "to_corporate_action",
     "to_corporate_action_list",
     "to_dividend",
     "to_dividend_list",
     "to_financial",
     "to_financial_list",
+    "to_fx_bar",
+    "to_fx_bar_list",
     "to_indicator",
     "to_indicator_list",
     "to_instrument",
