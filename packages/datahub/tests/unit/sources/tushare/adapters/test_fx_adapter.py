@@ -1,5 +1,6 @@
 """Tushare FX adapter tests."""
 
+from datetime import UTC
 from unittest.mock import MagicMock
 
 import polars as pl
@@ -47,6 +48,7 @@ class TestFxTushareAdapter:
         assert df.height == 1
         assert "instrument_id" in df.columns
         assert "trade_date" in df.columns
+        assert "trade_date_utc" in df.columns
         assert "open" in df.columns
         assert "high" in df.columns
         assert "low" in df.columns
@@ -54,6 +56,44 @@ class TestFxTushareAdapter:
 
         # 验证 instrument_id 正确
         assert df["instrument_id"][0] == 4_000_001
+
+    def test_fetch_fx_daily_trade_date_utc_conversion(self) -> None:
+        """测试 trade_date_utc 字段的时区转换."""
+        mock_client = MagicMock()
+        # 使用 2024-01-15 作为测试日期
+        mock_client.query.return_value = pl.DataFrame(
+            {
+                "ts_code": ["USDCNH.FXCM"],
+                "trade_date": ["20240115"],
+                "open": [7.1800],
+                "high": [7.1900],
+                "low": [7.1750],
+                "close": [7.1850],
+            }
+        )
+
+        adapter = FxTushareAdapter(_client=mock_client)
+        df = adapter.fetch_fx_daily(
+            ts_codes=["USDCNH.FXCM"],
+            start_date="2024-01-15",
+            end_date="2024-01-15",
+        )
+
+        # 验证 trade_date_utc 字段存在
+        assert "trade_date_utc" in df.columns
+        assert df.height == 1
+
+        # 验证 UTC 时间戳类型
+        trade_date_utc = df["trade_date_utc"][0]
+        assert trade_date_utc is not None
+
+        # 上海时区 2024-01-15 00:00:00 转换为 UTC
+        # 上海时区是 UTC+8，所以 2024-01-15 00:00:00 CST = 2024-01-14 16:00:00 UTC
+        from datetime import datetime
+
+        expected_utc = datetime(2024, 1, 14, 16, 0, 0, tzinfo=UTC)
+        # Polars 返回的是带时区的 datetime
+        assert trade_date_utc == expected_utc
 
     def test_fetch_fx_daily_empty_response(self) -> None:
         """测试空响应返回空 DataFrame."""

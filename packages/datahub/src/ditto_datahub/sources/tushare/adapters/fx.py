@@ -100,12 +100,24 @@ class FxTushareAdapter:
                     continue
 
                 # 转换为 FX_SOURCE_SCHEMA
+                # Tushare 汇率数据使用上海时区 (Asia/Shanghai)
                 df = response.with_columns(
                     pl.lit(instrument_id).alias("instrument_id"),
                     pl.col("trade_date")
                     .cast(pl.String)
                     .str.to_date(format="%Y%m%d", strict=False)
                     .alias("trade_date"),
+                    # 使用 Polars 原生表达式进行时区转换
+                    # 1. 将日期转换为 datetime（午夜时间）
+                    # 2. 设置为上海时区
+                    # 3. 转换为 UTC
+                    pl.col("trade_date")
+                    .cast(pl.String)
+                    .str.to_date(format="%Y%m%d", strict=False)
+                    .dt.combine(time=pl.time(0, 0, 0))
+                    .dt.replace_time_zone("Asia/Shanghai", ambiguous="earliest")
+                    .dt.convert_time_zone("UTC")
+                    .alias("trade_date_utc"),
                     pl.col("open").cast(pl.Float64),
                     pl.col("high").cast(pl.Float64),
                     pl.col("low").cast(pl.Float64),
@@ -113,6 +125,7 @@ class FxTushareAdapter:
                 ).select(
                     "instrument_id",
                     "trade_date",
+                    "trade_date_utc",
                     "open",
                     "high",
                     "low",
