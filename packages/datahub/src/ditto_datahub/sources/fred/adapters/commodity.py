@@ -7,6 +7,9 @@ import polars as pl
 from ditto_datahub.sources.fred.client import FredClient
 from ditto_datahub.sources.fred.indicators import get_fred_indicator
 from ditto_datahub.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
+from ditto_datahub.utils.timezone_utils import (
+    get_fred_query_date,
+)
 
 # Commodity code to instrument_id mapping
 # Using 5M range (5,000,000 - 5,999,999) for commodities
@@ -54,14 +57,18 @@ class CommodityFredAdapter:
 
         Args:
             codes: Commodity codes (e.g., ["COMMOD_WTI", "COMMOD_GOLD"]).
-            start_date: Start date (YYYY-MM-DD).
-            end_date: End date (YYYY-MM-DD).
+            start_date: Start date in Beijing time (YYYY-MM-DD).
+            end_date: End date in Beijing time (YYYY-MM-DD).
 
         Returns:
             DataFrame with COMMODITY_SOURCE_SCHEMA columns.
             Unknown codes or non-commodity codes are skipped.
 
         """
+        # Convert Beijing time dates to FRED query dates (US Eastern time)
+        fred_start = get_fred_query_date(start_date)
+        fred_end = get_fred_query_date(end_date)
+
         results: list[pl.DataFrame] = []
 
         for code in codes:
@@ -74,11 +81,11 @@ class CommodityFredAdapter:
             if instrument_id is None:
                 continue
 
-            # Fetch from FRED API
+            # Fetch from FRED API using converted dates
             df = self._client.get_series_observations(
                 series_id=indicator.series_id,
-                observation_start=start_date,
-                observation_end=end_date,
+                observation_start=fred_start,
+                observation_end=fred_end,
             )
 
             if df.height == 0:
@@ -86,13 +93,18 @@ class CommodityFredAdapter:
 
             # Transform to COMMODITY_SOURCE_SCHEMA
             # FRED only provides a single value, so OHLC are all same
+            # Use Polars native expressions for timezone-aware UTC conversion
             transformed = df.with_columns(
                 pl.lit(instrument_id).alias("instrument_id"),
                 pl.col("date").alias("trade_date"),
-                # Convert trade_date to UTC midnight timestamp
+                # FRED dates are in US Eastern time, convert to UTC midnight
+                # 1. Combine date with midnight time
+                # 2. Set timezone to America/New_York (FRED timezone)
+                # 3. Convert to UTC
                 pl.col("date")
                 .dt.combine(time=pl.time(0, 0, 0))
-                .dt.replace_time_zone("UTC")
+                .dt.replace_time_zone("America/New_York", ambiguous="earliest")
+                .dt.convert_time_zone("UTC")
                 .alias("trade_date_utc"),
                 pl.col("value").alias("open"),
                 pl.col("value").alias("high"),
