@@ -12,6 +12,7 @@ FX_SOURCE_SCHEMA = SourceSchema(
     schema={
         "instrument_id": pl.Int64,
         "trade_date": pl.Date,
+        "trade_date_utc": pl.Datetime("ms"),  # UTC 午夜时间戳
         "open": pl.Float64,
         "high": pl.Float64,
         "low": pl.Float64,

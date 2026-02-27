@@ -36,6 +36,12 @@ class TestFxSourceSchema:
         assert schema["low"] == pl.Float64
         assert schema["close"] == pl.Float64
 
+    def test_schema_has_trade_date_utc(self) -> None:
+        """测试 FX Schema 包含 trade_date_utc 字段（UTC 午夜时间戳）."""
+        schema = FX_SOURCE_SCHEMA.schema
+        assert "trade_date_utc" in schema
+        assert schema["trade_date_utc"] == pl.Datetime("ms")
+
     def test_schema_no_pit_columns(self) -> None:
         """测试汇率数据不需要 PIT 列."""
         assert FX_SOURCE_SCHEMA.pit_columns == ()
