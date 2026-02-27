@@ -10,6 +10,7 @@ from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareAdapt
 from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
 from ditto_datahub.sources.tushare.adapters.fundamental import FundamentalTushareAdapter
+from ditto_datahub.sources.tushare.adapters.fx import FxTushareAdapter
 from ditto_datahub.sources.tushare.adapters.index import IndexTushareAdapter
 from ditto_datahub.sources.tushare.adapters.industry import IndustryTushareAdapter
 from ditto_datahub.sources.tushare.adapters.macro import MacroTushareAdapter
@@ -59,6 +60,7 @@ class TushareSource(DataSource):
         self._capital = CapitalTushareAdapter(_client=self._client)
         self._fundamental = FundamentalTushareAdapter(_client=self._client)
         self._macro = MacroTushareAdapter(_client=self._client)
+        self._fx = FxTushareAdapter(_client=self._client)
 
     @staticmethod
     def _to_compact_date(trade_date: str) -> str:
@@ -755,6 +757,40 @@ class TushareSource(DataSource):
             start_date=compact_date,
             end_date=compact_date,
         )
+
+    # FX 相关方法 - 委托给 FxTushareAdapter
+    def fetch_fx_daily(
+        self,
+        ts_codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch FX daily data from Tushare.
+
+        Args:
+            ts_codes: FX ticker codes (e.g., ["USDCNH.FXCM"]).
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with FX_SOURCE_SCHEMA columns.
+
+        """
+        return self._fx.fetch_fx_daily(
+            ts_codes=ts_codes,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_commodities(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """Tushare 不支持商品数据。"""
+        raise NotImplementedError("Tushare does not support commodity data")
 
     def close(self) -> None:
         """

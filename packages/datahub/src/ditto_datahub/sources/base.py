@@ -731,6 +731,62 @@ class DataSource(ABC):
         """
         pass
 
+    @abstractmethod
+    def fetch_fx_daily(
+        self,
+        ts_codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch FX (Foreign Exchange) daily OHLCV bars.
+
+        Args:
+            ts_codes: FX ticker codes (e.g., ["USDCNH.FXCM"]).
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with FX_SOURCE_SCHEMA columns:
+            - instrument_id: Internal instrument ID
+            - trade_date: Trade date (Date)
+            - trade_date_utc: Trade date in UTC (Datetime)
+            - open, high, low, close: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_commodities(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch commodity daily prices.
+
+        Args:
+            codes: Commodity codes (e.g., ["COMMOD_WTI", "COMMOD_GOLD"]).
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with COMMODITY_SOURCE_SCHEMA columns:
+            - instrument_id: Internal instrument ID
+            - trade_date: Trade date (Date)
+            - trade_date_utc: Trade date in UTC (Datetime)
+            - open, high, low, close: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
 
 __all__ = [
     "DataSource",

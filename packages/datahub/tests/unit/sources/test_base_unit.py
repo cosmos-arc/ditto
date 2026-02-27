@@ -237,6 +237,22 @@ class TestDataSourceABC:
             def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
                 return pl.DataFrame()
 
+            def fetch_fx_daily(
+                self,
+                ts_codes: list[str],
+                start_date: str,
+                end_date: str,
+            ) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_commodities(
+                self,
+                codes: list[str],
+                start_date: str,
+                end_date: str,
+            ) -> pl.DataFrame:
+                return pl.DataFrame()
+
         # Should not raise
         source = CompleteSourcer()
         assert isinstance(source, DataSource)

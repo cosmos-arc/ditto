@@ -5,21 +5,29 @@ from __future__ import annotations
 import polars as pl
 
 from ditto_datahub.sources.base import DataSource
+from ditto_datahub.sources.fred.adapters.commodity import CommodityFredAdapter
 from ditto_datahub.sources.fred.adapters.macro import MacroFredAdapter
-from ditto_datahub.sources.fred.indicators import FRED_INDICATORS
+from ditto_datahub.sources.fred.indicators import FRED_INDICATORS, list_fred_indicators
 
 # 预计算所有 FRED 指标代码
 ALL_FRED_CODES: list[str] = list(FRED_INDICATORS.keys())
+
+# 预计算 commodity/vix 代码
+ALL_COMMODITY_CODES: list[str] = [
+    ind.code for ind in list_fred_indicators(category="commodity")
+]
+ALL_VIX_CODES: list[str] = [ind.code for ind in list_fred_indicators(category="vix")]
 
 
 class FredSource(DataSource):
     """
     FRED (Federal Reserve Economic Data) data source.
 
-    FRED 只提供宏观指标数据，其他方法抛出 NotImplementedError。
+    FRED 提供宏观指标数据和商品/VIX 数据，其他方法抛出 NotImplementedError。
 
     Attributes:
         _macro: FRED 宏观数据 adapter。
+        _commodity: FRED 商品数据 adapter。
         _api_key: FRED API key。
 
     """
@@ -34,6 +42,7 @@ class FredSource(DataSource):
         """
         self._api_key = api_key
         self._macro = MacroFredAdapter(api_key=api_key)
+        self._commodity = CommodityFredAdapter(api_key=api_key)
 
     # Macro 相关方法 - 委托给 MacroFredAdapter
     def fetch_macro_indicators(
@@ -95,8 +104,36 @@ class FredSource(DataSource):
             end_date=end_date,
         )
 
+    # Commodity 相关方法 - 委托给 CommodityFredAdapter
+    def fetch_commodities(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch commodity daily prices from FRED.
+
+        Args:
+            codes: Commodity codes (e.g., ["COMMOD_WTI", "COMMOD_GOLD"]).
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with COMMODITY_SOURCE_SCHEMA columns.
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        return self._commodity.fetch_commodities(
+            codes=codes,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
     # ========== DataSource 抽象方法实现 ==========
-    # FRED 只支持宏观数据，其他方法抛出 NotImplementedError
+    # FRED 只支持宏观数据和商品数据，其他方法抛出 NotImplementedError
 
     def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
         """FRED 不支持交易日历。"""
@@ -240,3 +277,12 @@ class FredSource(DataSource):
     def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
         """FRED 不支持行业分类数据。"""
         raise NotImplementedError("FRED does not support industry data")
+
+    def fetch_fx_daily(
+        self,
+        ts_codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """FRED 不支持汇率数据。"""
+        raise NotImplementedError("FRED does not support FX data")
