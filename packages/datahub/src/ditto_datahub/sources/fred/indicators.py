@@ -16,6 +16,7 @@ CategoryType = Literal[
     "interest_rate",
     "commodity",
     "vix",
+    "dollar_index",
 ]
 FrequencyType = Literal["daily", "monthly", "quarterly"]
 
@@ -274,6 +275,17 @@ FRED_INDICATORS: dict[str, FredIndicator] = {
         frequency="daily",
         unit="指数",
         description="CBOE 9-Day Volatility Index",
+        need_pit=False,
+    ),
+    # === Dollar Index (Market Domain) ===
+    "US_DOLLAR_INDEX_BROAD": FredIndicator(
+        series_id="DTWEXBGS",
+        code="US_DOLLAR_INDEX_BROAD",
+        name="美国贸易加权美元指数(广义)",
+        category="dollar_index",
+        frequency="daily",
+        unit="指数",
+        description="Trade Weighted U.S. Dollar Index: Broad, Goods and Services",
         need_pit=False,
     ),
 }

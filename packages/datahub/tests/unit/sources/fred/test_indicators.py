@@ -41,3 +41,15 @@ def test_vix_indicators_exist() -> None:
 
     assert get_fred_indicator("VIX_30D") is not None
     assert get_fred_indicator("VIX_9D") is not None
+
+
+def test_dollar_index_indicators_exist() -> None:
+    """测试美元指数指标定义存在."""
+    from ditto_datahub.sources.fred.indicators import get_fred_indicator
+
+    indicator = get_fred_indicator("US_DOLLAR_INDEX_BROAD")
+    assert indicator is not None
+    assert indicator.series_id == "DTWEXBGS"
+    assert indicator.category == "dollar_index"
+    assert indicator.frequency == "daily"
+    assert indicator.need_pit is False
