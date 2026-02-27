@@ -21,6 +21,7 @@ class TestCommoditySourceSchema:
         schema = COMMODITY_SOURCE_SCHEMA.schema
         assert "instrument_id" in schema
         assert "trade_date" in schema
+        assert "trade_date_utc" in schema
         assert "open" in schema
         assert "high" in schema
         assert "low" in schema
@@ -35,6 +36,12 @@ class TestCommoditySourceSchema:
         assert schema["high"] == pl.Float64
         assert schema["low"] == pl.Float64
         assert schema["close"] == pl.Float64
+
+    def test_schema_has_trade_date_utc(self) -> None:
+        """测试 Commodity Schema 包含 trade_date_utc 字段（UTC 午夜时间戳）."""
+        schema = COMMODITY_SOURCE_SCHEMA.schema
+        assert "trade_date_utc" in schema
+        assert schema["trade_date_utc"] == pl.Datetime("ms")
 
     def test_schema_no_pit_columns(self) -> None:
         """测试商品数据不需要 PIT 列."""

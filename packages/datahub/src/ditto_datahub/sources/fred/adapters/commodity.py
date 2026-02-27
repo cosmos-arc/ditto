@@ -89,6 +89,11 @@ class CommodityFredAdapter:
             transformed = df.with_columns(
                 pl.lit(instrument_id).alias("instrument_id"),
                 pl.col("date").alias("trade_date"),
+                # Convert trade_date to UTC midnight timestamp
+                pl.col("date")
+                .dt.combine(time=pl.time(0, 0, 0))
+                .dt.replace_time_zone("UTC")
+                .alias("trade_date_utc"),
                 pl.col("value").alias("open"),
                 pl.col("value").alias("high"),
                 pl.col("value").alias("low"),
@@ -96,6 +101,7 @@ class CommodityFredAdapter:
             ).select(
                 "instrument_id",
                 "trade_date",
+                "trade_date_utc",
                 "open",
                 "high",
                 "low",
