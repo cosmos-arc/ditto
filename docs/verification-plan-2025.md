@@ -401,13 +401,16 @@ pixi run -e dev python -m ditto_port.cli.main ingest market fx --help
 ```
 
 **验证项**：
-- [ ] 命令执行成功
+- [x] 命令可用（--help 正常）
+- [ ] 数据摄入成功
 - [ ] 数据包含 `trade_date_utc` 字段
 - [ ] UTC 时间戳正确（上海时区转换）
 
 **问题记录**：
 ```
-[记录问题...]
+2026-02-27 验证: Tushare fx_daily API 返回 FETCH_ERROR
+可能原因: Tushare API 权限问题或接口限制
+状态: 待确认 Tushare 账户权限
 ```
 
 #### 3.2.12 大宗商品数据 (Commodity Daily)
@@ -427,15 +430,20 @@ pixi run -e dev python -m ditto_port.cli.main ingest market commodity --help
 ```
 
 **验证项**：
-- [ ] 命令执行成功
+- [x] 命令可用（--help 正常）
+- [x] FRED API Key 已配置（keyring）
+- [x] Coordinator 正确路由到 FredSource
+- [ ] 数据摄入成功
 - [ ] 北京时间日期正确转换为 FRED 查询日期
 - [ ] 数据包含 `trade_date_utc` 字段
 - [ ] UTC 时间戳正确（纽约时区转换）
-- [ ] FRED API Key 已配置（keyring）
 
 **问题记录**：
 ```
-[记录问题...]
+2026-02-27 验证: FRED API 网络连接失败 (SourceFetchError -> RetryError)
+原因: 网络环境无法访问 FRED API
+状态: 网络问题，非代码问题
+修复: Coordinator 已修复，正确路由 COMMODITY_DAILY 到 FredSource
 ```
 
 ---
