@@ -22,6 +22,10 @@ from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.sources.base import DataSource
+from ditto_datahub.sources.fred.adapters.commodity import (
+    COMMODITY_CODE_TO_INSTRUMENT_ID,
+)
+from ditto_datahub.sources.tushare.adapters.fx import FX_CODE_TO_INSTRUMENT_ID
 from ditto_infra.foundation import logger
 
 from ditto_port.models import IngestionResult, InstrumentIngestParams
@@ -790,6 +794,17 @@ class IngestionCoordinator:
             Dataset.INDEX_DAILY: lambda: self._source.fetch_index_daily(
                 trade_date,
                 ts_codes=self._get_cached_index_codes(),
+            ),
+            # Market 域扩展（汇率/商品）
+            Dataset.FX_DAILY: lambda: self._source.fetch_fx_daily(
+                ts_codes=list(FX_CODE_TO_INSTRUMENT_ID.keys()),
+                start_date=trade_date,
+                end_date=trade_date,
+            ),
+            Dataset.COMMODITY_DAILY: lambda: self._source.fetch_commodities(
+                codes=list(COMMODITY_CODE_TO_INSTRUMENT_ID.keys()),
+                start_date=trade_date,
+                end_date=trade_date,
             ),
         }
 
