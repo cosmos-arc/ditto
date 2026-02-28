@@ -29,7 +29,7 @@ class TestBondYieldTushareAdapter:
         """测试获取指标."""
         indicator = get_cn_bond_yield_indicator("CN_BOND_YIELD_10Y")
         assert indicator is not None
-        assert indicator.field == "y10"
+        assert indicator.curve_term == 10.0
         assert indicator.maturity == "10年"
 
     def test_get_cn_bond_yield_indicator_unknown(self) -> None:
@@ -38,17 +38,17 @@ class TestBondYieldTushareAdapter:
         assert indicator is None
 
     def test_fetch_bond_yield_basic(self) -> None:
-        """测试基本数据获取."""
+        """测试基本数据获取（使用长格式 API 响应）."""
         mock_client = MagicMock()
+        # 模拟新的长格式 API 响应
         mock_client.query.return_value = pl.DataFrame(
             {
-                "ts_code": ["1001.CB"],
-                "trade_date": ["20240115"],
-                "curve_type": ["0"],
-                "y1": [2.15],
-                "y2": [2.25],
-                "y5": [2.45],
-                "y10": [2.65],
+                "ts_code": ["1001.CB", "1001.CB"],
+                "trade_date": ["20240115", "20240115"],
+                "curve_name": ["中债国债收益率曲线", "中债国债收益率曲线"],
+                "curve_type": ["0", "0"],
+                "curve_term": [1.0, 10.0],
+                "yield": [2.15, 2.65],
             }
         )
 
@@ -91,7 +91,8 @@ class TestBondYieldTushareAdapter:
                 "ts_code": ["1001.CB"],
                 "trade_date": ["20240115"],
                 "curve_type": ["0"],
-                "y1": [2.15],
+                "curve_term": [1.0],
+                "yield": [2.15],
             }
         )
 
@@ -115,7 +116,8 @@ class TestBondYieldTushareAdapter:
                 "ts_code": ["1001.CB"],
                 "trade_date": ["20240115"],
                 "curve_type": ["0"],
-                "y1": [2.15],
+                "curve_term": [1.0],
+                "yield": [2.15],
             }
         )
 
@@ -137,7 +139,8 @@ class TestBondYieldTushareAdapter:
                 "ts_code": ["1001.CB"],
                 "trade_date": ["20240115"],
                 "curve_type": ["0"],
-                "y10": [2.65],
+                "curve_term": [10.0],
+                "yield": [2.65],
             }
         )
 
@@ -167,7 +170,8 @@ class TestBondYieldTushareAdapter:
                 "ts_code": ["1001.CB"],
                 "trade_date": ["20240115"],
                 "curve_type": ["0"],
-                "y1": [2.15],
+                "curve_term": [1.0],
+                "yield": [2.15],
             }
         )
 
@@ -190,7 +194,8 @@ class TestBondYieldTushareAdapter:
                 "ts_code": ["1001.CB"],
                 "trade_date": ["20240115"],
                 "curve_type": ["0"],
-                "y1": [2.15],
+                "curve_term": [1.0],
+                "yield": [2.15],
             }
         )
 
@@ -207,13 +212,14 @@ class TestBondYieldTushareAdapter:
     def test_fetch_bond_yield_multiple_indicators(self) -> None:
         """测试获取多个指标."""
         mock_client = MagicMock()
+        # 2 days x 2 indicators = 4 rows in long format
         mock_client.query.return_value = pl.DataFrame(
             {
-                "ts_code": ["1001.CB", "1001.CB"],
-                "trade_date": ["20240115", "20240116"],
-                "curve_type": ["0", "0"],
-                "y1": [2.15, 2.20],
-                "y5": [2.45, 2.50],
+                "ts_code": ["1001.CB", "1001.CB", "1001.CB", "1001.CB"],
+                "trade_date": ["20240115", "20240115", "20240116", "20240116"],
+                "curve_type": ["0", "0", "0", "0"],
+                "curve_term": [1.0, 5.0, 1.0, 5.0],
+                "yield": [2.15, 2.45, 2.20, 2.50],
             }
         )
 
@@ -239,7 +245,8 @@ class TestBondYieldTushareAdapter:
                 "ts_code": ["1001.CB"],
                 "trade_date": ["20240115"],
                 "curve_type": ["0"],
-                "y1": [None],  # type: ignore[list-item]
+                "curve_term": [1.0],
+                "yield": [None],  # type: ignore[list-item]
             }
         )
 
@@ -260,7 +267,8 @@ class TestBondYieldTushareAdapter:
                 "ts_code": ["1001.CB"],
                 "trade_date": ["20240115"],
                 "curve_type": ["0"],
-                "y1": [2.15],
+                "curve_term": [1.0],
+                "yield": [2.15],
             }
         )
 
@@ -278,3 +286,31 @@ class TestBondYieldTushareAdapter:
         assert call_kwargs["curve_type"] == "0"
         assert call_kwargs["start_date"] == "20240115"
         assert call_kwargs["end_date"] == "20240115"
+
+    def test_fetch_bond_yield_unwanted_terms_filtered(self) -> None:
+        """测试不需要的期限被过滤."""
+        mock_client = MagicMock()
+        # 返回包含不需要的期限（3.0年）
+        mock_client.query.return_value = pl.DataFrame(
+            {
+                "ts_code": ["1001.CB", "1001.CB", "1001.CB"],
+                "trade_date": ["20240115", "20240115", "20240115"],
+                "curve_type": ["0", "0", "0"],
+                "curve_term": [1.0, 3.0, 10.0],  # 3.0 不是我们需要的
+                "yield": [2.15, 2.30, 2.65],
+            }
+        )
+
+        adapter = BondYieldTushareAdapter(_client=mock_client)
+        result = adapter.fetch_bond_yield(
+            codes=["CN_BOND_YIELD_1Y", "CN_BOND_YIELD_10Y"],
+            start_date="2024-01-15",
+            end_date="2024-01-15",
+        )
+
+        # 只返回 1Y 和 10Y
+        assert result.height == 2
+        assert set(result["indicator_code"].unique()) == {
+            "CN_BOND_YIELD_1Y",
+            "CN_BOND_YIELD_10Y",
+        }

@@ -2,24 +2,50 @@
 
 import os
 
+import keyring
 import polars as pl
 import pytest
+from ditto_datahub.config import DataSourceSettings
 from ditto_datahub.sources.tushare.adapters.bond_yield import (
     CN_BOND_YIELD_INDICATORS,
     BondYieldTushareAdapter,
 )
 
 
+def _get_tushare_token() -> str | None:
+    """获取 Tushare token（优先环境变量，其次 keyring）."""
+    if token := os.environ.get("TUSHARE_TOKEN"):
+        return token
+    return keyring.get_password("tushare", "token")
+
+
+def _has_tushare_token() -> bool:
+    """检查 Tushare token 是否可用（环境变量或 keyring）."""
+    return bool(_get_tushare_token())
+
+
+@pytest.fixture
+def tushare_adapter() -> BondYieldTushareAdapter:
+    """创建配置好的 BondYieldTushareAdapter 实例."""
+    token = _get_tushare_token()
+    if not token:
+        pytest.skip("TUSHARE_TOKEN not set (env or keyring)")
+    settings = DataSourceSettings(tushare_token=token)
+    return BondYieldTushareAdapter(settings=settings)
+
+
 @pytest.mark.integration
-@pytest.mark.skipif(not os.environ.get("TUSHARE_TOKEN"), reason="TUSHARE_TOKEN not set")
+@pytest.mark.skipif(
+    not _has_tushare_token(), reason="TUSHARE_TOKEN not set (env or keyring)"
+)
 class TestTushareBondYieldIngestion:
     """Tushare 中国国债收益率数据摄取集成测试."""
 
-    def test_fetch_cn_bond_yield_10y(self) -> None:
+    def test_fetch_cn_bond_yield_10y(
+        self, tushare_adapter: BondYieldTushareAdapter
+    ) -> None:
         """测试获取中国10年期国债收益率."""
-        adapter = BondYieldTushareAdapter()
-
-        df = adapter.fetch_bond_yield(
+        df = tushare_adapter.fetch_bond_yield(
             codes=["CN_BOND_YIELD_10Y"],
             start_date="2024-01-01",
             end_date="2024-01-31",
@@ -41,12 +67,12 @@ class TestTushareBondYieldIngestion:
             assert values.min() > 1.0, "国债收益率应该大于 1%"
             assert values.max() < 6.0, "国债收益率应该小于 6%"
 
-    def test_fetch_multiple_maturities(self) -> None:
+    def test_fetch_multiple_maturities(
+        self, tushare_adapter: BondYieldTushareAdapter
+    ) -> None:
         """测试获取多个期限的国债收益率."""
-        adapter = BondYieldTushareAdapter()
-
         codes = ["CN_BOND_YIELD_1Y", "CN_BOND_YIELD_5Y", "CN_BOND_YIELD_10Y"]
-        df = adapter.fetch_bond_yield(
+        df = tushare_adapter.fetch_bond_yield(
             codes=codes,
             start_date="2024-01-01",
             end_date="2024-01-31",
@@ -58,11 +84,9 @@ class TestTushareBondYieldIngestion:
         assert "CN_BOND_YIELD_5Y" in unique_codes
         assert "CN_BOND_YIELD_10Y" in unique_codes
 
-    def test_bond_yield_schema(self) -> None:
+    def test_bond_yield_schema(self, tushare_adapter: BondYieldTushareAdapter) -> None:
         """测试国债收益率返回的 schema 符合 MACRO_INDICATOR_SOURCE_SCHEMA."""
-        adapter = BondYieldTushareAdapter()
-
-        df = adapter.fetch_bond_yield(
+        df = tushare_adapter.fetch_bond_yield(
             codes=["CN_BOND_YIELD_10Y"],
             start_date="2024-01-01",
             end_date="2024-01-05",
@@ -97,11 +121,11 @@ class TestTushareBondYieldIngestion:
         assert row["source"] == "tushare"
         assert row["unit"] == "%"
 
-    def test_knowledge_date_equals_date(self) -> None:
+    def test_knowledge_date_equals_date(
+        self, tushare_adapter: BondYieldTushareAdapter
+    ) -> None:
         """测试 knowledge_date 等于 date（T+0 发布）."""
-        adapter = BondYieldTushareAdapter()
-
-        df = adapter.fetch_bond_yield(
+        df = tushare_adapter.fetch_bond_yield(
             codes=["CN_BOND_YIELD_10Y"],
             start_date="2024-01-01",
             end_date="2024-01-31",
@@ -116,14 +140,14 @@ class TestTushareBondYieldIngestion:
                 f"knowledge_date {row['knowledge_date']} 应等于 date {row['date']}"
             )
 
-    def test_all_defined_indicators_fetchable(self) -> None:
+    def test_all_defined_indicators_fetchable(
+        self, tushare_adapter: BondYieldTushareAdapter
+    ) -> None:
         """测试所有定义的指标都可以获取数据."""
-        adapter = BondYieldTushareAdapter()
-
         # 获取所有定义的指标代码
         all_codes = list(CN_BOND_YIELD_INDICATORS.keys())
 
-        df = adapter.fetch_bond_yield(
+        df = tushare_adapter.fetch_bond_yield(
             codes=all_codes,
             start_date="2024-01-01",
             end_date="2024-01-31",

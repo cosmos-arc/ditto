@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 
 import polars as pl
 from ditto_infra.foundation import logger, traced
@@ -19,38 +20,39 @@ class CnBondYieldIndicator:
     """中国国债收益率指标定义"""
 
     code: str  # 统一指标代码，如 CN_BOND_YIELD_1Y
-    field: str  # yc_cb 返回的字段名，如 y1
+    curve_term: float  # yc_cb 返回的期限值，如 1.0, 2.0, 5.0, 10.0
     name: str  # 中文名称
     maturity: str  # 期限描述
     description: str  # 描述
 
 
 # 国债收益率指标映射（到期收益率，curve_type=0）
+# curve_term 值：1.0=1年, 2.0=2年, 5.0=5年, 10.0=10年
 CN_BOND_YIELD_INDICATORS: dict[str, CnBondYieldIndicator] = {
     "CN_BOND_YIELD_1Y": CnBondYieldIndicator(
         code="CN_BOND_YIELD_1Y",
-        field="y1",
+        curve_term=1.0,
         name="中国1年期国债收益率",
         maturity="1年",
         description="中债国债收益率曲线1年期-到期收益率",
     ),
     "CN_BOND_YIELD_2Y": CnBondYieldIndicator(
         code="CN_BOND_YIELD_2Y",
-        field="y2",
+        curve_term=2.0,
         name="中国2年期国债收益率",
         maturity="2年",
         description="中债国债收益率曲线2年期-到期收益率",
     ),
     "CN_BOND_YIELD_5Y": CnBondYieldIndicator(
         code="CN_BOND_YIELD_5Y",
-        field="y5",
+        curve_term=5.0,
         name="中国5年期国债收益率",
         maturity="5年",
         description="中债国债收益率曲线5年期-到期收益率",
     ),
     "CN_BOND_YIELD_10Y": CnBondYieldIndicator(
         code="CN_BOND_YIELD_10Y",
-        field="y10",
+        curve_term=10.0,
         name="中国10年期国债收益率",
         maturity="10年",
         description="中债国债收益率曲线10年期-到期收益率",
@@ -66,6 +68,50 @@ def get_cn_bond_yield_indicator(code: str) -> CnBondYieldIndicator | None:
 def _empty_macro_dataframe() -> pl.DataFrame:
     """Return empty DataFrame with MACRO_INDICATOR_SOURCE_SCHEMA."""
     return pl.DataFrame(schema=MACRO_INDICATOR_SOURCE_SCHEMA.schema)
+
+
+# 日期字符串长度常量 (YYYYMMDD)
+_DATE_STR_LENGTH = 8
+
+
+def _parse_trade_date(trade_date: object) -> date | None:
+    """解析交易日期字符串为 date 对象."""
+    try:
+        date_str = str(trade_date)
+        if len(date_str) == _DATE_STR_LENGTH:
+            date_val = date_str
+        elif isinstance(trade_date, (int, float)):
+            date_val = str(int(trade_date))
+        else:
+            return None
+        return pl.Series([date_val]).str.to_date(format="%Y%m%d", strict=False)[0]
+    except (ValueError, TypeError):
+        return None
+
+
+def _make_indicator_row(
+    code: str,
+    indicator: CnBondYieldIndicator,
+    date_obj: date,
+    value: float,
+) -> pl.DataFrame:
+    """创建单个指标数据行."""
+    return pl.DataFrame(
+        {
+            "indicator_code": [code],
+            "indicator_name": [indicator.name],
+            "category": ["interest_rate"],
+            "frequency": ["daily"],
+            "need_pit": [False],
+            "date": [date_obj],
+            "value": [value],
+            "knowledge_date": [date_obj],  # T+0 发布
+            "source": ["tushare"],
+            "unit": ["%"],
+            "description": [indicator.description],
+        },
+        schema=MACRO_INDICATOR_SOURCE_SCHEMA.schema,
+    )
 
 
 class BondYieldTushareAdapter(BaseTushareAdapter):
@@ -111,15 +157,13 @@ class BondYieldTushareAdapter(BaseTushareAdapter):
         compact_start = start_date.replace("-", "")
         compact_end = end_date.replace("-", "")
 
-        # 收集需要的字段
-        fields_needed = ["ts_code", "trade_date", "curve_type"]
-        fields_needed.extend(ind.field for _, ind in valid_indicators)
-        fields_str = ",".join(dict.fromkeys(fields_needed))  # 去重保持顺序
+        # 收集需要的期限值（浮点数）
+        curve_terms_needed = [ind.curve_term for _, ind in valid_indicators]
 
         with tushare_fetch_error_handler("bond_yield", "yc_cb"):
             response = self._client.query(
                 api_name="yc_cb",
-                fields=fields_str,
+                fields="ts_code,trade_date,curve_name,curve_type,curve_term,yield",
                 ts_code="1001.CB",  # 中债国债收益率曲线
                 curve_type="0",  # 0=到期收益率
                 start_date=compact_start,
@@ -129,53 +173,25 @@ class BondYieldTushareAdapter(BaseTushareAdapter):
             if response.is_empty():
                 return _empty_macro_dataframe()
 
+            # API 返回长格式：
+            # trade_date, ts_code, curve_name, curve_type, curve_term, yield
+            # curve_term 可能是字符串或浮点数，需要统一处理
+            response = response.with_columns(
+                pl.col("curve_term").cast(pl.Float64, strict=False)
+            )
+            # 过滤出我们需要的期限
+            response = response.filter(pl.col("curve_term").is_in(curve_terms_needed))
+
+            if response.is_empty():
+                return _empty_macro_dataframe()
+
+            # 创建期限到指标的映射
+            term_to_indicator = {
+                ind.curve_term: (code, ind) for code, ind in valid_indicators
+            }
+
             # 转换为长表格式
-            results: list[pl.DataFrame] = []
-            for code, indicator in valid_indicators:
-                if indicator.field not in response.columns:
-                    continue
-
-                df = response.select(
-                    pl.col("trade_date"),
-                    pl.col(indicator.field).alias("value"),
-                ).filter(pl.col("value").is_not_null())
-
-                if df.is_empty():
-                    continue
-
-                # 转换日期和添加元数据
-                df = df.with_columns(
-                    pl.col("trade_date")
-                    .cast(pl.String)
-                    .str.to_date(format="%Y%m%d", strict=False)
-                    .alias("date"),
-                ).filter(pl.col("date").is_not_null())
-
-                df = df.with_columns(
-                    pl.lit(code).alias("indicator_code"),
-                    pl.lit(indicator.name).alias("indicator_name"),
-                    pl.lit("interest_rate").alias("category"),
-                    pl.lit("daily").alias("frequency"),
-                    pl.lit(False).alias("need_pit"),
-                    pl.col("date").alias("knowledge_date"),  # T+0 发布
-                    pl.lit("tushare").alias("source"),
-                    pl.lit("%").alias("unit"),
-                    pl.lit(indicator.description).alias("description"),
-                ).select(
-                    "indicator_code",
-                    "indicator_name",
-                    "category",
-                    "frequency",
-                    "need_pit",
-                    "date",
-                    "value",
-                    "knowledge_date",
-                    "source",
-                    "unit",
-                    "description",
-                )
-
-                results.append(df)
+            results = self._process_response_rows(response, term_to_indicator)
 
             if not results:
                 return _empty_macro_dataframe()
@@ -189,6 +205,53 @@ class BondYieldTushareAdapter(BaseTushareAdapter):
             )
 
             return result
+
+    def _process_response_rows(
+        self,
+        response: pl.DataFrame,
+        term_to_indicator: dict[float, tuple[str, CnBondYieldIndicator]],
+    ) -> list[pl.DataFrame]:
+        """处理响应数据行，转换为指标 DataFrame 列表."""
+        results: list[pl.DataFrame] = []
+
+        for row in response.iter_rows(named=True):
+            row_data = self._parse_row(row, term_to_indicator)
+            if row_data is not None:
+                code, indicator, date_obj, value = row_data
+                results.append(_make_indicator_row(code, indicator, date_obj, value))
+
+        return results
+
+    def _parse_row(
+        self,
+        row: dict[str, object],
+        term_to_indicator: dict[float, tuple[str, CnBondYieldIndicator]],
+    ) -> tuple[str, CnBondYieldIndicator, date, float] | None:
+        """解析单行数据，返回指标信息或 None."""
+        curve_term = row.get("curve_term")
+        if curve_term is None:
+            return None
+
+        # curve_term 已被 cast 为 Float64，应该是 float 类型
+        term_float = float(curve_term) if isinstance(curve_term, (int, float)) else 0.0
+        indicator_data = term_to_indicator.get(term_float)
+        if indicator_data is None:
+            return None
+
+        code, indicator = indicator_data
+        trade_date = row.get("trade_date")
+        value = row.get("yield")
+
+        if trade_date is None or value is None:
+            return None
+
+        date_obj = _parse_trade_date(trade_date)
+        if date_obj is None:
+            return None
+
+        # value 应该是 float 类型
+        value_float = float(value) if isinstance(value, (int, float)) else 0.0
+        return code, indicator, date_obj, value_float
 
 
 __all__ = [
