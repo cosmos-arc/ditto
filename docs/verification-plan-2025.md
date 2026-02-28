@@ -56,6 +56,8 @@
 | 资本 | valuation/margin/pledge | ✅ | ✅ | ✅ |
 | 宏观(中国) | indicators (tushare) | ✅ | - | ✅ |
 | 宏观(美国) | indicators (fred) | ✅ | - | ✅ |
+| 国债收益率 | bond-yield (tushare yc_cb) | ✅ | - | ✅ |
+| 美元指数 | dollar-index (fred DTWEXBGS) | ✅ | - | ✅ |
 
 ### 1.3 数据源配置
 
@@ -718,6 +720,78 @@ pixi run ingest macro indicators --source fred --codes US_GDP_QOQ,US_CPI_YOY -s 
 [记录问题...]
 ```
 
+#### 3.5.3 中国国债收益率（Tushare yc_cb）
+
+> **新增功能** (2026-02-28): 使用 Tushare yc_cb 接口获取中国国债收益率曲线
+
+**接口说明**：
+- 接口: `yc_cb`
+- 数据源: 中债国债收益率曲线
+- 口径: 到期收益率（YTM, curve_type=0），与美债口径一致
+- 积分要求: ≥5000
+
+**支持的指标**：
+| 指标代码 | 名称 | 期限 |
+|----------|------|------|
+| CN_BOND_YIELD_1Y | 中国1年期国债收益率 | 1年 |
+| CN_BOND_YIELD_2Y | 中国2年期国债收益率 | 2年 |
+| CN_BOND_YIELD_5Y | 中国5年期国债收益率 | 5年 |
+| CN_BOND_YIELD_10Y | 中国10年期国债收益率 | 10年 |
+
+```bash
+# 摄入中国国债收益率数据
+pixi run ingest macro bond-yield -s 2025-01-01 -e 2025-12-31
+
+# 摄入特定期限
+pixi run ingest macro bond-yield --codes CN_BOND_YIELD_1Y,CN_BOND_YIELD_10Y -s 2025-01-01 -e 2025-12-31
+```
+
+**验证项**：
+- [ ] Tushare yc_cb 接口连接成功（需要 ≥5000 积分）
+- [ ] 4 个期限指标全部摄入成功
+- [ ] knowledge_date = date（T+0 发布）
+- [ ] 数值范围合理（1.5% ~ 5%）
+
+**问题记录**：
+```
+[记录问题...]
+```
+
+#### 3.5.4 贸易加权美元指数（FRED DTWEXBGS）
+
+> **新增功能** (2026-02-28): 使用 FRED DTWEXBGS 获取贸易加权美元指数
+
+**指标说明**：
+- 指标代码: `US_DOLLAR_INDEX_BROAD`
+- Series ID: DTWEXBGS
+- 数据源: Federal Reserve Board
+- 特点: 包含 26 种货币的贸易加权指数（vs. DXY 仅 6 种）
+
+**vs. DXY (ICE美元指数)**：
+| 对比项 | DTWEXBGS | DXY |
+|--------|----------|-----|
+| 数据源 | FRED (官方) | ICE (商业) |
+| 货币数量 | 26种 | 6种 |
+| 稳定性 | 高 | 一般 |
+| 推荐度 | ⭐⭐⭐ | ⭐⭐ |
+
+```bash
+# 摄入贸易加权美元指数
+pixi run ingest macro indicators --source fred --codes US_DOLLAR_INDEX_BROAD -s 2025-01-01 -e 2025-12-31
+```
+
+**验证项**：
+- [ ] FRED DTWEXBGS 接口连接成功
+- [ ] 数据摄入成功
+- [ ] 数值范围合理（80 ~ 130）
+- [ ] frequency = daily
+- [ ] category = dollar_index
+
+**问题记录**：
+```
+[记录问题...]
+```
+
 ---
 
 ### 3.6 历史回填 (Backfill)
@@ -1064,6 +1138,58 @@ curl -X POST http://localhost:8000/api/v1/macro/indicators \
 - [ ] 美国宏观指标返回正确
 - [ ] knowledge_date 字段存在（PIT 支持）
 - [ ] 数据格式符合 MACRO_INDICATOR_SOURCE_SCHEMA
+
+**问题记录**：
+```
+[记录问题...]
+```
+
+#### 4.7.4 中国国债收益率查询（Tushare yc_cb）- 新增 2026-02-28
+
+```bash
+# 查询中国国债收益率曲线
+curl -X POST http://localhost:8000/api/v1/macro/indicators \
+  -H "Content-Type: application/json" \
+  -d '{
+    "indicators": ["CN_BOND_YIELD_1Y", "CN_BOND_YIELD_5Y", "CN_BOND_YIELD_10Y"],
+    "start_date": "2025-01-01",
+    "end_date": "2025-12-31",
+    "source": "tushare"
+  }'
+```
+
+**验证项**：
+- [ ] 国债收益率数据返回正确
+- [ ] 包含 1Y/5Y/10Y 三个期限
+- [ ] knowledge_date = date（T+0 发布）
+- [ ] 数值范围合理（1.5% ~ 5%）
+- [ ] category = interest_rate
+
+**问题记录**：
+```
+[记录问题...]
+```
+
+#### 4.7.5 贸易加权美元指数查询（FRED DTWEXBGS）- 新增 2026-02-28
+
+```bash
+# 查询贸易加权美元指数
+curl -X POST http://localhost:8000/api/v1/macro/indicators \
+  -H "Content-Type: application/json" \
+  -d '{
+    "indicators": ["US_DOLLAR_INDEX_BROAD"],
+    "start_date": "2025-01-01",
+    "end_date": "2025-12-31",
+    "source": "fred"
+  }'
+```
+
+**验证项**：
+- [ ] 美元指数数据返回正确
+- [ ] 数值范围合理（80 ~ 130）
+- [ ] frequency = daily
+- [ ] category = dollar_index
+- [ ] unit = 指数
 
 **问题记录**：
 ```
@@ -1555,7 +1681,18 @@ pixi run ingest capital valuation --ticker 600519 -s 2025-01-01 -e 2025-12-31
 pixi run ingest capital margin --ticker 000001 -s 2025-01-01 -e 2025-12-31
 
 echo "=== 7. 宏观数据摄入 ==="
+# 中国宏观指标（Tushare）
 pixi run ingest macro indicators 2025-01-02
+
+# 美国宏观指标（FRED）
+pixi run ingest macro indicators --source fred 2025-01-02
+
+# 中国国债收益率（Tushare yc_cb）- 新增 2026-02-28
+# 注意：需要 Tushare 积分 ≥5000
+pixi run ingest macro bond-yield -s 2025-01-01 -e 2025-01-31 || echo "警告: yc_cb 接口需要 5000+ 积分"
+
+# 贸易加权美元指数（FRED DTWEXBGS）- 新增 2026-02-28
+pixi run ingest macro indicators --source fred --codes US_DOLLAR_INDEX_BROAD -s 2025-01-01 -e 2025-01-31
 
 echo "=== 8. 历史回填（全年） ==="
 pixi run backfill market stock -s 2025-01-01 -e 2025-12-31 -p 2
@@ -1610,6 +1747,21 @@ curl -s "$BASE_URL/api/v1/capital/margin?ticker=000001&start_date=2025-01-01&end
 
 echo "=== 数据源直查（全年） ==="
 curl -s "$BASE_URL/api/v1/source/tushare/stock_daily?ticker=000001&start_date=2025-01-01&end_date=2025-12-31" | jq '. | length'
+
+echo "=== 宏观数据查询 ==="
+# 查询宏观指标元数据
+curl -s "$BASE_URL/api/v1/macro/indicators/metadata?source=fred" | jq '. | length'
+curl -s "$BASE_URL/api/v1/macro/indicators/metadata?source=tushare" | jq '. | length'
+
+# 中国国债收益率（Tushare yc_cb）- 新增 2026-02-28
+curl -s -X POST "$BASE_URL/api/v1/macro/indicators" \
+  -H "Content-Type: application/json" \
+  -d '{"indicators": ["CN_BOND_YIELD_1Y", "CN_BOND_YIELD_10Y"], "start_date": "2025-01-01", "end_date": "2025-01-31"}' | jq '. | length'
+
+# 贸易加权美元指数（FRED DTWEXBGS）- 新增 2026-02-28
+curl -s -X POST "$BASE_URL/api/v1/macro/indicators" \
+  -H "Content-Type: application/json" \
+  -d '{"indicators": ["US_DOLLAR_INDEX_BROAD"], "start_date": "2025-01-01", "end_date": "2025-01-31", "source": "fred"}' | jq '. | length'
 
 echo "=== API 验证完成 ==="
 ```

@@ -263,6 +263,21 @@ log_step "=== 9. 宏观数据 ==="
 
 run_test "宏观" "Tushare 指标" "pixi run -e dev python -m ditto_port.cli.main ingest macro indicators 2025-01-02"
 
+# 中国国债收益率（Tushare yc_cb）- 新增 2026-02-28
+# 注意：需要 Tushare 积分 ≥5000
+log_info "验证中国国债收益率（yc_cb 接口）..."
+BOND_YIELD_TEST=$(pixi run -e dev python -c "
+from ditto_datahub.sources.tushare.adapters.bond_yield import CN_BOND_YIELD_INDICATORS
+print(f'OK: {len(CN_BOND_YIELD_INDICATORS)} indicators')
+" 2>/dev/null)
+if echo "$BOND_YIELD_TEST" | grep -q "OK:"; then
+    log_info "国债收益率指标: ✅ $BOND_YIELD_TEST"
+    record_result "✅" "宏观" "国债收益率指标定义"
+else
+    log_warn "国债收益率指标: ❌ 加载失败"
+    record_result "❌" "宏观" "国债收益率指标定义"
+fi
+
 # FRED 数据验证（如果配置了 API Key）
 if [ "$FRED_STATUS" = "SET" ]; then
     log_info "验证 FRED 数据源..."
@@ -277,6 +292,21 @@ print(f'OK: {len(indicators)} indicators')
     else
         log_warn "FRED 数据源: ❌ 连接失败"
         record_result "❌" "宏观" "FRED 数据源"
+    fi
+
+    # 贸易加权美元指数（FRED DTWEXBGS）- 新增 2026-02-28
+    log_info "验证美元指数指标（DTWEXBGS）..."
+    DOLLAR_INDEX_TEST=$(pixi run -e dev python -c "
+from ditto_datahub.sources.fred import get_fred_indicator
+indicator = get_fred_indicator('US_DOLLAR_INDEX_BROAD')
+print(f'OK: {indicator.code}' if indicator else 'NOT_FOUND')
+" 2>/dev/null)
+    if echo "$DOLLAR_INDEX_TEST" | grep -q "OK:"; then
+        log_info "美元指数指标: ✅ $DOLLAR_INDEX_TEST"
+        record_result "✅" "宏观" "美元指数指标定义"
+    else
+        log_warn "美元指数指标: ❌ 未找到"
+        record_result "❌" "宏观" "美元指数指标定义"
     fi
 else
     log_warn "跳过 FRED 验证（API Key 未配置）"
@@ -430,6 +460,30 @@ if [ -n "$MACRO" ]; then
     record_result "✅" "API" "宏观指标"
 else
     record_result "❌" "API" "宏观指标"
+fi
+
+# 中国国债收益率查询（新增 2026-02-28）
+log_info "中国国债收益率查询..."
+BOND_YIELD=$(curl -s -X POST http://localhost:8000/api/v1/macro/indicators \
+  -H "Content-Type: application/json" \
+  -d '{"indicators": ["CN_BOND_YIELD_1Y", "CN_BOND_YIELD_10Y"], "start_date": "2025-01-01", "end_date": "2025-01-31"}' 2>/dev/null)
+if [ -n "$BOND_YIELD" ]; then
+    record_result "✅" "API" "国债收益率查询"
+else
+    record_result "❌" "API" "国债收益率查询"
+fi
+
+# 美元指数查询（新增 2026-02-28）
+if [ "$FRED_STATUS" = "SET" ]; then
+    log_info "贸易加权美元指数查询..."
+    DOLLAR_IDX=$(curl -s -X POST http://localhost:8000/api/v1/macro/indicators \
+      -H "Content-Type: application/json" \
+      -d '{"indicators": ["US_DOLLAR_INDEX_BROAD"], "start_date": "2025-01-01", "end_date": "2025-01-31", "source": "fred"}' 2>/dev/null)
+    if [ -n "$DOLLAR_IDX" ]; then
+        record_result "✅" "API" "美元指数查询"
+    else
+        record_result "❌" "API" "美元指数查询"
+    fi
 fi
 
 # 数据源直查
