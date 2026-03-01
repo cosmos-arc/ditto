@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import polars as pl
 
-from ditto_datahub.sources.fred.client import FredClient
+from ditto_datahub.sources.fred.adapters.base import BaseFredAdapter
 from ditto_datahub.sources.fred.indicators import get_fred_indicator
 from ditto_datahub.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
 from ditto_datahub.utils.timezone_utils import (
@@ -28,7 +28,7 @@ VIX_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
 }
 
 
-class CommodityFredAdapter:
+class CommodityFredAdapter(BaseFredAdapter):
     """
     Adapter for fetching commodity prices from FRED API.
 
@@ -36,20 +36,7 @@ class CommodityFredAdapter:
     FRED only provides a single value per observation, so OHLC
     are all set to the same value (the close price).
 
-    Attributes:
-        _client: FredClient instance for API calls.
-
     """
-
-    def __init__(self, api_key: str | None = None) -> None:
-        """
-        Initialize CommodityFredAdapter.
-
-        Args:
-            api_key: FRED API key. If None, reads from FRED_API_KEY env var.
-
-        """
-        self._client = FredClient(api_key=api_key)
 
     def fetch_commodities(
         self,
@@ -136,18 +123,6 @@ class CommodityFredAdapter:
             return pl.DataFrame(schema=COMMODITY_SOURCE_SCHEMA.schema)
 
         return pl.concat(results)
-
-    def close(self) -> None:
-        """Close underlying HTTP client."""
-        self._client.close()
-
-    def __enter__(self) -> CommodityFredAdapter:
-        """Context manager entry."""
-        return self
-
-    def __exit__(self, *args: object) -> None:
-        """Context manager exit."""
-        self.close()
 
 
 __all__ = [

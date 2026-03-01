@@ -265,6 +265,18 @@ class IngestionDataWriter:
             Dataset.INDEX_DAILY: lambda: self._write_index_bars(
                 dataset, df, year, on_duplicate, source_ticker_col
             ),
+            Dataset.FX_DAILY: lambda: self._write_fx_bars(
+                dataset,
+                df,
+                year,
+                on_duplicate,
+            ),
+            Dataset.COMMODITY_DAILY: lambda: self._write_commodity_bars(
+                dataset,
+                df,
+                year,
+                on_duplicate,
+            ),
         }
 
         if dataset_enum not in handlers:
@@ -355,6 +367,38 @@ class IngestionDataWriter:
         )
 
         return _to_write_result(dataset, year, enriched_df, rows_written)
+
+    def _write_fx_bars(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+    ) -> WriteResult:
+        """Write FX daily bars data."""
+        rows_written = self._market_service.save_bars(
+            dataset="fx_daily",
+            df=df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(dataset, year, df, rows_written)
+
+    def _write_commodity_bars(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+    ) -> WriteResult:
+        """Write Commodity daily bars data."""
+        rows_written = self._market_service.save_bars(
+            dataset="commodity_daily",
+            df=df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(dataset, year, df, rows_written)
 
     def _write_stock_status(
         self,

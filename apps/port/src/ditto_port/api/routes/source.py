@@ -36,6 +36,10 @@ class SourceDataResponse(APIResponse[list[dict[str, Any]]]):
 @router.get("/{source}/{dataset}", response_model=SourceDataResponse)
 @inject
 async def get_source_data(  # noqa: PLR0913
+    # 依赖注入
+    source_service: Annotated[SourceService, FromComponent()],
+    metadata_service: Annotated[MetadataService, FromComponent()],
+    # 路径参数
     source: str = Path(..., description="数据源名称 (如 tushare)"),
     dataset: str = Path(..., description="数据集名称 (如 stock_daily)"),
     # 标识符（三选一）
@@ -47,9 +51,6 @@ async def get_source_data(  # noqa: PLR0913
     # 时间范围
     start_date: str = Query(..., description="开始日期 (YYYY-MM-DD)"),
     end_date: str = Query(..., description="结束日期 (YYYY-MM-DD)"),
-    # 依赖注入
-    source_service: Annotated[SourceService, FromComponent()] = None,  # type: ignore[assignment]
-    metadata_service: Annotated[MetadataService, FromComponent()] = None,  # type: ignore[assignment]
 ) -> SourceDataResponse:
     """
     查询 Source 层数据.

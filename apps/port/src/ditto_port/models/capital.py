@@ -81,8 +81,8 @@ def to_margin(row: dict[str, Any]) -> Margin:
         trade_date=row["trade_date"],
         margin_buy_balance=row["margin_buy_balance"],
         short_sell_balance=row["short_sell_balance"],
-        margin_buy_volume=int(row["margin_buy_volume"]),
-        short_sell_volume=int(row["short_sell_volume"]),
+        margin_buy_volume=int(row["margin_buy_volume"] or 0),
+        short_sell_volume=int(row["short_sell_volume"] or 0),
     )
 
 
@@ -171,10 +171,10 @@ def to_valuation(row: dict[str, Any]) -> Valuation:
         instrument_id=str(row["instrument_id"]),
         trade_date=row["trade_date"],
         pe_ratio=row.get("pe_ratio"),
-        pb_ratio=row["pb_ratio"],
+        pb_ratio=row.get("pb_ratio") or 0.0,
         ps_ratio=row.get("ps_ratio"),
         dividend_yield=row.get("dividend_yield"),
-        market_cap=float(row["market_cap"]),
+        market_cap=float(row.get("market_cap") or 0.0),
     )
 
 

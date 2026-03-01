@@ -44,10 +44,14 @@ class TestMacroFredAdapter:
         expected_columns = set(MACRO_INDICATOR_SOURCE_SCHEMA.schema.keys())
         assert set(result.columns) == expected_columns
 
-    def test_fetch_indicators_sets_knowledge_date_from_realtime_start(
+    def test_fetch_indicators_sets_knowledge_date_from_observation_date(
         self, respx_mock
     ) -> None:
-        """knowledge_date 从 realtime_start 获取."""
+        """knowledge_date 从观测日期 (date 列) 获取.
+
+        Note: 完整的 PIT 语义需要向 FRED API 传递 realtime_start/realtime_end
+        参数，当前未实现，因此使用观测日期作为 knowledge_date。
+        """
         # Arrange
         respx_mock.get("https://api.stlouisfed.org/fred/series/observations").mock(
             return_value=httpx.Response(
@@ -76,10 +80,10 @@ class TestMacroFredAdapter:
             end_date="2024-12-31",
         )
 
-        # Assert
+        # Assert - knowledge_date comes from observation date
         import datetime
 
-        assert result["knowledge_date"][0] == datetime.date(2024, 2, 2)
+        assert result["knowledge_date"][0] == datetime.date(2024, 1, 1)
 
     def test_fetch_indicators_unknown_code_skipped(self, respx_mock) -> None:
         """未知指标代码被跳过."""

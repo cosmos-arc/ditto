@@ -4,31 +4,24 @@ from __future__ import annotations
 
 import polars as pl
 
-from ditto_datahub.sources.fred.client import FredClient
+from ditto_datahub.sources.fred.adapters.base import BaseFredAdapter
 from ditto_datahub.sources.fred.indicators import get_fred_indicator
 from ditto_datahub.sources.schemas.macro_schemas import MACRO_INDICATOR_SOURCE_SCHEMA
 
 
-class MacroFredAdapter:
+class MacroFredAdapter(BaseFredAdapter):
     """
     Adapter for fetching macro indicators from FRED API.
 
     Normalizes FRED data to MACRO_INDICATOR_SOURCE_SCHEMA format.
 
-    Attributes:
-        _client: FredClient instance for API calls.
+    Note:
+        FRED macro indicators typically have need_pit=False because:
+        1. Historical macro data is rarely restated
+        2. PIT semantics require passing realtime_start/realtime_end
+           parameters to FRED API, which is not currently implemented
 
     """
-
-    def __init__(self, api_key: str | None = None) -> None:
-        """
-        Initialize MacroFredAdapter.
-
-        Args:
-            api_key: FRED API key. If None, reads from FRED_API_KEY env var.
-
-        """
-        self._client = FredClient(api_key=api_key)
 
     def fetch_indicators(
         self,
@@ -74,8 +67,12 @@ class MacroFredAdapter:
                 pl.lit(indicator.category).alias("category"),
                 pl.lit(indicator.frequency).alias("frequency"),
                 pl.lit(indicator.need_pit).alias("need_pit"),
-                # knowledge_date from realtime_start (PIT date)
-                pl.col("realtime_start").alias("knowledge_date"),
+                # knowledge_date: use observation date as knowledge date
+                # Note: For true PIT semantics, realtime_start/realtime_end
+                # parameters need to be passed to FRED API, which is not
+                # currently implemented. This assumes data is known on the
+                # observation date itself.
+                pl.col("date").alias("knowledge_date"),
                 pl.lit("fred").alias("source"),
                 pl.lit(indicator.unit).alias("unit"),
                 pl.lit(indicator.description).alias("description"),
@@ -100,18 +97,6 @@ class MacroFredAdapter:
             return pl.DataFrame(schema=MACRO_INDICATOR_SOURCE_SCHEMA.schema)
 
         return pl.concat(results)
-
-    def close(self) -> None:
-        """Close underlying HTTP client."""
-        self._client.close()
-
-    def __enter__(self) -> MacroFredAdapter:
-        """Context manager entry."""
-        return self
-
-    def __exit__(self, *args: object) -> None:
-        """Context manager exit."""
-        self.close()
 
 
 __all__ = ["MacroFredAdapter"]

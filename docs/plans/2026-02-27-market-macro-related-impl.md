@@ -809,8 +809,7 @@ import pytest
 from pathlib import Path
 import tempfile
 
-from ditto_datahub.stores.market.fx.fx_writer import FxBarsWriter
-from ditto_datahub.stores.market.fx.fx_reader import FxBarsReader
+from ditto_datahub.stores.market.fx.bars import FxBarsReader, FxBarsWriter
 
 
 class TestFxStore:
@@ -853,8 +852,7 @@ Expected: FAIL
 # packages/datahub/src/ditto_datahub/stores/market/fx/__init__.py
 """FX (Foreign Exchange) store module."""
 
-from ditto_datahub.stores.market.fx.fx_reader import FxBarsReader
-from ditto_datahub.stores.market.fx.fx_writer import FxBarsWriter
+from ditto_datahub.stores.market.fx.bars import FxBarsReader, FxBarsWriter
 
 __all__ = ["FxBarsReader", "FxBarsWriter"]
 ```

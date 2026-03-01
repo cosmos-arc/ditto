@@ -32,7 +32,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from ditto_port.api.routes import (
     capital,
+    commodity,
     fundamental,
+    fx,
     ingestion,
     macro,
     market,
@@ -183,7 +185,9 @@ app.add_middleware(
 
 # 挂载业务路由
 app.include_router(capital.router, prefix="/api/v1")
+app.include_router(commodity.router, prefix="/api/v1")
 app.include_router(fundamental.router, prefix="/api/v1")
+app.include_router(fx.router, prefix="/api/v1")
 app.include_router(ingestion.router, prefix="/api/v1")
 app.include_router(macro.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")

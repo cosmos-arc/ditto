@@ -1,6 +1,3 @@
-"""FX (Foreign Exchange) store module."""
+"""FX domain market data stores."""
 
-from ditto_datahub.stores.market.fx.fx_reader import FxBarsReader
-from ditto_datahub.stores.market.fx.fx_writer import FxBarsWriter
-
-__all__ = ["FxBarsReader", "FxBarsWriter"]
+__all__ = []

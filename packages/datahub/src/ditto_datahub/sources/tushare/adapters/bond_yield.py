@@ -222,6 +222,35 @@ class BondYieldTushareAdapter(BaseTushareAdapter):
 
         return results
 
+    def _parse_curve_term(self, curve_term: object) -> float | None:
+        """解析 curve_term 值，返回浮点数或 None."""
+        if curve_term is None:
+            return None
+        try:
+            return float(curve_term)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            logger.warning(
+                "Invalid curve_term value, skipping row",
+                event="bond_yield_invalid_curve_term",
+                curve_term=curve_term,
+            )
+            return None
+
+    def _parse_yield_value(self, value: object, trade_date: object) -> float | None:
+        """解析 yield 值，返回浮点数或 None."""
+        if value is None:
+            return None
+        try:
+            return float(value)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            logger.warning(
+                "Invalid yield value, skipping row",
+                event="bond_yield_invalid_value",
+                value=value,
+                trade_date=trade_date,
+            )
+            return None
+
     def _parse_row(
         self,
         row: dict[str, object],
@@ -229,28 +258,35 @@ class BondYieldTushareAdapter(BaseTushareAdapter):
     ) -> tuple[str, CnBondYieldIndicator, date, float] | None:
         """解析单行数据，返回指标信息或 None."""
         curve_term = row.get("curve_term")
-        if curve_term is None:
+        trade_date = row.get("trade_date")
+        value = row.get("yield")
+
+        # 解析 curve_term
+        term_float = self._parse_curve_term(curve_term)
+        if term_float is None:
             return None
 
-        # curve_term 已被 cast 为 Float64，应该是 float 类型
-        term_float = float(curve_term) if isinstance(curve_term, (int, float)) else 0.0
+        # 查找指标映射
         indicator_data = term_to_indicator.get(term_float)
         if indicator_data is None:
             return None
 
         code, indicator = indicator_data
-        trade_date = row.get("trade_date")
-        value = row.get("yield")
 
-        if trade_date is None or value is None:
+        # 检查必要字段
+        if trade_date is None:
             return None
 
+        # 解析日期
         date_obj = _parse_trade_date(trade_date)
         if date_obj is None:
             return None
 
-        # value 应该是 float 类型
-        value_float = float(value) if isinstance(value, (int, float)) else 0.0
+        # 解析 yield 值
+        value_float = self._parse_yield_value(value, trade_date)
+        if value_float is None:
+            return None
+
         return code, indicator, date_obj, value_float
 
 

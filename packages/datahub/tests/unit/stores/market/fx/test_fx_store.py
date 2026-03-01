@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import polars as pl
-from ditto_datahub.stores.market.fx import FxBarsReader, FxBarsWriter
+from ditto_datahub.stores.market.fx.bars import FxBarsReader, FxBarsWriter
 
 
 class TestFxStore:

@@ -23,17 +23,17 @@ router = APIRouter(prefix="/capital", tags=["capital"])
 @router.get("/margin", response_model=APIResponse[list[Margin]])
 @inject
 async def get_margin(
+    service: Annotated[CapitalService, FromComponent()],
     instrument_id: str = Query(..., description="标的 ID"),
     as_of_date: date = Query(..., description="时间点查询日期"),
-    service: Annotated[CapitalService, FromComponent()] = None,  # type: ignore[assignment]
 ) -> APIResponse[list[Margin]]:
     """
     获取融资融券数据.
 
     Args:
+        service: CapitalService 依赖注入
         instrument_id: 标的 ID
         as_of_date: 时间点查询日期
-        service: CapitalService 依赖注入
 
     Returns:
         APIResponse 包含融资融券数据列表
@@ -51,17 +51,17 @@ async def get_margin(
 @router.get("/valuation", response_model=APIResponse[list[Valuation]])
 @inject
 async def get_valuation(
+    service: Annotated[CapitalService, FromComponent()],
     instrument_id: str = Query(..., description="标的 ID"),
     as_of_date: date = Query(..., description="时间点查询日期"),
-    service: Annotated[CapitalService, FromComponent()] = None,  # type: ignore[assignment]
 ) -> APIResponse[list[Valuation]]:
     """
     获取估值指标数据.
 
     Args:
+        service: CapitalService 依赖注入
         instrument_id: 标的 ID
         as_of_date: 时间点查询日期
-        service: CapitalService 依赖注入
 
     Returns:
         APIResponse 包含估值指标数据列表

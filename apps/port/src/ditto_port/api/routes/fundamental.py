@@ -27,18 +27,18 @@ router = APIRouter(prefix="/fundamental", tags=["fundamental"])
 @inject
 async def get_financials(
     report_type: FinancialType,
+    service: Annotated[FundamentalService, FromComponent()],
     instrument_id: str = Query(..., description="标的 ID"),
     as_of_date: date = Query(..., description="PIT 查询日期"),
-    service: Annotated[FundamentalService, FromComponent()] = None,  # type: ignore[assignment]
 ) -> APIResponse[list[Financial]]:
     """
     获取财务报表数据.
 
     Args:
         report_type: 财务报表类型 (balance_sheet/income_statement/cash_flow)
+        service: FundamentalService 依赖注入
         instrument_id: 标的 ID
         as_of_date: PIT 查询日期
-        service: FundamentalService 依赖注入
 
     Returns:
         APIResponse 包含财务报表数据列表
@@ -77,17 +77,17 @@ async def get_financials(
 @router.get("/dividend", response_model=APIResponse[list[Dividend]])
 @inject
 async def get_dividend(
+    service: Annotated[FundamentalService, FromComponent()],
     instrument_id: str = Query(..., description="标的 ID"),
     as_of_date: date = Query(..., description="PIT 查询日期"),
-    service: Annotated[FundamentalService, FromComponent()] = None,  # type: ignore[assignment]
 ) -> APIResponse[list[Dividend]]:
     """
     获取分红数据.
 
     Args:
+        service: FundamentalService 依赖注入
         instrument_id: 标的 ID
         as_of_date: PIT 查询日期
-        service: FundamentalService 依赖注入
 
     Returns:
         APIResponse 包含分红数据列表
@@ -108,19 +108,19 @@ async def get_dividend(
 @router.get("/corporate-actions", response_model=APIResponse[list[CorporateAction]])
 @inject
 async def list_corporate_actions(
+    service: Annotated[FundamentalService, FromComponent()],
     instrument_id: str = Query(..., description="标的 ID"),
     start_date: date = Query(..., description="开始日期"),
     end_date: date = Query(..., description="结束日期"),
-    service: Annotated[FundamentalService, FromComponent()] = None,  # type: ignore[assignment]
 ) -> APIResponse[list[CorporateAction]]:
     """
     查询公司行动列表.
 
     Args:
+        service: FundamentalService 依赖注入
         instrument_id: 标的 ID
         start_date: 开始日期
         end_date: 结束日期
-        service: FundamentalService 依赖注入
 
     Returns:
         APIResponse 包含公司行动列表
