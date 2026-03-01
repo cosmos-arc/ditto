@@ -104,6 +104,17 @@ class IngestionCoordinator:
         self._index_codes_cache: list[str] | None = None
 
     @staticmethod
+    def _raise_fred_not_configured() -> pl.DataFrame:
+        """Raise error when FRED source is not configured."""
+        raise SourceFetchError(
+            message=(
+                "FRED data source not configured. "
+                "Set FRED_API_KEY environment variable."
+            ),
+            source="fred",
+        )
+
+    @staticmethod
     def _is_source_fetch_error(error: Exception) -> bool:
         """Check whether exception should be treated as source fetch failure."""
         return isinstance(error, SourceFetchError) or (
@@ -813,7 +824,7 @@ class IngestionCoordinator:
                     end_date=trade_date,
                 )
                 if self._fred_source
-                else pl.DataFrame()
+                else self._raise_fred_not_configured()
             ),
         }
 
