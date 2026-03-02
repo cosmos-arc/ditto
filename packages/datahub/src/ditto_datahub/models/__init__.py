@@ -2,7 +2,9 @@
 
 # DataHub 层自己的 models
 from ditto_datahub.models.common import (
+    AssetClassType,
     Dataset,
+    DateScheduleType,
     Domain,
     InstrumentIdRange,
     OnDuplicate,
@@ -77,9 +79,11 @@ __all__ = [
     "INDICATOR_TYPE_VOLUME",
     "QUOTE_SCHEMA",
     "AssetClass",
+    "AssetClassType",
     "CalendarDay",
     "DataChangedError",
     "Dataset",
+    "DateScheduleType",
     "Domain",
     "ETFExtension",
     "Exchange",

@@ -14,6 +14,7 @@ from ditto_datahub.sources.tushare.adapters.fx import FxTushareAdapter
 from ditto_datahub.sources.tushare.adapters.index import IndexTushareAdapter
 from ditto_datahub.sources.tushare.adapters.industry import IndustryTushareAdapter
 from ditto_datahub.sources.tushare.adapters.macro import MacroTushareAdapter
+from ditto_datahub.sources.tushare.adapters.metal import MetalTushareAdapter
 from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
 from ditto_datahub.sources.tushare.client import TushareClient
 
@@ -26,11 +27,13 @@ class TushareSource(DataSource):
     - CalendarTushareAdapter: Trading calendar
     - StockTushareAdapter: Stock-related data
     - ETFTushareAdapter: ETF-related data
+    - MetalTushareAdapter: Precious metals data (XAUUSD, XAGUSD)
 
     Attributes:
         _calendar: Calendar data adapter.
         _stock: Stock data adapter.
         _etf: ETF data adapter.
+        _metal: Precious metals data adapter.
         _client: 共享的 TushareClient 实例。
 
     """
@@ -61,6 +64,7 @@ class TushareSource(DataSource):
         self._fundamental = FundamentalTushareAdapter(_client=self._client)
         self._macro = MacroTushareAdapter(_client=self._client)
         self._fx = FxTushareAdapter(_client=self._client)
+        self._metal = MetalTushareAdapter(_client=self._client)
 
     @staticmethod
     def _to_compact_date(trade_date: str) -> str:
@@ -779,6 +783,34 @@ class TushareSource(DataSource):
         """
         return self._fx.fetch_fx_daily(
             ts_codes=ts_codes,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    # Metal 相关方法 - 委托给 MetalTushareAdapter
+    def fetch_metal_daily(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch precious metals daily data from Tushare fx_daily API.
+
+        使用 fx_daily 接口的 METAL 分类获取贵金属数据（黄金、白银）。
+
+        Args:
+            codes: Metal codes (e.g., ["XAUUSD.FXCM", "COMMOD_GOLD"]).
+                   支持别名：COMMOD_GOLD, GOLD, XAUUSD, COMMOD_SILVER, SILVER, XAGUSD
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with COMMODITY_SOURCE_SCHEMA columns.
+
+        """
+        return self._metal.fetch_metal_daily(
+            codes=codes,
             start_date=start_date,
             end_date=end_date,
         )

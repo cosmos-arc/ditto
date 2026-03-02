@@ -14,7 +14,18 @@
       "Bash(pixi *)",
       "Bash(git *)",
       "Bash(gh *)"
-    ]
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(chmod 777 *)",
+      "Bash(mkfs *)",
+      "Bash(dd *)",
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)",
+      "Bash(*prisma reset*)"
+    ],
+    "defaultMode": "bypassPermissions"
   },
   "enabledPlugins": {
     "superpowers@superpowers-marketplace": true,

@@ -7,7 +7,7 @@ from collections import defaultdict
 import polars as pl
 from ditto_infra.foundation import logger, traced
 
-from ditto_datahub.sources.schemas.macro_schemas import MACRO_INDICATOR_SOURCE_SCHEMA
+from ditto_datahub.sources.schemas.macro_schemas import empty_macro_dataframe
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
@@ -16,11 +16,6 @@ from ditto_datahub.sources.tushare.processors.mappings.macro import (
     TushareMacroIndicator,
     get_tushare_macro_indicator,
 )
-
-
-def _empty_macro_dataframe() -> pl.DataFrame:
-    """Return empty DataFrame with MACRO_INDICATOR_SOURCE_SCHEMA."""
-    return pl.DataFrame(schema=MACRO_INDICATOR_SOURCE_SCHEMA.schema)
 
 
 def _parse_date_str(date_str: str, fmt: str) -> pl.Date | None:
@@ -88,7 +83,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
                 end_date=compact_date,
             )
             if response.is_empty():
-                return _empty_macro_dataframe()
+                return empty_macro_dataframe()
 
             required_columns = {"date", "on"}
             missing = required_columns - set(response.columns)
@@ -167,7 +162,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
                 valid_indicators.append(indicator)
 
         if not valid_indicators:
-            return _empty_macro_dataframe()
+            return empty_macro_dataframe()
 
         # Group indicators by API name
         api_to_indicators: dict[str, list[TushareMacroIndicator]] = defaultdict(list)
@@ -220,7 +215,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
                         results.append(df)
 
         if not results:
-            return _empty_macro_dataframe()
+            return empty_macro_dataframe()
 
         result = pl.concat(results)
         logger.info(
@@ -249,7 +244,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
 
         """
         if response.height == 0:
-            return _empty_macro_dataframe()
+            return empty_macro_dataframe()
 
         # Select and transform columns
         df = response.select(
@@ -258,7 +253,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
         ).filter(pl.col("value").is_not_null())
 
         if df.height == 0:
-            return _empty_macro_dataframe()
+            return empty_macro_dataframe()
 
         # Parse date based on frequency
         df = df.with_columns(
@@ -274,7 +269,7 @@ class MacroTushareAdapter(BaseTushareAdapter):
         df = df.filter(pl.col("date").is_not_null())
 
         if df.height == 0:
-            return _empty_macro_dataframe()
+            return empty_macro_dataframe()
 
         # Add metadata columns and calculate knowledge_date
         result = df.with_columns(

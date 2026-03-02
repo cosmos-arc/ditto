@@ -9,12 +9,13 @@
 """
 
 from collections.abc import Callable
+from datetime import date, timedelta
 from typing import Literal, cast
 
 import httpx
 import polars as pl
 from ditto_datahub.errors import AmbiguousTickerError, IdentifierNotFoundError
-from ditto_datahub.models import Dataset, OnDuplicate
+from ditto_datahub.models import Dataset, DateScheduleType, OnDuplicate
 from ditto_datahub.services import IngestionLogService
 from ditto_datahub.services.capital_service import CapitalService
 from ditto_datahub.services.fundamental_service import FundamentalService
@@ -23,10 +24,10 @@ from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.sources.base import DataSource
 from ditto_datahub.sources.fred.adapters.commodity import (
-    COMMODITY_CODE_TO_INSTRUMENT_ID,
     VIX_CODE_TO_INSTRUMENT_ID,
 )
 from ditto_datahub.sources.tushare.adapters.fx import FX_CODE_TO_INSTRUMENT_ID
+from ditto_datahub.sources.tushare.adapters.metal import METAL_CODE_ALIASES
 from ditto_infra.foundation import logger
 
 from ditto_port.models import IngestionResult, InstrumentIngestParams
@@ -55,6 +56,34 @@ SUPPORTED_INSTRUMENT_DATASETS: set[Dataset] = {
     Dataset.MARGIN_TRADING,
     Dataset.PLEDGE_RATIO,
 }
+
+# A股交易所代码前缀映射
+# 用于从裸代码（如 "600519"）推断交易所后缀
+EXCHANGE_PREFIX_MAP: dict[str, str] = {
+    "60": "SH",  # 上交所主板
+    "68": "SH",  # 上交所科创板
+    "00": "SZ",  # 深交所主板
+    "30": "SZ",  # 深交所创业板
+    "8": "BJ",  # 北交所
+    "4": "BJ",  # 北交所
+}
+
+
+def _infer_exchange_suffix(ticker: str) -> str | None:
+    """
+    从股票代码推断交易所后缀.
+
+    Args:
+        ticker: 裸股票代码（如 "600519"）
+
+    Returns:
+        交易所后缀（"SH", "SZ", "BJ"）或 None
+
+    """
+    for prefix, exchange in EXCHANGE_PREFIX_MAP.items():
+        if ticker.startswith(prefix):
+            return exchange
+    return None
 
 
 class IngestionCoordinator:
@@ -113,6 +142,71 @@ class IngestionCoordinator:
             ),
             source="fred",
         )
+
+    def _fetch_commodity_daily(self, trade_date: str) -> pl.DataFrame:
+        """
+        获取商品数据（原油、贵金属、VIX）.
+
+        数据源分配：
+        - FRED: WTI 原油、布伦特原油、VIX
+        - Tushare: 黄金、白银（FRED 数据已停止更新）
+
+        Args:
+            trade_date: 交易日期 (YYYY-MM-DD)
+
+        Returns:
+            合并后的商品数据 DataFrame
+
+        """
+        results: list[pl.DataFrame] = []
+
+        # FRED 数据：原油和 VIX（排除已停止更新的贵金属）
+        fred_codes = [
+            "COMMOD_WTI",
+            "COMMOD_BRENT",
+            *list(VIX_CODE_TO_INSTRUMENT_ID.keys()),
+        ]
+        if self._fred_source:
+            try:
+                fred_df = self._fred_source.fetch_commodities(
+                    codes=fred_codes,
+                    start_date=trade_date,
+                    end_date=trade_date,
+                )
+                if not fred_df.is_empty():
+                    results.append(fred_df)
+            except Exception as e:
+                logger.warning(
+                    "FRED commodity fetch failed, continuing with Tushare metals",
+                    event="fred_commodity_fetch_failed",
+                    error=str(e),
+                )
+        else:
+            logger.warning(
+                "FRED source not configured, skipping oil/VIX data",
+                event="fred_not_configured",
+            )
+
+        # Tushare 数据：贵金属（黄金、白银）
+        metal_codes = list(METAL_CODE_ALIASES.keys())
+        try:
+            metal_df = self._source.fetch_metal_daily(
+                codes=metal_codes,
+                start_date=trade_date,
+                end_date=trade_date,
+            )
+            if not metal_df.is_empty():
+                results.append(metal_df)
+        except Exception as e:
+            logger.warning(
+                "Tushare metal fetch failed",
+                event="tushare_metal_fetch_failed",
+                error=str(e),
+            )
+
+        if not results:
+            return pl.DataFrame()
+        return pl.concat(results)
 
     @staticmethod
     def _is_source_fetch_error(error: Exception) -> bool:
@@ -374,18 +468,74 @@ class IngestionCoordinator:
         end_date: str,
         force: bool = False,
     ) -> list[IngestionResult]:
-        """摄取日期范围数据。"""
-        trade_dates = self._metadata_service.list_trading_days(start_date, end_date)
+        """
+        摄取日期范围数据.
 
-        if not trade_dates:
+        根据数据集的日期调度类型选择日期序列：
+        - TRADING_DAYS: 使用 A 股交易日历
+        - NATURAL_DAYS: 使用自然日
+        - SOURCE_DEFINED: 使用自然日（由数据源决定哪些日期有数据）
+
+        Args:
+            dataset: 数据集名称
+            start_date: 开始日期 (YYYY-MM-DD)
+            end_date: 结束日期 (YYYY-MM-DD)
+            force: 是否强制覆盖已有数据
+
+        Returns:
+            摄取结果列表
+
+        """
+        # 获取数据集的日期调度类型
+        try:
+            dataset_enum = Dataset(dataset)
+        except ValueError:
+            # 未知数据集，默认使用交易日
+            dataset_enum = None
+
+        default_schedule = DateScheduleType.TRADING_DAYS
+        schedule_type = dataset_enum.date_schedule if dataset_enum else default_schedule
+
+        # 根据调度类型获取日期列表
+        match schedule_type:
+            case DateScheduleType.TRADING_DAYS:
+                dates = self._metadata_service.list_trading_days(start_date, end_date)
+            case DateScheduleType.NATURAL_DAYS | DateScheduleType.SOURCE_DEFINED:
+                dates = self._list_natural_days(start_date, end_date)
+
+        if not dates:
             return []
 
         results: list[IngestionResult] = []
-        for trade_date in trade_dates:
-            result = self.ingest_date(dataset, trade_date, force)
+        for dt in dates:
+            result = self.ingest_date(dataset, dt, force)
             results.append(result)
 
         return results
+
+    @staticmethod
+    def _list_natural_days(start_date: str, end_date: str) -> list[str]:
+        """
+        生成自然日列表.
+
+        Args:
+            start_date: 开始日期 (YYYY-MM-DD)
+            end_date: 结束日期 (YYYY-MM-DD)
+
+        Returns:
+            日期字符串列表 (YYYY-MM-DD)
+
+        """
+        start = date.fromisoformat(start_date)
+        end = date.fromisoformat(end_date)
+
+        days: list[str] = []
+        current = start
+        while current <= end:
+            days.append(current.isoformat())
+            current += timedelta(days=1)
+
+        return days
 
     def ingest_by_instrument(
         self,
@@ -532,15 +682,9 @@ class IngestionCoordinator:
             raise original_error
 
         # 尝试构建 source_ticker（需要判断交易所）
-        # 上交所：60xxxx, 68xxxx
-        # 深交所：00xxxx, 30xxxx
-        # 北交所：8xxxxx, 4xxxxx
-        if ticker.startswith(("60", "68")):
-            source_ticker = f"{ticker}.SH"
-        elif ticker.startswith(("00", "30")):
-            source_ticker = f"{ticker}.SZ"
-        elif ticker.startswith(("8", "4")):
-            source_ticker = f"{ticker}.BJ"
+        exchange_suffix = _infer_exchange_suffix(ticker)
+        if exchange_suffix:
+            source_ticker = f"{ticker}.{exchange_suffix}"
         else:
             logger.error(
                 "无法确定交易所",
@@ -815,17 +959,7 @@ class IngestionCoordinator:
                 start_date=trade_date,
                 end_date=trade_date,
             ),
-            Dataset.COMMODITY_DAILY: lambda: (
-                self._fred_source.fetch_commodities(
-                    # 包含大宗商品和 VIX（另类数据）
-                    codes=list(COMMODITY_CODE_TO_INSTRUMENT_ID.keys())
-                    + list(VIX_CODE_TO_INSTRUMENT_ID.keys()),
-                    start_date=trade_date,
-                    end_date=trade_date,
-                )
-                if self._fred_source
-                else self._raise_fred_not_configured()
-            ),
+            Dataset.COMMODITY_DAILY: lambda: self._fetch_commodity_daily(trade_date),
         }
 
         if dataset_enum not in handlers:

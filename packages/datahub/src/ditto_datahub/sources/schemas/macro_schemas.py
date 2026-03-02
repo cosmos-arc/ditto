@@ -1,10 +1,12 @@
 """Macro SourceSchema definitions."""
 
+from __future__ import annotations
+
 import polars as pl
 
 from ditto_datahub.sources.source_schema import SourceSchema
 
-__all__ = ["MACRO_INDICATOR_SOURCE_SCHEMA"]
+__all__ = ["MACRO_INDICATOR_SOURCE_SCHEMA", "empty_macro_dataframe"]
 
 MACRO_INDICATOR_SOURCE_SCHEMA = SourceSchema(
     dataset="macro_indicators",
@@ -24,3 +26,8 @@ MACRO_INDICATOR_SOURCE_SCHEMA = SourceSchema(
     },
     pit_columns=("knowledge_date",),
 )
+
+
+def empty_macro_dataframe() -> pl.DataFrame:
+    """Return empty DataFrame with MACRO_INDICATOR_SOURCE_SCHEMA."""
+    return pl.DataFrame(schema=MACRO_INDICATOR_SOURCE_SCHEMA.schema)

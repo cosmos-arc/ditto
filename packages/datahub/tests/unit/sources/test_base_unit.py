@@ -253,6 +253,14 @@ class TestDataSourceABC:
             ) -> pl.DataFrame:
                 return pl.DataFrame()
 
+            def fetch_metal_daily(
+                self,
+                codes: list[str],
+                start_date: str,
+                end_date: str,
+            ) -> pl.DataFrame:
+                return pl.DataFrame()
+
         # Should not raise
         source = CompleteSourcer()
         assert isinstance(source, DataSource)

@@ -220,9 +220,8 @@ class TestFredClientGetSeriesObservations:
         )
 
         # Assert
-        import polars as pl
 
-        assert result["value"].dtype == pl.Float64
+        assert str(result["value"].dtype) == "Float64"
 
     def test_date_columns_parsed_as_date(self, respx_mock) -> None:
         """日期列解析为 Date 类型."""
@@ -255,10 +254,8 @@ class TestFredClientGetSeriesObservations:
         )
 
         # Assert
-        import polars as pl
-
-        assert result["date"].dtype == pl.Date
-        assert result["realtime_start"].dtype == pl.Date
+        assert str(result["date"].dtype) == "Date"
+        assert str(result["realtime_start"].dtype) == "Date"
 
 
 class TestFredClientResourceManagement:

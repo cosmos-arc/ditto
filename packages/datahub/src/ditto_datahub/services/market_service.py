@@ -86,6 +86,7 @@ class MarketBarsQuery:
         with_status: 是否添加股票状态信息（仅对股票数据有效）.
         raw: 是否跳过复权和状态增强.
         market_wide: 全市场查询模式。为 True 且 instrument_ids 为空时获取所有活跃证券.
+        limit: 返回数量限制（在 DataFrame 层应用）.
 
     Note:
         - 复权功能 (adj) 仅支持股票数据，对 ETF 和 Index 数据无效
@@ -104,11 +105,15 @@ class MarketBarsQuery:
     end: str | None = None
     adj: AdjType = AdjType.NONE
     asof: str | None = None
-    asset_class: Literal["stock", "etf", "index", "fx", "commodity"] | None = None
+    asset_class: (
+        Literal["stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"]
+        | None
+    ) = None
     with_ticker: bool = False
     with_status: bool = False
     raw: bool = False
     market_wide: bool = False
+    limit: int | None = None
 
 
 @dataclass(frozen=True)
@@ -214,7 +219,7 @@ class MarketService:
         return self._query_bars(query)
 
     @traced("market.list_bars")
-    def list_bars(
+    def list_bars(  # noqa: PLR0913
         self,
         instrument_ids: list[int],
         start: str | None = None,
@@ -222,6 +227,11 @@ class MarketService:
         adj: AdjType = AdjType.NONE,
         with_ticker: bool = False,
         with_status: bool = False,
+        asset_class: Literal[
+            "stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"
+        ]
+        | None = None,
+        limit: int | None = None,
     ) -> pl.DataFrame:
         """
         便利方法：批量查询K线数据.
@@ -233,6 +243,8 @@ class MarketService:
             adj: 复权类型（仅对 stock 数据有效）.
             with_ticker: 是否在结果中添加 ticker 列.
             with_status: 是否添加股票状态信息（仅对股票数据有效）.
+            asset_class: 资产类别（显式指定可跳过自动检测）.
+            limit: 返回数量限制（在 DataFrame 层应用）.
 
         Returns:
             K线数据 DataFrame.
@@ -245,6 +257,8 @@ class MarketService:
             adj=adj,
             with_ticker=with_ticker,
             with_status=with_status,
+            asset_class=asset_class,
+            limit=limit,
         )
         return self._query_bars(query)
 
@@ -309,6 +323,10 @@ class MarketService:
             {"dataset": "market_bars", "operation": "get", "adj": query.adj.value},
         )
 
+        # P1-2: 在 DataFrame 层应用 limit
+        if query.limit is not None:
+            df = df.head(query.limit)
+
         return df
 
     @traced("market.get_constituents")
@@ -362,7 +380,9 @@ class MarketService:
         instrument_ids: list[int],
         start: date | None,
         end: date | None,
-        asset_class: Literal["stock", "etf", "index", "fx", "commodity"],
+        asset_class: Literal[
+            "stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"
+        ],
     ) -> pl.DataFrame:
         """
         加载核心行情数据（不含复权和增强）.
@@ -421,7 +441,12 @@ class MarketService:
 
     def _resolve_instrument_ids_and_asset_class(
         self, query: MarketBarsQuery
-    ) -> tuple[list[int], Literal["stock", "etf", "index", "fx", "commodity"]]:
+    ) -> tuple[
+        list[int],
+        Literal[
+            "stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"
+        ],
+    ]:
         """
         解析 Instrument ID 列表和资产类别.
 

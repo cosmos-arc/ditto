@@ -44,7 +44,7 @@ class FxQuery(BaseModel):
 
     """
 
-    pairs: list[str] | None = Field(default=None, description="货币对列表")
+    currency_pairs: list[str] | None = Field(default=None, description="货币对列表")
     start_date: DateField = Field(default=None, description="开始日期")
     end_date: DateField = Field(default=None, description="结束日期")
     limit: int = Field(default=1000, ge=1, le=10000, description="返回数量限制")
@@ -83,7 +83,7 @@ class FxBar(BaseModel):
     外汇 K 线响应模型.
 
     Attributes:
-        pair: 货币对 (如 USDCNY)
+        currency_pair: 货币对 (如 USDCNH.FXCM)
         trade_date_utc: 交易日期 (UTC, YYYY-MM-DD)
         open: 开盘价
         high: 最高价
@@ -92,7 +92,7 @@ class FxBar(BaseModel):
 
     """
 
-    pair: str = Field(description="货币对")
+    currency_pair: str = Field(description="货币对")
     trade_date_utc: str = Field(description="交易日期 (UTC)")
     open: float = Field(description="开盘价")
     high: float = Field(description="最高价")
@@ -126,14 +126,15 @@ def to_fx_bar(row: dict[str, Any]) -> FxBar:
     将数据库行转换为 FxBar 模型.
 
     Args:
-        row: 数据库行字典，包含 pair, trade_date_utc, open, high, low, close 等字段
+        row: 数据库行字典，包含 currency_pair, trade_date_utc,
+            open, high, low, close 等字段
 
     Returns:
         FxBar 模型实例
 
     """
     return FxBar(
-        pair=row["pair"],
+        currency_pair=row["currency_pair"],
         trade_date_utc=_format_date(row["trade_date_utc"]) or "",
         open=_format_float(row["open"]) or 0.0,
         high=_format_float(row["high"]) or 0.0,

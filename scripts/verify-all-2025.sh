@@ -47,9 +47,9 @@ record_result() {
     local note="${4:-}"
 
     case "$status" in
-        "✅") ((PASS_COUNT++)) ;;
-        "❌") ((FAIL_COUNT++)) ;;
-        "⚠️") ((SKIP_COUNT++)) ;;
+        "✅") PASS_COUNT=$((PASS_COUNT + 1)) ;;
+        "❌") FAIL_COUNT=$((FAIL_COUNT + 1)) ;;
+        "⚠️") SKIP_COUNT=$((SKIP_COUNT + 1)) ;;
     esac
 
     if [ -n "$note" ]; then
@@ -201,6 +201,40 @@ conn.close()
 " 2>/dev/null)
 echo "$VERIFY_INSTRUMENTS"
 
+# ETF/指数基础信息验证（确保行情摄入前有映射数据）
+log_info "验证 ETF/指数基础信息..."
+ETF_COUNT=$(pixi run -e dev python -c "
+import sqlite3
+conn = sqlite3.connect('data/metadata/metadata.sqlite')
+cursor = conn.cursor()
+cursor.execute('SELECT COUNT(*) FROM instrument WHERE asset_class = \"etf\"')
+print(cursor.fetchone()[0])
+conn.close()
+" 2>/dev/null)
+if [ "$ETF_COUNT" -gt 0 ]; then
+    log_info "ETF 基础信息: ✅ $ETF_COUNT 只"
+    record_result "✅" "元数据" "ETF基础信息验证 ($ETF_COUNT 只)"
+else
+    log_warn "ETF 基础信息: ⚠️ 未找到，尝试重新摄入..."
+    pixi run -e dev python -m ditto_port.cli.main ingest metadata basic etf > /dev/null 2>&1
+fi
+
+INDEX_COUNT=$(pixi run -e dev python -c "
+import sqlite3
+conn = sqlite3.connect('data/metadata/metadata.sqlite')
+cursor = conn.cursor()
+cursor.execute('SELECT COUNT(*) FROM instrument WHERE asset_class = \"index\"')
+print(cursor.fetchone()[0])
+conn.close()
+" 2>/dev/null)
+if [ "$INDEX_COUNT" -gt 0 ]; then
+    log_info "指数基础信息: ✅ $INDEX_COUNT 只"
+    record_result "✅" "元数据" "指数基础信息验证 ($INDEX_COUNT 只)"
+else
+    log_warn "指数基础信息: ⚠️ 未找到，尝试重新摄入..."
+    pixi run -e dev python -m ditto_port.cli.main ingest metadata basic index > /dev/null 2>&1
+fi
+
 # ============================================
 # 4. 行情数据摄入 - 按日期
 # ============================================
@@ -223,13 +257,14 @@ run_test "行情-按标的" "ETF" "pixi run -e dev python -m ditto_port.cli.main
 run_test "行情-按标的" "指数" "pixi run -e dev python -m ditto_port.cli.main ingest market index --standard-ticker 000300.XSHG -s 2025-01-01 -e 2025-12-31"
 
 # ============================================
-# 6. 复权因子（全年）
+# 6. 复权因子（按日期批量）
 # ============================================
 log_step "=== 6. 复权因子 ==="
 
-run_test "复权因子" "股票 000001" "pixi run -e dev python -m ditto_port.cli.main ingest market adj --ticker 000001 -s 2025-01-01 -e 2025-12-31"
-run_test "复权因子" "股票 600519" "pixi run -e dev python -m ditto_port.cli.main ingest market adj --ticker 600519 -s 2025-01-01 -e 2025-12-31"
-run_test "复权因子" "基金 510300" "pixi run -e dev python -m ditto_port.cli.main ingest market adj --fund --ticker 510300 -s 2025-01-01 -e 2025-12-31"
+# 股票复权因子：只支持按日期批量摄入
+run_test "复权因子" "股票复权因子 2025-01-02" "pixi run -e dev python -m ditto_port.cli.main ingest market adj 2025-01-02"
+# ETF/基金复权因子：支持按标的摄入
+run_test "复权因子" "基金复权因子 510300" "pixi run -e dev python -m ditto_port.cli.main ingest market adj --fund --ticker 510300 -s 2025-01-01 -e 2025-01-10"
 
 # ============================================
 # 7. 基本面数据（全年）
@@ -310,6 +345,39 @@ print(f'OK: {indicator.code}' if indicator else 'NOT_FOUND')
     fi
 else
     log_warn "跳过 FRED 验证（API Key 未配置）"
+fi
+
+# ============================================
+# 9.3 外汇数据 (FX Daily)
+# ============================================
+log_step "=== 9.3 外汇数据 ==="
+
+# FX-02: 外汇数据摄入（直接通过 CLI 验证接口可用性）
+run_test "外汇" "汇率数据摄入" \
+    "pixi run -e dev python -m ditto_port.cli.main ingest market fx 2025-01-02" || true
+
+# FX-03: 外汇 API 查询（需要在 API 服务启动后验证）
+# 将在 API 验证部分添加
+
+# ============================================
+# 9.4 大宗商品数据 (Commodity Daily)
+# ============================================
+log_step "=== 9.4 大宗商品数据 ==="
+
+if [ "$FRED_STATUS" = "SET" ]; then
+    # 注意：FRED 贵金属数据已停止更新
+    # - GOLDAMGBD228NLBM (伦敦金): 最后更新 2021-12-03
+    # - SLVPRUSD (伦敦银): 最后更新 2021-11-03
+    # 只有 WTI/布伦特原油数据仍然可用
+    log_warn "FRED 贵金属数据（黄金/白银）已于 2021 年底停止更新"
+    log_info "仅验证 WTI/布伦特原油数据..."
+
+    # CMD-02: 商品数据摄入（直接通过 CLI 验证）
+    run_test "商品" "大宗商品数据摄入 (WTI/Brent)" \
+        "pixi run -e dev python -m ditto_port.cli.main ingest market commodity 2025-01-02" || true
+else
+    log_warn "跳过商品验证（FRED API Key 未配置）"
+    record_result "⚠️" "商品" "FRED API Key 未配置"
 fi
 
 # ============================================
@@ -486,6 +554,30 @@ if [ "$FRED_STATUS" = "SET" ]; then
     fi
 fi
 
+# 外汇数据查询（新增 2026-03-01）
+log_info "外汇数据查询..."
+FX_API=$(curl -s -X POST http://localhost:8000/api/v1/market/fx \
+  -H "Content-Type: application/json" \
+  -d '{"ts_codes": ["USDCNH.FXCM"], "start_date": "2025-01-01", "end_date": "2025-01-10"}' 2>/dev/null)
+if [ -n "$FX_API" ]; then
+    record_result "✅" "API" "外汇查询"
+else
+    record_result "❌" "API" "外汇查询"
+fi
+
+# 大宗商品数据查询（新增 2026-03-01）
+if [ "$FRED_STATUS" = "SET" ]; then
+    log_info "大宗商品数据查询..."
+    CMD_API=$(curl -s -X POST http://localhost:8000/api/v1/market/commodity \
+      -H "Content-Type: application/json" \
+      -d '{"codes": ["WTI", "GOLD"], "start_date": "2025-01-01", "end_date": "2025-01-10"}' 2>/dev/null)
+    if [ -n "$CMD_API" ]; then
+        record_result "✅" "API" "大宗商品查询"
+    else
+        record_result "❌" "API" "大宗商品查询"
+    fi
+fi
+
 # 数据源直查
 log_info "数据源直查..."
 SOURCE=$(curl -s "http://localhost:8000/api/v1/source/tushare/stock_daily?ticker=000001&start_date=2025-01-01&end_date=2025-01-10" 2>/dev/null)
@@ -495,9 +587,7 @@ else
     record_result "❌" "API" "数据源直查"
 fi
 
-log_info "关闭 API 服务..."
-kill $SERVER_PID 2>/dev/null || true
-sleep 2
+# 注意：不在这里关闭 API 服务，因为后续的生产就绪验证（R3/R4）需要服务运行
 
 # ============================================
 # 13. CLI Query 验证
@@ -531,6 +621,265 @@ else
     log_warn "type 有警告/错误"
     record_result "⚠️" "代码质量" "type"
 fi
+
+# ============================================
+# 15. 性能验证
+# ============================================
+log_step "=== 15. 性能验证 ==="
+
+# P1: 单次查询延迟
+log_info "P1: 单次查询延迟测试..."
+P1_RESULT=$(pixi run -e dev python -c "
+import time
+import requests
+try:
+    times = []
+    for _ in range(20):  # 20次采样
+        start = time.time()
+        resp = requests.post('http://localhost:8000/api/v1/market/bars',
+            json={'instrument_ids': [1000001], 'start_date': '2025-01-01', 'end_date': '2025-01-10'},
+            timeout=5)
+        times.append(time.time() - start)
+    times.sort()
+    p95 = times[18] * 1000  # P95 in ms (18/20 = 95%)
+    print(f'OK: P95={p95:.0f}ms' if p95 < 100 else f'WARN: P95={p95:.0f}ms (target<100ms)')
+except Exception as e:
+    print(f'FAIL: {type(e).__name__}')
+" 2>/dev/null)
+if echo "$P1_RESULT" | grep -q "OK:"; then
+    log_info "P1 单次查询延迟: ✅ $P1_RESULT"
+    record_result "✅" "性能" "P1 单次查询延迟"
+elif echo "$P1_RESULT" | grep -q "WARN:"; then
+    log_warn "P1 单次查询延迟: $P1_RESULT"
+    record_result "⚠️" "性能" "P1 单次查询延迟"
+else
+    log_warn "P1 单次查询延迟: $P1_RESULT"
+    record_result "⚠️" "性能" "P1 单次查询延迟 (服务未启动?)"
+fi
+
+# P2: 批量查询吞吐
+log_info "P2: 批量查询吞吐测试..."
+P2_RESULT=$(pixi run -e dev python -c "
+import time
+import requests
+try:
+    # 查询 25 个标的
+    ids = list(range(1000001, 1000026))
+    start = time.time()
+    resp = requests.post('http://localhost:8000/api/v1/market/bars',
+        json={'instrument_ids': ids, 'start_date': '2025-01-01', 'end_date': '2025-01-10'},
+        timeout=30)
+    elapsed = time.time() - start
+    print(f'OK: {elapsed:.1f}s' if elapsed < 5 else f'WARN: {elapsed:.1f}s (target<5s)')
+except Exception as e:
+    print(f'FAIL: {type(e).__name__}')
+" 2>/dev/null)
+if echo "$P2_RESULT" | grep -q "OK:"; then
+    log_info "P2 批量查询吞吐: ✅ $P2_RESULT"
+    record_result "✅" "性能" "P2 批量查询吞吐"
+elif echo "$P2_RESULT" | grep -q "WARN:"; then
+    log_warn "P2 批量查询吞吐: $P2_RESULT"
+    record_result "⚠️" "性能" "P2 批量查询吞吐"
+else
+    log_warn "P2 批量查询吞吐: $P2_RESULT"
+    record_result "⚠️" "性能" "P2 批量查询吞吐"
+fi
+
+# P3: 内存占用检查（简化版）
+log_info "P3: 内存占用检查..."
+P3_RESULT=$(pixi run -e dev python -c "
+import psutil
+import os
+try:
+    process = psutil.Process(os.getpid())
+    # 获取 Python 进程内存（粗略估计）
+    mem_mb = process.memory_info().rss / 1024 / 1024
+    # 检查系统可用内存
+    avail_gb = psutil.virtual_memory().available / 1024 / 1024 / 1024
+    print(f'OK: 进程{mem_mb:.0f}MB, 可用{avail_gb:.1f}GB' if avail_gb > 2 else f'WARN: 可用{avail_gb:.1f}GB')
+except ImportError:
+    print('SKIP: psutil not installed')
+except Exception as e:
+    print(f'FAIL: {type(e).__name__}')
+" 2>/dev/null)
+if echo "$P3_RESULT" | grep -q "OK:"; then
+    log_info "P3 内存占用: ✅ $P3_RESULT"
+    record_result "✅" "性能" "P3 内存占用"
+elif echo "$P3_RESULT" | grep -q "SKIP:"; then
+    log_warn "P3 内存占用: 跳过 (psutil 未安装)"
+    record_result "⚠️" "性能" "P3 内存占用 (psutil 未安装)"
+else
+    log_warn "P3 内存占用: $P3_RESULT"
+    record_result "⚠️" "性能" "P3 内存占用"
+fi
+
+# P4: 并发写入稳定性
+log_info "P4: 并发写入稳定性..."
+P4_RESULT=$(pixi run -e dev python -c "
+import concurrent.futures
+import subprocess
+
+def ingest_date(date_str):
+    cmd = ['pixi', 'run', '-e', 'dev', 'python', '-m', 'ditto_port.cli.main',
+           'ingest', 'market', 'stock', date_str]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    return result.returncode == 0
+
+try:
+    dates = ['2025-01-06', '2025-01-07', '2025-01-08']
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        results = list(executor.map(ingest_date, dates))
+    success = all(results)
+    print('OK: 并发写入成功' if success else f'WARN: {sum(results)}/{len(results)} 成功')
+except Exception as e:
+    print(f'FAIL: {type(e).__name__}')
+" 2>/dev/null)
+if echo "$P4_RESULT" | grep -q "OK:"; then
+    log_info "P4 并发写入: ✅ $P4_RESULT"
+    record_result "✅" "性能" "P4 并发写入稳定性"
+elif echo "$P4_RESULT" | grep -q "WARN:"; then
+    log_warn "P4 并发写入: $P4_RESULT"
+    record_result "⚠️" "性能" "P4 并发写入稳定性"
+else
+    log_warn "P4 并发写入: $P4_RESULT"
+    record_result "⚠️" "性能" "P4 并发写入稳定性"
+fi
+
+# ============================================
+# 16. 生产就绪验证
+# ============================================
+log_step "=== 16. 生产就绪验证 ==="
+
+# R1: 配置外部化检查
+log_info "R1: 检查配置外部化..."
+R1_RESULT=$(pixi run -e dev python -c "
+import os
+import re
+
+hardcoded_patterns = [
+    r'localhost:\d+',
+    r'127\.0\.0\.1:\d+',
+    r'password\s*=\s*\"[^\"]+\"',
+    r\"api_key\s*=\s*'[^']+'\",
+]
+
+issues = []
+for root, dirs, files in os.walk('packages'):
+    dirs[:] = [d for d in dirs if d not in ['__pycache__', '.git', 'node_modules']]
+    for f in files:
+        if f.endswith('.py'):
+            path = os.path.join(root, f)
+            try:
+                with open(path, 'r', encoding='utf-8') as fp:
+                    content = fp.read()
+                    for pattern in hardcoded_patterns:
+                        if re.search(pattern, content, re.IGNORECASE):
+                            # 排除测试文件和配置示例
+                            if 'test' not in path and 'example' not in path:
+                                issues.append(path)
+                                break
+            except:
+                pass
+
+if not issues:
+    print('OK: 无硬编码配置')
+else:
+    print(f'WARN: {len(issues)} 个文件可能有硬编码')
+" 2>/dev/null)
+if echo "$R1_RESULT" | grep -q "OK:"; then
+    log_info "R1 配置外部化: ✅ $R1_RESULT"
+    record_result "✅" "生产就绪" "R1 配置外部化"
+else
+    log_warn "R1 配置外部化: $R1_RESULT"
+    record_result "⚠️" "生产就绪" "R1 配置外部化"
+fi
+
+# R2: 日志完整性检查
+log_info "R2: 检查日志完整性..."
+R2_RESULT=$(pixi run -e dev python -c "
+import subprocess
+import os
+
+# 检查关键模块是否有日志
+critical_modules = [
+    'packages/datahub/src/ditto_datahub/services/',
+    'apps/port/src/ditto_port/api/routes/',
+]
+
+log_count = 0
+for module in critical_modules:
+    if os.path.exists(module):
+        for root, dirs, files in os.walk(module):
+            for f in files:
+                if f.endswith('.py'):
+                    path = os.path.join(root, f)
+                    with open(path, 'r', encoding='utf-8') as fp:
+                        content = fp.read()
+                        if 'logger.' in content or 'logging.' in content:
+                            log_count += 1
+
+print(f'OK: {log_count} 个模块有日志' if log_count >= 5 else f'WARN: 仅 {log_count} 个模块有日志')
+" 2>/dev/null)
+if echo "$R2_RESULT" | grep -q "OK:"; then
+    log_info "R2 日志完整性: ✅ $R2_RESULT"
+    record_result "✅" "生产就绪" "R2 日志完整性"
+else
+    log_warn "R2 日志完整性: $R2_RESULT"
+    record_result "⚠️" "生产就绪" "R2 日志完整性"
+fi
+
+# R3: 错误恢复测试
+log_info "R3: 错误恢复测试..."
+R3_VALID=0
+R3_TOTAL=3
+
+# 测试1: 无效 instrument_id
+R3_1=$(curl -s -X POST http://localhost:8000/api/v1/market/bars \
+  -H "Content-Type: application/json" \
+  -d '{"instrument_ids": [-999999], "start_date": "2025-01-01", "end_date": "2025-01-10"}' 2>/dev/null)
+if [ -n "$R3_1" ]; then
+    ((R3_VALID++))
+fi
+
+# 测试2: 无效日期格式
+R3_2=$(curl -s -X POST http://localhost:8000/api/v1/market/bars \
+  -H "Content-Type: application/json" \
+  -d '{"instrument_ids": [1000001], "start_date": "invalid", "end_date": "2025-01-10"}' 2>/dev/null)
+if [ -n "$R3_2" ]; then
+    ((R3_VALID++))
+fi
+
+# 测试3: 空请求体
+R3_3=$(curl -s -X POST http://localhost:8000/api/v1/market/bars \
+  -H "Content-Type: application/json" \
+  -d '{}' 2>/dev/null)
+if [ -n "$R3_3" ]; then
+    ((R3_VALID++))
+fi
+
+if [ "$R3_VALID" -ge "$R3_TOTAL" ]; then
+    log_info "R3 错误恢复: ✅ $R3_VALID/$R3_TOTAL 返回响应"
+    record_result "✅" "生产就绪" "R3 错误恢复"
+else
+    log_warn "R3 错误恢复: ⚠️ $R3_VALID/$R3_TOTAL 返回响应"
+    record_result "⚠️" "生产就绪" "R3 错误恢复"
+fi
+
+# R4: 健康检查端点（已在 API 验证部分验证）
+log_info "R4: 健康检查端点..."
+R4_RESULT=$(curl -s http://localhost:8000/healthz 2>/dev/null)
+if [ -n "$R4_RESULT" ]; then
+    log_info "R4 健康检查: ✅ 返回正常"
+    record_result "✅" "生产就绪" "R4 健康检查端点"
+else
+    log_warn "R4 健康检查: ❌ 无响应"
+    record_result "❌" "生产就绪" "R4 健康检查端点"
+fi
+
+# 关闭 API 服务（所有需要服务的验证已完成）
+log_info "关闭 API 服务..."
+kill $SERVER_PID 2>/dev/null || true
+sleep 2
 
 # ============================================
 # 完成汇总

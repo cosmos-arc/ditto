@@ -44,7 +44,7 @@ class CommodityQuery(BaseModel):
 
     """
 
-    symbols: list[str] | None = Field(default=None, description="商品代码列表")
+    commodity_codes: list[str] | None = Field(default=None, description="商品代码列表")
     start_date: DateField = Field(default=None, description="开始日期")
     end_date: DateField = Field(default=None, description="结束日期")
     limit: int = Field(default=1000, ge=1, le=10000, description="返回数量限制")
@@ -93,7 +93,7 @@ class CommodityBar(BaseModel):
 
     """
 
-    symbol: str = Field(description="商品代码")
+    commodity_code: str = Field(description="商品代码")
     trade_date_utc: str = Field(description="交易日期 (UTC)")
     open: float = Field(description="开盘价")
     high: float = Field(description="最高价")
@@ -128,7 +128,7 @@ def to_commodity_bar(row: dict[str, Any]) -> CommodityBar:
     将数据库行转换为 CommodityBar 模型.
 
     Args:
-        row: 数据库行字典，包含 symbol, trade_date_utc, open, high, low, close,
+        row: 数据库行字典，包含 commodity_code, trade_date_utc, open, high, low, close,
              volume 等字段
 
     Returns:
@@ -136,7 +136,7 @@ def to_commodity_bar(row: dict[str, Any]) -> CommodityBar:
 
     """
     return CommodityBar(
-        symbol=row["symbol"],
+        commodity_code=row["commodity_code"],
         trade_date_utc=_format_date(row["trade_date_utc"]) or "",
         open=_format_float(row["open"]) or 0.0,
         high=_format_float(row["high"]) or 0.0,

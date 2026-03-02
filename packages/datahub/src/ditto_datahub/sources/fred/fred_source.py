@@ -286,3 +286,14 @@ class FredSource(DataSource):
     ) -> pl.DataFrame:
         """FRED 不支持汇率数据。"""
         raise NotImplementedError("FRED does not support FX data")
+
+    def fetch_metal_daily(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """FRED 不支持贵金属数据（请使用 Tushare 数据源）。"""
+        raise NotImplementedError(
+            "FRED precious metals data stopped updating in 2021. Use Tushare source."
+        )

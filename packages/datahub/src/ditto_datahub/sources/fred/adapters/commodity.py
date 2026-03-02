@@ -30,11 +30,16 @@ VIX_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
 
 class CommodityFredAdapter(BaseFredAdapter):
     """
-    Adapter for fetching commodity prices from FRED API.
+    Adapter for fetching commodity prices and VIX from FRED API.
 
     Normalizes FRED data to COMMODITY_SOURCE_SCHEMA format.
     FRED only provides a single value per observation, so OHLC
     are all set to the same value (the close price).
+
+    Note:
+        此适配器同时处理商品数据（WTI、Brent、Gold、Silver）和 VIX 波动率指数。
+        VIX 虽然属于"另类数据"类别，但与商品数据共享相同的数据结构和处理流程，
+        因此统一在此适配器中处理。两者都使用 COMMODITY_SOURCE_SCHEMA。
 
     """
 

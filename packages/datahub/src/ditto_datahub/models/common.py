@@ -7,13 +7,39 @@ from typing import Literal, NamedTuple
 
 from ditto_datahub.models.enums import AssetClass
 
+# 资产类别类型别名
+type AssetClassType = Literal[
+    "stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"
+]
+
 __all__ = [
+    "AssetClassType",
     "Dataset",
+    "DateScheduleType",
     "Domain",
     "InstrumentIdRange",
     "OnDuplicate",
     "Source",
 ]
+
+
+# ============ 日期调度类型枚举 ============
+class DateScheduleType(Enum):
+    """
+    数据集日期调度类型.
+
+    用于确定数据摄取时的日期序列生成策略。
+
+    Attributes:
+        TRADING_DAYS: A 股交易日驱动（stock_daily, etf_daily 等）
+        NATURAL_DAYS: 自然日驱动（fx_daily 等）
+        SOURCE_DEFINED: 由数据源决定（commodity_daily, macro_indicators）
+
+    """
+
+    TRADING_DAYS = "trading_days"
+    NATURAL_DAYS = "natural_days"
+    SOURCE_DEFINED = "source_defined"
 
 
 # ============ Dataset 枚举 ============
@@ -97,6 +123,45 @@ class Dataset(str, Enum):
         if self == Dataset.INDEX_DAILY:
             return AssetClass.INDEX
         return None
+
+    @property
+    def date_schedule(self) -> DateScheduleType:
+        """
+        获取数据集的日期调度类型.
+
+        Returns:
+            日期调度类型枚举。
+
+        """
+        # A 股交易日驱动
+        if self in (
+            Dataset.STOCK_DAILY,
+            Dataset.ETF_DAILY,
+            Dataset.INDEX_DAILY,
+            Dataset.STOCK_STATUS,
+            Dataset.ADJ_FACTOR,
+            Dataset.FUND_ADJ,
+            Dataset.VALUATION_METRICS,
+            Dataset.BALANCE_SHEET,
+            Dataset.INCOME_STATEMENT,
+            Dataset.CASH_FLOW,
+            Dataset.DIVIDEND,
+            Dataset.MARGIN_TRADING,
+            Dataset.PLEDGE_RATIO,
+            Dataset.CORPORATE_ACTIONS,
+        ):
+            return DateScheduleType.TRADING_DAYS
+
+        # 自然日驱动
+        if self == Dataset.FX_DAILY:
+            return DateScheduleType.NATURAL_DAYS
+
+        # 数据源决定
+        if self in (Dataset.COMMODITY_DAILY, Dataset.MACRO_INDICATORS):
+            return DateScheduleType.SOURCE_DEFINED
+
+        # 默认：交易日驱动
+        return DateScheduleType.TRADING_DAYS
 
     def supports_instrument_ingestion(self) -> bool:
         """
@@ -201,6 +266,11 @@ class InstrumentIdRange(NamedTuple):
     - stock: 1M (1,000,000 - 1,999,999)
     - etf: 2M (2,000,000 - 2,999,999)
     - index: 3M (3,000,000 - 3,999,999)
+    - fx: 4M (4,000,000 - 4,999,999)
+    - commodity: 5M (5,000,000 - 5,999,999)
+    - bond: 6M (6,000,000 - 6,999,999)
+    - futures: 7M (7,000,000 - 7,999,999)
+    - option: 8M (8,000,000 - 8,999,999)
 
     避免未来 instrument_id 冲突，并保持范围一致性。
 
@@ -219,6 +289,11 @@ class InstrumentIdRange(NamedTuple):
             "stock": cls(1_000_000, 1_999_999),
             "etf": cls(2_000_000, 2_999_999),
             "index": cls(3_000_000, 3_999_999),
+            "fx": cls(4_000_000, 4_999_999),
+            "commodity": cls(5_000_000, 5_999_999),
+            "bond": cls(6_000_000, 6_999_999),
+            "futures": cls(7_000_000, 7_999_999),
+            "option": cls(8_000_000, 8_999_999),
         }
 
         if asset_class not in ranges:
@@ -227,7 +302,7 @@ class InstrumentIdRange(NamedTuple):
         return ranges[asset_class]
 
     @classmethod
-    def detect_asset_class(cls, ids: list[int]) -> Literal["stock", "etf", "index"]:
+    def detect_asset_class(cls, ids: list[int]) -> AssetClassType:
         """
         Detect asset class from a list of IDs.
 
@@ -235,45 +310,79 @@ class InstrumentIdRange(NamedTuple):
             ids: List of instrument IDs.
 
         Returns:
-            Asset class string ("stock", "etf", "index").
+            Asset class string.
 
         Raises:
-            ValueError: If mixed asset classes detected or unrecognized.
+            ValueError: If mixed asset classes detected, empty list,
+                or unrecognized IDs.
 
         Examples:
             >>> InstrumentIdRange.detect_asset_class([1_000_001, 1_000_002])
             'stock'
-            >>> InstrumentIdRange.detect_asset_class([2_500_000])
-            'etf'
+            >>> InstrumentIdRange.detect_asset_class([4_000_001])
+            'fx'
 
         """
-        stock_range = cls.get_range("stock")
-        etf_range = cls.get_range("etf")
-        index_range = cls.get_range("index")
+        if not ids:
+            raise ValueError("无法推断空 instrument_id 列表的资产类别")
 
-        has_stock = any(
-            stock_range.min_id <= instrument_id <= stock_range.max_id
-            for instrument_id in ids
-        )
-        has_etf = any(
-            etf_range.min_id <= instrument_id <= etf_range.max_id
-            for instrument_id in ids
-        )
-        has_index = any(
-            index_range.min_id <= instrument_id <= index_range.max_id
-            for instrument_id in ids
-        )
+        # 定义所有资产类别范围（与 AssetClassType 保持一致）
+        asset_classes: list[AssetClassType] = [
+            "stock",
+            "etf",
+            "index",
+            "fx",
+            "commodity",
+            "bond",
+            "futures",
+            "option",
+        ]
+        ranges: list[tuple[AssetClassType, int, int]] = [
+            ("stock", 1_000_000, 1_999_999),
+            ("etf", 2_000_000, 2_999_999),
+            ("index", 3_000_000, 3_999_999),
+            ("fx", 4_000_000, 4_999_999),
+            ("commodity", 5_000_000, 5_999_999),
+            ("bond", 6_000_000, 6_999_999),
+            ("futures", 7_000_000, 7_999_999),
+            ("option", 8_000_000, 8_999_999),
+        ]
 
-        detected: list[Literal["stock", "etf", "index"]] = []
-        if has_stock:
-            detected.append("stock")
-        if has_etf:
-            detected.append("etf")
-        if has_index:
-            detected.append("index")
+        # 统计各范围命中次数
+        hits: dict[AssetClassType, int] = dict.fromkeys(asset_classes, 0)
+        unknown_ids: list[int] = []
+
+        for instrument_id in ids:
+            matched = False
+            for ac, lo, hi in ranges:
+                if lo <= instrument_id <= hi:
+                    hits[ac] += 1
+                    matched = True
+                    break
+            if not matched:
+                unknown_ids.append(instrument_id)
+
+        # 存在未知范围 ID，抛异常
+        _MAX_SAMPLE = 5  # 最多显示 5 个未知 ID
+        if unknown_ids:
+            sample = unknown_ids[:_MAX_SAMPLE]
+            suffix = "..." if len(unknown_ids) > _MAX_SAMPLE else ""
+            raise ValueError(f"instrument_id {sample}{suffix} 不在任何已定义范围内")
+
+        # 检测命中的资产类别
+        detected: list[AssetClassType] = [ac for ac, count in hits.items() if count > 0]
 
         if len(detected) > 1:
-            display_names = {"stock": "stock", "etf": "ETF", "index": "index"}
+            display_names = {
+                "stock": "stock",
+                "etf": "ETF",
+                "index": "index",
+                "fx": "FX",
+                "commodity": "commodity",
+                "bond": "bond",
+                "futures": "futures",
+                "option": "option",
+            }
             classes = [display_names[c] for c in detected]
             classes_str = ", ".join(classes)
             raise ValueError(
@@ -282,6 +391,7 @@ class InstrumentIdRange(NamedTuple):
             )
 
         if not detected:
-            return "stock"  # 默认
+            # 理论上不会到这里，因为 unknown_ids 已经处理了
+            raise ValueError("无法确定资产类别")
 
         return detected[0]

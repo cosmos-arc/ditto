@@ -8,7 +8,10 @@ from datetime import date
 import polars as pl
 from ditto_infra.foundation import logger, traced
 
-from ditto_datahub.sources.schemas.macro_schemas import MACRO_INDICATOR_SOURCE_SCHEMA
+from ditto_datahub.sources.schemas.macro_schemas import (
+    MACRO_INDICATOR_SOURCE_SCHEMA,
+    empty_macro_dataframe,
+)
 from ditto_datahub.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_datahub.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
@@ -65,25 +68,40 @@ def get_cn_bond_yield_indicator(code: str) -> CnBondYieldIndicator | None:
     return CN_BOND_YIELD_INDICATORS.get(code)
 
 
-def _empty_macro_dataframe() -> pl.DataFrame:
-    """Return empty DataFrame with MACRO_INDICATOR_SOURCE_SCHEMA."""
-    return pl.DataFrame(schema=MACRO_INDICATOR_SOURCE_SCHEMA.schema)
-
-
 # 日期字符串长度常量 (YYYYMMDD)
 _DATE_STR_LENGTH = 8
 
 
 def _parse_trade_date(trade_date: object) -> date | None:
-    """解析交易日期字符串为 date 对象."""
+    """
+    解析交易日期字符串为 date 对象.
+
+    P2-2 修复：对浮点数进行严格校验，避免脏数据被"合法化"。
+    - 浮点数必须是无小数部分的整数值（如 20260101.0）
+    - 有小数部分的浮点数（如 20260101.5）会被拒绝
+    """
     try:
-        date_str = str(trade_date)
-        if len(date_str) == _DATE_STR_LENGTH:
-            date_val = date_str
-        elif isinstance(trade_date, (int, float)):
+        # 如果是浮点数，校验是否为整数值
+        if isinstance(trade_date, float):
+            # 检查是否有小数部分
+            if not trade_date.is_integer():
+                logger.warning(
+                    "Float trade_date has decimal part, rejecting",
+                    event="bond_yield_invalid_float_date",
+                    trade_date=trade_date,
+                )
+                return None
             date_val = str(int(trade_date))
+        elif isinstance(trade_date, int):
+            date_val = str(trade_date)
         else:
-            return None
+            # 字符串处理
+            date_str = str(trade_date)
+            if len(date_str) == _DATE_STR_LENGTH:
+                date_val = date_str
+            else:
+                return None
+
         return pl.Series([date_val]).str.to_date(format="%Y%m%d", strict=False)[0]
     except (ValueError, TypeError):
         return None
@@ -152,7 +170,7 @@ class BondYieldTushareAdapter(BaseTushareAdapter):
         ]
 
         if not valid_indicators:
-            return _empty_macro_dataframe()
+            return empty_macro_dataframe()
 
         compact_start = start_date.replace("-", "")
         compact_end = end_date.replace("-", "")
@@ -171,7 +189,7 @@ class BondYieldTushareAdapter(BaseTushareAdapter):
             )
 
             if response.is_empty():
-                return _empty_macro_dataframe()
+                return empty_macro_dataframe()
 
             # API 返回长格式：
             # trade_date, ts_code, curve_name, curve_type, curve_term, yield
@@ -183,7 +201,7 @@ class BondYieldTushareAdapter(BaseTushareAdapter):
             response = response.filter(pl.col("curve_term").is_in(curve_terms_needed))
 
             if response.is_empty():
-                return _empty_macro_dataframe()
+                return empty_macro_dataframe()
 
             # 创建期限到指标的映射
             term_to_indicator = {
@@ -194,7 +212,7 @@ class BondYieldTushareAdapter(BaseTushareAdapter):
             results = self._process_response_rows(response, term_to_indicator)
 
             if not results:
-                return _empty_macro_dataframe()
+                return empty_macro_dataframe()
 
             result = pl.concat(results)
 

@@ -787,6 +787,38 @@ class DataSource(ABC):
         """
         pass
 
+    @abstractmethod
+    def fetch_metal_daily(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch precious metals daily prices (Gold, Silver).
+
+        Uses Tushare fx_daily API with METAL classify.
+
+        Args:
+            codes: Metal codes (e.g., ["COMMOD_GOLD", "XAUUSD.FXCM"]).
+                   支持别名：COMMOD_GOLD, GOLD, XAUUSD, COMMOD_SILVER,
+                   SILVER, XAGUSD
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with COMMODITY_SOURCE_SCHEMA columns:
+            - instrument_id: Internal instrument ID
+            - trade_date: Trade date (Date)
+            - trade_date_utc: Trade date in UTC (Datetime)
+            - open, high, low, close: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
 
 __all__ = [
     "DataSource",

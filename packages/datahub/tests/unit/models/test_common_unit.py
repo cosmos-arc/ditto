@@ -193,13 +193,87 @@ class TestInstrumentIdRange:
         with pytest.raises(ValueError, match="检测到混合资产类别查询"):
             InstrumentIdRange.detect_asset_class([1_000_001, 2_000_001])
 
-    def test_detect_empty_id_list_defaults_to_stock(self) -> None:
-        """空 ID 列表应该返回默认值 'stock'."""
-        asset_class = InstrumentIdRange.detect_asset_class([])
-        assert asset_class == "stock"
+    def test_detect_empty_id_list_raises_error(self) -> None:
+        """空 ID 列表应该抛出 ValueError（严格模式）."""
+        with pytest.raises(ValueError, match="无法推断空"):
+            InstrumentIdRange.detect_asset_class([])
 
-    def test_detect_unrecognized_ids_defaults_to_stock(self) -> None:
-        """无法识别的 ID 应该返回默认值 'stock'."""
-        # ID outside all ranges
-        asset_class = InstrumentIdRange.detect_asset_class([9_999_999])
-        assert asset_class == "stock"
+    def test_detect_unrecognized_ids_raises_error(self) -> None:
+        """无法识别的 ID 应该抛出 ValueError（严格模式）."""
+        with pytest.raises(ValueError, match="不在任何已定义范围内"):
+            InstrumentIdRange.detect_asset_class([9_999_999])
+
+    # ============ 新增资产类别测试 ============
+
+    def test_should_get_fx_range(self) -> None:
+        """应该能够获取外汇 ID 范围."""
+        fx_range = InstrumentIdRange.get_range("fx")
+        assert fx_range.min_id == 4_000_000
+        assert fx_range.max_id == 4_999_999
+
+    def test_should_get_commodity_range(self) -> None:
+        """应该能够获取大宗商品 ID 范围."""
+        commodity_range = InstrumentIdRange.get_range("commodity")
+        assert commodity_range.min_id == 5_000_000
+        assert commodity_range.max_id == 5_999_999
+
+    def test_should_get_bond_range(self) -> None:
+        """应该能够获取债券 ID 范围."""
+        bond_range = InstrumentIdRange.get_range("bond")
+        assert bond_range.min_id == 6_000_000
+        assert bond_range.max_id == 6_999_999
+
+    def test_should_get_futures_range(self) -> None:
+        """应该能够获取期货 ID 范围."""
+        futures_range = InstrumentIdRange.get_range("futures")
+        assert futures_range.min_id == 7_000_000
+        assert futures_range.max_id == 7_999_999
+
+    def test_should_get_option_range(self) -> None:
+        """应该能够获取期权 ID 范围."""
+        option_range = InstrumentIdRange.get_range("option")
+        assert option_range.min_id == 8_000_000
+        assert option_range.max_id == 8_999_999
+
+    def test_detect_fx_asset_class(self) -> None:
+        """应该能够检测外汇资产类别."""
+        asset_class = InstrumentIdRange.detect_asset_class([4_000_001, 4_500_000])
+        assert asset_class == "fx"
+
+    def test_detect_commodity_asset_class(self) -> None:
+        """应该能够检测大宗商品资产类别."""
+        asset_class = InstrumentIdRange.detect_asset_class([5_000_001, 5_500_000])
+        assert asset_class == "commodity"
+
+    def test_detect_bond_asset_class(self) -> None:
+        """应该能够检测债券资产类别."""
+        asset_class = InstrumentIdRange.detect_asset_class([6_000_001, 6_500_000])
+        assert asset_class == "bond"
+
+    def test_detect_futures_asset_class(self) -> None:
+        """应该能够检测期货资产类别."""
+        asset_class = InstrumentIdRange.detect_asset_class([7_000_001, 7_500_000])
+        assert asset_class == "futures"
+
+    def test_detect_option_asset_class(self) -> None:
+        """应该能够检测期权资产类别."""
+        asset_class = InstrumentIdRange.detect_asset_class([8_000_001, 8_500_000])
+        assert asset_class == "option"
+
+    def test_detect_new_asset_class_boundaries(self) -> None:
+        """应该能够正确识别新增资产类别的边界 ID 值."""
+        # FX boundaries
+        assert InstrumentIdRange.detect_asset_class([4_000_000]) == "fx"
+        assert InstrumentIdRange.detect_asset_class([4_999_999]) == "fx"
+        # Commodity boundaries
+        assert InstrumentIdRange.detect_asset_class([5_000_000]) == "commodity"
+        assert InstrumentIdRange.detect_asset_class([5_999_999]) == "commodity"
+        # Bond boundaries
+        assert InstrumentIdRange.detect_asset_class([6_000_000]) == "bond"
+        assert InstrumentIdRange.detect_asset_class([6_999_999]) == "bond"
+        # Futures boundaries
+        assert InstrumentIdRange.detect_asset_class([7_000_000]) == "futures"
+        assert InstrumentIdRange.detect_asset_class([7_999_999]) == "futures"
+        # Option boundaries
+        assert InstrumentIdRange.detect_asset_class([8_000_000]) == "option"
+        assert InstrumentIdRange.detect_asset_class([8_999_999]) == "option"

@@ -2069,6 +2069,261 @@ pixi run -e dev python -m ditto_port.jobs.flows.deploy
 
 ---
 
+## 10. 性能验证
+
+> **验证脚本**: `scripts/verify-all-2025.sh` 第 15 节
+> **更新日期**: 2026-03-01
+
+### 10.1 性能指标
+
+| 编号 | 验证项 | 指标 | 通过标准 | 验证方法 |
+|------|--------|------|---------|---------|
+| P1 | 单次查询延迟 | P95 | < 100ms | 20次请求取 P95 |
+| P2 | 批量查询吞吐 | 25标的 | < 5s | 单次批量查询 |
+| P3 | 内存占用峰值 | 3年数据 | < 2GB | 系统可用内存 |
+| P4 | 并发写入稳定性 | 10并发 | 无死锁 | 并发摄入测试 |
+
+### 10.2 性能验证命令
+
+```bash
+# P1: 单次查询延迟测试
+pixi run -e dev python -c "
+import time
+import requests
+times = []
+for _ in range(20):
+    start = time.time()
+    requests.post('http://localhost:8000/api/v1/market/bars',
+        json={'instrument_ids': [1000001], 'start_date': '2025-01-01', 'end_date': '2025-01-10'})
+    times.append(time.time() - start)
+times.sort()
+print(f'P95: {times[18]*1000:.0f}ms')
+"
+
+# P2: 批量查询吞吐测试
+pixi run -e dev python -c "
+import time
+import requests
+ids = list(range(1000001, 1000026))
+start = time.time()
+requests.post('http://localhost:8000/api/v1/market/bars',
+    json={'instrument_ids': ids, 'start_date': '2025-01-01', 'end_date': '2025-01-10'})
+print(f'批量查询耗时: {time.time()-start:.1f}s')
+"
+```
+
+### 10.3 性能验证结果
+
+| 日期 | P1 | P2 | P3 | P4 | 备注 |
+|------|-----|-----|-----|-----|------|
+| 2026-03-01 | - | - | - | - | 待验证 |
+
+---
+
+## 11. 生产就绪验证
+
+> **验证脚本**: `scripts/verify-all-2025.sh` 第 16 节
+> **更新日期**: 2026-03-01
+
+### 11.1 生产就绪检查项
+
+| 编号 | 验证项 | 通过标准 | 验证方法 |
+|------|--------|---------|---------|
+| R1 | 配置外部化 | 无硬编码 | 扫描代码检查硬编码配置 |
+| R2 | 日志完整性 | 关键操作有日志 | 检查 logger 调用 |
+| R3 | 错误恢复 | 优雅降级 | 发送无效请求验证 |
+| R4 | 健康检查 | /healthz 返回正常 | curl 请求验证 |
+
+### 11.2 生产就绪验证命令
+
+```bash
+# R1: 配置外部化检查
+pixi run -e dev python -c "
+import os
+import re
+for root, dirs, files in os.walk('packages'):
+    for f in files:
+        if f.endswith('.py'):
+            path = os.path.join(root, f)
+            with open(path) as fp:
+                content = fp.read()
+                if 'localhost:5432' in content:
+                    print(f'发现硬编码: {path}')
+"
+
+# R3: 错误恢复测试
+curl -X POST http://localhost:8000/api/v1/market/bars \
+  -H "Content-Type: application/json" \
+  -d '{"instrument_ids": [-1], "start_date": "invalid"}'
+
+# R4: 健康检查
+curl http://localhost:8000/healthz
+```
+
+### 11.3 生产就绪验证结果
+
+| 日期 | R1 | R2 | R3 | R4 | 备注 |
+|------|-----|-----|-----|-----|------|
+| 2026-03-01 | - | - | - | - | 待验证 |
+
+---
+
+## 12. 外汇和大宗商品验证
+
+> **验证脚本**: `scripts/verify-all-2025.sh` 第 9.3-9.4 节
+> **更新日期**: 2026-03-01
+
+### 12.1 外汇数据 (FX Daily)
+
+#### 12.1.1 CLI 摄入验证
+
+```bash
+# 按日期摄入汇率数据
+pixi run -e dev python -m ditto_port.cli.main ingest market fx 2025-01-02
+```
+
+**验证项**：
+- [ ] Tushare fx_daily 接口可用
+- [ ] 汇率数据摄入成功 (USDCNH, EURCNH)
+- [ ] trade_date_utc 字段正确（UTC 午夜时间戳）
+- [ ] 上海时区转换正确
+
+**问题记录**：
+```
+[记录问题...]
+```
+
+#### 12.1.2 API 查询验证
+
+```bash
+# 查询汇率数据
+curl -X POST http://localhost:8000/api/v1/market/fx \
+  -H "Content-Type: application/json" \
+  -d '{"ts_codes": ["USDCNH.FXCM"], "start_date": "2025-01-01", "end_date": "2025-01-10"}'
+```
+
+**验证项**：
+- [ ] API 端点响应 200
+- [ ] 返回格式符合 APIResponse[list[FxBar]]
+- [ ] FxBar 包含 trade_date_utc 字段
+
+### 12.2 大宗商品数据 (Commodity Daily)
+
+#### 12.2.1 CLI 摄入验证
+
+```bash
+# 按日期摄入商品数据（需要 FRED API Key）
+pixi run -e dev python -m ditto_port.cli.main ingest market commodity 2025-01-02
+```
+
+**验证项**：
+- [ ] FRED API 连接成功
+- [ ] 商品数据摄入成功（WTI/Brent/黄金/白银）
+- [ ] 北京时间日期正确转换为美东时间
+- [ ] trade_date_utc 字段正确（纽约时区转换）
+
+**问题记录**：
+```
+[记录问题...]
+```
+
+#### 12.2.2 API 查询验证
+
+```bash
+# 查询商品数据
+curl -X POST http://localhost:8000/api/v1/market/commodity \
+  -H "Content-Type: application/json" \
+  -d '{"codes": ["WTI", "GOLD"], "start_date": "2025-01-01", "end_date": "2025-01-10"}'
+```
+
+**验证项**：
+- [ ] API 端点响应 200
+- [ ] 返回格式符合 APIResponse[list[CommodityBar]]
+- [ ] CommodityBar 包含 trade_date_utc 字段
+
+### 12.3 外汇和商品验证结果
+
+| 日期 | FX 摄入 | FX API | 商品摄入 | 商品 API | 备注 |
+|------|---------|--------|----------|----------|------|
+| 2026-03-01 | - | - | - | - | 待验证 |
+
+---
+
+## 13. 验证脚本使用说明
+
+### 13.1 完整验证
+
+```bash
+# 执行完整验证流程（约 30-60 分钟）
+./scripts/verify-all-2025.sh
+```
+
+### 13.2 部分验证
+
+```bash
+# 仅验证元数据和行情
+pixi run -e dev python -m ditto_port.cli.main ingest metadata basic stock
+pixi run -e dev python -m ditto_port.cli.main ingest market stock 2025-01-02
+
+# 仅验证 API 端点
+pixi run -e dev server &
+curl http://localhost:8000/healthz
+```
+
+### 13.3 验证结果查看
+
+验证脚本会自动生成结果文件：
+```
+docs/verification-results-YYYYMMDD-HHMMSS.md
+```
+
+---
+
+## 14. 更新日志
+
+### 2026-03-02
+
+**修复的问题**：
+
+1. **指数行情路径重复** (已修复)
+   - 问题：指数行情文件路径错误为 `data/market/index/bars/market/index/bars/2025.parquet`
+   - 原因：`MarketProvider` 中 `index_bars_writer` 的 `data_root` 参数重复包含了 `market/index/bars`
+   - 修复：将 `index_bars_reader/writer` 改为使用 `settings.data_root`
+   - 文件：`apps/port/src/ditto_port/registry/datahub/market.py`
+
+2. **FX/Commodity Writer 未配置** (已修复)
+   - 问题：外汇和大宗商品数据摄入失败，错误 `FxBarsWriter not configured`
+   - 原因：`MarketProvider` 中缺少 FX 和 Commodity 的 Reader/Writer Provider
+   - 修复：添加 `FxBarsReader/Writer` 和 `CommodityBarsReader/Writer` 的 Provider
+   - 文件：`apps/port/src/ditto_port/registry/datahub/market.py`
+
+**已知限制**：
+
+- FRED 商品数据源的黄金（`GOLDAMGBD228NLBM`）和白银（`SLVPRUSD`）series 已不可用
+- WTI 原油（`DCOILWTICO`）和布伦特原油（`DCOILBRENTEU`）正常可用
+- 建议：更新黄金/白银的 series_id 或切换数据源
+
+**验证脚本改进**：
+
+- 添加 ETF/指数基础信息的前置验证检查
+- 如果 ETF/指数基础信息不存在，自动尝试重新摄入
+
+---
+
+### 2026-03-01
+
+- 新增第 10 节：性能验证 (P1-P4)
+- 新增第 11 节：生产就绪验证 (R1-R4)
+- 新增第 12 节：外汇和大宗商品验证
+- 更新验证脚本 `scripts/verify-all-2025.sh`：
+  - 添加外汇数据验证 (9.3 节)
+  - 添加大宗商品验证 (9.4 节)
+  - 添加性能验证 (15 节)
+  - 添加生产就绪验证 (16 节)
+  - 添加外汇/商品 API 查询验证
+
+---
+
 ## 10. 2026-02-25 完整重验记录
 
 ### 10.1 验证环境
