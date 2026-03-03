@@ -20,29 +20,7 @@ from ditto_infra.foundation.concurrency import FileLockManager
 
 from ditto_datahub.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.models import InstrumentIdRange, OnDuplicate
-from ditto_datahub.stores.market.commodity.bars import (
-    CommodityBarsReader,
-    CommodityBarsWriter,
-)
-from ditto_datahub.stores.market.etf.adj import EtfAdjFactorReader, EtfAdjFactorWriter
-from ditto_datahub.stores.market.etf.bars import EtfBarsReader, EtfBarsWriter
-from ditto_datahub.stores.market.etf.status import EtfStatusReader, EtfStatusWriter
-from ditto_datahub.stores.market.fx.bars import FxBarsReader, FxBarsWriter
-from ditto_datahub.stores.market.index.bars import IndexBarsReader, IndexBarsWriter
-from ditto_datahub.stores.market.index.constituent import (
-    IndexConstituentReader,
-    IndexConstituentWriter,
-)
-from ditto_datahub.stores.market.stock.adj import (
-    StockAdjFactorReader,
-    StockAdjFactorWriter,
-)
-from ditto_datahub.stores.market.stock.bars import StockBarsReader, StockBarsWriter
-from ditto_datahub.stores.market.stock.status import (
-    StockStatusReader,
-    StockStatusWriter,
-)
-from ditto_datahub.stores.metadata.instrument import InstrumentReader
+from ditto_datahub.services.ports import MarketReadPorts, MarketWritePorts
 
 
 class AdjType(Enum):
@@ -137,81 +115,24 @@ class MarketService:
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
-        stock_bars_reader: StockBarsReader,
-        stock_bars_writer: StockBarsWriter,
-        stock_status_reader: StockStatusReader,
-        stock_status_writer: StockStatusWriter,
-        stock_adj_reader: StockAdjFactorReader,
-        stock_adj_writer: StockAdjFactorWriter,
-        etf_bars_reader: EtfBarsReader,
-        etf_bars_writer: EtfBarsWriter,
-        etf_status_reader: EtfStatusReader,
-        etf_status_writer: EtfStatusWriter,
-        instrument_reader: InstrumentReader,
+        read_ports: MarketReadPorts,
+        write_ports: MarketWritePorts,
         file_lock: FileLockManager,
-        etf_adj_reader: EtfAdjFactorReader | None = None,
-        etf_adj_writer: EtfAdjFactorWriter | None = None,
-        index_bars_reader: IndexBarsReader | None = None,
-        index_bars_writer: IndexBarsWriter | None = None,
-        index_constituent_reader: IndexConstituentReader | None = None,
-        index_constituent_writer: IndexConstituentWriter | None = None,
-        fx_bars_reader: FxBarsReader | None = None,
-        fx_bars_writer: FxBarsWriter | None = None,
-        commodity_bars_reader: CommodityBarsReader | None = None,
-        commodity_bars_writer: CommodityBarsWriter | None = None,
     ) -> None:
         """
         初始化 MarketService.
 
         Args:
-            stock_bars_reader: 股票 K线读取器.
-            stock_bars_writer: 股票 K线写入器.
-            stock_status_reader: 股票状态读取器.
-            stock_status_writer: 股票状态写入器.
-            stock_adj_reader: 股票复权因子读取器.
-            stock_adj_writer: 股票复权因子写入器.
-            etf_bars_reader: ETF K线读取器.
-            etf_bars_writer: ETF K线写入器.
-            etf_status_reader: ETF 状态读取器.
-            etf_status_writer: ETF 状态写入器.
-            instrument_reader: 证券元数据读取器.
+            read_ports: Market 域读取端口（包含所有 Reader）.
+            write_ports: Market 域写入端口（包含所有 Writer）.
             file_lock: 文件锁管理器（用于并发写入保护）.
-            etf_adj_reader: ETF 复权因子读取器（可选）.
-            etf_adj_writer: ETF 复权因子写入器（可选）.
-            index_bars_reader: 指数 K线读取器（可选）.
-            index_bars_writer: 指数 K线写入器（可选）.
-            index_constituent_reader: 指数成分股读取器（可选）.
-            index_constituent_writer: 指数成分股写入器（可选）.
-            fx_bars_reader: 外汇 K线读取器（可选）.
-            fx_bars_writer: 外汇 K线写入器（可选）.
-            commodity_bars_reader: 大宗商品 K线读取器（可选）.
-            commodity_bars_writer: 大宗商品 K线写入器（可选）.
 
         """
-        self._stock_bars_reader = stock_bars_reader
-        self._stock_bars_writer = stock_bars_writer
-        self._stock_status_reader = stock_status_reader
-        self._stock_status_writer = stock_status_writer
-        self._stock_adj_reader = stock_adj_reader
-        self._stock_adj_writer = stock_adj_writer
-        self._etf_bars_reader = etf_bars_reader
-        self._etf_bars_writer = etf_bars_writer
-        self._etf_status_reader = etf_status_reader
-        self._etf_status_writer = etf_status_writer
-        self._instrument_reader = instrument_reader
+        self._read_ports = read_ports
+        self._write_ports = write_ports
         self._file_lock = file_lock
-        self._etf_adj_reader = etf_adj_reader
-        self._etf_adj_writer = etf_adj_writer
-        self._index_bars_reader = index_bars_reader
-        self._index_bars_writer = index_bars_writer
-        self._index_constituent_reader = index_constituent_reader
-        self._index_constituent_writer = index_constituent_writer
-        self._fx_bars_reader = fx_bars_reader
-        self._fx_bars_writer = fx_bars_writer
-        self._commodity_bars_reader = commodity_bars_reader
-        self._commodity_bars_writer = commodity_bars_writer
 
     @traced("market.find_bars")
     def find_bars(self, query: MarketBarsQuery) -> pl.DataFrame:
@@ -342,9 +263,9 @@ class MarketService:
 
     def _query_constituents(self, query: MarketConstituentsQuery) -> pl.DataFrame:
         """执行指数成分股查询."""
-        if self._index_constituent_reader is None:
+        if self._read_ports.index_constituent is None:
             raise NotImplementedError(
-                "IndexConstituentReader not configured. Please provide index_constituent_reader when initializing MarketService.",  # noqa: E501
+                "IndexConstituentReader not configured. Please provide index_constituent when initializing MarketReadPorts.",  # noqa: E501
             )
 
         # 使用当前日期（如果未指定 asof）
@@ -357,7 +278,9 @@ class MarketService:
             asof=asof_date,
         )
 
-        df = self._index_constituent_reader.get(query.index_instrument_id, asof_date)
+        df = self._read_ports.index_constituent.get(
+            query.index_instrument_id, asof_date
+        )
 
         logger.debug(
             "Index constituents fetched",
@@ -401,37 +324,37 @@ class MarketService:
         end_str = end.isoformat() if end else None
 
         if asset_class == "stock":
-            return self._stock_bars_reader.read(
+            return self._read_ports.stock_bars.read(
                 instrument_ids=instrument_ids,
                 start_date=start_str,
                 end_date=end_str,
             )
         elif asset_class == "etf":
-            return self._etf_bars_reader.read(
+            return self._read_ports.etf_bars.read(
                 instrument_ids=instrument_ids,
                 start_date=start_str,
                 end_date=end_str,
             )
         elif asset_class == "index":
-            if self._index_bars_reader is None:
+            if self._read_ports.index_bars is None:
                 return pl.DataFrame()
-            return self._index_bars_reader.read(
+            return self._read_ports.index_bars.read(
                 instrument_ids=instrument_ids,
                 start_date=start_str,
                 end_date=end_str,
             )
         elif asset_class == "fx":
-            if self._fx_bars_reader is None:
+            if self._read_ports.fx_bars is None:
                 return pl.DataFrame()
-            return self._fx_bars_reader.read(
+            return self._read_ports.fx_bars.read(
                 instrument_ids=instrument_ids,
                 start_date=start_str,
                 end_date=end_str,
             )
         elif asset_class == "commodity":
-            if self._commodity_bars_reader is None:
+            if self._read_ports.commodity_bars is None:
                 return pl.DataFrame()
-            return self._commodity_bars_reader.read(
+            return self._read_ports.commodity_bars.read(
                 instrument_ids=instrument_ids,
                 start_date=start_str,
                 end_date=end_str,
@@ -464,7 +387,7 @@ class MarketService:
             # 全市场模式：获取所有活跃 Instrument ID
             asset_class = query.asset_class
             instrument_ids = sorted(
-                self._instrument_reader.list_instrument_ids(asset_class=asset_class)
+                self._read_ports.instrument.list_instrument_ids(asset_class=asset_class)
             )
             if not asset_class:
                 asset_class = (
@@ -549,7 +472,7 @@ class MarketService:
         start_str = start.isoformat() if start else None
         end_str = end.isoformat() if end else None
 
-        adj_df = self._stock_adj_reader.read(
+        adj_df = self._read_ports.stock_adj.read(
             instrument_ids=instrument_ids,
             start_date=start_str,
             end_date=end_str,
@@ -621,7 +544,7 @@ class MarketService:
         end_str = end.isoformat() if isinstance(end, date) else end
 
         # 读取状态数据
-        status_df = self._stock_status_reader.read(
+        status_df = self._read_ports.stock_status.read(
             instrument_ids=instrument_ids,
             start_date=start_str,
             end_date=end_str,
@@ -646,7 +569,7 @@ class MarketService:
             return df
 
         instrument_ids = df[id_col].unique().to_list()
-        ticker_map = self._instrument_reader.get_instrument_id_ticker_map(
+        ticker_map = self._read_ports.instrument.get_instrument_id_ticker_map(
             instrument_ids
         )
 
@@ -714,37 +637,37 @@ class MarketService:
         lock_name = f"bars_write_{dataset}_{year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
             if dataset == "stock_daily":
-                write_result = self._stock_bars_writer.write(
+                write_result = self._write_ports.stock_bars.write(
                     storage_df,
                     year,
                     on_duplicate=on_duplicate_enum,
                 )
             elif dataset == "etf_daily":
-                write_result = self._etf_bars_writer.write(
+                write_result = self._write_ports.etf_bars.write(
                     storage_df,
                     year,
                     on_duplicate=on_duplicate_enum,
                 )
             elif dataset == "index_daily":
-                if self._index_bars_writer is None:
+                if self._write_ports.index_bars is None:
                     raise ValueError("IndexBarsWriter not configured")
-                write_result = self._index_bars_writer.write(
+                write_result = self._write_ports.index_bars.write(
                     storage_df,
                     year,
                     on_duplicate=on_duplicate_enum,
                 )
             elif dataset == "fx_daily":
-                if self._fx_bars_writer is None:
+                if self._write_ports.fx_bars is None:
                     raise ValueError("FxBarsWriter not configured")
-                write_result = self._fx_bars_writer.write(
+                write_result = self._write_ports.fx_bars.write(
                     storage_df,
                     year,
                     on_duplicate=on_duplicate_enum,
                 )
             elif dataset == "commodity_daily":
-                if self._commodity_bars_writer is None:
+                if self._write_ports.commodity_bars is None:
                     raise ValueError("CommodityBarsWriter not configured")
-                write_result = self._commodity_bars_writer.write(
+                write_result = self._write_ports.commodity_bars.write(
                     storage_df,
                     year,
                     on_duplicate=on_duplicate_enum,
@@ -803,7 +726,7 @@ class MarketService:
         # 使用文件锁保护并发写入
         lock_name = f"adj_factor_write_adj_factor_{year}"
         with self._file_lock.acquire(lock_name, timeout=60.0):
-            write_result = self._stock_adj_writer.write(
+            write_result = self._write_ports.stock_adj.write(
                 storage_df,
                 year,
                 on_duplicate=on_duplicate_enum,
@@ -856,7 +779,7 @@ class MarketService:
         storage_df = self._to_storage_columns(df)
 
         with self._file_lock.acquire(lock_name, timeout=60.0):
-            self._stock_status_writer.write(storage_df, year)
+            self._write_ports.stock_status.write(storage_df, year)
 
         rows_written = len(storage_df)
 

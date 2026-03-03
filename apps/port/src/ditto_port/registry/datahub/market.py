@@ -7,6 +7,7 @@ from pathlib import Path
 from dishka import Provider, Scope, provide
 from ditto_datahub.config.data_store import DataStoreSettings
 from ditto_datahub.services.market_service import MarketService
+from ditto_datahub.services.ports import MarketReadPorts, MarketWritePorts
 from ditto_datahub.stores.market.commodity.bars import (
     CommodityBarsReader,
     CommodityBarsWriter,
@@ -181,57 +182,81 @@ class MarketProvider(Provider):
         return CommodityBarsWriter(settings.data_root)
 
     # ========================================================================
+    # Market Ports
+    # ========================================================================
+
+    @provide
+    def market_read_ports(  # noqa: PLR0913
+        self,
+        stock_bars_reader: StockBarsReader,
+        stock_status_reader: StockStatusReader,
+        stock_adj_reader: StockAdjFactorReader,
+        etf_bars_reader: EtfBarsReader,
+        etf_status_reader: EtfStatusReader,
+        instrument_reader: InstrumentReader,
+        etf_adj_reader: EtfAdjFactorReader,
+        index_bars_reader: IndexBarsReader,
+        index_constituent_reader: IndexConstituentReader,
+        fx_bars_reader: FxBarsReader,
+        commodity_bars_reader: CommodityBarsReader,
+    ) -> MarketReadPorts:
+        """Market 域读取端口."""
+        return MarketReadPorts(
+            stock_bars=stock_bars_reader,
+            stock_status=stock_status_reader,
+            stock_adj=stock_adj_reader,
+            etf_bars=etf_bars_reader,
+            etf_status=etf_status_reader,
+            instrument=instrument_reader,
+            etf_adj=etf_adj_reader,
+            index_bars=index_bars_reader,
+            index_constituent=index_constituent_reader,
+            fx_bars=fx_bars_reader,
+            commodity_bars=commodity_bars_reader,
+        )
+
+    @provide
+    def market_write_ports(  # noqa: PLR0913
+        self,
+        stock_bars_writer: StockBarsWriter,
+        stock_status_writer: StockStatusWriter,
+        stock_adj_writer: StockAdjFactorWriter,
+        etf_bars_writer: EtfBarsWriter,
+        etf_status_writer: EtfStatusWriter,
+        etf_adj_writer: EtfAdjFactorWriter,
+        index_bars_writer: IndexBarsWriter,
+        index_constituent_writer: IndexConstituentWriter,
+        fx_bars_writer: FxBarsWriter,
+        commodity_bars_writer: CommodityBarsWriter,
+    ) -> MarketWritePorts:
+        """Market 域写入端口."""
+        return MarketWritePorts(
+            stock_bars=stock_bars_writer,
+            stock_status=stock_status_writer,
+            stock_adj=stock_adj_writer,
+            etf_bars=etf_bars_writer,
+            etf_status=etf_status_writer,
+            etf_adj=etf_adj_writer,
+            index_bars=index_bars_writer,
+            index_constituent=index_constituent_writer,
+            fx_bars=fx_bars_writer,
+            commodity_bars=commodity_bars_writer,
+        )
+
+    # ========================================================================
     # Market Service
     # ========================================================================
 
     @provide
-    def market_service(  # noqa: PLR0913
+    def market_service(
         self,
-        stock_bars_reader: StockBarsReader,
-        stock_bars_writer: StockBarsWriter,
-        stock_status_reader: StockStatusReader,
-        stock_status_writer: StockStatusWriter,
-        stock_adj_reader: StockAdjFactorReader,
-        stock_adj_writer: StockAdjFactorWriter,
-        etf_bars_reader: EtfBarsReader,
-        etf_bars_writer: EtfBarsWriter,
-        etf_status_reader: EtfStatusReader,
-        etf_status_writer: EtfStatusWriter,
-        instrument_reader: InstrumentReader,
+        read_ports: MarketReadPorts,
+        write_ports: MarketWritePorts,
         file_lock_manager: FileLockManager,
-        etf_adj_reader: EtfAdjFactorReader,
-        etf_adj_writer: EtfAdjFactorWriter,
-        index_bars_reader: IndexBarsReader,
-        index_bars_writer: IndexBarsWriter,
-        index_constituent_reader: IndexConstituentReader,
-        index_constituent_writer: IndexConstituentWriter,
-        fx_bars_reader: FxBarsReader,
-        fx_bars_writer: FxBarsWriter,
-        commodity_bars_reader: CommodityBarsReader,
-        commodity_bars_writer: CommodityBarsWriter,
     ) -> MarketService:
         """Market 查询服务（支持读写）。"""
         return MarketService(
-            stock_bars_reader=stock_bars_reader,
-            stock_bars_writer=stock_bars_writer,
-            stock_status_reader=stock_status_reader,
-            stock_status_writer=stock_status_writer,
-            stock_adj_reader=stock_adj_reader,
-            stock_adj_writer=stock_adj_writer,
-            etf_bars_reader=etf_bars_reader,
-            etf_bars_writer=etf_bars_writer,
-            etf_status_reader=etf_status_reader,
-            etf_status_writer=etf_status_writer,
-            instrument_reader=instrument_reader,
+            read_ports=read_ports,
+            write_ports=write_ports,
             file_lock=file_lock_manager,
-            etf_adj_reader=etf_adj_reader,
-            etf_adj_writer=etf_adj_writer,
-            index_bars_reader=index_bars_reader,
-            index_bars_writer=index_bars_writer,
-            index_constituent_reader=index_constituent_reader,
-            index_constituent_writer=index_constituent_writer,
-            fx_bars_reader=fx_bars_reader,
-            fx_bars_writer=fx_bars_writer,
-            commodity_bars_reader=commodity_bars_reader,
-            commodity_bars_writer=commodity_bars_writer,
         )

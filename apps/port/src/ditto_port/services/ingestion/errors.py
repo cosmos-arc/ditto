@@ -1,11 +1,11 @@
-"""摄取专用错误类型."""
+"""
+摄取专用错误类型.
+
+此模块保留用于向后兼容，新代码应使用 ditto_port.errors 中的异常类。
+"""
 
 from __future__ import annotations
 
+from ditto_port.errors import SourceFetchError
 
-class SourceFetchError(Exception):
-    """Source fetch error used at Port service boundary."""
-
-    def __init__(self, message: str, source: str) -> None:
-        super().__init__(message)
-        self.source = source
+__all__ = ["SourceFetchError"]

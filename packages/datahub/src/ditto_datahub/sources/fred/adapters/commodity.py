@@ -4,28 +4,16 @@ from __future__ import annotations
 
 import polars as pl
 
+from ditto_datahub.models.source_codes import (
+    COMMODITY_CODE_TO_INSTRUMENT_ID,
+    VIX_CODE_TO_INSTRUMENT_ID,
+)
 from ditto_datahub.sources.fred.adapters.base import BaseFredAdapter
 from ditto_datahub.sources.fred.indicators import get_fred_indicator
 from ditto_datahub.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
 from ditto_datahub.utils.timezone_utils import (
     get_fred_query_date,
 )
-
-# Commodity code to instrument_id mapping
-# Using 5M range (5,000,000 - 5,099,999) for commodities
-COMMODITY_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
-    "COMMOD_WTI": 5_000_001,  # WTI原油
-    "COMMOD_BRENT": 5_000_002,  # 布伦特原油
-    "COMMOD_GOLD": 5_000_003,  # 伦敦金
-    "COMMOD_SILVER": 5_000_004,  # 伦敦银
-}
-
-# VIX (另类数据) code to instrument_id mapping
-# Using 5M range (5,100,000 - 5,199,999) for alternative data
-VIX_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
-    "VIX_30D": 5_100_001,  # VIX波动率指数(30天)
-    "VIX_9D": 5_100_002,  # VIX波动率指数(9天)
-}
 
 
 class CommodityFredAdapter(BaseFredAdapter):

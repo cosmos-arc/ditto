@@ -79,11 +79,6 @@ class FredClient:
         """Context manager exit."""
         self.close()
 
-    def __del__(self) -> None:
-        """Cleanup HTTP client on destruction."""
-        if hasattr(self, "_client"):
-            self._client.close()
-
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),

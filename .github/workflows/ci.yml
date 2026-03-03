@@ -59,7 +59,35 @@ jobs:
               - 'docker-compose*.yml'
 
   # ============================================================
-  # Stage 2: Python 代码质量检查（并行）
+  # Stage 2: 架构审计门禁（新增）
+  # ============================================================
+  audit:
+    name: Architecture Audit
+    needs: changes
+    if: ${{ needs.changes.outputs.python == 'true' || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.9.3
+        with:
+          pixi-version: v0.39.5
+          cache: true
+          locked: true
+          environments: dev
+
+      - name: Architecture check
+        run: pixi run -e dev arch-check
+
+      - name: Type check
+        run: pixi run -e dev type --all
+
+      - name: Fast tests
+        run: pixi run -e dev test --fast
+
+  # ============================================================
+  # Stage 3: Python 代码质量检查（并行）
   # ============================================================
   lint:
     name: lint
@@ -100,8 +128,7 @@ jobs:
           environments: dev # 使用 dev 环境，包含代码质量工具
 
       - name: Pyright type check
-        run: |
-          pixi run -e dev typecheck-all
+        run: pixi run -e dev type --all
 
   # ============================================================
   # Stage 3: 测试套件（分层执行）
@@ -237,17 +264,17 @@ jobs:
   # ============================================================
   ci-success:
     name: ci-success
-    needs: [lint, type-check, test-unit]
+    needs: [audit, lint, type-check, test-unit]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check required jobs
         run: |
-          results=("${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.test-unit.result }}")
+          results=("${{ needs.audit.result }}" "${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.test-unit.result }}")
           for result in "${results[@]}"; do
             if [[ "$result" == "failure" ]]; then
               echo "::error::One or more required CI checks failed"
               exit 1
             fi
           done
-          echo "✅ All required CI checks passed!"
+          echo "All required CI checks passed!"
