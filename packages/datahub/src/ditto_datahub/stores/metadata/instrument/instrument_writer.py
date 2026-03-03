@@ -103,6 +103,8 @@ class InstrumentWriter:
             )
 
             # 插入 instrument_mapping 表
+            # effective_from 使用 list_date，若为 NULL 则使用默认值
+            effective_from = registration.list_date or "1990-01-01"
             self._client.execute(
                 """INSERT INTO instrument_mapping
                 (instrument_id, source, source_ticker, effective_from, is_primary)
@@ -111,7 +113,7 @@ class InstrumentWriter:
                     instrument_id,
                     registration.source,
                     registration.source_ticker,
-                    registration.list_date,
+                    effective_from,
                 ],
             )
 
@@ -222,4 +224,28 @@ class InstrumentWriter:
                 extension.base_point,
                 extension.num_constituents,
             ],
+        )
+
+    def update_list_date(self, instrument_id: int, list_date: Any) -> None:
+        """
+        更新证券的上市日期.
+
+        用于从行情数据推断上市日期的场景。
+
+        Args:
+            instrument_id: 证券 ID
+            list_date: 上市日期
+
+        """
+        self._client.execute(
+            """UPDATE instrument SET list_date = ? WHERE instrument_id = ?""",
+            [list_date, instrument_id],
+        )
+        self._client.commit()
+
+        logger.info(
+            "Instrument list_date updated",
+            event="instrument_list_date_updated",
+            instrument_id=instrument_id,
+            list_date=str(list_date),
         )

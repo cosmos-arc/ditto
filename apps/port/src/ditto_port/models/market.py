@@ -115,12 +115,12 @@ class Bar(BaseModel):
 
     Attributes:
         instrument_id: 标的 ID
-        trade_date: 交易日期
+        trade_date: 交易日期 (YYYY-MM-DD)
         open: 开盘价
         high: 最高价
         low: 最低价
         close: 收盘价
-        volume: 成交量
+        volume: 成交量 (保留2位小数)
         amount: 成交额
         turnover_rate: 换手率 (可选)
 
@@ -132,7 +132,7 @@ class Bar(BaseModel):
     high: float = Field(description="最高价")
     low: float = Field(description="最低价")
     close: float = Field(description="收盘价")
-    volume: int = Field(description="成交量")
+    volume: float = Field(description="成交量")
     amount: float = Field(description="成交额")
     turnover_rate: float | None = Field(default=None, description="换手率")
 
@@ -140,6 +140,22 @@ class Bar(BaseModel):
         strict=True,
         extra="ignore",
     )
+
+
+def _format_float(value: float | None, decimals: int = 2) -> float | None:
+    """格式化浮点数到指定小数位."""
+    if value is None:
+        return None
+    return round(value, decimals)
+
+
+def _format_date(value: date | str | None) -> str | None:
+    """将日期转换为字符串格式 (YYYY-MM-DD)."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return value.isoformat()
 
 
 def to_bar(row: dict[str, Any]) -> Bar:
@@ -156,14 +172,14 @@ def to_bar(row: dict[str, Any]) -> Bar:
     """
     return Bar(
         instrument_id=row["instrument_id"],
-        trade_date=row["trade_date"],
-        open=row["open"],
-        high=row["high"],
-        low=row["low"],
-        close=row["close"],
-        volume=row["volume"],
-        amount=row["amount"],
-        turnover_rate=row.get("turnover_rate"),
+        trade_date=_format_date(row["trade_date"]) or "",
+        open=_format_float(row["open"]) or 0.0,
+        high=_format_float(row["high"]) or 0.0,
+        low=_format_float(row["low"]) or 0.0,
+        close=_format_float(row["close"]) or 0.0,
+        volume=_format_float(row["volume"]) or 0.0,
+        amount=_format_float(row["amount"]) or 0.0,
+        turnover_rate=_format_float(row.get("turnover_rate")),
     )
 
 

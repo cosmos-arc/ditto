@@ -20,9 +20,14 @@ from ditto_infra.foundation.concurrency import FileLockManager
 
 from ditto_datahub.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.models import InstrumentIdRange, OnDuplicate
+from ditto_datahub.stores.market.commodity.bars import (
+    CommodityBarsReader,
+    CommodityBarsWriter,
+)
 from ditto_datahub.stores.market.etf.adj import EtfAdjFactorReader, EtfAdjFactorWriter
 from ditto_datahub.stores.market.etf.bars import EtfBarsReader, EtfBarsWriter
 from ditto_datahub.stores.market.etf.status import EtfStatusReader, EtfStatusWriter
+from ditto_datahub.stores.market.fx.bars import FxBarsReader, FxBarsWriter
 from ditto_datahub.stores.market.index.bars import IndexBarsReader, IndexBarsWriter
 from ditto_datahub.stores.market.index.constituent import (
     IndexConstituentReader,
@@ -81,6 +86,7 @@ class MarketBarsQuery:
         with_status: 是否添加股票状态信息（仅对股票数据有效）.
         raw: 是否跳过复权和状态增强.
         market_wide: 全市场查询模式。为 True 且 instrument_ids 为空时获取所有活跃证券.
+        limit: 返回数量限制（在 DataFrame 层应用）.
 
     Note:
         - 复权功能 (adj) 仅支持股票数据，对 ETF 和 Index 数据无效
@@ -99,11 +105,15 @@ class MarketBarsQuery:
     end: str | None = None
     adj: AdjType = AdjType.NONE
     asof: str | None = None
-    asset_class: Literal["stock", "etf", "index"] | None = None
+    asset_class: (
+        Literal["stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"]
+        | None
+    ) = None
     with_ticker: bool = False
     with_status: bool = False
     raw: bool = False
     market_wide: bool = False
+    limit: int | None = None
 
 
 @dataclass(frozen=True)
@@ -147,6 +157,10 @@ class MarketService:
         index_bars_writer: IndexBarsWriter | None = None,
         index_constituent_reader: IndexConstituentReader | None = None,
         index_constituent_writer: IndexConstituentWriter | None = None,
+        fx_bars_reader: FxBarsReader | None = None,
+        fx_bars_writer: FxBarsWriter | None = None,
+        commodity_bars_reader: CommodityBarsReader | None = None,
+        commodity_bars_writer: CommodityBarsWriter | None = None,
     ) -> None:
         """
         初始化 MarketService.
@@ -170,6 +184,10 @@ class MarketService:
             index_bars_writer: 指数 K线写入器（可选）.
             index_constituent_reader: 指数成分股读取器（可选）.
             index_constituent_writer: 指数成分股写入器（可选）.
+            fx_bars_reader: 外汇 K线读取器（可选）.
+            fx_bars_writer: 外汇 K线写入器（可选）.
+            commodity_bars_reader: 大宗商品 K线读取器（可选）.
+            commodity_bars_writer: 大宗商品 K线写入器（可选）.
 
         """
         self._stock_bars_reader = stock_bars_reader
@@ -190,6 +208,10 @@ class MarketService:
         self._index_bars_writer = index_bars_writer
         self._index_constituent_reader = index_constituent_reader
         self._index_constituent_writer = index_constituent_writer
+        self._fx_bars_reader = fx_bars_reader
+        self._fx_bars_writer = fx_bars_writer
+        self._commodity_bars_reader = commodity_bars_reader
+        self._commodity_bars_writer = commodity_bars_writer
 
     @traced("market.find_bars")
     def find_bars(self, query: MarketBarsQuery) -> pl.DataFrame:
@@ -197,7 +219,7 @@ class MarketService:
         return self._query_bars(query)
 
     @traced("market.list_bars")
-    def list_bars(
+    def list_bars(  # noqa: PLR0913
         self,
         instrument_ids: list[int],
         start: str | None = None,
@@ -205,6 +227,11 @@ class MarketService:
         adj: AdjType = AdjType.NONE,
         with_ticker: bool = False,
         with_status: bool = False,
+        asset_class: Literal[
+            "stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"
+        ]
+        | None = None,
+        limit: int | None = None,
     ) -> pl.DataFrame:
         """
         便利方法：批量查询K线数据.
@@ -216,6 +243,8 @@ class MarketService:
             adj: 复权类型（仅对 stock 数据有效）.
             with_ticker: 是否在结果中添加 ticker 列.
             with_status: 是否添加股票状态信息（仅对股票数据有效）.
+            asset_class: 资产类别（显式指定可跳过自动检测）.
+            limit: 返回数量限制（在 DataFrame 层应用）.
 
         Returns:
             K线数据 DataFrame.
@@ -228,6 +257,8 @@ class MarketService:
             adj=adj,
             with_ticker=with_ticker,
             with_status=with_status,
+            asset_class=asset_class,
+            limit=limit,
         )
         return self._query_bars(query)
 
@@ -292,6 +323,10 @@ class MarketService:
             {"dataset": "market_bars", "operation": "get", "adj": query.adj.value},
         )
 
+        # P1-2: 在 DataFrame 层应用 limit
+        if query.limit is not None:
+            df = df.head(query.limit)
+
         return df
 
     @traced("market.get_constituents")
@@ -340,12 +375,14 @@ class MarketService:
 
         return df
 
-    def _load_bars_core(
+    def _load_bars_core(  # noqa: PLR0911
         self,
         instrument_ids: list[int],
         start: date | None,
         end: date | None,
-        asset_class: Literal["stock", "etf", "index"],
+        asset_class: Literal[
+            "stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"
+        ],
     ) -> pl.DataFrame:
         """
         加载核心行情数据（不含复权和增强）.
@@ -383,12 +420,33 @@ class MarketService:
                 start_date=start_str,
                 end_date=end_str,
             )
+        elif asset_class == "fx":
+            if self._fx_bars_reader is None:
+                return pl.DataFrame()
+            return self._fx_bars_reader.read(
+                instrument_ids=instrument_ids,
+                start_date=start_str,
+                end_date=end_str,
+            )
+        elif asset_class == "commodity":
+            if self._commodity_bars_reader is None:
+                return pl.DataFrame()
+            return self._commodity_bars_reader.read(
+                instrument_ids=instrument_ids,
+                start_date=start_str,
+                end_date=end_str,
+            )
         else:
             return pl.DataFrame()
 
     def _resolve_instrument_ids_and_asset_class(
         self, query: MarketBarsQuery
-    ) -> tuple[list[int], Literal["stock", "etf", "index"]]:
+    ) -> tuple[
+        list[int],
+        Literal[
+            "stock", "etf", "index", "fx", "commodity", "bond", "futures", "option"
+        ],
+    ]:
         """
         解析 Instrument ID 列表和资产类别.
 
@@ -620,7 +678,9 @@ class MarketService:
     @traced("market.save_bars")
     def save_bars(
         self,
-        dataset: Literal["stock_daily", "etf_daily", "index_daily"],
+        dataset: Literal[
+            "stock_daily", "etf_daily", "index_daily", "fx_daily", "commodity_daily"
+        ],
         df: pl.DataFrame,
         year: int,
         on_duplicate: OnDuplicate = OnDuplicate.ERROR,
@@ -629,7 +689,8 @@ class MarketService:
         保存K线数据.
 
         Args:
-            dataset: 数据集类型（stock_daily, etf_daily, index_daily）.
+            dataset: 数据集类型（stock_daily, etf_daily, index_daily,
+                fx_daily, commodity_daily）.
             df: K线数据 DataFrame.
             year: 年份.
             on_duplicate: 重复数据处理策略.
@@ -668,6 +729,22 @@ class MarketService:
                 if self._index_bars_writer is None:
                     raise ValueError("IndexBarsWriter not configured")
                 write_result = self._index_bars_writer.write(
+                    storage_df,
+                    year,
+                    on_duplicate=on_duplicate_enum,
+                )
+            elif dataset == "fx_daily":
+                if self._fx_bars_writer is None:
+                    raise ValueError("FxBarsWriter not configured")
+                write_result = self._fx_bars_writer.write(
+                    storage_df,
+                    year,
+                    on_duplicate=on_duplicate_enum,
+                )
+            elif dataset == "commodity_daily":
+                if self._commodity_bars_writer is None:
+                    raise ValueError("CommodityBarsWriter not configured")
+                write_result = self._commodity_bars_writer.write(
                     storage_df,
                     year,
                     on_duplicate=on_duplicate_enum,

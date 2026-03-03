@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS instrument (
     exchange TEXT NOT NULL,
     board TEXT,
     asset_class TEXT NOT NULL,
-    list_date DATE NOT NULL,
+    list_date DATE,  -- 可为 NULL，后续通过行情数据推断
     delist_date DATE,
     is_st BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
@@ -195,3 +195,175 @@ CREATE INDEX IF NOT EXISTS idx_quarantine_dataset
     ON quarantine_failed_data(dataset);
 CREATE INDEX IF NOT EXISTS idx_quarantine_rule
     ON quarantine_failed_data(rule_id);
+
+-- ============ 基本面数据表 ============
+
+-- 资产负债表
+CREATE TABLE IF NOT EXISTS balance_sheet (
+    instrument_id INTEGER NOT NULL,
+    report_date DATE NOT NULL,
+    knowledge_date DATE NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    total_assets REAL,
+    total_liabilities REAL,
+    net_assets REAL,
+    current_assets REAL,
+    current_liabilities REAL,
+    PRIMARY KEY (instrument_id, report_date, effective_from),
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+CREATE INDEX IF NOT EXISTS idx_balance_sheet_pit
+    ON balance_sheet(instrument_id, effective_from, effective_to);
+
+-- 利润表
+CREATE TABLE IF NOT EXISTS income_statement (
+    instrument_id INTEGER NOT NULL,
+    report_date DATE NOT NULL,
+    knowledge_date DATE NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    revenue REAL,
+    operating_profit REAL,
+    net_profit REAL,
+    eps REAL,
+    PRIMARY KEY (instrument_id, report_date, effective_from),
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+CREATE INDEX IF NOT EXISTS idx_income_statement_pit
+    ON income_statement(instrument_id, effective_from, effective_to);
+
+-- 现金流量表
+CREATE TABLE IF NOT EXISTS cash_flow (
+    instrument_id INTEGER NOT NULL,
+    report_date DATE NOT NULL,
+    knowledge_date DATE NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    operating_cash_flow REAL,
+    investing_cash_flow REAL,
+    financing_cash_flow REAL,
+    net_cash_flow REAL,
+    PRIMARY KEY (instrument_id, report_date, effective_from),
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+CREATE INDEX IF NOT EXISTS idx_cash_flow_pit
+    ON cash_flow(instrument_id, effective_from, effective_to);
+
+-- 分红送配
+-- P015 修复：ex_dividend_date 可为 NULL（预案阶段），添加 div_proc 字段
+CREATE TABLE IF NOT EXISTS dividend (
+    instrument_id INTEGER NOT NULL,
+    ex_dividend_date DATE,  -- 可为 NULL，预案阶段
+    knowledge_date DATE NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    dividend_per_share REAL,
+    dividend_yield REAL,
+    div_proc TEXT,  -- P015: 实施进度：预案/实施
+    PRIMARY KEY (instrument_id, effective_from, ex_dividend_date),  -- 调整主键顺序
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+CREATE INDEX IF NOT EXISTS idx_dividend_pit
+    ON dividend(instrument_id, effective_from, effective_to);
+
+-- 公司行动
+CREATE TABLE IF NOT EXISTS corporate_actions (
+    instrument_id INTEGER NOT NULL,
+    action_type TEXT NOT NULL,
+    action_date DATE NOT NULL,
+    knowledge_date DATE NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    description TEXT,
+    PRIMARY KEY (instrument_id, action_type, action_date, effective_from),
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+CREATE INDEX IF NOT EXISTS idx_corporate_actions_pit
+    ON corporate_actions(instrument_id, effective_from, effective_to);
+
+-- ============ 资本面数据表 ============
+
+-- 估值指标
+CREATE TABLE IF NOT EXISTS valuation_metrics (
+    instrument_id INTEGER NOT NULL,
+    trade_date DATE NOT NULL,
+    knowledge_date DATE NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    pe_ratio REAL,
+    pb_ratio REAL,
+    ps_ratio REAL,
+    dividend_yield REAL,
+    market_cap REAL,
+    PRIMARY KEY (instrument_id, trade_date, effective_from),
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+CREATE INDEX IF NOT EXISTS idx_valuation_metrics_pit
+    ON valuation_metrics(instrument_id, effective_from, effective_to);
+
+-- 融资融券
+CREATE TABLE IF NOT EXISTS margin_trading (
+    instrument_id INTEGER NOT NULL,
+    trade_date DATE NOT NULL,
+    knowledge_date DATE NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    margin_buy_balance REAL,
+    short_sell_balance REAL,
+    margin_buy_volume REAL,
+    short_sell_volume REAL,
+    PRIMARY KEY (instrument_id, trade_date, effective_from),
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+CREATE INDEX IF NOT EXISTS idx_margin_trading_pit
+    ON margin_trading(instrument_id, effective_from, effective_to);
+
+-- 股权质押
+CREATE TABLE IF NOT EXISTS pledge_ratio (
+    instrument_id INTEGER NOT NULL,
+    report_date DATE NOT NULL,
+    knowledge_date DATE NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    pledge_ratio REAL,
+    pledge_shares REAL,
+    total_shares REAL,
+    PRIMARY KEY (instrument_id, report_date, effective_from),
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+CREATE INDEX IF NOT EXISTS idx_pledge_ratio_pit
+    ON pledge_ratio(instrument_id, effective_from, effective_to);
+
+-- ============ 宏观数据表 ============
+
+-- 宏观指标元数据
+CREATE TABLE IF NOT EXISTS macro_indicators (
+    indicator_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    frequency TEXT NOT NULL,
+    need_pit BOOLEAN DEFAULT FALSE,
+    source TEXT,
+    unit TEXT,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_macro_indicators_code ON macro_indicators(code);
+CREATE INDEX IF NOT EXISTS idx_macro_indicators_category ON macro_indicators(category);
+
+-- 宏观指标数据 (PIT support)
+CREATE TABLE IF NOT EXISTS macro_indicator_data (
+    indicator_id INTEGER NOT NULL,
+    date DATE NOT NULL,
+    value REAL,
+    knowledge_date DATE,
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    PRIMARY KEY (indicator_id, date, effective_from),
+    FOREIGN KEY (indicator_id) REFERENCES macro_indicators(indicator_id)
+);
+CREATE INDEX IF NOT EXISTS idx_macro_indicator_data_pit
+    ON macro_indicator_data(indicator_id, effective_from, effective_to);

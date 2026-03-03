@@ -13,7 +13,6 @@ from .capital import (
     CASH_FLOW_MAPPING,
     CORPORATE_ACTIONS_MAPPING,
     DIVIDEND_MAPPING,
-    FUTURES_MAPPING,
     INCOME_STATEMENT_MAPPING,
     INDEX_COMPOSITION_MAPPING,
     MARGIN_TRADING_MAPPING,
@@ -26,6 +25,12 @@ from .common import (
     DAILY_OHLCV_MAPPING,
     FUND_ADJ_MAPPING,
 )
+from .macro import (
+    TUSHARE_MACRO_INDICATORS,
+    TushareMacroIndicator,
+    get_tushare_macro_indicator,
+    list_tushare_macro_indicators,
+)
 
 __all__ = [
     "ADJ_FACTOR_MAPPING",
@@ -37,7 +42,6 @@ __all__ = [
     "DIVIDEND_MAPPING",
     "ETF_BASIC_MAPPING",
     "FUND_ADJ_MAPPING",
-    "FUTURES_MAPPING",
     "INCOME_STATEMENT_MAPPING",
     "INDEX_BASIC_MAPPING",
     "INDEX_COMPOSITION_MAPPING",
@@ -45,5 +49,9 @@ __all__ = [
     "PLEDGE_RATIO_MAPPING",
     "STOCK_BASIC_MAPPING",
     "STOCK_LIMIT_MAPPING",
+    "TUSHARE_MACRO_INDICATORS",
     "VALUATION_METRICS_MAPPING",
+    "TushareMacroIndicator",
+    "get_tushare_macro_indicator",
+    "list_tushare_macro_indicators",
 ]

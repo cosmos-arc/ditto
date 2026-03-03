@@ -26,6 +26,9 @@ class DataSourceSettings(BaseModel):
     # Token
     tushare_token: str = Field(default="")
 
+    # FRED API key (美国宏观数据)
+    fred_api_key: str = Field(default="")
+
     # 通达信数据源配置（用于质量对账）
     tdx_path: str = Field(default="D:\\new_tdx\\vipdoc")
 

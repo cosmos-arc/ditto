@@ -1,11 +1,5 @@
 """Capital Domain - 资金与资本市场数据域."""
 
-from ditto_datahub.stores.capital.futures_position.futures_reader import (
-    FuturesReader,
-)
-from ditto_datahub.stores.capital.futures_position.futures_writer import (
-    FuturesWriter,
-)
 from ditto_datahub.stores.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )
@@ -32,8 +26,6 @@ from ditto_datahub.stores.capital.valuation.valuation_metrics_writer import (
 )
 
 __all__ = [
-    "FuturesReader",
-    "FuturesWriter",
     "IndexCompositionReader",
     "IndexCompositionWriter",
     "MarginTradingReader",

@@ -57,6 +57,7 @@ def mock_metadata_service(mocker):
     # Instrument 相关方法
     service.register_instruments_batch = mocker.Mock()
     service.resolve_or_create_instruments_batch = mocker.Mock()
+    service.resolve_instrument_ids_batch = mocker.Mock()
 
     # 设置默认的 side_effect
     stock_counter = [1_000_000]
@@ -83,8 +84,18 @@ def mock_metadata_service(mocker):
         source_tickers = df["source_ticker"].to_list()
         return {source_tickers[0]: instrument_id}
 
+    def resolve_ids_side_effect(identifiers, source, asof, **kwargs):
+        """为 resolve_instrument_ids_batch 模拟返回值."""
+        _ = source, asof, kwargs
+        result = {}
+        for i, ticker in enumerate(identifiers):
+            # 简单映射：每个 ticker 映射到一个 instrument_id
+            result[ticker] = 1_000_000 + i
+        return result
+
     service.register_instruments_batch.side_effect = register_side_effect
     service.resolve_or_create_instruments_batch.side_effect = resolve_side_effect
+    service.resolve_instrument_ids_batch.side_effect = resolve_ids_side_effect
 
     return service
 

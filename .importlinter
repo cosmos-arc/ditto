@@ -76,22 +76,21 @@ ignore_imports =
 unmatched_ignore_imports_alerting = none
 
 # ═══════════════════════════════════════════════════════════════════
-# Port 层边界：非 registry 模块禁止直接依赖 DataHub 实现
+# Port 层边界：禁止直接依赖 DataHub 存储/运行时实现
+# 注意：sources 层（数据获取）可以由 Port 层直接访问
 # 注意：allow_indirect_imports = true 只检查直接导入，允许通过 hub 的间接使用
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:port-boundary]
-name = Port (non-registry) must not directly depend on DataHub implementation
+name = Port must not directly depend on DataHub stores/runtime
 type = forbidden
 source_modules =
     ditto_port.**
 forbidden_modules =
     ditto_datahub.stores.**
-    ditto_datahub.sources.**
     ditto_datahub.runtime.**
 # 忽略 registry 模块的导入
 ignore_imports =
     ditto_port.registry.** -> ditto_datahub.stores.**
-    ditto_port.registry.** -> ditto_datahub.sources.**
     ditto_port.registry.** -> ditto_datahub.runtime.**
 # 只检查直接导入，允许通过 hub 的间接使用
 allow_indirect_imports = true

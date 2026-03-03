@@ -1,7 +1,7 @@
 # Ditto: 量化投资系统
 
-**版本**: v0.5.0
-**最后更新**: 2026-01-23
+**版本**: v0.6.0
+**最后更新**: 2026-03-01
 **状态**: 🔄 开发中
 
 ## 概要
@@ -34,8 +34,8 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
                        │   APIs          │◄──►│   - DataHub      │
                        │                 │    │   - Accessor     │
                        │ - Tushare       │    │   - Store       │
-                       │ - MINIQMT       │    │   - Runtime      │
-                       │                 │    │   - PIT Safe     │
+                       │ - FRED          │    │   - Runtime      │
+                       │ - MINIQMT       │    │   - PIT Safe     │
                        └─────────────────┘    └─────────────────┘
 ```
 
@@ -167,6 +167,8 @@ ditto/
 │   ├── meta/                  # SQLite 元数据
 │   ├── stock_daily/           # 股票日线
 │   ├── etf_daily/             # ETF 日线
+│   ├── fx_daily/              # 外汇日线
+│   ├── commodity_daily/       # 大宗商品日线
 │   └── freezes/               # 冻结点
 ├── docs/                      # 项目文档
 │   ├── design/                # 设计文档
@@ -219,6 +221,19 @@ ditto/
 - [ADR](docs/adr/README.md) - 架构决策记录
 
 ## 变更记录
+
+### v0.6.0 (2026-03-01)
+**新增**
+- FRED 数据源集成（美国宏观数据：GDP、CPI、失业率等）
+- 外汇（FX）日线数据存储与 API
+- 大宗商品（Commodity）日线数据存储与 API（含 VIX 指数）
+- Exchange 层重构：协议 + DI 注入模式
+- 全局时区工具（zoneinfo + DST 处理）
+
+**改进**
+- FRED Adapter 基类抽取，消除重复代码
+- 宏观数据 PIT 语义修正（knowledge_date 使用观测日期）
+- API 路由实现完整查询逻辑（不再占位）
 
 ### v0.5.0 (2026-01-23)
 **新增**

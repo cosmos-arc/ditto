@@ -24,7 +24,7 @@ from ditto_infra.foundation.config.environment import get_environment
 from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, InitScope
 from ditto_infra.foundation.config.settings import Settings
 from ditto_infra.foundation.observability import Metrics, logger
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -32,12 +32,15 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from ditto_port.api.routes import (
     capital,
+    commodity,
     fundamental,
+    fx,
     ingestion,
     macro,
     market,
     metadata,
     portfolio,
+    source,
 )
 from ditto_port.exceptions import DittoException
 from ditto_port.middleware import (
@@ -101,16 +104,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     - Observability 初始化/关闭
     - SQLitePool 创建/关闭
     - DataHub 创建
+
+    注意：dishka 中间件在应用创建后立即设置，而不是在 lifespan 中。
     """
     logger.info("Starting Ditto API server", event="server_start")
 
-    container = make_async_app_container()
+    # 从 app.state 获取容器（由 setup_dishka 设置）
+    container = app.state.dishka_container
     typed_container = cast(AsyncContainerProtocol, container)
 
     try:
-        # 集成到 FastAPI
-        setup_dishka(container=container, app=app)
-
         # 初始化配置（fail-fast 模式）
         logger.info("Initializing configuration", event="config_init_start")
         coordinator: ConfigInitCoordinator = await typed_container.get(
@@ -166,6 +169,11 @@ app = FastAPI(
     default_response_class=ORJSONResponse,  # 使用 orjson 提升性能
 )
 
+# 在应用启动前设置 dishka（必须在 lifespan 之外）
+# 这样中间件可以在应用启动前添加
+container = make_async_app_container()
+setup_dishka(container=container, app=app)
+
 # 配置CORS
 app.add_middleware(
     CORSMiddleware,
@@ -177,12 +185,22 @@ app.add_middleware(
 
 # 挂载业务路由
 app.include_router(capital.router, prefix="/api/v1")
+app.include_router(commodity.router, prefix="/api/v1")
 app.include_router(fundamental.router, prefix="/api/v1")
+app.include_router(fx.router, prefix="/api/v1")
 app.include_router(ingestion.router, prefix="/api/v1")
 app.include_router(macro.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")
 app.include_router(metadata.router, prefix="/api/v1")
 app.include_router(portfolio.router, prefix="/api/v1")
+app.include_router(source.router, prefix="/api/v1")
+
+# 调试路由： 条件注册（仅非生产环境）
+env = get_environment()
+if not env.is_production:
+    from ditto_port.api.routes.debug import debug_router
+
+    app.include_router(debug_router, prefix="/api/v1", tags=["debug"])
 
 
 # Request logging middleware
@@ -281,19 +299,6 @@ async def get_status(request: Request) -> dict[str, Any]:
     }
 
 
-@app.get("/api/v1/logs/test")
-async def generate_test_logs() -> dict[str, str]:
-    """测试日志记录功能（仅开发/测试环境可用）."""
-    env = get_environment()
-    if env.is_production:
-        raise HTTPException(status_code=404, detail="Not found")
-
-    logger.info("Test info log", test_data="example")
-    logger.warning("Test warning log", test_data="example")
-    logger.error("Test error log", test_data="example")
-    return {"message": "Test logs generated"}
-
-
 # 注册异常处理器
 app.add_exception_handler(DittoException, ditto_exception_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
@@ -302,7 +307,10 @@ app.add_exception_handler(Exception, general_exception_handler)
 
 
 if __name__ == "__main__":
+    from granian.constants import Interfaces
+
     granian.Granian(
-        "main:app",
+        "ditto_port.main:app",
         address="0.0.0.0:8000",
+        interface=Interfaces.ASGI,  # FastAPI 需要 ASGI 接口
     ).serve()

@@ -35,11 +35,11 @@ class TestCapitalTushareAdapterFetchValuationMetrics:
 
         # Assert
         assert len(result) > 0
-        assert "instrument_id" in result.columns
+        assert "source_ticker" in result.columns
         assert "trade_date" in result.columns
         assert "pe_ratio" in result.columns
         assert "pb_ratio" in result.columns
-        assert result["instrument_id"][0] == "000001.SZ"
+        assert result["source_ticker"][0] == "000001.SZ"
 
     def test_fetch_valuation_metrics_empty_response_returns_empty_dataframe(
         self,
@@ -61,7 +61,7 @@ class TestCapitalTushareAdapterFetchValuationMetrics:
 
         # Assert
         assert len(result) == 0
-        assert "instrument_id" in result.columns
+        assert "source_ticker" in result.columns
 
 
 class TestCapitalTushareAdapterFetchDividend:
@@ -80,6 +80,7 @@ class TestCapitalTushareAdapterFetchDividend:
                 "cash_div": [0.5],  # API returns cash_div
                 "record_date": ["20240102"],
                 "ann_date": ["20240101"],
+                "div_proc": ["实施"],  # P015: 实施进度
             }
         )
 
@@ -92,9 +93,10 @@ class TestCapitalTushareAdapterFetchDividend:
 
         # Assert
         assert len(result) > 0
-        assert "instrument_id" in result.columns
+        assert "source_ticker" in result.columns
         assert "ex_dividend_date" in result.columns
         assert "dividend_per_share" in result.columns
+        assert "div_proc" in result.columns  # P015: 验证实施进度字段
 
 
 class TestCapitalTushareAdapterFetchMarginTrading:
@@ -126,7 +128,7 @@ class TestCapitalTushareAdapterFetchMarginTrading:
 
         # Assert
         assert len(result) > 0
-        assert "instrument_id" in result.columns
+        assert "source_ticker" in result.columns
         assert "margin_buy_balance" in result.columns
         assert "short_sell_balance" in result.columns
 
@@ -158,43 +160,9 @@ class TestCapitalTushareAdapterFetchPledgeRatio:
 
         # Assert
         assert len(result) > 0
-        assert "instrument_id" in result.columns
+        assert "source_ticker" in result.columns
         assert "pledge_ratio" in result.columns
         assert "total_shares" in result.columns
-
-
-class TestCapitalTushareAdapterFetchFutures:
-    """Tests for fetch_futures method."""
-
-    def test_fetch_futures_returns_dataframe(
-        self,
-        mocker: pytest_mock.MockFixture,
-    ) -> None:
-        """Test fetching futures data returns valid DataFrame."""
-        # Arrange
-        mock_response = pl.DataFrame(
-            {
-                "ts_code": ["IF2401"],
-                "trade_date": ["20240101"],
-                "oi": [10000.0],
-                "settlement": [3500.0],
-                "vol": [5000.0],
-                "amount": [175000000.0],
-            }
-        )
-
-        mock_client = mocker.Mock()
-        mock_client.query.return_value = mock_response
-
-        # Act
-        adapter = CapitalTushareAdapter(_client=mock_client)
-        result = adapter.fetch_futures(ts_code="IF2401")
-
-        # Assert
-        assert len(result) > 0
-        assert "instrument_id" in result.columns
-        assert "open_interest" in result.columns
-        assert "settlement_price" in result.columns
 
 
 class TestCapitalTushareAdapterFetchIndexComposition:
@@ -224,7 +192,7 @@ class TestCapitalTushareAdapterFetchIndexComposition:
         # Assert
         assert len(result) == 2
         assert "index_id" in result.columns
-        assert "instrument_id" in result.columns
+        assert "source_ticker" in result.columns
         assert "effective_from" in result.columns
 
 
@@ -256,6 +224,6 @@ class TestCapitalTushareAdapterFetchCorporateActions:
 
         # Assert
         assert len(result) > 0
-        assert "instrument_id" in result.columns
+        assert "source_ticker" in result.columns
         assert "action_type" in result.columns
         assert "announcement_date" in result.columns

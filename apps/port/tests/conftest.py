@@ -132,7 +132,7 @@ def sample_etf_data() -> list[dict[str, Any]]:
     """示例ETF数据."""
     return [
         {
-            "symbol": "510300",
+            "ticker": "510300",
             "name": "沪深300ETF",
             "market": "上海",
             "category": "指数型",
@@ -142,7 +142,7 @@ def sample_etf_data() -> list[dict[str, Any]]:
             "knowledge_date": "2024-01-01",
         },
         {
-            "symbol": "159915",
+            "ticker": "159915",
             "name": "创业板ETF",
             "market": "深圳",
             "category": "指数型",
@@ -158,12 +158,12 @@ def sample_etf_data() -> list[dict[str, Any]]:
 def sample_daily_data() -> list[dict[str, Any]]:
     """示例日线数据."""
     data = []
-    symbol = "510300"
+    ticker = "510300"
     for i in range(10):
         date = f"2024-01-{i + 1:02d}"
         data.append(
             {
-                "symbol": symbol,
+                "ticker": ticker,
                 "date": date,
                 "open": 3.5 + i * 0.01,
                 "high": 3.6 + i * 0.01,

@@ -10,6 +10,7 @@ from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.source_service import SourceService
+from ditto_datahub.sources import ExchangeTransformers
 
 from ditto_port.registry.container import make_app_container
 from ditto_port.registry.contexts.bundle import IngestionBundle
@@ -47,6 +48,7 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
         macro_service = container.get(MacroService)
         source_service = container.get(SourceService)
         ingestion_log_service = container.get(IngestionLogService)
+        exchange_transformers = container.get(ExchangeTransformers)
 
         # 创建协调器
         with create_coordinator(
@@ -73,6 +75,7 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
                 macro_service=macro_service,
                 source_service=source_service,
                 ingestion_log_service=ingestion_log_service,
+                exchange_transformers=exchange_transformers,
                 coordinator=coordinator,
                 backfill_manager=backfill_manager,
             )

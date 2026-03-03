@@ -57,18 +57,19 @@ class DividendWriter:
                 """INSERT INTO dividend
                 (instrument_id, ex_dividend_date, knowledge_date,
                  effective_from, effective_to,
-                 dividend_per_share, dividend_yield)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                 dividend_per_share, dividend_yield, div_proc)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT DO NOTHING""",
                 [
                     (
                         r["instrument_id"],
-                        r["ex_dividend_date"],
+                        r.get("ex_dividend_date"),  # P015: 预案阶段可能为 null
                         r["knowledge_date"],
                         r["effective_from"],
                         r.get("effective_to"),
-                        r["dividend_per_share"],
-                        r["dividend_yield"],
+                        r.get("dividend_per_share"),
+                        r.get("dividend_yield"),
+                        r.get("div_proc"),  # P015: 实施进度
                     )
                     for r in records
                 ],

@@ -23,14 +23,15 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
     pool = SQLitePool(str(db_path))
     pool.get_connection().execute(
         """CREATE TABLE IF NOT EXISTS dividend (
-        instrument_id TEXT NOT NULL,
-        ex_dividend_date DATE NOT NULL,
+        instrument_id INTEGER NOT NULL,
+        ex_dividend_date DATE,  -- P015: nullable for preliminary stage
         knowledge_date DATE NOT NULL,
         effective_from DATE NOT NULL,
         effective_to DATE,
         dividend_per_share REAL,
         dividend_yield REAL,
-        PRIMARY KEY (instrument_id, ex_dividend_date, effective_from)
+        div_proc TEXT,  -- P015: implementation progress
+        PRIMARY KEY (instrument_id, effective_from, ex_dividend_date)
     )"""
     )
     return pool
@@ -56,13 +57,14 @@ class TestDividendWriter:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "instrument_id": ["600000"],
+                "instrument_id": [1000001],  # 使用整数 instrument_id
                 "ex_dividend_date": [date(2024, 6, 15)],
                 "knowledge_date": [date(2024, 6, 10)],
                 "effective_from": [date(2024, 6, 11)],
                 "effective_to": [None],
                 "dividend_per_share": [0.5],
                 "dividend_yield": [2.5],
+                "div_proc": ["实施"],  # P015: 实施进度
             }
         )
 
@@ -82,8 +84,9 @@ class TestDividendWriter:
         client = SQLiteClient(in_memory_db)
         rows = client.fetchall("SELECT * FROM dividend")
         assert len(rows) == 1
-        assert rows[0]["instrument_id"] == "600000"
+        assert rows[0]["instrument_id"] == 1000001
         assert rows[0]["dividend_per_share"] == 0.5
+        assert rows[0]["div_proc"] == "实施"
 
     def test_write_returns_count(
         self,
@@ -95,7 +98,7 @@ class TestDividendWriter:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "instrument_id": ["600000", "600001", "600002"],
+                "instrument_id": [1000001, 1000002, 1000003],  # 使用整数
                 "ex_dividend_date": [
                     date(2024, 6, 15),
                     date(2024, 6, 15),
@@ -114,6 +117,7 @@ class TestDividendWriter:
                 "effective_to": [None, None, None],
                 "dividend_per_share": [0.5, 0.6, 0.7],
                 "dividend_yield": [2.5, 3.0, 3.5],
+                "div_proc": ["实施", "实施", "实施"],  # P015
             }
         )
 
@@ -142,8 +146,9 @@ class TestDividendWriter:
                 "effective_to": [],
                 "dividend_per_share": [],
                 "dividend_yield": [],
+                "div_proc": [],  # P015
             }
-        )
+        ).cast({"instrument_id": pl.Int64})  # 确保类型正确
 
         mocker.patch.object(Metrics.data_records, "add")
 
@@ -168,13 +173,14 @@ class TestDividendWriter:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "instrument_id": ["600000"],
+                "instrument_id": [1000001],  # 使用整数
                 "ex_dividend_date": [date(2024, 6, 15)],
                 "knowledge_date": [date(2024, 6, 10)],
                 "effective_from": [date(2024, 6, 11)],
                 "effective_to": [None],
                 "dividend_per_share": [0.5],
                 "dividend_yield": [2.5],
+                "div_proc": ["实施"],  # P015
             }
         )
 
@@ -202,13 +208,14 @@ class TestDividendWriter:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "instrument_id": ["600000"],
+                "instrument_id": [1000001],  # 使用整数
                 "ex_dividend_date": [date(2024, 6, 15)],
                 "knowledge_date": [date(2024, 6, 10)],
                 "effective_from": [date(2024, 6, 11)],
                 "effective_to": [date(2024, 7, 1)],
                 "dividend_per_share": [0.5],
                 "dividend_yield": [2.5],
+                "div_proc": ["实施"],  # P015
             }
         )
 

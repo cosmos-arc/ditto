@@ -240,12 +240,25 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
-    def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
+    def fetch_etf_daily(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch ETF daily OHLCV bars.
 
+        Supports two query modes:
+        - By date (batch): Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "510300.SH").
+            start_date: Start date (YYYY-MM-DD). Required with source_ticker.
+            end_date: End date (YYYY-MM-DD). Required with source_ticker.
 
         Returns:
             DataFrame with columns (matching ETF_DAILY_SCHEMA):
@@ -256,6 +269,7 @@ class DataSource(ABC):
             - pct_change: Float64
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
             SourceTransformationError: If data transformation fails.
 
@@ -265,16 +279,26 @@ class DataSource(ABC):
     @abstractmethod
     def fetch_index_daily(
         self,
-        trade_date: str,
+        trade_date: str | None = None,
         ts_codes: list[str] | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> pl.DataFrame:
         """
         Fetch index daily OHLCV bars.
 
+        Supports two query modes:
+        - By date (batch): Specify trade_date (optionally with ts_codes filter)
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
             ts_codes: List of ts_codes (e.g., ["000001.SH", "399001.SZ"]).
-                由编排层提供。如果为 None，实现类应提供合理的默认值。
+                Only used with trade_date mode.
+            source_ticker: Source code (e.g., "000001.SH").
+            start_date: Start date (YYYY-MM-DD). Required with source_ticker.
+            end_date: End date (YYYY-MM-DD). Required with source_ticker.
 
         Returns:
             DataFrame with columns (matching INDEX_DAILY_SCHEMA):
@@ -285,6 +309,7 @@ class DataSource(ABC):
             - pct_change: Float64
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
             SourceTransformationError: If data transformation fails.
 
@@ -292,9 +317,17 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
-    def fetch_stock_basic(self) -> pl.DataFrame:
+    def fetch_stock_basic(self, source_ticker: str | None = None) -> pl.DataFrame:
         """
         Fetch stock basic information.
+
+        Supports two modes:
+        - Batch mode: No source_ticker, fetch all stocks (all listing statuses)
+        - Single mode: With source_ticker, fetch specific stock
+
+        Args:
+            source_ticker: Stock code (e.g., "600519.SH"). Optional.
+                If not provided, fetches all stocks.
 
         Returns:
             DataFrame with columns:
@@ -303,6 +336,8 @@ class DataSource(ABC):
             - name: Stock name
             - exchange: Exchange code (SSE/SZSE/BSE)
             - list_date: Listing date
+            - list_status: Listing status (L=Active, D=Delisted, P=Suspended)
+            Empty DataFrame if single stock not found.
 
         Raises:
             SourceFetchError: If fetch fails.
@@ -311,12 +346,25 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
-    def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
+    def fetch_stock_daily(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch stock daily OHLCV bars.
 
+        Supports two query modes:
+        - By date (batch): Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Required with source_ticker.
+            end_date: End date (YYYY-MM-DD). Required with source_ticker.
 
         Returns:
             DataFrame with columns (same as ETF daily schema):
@@ -327,6 +375,7 @@ class DataSource(ABC):
             - pct_change: Float64
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
             SourceTransformationError: If data transformation fails.
 
@@ -354,12 +403,25 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
-    def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
+    def fetch_fund_adj(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch ETF/fund adjustment factors.
 
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "510300.SH").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
 
         Returns:
             DataFrame with columns:
@@ -368,6 +430,7 @@ class DataSource(ABC):
             - adj_factor: Float64
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
 
         """
@@ -398,119 +461,217 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
-    def fetch_balance_sheet(self, trade_date: str) -> pl.DataFrame:
+    def fetch_balance_sheet(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch balance sheet data.
 
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
 
         Returns:
             DataFrame with balance_sheet SourceSchema fields.
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
 
         """
         pass
 
     @abstractmethod
-    def fetch_income_statement(self, trade_date: str) -> pl.DataFrame:
+    def fetch_income_statement(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch income statement data.
 
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
 
         Returns:
             DataFrame with income_statement SourceSchema fields.
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
 
         """
         pass
 
     @abstractmethod
-    def fetch_cash_flow(self, trade_date: str) -> pl.DataFrame:
+    def fetch_cash_flow(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch cash flow data.
 
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
 
         Returns:
             DataFrame with cash_flow SourceSchema fields.
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
 
         """
         pass
 
     @abstractmethod
-    def fetch_dividend(self, trade_date: str) -> pl.DataFrame:
+    def fetch_dividend(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch dividend data.
 
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
 
         Returns:
             DataFrame with dividend SourceSchema fields.
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
 
         """
         pass
 
     @abstractmethod
-    def fetch_valuation_metrics(self, trade_date: str) -> pl.DataFrame:
+    def fetch_valuation_metrics(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch valuation metrics data.
 
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
 
         Returns:
             DataFrame with valuation_metrics SourceSchema fields.
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
 
         """
         pass
 
     @abstractmethod
-    def fetch_margin_trading(self, trade_date: str) -> pl.DataFrame:
+    def fetch_margin_trading(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch margin trading data.
 
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
 
         Returns:
             DataFrame with margin_trading SourceSchema fields.
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
 
         """
         pass
 
     @abstractmethod
-    def fetch_pledge_ratio(self, trade_date: str) -> pl.DataFrame:
+    def fetch_pledge_ratio(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch pledge ratio data.
 
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
 
         Returns:
             DataFrame with pledge_ratio SourceSchema fields.
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
 
         """
@@ -526,23 +687,6 @@ class DataSource(ABC):
 
         Returns:
             DataFrame with macro_indicators SourceSchema fields.
-
-        Raises:
-            SourceFetchError: If fetch fails.
-
-        """
-        pass
-
-    @abstractmethod
-    def fetch_futures(self, trade_date: str) -> pl.DataFrame:
-        """
-        Fetch futures data.
-
-        Args:
-            trade_date: Trade date (YYYY-MM-DD).
-
-        Returns:
-            DataFrame with futures SourceSchema fields.
 
         Raises:
             SourceFetchError: If fetch fails.
@@ -586,3 +730,102 @@ class DataSource(ABC):
 
         """
         pass
+
+    @abstractmethod
+    def fetch_fx_daily(
+        self,
+        ts_codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch FX (Foreign Exchange) daily OHLCV bars.
+
+        Args:
+            ts_codes: FX ticker codes (e.g., ["USDCNH.FXCM"]).
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with FX_SOURCE_SCHEMA columns:
+            - instrument_id: Internal instrument ID
+            - trade_date: Trade date (Date)
+            - trade_date_utc: Trade date in UTC (Datetime)
+            - open, high, low, close: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_commodities(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch commodity daily prices.
+
+        Args:
+            codes: Commodity codes (e.g., ["COMMOD_WTI", "COMMOD_GOLD"]).
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with COMMODITY_SOURCE_SCHEMA columns:
+            - instrument_id: Internal instrument ID
+            - trade_date: Trade date (Date)
+            - trade_date_utc: Trade date in UTC (Datetime)
+            - open, high, low, close: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_metal_daily(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch precious metals daily prices (Gold, Silver).
+
+        Uses Tushare fx_daily API with METAL classify.
+
+        Args:
+            codes: Metal codes (e.g., ["COMMOD_GOLD", "XAUUSD.FXCM"]).
+                   支持别名：COMMOD_GOLD, GOLD, XAUUSD, COMMOD_SILVER,
+                   SILVER, XAGUSD
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with COMMODITY_SOURCE_SCHEMA columns:
+            - instrument_id: Internal instrument ID
+            - trade_date: Trade date (Date)
+            - trade_date_utc: Trade date in UTC (Datetime)
+            - open, high, low, close: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+
+__all__ = [
+    "DataSource",
+    "DataSourceError",
+    "SourceAuthenticationError",
+    "SourceConfigurationError",
+    "SourceFetchError",
+    "SourceRateLimitError",
+    "SourceTransformationError",
+]

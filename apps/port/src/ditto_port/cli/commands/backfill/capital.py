@@ -15,9 +15,6 @@ _margin_impl = create_backfill_command("margin_trading", "回补融资融券")
 # 股权质押
 _pledge_impl = create_backfill_command("pledge_ratio", "回补股权质押")
 
-# 期货持仓
-_futures_position_impl = create_backfill_command("futures_position", "回补期货持仓")
-
 
 @app.command("valuation")
 def valuation(
@@ -50,14 +47,3 @@ def pledge(
 ) -> None:
     """回补股权质押."""
     return _pledge_impl(ctx, start, end, parallel)
-
-
-@app.command("futures-position")
-def futures_position(
-    ctx: typer.Context,
-    start: str = typer.Option(..., "--start", "-s", help="开始日期 (YYYY-MM-DD)"),
-    end: str = typer.Option(..., "--end", "-e", help="结束日期 (YYYY-MM-DD)"),
-    parallel: int = typer.Option(1, "--parallel", "-p", help="并行度"),
-) -> None:
-    """回补期货持仓."""
-    return _futures_position_impl(ctx, start, end, parallel)

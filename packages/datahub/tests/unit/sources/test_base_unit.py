@@ -177,7 +177,9 @@ class TestDataSourceABC:
             def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
-            def fetch_stock_basic(self) -> pl.DataFrame:
+            def fetch_stock_basic(
+                self, source_ticker: str | None = None
+            ) -> pl.DataFrame:
                 return pl.DataFrame()
 
             def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
@@ -233,6 +235,30 @@ class TestDataSourceABC:
                 return pl.DataFrame()
 
             def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_fx_daily(
+                self,
+                ts_codes: list[str],
+                start_date: str,
+                end_date: str,
+            ) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_commodities(
+                self,
+                codes: list[str],
+                start_date: str,
+                end_date: str,
+            ) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_metal_daily(
+                self,
+                codes: list[str],
+                start_date: str,
+                end_date: str,
+            ) -> pl.DataFrame:
                 return pl.DataFrame()
 
         # Should not raise

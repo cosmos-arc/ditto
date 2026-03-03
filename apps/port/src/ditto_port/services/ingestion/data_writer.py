@@ -18,6 +18,7 @@ from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
+from ditto_infra.foundation import logger
 from ditto_infra.foundation.util.checksum import ChecksumCompute
 
 
@@ -149,12 +150,21 @@ class IngestionDataWriter:
             ValueError: 不支持的数据集
 
         """
-        year = int(trade_date[:4])
-
         try:
             dataset_enum = Dataset(dataset)  # 转换为枚举进行比较
         except ValueError as e:
             raise ValueError(f"不支持写入数据集: {dataset}") from e
+
+        # 元数据类型数据集不需要年份分区
+        metadata_datasets = {
+            Dataset.CALENDAR,
+            Dataset.STOCK_BASIC,
+            Dataset.ETF_BASIC,
+            Dataset.INDEX_BASIC,
+        }
+
+        # 只有非元数据类型才需要提取年份
+        year = int(trade_date[:4]) if dataset_enum not in metadata_datasets else 0
 
         source_ticker_col = "source_ticker"
         handlers: dict[Dataset, Callable[[], WriteResult]] = {
@@ -183,7 +193,6 @@ class IngestionDataWriter:
             ),
             Dataset.ADJ_FACTOR: lambda: self._write_adj_factor(
                 dataset,
-                dataset_enum,
                 df,
                 year,
                 on_duplicate,
@@ -191,7 +200,6 @@ class IngestionDataWriter:
             ),
             Dataset.FUND_ADJ: lambda: self._write_adj_factor(
                 dataset,
-                dataset_enum,
                 df,
                 year,
                 on_duplicate,
@@ -244,12 +252,6 @@ class IngestionDataWriter:
                 df,
                 year,
             ),
-            Dataset.FUTURES_POSITION: lambda: self._write_capital(
-                dataset,
-                dataset_enum,
-                df,
-                year,
-            ),
             Dataset.CORPORATE_ACTIONS: lambda: self._write_fundamental(
                 dataset,
                 dataset_enum,
@@ -262,6 +264,18 @@ class IngestionDataWriter:
             Dataset.INDEX_BASIC: lambda: self._write_basic(df, trade_date, "index"),
             Dataset.INDEX_DAILY: lambda: self._write_index_bars(
                 dataset, df, year, on_duplicate, source_ticker_col
+            ),
+            Dataset.FX_DAILY: lambda: self._write_fx_bars(
+                dataset,
+                df,
+                year,
+                on_duplicate,
+            ),
+            Dataset.COMMODITY_DAILY: lambda: self._write_commodity_bars(
+                dataset,
+                df,
+                year,
+                on_duplicate,
             ),
         }
 
@@ -279,16 +293,13 @@ class IngestionDataWriter:
         on_duplicate: OnDuplicate,
         source_ticker_col: str,
     ) -> WriteResult:
-        asset_class: Literal["stock", "etf"] = (
-            "etf" if dataset_enum == Dataset.ETF_DAILY else "stock"
-        )
-        instrument_id_mapping = (
-            self._metadata_service.resolve_or_create_instruments_batch(
-                df=df,
-                source=self._source_name,
-                asset_class=asset_class,
-                source_ticker_col=source_ticker_col,
-            )
+        # 日行情数据不包含创建证券所需的元数据字段，
+        # 使用 resolve_instrument_ids_batch 仅解析已存在的证券
+        source_tickers = df[source_ticker_col].unique().to_list()
+        instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
+            identifiers=source_tickers,
+            source=self._source_name,
+            asof=None,
         )
         enriched_df = _enrich_with_instrument_id(
             df,
@@ -303,6 +314,7 @@ class IngestionDataWriter:
             year=year,
             on_duplicate=on_duplicate,
         )
+
         return _to_write_result(
             dataset,
             year,
@@ -332,14 +344,13 @@ class IngestionDataWriter:
             WriteResult: 写入结果
 
         """
-        # 解析或创建 instrument_id
-        instrument_id_mapping = (
-            self._metadata_service.resolve_or_create_instruments_batch(
-                df=df,
-                source=self._source_name,
-                asset_class="index",
-                source_ticker_col=source_ticker_col,
-            )
+        # 指数行情数据不包含创建证券所需的元数据字段，
+        # 使用 resolve_instrument_ids_batch 仅解析已存在的证券
+        source_tickers = df[source_ticker_col].unique().to_list()
+        instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
+            identifiers=source_tickers,
+            source=self._source_name,
+            asof=None,
         )
 
         # 添加 instrument_id 列
@@ -357,6 +368,38 @@ class IngestionDataWriter:
 
         return _to_write_result(dataset, year, enriched_df, rows_written)
 
+    def _write_fx_bars(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+    ) -> WriteResult:
+        """Write FX daily bars data."""
+        rows_written = self._market_service.save_bars(
+            dataset="fx_daily",
+            df=df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(dataset, year, df, rows_written)
+
+    def _write_commodity_bars(
+        self,
+        dataset: str,
+        df: pl.DataFrame,
+        year: int,
+        on_duplicate: OnDuplicate,
+    ) -> WriteResult:
+        """Write Commodity daily bars data."""
+        rows_written = self._market_service.save_bars(
+            dataset="commodity_daily",
+            df=df,
+            year=year,
+            on_duplicate=on_duplicate,
+        )
+        return _to_write_result(dataset, year, df, rows_written)
+
     def _write_stock_status(
         self,
         dataset: str,
@@ -365,13 +408,13 @@ class IngestionDataWriter:
         on_duplicate: OnDuplicate,
         source_ticker_col: str,
     ) -> WriteResult:
-        instrument_id_mapping = (
-            self._metadata_service.resolve_or_create_instruments_batch(
-                df=df,
-                source=self._source_name,
-                asset_class="stock",
-                source_ticker_col=source_ticker_col,
-            )
+        # 股票状态数据不包含创建证券所需的元数据字段，
+        # 使用 resolve_instrument_ids_batch 仅解析已存在的证券
+        source_tickers = df[source_ticker_col].unique().to_list()
+        instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
+            identifiers=source_tickers,
+            source=self._source_name,
+            asof=None,
         )
         enriched_df = _enrich_with_instrument_id(
             df,
@@ -393,7 +436,6 @@ class IngestionDataWriter:
     def _write_adj_factor(
         self,
         dataset: str,
-        dataset_enum: Dataset,
         df: pl.DataFrame,
         year: int,
         on_duplicate: OnDuplicate,
@@ -401,16 +443,13 @@ class IngestionDataWriter:
     ) -> WriteResult:
         enriched_df = df
         if "instrument_id" not in df.columns:
-            adj_asset_class: Literal["stock", "etf"] = (
-                "etf" if dataset_enum == Dataset.FUND_ADJ else "stock"
-            )
-            instrument_id_mapping = (
-                self._metadata_service.resolve_or_create_instruments_batch(
-                    df=df,
-                    source=self._source_name,
-                    asset_class=adj_asset_class,
-                    source_ticker_col=source_ticker_col,
-                )
+            # 复权因子数据不包含创建证券所需的元数据字段，
+            # 使用 resolve_instrument_ids_batch 仅解析已存在的证券
+            source_tickers = df[source_ticker_col].unique().to_list()
+            instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
+                identifiers=source_tickers,
+                source=self._source_name,
+                asof=None,
             )
             enriched_df = _enrich_with_instrument_id(
                 df,
@@ -438,19 +477,51 @@ class IngestionDataWriter:
         df: pl.DataFrame,
         year: int,
     ) -> WriteResult:
+        # 解析 instrument_id（基本面数据需要有效的 instrument_id 作为外键）
+        source_ticker_col = "source_ticker"
+        if "instrument_id" not in df.columns:
+            source_tickers = df[source_ticker_col].unique().to_list()
+            instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
+                identifiers=source_tickers,
+                source=self._source_name,
+                asof=None,
+            )
+            enriched_df = _enrich_with_instrument_id(
+                df,
+                instrument_id_mapping,
+                source_ticker_col,
+                self._source_name,
+            )
+        else:
+            enriched_df = df
+
+        # 过滤掉 instrument_id 为 null 的记录（无法写入有外键约束的表）
+        total_count = len(enriched_df)
+        enriched_df = enriched_df.filter(pl.col("instrument_id").is_not_null())
+        filtered_count = total_count - len(enriched_df)
+        if filtered_count > 0:
+            logger.warning(
+                f"Filtered {filtered_count} records with null instrument_id",
+                dataset=dataset,
+            )
+
+        if len(enriched_df) == 0:
+            return _to_write_result(dataset, year, enriched_df, 0)
+
         # Map dataset enum to the appropriate save method
         save_methods = {
             Dataset.BALANCE_SHEET: self._fundamental_service.save_balance_sheet,
             Dataset.INCOME_STATEMENT: self._fundamental_service.save_income_statement,
             Dataset.CASH_FLOW: self._fundamental_service.save_cash_flow,
             Dataset.DIVIDEND: self._fundamental_service.save_dividend,
+            Dataset.CORPORATE_ACTIONS: self._fundamental_service.save_corporate_actions,
         }
         save_method = save_methods[dataset_enum]
-        records_written = save_method(df)
+        records_written = save_method(enriched_df)
         return _to_write_result(
             dataset,
             year,
-            df,
+            enriched_df,
             records_written,
         )
 
@@ -461,33 +532,61 @@ class IngestionDataWriter:
         df: pl.DataFrame,
         year: int,
     ) -> WriteResult:
+        # 解析 instrument_id（资本面数据需要有效的 instrument_id 作为外键）
+        source_ticker_col = "source_ticker"
+        if "instrument_id" not in df.columns:
+            source_tickers = df[source_ticker_col].unique().to_list()
+            instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
+                identifiers=source_tickers,
+                source=self._source_name,
+                asof=None,
+            )
+            enriched_df = _enrich_with_instrument_id(
+                df,
+                instrument_id_mapping,
+                source_ticker_col,
+                self._source_name,
+            )
+        else:
+            enriched_df = df
+
+        # 过滤掉 instrument_id 为 null 的记录（无法写入有外键约束的表）
+        total_count = len(enriched_df)
+        enriched_df = enriched_df.filter(pl.col("instrument_id").is_not_null())
+        filtered_count = total_count - len(enriched_df)
+        if filtered_count > 0:
+            logger.warning(
+                f"Filtered {filtered_count} records with null instrument_id",
+                dataset=dataset,
+            )
+
+        if len(enriched_df) == 0:
+            return _to_write_result(dataset, year, enriched_df, 0)
+
         capital_dataset = cast(
             Literal[
                 "valuation_metrics",
                 "margin_trading",
                 "pledge_ratio",
-                "futures_position",
             ],
             dataset_enum.value,
         )
         # 使用特定的 save_* 方法替代已删除的 write() 方法
         if capital_dataset == "valuation_metrics":
-            records_written = self._capital_service.save_valuation_metrics(df)
+            records_written = self._capital_service.save_valuation_metrics(enriched_df)
         elif capital_dataset == "margin_trading":
-            records_written = self._capital_service.save_margin_trading(df)
+            records_written = self._capital_service.save_margin_trading(enriched_df)
         elif capital_dataset == "pledge_ratio":
-            records_written = self._capital_service.save_pledge_ratio(df)
-        elif capital_dataset == "futures_position":
-            records_written = self._capital_service.save_futures(df)
+            records_written = self._capital_service.save_pledge_ratio(enriched_df)
         else:
-            valid = "valuation_metrics, margin_trading, pledge_ratio, futures_position"
+            valid = "valuation_metrics, margin_trading, pledge_ratio"
             raise ValueError(
                 f"Unknown capital_dataset: {capital_dataset}. Expected: {valid}"
             )
         return _to_write_result(
             dataset,
             year,
-            df,
+            enriched_df,
             records_written,
         )
 

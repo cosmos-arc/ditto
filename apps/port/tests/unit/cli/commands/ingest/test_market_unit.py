@@ -58,7 +58,7 @@ class TestMarketCommands:
     ) -> None:
         """测试 stock 命令委托给工厂函数."""
         mock_impl = mocker.patch.object(market, "_stock_daily_impl")
-        market.stock(mock_ctx, "2024-01-02", False)
+        market.stock(mock_ctx, date="2024-01-02", force=False)
         mock_impl.assert_called_once_with(mock_ctx, "2024-01-02", False)
 
     def test_ingest_market_etf_delegates_to_factory(
@@ -66,7 +66,7 @@ class TestMarketCommands:
     ) -> None:
         """测试 etf 命令委托给工厂函数."""
         mock_impl = mocker.patch.object(market, "_etf_daily_impl")
-        market.etf(mock_ctx, "2024-01-02", False)
+        market.etf(mock_ctx, date="2024-01-02", force=False)
         mock_impl.assert_called_once_with(mock_ctx, "2024-01-02", False)
 
     def test_ingest_market_index_delegates_to_factory(
@@ -74,7 +74,7 @@ class TestMarketCommands:
     ) -> None:
         """测试 index 命令委托给工厂函数."""
         mock_impl = mocker.patch.object(market, "_index_daily_impl")
-        market.index(mock_ctx, "2024-01-02", False)
+        market.index(mock_ctx, date="2024-01-02", force=False)
         mock_impl.assert_called_once_with(mock_ctx, "2024-01-02", False)
 
     def test_ingest_market_adj_stock_delegates_to_factory(
@@ -83,7 +83,7 @@ class TestMarketCommands:
         """测试 adj 命令委托给股票复权因子工厂函数."""
         mock_impl = mocker.patch.object(market, "_adj_factor_impl")
         mock_fund_impl = mocker.patch.object(market, "_fund_adj_impl")
-        market.adj(mock_ctx, "2024-01-02", False, fund=False)
+        market.adj(mock_ctx, date="2024-01-02", force=False, fund=False)
         mock_impl.assert_called_once_with(mock_ctx, "2024-01-02", False)
         mock_fund_impl.assert_not_called()
 
@@ -93,7 +93,7 @@ class TestMarketCommands:
         """测试 adj 命令 --fund 选项委托给 ETF/基金复权因子工厂函数."""
         mock_impl = mocker.patch.object(market, "_adj_factor_impl")
         mock_fund_impl = mocker.patch.object(market, "_fund_adj_impl")
-        market.adj(mock_ctx, "2024-01-02", False, fund=True)
+        market.adj(mock_ctx, date="2024-01-02", force=False, fund=True)
         mock_fund_impl.assert_called_once_with(mock_ctx, "2024-01-02", False)
         mock_impl.assert_not_called()
 

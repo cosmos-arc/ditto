@@ -12,7 +12,6 @@ from ditto_datahub.sources.tushare.processors.error_handler import (
 from ditto_datahub.sources.tushare.processors.mappings import (
     CORPORATE_ACTIONS_MAPPING,
     DIVIDEND_MAPPING,
-    FUTURES_MAPPING,
     INDEX_COMPOSITION_MAPPING,
     MARGIN_TRADING_MAPPING,
     PLEDGE_RATIO_MAPPING,
@@ -56,7 +55,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
         Returns:
             DataFrame with columns:
-            - instrument_id: 股票代码
+            - source_ticker: 股票代码
             - trade_date: 交易日期
             - knowledge_date: 知识日期
             - effective_from: 生效开始日期
@@ -141,7 +140,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
         Returns:
             DataFrame with columns:
-            - instrument_id: 股票代码
+            - source_ticker: 股票代码
             - ex_dividend_date: 除权除息日
             - knowledge_date: 知识日期
             - effective_from: 生效开始日期
@@ -219,7 +218,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
         Returns:
             DataFrame with columns:
-            - instrument_id: 股票代码
+            - source_ticker: 股票代码
             - trade_date: 交易日期
             - knowledge_date: 知识日期
             - effective_from: 生效开始日期
@@ -299,7 +298,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
         Returns:
             DataFrame with columns:
-            - instrument_id: 股票代码
+            - source_ticker: 股票代码
             - report_date: 报告期
             - knowledge_date: 知识日期
             - effective_from: 生效开始日期
@@ -342,7 +341,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
             # 重新排列列顺序以符合 SourceSchema
             result = result.select(
-                "instrument_id",
+                "source_ticker",
                 "report_date",
                 "knowledge_date",
                 "effective_from",
@@ -364,90 +363,6 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
             return result
 
-    @traced("source.tushare.fetch_futures")
-    def fetch_futures(
-        self,
-        ts_code: str | None = None,
-        trade_date: str | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
-    ) -> pl.DataFrame:
-        """
-        获取期货数据.
-
-        Args:
-            ts_code: 期货代码 (e.g., "IF2401")
-            trade_date: 交易日期 (YYYYMMDD)
-            start_date: 开始日期 (YYYYMMDD)
-            end_date: 结束日期 (YYYYMMDD)
-
-        Returns:
-            DataFrame with columns:
-            - instrument_id: 期货代码
-            - trade_date: 交易日期
-            - knowledge_date: 知识日期
-            - effective_from: 生效开始日期
-            - effective_to: 生效结束日期
-            - open_interest: 持仓量
-            - settlement_price: 结算价
-            - volume: 成交量
-            - turnover: 成交额
-
-        Raises:
-            SourceFetchError: If fetch fails.
-
-        """
-        logger.info(
-            "Fetching Tushare futures data",
-            event="tushare_futures_fetch_start",
-            ts_code=ts_code,
-            trade_date=trade_date,
-        )
-
-        with tushare_fetch_error_handler("futures_position", "fut"):
-            params: dict[str, str] = {
-                "api_name": "fut",
-                "fields": "ts_code,trade_date,oi,settlement,vol,amount",
-            }
-
-            if ts_code:
-                params["ts_code"] = ts_code
-            if trade_date:
-                params["trade_date"] = trade_date
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
-
-            response = self._client.query(**params)
-
-            result = TushareDataTransformer.transform(
-                response, "futures_position", FUTURES_MAPPING
-            )
-
-            # 添加 PIT 列
-            result = result.with_columns(
-                pl.col("knowledge_date").alias("effective_from"),
-                pl.lit(None, dtype=pl.Date).alias("effective_to"),
-            )
-
-            row_count = len(result)
-            logger.info(
-                "Tushare futures data fetched",
-                event="tushare_futures_fetch_complete",
-                row_count=row_count,
-            )
-            Metrics.data_records.add(
-                row_count,
-                {
-                    "source": "tushare",
-                    "dataset": "futures_position",
-                    "status": "success",
-                },
-            )
-
-            return result
-
     @traced("source.tushare.fetch_index_composition")
     def fetch_index_composition(
         self,
@@ -464,7 +379,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         Returns:
             DataFrame with columns:
             - index_id: 指数代码
-            - instrument_id: 股票代码
+            - source_ticker: 股票代码
             - weight: 权重
             - effective_from: 生效开始日期
             - effective_to: 生效结束日期
@@ -541,7 +456,7 @@ class CapitalTushareAdapter(BaseTushareAdapter):
 
         Returns:
             DataFrame with columns:
-            - instrument_id: 股票代码
+            - source_ticker: 股票代码
             - action_type: 行为类型
             - announcement_date: 公告日期
             - effective_date: 生效日期

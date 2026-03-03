@@ -32,6 +32,17 @@ from ditto_infra.services.notification import NotificationSettings
 from ditto_port.config import load_env_file
 from ditto_port.registry.init_providers import MetadataDbInitProvider
 
+# keyring 是可选依赖，导入失败时静默忽略
+_keyring: Any = None
+keyring_available = False
+try:
+    import keyring as _keyring_module
+
+    _keyring = _keyring_module
+    keyring_available = True
+except ImportError:
+    pass
+
 __all__ = ["ConfigProvider", "RuntimeFlags"]
 
 
@@ -132,6 +143,32 @@ class ConfigProvider(Provider):
     def data_source_settings(self, config_loader: ConfigLoader) -> DataSourceSettings:
         """加载数据源配置。"""
         data_source_values = load_env_file(config_loader, "data_source")
+
+        # Token 加载优先级：环境变量 > keyring > 配置文件
+        # 安全规范：Token 不应明文存储在配置文件中
+
+        # Tushare Token
+        token: str | None = None
+        if env_token := os.getenv("TUSHARE_TOKEN"):
+            token = env_token
+        elif keyring_available and _keyring is not None:
+            # keyring 可用时尝试获取
+            token = _keyring.get_password("tushare", "token")
+
+        if token:
+            data_source_values["tushare_token"] = token
+
+        # FRED API Key
+        fred_api_key: str | None = None
+        if env_key := os.getenv("FRED_API_KEY"):
+            fred_api_key = env_key
+        elif keyring_available and _keyring is not None:
+            # keyring 可用时尝试获取
+            fred_api_key = _keyring.get_password("fred", "api_key")
+
+        if fred_api_key:
+            data_source_values["fred_api_key"] = fred_api_key
+
         return DataSourceSettings.model_validate(data_source_values)
 
     @provide

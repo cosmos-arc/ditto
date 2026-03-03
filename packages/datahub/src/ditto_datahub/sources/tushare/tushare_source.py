@@ -10,9 +10,11 @@ from ditto_datahub.sources.tushare.adapters.calendar import CalendarTushareAdapt
 from ditto_datahub.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_datahub.sources.tushare.adapters.etf import ETFTushareAdapter
 from ditto_datahub.sources.tushare.adapters.fundamental import FundamentalTushareAdapter
+from ditto_datahub.sources.tushare.adapters.fx import FxTushareAdapter
 from ditto_datahub.sources.tushare.adapters.index import IndexTushareAdapter
 from ditto_datahub.sources.tushare.adapters.industry import IndustryTushareAdapter
 from ditto_datahub.sources.tushare.adapters.macro import MacroTushareAdapter
+from ditto_datahub.sources.tushare.adapters.metal import MetalTushareAdapter
 from ditto_datahub.sources.tushare.adapters.stock import StockTushareAdapter
 from ditto_datahub.sources.tushare.client import TushareClient
 
@@ -25,11 +27,13 @@ class TushareSource(DataSource):
     - CalendarTushareAdapter: Trading calendar
     - StockTushareAdapter: Stock-related data
     - ETFTushareAdapter: ETF-related data
+    - MetalTushareAdapter: Precious metals data (XAUUSD, XAGUSD)
 
     Attributes:
         _calendar: Calendar data adapter.
         _stock: Stock data adapter.
         _etf: ETF data adapter.
+        _metal: Precious metals data adapter.
         _client: 共享的 TushareClient 实例。
 
     """
@@ -59,6 +63,8 @@ class TushareSource(DataSource):
         self._capital = CapitalTushareAdapter(_client=self._client)
         self._fundamental = FundamentalTushareAdapter(_client=self._client)
         self._macro = MacroTushareAdapter(_client=self._client)
+        self._fx = FxTushareAdapter(_client=self._client)
+        self._metal = MetalTushareAdapter(_client=self._client)
 
     @staticmethod
     def _to_compact_date(trade_date: str) -> str:
@@ -86,30 +92,51 @@ class TushareSource(DataSource):
         return self._calendar.fetch_calendar(start_date, end_date)
 
     # Stock 相关方法 - 委托给 StockTushareAdapter
-    def fetch_stock_basic(self) -> pl.DataFrame:
+    def fetch_stock_basic(self, source_ticker: str | None = None) -> pl.DataFrame:
         """
         Fetch stock basic information.
 
+        Supports two modes:
+        - Batch mode: No source_ticker, fetch all stocks
+        - Single mode: With source_ticker, fetch specific stock
+
+        Args:
+            source_ticker: Stock code (e.g., "600519.SH"). Optional.
+
         Returns:
             DataFrame with columns:
-            - source_ticker: Source code (e.g., "000001.SZ")
-            - ticker: Display ticker (e.g., "000001")
+            - source_ticker: Source code
+            - ticker: Display ticker
             - name: Stock name
             - exchange: Exchange code
             - list_date: Listing date
+            - list_status: Listing status
 
         Raises:
             SourceFetchError: If fetch fails.
 
         """
-        return self._stock.fetch_stock_basic()
+        return self._stock.fetch_stock_basic(source_ticker)
 
-    def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
+    def fetch_stock_daily(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch stock daily OHLCV bars.
 
+        Supports two query modes:
+        - By date (batch): Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Required with source_ticker.
+            end_date: End date (YYYY-MM-DD). Required with source_ticker.
 
         Returns:
             DataFrame with columns (same as ETF daily schema):
@@ -120,11 +147,17 @@ class TushareSource(DataSource):
             - pct_change: Float64
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
             SourceTransformationError: If data transformation fails.
 
         """
-        return self._stock.fetch_stock_daily(trade_date)
+        return self._stock.fetch_stock_daily(
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
         """
@@ -213,12 +246,25 @@ class TushareSource(DataSource):
         """
         return self._etf.fetch_etf_basic()
 
-    def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
+    def fetch_etf_daily(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch ETF daily OHLCV bars.
 
+        Supports two query modes:
+        - By date (batch): Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "510300.SH").
+            start_date: Start date (YYYY-MM-DD). Required with source_ticker.
+            end_date: End date (YYYY-MM-DD). Required with source_ticker.
 
         Returns:
             DataFrame with columns (matching ETF_DAILY_SCHEMA):
@@ -229,31 +275,55 @@ class TushareSource(DataSource):
             - pct_change: Float64
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
             SourceTransformationError: If data transformation fails.
 
         """
-        return self._etf.fetch_etf_daily(trade_date)
+        return self._etf.fetch_etf_daily(
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
-    def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
+    def fetch_fund_adj(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
         Fetch ETF/fund adjustment factors.
 
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "510300.SH").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
 
         Returns:
             DataFrame with columns:
             - source_ticker: Source code
             - trade_date: Date
-            - knowledge_date: Date (PIT safety: when this data became known)
             - adj_factor: Float64
 
         Raises:
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
 
         """
-        return self._etf.fetch_fund_adj(trade_date)
+        return self._etf.fetch_fund_adj(
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     # Index 相关方法 - 委托给 IndexTushareAdapter
     def fetch_index_basic(self) -> pl.DataFrame:
@@ -276,20 +346,29 @@ class TushareSource(DataSource):
 
     def fetch_index_daily(
         self,
-        trade_date: str,
+        trade_date: str | None = None,
         ts_codes: list[str] | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> pl.DataFrame:
         """
         Fetch index daily OHLCV bars.
+
+        Supports two query modes:
+        - By date (batch): Specify trade_date (optionally with ts_codes filter)
+        - By ticker + date range: Specify source_ticker + start_date + end_date
 
         注意：Tushare index_daily API 要求 ts_code 参数，
         此方法逐个查询指定指数列表并合并结果。
 
         Args:
-            trade_date: Trade date (YYYY-MM-DD).
+            trade_date: Trade date (YYYY-MM-DD). Mutually exclusive with source_ticker.
             ts_codes: List of ts_codes (e.g., ["000001.SH", "399001.SZ"]).
-                由编排层提供，不在 Source 层硬编码。
-                如果为 None，将抛出 ValueError。
+                Only used with trade_date mode.
+            source_ticker: Source code (e.g., "000001.SH").
+            start_date: Start date (YYYY-MM-DD). Required with source_ticker.
+            end_date: End date (YYYY-MM-DD). Required with source_ticker.
 
         Returns:
             DataFrame with columns (matching INDEX_DAILY_SCHEMA):
@@ -300,16 +379,18 @@ class TushareSource(DataSource):
             - pct_change: Float64
 
         Raises:
-            ValueError: If ts_codes is None or empty.
+            ValueError: Invalid parameter combination.
             SourceFetchError: If fetch fails.
             SourceTransformationError: If data transformation fails.
 
         """
-        if not ts_codes:
-            raise ValueError(
-                "ts_codes is required - index codes should be provided by orchestration"
-            )
-        return self._index.fetch_daily(trade_date, ts_codes)
+        return self._index.fetch_daily(
+            trade_date=trade_date,
+            ts_codes=ts_codes,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     # Industry 相关方法 - 委托给 IndustryTushareAdapter
     def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
@@ -331,90 +412,346 @@ class TushareSource(DataSource):
         """
         return self._industry.fetch_sw_industry(level)
 
-    # Financial 相关方法 - 使用 VIP API 批量获取（需要 5000+ 积分）
-    def fetch_balance_sheet(self, trade_date: str) -> pl.DataFrame:
+    # Fundamental 相关方法 - 支持双模式查询
+    def fetch_balance_sheet(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
-        Fetch balance sheet data for a trade date.
+        Fetch balance sheet data.
 
-        使用 VIP API (balancesheet_vip) 按 ann_date 获取全部股票数据。
-        无需指定 ts_code，可批量获取当日公告的所有资产负债表。
+        Supports two query modes:
+        - By date batch: Specify trade_date (uses VIP API)
+        - By ticker + date range: Specify source_ticker + start_date + end_date
 
         Args:
-            trade_date: 公告日期 (YYYY-MM-DD)
+            trade_date: 公告日期 (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Required with source_ticker.
+            end_date: End date (YYYY-MM-DD). Required with source_ticker.
 
         Returns:
-            当日公告的全部股票资产负债表数据
+            DataFrame with balance_sheet SourceSchema fields.
+
+        Raises:
+            ValueError: Invalid parameter combination.
+            SourceFetchError: If fetch fails.
 
         """
-        compact_date = self._to_compact_date(trade_date)
-        return self._fundamental.fetch_balance_sheet_vip(ann_date=compact_date)
+        if trade_date and source_ticker:
+            raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+        if not trade_date and not source_ticker:
+            raise ValueError("必须指定 trade_date 或 source_ticker 之一")
 
-    def fetch_income_statement(self, trade_date: str) -> pl.DataFrame:
+        if trade_date:
+            # 按日期批量查询（使用 VIP API）
+            compact_date = self._to_compact_date(trade_date)
+            return self._fundamental.fetch_balance_sheet_vip(ann_date=compact_date)
+
+        # 按标的查询
+        if not source_ticker or not start_date or not end_date:
+            raise ValueError("按标的查询必须指定 source_ticker、start_date 和 end_date")
+        compact_start = self._to_compact_date(start_date)
+        compact_end = self._to_compact_date(end_date)
+        return self._fundamental.fetch_balance_sheet(
+            ts_code=source_ticker,
+            start_date=compact_start,
+            end_date=compact_end,
+        )
+
+    def fetch_income_statement(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
-        Fetch income statement data for a trade date.
+        Fetch income statement data.
 
-        使用 VIP API (income_vip) 按 ann_date 获取全部股票数据。
-        无需指定 ts_code，可批量获取当日公告的所有利润表。
+        Supports two query modes:
+        - By date batch: Specify trade_date (uses VIP API)
+        - By ticker + date range: Specify source_ticker + start_date + end_date
 
         Args:
-            trade_date: 公告日期 (YYYY-MM-DD)
+            trade_date: 公告日期 (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Required with source_ticker.
+            end_date: End date (YYYY-MM-DD). Required with source_ticker.
 
         Returns:
-            当日公告的全部股票利润表数据
+            DataFrame with income_statement SourceSchema fields.
+
+        Raises:
+            ValueError: Invalid parameter combination.
+            SourceFetchError: If fetch fails.
 
         """
-        compact_date = self._to_compact_date(trade_date)
-        return self._fundamental.fetch_income_statement_vip(ann_date=compact_date)
+        if trade_date and source_ticker:
+            raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+        if not trade_date and not source_ticker:
+            raise ValueError("必须指定 trade_date 或 source_ticker 之一")
 
-    def fetch_cash_flow(self, trade_date: str) -> pl.DataFrame:
+        if trade_date:
+            # 按日期批量查询（使用 VIP API）
+            compact_date = self._to_compact_date(trade_date)
+            return self._fundamental.fetch_income_statement_vip(ann_date=compact_date)
+
+        # 按标的查询
+        if not source_ticker or not start_date or not end_date:
+            raise ValueError("按标的查询必须指定 source_ticker、start_date 和 end_date")
+        compact_start = self._to_compact_date(start_date)
+        compact_end = self._to_compact_date(end_date)
+        return self._fundamental.fetch_income_statement(
+            ts_code=source_ticker,
+            start_date=compact_start,
+            end_date=compact_end,
+        )
+
+    def fetch_cash_flow(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
         """
-        Fetch cash flow data for a trade date.
+        Fetch cash flow data.
 
-        使用 VIP API (cashflow_vip) 按 ann_date 获取全部股票数据。
-        无需指定 ts_code，可批量获取当日公告的所有现金流量表。
+        Supports two query modes:
+        - By date batch: Specify trade_date (uses VIP API)
+        - By ticker + date range: Specify source_ticker + start_date + end_date
 
         Args:
-            trade_date: 公告日期 (YYYY-MM-DD)
+            trade_date: 公告日期 (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Required with source_ticker.
+            end_date: End date (YYYY-MM-DD). Required with source_ticker.
 
         Returns:
-            当日公告的全部股票现金流量表数据
+            DataFrame with cash_flow SourceSchema fields.
+
+        Raises:
+            ValueError: Invalid parameter combination.
+            SourceFetchError: If fetch fails.
 
         """
-        compact_date = self._to_compact_date(trade_date)
-        return self._fundamental.fetch_cash_flow_vip(ann_date=compact_date)
+        if trade_date and source_ticker:
+            raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+        if not trade_date and not source_ticker:
+            raise ValueError("必须指定 trade_date 或 source_ticker 之一")
 
-    def fetch_dividend(self, trade_date: str) -> pl.DataFrame:
-        """Fetch dividend data."""
-        compact_date = self._to_compact_date(trade_date)
-        return self._fundamental.fetch_dividend(ex_date=compact_date)
+        if trade_date:
+            # 按日期批量查询（使用 VIP API）
+            compact_date = self._to_compact_date(trade_date)
+            return self._fundamental.fetch_cash_flow_vip(ann_date=compact_date)
 
-    def fetch_valuation_metrics(self, trade_date: str) -> pl.DataFrame:
-        """Fetch valuation metrics data."""
-        compact_date = self._to_compact_date(trade_date)
-        return self._capital.fetch_valuation_metrics(trade_date=compact_date)
+        # 按标的查询
+        if not source_ticker or not start_date or not end_date:
+            raise ValueError("按标的查询必须指定 source_ticker、start_date 和 end_date")
+        compact_start = self._to_compact_date(start_date)
+        compact_end = self._to_compact_date(end_date)
+        return self._fundamental.fetch_cash_flow(
+            ts_code=source_ticker,
+            start_date=compact_start,
+            end_date=compact_end,
+        )
 
-    def fetch_margin_trading(self, trade_date: str) -> pl.DataFrame:
-        """Fetch margin trading data."""
-        compact_date = self._to_compact_date(trade_date)
-        return self._capital.fetch_margin_trading(trade_date=compact_date)
+    def fetch_dividend(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        Fetch dividend data.
 
-    def fetch_pledge_ratio(self, trade_date: str) -> pl.DataFrame:
-        """Fetch pledge ratio data."""
-        compact_date = self._to_compact_date(trade_date)
-        return self._capital.fetch_pledge_ratio(report_date=compact_date)
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
+        Args:
+            trade_date: 除权除息日 (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
+
+        Returns:
+            DataFrame with dividend SourceSchema fields.
+
+        Raises:
+            ValueError: Invalid parameter combination.
+            SourceFetchError: If fetch fails.
+
+        """
+        if trade_date and source_ticker:
+            raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+        if not trade_date and not source_ticker:
+            raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+
+        if trade_date:
+            # 按日期批量查询
+            compact_date = self._to_compact_date(trade_date)
+            return self._fundamental.fetch_dividend(ex_date=compact_date)
+
+        # 按标的查询
+        if not source_ticker:
+            raise ValueError("按标的查询必须指定 source_ticker")
+        compact_start = self._to_compact_date(start_date) if start_date else None
+        compact_end = self._to_compact_date(end_date) if end_date else None
+        return self._fundamental.fetch_dividend(
+            ts_code=source_ticker,
+            start_date=compact_start,
+            end_date=compact_end,
+        )
+
+    # Capital 相关方法 - 支持双模式查询
+    def fetch_valuation_metrics(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        Fetch valuation metrics data.
+
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
+        Args:
+            trade_date: 交易日期 (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
+
+        Returns:
+            DataFrame with valuation_metrics SourceSchema fields.
+
+        Raises:
+            ValueError: Invalid parameter combination.
+            SourceFetchError: If fetch fails.
+
+        """
+        if trade_date and source_ticker:
+            raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+        if not trade_date and not source_ticker:
+            raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+
+        if trade_date:
+            # 按日期批量查询
+            compact_date = self._to_compact_date(trade_date)
+            return self._capital.fetch_valuation_metrics(trade_date=compact_date)
+
+        # 按标的查询
+        if not source_ticker:
+            raise ValueError("按标的查询必须指定 source_ticker")
+        compact_start = self._to_compact_date(start_date) if start_date else None
+        compact_end = self._to_compact_date(end_date) if end_date else None
+        return self._capital.fetch_valuation_metrics(
+            ts_code=source_ticker,
+            start_date=compact_start,
+            end_date=compact_end,
+        )
+
+    def fetch_margin_trading(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        Fetch margin trading data.
+
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker + start_date + end_date
+
+        Args:
+            trade_date: 交易日期 (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
+
+        Returns:
+            DataFrame with margin_trading SourceSchema fields.
+
+        Raises:
+            ValueError: Invalid parameter combination.
+            SourceFetchError: If fetch fails.
+
+        """
+        if trade_date and source_ticker:
+            raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+        if not trade_date and not source_ticker:
+            raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+
+        if trade_date:
+            # 按日期批量查询
+            compact_date = self._to_compact_date(trade_date)
+            return self._capital.fetch_margin_trading(trade_date=compact_date)
+
+        # 按标的查询
+        if not source_ticker:
+            raise ValueError("按标的查询必须指定 source_ticker")
+        compact_start = self._to_compact_date(start_date) if start_date else None
+        compact_end = self._to_compact_date(end_date) if end_date else None
+        return self._capital.fetch_margin_trading(
+            ts_code=source_ticker,
+            start_date=compact_start,
+            end_date=compact_end,
+        )
+
+    def fetch_pledge_ratio(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        Fetch pledge ratio data.
+
+        Supports two query modes:
+        - By date batch: Specify trade_date
+        - By ticker + date range: Specify source_ticker (start_date/end_date ignored)
+
+        Args:
+            trade_date: 报告期 (YYYY-MM-DD). Mutually exclusive with source_ticker.
+            source_ticker: Source code (e.g., "000001.SZ").
+            start_date: Start date (YYYY-MM-DD). Used with source_ticker.
+            end_date: End date (YYYY-MM-DD). Used with source_ticker.
+
+        Returns:
+            DataFrame with pledge_ratio SourceSchema fields.
+
+        Raises:
+            ValueError: Invalid parameter combination.
+            SourceFetchError: If fetch fails.
+
+        """
+        if trade_date and source_ticker:
+            raise ValueError("trade_date 和 source_ticker 互斥, 不能同时指定")
+        if not trade_date and not source_ticker:
+            raise ValueError("必须指定 trade_date 或 source_ticker 之一")
+
+        if trade_date:
+            # 按日期批量查询
+            compact_date = self._to_compact_date(trade_date)
+            return self._capital.fetch_pledge_ratio(report_date=compact_date)
+
+        # 按标的查询（pledge_ratio API 不支持日期范围）
+        return self._capital.fetch_pledge_ratio(ts_code=source_ticker)
 
     def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
         """Fetch macro indicators data."""
         return self._macro.fetch_macro_indicators(trade_date)
-
-    def fetch_futures(self, trade_date: str) -> pl.DataFrame:
-        """Fetch futures data."""
-        compact_date = self._to_compact_date(trade_date)
-        return self._capital.fetch_futures(
-            ts_code=None,
-            start_date=compact_date,
-            end_date=compact_date,
-        )
 
     def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
         """Fetch corporate actions data."""
@@ -424,6 +761,68 @@ class TushareSource(DataSource):
             start_date=compact_date,
             end_date=compact_date,
         )
+
+    # FX 相关方法 - 委托给 FxTushareAdapter
+    def fetch_fx_daily(
+        self,
+        ts_codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch FX daily data from Tushare.
+
+        Args:
+            ts_codes: FX ticker codes (e.g., ["USDCNH.FXCM"]).
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with FX_SOURCE_SCHEMA columns.
+
+        """
+        return self._fx.fetch_fx_daily(
+            ts_codes=ts_codes,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    # Metal 相关方法 - 委托给 MetalTushareAdapter
+    def fetch_metal_daily(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch precious metals daily data from Tushare fx_daily API.
+
+        使用 fx_daily 接口的 METAL 分类获取贵金属数据（黄金、白银）。
+
+        Args:
+            codes: Metal codes (e.g., ["XAUUSD.FXCM", "COMMOD_GOLD"]).
+                   支持别名：COMMOD_GOLD, GOLD, XAUUSD, COMMOD_SILVER, SILVER, XAGUSD
+            start_date: Start date (YYYY-MM-DD).
+            end_date: End date (YYYY-MM-DD).
+
+        Returns:
+            DataFrame with COMMODITY_SOURCE_SCHEMA columns.
+
+        """
+        return self._metal.fetch_metal_daily(
+            codes=codes,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def fetch_commodities(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """Tushare 不支持商品数据。"""
+        raise NotImplementedError("Tushare does not support commodity data")
 
     def close(self) -> None:
         """

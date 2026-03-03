@@ -13,7 +13,6 @@ from rich.table import Table
 
 from ditto_port.cli.context import create_cli_host
 from ditto_port.models.capital import (
-    to_futures_list,
     to_margin_list,
     to_valuation_list,
 )
@@ -27,8 +26,8 @@ console = Console()
 @contextmanager
 def _get_capital_service() -> Generator[CapitalService, None, None]:
     """获取 CapitalService 实例."""
-    with create_cli_host() as container:
-        yield container.get(CapitalService)
+    with create_cli_host() as bundle:
+        yield bundle.capital_service
 
 
 def _output_json(items: list[Any]) -> None:
@@ -144,50 +143,3 @@ def get_valuation(
 
         console.print(table)
         _print_truncated_hint(len(valuations))
-
-
-@app.command("futures")
-def get_futures(
-    instrument_id: str = typer.Option(..., "--instrument-id", "-i", help="标的 ID"),
-    as_of_date: str = typer.Option(..., "--date", "-d", help="PIT 查询日期"),
-    json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
-) -> None:
-    """
-    查询期货持仓数据.
-
-    示例:
-        ditto query capital futures -i 1 --date 2024-12-31
-
-    """
-    as_of = _parse_date(as_of_date).date()
-    with _get_capital_service() as service:
-        df = service.get_futures(instrument_id, as_of)
-
-        if df.is_empty():
-            typer.echo("未找到期货持仓数据")
-            return
-
-        futures = to_futures_list(df)
-
-        if json_output:
-            _output_json(futures)
-            return
-
-        table = Table(title="期货持仓数据")
-        table.add_column("日期", style="cyan")
-        table.add_column("持仓量", style="yellow", justify="right")
-        table.add_column("结算价", style="green", justify="right")
-        table.add_column("成交量", style="white", justify="right")
-
-        for fut in futures[:_TABLE_DISPLAY_LIMIT]:
-            open_interest = f"{fut.open_interest:,.0f}" if fut.open_interest else "-"
-            settlement = f"{fut.settlement_price:,.2f}" if fut.settlement_price else "-"
-            table.add_row(
-                str(fut.trade_date) if fut.trade_date else "-",
-                open_interest,
-                settlement,
-                f"{fut.volume:,.0f}" if fut.volume else "-",
-            )
-
-        console.print(table)
-        _print_truncated_hint(len(futures))

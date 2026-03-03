@@ -28,8 +28,8 @@ console = Console()
 @contextmanager
 def _get_fundamental_service() -> Generator[FundamentalService, None, None]:
     """获取 FundamentalService 实例."""
-    with create_cli_host() as container:
-        yield container.get(FundamentalService)
+    with create_cli_host() as bundle:
+        yield bundle.fundamental_service
 
 
 def _output_json(items: list[Any]) -> None:

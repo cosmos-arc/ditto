@@ -23,8 +23,8 @@ console = Console()
 @contextmanager
 def _get_metadata_service() -> Generator[MetadataService, None, None]:
     """获取 MetadataService 实例."""
-    with create_cli_host() as container:
-        yield container.get(MetadataService)
+    with create_cli_host() as bundle:
+        yield bundle.metadata_service
 
 
 def _output_json(items: list[Any]) -> None:

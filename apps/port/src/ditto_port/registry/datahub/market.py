@@ -7,6 +7,10 @@ from pathlib import Path
 from dishka import Provider, Scope, provide
 from ditto_datahub.config.data_store import DataStoreSettings
 from ditto_datahub.services.market_service import MarketService
+from ditto_datahub.stores.market.commodity.bars import (
+    CommodityBarsReader,
+    CommodityBarsWriter,
+)
 from ditto_datahub.stores.market.etf.adj.adj_factor_reader import (
     EtfAdjFactorReader,
 )
@@ -17,6 +21,7 @@ from ditto_datahub.stores.market.etf.bars import EtfBarsReader, EtfBarsWriter
 from ditto_datahub.stores.market.etf.nav.nav_reader import EtfNavReader
 from ditto_datahub.stores.market.etf.nav.nav_writer import EtfNavWriter
 from ditto_datahub.stores.market.etf.status import EtfStatusReader, EtfStatusWriter
+from ditto_datahub.stores.market.fx.bars import FxBarsReader, FxBarsWriter
 from ditto_datahub.stores.market.index.bars.bars_reader import IndexBarsReader
 from ditto_datahub.stores.market.index.bars.bars_writer import IndexBarsWriter
 from ditto_datahub.stores.market.index.constituent.constituent_reader import (
@@ -128,14 +133,14 @@ class MarketProvider(Provider):
     # ========================================================================
 
     @provide
-    def index_bars_reader(self, data_root: Path) -> IndexBarsReader:
+    def index_bars_reader(self, settings: DataStoreSettings) -> IndexBarsReader:
         """指数 K线读取器."""
-        return IndexBarsReader(data_root=data_root / "market" / "index" / "bars")
+        return IndexBarsReader(data_root=settings.data_root)
 
     @provide
-    def index_bars_writer(self, data_root: Path) -> IndexBarsWriter:
+    def index_bars_writer(self, settings: DataStoreSettings) -> IndexBarsWriter:
         """指数 K线写入器."""
-        return IndexBarsWriter(data_root=data_root / "market" / "index" / "bars")
+        return IndexBarsWriter(data_root=settings.data_root)
 
     @provide
     def index_constituent_reader(self, data_root: Path) -> IndexConstituentReader:
@@ -146,6 +151,34 @@ class MarketProvider(Provider):
     def index_constituent_writer(self, data_root: Path) -> IndexConstituentWriter:
         """指数成分股写入器."""
         return IndexConstituentWriter(data_root=data_root)
+
+    # ========================================================================
+    # FX Stores
+    # ========================================================================
+
+    @provide
+    def fx_bars_reader(self, settings: DataStoreSettings) -> FxBarsReader:
+        """外汇 K线读取器."""
+        return FxBarsReader(settings.data_root)
+
+    @provide
+    def fx_bars_writer(self, settings: DataStoreSettings) -> FxBarsWriter:
+        """外汇 K线写入器."""
+        return FxBarsWriter(settings.data_root)
+
+    # ========================================================================
+    # Commodity Stores
+    # ========================================================================
+
+    @provide
+    def commodity_bars_reader(self, settings: DataStoreSettings) -> CommodityBarsReader:
+        """大宗商品 K线读取器."""
+        return CommodityBarsReader(settings.data_root)
+
+    @provide
+    def commodity_bars_writer(self, settings: DataStoreSettings) -> CommodityBarsWriter:
+        """大宗商品 K线写入器."""
+        return CommodityBarsWriter(settings.data_root)
 
     # ========================================================================
     # Market Service
@@ -172,6 +205,10 @@ class MarketProvider(Provider):
         index_bars_writer: IndexBarsWriter,
         index_constituent_reader: IndexConstituentReader,
         index_constituent_writer: IndexConstituentWriter,
+        fx_bars_reader: FxBarsReader,
+        fx_bars_writer: FxBarsWriter,
+        commodity_bars_reader: CommodityBarsReader,
+        commodity_bars_writer: CommodityBarsWriter,
     ) -> MarketService:
         """Market 查询服务（支持读写）。"""
         return MarketService(
@@ -193,4 +230,8 @@ class MarketProvider(Provider):
             index_bars_writer=index_bars_writer,
             index_constituent_reader=index_constituent_reader,
             index_constituent_writer=index_constituent_writer,
+            fx_bars_reader=fx_bars_reader,
+            fx_bars_writer=fx_bars_writer,
+            commodity_bars_reader=commodity_bars_reader,
+            commodity_bars_writer=commodity_bars_writer,
         )

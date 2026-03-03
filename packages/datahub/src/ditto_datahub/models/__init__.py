@@ -2,12 +2,15 @@
 
 # DataHub 层自己的 models
 from ditto_datahub.models.common import (
+    AssetClassType,
     Dataset,
+    DateScheduleType,
     Domain,
     InstrumentIdRange,
     OnDuplicate,
     Source,
 )
+from ditto_datahub.models.enums import AssetClass, Exchange
 from ditto_datahub.models.factors import (
     FACTOR_CLASS_FUNDAMENTAL,
     FACTOR_CLASS_MACRO,
@@ -75,11 +78,15 @@ __all__ = [
     "INDICATOR_TYPE_VOLATILITY",
     "INDICATOR_TYPE_VOLUME",
     "QUOTE_SCHEMA",
+    "AssetClass",
+    "AssetClassType",
     "CalendarDay",
     "DataChangedError",
     "Dataset",
+    "DateScheduleType",
     "Domain",
     "ETFExtension",
+    "Exchange",
     "FactorClass",
     "FactorFamily",
     "FactorMetadata",

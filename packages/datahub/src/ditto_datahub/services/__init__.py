@@ -21,7 +21,7 @@ Services module - 域服务统一入口.
 - QualityRecordService: 质量记录服务（对比结果、隔离数据）
 """
 
-# Market 域服务
+# Capital 域服务
 from ditto_datahub.services.capital_service import CapitalService
 
 # Factors 域服务
