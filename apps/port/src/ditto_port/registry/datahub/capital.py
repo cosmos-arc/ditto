@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dishka import Provider, Scope, provide
 from ditto_datahub.services.capital_service import CapitalService
+from ditto_datahub.services.ports import CapitalReadPorts, CapitalWritePorts
 from ditto_datahub.stores.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )
@@ -119,29 +120,53 @@ class CapitalProvider(Provider):
         return IndexCompositionWriter(client=sqlite_client)
 
     # ========================================================================
+    # Capital Ports
+    # ========================================================================
+
+    @provide
+    def capital_read_ports(
+        self,
+        margin_trading_reader: MarginTradingReader,
+        pledge_ratio_reader: PledgeRatioReader,
+        valuation_metrics_reader: ValuationMetricsReader,
+        index_composition_reader: IndexCompositionReader,
+    ) -> CapitalReadPorts:
+        """Capital domain read ports."""
+        return CapitalReadPorts(
+            margin_trading=margin_trading_reader,
+            pledge_ratio=pledge_ratio_reader,
+            valuation_metrics=valuation_metrics_reader,
+            index_composition=index_composition_reader,
+        )
+
+    @provide
+    def capital_write_ports(
+        self,
+        margin_trading_writer: MarginTradingWriter,
+        pledge_ratio_writer: PledgeRatioWriter,
+        valuation_metrics_writer: ValuationMetricsWriter,
+        index_composition_writer: IndexCompositionWriter,
+    ) -> CapitalWritePorts:
+        """Capital domain write ports."""
+        return CapitalWritePorts(
+            margin_trading=margin_trading_writer,
+            pledge_ratio=pledge_ratio_writer,
+            valuation_metrics=valuation_metrics_writer,
+            index_composition=index_composition_writer,
+        )
+
+    # ========================================================================
     # Capital Service
     # ========================================================================
 
     @provide
-    def capital_service(  # noqa: PLR0913
+    def capital_service(
         self,
-        margin_trading_reader: MarginTradingReader,
-        margin_trading_writer: MarginTradingWriter,
-        pledge_ratio_reader: PledgeRatioReader,
-        pledge_ratio_writer: PledgeRatioWriter,
-        valuation_metrics_reader: ValuationMetricsReader,
-        valuation_metrics_writer: ValuationMetricsWriter,
-        index_composition_reader: IndexCompositionReader,
-        index_composition_writer: IndexCompositionWriter,
+        capital_read_ports: CapitalReadPorts,
+        capital_write_ports: CapitalWritePorts,
     ) -> CapitalService:
         """Capital domain unified service."""
         return CapitalService(
-            margin_trading_reader=margin_trading_reader,
-            margin_trading_writer=margin_trading_writer,
-            pledge_ratio_reader=pledge_ratio_reader,
-            pledge_ratio_writer=pledge_ratio_writer,
-            valuation_metrics_reader=valuation_metrics_reader,
-            valuation_metrics_writer=valuation_metrics_writer,
-            index_composition_reader=index_composition_reader,
-            index_composition_writer=index_composition_writer,
+            read_ports=capital_read_ports,
+            write_ports=capital_write_ports,
         )
