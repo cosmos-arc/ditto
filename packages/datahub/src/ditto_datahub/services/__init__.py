@@ -47,6 +47,14 @@ from ditto_datahub.services.market_service import (
 
 # Metadata 域服务
 from ditto_datahub.services.metadata_service import MetadataService
+
+# Ports 对象（用于 DI 容器组装）
+from ditto_datahub.services.ports import (
+    FundamentalReadPorts,
+    FundamentalWritePorts,
+    MarketReadPorts,
+    MarketWritePorts,
+)
 from ditto_datahub.services.quality_record_service import QualityRecordService
 
 # Source 服务
@@ -59,12 +67,16 @@ __all__ = [
     "FactorService",
     "FeatureQuery",
     "FeatureService",
+    "FundamentalReadPorts",
     "FundamentalService",
+    "FundamentalWritePorts",
     "IngestionLogService",
     "MacroService",
     "MarketBarsQuery",
     "MarketConstituentsQuery",
+    "MarketReadPorts",
     "MarketService",
+    "MarketWritePorts",
     "MetadataService",
     "QualityRecordService",
     "SourceService",

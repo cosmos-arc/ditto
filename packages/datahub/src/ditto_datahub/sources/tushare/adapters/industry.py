@@ -61,9 +61,13 @@ def _record_metrics(row_count: int, dataset: str) -> None:
             row_count,
             {"source": "tushare", "dataset": dataset, "status": "success"},
         )
-    except (AttributeError, TypeError):
-        # Observability 未初始化，静默跳过
-        pass
+    except (AttributeError, TypeError) as e:
+        # Observability 未初始化，低噪日志
+        logger.debug(
+            "metrics_emit_skipped",
+            event="observability_not_initialized",
+            reason=str(e),
+        )
 
 
 class IndustryTushareAdapter(BaseTushareAdapter):

@@ -8,24 +8,17 @@ import polars as pl
 from ditto_infra.foundation import traced
 
 from ditto_datahub.config import DataSourceSettings
+
+# 汇率品种代码映射到 instrument_id
+# 使用 4M 范围 (4,000,000 - 4,999,999) 作为汇率
+# 注意：贵金属现货（伦敦金/银）通过 FRED 获取，不在此列表
+# 常量已迁移至 models 层
+from ditto_datahub.models.source_codes import FX_CODE_TO_INSTRUMENT_ID
 from ditto_datahub.sources.schemas.fx_schemas import FX_SOURCE_SCHEMA
 from ditto_datahub.sources.tushare.client import TushareClient
 from ditto_datahub.sources.tushare.processors.error_handler import (
     tushare_fetch_error_handler,
 )
-
-# 汇率品种代码映射到 instrument_id
-# 使用 4M 范围 (4,000,000 - 4,999,999) 作为汇率
-# 注意：贵金属现货（伦敦金/银）通过 FRED 获取，不在此列表
-FX_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
-    # 外汇货币对
-    "USDCNH.FXCM": 4_000_001,
-    "EURUSD.FXCM": 4_000_002,
-    "GBPUSD.FXCM": 4_000_003,
-    "USDJPY.FXCM": 4_000_004,
-    "AUDUSD.FXCM": 4_000_005,
-    "USDCAD.FXCM": 4_000_006,
-}
 
 
 class FxTushareAdapter:

@@ -31,7 +31,29 @@ from ditto_datahub.stores.capital.valuation.valuation_metrics_writer import (
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
+from .builders import sqlite_store_pair
+
 __all__ = ["CapitalProvider"]
+
+# ============================================================================
+# SQLite Store 工厂函数（减少样板代码）
+# ============================================================================
+
+# Margin Trading
+_margin_r, _margin_w = sqlite_store_pair(MarginTradingReader, MarginTradingWriter)
+
+# Pledge
+_pledge_r, _pledge_w = sqlite_store_pair(PledgeRatioReader, PledgeRatioWriter)
+
+# Valuation
+_valuation_r, _valuation_w = sqlite_store_pair(
+    ValuationMetricsReader, ValuationMetricsWriter
+)
+
+# Index Composition
+_index_comp_r, _index_comp_w = sqlite_store_pair(
+    IndexCompositionReader, IndexCompositionWriter
+)
 
 
 class CapitalProvider(Provider):
@@ -49,7 +71,7 @@ class CapitalProvider(Provider):
         sqlite_client: SQLiteClient,
     ) -> MarginTradingReader:
         """MarginTrading reader."""
-        return MarginTradingReader(client=sqlite_client)
+        return _margin_r(sqlite_client)
 
     @provide
     def margin_trading_writer(
@@ -57,7 +79,7 @@ class CapitalProvider(Provider):
         sqlite_client: SQLiteClient,
     ) -> MarginTradingWriter:
         """MarginTrading writer."""
-        return MarginTradingWriter(client=sqlite_client)
+        return _margin_w(sqlite_client)
 
     # ========================================================================
     # Pledge Stores
@@ -69,7 +91,7 @@ class CapitalProvider(Provider):
         sqlite_client: SQLiteClient,
     ) -> PledgeRatioReader:
         """PledgeRatio reader."""
-        return PledgeRatioReader(client=sqlite_client)
+        return _pledge_r(sqlite_client)
 
     @provide
     def pledge_ratio_writer(
@@ -77,7 +99,7 @@ class CapitalProvider(Provider):
         sqlite_client: SQLiteClient,
     ) -> PledgeRatioWriter:
         """PledgeRatio writer."""
-        return PledgeRatioWriter(client=sqlite_client)
+        return _pledge_w(sqlite_client)
 
     # ========================================================================
     # Valuation Stores
@@ -89,7 +111,7 @@ class CapitalProvider(Provider):
         sqlite_client: SQLiteClient,
     ) -> ValuationMetricsReader:
         """ValuationMetrics reader."""
-        return ValuationMetricsReader(client=sqlite_client)
+        return _valuation_r(sqlite_client)
 
     @provide
     def valuation_metrics_writer(
@@ -97,7 +119,7 @@ class CapitalProvider(Provider):
         sqlite_client: SQLiteClient,
     ) -> ValuationMetricsWriter:
         """ValuationMetrics writer."""
-        return ValuationMetricsWriter(client=sqlite_client)
+        return _valuation_w(sqlite_client)
 
     # ========================================================================
     # Index Composition Stores
@@ -109,7 +131,7 @@ class CapitalProvider(Provider):
         sqlite_client: SQLiteClient,
     ) -> IndexCompositionReader:
         """IndexComposition reader."""
-        return IndexCompositionReader(client=sqlite_client)
+        return _index_comp_r(sqlite_client)
 
     @provide
     def index_composition_writer(
@@ -117,7 +139,7 @@ class CapitalProvider(Provider):
         sqlite_client: SQLiteClient,
     ) -> IndexCompositionWriter:
         """IndexComposition writer."""
-        return IndexCompositionWriter(client=sqlite_client)
+        return _index_comp_w(sqlite_client)
 
     # ========================================================================
     # Capital Ports

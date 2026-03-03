@@ -12,6 +12,7 @@ import polars as pl
 from ditto_infra.foundation import traced
 
 from ditto_datahub.config import DataSourceSettings
+from ditto_datahub.models.source_codes import METAL_CODE_ALIASES
 from ditto_datahub.sources.schemas.commodity_schemas import COMMODITY_SOURCE_SCHEMA
 from ditto_datahub.sources.tushare.client import TushareClient
 from ditto_datahub.sources.tushare.processors.error_handler import (
@@ -25,18 +26,6 @@ METAL_CODE_TO_INSTRUMENT_ID: dict[str, int] = {
     # 贵金属现货（通过 Tushare fx_daily METAL 分类获取）
     "XAUUSD.FXCM": 5_000_003,  # 黄金美元（对应 COMMOD_GOLD）
     "XAGUSD.FXCM": 5_000_004,  # 白银美元（对应 COMMOD_SILVER）
-}
-
-# 代码别名映射（支持多种输入格式）
-METAL_CODE_ALIASES: dict[str, str] = {
-    # 黄金
-    "COMMOD_GOLD": "XAUUSD.FXCM",
-    "GOLD": "XAUUSD.FXCM",
-    "XAUUSD": "XAUUSD.FXCM",
-    # 白银
-    "COMMOD_SILVER": "XAGUSD.FXCM",
-    "SILVER": "XAGUSD.FXCM",
-    "XAGUSD": "XAGUSD.FXCM",
 }
 
 

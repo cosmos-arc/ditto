@@ -15,7 +15,14 @@ from typing import Literal, cast
 import httpx
 import polars as pl
 from ditto_datahub.errors import AmbiguousTickerError, IdentifierNotFoundError
-from ditto_datahub.models import Dataset, DateScheduleType, OnDuplicate
+from ditto_datahub.models import (
+    FX_CODE_TO_INSTRUMENT_ID,
+    METAL_CODE_ALIASES,
+    VIX_CODE_TO_INSTRUMENT_ID,
+    Dataset,
+    DateScheduleType,
+    OnDuplicate,
+)
 from ditto_datahub.services import IngestionLogService
 from ditto_datahub.services.capital_service import CapitalService
 from ditto_datahub.services.fundamental_service import FundamentalService
@@ -23,16 +30,11 @@ from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.sources.base import DataSource
-from ditto_datahub.sources.fred.adapters.commodity import (
-    VIX_CODE_TO_INSTRUMENT_ID,
-)
-from ditto_datahub.sources.tushare.adapters.fx import FX_CODE_TO_INSTRUMENT_ID
-from ditto_datahub.sources.tushare.adapters.metal import METAL_CODE_ALIASES
 from ditto_infra.foundation import logger
 
+from ditto_port.errors import NetworkError, SourceFetchError
 from ditto_port.models import IngestionResult, InstrumentIngestParams
 from ditto_port.services.ingestion.data_writer import IngestionDataWriter
-from ditto_port.services.ingestion.errors import SourceFetchError
 from ditto_port.services.ingestion.index_config import get_all_index_codes
 from ditto_port.services.ingestion.list_date_inference import (
     ListDateInferenceService,
@@ -131,17 +133,6 @@ class IngestionCoordinator:
         )
         # 缓存指数代码，避免每次摄取都调用 API
         self._index_codes_cache: list[str] | None = None
-
-    @staticmethod
-    def _raise_fred_not_configured() -> pl.DataFrame:
-        """Raise error when FRED source is not configured."""
-        raise SourceFetchError(
-            message=(
-                "FRED data source not configured. "
-                "Set FRED_API_KEY environment variable."
-            ),
-            source="fred",
-        )
 
     def _fetch_commodity_daily(self, trade_date: str) -> pl.DataFrame:
         """
@@ -399,16 +390,23 @@ class IngestionCoordinator:
         try:
             df = self._fetch_data(dataset, trade_date)
         except (httpx.NetworkError, httpx.TimeoutException) as e:
-            # 网络相关异常，记录后转换为业务异常
+            # 网络相关异常，转换为 NetworkError
             logger.exception(
                 "network_error_during_fetch",
                 dataset=dataset,
                 trade_date=trade_date,
                 error_type=type(e).__name__,
             )
+            network_error = NetworkError.from_httpx(
+                error=e,
+                source=self._source_name,
+                context=f"fetching {dataset}",
+            )
+            # 转换为 SourceFetchError 以保持与现有处理流程的兼容性
             fetch_error = SourceFetchError(
-                message=f"Network error fetching {dataset}: {e}",
-                source=type(e).__name__,
+                message=str(network_error),
+                source=self._source_name,
+                cause=network_error,
             )
             return self._result_handler.handle_fetch_error(
                 dataset, trade_date, fetch_error
@@ -757,15 +755,23 @@ class IngestionCoordinator:
         try:
             df = self._fetch_by_dataset(dataset_enum, source_ticker, params)
         except (httpx.NetworkError, httpx.TimeoutException) as e:
+            # 网络相关异常，转换为 NetworkError
             logger.exception(
                 "network_error_during_fetch_by_instrument",
                 dataset=dataset,
                 source_ticker=source_ticker,
                 error_type=type(e).__name__,
             )
+            network_error = NetworkError.from_httpx(
+                error=e,
+                source=self._source_name,
+                context=f"fetching {dataset} for {source_ticker}",
+            )
+            # 转换为 SourceFetchError 以保持与现有处理流程的兼容性
             fetch_error = SourceFetchError(
-                message=f"Network error fetching {dataset} for {source_ticker}: {e}",
-                source=type(e).__name__,
+                message=str(network_error),
+                source=self._source_name,
+                cause=network_error,
             )
             return self._result_handler.handle_fetch_error(
                 dataset, params.start_date, fetch_error
