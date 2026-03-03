@@ -24,7 +24,7 @@ from ditto_infra.foundation.config.environment import get_environment
 from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, InitScope
 from ditto_infra.foundation.config.settings import Settings
 from ditto_infra.foundation.observability import Metrics, logger
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -195,6 +195,13 @@ app.include_router(metadata.router, prefix="/api/v1")
 app.include_router(portfolio.router, prefix="/api/v1")
 app.include_router(source.router, prefix="/api/v1")
 
+# 调试路由： 条件注册（仅非生产环境）
+env = get_environment()
+if not env.is_production:
+    from ditto_port.api.routes.debug import debug_router
+
+    app.include_router(debug_router, prefix="/api/v1", tags=["debug"])
+
 
 # Request logging middleware
 @app.middleware("http")
@@ -290,19 +297,6 @@ async def get_status(request: Request) -> dict[str, Any]:
             "structured": True,
         },
     }
-
-
-@app.get("/api/v1/logs/test")
-async def generate_test_logs() -> dict[str, str]:
-    """测试日志记录功能（仅开发/测试环境可用）."""
-    env = get_environment()
-    if env.is_production:
-        raise HTTPException(status_code=404, detail="Not found")
-
-    logger.info("Test info log", test_data="example")
-    logger.warning("Test warning log", test_data="example")
-    logger.error("Test error log", test_data="example")
-    return {"message": "Test logs generated"}
 
 
 # 注册异常处理器

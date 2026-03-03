@@ -1,7 +1,5 @@
 """Tests for FastAPI main application async endpoints."""
 
-from unittest.mock import patch
-
 import pytest
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.config.settings import (
@@ -9,14 +7,13 @@ from ditto_infra.foundation.config.settings import (
     Settings,
     SystemSettings,
 )
+from ditto_port.api.routes.debug import generate_test_logs
 from ditto_port.main import (
     app,
-    generate_test_logs,
     get_status,
     health_check,
     root,
 )
-from fastapi import HTTPException
 from starlette.requests import Request
 
 
@@ -68,36 +65,11 @@ class TestFastAPIEndpoints:
 
 @pytest.mark.unit
 class TestTestLogsEndpoint:
-    """Tests for test logs endpoint environment check."""
+    """Tests for test logs endpoint."""
 
     @pytest.mark.asyncio
-    async def test_test_logs_endpoint_in_development_environment(self):
-        """Test test logs endpoint works in development environment."""
-        with patch(
-            "ditto_port.main.get_environment",
-            return_value=Environment.DEVELOPMENT,
-        ):
-            response = await generate_test_logs()
-            assert response == {"message": "Test logs generated"}
-
-    @pytest.mark.asyncio
-    async def test_test_logs_endpoint_in_testing_environment(self):
-        """Test test logs endpoint works in testing environment."""
-        with patch(
-            "ditto_port.main.get_environment",
-            return_value=Environment.TESTING,
-        ):
-            response = await generate_test_logs()
-            assert response == {"message": "Test logs generated"}
-
-    @pytest.mark.asyncio
-    async def test_test_logs_endpoint_in_production_environment(self):
-        """Test test logs endpoint returns 404 in production environment."""
-        with patch(
-            "ditto_port.main.get_environment",
-            return_value=Environment.PRODUCTION,
-        ):
-            with pytest.raises(HTTPException) as exc_info:
-                await generate_test_logs()
-            assert exc_info.value.status_code == 404
-            assert exc_info.value.detail == "Not found"
+    async def test_test_logs_endpoint_returns_expected_message(self):
+        """Test test logs endpoint returns expected message."""
+        # 环境检查已移到路由注册阶段，函数本身不再检查环境
+        response = await generate_test_logs()
+        assert response == {"message": "Test logs generated"}
