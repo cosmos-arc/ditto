@@ -710,7 +710,7 @@ class IngestionCoordinator:
                 source_ticker=source_ticker,
                 error=str(fetch_error),
             )
-            raise original_error from None
+            raise original_error from fetch_error
 
         if basic_df.is_empty():
             logger.warning(
@@ -718,7 +718,7 @@ class IngestionCoordinator:
                 event="auto_init_stock_not_found",
                 source_ticker=source_ticker,
             )
-            raise original_error from None
+            raise original_error  # 无底层异常：股票不存在是业务条件，非错误
 
         # 注册证券
         try:
@@ -735,7 +735,7 @@ class IngestionCoordinator:
                 source_ticker=source_ticker,
                 error=str(register_error),
             )
-            raise original_error from None
+            raise original_error from register_error
 
         logger.info(
             "自动初始化股票信息成功",
