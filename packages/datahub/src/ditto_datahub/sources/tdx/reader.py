@@ -55,7 +55,7 @@ class TdxReader:
         """
         # 解析市场代码
         market = self._parse_market(ts_code)
-        ticker = ts_code.split(".")[0]
+        ticker = ts_code.split(".", maxsplit=1)[0]
 
         # 定位 .day 文件
         day_file = self._locate_day_file(market, ticker)

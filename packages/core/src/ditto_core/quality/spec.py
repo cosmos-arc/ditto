@@ -1,7 +1,7 @@
 """DQ rule configuration models."""
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
@@ -17,7 +17,7 @@ class DQLevel(Enum):
     STATISTICAL = "statistical"  # 统计类 - 异常检测（Z-score、完整性）
 
 
-class RuleType(str, Enum):
+class RuleType(StrEnum):
     """Rule type enum."""
 
     NOT_NULL = "not_null"
@@ -40,7 +40,7 @@ class RuleType(str, Enum):
 # Cross-Source Comparison Models
 
 
-class CompareMethod(str, Enum):
+class CompareMethod(StrEnum):
     """跨源比对方法."""
 
     TICK_ALIGNED = "tick_aligned"  # Tick 对齐（价格类）

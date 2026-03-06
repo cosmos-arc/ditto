@@ -1,5 +1,6 @@
 ---
-paths: ./**/*.py
+paths:
+  - ./**/*.py
 ---
 
 # 架构设计规范
@@ -23,10 +24,10 @@ paths: ./**/*.py
 ```
 
 **详细分层规范**：
-- Infra → [/packages/infra/CLAUDE.md](/packages/infra/CLAUDE.md)
-- DataHub → [/packages/datahub/CLAUDE.md](/packages/datahub/CLAUDE.md)
-- Core → [/packages/core/CLAUDE.md](/packages/core/CLAUDE.md)
-- Port → [/apps/port/CLAUDE.md](/apps/port/CLAUDE.md)
+- Infra → [packages/infra/CLAUDE.md](../../packages/infra/CLAUDE.md)
+- DataHub → [packages/datahub/CLAUDE.md](../../packages/datahub/CLAUDE.md)
+- Core → [packages/core/CLAUDE.md](../../packages/core/CLAUDE.md)
+- Port → [apps/port/CLAUDE.md](../../apps/port/CLAUDE.md)
 
 **依赖规则**：
 - **应用层** (port) → 数据层 (datahub) ✅
@@ -41,7 +42,7 @@ paths: ./**/*.py
 
 以下规则由 `pixi run -e dev arch-check` 强制执行，违反即 CI 失败：
 
-使用 **Import Linter** 进行架构约束检查，配置位于 [pyproject.toml](pyproject.toml)。
+使用 **Import Linter** 进行架构约束检查，配置位于 [pyproject.toml](../../pyproject.toml)。
 
 **检查类型：**
 1. **分层架构** (`layers`): Port → Core → DataHub → Infra
@@ -66,7 +67,7 @@ lint-imports --contract acyclic-packages       # 单独检查循环依赖
 
 **定义**：提供跨所有层的基础设施服务，可被任何层访问
 
-**详细规范**：详见 [/packages/infra/CLAUDE.md](/packages/infra/CLAUDE.md)
+**详细规范**：详见 [packages/infra/CLAUDE.md](../../packages/infra/CLAUDE.md)
 
 **正确使用**：
 ```python

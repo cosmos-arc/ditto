@@ -11,10 +11,10 @@ Strategy 域数据模型.
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 
-class SignalType(str, Enum):
+class SignalType(StrEnum):
     """信号类型."""
 
     BUY = "buy"

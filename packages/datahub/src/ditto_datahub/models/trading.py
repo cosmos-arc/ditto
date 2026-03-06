@@ -11,17 +11,17 @@ Trading 域数据模型（dataclass 定义）.
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 
-class OrderSide(str, Enum):
+class OrderSide(StrEnum):
     """订单方向."""
 
     BUY = "buy"
     SELL = "sell"
 
 
-class OrderStatus(str, Enum):
+class OrderStatus(StrEnum):
     """订单状态."""
 
     PENDING = "pending"

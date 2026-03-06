@@ -5,7 +5,7 @@ Data normalization enumerations and configuration.
 """
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 __all__ = [
     "Currency",
@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 
-class Exchange(str, Enum):
+class Exchange(StrEnum):
     """
     交易所代码（ISO 10383 标准）.
 
@@ -31,7 +31,7 @@ class Exchange(str, Enum):
     CZCE = "CZCE"  # 郑州商品交易所
 
 
-class InstrumentType(str, Enum):
+class InstrumentType(StrEnum):
     """
     标的类型（ISO 10962 CFI 标准）.
 
@@ -47,7 +47,7 @@ class InstrumentType(str, Enum):
     FUND = "fund"  # 基金
 
 
-class Currency(str, Enum):
+class Currency(StrEnum):
     """
     货币代码（ISO 4217 标准）.
 

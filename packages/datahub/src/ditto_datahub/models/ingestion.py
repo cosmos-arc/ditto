@@ -1,12 +1,12 @@
 """Ingestion metadata models for data tracking."""
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 # ============ New Ingestion System: Event Log + Cursor ============
 
 
-class IngestionStatus(str, Enum):
+class IngestionStatus(StrEnum):
     """Ingestion status for a specific trade date."""
 
     SUCCESS = "SUCCESS"  # Data successfully ingested

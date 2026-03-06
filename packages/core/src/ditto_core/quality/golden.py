@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
@@ -24,7 +24,7 @@ __all__ = [
 ]
 
 
-class AssetType(str, Enum):
+class AssetType(StrEnum):
     """资产类型枚举。"""
 
     STOCK = "stock"  # A股股票

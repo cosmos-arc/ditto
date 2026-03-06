@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from loguru import logger
@@ -13,7 +13,7 @@ from loguru import logger
 from ditto_infra.foundation.config.errors import ConfigInitError
 
 
-class InitScope(str, Enum):
+class InitScope(StrEnum):
     """初始化作用域。"""
 
     STARTUP = "startup"

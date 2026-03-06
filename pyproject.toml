@@ -186,7 +186,7 @@ max-complexity = 10
 #   4. 更多诊断规则默认启用，更好的 AI coding 支持
 # ===================================================================
 [tool.basedpyright]
-pythonVersion = "3.12"
+pythonVersion = "3.13"
 pythonPlatform = "All"
 stubPath = "typings"
 

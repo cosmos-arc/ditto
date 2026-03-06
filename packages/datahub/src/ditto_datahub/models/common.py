@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Literal, NamedTuple
 
 from ditto_datahub.models.enums import AssetClass
@@ -43,7 +43,7 @@ class DateScheduleType(Enum):
 
 
 # ============ Dataset 枚举 ============
-class Dataset(str, Enum):
+class Dataset(StrEnum):
     """
     支持的数据集类型。
 
@@ -222,7 +222,7 @@ class Dataset(str, Enum):
 
 
 # ============ Domain 枚举 ============
-class Domain(str, Enum):
+class Domain(StrEnum):
     """
     支持的数据域类型。
 
@@ -237,7 +237,7 @@ class Domain(str, Enum):
 
 
 # ============ Source 枚举 ============
-class Source(str, Enum):
+class Source(StrEnum):
     """
     支持的数据源类型。
 

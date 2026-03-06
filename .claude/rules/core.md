@@ -1,5 +1,6 @@
 ---
-paths: ./**/*.py
+paths:
+  - ./**/*.py
 ---
 
 # Python 核心规范

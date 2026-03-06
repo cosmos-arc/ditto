@@ -110,7 +110,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            PYTHON_VERSION=3.12
+            PYTHON_VERSION=3.13
             BUILD_VERSION=${{ needs.prepare.outputs.version }}
 
       # 部署（示例：使用 SSH）

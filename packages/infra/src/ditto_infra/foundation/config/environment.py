@@ -1,10 +1,10 @@
 """系统运行环境枚举."""
 
 import os
-from enum import Enum
+from enum import StrEnum
 
 
-class Environment(str, Enum):
+class Environment(StrEnum):
     """系统运行环境枚举."""
 
     DEVELOPMENT = "development"

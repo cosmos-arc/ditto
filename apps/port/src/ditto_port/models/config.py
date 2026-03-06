@@ -15,14 +15,14 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from datetime import time
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, cast, overload
 
 from ditto_datahub.models import Dataset
 from pydantic import BaseModel, Field
 
 
-class TaskTier(str, Enum):
+class TaskTier(StrEnum):
     """
     Task tier enumeration for scheduling and orchestration.
 

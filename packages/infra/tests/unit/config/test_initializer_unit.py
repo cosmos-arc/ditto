@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from threading import Thread
 from typing import final
@@ -19,7 +19,7 @@ from ditto_infra.foundation.config.initializer import (
 # ==================== 测试辅助类 ====================
 
 
-class MockInitScope(str, Enum):
+class MockInitScope(StrEnum):
     """测试用的模拟作用域."""
 
     STARTUP = "startup"

@@ -1,5 +1,6 @@
 ---
-paths: ./**/*.py
+paths:
+  - ./**/*.py
 ---
 
 # noqa 和 type: ignore 使用规范
@@ -18,12 +19,12 @@ paths: ./**/*.py
 
 ### 生产代码（src）禁止项
 
-| 规则 | 例外 | 说明 |
-|------|------|------|
-| `# noqa` | S608/S108/S110（需注释） | 通过重构解决 |
-| `# type: ignore` | 无 | 通过类型修正解决 |
-| `global` 语句 | 无 | 使用类属性单例模式 |
-| 行内导入 | 无 | 重构解决循环依赖 |
+| 规则             | 例外                     | 说明               |
+| ---------------- | ------------------------ | ------------------ |
+| `# noqa`         | S608/S108/S110（需注释） | 通过重构解决       |
+| `# type: ignore` | 无                       | 通过类型修正解决   |
+| `global` 语句    | 无                       | 使用类属性单例模式 |
+| 行内导入         | 无                       | 重构解决循环依赖   |
 
 ### global 语句示例
 
@@ -192,14 +193,14 @@ class ClassB:
 
 ### 常见问题方案
 
-| 问题 | 解决方案 |
-|------|----------|
-| 参数过多（PLR0913） | 配置对象/数据类 |
-| 返回语句过多（PLR0911） | 提取辅助方法 |
-| 复杂度过高（C901） | 拆分函数 |
-| 循环依赖（PLC0415） | 重构架构 |
-| global 语句（PLW0603） | 类属性单例 |
-| 类型收窄问题 | TypeGuard |
+| 问题                    | 解决方案        |
+| ----------------------- | --------------- |
+| 参数过多（PLR0913）     | 配置对象/数据类 |
+| 返回语句过多（PLR0911） | 提取辅助方法    |
+| 复杂度过高（C901）      | 拆分函数        |
+| 循环依赖（PLC0415）     | 重构架构        |
+| global 语句（PLW0603）  | 类属性单例      |
+| 类型收窄问题            | TypeGuard       |
 
 ---
 
@@ -230,7 +231,6 @@ git grep "^global " packages/*/src apps/*/src
 
 ## 参考资源
 
-- [core.md](.claude/rules/core.md) - Python 核心规范
+- [core.md](../../.claude/rules/core.md) - Python 核心规范
 - [BasedPyright Type Guards](https://docs.basedpyright.com/)
 - [Ruff Rules](https://docs.astral.sh/ruff/rules/)
-- [2026-01-15-noqa-cleanup-plan.md](../../docs/plans/2026-01-15-noqa-cleanup-plan.md) - 清理执行计划

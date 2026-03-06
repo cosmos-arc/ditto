@@ -2,11 +2,11 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class NotificationLevel(str, Enum):
+class NotificationLevel(StrEnum):
     """Notification severity levels."""
 
     INFO = "info"

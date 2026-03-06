@@ -1,9 +1,9 @@
 """Market 域 - 市场数据存储."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class AdjType(str, Enum):
+class AdjType(StrEnum):
     """复权类型."""
 
     NONE = "none"

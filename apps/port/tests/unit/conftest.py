@@ -6,7 +6,7 @@
 """
 
 from collections.abc import Generator
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 import prefect
 import prefect.flows
@@ -31,17 +31,58 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 
 
 # ===================================================================
-# Mock Prefect 装饰器（仅在单元测试中）
+# Mock Prefect 装饰器（必须在模块导入前应用）
 # ===================================================================
-# 原始装饰器保存（用于恢复）
+# 保存原始装饰器
 _original_flow_decorator = prefect.flows.flow
 _original_task_decorator = prefect.tasks.task
+
+
+class MockTask:
+    """Mock task that mimics Prefect Task interface."""
+
+    def __init__(self, func):
+        self.func = func
+        # 复制函数的关键属性
+        self.__name__ = getattr(func, "__name__", "mock_task")
+        self.__doc__ = getattr(func, "__doc__", None)
+        self.name = self.__name__
+        self._is_prefect_task = True
+
+    def __call__(self, *args, **kwargs):
+        # 过滤掉 Prefect 特有的参数
+        filtered_kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k not in ("wait_for", "return_state", "refresh_cache")
+        }
+        return self.func(*args, **filtered_kwargs)
+
+    def submit(self, *args, **kwargs):
+        """Mock submit that returns a future-like object."""
+        # 过滤掉 Prefect 特有的参数
+        filtered_kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k not in ("wait_for", "return_state", "refresh_cache")
+        }
+        result = self.func(*args, **filtered_kwargs)
+        future = Mock()
+        future.result = Mock(return_value=result)
+        return future
+
+    def fn(self):
+        """Return the underlying function."""
+        return self.func
 
 
 def _mock_flow_decorator(*args, **kwargs):
     """Mock @flow decorator that returns the function unchanged."""
 
     def decorator(func):
+        # 添加 flow 的常用属性
+        func.is_flow = True
+        func.name = getattr(func, "__name__", "mock_flow")
         return func
 
     # Support @flow() and @flow syntax
@@ -51,46 +92,31 @@ def _mock_flow_decorator(*args, **kwargs):
 
 
 def _mock_task_decorator(*args, **kwargs):
-    """Mock @task decorator that returns the function unchanged."""
+    """Mock @task decorator that returns a MockTask."""
 
     def decorator(func):
-        return func
+        return MockTask(func)
 
     # Support @task() and @task syntax
     if args and callable(args[0]):
-        return args[0]  # Direct @task without parentheses
+        return MockTask(args[0])  # Direct @task without parentheses
     return decorator
 
 
+# 在模块级别立即应用 mock（在任何测试模块导入之前）
+prefect.flows.flow = _mock_flow_decorator
+prefect.tasks.task = _mock_task_decorator
+
+
 @pytest.fixture(autouse=True)
-def apply_prefect_mocks_and_disable_api_server() -> Generator[None, None, None]:
-    """应用 Prefect mock 并禁用 API 服务器（仅限单元测试）.
-
-    通过 autouse fixture 确保只有单元测试使用 mock，
-    避免影响集成测试。
-    """
-    # 应用 mock
-    import prefect
-
-    prefect.flows.flow = _mock_flow_decorator
-    prefect.tasks.task = _mock_task_decorator
-
-    # 禁用 API 服务器
+def disable_prefect_api_server() -> Generator[None, None, None]:
+    """禁用 Prefect API 服务器（单元测试不需要）."""
     import prefect.settings
 
     with prefect.settings.temporary_settings(
         updates={prefect.settings.PREFECT_API_URL: None}
     ):
         yield
-
-    # 恢复原始装饰器
-    prefect.flows.flow = _original_flow_decorator
-    prefect.tasks.task = _original_task_decorator
-
-
-# 移除原来的全局 mock 应用，改为通过 fixture 应用
-# prefect.flows.flow = _mock_flow_decorator
-# prefect.tasks.task = _mock_task_decorator
 
 
 @pytest.fixture

@@ -928,8 +928,8 @@ class IngestionCoordinator:
             Dataset.CALENDAR: lambda y=_calendar_year: self._source.fetch_calendar(
                 f"{y}-01-01", f"{y}-12-31"
             ),
-            Dataset.STOCK_BASIC: lambda: self._source.fetch_stock_basic(),
-            Dataset.ETF_BASIC: lambda: self._source.fetch_etf_basic(),
+            Dataset.STOCK_BASIC: self._source.fetch_stock_basic,
+            Dataset.ETF_BASIC: self._source.fetch_etf_basic,
             Dataset.STOCK_DAILY: lambda: self._source.fetch_stock_daily(trade_date),
             Dataset.ETF_DAILY: lambda: self._source.fetch_etf_daily(trade_date),
             Dataset.STOCK_STATUS: lambda: self._source.fetch_stock_status(trade_date),
@@ -954,7 +954,7 @@ class IngestionCoordinator:
             Dataset.CORPORATE_ACTIONS: lambda: self._source.fetch_corporate_actions(
                 trade_date
             ),
-            Dataset.INDEX_BASIC: lambda: self._source.fetch_index_basic(),
+            Dataset.INDEX_BASIC: self._source.fetch_index_basic,
             Dataset.INDEX_DAILY: lambda: self._source.fetch_index_daily(
                 trade_date,
                 ts_codes=self._get_cached_index_codes(),

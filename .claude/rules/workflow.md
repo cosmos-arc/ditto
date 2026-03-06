@@ -1,5 +1,6 @@
 ---
-paths: **/*.py
+paths:
+  - "**/*.py"
 ---
 
 # 开发流程规范
@@ -76,6 +77,6 @@ pixi run -e dev ci
 
 ## 相关规范
 
-- **SKILLS 规则**: [`.claude/CLAUDE.md`](.claude/CLAUDE.md#⚠️-skills-执行规则)
-- **工具使用标准**: [`.claude/CLAUDE.md`](.claude/CLAUDE.md#⚠️-工具使用标准)
-- **检查清单**: [`.claude/checklists/`](.claude/checklists/)
+- **SKILLS 规则**: [`CLAUDE.md`](../../CLAUDE.md)
+- **工具使用标准**: [`CLAUDE.md`](../../CLAUDE.md)
+- **检查清单**: [`.claude/checklists/`](../checklists/)

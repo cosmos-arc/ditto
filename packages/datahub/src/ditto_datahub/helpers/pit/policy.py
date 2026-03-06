@@ -6,10 +6,10 @@ PIT (Point-in-Time) 策略常量.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class RollingWindowClosed(str, Enum):
+class RollingWindowClosed(StrEnum):
     """
     滚动窗口闭合策略.
 
