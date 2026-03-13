@@ -57,6 +57,12 @@ from ditto_datahub.models.metadata import (
     StockExtension,
 )
 from ditto_datahub.models.portfolio import Portfolio, Position
+from ditto_datahub.models.publication_safety import (
+    CertificationReportRecord,
+    CompatibilityManifestRecord,
+    ShadowDiffReportRecord,
+    ShadowTraceRecordRecord,
+)
 from ditto_datahub.models.source_codes import (
     COMMODITY_CODE_TO_INSTRUMENT_ID,
     FX_CODE_TO_INSTRUMENT_ID,
@@ -91,6 +97,8 @@ __all__ = [
     "AssetClass",
     "AssetClassType",
     "CalendarDay",
+    "CertificationReportRecord",
+    "CompatibilityManifestRecord",
     "DataChangedError",
     "Dataset",
     "DateScheduleType",
@@ -122,6 +130,8 @@ __all__ = [
     "OrderStatus",
     "Portfolio",
     "Position",
+    "ShadowDiffReportRecord",
+    "ShadowTraceRecordRecord",
     "Signal",
     "SignalType",
     "Source",

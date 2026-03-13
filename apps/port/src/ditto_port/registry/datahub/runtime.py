@@ -11,12 +11,24 @@ from ditto_datahub.config.data_store import DataStoreSettings
 from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
-from ditto_datahub.services import IngestionLogService, QualityRecordService
+from ditto_datahub.services import (
+    IngestionLogService,
+    PublicationSafetyRecordService,
+    QualityRecordService,
+)
 from ditto_datahub.services.source_service import SourceService
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.stores.runtime.ingestion import (
     IngestionLogReader,
     IngestionLogWriter,
+)
+from ditto_datahub.stores.runtime.publication_safety import (
+    CertificationReader,
+    CertificationWriter,
+    ManifestReader,
+    ManifestWriter,
+    ShadowReportReader,
+    ShadowReportWriter,
 )
 from ditto_datahub.stores.runtime.quality import (
     ComparisonReader,
@@ -111,6 +123,36 @@ class RuntimeProvider(Provider):
         """隔离区数据写入器."""
         return QuarantineWriter(sqlite_client)
 
+    @provide
+    def manifest_reader(self, settings: DataStoreSettings) -> ManifestReader:
+        """发布兼容 manifest 读取器."""
+        return ManifestReader(base_path=settings.data_root)
+
+    @provide
+    def manifest_writer(self, settings: DataStoreSettings) -> ManifestWriter:
+        """发布兼容 manifest 写入器."""
+        return ManifestWriter(base_path=settings.data_root)
+
+    @provide
+    def shadow_report_reader(self, settings: DataStoreSettings) -> ShadowReportReader:
+        """Shadow diff / trace 读取器."""
+        return ShadowReportReader(base_path=settings.data_root)
+
+    @provide
+    def shadow_report_writer(self, settings: DataStoreSettings) -> ShadowReportWriter:
+        """Shadow diff / trace 写入器."""
+        return ShadowReportWriter(base_path=settings.data_root)
+
+    @provide
+    def certification_reader(self, settings: DataStoreSettings) -> CertificationReader:
+        """认证报告读取器."""
+        return CertificationReader(base_path=settings.data_root)
+
+    @provide
+    def certification_writer(self, settings: DataStoreSettings) -> CertificationWriter:
+        """认证报告写入器."""
+        return CertificationWriter(base_path=settings.data_root)
+
     # ========================================================================
     # Runtime Services
     # ========================================================================
@@ -138,6 +180,26 @@ class RuntimeProvider(Provider):
             comparison_writer,
             quarantine_reader,
             quarantine_writer,
+        )
+
+    @provide
+    def publication_safety_record_service(
+        self,
+        manifest_reader: ManifestReader,
+        manifest_writer: ManifestWriter,
+        shadow_report_reader: ShadowReportReader,
+        shadow_report_writer: ShadowReportWriter,
+        certification_reader: CertificationReader,
+        certification_writer: CertificationWriter,
+    ) -> PublicationSafetyRecordService:
+        """发布安全记录服务."""
+        return PublicationSafetyRecordService(
+            manifest_reader=manifest_reader,
+            manifest_writer=manifest_writer,
+            shadow_report_reader=shadow_report_reader,
+            shadow_report_writer=shadow_report_writer,
+            certification_reader=certification_reader,
+            certification_writer=certification_writer,
         )
 
     @provide

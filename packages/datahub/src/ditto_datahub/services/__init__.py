@@ -19,6 +19,8 @@ Services module - 域服务统一入口.
 - SourceService: 外部数据源访问（Tushare 等）
 - IngestionLogService: 数据摄入日志管理（追踪摄入状态、失败重试）
 - QualityRecordService: 质量记录服务（对比结果、隔离数据）
+- PublicationSafetyRecordService: 发布安全记录服务
+  （manifest、shadow diff、certification）
 """
 
 # Capital 域服务
@@ -55,6 +57,9 @@ from ditto_datahub.services.ports import (
     MarketReadPorts,
     MarketWritePorts,
 )
+from ditto_datahub.services.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+)
 from ditto_datahub.services.quality_record_service import QualityRecordService
 
 # Source 服务
@@ -78,6 +83,7 @@ __all__ = [
     "MarketService",
     "MarketWritePorts",
     "MetadataService",
+    "PublicationSafetyRecordService",
     "QualityRecordService",
     "SourceService",
 ]
