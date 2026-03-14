@@ -11,6 +11,10 @@ from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.source_service import SourceService
 from ditto_datahub.sources import ExchangeTransformers
 
+from ditto_port.services.derived import (
+    DerivedInvalidationService,
+    DerivedMaterializationService,
+)
 from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
 
@@ -34,3 +38,11 @@ class IngestionBundle:
     exchange_transformers: ExchangeTransformers
     coordinator: IngestionCoordinator
     backfill_manager: BackfillManager
+
+
+@dataclass(frozen=True)
+class MaterializationBundle:
+    """物化上下文组合包。"""
+
+    materialization_service: DerivedMaterializationService
+    invalidation_service: DerivedInvalidationService

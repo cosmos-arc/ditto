@@ -17,6 +17,10 @@ from ditto_port.jobs.flows.backfill import (
     backfill_missing_flow,
 )
 from ditto_port.jobs.flows.daily import daily_ingestion_flow
+from ditto_port.jobs.flows.materialization import (
+    daily_materialization_flow,
+    repair_from_invalidation_flow,
+)
 from ditto_port.jobs.flows.repair import (
     daily_repair_flow,
     repair_holes_flow,
@@ -28,7 +32,9 @@ __all__ = [
     "backfill_flow",
     "backfill_missing_flow",
     "daily_ingestion_flow",
+    "daily_materialization_flow",
     "daily_repair_flow",
+    "repair_from_invalidation_flow",
     "repair_holes_flow",
     "retry_failed_flow",
 ]

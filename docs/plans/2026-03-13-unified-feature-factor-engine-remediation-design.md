@@ -35,11 +35,20 @@
    - [2026-03-13-derived-publication-safety-implementation-plan.md](2026-03-13-derived-publication-safety-implementation-plan.md)
 5. 已形成统一引擎分阶段开发执行计划：
    - [2026-03-13-unified-feature-factor-engine-development-execution-plan.md](2026-03-13-unified-feature-factor-engine-development-execution-plan.md)
+6. Phase 1 首批 runtime metadata 基线已落地：
+   - `packages/core`: `DerivedSpec`、`DerivedVersion / DerivedRun / DerivedState / DerivedPartition`
+   - `packages/datahub`: `models/derived.py`、`stores/runtime/derived_catalog/*`、`DerivedCatalogService`
+   - `apps/port`: RuntimeProvider 接入 `DerivedCatalogService`
+7. 全量验证已通过：
+   - `pixi run -e dev check`
+   - `basedpyright`: `0 errors, 0 warnings`
+   - `pytest --fast`: `1975 passed`
+   - `arch-check`: `6 kept, 0 broken`
 
 ### 下一阶段待进入
 
 1. 进入统一引擎分阶段开发执行：
-   - Phase 1: derived catalog / metadata / run-state 基线
+   - Phase 1 剩余：catalog / SQLite schema phase（待单独确认）
    - Phase 2: query facade / DataHub derived query implementation
    - Phase 3: materialization engine / artifact / invalidation 主链路
    - Phase 4: research dataset / publication orchestration / certification integration

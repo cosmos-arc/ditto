@@ -1,29 +1,69 @@
-"""
-核心引擎模块.
+"""Core engine exports."""
 
-包含Regime、Factor、Rotation、Backtest、Risk等核心引擎
-"""
-
+from ditto_core.engine.expression import ExpressionCompiler
+from ditto_core.engine.materialization import (
+    Analysis,
+    CompiledDerivedExpression,
+    CompileIdentity,
+    DerivedExecutionPlan,
+    DerivedExecutionPlanner,
+    DerivedInvalidationEvent,
+    DerivedMaterializationRequest,
+    DerivedMaterializationResult,
+    DerivedPartition,
+    DerivedRun,
+    DerivedRunMode,
+    DerivedRunStatus,
+    DerivedRunTrigger,
+    DerivedState,
+    DerivedVersion,
+    DerivedVersionStatus,
+)
 from ditto_core.engine.publication_safety import (
     CertificationCheckResult,
     CertificationPack,
     CertificationReport,
     CertificationStage,
     CompatibilityManifest,
-    DerivedRole,
-    MaterializationProfile,
     PublicationSafetySeverity,
     ShadowDiffReport,
     ShadowTraceRecord,
 )
+from ditto_core.engine.specs import (
+    CALENDAR_TO_TIMEZONE,
+    GRAIN_TO_TIME_KEYS,
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 
 __all__ = [
+    "CALENDAR_TO_TIMEZONE",
+    "GRAIN_TO_TIME_KEYS",
+    "Analysis",
     "CertificationCheckResult",
     "CertificationPack",
     "CertificationReport",
     "CertificationStage",
     "CompatibilityManifest",
+    "CompileIdentity",
+    "CompiledDerivedExpression",
+    "DerivedExecutionPlan",
+    "DerivedExecutionPlanner",
+    "DerivedInvalidationEvent",
+    "DerivedMaterializationRequest",
+    "DerivedMaterializationResult",
+    "DerivedPartition",
     "DerivedRole",
+    "DerivedRun",
+    "DerivedRunMode",
+    "DerivedRunStatus",
+    "DerivedRunTrigger",
+    "DerivedSpec",
+    "DerivedState",
+    "DerivedVersion",
+    "DerivedVersionStatus",
+    "ExpressionCompiler",
     "MaterializationProfile",
     "PublicationSafetySeverity",
     "ShadowDiffReport",

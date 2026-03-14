@@ -5,8 +5,7 @@
 
 # 导出 Domain Services（供 Port 层使用）
 from ditto_datahub.services.capital_service import CapitalService
-from ditto_datahub.services.factor_service import FactorService
-from ditto_datahub.services.feature_service import FeatureService
+from ditto_datahub.services.derived import DerivedQueryService
 from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import MarketService
@@ -14,8 +13,7 @@ from ditto_datahub.services.metadata_service import MetadataService
 
 __all__ = [
     "CapitalService",
-    "FactorService",
-    "FeatureService",
+    "DerivedQueryService",
     "FundamentalService",
     "MacroService",
     "MarketService",

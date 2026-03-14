@@ -3,7 +3,7 @@
 from dishka import Provider
 
 from .capital import CapitalProvider
-from .features import FeaturesProvider
+from .derived import DerivedProvider
 from .fundamental import FundamentalProvider
 from .macro import MacroProvider
 from .market import MarketProvider
@@ -13,7 +13,7 @@ from .sources import SourcesProvider
 
 __all__ = [
     "CapitalProvider",
-    "FeaturesProvider",
+    "DerivedProvider",
     "FundamentalProvider",
     "MacroProvider",
     "MarketProvider",
@@ -34,5 +34,5 @@ def get_datahub_providers() -> list[Provider]:
         FundamentalProvider(),
         CapitalProvider(),
         MacroProvider(),
-        FeaturesProvider(),
+        DerivedProvider(),
     ]

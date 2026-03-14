@@ -10,6 +10,18 @@ from ditto_datahub.models.common import (
     OnDuplicate,
     Source,
 )
+from ditto_datahub.models.derived import (
+    CompiledExpressionCacheRecord,
+    CompiledExpressionOperatorRecord,
+    DerivedCheckpointRecord,
+    DerivedDependencyRecord,
+    DerivedInvalidationRecord,
+    DerivedPartitionRecord,
+    DerivedRunRecord,
+    DerivedSpecRecord,
+    DerivedStateRecord,
+    DerivedVersionRecord,
+)
 from ditto_datahub.models.enums import AssetClass, Exchange
 from ditto_datahub.models.factors import (
     FACTOR_CLASS_FUNDAMENTAL,
@@ -99,9 +111,19 @@ __all__ = [
     "CalendarDay",
     "CertificationReportRecord",
     "CompatibilityManifestRecord",
+    "CompiledExpressionCacheRecord",
+    "CompiledExpressionOperatorRecord",
     "DataChangedError",
     "Dataset",
     "DateScheduleType",
+    "DerivedCheckpointRecord",
+    "DerivedDependencyRecord",
+    "DerivedInvalidationRecord",
+    "DerivedPartitionRecord",
+    "DerivedRunRecord",
+    "DerivedSpecRecord",
+    "DerivedStateRecord",
+    "DerivedVersionRecord",
     "Domain",
     "ETFExtension",
     "Exchange",

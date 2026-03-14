@@ -12,12 +12,17 @@ from ditto_datahub.runtime.freeze_manager import FreezeManager
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.services import (
+    DerivedCatalogService,
     IngestionLogService,
     PublicationSafetyRecordService,
     QualityRecordService,
 )
 from ditto_datahub.services.source_service import SourceService
 from ditto_datahub.sources.source import DataSources
+from ditto_datahub.stores.runtime.derived_sqlite import (
+    SQLiteDerivedCatalogReader,
+    SQLiteDerivedCatalogWriter,
+)
 from ditto_datahub.stores.runtime.ingestion import (
     IngestionLogReader,
     IngestionLogWriter,
@@ -104,6 +109,22 @@ class RuntimeProvider(Provider):
         return IngestionLogWriter(sqlite_client)
 
     @provide
+    def derived_catalog_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteDerivedCatalogReader:
+        """统一派生 catalog 读取器."""
+        return SQLiteDerivedCatalogReader(sqlite_client)
+
+    @provide
+    def derived_catalog_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteDerivedCatalogWriter:
+        """统一派生 catalog 写入器."""
+        return SQLiteDerivedCatalogWriter(sqlite_client)
+
+    @provide
     def comparison_reader(self, settings: DataStoreSettings) -> ComparisonReader:
         """质量对比数据读取器."""
         return ComparisonReader(base_path=settings.data_root)
@@ -165,6 +186,18 @@ class RuntimeProvider(Provider):
     ) -> IngestionLogService:
         """数据摄入日志服务."""
         return IngestionLogService(ingestion_log_reader, ingestion_log_writer)
+
+    @provide
+    def derived_catalog_service(
+        self,
+        derived_catalog_reader: SQLiteDerivedCatalogReader,
+        derived_catalog_writer: SQLiteDerivedCatalogWriter,
+    ) -> DerivedCatalogService:
+        """统一派生 catalog 记录服务."""
+        return DerivedCatalogService(
+            catalog_reader=derived_catalog_reader,
+            catalog_writer=derived_catalog_writer,
+        )
 
     @provide
     def quality_record_service(

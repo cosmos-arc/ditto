@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from ditto_core.engine.specs import DerivedRole, MaterializationProfile
+
 type CompileFlagValue = str | int | float | bool
 type JsonPrimitive = None | bool | int | float | str
 type JsonValue = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
@@ -37,24 +39,6 @@ class CertificationStage(StrEnum):
 
     SHADOW_READY = "shadow_ready"
     PUBLISH_READY = "publish_ready"
-
-
-class DerivedRole(StrEnum):
-    """Derived entity role."""
-
-    FEATURE = "feature"
-    FACTOR = "factor"
-    SIGNAL = "signal"
-    LABEL = "label"
-
-
-class MaterializationProfile(StrEnum):
-    """Derived materialization profile."""
-
-    SERIES = "SERIES"
-    STATE = "STATE"
-    DERIVE = "DERIVE"
-    OFFLINE = "OFFLINE"
 
 
 @dataclass(frozen=True)

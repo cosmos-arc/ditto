@@ -367,3 +367,144 @@ CREATE TABLE IF NOT EXISTS macro_indicator_data (
 );
 CREATE INDEX IF NOT EXISTS idx_macro_indicator_data_pit
     ON macro_indicator_data(indicator_id, effective_from, effective_to);
+
+-- ============ Unified Derived Runtime Tables ============
+
+CREATE TABLE IF NOT EXISTS derived_spec (
+    derived_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    materialization_profile TEXT NOT NULL,
+    spec_hash TEXT NOT NULL,
+    spec_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (derived_id, version)
+);
+
+CREATE TABLE IF NOT EXISTS derived_version (
+    derived_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    engine_version TEXT NOT NULL,
+    is_online INTEGER NOT NULL,
+    is_primary INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT,
+    PRIMARY KEY (derived_id, version)
+);
+
+CREATE TABLE IF NOT EXISTS derived_run (
+    run_id TEXT PRIMARY KEY,
+    derived_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    mode TEXT NOT NULL,
+    trigger TEXT NOT NULL,
+    request_start TEXT NOT NULL,
+    request_end TEXT NOT NULL,
+    compute_start TEXT NOT NULL,
+    compute_end TEXT NOT NULL,
+    source_snapshot_id TEXT,
+    status TEXT NOT NULL,
+    rows_written INTEGER NOT NULL,
+    partitions_written TEXT NOT NULL,
+    error_message TEXT,
+    created_at TEXT NOT NULL,
+    started_at TEXT,
+    finished_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_derived_run_lookup
+    ON derived_run(derived_id, version, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS derived_partition (
+    run_id TEXT NOT NULL,
+    derived_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    partition_key TEXT NOT NULL,
+    partition_path TEXT NOT NULL,
+    row_count INTEGER NOT NULL,
+    checksum TEXT,
+    written_at TEXT NOT NULL,
+    PRIMARY KEY (run_id, partition_key)
+);
+
+CREATE TABLE IF NOT EXISTS derived_checkpoint (
+    derived_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    partition_key TEXT NOT NULL,
+    status TEXT NOT NULL,
+    rows_written INTEGER NOT NULL,
+    checksum TEXT,
+    error_message TEXT,
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    PRIMARY KEY (derived_id, version, partition_key)
+);
+
+CREATE TABLE IF NOT EXISTS derived_dependency (
+    derived_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    dependency_kind TEXT NOT NULL,
+    dependency_ref TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (derived_id, version, dependency_kind, dependency_ref)
+);
+CREATE INDEX IF NOT EXISTS idx_derived_dependency_ref
+    ON derived_dependency(dependency_ref);
+
+CREATE TABLE IF NOT EXISTS derived_invalidation (
+    invalidation_id TEXT PRIMARY KEY,
+    derived_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    source_domain TEXT NOT NULL,
+    source_dataset TEXT NOT NULL,
+    change_date TEXT NOT NULL,
+    affected_start TEXT NOT NULL,
+    affected_end TEXT NOT NULL,
+    source_snapshot_id TEXT,
+    root_dependency_ref TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    processed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_derived_invalidation_pending
+    ON derived_invalidation(status, created_at);
+
+CREATE TABLE IF NOT EXISTS derived_state (
+    derived_id TEXT PRIMARY KEY,
+    active_version INTEGER,
+    coverage_start TEXT,
+    coverage_end TEXT,
+    watermark TEXT,
+    latest_run_id TEXT,
+    latest_run_status TEXT,
+    total_rows INTEGER NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS compiled_expression_cache (
+    cache_key TEXT PRIMARY KEY,
+    derived_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    compiler_fingerprint TEXT NOT NULL,
+    compile_input_hash TEXT NOT NULL,
+    analysis_json TEXT NOT NULL,
+    compile_identity_json TEXT NOT NULL,
+    expression_repr TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS compiled_expression_operator (
+    cache_key TEXT NOT NULL,
+    operator_name TEXT NOT NULL,
+    operator_version TEXT NOT NULL,
+    PRIMARY KEY (cache_key, operator_name)
+);
+
+CREATE TABLE IF NOT EXISTS derived_spec_operator (
+    derived_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    operator_name TEXT NOT NULL,
+    operator_version TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (derived_id, version, operator_name)
+);
