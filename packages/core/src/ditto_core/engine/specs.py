@@ -12,8 +12,10 @@ type GrainId = Literal["1d", "1m"]
 __all__ = [
     "CALENDAR_TO_TIMEZONE",
     "GRAIN_TO_TIME_KEYS",
+    "CalendarId",
     "DerivedRole",
     "DerivedSpec",
+    "GrainId",
     "MaterializationProfile",
 ]
 

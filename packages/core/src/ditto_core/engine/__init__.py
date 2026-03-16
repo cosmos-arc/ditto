@@ -29,11 +29,21 @@ from ditto_core.engine.publication_safety import (
     ShadowDiffReport,
     ShadowTraceRecord,
 )
+from ditto_core.engine.research import (
+    DatasetSnapshot,
+    KnownAtPolicy,
+    LateArrivalPolicy,
+    ResearchDatasetSpec,
+    SpineSnapshot,
+    SpineSpec,
+)
 from ditto_core.engine.specs import (
     CALENDAR_TO_TIMEZONE,
     GRAIN_TO_TIME_KEYS,
+    CalendarId,
     DerivedRole,
     DerivedSpec,
+    GrainId,
     MaterializationProfile,
 )
 
@@ -41,6 +51,7 @@ __all__ = [
     "CALENDAR_TO_TIMEZONE",
     "GRAIN_TO_TIME_KEYS",
     "Analysis",
+    "CalendarId",
     "CertificationCheckResult",
     "CertificationPack",
     "CertificationReport",
@@ -48,6 +59,7 @@ __all__ = [
     "CompatibilityManifest",
     "CompileIdentity",
     "CompiledDerivedExpression",
+    "DatasetSnapshot",
     "DerivedExecutionPlan",
     "DerivedExecutionPlanner",
     "DerivedInvalidationEvent",
@@ -64,8 +76,14 @@ __all__ = [
     "DerivedVersion",
     "DerivedVersionStatus",
     "ExpressionCompiler",
+    "GrainId",
+    "KnownAtPolicy",
+    "LateArrivalPolicy",
     "MaterializationProfile",
     "PublicationSafetySeverity",
+    "ResearchDatasetSpec",
     "ShadowDiffReport",
     "ShadowTraceRecord",
+    "SpineSnapshot",
+    "SpineSpec",
 ]
