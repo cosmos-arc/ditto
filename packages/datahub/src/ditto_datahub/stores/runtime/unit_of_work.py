@@ -95,6 +95,14 @@ class UnitOfWork:
         return self._committed
 
 
+class _SQLiteCommitRollback(Protocol):
+    """Structural interface for SQLite transaction control."""
+
+    def commit(self) -> None: ...
+
+    def rollback(self) -> None: ...
+
+
 class SQLiteAtomicWriter:
     """
     AtomicWriter adapter for SQLiteClient.
@@ -107,7 +115,7 @@ class SQLiteAtomicWriter:
 
     """
 
-    def __init__(self, sqlite_client: object) -> None:
+    def __init__(self, sqlite_client: _SQLiteCommitRollback) -> None:
         """
         Initialize with a SQLiteClient.
 
@@ -129,7 +137,7 @@ class SQLiteAtomicWriter:
         No-op if no transaction is active (no begin() was called).
         """
         if self._active:
-            self._sqlite_client.commit()  # type: ignore[union-attr]
+            self._sqlite_client.commit()
             self._active = False
 
     def rollback(self) -> None:
@@ -139,5 +147,5 @@ class SQLiteAtomicWriter:
         No-op if no transaction is active (no begin() was called).
         """
         if self._active:
-            self._sqlite_client.rollback()  # type: ignore[union-attr]
+            self._sqlite_client.rollback()
             self._active = False
