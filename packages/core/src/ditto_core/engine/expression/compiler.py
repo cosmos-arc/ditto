@@ -26,12 +26,13 @@ from ditto_core.engine.expression.lexer import tokenize
 from ditto_core.engine.expression.parser import ExpressionParser
 from ditto_core.engine.expression.registry import P0_OPERATOR_VERSIONS
 from ditto_core.engine.materialization.contracts import (
+    Analysis,
     CompiledDerivedExpression,
     CompileIdentity,
 )
 from ditto_core.engine.specs import DerivedSpec
 
-__all__ = ["ExpressionCompiler"]
+__all__ = ["ExpressionCompiler", "compute_compile_cache_key"]
 
 _ANALYSIS_VERSION = "analysis-v1"
 _CODEGEN_VERSION = "expr-v1"
@@ -42,64 +43,88 @@ _MAX_EXPRESSION_NODES = 100
 _MAX_LOOKBACK = 252
 
 
+def compute_compile_cache_key(
+    spec: DerivedSpec,
+) -> tuple[str, Analysis, CompileIdentity]:
+    """
+    Compute the cache key for a spec without performing codegen.
+
+    Returns a ``(cache_key, analysis, compile_identity)`` tuple.  The
+    expression is parsed and analysed so that operator versions can be
+    resolved, but no Polars expression is generated.
+    """
+    spec.validate_spec()
+    tokens = tokenize(spec.expression)
+    ast = ExpressionParser(tokens, spec.expression).parse()
+    analysis = analyze_expression(ast)
+
+    operator_versions = tuple(
+        sorted(
+            (
+                name,
+                spec.operator_versions.get(
+                    name, P0_OPERATOR_VERSIONS.get(name, "unknown")
+                ),
+            )
+            for name in analysis.operator_names
+        )
+    )
+    operator_fingerprint = _hash_payload(operator_versions)
+    compile_input_hash = _hash_payload(
+        {
+            "id": spec.id,
+            "version": spec.version,
+            "expression": spec.expression,
+            "entity_keys": spec.entity_keys,
+            "time_keys": spec.effective_time_keys,
+            "profile": spec.materialization_profile.value,
+            "pit_required": spec.pit_required,
+            "normalization_preset": spec.normalization_preset,
+            "operator_versions": operator_versions,
+        }
+    )
+    compiler_fingerprint = _hash_payload(
+        {
+            "engine_codegen_version": _CODEGEN_VERSION,
+            "analysis_version": _ANALYSIS_VERSION,
+            "polars_version": pl.__version__,
+            "expr_serialization_format": _EXPR_SERIALIZATION_FORMAT,
+            "operator_fingerprint": operator_fingerprint,
+            "global_compile_flags": ("grain=1d", "entity_key=instrument_id"),
+        }
+    )
+    cache_key = _hash_payload((compile_input_hash, compiler_fingerprint))
+    compile_identity = CompileIdentity(
+        compile_input_hash=compile_input_hash,
+        operator_fingerprint=operator_fingerprint,
+        compiler_fingerprint=compiler_fingerprint,
+        cache_key=cache_key,
+        engine_codegen_version=_CODEGEN_VERSION,
+        analysis_version=_ANALYSIS_VERSION,
+        polars_version=pl.__version__,
+        expr_serialization_format=_EXPR_SERIALIZATION_FORMAT,
+        operator_versions=operator_versions,
+        global_compile_flags=("grain=1d", "entity_key=instrument_id"),
+    )
+    return cache_key, analysis, compile_identity
+
+
 class ExpressionCompiler:
     """Compile a derived expression into executable Polars state."""
 
     def compile(self, spec: DerivedSpec) -> CompiledDerivedExpression:
         """Compile one spec into a Polars expression and compile identity."""
-        spec.validate_spec()
+        _cache_key, analysis, compile_identity = compute_compile_cache_key(spec)
+
+        # NOTE: tokenization + parsing is repeated here (already done inside
+        # compute_compile_cache_key).  This is acceptable because parsing is
+        # cheap relative to codegen.  A future optimisation could return the
+        # AST from compute_compile_cache_key to avoid the redundancy.
         tokens = tokenize(spec.expression)
         ast = ExpressionParser(tokens, spec.expression).parse()
-        analysis = analyze_expression(ast)
         self._enforce_limits(spec.expression, ast, analysis.lookback)
         expr = compile_expression(ast, spec, source=spec.expression)
 
-        operator_versions = tuple(
-            sorted(
-                (
-                    name,
-                    spec.operator_versions.get(name, P0_OPERATOR_VERSIONS[name]),
-                )
-                for name in analysis.operator_names
-            )
-        )
-        operator_fingerprint = _hash_payload(operator_versions)
-        compile_input_hash = _hash_payload(
-            {
-                "id": spec.id,
-                "version": spec.version,
-                "expression": spec.expression,
-                "entity_keys": spec.entity_keys,
-                "time_keys": spec.effective_time_keys,
-                "profile": spec.materialization_profile.value,
-                "pit_required": spec.pit_required,
-                "normalization_preset": spec.normalization_preset,
-                "operator_versions": operator_versions,
-            }
-        )
-        compiler_fingerprint = _hash_payload(
-            {
-                "engine_codegen_version": _CODEGEN_VERSION,
-                "analysis_version": _ANALYSIS_VERSION,
-                "polars_version": pl.__version__,
-                "expr_serialization_format": _EXPR_SERIALIZATION_FORMAT,
-                "operator_fingerprint": operator_fingerprint,
-                "global_compile_flags": ("grain=1d", "entity_key=instrument_id"),
-            }
-        )
-        cache_key = _hash_payload((compile_input_hash, compiler_fingerprint))
-        compile_identity = CompileIdentity(
-            compile_input_hash=compile_input_hash,
-            operator_fingerprint=operator_fingerprint,
-            compiler_fingerprint=compiler_fingerprint,
-            cache_key=cache_key,
-            engine_codegen_version=_CODEGEN_VERSION,
-            analysis_version=_ANALYSIS_VERSION,
-            polars_version=pl.__version__,
-            expr_serialization_format=_EXPR_SERIALIZATION_FORMAT,
-            operator_versions=operator_versions,
-            global_compile_flags=("grain=1d", "entity_key=instrument_id"),
-        )
         return CompiledDerivedExpression(
             derived_id=spec.id,
             version=spec.version,

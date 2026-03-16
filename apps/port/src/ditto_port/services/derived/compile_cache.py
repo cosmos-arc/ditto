@@ -1,4 +1,16 @@
-"""Port-side compile cache service for unified derived expressions."""
+"""
+Port-side compile cache service for unified derived expressions.
+
+Implements a two-tier cache hierarchy:
+
+1. **L1 (memory)**: In-process dict keyed by cache key.  O(1) lookup.
+2. **L2 (SQLite)**: Persistent cache across process restarts.
+
+Lookup order: L1 -> L2 -> full compile.  On L2 hit the expression is
+re-compiled (unavoidable -- ``pl.Expr`` cannot be deserialized from a
+string), but the L1 cache is re-hydrated so subsequent calls within the
+same process avoid compilation entirely.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +19,7 @@ from datetime import UTC, datetime
 from typing import Any, Protocol
 
 import orjson
-from ditto_core.engine.expression import ExpressionCompiler
+from ditto_core.engine.expression import ExpressionCompiler, compute_compile_cache_key
 from ditto_core.engine.materialization import CompiledDerivedExpression
 from ditto_core.engine.specs import DerivedSpec
 
@@ -52,13 +64,55 @@ class SQLiteCompileCacheService:
         *,
         force_recompile: bool = False,
     ) -> CompiledDerivedExpression:
-        """Return a compiled expression, storing metadata on cache miss."""
-        compiled = self._compiler.compile(spec)
-        cache_key = compiled.compile_identity.cache_key
+        """
+        Return a compiled expression, checking L1 then L2 before compiling.
+
+        Lookup order:
+        1. L1 memory cache (O(1) dict lookup)
+        2. L2 SQLite cache (confirms entry exists, then re-compiles)
+        3. Full compile + persist to L1 and L2
+        """
+        # Compute cache key WITHOUT full compilation.
+        cache_key = _precompute_cache_key(spec)
+
+        # L1 hit
         if not force_recompile and cache_key in self._memory_cache:
             return self._memory_cache[cache_key]
 
+        # L2 hit: if the key exists in SQLite we know the expression
+        # was previously compiled successfully.  Re-compile (required
+        # for a live ``pl.Expr``) and re-hydrate L1.
+        if not force_recompile and self._has_sqlite_entry(cache_key):
+            compiled = self._compiler.compile(spec)
+            self._memory_cache[cache_key] = compiled
+            return compiled
+
+        # Full compile + persist to L1 and L2
+        compiled = self._compiler.compile(spec)
         self._memory_cache[cache_key] = compiled
+        self._persist_to_sqlite(spec, compiled)
+        return compiled
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _has_sqlite_entry(self, cache_key: str) -> bool:
+        """Check whether a cache key exists in the L2 SQLite backend."""
+        row = self._sqlite_client.execute(
+            "SELECT 1 FROM compiled_expression_cache WHERE cache_key = ?",
+            (cache_key,),
+        )
+        result = _fetch_one(row)
+        return result is not None
+
+    def _persist_to_sqlite(
+        self,
+        spec: DerivedSpec,
+        compiled: CompiledDerivedExpression,
+    ) -> None:
+        """Write compiled metadata to the L2 SQLite backend."""
+        cache_key = compiled.compile_identity.cache_key
         self._sqlite_client.execute(
             """
             INSERT OR REPLACE INTO compiled_expression_cache (
@@ -76,7 +130,7 @@ class SQLiteCompileCacheService:
                 compiled.compile_identity.compile_input_hash,
                 orjson.dumps(asdict(compiled.analysis)).decode(),
                 orjson.dumps(asdict(compiled.compile_identity)).decode(),
-                str(compiled.expr),
+                spec.expression,
                 datetime.now(UTC).isoformat(),
             ),
         )
@@ -96,4 +150,22 @@ class SQLiteCompileCacheService:
             ],
         )
         self._sqlite_client.commit()
-        return compiled
+
+
+# ------------------------------------------------------------------
+# Module-level helpers
+# ------------------------------------------------------------------
+
+
+def _precompute_cache_key(spec: DerivedSpec) -> str:
+    """Compute the cache key for *spec* without performing codegen."""
+    cache_key, _analysis, _identity = compute_compile_cache_key(spec)
+    return cache_key
+
+
+def _fetch_one(cursor: object) -> tuple[Any, ...] | None:
+    """Extract the first row from a cursor-like object."""
+    try:
+        return cursor.fetchone()  # type: ignore[union-attr]
+    except AttributeError:
+        return None
