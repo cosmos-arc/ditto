@@ -4,7 +4,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import polars as pl
-from ditto_infra.foundation.util.io import atomic_write, file_md5
+from ditto_infra.foundation.util.io import (
+    atomic_bytes_write,
+    atomic_write,
+    file_md5,
+)
 
 
 class TestAtomicWrite:
@@ -121,6 +125,64 @@ class TestAtomicWrite:
         assert target_path.exists()
         loaded_df = pl.read_parquet(target_path)
         assert loaded_df.equals(df)
+
+
+class TestAtomicBytesWrite:
+    """Test cases for atomic_bytes_write function."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.temp_dir = TemporaryDirectory()
+        self.temp_path = Path(self.temp_dir.name)
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        self.temp_dir.cleanup()
+
+    def test_creates_file(self) -> None:
+        """atomic_bytes_write should create a new file."""
+        target_path = self.temp_path / "test.json"
+        data = b'{"key": "value"}'
+
+        atomic_bytes_write(data, target_path)
+
+        assert target_path.exists()
+        assert target_path.read_bytes() == data
+
+    def test_preserves_data(self) -> None:
+        """atomic_bytes_write should preserve written bytes exactly."""
+        target_path = self.temp_path / "data.bin"
+        data = b"\x00\x01\x02\xff\xfe\xfd"
+
+        atomic_bytes_write(data, target_path)
+
+        assert target_path.read_bytes() == data
+
+    def test_overwrites_existing(self) -> None:
+        """atomic_bytes_write should overwrite existing file atomically."""
+        target_path = self.temp_path / "test.json"
+
+        atomic_bytes_write(b'{"version": 1}', target_path)
+        atomic_bytes_write(b'{"version": 2}', target_path)
+
+        assert target_path.read_bytes() == b'{"version": 2}'
+
+    def test_creates_parent_directories(self) -> None:
+        """atomic_bytes_write should create parent directories if needed."""
+        target_path = self.temp_path / "subdir" / "nested" / "test.json"
+
+        atomic_bytes_write(b"content", target_path)
+
+        assert target_path.exists()
+
+    def test_no_temp_file_left_on_success(self) -> None:
+        """atomic_bytes_write should clean up the temp file after rename."""
+        target_path = self.temp_path / "test.json"
+
+        atomic_bytes_write(b"data", target_path)
+
+        assert not (target_path.with_suffix(".json.tmp")).exists()
+        assert target_path.exists()
 
 
 class TestFileMd5:

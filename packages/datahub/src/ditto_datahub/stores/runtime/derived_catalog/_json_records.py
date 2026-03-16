@@ -7,6 +7,7 @@ from typing import cast
 
 import orjson
 from ditto_datahub.models.derived import JsonDict
+from ditto_infra.foundation.util.io import atomic_bytes_write
 
 
 def read_json_file(path: Path) -> JsonDict | None:
@@ -21,9 +22,8 @@ def read_json_file(path: Path) -> JsonDict | None:
 
 
 def write_json_file(path: Path, payload: JsonDict) -> None:
-    """Write a JSON dictionary to disk."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(orjson.dumps(payload, option=orjson.OPT_INDENT_2))
+    """Write a JSON dictionary to disk atomically."""
+    atomic_bytes_write(orjson.dumps(payload, option=orjson.OPT_INDENT_2), path)
 
 
 def list_json_files(path: Path) -> list[Path]:
