@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from ditto_core.engine.materialization.models import DerivedVersionStatus
 from ditto_datahub.models.derived import (
     DerivedPartitionRecord,
     DerivedRunRecord,
@@ -38,7 +39,7 @@ class TestDerivedCatalogStore:
         version = DerivedVersionRecord(
             derived_id="factor.momentum_20d",
             version=3,
-            status="active",
+            status=DerivedVersionStatus.PUBLISHED,
             engine_version="expr-v1",
             is_online=True,
             is_primary=True,

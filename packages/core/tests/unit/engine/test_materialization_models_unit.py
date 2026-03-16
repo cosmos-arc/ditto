@@ -12,23 +12,67 @@ from ditto_core.engine.materialization.models import (
 )
 
 
+class TestDerivedVersionStatus:
+    """Tests for DerivedVersionStatus enum — unified lifecycle vocabulary."""
+
+    def test_enum_values_are_lowercase(self) -> None:
+        """All enum values must be lowercase for consistent persistence."""
+        assert DerivedVersionStatus.DRAFT.value == "draft"
+        assert DerivedVersionStatus.MATERIALIZED.value == "materialized"
+        assert DerivedVersionStatus.PUBLISHED.value == "published"
+        assert DerivedVersionStatus.DEPRECATED.value == "deprecated"
+        assert DerivedVersionStatus.ARCHIVED.value == "archived"
+
+    def test_str_enum_comparison(self) -> None:
+        """StrEnum members compare equal to their lowercase string value."""
+        assert DerivedVersionStatus.PUBLISHED == "published"
+        assert DerivedVersionStatus.PUBLISHED != "PUBLISHED"
+        assert DerivedVersionStatus.DEPRECATED == "deprecated"
+        assert DerivedVersionStatus.DEPRECATED != "DEPRECATED"
+
+    def test_all_expected_members_exist(self) -> None:
+        """The enum must contain exactly five lifecycle members."""
+        members = list(DerivedVersionStatus)
+        assert len(members) == 5
+        assert DerivedVersionStatus.DRAFT in members
+        assert DerivedVersionStatus.MATERIALIZED in members
+        assert DerivedVersionStatus.PUBLISHED in members
+        assert DerivedVersionStatus.DEPRECATED in members
+        assert DerivedVersionStatus.ARCHIVED in members
+
+
 class TestDerivedVersion:
     """Tests for DerivedVersion."""
 
-    def test_is_active_returns_true_for_active_version(self) -> None:
-        """Active versions should report active state."""
+    def test_is_active_returns_true_for_published_version(self) -> None:
+        """Published versions should report active state."""
         version = DerivedVersion(
             derived_id="factor.momentum_20d",
             version=3,
             spec_hash="spec-hash-v3",
             engine_version="expr-v1",
-            status=DerivedVersionStatus.ACTIVE,
+            status=DerivedVersionStatus.PUBLISHED,
             is_online=True,
             is_primary=True,
             created_at="2026-03-13T16:00:00+08:00",
         )
 
         assert version.is_active() is True
+
+    def test_is_active_returns_false_for_non_published_version(self) -> None:
+        """Non-published versions should not report active state."""
+        version = DerivedVersion(
+            derived_id="factor.momentum_20d",
+            version=3,
+            spec_hash="spec-hash-v3",
+            engine_version="expr-v1",
+            status=DerivedVersionStatus.MATERIALIZED,
+            is_online=False,
+            is_primary=False,
+            created_at="2026-03-13T16:00:00+08:00",
+        )
+
+        assert version.is_active() is False
 
 
 class TestDerivedRun:

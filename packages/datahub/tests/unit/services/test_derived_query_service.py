@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
+from datetime import date
+from pathlib import Path
+
+import polars as pl
 import pytest
+from ditto_core.engine.materialization.models import DerivedVersionStatus
+from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_datahub.models.derived import (
+    DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
 )
@@ -11,6 +19,7 @@ from ditto_datahub.services.derived import (
     COMPARE_RESULT_COLUMNS,
     LATEST_RESULT_COLUMNS,
     SERIES_RESULT_COLUMNS,
+    DerivedArtifactReader,
     DerivedCompareQuery,
     DerivedLatestQuery,
     DerivedQueryService,
@@ -20,7 +29,11 @@ from ditto_datahub.services.derived import (
     empty_latest_result,
     empty_series_result,
 )
-from pytest_mock import MockerFixture
+from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
+from ditto_datahub.stores.runtime.derived_sqlite import (
+    SQLiteDerivedCatalogReader,
+    SQLiteDerivedCatalogWriter,
+)
 
 
 def _state_record(active_version: int | None = 3) -> DerivedStateRecord:
@@ -41,13 +54,75 @@ def _version_record(version: int = 3) -> DerivedVersionRecord:
     return DerivedVersionRecord(
         derived_id="factor.momentum_20d",
         version=version,
-        status="MATERIALIZED",
+        status=DerivedVersionStatus.MATERIALIZED,
         engine_version="expr-v0",
         is_online=True,
         is_primary=True,
         created_at="2026-03-13T12:00:00+08:00",
         updated_at=None,
     )
+
+
+def _catalog_service(sqlite_client) -> DerivedCatalogService:
+    return DerivedCatalogService(
+        catalog_reader=SQLiteDerivedCatalogReader(sqlite_client),
+        catalog_writer=SQLiteDerivedCatalogWriter(sqlite_client),
+    )
+
+
+def _seed_spec(
+    catalog_service: DerivedCatalogService,
+    *,
+    derived_id: str,
+    version: int,
+    is_online: bool,
+    is_primary: bool,
+    profile: MaterializationProfile = MaterializationProfile.SERIES,
+) -> None:
+    spec = DerivedSpec(
+        id=derived_id,
+        version=version,
+        role=DerivedRole.FACTOR,
+        materialization_profile=profile,
+        expression="market.close",
+    )
+    catalog_service.save_spec(
+        DerivedSpecRecord(
+            derived_id=derived_id,
+            version=version,
+            role=spec.role.value,
+            materialization_profile=profile.value,
+            spec_hash=f"hash:{derived_id}:v{version}",
+            spec_json=asdict(spec),
+            created_at="2026-03-13T12:00:00+08:00",
+        )
+    )
+    catalog_service.save_version(
+        DerivedVersionRecord(
+            derived_id=derived_id,
+            version=version,
+            status=DerivedVersionStatus.PUBLISHED if is_primary else "MATERIALIZED",
+            engine_version="expr-v1",
+            is_online=is_online,
+            is_primary=is_primary,
+            created_at="2026-03-13T12:00:00+08:00",
+            updated_at=None,
+        )
+    )
+
+
+def _write_artifact(
+    artifact_root: Path,
+    *,
+    derived_id: str,
+    version: int,
+    rows: list[dict[str, object]],
+) -> None:
+    version_root = (
+        artifact_root / "derived" / "artifacts" / "series" / derived_id / f"v{version}"
+    )
+    version_root.mkdir(parents=True, exist_ok=True)
+    pl.DataFrame(rows).write_parquet(version_root / "2026.parquet")
 
 
 class TestDerivedQueryService:
@@ -76,36 +151,101 @@ class TestDerivedQueryService:
                 source_scope="archive",
             )
 
-    def test_find_latest_resolves_active_version_before_backend_guard(
+    def test_find_latest_reads_primary_online_artifact_slice(
         self,
-        mocker: MockerFixture,
+        sqlite_client,
+        tmp_path: Path,
     ) -> None:
-        """Latest queries should resolve active versions before failing closed."""
-        catalog_service = mocker.Mock()
-        catalog_service.get_state.return_value = _state_record(active_version=3)
-        catalog_service.get_spec.return_value = object()
-        catalog_service.get_version.return_value = _version_record(version=3)
-        service = DerivedQueryService(catalog_service=catalog_service)
+        """Serving latest queries should prefer the primary online version artifact."""
+        catalog_service = _catalog_service(sqlite_client)
+        derived_id = "factor.momentum_20d"
+        _seed_spec(
+            catalog_service,
+            derived_id=derived_id,
+            version=2,
+            is_online=True,
+            is_primary=True,
+        )
+        _seed_spec(
+            catalog_service,
+            derived_id=derived_id,
+            version=3,
+            is_online=False,
+            is_primary=False,
+        )
+        catalog_service.save_state(_state_record(active_version=3))
+        _write_artifact(
+            tmp_path,
+            derived_id=derived_id,
+            version=2,
+            rows=[
+                {
+                    "instrument_id": 1,
+                    "trade_date": date(2026, 3, 10),
+                    "value": 1.0,
+                    "availability_time": date(2026, 3, 10),
+                },
+                {
+                    "instrument_id": 1,
+                    "trade_date": date(2026, 3, 11),
+                    "value": 2.0,
+                    "availability_time": date(2026, 3, 11),
+                },
+            ],
+        )
+        _write_artifact(
+            tmp_path,
+            derived_id=derived_id,
+            version=3,
+            rows=[
+                {
+                    "instrument_id": 1,
+                    "trade_date": date(2026, 3, 11),
+                    "value": 99.0,
+                    "availability_time": date(2026, 3, 11),
+                },
+            ],
+        )
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=DerivedArtifactReader(
+                catalog_service=catalog_service,
+                artifact_root=tmp_path,
+            ),
+        )
         query = DerivedLatestQuery(
-            derived_ids=("factor.momentum_20d",),
-            instrument_ids=(1, 2),
+            derived_ids=(derived_id,),
+            instrument_ids=(1,),
+            as_of="2026-03-11",
         )
 
-        with pytest.raises(NotImplementedError, match="Phase 3 backend not ready"):
-            service.find_latest(query)
+        result = service.find_latest(query)
 
-        catalog_service.get_state.assert_called_once_with("factor.momentum_20d")
-        catalog_service.get_spec.assert_called_once_with("factor.momentum_20d", 3)
-        catalog_service.get_version.assert_called_once_with("factor.momentum_20d", 3)
+        assert result.to_dicts() == [
+            {
+                "derived_id": derived_id,
+                "instrument_id": 1,
+                "value": 2.0,
+                "trade_date": date(2026, 3, 11),
+                "bar_time": None,
+                "asof_ts": None,
+                "version": 2,
+            }
+        ]
 
     def test_find_series_missing_spec_raises_key_error(
         self,
-        mocker: MockerFixture,
+        sqlite_client,
     ) -> None:
         """Explicit versions should fail fast when catalog metadata is missing."""
-        catalog_service = mocker.Mock()
-        catalog_service.get_spec.return_value = None
-        service = DerivedQueryService(catalog_service=catalog_service)
+        catalog_service = _catalog_service(sqlite_client)
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=DerivedArtifactReader(
+                catalog_service=catalog_service,
+                artifact_root=Path("/tmp/does-not-exist"),
+            ),
+        )
         query = DerivedSeriesQuery(
             derived_ids=("factor.momentum_20d",),
             instrument_ids=(1,),
@@ -114,9 +254,6 @@ class TestDerivedQueryService:
 
         with pytest.raises(KeyError, match="derived spec not found"):
             service.find_series(query)
-
-        catalog_service.get_state.assert_not_called()
-        catalog_service.get_spec.assert_called_once_with("factor.momentum_20d", 5)
 
     def test_compare_query_rejects_duplicate_sources(self) -> None:
         """Compare queries should require two distinct source scopes."""
@@ -131,6 +268,185 @@ class TestDerivedQueryService:
                     DerivedSourceScope.SERVING,
                 ),
             )
+
+    def test_find_series_reads_requested_offline_version_artifact(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """Offline series queries should honor an explicit version override."""
+        catalog_service = _catalog_service(sqlite_client)
+        derived_id = "factor.momentum_20d"
+        _seed_spec(
+            catalog_service,
+            derived_id=derived_id,
+            version=2,
+            is_online=False,
+            is_primary=False,
+        )
+        _seed_spec(
+            catalog_service,
+            derived_id=derived_id,
+            version=3,
+            is_online=True,
+            is_primary=True,
+        )
+        catalog_service.save_state(_state_record(active_version=3))
+        _write_artifact(
+            tmp_path,
+            derived_id=derived_id,
+            version=2,
+            rows=[
+                {
+                    "instrument_id": 1,
+                    "trade_date": date(2026, 3, 10),
+                    "value": 1.5,
+                    "availability_time": date(2026, 3, 10),
+                },
+                {
+                    "instrument_id": 1,
+                    "trade_date": date(2026, 3, 11),
+                    "value": 2.5,
+                    "availability_time": date(2026, 3, 11),
+                },
+            ],
+        )
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=DerivedArtifactReader(
+                catalog_service=catalog_service,
+                artifact_root=tmp_path,
+            ),
+        )
+
+        result = service.find_series(
+            DerivedSeriesQuery(
+                derived_ids=(derived_id,),
+                instrument_ids=(1,),
+                start="2026-03-10",
+                end="2026-03-11",
+                version=2,
+            )
+        )
+
+        assert result.to_dicts() == [
+            {
+                "derived_id": derived_id,
+                "instrument_id": 1,
+                "trade_date": date(2026, 3, 10),
+                "bar_time": None,
+                "value": 1.5,
+                "asof_ts": None,
+                "version": 2,
+            },
+            {
+                "derived_id": derived_id,
+                "instrument_id": 1,
+                "trade_date": date(2026, 3, 11),
+                "bar_time": None,
+                "value": 2.5,
+                "asof_ts": None,
+                "version": 2,
+            },
+        ]
+
+    def test_compare_sources_reads_serving_and_offline_artifacts(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """Compare queries should join serving baseline and offline candidate."""
+        catalog_service = _catalog_service(sqlite_client)
+        derived_id = "factor.momentum_20d"
+        _seed_spec(
+            catalog_service,
+            derived_id=derived_id,
+            version=2,
+            is_online=True,
+            is_primary=True,
+        )
+        _seed_spec(
+            catalog_service,
+            derived_id=derived_id,
+            version=3,
+            is_online=False,
+            is_primary=False,
+        )
+        catalog_service.save_state(_state_record(active_version=3))
+        _write_artifact(
+            tmp_path,
+            derived_id=derived_id,
+            version=2,
+            rows=[
+                {
+                    "instrument_id": 1,
+                    "trade_date": date(2026, 3, 10),
+                    "value": 1.0,
+                    "availability_time": date(2026, 3, 10),
+                },
+                {
+                    "instrument_id": 1,
+                    "trade_date": date(2026, 3, 11),
+                    "value": 1.5,
+                    "availability_time": date(2026, 3, 11),
+                },
+            ],
+        )
+        _write_artifact(
+            tmp_path,
+            derived_id=derived_id,
+            version=3,
+            rows=[
+                {
+                    "instrument_id": 1,
+                    "trade_date": date(2026, 3, 10),
+                    "value": 1.2,
+                    "availability_time": date(2026, 3, 10),
+                },
+                {
+                    "instrument_id": 1,
+                    "trade_date": date(2026, 3, 11),
+                    "value": 1.4,
+                    "availability_time": date(2026, 3, 11),
+                },
+            ],
+        )
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=DerivedArtifactReader(
+                catalog_service=catalog_service,
+                artifact_root=tmp_path,
+            ),
+        )
+
+        result = service.compare_sources(
+            DerivedCompareQuery(
+                derived_ids=(derived_id,),
+                instrument_ids=(1,),
+                start="2026-03-10",
+                end="2026-03-11",
+                version=3,
+            )
+        )
+
+        assert result.to_dicts() == [
+            {
+                "derived_id": derived_id,
+                "instrument_id": 1,
+                "trade_date": date(2026, 3, 10),
+                "serving_value": 1.0,
+                "offline_value": 1.2,
+                "diff": -0.2,
+            },
+            {
+                "derived_id": derived_id,
+                "instrument_id": 1,
+                "trade_date": date(2026, 3, 11),
+                "serving_value": 1.5,
+                "offline_value": 1.4,
+                "diff": 0.1,
+            },
+        ]
 
 
 def test_empty_result_helpers_expose_stable_columns() -> None:

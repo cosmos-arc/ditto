@@ -21,7 +21,8 @@ class DerivedVersionStatus(StrEnum):
     """Catalog lifecycle status for a derived version."""
 
     DRAFT = "draft"
-    ACTIVE = "active"
+    MATERIALIZED = "materialized"
+    PUBLISHED = "published"
     DEPRECATED = "deprecated"
     ARCHIVED = "archived"
 
@@ -64,8 +65,8 @@ class DerivedVersion:
     updated_at: str | None = None
 
     def is_active(self) -> bool:
-        """Return whether the version is active."""
-        return self.status == DerivedVersionStatus.ACTIVE
+        """Return whether the version is active (published and online)."""
+        return self.status == DerivedVersionStatus.PUBLISHED
 
 
 @dataclass(frozen=True)

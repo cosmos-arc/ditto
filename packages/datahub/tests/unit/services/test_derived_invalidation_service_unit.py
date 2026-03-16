@@ -6,10 +6,17 @@ from dataclasses import asdict
 from pathlib import Path
 
 import polars as pl
-from ditto_core.engine.materialization import DerivedInvalidationEvent
+from ditto_core.engine.materialization import (
+    DerivedInvalidationEvent,
+    DerivedMaterializationRequest,
+)
+from ditto_core.engine.materialization.models import (
+    DerivedRunMode,
+    DerivedRunTrigger,
+    DerivedVersionStatus,
+)
 from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_datahub.models.derived import (
-    DerivedDependencyRecord,
     DerivedSpecRecord,
     DerivedVersionRecord,
 )
@@ -77,7 +84,7 @@ def _seed_spec(catalog_service: DerivedCatalogService, spec: DerivedSpec) -> Non
         DerivedVersionRecord(
             derived_id=spec.id,
             version=spec.version,
-            status="active",
+            status=DerivedVersionStatus.PUBLISHED,
             engine_version="expr-v1",
             is_online=True,
             is_primary=True,
@@ -113,15 +120,16 @@ class TestDerivedInvalidationService:
         )
         _seed_spec(catalog_service, upstream)
         _seed_spec(catalog_service, downstream)
-        catalog_service.save_dependencies(
-            (
-                DerivedDependencyRecord(
-                    derived_id=downstream.id,
-                    version=downstream.version,
-                    dependency_kind="derived",
-                    dependency_ref=upstream.id,
-                    created_at="2026-03-13T11:00:00+08:00",
-                ),
+        materialization_service = invalidation_service._materialization_service
+        materialization_service.materialize(
+            DerivedMaterializationRequest(
+                derived_id=downstream.id,
+                version=downstream.version,
+                mode=DerivedRunMode.FULL,
+                request_start="2026-03-10",
+                request_end="2026-03-11",
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id=None,
             )
         )
 
