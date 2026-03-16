@@ -62,6 +62,7 @@ __all__ = [
     "DerivedInputProvider",
     "DerivedMaterializationService",
     "InMemoryDerivedInputProvider",
+    "MissingDependencyError",
     "UnavailableDerivedInputProvider",
 ]
 
@@ -727,27 +728,41 @@ def _optional_bool_payload(payload: Mapping[str, object], key: str) -> bool | No
     return value
 
 
+class MissingDependencyError(Exception):
+    """Raised when required dependency columns are missing from input data."""
+
+    def __init__(self, missing: list[str], available: list[str]) -> None:
+        self.missing = missing
+        self.available = available
+        super().__init__(
+            f"Missing required dependency columns: {missing}. "
+            + f"Available columns: {available}"
+        )
+
+
 def _prepare_input_frame(
     *,
     frame: pl.DataFrame,
     spec: DerivedSpec,
     dependencies: tuple[str, ...],
 ) -> pl.DataFrame:
+    """Prepare input data frame, validating all dependencies exist."""
     sort_columns = [*spec.entity_keys, *spec.effective_time_keys]
     prepared = frame.sort(sort_columns)
-    key_columns = set(spec.entity_keys) | set(spec.effective_time_keys)
-    value_candidates = [
-        column for column in prepared.columns if column not in key_columns
-    ]
-    fallback_column = value_candidates[0] if value_candidates else None
+
+    missing: list[str] = []
     for dependency in dependencies:
-        if (
-            dependency in prepared.columns
-            or _dependency_input_column(dependency) in prepared.columns
-            or fallback_column is None
-        ):
-            continue
-        prepared = prepared.with_columns(pl.col(fallback_column).alias(dependency))
+        if dependency not in prepared.columns:
+            input_col = _dependency_input_column(dependency)
+            if input_col not in prepared.columns:
+                missing.append(dependency)
+
+    if missing:
+        raise MissingDependencyError(
+            missing=missing,
+            available=list(prepared.columns),
+        )
+
     return prepared
 
 
