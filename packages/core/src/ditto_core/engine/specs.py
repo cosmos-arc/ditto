@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Literal
 
-type CalendarId = str
-type GrainId = str
+type CalendarId = Literal["cn_stock"]
+type GrainId = Literal["1d", "1m"]
 
 __all__ = [
     "CALENDAR_TO_TIMEZONE",

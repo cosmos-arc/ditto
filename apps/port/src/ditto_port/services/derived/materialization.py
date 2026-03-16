@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import platform
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
@@ -15,6 +16,7 @@ import polars as pl
 from ditto_core.engine.materialization import (
     Analysis,
     CompileIdentity,
+    DerivedExecutionPlan,
     DerivedExecutionPlanner,
     DerivedMaterializationRequest,
     DerivedMaterializationResult,
@@ -22,16 +24,37 @@ from ditto_core.engine.materialization import (
     DerivedRunStatus,
     DerivedRunTrigger,
 )
-from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_core.engine.publication_safety import (
+    CompatibilityManifest,
+    DerivedMinimalDQSummary,
+)
+from ditto_core.engine.specs import (
+    CalendarId,
+    DerivedRole,
+    DerivedSpec,
+    GrainId,
+    MaterializationProfile,
+)
 from ditto_datahub.models.derived import (
     DerivedCheckpointRecord,
+    DerivedDependencyRecord,
     DerivedInvalidationRecord,
     DerivedPartitionRecord,
     DerivedRunRecord,
     DerivedSpecRecord,
     DerivedStateRecord,
 )
+from ditto_datahub.models.publication_safety import (
+    CompatibilityManifestRecord,
+    DerivedMinimalDQSummaryRecord,
+    DerivedShadowSlotRecord,
+    JsonDict,
+)
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
+from ditto_datahub.services.derived_shadow_slot_service import DerivedShadowSlotService
+from ditto_datahub.services.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+)
 
 from ditto_port.services.derived.compile_cache import SQLiteCompileCacheService
 
@@ -51,6 +74,8 @@ class DerivedInputProvider(Protocol):
         *,
         spec: DerivedSpec,
         request: DerivedMaterializationRequest,
+        plan: DerivedExecutionPlan,
+        dependencies: tuple[str, ...],
     ) -> pl.DataFrame:
         """Load the raw input frame for one derived request."""
         ...
@@ -67,9 +92,13 @@ class InMemoryDerivedInputProvider:
         *,
         spec: DerivedSpec,
         request: DerivedMaterializationRequest,
+        plan: DerivedExecutionPlan,
+        dependencies: tuple[str, ...],
     ) -> pl.DataFrame:
         """Load one in-memory input frame."""
         del request
+        del plan
+        del dependencies
         frame = self._frames.get(spec.id)
         if frame is None:
             raise KeyError(f"missing input frame for derived_id={spec.id}")
@@ -84,9 +113,13 @@ class UnavailableDerivedInputProvider:
         *,
         spec: DerivedSpec,
         request: DerivedMaterializationRequest,
+        plan: DerivedExecutionPlan,
+        dependencies: tuple[str, ...],
     ) -> pl.DataFrame:
         """Raise until a runtime source loader is wired."""
         del request
+        del plan
+        del dependencies
         raise NotImplementedError(
             f"Phase 3 input backend not wired for derived_id={spec.id}"
         )
@@ -102,11 +135,15 @@ class DerivedMaterializationService:
         compile_cache_service: SQLiteCompileCacheService,
         input_provider: DerivedInputProvider,
         artifact_root: Path,
+        publication_record_service: PublicationSafetyRecordService | None = None,
+        shadow_slot_service: DerivedShadowSlotService | None = None,
     ) -> None:
         self._catalog_service = catalog_service
         self._compile_cache_service = compile_cache_service
         self._input_provider = input_provider
         self._artifact_root = Path(artifact_root)
+        self._publication_record_service = publication_record_service
+        self._shadow_slot_service = shadow_slot_service
         self._planner = DerivedExecutionPlanner()
 
     def materialize(
@@ -172,7 +209,12 @@ class DerivedMaterializationService:
             )
         )
         try:
-            input_frame = self._input_provider.load_input(spec=spec, request=request)
+            input_frame = self._input_provider.load_input(
+                spec=spec,
+                request=request,
+                plan=plan,
+                dependencies=compiled.analysis.dependencies,
+            )
             prepared_frame = _prepare_input_frame(
                 frame=input_frame,
                 spec=spec,
@@ -193,6 +235,7 @@ class DerivedMaterializationService:
                     run_id=run_id,
                     started_at=started_at,
                     rows_written=materialized_frame.height,
+                    dependencies=compiled.analysis.dependencies,
                 )
             partitions = self._write_durable_artifacts(
                 spec=spec,
@@ -202,6 +245,22 @@ class DerivedMaterializationService:
                 compile_identity=compiled.compile_identity,
                 analysis=compiled.analysis,
             )
+            minimal_dq_record = None
+            if self._publication_record_service is not None:
+                minimal_dq_record = _build_minimal_dq_record(
+                    spec=spec,
+                    run_id=run_id,
+                    version=spec.version,
+                    frame=materialized_frame,
+                )
+                self._persist_publication_safety_records(
+                    spec=spec,
+                    run_id=run_id,
+                    request=request,
+                    compile_identity=compiled.compile_identity,
+                    partitions=partitions,
+                    minimal_dq_record=minimal_dq_record,
+                )
             return self._finalize_durable_run(
                 spec=spec,
                 request=request,
@@ -209,6 +268,7 @@ class DerivedMaterializationService:
                 started_at=started_at,
                 frame=materialized_frame,
                 partitions=partitions,
+                dependencies=compiled.analysis.dependencies,
             )
         except Exception as exc:
             finished_at = _now_iso()
@@ -271,8 +331,15 @@ class DerivedMaterializationService:
         run_id: str,
         started_at: str,
         rows_written: int,
+        dependencies: tuple[str, ...],
     ) -> DerivedMaterializationResult:
         finished_at = _now_iso()
+        self._persist_dependencies(
+            derived_id=spec.id,
+            version=spec.version,
+            dependencies=dependencies,
+            created_at=finished_at,
+        )
         result = DerivedMaterializationResult(
             run_id=run_id,
             derived_id=spec.id,
@@ -316,6 +383,7 @@ class DerivedMaterializationService:
         started_at: str,
         frame: pl.DataFrame,
         partitions: tuple[dict[str, str | int], ...],
+        dependencies: tuple[str, ...],
     ) -> DerivedMaterializationResult:
         finished_at = _now_iso()
         partition_records = tuple(
@@ -360,6 +428,12 @@ class DerivedMaterializationService:
                 updated_at=finished_at,
             )
         )
+        self._persist_dependencies(
+            derived_id=spec.id,
+            version=spec.version,
+            dependencies=dependencies,
+            created_at=finished_at,
+        )
         result = DerivedMaterializationResult(
             run_id=run_id,
             derived_id=spec.id,
@@ -395,6 +469,27 @@ class DerivedMaterializationService:
             )
         )
         return result
+
+    def _persist_dependencies(
+        self,
+        *,
+        derived_id: str,
+        version: int,
+        dependencies: tuple[str, ...],
+        created_at: str,
+    ) -> None:
+        records = tuple(
+            DerivedDependencyRecord(
+                derived_id=derived_id,
+                version=version,
+                dependency_kind=dependency_kind,
+                dependency_ref=dependency_ref,
+                created_at=created_at,
+            )
+            for dependency_kind, dependency_ref in _dependency_refs(dependencies)
+        )
+        if records:
+            self._catalog_service.save_dependencies(records)
 
     def _write_ephemeral_result(
         self,
@@ -478,6 +573,97 @@ class DerivedMaterializationService:
         )
         return tuple(partitions)
 
+    def _persist_publication_safety_records(
+        self,
+        *,
+        spec: DerivedSpec,
+        run_id: str,
+        request: DerivedMaterializationRequest,
+        compile_identity: CompileIdentity,
+        partitions: tuple[dict[str, str | int], ...],
+        minimal_dq_record: DerivedMinimalDQSummaryRecord,
+    ) -> None:
+        publication_record_service = self._publication_record_service
+        if publication_record_service is None:
+            raise RuntimeError("publication record service is not configured")
+        manifest_record = _build_manifest_record(
+            spec=spec,
+            version=spec.version,
+            compile_identity=compile_identity,
+        )
+        publication_record_service.save_manifest(manifest_record)
+        publication_record_service.save_minimal_dq_summary(minimal_dq_record)
+        self._update_artifact_metadata(
+            spec=spec,
+            run_id=run_id,
+            request=request,
+            compile_identity=compile_identity,
+            partitions=partitions,
+            manifest_record=manifest_record,
+            minimal_dq_record=minimal_dq_record,
+        )
+        shadow_slot_service = self._shadow_slot_service
+        if shadow_slot_service is None:
+            return
+        baseline_version = _resolve_shadow_baseline(
+            catalog_service=self._catalog_service,
+            derived_id=spec.id,
+            candidate_version=spec.version,
+        )
+        shadow_slot_service.save_slot(
+            DerivedShadowSlotRecord(
+                derived_id=spec.id,
+                candidate_version=spec.version,
+                baseline_version=baseline_version,
+                activated_at=_now_iso(),
+                disabled_at=None,
+            )
+        )
+
+    def _update_artifact_metadata(
+        self,
+        *,
+        spec: DerivedSpec,
+        run_id: str,
+        request: DerivedMaterializationRequest,
+        compile_identity: CompileIdentity,
+        partitions: tuple[dict[str, str | int], ...],
+        manifest_record: CompatibilityManifestRecord,
+        minimal_dq_record: DerivedMinimalDQSummaryRecord,
+    ) -> None:
+        metadata_path = (
+            self._artifact_root
+            / "derived"
+            / "artifacts"
+            / spec.materialization_profile.value.lower()
+            / spec.id
+            / f"v{spec.version}"
+            / "_runs"
+            / run_id
+            / "artifact_metadata.json"
+        )
+        payload = orjson.loads(metadata_path.read_bytes())
+        payload["publication"] = {
+            "manifest_hash": manifest_record.manifest_hash,
+            "compatibility_manifest": manifest_record.payload,
+            "minimal_dq_summary": {
+                "run_id": minimal_dq_record.run_id,
+                "passed": minimal_dq_record.passed,
+                "error_count": minimal_dq_record.error_count,
+                **minimal_dq_record.payload,
+            },
+        }
+        payload["compile_identity"] = asdict(compile_identity)
+        payload["input_snapshots"] = (
+            [request.source_snapshot_id]
+            if request.source_snapshot_id is not None
+            else []
+        )
+        payload["partitions_written"] = list(partitions)
+        metadata_path.write_bytes(
+            orjson.dumps(payload, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS)
+        )
+
 
 def _hydrate_spec(record: DerivedSpecRecord) -> DerivedSpec:
     payload = record.spec_json
@@ -492,11 +678,11 @@ def _hydrate_spec(record: DerivedSpecRecord) -> DerivedSpec:
         entity_keys=tuple(
             cast(list[str], payload.get("entity_keys", ["instrument_id"]))
         ),
-        grain=str(payload.get("grain", "1d")),
+        grain=cast(GrainId, str(payload.get("grain", "1d"))),
         time_keys=None
         if payload.get("time_keys") is None
         else tuple(cast(list[str], payload["time_keys"])),
-        calendar=str(payload.get("calendar", "cn_stock")),
+        calendar=cast(CalendarId, str(payload.get("calendar", "cn_stock"))),
         description=None
         if payload.get("description") is None
         else str(payload["description"]),
@@ -555,7 +741,11 @@ def _prepare_input_frame(
     ]
     fallback_column = value_candidates[0] if value_candidates else None
     for dependency in dependencies:
-        if dependency in prepared.columns or fallback_column is None:
+        if (
+            dependency in prepared.columns
+            or _dependency_input_column(dependency) in prepared.columns
+            or fallback_column is None
+        ):
             continue
         prepared = prepared.with_columns(pl.col(fallback_column).alias(dependency))
     return prepared
@@ -573,3 +763,277 @@ def _extract_partition_keys(frame: pl.DataFrame, spec: DerivedSpec) -> tuple[str
 
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _build_manifest_record(
+    *,
+    spec: DerivedSpec,
+    version: int,
+    compile_identity: CompileIdentity,
+) -> CompatibilityManifestRecord:
+    manifest = _build_manifest(spec=spec, compile_identity=compile_identity)
+    manifest_hash = _manifest_hash(_manifest_payload(manifest))
+    manifest = replace(manifest, manifest_hash=manifest_hash)
+    payload = asdict(manifest)
+    return CompatibilityManifestRecord(
+        derived_id=spec.id,
+        version=version,
+        manifest_hash=manifest_hash,
+        payload=cast(JsonDict, payload),
+        created_at=_now_iso(),
+    )
+
+
+def _build_minimal_dq_record(
+    *,
+    spec: DerivedSpec,
+    run_id: str,
+    version: int,
+    frame: pl.DataFrame,
+) -> DerivedMinimalDQSummaryRecord:
+    summary = _build_minimal_dq_summary(spec=spec, frame=frame)
+    return DerivedMinimalDQSummaryRecord(
+        derived_id=spec.id,
+        version=version,
+        run_id=run_id,
+        passed=summary.is_passed(),
+        error_count=summary.error_count(),
+        payload=cast(JsonDict, asdict(summary)),
+        created_at=_now_iso(),
+    )
+
+
+def _build_minimal_dq_summary(
+    *,
+    spec: DerivedSpec,
+    frame: pl.DataFrame,
+) -> DerivedMinimalDQSummary:
+    primary_key_columns = tuple(
+        dict.fromkeys((*spec.entity_keys, *spec.effective_time_keys))
+    )
+    missing_primary_key_columns = tuple(
+        column for column in primary_key_columns if column not in frame.columns
+    )
+    row_count = frame.height
+    failed_checks: list[str] = []
+    if row_count <= 0:
+        failed_checks.append("row_count_positive")
+
+    null_primary_key_count = 0
+    duplicate_key_count = 0
+    if missing_primary_key_columns:
+        failed_checks.append("primary_keys_present")
+    elif row_count > 0:
+        null_primary_key_count = _count_null_primary_keys(
+            frame=frame,
+            primary_key_columns=primary_key_columns,
+        )
+        duplicate_key_count = _count_duplicate_primary_keys(
+            frame=frame,
+            primary_key_columns=primary_key_columns,
+        )
+        if null_primary_key_count > 0:
+            failed_checks.append("primary_keys_present")
+        if duplicate_key_count > 0:
+            failed_checks.append("primary_keys_unique")
+
+    null_value_count = 0
+    nan_value_count = 0
+    computable_value_count = 0
+    if "value" not in frame.columns:
+        failed_checks.append("value_column_present")
+    else:
+        null_value_count = int(frame.select(pl.col("value").is_null().sum()).item())
+        nan_value_count = _count_nan_values(frame)
+        computable_value_count = _count_computable_values(
+            frame=frame,
+            null_value_count=null_value_count,
+            nan_value_count=nan_value_count,
+        )
+        if computable_value_count <= 0:
+            failed_checks.append("value_has_computable_rows")
+        if nan_value_count > 0:
+            failed_checks.append("value_has_no_nan")
+
+    return DerivedMinimalDQSummary(
+        row_count=row_count,
+        primary_key_columns=primary_key_columns,
+        missing_primary_key_columns=missing_primary_key_columns,
+        null_primary_key_count=null_primary_key_count,
+        duplicate_key_count=duplicate_key_count,
+        null_value_count=null_value_count,
+        nan_value_count=nan_value_count,
+        computable_value_count=computable_value_count,
+        failed_checks=tuple(failed_checks),
+    )
+
+
+def _count_null_primary_keys(
+    *,
+    frame: pl.DataFrame,
+    primary_key_columns: tuple[str, ...],
+) -> int:
+    if not primary_key_columns or frame.is_empty():
+        return 0
+    return int(
+        frame.select(
+            pl.any_horizontal(
+                [pl.col(column).is_null() for column in primary_key_columns]
+            ).sum()
+        ).item()
+    )
+
+
+def _count_duplicate_primary_keys(
+    *,
+    frame: pl.DataFrame,
+    primary_key_columns: tuple[str, ...],
+) -> int:
+    if not primary_key_columns or frame.is_empty():
+        return 0
+    duplicate_rows = (
+        frame.group_by(list(primary_key_columns)).len().filter(pl.col("len") > 1)
+    )
+    if duplicate_rows.is_empty():
+        return 0
+    return int(duplicate_rows.select((pl.col("len") - 1).sum()).item())
+
+
+def _count_nan_values(frame: pl.DataFrame) -> int:
+    if "value" not in frame.columns:
+        return 0
+    value_dtype = frame.schema["value"]
+    if value_dtype not in (pl.Float32(), pl.Float64()):
+        return 0
+    return int(frame.select(pl.col("value").is_nan().sum()).item())
+
+
+def _count_computable_values(
+    *,
+    frame: pl.DataFrame,
+    null_value_count: int,
+    nan_value_count: int,
+) -> int:
+    if "value" not in frame.columns:
+        return 0
+    return frame.height - null_value_count - nan_value_count
+
+
+def _build_manifest(
+    *,
+    spec: DerivedSpec,
+    compile_identity: CompileIdentity,
+) -> CompatibilityManifest:
+    return CompatibilityManifest(
+        engine_codegen_version=compile_identity.engine_codegen_version,
+        analysis_version=compile_identity.analysis_version,
+        polars_version=compile_identity.polars_version,
+        expr_serialization_format=compile_identity.expr_serialization_format,
+        operator_fingerprint=compile_identity.operator_fingerprint,
+        global_compile_flags=_compile_flags_dict(compile_identity.global_compile_flags),
+        calendar_id=spec.calendar,
+        timezone="Asia/Shanghai",
+        time_semantics_version="time-v1",
+        python_version=platform.python_version(),
+        platform=platform.platform(),
+        builder_version="unified-derived-v1",
+    )
+
+
+def _manifest_payload(manifest: CompatibilityManifest) -> JsonDict:
+    payload = cast(JsonDict, asdict(manifest))
+    payload.pop("manifest_hash", None)
+    return payload
+
+
+def _compile_flags_dict(flags: tuple[str, ...]) -> dict[str, str | int | float | bool]:
+    parsed: dict[str, str | int | float | bool] = {}
+    for flag in flags:
+        if "=" not in flag:
+            parsed[flag] = True
+            continue
+        key, value = flag.split("=", 1)
+        parsed[key] = value
+    return parsed
+
+
+def _manifest_hash(payload: JsonDict) -> str:
+    serialized = orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)
+    return sha256(serialized).hexdigest()
+
+
+def _resolve_shadow_baseline(
+    *,
+    catalog_service: DerivedCatalogService,
+    derived_id: str,
+    candidate_version: int,
+) -> int | None:
+    primary_online = next(
+        (
+            record.version
+            for record in catalog_service.list_versions(derived_id)
+            if (
+                record.is_primary
+                and record.is_online
+                and record.version != candidate_version
+            )
+        ),
+        None,
+    )
+    if primary_online is not None:
+        return primary_online
+    return next(
+        (
+            record.version
+            for record in catalog_service.list_versions(derived_id)
+            if record.is_primary and record.version != candidate_version
+        ),
+        None,
+    )
+
+
+def _dependency_refs(
+    dependencies: tuple[str, ...],
+) -> tuple[tuple[str, str], ...]:
+    refs: list[tuple[str, str]] = []
+    for dependency in dependencies:
+        if dependency.startswith("market."):
+            refs.append(("dataset", _market_dependency_ref(dependency)))
+            continue
+        if "." not in dependency:
+            continue
+        refs.append(("derived", dependency))
+    deduped: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for item in refs:
+        if item in seen:
+            continue
+        deduped.append(item)
+        seen.add(item)
+    return tuple(deduped)
+
+
+def _market_dependency_ref(dependency: str) -> str:
+    column_name = dependency.removeprefix("market.")
+    if column_name in {"open", "high", "low", "close", "pre_close", "volume", "amount"}:
+        return "market.stock_daily"
+    if column_name == "adj_factor":
+        return "market.adj_factor"
+    if column_name in {
+        "is_suspended",
+        "suspend_timing",
+        "is_st",
+        "st_type",
+        "list_status",
+    }:
+        return "market.stock_status"
+    raise NotImplementedError(
+        "Unsupported market dependency for durable persistence: "
+        + f"dependency={dependency}"
+    )
+
+
+def _dependency_input_column(dependency: str) -> str:
+    if dependency.startswith("market."):
+        return dependency.removeprefix("market.")
+    return dependency

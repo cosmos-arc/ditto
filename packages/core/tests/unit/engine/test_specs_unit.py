@@ -1,7 +1,65 @@
 """Tests for derived spec models."""
 
+from typing import get_args
+
 import pytest
-from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_core.engine.specs import (
+    CalendarId,
+    DerivedRole,
+    DerivedSpec,
+    GrainId,
+    MaterializationProfile,
+)
+
+
+class TestLiteralTypeAliases:
+    """Tests for CalendarId and GrainId Literal type aliases."""
+
+    def test_calendar_id_literal_values(self) -> None:
+        """CalendarId should be Literal['cn_stock'] per ADR-032 D-2."""
+        args = get_args(CalendarId.__value__)
+        assert args == ("cn_stock",)
+
+    def test_grain_id_literal_values(self) -> None:
+        """GrainId should be Literal['1d', '1m'] per ADR-032 D-3."""
+        args = get_args(GrainId.__value__)
+        assert args == ("1d", "1m")
+
+    def test_derived_spec_accepts_calendar_cn_stock(self) -> None:
+        """DerivedSpec should accept calendar='cn_stock'."""
+        spec = DerivedSpec(
+            id="test",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="close",
+            calendar="cn_stock",
+        )
+        assert spec.calendar == "cn_stock"
+
+    def test_derived_spec_accepts_grain_1d(self) -> None:
+        """DerivedSpec should accept grain='1d'."""
+        spec = DerivedSpec(
+            id="test",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="close",
+            grain="1d",
+        )
+        assert spec.grain == "1d"
+
+    def test_derived_spec_accepts_grain_1m(self) -> None:
+        """DerivedSpec should accept grain='1m' (reserved, in Literal type)."""
+        spec = DerivedSpec(
+            id="test",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="close",
+            grain="1m",
+        )
+        assert spec.grain == "1m"
 
 
 class TestDerivedSpec:
