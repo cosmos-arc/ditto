@@ -101,7 +101,7 @@ def _seed_spec(
         DerivedVersionRecord(
             derived_id=derived_id,
             version=version,
-            status=DerivedVersionStatus.PUBLISHED if is_primary else "MATERIALIZED",
+            status=DerivedVersionStatus.PUBLISHED if is_primary else DerivedVersionStatus.MATERIALIZED,
             engine_version="expr-v1",
             is_online=is_online,
             is_primary=is_primary,
