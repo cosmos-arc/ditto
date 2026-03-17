@@ -20,9 +20,6 @@ from ditto_datahub.models.research import (
     ResearchSpineSpecRecord,
 )
 from ditto_datahub.services import DerivedCatalogService, ResearchCatalogService
-from ditto_datahub.services.derived_migration_service import (
-    LegacyDerivedCatalogMigrationService,
-)
 from ditto_datahub.sources import ExchangeTransformers
 from ditto_datahub.sources.source import DataSources
 from ditto_datahub.stores.sqlite_client import SQLiteClient
@@ -232,7 +229,6 @@ def _materialization_bundle_context():
         yield MaterializationBundle(
             materialization_service=container.get(DerivedMaterializationOrchestrator),
             invalidation_service=container.get(DerivedInvalidationOrchestrator),
-            migration_service=container.get(LegacyDerivedCatalogMigrationService),
             publication_facade=container.get(DerivedPublicationFacade),
             research_dataset_facade=container.get(ResearchDatasetFacade),
         )

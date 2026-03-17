@@ -4,9 +4,6 @@ from dataclasses import dataclass
 
 from ditto_datahub.services import IngestionLogService
 from ditto_datahub.services.capital_service import CapitalService
-from ditto_datahub.services.derived_migration_service import (
-    LegacyDerivedCatalogMigrationService,
-)
 from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import MarketService
@@ -51,6 +48,5 @@ class MaterializationBundle:
 
     materialization_service: DerivedMaterializationOrchestrator
     invalidation_service: DerivedInvalidationOrchestrator
-    migration_service: LegacyDerivedCatalogMigrationService
     publication_facade: DerivedPublicationFacade
     research_dataset_facade: ResearchDatasetFacade

@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 from ditto_core.engine.publication_safety import CertificationStage
-from ditto_datahub.services.derived_migration_service import (
-    LegacyDerivedCatalogMigrationResult,
-)
 from ditto_port.jobs.flows.materialization import (
     certify_publication_flow,
     daily_materialization_flow,
     deprecate_publication_flow,
-    migrate_legacy_derived_catalog_flow,
     promote_publication_flow,
     repair_from_invalidation_flow,
     rollback_publication_flow,
@@ -26,9 +22,6 @@ def _prefect_runner(entrypoint):
 
 DAILY_MATERIALIZATION_FLOW_RUNNER = _prefect_runner(daily_materialization_flow)
 REPAIR_FROM_INVALIDATION_FLOW_RUNNER = _prefect_runner(repair_from_invalidation_flow)
-MIGRATE_LEGACY_DERIVED_CATALOG_FLOW_RUNNER = _prefect_runner(
-    migrate_legacy_derived_catalog_flow
-)
 SHADOW_PUBLISH_FLOW_RUNNER = _prefect_runner(shadow_publish_flow)
 SHADOW_COMPARE_FLOW_RUNNER = _prefect_runner(shadow_compare_flow)
 CERTIFY_PUBLICATION_FLOW_RUNNER = _prefect_runner(certify_publication_flow)
@@ -89,43 +82,6 @@ class TestRepairFromInvalidationFlow:
 
         bundle.invalidation_service.repair_pending.assert_called_once_with(limit=20)
         assert result["summary"]["repaired_count"] == 2
-
-
-class TestMigrateLegacyDerivedCatalogFlow:
-    """Tests for legacy catalog migration flow."""
-
-    def test_flow_runs_one_shot_migration(self, mocker: MockerFixture) -> None:
-        """Migration flow should delegate to the bundle migration service."""
-        bundle = mocker.MagicMock()
-        bundle.migration_service.migrate.return_value = (
-            LegacyDerivedCatalogMigrationResult(
-                migrated_specs=1,
-                migrated_versions=1,
-                migrated_runs=1,
-                migrated_states=1,
-                migrated_partitions=2,
-                skipped_reason=None,
-            )
-        )
-        context = mocker.MagicMock()
-        context.__enter__.return_value = bundle
-        context.__exit__.return_value = None
-        mocker.patch(
-            "ditto_port.jobs.flows.materialization.create_materialization_bundle",
-            return_value=context,
-        )
-
-        result = MIGRATE_LEGACY_DERIVED_CATALOG_FLOW_RUNNER()
-
-        bundle.migration_service.migrate.assert_called_once_with()
-        assert result["summary"] == {
-            "migrated_specs": 1,
-            "migrated_versions": 1,
-            "migrated_runs": 1,
-            "migrated_states": 1,
-            "migrated_partitions": 2,
-            "skipped_reason": None,
-        }
 
 
 class TestPublicationFlows:

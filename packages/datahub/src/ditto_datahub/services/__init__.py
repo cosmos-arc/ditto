@@ -37,10 +37,6 @@ from ditto_datahub.services.derived import (
     DerivedSourceScope,
 )
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
-from ditto_datahub.services.derived_migration_service import (
-    LegacyDerivedCatalogMigrationResult,
-    LegacyDerivedCatalogMigrationService,
-)
 from ditto_datahub.services.derived_shadow_slot_service import (
     DerivedShadowSlotService,
 )
@@ -104,8 +100,6 @@ __all__ = [
     "HotLayerReader",
     "HotLayerWriter",
     "IngestionLogService",
-    "LegacyDerivedCatalogMigrationResult",
-    "LegacyDerivedCatalogMigrationService",
     "MacroService",
     "MarketBarsQuery",
     "MarketConstituentsQuery",

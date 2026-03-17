@@ -9,6 +9,7 @@ I-CASC-03: Cycle guard + micro-batch merge + max depth
 from __future__ import annotations
 
 from collections import deque
+from dataclasses import replace
 from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import uuid4
@@ -227,20 +228,9 @@ class InvalidationCascadeOrchestrator:
                 merged[key] = record
             else:
                 existing = merged[key]
-                merged[key] = DerivedInvalidationRecord(
-                    invalidation_id=existing.invalidation_id,
-                    derived_id=existing.derived_id,
-                    version=existing.version,
-                    source_domain=existing.source_domain,
-                    source_dataset=existing.source_dataset,
-                    change_date=existing.change_date,
+                merged[key] = replace(
+                    existing,
                     affected_start=min(existing.affected_start, record.affected_start),
                     affected_end=max(existing.affected_end, record.affected_end),
-                    source_snapshot_id=existing.source_snapshot_id,
-                    root_dependency_ref=existing.root_dependency_ref,
-                    status=existing.status,
-                    created_at=existing.created_at,
-                    processed_at=existing.processed_at,
-                    depth=existing.depth,
                 )
         return list(merged.values())

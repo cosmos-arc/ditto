@@ -14,7 +14,6 @@ __all__ = [
     "certify_publication_flow",
     "daily_materialization_flow",
     "deprecate_publication_flow",
-    "migrate_legacy_derived_catalog_flow",
     "promote_publication_flow",
     "repair_from_invalidation_flow",
     "rollback_publication_flow",
@@ -68,27 +67,6 @@ def repair_from_invalidation_flow(limit: int = 100) -> dict[str, object]:
         "results": _normalize_results(results),
         "summary": {
             "repaired_count": len(results),
-        },
-    }
-
-
-@flow(
-    name="migrate-legacy-derived-catalog",
-    description="执行 legacy JSON derived catalog 到 SQLite 的一次性迁移",
-)
-def migrate_legacy_derived_catalog_flow() -> dict[str, object]:
-    """Run the one-shot legacy derived catalog migration."""
-    with create_materialization_bundle() as bundle:
-        result = bundle.migration_service.migrate()
-    return {
-        "results": _normalize_results((result,)),
-        "summary": {
-            "migrated_specs": result.migrated_specs,
-            "migrated_versions": result.migrated_versions,
-            "migrated_runs": result.migrated_runs,
-            "migrated_states": result.migrated_states,
-            "migrated_partitions": result.migrated_partitions,
-            "skipped_reason": result.skipped_reason,
         },
     }
 

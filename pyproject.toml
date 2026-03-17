@@ -36,6 +36,7 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
+    "scripts/learning",
 ]
 
 cache-dir = ".ruff_cache"

@@ -3,10 +3,6 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from ditto_datahub.services.derived_migration_service import (
-    LegacyDerivedCatalogMigrationService,
-)
-
 from ditto_port.registry.container import make_app_container
 from ditto_port.registry.contexts.bundle import MaterializationBundle
 from ditto_port.services.derived import (
@@ -25,7 +21,6 @@ def create_materialization_bundle() -> Iterator[MaterializationBundle]:
         yield MaterializationBundle(
             materialization_service=container.get(DerivedMaterializationOrchestrator),
             invalidation_service=container.get(DerivedInvalidationOrchestrator),
-            migration_service=container.get(LegacyDerivedCatalogMigrationService),
             publication_facade=container.get(DerivedPublicationFacade),
             research_dataset_facade=container.get(ResearchDatasetFacade),
         )

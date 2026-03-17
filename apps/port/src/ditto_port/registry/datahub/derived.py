@@ -10,7 +10,6 @@ from ditto_datahub.services import (
     DerivedCatalogService,
     DerivedQueryService,
     DerivedShadowSlotService,
-    LegacyDerivedCatalogMigrationService,
     PublicationSafetyRecordService,
     ResearchCatalogService,
 )
@@ -57,18 +56,6 @@ class DerivedProvider(Provider):
                 catalog_service=derived_catalog_service,
                 artifact_root=Path(settings.data_root),
             ),
-        )
-
-    @provide
-    def legacy_derived_catalog_migration_service(
-        self,
-        derived_catalog_service: DerivedCatalogService,
-        settings: DataStoreSettings,
-    ) -> LegacyDerivedCatalogMigrationService:
-        """One-shot migration service from legacy JSON catalog to SQLite."""
-        return LegacyDerivedCatalogMigrationService(
-            data_root=Path(settings.data_root),
-            target_catalog_service=derived_catalog_service,
         )
 
     @provide
