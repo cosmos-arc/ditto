@@ -360,6 +360,7 @@ class DerivedInvalidationRecord:
     status: str
     created_at: str
     processed_at: str | None
+    depth: int = 0
 
 
 @dataclass(frozen=True)

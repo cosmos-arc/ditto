@@ -20,6 +20,10 @@ from ditto_datahub.models.derived import (
 class DerivedCatalogReaderProtocol(Protocol):
     """Reader protocol shared by file-based and SQLite-backed catalogs."""
 
+    def has_any_records(self) -> bool:
+        """Whether the backing catalog already contains runtime metadata."""
+        ...
+
     def read_spec(self, derived_id: str, version: int) -> DerivedSpecRecord | None:
         """Read one derived spec record."""
         ...
@@ -30,6 +34,10 @@ class DerivedCatalogReaderProtocol(Protocol):
         version: int,
     ) -> DerivedVersionRecord | None:
         """Read one derived version record."""
+        ...
+
+    def list_versions(self, derived_id: str) -> tuple[DerivedVersionRecord, ...]:
+        """List all known versions for one derived id."""
         ...
 
     def read_run(
@@ -79,6 +87,10 @@ class DerivedCatalogReaderProtocol(Protocol):
 
     def list_pending_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
         """List pending invalidation records."""
+        ...
+
+    def list_stale_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
+        """List stale invalidation records ordered by depth then created_at."""
         ...
 
     def list_specs(
@@ -145,6 +157,14 @@ class DerivedCatalogWriterProtocol(Protocol):
         """Mark one invalidation record as processed."""
         ...
 
+    def mark_invalidation_status(
+        self,
+        invalidation_id: str,
+        status: str,
+    ) -> None:
+        """Update the status of one invalidation record."""
+        ...
+
 
 class DerivedCatalogService:
     """Unified service for derived catalog runtime metadata."""
@@ -161,6 +181,10 @@ class DerivedCatalogService:
         """Persist derived spec metadata."""
         self._catalog_writer.write_spec(record)
 
+    def has_any_records(self) -> bool:
+        """Whether the backing catalog already contains runtime metadata."""
+        return self._catalog_reader.has_any_records()
+
     def get_spec(self, derived_id: str, version: int) -> DerivedSpecRecord | None:
         """Read derived spec metadata."""
         return self._catalog_reader.read_spec(derived_id, version)
@@ -176,6 +200,10 @@ class DerivedCatalogService:
     ) -> DerivedVersionRecord | None:
         """Read derived version metadata."""
         return self._catalog_reader.read_version(derived_id, version)
+
+    def list_versions(self, derived_id: str) -> tuple[DerivedVersionRecord, ...]:
+        """List all version metadata for one derived id."""
+        return self._catalog_reader.list_versions(derived_id)
 
     def save_run(self, record: DerivedRunRecord) -> None:
         """Persist derived run metadata."""
@@ -242,6 +270,13 @@ class DerivedCatalogService:
         """List downstream dependencies for one upstream reference."""
         return self._catalog_reader.list_dependencies_by_ref(dependency_ref)
 
+    def list_downstream_dependencies(
+        self,
+        derived_id: str,
+    ) -> tuple[DerivedDependencyRecord, ...]:
+        """List downstream dependencies for one derived id used as upstream."""
+        return self._catalog_reader.list_dependencies_by_ref(derived_id)
+
     def save_invalidations(
         self,
         records: tuple[DerivedInvalidationRecord, ...],
@@ -253,6 +288,10 @@ class DerivedCatalogService:
         """List invalidations waiting for repair."""
         return self._catalog_reader.list_pending_invalidations()
 
+    def list_stale_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
+        """List stale invalidations ordered by depth then created_at."""
+        return self._catalog_reader.list_stale_invalidations()
+
     def mark_invalidation_processed(
         self,
         invalidation_id: str,
@@ -260,6 +299,14 @@ class DerivedCatalogService:
     ) -> None:
         """Mark one invalidation row as processed."""
         self._catalog_writer.mark_invalidation_processed(invalidation_id, processed_at)
+
+    def mark_invalidation_status(
+        self,
+        invalidation_id: str,
+        status: str,
+    ) -> None:
+        """Update the status of one invalidation row."""
+        self._catalog_writer.mark_invalidation_status(invalidation_id, status)
 
     def list_specs(
         self,

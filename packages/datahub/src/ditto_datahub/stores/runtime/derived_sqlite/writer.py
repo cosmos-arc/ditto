@@ -214,8 +214,8 @@ class SQLiteDerivedCatalogWriter:
                 source_domain, source_dataset, change_date,
                 affected_start, affected_end,
                 source_snapshot_id, root_dependency_ref,
-                status, created_at, processed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                status, created_at, processed_at, depth
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 (
@@ -232,6 +232,7 @@ class SQLiteDerivedCatalogWriter:
                     record.status,
                     record.created_at,
                     record.processed_at,
+                    record.depth,
                 )
                 for record in records
             ],
@@ -251,5 +252,21 @@ class SQLiteDerivedCatalogWriter:
             WHERE invalidation_id = ?
             """,
             (processed_at, invalidation_id),
+        )
+        self._sqlite_client.commit()
+
+    def mark_invalidation_status(
+        self,
+        invalidation_id: str,
+        status: str,
+    ) -> None:
+        """Update the status of one invalidation row."""
+        self._sqlite_client.execute(
+            """
+            UPDATE derived_invalidation
+            SET status = ?
+            WHERE invalidation_id = ?
+            """,
+            (status, invalidation_id),
         )
         self._sqlite_client.commit()

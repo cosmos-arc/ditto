@@ -464,10 +464,13 @@ CREATE TABLE IF NOT EXISTS derived_invalidation (
     root_dependency_ref TEXT NOT NULL,
     status TEXT NOT NULL,
     created_at TEXT NOT NULL,
-    processed_at TEXT
+    processed_at TEXT,
+    depth INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_derived_invalidation_pending
     ON derived_invalidation(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_derived_invalidation_stale
+    ON derived_invalidation(status, depth, created_at);
 
 CREATE TABLE IF NOT EXISTS derived_state (
     derived_id TEXT PRIMARY KEY,
@@ -479,6 +482,14 @@ CREATE TABLE IF NOT EXISTS derived_state (
     latest_run_status TEXT,
     total_rows INTEGER NOT NULL,
     updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS derived_shadow_slot (
+    derived_id TEXT PRIMARY KEY,
+    candidate_version INTEGER NOT NULL,
+    baseline_version INTEGER,
+    activated_at TEXT NOT NULL,
+    disabled_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS compiled_expression_cache (
@@ -508,3 +519,65 @@ CREATE TABLE IF NOT EXISTS derived_spec_operator (
     created_at TEXT NOT NULL,
     PRIMARY KEY (derived_id, version, operator_name)
 );
+
+-- ============ Research Control-Plane Tables ============
+
+CREATE TABLE IF NOT EXISTS research_spine_spec (
+    spine_id TEXT PRIMARY KEY,
+    universe_id TEXT NOT NULL,
+    calendar TEXT NOT NULL,
+    grain TEXT NOT NULL,
+    entity_key TEXT NOT NULL,
+    description TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS research_dataset_spec (
+    dataset_id TEXT PRIMARY KEY,
+    spine_id TEXT NOT NULL,
+    derived_ids TEXT NOT NULL,
+    join_policy TEXT NOT NULL,
+    known_at_policy TEXT NOT NULL,
+    late_arrival_policy TEXT NOT NULL,
+    description TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (spine_id) REFERENCES research_spine_spec(spine_id)
+);
+
+CREATE TABLE IF NOT EXISTS research_spine_snapshot (
+    spine_snapshot_id TEXT PRIMARY KEY,
+    spine_id TEXT NOT NULL,
+    snapshot_start TEXT NOT NULL,
+    snapshot_end TEXT NOT NULL,
+    row_count INTEGER NOT NULL,
+    data_path TEXT NOT NULL,
+    manifest_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (spine_id) REFERENCES research_spine_spec(spine_id)
+);
+CREATE INDEX IF NOT EXISTS idx_research_spine_snapshot_lookup
+    ON research_spine_snapshot(spine_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS research_dataset_snapshot (
+    snapshot_id TEXT PRIMARY KEY,
+    dataset_id TEXT NOT NULL,
+    dataset_spec_version INTEGER NOT NULL,
+    spine_snapshot_id TEXT NOT NULL,
+    snapshot_start TEXT NOT NULL,
+    snapshot_end TEXT NOT NULL,
+    row_count INTEGER NOT NULL,
+    data_path TEXT NOT NULL,
+    manifest_hash TEXT NOT NULL,
+    known_at_policy TEXT NOT NULL,
+    effective_cutoff TEXT,
+    resolved_versions TEXT NOT NULL,
+    resolved_inputs TEXT NOT NULL,
+    source_snapshot_ids TEXT NOT NULL,
+    builder_version TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (dataset_id) REFERENCES research_dataset_spec(dataset_id),
+    FOREIGN KEY (spine_snapshot_id)
+        REFERENCES research_spine_snapshot(spine_snapshot_id)
+);
+CREATE INDEX IF NOT EXISTS idx_research_dataset_snapshot_lookup
+    ON research_dataset_snapshot(dataset_id, created_at DESC);

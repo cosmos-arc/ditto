@@ -243,10 +243,26 @@ class SQLiteDerivedCatalogReader:
                    source_domain, source_dataset, change_date,
                    affected_start, affected_end,
                    source_snapshot_id, root_dependency_ref,
-                   status, created_at, processed_at
+                   status, created_at, processed_at, depth
             FROM derived_invalidation
             WHERE status = 'pending'
             ORDER BY created_at ASC, invalidation_id ASC
+            """,
+        )
+        return tuple(_to_invalidation_record(row) for row in rows)
+
+    def list_stale_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
+        """List stale invalidation rows ordered by depth then created_at."""
+        rows = self._sqlite_client.fetchall(
+            """
+            SELECT invalidation_id, derived_id, version,
+                   source_domain, source_dataset, change_date,
+                   affected_start, affected_end,
+                   source_snapshot_id, root_dependency_ref,
+                   status, created_at, processed_at, depth
+            FROM derived_invalidation
+            WHERE status = 'stale'
+            ORDER BY depth ASC, created_at ASC, invalidation_id ASC
             """,
         )
         return tuple(_to_invalidation_record(row) for row in rows)
@@ -363,4 +379,5 @@ def _to_invalidation_record(row: dict[str, Any]) -> DerivedInvalidationRecord:
         status=row["status"],
         created_at=row["created_at"],
         processed_at=row["processed_at"],
+        depth=row["depth"],
     )
