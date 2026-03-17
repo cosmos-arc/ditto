@@ -28,11 +28,11 @@ from ditto_datahub.models.research import (
     ResearchSpineSpecRecord,
 )
 from ditto_datahub.services import DerivedArtifactReader, ResearchCatalogService
+from ditto_datahub.services.derived import VersionResolutionStrategy
 from ditto_datahub.services.metadata_service import MetadataService
 
 __all__ = ["ResearchDatasetFacade"]
 
-_DATASET_SPEC_VERSION = 1
 _RESEARCH_BUILDER_VERSION = "unified-derived-research-v1"
 _BUILD_REPORT_FILENAME = "build_report.json"
 
@@ -114,7 +114,8 @@ class ResearchDatasetFacade:
             resolved_version = overrides.get(derived_id)
             if resolved_version is None:
                 resolved_version = self._artifact_reader.resolve_serving_version(
-                    derived_id
+                    derived_id,
+                    strategy=VersionResolutionStrategy.FALLBACK_TO_ACTIVE,
                 )
             resolved_versions[derived_id] = resolved_version
             artifact_path = _resolve_artifact_path(
@@ -163,6 +164,8 @@ class ResearchDatasetFacade:
         snapshot = self._write_dataset_snapshot(
             dataset_id=dataset_id,
             spine_snapshot=spine_snapshot,
+            dataset_spec_version=dataset_spec.version,
+            spine_spec_version=spine_spec.version,
             dataset_frame=dataset_frame,
             snapshot_contract=snapshot_contract,
             build_report=build_report,
@@ -231,9 +234,10 @@ class ResearchDatasetFacade:
         snapshot_path.parent.mkdir(parents=True, exist_ok=True)
         spine_frame.write_parquet(snapshot_path)
         relative_path = str(snapshot_path.relative_to(self._data_root))
-        metadata = {
+        metadata: dict[str, object] = {
             "spine_snapshot_id": snapshot_id,
             "spine_id": spine_spec.spine_id,
+            "version": spine_spec.version,
             "start": start,
             "end": end,
             "row_count": spine_frame.height,
@@ -254,6 +258,7 @@ class ResearchDatasetFacade:
             data_path=relative_path,
             manifest_hash=manifest_hash,
             created_at=created_at,
+            version=spine_spec.version,
         )
         self._research_catalog_service.save_spine_snapshot(record)
         return SpineSnapshot(
@@ -265,6 +270,7 @@ class ResearchDatasetFacade:
             data_path=relative_path,
             manifest_hash=manifest_hash,
             created_at=created_at,
+            version=spine_spec.version,
         )
 
     def _write_dataset_snapshot(
@@ -272,6 +278,8 @@ class ResearchDatasetFacade:
         *,
         dataset_id: str,
         spine_snapshot: SpineSnapshot,
+        dataset_spec_version: int,
+        spine_spec_version: int,
         dataset_frame: pl.DataFrame,
         snapshot_contract: _DatasetSnapshotContract,
         build_report: dict[str, object],
@@ -291,10 +299,11 @@ class ResearchDatasetFacade:
         snapshot_path.parent.mkdir(parents=True, exist_ok=True)
         dataset_frame.write_parquet(snapshot_path)
         relative_path = str(snapshot_path.relative_to(self._data_root))
-        metadata = {
+        metadata: dict[str, object] = {
             "snapshot_id": snapshot_id,
             "dataset_id": dataset_id,
-            "dataset_spec_version": _DATASET_SPEC_VERSION,
+            "dataset_spec_version": dataset_spec_version,
+            "spine_spec_version": spine_spec_version,
             "spine_snapshot_id": spine_snapshot.spine_snapshot_id,
             "start": spine_snapshot.start,
             "end": spine_snapshot.end,
@@ -320,7 +329,7 @@ class ResearchDatasetFacade:
         record = ResearchDatasetSnapshotRecord(
             snapshot_id=snapshot_id,
             dataset_id=dataset_id,
-            dataset_spec_version=_DATASET_SPEC_VERSION,
+            dataset_spec_version=dataset_spec_version,
             spine_snapshot_id=spine_snapshot.spine_snapshot_id,
             snapshot_start=spine_snapshot.start,
             snapshot_end=spine_snapshot.end,
@@ -329,6 +338,7 @@ class ResearchDatasetFacade:
             manifest_hash=manifest_hash,
             known_at_policy=snapshot_contract.known_at_policy.value,
             effective_cutoff=snapshot_contract.effective_cutoff,
+            spine_spec_version=spine_spec_version,
             resolved_versions=snapshot_contract.resolved_versions,
             resolved_inputs=snapshot_contract.resolved_inputs,
             source_snapshot_ids=snapshot_contract.source_snapshot_ids,
@@ -339,7 +349,7 @@ class ResearchDatasetFacade:
         return DatasetSnapshot(
             snapshot_id=snapshot_id,
             dataset_id=dataset_id,
-            dataset_spec_version=_DATASET_SPEC_VERSION,
+            dataset_spec_version=dataset_spec_version,
             spine_snapshot_id=spine_snapshot.spine_snapshot_id,
             start=spine_snapshot.start,
             end=spine_snapshot.end,
@@ -348,6 +358,7 @@ class ResearchDatasetFacade:
             manifest_hash=manifest_hash,
             known_at_policy=snapshot_contract.known_at_policy,
             effective_cutoff=snapshot_contract.effective_cutoff,
+            spine_spec_version=spine_spec_version,
             resolved_versions=snapshot_contract.resolved_versions,
             resolved_inputs=snapshot_contract.resolved_inputs,
             source_snapshot_ids=snapshot_contract.source_snapshot_ids,
@@ -377,6 +388,7 @@ def _hydrate_spine_spec(record: ResearchSpineSpecRecord) -> SpineSpec:
     return SpineSpec(
         spine_id=record.spine_id,
         universe_id=record.universe_id,
+        version=record.version,
         calendar=cast(CalendarId, record.calendar),
         grain=cast(GrainId, record.grain),
         entity_key=record.entity_key,
@@ -389,6 +401,7 @@ def _hydrate_dataset_spec(record: ResearchDatasetSpecRecord) -> ResearchDatasetS
         dataset_id=record.dataset_id,
         spine_id=record.spine_id,
         derived_ids=record.derived_ids,
+        version=record.version,
         join_policy=record.join_policy,
         known_at_policy=KnownAtPolicy(record.known_at_policy),
         late_arrival_policy=LateArrivalPolicy(record.late_arrival_policy),

@@ -38,6 +38,7 @@ class SpineSpec:
 
     spine_id: str
     universe_id: str
+    version: int = 1
     calendar: CalendarId = "cn_stock"
     grain: GrainId = "1d"
     entity_key: str = "instrument_id"
@@ -62,6 +63,7 @@ class ResearchDatasetSpec:
     dataset_id: str
     spine_id: str
     derived_ids: tuple[str, ...]
+    version: int = 1
     join_policy: str = "left_preserving_pit"
     known_at_policy: KnownAtPolicy = KnownAtPolicy.SAMPLE_TIME
     late_arrival_policy: LateArrivalPolicy = LateArrivalPolicy.REQUIRE_REBUILD
@@ -91,6 +93,7 @@ class SpineSnapshot:
     data_path: str
     manifest_hash: str
     created_at: str
+    version: int = 1
 
 
 @dataclass(frozen=True)
@@ -108,6 +111,7 @@ class DatasetSnapshot:
     manifest_hash: str
     known_at_policy: KnownAtPolicy
     effective_cutoff: str | None
+    spine_spec_version: int = 1
     resolved_versions: dict[str, int] = field(default_factory=dict)
     resolved_inputs: tuple[dict[str, str | int], ...] = field(default_factory=tuple)
     source_snapshot_ids: tuple[str, ...] = field(default_factory=tuple)

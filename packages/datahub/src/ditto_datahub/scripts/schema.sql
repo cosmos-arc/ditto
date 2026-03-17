@@ -529,7 +529,8 @@ CREATE TABLE IF NOT EXISTS research_spine_spec (
     grain TEXT NOT NULL,
     entity_key TEXT NOT NULL,
     description TEXT,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    version INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS research_dataset_spec (
@@ -541,6 +542,7 @@ CREATE TABLE IF NOT EXISTS research_dataset_spec (
     late_arrival_policy TEXT NOT NULL,
     description TEXT,
     created_at TEXT NOT NULL,
+    version INTEGER NOT NULL DEFAULT 1,
     FOREIGN KEY (spine_id) REFERENCES research_spine_spec(spine_id)
 );
 
@@ -553,6 +555,7 @@ CREATE TABLE IF NOT EXISTS research_spine_snapshot (
     data_path TEXT NOT NULL,
     manifest_hash TEXT NOT NULL,
     created_at TEXT NOT NULL,
+    version INTEGER NOT NULL DEFAULT 1,
     FOREIGN KEY (spine_id) REFERENCES research_spine_spec(spine_id)
 );
 CREATE INDEX IF NOT EXISTS idx_research_spine_snapshot_lookup
@@ -570,6 +573,7 @@ CREATE TABLE IF NOT EXISTS research_dataset_snapshot (
     manifest_hash TEXT NOT NULL,
     known_at_policy TEXT NOT NULL,
     effective_cutoff TEXT,
+    spine_spec_version INTEGER NOT NULL DEFAULT 1,
     resolved_versions TEXT NOT NULL,
     resolved_inputs TEXT NOT NULL,
     source_snapshot_ids TEXT NOT NULL,
