@@ -82,6 +82,7 @@ class DerivedSpec:
     description: str | None = None
     time_spec: TimeSpec | None = None
     operator_versions: dict[str, str] = field(default_factory=dict)
+    universe_id: str | None = None
 
     @property
     def effective_time_keys(self) -> tuple[str, ...]:

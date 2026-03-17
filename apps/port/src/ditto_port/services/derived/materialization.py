@@ -134,6 +134,9 @@ def hydrate_spec(record: DerivedSpecRecord) -> DerivedSpec:
         operator_versions=dict(
             cast(dict[str, str], payload.get("operator_versions", {}))
         ),
+        universe_id=None
+        if payload.get("universe_id") is None
+        else str(payload["universe_id"]),
     )
 
 
