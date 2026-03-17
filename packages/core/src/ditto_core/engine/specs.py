@@ -15,8 +15,10 @@ __all__ = [
     "CalendarId",
     "DerivedRole",
     "DerivedSpec",
+    "ExecutionPolicy",
     "GrainId",
     "MaterializationProfile",
+    "TimeSpec",
 ]
 
 
@@ -49,6 +51,22 @@ CALENDAR_TO_TIMEZONE: dict[CalendarId, str] = {
 
 
 @dataclass(frozen=True)
+class TimeSpec:
+    """时间语义规范"""
+
+    event_time_key: str
+    availability_time_key: str | None = None
+
+
+@dataclass(frozen=True)
+class ExecutionPolicy:
+    """执行策略配置"""
+
+    pit_required: bool = True
+    normalization_preset: str = "default"
+
+
+@dataclass(frozen=True)
 class DerivedSpec:
     """Unified derived semantic contract."""
 
@@ -62,17 +80,8 @@ class DerivedSpec:
     time_keys: tuple[str, ...] | None = None
     calendar: CalendarId = "cn_stock"
     description: str | None = None
-    pit_required: bool | None = None
-    normalization_preset: str | None = None
+    time_spec: TimeSpec | None = None
     operator_versions: dict[str, str] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        """Apply role-driven execution defaults."""
-        if self.pit_required is None:
-            object.__setattr__(self, "pit_required", self.role == DerivedRole.FACTOR)
-        if self.normalization_preset is None:
-            default_preset = "default" if self.role == DerivedRole.FACTOR else "none"
-            object.__setattr__(self, "normalization_preset", default_preset)
 
     @property
     def effective_time_keys(self) -> tuple[str, ...]:
@@ -93,14 +102,3 @@ class DerivedSpec:
 
         if self.grain == "1m":
             raise NotImplementedError("grain='1m' 已预留、暂未实现")
-
-        if self.normalization_preset not in {
-            "default",
-            "fundamental",
-            "institutional",
-            "none",
-        }:
-            raise ValueError(
-                "normalization_preset must be one of "
-                + "{'default', 'fundamental', 'institutional', 'none'}"
-            )

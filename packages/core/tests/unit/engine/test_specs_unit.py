@@ -7,8 +7,10 @@ from ditto_core.engine.specs import (
     CalendarId,
     DerivedRole,
     DerivedSpec,
+    ExecutionPolicy,
     GrainId,
     MaterializationProfile,
+    TimeSpec,
 )
 
 
@@ -60,6 +62,66 @@ class TestLiteralTypeAliases:
             grain="1m",
         )
         assert spec.grain == "1m"
+
+
+class TestTimeSpec:
+    """Tests for TimeSpec dataclass."""
+
+    def test_construct_with_required_fields(self) -> None:
+        """TimeSpec requires event_time_key; availability_time_key is optional."""
+        ts = TimeSpec(event_time_key="trade_date")
+        assert ts.event_time_key == "trade_date"
+        assert ts.availability_time_key is None
+
+    def test_construct_with_all_fields(self) -> None:
+        """TimeSpec accepts explicit availability_time_key."""
+        ts = TimeSpec(
+            event_time_key="trade_date",
+            availability_time_key="data_arrival_time",
+        )
+        assert ts.event_time_key == "trade_date"
+        assert ts.availability_time_key == "data_arrival_time"
+
+    def test_frozen_immutable(self) -> None:
+        """TimeSpec should be frozen (immutable)."""
+        ts = TimeSpec(event_time_key="trade_date")
+        with pytest.raises(AttributeError):
+            ts.event_time_key = "bar_time"  # type: ignore[misc]
+
+    def test_event_time_key_required(self) -> None:
+        """event_time_key is a required positional argument."""
+        with pytest.raises(TypeError):
+            TimeSpec()  # type: ignore[call-arg]
+
+
+class TestExecutionPolicy:
+    """Tests for ExecutionPolicy dataclass."""
+
+    def test_default_values(self) -> None:
+        """ExecutionPolicy has sensible defaults."""
+        policy = ExecutionPolicy()
+        assert policy.pit_required is True
+        assert policy.normalization_preset == "default"
+
+    def test_explicit_values(self) -> None:
+        """ExecutionPolicy accepts explicit values."""
+        policy = ExecutionPolicy(
+            pit_required=False,
+            normalization_preset="none",
+        )
+        assert policy.pit_required is False
+        assert policy.normalization_preset == "none"
+
+    def test_frozen_immutable(self) -> None:
+        """ExecutionPolicy should be frozen (immutable)."""
+        policy = ExecutionPolicy()
+        with pytest.raises(AttributeError):
+            policy.pit_required = False  # type: ignore[misc]
+
+    def test_no_arg_required(self) -> None:
+        """ExecutionPolicy can be constructed without arguments."""
+        policy = ExecutionPolicy()
+        assert isinstance(policy, ExecutionPolicy)
 
 
 class TestDerivedSpec:
@@ -119,8 +181,8 @@ class TestDerivedSpec:
         with pytest.raises(NotImplementedError, match="grain='1m' 已预留、暂未实现"):
             spec.validate_spec()
 
-    def test_factor_role_defaults_to_pit_and_default_normalization(self) -> None:
-        """Factor specs should default to PIT + default normalization preset."""
+    def test_no_pit_required_or_normalization_fields(self) -> None:
+        """DerivedSpec should not have pit_required or normalization_preset."""
         spec = DerivedSpec(
             id="factor.momentum_20d",
             version=1,
@@ -128,20 +190,43 @@ class TestDerivedSpec:
             materialization_profile=MaterializationProfile.SERIES,
             expression="ts_mean(close, 20)",
         )
+        assert not hasattr(spec, "pit_required")
+        assert not hasattr(spec, "normalization_preset")
 
-        assert spec.pit_required is True
-        assert spec.normalization_preset == "default"
-        assert spec.operator_versions == {}
-
-    def test_non_factor_role_defaults_to_no_pit_and_no_normalization(self) -> None:
-        """Non-factor roles should keep neutral execution defaults."""
+    def test_time_spec_optional_default_none(self) -> None:
+        """time_spec defaults to None when not provided."""
         spec = DerivedSpec(
-            id="feature.volume_ma_20d",
+            id="factor.simple",
             version=1,
-            role=DerivedRole.FEATURE,
+            role=DerivedRole.FACTOR,
             materialization_profile=MaterializationProfile.SERIES,
-            expression="ts_mean(volume, 20)",
+            expression="close",
         )
+        assert spec.time_spec is None
 
-        assert spec.pit_required is False
-        assert spec.normalization_preset == "none"
+    def test_time_spec_provided(self) -> None:
+        """DerivedSpec accepts a TimeSpec instance."""
+        ts = TimeSpec(event_time_key="trade_date")
+        spec = DerivedSpec(
+            id="factor.timed",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="close",
+            time_spec=ts,
+        )
+        assert spec.time_spec is ts
+        assert spec.time_spec is not None
+        assert spec.time_spec.event_time_key == "trade_date"
+
+    def test_validate_spec_no_normalization_validation(self) -> None:
+        """validate_spec should not check normalization_preset."""
+        spec = DerivedSpec(
+            id="factor.simple",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="close",
+        )
+        # Should not raise
+        spec.validate_spec()

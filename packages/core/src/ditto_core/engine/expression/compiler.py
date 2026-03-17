@@ -78,8 +78,6 @@ def compute_compile_cache_key(
             "entity_keys": spec.entity_keys,
             "time_keys": spec.effective_time_keys,
             "profile": spec.materialization_profile.value,
-            "pit_required": spec.pit_required,
-            "normalization_preset": spec.normalization_preset,
             "operator_versions": operator_versions,
         }
     )
