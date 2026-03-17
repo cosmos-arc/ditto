@@ -54,7 +54,7 @@ def _service_bundle(sqlite_client, tmp_path: Path):
                     {
                         "instrument_id": [1, 1],
                         "trade_date": ["2026-03-10", "2026-03-11"],
-                        "close": [10.0, 11.0],
+                        "factor.alpha_upstream": [0.5, 1.0],
                     }
                 ),
             }
