@@ -23,6 +23,14 @@ from ditto_port.jobs.flows.backfill import (
 from pydantic import ValidationError
 
 
+def _prefect_runner(entrypoint):
+    return getattr(entrypoint, "func", getattr(entrypoint, "fn", entrypoint))
+
+
+BACKFILL_FLOW_RUNNER = _prefect_runner(backfill_flow)
+BACKFILL_MISSING_FLOW_RUNNER = _prefect_runner(backfill_missing_flow)
+
+
 def _create_mock_bundle(
     mocker, mock_coordinator, mock_metadata_service, mock_ingestion_log_service
 ):
@@ -218,7 +226,7 @@ class TestBackfillFlow:
             end_date="2024-01-31",
             source="tushare",
         )
-        result = backfill_flow(config)
+        result = BACKFILL_FLOW_RUNNER(config)
 
         # Verify bundle was created with correct source
         mock_patch.assert_called_once_with(source="tushare")
@@ -263,7 +271,7 @@ class TestBackfillFlow:
             end_date="2024-01-31",
             source="tushare",
         )
-        backfill_flow(config)
+        BACKFILL_FLOW_RUNNER(config)
 
         # Verify BackfillManager was created with coordinator from bundle
         mock_manager_cls.assert_called_once()
@@ -312,7 +320,7 @@ class TestBackfillFlow:
             start_date="2024-01-01",
             end_date="2024-01-31",
         )
-        backfill_flow(config)
+        BACKFILL_FLOW_RUNNER(config)
 
         # Verify BackfillManager was created with correct params
         mock_manager_cls.assert_called_once()
@@ -359,7 +367,7 @@ class TestBackfillFlow:
             end_date="2024-01-31",
             resume_from="2024-01-15",
         )
-        result = backfill_flow(config)
+        result = BACKFILL_FLOW_RUNNER(config)
 
         # Verify backfill_range was called with resume_from date
         mock_manager.backfill_range.assert_called_once()
@@ -406,7 +414,7 @@ class TestBackfillFlow:
             end_date="2024-01-31",
             parallel=4,
         )
-        backfill_flow(config)
+        BACKFILL_FLOW_RUNNER(config)
 
         # Verify parallel parameter was passed
         call_kwargs = mock_manager.backfill_range.call_args.kwargs
@@ -449,7 +457,7 @@ class TestBackfillFlow:
             start_date="2024-01-01",
             end_date="2024-01-31",
         )
-        result = backfill_flow(config)
+        result = BACKFILL_FLOW_RUNNER(config)
 
         # Verify all keys present
         assert "dataset" in result
@@ -506,7 +514,7 @@ class TestBackfillFlow:
             start_date="2024-01-01",
             end_date="2024-01-31",
         )
-        backfill_flow(config)
+        BACKFILL_FLOW_RUNNER(config)
 
         # Verify context manager was properly used
         mock_context_mgr.__enter__.assert_called_once()
@@ -545,7 +553,7 @@ class TestBackfillFlow:
             end_date="2024-01-31",
         )
         with pytest.raises(ValueError, match="Test error"):
-            backfill_flow(config)
+            BACKFILL_FLOW_RUNNER(config)
 
         # Verify context manager cleanup still happened
         mock_context_mgr.__enter__.assert_called_once()
@@ -595,7 +603,7 @@ class TestBackfillMissingFlow:
         mock_result.failed_count = 0
         mock_manager.backfill_missing.return_value = mock_result
 
-        result = backfill_missing_flow(
+        result = BACKFILL_MISSING_FLOW_RUNNER(
             dataset="stock_daily",
             source="tushare",
         )
@@ -636,7 +644,7 @@ class TestBackfillMissingFlow:
         mock_result.failed_count = 0
         mock_manager.backfill_missing.return_value = mock_result
 
-        backfill_missing_flow(
+        BACKFILL_MISSING_FLOW_RUNNER(
             dataset="stock_daily",
             source="tushare",
         )
@@ -681,7 +689,7 @@ class TestBackfillMissingFlow:
         mock_result.failed_count = 0
         mock_manager.backfill_missing.return_value = mock_result
 
-        backfill_missing_flow(
+        BACKFILL_MISSING_FLOW_RUNNER(
             dataset="stock_daily",
         )
 
@@ -724,7 +732,7 @@ class TestBackfillMissingFlow:
         mock_result.failed_count = 0
         mock_manager.backfill_missing.return_value = mock_result
 
-        backfill_missing_flow(
+        BACKFILL_MISSING_FLOW_RUNNER(
             dataset="stock_daily",
             parallel=3,
         )
@@ -765,7 +773,7 @@ class TestBackfillMissingFlow:
         mock_result.failed_count = 0
         mock_manager.backfill_missing.return_value = mock_result
 
-        result = backfill_missing_flow(
+        result = BACKFILL_MISSING_FLOW_RUNNER(
             dataset="stock_daily",
         )
 
@@ -815,7 +823,7 @@ class TestBackfillMissingFlow:
         mock_result.failed_count = 0
         mock_manager.backfill_missing.return_value = mock_result
 
-        result = backfill_missing_flow(
+        result = BACKFILL_MISSING_FLOW_RUNNER(
             dataset="stock_daily",
         )
 
@@ -855,7 +863,7 @@ class TestBackfillMissingFlow:
         mock_result.failed_count = 0
         mock_manager.backfill_missing.return_value = mock_result
 
-        backfill_missing_flow(
+        BACKFILL_MISSING_FLOW_RUNNER(
             dataset="stock_daily",
         )
 
@@ -891,7 +899,7 @@ class TestBackfillMissingFlow:
         mock_manager.backfill_missing.side_effect = ValueError("Test error")
 
         with pytest.raises(ValueError, match="Test error"):
-            backfill_missing_flow(
+            BACKFILL_MISSING_FLOW_RUNNER(
                 dataset="stock_daily",
             )
 

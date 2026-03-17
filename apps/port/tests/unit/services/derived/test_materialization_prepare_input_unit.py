@@ -1,4 +1,4 @@
-"""Tests for _prepare_input_frame and MissingDependencyError."""
+"""Tests for prepare_input_frame and MissingDependencyError."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import pytest
 from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_port.services.derived.materialization import (
     MissingDependencyError,
-    _prepare_input_frame,
+    prepare_input_frame,
 )
 
 
@@ -62,7 +62,7 @@ class TestMissingDependencyError:
 
 
 # ---------------------------------------------------------------------------
-# _prepare_input_frame — success cases
+# prepare_input_frame — success cases
 # ---------------------------------------------------------------------------
 
 
@@ -70,7 +70,7 @@ class TestPrepareInputFrameSuccess:
     def test_returns_sorted_frame_with_all_dependencies(self) -> None:
         spec = _make_spec()
         frame = _make_frame("close", "open", "volume")
-        result = _prepare_input_frame(
+        result = prepare_input_frame(
             frame=frame,
             spec=spec,
             dependencies=("market.close", "market.volume"),
@@ -87,7 +87,7 @@ class TestPrepareInputFrameSuccess:
         """Dependency 'market.close' is matched by input column 'close'."""
         spec = _make_spec()
         frame = _make_frame("close")
-        result = _prepare_input_frame(
+        result = prepare_input_frame(
             frame=frame,
             spec=spec,
             dependencies=("market.close",),
@@ -97,7 +97,7 @@ class TestPrepareInputFrameSuccess:
     def test_empty_dependencies_returns_sorted_frame(self) -> None:
         spec = _make_spec()
         frame = _make_frame("close")
-        result = _prepare_input_frame(
+        result = prepare_input_frame(
             frame=frame,
             spec=spec,
             dependencies=(),
@@ -108,7 +108,7 @@ class TestPrepareInputFrameSuccess:
         """Ensure no fallback alias is injected when a dependency exists."""
         spec = _make_spec()
         frame = _make_frame("close")
-        result = _prepare_input_frame(
+        result = prepare_input_frame(
             frame=frame,
             spec=spec,
             dependencies=("market.close",),
@@ -118,7 +118,7 @@ class TestPrepareInputFrameSuccess:
 
 
 # ---------------------------------------------------------------------------
-# _prepare_input_frame — failure cases
+# prepare_input_frame — failure cases
 # ---------------------------------------------------------------------------
 
 
@@ -127,7 +127,7 @@ class TestPrepareInputFrameFailure:
         spec = _make_spec()
         frame = _make_frame("open")
         with pytest.raises(MissingDependencyError) as exc_info:
-            _prepare_input_frame(
+            prepare_input_frame(
                 frame=frame,
                 spec=spec,
                 dependencies=("market.close",),
@@ -138,7 +138,7 @@ class TestPrepareInputFrameFailure:
         spec = _make_spec()
         frame = _make_frame("some_other_column")
         with pytest.raises(MissingDependencyError) as exc_info:
-            _prepare_input_frame(
+            prepare_input_frame(
                 frame=frame,
                 spec=spec,
                 dependencies=("market.close", "market.volume", "market.high"),
@@ -153,7 +153,7 @@ class TestPrepareInputFrameFailure:
         spec = _make_spec()
         frame = _make_frame("open")
         with pytest.raises(MissingDependencyError) as exc_info:
-            _prepare_input_frame(
+            prepare_input_frame(
                 frame=frame,
                 spec=spec,
                 dependencies=("market.close",),

@@ -18,7 +18,7 @@
    当前有 `DerivedSpec`，但没有与业界常见 `entity dataframe` / `spine` 对应的统一模型。
 
 2. **`event_time` / `availability_time` 仍停留在语义提示层**
-   [ADR-032](adr-032-unified-derived-semantic-model.md) 已指出时间语义应与 `grain` 分离，但尚未定义训练数据集如何使用 `availability_time` / `known_at`。
+   [ADR-032](../core/adr-032-unified-derived-semantic-model.md) 已指出时间语义应与 `grain` 分离，但尚未定义训练数据集如何使用 `availability_time` / `known_at`。
 
 3. **研究可复现性仍弱于物化可复现性**
    当前版本化、发布、artifact 已较清晰，但尚未把“某个训练数据集由哪些版本、哪些源快照、在什么 cutoff 下生成”固定成不可变快照。
@@ -200,12 +200,12 @@ class DatasetSnapshot(BaseModel):
 
 | ADR | 关系 |
 |-----|------|
-| [ADR-021](adr-021-pit-consistency.md) | 扩展其 PIT 一致性原则到研究数据集构建与左表契约 |
-| [ADR-030](adr-030-online-data-access-boundary.md) | 保持一致：在线默认不读 Parquet，但研究构建允许读取真相层 |
-| [ADR-032](adr-032-unified-derived-semantic-model.md) | 将其 `event_time / availability_time` 语义分离正式落到研究契约 |
-| [ADR-033](adr-033-derived-query-architecture.md) | 复用查询层能力，但要求研究链路显式提供 spine / known_at |
-| [ADR-034](adr-034-publication-lifecycle.md) | `DatasetSnapshot` 必须绑定已发布或显式指定的版本化 artifact |
-| [ADR-036](adr-036-quality-gates.md) | 后续可基于 coverage / null / freshness 为数据集构建补认证包 |
+| [ADR-021](../quality/adr-021-pit-consistency.md) | 扩展其 PIT 一致性原则到研究数据集构建与左表契约 |
+| [ADR-030](../adr-030-online-data-access-boundary.md) | 保持一致：在线默认不读 Parquet，但研究构建允许读取真相层 |
+| [ADR-032](../core/adr-032-unified-derived-semantic-model.md) | 将其 `event_time / availability_time` 语义分离正式落到研究契约 |
+| [ADR-033](../adr-033-derived-query-architecture.md) | 复用查询层能力，但要求研究链路显式提供 spine / known_at |
+| [ADR-034](../core/adr-034-publication-lifecycle.md) | `DatasetSnapshot` 必须绑定已发布或显式指定的版本化 artifact |
+| [ADR-036](../quality/adr-036-quality-gates.md) | 后续可基于 coverage / null / freshness 为数据集构建补认证包 |
 
 ---
 
@@ -216,7 +216,7 @@ class DatasetSnapshot(BaseModel):
 | 文件路径 | 修改内容 |
 |---------|---------|
 | `docs/design/unified-feature-factor-engine/main-design.md` | 增加 spine / research dataset / availability-time 章节 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-032-unified-derived-semantic-model.md` | 回写 TimeSpec 与 dataset 契约之间的关系 |
+| `docs/design/unified-feature-factor-engine/decisions/core/adr-032-unified-derived-semantic-model.md` | 回写 TimeSpec 与 dataset 契约之间的关系 |
 | `docs/design/unified-feature-factor-engine/decisions/adr-033-derived-query-architecture.md` | 区分 serving query 与 dataset build 的入口 |
 
 ### 实现落点

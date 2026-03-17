@@ -12,6 +12,7 @@ from ditto_core.engine.specs import (
     MaterializationProfile,
     TimeSpec,
 )
+from ditto_datahub.errors import DerivedNotImplementedError
 
 
 class TestLiteralTypeAliases:
@@ -164,7 +165,7 @@ class TestDerivedSpec:
             entity_keys=("instrument_id", "exchange"),
         )
 
-        with pytest.raises(NotImplementedError, match="复合键已预留、暂未实现"):
+        with pytest.raises(DerivedNotImplementedError, match="复合键已预留、暂未实现"):
             spec.validate_spec()
 
     def test_validate_spec_rejects_intraday_grain(self) -> None:
@@ -178,7 +179,9 @@ class TestDerivedSpec:
             grain="1m",
         )
 
-        with pytest.raises(NotImplementedError, match="grain='1m' 已预留、暂未实现"):
+        with pytest.raises(
+            DerivedNotImplementedError, match="grain='1m' 已预留、暂未实现"
+        ):
             spec.validate_spec()
 
     def test_no_pit_required_or_normalization_fields(self) -> None:

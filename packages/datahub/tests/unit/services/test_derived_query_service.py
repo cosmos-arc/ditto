@@ -10,6 +10,7 @@ import polars as pl
 import pytest
 from ditto_core.engine.materialization.models import DerivedVersionStatus
 from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_datahub.errors import DerivedNotFoundError
 from ditto_datahub.models.derived import (
     DerivedSpecRecord,
     DerivedStateRecord,
@@ -101,7 +102,9 @@ def _seed_spec(
         DerivedVersionRecord(
             derived_id=derived_id,
             version=version,
-            status=DerivedVersionStatus.PUBLISHED if is_primary else DerivedVersionStatus.MATERIALIZED,
+            status=DerivedVersionStatus.PUBLISHED
+            if is_primary
+            else DerivedVersionStatus.MATERIALIZED,
             engine_version="expr-v1",
             is_online=is_online,
             is_primary=is_primary,
@@ -233,7 +236,7 @@ class TestDerivedQueryService:
             }
         ]
 
-    def test_find_series_missing_spec_raises_key_error(
+    def test_find_series_missing_spec_raises_not_found(
         self,
         sqlite_client,
     ) -> None:
@@ -252,7 +255,7 @@ class TestDerivedQueryService:
             version=5,
         )
 
-        with pytest.raises(KeyError, match="derived spec not found"):
+        with pytest.raises(DerivedNotFoundError, match="Derived not found"):
             service.find_series(query)
 
     def test_compare_query_rejects_duplicate_sources(self) -> None:

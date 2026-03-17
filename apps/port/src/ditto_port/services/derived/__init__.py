@@ -1,16 +1,22 @@
 """Unified derived service exports."""
 
-from ditto_datahub.services.derived.compile_cache_service import (
-    SQLiteCompileCacheService,
+from ditto_core.engine import SQLiteCompileCache, SQLiteCompileCacheBackend
+from ditto_datahub.services.hot_layer import (
+    HotLayerReader,
+    HotLayerWriter,
+    StateStore,
+    UnavailableHotLayerReader,
+    UnavailableHotLayerWriter,
+    UnavailableStateStore,
 )
 
 from ditto_port.services.derived.cascade_protocol import (
     REALTIME_CASCADE_MAX_DEPTH,
     CascadeDepthExceededError,
     CascadeStatus,
-    InvalidationCascadeService,
+    InvalidationCascadeOrchestrator,
 )
-from ditto_port.services.derived.invalidation import DerivedInvalidationService
+from ditto_port.services.derived.invalidation import DerivedInvalidationOrchestrator
 from ditto_port.services.derived.materialization import (
     InMemoryDerivedInputProvider,
     InputContext,
@@ -33,18 +39,25 @@ __all__ = [
     "REALTIME_CASCADE_MAX_DEPTH",
     "CascadeDepthExceededError",
     "CascadeStatus",
-    "DerivedInvalidationService",
+    "DerivedInvalidationOrchestrator",
     "DerivedMaterializationOrchestrator",
     "DerivedPublicationFacade",
     "DerivedQueryFacade",
+    "HotLayerReader",
+    "HotLayerWriter",
     "InMemoryDerivedInputProvider",
     "InputContext",
-    "InvalidationCascadeService",
+    "InvalidationCascadeOrchestrator",
     "ResearchDatasetFacade",
     "RuntimeDerivedInputProvider",
     "RuntimeMode",
     "RuntimeModeResolver",
-    "SQLiteCompileCacheService",
+    "SQLiteCompileCache",
+    "SQLiteCompileCacheBackend",
+    "StateStore",
     "StaticRuntimeModeResolver",
     "UnavailableDerivedInputProvider",
+    "UnavailableHotLayerReader",
+    "UnavailableHotLayerWriter",
+    "UnavailableStateStore",
 ]

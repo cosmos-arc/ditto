@@ -13,9 +13,14 @@ from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.services import (
     DerivedCatalogService,
+    DerivedShadowSlotService,
     IngestionLogService,
     PublicationSafetyRecordService,
     QualityRecordService,
+    ResearchCatalogService,
+)
+from ditto_datahub.services.publication_safety_record_service import (
+    PublicationSafetyRuntimeStores,
 )
 from ditto_datahub.services.source_service import SourceService
 from ditto_datahub.sources.source import DataSources
@@ -32,14 +37,24 @@ from ditto_datahub.stores.runtime.publication_safety import (
     CertificationWriter,
     ManifestReader,
     ManifestWriter,
+    MinimalDQReader,
+    MinimalDQWriter,
     ShadowReportReader,
     ShadowReportWriter,
+)
+from ditto_datahub.stores.runtime.publication_shadow_sqlite import (
+    SQLiteDerivedShadowSlotReader,
+    SQLiteDerivedShadowSlotWriter,
 )
 from ditto_datahub.stores.runtime.quality import (
     ComparisonReader,
     ComparisonWriter,
     QuarantineReader,
     QuarantineWriter,
+)
+from ditto_datahub.stores.runtime.research_sqlite import (
+    SQLiteResearchCatalogReader,
+    SQLiteResearchCatalogWriter,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
@@ -125,6 +140,22 @@ class RuntimeProvider(Provider):
         return SQLiteDerivedCatalogWriter(sqlite_client)
 
     @provide
+    def research_catalog_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteResearchCatalogReader:
+        """Research 控制面读取器."""
+        return SQLiteResearchCatalogReader(sqlite_client)
+
+    @provide
+    def research_catalog_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteResearchCatalogWriter:
+        """Research 控制面写入器."""
+        return SQLiteResearchCatalogWriter(sqlite_client)
+
+    @provide
     def comparison_reader(self, settings: DataStoreSettings) -> ComparisonReader:
         """质量对比数据读取器."""
         return ComparisonReader(base_path=settings.data_root)
@@ -155,6 +186,16 @@ class RuntimeProvider(Provider):
         return ManifestWriter(base_path=settings.data_root)
 
     @provide
+    def minimal_dq_reader(self, settings: DataStoreSettings) -> MinimalDQReader:
+        """Minimal DQ 摘要读取器."""
+        return MinimalDQReader(base_path=settings.data_root)
+
+    @provide
+    def minimal_dq_writer(self, settings: DataStoreSettings) -> MinimalDQWriter:
+        """Minimal DQ 摘要写入器."""
+        return MinimalDQWriter(base_path=settings.data_root)
+
+    @provide
     def shadow_report_reader(self, settings: DataStoreSettings) -> ShadowReportReader:
         """Shadow diff / trace 读取器."""
         return ShadowReportReader(base_path=settings.data_root)
@@ -173,6 +214,22 @@ class RuntimeProvider(Provider):
     def certification_writer(self, settings: DataStoreSettings) -> CertificationWriter:
         """认证报告写入器."""
         return CertificationWriter(base_path=settings.data_root)
+
+    @provide
+    def derived_shadow_slot_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteDerivedShadowSlotReader:
+        """Shadow slot 控制面读取器."""
+        return SQLiteDerivedShadowSlotReader(sqlite_client)
+
+    @provide
+    def derived_shadow_slot_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteDerivedShadowSlotWriter:
+        """Shadow slot 控制面写入器."""
+        return SQLiteDerivedShadowSlotWriter(sqlite_client)
 
     # ========================================================================
     # Runtime Services
@@ -200,6 +257,18 @@ class RuntimeProvider(Provider):
         )
 
     @provide
+    def research_catalog_service(
+        self,
+        research_catalog_reader: SQLiteResearchCatalogReader,
+        research_catalog_writer: SQLiteResearchCatalogWriter,
+    ) -> ResearchCatalogService:
+        """Research 控制面元数据服务."""
+        return ResearchCatalogService(
+            catalog_reader=research_catalog_reader,
+            catalog_writer=research_catalog_writer,
+        )
+
+    @provide
     def quality_record_service(
         self,
         comparison_reader: ComparisonReader,
@@ -218,21 +287,39 @@ class RuntimeProvider(Provider):
     @provide
     def publication_safety_record_service(
         self,
-        manifest_reader: ManifestReader,
-        manifest_writer: ManifestWriter,
-        shadow_report_reader: ShadowReportReader,
-        shadow_report_writer: ShadowReportWriter,
-        certification_reader: CertificationReader,
-        certification_writer: CertificationWriter,
+        publication_safety_runtime_stores: PublicationSafetyRuntimeStores,
     ) -> PublicationSafetyRecordService:
         """发布安全记录服务."""
-        return PublicationSafetyRecordService(
-            manifest_reader=manifest_reader,
-            manifest_writer=manifest_writer,
-            shadow_report_reader=shadow_report_reader,
-            shadow_report_writer=shadow_report_writer,
-            certification_reader=certification_reader,
-            certification_writer=certification_writer,
+        return PublicationSafetyRecordService(publication_safety_runtime_stores)
+
+    @provide
+    def publication_safety_runtime_stores(
+        self,
+        settings: DataStoreSettings,
+    ) -> PublicationSafetyRuntimeStores:
+        """发布安全运行时 stores 组合包."""
+        data_root = settings.data_root
+        return PublicationSafetyRuntimeStores(
+            manifest_reader=ManifestReader(base_path=data_root),
+            manifest_writer=ManifestWriter(base_path=data_root),
+            minimal_dq_reader=MinimalDQReader(base_path=data_root),
+            minimal_dq_writer=MinimalDQWriter(base_path=data_root),
+            shadow_report_reader=ShadowReportReader(base_path=data_root),
+            shadow_report_writer=ShadowReportWriter(base_path=data_root),
+            certification_reader=CertificationReader(base_path=data_root),
+            certification_writer=CertificationWriter(base_path=data_root),
+        )
+
+    @provide
+    def derived_shadow_slot_service(
+        self,
+        derived_shadow_slot_reader: SQLiteDerivedShadowSlotReader,
+        derived_shadow_slot_writer: SQLiteDerivedShadowSlotWriter,
+    ) -> DerivedShadowSlotService:
+        """Shadow slot 控制面服务."""
+        return DerivedShadowSlotService(
+            slot_reader=derived_shadow_slot_reader,
+            slot_writer=derived_shadow_slot_writer,
         )
 
     @provide

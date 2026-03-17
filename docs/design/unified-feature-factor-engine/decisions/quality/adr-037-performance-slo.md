@@ -76,17 +76,48 @@
 
 ### Workload 分层
 
-| 规模 | 数据量 | 标的数 | 天数 | 用途 |
-|------|--------|--------|------|------|
-| **S** | 10K rows | 10 | 100 | 快速回归 |
-| **M** | 500K rows | 100 | 500 | 标准基准 |
-| **L** | 5M rows | 500 | 1000 | 压力测试 |
+| 规模 | 数据量 | 标的数 | 天数 | slot 倍数 | 用途 |
+|------|--------|--------|------|-----------|------|
+| **S** | 10K rows | 10 | 100 | 10 | 快速回归 |
+| **M** | 500K rows | 100 | 500 | 10 | 标准基准 |
+| **L** | 5M rows | 500 | 1000 | 10 | 压力测试 |
 
 ### Benchmark 环境
 
 - 固定硬件配置（CPU、内存、磁盘）
 - 隔离环境，避免干扰
 - 可复现的数据集
+
+### 2026-03-14 v1 基准实现
+
+**D-3**: Phase 6 的首版 benchmark harness 固化为 [`scripts/benchmarks/derived_benchmark.py`](../../../../scripts/benchmarks/derived_benchmark.py)，覆盖 `query / materialize / shadow_compare` 三类 workload。定时窗口只覆盖 workload 执行本身，不把 synthetic fixture 构造时间纳入 latency，避免把数据生成噪音混入回归预算。
+
+### 本地基线快照（2026-03-14）
+
+以下结果来自 2026 年 3 月 14 日在本地开发环境执行：
+
+```bash
+pixi run -e dev python scripts/benchmarks/derived_benchmark.py --scale S --scale M --iterations 3
+pixi run -e dev python scripts/benchmarks/derived_benchmark.py --scale L --iterations 1
+```
+
+| Workload | Scale | Elapsed (s) | Throughput (rows/s) | 用途 |
+|----------|-------|-------------|---------------------|------|
+| `query` | `S` | `0.001238` | `8.08M` | 观测 |
+| `query` | `M` | `0.001238` | `403.78M` | 观测 |
+| `query` | `L` | `0.005208` | `960.02M` | 夜间 / 手工观测 |
+| `materialize` | `S` | `0.001602` | `6.24M` | PR 阻断 |
+| `materialize` | `M` | `0.027121` | `18.44M` | PR 阻断 |
+| `materialize` | `L` | `0.368278` | `13.58M` | 夜间 / 手工观测 |
+| `shadow_compare` | `S` | `0.003378` | `2.96M` | PR 阻断 |
+| `shadow_compare` | `M` | `0.060801` | `8.22M` | PR 阻断 |
+| `shadow_compare` | `L` | `0.810838` | `6.17M` | 夜间 / 手工观测 |
+
+说明：
+
+- `query` 当前仍保留为观测指标，不纳入 Phase 1 的 PR 阻断。原因是本地微基准已经进入毫秒级，容易被调度与缓存抖动放大噪音。
+- `materialize` 与 `shadow_compare` 直接对应当前 v1 主链的冷路径成本，因此进入首批 regression budget 门禁。
+- `L` 规模用于压力与容量感知，先放入夜间或手工执行，不纳入日常 PR gate。
 
 ---
 
@@ -115,6 +146,16 @@
    └── 退化 > 25%: 阻断
 4. 更新基线（main 分支合并后）
 ```
+
+### 首批门禁矩阵
+
+**D-4**: Phase 1 v1 的 benchmark gate 采用“PR 阻断 + 夜间观测”双层策略。
+
+| Workload | S | M | L |
+|----------|---|---|---|
+| `query` | WARNING only | WARNING only | Observe only |
+| `materialize` | ERROR on >25% / WARNING on >15% | ERROR on >25% / WARNING on >15% | Observe only |
+| `shadow_compare` | ERROR on >25% / WARNING on >15% | ERROR on >25% / WARNING on >15% | Observe only |
 
 ### 基线管理
 
@@ -148,3 +189,5 @@
 |------|------|
 | 2026-03-12 | D-1: Phase 1 定义测量框架 + CI 回归预算，Phase 2 收敛正式 SLO |
 | 2026-03-12 | D-2: SLI 聚焦端到端延迟 + 吞吐，资源作为诊断指标 |
+| 2026-03-14 | D-3: 基准 harness 固化为 `query / materialize / shadow_compare` 三类 workload，定时窗口排除 synthetic fixture 构造 |
+| 2026-03-14 | D-4: PR gate 只阻断 `materialize` 与 `shadow_compare` 的 S/M 回归；`query` 与全部 L workload 先做观测 |

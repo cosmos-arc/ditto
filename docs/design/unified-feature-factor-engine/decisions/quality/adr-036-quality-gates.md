@@ -19,11 +19,11 @@ DQ（Data Quality）门禁是因子发布的质量保障机制，用于：
 
 本 ADR 定义 **最小 DQ 门禁** 设计，即“明显坏数据不能进入候选发布面”的基础层。
 
-更高等级的发布安全认证、shadow diff 判定与 compatibility manifest 契约由 [ADR-042](adr-042-shadow-publish-dual-read-diff-protocol.md) 与 [ADR-043](adr-043-role-profile-certification-compatibility-manifest.md) 承担。
+更高等级的发布安全认证、shadow diff 判定与 compatibility manifest 契约由 [ADR-042](../research/adr-042-shadow-publish-dual-read-diff-protocol.md) 与 [ADR-043](../research/adr-043-role-profile-certification-compatibility-manifest.md) 承担。
 
 **关联 ADR**：
-- 依赖 [ADR-010: Catalog Schema](adr-010-catalog-schema.md)
-- 关联 [ADR-034: 发布生命周期](adr-034-publication-lifecycle.md)
+- 依赖 [ADR-010: Catalog Schema](../adr-010-catalog-schema.md)
+- 关联 [ADR-034: 发布生命周期](../core/adr-034-publication-lifecycle.md)
 
 ---
 
@@ -302,10 +302,10 @@ class DQReport:
 
 | ADR | 关系 |
 |-----|------|
-| [ADR-010](adr-010-catalog-schema.md) | 依赖：`validation_policy`、`freshness_sla` 字段 |
-| [ADR-034](adr-034-publication-lifecycle.md) | 被依赖：最小 DQ 是 certify / promote 的前置输入 |
-| [ADR-042](adr-042-shadow-publish-dual-read-diff-protocol.md) | 后续阶段消费最小 DQ 结果，进入 shadow compare |
-| [ADR-043](adr-043-role-profile-certification-compatibility-manifest.md) | 在最小 DQ 之上叠加更高等级认证 |
+| [ADR-010](../adr-010-catalog-schema.md) | 依赖：`validation_policy`、`freshness_sla` 字段 |
+| [ADR-034](../core/adr-034-publication-lifecycle.md) | 被依赖：最小 DQ 是 certify / promote 的前置输入 |
+| [ADR-042](../research/adr-042-shadow-publish-dual-read-diff-protocol.md) | 后续阶段消费最小 DQ 结果，进入 shadow compare |
+| [ADR-043](../research/adr-043-role-profile-certification-compatibility-manifest.md) | 在最小 DQ 之上叠加更高等级认证 |
 
 ---
 

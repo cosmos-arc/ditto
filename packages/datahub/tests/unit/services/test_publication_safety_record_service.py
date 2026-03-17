@@ -3,13 +3,31 @@
 from ditto_datahub.models.publication_safety import (
     CertificationReportRecord,
     CompatibilityManifestRecord,
+    DerivedMinimalDQSummaryRecord,
     ShadowDiffReportRecord,
     ShadowTraceRecordRecord,
 )
 from ditto_datahub.services.publication_safety_record_service import (
     PublicationSafetyRecordService,
+    PublicationSafetyRuntimeStores,
 )
 from pytest_mock import MockerFixture
+
+
+def _stores(
+    mocker: MockerFixture,
+    **overrides: object,
+) -> PublicationSafetyRuntimeStores:
+    return PublicationSafetyRuntimeStores(
+        manifest_reader=overrides.get("manifest_reader", mocker.Mock()),
+        manifest_writer=overrides.get("manifest_writer", mocker.Mock()),
+        minimal_dq_reader=overrides.get("minimal_dq_reader", mocker.Mock()),
+        minimal_dq_writer=overrides.get("minimal_dq_writer", mocker.Mock()),
+        shadow_report_reader=overrides.get("shadow_report_reader", mocker.Mock()),
+        shadow_report_writer=overrides.get("shadow_report_writer", mocker.Mock()),
+        certification_reader=overrides.get("certification_reader", mocker.Mock()),
+        certification_writer=overrides.get("certification_writer", mocker.Mock()),
+    )
 
 
 class TestPublicationSafetyRecordService:
@@ -26,12 +44,7 @@ class TestPublicationSafetyRecordService:
         )
         manifest_writer = mocker.Mock()
         service = PublicationSafetyRecordService(
-            manifest_reader=mocker.Mock(),
-            manifest_writer=manifest_writer,
-            shadow_report_reader=mocker.Mock(),
-            shadow_report_writer=mocker.Mock(),
-            certification_reader=mocker.Mock(),
-            certification_writer=mocker.Mock(),
+            _stores(mocker, manifest_writer=manifest_writer)
         )
 
         service.save_manifest(manifest)
@@ -50,12 +63,7 @@ class TestPublicationSafetyRecordService:
         manifest_reader = mocker.Mock()
         manifest_reader.read_manifest = mocker.Mock(return_value=manifest)
         service = PublicationSafetyRecordService(
-            manifest_reader=manifest_reader,
-            manifest_writer=mocker.Mock(),
-            shadow_report_reader=mocker.Mock(),
-            shadow_report_writer=mocker.Mock(),
-            certification_reader=mocker.Mock(),
-            certification_writer=mocker.Mock(),
+            _stores(mocker, manifest_reader=manifest_reader)
         )
 
         result = service.get_manifest("factor.momentum_20d", 3)
@@ -89,12 +97,7 @@ class TestPublicationSafetyRecordService:
         )
         shadow_writer = mocker.Mock()
         service = PublicationSafetyRecordService(
-            manifest_reader=mocker.Mock(),
-            manifest_writer=mocker.Mock(),
-            shadow_report_reader=mocker.Mock(),
-            shadow_report_writer=shadow_writer,
-            certification_reader=mocker.Mock(),
-            certification_writer=mocker.Mock(),
+            _stores(mocker, shadow_report_writer=shadow_writer)
         )
 
         service.save_shadow_report(report, traces)
@@ -119,12 +122,7 @@ class TestPublicationSafetyRecordService:
         shadow_reader = mocker.Mock()
         shadow_reader.get_latest_report = mocker.Mock(return_value=report)
         service = PublicationSafetyRecordService(
-            manifest_reader=mocker.Mock(),
-            manifest_writer=mocker.Mock(),
-            shadow_report_reader=shadow_reader,
-            shadow_report_writer=mocker.Mock(),
-            certification_reader=mocker.Mock(),
-            certification_writer=mocker.Mock(),
+            _stores(mocker, shadow_report_reader=shadow_reader)
         )
 
         result = service.get_latest_shadow_report("factor.momentum_20d", 3, 2)
@@ -150,12 +148,7 @@ class TestPublicationSafetyRecordService:
         )
         certification_writer = mocker.Mock()
         service = PublicationSafetyRecordService(
-            manifest_reader=mocker.Mock(),
-            manifest_writer=mocker.Mock(),
-            shadow_report_reader=mocker.Mock(),
-            shadow_report_writer=mocker.Mock(),
-            certification_reader=mocker.Mock(),
-            certification_writer=certification_writer,
+            _stores(mocker, certification_writer=certification_writer)
         )
 
         service.save_certification_report(record)
@@ -179,12 +172,7 @@ class TestPublicationSafetyRecordService:
         certification_reader = mocker.Mock()
         certification_reader.get_latest_report = mocker.Mock(return_value=record)
         service = PublicationSafetyRecordService(
-            manifest_reader=mocker.Mock(),
-            manifest_writer=mocker.Mock(),
-            shadow_report_reader=mocker.Mock(),
-            shadow_report_writer=mocker.Mock(),
-            certification_reader=certification_reader,
-            certification_writer=mocker.Mock(),
+            _stores(mocker, certification_reader=certification_reader)
         )
 
         result = service.get_latest_certification_report(
@@ -194,4 +182,55 @@ class TestPublicationSafetyRecordService:
         assert result == record
         certification_reader.get_latest_report.assert_called_once_with(
             "factor.momentum_20d", 3, "publish_ready"
+        )
+
+    def test_save_minimal_dq_summary_delegates_to_writer(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        """Test save_minimal_dq_summary() delegates to minimal DQ writer."""
+        record = DerivedMinimalDQSummaryRecord(
+            derived_id="factor.momentum_20d",
+            version=3,
+            run_id="drv-001",
+            passed=True,
+            error_count=0,
+            payload={"failed_checks": []},
+            created_at="2026-03-14T12:00:00+08:00",
+        )
+        minimal_dq_writer = mocker.Mock()
+        service = PublicationSafetyRecordService(
+            _stores(mocker, minimal_dq_writer=minimal_dq_writer)
+        )
+
+        service.save_minimal_dq_summary(record)
+
+        minimal_dq_writer.write_summary.assert_called_once_with(record)
+
+    def test_get_latest_minimal_dq_summary_delegates_to_reader(
+        self,
+        mocker: MockerFixture,
+    ) -> None:
+        """Test latest minimal DQ lookup delegates to reader."""
+        record = DerivedMinimalDQSummaryRecord(
+            derived_id="factor.momentum_20d",
+            version=3,
+            run_id="drv-001",
+            passed=False,
+            error_count=1,
+            payload={"failed_checks": ["value_has_no_nan"]},
+            created_at="2026-03-14T12:00:00+08:00",
+        )
+        minimal_dq_reader = mocker.Mock()
+        minimal_dq_reader.get_latest_summary = mocker.Mock(return_value=record)
+        service = PublicationSafetyRecordService(
+            _stores(mocker, minimal_dq_reader=minimal_dq_reader)
+        )
+
+        result = service.get_latest_minimal_dq_summary("factor.momentum_20d", 3)
+
+        assert result == record
+        minimal_dq_reader.get_latest_summary.assert_called_once_with(
+            "factor.momentum_20d",
+            3,
         )

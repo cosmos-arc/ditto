@@ -21,6 +21,7 @@ Services module - 域服务统一入口.
 - DerivedCatalogService: 统一派生 catalog/runtime metadata 服务
 - PublicationSafetyRecordService: 发布安全记录服务
   （manifest、shadow diff、certification）
+- DerivedShadowSlotService: 发布 shadow candidate SQLite 控制面服务
 """
 
 # Capital 域服务
@@ -28,6 +29,7 @@ from ditto_datahub.services.capital_service import CapitalService
 
 # Runtime 服务
 from ditto_datahub.services.derived import (
+    DerivedArtifactReader,
     DerivedCompareQuery,
     DerivedLatestQuery,
     DerivedQueryService,
@@ -35,9 +37,26 @@ from ditto_datahub.services.derived import (
     DerivedSourceScope,
 )
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
+from ditto_datahub.services.derived_migration_service import (
+    LegacyDerivedCatalogMigrationResult,
+    LegacyDerivedCatalogMigrationService,
+)
+from ditto_datahub.services.derived_shadow_slot_service import (
+    DerivedShadowSlotService,
+)
 
 # Fundamental 域服务
 from ditto_datahub.services.fundamental_service import FundamentalService
+
+# Hot layer protocols (Phase 5+ infrastructure)
+from ditto_datahub.services.hot_layer import (
+    HotLayerReader,
+    HotLayerWriter,
+    StateStore,
+    UnavailableHotLayerReader,
+    UnavailableHotLayerWriter,
+    UnavailableStateStore,
+)
 from ditto_datahub.services.ingestion_log_service import IngestionLogService
 
 # Macro 域服务
@@ -63,6 +82,7 @@ from ditto_datahub.services.publication_safety_record_service import (
     PublicationSafetyRecordService,
 )
 from ditto_datahub.services.quality_record_service import QualityRecordService
+from ditto_datahub.services.research_catalog_service import ResearchCatalogService
 
 # Source 服务
 from ditto_datahub.services.source_service import SourceService
@@ -70,16 +90,22 @@ from ditto_datahub.services.source_service import SourceService
 __all__ = [
     "AdjType",
     "CapitalService",
+    "DerivedArtifactReader",
     "DerivedCatalogService",
     "DerivedCompareQuery",
     "DerivedLatestQuery",
     "DerivedQueryService",
     "DerivedSeriesQuery",
+    "DerivedShadowSlotService",
     "DerivedSourceScope",
     "FundamentalReadPorts",
     "FundamentalService",
     "FundamentalWritePorts",
+    "HotLayerReader",
+    "HotLayerWriter",
     "IngestionLogService",
+    "LegacyDerivedCatalogMigrationResult",
+    "LegacyDerivedCatalogMigrationService",
     "MacroService",
     "MarketBarsQuery",
     "MarketConstituentsQuery",
@@ -89,5 +115,10 @@ __all__ = [
     "MetadataService",
     "PublicationSafetyRecordService",
     "QualityRecordService",
+    "ResearchCatalogService",
     "SourceService",
+    "StateStore",
+    "UnavailableHotLayerReader",
+    "UnavailableHotLayerWriter",
+    "UnavailableStateStore",
 ]

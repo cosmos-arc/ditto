@@ -590,7 +590,7 @@ Week 6:
 - [ADR-010: Catalog 完整表结构](decisions/adr-010-catalog-schema.md)
 - [ADR-029: 盘中/盘后路径](decisions/adr-029-intraday-postmarket-paths.md)
 - [ADR-030: Online Data Access Boundary](decisions/adr-030-online-data-access-boundary.md)
-- [ADR-031: State Snapshot ABI](decisions/adr-031-state-snapshot-abi.md)
+- [ADR-031: State Snapshot ABI](decisions/storage/adr-031-state-snapshot-abi.md)
 
 ### 10.3 派生查询设计决策
 

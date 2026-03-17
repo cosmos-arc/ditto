@@ -72,8 +72,16 @@ from ditto_datahub.models.portfolio import Portfolio, Position
 from ditto_datahub.models.publication_safety import (
     CertificationReportRecord,
     CompatibilityManifestRecord,
+    DerivedMinimalDQSummaryRecord,
+    DerivedShadowSlotRecord,
     ShadowDiffReportRecord,
     ShadowTraceRecordRecord,
+)
+from ditto_datahub.models.research import (
+    ResearchDatasetSnapshotRecord,
+    ResearchDatasetSpecRecord,
+    ResearchSpineSnapshotRecord,
+    ResearchSpineSpecRecord,
 )
 from ditto_datahub.models.source_codes import (
     COMMODITY_CODE_TO_INSTRUMENT_ID,
@@ -119,8 +127,10 @@ __all__ = [
     "DerivedCheckpointRecord",
     "DerivedDependencyRecord",
     "DerivedInvalidationRecord",
+    "DerivedMinimalDQSummaryRecord",
     "DerivedPartitionRecord",
     "DerivedRunRecord",
+    "DerivedShadowSlotRecord",
     "DerivedSpecRecord",
     "DerivedStateRecord",
     "DerivedVersionRecord",
@@ -152,6 +162,10 @@ __all__ = [
     "OrderStatus",
     "Portfolio",
     "Position",
+    "ResearchDatasetSnapshotRecord",
+    "ResearchDatasetSpecRecord",
+    "ResearchSpineSnapshotRecord",
+    "ResearchSpineSpecRecord",
     "ShadowDiffReportRecord",
     "ShadowTraceRecordRecord",
     "Signal",

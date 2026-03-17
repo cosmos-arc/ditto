@@ -1,4 +1,4 @@
-"""Unit tests for SQLiteCompileCacheService L1/L2/compile hierarchy."""
+"""Unit tests for SQLiteCompileCache L1/L2/compile hierarchy."""
 
 from __future__ import annotations
 
@@ -9,11 +9,11 @@ from typing import Any
 import orjson
 import polars as pl
 import pytest
+from ditto_core.engine.compile_cache import SQLiteCompileCache
 from ditto_core.engine.materialization import (
     CompiledDerivedExpression,
 )
 from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
-from ditto_port.services.derived.compile_cache import SQLiteCompileCacheService
 
 # ---------------------------------------------------------------------------
 # Schema SQL (excerpt for compile cache tables)
@@ -104,7 +104,7 @@ class TestCompileCacheKeyBeforeCompile:
         self, sqlite_backend: _SQLiteBackend
     ) -> None:
         """First call should compile, populate L1, and persist to L2."""
-        service = SQLiteCompileCacheService(sqlite_backend)
+        service = SQLiteCompileCache(sqlite_backend)
         spec = _make_spec()
         call_count = _track_compile_calls(service)
 
@@ -125,7 +125,7 @@ class TestCompileCacheKeyBeforeCompile:
 
     def test_l1_hit_skips_compile(self, sqlite_backend: _SQLiteBackend) -> None:
         """Second call with same spec should hit L1 memory cache."""
-        service = SQLiteCompileCacheService(sqlite_backend)
+        service = SQLiteCompileCache(sqlite_backend)
         spec = _make_spec()
 
         first = service.get_or_compile(spec)
@@ -140,7 +140,7 @@ class TestCompileCacheKeyBeforeCompile:
         self, sqlite_backend: _SQLiteBackend
     ) -> None:
         """force_recompile=True should always compile."""
-        service = SQLiteCompileCacheService(sqlite_backend)
+        service = SQLiteCompileCache(sqlite_backend)
         spec = _make_spec()
         service.get_or_compile(spec)
 
@@ -158,7 +158,7 @@ class TestL2SQLiteReadPath:
         self, sqlite_backend: _SQLiteBackend
     ) -> None:
         """L2 cache hit should return a valid CompiledDerivedExpression."""
-        service = SQLiteCompileCacheService(sqlite_backend)
+        service = SQLiteCompileCache(sqlite_backend)
         spec = _make_spec()
 
         # Populate cache
@@ -166,7 +166,7 @@ class TestL2SQLiteReadPath:
         original_cache_key = first.compile_identity.cache_key
 
         # Simulate process restart: new service instance, empty L1
-        service2 = SQLiteCompileCacheService(sqlite_backend)
+        service2 = SQLiteCompileCache(sqlite_backend)
         assert len(service2._memory_cache) == 0
 
         _track_compile_calls(service2)
@@ -185,7 +185,7 @@ class TestL2SQLiteReadPath:
         self, sqlite_backend: _SQLiteBackend
     ) -> None:
         """expression_repr should store the original DSL expression."""
-        service = SQLiteCompileCacheService(sqlite_backend)
+        service = SQLiteCompileCache(sqlite_backend)
         spec = _make_spec("ts_mean(close, 20)")
 
         service.get_or_compile(spec)
@@ -197,14 +197,14 @@ class TestL2SQLiteReadPath:
 
     def test_l2_hit_rehydrates_l1(self, sqlite_backend: _SQLiteBackend) -> None:
         """L2 cache hit should populate L1 for subsequent hits."""
-        service = SQLiteCompileCacheService(sqlite_backend)
+        service = SQLiteCompileCache(sqlite_backend)
         spec = _make_spec()
 
         # Populate cache with first service
         service.get_or_compile(spec)
 
         # New service (simulated restart)
-        service2 = SQLiteCompileCacheService(sqlite_backend)
+        service2 = SQLiteCompileCache(sqlite_backend)
         assert len(service2._memory_cache) == 0
 
         # L2 hit (should populate L1)
@@ -220,7 +220,7 @@ class TestL2SQLiteReadPath:
         self, sqlite_backend: _SQLiteBackend
     ) -> None:
         """L2 cache should persist analysis and compile identity as JSON."""
-        service = SQLiteCompileCacheService(sqlite_backend)
+        service = SQLiteCompileCache(sqlite_backend)
         spec = _make_spec()
         compiled = service.get_or_compile(spec)
 
@@ -239,7 +239,7 @@ class TestL2SQLiteReadPath:
         self, sqlite_backend: _SQLiteBackend
     ) -> None:
         """Different expressions should produce different cache keys."""
-        service = SQLiteCompileCacheService(sqlite_backend)
+        service = SQLiteCompileCache(sqlite_backend)
 
         result_a = service.get_or_compile(_make_spec("ts_delta(close, 1)"))
         result_b = service.get_or_compile(_make_spec("ts_mean(close, 20)"))
@@ -254,7 +254,7 @@ class TestL2SQLiteReadPath:
 # ---------------------------------------------------------------------------
 
 
-def _track_compile_calls(service: SQLiteCompileCacheService) -> Any:
+def _track_compile_calls(service: SQLiteCompileCache) -> Any:
     """Return a callable that returns how many times compile() was called."""
     original_compile = service._compiler.compile
     call_count = [0]

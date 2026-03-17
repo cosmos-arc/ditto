@@ -250,7 +250,7 @@ deploy/derived/
 
 ## DuckDB ADHOC 工具
 
-> 详见 [ADR-026: DuckDB 定位与使用规范](adr-026-duckdb-positioning.md)
+> 详见 [ADR-026: DuckDB 定位与使用规范](storage/adr-026-duckdb-positioning.md)
 
 DuckDB 不作为常驻服务，仅作为 ADHOC/审计工具使用：
 

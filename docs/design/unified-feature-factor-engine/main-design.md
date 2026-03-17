@@ -326,8 +326,8 @@ class FactorSpec(BaseSpec):
 ```
 
 > **补充说明**:
-> 1. 统一语义根模型、`entity_keys/calendar/grain/time_keys` 的正式定义以 [ADR-032](decisions/adr-032-unified-derived-semantic-model.md) 为准。
-> 2. 研究/训练左表契约与数据集快照不并入 `FeatureSpec/FactorSpec`，而是由 [ADR-041](decisions/adr-041-research-dataset-spine-availability-contract.md) 定义 `SpineSpec`、`ResearchDatasetSpec`、`DatasetSnapshot`。
+> 1. 统一语义根模型、`entity_keys/calendar/grain/time_keys` 的正式定义以 [ADR-032](decisions/core/adr-032-unified-derived-semantic-model.md) 为准。
+> 2. 研究/训练左表契约与数据集快照不并入 `FeatureSpec/FactorSpec`，而是由 [ADR-041](decisions/research/adr-041-research-dataset-spine-availability-contract.md) 定义 `SpineSpec`、`ResearchDatasetSpec`、`DatasetSnapshot`。
 
 ### 6.2 RunConfig（应用层传入）
 

@@ -6,7 +6,7 @@
 
 ## 背景
 
-[ADR-036](adr-036-quality-gates.md) 已定义最小 DQ 门禁，但它主要解决的是“明显坏数据不能发布”，仍然不足以支撑更高安全等级的发布与回放：
+[ADR-036](../quality/adr-036-quality-gates.md) 已定义最小 DQ 门禁，但它主要解决的是”明显坏数据不能发布”，仍然不足以支撑更高安全等级的发布与回放：
 
 1. **不同 role / materialization_profile 需要不同验证重点**
    `feature`、`factor`、`STATE`、`DERIVE` 的风险形态并不相同，不能继续只靠 schema / null-rate / freshness。
@@ -171,9 +171,9 @@ materialize
 
 | ADR | 关系 |
 |-----|------|
-| [ADR-034](adr-034-publication-lifecycle.md) | 扩展其 publish 前 gate，形成正式 certification 阶段 |
-| [ADR-036](adr-036-quality-gates.md) | 继承最小 DQ，向更高安全等级扩展 |
-| [ADR-039](adr-039-expression-cache-persistence.md) | 吸收其 `compiler_fingerprint` 思路，但上升为发布兼容契约 |
+| [ADR-034](../core/adr-034-publication-lifecycle.md) | 扩展其 publish 前 gate，形成正式 certification 阶段 |
+| [ADR-036](../quality/adr-036-quality-gates.md) | 继承最小 DQ，向更高安全等级扩展 |
+| [ADR-039](../computation/adr-039-expression-cache-persistence.md) | 吸收其 `compiler_fingerprint` 思路，但上升为发布兼容契约 |
 | [ADR-041](adr-041-research-dataset-spine-availability-contract.md) | `DatasetSnapshot` 必须携带 compatibility manifest |
 | [ADR-042](adr-042-shadow-publish-dual-read-diff-protocol.md) | shadow diff 结果进入 certification pack |
 
@@ -185,9 +185,9 @@ materialize
 
 | 文件路径 | 修改内容 |
 |---------|---------|
-| `docs/design/unified-feature-factor-engine/decisions/adr-034-publication-lifecycle.md` | 接入 `shadow_ready` / `publish_ready` 认证阶段 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-036-quality-gates.md` | 明确“最小 DQ”与“认证层”分层 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-039-expression-cache-persistence.md` | 区分缓存指纹与发布兼容 manifest |
+| `docs/design/unified-feature-factor-engine/decisions/core/adr-034-publication-lifecycle.md` | 接入 `shadow_ready` / `publish_ready` 认证阶段 |
+| `docs/design/unified-feature-factor-engine/decisions/quality/adr-036-quality-gates.md` | 明确”最小 DQ”与”认证层”分层 |
+| `docs/design/unified-feature-factor-engine/decisions/computation/adr-039-expression-cache-persistence.md` | 区分缓存指纹与发布兼容 manifest |
 
 ### 实现落点
 

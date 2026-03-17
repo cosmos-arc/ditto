@@ -423,8 +423,8 @@ Phase 2.3: DERIVE 因子
 
 ## 相关 ADR
 
-- [ADR-027: 表达式 Pushdown 策略](adr-027-pushdown-strategy.md) - QuestDB 下推
-- [ADR-028: QuestDB 热表与物化视图 DDL](adr-028-questdb-hot-tables.md) - 热层存储
+- [ADR-027: 表达式 Pushdown 策略](storage/adr-027-pushdown-strategy.md) - QuestDB 下推
+- [ADR-028: QuestDB 热表与物化视图 DDL](storage/adr-028-questdb-hot-tables.md) - 热层存储
 - [ADR-030: Online Data Access Boundary](adr-030-online-data-access-boundary.md) - 在线查询边界
-- [ADR-031: State Snapshot ABI](adr-031-state-snapshot-abi.md) - STATE 因子快照格式
+- [ADR-031: State Snapshot ABI](storage/adr-031-state-snapshot-abi.md) - STATE 因子快照格式
 - [ADR-010: Catalog 完整表结构与存储架构](adr-010-catalog-schema.md) - serve_mode 字段

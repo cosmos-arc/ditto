@@ -6,14 +6,16 @@ from unittest.mock import MagicMock
 
 from dishka import Provider, Scope, make_container, provide
 from ditto_datahub.services import DerivedQueryService
+from ditto_datahub.sources import ExchangeTransformers
 from ditto_datahub.sources.source import DataSources
 from ditto_port.registry import ConfigProvider
 from ditto_port.registry.datahub import (
     DerivedProvider,
+    MetadataProvider,
     RuntimeProvider,
     get_datahub_providers,
 )
-from ditto_port.services.derived import DerivedQueryFacade
+from ditto_port.services.derived import DerivedPublicationFacade, DerivedQueryFacade
 
 
 def _sources_provider() -> Provider:
@@ -23,6 +25,13 @@ def _sources_provider() -> Provider:
         @provide
         def data_sources(self) -> DataSources:
             return DataSources(tushare=MagicMock(), fred=None)
+
+        @provide
+        def exchange_transformers(self) -> ExchangeTransformers:
+            return ExchangeTransformers(
+                tushare=MagicMock(),
+                tdx=MagicMock(),
+            )
 
     return SourcesProvider()
 
@@ -42,14 +51,17 @@ class TestDerivedProvider:
             ConfigProvider(),
             _sources_provider(),
             RuntimeProvider(),
+            MetadataProvider(),
             DerivedProvider(),
         )
 
         query_service = container.get(DerivedQueryService)
         facade = container.get(DerivedQueryFacade)
+        publication_facade = container.get(DerivedPublicationFacade)
 
         assert isinstance(query_service, DerivedQueryService)
         assert isinstance(facade, DerivedQueryFacade)
+        assert isinstance(publication_facade, DerivedPublicationFacade)
         container.close()
 
     def test_registry_exports_replace_features_provider(self) -> None:

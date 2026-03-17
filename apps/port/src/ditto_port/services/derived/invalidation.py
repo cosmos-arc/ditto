@@ -14,19 +14,21 @@ from ditto_core.engine.materialization.models import DerivedRunMode, DerivedRunT
 from ditto_datahub.models.derived import DerivedInvalidationRecord
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
 
-from ditto_port.services.derived.materialization import DerivedMaterializationService
+from ditto_port.services.derived.materialization_orchestrator import (
+    DerivedMaterializationOrchestrator,
+)
 
-__all__ = ["DerivedInvalidationService"]
+__all__ = ["DerivedInvalidationOrchestrator"]
 
 
-class DerivedInvalidationService:
+class DerivedInvalidationOrchestrator:
     """Expand invalidations across dependency edges and repair pending work."""
 
     def __init__(
         self,
         *,
         catalog_service: DerivedCatalogService,
-        materialization_service: DerivedMaterializationService,
+        materialization_service: DerivedMaterializationOrchestrator,
     ) -> None:
         self._catalog_service = catalog_service
         self._materialization_service = materialization_service

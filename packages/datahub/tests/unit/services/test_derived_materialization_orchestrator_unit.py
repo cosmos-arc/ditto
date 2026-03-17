@@ -28,6 +28,7 @@ from ditto_datahub.services.derived_shadow_slot_service import DerivedShadowSlot
 from ditto_datahub.services.publication_safety_record_service import (
     PublicationSafetyRuntimeStores,
 )
+from ditto_datahub.stores.runtime.derived_artifact_writer import DerivedArtifactWriter
 from ditto_datahub.stores.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
@@ -47,10 +48,12 @@ from ditto_datahub.stores.runtime.publication_shadow_sqlite import (
     SQLiteDerivedShadowSlotWriter,
 )
 from ditto_port.services.derived import (
-    DerivedMaterializationService,
     InMemoryDerivedInputProvider,
     RuntimeDerivedInputProvider,
-    SQLiteCompileCacheService,
+    SQLiteCompileCache,
+)
+from ditto_port.services.derived.materialization_orchestrator import (
+    DerivedMaterializationOrchestrator,
 )
 
 
@@ -206,7 +209,7 @@ def _shadow_slot_service(sqlite_client) -> DerivedShadowSlotService:
     )
 
 
-class TestDerivedMaterializationService:
+class TestDerivedMaterializationOrchestrator:
     """Tests for unified derived materialization."""
 
     def test_series_materialization_writes_artifact_and_runtime_metadata(
@@ -218,11 +221,11 @@ class TestDerivedMaterializationService:
         spec = _spec(MaterializationProfile.SERIES)
         catalog_service = _catalog_service(sqlite_client, tmp_path)
         _seed_spec(catalog_service, spec)
-        service = DerivedMaterializationService(
+        service = DerivedMaterializationOrchestrator(
             catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCacheService(sqlite_client),
+            compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
-            artifact_root=tmp_path,
+            artifact_writer=DerivedArtifactWriter(tmp_path),
         )
 
         result = service.materialize(
@@ -262,11 +265,11 @@ class TestDerivedMaterializationService:
         spec = _spec(MaterializationProfile.DERIVE)
         catalog_service = _catalog_service(sqlite_client, tmp_path)
         _seed_spec(catalog_service, spec)
-        service = DerivedMaterializationService(
+        service = DerivedMaterializationOrchestrator(
             catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCacheService(sqlite_client),
+            compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
-            artifact_root=tmp_path,
+            artifact_writer=DerivedArtifactWriter(tmp_path),
         )
 
         result = service.materialize(
@@ -301,11 +304,11 @@ class TestDerivedMaterializationService:
         spec = _spec(MaterializationProfile.OFFLINE)
         catalog_service = _catalog_service(sqlite_client, tmp_path)
         _seed_spec(catalog_service, spec)
-        service = DerivedMaterializationService(
+        service = DerivedMaterializationOrchestrator(
             catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCacheService(sqlite_client),
+            compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
-            artifact_root=tmp_path,
+            artifact_writer=DerivedArtifactWriter(tmp_path),
         )
 
         result = service.materialize(
@@ -358,15 +361,15 @@ class TestDerivedMaterializationService:
         _write_market_truth_layers(tmp_path)
         catalog_service = _catalog_service(sqlite_client, tmp_path)
         _seed_spec(catalog_service, spec)
-        service = DerivedMaterializationService(
+        service = DerivedMaterializationOrchestrator(
             catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCacheService(sqlite_client),
+            compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=RuntimeDerivedInputProvider(
                 catalog_service=catalog_service,
                 artifact_root=tmp_path,
                 data_root=tmp_path,
             ),
-            artifact_root=tmp_path,
+            artifact_writer=DerivedArtifactWriter(tmp_path),
         )
 
         result = service.materialize(
@@ -454,15 +457,15 @@ class TestDerivedMaterializationService:
             version=upstream.version,
             availability_offset_days=1,
         )
-        service = DerivedMaterializationService(
+        service = DerivedMaterializationOrchestrator(
             catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCacheService(sqlite_client),
+            compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=RuntimeDerivedInputProvider(
                 catalog_service=catalog_service,
                 artifact_root=tmp_path,
                 data_root=tmp_path,
             ),
-            artifact_root=tmp_path,
+            artifact_writer=DerivedArtifactWriter(tmp_path),
         )
 
         result = service.materialize(
@@ -524,11 +527,11 @@ class TestDerivedMaterializationService:
         )
         publication_record_service = _publication_record_service(tmp_path)
         shadow_slot_service = _shadow_slot_service(sqlite_client)
-        service = DerivedMaterializationService(
+        service = DerivedMaterializationOrchestrator(
             catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCacheService(sqlite_client),
+            compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=InMemoryDerivedInputProvider({candidate.id: _input_frame()}),
-            artifact_root=tmp_path,
+            artifact_writer=DerivedArtifactWriter(tmp_path),
             publication_record_service=publication_record_service,
             shadow_slot_service=shadow_slot_service,
         )
@@ -585,11 +588,11 @@ class TestDerivedMaterializationService:
         catalog_service = _catalog_service(sqlite_client, tmp_path)
         _seed_spec(catalog_service, spec)
         publication_record_service = _publication_record_service(tmp_path)
-        service = DerivedMaterializationService(
+        service = DerivedMaterializationOrchestrator(
             catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCacheService(sqlite_client),
+            compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
-            artifact_root=tmp_path,
+            artifact_writer=DerivedArtifactWriter(tmp_path),
             publication_record_service=publication_record_service,
         )
 
@@ -663,11 +666,11 @@ class TestDerivedMaterializationService:
         catalog_service = _catalog_service(sqlite_client, tmp_path)
         _seed_spec(catalog_service, spec)
         publication_record_service = _publication_record_service(tmp_path)
-        service = DerivedMaterializationService(
+        service = DerivedMaterializationOrchestrator(
             catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCacheService(sqlite_client),
+            compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=InMemoryDerivedInputProvider({spec.id: invalid_frame}),
-            artifact_root=tmp_path,
+            artifact_writer=DerivedArtifactWriter(tmp_path),
             publication_record_service=publication_record_service,
         )
 

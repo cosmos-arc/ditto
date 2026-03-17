@@ -35,8 +35,7 @@ from ditto_port.registry.datahub import (
     RuntimeProvider,
 )
 from ditto_port.services.derived import (
-    DerivedInvalidationService,
-    DerivedMaterializationService,
+    DerivedInvalidationOrchestrator,
     DerivedPublicationFacade,
     ResearchDatasetFacade,
 )
@@ -224,11 +223,15 @@ def _write_artifact(
 
 @contextmanager
 def _materialization_bundle_context():
+    from ditto_port.services.derived.materialization_orchestrator import (
+        DerivedMaterializationOrchestrator,
+    )
+
     container = _make_test_container()
     try:
         yield MaterializationBundle(
-            materialization_service=container.get(DerivedMaterializationService),
-            invalidation_service=container.get(DerivedInvalidationService),
+            materialization_service=container.get(DerivedMaterializationOrchestrator),
+            invalidation_service=container.get(DerivedInvalidationOrchestrator),
             migration_service=container.get(LegacyDerivedCatalogMigrationService),
             publication_facade=container.get(DerivedPublicationFacade),
             research_dataset_facade=container.get(ResearchDatasetFacade),

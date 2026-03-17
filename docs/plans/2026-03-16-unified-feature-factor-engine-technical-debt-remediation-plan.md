@@ -1,7 +1,7 @@
 # Unified Feature/Factor Engine 技术债务整改计划
 
 **创建日期**: 2026-03-16
-**状态**: Phase 1 已完成 ✅
+**状态**: Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4 ✅
 **目标**: 所有维度评分提升至 **10/10**
 
 ---
@@ -38,9 +38,9 @@
 | Phase | 名称 | 问题数 | 周次 | 核心目标 | 状态 |
 |-------|------|--------|------|----------|------|
 | **Phase 1** | 核心语义修复 | 9 | Week 1 | 状态统一、事务边界、类型恢复 | ✅ 已完成 |
-| **Phase 2** | 结构重构 | 8 | Week 2 | Port 层职责下沉、接口重构 | 待开始 |
-| **Phase 3** | 语义补全 | 10 | Week 3 | Cascade protocol、时间语义 | 待开始 |
-| **Phase 4** | 架构完善 | 11 | Week 4 | 热层接口、ADR 整理、工程标准 | 待开始 |
+| **Phase 2** | 结构重构 | 8 | Week 2 | Port 层职责下沉、接口重构 | ✅ 已完成 |
+| **Phase 3** | 语义补全 | 10 | Week 3 | Cascade protocol、时间语义 | ✅ 已完成 |
+| **Phase 4** | 架构完善 | 11 | Week 4 | 热层接口、ADR 整理、工程标准 | ✅ 已完成 |
 
 ---
 
@@ -595,16 +595,16 @@ Day 5: Fallback 移除
 
 ### 问题清单
 
-| ID | 问题 | 类型 | 严重程度 |
-|----|------|------|----------|
-| **Q-RESP-01** | `DerivedMaterializationService` 880+ 行，职责过重 | 工程 | 高 |
-| **Q-RESP-02** | Port 层直接操作文件系统 | 工程 | 中 |
-| **Q-RESP-03** | `compile_cache.py` 位置存疑（应在 DataHub） | 工程 | 低 |
-| **C-CW-01** | `compute_start/end` 被 `request_start/end` 覆盖 | 核心 | 中 |
-| **C-RV-01** | `resolve_serving_version()` 静默回退 | 核心 | 高 |
-| **C-RV-02** | research 版本解析可能绑定未发布版本 | 核心 | 高 |
-| **Q-ABS-01** | `DerivedInputProvider` 参数过多（4 个） | 工程 | 低 |
-| **Q-ABS-02** | `InMemoryDerivedInputProvider` 忽略 3/4 参数 | 工程 | 低 |
+| ID | 问题 | 类型 | 严重程度 | 状态 |
+|----|------|------|----------|------|
+| **Q-RESP-01** | `DerivedMaterializationService` 880+ 行，职责过重 | 工程 | 高 | ✅ 已拆分为 Orchestrator |
+| **Q-RESP-02** | Port 层直接操作文件系统 | 工程 | 中 | ✅ FS 写入委托 DerivedArtifactWriter |
+| **Q-RESP-03** | `compile_cache.py` 位置存疑（应在 DataHub） | 工程 | 低 | ✅ 已移至 DataHub |
+| **C-CW-01** | `compute_start/end` 被 `request_start/end` 覆盖 | 核心 | 中 | ✅ 已修复 |
+| **C-RV-01** | `resolve_serving_version()` 静默回退 | 核心 | 高 | ✅ 引入 VersionResolutionStrategy |
+| **C-RV-02** | research 版本解析可能绑定未发布版本 | 核心 | 高 | ✅ 使用 EXPLICIT_VERSION |
+| **Q-ABS-01** | `DerivedInputProvider` 参数过多（4 个） | 工程 | 低 | ✅ 封装 InputContext |
+| **Q-ABS-02** | `InMemoryDerivedInputProvider` 忽略 3/4 参数 | 工程 | 低 | ✅ 使用 InputContext |
 
 ---
 
@@ -1402,19 +1402,19 @@ Day 4-5: 增量计算补全
 
 ### 问题清单
 
-| ID | 问题 | 类型 | 严重程度 |
-|----|------|------|----------|
-| **D-HEAT-01** | QuestDB 热层未实现 | 设计 | 中 |
-| **D-HEAT-02** | Kvrocks 状态存储未实现 | 设计 | 中 |
-| **D-HEAT-03** | `RuntimeMode` 空解析模式 | 设计 | 低 |
-| **D-HEAT-04** | artifact-first 缺少迁移计划 | 设计 | 低 |
-| **D-ADR-01** | ADR 过度碎片化（43+ 文档） | 设计 | 低 |
-| **D-ADR-02** | 部分状态漂移（暂缓无重启条件） | 设计 | 低 |
-| **D-ADR-03** | ADR 交叉引用复杂 | 设计 | 低 |
-| **Q-ERR-01** | 异常类型混用 | 工程 | 中 |
-| **Q-NAME-01** | 命名不一致（Service vs Orchestrator） | 工程 | 低 |
-| **Q-NAME-02** | 测试文件名实不符 | 工程 | 低 |
-| **I-EXPR-01** | DAG/CSE 优化未实现 | 实现 | 低（标记为 Phase 5+） |
+| ID | 问题 | 类型 | 严重程度 | 状态 |
+|----|------|------|----------|------|
+| **D-HEAT-01** | QuestDB 热层未实现 | 设计 | 中 | ✅ 已完成 |
+| **D-HEAT-02** | Kvrocks 状态存储未实现 | 设计 | 中 | ✅ 已完成 |
+| **D-HEAT-03** | `RuntimeMode` 空解析模式 | 设计 | 低 | ✅ 已完成 |
+| **D-HEAT-04** | artifact-first 缺少迁移计划 | 设计 | 低 | ✅ 已完成（移除，功能未使用） |
+| **D-ADR-01** | ADR 过度碎片化（43+ 文档） | 设计 | 低 | ✅ 已完成 |
+| **D-ADR-02** | 部分状态漂移（暂缓无重启条件） | 设计 | 低 | ✅ 已完成 |
+| **D-ADR-03** | ADR 交叉引用复杂 | 设计 | 低 | ✅ 已完成 |
+| **Q-ERR-01** | 异常类型混用 | 工程 | 中 | ✅ 已完成 |
+| **Q-NAME-01** | 命名不一致（Service vs Orchestrator） | 工程 | 低 | ✅ 已完成（Phase 2 已处理） |
+| **Q-NAME-02** | 测试文件名实不符 | 工程 | 低 | ✅ 已完成 |
+| **I-EXPR-01** | DAG/CSE 优化未实现 | 实现 | 低 | ⏸️ Phase 5+ |
 
 ### 全局约束
 

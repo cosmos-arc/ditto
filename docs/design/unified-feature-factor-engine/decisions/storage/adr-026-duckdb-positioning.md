@@ -191,7 +191,7 @@ research_df = pl.read_parquet("data/...").filter(...)
 
 ## 相关 ADR
 
-- [ADR-020: 部署与运维设计](adr-020-deployment-ops.md) - DuckDB 依赖配置
-- [ADR-025: DuckDB 统一数据架构](adr-025-duckdb-unified-architecture.md) - **已废弃**，本 ADR 替代
+- [ADR-020: 部署与运维设计](../adr-020-deployment-ops.md) - DuckDB 依赖配置
+- [ADR-025: DuckDB 统一数据架构](../adr-025-duckdb-unified-architecture.md) - **已废弃**，本 ADR 替代
 - [ADR-027: 表达式 Pushdown 策略](adr-027-pushdown-strategy.md) - QuestDB 下推策略
 - [ADR-028: QuestDB 热表与物化视图 DDL](adr-028-questdb-hot-tables.md) - 热层存储设计

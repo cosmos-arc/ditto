@@ -1,8 +1,10 @@
 # ADR-011: 盘中微批量处理模式（Intraday Micro-Batch Mode）
 
-**状态**: 已修订（2026-03-10）
+**状态**: ⏸️ 暂缓
 
-**修订说明**: 本 ADR 已大幅修订，移除了流式引擎概念（ReactiveStateEngine、CrossSectionalEngine），存储架构拆分到 [ADR-028](adr-028-questdb-hot-tables.md)。
+**重启条件**: QuestDB + Kvrocks 基础设施就绪后重启。预估 Phase 5+。
+
+**修订说明**: 本 ADR 已大幅修订，移除了流式引擎概念（ReactiveStateEngine、CrossSectionalEngine），存储架构拆分到 [ADR-028](storage/adr-028-questdb-hot-tables.md)。
 
 ---
 
@@ -130,7 +132,7 @@
 
 ## 存储技术选型
 
-> 存储架构已拆分到 [ADR-028: QuestDB 热表与物化视图 DDL](adr-028-questdb-hot-tables.md)
+> 存储架构已拆分到 [ADR-028: QuestDB 热表与物化视图 DDL](storage/adr-028-questdb-hot-tables.md)
 
 ### 存储层职责
 
@@ -158,7 +160,7 @@
 
 ## 状态管理
 
-> 详见 [ADR-031: State Snapshot ABI](adr-031-state-snapshot-abi.md)
+> 详见 [ADR-031: State Snapshot ABI](storage/adr-031-state-snapshot-abi.md)
 
 ### Kvrocks Key 设计
 
@@ -232,8 +234,8 @@ async def initialize_state_factor(spec: FactorSpec) -> None:
 
 ## 相关 ADR
 
-- [ADR-027: 表达式 Pushdown 策略](adr-027-pushdown-strategy.md) - QuestDB 下推
-- [ADR-028: QuestDB 热表与物化视图 DDL](adr-028-questdb-hot-tables.md) - 热层存储设计
+- [ADR-027: 表达式 Pushdown 策略](storage/adr-027-pushdown-strategy.md) - QuestDB 下推
+- [ADR-028: QuestDB 热表与物化视图 DDL](storage/adr-028-questdb-hot-tables.md) - 热层存储设计
 - [ADR-029: 盘中实时路径与盘后批量路径](adr-029-intraday-postmarket-paths.md) - 因子分级模型
 - [ADR-030: Online Data Access Boundary](adr-030-online-data-access-boundary.md) - 在线查询边界
-- [ADR-031: State Snapshot ABI](adr-031-state-snapshot-abi.md) - 状态快照格式
+- [ADR-031: State Snapshot ABI](storage/adr-031-state-snapshot-abi.md) - 状态快照格式

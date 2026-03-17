@@ -17,6 +17,36 @@ from ditto_port.models import Dataset
 from pytest_mock import MockerFixture
 
 
+def _prefect_runner(entrypoint):
+    return getattr(entrypoint, "func", getattr(entrypoint, "fn", entrypoint))
+
+
+CHECK_TRADING_DAY_RUNNER = _prefect_runner(check_trading_day)
+DAILY_INGESTION_FLOW_RUNNER = _prefect_runner(daily_ingestion_flow)
+
+
+@pytest.fixture(autouse=True)
+def mock_daily_dq_batch_check(mocker: MockerFixture):
+    """Replace DQC task execution with a lightweight future for unit tests."""
+
+    mock_future = mocker.Mock()
+    mock_future.result.return_value = {
+        "trade_date": "2024-01-02",
+        "datasets_checked": [
+            "etf_daily",
+            "index_daily",
+            "stock_daily",
+            "adj_factor",
+        ],
+        "total_issues": 0,
+        "alert_count": 0,
+        "results_by_dataset": {},
+    }
+    mock_task = mocker.Mock()
+    mock_task.submit.return_value = mock_future
+    return mocker.patch("ditto_port.jobs.flows.daily.dq_batch_check", mock_task)
+
+
 @pytest.mark.unit
 class TestCheckTradingDay:
     """Unit tests for check_trading_day task."""
@@ -38,7 +68,7 @@ class TestCheckTradingDay:
             "ditto_port.jobs.flows.daily.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
-        result = check_trading_day(trade_date="2024-01-02")
+        result = CHECK_TRADING_DAY_RUNNER(trade_date="2024-01-02")
 
         assert result is True
         mock_metadata_service.is_trading_day.assert_called_once_with("2024-01-02")
@@ -60,7 +90,7 @@ class TestCheckTradingDay:
             "ditto_port.jobs.flows.daily.create_ingestion_bundle",
             return_value=mock_context_mgr,
         )
-        result = check_trading_day(trade_date="2024-01-06")
+        result = CHECK_TRADING_DAY_RUNNER(trade_date="2024-01-06")
 
         assert result is False
 
@@ -82,7 +112,7 @@ class TestCheckTradingDay:
             return_value=mock_context_mgr,
         )
         with pytest.raises(ValueError, match="Test error"):
-            check_trading_day(trade_date="2024-01-02")
+            CHECK_TRADING_DAY_RUNNER(trade_date="2024-01-02")
 
     def test_is_prefect_task(self, mocker: MockerFixture):
         """
@@ -104,7 +134,7 @@ class TestDailyIngestionFlowNonTradingDay:
         mocker.patch(
             "ditto_port.jobs.flows.daily.check_trading_day", return_value=False
         )
-        result = daily_ingestion_flow(
+        result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-06",
             source="tushare",
         )
@@ -153,7 +183,7 @@ class TestDailyIngestionFlowT0Execution:
             "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[],
         )
-        result = daily_ingestion_flow(
+        result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )
@@ -174,7 +204,7 @@ class TestDailyIngestionFlowT0Execution:
             "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[],
         )
-        result = daily_ingestion_flow(
+        result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )
@@ -214,7 +244,7 @@ class TestDailyIngestionFlowT1Execution:
 
         # Mock T0 futures
         mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
-        result = daily_ingestion_flow(
+        result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )
@@ -247,7 +277,7 @@ class TestDailyIngestionFlowT1Execution:
         mock_t1_adj.return_value = mock_task
 
         mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
-        result = daily_ingestion_flow(
+        result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )
@@ -279,7 +309,7 @@ class TestDailyIngestionFlowT1Execution:
         mock_t1_bars.return_value = mock_task
 
         mocker.patch("ditto_port.jobs.flows.daily.create_ingest_task_t0")
-        daily_ingestion_flow(
+        DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )
@@ -337,7 +367,7 @@ class TestDailyIngestionFlowT1Execution:
         mock_t1_adj_task.submit.return_value = t1_adj_future
         mock_t1_adj.return_value = mock_t1_adj_task
 
-        daily_ingestion_flow(
+        DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )
@@ -357,7 +387,7 @@ class TestDailyIngestionFlowT1Execution:
             "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[],
         )
-        result = daily_ingestion_flow(
+        result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )
@@ -392,7 +422,7 @@ class TestDailyIngestionFlowResultAggregation:
         mock_task.submit.return_value = mock_future
         mock_factory.return_value = mock_task
 
-        result = daily_ingestion_flow(
+        result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )
@@ -424,7 +454,7 @@ class TestDailyIngestionFlowResultAggregation:
         mock_task.submit.return_value = mock_future
         mock_factory.return_value = mock_task
 
-        result = daily_ingestion_flow(
+        result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )
@@ -456,7 +486,7 @@ class TestDailyIngestionFlowResultAggregation:
         mock_task.submit.return_value = mock_future
         mock_factory.return_value = mock_task
 
-        result = daily_ingestion_flow(
+        result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )
@@ -492,7 +522,7 @@ class TestDailyIngestionFlowResultAggregation:
         mock_task.submit.return_value = mock_future
         mock_factory.return_value = mock_task
 
-        result = daily_ingestion_flow(
+        result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )
@@ -518,7 +548,7 @@ class TestDailyIngestionFlowReturnValue:
             "ditto_port.jobs.flows.daily.get_parallel_datasets",
             return_value=[],
         )
-        result = daily_ingestion_flow(
+        result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )
@@ -567,7 +597,7 @@ class TestDailyIngestionFlowReturnValue:
         mock_dqc_task = mocker.patch("ditto_port.jobs.flows.daily.dq_batch_check")
         mock_dqc_task.submit.return_value = mock_dqc_future
 
-        result = daily_ingestion_flow(
+        result = DAILY_INGESTION_FLOW_RUNNER(
             trade_date="2024-01-02",
             source="tushare",
         )

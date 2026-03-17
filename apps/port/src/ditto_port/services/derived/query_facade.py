@@ -14,6 +14,8 @@ from ditto_datahub.services import (
     DerivedSeriesQuery,
     DerivedSourceScope,
 )
+from ditto_datahub.services.hot_layer import HotLayerReader
+from loguru import logger
 
 from ditto_port.models.derived import (
     DerivedCompareResult,
@@ -75,14 +77,44 @@ class DerivedQueryFacade:
         self,
         service: DerivedQueryService,
         mode_resolver: RuntimeModeResolver,
+        hot_layer: HotLayerReader,
     ) -> None:
         self._service = service
         self._mode_resolver = mode_resolver
+        self._hot_layer = hot_layer
 
     def get_latest(self, request: LatestDerivedRequest) -> DerivedLatestResult:
-        """Map latest requests to the serving contract."""
-        # Phase 2 only freezes the seam; Phase 3 will consume the resolved mode.
-        _ = self._mode_resolver.resolve()
+        """
+        Map latest requests to the serving contract.
+
+        In ONLINE mode with a single derived_id, attempts to serve from
+        the hot layer (QuestDB) first. Falls back to the cold layer on
+        unavailability, empty results, or any exception.
+        """
+        mode = self._mode_resolver.resolve()
+
+        # Try hot layer when in ONLINE mode with a single derived_id
+        if (
+            mode == RuntimeMode.ONLINE
+            and len(request.derived_ids) == 1
+            and self._hot_layer.is_available()
+        ):
+            try:
+                data = self._hot_layer.read_latest(
+                    derived_id=request.derived_ids[0],
+                    instrument_ids=request.instrument_ids,
+                    as_of=_temporal_to_iso(request.as_of),
+                )
+                if not data.is_empty():
+                    return DerivedLatestResult(data=data)
+            except Exception:
+                logger.warning(
+                    "Hot layer read failed, falling back to cold layer",
+                    derived_id=request.derived_ids[0],
+                    exc_info=True,
+                )
+
+        # Cold layer (existing code)
         query = DerivedLatestQuery(
             derived_ids=request.derived_ids,
             instrument_ids=request.instrument_ids,
@@ -94,7 +126,6 @@ class DerivedQueryFacade:
 
     def get_series(self, request: SeriesDerivedRequest) -> DerivedSeriesResult:
         """Map series requests to the offline contract."""
-        _ = self._mode_resolver.resolve()
         query = DerivedSeriesQuery(
             derived_ids=request.derived_ids,
             instrument_ids=request.instrument_ids,
@@ -112,7 +143,6 @@ class DerivedQueryFacade:
         request: SourceCompareRequest,
     ) -> DerivedCompareResult:
         """Compare serving and offline slices without research semantics."""
-        _ = self._mode_resolver.resolve()
         query = DerivedCompareQuery(
             derived_ids=request.derived_ids,
             instrument_ids=request.instrument_ids,

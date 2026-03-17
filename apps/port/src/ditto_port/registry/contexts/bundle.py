@@ -4,6 +4,9 @@ from dataclasses import dataclass
 
 from ditto_datahub.services import IngestionLogService
 from ditto_datahub.services.capital_service import CapitalService
+from ditto_datahub.services.derived_migration_service import (
+    LegacyDerivedCatalogMigrationService,
+)
 from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.macro_service import MacroService
 from ditto_datahub.services.market_service import MarketService
@@ -12,8 +15,10 @@ from ditto_datahub.services.source_service import SourceService
 from ditto_datahub.sources import ExchangeTransformers
 
 from ditto_port.services.derived import (
-    DerivedInvalidationService,
-    DerivedMaterializationService,
+    DerivedInvalidationOrchestrator,
+    DerivedMaterializationOrchestrator,
+    DerivedPublicationFacade,
+    ResearchDatasetFacade,
 )
 from ditto_port.services.ingestion.backfill import BackfillManager
 from ditto_port.services.ingestion.coordinator import IngestionCoordinator
@@ -44,5 +49,8 @@ class IngestionBundle:
 class MaterializationBundle:
     """物化上下文组合包。"""
 
-    materialization_service: DerivedMaterializationService
-    invalidation_service: DerivedInvalidationService
+    materialization_service: DerivedMaterializationOrchestrator
+    invalidation_service: DerivedInvalidationOrchestrator
+    migration_service: LegacyDerivedCatalogMigrationService
+    publication_facade: DerivedPublicationFacade
+    research_dataset_facade: ResearchDatasetFacade

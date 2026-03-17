@@ -444,8 +444,8 @@ async def restore_mode(
 
 ## 相关 ADR
 
-- [ADR-026: DuckDB 定位与使用规范](adr-026-duckdb-positioning.md) - DuckDB 可用于审计对拍
-- [ADR-028: QuestDB 热表与物化视图 DDL](adr-028-questdb-hot-tables.md) - 热层存储
+- [ADR-026: DuckDB 定位与使用规范](storage/adr-026-duckdb-positioning.md) - DuckDB 可用于审计对拍
+- [ADR-028: QuestDB 热表与物化视图 DDL](storage/adr-028-questdb-hot-tables.md) - 热层存储
 - [ADR-029: 盘中实时路径与盘后批量路径](adr-029-intraday-postmarket-paths.md) - 因子分级模型
 - [ADR-017: 服务层与 API 设计](adr-017-service-layer-api.md) - API 权限控制
 - [ADR-018: 可观测性与监控](adr-018-observability-monitoring.md) - 指标与告警

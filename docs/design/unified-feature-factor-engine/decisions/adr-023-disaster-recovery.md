@@ -1,6 +1,8 @@
 # ADR-023: 灾备恢复策略
 
-**状态**: 已修订（2026-03-10）
+**状态**: ⏸️ 暂缓
+
+**重启条件**: 确认上游数据源支持断点续传后重启。预估 Phase 5+。
 
 **修订说明**: 明确"上游可重发"决策，细化盘中恢复和历史回补的区分。
 
@@ -231,6 +233,6 @@ ditto restore kvrocks --factors alpha_001,alpha_002
 
 ## 相关 ADR
 
-- [ADR-028: QuestDB 热表与物化视图 DDL](adr-028-questdb-hot-tables.md) - 热层存储设计
+- [ADR-028: QuestDB 热表与物化视图 DDL](storage/adr-028-questdb-hot-tables.md) - 热层存储设计
 - [ADR-029: 盘中实时路径与盘后批量路径](adr-029-intraday-postmarket-paths.md) - 回补机制
-- [ADR-031: State Snapshot ABI](adr-031-state-snapshot-abi.md) - 状态快照格式
+- [ADR-031: State Snapshot ABI](storage/adr-031-state-snapshot-abi.md) - 状态快照格式

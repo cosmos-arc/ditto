@@ -28,6 +28,19 @@ class DerivedCatalogReader:
         self._run_base = root / "runs"
         self._partition_base = root / "partitions"
 
+    def has_any_records(self) -> bool:
+        """Whether the legacy file-based catalog already contains records."""
+        return any(
+            directory.exists() and any(directory.rglob("*.json"))
+            for directory in (
+                self._spec_base,
+                self._version_base,
+                self._state_base,
+                self._run_base,
+                self._partition_base,
+            )
+        )
+
     def read_spec(self, derived_id: str, version: int) -> DerivedSpecRecord | None:
         """Read spec metadata by derived/version."""
         payload = read_json_file(self._spec_base / derived_id / f"v{version}.json")
@@ -45,6 +58,17 @@ class DerivedCatalogReader:
         if payload is None:
             return None
         return DerivedVersionRecord.from_json_dict(payload)
+
+    def list_versions(self, derived_id: str) -> tuple[DerivedVersionRecord, ...]:
+        """List all version metadata for one derived id."""
+        version_dir = self._version_base / derived_id
+        records: list[DerivedVersionRecord] = []
+        for file_path in list_json_files(version_dir):
+            payload = read_json_file(file_path)
+            if payload is None:
+                continue
+            records.append(DerivedVersionRecord.from_json_dict(payload))
+        return tuple(sorted(records, key=lambda record: record.version))
 
     def read_run(
         self,

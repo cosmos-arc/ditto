@@ -443,8 +443,8 @@ async def daily_backfill_flow() -> None:
 
 ## 相关 ADR
 
-- [ADR-020: 部署与运维设计](adr-020-deployment-ops.md) - QuestDB Docker 配置
-- [ADR-023: 灾备恢复策略](adr-023-disaster-recovery.md) - 热层恢复策略
+- [ADR-020: 部署与运维设计](../adr-020-deployment-ops.md) - QuestDB Docker 配置
+- [ADR-023: 灾备恢复策略](../adr-023-disaster-recovery.md) - 热层恢复策略
 - [ADR-027: 表达式 Pushdown 策略](adr-027-pushdown-strategy.md) - 下推到 QuestDB
-- [ADR-029: 盘中实时路径与盘后批量路径](adr-029-intraday-postmarket-paths.md) - 数据写入路径
-- [ADR-030: Online Data Access Boundary](adr-030-online-data-access-boundary.md) - 在线查询边界
+- [ADR-029: 盘中实时路径与盘后批量路径](../adr-029-intraday-postmarket-paths.md) - 数据写入路径
+- [ADR-030: Online Data Access Boundary](../adr-030-online-data-access-boundary.md) - 在线查询边界

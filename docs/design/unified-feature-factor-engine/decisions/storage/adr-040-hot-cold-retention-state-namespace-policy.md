@@ -15,7 +15,7 @@
    主设计与历史 gap 文档之间，对 `bar_1m` 是否保留、保留多久、保留哪些元数据仍有冲突。
 
 3. **Kvrocks state key 命名冲突**
-   [ADR-010](adr-010-catalog-schema.md) 使用 `ditto:derived:state:{entity_type}:{entity_id}` 表达派生运行状态，[ADR-031](adr-031-state-snapshot-abi.md) 则使用 `state:feature:{factor_id}:{instrument_id}` 表达 per-instrument snapshot。
+   [ADR-010](../adr-010-catalog-schema.md) 使用 `ditto:derived:state:{entity_type}:{entity_id}` 表达派生运行状态，[ADR-031](adr-031-state-snapshot-abi.md) 则使用 `state:feature:{factor_id}:{instrument_id}` 表达 per-instrument snapshot。
 
 4. **artifact / serving / snapshot 生命周期边界不够清晰**
    当前设计已区分 Parquet、QuestDB、Kvrocks，但“哪些是权威层、哪些只是热投影、TTL 是否参与正确性”还未统一。
@@ -144,11 +144,11 @@ State family 统一采用 `ditto:derived:state:*` 前缀，区分“控制面 la
 
 | ADR | 关系 |
 |-----|------|
-| [ADR-010](adr-010-catalog-schema.md) | 继承其 `ditto:derived:state:{entity_type}:{entity_id}` 控制面 key，并补齐 snapshot 子空间 |
+| [ADR-010](../adr-010-catalog-schema.md) | 继承其 `ditto:derived:state:{entity_type}:{entity_id}` 控制面 key，并补齐 snapshot 子空间 |
 | [ADR-028](adr-028-questdb-hot-tables.md) | 覆盖其默认 TTL 口径；长 TTL 降级为 benchmark profile 示例 |
-| [ADR-030](adr-030-online-data-access-boundary.md) | 保持一致：在线默认不查 Parquet，冷层保留仅用于回放 / 重建 |
+| [ADR-030](../adr-030-online-data-access-boundary.md) | 保持一致：在线默认不查 Parquet，冷层保留仅用于回放 / 重建 |
 | [ADR-031](adr-031-state-snapshot-abi.md) | 继承其 HASH / BLOB ABI，替换 `state:feature:*` 命名规范 |
-| [ADR-034](adr-034-publication-lifecycle.md) | 明确发布产物与热 serving 投影的生命周期分离 |
+| [ADR-034](../core/adr-034-publication-lifecycle.md) | 明确发布产物与热 serving 投影的生命周期分离 |
 
 ---
 
@@ -159,8 +159,8 @@ State family 统一采用 `ditto:derived:state:*` 前缀，区分“控制面 la
 | 文件路径 | 修改内容 |
 |---------|---------|
 | `docs/design/unified-feature-factor-engine/main-design.md` | 回写 hot/cold retention、分钟冷回放窗口、state namespace |
-| `docs/design/unified-feature-factor-engine/decisions/adr-028-questdb-hot-tables.md` | 将长 TTL 改写为 benchmark profile，补默认 profile 说明 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-031-state-snapshot-abi.md` | 统一 key 命名到 `ditto:derived:state:*` |
+| `docs/design/unified-feature-factor-engine/decisions/storage/adr-028-questdb-hot-tables.md` | 将长 TTL 改写为 benchmark profile，补默认 profile 说明 |
+| `docs/design/unified-feature-factor-engine/decisions/storage/adr-031-state-snapshot-abi.md` | 统一 key 命名到 `ditto:derived:state:*` |
 | `docs/design/unified-feature-factor-engine/reference/catalog-schema.md` | 对齐 namespace 与生命周期矩阵 |
 
 ### 实现落点

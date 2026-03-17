@@ -1,15 +1,26 @@
-"""Prefect flows for derived materialization and invalidation repair."""
+"""Prefect flows for derived materialization, repair, and migration."""
 
 from __future__ import annotations
 
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
+from ditto_core.engine.publication_safety import CertificationStage
 from prefect import flow
 
 from ditto_port.registry import create_materialization_bundle
 
-__all__ = ["daily_materialization_flow", "repair_from_invalidation_flow"]
+__all__ = [
+    "certify_publication_flow",
+    "daily_materialization_flow",
+    "deprecate_publication_flow",
+    "migrate_legacy_derived_catalog_flow",
+    "promote_publication_flow",
+    "repair_from_invalidation_flow",
+    "rollback_publication_flow",
+    "shadow_compare_flow",
+    "shadow_publish_flow",
+]
 
 
 def _normalize_results(results: tuple[object, ...]) -> list[dict[str, Any] | object]:
@@ -57,5 +68,185 @@ def repair_from_invalidation_flow(limit: int = 100) -> dict[str, object]:
         "results": _normalize_results(results),
         "summary": {
             "repaired_count": len(results),
+        },
+    }
+
+
+@flow(
+    name="migrate-legacy-derived-catalog",
+    description="执行 legacy JSON derived catalog 到 SQLite 的一次性迁移",
+)
+def migrate_legacy_derived_catalog_flow() -> dict[str, object]:
+    """Run the one-shot legacy derived catalog migration."""
+    with create_materialization_bundle() as bundle:
+        result = bundle.migration_service.migrate()
+    return {
+        "results": _normalize_results((result,)),
+        "summary": {
+            "migrated_specs": result.migrated_specs,
+            "migrated_versions": result.migrated_versions,
+            "migrated_runs": result.migrated_runs,
+            "migrated_states": result.migrated_states,
+            "migrated_partitions": result.migrated_partitions,
+            "skipped_reason": result.skipped_reason,
+        },
+    }
+
+
+@flow(
+    name="derived-shadow-publish",
+    description="注册 candidate 版本进入 shadow slot",
+)
+def shadow_publish_flow(
+    *,
+    derived_id: str,
+    candidate_version: int,
+    baseline_version: int | None = None,
+) -> dict[str, object]:
+    """Register one active shadow candidate slot."""
+    with create_materialization_bundle() as bundle:
+        result = bundle.publication_facade.shadow_publish(
+            derived_id=derived_id,
+            candidate_version=candidate_version,
+            baseline_version=baseline_version,
+        )
+    return {
+        "results": _normalize_results((result,)),
+        "summary": {
+            "derived_id": derived_id,
+            "candidate_version": candidate_version,
+            "baseline_version": baseline_version,
+        },
+    }
+
+
+@flow(
+    name="derived-shadow-compare",
+    description="执行 candidate 与 baseline 的 shadow compare 审计",
+)
+def shadow_compare_flow(
+    *,
+    derived_id: str,
+    start: str,
+    end: str,
+    candidate_version: int | None = None,
+    baseline_version: int | None = None,
+) -> dict[str, object]:
+    """Run one explicit shadow compare batch audit."""
+    with create_materialization_bundle() as bundle:
+        result = bundle.publication_facade.run_shadow_compare(
+            derived_id=derived_id,
+            start=start,
+            end=end,
+            candidate_version=candidate_version,
+            baseline_version=baseline_version,
+        )
+    return {
+        "results": _normalize_results((result,)),
+        "summary": {
+            "derived_id": derived_id,
+            "candidate_version": candidate_version,
+            "baseline_version": baseline_version,
+            "start": start,
+            "end": end,
+        },
+    }
+
+
+@flow(
+    name="derived-publication-certify",
+    description="执行 derived candidate 的 publish gate 认证",
+)
+def certify_publication_flow(
+    *,
+    derived_id: str,
+    version: int,
+    stage: str,
+) -> dict[str, object]:
+    """Run one explicit publication certification gate."""
+    with create_materialization_bundle() as bundle:
+        result = bundle.publication_facade.certify(
+            derived_id=derived_id,
+            version=version,
+            stage=CertificationStage(stage),
+        )
+    return {
+        "results": _normalize_results((result,)),
+        "summary": {
+            "derived_id": derived_id,
+            "version": version,
+            "stage": stage,
+        },
+    }
+
+
+@flow(
+    name="derived-publication-promote",
+    description="将 publish_ready candidate 原子提升为 primary/online",
+)
+def promote_publication_flow(
+    *,
+    derived_id: str,
+    candidate_version: int,
+) -> dict[str, object]:
+    """Promote one candidate version after publication gates pass."""
+    with create_materialization_bundle() as bundle:
+        result = bundle.publication_facade.promote(
+            derived_id=derived_id,
+            candidate_version=candidate_version,
+        )
+    return {
+        "results": _normalize_results((result,)),
+        "summary": {
+            "derived_id": derived_id,
+            "candidate_version": candidate_version,
+        },
+    }
+
+
+@flow(
+    name="derived-publication-rollback",
+    description="将 primary 指针回滚到已发布目标版本",
+)
+def rollback_publication_flow(
+    *,
+    derived_id: str,
+    target_version: int,
+) -> dict[str, object]:
+    """Move the primary pointer back to one published target version."""
+    with create_materialization_bundle() as bundle:
+        result = bundle.publication_facade.rollback(
+            derived_id=derived_id,
+            target_version=target_version,
+        )
+    return {
+        "results": _normalize_results((result,)),
+        "summary": {
+            "derived_id": derived_id,
+            "target_version": target_version,
+        },
+    }
+
+
+@flow(
+    name="derived-publication-deprecate",
+    description="将已发布非主版本标记为 deprecated/offline",
+)
+def deprecate_publication_flow(
+    *,
+    derived_id: str,
+    version: int,
+) -> dict[str, object]:
+    """Mark one published non-primary version as deprecated and offline."""
+    with create_materialization_bundle() as bundle:
+        result = bundle.publication_facade.deprecate(
+            derived_id=derived_id,
+            version=version,
+        )
+    return {
+        "results": _normalize_results((result,)),
+        "summary": {
+            "derived_id": derived_id,
+            "version": version,
         },
     }

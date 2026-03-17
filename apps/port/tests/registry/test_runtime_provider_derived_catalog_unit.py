@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 from dishka import Provider, Scope, make_container, provide
 from ditto_datahub.services import DerivedCatalogService
+from ditto_datahub.services.derived_shadow_slot_service import DerivedShadowSlotService
 from ditto_datahub.sources.source import DataSources
 from ditto_port.registry.datahub import RuntimeProvider
 from ditto_port.registry.infra import ConfigProvider
@@ -60,4 +61,23 @@ class TestRuntimeProviderDerivedCatalog:
         service_2 = container.get(DerivedCatalogService)
 
         assert service_1 is service_2
+        container.close()
+
+    def test_runtime_provider_provides_shadow_slot_service(
+        self,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        """RuntimeProvider should build DerivedShadowSlotService."""
+        monkeypatch.setenv("ENVIRONMENT", "testing")
+        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        container = make_container(
+            ConfigProvider(),
+            _sources_provider(),
+            RuntimeProvider(),
+        )
+
+        service = container.get(DerivedShadowSlotService)
+
+        assert isinstance(service, DerivedShadowSlotService)
         container.close()

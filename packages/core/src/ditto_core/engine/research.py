@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+from ditto_datahub.errors import DerivedNotImplementedError, DerivedValidationError
+
 from ditto_core.engine.specs import CalendarId, GrainId
 
 __all__ = [
@@ -47,12 +49,19 @@ class SpineSpec:
     def validate_spec(self) -> None:
         """Validate current v1 boundaries."""
         if self.calendar != "cn_stock":
-            raise NotImplementedError("research spine v1 仅支持 calendar='cn_stock'")
+            raise DerivedNotImplementedError(
+                feature="research spine v1 仅支持 calendar='cn_stock'",
+                derived_id=self.spine_id,
+            )
         if self.grain != "1d":
-            raise NotImplementedError("research spine v1 仅支持 grain='1d'")
+            raise DerivedNotImplementedError(
+                feature="research spine v1 仅支持 grain='1d'",
+                derived_id=self.spine_id,
+            )
         if self.entity_key != "instrument_id":
-            raise NotImplementedError(
-                "research spine v1 仅支持 entity_key='instrument_id'"
+            raise DerivedNotImplementedError(
+                feature="research spine v1 仅支持 entity_key='instrument_id'",
+                derived_id=self.spine_id,
             )
 
 
@@ -72,13 +81,22 @@ class ResearchDatasetSpec:
     def validate_spec(self) -> None:
         """Validate current v1 boundaries."""
         if not self.derived_ids:
-            raise ValueError("research dataset must include at least one derived_id")
+            raise DerivedValidationError(
+                field="derived_ids",
+                value="()",
+                reason="research dataset must include at least one derived_id",
+                derived_id=self.dataset_id,
+            )
         if self.join_policy != "left_preserving_pit":
-            raise NotImplementedError(
-                "research dataset v1 仅支持 join_policy='left_preserving_pit'"
+            raise DerivedNotImplementedError(
+                feature="research dataset v1 仅支持 join_policy='left_preserving_pit'",
+                derived_id=self.dataset_id,
             )
         if any(derived_id.startswith("market.") for derived_id in self.derived_ids):
-            raise NotImplementedError("research dataset v1 仅支持 derived ids 作为输入")
+            raise DerivedNotImplementedError(
+                feature="research dataset v1 仅支持 derived ids 作为输入",
+                derived_id=self.dataset_id,
+            )
 
 
 @dataclass(frozen=True)

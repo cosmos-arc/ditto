@@ -18,23 +18,39 @@ from ditto_port.jobs.flows.backfill import (
 )
 from ditto_port.jobs.flows.daily import daily_ingestion_flow
 from ditto_port.jobs.flows.materialization import (
+    certify_publication_flow,
     daily_materialization_flow,
+    deprecate_publication_flow,
+    migrate_legacy_derived_catalog_flow,
+    promote_publication_flow,
     repair_from_invalidation_flow,
+    rollback_publication_flow,
+    shadow_compare_flow,
+    shadow_publish_flow,
 )
 from ditto_port.jobs.flows.repair import (
     daily_repair_flow,
     repair_holes_flow,
     retry_failed_flow,
 )
+from ditto_port.jobs.flows.research import research_dataset_build_flow
 
 __all__ = [
     "BackfillFlowConfig",
     "backfill_flow",
     "backfill_missing_flow",
+    "certify_publication_flow",
     "daily_ingestion_flow",
     "daily_materialization_flow",
     "daily_repair_flow",
+    "deprecate_publication_flow",
+    "migrate_legacy_derived_catalog_flow",
+    "promote_publication_flow",
     "repair_from_invalidation_flow",
     "repair_holes_flow",
+    "research_dataset_build_flow",
     "retry_failed_flow",
+    "rollback_publication_flow",
+    "shadow_compare_flow",
+    "shadow_publish_flow",
 ]

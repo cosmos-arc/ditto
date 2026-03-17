@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Literal
 
+from ditto_datahub.errors import DerivedNotImplementedError
+
 type CalendarId = Literal["cn_stock"]
 type GrainId = Literal["1d", "1m"]
 
@@ -97,9 +99,13 @@ class DerivedSpec:
     def validate_spec(self) -> None:
         """Validate current v1 boundaries."""
         if len(self.entity_keys) != 1:
-            raise NotImplementedError(
-                f"复合键已预留、暂未实现: entity_keys={self.entity_keys}"
+            raise DerivedNotImplementedError(
+                feature=f"复合键已预留、暂未实现: entity_keys={self.entity_keys}",
+                derived_id=self.id,
             )
 
         if self.grain == "1m":
-            raise NotImplementedError("grain='1m' 已预留、暂未实现")
+            raise DerivedNotImplementedError(
+                feature="grain='1m' 已预留、暂未实现",
+                derived_id=self.id,
+            )

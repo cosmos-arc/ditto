@@ -1,5 +1,9 @@
 """Core engine exports."""
 
+from ditto_core.engine.compile_cache import (
+    SQLiteCompileCache,
+    SQLiteCompileCacheBackend,
+)
 from ditto_core.engine.expression import ExpressionCompiler
 from ditto_core.engine.materialization import (
     Analysis,
@@ -82,6 +86,8 @@ __all__ = [
     "MaterializationProfile",
     "PublicationSafetySeverity",
     "ResearchDatasetSpec",
+    "SQLiteCompileCache",
+    "SQLiteCompileCacheBackend",
     "ShadowDiffReport",
     "ShadowTraceRecord",
     "SpineSnapshot",

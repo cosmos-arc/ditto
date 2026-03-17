@@ -361,5 +361,5 @@ def execute_with_pushdown(expr: Expression, config: PushdownConfig):
 
 - [ADR-026: DuckDB 定位与使用规范](adr-026-duckdb-positioning.md) - DuckDB 不承担下推角色
 - [ADR-028: QuestDB 热表与物化视图 DDL](adr-028-questdb-hot-tables.md) - 下推目标表设计
-- [ADR-029: 盘中实时路径与盘后批量路径](adr-029-intraday-postmarket-paths.md) - 执行路径选择
-- [ADR-012: 物化写入与查询引擎](adr-012-materialization-engine.md) - 执行引擎设计
+- [ADR-029: 盘中实时路径与盘后批量路径](../adr-029-intraday-postmarket-paths.md) - 执行路径选择
+- [ADR-012: 物化写入与查询引擎](../computation/adr-012-operator-incremental-impl.md) - 执行引擎设计

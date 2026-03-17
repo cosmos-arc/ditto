@@ -1,5 +1,5 @@
 """
-Port-side compile cache service for unified derived expressions.
+Compile cache for unified derived expressions.
 
 Implements a two-tier cache hierarchy:
 
@@ -19,15 +19,16 @@ from datetime import UTC, datetime
 from typing import Any, Protocol
 
 import orjson
+
 from ditto_core.engine.expression import ExpressionCompiler, compute_compile_cache_key
 from ditto_core.engine.materialization import CompiledDerivedExpression
 from ditto_core.engine.specs import DerivedSpec
 
-__all__ = ["SQLiteCompileCacheBackend", "SQLiteCompileCacheService"]
+__all__ = ["SQLiteCompileCache", "SQLiteCompileCacheBackend"]
 
 
 class SQLiteCompileCacheBackend(Protocol):
-    """Minimal SQL client contract needed by the compile cache service."""
+    """Minimal SQL client contract needed by the compile cache."""
 
     def execute(
         self,
@@ -50,7 +51,7 @@ class SQLiteCompileCacheBackend(Protocol):
         ...
 
 
-class SQLiteCompileCacheService:
+class SQLiteCompileCache:
     """Persist compile metadata while keeping an in-process L1 cache."""
 
     def __init__(self, sqlite_client: SQLiteCompileCacheBackend) -> None:

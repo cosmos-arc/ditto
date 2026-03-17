@@ -21,6 +21,7 @@ from ditto_core.engine.publication_safety import (
     ShadowTraceRecord,
 )
 from ditto_core.engine.specs import DerivedRole, MaterializationProfile
+from ditto_datahub.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_datahub.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_datahub.models.publication_safety import (
     CertificationReportRecord,
@@ -100,7 +101,7 @@ class DerivedPublicationFacade:
             baseline_version=baseline_version,
         )
         if slot.baseline_version is None:
-            raise ValueError(f"shadow baseline not found for derived_id={derived_id}")
+            raise DerivedNotFoundError(derived_id=derived_id)
         candidate_manifest = self._require_manifest(
             derived_id=derived_id,
             version=slot.candidate_version,
@@ -172,12 +173,14 @@ class DerivedPublicationFacade:
                     slot.baseline_version,
                 )
             )
+        role = DerivedRole(spec_record.role)
+        materialization_profile = MaterializationProfile(
+            spec_record.materialization_profile
+        )
         checks = build_certification_checks(
             stage=stage,
-            role=DerivedRole(spec_record.role),
-            materialization_profile=MaterializationProfile(
-                spec_record.materialization_profile
-            ),
+            role=role,
+            materialization_profile=materialization_profile,
             manifest=manifest,
             minimal_dq_record=minimal_dq_record,
             shadow_report_record=shadow_report_record,
@@ -185,13 +188,11 @@ class DerivedPublicationFacade:
         pack = CertificationPack(
             pack_id=(
                 f"pack-{spec_record.role.lower()}"
-                f"-{spec_record.materialization_profile.lower()}"
-                f"-{stage.value}"
+                + f"-{spec_record.materialization_profile.lower()}"
+                + f"-{stage.value}"
             ),
-            role=DerivedRole(spec_record.role),
-            materialization_profile=MaterializationProfile(
-                spec_record.materialization_profile
-            ),
+            role=role,
+            materialization_profile=materialization_profile,
             stage=stage,
             check_names=tuple(check.name for check in checks),
         )
@@ -242,10 +243,7 @@ class DerivedPublicationFacade:
         self._shadow_slot_service.disable_slot(derived_id, promoted_at)
         promoted = self._catalog_service.get_version(derived_id, candidate_version)
         if promoted is None:
-            raise KeyError(
-                "promoted version not found for "
-                + f"derived_id={derived_id} version={candidate_version}"
-            )
+            raise DerivedNotFoundError(derived_id=derived_id, version=candidate_version)
         return promoted
 
     def rollback(
@@ -257,9 +255,10 @@ class DerivedPublicationFacade:
         """Move the primary pointer back to one already-published version."""
         target = self._require_version(derived_id, target_version)
         if target.status != DerivedVersionStatus.PUBLISHED:
-            raise ValueError(
-                "rollback target must already be published for "
-                + f"derived_id={derived_id} version={target_version}"
+            raise DerivedValidationError(
+                "rollback target must already be published: "
+                + f"id={derived_id} v={target_version}",
+                derived_id=derived_id,
             )
         rolled_back_at = _now_iso()
         self._move_primary_pointer(
@@ -270,10 +269,7 @@ class DerivedPublicationFacade:
         )
         rolled_back = self._catalog_service.get_version(derived_id, target_version)
         if rolled_back is None:
-            raise KeyError(
-                "rollback target not found for "
-                + f"derived_id={derived_id} version={target_version}"
-            )
+            raise DerivedNotFoundError(derived_id=derived_id, version=target_version)
         return rolled_back
 
     def deprecate(
@@ -285,14 +281,16 @@ class DerivedPublicationFacade:
         """Mark one published non-primary version as deprecated and offline."""
         version_record = self._require_version(derived_id, version)
         if version_record.status != DerivedVersionStatus.PUBLISHED:
-            raise ValueError(
-                "only published versions can be deprecated for "
-                + f"derived_id={derived_id} version={version}"
+            raise DerivedValidationError(
+                "only published versions can be deprecated: "
+                + f"id={derived_id} v={version}",
+                derived_id=derived_id,
             )
         if version_record.is_primary:
-            raise ValueError(
-                "primary published version must be rolled back before deprecate for "
-                + f"derived_id={derived_id} version={version}"
+            raise DerivedValidationError(
+                "primary must be rolled back before deprecate: "
+                + f"id={derived_id} v={version}",
+                derived_id=derived_id,
             )
         deprecated_at = _now_iso()
         self._catalog_service.save_version(
@@ -309,10 +307,7 @@ class DerivedPublicationFacade:
         )
         deprecated = self._catalog_service.get_version(derived_id, version)
         if deprecated is None:
-            raise KeyError(
-                "deprecated version not found for "
-                + f"derived_id={derived_id} version={version}"
-            )
+            raise DerivedNotFoundError(derived_id=derived_id, version=version)
         return deprecated
 
     def _resolve_slot(
@@ -325,12 +320,10 @@ class DerivedPublicationFacade:
         if candidate_version is None and baseline_version is None:
             slot = self._shadow_slot_service.get_active_slot(derived_id)
             if slot is None:
-                raise ValueError(
-                    f"active shadow slot not found for derived_id={derived_id}"
-                )
+                raise DerivedNotFoundError(derived_id=derived_id)
             return slot
         if candidate_version is None:
-            raise ValueError(
+            raise DerivedValidationError(
                 "candidate_version is required when baseline_version is set"
             )
         self._require_version(derived_id, candidate_version)
@@ -381,9 +374,10 @@ class DerivedPublicationFacade:
         self._require_version(derived_id, candidate_version)
         latest_run = self._catalog_service.get_latest_run(derived_id, candidate_version)
         if latest_run is None or latest_run.status != DerivedRunStatus.SUCCESS:
-            raise ValueError(
-                "candidate version is not materialized successfully for "
-                + f"derived_id={derived_id} version={candidate_version}"
+            raise DerivedValidationError(
+                "candidate version is not materialized: "
+                + f"id={derived_id} v={candidate_version}",
+                derived_id=derived_id,
             )
         manifest_record = self._require_manifest(
             derived_id=derived_id,
@@ -391,27 +385,33 @@ class DerivedPublicationFacade:
         )
         manifest = _hydrate_manifest(manifest_record)
         if not manifest.is_complete():
-            raise ValueError(
-                "candidate manifest is incomplete for "
-                + f"derived_id={derived_id} version={candidate_version}"
+            raise DerivedValidationError(
+                "candidate manifest is incomplete: "
+                + f"id={derived_id} v={candidate_version}",
+                derived_id=derived_id,
             )
         slot = self._shadow_slot_service.get_active_slot(derived_id)
         if slot is None or slot.candidate_version != candidate_version:
-            raise ValueError(
-                "active shadow slot missing for "
-                + f"derived_id={derived_id} version={candidate_version}"
+            raise DerivedValidationError(
+                "active shadow slot missing: "
+                + f"id={derived_id} v={candidate_version}",
+                derived_id=derived_id,
             )
         if slot.baseline_version is None:
-            raise ValueError(f"shadow baseline missing for derived_id={derived_id}")
+            raise DerivedValidationError(
+                f"shadow baseline missing for {derived_id}",
+                derived_id=derived_id,
+            )
         shadow_report = self._publication_record_service.get_latest_shadow_report(
             derived_id,
             candidate_version,
             slot.baseline_version,
         )
         if shadow_report is None or shadow_report.error_count > 0:
-            raise ValueError(
-                "latest shadow compare is not publishable for "
-                + f"derived_id={derived_id} version={candidate_version}"
+            raise DerivedValidationError(
+                "shadow compare not publishable: "
+                + f"id={derived_id} v={candidate_version}",
+                derived_id=derived_id,
             )
         certification = (
             self._publication_record_service.get_latest_certification_report(
@@ -421,9 +421,10 @@ class DerivedPublicationFacade:
             )
         )
         if certification is None or certification.payload.get("passed") is not True:
-            raise ValueError(
-                "publish_ready gate has not passed for "
-                + f"derived_id={derived_id} version={candidate_version}"
+            raise DerivedValidationError(
+                "publish_ready gate has not passed: "
+                + f"id={derived_id} v={candidate_version}",
+                derived_id=derived_id,
             )
         return slot
 
@@ -471,19 +472,13 @@ class DerivedPublicationFacade:
     ) -> DerivedSpecRecord:
         spec_record = self._catalog_service.get_spec(derived_id, version)
         if spec_record is None:
-            raise KeyError(
-                "derived spec not found for "
-                + f"derived_id={derived_id} version={version}"
-            )
+            raise DerivedNotFoundError(derived_id=derived_id, version=version)
         return spec_record
 
     def _require_version(self, derived_id: str, version: int) -> DerivedVersionRecord:
         version_record = self._catalog_service.get_version(derived_id, version)
         if version_record is None:
-            raise KeyError(
-                "derived version not found for "
-                + f"derived_id={derived_id} version={version}"
-            )
+            raise DerivedNotFoundError(derived_id=derived_id, version=version)
         return version_record
 
     def _require_manifest(
@@ -497,10 +492,7 @@ class DerivedPublicationFacade:
             version,
         )
         if manifest_record is None:
-            raise KeyError(
-                "compatibility manifest not found for "
-                + f"derived_id={derived_id} version={version}"
-            )
+            raise DerivedNotFoundError(derived_id=derived_id, version=version)
         return manifest_record
 
 
@@ -529,13 +521,14 @@ def _build_shadow_diff_report(
         candidate_count=candidate_frame.height,
         baseline_count=baseline_frame.height,
     )
-    error_count = 0
-    if not schema_match:
-        error_count += 1
-    if diff_count > 0:
-        error_count += 1
-    if candidate_frame.height != baseline_frame.height:
-        error_count += 1
+    error_count = sum(
+        int(condition)
+        for condition in (
+            not schema_match,
+            diff_count > 0,
+            candidate_frame.height != baseline_frame.height,
+        )
+    )
     return ShadowDiffReport(
         report_id=f"diff-{uuid4().hex[:12]}",
         derived_id=derived_id,
@@ -732,10 +725,9 @@ def _optional_compile_flags(
         raise TypeError("global_compile_flags must be a JSON object or null")
     compile_flags: dict[str, str | int | float | bool] = {}
     for key, item in value.items():
-        if isinstance(item, bool | int | float | str):
-            compile_flags[key] = item
-            continue
-        raise TypeError("global_compile_flags values must be primitive JSON values")
+        if not isinstance(item, bool | int | float | str):
+            raise TypeError("global_compile_flags values must be primitive JSON values")
+        compile_flags[key] = item
     return compile_flags
 
 

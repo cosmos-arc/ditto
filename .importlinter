@@ -70,9 +70,10 @@ source_modules =
     ditto_core.**
 forbidden_modules =
     ditto_datahub.**
-# 忽略对 models 的依赖
+# 忽略对 models 和 errors 的依赖
 ignore_imports =
     ditto_core.** -> ditto_datahub.models.*
+    ditto_core.** -> ditto_datahub.errors
 unmatched_ignore_imports_alerting = none
 
 # ═══════════════════════════════════════════════════════════════════

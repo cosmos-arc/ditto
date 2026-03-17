@@ -6,6 +6,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 import polars as pl
+from ditto_core.engine.compile_cache import SQLiteCompileCache
 from ditto_core.engine.materialization import (
     DerivedInvalidationEvent,
     DerivedMaterializationRequest,
@@ -26,21 +27,27 @@ from ditto_datahub.stores.runtime.derived_sqlite import (
     SQLiteDerivedCatalogWriter,
 )
 from ditto_port.services.derived import (
-    DerivedInvalidationService,
-    DerivedMaterializationService,
+    DerivedInvalidationOrchestrator,
     InMemoryDerivedInputProvider,
-    SQLiteCompileCacheService,
 )
 
 
 def _service_bundle(sqlite_client, tmp_path: Path):
+    from ditto_datahub.stores.runtime.derived_artifact_writer import (
+        DerivedArtifactWriter,
+    )
+    from ditto_port.services.derived.materialization_orchestrator import (
+        DerivedMaterializationOrchestrator,
+    )
+
     catalog_service = DerivedCatalogService(
         catalog_reader=SQLiteDerivedCatalogReader(sqlite_client),
         catalog_writer=SQLiteDerivedCatalogWriter(sqlite_client),
     )
-    materialization_service = DerivedMaterializationService(
+    materialization_service = DerivedMaterializationOrchestrator(
         catalog_service=catalog_service,
-        compile_cache_service=SQLiteCompileCacheService(sqlite_client),
+        compile_cache_service=SQLiteCompileCache(sqlite_client),
+        artifact_writer=DerivedArtifactWriter(tmp_path),
         input_provider=InMemoryDerivedInputProvider(
             {
                 "factor.alpha_upstream": pl.DataFrame(
@@ -59,9 +66,8 @@ def _service_bundle(sqlite_client, tmp_path: Path):
                 ),
             }
         ),
-        artifact_root=tmp_path,
     )
-    invalidation_service = DerivedInvalidationService(
+    invalidation_service = DerivedInvalidationOrchestrator(
         catalog_service=catalog_service,
         materialization_service=materialization_service,
     )
@@ -94,7 +100,7 @@ def _seed_spec(catalog_service: DerivedCatalogService, spec: DerivedSpec) -> Non
     )
 
 
-class TestDerivedInvalidationService:
+class TestDerivedInvalidationOrchestrator:
     """Tests for invalidation cascade."""
 
     def test_enqueue_expands_to_durable_downstream_and_repair_marks_processed(

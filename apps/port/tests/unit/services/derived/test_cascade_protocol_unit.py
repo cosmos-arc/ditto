@@ -1,4 +1,4 @@
-"""Unit tests for InvalidationCascadeService (I-CASC-01/02/03)."""
+"""Unit tests for InvalidationCascadeOrchestrator (I-CASC-01/02/03)."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from ditto_port.services.derived.cascade_protocol import (
     REALTIME_CASCADE_MAX_DEPTH,
     CascadeDepthExceededError,
     CascadeStatus,
-    InvalidationCascadeService,
+    InvalidationCascadeOrchestrator,
 )
 
 
@@ -110,7 +110,7 @@ class TestBFSPropagation:
             ),
         )
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )
@@ -156,7 +156,7 @@ class TestBFSPropagation:
 
         catalog_service.list_downstream_dependencies.side_effect = list_downstream
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )
@@ -199,7 +199,7 @@ class TestBFSPropagation:
 
         catalog_service.list_downstream_dependencies.side_effect = list_downstream
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )
@@ -231,7 +231,7 @@ class TestBFSPropagation:
             ),
         )
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )
@@ -250,7 +250,7 @@ class TestBFSPropagation:
 
         catalog_service.list_downstream_dependencies.return_value = ()
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )
@@ -300,7 +300,7 @@ class TestCycleGuard:
 
         catalog_service.list_downstream_dependencies.side_effect = list_downstream
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )
@@ -360,7 +360,7 @@ class TestCycleGuard:
 
         catalog_service.list_downstream_dependencies.side_effect = list_downstream
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )
@@ -398,7 +398,7 @@ class TestDepthLimit:
 
         catalog_service.list_downstream_dependencies.side_effect = list_downstream
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
             max_depth=max_depth,
@@ -442,7 +442,7 @@ class TestMicroBatchMerge:
 
         catalog_service.list_downstream_dependencies.side_effect = list_downstream
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )
@@ -476,7 +476,7 @@ class TestMicroBatchMerge:
 
         catalog_service.list_downstream_dependencies.side_effect = list_downstream
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )
@@ -524,7 +524,7 @@ class TestStateMachine:
         )
         materialization_service.materialize.return_value = result
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )
@@ -555,7 +555,7 @@ class TestStateMachine:
 
         materialization_service.materialize.side_effect = RuntimeError("compute failed")
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )
@@ -610,7 +610,7 @@ class TestStateMachine:
             coverage_end="2026-03-11",
         )
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )
@@ -644,7 +644,7 @@ class TestStateMachine:
             coverage_end="2026-03-11",
         )
 
-        cascade = InvalidationCascadeService(
+        cascade = InvalidationCascadeOrchestrator(
             catalog_service=catalog_service,
             materialization_service=materialization_service,
         )

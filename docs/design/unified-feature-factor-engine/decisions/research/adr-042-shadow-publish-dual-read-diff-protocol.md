@@ -6,7 +6,7 @@
 
 ## 背景
 
-[ADR-034](adr-034-publication-lifecycle.md) 已定义最小发布生命周期：`register -> materialize -> promote`。这条主线足以支持“能发布”，但还不足以支持“敢发布”，主要缺口包括：
+[ADR-034](../core/adr-034-publication-lifecycle.md) 已定义最小发布生命周期：`register -> materialize -> promote`。这条主线足以支持”能发布”，但还不足以支持”敢发布”，主要缺口包括：
 
 1. **缺少上线前影子验证路径**
    当前候选版本只能在 `MATERIALIZED` 与 `PUBLISHED` 之间二选一，缺少“先接少量流量/审计流量验证”的正式步骤。
@@ -169,10 +169,10 @@
 
 | ADR | 关系 |
 |-----|------|
-| [ADR-034](adr-034-publication-lifecycle.md) | 扩展其 promote 前置条件与发布安全路径 |
-| [ADR-036](adr-036-quality-gates.md) | 最小 DQ 是 shadow / certification 的前置基础 |
-| [ADR-037](adr-037-performance-slo.md) | dual-read compare 复用其 latency / regression 观测语义 |
-| [ADR-040](adr-040-hot-cold-retention-state-namespace-policy.md) | DERIVE / STATE 的 shadow 行为受热层与冷层边界约束 |
+| [ADR-034](../core/adr-034-publication-lifecycle.md) | 扩展其 promote 前置条件与发布安全路径 |
+| [ADR-036](../quality/adr-036-quality-gates.md) | 最小 DQ 是 shadow / certification 的前置基础 |
+| [ADR-037](../quality/adr-037-performance-slo.md) | dual-read compare 复用其 latency / regression 观测语义 |
+| [ADR-040](../storage/adr-040-hot-cold-retention-state-namespace-policy.md) | DERIVE / STATE 的 shadow 行为受热层与冷层边界约束 |
 | [ADR-043](adr-043-role-profile-certification-compatibility-manifest.md) | `DiffReport` 结果进入 certification pack 判断 |
 
 ---
@@ -183,7 +183,7 @@
 
 | 文件路径 | 修改内容 |
 |---------|---------|
-| `docs/design/unified-feature-factor-engine/decisions/adr-034-publication-lifecycle.md` | 增补 shadow publish 与 promote 前置条件 |
+| `docs/design/unified-feature-factor-engine/decisions/core/adr-034-publication-lifecycle.md` | 增补 shadow publish 与 promote 前置条件 |
 | `docs/design/unified-feature-factor-engine/main-design.md` | 增加发布安全与 dual-read diff 段落 |
 
 ### 实现落点

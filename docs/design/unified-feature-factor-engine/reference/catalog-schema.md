@@ -2,7 +2,7 @@
 
 > **注意**: 本文档是**参考资料**，规范定义以 [ADR-010: Catalog 完整表结构与存储架构](../decisions/adr-010-catalog-schema.md) 为准。
 >
-> **2026-03-13 对齐说明**: Hot/Cold retention、state namespace 与研究数据集契约的较新口径以 [ADR-040](../decisions/adr-040-hot-cold-retention-state-namespace-policy.md) 和 [ADR-041](../decisions/adr-041-research-dataset-spine-availability-contract.md) 为准。
+> **2026-03-13 对齐说明**: Hot/Cold retention、state namespace 与研究数据集契约的较新口径以 [ADR-040](../decisions/storage/adr-040-hot-cold-retention-state-namespace-policy.md) 和 [ADR-041](../decisions/research/adr-041-research-dataset-spine-availability-contract.md) 为准。
 
 本文档定义了 Ditto 衍生数据 Catalog 的完整表结构。
 

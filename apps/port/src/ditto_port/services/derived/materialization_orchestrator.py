@@ -7,6 +7,7 @@ from typing import NamedTuple, Protocol, runtime_checkable
 from uuid import uuid4
 
 import polars as pl
+from ditto_core.engine import SQLiteCompileCache
 from ditto_core.engine.materialization import (
     CompileIdentity,
     DerivedExecutionPlan,
@@ -31,9 +32,6 @@ from ditto_datahub.models.derived import (
 from ditto_datahub.models.publication_safety import (
     DerivedMinimalDQSummaryRecord,
     DerivedShadowSlotRecord,
-)
-from ditto_datahub.services.derived.compile_cache_service import (
-    SQLiteCompileCacheService,
 )
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
 from ditto_datahub.services.derived_shadow_slot_service import DerivedShadowSlotService
@@ -87,7 +85,7 @@ class DerivedMaterializationOrchestrator:
         self,
         *,
         catalog_service: DerivedCatalogService,
-        compile_cache_service: SQLiteCompileCacheService,
+        compile_cache_service: SQLiteCompileCache,
         artifact_writer: DerivedArtifactWriter,
         input_provider: DerivedInputProvider,
         universe_provider: UniverseProvider | None = None,

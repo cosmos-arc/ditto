@@ -12,6 +12,12 @@ from ditto_datahub.stores.runtime.publication_safety.manifest_reader import (
 from ditto_datahub.stores.runtime.publication_safety.manifest_writer import (
     ManifestWriter,
 )
+from ditto_datahub.stores.runtime.publication_safety.minimal_dq_reader import (
+    MinimalDQReader,
+)
+from ditto_datahub.stores.runtime.publication_safety.minimal_dq_writer import (
+    MinimalDQWriter,
+)
 from ditto_datahub.stores.runtime.publication_safety.shadow_report_reader import (
     ShadowReportReader,
 )
@@ -24,6 +30,8 @@ __all__ = [
     "CertificationWriter",
     "ManifestReader",
     "ManifestWriter",
+    "MinimalDQReader",
+    "MinimalDQWriter",
     "ShadowReportReader",
     "ShadowReportWriter",
 ]

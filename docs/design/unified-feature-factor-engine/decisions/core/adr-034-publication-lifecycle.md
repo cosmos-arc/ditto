@@ -14,7 +14,7 @@
 2. dual-read diff 如何进入发布判定
 3. 最小 DQ 与更高等级认证如何衔接
 
-本 ADR 作为生命周期主协议，吸收 [ADR-042](adr-042-shadow-publish-dual-read-diff-protocol.md) 与 [ADR-043](adr-043-role-profile-certification-compatibility-manifest.md) 的控制面关系。
+本 ADR 作为生命周期主协议，吸收 [ADR-042](../research/adr-042-shadow-publish-dual-read-diff-protocol.md) 与 [ADR-043](../research/adr-043-role-profile-certification-compatibility-manifest.md) 的控制面关系。
 
 ---
 

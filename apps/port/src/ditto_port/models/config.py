@@ -642,6 +642,8 @@ def get_dataset_config(dataset: Dataset) -> DatasetSpec:
 
     """
     if dataset not in INGESTION_SPECS:
+        # KeyError is deliberate: dict lookup failure in the ingestion config registry.
+        # This is NOT the derived domain — DerivedNotFoundError does not apply here.
         raise KeyError(f"Dataset {dataset} not found in registry")
     return INGESTION_SPECS[dataset]
 

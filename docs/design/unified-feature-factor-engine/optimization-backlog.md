@@ -104,7 +104,7 @@ class DerivedSpec(BaseModel):
 **涉及文件**：
 - 待新增: `packages/core/src/ditto_core/engine/specs.py`
 - 待修改: `docs/design/unified-feature-factor-engine/main-design.md`
-- 待新增: `docs/design/unified-feature-factor-engine/decisions/adr-032-unified-derived-semantic-model.md`
+- 待新增: `docs/design/unified-feature-factor-engine/decisions/core/adr-032-unified-derived-semantic-model.md`
 
 ---
 
@@ -144,7 +144,7 @@ class DerivedSpec(BaseModel):
 | **优先级** | P1 |
 | **当前问题** | 只有内存缓存，缺少持久化，重启后需要重新编译 |
 | **影响范围** | 性能、启动时间 |
-| **目标 ADR** | [ADR-039: 表达式缓存持久化策略](decisions/adr-039-expression-cache-persistence.md) |
+| **目标 ADR** | [ADR-039: 表达式缓存持久化策略](decisions/computation/adr-039-expression-cache-persistence.md) |
 | **依赖** | P0-1 |
 | **业界对标** | Qlib 两级缓存（内存 + 磁盘） |
 
@@ -172,7 +172,7 @@ class DerivedSpec(BaseModel):
 | **优先级** | P1 |
 | **当前问题** | 算子变更无法追踪影响范围，可能导致历史数据不一致 |
 | **影响范围** | 可复现性、缓存失效 |
-| **目标 ADR** | [ADR-038: 算子版本管理](decisions/adr-038-operator-versioning.md) |
+| **目标 ADR** | [ADR-038: 算子版本管理](decisions/computation/adr-038-operator-versioning.md) |
 | **依赖** | P1-1 ✅ |
 | **业界对标** | Qlib 算子版本、DolphinDB JIT 版本 |
 
@@ -201,7 +201,7 @@ class DerivedSpec(BaseModel):
 | **优先级** | P1 |
 | **当前问题** | 无复杂度检查，可能导致性能问题或资源耗尽 |
 | **影响范围** | 性能、稳定性 |
-| **目标 ADR** | [ADR-014: 表达式引擎核心设计](decisions/adr-014-expression-engine-core.md)（扩展） |
+| **目标 ADR** | [ADR-014: 表达式引擎核心设计](decisions/computation/adr-014-expression-engine-core.md)（扩展） |
 | **依赖** | 无 |
 | **业界对标** | WorldQuant Brain：500 字符 / 10 层 |
 
@@ -265,7 +265,7 @@ class DerivedSpec(BaseModel):
 | **优先级** | P1 |
 | **当前问题** | `register → publish` 流程未细化 |
 | **影响范围** | 控制面、质量保障 |
-| **目标 ADR** | [ADR-034: Derived 发布生命周期协议](decisions/adr-034-publication-lifecycle.md) |
+| **目标 ADR** | [ADR-034: Derived 发布生命周期协议](decisions/core/adr-034-publication-lifecycle.md) |
 | **依赖** | P0-1 ✅ |
 | **业界对标** | MLflow Stage 指针、Feast Feature View 版本化 |
 
@@ -278,7 +278,7 @@ class DerivedSpec(BaseModel):
 | **回滚机制** | `deprecate` 标记废弃 + `rollback_primary` 指针切换，不改状态历史 |
 
 **涉及文件**：
-- 已新增: `docs/design/unified-feature-factor-engine/decisions/adr-034-publication-lifecycle.md`
+- 已新增: `docs/design/unified-feature-factor-engine/decisions/core/adr-034-publication-lifecycle.md`
 - 待新增: `packages/datahub/src/ditto_datahub/services/derived/publication_service.py`
 
 ---
@@ -316,7 +316,7 @@ class DerivedSpec(BaseModel):
 | **优先级** | P1 |
 | **当前问题** | 最小发布门禁未定义 |
 | **影响范围** | 质量保障 |
-| **目标 ADR** | [ADR-036: DQ 门禁设计](decisions/adr-036-quality-gates.md) |
+| **目标 ADR** | [ADR-036: DQ 门禁设计](decisions/quality/adr-036-quality-gates.md) |
 | **依赖** | P0-1 ✅ |
 | **业界对标** | Feast/Tecton DQ 检查 |
 
@@ -344,7 +344,7 @@ class DerivedSpec(BaseModel):
 | **优先级** | P1 |
 | **当前问题** | 无性能基准 |
 | **影响范围** | 性能监控、容量规划 |
-| **目标 ADR** | [ADR-037: 性能 SLO 定义](decisions/adr-037-performance-slo.md) |
+| **目标 ADR** | [ADR-037: 性能 SLO 定义](decisions/quality/adr-037-performance-slo.md) |
 | **依赖** | 无 |
 | **业界对标** | RisingWave MV 性能指标 |
 
@@ -357,7 +357,7 @@ class DerivedSpec(BaseModel):
 | **CI 门禁** | 退化 > 15% 告警，退化 > 25% 阻断 |
 
 **涉及文件**：
-- 已新增: `docs/design/unified-feature-factor-engine/decisions/adr-037-performance-slo.md`
+- 已新增: `docs/design/unified-feature-factor-engine/decisions/quality/adr-037-performance-slo.md`
 - 待新增: `tests/benchmarks/`
 
 ---
@@ -564,7 +564,7 @@ class BaseTradingCalendar(ABC):
 
 **需修改文件**：
 - `docs/design/unified-feature-factor-engine/main-design.md`
-- `docs/design/unified-feature-factor-engine/decisions/adr-028-questdb-hot-tables.md`
+- `docs/design/unified-feature-factor-engine/decisions/storage/adr-028-questdb-hot-tables.md`
 
 ---
 
@@ -579,7 +579,7 @@ class BaseTradingCalendar(ABC):
 | **理由** | 更通用，支持 role 扩展 |
 
 **需修改文件**：
-- `docs/design/unified-feature-factor-engine/decisions/adr-031-state-snapshot-abi.md`
+- `docs/design/unified-feature-factor-engine/decisions/storage/adr-031-state-snapshot-abi.md`
 
 ---
 
@@ -609,14 +609,14 @@ class BaseTradingCalendar(ABC):
 
 | 文件路径 | 用途 | 关联项目 |
 |---------|------|---------|
-| `docs/design/unified-feature-factor-engine/decisions/adr-032-unified-derived-semantic-model.md` | DerivedSpec 完整模型 | P0-1 |
+| `docs/design/unified-feature-factor-engine/decisions/core/adr-032-unified-derived-semantic-model.md` | DerivedSpec 完整模型 | P0-1 |
 | `docs/design/unified-feature-factor-engine/decisions/adr-033-derived-query-architecture.md` | Port/DataHub 边界 | P0-2 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-034-publication-lifecycle.md` | 发布生命周期 | P1-5 |
+| `docs/design/unified-feature-factor-engine/decisions/core/adr-034-publication-lifecycle.md` | 发布生命周期 | P1-5 |
 | `docs/design/unified-feature-factor-engine/decisions/adr-035-invalidation-cascade.md` | 失效级联协议 | P1-6 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-036-quality-gates.md` | DQ 门禁 | P1-7 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-037-performance-slo.md` | 性能 SLO | P1-8 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-038-operator-versioning.md` | 算子版本管理 | P1-2 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-039-expression-cache-persistence.md` | 表达式缓存持久化 | P1-1 |
+| `docs/design/unified-feature-factor-engine/decisions/quality/adr-036-quality-gates.md` | DQ 门禁 | P1-7 |
+| `docs/design/unified-feature-factor-engine/decisions/quality/adr-037-performance-slo.md` | 性能 SLO | P1-8 |
+| `docs/design/unified-feature-factor-engine/decisions/computation/adr-038-operator-versioning.md` | 算子版本管理 | P1-2 |
+| `docs/design/unified-feature-factor-engine/decisions/computation/adr-039-expression-cache-persistence.md` | 表达式缓存持久化 | P1-1 |
 | `packages/core/src/ditto_core/engine/specs.py` | DerivedSpec 模型 | P0-1 |
 | `packages/core/src/ditto_core/engine/cache/` | 表达式缓存 | P1-1 |
 | `packages/core/src/ditto_core/engine/gates/` | 质量门禁 | P1-7 |
@@ -630,14 +630,14 @@ class BaseTradingCalendar(ABC):
 | 文件路径 | 修改内容 | 关联项目 |
 |---------|---------|---------|
 | `docs/design/unified-feature-factor-engine/main-design.md` | 统一冲突口径、补充字段 | C-1, C-2, C-4 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-014-expression-engine-core.md` | 复杂度限制 | P1-3 |
+| `docs/design/unified-feature-factor-engine/decisions/computation/adr-014-expression-engine-core.md` | 复杂度限制 | P1-3 |
 | `docs/design/unified-feature-factor-engine/decisions/adr-019-testing-strategy.md` | 黄金数据集 | P1-4 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-024-factor-versioning.md` | 扩展到 Derived | P1-5 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-006-incremental-computation.md` | 级联传播 | P1-6 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-028-questdb-hot-tables.md` | TTL 统一 | C-2 |
+| `docs/design/unified-feature-factor-engine/decisions/core/adr-024-factor-versioning.md` | 扩展到 Derived | P1-5 |
+| `docs/design/unified-feature-factor-engine/decisions/computation/adr-006-incremental-computation.md` | 级联传播 | P1-6 |
+| `docs/design/unified-feature-factor-engine/decisions/storage/adr-028-questdb-hot-tables.md` | TTL 统一 | C-2 |
 | `docs/design/unified-feature-factor-engine/decisions/adr-029-intraday-postmarket-paths.md` | DERIVE 定位 | C-1 |
 | `docs/design/unified-feature-factor-engine/decisions/adr-030-online-data-access-boundary.md` | 查询边界细化 | P0-2 |
-| `docs/design/unified-feature-factor-engine/decisions/adr-031-state-snapshot-abi.md` | State namespace | C-3 |
+| `docs/design/unified-feature-factor-engine/decisions/storage/adr-031-state-snapshot-abi.md` | State namespace | C-3 |
 | `docs/design/unified-feature-factor-engine/README.md` | ADR 索引更新 | 全部 |
 
 ### 6.3 待删除文件
@@ -713,14 +713,14 @@ class BaseTradingCalendar(ABC):
 - 按 P0/P1/P2 分级
 - 汇总冲突口径
 - 整理待修改/待新增文件清单
-- **P1-1 决策完成**：表达式缓存持久化策略 → [ADR-039](decisions/adr-039-expression-cache-persistence.md)
-- **P1-2 决策完成**：算子版本管理 → [ADR-038](decisions/adr-038-operator-versioning.md)
-- **P1-3 决策完成**：表达式复杂度限制 → [ADR-014](decisions/adr-014-expression-engine-core.md)（扩展）
+- **P1-1 决策完成**：表达式缓存持久化策略 → [ADR-039](decisions/computation/adr-039-expression-cache-persistence.md)
+- **P1-2 决策完成**：算子版本管理 → [ADR-038](decisions/computation/adr-038-operator-versioning.md)
+- **P1-3 决策完成**：表达式复杂度限制 → [ADR-014](decisions/computation/adr-014-expression-engine-core.md)（扩展）
 - **P1-4 决策完成**：算子黄金数据集 → [ADR-019](decisions/adr-019-testing-strategy.md)（扩展）
-- **P1-5 决策完成**：发布生命周期协议 → [ADR-034](decisions/adr-034-publication-lifecycle.md)
+- **P1-5 决策完成**：发布生命周期协议 → [ADR-034](decisions/core/adr-034-publication-lifecycle.md)
 - **P1-6 决策完成**：失效传播级联协议 → [ADR-035](decisions/adr-035-invalidation-cascade.md)
-- **P1-7 决策完成**：DQ 门禁设计 → [ADR-036](decisions/adr-036-quality-gates.md)
-- **P1-8 决策完成**：性能 SLO 定义 → [ADR-037](decisions/adr-037-performance-slo.md)
+- **P1-7 决策完成**：DQ 门禁设计 → [ADR-036](decisions/quality/adr-036-quality-gates.md)
+- **P1-8 决策完成**：性能 SLO 定义 → [ADR-037](decisions/quality/adr-037-performance-slo.md)
 - **C-2 临时决策**：热层 TTL → 可配置，默认 分钟 5 日 / 日线 30 日（压测后复审）
 - **C-4 决策完成**：分钟数据进 Parquet → 保留 30 日标准化 bar_1m，限最小必要范围
 

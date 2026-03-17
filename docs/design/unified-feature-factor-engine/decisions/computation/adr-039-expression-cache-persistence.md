@@ -21,8 +21,8 @@
 
 **关联 ADR**：
 - 扩展 [ADR-014: 表达式引擎核心设计](adr-014-expression-engine-core.md)
-- 依赖 [ADR-032: 统一派生语义模型](adr-032-unified-derived-semantic-model.md)
-- 关联 [ADR-043: Role/Profile Certification 与 Compatibility Manifest](adr-043-role-profile-certification-compatibility-manifest.md)
+- 依赖 [ADR-032: 统一派生语义模型](../core/adr-032-unified-derived-semantic-model.md)
+- 关联 [ADR-043: Role/Profile Certification 与 Compatibility Manifest](../research/adr-043-role-profile-certification-compatibility-manifest.md)
 - 前置 [P1-2: 算子版本管理](../optimization-backlog.md)（算子 version 声明）
 
 ---
@@ -331,9 +331,9 @@ restored: pl.Expr = pl.Expr.deserialize(payload)
 | ADR | 关系 |
 |-----|------|
 | [ADR-014](adr-014-expression-engine-core.md) | 扩展：添加 L2 持久化层 |
-| [ADR-032](adr-032-unified-derived-semantic-model.md) | 依赖：`DerivedSpec` 字段定义 |
+| [ADR-032](../core/adr-032-unified-derived-semantic-model.md) | 依赖：`DerivedSpec` 字段定义 |
 | [ADR-038](adr-038-operator-versioning.md) | 前置：算子版本管理（P1-2） |
-| [ADR-043](adr-043-role-profile-certification-compatibility-manifest.md) | 区分缓存指纹与发布级 compatibility manifest |
+| [ADR-043](../research/adr-043-role-profile-certification-compatibility-manifest.md) | 区分缓存指纹与发布级 compatibility manifest |
 
 ---
 

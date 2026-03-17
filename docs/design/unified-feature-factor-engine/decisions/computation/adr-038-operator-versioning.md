@@ -277,8 +277,8 @@ ON compiled_expression_operator(operator_name, operator_version);
 |-----|------|
 | [ADR-039](adr-039-expression-cache-persistence.md) | 被依赖：算子版本进入 `operator_fingerprint` |
 | [ADR-014](adr-014-expression-engine-core.md) | 扩展：Analyzer 增加 `operator_names` |
-| [ADR-010](adr-010-catalog-schema.md) | 参考：`derived_dependency` 副表模式 |
-| [ADR-032](adr-032-unified-derived-semantic-model.md) | 扩展：`DerivedSpec.operator_versions` |
+| [ADR-010](../adr-010-catalog-schema.md) | 参考：`derived_dependency` 副表模式 |
+| [ADR-032](../core/adr-032-unified-derived-semantic-model.md) | 扩展：`DerivedSpec.operator_versions` |
 
 ---
 

@@ -31,7 +31,7 @@ __all__ = [
     "REALTIME_CASCADE_MAX_DEPTH",
     "CascadeDepthExceededError",
     "CascadeStatus",
-    "InvalidationCascadeService",
+    "InvalidationCascadeOrchestrator",
 ]
 
 
@@ -56,13 +56,14 @@ class CascadeDepthExceededError(Exception):
 REALTIME_CASCADE_MAX_DEPTH = 5
 
 
-class InvalidationCascadeService:
+class InvalidationCascadeOrchestrator:
     """
     BFS-based invalidation cascade with cycle guard and state machine.
 
-    Propagates invalidation events through the derived dependency graph
-    using breadth-first search, tracking depth and detecting cycles via
-    a visited set. Supports micro-batch merging of same-target events.
+    Orchestrates invalidation propagation through the derived dependency
+    graph using breadth-first search, tracking depth and detecting cycles
+    via a visited set. Coordinates catalog service and materialization
+    service for batch repair of stale derived artifacts.
     """
 
     def __init__(

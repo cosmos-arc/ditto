@@ -13,6 +13,8 @@ type JsonDict = dict[str, JsonValue]
 __all__ = [
     "CertificationReportRecord",
     "CompatibilityManifestRecord",
+    "DerivedMinimalDQSummaryRecord",
+    "DerivedShadowSlotRecord",
     "JsonDict",
     "JsonValue",
     "ShadowDiffReportRecord",
@@ -33,6 +35,14 @@ def _require_int(data: Mapping[str, JsonValue], key: str) -> int:
     value = data[key]
     if not isinstance(value, int) or isinstance(value, bool):
         raise TypeError(f"{key} must be an int")
+    return value
+
+
+def _require_bool(data: Mapping[str, JsonValue], key: str) -> bool:
+    """Extract a required bool field from JSON payload."""
+    value = data[key]
+    if not isinstance(value, bool):
+        raise TypeError(f"{key} must be a bool")
     return value
 
 
@@ -74,6 +84,47 @@ class CompatibilityManifestRecord:
             derived_id=_require_str(data, "derived_id"),
             version=_require_int(data, "version"),
             manifest_hash=_require_str(data, "manifest_hash"),
+            payload=_require_payload(data, "payload"),
+            created_at=_require_str(data, "created_at"),
+        )
+
+
+@dataclass(frozen=True)
+class DerivedMinimalDQSummaryRecord:
+    """Stored minimal DQ summary for one derived materialization run."""
+
+    derived_id: str
+    version: int
+    run_id: str
+    passed: bool
+    error_count: int
+    payload: JsonDict
+    created_at: str
+
+    def to_json_dict(self) -> JsonDict:
+        """Convert record to a JSON-serializable dictionary."""
+        return {
+            "derived_id": self.derived_id,
+            "version": self.version,
+            "run_id": self.run_id,
+            "passed": self.passed,
+            "error_count": self.error_count,
+            "payload": self.payload,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_json_dict(
+        cls,
+        data: Mapping[str, JsonValue],
+    ) -> DerivedMinimalDQSummaryRecord:
+        """Create record from JSON dictionary."""
+        return cls(
+            derived_id=_require_str(data, "derived_id"),
+            version=_require_int(data, "version"),
+            run_id=_require_str(data, "run_id"),
+            passed=_require_bool(data, "passed"),
+            error_count=_require_int(data, "error_count"),
             payload=_require_payload(data, "payload"),
             created_at=_require_str(data, "created_at"),
         )
@@ -203,3 +254,14 @@ class CertificationReportRecord:
             payload=_require_payload(data, "payload"),
             created_at=_require_str(data, "created_at"),
         )
+
+
+@dataclass(frozen=True)
+class DerivedShadowSlotRecord:
+    """Stored active shadow candidate slot for one derived id."""
+
+    derived_id: str
+    candidate_version: int
+    baseline_version: int | None
+    activated_at: str
+    disabled_at: str | None

@@ -10,6 +10,7 @@ from ditto_core.engine.research import (
     SpineSnapshot,
     SpineSpec,
 )
+from ditto_datahub.errors import DerivedNotImplementedError
 
 
 class TestSpineSpec:
@@ -51,7 +52,7 @@ class TestSpineSpec:
             calendar="us_stock",
         )
 
-        with pytest.raises(NotImplementedError, match="cn_stock"):
+        with pytest.raises(DerivedNotImplementedError, match="cn_stock"):
             spec.validate_spec()
 
 
@@ -87,7 +88,7 @@ class TestResearchDatasetSpec:
             derived_ids=("market.close",),
         )
 
-        with pytest.raises(NotImplementedError, match="derived"):
+        with pytest.raises(DerivedNotImplementedError, match="derived"):
             spec.validate_spec()
 
     def test_late_arrival_policy_defaults_to_require_rebuild(self) -> None:

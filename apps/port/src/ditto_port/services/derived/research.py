@@ -21,6 +21,7 @@ from ditto_core.engine.research import (
     SpineSpec,
 )
 from ditto_core.engine.specs import CalendarId, GrainId
+from ditto_datahub.errors import DerivedNotFoundError
 from ditto_datahub.models.research import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
@@ -372,15 +373,13 @@ class ResearchDatasetFacade:
     ) -> ResearchDatasetSpecRecord:
         record = self._research_catalog_service.get_dataset_spec(dataset_id)
         if record is None:
-            raise KeyError(
-                "research dataset spec not found for " + f"dataset_id={dataset_id}"
-            )
+            raise DerivedNotFoundError(derived_id=dataset_id)
         return record
 
     def _require_spine_spec_record(self, spine_id: str) -> ResearchSpineSpecRecord:
         record = self._research_catalog_service.get_spine_spec(spine_id)
         if record is None:
-            raise KeyError(f"research spine spec not found for spine_id={spine_id}")
+            raise DerivedNotFoundError(derived_id=spine_id)
         return record
 
 

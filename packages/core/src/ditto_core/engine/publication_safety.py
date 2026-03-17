@@ -18,6 +18,7 @@ __all__ = [
     "CertificationStage",
     "CompatibilityManifest",
     "CompileFlagValue",
+    "DerivedMinimalDQSummary",
     "DerivedRole",
     "MaterializationProfile",
     "PublicationSafetySeverity",
@@ -82,6 +83,29 @@ class CompatibilityManifest:
     def is_complete(self) -> bool:
         """Whether all required fields are present."""
         return len(self.missing_required_fields()) == 0
+
+
+@dataclass(frozen=True)
+class DerivedMinimalDQSummary:
+    """Minimal DQ summary collected from one derived materialization output."""
+
+    row_count: int
+    primary_key_columns: tuple[str, ...]
+    missing_primary_key_columns: tuple[str, ...] = ()
+    null_primary_key_count: int = 0
+    duplicate_key_count: int = 0
+    null_value_count: int = 0
+    nan_value_count: int = 0
+    computable_value_count: int = 0
+    failed_checks: tuple[str, ...] = ()
+
+    def is_passed(self) -> bool:
+        """Return whether the minimal DQ summary has blocking errors."""
+        return len(self.failed_checks) == 0
+
+    def error_count(self) -> int:
+        """Return the number of failed minimal DQ checks."""
+        return len(self.failed_checks)
 
 
 @dataclass(frozen=True)
