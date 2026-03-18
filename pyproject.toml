@@ -97,6 +97,8 @@ unfixable = []
 "packages/datahub/src/ditto_datahub/domains/macro/indicator/metadata_store.py" = ["S608"]
 "packages/datahub/src/ditto_datahub/domains/features/technical/indicator_metadata_store.py" = ["S608"]
 "packages/datahub/src/ditto_datahub/domains/factors/factor_metadata_store.py" = ["S608"]
+# ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
+"apps/port/src/ditto_port/services/derived/research.py" = ["S608"]
 
 # 测试文件 - 最宽松
 "tests/**/*.py" = [

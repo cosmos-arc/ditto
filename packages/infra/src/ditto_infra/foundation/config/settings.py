@@ -8,9 +8,30 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ditto_infra.foundation.config.environment import Environment
+
+
+class TradingSettings(BaseModel):
+    """交易策略配置。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    default_universe: str = Field(default="csi300", description="默认标的池")
+    max_position_pct: float = Field(default=0.1, description="单只标的最大仓位百分比")
+    risk_free_rate: float = Field(default=0.025, description="无风险利率")
+    benchmark: str = Field(default="000300.SH", description="基准指数代码")
+    cost_bps: float = Field(default=3.0, description="交易成本 (基点)")
+    slippage_bps: float = Field(default=1.0, description="滑点成本 (基点)")
+
+    @field_validator("max_position_pct")
+    @classmethod
+    def validate_max_position_pct(cls, v: float) -> float:
+        """max_position_pct 必须在 (0, 1] 范围内。"""
+        if v <= 0 or v > 1:
+            raise ValueError("max_position_pct 必须在 (0, 1] 范围内")
+        return v
 
 
 class SystemSettings(BaseModel):
@@ -67,6 +88,7 @@ class Settings(BaseModel):
 
     system: SystemSettings
     observability: ObservabilitySettings
+    trading: TradingSettings | None = None
 
     @property
     def is_development(self) -> bool:
@@ -88,4 +110,5 @@ __all__ = [
     "ObservabilitySettings",
     "Settings",
     "SystemSettings",
+    "TradingSettings",
 ]

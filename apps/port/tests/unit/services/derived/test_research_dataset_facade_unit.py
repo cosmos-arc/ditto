@@ -9,8 +9,10 @@ from unittest.mock import MagicMock
 
 import orjson
 import polars as pl
+import pytest
 from dishka import Provider, Scope, make_container, provide
 from ditto_core.engine.materialization.models import DerivedVersionStatus
+from ditto_core.engine.research import DatasetSnapshot, KnownAtPolicy
 from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_datahub.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_datahub.models.research import (
@@ -648,3 +650,163 @@ class TestResearchDatasetFacade:
             assert report_path.parent.joinpath("build_report.json").exists() is True
         finally:
             container.close()
+
+
+class TestResearchDatasetFacadeExport:
+    """Tests for ResearchDatasetFacade.export()."""
+
+    def _make_facade(self) -> tuple[ResearchDatasetFacade, MagicMock]:
+        """创建带 mock 的 facade 实例."""
+        artifact_service = MagicMock()
+        facade = ResearchDatasetFacade(
+            metadata_service=MagicMock(),
+            research_catalog_service=MagicMock(),
+            artifact_reader=MagicMock(),
+            research_artifact_service=artifact_service,
+        )
+        return facade, artifact_service
+
+    def _make_snapshot(
+        self,
+        *,
+        dataset_id: str = "research-test-dataset",
+        data_path: str = (
+            "derived/research/datasets/research-test-dataset"
+            "/snapshots/abc123/data.parquet"
+        ),
+    ) -> DatasetSnapshot:
+        """创建测试用 DatasetSnapshot."""
+        return DatasetSnapshot(
+            snapshot_id="rds-abc123",
+            dataset_id=dataset_id,
+            dataset_spec_version=1,
+            spine_snapshot_id="rsp-xyz",
+            start="2026-03-10",
+            end="2026-03-11",
+            row_count=2,
+            data_path=data_path,
+            manifest_hash="hash123",
+            known_at_policy=KnownAtPolicy.SAMPLE_TIME,
+            effective_cutoff=None,
+        )
+
+    def test_export_csv(self, tmp_path: Path) -> None:
+        """export() 应该能导出为 CSV 格式."""
+        facade, artifact_service = self._make_facade()
+        snapshot = self._make_snapshot()
+        test_df = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "trade_date": [date(2026, 3, 10), date(2026, 3, 11)],
+                "value": [10.0, 20.0],
+            }
+        )
+        artifact_service.read_parquet.return_value = test_df
+
+        csv_path = tmp_path / "output.csv"
+        facade.export(snapshot, "csv", csv_path)
+
+        artifact_service.read_parquet.assert_called_once_with(snapshot.data_path)
+        assert csv_path.exists()
+        result_df = pl.read_csv(csv_path)
+        assert result_df.shape == (2, 3)
+        assert result_df["instrument_id"].to_list() == [1, 2]
+
+    def test_export_csv_with_hyphens_in_dataset_id(self, tmp_path: Path) -> None:
+        """CSV 导出应该正常处理含连字符的 dataset_id."""
+        facade, artifact_service = self._make_facade()
+        snapshot = self._make_snapshot(dataset_id="my-research-dataset")
+        artifact_service.read_parquet.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "value": [100.0],
+            }
+        )
+
+        csv_path = tmp_path / "output.csv"
+        facade.export(snapshot, "csv", csv_path)
+        assert csv_path.exists()
+
+    def test_export_sqlite(self, tmp_path: Path) -> None:
+        """export() 应该能导出为 SQLite 格式."""
+        import sqlite3 as _sqlite3
+
+        facade, artifact_service = self._make_facade()
+        snapshot = self._make_snapshot(dataset_id="research-alpha")
+        test_df = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "trade_date": [date(2026, 3, 10), date(2026, 3, 11)],
+                "factor_alpha": [0.5, 0.8],
+            }
+        )
+        artifact_service.read_parquet.return_value = test_df
+
+        db_path = tmp_path / "output.db"
+        facade.export(snapshot, "sqlite", db_path)
+
+        artifact_service.read_parquet.assert_called_once_with(snapshot.data_path)
+        assert db_path.exists()
+        conn = _sqlite3.connect(str(db_path))
+        rows = conn.execute(
+            "SELECT * FROM research_alpha ORDER BY instrument_id"
+        ).fetchall()
+        conn.close()
+        assert len(rows) == 2
+        assert rows[0][0] == 1
+        assert rows[0][2] == 0.5
+        assert rows[1][0] == 2
+        assert rows[1][2] == 0.8
+
+    def test_export_sqlite_table_name_from_dataset_id(self, tmp_path: Path) -> None:
+        """SQLite 导出应该将 dataset_id 中的连字符替换为下划线作为表名."""
+        import sqlite3 as _sqlite3
+
+        facade, artifact_service = self._make_facade()
+        snapshot = self._make_snapshot(dataset_id="my-test-dataset")
+        artifact_service.read_parquet.return_value = pl.DataFrame(
+            {
+                "col_a": [1],
+            }
+        )
+
+        db_path = tmp_path / "output.db"
+        facade.export(snapshot, "sqlite", db_path)
+
+        conn = _sqlite3.connect(str(db_path))
+        tables = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+        conn.close()
+        assert ("my_test_dataset",) in tables
+
+    def test_export_sqlite_empty_dataframe(self, tmp_path: Path) -> None:
+        """SQLite 导出空 DataFrame 应该不创建表."""
+        import sqlite3 as _sqlite3
+
+        facade, artifact_service = self._make_facade()
+        snapshot = self._make_snapshot()
+        artifact_service.read_parquet.return_value = pl.DataFrame(
+            schema={
+                "instrument_id": pl.Int64,
+                "value": pl.Float64,
+            },
+        )
+
+        db_path = tmp_path / "output.db"
+        facade.export(snapshot, "sqlite", db_path)
+
+        conn = _sqlite3.connect(str(db_path))
+        tables = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+        conn.close()
+        assert len(tables) == 0
+
+    def test_export_unsupported_format(self, tmp_path: Path) -> None:
+        """export() 应该对不支持的格式抛出 ValueError."""
+        facade, _artifact_service = self._make_facade()
+        snapshot = self._make_snapshot()
+
+        with pytest.raises(ValueError, match="不支持的导出格式"):
+            facade.export(snapshot, "xlsx", tmp_path / "output.xlsx")

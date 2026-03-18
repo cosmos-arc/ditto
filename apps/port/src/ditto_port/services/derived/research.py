@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import sqlite3
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from hashlib import sha256
+from pathlib import Path
 from typing import cast
 from uuid import uuid4
 
@@ -181,6 +183,56 @@ class ResearchDatasetFacade:
         snapshot_dir = snapshot.data_path.rsplit("/", 1)[0]
         report_relative = f"{snapshot_dir}/{_BUILD_REPORT_FILENAME}"
         return self._artifact_service.read_json(report_relative)
+
+    def export(
+        self,
+        snapshot: DatasetSnapshot,
+        fmt: str,
+        path: Path,
+    ) -> None:
+        """
+        导出研究数据集快照到指定格式.
+
+        Args:
+            snapshot: 数据集快照.
+            fmt: 导出格式 ("csv", "sqlite").
+            path: 输出文件路径.
+
+        Raises:
+            ValueError: 不支持的格式.
+
+        """
+        df = self._artifact_service.read_parquet(snapshot.data_path)
+        if fmt == "csv":
+            df.write_csv(str(path))
+        elif fmt == "sqlite":
+            self._export_sqlite(df, snapshot.dataset_id, path)
+        else:
+            raise ValueError(f"不支持的导出格式: {fmt}")
+
+    @staticmethod
+    def _export_sqlite(
+        df: pl.DataFrame,
+        dataset_id: str,
+        path: Path,
+    ) -> None:
+        """将 DataFrame 导出为 SQLite 表."""
+        conn = sqlite3.connect(str(path))
+        table_name = dataset_id.replace("-", "_")
+        records = df.to_dicts()
+        if records:
+            columns = list(records[0].keys())
+            col_str = ",".join(columns)
+            placeholders = ",".join(["?"] * len(columns))
+            conn.execute(
+                f"CREATE TABLE IF NOT EXISTS {table_name} ({col_str})",
+            )
+            conn.executemany(
+                f"INSERT INTO {table_name} VALUES ({placeholders})",
+                [tuple(r.values()) for r in records],
+            )
+            conn.commit()
+        conn.close()
 
     def _build_spine_snapshot(
         self,
