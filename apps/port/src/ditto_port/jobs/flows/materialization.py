@@ -62,7 +62,7 @@ def daily_materialization_flow(
 def repair_from_invalidation_flow(limit: int = 100) -> dict[str, object]:
     """Repair pending invalidations in batch order."""
     with create_materialization_bundle() as bundle:
-        results = bundle.invalidation_service.repair_pending(limit=limit)
+        results = bundle.invalidation_service.repair_batch(batch_size=limit)
     return {
         "results": _normalize_results(results),
         "summary": {

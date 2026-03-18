@@ -15,13 +15,32 @@ __all__ = ["SQLiteResearchCatalogWriter"]
 
 
 class SQLiteResearchCatalogWriter:
-    """Persist research specs and snapshots into SQLite."""
+    """
+    Persist research specs and snapshots into SQLite.
+
+    Each ``write_*`` method executes SQL and immediately commits.
+    For batch operations that require a single transaction, use the
+    ``execute_*`` methods (SQL without commit) together with
+    ``commit()`` / ``rollback()``.
+    """
 
     def __init__(self, sqlite_client: SQLiteClient) -> None:
         self._sqlite_client = sqlite_client
 
-    def write_spine_spec(self, record: ResearchSpineSpecRecord) -> None:
-        """Persist one spine spec row."""
+    # --- transaction control (UoW) ---
+
+    def commit(self) -> None:
+        """Commit the current transaction."""
+        self._sqlite_client.commit()
+
+    def rollback(self) -> None:
+        """Roll back the current transaction."""
+        self._sqlite_client.rollback()
+
+    # --- execute methods (no commit) ---
+
+    def execute_spine_spec(self, record: ResearchSpineSpecRecord) -> None:
+        """Execute spine spec INSERT without committing."""
         self._sqlite_client.execute(
             """
             INSERT OR REPLACE INTO research_spine_spec (
@@ -40,10 +59,9 @@ class SQLiteResearchCatalogWriter:
                 record.version,
             ),
         )
-        self._sqlite_client.commit()
 
-    def write_dataset_spec(self, record: ResearchDatasetSpecRecord) -> None:
-        """Persist one dataset spec row."""
+    def execute_dataset_spec(self, record: ResearchDatasetSpecRecord) -> None:
+        """Execute dataset spec INSERT without committing."""
         self._sqlite_client.execute(
             """
             INSERT OR REPLACE INTO research_dataset_spec (
@@ -64,10 +82,9 @@ class SQLiteResearchCatalogWriter:
                 record.version,
             ),
         )
-        self._sqlite_client.commit()
 
-    def write_spine_snapshot(self, record: ResearchSpineSnapshotRecord) -> None:
-        """Persist one spine snapshot row."""
+    def execute_spine_snapshot(self, record: ResearchSpineSnapshotRecord) -> None:
+        """Execute spine snapshot INSERT without committing."""
         self._sqlite_client.execute(
             """
             INSERT OR REPLACE INTO research_spine_snapshot (
@@ -87,10 +104,9 @@ class SQLiteResearchCatalogWriter:
                 record.version,
             ),
         )
-        self._sqlite_client.commit()
 
-    def write_dataset_snapshot(self, record: ResearchDatasetSnapshotRecord) -> None:
-        """Persist one dataset snapshot row."""
+    def execute_dataset_snapshot(self, record: ResearchDatasetSnapshotRecord) -> None:
+        """Execute dataset snapshot INSERT without committing."""
         self._sqlite_client.execute(
             """
             INSERT OR REPLACE INTO research_dataset_snapshot (
@@ -121,4 +137,25 @@ class SQLiteResearchCatalogWriter:
                 record.created_at,
             ),
         )
-        self._sqlite_client.commit()
+
+    # --- write methods (execute + commit, backward-compatible) ---
+
+    def write_spine_spec(self, record: ResearchSpineSpecRecord) -> None:
+        """Persist one spine spec row."""
+        self.execute_spine_spec(record)
+        self.commit()
+
+    def write_dataset_spec(self, record: ResearchDatasetSpecRecord) -> None:
+        """Persist one dataset spec row."""
+        self.execute_dataset_spec(record)
+        self.commit()
+
+    def write_spine_snapshot(self, record: ResearchSpineSnapshotRecord) -> None:
+        """Persist one spine snapshot row."""
+        self.execute_spine_snapshot(record)
+        self.commit()
+
+    def write_dataset_snapshot(self, record: ResearchDatasetSnapshotRecord) -> None:
+        """Persist one dataset snapshot row."""
+        self.execute_dataset_snapshot(record)
+        self.commit()

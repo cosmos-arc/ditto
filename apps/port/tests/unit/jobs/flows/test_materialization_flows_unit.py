@@ -66,7 +66,7 @@ class TestRepairFromInvalidationFlow:
     def test_flow_repairs_pending_invalidations(self, mocker: MockerFixture) -> None:
         """Repair flow should delegate to the invalidation service."""
         bundle = mocker.MagicMock()
-        bundle.invalidation_service.repair_pending.return_value = (
+        bundle.invalidation_service.repair_batch.return_value = (
             {"derived_id": "factor.alpha_simple"},
             {"derived_id": "factor.alpha_other"},
         )
@@ -80,7 +80,7 @@ class TestRepairFromInvalidationFlow:
 
         result = REPAIR_FROM_INVALIDATION_FLOW_RUNNER(limit=20)
 
-        bundle.invalidation_service.repair_pending.assert_called_once_with(limit=20)
+        bundle.invalidation_service.repair_batch.assert_called_once_with(batch_size=20)
         assert result["summary"]["repaired_count"] == 2
 
 

@@ -118,24 +118,30 @@ class InvalidationCascadeOrchestrator:
                 self._emit_depth_alert(current_id, depth)
                 continue
 
-            # Create stale invalidation record for this node
-            record = DerivedInvalidationRecord(
-                invalidation_id=f"inval-{uuid4().hex[:12]}",
-                derived_id=current_id,
-                version=current_version,
-                source_domain=event.source_domain,
-                source_dataset=event.source_dataset,
-                change_date=event.change_date,
-                affected_start=event.affected_start,
-                affected_end=event.affected_end,
-                source_snapshot_id=event.source_snapshot_id,
-                root_dependency_ref=event.root_dependency_ref,
-                status=CascadeStatus.STALE,
-                created_at=created_at,
-                processed_at=None,
-                depth=depth,
+            # Skip source domain root refs (e.g. "market.stock_daily")
+            # but still traverse downstream deps
+            is_source_domain_root = depth == 0 and current_id.startswith(
+                f"{event.source_domain}."
             )
-            all_records.append(record)
+
+            if not is_source_domain_root:
+                record = DerivedInvalidationRecord(
+                    invalidation_id=f"inval-{uuid4().hex[:12]}",
+                    derived_id=current_id,
+                    version=current_version,
+                    source_domain=event.source_domain,
+                    source_dataset=event.source_dataset,
+                    change_date=event.change_date,
+                    affected_start=event.affected_start,
+                    affected_end=event.affected_end,
+                    source_snapshot_id=event.source_snapshot_id,
+                    root_dependency_ref=event.root_dependency_ref,
+                    status=CascadeStatus.STALE,
+                    created_at=created_at,
+                    processed_at=None,
+                    depth=depth,
+                )
+                all_records.append(record)
 
             # Find downstream dependencies and enqueue
             for dep in self._catalog_service.list_downstream_dependencies(current_id):

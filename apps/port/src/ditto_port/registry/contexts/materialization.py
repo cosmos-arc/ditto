@@ -6,9 +6,9 @@ from contextlib import contextmanager
 from ditto_port.registry.container import make_app_container
 from ditto_port.registry.contexts.bundle import MaterializationBundle
 from ditto_port.services.derived import (
-    DerivedInvalidationOrchestrator,
     DerivedMaterializationOrchestrator,
     DerivedPublicationFacade,
+    InvalidationCascadeOrchestrator,
     ResearchDatasetFacade,
 )
 
@@ -20,7 +20,7 @@ def create_materialization_bundle() -> Iterator[MaterializationBundle]:
     try:
         yield MaterializationBundle(
             materialization_service=container.get(DerivedMaterializationOrchestrator),
-            invalidation_service=container.get(DerivedInvalidationOrchestrator),
+            invalidation_service=container.get(InvalidationCascadeOrchestrator),
             publication_facade=container.get(DerivedPublicationFacade),
             research_dataset_facade=container.get(ResearchDatasetFacade),
         )

@@ -62,10 +62,19 @@ class TimeSpec:
 
 @dataclass(frozen=True)
 class ExecutionPolicy:
-    """执行策略配置"""
+    """
+    执行策略配置。
+
+    Attributes:
+        pit_required: 是否要求 PIT (Point-in-Time) 数据。
+        normalization_preset: 因子标准化预设名称。
+        adj_type: 复权类型，"none"/"qfq"/"hfq"。
+
+    """
 
     pit_required: bool = True
     normalization_preset: str = "default"
+    adj_type: str = "none"
 
 
 @dataclass(frozen=True)
@@ -85,6 +94,7 @@ class DerivedSpec:
     time_spec: TimeSpec | None = None
     operator_versions: dict[str, str] = field(default_factory=dict)
     universe_id: str | None = None
+    execution_policy: ExecutionPolicy = field(default_factory=ExecutionPolicy)
 
     @property
     def effective_time_keys(self) -> tuple[str, ...]:

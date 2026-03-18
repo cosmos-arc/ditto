@@ -103,7 +103,73 @@ class DerivedCatalogReaderProtocol(Protocol):
 
 
 class DerivedCatalogWriterProtocol(Protocol):
-    """Writer protocol shared by file-based and SQLite-backed catalogs."""
+    """
+    Writer protocol for derived catalog persistence.
+
+    Each ``write_*`` method executes SQL and immediately commits.
+    For batch operations requiring a single transaction, use the
+    ``execute_*`` methods together with ``commit()`` / ``rollback()``.
+    """
+
+    # --- transaction control ---
+
+    def commit(self) -> None:
+        """Commit the current transaction."""
+        ...
+
+    def rollback(self) -> None:
+        """Roll back the current transaction."""
+        ...
+
+    # --- execute methods (no commit) ---
+
+    def execute_spec(self, record: DerivedSpecRecord) -> None:
+        """Execute spec INSERT without committing."""
+        ...
+
+    def execute_version(self, record: DerivedVersionRecord) -> None:
+        """Execute version INSERT without committing."""
+        ...
+
+    def execute_run(self, record: DerivedRunRecord) -> None:
+        """Execute run INSERT without committing."""
+        ...
+
+    def execute_state(self, record: DerivedStateRecord) -> None:
+        """Execute state INSERT without committing."""
+        ...
+
+    def execute_partitions(self, records: tuple[DerivedPartitionRecord, ...]) -> None:
+        """Execute partition INSERTs without committing."""
+        ...
+
+    def execute_checkpoints(self, records: tuple[DerivedCheckpointRecord, ...]) -> None:
+        """Execute checkpoint INSERTs without committing."""
+        ...
+
+    def execute_dependencies(
+        self, records: tuple[DerivedDependencyRecord, ...]
+    ) -> None:
+        """Execute dependency INSERTs without committing."""
+        ...
+
+    def execute_invalidations(
+        self, records: tuple[DerivedInvalidationRecord, ...]
+    ) -> None:
+        """Execute invalidation INSERTs without committing."""
+        ...
+
+    def execute_invalidation_processed(
+        self, invalidation_id: str, processed_at: str
+    ) -> None:
+        """Execute invalidation processed UPDATE without committing."""
+        ...
+
+    def execute_invalidation_status(self, invalidation_id: str, status: str) -> None:
+        """Execute invalidation status UPDATE without committing."""
+        ...
+
+    # --- write methods (execute + commit) ---
 
     def write_spec(self, record: DerivedSpecRecord) -> None:
         """Persist one derived spec record."""

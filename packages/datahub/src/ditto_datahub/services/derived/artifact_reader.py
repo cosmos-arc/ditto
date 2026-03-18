@@ -151,12 +151,14 @@ class DerivedArtifactReader:
         return state.active_version
 
     def _resolve_primary_online(self, derived_id: str) -> int | None:
-        """Return the primary online version, or ``None`` if none exists."""
+        """Return the primary online PUBLISHED version, or ``None``."""
         return next(
             (
                 record.version
                 for record in self._catalog_service.list_versions(derived_id)
-                if record.is_primary and record.is_online
+                if record.is_primary
+                and record.is_online
+                and record.status == "published"
             ),
             None,
         )

@@ -13,15 +13,19 @@ from ditto_datahub.services import (
     PublicationSafetyRecordService,
     ResearchCatalogService,
 )
+from ditto_datahub.services.derived.artifact_persistence_service import (
+    ArtifactPersistenceService,
+)
 from ditto_datahub.services.hot_layer import UnavailableHotLayerReader
+from ditto_datahub.services.market_service import MarketService
 from ditto_datahub.services.metadata_service import MetadataService
-from ditto_datahub.stores.runtime.derived_artifact_writer import DerivedArtifactWriter
+from ditto_datahub.services.research_artifact_service import ResearchArtifactService
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 from ditto_port.services.derived import (
-    DerivedInvalidationOrchestrator,
     DerivedPublicationFacade,
     DerivedQueryFacade,
+    InvalidationCascadeOrchestrator,
     ResearchDatasetFacade,
     RuntimeDerivedInputProvider,
     StaticRuntimeModeResolver,
@@ -42,6 +46,14 @@ class DerivedProvider(Provider):
     def runtime_mode_resolver(self) -> StaticRuntimeModeResolver:
         """Static runtime mode resolver for Phase 2 contract wiring."""
         return StaticRuntimeModeResolver()
+
+    @provide
+    def research_artifact_service(
+        self,
+        settings: DataStoreSettings,
+    ) -> ResearchArtifactService:
+        """Research artifact file I/O service."""
+        return ResearchArtifactService(artifact_root=Path(settings.data_root))
 
     @provide
     def derived_query_service(
@@ -70,11 +82,13 @@ class DerivedProvider(Provider):
     def derived_input_provider(
         self,
         derived_catalog_service: DerivedCatalogService,
+        market_service: MarketService,
         settings: DataStoreSettings,
     ) -> RuntimeDerivedInputProvider:
         """Runtime input provider backed by truth-layer parquet and artifacts."""
         return RuntimeDerivedInputProvider(
             catalog_service=derived_catalog_service,
+            market_service=market_service,
             artifact_root=Path(settings.data_root),
             data_root=Path(settings.data_root),
         )
@@ -86,19 +100,19 @@ class DerivedProvider(Provider):
         compile_cache_service: SQLiteCompileCache,
         derived_input_provider: RuntimeDerivedInputProvider,
         publication_record_service: PublicationSafetyRecordService,
-        shadow_slot_service: DerivedShadowSlotService,
+        metadata_service: MetadataService,
         settings: DataStoreSettings,
     ) -> DerivedMaterializationOrchestrator:
         """Unified materialization orchestrator."""
         return DerivedMaterializationOrchestrator(
             catalog_service=derived_catalog_service,
             compile_cache_service=compile_cache_service,
-            artifact_writer=DerivedArtifactWriter(
+            artifact_writer=ArtifactPersistenceService(
                 artifact_root=Path(settings.data_root),
             ),
             input_provider=derived_input_provider,
+            universe_provider=metadata_service,
             publication_record_service=publication_record_service,
-            shadow_slot_service=shadow_slot_service,
         )
 
     @provide
@@ -106,9 +120,9 @@ class DerivedProvider(Provider):
         self,
         derived_catalog_service: DerivedCatalogService,
         derived_materialization_orchestrator: DerivedMaterializationOrchestrator,
-    ) -> DerivedInvalidationOrchestrator:
-        """Invalidation fan-out and repair orchestrator."""
-        return DerivedInvalidationOrchestrator(
+    ) -> InvalidationCascadeOrchestrator:
+        """BFS-based invalidation cascade with cycle guard and state machine."""
+        return InvalidationCascadeOrchestrator(
             catalog_service=derived_catalog_service,
             materialization_service=derived_materialization_orchestrator,
         )
@@ -132,6 +146,7 @@ class DerivedProvider(Provider):
         metadata_service: MetadataService,
         research_catalog_service: ResearchCatalogService,
         derived_catalog_service: DerivedCatalogService,
+        research_artifact_service: ResearchArtifactService,
         settings: DataStoreSettings,
     ) -> ResearchDatasetFacade:
         """Research dataset snapshot builder facade."""
@@ -142,7 +157,7 @@ class DerivedProvider(Provider):
                 catalog_service=derived_catalog_service,
                 artifact_root=Path(settings.data_root),
             ),
-            data_root=Path(settings.data_root),
+            research_artifact_service=research_artifact_service,
         )
 
     @provide

@@ -15,15 +15,60 @@ from ditto_datahub.stores.sqlite_client import SQLiteClient
 
 __all__ = ["SQLiteDerivedCatalogWriter"]
 
+_VALID_VERSION_STATUSES: frozenset[str] = frozenset(
+    {
+        "draft",
+        "materialized",
+        "published",
+        "deprecated",
+        "archived",
+    }
+)
+_VALID_RUN_STATUSES: frozenset[str] = frozenset(
+    {
+        "RUNNING",
+        "SUCCESS",
+        "FAILED",
+    }
+)
+_VALID_INVALIDATION_STATUSES: frozenset[str] = frozenset(
+    {
+        "fresh",
+        "stale",
+        "recomputing",
+        "healed",
+        "processed",
+    }
+)
+
 
 class SQLiteDerivedCatalogWriter:
-    """Persist derived catalog and runtime metadata into SQLite."""
+    """
+    Persist derived catalog and runtime metadata into SQLite.
+
+    Each ``write_*`` method executes SQL and immediately commits.
+    For batch operations that require a single transaction, use the
+    ``execute_*`` methods (SQL without commit) together with
+    ``commit()`` / ``rollback()``.
+    """
 
     def __init__(self, sqlite_client: SQLiteClient) -> None:
         self._sqlite_client = sqlite_client
 
-    def write_spec(self, record: DerivedSpecRecord) -> None:
-        """Persist one derived spec row."""
+    # --- transaction control (UoW) ---
+
+    def commit(self) -> None:
+        """Commit the current transaction."""
+        self._sqlite_client.commit()
+
+    def rollback(self) -> None:
+        """Roll back the current transaction."""
+        self._sqlite_client.rollback()
+
+    # --- execute methods (no commit) ---
+
+    def execute_spec(self, record: DerivedSpecRecord) -> None:
+        """Execute spec INSERT without committing."""
         self._sqlite_client.execute(
             """
             INSERT OR REPLACE INTO derived_spec (
@@ -41,10 +86,15 @@ class SQLiteDerivedCatalogWriter:
                 record.created_at,
             ),
         )
-        self._sqlite_client.commit()
 
-    def write_version(self, record: DerivedVersionRecord) -> None:
-        """Persist one derived version row."""
+    def execute_version(self, record: DerivedVersionRecord) -> None:
+        """Execute version INSERT without committing."""
+        if record.status not in _VALID_VERSION_STATUSES:
+            msg = (
+                f"invalid version status: {record.status!r}, "
+                f"expected one of {sorted(_VALID_VERSION_STATUSES)}"
+            )
+            raise ValueError(msg)
         self._sqlite_client.execute(
             """
             INSERT OR REPLACE INTO derived_version (
@@ -63,10 +113,15 @@ class SQLiteDerivedCatalogWriter:
                 record.updated_at,
             ),
         )
-        self._sqlite_client.commit()
 
-    def write_run(self, record: DerivedRunRecord) -> None:
-        """Persist one materialization run row."""
+    def execute_run(self, record: DerivedRunRecord) -> None:
+        """Execute run INSERT without committing."""
+        if record.status not in _VALID_RUN_STATUSES:
+            msg = (
+                f"invalid run status: {record.status!r}, "
+                f"expected one of {sorted(_VALID_RUN_STATUSES)}"
+            )
+            raise ValueError(msg)
         self._sqlite_client.execute(
             """
             INSERT OR REPLACE INTO derived_run (
@@ -97,10 +152,9 @@ class SQLiteDerivedCatalogWriter:
                 record.finished_at,
             ),
         )
-        self._sqlite_client.commit()
 
-    def write_state(self, record: DerivedStateRecord) -> None:
-        """Persist the latest durable state row."""
+    def execute_state(self, record: DerivedStateRecord) -> None:
+        """Execute state INSERT without committing."""
         self._sqlite_client.execute(
             """
             INSERT OR REPLACE INTO derived_state (
@@ -120,10 +174,9 @@ class SQLiteDerivedCatalogWriter:
                 record.updated_at,
             ),
         )
-        self._sqlite_client.commit()
 
-    def write_partitions(self, records: tuple[DerivedPartitionRecord, ...]) -> None:
-        """Persist partition rows for one run."""
+    def execute_partitions(self, records: tuple[DerivedPartitionRecord, ...]) -> None:
+        """Execute partition INSERTs without committing."""
         if not records:
             return
         self._sqlite_client.executemany(
@@ -147,10 +200,9 @@ class SQLiteDerivedCatalogWriter:
                 for record in records
             ],
         )
-        self._sqlite_client.commit()
 
-    def write_checkpoints(self, records: tuple[DerivedCheckpointRecord, ...]) -> None:
-        """Persist checkpoint rows for durable partitions."""
+    def execute_checkpoints(self, records: tuple[DerivedCheckpointRecord, ...]) -> None:
+        """Execute checkpoint INSERTs without committing."""
         if not records:
             return
         self._sqlite_client.executemany(
@@ -175,10 +227,11 @@ class SQLiteDerivedCatalogWriter:
                 for record in records
             ],
         )
-        self._sqlite_client.commit()
 
-    def write_dependencies(self, records: tuple[DerivedDependencyRecord, ...]) -> None:
-        """Persist dependency rows."""
+    def execute_dependencies(
+        self, records: tuple[DerivedDependencyRecord, ...]
+    ) -> None:
+        """Execute dependency INSERTs without committing."""
         if not records:
             return
         self._sqlite_client.executemany(
@@ -198,13 +251,11 @@ class SQLiteDerivedCatalogWriter:
                 for record in records
             ],
         )
-        self._sqlite_client.commit()
 
-    def write_invalidations(
-        self,
-        records: tuple[DerivedInvalidationRecord, ...],
+    def execute_invalidations(
+        self, records: tuple[DerivedInvalidationRecord, ...]
     ) -> None:
-        """Persist invalidation rows."""
+        """Execute invalidation INSERTs without committing."""
         if not records:
             return
         self._sqlite_client.executemany(
@@ -237,14 +288,11 @@ class SQLiteDerivedCatalogWriter:
                 for record in records
             ],
         )
-        self._sqlite_client.commit()
 
-    def mark_invalidation_processed(
-        self,
-        invalidation_id: str,
-        processed_at: str,
+    def execute_invalidation_processed(
+        self, invalidation_id: str, processed_at: str
     ) -> None:
-        """Mark one invalidation row as processed."""
+        """Execute invalidation processed UPDATE without committing."""
         self._sqlite_client.execute(
             """
             UPDATE derived_invalidation
@@ -253,14 +301,15 @@ class SQLiteDerivedCatalogWriter:
             """,
             (processed_at, invalidation_id),
         )
-        self._sqlite_client.commit()
 
-    def mark_invalidation_status(
-        self,
-        invalidation_id: str,
-        status: str,
-    ) -> None:
-        """Update the status of one invalidation row."""
+    def execute_invalidation_status(self, invalidation_id: str, status: str) -> None:
+        """Execute invalidation status UPDATE without committing."""
+        if status not in _VALID_INVALIDATION_STATUSES:
+            msg = (
+                f"invalid invalidation status: {status!r}, "
+                f"expected one of {sorted(_VALID_INVALIDATION_STATUSES)}"
+            )
+            raise ValueError(msg)
         self._sqlite_client.execute(
             """
             UPDATE derived_invalidation
@@ -269,4 +318,66 @@ class SQLiteDerivedCatalogWriter:
             """,
             (status, invalidation_id),
         )
-        self._sqlite_client.commit()
+
+    # --- write methods (execute + commit, backward-compatible) ---
+
+    def write_spec(self, record: DerivedSpecRecord) -> None:
+        """Persist one derived spec row."""
+        self.execute_spec(record)
+        self.commit()
+
+    def write_version(self, record: DerivedVersionRecord) -> None:
+        """Persist one derived version row."""
+        self.execute_version(record)
+        self.commit()
+
+    def write_run(self, record: DerivedRunRecord) -> None:
+        """Persist one materialization run row."""
+        self.execute_run(record)
+        self.commit()
+
+    def write_state(self, record: DerivedStateRecord) -> None:
+        """Persist the latest durable state row."""
+        self.execute_state(record)
+        self.commit()
+
+    def write_partitions(self, records: tuple[DerivedPartitionRecord, ...]) -> None:
+        """Persist partition rows for one run."""
+        self.execute_partitions(records)
+        self.commit()
+
+    def write_checkpoints(self, records: tuple[DerivedCheckpointRecord, ...]) -> None:
+        """Persist checkpoint rows for durable partitions."""
+        self.execute_checkpoints(records)
+        self.commit()
+
+    def write_dependencies(self, records: tuple[DerivedDependencyRecord, ...]) -> None:
+        """Persist dependency rows."""
+        self.execute_dependencies(records)
+        self.commit()
+
+    def write_invalidations(
+        self,
+        records: tuple[DerivedInvalidationRecord, ...],
+    ) -> None:
+        """Persist invalidation rows."""
+        self.execute_invalidations(records)
+        self.commit()
+
+    def mark_invalidation_processed(
+        self,
+        invalidation_id: str,
+        processed_at: str,
+    ) -> None:
+        """Mark one invalidation row as processed."""
+        self.execute_invalidation_processed(invalidation_id, processed_at)
+        self.commit()
+
+    def mark_invalidation_status(
+        self,
+        invalidation_id: str,
+        status: str,
+    ) -> None:
+        """Update the status of one invalidation row."""
+        self.execute_invalidation_status(invalidation_id, status)
+        self.commit()

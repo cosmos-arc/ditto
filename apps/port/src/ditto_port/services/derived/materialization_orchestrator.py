@@ -28,19 +28,17 @@ from ditto_datahub.models.derived import (
     DerivedPartitionRecord,
     DerivedRunRecord,
     DerivedStateRecord,
+    PartitionInfo,
 )
 from ditto_datahub.models.publication_safety import (
     DerivedMinimalDQSummaryRecord,
-    DerivedShadowSlotRecord,
+)
+from ditto_datahub.services.derived.artifact_persistence_service import (
+    ArtifactPersistenceService,
 )
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
-from ditto_datahub.services.derived_shadow_slot_service import DerivedShadowSlotService
 from ditto_datahub.services.publication_safety_record_service import (
     PublicationSafetyRecordService,
-)
-from ditto_datahub.stores.runtime.derived_artifact_writer import (
-    DerivedArtifactWriter,
-    PartitionInfo,
 )
 
 from ditto_port.services.derived.materialization import (
@@ -53,7 +51,6 @@ from ditto_port.services.derived.materialization import (
     hydrate_spec,
     now_iso,
     prepare_input_frame,
-    resolve_shadow_baseline,
 )
 
 __all__ = [
@@ -86,11 +83,10 @@ class DerivedMaterializationOrchestrator:
         *,
         catalog_service: DerivedCatalogService,
         compile_cache_service: SQLiteCompileCache,
-        artifact_writer: DerivedArtifactWriter,
+        artifact_writer: ArtifactPersistenceService,
         input_provider: DerivedInputProvider,
         universe_provider: UniverseProvider | None = None,
         publication_record_service: PublicationSafetyRecordService | None = None,
-        shadow_slot_service: DerivedShadowSlotService | None = None,
     ) -> None:
         self._catalog_service = catalog_service
         self._compile_cache_service = compile_cache_service
@@ -98,7 +94,6 @@ class DerivedMaterializationOrchestrator:
         self._input_provider = input_provider
         self._universe_provider = universe_provider
         self._publication_record_service = publication_record_service
-        self._shadow_slot_service = shadow_slot_service
         self._planner = DerivedExecutionPlanner()
 
     def materialize(
@@ -130,7 +125,7 @@ class DerivedMaterializationOrchestrator:
             force_recompile=request.force_recompile,
         )
         earliest_pending = earliest_pending_start(
-            self._catalog_service.list_pending_invalidations(),
+            self._catalog_service.list_stale_invalidations(),
             spec.id,
             spec.version,
         )
@@ -491,23 +486,6 @@ class DerivedMaterializationOrchestrator:
             source_snapshot_id=request.source_snapshot_id,
             manifest_record=manifest_record,
             minimal_dq_record=minimal_dq_record,
-        )
-        shadow_slot_service = self._shadow_slot_service
-        if shadow_slot_service is None:
-            return
-        baseline_version = resolve_shadow_baseline(
-            catalog_service=self._catalog_service,
-            derived_id=spec.id,
-            candidate_version=spec.version,
-        )
-        shadow_slot_service.save_slot(
-            DerivedShadowSlotRecord(
-                derived_id=spec.id,
-                candidate_version=spec.version,
-                baseline_version=baseline_version,
-                activated_at=now_iso(),
-                disabled_at=None,
-            )
         )
 
     def _maybe_apply_cs_amplification(

@@ -12,9 +12,9 @@ from ditto_datahub.services.source_service import SourceService
 from ditto_datahub.sources import ExchangeTransformers
 
 from ditto_port.services.derived import (
-    DerivedInvalidationOrchestrator,
     DerivedMaterializationOrchestrator,
     DerivedPublicationFacade,
+    InvalidationCascadeOrchestrator,
     ResearchDatasetFacade,
 )
 from ditto_port.services.ingestion.backfill import BackfillManager
@@ -47,6 +47,6 @@ class MaterializationBundle:
     """物化上下文组合包。"""
 
     materialization_service: DerivedMaterializationOrchestrator
-    invalidation_service: DerivedInvalidationOrchestrator
+    invalidation_service: InvalidationCascadeOrchestrator
     publication_facade: DerivedPublicationFacade
     research_dataset_facade: ResearchDatasetFacade

@@ -6,7 +6,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from hashlib import sha256
-from pathlib import Path
 from typing import cast
 from uuid import uuid4
 
@@ -21,7 +20,7 @@ from ditto_core.engine.research import (
     SpineSpec,
 )
 from ditto_core.engine.specs import CalendarId, GrainId
-from ditto_datahub.errors import DerivedNotFoundError
+from ditto_datahub.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_datahub.models.research import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
@@ -31,6 +30,7 @@ from ditto_datahub.models.research import (
 from ditto_datahub.services import DerivedArtifactReader, ResearchCatalogService
 from ditto_datahub.services.derived import VersionResolutionStrategy
 from ditto_datahub.services.metadata_service import MetadataService
+from ditto_datahub.services.research_artifact_service import ResearchArtifactService
 
 __all__ = ["ResearchDatasetFacade"]
 
@@ -59,12 +59,12 @@ class ResearchDatasetFacade:
         metadata_service: MetadataService,
         research_catalog_service: ResearchCatalogService,
         artifact_reader: DerivedArtifactReader,
-        data_root: Path,
+        research_artifact_service: ResearchArtifactService,
     ) -> None:
         self._metadata_service = metadata_service
         self._research_catalog_service = research_catalog_service
         self._artifact_reader = artifact_reader
-        self._data_root = Path(data_root)
+        self._artifact_service = research_artifact_service
 
     def build(
         self,
@@ -90,7 +90,7 @@ class ResearchDatasetFacade:
             start=start,
             end=end,
         )
-        spine_frame = pl.read_parquet(self._data_root / spine_snapshot.data_path)
+        spine_frame = self._artifact_service.read_parquet(spine_snapshot.data_path)
         known_at_policy = (
             KnownAtPolicy.EXPLICIT_CUTOFF
             if explicit_cutoff is not None
@@ -119,11 +119,14 @@ class ResearchDatasetFacade:
                     strategy=VersionResolutionStrategy.FALLBACK_TO_ACTIVE,
                 )
             resolved_versions[derived_id] = resolved_version
-            artifact_path = _resolve_artifact_path(
-                data_root=self._data_root,
-                derived_id=derived_id,
-                version=resolved_version,
+            artifact_path = self._artifact_service.resolve_artifact_relative_path(
+                derived_id,
+                resolved_version,
             )
+            if artifact_path is None:
+                artifact_path = (
+                    f"derived/artifacts/unknown/{derived_id}/v{resolved_version}"
+                )
             resolved_inputs.append(
                 {
                     "derived_id": derived_id,
@@ -132,7 +135,7 @@ class ResearchDatasetFacade:
                 }
             )
             source_snapshot_ids.update(
-                _read_source_snapshot_ids(self._data_root / artifact_path)
+                self._artifact_service.read_source_snapshot_ids(artifact_path)
             )
             source_frame = self._artifact_reader.read_frame(
                 derived_id=derived_id,
@@ -175,16 +178,9 @@ class ResearchDatasetFacade:
 
     def load_build_report(self, snapshot: DatasetSnapshot) -> dict[str, object]:
         """Load the persisted build report for one dataset snapshot."""
-        report_path = (
-            _dataset_snapshot_root(self._data_root, snapshot) / _BUILD_REPORT_FILENAME
-        )
-        payload = orjson.loads(report_path.read_bytes())
-        if not isinstance(payload, dict):
-            raise ValueError(
-                "invalid research build report payload for "
-                + f"snapshot_id={snapshot.snapshot_id}"
-            )
-        return cast(dict[str, object], payload)
+        snapshot_dir = snapshot.data_path.rsplit("/", 1)[0]
+        report_relative = f"{snapshot_dir}/{_BUILD_REPORT_FILENAME}"
+        return self._artifact_service.read_json(report_relative)
 
     def _build_spine_snapshot(
         self,
@@ -222,19 +218,12 @@ class ResearchDatasetFacade:
 
         created_at = _now_iso()
         snapshot_id = f"rsp-{uuid4().hex[:12]}"
-        snapshot_path = (
-            self._data_root
-            / "derived"
-            / "research"
-            / "spines"
-            / spine_spec.spine_id
-            / "snapshots"
-            / snapshot_id
-            / "data.parquet"
+        relative_path = (
+            f"derived/research/spines/{spine_spec.spine_id}"
+            f"/snapshots/{snapshot_id}/data.parquet"
         )
-        snapshot_path.parent.mkdir(parents=True, exist_ok=True)
-        spine_frame.write_parquet(snapshot_path)
-        relative_path = str(snapshot_path.relative_to(self._data_root))
+        self._artifact_service.write_parquet(relative_path, spine_frame)
+        snapshot_dir = relative_path.rsplit("/", 1)[0]
         metadata: dict[str, object] = {
             "spine_snapshot_id": snapshot_id,
             "spine_id": spine_spec.spine_id,
@@ -246,8 +235,8 @@ class ResearchDatasetFacade:
             "created_at": created_at,
         }
         manifest_hash = _manifest_hash(metadata)
-        _write_metadata_file(
-            snapshot_path.parent / "metadata.json",
+        self._artifact_service.write_json(
+            f"{snapshot_dir}/metadata.json",
             {**metadata, "manifest_hash": manifest_hash},
         )
         record = ResearchSpineSnapshotRecord(
@@ -287,19 +276,12 @@ class ResearchDatasetFacade:
     ) -> DatasetSnapshot:
         created_at = _now_iso()
         snapshot_id = f"rds-{uuid4().hex[:12]}"
-        snapshot_path = (
-            self._data_root
-            / "derived"
-            / "research"
-            / "datasets"
-            / dataset_id
-            / "snapshots"
-            / snapshot_id
-            / "data.parquet"
+        relative_path = (
+            f"derived/research/datasets/{dataset_id}"
+            f"/snapshots/{snapshot_id}/data.parquet"
         )
-        snapshot_path.parent.mkdir(parents=True, exist_ok=True)
-        dataset_frame.write_parquet(snapshot_path)
-        relative_path = str(snapshot_path.relative_to(self._data_root))
+        self._artifact_service.write_parquet(relative_path, dataset_frame)
+        snapshot_dir = relative_path.rsplit("/", 1)[0]
         metadata: dict[str, object] = {
             "snapshot_id": snapshot_id,
             "dataset_id": dataset_id,
@@ -319,12 +301,12 @@ class ResearchDatasetFacade:
             "created_at": created_at,
         }
         manifest_hash = _manifest_hash(metadata)
-        _write_metadata_file(
-            snapshot_path.parent / "metadata.json",
+        self._artifact_service.write_json(
+            f"{snapshot_dir}/metadata.json",
             {**metadata, "manifest_hash": manifest_hash},
         )
-        _write_metadata_file(
-            snapshot_path.parent / _BUILD_REPORT_FILENAME,
+        self._artifact_service.write_json(
+            f"{snapshot_dir}/{_BUILD_REPORT_FILENAME}",
             build_report,
         )
         record = ResearchDatasetSnapshotRecord(
@@ -482,21 +464,17 @@ def _source_value_column(source_frame: pl.DataFrame) -> str:
     for column in source_frame.columns:
         if column not in key_columns:
             return column
-    raise KeyError("source frame does not contain a research value column")
+    raise DerivedValidationError(
+        "source frame does not contain a research value column",
+        field="columns",
+        value=str(source_frame.columns),
+        reason="no non-key column found to serve as research value",
+    )
 
 
 def _manifest_hash(metadata: Mapping[str, object]) -> str:
     payload = orjson.dumps(metadata, option=orjson.OPT_SORT_KEYS)
     return sha256(payload).hexdigest()
-
-
-def _write_metadata_file(path: Path, metadata: Mapping[str, object]) -> None:
-    path.write_bytes(
-        orjson.dumps(
-            metadata,
-            option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS,
-        )
-    )
 
 
 def _build_dataset_report(
@@ -541,43 +519,6 @@ def _collect_null_counts(
 
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
-
-
-def _dataset_snapshot_root(data_root: Path, snapshot: DatasetSnapshot) -> Path:
-    return (data_root / snapshot.data_path).parent
-
-
-def _resolve_artifact_path(
-    data_root: Path,
-    *,
-    derived_id: str,
-    version: int,
-) -> str:
-    artifact_root = data_root / "derived" / "artifacts"
-    matches = sorted(artifact_root.glob(f"*/{derived_id}/v{version}"))
-    if matches:
-        return str(matches[0].relative_to(data_root))
-    return f"derived/artifacts/unknown/{derived_id}/v{version}"
-
-
-def _read_source_snapshot_ids(version_root: Path) -> tuple[str, ...]:
-    runs_root = version_root / "_runs"
-    if not runs_root.exists():
-        return ()
-    metadata_paths = tuple(runs_root.glob("*/artifact_metadata.json"))
-    if not metadata_paths:
-        return ()
-    latest_metadata = max(metadata_paths, key=lambda path: path.stat().st_mtime_ns)
-    payload = orjson.loads(latest_metadata.read_bytes())
-    raw_snapshots = payload.get("input_snapshots", [])
-    if not isinstance(raw_snapshots, list):
-        return ()
-    typed_raw_snapshots = cast(list[object], raw_snapshots)
-    snapshot_ids: list[str] = []
-    for raw_snapshot_id in typed_raw_snapshots:
-        if isinstance(raw_snapshot_id, str) and raw_snapshot_id != "":
-            snapshot_ids.append(raw_snapshot_id)
-    return tuple(sorted(set(snapshot_ids)))
 
 
 def _coerce_date(value: str) -> date:

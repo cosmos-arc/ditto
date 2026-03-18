@@ -20,19 +20,77 @@ from ditto_core.engine.materialization import (
 def _sample_frame() -> pl.DataFrame:
     return pl.DataFrame(
         {
-            "instrument_id": [1, 1, 1, 2, 2, 2],
+            "instrument_id": [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2],
             "trade_date": [
+                date(2026, 3, 8),
+                date(2026, 3, 9),
                 date(2026, 3, 10),
                 date(2026, 3, 11),
                 date(2026, 3, 12),
+                date(2026, 3, 13),
+                date(2026, 3, 8),
+                date(2026, 3, 9),
                 date(2026, 3, 10),
                 date(2026, 3, 11),
                 date(2026, 3, 12),
+                date(2026, 3, 13),
             ],
-            "close": [10.0, 12.0, 15.0, 8.0, 9.0, 11.0],
-            "volume": [100.0, 120.0, 140.0, 90.0, 95.0, 105.0],
-            "alpha_base": [0.10, 0.15, 0.20, -0.05, 0.05, 0.08],
-            "alpha_state": ["pass", "halt", "pass", "pass", "halt", "pass"],
+            "close": [
+                10.0,
+                11.0,
+                10.0,
+                12.0,
+                15.0,
+                8.0,
+                8.0,
+                7.5,
+                8.0,
+                9.0,
+                11.0,
+                20.0,
+            ],
+            "volume": [
+                100.0,
+                110.0,
+                100.0,
+                120.0,
+                140.0,
+                130.0,
+                90.0,
+                85.0,
+                90.0,
+                95.0,
+                105.0,
+                110.0,
+            ],
+            "alpha_base": [
+                0.10,
+                0.12,
+                0.10,
+                0.15,
+                0.20,
+                0.18,
+                -0.05,
+                -0.03,
+                -0.05,
+                0.05,
+                0.08,
+                0.12,
+            ],
+            "alpha_state": [
+                "pass",
+                "pass",
+                "pass",
+                "halt",
+                "pass",
+                "pass",
+                "pass",
+                "pass",
+                "pass",
+                "halt",
+                "pass",
+                "pass",
+            ],
         }
     )
 
@@ -89,7 +147,7 @@ class TestExpressionCompiler:
 
         assert "value" in result.columns
         non_null = result.drop_nulls("value")
-        assert non_null.height == 4
+        assert non_null.height == 10
         assert non_null["value"].min() >= 0.0
         assert non_null["value"].max() <= 1.0
 
@@ -163,11 +221,89 @@ class TestExpressionCompiler:
         assert result["value"].to_list() == [
             "pass",
             "block",
-            "block",
             "pass",
             "block",
             "block",
+            "pass",
+            "pass",
+            "pass",
+            "pass",
+            "block",
+            "block",
+            "block",
         ]
+
+    def test_codegen_ts_rank(self) -> None:
+        """ts_rank should produce per-group percentile rank over shifted window."""
+        spec = DerivedSpec(
+            id="factor.ts_rank",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_rank(market.close, 3)",
+        )
+        compiler = ExpressionCompiler()
+        compiled = compiler.compile(spec)
+
+        result = (
+            _sample_frame()
+            .sort(["instrument_id", "trade_date"])
+            .with_columns(compiled.expr.alias("value"))
+        )
+
+        assert "value" in result.columns
+        non_null = result.drop_nulls("value")
+        # 4 per instrument (rolling_rank includes null slots)
+        assert non_null.height == 8
+        assert non_null["value"].min() >= 0.0
+        assert non_null["value"].max() <= 1.0
+
+    def test_codegen_ts_argmax(self) -> None:
+        """ts_argmax should return the position of the maximum in the window."""
+        spec = DerivedSpec(
+            id="factor.ts_argmax",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_argmax(market.close, 3)",
+        )
+        compiler = ExpressionCompiler()
+        compiled = compiler.compile(spec)
+
+        result = (
+            _sample_frame()
+            .sort(["instrument_id", "trade_date"])
+            .with_columns(compiled.expr.alias("value"))
+        )
+
+        assert "value" in result.columns
+        non_null = result.drop_nulls("value")
+        assert non_null.height == 6
+        # arg_max should return integer indices (0-based from the shifted window)
+        assert set(non_null["value"].cast(pl.Int64).to_list()).issubset({0, 1, 2})
+
+    def test_codegen_ts_argmin(self) -> None:
+        """ts_argmin should return the position of the minimum in the window."""
+        spec = DerivedSpec(
+            id="factor.ts_argmin",
+            version=1,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_argmin(market.close, 3)",
+        )
+        compiler = ExpressionCompiler()
+        compiled = compiler.compile(spec)
+
+        result = (
+            _sample_frame()
+            .sort(["instrument_id", "trade_date"])
+            .with_columns(compiled.expr.alias("value"))
+        )
+
+        assert "value" in result.columns
+        non_null = result.drop_nulls("value")
+        assert non_null.height == 6
+        assert set(non_null["value"].cast(pl.Int64).to_list()).issubset({0, 1, 2})
 
 
 class TestDerivedExecutionPlanner:

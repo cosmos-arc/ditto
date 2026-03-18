@@ -318,6 +318,31 @@ def _compile_time_series_special(
     if name == "ts_pct_change":
         period = _read_int_literal(raw_arguments, 1, source=source)
         return (arguments[0] / arguments[0].shift(period).over(entity_keys)) - 1
+    if name == "ts_rank":
+        window = _read_int_literal(raw_arguments, 1, source=source)
+        shifted = arguments[0].shift(1)
+        return (
+            shifted.rolling_rank(window_size=window, min_samples=window)
+            .cast(pl.Float64)
+            .over(entity_keys)
+            / window
+        )
+    if name in {"ts_argmax", "ts_argmin"}:
+        window = _read_int_literal(raw_arguments, 1, source=source)
+        shifted = arguments[0].shift(1)
+
+        def _rolling_argmax(s: pl.Series) -> int:
+            idx = s.arg_max()
+            return idx if idx is not None else -1
+
+        def _rolling_argmin(s: pl.Series) -> int:
+            idx = s.arg_min()
+            return idx if idx is not None else -1
+
+        arg_func = _rolling_argmax if name == "ts_argmax" else _rolling_argmin
+        return shifted.rolling_map(
+            arg_func, window_size=window, min_samples=window
+        ).over(entity_keys)
     return None
 
 

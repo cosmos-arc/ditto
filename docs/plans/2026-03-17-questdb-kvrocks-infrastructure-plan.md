@@ -1,823 +1,532 @@
-# QuestDB + Kvrocks 基础设施实施计划
+# QuestDB + Kvrocks 基础设施修订实施计划
 
-**创建日期**: 2026-03-17
-**前序**: ADR-011/023/027/028/029/030/031/040 设计文档已完成
-**目标**: 从设计到落地，建立盘中热层数据基础设施
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
----
+**Goal:** 在不破坏现有同步接口、分层边界和 Parquet 真相层约束的前提下，落地可重建的 QuestDB/Kvrocks 热层基础设施，并补齐 ADR-040 要求的 `bar_1m` 冷回放前置能力。
 
-## 整改目标
+**Architecture:** 本计划先修正语义和前置条件，再实现基础设施骨架。QuestDB 只负责热序列、DDL 与时间窗口查询，Kvrocks 负责 latest snapshot 与控制面状态，Parquet 继续作为唯一长期真相层，并新增最小化的 `bar_1m` 冷回放窗口支撑热层重建。
 
-| 维度 | 当前 | Phase 1 | Phase 2 | Phase 3 |
-|------|------|---------|---------|---------|
-| **部署环境** | 无 | Docker Compose 就绪 | DDL 自动创建 | 完整拓扑 |
-| **依赖引入** | 无 | questdb + redis 客户端 | - | - |
-| **连接基础设施** | 无 | infra 客户端 + 健康检查 | 生产实现 | - |
-| **Protocol 实现** | Unavailable 占位 | InMemory/Fake | QuestDB/Kvrocks Real | - |
-| **数据读写** | 无 | Fake 读写 | ILP 写入 + SQL 查询 | 集成到流水线 |
-| **Pushdown** | 无 | - | - | 时间序列算子下推 |
-| **测试** | - | Testcontainers 集成 | 协议实现测试 | 端到端测试 |
+**Tech Stack:** Python 3.13、Polars、orjson、QuestDB ILP client、psycopg、redis、httpx、testcontainers、Docker Compose、Dishka、pytest、Pixi
 
 ---
 
-## 核心约束
+## 一、修订背景
 
-| 约束项 | 内容 |
-|--------|------|
-| 分层 | `infra`（连接池）→ `datahub`（业务实现）→ `core`（语义定义） |
-| 部署 | Docker Compose 开发/测试，Testcontainers 集成测试 |
-| 测试 | Fake/InMemory 单元测试 + Testcontainers 真实实例集成测试 |
-| 向后兼容 | 不需要，直接实现 |
-| ADR 对齐 | 所有实现必须符合 ADR-028/031/040 的 DDL、Key 模式和 TTL 策略 |
+原始计划存在五个会导致返工的结构性问题，本修订版统一纠正：
 
----
+1. **QuestDB 与 Kvrocks 的 serving 语义混淆**
+   - 原计划默认 `get_latest()` 从 QuestDB 读取。
+   - 但 ADR-029/030 的正式口径是：`latest` 优先 Kvrocks，`recent series` 优先 QuestDB。
 
-## Phase 总览
+2. **同步协议 + 异步客户端桥接方案不成立**
+   - 当前 `DerivedQueryFacade`、`DerivedMaterializationOrchestrator`、`HotLayerReader`、`StateStore` 均为同步接口。
+   - 在这个基础上引入 `redis.asyncio` + `asyncio.to_thread()` 只会增加复杂度，不会减少改动。
 
-| Phase | 名称 | 核心目标 | 依赖 | 预估 |
-|-------|------|----------|------|------|
-| **Phase 1** | 连接层 + 配置 + 部署 + Fake | 基础设施就绪，DI 可注入 | 无 | Week 1-2 |
-| **Phase 2** | 协议实现 + 数据读写 | 3 个 Protocol 生产版本 | Phase 1 | Week 3-4 |
-| **Phase 3** | 集成到流水线 + 盘中模式 | 端到端盘中因子计算 | Phase 2 | Week 5-7 |
+3. **配置接入点判断错误**
+   - 当前 Port 侧只会加载 `config/{env}/data_store.env`。
+   - 新增独立 `questdb.env` / `kvrocks.env` 不修改加载链路就不会生效。
 
----
+4. **ADR-040 的前置条件在代码中尚不存在**
+   - 文档要求保留 30 天标准化 `bar_1m` 冷回放窗口。
+   - 现有 Market Store 仍以日频 Parquet 为主，尚无分钟真相层可供 QuestDB/Kvrocks 重建。
 
-## Phase 1: 连接层 + 配置 + 部署 + Fake
-
-### 目标
-
-建立基础设施骨架，不实现任何业务逻辑。开发环境一键启动，DI 可根据配置选择 Real 或 Fake 实现。
-
-### 1.1 Docker Compose 服务定义
-
-**文件**: `docker-compose.dev.yml`
-
-```yaml
-services:
-  questdb:
-    image: questdb/questdb:latest
-    ports:
-      - "9000:9000"   # HTTP/PG
-      - "9009:9009"   # ILP
-      - "8812:8812"   # PG Wire
-    volumes:
-      - questdb_data:/root/.questdb
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/status"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  kvrocks:
-    image: apache/kvrocks:latest
-    ports:
-      - "6666:6666"
-    command: kvrocks --bind 0.0.0.0 --port 6666
-    volumes:
-      - kvrocks_data:/var/lib/kvrocks
-    healthcheck:
-      test: ["CMD", "redis-cli", "-p", "6666", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-volumes:
-  questdb_data:
-  kvrocks_data:
-```
-
-**配置文件**:
-
-| 文件 | 内容 |
-|------|------|
-| `config/development/questdb.env` | `QUESTDB_HOST=localhost`, `QUESTDB_ILP_PORT=9009`, `QUESTDB_PG_PORT=8812` |
-| `config/development/kvrocks.env` | `KVROCKS_HOST=localhost`, `KVROCKS_PORT=6666` |
-| `config/testing/questdb.env` | Testcontainers 自动注入，无需配置文件 |
-| `config/testing/kvrocks.env` | Testcontainers 自动注入，无需配置文件 |
-
-### 1.2 pixi.toml 依赖
-
-```toml
-[pypi-dependencies]
-# 新增
-questdb = ">=3.0"
-redis = { version = ">=5.0", extras = ["hiredis"] }
-
-# 测试依赖
-[feature.dev.dependencies]
-testcontainers = ">=4.0"
-```
-
-**选型说明**:
-- `questdb`: 官方 Python 客户端，提供 `ingress.Sender`（ILP 写入）和 HTTP/PG 查询
-- `redis[hiredis]`: Kvrocks 兼容 Redis 协议，`redis.asyncio` 提供异步连接池
-- `testcontainers`: 启动真实容器进行集成测试
-
-### 1.3 Pydantic 配置模型
-
-**文件**: `packages/datahub/src/ditto_datahub/settings.py`（扩展）
-
-```python
-@dataclass(frozen=True)
-class QuestDBSettings:
-    """QuestDB connection settings."""
-    host: str = "localhost"
-    ilp_port: int = 9009
-    pg_port: int = 8812
-    enabled: bool = False  # 是否启用真实连接（否则使用 Fake）
-
-@dataclass(frozen=True)
-class KvrocksSettings:
-    """Kvrocks connection settings."""
-    host: str = "localhost"
-    port: int = 6666
-    password: str | None = None
-    db: int = 0
-    enabled: bool = False  # 是否启用真实连接（否则使用 Fake）
-```
-
-**优先级**: 环境变量 > `.env` 文件 > 默认值（与现有 `DataSourceSettings` 一致）
-
-### 1.4 infra 连接客户端
-
-**文件**: `packages/infra/src/ditto_infra/clients/`
-
-```
-clients/
-├── __init__.py
-├── questdb.py      # QuestDBClient
-└── kvrocks.py      # KvrocksClient
-```
-
-**QuestDBClient**:
-
-```python
-class QuestDBClient:
-    """QuestDB 连接客户端。
-
-    封装 ILP Sender（写入）和 HTTP/PG 连接（查询），
-    提供统一的生命周期管理和健康检查。
-    """
-
-    def __init__(self, settings: QuestDBSettings) -> None: ...
-
-    @property
-    def is_available(self) -> bool: ...
-
-    async def health_check(self) -> bool: ...
-
-    async def flush(self) -> None:
-        """刷新 ILP buffer。"""
-        ...
-
-    async def execute_query(self, sql: str, params: dict | None = None) -> pl.DataFrame:
-        """执行查询并返回 Polars DataFrame。"""
-        ...
-
-    async def close(self) -> None: ...
-```
-
-**KvrocksClient**:
-
-```python
-class KvrocksClient:
-    """Kvrocks 连接客户端（Redis 协议兼容）。
-
-    封装 redis.asyncio 连接池，提供健康检查和生命周期管理。
-    """
-
-    def __init__(self, settings: KvrocksSettings) -> None: ...
-
-    @property
-    def is_available(self) -> bool: ...
-
-    async def health_check(self) -> bool: ...
-
-    @property
-    def redis(self) -> redis.asyncio.Redis:
-        """底层 Redis 客户端，供业务层使用。"""
-        ...
-
-    async def close(self) -> None: ...
-```
-
-### 1.5 Fake/InMemory 实现
-
-**文件**: `packages/datahub/src/ditto_datahub/services/hot_layer/`
-
-```
-hot_layer/
-├── __init__.py           # Protocol 定义（已有）+ re-export
-├── in_memory_reader.py   # InMemoryHotLayerReader
-├── in_memory_writer.py   # InMemoryHotLayerWriter
-└── in_memory_store.py    # InMemoryStateStore
-```
-
-**InMemoryHotLayerReader**:
-- `is_available()` → 始终返回 `True`
-- `read_latest()` → 从内存字典读取
-- 支持写入（测试用）
-
-**InMemoryStateStore**:
-- `get()` / `set()` → 内存字典
-- 支持 TTL 模拟（可选）
-
-### 1.6 DI Provider 注册
-
-**文件**: `apps/port/src/ditto_port/registry/datahub/hot_layer.py`（新增）
-
-```python
-class HotLayerProvider(SingletonScope):
-    """热层基础设施 Provider。"""
-
-    @provide
-    def questdb_client(self, settings: QuestDBSettings) -> QuestDBClient: ...
-
-    @provide
-    def kvrocks_client(self, settings: KvrocksSettings) -> KvrocksClient: ...
-
-    @provide
-    def hot_layer_reader(self, ...) -> HotLayerReader:
-        """根据 enabled 配置选择 Real 或 InMemory 实现。"""
-        if settings.questdb.enabled:
-            return QuestDBReader(questdb_client)
-        return InMemoryHotLayerReader()
-
-    @provide
-    def hot_layer_writer(self, ...) -> HotLayerWriter: ...
-
-    @provide
-    def state_store(self, ...) -> StateStore:
-        """根据 enabled 配置选择 Real 或 InMemory 实现。"""
-        if settings.kvrocks.enabled:
-            return KvrocksStore(kvrocks_client)
-        return InMemoryStateStore()
-```
-
-### 1.7 Testcontainers 工具
-
-**文件**: `packages/infra/tests/conftest.py`
-
-```python
-@pytest.fixture(scope="session")
-def questdb_container():
-    """启动 QuestDB 容器，返回连接参数。"""
-    with QuestDBContainer("questdb/questdb:latest") as container:
-        yield container
-
-@pytest.fixture(scope="session")
-def kvrocks_container():
-    """启动 Kvrocks 容器，返回连接参数。"""
-    with KvrocksContainer("apache/kvrocks:latest") as container:
-        yield container
-```
-
-### Phase 1 验收标准
-
-| 检查项 | 标准 |
-|--------|------|
-| Docker Compose | `docker compose -f docker-compose.dev.yml up` 两个服务健康检查通过 |
-| 健康检查 | `QuestDBClient.health_check()` 和 `KvrocksClient.health_check()` 返回 True |
-| DI 注入 | `HotLayerProvider` 根据 `enabled` 配置正确注入 Real/Fake |
-| Fake 实现 | `InMemoryHotLayerReader`、`InMemoryStateStore` 通过单元测试 |
-| Testcontainers | 集成测试可启动真实容器并执行健康检查 |
-| 类型检查 | 0 errors |
-| 测试 | 全部通过 |
+5. **现有 hot-layer 抽象不足以承载 ADR-031**
+   - `StateStore` 只有 bytes 级 `get/set`，无法表达 HASH/BLOB 双 ABI。
+   - `HotLayerReader.read_latest()` 也无法同时承载 Kvrocks latest 与 QuestDB series 两种职责。
 
 ---
 
-## Phase 2: 协议实现 + 数据读写
+## 二、冻结决策
 
-### 目标
+以下决策在 2026-03-17 已收敛，可直接作为实施基线。
 
-实现 3 个 Protocol 的 QuestDB/Kvrocks 生产版本，支持热表 DDL 自动创建和基础读写。
-
-### 2.1 QuestDB DDL 管理
-
-**文件**: `packages/datahub/src/ditto_datahub/services/hot_layer/questdb_ddl.py`
-
-```python
-QUESTDB_DDL = [
-    # bar_1m_hot（ADR-028）
-    "CREATE TABLE IF NOT EXISTS bar_1m_hot (...)",
-    "ALTER TABLE bar_1m_hot SET TTL 5 DAYS",
-    # f_1m_hot（ADR-028）
-    "CREATE TABLE IF NOT EXISTS f_1m_hot (...)",
-    "ALTER TABLE f_1m_hot SET TTL 5 DAYS",
-    # 物化视图
-    "CREATE MATERIALIZED VIEW IF NOT EXISTS bar_5m_mv AS ...",
-    "CREATE MATERIALIZED VIEW IF NOT EXISTS bar_15m_mv AS ...",
-    "CREATE MATERIALIZED VIEW IF NOT EXISTS bar_60m_mv AS ...",
-]
-
-class QuestDBDDLManager:
-    """管理 QuestDB 热表 DDL 创建。"""
-
-    async def ensure_tables(self, client: QuestDBClient) -> None:
-        """确保所有热表和物化视图已创建。"""
-        ...
-
-    async def verify_tables(self, client: QuestDBClient) -> list[str]:
-        """验证表是否存在，返回缺失的表名。"""
-        ...
-```
-
-### 2.2 QuestDBReader 实现
-
-**文件**: `packages/datahub/src/ditto_datahub/services/hot_layer/questdb_reader.py`
-
-```python
-class QuestDBReader:
-    """HotLayerReader 的 QuestDB 实现（ADR-028/030）。"""
-
-    def __init__(self, client: QuestDBClient) -> None:
-        self._client = client
-
-    def is_available(self) -> bool:
-        return self._client.is_available
-
-    def read_latest(
-        self,
-        *,
-        derived_id: str,
-        instrument_ids: tuple[int, ...] | None,
-        as_of: str | None,
-    ) -> pl.DataFrame:
-        """从 QuestDB 查询最新因子值（f_1m_hot）。"""
-        sql = """
-            SELECT * FROM f_1m_hot
-            WHERE factor_id = :factor_id
-              AND ts <= :as_of
-            ORDER BY ts DESC
-            LIMIT 1
-        """
-        ...
-```
-
-### 2.3 QuestDBWriter 实现
-
-**文件**: `packages/datahub/src/ditto_datahub/services/hot_layer/questdb_writer.py`
-
-```python
-class QuestDBWriter:
-    """HotLayerWriter 的 QuestDB 实现（ADR-028 ILP 写入）。"""
-
-    def __init__(self, client: QuestDBClient) -> None:
-        self._client = client
-
-    def write_frame(
-        self,
-        *,
-        derived_id: str,
-        version: int,
-        frame: pl.DataFrame,
-    ) -> int:
-        """通过 ILP 批量写入因子值到 f_1m_hot。"""
-        # frame → ILP row 格式转换
-        # 调用 client.sender.row()
-        # 返回写入行数
-        ...
-```
-
-### 2.4 KvrocksStore 实现
-
-**文件**: `packages/datahub/src/ditto_datahub/services/hot_layer/kvrocks_store.py`
-
-```python
-class KvrocksStore:
-    """StateStore 的 Kvrocks 实现（ADR-031/040）。"""
-
-    def __init__(self, client: KvrocksClient) -> None:
-        self._client = client
-
-    def get(self, key: str) -> bytes | None:
-        raw = self._client.redis.get(key)
-        return raw if raw else None
-
-    def set(
-        self,
-        key: str,
-        value: bytes,
-        ttl_seconds: int | None = None,
-    ) -> None:
-        self._client.redis.set(key, value, ex=ttl_seconds)
-
-    # --- ADR-031 专用方法 ---
-
-    def write_hash_snapshot(
-        self,
-        *,
-        factor_id: str,
-        instrument_id: str,
-        value: float,
-        ts: datetime,
-        trade_date: date,
-        calc_ver: int,
-    ) -> None:
-        """写入 HASH 模式快照（ADR-031）。"""
-        key = f"ditto:derived:state:factor:{factor_id}:snapshot:{instrument_id}"
-        self._client.redis.hset(key, mapping={
-            "v": str(value),
-            "ts": ts.isoformat(),
-            "td": trade_date.isoformat(),
-            "ver": str(calc_ver),
-        })
-
-    def read_hash_snapshot(
-        self,
-        *,
-        factor_id: str,
-        instrument_id: str,
-    ) -> dict | None:
-        """读取 HASH 模式快照。"""
-        key = f"ditto:derived:state:factor:{factor_id}:snapshot:{instrument_id}"
-        data = self._client.redis.hgetall(key)
-        if not data:
-            return None
-        return {
-            "value": float(data[b"v"]),
-            "ts": data[b"ts"].decode(),
-            "trade_date": data[b"td"].decode(),
-            "calc_ver": int(data[b"ver"]),
-        }
-
-    def write_blob_snapshot(
-        self,
-        *,
-        factor_id: str,
-        instrument_id: str,
-        data: dict,
-        ts: datetime,
-        trade_date: date,
-        calc_ver: int,
-        schema_ver: int = 1,
-    ) -> None:
-        """写入 BLOB 模式快照（ADR-031）。"""
-        key = f"ditto:derived:state:factor:{factor_id}:snapshot:{instrument_id}"
-        blob = orjson.dumps({
-            "schema_ver": schema_ver,
-            "factor_id": factor_id,
-            "instrument_id": instrument_id,
-            "serve_mode": "STATE",
-            "ts": ts.isoformat(),
-            "trade_date": trade_date.isoformat(),
-            "calc_ver": calc_ver,
-            "data": data,
-        })
-        self._client.redis.set(key, blob, ex=7 * 24 * 3600)  # 7 天 TTL
-
-    def read_blob_snapshot(
-        self,
-        *,
-        factor_id: str,
-        instrument_id: str,
-    ) -> dict | None:
-        """读取 BLOB 模式快照。"""
-        key = f"ditto:derived:state:factor:{factor_id}:snapshot:{instrument_id}"
-        raw = self._client.redis.get(key)
-        if not raw:
-            return None
-        return orjson.loads(raw)
-
-    def batch_read_snapshots(
-        self,
-        *,
-        factor_id: str,
-        instrument_ids: list[str],
-    ) -> dict[str, dict | None]:
-        """批量读取快照（Pipeline 优化）。"""
-        pipe = self._client.redis.pipeline(transaction=False)
-        for sid in instrument_ids:
-            key = f"ditto:derived:state:factor:{factor_id}:snapshot:{sid}"
-            pipe.hgetall(key)
-        results = pipe.execute()
-        return {
-            sid: self._parse_hash(data) if data else None
-            for sid, data in zip(instrument_ids, results)
-        }
-
-    def clear_factor_snapshots(self, factor_id: str) -> int:
-        """清除某个因子的所有快照（SCAN + DELETE）。"""
-        pattern = f"ditto:derived:state:factor:{factor_id}:snapshot:*"
-        keys = list(self._client.redis.scan_iter(match=pattern))
-        if keys:
-            return self._client.redis.delete(*keys)
-        return 0
-```
-
-### 2.5 命名空间与 TTL 策略
-
-**文件**: `packages/datahub/src/ditto_datahub/services/hot_layer/namespace.py`
-
-```python
-# ADR-040 统一命名空间
-
-NAMESPACE_PREFIX = "ditto:derived"
-
-def build_snapshot_key(
-    *,
-    entity_type: str,
-    entity_id: str,
-    instance_key: str,
-) -> str:
-    """构建 per-instance snapshot key。"""
-    return f"{NAMESPACE_PREFIX}:state:{entity_type}:{entity_id}:snapshot:{instance_key}"
-
-def build_control_state_key(
-    *,
-    entity_type: str,
-    entity_id: str,
-) -> str:
-    """构建控制面 latest state key（无 TTL）。"""
-    return f"{NAMESPACE_PREFIX}:state:{entity_type}:{entity_id}"
-
-def build_checkpoint_key(
-    *,
-    entity_type: str,
-    entity_id: str,
-    partition_key: str,
-) -> str:
-    """构建 checkpoint key（7 天 TTL）。"""
-    return f"{NAMESPACE_PREFIX}:checkpoint:{entity_type}:{entity_id}:{partition_key}"
-
-# TTL 常量（ADR-040）
-SNAPSHOT_TTL_SECONDS = 7 * 24 * 3600  # 7 天
-CHECKPOINT_TTL_SECONDS = 7 * 24 * 3600  # 7 天
-CONTROL_STATE_TTL_SECONDS = None  # 无 TTL
-```
-
-### Phase 2 验收标准
-
-| 检查项 | 标准 |
-|--------|------|
-| DDL 管理 | `ensure_tables()` 创建所有热表，`verify_tables()` 确认无缺失 |
-| QuestDBReader | `read_latest()` 从 `f_1m_hot` 查询返回 `pl.DataFrame` |
-| QuestDBWriter | `write_frame()` 通过 ILP 写入数据，可被 Reader 读回 |
-| KvrocksStore HASH | `write_hash_snapshot()` + `read_hash_snapshot()` 读写一致 |
-| KvrocksStore BLOB | `write_blob_snapshot()` + `read_blob_snapshot()` 读写一致 |
-| 命名空间 | 所有 key 符合 `ditto:derived:state:*` 规范 |
-| TTL | snapshot 7 天、checkpoint 7 天、control state 无 TTL |
-| Testcontainers | 集成测试使用真实容器验证读写 |
-| 测试 | 全部通过，覆盖率 ≥ 80% |
+| # | 议题 | 决策 |
+|---|------|------|
+| D1 | 接口风格 | **全链路保持同步**；不引入 `redis.asyncio` / `asyncio.to_thread()` 桥接 |
+| D2 | QuestDB 查询路径 | **`questdb` 仅用于 ILP 写入；查询/DDL 统一走 `psycopg` (PGWire)** |
+| D3 | QuestDB 健康检查 | **Docker 与 testcontainers 都基于 health server / PGWire 可用性验证** |
+| D4 | Kvrocks 客户端 | **使用同步 `redis.Redis`**；健康检查以 `PING` 为准 |
+| D5 | 客户端位置 | **`packages/infra/src/ditto_infra/foundation/clients/`** |
+| D6 | Provider 落点 | **并入现有 `DerivedProvider`**，不新建独立 hot-layer provider 模块 |
+| D7 | 配置入口 | **仍然只使用 `config/*/data_store.env`**；新增 QuestDB/Kvrocks 嵌套配置 |
+| D8 | 环境变量风格 | **支持原生 `QUESTDB_*` / `KVROCKS_*` 覆盖**，但文件内采用 `QUESTDB__*` / `KVROCKS__*` 嵌套键 |
+| D9 | `storage.py` | **保留**；它只是派生 DTO，不是第二套配置真相源 |
+| D10 | 协议语义 | **拆分 latest snapshot、hot series、control state、snapshot store**，不再继续扩 `HotLayerReader.read_latest()` |
+| D11 | 前置里程碑 | **新增 Phase 0：补齐 stock `bar_1m` 冷回放基础** |
+| D12 | 双写策略 | **best-effort**；Parquet/Artifact 主链路成功优先，热层失败记录日志与 metrics，后续通过回补修复 |
+| D13 | RuntimeMode 持久化 | **后移到 Phase 3b**；先把 hot-path 语义跑通，再做动态 resolver |
+| D14 | Docker 版本策略 | **显式 pin 版本，不使用 `latest`** |
+| D15 | 测试策略 | **单元测试使用共享 InMemory fake；集成测试使用通用 `DockerContainer`** |
 
 ---
 
-## Phase 3: 集成到流水线 + 盘中模式
+## 三、范围与非目标
 
-### 目标
+### 本计划包含
 
-将热层集成到物化/查询流水线，实现端到端盘中因子计算。
+- stock `bar_1m` Parquet 冷回放基础
+- QuestDB/Kvrocks 配置、依赖、部署与基础健康检查
+- hot-layer 协议重构与共享 InMemory fake
+- QuestDB 热表 DDL、分钟热序列读写
+- Kvrocks latest snapshot / checkpoint / control-state 实现
+- derived query routing 纠偏
+- materialization best-effort 双写
+- runtime mode 持久化与回补/重建 flow
 
-### 3.1 物化双写
+### 本计划明确不包含
 
-**文件**: `apps/port/src/ditto_port/services/derived/materialization.py`（修改）
-
-物化流程扩展：Parquet 写入完成后，同步写入 QuestDB。
-
-```python
-class DerivedMaterializationOrchestrator:
-    def __init__(
-        self,
-        *,
-        # ... 现有依赖 ...
-        hot_layer_writer: HotLayerWriter,  # 新增
-    ) -> None: ...
-
-    def materialize(self, request: DerivedMaterializationRequest) -> DerivedMaterializationResult:
-        # 1. 现有流程：编译 → 加载 → 计算 → 写入 Parquet → 更新 Catalog
-        result = self._execute_materialization(request)
-
-        # 2. 新增：如果 HotLayerWriter 可用，同步写入热层
-        if self._hot_layer_available(request):
-            self._write_to_hot_layer(result)
-
-        return result
-```
-
-### 3.2 查询热层路由
-
-**文件**: `apps/port/src/ditto_port/services/derived/query_facade.py`（修改）
-
-扩展现有 `get_latest()` 的热层逻辑，从占位升级为完整实现。
-
-```python
-def get_latest(self, request: LatestDerivedRequest) -> DerivedLatestResult:
-    mode = self._mode_resolver.resolve()
-
-    # ONLINE 模式：热层优先
-    if mode == RuntimeMode.ONLINE and self._hot_layer.is_available():
-        try:
-            data = self._hot_layer.read_latest(
-                derived_id=request.derived_ids[0],
-                instrument_ids=request.instrument_ids,
-                as_of=_temporal_to_iso(request.as_of),
-            )
-            if not data.is_empty():
-                logger.info("Hot layer hit", derived_id=request.derived_ids[0])
-                return DerivedLatestResult(data=data)
-        except Exception:
-            logger.warning(
-                "Hot layer read failed, falling back to cold layer",
-                exc_info=True,
-            )
-
-    # 冷层回退
-    return DerivedLatestResult(data=self._service.find_latest(query))
-```
-
-### 3.3 STATE 因子盘前初始化
-
-**文件**: `packages/datahub/src/ditto_datahub/services/derived/state_initializer.py`（新增）
-
-```python
-class StateInitializer:
-    """STATE 因子盘前状态初始化。"""
-
-    def __init__(
-        self,
-        *,
-        state_store: StateStore,
-        catalog_service: DerivedCatalogService,
-    ) -> None: ...
-
-    async def initialize_factor(self, factor_id: str) -> int:
-        """从 Parquet 计算初始快照并写入 Kvrocks。"""
-        # 1. 获取 factor spec
-        # 2. 从 Parquet 读取历史数据
-        # 3. 计算状态快照
-        # 4. 批量写入 Kvrocks
-        # 返回初始化的 instrument 数量
-        ...
-
-    async def initialize_all_state_factors(self) -> dict[str, int]:
-        """初始化所有 STATE 模式因子。"""
-        ...
-```
-
-### 3.4 运行时模式持久化
-
-**文件**: `packages/datahub/src/ditto_datahub/services/hot_layer/runtime_mode_manager.py`（新增）
-
-```python
-class RuntimeModeManager:
-    """运行时模式管理（ADR-030）。"""
-
-    def __init__(self, state_store: StateStore) -> None: ...
-
-    def get_mode(self) -> RuntimeMode:
-        """获取当前运行时模式。"""
-        ...
-
-    def set_mode(
-        self,
-        mode: RuntimeMode,
-        *,
-        reason: str,
-        operator: str,
-    ) -> None:
-        """切换运行时模式（需显式触发，记录审计）。"""
-        ...
-
-    def get_mode_history(self, limit: int = 10) -> list[ModeChangeEvent]:
-        """获取模式切换历史。"""
-        ...
-```
-
-### 3.5 Pushdown Engine（可选）
-
-**复杂度较高，建议作为 Phase 3 的增量迭代，不阻塞其他任务。**
-
-```python
-class PushdownEngine:
-    """表达式下推引擎（ADR-027）。"""
-
-    def can_pushdown(self, expression: str) -> bool:
-        """检查表达式是否可以下推到 QuestDB。"""
-        ...
-
-    def to_questdb_sql(self, expression: str) -> str:
-        """将表达式转换为 QuestDB SQL。"""
-        ...
-
-    def execute(
-        self,
-        expression: str,
-        *,
-        instrument_id: str,
-        window: str,
-    ) -> pl.DataFrame:
-        """执行下推查询。"""
-        ...
-```
-
-### 3.6 盘后回补 Flow
-
-**文件**: `apps/port/src/ditto_port/jobs/flows/hot_layer_backfill.py`（新增）
-
-```python
-@flow(name="hot-layer-daily-backfill")
-async def daily_backfill_flow() -> None:
-    """每日盘后从 Parquet 回补 QuestDB 热层。"""
-    # 1. 确定回补日期范围（最近 5 天）
-    # 2. 读取 Parquet bar_1m 数据
-    # 3. 通过 ILP 写入 QuestDB bar_1m_hot
-    # 4. 验证写入行数
-    ...
-```
-
-### Phase 3 验收标准
-
-| 检查项 | 标准 |
-|--------|------|
-| 物化双写 | Parquet 写入后 QuestDB 可查到相同数据 |
-| 查询路由 | ONLINE 模式优先读热层，DEGRADED 模式允许 Parquet |
-| STATE 初始化 | 盘前从 Parquet 计算 Kvrocks 快照，盘中可读取 |
-| 运行时模式 | 模式切换有审计记录，持久化到 Kvrocks |
-| 盘后回补 | Prefect flow 成功回补 QuestDB |
-| 端到端测试 | 物化 → QuestDB 写入 → 查询路由 → 降级回退 |
-| 测试 | 全部通过，覆盖率 ≥ 80% |
+- LOB 热表（`lob_5s_hot`、`lob_1m_mv`、`lob_1s_hot`）
+- 流式引擎 / queue consumer / intraday stream runtime
+- QuestDB pushdown 策略实现
+- Prometheus/Grafana 全量监控面板
+- 多市场分钟真相层全面铺开
+- benchmark TTL profile 的专项压测
 
 ---
 
-## 文件变更总览
+## 四、里程碑总览
 
-### 新增文件
-
-```
-# 基础设施
-docker-compose.dev.yml
-config/development/questdb.env
-config/development/kvrocks.env
-
-# infra 层 - 连接客户端
-packages/infra/src/ditto_infra/clients/__init__.py
-packages/infra/src/ditto_infra/clients/questdb.py
-packages/infra/src/ditto_infra/clients/kvrocks.py
-
-# datahub 层 - 协议实现
-packages/datahub/src/ditto_datahub/services/hot_layer/in_memory_reader.py
-packages/datahub/src/ditto_datahub/services/hot_layer/in_memory_writer.py
-packages/datahub/src/ditto_datahub/services/hot_layer/in_memory_store.py
-packages/datahub/src/ditto_datahub/services/hot_layer/questdb_reader.py
-packages/datahub/src/ditto_datahub/services/hot_layer/questdb_writer.py
-packages/datahub/src/ditto_datahub/services/hot_layer/questdb_ddl.py
-packages/datahub/src/ditto_datahub/services/hot_layer/kvrocks_store.py
-packages/datahub/src/ditto_datahub/services/hot_layer/namespace.py
-packages/datahub/src/ditto_datahub/services/derived/state_initializer.py
-packages/datahub/src/ditto_datahub/services/hot_layer/runtime_mode_manager.py
-
-# Port 层 - DI + Flow
-apps/port/src/ditto_port/registry/datahub/hot_layer.py
-apps/port/src/ditto_port/jobs/flows/hot_layer_backfill.py
-
-# 测试
-packages/infra/tests/unit/clients/test_questdb_client_unit.py
-packages/infra/tests/unit/clients/test_kvrocks_client_unit.py
-packages/infra/tests/integration/test_containers_integration.py
-packages/datahub/tests/unit/services/hot_layer/test_questdb_reader_unit.py
-packages/datahub/tests/unit/services/hot_layer/test_questdb_writer_unit.py
-packages/datahub/tests/unit/services/hot_layer/test_kvrocks_store_unit.py
-packages/datahub/tests/unit/services/hot_layer/test_namespace_unit.py
-packages/datahub/tests/integration/hot_layer/test_questdb_integration.py
-packages/datahub/tests/integration/hot_layer/test_kvrocks_integration.py
-```
-
-### 修改文件
-
-```
-pixi.toml                                          # 添加依赖
-packages/datahub/src/ditto_datahub/settings.py     # 添加配置模型
-packages/datahub/src/ditto_datahub/services/__init__.py  # re-export
-packages/datahub/src/ditto_datahub/services/hot_layer/__init__.py  # 添加 re-export
-apps/port/src/ditto_port/services/derived/query_facade.py  # 热层路由
-apps/port/src/ditto_port/services/derived/materialization.py  # 双写
-apps/port/src/ditto_port/registry/datahub/__init__.py  # 注册 HotLayerProvider
-```
+| Phase | 名称 | 核心目标 | 关键交付 |
+|------|------|----------|---------|
+| Phase 0 | `bar_1m` 冷回放前置层 | 补齐 ADR-040 的可重建前提 | stock `bar_1m` store + 30 天清理策略 |
+| Phase 1a | 配置、依赖与部署骨架 | 让 QuestDB/Kvrocks 可以被稳定拉起与注入 | `data_store` 嵌套配置 + pinned compose + 依赖 |
+| Phase 1b | 语义纠偏与 InMemory fake | 先把抽象改正确，再写真实实现 | latest/snapshot/control-state 契约 + 共享 fake backend |
+| Phase 1c | infra 同步客户端 + testcontainers | 建立稳定的连接与集成测试基座 | QuestDB/Kvrocks sync client + GenericContainer fixtures |
+| Phase 2a | QuestDB 热序列实现 | 跑通 DDL、ILP 写入、时间窗口读取 | DDL manager + writer + series reader |
+| Phase 2b | Kvrocks snapshot/control-state | 跑通 namespace、TTL policy、snapshot ABI | snapshot store + control-state store + key builder |
+| Phase 3a | Derived 接线与双写 | 把真实热层接到 query/materialization | query facade routing + best-effort dual write |
+| Phase 3b | RuntimeMode 持久化与回补 flow | 跑通降级/恢复与 rebuild 主线 | dynamic resolver + runtime mode store + backfill flow |
 
 ---
 
-## 不在本计划范围内
+## 五、任务清单
 
-| 项目 | 原因 |
-|------|------|
-| Pushdown Engine 完整实现 | ADR-027 的表达式→SQL 映射复杂度高，建议独立计划 |
-| LOB 热表（lob_5s_hot / lob_1s_hot） | 依赖实时行情数据源，非当前优先级 |
-| 多实例 RuntimeMode 协调 | 需要分布式锁/选主，Phase 3 仅单实例持久化 |
-| 生产部署（K8s / 监控 / 告警） | 属于运维阶段 |
-| 灾备恢复脚本化 | ADR-023 恢复流程复杂度高，建议独立计划 |
-| Kvrocks Streams | ADR 未定义消息 schema，建议独立计划 |
+### Task 1: 补齐 stock `bar_1m` 冷回放前置层
+
+**目的**
+
+先补齐 ADR-040 要求的最小真相层，否则 QuestDB/Kvrocks 的“可重建”只有文档语义，没有实现落点。
+
+**Files**
+
+- Create: `packages/datahub/src/ditto_datahub/stores/market/stock/bars_minute/__init__.py`
+- Create: `packages/datahub/src/ditto_datahub/stores/market/stock/bars_minute/bars_reader.py`
+- Create: `packages/datahub/src/ditto_datahub/stores/market/stock/bars_minute/bars_writer.py`
+- Modify: `packages/datahub/src/ditto_datahub/config/data_store.py`
+- Modify: `packages/infra/src/ditto_infra/foundation/config/providers/data_root.py`
+- Modify: `apps/port/src/ditto_port/registry/datahub/market.py`
+- Test: `packages/datahub/tests/unit/stores/market/stock/bars_minute/test_bars_minute_store_unit.py`
+
+**实现要点**
+
+1. 新增 dataset `market/stock/bars_minute`
+2. 继续复用现有 `ParquetStore + YearlyPartition`，不在本阶段引入新的分区策略
+3. 在 `DataStoreSettings` 中补充 `market_stock_bars_minute_path`
+4. 在 `DataRootInitProvider` 中创建 `market/stock/bars_minute`
+5. 先只做 stock MVP，ETF/index 的分钟真相层后续再扩
+6. 30 天保留策略先由回补/清理 flow 承担，不在 store 层做隐式 TTL
+
+**验证**
+
+- `pixi run -e dev pytest packages/datahub/tests/unit/stores/market/stock/bars_minute/test_bars_minute_store_unit.py -v`
+
+**建议提交**
+
+- `feat(datahub): add stock bar_1m parquet replay store`
 
 ---
 
-## 相关 ADR
+### Task 2: 调整配置模型、依赖与部署骨架
 
-| ADR | 内容 | Phase |
-|-----|------|-------|
-| [ADR-028](../design/unified-feature-factor-engine/decisions/storage/adr-028-questdb-hot-tables.md) | QuestDB 热表 DDL | Phase 2 |
-| [ADR-031](../design/unified-feature-factor-engine/decisions/storage/adr-031-state-snapshot-abi.md) | State Snapshot ABI | Phase 2 |
-| [ADR-040](../design/unified-feature-factor-engine/decisions/storage/adr-040-hot-cold-retention-state-namespace-policy.md) | 保留策略 + 命名空间 | Phase 2 |
-| [ADR-027](../design/unified-feature-factor-engine/decisions/storage/adr-027-pushdown-strategy.md) | 表达式 Pushdown | Phase 3（可选） |
-| [ADR-029](../design/unified-feature-factor-engine/decisions/adr-029-intraday-postmarket-paths.md) | 盘中/盘后路径 | Phase 3 |
-| [ADR-030](../design/unified-feature-factor-engine/decisions/adr-030-online-data-access-boundary.md) | 在线查询边界 | Phase 3 |
-| [ADR-011](../design/unified-feature-factor-engine/decisions/adr-011-streaming-mode.md) | 盘中微批量 | Phase 3 |
-| [ADR-023](../design/unified-feature-factor-engine/decisions/adr-023-disaster-recovery.md) | 灾备恢复 | 不在本计划 |
+**目的**
+
+建立真实可用的配置和部署入口，避免后续实现建立在无效 env 文件和 `latest` 镜像之上。
+
+**Files**
+
+- Modify: `pixi.toml`
+- Modify: `packages/datahub/src/ditto_datahub/config/data_store.py`
+- Modify: `apps/port/src/ditto_port/registry/infra/config.py`
+- Modify: `config/development/data_store.env`
+- Modify: `config/testing/data_store.env`
+- Modify: `config/production/data_store.env`
+- Create: `deploy/derived/docker-compose.dev.yml`
+- Create: `deploy/derived/questdb/server.conf`
+- Create: `deploy/derived/kvrocks/kvrocks.conf`
+- Create: `deploy/derived/README.md`
+- Test: `apps/port/tests/registry/test_config_datahub_unit.py`
+
+**实现要点**
+
+1. 在 `DataStoreSettings` 中新增：
+   - `questdb: QuestDBSettings`
+   - `kvrocks: KvrocksSettings`
+2. QuestDB settings 至少包含：
+   - `enabled`
+   - `host`
+   - `ilp_port`
+   - `pg_port`
+   - `health_port`
+   - `user`
+   - `password`
+   - `ttl_profile`
+3. Kvrocks settings 至少包含：
+   - `enabled`
+   - `host`
+   - `port`
+   - `password`
+   - `db`
+   - `snapshot_ttl_seconds`
+   - `checkpoint_ttl_seconds`
+4. `ConfigProvider.data_store_settings()` 保持从 `data_store.env` 读取，但额外接受 `QUESTDB_*` / `KVROCKS_*` 原生环境变量覆盖
+5. `pixi.toml` 新增：
+   - `questdb`
+   - `psycopg`
+   - `redis`
+   - `testcontainers`
+6. `deploy/derived/docker-compose.dev.yml` 使用显式版本：
+   - QuestDB：`questdb/questdb:9.3.3`
+   - Kvrocks：`apache/kvrocks:2.15.0`
+7. 不改动现有 `deploy/docker/docker-compose.yml`
+
+**验证**
+
+- `pixi run -e dev pytest apps/port/tests/registry/test_config_datahub_unit.py -v`
+
+**建议提交**
+
+- `feat(config): add questdb kvrocks nested settings and dev compose`
+
+---
+
+### Task 3: 纠正 hot-layer 协议语义并提供共享 InMemory fake
+
+**目的**
+
+先把抽象层改对，再实现真实客户端，避免后续所有代码都绑在错误协议上。
+
+**Files**
+
+- Modify: `packages/datahub/src/ditto_datahub/services/hot_layer/__init__.py`
+- Modify: `packages/datahub/src/ditto_datahub/services/__init__.py`
+- Modify: `apps/port/src/ditto_port/services/derived/__init__.py`
+- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/in_memory_backend.py`
+- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/in_memory_series_reader.py`
+- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/in_memory_snapshot_store.py`
+- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/in_memory_control_state_store.py`
+- Test: `packages/datahub/tests/unit/services/test_hot_layer_unit.py`
+- Test: `apps/port/tests/unit/services/derived/test_query_facade_unit.py`
+
+**实现要点**
+
+1. 废弃“QuestDB 负责 latest”这一错误语义
+2. 将当前抽象拆分为最少四类：
+   - `HotSeriesReader`
+   - `HotProjectionWriter`
+   - `LatestSnapshotStore`
+   - `ControlStateStore`
+3. 如果需要兼容旧测试，可保留 placeholder，但命名必须体现真实职责
+4. InMemory fake 必须共享同一个 backend，避免 reader/writer 跨实例后数据断裂
+5. InMemory snapshot store 必须能模拟 TTL 到期
+6. namespace 相关逻辑暂不写死在 fake 中，为 Task 6 预留注入点
+
+**验证**
+
+- `pixi run -e dev pytest packages/datahub/tests/unit/services/test_hot_layer_unit.py -v`
+- `pixi run -e dev pytest apps/port/tests/unit/services/derived/test_query_facade_unit.py -v`
+
+**建议提交**
+
+- `refactor(datahub): split hot layer contracts by semantic role`
+
+---
+
+### Task 4: 实现 infra 同步客户端与 testcontainers 基座
+
+**目的**
+
+提供真实连接、生命周期管理和集成测试夹具，为后续 DataHub 层实现提供稳定基础。
+
+**Files**
+
+- Create: `packages/infra/src/ditto_infra/foundation/clients/__init__.py`
+- Create: `packages/infra/src/ditto_infra/foundation/clients/questdb.py`
+- Create: `packages/infra/src/ditto_infra/foundation/clients/kvrocks.py`
+- Modify: `packages/infra/src/ditto_infra/foundation/__init__.py`
+- Create: `packages/infra/tests/conftest.py`
+- Create: `packages/infra/tests/integration/clients/test_questdb_client_integration.py`
+- Create: `packages/infra/tests/integration/clients/test_kvrocks_client_integration.py`
+
+**实现要点**
+
+1. `QuestDBClient`
+   - ILP writer：官方 `questdb.ingress.Sender`
+   - query/DDL：`psycopg.Connection`
+   - `health_check()` 同时验证 health port 与 PGWire 可用性
+2. `KvrocksClient`
+   - 使用同步 `redis.Redis`
+   - `health_check()` 发送 `PING`
+   - 暴露同步 pipeline 能力
+3. testcontainers
+   - 统一使用 `testcontainers.core.container.DockerContainer`
+   - QuestDB 暴露 `9009/8812/9003`
+   - Kvrocks 暴露 `6666`
+4. 不在这一层引入 DataHub 业务逻辑
+
+**验证**
+
+- `pixi run -e dev pytest packages/infra/tests/integration/clients/test_questdb_client_integration.py -v`
+- `pixi run -e dev pytest packages/infra/tests/integration/clients/test_kvrocks_client_integration.py -v`
+
+**建议提交**
+
+- `feat(infra): add sync questdb and kvrocks clients`
+
+---
+
+### Task 5: 实现 QuestDB 热序列读写与 DDL 管理
+
+**目的**
+
+让 QuestDB 具备最小可用的“热表创建 + ILP 写入 + 时间窗口读取”能力。
+
+**Files**
+
+- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/questdb_ddl.py`
+- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/questdb_series_reader.py`
+- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/questdb_hot_writer.py`
+- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/questdb_frame_codec.py`
+- Test: `packages/datahub/tests/integration/services/hot_layer/test_questdb_ddl_integration.py`
+- Test: `packages/datahub/tests/integration/services/hot_layer/test_questdb_series_reader_integration.py`
+- Test: `packages/datahub/tests/integration/services/hot_layer/test_questdb_hot_writer_integration.py`
+
+**实现要点**
+
+1. DDL manager 必须接受 `ttl_profile` 或 `ttl_days`，不得硬编码 `5 DAYS`
+2. 首批只落：
+   - `bar_1m_hot`
+   - `f_1m_hot`
+   - `bar_5m_mv`
+   - `bar_15m_mv`
+   - `bar_60m_mv`
+3. LOB 相关 DDL 仅保留扩展点，不在本阶段实现
+4. `QuestDBHotWriter.write_frame()` 内部自动 flush，不把 flush 责任外泄给 orchestrator
+5. 返回结果统一转成 `pl.DataFrame`
+6. SQL 参数绑定统一走 PGWire，不拼接字符串
+
+**验证**
+
+- `pixi run -e dev pytest packages/datahub/tests/integration/services/hot_layer/test_questdb_ddl_integration.py -v`
+- `pixi run -e dev pytest packages/datahub/tests/integration/services/hot_layer/test_questdb_series_reader_integration.py -v`
+- `pixi run -e dev pytest packages/datahub/tests/integration/services/hot_layer/test_questdb_hot_writer_integration.py -v`
+
+**建议提交**
+
+- `feat(datahub): add questdb hot table ddl and series io`
+
+---
+
+### Task 6: 实现 Kvrocks namespace、snapshot store 与 control-state store
+
+**目的**
+
+落实 ADR-031/040 的命名空间和 TTL 语义，让 Kvrocks 真正承担 latest snapshot 与控制面状态职责。
+
+**Files**
+
+- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/namespace.py`
+- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/kvrocks_snapshot_store.py`
+- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/kvrocks_control_state_store.py`
+- Create: `packages/datahub/src/ditto_datahub/services/hot_layer/kvrocks_snapshot_codec.py`
+- Test: `packages/datahub/tests/unit/services/hot_layer/test_namespace_unit.py`
+- Test: `packages/datahub/tests/integration/services/hot_layer/test_kvrocks_snapshot_store_integration.py`
+- Test: `packages/datahub/tests/integration/services/hot_layer/test_kvrocks_control_state_store_integration.py`
+
+**实现要点**
+
+1. 统一 key 前缀：
+   - root state：`ditto:derived:state:{entity_type}:{entity_id}`
+   - snapshot：`ditto:derived:state:{entity_type}:{entity_id}:snapshot:{instance_key}`
+   - checkpoint：`ditto:derived:checkpoint:{entity_type}:{entity_id}:{partition_key}`
+2. 实现 `build_*` 与 `parse_key()`，禁止业务代码散落硬编码 key
+3. snapshot store 支持：
+   - HASH 模式
+   - BLOB 模式
+   - `schema_ver` 演进
+4. control-state store 默认无 TTL；snapshot/checkpoint 使用 settings 中的 TTL
+5. 大批量清理允许 `scan_iter + delete`，但只用于限定场景
+
+**验证**
+
+- `pixi run -e dev pytest packages/datahub/tests/unit/services/hot_layer/test_namespace_unit.py -v`
+- `pixi run -e dev pytest packages/datahub/tests/integration/services/hot_layer/test_kvrocks_snapshot_store_integration.py -v`
+- `pixi run -e dev pytest packages/datahub/tests/integration/services/hot_layer/test_kvrocks_control_state_store_integration.py -v`
+
+**建议提交**
+
+- `feat(datahub): add kvrocks snapshot and control state stores`
+
+---
+
+### Task 7: 接线 Derived query facade，并修正 serving 路由
+
+**目的**
+
+把热层接到实际查询入口，并把当前错误的“QuestDB latest 优先”改成与 ADR 一致的正式语义。
+
+**Files**
+
+- Modify: `apps/port/src/ditto_port/services/derived/query_facade.py`
+- Modify: `apps/port/src/ditto_port/registry/datahub/derived.py`
+- Modify: `apps/port/tests/unit/services/derived/test_query_facade_unit.py`
+- Modify: `packages/datahub/src/ditto_datahub/services/__init__.py`
+
+**实现要点**
+
+1. `get_latest()`
+   - ONLINE：优先从 Kvrocks latest snapshot 读取
+   - OFFLINE：走 cold layer
+   - DEGRADED：允许 cold fallback，但必须显式可观测
+2. `get_series()`
+   - ONLINE：优先 QuestDB recent series
+   - OFFLINE：cold layer
+3. `compare_sources()`
+   - 继续对比 serving/offline，但 serving 侧来源变为 QuestDB/Kvrocks 正式语义
+4. `DerivedProvider` 中不再硬编码 `UnavailableHotLayerReader()`
+5. 本阶段的 runtime mode 仍可保持静态 resolver，不提前实现持久化
+
+**验证**
+
+- `pixi run -e dev pytest apps/port/tests/unit/services/derived/test_query_facade_unit.py -v`
+
+**建议提交**
+
+- `feat(port): wire derived query facade to hot snapshot and hot series`
+
+---
+
+### Task 8: 落实双写、RuntimeMode 持久化与回补/重建 flow
+
+**目的**
+
+在不影响现有 artifact 主链路的前提下，把热层写入、降级恢复和 rebuild 主线补齐。
+
+**Files**
+
+- Modify: `apps/port/src/ditto_port/services/derived/materialization_orchestrator.py`
+- Modify: `apps/port/src/ditto_port/registry/datahub/derived.py`
+- Create: `apps/port/src/ditto_port/services/derived/runtime_mode_store.py`
+- Create: `apps/port/src/ditto_port/services/derived/runtime_mode_resolver.py`
+- Create: `apps/port/src/ditto_port/services/derived/hot_layer_backfill_flow.py`
+- Create: `apps/port/src/ditto_port/services/derived/state_snapshot_rebuild_flow.py`
+- Test: `apps/port/tests/unit/services/derived/test_materialization_hot_write_unit.py`
+- Test: `apps/port/tests/unit/services/derived/test_runtime_mode_resolver_unit.py`
+- Test: `apps/port/tests/integration/services/derived/test_hot_layer_backfill_integration.py`
+
+**实现要点**
+
+1. materialization 双写必须是 best-effort
+   - artifact / catalog 主链路成功优先
+   - 热层失败只记录日志、metrics、补偿任务
+2. RuntimeMode 持久化通过 Kvrocks control-state store 保存
+3. 必须校验 ADR-030 的 `ALLOWED_MODE_TRANSITIONS`
+4. 回补 flow 顺序固定为：
+   - Parquet `bar_1m` 回补 QuestDB `bar_1m_hot`
+   - 已发布 SERIES 结果回补 QuestDB `f_1m_hot`
+   - 已发布 STATE 结果重建 Kvrocks snapshot
+5. 30 天外的数据恢复不依赖热层，改由上游源重放或重新物化
+
+**验证**
+
+- `pixi run -e dev pytest apps/port/tests/unit/services/derived/test_materialization_hot_write_unit.py -v`
+- `pixi run -e dev pytest apps/port/tests/unit/services/derived/test_runtime_mode_resolver_unit.py -v`
+- `pixi run -e dev pytest apps/port/tests/integration/services/derived/test_hot_layer_backfill_integration.py -v`
+
+**建议提交**
+
+- `feat(port): add hot layer dual write and runtime mode persistence`
+
+---
+
+## 六、统一验证顺序
+
+每个任务完成后跑对应 targeted tests；里程碑结束后跑一次小闭环；全部完成后跑全量 gate。
+
+### 里程碑级验证
+
+1. `pixi run -e dev pytest packages/datahub/tests/unit/services/test_hot_layer_unit.py -v`
+2. `pixi run -e dev pytest apps/port/tests/unit/services/derived/test_query_facade_unit.py -v`
+3. `pixi run -e dev pytest packages/infra/tests/integration/clients -v`
+4. `pixi run -e dev pytest packages/datahub/tests/integration/services/hot_layer -v`
+
+### 最终门禁
+
+1. `pixi run -e dev check`
+2. 如有较多集成测试新增，再补：
+   - `pixi run -e dev test --integration`
+
+---
+
+## 七、风险与缓解
+
+| 风险 | 严重性 | 缓解 |
+|------|--------|------|
+| `bar_1m` 真相层缺失导致回补 flow 无法闭环 | 高 | 把 Phase 0 作为硬前置，未完成不得开始 Phase 3 |
+| QuestDB DDL / MV 兼容性差异 | 中 | 集成测试里显式校验 DDL 建表、查询与 MV 可用性 |
+| Kvrocks snapshot ABI 演进复杂 | 中 | 强制 `schema_ver` 与 codec 层集中实现 |
+| 双写失败造成热层与 artifact 短期不一致 | 中 | best-effort + flow 回补 + metrics 告警 |
+| RuntimeMode 过早持久化引入更多耦合 | 中 | 明确后移到 Phase 3b |
+| Docker 版本漂移 | 中 | compose 与 testcontainers 都显式 pin 版本 |
+
+---
+
+## 八、完成定义
+
+满足以下条件才可视为本计划完成：
+
+- stock `bar_1m` 冷回放层已落地，且有 30 天清理/重建语义
+- QuestDB/Kvrocks 配置通过 `data_store.env` 与原生环境变量同时可用
+- QuestDB 热表 DDL、读写与 Kvrocks snapshot/control-state 全部有集成测试
+- `DerivedQueryFacade` 已按“Kvrocks latest / QuestDB series / cold fallback”运行
+- materialization 双写为 best-effort，失败不破坏 artifact 主链路
+- RuntimeMode 持久化与回补 flow 可运行
+- `pixi run -e dev check` 通过
+
+---
+
+## 九、执行顺序建议
+
+严格按以下顺序实施，不要跳步：
+
+1. Task 1
+2. Task 2
+3. Task 3
+4. Task 4
+5. Task 5
+6. Task 6
+7. Task 7
+8. Task 8
+
+原因：
+
+- Task 1 决定是否具备 ADR-040 的实现前提
+- Task 3 决定真实实现面对的协议是否正确
+- Task 4 是 QuestDB/Kvrocks 真实实现的公共底座
+- Task 7/8 依赖前面全部基础设施与语义收敛
+
+---
+
+## 十、版本注记
+
+本计划中的版本选择基于 2026-03-17 可获得的官方口径：
+
+- QuestDB Docker：`9.3.3`
+- Kvrocks Docker：`2.15.0`
+- Python query client：`psycopg`
+- QuestDB Python ILP client：`questdb`
+
+后续如果版本漂移，更新原则是：
+
+1. 先更新本计划与 `deploy/derived/*`
+2. 再更新 `pixi.toml`
+3. 最后补集成测试验证，不允许只改镜像标签

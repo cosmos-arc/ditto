@@ -103,6 +103,12 @@ class TestExecutionPolicy:
         policy = ExecutionPolicy()
         assert policy.pit_required is True
         assert policy.normalization_preset == "default"
+        assert policy.adj_type == "none"
+
+    def test_explicit_adj_type(self) -> None:
+        """ExecutionPolicy accepts explicit adj_type for ETF adjustment control."""
+        policy = ExecutionPolicy(adj_type="qfq")
+        assert policy.adj_type == "qfq"
 
     def test_explicit_values(self) -> None:
         """ExecutionPolicy accepts explicit values."""

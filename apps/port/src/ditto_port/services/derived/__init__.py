@@ -16,7 +16,6 @@ from ditto_port.services.derived.cascade_protocol import (
     CascadeStatus,
     InvalidationCascadeOrchestrator,
 )
-from ditto_port.services.derived.invalidation import DerivedInvalidationOrchestrator
 from ditto_port.services.derived.materialization import (
     InMemoryDerivedInputProvider,
     InputContext,
@@ -39,7 +38,6 @@ __all__ = [
     "REALTIME_CASCADE_MAX_DEPTH",
     "CascadeDepthExceededError",
     "CascadeStatus",
-    "DerivedInvalidationOrchestrator",
     "DerivedMaterializationOrchestrator",
     "DerivedPublicationFacade",
     "DerivedQueryFacade",

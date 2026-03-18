@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from hashlib import sha256
 from pathlib import Path
 
@@ -10,22 +10,13 @@ import orjson
 import polars as pl
 from ditto_core.engine.materialization import Analysis, CompileIdentity
 from ditto_core.engine.specs import DerivedSpec
+from ditto_datahub.models.derived import PartitionInfo
 from ditto_datahub.models.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
 
-__all__ = ["DerivedArtifactWriter", "PartitionInfo", "extract_partition_keys"]
-
-
-@dataclass(frozen=True)
-class PartitionInfo:
-    """Metadata for a single artifact partition."""
-
-    partition_key: str
-    partition_path: str
-    row_count: int
-    checksum: str | None
+__all__ = ["DerivedArtifactWriter", "extract_partition_keys"]
 
 
 class DerivedArtifactWriter:

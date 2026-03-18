@@ -6,7 +6,6 @@ from dataclasses import asdict
 from pathlib import Path
 
 import pytest
-from ditto_core.engine.materialization.models import DerivedVersionStatus
 from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_datahub.errors import DerivedVersionError
 from ditto_datahub.models.derived import (
@@ -40,6 +39,7 @@ def _seed_spec(
     is_online: bool,
     is_primary: bool,
     profile: MaterializationProfile = MaterializationProfile.SERIES,
+    status: str | None = None,
 ) -> None:
     spec = DerivedSpec(
         id=derived_id,
@@ -48,6 +48,8 @@ def _seed_spec(
         materialization_profile=profile,
         expression="market.close",
     )
+    if status is None:
+        status = "published" if is_primary else "materialized"
     catalog_service.save_spec(
         DerivedSpecRecord(
             derived_id=derived_id,
@@ -63,9 +65,7 @@ def _seed_spec(
         DerivedVersionRecord(
             derived_id=derived_id,
             version=version,
-            status=DerivedVersionStatus.PUBLISHED
-            if is_primary
-            else DerivedVersionStatus.MATERIALIZED,
+            status=status,
             engine_version="expr-v1",
             is_online=is_online,
             is_primary=is_primary,
@@ -280,3 +280,71 @@ class TestVersionResolutionStrategy:
                 derived_id,
                 strategy=VersionResolutionStrategy.EXPLICIT_VERSION,
             )
+
+
+class TestPublishedVersionBinding:
+    """Tests ensuring version resolution only selects PUBLISHED versions."""
+
+    def test_primary_online_materialized_is_skipped_for_primary_online_only(
+        self,
+        sqlite_client,
+    ) -> None:
+        """PRIMARY_ONLINE_ONLY should skip a primary+online version with
+        MATERIALIZED status (not PUBLISHED)."""
+        catalog_service = _catalog_service(sqlite_client)
+        derived_id = "factor.alpha"
+        _seed_spec(
+            catalog_service,
+            derived_id=derived_id,
+            version=2,
+            is_online=True,
+            is_primary=True,
+            status="materialized",
+        )
+        reader = DerivedArtifactReader(
+            catalog_service=catalog_service,
+            artifact_root=Path("/tmp/test-artifacts"),
+        )
+
+        with pytest.raises(DerivedVersionError, match="no primary online version"):
+            reader.resolve_serving_version(
+                derived_id,
+                strategy=VersionResolutionStrategy.PRIMARY_ONLINE_ONLY,
+            )
+
+    def test_fallback_to_active_falls_through_when_primary_not_published(
+        self,
+        sqlite_client,
+    ) -> None:
+        """FALLBACK_TO_ACTIVE should fall through to active_version when
+        the primary+online version is not PUBLISHED."""
+        catalog_service = _catalog_service(sqlite_client)
+        derived_id = "factor.alpha"
+        _seed_spec(
+            catalog_service,
+            derived_id=derived_id,
+            version=2,
+            is_online=True,
+            is_primary=True,
+            status="materialized",
+        )
+        _seed_spec(
+            catalog_service,
+            derived_id=derived_id,
+            version=3,
+            is_online=True,
+            is_primary=True,
+            status="published",
+        )
+        _save_state(catalog_service, derived_id=derived_id, active_version=2)
+        reader = DerivedArtifactReader(
+            catalog_service=catalog_service,
+            artifact_root=Path("/tmp/test-artifacts"),
+        )
+
+        version = reader.resolve_serving_version(
+            derived_id,
+            strategy=VersionResolutionStrategy.FALLBACK_TO_ACTIVE,
+        )
+
+        assert version == 3

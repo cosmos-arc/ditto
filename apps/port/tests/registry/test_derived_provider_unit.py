@@ -11,11 +11,15 @@ from ditto_datahub.sources.source import DataSources
 from ditto_port.registry import ConfigProvider
 from ditto_port.registry.datahub import (
     DerivedProvider,
+    MarketProvider,
     MetadataProvider,
     RuntimeProvider,
     get_datahub_providers,
 )
-from ditto_port.services.derived import DerivedPublicationFacade, DerivedQueryFacade
+from ditto_port.services.derived import (
+    DerivedPublicationFacade,
+    DerivedQueryFacade,
+)
 
 
 def _sources_provider() -> Provider:
@@ -52,6 +56,7 @@ class TestDerivedProvider:
             _sources_provider(),
             RuntimeProvider(),
             MetadataProvider(),
+            MarketProvider(),
             DerivedProvider(),
         )
 
@@ -79,3 +84,28 @@ class TestDerivedProvider:
         assert "FeaturesProvider" not in datahub_registry.__all__
         assert "DerivedProvider" in root_registry.__all__
         assert "FeaturesProvider" not in root_registry.__all__
+
+    def test_materialization_orchestrator_has_universe_provider(
+        self,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        """DerivedMaterializationOrchestrator should receive UniverseProvider via DI."""
+        from ditto_port.services.derived.materialization_orchestrator import (
+            DerivedMaterializationOrchestrator,
+        )
+
+        monkeypatch.setenv("ENVIRONMENT", "testing")
+        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        container = make_container(
+            ConfigProvider(),
+            _sources_provider(),
+            RuntimeProvider(),
+            MetadataProvider(),
+            MarketProvider(),
+            DerivedProvider(),
+        )
+
+        orchestrator = container.get(DerivedMaterializationOrchestrator)
+        assert orchestrator._universe_provider is not None
+        container.close()

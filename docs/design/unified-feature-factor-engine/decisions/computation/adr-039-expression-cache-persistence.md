@@ -23,7 +23,7 @@
 - 扩展 [ADR-014: 表达式引擎核心设计](adr-014-expression-engine-core.md)
 - 依赖 [ADR-032: 统一派生语义模型](../core/adr-032-unified-derived-semantic-model.md)
 - 关联 [ADR-043: Role/Profile Certification 与 Compatibility Manifest](../research/adr-043-role-profile-certification-compatibility-manifest.md)
-- 前置 [P1-2: 算子版本管理](../optimization-backlog.md)（算子 version 声明）
+- 历史前序见 [optimization-backlog](../archive/optimization-backlog.md)（该 backlog 已归档，仅保留设计演化记录）
 
 ---
 

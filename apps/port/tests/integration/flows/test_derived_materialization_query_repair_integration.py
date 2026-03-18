@@ -34,8 +34,8 @@ from ditto_port.registry.datahub import (
     RuntimeProvider,
 )
 from ditto_port.services.derived import (
-    DerivedInvalidationOrchestrator,
     DerivedPublicationFacade,
+    InvalidationCascadeOrchestrator,
     ResearchDatasetFacade,
 )
 
@@ -80,7 +80,7 @@ def _materialization_bundle_context():
     try:
         yield MaterializationBundle(
             materialization_service=container.get(DerivedMaterializationOrchestrator),
-            invalidation_service=container.get(DerivedInvalidationOrchestrator),
+            invalidation_service=container.get(InvalidationCascadeOrchestrator),
             publication_facade=container.get(DerivedPublicationFacade),
             research_dataset_facade=container.get(ResearchDatasetFacade),
         )
@@ -216,7 +216,7 @@ class TestDerivedMaterializationQueryRepairIntegration:
 
         before_container = _make_test_container()
         try:
-            invalidation_service = before_container.get(DerivedInvalidationOrchestrator)
+            invalidation_service = before_container.get(InvalidationCascadeOrchestrator)
             query_service = before_container.get(DerivedQueryService)
             before_frame = query_service.find_series(
                 DerivedSeriesQuery(
@@ -227,7 +227,7 @@ class TestDerivedMaterializationQueryRepairIntegration:
                 )
             )
             _write_market_truth_layers(tmp_path, close_values=[10.0, 21.0])
-            invalidation_service.enqueue(
+            invalidation_service.propagate(
                 DerivedInvalidationEvent(
                     source_domain="market",
                     source_dataset="stock_daily",
@@ -256,7 +256,7 @@ class TestDerivedMaterializationQueryRepairIntegration:
                 )
             )
             latest_run = catalog_service.get_latest_run("factor.alpha_repair", 3)
-            pending_invalidations = catalog_service.list_pending_invalidations()
+            stale_invalidations = catalog_service.list_stale_invalidations()
         finally:
             verify_container.close()
 
@@ -266,4 +266,4 @@ class TestDerivedMaterializationQueryRepairIntegration:
         assert after_frame["value"].to_list() == [42.0]
         assert latest_run is not None
         assert latest_run.trigger == "cascade"
-        assert pending_invalidations == ()
+        assert stale_invalidations == ()

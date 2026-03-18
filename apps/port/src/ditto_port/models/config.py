@@ -18,6 +18,7 @@ from datetime import time
 from enum import StrEnum
 from typing import Annotated, cast, overload
 
+from ditto_datahub.errors import DatasetNotFoundError
 from ditto_datahub.models import Dataset
 from pydantic import BaseModel, Field
 
@@ -634,7 +635,7 @@ def get_dataset_config(dataset: Dataset) -> DatasetSpec:
         DatasetSpec instance
 
     Raises:
-        KeyError: If dataset is not in registry
+        DatasetNotFoundError: If dataset is not in registry
 
     Examples:
         >>> config = get_dataset_config(Dataset.ETF_DAILY)
@@ -642,9 +643,7 @@ def get_dataset_config(dataset: Dataset) -> DatasetSpec:
 
     """
     if dataset not in INGESTION_SPECS:
-        # KeyError is deliberate: dict lookup failure in the ingestion config registry.
-        # This is NOT the derived domain — DerivedNotFoundError does not apply here.
-        raise KeyError(f"Dataset {dataset} not found in registry")
+        raise DatasetNotFoundError(dataset=str(dataset))
     return INGESTION_SPECS[dataset]
 
 

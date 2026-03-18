@@ -56,7 +56,43 @@ class ResearchCatalogReaderProtocol(Protocol):
 
 
 class ResearchCatalogWriterProtocol(Protocol):
-    """Writer protocol for research specs and snapshots."""
+    """
+    Writer protocol for research catalog persistence.
+
+    Each ``write_*`` method executes SQL and immediately commits.
+    For batch operations requiring a single transaction, use the
+    ``execute_*`` methods together with ``commit()`` / ``rollback()``.
+    """
+
+    # --- transaction control ---
+
+    def commit(self) -> None:
+        """Commit the current transaction."""
+        ...
+
+    def rollback(self) -> None:
+        """Roll back the current transaction."""
+        ...
+
+    # --- execute methods (no commit) ---
+
+    def execute_spine_spec(self, record: ResearchSpineSpecRecord) -> None:
+        """Execute spine spec INSERT without committing."""
+        ...
+
+    def execute_dataset_spec(self, record: ResearchDatasetSpecRecord) -> None:
+        """Execute dataset spec INSERT without committing."""
+        ...
+
+    def execute_spine_snapshot(self, record: ResearchSpineSnapshotRecord) -> None:
+        """Execute spine snapshot INSERT without committing."""
+        ...
+
+    def execute_dataset_snapshot(self, record: ResearchDatasetSnapshotRecord) -> None:
+        """Execute dataset snapshot INSERT without committing."""
+        ...
+
+    # --- write methods (execute + commit) ---
 
     def write_spine_spec(self, record: ResearchSpineSpecRecord) -> None:
         """Persist one spine spec record."""

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from datetime import date, timedelta
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import orjson
 import polars as pl
@@ -23,12 +24,13 @@ from ditto_datahub.models.derived import (
     DerivedVersionRecord,
 )
 from ditto_datahub.services import PublicationSafetyRecordService
+from ditto_datahub.services.derived.artifact_persistence_service import (
+    ArtifactPersistenceService,
+)
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
-from ditto_datahub.services.derived_shadow_slot_service import DerivedShadowSlotService
 from ditto_datahub.services.publication_safety_record_service import (
     PublicationSafetyRuntimeStores,
 )
-from ditto_datahub.stores.runtime.derived_artifact_writer import DerivedArtifactWriter
 from ditto_datahub.stores.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
@@ -42,10 +44,6 @@ from ditto_datahub.stores.runtime.publication_safety import (
     MinimalDQWriter,
     ShadowReportReader,
     ShadowReportWriter,
-)
-from ditto_datahub.stores.runtime.publication_shadow_sqlite import (
-    SQLiteDerivedShadowSlotReader,
-    SQLiteDerivedShadowSlotWriter,
 )
 from ditto_port.services.derived import (
     InMemoryDerivedInputProvider,
@@ -202,13 +200,6 @@ def _publication_record_service(data_root: Path) -> PublicationSafetyRecordServi
     )
 
 
-def _shadow_slot_service(sqlite_client) -> DerivedShadowSlotService:
-    return DerivedShadowSlotService(
-        slot_reader=SQLiteDerivedShadowSlotReader(sqlite_client),
-        slot_writer=SQLiteDerivedShadowSlotWriter(sqlite_client),
-    )
-
-
 class TestDerivedMaterializationOrchestrator:
     """Tests for unified derived materialization."""
 
@@ -225,7 +216,7 @@ class TestDerivedMaterializationOrchestrator:
             catalog_service=catalog_service,
             compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
-            artifact_writer=DerivedArtifactWriter(tmp_path),
+            artifact_writer=ArtifactPersistenceService(tmp_path),
         )
 
         result = service.materialize(
@@ -269,7 +260,7 @@ class TestDerivedMaterializationOrchestrator:
             catalog_service=catalog_service,
             compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
-            artifact_writer=DerivedArtifactWriter(tmp_path),
+            artifact_writer=ArtifactPersistenceService(tmp_path),
         )
 
         result = service.materialize(
@@ -308,7 +299,7 @@ class TestDerivedMaterializationOrchestrator:
             catalog_service=catalog_service,
             compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
-            artifact_writer=DerivedArtifactWriter(tmp_path),
+            artifact_writer=ArtifactPersistenceService(tmp_path),
         )
 
         result = service.materialize(
@@ -361,15 +352,48 @@ class TestDerivedMaterializationOrchestrator:
         _write_market_truth_layers(tmp_path)
         catalog_service = _catalog_service(sqlite_client, tmp_path)
         _seed_spec(catalog_service, spec)
+        mock_market = MagicMock()
+        mock_market.get_stock_bars.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 1],
+                "trade_date": [date(2026, 3, 10), date(2026, 3, 11)],
+                "close": [10.0, 11.0],
+                "open": [9.5, 10.5],
+                "high": [10.5, 11.5],
+                "low": [9.0, 10.0],
+                "pre_close": [9.0, 10.0],
+                "volume": [100.0, 110.0],
+                "amount": [1000.0, 1100.0],
+            }
+        )
+        mock_market.get_adj_factors.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 1],
+                "trade_date": [date(2026, 3, 10), date(2026, 3, 11)],
+                "adj_factor": [1.0, 1.1],
+            }
+        )
+        mock_market.get_stock_status.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 1],
+                "trade_date": [date(2026, 3, 10), date(2026, 3, 11)],
+                "is_suspended": [False, True],
+                "suspend_timing": [None, None],
+                "is_st": [False, False],
+                "st_type": [None, None],
+                "list_status": ["L", "L"],
+            }
+        )
         service = DerivedMaterializationOrchestrator(
             catalog_service=catalog_service,
             compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=RuntimeDerivedInputProvider(
                 catalog_service=catalog_service,
+                market_service=mock_market,
                 artifact_root=tmp_path,
                 data_root=tmp_path,
             ),
-            artifact_writer=DerivedArtifactWriter(tmp_path),
+            artifact_writer=ArtifactPersistenceService(tmp_path),
         )
 
         result = service.materialize(
@@ -457,15 +481,17 @@ class TestDerivedMaterializationOrchestrator:
             version=upstream.version,
             availability_offset_days=1,
         )
+        mock_market = MagicMock()
         service = DerivedMaterializationOrchestrator(
             catalog_service=catalog_service,
             compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=RuntimeDerivedInputProvider(
                 catalog_service=catalog_service,
+                market_service=mock_market,
                 artifact_root=tmp_path,
                 data_root=tmp_path,
             ),
-            artifact_writer=DerivedArtifactWriter(tmp_path),
+            artifact_writer=ArtifactPersistenceService(tmp_path),
         )
 
         result = service.materialize(
@@ -496,19 +522,12 @@ class TestDerivedMaterializationOrchestrator:
             date(2026, 3, 12),
         ]
 
-    def test_materialization_persists_manifest_and_shadow_slot(
+    def test_materialization_persists_manifest(
         self,
         sqlite_client,
         tmp_path: Path,
     ) -> None:
-        """Durable materialization should auto-save manifest and shadow slot."""
-        baseline = DerivedSpec(
-            id="factor.alpha_publish",
-            version=2,
-            role=DerivedRole.FACTOR,
-            materialization_profile=MaterializationProfile.SERIES,
-            expression="market.close",
-        )
+        """Durable materialization should auto-save manifest."""
         candidate = DerivedSpec(
             id="factor.alpha_publish",
             version=3,
@@ -517,7 +536,6 @@ class TestDerivedMaterializationOrchestrator:
             expression="ts_delta(close, 1)",
         )
         catalog_service = _catalog_service(sqlite_client, tmp_path)
-        _seed_spec(catalog_service, baseline, status=DerivedVersionStatus.PUBLISHED)
         _seed_spec(
             catalog_service,
             candidate,
@@ -526,14 +544,12 @@ class TestDerivedMaterializationOrchestrator:
             is_primary=False,
         )
         publication_record_service = _publication_record_service(tmp_path)
-        shadow_slot_service = _shadow_slot_service(sqlite_client)
         service = DerivedMaterializationOrchestrator(
             catalog_service=catalog_service,
             compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=InMemoryDerivedInputProvider({candidate.id: _input_frame()}),
-            artifact_writer=DerivedArtifactWriter(tmp_path),
+            artifact_writer=ArtifactPersistenceService(tmp_path),
             publication_record_service=publication_record_service,
-            shadow_slot_service=shadow_slot_service,
         )
 
         result = service.materialize(
@@ -573,11 +589,6 @@ class TestDerivedMaterializationOrchestrator:
             payload["publication"]["compatibility_manifest"] == manifest_record.payload
         )
 
-        shadow_slot = shadow_slot_service.get_active_slot(candidate.id)
-        assert shadow_slot is not None
-        assert shadow_slot.candidate_version == candidate.version
-        assert shadow_slot.baseline_version == baseline.version
-
     def test_durable_materialization_persists_minimal_dq_summary(
         self,
         sqlite_client,
@@ -592,7 +603,7 @@ class TestDerivedMaterializationOrchestrator:
             catalog_service=catalog_service,
             compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
-            artifact_writer=DerivedArtifactWriter(tmp_path),
+            artifact_writer=ArtifactPersistenceService(tmp_path),
             publication_record_service=publication_record_service,
         )
 
@@ -670,7 +681,7 @@ class TestDerivedMaterializationOrchestrator:
             catalog_service=catalog_service,
             compile_cache_service=SQLiteCompileCache(sqlite_client),
             input_provider=InMemoryDerivedInputProvider({spec.id: invalid_frame}),
-            artifact_writer=DerivedArtifactWriter(tmp_path),
+            artifact_writer=ArtifactPersistenceService(tmp_path),
             publication_record_service=publication_record_service,
         )
 

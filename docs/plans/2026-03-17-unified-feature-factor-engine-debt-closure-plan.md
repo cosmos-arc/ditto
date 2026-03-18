@@ -279,7 +279,7 @@ Batch 3（Day 4）: 生产加固
 | 项目 | 原因 | 位置 |
 |------|------|------|
 | I-EXPR-01 DAG/CSE 优化 | 性能满足需求，复杂度高 | 独立计划 |
-| Phase 6 Benchmark 治理 | 运维阶段 | [Phase 6 计划](./2026-03-14-unified-feature-factor-engine-phase-6-hardening-plan.md) |
+| Phase 6 Benchmark 治理 | 运维阶段 | [Phase 6 计划](./archive/2026-03-14-unified-feature-factor-engine-phase-6-hardening-plan.md) |
 | ADR-011 盘中微批量 | 等待 QuestDB + Kvrocks | 已暂缓 |
 | ADR-023 灾备恢复 | 等待上游数据源确认 | 已暂缓 |
 | TD-01 TDX 批量查询 | 功能增强 | 独立 feature（已转出） |

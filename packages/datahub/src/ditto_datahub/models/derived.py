@@ -23,6 +23,7 @@ __all__ = [
     "DerivedVersionRecord",
     "JsonDict",
     "JsonValue",
+    "PartitionInfo",
 ]
 
 
@@ -385,3 +386,13 @@ class CompiledExpressionOperatorRecord:
     cache_key: str
     operator_name: str
     operator_version: str
+
+
+@dataclass(frozen=True)
+class PartitionInfo:
+    """Metadata for a single artifact partition."""
+
+    partition_key: str
+    partition_path: str
+    row_count: int
+    checksum: str | None

@@ -10,6 +10,7 @@ import polars as pl
 import pytest
 from ditto_core.engine.materialization import Analysis, CompileIdentity
 from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_datahub.models.derived import PartitionInfo
 from ditto_datahub.models.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
@@ -200,7 +201,6 @@ class TestWriteArtifactMetadata:
         """write_artifact_metadata should write artifact_metadata.json."""
         from ditto_datahub.stores.runtime.derived_artifact_writer import (
             DerivedArtifactWriter,
-            PartitionInfo,
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
@@ -300,7 +300,6 @@ class TestUpdateArtifactMetadata:
 
         from ditto_datahub.stores.runtime.derived_artifact_writer import (
             DerivedArtifactWriter,
-            PartitionInfo,
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
@@ -486,10 +485,6 @@ class TestPartitionInfo:
     """Tests for PartitionInfo dataclass."""
 
     def test_is_frozen(self) -> None:
-        from ditto_datahub.stores.runtime.derived_artifact_writer import (
-            PartitionInfo,
-        )
-
         info = PartitionInfo(
             partition_key="2024",
             partition_path="some/path.parquet",

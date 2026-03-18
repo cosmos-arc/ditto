@@ -24,6 +24,7 @@ from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_port.registry import ConfigProvider
 from ditto_port.registry.datahub import (
     DerivedProvider,
+    MarketProvider,
     MetadataProvider,
     RuntimeProvider,
 )
@@ -46,6 +47,19 @@ def _sources_provider() -> Provider:
             )
 
     return SourcesProvider()
+
+
+def _make_container(*, monkeypatch, tmp_path: Path):
+    monkeypatch.setenv("ENVIRONMENT", "testing")
+    monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+    return make_container(
+        ConfigProvider(),
+        _sources_provider(),
+        RuntimeProvider(),
+        MetadataProvider(),
+        MarketProvider(),
+        DerivedProvider(),
+    )
 
 
 def _seed_calendar(sqlite_client: SQLiteClient, dates: list[date]) -> None:
@@ -206,15 +220,7 @@ class TestResearchDatasetFacade:
         tmp_path: Path,
     ) -> None:
         """Research build should freeze primary versions and preserve left rows."""
-        monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
-        container = make_container(
-            ConfigProvider(),
-            _sources_provider(),
-            RuntimeProvider(),
-            MetadataProvider(),
-            DerivedProvider(),
-        )
+        container = _make_container(monkeypatch=monkeypatch, tmp_path=tmp_path)
 
         try:
             sqlite_client = container.get(SQLiteClient)
@@ -356,15 +362,7 @@ class TestResearchDatasetFacade:
         tmp_path: Path,
     ) -> None:
         """Build requests should be able to freeze non-primary explicit versions."""
-        monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
-        container = make_container(
-            ConfigProvider(),
-            _sources_provider(),
-            RuntimeProvider(),
-            MetadataProvider(),
-            DerivedProvider(),
-        )
+        container = _make_container(monkeypatch=monkeypatch, tmp_path=tmp_path)
 
         try:
             sqlite_client = container.get(SQLiteClient)
@@ -464,15 +462,7 @@ class TestResearchDatasetFacade:
         tmp_path: Path,
     ) -> None:
         """Builds should freeze effective cutoff and aggregated source snapshots."""
-        monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
-        container = make_container(
-            ConfigProvider(),
-            _sources_provider(),
-            RuntimeProvider(),
-            MetadataProvider(),
-            DerivedProvider(),
-        )
+        container = _make_container(monkeypatch=monkeypatch, tmp_path=tmp_path)
 
         try:
             sqlite_client = container.get(SQLiteClient)
@@ -574,15 +564,7 @@ class TestResearchDatasetFacade:
         tmp_path: Path,
     ) -> None:
         """Build should persist a reusable build report next to the snapshot."""
-        monkeypatch.setenv("ENVIRONMENT", "testing")
-        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
-        container = make_container(
-            ConfigProvider(),
-            _sources_provider(),
-            RuntimeProvider(),
-            MetadataProvider(),
-            DerivedProvider(),
-        )
+        container = _make_container(monkeypatch=monkeypatch, tmp_path=tmp_path)
 
         try:
             sqlite_client = container.get(SQLiteClient)

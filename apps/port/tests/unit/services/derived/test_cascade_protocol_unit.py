@@ -262,6 +262,67 @@ class TestBFSPropagation:
         saved_records = catalog_service.save_invalidations.call_args[0][0]
         assert saved_records[0].derived_id == "factor.alpha_upstream"
 
+    def test_source_domain_root_ref_skipped_but_downstream_traversed(self) -> None:
+        """Source domain root refs (e.g. market.stock_daily) should not get records
+        but their downstream dependents should still receive invalidation records."""
+        catalog_service = MagicMock()
+        materialization_service = MagicMock()
+
+        catalog_service.list_downstream_dependencies.side_effect = lambda did: (
+            (
+                DerivedDependencyRecord(
+                    derived_id="factor.uses_market",
+                    version=1,
+                    dependency_kind="derived",
+                    dependency_ref=did,
+                    created_at="2026-03-13T10:00:00+08:00",
+                ),
+            )
+            if did == "market.stock_daily"
+            else ()
+        )
+
+        cascade = InvalidationCascadeOrchestrator(
+            catalog_service=catalog_service,
+            materialization_service=materialization_service,
+        )
+
+        event = _make_event(
+            root_dependency_ref="market.stock_daily",
+            source_domain="market",
+        )
+        result_ids = cascade.propagate(event)
+
+        # Root (market.stock_daily) should be skipped, only downstream gets record
+        assert len(result_ids) == 1
+        saved_records = catalog_service.save_invalidations.call_args[0][0]
+        assert saved_records[0].derived_id == "factor.uses_market"
+        assert saved_records[0].depth == 1
+
+    def test_non_source_domain_root_creates_record(self) -> None:
+        """Non-source-domain root refs (e.g. factor.alpha) should get records."""
+        catalog_service = MagicMock()
+        materialization_service = MagicMock()
+
+        catalog_service.list_downstream_dependencies.return_value = ()
+
+        cascade = InvalidationCascadeOrchestrator(
+            catalog_service=catalog_service,
+            materialization_service=materialization_service,
+        )
+
+        event = _make_event(
+            root_dependency_ref="factor.alpha",
+            source_domain="market",
+        )
+        result_ids = cascade.propagate(event)
+
+        # factor.alpha does not start with "market." so it gets a record
+        assert len(result_ids) == 1
+        saved_records = catalog_service.save_invalidations.call_args[0][0]
+        assert saved_records[0].derived_id == "factor.alpha"
+        assert saved_records[0].depth == 0
+
 
 class TestCycleGuard:
     """I-CASC-03: Cycle detection."""
