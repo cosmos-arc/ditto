@@ -31,6 +31,7 @@ class CalendarTushareAdapter(BaseTushareAdapter):
         self,
         start_date: str,
         end_date: str,
+        exchange: str = "SSE",
     ) -> pl.DataFrame:
         """
         获取交易日历.
@@ -38,6 +39,7 @@ class CalendarTushareAdapter(BaseTushareAdapter):
         Args:
             start_date: 开始日期 (YYYY-MM-DD).
             end_date: 结束日期 (YYYY-MM-DD).
+            exchange: 交易所代码 (默认 'SSE').
 
         Returns:
             包含以下列的 DataFrame:
@@ -53,12 +55,13 @@ class CalendarTushareAdapter(BaseTushareAdapter):
             event="tushare_calendar_fetch_start",
             start_date=start_date,
             end_date=end_date,
+            exchange=exchange,
         )
 
         with tushare_fetch_error_handler("calendar", "trade_cal"):
             response = self._client.query(
                 api_name="trade_cal",
-                exchange="SSE",
+                exchange=exchange,
                 start_date=start_date.replace("-", ""),
                 end_date=end_date.replace("-", ""),
                 fields="cal_date,is_open",

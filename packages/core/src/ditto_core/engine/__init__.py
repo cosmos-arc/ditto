@@ -36,6 +36,7 @@ from ditto_core.engine.publication_safety import (
 from ditto_core.engine.research import (
     DatasetSnapshot,
     KnownAtPolicy,
+    LateArrivalError,
     LateArrivalPolicy,
     ResearchDatasetSpec,
     SpineSnapshot,
@@ -82,6 +83,7 @@ __all__ = [
     "ExpressionCompiler",
     "GrainId",
     "KnownAtPolicy",
+    "LateArrivalError",
     "LateArrivalPolicy",
     "MaterializationProfile",
     "PublicationSafetySeverity",

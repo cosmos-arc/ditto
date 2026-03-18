@@ -135,3 +135,51 @@ class IndustryMappingReader:
             self._cache.set(cache_key, result)
 
         return result
+
+    @traced("data.industry.get_stock_industries_all_levels")
+    def get_stock_industries_all_levels(
+        self,
+        instrument_id: int,
+        asof: str | None = None,
+        source: str = "sw",
+    ) -> list[dict[str, Any]]:
+        """
+        获取股票所有级别的行业分类.
+
+        JOIN industry_basic 获取 industry_level，按 level 排序。
+
+        Args:
+            instrument_id: 证券 ID.
+            asof: Point-in-Time 查询日期，None 表示查询当前.
+            source: 行业分类来源（sw=申万, csrc=证监会）.
+
+        Returns:
+            行业分类列表（按 industry_level 排序）.
+
+        """
+        if asof:
+            sql = """
+                SELECT im.instrument_id, im.industry_id, im.source, im.effective_from,
+                       ib.industry_name, ib.industry_level, ib.parent_id
+                FROM industry_mapping im
+                JOIN industry_basic ib ON im.industry_id = ib.industry_id
+                WHERE im.instrument_id = ? AND im.source = ?
+                  AND im.effective_from <= ?
+                  AND (im.effective_to IS NULL OR im.effective_to > ?)
+                ORDER BY ib.industry_level
+            """
+            params = [instrument_id, source, asof, asof]
+        else:
+            sql = """
+                SELECT im.instrument_id, im.industry_id, im.source, im.effective_from,
+                       ib.industry_name, ib.industry_level, ib.parent_id
+                FROM industry_mapping im
+                JOIN industry_basic ib ON im.industry_id = ib.industry_id
+                WHERE im.instrument_id = ? AND im.source = ?
+                  AND im.effective_to IS NULL
+                ORDER BY ib.industry_level
+            """
+            params = [instrument_id, source]
+
+        rows = self._client.fetchall(sql, params)
+        return [dict(r) for r in rows]

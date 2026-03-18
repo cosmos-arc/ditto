@@ -15,6 +15,8 @@ def mock_dependencies() -> dict[str, MagicMock]:
     return {
         "instrument_reader": MagicMock(),
         "instrument_writer": MagicMock(),
+        "name_history_reader": MagicMock(),
+        "name_history_writer": MagicMock(),
         "calendar_reader": MagicMock(),
         "calendar_writer": MagicMock(),
         "industry_reader": MagicMock(),
@@ -23,6 +25,8 @@ def mock_dependencies() -> dict[str, MagicMock]:
         "industry_mapping_writer": MagicMock(),
         "universe_reader": MagicMock(),
         "universe_writer": MagicMock(),
+        "rebalance_reader": MagicMock(),
+        "rebalance_writer": MagicMock(),
         "instrument_id_allocator": MagicMock(),
     }
 

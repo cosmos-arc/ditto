@@ -60,14 +60,16 @@ class IndustryWriter:
         try:
             self._client.execute(
                 """INSERT OR REPLACE INTO industry_basic
-                (industry_id, industry_name, industry_level, parent_id, is_active)
-                VALUES (?, ?, ?, ?, ?)""",
+                (industry_id, industry_name, industry_level,
+                 parent_id, is_active, source)
+                VALUES (?, ?, ?, ?, ?, ?)""",
                 [
                     industry.industry_id,
                     industry.industry_name,
                     industry.industry_level,
                     industry.parent_id,
                     1 if industry.is_active else 0,
+                    industry.source,
                 ],
             )
             self._client.commit()

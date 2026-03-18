@@ -84,10 +84,40 @@ CREATE TABLE IF NOT EXISTS instrument_index (
     FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );
 
+-- ============ 行业分类表 ============
+
+-- 行业主数据（申万/证监会）
+CREATE TABLE IF NOT EXISTS industry_basic (
+    industry_id TEXT PRIMARY KEY,
+    industry_name TEXT NOT NULL,
+    industry_level TEXT NOT NULL,  -- L1/L2/L3
+    parent_id TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    source TEXT DEFAULT 'sw'  -- sw=申万, csrc=证监会
+);
+
+-- 股票-行业映射（PIT support）
+CREATE TABLE IF NOT EXISTS industry_mapping (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    instrument_id INTEGER NOT NULL,
+    industry_id TEXT NOT NULL,
+    source TEXT DEFAULT 'sw',
+    effective_from DATE,
+    effective_to DATE,
+    entry_reason TEXT,
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id),
+    FOREIGN KEY (industry_id) REFERENCES industry_basic(industry_id)
+);
+CREATE INDEX IF NOT EXISTS idx_industry_mapping_current
+    ON industry_mapping(instrument_id, source) WHERE effective_to IS NULL;
+CREATE INDEX IF NOT EXISTS idx_industry_mapping_pit
+    ON industry_mapping(instrument_id, source, effective_from, effective_to);
+
 -- 交易日历
 CREATE TABLE IF NOT EXISTS trading_calendar (
     trade_date DATE PRIMARY KEY,
     is_open BOOLEAN NOT NULL,
+    exchange TEXT DEFAULT 'SSE',
     prev_trade_date DATE,
     next_trade_date DATE,
     week_of_year INTEGER,
@@ -96,7 +126,9 @@ CREATE TABLE IF NOT EXISTS trading_calendar (
     year INTEGER,
     is_week_end BOOLEAN,
     is_month_end BOOLEAN,
-    is_quarter_end BOOLEAN
+    is_quarter_end BOOLEAN,
+    is_half_day BOOLEAN DEFAULT FALSE,
+    is_special BOOLEAN DEFAULT FALSE
 );
 
 -- Freeze 冻结点
@@ -154,6 +186,17 @@ CREATE TABLE IF NOT EXISTS universe_constituent (
     FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );
 
+-- 证券名称变更历史
+CREATE TABLE IF NOT EXISTS instrument_name_history (
+    instrument_id INTEGER NOT NULL,
+    old_name TEXT NOT NULL,
+    new_name TEXT NOT NULL,
+    changed_date DATE NOT NULL,
+    PRIMARY KEY (instrument_id, changed_date),
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+CREATE INDEX IF NOT EXISTS idx_name_history_instrument ON instrument_name_history(instrument_id);
+
 -- 当前有效成分快速查询
 CREATE INDEX IF NOT EXISTS idx_constituent_current
     ON universe_constituent(universe_id, instrument_id) WHERE effective_to IS NULL;
@@ -161,6 +204,16 @@ CREATE INDEX IF NOT EXISTS idx_constituent_current
 -- PIT 查询优化
 CREATE INDEX IF NOT EXISTS idx_constituent_pit
     ON universe_constituent(universe_id, effective_from, effective_to);
+
+-- 标的池调仓日程
+CREATE TABLE IF NOT EXISTS universe_rebalance (
+    universe_id TEXT NOT NULL,
+    rebalance_date DATE NOT NULL,
+    description TEXT,
+    PRIMARY KEY (universe_id, rebalance_date),
+    FOREIGN KEY (universe_id) REFERENCES universe(universe_id)
+);
+CREATE INDEX IF NOT EXISTS idx_rebalance_date ON universe_rebalance(universe_id, rebalance_date);
 
 -- 指数成分股权重（PIT support）
 CREATE TABLE IF NOT EXISTS index_weight (

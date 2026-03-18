@@ -16,15 +16,18 @@ class CalendarDay:
 
     trade_date: str
     is_open: bool
-    prev_trade_date: str | None
-    next_trade_date: str | None
-    week_of_year: int | None
-    month: int | None
-    quarter: int | None
-    year: int | None
-    is_week_end: bool
-    is_month_end: bool
-    is_quarter_end: bool
+    exchange: str = "SSE"
+    prev_trade_date: str | None = None
+    next_trade_date: str | None = None
+    week_of_year: int | None = None
+    month: int | None = None
+    quarter: int | None = None
+    year: int | None = None
+    is_week_end: bool = False
+    is_month_end: bool = False
+    is_quarter_end: bool = False
+    is_half_day: bool = False
+    is_special: bool = False
 
 
 # ========================================================================
@@ -34,13 +37,14 @@ class CalendarDay:
 
 @dataclass(frozen=True)
 class IndustryBasic:
-    """申万行业基本信息."""
+    """行业基本信息（申万/证监会）."""
 
     industry_id: str
     industry_name: str
-    industry_level: str  # 一级/二级行业
+    industry_level: str  # L1/L2/L3
     parent_id: str | None = None
     is_active: bool = True
+    source: str = "sw"  # sw=申万, csrc=证监会
 
 
 @dataclass(frozen=True)
@@ -120,6 +124,7 @@ class InstrumentRegistration:
         exchange: 交易所代码（如 "SSE", "SZSE"）
         asset_class: 资产类别（stock/etf/index）
         list_date: 上市日期（YYYY-MM-DD 格式）
+        delist_date: 退市日期（YYYY-MM-DD 格式，可选）
         source: 数据源标识符（默认 "tushare"）
         board: 板块代码（可选）
         extension: 可选的资产类型扩展信息
@@ -132,6 +137,7 @@ class InstrumentRegistration:
     exchange: str
     asset_class: str
     list_date: str
+    delist_date: str | None = None
     source: str = "tushare"
     board: str | None = None
     extension: InstrumentExtension | None = None

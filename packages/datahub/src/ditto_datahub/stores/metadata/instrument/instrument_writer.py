@@ -88,9 +88,9 @@ class InstrumentWriter:
                 """INSERT INTO instrument
                 (
                     instrument_id, ticker, name, exchange, board, asset_class,
-                    list_date, is_active
+                    list_date, delist_date, is_active
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)""",
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)""",
                 [
                     instrument_id,
                     registration.ticker,
@@ -99,6 +99,7 @@ class InstrumentWriter:
                     registration.board,
                     registration.asset_class,
                     registration.list_date,
+                    registration.delist_date,
                 ],
             )
 

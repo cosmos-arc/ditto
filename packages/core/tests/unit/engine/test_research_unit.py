@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+from datetime import date
+
+import polars as pl
 import pytest
 from ditto_core.engine.research import (
     DatasetSnapshot,
+    LateArrivalError,
     LateArrivalPolicy,
     ResearchDatasetSpec,
     SpineSnapshot,
     SpineSpec,
+    _apply_late_arrival_policy,
+    _detect_late_arrivals,
 )
 from ditto_datahub.errors import DerivedNotImplementedError
 
@@ -237,3 +243,222 @@ class TestDatasetSnapshot:
             "market:20260311-001",
         )
         assert snapshot.builder_version == "unified-derived-research-v1"
+
+
+# ============ Late Arrival Detection & Policy Tests ============
+
+
+class TestDetectLateArrivals:
+    """Tests for _detect_late_arrivals function."""
+
+    def test_detect_late_arrivals_flags_delayed_data(self) -> None:
+        """当 availability_time > known_at 时应标记为延迟到达."""
+
+        derived_id = "factor.alpha"
+        availability_col = f"{derived_id}_availability_time"
+
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 1, 2],
+                "trade_date": [
+                    date(2026, 3, 10),
+                    date(2026, 3, 11),
+                    date(2026, 3, 10),
+                ],
+                "known_at": [
+                    date(2026, 3, 10),
+                    date(2026, 3, 11),
+                    date(2026, 3, 10),
+                ],
+                availability_col: [
+                    date(2026, 3, 10),
+                    date(2026, 3, 12),
+                    date(2026, 3, 10),
+                ],
+                derived_id: [1.0, 2.0, 3.0],
+            }
+        )
+
+        result = _detect_late_arrivals(frame, derived_id)
+
+        # Row 0: availability (3/10) == known_at (3/10) -> not late
+        # Row 1: availability (3/12) > known_at (3/11) -> late
+        # Row 2: availability (3/10) == known_at (3/10) -> not late
+        assert result.height == 3
+        flags = result["is_late"].to_list()
+        assert flags == [False, True, False]
+
+    def test_detect_late_arrivals_handles_null_availability(self) -> None:
+        """当 availability_time 为 null 时不应标记为延迟."""
+
+        derived_id = "factor.alpha"
+        availability_col = f"{derived_id}_availability_time"
+
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2026, 3, 10)],
+                "known_at": [date(2026, 3, 10)],
+                availability_col: [None],
+                derived_id: [None],
+            },
+        )
+
+        result = _detect_late_arrivals(frame, derived_id)
+        assert result["is_late"].to_list() == [False]
+
+    def test_detect_late_arrivals_empty_frame(self) -> None:
+        """空 DataFrame 应返回空结果."""
+
+        frame = pl.DataFrame(
+            schema={
+                "instrument_id": pl.Int64,
+                "trade_date": pl.Date,
+                "known_at": pl.Date,
+                "factor.alpha": pl.Float64,
+            }
+        )
+
+        result = _detect_late_arrivals(frame, "factor.alpha")
+        assert result.is_empty()
+
+    def test_detect_late_arrivals_no_availability_column(
+        self,
+    ) -> None:
+        """当 availability_time 列不存在时，所有行都不应标记为延迟."""
+
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2026, 3, 10)],
+                "known_at": [date(2026, 3, 10)],
+                "factor.alpha": [1.0],
+            }
+        )
+
+        result = _detect_late_arrivals(frame, "factor.alpha")
+        assert result["is_late"].to_list() == [False]
+
+
+class TestApplyLateArrivalPolicy:
+    """Tests for _apply_late_arrival_policy function."""
+
+    def test_apply_late_arrival_policy_exclude(
+        self,
+    ) -> None:
+        """EXCLUDE 策略应过滤掉延迟到达的行."""
+
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 1, 2],
+                "trade_date": [
+                    date(2026, 3, 10),
+                    date(2026, 3, 11),
+                    date(2026, 3, 10),
+                ],
+                "factor.alpha": [1.0, 2.0, 3.0],
+            }
+        )
+        late_flags = pl.Series([False, True, False])
+
+        result = _apply_late_arrival_policy(
+            frame,
+            LateArrivalPolicy.EXCLUDE_FROM_CURRENT_SNAPSHOT,
+            late_flags,
+        )
+
+        assert result.height == 2
+        assert result["instrument_id"].to_list() == [1, 2]
+        assert result["trade_date"].to_list() == [
+            date(2026, 3, 10),
+            date(2026, 3, 10),
+        ]
+
+    def test_apply_late_arrival_policy_shift_logs_warning(
+        self,
+    ) -> None:
+        """SHIFT 策略应记录日志并原样返回（v1 暂不实现位移）."""
+
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "trade_date": [date(2026, 3, 10), date(2026, 3, 11)],
+                "factor.alpha": [1.0, 2.0],
+            }
+        )
+        late_flags = pl.Series([True, False])
+
+        result = _apply_late_arrival_policy(
+            frame,
+            LateArrivalPolicy.SHIFT_TO_NEXT_SNAPSHOT,
+            late_flags,
+        )
+
+        # v1: SHIFT 原样返回，不修改
+        assert result.height == 2
+        assert result.equals(frame)
+
+    def test_apply_late_arrival_policy_rebuild_raises(
+        self,
+    ) -> None:
+        """REBUILD 策略应在存在延迟到达行时抛出 LateArrivalError."""
+
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "trade_date": [date(2026, 3, 10), date(2026, 3, 11)],
+                "factor.alpha": [1.0, 2.0],
+            }
+        )
+        late_flags = pl.Series([True, False])
+
+        with pytest.raises(LateArrivalError, match="Late arrival"):
+            _apply_late_arrival_policy(
+                frame,
+                LateArrivalPolicy.REQUIRE_REBUILD,
+                late_flags,
+            )
+
+    def test_apply_late_arrival_policy_rebuild_no_late_passes(
+        self,
+    ) -> None:
+        """REBUILD 策略在无延迟行时应原样返回."""
+
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "trade_date": [date(2026, 3, 10), date(2026, 3, 11)],
+                "factor.alpha": [1.0, 2.0],
+            }
+        )
+        late_flags = pl.Series([False, False])
+
+        result = _apply_late_arrival_policy(
+            frame,
+            LateArrivalPolicy.REQUIRE_REBUILD,
+            late_flags,
+        )
+
+        assert result.equals(frame)
+
+    def test_apply_late_arrival_policy_exclude_all_late(
+        self,
+    ) -> None:
+        """EXCLUDE 策略过滤全部延迟行时，应返回空 DataFrame."""
+
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "trade_date": [date(2026, 3, 10), date(2026, 3, 11)],
+                "factor.alpha": [1.0, 2.0],
+            }
+        )
+        late_flags = pl.Series([True, True])
+
+        result = _apply_late_arrival_policy(
+            frame,
+            LateArrivalPolicy.EXCLUDE_FROM_CURRENT_SNAPSHOT,
+            late_flags,
+        )
+
+        assert result.is_empty()

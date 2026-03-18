@@ -8,6 +8,7 @@ CQRS 架构：使用 Reader 处理查询，Writer 处理写入。
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, Literal
 
 import polars as pl
@@ -32,8 +33,93 @@ from ditto_datahub.stores.metadata.industry import (
 from ditto_datahub.stores.metadata.instrument import (
     InstrumentReader,
     InstrumentWriter,
+    NameHistoryReader,
+    NameHistoryWriter,
 )
-from ditto_datahub.stores.metadata.universe import UniverseReader, UniverseWriter
+from ditto_datahub.stores.metadata.universe import (
+    UniverseReader,
+    UniverseWriter,
+)
+
+
+def _compute_calendar_enrichment(days: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    计算日历丰富字段（纯函数）.
+
+    从仅有 trade_date/is_open 的基本日历数据，
+    计算 prev_trade_date, next_trade_date, week_of_year,
+    month, quarter, year, is_week_end, is_month_end, is_quarter_end.
+
+    Args:
+        days: 输入格式 [{"trade_date": "2024-01-02", "is_open": True}, ...]
+
+    Returns:
+        丰富后的完整 records 列表（仅包含 is_open=True 的交易日）.
+
+    """
+    if not days:
+        return []
+
+    # 筛选交易日并按 trade_date 排序
+    trading_days = sorted(
+        [d for d in days if d.get("is_open", False)],
+        key=lambda d: d["trade_date"],
+    )
+
+    if not trading_days:
+        return []
+
+    results: list[dict[str, Any]] = []
+
+    for i, day in enumerate(trading_days):
+        d = date.fromisoformat(day["trade_date"])
+        iso = d.isocalendar()
+        month = d.month
+        quarter = (month - 1) // 3 + 1
+
+        prev_td: str | None = None
+        next_td: str | None = None
+
+        if i > 0:
+            prev_td = trading_days[i - 1]["trade_date"]
+        if i < len(trading_days) - 1:
+            next_td = trading_days[i + 1]["trade_date"]
+
+        # 周末/月末/季末: 比较当前和下一个交易日的对应周期
+        is_week_end = False
+        is_month_end = False
+        is_quarter_end = False
+
+        if next_td is not None:
+            next_d = date.fromisoformat(next_td)
+            next_iso = next_d.isocalendar()
+            next_month = next_d.month
+            next_quarter = (next_month - 1) // 3 + 1
+
+            is_week_end = (iso[0], iso[1]) != (next_iso[0], next_iso[1])
+            is_month_end = month != next_month
+            is_quarter_end = quarter != next_quarter
+
+        results.append(
+            {
+                "trade_date": day["trade_date"],
+                "is_open": True,
+                "exchange": day.get("exchange", "SSE"),
+                "prev_trade_date": prev_td,
+                "next_trade_date": next_td,
+                "week_of_year": iso[1],
+                "month": month,
+                "quarter": quarter,
+                "year": d.year,
+                "is_week_end": is_week_end,
+                "is_month_end": is_month_end,
+                "is_quarter_end": is_quarter_end,
+                "is_half_day": False,
+                "is_special": bool(day.get("is_special", False)),
+            }
+        )
+
+    return results
 
 
 class MetadataService:
@@ -49,6 +135,8 @@ class MetadataService:
         self,
         instrument_reader: InstrumentReader,
         instrument_writer: InstrumentWriter,
+        name_history_reader: NameHistoryReader,
+        name_history_writer: NameHistoryWriter,
         calendar_reader: CalendarReader,
         calendar_writer: CalendarWriter,
         industry_reader: IndustryReader,
@@ -57,6 +145,8 @@ class MetadataService:
         industry_mapping_writer: IndustryMappingWriter,
         universe_reader: UniverseReader,
         universe_writer: UniverseWriter,
+        rebalance_reader: Any,
+        rebalance_writer: Any,
         instrument_id_allocator: InstrumentIdAllocator,
         exchange_transformers: ExchangeTransformers,
     ) -> None:
@@ -66,6 +156,8 @@ class MetadataService:
         Args:
             instrument_reader: 证券主数据读取器.
             instrument_writer: 证券主数据写入器.
+            name_history_reader: 证券名称变更历史读取器.
+            name_history_writer: 证券名称变更历史写入器.
             calendar_reader: 交易日历读取器.
             calendar_writer: 交易日历写入器.
             industry_reader: 行业主数据读取器.
@@ -74,12 +166,16 @@ class MetadataService:
             industry_mapping_writer: 行业映射写入器.
             universe_reader: 标的池读取器.
             universe_writer: 标的池写入器.
+            rebalance_reader: 标的池调仓日程读取器.
+            rebalance_writer: 标的池调仓日程写入器.
             instrument_id_allocator: instrument_id 分配器.
             exchange_transformers: 交易所转换器工厂.
 
         """
         self._instrument_reader = instrument_reader
         self._instrument_writer = instrument_writer
+        self._name_history_reader = name_history_reader
+        self._name_history_writer = name_history_writer
         self._calendar_reader = calendar_reader
         self._calendar_writer = calendar_writer
         self._industry_reader = industry_reader
@@ -88,6 +184,8 @@ class MetadataService:
         self._industry_mapping_writer = industry_mapping_writer
         self._universe_reader = universe_reader
         self._universe_writer = universe_writer
+        self._rebalance_reader = rebalance_reader
+        self._rebalance_writer = rebalance_writer
         self._instrument_id_allocator = instrument_id_allocator
         self._exchange_transformers = exchange_transformers
 
@@ -191,6 +289,75 @@ class MetadataService:
         """
         return self._calendar_reader.get_first_trading_day()
 
+    @traced("metadata.calendar.update_half_days")
+    def update_half_days(self, half_days: list[str]) -> int:
+        """
+        批量更新半日交易标记.
+
+        Args:
+            half_days: 半日交易日期列表 (YYYY-MM-DD 格式).
+
+        Returns:
+            更新的记录数.
+
+        """
+        if not half_days:
+            return 0
+        records = [{"trade_date": d, "is_half_day": True} for d in half_days]
+        return self._calendar_writer.upsert(records)
+
+    @traced("metadata.calendar.enrich_calendar")
+    def enrich_calendar(self, start: str, end: str) -> int:
+        """
+        丰富日历数据：计算 prev/next、周/月/季末标记.
+
+        仅处理 prev_trade_date 为 NULL 的未丰富行。
+
+        Args:
+            start: 开始日期.
+            end: 结束日期.
+
+        Returns:
+            更新的记录数.
+
+        """
+        df = self._calendar_reader.get_range_df(start, end, only_open=False)
+
+        if df.is_empty():
+            return 0
+
+        # 筛选未丰富的行（prev_trade_date 为 null）
+        unenriched = df.filter(pl.col("prev_trade_date").is_null())
+        if unenriched.is_empty():
+            return 0
+
+        days = unenriched.to_dicts()
+        enriched = _compute_calendar_enrichment(days)
+
+        if not enriched:
+            return 0
+
+        self._calendar_writer.upsert(enriched)
+        return len(enriched)
+
+    @traced("metadata.calendar.auto_enrich_calendar")
+    def auto_enrich_calendar(self) -> int:
+        """
+        自动丰富所有未处理的日历数据。
+
+        自动确定日期范围（从第一个交易日到最后一个交易日），
+        然后调用 enrich_calendar。
+
+        Returns:
+            更新的记录数。
+
+        """
+        first = self._calendar_reader.get_first_trading_day()
+        last = self._calendar_reader.get_last_trading_day()
+        if first is None or last is None:
+            return 0
+        return self.enrich_calendar(first, last)
+
     # ============ Identity 解析 ============
 
     @traced("metadata.identity.resolve_instrument_id")
@@ -254,7 +421,7 @@ class MetadataService:
         return self._instrument_reader.get_by_instrument_id(instrument_id)
 
     @traced("metadata.instrument.find_securities")
-    def find_securities(
+    def find_securities(  # noqa: PLR0913
         self,
         instrument_ids: list[int] | None = None,
         source_tickers: list[str] | None = None,
@@ -263,6 +430,7 @@ class MetadataService:
         exchange: str | None = None,
         is_active: bool | None = True,
         asof: str | None = None,
+        min_list_days: int | None = None,
     ) -> pl.DataFrame:
         """
         多维查询证券数据.
@@ -275,6 +443,7 @@ class MetadataService:
             exchange: 过滤交易所.
             is_active: 过滤活跃状态.
             asof: 时间点日期.
+            min_list_days: 最低上市天数（需配合 asof 使用）.
 
         Returns:
             证券数据 DataFrame.
@@ -288,6 +457,7 @@ class MetadataService:
             exchange=exchange,
             is_active=is_active,
             asof=asof,
+            min_list_days=min_list_days,
         )
 
     @traced("metadata.instrument.list_instrument_ids")
@@ -409,6 +579,51 @@ class MetadataService:
         """
         return self._industry_mapping_reader.get_stock_industry(instrument_id, asof)
 
+    # ============ 状态查询 (PIT) ============
+
+    @traced("metadata.instrument.get_stock_status")
+    def get_stock_status(
+        self,
+        instrument_id: int,
+        asof: str,
+    ) -> dict[str, Any]:
+        """
+        获取股票在指定时间点的状态（PIT 查询）.
+
+        通过 SQLite 中的 instrument 表获取 is_st 字段，
+        通过 instrument_stock 表获取 list_status。
+        完整 PIT 实现将通过 Parquet 数据源提供。
+
+        Args:
+            instrument_id: 证券 ID.
+            asof: 时间点日期 (YYYY-MM-DD).
+
+        Returns:
+            包含 is_st, list_status, is_suspended 的字典。
+            无数据时返回默认值。
+
+        """
+        defaults: dict[str, Any] = {
+            "is_st": False,
+            "list_status": "L",
+            "is_suspended": False,
+        }
+
+        # 从 instrument 表获取 is_st
+        instrument = self._instrument_reader.get_by_instrument_id(instrument_id)
+        if instrument:
+            defaults["is_st"] = bool(instrument.get("is_st", False))
+
+        # 从 instrument_stock 表获取 list_status
+        stock_ext = self._instrument_reader.get_stock_extension(instrument_id)
+        if stock_ext:
+            list_status = stock_ext.get("list_status", "L")
+            defaults["list_status"] = list_status
+            # P = 暂停上市, D = 退市 → 视为 suspended
+            defaults["is_suspended"] = list_status in ("P", "D")
+
+        return defaults
+
     # ============ 标的池查询 ============
 
     @traced("metadata.universe.get_universe")
@@ -429,6 +644,106 @@ class MetadataService:
 
         """
         return self._universe_reader.get_constituent_instrument_ids(universe_id, asof)
+
+    @traced("metadata.universe.get_filtered_universe")
+    def get_filtered_universe(
+        self,
+        universe_id: str,
+        asof: str | None = None,
+        volume_map: dict[int, float] | None = None,
+        min_avg_volume: float | None = None,
+    ) -> list[int]:
+        """
+        获取流动性过滤后的标的池成分股.
+
+        通过外部传入的 volume_map 进行成交量过滤，
+        避免在 datahub 层直接依赖行情数据。
+
+        Args:
+            universe_id: 标的池 ID.
+            asof: 时间点日期.
+            volume_map: {instrument_id: avg_volume} 外部传入的成交量数据.
+            min_avg_volume: 最低平均成交量阈值.
+
+        Returns:
+            过滤后的 instrument_id 列表.
+
+        """
+        ids = self._universe_reader.get_constituent_instrument_ids(universe_id, asof)
+
+        if min_avg_volume is None or volume_map is None:
+            return ids
+
+        return [iid for iid in ids if volume_map.get(iid, 0) >= min_avg_volume]
+
+    @traced("metadata.universe.intersection")
+    def universe_intersection(
+        self,
+        id_a: str,
+        id_b: str,
+        asof: str | None = None,
+    ) -> list[int]:
+        """
+        两个标的池的交集.
+
+        Args:
+            id_a: 标的池 A 的 ID.
+            id_b: 标的池 B 的 ID.
+            asof: 时间点日期.
+
+        Returns:
+            同时属于 A 和 B 的 instrument_id 列表.
+
+        """
+        set_a = set(self._universe_reader.get_constituent_instrument_ids(id_a, asof))
+        set_b = set(self._universe_reader.get_constituent_instrument_ids(id_b, asof))
+        return sorted(set_a & set_b)
+
+    @traced("metadata.universe.union")
+    def universe_union(
+        self,
+        id_a: str,
+        id_b: str,
+        asof: str | None = None,
+    ) -> list[int]:
+        """
+        两个标的池的并集.
+
+        Args:
+            id_a: 标的池 A 的 ID.
+            id_b: 标的池 B 的 ID.
+            asof: 时间点日期.
+
+        Returns:
+            属于 A 或 B 的 instrument_id 列表（去重、排序）.
+
+        """
+        set_a = set(self._universe_reader.get_constituent_instrument_ids(id_a, asof))
+        set_b = set(self._universe_reader.get_constituent_instrument_ids(id_b, asof))
+        return sorted(set_a | set_b)
+
+    @traced("metadata.universe.subtract")
+    def universe_subtract(
+        self,
+        id_a: str,
+        id_b: str,
+        asof: str | None = None,
+    ) -> list[int]:
+        """
+        标的池 A 减去 B 的差集.
+
+        Args:
+            id_a: 标的池 A 的 ID.
+            id_b: 标的池 B 的 ID.
+            asof: 时间点日期.
+
+        Returns:
+            属于 A 但不属于 B 的 instrument_id 列表（排序）.
+
+        """
+        set_a = set(self._universe_reader.get_constituent_instrument_ids(id_a, asof))
+        set_b = set(self._universe_reader.get_constituent_instrument_ids(id_b, asof))
+        return sorted(set_a - set_b)
 
     # ============ 证券注册 ============
 
@@ -543,6 +858,7 @@ class MetadataService:
                     exchange=row["exchange"],
                     asset_class=asset_class,
                     list_date=row["list_date"],
+                    delist_date=row.get("delist_date"),
                     source=source,
                     board=row.get("board"),
                     extension=self._build_extension(row, asset_class),
@@ -645,6 +961,7 @@ class MetadataService:
                     exchange=row["exchange"],
                     asset_class=asset_class,
                     list_date=row["list_date"],
+                    delist_date=row.get("delist_date"),
                     source=source,
                 )
             )
@@ -823,3 +1140,95 @@ class MetadataService:
             asset_class=asset_class,
             is_active=True,
         ).filter(pl.col("list_date").is_null())
+
+    # ============ 证券名称查询 ============
+
+    @traced("metadata.instrument.get_stock_name")
+    def get_stock_name(
+        self,
+        instrument_id: int,
+        asof: str | None = None,
+    ) -> str | None:
+        """
+        获取证券名称（支持 PIT 查询）.
+
+        如果指定 asof 日期，优先从名称变更历史中查找，
+        若未找到则 fallback 到 instrument 表中的当前名称。
+
+        Args:
+            instrument_id: 证券 ID.
+            asof: Point-in-Time 日期 (YYYY-MM-DD)，None 表示当前名称.
+
+        Returns:
+            证券名称或 None（未找到时）.
+
+        """
+        if asof is not None:
+            name = self._name_history_reader.get_name(instrument_id, asof)
+            if name is not None:
+                return name
+        # Fallback: 当前名称
+        instrument = self._instrument_reader.get_by_instrument_id(instrument_id)
+        return instrument.get("name") if instrument else None
+
+    # ============ 行业多级查询 ============
+
+    @traced("metadata.industry.get_stock_industries_all_levels")
+    def get_stock_industries_all_levels(
+        self,
+        instrument_id: int,
+        asof: str | None = None,
+        source: str = "sw",
+    ) -> list[dict[str, Any]]:
+        """
+        获取股票所有级别的行业分类.
+
+        JOIN industry_basic 获取 industry_level，按 level 排序。
+
+        Args:
+            instrument_id: 证券 ID.
+            asof: Point-in-Time 日期，None 表示查询当前.
+            source: 行业分类来源（sw=申万, csrc=证监会）.
+
+        Returns:
+            行业分类列表（按 industry_level 排序）.
+
+        """
+        return self._industry_mapping_reader.get_stock_industries_all_levels(
+            instrument_id, asof, source
+        )
+
+    # ============ 标的池调仓日程 ============
+
+    @traced("metadata.universe.get_next_rebalance")
+    def get_next_rebalance(
+        self,
+        universe_id: str,
+        after_date: str,
+    ) -> dict[str, Any] | None:
+        """
+        获取标的池下一次调仓日程.
+
+        Args:
+            universe_id: 标的池 ID.
+            after_date: 查询此日期之后的调仓日程.
+
+        Returns:
+            调仓日程字典或 None（未找到时）.
+
+        """
+        return self._rebalance_reader.get_next_rebalance(universe_id, after_date)
+
+    @traced("metadata.universe.list_rebalances")
+    def list_rebalances(self, universe_id: str) -> list[dict[str, Any]]:
+        """
+        列出标的池所有调仓日程.
+
+        Args:
+            universe_id: 标的池 ID.
+
+        Returns:
+            调仓日程列表（按 rebalance_date 倒序）.
+
+        """
+        return self._rebalance_reader.list_rebalances(universe_id)

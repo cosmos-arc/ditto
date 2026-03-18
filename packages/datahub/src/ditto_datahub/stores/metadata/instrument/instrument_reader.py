@@ -273,7 +273,7 @@ class InstrumentReader:
 
         return cast(str, row["source_ticker"]) if row else None
 
-    def find_securities(
+    def find_securities(  # noqa: PLR0913
         self,
         instrument_ids: list[int] | None = None,
         source_tickers: list[str] | None = None,
@@ -282,6 +282,7 @@ class InstrumentReader:
         exchange: str | None = None,
         is_active: bool | None = True,
         asof: str | None = None,
+        min_list_days: int | None = None,
     ) -> pl.DataFrame:
         """
         带过滤条件查询证券。
@@ -294,6 +295,7 @@ class InstrumentReader:
             exchange: 按交易所过滤
             is_active: 按活跃状态过滤
             asof: Point-in-Time 日期
+            min_list_days: 最低上市天数（需配合 asof 使用）
 
         Returns:
             包含证券数据的 DataFrame
@@ -340,6 +342,14 @@ class InstrumentReader:
         if is_active is not None:
             sql += " AND s.is_active = ?"
             params.append(is_active)
+
+        if min_list_days is not None and asof is not None:
+            sql += (
+                " AND (s.list_date IS NULL"
+                " OR julianday(?, 'start of day')"
+                " - julianday(s.list_date, 'start of day') >= ?)"
+            )
+            params.extend([asof, min_list_days])
 
         rows = self._client.fetchall(sql, params)
 

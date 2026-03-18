@@ -1,4 +1,4 @@
-"""申万行业分类适配器实现."""
+"""行业分类适配器实现（申万/证监会）."""
 
 from __future__ import annotations
 
@@ -72,11 +72,11 @@ def _record_metrics(row_count: int, dataset: str) -> None:
 
 class IndustryTushareAdapter(BaseTushareAdapter):
     """
-    申万行业分类 Tushare 适配器.
+    行业分类 Tushare 适配器.
 
-    专门处理申万行业分类相关数据获取，包括：
-    - 申万一级行业分类
-    - 申万二级行业分类
+    专门处理行业分类相关数据获取，包括：
+    - 申万行业分类（一/二/三级行业）
+    - 证监会行业分类
     - 股票的行业映射关系
 
     """
@@ -87,13 +87,13 @@ class IndustryTushareAdapter(BaseTushareAdapter):
         获取申万行业分类.
 
         Args:
-            level: 行业级别 (1=一级行业, 2=二级行业)
+            level: 行业级别 (1=一级行业, 2=二级行业, 3=三级行业)
 
         Returns:
             DataFrame with columns:
             - source_ticker: 行业代码 (e.g., "801010.SI")
             - industry_name: 行业名称
-            - level: 行业级别 (1 or 2)
+            - level: 行业级别 (1, 2, or 3)
 
         Raises:
             SourceFetchError: If fetch fails.
@@ -134,12 +134,17 @@ class IndustryTushareAdapter(BaseTushareAdapter):
             return result
 
     @traced("source.tushare.fetch_sw_industry_concepts")
-    def fetch_sw_industry_concepts(self, asof_date: str | None = None) -> pl.DataFrame:
+    def fetch_sw_industry_concepts(
+        self,
+        asof_date: str | None = None,
+        level: int = 1,
+    ) -> pl.DataFrame:
         """
         获取申万行业成分股.
 
         Args:
             asof_date: 历史查询日期 (YYYY-MM-DD), None 表示最新
+            level: 行业级别 (1=一级行业, 2=二级行业, 3=三级行业)
 
         Returns:
             DataFrame with columns:
@@ -157,6 +162,7 @@ class IndustryTushareAdapter(BaseTushareAdapter):
             "Fetching Tushare SW industry concepts",
             event="tushare_sw_industry_concepts_fetch_start",
             asof_date=asof_date,
+            level=level,
         )
 
         with tushare_fetch_error_handler("sw_industry_concepts", "index_member"):
@@ -164,10 +170,10 @@ class IndustryTushareAdapter(BaseTushareAdapter):
             # 申万行业指数的成分股即为该行业的股票
             # 需要先获取所有申万行业代码，然后分别查询成分股
 
-            # 1. 获取申万一级行业代码
+            # 1. 获取申万行业代码
             industries = self._client.query(
                 api_name="index_classify",
-                level="1",
+                level=str(level),
                 src="SW2021",
                 fields="index_code,index_name",
             )
@@ -203,7 +209,7 @@ class IndustryTushareAdapter(BaseTushareAdapter):
                     members = members.with_columns(
                         pl.lit(index_code).alias("index_code"),
                         pl.lit(industry_name).alias("industry_name"),
-                        pl.lit(1).alias("industry_level"),
+                        pl.lit(level).alias("industry_level"),
                     )
                     all_concepts.append(members)
 
@@ -247,5 +253,78 @@ class IndustryTushareAdapter(BaseTushareAdapter):
                 row_count=row_count,
             )
             _record_metrics(row_count, "sw_industry_concepts")
+
+            return result
+
+    @traced("source.tushare.fetch_csrc_industry")
+    def fetch_csrc_industry(self) -> pl.DataFrame:
+        """
+        获取证监会行业分类.
+
+        使用 Tushare csrc_industrial API 获取证监会行业分类数据。
+
+        Returns:
+            DataFrame with columns:
+            - industry_id: 行业代码 (e.g., "M0001")
+            - industry_name: 行业名称
+            - industry_level: 行业级别 (L1/L2)
+            - source: 固定为 "csrc"
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        logger.info(
+            "Fetching Tushare CSRC industry",
+            event="tushare_csrc_industry_fetch_start",
+        )
+
+        with tushare_fetch_error_handler("csrc_industry", "csrc_industrial"):
+            response = self._client.query(
+                api_name="csrc_industrial",
+                fields="industry,industry_name,level,parent_industry",
+            )
+
+            if len(response) == 0:
+                logger.warning(
+                    "No CSRC industries found",
+                    event="tushare_csrc_industry_empty",
+                )
+                return pl.DataFrame(
+                    schema={
+                        "industry_id": pl.Utf8,
+                        "industry_name": pl.Utf8,
+                        "industry_level": pl.Utf8,
+                        "source": pl.Utf8,
+                    }
+                )
+
+            # 重命名列并添加 source
+            result = response.rename(
+                {
+                    "industry": "industry_id",
+                    "level": "industry_level",
+                    "parent_industry": "parent_id",
+                }
+            )
+            result = result.with_columns(
+                pl.lit("csrc").alias("source"),
+            )
+
+            # 选择最终列
+            result = result.select(
+                "industry_id",
+                "industry_name",
+                "industry_level",
+                "source",
+            )
+
+            row_count = len(result)
+            logger.info(
+                "Tushare CSRC industry fetched",
+                event="tushare_csrc_industry_fetch_complete",
+                row_count=row_count,
+            )
+            _record_metrics(row_count, "csrc_industry")
 
             return result

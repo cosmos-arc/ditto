@@ -73,7 +73,7 @@ class StockTushareAdapter(BaseTushareAdapter):
                 response = self._client.query(
                     api_name="stock_basic",
                     ts_code=source_ticker,
-                    fields="ts_code,symbol,name,exchange,list_date,list_status",
+                    fields="ts_code,symbol,name,exchange,list_date,delist_date,list_status",
                 )
 
                 if len(response) == 0:
@@ -102,7 +102,7 @@ class StockTushareAdapter(BaseTushareAdapter):
                 response = self._client.query(
                     api_name="stock_basic",
                     list_status=status,
-                    fields="ts_code,symbol,name,exchange,list_date,list_status",
+                    fields="ts_code,symbol,name,exchange,list_date,delist_date,list_status",
                 )
                 if len(response) > 0:
                     all_dfs.append(response)
@@ -126,6 +126,7 @@ class StockTushareAdapter(BaseTushareAdapter):
                 "name": pl.String,
                 "exchange": pl.String,
                 "list_date": pl.Date,
+                "delist_date": pl.Date,
                 "list_status": pl.String,
             }
         )

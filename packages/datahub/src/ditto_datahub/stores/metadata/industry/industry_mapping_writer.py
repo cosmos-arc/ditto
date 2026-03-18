@@ -65,10 +65,11 @@ class IndustryMappingWriter:
             """INSERT INTO industry_mapping
             (instrument_id, industry_id, source, effective_from,
              effective_to, entry_reason)
-            VALUES (?, ?, 'sw', ?, NULL, ?)""",
+            VALUES (?, ?, ?, ?, NULL, ?)""",
             [
                 mapping.instrument_id,
                 mapping.industry_id,
+                mapping.source,
                 mapping.effective_from,
                 mapping.entry_reason,
             ],
