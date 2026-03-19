@@ -14,6 +14,7 @@ from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.services import (
     DerivedCatalogService,
     DerivedShadowSlotService,
+    IngestionCursorService,
     IngestionLogService,
     PublicationSafetyRecordService,
     QualityRecordService,
@@ -29,6 +30,8 @@ from ditto_datahub.stores.runtime.derived_sqlite import (
     SQLiteDerivedCatalogWriter,
 )
 from ditto_datahub.stores.runtime.ingestion import (
+    IngestionCursorReader,
+    IngestionCursorWriter,
     IngestionLogReader,
     IngestionLogWriter,
 )
@@ -243,6 +246,29 @@ class RuntimeProvider(Provider):
     ) -> IngestionLogService:
         """数据摄入日志服务."""
         return IngestionLogService(ingestion_log_reader, ingestion_log_writer)
+
+    @provide
+    def ingestion_cursor_reader(
+        self, sqlite_client: SQLiteClient
+    ) -> IngestionCursorReader:
+        """摄取游标读取器."""
+        return IngestionCursorReader(sqlite_client)
+
+    @provide
+    def ingestion_cursor_writer(
+        self, sqlite_client: SQLiteClient
+    ) -> IngestionCursorWriter:
+        """摄取游标写入器."""
+        return IngestionCursorWriter(sqlite_client)
+
+    @provide
+    def ingestion_cursor_service(
+        self,
+        ingestion_cursor_reader: IngestionCursorReader,
+        ingestion_cursor_writer: IngestionCursorWriter,
+    ) -> IngestionCursorService:
+        """数据摄入游标服务."""
+        return IngestionCursorService(ingestion_cursor_reader, ingestion_cursor_writer)
 
     @provide
     def derived_catalog_service(

@@ -90,6 +90,7 @@ class TestDeployFunctions:
             assert hasattr(config, "description")
             assert hasattr(config, "parameters")
             assert hasattr(config, "tags")
+            assert hasattr(config, "schedule")
             # flow 可能是 Flow 对象或返回 Flow 的函数
             # 使用 _resolve_flow 来获取实际的 Flow 对象
             flow = _resolve_flow(config.flow)

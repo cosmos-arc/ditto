@@ -309,6 +309,156 @@ class TestGetFilteredUniverse:
         assert result == [1, 2, 3]
 
 
+# ============ ING-SS-2: get_filtered_universe min_list_days ============
+
+
+class TestGetFilteredUniverseMinListDays:
+    """测试 get_filtered_universe 的 min_list_days 上市天数过滤."""
+
+    def test_min_list_days_default_no_filter(
+        self,
+        service: MetadataService,
+        mock_dependencies: dict[str, MagicMock],
+    ) -> None:
+        """min_list_days=0（默认）时不过滤."""
+        mock_dependencies[
+            "universe_reader"
+        ].get_constituent_instrument_ids.return_value = [1, 2, 3]
+
+        result = service.get_filtered_universe("csi300")
+
+        assert result == [1, 2, 3]
+        mock_dependencies["instrument_reader"].find_securities.assert_not_called()
+
+    def test_min_list_days_filters_newly_listed(
+        self,
+        service: MetadataService,
+        mock_dependencies: dict[str, MagicMock],
+    ) -> None:
+        """min_list_days > 0 时过滤掉上市天数不足的标的."""
+        import polars as pl
+
+        mock_reader = mock_dependencies["instrument_reader"]
+        mock_dependencies[
+            "universe_reader"
+        ].get_constituent_instrument_ids.return_value = [1, 2, 3, 4]
+        mock_reader.find_securities.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3, 4],
+                "list_date": [
+                    "2024-01-01",  # 165 days — pass
+                    "2024-04-10",  # 66 days — pass
+                    "2024-06-01",  # 44 days — fail
+                    None,  # NULL — fail
+                ],
+            }
+        ).with_columns(pl.col("list_date").cast(pl.Date))
+
+        result = service.get_filtered_universe(
+            "csi300",
+            asof="2024-07-15",
+            min_list_days=60,
+        )
+
+        assert result == [1, 2]
+        mock_reader.find_securities.assert_called_once_with(
+            instrument_ids=[1, 2, 3, 4],
+            is_active=None,
+        )
+
+    def test_min_list_days_excludes_null_list_date(
+        self,
+        service: MetadataService,
+        mock_dependencies: dict[str, MagicMock],
+    ) -> None:
+        """list_date 为 NULL 的标的在 min_list_days > 0 时被排除."""
+        import polars as pl
+
+        mock_reader = mock_dependencies["instrument_reader"]
+        mock_dependencies[
+            "universe_reader"
+        ].get_constituent_instrument_ids.return_value = [1, 2]
+        mock_reader.find_securities.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "list_date": ["2024-01-01", None],
+            }
+        ).with_columns(pl.col("list_date").cast(pl.Date))
+
+        result = service.get_filtered_universe(
+            "csi300",
+            asof="2024-06-15",
+            min_list_days=30,
+        )
+
+        assert result == [1]
+
+    def test_min_list_days_without_asof_raises(
+        self,
+        service: MetadataService,
+    ) -> None:
+        """min_list_days > 0 但未提供 asof 时应抛出 ValueError."""
+        with pytest.raises(ValueError, match="min_list_days > 0 时必须提供 asof 日期"):
+            service.get_filtered_universe("csi300", min_list_days=60)
+
+    def test_min_list_days_empty_universe(
+        self,
+        service: MetadataService,
+        mock_dependencies: dict[str, MagicMock],
+    ) -> None:
+        """空标的池时返回空列表，不调用 find_securities."""
+        mock_dependencies[
+            "universe_reader"
+        ].get_constituent_instrument_ids.return_value = []
+
+        result = service.get_filtered_universe(
+            "csi300",
+            asof="2024-06-15",
+            min_list_days=60,
+        )
+
+        assert result == []
+        mock_dependencies["instrument_reader"].find_securities.assert_not_called()
+
+    def test_min_list_days_and_volume_filter_combined(
+        self,
+        service: MetadataService,
+        mock_dependencies: dict[str, MagicMock],
+    ) -> None:
+        """min_list_days 和 volume 过滤同时生效."""
+        import polars as pl
+
+        mock_reader = mock_dependencies["instrument_reader"]
+        mock_dependencies[
+            "universe_reader"
+        ].get_constituent_instrument_ids.return_value = [1, 2, 3, 4]
+        # instrument 1 & 2 pass list_days, instrument 3 & 4 fail
+        mock_reader.find_securities.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3, 4],
+                "list_date": [
+                    "2024-01-01",  # pass list_days
+                    "2024-01-01",  # pass list_days
+                    "2024-06-01",  # fail list_days
+                    "2024-06-01",  # fail list_days
+                ],
+            }
+        ).with_columns(pl.col("list_date").cast(pl.Date))
+
+        volume_map = {1: 1000000, 2: 50000}  # 2 fails volume
+
+        result = service.get_filtered_universe(
+            "csi300",
+            asof="2024-07-15",
+            volume_map=volume_map,
+            min_avg_volume=100000,
+            min_list_days=60,
+        )
+
+        # only instrument 1 passes both filters
+        assert result == [1]
+
+
 # ============ T09: replace_constituents & set operations ============
 
 

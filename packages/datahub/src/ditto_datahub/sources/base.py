@@ -403,6 +403,33 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
+    def fetch_adj_factor_by_ticker(
+        self,
+        ts_code: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch stock adjustment factors by ticker (for backfill).
+
+        Args:
+            ts_code: Stock code (e.g., "000001.SZ").
+            start_date: Start date (YYYYMMDD).
+            end_date: End date (YYYYMMDD).
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: Source code
+            - trade_date: Date
+            - adj_factor: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
     def fetch_fund_adj(
         self,
         trade_date: str | None = None,
@@ -453,6 +480,34 @@ class DataSource(ABC):
             - is_st: Boolean
             - st_type: Utf8
             - list_status: Utf8
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        pass
+
+    @abstractmethod
+    def fetch_st_history(
+        self,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        Fetch ST status change history.
+
+        Args:
+            ts_code: Stock code (e.g., "000001.SZ"). None for all stocks.
+            start_date: Start date (YYYY-MM-DD). None for no limit.
+            end_date: End date (YYYY-MM-DD). None for no limit.
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: Stock code (e.g., "000001.SZ")
+            - change_date: Date of status change (Date)
+            - end_date: Date when status ended (Date), NULL if still active
+            - change_reason: Reason for change (e.g., "ST", "*ST", "撤销ST")
 
         Raises:
             SourceFetchError: If fetch fails.

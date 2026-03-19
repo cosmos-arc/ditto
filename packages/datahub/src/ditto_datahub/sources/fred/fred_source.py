@@ -157,9 +157,27 @@ class FredSource(DataSource):
         """FRED 不支持复权因子。"""
         raise NotImplementedError("FRED does not support adjustment factors")
 
+    def fetch_adj_factor_by_ticker(
+        self,
+        ts_code: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """FRED 不支持复权因子。"""
+        raise NotImplementedError("FRED does not support adjustment factors")
+
     def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
         """FRED 不支持股票状态。"""
         raise NotImplementedError("FRED does not support stock status")
+
+    def fetch_st_history(
+        self,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """FRED 不支持 ST 状态变更历史。"""
+        raise NotImplementedError("FRED does not support ST status change history")
 
     def fetch_etf_basic(self) -> pl.DataFrame:
         """FRED 不支持 ETF 数据。"""

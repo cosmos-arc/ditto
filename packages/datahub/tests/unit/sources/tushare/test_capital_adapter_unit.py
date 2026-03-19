@@ -178,6 +178,7 @@ class TestCapitalTushareAdapterFetchIndexComposition:
             {
                 "ts_code": ["000001.SZ", "000002.SZ"],
                 "in_date": ["20200101", "20200101"],
+                "out_date": ["", ""],
                 "is_new": [1, 1],
             }
         )

@@ -263,6 +263,14 @@ CREATE TABLE IF NOT EXISTS balance_sheet (
     net_assets REAL,
     current_assets REAL,
     current_liabilities REAL,
+    inventory REAL,
+    fixed_assets REAL,
+    cash_equivalents REAL,
+    accounts_receivable REAL,
+    short_term_debt REAL,
+    long_term_debt REAL,
+    money_cap REAL,
+    total_share REAL,
     PRIMARY KEY (instrument_id, report_date, effective_from),
     FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );
@@ -280,6 +288,14 @@ CREATE TABLE IF NOT EXISTS income_statement (
     operating_profit REAL,
     net_profit REAL,
     eps REAL,
+    operate_cost REAL,
+    sale_exp REAL,
+    admin_exp REAL,
+    fin_exp REAL,
+    rd_exp REAL,
+    total_profit REAL,
+    income_tax REAL,
+    diluted_eps REAL,
     PRIMARY KEY (instrument_id, report_date, effective_from),
     FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );
@@ -297,6 +313,9 @@ CREATE TABLE IF NOT EXISTS cash_flow (
     investing_cash_flow REAL,
     financing_cash_flow REAL,
     net_cash_flow REAL,
+    depreciation REAL,
+    interest_paid REAL,
+    tax_paid REAL,
     PRIMARY KEY (instrument_id, report_date, effective_from),
     FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );

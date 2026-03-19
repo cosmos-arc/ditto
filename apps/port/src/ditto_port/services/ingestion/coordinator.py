@@ -23,7 +23,9 @@ from ditto_datahub.models import (
     DateScheduleType,
     OnDuplicate,
 )
-from ditto_datahub.services import IngestionLogService
+from ditto_datahub.models.storage import WriteResult
+from ditto_datahub.runtime.freeze_manager import FreezeManager
+from ditto_datahub.services import IngestionCursorService, IngestionLogService
 from ditto_datahub.services.capital_service import CapitalService
 from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.macro_service import MacroService
@@ -40,6 +42,7 @@ from ditto_port.services.ingestion.list_date_inference import (
     ListDateInferenceService,
 )
 from ditto_port.services.ingestion.metadata import MetadataManager
+from ditto_port.services.ingestion.quality.service import QualityService
 from ditto_port.services.ingestion.result_handler import IngestionResultHandler
 
 # 支持按标的摄取的数据集
@@ -101,6 +104,9 @@ class IngestionCoordinator:
         source: DataSource,
         source_name: str = "tushare",
         ingestion_log_service: IngestionLogService | None = None,
+        ingestion_cursor_service: IngestionCursorService | None = None,
+        quality_service: QualityService | None = None,
+        freeze_manager: FreezeManager | None = None,
         fred_source: DataSource | None = None,
     ) -> None:
         """初始化 IngestionCoordinator。"""
@@ -113,6 +119,9 @@ class IngestionCoordinator:
         self._source_name = source_name
         self._fred_source = fred_source
         self._ingestion_log_service = ingestion_log_service
+        self._ingestion_cursor_service = ingestion_cursor_service
+        self._quality_service = quality_service
+        self._freeze_manager = freeze_manager
         self._metadata_manager = MetadataManager(ingestion_log_service)
         self._result_handler = IngestionResultHandler(
             ingestion_log_service, source_name
@@ -383,7 +392,7 @@ class IngestionCoordinator:
             message=message,
         )
 
-    def _fetch_and_ingest(  # noqa: PLR0911
+    def _fetch_and_ingest(  # noqa: C901, PLR0911
         self, dataset: str, trade_date: str, force: bool
     ) -> IngestionResult:
         """获取数据并执行摄取（统一错误处理）。"""
@@ -429,6 +438,27 @@ class IngestionCoordinator:
         if df.is_empty():
             return self._result_handler.handle_empty_data(dataset, trade_date)
 
+        # DQ 质量检查
+        if self._quality_service is not None:
+            checked_df, should_block = self._quality_service.check_and_quarantine(
+                df=df,
+                dataset=dataset,
+                context={"trade_date": trade_date},
+            )
+            if should_block:
+                return self._result_handler.handle_dq_blocked(
+                    dataset,
+                    trade_date,
+                    WriteResult(
+                        file_path="",
+                        checksum="",
+                        rows_written=0,
+                        rows_total=df.height,
+                        blocked=True,
+                    ),
+                )
+            df = checked_df
+
         # 将 force 映射到 on_duplicate
         on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
 
@@ -453,6 +483,39 @@ class IngestionCoordinator:
 
         # basic 数据摄取成功后，执行 list_date 推断补偿
         self._run_list_date_inference(dataset)
+
+        # 更新摄入游标
+        if self._ingestion_cursor_service is not None:
+            try:
+                self._ingestion_cursor_service.update_cursor(
+                    dataset=dataset,
+                    source=self._source_name,
+                    last_success=trade_date,
+                    last_attempted=trade_date,
+                )
+            except Exception as e:
+                logger.warning(
+                    "cursor_update_failed",
+                    dataset=dataset,
+                    trade_date=trade_date,
+                    error=str(e),
+                )
+
+        # 创建冻结点（轻量级版本追踪）
+        if self._freeze_manager is not None:
+            try:
+                self._freeze_manager.create(
+                    freeze_id=f"{dataset}_{trade_date}",
+                    description=f"Auto-freeze: {dataset} @ {trade_date}",
+                    datasets=[dataset],
+                )
+            except Exception as e:
+                logger.warning(
+                    "freeze_create_failed",
+                    dataset=dataset,
+                    trade_date=trade_date,
+                    error=str(e),
+                )
 
         # 成功写入
         return self._result_handler.handle_success(

@@ -11,6 +11,8 @@ from ditto_infra.foundation.config import get_default_dq_rules_dir
 from loguru import logger
 from pydantic import ValidationError
 
+from ditto_port.services.ingestion.quality.service import QualityService
+
 __all__ = ["QualityProvider"]
 
 
@@ -106,3 +108,17 @@ class QualityProvider(Provider):
         """
         engine = QualityEngine(config=dq_spec)
         yield engine
+
+    @provide
+    def quality_service(self, dq_engine: QualityEngine) -> QualityService:
+        """
+        写入时 DQ 质量服务.
+
+        Args:
+            dq_engine: QualityEngine 实例（通过 DI 注入）
+
+        Returns:
+            QualityService: 质量服务实例
+
+        """
+        return QualityService(engine=dq_engine)

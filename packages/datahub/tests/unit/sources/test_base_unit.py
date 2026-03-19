@@ -188,6 +188,14 @@ class TestDataSourceABC:
             def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
+            def fetch_adj_factor_by_ticker(
+                self,
+                ts_code: str,
+                start_date: str,
+                end_date: str,
+            ) -> pl.DataFrame:
+                return pl.DataFrame()
+
             def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
                 return pl.DataFrame()
 
@@ -258,6 +266,14 @@ class TestDataSourceABC:
                 codes: list[str],
                 start_date: str,
                 end_date: str,
+            ) -> pl.DataFrame:
+                return pl.DataFrame()
+
+            def fetch_st_history(
+                self,
+                ts_code: str | None = None,
+                start_date: str | None = None,
+                end_date: str | None = None,
             ) -> pl.DataFrame:
                 return pl.DataFrame()
 

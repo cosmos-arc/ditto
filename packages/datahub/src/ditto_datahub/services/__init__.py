@@ -53,6 +53,7 @@ from ditto_datahub.services.hot_layer import (
     UnavailableHotLayerWriter,
     UnavailableStateStore,
 )
+from ditto_datahub.services.ingestion_cursor_service import IngestionCursorService
 from ditto_datahub.services.ingestion_log_service import IngestionLogService
 
 # Macro 域服务
@@ -99,6 +100,7 @@ __all__ = [
     "FundamentalWritePorts",
     "HotLayerReader",
     "HotLayerWriter",
+    "IngestionCursorService",
     "IngestionLogService",
     "MacroService",
     "MarketBarsQuery",

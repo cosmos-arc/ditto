@@ -652,18 +652,21 @@ class MetadataService:
         asof: str | None = None,
         volume_map: dict[int, float] | None = None,
         min_avg_volume: float | None = None,
+        min_list_days: int = 0,
     ) -> list[int]:
         """
-        获取流动性过滤后的标的池成分股.
+        获取过滤后的标的池成分股.
 
-        通过外部传入的 volume_map 进行成交量过滤，
-        避免在 datahub 层直接依赖行情数据。
+        支持两种过滤维度：
+        - 流动性过滤：通过外部传入的 volume_map 进行成交量过滤
+        - 上市天数过滤：排除上市时间不足 N 天的标的
 
         Args:
             universe_id: 标的池 ID.
-            asof: 时间点日期.
+            asof: 时间点日期（上市天数过滤时必需）.
             volume_map: {instrument_id: avg_volume} 外部传入的成交量数据.
             min_avg_volume: 最低平均成交量阈值.
+            min_list_days: 最低上市天数（自然日），0 表示不过滤.
 
         Returns:
             过滤后的 instrument_id 列表.
@@ -671,10 +674,59 @@ class MetadataService:
         """
         ids = self._universe_reader.get_constituent_instrument_ids(universe_id, asof)
 
-        if min_avg_volume is None or volume_map is None:
-            return ids
+        # 上市天数过滤
+        if min_list_days > 0:
+            if asof is None:
+                msg = "min_list_days > 0 时必须提供 asof 日期"
+                raise ValueError(msg)
+            ids = self._filter_by_list_days(ids, asof, min_list_days)
 
-        return [iid for iid in ids if volume_map.get(iid, 0) >= min_avg_volume]
+        # 流动性过滤
+        if min_avg_volume is not None and volume_map is not None:
+            ids = [iid for iid in ids if volume_map.get(iid, 0) >= min_avg_volume]
+
+        return ids
+
+    def _filter_by_list_days(
+        self,
+        instrument_ids: list[int],
+        asof: str,
+        min_list_days: int,
+    ) -> list[int]:
+        """
+        按上市天数过滤 instrument_id 列表.
+
+        查询各证券的 list_date，排除上市天数不足或 list_date 为 NULL 的标的。
+
+        Args:
+            instrument_ids: 待过滤的 instrument_id 列表.
+            asof: 时间点日期 (YYYY-MM-DD).
+            min_list_days: 最低上市天数（自然日）.
+
+        Returns:
+            过滤后的 instrument_id 列表.
+
+        """
+        if not instrument_ids:
+            return []
+
+        # 批量查询 list_date
+        rows = self._instrument_reader.find_securities(
+            instrument_ids=instrument_ids,
+            is_active=None,
+        ).select("instrument_id", "list_date")
+
+        if rows.is_empty():
+            return []
+
+        asof_date = date.fromisoformat(asof)
+        # 筛选：list_date 非空且 (asof_date - list_date).days >= min_list_days
+        days_since_list = (asof_date - pl.col("list_date").dt.date()).dt.total_days()
+        qualified = rows.filter(
+            pl.col("list_date").is_not_null() & (days_since_list >= min_list_days)
+        )
+
+        return qualified["instrument_id"].to_list()
 
     @traced("metadata.universe.intersection")
     def universe_intersection(
