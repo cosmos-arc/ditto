@@ -8,6 +8,7 @@ __all__ = [
     "FactorEvaluationReport",
     "ICSummary",
     "LongShortResult",
+    "TailRiskMetrics",
 ]
 
 
@@ -35,17 +36,40 @@ class ICSummary:
 
 
 @dataclass(frozen=True)
+class TailRiskMetrics:
+    """
+    Tail risk statistics for a long-short returns series.
+
+    Attributes:
+        cvar_95: CVaR at 95% confidence level (Expected Shortfall).
+        cvar_99: CVaR at 99% confidence level (Expected Shortfall).
+        skewness: Skewness of returns.
+        kurtosis: Excess kurtosis (Pearson kurtosis minus 3).
+        max_single_day_loss: Worst single-day return.
+
+    """
+
+    cvar_95: float
+    cvar_99: float
+    skewness: float
+    kurtosis: float
+    max_single_day_loss: float
+
+
+@dataclass(frozen=True)
 class LongShortResult:
     """
     Long-short portfolio risk metrics.
 
     Attributes:
-        annual_return: Annualized return.
+        annual_return: Annualized return (net of risk-free rate).
         annual_volatility: Annualized volatility.
-        sharpe: Sharpe ratio = return / vol (equals IR_2 when R_f = 0).
+        sharpe: Sharpe ratio = (annual_return - rf) / vol.
         portfolio_ir: Factor Portfolio IR = (return - R_f) / vol.
         sortino: Sortino ratio = return / downside_dev.
         max_drawdown: Maximum drawdown.
+        calmar: Calmar ratio = annual_return / abs(max_drawdown).
+        tail_risk: Tail risk metrics (CVaR, skewness, kurtosis, etc.).
 
     """
 
@@ -55,6 +79,8 @@ class LongShortResult:
     portfolio_ir: float
     sortino: float
     max_drawdown: float
+    calmar: float
+    tail_risk: TailRiskMetrics
 
 
 @dataclass(frozen=True)
@@ -78,6 +104,8 @@ class FactorEvaluationReport:
         avg_turnover: Average two-way turnover.
         net_return_after_cost: Net return after turnover cost.
         turnover_adjusted_ir: Turnover-adjusted IR (IR layer 3).
+        grinold_kahn_ir: Grinold-Kahn fundamental law IR with autocorrelation
+            correction.
         sub_period_ic: {period_label: ICSummary}.
         n_observations: Total number of cross-section observations.
         n_dates: Number of trading dates in the evaluation window.
@@ -110,6 +138,7 @@ class FactorEvaluationReport:
 
     # IR layer 3
     turnover_adjusted_ir: float
+    grinold_kahn_ir: float
 
     # Sub-period stability
     sub_period_ic: dict[str, ICSummary]

@@ -123,6 +123,7 @@ class FactorEvaluationFacade:
             avg_turnover=report.avg_turnover,
             net_return_after_cost=report.net_return_after_cost,
             turnover_adjusted_ir=report.turnover_adjusted_ir,
+            grinold_kahn_ir=report.grinold_kahn_ir,
             sub_period_ic=report.sub_period_ic,
             n_observations=report.n_observations,
             n_dates=report.n_dates,

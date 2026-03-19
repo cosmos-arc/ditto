@@ -10,6 +10,7 @@ import polars as pl
 import polars.exceptions as pl_exc
 
 from ditto_core.engine.evaluation.metrics import (
+    grinold_kahn_ir,
     ic_autocorrelation,
     ic_decay,
     ic_summary,
@@ -26,6 +27,7 @@ from ditto_core.engine.evaluation.report import (
     FactorEvaluationReport,
     ICSummary,
     LongShortResult,
+    TailRiskMetrics,
 )
 
 __all__ = [
@@ -52,6 +54,7 @@ class EvaluationConfig:
     risk_free_rate: float = 0.0
     cost_bps: float = 20.0
     rebalance_freq: int = 5
+    periods_per_year: int = 244
 
 
 class ForwardReturnProvider(Protocol):
@@ -92,9 +95,10 @@ class FactorEvaluator:
         3. IC decay + half-life
         4. IC autocorrelation (lag-1 for IR layer 3)
         5. Turnover-adjusted IR (IR layer 3)
-        6. Quantile returns -> LongShortResult (IR layer 2)
-        7. Sub-period IC stability
-        8. Assemble report
+        6. Grinold-Kahn IR (IR layer 3)
+        7. Quantile returns -> LongShortResult (IR layer 2)
+        8. Sub-period IC stability
+        9. Assemble report
         """
         effective_config = config or EvaluationConfig()
         return self._evaluate_impl(factor_df, effective_config, start, end)
@@ -109,6 +113,7 @@ class FactorEvaluator:
         """Core evaluation logic."""
         effective_start, effective_end = _resolve_period(factor_df, start, end)
         effective_lags = config.ic_lags or DEFAULT_IC_LAGS
+        ppw = config.periods_per_year
 
         # Compute forward returns
         return_df = self._fr_provider.compute(
@@ -135,6 +140,10 @@ class FactorEvaluator:
                 holding_period=config.holding_period,
                 n_quantiles=config.n_quantiles,
             )
+
+        n_dates = factor_df_clean.select(
+            pl.col("trade_date").n_unique(),
+        ).item()
 
         # IR Layer 1: IC analysis
         rank_ic_df = rank_ic(factor_df_clean, return_df_clean)
@@ -163,6 +172,17 @@ class FactorEvaluator:
             rebalance_freq=config.rebalance_freq,
         )
 
+        # IR Layer 3: Grinold-Kahn IR
+        breadth = n_dates * (config.n_quantiles - 1) / config.n_quantiles
+        gk_ir = grinold_kahn_ir(
+            mean_ic=rank_ic_summary.mean,
+            ic_std=rank_ic_summary.std,
+            ic_autocorr_lag1=ic_autocorr_lag1,
+            breadth=breadth,
+            rebalance_freq=config.rebalance_freq,
+            periods_per_year=ppw,
+        )
+
         # IR Layer 2: Quantile returns + Long-Short
         q_ret_df = quantile_returns(
             factor_df_clean,
@@ -172,13 +192,13 @@ class FactorEvaluator:
         ls_result = long_short_returns(
             q_ret_df,
             risk_free_rate=config.risk_free_rate,
-            periods_per_year=DEFAULT_PERIODS_PER_YEAR,
+            periods_per_year=ppw,
         )
 
         # Quantile annual returns
         quantile_annual = _compute_quantile_annual_returns(
             q_ret_df,
-            periods_per_year=DEFAULT_PERIODS_PER_YEAR,
+            periods_per_year=ppw,
         )
 
         # Turnover and net returns
@@ -205,11 +225,10 @@ class FactorEvaluator:
             avg_turnover=avg_turnover,
             net_return_after_cost=net_ret,
             turnover_adjusted_ir=t_ir,
+            grinold_kahn_ir=gk_ir,
             sub_period_ic=sub_ic,
             n_observations=factor_df_clean.height,
-            n_dates=factor_df_clean.select(
-                pl.col("trade_date").n_unique(),
-            ).item(),
+            n_dates=n_dates,
             computed_at=datetime.now(UTC).isoformat(),
         )
 
@@ -389,6 +408,13 @@ def _empty_report(
         p_value=1.0,
         win_rate=0.0,
     )
+    empty_tail = TailRiskMetrics(
+        cvar_95=0.0,
+        cvar_99=0.0,
+        skewness=0.0,
+        kurtosis=0.0,
+        max_single_day_loss=0.0,
+    )
     empty_ls = LongShortResult(
         annual_return=0.0,
         annual_volatility=0.0,
@@ -396,6 +422,8 @@ def _empty_report(
         portfolio_ir=0.0,
         sortino=0.0,
         max_drawdown=0.0,
+        calmar=0.0,
+        tail_risk=empty_tail,
     )
     return FactorEvaluationReport(
         factor_id=factor_id,
@@ -413,6 +441,7 @@ def _empty_report(
         avg_turnover=0.0,
         net_return_after_cost=0.0,
         turnover_adjusted_ir=0.0,
+        grinold_kahn_ir=0.0,
         sub_period_ic={},
         n_observations=0,
         n_dates=0,

@@ -22,7 +22,11 @@ from ditto_core.engine.evaluation.metrics import (
     turnover,
     turnover_adjusted_ir,
 )
-from ditto_core.engine.evaluation.report import ICSummary, LongShortResult
+from ditto_core.engine.evaluation.report import (
+    ICSummary,
+    LongShortResult,
+    TailRiskMetrics,
+)
 
 # ---------------------------------------------------------------------------
 # Test data factories
@@ -667,6 +671,14 @@ class TestLongShortReturns:
             portfolio_ir=0.0,
             sortino=0.0,
             max_drawdown=0.0,
+            calmar=0.0,
+            tail_risk=TailRiskMetrics(
+                cvar_95=0.0,
+                cvar_99=0.0,
+                skewness=0.0,
+                kurtosis=0.0,
+                max_single_day_loss=0.0,
+            ),
         )
 
     def test_max_drawdown_is_nonpositive(self) -> None:

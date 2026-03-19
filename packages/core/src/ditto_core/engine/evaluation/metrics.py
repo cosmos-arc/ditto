@@ -15,9 +15,14 @@ from decimal import Decimal
 import polars as pl
 from polars._typing import PythonLiteral
 
-from ditto_core.engine.evaluation.report import ICSummary, LongShortResult
+from ditto_core.engine.evaluation.report import (
+    ICSummary,
+    LongShortResult,
+    TailRiskMetrics,
+)
 
 __all__ = [
+    "grinold_kahn_ir",
     "ic_autocorrelation",
     "ic_decay",
     "ic_summary",
@@ -28,6 +33,7 @@ __all__ = [
     "quantile_returns",
     "rank_ic",
     "sub_period_ic",
+    "tail_risk_metrics",
     "turnover",
     "turnover_adjusted_ir",
 ]
@@ -445,8 +451,9 @@ def long_short_returns(
 
     Daily LS returns = top-quantile mean return - bottom-quantile mean return.
 
-    Metrics: annualised return, annualised volatility, Sharpe ratio,
-    Portfolio IR, Sortino ratio, and maximum drawdown.
+    Metrics: annualised return (net of risk-free rate), annualised volatility,
+    Sharpe ratio, Portfolio IR, Sortino ratio, maximum drawdown, Calmar ratio,
+    and tail risk metrics.
 
     Args:
         quantile_ret_df: Output of :func:`quantile_returns`.
@@ -468,43 +475,49 @@ def long_short_returns(
         "trade_date"
     )
 
+    empty_tail = TailRiskMetrics(
+        cvar_95=0.0,
+        cvar_99=0.0,
+        skewness=0.0,
+        kurtosis=0.0,
+        max_single_day_loss=0.0,
+    )
+    empty_result = LongShortResult(
+        annual_return=0.0,
+        annual_volatility=0.0,
+        sharpe=0.0,
+        portfolio_ir=0.0,
+        sortino=0.0,
+        max_drawdown=0.0,
+        calmar=0.0,
+        tail_risk=empty_tail,
+    )
+
     if top_df.height == 0 or bottom_df.height == 0:
-        return LongShortResult(
-            annual_return=0.0,
-            annual_volatility=0.0,
-            sharpe=0.0,
-            portfolio_ir=0.0,
-            sortino=0.0,
-            max_drawdown=0.0,
-        )
+        return empty_result
 
     # Align by row position (both sorted by date).
     ls_daily = top_df[return_col] - bottom_df[return_col]
     n = len(ls_daily)
     if n == 0:
-        return LongShortResult(
-            annual_return=0.0,
-            annual_volatility=0.0,
-            sharpe=0.0,
-            portfolio_ir=0.0,
-            sortino=0.0,
-            max_drawdown=0.0,
-        )
+        return empty_result
 
-    mean_daily = _scalar_to_float(ls_daily.mean())
+    # Subtract daily risk-free rate BEFORE annualizing.
+    daily_rf = risk_free_rate / periods_per_year
+    ls_daily_adjusted = ls_daily - daily_rf
+
+    mean_daily = _scalar_to_float(ls_daily_adjusted.mean())
     std_daily = _scalar_to_float(ls_daily.std(ddof=1) if n > 1 else None)
 
     annual_return = mean_daily * periods_per_year
     annual_vol = std_daily * math.sqrt(periods_per_year)
 
     sharpe = annual_return / annual_vol if annual_vol > 0 else 0.0
+    # portfolio_ir is now the same as sharpe since rf is already subtracted.
+    portfolio_ir = sharpe
 
-    portfolio_ir = (
-        (annual_return - risk_free_rate) / annual_vol if annual_vol > 0 else 0.0
-    )
-
-    # Sortino — downside deviation only.
-    negative = ls_daily.filter(ls_daily < 0)
+    # Sortino — downside deviation only (using adjusted returns).
+    negative = ls_daily_adjusted.filter(ls_daily_adjusted < 0)
     neg_std = _scalar_to_float(
         negative.std(ddof=1) if len(negative) > 1 else None,
     )
@@ -517,6 +530,12 @@ def long_short_returns(
     drawdown = (cumulative - running_max) / running_max
     max_drawdown = _scalar_to_float(drawdown.min())
 
+    # Calmar ratio.
+    calmar = annual_return / abs(max_drawdown) if max_drawdown != 0 else 0.0
+
+    # Tail risk metrics.
+    tr = tail_risk_metrics(ls_daily)
+
     return LongShortResult(
         annual_return=annual_return,
         annual_volatility=annual_vol,
@@ -524,7 +543,120 @@ def long_short_returns(
         portfolio_ir=portfolio_ir,
         sortino=sortino,
         max_drawdown=max_drawdown,
+        calmar=calmar,
+        tail_risk=tr,
     )
+
+
+# ---------------------------------------------------------------------------
+# Tail risk metrics
+# ---------------------------------------------------------------------------
+
+
+def tail_risk_metrics(ls_daily: pl.Series) -> TailRiskMetrics:
+    """
+    Compute tail risk statistics from a daily long-short returns series.
+
+    Args:
+        ls_daily: Daily long-short returns as a Polars Series.
+
+    Returns:
+        A :class:`~ditto_core.engine.evaluation.report.TailRiskMetrics` instance.
+        Returns all zeros if the series is empty or has fewer than 2 elements.
+
+    """
+    n = len(ls_daily)
+    _MIN_TAIL_OBSERVATIONS = 2
+    if n < _MIN_TAIL_OBSERVATIONS:
+        return TailRiskMetrics(
+            cvar_95=0.0,
+            cvar_99=0.0,
+            skewness=0.0,
+            kurtosis=0.0,
+            max_single_day_loss=_scalar_to_float(ls_daily.min()) if n == 1 else 0.0,
+        )
+
+    sorted_vals = ls_daily.sort()
+
+    # CVaR 95%: mean of worst 5%.
+    cutoff_95 = max(1, math.ceil(n * 0.05))
+    worst_95 = sorted_vals.slice(0, cutoff_95)
+    cvar_95 = _scalar_to_float(worst_95.mean())
+
+    # CVaR 99%: mean of worst 1%.
+    cutoff_99 = max(1, math.ceil(n * 0.01))
+    worst_99 = sorted_vals.slice(0, cutoff_99)
+    cvar_99 = _scalar_to_float(worst_99.mean())
+
+    # Skewness and excess kurtosis.
+    skewness = _scalar_to_float(ls_daily.skew())
+    kurtosis = _scalar_to_float(ls_daily.kurtosis()) - 3.0
+
+    # Max single day loss.
+    max_single_day_loss = _scalar_to_float(ls_daily.min())
+
+    return TailRiskMetrics(
+        cvar_95=cvar_95,
+        cvar_99=cvar_99,
+        skewness=skewness,
+        kurtosis=kurtosis,
+        max_single_day_loss=max_single_day_loss,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Grinold-Kahn IR
+# ---------------------------------------------------------------------------
+
+
+def grinold_kahn_ir(
+    mean_ic: float,
+    ic_std: float,
+    ic_autocorr_lag1: float,
+    breadth: float,
+    rebalance_freq: int = 5,
+    periods_per_year: int = 244,
+) -> float:
+    """
+    Compute the Grinold-Kahn Information Ratio using the Fundamental Law.
+
+    ``IR = IC * sqrt(BR_effective)``
+
+    where ``IC = mean_ic / ic_std`` and ``BR_effective`` is computed using
+    the Gordon Ritter autocorrelation correction:
+
+    ``BR_effective = BR * (1 - rho^2) / (1 - 2*rho*cos(pi/T) + rho^2)``
+
+    with ``rho = ic_autocorr_lag1`` and ``T = periods_per_year``.
+
+    Args:
+        mean_ic: Mean IC value.
+        ic_std: IC standard deviation.
+        ic_autocorr_lag1: IC autocorrelation at lag 1.
+        breadth: Strategy breadth (e.g. n_dates * (n_quantiles - 1) / n_quantiles).
+        rebalance_freq: Rebalancing frequency in days.
+        periods_per_year: Number of periods per year.
+
+    Returns:
+        Grinold-Kahn IR. Returns 0.0 if ic_std is 0 or breadth is <= 0.
+
+    """
+    if ic_std == 0.0 or breadth <= 0:
+        return 0.0
+
+    ic_ratio = mean_ic / ic_std
+    rho = ic_autocorr_lag1
+    t_periods = periods_per_year
+
+    denominator = 1 - 2 * rho * math.cos(math.pi / t_periods) + rho * rho
+    if denominator <= 0:
+        return 0.0
+
+    br_effective = breadth * (1 - rho * rho) / denominator
+    if br_effective <= 0:
+        return 0.0
+
+    return ic_ratio * math.sqrt(br_effective)
 
 
 # ---------------------------------------------------------------------------
