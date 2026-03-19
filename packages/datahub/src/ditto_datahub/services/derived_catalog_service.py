@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Protocol
+
+import polars as pl
 
 from ditto_datahub.models.derived import (
     DerivedCheckpointRecord,
@@ -15,6 +18,8 @@ from ditto_datahub.models.derived import (
     DerivedStateRecord,
     DerivedVersionRecord,
 )
+from ditto_datahub.services.derived.garbage_collector import DerivedGarbageCollector
+from ditto_datahub.services.derived.gc_models import GcReport
 
 
 class DerivedCatalogReaderProtocol(Protocol):
@@ -231,6 +236,22 @@ class DerivedCatalogWriterProtocol(Protocol):
         """Update the status of one invalidation record."""
         ...
 
+    # --- delete methods ---
+
+    def delete_version_records(self, derived_id: str, version: int) -> int:
+        """
+        Delete all records for one derived version.
+
+        Removes rows from derived_run, derived_partition,
+        derived_checkpoint, derived_spec, and derived_version.
+
+        Does NOT touch derived_state, derived_dependency, or
+        derived_invalidation (managed separately).
+
+        Returns the number of records removed.
+        """
+        ...
+
 
 class DerivedCatalogService:
     """Unified service for derived catalog runtime metadata."""
@@ -386,3 +407,113 @@ class DerivedCatalogService:
             derived_ids=tuple(derived_ids),
             durable_only=durable_only,
         )
+
+    def catalog_dashboard(self) -> pl.DataFrame:
+        """
+        Return a unified catalog dashboard view.
+
+        Joins spec, version, state, and latest-run metadata into a single
+        monitoring/debugging DataFrame.  Returns an empty frame with the
+        canonical schema when no specs exist.
+        """
+        specs = self._catalog_reader.list_specs(durable_only=False)
+        if not specs:
+            return _empty_dashboard()
+        rows: list[dict[str, object]] = []
+        for spec in specs:
+            version_rec = self._catalog_reader.read_version(
+                spec.derived_id, spec.version
+            )
+            state_rec = self._catalog_reader.read_state(spec.derived_id)
+            run_rec = (
+                self._catalog_reader.get_latest_run(spec.derived_id, spec.version)
+                if version_rec is not None
+                else None
+            )
+            rows.append(
+                {
+                    "derived_id": spec.derived_id,
+                    "version": spec.version,
+                    "role": spec.role,
+                    "profile": spec.materialization_profile,
+                    "version_status": version_rec.status if version_rec else None,
+                    "is_online": version_rec.is_online if version_rec else None,
+                    "is_primary": version_rec.is_primary if version_rec else None,
+                    "active_version": (state_rec.active_version if state_rec else None),
+                    "latest_run_id": run_rec.run_id if run_rec else None,
+                    "latest_run_status": run_rec.status if run_rec else None,
+                    "total_rows": state_rec.total_rows if state_rec else None,
+                    "watermark": state_rec.watermark if state_rec else None,
+                }
+            )
+        return pl.DataFrame(rows, schema=_dashboard_schema())
+
+    # --- garbage collection ---
+
+    def gc_versions(
+        self,
+        derived_id: str,
+        artifact_root: Path | str,
+        keep_last_n: int = 3,
+    ) -> GcReport:
+        """
+        Execute GC for one derived id.
+
+        Delegates to
+        :class:`~ditto_datahub.services.derived.garbage_collector.DerivedGarbageCollector`.
+        """
+        gc = DerivedGarbageCollector(
+            catalog_reader=self._catalog_reader,
+            catalog_writer=self._catalog_writer,
+            artifact_root=Path(artifact_root),
+        )
+        return gc.gc_versions(derived_id, keep_last_n=keep_last_n)
+
+    def gc_all(
+        self,
+        artifact_root: Path | str,
+        keep_last_n: int = 3,
+    ) -> list[GcReport]:
+        """
+        Execute GC for every derived id known to the catalog.
+
+        Delegates to
+        :class:`~ditto_datahub.services.derived.garbage_collector.DerivedGarbageCollector`.
+        """
+        gc = DerivedGarbageCollector(
+            catalog_reader=self._catalog_reader,
+            catalog_writer=self._catalog_writer,
+            artifact_root=Path(artifact_root),
+        )
+        return gc.gc_all(keep_last_n=keep_last_n)
+
+
+_DASHBOARD_COLUMNS = [
+    ("derived_id", pl.String),
+    ("version", pl.Int64),
+    ("role", pl.String),
+    ("profile", pl.String),
+    ("version_status", pl.String),
+    ("is_online", pl.Boolean),
+    ("is_primary", pl.Boolean),
+    ("active_version", pl.Int64),
+    ("latest_run_id", pl.String),
+    ("latest_run_status", pl.String),
+    ("total_rows", pl.Int64),
+    ("watermark", pl.String),
+]
+
+
+def _dashboard_schema() -> dict[str, type[pl.DataType]]:
+    """Build a schema dict for the dashboard DataFrame."""
+    return dict(_DASHBOARD_COLUMNS)
+
+
+def _empty_dashboard() -> pl.DataFrame:
+    """Create an empty dashboard frame with the canonical schema."""
+    return pl.DataFrame(
+        {
+            name: pl.Series(name=name, values=[], dtype=dtype)
+            for name, dtype in _DASHBOARD_COLUMNS
+        }
+    )

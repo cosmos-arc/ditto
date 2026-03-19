@@ -381,3 +381,43 @@ class SQLiteDerivedCatalogWriter:
         """Update the status of one invalidation row."""
         self.execute_invalidation_status(invalidation_id, status)
         self.commit()
+
+    # --- delete methods ---
+
+    def execute_delete_version_records(
+        self,
+        derived_id: str,
+        version: int,
+    ) -> int:
+        """
+        Delete all records for one derived version without committing.
+
+        Removes rows from derived_run, derived_partition,
+        derived_checkpoint, derived_spec, and derived_version.
+
+        Does NOT touch derived_state, derived_dependency, or
+        derived_invalidation (managed separately).
+
+        Returns the number of records removed.
+        """
+        total = 0
+        delete_order = [
+            "derived_partition",
+            "derived_checkpoint",
+            "derived_run",
+            "derived_spec",
+            "derived_version",
+        ]
+        for table in delete_order:
+            cursor = self._sqlite_client.execute(
+                f"DELETE FROM {table} WHERE derived_id = ? AND version = ?",  # noqa: S608
+                (derived_id, version),
+            )
+            total += cursor.rowcount
+        return total
+
+    def delete_version_records(self, derived_id: str, version: int) -> int:
+        """Delete all records for one derived version and commit."""
+        total = self.execute_delete_version_records(derived_id, version)
+        self.commit()
+        return total

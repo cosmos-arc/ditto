@@ -5,11 +5,13 @@ from __future__ import annotations
 from datetime import date
 from enum import StrEnum
 from pathlib import Path
+from typing import Literal, overload
 
 import polars as pl
 
 from ditto_datahub.errors import DerivedNotFoundError, DerivedVersionError
 from ditto_datahub.models.derived import DerivedSpecRecord
+from ditto_datahub.services.derived._pruning import prune_parquet_paths
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
 
 __all__ = [
@@ -99,6 +101,11 @@ class DerivedArtifactReader:
         self._require_catalog_entry(derived_id, version)
         return version
 
+    # ------------------------------------------------------------------
+    # read_frame overloads
+    # ------------------------------------------------------------------
+
+    @overload
     def read_frame(
         self,
         *,
@@ -108,8 +115,110 @@ class DerivedArtifactReader:
         start: str | None = None,
         end: str | None = None,
         as_of: str | None = None,
-    ) -> pl.DataFrame:
-        """Read one artifact slice from parquet partitions."""
+        streaming: bool = False,
+        max_rows: int | None = None,
+        as_lazy: Literal[False] = False,
+    ) -> pl.DataFrame: ...
+
+    @overload
+    def read_frame(
+        self,
+        *,
+        derived_id: str,
+        version: int,
+        instrument_ids: tuple[int, ...] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        as_of: str | None = None,
+        streaming: bool = False,
+        max_rows: int | None = None,
+        as_lazy: Literal[True],
+    ) -> pl.LazyFrame: ...
+
+    def read_frame(  # noqa: PLR0913
+        self,
+        *,
+        derived_id: str,
+        version: int,
+        instrument_ids: tuple[int, ...] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        as_of: str | None = None,
+        streaming: bool = False,
+        max_rows: int | None = None,
+        as_lazy: bool = False,
+    ) -> pl.DataFrame | pl.LazyFrame:
+        """
+        Read one artifact slice from parquet partitions.
+
+        Args:
+            derived_id: The derived artifact identifier.
+            version: The artifact version.
+            instrument_ids: Optional filter for specific instruments.
+            start: Optional start date filter (inclusive).
+            end: Optional end date filter (inclusive).
+            as_of: Optional point-in-time filter (inclusive).
+            streaming: When True, collect with the streaming engine.
+            max_rows: Optional row limit applied before collection.
+            as_lazy: When True, return a ``pl.LazyFrame`` without collecting.
+
+        Returns:
+            A ``pl.DataFrame`` by default, or a ``pl.LazyFrame`` when
+            ``as_lazy=True``.
+
+        """
+        frame = self._build_filtered_lazy_frame(
+            derived_id=derived_id,
+            version=version,
+            instrument_ids=instrument_ids,
+            start=start,
+            end=end,
+            as_of=as_of,
+        )
+
+        if frame is None:
+            return pl.DataFrame()
+
+        if as_lazy:
+            return frame
+
+        if max_rows is not None:
+            frame = frame.head(max_rows)
+
+        time_key = self._time_key(derived_id, version)
+
+        if streaming:
+            collected = frame.collect(engine="streaming").sort(
+                ["instrument_id", time_key]
+            )
+        else:
+            collected = frame.collect().sort(["instrument_id", time_key])
+
+        if (
+            "availability_time" not in collected.columns
+            and time_key in collected.columns
+        ):
+            collected = collected.with_columns(
+                pl.col(time_key).alias("availability_time")
+            )
+        return collected
+
+    def _build_filtered_lazy_frame(
+        self,
+        *,
+        derived_id: str,
+        version: int,
+        instrument_ids: tuple[int, ...] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        as_of: str | None = None,
+    ) -> pl.LazyFrame | None:
+        """
+        Build a filtered LazyFrame for the given artifact version.
+
+        Returns ``None`` when no parquet files exist for the requested
+        date range (convenient for the ``as_lazy=False`` early-return).
+        """
         spec_record = self._require_catalog_entry(derived_id, version)
         version_root = (
             self._artifact_root
@@ -119,12 +228,12 @@ class DerivedArtifactReader:
             / derived_id
             / f"v{version}"
         )
-        parquet_paths = sorted(version_root.glob("*.parquet"))
+        parquet_paths = prune_parquet_paths(version_root, start=start, end=end)
         if not parquet_paths:
-            return pl.DataFrame()
+            return None
 
         time_key = _effective_time_key(spec_record)
-        frame = pl.scan_parquet([str(path) for path in parquet_paths])
+        frame = _scan_with_schema_evolution(parquet_paths)
         if instrument_ids:
             frame = frame.filter(pl.col("instrument_id").is_in(instrument_ids))
         if start is not None:
@@ -133,16 +242,12 @@ class DerivedArtifactReader:
             frame = frame.filter(pl.col(time_key) <= pl.lit(_coerce_date(end)))
         if as_of is not None:
             frame = frame.filter(pl.col(time_key) <= pl.lit(_coerce_date(as_of)))
+        return frame
 
-        collected = frame.collect().sort(["instrument_id", time_key])
-        if (
-            "availability_time" not in collected.columns
-            and time_key in collected.columns
-        ):
-            collected = collected.with_columns(
-                pl.col(time_key).alias("availability_time")
-            )
-        return collected
+    def _time_key(self, derived_id: str, version: int) -> str:
+        """Resolve the effective time key for a given derived artifact."""
+        spec_record = self._require_catalog_entry(derived_id, version)
+        return _effective_time_key(spec_record)
 
     def _resolve_active_version(self, derived_id: str) -> int:
         state = self._catalog_service.get_state(derived_id)
@@ -189,3 +294,17 @@ def _effective_time_key(spec_record: DerivedSpecRecord) -> str:
 
 def _coerce_date(value: str) -> date:
     return date.fromisoformat(value[:10])
+
+
+def _scan_with_schema_evolution(parquet_paths: list[Path]) -> pl.LazyFrame:
+    """
+    Scan parquet files with schema evolution support.
+
+    When multiple files have diverging schemas (new columns or widened
+    types), ``pl.concat(how='diagonal_relaxed')`` unions the column sets
+    and coerces mismatched types to their common supertype.
+    """
+    if len(parquet_paths) == 1:
+        return pl.scan_parquet(str(parquet_paths[0]))
+    lfs = [pl.scan_parquet(str(p)) for p in parquet_paths]
+    return pl.concat(lfs, how="diagonal_relaxed")

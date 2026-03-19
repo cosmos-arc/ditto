@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from datetime import date
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
@@ -448,6 +449,212 @@ class TestDerivedQueryService:
                 "serving_value": 1.5,
                 "offline_value": 1.4,
                 "diff": 0.1,
+            },
+        ]
+
+
+class TestQueryForEvaluation:
+    """Tests for DerivedQueryService.query_for_evaluation."""
+
+    def test_query_for_evaluation_returns_clean_columns(self) -> None:
+        """query_for_evaluation() should return only clean columns."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_offline_version.return_value = 1
+        artifact_reader.read_frame.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 1],
+                "trade_date": [date(2026, 3, 10), date(2026, 3, 11)],
+                "value": [1.0, 2.0],
+                "availability_time": [date(2026, 3, 10), date(2026, 3, 11)],
+                "extra_internal_col": ["a", "b"],
+            }
+        )
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+
+        result = service.query_for_evaluation(
+            derived_ids=("factor.momentum_20d",),
+            instrument_ids=(1,),
+            start="2026-03-10",
+            end="2026-03-11",
+        )
+
+        assert result.columns == ["derived_id", "instrument_id", "trade_date", "value"]
+        assert result.height == 2
+        assert result.to_dicts() == [
+            {
+                "derived_id": "factor.momentum_20d",
+                "instrument_id": 1,
+                "trade_date": date(2026, 3, 10),
+                "value": 1.0,
+            },
+            {
+                "derived_id": "factor.momentum_20d",
+                "instrument_id": 1,
+                "trade_date": date(2026, 3, 11),
+                "value": 2.0,
+            },
+        ]
+
+    def test_query_for_evaluation_multiple_derived_ids(self) -> None:
+        """query_for_evaluation() should concat results from multiple derived_ids."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_offline_version.return_value = 1
+
+        call_count = 0
+
+        def mock_read_frame(**kwargs: object) -> pl.DataFrame:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return pl.DataFrame(
+                    {
+                        "instrument_id": [1],
+                        "trade_date": [date(2026, 3, 10)],
+                        "value": [10.0],
+                        "availability_time": [date(2026, 3, 10)],
+                    }
+                )
+            return pl.DataFrame(
+                {
+                    "instrument_id": [2],
+                    "trade_date": [date(2026, 3, 10)],
+                    "value": [20.0],
+                    "availability_time": [date(2026, 3, 10)],
+                }
+            )
+
+        artifact_reader.read_frame.side_effect = mock_read_frame
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+
+        result = service.query_for_evaluation(
+            derived_ids=("factor.momentum_20d", "factor.volatility_10d"),
+        )
+
+        assert result.height == 2
+        assert set(result["derived_id"].to_list()) == {
+            "factor.momentum_20d",
+            "factor.volatility_10d",
+        }
+
+    def test_query_for_evaluation_applies_date_filters(self) -> None:
+        """query_for_evaluation() should pass start/end filters to read_frame."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_offline_version.return_value = 2
+        artifact_reader.read_frame.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2026, 3, 15)],
+                "value": [3.0],
+                "availability_time": [date(2026, 3, 15)],
+            }
+        )
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+
+        service.query_for_evaluation(
+            derived_ids=("factor.momentum_20d",),
+            instrument_ids=(1,),
+            start="2026-03-15",
+            end="2026-03-15",
+            as_of="2026-03-15",
+            version=2,
+        )
+
+        artifact_reader.read_frame.assert_called_once_with(
+            derived_id="factor.momentum_20d",
+            version=2,
+            instrument_ids=(1,),
+            start="2026-03-15",
+            end="2026-03-15",
+            as_of="2026-03-15",
+        )
+
+    def test_query_for_evaluation_returns_empty_on_no_data(self) -> None:
+        """query_for_evaluation() should return empty frame when no data."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_offline_version.return_value = 1
+        artifact_reader.read_frame.return_value = pl.DataFrame()
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+
+        result = service.query_for_evaluation(
+            derived_ids=("factor.nonexistent",),
+        )
+
+        assert result.is_empty()
+        assert result.columns == ["derived_id", "instrument_id", "trade_date", "value"]
+
+    def test_query_for_evaluation_sorts_by_derived_id_instrument_trade_date(
+        self,
+    ) -> None:
+        """query_for_evaluation() should sort by (derived_id, instrument, date)."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_offline_version.return_value = 1
+        # Return unsorted data
+        artifact_reader.read_frame.return_value = pl.DataFrame(
+            {
+                "instrument_id": [2, 1],
+                "trade_date": [date(2026, 3, 11), date(2026, 3, 10)],
+                "value": [20.0, 10.0],
+                "availability_time": [date(2026, 3, 11), date(2026, 3, 10)],
+            }
+        )
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+
+        result = service.query_for_evaluation(
+            derived_ids=("factor.momentum_20d",),
+        )
+
+        assert result.to_dicts() == [
+            {
+                "derived_id": "factor.momentum_20d",
+                "instrument_id": 1,
+                "trade_date": date(2026, 3, 10),
+                "value": 10.0,
+            },
+            {
+                "derived_id": "factor.momentum_20d",
+                "instrument_id": 2,
+                "trade_date": date(2026, 3, 11),
+                "value": 20.0,
             },
         ]
 

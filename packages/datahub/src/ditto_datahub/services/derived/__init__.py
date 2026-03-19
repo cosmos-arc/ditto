@@ -4,6 +4,8 @@ from ditto_datahub.services.derived.artifact_reader import (
     DerivedArtifactReader,
     VersionResolutionStrategy,
 )
+from ditto_datahub.services.derived.garbage_collector import DerivedGarbageCollector
+from ditto_datahub.services.derived.gc_models import GcConfig, GcPlan, GcReport
 from ditto_datahub.services.derived.queries import (
     DerivedCompareQuery,
     DerivedLatestQuery,
@@ -26,10 +28,14 @@ __all__ = [
     "SERIES_RESULT_COLUMNS",
     "DerivedArtifactReader",
     "DerivedCompareQuery",
+    "DerivedGarbageCollector",
     "DerivedLatestQuery",
     "DerivedQueryService",
     "DerivedSeriesQuery",
     "DerivedSourceScope",
+    "GcConfig",
+    "GcPlan",
+    "GcReport",
     "VersionResolutionStrategy",
     "empty_compare_result",
     "empty_latest_result",

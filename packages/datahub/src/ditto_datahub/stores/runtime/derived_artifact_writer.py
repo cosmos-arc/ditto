@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict
 from hashlib import sha256
 from pathlib import Path
@@ -15,6 +16,13 @@ from ditto_datahub.models.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
+from ditto_infra.foundation.util.io import (
+    ParquetCompression,
+    atomic_bytes_write,
+    atomic_write,
+)
+
+logger = logging.getLogger(__name__)
 
 __all__ = ["DerivedArtifactWriter", "extract_partition_keys"]
 
@@ -26,10 +34,26 @@ class DerivedArtifactWriter:
     Handles all file system I/O for derived artifact persistence, including
     ephemeral results (DERIVE profile), durable partitions (SERIES profile),
     run metadata JSON files, and publication safety metadata injection.
+
+    All writes use atomic patterns (write-then-rename) to prevent partial
+    file exposure.  Multi-partition writes follow a two-phase commit protocol
+    so that either every partition is committed or none are.
     """
 
-    def __init__(self, artifact_root: Path) -> None:
+    _compression: ParquetCompression
+
+    def __init__(
+        self,
+        artifact_root: Path,
+        *,
+        compression: ParquetCompression = "zstd",
+    ) -> None:
         self._artifact_root = Path(artifact_root)
+        self._compression = compression
+
+    # ------------------------------------------------------------------
+    # Ephemeral result (DERIVE profile)
+    # ------------------------------------------------------------------
 
     def write_ephemeral_result(
         self,
@@ -38,7 +62,7 @@ class DerivedArtifactWriter:
         run_id: str,
         frame: pl.DataFrame,
     ) -> None:
-        """Write ephemeral (derive profile) result to parquet."""
+        """Write ephemeral (derive profile) result to parquet atomically."""
         ephemeral_dir = (
             self._artifact_root
             / "derived"
@@ -50,7 +74,15 @@ class DerivedArtifactWriter:
             / run_id
         )
         ephemeral_dir.mkdir(parents=True, exist_ok=True)
-        frame.write_parquet(ephemeral_dir / "result.parquet")
+        atomic_write(
+            frame,
+            ephemeral_dir / "result.parquet",
+            compression=self._compression,
+        )
+
+    # ------------------------------------------------------------------
+    # Durable partitions (SERIES profile) — two-phase commit
+    # ------------------------------------------------------------------
 
     def write_durable_partitions(
         self,
@@ -62,7 +94,17 @@ class DerivedArtifactWriter:
         request_end: str,
         source_snapshot_id: str | None,
     ) -> tuple[PartitionInfo, ...]:
-        """Write durable (series) partitions as per-year parquet files."""
+        """
+        Write durable (series) partitions as per-year parquet files.
+
+        Uses a two-phase commit to guarantee all-or-nothing semantics:
+
+        * **Phase 1** — write every partition to a ``.tmp.parquet`` file.
+        * **Phase 2** — atomically rename all temp files to their final names.
+
+        If Phase 1 raises, all temp files are cleaned up before re-raising.
+        Checksums are computed on the *final* files after rename.
+        """
         version_root = (
             self._artifact_root
             / "derived"
@@ -72,16 +114,39 @@ class DerivedArtifactWriter:
             / f"v{spec.version}"
         )
         version_root.mkdir(parents=True, exist_ok=True)
-        partitions: list[PartitionInfo] = []
+
         trade_date_expr = pl.col(spec.effective_time_keys[0]).cast(pl.Utf8)
-        for partition_key in extract_partition_keys(frame, spec):
+        partition_keys = extract_partition_keys(frame, spec)
+
+        # Collect (partition_key, partition_frame, temp_path, final_path)
+        pending: list[tuple[str, pl.DataFrame, Path, Path]] = []
+        for partition_key in partition_keys:
             partition_frame = frame.filter(
                 trade_date_expr.str.slice(0, 4) == partition_key
             )
             partition_path = version_root / f"{partition_key}.parquet"
             temp_path = version_root / f"{partition_key}.tmp.parquet"
-            partition_frame.write_parquet(temp_path)
+            pending.append((partition_key, partition_frame, temp_path, partition_path))
+
+        # --- Phase 1: write all temp files ---
+        try:
+            for _partition_key, partition_frame, temp_path, _partition_path in pending:
+                partition_frame.write_parquet(temp_path, compression=self._compression)
+        except BaseException:
+            # Clean up any temp files that were written before the failure
+            written_temps = self._existing_temp_files(
+                [temp_path for _, _, temp_path, _ in pending]
+            )
+            self._cleanup_temp_files(written_temps)
+            raise
+
+        # --- Phase 2: atomic rename all temp → final ---
+        partitions: list[PartitionInfo] = []
+        for _pk, _pf, temp_path, partition_path in pending:
             temp_path.replace(partition_path)
+
+        # Compute checksums on final files (after rename)
+        for partition_key, partition_frame, _temp_path, partition_path in pending:
             checksum = sha256(partition_path.read_bytes()).hexdigest()
             partitions.append(
                 PartitionInfo(
@@ -91,7 +156,82 @@ class DerivedArtifactWriter:
                     checksum=checksum,
                 )
             )
+
         return tuple(partitions)
+
+    # ------------------------------------------------------------------
+    # Incremental partition merge (MAT-M-6)
+    # ------------------------------------------------------------------
+
+    def write_incremental_partition(
+        self,
+        *,
+        spec: DerivedSpec,
+        run_id: str,
+        frame: pl.DataFrame,
+        source_snapshot_id: str | None,
+    ) -> tuple[PartitionInfo, ...]:
+        """
+        Merge new data into existing year partitions incrementally.
+
+        For each partition key present in *frame*:
+
+        1. If an existing parquet file exists, read it and concat with
+           the new data using ``diagonal_relaxed`` schema handling.
+        2. Group by ``(instrument_id, trade_date)`` and take the **last**
+           row so that newer values overwrite older ones.
+        3. Write the merged result atomically.
+
+        If no existing file exists, the partition is written as-is.
+
+        Returns:
+            Metadata for every partition that was written.
+
+        """
+        version_root = (
+            self._artifact_root
+            / "derived"
+            / "artifacts"
+            / spec.materialization_profile.value.lower()
+            / spec.id
+            / f"v{spec.version}"
+        )
+        version_root.mkdir(parents=True, exist_ok=True)
+
+        partition_keys = extract_partition_keys(frame, spec)
+        time_key = spec.effective_time_keys[0]
+        trade_date_expr = pl.col(time_key).cast(pl.Utf8)
+
+        partitions: list[PartitionInfo] = []
+
+        for partition_key in partition_keys:
+            partition_frame = frame.filter(
+                trade_date_expr.str.slice(0, 4) == partition_key
+            )
+            partition_path = version_root / f"{partition_key}.parquet"
+
+            if partition_path.exists():
+                existing = pl.read_parquet(partition_path)
+                merged = _merge_partitions(existing, partition_frame, time_key)
+            else:
+                merged = partition_frame
+
+            atomic_write(merged, partition_path, compression=self._compression)
+            checksum = sha256(partition_path.read_bytes()).hexdigest()
+            partitions.append(
+                PartitionInfo(
+                    partition_key=partition_key,
+                    partition_path=str(partition_path.relative_to(self._artifact_root)),
+                    row_count=merged.height,
+                    checksum=checksum,
+                )
+            )
+
+        return tuple(partitions)
+
+    # ------------------------------------------------------------------
+    # Artifact metadata
+    # ------------------------------------------------------------------
 
     def write_artifact_metadata(  # noqa: PLR0913
         self,
@@ -105,7 +245,7 @@ class DerivedArtifactWriter:
         request_end: str,
         source_snapshot_id: str | None,
     ) -> None:
-        """Write run metadata as artifact_metadata.json."""
+        """Write run metadata as artifact_metadata.json atomically."""
         version_root = (
             self._artifact_root
             / "derived"
@@ -125,7 +265,8 @@ class DerivedArtifactWriter:
             }
             for p in partitions
         ]
-        metadata_dir.joinpath("artifact_metadata.json").write_bytes(
+        metadata_path = metadata_dir / "artifact_metadata.json"
+        atomic_bytes_write(
             orjson.dumps(
                 {
                     "run_id": run_id,
@@ -141,7 +282,8 @@ class DerivedArtifactWriter:
                     "partitions_written": partition_dicts,
                 },
                 option=orjson.OPT_INDENT_2,
-            )
+            ),
+            metadata_path,
         )
 
     def update_artifact_metadata(
@@ -155,7 +297,7 @@ class DerivedArtifactWriter:
         manifest_record: CompatibilityManifestRecord,
         minimal_dq_record: DerivedMinimalDQSummaryRecord,
     ) -> None:
-        """Read existing metadata JSON and inject publication safety info."""
+        """Read existing metadata JSON, inject publication safety, write atomically."""
         metadata_path = (
             self._artifact_root
             / "derived"
@@ -191,9 +333,28 @@ class DerivedArtifactWriter:
             }
             for p in partitions
         ]
-        metadata_path.write_bytes(
-            orjson.dumps(payload, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS)
+        atomic_bytes_write(
+            orjson.dumps(payload, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS),
+            metadata_path,
         )
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _cleanup_temp_files(temp_paths: list[Path]) -> None:
+        """Remove temporary files, ignoring errors for missing files."""
+        for path in temp_paths:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                logger.warning("Failed to clean up temp file: %s", path, exc_info=True)
+
+    @staticmethod
+    def _existing_temp_files(candidates: list[Path]) -> list[Path]:
+        """Return only the paths that actually exist on disk."""
+        return [p for p in candidates if p.exists()]
 
 
 def extract_partition_keys(frame: pl.DataFrame, spec: DerivedSpec) -> tuple[str, ...]:
@@ -205,3 +366,27 @@ def extract_partition_keys(frame: pl.DataFrame, spec: DerivedSpec) -> tuple[str,
         .sort()
     )
     return tuple(str(value) for value in partition_series.to_list())
+
+
+def _merge_partitions(
+    existing: pl.DataFrame,
+    new_data: pl.DataFrame,
+    time_key: str,
+) -> pl.DataFrame:
+    """
+    Merge existing partition data with new incremental data.
+
+    Uses ``pl.concat(how='diagonal_relaxed')`` for schema evolution,
+    then deduplicates by ``(instrument_id, time_key)`` keeping the last
+    occurrence so that newer values overwrite older ones.
+    """
+    combined = pl.concat([existing, new_data], how="diagonal_relaxed")
+    return (
+        combined.sort(time_key)
+        .group_by(
+            "instrument_id",
+            time_key,
+            maintain_order=True,
+        )
+        .last()
+    )

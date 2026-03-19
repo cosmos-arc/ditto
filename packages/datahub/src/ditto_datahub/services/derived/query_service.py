@@ -135,6 +135,54 @@ class DerivedQueryService:
             )
         return _concat_frames(frames, empty_compare_result())
 
+    def query_for_evaluation(
+        self,
+        *,
+        derived_ids: tuple[str, ...],
+        instrument_ids: tuple[int, ...] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        as_of: str | None = None,
+        version: int | None = None,
+    ) -> pl.DataFrame:
+        """
+        Return a clean evaluation DataFrame for backtesting / strategy evaluation.
+
+        Produces a normalized ``(derived_id, instrument_id, trade_date, value)``
+        frame by resolving the offline version for each derived, reading the
+        artifact slice, stripping internal columns, concatenating results, and
+        sorting by ``(derived_id, instrument_id, trade_date)``.
+        """
+        frames: list[pl.DataFrame] = []
+        for derived_id in derived_ids:
+            resolved_version = self._artifact_reader.resolve_offline_version(
+                derived_id,
+                requested_version=version,
+            )
+            frame = self._artifact_reader.read_frame(
+                derived_id=derived_id,
+                version=resolved_version,
+                instrument_ids=instrument_ids,
+                start=start,
+                end=end,
+                as_of=as_of,
+            )
+            if frame.is_empty():
+                continue
+            frames.append(
+                frame.select(
+                    pl.lit(derived_id).alias("derived_id"),
+                    pl.col("instrument_id").cast(pl.Int64),
+                    pl.col("trade_date").cast(pl.Date),
+                    pl.col("value").cast(pl.Float64),
+                )
+            )
+        if not frames:
+            return _empty_evaluation_result()
+        return pl.concat(frames, how="vertical").sort(
+            ["derived_id", "instrument_id", "trade_date"]
+        )
+
     def _resolve_query_version(
         self,
         *,
@@ -273,3 +321,15 @@ def _concat_frames(
     if not frames:
         return empty_frame
     return pl.concat(frames, how="vertical")
+
+
+def _empty_evaluation_result() -> pl.DataFrame:
+    """Create an empty evaluation result frame with the canonical schema."""
+    return pl.DataFrame(
+        {
+            "derived_id": pl.Series("derived_id", [], dtype=pl.String),
+            "instrument_id": pl.Series("instrument_id", [], dtype=pl.Int64),
+            "trade_date": pl.Series("trade_date", [], dtype=pl.Date),
+            "value": pl.Series("value", [], dtype=pl.Float64),
+        }
+    )

@@ -3,14 +3,19 @@
 import hashlib
 import os
 from pathlib import Path
+from typing import Literal
 
 import polars as pl
+
+ParquetCompression = Literal["lz4", "uncompressed", "snappy", "gzip", "brotli", "zstd"]
 
 
 def atomic_write(
     df: pl.DataFrame,
     path: Path,
+    *,
     fsync: bool = True,
+    compression: ParquetCompression = "zstd",
 ) -> None:
     """
     Write DataFrame to Parquet file atomically.
@@ -23,6 +28,7 @@ def atomic_write(
         path: Target file path.
         fsync: Whether to call fsync to ensure data is persisted to disk.
              Defaults to True for data durability.
+        compression: Parquet compression codec. Defaults to ``"zstd"``.
 
     """
     path = Path(path)
@@ -30,7 +36,7 @@ def atomic_write(
 
     # Write to temporary file first
     temp_path = path.with_suffix(path.suffix + ".tmp")
-    df.write_parquet(temp_path, compression="zstd")
+    df.write_parquet(temp_path, compression=compression)
 
     # Call fsync if requested
     if fsync:

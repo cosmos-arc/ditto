@@ -126,6 +126,50 @@ class TestAtomicWrite:
         loaded_df = pl.read_parquet(target_path)
         assert loaded_df.equals(df)
 
+    def test_default_compression_zstd(self) -> None:
+        """Default compression should be zstd (MAT-M-9)."""
+        df = pl.DataFrame({"a": range(1000), "b": range(1000)})
+        target_path = self.temp_path / "test_zstd.parquet"
+
+        atomic_write(df, target_path)
+
+        assert target_path.exists()
+        loaded = pl.read_parquet(target_path)
+        assert loaded.equals(df)
+
+    def test_configurable_compression_snappy(self) -> None:
+        """Explicit snappy compression should produce readable parquet (MAT-M-9)."""
+        df = pl.DataFrame({"a": range(1000), "b": range(1000)})
+        target_path = self.temp_path / "test_snappy.parquet"
+
+        atomic_write(df, target_path, compression="snappy")
+
+        assert target_path.exists()
+        loaded = pl.read_parquet(target_path)
+        assert loaded.equals(df)
+
+    def test_configurable_compression_gzip(self) -> None:
+        """Explicit gzip compression should produce readable parquet (MAT-M-9)."""
+        df = pl.DataFrame({"a": range(1000), "b": range(1000)})
+        target_path = self.temp_path / "test_gzip.parquet"
+
+        atomic_write(df, target_path, compression="gzip")
+
+        assert target_path.exists()
+        loaded = pl.read_parquet(target_path)
+        assert loaded.equals(df)
+
+    def test_configurable_compression_none(self) -> None:
+        """No compression should produce readable parquet (MAT-M-9)."""
+        df = pl.DataFrame({"a": range(1000), "b": range(1000)})
+        target_path = self.temp_path / "test_none.parquet"
+
+        atomic_write(df, target_path, compression="uncompressed")
+
+        assert target_path.exists()
+        loaded = pl.read_parquet(target_path)
+        assert loaded.equals(df)
+
 
 class TestAtomicBytesWrite:
     """Test cases for atomic_bytes_write function."""
