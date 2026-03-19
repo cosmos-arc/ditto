@@ -10,6 +10,8 @@ import polars as pl
 import polars.exceptions as pl_exc
 
 from ditto_core.engine.evaluation.metrics import (
+    factor_exposure,
+    fama_macbeth,
     grinold_kahn_ir,
     ic_autocorrelation,
     ic_decay,
@@ -18,15 +20,21 @@ from ditto_core.engine.evaluation.metrics import (
     net_returns,
     orthogonalize,
     pearson_ic,
+    performance_attribution,
     quantile_returns,
     rank_ic,
+    regime_adjusted_ic,
     sub_period_ic,
     turnover_adjusted_ir,
 )
 from ditto_core.engine.evaluation.report import (
     FactorEvaluationReport,
+    FactorExposureResult,
+    FamaMacBethResult,
     ICSummary,
     LongShortResult,
+    PerformanceAttributionResult,
+    RegimeICResult,
     TailRiskMetrics,
 )
 
@@ -34,6 +42,7 @@ __all__ = [
     "EvaluationConfig",
     "FactorEvaluator",
     "ForwardReturnProvider",
+    "RiskFactorProvider",
 ]
 
 DEFAULT_IC_LAGS: list[int] = [1, 2, 3, 5, 10, 20]
@@ -55,6 +64,10 @@ class EvaluationConfig:
     cost_bps: float = 20.0
     rebalance_freq: int = 5
     periods_per_year: int = 244
+    run_fama_macbeth: bool = False
+    run_exposure_analysis: bool = False
+    run_regime_ic: bool = False
+    run_performance_attribution: bool = False
 
 
 class ForwardReturnProvider(Protocol):
@@ -72,11 +85,43 @@ class ForwardReturnProvider(Protocol):
         ...
 
 
+class RiskFactorProvider(Protocol):
+    """Provide risk factor data for Fama-MacBeth and factor exposure."""
+
+    def get_risk_factors(
+        self,
+        factor_ids: list[str],
+        start: str,
+        end: str,
+    ) -> dict[str, pl.DataFrame]:
+        """
+        Retrieve risk factor DataFrames for the given IDs and date range.
+
+        Args:
+            factor_ids: List of risk factor identifiers to retrieve.
+            start: Start date string (inclusive).
+            end: End date string (inclusive).
+
+        Returns:
+            ``{factor_id: DataFrame[date, entity, value]}`` mapping.
+
+        """
+        ...
+
+
 class FactorEvaluator:
     """Factor evaluation orchestrator: coordinates forward returns and metrics."""
 
-    def __init__(self, forward_return_provider: ForwardReturnProvider) -> None:
+    def __init__(
+        self,
+        forward_return_provider: ForwardReturnProvider,
+        *,
+        risk_factor_provider: RiskFactorProvider | None = None,
+        risk_factor_ids: list[str] | None = None,
+    ) -> None:
         self._fr_provider = forward_return_provider
+        self._rf_provider = risk_factor_provider
+        self._rf_ids = risk_factor_ids or []
 
     def evaluate(
         self,
@@ -209,6 +254,53 @@ class FactorEvaluator:
         # Sub-period IC
         sub_ic = sub_period_ic(rank_ic_df)
 
+        # Fama-MacBeth regression (optional)
+        fm_result: FamaMacBethResult | None = None
+        if config.run_fama_macbeth and self._rf_provider is not None and self._rf_ids:
+            risk_dfs = self._rf_provider.get_risk_factors(
+                self._rf_ids,
+                effective_start,
+                effective_end,
+            )
+            if risk_dfs:
+                fm_result = fama_macbeth(
+                    factor_df_clean,
+                    return_df_clean,
+                    risk_factors=risk_dfs,
+                )
+
+        # Factor exposure analysis (optional)
+        fe_result: FactorExposureResult | None = None
+        if (
+            config.run_exposure_analysis
+            and self._rf_provider is not None
+            and self._rf_ids
+        ):
+            risk_dfs = self._rf_provider.get_risk_factors(
+                self._rf_ids,
+                effective_start,
+                effective_end,
+            )
+            if risk_dfs:
+                fe_result = factor_exposure(
+                    factor_df_clean,
+                    risk_dfs,
+                    return_df=return_df_clean,
+                )
+
+        # Regime-adjusted IC (optional)
+        regime_ic_result: RegimeICResult | None = None
+        if config.run_regime_ic:
+            regime_ic_result = regime_adjusted_ic(rank_ic_df)
+
+        # Performance attribution (optional)
+        pa_result: PerformanceAttributionResult | None = None
+        if config.run_performance_attribution:
+            pa_result = performance_attribution(
+                q_ret_df,
+                periods_per_year=ppw,
+            )
+
         return FactorEvaluationReport(
             factor_id="unknown",
             factor_version=1,
@@ -227,6 +319,10 @@ class FactorEvaluator:
             turnover_adjusted_ir=t_ir,
             grinold_kahn_ir=gk_ir,
             sub_period_ic=sub_ic,
+            fama_macbeth=fm_result,
+            factor_exposure=fe_result,
+            regime_ic=regime_ic_result,
+            performance_attribution=pa_result,
             n_observations=factor_df_clean.height,
             n_dates=n_dates,
             computed_at=datetime.now(UTC).isoformat(),
@@ -446,4 +542,6 @@ def _empty_report(
         n_observations=0,
         n_dates=0,
         computed_at=datetime.now(UTC).isoformat(),
+        regime_ic=None,
+        performance_attribution=None,
     )

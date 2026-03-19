@@ -12,31 +12,45 @@ import math
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
+import numpy as np
 import polars as pl
 from polars._typing import PythonLiteral
 
 from ditto_core.engine.evaluation.report import (
+    FactorExposureResult,
+    FamaMacBethResult,
     ICSummary,
     LongShortResult,
+    PerformanceAttributionResult,
+    RegimeICResult,
     TailRiskMetrics,
 )
 
 __all__ = [
+    "factor_exposure",
+    "fama_macbeth",
     "grinold_kahn_ir",
     "ic_autocorrelation",
     "ic_decay",
+    "ic_momentum",
     "ic_summary",
     "long_short_returns",
     "net_returns",
     "orthogonalize",
     "pearson_ic",
+    "performance_attribution",
     "quantile_returns",
     "rank_ic",
+    "regime_adjusted_ic",
     "sub_period_ic",
     "tail_risk_metrics",
     "turnover",
     "turnover_adjusted_ir",
 ]
+
+_MIN_TRANSITIONS_FOR_MATRIX = 2
+_MIN_OBS_FOR_OLS = 30
+_IR_TE_EPSILON = 1e-12
 
 # ---------------------------------------------------------------------------
 # IC computation
@@ -869,6 +883,766 @@ def sub_period_ic(
         results[period_label] = ic_summary(sub_df)
 
     return results
+
+
+# ---------------------------------------------------------------------------
+# Fama-MacBeth regression
+# ---------------------------------------------------------------------------
+
+
+def fama_macbeth(  # noqa: C901,PLR0912,PLR0913,PLR0915
+    factor_df: pl.DataFrame,
+    return_df: pl.DataFrame,
+    *,
+    risk_factors: dict[str, pl.DataFrame] | None = None,
+    min_cross_section: int = 30,
+    date_col: str = "trade_date",
+    entity_col: str = "instrument_id",
+    factor_col: str = "value",
+    return_col: str = "forward_return",
+) -> FamaMacBethResult:
+    """
+    Fama-MacBeth two-pass regression.
+
+    **First pass (cross-section):** For each date, run an OLS regression of
+    returns on the target factor (and optionally risk factors).  Record the
+    slope coefficient for the target factor and the R².
+
+    **Second pass (time-series):** Compute mean, standard error, t-statistic,
+    and p-value of the target factor's slope across all dates.
+
+    Args:
+        factor_df: Target factor values ``pl.DataFrame[date, entity, value]``.
+        return_df: Forward returns ``pl.DataFrame[date, entity, forward_return]``.
+        risk_factors: Optional ``{name: DataFrame[date, entity, value]}`` of
+            additional control factors.
+        min_cross_section: Minimum number of entities per date for a valid
+            cross-section regression.
+        date_col: Name of the date column.
+        entity_col: Name of the entity identifier column.
+        factor_col: Name of the target factor value column.
+        return_col: Name of the forward return column.
+
+    Returns:
+        A :class:`~ditto_core.engine.evaluation.report.FamaMacBethResult`.
+
+    """
+    # Zero result for degenerate cases.
+    _empty = FamaMacBethResult(
+        factor_exposure=0.0,
+        exposure_t_stat=0.0,
+        exposure_p_value=1.0,
+        exposure_stderr=0.0,
+        r_squared_avg=0.0,
+        n_periods=0,
+        slopes=(),
+    )
+
+    # Join factor and return data.
+    joined = factor_df.join(return_df, on=[date_col, entity_col], how="inner")
+    if joined.height == 0:
+        return _empty
+
+    # Join risk factors if provided.
+    risk_names: list[str] = []
+    if risk_factors:
+        for rf_name, rf_df in risk_factors.items():
+            joined = joined.join(
+                rf_df.rename({factor_col: f"risk_{rf_name}"}),
+                on=[date_col, entity_col],
+                how="inner",
+            )
+            risk_names.append(rf_name)
+
+    dates = joined.select(pl.col(date_col)).unique().sort(date_col)
+    target_slopes: list[float] = []
+    r_squareds: list[float] = []
+    risk_slopes_per_date: list[list[float]] = [[] for _ in risk_names]
+
+    for date_row in dates.iter_rows(named=True):
+        dt = date_row[date_col]
+        cross = joined.filter(pl.col(date_col) == dt)
+        n = cross.height
+        if n < min_cross_section:
+            continue
+
+        # Build design matrix: [1, f_target, f_risk1, f_risk2, ...]
+        f_target = cross[factor_col].to_numpy()
+        y = cross[return_col].to_numpy()
+
+        # Demean for numerical stability.
+        y_mean = y.mean()
+        y_c = y - y_mean
+
+        x_cols: list[list[float]] = []
+        # Target factor (demeaned).
+        f_mean = f_target.mean()
+        x_cols.append((f_target - f_mean).tolist())
+        # Risk factors (demeaned).
+        for rf_name in risk_names:
+            rf_vals = cross[f"risk_{rf_name}"].to_numpy()
+            rf_mean = rf_vals.mean()
+            x_cols.append((rf_vals - rf_mean).tolist())
+
+        # Single factor (no risk factors): simple OLS.
+        if not risk_names:
+            x_c_arr = f_target - f_mean
+
+            var_f = float(x_c_arr @ x_c_arr)
+            if var_f == 0:
+                continue
+            cov_f_r = float(x_c_arr @ y_c)
+            beta = cov_f_r / var_f
+
+            # R² = corr²
+            std_f = math.sqrt(var_f / n) if n > 1 else 0.0
+            std_y = math.sqrt(float(y_c @ y_c) / n) if n > 1 else 0.0
+            if std_f > 0 and std_y > 0:
+                corr_val = cov_f_r / (n * std_f * std_y)
+                r_sq = corr_val * corr_val
+            else:
+                r_sq = 0.0
+
+            target_slopes.append(beta)
+            r_squareds.append(r_sq)
+        else:
+            # Multi-factor OLS via matrix approach.
+            # Build full design matrix (demeaned, so intercept is implicit).
+            X: np.ndarray = np.column_stack(x_cols).astype(np.float64)
+
+            # X'X and X'y
+            XtX: np.ndarray = X.T @ X  # (k, k)
+            Xty: np.ndarray = X.T @ y_c  # (k,)
+
+            try:
+                beta_vec: np.ndarray = np.linalg.solve(XtX, Xty)  # (k,)
+            except np.linalg.LinAlgError:
+                continue
+
+            # Target factor slope is beta_vec[0].
+            target_slopes.append(float(beta_vec[0]))
+            for i, _rf_name in enumerate(risk_names):
+                risk_slopes_per_date[i].append(float(beta_vec[i + 1]))
+
+            # R² = 1 - SSE/SST
+            y_pred: np.ndarray = X @ beta_vec
+            sse = float(np.sum((y_c - y_pred) ** 2))
+            sst = float(np.sum(y_c**2))
+            r_sq = 1.0 - sse / sst if sst > 0 else 0.0
+            r_squareds.append(r_sq)
+
+    if not target_slopes:
+        return _empty
+
+    n_periods = len(target_slopes)
+    mean_slope = sum(target_slopes) / n_periods
+
+    if n_periods == 1:
+        return FamaMacBethResult(
+            factor_exposure=mean_slope,
+            exposure_t_stat=0.0,
+            exposure_p_value=1.0,
+            exposure_stderr=0.0,
+            r_squared_avg=sum(r_squareds) / n_periods if r_squareds else 0.0,
+            n_periods=n_periods,
+            slopes=_build_slopes_tuple(
+                mean_slope,
+                target_slopes,
+                risk_names,
+                risk_slopes_per_date,
+            ),
+        )
+
+    # Time-series statistics.
+    var_slopes = sum((s - mean_slope) ** 2 for s in target_slopes) / (n_periods - 1)
+    std_slopes = math.sqrt(var_slopes) if var_slopes > 0 else 0.0
+    stderr = std_slopes / math.sqrt(n_periods)
+    t_stat = mean_slope / stderr if stderr > 0 else 0.0
+    p_value = _two_sided_p_value(t_stat, n_periods - 1)
+    r_sq_avg = sum(r_squareds) / len(r_squareds) if r_squareds else 0.0
+
+    return FamaMacBethResult(
+        factor_exposure=mean_slope,
+        exposure_t_stat=t_stat,
+        exposure_p_value=p_value,
+        exposure_stderr=stderr,
+        r_squared_avg=r_sq_avg,
+        n_periods=n_periods,
+        slopes=_build_slopes_tuple(
+            mean_slope,
+            target_slopes,
+            risk_names,
+            risk_slopes_per_date,
+        ),
+    )
+
+
+def _build_slopes_tuple(
+    target_mean: float,
+    _target_slopes: list[float],
+    risk_names: list[str],
+    risk_slopes_per_date: list[list[float]],
+) -> tuple[tuple[str, float], ...]:
+    """Build the slopes tuple for FamaMacBethResult."""
+    items: list[tuple[str, float]] = [("target", target_mean)]
+    for i, rf_name in enumerate(risk_names):
+        slopes = risk_slopes_per_date[i]
+        if slopes:
+            items.append((rf_name, sum(slopes) / len(slopes)))
+        else:
+            items.append((rf_name, 0.0))
+    return tuple(items)
+
+
+# ---------------------------------------------------------------------------
+# Factor exposure analysis
+# ---------------------------------------------------------------------------
+
+
+def factor_exposure(  # noqa: C901,PLR0912,PLR0913,PLR0915
+    target_df: pl.DataFrame,
+    risk_factor_dfs: dict[str, pl.DataFrame],
+    *,
+    return_df: pl.DataFrame | None = None,
+    min_cross_section: int = 30,
+    method: str = "sequential",
+    date_col: str = "trade_date",
+    entity_col: str = "instrument_id",
+    value_col: str = "value",
+) -> FactorExposureResult:
+    """
+    Factor exposure analysis.
+
+    Quantify how much the target factor is explained by risk factors.
+
+    Steps:
+    1. Compute pairwise correlation matrix of target + all risk factors
+       (per-date, then average).
+    2. For each risk factor, orthogonalise the target against it and compute
+       the residual IC with returns.
+    3. Target exposure: R² contribution of each risk factor.
+
+    Args:
+        target_df: ``pl.DataFrame[date, entity, value]`` — target factor.
+        risk_factor_dfs: ``{name: DataFrame[date, entity, value]}`` — risk
+            factors.
+        return_df: Optional ``pl.DataFrame[date, entity, forward_return]``
+            for computing residual IC.  If ``None``, orthogonal residual stats
+            will be empty.
+        min_cross_section: Minimum observations per date.
+        method: Orthogonalization method (``"sequential"`` or ``"symmetric"``).
+        date_col: Name of the date column.
+        entity_col: Name of the entity identifier column.
+        value_col: Name of the value column.
+
+    Returns:
+        A :class:`~ditto_core.engine.evaluation.report.FactorExposureResult`.
+
+    """
+    # Build the empty result early for early-return paths.
+    _empty_result = FactorExposureResult(
+        target_exposure={},
+        correlation_matrix={},
+        orthogonal_residual_stats={},
+        n_factors=0,
+        n_dates=0,
+    )
+
+    if not risk_factor_dfs or target_df.height == 0:
+        return _empty_result
+
+    # Collect all factor names: "target" + risk factor names.
+    all_names = ["target", *risk_factor_dfs]
+
+    # Build a long-format DataFrame with all factors for correlation.
+    long_frames: list[pl.DataFrame] = []
+    long_frames.append(
+        target_df.select(
+            pl.col(date_col),
+            pl.col(entity_col),
+            pl.col(value_col),
+            pl.lit("target").alias("factor_name"),
+        ),
+    )
+    for rf_name, rf_df in risk_factor_dfs.items():
+        long_frames.append(
+            rf_df.select(
+                pl.col(date_col),
+                pl.col(entity_col),
+                pl.col(value_col),
+                pl.lit(rf_name).alias("factor_name"),
+            ),
+        )
+    all_factors = pl.concat(long_frames, how="diagonal")
+
+    # Count dates and filter by min_cross_section.
+    dates = target_df.select(pl.col(date_col)).unique().sort(date_col)
+    valid_dates: list[object] = []
+    for date_row in dates.iter_rows(named=True):
+        dt = date_row[date_col]
+        cross = all_factors.filter(pl.col(date_col) == dt)
+        # Check that all factors have enough observations.
+        if cross.height < min_cross_section * len(all_names):
+            continue
+        # Check each factor individually has enough.
+        per_factor_ok = True
+        for fname in all_names:
+            factor_rows = cross.filter(pl.col("factor_name") == fname)
+            if factor_rows.height < min_cross_section:
+                per_factor_ok = False
+                break
+        if per_factor_ok:
+            valid_dates.append(dt)
+
+    if not valid_dates:
+        return _empty_result
+
+    n_dates = len(valid_dates)
+    n_factors = len(risk_factor_dfs)
+
+    # 1. Compute pairwise correlation matrix (average across dates).
+    _MIN_CORR_PAIRS = 2
+    corr_matrix: dict[str, dict[str, float]] = {name: {} for name in all_names}
+    for name_a in all_names:
+        for name_b in all_names:
+            corr_matrix[name_a][name_b] = 0.0
+
+    for dt in valid_dates:
+        cross = all_factors.filter(pl.col(date_col) == dt)
+        # Build wide format manually: group by entity, collect factor values.
+        entity_list = cross.select(pl.col(entity_col)).unique().to_series().to_list()
+
+        # Extract arrays for each factor.
+        factor_arrays: dict[str, np.ndarray] = {}
+        for fname in all_names:
+            factor_rows = cross.filter(pl.col("factor_name") == fname)
+            # Build entity -> value map.
+            val_map = dict(
+                zip(
+                    factor_rows[entity_col].to_list(),
+                    factor_rows[value_col].to_list(),
+                    strict=False,
+                ),
+            )
+            arr = np.array([val_map.get(e, float("nan")) for e in entity_list])
+            factor_arrays[fname] = arr
+
+        for name_a in all_names:
+            a_vals = factor_arrays[name_a]
+            for name_b in all_names:
+                b_vals = factor_arrays[name_b]
+                # Compute correlation on valid (non-NaN) pairs.
+                valid_mask = ~(np.isnan(a_vals) | np.isnan(b_vals))
+                n_valid = int(valid_mask.sum())
+                if n_valid < _MIN_CORR_PAIRS:
+                    continue
+                a_sub = a_vals[valid_mask]
+                b_sub = b_vals[valid_mask]
+                a_mean = a_sub.mean()
+                b_mean = b_sub.mean()
+                da = a_sub - a_mean
+                db = b_sub - b_mean
+                num = float(da @ db)
+                den = math.sqrt(float(da @ da) * float(db @ db))
+                if den > 0:
+                    corr_matrix[name_a][name_b] += num / den / n_dates
+
+    # Ensure self-correlation is exactly 1.0.
+    for name in all_names:
+        corr_matrix[name][name] = 1.0
+
+    # 2. For each risk factor, orthogonalise target and compute residual IC.
+    target_exposure: dict[str, float] = {}
+    orthogonal_residual_stats: dict[str, float] = {}
+
+    for rf_name, rf_df in risk_factor_dfs.items():
+        # Build long-format for orthogonalize.
+        rf_long = rf_df.select(
+            pl.col(date_col),
+            pl.col(entity_col),
+            pl.col(value_col),
+            pl.lit(rf_name).alias("factor_name"),
+        )
+        residual_df = orthogonalize(
+            target_df,
+            rf_long,
+            date_col=date_col,
+            entity_col=entity_col,
+            value_col=value_col,
+            method=method,
+            min_cross_section=min_cross_section,
+        )
+
+        if residual_df.height == 0:
+            target_exposure[rf_name] = 0.0
+            orthogonal_residual_stats[rf_name] = 0.0
+            continue
+
+        # R² exposure: 1 - (var_residual / var_target).
+        residual_vals = residual_df["orthogonalized_value"].drop_nulls()
+        target_vals = target_df[value_col].drop_nulls()
+        var_residual = _scalar_to_float(residual_vals.var())
+        var_target = _scalar_to_float(target_vals.var())
+
+        if var_target > 0:
+            target_exposure[rf_name] = max(0.0, 1.0 - var_residual / var_target)
+        else:
+            target_exposure[rf_name] = 0.0
+
+        # Compute residual IC if return data is provided.
+        if return_df is not None and return_df.height > 0:
+            # Rename for rank_ic compatibility.
+            residual_for_ic = residual_df.rename(
+                {"orthogonalized_value": value_col},
+            )
+            ic_df = rank_ic(
+                residual_for_ic,
+                return_df,
+                factor_col=value_col,
+                return_col="forward_return",
+                date_col=date_col,
+                entity_col=entity_col,
+            )
+            ic_summary_val = ic_summary(ic_df)
+            orthogonal_residual_stats[rf_name] = ic_summary_val.mean
+        else:
+            orthogonal_residual_stats[rf_name] = 0.0
+
+    return FactorExposureResult(
+        target_exposure=target_exposure,
+        correlation_matrix=corr_matrix,
+        orthogonal_residual_stats=orthogonal_residual_stats,
+        n_factors=n_factors,
+        n_dates=n_dates,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Regime-adjusted IC (EVAL-EV-5)
+# ---------------------------------------------------------------------------
+
+
+def regime_adjusted_ic(
+    ic_df: pl.DataFrame,
+    *,
+    n_regimes: int = 2,
+    ic_col: str = "ic",
+    date_col: str = "trade_date",
+) -> RegimeICResult:
+    """
+    Compute regime-switching IC analysis.
+
+    Splits the IC series into regimes based on median of |IC|.  "low_vol"
+    captures periods with |IC| <= median(|IC|), "high_vol" the rest.
+
+    Args:
+        ic_df: ``pl.DataFrame[date, ic]``.
+        n_regimes: Number of regimes (only 2 is supported).
+        ic_col: Name of the IC column.
+        date_col: Name of the date column.
+
+    Returns:
+        A :class:`~ditto_core.engine.evaluation.report.RegimeICResult`.
+
+    """
+    clean = (
+        ic_df.select(pl.col(date_col), pl.col(ic_col))
+        .drop_nulls(subset=[ic_col])
+        .filter(pl.col(ic_col).is_not_nan())
+        .sort(date_col)
+    )
+
+    if clean.height == 0:
+        return RegimeICResult(
+            regimes={},
+            regime_labels=[],
+            transition_matrix={},
+            ic_trend=0.0,
+            ic_trend_p_value=1.0,
+        )
+
+    ic_abs = clean.select(pl.col(ic_col).abs().alias("ic_abs"))
+    median_abs = _scalar_to_float(ic_abs.select(pl.col("ic_abs").median()).item())
+
+    # Assign regime labels
+    labeled = clean.with_columns(
+        regime=pl.when(pl.col(ic_col).abs() <= median_abs)
+        .then(pl.lit("low_vol"))
+        .otherwise(pl.lit("high_vol"))
+    )
+
+    regime_labels: list[tuple[str, str]] = [
+        (str(row[date_col]), row["regime"]) for row in labeled.iter_rows(named=True)
+    ]
+
+    # Compute IC summary per regime
+    regimes: dict[str, ICSummary] = {}
+    for regime_name in ("low_vol", "high_vol"):
+        subset = labeled.filter(pl.col("regime") == regime_name)
+        if subset.height > 0:
+            regimes[regime_name] = ic_summary(subset, ic_col=ic_col, date_col=date_col)
+
+    # Transition matrix
+    transition_matrix = _build_transition_matrix(regime_labels)
+
+    # IC trend
+    ic_trend, ic_trend_p_value = ic_momentum(clean, ic_col=ic_col, date_col=date_col)
+
+    return RegimeICResult(
+        regimes=regimes,
+        regime_labels=regime_labels,
+        transition_matrix=transition_matrix,
+        ic_trend=ic_trend,
+        ic_trend_p_value=ic_trend_p_value,
+    )
+
+
+def _build_transition_matrix(
+    labels: list[tuple[str, str]],
+) -> dict[str, dict[str, float]]:
+    """
+    Build Markov transition matrix from consecutive regime labels.
+
+    Args:
+        labels: ``[(date_str, regime_name), ...]`` ordered by date.
+
+    Returns:
+        ``{from_regime: {to_regime: probability}}``.
+
+    """
+    if len(labels) < _MIN_TRANSITIONS_FOR_MATRIX:
+        return {}
+
+    transitions: dict[tuple[str, str], int] = {}
+    for i in range(1, len(labels)):
+        from_r = labels[i - 1][1]
+        to_r = labels[i][1]
+        key = (from_r, to_r)
+        transitions[key] = transitions.get(key, 0) + 1
+
+    # Count outgoing transitions per regime
+    from_counts: dict[str, int] = {}
+    for (from_r, _to_r), count in transitions.items():
+        from_counts[from_r] = from_counts.get(from_r, 0) + count
+
+    # Build probability matrix
+    result: dict[str, dict[str, float]] = {}
+    all_regimes = sorted({r for _, r in labels})
+    for from_r in all_regimes:
+        result[from_r] = {}
+        total = from_counts.get(from_r, 0)
+        for to_r in all_regimes:
+            count = transitions.get((from_r, to_r), 0)
+            result[from_r][to_r] = count / total if total > 0 else 0.0
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# IC momentum / trend (EVAL-EV-10)
+# ---------------------------------------------------------------------------
+
+
+def ic_momentum(
+    ic_df: pl.DataFrame,
+    *,
+    window: int = 60,
+    ic_col: str = "ic",
+    date_col: str = "trade_date",
+) -> tuple[float, float]:
+    """
+    Estimate IC trend via simple OLS on the last *window* IC values.
+
+    Fits ``ic_t = alpha + beta * t`` and returns ``(beta, p_value)`` where
+    *p_value* tests ``beta != 0``.
+
+    For small samples (n <= 30), returns ``(0.0, 1.0)`` to avoid unreliable
+    estimates.
+
+    Args:
+        ic_df: ``pl.DataFrame[date, ic]``.
+        window: Number of trailing IC values to use.
+        ic_col: Name of the IC column.
+        date_col: Name of the date column.
+
+    Returns:
+        ``(trend_slope, p_value)``.
+
+    """
+    clean = (
+        ic_df.select(pl.col(date_col), pl.col(ic_col))
+        .drop_nulls(subset=[ic_col])
+        .filter(pl.col(ic_col).is_not_nan())
+        .sort(date_col)
+        .tail(window)
+    )
+
+    n = clean.height
+    if n <= _MIN_OBS_FOR_OLS:
+        return 0.0, 1.0
+
+    ic_vals = clean.select(pl.col(ic_col)).to_series().to_numpy()
+    t_vals = np.arange(n, dtype=np.float64)
+
+    # OLS: beta = cov(t, ic) / var(t)
+    t_mean = t_vals.mean()
+    ic_mean = ic_vals.mean()
+    cov_ti = np.sum((t_vals - t_mean) * (ic_vals - ic_mean)) / n
+    var_t = np.sum((t_vals - t_mean) ** 2) / n
+
+    if var_t == 0.0:
+        return 0.0, 1.0
+
+    beta = cov_ti / var_t
+    residuals = ic_vals - (ic_mean + beta * (t_vals - t_mean))
+    _ols_params = 2  # intercept + slope
+    residual_var = np.sum(residuals**2) / (n - _ols_params) if n > _ols_params else 1.0
+
+    # Standard error of beta
+    se_beta = math.sqrt(residual_var / (n * var_t)) if residual_var > 0 else 0.0
+
+    if se_beta == 0.0:
+        return float(beta), 1.0
+
+    t_stat = beta / se_beta
+    p_value = _two_sided_p_value(t_stat, n - 2)
+
+    return float(beta), float(p_value)
+
+
+# ---------------------------------------------------------------------------
+# Performance attribution (EVAL-EV-9)
+# ---------------------------------------------------------------------------
+
+
+def performance_attribution(
+    quantile_ret_df: pl.DataFrame,
+    *,
+    periods_per_year: int = 244,
+    quantile_col: str = "quantile",
+    return_col: str = "mean_return",
+    date_col: str = "trade_date",
+) -> PerformanceAttributionResult:
+    """
+    Decompose factor portfolio performance into selection, timing, interaction.
+
+    * **total_return**: Annualized equal-weighted average of all quantile returns.
+    * **selection_return**: Annualized long-short spread (top - bottom).
+    * **timing_return**: ``total_return - selection_return`` (simplified model).
+    * **interaction_return**: 0.0 (simplified decomposition).
+    * **annual_alpha**: Same as selection_return.
+    * **tracking_error**: Daily std of LS return * sqrt(periods_per_year).
+    * **information_ratio**: alpha / tracking_error (0.0 if TE is 0).
+
+    Args:
+        quantile_ret_df: ``pl.DataFrame[date, quantile, mean_return]``.
+        periods_per_year: Trading periods per year for annualisation.
+        quantile_col: Name of the quantile column.
+        return_col: Name of the mean return column.
+        date_col: Name of the date column.
+
+    Returns:
+        A :class:`~ditto_core.engine.evaluation.report.PerformanceAttributionResult`.
+
+    """
+    if quantile_ret_df.height == 0:
+        return PerformanceAttributionResult(
+            total_return=0.0,
+            selection_return=0.0,
+            timing_return=0.0,
+            interaction_return=0.0,
+            annual_alpha=0.0,
+            tracking_error=0.0,
+            information_ratio=0.0,
+            win_rate_by_quantile={},
+        )
+
+    # Total return: equal-weighted average across all quantiles, annualized
+    total_daily = _scalar_to_float(
+        quantile_ret_df.select(pl.col(return_col).mean()).item(),
+    )
+    total_return = total_daily * periods_per_year
+
+    # Selection return: LS spread (top quantile - bottom quantile), annualized
+    max_q = _scalar_to_float(
+        quantile_ret_df.select(pl.col(quantile_col).max()).item(),
+    )
+    min_q = _scalar_to_float(
+        quantile_ret_df.select(pl.col(quantile_col).min()).item(),
+    )
+
+    top_daily = _scalar_to_float(
+        quantile_ret_df.filter(pl.col(quantile_col) == max_q)
+        .select(pl.col(return_col).mean())
+        .item(),
+    )
+    bottom_daily = _scalar_to_float(
+        quantile_ret_df.filter(pl.col(quantile_col) == min_q)
+        .select(pl.col(return_col).mean())
+        .item(),
+    )
+    ls_daily = top_daily - bottom_daily
+    selection_return = ls_daily * periods_per_year
+
+    # Timing and interaction (simplified)
+    timing_return = total_return - selection_return
+    interaction_return = 0.0
+
+    # Alpha = selection return
+    annual_alpha = selection_return
+
+    # Tracking error: std of daily LS returns * sqrt(periods_per_year)
+    # Compute daily LS spread per date
+    dates = quantile_ret_df.select(pl.col(date_col).unique()).sort(date_col)
+    ls_series = dates.join(
+        quantile_ret_df.filter(pl.col(quantile_col) == max_q).select(
+            pl.col(date_col),
+            pl.col(return_col).alias("top_ret"),
+        ),
+        on=date_col,
+        how="left",
+    ).join(
+        quantile_ret_df.filter(pl.col(quantile_col) == min_q).select(
+            pl.col(date_col),
+            pl.col(return_col).alias("bottom_ret"),
+        ),
+        on=date_col,
+        how="left",
+    )
+    ls_series = ls_series.with_columns(
+        ls=pl.col("top_ret") - pl.col("bottom_ret"),
+    )
+
+    ls_std = _scalar_to_float(
+        ls_series.select(pl.col("ls").std(ddof=1)).item(),
+    )
+    tracking_error = ls_std * math.sqrt(periods_per_year)
+
+    # Information ratio
+    information_ratio = (
+        annual_alpha / tracking_error if tracking_error > _IR_TE_EPSILON else 0.0
+    )
+
+    # Win rate by quantile
+    win_rate_by_quantile: dict[int, float] = {}
+    for q_val in quantile_ret_df.select(pl.col(quantile_col).unique()).to_series():
+        q_df = quantile_ret_df.filter(pl.col(quantile_col) == q_val)
+        n_positive = _scalar_to_float(
+            q_df.filter(pl.col(return_col) > 0).height,
+        )
+        n_total = q_df.height
+        win_rate_by_quantile[int(q_val)] = n_positive / n_total if n_total > 0 else 0.0
+
+    return PerformanceAttributionResult(
+        total_return=total_return,
+        selection_return=selection_return,
+        timing_return=timing_return,
+        interaction_return=interaction_return,
+        annual_alpha=annual_alpha,
+        tracking_error=tracking_error,
+        information_ratio=information_ratio,
+        win_rate_by_quantile=win_rate_by_quantile,
+    )
 
 
 # ---------------------------------------------------------------------------

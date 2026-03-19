@@ -6,8 +6,12 @@ from dataclasses import dataclass
 
 __all__ = [
     "FactorEvaluationReport",
+    "FactorExposureResult",
+    "FamaMacBethResult",
     "ICSummary",
     "LongShortResult",
+    "PerformanceAttributionResult",
+    "RegimeICResult",
     "TailRiskMetrics",
 ]
 
@@ -33,6 +37,66 @@ class ICSummary:
     t_stat: float
     p_value: float
     win_rate: float
+
+
+@dataclass(frozen=True)
+class FamaMacBethResult:
+    """
+    Fama-MacBeth regression result across time-period cross-sections.
+
+    For each date, an OLS cross-sectional regression of returns on the target
+    factor (and optionally risk factors) is run.  The time-series of the target
+    factor's slope coefficient is then summarised with standard error,
+    t-statistic, and p-value.
+
+    Attributes:
+        factor_exposure: Mean slope (β) for the target factor across periods.
+        exposure_t_stat: t-statistic of the mean slope.
+        exposure_p_value: Two-sided p-value of the mean slope.
+        exposure_stderr: Standard error of the slope (std / sqrt(n)).
+        r_squared_avg: Average R² across periods.
+        n_periods: Number of valid periods (dates) used.
+        slopes: ``[(factor_name, mean_slope), ...]`` for all regressors.
+
+    """
+
+    factor_exposure: float
+    exposure_t_stat: float
+    exposure_p_value: float
+    exposure_stderr: float
+    r_squared_avg: float
+    n_periods: int
+    slopes: tuple[tuple[str, float], ...]
+
+
+@dataclass(frozen=True)
+class FactorExposureResult:
+    """
+    Factor exposure analysis.
+
+    Measure how much the target factor is explained by risk factors.
+
+    For each risk factor, the target is orthogonalised against it and the
+    residual's IC with returns is computed.  A pairwise correlation matrix is
+    also produced.
+
+    Attributes:
+        target_exposure: ``{risk_factor_name: R² contribution}`` measuring
+            how much of the target's variance each risk factor explains.
+        correlation_matrix: ``{factor_name: {other: corr}}`` pairwise
+            correlation matrix (target + all risk factors).
+        orthogonal_residual_stats: ``{factor_name: residual_mean_ic}`` the
+            mean IC of the orthogonalised residual vs returns.
+        n_factors: Number of risk factors analysed.
+        n_dates: Number of trading dates used.
+
+    """
+
+    target_exposure: dict[str, float]
+    correlation_matrix: dict[str, dict[str, float]]
+    orthogonal_residual_stats: dict[str, float]
+    n_factors: int
+    n_dates: int
 
 
 @dataclass(frozen=True)
@@ -84,6 +148,54 @@ class LongShortResult:
 
 
 @dataclass(frozen=True)
+class RegimeICResult:
+    """
+    Regime-adjusted IC analysis result.
+
+    Attributes:
+        regimes: Mapping of regime name to IC summary statistics.
+        regime_labels: List of (date_str, regime_label) per observation.
+        transition_matrix: Markov transition probabilities ``{from: {to: prob}}``.
+        ic_trend: Linear regression slope of IC over time (trend momentum).
+        ic_trend_p_value: p-value testing whether the trend slope is non-zero.
+
+    """
+
+    regimes: dict[str, ICSummary]
+    regime_labels: list[tuple[str, str]]
+    transition_matrix: dict[str, dict[str, float]]
+    ic_trend: float
+    ic_trend_p_value: float
+
+
+@dataclass(frozen=True)
+class PerformanceAttributionResult:
+    """
+    Performance attribution decomposition.
+
+    Attributes:
+        total_return: Annualized equal-weighted return across all quantiles.
+        selection_return: Annualized long-short spread (top - bottom).
+        timing_return: total_return - selection_return (simplified model).
+        interaction_return: Residual component (0.0 in simplified model).
+        annual_alpha: Annualized alpha (= selection_return in simplified model).
+        tracking_error: Annualized daily std of LS return.
+        information_ratio: alpha / tracking_error (0.0 if tracking_error is 0).
+        win_rate_by_quantile: Fraction of days with positive return per quantile.
+
+    """
+
+    total_return: float
+    selection_return: float
+    timing_return: float
+    interaction_return: float
+    annual_alpha: float
+    tracking_error: float
+    information_ratio: float
+    win_rate_by_quantile: dict[int, float]
+
+
+@dataclass(frozen=True)
 class FactorEvaluationReport:
     """
     Complete factor evaluation result for a single run.
@@ -107,6 +219,8 @@ class FactorEvaluationReport:
         grinold_kahn_ir: Grinold-Kahn fundamental law IR with autocorrelation
             correction.
         sub_period_ic: {period_label: ICSummary}.
+        fama_macbeth: Fama-MacBeth regression result (None if not computed).
+        factor_exposure: Factor exposure analysis result (None if not computed).
         n_observations: Total number of cross-section observations.
         n_dates: Number of trading dates in the evaluation window.
         computed_at: ISO timestamp of when the report was generated.
@@ -147,3 +261,11 @@ class FactorEvaluationReport:
     n_observations: int
     n_dates: int
     computed_at: str
+
+    # Fama-MacBeth and factor exposure (optional)
+    fama_macbeth: FamaMacBethResult | None = None
+    factor_exposure: FactorExposureResult | None = None
+
+    # Regime-adjusted IC and performance attribution (optional)
+    regime_ic: RegimeICResult | None = None
+    performance_attribution: PerformanceAttributionResult | None = None

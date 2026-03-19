@@ -26,6 +26,10 @@ __all__ = [
     "ShadowTraceRecord",
 ]
 
+_JUMP_RATE_THRESHOLD: float = 0.3
+_DISTRIBUTION_DRIFT_THRESHOLD: float = 0.1
+_COVERAGE_RATE_MINIMUM: float = 0.95
+
 
 class PublicationSafetySeverity(StrEnum):
     """Severity levels for publication safety checks."""
@@ -98,6 +102,13 @@ class DerivedMinimalDQSummary:
     nan_value_count: int = 0
     computable_value_count: int = 0
     failed_checks: tuple[str, ...] = ()
+    coverage_rate: float = 0.0
+    value_mean: float = 0.0
+    value_std: float = 0.0
+    value_skewness: float = 0.0
+    distribution_drift: float | None = None
+    value_jump_rate: float = 0.0
+    max_consecutive_nulls: int = 0
 
     def is_passed(self) -> bool:
         """Return whether the minimal DQ summary has blocking errors."""
@@ -106,6 +117,26 @@ class DerivedMinimalDQSummary:
     def error_count(self) -> int:
         """Return the number of failed minimal DQ checks."""
         return len(self.failed_checks)
+
+    def advanced_checks(self) -> tuple[str, ...]:
+        """
+        Run enhanced DQ constraint checks on the value distribution.
+
+        Returns:
+            Tuple of failed check names.  Empty tuple means all passed.
+
+        """
+        failed: list[str] = []
+        if self.coverage_rate < _COVERAGE_RATE_MINIMUM:
+            failed.append("coverage_rate_minimum")
+        if (
+            self.distribution_drift is not None
+            and self.distribution_drift > _DISTRIBUTION_DRIFT_THRESHOLD
+        ):
+            failed.append("distribution_stability")
+        if self.value_jump_rate > _JUMP_RATE_THRESHOLD:
+            failed.append("value_continuity")
+        return tuple(failed)
 
 
 @dataclass(frozen=True)
