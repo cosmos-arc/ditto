@@ -7,6 +7,7 @@ I-CASC-03: Cycle guard + micro-batch merge + max depth
 INVAL-IC-1: repair_batch failure resilience
 INVAL-IC-2: Dead letter queue
 INVAL-IC-3: Priority queue ordering
+INVAL-IC-4: Cross-event deduplication (subsumed healing)
 """
 
 from __future__ import annotations
@@ -216,6 +217,14 @@ class InvalidationCascadeOrchestrator:
                     CascadeStatus.HEALED,
                 )
                 results.append(result)
+                # Mark any subsumed stale records as healed
+                self._mark_subsumed_healed(
+                    healed_id=invalidation.invalidation_id,
+                    derived_id=invalidation.derived_id,
+                    version=invalidation.version,
+                    affected_start=invalidation.affected_start,
+                    affected_end=invalidation.affected_end,
+                )
             except Exception as exc:
                 error_message = str(exc)
                 logger.error(
@@ -260,6 +269,31 @@ class InvalidationCascadeOrchestrator:
             depth,
             self._max_depth,
         )
+
+    def _mark_subsumed_healed(
+        self,
+        healed_id: str,
+        derived_id: str,
+        version: int,
+        affected_start: str,
+        affected_end: str,
+    ) -> None:
+        """Mark stale records subsumed by a successful repair as healed."""
+        stale_records = self._catalog_service.list_stale_by_derived_version(
+            derived_id,
+            version,
+        )
+        for record in stale_records:
+            if (
+                record.invalidation_id == healed_id
+                or record.affected_start < affected_start
+                or record.affected_end > affected_end
+            ):
+                continue
+            self._catalog_service.mark_invalidation_status(
+                record.invalidation_id,
+                CascadeStatus.HEALED,
+            )
 
     @staticmethod
     def _merge_batch_events(

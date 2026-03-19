@@ -102,6 +102,14 @@ class DerivedCatalogReaderProtocol(Protocol):
         """List dead-letter invalidation records ordered by dead_letter_at."""
         ...
 
+    def list_stale_by_derived_version(
+        self,
+        derived_id: str,
+        version: int,
+    ) -> tuple[DerivedInvalidationRecord, ...]:
+        """List stale invalidations for a specific derived_id and version."""
+        ...
+
     def list_specs(
         self,
         derived_ids: tuple[str, ...] | None = None,
@@ -422,6 +430,14 @@ class DerivedCatalogService:
     def list_dead_letter_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
         """List dead-letter invalidations ordered by dead_letter_at."""
         return self._catalog_reader.list_dead_letter_invalidations()
+
+    def list_stale_by_derived_version(
+        self,
+        derived_id: str,
+        version: int,
+    ) -> tuple[DerivedInvalidationRecord, ...]:
+        """List stale invalidations for a specific derived_id and version."""
+        return self._catalog_reader.list_stale_by_derived_version(derived_id, version)
 
     def increment_retry_count(self, invalidation_id: str) -> None:
         """Increment retry_count for one invalidation row."""

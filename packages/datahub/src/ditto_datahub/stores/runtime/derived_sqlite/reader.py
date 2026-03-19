@@ -253,7 +253,41 @@ class SQLiteDerivedCatalogReader:
         return tuple(_to_invalidation_record(row) for row in rows)
 
     def list_stale_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
-        """List stale invalidation rows ordered by role priority then depth."""
+        """List stale invalidations, excluding those subsumed by a healed record."""
+        rows = self._sqlite_client.fetchall(
+            """
+            SELECT invalidation_id, derived_id, version,
+                   source_domain, source_dataset, change_date,
+                   affected_start, affected_end,
+                   source_snapshot_id, root_dependency_ref,
+                   status, created_at, processed_at, depth,
+                   retry_count, error_message, dead_letter_at, role
+            FROM derived_invalidation i
+            WHERE status = 'stale'
+              AND NOT EXISTS (
+                  SELECT 1 FROM derived_invalidation h
+                  WHERE h.derived_id = i.derived_id
+                    AND h.version = i.version
+                    AND h.status = 'healed'
+                    AND h.affected_start <= i.affected_start
+                    AND h.affected_end >= i.affected_end
+              )
+            ORDER BY
+                CASE role
+                    WHEN 'signal' THEN 0 WHEN 'factor' THEN 1
+                    WHEN 'label' THEN 2 WHEN 'feature' THEN 3 ELSE 4
+                END ASC,
+                depth ASC, created_at ASC, invalidation_id ASC
+            """,
+        )
+        return tuple(_to_invalidation_record(row) for row in rows)
+
+    def list_stale_by_derived_version(
+        self,
+        derived_id: str,
+        version: int,
+    ) -> tuple[DerivedInvalidationRecord, ...]:
+        """List stale invalidations for a specific derived_id and version."""
         rows = self._sqlite_client.fetchall(
             """
             SELECT invalidation_id, derived_id, version,
@@ -263,14 +297,9 @@ class SQLiteDerivedCatalogReader:
                    status, created_at, processed_at, depth,
                    retry_count, error_message, dead_letter_at, role
             FROM derived_invalidation
-            WHERE status = 'stale'
-            ORDER BY
-                CASE role
-                    WHEN 'signal' THEN 0 WHEN 'factor' THEN 1
-                    WHEN 'label' THEN 2 WHEN 'feature' THEN 3 ELSE 4
-                END ASC,
-                depth ASC, created_at ASC, invalidation_id ASC
+            WHERE status = 'stale' AND derived_id = ? AND version = ?
             """,
+            (derived_id, version),
         )
         return tuple(_to_invalidation_record(row) for row in rows)
 
