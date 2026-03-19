@@ -4,12 +4,15 @@ Invalidation cascade protocol with BFS propagation and state machine.
 I-CASC-01: BFS multi-level propagation
 I-CASC-02: State machine (fresh -> stale -> recomputing -> healed)
 I-CASC-03: Cycle guard + micro-batch merge + max depth
+INVAL-IC-1: repair_batch failure resilience
+INVAL-IC-2: Dead letter queue
+INVAL-IC-3: Priority queue ordering
 """
 
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import uuid4
@@ -29,10 +32,12 @@ from ditto_port.services.derived.materialization_orchestrator import (
 )
 
 __all__ = [
+    "CASCADE_MAX_RETRY_COUNT",
     "REALTIME_CASCADE_MAX_DEPTH",
     "CascadeDepthExceededError",
     "CascadeStatus",
     "InvalidationCascadeOrchestrator",
+    "RepairBatchResult",
 ]
 
 
@@ -43,6 +48,7 @@ class CascadeStatus(StrEnum):
     STALE = "stale"
     RECOMPUTING = "recomputing"
     HEALED = "healed"
+    DEAD_LETTER = "dead_letter"
 
 
 class CascadeDepthExceededError(Exception):
@@ -55,6 +61,15 @@ class CascadeDepthExceededError(Exception):
 
 
 REALTIME_CASCADE_MAX_DEPTH = 5
+CASCADE_MAX_RETRY_COUNT = 3
+
+
+@dataclass(frozen=True)
+class RepairBatchResult:
+    """Result of a repair batch operation containing successes and failures."""
+
+    repaired: tuple[DerivedMaterializationResult, ...]
+    failed: tuple[str, ...]
 
 
 class InvalidationCascadeOrchestrator:
@@ -140,6 +155,7 @@ class InvalidationCascadeOrchestrator:
                     created_at=created_at,
                     processed_at=None,
                     depth=depth,
+                    role="factor",
                 )
                 all_records.append(record)
 
@@ -156,20 +172,23 @@ class InvalidationCascadeOrchestrator:
     def repair_batch(
         self,
         batch_size: int = 10,
-    ) -> tuple[DerivedMaterializationResult, ...]:
+    ) -> RepairBatchResult:
         """
-        Repair stale invalidations in depth order.
+        Repair stale invalidations in priority/depth order.
 
         Transitions each record through: stale -> recomputing -> healed.
-        On failure, reverts to stale and raises.
+        On failure, increments retry count. If retry_count >= max, marks
+        as dead letter; otherwise reverts to stale and continues to
+        the next item. Never raises due to individual item failures.
 
         Returns:
-            Tuple of materialization results for successfully repaired items.
+            RepairBatchResult with successfully repaired items and failed IDs.
 
         """
         results: list[DerivedMaterializationResult] = []
+        failed_ids: list[str] = []
 
-        # Already sorted by depth then created_at from catalog service
+        # Already sorted by role priority, depth, then created_at
         pending = self._catalog_service.list_stale_invalidations()
 
         for invalidation in pending[:batch_size]:
@@ -197,15 +216,41 @@ class InvalidationCascadeOrchestrator:
                     CascadeStatus.HEALED,
                 )
                 results.append(result)
-            except Exception:
-                # State transition: recomputing -> stale (failure revert)
-                self._catalog_service.mark_invalidation_status(
+            except Exception as exc:
+                error_message = str(exc)
+                logger.error(
+                    "repair failed for {}: {}",
                     invalidation.invalidation_id,
-                    CascadeStatus.STALE,
+                    error_message,
                 )
-                raise
+                new_retry_count = invalidation.retry_count + 1
+                self._catalog_service.increment_retry_count(
+                    invalidation.invalidation_id,
+                )
+                if new_retry_count >= CASCADE_MAX_RETRY_COUNT:
+                    dead_letter_at = datetime.now(UTC).isoformat()
+                    self._catalog_service.mark_invalidation_dead_letter(
+                        invalidation.invalidation_id,
+                        error_message,
+                        dead_letter_at,
+                    )
+                    logger.warning(
+                        "dead-lettered {} after {} retries",
+                        invalidation.invalidation_id,
+                        new_retry_count,
+                    )
+                else:
+                    # State transition: recomputing -> stale (failure revert)
+                    self._catalog_service.mark_invalidation_status(
+                        invalidation.invalidation_id,
+                        CascadeStatus.STALE,
+                    )
+                failed_ids.append(invalidation.invalidation_id)
 
-        return tuple(results)
+        return RepairBatchResult(
+            repaired=tuple(results),
+            failed=tuple(failed_ids),
+        )
 
     def _emit_depth_alert(self, derived_id: str, depth: int) -> None:
         """Log a warning when cascade depth is exceeded."""

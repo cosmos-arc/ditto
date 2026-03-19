@@ -11,10 +11,12 @@ from ditto_datahub.services.hot_layer import (
 )
 
 from ditto_port.services.derived.cascade_protocol import (
+    CASCADE_MAX_RETRY_COUNT,
     REALTIME_CASCADE_MAX_DEPTH,
     CascadeDepthExceededError,
     CascadeStatus,
     InvalidationCascadeOrchestrator,
+    RepairBatchResult,
 )
 from ditto_port.services.derived.materialization import (
     InMemoryDerivedInputProvider,
@@ -35,6 +37,7 @@ from ditto_port.services.derived.research import ResearchDatasetFacade
 from ditto_port.services.derived.runtime_input import RuntimeDerivedInputProvider
 
 __all__ = [
+    "CASCADE_MAX_RETRY_COUNT",
     "REALTIME_CASCADE_MAX_DEPTH",
     "CascadeDepthExceededError",
     "CascadeStatus",
@@ -46,6 +49,7 @@ __all__ = [
     "InMemoryDerivedInputProvider",
     "InputContext",
     "InvalidationCascadeOrchestrator",
+    "RepairBatchResult",
     "ResearchDatasetFacade",
     "RuntimeDerivedInputProvider",
     "RuntimeMode",

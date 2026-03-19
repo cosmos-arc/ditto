@@ -362,6 +362,10 @@ class DerivedInvalidationRecord:
     created_at: str
     processed_at: str | None
     depth: int = 0
+    retry_count: int = 0
+    error_message: str | None = None
+    dead_letter_at: str | None = None
+    role: str = "factor"
 
 
 @dataclass(frozen=True)

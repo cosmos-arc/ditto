@@ -243,7 +243,8 @@ class SQLiteDerivedCatalogReader:
                    source_domain, source_dataset, change_date,
                    affected_start, affected_end,
                    source_snapshot_id, root_dependency_ref,
-                   status, created_at, processed_at, depth
+                   status, created_at, processed_at, depth,
+                   retry_count, error_message, dead_letter_at, role
             FROM derived_invalidation
             WHERE status = 'pending'
             ORDER BY created_at ASC, invalidation_id ASC
@@ -252,17 +253,40 @@ class SQLiteDerivedCatalogReader:
         return tuple(_to_invalidation_record(row) for row in rows)
 
     def list_stale_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
-        """List stale invalidation rows ordered by depth then created_at."""
+        """List stale invalidation rows ordered by role priority then depth."""
         rows = self._sqlite_client.fetchall(
             """
             SELECT invalidation_id, derived_id, version,
                    source_domain, source_dataset, change_date,
                    affected_start, affected_end,
                    source_snapshot_id, root_dependency_ref,
-                   status, created_at, processed_at, depth
+                   status, created_at, processed_at, depth,
+                   retry_count, error_message, dead_letter_at, role
             FROM derived_invalidation
             WHERE status = 'stale'
-            ORDER BY depth ASC, created_at ASC, invalidation_id ASC
+            ORDER BY
+                CASE role
+                    WHEN 'signal' THEN 0 WHEN 'factor' THEN 1
+                    WHEN 'label' THEN 2 WHEN 'feature' THEN 3 ELSE 4
+                END ASC,
+                depth ASC, created_at ASC, invalidation_id ASC
+            """,
+        )
+        return tuple(_to_invalidation_record(row) for row in rows)
+
+    def list_dead_letter_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
+        """List dead-letter invalidation rows ordered by dead_letter_at."""
+        rows = self._sqlite_client.fetchall(
+            """
+            SELECT invalidation_id, derived_id, version,
+                   source_domain, source_dataset, change_date,
+                   affected_start, affected_end,
+                   source_snapshot_id, root_dependency_ref,
+                   status, created_at, processed_at, depth,
+                   retry_count, error_message, dead_letter_at, role
+            FROM derived_invalidation
+            WHERE status = 'dead_letter'
+            ORDER BY dead_letter_at ASC
             """,
         )
         return tuple(_to_invalidation_record(row) for row in rows)
@@ -380,4 +404,8 @@ def _to_invalidation_record(row: dict[str, Any]) -> DerivedInvalidationRecord:
         created_at=row["created_at"],
         processed_at=row["processed_at"],
         depth=row["depth"],
+        retry_count=row["retry_count"],
+        error_message=row["error_message"],
+        dead_letter_at=row["dead_letter_at"],
+        role=row["role"],
     )

@@ -13,6 +13,7 @@ from ditto_port.jobs.flows.materialization import (
     shadow_compare_flow,
     shadow_publish_flow,
 )
+from ditto_port.services.derived.cascade_protocol import RepairBatchResult
 from pytest_mock import MockerFixture
 
 
@@ -66,9 +67,12 @@ class TestRepairFromInvalidationFlow:
     def test_flow_repairs_pending_invalidations(self, mocker: MockerFixture) -> None:
         """Repair flow should delegate to the invalidation service."""
         bundle = mocker.MagicMock()
-        bundle.invalidation_service.repair_batch.return_value = (
-            {"derived_id": "factor.alpha_simple"},
-            {"derived_id": "factor.alpha_other"},
+        bundle.invalidation_service.repair_batch.return_value = RepairBatchResult(
+            repaired=(
+                {"derived_id": "factor.alpha_simple"},
+                {"derived_id": "factor.alpha_other"},
+            ),
+            failed=(),
         )
         context = mocker.MagicMock()
         context.__enter__.return_value = bundle
@@ -82,6 +86,7 @@ class TestRepairFromInvalidationFlow:
 
         bundle.invalidation_service.repair_batch.assert_called_once_with(batch_size=20)
         assert result["summary"]["repaired_count"] == 2
+        assert result["summary"]["failed_count"] == 0
 
 
 class TestPublicationFlows:

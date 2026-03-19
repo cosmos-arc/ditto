@@ -1,4 +1,4 @@
-"""Unit tests for InvalidationCascadeOrchestrator (I-CASC-01/02/03)."""
+"""Unit tests for InvalidationCascadeOrchestrator (I-CASC-01/02/03, INVAL-IC)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock
 from uuid import uuid4
 
-import pytest
 from ditto_core.engine.materialization import (
     DerivedInvalidationEvent,
     DerivedMaterializationResult,
@@ -56,6 +55,8 @@ def _make_record(
     depth: int = 0,
     affected_start: str = "2026-03-10",
     affected_end: str = "2026-03-11",
+    retry_count: int = 0,
+    role: str = "factor",
 ) -> DerivedInvalidationRecord:
     return DerivedInvalidationRecord(
         invalidation_id=f"inval-{uuid4().hex[:12]}",
@@ -72,6 +73,8 @@ def _make_record(
         created_at=datetime.now(UTC).isoformat(),
         processed_at=None,
         depth=depth,
+        retry_count=retry_count,
+        role=role,
     )
 
 
@@ -83,6 +86,7 @@ class TestCascadeStatus:
         assert CascadeStatus.STALE == "stale"
         assert CascadeStatus.RECOMPUTING == "recomputing"
         assert CascadeStatus.HEALED == "healed"
+        assert CascadeStatus.DEAD_LETTER == "dead_letter"
 
 
 class TestRealtimeCascadeMaxDepth:
@@ -590,10 +594,11 @@ class TestStateMachine:
             materialization_service=materialization_service,
         )
 
-        results = cascade.repair_batch(batch_size=10)
+        batch_result = cascade.repair_batch(batch_size=10)
 
-        assert len(results) == 1
-        assert results[0].run_id == "run-001"
+        assert len(batch_result.repaired) == 1
+        assert batch_result.repaired[0].run_id == "run-001"
+        assert len(batch_result.failed) == 0
 
         # Verify state transitions
         mark_calls = catalog_service.mark_invalidation_status.call_args_list
@@ -602,7 +607,7 @@ class TestStateMachine:
         assert CascadeStatus.HEALED in status_transitions
 
     def test_repair_batch_failure_reverts_to_stale(self) -> None:
-        """Failed repair transitions recomputing -> stale."""
+        """Failed repair with retries remaining transitions recomputing -> stale."""
         catalog_service = MagicMock()
         materialization_service = MagicMock()
 
@@ -611,6 +616,7 @@ class TestStateMachine:
             version=1,
             status=CascadeStatus.STALE,
             depth=1,
+            retry_count=0,
         )
         catalog_service.list_stale_invalidations.return_value = (stale_record,)
 
@@ -621,8 +627,11 @@ class TestStateMachine:
             materialization_service=materialization_service,
         )
 
-        with pytest.raises(RuntimeError, match="compute failed"):
-            cascade.repair_batch(batch_size=10)
+        batch_result = cascade.repair_batch(batch_size=10)
+
+        # Should NOT raise - continues on failure
+        assert len(batch_result.repaired) == 0
+        assert len(batch_result.failed) == 1
 
         # Should have been marked recomputing first, then reverted to stale
         mark_calls = catalog_service.mark_invalidation_status.call_args_list
@@ -710,8 +719,8 @@ class TestStateMachine:
             materialization_service=materialization_service,
         )
 
-        results = cascade.repair_batch(batch_size=2)
-        assert len(results) == 2
+        batch_result = cascade.repair_batch(batch_size=2)
+        assert len(batch_result.repaired) == 2
 
 
 class TestCascadeDepthExceededError:
@@ -724,3 +733,322 @@ class TestCascadeDepthExceededError:
         err = CascadeDepthExceededError("factor.test", 10)
         assert "factor.test" in str(err)
         assert "10" in str(err)
+
+
+def _make_materialization_result(
+    derived_id: str = "test",
+) -> DerivedMaterializationResult:
+    return DerivedMaterializationResult(
+        run_id="run-001",
+        derived_id=derived_id,
+        version=1,
+        profile=MaterializationProfile.SERIES,
+        status=DerivedRunStatus.SUCCESS,
+        rows_written=1,
+        partitions_written=("2026-03-10",),
+        coverage_start="2026-03-10",
+        coverage_end="2026-03-11",
+    )
+
+
+class TestRepairBatchResilience:
+    """INVAL-IC-1: repair_batch failure does not terminate the batch."""
+
+    def test_repair_batch_continues_on_failure(self) -> None:
+        """3 items, middle fails -> first and last repaired, middle failed."""
+        catalog_service = MagicMock()
+        materialization_service = MagicMock()
+
+        first = _make_record(derived_id="factor.first", depth=0)
+        middle = _make_record(derived_id="factor.middle", depth=1)
+        last = _make_record(derived_id="factor.last", depth=2)
+        catalog_service.list_stale_invalidations.return_value = (
+            first,
+            middle,
+            last,
+        )
+
+        call_count = 0
+
+        def materialize_side_effect(_request):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 2:
+                raise RuntimeError("middle failed")
+            return _make_materialization_result()
+
+        materialization_service.materialize.side_effect = materialize_side_effect
+
+        cascade = InvalidationCascadeOrchestrator(
+            catalog_service=catalog_service,
+            materialization_service=materialization_service,
+        )
+
+        batch_result = cascade.repair_batch(batch_size=10)
+
+        # First and last repaired, middle failed
+        assert len(batch_result.repaired) == 2
+        assert len(batch_result.failed) == 1
+        assert batch_result.failed[0] == middle.invalidation_id
+
+        # All 3 were attempted
+        assert materialization_service.materialize.call_count == 3
+
+    def test_repair_batch_tracks_failures(self) -> None:
+        """RepairBatchResult.failed contains all failed invalidation IDs."""
+        catalog_service = MagicMock()
+        materialization_service = MagicMock()
+
+        record1 = _make_record(derived_id="factor.a", depth=0)
+        record2 = _make_record(derived_id="factor.b", depth=1)
+        catalog_service.list_stale_invalidations.return_value = (record1, record2)
+
+        materialization_service.materialize.side_effect = RuntimeError("boom")
+
+        cascade = InvalidationCascadeOrchestrator(
+            catalog_service=catalog_service,
+            materialization_service=materialization_service,
+        )
+
+        batch_result = cascade.repair_batch(batch_size=10)
+
+        assert len(batch_result.repaired) == 0
+        assert len(batch_result.failed) == 2
+        assert record1.invalidation_id in batch_result.failed
+        assert record2.invalidation_id in batch_result.failed
+
+    def test_repair_batch_no_failures_empty_failed(self) -> None:
+        """Successful batch has empty failed tuple."""
+        catalog_service = MagicMock()
+        materialization_service = MagicMock()
+
+        record = _make_record(derived_id="factor.ok", depth=0)
+        catalog_service.list_stale_invalidations.return_value = (record,)
+
+        materialization_service.materialize.return_value = (
+            _make_materialization_result()
+        )
+
+        cascade = InvalidationCascadeOrchestrator(
+            catalog_service=catalog_service,
+            materialization_service=materialization_service,
+        )
+
+        batch_result = cascade.repair_batch(batch_size=10)
+
+        assert len(batch_result.failed) == 0
+        assert len(batch_result.repaired) == 1
+
+
+class TestDeadLetter:
+    """INVAL-IC-2: Dead letter queue for max-retry invalidations."""
+
+    def test_dead_letter_after_max_retries(self) -> None:
+        """After 3 failures, status becomes DEAD_LETTER."""
+        catalog_service = MagicMock()
+        materialization_service = MagicMock()
+
+        record = _make_record(
+            derived_id="factor.doomed",
+            retry_count=2,  # 2 prior retries; this will be the 3rd
+        )
+        catalog_service.list_stale_invalidations.return_value = (record,)
+
+        materialization_service.materialize.side_effect = RuntimeError("fatal")
+
+        cascade = InvalidationCascadeOrchestrator(
+            catalog_service=catalog_service,
+            materialization_service=materialization_service,
+        )
+
+        batch_result = cascade.repair_batch(batch_size=10)
+
+        assert len(batch_result.repaired) == 0
+        assert len(batch_result.failed) == 1
+
+        # Should have incremented retry count
+        catalog_service.increment_retry_count.assert_called_once_with(
+            record.invalidation_id,
+        )
+
+        # Should have been marked dead letter
+        catalog_service.mark_invalidation_dead_letter.assert_called_once()
+        dl_call = catalog_service.mark_invalidation_dead_letter.call_args
+        assert dl_call[0][0] == record.invalidation_id
+        assert "fatal" in dl_call[0][1]
+        assert dl_call[0][2] is not None  # dead_letter_at timestamp
+
+    def test_not_dead_letter_below_max_retries(self) -> None:
+        """Below max retries: reverts to STALE, not dead letter."""
+        catalog_service = MagicMock()
+        materialization_service = MagicMock()
+
+        record = _make_record(
+            derived_id="factor.recoverable",
+            retry_count=0,  # first failure
+        )
+        catalog_service.list_stale_invalidations.return_value = (record,)
+
+        materialization_service.materialize.side_effect = RuntimeError("transient")
+
+        cascade = InvalidationCascadeOrchestrator(
+            catalog_service=catalog_service,
+            materialization_service=materialization_service,
+        )
+
+        cascade.repair_batch(batch_size=10)
+
+        # Should NOT have been marked dead letter
+        catalog_service.mark_invalidation_dead_letter.assert_not_called()
+
+        # Should have been reverted to stale
+        mark_calls = catalog_service.mark_invalidation_status.call_args_list
+        status_transitions = [c[0][1] for c in mark_calls]
+        assert CascadeStatus.STALE in status_transitions
+
+    def test_dead_letter_not_retried(self) -> None:
+        """Dead letter records should not be returned by list_stale_invalidations."""
+        catalog_service = MagicMock()
+        materialization_service = MagicMock()
+
+        # Only stale records are returned; dead_letter ones are filtered out
+        stale_record = _make_record(derived_id="factor.still_ok", depth=0)
+        catalog_service.list_stale_invalidations.return_value = (stale_record,)
+
+        materialization_service.materialize.return_value = (
+            _make_materialization_result()
+        )
+
+        cascade = InvalidationCascadeOrchestrator(
+            catalog_service=catalog_service,
+            materialization_service=materialization_service,
+        )
+
+        batch_result = cascade.repair_batch(batch_size=10)
+
+        # Only the stale record is processed
+        assert len(batch_result.repaired) == 1
+        assert len(batch_result.failed) == 0
+
+
+class TestPriorityQueue:
+    """INVAL-IC-3: Priority queue ordering by role."""
+
+    def test_priority_queue_ordering(self) -> None:
+        """signal > factor > feature ordering at same depth."""
+        catalog_service = MagicMock()
+        materialization_service = MagicMock()
+
+        signal_record = _make_record(
+            derived_id="signal.urgent",
+            depth=1,
+            role="signal",
+        )
+        factor_record = _make_record(
+            derived_id="factor.normal",
+            depth=1,
+            role="factor",
+        )
+        feature_record = _make_record(
+            derived_id="feature.slow",
+            depth=1,
+            role="feature",
+        )
+
+        # The reader should return them in priority order:
+        # signal (0) > factor (1) > feature (3)
+        catalog_service.list_stale_invalidations.return_value = (
+            signal_record,
+            factor_record,
+            feature_record,
+        )
+
+        materialization_service.materialize.return_value = (
+            _make_materialization_result()
+        )
+
+        cascade = InvalidationCascadeOrchestrator(
+            catalog_service=catalog_service,
+            materialization_service=materialization_service,
+        )
+
+        cascade.repair_batch(batch_size=10)
+
+        mat_calls = materialization_service.materialize.call_args_list
+        derived_ids = [c[0][0].derived_id for c in mat_calls]
+        assert derived_ids == [
+            "signal.urgent",
+            "factor.normal",
+            "feature.slow",
+        ]
+
+    def test_depth_still_primary_sort_for_different_depths(self) -> None:
+        """Depth is still the primary sort when roles differ across depths."""
+        catalog_service = MagicMock()
+        materialization_service = MagicMock()
+
+        shallow_feature = _make_record(
+            derived_id="feature.shallow",
+            depth=0,
+            role="feature",
+        )
+        deep_signal = _make_record(
+            derived_id="signal.deep",
+            depth=2,
+            role="signal",
+        )
+
+        catalog_service.list_stale_invalidations.return_value = (
+            shallow_feature,
+            deep_signal,
+        )
+
+        materialization_service.materialize.return_value = (
+            _make_materialization_result()
+        )
+
+        cascade = InvalidationCascadeOrchestrator(
+            catalog_service=catalog_service,
+            materialization_service=materialization_service,
+        )
+
+        cascade.repair_batch(batch_size=10)
+
+        mat_calls = materialization_service.materialize.call_args_list
+        derived_ids = [c[0][0].derived_id for c in mat_calls]
+        # depth 0 < depth 2, so shallow_feature comes first
+        assert derived_ids == [
+            "feature.shallow",
+            "signal.deep",
+        ]
+
+
+class TestPropagationRole:
+    """Verify propagate() assigns default role to created records."""
+
+    def test_propagate_assigns_default_role(self) -> None:
+        """Each propagated record should have role='factor' by default."""
+        catalog_service = MagicMock()
+        materialization_service = MagicMock()
+
+        catalog_service.list_downstream_dependencies.return_value = (
+            DerivedDependencyRecord(
+                derived_id="factor.downstream",
+                version=1,
+                dependency_kind="derived",
+                dependency_ref="factor.alpha_upstream",
+                created_at="2026-03-13T10:00:00+08:00",
+            ),
+        )
+
+        cascade = InvalidationCascadeOrchestrator(
+            catalog_service=catalog_service,
+            materialization_service=materialization_service,
+        )
+
+        event = _make_event()
+        cascade.propagate(event)
+
+        saved_records = catalog_service.save_invalidations.call_args[0][0]
+        for record in saved_records:
+            assert record.role == "factor"

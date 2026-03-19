@@ -38,6 +38,7 @@ _VALID_INVALIDATION_STATUSES: frozenset[str] = frozenset(
         "recomputing",
         "healed",
         "processed",
+        "dead_letter",
     }
 )
 
@@ -265,8 +266,9 @@ class SQLiteDerivedCatalogWriter:
                 source_domain, source_dataset, change_date,
                 affected_start, affected_end,
                 source_snapshot_id, root_dependency_ref,
-                status, created_at, processed_at, depth
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                status, created_at, processed_at, depth,
+                retry_count, error_message, dead_letter_at, role
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 (
@@ -284,6 +286,10 @@ class SQLiteDerivedCatalogWriter:
                     record.created_at,
                     record.processed_at,
                     record.depth,
+                    record.retry_count,
+                    record.error_message,
+                    record.dead_letter_at,
+                    record.role,
                 )
                 for record in records
             ],
@@ -380,6 +386,57 @@ class SQLiteDerivedCatalogWriter:
     ) -> None:
         """Update the status of one invalidation row."""
         self.execute_invalidation_status(invalidation_id, status)
+        self.commit()
+
+    def execute_increment_retry_count(
+        self,
+        invalidation_id: str,
+    ) -> None:
+        """Increment retry_count for one invalidation row."""
+        self._sqlite_client.execute(
+            """
+            UPDATE derived_invalidation
+            SET retry_count = retry_count + 1
+            WHERE invalidation_id = ?
+            """,
+            (invalidation_id,),
+        )
+
+    def increment_retry_count(self, invalidation_id: str) -> None:
+        """Increment retry_count for one invalidation row and commit."""
+        self.execute_increment_retry_count(invalidation_id)
+        self.commit()
+
+    def execute_mark_invalidation_dead_letter(
+        self,
+        invalidation_id: str,
+        error_message: str,
+        dead_letter_at: str,
+    ) -> None:
+        """Mark one invalidation as dead letter."""
+        self._sqlite_client.execute(
+            """
+            UPDATE derived_invalidation
+            SET status = 'dead_letter',
+                error_message = ?,
+                dead_letter_at = ?
+            WHERE invalidation_id = ?
+            """,
+            (error_message, dead_letter_at, invalidation_id),
+        )
+
+    def mark_invalidation_dead_letter(
+        self,
+        invalidation_id: str,
+        error_message: str,
+        dead_letter_at: str,
+    ) -> None:
+        """Mark one invalidation as dead letter and commit."""
+        self.execute_mark_invalidation_dead_letter(
+            invalidation_id,
+            error_message,
+            dead_letter_at,
+        )
         self.commit()
 
     # --- delete methods ---

@@ -537,7 +537,11 @@ CREATE TABLE IF NOT EXISTS derived_invalidation (
     status TEXT NOT NULL,
     created_at TEXT NOT NULL,
     processed_at TEXT,
-    depth INTEGER NOT NULL DEFAULT 0
+    depth INTEGER NOT NULL DEFAULT 0,
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    error_message TEXT,
+    dead_letter_at TEXT,
+    role TEXT NOT NULL DEFAULT 'factor'
 );
 CREATE INDEX IF NOT EXISTS idx_derived_invalidation_pending
     ON derived_invalidation(status, created_at);

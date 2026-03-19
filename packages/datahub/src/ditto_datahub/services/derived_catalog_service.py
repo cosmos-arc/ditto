@@ -95,7 +95,11 @@ class DerivedCatalogReaderProtocol(Protocol):
         ...
 
     def list_stale_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
-        """List stale invalidation records ordered by depth then created_at."""
+        """List stale invalidation records ordered by role priority then depth."""
+        ...
+
+    def list_dead_letter_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
+        """List dead-letter invalidation records ordered by dead_letter_at."""
         ...
 
     def list_specs(
@@ -234,6 +238,26 @@ class DerivedCatalogWriterProtocol(Protocol):
         status: str,
     ) -> None:
         """Update the status of one invalidation record."""
+        ...
+
+    def execute_increment_retry_count(self, invalidation_id: str) -> None:
+        """Increment retry_count for one invalidation row without committing."""
+        ...
+
+    def execute_mark_invalidation_dead_letter(
+        self, invalidation_id: str, error_message: str, dead_letter_at: str
+    ) -> None:
+        """Mark one invalidation as dead letter without committing."""
+        ...
+
+    def increment_retry_count(self, invalidation_id: str) -> None:
+        """Increment retry_count for one invalidation row."""
+        ...
+
+    def mark_invalidation_dead_letter(
+        self, invalidation_id: str, error_message: str, dead_letter_at: str
+    ) -> None:
+        """Mark one invalidation as dead letter."""
         ...
 
     # --- delete methods ---
@@ -394,6 +418,24 @@ class DerivedCatalogService:
     ) -> None:
         """Update the status of one invalidation row."""
         self._catalog_writer.mark_invalidation_status(invalidation_id, status)
+
+    def list_dead_letter_invalidations(self) -> tuple[DerivedInvalidationRecord, ...]:
+        """List dead-letter invalidations ordered by dead_letter_at."""
+        return self._catalog_reader.list_dead_letter_invalidations()
+
+    def increment_retry_count(self, invalidation_id: str) -> None:
+        """Increment retry_count for one invalidation row."""
+        self._catalog_writer.increment_retry_count(invalidation_id)
+
+    def mark_invalidation_dead_letter(
+        self, invalidation_id: str, error_message: str, dead_letter_at: str
+    ) -> None:
+        """Mark one invalidation as dead letter."""
+        self._catalog_writer.mark_invalidation_dead_letter(
+            invalidation_id,
+            error_message,
+            dead_letter_at,
+        )
 
     def list_specs(
         self,
