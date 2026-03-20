@@ -14,6 +14,7 @@ from ditto_datahub.runtime.sql_engine import SqlEngine
 from ditto_datahub.services import (
     DerivedCatalogService,
     DerivedShadowSlotService,
+    FreezeService,
     IngestionCursorService,
     IngestionLogService,
     PublicationSafetyRecordService,
@@ -105,6 +106,11 @@ class RuntimeProvider(Provider):
     def freeze_manager(self, settings: DataStoreSettings) -> FreezeManager:
         """数据版本管理."""
         return FreezeManager(data_root=str(settings.data_root))
+
+    @provide
+    def freeze_service(self, freeze_manager: FreezeManager) -> FreezeService:
+        """数据版本管理服务."""
+        return FreezeService(freeze_manager=freeze_manager)
 
     @provide
     def file_lock(self, settings: DataStoreSettings) -> FileLockManager:

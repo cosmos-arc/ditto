@@ -7,6 +7,7 @@ from typing import Any
 import orjson
 import polars as pl
 import typer
+from ditto_datahub.services.metadata import SecurityQuery
 from ditto_datahub.services.metadata_service import MetadataService
 from rich.console import Console
 from rich.table import Table
@@ -66,10 +67,12 @@ def query_instruments(
         source_tickers = [source_ticker] if source_ticker else None
 
         df = service.find_securities(
-            source_tickers=source_tickers,
-            asset_class=asset_class,
-            exchange=exchange,
-            is_active=is_active,
+            SecurityQuery(
+                source_tickers=source_tickers,
+                asset_class=asset_class,
+                exchange=exchange,
+                is_active=is_active,
+            ),
         )
 
         if df.is_empty():

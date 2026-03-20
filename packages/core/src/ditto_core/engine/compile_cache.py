@@ -35,7 +35,7 @@ class SQLiteCompileCacheBackend(Protocol):
         self,
         sql: str,
         params: list[Any] | tuple[Any, ...] | None = None,
-    ) -> object:
+    ) -> CursorLike:
         """Execute one SQL statement."""
         ...
 
@@ -49,6 +49,14 @@ class SQLiteCompileCacheBackend(Protocol):
 
     def commit(self) -> None:
         """Commit the current transaction."""
+        ...
+
+
+class CursorLike(Protocol):
+    """Minimal cursor contract for reading SQL results."""
+
+    def fetchone(self) -> tuple[Any, ...] | None:
+        """Return the next row or None."""
         ...
 
 
@@ -167,9 +175,9 @@ class SQLiteCompileCache:
 # ------------------------------------------------------------------
 
 
-def _fetch_one(cursor: object) -> tuple[Any, ...] | None:
+def _fetch_one(cursor: CursorLike) -> tuple[Any, ...] | None:
     """Extract the first row from a cursor-like object."""
     try:
-        return cursor.fetchone()  # type: ignore[union-attr]
+        return cursor.fetchone()
     except AttributeError:
         return None

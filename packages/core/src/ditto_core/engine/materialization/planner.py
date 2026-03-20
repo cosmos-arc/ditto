@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from datetime import date, timedelta
 
 from ditto_core.engine.materialization.contracts import (
@@ -13,6 +14,16 @@ from ditto_core.engine.materialization.models import DerivedRunMode
 from ditto_core.engine.specs import DerivedSpec
 
 __all__ = ["DerivedExecutionPlanner"]
+
+
+def _trading_days_to_calendar_days(trading_days: int) -> int:
+    """
+    Convert trading days to approximate calendar days.
+
+    Uses fixed ratio 365/250 ~ 1.46 to account for weekends
+    and approximate holidays.
+    """
+    return math.ceil(trading_days * 365 / 250)
 
 
 class DerivedExecutionPlanner:
@@ -40,9 +51,11 @@ class DerivedExecutionPlanner:
             request.mode == DerivedRunMode.INCREMENTAL
             and compiled.analysis.lookback > 0
         ):
+            calendar_lookback = _trading_days_to_calendar_days(
+                compiled.analysis.lookback,
+            )
             compute_start = (
-                date.fromisoformat(anchor_start)
-                - timedelta(days=compiled.analysis.lookback)
+                date.fromisoformat(anchor_start) - timedelta(days=calendar_lookback)
             ).isoformat()
 
         partitions = _partition_years(request.request_start, request.request_end)

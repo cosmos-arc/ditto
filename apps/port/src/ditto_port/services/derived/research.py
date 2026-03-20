@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import date
 from hashlib import sha256
 from pathlib import Path
 from typing import cast
@@ -33,6 +33,8 @@ from ditto_datahub.services import DerivedArtifactReader, ResearchCatalogService
 from ditto_datahub.services.derived import VersionResolutionStrategy
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.services.research_artifact_service import ResearchArtifactService
+
+from ._utils import now_iso
 
 __all__ = ["ResearchDatasetFacade"]
 
@@ -268,7 +270,7 @@ class ResearchDatasetFacade:
                 .sort(["instrument_id", "trade_date"])
             )
 
-        created_at = _now_iso()
+        created_at = now_iso()
         snapshot_id = f"rsp-{uuid4().hex[:12]}"
         relative_path = (
             f"derived/research/spines/{spine_spec.spine_id}"
@@ -326,7 +328,7 @@ class ResearchDatasetFacade:
         snapshot_contract: _DatasetSnapshotContract,
         build_report: dict[str, object],
     ) -> DatasetSnapshot:
-        created_at = _now_iso()
+        created_at = now_iso()
         snapshot_id = f"rds-{uuid4().hex[:12]}"
         relative_path = (
             f"derived/research/datasets/{dataset_id}"
@@ -567,10 +569,6 @@ def _collect_null_counts(
     )
     summary_row = summary_frame.row(0, named=True)
     return {derived_id: int(summary_row[derived_id]) for derived_id in derived_ids}
-
-
-def _now_iso() -> str:
-    return datetime.now(UTC).isoformat()
 
 
 def _coerce_date(value: str) -> date:

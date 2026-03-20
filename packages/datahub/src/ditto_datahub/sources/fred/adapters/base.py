@@ -2,12 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from ditto_datahub.sources.fred.client import FredClient
-
-if TYPE_CHECKING:
-    pass
 
 
 class BaseFredAdapter:

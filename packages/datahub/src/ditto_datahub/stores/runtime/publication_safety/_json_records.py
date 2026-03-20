@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import cast
 
 import orjson
-from ditto_datahub.models.publication_safety import JsonDict
+from ditto_datahub.models.common import JsonDict
 
 
 def read_json_file(path: Path) -> JsonDict | None:

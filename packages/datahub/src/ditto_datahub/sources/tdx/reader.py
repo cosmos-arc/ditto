@@ -49,7 +49,7 @@ class TdxReader:
             DataFrame with columns:
             - trade_date: 交易日期（YYYYMMDD）
             - open, high, low, close: 价格（元）
-            - vol: 成交量（股）
+            - volume: 成交量（股）
             - amount: 成交额（元）
 
         """
@@ -119,7 +119,7 @@ class TdxReader:
 
                 # 解析成交量和成交额
                 amount = float(values[5])  # 成交额（元）
-                vol = float(values[6]) * 100  # 成交量（手 → 股）
+                volume = float(values[6]) * 100  # 成交量（手 → 股）
 
                 records.append(
                     {
@@ -128,7 +128,7 @@ class TdxReader:
                         "high": high_price,
                         "low": low_price,
                         "close": close_price,
-                        "vol": vol,
+                        "volume": volume,
                         "amount": amount,
                     }
                 )
@@ -143,7 +143,7 @@ class TdxReader:
             "high": pl.Float64(),
             "low": pl.Float64(),
             "close": pl.Float64(),
-            "vol": pl.Float64(),
+            "volume": pl.Float64(),
             "amount": pl.Float64(),
         }
 
@@ -161,7 +161,7 @@ class TdxReader:
 
         Returns:
             DataFrame with columns:
-            source_ticker, trade_date, open, high, low, close, vol, amount
+            source_ticker, trade_date, open, high, low, close, volume, amount
 
         """
         all_data: list[pl.DataFrame] = []
@@ -183,7 +183,7 @@ class TdxReader:
                     "high": pl.Float64,
                     "low": pl.Float64,
                     "close": pl.Float64,
-                    "vol": pl.Float64,
+                    "volume": pl.Float64,
                     "amount": pl.Float64,
                 }
             )

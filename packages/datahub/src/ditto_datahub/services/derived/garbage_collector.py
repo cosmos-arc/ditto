@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import logging
 import shutil
 from pathlib import Path
 from typing import Protocol
+
+from ditto_infra.foundation import logger
 
 from ditto_datahub.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_datahub.services.derived.gc_models import GcPlan, GcReport
 
 __all__ = ["DerivedGarbageCollector"]
-
-logger = logging.getLogger(__name__)
 
 # Statuses eligible for GC when not protected by keep_last_n or primary_online.
 _GC_ELIGIBLE_STATUSES: frozenset[str] = frozenset(

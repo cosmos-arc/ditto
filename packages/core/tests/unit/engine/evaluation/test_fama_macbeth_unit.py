@@ -421,13 +421,17 @@ class TestFamaMacBethEdgeCases:
 
         factor_df = pl.DataFrame(rows_f)
         return_df = pl.DataFrame(rows_r)
+        from ditto_core.engine.evaluation.metrics import EvaluationColumns
+
         result = fama_macbeth(
             factor_df,
             return_df,
-            date_col="dt",
-            entity_col="eid",
-            factor_col="factor",
-            return_col="ret",
+            columns=EvaluationColumns(
+                date="dt",
+                entity="eid",
+                factor="factor",
+                return_col="ret",
+            ),
         )
 
         assert result.n_periods == 20

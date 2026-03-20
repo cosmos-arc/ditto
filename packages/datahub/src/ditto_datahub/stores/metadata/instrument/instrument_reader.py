@@ -3,10 +3,38 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, cast
 
 import polars as pl
 from ditto_infra.foundation import logger
+
+
+@dataclass(frozen=True)
+class SecurityQuery:
+    """
+    证券查询参数.
+
+    Attributes:
+        instrument_ids: 按 instrument_id 过滤.
+        source_tickers: 按源代码过滤.
+        source: 数据源标识符.
+        asset_class: 按资产类别过滤.
+        exchange: 按交易所过滤.
+        is_active: 按活跃状态过滤.
+        asof: Point-in-Time 日期.
+        min_list_days: 最低上市天数（需配合 asof 使用）.
+
+    """
+
+    instrument_ids: list[int] | None = None
+    source_tickers: list[str] | None = None
+    source: str = "tushare"
+    asset_class: str | None = None
+    exchange: str | None = None
+    is_active: bool | None = True
+    asof: str | None = None
+    min_list_days: int | None = None
 
 
 def _build_in_clause(
@@ -273,29 +301,12 @@ class InstrumentReader:
 
         return cast(str, row["source_ticker"]) if row else None
 
-    def find_securities(  # noqa: PLR0913
-        self,
-        instrument_ids: list[int] | None = None,
-        source_tickers: list[str] | None = None,
-        source: str = "tushare",
-        asset_class: str | None = None,
-        exchange: str | None = None,
-        is_active: bool | None = True,
-        asof: str | None = None,
-        min_list_days: int | None = None,
-    ) -> pl.DataFrame:
+    def find_securities(self, query: SecurityQuery) -> pl.DataFrame:
         """
         带过滤条件查询证券。
 
         Args:
-            instrument_ids: 按 instrument_ids 过滤
-            source_tickers: 按源代码过滤
-            source: 数据源标识符
-            asset_class: 按资产类别过滤
-            exchange: 按交易所过滤
-            is_active: 按活跃状态过滤
-            asof: Point-in-Time 日期
-            min_list_days: 最低上市天数（需配合 asof 使用）
+            query: SecurityQuery 查询参数对象。
 
         Returns:
             包含证券数据的 DataFrame
@@ -309,47 +320,49 @@ class InstrumentReader:
         """
         params: list[Any] = []
 
-        if instrument_ids:
-            in_clause, sids_list = _build_in_clause("s.instrument_id", instrument_ids)
+        if query.instrument_ids:
+            in_clause, sids_list = _build_in_clause(
+                "s.instrument_id", query.instrument_ids
+            )
             sql += f" AND {in_clause}"
             params.extend(sids_list)
 
-        if source_tickers:
+        if query.source_tickers:
             in_clause, source_tickers_list = _build_in_clause(
-                "m.source_ticker", source_tickers
+                "m.source_ticker", query.source_tickers
             )
             sql += f" AND {in_clause} AND m.source = ?"
             params.extend(source_tickers_list)
-            params.append(source)
+            params.append(query.source)
 
-            if asof:
+            if query.asof:
                 sql += (
                     " AND m.effective_from <= ? AND "
                     "(m.effective_to IS NULL OR m.effective_to > ?)"
                 )
-                params.extend([asof, asof])
+                params.extend([query.asof, query.asof])
             else:
                 sql += " AND m.effective_to IS NULL"
 
-        if asset_class:
+        if query.asset_class:
             sql += " AND s.asset_class = ?"
-            params.append(asset_class)
+            params.append(query.asset_class)
 
-        if exchange:
+        if query.exchange:
             sql += " AND s.exchange = ?"
-            params.append(exchange)
+            params.append(query.exchange)
 
-        if is_active is not None:
+        if query.is_active is not None:
             sql += " AND s.is_active = ?"
-            params.append(is_active)
+            params.append(query.is_active)
 
-        if min_list_days is not None and asof is not None:
+        if query.min_list_days is not None and query.asof is not None:
             sql += (
                 " AND (s.list_date IS NULL"
                 " OR julianday(?, 'start of day')"
                 " - julianday(s.list_date, 'start of day') >= ?)"
             )
-            params.extend([asof, min_list_days])
+            params.extend([query.asof, query.min_list_days])
 
         rows = self._client.fetchall(sql, params)
 

@@ -3,8 +3,11 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from ditto_datahub.runtime.freeze_manager import FreezeManager
-from ditto_datahub.services import IngestionCursorService, IngestionLogService
+from ditto_datahub.services import (
+    FreezeService,
+    IngestionCursorService,
+    IngestionLogService,
+)
 from ditto_datahub.services.capital_service import CapitalService
 from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.macro_service import MacroService
@@ -53,7 +56,7 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
         ingestion_cursor_service = container.get(IngestionCursorService)
         exchange_transformers = container.get(ExchangeTransformers)
         quality_service = container.get(QualityService)
-        freeze_manager = container.get(FreezeManager)
+        freeze_service = container.get(FreezeService)
 
         # 创建协调器
         with create_coordinator(
@@ -66,7 +69,7 @@ def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle
             ingestion_log_service=ingestion_log_service,
             ingestion_cursor_service=ingestion_cursor_service,
             quality_service=quality_service,
-            freeze_manager=freeze_manager,
+            freeze_service=freeze_service,
             source_name=source,
         ) as coordinator:
             # 创建回补管理器

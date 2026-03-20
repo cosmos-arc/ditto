@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from hashlib import sha256
 from pathlib import Path
 from unittest.mock import patch
@@ -11,25 +12,40 @@ import polars as pl
 import pytest
 from ditto_core.engine.materialization import Analysis, CompileIdentity
 from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
-from ditto_datahub.models.derived import PartitionInfo
+from ditto_datahub.models.derived import DerivedSpecRecord, PartitionInfo
 from ditto_datahub.models.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
+from ditto_datahub.stores.runtime.derived_artifact_writer import (
+    ArtifactMetadataParams,
+)
+
+_TIME_KEY = "trade_date"
 
 
-def _make_spec(
+def _make_spec_record(
     *,
     profile: MaterializationProfile = MaterializationProfile.SERIES,
     derived_id: str = "factor.test_factor",
     version: int = 1,
-) -> DerivedSpec:
-    return DerivedSpec(
+) -> DerivedSpecRecord:
+    """Build a DerivedSpecRecord for writer tests."""
+    spec = DerivedSpec(
         id=derived_id,
         version=version,
         role=DerivedRole.FACTOR,
         materialization_profile=profile,
         expression="close_20",
+    )
+    return DerivedSpecRecord(
+        derived_id=derived_id,
+        version=version,
+        role=spec.role.value,
+        materialization_profile=profile.value,
+        spec_hash="test-hash",
+        spec_json=asdict(spec),
+        created_at="2026-03-20T00:00:00+00:00",
     )
 
 
@@ -46,6 +62,10 @@ def _make_compile_identity() -> CompileIdentity:
     )
 
 
+def _make_compile_identity_dict() -> dict[str, object]:
+    return asdict(_make_compile_identity())
+
+
 def _make_analysis() -> Analysis:
     return Analysis(
         dependencies=("close",),
@@ -54,6 +74,10 @@ def _make_analysis() -> Analysis:
         requires_full_day=True,
         scope="per_instrument",
     )
+
+
+def _make_analysis_dict() -> dict[str, object]:
+    return asdict(_make_analysis())
 
 
 def _make_frame(*, years: tuple[str, ...] = ("2024", "2025")) -> pl.DataFrame:
@@ -79,12 +103,12 @@ class TestWriteEphemeralResult:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec(profile=MaterializationProfile.DERIVE)
+        spec_record = _make_spec_record(profile=MaterializationProfile.DERIVE)
         frame = _make_frame()
         run_id = "drv-test-run-001"
 
         writer.write_ephemeral_result(
-            spec=spec,
+            spec=spec_record,
             run_id=run_id,
             frame=frame,
         )
@@ -120,11 +144,12 @@ class TestWriteDurablePartitions:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec(profile=MaterializationProfile.SERIES)
+        spec_record = _make_spec_record(profile=MaterializationProfile.SERIES)
         frame = _make_frame(years=("2024", "2025"))
 
         partitions = writer.write_durable_partitions(
-            spec=spec,
+            spec=spec_record,
+            time_key=_TIME_KEY,
             run_id="drv-test-run-002",
             frame=frame,
             request_start="2024-01-01",
@@ -148,11 +173,12 @@ class TestWriteDurablePartitions:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec()
+        spec_record = _make_spec_record()
         frame = _make_frame(years=("2024",))
 
         partitions = writer.write_durable_partitions(
-            spec=spec,
+            spec=spec_record,
+            time_key=_TIME_KEY,
             run_id="drv-test-run-003",
             frame=frame,
             request_start="2024-01-01",
@@ -176,11 +202,12 @@ class TestWriteDurablePartitions:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec()
+        spec_record = _make_spec_record()
         frame = _make_frame(years=("2024",))
 
         writer.write_durable_partitions(
-            spec=spec,
+            spec=spec_record,
+            time_key=_TIME_KEY,
             run_id="drv-test-run-004",
             frame=frame,
             request_start="2024-01-01",
@@ -205,10 +232,10 @@ class TestWriteArtifactMetadata:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec()
+        spec_record = _make_spec_record()
         run_id = "drv-test-run-005"
-        compile_identity = _make_compile_identity()
-        analysis = _make_analysis()
+        compile_identity = _make_compile_identity_dict()
+        analysis = _make_analysis_dict()
         partitions = (
             PartitionInfo(
                 partition_key="2024",
@@ -219,14 +246,16 @@ class TestWriteArtifactMetadata:
         )
 
         writer.write_artifact_metadata(
-            spec=spec,
-            run_id=run_id,
-            compile_identity=compile_identity,
-            analysis=analysis,
-            partitions=partitions,
-            request_start="2024-01-01",
-            request_end="2024-12-31",
-            source_snapshot_id="snap-001",
+            ArtifactMetadataParams(
+                spec=spec_record,
+                run_id=run_id,
+                compile_identity=compile_identity,
+                analysis=analysis,
+                partitions=partitions,
+                request_start="2024-01-01",
+                request_end="2024-12-31",
+                source_snapshot_id="snap-001",
+            ),
         )
 
         metadata_path = (
@@ -262,19 +291,21 @@ class TestWriteArtifactMetadata:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec()
-        compile_identity = _make_compile_identity()
-        analysis = _make_analysis()
+        spec_record = _make_spec_record()
+        compile_identity = _make_compile_identity_dict()
+        analysis = _make_analysis_dict()
 
         writer.write_artifact_metadata(
-            spec=spec,
-            run_id="drv-test-run-006",
-            compile_identity=compile_identity,
-            analysis=analysis,
-            partitions=(),
-            request_start="2024-01-01",
-            request_end="2024-12-31",
-            source_snapshot_id=None,
+            ArtifactMetadataParams(
+                spec=spec_record,
+                run_id="drv-test-run-006",
+                compile_identity=compile_identity,
+                analysis=analysis,
+                partitions=(),
+                request_start="2024-01-01",
+                request_end="2024-12-31",
+                source_snapshot_id=None,
+            ),
         )
 
         metadata_path = (
@@ -304,10 +335,10 @@ class TestUpdateArtifactMetadata:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec()
+        spec_record = _make_spec_record()
         run_id = "drv-test-run-007"
-        compile_identity = _make_compile_identity()
-        analysis = _make_analysis()
+        compile_identity = _make_compile_identity_dict()
+        analysis = _make_analysis_dict()
         partitions = (
             PartitionInfo(
                 partition_key="2024",
@@ -319,14 +350,16 @@ class TestUpdateArtifactMetadata:
 
         # First write initial metadata
         writer.write_artifact_metadata(
-            spec=spec,
-            run_id=run_id,
-            compile_identity=compile_identity,
-            analysis=analysis,
-            partitions=partitions,
-            request_start="2024-01-01",
-            request_end="2024-12-31",
-            source_snapshot_id="snap-002",
+            ArtifactMetadataParams(
+                spec=spec_record,
+                run_id=run_id,
+                compile_identity=compile_identity,
+                analysis=analysis,
+                partitions=partitions,
+                request_start="2024-01-01",
+                request_end="2024-12-31",
+                source_snapshot_id="snap-002",
+            ),
         )
 
         # Now update with publication info
@@ -348,7 +381,7 @@ class TestUpdateArtifactMetadata:
         )
 
         writer.update_artifact_metadata(
-            spec=spec,
+            spec=spec_record,
             run_id=run_id,
             compile_identity=compile_identity,
             partitions=partitions,
@@ -394,20 +427,22 @@ class TestUpdateArtifactMetadata:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec()
+        spec_record = _make_spec_record()
         run_id = "drv-test-run-008"
-        compile_identity = _make_compile_identity()
-        analysis = _make_analysis()
+        compile_identity = _make_compile_identity_dict()
+        analysis = _make_analysis_dict()
 
         writer.write_artifact_metadata(
-            spec=spec,
-            run_id=run_id,
-            compile_identity=compile_identity,
-            analysis=analysis,
-            partitions=(),
-            request_start="2024-01-01",
-            request_end="2024-12-31",
-            source_snapshot_id=None,
+            ArtifactMetadataParams(
+                spec=spec_record,
+                run_id=run_id,
+                compile_identity=compile_identity,
+                analysis=analysis,
+                partitions=(),
+                request_start="2024-01-01",
+                request_end="2024-12-31",
+                source_snapshot_id=None,
+            ),
         )
 
         manifest_record = CompatibilityManifestRecord(
@@ -428,7 +463,7 @@ class TestUpdateArtifactMetadata:
         )
 
         writer.update_artifact_metadata(
-            spec=spec,
+            spec=spec_record,
             run_id=run_id,
             compile_identity=compile_identity,
             partitions=(),
@@ -461,10 +496,9 @@ class TestExtractPartitionKeys:
             extract_partition_keys,
         )
 
-        spec = _make_spec()
         frame = _make_frame(years=("2023", "2024", "2024", "2025"))
 
-        keys = extract_partition_keys(frame, spec)
+        keys = extract_partition_keys(frame, _TIME_KEY)
 
         assert keys == ("2023", "2024", "2025")
 
@@ -474,10 +508,9 @@ class TestExtractPartitionKeys:
             extract_partition_keys,
         )
 
-        spec = _make_spec()
         frame = _make_frame(years=("2024",))
 
-        keys = extract_partition_keys(frame, spec)
+        keys = extract_partition_keys(frame, _TIME_KEY)
 
         assert keys == ("2024",)
 
@@ -492,7 +525,7 @@ class TestTwoPhaseCommit:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec(profile=MaterializationProfile.SERIES)
+        spec_record = _make_spec_record(profile=MaterializationProfile.SERIES)
         frame = _make_frame(years=("2024", "2025", "2026"))
 
         # Make write_parquet fail on the 2nd partition (2025)
@@ -502,9 +535,6 @@ class TestTwoPhaseCommit:
         def _failing_write_parquet(self, path, **kwargs) -> None:  # type: ignore[no-untyped-def]
             nonlocal call_count
             call_count += 1
-            # The method is called once for extract_partition_keys (via filter)
-            # and once for each partition's write_parquet call.
-            # Actually write_parquet is only called inside the loop for temp files.
             # Fail on the 2nd partition write (2025).
             if call_count == 2:
                 raise RuntimeError("disk full on second partition")
@@ -517,7 +547,8 @@ class TestTwoPhaseCommit:
         with pytest.raises(RuntimeError, match="disk full on second partition"):
             with patch.object(pl.DataFrame, "write_parquet", _failing_write_parquet):
                 writer.write_durable_partitions(
-                    spec=spec,
+                    spec=spec_record,
+                    time_key=_TIME_KEY,
                     run_id="drv-test-run-fail-001",
                     frame=frame,
                     request_start="2024-01-01",
@@ -538,11 +569,12 @@ class TestTwoPhaseCommit:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec(profile=MaterializationProfile.SERIES)
+        spec_record = _make_spec_record(profile=MaterializationProfile.SERIES)
         frame = _make_frame(years=("2024", "2025"))
 
         writer.write_durable_partitions(
-            spec=spec,
+            spec=spec_record,
+            time_key=_TIME_KEY,
             run_id="drv-test-run-ok-001",
             frame=frame,
             request_start="2024-01-01",
@@ -574,7 +606,7 @@ class TestEphemeralAtomicWrite:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec(profile=MaterializationProfile.DERIVE)
+        spec_record = _make_spec_record(profile=MaterializationProfile.DERIVE)
         frame = _make_frame()
         run_id = "drv-test-run-atomic-001"
 
@@ -594,7 +626,7 @@ class TestEphemeralAtomicWrite:
             "ditto_datahub.stores.runtime.derived_artifact_writer.atomic_write"
         ) as mock_atomic:
             writer.write_ephemeral_result(
-                spec=spec,
+                spec=spec_record,
                 run_id=run_id,
                 frame=frame,
             )
@@ -609,12 +641,12 @@ class TestEphemeralAtomicWrite:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec(profile=MaterializationProfile.DERIVE)
+        spec_record = _make_spec_record(profile=MaterializationProfile.DERIVE)
         frame = _make_frame()
         run_id = "drv-test-run-atomic-002"
 
         writer.write_ephemeral_result(
-            spec=spec,
+            spec=spec_record,
             run_id=run_id,
             frame=frame,
         )
@@ -645,10 +677,10 @@ class TestMetadataAtomicWrite:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec()
+        spec_record = _make_spec_record()
         run_id = "drv-test-run-meta-001"
-        compile_identity = _make_compile_identity()
-        analysis = _make_analysis()
+        compile_identity = _make_compile_identity_dict()
+        analysis = _make_analysis_dict()
         partitions = (
             PartitionInfo(
                 partition_key="2024",
@@ -674,14 +706,16 @@ class TestMetadataAtomicWrite:
             "ditto_datahub.stores.runtime.derived_artifact_writer.atomic_bytes_write"
         ) as mock_atomic:
             writer.write_artifact_metadata(
-                spec=spec,
-                run_id=run_id,
-                compile_identity=compile_identity,
-                analysis=analysis,
-                partitions=partitions,
-                request_start="2024-01-01",
-                request_end="2024-12-31",
-                source_snapshot_id="snap-001",
+                ArtifactMetadataParams(
+                    spec=spec_record,
+                    run_id=run_id,
+                    compile_identity=compile_identity,
+                    analysis=analysis,
+                    partitions=partitions,
+                    request_start="2024-01-01",
+                    request_end="2024-12-31",
+                    source_snapshot_id="snap-001",
+                ),
             )
             mock_atomic.assert_called_once()
             # Verify the first positional arg is bytes (orjson output)
@@ -696,10 +730,10 @@ class TestMetadataAtomicWrite:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec()
+        spec_record = _make_spec_record()
         run_id = "drv-test-run-upd-001"
-        compile_identity = _make_compile_identity()
-        analysis = _make_analysis()
+        compile_identity = _make_compile_identity_dict()
+        analysis = _make_analysis_dict()
         partitions = (
             PartitionInfo(
                 partition_key="2024",
@@ -711,14 +745,16 @@ class TestMetadataAtomicWrite:
 
         # First write initial metadata
         writer.write_artifact_metadata(
-            spec=spec,
-            run_id=run_id,
-            compile_identity=compile_identity,
-            analysis=analysis,
-            partitions=partitions,
-            request_start="2024-01-01",
-            request_end="2024-12-31",
-            source_snapshot_id="snap-002",
+            ArtifactMetadataParams(
+                spec=spec_record,
+                run_id=run_id,
+                compile_identity=compile_identity,
+                analysis=analysis,
+                partitions=partitions,
+                request_start="2024-01-01",
+                request_end="2024-12-31",
+                source_snapshot_id="snap-002",
+            ),
         )
 
         manifest_record = CompatibilityManifestRecord(
@@ -754,7 +790,7 @@ class TestMetadataAtomicWrite:
             "ditto_datahub.stores.runtime.derived_artifact_writer.atomic_bytes_write"
         ) as mock_atomic:
             writer.update_artifact_metadata(
-                spec=spec,
+                spec=spec_record,
                 run_id=run_id,
                 compile_identity=compile_identity,
                 partitions=partitions,
@@ -794,16 +830,16 @@ class TestPartitionInfo:
 
 
 class TestIncrementalPartitionMerge:
-    """Tests for write_incremental_partition — merge into existing year partitions."""
+    """Tests for write_incremental_partition -- merge into existing year partitions."""
 
     def test_incremental_partition_creates_new_if_missing(self, tmp_path: Path) -> None:
-        """No existing file → just writes the new partition data."""
+        """No existing file -> just writes the new partition data."""
         from ditto_datahub.stores.runtime.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec(profile=MaterializationProfile.SERIES)
+        spec_record = _make_spec_record(profile=MaterializationProfile.SERIES)
         new_frame = pl.DataFrame(
             {
                 "instrument_id": [1, 2],
@@ -813,7 +849,8 @@ class TestIncrementalPartitionMerge:
         )
 
         partitions = writer.write_incremental_partition(
-            spec=spec,
+            spec=spec_record,
+            time_key=_TIME_KEY,
             run_id="drv-incr-001",
             frame=new_frame,
             source_snapshot_id=None,
@@ -830,13 +867,13 @@ class TestIncrementalPartitionMerge:
         assert loaded.height == 2
 
     def test_incremental_partition_merges_with_existing(self, tmp_path: Path) -> None:
-        """existing + new → merged with both datasets present."""
+        """existing + new -> merged with both datasets present."""
         from ditto_datahub.stores.runtime.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec(profile=MaterializationProfile.SERIES)
+        spec_record = _make_spec_record(profile=MaterializationProfile.SERIES)
 
         # Pre-existing partition data
         existing_frame = pl.DataFrame(
@@ -862,7 +899,8 @@ class TestIncrementalPartitionMerge:
         )
 
         partitions = writer.write_incremental_partition(
-            spec=spec,
+            spec=spec_record,
+            time_key=_TIME_KEY,
             run_id="drv-incr-002",
             frame=new_frame,
             source_snapshot_id="snap-002",
@@ -878,13 +916,13 @@ class TestIncrementalPartitionMerge:
         assert loaded["instrument_id"].to_list() == [1, 2, 3]
 
     def test_incremental_partition_new_overwrites_old(self, tmp_path: Path) -> None:
-        """Duplicate (instrument_id, trade_date) → new value overwrites old."""
+        """Duplicate (instrument_id, trade_date) -> new value overwrites old."""
         from ditto_datahub.stores.runtime.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec(profile=MaterializationProfile.SERIES)
+        spec_record = _make_spec_record(profile=MaterializationProfile.SERIES)
 
         # Pre-existing: instrument_id=1 on 2024-01-02 with value=10.0
         existing_frame = pl.DataFrame(
@@ -910,7 +948,8 @@ class TestIncrementalPartitionMerge:
         )
 
         partitions = writer.write_incremental_partition(
-            spec=spec,
+            spec=spec_record,
+            time_key=_TIME_KEY,
             run_id="drv-incr-003",
             frame=new_frame,
             source_snapshot_id="snap-003",
@@ -932,7 +971,7 @@ class TestIncrementalPartitionMerge:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec(profile=MaterializationProfile.SERIES)
+        spec_record = _make_spec_record(profile=MaterializationProfile.SERIES)
 
         # Pre-existing 2024 data
         version_root = (
@@ -958,7 +997,8 @@ class TestIncrementalPartitionMerge:
         )
 
         partitions = writer.write_incremental_partition(
-            spec=spec,
+            spec=spec_record,
+            time_key=_TIME_KEY,
             run_id="drv-incr-004",
             frame=new_frame,
             source_snapshot_id=None,
@@ -996,12 +1036,12 @@ class TestConfigurableCompression:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path)
-        spec = _make_spec(profile=MaterializationProfile.DERIVE)
+        spec_record = _make_spec_record(profile=MaterializationProfile.DERIVE)
         frame = _make_frame()
         run_id = "drv-comp-zstd-001"
 
         writer.write_ephemeral_result(
-            spec=spec,
+            spec=spec_record,
             run_id=run_id,
             frame=frame,
         )
@@ -1028,12 +1068,12 @@ class TestConfigurableCompression:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path, compression="snappy")
-        spec = _make_spec(profile=MaterializationProfile.DERIVE)
+        spec_record = _make_spec_record(profile=MaterializationProfile.DERIVE)
         frame = _make_frame()
         run_id = "drv-comp-snappy-001"
 
         writer.write_ephemeral_result(
-            spec=spec,
+            spec=spec_record,
             run_id=run_id,
             frame=frame,
         )
@@ -1060,11 +1100,12 @@ class TestConfigurableCompression:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path, compression="snappy")
-        spec = _make_spec(profile=MaterializationProfile.SERIES)
+        spec_record = _make_spec_record(profile=MaterializationProfile.SERIES)
         frame = _make_frame(years=("2024", "2025"))
 
         partitions = writer.write_durable_partitions(
-            spec=spec,
+            spec=spec_record,
+            time_key=_TIME_KEY,
             run_id="drv-comp-snappy-002",
             frame=frame,
             request_start="2024-01-01",
@@ -1086,7 +1127,7 @@ class TestConfigurableCompression:
         )
 
         writer = DerivedArtifactWriter(artifact_root=tmp_path, compression="snappy")
-        spec = _make_spec(profile=MaterializationProfile.SERIES)
+        spec_record = _make_spec_record(profile=MaterializationProfile.SERIES)
         new_frame = pl.DataFrame(
             {
                 "instrument_id": [1],
@@ -1096,7 +1137,8 @@ class TestConfigurableCompression:
         )
 
         partitions = writer.write_incremental_partition(
-            spec=spec,
+            spec=spec_record,
+            time_key=_TIME_KEY,
             run_id="drv-comp-snappy-003",
             frame=new_frame,
             source_snapshot_id=None,

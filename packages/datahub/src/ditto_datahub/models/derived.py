@@ -6,9 +6,14 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import cast
 
-type JsonPrimitive = None | bool | int | float | str
-type JsonValue = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
-type JsonDict = dict[str, JsonValue]
+from ditto_datahub.models.common import (
+    JsonDict,
+    JsonValue,
+    require_bool,
+    require_int,
+    require_payload,
+    require_str,
+)
 
 __all__ = [
     "CompiledExpressionCacheRecord",
@@ -27,22 +32,6 @@ __all__ = [
 ]
 
 
-def _require_str(data: Mapping[str, JsonValue], key: str) -> str:
-    """Extract a required string field from JSON payload."""
-    value = data[key]
-    if not isinstance(value, str):
-        raise TypeError(f"{key} must be a string")
-    return value
-
-
-def _require_int(data: Mapping[str, JsonValue], key: str) -> int:
-    """Extract a required int field from JSON payload."""
-    value = data[key]
-    if not isinstance(value, int) or isinstance(value, bool):
-        raise TypeError(f"{key} must be an int")
-    return value
-
-
 def _optional_str(data: Mapping[str, JsonValue], key: str) -> str | None:
     """Extract an optional string field from JSON payload."""
     value = data.get(key)
@@ -51,22 +40,6 @@ def _optional_str(data: Mapping[str, JsonValue], key: str) -> str | None:
     if not isinstance(value, str):
         raise TypeError(f"{key} must be a string or null")
     return value
-
-
-def _require_bool(data: Mapping[str, JsonValue], key: str) -> bool:
-    """Extract a required bool field from JSON payload."""
-    value = data[key]
-    if not isinstance(value, bool):
-        raise TypeError(f"{key} must be a bool")
-    return value
-
-
-def _require_payload(data: Mapping[str, JsonValue], key: str) -> JsonDict:
-    """Extract a required JSON object field from payload."""
-    value = data[key]
-    if not isinstance(value, dict):
-        raise TypeError(f"{key} must be a JSON object")
-    return cast(JsonDict, value)
 
 
 def _require_str_tuple(data: Mapping[str, JsonValue], key: str) -> tuple[str, ...]:
@@ -105,13 +78,13 @@ class DerivedSpecRecord:
     def from_json_dict(cls, data: Mapping[str, JsonValue]) -> DerivedSpecRecord:
         """Create record from JSON dictionary."""
         return cls(
-            derived_id=_require_str(data, "derived_id"),
-            version=_require_int(data, "version"),
-            role=_require_str(data, "role"),
-            materialization_profile=_require_str(data, "materialization_profile"),
-            spec_hash=_require_str(data, "spec_hash"),
-            spec_json=_require_payload(data, "spec_json"),
-            created_at=_require_str(data, "created_at"),
+            derived_id=require_str(data, "derived_id"),
+            version=require_int(data, "version"),
+            role=require_str(data, "role"),
+            materialization_profile=require_str(data, "materialization_profile"),
+            spec_hash=require_str(data, "spec_hash"),
+            spec_json=require_payload(data, "spec_json"),
+            created_at=require_str(data, "created_at"),
         )
 
 
@@ -145,13 +118,13 @@ class DerivedVersionRecord:
     def from_json_dict(cls, data: Mapping[str, JsonValue]) -> DerivedVersionRecord:
         """Create record from JSON dictionary."""
         return cls(
-            derived_id=_require_str(data, "derived_id"),
-            version=_require_int(data, "version"),
-            status=_require_str(data, "status"),
-            engine_version=_require_str(data, "engine_version"),
-            is_online=_require_bool(data, "is_online"),
-            is_primary=_require_bool(data, "is_primary"),
-            created_at=_require_str(data, "created_at"),
+            derived_id=require_str(data, "derived_id"),
+            version=require_int(data, "version"),
+            status=require_str(data, "status"),
+            engine_version=require_str(data, "engine_version"),
+            is_online=require_bool(data, "is_online"),
+            is_primary=require_bool(data, "is_primary"),
+            created_at=require_str(data, "created_at"),
             updated_at=_optional_str(data, "updated_at"),
         )
 
@@ -204,21 +177,21 @@ class DerivedRunRecord:
     def from_json_dict(cls, data: Mapping[str, JsonValue]) -> DerivedRunRecord:
         """Create record from JSON dictionary."""
         return cls(
-            run_id=_require_str(data, "run_id"),
-            derived_id=_require_str(data, "derived_id"),
-            version=_require_int(data, "version"),
-            mode=_require_str(data, "mode"),
-            trigger=_require_str(data, "trigger"),
-            request_start=_require_str(data, "request_start"),
-            request_end=_require_str(data, "request_end"),
-            compute_start=_require_str(data, "compute_start"),
-            compute_end=_require_str(data, "compute_end"),
+            run_id=require_str(data, "run_id"),
+            derived_id=require_str(data, "derived_id"),
+            version=require_int(data, "version"),
+            mode=require_str(data, "mode"),
+            trigger=require_str(data, "trigger"),
+            request_start=require_str(data, "request_start"),
+            request_end=require_str(data, "request_end"),
+            compute_start=require_str(data, "compute_start"),
+            compute_end=require_str(data, "compute_end"),
             source_snapshot_id=_optional_str(data, "source_snapshot_id"),
-            status=_require_str(data, "status"),
-            rows_written=_require_int(data, "rows_written"),
+            status=require_str(data, "status"),
+            rows_written=require_int(data, "rows_written"),
             partitions_written=_require_str_tuple(data, "partitions_written"),
             error_message=_optional_str(data, "error_message"),
-            created_at=_require_str(data, "created_at"),
+            created_at=require_str(data, "created_at"),
             started_at=_optional_str(data, "started_at"),
             finished_at=_optional_str(data, "finished_at"),
         )
@@ -254,14 +227,14 @@ class DerivedPartitionRecord:
     def from_json_dict(cls, data: Mapping[str, JsonValue]) -> DerivedPartitionRecord:
         """Create record from JSON dictionary."""
         return cls(
-            run_id=_require_str(data, "run_id"),
-            derived_id=_require_str(data, "derived_id"),
-            version=_require_int(data, "version"),
-            partition_key=_require_str(data, "partition_key"),
-            partition_path=_require_str(data, "partition_path"),
-            row_count=_require_int(data, "row_count"),
+            run_id=require_str(data, "run_id"),
+            derived_id=require_str(data, "derived_id"),
+            version=require_int(data, "version"),
+            partition_key=require_str(data, "partition_key"),
+            partition_path=require_str(data, "partition_path"),
+            row_count=require_int(data, "row_count"),
             checksum=_optional_str(data, "checksum"),
-            written_at=_require_str(data, "written_at"),
+            written_at=require_str(data, "written_at"),
         )
 
 
@@ -306,7 +279,7 @@ class DerivedStateRecord:
             raise TypeError("total_rows must be an int")
 
         return cls(
-            derived_id=_require_str(data, "derived_id"),
+            derived_id=require_str(data, "derived_id"),
             active_version=active_version,
             coverage_start=_optional_str(data, "coverage_start"),
             coverage_end=_optional_str(data, "coverage_end"),
@@ -314,7 +287,7 @@ class DerivedStateRecord:
             latest_run_id=_optional_str(data, "latest_run_id"),
             latest_run_status=_optional_str(data, "latest_run_status"),
             total_rows=total_rows,
-            updated_at=_require_str(data, "updated_at"),
+            updated_at=require_str(data, "updated_at"),
         )
 
 

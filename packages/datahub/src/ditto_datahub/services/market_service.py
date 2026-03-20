@@ -145,7 +145,7 @@ class MarketService:
         return self._query_bars(query)
 
     @traced("market.list_bars")
-    def list_bars(  # noqa: PLR0913
+    def list_bars(
         self,
         instrument_ids: list[int],
         start: str | None = None,

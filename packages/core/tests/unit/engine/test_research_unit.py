@@ -6,6 +6,7 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_core.engine.errors import DerivedNotImplementedError
 from ditto_core.engine.research import (
     DatasetSnapshot,
     LateArrivalError,
@@ -16,7 +17,6 @@ from ditto_core.engine.research import (
     _apply_late_arrival_policy,
     _detect_late_arrivals,
 )
-from ditto_datahub.errors import DerivedNotImplementedError
 
 
 class TestSpineSpec:

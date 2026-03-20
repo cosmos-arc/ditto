@@ -6,9 +6,9 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 
 import polars as pl
-from ditto_datahub.errors import DerivedNotImplementedError, DerivedValidationError
 from ditto_infra.foundation import logger
 
+from ditto_core.engine.errors import DerivedNotImplementedError, DerivedValidationError
 from ditto_core.engine.specs import CalendarId, GrainId
 
 __all__ = [

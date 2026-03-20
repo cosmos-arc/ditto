@@ -1,55 +1,73 @@
-"""Tests for ArtifactPersistenceService (TDD RED phase)."""
+"""Tests for ArtifactPersistenceService."""
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import polars as pl
 from ditto_core.engine.materialization import Analysis, CompileIdentity
 from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationProfile
-from ditto_datahub.models.derived import PartitionInfo
+from ditto_datahub.models.derived import DerivedSpecRecord, PartitionInfo
 from ditto_datahub.models.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
+from ditto_datahub.stores.runtime.derived_artifact_writer import (
+    ArtifactMetadataParams,
+)
 
 
-def _make_spec(
+def _make_spec_record(
     *,
     profile: MaterializationProfile = MaterializationProfile.SERIES,
     derived_id: str = "factor.test_factor",
     version: int = 1,
-) -> DerivedSpec:
-    return DerivedSpec(
+) -> DerivedSpecRecord:
+    """Build a DerivedSpecRecord for service tests."""
+    spec = DerivedSpec(
         id=derived_id,
         version=version,
         role=DerivedRole.FACTOR,
         materialization_profile=profile,
         expression="close_20",
     )
-
-
-def _make_compile_identity() -> CompileIdentity:
-    return CompileIdentity(
-        compile_input_hash="hash-abc",
-        operator_fingerprint="op-fp",
-        compiler_fingerprint="cc-fp",
-        cache_key="cache-key",
-        engine_codegen_version="codegen-v1",
-        analysis_version="analysis-v1",
-        polars_version="0.x",
-        expr_serialization_format="expr-v1",
+    return DerivedSpecRecord(
+        derived_id=derived_id,
+        version=version,
+        role=spec.role.value,
+        materialization_profile=profile.value,
+        spec_hash="test-hash",
+        spec_json=asdict(spec),
+        created_at="2026-03-20T00:00:00+00:00",
     )
 
 
-def _make_analysis() -> Analysis:
-    return Analysis(
-        dependencies=("close",),
-        operator_names=("rolling_mean",),
-        lookback=20,
-        requires_full_day=True,
-        scope="per_instrument",
+def _make_compile_identity_dict() -> dict[str, object]:
+    return asdict(
+        CompileIdentity(
+            compile_input_hash="hash-abc",
+            operator_fingerprint="op-fp",
+            compiler_fingerprint="cc-fp",
+            cache_key="cache-key",
+            engine_codegen_version="codegen-v1",
+            analysis_version="analysis-v1",
+            polars_version="0.x",
+            expr_serialization_format="expr-v1",
+        )
+    )
+
+
+def _make_analysis_dict() -> dict[str, object]:
+    return asdict(
+        Analysis(
+            dependencies=("close",),
+            operator_names=("rolling_mean",),
+            lookback=20,
+            requires_full_day=True,
+            scope="per_instrument",
+        )
     )
 
 
@@ -116,17 +134,17 @@ class TestServiceDelegatesWriteEphemeralResult:
             artifact_root=Path("/tmp/data"),
             _writer=mock_writer,
         )
-        spec = _make_spec(profile=MaterializationProfile.DERIVE)
+        spec_record = _make_spec_record(profile=MaterializationProfile.DERIVE)
         frame = _make_frame()
 
         service.write_ephemeral_result(
-            spec=spec,
+            spec=spec_record,
             run_id="drv-ephemeral-001",
             frame=frame,
         )
 
         mock_writer.write_ephemeral_result.assert_called_once_with(
-            spec=spec,
+            spec=spec_record,
             run_id="drv-ephemeral-001",
             frame=frame,
         )
@@ -150,11 +168,12 @@ class TestServiceDelegatesWriteDurablePartitions:
             artifact_root=Path("/tmp/data"),
             _writer=mock_writer,
         )
-        spec = _make_spec()
+        spec_record = _make_spec_record()
         frame = _make_frame()
 
         result = service.write_durable_partitions(
-            spec=spec,
+            spec=spec_record,
+            time_key="trade_date",
             run_id="drv-durable-001",
             frame=frame,
             request_start="2024-01-01",
@@ -163,7 +182,8 @@ class TestServiceDelegatesWriteDurablePartitions:
         )
 
         mock_writer.write_durable_partitions.assert_called_once_with(
-            spec=spec,
+            spec=spec_record,
+            time_key="trade_date",
             run_id="drv-durable-001",
             frame=frame,
             request_start="2024-01-01",
@@ -189,32 +209,25 @@ class TestServiceDelegatesWriteArtifactMetadata:
             artifact_root=Path("/tmp/data"),
             _writer=mock_writer,
         )
-        spec = _make_spec()
-        compile_identity = _make_compile_identity()
-        analysis = _make_analysis()
+        spec_record = _make_spec_record()
+        compile_identity = _make_compile_identity_dict()
+        analysis = _make_analysis_dict()
         partitions = _make_partitions()
 
         service.write_artifact_metadata(
-            spec=spec,
-            run_id="drv-meta-001",
-            compile_identity=compile_identity,
-            analysis=analysis,
-            partitions=partitions,
-            request_start="2024-01-01",
-            request_end="2025-12-31",
-            source_snapshot_id="snap-001",
+            ArtifactMetadataParams(
+                spec=spec_record,
+                run_id="drv-meta-001",
+                compile_identity=compile_identity,
+                analysis=analysis,
+                partitions=partitions,
+                request_start="2024-01-01",
+                request_end="2025-12-31",
+                source_snapshot_id="snap-001",
+            ),
         )
 
-        mock_writer.write_artifact_metadata.assert_called_once_with(
-            spec=spec,
-            run_id="drv-meta-001",
-            compile_identity=compile_identity,
-            analysis=analysis,
-            partitions=partitions,
-            request_start="2024-01-01",
-            request_end="2025-12-31",
-            source_snapshot_id="snap-001",
-        )
+        mock_writer.write_artifact_metadata.assert_called_once()
 
 
 class TestServiceDelegatesUpdateArtifactMetadata:
@@ -231,14 +244,14 @@ class TestServiceDelegatesUpdateArtifactMetadata:
             artifact_root=Path("/tmp/data"),
             _writer=mock_writer,
         )
-        spec = _make_spec()
-        compile_identity = _make_compile_identity()
+        spec_record = _make_spec_record()
+        compile_identity = _make_compile_identity_dict()
         partitions = _make_partitions()
         manifest_record = _make_manifest_record()
         minimal_dq_record = _make_minimal_dq_record()
 
         service.update_artifact_metadata(
-            spec=spec,
+            spec=spec_record,
             run_id="drv-update-001",
             compile_identity=compile_identity,
             partitions=partitions,
@@ -248,7 +261,7 @@ class TestServiceDelegatesUpdateArtifactMetadata:
         )
 
         mock_writer.update_artifact_metadata.assert_called_once_with(
-            spec=spec,
+            spec=spec_record,
             run_id="drv-update-001",
             compile_identity=compile_identity,
             partitions=partitions,

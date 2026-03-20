@@ -37,7 +37,7 @@ class IndicatorMetadataWriter:
         self._client = client
 
     @traced("data.metadata_write")
-    def upsert(  # noqa: PLR0913
+    def upsert(
         self,
         code: str,
         name: str,

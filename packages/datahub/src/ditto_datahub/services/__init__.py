@@ -41,6 +41,9 @@ from ditto_datahub.services.derived_shadow_slot_service import (
     DerivedShadowSlotService,
 )
 
+# Freeze 版本管理服务
+from ditto_datahub.services.freeze_service import FreezeService
+
 # Fundamental 域服务
 from ditto_datahub.services.fundamental_service import FundamentalService
 
@@ -95,6 +98,7 @@ __all__ = [
     "DerivedSeriesQuery",
     "DerivedShadowSlotService",
     "DerivedSourceScope",
+    "FreezeService",
     "FundamentalReadPorts",
     "FundamentalService",
     "FundamentalWritePorts",

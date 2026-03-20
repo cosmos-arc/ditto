@@ -5,14 +5,17 @@ from __future__ import annotations
 from datetime import date
 from enum import StrEnum
 from pathlib import Path
-from typing import Literal, overload
+from typing import Literal, Protocol, overload
 
 import polars as pl
 
 from ditto_datahub.errors import DerivedNotFoundError, DerivedVersionError
-from ditto_datahub.models.derived import DerivedSpecRecord
+from ditto_datahub.models.derived import (
+    DerivedSpecRecord,
+    DerivedStateRecord,
+    DerivedVersionRecord,
+)
 from ditto_datahub.services.derived._pruning import prune_parquet_paths
-from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
 
 __all__ = [
     "DerivedArtifactReader",
@@ -28,13 +31,24 @@ class VersionResolutionStrategy(StrEnum):
     EXPLICIT_VERSION = "explicit_version"
 
 
+class _CatalogReader(Protocol):
+    """Minimal catalog read interface consumed by the artifact reader."""
+
+    def get_spec(self, derived_id: str, version: int) -> DerivedSpecRecord | None: ...
+    def get_version(
+        self, derived_id: str, version: int
+    ) -> DerivedVersionRecord | None: ...
+    def get_state(self, derived_id: str) -> DerivedStateRecord | None: ...
+    def list_versions(self, derived_id: str) -> tuple[DerivedVersionRecord, ...]: ...
+
+
 class DerivedArtifactReader:
     """Resolve versions and read materialized artifact frames."""
 
     def __init__(
         self,
         *,
-        catalog_service: DerivedCatalogService,
+        catalog_service: _CatalogReader,
         artifact_root: Path,
     ) -> None:
         self._catalog_service = catalog_service
@@ -135,7 +149,7 @@ class DerivedArtifactReader:
         as_lazy: Literal[True],
     ) -> pl.DataFrame | pl.LazyFrame: ...
 
-    def read_frame(  # noqa: PLR0913
+    def read_frame(
         self,
         *,
         derived_id: str,

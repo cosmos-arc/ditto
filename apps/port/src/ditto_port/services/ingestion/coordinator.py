@@ -24,8 +24,11 @@ from ditto_datahub.models import (
     OnDuplicate,
 )
 from ditto_datahub.models.storage import WriteResult
-from ditto_datahub.runtime.freeze_manager import FreezeManager
-from ditto_datahub.services import IngestionCursorService, IngestionLogService
+from ditto_datahub.services import (
+    FreezeService,
+    IngestionCursorService,
+    IngestionLogService,
+)
 from ditto_datahub.services.capital_service import CapitalService
 from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.macro_service import MacroService
@@ -106,7 +109,7 @@ class IngestionCoordinator:
         ingestion_log_service: IngestionLogService | None = None,
         ingestion_cursor_service: IngestionCursorService | None = None,
         quality_service: QualityService | None = None,
-        freeze_manager: FreezeManager | None = None,
+        freeze_service: FreezeService | None = None,
         fred_source: DataSource | None = None,
     ) -> None:
         """初始化 IngestionCoordinator。"""
@@ -121,7 +124,7 @@ class IngestionCoordinator:
         self._ingestion_log_service = ingestion_log_service
         self._ingestion_cursor_service = ingestion_cursor_service
         self._quality_service = quality_service
-        self._freeze_manager = freeze_manager
+        self._freeze_service = freeze_service
         self._metadata_manager = MetadataManager(ingestion_log_service)
         self._result_handler = IngestionResultHandler(
             ingestion_log_service, source_name
@@ -392,7 +395,7 @@ class IngestionCoordinator:
             message=message,
         )
 
-    def _fetch_and_ingest(  # noqa: C901, PLR0911
+    def _fetch_and_ingest(  # noqa: PLR0911
         self, dataset: str, trade_date: str, force: bool
     ) -> IngestionResult:
         """获取数据并执行摄取（统一错误处理）。"""
@@ -483,7 +486,15 @@ class IngestionCoordinator:
 
         # basic 数据摄取成功后，执行 list_date 推断补偿
         self._run_list_date_inference(dataset)
+        self._run_post_ingest_hooks(dataset, trade_date)
 
+        # 成功写入
+        return self._result_handler.handle_success(
+            dataset, trade_date, df, write_result
+        )
+
+    def _run_post_ingest_hooks(self, dataset: str, trade_date: str) -> None:
+        """执行摄取后的副作用：游标更新、冻结点创建。"""
         # 更新摄入游标
         if self._ingestion_cursor_service is not None:
             try:
@@ -502,9 +513,9 @@ class IngestionCoordinator:
                 )
 
         # 创建冻结点（轻量级版本追踪）
-        if self._freeze_manager is not None:
+        if self._freeze_service is not None:
             try:
-                self._freeze_manager.create(
+                self._freeze_service.create_freeze(
                     freeze_id=f"{dataset}_{trade_date}",
                     description=f"Auto-freeze: {dataset} @ {trade_date}",
                     datasets=[dataset],
@@ -516,11 +527,6 @@ class IngestionCoordinator:
                     trade_date=trade_date,
                     error=str(e),
                 )
-
-        # 成功写入
-        return self._result_handler.handle_success(
-            dataset, trade_date, df, write_result
-        )
 
     def ingest_range(
         self,

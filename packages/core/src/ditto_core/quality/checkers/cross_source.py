@@ -46,7 +46,7 @@ class CrossSourceChecker:
             "high": ToleranceRule(method=CompareMethod.TICK_ALIGNED, tick_size=0.001),
             "low": ToleranceRule(method=CompareMethod.TICK_ALIGNED, tick_size=0.001),
             "close": ToleranceRule(method=CompareMethod.TICK_ALIGNED, tick_size=0.001),
-            "vol": ToleranceRule(method=CompareMethod.RELATIVE, relative_tol=0.001),
+            "volume": ToleranceRule(method=CompareMethod.RELATIVE, relative_tol=0.001),
             "amount": ToleranceRule(method=CompareMethod.RELATIVE, relative_tol=0.001),
         }
 

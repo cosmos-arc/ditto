@@ -22,33 +22,42 @@
 
 ### Phase 1 持久化状态
 
+> **代码变更记录（2026-03-20）**：Phase 1 实现时简化了状态机，移除了 `REGISTERED` 状态（validate 检查合并到 materialize 入口），新增了 `ARCHIVED` 状态用于已下线且无可回滚价值的版本。详见 `DerivedVersionStatus`（`packages/core/src/ditto_core/engine/materialization/models.py`）。
+
 | 状态 | 含义 | 进入条件 |
 |------|------|---------|
 | **DRAFT** | spec 可编辑，未进入正式生命周期 | 创建时 |
-| **REGISTERED** | spec 已冻结入 catalog，可触发物化 | validate 通过 |
+| ~~**REGISTERED**~~ | ~~spec 已冻结入 catalog，可触发物化~~ | *已移除 — validate 检查合并到 materialize 入口* |
 | **MATERIALIZED** | 至少存在一份通过基础运行检查的产物/水位 | materialize 成功 |
 | **PUBLISHED** | 当前对查询/serving 生效的版本 | promote 操作 |
 | **DEPRECATED** | 仍可保留查询或回滚价值，但不再推荐使用 | deprecate 操作 |
+| **ARCHIVED** | 已下线且无可回滚价值，仅保留审计记录 | archive 操作 |
+
+#### 设计变更说明
+
+`REGISTERED` 状态在 ADR 原设计中用于"validate 通过后的冻结态"。Phase 1 实现中，validate 检查（表达式语法、复杂度限制）被合并为 materialize 的前置校验，不再作为独立持久化状态。这简化了状态机流转：`DRAFT → MATERIALIZED → PUBLISHED → DEPRECATED → ARCHIVED`。
 
 ### 门禁/事件（非持久化状态）
 
 | 事件 | 触发点 | 职责 |
 |------|--------|------|
-| **validate** | DRAFT → REGISTERED | 静态检查（表达式语法、复杂度限制） |
+| ~~**validate**~~ | ~~DRAFT → REGISTERED~~ | *已合并到 materialize 前置校验* |
 | **shadow_publish** | MATERIALIZED 后 | 将 candidate 挂到 shadow 验证通道，不改 primary |
 | **certify** | shadow / promote 前 | 汇总最小 DQ、shadow diff、compatibility manifest 与认证包 |
 
 ### 状态转换图
 
+> **代码变更记录（2026-03-20）**：图示已更新为与 `DerivedVersionStatus` 一致。
+
 ```
-DRAFT ──validate──> REGISTERED ──materialize──> MATERIALIZED ──promote──> PUBLISHED
-                         │                           │                        │
-                         │                           ├──shadow_publish──> shadow slot
-                         │                           │                        ↓
-                         └─────────────────────────────────────────────> DEPRECATED
-                                                                              ↑
-                                                                         deprecate
+DRAFT ──materialize──> MATERIALIZED ──promote──> PUBLISHED ──deprecate──> DEPRECATED ──archive──> ARCHIVED
+                            │                        │
+                            ├──shadow_publish──> shadow slot
+                            │                        ↓
+                            └──────────────────────────────────────> DEPRECATED
 ```
+
+原始设计中 `DRAFT → REGISTERED → MATERIALIZED` 的两步流转被简化为 `DRAFT → MATERIALIZED` 单步，validate 检查在 materialize 入口完成。
 
 ### 辅助发布通道
 
@@ -193,12 +202,13 @@ rollback_primary(target) ⟹ target.status == PUBLISHED
 ```python
 # 发布服务接口
 class PublicationService:
-    def register(self, spec_id: str, expression: str) -> RegistrationResult:
-        """DRAFT → REGISTERED：注册并验证 spec"""
-        ...
-
     def materialize(self, spec_id: str, version: int) -> MaterializationResult:
-        """REGISTERED → MATERIALIZED：执行物化"""
+        """DRAFT → MATERIALIZED：验证并执行物化
+
+        前置校验（原 validate 门禁已合并）：
+        - 表达式语法与复杂度检查
+        - 依赖完整性检查
+        """
         ...
 
     def shadow_publish(self, spec_id: str, version: int) -> ShadowPublishResult:
@@ -285,3 +295,4 @@ class PublicationService:
 | 2026-03-12 | 确定 PUBLISHED 精确语义：已注册 + 已物化 + 通过最小 DQ + 原子更新 primary |
 | 2026-03-13 | 吸收 ADR-042：shadow publish 不新增生命周期状态，promote 前默认要求 dual-read diff |
 | 2026-03-13 | 吸收 ADR-043：promote 前增加 publish_ready 认证与 compatibility manifest 完整性检查 |
+| 2026-03-20 | **变更**：Phase 1 实现移除 `REGISTERED` 状态，validate 合并到 materialize 入口；新增 `ARCHIVED` 状态。实际代码见 `DerivedVersionStatus`（`DRAFT → MATERIALIZED → PUBLISHED → DEPRECATED → ARCHIVED`） |

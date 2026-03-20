@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import asdict
 from typing import NamedTuple, Protocol, runtime_checkable
 from uuid import uuid4
 
@@ -27,6 +28,7 @@ from ditto_datahub.models.derived import (
     DerivedDependencyRecord,
     DerivedPartitionRecord,
     DerivedRunRecord,
+    DerivedSpecRecord,
     DerivedStateRecord,
     PartitionInfo,
 )
@@ -39,6 +41,9 @@ from ditto_datahub.services.derived.artifact_persistence_service import (
 from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
 from ditto_datahub.services.publication_safety_record_service import (
     PublicationSafetyRecordService,
+)
+from ditto_datahub.stores.runtime.derived_artifact_writer import (
+    ArtifactMetadataParams,
 )
 
 from ditto_port.services.derived.materialization import (
@@ -182,7 +187,7 @@ class DerivedMaterializationOrchestrator:
             )
             if spec.materialization_profile == MaterializationProfile.DERIVE:
                 self._artifact_writer.write_ephemeral_result(
-                    spec=spec,
+                    spec=spec_record,
                     run_id=run_id,
                     frame=materialized_frame,
                 )
@@ -194,8 +199,10 @@ class DerivedMaterializationOrchestrator:
                     rows_written=materialized_frame.height,
                     dependencies=compiled.analysis.dependencies,
                 )
+            time_key = spec.effective_time_keys[0]
             partitions = self._artifact_writer.write_durable_partitions(
-                spec=spec,
+                spec=spec_record,
+                time_key=time_key,
                 run_id=run_id,
                 frame=materialized_frame,
                 request_start=request.request_start,
@@ -203,14 +210,16 @@ class DerivedMaterializationOrchestrator:
                 source_snapshot_id=request.source_snapshot_id,
             )
             self._artifact_writer.write_artifact_metadata(
-                spec=spec,
-                run_id=run_id,
-                compile_identity=compiled.compile_identity,
-                analysis=compiled.analysis,
-                partitions=partitions,
-                request_start=request.request_start,
-                request_end=request.request_end,
-                source_snapshot_id=request.source_snapshot_id,
+                ArtifactMetadataParams(
+                    spec=spec_record,
+                    run_id=run_id,
+                    compile_identity=asdict(compiled.compile_identity),
+                    analysis=asdict(compiled.analysis),
+                    partitions=partitions,
+                    request_start=request.request_start,
+                    request_end=request.request_end,
+                    source_snapshot_id=request.source_snapshot_id,
+                ),
             )
             minimal_dq_record = None
             if self._publication_record_service is not None:
@@ -222,6 +231,7 @@ class DerivedMaterializationOrchestrator:
                 )
                 self._persist_publication_safety_records(
                     spec=spec,
+                    spec_record=spec_record,
                     run_id=run_id,
                     request=request,
                     compile_identity=compiled.compile_identity,
@@ -462,6 +472,7 @@ class DerivedMaterializationOrchestrator:
         self,
         *,
         spec: DerivedSpec,
+        spec_record: DerivedSpecRecord,
         run_id: str,
         request: DerivedMaterializationRequest,
         compile_identity: CompileIdentity,
@@ -479,9 +490,9 @@ class DerivedMaterializationOrchestrator:
         publication_record_service.save_manifest(manifest_record)
         publication_record_service.save_minimal_dq_summary(minimal_dq_record)
         self._artifact_writer.update_artifact_metadata(
-            spec=spec,
+            spec=spec_record,
             run_id=run_id,
-            compile_identity=compile_identity,
+            compile_identity=asdict(compile_identity),
             partitions=partitions,
             source_snapshot_id=request.source_snapshot_id,
             manifest_record=manifest_record,
@@ -536,9 +547,14 @@ def apply_cs_amplification(
     if frame.is_empty() or not instrument_ids:
         return frame
     key_columns = list(entity_keys) + list(time_keys)
+    extra_cols = ["availability_time"] if "availability_time" in frame.columns else []
     unique_dates = frame.select(pl.col(time_keys[0]).unique().sort()).to_series()
     cross = unique_dates.to_frame(time_keys[0]).join(
         pl.DataFrame({entity_keys[0]: instrument_ids}),
         how="cross",
     )
-    return cross.join(frame.select([*key_columns, "value"]), on=key_columns, how="left")
+    return cross.join(
+        frame.select([*key_columns, "value", *extra_cols]),
+        on=key_columns,
+        how="left",
+    )

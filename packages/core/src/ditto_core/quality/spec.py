@@ -220,7 +220,7 @@ class CrossSourceRule(BaseRule):
     """跨源对比规则（L3 统计检查）."""
 
     rule: RuleType = RuleType.CROSS_SOURCE_COMPARE
-    fields: list[str]  # 要对比的字段（如 [open, high, low, close, vol]）
+    fields: list[str]  # 要对比的字段（如 [open, high, low, close, volume]）
     key_columns: list[str]  # 对比键（如 [source_ticker, trade_date]）
     tolerance_rules: dict[str, dict[str, Any]] | None = None  # 字段 → 容差配置
     enabled: bool = True  # 开关控制

@@ -2,29 +2,53 @@
 
 from __future__ import annotations
 
-import logging
-from dataclasses import asdict
+from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
+from typing import Any
 
 import orjson
 import polars as pl
-from ditto_core.engine.materialization import Analysis, CompileIdentity
-from ditto_core.engine.specs import DerivedSpec
-from ditto_datahub.models.derived import PartitionInfo
+from ditto_datahub.models.derived import DerivedSpecRecord, PartitionInfo
 from ditto_datahub.models.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
+from ditto_infra.foundation import logger
 from ditto_infra.foundation.util.io import (
     ParquetCompression,
     atomic_bytes_write,
     atomic_write,
 )
 
-logger = logging.getLogger(__name__)
+__all__ = ["ArtifactMetadataParams", "DerivedArtifactWriter", "extract_partition_keys"]
 
-__all__ = ["DerivedArtifactWriter", "extract_partition_keys"]
+
+@dataclass(frozen=True)
+class ArtifactMetadataParams:
+    """
+    制品元数据写入参数.
+
+    Attributes:
+        spec: 派生规格记录.
+        run_id: 运行 ID.
+        compile_identity: 编译标识（已序列化为 dict）.
+        analysis: 分析结果（已序列化为 dict）.
+        partitions: 分区信息.
+        request_start: 请求开始日期.
+        request_end: 请求结束日期.
+        source_snapshot_id: 源快照 ID.
+
+    """
+
+    spec: DerivedSpecRecord
+    run_id: str
+    compile_identity: dict[str, Any]
+    analysis: dict[str, Any]
+    partitions: tuple[PartitionInfo, ...]
+    request_start: str
+    request_end: str
+    source_snapshot_id: str | None
 
 
 class DerivedArtifactWriter:
@@ -58,7 +82,7 @@ class DerivedArtifactWriter:
     def write_ephemeral_result(
         self,
         *,
-        spec: DerivedSpec,
+        spec: DerivedSpecRecord,
         run_id: str,
         frame: pl.DataFrame,
     ) -> None:
@@ -67,8 +91,8 @@ class DerivedArtifactWriter:
             self._artifact_root
             / "derived"
             / "artifacts"
-            / spec.materialization_profile.value.lower()
-            / spec.id
+            / spec.materialization_profile.lower()
+            / spec.derived_id
             / f"v{spec.version}"
             / "_ephemeral"
             / run_id
@@ -81,13 +105,14 @@ class DerivedArtifactWriter:
         )
 
     # ------------------------------------------------------------------
-    # Durable partitions (SERIES profile) — two-phase commit
+    # Durable partitions (SERIES profile) -- two-phase commit
     # ------------------------------------------------------------------
 
     def write_durable_partitions(
         self,
         *,
-        spec: DerivedSpec,
+        spec: DerivedSpecRecord,
+        time_key: str,
         run_id: str,
         frame: pl.DataFrame,
         request_start: str,
@@ -99,8 +124,8 @@ class DerivedArtifactWriter:
 
         Uses a two-phase commit to guarantee all-or-nothing semantics:
 
-        * **Phase 1** — write every partition to a ``.tmp.parquet`` file.
-        * **Phase 2** — atomically rename all temp files to their final names.
+        * **Phase 1** -- write every partition to a ``.tmp.parquet`` file.
+        * **Phase 2** -- atomically rename all temp files to their final names.
 
         If Phase 1 raises, all temp files are cleaned up before re-raising.
         Checksums are computed on the *final* files after rename.
@@ -109,14 +134,14 @@ class DerivedArtifactWriter:
             self._artifact_root
             / "derived"
             / "artifacts"
-            / spec.materialization_profile.value.lower()
-            / spec.id
+            / spec.materialization_profile.lower()
+            / spec.derived_id
             / f"v{spec.version}"
         )
         version_root.mkdir(parents=True, exist_ok=True)
 
-        trade_date_expr = pl.col(spec.effective_time_keys[0]).cast(pl.Utf8)
-        partition_keys = extract_partition_keys(frame, spec)
+        trade_date_expr = pl.col(time_key).cast(pl.Utf8)
+        partition_keys = extract_partition_keys(frame, time_key)
 
         # Collect (partition_key, partition_frame, temp_path, final_path)
         pending: list[tuple[str, pl.DataFrame, Path, Path]] = []
@@ -140,7 +165,7 @@ class DerivedArtifactWriter:
             self._cleanup_temp_files(written_temps)
             raise
 
-        # --- Phase 2: atomic rename all temp → final ---
+        # --- Phase 2: atomic rename all temp -> final ---
         partitions: list[PartitionInfo] = []
         for _pk, _pf, temp_path, partition_path in pending:
             temp_path.replace(partition_path)
@@ -166,7 +191,8 @@ class DerivedArtifactWriter:
     def write_incremental_partition(
         self,
         *,
-        spec: DerivedSpec,
+        spec: DerivedSpecRecord,
+        time_key: str,
         run_id: str,
         frame: pl.DataFrame,
         source_snapshot_id: str | None,
@@ -192,14 +218,13 @@ class DerivedArtifactWriter:
             self._artifact_root
             / "derived"
             / "artifacts"
-            / spec.materialization_profile.value.lower()
-            / spec.id
+            / spec.materialization_profile.lower()
+            / spec.derived_id
             / f"v{spec.version}"
         )
         version_root.mkdir(parents=True, exist_ok=True)
 
-        partition_keys = extract_partition_keys(frame, spec)
-        time_key = spec.effective_time_keys[0]
+        partition_keys = extract_partition_keys(frame, time_key)
         trade_date_expr = pl.col(time_key).cast(pl.Utf8)
 
         partitions: list[PartitionInfo] = []
@@ -233,28 +258,20 @@ class DerivedArtifactWriter:
     # Artifact metadata
     # ------------------------------------------------------------------
 
-    def write_artifact_metadata(  # noqa: PLR0913
+    def write_artifact_metadata(
         self,
-        *,
-        spec: DerivedSpec,
-        run_id: str,
-        compile_identity: CompileIdentity,
-        analysis: Analysis,
-        partitions: tuple[PartitionInfo, ...],
-        request_start: str,
-        request_end: str,
-        source_snapshot_id: str | None,
+        params: ArtifactMetadataParams,
     ) -> None:
         """Write run metadata as artifact_metadata.json atomically."""
         version_root = (
             self._artifact_root
             / "derived"
             / "artifacts"
-            / spec.materialization_profile.value.lower()
-            / spec.id
-            / f"v{spec.version}"
+            / params.spec.materialization_profile.lower()
+            / params.spec.derived_id
+            / f"v{params.spec.version}"
         )
-        metadata_dir = version_root / "_runs" / run_id
+        metadata_dir = version_root / "_runs" / params.run_id
         metadata_dir.mkdir(parents=True, exist_ok=True)
         partition_dicts = [
             {
@@ -263,21 +280,21 @@ class DerivedArtifactWriter:
                 "row_count": p.row_count,
                 "checksum": p.checksum,
             }
-            for p in partitions
+            for p in params.partitions
         ]
         metadata_path = metadata_dir / "artifact_metadata.json"
         atomic_bytes_write(
             orjson.dumps(
                 {
-                    "run_id": run_id,
-                    "compile_identity": asdict(compile_identity),
-                    "analysis": asdict(analysis),
-                    "input_snapshots": [source_snapshot_id]
-                    if source_snapshot_id is not None
+                    "run_id": params.run_id,
+                    "compile_identity": params.compile_identity,
+                    "analysis": params.analysis,
+                    "input_snapshots": [params.source_snapshot_id]
+                    if params.source_snapshot_id is not None
                     else [],
                     "coverage": {
-                        "start": request_start,
-                        "end": request_end,
+                        "start": params.request_start,
+                        "end": params.request_end,
                     },
                     "partitions_written": partition_dicts,
                 },
@@ -289,9 +306,9 @@ class DerivedArtifactWriter:
     def update_artifact_metadata(
         self,
         *,
-        spec: DerivedSpec,
+        spec: DerivedSpecRecord,
         run_id: str,
-        compile_identity: CompileIdentity,
+        compile_identity: dict[str, Any],
         partitions: tuple[PartitionInfo, ...],
         source_snapshot_id: str | None,
         manifest_record: CompatibilityManifestRecord,
@@ -302,8 +319,8 @@ class DerivedArtifactWriter:
             self._artifact_root
             / "derived"
             / "artifacts"
-            / spec.materialization_profile.value.lower()
-            / spec.id
+            / spec.materialization_profile.lower()
+            / spec.derived_id
             / f"v{spec.version}"
             / "_runs"
             / run_id
@@ -320,7 +337,7 @@ class DerivedArtifactWriter:
                 **minimal_dq_record.payload,
             },
         }
-        payload["compile_identity"] = asdict(compile_identity)
+        payload["compile_identity"] = compile_identity
         payload["input_snapshots"] = (
             [source_snapshot_id] if source_snapshot_id is not None else []
         )
@@ -357,10 +374,13 @@ class DerivedArtifactWriter:
         return [p for p in candidates if p.exists()]
 
 
-def extract_partition_keys(frame: pl.DataFrame, spec: DerivedSpec) -> tuple[str, ...]:
+def extract_partition_keys(
+    frame: pl.DataFrame,
+    time_key: str,
+) -> tuple[str, ...]:
     """Extract unique year-based partition keys from the time column."""
     partition_series = (
-        frame.select(pl.col(spec.effective_time_keys[0]).cast(pl.Utf8).str.slice(0, 4))
+        frame.select(pl.col(time_key).cast(pl.Utf8).str.slice(0, 4))
         .to_series()
         .unique()
         .sort()

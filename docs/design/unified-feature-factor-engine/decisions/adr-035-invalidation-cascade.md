@@ -136,10 +136,14 @@ def propagate_invalidation(event, visited: set, depth: int) -> None:
 
 ## 失效事件结构
 
+> **代码变更记录（2026-03-20）**：Phase 1 实现中，失效事件结构经过重新设计，聚焦于数据源变更描述（source domain/dataset/date），而非 ADR 原始设计的因子级追踪（event_id/source_version/priority/depth）。实际代码见 `DerivedInvalidationEvent`（`packages/core/src/ditto_core/engine/materialization/contracts.py`）。
+
+### 原始设计（概念层）
+
 ```python
 @dataclass
 class InvalidationEvent:
-    """失效事件"""
+    """失效事件 — 原始 ADR 概念设计"""
     event_id: str              # 唯一标识
     source_id: str             # 失效源头（因子 ID）
     source_version: int        # 源头版本
@@ -149,6 +153,36 @@ class InvalidationEvent:
     created_at: datetime       # 创建时间
     depth: int                 # 传播深度
 ```
+
+### 实际实现（Phase 1）
+
+```python
+@dataclass(frozen=True)
+class DerivedInvalidationEvent:
+    """Source change event that fans out into downstream repair work."""
+    source_domain: str              # 变更来源领域（如 market、fundamental）
+    source_dataset: str             # 变更来源数据集（如 daily_bar）
+    change_date: str                # 变更日期
+    affected_start: str             # 受影响范围起始
+    affected_end: str               # 受影响范围结束
+    source_snapshot_id: str | None  # 来源快照 ID
+    root_dependency_ref: str        # 根依赖引用（用于依赖链解析）
+```
+
+#### 设计差异说明
+
+| 原始设计字段 | 实际实现 | 说明 |
+|-------------|---------|------|
+| `event_id` | （隐式由存储层生成） | 不作为事件数据字段 |
+| `source_id` | `source_domain` + `source_dataset` | 改为二维定位（领域 + 数据集） |
+| `source_version` | `source_snapshot_id` | 改用快照引用 |
+| `affected_partitions` | `affected_start` + `affected_end` | 改为连续日期范围 |
+| `reason` | （隐式由变更来源推断） | correction / late_arrival 等由上游事件类型决定 |
+| `priority` | 由 `InvalidationCascadeOrchestrator` 内部排序 | 同深度按 `DerivedRole` 优先级排序 |
+| `created_at` | （由存储层自动管理） | 不作为事件数据字段 |
+| `depth` | （由传播器运行时计算） | 不作为事件数据字段 |
+| — | `root_dependency_ref` | 新增：用于依赖链解析的根引用 |
+| — | `change_date` | 新增：精确变更日期 |
 
 ---
 
@@ -178,3 +212,4 @@ class InvalidationEvent:
 | 2026-03-12 | D-1: 确定级联深度限制（实时 5 层，批处理不限） |
 | 2026-03-12 | D-2: 确定异步队列传播模式 + stale 标记 |
 | 2026-03-12 | D-3: 确定循环依赖检测策略（注册时硬阻断 + 运行时兜底） |
+| 2026-03-20 | **变更**：Phase 1 实现的 `DerivedInvalidationEvent` 结构与原始 ADR 概念设计有显著差异（见"失效事件结构"章节），聚焦于数据源变更描述而非因子级追踪 |

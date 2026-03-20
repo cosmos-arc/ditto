@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import UTC, datetime
 from typing import cast
 from uuid import uuid4
 
@@ -40,6 +39,8 @@ from ditto_datahub.services import (
 from ditto_datahub.services.derived_shadow_slot_service import DerivedShadowSlotService
 
 from ditto_port.services.derived.publication_rules import build_certification_checks
+
+from ._utils import now_iso
 
 __all__ = ["DerivedPublicationFacade"]
 
@@ -79,7 +80,7 @@ class DerivedPublicationFacade:
             derived_id=derived_id,
             candidate_version=candidate_version,
             baseline_version=resolved_baseline,
-            activated_at=_now_iso(),
+            activated_at=now_iso(),
             disabled_at=None,
         )
         self._shadow_slot_service.save_slot(slot)
@@ -206,7 +207,7 @@ class DerivedPublicationFacade:
             shadow_diff_report_id=None
             if shadow_report_record is None
             else shadow_report_record.report_id,
-            created_at=_now_iso(),
+            created_at=now_iso(),
         )
         self._publication_record_service.save_certification_report(
             CertificationReportRecord(
@@ -233,7 +234,7 @@ class DerivedPublicationFacade:
             derived_id=derived_id,
             candidate_version=candidate_version,
         )
-        promoted_at = _now_iso()
+        promoted_at = now_iso()
         self._move_primary_pointer(
             derived_id=derived_id,
             target_version=candidate_version,
@@ -260,7 +261,7 @@ class DerivedPublicationFacade:
                 + f"id={derived_id} v={target_version}",
                 derived_id=derived_id,
             )
-        rolled_back_at = _now_iso()
+        rolled_back_at = now_iso()
         self._move_primary_pointer(
             derived_id=derived_id,
             target_version=target_version,
@@ -292,7 +293,7 @@ class DerivedPublicationFacade:
                 + f"id={derived_id} v={version}",
                 derived_id=derived_id,
             )
-        deprecated_at = _now_iso()
+        deprecated_at = now_iso()
         self._catalog_service.save_version(
             DerivedVersionRecord(
                 derived_id=version_record.derived_id,
@@ -333,7 +334,7 @@ class DerivedPublicationFacade:
             derived_id=derived_id,
             candidate_version=candidate_version,
             baseline_version=baseline_version,
-            activated_at=_now_iso(),
+            activated_at=now_iso(),
             disabled_at=None,
         )
 
@@ -548,7 +549,7 @@ def _build_shadow_diff_report(
         info_count=0,
         candidate_manifest_hash=candidate_manifest_hash,
         baseline_manifest_hash=baseline_manifest_hash,
-        created_at=_now_iso(),
+        created_at=now_iso(),
     )
 
 
@@ -729,7 +730,3 @@ def _optional_compile_flags(
             raise TypeError("global_compile_flags values must be primitive JSON values")
         compile_flags[key] = item
     return compile_flags
-
-
-def _now_iso() -> str:
-    return datetime.now(UTC).isoformat()

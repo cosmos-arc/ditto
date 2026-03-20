@@ -4,11 +4,15 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import cast
 
-type JsonPrimitive = None | bool | int | float | str
-type JsonValue = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
-type JsonDict = dict[str, JsonValue]
+from ditto_datahub.models.common import (
+    JsonDict,
+    JsonValue,
+    require_bool,
+    require_int,
+    require_payload,
+    require_str,
+)
 
 __all__ = [
     "CertificationReportRecord",
@@ -20,38 +24,6 @@ __all__ = [
     "ShadowDiffReportRecord",
     "ShadowTraceRecordRecord",
 ]
-
-
-def _require_str(data: Mapping[str, JsonValue], key: str) -> str:
-    """Extract a required string field from JSON payload."""
-    value = data[key]
-    if not isinstance(value, str):
-        raise TypeError(f"{key} must be a string")
-    return value
-
-
-def _require_int(data: Mapping[str, JsonValue], key: str) -> int:
-    """Extract a required int field from JSON payload."""
-    value = data[key]
-    if not isinstance(value, int) or isinstance(value, bool):
-        raise TypeError(f"{key} must be an int")
-    return value
-
-
-def _require_bool(data: Mapping[str, JsonValue], key: str) -> bool:
-    """Extract a required bool field from JSON payload."""
-    value = data[key]
-    if not isinstance(value, bool):
-        raise TypeError(f"{key} must be a bool")
-    return value
-
-
-def _require_payload(data: Mapping[str, JsonValue], key: str) -> JsonDict:
-    """Extract a required JSON object field from payload."""
-    value = data[key]
-    if not isinstance(value, dict):
-        raise TypeError(f"{key} must be a JSON object")
-    return cast(JsonDict, value)
 
 
 @dataclass(frozen=True)
@@ -81,11 +53,11 @@ class CompatibilityManifestRecord:
     ) -> CompatibilityManifestRecord:
         """Create record from JSON dictionary."""
         return cls(
-            derived_id=_require_str(data, "derived_id"),
-            version=_require_int(data, "version"),
-            manifest_hash=_require_str(data, "manifest_hash"),
-            payload=_require_payload(data, "payload"),
-            created_at=_require_str(data, "created_at"),
+            derived_id=require_str(data, "derived_id"),
+            version=require_int(data, "version"),
+            manifest_hash=require_str(data, "manifest_hash"),
+            payload=require_payload(data, "payload"),
+            created_at=require_str(data, "created_at"),
         )
 
 
@@ -120,13 +92,13 @@ class DerivedMinimalDQSummaryRecord:
     ) -> DerivedMinimalDQSummaryRecord:
         """Create record from JSON dictionary."""
         return cls(
-            derived_id=_require_str(data, "derived_id"),
-            version=_require_int(data, "version"),
-            run_id=_require_str(data, "run_id"),
-            passed=_require_bool(data, "passed"),
-            error_count=_require_int(data, "error_count"),
-            payload=_require_payload(data, "payload"),
-            created_at=_require_str(data, "created_at"),
+            derived_id=require_str(data, "derived_id"),
+            version=require_int(data, "version"),
+            run_id=require_str(data, "run_id"),
+            passed=require_bool(data, "passed"),
+            error_count=require_int(data, "error_count"),
+            payload=require_payload(data, "payload"),
+            created_at=require_str(data, "created_at"),
         )
 
 
@@ -165,15 +137,15 @@ class ShadowDiffReportRecord:
     ) -> ShadowDiffReportRecord:
         """Create record from JSON dictionary."""
         return cls(
-            report_id=_require_str(data, "report_id"),
-            derived_id=_require_str(data, "derived_id"),
-            candidate_version=_require_int(data, "candidate_version"),
-            baseline_version=_require_int(data, "baseline_version"),
-            error_count=_require_int(data, "error_count"),
-            warning_count=_require_int(data, "warning_count"),
-            info_count=_require_int(data, "info_count"),
-            payload=_require_payload(data, "payload"),
-            created_at=_require_str(data, "created_at"),
+            report_id=require_str(data, "report_id"),
+            derived_id=require_str(data, "derived_id"),
+            candidate_version=require_int(data, "candidate_version"),
+            baseline_version=require_int(data, "baseline_version"),
+            error_count=require_int(data, "error_count"),
+            warning_count=require_int(data, "warning_count"),
+            info_count=require_int(data, "info_count"),
+            payload=require_payload(data, "payload"),
+            created_at=require_str(data, "created_at"),
         )
 
 
@@ -204,11 +176,11 @@ class ShadowTraceRecordRecord:
     ) -> ShadowTraceRecordRecord:
         """Create record from JSON dictionary."""
         return cls(
-            trace_id=_require_str(data, "trace_id"),
-            report_id=_require_str(data, "report_id"),
-            derived_id=_require_str(data, "derived_id"),
-            payload=_require_payload(data, "payload"),
-            sampled_at=_require_str(data, "sampled_at"),
+            trace_id=require_str(data, "trace_id"),
+            report_id=require_str(data, "report_id"),
+            derived_id=require_str(data, "derived_id"),
+            payload=require_payload(data, "payload"),
+            sampled_at=require_str(data, "sampled_at"),
         )
 
 
@@ -245,14 +217,14 @@ class CertificationReportRecord:
     ) -> CertificationReportRecord:
         """Create record from JSON dictionary."""
         return cls(
-            report_id=_require_str(data, "report_id"),
-            derived_id=_require_str(data, "derived_id"),
-            version=_require_int(data, "version"),
-            stage=_require_str(data, "stage"),
-            pack_id=_require_str(data, "pack_id"),
-            manifest_hash=_require_str(data, "manifest_hash"),
-            payload=_require_payload(data, "payload"),
-            created_at=_require_str(data, "created_at"),
+            report_id=require_str(data, "report_id"),
+            derived_id=require_str(data, "derived_id"),
+            version=require_int(data, "version"),
+            stage=require_str(data, "stage"),
+            pack_id=require_str(data, "pack_id"),
+            manifest_hash=require_str(data, "manifest_hash"),
+            payload=require_payload(data, "payload"),
+            created_at=require_str(data, "created_at"),
         )
 
 

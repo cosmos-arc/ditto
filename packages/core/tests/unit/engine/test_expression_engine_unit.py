@@ -731,7 +731,9 @@ class TestDerivedExecutionPlanner:
             earliest_pending_invalidation_start="2026-03-08",
         )
 
-        assert plan.compute_start == "2026-03-02"
+        # ts_mean(window=5) → lookback=6 trading days → ceil(6*365/250)=9 calendar days
+        # anchor 2026-03-08 - 9 days = 2026-02-27
+        assert plan.compute_start == "2026-02-27"
         assert plan.compute_end == "2026-03-13"
         assert plan.partitions == ("2026",)
         assert plan.profile == MaterializationProfile.SERIES

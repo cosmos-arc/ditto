@@ -3,6 +3,7 @@
 from typing import get_args
 
 import pytest
+from ditto_core.engine.errors import DerivedNotImplementedError
 from ditto_core.engine.specs import (
     CalendarId,
     DerivedRole,
@@ -12,7 +13,6 @@ from ditto_core.engine.specs import (
     MaterializationProfile,
     TimeSpec,
 )
-from ditto_datahub.errors import DerivedNotImplementedError
 
 
 class TestLiteralTypeAliases:

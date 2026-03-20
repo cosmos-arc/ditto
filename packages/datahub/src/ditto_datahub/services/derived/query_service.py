@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Protocol
+
 import polars as pl
 
 from ditto_datahub.errors import DerivedNotFoundError, DerivedValidationError
+from ditto_datahub.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_datahub.services.derived.artifact_reader import DerivedArtifactReader
 from ditto_datahub.services.derived.queries import (
     DerivedCompareQuery,
@@ -17,9 +20,17 @@ from ditto_datahub.services.derived.results import (
     empty_latest_result,
     empty_series_result,
 )
-from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
 
 __all__ = ["DerivedQueryService"]
+
+
+class _CatalogReader(Protocol):
+    """Minimal catalog read interface consumed by the query service."""
+
+    def get_spec(self, derived_id: str, version: int) -> DerivedSpecRecord | None: ...
+    def get_version(
+        self, derived_id: str, version: int
+    ) -> DerivedVersionRecord | None: ...
 
 
 class DerivedQueryService:
@@ -28,7 +39,7 @@ class DerivedQueryService:
     def __init__(
         self,
         *,
-        catalog_service: DerivedCatalogService,
+        catalog_service: _CatalogReader,
         artifact_reader: DerivedArtifactReader,
     ) -> None:
         self._catalog_service = catalog_service

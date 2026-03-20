@@ -309,6 +309,7 @@ class TestEnrichCalendar:
                 "prev_trade_date": [None, "2024-01-02"],
             }
         )
+        mock_dependencies["calendar_reader"].offset.return_value = None
         mock_dependencies["calendar_writer"].upsert.return_value = 1
 
         count = service.enrich_calendar("2024-01-01", "2024-01-31")
@@ -321,6 +322,8 @@ class TestEnrichCalendar:
         assert len(records) == 1
         assert records[0]["trade_date"] == "2024-01-02"
         assert records[0]["prev_trade_date"] is None
+        # offset returned None for both boundaries, and 2024-01-03 is enriched
+        # so next_trade_date should still be None (no adjacent boundary)
         assert records[0]["next_trade_date"] is None
 
     def test_enrich_calendar_all_rows_already_enriched(
@@ -369,6 +372,7 @@ class TestAutoEnrichCalendar:
                 "prev_trade_date": [None, "2024-01-02"],
             }
         )
+        mock_dependencies["calendar_reader"].offset.return_value = None
         mock_dependencies["calendar_writer"].upsert.return_value = 1
 
         count = service.auto_enrich_calendar()

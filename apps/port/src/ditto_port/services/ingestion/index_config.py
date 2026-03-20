@@ -16,14 +16,14 @@ SW 行业指数代码通过 Tushare API 动态获取。
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Protocol
+from typing import Literal, Protocol
 
-if TYPE_CHECKING:
-    import polars as pl
+import polars as pl
 
 __all__ = [
     "MARKET_INDEX_CODES",
     "STYLE_INDEX_CODES",
+    "get_all_index_codes",
     "get_default_index_codes",
     "get_sw_index_codes",
 ]

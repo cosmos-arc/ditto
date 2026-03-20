@@ -288,13 +288,15 @@ class TestInstrumentReaderWriterIntegration:
         )
         writer.register(2_000_001, registration2)
 
+        from ditto_datahub.stores.metadata.instrument import SecurityQuery
+
         # Find all stocks
-        stocks = reader.find_securities(asset_class="stock")
+        stocks = reader.find_securities(SecurityQuery(asset_class="stock"))
         assert len(stocks) == 1
         assert stocks["asset_class"][0] == "stock"
 
         # Find by exchange
-        sse_securities = reader.find_securities(exchange="SSE")
+        sse_securities = reader.find_securities(SecurityQuery(exchange="SSE"))
         assert len(sse_securities) == 2
 
     def test_list_instrument_ids(

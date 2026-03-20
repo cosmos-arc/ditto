@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Literal
 
-from ditto_datahub.errors import DerivedNotImplementedError
+from ditto_core.engine.errors import DerivedNotImplementedError
 
 type CalendarId = Literal["cn_stock"]
 type GrainId = Literal["1d", "1m"]

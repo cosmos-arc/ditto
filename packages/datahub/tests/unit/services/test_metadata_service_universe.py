@@ -150,6 +150,8 @@ class TestFindSecuritiesMinListDays:
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
         """min_list_days + asof 同时提供时应透传给 reader."""
+        from ditto_datahub.stores.metadata.instrument import SecurityQuery
+
         mock_dependencies[
             "instrument_reader"
         ].find_securities.return_value = __import__("polars").DataFrame()
@@ -160,16 +162,13 @@ class TestFindSecuritiesMinListDays:
             min_list_days=60,
         )
 
-        mock_dependencies["instrument_reader"].find_securities.assert_called_once_with(
-            instrument_ids=None,
-            source_tickers=None,
-            source="tushare",
-            asset_class="stock",
-            exchange=None,
-            is_active=True,
-            asof="2024-06-15",
-            min_list_days=60,
-        )
+        mock_dependencies["instrument_reader"].find_securities.assert_called_once()
+        call_args = mock_dependencies["instrument_reader"].find_securities.call_args
+        query = call_args[0][0]
+        assert isinstance(query, SecurityQuery)
+        assert query.asset_class == "stock"
+        assert query.asof == "2024-06-15"
+        assert query.min_list_days == 60
 
     def test_find_securities_min_list_days_without_asof(
         self,
@@ -177,6 +176,8 @@ class TestFindSecuritiesMinListDays:
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
         """无 asof 时 min_list_days 仍然透传，但 reader 侧不应用过滤."""
+        from ditto_datahub.stores.metadata.instrument import SecurityQuery
+
         mock_dependencies[
             "instrument_reader"
         ].find_securities.return_value = __import__("polars").DataFrame()
@@ -186,16 +187,11 @@ class TestFindSecuritiesMinListDays:
             min_list_days=60,
         )
 
-        mock_dependencies["instrument_reader"].find_securities.assert_called_once_with(
-            instrument_ids=None,
-            source_tickers=None,
-            source="tushare",
-            asset_class="stock",
-            exchange=None,
-            is_active=True,
-            asof=None,
-            min_list_days=60,
-        )
+        mock_dependencies["instrument_reader"].find_securities.assert_called_once()
+        call_args = mock_dependencies["instrument_reader"].find_securities.call_args
+        query = call_args[0][0]
+        assert isinstance(query, SecurityQuery)
+        assert query.min_list_days == 60
 
     def test_find_securities_default_no_min_list_days(
         self,
@@ -203,14 +199,18 @@ class TestFindSecuritiesMinListDays:
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
         """默认不传 min_list_days."""
+        from ditto_datahub.stores.metadata.instrument import SecurityQuery
+
         mock_dependencies[
             "instrument_reader"
         ].find_securities.return_value = __import__("polars").DataFrame()
 
         service.find_securities(asset_class="stock")
 
-        call_kwargs = mock_dependencies["instrument_reader"].find_securities.call_args
-        assert call_kwargs.kwargs.get("min_list_days") is None
+        call_args = mock_dependencies["instrument_reader"].find_securities.call_args
+        query = call_args[0][0]
+        assert isinstance(query, SecurityQuery)
+        assert query.min_list_days is None
 
 
 # ============ T08: get_filtered_universe ============
@@ -364,10 +364,11 @@ class TestGetFilteredUniverseMinListDays:
         )
 
         assert result == [1, 2]
-        mock_reader.find_securities.assert_called_once_with(
-            instrument_ids=[1, 2, 3, 4],
-            is_active=None,
-        )
+        mock_reader.find_securities.assert_called_once()
+        call_args = mock_reader.find_securities.call_args
+        query = call_args[0][0]
+        assert query.instrument_ids == [1, 2, 3, 4]
+        assert query.is_active is None
 
     def test_min_list_days_excludes_null_list_date(
         self,

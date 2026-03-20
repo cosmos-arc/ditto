@@ -4,6 +4,15 @@ from ditto_core.engine.compile_cache import (
     SQLiteCompileCache,
     SQLiteCompileCacheBackend,
 )
+from ditto_core.engine.errors import (
+    DerivedDependencyError,
+    DerivedError,
+    DerivedMaterializationError,
+    DerivedNotFoundError,
+    DerivedNotImplementedError,
+    DerivedValidationError,
+    DerivedVersionError,
+)
 from ditto_core.engine.expression import ExpressionCompiler
 from ditto_core.engine.materialization import (
     Analysis,
@@ -65,11 +74,16 @@ __all__ = [
     "CompileIdentity",
     "CompiledDerivedExpression",
     "DatasetSnapshot",
+    "DerivedDependencyError",
+    "DerivedError",
     "DerivedExecutionPlan",
     "DerivedExecutionPlanner",
     "DerivedInvalidationEvent",
+    "DerivedMaterializationError",
     "DerivedMaterializationRequest",
     "DerivedMaterializationResult",
+    "DerivedNotFoundError",
+    "DerivedNotImplementedError",
     "DerivedPartition",
     "DerivedRole",
     "DerivedRun",
@@ -78,7 +92,9 @@ __all__ = [
     "DerivedRunTrigger",
     "DerivedSpec",
     "DerivedState",
+    "DerivedValidationError",
     "DerivedVersion",
+    "DerivedVersionError",
     "DerivedVersionStatus",
     "ExpressionCompiler",
     "GrainId",
