@@ -107,6 +107,9 @@ def dependency_refs(
         if dependency.startswith("market."):
             refs.append(("dataset", _market_dependency_ref(dependency)))
             continue
+        if dependency.startswith("etf."):
+            refs.append(("dataset", _etf_dependency_ref(dependency)))
+            continue
         if "." not in dependency:
             continue
         refs.append(("derived", dependency))
@@ -184,5 +187,20 @@ def _market_dependency_ref(dependency: str) -> str:
         return "market.stock_status"
     raise NotImplementedError(
         "Unsupported market dependency for durable persistence: "
+        + f"dependency={dependency}"
+    )
+
+
+_ETF_DAILY_COLUMNS = frozenset(
+    {"open", "high", "low", "close", "pre_close", "volume", "amount", "pct_change"}
+)
+
+
+def _etf_dependency_ref(dependency: str) -> str:
+    column_name = dependency.removeprefix("etf.")
+    if column_name in _ETF_DAILY_COLUMNS:
+        return "etf.daily"
+    raise NotImplementedError(
+        "Unsupported ETF dependency for durable persistence: "
         + f"dependency={dependency}"
     )
