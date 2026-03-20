@@ -25,12 +25,15 @@ from ditto_datahub.sources.source import DataSources
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_port.registry import ConfigProvider
 from ditto_port.registry.datahub import (
+    CapitalProvider,
     DerivedProvider,
     MarketProvider,
     MetadataProvider,
     RuntimeProvider,
 )
 from ditto_port.services.derived import ResearchDatasetFacade
+
+# CapitalProvider is used in _make_container to satisfy MetadataService deps
 
 
 def _sources_provider() -> Provider:
@@ -60,6 +63,7 @@ def _make_container(*, monkeypatch, tmp_path: Path):
         RuntimeProvider(),
         MetadataProvider(),
         MarketProvider(),
+        CapitalProvider(),
         DerivedProvider(),
     )
 

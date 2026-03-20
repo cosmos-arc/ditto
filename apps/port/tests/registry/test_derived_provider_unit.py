@@ -10,6 +10,7 @@ from ditto_datahub.sources import ExchangeTransformers
 from ditto_datahub.sources.source import DataSources
 from ditto_port.registry import ConfigProvider
 from ditto_port.registry.datahub import (
+    CapitalProvider,
     DerivedProvider,
     MarketProvider,
     MetadataProvider,
@@ -57,6 +58,7 @@ class TestDerivedProvider:
             RuntimeProvider(),
             MetadataProvider(),
             MarketProvider(),
+            CapitalProvider(),
             DerivedProvider(),
         )
 
@@ -103,6 +105,7 @@ class TestDerivedProvider:
             RuntimeProvider(),
             MetadataProvider(),
             MarketProvider(),
+            CapitalProvider(),
             DerivedProvider(),
         )
 
