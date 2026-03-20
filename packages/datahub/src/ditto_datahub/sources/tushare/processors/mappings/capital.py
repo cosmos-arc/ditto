@@ -278,6 +278,50 @@ CASH_FLOW_MAPPING = ColumnMapping(
     ),
 )
 
+# Share Buyback (限售解禁) - Non-PIT data
+SHARE_BUYBACK_MAPPING = ColumnMapping(
+    rename={
+        "ts_code": "source_ticker",
+        "ann_date": "announcement_date",
+        "float_date": "effective_date",
+        "float_share": "float_shares",
+    },
+    date_columns={"announcement_date": "%Y%m%d", "effective_date": "%Y%m%d"},
+    float_columns=["float_shares", "float_ratio"],
+    output_columns=(
+        "source_ticker",
+        "announcement_date",
+        "effective_date",
+        "float_shares",
+        "float_ratio",
+    ),
+)
+
+# Rights Issue (配股) - Non-PIT data
+RIGHTS_ISSUE_MAPPING = ColumnMapping(
+    rename={
+        "ts_code": "source_ticker",
+        "ann_date": "announcement_date",
+        "reg_date": "record_date",
+        "ex_date": "ex_rights_date",
+    },
+    date_columns={
+        "announcement_date": "%Y%m%d",
+        "record_date": "%Y%m%d",
+        "ex_rights_date": "%Y%m%d",
+    },
+    float_columns=["rights_price", "rights_ratio"],
+    output_columns=(
+        "source_ticker",
+        "rights_type",
+        "announcement_date",
+        "record_date",
+        "ex_rights_date",
+        "rights_price",
+        "rights_ratio",
+    ),
+)
+
 __all__ = [
     "BALANCE_SHEET_MAPPING",
     "CASH_FLOW_MAPPING",
@@ -287,5 +331,7 @@ __all__ = [
     "INDEX_COMPOSITION_MAPPING",
     "MARGIN_TRADING_MAPPING",
     "PLEDGE_RATIO_MAPPING",
+    "RIGHTS_ISSUE_MAPPING",
+    "SHARE_BUYBACK_MAPPING",
     "VALUATION_METRICS_MAPPING",
 ]

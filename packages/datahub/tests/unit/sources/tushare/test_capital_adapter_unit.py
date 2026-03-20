@@ -228,3 +228,115 @@ class TestCapitalTushareAdapterFetchCorporateActions:
         assert "source_ticker" in result.columns
         assert "action_type" in result.columns
         assert "announcement_date" in result.columns
+
+
+class TestCapitalTushareAdapterFetchShareBuyback:
+    """Tests for fetch_share_buyback method."""
+
+    def test_fetch_share_buyback_returns_dataframe(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        """Test fetching share buyback data returns valid DataFrame."""
+        # Arrange - Mock Tushare share_float API response
+        mock_response = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "ann_date": ["20240101"],
+                "float_date": ["20240115"],
+                "float_share": [50000000.0],
+                "float_ratio": [2.5],
+            }
+        )
+
+        mock_client = mocker.Mock()
+        mock_client.query.return_value = mock_response
+
+        # Act
+        adapter = CapitalTushareAdapter(_client=mock_client)
+        result = adapter.fetch_share_buyback(ts_code="000001.SZ")
+
+        # Assert
+        assert len(result) > 0
+        assert "source_ticker" in result.columns
+        assert "announcement_date" in result.columns
+        assert "effective_date" in result.columns
+        assert "float_shares" in result.columns
+        assert "float_ratio" in result.columns
+
+    def test_fetch_share_buyback_empty_response(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        """Test fetching share buyback with empty response returns empty DataFrame."""
+        # Arrange
+        mock_response = pl.DataFrame()
+
+        mock_client = mocker.Mock()
+        mock_client.query.return_value = mock_response
+
+        # Act
+        adapter = CapitalTushareAdapter(_client=mock_client)
+        result = adapter.fetch_share_buyback(ts_code="000001.SZ")
+
+        # Assert
+        assert len(result) == 0
+        assert "source_ticker" in result.columns
+
+
+class TestCapitalTushareAdapterFetchRightsIssue:
+    """Tests for fetch_rights_issue method."""
+
+    def test_fetch_rights_issue_returns_dataframe(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        """Test fetching rights issue data returns valid DataFrame."""
+        # Arrange - Mock Tushare rights API response
+        mock_response = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "rights_type": ["A"],
+                "ann_date": ["20240101"],
+                "reg_date": ["20240110"],
+                "ex_date": ["20240111"],
+                "rights_price": [5.0],
+                "rights_ratio": [0.3],
+            }
+        )
+
+        mock_client = mocker.Mock()
+        mock_client.query.return_value = mock_response
+
+        # Act
+        adapter = CapitalTushareAdapter(_client=mock_client)
+        result = adapter.fetch_rights_issue(ts_code="000001.SZ")
+
+        # Assert
+        assert len(result) > 0
+        assert "source_ticker" in result.columns
+        assert "rights_type" in result.columns
+        assert "announcement_date" in result.columns
+        assert "record_date" in result.columns
+        assert "ex_rights_date" in result.columns
+        assert "rights_price" in result.columns
+        assert "rights_ratio" in result.columns
+
+    def test_fetch_rights_issue_empty_response(
+        self,
+        mocker: pytest_mock.MockFixture,
+    ) -> None:
+        """Test fetching rights issue with empty response returns empty DataFrame."""
+        # Arrange
+        mock_response = pl.DataFrame()
+
+        mock_client = mocker.Mock()
+        mock_client.query.return_value = mock_response
+
+        # Act
+        adapter = CapitalTushareAdapter(_client=mock_client)
+        result = adapter.fetch_rights_issue(ts_code="000001.SZ")
+
+        # Assert
+        assert len(result) == 0
+        assert "source_ticker" in result.columns

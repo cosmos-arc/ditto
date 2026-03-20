@@ -47,9 +47,12 @@ from ditto_datahub.models.features import (
 )
 from ditto_datahub.models.ingestion import (
     DataChangedError,
+    DataLateArrivalPolicy,
     IngestionCursor,
     IngestionLog,
     IngestionStatus,
+    LateArrivalCheckResult,
+    LateArrivalRejectedError,
     NotTradingDayError,
 )
 from ditto_datahub.models.macro import MacroCategory, MacroFrequency
@@ -122,6 +125,7 @@ __all__ = [
     "CompiledExpressionCacheRecord",
     "CompiledExpressionOperatorRecord",
     "DataChangedError",
+    "DataLateArrivalPolicy",
     "Dataset",
     "DateScheduleType",
     "DerivedCheckpointRecord",
@@ -152,6 +156,8 @@ __all__ = [
     "InstrumentExtension",
     "InstrumentIdRange",
     "InstrumentRegistration",
+    "LateArrivalCheckResult",
+    "LateArrivalRejectedError",
     "MacroCategory",
     "MacroFrequency",
     "MarketState",

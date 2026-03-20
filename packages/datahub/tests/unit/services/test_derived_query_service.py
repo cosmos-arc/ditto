@@ -590,6 +590,7 @@ class TestQueryForEvaluation:
             start="2026-03-15",
             end="2026-03-15",
             as_of="2026-03-15",
+            streaming=False,
         )
 
     def test_query_for_evaluation_returns_empty_on_no_data(self) -> None:
@@ -664,6 +665,356 @@ def test_empty_result_helpers_expose_stable_columns() -> None:
     assert empty_latest_result().columns == list(LATEST_RESULT_COLUMNS)
     assert empty_series_result().columns == list(SERIES_RESULT_COLUMNS)
     assert empty_compare_result().columns == list(COMPARE_RESULT_COLUMNS)
+
+
+class TestStreamingMemoryManagement:
+    """Tests for streaming and lazy query support on DerivedQueryService."""
+
+    def test_find_series_passes_streaming_to_read_frame(self) -> None:
+        """find_series(streaming=True) should pass streaming=True to read_frame."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_offline_version.return_value = 1
+        artifact_reader.read_frame.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2026, 3, 10)],
+                "value": [1.0],
+                "availability_time": [date(2026, 3, 10)],
+            }
+        )
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+        query = DerivedSeriesQuery(
+            derived_ids=("factor.momentum_20d",),
+            instrument_ids=(1,),
+            start="2026-03-10",
+            end="2026-03-11",
+        )
+
+        service.find_series(query, streaming=True)
+
+        artifact_reader.read_frame.assert_called_once_with(
+            derived_id="factor.momentum_20d",
+            version=1,
+            instrument_ids=(1,),
+            start="2026-03-10",
+            end="2026-03-11",
+            as_of=None,
+            streaming=True,
+        )
+
+    def test_find_series_defaults_to_non_streaming(self) -> None:
+        """find_series() should default to streaming=False for backward compat."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_offline_version.return_value = 1
+        artifact_reader.read_frame.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2026, 3, 10)],
+                "value": [1.0],
+                "availability_time": [date(2026, 3, 10)],
+            }
+        )
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+        query = DerivedSeriesQuery(
+            derived_ids=("factor.momentum_20d",),
+            instrument_ids=(1,),
+        )
+
+        service.find_series(query)
+
+        artifact_reader.read_frame.assert_called_once_with(
+            derived_id="factor.momentum_20d",
+            version=1,
+            instrument_ids=(1,),
+            start=None,
+            end=None,
+            as_of=None,
+            streaming=False,
+        )
+
+    def test_find_latest_passes_streaming_to_read_frame(self) -> None:
+        """find_latest(streaming=True) should pass streaming=True to read_frame."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_serving_version.return_value = 2
+        artifact_reader.read_frame.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2026, 3, 11)],
+                "value": 2.0,
+                "availability_time": [date(2026, 3, 11)],
+            }
+        )
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+        query = DerivedLatestQuery(
+            derived_ids=("factor.momentum_20d",),
+            instrument_ids=(1,),
+        )
+
+        service.find_latest(query, streaming=True)
+
+        artifact_reader.read_frame.assert_called_once_with(
+            derived_id="factor.momentum_20d",
+            version=2,
+            instrument_ids=(1,),
+            as_of=None,
+            streaming=True,
+        )
+
+    def test_find_latest_defaults_to_non_streaming(self) -> None:
+        """find_latest() should default to streaming=False for backward compat."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_serving_version.return_value = 2
+        artifact_reader.read_frame.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2026, 3, 11)],
+                "value": 2.0,
+                "availability_time": [date(2026, 3, 11)],
+            }
+        )
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+        query = DerivedLatestQuery(
+            derived_ids=("factor.momentum_20d",),
+            instrument_ids=(1,),
+        )
+
+        service.find_latest(query)
+
+        artifact_reader.read_frame.assert_called_once_with(
+            derived_id="factor.momentum_20d",
+            version=2,
+            instrument_ids=(1,),
+            as_of=None,
+            streaming=False,
+        )
+
+    def test_query_for_evaluation_passes_streaming_to_read_frame(self) -> None:
+        """query_for_evaluation(streaming=True) should pass streaming=True."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_offline_version.return_value = 1
+        artifact_reader.read_frame.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2026, 3, 10)],
+                "value": [1.0],
+                "availability_time": [date(2026, 3, 10)],
+            }
+        )
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+
+        service.query_for_evaluation(
+            derived_ids=("factor.momentum_20d",),
+            streaming=True,
+        )
+
+        artifact_reader.read_frame.assert_called_once_with(
+            derived_id="factor.momentum_20d",
+            version=1,
+            instrument_ids=None,
+            start=None,
+            end=None,
+            as_of=None,
+            streaming=True,
+        )
+
+    def test_query_for_evaluation_defaults_to_non_streaming(self) -> None:
+        """query_for_evaluation() should default to streaming=False."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_offline_version.return_value = 1
+        artifact_reader.read_frame.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2026, 3, 10)],
+                "value": [1.0],
+                "availability_time": [date(2026, 3, 10)],
+            }
+        )
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+
+        service.query_for_evaluation(
+            derived_ids=("factor.momentum_20d",),
+        )
+
+        artifact_reader.read_frame.assert_called_once_with(
+            derived_id="factor.momentum_20d",
+            version=1,
+            instrument_ids=None,
+            start=None,
+            end=None,
+            as_of=None,
+            streaming=False,
+        )
+
+    def test_compare_sources_passes_streaming_to_read_frame(self) -> None:
+        """compare_sources(streaming=True) should pass streaming=True to all reads."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_serving_version.return_value = 2
+        artifact_reader.resolve_offline_version.return_value = 3
+        artifact_reader.read_frame.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2026, 3, 10)],
+                "value": [1.0],
+                "availability_time": [date(2026, 3, 10)],
+            }
+        )
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+        query = DerivedCompareQuery(
+            derived_ids=("factor.momentum_20d",),
+            instrument_ids=(1,),
+            start="2026-03-10",
+            end="2026-03-11",
+            version=3,
+        )
+
+        service.compare_sources(query, streaming=True)
+
+        assert artifact_reader.read_frame.call_count == 2
+        for call_args in artifact_reader.read_frame.call_args_list:
+            assert call_args.kwargs.get("streaming") is True
+
+    def test_query_as_lazy_returns_lazy_frame(self) -> None:
+        """query_as_lazy() should return a pl.LazyFrame for custom processing."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        lazy_frame = pl.LazyFrame(
+            {
+                "instrument_id": [1],
+                "trade_date": [date(2026, 3, 10)],
+                "value": [1.0],
+                "availability_time": [date(2026, 3, 10)],
+            }
+        )
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_offline_version.return_value = 1
+        artifact_reader.read_frame.return_value = lazy_frame
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+
+        result = service.query_as_lazy(
+            derived_ids=("factor.momentum_20d",),
+            start="2026-03-10",
+            end="2026-03-11",
+        )
+
+        assert isinstance(result, pl.LazyFrame)
+        artifact_reader.read_frame.assert_called_once_with(
+            derived_id="factor.momentum_20d",
+            version=1,
+            instrument_ids=None,
+            start="2026-03-10",
+            end="2026-03-11",
+            as_of=None,
+            as_lazy=True,
+        )
+
+    def test_query_as_lazy_multiple_derived_ids_returns_lazy_frame(
+        self,
+    ) -> None:
+        """query_as_lazy() with multiple ids should return a LazyFrame concat."""
+        catalog_service = MagicMock(spec=DerivedCatalogService)
+        catalog_service.list_specs.return_value = ()
+        catalog_service.get_version.return_value = None
+
+        artifact_reader = MagicMock(spec=DerivedArtifactReader)
+        artifact_reader.resolve_offline_version.return_value = 1
+
+        def mock_read_frame(**kwargs: object) -> pl.LazyFrame | pl.DataFrame:
+            derived_id = kwargs["derived_id"]
+            if derived_id == "factor.momentum_20d":
+                return pl.LazyFrame(
+                    {
+                        "instrument_id": [1],
+                        "trade_date": [date(2026, 3, 10)],
+                        "value": [10.0],
+                        "availability_time": [date(2026, 3, 10)],
+                    }
+                )
+            return pl.LazyFrame(
+                {
+                    "instrument_id": [2],
+                    "trade_date": [date(2026, 3, 10)],
+                    "value": [20.0],
+                    "availability_time": [date(2026, 3, 10)],
+                }
+            )
+
+        artifact_reader.read_frame.side_effect = mock_read_frame
+
+        service = DerivedQueryService(
+            catalog_service=catalog_service,
+            artifact_reader=artifact_reader,
+        )
+
+        result = service.query_as_lazy(
+            derived_ids=("factor.momentum_20d", "factor.volatility_10d"),
+        )
+
+        assert isinstance(result, pl.LazyFrame)
+        collected = result.collect()
+        assert collected.height == 2
 
 
 def test_services_exports_switch_to_derived_query_contract() -> None:

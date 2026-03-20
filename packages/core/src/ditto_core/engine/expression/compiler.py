@@ -32,7 +32,11 @@ from ditto_core.engine.materialization.contracts import (
 )
 from ditto_core.engine.specs import DerivedSpec
 
-__all__ = ["ExpressionCompiler", "compute_compile_cache_key"]
+__all__ = [
+    "ExpressionCompiler",
+    "compute_compile_cache_key",
+    "detect_dependency_cycles",
+]
 
 _ANALYSIS_VERSION = "analysis-v1"
 _CODEGEN_VERSION = "expr-v1"
@@ -45,13 +49,14 @@ _MAX_LOOKBACK = 252
 
 def compute_compile_cache_key(
     spec: DerivedSpec,
-) -> tuple[str, Analysis, CompileIdentity]:
+) -> tuple[str, Analysis, CompileIdentity, ExpressionNode]:
     """
     Compute the cache key for a spec without performing codegen.
 
-    Returns a ``(cache_key, analysis, compile_identity)`` tuple.  The
-    expression is parsed and analysed so that operator versions can be
-    resolved, but no Polars expression is generated.
+    Returns a ``(cache_key, analysis, compile_identity, ast)`` tuple.
+    The expression is parsed and analysed so that operator versions can be
+    resolved, but no Polars expression is generated.  The parsed AST is
+    returned so callers can avoid double-parsing on cache hits.
     """
     spec.validate_spec()
     tokens = tokenize(spec.expression)
@@ -104,24 +109,26 @@ def compute_compile_cache_key(
         operator_versions=operator_versions,
         global_compile_flags=("grain=1d", "entity_key=instrument_id"),
     )
-    return cache_key, analysis, compile_identity
+    return cache_key, analysis, compile_identity, ast
 
 
 class ExpressionCompiler:
     """Compile a derived expression into executable Polars state."""
 
-    def compile(self, spec: DerivedSpec) -> CompiledDerivedExpression:
+    def compile(
+        self,
+        spec: DerivedSpec,
+        *,
+        ast: ExpressionNode | None = None,
+    ) -> CompiledDerivedExpression:
         """Compile one spec into a Polars expression and compile identity."""
-        _cache_key, analysis, compile_identity = compute_compile_cache_key(spec)
+        _cache_key, analysis, compile_identity, parsed_ast = compute_compile_cache_key(
+            spec
+        )
 
-        # NOTE: tokenization + parsing is repeated here (already done inside
-        # compute_compile_cache_key).  This is acceptable because parsing is
-        # cheap relative to codegen.  A future optimisation could return the
-        # AST from compute_compile_cache_key to avoid the redundancy.
-        tokens = tokenize(spec.expression)
-        ast = ExpressionParser(tokens, spec.expression).parse()
-        self._enforce_limits(spec.expression, ast, analysis.lookback)
-        expr = compile_expression(ast, spec, source=spec.expression)
+        ast_to_use = ast if ast is not None else parsed_ast
+        self._enforce_limits(spec.expression, ast_to_use, analysis.lookback)
+        expr = compile_expression(ast_to_use, spec, source=spec.expression)
 
         return CompiledDerivedExpression(
             derived_id=spec.id,
@@ -211,3 +218,50 @@ def _measure_expression(expression: ExpressionNode) -> tuple[int, int]:
                 total_nodes += nodes
             return (max_depth + 1, total_nodes)
     raise ValueError(f"unsupported expression node: {expression!r}")
+
+
+def detect_dependency_cycles(
+    graph: dict[str, tuple[str, ...]],
+) -> None:
+    """
+    Detect cycles in a dependency graph using Kahn's algorithm.
+
+    Parameters
+    ----------
+    graph:
+        Mapping of node name to its dependency list.  The key is the node
+        identifier and the value is a tuple of nodes it depends on.
+
+    Raises
+    ------
+    ValueError
+        If a cycle is detected.  The message includes the names of the
+        nodes involved in the cycle.
+
+    """
+    in_degree: dict[str, int] = dict.fromkeys(graph, 0)
+    # Build adjacency list (node -> dependents) and compute in-degrees.
+    dependents: dict[str, list[str]] = {node: [] for node in graph}
+    for node, deps in graph.items():
+        for dep in deps:
+            if dep not in graph:
+                # External dependency (e.g. market.close), skip.
+                continue
+            in_degree[node] = in_degree.get(node, 0) + 1
+            dependents.setdefault(dep, []).append(node)
+
+    # Start with nodes that have zero in-degree (no internal dependencies).
+    queue: list[str] = [n for n, d in in_degree.items() if d == 0]
+    visited = 0
+
+    while queue:
+        node = queue.pop(0)
+        visited += 1
+        for dependent in dependents.get(node, []):
+            in_degree[dependent] -= 1
+            if in_degree[dependent] == 0:
+                queue.append(dependent)
+
+    if visited != len(graph):
+        cycle_nodes = [n for n, d in in_degree.items() if d > 0]
+        raise ValueError(f"dependency cycle detected involving nodes: {cycle_nodes}")

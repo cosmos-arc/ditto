@@ -259,7 +259,12 @@ def _track_compile_calls(service: SQLiteCompileCache) -> Any:
     original_compile = service._compiler.compile
     call_count = [0]
 
-    def _counting_compile(spec: DerivedSpec) -> CompiledDerivedExpression:
+    def _counting_compile(
+        spec: DerivedSpec,
+        *,
+        ast: object = None,
+    ) -> CompiledDerivedExpression:
+        del ast
         call_count[0] += 1
         return original_compile(spec)
 

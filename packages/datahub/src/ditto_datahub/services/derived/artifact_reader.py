@@ -133,7 +133,7 @@ class DerivedArtifactReader:
         streaming: bool = False,
         max_rows: int | None = None,
         as_lazy: Literal[True],
-    ) -> pl.LazyFrame: ...
+    ) -> pl.DataFrame | pl.LazyFrame: ...
 
     def read_frame(  # noqa: PLR0913
         self,

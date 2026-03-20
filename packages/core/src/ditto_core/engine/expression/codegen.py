@@ -80,8 +80,12 @@ _WINDOW_KIND_BY_NAME = {
 
 _SCALAR_UNARY_OPERATORS: dict[str, Callable[[pl.Expr], pl.Expr]] = {
     "abs": lambda expr: expr.abs(),
+    "ceil": lambda expr: expr.ceil(),
     "exp": lambda expr: expr.exp(),
+    "floor": lambda expr: expr.floor(),
     "log": lambda expr: expr.log(),
+    "log10": lambda expr: expr.log10(),
+    "log2": lambda expr: expr.log(base=2),
     "sign": lambda expr: expr.sign(),
     "sqrt": lambda expr: expr.sqrt(),
 }
@@ -283,12 +287,23 @@ def _compile_call(
     cross_section = _compile_cross_section(
         name=name,
         arguments=arguments,
+        raw_arguments=raw_arguments,
+        source=source,
         time_keys=time_keys,
     )
     if cross_section is not None:
         return cross_section
 
-    scalar = _compile_scalar(name=name, arguments=arguments)
+    grouped = _compile_grouped_cross_section(name=name, arguments=arguments)
+    if grouped is not None:
+        return grouped
+
+    scalar = _compile_scalar(
+        name=name,
+        arguments=arguments,
+        raw_arguments=raw_arguments,
+        source=source,
+    )
     if scalar is not None:
         return scalar
 
@@ -301,6 +316,200 @@ def _compile_call(
     )
 
 
+def _read_window_at(
+    raw_arguments: tuple[ExpressionNode, ...],
+    index: int,
+    *,
+    source: str,
+) -> int:
+    """Read and validate a positive window from raw arguments at *index*."""
+    window = _read_int_literal(raw_arguments, index, source=source)
+    _require_positive(window, raw_arguments[index].span, source=source)
+    return window
+
+
+def _ts_delay(
+    arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    entity_keys: list[str],
+    source: str,
+) -> pl.Expr:
+    period = _read_window_at(raw_arguments, 1, source=source)
+    return arguments[0].shift(period).over(entity_keys)
+
+
+def _ts_delta(
+    arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    entity_keys: list[str],
+    source: str,
+) -> pl.Expr:
+    period = _read_window_at(raw_arguments, 1, source=source)
+    return arguments[0] - arguments[0].shift(period).over(entity_keys)
+
+
+def _ts_pct_change(
+    arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    entity_keys: list[str],
+    source: str,
+) -> pl.Expr:
+    period = _read_window_at(raw_arguments, 1, source=source)
+    shifted = arguments[0].shift(period).over(entity_keys)
+    return pl.when(shifted == 0).then(0.0).otherwise((arguments[0] / shifted) - 1)
+
+
+def _ts_rank(
+    arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    entity_keys: list[str],
+    source: str,
+) -> pl.Expr:
+    window = _read_window_at(raw_arguments, 1, source=source)
+    shifted = arguments[0].shift(1)
+    return (
+        shifted.rolling_rank(window_size=window, min_samples=window)
+        .cast(pl.Float64)
+        .over(entity_keys)
+        / window
+    )
+
+
+def _ts_argmax(
+    arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    entity_keys: list[str],
+    source: str,
+) -> pl.Expr:
+    window = _read_window_at(raw_arguments, 1, source=source)
+    shifted = arguments[0].shift(1)
+
+    def _rolling_argmax(s: pl.Series) -> int:
+        idx = s.arg_max()
+        return idx if idx is not None else -1
+
+    return shifted.rolling_map(
+        _rolling_argmax,
+        window_size=window,
+        min_samples=window,
+    ).over(entity_keys)
+
+
+def _ts_argmin(
+    arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    entity_keys: list[str],
+    source: str,
+) -> pl.Expr:
+    window = _read_window_at(raw_arguments, 1, source=source)
+    shifted = arguments[0].shift(1)
+
+    def _rolling_argmin(s: pl.Series) -> int:
+        idx = s.arg_min()
+        return idx if idx is not None else -1
+
+    return shifted.rolling_map(
+        _rolling_argmin,
+        window_size=window,
+        min_samples=window,
+    ).over(entity_keys)
+
+
+def _ts_corr(
+    arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    entity_keys: list[str],
+    source: str,
+) -> pl.Expr:
+    window = _read_window_at(raw_arguments, 2, source=source)
+    shifted_x = arguments[0].shift(1)
+    shifted_y = arguments[1].shift(1)
+    return pl.rolling_corr(
+        shifted_x,
+        shifted_y,
+        window_size=window,
+        min_samples=window,
+    ).over(entity_keys)
+
+
+def _ts_cov(
+    arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    entity_keys: list[str],
+    source: str,
+) -> pl.Expr:
+    window = _read_window_at(raw_arguments, 2, source=source)
+    shifted_x = arguments[0].shift(1)
+    shifted_y = arguments[1].shift(1)
+    return pl.rolling_cov(
+        shifted_x,
+        shifted_y,
+        window_size=window,
+        min_samples=window,
+    ).over(entity_keys)
+
+
+def _ts_ema(
+    arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    entity_keys: list[str],
+    source: str,
+) -> pl.Expr:
+    window = _read_window_at(raw_arguments, 1, source=source)
+    shifted = arguments[0].shift(1)
+    return shifted.ewm_mean(span=window, min_samples=1).over(
+        entity_keys,
+    )
+
+
+def _ts_decay_linear(
+    arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    entity_keys: list[str],
+    source: str,
+) -> pl.Expr:
+    window = _read_window_at(raw_arguments, 1, source=source)
+    shifted = arguments[0].shift(1)
+
+    def _wma(s: pl.Series) -> float:
+        valid = s.drop_nulls()
+        if valid.is_empty():
+            return float("nan")
+        n = len(valid)
+        weights = list(range(1, n + 1))
+        total_weight = n * (n + 1) // 2
+        return (
+            sum(w * v for w, v in zip(weights, valid.to_list(), strict=True))
+            / total_weight
+        )
+
+    return shifted.rolling_map(
+        _wma,
+        window_size=window,
+        min_samples=window,
+    ).over(entity_keys)
+
+
+type _TsSpecialFn = Callable[
+    [tuple[pl.Expr, ...], tuple[ExpressionNode, ...], list[str], str],
+    pl.Expr,
+]
+
+_TS_SPECIAL_DISPATCH: dict[str, _TsSpecialFn] = {
+    "ts_delay": _ts_delay,
+    "ts_delta": _ts_delta,
+    "ts_diff": _ts_delta,
+    "ts_pct_change": _ts_pct_change,
+    "ts_rank": _ts_rank,
+    "ts_argmax": _ts_argmax,
+    "ts_argmin": _ts_argmin,
+    "ts_corr": _ts_corr,
+    "ts_cov": _ts_cov,
+    "ts_ema": _ts_ema,
+    "ts_decay_linear": _ts_decay_linear,
+}
+
+
 def _compile_time_series_special(
     *,
     name: str,
@@ -309,47 +518,18 @@ def _compile_time_series_special(
     entity_keys: list[str],
     source: str,
 ) -> pl.Expr | None:
-    if name == "ts_delay":
-        period = _read_int_literal(raw_arguments, 1, source=source)
-        return arguments[0].shift(period).over(entity_keys)
-    if name in {"ts_delta", "ts_diff"}:
-        period = _read_int_literal(raw_arguments, 1, source=source)
-        return arguments[0] - arguments[0].shift(period).over(entity_keys)
-    if name == "ts_pct_change":
-        period = _read_int_literal(raw_arguments, 1, source=source)
-        return (arguments[0] / arguments[0].shift(period).over(entity_keys)) - 1
-    if name == "ts_rank":
-        window = _read_int_literal(raw_arguments, 1, source=source)
-        shifted = arguments[0].shift(1)
-        return (
-            shifted.rolling_rank(window_size=window, min_samples=window)
-            .cast(pl.Float64)
-            .over(entity_keys)
-            / window
-        )
-    if name in {"ts_argmax", "ts_argmin"}:
-        window = _read_int_literal(raw_arguments, 1, source=source)
-        shifted = arguments[0].shift(1)
-
-        def _rolling_argmax(s: pl.Series) -> int:
-            idx = s.arg_max()
-            return idx if idx is not None else -1
-
-        def _rolling_argmin(s: pl.Series) -> int:
-            idx = s.arg_min()
-            return idx if idx is not None else -1
-
-        arg_func = _rolling_argmax if name == "ts_argmax" else _rolling_argmin
-        return shifted.rolling_map(
-            arg_func, window_size=window, min_samples=window
-        ).over(entity_keys)
-    return None
+    handler = _TS_SPECIAL_DISPATCH.get(name)
+    if handler is None:
+        return None
+    return handler(arguments, raw_arguments, entity_keys, source)
 
 
 def _compile_cross_section(
     *,
     name: str,
     arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    source: str,
     time_keys: list[str],
 ) -> pl.Expr | None:
     if name == "cs_rank":
@@ -358,28 +538,57 @@ def _compile_cross_section(
         )
     if name == "cs_scale":
         denominator = arguments[0].abs().sum().over(time_keys)
-        return arguments[0] / denominator
+        return pl.when(denominator == 0).then(0.0).otherwise(arguments[0] / denominator)
     if name == "cs_zscore":
         mean = arguments[0].mean().over(time_keys)
         std = arguments[0].std().over(time_keys)
-        return (arguments[0] - mean) / std
+        return pl.when(std == 0).then(0.0).otherwise((arguments[0] - mean) / std)
     if name == "cs_demean":
         return arguments[0] - arguments[0].mean().over(time_keys)
     if name == "cs_winsorize":
-        mean = arguments[0].mean().over(time_keys)
-        std = arguments[0].std().over(time_keys)
-        return arguments[0].clip(mean - 3 * std, mean + 3 * std)
+        return _compile_cs_winsorize(arguments, raw_arguments, source, time_keys)
     return None
+
+
+def _compile_cs_winsorize(
+    arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    source: str,
+    time_keys: list[str],
+) -> pl.Expr:
+    """Compile cs_winsorize with sigma or quantile mode."""
+    _first, *remaining = raw_arguments
+    if remaining and isinstance(remaining[0], StringNode):
+        method_node = remaining[0]
+        if method_node.value == "quantile":
+            lower = _read_float_literal(raw_arguments, 2, source=source)
+            upper = _read_float_literal(raw_arguments, 3, source=source)
+            q_lo = arguments[0].quantile(lower).over(time_keys)
+            q_hi = arguments[0].quantile(upper).over(time_keys)
+            return arguments[0].clip(q_lo, q_hi)
+    # Sigma mode (default)
+    mean = arguments[0].mean().over(time_keys)
+    std = arguments[0].std().over(time_keys)
+    n_sigma = 3  # default
+    if remaining:
+        n_sigma = _read_int_literal(raw_arguments, 1, source=source)
+    return arguments[0].clip(mean - n_sigma * std, mean + n_sigma * std)
 
 
 def _compile_scalar(
     *,
     name: str,
     arguments: tuple[pl.Expr, ...],
+    raw_arguments: tuple[ExpressionNode, ...],
+    source: str,
 ) -> pl.Expr | None:
     unary_operation = _SCALAR_UNARY_OPERATORS.get(name)
     if unary_operation is not None:
         return unary_operation(arguments[0])
+
+    if name == "round":
+        decimals = _read_int_literal(raw_arguments, 1, source=source)
+        return arguments[0].round(decimals=decimals)
 
     binary_operation = _SCALAR_BINARY_OPERATORS.get(name)
     if binary_operation is not None:
@@ -389,6 +598,24 @@ def _compile_scalar(
         return arguments[0].clip(arguments[1], arguments[2])
     if name == "if_else":
         return pl.when(arguments[0]).then(arguments[1]).otherwise(arguments[2])
+    return pl.coalesce(*arguments) if name == "coalesce" else None
+
+
+def _compile_grouped_cross_section(
+    *,
+    name: str,
+    arguments: tuple[pl.Expr, ...],
+) -> pl.Expr | None:
+    if name == "group_rank":
+        group_size = pl.len().over(arguments[1]).cast(pl.Float64)
+        return (
+            arguments[0].rank(method="ordinal").over(arguments[1]).cast(pl.Float64)
+            / group_size
+        )
+    if name == "group_zscore":
+        mean = arguments[0].mean().over(arguments[1])
+        std = arguments[0].std().over(arguments[1])
+        return pl.when(std == 0).then(0.0).otherwise((arguments[0] - mean) / std)
     return None
 
 
@@ -401,6 +628,7 @@ def _rolling(
     source: str,
 ) -> pl.Expr:
     window = _read_int_literal(raw_arguments, index, source=source)
+    _require_positive(window, raw_arguments[index].span, source=source)
     shifted = argument.shift(1)
     builder = _ROLLING_BUILDERS.get(kind)
     if builder is None:
@@ -430,6 +658,35 @@ def _read_int_literal(
     return math.floor(argument.value)
 
 
+def _read_float_literal(
+    arguments: tuple[ExpressionNode, ...],
+    index: int,
+    *,
+    source: str,
+) -> float:
+    """Read and validate a float literal from raw arguments at *index*."""
+    argument = arguments[index]
+    if not isinstance(argument, NumberNode):
+        raise make_compile_error(
+            source=source,
+            message="quantile value must be a number",
+            error_code="E031_TYPE_MISMATCH",
+            span=argument.span,
+        )
+    return float(argument.value)
+
+
+def _require_positive(value: int, span: Span, *, source: str) -> None:
+    """Raise a compile error if *value* is not positive."""
+    if value <= 0:
+        raise make_compile_error(
+            source=source,
+            message=f"window size must be positive, got {value}",
+            error_code="E033_INVALID_PARAMETER",
+            span=span,
+        )
+
+
 def _validate_operator_call(
     *,
     name: str,
@@ -457,3 +714,12 @@ def _validate_operator_call(
             error_code="E032_ARGUMENT_ARITY",
             span=span,
         )
+    if name.startswith("ts_"):
+        for i, arg in enumerate(arguments):
+            if isinstance(arg, StringNode):
+                raise make_compile_error(
+                    source=source,
+                    message=f"operator '{name}' argument {i} must be numeric",
+                    error_code="E031_TYPE_MISMATCH",
+                    span=arg.span,
+                )

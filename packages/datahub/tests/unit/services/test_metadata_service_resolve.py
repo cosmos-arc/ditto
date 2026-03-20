@@ -28,6 +28,7 @@ def mock_dependencies() -> dict[str, MagicMock]:
         "rebalance_reader": MagicMock(),
         "rebalance_writer": MagicMock(),
         "instrument_id_allocator": MagicMock(),
+        "index_composition_reader": MagicMock(),
     }
 
 

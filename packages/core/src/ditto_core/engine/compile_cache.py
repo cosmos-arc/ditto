@@ -3,7 +3,7 @@ Compile cache for unified derived expressions.
 
 Implements a two-tier cache hierarchy:
 
-1. **L1 (memory)**: In-process dict keyed by cache key.  O(1) lookup.
+1. **L1 (memory)**: In-process LRU cache keyed by cache key.  O(1) lookup.
 2. **L2 (SQLite)**: Persistent cache across process restarts.
 
 Lookup order: L1 -> L2 -> full compile.  On L2 hit the expression is
@@ -18,6 +18,7 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
+import cachebox
 import orjson
 
 from ditto_core.engine.expression import ExpressionCompiler, compute_compile_cache_key
@@ -52,11 +53,18 @@ class SQLiteCompileCacheBackend(Protocol):
 
 
 class SQLiteCompileCache:
-    """Persist compile metadata while keeping an in-process L1 cache."""
+    """Persist compile metadata while keeping an in-process L1 LRU cache."""
 
-    def __init__(self, sqlite_client: SQLiteCompileCacheBackend) -> None:
+    def __init__(
+        self,
+        sqlite_client: SQLiteCompileCacheBackend,
+        *,
+        max_cache_size: int = 256,
+    ) -> None:
         self._sqlite_client = sqlite_client
-        self._memory_cache: dict[str, CompiledDerivedExpression] = {}
+        self._memory_cache = cachebox.LRUCache[str, CompiledDerivedExpression](
+            maxsize=max_cache_size,
+        )
         self._compiler = ExpressionCompiler()
 
     def get_or_compile(
@@ -69,27 +77,28 @@ class SQLiteCompileCache:
         Return a compiled expression, checking L1 then L2 before compiling.
 
         Lookup order:
-        1. L1 memory cache (O(1) dict lookup)
+        1. L1 memory cache (LRU lookup)
         2. L2 SQLite cache (confirms entry exists, then re-compiles)
         3. Full compile + persist to L1 and L2
         """
-        # Compute cache key WITHOUT full compilation.
-        cache_key = _precompute_cache_key(spec)
+        # Pre-compute cache key and AST to avoid double-parsing.
+        cache_key, _analysis, _identity, ast = compute_compile_cache_key(spec)
 
         # L1 hit
         if not force_recompile and cache_key in self._memory_cache:
             return self._memory_cache[cache_key]
 
         # L2 hit: if the key exists in SQLite we know the expression
-        # was previously compiled successfully.  Re-compile (required
-        # for a live ``pl.Expr``) and re-hydrate L1.
+        # was previously compiled successfully.  Re-compile using the
+        # pre-parsed AST (avoids redundant tokenization + parsing) and
+        # re-hydrate L1.
         if not force_recompile and self._has_sqlite_entry(cache_key):
-            compiled = self._compiler.compile(spec)
+            compiled = self._compiler.compile(spec, ast=ast)
             self._memory_cache[cache_key] = compiled
             return compiled
 
         # Full compile + persist to L1 and L2
-        compiled = self._compiler.compile(spec)
+        compiled = self._compiler.compile(spec, ast=ast)
         self._memory_cache[cache_key] = compiled
         self._persist_to_sqlite(spec, compiled)
         return compiled
@@ -156,12 +165,6 @@ class SQLiteCompileCache:
 # ------------------------------------------------------------------
 # Module-level helpers
 # ------------------------------------------------------------------
-
-
-def _precompute_cache_key(spec: DerivedSpec) -> str:
-    """Compute the cache key for *spec* without performing codegen."""
-    cache_key, _analysis, _identity = compute_compile_cache_key(spec)
-    return cache_key
 
 
 def _fetch_one(cursor: object) -> tuple[Any, ...] | None:

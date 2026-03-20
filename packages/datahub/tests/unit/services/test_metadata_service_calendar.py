@@ -33,6 +33,7 @@ def mock_dependencies() -> dict[str, MagicMock]:
         "rebalance_reader": MagicMock(),
         "rebalance_writer": MagicMock(),
         "instrument_id_allocator": MagicMock(),
+        "index_composition_reader": MagicMock(),
     }
 
 
@@ -67,6 +68,7 @@ def service(
         rebalance_reader=mock_dependencies["rebalance_reader"],
         rebalance_writer=mock_dependencies["rebalance_writer"],
         instrument_id_allocator=mock_dependencies["instrument_id_allocator"],
+        index_composition_reader=mock_dependencies["index_composition_reader"],
         exchange_transformers=exchange_transformers,
     )
 

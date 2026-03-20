@@ -2,14 +2,22 @@
 
 from ditto_core.engine.evaluation.report import (
     FactorEvaluationReport,
+    FactorExposureResult,
+    FamaMacBethResult,
     ICSummary,
     LongShortResult,
+    PerformanceAttributionResult,
+    RegimeICResult,
     TailRiskMetrics,
 )
 
 __all__ = [
     "FactorEvaluationReport",
+    "FactorExposureResult",
+    "FamaMacBethResult",
     "ICSummary",
     "LongShortResult",
+    "PerformanceAttributionResult",
+    "RegimeICResult",
     "TailRiskMetrics",
 ]

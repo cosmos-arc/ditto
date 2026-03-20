@@ -1,7 +1,7 @@
 # Ditto: 量化投资系统
 
-**版本**: v0.6.0
-**最后更新**: 2026-03-01
+**版本**: v0.7.0
+**最后更新**: 2026-03-19
 **状态**: 🔄 开发中
 
 ## 概要
@@ -12,9 +12,10 @@ Ditto 是一个面向 A 股市场的个人量化投资系统，专注于 ETF 行
 
 - **行业轮动策略**: 基于 Regime 识别的 ETF 行业轮动
 - **多因子模型**: 相对强弱、估值、波动率、拥挤度等因子
+- **因子评估体系**: IC 分析、Fama-MacBeth 回归、Regime IC、Performance Attribution
 - **严格风控**: 三层 Kill Switch 机制，回撤速度检测
 - **双引擎回测**: Fast 向量化引擎 + Production 事件驱动引擎
-- **数据质量**: 多源校验，PIT 安全，复权分离存储
+- **数据质量**: 多源校验，PIT 安全，复权分离存储，发布 DQ 增强约束
 - **ML 增强**: 机器学习因子权重学习（Phase 3+）
 
 ## 架构
@@ -221,6 +222,29 @@ ditto/
 - [ADR](docs/adr/README.md) - 架构决策记录
 
 ## 变更记录
+
+### v0.7.0 (2026-03-19)
+**新增**
+- **评估指标增强**（Layer 4 Phase 1-3）:
+  - `periods_per_year` 可配置化（默认 244）
+  - Sharpe 纳入无风险利率、Calmar Ratio
+  - 尾部风险指标（CVaR 95/99, 偏度, 超额峰度, 最大单日损失）
+  - Grinold-Kahn IR（Gordon Ritter 自相关修正）
+  - Fama-MacBeth 两步回归（支持多因子）
+  - 因子暴露分析（正交化 + 相关矩阵 + 残差 IC）
+  - Regime-Adjusted IC（Markov Regime Switching + 转移矩阵）
+  - IC 趋势监测（OLS 线性回归）
+  - Performance Attribution（Selection/Timing/Interaction 分解）
+- **发布安全 DQ 增强**: 覆盖率、均值/标准差/偏度、分布漂移、值跳跃率、最大连续空值
+- **失效传播韧性**（Layer 4 Phase 4-5）:
+  - 修复失败不终止（`RepairBatchResult`）
+  - 死信队列（3 次重试后转入 dead_letter）
+  - 优先级队列（signal > factor > label > feature）
+  - 跨事件去重（NOT EXISTS + 子集范围自动愈合）
+
+**改进**
+- 修复 `_estimate_avg_turnover` 运算符优先级 bug
+- 合并重复 `get_risk_factors()` 调用
 
 ### v0.6.0 (2026-03-01)
 **新增**

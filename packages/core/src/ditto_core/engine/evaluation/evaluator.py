@@ -254,25 +254,12 @@ class FactorEvaluator:
         # Sub-period IC
         sub_ic = sub_period_ic(rank_ic_df)
 
-        # Fama-MacBeth regression (optional)
+        # Fama-MacBeth regression and factor exposure analysis (optional)
         fm_result: FamaMacBethResult | None = None
-        if config.run_fama_macbeth and self._rf_provider is not None and self._rf_ids:
-            risk_dfs = self._rf_provider.get_risk_factors(
-                self._rf_ids,
-                effective_start,
-                effective_end,
-            )
-            if risk_dfs:
-                fm_result = fama_macbeth(
-                    factor_df_clean,
-                    return_df_clean,
-                    risk_factors=risk_dfs,
-                )
-
-        # Factor exposure analysis (optional)
         fe_result: FactorExposureResult | None = None
+        risk_dfs: dict[str, pl.DataFrame] = {}
         if (
-            config.run_exposure_analysis
+            (config.run_fama_macbeth or config.run_exposure_analysis)
             and self._rf_provider is not None
             and self._rf_ids
         ):
@@ -281,7 +268,14 @@ class FactorEvaluator:
                 effective_start,
                 effective_end,
             )
-            if risk_dfs:
+        if risk_dfs:
+            if config.run_fama_macbeth:
+                fm_result = fama_macbeth(
+                    factor_df_clean,
+                    return_df_clean,
+                    risk_factors=risk_dfs,
+                )
+            if config.run_exposure_analysis:
                 fe_result = factor_exposure(
                     factor_df_clean,
                     risk_dfs,
@@ -475,11 +469,9 @@ def _estimate_avg_turnover(
             curr = q_ret_df.filter(pl.col("trade_date") == dates[i])
             # If we had weight data we'd compute actual turnover;
             # here we estimate from quantile return stability
-            avg_change = abs(
-                curr.select(pl.col("mean_return").mean()).item()
-                or 0 - prev.select(pl.col("mean_return").mean()).item()
-                or 0
-            )
+            curr_mean = curr.select(pl.col("mean_return").mean()).item() or 0
+            prev_mean = prev.select(pl.col("mean_return").mean()).item() or 0
+            avg_change = abs(curr_mean - prev_mean)
             migrations.append(avg_change)
 
         return float(sum(migrations) / len(migrations)) if migrations else 0.0

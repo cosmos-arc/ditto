@@ -4,12 +4,19 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 import orjson
 import polars as pl
 
 __all__ = ["ResearchArtifactService"]
+
+ExportFormat = Literal["parquet", "csv", "feather"]
+_EXPORT_WRITERS: dict[ExportFormat, str] = {
+    "parquet": "write_parquet",
+    "csv": "write_csv",
+    "feather": "write_ipc",
+}
 
 
 class ResearchArtifactService:
@@ -36,6 +43,30 @@ class ResearchArtifactService:
         path = self._root / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
         frame.write_parquet(path)
+
+    # -- Multi-format export --
+
+    def export_dataset(
+        self,
+        relative_path: str,
+        frame: pl.DataFrame,
+        *,
+        fmt: ExportFormat = "parquet",
+    ) -> None:
+        """
+        Export a DataFrame in the specified format.
+
+        Creates parent directories as needed. Supported formats: parquet, csv, feather.
+        """
+        writer_name = _EXPORT_WRITERS.get(fmt)
+        if writer_name is None:
+            supported = ", ".join(_EXPORT_WRITERS)
+            raise ValueError(
+                f"unsupported format: {fmt!r}. Expected one of: {supported}"
+            )
+        path = self._root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        getattr(frame, writer_name)(path)
 
     # -- JSON --
 

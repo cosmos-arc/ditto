@@ -95,6 +95,71 @@ class TestWriteJson:
         assert keys == ["a", "z"]
 
 
+class TestExportDataset:
+    """Tests for multi-format dataset export."""
+
+    def test_export_parquet_default(self, tmp_path: Path) -> None:
+        """Default format is parquet."""
+        frame = pl.DataFrame({"a": [1, 2], "b": [3.0, 4.0]})
+
+        service = ResearchArtifactService(artifact_root=tmp_path)
+        service.export_dataset("out/data.parquet", frame)
+
+        result = pl.read_parquet(tmp_path / "out" / "data.parquet")
+        assert_frame_equal(result, frame)
+
+    def test_export_csv(self, tmp_path: Path) -> None:
+        """Export to CSV format."""
+        frame = pl.DataFrame({"a": [1, 2], "b": [3.0, 4.0]})
+
+        service = ResearchArtifactService(artifact_root=tmp_path)
+        service.export_dataset("out/data.csv", frame, fmt="csv")
+
+        result = pl.read_csv(tmp_path / "out" / "data.csv")
+        assert_frame_equal(result, frame)
+
+    def test_export_feather(self, tmp_path: Path) -> None:
+        """Export to Feather (IPC) format."""
+        frame = pl.DataFrame({"a": [1, 2], "b": [3.0, 4.0]})
+
+        service = ResearchArtifactService(artifact_root=tmp_path)
+        service.export_dataset("out/data.feather", frame, fmt="feather")
+
+        result = pl.read_ipc(tmp_path / "out" / "data.feather")
+        assert_frame_equal(result, frame)
+
+    def test_export_creates_parent_directories(self, tmp_path: Path) -> None:
+        """Parent directories are created automatically."""
+        frame = pl.DataFrame({"x": [10]})
+
+        service = ResearchArtifactService(artifact_root=tmp_path)
+        service.export_dataset("deep/nested/data.csv", frame, fmt="csv")
+
+        path = tmp_path / "deep" / "nested" / "data.csv"
+        assert path.exists()
+
+    def test_export_raises_for_unsupported_format(self, tmp_path: Path) -> None:
+        """Unsupported format raises ValueError."""
+        frame = pl.DataFrame({"x": [1]})
+
+        service = ResearchArtifactService(artifact_root=tmp_path)
+        with pytest.raises(ValueError, match="unsupported format"):
+            service.export_dataset("data.xlsx", frame, fmt="xlsx")
+
+    def test_export_overwrites_existing_file(self, tmp_path: Path) -> None:
+        """Existing file is overwritten."""
+        frame1 = pl.DataFrame({"x": [1]})
+        frame1.write_csv(tmp_path / "data.csv")
+
+        frame2 = pl.DataFrame({"x": [2, 3]})
+
+        service = ResearchArtifactService(artifact_root=tmp_path)
+        service.export_dataset("data.csv", frame2, fmt="csv")
+
+        result = pl.read_csv(tmp_path / "data.csv")
+        assert_frame_equal(result, frame2)
+
+
 class TestResolveArtifactRelativePath:
     def test_finds_matching_artifact(self, tmp_path: Path) -> None:
         version_root = (

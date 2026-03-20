@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import date
 from unittest.mock import MagicMock
 
+import polars as pl
 import pytest
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.sources import ExchangeTransformers
@@ -30,6 +32,7 @@ def mock_dependencies() -> dict[str, MagicMock]:
         "rebalance_reader": MagicMock(),
         "rebalance_writer": MagicMock(),
         "instrument_id_allocator": MagicMock(),
+        "index_composition_reader": MagicMock(),
     }
 
 
@@ -64,6 +67,7 @@ def service(
         rebalance_reader=mock_dependencies["rebalance_reader"],
         rebalance_writer=mock_dependencies["rebalance_writer"],
         instrument_id_allocator=mock_dependencies["instrument_id_allocator"],
+        index_composition_reader=mock_dependencies["index_composition_reader"],
         exchange_transformers=exchange_transformers,
     )
 
@@ -336,7 +340,6 @@ class TestGetFilteredUniverseMinListDays:
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
         """min_list_days > 0 时过滤掉上市天数不足的标的."""
-        import polars as pl
 
         mock_reader = mock_dependencies["instrument_reader"]
         mock_dependencies[
@@ -372,7 +375,6 @@ class TestGetFilteredUniverseMinListDays:
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
         """list_date 为 NULL 的标的在 min_list_days > 0 时被排除."""
-        import polars as pl
 
         mock_reader = mock_dependencies["instrument_reader"]
         mock_dependencies[
@@ -426,7 +428,6 @@ class TestGetFilteredUniverseMinListDays:
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
         """min_list_days 和 volume 过滤同时生效."""
-        import polars as pl
 
         mock_reader = mock_dependencies["instrument_reader"]
         mock_dependencies[
@@ -600,3 +601,52 @@ class TestUniverseSetOperations:
         for c in mock_deps.get_constituent_instrument_ids.call_args_list:
             # Positional args: (universe_id, asof)
             assert c[0][1] == "2024-01-15"
+
+
+# ============ sync_index_universe ============
+
+
+class TestSyncIndexUniverse:
+    """测试 sync_index_universe 从 index_composition 同步成分到 universe."""
+
+    def test_sync_index_universe_success(
+        self,
+        service: MetadataService,
+        mock_dependencies: dict[str, MagicMock],
+    ) -> None:
+        """正常同步：3 条成分 → replace_constituents 被正确调用."""
+        mock_ic = mock_dependencies["index_composition_reader"]
+        mock_ic.get.return_value = pl.DataFrame(
+            {
+                "index_id": ["399300.XSHE", "399300.XSHE", "399300.XSHE"],
+                "instrument_id": [101, 102, 103],
+                "weight": [0.05, 0.03, 0.02],
+                "effective_from": [date(2024, 1, 15)] * 3,
+                "effective_to": [None] * 3,
+            }
+        )
+        mock_dependencies["universe_writer"].replace_constituents.return_value = 3
+
+        result = service.sync_index_universe("399300.XSHE", date(2024, 6, 15))
+
+        assert result == 3
+        mock_ic.get.assert_called_once_with("399300.XSHE", date(2024, 6, 15))
+        mock_dependencies["universe_writer"].replace_constituents.assert_called_once()
+        call_args = mock_dependencies["universe_writer"].replace_constituents.call_args
+        assert call_args[0][0] == "399300.XSHE"
+        assert len(call_args[0][1]) == 3
+        assert call_args[0][2] == "2024-06-15"
+
+    def test_sync_index_universe_empty_composition(
+        self,
+        service: MetadataService,
+        mock_dependencies: dict[str, MagicMock],
+    ) -> None:
+        """空成分数据 → 不调用 replace_constituents，返回 0."""
+        mock_ic = mock_dependencies["index_composition_reader"]
+        mock_ic.get.return_value = pl.DataFrame()
+
+        result = service.sync_index_universe("399300.XSHE", date(2024, 6, 15))
+
+        assert result == 0
+        mock_dependencies["universe_writer"].replace_constituents.assert_not_called()

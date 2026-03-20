@@ -23,6 +23,7 @@ from ditto_datahub.models.metadata import (
 )
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.sources import ExchangeTransformers
+from ditto_datahub.stores.capital.index_composition import IndexCompositionReader
 from ditto_datahub.stores.metadata.calendar import CalendarReader, CalendarWriter
 from ditto_datahub.stores.metadata.industry import (
     IndustryMappingReader,
@@ -148,6 +149,7 @@ class MetadataService:
         rebalance_reader: Any,
         rebalance_writer: Any,
         instrument_id_allocator: InstrumentIdAllocator,
+        index_composition_reader: IndexCompositionReader,
         exchange_transformers: ExchangeTransformers,
     ) -> None:
         """
@@ -169,6 +171,7 @@ class MetadataService:
             rebalance_reader: 标的池调仓日程读取器.
             rebalance_writer: 标的池调仓日程写入器.
             instrument_id_allocator: instrument_id 分配器.
+            index_composition_reader: 指数成分股读取器.
             exchange_transformers: 交易所转换器工厂.
 
         """
@@ -187,6 +190,7 @@ class MetadataService:
         self._rebalance_reader = rebalance_reader
         self._rebalance_writer = rebalance_writer
         self._instrument_id_allocator = instrument_id_allocator
+        self._index_composition_reader = index_composition_reader
         self._exchange_transformers = exchange_transformers
 
         logger.debug(
@@ -796,6 +800,32 @@ class MetadataService:
         set_a = set(self._universe_reader.get_constituent_instrument_ids(id_a, asof))
         set_b = set(self._universe_reader.get_constituent_instrument_ids(id_b, asof))
         return sorted(set_a - set_b)
+
+    @traced("metadata.universe.sync_index_universe")
+    def sync_index_universe(self, index_code: str, asof_date: date) -> int:
+        """
+        从指数成分数据同步到标的池.
+
+        查询 IndexCompositionReader 获取指定指数在 asof_date 的成分股，
+        原子写入到 UniverseWriter（以 index_code 作为 universe_id）。
+
+        Args:
+            index_code: 指数代码（如 "399300.XSHE"），同时作为 universe_id.
+            asof_date: 时间点查询日期.
+
+        Returns:
+            同步的成分股数量，无数据时返回 0.
+
+        """
+        df = self._index_composition_reader.get(index_code, asof_date)
+
+        if df.is_empty():
+            return 0
+
+        records = df.select("instrument_id", "effective_from").to_dicts()
+        return self._universe_writer.replace_constituents(
+            index_code, records, str(asof_date)
+        )
 
     # ============ 证券注册 ============
 

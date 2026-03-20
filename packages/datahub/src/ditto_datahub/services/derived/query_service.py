@@ -34,8 +34,21 @@ class DerivedQueryService:
         self._catalog_service = catalog_service
         self._artifact_reader = artifact_reader
 
-    def find_latest(self, query: DerivedLatestQuery) -> pl.DataFrame:
-        """Read latest serving or offline values from materialized artifacts."""
+    def find_latest(
+        self,
+        query: DerivedLatestQuery,
+        *,
+        streaming: bool = False,
+    ) -> pl.DataFrame:
+        """
+        Read latest serving or offline values from materialized artifacts.
+
+        Args:
+            query: The latest query parameters.
+            streaming: When True, use Polars streaming engine to reduce
+                peak memory for large datasets.
+
+        """
         self._validate_source_scope(query.source_scope)
         frames: list[pl.DataFrame] = []
         for derived_id in query.derived_ids:
@@ -49,6 +62,7 @@ class DerivedQueryService:
                 version=version,
                 instrument_ids=query.instrument_ids,
                 as_of=query.as_of,
+                streaming=streaming,
             )
             if frame.is_empty():
                 continue
@@ -67,8 +81,21 @@ class DerivedQueryService:
             )
         return _concat_frames(frames, empty_latest_result())
 
-    def find_series(self, query: DerivedSeriesQuery) -> pl.DataFrame:
-        """Read offline or serving series slices from materialized artifacts."""
+    def find_series(
+        self,
+        query: DerivedSeriesQuery,
+        *,
+        streaming: bool = False,
+    ) -> pl.DataFrame:
+        """
+        Read offline or serving series slices from materialized artifacts.
+
+        Args:
+            query: The series query parameters.
+            streaming: When True, use Polars streaming engine to reduce
+                peak memory for large datasets.
+
+        """
         self._validate_source_scope(query.source_scope)
         frames: list[pl.DataFrame] = []
         for derived_id in query.derived_ids:
@@ -84,6 +111,7 @@ class DerivedQueryService:
                 start=query.start,
                 end=query.end,
                 as_of=query.as_of,
+                streaming=streaming,
             )
             if frame.is_empty():
                 continue
@@ -99,8 +127,21 @@ class DerivedQueryService:
             return result.head(query.limit)
         return result
 
-    def compare_sources(self, query: DerivedCompareQuery) -> pl.DataFrame:
-        """Compare serving and offline slices backed by the same artifact reader."""
+    def compare_sources(
+        self,
+        query: DerivedCompareQuery,
+        *,
+        streaming: bool = False,
+    ) -> pl.DataFrame:
+        """
+        Compare serving and offline slices backed by the same artifact reader.
+
+        Args:
+            query: The compare query parameters.
+            streaming: When True, use Polars streaming engine to reduce
+                peak memory for large datasets.
+
+        """
         for source_scope in query.compare_sources:
             self._validate_source_scope(source_scope)
         frames: list[pl.DataFrame] = []
@@ -116,6 +157,7 @@ class DerivedQueryService:
                 instrument_ids=query.instrument_ids,
                 start=query.start,
                 end=query.end,
+                streaming=streaming,
             )
             offline = self._artifact_reader.read_frame(
                 derived_id=derived_id,
@@ -123,6 +165,7 @@ class DerivedQueryService:
                 instrument_ids=query.instrument_ids,
                 start=query.start,
                 end=query.end,
+                streaming=streaming,
             )
             if serving.is_empty() and offline.is_empty():
                 continue
@@ -144,6 +187,7 @@ class DerivedQueryService:
         end: str | None = None,
         as_of: str | None = None,
         version: int | None = None,
+        streaming: bool = False,
     ) -> pl.DataFrame:
         """
         Return a clean evaluation DataFrame for backtesting / strategy evaluation.
@@ -152,6 +196,17 @@ class DerivedQueryService:
         frame by resolving the offline version for each derived, reading the
         artifact slice, stripping internal columns, concatenating results, and
         sorting by ``(derived_id, instrument_id, trade_date)``.
+
+        Args:
+            derived_ids: The derived artifact identifiers.
+            instrument_ids: Optional filter for specific instruments.
+            start: Optional start date filter (inclusive).
+            end: Optional end date filter (inclusive).
+            as_of: Optional point-in-time filter (inclusive).
+            version: Optional explicit version override.
+            streaming: When True, use Polars streaming engine to reduce
+                peak memory for large datasets.
+
         """
         frames: list[pl.DataFrame] = []
         for derived_id in derived_ids:
@@ -166,6 +221,7 @@ class DerivedQueryService:
                 start=start,
                 end=end,
                 as_of=as_of,
+                streaming=streaming,
             )
             if frame.is_empty():
                 continue
@@ -180,6 +236,70 @@ class DerivedQueryService:
         if not frames:
             return _empty_evaluation_result()
         return pl.concat(frames, how="vertical").sort(
+            ["derived_id", "instrument_id", "trade_date"]
+        )
+
+    def query_as_lazy(
+        self,
+        *,
+        derived_ids: tuple[str, ...],
+        instrument_ids: tuple[int, ...] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        as_of: str | None = None,
+        version: int | None = None,
+    ) -> pl.LazyFrame:
+        """
+        Return a LazyFrame for custom downstream processing.
+
+        Reads each derived artifact in lazy mode (no collection) and
+        concatenates the results into a single ``pl.LazyFrame`` that
+        callers can further transform before calling ``.collect()``.
+
+        This is the recommended API for large datasets where callers
+        want full control over the query plan, e.g. adding additional
+        filters, joins, or aggregations before materialization.
+
+        Args:
+            derived_ids: The derived artifact identifiers.
+            instrument_ids: Optional filter for specific instruments.
+            start: Optional start date filter (inclusive).
+            end: Optional end date filter (inclusive).
+            as_of: Optional point-in-time filter (inclusive).
+            version: Optional explicit version override.
+
+        Returns:
+            A ``pl.LazyFrame`` that the caller can collect or extend.
+
+        """
+        lazy_frames: list[pl.LazyFrame] = []
+        for derived_id in derived_ids:
+            resolved_version = self._artifact_reader.resolve_offline_version(
+                derived_id,
+                requested_version=version,
+            )
+            lf = self._artifact_reader.read_frame(
+                derived_id=derived_id,
+                version=resolved_version,
+                instrument_ids=instrument_ids,
+                start=start,
+                end=end,
+                as_of=as_of,
+                as_lazy=True,
+            )
+            if not isinstance(lf, pl.LazyFrame):
+                continue
+            lazy_frames.append(
+                lf.select(
+                    pl.lit(derived_id).alias("derived_id"),
+                    pl.col("instrument_id").cast(pl.Int64),
+                    pl.col("trade_date").cast(pl.Date),
+                    pl.col("value").cast(pl.Float64),
+                )
+            )
+        if not lazy_frames:
+            return _empty_evaluation_result().lazy()
+        return pl.concat(lazy_frames, how="vertical").sort(
             ["derived_id", "instrument_id", "trade_date"]
         )
 

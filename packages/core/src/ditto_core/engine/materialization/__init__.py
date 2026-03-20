@@ -2,6 +2,7 @@
 
 from ditto_core.engine.materialization.contracts import (
     Analysis,
+    AnalysisWarning,
     CompiledDerivedExpression,
     CompileIdentity,
     DerivedExecutionPlan,
@@ -24,6 +25,7 @@ from ditto_core.engine.specs import DerivedRole, DerivedSpec, MaterializationPro
 
 __all__ = [
     "Analysis",
+    "AnalysisWarning",
     "CompileIdentity",
     "CompiledDerivedExpression",
     "DerivedExecutionPlan",

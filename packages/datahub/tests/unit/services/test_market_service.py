@@ -4,12 +4,17 @@ MarketService 单元测试.
 测试 Market 域服务的查询和写入功能。
 """
 
+from datetime import date
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
 from ditto_datahub.models import OnDuplicate
+from ditto_datahub.models.ingestion import (
+    DataLateArrivalPolicy,
+    LateArrivalRejectedError,
+)
 from ditto_datahub.services.market_service import (
     AdjType,
     MarketBarsQuery,
@@ -361,3 +366,37 @@ class TestMarketServiceSaveStockStatus:
         # Assert
         assert rows_written == 1
         mock_writers["stock_status"].write.assert_called_once_with(df, 2024)
+
+
+class TestMarketServiceCheckLateArrival:
+    """测试 check_late_arrival_on_write() 集成钩子."""
+
+    def test_accept_passes_through(self) -> None:
+        """ACCEPT 策略委托给 check_late_arrival."""
+        result = MarketService.check_late_arrival_on_write(
+            knowledge_date=date(2024, 1, 10),
+            trade_date=date(2024, 1, 1),
+            policy=DataLateArrivalPolicy.ACCEPT,
+        )
+        assert result.accepted is True
+        assert result.needs_rebuild is False
+
+    def test_reject_raises(self) -> None:
+        """REJECT 策略超出阈值时抛出 LateArrivalRejectedError."""
+        with pytest.raises(LateArrivalRejectedError):
+            MarketService.check_late_arrival_on_write(
+                knowledge_date=date(2024, 1, 10),
+                trade_date=date(2024, 1, 1),
+                policy=DataLateArrivalPolicy.REJECT,
+                max_delay_days=5,
+            )
+
+    def test_rebuild_flags_needs_rebuild(self) -> None:
+        """REBUILD 策略在有延迟时标记需要重建."""
+        result = MarketService.check_late_arrival_on_write(
+            knowledge_date=date(2024, 1, 10),
+            trade_date=date(2024, 1, 1),
+            policy=DataLateArrivalPolicy.REBUILD,
+        )
+        assert result.accepted is True
+        assert result.needs_rebuild is True

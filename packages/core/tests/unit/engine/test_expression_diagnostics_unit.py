@@ -47,7 +47,7 @@ class TestExpressionDiagnostics:
         assert diagnostic.error_code == "E031_TYPE_MISMATCH"
         assert diagnostic.span.start.line == 1
         assert diagnostic.span.start.column > 20
-        assert "window size must be an integer" in diagnostic.message
+        assert "must be numeric" in diagnostic.message
 
     def test_unterminated_string_reports_lexical_error(self) -> None:
         """Lexer should emit a lexical diagnostic for unterminated strings."""

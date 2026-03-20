@@ -20,6 +20,11 @@ from ditto_infra.foundation.concurrency import FileLockManager
 
 from ditto_datahub.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.models import InstrumentIdRange, OnDuplicate
+from ditto_datahub.models.ingestion import (
+    DataLateArrivalPolicy,
+    LateArrivalCheckResult,
+)
+from ditto_datahub.services.late_arrival import check_late_arrival
 from ditto_datahub.services.ports import MarketReadPorts, MarketWritePorts
 
 
@@ -1024,3 +1029,37 @@ class MarketService:
         )
 
         return rows_written
+
+    @staticmethod
+    def check_late_arrival_on_write(
+        *,
+        knowledge_date: date,
+        trade_date: date,
+        policy: DataLateArrivalPolicy,
+        max_delay_days: int = 999_999,
+    ) -> LateArrivalCheckResult:
+        """
+        检查写入数据的延迟到达策略.
+
+        供调用方在 save_bars / save_adj_factor 等写入方法之前调用，
+        以检查数据的 knowledge_date 是否晚于 trade_date。
+
+        Args:
+            knowledge_date: 数据可知日期.
+            trade_date: 数据所属交易日期.
+            policy: 延迟到达策略.
+            max_delay_days: REJECT 策略下允许的最大延迟天数.
+
+        Returns:
+            检查结果.
+
+        Raises:
+            LateArrivalRejectedError: 当策略为 REJECT 且延迟超过阈值时.
+
+        """
+        return check_late_arrival(
+            knowledge_date=knowledge_date,
+            trade_date=trade_date,
+            policy=policy,
+            max_delay_days=max_delay_days,
+        )

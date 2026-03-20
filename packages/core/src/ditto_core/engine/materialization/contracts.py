@@ -15,6 +15,7 @@ from ditto_core.engine.specs import MaterializationProfile
 
 __all__ = [
     "Analysis",
+    "AnalysisWarning",
     "CompileIdentity",
     "CompiledDerivedExpression",
     "DerivedExecutionPlan",
@@ -22,6 +23,14 @@ __all__ = [
     "DerivedMaterializationRequest",
     "DerivedMaterializationResult",
 ]
+
+
+@dataclass(frozen=True)
+class AnalysisWarning:
+    """Lightweight compile-time warning produced during expression analysis."""
+
+    message: str
+    error_code: str
 
 
 @dataclass(frozen=True)
@@ -34,6 +43,7 @@ class Analysis:
     requires_full_day: bool
     scope: str
     output_schema: tuple[str, ...] = ("value",)
+    warnings: tuple[AnalysisWarning, ...] = ()
 
 
 @dataclass(frozen=True)

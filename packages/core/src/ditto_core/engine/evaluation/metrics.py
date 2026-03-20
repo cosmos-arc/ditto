@@ -50,6 +50,9 @@ __all__ = [
 
 _MIN_TRANSITIONS_FOR_MATRIX = 2
 _MIN_OBS_FOR_OLS = 30
+_MIN_TAIL_OBSERVATIONS = 2
+_MIN_CORR_PAIRS = 2
+_MIN_POINTS_FOR_HALF_LIFE_FIT = 2
 _IR_TE_EPSILON = 1e-12
 
 # ---------------------------------------------------------------------------
@@ -580,7 +583,6 @@ def tail_risk_metrics(ls_daily: pl.Series) -> TailRiskMetrics:
 
     """
     n = len(ls_daily)
-    _MIN_TAIL_OBSERVATIONS = 2
     if n < _MIN_TAIL_OBSERVATIONS:
         return TailRiskMetrics(
             cvar_95=0.0,
@@ -1201,7 +1203,6 @@ def factor_exposure(  # noqa: C901,PLR0912,PLR0913,PLR0915
     n_factors = len(risk_factor_dfs)
 
     # 1. Compute pairwise correlation matrix (average across dates).
-    _MIN_CORR_PAIRS = 2
     corr_matrix: dict[str, dict[str, float]] = {name: {} for name in all_names}
     for name_a in all_names:
         for name_b in all_names:
@@ -1873,7 +1874,7 @@ def _fit_ic_half_life(
         Estimated half-life in days, or ``None`` if the fit is not possible.
 
     """
-    MIN_POINTS_FOR_FIT = 2
+    MIN_POINTS_FOR_FIT = _MIN_POINTS_FOR_HALF_LIFE_FIT
     valid = [(lag, ic) for lag, ic in decay_results if ic > 0]
     if len(valid) < MIN_POINTS_FOR_FIT:
         return None

@@ -197,6 +197,19 @@ CREATE TABLE IF NOT EXISTS instrument_name_history (
 );
 CREATE INDEX IF NOT EXISTS idx_name_history_instrument ON instrument_name_history(instrument_id);
 
+-- ST 状态变更历史 (PIT support)
+CREATE TABLE IF NOT EXISTS st_change_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    instrument_id INTEGER NOT NULL,
+    effective_from DATE NOT NULL,
+    is_st INTEGER NOT NULL,
+    st_type TEXT,
+    effective_to DATE,
+    FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
+);
+CREATE INDEX IF NOT EXISTS idx_st_change_history_pit
+    ON st_change_history(instrument_id, effective_from, effective_to);
+
 -- 当前有效成分快速查询
 CREATE INDEX IF NOT EXISTS idx_constituent_current
     ON universe_constituent(universe_id, instrument_id) WHERE effective_to IS NULL;
