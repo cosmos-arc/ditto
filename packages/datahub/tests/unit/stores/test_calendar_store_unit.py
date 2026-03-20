@@ -451,3 +451,251 @@ class TestCalendarWriter:
             assert "error_message" in call_kwargs
             assert call_kwargs["event"] == "calendar_upsert_failed"
             assert call_kwargs["error_type"] == "RuntimeError"
+
+
+class TestCalendarDayHalfDay:
+    """Tests for is_half_day field in CalendarDay and store layer."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端."""
+        self.client = sqlite_client
+        self.reader = CalendarReader(self.client)
+        self.writer = CalendarWriter(self.client, None, self.reader)
+
+    def _insert_row(
+        self,
+        trade_date: str,
+        is_open: bool,
+        is_half_day: bool = False,
+    ) -> None:
+        """Insert a single calendar row with is_half_day."""
+        self.client.execute(
+            """INSERT INTO trading_calendar
+            (trade_date, is_open, prev_trade_date, next_trade_date,
+             week_of_year, month, quarter, year,
+             is_week_end, is_month_end, is_quarter_end,
+             is_half_day)
+            VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL,
+                    FALSE, FALSE, FALSE, ?)""",
+            [trade_date, is_open, is_half_day],
+        )
+        self.client.commit()
+        self.reader.reload()
+
+    def test_calendar_day_has_is_half_day_field(self) -> None:
+        """CalendarDay dataclass should contain is_half_day field with default False."""
+        from ditto_datahub.models.metadata import CalendarDay
+
+        day = CalendarDay(
+            trade_date="2024-01-02",
+            is_open=True,
+            prev_trade_date=None,
+            next_trade_date=None,
+            week_of_year=1,
+            month=1,
+            quarter=1,
+            year=2024,
+            is_week_end=False,
+            is_month_end=False,
+            is_quarter_end=False,
+        )
+        assert hasattr(day, "is_half_day")
+        assert day.is_half_day is False
+
+    def test_reader_loads_is_half_day_false(self) -> None:
+        """Reader should load is_half_day = FALSE from DB."""
+        self._insert_row("2024-01-02", is_open=True, is_half_day=False)
+        day = self.reader.get("2024-01-02")
+        assert day is not None
+        assert day.is_half_day is False
+
+    def test_reader_loads_is_half_day_true(self) -> None:
+        """Reader should load is_half_day = TRUE from DB."""
+        self._insert_row("2024-12-31", is_open=True, is_half_day=True)
+        day = self.reader.get("2024-12-31")
+        assert day is not None
+        assert day.is_half_day is True
+
+    def test_writer_upsert_is_half_day(self) -> None:
+        """Writer upsert should persist is_half_day field."""
+        records = [
+            {
+                "trade_date": "2024-12-31",
+                "is_open": True,
+                "is_half_day": True,
+            }
+        ]
+        self.writer.upsert(records)
+
+        day = self.reader.get("2024-12-31")
+        assert day is not None
+        assert day.is_half_day is True
+
+    def test_get_range_df_includes_is_half_day(self) -> None:
+        """get_range_df should include is_half_day column."""
+        self._insert_row("2024-12-31", is_open=True, is_half_day=True)
+        self._insert_row("2025-01-02", is_open=True, is_half_day=False)
+
+        df = self.reader.get_range_df("2024-12-31", "2025-01-02", only_open=True)
+        assert "is_half_day" in df.columns
+        assert df["is_half_day"].to_list() == [True, False]
+
+
+class TestCalendarDayExchange:
+    """Tests for exchange field in CalendarDay and store layer (T13)."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端."""
+        self.client = sqlite_client
+        self.reader = CalendarReader(self.client)
+        self.writer = CalendarWriter(self.client, None, self.reader)
+
+    def _insert_row(
+        self,
+        trade_date: str,
+        is_open: bool,
+        exchange: str = "SSE",
+        is_special: bool = False,
+    ) -> None:
+        """Insert a single calendar row with exchange and is_special."""
+        self.client.execute(
+            """INSERT INTO trading_calendar
+            (trade_date, is_open, exchange, prev_trade_date, next_trade_date,
+             week_of_year, month, quarter, year,
+             is_week_end, is_month_end, is_quarter_end,
+             is_half_day, is_special)
+            VALUES (?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL,
+                    FALSE, FALSE, FALSE, FALSE, ?)""",
+            [trade_date, is_open, exchange, is_special],
+        )
+        self.client.commit()
+        self.reader.reload()
+
+    def test_calendar_day_default_exchange_is_sse(self) -> None:
+        """CalendarDay exchange defaults to 'SSE'."""
+        from ditto_datahub.models.metadata import CalendarDay
+
+        day = CalendarDay(
+            trade_date="2024-01-02",
+            is_open=True,
+        )
+        assert day.exchange == "SSE"
+
+    def test_reader_loads_exchange_sse(self) -> None:
+        """Reader should load exchange='SSE' from DB."""
+        self._insert_row("2024-01-02", is_open=True, exchange="SSE")
+        day = self.reader.get("2024-01-02")
+        assert day is not None
+        assert day.exchange == "SSE"
+
+    def test_reader_loads_exchange_szse(self) -> None:
+        """Reader should load exchange='SZSE' from DB."""
+        self._insert_row("2024-01-02", is_open=True, exchange="SZSE")
+        day = self.reader.get("2024-01-02")
+        assert day is not None
+        assert day.exchange == "SZSE"
+
+    def test_writer_upsert_preserves_exchange(self) -> None:
+        """Writer upsert should persist exchange field."""
+        records = [
+            {
+                "trade_date": "2024-06-01",
+                "is_open": True,
+                "exchange": "SZSE",
+            }
+        ]
+        self.writer.upsert(records)
+
+        day = self.reader.get("2024-06-01")
+        assert day is not None
+        assert day.exchange == "SZSE"
+
+    def test_get_range_df_includes_exchange(self) -> None:
+        """get_range_df should include exchange column."""
+        self._insert_row("2024-06-01", is_open=True, exchange="SSE")
+        self._insert_row("2024-06-03", is_open=True, exchange="SZSE")
+
+        df = self.reader.get_range_df("2024-06-01", "2024-06-03", only_open=True)
+        assert "exchange" in df.columns
+        assert df["exchange"].to_list() == ["SSE", "SZSE"]
+
+
+class TestCalendarDayIsSpecial:
+    """Tests for is_special field in CalendarDay and store layer (T13)."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, sqlite_client: SQLiteClient) -> None:
+        """使用 fixture 自动注入已初始化的数据库客户端."""
+        self.client = sqlite_client
+        self.reader = CalendarReader(self.client)
+        self.writer = CalendarWriter(self.client, None, self.reader)
+
+    def _insert_row(
+        self,
+        trade_date: str,
+        is_open: bool,
+        is_special: bool = False,
+    ) -> None:
+        """Insert a single calendar row with is_special."""
+        self.client.execute(
+            """INSERT INTO trading_calendar
+            (trade_date, is_open, prev_trade_date, next_trade_date,
+             week_of_year, month, quarter, year,
+             is_week_end, is_month_end, is_quarter_end,
+             is_half_day, is_special)
+            VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL,
+                    FALSE, FALSE, FALSE, FALSE, ?)""",
+            [trade_date, is_open, is_special],
+        )
+        self.client.commit()
+        self.reader.reload()
+
+    def test_calendar_day_default_is_special_is_false(self) -> None:
+        """CalendarDay is_special defaults to False."""
+        from ditto_datahub.models.metadata import CalendarDay
+
+        day = CalendarDay(
+            trade_date="2024-01-02",
+            is_open=True,
+        )
+        assert day.is_special is False
+
+    def test_reader_loads_is_special_false(self) -> None:
+        """Reader should load is_special = FALSE from DB."""
+        self._insert_row("2024-01-02", is_open=True, is_special=False)
+        day = self.reader.get("2024-01-02")
+        assert day is not None
+        assert day.is_special is False
+
+    def test_reader_loads_is_special_true(self) -> None:
+        """Reader should load is_special = TRUE from DB."""
+        self._insert_row("2024-09-18", is_open=True, is_special=True)
+        day = self.reader.get("2024-09-18")
+        assert day is not None
+        assert day.is_special is True
+
+    def test_writer_upsert_is_special(self) -> None:
+        """Writer upsert should persist is_special field."""
+        records = [
+            {
+                "trade_date": "2024-09-18",
+                "is_open": True,
+                "is_special": True,
+            }
+        ]
+        self.writer.upsert(records)
+
+        day = self.reader.get("2024-09-18")
+        assert day is not None
+        assert day.is_special is True
+
+    def test_get_range_df_includes_is_special(self) -> None:
+        """get_range_df should include is_special column."""
+        self._insert_row("2024-09-18", is_open=True, is_special=True)
+        self._insert_row("2024-09-19", is_open=True, is_special=False)
+
+        df = self.reader.get_range_df("2024-09-18", "2024-09-19", only_open=True)
+        assert "is_special" in df.columns
+        assert df["is_special"].to_list() == [True, False]

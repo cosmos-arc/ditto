@@ -8,6 +8,13 @@ from ditto_infra.foundation.observability.config import ObservabilityConfig
 from ditto_port.jobs.tasks.monitoring import monitor_ingestion_quality
 
 
+def _prefect_runner(entrypoint):
+    return getattr(entrypoint, "func", getattr(entrypoint, "fn", entrypoint))
+
+
+MONITOR_INGESTION_QUALITY_RUNNER = _prefect_runner(monitor_ingestion_quality)
+
+
 @pytest.fixture(autouse=True)
 def setup_observability():
     """Initialize observability for metrics testing."""
@@ -50,7 +57,7 @@ class TestMonitorIngestionQuality:
         }
 
         # Should not raise
-        result = monitor_ingestion_quality(
+        result = MONITOR_INGESTION_QUALITY_RUNNER(
             trade_date="2024-12-27",
             ingestion_results=ingestion_results,
         )
@@ -95,7 +102,7 @@ class TestMonitorIngestionQuality:
             }
         }
 
-        result = monitor_ingestion_quality(
+        result = MONITOR_INGESTION_QUALITY_RUNNER(
             trade_date="2024-12-27",
             ingestion_results=ingestion_results,
         )
@@ -131,7 +138,7 @@ class TestMonitorIngestionQuality:
             },
         }
 
-        result = monitor_ingestion_quality(
+        result = MONITOR_INGESTION_QUALITY_RUNNER(
             trade_date="2024-12-27",
             ingestion_results=ingestion_results,
         )
@@ -146,7 +153,7 @@ class TestMonitorIngestionQuality:
 
     def test_monitor_handles_empty_results(self) -> None:
         """Test monitoring handles empty ingestion results."""
-        result = monitor_ingestion_quality(
+        result = MONITOR_INGESTION_QUALITY_RUNNER(
             trade_date="2024-12-27",
             ingestion_results={},
         )
@@ -171,7 +178,7 @@ class TestMonitorIngestionQuality:
         }
 
         # Should not raise
-        result = monitor_ingestion_quality(
+        result = MONITOR_INGESTION_QUALITY_RUNNER(
             trade_date="2024-12-27",
             ingestion_results=ingestion_results,
         )

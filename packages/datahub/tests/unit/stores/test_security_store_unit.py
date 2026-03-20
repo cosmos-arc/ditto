@@ -6,6 +6,7 @@ from ditto_datahub.stores.metadata.instrument import (
     InstrumentReader,
     InstrumentRegistration,
     InstrumentWriter,
+    SecurityQuery,
 )
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_infra.foundation.cache import DataCache
@@ -335,13 +336,13 @@ class TestInstrumentReader:
 
         # Find by source_ticker
         result = self.reader.find_securities(
-            source_tickers=["600000.SH"], source="tushare"
+            SecurityQuery(source_tickers=["600000.SH"], source="tushare"),
         )
         assert len(result) == 1
         assert result["instrument_id"][0] == 100000001
 
         # Find by asset_class
-        result = self.reader.find_securities(asset_class="stock")
+        result = self.reader.find_securities(SecurityQuery(asset_class="stock"))
         assert len(result) == 1
 
     def teardown_method(self) -> None:
@@ -536,7 +537,9 @@ class TestSqlInjectionProtection:
 
         # Query with 100 SIDs
         instrument_ids = list(range(100000001, 100000101))
-        result = self.reader.find_securities(instrument_ids=instrument_ids)
+        result = self.reader.find_securities(
+            SecurityQuery(instrument_ids=instrument_ids),
+        )
 
         # Should return all 100 securities
         assert len(result) == 100
@@ -550,7 +553,9 @@ class TestSqlInjectionProtection:
         )
         self.client.commit()
 
-        result = self.reader.find_securities(instrument_ids=[100000001])
+        result = self.reader.find_securities(
+            SecurityQuery(instrument_ids=[100000001]),
+        )
         assert len(result) == 1
         assert result["instrument_id"][0] == 100000001
 

@@ -75,13 +75,14 @@ class CalendarWriter:
             for record in records:
                 self._client.execute(
                     """INSERT OR REPLACE INTO trading_calendar
-                    (trade_date, is_open, prev_trade_date, next_trade_date,
+                    (trade_date, is_open, exchange, prev_trade_date, next_trade_date,
                     week_of_year, month, quarter, year,
-                    is_week_end, is_month_end, is_quarter_end)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    is_week_end, is_month_end, is_quarter_end, is_half_day, is_special)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     [
                         record["trade_date"],
                         record.get("is_open", True),
+                        record.get("exchange", "SSE"),
                         record.get("prev_trade_date"),
                         record.get("next_trade_date"),
                         record.get("week_of_year"),
@@ -91,6 +92,8 @@ class CalendarWriter:
                         record.get("is_week_end", False),
                         record.get("is_month_end", False),
                         record.get("is_quarter_end", False),
+                        record.get("is_half_day", False),
+                        record.get("is_special", False),
                     ],
                 )
                 count += 1

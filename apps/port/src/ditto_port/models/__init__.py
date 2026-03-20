@@ -36,6 +36,14 @@ from ditto_port.models.config import (
     get_parallel_datasets,
     iter_tier_datasets,
 )
+from ditto_port.models.derived import (
+    DerivedCompareResult,
+    DerivedLatestResult,
+    DerivedSeriesResult,
+    LatestDerivedRequest,
+    SeriesDerivedRequest,
+    SourceCompareRequest,
+)
 from ditto_port.models.fundamental import (
     CorporateAction,
     CorporateActionsQuery,
@@ -101,6 +109,9 @@ __all__ = [
     "CorporateActionsQuery",
     "Dataset",
     "DatasetSpec",
+    "DerivedCompareResult",
+    "DerivedLatestResult",
+    "DerivedSeriesResult",
     "Dividend",
     "DividendQuery",
     "ErrorResponse",
@@ -115,6 +126,7 @@ __all__ = [
     "Instrument",
     "InstrumentIngestParams",
     "InstrumentQuery",
+    "LatestDerivedRequest",
     "MacroCategory",
     "MacroFrequency",
     "Margin",
@@ -123,6 +135,8 @@ __all__ = [
     "PaginationResponse",
     "ResultCounts",
     "RetryResult",
+    "SeriesDerivedRequest",
+    "SourceCompareRequest",
     "T1ConfigSpec",
     "TaskTier",
     "Valuation",

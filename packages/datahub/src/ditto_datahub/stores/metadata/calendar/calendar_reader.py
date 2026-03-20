@@ -138,6 +138,7 @@ class CalendarReader:
             day = CalendarDay(
                 trade_date=date_str,
                 is_open=bool(r["is_open"]),
+                exchange=r.get("exchange", "SSE"),
                 prev_trade_date=r["prev_trade_date"],
                 next_trade_date=r["next_trade_date"],
                 week_of_year=r["week_of_year"],
@@ -147,6 +148,8 @@ class CalendarReader:
                 is_week_end=bool(r["is_week_end"]),
                 is_month_end=bool(r["is_month_end"]),
                 is_quarter_end=bool(r["is_quarter_end"]),
+                is_half_day=bool(r["is_half_day"]),
+                is_special=bool(r.get("is_special", False)),
             )
 
             cache[date_str] = day
@@ -410,11 +413,14 @@ class CalendarReader:
                     {
                         "trade_date": day.trade_date,
                         "is_open": day.is_open,
+                        "exchange": day.exchange,
                         "prev_trade_date": day.prev_trade_date,
                         "next_trade_date": day.next_trade_date,
                         "is_week_end": day.is_week_end,
                         "is_month_end": day.is_month_end,
                         "is_quarter_end": day.is_quarter_end,
+                        "is_half_day": day.is_half_day,
+                        "is_special": day.is_special,
                     }
                 )
 

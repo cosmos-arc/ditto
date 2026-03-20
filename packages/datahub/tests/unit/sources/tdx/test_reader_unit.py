@@ -77,14 +77,14 @@ class TestTdxReader:
         assert "high" in schema
         assert "low" in schema
         assert "close" in schema
-        assert "vol" in schema
+        assert "volume" in schema
         assert "amount" in schema
 
     def test_read_daily_basic(self) -> None:
         """Test basic daily data reading."""
         # Create mock .day file
         # Format: date, open, high, low, close, amount, vol, reserved
-        # Prices are in cents (* 100), vol is in lots
+        # Prices are in cents (* 100), volume is in lots
         records = [
             (20240101, 10500, 10600, 10400, 10550, 1000000, 1000, 0),
             (20240102, 10550, 10700, 10500, 10650, 1200000, 1200, 0),
@@ -103,7 +103,7 @@ class TestTdxReader:
         assert df["close"][1] == 106.5
 
         # Check volume conversion (×100)
-        assert df["vol"][0] == 100000
+        assert df["volume"][0] == 100000
 
     def test_read_daily_with_date_filter(self) -> None:
         """Test reading with date filter."""

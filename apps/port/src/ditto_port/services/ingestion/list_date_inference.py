@@ -14,14 +14,12 @@ API 返回限制：
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import polars as pl
+from ditto_datahub.services.metadata_service import MetadataService
+from ditto_datahub.sources.base import DataSource
 from ditto_infra.foundation import logger, traced
-
-if TYPE_CHECKING:
-    from ditto_datahub.services.metadata_service import MetadataService
-    from ditto_datahub.sources.base import DataSource
 
 # list_date 推断的最早起始日期
 EARLIEST_LIST_DATE_INFERENCE = date(2010, 1, 1)

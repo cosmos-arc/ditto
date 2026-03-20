@@ -20,6 +20,11 @@ from ditto_infra.foundation.concurrency import FileLockManager
 
 from ditto_datahub.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_datahub.models import InstrumentIdRange, OnDuplicate
+from ditto_datahub.models.ingestion import (
+    DataLateArrivalPolicy,
+    LateArrivalCheckResult,
+)
+from ditto_datahub.services.late_arrival import check_late_arrival
 from ditto_datahub.services.ports import MarketReadPorts, MarketWritePorts
 
 
@@ -140,7 +145,7 @@ class MarketService:
         return self._query_bars(query)
 
     @traced("market.list_bars")
-    def list_bars(  # noqa: PLR0913
+    def list_bars(
         self,
         instrument_ids: list[int],
         start: str | None = None,
@@ -512,6 +517,67 @@ class MarketService:
         else:  # HFQ
             return apply_hfq_adj(df, adj_df)
 
+    def _apply_etf_adjustment(
+        self,
+        df: pl.DataFrame,
+        adj: AdjType,
+        start: str,
+        end: str,
+    ) -> pl.DataFrame:
+        """
+        应用 ETF 价格调整.
+
+        与 _apply_adjustment() 类似，但使用 etf_adj 端口读取复权因子。
+        当 adj_df 为空时，优雅回退返回原始数据。
+
+        Args:
+            df: ETF K线数据 DataFrame.
+            adj: 调整类型.
+            start: 开始日期 (YYYY-MM-DD).
+            end: 结束日期 (YYYY-MM-DD).
+
+        Returns:
+            调整后的 DataFrame（无复权因子时返回原始数据）.
+
+        """
+        etf_adj = self._read_ports.etf_adj
+        if etf_adj is None:
+            logger.warning(
+                "etf_adj port not configured, returning raw data",
+                event="market_etf_bars_adj_not_available",
+                adj_type=adj.value,
+            )
+            return df
+
+        adj_df = etf_adj.read(start_date=start, end_date=end)
+
+        if adj_df.is_empty():
+            logger.warning(
+                "No ETF adjustment factor data available, returning raw data",
+                event="market_etf_bars_adj_not_available",
+                adj_type=adj.value,
+            )
+            return df
+
+        # 确保排序以正确处理 last() 聚合
+        adj_df = adj_df.sort(["instrument_id", "trade_date"])
+
+        # 关联调整因子
+        cols = ["instrument_id", "trade_date", "adj_factor"]
+        if "knowledge_date" in adj_df.columns:
+            cols.append("knowledge_date")
+        df = df.join(
+            adj_df.select(cols),
+            on=["instrument_id", "trade_date"],
+            how="left",
+        )
+
+        # 根据调整类型调用相应方法
+        if adj == AdjType.QFQ:
+            return apply_qfq_adj(df, adj_df)
+        else:  # HFQ
+            return apply_hfq_adj(df, adj_df)
+
     def _enrich_with_status(
         self,
         df: pl.DataFrame,
@@ -587,6 +653,173 @@ class MarketService:
 
         # 内联数据增强：join ticker 数据
         return df.join(ticker_df, on=id_col, how="left")
+
+    @traced("market.get_stock_bars")
+    def get_stock_bars(self, start: str, end: str) -> pl.DataFrame:
+        """
+        查询全市场股票日K线（不复权）.
+
+        提供公开的行情查询接口，供 RuntimeDerivedInputProvider 等上层组件使用。
+        不传入 instrument_ids 参数，返回日期范围内全部证券的原始行情。
+
+        Args:
+            start: 开始日期 (YYYY-MM-DD).
+            end: 结束日期 (YYYY-MM-DD).
+
+        Returns:
+            原始行情 DataFrame，包含 instrument_id、trade_date、open、high、
+            low、close、pre_close、volume、amount 等列。
+
+        """
+        logger.debug(
+            "Fetching stock daily bars",
+            event="market_stock_bars_get_start",
+            start=start,
+            end=end,
+        )
+
+        df = self._read_ports.stock_bars.read(start_date=start, end_date=end)
+
+        logger.debug(
+            "Stock daily bars fetched",
+            event="market_stock_bars_get_complete",
+            row_count=len(df),
+        )
+
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "stock_daily", "operation": "get"},
+        )
+
+        return df
+
+    @traced("market.get_etf_bars")
+    def get_etf_bars(self, start: str, end: str, adj: str = "none") -> pl.DataFrame:
+        """
+        查询全市场 ETF 日K线，可选复权.
+
+        提供公开的行情查询接口，供 ETF 因子评估等上层组件使用。
+        不传入 instrument_ids 参数，返回日期范围内全部 ETF 的行情数据。
+
+        Args:
+            start: 开始日期 (YYYY-MM-DD).
+            end: 结束日期 (YYYY-MM-DD).
+            adj: 复权类型 ("none", "qfq", "hfq")，默认不复权。
+
+        Returns:
+            行情 DataFrame，包含 instrument_id、trade_date、open、high、
+            low、close、volume、amount 等列。如果请求复权但无复权因子
+            数据，则返回未复权的原始数据。
+
+        """
+        logger.debug(
+            "Fetching ETF daily bars",
+            event="market_etf_bars_get_start",
+            start=start,
+            end=end,
+            adj=adj,
+        )
+
+        df = self._read_ports.etf_bars.read(start_date=start, end_date=end)
+
+        # 应用复权（如果需要且 etf_adj 端口可用）
+        adj_type = AdjType.from_string(adj)
+        if adj_type != AdjType.NONE and self._read_ports.etf_adj is not None:
+            df = self._apply_etf_adjustment(df, adj_type, start, end)
+
+        logger.debug(
+            "ETF daily bars fetched",
+            event="market_etf_bars_get_complete",
+            row_count=len(df),
+            adj=adj,
+        )
+
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "etf_daily", "operation": "get", "adj": adj},
+        )
+
+        return df
+
+    @traced("market.get_adj_factors")
+    def get_adj_factors(self, start: str, end: str) -> pl.DataFrame:
+        """
+        查询股票复权因子.
+
+        提供公开的 adj_factor 查询接口，
+        供 RuntimeDerivedInputProvider 等上层组件使用。
+        不传入 instrument_ids 参数，返回日期范围内全部证券的复权因子。
+
+        Args:
+            start: 开始日期 (YYYY-MM-DD).
+            end: 结束日期 (YYYY-MM-DD).
+
+        Returns:
+            复权因子 DataFrame，包含 instrument_id、trade_date、adj_factor 等列。
+
+        """
+        logger.debug(
+            "Fetching adjustment factors",
+            event="market_adj_factors_get_start",
+            start=start,
+            end=end,
+        )
+
+        df = self._read_ports.stock_adj.read(start_date=start, end_date=end)
+
+        logger.debug(
+            "Adjustment factors fetched",
+            event="market_adj_factors_get_complete",
+            row_count=len(df),
+        )
+
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "adj_factor", "operation": "get"},
+        )
+
+        return df
+
+    @traced("market.get_stock_status")
+    def get_stock_status(self, start: str, end: str) -> pl.DataFrame:
+        """
+        查询股票状态.
+
+        提供公开的 stock_status 查询接口，
+        供 RuntimeDerivedInputProvider 等上层组件使用。
+        不传入 instrument_ids 参数，返回日期范围内全部证券的状态数据。
+
+        状态包含：is_suspended、suspend_timing、is_st、st_type、list_status。
+
+        Args:
+            start: 开始日期 (YYYY-MM-DD).
+            end: 结束日期 (YYYY-MM-DD).
+
+        Returns:
+            股票状态 DataFrame，包含 instrument_id、trade_date、is_suspended 等列。
+
+        """
+        logger.debug(
+            "Fetching stock status",
+            event="market_stock_status_get_start",
+            start=start,
+            end=end,
+        )
+
+        df = self._read_ports.stock_status.read(start_date=start, end_date=end)
+
+        logger.debug(
+            "Stock status fetched",
+            event="market_stock_status_get_complete",
+            row_count=len(df),
+        )
+
+        Metrics.data_records.add(
+            len(df),
+            {"dataset": "stock_status", "operation": "get"},
+        )
+
+        return df
 
     @staticmethod
     def _to_storage_columns(df: pl.DataFrame) -> pl.DataFrame:
@@ -796,3 +1029,37 @@ class MarketService:
         )
 
         return rows_written
+
+    @staticmethod
+    def check_late_arrival_on_write(
+        *,
+        knowledge_date: date,
+        trade_date: date,
+        policy: DataLateArrivalPolicy,
+        max_delay_days: int = 999_999,
+    ) -> LateArrivalCheckResult:
+        """
+        检查写入数据的延迟到达策略.
+
+        供调用方在 save_bars / save_adj_factor 等写入方法之前调用，
+        以检查数据的 knowledge_date 是否晚于 trade_date。
+
+        Args:
+            knowledge_date: 数据可知日期.
+            trade_date: 数据所属交易日期.
+            policy: 延迟到达策略.
+            max_delay_days: REJECT 策略下允许的最大延迟天数.
+
+        Returns:
+            检查结果.
+
+        Raises:
+            LateArrivalRejectedError: 当策略为 REJECT 且延迟超过阈值时.
+
+        """
+        return check_late_arrival(
+            knowledge_date=knowledge_date,
+            trade_date=trade_date,
+            policy=policy,
+            max_delay_days=max_delay_days,
+        )

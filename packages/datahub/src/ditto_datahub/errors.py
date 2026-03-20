@@ -4,6 +4,17 @@ DataHub exception classes.
 Following design document at docs/design/02_data_design.md
 """
 
+# Re-exported from core engine — canonical location for Derived* error hierarchy
+from ditto_core.engine.errors import (
+    DerivedDependencyError,
+    DerivedError,
+    DerivedMaterializationError,
+    DerivedNotFoundError,
+    DerivedNotImplementedError,
+    DerivedValidationError,
+    DerivedVersionError,
+)
+
 
 class DataHubError(Exception):
     """DataHub base exception."""
@@ -214,3 +225,25 @@ class SchemaValidationError(ValidationError):
     """SourceSchema validation failed."""
 
     pass
+
+
+__all__ = [
+    "AmbiguousTickerError",
+    "CalendarError",
+    "DataHubError",
+    "DatasetNotFoundError",
+    "DerivedDependencyError",
+    "DerivedError",
+    "DerivedMaterializationError",
+    "DerivedNotFoundError",
+    "DerivedNotImplementedError",
+    "DerivedValidationError",
+    "DerivedVersionError",
+    "IdentifierError",
+    "IdentifierNotFoundError",
+    "InstrumentIdNotFoundError",
+    "PartitionNotFoundError",
+    "SchemaValidationError",
+    "TradingDateNotFoundError",
+    "ValidationError",
+]

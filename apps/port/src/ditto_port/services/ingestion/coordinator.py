@@ -23,7 +23,12 @@ from ditto_datahub.models import (
     DateScheduleType,
     OnDuplicate,
 )
-from ditto_datahub.services import IngestionLogService
+from ditto_datahub.models.storage import WriteResult
+from ditto_datahub.services import (
+    FreezeService,
+    IngestionCursorService,
+    IngestionLogService,
+)
 from ditto_datahub.services.capital_service import CapitalService
 from ditto_datahub.services.fundamental_service import FundamentalService
 from ditto_datahub.services.macro_service import MacroService
@@ -40,6 +45,7 @@ from ditto_port.services.ingestion.list_date_inference import (
     ListDateInferenceService,
 )
 from ditto_port.services.ingestion.metadata import MetadataManager
+from ditto_port.services.ingestion.quality.service import QualityService
 from ditto_port.services.ingestion.result_handler import IngestionResultHandler
 
 # 支持按标的摄取的数据集
@@ -101,6 +107,9 @@ class IngestionCoordinator:
         source: DataSource,
         source_name: str = "tushare",
         ingestion_log_service: IngestionLogService | None = None,
+        ingestion_cursor_service: IngestionCursorService | None = None,
+        quality_service: QualityService | None = None,
+        freeze_service: FreezeService | None = None,
         fred_source: DataSource | None = None,
     ) -> None:
         """初始化 IngestionCoordinator。"""
@@ -113,6 +122,9 @@ class IngestionCoordinator:
         self._source_name = source_name
         self._fred_source = fred_source
         self._ingestion_log_service = ingestion_log_service
+        self._ingestion_cursor_service = ingestion_cursor_service
+        self._quality_service = quality_service
+        self._freeze_service = freeze_service
         self._metadata_manager = MetadataManager(ingestion_log_service)
         self._result_handler = IngestionResultHandler(
             ingestion_log_service, source_name
@@ -429,6 +441,27 @@ class IngestionCoordinator:
         if df.is_empty():
             return self._result_handler.handle_empty_data(dataset, trade_date)
 
+        # DQ 质量检查
+        if self._quality_service is not None:
+            checked_df, should_block = self._quality_service.check_and_quarantine(
+                df=df,
+                dataset=dataset,
+                context={"trade_date": trade_date},
+            )
+            if should_block:
+                return self._result_handler.handle_dq_blocked(
+                    dataset,
+                    trade_date,
+                    WriteResult(
+                        file_path="",
+                        checksum="",
+                        rows_written=0,
+                        rows_total=df.height,
+                        blocked=True,
+                    ),
+                )
+            df = checked_df
+
         # 将 force 映射到 on_duplicate
         on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
 
@@ -453,11 +486,47 @@ class IngestionCoordinator:
 
         # basic 数据摄取成功后，执行 list_date 推断补偿
         self._run_list_date_inference(dataset)
+        self._run_post_ingest_hooks(dataset, trade_date)
 
         # 成功写入
         return self._result_handler.handle_success(
             dataset, trade_date, df, write_result
         )
+
+    def _run_post_ingest_hooks(self, dataset: str, trade_date: str) -> None:
+        """执行摄取后的副作用：游标更新、冻结点创建。"""
+        # 更新摄入游标
+        if self._ingestion_cursor_service is not None:
+            try:
+                self._ingestion_cursor_service.update_cursor(
+                    dataset=dataset,
+                    source=self._source_name,
+                    last_success=trade_date,
+                    last_attempted=trade_date,
+                )
+            except Exception as e:
+                logger.warning(
+                    "cursor_update_failed",
+                    dataset=dataset,
+                    trade_date=trade_date,
+                    error=str(e),
+                )
+
+        # 创建冻结点（轻量级版本追踪）
+        if self._freeze_service is not None:
+            try:
+                self._freeze_service.create_freeze(
+                    freeze_id=f"{dataset}_{trade_date}",
+                    description=f"Auto-freeze: {dataset} @ {trade_date}",
+                    datasets=[dataset],
+                )
+            except Exception as e:
+                logger.warning(
+                    "freeze_create_failed",
+                    dataset=dataset,
+                    trade_date=trade_date,
+                    error=str(e),
+                )
 
     def ingest_range(
         self,
@@ -860,6 +929,11 @@ class IngestionCoordinator:
                 start_date=params.start_date,
                 end_date=params.end_date,
             ),
+            Dataset.ADJ_FACTOR: lambda: self._source.fetch_adj_factor_by_ticker(
+                ts_code=source_ticker,
+                start_date=params.start_date.replace("-", ""),
+                end_date=params.end_date.replace("-", ""),
+            ),
             Dataset.FUND_ADJ: lambda: self._source.fetch_fund_adj(
                 source_ticker=source_ticker,
                 start_date=params.start_date,
@@ -972,3 +1046,176 @@ class IngestionCoordinator:
             raise ValueError(f"不支持的数据集: {dataset}")
 
         return handlers[dataset_enum]()
+
+    # ------------------------------------------------------------------
+    # 智能回填
+    # ------------------------------------------------------------------
+
+    def backfill_adj_factor(
+        self,
+        instrument_id: int,
+        start: str,
+        end: str,
+    ) -> dict[str, object]:
+        """
+        按标的智能回补复权因子空洞.
+
+        检测指定证券在 [start, end] 日期范围内的复权因子空洞，
+        仅对缺失的连续日期区间发起数据源请求，避免全量覆盖。
+
+        流程:
+        1. 解析 instrument_id → source_ticker
+        2. 获取 [start, end] 内全部交易日
+        3. 查询已有的复权因子日期
+        4. 计算差集得到空洞日期
+        5. 将空洞按连续区间分组，逐段 fetch + 写入
+
+        Args:
+            instrument_id: 证券内部 ID.
+            start: 开始日期 (YYYY-MM-DD).
+            end: 结束日期 (YYYY-MM-DD).
+
+        Returns:
+            回补结果摘要，包含 status / gap_count / filled_dates.
+
+        """
+        logger.info(
+            "开始智能回补复权因子",
+            event="backfill_adj_factor_start",
+            instrument_id=instrument_id,
+            start=start,
+            end=end,
+        )
+
+        # 1. 解析 source_ticker
+        source_ticker = self._metadata_service.resolve_source_ticker(
+            instrument_id=instrument_id,
+            asset_class="stock",
+            source=self._source_name,
+        )
+
+        # 2. 获取交易日列表
+        trading_days = self._metadata_service.list_trading_days(start, end)
+        if not trading_days:
+            logger.info(
+                "范围内无交易日",
+                event="backfill_adj_factor_no_trading_days",
+                instrument_id=instrument_id,
+            )
+            return {"status": "ok", "gap_count": 0, "filled_dates": 0}
+
+        trading_day_set: set[str] = set(trading_days)
+
+        # 3. 查询已有复权因子日期
+        existing_df = self._market_service.get_adj_factors(start, end)
+        existing_dates: set[str] = set()
+        if not existing_df.is_empty():
+            existing_dates = set(
+                existing_df.filter(pl.col("instrument_id") == instrument_id)
+                .select("trade_date")
+                .to_series()
+                .cast(pl.String)
+                .to_list()
+            )
+
+        # 4. 计算空洞
+        gap_dates = sorted(trading_day_set - existing_dates)
+        if not gap_dates:
+            logger.info(
+                "复权因子数据完整 无需回补",
+                event="backfill_adj_factor_no_gaps",
+                instrument_id=instrument_id,
+            )
+            return {"status": "ok", "gap_count": 0, "filled_dates": 0}
+
+        # 5. 将空洞按连续区间分组
+        gap_ranges = self._group_contiguous_dates(gap_dates)
+
+        # 6. 逐段 fetch + 写入
+        total_filled = 0
+        for range_start, range_end in gap_ranges:
+            try:
+                gap_df = self._source.fetch_adj_factor_by_ticker(
+                    ts_code=source_ticker,
+                    start_date=range_start.replace("-", ""),
+                    end_date=range_end.replace("-", ""),
+                )
+            except Exception as e:
+                logger.warning(
+                    "回补 fetch 失败",
+                    event="backfill_adj_factor_fetch_failed",
+                    instrument_id=instrument_id,
+                    range_start=range_start,
+                    range_end=range_end,
+                    error=str(e),
+                )
+                continue
+
+            if gap_df.is_empty():
+                continue
+
+            # 写入 — 使用 OnDuplicate.KEEP_LAST 保证幂等
+            try:
+                self._data_writer.write_data(
+                    "adj_factor", gap_df, range_start, OnDuplicate.KEEP_LAST
+                )
+            except Exception as e:
+                logger.warning(
+                    "回补写入失败",
+                    event="backfill_adj_factor_write_failed",
+                    instrument_id=instrument_id,
+                    range_start=range_start,
+                    range_end=range_end,
+                    error=str(e),
+                )
+                continue
+
+            total_filled += len(gap_df)
+
+        logger.info(
+            "智能回补复权因子完成",
+            event="backfill_adj_factor_complete",
+            instrument_id=instrument_id,
+            gap_count=len(gap_ranges),
+            filled_dates=total_filled,
+        )
+
+        return {
+            "status": "ok",
+            "gap_count": len(gap_ranges),
+            "filled_dates": total_filled,
+        }
+
+    @staticmethod
+    def _group_contiguous_dates(dates: list[str]) -> list[tuple[str, str]]:
+        """
+        将日期列表按连续区间分组.
+
+        对于 [2024-01-02, 2024-01-03, 2024-01-05, 2024-01-06]，
+        返回 [("2024-01-02", "2024-01-03"), ("2024-01-05", "2024-01-06")]。
+
+        Args:
+            dates: 已排序的日期字符串列表 (YYYY-MM-DD).
+
+        Returns:
+            连续区间列表 [(start, end), ...].
+
+        """
+        if not dates:
+            return []
+
+        ranges: list[tuple[str, str]] = []
+        range_start = dates[0]
+        prev = date.fromisoformat(dates[0])
+
+        for d_str in dates[1:]:
+            d = date.fromisoformat(d_str)
+            if (d - prev).days <= 1:
+                prev = d
+            else:
+                ranges.append((range_start, prev.isoformat()))
+                range_start = d_str
+                prev = d
+
+        ranges.append((range_start, prev.isoformat()))
+        return ranges

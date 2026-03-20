@@ -8,6 +8,7 @@ from dishka import Provider, Scope, provide
 from ditto_datahub.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_datahub.services.metadata_service import MetadataService
 from ditto_datahub.sources import ExchangeTransformers
+from ditto_datahub.stores.capital.index_composition import IndexCompositionReader
 from ditto_datahub.stores.metadata.calendar import CalendarReader, CalendarWriter
 from ditto_datahub.stores.metadata.industry import (
     IndustryMappingReader,
@@ -18,8 +19,15 @@ from ditto_datahub.stores.metadata.industry import (
 from ditto_datahub.stores.metadata.instrument import (
     InstrumentReader,
     InstrumentWriter,
+    NameHistoryReader,
+    NameHistoryWriter,
 )
-from ditto_datahub.stores.metadata.universe import UniverseReader, UniverseWriter
+from ditto_datahub.stores.metadata.universe import (
+    RebalanceReader,
+    RebalanceWriter,
+    UniverseReader,
+    UniverseWriter,
+)
 from ditto_datahub.stores.sqlite_client import SQLiteClient
 from ditto_infra.foundation.cache import DataCache
 
@@ -51,6 +59,24 @@ class MetadataProvider(Provider):
     ) -> InstrumentWriter:
         """证券主数据写入器."""
         return InstrumentWriter(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def name_history_reader(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> NameHistoryReader:
+        """证券名称变更历史读取器."""
+        return NameHistoryReader(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def name_history_writer(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> NameHistoryWriter:
+        """证券名称变更历史写入器."""
+        return NameHistoryWriter(client=sqlite_client, cache=data_cache)
 
     # ========================================================================
     # Calendar Store
@@ -137,6 +163,24 @@ class MetadataProvider(Provider):
         """标的池写入器."""
         return UniverseWriter(client=sqlite_client, cache=data_cache)
 
+    @provide
+    def rebalance_reader(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> RebalanceReader:
+        """标的池调仓日程读取器."""
+        return RebalanceReader(client=sqlite_client, cache=data_cache)
+
+    @provide
+    def rebalance_writer(
+        self,
+        sqlite_client: SQLiteClient,
+        data_cache: DataCache[Any],
+    ) -> RebalanceWriter:
+        """标的池调仓日程写入器."""
+        return RebalanceWriter(client=sqlite_client, cache=data_cache)
+
     # ========================================================================
     # Metadata Service
     # ========================================================================
@@ -146,6 +190,8 @@ class MetadataProvider(Provider):
         self,
         instrument_reader: InstrumentReader,
         instrument_writer: InstrumentWriter,
+        name_history_reader: NameHistoryReader,
+        name_history_writer: NameHistoryWriter,
         calendar_reader: CalendarReader,
         calendar_writer: CalendarWriter,
         industry_reader: IndustryReader,
@@ -154,13 +200,18 @@ class MetadataProvider(Provider):
         industry_mapping_writer: IndustryMappingWriter,
         universe_reader: UniverseReader,
         universe_writer: UniverseWriter,
+        rebalance_reader: RebalanceReader,
+        rebalance_writer: RebalanceWriter,
         instrument_id_allocator: InstrumentIdAllocator,
+        index_composition_reader: IndexCompositionReader,
         exchange_transformers: ExchangeTransformers,
     ) -> MetadataService:
         """Metadata 查询服务（CQRS Reader/Writer）。"""
         return MetadataService(
             instrument_reader=instrument_reader,
             instrument_writer=instrument_writer,
+            name_history_reader=name_history_reader,
+            name_history_writer=name_history_writer,
             calendar_reader=calendar_reader,
             calendar_writer=calendar_writer,
             industry_reader=industry_reader,
@@ -169,6 +220,9 @@ class MetadataProvider(Provider):
             industry_mapping_writer=industry_mapping_writer,
             universe_reader=universe_reader,
             universe_writer=universe_writer,
+            rebalance_reader=rebalance_reader,
+            rebalance_writer=rebalance_writer,
             instrument_id_allocator=instrument_id_allocator,
+            index_composition_reader=index_composition_reader,
             exchange_transformers=exchange_transformers,
         )

@@ -42,7 +42,7 @@ INDEX_BASIC_MAPPING = ColumnMapping(
 # list_status: L=正常上市, D=退市, P=暂停上市
 STOCK_BASIC_MAPPING = ColumnMapping(
     rename={"ts_code": "source_ticker"},
-    date_columns={"list_date": "%Y%m%d"},
+    date_columns={"list_date": "%Y%m%d", "delist_date": "%Y%m%d"},
     float_columns=[],
     computed_columns={
         "ticker": pl.col("source_ticker").str.split(".").list.get(0),
@@ -53,6 +53,7 @@ STOCK_BASIC_MAPPING = ColumnMapping(
         "name",
         "exchange",
         "list_date",
+        "delist_date",
         "list_status",
     ),
 )

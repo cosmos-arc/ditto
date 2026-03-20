@@ -105,7 +105,7 @@ class TestDatasetSpec:
                 "high",
                 "low",
                 "close",
-                "vol",
+                "volume",
             ],
             task_name="ingest_etf_bars",
             requires_trade_date=True,
@@ -127,7 +127,7 @@ class TestDatasetSpec:
             "high",
             "low",
             "close",
-            "vol",
+            "volume",
         ]
 
     def test_dataset_config_with_dependencies(self) -> None:
@@ -150,7 +150,7 @@ class TestDatasetSpec:
                 "high",
                 "low",
                 "close",
-                "vol",
+                "volume",
             ],
             task_name="ingest_stock_daily",
             requires_trade_date=True,

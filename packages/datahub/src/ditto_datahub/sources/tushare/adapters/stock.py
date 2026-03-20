@@ -73,7 +73,7 @@ class StockTushareAdapter(BaseTushareAdapter):
                 response = self._client.query(
                     api_name="stock_basic",
                     ts_code=source_ticker,
-                    fields="ts_code,symbol,name,exchange,list_date,list_status",
+                    fields="ts_code,symbol,name,exchange,list_date,delist_date,list_status",
                 )
 
                 if len(response) == 0:
@@ -102,7 +102,7 @@ class StockTushareAdapter(BaseTushareAdapter):
                 response = self._client.query(
                     api_name="stock_basic",
                     list_status=status,
-                    fields="ts_code,symbol,name,exchange,list_date,list_status",
+                    fields="ts_code,symbol,name,exchange,list_date,delist_date,list_status",
                 )
                 if len(response) > 0:
                     all_dfs.append(response)
@@ -126,6 +126,7 @@ class StockTushareAdapter(BaseTushareAdapter):
                 "name": pl.String,
                 "exchange": pl.String,
                 "list_date": pl.Date,
+                "delist_date": pl.Date,
                 "list_status": pl.String,
             }
         )
@@ -274,6 +275,62 @@ class StockTushareAdapter(BaseTushareAdapter):
                 response, "adj_factor", ADJ_FACTOR_MAPPING
             )
 
+    @traced("source.tushare.fetch_adj_factor_by_ticker")
+    def fetch_adj_factor_by_ticker(
+        self,
+        ts_code: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        按标的获取复权因子（用于回填）.
+
+        Args:
+            ts_code: 股票代码 (e.g., "000001.SZ").
+            start_date: 开始日期 (YYYYMMDD).
+            end_date: 结束日期 (YYYYMMDD).
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: Source code
+            - trade_date: Date
+            - knowledge_date: Date
+            - adj_factor: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        logger.info(
+            "Fetching Tushare adj factors by ticker",
+            event="tushare_adj_factor_by_ticker_fetch_start",
+            ts_code=ts_code,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        with tushare_fetch_error_handler("adj_factor", "adj_factor"):
+            response = self._client.query(
+                api_name="adj_factor",
+                ts_code=ts_code,
+                start_date=start_date,
+                end_date=end_date,
+                fields="ts_code,trade_date,adj_factor",
+            )
+
+            if response.is_empty():
+                logger.info(
+                    "adj_factor_by_ticker_empty",
+                    ts_code=ts_code,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+                return response
+
+            return TushareDataTransformer.transform(
+                response, "adj_factor", ADJ_FACTOR_MAPPING
+            )
+
     @traced("source.tushare.fetch_stock_limit")
     def fetch_stock_limit(self, trade_date: str) -> pl.DataFrame:
         """
@@ -353,8 +410,8 @@ class StockTushareAdapter(BaseTushareAdapter):
             # 2. Fetch ST status from stock_st API
             st_df = self._fetch_st_data()
 
-            # 3. Fetch list_status from stock_basic API
-            list_status_df = self._fetch_list_status_data()
+            # 3. Fetch list_status from stock_basic API (historical snapshot)
+            list_status_df = self._fetch_list_status_data(trade_date=trade_date)
 
             # 4. 使用 Processor 合并数据
             merger = StatusMerger()
@@ -371,6 +428,91 @@ class StockTushareAdapter(BaseTushareAdapter):
             Metrics.data_records.add(
                 row_count,
                 {"source": "tushare", "dataset": "stock_status", "status": "success"},
+            )
+
+            return result
+
+    @traced("source.tushare.fetch_st_history")
+    def fetch_st_history(
+        self,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        获取 ST 状态变更历史（从 namechange API）.
+
+        通过 Tushare namechange API 查询股票名称变更记录，
+        过滤出与 ST 状态相关的变更（如 ST、*ST、撤销ST、撤销*ST 等）.
+
+        Args:
+            ts_code: 股票代码 (e.g., "000001.SZ"). 为 None 时查询全部股票.
+            start_date: 开始日期 (YYYY-MM-DD). 为 None 时不限制.
+            end_date: 结束日期 (YYYY-MM-DD). 为 None 时不限制.
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: 股票代码 (e.g., "000001.SZ")
+            - change_date: 变更日期 (Date)
+            - end_date: 变更结束日期 (Date), NULL 表示当前仍有效
+            - change_reason: 变更原因 (e.g., "ST", "*ST", "撤销ST")
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        logger.info(
+            "Fetching Tushare ST change history",
+            event="tushare_st_history_fetch_start",
+            ts_code=ts_code,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        with tushare_fetch_error_handler("namechange", "st_history"):
+            params: dict[str, str] = {
+                "api_name": "namechange",
+                "fields": "ts_code,start_date,end_date,change_reason",
+            }
+            if ts_code is not None:
+                params["ts_code"] = ts_code
+            if start_date is not None:
+                params["start_date"] = start_date.replace("-", "")
+            if end_date is not None:
+                params["end_date"] = end_date.replace("-", "")
+
+            response = self._client.query(**params)
+
+            if response.is_empty():
+                return pl.DataFrame(
+                    schema={
+                        "source_ticker": pl.String,
+                        "change_date": pl.Date,
+                        "end_date": pl.Date,
+                        "change_reason": pl.String,
+                    }
+                )
+
+            # 过滤 change_reason 包含 "ST" 的记录
+            st_records = response.filter(pl.col("change_reason").str.contains("ST"))
+
+            # 重命名列并转换日期格式
+            result = st_records.select(
+                pl.col("ts_code").alias("source_ticker"),
+                pl.col("start_date").alias("change_date"),
+                pl.col("end_date"),
+                pl.col("change_reason"),
+            )
+
+            row_count = len(result)
+            logger.info(
+                "Tushare ST change history fetched",
+                event="tushare_st_history_fetch_complete",
+                row_count=row_count,
+            )
+            Metrics.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": "st_history", "status": "success"},
             )
 
             return result
@@ -444,27 +586,34 @@ class StockTushareAdapter(BaseTushareAdapter):
             )
         return st_df
 
-    def _fetch_list_status_data(self) -> pl.DataFrame:
+    def _fetch_list_status_data(self, trade_date: str | None = None) -> pl.DataFrame:
         """
         获取上市状态数据（从 stock_basic API）.
+
+        Args:
+            trade_date: 交易日期 (YYYY-MM-DD). 当提供时，使用 list_date 参数
+                获取该日期的股票上市状态快照；为 None 时返回当前全量快照.
 
         Returns:
             DataFrame with columns: ts_code, list_status
             如果获取失败返回空 DataFrame
 
         Note:
-            stock_basic API 不需要日期参数，返回所有股票的上市状态.
             list_status: L=正常, D=退市, P=暂停.
+            trade_date 为 None 时返回当前全量快照，传入日期时返回该日期的历史快照.
 
         """
         list_status_df = pl.DataFrame(
             schema={"ts_code": pl.String, "list_status": pl.String}
         )
         try:
-            basic_response = self._client.query(
-                api_name="stock_basic",
-                fields="ts_code,list_status",
-            )
+            params: dict[str, str] = {
+                "api_name": "stock_basic",
+                "fields": "ts_code,list_status",
+            }
+            if trade_date is not None:
+                params["list_date"] = trade_date.replace("-", "")
+            basic_response = self._client.query(**params)
             if len(basic_response) > 0:
                 list_status_df = basic_response
         except (

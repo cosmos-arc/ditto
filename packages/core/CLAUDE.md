@@ -24,7 +24,7 @@ ditto_core/
 │   ├── config.py      # DQ 配置
 │   ├── report.py      # 检查报告
 │   └── severity.py    # 严重程度
-├── engine/            # 核心引擎（待实现）
+├── engine/            # 核心引擎（Phase 1 已实现 — 表达式编译器、因子定义、评估指标、物化模型）
 ├── portfolio/         # 组合管理（待实现）
 └── strategy/          # 策略框架（待实现）
 ```

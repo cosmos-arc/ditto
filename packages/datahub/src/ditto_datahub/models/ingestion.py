@@ -1,5 +1,7 @@
 """Ingestion metadata models for data tracking."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -114,4 +116,77 @@ class DataChangedError(Exception):
         super().__init__(
             f"Data changed for {trade_date}: checksum {old_checksum} → {new_checksum}. "
             + "Use force=True to overwrite."
+        )
+
+
+# ============ Late Arrival Policy ============
+
+
+class DataLateArrivalPolicy(StrEnum):
+    """
+    数据摄入层延迟到达策略.
+
+    控制写入层对 knowledge_date 晚于 trade_date 的数据的处理行为。
+    与 Core 层 ``LateArrivalPolicy``（研究快照级别）不同，此枚举面向
+    数据摄入层，语义为写入时的实时决策。
+
+    Attributes:
+        REJECT: 超过 max_delay_days 的数据拒绝写入.
+        ACCEPT: 始终接受，不做延迟检查.
+        REBUILD: 接受写入，但标记需要重算受影响的因子.
+
+    """
+
+    REJECT = "reject"
+    ACCEPT = "accept"
+    REBUILD = "rebuild"
+
+
+@dataclass(frozen=True)
+class LateArrivalCheckResult:
+    """
+    延迟到达检查结果.
+
+    Attributes:
+        accepted: 数据是否被接受.
+        needs_rebuild: 是否需要重算受影响的因子.
+        delay_days: 延迟天数（knowledge_date - trade_date，最小为 0）.
+        policy: 使用的策略.
+
+    """
+
+    accepted: bool
+    needs_rebuild: bool
+    delay_days: int
+    policy: DataLateArrivalPolicy
+
+
+class LateArrivalRejectedError(Exception):
+    """延迟到达数据被拒绝时抛出."""
+
+    def __init__(
+        self,
+        delay_days: int,
+        max_delay_days: int,
+        trade_date: str,
+        knowledge_date: str,
+    ) -> None:
+        """
+        初始化 LateArrivalRejectedError.
+
+        Args:
+            delay_days: 实际延迟天数.
+            max_delay_days: 允许的最大延迟天数.
+            trade_date: 交易日期 (YYYY-MM-DD).
+            knowledge_date: 数据可知日期 (YYYY-MM-DD).
+
+        """
+        self.delay_days = delay_days
+        self.max_delay_days = max_delay_days
+        self.trade_date = trade_date
+        self.knowledge_date = knowledge_date
+        super().__init__(
+            f"数据延迟到达被拒绝: trade_date={trade_date}, "
+            + f"knowledge_date={knowledge_date}, "
+            + f"延迟 {delay_days} 天超过阈值 {max_delay_days} 天"
         )

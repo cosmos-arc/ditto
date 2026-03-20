@@ -328,6 +328,7 @@ class TestTushareSourceStockBasic:
                                 "name",
                                 "exchange",
                                 "list_date",
+                                "delist_date",
                                 "list_status",
                             ],
                             "items": [
@@ -337,6 +338,7 @@ class TestTushareSourceStockBasic:
                                     "平安银行",
                                     "SZSE",
                                     "19910403",
+                                    "",
                                     "L",
                                 ],
                                 [
@@ -345,6 +347,7 @@ class TestTushareSourceStockBasic:
                                     "浦发银行",
                                     "SSE",
                                     "19991110",
+                                    "",
                                     "L",
                                 ],
                             ],
@@ -365,6 +368,7 @@ class TestTushareSourceStockBasic:
                                 "name",
                                 "exchange",
                                 "list_date",
+                                "delist_date",
                                 "list_status",
                             ],
                             "items": [],
@@ -377,13 +381,14 @@ class TestTushareSourceStockBasic:
         source = TushareSource(settings=_settings())
         result = source.fetch_stock_basic()
 
-        # Verify schema - 现在包含 list_status 字段
+        # Verify schema - 现在包含 list_status 和 delist_date 字段
         assert dict(result.schema) == {
             "source_ticker": pl.String,
             "ticker": pl.String,
             "name": pl.String,
             "exchange": pl.String,
             "list_date": pl.Date,
+            "delist_date": pl.Date,
             "list_status": pl.String,
         }
 
@@ -395,6 +400,7 @@ class TestTushareSourceStockBasic:
                 "name": "平安银行",
                 "exchange": "SZSE",
                 "list_date": date(1991, 4, 3),
+                "delist_date": None,
                 "list_status": "L",
             },
             {
@@ -403,6 +409,7 @@ class TestTushareSourceStockBasic:
                 "name": "浦发银行",
                 "exchange": "SSE",
                 "list_date": date(1999, 11, 10),
+                "delist_date": None,
                 "list_status": "L",
             },
         ]
@@ -424,6 +431,7 @@ class TestTushareSourceStockBasic:
                             "name",
                             "exchange",
                             "list_date",
+                            "delist_date",
                             "list_status",
                         ],
                         "items": [],

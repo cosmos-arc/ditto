@@ -172,7 +172,7 @@ class TestFetchStockDailyBars:
                 "high": [10.5],
                 "low": [9.8],
                 "close": [10.2],
-                "vol": [1000000],
+                "volume": [1000000],
                 "amount": [10200000],
             }
         )
@@ -189,7 +189,7 @@ class TestFetchStockDailyBars:
             "high",
             "low",
             "close",
-            "vol",
+            "volume",
             "amount",
         }
         assert set(result.columns) == expected_columns

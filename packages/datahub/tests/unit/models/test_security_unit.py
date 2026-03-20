@@ -95,6 +95,50 @@ class TestInstrumentRegistration:
         error_msg = str(exc_info.value).lower()
         assert "missing" in error_msg or "required" in error_msg
 
+    def test_create_registration_with_delist_date(self) -> None:
+        """Test creating InstrumentRegistration with delist_date."""
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
+            ticker="600000",
+            name="浦发银行",
+            exchange="SSE",
+            asset_class="stock",
+            list_date="1999-11-10",
+            delist_date="2025-06-30",
+        )
+
+        assert registration.delist_date == "2025-06-30"
+
+    def test_create_registration_delist_date_defaults_to_none(self) -> None:
+        """Test that delist_date defaults to None when not provided."""
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
+            ticker="600000",
+            name="浦发银行",
+            exchange="SSE",
+            asset_class="stock",
+            list_date="1999-11-10",
+        )
+
+        assert registration.delist_date is None
+
+    def test_model_serialization_includes_delist_date(self) -> None:
+        """Test that serialization includes delist_date field."""
+        registration = InstrumentRegistration(
+            source_ticker="600000.SH",
+            ticker="600000",
+            name="浦发银行",
+            exchange="SSE",
+            asset_class="stock",
+            list_date="1999-11-10",
+            delist_date="2025-06-30",
+        )
+
+        data = asdict(registration)
+
+        assert "delist_date" in data
+        assert data["delist_date"] == "2025-06-30"
+
     def test_json_serialization(self) -> None:
         """Test InstrumentRegistration can be serialized to JSON."""
         import json

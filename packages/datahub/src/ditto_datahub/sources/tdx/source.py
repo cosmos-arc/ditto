@@ -60,7 +60,7 @@ class TdxSource:
             trade_date: 交易日期（YYYYMMDD）
 
         Returns:
-            DataFrame with columns: ticker, trade_date, open, high, low, close, vol,
+            DataFrame with columns: ticker, trade_date, open, high, low, close, volume,
             amount
 
         """

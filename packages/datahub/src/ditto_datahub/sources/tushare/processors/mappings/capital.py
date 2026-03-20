@@ -108,17 +108,22 @@ PLEDGE_RATIO_MAPPING = ColumnMapping(
 )
 
 # Index Composition - PIT data
+# out_date 为成分退出日期，映射为 effective_to（NULL 表示当前成分）
 INDEX_COMPOSITION_MAPPING = ColumnMapping(
     rename={"ts_code": "source_ticker", "index_code": "index_id"},
-    date_columns={"in_date": "%Y%m%d"},
+    date_columns={"in_date": "%Y%m%d", "out_date": "%Y%m%d"},
     float_columns=["weight"],
     int_columns=("is_new",),
-    computed_columns={"effective_from": pl.col("in_date")},
+    computed_columns={
+        "effective_from": pl.col("in_date"),
+        "effective_to": pl.col("out_date"),
+    },
     output_columns=(
         "index_id",
         "source_ticker",
         "weight",
         "effective_from",
+        "effective_to",
     ),
 )
 
@@ -155,6 +160,14 @@ BALANCE_SHEET_MAPPING = ColumnMapping(
         "total_hldr_eqy_exc_min_int",
         "total_cur_assets",
         "total_cur_liab",
+        "inventory",
+        "fixed_assets",
+        "cash_equivalents",
+        "accounts_receivable",
+        "short_term_debt",
+        "long_term_debt",
+        "money_cap",
+        "total_share",
     ],
     computed_columns={
         "report_date": pl.col("end_date"),
@@ -172,6 +185,14 @@ BALANCE_SHEET_MAPPING = ColumnMapping(
         "net_assets",
         "current_assets",
         "current_liabilities",
+        "inventory",
+        "fixed_assets",
+        "cash_equivalents",
+        "accounts_receivable",
+        "short_term_debt",
+        "long_term_debt",
+        "money_cap",
+        "total_share",
     ),
 )
 
@@ -182,9 +203,17 @@ INCOME_STATEMENT_MAPPING = ColumnMapping(
     date_columns={"end_date": "%Y%m%d", "ann_date": "%Y%m%d"},
     float_columns=[
         "total_revenue",
+        "operate_cost",
+        "sale_exp",
+        "admin_exp",
+        "fin_exp",
+        "rd_exp",
         "operate_profit",
+        "total_profit",
+        "income_tax",
         "n_income",
         "basic_eps",
+        "diluted_eps",
     ],
     computed_columns={
         "report_date": pl.col("end_date"),
@@ -202,6 +231,14 @@ INCOME_STATEMENT_MAPPING = ColumnMapping(
         "operating_profit",
         "net_profit",
         "eps",
+        "operate_cost",
+        "sale_exp",
+        "admin_exp",
+        "fin_exp",
+        "rd_exp",
+        "total_profit",
+        "income_tax",
+        "diluted_eps",
     ),
 )
 
@@ -213,6 +250,9 @@ CASH_FLOW_MAPPING = ColumnMapping(
         "n_cashflow_act",
         "n_cash_flows_inv_act",
         "n_cash_flows_fnc_act",
+        "depreciation",
+        "interest_paid",
+        "tax_paid",
     ],
     computed_columns={
         "report_date": pl.col("end_date"),
@@ -232,6 +272,53 @@ CASH_FLOW_MAPPING = ColumnMapping(
         "investing_cash_flow",
         "financing_cash_flow",
         "net_cash_flow",
+        "depreciation",
+        "interest_paid",
+        "tax_paid",
+    ),
+)
+
+# Share Buyback (限售解禁) - Non-PIT data
+SHARE_BUYBACK_MAPPING = ColumnMapping(
+    rename={
+        "ts_code": "source_ticker",
+        "ann_date": "announcement_date",
+        "float_date": "effective_date",
+        "float_share": "float_shares",
+    },
+    date_columns={"announcement_date": "%Y%m%d", "effective_date": "%Y%m%d"},
+    float_columns=["float_shares", "float_ratio"],
+    output_columns=(
+        "source_ticker",
+        "announcement_date",
+        "effective_date",
+        "float_shares",
+        "float_ratio",
+    ),
+)
+
+# Rights Issue (配股) - Non-PIT data
+RIGHTS_ISSUE_MAPPING = ColumnMapping(
+    rename={
+        "ts_code": "source_ticker",
+        "ann_date": "announcement_date",
+        "reg_date": "record_date",
+        "ex_date": "ex_rights_date",
+    },
+    date_columns={
+        "announcement_date": "%Y%m%d",
+        "record_date": "%Y%m%d",
+        "ex_rights_date": "%Y%m%d",
+    },
+    float_columns=["rights_price", "rights_ratio"],
+    output_columns=(
+        "source_ticker",
+        "rights_type",
+        "announcement_date",
+        "record_date",
+        "ex_rights_date",
+        "rights_price",
+        "rights_ratio",
     ),
 )
 
@@ -244,5 +331,7 @@ __all__ = [
     "INDEX_COMPOSITION_MAPPING",
     "MARGIN_TRADING_MAPPING",
     "PLEDGE_RATIO_MAPPING",
+    "RIGHTS_ISSUE_MAPPING",
+    "SHARE_BUYBACK_MAPPING",
     "VALUATION_METRICS_MAPPING",
 ]

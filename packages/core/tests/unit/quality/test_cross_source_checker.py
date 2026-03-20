@@ -17,9 +17,9 @@ class TestCrossSourceChecker:
         checker = CrossSourceChecker()
         assert "open" in checker.tolerance_rules
         assert "close" in checker.tolerance_rules
-        assert "vol" in checker.tolerance_rules
+        assert "volume" in checker.tolerance_rules
         assert checker.tolerance_rules["open"].method == CompareMethod.TICK_ALIGNED
-        assert checker.tolerance_rules["vol"].method == CompareMethod.RELATIVE
+        assert checker.tolerance_rules["volume"].method == CompareMethod.RELATIVE
 
     def test_check_no_diff(self) -> None:
         """测试无差异场景."""
@@ -127,14 +127,14 @@ class TestCrossSourceChecker:
             {
                 "symbol": ["1"],
                 "trade_date": ["20240101"],
-                "vol": [1000],
+                "volume": [1000],
             }
         )
         secondary = pl.DataFrame(
             {
                 "symbol": ["1"],
                 "trade_date": ["20240101"],
-                "vol": [1005],  # 0.5% 差异
+                "volume": [1005],  # 0.5% 差异
             }
         )
 
@@ -145,10 +145,10 @@ class TestCrossSourceChecker:
             rules=[
                 {
                     "rule": "cross_source_compare",
-                    "fields": ["vol"],
+                    "fields": ["volume"],
                     "key_columns": ["symbol", "trade_date"],
                     "tolerance_rules": {
-                        "vol": {
+                        "volume": {
                             "method": "relative",
                             "relative_tol": 0.01,  # 1%
                         },

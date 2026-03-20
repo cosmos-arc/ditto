@@ -6,6 +6,10 @@ import pytest
 from pytest_mock import MockerFixture
 
 
+def _prefect_runner(entrypoint):
+    return getattr(entrypoint, "func", getattr(entrypoint, "fn", entrypoint))
+
+
 @pytest.mark.unit
 class TestDqBatchCheckKnownErrorHandling:
     """测试已知异常被正确记录到 results_by_dataset."""
@@ -58,8 +62,10 @@ class TestDqBatchCheckKnownErrorHandling:
         # Import after patching
         from ditto_port.jobs.tasks.dq_batch import dq_batch_check
 
+        runner = _prefect_runner(dq_batch_check)
+
         # Act: 执行批处理任务
-        result = await dq_batch_check(
+        result = await runner(
             trade_date="2024-01-15",
             datasets=["stock_daily"],
         )
@@ -131,8 +137,10 @@ class TestDqBatchCheckKnownErrorHandling:
 
         from ditto_port.jobs.tasks.dq_batch import dq_batch_check
 
+        runner = _prefect_runner(dq_batch_check)
+
         # Act
-        result = await dq_batch_check(
+        result = await runner(
             trade_date="2024-01-15",
             datasets=["etf_daily"],
         )
@@ -186,8 +194,10 @@ class TestDqBatchCheckKnownErrorHandling:
 
         from ditto_port.jobs.tasks.dq_batch import dq_batch_check
 
+        runner = _prefect_runner(dq_batch_check)
+
         # Act
-        result = await dq_batch_check(
+        result = await runner(
             trade_date="2024-01-15",
             datasets=["index_daily"],
         )
@@ -252,8 +262,10 @@ class TestDqBatchCheckKnownErrorHandling:
 
         from ditto_port.jobs.tasks.dq_batch import dq_batch_check
 
+        runner = _prefect_runner(dq_batch_check)
+
         # Act
-        result = await dq_batch_check(
+        result = await runner(
             trade_date="2024-01-15",
             datasets=["stock_daily", "etf_daily"],
         )

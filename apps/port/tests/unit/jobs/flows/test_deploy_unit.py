@@ -2,6 +2,8 @@
 
 import pytest
 from ditto_port.jobs.flows.deploy import (
+    SCHEDULE_DAILY_INGESTION,
+    SCHEDULE_DAILY_REPAIR,
     FlowDeploymentConfig,
     _get_flow,
     _get_flow_configs,
@@ -61,6 +63,49 @@ class TestGetFlowConfigs:
         assert isinstance(config.description, str)
         assert isinstance(config.parameters, dict)
         assert isinstance(config.tags, list)
+
+    def test_flow_config_has_schedule_field(self):
+        """测试 FlowDeploymentConfig 包含 schedule 字段。"""
+        configs = _get_flow_configs()
+        # 所有配置都应该有 schedule 属性（dataclass 默认值为 None）
+        for config in configs:
+            assert hasattr(config, "schedule")
+
+
+@pytest.mark.unit
+class TestScheduleDefinitions:
+    """测试 Cron 调度定义."""
+
+    def test_schedule_daily_ingestion_cron_and_timezone(self):
+        """测试每日增量摄取调度: 交易日 18:30, Asia/Shanghai。"""
+        assert SCHEDULE_DAILY_INGESTION is not None
+        assert SCHEDULE_DAILY_INGESTION.cron == "30 18 * * 1-5"
+        assert SCHEDULE_DAILY_INGESTION.timezone == "Asia/Shanghai"
+
+    def test_schedule_daily_repair_cron_and_timezone(self):
+        """测试每日修补调度: 每日 02:00, Asia/Shanghai。"""
+        assert SCHEDULE_DAILY_REPAIR is not None
+        assert SCHEDULE_DAILY_REPAIR.cron == "0 2 * * *"
+        assert SCHEDULE_DAILY_REPAIR.timezone == "Asia/Shanghai"
+
+
+@pytest.mark.unit
+class TestScheduleAssignment:
+    """测试调度分配逻辑."""
+
+    def test_scheduled_deployments_have_schedule(self):
+        """自动调度的部署应配置 schedule，手动触发的应为 None。"""
+        configs = _get_flow_configs()
+        config_map = {c.deployment_name: c for c in configs}
+
+        # 自动调度的部署
+        assert config_map["daily-ingestion-prod"].schedule is SCHEDULE_DAILY_INGESTION
+        assert config_map["daily-repair-prod"].schedule is SCHEDULE_DAILY_REPAIR
+
+        # 手动触发的部署
+        assert config_map["retry-failed-prod"].schedule is None
+        assert config_map["backfill-prod"].schedule is None
+        assert config_map["repair-holes-prod"].schedule is None
 
 
 @pytest.mark.unit
@@ -143,6 +188,7 @@ class TestDeployAllFlows:
         mock_config.description = "Test description"
         mock_config.tags = ["test"]
         mock_config.parameters = {}
+        mock_config.schedule = None
 
         mock_get_configs.return_value = [mock_config]
 
@@ -153,6 +199,38 @@ class TestDeployAllFlows:
         mock_deploy.assert_called_once()
         call_args = mock_deploy.call_args
         assert call_args.kwargs["work_pool_name"] == "test-pool"
+
+    def test_deploy_passes_schedule_to_deployment(self, mocker: MockerFixture):
+        """测试 schedule 被传递给 to_deployment。"""
+        # Arrange
+        mocker.patch("ditto_port.jobs.flows.deploy.deploy")
+        mock_get_configs = mocker.patch(
+            "ditto_port.jobs.flows.deploy._get_flow_configs"
+        )
+
+        mock_config = mocker.Mock()
+        mock_config.deployment_name = "test-deployment"
+        mock_config.description = "Test description"
+        mock_config.tags = ["test"]
+        mock_config.parameters = {}
+        mock_config.schedule = SCHEDULE_DAILY_INGESTION
+        # _resolve_flow 检查 hasattr(flow, "name") 和 hasattr(flow, "to_deployment")
+        # Mock 对象自动创建这些属性，所以 _resolve_flow 会直接返回 config.flow
+        mock_config.flow.to_deployment.return_value = mocker.Mock()
+
+        mock_get_configs.return_value = [mock_config]
+
+        # Act
+        deploy_all_flows(work_pool_name="test-pool")
+
+        # Assert
+        mock_config.flow.to_deployment.assert_called_once_with(
+            name="test-deployment",
+            description="Test description",
+            tags=["test"],
+            parameters={},
+            schedule=SCHEDULE_DAILY_INGESTION,
+        )
 
     def test_deploy_all_flows_with_image(self, mocker: MockerFixture):
         """测试使用自定义镜像。"""
@@ -167,6 +245,7 @@ class TestDeployAllFlows:
 
         mock_config = mocker.Mock()
         mock_config.flow.return_value = mock_flow
+        mock_config.schedule = None
         mock_get_configs.return_value = [mock_config]
 
         # Act
@@ -189,6 +268,7 @@ class TestDeployAllFlows:
 
         mock_config = mocker.Mock()
         mock_config.flow.return_value = mock_flow
+        mock_config.schedule = None
         mock_get_configs.return_value = [mock_config]
 
         # Act

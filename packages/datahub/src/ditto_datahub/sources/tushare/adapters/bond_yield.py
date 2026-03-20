@@ -244,8 +244,10 @@ class BondYieldTushareAdapter(BaseTushareAdapter):
         """解析 curve_term 值，返回浮点数或 None."""
         if curve_term is None:
             return None
+        if not isinstance(curve_term, (int, float, str, bytes)):
+            return None
         try:
-            return float(curve_term)  # type: ignore[arg-type]
+            return float(curve_term)
         except (TypeError, ValueError):
             logger.warning(
                 "Invalid curve_term value, skipping row",
@@ -258,8 +260,10 @@ class BondYieldTushareAdapter(BaseTushareAdapter):
         """解析 yield 值，返回浮点数或 None."""
         if value is None:
             return None
+        if not isinstance(value, (int, float, str, bytes)):
+            return None
         try:
-            return float(value)  # type: ignore[arg-type]
+            return float(value)
         except (TypeError, ValueError):
             logger.warning(
                 "Invalid yield value, skipping row",

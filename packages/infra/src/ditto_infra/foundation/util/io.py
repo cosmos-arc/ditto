@@ -3,14 +3,19 @@
 import hashlib
 import os
 from pathlib import Path
+from typing import Literal
 
 import polars as pl
+
+ParquetCompression = Literal["lz4", "uncompressed", "snappy", "gzip", "brotli", "zstd"]
 
 
 def atomic_write(
     df: pl.DataFrame,
     path: Path,
+    *,
     fsync: bool = True,
+    compression: ParquetCompression = "zstd",
 ) -> None:
     """
     Write DataFrame to Parquet file atomically.
@@ -23,6 +28,7 @@ def atomic_write(
         path: Target file path.
         fsync: Whether to call fsync to ensure data is persisted to disk.
              Defaults to True for data durability.
+        compression: Parquet compression codec. Defaults to ``"zstd"``.
 
     """
     path = Path(path)
@@ -30,7 +36,41 @@ def atomic_write(
 
     # Write to temporary file first
     temp_path = path.with_suffix(path.suffix + ".tmp")
-    df.write_parquet(temp_path, compression="zstd")
+    df.write_parquet(temp_path, compression=compression)
+
+    # Call fsync if requested
+    if fsync:
+        with temp_path.open("r+b") as f:
+            os.fsync(f.fileno())
+
+    # Atomic rename
+    temp_path.replace(path)
+
+
+def atomic_bytes_write(
+    data: bytes,
+    path: Path,
+    fsync: bool = True,
+) -> None:
+    """
+    Write raw bytes to a file atomically.
+
+    Writes to a temporary file first, then renames to the target path.
+    This ensures atomic operation - either the file is fully written or not at all.
+
+    Args:
+        data: Raw bytes to write.
+        path: Target file path.
+        fsync: Whether to call fsync to ensure data is persisted to disk.
+             Defaults to True for data durability.
+
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write to temporary file first
+    temp_path = path.with_suffix(path.suffix + ".tmp")
+    temp_path.write_bytes(data)
 
     # Call fsync if requested
     if fsync:

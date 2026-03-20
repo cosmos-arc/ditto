@@ -201,3 +201,83 @@ class UniverseWriter:
             universe_id=universe_id,
             instrument_id=instrument_id,
         )
+
+    @traced("data.universe_replace_constituents")
+    def replace_constituents(
+        self,
+        universe_id: str,
+        records: list[dict[str, Any]],
+        effective_date: str,
+    ) -> int:
+        """
+        原子替换标的池所有当前成分股.
+
+        在事务中：
+        1. 关闭所有当前成分（SET effective_to = effective_date）
+        2. 批量插入新成分
+
+        Args:
+            universe_id: 标的池 ID.
+            records: 新成分列表，每条需包含 instrument_id 和 effective_from.
+            effective_date: 当前成分的失效日期.
+
+        Returns:
+            新增的成分数量.
+
+        """
+        if not records:
+            return 0
+
+        logger.info(
+            "Replacing universe constituents",
+            event="universe_replace_constituents_start",
+            universe_id=universe_id,
+            record_count=len(records),
+            effective_date=effective_date,
+        )
+
+        # 关闭当前成分
+        self._client.execute(
+            """UPDATE universe_constituent
+            SET effective_to = ?
+            WHERE universe_id = ? AND effective_to IS NULL""",
+            [effective_date, universe_id],
+        )
+
+        # 批量插入新成分
+        params_list: list[list[Any] | tuple[Any, ...]] = []
+        for record in records:
+            params = (
+                universe_id,
+                record.get("instrument_id"),
+                record.get("effective_from"),
+                record.get("effective_to"),
+                record.get("weight", 1.0),
+                record.get("source"),
+                record.get("source_ticker"),
+            )
+            params_list.append(params)
+
+        self._client.executemany(
+            """INSERT INTO universe_constituent
+            (
+                universe_id, instrument_id, effective_from, effective_to,
+                weight, source, source_ticker
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            params_list,
+        )
+
+        self._client.commit()
+
+        # 失效缓存
+        self._cache.invalidate_pattern("universe:constituents:*")
+
+        logger.info(
+            "Constituents replaced successfully",
+            event="universe_replace_constituents_complete",
+            universe_id=universe_id,
+            count=len(records),
+        )
+
+        return len(records)

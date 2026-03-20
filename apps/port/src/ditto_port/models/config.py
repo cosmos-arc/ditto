@@ -18,6 +18,7 @@ from datetime import time
 from enum import StrEnum
 from typing import Annotated, cast, overload
 
+from ditto_datahub.errors import DatasetNotFoundError
 from ditto_datahub.models import Dataset
 from pydantic import BaseModel, Field
 
@@ -424,7 +425,7 @@ INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
             "high",
             "low",
             "close",
-            "vol",
+            "volume",
         ],
         task_name="ingest_etf_bars",
     ),
@@ -440,7 +441,7 @@ INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
             "high",
             "low",
             "close",
-            "vol",
+            "volume",
         ],
         task_name="ingest_index_daily",
         priority=15,
@@ -457,7 +458,7 @@ INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
             "high",
             "low",
             "close",
-            "vol",
+            "volume",
         ],
         task_name="ingest_stock_daily",
         timeout_seconds=600,
@@ -634,7 +635,7 @@ def get_dataset_config(dataset: Dataset) -> DatasetSpec:
         DatasetSpec instance
 
     Raises:
-        KeyError: If dataset is not in registry
+        DatasetNotFoundError: If dataset is not in registry
 
     Examples:
         >>> config = get_dataset_config(Dataset.ETF_DAILY)
@@ -642,7 +643,7 @@ def get_dataset_config(dataset: Dataset) -> DatasetSpec:
 
     """
     if dataset not in INGESTION_SPECS:
-        raise KeyError(f"Dataset {dataset} not found in registry")
+        raise DatasetNotFoundError(dataset=str(dataset))
     return INGESTION_SPECS[dataset]
 
 

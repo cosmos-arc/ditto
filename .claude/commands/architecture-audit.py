@@ -390,7 +390,7 @@ class ArchitectureAuditor:
                         "category": "Dependency",
                         "evidence": result.stdout.split("\n")[0],
                         "why": f"禁止使用 {module}，违反项目约束",
-                        "fix": f"替换为允许的类库（polars、duckdb 等）",
+                        "fix": "替换为允许的类库（polars、duckdb 等）",
                         "effort": "M",
                     }
                 )

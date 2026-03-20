@@ -42,20 +42,24 @@ class IndustryReader:
         self,
         is_active: bool | None = True,
         industry_level: str | None = None,
+        source: str | None = None,
     ) -> pl.DataFrame:
         """
         获取所有行业信息.
 
         Args:
             is_active: 是否只返回活跃行业，None 返回全部.
-            industry_level: 行业级别过滤 (L1/L2).
+            industry_level: 行业级别过滤 (L1/L2/L3).
+            source: 行业来源过滤 (sw/csrc).
 
         Returns:
             行业信息 DataFrame. 如果没有数据返回空 DataFrame.
 
         """
         # 尝试从缓存获取
-        cache_key = f"industry:all:active={is_active}:level={industry_level}"
+        cache_key = (
+            f"industry:all:active={is_active}:level={industry_level}:source={source}"
+        )
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
@@ -71,6 +75,10 @@ class IndustryReader:
         if industry_level:
             sql += " AND industry_level = ?"
             params.append(industry_level)
+
+        if source:
+            sql += " AND source = ?"
+            params.append(source)
 
         # 执行查询
         rows = self._client.fetchall(sql, params)

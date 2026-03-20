@@ -23,9 +23,16 @@ from ditto_datahub.models.metadata import (
 )
 from ditto_datahub.stores.metadata.instrument.instrument_reader import (
     InstrumentReader,
+    SecurityQuery,
 )
 from ditto_datahub.stores.metadata.instrument.instrument_writer import (
     InstrumentWriter,
+)
+from ditto_datahub.stores.metadata.instrument.name_history_reader import (
+    NameHistoryReader,
+)
+from ditto_datahub.stores.metadata.instrument.name_history_writer import (
+    NameHistoryWriter,
 )
 
 __all__ = [
@@ -35,5 +42,8 @@ __all__ = [
     "InstrumentReader",
     "InstrumentRegistration",
     "InstrumentWriter",
+    "NameHistoryReader",
+    "NameHistoryWriter",
+    "SecurityQuery",
     "StockExtension",
 ]

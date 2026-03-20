@@ -117,7 +117,7 @@ class TushareDataTransformer:
         # 2. 应用类型转换
         transforms: list[pl.Expr] = []
         for col, fmt in mapping.date_columns.items():
-            transforms.append(pl.col(col).str.to_date(fmt))
+            transforms.append(pl.col(col).str.to_date(fmt, strict=False))
         for col in mapping.float_columns:
             transforms.append(pl.col(col).cast(pl.Float64))
         for col in mapping.int_columns:
@@ -172,7 +172,7 @@ class TushareDataTransformer:
         # 应用类型转换
         transforms: list[pl.Expr] = []
         for col, fmt in mapping.date_columns.items():
-            transforms.append(pl.col(col).str.to_date(fmt))
+            transforms.append(pl.col(col).str.to_date(fmt, strict=False))
         for col in mapping.float_columns:
             transforms.append(pl.col(col).cast(pl.Float64))
         for col in mapping.int_columns:

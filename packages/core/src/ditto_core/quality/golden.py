@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -109,14 +109,15 @@ class GoldenDatasetSpec(BaseModel):
                 if ticker:
                     tickers_set.add(ticker)
             elif isinstance(item, Mapping):
-                item_dict: dict[str, Any] = dict(item)  # type: ignore[arg-type]
+                item_dict: dict[str, Any] = cast(dict[str, Any], item)
                 ticker_val: Any = item_dict.get("ticker", "")
                 if ticker_val and isinstance(ticker_val, str):
                     tickers_set.add(ticker_val.strip())
                     try:
                         specs.append(TickerSpec(**item_dict))
                     except Exception:
-                        logger.debug("忽略无效的 TickerSpec: %s", repr(item))  # type: ignore[reportUnknownArgumentType]
+                        msg = repr(cast(object, item))
+                        logger.debug("忽略无效的 TickerSpec: %s", msg)
 
         return tickers_set, specs
 
@@ -133,7 +134,7 @@ class GoldenDatasetSpec(BaseModel):
         if not isinstance(data, dict):
             return data
 
-        data_dict: dict[str, Any] = data  # type: ignore[assignment]
+        data_dict: dict[str, Any] = cast(dict[str, Any], data)
         tickers_raw: Any = data_dict.get("tickers", [])
 
         # 处理 None：转换为空列表
@@ -146,7 +147,7 @@ class GoldenDatasetSpec(BaseModel):
             return data_dict
 
         # 解析 tickers 列表
-        items_list: list[Any] = tickers_raw  # type: ignore[assignment]
+        items_list: list[Any] = cast(list[Any], tickers_raw)
         tickers_set, specs = cls._parse_tickers_list(items_list)
 
         # 更新数据

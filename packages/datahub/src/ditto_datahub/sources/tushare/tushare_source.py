@@ -179,6 +179,33 @@ class TushareSource(DataSource):
         """
         return self._stock.fetch_adj_factor(trade_date)
 
+    def fetch_adj_factor_by_ticker(
+        self,
+        ts_code: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch stock adjustment factors by ticker (for backfill).
+
+        Args:
+            ts_code: Stock code (e.g., "000001.SZ").
+            start_date: Start date (YYYYMMDD).
+            end_date: End date (YYYYMMDD).
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: Source code
+            - trade_date: Date
+            - knowledge_date: Date
+            - adj_factor: Float64
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        return self._stock.fetch_adj_factor_by_ticker(ts_code, start_date, end_date)
+
     def fetch_stock_limit(self, trade_date: str) -> pl.DataFrame:
         """
         Fetch stock limit up/down prices (B.3).
@@ -226,6 +253,37 @@ class TushareSource(DataSource):
 
         """
         return self._stock.fetch_stock_status(trade_date)
+
+    def fetch_st_history(
+        self,
+        ts_code: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """
+        Fetch ST status change history (B.3).
+
+        Args:
+            ts_code: Stock code (e.g., "000001.SZ"). None for all stocks.
+            start_date: Start date (YYYY-MM-DD). None for no limit.
+            end_date: End date (YYYY-MM-DD). None for no limit.
+
+        Returns:
+            DataFrame with columns:
+            - source_ticker: Stock code (e.g., "000001.SZ")
+            - change_date: Date of status change (Date)
+            - end_date: Date when status ended (Date), NULL if still active
+            - change_reason: Reason for change (e.g., "ST", "*ST", "撤销ST")
+
+        Raises:
+            SourceFetchError: If fetch fails.
+
+        """
+        return self._stock.fetch_st_history(
+            ts_code=ts_code,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     # ETF 相关方法 - 委托给 ETFTushareAdapter
     def fetch_etf_basic(self) -> pl.DataFrame:

@@ -36,6 +36,7 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
+    "scripts/learning",
 ]
 
 cache-dir = ".ruff_cache"
@@ -92,10 +93,20 @@ ignore = [
 unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
+# MetadataService.__init__ - 构造器注入 16 个依赖，参数数量不可避免
+"packages/datahub/src/ditto_datahub/services/metadata_service.py" = ["PLR0913"]
+# DerivedArtifactReader.read_frame - @overload 模式下无法拆分参数
+"packages/datahub/src/ditto_datahub/services/derived/artifact_reader.py" = ["PLR0913"]
+# MarketService.list_bars - 便利方法，参数透传到 MarketBarsQuery
+"packages/datahub/src/ditto_datahub/services/market_service.py" = ["PLR0913"]
+# IndicatorMetadataWriter.upsert - CQRS upsert 写入模式
+"packages/datahub/src/ditto_datahub/stores/macro/indicator/metadata_writer.py" = ["PLR0913"]
 # MetadataStore batch_get_by_codes - 参数化查询，使用 ? 占位符
 "packages/datahub/src/ditto_datahub/domains/macro/indicator/metadata_store.py" = ["S608"]
 "packages/datahub/src/ditto_datahub/domains/features/technical/indicator_metadata_store.py" = ["S608"]
 "packages/datahub/src/ditto_datahub/domains/factors/factor_metadata_store.py" = ["S608"]
+# ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
+"apps/port/src/ditto_port/services/derived/research.py" = ["S608"]
 
 # 测试文件 - 最宽松
 "tests/**/*.py" = [

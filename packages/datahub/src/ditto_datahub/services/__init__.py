@@ -14,26 +14,49 @@ Services module - 域服务统一入口.
 - FundamentalService: 企业基本面数据（财务报表、分红、业绩预告）
 - CapitalService: 资金市场数据（估值、融资融券、股权质押）
 - MacroService: 宏观经济指标（经济、利率、汇率、货币供应）
-- FeatureService: 技术指标数据（趋势、动量、波动率、成交量）
-- FactorService: 因子信号数据（基本面、技术面、宏观、统计）
+- DerivedQueryService: 统一派生查询契约（latest/series/compare_sources）
 - SourceService: 外部数据源访问（Tushare 等）
 - IngestionLogService: 数据摄入日志管理（追踪摄入状态、失败重试）
 - QualityRecordService: 质量记录服务（对比结果、隔离数据）
+- DerivedCatalogService: 统一派生 catalog/runtime metadata 服务
+- PublicationSafetyRecordService: 发布安全记录服务
+  （manifest、shadow diff、certification）
+- DerivedShadowSlotService: 发布 shadow candidate SQLite 控制面服务
 """
 
 # Capital 域服务
 from ditto_datahub.services.capital_service import CapitalService
 
-# Factors 域服务
-from ditto_datahub.services.factor_service import FactorQuery, FactorService
+# Runtime 服务
+from ditto_datahub.services.derived import (
+    DerivedArtifactReader,
+    DerivedCompareQuery,
+    DerivedLatestQuery,
+    DerivedQueryService,
+    DerivedSeriesQuery,
+    DerivedSourceScope,
+)
+from ditto_datahub.services.derived_catalog_service import DerivedCatalogService
+from ditto_datahub.services.derived_shadow_slot_service import (
+    DerivedShadowSlotService,
+)
 
-# Features 域服务
-from ditto_datahub.services.feature_service import FeatureQuery, FeatureService
+# Freeze 版本管理服务
+from ditto_datahub.services.freeze_service import FreezeService
 
 # Fundamental 域服务
 from ditto_datahub.services.fundamental_service import FundamentalService
 
-# Runtime 服务
+# Hot layer protocols (Phase 5+ infrastructure)
+from ditto_datahub.services.hot_layer import (
+    HotLayerReader,
+    HotLayerWriter,
+    StateStore,
+    UnavailableHotLayerReader,
+    UnavailableHotLayerWriter,
+    UnavailableStateStore,
+)
+from ditto_datahub.services.ingestion_cursor_service import IngestionCursorService
 from ditto_datahub.services.ingestion_log_service import IngestionLogService
 
 # Macro 域服务
@@ -55,7 +78,11 @@ from ditto_datahub.services.ports import (
     MarketReadPorts,
     MarketWritePorts,
 )
+from ditto_datahub.services.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+)
 from ditto_datahub.services.quality_record_service import QualityRecordService
+from ditto_datahub.services.research_catalog_service import ResearchCatalogService
 
 # Source 服务
 from ditto_datahub.services.source_service import SourceService
@@ -63,13 +90,21 @@ from ditto_datahub.services.source_service import SourceService
 __all__ = [
     "AdjType",
     "CapitalService",
-    "FactorQuery",
-    "FactorService",
-    "FeatureQuery",
-    "FeatureService",
+    "DerivedArtifactReader",
+    "DerivedCatalogService",
+    "DerivedCompareQuery",
+    "DerivedLatestQuery",
+    "DerivedQueryService",
+    "DerivedSeriesQuery",
+    "DerivedShadowSlotService",
+    "DerivedSourceScope",
+    "FreezeService",
     "FundamentalReadPorts",
     "FundamentalService",
     "FundamentalWritePorts",
+    "HotLayerReader",
+    "HotLayerWriter",
+    "IngestionCursorService",
     "IngestionLogService",
     "MacroService",
     "MarketBarsQuery",
@@ -78,6 +113,12 @@ __all__ = [
     "MarketService",
     "MarketWritePorts",
     "MetadataService",
+    "PublicationSafetyRecordService",
     "QualityRecordService",
+    "ResearchCatalogService",
     "SourceService",
+    "StateStore",
+    "UnavailableHotLayerReader",
+    "UnavailableHotLayerWriter",
+    "UnavailableStateStore",
 ]

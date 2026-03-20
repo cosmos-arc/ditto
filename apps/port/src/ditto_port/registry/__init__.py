@@ -14,13 +14,18 @@ Composition Root 模式：所有依赖在应用入口点（apps/port/）组装�
 # Infrastructure 层
 # Core 层
 # Contexts 层 - 上下文组合包
-from .contexts import IngestionBundle, create_ingestion_bundle
+from .contexts import (
+    IngestionBundle,
+    MaterializationBundle,
+    create_ingestion_bundle,
+    create_materialization_bundle,
+)
 from .core import QualityProvider
 
 # DataHub 层
 from .datahub import (
     CapitalProvider,
-    FeaturesProvider,
+    DerivedProvider,
     FundamentalProvider,
     MacroProvider,
     MarketProvider,
@@ -37,11 +42,12 @@ from .infra import (
 __all__ = [
     "CapitalProvider",
     "ConfigProvider",
-    "FeaturesProvider",
+    "DerivedProvider",
     "FundamentalProvider",
     "IngestionBundle",
     "MacroProvider",
     "MarketProvider",
+    "MaterializationBundle",
     "MetadataProvider",
     "NotificationProvider",
     "ObservabilityProvider",
@@ -49,4 +55,5 @@ __all__ = [
     "RuntimeProvider",
     "SourcesProvider",
     "create_ingestion_bundle",
+    "create_materialization_bundle",
 ]

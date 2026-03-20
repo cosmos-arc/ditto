@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import Enum, StrEnum
-from typing import Literal, NamedTuple
+from typing import Literal, NamedTuple, cast
 
 from ditto_datahub.models.enums import AssetClass
 
@@ -395,3 +396,49 @@ class InstrumentIdRange(NamedTuple):
             raise ValueError("无法确定资产类别")
 
         return detected[0]
+
+
+# ---------------------------------------------------------------------------
+# JSON type aliases (shared across models)
+# ---------------------------------------------------------------------------
+
+type JsonPrimitive = None | bool | int | float | str
+type JsonValue = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
+type JsonDict = dict[str, JsonValue]
+
+
+# ---------------------------------------------------------------------------
+# JSON record field validators
+# ---------------------------------------------------------------------------
+
+
+def require_str(data: Mapping[str, JsonValue], key: str) -> str:
+    """Extract a required string field from JSON payload."""
+    value = data[key]
+    if not isinstance(value, str):
+        raise TypeError(f"{key} must be a string")
+    return value
+
+
+def require_int(data: Mapping[str, JsonValue], key: str) -> int:
+    """Extract a required int field from JSON payload."""
+    value = data[key]
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise TypeError(f"{key} must be an int")
+    return value
+
+
+def require_bool(data: Mapping[str, JsonValue], key: str) -> bool:
+    """Extract a required bool field from JSON payload."""
+    value = data[key]
+    if not isinstance(value, bool):
+        raise TypeError(f"{key} must be a bool")
+    return value
+
+
+def require_payload(data: Mapping[str, JsonValue], key: str) -> JsonDict:
+    """Extract a required JSON object field from payload."""
+    value = data[key]
+    if not isinstance(value, dict):
+        raise TypeError(f"{key} must be a JSON object")
+    return cast(JsonDict, value)
