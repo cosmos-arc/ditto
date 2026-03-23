@@ -7,6 +7,7 @@ P5 证明型测试: manifest 序列化稳定性、rule_refs 排序、pre_trade �
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,7 @@ from ditto_core.backtest.engine import (
     EngineLoop,
     EngineMode,
     EngineOptions,
+    EngineResult,
 )
 from ditto_core.backtest.manifest import (
     RuleRef,
@@ -36,6 +38,7 @@ from ditto_core.backtest.risk.pre_trade import (
 from ditto_core.backtest.statistics import (
     ExecutionAuditCollector,
     PreTradeDecisionRecord,
+    build_report,
 )
 from ditto_core.execution.brokerage import BacktestBrokerage
 from ditto_core.execution.fills import FillEvent
@@ -188,6 +191,81 @@ def _build_engine_loop(
     )
 
 
+def _build_audited_engine_loop(
+    tmp_path: Path,
+    data: dict[str, pl.DataFrame],
+    config: EngineConfig,
+    pipeline: Any,
+    fee_model: SimpleFeeModel | AShareFeeModel,
+    pre_trade_check: CompositePreTradeCheck,
+    collector: ExecutionAuditCollector,
+    instance_id: int = 0,
+    rules_getter: RulesGetter | None = None,
+) -> _AuditedEngineLoop:
+    """构建带审计收集器的 EngineLoop — 自动记录每日快照和成交。"""
+    instance_dir = tmp_path / f"audited_{instance_id}"
+    instance_dir.mkdir(parents=True)
+    data_dir = write_parquet_data(instance_dir, data)
+    data_feed = ParquetDataFeed(
+        data_dir=data_dir,
+        instrument_ids=INSTRUMENT_IDS,
+        start_date=config.start_date,
+        end_date=config.end_date,
+    )
+    account = Account(
+        cash=CashBook(
+            available=INITIAL_CASH,
+            settled=INITIAL_CASH,
+            frozen=0.0,
+        ),
+    )
+    brokerage = BacktestBrokerage(
+        account=account,
+        model=BrokerageModel(fee_model=fee_model),
+        rules_getter=rules_getter,
+    )
+    planner = SimpleExecutionPlanner()
+
+    return _AuditedEngineLoop(
+        config=config,
+        pipeline=pipeline,
+        planner=planner,
+        brokerage=brokerage,
+        pre_trade_check=pre_trade_check,
+        data_feed=data_feed,
+        options=EngineOptions(fee_model=fee_model, audit_collector=collector),
+        collector=collector,
+    )
+
+
+class _AuditedEngineLoop(EngineLoop):
+    """EngineLoop 子类 — 在每步后自动记录 account_view 和 fills 到审计收集器。"""
+
+    def __init__(
+        self,
+        collector: ExecutionAuditCollector,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._audit_collector = collector
+
+    def _step(self, date: str) -> None:
+        """执行单日步骤并记录审计数据。"""
+        # 记录步骤前账户快照
+        account_view_before = self._brokerage.get_account()
+        self._audit_collector.record_account_view(
+            f"{date}-before",
+            account_view_before,
+        )
+
+        # 执行原始步骤
+        super()._step(date)
+
+        # 记录步骤后账户快照
+        account_view_after = self._brokerage.get_account()
+        self._audit_collector.record_account_view(date, account_view_after)
+
+
 def _fill_key(fill: FillEvent) -> tuple[str, str, int, float, float]:
     """提取 FillEvent 的业务关键字段（排除 UUID）。"""
     return (
@@ -196,6 +274,103 @@ def _fill_key(fill: FillEvent) -> tuple[str, str, int, float, float]:
         fill.filled_quantity,
         fill.fill_price,
         fill.fee,
+    )
+
+
+def _fill_identity_key(fill: FillEvent) -> str:
+    """FillEvent 的归一化标识 — 用于 diff 比对 (instrument, direction, date)。"""
+    return f"{fill.instrument_id}|{fill.direction.value}|{fill.event_time:%Y-%m-%d}"
+
+
+# ---------------------------------------------------------------------------
+# RunDiff — 两次引擎运行定量差异
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class RunDiff:
+    """两次引擎运行的定量差异。"""
+
+    nav_delta: float
+    nav_delta_pct: float
+    total_fee_delta: float
+    affected_instruments: set[str]
+    affected_dates: set[str]
+    fill_count_diff: int
+    extra_fills_in_a: set[str]
+    extra_fills_in_b: set[str]
+
+
+def compute_run_diff(
+    result_a: EngineResult,
+    result_b: EngineResult,
+    label_a: str = "A",
+    label_b: str = "B",
+) -> RunDiff:
+    """计算两次引擎运行的定量差异。
+
+    Args:
+        result_a: 第一次运行结果。
+        result_b: 第二次运行结果。
+        label_a: 第一次运行标签 (用于 extra_fills 标识)。
+        label_b: 第二次运行标签。
+
+    Returns:
+        RunDiff 实例，包含 NAV 差异、费用差异、影响标的/日期等。
+    """
+    nav_delta = result_a.final_nav - result_b.final_nav
+    nav_delta_pct = (
+        (nav_delta / result_b.final_nav * 100) if result_b.final_nav != 0 else 0.0
+    )
+
+    total_fee_a = sum(f.fee for f in result_a.fills)
+    total_fee_b = sum(f.fee for f in result_b.fills)
+    total_fee_delta = total_fee_a - total_fee_b
+
+    # 归一化 fill 标识
+    keys_a = {_fill_identity_key(f) for f in result_a.fills}
+    keys_b = {_fill_identity_key(f) for f in result_b.fills}
+
+    extra_in_a = keys_a - keys_b
+    extra_in_b = keys_b - keys_a
+
+    # 影响标的 — 两个运行中 fill 标识不同的 instrument
+    affected_instruments: set[str] = set()
+    affected_dates: set[str] = set()
+
+    all_diff_keys = extra_in_a | extra_in_b
+    for key in all_diff_keys:
+        parts = key.split("|")
+        if len(parts) == 3:
+            affected_instruments.add(parts[0])
+            affected_dates.add(parts[2])
+
+    # 额外添加费用不同但标识相同的标的
+    fee_map_a: dict[str, float] = {}
+    fee_map_b: dict[str, float] = {}
+    for f in result_a.fills:
+        k = _fill_identity_key(f)
+        fee_map_a[k] = fee_map_a.get(k, 0.0) + f.fee
+    for f in result_b.fills:
+        k = _fill_identity_key(f)
+        fee_map_b[k] = fee_map_b.get(k, 0.0) + f.fee
+
+    for k in keys_a & keys_b:
+        if abs(fee_map_a.get(k, 0.0) - fee_map_b.get(k, 0.0)) > 1e-10:
+            parts = k.split("|")
+            if len(parts) == 3:
+                affected_instruments.add(parts[0])
+                affected_dates.add(parts[2])
+
+    return RunDiff(
+        nav_delta=nav_delta,
+        nav_delta_pct=nav_delta_pct,
+        total_fee_delta=total_fee_delta,
+        affected_instruments=affected_instruments,
+        affected_dates=affected_dates,
+        fill_count_diff=abs(len(result_a.fills) - len(result_b.fills)),
+        extra_fills_in_a=extra_in_a,
+        extra_fills_in_b=extra_in_b,
     )
 
 
@@ -344,6 +519,109 @@ class TestReproducibilityLayer1:
         assert result1.account_view.nav == result2.account_view.nav
         assert result1.account_view.cash.total == result2.account_view.cash.total
 
+    def test_reproducible_nav_series(
+        self,
+        tmp_path: Path,
+        three_day_config: EngineConfig,
+        etf_pipeline: Any,
+        composite_pre_trade_check: CompositePreTradeCheck,
+        three_day_test_data: dict[str, pl.DataFrame],
+    ) -> None:
+        """两次运行的 nav_series 逐日完全一致 — 验证整个 NAV 轨迹的确定性。"""
+        data = three_day_test_data
+        collector1 = ExecutionAuditCollector()
+        collector2 = ExecutionAuditCollector()
+
+        loop1 = _build_audited_engine_loop(
+            tmp_path,
+            data,
+            three_day_config,
+            etf_pipeline,
+            SimpleFeeModel(),
+            composite_pre_trade_check,
+            collector=collector1,
+            instance_id=0,
+        )
+        loop2 = _build_audited_engine_loop(
+            tmp_path,
+            data,
+            three_day_config,
+            etf_pipeline,
+            SimpleFeeModel(),
+            composite_pre_trade_check,
+            collector=collector2,
+            instance_id=1,
+        )
+
+        result1 = loop1.run()
+        result2 = loop2.run()
+
+        report1 = build_report(collector1, run_id=result1.run_id)
+        report2 = build_report(collector2, run_id=result2.run_id)
+
+        assert len(report1.nav_series) > 0, "nav_series should not be empty"
+        assert len(report1.nav_series) == len(report2.nav_series), (
+            f"nav_series length differs: {len(report1.nav_series)} vs "
+            f"{len(report2.nav_series)}"
+        )
+
+        for i, ((date1, nav1), (date2, nav2)) in enumerate(
+            zip(report1.nav_series, report2.nav_series, strict=True),
+        ):
+            assert date1 == date2, f"Day {i}: date differs ({date1} vs {date2})"
+            assert nav1 == nav2, f"Day {i} ({date1}): nav differs ({nav1} vs {nav2})"
+
+    def test_reproducible_nav_series_with_engine_version(
+        self,
+        tmp_path: Path,
+        three_day_config: EngineConfig,
+        etf_pipeline: Any,
+        composite_pre_trade_check: CompositePreTradeCheck,
+        three_day_test_data: dict[str, pl.DataFrame],
+    ) -> None:
+        """同 engine_version 两次运行 → nav_series 一致。"""
+        data = three_day_test_data
+        config = EngineConfig(
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+            initial_cash=INITIAL_CASH,
+            mode=EngineMode.BACKTEST,
+            strategy_id="test-etf-rotation",
+            strategy_run_id="run-version",
+            engine_version="0.1.0",
+        )
+        collector1 = ExecutionAuditCollector()
+        collector2 = ExecutionAuditCollector()
+
+        loop1 = _build_audited_engine_loop(
+            tmp_path,
+            data,
+            config,
+            etf_pipeline,
+            SimpleFeeModel(),
+            composite_pre_trade_check,
+            collector=collector1,
+            instance_id=0,
+        )
+        loop2 = _build_audited_engine_loop(
+            tmp_path,
+            data,
+            config,
+            etf_pipeline,
+            SimpleFeeModel(),
+            composite_pre_trade_check,
+            collector=collector2,
+            instance_id=1,
+        )
+
+        result1 = loop1.run()
+        result2 = loop2.run()
+
+        report1 = build_report(collector1, run_id=result1.run_id)
+        report2 = build_report(collector2, run_id=result2.run_id)
+
+        assert report1.nav_series == report2.nav_series
+
 
 # ---------------------------------------------------------------------------
 # Task 3A.2: Layer 2 — 版本变更 diff report
@@ -449,6 +727,104 @@ class TestReproducibilityLayer2:
         )
 
         assert result_simple.final_nav != result_ashare.final_nav
+
+    def test_compute_run_diff_identical_runs(
+        self,
+        two_identical_engine_loops: tuple[EngineLoop, EngineLoop],
+    ) -> None:
+        """同 config 两次运行 → compute_run_diff 输出全零差异。"""
+        loop1, loop2 = two_identical_engine_loops
+        result1 = loop1.run()
+        result2 = loop2.run()
+
+        diff = compute_run_diff(result1, result2, "run-1", "run-2")
+
+        assert diff.nav_delta == 0.0
+        assert diff.nav_delta_pct == 0.0
+        assert diff.total_fee_delta == 0.0
+        assert diff.fill_count_diff == 0
+        assert len(diff.affected_instruments) == 0
+        assert len(diff.affected_dates) == 0
+        assert len(diff.extra_fills_in_a) == 0
+        assert len(diff.extra_fills_in_b) == 0
+
+    def test_compute_run_diff_different_fee_models(
+        self,
+        tmp_path: Path,
+        three_day_config: EngineConfig,
+        etf_pipeline: Any,
+        composite_pre_trade_check: CompositePreTradeCheck,
+        three_day_test_data: dict[str, pl.DataFrame],
+    ) -> None:
+        """不同 fee model → compute_run_diff 精确量化差异。"""
+        data = three_day_test_data
+
+        config_simple = EngineConfig(
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+            initial_cash=INITIAL_CASH,
+            mode=EngineMode.BACKTEST,
+            strategy_id="test-etf-rotation",
+            strategy_run_id="v0.1.0-simple",
+            engine_version="0.1.0",
+        )
+        config_ashare = EngineConfig(
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+            initial_cash=INITIAL_CASH,
+            mode=EngineMode.BACKTEST,
+            strategy_id="test-etf-rotation",
+            strategy_run_id="v0.1.0-ashare",
+            engine_version="0.1.0",
+        )
+
+        loop_simple = _build_engine_loop(
+            tmp_path,
+            data,
+            config_simple,
+            etf_pipeline,
+            SimpleFeeModel(),
+            composite_pre_trade_check,
+            instance_id=0,
+        )
+        result_simple = loop_simple.run()
+
+        loop_ashare = _build_engine_loop(
+            tmp_path,
+            data,
+            config_ashare,
+            etf_pipeline,
+            AShareFeeModel(),
+            composite_pre_trade_check,
+            instance_id=1,
+            rules_getter=_ashare_rules_getter,
+        )
+        result_ashare = loop_ashare.run()
+
+        diff = compute_run_diff(
+            result_simple,
+            result_ashare,
+            label_a="v0.1.0-simple",
+            label_b="v0.1.0-ashare",
+        )
+
+        # NAV 应该不同
+        assert diff.nav_delta != 0.0, (
+            f"NAV delta should be non-zero, got {diff.nav_delta}"
+        )
+
+        # 费用总额不同
+        assert diff.total_fee_delta != 0.0, (
+            f"Fee delta should be non-zero, got {diff.total_fee_delta}"
+        )
+
+        # 应至少有一个受影响标的
+        assert len(diff.affected_instruments) > 0, (
+            "Should have at least one affected instrument"
+        )
+
+        # 应至少有一个受影响日期
+        assert len(diff.affected_dates) > 0, "Should have at least one affected date"
 
 
 # ---------------------------------------------------------------------------

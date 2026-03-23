@@ -90,6 +90,7 @@ class EngineConfig:
         strategy_id: 策略 ID
         strategy_run_id: 策略运行 ID
         rebalance_freq: 调仓频率 (daily / weekly / monthly)
+        engine_version: 引擎版本号 (用于 manifest/diff 追踪)
 
     """
 
@@ -102,6 +103,7 @@ class EngineConfig:
     strategy_id: str = "default"
     strategy_run_id: str = ""
     rebalance_freq: str = "daily"
+    engine_version: str = "0.1.0"
 
 
 # ---------------------------------------------------------------------------
