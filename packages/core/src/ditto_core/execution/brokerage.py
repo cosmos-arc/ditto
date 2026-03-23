@@ -12,7 +12,6 @@ from datetime import datetime
 from typing import Protocol
 
 from ditto_core.accounting.account import Account, AccountView
-from ditto_core.accounting.cash import CashBook
 from ditto_core.accounting.order_book import (
     Order,
     OrderDirection,
@@ -21,7 +20,6 @@ from ditto_core.accounting.order_book import (
     OrderTicket,
     StateTransitionError,
 )
-from ditto_core.accounting.position import Position
 from ditto_core.execution.fills import Filled, FillEvent, NoFill
 from ditto_core.execution.reality import BrokerageModel
 from ditto_core.execution.reality.market import MarketSnapshot
@@ -338,62 +336,7 @@ class BacktestBrokerage:
             event=order_evt,
         )
         self._account.order_book.update(updated_ticket)
-        self._update_position(fill, settle_date)
-        self._update_cash(fill)
-
-    def _update_position(self, fill: FillEvent, settle_date: str) -> None:
-        """更新持仓 — BUY 时注册冻结, SELL 时扣减 available_quantity。"""
-        iid = fill.instrument_id
-        existing = self._account.positions.get(iid)
-        price = fill.fill_price
-        qty = fill.filled_quantity
-
-        if fill.direction == OrderDirection.BUY:
-            if existing is not None:
-                total_qty = existing.quantity + qty
-                avg_cost = (
-                    existing.average_cost * existing.quantity + price * qty
-                ) / total_qty
-                # available_quantity 保持不变 — 新买入份额被冻结
-                new_pos = replace(
-                    existing,
-                    quantity=total_qty,
-                    average_cost=avg_cost,
-                    market_value=avg_cost * total_qty,
-                    total_fees=existing.total_fees + fill.fee,
-                )
-            else:
-                new_pos = Position(
-                    instrument_id=iid,
-                    quantity=qty,
-                    available_quantity=0,
-                    average_cost=price,
-                    market_value=price * qty,
-                    unrealized_pnl=0.0,
-                    realized_pnl=0.0,
-                    total_fees=fill.fee,
-                )
-            self._account.positions[iid] = new_pos
-            # 注册冻结: settle_date 到期后解冻
-            self._register_frozen(iid, settle_date, qty)
-
-        elif fill.direction == OrderDirection.SELL:
-            if existing is not None:
-                new_qty = existing.quantity - qty
-                new_avail = existing.available_quantity - qty
-                realized = (price - existing.average_cost) * qty
-                if new_qty <= 0:
-                    del self._account.positions[iid]
-                else:
-                    new_pos = replace(
-                        existing,
-                        quantity=new_qty,
-                        available_quantity=new_avail,
-                        market_value=existing.average_cost * new_qty,
-                        realized_pnl=existing.realized_pnl + realized,
-                        total_fees=existing.total_fees + fill.fee,
-                    )
-                    self._account.positions[iid] = new_pos
+        self._account.apply_fill(fill, settle_date, on_frozen=self._register_frozen)
 
     def _register_frozen(
         self,
@@ -444,28 +387,3 @@ class BacktestBrokerage:
                     pos,
                     available_quantity=pos.available_quantity + thaw_total,
                 )
-
-    def _update_cash(self, fill: FillEvent) -> None:
-        """更新现金。"""
-        cash = self._account.cash
-        price = fill.fill_price
-        qty = fill.filled_quantity
-        fee = fill.fee
-        amount = price * qty
-
-        if fill.direction == OrderDirection.BUY:
-            new_available = cash.available - amount - fee
-            new_settled = cash.settled - fee
-            self._account.cash = CashBook(
-                available=new_available,
-                settled=new_settled,
-                frozen=cash.frozen,
-            )
-        elif fill.direction == OrderDirection.SELL:
-            new_available = cash.available + amount - fee
-            new_settled = cash.settled + amount - fee
-            self._account.cash = CashBook(
-                available=new_available,
-                settled=new_settled,
-                frozen=cash.frozen,
-            )

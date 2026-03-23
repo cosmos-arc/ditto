@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass, field, replace
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from ditto_core.accounting.cash import CashBook
 from ditto_core.accounting.order_book import (
@@ -12,6 +14,9 @@ from ditto_core.accounting.order_book import (
     OrderDirection,
 )
 from ditto_core.accounting.position import Position
+
+if TYPE_CHECKING:
+    from ditto_core.execution.fills import FillEvent
 
 __all__ = ["Account", "AccountView"]
 
@@ -138,3 +143,113 @@ class Account:
             pending_buy_value=self._calc_pending_buy_value(),
             order_book=self.order_book.readonly_view(),
         )
+
+    # -- fill application ----------------------------------------------------
+
+    def apply_fill(
+        self,
+        fill: FillEvent,
+        settle_date: str,
+        *,
+        on_frozen: Callable[[str, str, int], None] | None = None,
+    ) -> None:
+        """
+        应用成交事件，更新持仓和现金。
+
+        从 BacktestBrokerage 提取的持仓/资金更新逻辑。
+        BUY 时通过 on_frozen 回调注册冻结份额（T+1 交收），
+        SELL 时扣减 available_quantity 并计算已实现盈亏。
+
+        Args:
+            fill: 成交事件
+            settle_date: 交收日期 (YYYY-MM-DD)，用于冻结份额追踪
+            on_frozen: 冻结回调，签名 (instrument_id, settle_date, quantity)。
+                BUY 时调用，由 Brokerage 实现 T+1 冻结注册逻辑。
+
+        """
+        self._update_position_from_fill(fill, settle_date, on_frozen)
+        self._update_cash_from_fill(fill)
+
+    def _update_position_from_fill(
+        self,
+        fill: FillEvent,
+        settle_date: str,
+        on_frozen: Callable[[str, str, int], None] | None,
+    ) -> None:
+        """更新持仓 — BUY 时注册冻结, SELL 时扣减 available_quantity。"""
+        iid = fill.instrument_id
+        existing = self.positions.get(iid)
+        price = fill.fill_price
+        qty = fill.filled_quantity
+
+        if fill.direction == OrderDirection.BUY:
+            if existing is not None:
+                total_qty = existing.quantity + qty
+                avg_cost = (
+                    existing.average_cost * existing.quantity + price * qty
+                ) / total_qty
+                new_pos = replace(
+                    existing,
+                    quantity=total_qty,
+                    average_cost=avg_cost,
+                    market_value=avg_cost * total_qty,
+                    total_fees=existing.total_fees + fill.fee,
+                )
+            else:
+                new_pos = Position(
+                    instrument_id=iid,
+                    quantity=qty,
+                    available_quantity=0,
+                    average_cost=price,
+                    market_value=price * qty,
+                    unrealized_pnl=0.0,
+                    realized_pnl=0.0,
+                    total_fees=fill.fee,
+                )
+            self.positions[iid] = new_pos
+            # 注册冻结: settle_date 到期后解冻
+            if on_frozen is not None:
+                on_frozen(iid, settle_date, qty)
+
+        elif fill.direction == OrderDirection.SELL:
+            if existing is not None:
+                new_qty = existing.quantity - qty
+                new_avail = existing.available_quantity - qty
+                realized = (price - existing.average_cost) * qty
+                if new_qty <= 0:
+                    del self.positions[iid]
+                else:
+                    new_pos = replace(
+                        existing,
+                        quantity=new_qty,
+                        available_quantity=new_avail,
+                        market_value=existing.average_cost * new_qty,
+                        realized_pnl=existing.realized_pnl + realized,
+                        total_fees=existing.total_fees + fill.fee,
+                    )
+                    self.positions[iid] = new_pos
+
+    def _update_cash_from_fill(self, fill: FillEvent) -> None:
+        """更新现金。"""
+        cash = self.cash
+        price = fill.fill_price
+        qty = fill.filled_quantity
+        fee = fill.fee
+        amount = price * qty
+
+        if fill.direction == OrderDirection.BUY:
+            new_available = cash.available - amount - fee
+            new_settled = cash.settled - fee
+            self.cash = CashBook(
+                available=new_available,
+                settled=new_settled,
+                frozen=cash.frozen,
+            )
+        elif fill.direction == OrderDirection.SELL:
+            new_available = cash.available + amount - fee
+            new_settled = cash.settled + amount - fee
+            self.cash = CashBook(
+                available=new_available,
+                settled=new_settled,
+                frozen=cash.frozen,
+            )
