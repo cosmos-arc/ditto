@@ -1,7 +1,7 @@
 # ditto-datahub
 
-**版本**: v0.16.0
-**最后更新**: 2026-03-21
+**版本**: v0.17.0
+**最后更新**: 2026-03-23
 **状态**: ✅ 稳定
 
 ## 概要
@@ -493,13 +493,21 @@ result = service.get_valuation_metrics(
 
 #### Strategy 域
 
-- `services/strategy/`: Strategy 域（策略规则组装服务）
+- `services/strategy/`: Strategy 域（策略规则组装 + 策略目录服务）
   - `instrument_rule_provider.py`: InstrumentRuleProvider（三层规则组装）
+  - `strategy_catalog_service.py`: StrategyCatalogService（Spec CRUD + 发布治理）
+  - `strategy_artifact_service.py`: StrategyArtifactService（产物生命周期管理）
 
 **三层规则 (R6)**：
 - `DefinitionRecord`: 标的静态定义（asset_class, exchange, tick_size, lot_size 等）
 - `TradingRuleRecord`: 交易规则（PIT 版本化 — settlement_cycle, price_limit_pct 等）
 - `FeeScheduleRecord`: 费率表（PIT 版本化 — commission_rate, stamp_duty_rate 等）
+
+**策略目录**：
+- `StrategySpecRecord`: 策略 Spec 存储记录（strategy_id, name, spec_json, version, status）
+- `StrategyArtifactRecord`: 策略产物记录（artifact_id, strategy_id, run_id, artifact_type, file_path）
+- `StrategyCatalogService`: Spec CRUD + `publish_spec()`（draft → published 状态治理）
+- `StrategyArtifactService`: 产物 CRUD + `archive_artifact()`（active → archived）
 
 ### Helpers 层
 
@@ -822,6 +830,13 @@ bars/
 - [Port 层重构计划](../../../../docs/plans/2026-02-02-port-layer-refactor.md)
 
 ## 变更记录
+
+### v0.17.0 (2026-03-23)
+**新增** — Strategy 域控制面服务
+- `models/strategy.py`: StrategySpecRecord（策略 Spec 存储）、StrategyArtifactRecord（策略产物记录）
+- `services/strategy/strategy_catalog_service.py`: StrategyCatalogService（Spec CRUD + DRAFT/PUBLISHED 状态治理）
+- `services/strategy/strategy_artifact_service.py`: StrategyArtifactService（产物 CRUD + 生命周期管理）
+- 21 个新测试（catalog 10 + artifact 11），全部通过
 
 ### v0.16.0 (2026-03-21)
 **新增** — Phase 0 Part 4: DataHub 层策略规则支持

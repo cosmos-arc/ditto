@@ -1,7 +1,7 @@
 """Tests for built-in Pipeline stages.
 
-Covers Universe, Signal, Scoring, Filtering, Selection, TrendFilter
-DecisionStage implementations with AAA test pattern.
+Covers Universe, Signal, Scoring, Filtering, Selection, TrendFilter,
+RiskLockFilter DecisionStage implementations with AAA test pattern.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ import pytest
 from ditto_core.strategy.builtins.filtering import (
     FilterCondition,
     FilteringStage,
+    RiskLockFilter,
     TrendFilterStage,
 )
 from ditto_core.strategy.builtins.scoring import ScoringMethod, ScoringStage
@@ -646,6 +647,241 @@ class TestTrendFilterStage:
         stage = TrendFilterStage(threshold=0.05)
         with pytest.raises(AttributeError):
             stage.threshold = 0.1  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# FilteringStage boundary
+# ---------------------------------------------------------------------------
+
+
+class TestFilteringStageBoundary:
+    """FilteringStage 边界条件测试。"""
+
+    def test_empty_frame(self, empty_context: StrategyContext) -> None:
+        """空 frame 带过滤条件不应崩溃，仍返回空 frame。"""
+        empty_frame = pl.DataFrame(
+            {"instrument_id": [], "score": []},
+            schema={"instrument_id": pl.Utf8, "score": pl.Float64},
+        )
+        stage = FilteringStage(
+            conditions=(
+                FilterCondition(
+                    name="min_score",
+                    column="score",
+                    min_value=0.5,
+                ),
+            )
+        )
+        result = stage.process(empty_frame, empty_context)
+        assert result.is_empty()
+
+    def test_all_filtered(self, empty_context: StrategyContext) -> None:
+        """所有行被过滤掉时应返回空 frame。"""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["A", "B", "C"],
+                "score": [0.1, 0.2, 0.3],
+            }
+        )
+        stage = FilteringStage(
+            conditions=(
+                FilterCondition(
+                    name="min_score",
+                    column="score",
+                    min_value=0.9,
+                ),
+            )
+        )
+        result = stage.process(frame, empty_context)
+        assert result.is_empty()
+
+    def test_min_greater_than_max_contradiction(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        """min_value > max_value 矛盾条件：没有行能同时满足，返回空 frame。"""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["A", "B", "C"],
+                "score": [0.3, 0.5, 0.7],
+            }
+        )
+        stage = FilteringStage(
+            conditions=(
+                FilterCondition(
+                    name="contradiction",
+                    column="score",
+                    min_value=0.8,
+                    max_value=0.4,
+                ),
+            )
+        )
+        result = stage.process(frame, empty_context)
+        assert result.is_empty()
+
+    def test_only_null_exclusion(self, empty_context: StrategyContext) -> None:
+        """仅有 exclude_nulls 条件（无 min/max）时，保留非 null 行。"""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["A", "B", "C", "D"],
+                "score": [0.5, None, 0.8, None],
+            }
+        )
+        stage = FilteringStage(
+            conditions=(
+                FilterCondition(
+                    name="no_null_score",
+                    column="score",
+                    exclude_nulls=True,
+                ),
+            )
+        )
+        result = stage.process(frame, empty_context)
+        assert result.shape == (2, 2)
+        assert set(result["instrument_id"].to_list()) == {"A", "C"}
+
+    def test_frozen(self) -> None:
+        """FilteringStage 是 frozen dataclass，不可修改属性。"""
+        stage = FilteringStage(
+            conditions=(FilterCondition(name="t", column="c"),),
+        )
+        with pytest.raises(AttributeError):
+            stage.conditions = ()  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# ScoringStage boundary
+# ---------------------------------------------------------------------------
+
+
+class TestScoringStageBoundary:
+    """ScoringStage 边界条件测试。"""
+
+    @pytest.mark.parametrize(
+        "method",
+        [ScoringMethod.RAW, ScoringMethod.RANK, ScoringMethod.ZSCORE],
+    )
+    def test_empty_frame(
+        self,
+        empty_context: StrategyContext,
+        method: ScoringMethod,
+    ) -> None:
+        """空 frame：返回空 frame，带 score 列。"""
+        empty_frame = pl.DataFrame(
+            {"instrument_id": [], "signal_value": []},
+            schema={"instrument_id": pl.Utf8, "signal_value": pl.Float64},
+        )
+        stage = ScoringStage(method=method, output_column="score")
+        result = stage.process(empty_frame, empty_context)
+        assert result.is_empty()
+        assert "score" in result.columns
+
+    def test_single_row_raw(self, empty_context: StrategyContext) -> None:
+        """RAW 模式单行：score = signal_value。"""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["A"],
+                "signal_value": [0.42],
+            }
+        )
+        stage = ScoringStage(method=ScoringMethod.RAW, output_column="score")
+        result = stage.process(frame, empty_context)
+        assert result["score"][0] == pytest.approx(0.42)
+
+    def test_single_row_rank(self, empty_context: StrategyContext) -> None:
+        """RANK 模式单行：score = 1.0（rank/count = 1/1）。"""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["A"],
+                "signal_value": [0.42],
+            }
+        )
+        stage = ScoringStage(method=ScoringMethod.RANK, output_column="score")
+        result = stage.process(frame, empty_context)
+        assert result["score"][0] == pytest.approx(1.0)
+
+    def test_single_row_zscore(self, empty_context: StrategyContext) -> None:
+        """ZSCORE 模式单行：std(ddof=1) 为 null，score 应为 null。"""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["A"],
+                "signal_value": [0.42],
+            }
+        )
+        stage = ScoringStage(method=ScoringMethod.ZSCORE, output_column="score")
+        result = stage.process(frame, empty_context)
+        # Polars std(ddof=1) 对单行返回 null，null == 0 为 null（非 True），
+        # 走 otherwise 分支：(col - mean) / null = null
+        assert result["score"][0] is None
+
+
+# ---------------------------------------------------------------------------
+# RiskLockFilter
+# ---------------------------------------------------------------------------
+
+
+class TestRiskLockFilter:
+    def test_no_locked_instruments(
+        self,
+        sample_instruments: pl.DataFrame,
+        empty_context: StrategyContext,
+    ) -> None:
+        """无锁定标的时应原样返回。"""
+        stage = RiskLockFilter()
+        result = stage.process(sample_instruments, empty_context)
+        assert result.shape == (3, 1)
+
+    def test_partial_lock(
+        self,
+        sample_instruments: pl.DataFrame,
+    ) -> None:
+        """部分标的被锁定时应过滤掉锁定行。"""
+        ctx = StrategyContext(
+            risk_locked_instruments={
+                "159915.SZ": ("stop_loss", None),
+            },
+        )
+        stage = RiskLockFilter()
+        result = stage.process(sample_instruments, ctx)
+        assert result.shape == (2, 1)
+        assert set(result["instrument_id"].to_list()) == {"510300.SH", "159949.SZ"}
+
+    def test_all_locked(
+        self,
+        sample_instruments: pl.DataFrame,
+    ) -> None:
+        """所有标的被锁定时应返回空 frame。"""
+        ctx = StrategyContext(
+            risk_locked_instruments={
+                "159915.SZ": ("stop_loss", None),
+                "510300.SH": ("stop_loss", None),
+                "159949.SZ": ("stop_loss", None),
+            },
+        )
+        stage = RiskLockFilter()
+        result = stage.process(sample_instruments, ctx)
+        assert result.is_empty()
+
+    def test_empty_frame_with_locks(self) -> None:
+        """空 frame 加锁定列表仍返回空 frame。"""
+        ctx = StrategyContext(
+            risk_locked_instruments={
+                "159915.SZ": ("stop_loss", None),
+            },
+        )
+        empty_frame = pl.DataFrame(
+            {"instrument_id": []},
+            schema={"instrument_id": pl.Utf8},
+        )
+        stage = RiskLockFilter()
+        result = stage.process(empty_frame, ctx)
+        assert result.is_empty()
+
+    def test_frozen(self) -> None:
+        """RiskLockFilter 是 frozen dataclass。"""
+        stage = RiskLockFilter()
+        with pytest.raises(AttributeError):
+            stage.process = lambda *a: pl.DataFrame()  # type: ignore[misc]
 
 
 # ---------------------------------------------------------------------------

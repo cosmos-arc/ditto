@@ -86,9 +86,10 @@ ditto_core/
 - StrategySpec 是策略的完整语义契约
 - DecisionStage 是 Protocol，Pipeline 通过它分发
 - StrategyPipeline 顺序编排 Stages，纯函数无状态
-- 内置 Stages: Universe / Signal / Scoring / Filtering / Selection / RiskLockFilter
+- 内置 Stages: Universe / Signal / Scoring / Filtering / Selection / RiskLockFilter / RegimeStage
 - etf_rotation 模板提供标准 Pipeline 组装
 - DecisionFrame 通过列名约定流转，不做运行时 schema 校验
+- `validation.py` 提供 `validate_spec_params()` 独立参数校验函数
 - 详见 v3 设计文档 §2, §6.1, §9.1
 
 ### Portfolio（组合构建层）

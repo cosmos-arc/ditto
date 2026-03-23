@@ -11,6 +11,9 @@ Note: 模板（ETFRotationConfig 等）从 ditto_core.strategy.templates 导入�
 from ditto_core.strategy.builtins import (
     FilterCondition,
     FilteringStage,
+    RegimeLabel,
+    RegimeMethod,
+    RegimeStage,
     RiskLockFilter,
     ScoringMethod,
     ScoringStage,
@@ -21,6 +24,7 @@ from ditto_core.strategy.builtins import (
 )
 from ditto_core.strategy.context import StrategyContext
 from ditto_core.strategy.models import (
+    RebalancePlan,
     SignalSnapshot,
     StrategyRun,
     StrategyTemplate,
@@ -47,6 +51,10 @@ __all__ = [
     "FilterCondition",
     "FilteringStage",
     "ParamConstraint",
+    "RebalancePlan",
+    "RegimeLabel",
+    "RegimeMethod",
+    "RegimeStage",
     "RiskLockFilter",
     "ScorerSpec",
     "ScoringMethod",

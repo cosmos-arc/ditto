@@ -16,6 +16,7 @@ from ditto_core.accounting.order_book import (
 from ditto_core.accounting.position import Position
 from ditto_core.execution.planner import (
     BlockedOrder,
+    BlockSeverity,
     ExecutionPlan,
     ExecutionPlanner,
     SimpleExecutionPlanner,
@@ -147,7 +148,7 @@ class TestBlockedOrder:
             direction=OrderDirection.BUY,
             intended_quantity=100,
             reason="risk_locked",
-            severity="block",
+            severity=BlockSeverity.BLOCK,
         )
         with pytest.raises(AttributeError):
             bo.instrument_id = "ETF-002"  # type: ignore[misc]
@@ -158,18 +159,18 @@ class TestBlockedOrder:
             direction=OrderDirection.BUY,
             intended_quantity=100,
             reason="risk_locked",
-            severity="block",
+            severity=BlockSeverity.BLOCK,
         )
-        assert bo_block.severity == "block"
+        assert bo_block.severity is BlockSeverity.BLOCK
 
         bo_defer = BlockedOrder(
             instrument_id="ETF-001",
             direction=OrderDirection.BUY,
             intended_quantity=100,
             reason="price_limit",
-            severity="defer",
+            severity=BlockSeverity.DEFER,
         )
-        assert bo_defer.severity == "defer"
+        assert bo_defer.severity is BlockSeverity.DEFER
 
 
 # ---------------------------------------------------------------------------
@@ -523,7 +524,7 @@ class TestPlannerLock:
         assert bo.instrument_id == "ETF-001"
         assert bo.direction == OrderDirection.BUY
         assert bo.reason == "risk_locked"
-        assert bo.severity == "block"
+        assert bo.severity is BlockSeverity.BLOCK
         assert bo.intended_quantity == 50000  # 0.5 * 100K
 
     def test_locked_allows_sell(self) -> None:
@@ -1064,7 +1065,7 @@ class TestTPlusOne:
         assert sum(o.quantity for o in sell_orders) == 500
         assert len(plan.blocked_orders) == 1
         assert plan.blocked_orders[0].reason == "t_plus1_not_sellable"
-        assert plan.blocked_orders[0].severity == "defer"
+        assert plan.blocked_orders[0].severity is BlockSeverity.DEFER
         assert plan.blocked_orders[0].intended_quantity == 500
 
     def test_t0_sell_not_capped(self) -> None:
@@ -1155,7 +1156,7 @@ class TestLimitUpDown:
         assert len(plan.orders) == 0
         assert len(plan.blocked_orders) == 1
         assert plan.blocked_orders[0].reason == "limit_up_no_buy"
-        assert plan.blocked_orders[0].severity == "defer"
+        assert plan.blocked_orders[0].severity is BlockSeverity.DEFER
 
     def test_sell_at_limit_down_blocked(self) -> None:
         """卖出 + 跌停 → BlockedOrder(reason=limit_down_no_sell)。"""
@@ -1264,7 +1265,7 @@ class TestSuspended:
         assert len(plan.orders) == 0
         assert len(plan.blocked_orders) == 1
         assert plan.blocked_orders[0].reason == "suspended"
-        assert plan.blocked_orders[0].severity == "block"
+        assert plan.blocked_orders[0].severity is BlockSeverity.BLOCK
 
     def test_sell_suspended_blocked(self) -> None:
         """卖出 + 停牌 → BlockedOrder(reason=suspended)。"""

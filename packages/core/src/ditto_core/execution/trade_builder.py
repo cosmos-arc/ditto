@@ -31,7 +31,7 @@ __all__ = [
 
 
 class TradeMatchingMethod(StrEnum):
-    """Trade matching protocol."""
+    """成交匹配方式。"""
 
     FIFO = "fifo"
     FLAT_TO_FLAT = "flat_to_flat"
@@ -69,7 +69,7 @@ class TradeRecord:
 
 
 class TradeBuilder(Protocol):
-    """Trade matching protocol — converts fills to trades."""
+    """成交构建协议 — 将 fills 转换为 trades。"""
 
     def on_fill(self, fill: FillEvent, account_view: AccountView) -> None:
         """处理成交事件，更新开仓/平仓记录。"""
@@ -95,7 +95,7 @@ class TradeBuilder(Protocol):
 
 @dataclass
 class _OpenEntry:
-    """Mutable tracking entry for FIFO matching."""
+    """FIFO 匹配的可变跟踪条目。"""
 
     trade_id: str
     instrument_id: str
@@ -114,13 +114,9 @@ class _OpenEntry:
 
 
 class FifoTradeBuilder:
-    """FIFO trade matching — sells close the earliest open buy."""
+    """FIFO 成交匹配 — 卖出时平仓最早的开仓买入。"""
 
-    def __init__(
-        self,
-        method: TradeMatchingMethod = TradeMatchingMethod.FIFO,
-    ) -> None:
-        self._method = method
+    def __init__(self) -> None:
         # instrument_id → FIFO queue of open entries
         self._open: dict[str, deque[_OpenEntry]] = {}
         self._closed: list[TradeRecord] = []

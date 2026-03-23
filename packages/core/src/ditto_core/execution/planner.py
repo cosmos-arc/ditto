@@ -13,6 +13,7 @@ Phase 3: A 股完整规则 (T+1, 涨跌停, 停牌, 100+1, 三层规则).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Protocol
 
 from ditto_core.accounting.account import AccountView
@@ -27,6 +28,7 @@ from ditto_core.execution.rules import InstrumentRules
 from ditto_core.strategy.models import TargetPortfolio
 
 __all__ = [
+    "BlockSeverity",
     "BlockedOrder",
     "ExecutionPlan",
     "ExecutionPlanner",
@@ -36,14 +38,26 @@ __all__ = [
 _DEFAULT_LOT_SIZE = 100
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class _DiffResult:
-    """Single instrument diff result."""
+    """单个标的的调仓差异结果。"""
 
     diff_qty: int
     target_qty: int
     effective_qty: int
     lot_size: int
+
+
+# ---------------------------------------------------------------------------
+# Enums
+# ---------------------------------------------------------------------------
+
+
+class BlockSeverity(StrEnum):
+    """订单阻塞严重程度。"""
+
+    BLOCK = "block"
+    DEFER = "defer"
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +75,7 @@ class BlockedOrder:
         direction: 原始订单方向
         intended_quantity: 原始计划数量
         reason: 阻止原因
-        severity: 阻止严重程度 ("block" 或 "defer")
+        severity: 阻止严重程度
 
     """
 
@@ -69,7 +83,7 @@ class BlockedOrder:
     direction: OrderDirection
     intended_quantity: int
     reason: str
-    severity: str  # "block" | "defer"
+    severity: BlockSeverity
 
 
 @dataclass(frozen=True)
@@ -223,7 +237,7 @@ class SimpleExecutionPlanner:
                 direction=direction,
                 intended_quantity=abs(diff_qty),
                 reason="suspended",
-                severity="block",
+                severity=BlockSeverity.BLOCK,
             )
 
         if diff_qty > 0 and snap.limit_up is not None and snap.close >= snap.limit_up:
@@ -232,7 +246,7 @@ class SimpleExecutionPlanner:
                 direction=OrderDirection.BUY,
                 intended_quantity=diff_qty,
                 reason="limit_up_no_buy",
-                severity="defer",
+                severity=BlockSeverity.DEFER,
             )
 
         if (
@@ -245,7 +259,7 @@ class SimpleExecutionPlanner:
                 direction=OrderDirection.SELL,
                 intended_quantity=-diff_qty,
                 reason="limit_down_no_sell",
-                severity="defer",
+                severity=BlockSeverity.DEFER,
             )
 
         return None
@@ -404,7 +418,7 @@ class SimpleExecutionPlanner:
                     direction=OrderDirection.BUY,
                     intended_quantity=rounded,
                     reason="risk_locked",
-                    severity="block",
+                    severity=BlockSeverity.BLOCK,
                 )
             )
         elif rounded > 0:
@@ -446,7 +460,7 @@ class SimpleExecutionPlanner:
                             direction=OrderDirection.SELL,
                             intended_quantity=sell_qty - actual_sell,
                             reason="t_plus1_not_sellable",
-                            severity="defer",
+                            severity=BlockSeverity.DEFER,
                         )
                     )
 

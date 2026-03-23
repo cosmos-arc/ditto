@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 __all__ = [
+    "RebalancePlan",
     "SignalSnapshot",
     "StrategyRun",
     "StrategyTemplate",
@@ -100,6 +101,7 @@ class SignalSnapshot:
         strategy_id: 策略 ID
         run_id: 运行 ID
         signals: instrument_id → signal value
+        valid_until: 信号有效期截止日期（含），None 表示仅当日有效
 
     """
 
@@ -107,6 +109,7 @@ class SignalSnapshot:
     strategy_id: str
     run_id: str
     signals: dict[str, float] = field(default_factory=dict)
+    valid_until: str | None = None
 
 
 @dataclass(frozen=True)
@@ -128,3 +131,26 @@ class TargetPortfolio:
     run_id: str
     positions: dict[str, float] = field(default_factory=dict)
     cash_target: float = 0.0
+
+
+@dataclass(frozen=True)
+class RebalancePlan:
+    """
+    调仓计划 — 策略输出的可执行调仓指令。
+
+    Attributes:
+        trade_date: 调仓日期
+        strategy_id: 策略 ID
+        run_id: 运行 ID
+        target_weights: instrument_id → 目标权重
+        executed: 是否已执行
+        execution_date: 实际执行日期
+
+    """
+
+    trade_date: str
+    strategy_id: str
+    run_id: str
+    target_weights: dict[str, float] = field(default_factory=dict)
+    executed: bool = False
+    execution_date: str | None = None

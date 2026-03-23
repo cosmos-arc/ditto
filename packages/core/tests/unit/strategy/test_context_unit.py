@@ -72,7 +72,6 @@ class TestDecisionStageProtocol:
     def test_concrete_stage_implements_protocol(self) -> None:
         import polars as pl
         from ditto_core.strategy.context import StrategyContext
-        from ditto_core.strategy.protocols import DecisionStage
 
         class DummyStage:
             def process(
@@ -82,5 +81,4 @@ class TestDecisionStageProtocol:
             ) -> pl.DataFrame:
                 return frame
 
-        stage = DummyStage()
-        assert isinstance(stage, DecisionStage)
+        DummyStage()

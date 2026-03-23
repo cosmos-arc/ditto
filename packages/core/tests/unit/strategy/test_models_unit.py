@@ -137,6 +137,29 @@ class TestSignalSnapshot:
         with pytest.raises(FrozenInstanceError):
             snapshot.trade_date = "2026-01-16"  # type: ignore[misc]
 
+    def test_valid_until_default_none(self) -> None:
+        """默认 valid_until 为 None（仅当日有效）。"""
+        from ditto_core.strategy.models import SignalSnapshot
+
+        snapshot = SignalSnapshot(
+            trade_date="2026-01-15",
+            strategy_id="test",
+            run_id="RUN-001",
+        )
+        assert snapshot.valid_until is None
+
+    def test_valid_until_explicit(self) -> None:
+        """显式设置 valid_until。"""
+        from ditto_core.strategy.models import SignalSnapshot
+
+        snapshot = SignalSnapshot(
+            trade_date="2026-01-15",
+            strategy_id="test",
+            run_id="RUN-001",
+            valid_until="2026-01-20",
+        )
+        assert snapshot.valid_until == "2026-01-20"
+
 
 class TestTargetPortfolio:
     def test_create_target_portfolio(self) -> None:
@@ -167,3 +190,56 @@ class TestTargetPortfolio:
             cash_target=0.20,
         )
         assert target.cash_target == 0.20
+
+
+class TestRebalancePlan:
+    def test_create_rebalance_plan(self) -> None:
+        from ditto_core.strategy.models import RebalancePlan
+
+        plan = RebalancePlan(
+            trade_date="2026-01-15",
+            strategy_id="etf_momentum_rotation",
+            run_id="RUN-001",
+            target_weights={
+                "159915.SZ": 0.40,
+                "510300.SH": 0.35,
+                "159949.SZ": 0.25,
+            },
+        )
+        assert plan.executed is False
+        assert plan.execution_date is None
+        assert len(plan.target_weights) == 3
+
+    def test_rebalance_plan_default_weights(self) -> None:
+        from ditto_core.strategy.models import RebalancePlan
+
+        plan = RebalancePlan(
+            trade_date="2026-01-15",
+            strategy_id="test",
+            run_id="RUN-001",
+        )
+        assert plan.target_weights == {}
+
+    def test_rebalance_plan_executed(self) -> None:
+        from ditto_core.strategy.models import RebalancePlan
+
+        plan = RebalancePlan(
+            trade_date="2026-01-15",
+            strategy_id="test",
+            run_id="RUN-001",
+            executed=True,
+            execution_date="2026-01-16",
+        )
+        assert plan.executed is True
+        assert plan.execution_date == "2026-01-16"
+
+    def test_is_frozen(self) -> None:
+        from ditto_core.strategy.models import RebalancePlan
+
+        plan = RebalancePlan(
+            trade_date="2026-01-15",
+            strategy_id="test",
+            run_id="RUN-001",
+        )
+        with pytest.raises(FrozenInstanceError):
+            plan.executed = True  # type: ignore[misc]

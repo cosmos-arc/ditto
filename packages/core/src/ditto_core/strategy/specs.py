@@ -45,7 +45,15 @@ class ParamConstraint:
 
 @dataclass(frozen=True)
 class CostModelSpec:
-    """成本模型配置。"""
+    """
+    成本模型配置。
+
+    Attributes:
+        commission_rate: 佣金费率。
+        slippage_bps: 滑点（基点）。
+        impact_model: 冲击成本模型名称。
+
+    """
 
     commission_rate: float = 0.0003
     slippage_bps: float = 5.0
@@ -88,7 +96,14 @@ class ConstraintSpec:
 
 @dataclass(frozen=True)
 class ScorerSpec:
-    """评分器定义。"""
+    """
+    评分器定义。
+
+    Attributes:
+        method: 评分方法名称。
+        params: 评分方法参数。
+
+    """
 
     method: str = "equal_weight"
     params: dict[str, object] = field(default_factory=dict)
@@ -96,7 +111,14 @@ class ScorerSpec:
 
 @dataclass(frozen=True)
 class SelectorSpec:
-    """标的选取器定义。"""
+    """
+    标的选取器定义。
+
+    Attributes:
+        method: 选取方法名称。
+        params: 选取方法参数。
+
+    """
 
     method: str = "top_k"
     params: dict[str, object] = field(default_factory=dict)

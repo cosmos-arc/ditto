@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 
 __all__ = [
     "FeeSchedule",
@@ -153,7 +153,6 @@ def default_price_limit_pct(
 # ---------------------------------------------------------------------------
 
 
-@runtime_checkable
 class InstrumentRuleProvider(Protocol):
     """
     三层规则查询 Protocol — Core 层接口，无 I/O。

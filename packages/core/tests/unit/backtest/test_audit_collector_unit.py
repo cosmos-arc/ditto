@@ -1045,3 +1045,113 @@ class TestPreTradeLogRecording:
         assert log[0].original_quantity == 150
         assert log[0].final_quantity == 200
         assert log[0].decision == "resized"
+
+
+# ---------------------------------------------------------------------------
+# Part 04b: NAV=0 边界 + benchmark 长度不匹配
+# ---------------------------------------------------------------------------
+
+
+class TestNavZeroBoundary:
+    """空仓场景 (NAV=0) 下统计计算不除零."""
+
+    def test_portfolio_stats_all_zero_nav(self) -> None:
+        """所有快照 NAV=0 → daily_return=0, cumulative_return=0, drawdown=0."""
+        collector = ExecutionAuditCollector()
+        for i in range(3):
+            collector.record_account_view(
+                f"2026-01-{10 + i}",
+                _account_view(nav=0.0, exposure=0.0, cash=0.0),
+            )
+        stats = collector.compute_portfolio_statistics()
+        assert len(stats) == 3
+        for s in stats:
+            assert s.nav == 0.0
+            assert s.daily_return == 0.0
+            assert s.cumulative_return == 0.0
+            assert s.drawdown == 0.0
+            assert s.max_drawdown == 0.0
+            assert s.cash_ratio == 0.0
+
+    def test_portfolio_stats_zero_to_positive(self) -> None:
+        """NAV 从 0 恢复到正值 → daily_return=0 (除零保护)."""
+        collector = ExecutionAuditCollector()
+        collector.record_account_view("2026-01-10", _account_view(nav=0.0))
+        collector.record_account_view("2026-01-11", _account_view(nav=100_000.0))
+        stats = collector.compute_portfolio_statistics()
+        assert stats[0].daily_return == 0.0  # first day always 0
+        assert stats[1].daily_return == 0.0  # prev_nav=0 → protected
+
+    def test_portfolio_stats_positive_to_zero(self) -> None:
+        """NAV 从正值跌到 0 → daily_return=-100%."""
+        collector = ExecutionAuditCollector()
+        collector.record_account_view("2026-01-10", _account_view(nav=100_000.0))
+        collector.record_account_view("2026-01-11", _account_view(nav=0.0))
+        stats = collector.compute_portfolio_statistics()
+        assert stats[1].daily_return == pytest.approx(-100.0)
+
+    def test_alpha_stats_single_snapshot(self) -> None:
+        """单个快照 → 无日收益率 → vol=0, sharpe=0."""
+        collector = ExecutionAuditCollector()
+        collector.record_account_view("2026-01-10", _account_view(nav=100_000.0))
+        alpha = collector.compute_alpha_statistics()
+        assert alpha.annualized_volatility == 0.0
+        assert alpha.sharpe_ratio == 0.0
+        assert alpha.sortino_ratio == 0.0
+
+
+class TestBenchmarkLengthMismatch:
+    """benchmark 长度与快照数不一致时 graceful 降级."""
+
+    def test_benchmark_too_short(self) -> None:
+        """benchmark 少于快照数 → 基准字段为 None."""
+        collector = ExecutionAuditCollector()
+        for i in range(3):
+            collector.record_account_view(
+                f"2026-01-{10 + i}",
+                _account_view(nav=100_000.0 * (1 + 0.001 * i)),
+            )
+        # 3 snapshots but only 2 benchmark values
+        alpha = collector.compute_alpha_statistics(benchmark_navs=(100.0, 101.0))
+        assert alpha.beta is None
+        assert alpha.tracking_error is None
+        assert alpha.information_ratio is None
+        assert alpha.alpha_annualized is None
+        # 非基准字段正常（3 个快照有微小日收益）
+        assert alpha.annualized_return > 0.0
+
+    def test_benchmark_too_long(self) -> None:
+        """benchmark 多于快照数 → 基准字段为 None."""
+        collector = ExecutionAuditCollector()
+        collector.record_account_view("2026-01-10", _account_view(nav=100_000.0))
+        alpha = collector.compute_alpha_statistics(
+            benchmark_navs=(100.0, 101.0, 102.0),
+        )
+        assert alpha.beta is None
+        assert alpha.tracking_error is None
+
+    def test_benchmark_none_returns_none_fields(self) -> None:
+        """不传 benchmark → 基准字段全为 None."""
+        collector = ExecutionAuditCollector()
+        collector.record_account_view("2026-01-10", _account_view(nav=100_000.0))
+        collector.record_account_view("2026-01-11", _account_view(nav=101_000.0))
+        alpha = collector.compute_alpha_statistics()
+        assert alpha.beta is None
+        assert alpha.tracking_error is None
+        assert alpha.information_ratio is None
+        assert alpha.alpha_annualized is None
+
+    def test_benchmark_matching_length_computes(self) -> None:
+        """benchmark 与快照等长 → 正常计算基准字段."""
+        collector = ExecutionAuditCollector()
+        for i in range(3):
+            collector.record_account_view(
+                f"2026-01-{10 + i}",
+                _account_view(nav=100_000.0 * (1 + 0.001 * i)),
+            )
+        alpha = collector.compute_alpha_statistics(
+            benchmark_navs=(100.0, 100.1, 100.201),
+        )
+        assert alpha.beta is not None
+        assert alpha.tracking_error is not None
+        assert alpha.alpha_annualized is not None

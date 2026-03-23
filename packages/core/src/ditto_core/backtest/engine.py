@@ -32,6 +32,7 @@ from ditto_core.backtest.risk.post_trade import (
 )
 from ditto_core.backtest.risk.pre_trade import (
     CompositePreTradeCheck,
+    Decision,
     PreTradeContext,
 )
 from ditto_core.backtest.statistics import (
@@ -87,6 +88,7 @@ class EngineConfig:
         trade_matching: 成交匹配算法
         strategy_id: 策略 ID
         strategy_run_id: 策略运行 ID
+        rebalance_freq: 调仓频率 (daily / weekly / monthly)
 
     """
 
@@ -343,9 +345,9 @@ class EngineLoop:
         逐单检查, 滚动更新 context (F1)。
         """
         _decision_map = {
-            "accept": "accepted",
-            "reject": "rejected",
-            "resize": "resized",
+            Decision.ACCEPT: "accepted",
+            Decision.REJECT: "rejected",
+            Decision.RESIZE: "resized",
         }
         decisions: list[PreTradeDecisionRecord] = []
 
@@ -353,7 +355,7 @@ class EngineLoop:
             result = self._pre_trade_check.check_order(order, pre_trade_context)
 
             # 计算最终数量
-            if result.decision == "reject":
+            if result.decision == Decision.REJECT:
                 final_qty = 0
             elif result.resized_quantity is not None:
                 final_qty = result.resized_quantity
@@ -375,7 +377,7 @@ class EngineLoop:
                 ),
             )
 
-            if result.decision == "reject":
+            if result.decision == Decision.REJECT:
                 continue
 
             final_order = (

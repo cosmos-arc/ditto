@@ -101,7 +101,19 @@ class Order:
 
 @dataclass(frozen=True)
 class OrderEvent:
-    """订单事件 — 记录状态变更详情。"""
+    """
+    订单事件 — 记录状态变更详情。
+
+    Attributes:
+        order_id: 关联订单 ID
+        status: 订单状态
+        fill_price: 成交价格（未成交为 None）
+        fill_quantity: 本次成交数量
+        fee: 手续费
+        message: 附加信息（拒绝原因等）
+        timestamp: 事件时间
+
+    """
 
     order_id: str
     status: OrderStatus
@@ -114,7 +126,18 @@ class OrderEvent:
 
 @dataclass(frozen=True)
 class OrderTicket:
-    """订单票据 — frozen，状态变更通过 with_xxx() 返回新实例。"""
+    """
+    订单票据 — frozen，状态变更通过 with_xxx() 返回新实例。
+
+    Attributes:
+        order: 原始订单
+        status: 当前订单状态
+        filled_quantity: 累计成交数量
+        filled_price: 最近一次成交价格
+        average_fill_price: 成交量加权平均成交价（VWAP）
+        order_events: 订单事件历史
+
+    """
 
     order: Order
     status: OrderStatus = OrderStatus.NEW
@@ -183,6 +206,7 @@ class OrderTicket:
         )
 
     def _calc_avg(self, price: float, quantity: int) -> float:
+        """计算成交量加权平均成交价（VWAP）。"""
         if self.average_fill_price is None:
             return price
         total_qty = self.filled_quantity + quantity
@@ -194,7 +218,15 @@ class OrderTicket:
 
 
 class OrderBookReadOnly:
-    """OrderBook 只读视图。"""
+    """
+    OrderBook 只读视图。
+
+    Note:
+        使用普通类而非 frozen dataclass，因为 OrderBook 需要可变内部状态
+        管理订单生命周期（submit / update / cancel），只读视图通过
+        传递 dict 副本实现不可变性，无需 frozen dataclass。
+
+    """
 
     def __init__(self, tickets: dict[str, OrderTicket]) -> None:
         self._tickets = tickets
@@ -209,7 +241,16 @@ class OrderBookReadOnly:
 
 
 class OrderBook:
-    """订单簿 — 持有所有 OrderTicket，只允许通过受控方法修改。"""
+    """
+    订单簿 — 持有所有 OrderTicket，只允许通过受控方法修改。
+
+    Note:
+        使用普通类而非 frozen dataclass，因为订单簿需要在运行时
+        管理订单生命周期（submit / update / cancel），可变 dict 存储
+        是最自然的状态管理方式。OrderTicket 本身是 frozen dataclass，
+        状态变更通过 with_xxx() 返回新实例实现不可变性。
+
+    """
 
     def __init__(self) -> None:
         self._tickets: dict[str, OrderTicket] = {}

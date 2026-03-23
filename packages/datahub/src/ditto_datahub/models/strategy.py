@@ -9,7 +9,9 @@ Strategy 域数据模型.
 - 类型安全（类型注解）
 """
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
@@ -68,8 +70,64 @@ class MarketState:
     trend: str
 
 
+@dataclass(frozen=True)
+class StrategySpecRecord:
+    """
+    策略 Spec 存储记录.
+
+    Attributes:
+        strategy_id: 策略唯一标识.
+        name: 策略名称.
+        spec_json: 策略定义 JSON.
+        version: 版本号（默认 1）.
+        status: 状态（draft / published）.
+        created_at: 创建时间.
+        updated_at: 更新时间.
+        tags: 标签.
+
+    """
+
+    strategy_id: str
+    name: str
+    spec_json: dict[str, object]
+    version: int = 1
+    status: str = "draft"
+    created_at: str = ""
+    updated_at: str = ""
+    tags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class StrategyArtifactRecord:
+    """
+    策略产物记录.
+
+    Attributes:
+        artifact_id: 产物唯一标识.
+        strategy_id: 所属策略 ID.
+        run_id: 关联运行 ID.
+        artifact_type: 产物类型（backtest_report / signal_snapshot 等）.
+        file_path: 文件存储路径.
+        metadata: 产物元数据.
+        status: 状态（active / archived）.
+        created_at: 创建时间.
+
+    """
+
+    artifact_id: str
+    strategy_id: str
+    run_id: str
+    artifact_type: str
+    file_path: str
+    metadata: dict[str, object] = field(default_factory=dict)
+    status: str = "active"
+    created_at: str = ""
+
+
 __all__ = [
     "MarketState",
     "Signal",
     "SignalType",
+    "StrategyArtifactRecord",
+    "StrategySpecRecord",
 ]

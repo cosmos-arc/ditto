@@ -24,7 +24,7 @@ from ditto_core.backtest.risk.post_trade import (
     RiskSeverity,
     SingleLossLimitRule,
 )
-from ditto_core.backtest.risk.pre_trade import OrderCheckResult
+from ditto_core.backtest.risk.pre_trade import Decision, OrderCheckResult
 from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.strategy.models import TargetPortfolio
 
@@ -1001,7 +1001,7 @@ class TestEngineLoopPostTradeIntegration:
 
         pre_trade_check = Mock()
         pre_trade_check.check_order.return_value = OrderCheckResult(
-            decision="accept",
+            decision=Decision.ACCEPT,
             order_id="o-1",
         )
         fee_model = Mock()

@@ -19,6 +19,7 @@ from ditto_core.backtest.risk.pre_trade import (
     CompositePreTradeCheck,
     ConcentrationPreCheck,
     DailyTurnoverPreCheck,
+    Decision,
     LotSizeCheck,
     NoShortSellCheck,
     OrderCheckResult,
@@ -209,15 +210,15 @@ def _sell_order(
 class TestOrderCheckResult:
     def test_frozen(self) -> None:
         result = OrderCheckResult(
-            decision="accept",
+            decision=Decision.ACCEPT,
             order_id="o-1",
         )
         with pytest.raises(AttributeError):
-            result.decision = "reject"  # type: ignore[misc]
+            result.decision = Decision.REJECT  # type: ignore[misc]
 
     def test_resize_result(self) -> None:
         result = OrderCheckResult(
-            decision="resize",
+            decision=Decision.RESIZE,
             order_id="o-1",
             resized_quantity=200,
             reason="lot_size",
@@ -429,7 +430,7 @@ class TestNoShortSellCheck:
         order = _buy_order(quantity=100)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_sell_with_position_accepts(self, empty_context: PreTradeContext) -> None:
         """有充足持仓时卖出通过。"""
@@ -465,14 +466,14 @@ class TestNoShortSellCheck:
         check = NoShortSellCheck()
         result = check.check_order(_sell_order(quantity=300), ctx)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_sell_no_position_rejects(self, empty_context: PreTradeContext) -> None:
         """无持仓时卖出拒绝。"""
         check = NoShortSellCheck()
         result = check.check_order(_sell_order(quantity=100), empty_context)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
         assert "no_short_sell" in result.triggered_checks
         assert "available=0" in (result.reason or "")
 
@@ -513,7 +514,7 @@ class TestNoShortSellCheck:
         check = NoShortSellCheck()
         result = check.check_order(_sell_order(quantity=100), ctx)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
         assert "available=50" in (result.reason or "")
 
 
@@ -528,14 +529,14 @@ class TestPriceValidityCheck:
         order = _buy_order(order_type=OrderType.MARKET)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_limit_order_in_range_accepts(self, empty_context: PreTradeContext) -> None:
         check = PriceValidityCheck()
         order = _buy_order(order_type=OrderType.LIMIT, price=10.5)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_limit_order_at_boundary_accepts(
         self,
@@ -546,8 +547,8 @@ class TestPriceValidityCheck:
         order_up = _buy_order(order_type=OrderType.LIMIT, price=11.0)
         order_down = _buy_order(order_type=OrderType.LIMIT, price=9.0)
 
-        assert check.check_order(order_up, empty_context).decision == "accept"
-        assert check.check_order(order_down, empty_context).decision == "accept"
+        assert check.check_order(order_up, empty_context).decision == Decision.ACCEPT
+        assert check.check_order(order_down, empty_context).decision == Decision.ACCEPT
 
     def test_limit_order_above_limit_up_rejects(
         self,
@@ -557,7 +558,7 @@ class TestPriceValidityCheck:
         order = _buy_order(order_type=OrderType.LIMIT, price=12.0)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
         assert "price_validity" in result.triggered_checks
 
     def test_limit_order_below_limit_down_rejects(
@@ -568,7 +569,7 @@ class TestPriceValidityCheck:
         order = _buy_order(order_type=OrderType.LIMIT, price=8.0)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
         assert "price_validity" in result.triggered_checks
 
     def test_no_snapshot_accepts(self, empty_context: PreTradeContext) -> None:
@@ -581,7 +582,7 @@ class TestPriceValidityCheck:
         )
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_no_price_limit_accepts(self) -> None:
         """无涨跌停信息（如 IPO 前五日）时直接放行。"""
@@ -612,7 +613,7 @@ class TestPriceValidityCheck:
         order = _buy_order(order_type=OrderType.LIMIT, price=100.0)
         result = check.check_order(order, ctx)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
 
 # ---------------------------------------------------------------------------
@@ -626,21 +627,21 @@ class TestLotSizeCheck:
         order = _buy_order(quantity=100)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_multiple_lot_passes(self, empty_context: PreTradeContext) -> None:
         check = LotSizeCheck()
         order = _buy_order(quantity=300)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_below_lot_resizes_up(self, empty_context: PreTradeContext) -> None:
         check = LotSizeCheck()
         order = _buy_order(quantity=50)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "resize"
+        assert result.decision == Decision.RESIZE
         assert result.resized_quantity == 100
         assert "lot_size" in result.triggered_checks
 
@@ -649,7 +650,7 @@ class TestLotSizeCheck:
         order = _buy_order(quantity=0)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "resize"
+        assert result.decision == Decision.RESIZE
         assert result.resized_quantity == 100
 
     def test_sell_always_passes(self, empty_context: PreTradeContext) -> None:
@@ -657,7 +658,7 @@ class TestLotSizeCheck:
         order = _sell_order(quantity=50)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_per_instrument_lot_size(self, empty_context: PreTradeContext) -> None:
         """ETF-002 lot_size=200，50 -> resize to 200。"""
@@ -665,7 +666,7 @@ class TestLotSizeCheck:
         order = _buy_order(instrument_id="ETF-002", quantity=50)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "resize"
+        assert result.decision == Decision.RESIZE
         assert result.resized_quantity == 200
 
     def test_missing_instrument_defaults_100(
@@ -677,7 +678,7 @@ class TestLotSizeCheck:
         order = _buy_order(instrument_id="ETF-UNKNOWN", quantity=50)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "resize"
+        assert result.decision == Decision.RESIZE
         assert result.resized_quantity == 100
 
 
@@ -695,7 +696,7 @@ class TestBuyingPowerCheck:
         order = _buy_order(quantity=100)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
         assert result.order_id == "o-1"
 
     def test_insufficient_power_rejects(
@@ -706,7 +707,7 @@ class TestBuyingPowerCheck:
         order = _buy_order(quantity=50000)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
         assert "buying_power" in (result.reason or "")
 
     def test_sell_always_accepts(
@@ -717,7 +718,7 @@ class TestBuyingPowerCheck:
         order = _sell_order()
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_triggered_check_id(self) -> None:
         ctx = PreTradeContext(
@@ -741,7 +742,7 @@ class TestBuyingPowerCheck:
         order = _buy_order(quantity=100)
         result = check.check_order(order, ctx)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
         assert "buying_power" in result.triggered_checks
 
 
@@ -757,7 +758,7 @@ class TestConcentrationPreCheck:
         order = _buy_order(quantity=100)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_buy_exceeds_limit_rejects(self, empty_context: PreTradeContext) -> None:
         """NAV=1M, buy 20000*10=200k -> 20% == 20% → should reject (> max)。"""
@@ -765,7 +766,7 @@ class TestConcentrationPreCheck:
         order = _buy_order(quantity=20001)  # 200010 / 1M > 20%
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
         assert "concentration" in result.triggered_checks
 
     def test_buy_at_exact_limit_accepts(self, empty_context: PreTradeContext) -> None:
@@ -774,14 +775,14 @@ class TestConcentrationPreCheck:
         order = _buy_order(quantity=20000)  # 200000 / 1M = 20%
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_sell_always_accepts(self, empty_context: PreTradeContext) -> None:
         check = ConcentrationPreCheck(max_weight=0.20)
         order = _sell_order(quantity=100)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_with_existing_position(self, empty_context: PreTradeContext) -> None:
         """已有持仓 150k + 新买 60k = 210k > 200k (20%)。"""
@@ -818,7 +819,7 @@ class TestConcentrationPreCheck:
         order = _buy_order(quantity=6000)
         result = check.check_order(order, ctx)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
 
     def test_no_position_no_price_accepts(self, empty_context: PreTradeContext) -> None:
         """无价格信息时直接放行。"""
@@ -826,7 +827,7 @@ class TestConcentrationPreCheck:
         order = _buy_order(instrument_id="ETF-UNKNOWN", quantity=100)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_zero_nav_accepts(self) -> None:
         """NAV=0 时直接放行。"""
@@ -849,7 +850,7 @@ class TestConcentrationPreCheck:
         order = _buy_order(quantity=100)
         result = check.check_order(order, ctx)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_invalid_max_weight_raises(self) -> None:
         with pytest.raises(ValueError, match="max_weight must be in"):
@@ -870,7 +871,7 @@ class TestDailyTurnoverPreCheck:
         order = _buy_order(quantity=100)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_buy_exceeds_limit_rejects(self, empty_context: PreTradeContext) -> None:
         """NAV=1M, buy 30001*10=300010 -> 30.001% > 30%。"""
@@ -878,7 +879,7 @@ class TestDailyTurnoverPreCheck:
         order = _buy_order(quantity=30001)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
         assert "daily_turnover" in result.triggered_checks
 
     def test_buy_at_exact_limit_accepts(self, empty_context: PreTradeContext) -> None:
@@ -887,14 +888,14 @@ class TestDailyTurnoverPreCheck:
         order = _buy_order(quantity=30000)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_sell_always_accepts(self, empty_context: PreTradeContext) -> None:
         check = DailyTurnoverPreCheck(max_turnover=0.30)
         order = _sell_order(quantity=100)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_sell_pending_tickets_not_counted(
         self,
@@ -918,7 +919,7 @@ class TestDailyTurnoverPreCheck:
         order = _buy_order(quantity=30000)
         result = check.check_order(order, ctx)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_pending_buy_tickets_accumulate(
         self,
@@ -942,13 +943,13 @@ class TestDailyTurnoverPreCheck:
         order = _buy_order(quantity=11000)
         result = check.check_order(order, ctx)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
         # 2000*10=20000 + 29000*10=290000 = 310000 > 300000 → reject
         order2 = _buy_order(quantity=29000)
         result2 = check.check_order(order2, ctx)
 
-        assert result2.decision == "reject"
+        assert result2.decision == Decision.REJECT
 
     def test_no_price_accepts(self, empty_context: PreTradeContext) -> None:
         """无价格信息时直接放行。"""
@@ -956,7 +957,7 @@ class TestDailyTurnoverPreCheck:
         order = _buy_order(instrument_id="ETF-UNKNOWN", quantity=100)
         result = check.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_zero_nav_accepts(self) -> None:
         """NAV=0 时直接放行。"""
@@ -979,7 +980,7 @@ class TestDailyTurnoverPreCheck:
         order = _buy_order(quantity=100)
         result = check.check_order(order, ctx)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_invalid_max_turnover_raises(self) -> None:
         with pytest.raises(ValueError, match="max_turnover must be in"):
@@ -1027,7 +1028,7 @@ class TestCompositeResize:
         order = _buy_order(quantity=350)
         result = composite.check_order(order, ctx)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
         assert "buying_power" in (result.reason or "")
 
     def test_all_pass_accepts(self, empty_context: PreTradeContext) -> None:
@@ -1044,7 +1045,7 @@ class TestCompositeResize:
         order = _buy_order(quantity=100)
         result = composite.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
 
     def test_resize_returns_resized_quantity(
         self,
@@ -1064,7 +1065,7 @@ class TestCompositeResize:
         order = _buy_order(quantity=150)
         result = composite.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
         assert result.resized_quantity == 200
 
     def test_resize_loop_detected(self, empty_context: PreTradeContext) -> None:
@@ -1079,7 +1080,7 @@ class TestCompositeResize:
                 context: PreTradeContext,
             ) -> OrderCheckResult:
                 return OrderCheckResult(
-                    decision="resize",
+                    decision=Decision.RESIZE,
                     order_id=order.order_id,
                     resized_quantity=order.quantity + 100,
                     reason="always_resize",
@@ -1090,7 +1091,7 @@ class TestCompositeResize:
         order = _buy_order(quantity=100)
         result = composite.check_order(order, empty_context)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
         assert "resize loop" in (result.reason or "")
 
     def test_triggered_checks_chain(self, empty_context: PreTradeContext) -> None:
@@ -1108,7 +1109,7 @@ class TestCompositeResize:
         order = _buy_order(quantity=50)
         result = composite.check_order(order, empty_context)
 
-        assert result.decision == "accept"
+        assert result.decision == Decision.ACCEPT
         assert "lot_size" in result.triggered_checks
 
     def test_no_short_sell_short_circuits(
@@ -1129,7 +1130,7 @@ class TestCompositeResize:
         order = _sell_order(quantity=100)
         result = composite.check_order(order, empty_context)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
         assert "no_short_sell" in result.triggered_checks
 
     def test_price_validity_short_circuits(
@@ -1151,5 +1152,5 @@ class TestCompositeResize:
         order = _buy_order(order_type=OrderType.LIMIT, price=12.0)
         result = composite.check_order(order, empty_context)
 
-        assert result.decision == "reject"
+        assert result.decision == Decision.REJECT
         assert "price_validity" in result.triggered_checks

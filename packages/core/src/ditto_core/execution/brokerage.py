@@ -43,7 +43,15 @@ __all__ = ["BacktestBrokerage", "Brokerage", "ProcessInput"]
 
 @dataclass(frozen=True)
 class ProcessInput:
-    """process_pending 的输入 — 包含完整 MarketSnapshot。"""
+    """
+    process_pending 的输入 — 包含完整 MarketSnapshot。
+
+    Attributes:
+        step_time: 当前步骤时间
+        trade_date: 交易日（YYYY-MM-DD 格式）
+        bars: 标的行情快照映射（instrument_id → MarketSnapshot）
+
+    """
 
     step_time: datetime
     trade_date: str

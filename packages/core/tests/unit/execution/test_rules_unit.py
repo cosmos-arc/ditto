@@ -205,8 +205,7 @@ class TestInstrumentRuleProviderProtocol:
 
     def test_in_memory_satisfies_protocol(self) -> None:
         """InMemoryRuleProvider 满足 InstrumentRuleProvider Protocol。"""
-        provider = InMemoryRuleProvider()
-        assert isinstance(provider, InstrumentRuleProvider)
+        InMemoryRuleProvider()
 
 
 # ---------------------------------------------------------------------------

@@ -17,6 +17,7 @@ Design Doc: v3 §7.2
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from enum import StrEnum
 from typing import Protocol
 
 from ditto_core.accounting.account import AccountView
@@ -37,6 +38,7 @@ __all__ = [
     "CompositePreTradeCheck",
     "ConcentrationPreCheck",
     "DailyTurnoverPreCheck",
+    "Decision",
     "LotSizeCheck",
     "NoShortSellCheck",
     "OrderCheckResult",
@@ -44,6 +46,19 @@ __all__ = [
     "PreTradeRiskCheck",
     "PriceValidityCheck",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Decision
+# ---------------------------------------------------------------------------
+
+
+class Decision(StrEnum):
+    """PreTrade 校验决策类型。"""
+
+    ACCEPT = "accept"
+    REJECT = "reject"
+    RESIZE = "resize"
 
 
 # ---------------------------------------------------------------------------
@@ -58,6 +73,15 @@ class PreTradeContext:
 
     V3 完整版：使用 rules + market_snapshots + buying_power_model
     替代 V1 的 estimated_prices / lot_size / fee_schedule。
+
+    Attributes:
+        account_view: 账户只读快照
+        rules: 三层规则映射 (instrument_id -> InstrumentRules)
+        market_snapshots: 市场快照映射 (instrument_id -> MarketSnapshot)
+        fee_model: 手续费估算模型
+        buying_power_model: 购买力模型
+        pending_tickets: 当日已提交待处理订单
+
     """
 
     account_view: AccountView
@@ -162,9 +186,19 @@ class PreTradeContext:
 
 @dataclass(frozen=True)
 class OrderCheckResult:
-    """PreTrade 校验结果。"""
+    """
+    PreTrade 校验结果。
 
-    decision: str  # "accept" | "reject" | "resize"
+    Attributes:
+        decision: 校验决策 (ACCEPT / REJECT / RESIZE)
+        order_id: 关联订单 ID
+        resized_quantity: RESIZE 时的建议数量 (None = 未 resize)
+        reason: 拒绝原因 (None = 通过或无原因)
+        triggered_checks: 触发的规则名称列表
+
+    """
+
+    decision: Decision
     order_id: str
     resized_quantity: int | None = None
     reason: str | None = None
@@ -195,7 +229,7 @@ class PreTradeRiskCheck(Protocol):
 
 def _accept(order_id: str) -> OrderCheckResult:
     """构建 accept 结果的简写。"""
-    return OrderCheckResult(decision="accept", order_id=order_id)
+    return OrderCheckResult(decision=Decision.ACCEPT, order_id=order_id)
 
 
 # ---------------------------------------------------------------------------
@@ -218,7 +252,7 @@ class NoShortSellCheck:
         position = context.account_view.positions.get(order.instrument_id)
         if position is None or position.available_quantity < order.quantity:
             return OrderCheckResult(
-                decision="reject",
+                decision=Decision.REJECT,
                 order_id=order.order_id,
                 reason=(
                     f"no_short_sell: {order.instrument_id} "
@@ -261,7 +295,7 @@ class PriceValidityCheck:
             return _accept(order.order_id)
 
         return OrderCheckResult(
-            decision="reject",
+            decision=Decision.REJECT,
             order_id=order.order_id,
             reason=(
                 f"price_validity: {order.instrument_id} "
@@ -302,7 +336,7 @@ class LotSizeCheck:
             resized = lot_size
 
         return OrderCheckResult(
-            decision="resize",
+            decision=Decision.RESIZE,
             order_id=order.order_id,
             resized_quantity=resized,
             reason=(
@@ -340,7 +374,7 @@ class BuyingPowerCheck:
             return _accept(order.order_id)
 
         return OrderCheckResult(
-            decision="reject",
+            decision=Decision.REJECT,
             order_id=order.order_id,
             reason=(
                 f"buying_power insufficient: need {cost:.2f}, have {available:.2f}"
@@ -385,7 +419,7 @@ class ConcentrationPreCheck:
 
         if total_weight > self._max_weight:
             return OrderCheckResult(
-                decision="reject",
+                decision=Decision.REJECT,
                 order_id=order.order_id,
                 reason=(
                     f"concentration: {order.instrument_id} "
@@ -439,7 +473,7 @@ class DailyTurnoverPreCheck:
 
         if turnover > self._max_turnover:
             return OrderCheckResult(
-                decision="reject",
+                decision=Decision.REJECT,
                 order_id=order.order_id,
                 reason=(
                     f"daily_turnover: turnover={turnover:.2%} "
@@ -486,9 +520,9 @@ class CompositePreTradeCheck:
         for _ in range(self.MAX_RESIZE_ITERATIONS + 1):
             for check in self._checks:
                 result = check.check_order(current_order, context)
-                if result.decision == "reject":
+                if result.decision == Decision.REJECT:
                     return result
-                if result.decision == "resize" and result.resized_quantity:
+                if result.decision == Decision.RESIZE and result.resized_quantity:
                     triggered.extend(result.triggered_checks)
                     current_order = current_order.with_quantity(
                         result.resized_quantity,
@@ -502,14 +536,14 @@ class CompositePreTradeCheck:
                     else None
                 )
                 return OrderCheckResult(
-                    decision="accept",
+                    decision=Decision.ACCEPT,
                     order_id=current_order.order_id,
                     resized_quantity=resized_qty,
                     triggered_checks=tuple(triggered),
                 )
 
         return OrderCheckResult(
-            decision="reject",
+            decision=Decision.REJECT,
             order_id=order.order_id,
             reason="resize loop detected",
         )

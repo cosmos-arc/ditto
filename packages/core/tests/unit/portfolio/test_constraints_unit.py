@@ -11,7 +11,6 @@ from ditto_core.portfolio.constraints import (
     MaxWeightConstraint,
     MinWeightConstraint,
 )
-from ditto_core.strategy.protocols import DecisionStage
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -32,6 +31,17 @@ def weighted_frame() -> pl.DataFrame:
             ],
             "weight": [0.30, 0.25, 0.20, 0.15, 0.10],
         }
+    )
+
+
+def _weights_dict(frame: pl.DataFrame) -> dict[str, float]:
+    """Convert weight column to {instrument_id: weight} dict."""
+    return dict(
+        zip(
+            frame["instrument_id"].to_list(),
+            frame["weight"].to_list(),
+            strict=True,
+        )
     )
 
 
@@ -56,13 +66,7 @@ class TestConstraintChecker:
         checker = ConstraintChecker(constraints=[constraint])
         result = checker.check(weighted_frame)
 
-        weights = dict(
-            zip(
-                result["instrument_id"].to_list(),
-                result["weight"].to_list(),
-                strict=True,
-            )
-        )
+        weights = _weights_dict(result)
         # All weights should be <= 0.20
         for w in weights.values():
             assert w == pytest.approx(0.20, abs=1e-9) or w < 0.20
@@ -78,13 +82,7 @@ class TestConstraintChecker:
         checker = ConstraintChecker(constraints=[constraint])
         result = checker.check(weighted_frame)
 
-        weights = dict(
-            zip(
-                result["instrument_id"].to_list(),
-                result["weight"].to_list(),
-                strict=True,
-            )
-        )
+        weights = _weights_dict(result)
         # 159919.SZ had weight 0.10 < 0.18, should be zeroed
         assert weights["159919.SZ"] == pytest.approx(0.0)
         # 510050.SH had weight 0.15 < 0.18, should be zeroed
@@ -99,13 +97,7 @@ class TestConstraintChecker:
         checker = ConstraintChecker(constraints=[constraint])
         result = checker.check(weighted_frame)
 
-        weights = dict(
-            zip(
-                result["instrument_id"].to_list(),
-                result["weight"].to_list(),
-                strict=True,
-            )
-        )
+        weights = _weights_dict(result)
         # Top 3 by weight: 159915.SZ (0.30), 510300.SH (0.25), 159949.SZ (0.20)
         assert weights["159915.SZ"] == pytest.approx(0.30)
         assert weights["510300.SH"] == pytest.approx(0.25)
@@ -125,13 +117,7 @@ class TestConstraintChecker:
         checker = ConstraintChecker(constraints=constraints)
         result = checker.check(weighted_frame)
 
-        weights = dict(
-            zip(
-                result["instrument_id"].to_list(),
-                result["weight"].to_list(),
-                strict=True,
-            )
-        )
+        weights = _weights_dict(result)
         # 159915.SZ (0.30) was in top 3, then truncated to 0.20
         assert weights["159915.SZ"] == pytest.approx(0.20)
         # 510050.SH and 159919.SZ were removed by max_positions first
@@ -158,6 +144,159 @@ class TestConstraintChecker:
 
 
 # ---------------------------------------------------------------------------
+# ConstraintChecker -- Boundary Tests
+# ---------------------------------------------------------------------------
+
+
+class TestConstraintCheckerBoundary:
+    """Boundary / edge-case tests for ConstraintChecker."""
+
+    def test_empty_frame(self) -> None:
+        """Empty frame with constraints -- should return empty, no crash."""
+        frame = pl.DataFrame(
+            schema={"instrument_id": pl.String, "weight": pl.Float64},
+        )
+        checker = ConstraintChecker(
+            constraints=[
+                MaxWeightConstraint(max_weight=0.20),
+                MinWeightConstraint(min_weight=0.10),
+                MaxPositionsConstraint(max_positions=3),
+            ],
+        )
+        result = checker.check(frame)
+        assert result.shape[0] == 0
+        assert "weight" in result.columns
+        assert "reason_codes" in result.columns
+
+    def test_max_positions_zero_zeros_all(
+        self,
+        weighted_frame: pl.DataFrame,
+    ) -> None:
+        """max_positions=0 keeps nothing -- all weights zeroed."""
+        constraint = MaxPositionsConstraint(max_positions=0)
+        checker = ConstraintChecker(constraints=[constraint])
+        result = checker.check(weighted_frame)
+
+        weights = _weights_dict(result)
+        for w in weights.values():
+            assert w == pytest.approx(0.0)
+
+    def test_max_weight_zero_zeros_all_positive(
+        self,
+        weighted_frame: pl.DataFrame,
+    ) -> None:
+        """max_weight=0.0 -- all positive weights become 0."""
+        constraint = MaxWeightConstraint(max_weight=0.0)
+        checker = ConstraintChecker(constraints=[constraint])
+        result = checker.check(weighted_frame)
+
+        weights = _weights_dict(result)
+        for w in weights.values():
+            assert w == pytest.approx(0.0)
+
+    def test_min_weight_one_zeros_all_below_one(
+        self,
+        weighted_frame: pl.DataFrame,
+    ) -> None:
+        """min_weight=1.0 with all weights < 1.0 -- all zeroed."""
+        constraint = MinWeightConstraint(min_weight=1.0)
+        checker = ConstraintChecker(constraints=[constraint])
+        result = checker.check(weighted_frame)
+
+        weights = _weights_dict(result)
+        for w in weights.values():
+            assert w == pytest.approx(0.0)
+
+    def test_single_constraint_single_instrument(self) -> None:
+        """Single instrument with max_weight -- correct truncation."""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["159915.SZ"],
+                "weight": [0.50],
+            },
+        )
+        constraint = MaxWeightConstraint(max_weight=0.25)
+        checker = ConstraintChecker(constraints=[constraint])
+        result = checker.check(frame)
+
+        weights = _weights_dict(result)
+        assert weights["159915.SZ"] == pytest.approx(0.25)
+
+    def test_all_zero_weights_unchanged(self) -> None:
+        """All weights already 0 -- constraints produce no changes."""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["159915.SZ", "510300.SH", "159949.SZ"],
+                "weight": [0.0, 0.0, 0.0],
+            },
+        )
+        checker = ConstraintChecker(
+            constraints=[
+                MaxWeightConstraint(max_weight=0.20),
+                MinWeightConstraint(min_weight=0.05),
+                MaxPositionsConstraint(max_positions=1),
+            ],
+        )
+        result = checker.check(frame)
+
+        weights = _weights_dict(result)
+        for w in weights.values():
+            assert w == pytest.approx(0.0)
+
+    def test_negative_weights_preserved_by_min(self) -> None:
+        """MinWeightConstraint only zeros 0 < w < min; negative and 0 pass through."""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["A", "B", "C", "D"],
+                "weight": [-0.10, 0.0, 0.05, 0.20],
+            },
+        )
+        constraint = MinWeightConstraint(min_weight=0.10)
+        checker = ConstraintChecker(constraints=[constraint])
+        result = checker.check(frame)
+
+        weights = _weights_dict(result)
+        # Negative weight unchanged
+        assert weights["A"] == pytest.approx(-0.10)
+        # Exactly zero unchanged
+        assert weights["B"] == pytest.approx(0.0)
+        # 0 < 0.05 < 0.10 => zeroed
+        assert weights["C"] == pytest.approx(0.0)
+        # 0.20 >= 0.10 => unchanged
+        assert weights["D"] == pytest.approx(0.20)
+
+    def test_combined_max_positions_and_min_weight(
+        self,
+        weighted_frame: pl.DataFrame,
+    ) -> None:
+        """max_positions removes some, min_weight zeros remaining small ones.
+
+        Priority order: min_weight (20) runs before max_positions (30).
+        Step 1 -- min_weight=0.18 zeros 510050.SH (0.15) and 159919.SZ (0.10).
+        Step 2 -- max_positions=2 keeps top 2 of remaining:
+                  159915.SZ (0.30) and 510300.SH (0.25), zeros 159949.SZ (0.20).
+        """
+        constraints = [
+            MaxPositionsConstraint(max_positions=2),
+            MinWeightConstraint(min_weight=0.18),
+        ]
+        checker = ConstraintChecker(constraints=constraints)
+        result = checker.check(weighted_frame)
+
+        weights = _weights_dict(result)
+        # 159915.SZ (0.30) -- passes min_weight, in top 2 => kept
+        assert weights["159915.SZ"] == pytest.approx(0.30)
+        # 510300.SH (0.25) -- passes min_weight, in top 2 => kept
+        assert weights["510300.SH"] == pytest.approx(0.25)
+        # 159949.SZ (0.20) -- passes min_weight, but NOT in top 2 => zeroed
+        assert weights["159949.SZ"] == pytest.approx(0.0)
+        # 510050.SH (0.15) -- zeroed by min_weight
+        assert weights["510050.SH"] == pytest.approx(0.0)
+        # 159919.SZ (0.10) -- zeroed by min_weight
+        assert weights["159919.SZ"] == pytest.approx(0.0)
+
+
+# ---------------------------------------------------------------------------
 # ConstraintStage
 # ---------------------------------------------------------------------------
 
@@ -172,14 +311,5 @@ class TestConstraintStage:
         # ConstraintStage.process accepts context but doesn't use it
         result = stage.process(weighted_frame, object())
 
-        weights = dict(
-            zip(
-                result["instrument_id"].to_list(),
-                result["weight"].to_list(),
-                strict=True,
-            )
-        )
+        weights = _weights_dict(result)
         assert weights["159915.SZ"] == pytest.approx(0.20)
-
-        # ConstraintStage should satisfy DecisionStage Protocol
-        assert isinstance(stage, DecisionStage)

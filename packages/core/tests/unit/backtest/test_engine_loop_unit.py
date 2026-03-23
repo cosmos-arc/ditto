@@ -1,11 +1,13 @@
-"""EngineLoop unit tests — 7 scenarios with mock objects."""
+"""EngineLoop unit tests — 7 scenarios with mock objects + boundary tests."""
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime
 from types import MappingProxyType
 from unittest.mock import Mock
 
+import pytest
 from ditto_core.accounting.account import AccountView
 from ditto_core.accounting.cash import CashBook
 from ditto_core.accounting.order_book import (
@@ -17,6 +19,7 @@ from ditto_core.accounting.order_book import (
 from ditto_core.backtest.data_feed import MarketSnapshot, Slice
 from ditto_core.backtest.engine import EngineConfig, EngineLoop, EngineOptions
 from ditto_core.backtest.risk.pre_trade import (
+    Decision,
     OrderCheckResult,
 )
 from ditto_core.execution.fills import FillEvent
@@ -196,7 +199,7 @@ class TestThreeDayStep:
 
         pre_trade_check = Mock()
         pre_trade_check.check_order.return_value = OrderCheckResult(
-            decision="accept",
+            decision=Decision.ACCEPT,
             order_id="order-001",
         )
 
@@ -292,7 +295,7 @@ class TestPreTradeRejectSkipsOrder:
 
         pre_trade_check = Mock()
         pre_trade_check.check_order.return_value = OrderCheckResult(
-            decision="reject",
+            decision=Decision.REJECT,
             order_id="order-001",
             reason="insufficient buying power",
             triggered_checks=("buying_power",),
@@ -346,7 +349,7 @@ class TestPreTradeResizeApplied:
         pre_trade_check = Mock()
         # Resize 150 → 200 (next lot size multiple)
         pre_trade_check.check_order.return_value = OrderCheckResult(
-            decision="accept",
+            decision=Decision.ACCEPT,
             order_id="order-001",
             resized_quantity=200,
             triggered_checks=("lot_size",),
@@ -404,7 +407,7 @@ class TestRollingContextUpdates:
 
         pre_trade_check = Mock()
         pre_trade_check.check_order.return_value = OrderCheckResult(
-            decision="accept",
+            decision=Decision.ACCEPT,
             order_id="order-001",
         )
 
@@ -653,3 +656,74 @@ class TestEmptyPlanNoOrders:
         assert brokerage.place_order.call_count == 0
         assert result.total_trades == 0
         assert len(result.orders) == 0
+
+
+# ---------------------------------------------------------------------------
+# Part 05: _is_rebalance_day 边界测试
+# ---------------------------------------------------------------------------
+
+
+class TestIsRebalanceDay:
+    """_is_rebalance_day 日期格式与频率边界测试."""
+
+    def test_daily_always_true(self) -> None:
+        config = _make_config()
+        loop = _make_engine_loop(config=config)
+        assert loop._is_rebalance_day("2026-03-01") is True
+        assert loop._is_rebalance_day("2026-03-15") is True
+
+    def test_weekly_monday_true(self) -> None:
+        config = replace(_make_config(), rebalance_freq="weekly")
+        loop = _make_engine_loop(config=config)
+        # 2026-03-02 is Monday
+        assert loop._is_rebalance_day("2026-03-02") is True
+
+    def test_weekly_tuesday_false(self) -> None:
+        config = replace(_make_config(), rebalance_freq="weekly")
+        loop = _make_engine_loop(config=config)
+        # 2026-03-03 is Tuesday
+        assert loop._is_rebalance_day("2026-03-03") is False
+
+    def test_weekly_invalid_date_raises(self) -> None:
+        """非标准日期格式 → weekly 模式下 strptime 抛出 ValueError."""
+        config = replace(_make_config(), rebalance_freq="weekly")
+        loop = _make_engine_loop(config=config)
+        with pytest.raises(ValueError, match="time data"):
+            loop._is_rebalance_day("not-a-date")
+
+    def test_monthly_first_day_of_month(self) -> None:
+        config = replace(_make_config(), rebalance_freq="monthly")
+        loop = _make_engine_loop(config=config)
+        loop._trading_days = tuple(DAYS)
+        # First trading day in list → idx=0 → True
+        assert loop._is_rebalance_day("2026-03-01") is True
+
+    def test_monthly_same_month_false(self) -> None:
+        """同一月内非首日 → False."""
+        config = replace(_make_config(), rebalance_freq="monthly")
+        loop = _make_engine_loop(config=config)
+        loop._trading_days = tuple(DAYS)
+        # "2026-03-02" same month as "2026-03-01" (idx 0) → False
+        assert loop._is_rebalance_day("2026-03-02") is False
+
+    def test_monthly_different_month_true(self) -> None:
+        """跨月 → True."""
+        config = replace(_make_config(), rebalance_freq="monthly")
+        loop = _make_engine_loop(config=config)
+        loop._trading_days = ("2026-03-31", "2026-04-01")
+        # "2026-04-01" has month_prefix "2026-04", prev "2026-03" different → True
+        assert loop._is_rebalance_day("2026-04-01") is True
+
+    def test_monthly_date_not_in_trading_days_raises(self) -> None:
+        """date 不在 trading_days 中 → .index() 抛出 ValueError."""
+        config = replace(_make_config(), rebalance_freq="monthly")
+        loop = _make_engine_loop(config=config)
+        loop._trading_days = tuple(DAYS)
+        with pytest.raises(ValueError):
+            loop._is_rebalance_day("2026-06-01")
+
+    def test_unknown_freq_defaults_true(self) -> None:
+        """未知 rebalance_freq → 默认返回 True."""
+        config = replace(_make_config(), rebalance_freq="quarterly")
+        loop = _make_engine_loop(config=config)
+        assert loop._is_rebalance_day("2026-03-01") is True

@@ -26,6 +26,7 @@ from ditto_core.backtest.risk.post_trade import (
 )
 from ditto_core.backtest.risk.pre_trade import (
     CompositePreTradeCheck,
+    Decision,
     OrderCheckResult,
     PreTradeContext,
     PreTradeRiskCheck,
@@ -47,6 +48,7 @@ __all__ = [
     "CompositePostTradeGuard",
     "CompositePreTradeCheck",
     "DataFeed",
+    "Decision",
     "EngineConfig",
     "EngineLoop",
     "EngineMode",

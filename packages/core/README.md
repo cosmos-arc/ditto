@@ -85,6 +85,9 @@
 | `Pipeline` | 策略流水线编排 | ✅ Phase 1 |
 | `TrendFilterStage` | 趋势方向过滤 Stage | ✅ Phase 5 |
 | `TrailingStopStage` | 追踪止损 Stage | ✅ Phase 5 |
+| `RegimeStage` | 市场状态检测 Stage（MA 交叉 / 波动率阈值） | ✅ Phase 6 |
+| `validate_spec_params` | StrategySpec 参数校验 | ✅ Phase 6 |
+| `RebalancePlan` | 调仓计划数据对象 | ✅ Phase 6 |
 | `ETFTrendSwingConfig` | ETF 趋势追踪模板配置 | ✅ Phase 5 |
 
 ### Accounting - 共享账户契约层
@@ -268,6 +271,18 @@ assert abs(fast_result.total_return - prod_result.total_return) < 0.001
 - [PIT 安全指南](../../.claude/skills/pit-guide/SKILL.md)
 
 ## 变更记录
+
+### v0.8.0 (2026-03-23)
+**新增** — Phase 6: Gap 补齐 + 质量加固 Sprint
+- `strategy/builtins/regime.py`: RegimeStage（市场状态检测：MA 交叉法 + 波动率阈值法）、RegimeLabel / RegimeMethod 枚举
+- `strategy/validation.py`: validate_spec_params() 独立参数校验函数（类型、范围、枚举值）
+- `strategy/models.py`: RebalancePlan（调仓计划）、SignalSnapshot.valid_until 字段
+- `strategy/protocols.py`: DecisionFrame 类型别名（pl.DataFrame 语义化）
+- `execution/orders.py`: Order 类型从 accounting 重导出到 execution
+- `accounting/account.py`: Account._cash 私有化（property 访问器）
+- `accounting/order_book.py`: OrderBook / OrderBookReadOnly 非 frozen 说明注释
+- **DataHub 控制面**: StrategyCatalogService（Spec CRUD + 发布治理）、StrategyArtifactService（产物生命周期管理）
+- 62 个新测试（regime 24 + validation 17 + models 6 + catalog 10 + artifact 11），3849 个测试全部通过，84.82% 覆盖率
 
 ### v0.7.0 (2026-03-22)
 **新增** — Phase 5 Part 01-02: etf_trend_swing 模板 + InverseVol 分配器

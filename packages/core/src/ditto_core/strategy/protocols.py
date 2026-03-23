@@ -2,27 +2,30 @@
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 
 import polars as pl
 
 from ditto_core.strategy.context import StrategyContext
 
-__all__ = ["DecisionStage"]
+__all__ = ["DecisionFrame", "DecisionStage"]
+
+type DecisionFrame = pl.DataFrame
 
 
-@runtime_checkable
 class DecisionStage(Protocol):
     """
     Pipeline 阶段 — 每个 Stage 实现此接口。
 
-    输入 DecisionFrame (pl.DataFrame)，输出处理后的 DecisionFrame。
+    输入 DecisionFrame，输出处理后的 DecisionFrame。
+    DecisionFrame 是 polars DataFrame 的类型别名，
+    通过列名约定流转决策数据（instrument_id、signal 等）。
     """
 
     def process(
         self,
-        frame: pl.DataFrame,
+        frame: DecisionFrame,
         context: StrategyContext,
-    ) -> pl.DataFrame:
+    ) -> DecisionFrame:
         """处理决策帧，返回处理后的 DataFrame。"""
         ...
