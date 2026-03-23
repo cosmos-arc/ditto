@@ -11,6 +11,7 @@ from ditto_core.accounting.order_book import (
     OrderDirection,
 )
 from ditto_core.accounting.position import Position
+from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
 from ditto_core.backtest.statistics import (
     AggregatedTradeStatistics,
     AlphaStatistics,
@@ -719,6 +720,8 @@ class TestBacktestReport:
         assert report.nav_series == ()
         assert report.trade_log == ()
         assert report.fill_log == ()
+        assert report.risk_log == ()
+        assert report.pre_trade_log == ()
 
     def test_complete_report(self) -> None:
         """Report contains all dimensions when data is present."""
@@ -747,6 +750,8 @@ class TestBacktestReport:
         assert report.trade_log[0].trade_id == "t1"
         assert len(report.fill_log) == 1
         assert report.fill_log[0].fill_id == "f-1"
+        assert report.risk_log == ()
+        assert report.pre_trade_log == ()
 
     def test_report_with_benchmark(self) -> None:
         """Report passes benchmark to alpha_stats computation."""
@@ -813,9 +818,53 @@ class TestBacktestReport:
             nav_series=(),
             trade_log=(),
             fill_log=(),
+            risk_log=(),
+            pre_trade_log=(),
         )
         with pytest.raises(AttributeError):
             report.run_id = "changed"  # type: ignore[misc]
+
+    def test_report_includes_risk_log(self) -> None:
+        """build_report fills risk_log from recorded risk scans."""
+        collector = ExecutionAuditCollector()
+        collector.record_account_view("2026-01-01", _account_view(nav=100_000.0))
+        risk_record = RiskScanRecord(
+            trade_date="2026-01-01",
+            rule_id="max_drawdown",
+            instrument_id="*",
+            severity=RiskSeverity.EMERGENCY,
+            action_taken=RiskActionType.LIQUIDATE,
+            detail="drawdown exceeded",
+            current_value=0.25,
+            threshold=0.20,
+        )
+        collector.record_risk_scan("2026-01-01", (risk_record,))
+
+        report = collector.build_report(run_id="risk-test")
+        assert len(report.risk_log) == 1
+        assert report.risk_log[0].rule_id == "max_drawdown"
+        assert report.risk_log[0].severity == RiskSeverity.EMERGENCY
+
+    def test_report_includes_pre_trade_log(self) -> None:
+        """build_report fills pre_trade_log from recorded decisions."""
+        collector = ExecutionAuditCollector()
+        collector.record_account_view("2026-01-01", _account_view(nav=100_000.0))
+        decision = PreTradeDecisionRecord(
+            trade_date="2026-01-01",
+            order_id="o-1",
+            instrument_id="510300.SH",
+            direction="buy",
+            original_quantity=500,
+            final_quantity=500,
+            decision="accepted",
+            reason=None,
+        )
+        collector.record_pre_trade_decisions("2026-01-01", (decision,))
+
+        report = collector.build_report(run_id="pretrade-test")
+        assert len(report.pre_trade_log) == 1
+        assert report.pre_trade_log[0].order_id == "o-1"
+        assert report.pre_trade_log[0].decision == "accepted"
 
 
 # ---------------------------------------------------------------------------
@@ -829,8 +878,8 @@ class TestRiskScanRecord:
             trade_date="2026-01-15",
             rule_id="max_drawdown",
             instrument_id="*",
-            severity="emergency",
-            action_taken="liquidate",
+            severity=RiskSeverity.EMERGENCY,
+            action_taken=RiskActionType.LIQUIDATE,
             detail="组合回撤 25.00% 超过紧急阈值 20.00%",
             current_value=0.25,
             threshold=0.20,
@@ -843,14 +892,59 @@ class TestRiskScanRecord:
             trade_date="2026-01-15",
             rule_id="test",
             instrument_id="510300.SH",
-            severity="warning",
-            action_taken="alert",
+            severity=RiskSeverity.WARNING,
+            action_taken=RiskActionType.ALERT,
             detail="test",
             current_value=0.1,
             threshold=0.05,
         )
         assert record.trade_date == "2026-01-15"
         assert record.rule_id == "test"
+
+    def test_severity_is_risk_severity_enum(self) -> None:
+        """severity 字段类型为 RiskSeverity 枚举。"""
+        record = RiskScanRecord(
+            trade_date="2026-01-15",
+            rule_id="test",
+            instrument_id="*",
+            severity=RiskSeverity.CRITICAL,
+            action_taken=RiskActionType.REDUCE_POSITION,
+            detail="test",
+            current_value=0.1,
+            threshold=0.05,
+        )
+        assert isinstance(record.severity, RiskSeverity)
+        assert record.severity == RiskSeverity.CRITICAL
+
+    def test_action_taken_is_risk_action_type_enum(self) -> None:
+        """action_taken 字段类型为 RiskActionType 枚举。"""
+        record = RiskScanRecord(
+            trade_date="2026-01-15",
+            rule_id="test",
+            instrument_id="*",
+            severity=RiskSeverity.WARNING,
+            action_taken=RiskActionType.REDUCE_POSITION,
+            detail="test",
+            current_value=0.1,
+            threshold=0.05,
+        )
+        assert isinstance(record.action_taken, RiskActionType)
+        assert record.action_taken == RiskActionType.REDUCE_POSITION
+
+    def test_enum_values_compatible_with_str(self) -> None:
+        """StrEnum 枚举值与原始字符串兼容。"""
+        record = RiskScanRecord(
+            trade_date="2026-01-15",
+            rule_id="test",
+            instrument_id="*",
+            severity=RiskSeverity.EMERGENCY,
+            action_taken=RiskActionType.LIQUIDATE,
+            detail="test",
+            current_value=0.1,
+            threshold=0.05,
+        )
+        assert record.severity == "emergency"
+        assert record.action_taken == "liquidate"
 
 
 # ---------------------------------------------------------------------------
@@ -917,8 +1011,8 @@ class TestRiskLogRecording:
                 trade_date="2026-01-15",
                 rule_id="max_drawdown",
                 instrument_id="*",
-                severity="emergency",
-                action_taken="liquidate",
+                severity=RiskSeverity.EMERGENCY,
+                action_taken=RiskActionType.LIQUIDATE,
                 detail="组合回撤 25.00%",
                 current_value=0.25,
                 threshold=0.20,
@@ -927,8 +1021,8 @@ class TestRiskLogRecording:
                 trade_date="2026-01-15",
                 rule_id="single_loss_limit",
                 instrument_id="510300.SH",
-                severity="critical",
-                action_taken="reduce_position",
+                severity=RiskSeverity.CRITICAL,
+                action_taken=RiskActionType.REDUCE_POSITION,
                 detail="510300.SH 亏损 20.00%",
                 current_value=-0.20,
                 threshold=-0.15,
@@ -940,7 +1034,9 @@ class TestRiskLogRecording:
         assert len(log) == 2
         assert log[0].rule_id == "max_drawdown"
         assert log[0].trade_date == "2026-01-15"
+        assert log[0].severity == RiskSeverity.EMERGENCY
         assert log[1].rule_id == "single_loss_limit"
+        assert log[1].action_taken == RiskActionType.REDUCE_POSITION
 
     def test_empty_risk_log(self) -> None:
         collector = ExecutionAuditCollector()
@@ -955,8 +1051,8 @@ class TestRiskLogRecording:
                     trade_date="2026-01-15",
                     rule_id="test",
                     instrument_id="*",
-                    severity="warning",
-                    action_taken="alert",
+                    severity=RiskSeverity.WARNING,
+                    action_taken=RiskActionType.ALERT,
                     detail="d",
                     current_value=0.1,
                     threshold=0.1,
@@ -970,8 +1066,8 @@ class TestRiskLogRecording:
                     trade_date="2026-01-16",
                     rule_id="test",
                     instrument_id="*",
-                    severity="warning",
-                    action_taken="alert",
+                    severity=RiskSeverity.WARNING,
+                    action_taken=RiskActionType.ALERT,
                     detail="d",
                     current_value=0.1,
                     threshold=0.1,

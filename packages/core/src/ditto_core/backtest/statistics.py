@@ -14,6 +14,7 @@ import statistics
 from dataclasses import dataclass, replace
 
 from ditto_core.accounting.account import AccountView
+from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
 from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.trade_builder import TradeRecord
 
@@ -201,6 +202,8 @@ class BacktestReport:
         nav_series: 每日 NAV 序列 (trade_date, nav)
         trade_log: 交易记录
         fill_log: 成交记录
+        risk_log: PostTrade 风控扫描记录
+        pre_trade_log: PreTrade 订单校验决策记录
 
     """
 
@@ -215,6 +218,8 @@ class BacktestReport:
     nav_series: tuple[tuple[str, float], ...]
     trade_log: tuple[TradeRecord, ...]
     fill_log: tuple[FillEvent, ...]
+    risk_log: tuple[RiskScanRecord, ...] = ()
+    pre_trade_log: tuple[PreTradeDecisionRecord, ...] = ()
 
 
 # ---------------------------------------------------------------------------
@@ -231,8 +236,8 @@ class RiskScanRecord:
         trade_date: 交易日期 (YYYY-MM-DD)
         rule_id: 触发规则标识符
         instrument_id: 标的 ID ("*" 表示全组合)
-        severity: 严重程度
-        action_taken: 采取的动作 (reduce_position / liquidate / alert)
+        severity: 严重程度 (RiskSeverity 枚举)
+        action_taken: 采取的动作 (RiskActionType 枚举)
         detail: 风险描述
         current_value: 当前实际值
         threshold: 触发阈值
@@ -242,8 +247,8 @@ class RiskScanRecord:
     trade_date: str
     rule_id: str
     instrument_id: str
-    severity: str
-    action_taken: str
+    severity: RiskSeverity
+    action_taken: RiskActionType
     detail: str
     current_value: float
     threshold: float
@@ -647,6 +652,8 @@ class ExecutionAuditCollector:
             nav_series=nav_series,
             trade_log=tuple(self._closed_trades),
             fill_log=tuple(self._fills),
+            risk_log=self.get_risk_log(),
+            pre_trade_log=self.get_pre_trade_log(),
         )
 
 

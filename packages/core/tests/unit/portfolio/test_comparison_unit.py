@@ -96,6 +96,8 @@ def _make_backtest_report(
         nav_series=(),
         trade_log=(),
         fill_log=(),
+        risk_log=(),
+        pre_trade_log=(),
     )
 
 
@@ -219,6 +221,8 @@ class TestCompareReports:
             nav_series=(),
             trade_log=(),
             fill_log=(),
+            risk_log=(),
+            pre_trade_log=(),
         )
 
         result = compare_reports(report_with_trades, report_with_trades)
@@ -498,6 +502,8 @@ class TestCompareReports:
             nav_series=(),
             trade_log=(),
             fill_log=(),
+            risk_log=(),
+            pre_trade_log=(),
         )
         report_cmp = BacktestReport(
             run_id="run-2",
@@ -511,6 +517,8 @@ class TestCompareReports:
             nav_series=(),
             trade_log=(),
             fill_log=(),
+            risk_log=(),
+            pre_trade_log=(),
         )
         result = compare_reports(report_base, report_cmp)
 

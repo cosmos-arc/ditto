@@ -242,13 +242,21 @@ class OrderBookReadOnly:
 
 class OrderBook:
     """
-    订单簿 — 持有所有 OrderTicket，只允许通过受控方法修改。
+    订单簿 — 持有所有 OrderTicket，只允许通过受控方法修改.
+
+    使用普通 class 而非 frozen dataclass，原因如下:
+
+    1. **Mutable state**: 内部维护 ``dict[str, OrderTicket]`` 可变状态，
+       需要在运行时动态增删改（submit / update / cancel），frozen dataclass
+       无法满足此需求。
+    2. **Lifecycle ownership**: OrderBook 管理订单的完整生命周期——从 submit
+       到终态（filled / canceled / rejected / invalid），通过受控方法保证
+       状态转换合法性。这是典型的 mutable owner 模式，不适合不可变值对象。
 
     Note:
-        使用普通类而非 frozen dataclass，因为订单簿需要在运行时
-        管理订单生命周期（submit / update / cancel），可变 dict 存储
-        是最自然的状态管理方式。OrderTicket 本身是 frozen dataclass，
-        状态变更通过 with_xxx() 返回新实例实现不可变性。
+        OrderTicket 本身是 frozen dataclass，状态变更通过 ``with_xxx()``
+        返回新实例实现不可变性。OrderBook 持有对最新 OrderTicket 实例的
+        引用，通过 ``update()`` 替换旧实例。
 
     """
 
