@@ -6,10 +6,20 @@ from ditto_port.services.strategy.backtest_service import (
     BacktestServiceOptions,
 )
 from ditto_port.services.strategy.input_assembler import StrategyInputAssembler
+from ditto_port.services.strategy.strategy_run_service import (
+    StrategyRunMode,
+    StrategyRunResult,
+    StrategyRunService,
+    StrategyRunServiceConfig,
+)
 
 __all__ = [
     "BacktestService",
     "BacktestServiceConfig",
     "BacktestServiceOptions",
     "StrategyInputAssembler",
+    "StrategyRunMode",
+    "StrategyRunResult",
+    "StrategyRunService",
+    "StrategyRunServiceConfig",
 ]
