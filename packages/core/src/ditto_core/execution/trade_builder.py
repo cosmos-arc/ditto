@@ -1,7 +1,7 @@
 """
-TradeBuilder — FIFO trade matching (v3 §8.2).
+TradeBuilder — FIFO & FLAT_TO_FLAT trade matching (v3 §8.2).
 
-Consumes FillEvent, matches entry/exit pairs by FIFO protocol,
+Consumes FillEvent, matches entry/exit pairs by FIFO or FLAT_TO_FLAT protocol,
 produces TradeRecord (open or closed).
 """
 
@@ -19,6 +19,7 @@ from ditto_core.execution.fills import FillEvent
 
 __all__ = [
     "FifoTradeBuilder",
+    "FlatToFlatTradeBuilder",
     "TradeBuilder",
     "TradeMatchingMethod",
     "TradeRecord",
@@ -240,3 +241,185 @@ class FifoTradeBuilder:
 
             if entry.remaining_quantity == 0:
                 queue.popleft()
+
+
+# ---------------------------------------------------------------------------
+# Internal mutable container — FLAT_TO_FLAT
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _InstrumentAccumulator:
+    """FLAT_TO_FLAT per-instrument accumulation tracker."""
+
+    instrument_id: str
+    entry_order_ids: list[str]
+    exit_order_ids: list[str]
+    net_quantity: int = 0  # positive = long, 0 = flat
+    buy_quantity: int = 0
+    buy_total_cost: float = 0.0  # sum of price * qty for all buys
+    buy_fees: float = 0.0
+    sell_quantity: int = 0
+    sell_total_proceeds: float = 0.0  # sum of price * qty for all sells
+    sell_fees: float = 0.0
+    first_entry_date: date | None = None
+    last_entry_date: date | None = None
+    first_exit_date: date | None = None
+    last_exit_date: date | None = None
+
+
+# ---------------------------------------------------------------------------
+# FLAT_TO_FLAT implementation
+# ---------------------------------------------------------------------------
+
+
+class FlatToFlatTradeBuilder:
+    """FLAT_TO_FLAT 成交匹配 — 按品种 VWAP 累积，净仓位归零时输出一笔交易。"""
+
+    def __init__(self) -> None:
+        self._accumulators: dict[str, _InstrumentAccumulator] = {}
+        self._closed: list[TradeRecord] = []
+        self._counter = 0
+
+    # -- public API ---------------------------------------------------------
+
+    def on_fill(self, fill: FillEvent, account_view: AccountView) -> None:
+        """处理成交事件，更新品种累积。"""
+        iid = fill.instrument_id
+        fill_date = fill.event_time.date()
+
+        if fill.direction == OrderDirection.BUY:
+            acc = self._get_or_create(iid)
+            acc.net_quantity += fill.filled_quantity
+            acc.buy_quantity += fill.filled_quantity
+            acc.buy_total_cost += fill.fill_price * fill.filled_quantity
+            acc.buy_fees += fill.fee
+            acc.entry_order_ids.append(fill.order_id)
+            if acc.first_entry_date is None:
+                acc.first_entry_date = fill_date
+            acc.last_entry_date = fill_date
+
+        elif fill.direction == OrderDirection.SELL:
+            acc = self._accumulators.get(iid)
+            if not acc or acc.net_quantity <= 0:
+                return
+
+            # Cap sell at net position
+            effective_qty = min(fill.filled_quantity, acc.net_quantity)
+            sell_proceeds = fill.fill_price * effective_qty
+            # Proportional fee for effective portion
+            sell_fee = fill.fee * (effective_qty / fill.filled_quantity)
+
+            acc.net_quantity -= effective_qty
+            acc.sell_quantity += effective_qty
+            acc.sell_total_proceeds += sell_proceeds
+            acc.sell_fees += sell_fee
+            acc.exit_order_ids.append(fill.order_id)
+            if acc.first_exit_date is None:
+                acc.first_exit_date = fill_date
+            acc.last_exit_date = fill_date
+
+            # Net position reached zero → emit closed trade
+            if acc.net_quantity == 0:
+                self._emit_closed(acc)
+                del self._accumulators[iid]
+
+    def get_open_trades(self) -> tuple[TradeRecord, ...]:
+        """获取当前未平仓交易（按品种 VWAP entry price）。"""
+        records: list[TradeRecord] = []
+        for acc in self._accumulators.values():
+            vwap = (
+                acc.buy_total_cost / acc.buy_quantity if acc.buy_quantity > 0 else 0.0
+            )
+            records.append(
+                TradeRecord(
+                    trade_id=self._next_id(),
+                    instrument_id=acc.instrument_id,
+                    direction=OrderDirection.BUY,
+                    entry_date=(
+                        acc.first_entry_date.isoformat() if acc.first_entry_date else ""
+                    ),
+                    exit_date=None,
+                    entry_price=vwap,
+                    exit_price=None,
+                    quantity=acc.net_quantity,
+                    gross_pnl=None,
+                    fees=acc.buy_fees,
+                    net_pnl=None,
+                    holding_days=None,
+                    return_pct=None,
+                    entry_order_ids=tuple(acc.entry_order_ids),
+                    exit_order_ids=(),
+                ),
+            )
+        return tuple(records)
+
+    def get_closed_trades(self) -> tuple[TradeRecord, ...]:
+        """获取已平仓交易。"""
+        return tuple(self._closed)
+
+    def flush(self) -> tuple[TradeRecord, ...]:
+        """刷新所有未平仓交易为已平仓。"""
+        open_records = self.get_open_trades()
+        self._accumulators.clear()
+        return open_records
+
+    # -- internals ----------------------------------------------------------
+
+    def _next_id(self) -> str:
+        self._counter += 1
+        return f"trade-{self._counter}"
+
+    def _get_or_create(self, instrument_id: str) -> _InstrumentAccumulator:
+        if instrument_id not in self._accumulators:
+            self._accumulators[instrument_id] = _InstrumentAccumulator(
+                instrument_id=instrument_id,
+                entry_order_ids=[],
+                exit_order_ids=[],
+            )
+        return self._accumulators[instrument_id]
+
+    def _emit_closed(self, acc: _InstrumentAccumulator) -> None:
+        """从累积器生成一笔已平仓 TradeRecord。"""
+        entry_vwap = (
+            acc.buy_total_cost / acc.buy_quantity if acc.buy_quantity > 0 else 0.0
+        )
+        exit_vwap = (
+            acc.sell_total_proceeds / acc.sell_quantity
+            if acc.sell_quantity > 0
+            else 0.0
+        )
+        gross_pnl = acc.sell_total_proceeds - acc.buy_total_cost
+        total_fees = acc.buy_fees + acc.sell_fees
+        holding_days = (
+            (acc.last_exit_date - acc.first_entry_date).days
+            if acc.first_entry_date and acc.last_exit_date
+            else 0
+        )
+        return_pct = (
+            (gross_pnl / acc.buy_total_cost) * 100 if acc.buy_total_cost > 0 else 0.0
+        )
+
+        self._closed.append(
+            TradeRecord(
+                trade_id=self._next_id(),
+                instrument_id=acc.instrument_id,
+                direction=OrderDirection.BUY,
+                entry_date=(
+                    acc.first_entry_date.isoformat() if acc.first_entry_date else ""
+                ),
+                exit_date=(
+                    acc.last_exit_date.isoformat() if acc.last_exit_date else None
+                ),
+                entry_price=entry_vwap,
+                exit_price=exit_vwap,
+                quantity=acc.buy_quantity,
+                gross_pnl=gross_pnl,
+                fees=total_fees,
+                net_pnl=gross_pnl - total_fees,
+                holding_days=holding_days,
+                return_pct=return_pct,
+                entry_order_ids=tuple(acc.entry_order_ids),
+                exit_order_ids=tuple(acc.exit_order_ids),
+            ),
+        )

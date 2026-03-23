@@ -59,6 +59,7 @@ from ditto_core.execution.rules import (
 )
 from ditto_core.execution.trade_builder import (
     FifoTradeBuilder,
+    FlatToFlatTradeBuilder,
     TradeBuilder,
     TradeMatchingMethod,
     TradeRecord,
@@ -84,6 +85,7 @@ __all__ = [
     "FillOutcome",
     "Filled",
     "FixedBpsSlippage",
+    "FlatToFlatTradeBuilder",
     "InMemoryRuleProvider",
     "InstrumentDefinition",
     "InstrumentRuleProvider",

@@ -45,6 +45,7 @@ from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.planner import ExecutionPlanner
 from ditto_core.execution.reality import FeeModel
 from ditto_core.execution.rules import InstrumentRuleProvider, InstrumentRules
+from ditto_core.execution.trade_builder import TradeMatchingMethod
 from ditto_core.strategy.context import StrategyContext
 from ditto_core.strategy.pipeline import StrategyInputBundle, StrategyPipeline
 
@@ -97,7 +98,7 @@ class EngineConfig:
     initial_cash: float
     benchmark_id: str | None = None
     mode: EngineMode = EngineMode.BACKTEST
-    trade_matching: str = "fifo"
+    trade_matching: TradeMatchingMethod = TradeMatchingMethod.FIFO
     strategy_id: str = "default"
     strategy_run_id: str = ""
     rebalance_freq: str = "daily"
