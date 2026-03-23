@@ -68,14 +68,34 @@
 | `PortfolioManager` | 多策略协调 + 持仓管理 | 🔄 规划中 |
 | `PortfolioBuilder` | 组合构建 + 权重分配 | 🔄 规划中 |
 | `PositionManager` | 持仓跟踪 + 盈亏计算 | 🔄 规划中 |
+| `InverseVolAllocator` | 波动率倒数加权分配 | ✅ Phase 5 |
 
 ### Strategy - 策略层
 
 | 模块 | 职责 | 状态 |
 |------|------|------|
-| `Strategy` | 策略抽象基类 | 🔄 规划中 |
-| `SignalGenerator` | 信号生成接口 | 🔄 规划中 |
-| `OrderExecutor` | 订单执行接口 | 🔄 规划中 |
+| `StrategySpec` | 策略完整定义（语义契约） | ✅ Phase 0 |
+| `StrategyTemplate` | 策略模板蓝图 | ✅ Phase 0 |
+| `StrategyVersion` | 策略版本管理 | ✅ Phase 0 |
+| `StrategyRun` | 策略运行记录 | ✅ Phase 0 |
+| `StrategyContext` | 运行时上下文（风控锁定） | ✅ Phase 0 |
+| `DecisionStage` | Pipeline 阶段 Protocol | ✅ Phase 0 |
+| `SignalSnapshot` | 信号快照 | ✅ Phase 0 |
+| `TargetPortfolio` | 目标持仓 | ✅ Phase 0 |
+| `Pipeline` | 策略流水线编排 | ✅ Phase 1 |
+| `TrendFilterStage` | 趋势方向过滤 Stage | ✅ Phase 5 |
+| `TrailingStopStage` | 追踪止损 Stage | ✅ Phase 5 |
+| `ETFTrendSwingConfig` | ETF 趋势追踪模板配置 | ✅ Phase 5 |
+
+### Accounting - 共享账户契约层
+
+| 模块 | 职责 | 状态 |
+|------|------|------|
+| `Account` / `AccountView` | 账户（可变/只读快照） | ✅ Phase 0 |
+| `CashBook` | 资金账本 | ✅ Phase 0 |
+| `OrderBook` / `Order` | 订单簿 | ✅ Phase 0 |
+| `Position` | 持仓 | ✅ Phase 0 |
+| `BuyingPowerModel` | 购买力模型 Protocol | ✅ Phase 0 |
 
 ## 使用示例
 
@@ -248,6 +268,47 @@ assert abs(fast_result.total_return - prod_result.total_return) < 0.001
 - [PIT 安全指南](../../.claude/skills/pit-guide/SKILL.md)
 
 ## 变更记录
+
+### v0.7.0 (2026-03-22)
+**新增** — Phase 5 Part 01-02: etf_trend_swing 模板 + InverseVol 分配器
+- `strategy/templates/etf_trend_swing.py`: TrailingStopStage（追踪止损，向量化 polars join）、ETFTrendSwingConfig、build_etf_trend_swing_pipeline
+- `strategy/builtins/filtering.py`: TrendFilterStage（趋势方向过滤）
+- `portfolio/allocation.py`: InverseVolAllocator（波动率倒数加权，含零波动率/cash_target 边界处理）
+- `strategy/context.py`: StrategyContext 新增 `positions` 字段（持仓成本传递给 TrailingStop）
+- **架构重构**: 移除 portfolio → strategy 循环依赖，WeightAllocator/Constraint 签名简化（不再接收 StrategyContext）
+- 17 个 etf_trend_swing 测试 + 10 个 InverseVolAllocator 测试，3448 个测试全部通过
+
+### v0.6.0 (2026-03-22)
+**新增** — Phase 4 Part 01: PreTrade V3 + T+1 冻结逻辑
+- PreTrade 风控完整版: 6 条规则（NoShortSell / PriceValidity / LotSize / BuyingPower / Concentration / DailyTurnover）
+- PreTradeContext V3: `rules` + `market_snapshots` + `buying_power_model` + `pending_tickets`
+- BacktestBrokerage T+1 冻结: `_register_frozen` / `_thaw_frozen` + SELL 守卫
+- F1 rolling context: 批内订单通过后滚动更新（B3 anti-oversell）
+- A1 resize recheck: LotSize resize 后重入检查链（最多 3 轮）
+- 63 个 PreTrade 单元测试 + 10 个 T+1 冻结测试 + 6 个集成测试迁移
+- 3410 个测试全部通过
+
+### v0.5.0 (2026-03-22)
+**新增** — Phase 2: 回测引擎闭环
+- `execution/` 扩展: `ExecutionPlanner` + `BacktestBrokerage` + `TradeBuilder` (FIFO) + Reality Model (佣金/滑点/结算)
+- `backtest/` 新增: `EngineLoop` (日历步进) + `ParquetDataFeed` + `ExecutionAuditCollector` + PreTrade 风控
+- 3 日/5 日 etf_rotation 回测集成测试（快照 + 16 个不变量测试）
+- 3260 个测试全部通过
+
+### v0.4.0 (2026-03-21)
+**新增** — Phase 1: Pipeline 闭环 + 组合构建
+- `strategy/builtins/`: Universe / Signal / Scoring / Filtering / Selection 内置 Stage
+- `strategy/pipeline.py`: StrategyPipeline + StrategyInputBundle
+- `strategy/templates/etf_rotation.py`: ETF 轮动策略模板
+- `portfolio/allocation.py`: EqualWeight / ScoreWeight 分配器
+- `portfolio/constraints.py`: MaxWeight / MinWeight / MaxPositions 约束
+
+### v0.3.0 (2026-03-21)
+**新增** — Phase 0 Part 3: strategy/ 策略决策层类型定义
+- `StrategySpec` + `ParamConstraint` / `CostModelSpec` / `ExecutionSpec` / `ConstraintSpec` / `ScorerSpec` / `SelectorSpec`
+- `StrategyRun` / `StrategyTemplate` / `StrategyVersion` / `SignalSnapshot` / `TargetPortfolio`
+- `StrategyContext`（可变运行时上下文）+ `DecisionStage` Protocol（Pipeline 阶段接口）
+- 32 个单元测试，98.07% 覆盖率
 
 ### v0.2.0 (2026-01-23)
 **新增**

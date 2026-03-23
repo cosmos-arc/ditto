@@ -107,6 +107,8 @@ unfixable = []
 "packages/datahub/src/ditto_datahub/domains/factors/factor_metadata_store.py" = ["S608"]
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
 "apps/port/src/ditto_port/services/derived/research.py" = ["S608"]
+# EngineLoop.__init__ - DI 注入 8 个依赖，参数数量不可避免
+"packages/core/src/ditto_core/backtest/engine.py" = ["PLR0913"]
 
 # 测试文件 - 最宽松
 "tests/**/*.py" = [
