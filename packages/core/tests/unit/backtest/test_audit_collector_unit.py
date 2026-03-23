@@ -21,6 +21,11 @@ from ditto_core.backtest.statistics import (
     PreTradeDecisionRecord,
     RiskScanRecord,
     TradeStatistics,
+    build_report,
+    compute_aggregated_trade_statistics,
+    compute_alpha_statistics,
+    compute_portfolio_statistics,
+    compute_trade_statistics,
 )
 from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.trade_builder import TradeRecord
@@ -203,7 +208,7 @@ class TestComputePortfolioStatistics:
         collector.record_account_view("2026-01-02", _account_view(nav=101_000.0))
         collector.record_account_view("2026-01-03", _account_view(nav=99_500.0))
 
-        stats = collector.compute_portfolio_statistics()
+        stats = compute_portfolio_statistics(collector)
         assert len(stats) == 3
 
         # Day 1
@@ -248,7 +253,7 @@ class TestComputeTradeStatistics:
             ),
         )
 
-        trade_stats = collector.compute_trade_statistics()
+        trade_stats = compute_trade_statistics(collector)
         assert len(trade_stats) == 2
 
         # Closed trade
@@ -287,8 +292,8 @@ class TestEmptyCollector:
         assert collector.get_fills() == ()
         assert collector.get_daily_snapshots() == ()
         assert collector.get_closed_trades() == ()
-        assert collector.compute_portfolio_statistics() == ()
-        assert collector.compute_trade_statistics() == ()
+        assert compute_portfolio_statistics(collector) == ()
+        assert compute_trade_statistics(collector) == ()
 
 
 # ---------------------------------------------------------------------------
@@ -320,7 +325,7 @@ class TestPortfolioStatisticsWithCashRatio:
         )
         collector.record_account_view("2026-01-01", view)
 
-        stats = collector.compute_portfolio_statistics()
+        stats = compute_portfolio_statistics(collector)
         assert len(stats) == 1
         assert stats[0].cash_ratio == pytest.approx(40.0)
         assert stats[0].position_count == 1
@@ -369,7 +374,7 @@ class TestAggregatedTradeStatistics:
     def test_no_trades_returns_zeros(self) -> None:
         """Empty collector → all fields zero."""
         collector = ExecutionAuditCollector()
-        stats = collector.compute_aggregated_trade_statistics()
+        stats = compute_aggregated_trade_statistics(collector)
 
         assert stats.total_trades == 0
         assert stats.win_trades == 0
@@ -387,7 +392,7 @@ class TestAggregatedTradeStatistics:
         collector.record_closed_trade(
             _trade_record(trade_id="open-1", exit_date=None),
         )
-        stats = collector.compute_aggregated_trade_statistics()
+        stats = compute_aggregated_trade_statistics(collector)
         assert stats.total_trades == 0
 
     def test_basic_aggregation(self) -> None:
@@ -420,7 +425,7 @@ class TestAggregatedTradeStatistics:
             _closed_trade("t5", gross_pnl=-30.0, holding_days=2, return_pct=-0.6),
         )
 
-        stats = collector.compute_aggregated_trade_statistics()
+        stats = compute_aggregated_trade_statistics(collector)
 
         assert stats.total_trades == 5
         assert stats.long_trades == 5
@@ -451,7 +456,7 @@ class TestAggregatedTradeStatistics:
         collector.record_closed_trade(
             _closed_trade("t2", gross_pnl=200.0, holding_days=5, return_pct=2.0),
         )
-        stats = collector.compute_aggregated_trade_statistics()
+        stats = compute_aggregated_trade_statistics(collector)
 
         assert stats.win_trades == 2
         assert stats.loss_trades == 0
@@ -470,7 +475,7 @@ class TestAggregatedTradeStatistics:
         collector.record_closed_trade(
             _closed_trade("t2", gross_pnl=-100.0, holding_days=4, return_pct=-2.0),
         )
-        stats = collector.compute_aggregated_trade_statistics()
+        stats = compute_aggregated_trade_statistics(collector)
 
         assert stats.win_trades == 0
         assert stats.loss_trades == 2
@@ -494,7 +499,7 @@ class TestAggregatedTradeStatistics:
                 direction=OrderDirection.SELL,
             ),
         )
-        stats = collector.compute_aggregated_trade_statistics()
+        stats = compute_aggregated_trade_statistics(collector)
 
         assert stats.total_trades == 2
         assert stats.long_trades == 1
@@ -536,7 +541,9 @@ class TestAlphaStatistics:
     def test_empty_collector_returns_zeros(self) -> None:
         """No snapshots → all numeric fields zero, benchmark fields None."""
         collector = ExecutionAuditCollector()
-        alpha = collector.compute_alpha_statistics()
+        alpha = compute_alpha_statistics(
+            collector,
+        )
 
         assert alpha.annualized_return == 0.0
         assert alpha.annualized_volatility == 0.0
@@ -556,7 +563,9 @@ class TestAlphaStatistics:
         """One day snapshot → no daily returns → volatility = 0."""
         collector = ExecutionAuditCollector()
         collector.record_account_view("2026-01-01", _account_view(nav=100_000.0))
-        alpha = collector.compute_alpha_statistics()
+        alpha = compute_alpha_statistics(
+            collector,
+        )
 
         assert alpha.annualized_return == pytest.approx(0.0)
         assert alpha.annualized_volatility == 0.0
@@ -572,7 +581,9 @@ class TestAlphaStatistics:
         collector.record_account_view("2026-01-02", _account_view(nav=101_000.0))
         collector.record_account_view("2026-01-03", _account_view(nav=100_500.0))
 
-        alpha = collector.compute_alpha_statistics()
+        alpha = compute_alpha_statistics(
+            collector,
+        )
 
         # total_return = (100500 - 100000) / 100000 = 0.005
         # annualized = (1.005)^(252/2) - 1 ≈ ... (positive)
@@ -601,7 +612,9 @@ class TestAlphaStatistics:
         collector.record_account_view("2026-01-07", _account_view(nav=92.0))
         collector.record_account_view("2026-01-08", _account_view(nav=100.0))
 
-        alpha = collector.compute_alpha_statistics()
+        alpha = compute_alpha_statistics(
+            collector,
+        )
         assert alpha.max_drawdown_duration_days == 6
 
     def test_calmar_ratio(self) -> None:
@@ -611,7 +624,9 @@ class TestAlphaStatistics:
         collector.record_account_view("2026-01-02", _account_view(nav=110.0))
         collector.record_account_view("2026-01-03", _account_view(nav=105.0))
 
-        alpha = collector.compute_alpha_statistics()
+        alpha = compute_alpha_statistics(
+            collector,
+        )
         if alpha.max_drawdown != 0:
             expected = alpha.annualized_return / abs(alpha.max_drawdown)
             assert alpha.calmar_ratio == pytest.approx(expected)
@@ -625,7 +640,9 @@ class TestAlphaStatistics:
         collector.record_account_view("2026-01-02", _account_view(nav=101_000.0))
         collector.record_account_view("2026-01-03", _account_view(nav=100_500.0))
 
-        alpha = collector.compute_alpha_statistics()
+        alpha = compute_alpha_statistics(
+            collector,
+        )
 
         assert alpha.information_ratio is None
         assert alpha.tracking_error is None
@@ -640,7 +657,7 @@ class TestAlphaStatistics:
         collector.record_account_view("2026-01-03", _account_view(nav=100_500.0))
 
         benchmark = (100_000.0, 100_500.0, 100_200.0)
-        alpha = collector.compute_alpha_statistics(benchmark_navs=benchmark)
+        alpha = compute_alpha_statistics(collector, benchmark_navs=benchmark)
 
         assert alpha.information_ratio is not None
         assert alpha.tracking_error is not None
@@ -655,7 +672,9 @@ class TestAlphaStatistics:
         collector.record_fill(_fill_event(fill_id="f-1"))  # price=10, qty=100
         collector.record_fill(_fill_event(fill_id="f-2"))  # price=10, qty=100
 
-        alpha = collector.compute_alpha_statistics()
+        alpha = compute_alpha_statistics(
+            collector,
+        )
         # total_fill_value = 10 * 100 * 2 = 2000
         # avg_nav = (100000 + 101000) / 2 = 100500
         # total_turnover = 2000 / 100500
@@ -668,7 +687,9 @@ class TestAlphaStatistics:
         collector.record_account_view("2026-01-02", _account_view(nav=101_000.0))
         collector.record_fill(_fill_event(fill_id="f-1"))
 
-        alpha = collector.compute_alpha_statistics()
+        alpha = compute_alpha_statistics(
+            collector,
+        )
         assert alpha.total_fees == pytest.approx(5.0)
         assert alpha.cost_drag == pytest.approx(5.0 / 100_000.0 * 100)
 
@@ -707,7 +728,7 @@ class TestBacktestReport:
     def test_empty_report(self) -> None:
         """Empty collector produces valid report with zero-length series."""
         collector = ExecutionAuditCollector()
-        report = collector.build_report(run_id="test-empty")
+        report = build_report(collector, run_id="test-empty")
 
         assert report.run_id == "test-empty"
         assert report.period == ("", "")
@@ -733,7 +754,7 @@ class TestBacktestReport:
         )
         collector.record_fill(_fill_event(fill_id="f-1"))
 
-        report = collector.build_report(run_id="run-001")
+        report = build_report(collector, run_id="run-001")
 
         assert report.run_id == "run-001"
         assert report.period == ("2026-01-01", "2026-01-02")
@@ -761,7 +782,8 @@ class TestBacktestReport:
         collector.record_account_view("2026-01-03", _account_view(nav=100_500.0))
 
         benchmark = (100_000.0, 100_500.0, 100_200.0)
-        report = collector.build_report(
+        report = build_report(
+            collector,
             run_id="bench-test",
             benchmark_navs=benchmark,
         )
@@ -840,7 +862,7 @@ class TestBacktestReport:
         )
         collector.record_risk_scan("2026-01-01", (risk_record,))
 
-        report = collector.build_report(run_id="risk-test")
+        report = build_report(collector, run_id="risk-test")
         assert len(report.risk_log) == 1
         assert report.risk_log[0].rule_id == "max_drawdown"
         assert report.risk_log[0].severity == RiskSeverity.EMERGENCY
@@ -861,7 +883,7 @@ class TestBacktestReport:
         )
         collector.record_pre_trade_decisions("2026-01-01", (decision,))
 
-        report = collector.build_report(run_id="pretrade-test")
+        report = build_report(collector, run_id="pretrade-test")
         assert len(report.pre_trade_log) == 1
         assert report.pre_trade_log[0].order_id == "o-1"
         assert report.pre_trade_log[0].decision == "accepted"
@@ -1159,7 +1181,7 @@ class TestNavZeroBoundary:
                 f"2026-01-{10 + i}",
                 _account_view(nav=0.0, exposure=0.0, cash=0.0),
             )
-        stats = collector.compute_portfolio_statistics()
+        stats = compute_portfolio_statistics(collector)
         assert len(stats) == 3
         for s in stats:
             assert s.nav == 0.0
@@ -1174,7 +1196,7 @@ class TestNavZeroBoundary:
         collector = ExecutionAuditCollector()
         collector.record_account_view("2026-01-10", _account_view(nav=0.0))
         collector.record_account_view("2026-01-11", _account_view(nav=100_000.0))
-        stats = collector.compute_portfolio_statistics()
+        stats = compute_portfolio_statistics(collector)
         assert stats[0].daily_return == 0.0  # first day always 0
         assert stats[1].daily_return == 0.0  # prev_nav=0 → protected
 
@@ -1183,14 +1205,16 @@ class TestNavZeroBoundary:
         collector = ExecutionAuditCollector()
         collector.record_account_view("2026-01-10", _account_view(nav=100_000.0))
         collector.record_account_view("2026-01-11", _account_view(nav=0.0))
-        stats = collector.compute_portfolio_statistics()
+        stats = compute_portfolio_statistics(collector)
         assert stats[1].daily_return == pytest.approx(-100.0)
 
     def test_alpha_stats_single_snapshot(self) -> None:
         """单个快照 → 无日收益率 → vol=0, sharpe=0."""
         collector = ExecutionAuditCollector()
         collector.record_account_view("2026-01-10", _account_view(nav=100_000.0))
-        alpha = collector.compute_alpha_statistics()
+        alpha = compute_alpha_statistics(
+            collector,
+        )
         assert alpha.annualized_volatility == 0.0
         assert alpha.sharpe_ratio == 0.0
         assert alpha.sortino_ratio == 0.0
@@ -1208,7 +1232,7 @@ class TestBenchmarkLengthMismatch:
                 _account_view(nav=100_000.0 * (1 + 0.001 * i)),
             )
         # 3 snapshots but only 2 benchmark values
-        alpha = collector.compute_alpha_statistics(benchmark_navs=(100.0, 101.0))
+        alpha = compute_alpha_statistics(collector, benchmark_navs=(100.0, 101.0))
         assert alpha.beta is None
         assert alpha.tracking_error is None
         assert alpha.information_ratio is None
@@ -1220,7 +1244,8 @@ class TestBenchmarkLengthMismatch:
         """benchmark 多于快照数 → 基准字段为 None."""
         collector = ExecutionAuditCollector()
         collector.record_account_view("2026-01-10", _account_view(nav=100_000.0))
-        alpha = collector.compute_alpha_statistics(
+        alpha = compute_alpha_statistics(
+            collector,
             benchmark_navs=(100.0, 101.0, 102.0),
         )
         assert alpha.beta is None
@@ -1231,7 +1256,9 @@ class TestBenchmarkLengthMismatch:
         collector = ExecutionAuditCollector()
         collector.record_account_view("2026-01-10", _account_view(nav=100_000.0))
         collector.record_account_view("2026-01-11", _account_view(nav=101_000.0))
-        alpha = collector.compute_alpha_statistics()
+        alpha = compute_alpha_statistics(
+            collector,
+        )
         assert alpha.beta is None
         assert alpha.tracking_error is None
         assert alpha.information_ratio is None
@@ -1245,7 +1272,8 @@ class TestBenchmarkLengthMismatch:
                 f"2026-01-{10 + i}",
                 _account_view(nav=100_000.0 * (1 + 0.001 * i)),
             )
-        alpha = collector.compute_alpha_statistics(
+        alpha = compute_alpha_statistics(
+            collector,
             benchmark_navs=(100.0, 100.1, 100.201),
         )
         assert alpha.beta is not None

@@ -756,7 +756,10 @@ class TestStatsPostFillSnapshot:
 
     def test_audit_collector_uses_post_fill_view(self) -> None:
         """ExecutionAuditCollector 应在 fill 后记录 AccountView。"""
-        from ditto_core.backtest.statistics import ExecutionAuditCollector
+        from ditto_core.backtest.statistics import (
+            ExecutionAuditCollector,
+            compute_portfolio_statistics,
+        )
 
         account = Account(
             cash=CashBook(
@@ -800,7 +803,7 @@ class TestStatsPostFillSnapshot:
         view_after = brokerage.get_account()
         collector.record_account_view("2026-01-05-post", view_after)
 
-        stats = collector.compute_portfolio_statistics()
+        stats = compute_portfolio_statistics(collector)
         assert len(stats) == 2
 
         # Post-fill NAV should reflect the position

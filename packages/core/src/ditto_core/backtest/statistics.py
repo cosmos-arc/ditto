@@ -1,10 +1,9 @@
 """
-ExecutionAuditCollector — 回测审计数据收集与统计计算.
+统计计算 — 组合统计、交易统计、绩效分析、回测报告.
 
-收集 fills、daily account snapshots、closed trades，
-计算 PortfolioStatistics（组合级别每日统计）、TradeStatistics（逐笔统计）、
-AggregatedTradeStatistics（汇总交易统计）、AlphaStatistics（绩效分析）、
-BacktestReport（完整回测报告）。
+提供 frozen statistics data classes 和模块级计算函数。
+审计记录 (RiskScanRecord / PreTradeDecisionRecord) 和数据收集器
+(ExecutionAuditCollector) 在 backtest.audit 子包中。
 """
 
 from __future__ import annotations
@@ -13,8 +12,11 @@ import math
 import statistics
 from dataclasses import dataclass, replace
 
-from ditto_core.accounting.account import AccountView
-from ditto_core.backtest.risk.post_trade import RiskActionType, RiskSeverity
+from ditto_core.backtest.audit import (
+    ExecutionAuditCollector,
+    PreTradeDecisionRecord,
+    RiskScanRecord,
+)
 from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.trade_builder import TradeRecord
 
@@ -27,6 +29,11 @@ __all__ = [
     "PreTradeDecisionRecord",
     "RiskScanRecord",
     "TradeStatistics",
+    "build_report",
+    "compute_aggregated_trade_statistics",
+    "compute_alpha_statistics",
+    "compute_portfolio_statistics",
+    "compute_trade_statistics",
 ]
 
 _TRADING_DAYS_PER_YEAR = 252
@@ -223,438 +230,337 @@ class BacktestReport:
 
 
 # ---------------------------------------------------------------------------
-# Frozen audit record data classes
+# Module-level computation functions
 # ---------------------------------------------------------------------------
 
 
-@dataclass(frozen=True)
-class RiskScanRecord:
+def compute_portfolio_statistics(
+    collector: ExecutionAuditCollector,
+) -> tuple[PortfolioStatistics, ...]:
     """
-    PostTrade 风控扫描记录 — frozen.
+    从每日账户快照计算组合统计序列.
 
-    Attributes:
-        trade_date: 交易日期 (YYYY-MM-DD)
-        rule_id: 触发规则标识符
-        instrument_id: 标的 ID ("*" 表示全组合)
-        severity: 严重程度 (RiskSeverity 枚举)
-        action_taken: 采取的动作 (RiskActionType 枚举)
-        detail: 风险描述
-        current_value: 当前实际值
-        threshold: 触发阈值
+    Args:
+        collector: 审计数据收集器。
+
+    Returns:
+        按 trade_date 排序的 PortfolioStatistics 元组。
 
     """
+    snapshots = collector.get_daily_snapshots()
+    stats: list[PortfolioStatistics] = []
+    peak_nav = 0.0
+    inception_nav: float | None = None
 
-    trade_date: str
-    rule_id: str
-    instrument_id: str
-    severity: RiskSeverity
-    action_taken: RiskActionType
-    detail: str
-    current_value: float
-    threshold: float
+    for i, (date, view) in enumerate(snapshots):
+        if inception_nav is None:
+            inception_nav = view.nav
 
-
-@dataclass(frozen=True)
-class PreTradeDecisionRecord:
-    """
-    PreTrade 订单校验决策记录 — frozen.
-
-    Attributes:
-        trade_date: 交易日期 (YYYY-MM-DD)
-        order_id: 订单 ID
-        instrument_id: 标的 ID
-        direction: 方向 (buy/sell)
-        original_quantity: 原始数量
-        final_quantity: 最终数量 (accepted/resized 时有值, rejected 时为 0)
-        decision: 决策 (accepted/rejected/resized)
-        reason: 决策原因 (None = 无原因)
-        check_sequence: 触发的检查链路 (e.g. ("lot_size", "buying_power"))
-
-    """
-
-    trade_date: str
-    order_id: str
-    instrument_id: str
-    direction: str
-    original_quantity: int
-    final_quantity: int
-    decision: str
-    reason: str | None
-    check_sequence: tuple[str, ...] = ()
-
-
-# ---------------------------------------------------------------------------
-# ExecutionAuditCollector
-# ---------------------------------------------------------------------------
-
-
-class ExecutionAuditCollector:
-    """
-    回测审计数据收集器.
-
-    在回测运行期间收集 fills、每日账户快照和平仓交易，
-    提供计算组合统计和逐笔统计的方法。
-
-    """
-
-    def __init__(self) -> None:
-        self._fills: list[FillEvent] = []
-        self._snapshots: list[tuple[str, AccountView]] = []
-        self._closed_trades: list[TradeRecord] = []
-        self._risk_log: list[RiskScanRecord] = []
-        self._pre_trade_log: list[PreTradeDecisionRecord] = []
-
-    # -- recording API -------------------------------------------------------
-
-    def record_fill(self, fill: FillEvent) -> None:
-        """记录成交事件。"""
-        self._fills.append(fill)
-
-    def record_account_view(self, date: str, account_view: AccountView) -> None:
-        """记录每日账户快照。"""
-        self._snapshots.append((date, account_view))
-
-    def record_closed_trade(self, trade: TradeRecord) -> None:
-        """记录平仓交易。"""
-        self._closed_trades.append(trade)
-
-    def record_risk_scan(
-        self,
-        date: str,
-        results: tuple[RiskScanRecord, ...],
-    ) -> None:
-        """记录 PostTrade 风控扫描结果。"""
-        self._risk_log.extend(results)
-
-    def record_pre_trade_decisions(
-        self,
-        date: str,
-        decisions: tuple[PreTradeDecisionRecord, ...],
-    ) -> None:
-        """记录 PreTrade 订单校验决策。"""
-        self._pre_trade_log.extend(decisions)
-
-    # -- getter API ----------------------------------------------------------
-
-    def get_fills(self) -> tuple[FillEvent, ...]:
-        """返回所有已记录的成交事件。"""
-        return tuple(self._fills)
-
-    def get_daily_snapshots(self) -> tuple[tuple[str, AccountView], ...]:
-        """返回所有已记录的每日账户快照。"""
-        return tuple(self._snapshots)
-
-    def get_closed_trades(self) -> tuple[TradeRecord, ...]:
-        """返回所有已记录的平仓交易。"""
-        return tuple(self._closed_trades)
-
-    def get_risk_log(self) -> tuple[RiskScanRecord, ...]:
-        """返回所有已记录的风控扫描记录。"""
-        return tuple(self._risk_log)
-
-    def get_pre_trade_log(self) -> tuple[PreTradeDecisionRecord, ...]:
-        """返回所有已记录的 PreTrade 决策记录。"""
-        return tuple(self._pre_trade_log)
-
-    # -- computation API -----------------------------------------------------
-
-    def compute_portfolio_statistics(self) -> tuple[PortfolioStatistics, ...]:
-        """
-        从每日账户快照计算组合统计序列.
-
-        Returns:
-            按 trade_date 排序的 PortfolioStatistics 元组。
-
-        """
-        stats: list[PortfolioStatistics] = []
-        peak_nav = 0.0
-        inception_nav: float | None = None
-
-        for i, (date, view) in enumerate(self._snapshots):
-            if inception_nav is None:
-                inception_nav = view.nav
-
-            # Daily return
-            if i > 0:
-                prev_nav = self._snapshots[i - 1][1].nav
-                daily_return = (
-                    (view.nav - prev_nav) / prev_nav * 100 if prev_nav != 0 else 0.0
-                )
-            else:
-                daily_return = 0.0
-
-            # Cumulative return
-            cumulative_return = (
-                (view.nav - inception_nav) / inception_nav * 100
-                if inception_nav != 0
-                else 0.0
+        # Daily return
+        if i > 0:
+            prev_nav = snapshots[i - 1][1].nav
+            daily_return = (
+                (view.nav - prev_nav) / prev_nav * 100 if prev_nav != 0 else 0.0
             )
-
-            # Drawdown
-            peak_nav = max(peak_nav, view.nav)
-            drawdown = (view.nav - peak_nav) / peak_nav * 100 if peak_nav != 0 else 0.0
-
-            # Cash ratio
-            cash_ratio = view.cash.total / view.nav * 100 if view.nav != 0 else 0.0
-
-            # Position count
-            position_count = len(view.positions)
-
-            stats.append(
-                PortfolioStatistics(
-                    trade_date=date,
-                    nav=view.nav,
-                    daily_return=daily_return,
-                    cumulative_return=cumulative_return,
-                    drawdown=drawdown,
-                    max_drawdown=0.0,  # placeholder, second pass
-                    exposure=view.exposure,
-                    cash_ratio=cash_ratio,
-                    position_count=position_count,
-                ),
-            )
-
-        # Second pass: running max of abs(drawdown) → negative convention
-        max_dd = 0.0
-        final_stats: list[PortfolioStatistics] = []
-        for s in stats:
-            max_dd = max(max_dd, abs(s.drawdown))
-            final_stats.append(replace(s, max_drawdown=-max_dd))
-
-        return tuple(final_stats)
-
-    def compute_trade_statistics(self) -> tuple[TradeStatistics, ...]:
-        """
-        将已记录的平仓交易转换为逐笔统计.
-
-        Returns:
-            TradeStatistics 元组，每条对应一笔 TradeRecord。
-
-        """
-        result: list[TradeStatistics] = []
-        for trade in self._closed_trades:
-            result.append(
-                TradeStatistics(
-                    trade_id=trade.trade_id,
-                    instrument_id=trade.instrument_id,
-                    direction=trade.direction.value,
-                    entry_date=trade.entry_date,
-                    exit_date=trade.exit_date,
-                    holding_days=trade.holding_days,
-                    return_pct=trade.return_pct,
-                    gross_pnl=trade.gross_pnl,
-                    net_pnl=trade.net_pnl,
-                    fees=trade.fees,
-                ),
-            )
-        return tuple(result)
-
-    def compute_aggregated_trade_statistics(
-        self,
-    ) -> AggregatedTradeStatistics:
-        """
-        从已平仓交易计算汇总统计.
-
-        仅统计 exit_date 非空的交易。
-        无交易时所有数值字段返回 0.0。
-
-        Returns:
-            AggregatedTradeStatistics 实例。
-
-        """
-        # Filter closed trades only
-        closed = [t for t in self._closed_trades if t.exit_date is not None]
-
-        if not closed:
-            return _empty_aggregated_trade_statistics()
-
-        total = len(closed)
-        longs = sum(1 for t in closed if t.direction.value == "buy")
-        shorts = total - longs
-
-        gross_pnls: list[float] = []
-        return_pcts: list[float] = []
-        holding_days: list[int] = []
-
-        for t in closed:
-            gp = t.gross_pnl if t.gross_pnl is not None else 0.0
-            gross_pnls.append(gp)
-            rp = t.return_pct if t.return_pct is not None else 0.0
-            return_pcts.append(rp)
-            hd = t.holding_days if t.holding_days is not None else 0
-            holding_days.append(hd)
-
-        wins = [g for g in gross_pnls if g > 0]
-        losses = [g for g in gross_pnls if g < 0]
-        win_count = len(wins)
-        loss_count = len(losses)
-
-        win_rate = win_count / total * 100 if total > 0 else 0.0
-        sum_wins = sum(wins)
-        sum_losses = abs(sum(losses)) if losses else 0.0
-        profit_factor = sum_wins / sum_losses if sum_losses > 0 else float("inf")
-
-        avg_win = sum_wins / win_count if win_count > 0 else 0.0
-        avg_loss = sum_losses / loss_count if loss_count > 0 else 0.0
-        avg_win_loss_ratio = avg_win / avg_loss if avg_loss > 0 else float("inf")
-
-        # Consecutive wins/losses
-        max_consec_wins = 0
-        max_consec_losses = 0
-        current_wins = 0
-        current_losses = 0
-        for g in gross_pnls:
-            if g > 0:
-                current_wins += 1
-                current_losses = 0
-            elif g < 0:
-                current_losses += 1
-                current_wins = 0
-            else:
-                current_wins = 0
-                current_losses = 0
-            max_consec_wins = max(max_consec_wins, current_wins)
-            max_consec_losses = max(max_consec_losses, current_losses)
-
-        avg_hold = sum(holding_days) / total
-        median_hold = float(statistics.median(holding_days))
-
-        best = max(gross_pnls)
-        worst = min(gross_pnls)
-        avg_ret = sum(return_pcts) / total
-
-        return AggregatedTradeStatistics(
-            total_trades=total,
-            long_trades=longs,
-            short_trades=shorts,
-            win_trades=win_count,
-            loss_trades=loss_count,
-            win_rate=win_rate,
-            profit_factor=profit_factor,
-            avg_win=avg_win,
-            avg_loss=avg_loss,
-            avg_win_loss_ratio=avg_win_loss_ratio,
-            max_consecutive_wins=max_consec_wins,
-            max_consecutive_losses=max_consec_losses,
-            avg_holding_days=avg_hold,
-            median_holding_days=median_hold,
-            best_trade=best,
-            worst_trade=worst,
-            avg_trade_return_pct=avg_ret,
-        )
-
-    def compute_alpha_statistics(
-        self,
-        benchmark_navs: tuple[float, ...] | None = None,
-    ) -> AlphaStatistics:
-        """
-        从 NAV 序列计算绩效分析统计.
-
-        Args:
-            benchmark_navs: 可选的基准 NAV 序列（长度须与快照一致）。
-
-        Returns:
-            AlphaStatistics 实例。
-
-        """
-        navs = [view.nav for _, view in self._snapshots]
-
-        if not navs:
-            return _empty_alpha_statistics()
-
-        n = len(navs)
-        initial_nav = navs[0]
-        daily_returns = _daily_returns_from_navs(navs)
-        total_days = len(daily_returns)
-        total_return = navs[-1] / initial_nav - 1 if initial_nav != 0 else 0.0
-
-        ann_ret = _annualized_return(total_return, total_days)
-        ann_vol = _annualized_volatility(daily_returns)
-        sharpe = ann_ret / ann_vol if ann_vol > 0 else 0.0
-        sortino = _sortino_ratio(daily_returns, ann_ret)
-        max_dd, max_dd_dur = _drawdown_analysis(navs)
-        calmar = ann_ret / abs(max_dd) if max_dd != 0 else 0.0
-
-        bench_rel = _benchmark_relative(
-            daily_returns,
-            benchmark_navs,
-            n,
-            ann_ret,
-        )
-
-        cost = _cost_metrics(self._fills, initial_nav, navs)
-
-        net_return_after_cost = total_return * 100 - cost.cost_drag
-
-        return AlphaStatistics(
-            annualized_return=ann_ret,
-            annualized_volatility=ann_vol,
-            sharpe_ratio=sharpe,
-            sortino_ratio=sortino,
-            max_drawdown=max_dd,
-            max_drawdown_duration_days=max_dd_dur,
-            calmar_ratio=calmar,
-            information_ratio=bench_rel.information_ratio,
-            tracking_error=bench_rel.tracking_error,
-            beta=bench_rel.beta,
-            alpha_annualized=bench_rel.alpha,
-            total_turnover=cost.total_turnover,
-            avg_turnover_per_rebalance=cost.avg_turnover_per_rebalance,
-            total_fees=cost.total_fees,
-            net_return_after_cost=net_return_after_cost,
-            cost_drag=cost.cost_drag,
-        )
-
-    def build_report(
-        self,
-        run_id: str = "",
-        benchmark_navs: tuple[float, ...] | None = None,
-    ) -> BacktestReport:
-        """
-        构建完整回测报告.
-
-        Args:
-            run_id: 回测运行 ID。
-            benchmark_navs: 可选基准 NAV 序列。
-
-        Returns:
-            BacktestReport 实例。
-
-        """
-        portfolio_stats = self.compute_portfolio_statistics()
-        trade_stats = self.compute_trade_statistics()
-        aggregated_stats = self.compute_aggregated_trade_statistics()
-        alpha_stats = self.compute_alpha_statistics(benchmark_navs)
-
-        # NAV series
-        nav_series = tuple((date, view.nav) for date, view in self._snapshots)
-
-        # Period
-        if portfolio_stats:
-            start_date = portfolio_stats[0].trade_date
-            end_date = portfolio_stats[-1].trade_date
         else:
-            start_date = ""
-            end_date = ""
+            daily_return = 0.0
 
-        initial_cash = self._snapshots[0][1].nav if self._snapshots else 0.0
-        final_nav = self._snapshots[-1][1].nav if self._snapshots else 0.0
-
-        return BacktestReport(
-            run_id=run_id,
-            period=(start_date, end_date),
-            initial_cash=initial_cash,
-            final_nav=final_nav,
-            trade_stats=trade_stats,
-            portfolio_stats=portfolio_stats,
-            aggregated_trade_stats=aggregated_stats,
-            alpha_stats=alpha_stats,
-            nav_series=nav_series,
-            trade_log=tuple(self._closed_trades),
-            fill_log=tuple(self._fills),
-            risk_log=self.get_risk_log(),
-            pre_trade_log=self.get_pre_trade_log(),
+        # Cumulative return
+        cumulative_return = (
+            (view.nav - inception_nav) / inception_nav * 100
+            if inception_nav != 0
+            else 0.0
         )
+
+        # Drawdown
+        peak_nav = max(peak_nav, view.nav)
+        drawdown = (view.nav - peak_nav) / peak_nav * 100 if peak_nav != 0 else 0.0
+
+        # Cash ratio
+        cash_ratio = view.cash.total / view.nav * 100 if view.nav != 0 else 0.0
+
+        # Position count
+        position_count = len(view.positions)
+
+        stats.append(
+            PortfolioStatistics(
+                trade_date=date,
+                nav=view.nav,
+                daily_return=daily_return,
+                cumulative_return=cumulative_return,
+                drawdown=drawdown,
+                max_drawdown=0.0,  # placeholder, second pass
+                exposure=view.exposure,
+                cash_ratio=cash_ratio,
+                position_count=position_count,
+            ),
+        )
+
+    # Second pass: running max of abs(drawdown) → negative convention
+    max_dd = 0.0
+    final_stats: list[PortfolioStatistics] = []
+    for s in stats:
+        max_dd = max(max_dd, abs(s.drawdown))
+        final_stats.append(replace(s, max_drawdown=-max_dd))
+
+    return tuple(final_stats)
+
+
+def compute_trade_statistics(
+    collector: ExecutionAuditCollector,
+) -> tuple[TradeStatistics, ...]:
+    """
+    将已记录的平仓交易转换为逐笔统计.
+
+    Args:
+        collector: 审计数据收集器。
+
+    Returns:
+        TradeStatistics 元组，每条对应一笔 TradeRecord。
+
+    """
+    closed_trades = collector.get_closed_trades()
+    result: list[TradeStatistics] = []
+    for trade in closed_trades:
+        result.append(
+            TradeStatistics(
+                trade_id=trade.trade_id,
+                instrument_id=trade.instrument_id,
+                direction=trade.direction.value,
+                entry_date=trade.entry_date,
+                exit_date=trade.exit_date,
+                holding_days=trade.holding_days,
+                return_pct=trade.return_pct,
+                gross_pnl=trade.gross_pnl,
+                net_pnl=trade.net_pnl,
+                fees=trade.fees,
+            ),
+        )
+    return tuple(result)
+
+
+def compute_aggregated_trade_statistics(
+    collector: ExecutionAuditCollector,
+) -> AggregatedTradeStatistics:
+    """
+    从已平仓交易计算汇总统计.
+
+    仅统计 exit_date 非空的交易。
+    无交易时所有数值字段返回 0.0。
+
+    Args:
+        collector: 审计数据收集器。
+
+    Returns:
+        AggregatedTradeStatistics 实例。
+
+    """
+    closed_trades = collector.get_closed_trades()
+
+    # Filter closed trades only
+    closed = [t for t in closed_trades if t.exit_date is not None]
+
+    if not closed:
+        return _empty_aggregated_trade_statistics()
+
+    total = len(closed)
+    longs = sum(1 for t in closed if t.direction.value == "buy")
+    shorts = total - longs
+
+    gross_pnls: list[float] = []
+    return_pcts: list[float] = []
+    holding_days: list[int] = []
+
+    for t in closed:
+        gp = t.gross_pnl if t.gross_pnl is not None else 0.0
+        gross_pnls.append(gp)
+        rp = t.return_pct if t.return_pct is not None else 0.0
+        return_pcts.append(rp)
+        hd = t.holding_days if t.holding_days is not None else 0
+        holding_days.append(hd)
+
+    wins = [g for g in gross_pnls if g > 0]
+    losses = [g for g in gross_pnls if g < 0]
+    win_count = len(wins)
+    loss_count = len(losses)
+
+    win_rate = win_count / total * 100 if total > 0 else 0.0
+    sum_wins = sum(wins)
+    sum_losses = abs(sum(losses)) if losses else 0.0
+    profit_factor = sum_wins / sum_losses if sum_losses > 0 else float("inf")
+
+    avg_win = sum_wins / win_count if win_count > 0 else 0.0
+    avg_loss = sum_losses / loss_count if loss_count > 0 else 0.0
+    avg_win_loss_ratio = avg_win / avg_loss if avg_loss > 0 else float("inf")
+
+    # Consecutive wins/losses
+    max_consec_wins = 0
+    max_consec_losses = 0
+    current_wins = 0
+    current_losses = 0
+    for g in gross_pnls:
+        if g > 0:
+            current_wins += 1
+            current_losses = 0
+        elif g < 0:
+            current_losses += 1
+            current_wins = 0
+        else:
+            current_wins = 0
+            current_losses = 0
+        max_consec_wins = max(max_consec_wins, current_wins)
+        max_consec_losses = max(max_consec_losses, current_losses)
+
+    avg_hold = sum(holding_days) / total
+    median_hold = float(statistics.median(holding_days))
+
+    best = max(gross_pnls)
+    worst = min(gross_pnls)
+    avg_ret = sum(return_pcts) / total
+
+    return AggregatedTradeStatistics(
+        total_trades=total,
+        long_trades=longs,
+        short_trades=shorts,
+        win_trades=win_count,
+        loss_trades=loss_count,
+        win_rate=win_rate,
+        profit_factor=profit_factor,
+        avg_win=avg_win,
+        avg_loss=avg_loss,
+        avg_win_loss_ratio=avg_win_loss_ratio,
+        max_consecutive_wins=max_consec_wins,
+        max_consecutive_losses=max_consec_losses,
+        avg_holding_days=avg_hold,
+        median_holding_days=median_hold,
+        best_trade=best,
+        worst_trade=worst,
+        avg_trade_return_pct=avg_ret,
+    )
+
+
+def compute_alpha_statistics(
+    collector: ExecutionAuditCollector,
+    benchmark_navs: tuple[float, ...] | None = None,
+) -> AlphaStatistics:
+    """
+    从 NAV 序列计算绩效分析统计.
+
+    Args:
+        collector: 审计数据收集器。
+        benchmark_navs: 可选的基准 NAV 序列（长度须与快照一致）。
+
+    Returns:
+        AlphaStatistics 实例。
+
+    """
+    snapshots = collector.get_daily_snapshots()
+    fills = collector.get_fills()
+    navs = [view.nav for _, view in snapshots]
+
+    if not navs:
+        return _empty_alpha_statistics()
+
+    n = len(navs)
+    initial_nav = navs[0]
+    daily_returns = _daily_returns_from_navs(navs)
+    total_days = len(daily_returns)
+    total_return = navs[-1] / initial_nav - 1 if initial_nav != 0 else 0.0
+
+    ann_ret = _annualized_return(total_return, total_days)
+    ann_vol = _annualized_volatility(daily_returns)
+    sharpe = ann_ret / ann_vol if ann_vol > 0 else 0.0
+    sortino = _sortino_ratio(daily_returns, ann_ret)
+    max_dd, max_dd_dur = _drawdown_analysis(navs)
+    calmar = ann_ret / abs(max_dd) if max_dd != 0 else 0.0
+
+    bench_rel = _benchmark_relative(
+        daily_returns,
+        benchmark_navs,
+        n,
+        ann_ret,
+    )
+
+    cost = _cost_metrics(list(fills), initial_nav, navs)
+
+    net_return_after_cost = total_return * 100 - cost.cost_drag
+
+    return AlphaStatistics(
+        annualized_return=ann_ret,
+        annualized_volatility=ann_vol,
+        sharpe_ratio=sharpe,
+        sortino_ratio=sortino,
+        max_drawdown=max_dd,
+        max_drawdown_duration_days=max_dd_dur,
+        calmar_ratio=calmar,
+        information_ratio=bench_rel.information_ratio,
+        tracking_error=bench_rel.tracking_error,
+        beta=bench_rel.beta,
+        alpha_annualized=bench_rel.alpha,
+        total_turnover=cost.total_turnover,
+        avg_turnover_per_rebalance=cost.avg_turnover_per_rebalance,
+        total_fees=cost.total_fees,
+        net_return_after_cost=net_return_after_cost,
+        cost_drag=cost.cost_drag,
+    )
+
+
+def build_report(
+    collector: ExecutionAuditCollector,
+    run_id: str = "",
+    benchmark_navs: tuple[float, ...] | None = None,
+) -> BacktestReport:
+    """
+    构建完整回测报告.
+
+    Args:
+        collector: 审计数据收集器。
+        run_id: 回测运行 ID。
+        benchmark_navs: 可选基准 NAV 序列。
+
+    Returns:
+        BacktestReport 实例。
+
+    """
+    portfolio_stats = compute_portfolio_statistics(collector)
+    trade_stats = compute_trade_statistics(collector)
+    aggregated_stats = compute_aggregated_trade_statistics(collector)
+    alpha_stats = compute_alpha_statistics(collector, benchmark_navs)
+
+    snapshots = collector.get_daily_snapshots()
+
+    # NAV series
+    nav_series = tuple((date, view.nav) for date, view in snapshots)
+
+    # Period
+    if portfolio_stats:
+        start_date = portfolio_stats[0].trade_date
+        end_date = portfolio_stats[-1].trade_date
+    else:
+        start_date = ""
+        end_date = ""
+
+    initial_cash = snapshots[0][1].nav if snapshots else 0.0
+    final_nav = snapshots[-1][1].nav if snapshots else 0.0
+
+    closed_trades = collector.get_closed_trades()
+    fills = collector.get_fills()
+
+    return BacktestReport(
+        run_id=run_id,
+        period=(start_date, end_date),
+        initial_cash=initial_cash,
+        final_nav=final_nav,
+        trade_stats=trade_stats,
+        portfolio_stats=portfolio_stats,
+        aggregated_trade_stats=aggregated_stats,
+        alpha_stats=alpha_stats,
+        nav_series=nav_series,
+        trade_log=tuple(closed_trades),
+        fill_log=tuple(fills),
+        risk_log=collector.get_risk_log(),
+        pre_trade_log=collector.get_pre_trade_log(),
+    )
 
 
 # ---------------------------------------------------------------------------
