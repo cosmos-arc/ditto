@@ -1,0 +1,95 @@
+"""
+Execution — 执行层类型定义.
+
+Phase 0: rules (三层规则), fills (FillOutcome).
+Phase 2: brokerage, trade_builder, planner, reality/.
+Phase 3: ProcessInput, MarketSnapshot (moved from backtest).
+"""
+
+from ditto_core.execution.brokerage import BacktestBrokerage, Brokerage, ProcessInput
+from ditto_core.execution.fills import (
+    Filled,
+    FillEvent,
+    FillOutcome,
+    NoFill,
+)
+from ditto_core.execution.planner import (
+    BlockedOrder,
+    ExecutionPlan,
+    ExecutionPlanner,
+    SimpleExecutionPlanner,
+)
+from ditto_core.execution.reality import (
+    AShareFeeModel,
+    AShareFillModel,
+    AShareSettlementModel,
+    BrokerageModel,
+    ClosingAuctionFillModel,
+    FeeModel,
+    FillModel,
+    FixedBpsSlippage,
+    MarketSnapshot,
+    SettlementModel,
+    SimpleFeeModel,
+    SimpleFillModel,
+    SimpleSettlementModel,
+    SlippageModel,
+    VolumeShareSlippage,
+)
+from ditto_core.execution.rules import (
+    FeeSchedule,
+    InMemoryRuleProvider,
+    InstrumentDefinition,
+    InstrumentRuleProvider,
+    InstrumentRules,
+    RulesGetter,
+    TradingRuleSet,
+    default_price_limit_pct,
+)
+from ditto_core.execution.trade_builder import (
+    FifoTradeBuilder,
+    TradeBuilder,
+    TradeMatchingMethod,
+    TradeRecord,
+)
+
+__all__ = [
+    "AShareFeeModel",
+    "AShareFillModel",
+    "AShareSettlementModel",
+    "BacktestBrokerage",
+    "BlockedOrder",
+    "Brokerage",
+    "BrokerageModel",
+    "ClosingAuctionFillModel",
+    "ExecutionPlan",
+    "ExecutionPlanner",
+    "FeeModel",
+    "FeeSchedule",
+    "FifoTradeBuilder",
+    "FillEvent",
+    "FillModel",
+    "FillOutcome",
+    "Filled",
+    "FixedBpsSlippage",
+    "InMemoryRuleProvider",
+    "InstrumentDefinition",
+    "InstrumentRuleProvider",
+    "InstrumentRules",
+    "MarketSnapshot",
+    "NoFill",
+    "ProcessInput",
+    "RulesGetter",
+    "SettlementModel",
+    "SimpleExecutionPlanner",
+    "SimpleFeeModel",
+    "SimpleFillModel",
+    "SimpleSettlementModel",
+    "SlippageModel",
+    "TradeBuilder",
+    "TradeMatchingMethod",
+    "TradeRecord",
+    "TradingRuleSet",
+    "VolumeShareSlippage",
+    "default_price_limit_pct",
+]

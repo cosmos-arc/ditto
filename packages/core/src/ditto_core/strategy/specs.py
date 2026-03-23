@@ -1,0 +1,140 @@
+"""
+StrategySpec — 策略定义的核心语义契约.
+
+混合范式：信号用表达式，编排用 Pipeline，风险用约束。
+每个阶段通过 Protocol 接受声明式或命令式输入。
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+__all__ = [
+    "ConstraintSpec",
+    "CostModelSpec",
+    "ExecutionSpec",
+    "ParamConstraint",
+    "ScorerSpec",
+    "SelectorSpec",
+    "StrategySpec",
+]
+
+
+@dataclass(frozen=True)
+class ParamConstraint:
+    """
+    参数约束 — 为参数扫描 UI 和 Walk-Forward 提供元数据。
+
+    Attributes:
+        name: 参数名
+        dtype: 数据类型 (int / float / str)
+        min_value: 最小值
+        max_value: 最大值
+        step: 步长
+        allowed_values: 枚举型参数的可选值
+
+    """
+
+    name: str
+    dtype: str
+    min_value: float | None = None
+    max_value: float | None = None
+    step: float | None = None
+    allowed_values: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class CostModelSpec:
+    """成本模型配置。"""
+
+    commission_rate: float = 0.0003
+    slippage_bps: float = 5.0
+    impact_model: str = "linear"
+
+
+@dataclass(frozen=True)
+class ExecutionSpec:
+    """
+    执行层配置。
+
+    Attributes:
+        frequency: 换仓频率 (D / W / M / Q)
+        method: 触发方法 (calendar / signal_change_pct / composite)
+        cost_model: 成本模型
+
+    """
+
+    frequency: str = "M"
+    method: str = "calendar"
+    cost_model: CostModelSpec = field(default_factory=CostModelSpec)
+
+
+@dataclass(frozen=True)
+class ConstraintSpec:
+    """
+    单条风险约束。
+
+    Attributes:
+        type: 约束类型
+        params: 约束参数
+        priority: 优先级（数字小优先，默认 100）
+
+    """
+
+    type: str
+    params: dict[str, object] = field(default_factory=dict)
+    priority: int = 100
+
+
+@dataclass(frozen=True)
+class ScorerSpec:
+    """评分器定义。"""
+
+    method: str = "equal_weight"
+    params: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class SelectorSpec:
+    """标的选取器定义。"""
+
+    method: str = "top_k"
+    params: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class StrategySpec:
+    """
+    策略完整定义 — 一等语义对象。
+
+    Attributes:
+        strategy_id: 策略唯一 ID
+        name: 策略名称
+        template: 策略模板
+            (etf_rotation / etf_trend_swing / stock_selection / stock_sector_rotation)
+        universe: Universe ID
+        asset_class: 资产类别
+        scorer: 评分器配置
+        selector: 选取器配置
+        execution: 执行配置
+        constraints: 风险约束列表
+        benchmark: 基准代码
+        params: 策略参数（运行时可覆盖）
+        param_constraints: 参数约束元数据
+        tags: 标签
+
+    """
+
+    strategy_id: str
+    name: str
+    template: str
+    universe: str
+    asset_class: str
+    scorer: ScorerSpec = field(default_factory=ScorerSpec)
+    selector: SelectorSpec = field(default_factory=SelectorSpec)
+    execution: ExecutionSpec = field(default_factory=ExecutionSpec)
+    constraints: tuple[ConstraintSpec, ...] = ()
+    benchmark: str | None = None
+    params: dict[str, object] = field(default_factory=dict)
+    param_constraints: tuple[ParamConstraint, ...] = ()
+    tags: tuple[str, ...] = ()
