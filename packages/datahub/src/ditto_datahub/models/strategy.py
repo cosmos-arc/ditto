@@ -16,6 +16,28 @@ from datetime import datetime
 from enum import StrEnum
 
 
+class ArtifactKind(StrEnum):
+    """策略产物类型."""
+
+    # Pipeline 输出
+    DECISION_FRAME = "decision_frame"
+    SIGNAL_SNAPSHOT = "signal_snapshot"
+    TARGET_PORTFOLIO = "target_portfolio"
+    REBALANCE_PLAN = "rebalance_plan"
+    # 执行层输出
+    ORDER_LOG = "order_log"
+    FILL_LOG = "fill_log"
+    # 统计层输出
+    NAV = "nav"
+    TRADE_LOG = "trade_log"
+    BACKTEST_REPORT = "backtest_report"
+    # 审计日志
+    RISK_LOG = "risk_log"
+    PRE_TRADE_LOG = "pre_trade_log"
+    # 诊断
+    DIAGNOSTICS = "diagnostics"
+
+
 class SignalType(StrEnum):
     """信号类型."""
 
@@ -117,7 +139,7 @@ class StrategyArtifactRecord:
     artifact_id: str
     strategy_id: str
     run_id: str
-    artifact_type: str
+    artifact_type: ArtifactKind
     file_path: str
     metadata: dict[str, object] = field(default_factory=dict)
     status: str = "active"
@@ -125,6 +147,7 @@ class StrategyArtifactRecord:
 
 
 __all__ = [
+    "ArtifactKind",
     "MarketState",
     "Signal",
     "SignalType",

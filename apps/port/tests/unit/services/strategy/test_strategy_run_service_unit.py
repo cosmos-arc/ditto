@@ -12,6 +12,7 @@ from ditto_core.execution.reality.market import MarketSnapshot
 from ditto_core.strategy.context import StrategyContext
 from ditto_core.strategy.models import TargetPortfolio
 from ditto_core.strategy.pipeline import StrategyPipeline
+from ditto_core.strategy.specs import ParamConstraint, StrategySpec
 from ditto_datahub.models.strategy import StrategyArtifactRecord
 from ditto_datahub.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
@@ -121,6 +122,49 @@ def _make_service(
         pipeline=pipeline or _make_mock_pipeline(),
         assembler=assembler or _make_mock_assembler(),
         artifact_service=artifact_service,
+    )
+
+
+def _make_spec_with_invalid_type() -> StrategySpec:
+    """创建 param 类型不匹配的 StrategySpec。"""
+    return StrategySpec(
+        strategy_id="test",
+        name="测试策略",
+        template="etf_rotation",
+        universe="etf-a",
+        asset_class="etf",
+        params={"lookback": "abc"},
+        param_constraints=(ParamConstraint(name="lookback", dtype="int"),),
+    )
+
+
+def _make_spec_with_out_of_range() -> StrategySpec:
+    """创建 param 超出范围的 StrategySpec。"""
+    return StrategySpec(
+        strategy_id="test",
+        name="测试策略",
+        template="etf_rotation",
+        universe="etf-a",
+        asset_class="etf",
+        params={"lookback": 200},
+        param_constraints=(
+            ParamConstraint(name="lookback", dtype="int", min_value=1, max_value=100),
+        ),
+    )
+
+
+def _make_spec_valid() -> StrategySpec:
+    """创建参数合法的 StrategySpec。"""
+    return StrategySpec(
+        strategy_id="test",
+        name="测试策略",
+        template="etf_rotation",
+        universe="etf-a",
+        asset_class="etf",
+        params={"lookback": 20},
+        param_constraints=(
+            ParamConstraint(name="lookback", dtype="int", min_value=1, max_value=100),
+        ),
     )
 
 
@@ -322,3 +366,49 @@ class TestEnumAndProperty:
             config=StrategyRunServiceConfig(mode=StrategyRunMode.RESEARCH),
         )
         assert service_research.mode == StrategyRunMode.RESEARCH
+
+
+class TestParamValidation:
+    """spec 参数校验测试。"""
+
+    def test_invalid_param_type_raises(self) -> None:
+        """param 类型不匹配时抛出 ValueError，消息包含"类型错误"。"""
+        spec = _make_spec_with_invalid_type()
+        config = StrategyRunServiceConfig(spec=spec)
+        service = _make_service(config=config)
+        slice_ = _make_fake_slice()
+
+        with pytest.raises(ValueError, match="类型错误"):
+            service.run(TRADE_DATE, slice_)
+
+    def test_param_out_of_range_raises(self) -> None:
+        """param 超出范围时抛出 ValueError。"""
+        spec = _make_spec_with_out_of_range()
+        config = StrategyRunServiceConfig(spec=spec)
+        service = _make_service(config=config)
+        slice_ = _make_fake_slice()
+
+        with pytest.raises(ValueError, match="最大值"):
+            service.run(TRADE_DATE, slice_)
+
+    def test_valid_params_passes(self) -> None:
+        """合法参数时正常执行 run()。"""
+        spec = _make_spec_valid()
+        config = StrategyRunServiceConfig(spec=spec)
+        service = _make_service(config=config)
+        slice_ = _make_fake_slice()
+
+        result = service.run(TRADE_DATE, slice_)
+
+        assert isinstance(result, StrategyRunResult)
+        assert result.target is not None
+
+    def test_no_spec_skips_validation(self) -> None:
+        """spec 为 None 时跳过校验，正常执行。"""
+        config = StrategyRunServiceConfig()  # spec 默认 None
+        service = _make_service(config=config)
+        slice_ = _make_fake_slice()
+
+        result = service.run(TRADE_DATE, slice_)
+
+        assert isinstance(result, StrategyRunResult)

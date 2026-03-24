@@ -271,6 +271,62 @@ class TestEmptyBars:
         assert bundle.strategy_id == "default"
 
 
+class TestValidUntil:
+    """测试信号过期检查 (valid_until < trade_date 时信号为空)。"""
+
+    def test_expired_signals_produce_none(self) -> None:
+        """valid_until < trade_date 时，signal_values 应为 None。"""
+        assembler = StrategyInputAssembler()
+        slice_ = _make_slice()
+        bundle = assembler.assemble(
+            "2026-03-06",
+            slice_,
+            valid_until="2026-03-05",
+        )
+
+        # 信号已过期，signal_values 应为 None
+        assert bundle.signal_values is None
+        # market_data 不受影响
+        assert bundle.market_data.height == 1
+        assert bundle.instruments.height == 1
+
+    def test_valid_signals_produced_normally(self) -> None:
+        """valid_until >= trade_date 时，signal_values 正常生成。"""
+        assembler = StrategyInputAssembler()
+        slice_ = _make_slice()
+        bundle = assembler.assemble(
+            "2026-03-05",
+            slice_,
+            valid_until="2026-03-05",
+        )
+
+        # 信号未过期，正常生成
+        assert bundle.signal_values is not None
+        assert bundle.signal_values.height == 1
+
+    def test_no_valid_until_produces_signals(self) -> None:
+        """不传 valid_until 时，信号正常生成（向后兼容）。"""
+        assembler = StrategyInputAssembler()
+        slice_ = _make_slice()
+        bundle = assembler.assemble("2026-03-01", slice_)
+
+        assert bundle.signal_values is not None
+        assert bundle.signal_values.height == 1
+
+    def test_valid_until_after_trade_date(self) -> None:
+        """valid_until > trade_date 时，信号正常生成。"""
+        assembler = StrategyInputAssembler()
+        slice_ = _make_slice()
+        bundle = assembler.assemble(
+            "2026-03-01",
+            slice_,
+            valid_until="2026-03-10",
+        )
+
+        assert bundle.signal_values is not None
+        assert bundle.signal_values.height == 1
+
+
 class TestReusability:
     """测试跨多次调用复用。"""
 

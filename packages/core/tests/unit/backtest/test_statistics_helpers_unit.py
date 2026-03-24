@@ -8,10 +8,16 @@ from __future__ import annotations
 
 import math
 from datetime import datetime
+from types import MappingProxyType
 
 import pytest
-from ditto_core.accounting.order_book import OrderDirection
+from ditto_core.accounting.account import AccountView
+from ditto_core.accounting.cash import CashBook
+from ditto_core.accounting.order_book import OrderBookReadOnly, OrderDirection
+from ditto_core.accounting.position import Position
 from ditto_core.backtest.statistics import (
+    ExecutionAuditCollector,
+    PortfolioStatistics,
     _annualized_return,
     _annualized_volatility,
     _benchmark_relative,
@@ -23,6 +29,7 @@ from ditto_core.backtest.statistics import (
     _empty_aggregated_trade_statistics,
     _empty_alpha_statistics,
     _sortino_ratio,
+    compute_portfolio_statistics,
 )
 from ditto_core.execution.fills import FillEvent
 
@@ -559,3 +566,168 @@ class TestEmptyConstructors:
         assert stats.alpha_annualized is None
         assert stats.total_fees == 0.0
         assert stats.cost_drag == 0.0
+
+
+# ---------------------------------------------------------------------------
+# PortfolioStatistics 不变量
+# ---------------------------------------------------------------------------
+
+
+def _make_account_view(
+    nav: float = 100_000.0,
+    exposure: float = 60_000.0,
+    cash: float = 40_000.0,
+    positions: dict[str, Position] | None = None,
+) -> AccountView:
+    """构造 AccountView 快照，用于 PortfolioStatistics 测试."""
+    cash_book = CashBook(available=cash, settled=cash, frozen=0.0)
+    pos_map = MappingProxyType(positions or {})
+    return AccountView(
+        positions=pos_map,
+        cash=cash_book,
+        total_value=nav,
+        nav=nav,
+        exposure=exposure,
+        pending_buy_value=0.0,
+        order_book=OrderBookReadOnly({}),
+    )
+
+
+class TestPortfolioStatisticsInvariants:
+    """compute_portfolio_statistics 产出结果的不变量验证."""
+
+    # -- helpers -------------------------------------------------------------
+
+    @staticmethod
+    def _build_stats(
+        nav_series: list[tuple[str, float]],
+        exposure: float = 60_000.0,
+        cash: float = 40_000.0,
+    ) -> tuple[PortfolioStatistics, ...]:
+        """便捷构建: 传入 [(date, nav), ...] 返回统计序列."""
+        collector = ExecutionAuditCollector()
+        for date, nav in nav_series:
+            collector.record_account_view(date, _make_account_view(nav=nav))
+        return compute_portfolio_statistics(collector)
+
+    # -- invariants ----------------------------------------------------------
+
+    def test_max_drawdown_non_positive(self) -> None:
+        """max_drawdown 始终 <= 0（负数表示亏损回撤，0 表示无回撤）。"""
+        # 单调上涨
+        stats = self._build_stats(
+            [
+                ("2026-01-01", 100_000.0),
+                ("2026-01-02", 105_000.0),
+                ("2026-01-03", 110_000.0),
+            ]
+        )
+        for s in stats:
+            assert s.max_drawdown <= 0.0
+
+        # 单调下跌
+        stats = self._build_stats(
+            [
+                ("2026-01-01", 100_000.0),
+                ("2026-01-02", 90_000.0),
+                ("2026-01-03", 80_000.0),
+            ]
+        )
+        for s in stats:
+            assert s.max_drawdown <= 0.0
+
+        # V 形回撤恢复
+        stats = self._build_stats(
+            [
+                ("2026-01-01", 100_000.0),
+                ("2026-01-02", 70_000.0),
+                ("2026-01-03", 100_000.0),
+            ]
+        )
+        for s in stats:
+            assert s.max_drawdown <= 0.0
+        # 最大回撤应记录为 -30%
+        assert stats[-1].max_drawdown == pytest.approx(-30.0, abs=1e-6)
+
+    def test_nav_non_negative(self) -> None:
+        """NAV 不为负。"""
+        stats = self._build_stats(
+            [
+                ("2026-01-01", 0.0),
+                ("2026-01-02", 100_000.0),
+                ("2026-01-03", 50_000.0),
+            ]
+        )
+        for s in stats:
+            assert s.nav >= 0.0
+
+    def test_total_return_consistency(self) -> None:
+        """cumulative_return 与 initial/final NAV 一致。"""
+        # 上涨场景
+        stats = self._build_stats(
+            [
+                ("2026-01-01", 100_000.0),
+                ("2026-01-02", 110_000.0),
+                ("2026-01-03", 99_000.0),
+            ]
+        )
+        initial_nav = stats[0].nav
+        for s in stats:
+            if initial_nav != 0:
+                expected = (s.nav - initial_nav) / initial_nav * 100
+                assert s.cumulative_return == pytest.approx(expected, rel=1e-9)
+
+        # 零初始 NAV → cumulative_return = 0
+        stats = self._build_stats(
+            [
+                ("2026-01-01", 0.0),
+                ("2026-01-02", 50_000.0),
+            ]
+        )
+        for s in stats:
+            assert s.cumulative_return == 0.0
+
+    def test_cumulative_return_monotonic_when_increasing(self) -> None:
+        """单调上涨时 cumulative_return 递增。"""
+        stats = self._build_stats(
+            [
+                ("2026-01-01", 100_000.0),
+                ("2026-01-02", 102_000.0),
+                ("2026-01-03", 105_000.0),
+                ("2026-01-04", 110_000.0),
+                ("2026-01-05", 115_000.0),
+            ]
+        )
+        for i in range(1, len(stats)):
+            assert stats[i].cumulative_return >= stats[i - 1].cumulative_return
+
+    def test_drawdown_non_positive(self) -> None:
+        """drawdown 始终 <= 0（负数表示从峰值回落）。"""
+        stats = self._build_stats(
+            [
+                ("2026-01-01", 100_000.0),
+                ("2026-01-02", 90_000.0),
+                ("2026-01-03", 95_000.0),
+                ("2026-01-04", 85_000.0),
+            ]
+        )
+        for s in stats:
+            assert s.drawdown <= 0.0
+
+    def test_max_drawdown_is_worst_drawdown(self) -> None:
+        """max_drawdown 是历史最大回撤绝对值（running max，单调递减）。"""
+        stats = self._build_stats(
+            [
+                ("2026-01-01", 100_000.0),
+                ("2026-01-02", 80_000.0),  # drawdown -20%
+                ("2026-01-03", 100_000.0),  # recovery → drawdown 0
+                ("2026-01-04", 50_000.0),  # drawdown -50%
+            ]
+        )
+        # max_drawdown 是 running max of |drawdown|，单调不增（负数方向）
+        for i in range(1, len(stats)):
+            assert stats[i].max_drawdown <= stats[i - 1].max_drawdown
+        # 最终最深回撤: (50000 - 100000) / 100000 * 100 = -50%
+        assert stats[-1].max_drawdown == pytest.approx(-50.0, abs=1e-6)
+        # day 2 时最大回撤为 -20%
+        assert stats[1].max_drawdown == pytest.approx(-20.0, abs=1e-6)

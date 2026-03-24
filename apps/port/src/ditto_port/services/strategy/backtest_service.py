@@ -33,7 +33,7 @@ from ditto_core.execution.planner import ExecutionPlanner
 from ditto_core.execution.reality import FeeModel
 from ditto_core.execution.rules import InstrumentRuleProvider
 from ditto_core.strategy.pipeline import StrategyPipeline
-from ditto_datahub.models.strategy import StrategyArtifactRecord
+from ditto_datahub.models.strategy import ArtifactKind, StrategyArtifactRecord
 from ditto_datahub.services.audit import ExecutionAuditService
 from ditto_datahub.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
@@ -225,7 +225,7 @@ class BacktestService:
             artifact_id=f"artifact-{run_id}",
             strategy_id=self._config.strategy_id,
             run_id=run_id,
-            artifact_type="backtest_report",
+            artifact_type=ArtifactKind.BACKTEST_REPORT,
             file_path="",  # TODO: serialize report to file
             metadata={
                 "initial_cash": self._config.initial_cash,

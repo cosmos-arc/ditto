@@ -1,5 +1,6 @@
 """FillModel unit tests — SimpleFill, AShare, ClosingAuction."""
 
+from dataclasses import dataclass
 from datetime import datetime
 
 import pytest
@@ -325,3 +326,144 @@ class TestClosingAuctionFillModel:
         result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
         assert isinstance(result, Filled)
         assert result.fill_event.filled_quantity == 100
+
+
+# ---------------------------------------------------------------------------
+# AShareFillModel — Parametrized scenario matrix (v3 §5.3)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class FillScenario:
+    """Declarative fill scenario for parametrized testing."""
+
+    name: str
+    order_type: OrderType
+    direction: OrderDirection
+    is_suspended: bool = False
+    limit_up: float | None = None
+    limit_down: float | None = None
+    close: float = 10.5
+    high: float = 11.0
+    low: float = 10.0
+    order_price: float | None = None
+    should_fill: bool = True
+    expected_reason: str | None = None
+    expected_can_retry: bool = True
+
+
+A_SHARE_FILL_SCENARIOS: list[FillScenario] = [
+    # ── Core scenarios (v3 §5.3) ──────────────────────────────────────
+    FillScenario(
+        name="normal_market_buy_fills",
+        order_type=OrderType.MARKET,
+        direction=OrderDirection.BUY,
+        should_fill=True,
+    ),
+    FillScenario(
+        name="suspended_market_buy_no_fill",
+        order_type=OrderType.MARKET,
+        direction=OrderDirection.BUY,
+        is_suspended=True,
+        should_fill=False,
+        expected_reason="suspended",
+        expected_can_retry=True,
+    ),
+    FillScenario(
+        name="limit_up_market_buy_no_fill",
+        order_type=OrderType.MARKET,
+        direction=OrderDirection.BUY,
+        close=11.0,
+        high=11.0,
+        limit_up=11.0,
+        should_fill=False,
+        expected_reason="limit_up_no_buy",
+        expected_can_retry=True,
+    ),
+    FillScenario(
+        name="limit_down_market_sell_no_fill",
+        order_type=OrderType.MARKET,
+        direction=OrderDirection.SELL,
+        close=10.0,
+        low=10.0,
+        limit_down=10.0,
+        should_fill=False,
+        expected_reason="limit_down_no_sell",
+        expected_can_retry=True,
+    ),
+    FillScenario(
+        name="limit_up_market_sell_fills",
+        order_type=OrderType.MARKET,
+        direction=OrderDirection.SELL,
+        close=11.0,
+        high=11.0,
+        limit_up=11.0,
+        should_fill=True,
+    ),
+    FillScenario(
+        name="limit_down_market_buy_fills",
+        order_type=OrderType.MARKET,
+        direction=OrderDirection.BUY,
+        close=10.0,
+        low=10.0,
+        limit_down=10.0,
+        should_fill=True,
+    ),
+    # ── Edge cases ────────────────────────────────────────────────────
+    FillScenario(
+        name="limit_buy_at_exact_low_boundary_fills",
+        order_type=OrderType.LIMIT,
+        direction=OrderDirection.BUY,
+        order_price=10.0,
+        should_fill=True,
+    ),
+    FillScenario(
+        name="limit_buy_below_low_no_fill",
+        order_type=OrderType.LIMIT,
+        direction=OrderDirection.BUY,
+        order_price=9.5,
+        should_fill=False,
+        expected_reason="price_out_of_range",
+        expected_can_retry=False,
+    ),
+    FillScenario(
+        name="stop_market_unsupported_no_fill",
+        order_type=OrderType.STOP_MARKET,
+        direction=OrderDirection.BUY,
+        should_fill=False,
+        expected_reason="unsupported_order_type",
+        expected_can_retry=False,
+    ),
+]
+
+
+class TestAShareFillScenarios:
+    """Parametrized AShareFillModel scenario matrix."""
+
+    @pytest.mark.parametrize("scenario", A_SHARE_FILL_SCENARIOS, ids=lambda s: s.name)
+    def test_fill_scenario(self, scenario: FillScenario) -> None:
+        model = AShareFillModel()
+        order = _order(
+            order_type=scenario.order_type,
+            direction=scenario.direction,
+            price=scenario.order_price,
+        )
+        market = _market_snapshot(
+            close=scenario.close,
+            high=scenario.high,
+            low=scenario.low,
+            limit_up=scenario.limit_up,
+            limit_down=scenario.limit_down,
+            is_suspended=scenario.is_suspended,
+        )
+        result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
+
+        if scenario.should_fill:
+            assert isinstance(result, Filled), (
+                f"Expected Filled but got {type(result).__name__}"
+            )
+            assert isinstance(result, FillOutcome)
+        else:
+            assert isinstance(result, NoFill), "Expected NoFill but got Filled"
+            assert result.reason == scenario.expected_reason
+            assert result.can_retry is scenario.expected_can_retry

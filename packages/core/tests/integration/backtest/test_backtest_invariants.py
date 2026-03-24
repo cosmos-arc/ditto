@@ -29,9 +29,11 @@ from ditto_core.backtest.risk.pre_trade import (
     LotSizeCheck,
     PreTradeContext,
 )
+from ditto_core.backtest.statistics import ExecutionAuditCollector
 from ditto_core.execution.brokerage import BacktestBrokerage, ProcessInput
 from ditto_core.execution.planner import SimpleExecutionPlanner
 from ditto_core.execution.reality import (
+    BrokerageModel,
     SimpleFeeModel,
 )
 from ditto_core.execution.reality.market import MarketSnapshot
@@ -757,7 +759,6 @@ class TestStatsPostFillSnapshot:
     def test_audit_collector_uses_post_fill_view(self) -> None:
         """ExecutionAuditCollector 应在 fill 后记录 AccountView。"""
         from ditto_core.backtest.statistics import (
-            ExecutionAuditCollector,
             compute_portfolio_statistics,
         )
 
@@ -844,7 +845,7 @@ class TestPriceLimitInvariants:
 
     def test_limit_up_blocks_buy(self) -> None:
         """涨停买入不成交 — close >= limit_up。"""
-        from ditto_core.execution.reality import AShareFillModel, BrokerageModel
+        from ditto_core.execution.reality import AShareFillModel
 
         model = BrokerageModel(fill_model=AShareFillModel())
         account = Account(
@@ -881,7 +882,7 @@ class TestPriceLimitInvariants:
     def test_limit_down_blocks_sell(self) -> None:
         """跌停卖出不成交 — close <= limit_down。"""
         from ditto_core.accounting.position import Position
-        from ditto_core.execution.reality import AShareFillModel, BrokerageModel
+        from ditto_core.execution.reality import AShareFillModel
 
         pos = Position(
             instrument_id="ETF-001",
@@ -929,7 +930,7 @@ class TestPriceLimitInvariants:
     def test_limit_up_allows_sell(self) -> None:
         """涨停可以卖出 — close >= limit_up + SELL → 正常成交。"""
         from ditto_core.accounting.position import Position
-        from ditto_core.execution.reality import AShareFillModel, BrokerageModel
+        from ditto_core.execution.reality import AShareFillModel
 
         pos = Position(
             instrument_id="ETF-001",
@@ -976,7 +977,7 @@ class TestPriceLimitInvariants:
 
     def test_limit_down_allows_buy(self) -> None:
         """跌停可以买入 — close <= limit_down + BUY → 正常成交。"""
-        from ditto_core.execution.reality import AShareFillModel, BrokerageModel
+        from ditto_core.execution.reality import AShareFillModel
 
         model = BrokerageModel(fill_model=AShareFillModel())
         account = Account(
@@ -1013,7 +1014,7 @@ class TestPriceLimitInvariants:
     def test_no_limit_allows_both_directions(self) -> None:
         """无涨跌停限制 — 买卖均可成交。"""
         from ditto_core.accounting.position import Position
-        from ditto_core.execution.reality import AShareFillModel, BrokerageModel
+        from ditto_core.execution.reality import AShareFillModel
 
         pos = Position(
             instrument_id="ETF-001",
@@ -1190,3 +1191,428 @@ class TestLotSizeRounding:
         result = composite.check_order(order, ctx)
         assert result.decision == "accept"
         assert result.resized_quantity is None
+
+
+# ---------------------------------------------------------------------------
+# Suspended instrument E2E — 完整引擎管道不产生成交
+# ---------------------------------------------------------------------------
+
+
+class TestSuspendedE2E:
+    """停牌标的 E2E — 完整引擎管道不产生成交。"""
+
+    def test_no_fill_on_suspended_e2e(
+        self,
+        tmp_path,
+    ) -> None:
+        """is_suspended=True 的标的不产生成交。"""
+
+        import polars as pl
+        from ditto_core.backtest.data_feed import ParquetDataFeed
+        from ditto_core.backtest.engine import (
+            EngineConfig,
+            EngineLoop,
+            EngineMode,
+            EngineOptions,
+        )
+        from ditto_core.strategy.templates.etf_rotation import (
+            ETFRotationConfig,
+            build_etf_rotation_pipeline,
+        )
+
+        from .conftest import (
+            INSTRUMENT_IDS,
+            TRADE_DATES_3,
+            generate_3day_data,
+            write_parquet_data,
+        )
+
+        # 构建数据: ETF-001 全程停牌, ETF-002/003 正常
+        suspended_data: dict[str, pl.DataFrame] = {}
+        for iid in INSTRUMENT_IDS:
+            if iid == "ETF-001":
+                # 全部日期 is_suspended=True
+                df = pl.DataFrame(
+                    {
+                        "trade_date": TRADE_DATES_3,
+                        "open": [10.0, 10.2, 10.1],
+                        "high": [10.1, 10.3, 10.2],
+                        "low": [9.9, 10.1, 10.0],
+                        "close": [10.0, 10.2, 10.1],
+                        "prev_close": [10.0, 10.0, 10.2],
+                        "volume": [0.0, 0.0, 0.0],
+                        "amount": [0.0, 0.0, 0.0],
+                        "is_suspended": [True, True, True],
+                    },
+                )
+            else:
+                # 正常数据 — 直接复用 generate_3day_data
+                base = generate_3day_data()
+                df = base[iid]
+            suspended_data[iid] = df
+
+        # 写 parquet + 创建 DataFeed
+        data_dir = write_parquet_data(tmp_path, suspended_data)
+        data_feed = ParquetDataFeed(
+            data_dir=data_dir,
+            instrument_ids=INSTRUMENT_IDS,
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+        )
+
+        # 组装引擎
+        config = EngineConfig(
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+            initial_cash=INITIAL_CASH,
+            mode=EngineMode.BACKTEST,
+            strategy_id="test-suspended",
+            strategy_run_id="run-suspended",
+        )
+        pipeline = build_etf_rotation_pipeline(
+            ETFRotationConfig(top_k=3, cash_target=0.0),
+        )
+        fee_model = SimpleFeeModel()
+        account = Account(
+            cash=CashBook(
+                available=INITIAL_CASH,
+                settled=INITIAL_CASH,
+                frozen=0.0,
+            ),
+        )
+        brokerage = BacktestBrokerage(
+            account=account,
+            model=BrokerageModel(fee_model=fee_model),
+        )
+        planner = SimpleExecutionPlanner()
+        pre_trade_check = CompositePreTradeCheck(
+            checks=(LotSizeCheck(), BuyingPowerCheck()),
+        )
+        collector = ExecutionAuditCollector()
+
+        engine = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(fee_model=fee_model, audit_collector=collector),
+        )
+        result = engine.run()
+
+        # 验证: ETF-001 不产生任何成交
+        suspended_fills = [f for f in result.fills if f.instrument_id == "ETF-001"]
+        assert len(suspended_fills) == 0, (
+            f"停牌标的 ETF-001 不应产生成交, 实际 {len(suspended_fills)} 笔"
+        )
+
+        # 验证: 审计收集器中 ETF-001 无成交
+        audit_fills = collector.get_fills()
+        suspended_audit_fills = [f for f in audit_fills if f.instrument_id == "ETF-001"]
+        assert len(suspended_audit_fills) == 0, "审计收集器中 ETF-001 不应有成交记录"
+
+
+# ---------------------------------------------------------------------------
+# Exit order rules — 退出标的卖出订单正确加载三层规则
+# ---------------------------------------------------------------------------
+
+
+class TestExitOrderRules:
+    """退出标的卖出订单正确加载三层规则。"""
+
+    def test_exit_order_has_rules(self, tmp_path) -> None:
+        """持有标的不在 target 中 → 退出 SELL 订单获得三层规则校验。"""
+
+        import polars as pl
+        from ditto_core.accounting.position import Position
+        from ditto_core.backtest.data_feed import ParquetDataFeed
+        from ditto_core.backtest.engine import (
+            EngineConfig,
+            EngineLoop,
+            EngineMode,
+            EngineOptions,
+        )
+        from ditto_core.execution.rules import InMemoryRuleProvider
+        from ditto_core.strategy.templates.etf_rotation import (
+            ETFRotationConfig,
+            build_etf_rotation_pipeline,
+        )
+
+        from .conftest import (
+            INSTRUMENT_IDS,
+            TRADE_DATES_3,
+            generate_3day_data,
+            write_parquet_data,
+        )
+
+        # 构建数据 — ETF-003 价格表现最差（持续下跌），top_k=2 会排除它
+        data = generate_3day_data()
+        # 确保 ETF-003 跌幅最大 → 会被 top_k=2 排除
+        data["ETF-003"] = pl.DataFrame(
+            {
+                "trade_date": TRADE_DATES_3,
+                "open": [5.0, 4.8, 4.5],
+                "high": [5.1, 4.9, 4.6],
+                "low": [4.9, 4.7, 4.4],
+                "close": [5.0, 4.8, 4.5],
+                "prev_close": [5.0, 5.0, 4.8],
+                "volume": [1_000_000.0] * 3,
+                "amount": [5_000_000.0, 4_800_000.0, 4_500_000.0],
+                "is_suspended": [False] * 3,
+            },
+        )
+
+        data_dir = write_parquet_data(tmp_path, data)
+        data_feed = ParquetDataFeed(
+            data_dir=data_dir,
+            instrument_ids=INSTRUMENT_IDS,
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+        )
+
+        # 创建已有持仓 — ETF-001 持有 1000 股
+        pos_etf001 = Position(
+            instrument_id="ETF-001",
+            quantity=1000,
+            available_quantity=1000,
+            average_cost=10.0,
+            market_value=10_000.0,
+            unrealized_pnl=0.0,
+            realized_pnl=0.0,
+            total_fees=0.0,
+        )
+        account = Account(
+            positions={"ETF-001": pos_etf001},
+            cash=CashBook(
+                available=INITIAL_CASH,
+                settled=INITIAL_CASH,
+                frozen=0.0,
+            ),
+        )
+
+        # InMemoryRuleProvider — 为所有 3 个 ETF 提供规则
+        definitions: dict[str, InstrumentDefinition] = {}
+        trading_rules: dict[str, list[TradingRuleSet]] = {}
+        fee_schedules: dict[str, list[FeeSchedule]] = {}
+        for iid in INSTRUMENT_IDS:
+            rules = _make_instrument_rules(iid)
+            definitions[iid] = rules[0]
+            trading_rules[iid] = [rules[1]]
+            fee_schedules[iid] = [rules[2]]
+
+        rule_provider = InMemoryRuleProvider(
+            definitions=definitions,
+            trading_rules=trading_rules,
+            fee_schedules=fee_schedules,
+        )
+
+        # top_k=2 — 只选前 2 名, 排除表现最差的 ETF-003
+        pipeline = build_etf_rotation_pipeline(
+            ETFRotationConfig(top_k=2, cash_target=0.0),
+        )
+        fee_model = SimpleFeeModel()
+        brokerage = BacktestBrokerage(
+            account=account,
+            model=BrokerageModel(fee_model=fee_model),
+        )
+        planner = SimpleExecutionPlanner()
+        pre_trade_check = CompositePreTradeCheck(
+            checks=(LotSizeCheck(), BuyingPowerCheck()),
+        )
+        collector = ExecutionAuditCollector()
+
+        config = EngineConfig(
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+            initial_cash=INITIAL_CASH,
+            mode=EngineMode.BACKTEST,
+            strategy_id="test-exit-rules",
+            strategy_run_id="run-exit",
+        )
+
+        engine = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(
+                fee_model=fee_model,
+                rule_provider=rule_provider,
+                audit_collector=collector,
+            ),
+        )
+        result = engine.run()
+
+        # 验证: pre_trade_log 中包含 ETF-001 的决策记录
+        # ETF-001 已持有且权重已分配 → PreTrade 会有 buy/resize 决策
+        # ETF-003 不在 top_k 中 → 如果 Day 1 被买入则 Day 2 会被卖出
+        pre_trade_log = collector.get_pre_trade_log()
+        etf001_decisions = [d for d in pre_trade_log if d.instrument_id == "ETF-001"]
+        assert len(etf001_decisions) > 0, (
+            "ETF-001 应有 PreTrade 决策记录 — 证明三层规则被正确加载"
+        )
+
+        # 验证: manifest 包含 rule_refs
+        assert result.manifest is not None
+        assert len(result.manifest.rule_refs) > 0, (
+            "manifest 应包含 rule_refs — 证明 RuleRefCollector 工作正常"
+        )
+
+
+# ---------------------------------------------------------------------------
+# RuleRefCollector — 保留跨日期的所有规则版本
+# ---------------------------------------------------------------------------
+
+
+class TestRuleRefsPreserved:
+    """RuleRefCollector 保留跨日期的所有规则版本。"""
+
+    def test_rule_refs_all_versions_preserved(self, tmp_path) -> None:
+        """跨 3 日运行 — 不同 as_of_date 的规则版本都被保留。"""
+
+        from ditto_core.backtest.data_feed import ParquetDataFeed
+        from ditto_core.backtest.engine import (
+            EngineConfig,
+            EngineLoop,
+            EngineMode,
+            EngineOptions,
+        )
+        from ditto_core.execution.rules import InMemoryRuleProvider
+        from ditto_core.strategy.templates.etf_rotation import (
+            ETFRotationConfig,
+            build_etf_rotation_pipeline,
+        )
+
+        from .conftest import (
+            INSTRUMENT_IDS,
+            generate_3day_data,
+            write_parquet_data,
+        )
+
+        data = generate_3day_data()
+        data_dir = write_parquet_data(tmp_path, data)
+        data_feed = ParquetDataFeed(
+            data_dir=data_dir,
+            instrument_ids=INSTRUMENT_IDS,
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+        )
+
+        # 创建 InMemoryRuleProvider — ETF-001 有 3 个版本（每天一个）
+        definitions: dict[str, InstrumentDefinition] = {}
+        trading_rules: dict[str, list[TradingRuleSet]] = {}
+        fee_schedules: dict[str, list[FeeSchedule]] = {}
+
+        for iid in INSTRUMENT_IDS:
+            rules = _make_instrument_rules(iid)
+            definitions[iid] = rules[0]
+            trading_rules[iid] = [rules[1]]
+            fee_schedules[iid] = [rules[2]]
+
+        # ETF-001 有 3 个 trading_rule 版本 — 不同 as_of_date
+        trading_rules["ETF-001"] = [
+            TradingRuleSet(
+                instrument_id="ETF-001",
+                as_of_date="2025-12-01",
+                settlement_cycle=1,
+                fund_settlement_cycle=1,
+                price_limit_pct=0.10,
+                order_types_supported=("market", "limit"),
+                call_auction_sessions=("open", "close"),
+            ),
+            TradingRuleSet(
+                instrument_id="ETF-001",
+                as_of_date="2026-01-03",
+                settlement_cycle=1,
+                fund_settlement_cycle=0,
+                price_limit_pct=0.10,
+                order_types_supported=("market", "limit"),
+                call_auction_sessions=("open", "close"),
+            ),
+            TradingRuleSet(
+                instrument_id="ETF-001",
+                as_of_date="2026-01-06",
+                settlement_cycle=0,
+                fund_settlement_cycle=0,
+                price_limit_pct=0.10,
+                order_types_supported=("market", "limit"),
+                call_auction_sessions=("open", "close"),
+            ),
+        ]
+
+        rule_provider = InMemoryRuleProvider(
+            definitions=definitions,
+            trading_rules=trading_rules,
+            fee_schedules=fee_schedules,
+        )
+
+        pipeline = build_etf_rotation_pipeline(
+            ETFRotationConfig(top_k=3, cash_target=0.0),
+        )
+        fee_model = SimpleFeeModel()
+        account = Account(
+            cash=CashBook(
+                available=INITIAL_CASH,
+                settled=INITIAL_CASH,
+                frozen=0.0,
+            ),
+        )
+        brokerage = BacktestBrokerage(
+            account=account,
+            model=BrokerageModel(fee_model=fee_model),
+        )
+        planner = SimpleExecutionPlanner()
+        pre_trade_check = CompositePreTradeCheck(
+            checks=(LotSizeCheck(), BuyingPowerCheck()),
+        )
+
+        config = EngineConfig(
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+            initial_cash=INITIAL_CASH,
+            mode=EngineMode.BACKTEST,
+            strategy_id="test-rule-refs",
+            strategy_run_id="run-rule-refs",
+        )
+
+        engine = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(
+                fee_model=fee_model,
+                rule_provider=rule_provider,
+            ),
+        )
+        result = engine.run()
+
+        # 验证: manifest 包含 rule_refs
+        assert result.manifest is not None
+        assert len(result.manifest.rule_refs) > 0, "manifest 应包含 rule_refs"
+
+        # 验证: ETF-001 的 rule_refs 至少包含 2 个不同版本
+        # RuleRefCollector 使用 first_observed 策略 (F3):
+        # Day 1 (01-05): PIT 查询 → 2026-01-03 版本（最新 <= 01-05）
+        # Day 2 (01-06): PIT 查询 → 2026-01-06 版本（新 key，被记录）
+        # Day 3 (01-07): PIT 查询 → 2026-01-06 版本（已存在，不重复记录）
+        # 所以 ETF-001 应有 2 个不同的 trading_rule_as_of
+        etf001_refs = [
+            r for r in result.manifest.rule_refs if r.instrument_id == "ETF-001"
+        ]
+        assert len(etf001_refs) >= 2, (
+            f"ETF-001 应至少有 2 个不同版本的 rule_refs (F3 first_observed), "
+            f"实际 {len(etf001_refs)} 个: "
+            f"{[r.trading_rule_as_of for r in etf001_refs]}"
+        )
+
+        # 验证: 所有 ETF 都有 rule_refs
+        ref_iids = {r.instrument_id for r in result.manifest.rule_refs}
+        assert ref_iids == set(INSTRUMENT_IDS), (
+            f"所有标的都应有 rule_refs, 实际: {ref_iids}"
+        )

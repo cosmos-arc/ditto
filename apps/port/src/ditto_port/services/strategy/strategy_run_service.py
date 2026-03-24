@@ -22,7 +22,9 @@ from ditto_core.backtest.data_feed import Slice
 from ditto_core.strategy.context import StrategyContext
 from ditto_core.strategy.models import TargetPortfolio
 from ditto_core.strategy.pipeline import StrategyPipeline
-from ditto_datahub.models.strategy import StrategyArtifactRecord
+from ditto_core.strategy.specs import StrategySpec
+from ditto_core.strategy.validation import validate_spec_params
+from ditto_datahub.models.strategy import ArtifactKind, StrategyArtifactRecord
 from ditto_datahub.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -58,12 +60,14 @@ class StrategyRunServiceConfig:
         strategy_id: 策略 ID
         run_id: 运行 ID (空字符串时自动生成)
         mode: 运行模式 (research / recommendation)
+        spec: 策略定义（可选，设置后 run() 会先校验参数）
 
     """
 
     strategy_id: str = "default"
     run_id: str = ""
     mode: StrategyRunMode = StrategyRunMode.RESEARCH
+    spec: StrategySpec | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -143,6 +147,10 @@ class StrategyRunService:
             StrategyRunResult 包含 TargetPortfolio。
 
         """
+        # 校验 spec 参数
+        if self._config.spec is not None:
+            self._validate_params(self._config.spec)
+
         run_id = self._config.run_id or uuid.uuid4().hex[:8]
 
         # 组装输入
@@ -167,6 +175,17 @@ class StrategyRunService:
 
         return result
 
+    # -- internal validation -------------------------------------------------
+
+    @staticmethod
+    def _validate_params(spec: StrategySpec) -> None:
+        """校验 spec 参数，不合法时抛出 ValueError。"""
+        errors = validate_spec_params(spec)
+        if errors:
+            raise ValueError(
+                f"策略参数校验失败 [{spec.strategy_id}]: {'; '.join(errors)}"
+            )
+
     # -- internal persistence ------------------------------------------------
 
     def _persist_signal(
@@ -182,7 +201,7 @@ class StrategyRunService:
             artifact_id=f"signal-{run_id}-{trade_date}",
             strategy_id=self._config.strategy_id,
             run_id=run_id,
-            artifact_type="signal_snapshot",
+            artifact_type=ArtifactKind.SIGNAL_SNAPSHOT,
             file_path="",
             metadata={
                 "trade_date": trade_date,

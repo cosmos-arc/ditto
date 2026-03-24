@@ -45,7 +45,11 @@ from ditto_core.execution.fills import FillEvent
 from ditto_core.execution.planner import ExecutionPlanner
 from ditto_core.execution.reality import FeeModel
 from ditto_core.execution.rules import InstrumentRuleProvider, InstrumentRules
-from ditto_core.execution.trade_builder import TradeMatchingMethod
+from ditto_core.execution.trade_builder import (
+    FifoTradeBuilder,
+    FlatToFlatTradeBuilder,
+    TradeMatchingMethod,
+)
 from ditto_core.strategy.context import StrategyContext
 from ditto_core.strategy.pipeline import StrategyInputBundle, StrategyPipeline
 
@@ -210,6 +214,13 @@ class EngineLoop:
         self._rule_ref_collector = RuleRefCollector()
         self._trading_days: tuple[str, ...] = ()
 
+        # TradeBuilder — 根据 config.trade_matching 创建成交匹配器
+        if config.trade_matching == TradeMatchingMethod.FLAT_TO_FLAT:
+            self._trade_builder = FlatToFlatTradeBuilder()
+        else:
+            self._trade_builder = FifoTradeBuilder()
+        self._recorded_trade_ids: set[str] = set()
+
     # -- public ---------------------------------------------------------------
 
     def run(self) -> EngineResult:
@@ -228,6 +239,13 @@ class EngineLoop:
             self._step(date)
 
         account_view = self._brokerage.get_account()
+
+        # flush 未平仓交易 — 回测结束时记录剩余开仓交易
+        if self._audit_collector is not None:
+            for trade in self._trade_builder.flush():
+                if trade.trade_id not in self._recorded_trade_ids:
+                    self._audit_collector.record_closed_trade(trade)
+                    self._recorded_trade_ids.add(trade.trade_id)
 
         # 构建运行清单 — RuleRefCollector 积累的 rule_refs
         manifest = RunManifest(
@@ -335,6 +353,25 @@ class EngineLoop:
         process_input = self._build_process_input(date, slice_)
         step_fills = self._brokerage.process_pending(process_input)
         self._fills.extend(step_fills)
+
+        # ── 审计记录（R3: 使用成交后快照） ──
+        self._record_step_audit(date, step_fills)
+
+    def _record_step_audit(self, date: str, step_fills: tuple[FillEvent, ...]) -> None:
+        """记录单步审计数据: account_view + fills + closed_trades。"""
+        if self._audit_collector is None:
+            return
+        account_view = self._brokerage.get_account()
+        self._audit_collector.record_account_view(date, account_view)
+        for fill in step_fills:
+            self._audit_collector.record_fill(fill)
+        # 通过 TradeBuilder 匹配成交 -> 记录已平仓交易
+        for fill in step_fills:
+            self._trade_builder.on_fill(fill, account_view)
+        for trade in self._trade_builder.get_closed_trades():
+            if trade.trade_id not in self._recorded_trade_ids:
+                self._audit_collector.record_closed_trade(trade)
+                self._recorded_trade_ids.add(trade.trade_id)
 
     def _run_pre_trade_checks(
         self,
@@ -465,7 +502,6 @@ class EngineLoop:
             {"instrument_id": instrument_ids},
         )
 
-        # Build market_data and signal_values in a single pass
         market_rows: list[dict[str, object]] = []
         signal_rows: list[dict[str, object]] = []
         for iid, bar in slice_.bars.items():
