@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 
 from ditto_core.backtest.audit import ExecutionAuditCollector
 from ditto_core.backtest.data_feed import DataFeed
@@ -27,6 +28,7 @@ from ditto_core.backtest.engine import (
 )
 from ditto_core.backtest.risk.post_trade import PostTradeRiskGuard
 from ditto_core.backtest.risk.pre_trade import CompositePreTradeCheck
+from ditto_core.backtest.serialization import serialize
 from ditto_core.backtest.statistics import BacktestReport, build_report
 from ditto_core.execution.brokerage import Brokerage
 from ditto_core.execution.planner import ExecutionPlanner
@@ -90,6 +92,7 @@ class BacktestServiceOptions:
         post_trade_guard: PostTrade 风控扫描器
         audit_service: 审计日志持久化服务
         artifact_service: 策略产物持久化服务
+        artifact_dir: 回测产物序列化输出目录 (None = 不序列化到文件)
 
     """
 
@@ -98,6 +101,7 @@ class BacktestServiceOptions:
     post_trade_guard: PostTradeRiskGuard | None = None
     audit_service: ExecutionAuditService | None = None
     artifact_service: StrategyArtifactService | None = None
+    artifact_dir: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -221,12 +225,20 @@ class BacktestService:
         """持久化回测报告到 StrategyArtifactService。"""
         if self._options.artifact_service is None:
             return
+
+        # 序列化报告到文件（如果指定了输出目录）
+        file_path = ""
+        if self._options.artifact_dir is not None:
+            output_dir = Path(self._options.artifact_dir) / run_id
+            json_path = serialize(report, output_dir)
+            file_path = str(json_path)
+
         artifact = StrategyArtifactRecord(
             artifact_id=f"artifact-{run_id}",
             strategy_id=self._config.strategy_id,
             run_id=run_id,
             artifact_type=ArtifactKind.BACKTEST_REPORT,
-            file_path="",  # TODO: serialize report to file
+            file_path=file_path,
             metadata={
                 "initial_cash": self._config.initial_cash,
                 "final_nav": report.final_nav,

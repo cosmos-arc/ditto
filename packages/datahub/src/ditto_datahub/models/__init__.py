@@ -93,7 +93,14 @@ from ditto_datahub.models.source_codes import (
     VIX_CODE_TO_INSTRUMENT_ID,
 )
 from ditto_datahub.models.storage import FreezeManifest, WriteResult, WriteStoreResult
-from ditto_datahub.models.strategy import ArtifactKind, MarketState, Signal, SignalType
+from ditto_datahub.models.strategy import (
+    ArtifactKind,
+    MarketState,
+    Signal,
+    SignalType,
+    StrategyArtifactRecord,
+    StrategySpecRecord,
+)
 from ditto_datahub.models.trading import Order, OrderSide, OrderStatus, Trade
 
 __all__ = [
@@ -179,6 +186,8 @@ __all__ = [
     "SignalType",
     "Source",
     "StockExtension",
+    "StrategyArtifactRecord",
+    "StrategySpecRecord",
     "Trade",
     "WriteResult",
     "WriteStoreResult",

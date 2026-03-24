@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -155,6 +156,7 @@ class TestBacktestServiceOptions:
         assert options.post_trade_guard is None
         assert options.audit_service is None
         assert options.artifact_service is None
+        assert options.artifact_dir is None
 
     def test_frozen(self) -> None:
         """BacktestServiceOptions 是 frozen，不可变。"""
@@ -371,6 +373,91 @@ class TestArtifactPersistence:
         service.run()
 
         # No error should occur
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch("ditto_port.services.strategy.backtest_service.serialize")
+    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    def test_run_serializes_report_when_artifact_dir_provided(
+        self,
+        mock_build_report: MagicMock,
+        mock_serialize: MagicMock,
+        mock_engine_run: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """提供 artifact_dir 时，报告序列化到文件，file_path 非空。"""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.run_id = "run-001"
+        fake_report.final_nav = 1_100_000.0
+        fake_report.period = ("2026-01-01", "2026-03-01")
+        fake_report.initial_cash = 1_000_000.0
+        fake_report.aggregated_trade_stats = MagicMock(
+            total_trades=42,
+        )
+        fake_report.alpha_stats = MagicMock(
+            sharpe_ratio=1.5,
+            max_drawdown=-5.2,
+        )
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_serialize.return_value = tmp_path / "run-001" / "backtest_report.json"
+
+        mock_artifact = MagicMock()
+        options = BacktestServiceOptions(
+            artifact_service=mock_artifact,
+            artifact_dir=str(tmp_path),
+        )
+        service = _make_minimal_service(
+            config=_make_service_config(strategy_id="momentum-etf", run_id="run-001"),
+            artifact_service=mock_artifact,
+        )
+        service._options = options  # type: ignore[misc]
+
+        service.run()
+
+        mock_serialize.assert_called_once()
+        call_args = mock_serialize.call_args[0]
+        assert call_args[0] is fake_report
+        mock_artifact.save_artifact.assert_called_once()
+        call_arg = mock_artifact.save_artifact.call_args[0][0]
+        assert call_arg.file_path != ""
+        assert "backtest_report.json" in call_arg.file_path
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch("ditto_port.services.strategy.backtest_service.build_report")
+    def test_run_artifact_without_dir_has_empty_file_path(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """未提供 artifact_dir 时，file_path 为空字符串。"""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.run_id = "run-001"
+        fake_report.final_nav = 1_100_000.0
+        fake_report.period = ("2026-01-01", "2026-03-01")
+        fake_report.initial_cash = 1_000_000.0
+        fake_report.aggregated_trade_stats = MagicMock(
+            total_trades=42,
+        )
+        fake_report.alpha_stats = MagicMock(
+            sharpe_ratio=1.5,
+            max_drawdown=-5.2,
+        )
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_artifact = MagicMock()
+        service = _make_minimal_service(
+            config=_make_service_config(strategy_id="momentum-etf", run_id="run-001"),
+            artifact_service=mock_artifact,
+        )
+        service.run()
+
+        mock_artifact.save_artifact.assert_called_once()
+        call_arg = mock_artifact.save_artifact.call_args[0][0]
+        assert call_arg.file_path == ""
 
 
 # ---------------------------------------------------------------------------
